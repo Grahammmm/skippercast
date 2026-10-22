@@ -86,28 +86,118 @@ Admission still requires the full campaign-generated inverse-bbox record.
 
 ## Precisely held provenance (never silently dropped)
 
-* Any nonnull source_row (inline or Ref) or native-facts source_lineage.source_row:
-  `held: retained source-row adapter not yet admitted`. Original BAG/source-row
-  provenance is NOT claimed covered by the GeoTIFF fixture.
-* Schema-less raw-manifest rows/snapshots and non-workflow JSONL snapshots are
-  NOT supported by the workflow-ledger JSONL parser. Unknown structured schemas
-  refuse. A live append-growing manifest is not an immutable input. Do not rename
-  JSON/JSONL to opaque text or omit it; B1d must hold that graph until the exact
-  source-row/snapshot adapter is admitted.
-* Cached derived inputs requiring external derivation receipts (including
-  VR-BAG-derived GTiff) are HELD. Adding derivation/raw_manifest_snapshot slots to
-  a native manifest refuses as unknown producer fields; unknown derivation
-  schemas refuse when reached through a workflow Ref. A hash-matched GTiff alone
-  is not a claim that its upstream derivation/raw closure is complete.
+* A nonnull source_row (inline or Ref) or native-facts source_lineage.source_row
+  is admitted ONLY when the document's exact Ref is registered by a supplied
+  coast-raw-provenance-v1 envelope (below); otherwise it still refuses with
+  `held: retained source-row adapter not yet admitted` / `held: unregistered
+  native lineage`. Ref-valued source_row variants remain held.
+* Raw-manifest rows/snapshots are admitted ONLY through the envelope's edge-scoped
+  `coastal-prefetch-row-v1` / `coastal-prefetch-snapshot-v1` adapters. A `.jsonl`
+  Ref pinned anywhere else still falls into the workflow-ledger branch and refuses
+  (`workflow receipt needs a schema`); it is never hashed as opaque text. A live
+  append-growing manifest is not an immutable input.
+* Cached derived inputs are admitted ONLY for the unchanged
+  `coastal-vr-refinement-receipt-v1` selected by an envelope's `derivation` edge.
+  Other derivation schemas, and any derivation/raw_manifest_snapshot slot added to
+  a native manifest, still refuse as unknown producer fields/schemas.
 * Authenticated/source-free/managed-output Store lanes, discover/render jobs,
   nonempty execution params, renderer handoffs/thumbnails and new native output
   schemas require separate adapters and currently refuse. No executable intent,
   scratch, live SQLite or lease document is automatically trusted.
+* Canonical catalog/surveys.json BAG records, `evidence[]`/`field_evidence{}`
+  path-bearing strings, cross-round catalog corrections (supersession) and
+  snapshots over the 32 MiB structured bound remain HELD (addendum v2 line 67-69,
+  v3 L2); the inventory lane is synthetic-only until separately widened.
 
 These holds mean this pin is NOT universal archive closure for the real coast.
 B1d must retain the admitted complete subgraph and refuse any held provenance,
 not report an archive success that silently omits it. Archives, raw-equivalence,
 lineage snapshot generation and release gates remain B1d's responsibility.
+
+## Retained raw and derived provenance (addendum v2 + v3, t_f9cfca4f)
+
+Governing design: coast-raw-provenance-addendum-v2.md (SHA256 50211c22...0d2db)
+and the v3 plan-anchor delta (SHA256 d832b406...ae93), both independently
+approved. Adapters live in `coast_raw.py`; the validator only dispatches.
+
+**API.** `GraphValidator(resolver, *, raw_provenance=())` and
+`validate(value, resolver, root_id=..., raw_provenance=())`. `raw_provenance` is
+an explicit finite sequence of four-key envelope Refs (root `queue:*`, path
+`.json`) collected by walking `coast-admission-v1 sources[*].raw_provenance[*]`
+and taking only non-`raw:campaign` items. No glob, filename, "latest" or
+receipt-shape discovery exists. CLI: `--raw-provenance ENVELOPES.json` plus
+`--original-raw-roots /abs/origins.json` (requires card-admitted
+`--allowed-root-id raw:campaign`). The resolver attribute
+`original_raw_roots == {'raw:campaign': ORIGINAL_ABSOLUTE_POSIX_ROOT}` is
+deployment metadata supplied by the caller, never learned from a receipt; it is
+a lexical identity (no open/realpath) and must not equal, contain or be contained
+by any queue/repo origin.
+
+**Lifecycle (v3 L0-L4).** Identical Ref tuples collapse; every distinct envelope
+is fully validated BEFORE any root walk (an otherwise-unused envelope still
+refuses on any defect); only after all pass are the registries published:
+R-PLAN `(plan Ref, source_id) -> envelope Ref` (a header-only re-emission of the
+same plan selection is a second envelope tuple and REFUSES), R-RAW `raw Ref ->
+(inventory_row, metadata_sha256, originals set)` and R-NAT `native/derivation
+Ref -> (inventory_row, metadata_sha256, bound source Ref)`; equal values from
+different plans coexist, unequal values refuse in every order. During the root
+walk an envelope reached by traversal must already be registered, may be pinned
+only under `sources[k].raw_provenance[]`, must have `source_id ==
+sources[k].source_id`, `plan == admission.plan_file` verbatim, and every
+`selections[].raw` must also appear verbatim in the same `raw_provenance[]`.
+Observation: between individually valid envelopes an R-NAT conflict is
+unreachable, because a native document's own bytes pin its identity tuple; the
+registry rule is still enforced and tested directly.
+
+**Envelope `coast-raw-provenance-v1`** (closed; rev4 common header exactly, no
+self-hash): `source_id`, `plan` (Ref, same queue root, `.json`, validated via
+`reference(plan, contract=bridge.PLAN)`; exactly one plan selection with that
+`source_id`; its `source_row` must equal every `inventory_row`; a present
+`metadata_sha256` must agree; its native `source` must equal one `originals` Ref
+or one derivation `outputs[].artifact`), `snapshot` (Ref, same root, `.jsonl`),
+`selections[]` strictly increasing by `line` with unique `row` Ref and `raw`
+path: `line`, `row` (Ref `.jsonl`; bytes must equal exactly snapshot line
+`line` including LF), `raw` (Ref `raw:campaign`; `row.path ==
+origin + '/' + raw.path` byte for byte, `row.sha256/bytes == raw`), `inventory_row`
+(closed 8-field synthetic subset `id title kind format url sha256 horizontal_crs
+vertical_datum`, kind=bathymetry, format=bag, no `unknown`, `url == row.url`,
+`sha256 == raw.sha256`), `metadata_sha256` (BAG XML identity, not a file hash),
+`originals[]` (queue Refs, each hash/bytes equal to raw, read with the
+structured-bytes guard), `derivation` (null or the unchanged VR receipt: closed
+producer field set, source in originals, source_row == inventory_row,
+metadata agreement, source + ALL outputs[].artifact + supergrid_table read as
+binary leaves, nested metadata walked for smuggled path fields) and
+`native_documents[]` (native-job, cached-observation, mapping-input, mapping-run
+or the selected VR receipt; every audited `source_row`/`source_lineage.source_row`
+occurrence must equal `inventory_row`, every metadata identity must agree, and the
+typed input source must equal an originals Ref (BAG) or a derivation output
+(GTiff); each is then traversed under its own native contract).
+
+**Snapshot/row grammar** (producer-exact, `prefetch.py` at d79f245e): LF-only
+JSONL with final LF, no blank/CRLF lines; each line an object with exactly `url
+final_url bytes sha256 etag last_modified fetched_at licence segments path
+review_required verification`; `fetched_at` equals the `stamp()` grammar
+(`+00:00`, optional six-digit fraction, round-trips through `fromisoformat`;
+`Z` refuses); `segments == sorted(set(segments), key=SEGMENTS.index)` with
+members in `SEGMENTS`; `path` a normalized absolute POSIX scalar (checked on
+every row; only selected rows must match the independent origin); each line must
+equal `json.dumps(row, sort_keys=True) + '\n'`; URLs strictly increasing; the
+row file is exactly one such line. Unselected rows are preserved diagnostic
+metadata: fully parsed, never opened, no payload claimed.
+
+**Binary guard.** `Resolver.read(ref, reject_structured=True)` refuses payloads
+whose first non-whitespace byte is `{`, `[` or a UTF-8 BOM; it is applied to
+raw/original/VR/native binary edges only. Existing schema-less opaque `.txt`
+identity leaves are unchanged baseline behavior, not newly admitted provenance.
+
+**Evidence.** tests/gis/test_coast_raw_provenance.py builds the graph from REAL
+`prefetch.load_plan`/`stamp`/`Prefetch.flush_manifest`, REAL
+`vr_refinements.emit` on an owned synthetic BAG (three non-identical GeoTIFF
+outputs plus the supergrid table and a GDAL `.aux.xml`), REAL
+`catalog_bridge.native_job`/`dry_run` and REAL Store/Coordinator acquire ->
+qualify -> map, then a real producer admission that pins the envelope (P6 BAG
+branch; the execution graph exercises the GTiff branch). Non-GIS grammar tests
+live in tests/unit/test_coast_raw_grammar.py. Exit 0 remains REVIEW REQUIRED.
 
 ## Evidence and fixture compatibility
 

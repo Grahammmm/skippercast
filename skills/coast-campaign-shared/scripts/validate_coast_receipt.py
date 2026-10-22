@@ -14,6 +14,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 from coast_refs import Resolver, REF_KEYS, canonical, loads, native_ref
 from coast_sample import sample, window_dir, window_key
 import coast_native as native
+import coast_raw as raw_provenance_contracts
 
 SHARED = Path(__file__).resolve().parents[1]
 SCHEMAS = SHARED / 'schemas'
@@ -133,16 +134,30 @@ def _consistency(value):
 
 
 class GraphValidator:
-    def __init__(self, resolver):
+    def __init__(self, resolver, *, raw_provenance=()):
         self.resolver = resolver
         self.visiting = set()
         self.verified = set()
+        self.provenance = raw_provenance_contracts.Provenance(self)
+        self.provenance.preflight(raw_provenance)
+
+    def header(self, header):
+        definition = loads((SCHEMAS / 'coast-native-execution-v1.schema.json').read_bytes())
+        definition['required'] = raw_provenance_contracts.HEADER
+        definition['properties']['schema'] = {'const': raw_provenance_contracts.ENVELOPE}
+        errors = list(Draft202012Validator(definition, format_checker=FormatChecker()).iter_errors(header))
+        if errors:
+            raise ValueError('provenance header: ' + errors[0].message)
 
     def reference(self, ref, *, scope='full_graph', contract=None):
         structured = contract or ref['path'].endswith(('.json', '.jsonl'))
         if structured and ref['bytes'] > 32 * 1024 * 1024:
             raise ValueError('structured receipt exceeds 32 MiB validation bound')
         raw = self.resolver.read(ref, retain=bool(structured))
+        if contract in (raw_provenance_contracts.ROW, raw_provenance_contracts.SNAPSHOT):
+            rows = raw_provenance_contracts.parse_rows(raw, single=contract == raw_provenance_contracts.ROW)
+            self.verified.add((canonical(ref), scope, contract))
+            return rows
         if contract:
             document = loads(raw)
             if not isinstance(document, dict) or (contract != native.STORE_JOB and document.get('schema') != contract):
@@ -153,6 +168,11 @@ class GraphValidator:
                 if ref['root_id'] not in origins:
                     raise ValueError('missing original queue root binding')
                 native.job_location(document, ref, origins[ref['root_id']])
+        if structured and ref['path'].endswith('.json'):
+            candidate = loads(raw)
+            if isinstance(candidate, dict) and candidate.get('schema') == raw_provenance_contracts.ENVELOPE:
+                if not self.provenance.preflighting and canonical(ref) not in self.provenance.envelopes:
+                    raise ValueError('envelope reached by traversal was not supplied up front')
         key = (canonical(ref), scope, contract)
         if key in self.visiting:
             raise ValueError('cyclic receipt graph')
@@ -163,7 +183,7 @@ class GraphValidator:
             doc = None
             if contract or ref['path'].endswith('.json'):
                 doc = loads(raw)
-                self.document(doc, root_id=ref['root_id'], scope=scope, contract=contract)
+                self.document(doc, root_id=ref['root_id'], scope=scope, contract=contract, ref=ref)
             elif ref['path'].endswith('.jsonl'):
                 from coast_ledger import verify_bytes
                 for row in verify_bytes(raw):
@@ -175,7 +195,7 @@ class GraphValidator:
         finally:
             self.visiting.remove(key)
 
-    def document(self, doc, *, root_id, scope='full_graph', contract=None):
+    def document(self, doc, *, root_id, scope='full_graph', contract=None, ref=None):
         if not isinstance(doc, dict):
             raise ValueError('referenced JSON document must be an object')
         name = doc.get('schema', '')
@@ -185,6 +205,30 @@ class GraphValidator:
             if name:
                 raise ValueError('Store job must retain schema-less producer bytes')
             name = contract
+        if name == raw_provenance_contracts.ENVELOPE:
+            if ref is None:
+                raise ValueError('provenance envelope requires explicit supplied Ref')
+            if self.provenance.preflighting:
+                self.provenance.envelope(doc, ref)
+            elif canonical(ref) not in self.provenance.envelopes:
+                raise ValueError('envelope reached by traversal was not supplied up front')
+            return
+        if name == raw_provenance_contracts.VR:
+            raw_provenance_contracts.vr_check(doc)
+            self.provenance.lineage(doc, ref, root_id)
+            from skippercast.coastal.handoff import vr_refinements as vr
+            for value, expected in [(doc['source'], 'native-raster-v1'),
+                                    (doc['supergrid_table'], vr.TABLE_CONTRACT)] + [(o['artifact'], vr.OUTPUT_CONTRACT) for o in doc['outputs']]:
+                native.closed(value, ('path', 'sha256', 'bytes', 'contract'), ('path', 'sha256', 'bytes', 'contract'))
+                if value['contract'] != expected or value['path'].endswith(('.json', '.jsonl')):
+                    raise ValueError('VR edge contract mismatch')
+                edge = native_ref(value, root_id)
+                self.resolver.read(edge, retain=False, reject_structured=True)
+                self.verified.add((canonical(edge), scope, expected))
+            # Metadata must not smuggle additional dependencies.
+            for key in ('bag', 'placement', 'convention', 'implementation', 'libs', 'limitations'):
+                self.walk(doc[key], root_id=root_id)
+            return
         if name.startswith('coast-'):
             validate_schema(doc)
             _consistency(doc)
@@ -203,6 +247,18 @@ class GraphValidator:
             if name == 'coast-review-context-v1' and doc['mode'] == 'diagnostic':
                 raise ValueError('diagnostic context is not a full-graph scientific input')
             for key, child in doc.items():
+                if name == 'coast-admission-v1' and key == 'sources':
+                    self.provenance.admission(doc)
+                    for source in child:
+                        for slot, values in source.items():
+                            if slot != 'raw_provenance':
+                                self.walk(values, root_id=root_id)
+                        for edge in source['raw_provenance']:
+                            if edge['root_id'] == 'raw:campaign':
+                                self.reference(edge)
+                            else:
+                                self.reference(edge, contract=raw_provenance_contracts.ENVELOPE)
+                    continue
                 if key in OBSERVATION_FIELDS:
                     continue  # schema-validated diagnostic scalars, not Ref edges
                 if key == 'context' and error_branch:
@@ -219,19 +275,22 @@ class GraphValidator:
                 raise ValueError('threshold schema: ' + errors[0].message)
         elif name in NATIVE_FIELDS:
             try:
-                native.check(doc, name)
+                bound = self.provenance.lineage(doc, ref, root_id)
+                native.check(doc, name, lineage_bound=bound)
                 if name != native.STORE_JOB:
                     self.check_producer(doc)
             except (KeyError, TypeError, IndexError) as error:
                 raise ValueError('malformed native producer: ' + name) from error
-            self.walk_native(doc, root_id=root_id, contract=name)
+            self.walk_native(doc, root_id=root_id, contract=name, ref=ref)
         else:
             raise ValueError('unresolved-reference: unsupported JSON producer schema ' + repr(name))
 
     def walk(self, value, *, root_id):
         if isinstance(value, dict):
             if set(value) == REF_KEYS:
-                self.reference(value)
+                document = self.reference(value)
+                if isinstance(document, dict) and document.get('schema') == raw_provenance_contracts.ENVELOPE:
+                    raise ValueError('envelope pinned outside admission raw_provenance')
             elif 'path' in value or 'root_id' in value:
                 raise ValueError('unresolved-reference: untyped or unknown path-bearing field')
             elif isinstance(value.get('schema'),str):
@@ -243,7 +302,7 @@ class GraphValidator:
             for child in value:
                 self.walk(child, root_id=root_id)
 
-    def walk_native(self, doc, *, root_id, contract):
+    def walk_native(self, doc, *, root_id, contract, ref=None):
         if not root_id.startswith('queue:'):
             raise ValueError('native adapter requires original queue root namespace')
         allowed = NATIVE_FIELDS[contract]
@@ -259,7 +318,7 @@ class GraphValidator:
                 elif 'path' in value or 'root_id' in value:
                     raise ValueError('unresolved-reference: unknown native ref slot ' + slot)
                 elif value is not doc and 'schema' in value and value['schema'] not in native.INLINE and not (contract.startswith('coastal-catalog-acquire-bridge-') and slot == 'catalog'):
-                    self.document(value, root_id=root_id)
+                    self.document(value, root_id=root_id, ref=ref if slot == 'mapping_input' else None)
                 else:
                     for key, child in value.items():
                         if contract == native.STORE_JOB and key == 'root' and not path:
@@ -311,7 +370,7 @@ class GraphValidator:
         if contract in native.BINARY:
             if ref['path'].endswith(('.json', '.jsonl')):
                 raise ValueError('binary contract cannot hide structured provenance')
-            self.resolver.read(ref, retain=False)
+            self.resolver.read(ref, retain=False, reject_structured=True)
             self.verified.add((canonical(ref), 'full_graph', contract))
         elif contract:
             self.reference(ref, contract=contract)
@@ -557,11 +616,11 @@ def inverse_bounds_equal(observed, expected):
     return True
 
 
-def validate(value, resolver, *, root_id):
+def validate(value, resolver, *, root_id, raw_provenance=()):
     """No public opt-down flag: the discriminated error union selects edge roles."""
     if root_id not in resolver.bindings:
         raise ValueError('unbound receipt root_id')
-    graph = GraphValidator(resolver)
+    graph = GraphValidator(resolver, raw_provenance=raw_provenance)
     graph.document(value, root_id=root_id)
     return value
 
@@ -606,6 +665,8 @@ def main(argv=None):
     parser.add_argument('--roots', type=Path)
     parser.add_argument('--allowed-root-id', action='append', default=[], help='Repeat card-admitted root IDs (independent of roots file)')
     parser.add_argument('--root-id', help='Original receipt namespace')
+    parser.add_argument('--original-raw-roots', type=Path, help='Independently admitted absolute JSON origin mapping (not receipt-derived)')
+    parser.add_argument('--raw-provenance', type=Path, help='Explicit JSON array of envelope Refs collected from admissions')
     parser.add_argument('--hash-dir', type=Path)
     args = parser.parse_args(argv)
     try:
@@ -615,7 +676,12 @@ def main(argv=None):
             if not args.receipt or not args.roots or not args.root_id or not args.allowed_root_id:
                 parser.error('receipt requires --roots, --root-id and card-admitted --allowed-root-id')
             resolver = Resolver(loads(args.roots.read_bytes()), allowed_root_ids=args.allowed_root_id)
-            validate(loads(args.receipt.read_bytes()), resolver, root_id=args.root_id)
+            if args.original_raw_roots:
+                if not args.original_raw_roots.is_absolute() or 'raw:campaign' not in args.allowed_root_id:
+                    raise ValueError('original raw roots require absolute JSON and admitted raw:campaign')
+                resolver.original_raw_roots = loads(args.original_raw_roots.read_bytes())
+            envelopes = loads(args.raw_provenance.read_bytes()) if args.raw_provenance else ()
+            validate(loads(args.receipt.read_bytes()), resolver, root_id=args.root_id, raw_provenance=envelopes)
             result = dict(status='structurally_valid', scientific_acceptance=False)
         print(json.dumps(result, sort_keys=True, allow_nan=False))
         return 0

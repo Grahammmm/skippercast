@@ -31,7 +31,7 @@ def closed(value, allowed, required=()):
         raise ValueError('unknown or missing native producer field')
 
 
-def check(doc, contract):
+def check(doc, contract, *, lineage_bound=False):
     canonical(doc)
     if contract in FIELDS:
         closed(doc, FIELDS[contract].split())
@@ -43,12 +43,12 @@ def check(doc, contract):
         source = doc.get('source')
         if not isinstance(source, dict) or not {'path', 'sha256', 'bytes'} <= source.keys():
             raise ValueError('native producer requires complete source reference')
-    if doc.get('source_row') is not None:
+    if doc.get('source_row') is not None and not lineage_bound:
         raise ValueError('held: retained source-row adapter not yet admitted')
     facts = doc.get('facts', doc.get('native_facts', {}))
     if not isinstance(facts, dict) or not isinstance(facts.get('source_lineage', {}), dict):
         raise ValueError('malformed native facts/source lineage')
-    if facts.get('source_lineage', {}).get('source_row') is not None:
+    if facts.get('source_lineage', {}).get('source_row') is not None and not lineage_bound:
         raise ValueError('held: retained source-row adapter not yet admitted')
     if contract == STORE_JOB:
         closed(doc, FIELDS[contract].split(), FIELDS[contract].split())
