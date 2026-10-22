@@ -64,6 +64,30 @@ export function buildExport({atlas,screen,ids,layers=DEFAULT_LAYERS,region,title
   return {gpx,counts,features,allowResearch:allowResearch===true,exclusions,created_at:stamp,boundary_checked_at:snapshot?.checked_at||null,region_id:region.id,source_validation_date:atlas.source_validation_date||null,layers:{...layers},avoid_bounds:exportBounds};
 }
 const safeLink=value=>{try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?xml(u.href):'';}catch{return '';}};
+// A blocked plan can carry a boundary-context report, never fishing coordinates.
+// Run the authoritative export first: only a named point hit gets this fallback.
+export function protectedPlanHits(screen,targets) {
+  if(!screen?.ready())return [];
+  return targets.flatMap(t=>{
+    const inspection=screen.inspect?.(t);
+    return inspection?.fresh && inspection.status==='excluded' && inspection.matches?.length
+      ? [{id:t.id,label:t.label,matches:inspection.matches}]:[];
+  });
+}
+export function protectedPlanNotes(request,draft) {
+  try { buildExport(request); return null; }
+  catch(error) {
+    if(error.message!=='A selected spot fails the current protected-area check. Review your selection on the map.')throw error;
+    const targets=request.atlas.targets.filter(t=>request.ids.includes(t.id));
+    if(targets.some(t=>!validPoint(t)))throw error;
+    if(targets.some(t=>!isMeasuredTarget(t))&&request.allowResearch!==true)
+      throw Error('Research coordinates need explicit opt-in. Enable Research-coordinate export or select measured reefs.');
+    const hits=protectedPlanHits(request.screen,targets);
+    if(!hits.length || targets.some(t=>!request.screen.pointAllowed(t)&&!hits.some(h=>h.id===t.id)))throw error;
+    const checked=request.screen.exportExclusions?.()?.checked_at;
+    return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${xml(draft.name)} · Boundary context</title><h1>${xml(draft.name)}</h1><p>Planned date ${xml(draft.date)}. Boundary source check ${xml(checked||'current session')}.</p><p>GPX withheld. This report contains boundary context only, not fishing waypoints or a legal clearance. Other selected items are omitted from this report. Boundaries are context; current rules are on the agency page. Recheck before departure; this file does not update offline.</p>${hits.map(h=>`<article><h2>${xml(h.id)} · ${xml(h.label)}</h2><p>Inside a protected-area boundary; excluded as a fishing target by SkipperCast.</p><ul>${h.matches.map(m=>`<li>${xml(m.name)} · <a href="${safeLink(m.url)}">${xml(m.agency)} boundary and rules</a></li>`).join('')}</ul></article>`).join('')}</html>`;
+  }
+}
 export function offlineNotes(result,region,draft,coordinateFormat='dd') {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${xml(draft.name)} · SkipperCast</title><style>body{font:17px/1.55 system-ui,sans-serif;max-width:760px;margin:auto;padding:24px;color:#173d47}article{border-top:1px solid #ccd9db;padding:16px 0}h1{line-height:1.2}h2{font-size:1.2em}a{color:#006c65;overflow-wrap:anywhere}dt{font-weight:bold}dd{margin:0 0 12px}pre{white-space:pre-wrap}@media print{body{padding:0}article{break-inside:avoid}}</style><h1>${xml(draft.name)}</h1><p>${xml(region.name)} · Planned date ${xml(draft.date)}</p><p>Created ${xml(result.created_at)}. Protected-area source check ${xml(result.boundary_checked_at||'current session')}.</p><p>${result.counts.waypoints} waypoints · ${result.counts.tracks} reference tracks. WGS84 coordinates. Habitat research, not verified fish presence or navigation routes.</p><p><strong>Before departure:</strong> check current regulations, closures, marine conditions and harbor access. This file does not update offline. The planned date is a label, not a future clearance. Follow your official navigation chart and sounder.</p><p><a href="https://skippercast.com/?region=${xml(region.id)}#map">Reopen this region</a> · <a href="${safeLink(region.regulations_url)}">Official regional regulations</a></p>
   ${result.features.selected.map(t=>`<article><h2>${xml(t.id)} · ${xml(t.label)}</h2><p>${xml(formatCoordinates(t.latitude,t.longitude,coordinateFormat))} · ${t.canonical_habitat?'Interior reef reference point':xml(t.center_depth_ft)+' ft center'} · ${xml(t.neighborhood_depth_ft.join('–'))} ft nearby (${xml(t.vertical_datum === 'MLLW' ? 'survey MLLW' : 'source raster; vertical datum unverified, research only')})</p><dl><dt>Structure</dt><dd>${xml(t.terrain_interpretation)}</dd><dt>Priority</dt><dd>${xml(t.habitat_grade)} · ${xml(t.habitat_score)}/100 terrain score, not catch probability.</dd><dt>Export class</dt><dd>${xml(exportEvidenceLabel(t))}</dd><dt>Evidence</dt><dd>${xml(t.evidence_status)} ${xml(t.ais_status)} Survey ${xml(t.survey_year)}.</dd><dt>Approach notes</dt><dd>${xml(t.special_note||'Locate structure and fish on your sounder; measure your actual drift before setting up.')} Fixed alignment tracks do not predict drift or provide a safe approach.</dd></dl><a href="${safeLink(t.source_url)}">Survey source</a></article>`).join('')}

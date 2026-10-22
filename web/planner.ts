@@ -15,7 +15,7 @@
 //
 // Erasable syntax only: the node tests import this file by type stripping.
 import {batch, computed, effect, signal, untracked} from '@preact/signals';
-import {buildExport, draftKey, exportPresetTargets, isMeasuredTarget, offlineNotes, readDraft} from '../dist/trip-export.js';
+import {buildExport, draftKey, exportPresetTargets, isMeasuredTarget, offlineNotes, protectedPlanHits, protectedPlanNotes, readDraft} from '../dist/trip-export.js';
 import {loadReefTrip} from '../dist/reef-trip-data.js';
 import {bestSpots, waypointTitle} from '../dist/spot-ranking.js';
 import {HOME_PORT_KEY} from '../dist/home-port.js';
@@ -34,6 +34,7 @@ export type Target = {
   neighborhood_depth_ft?: number[]; center_depth_ft?: number | null; terrain_interpretation?: string; species_fit?: Record<string, number>;
 };
 export type Area = {id: string};
+export type ProtectedHit = {id: string; label: string; matches: {name: string; url: string; agency: string}[]};
 export type Publication = {export_sha256?: string} & Record<string, unknown>;
 export type Atlas = {targets: Target[]; areas: Area[]; drifts?: unknown[]; publication?: Publication; source_validation_date?: string};
 export type Reefs = {targets: Target[]; areas: Area[]; publication: Publication & {export_sha256: string}; source_validation_date?: string};
@@ -150,6 +151,14 @@ export function createPlanner(deps: PlannerDeps) {
   const summary = computed<Summary>(() => {
     void tick.value; void exportKey.value;
     try { return {ok: true, counts: (buildExport(request(draft.peek())) as {counts: Extract<Summary, {ok: true}>['counts']}).counts}; } catch (error) { return {ok: false, message: (error as Error).message}; }
+  });
+  const protectedHits = computed<ProtectedHit[]>(() => {
+    void tick.value;
+    return protectedPlanHits(screen, selected()) as ProtectedHit[];
+  });
+  const notesReady = computed(() => {
+    if (summary.value.ok) return true;
+    try { return !!protectedPlanNotes(request(), draft.value); } catch { return false; }
   });
   const spots = computed<Target[]>(() => {
     const q = search.value.trim().toLowerCase(), r = ranked.value, ids = draft.value.ids, research = allowResearch.value;
@@ -289,7 +298,12 @@ export function createPlanner(deps: PlannerDeps) {
       tripAtlas.value = {...tripAtlas.value, publication: latest.publication};
     }
     // Repeat the authoritative screen here, even if the preview count was valid moments ago.
-    const d = draft.value, result = buildExport(request()) as {gpx: string; counts: {waypoints: number}};
+    const d = draft.value;
+    if (kind === 'notes') {
+      const context = protectedPlanNotes(request(), {...d, date: d.date || today});
+      if (context) return new File([context], `SkipperCast-${region.id}-${d.date || today}-boundary-context.html`, {type: 'text/html'});
+    }
+    const result = buildExport(request()) as {gpx: string; counts: {waypoints: number}};
     const base = `SkipperCast-${region.id}-${d.date || today}-${result.counts.waypoints}wp`;
     return kind === 'notes'
       ? new File([offlineNotes(result, region, {...d, date: d.date || today}, coordinates.value) as string], `${base}.html`, {type: 'text/html'})
@@ -326,7 +340,7 @@ export function createPlanner(deps: PlannerDeps) {
 
   return {
     today, region, draft, tripAtlas, ranked, filtersDirty, restorePending, allowResearch, search, loading, portsReady, filters, ports,
-    scopeStatus, actionStatus, storageNote, tick, summary, spots,
+    scopeStatus, actionStatus, storageNote, tick, summary, spots, protectedHits, notesReady,
     setFilter, edit, setLayer, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, restore, exportFile, deliver, showOnMap, checkConditions,
     /** For tests and a region change: stop drawing the ranked set. */
