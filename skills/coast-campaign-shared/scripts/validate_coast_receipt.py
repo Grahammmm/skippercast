@@ -530,6 +530,7 @@ class GraphValidator:
             if 'source' in decision and decision['source'] != selection['source']:
                 raise ValueError('dry source differs from pinned plan')
         checked = dict(segment=plan['segment'], catalog_ref=dry['catalog'], decisions=decisions,
+                       selections={s['source_id']: s for s in plan['selections']},
                        selected_bytes=sum(d['source']['bytes'] for d in selected))
         if checked['selected_bytes'] > plan['max_total_bytes'] or any(d['source']['bytes'] > plan['budget']['bytes'] for d in selected):
             raise ValueError('selected sources exceed plan budget')
