@@ -105,7 +105,13 @@ not-for-navigation, review, no-endorsement (GEBCO/IHO/IOC), CSUMB and GEBCO
 caveats, the inventory's byte SHA-256 and a relative link to the complete C5
 rights page. `validateMvpManifest` rejects an adapted manifest that drops a
 CSUMB hold, invents one, loses a hash, terms link or required caveat, mixes in
-unadapted rows or points the rights page off-directory. The viewer shows the
+unadapted rows or points the rights page off-directory. The rights page path
+must pass `isLocalAssetPath`, which reuses the viewer's `localAsset` rule and
+additionally refuses `?`, `#` and `%`, so traversal (including encoded dot
+segments), backslashes, query/fragment, absolute and remote paths fail in the
+adapter, the validator and the CLI alike. The CLI also refuses an `--output`
+that resolves to the linked rights page (or an input), before writing anything.
+The viewer shows the
 unresolved permission in the persistent banner, outside the collapsible panel.
 
 Reproduce (the C5 page is built by the unmodified C5 tool from PR #828 at

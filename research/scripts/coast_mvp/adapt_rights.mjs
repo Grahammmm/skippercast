@@ -2,10 +2,11 @@
 // C3 presentation manifest. No network, raster reads or C5 file writes.
 // See README-viewer.md "Rights adapter".
 import {createHash} from 'node:crypto';
-import {existsSync, readFileSync, renameSync, rmSync, writeFileSync} from 'node:fs';
+import {existsSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync} from 'node:fs';
 import {dirname, resolve} from 'node:path';
 import {parseArgs} from 'node:util';
 import {adaptC5Rights} from '../../../packages/coast/src/coast3d/mvp-rights.ts';
+import {isLocalAssetPath} from '../../../packages/coast/src/coast3d/mvp.ts';
 
 const {values: a} = parseArgs({options: {
   inventory: {type: 'string'}, 'tile-base': {type: 'string'},
@@ -14,9 +15,15 @@ const {values: a} = parseArgs({options: {
 try {
   for (const k of ['inventory', 'tile-base', 'rights-page', 'output']) if (!a[k]) throw Error(`--${k} is required`);
   const output = resolve(a.output);
+  // Same containment rules as the viewer, checked before any filesystem access.
+  if (!isLocalAssetPath(a['rights-page'])) throw Error('rights page must be a relative file inside the manifest directory');
+  const page = resolve(dirname(output), a['rights-page']);
   if ([resolve(a.inventory), resolve(a['tile-base'])].includes(output)) throw Error('output must not overwrite an input');
+  if (page === output || (existsSync(output) && existsSync(page) && realpathSync(output) === realpathSync(page))) {
+    throw Error('output must not overwrite the linked rights page');
+  }
   // The complete C5 page must already sit beside the manifest; the viewer only links it.
-  if (!existsSync(resolve(dirname(output), a['rights-page']))) throw Error('rights page not found beside the output manifest');
+  if (!existsSync(page)) throw Error('rights page not found beside the output manifest');
   const raw = readFileSync(a.inventory);
   const manifest = adaptC5Rights(JSON.parse(raw.toString('utf8')), JSON.parse(readFileSync(a['tile-base'], 'utf8')),
     {page: a['rights-page'], inventorySha256: createHash('sha256').update(raw).digest('hex')});

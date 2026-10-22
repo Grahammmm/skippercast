@@ -45,6 +45,16 @@ export function localAsset(path: string, base: URL): string {
   // URL serialisation escapes braces; restore only the three numeric XYZ tokens.
   return url.href.replace(/%7B(z|x|y)%7D/gi, '{$1}');
 }
+/**
+ * Pure, offline form of localAsset: true iff the viewer would load `path` as a file inside its manifest directory.
+ * Stricter than localAsset on purpose: no `?`, `#` or `%` at all, so the URL path and the on-disk file name are identical.
+ */
+export function isLocalAssetPath(path: unknown): path is string {
+  if (!text(path) || /[?#%]/.test(path)) return false;
+  // Placeholder origin/directory only; nothing is fetched. Same function as the viewer, so the rules cannot drift.
+  const base = new URL('https://coast-mvp.invalid/assets/manifest/');
+  try { return !localAsset(path, base).endsWith('/'); } catch { return false; }
+}
 export function validateMvpManifest(value: unknown): MvpManifest {
   const m = value as MvpManifest;
   if (!m || m.schemaVersion !== 1 || !text(m.region) || typeof m.synthetic !== 'boolean' ||
@@ -73,8 +83,9 @@ export function validateMvpManifest(value: unknown): MvpManifest {
   if (m.rightsInventory === undefined && !adapted.length) return m;
   // Adapted C5 rights: every row keeps its hash, terms link and an explicit, uncleared status.
   const r = m.rightsInventory;
-  if (!r || r.schemaVersion !== 1 || !HEX64.test(String(r.sha256)) || r.status !== 'review_required' || !text(r.page) ||
-      r.page.startsWith('/') || /^[a-z][a-z0-9+.-]*:/i.test(r.page) || !Array.isArray(r.caveats) ||
+  // The rights page passes the viewer's own containment rules, so a manifest that validates can always link it.
+  if (!r || r.schemaVersion !== 1 || !HEX64.test(String(r.sha256)) || r.status !== 'review_required' ||
+      !isLocalAssetPath(r.page) || !Array.isArray(r.caveats) ||
       adapted.length !== m.sources.length) throw Error('Incomplete rights inventory link');
   for (const s of m.sources) {
     const x = s.rights;

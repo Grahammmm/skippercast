@@ -2,12 +2,12 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
-import {copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {adaptC5Rights} from '../packages/coast/src/coast3d/mvp-rights.ts';
-import {CSUMB_NOTICE, GEBCO_CAVEAT, NO_ENDORSEMENT, NOT_FOR_NAVIGATION, RIGHTS_REVIEW, validateMvpManifest} from '../packages/coast/src/coast3d/mvp.ts';
+import {CSUMB_NOTICE, GEBCO_CAVEAT, NO_ENDORSEMENT, NOT_FOR_NAVIGATION, RIGHTS_REVIEW, isLocalAssetPath, localAsset, validateMvpManifest} from '../packages/coast/src/coast3d/mvp.ts';
 
 const dir = new URL('../research/scripts/coast_mvp/fixtures/', import.meta.url);
 const raw = readFileSync(new URL('rights-adapter/inventory.json', dir));
@@ -152,5 +152,79 @@ test('adapter CLI pins the inventory bytes and leaves the previous manifest on f
     copyFileSync(new URL('rights-adapter/inventory.json', dir), inv);
     r = run();
     assert.equal(r.status, 2); assert.match(r.stderr, /rights page not found/);
+  } finally { rmSync(work, {recursive: true, force: true}); }
+});
+
+// Review round 1: the rights page must obey the viewer's own containment rules at every boundary.
+const BAD_PAGES = ['../rights.html', '%2e%2e/rights.html', '.%2e/rights.html', '%2E%2E/rights.html', 'sub/../../rights.html',
+  'sub/%2e%2e/%2e%2e/rights.html', '%252e%252e/rights.html', 'sub%2f..%2f..%2frights.html', '..\\rights.html', 'sub\\rights.html',
+  'rights.html?x=1', 'rights.html#x', 'rights.html?', 'https://remote.example/rights.html', '//remote.example/rights.html',
+  '/rights.html', 'file:///tmp/rights.html', 'javascript:alert(1)', 'data:text/html,x', 'user:pw@rights.html',
+  '', ' ', '.', './', 'sub/', '..', null, 42];
+const GOOD_PAGES = ['rights.html', './rights.html', 'sub/rights.html', 'sub/../rights.html'];
+
+test('rights page path: adapter, validator and viewer share one containment rule', () => {
+  const viewerBase = new URL('http://127.0.0.1:5179/research/scripts/coast_mvp/fixtures/viewer-demo/');
+  for (const page of GOOD_PAGES) {
+    assert.ok(isLocalAssetPath(page), page);
+    assert.doesNotThrow(() => localAsset(page, viewerBase), page);
+    assert.equal(adapt(inventory, base, {page, inventorySha256: sha}).rightsInventory.page, page);
+  }
+  const good = adapt();
+  for (const page of BAD_PAGES) {
+    const label = JSON.stringify(page);
+    assert.equal(isLocalAssetPath(page), false, label);
+    assert.throws(() => adapt(inventory, base, {page, inventorySha256: sha}), undefined, label);
+    const m = structuredClone(good); m.rightsInventory.page = page;
+    assert.throws(() => validateMvpManifest(m), /Incomplete rights inventory link/, label);
+    // Every rejected path is also one the viewer refuses, except the few the offline rule refuses more strictly
+    // (directories, and an empty query whose URL path would differ from the on-disk file name).
+    if (typeof page === 'string' && page.trim() && !['.', './', 'sub/', 'rights.html?'].includes(page)) {
+      assert.throws(() => localAsset(page, viewerBase), undefined, label);
+    }
+  }
+});
+
+test('adapter CLI rejects unsafe rights-page paths and output aliasing without touching any file', () => {
+  const work = mkdtempSync(join(process.env.TMPDIR || tmpdir(), 'c3-rights-alias-'));
+  try {
+    const cli = fileURLToPath(new URL('../research/scripts/coast_mvp/adapt_rights.mjs', import.meta.url));
+    const tileBase = fileURLToPath(new URL('rights-adapter/tile-base.json', dir));
+    const inv = join(work, 'inventory.json'), outDir = join(work, 'out'), out = join(outDir, 'manifest.json');
+    mkdirSync(join(outDir, 'sub'), {recursive: true});
+    copyFileSync(new URL('rights-adapter/inventory.json', dir), inv);
+    const pageBytes = Buffer.from('<!doctype html><title>complete C5 rights page</title>\n');
+    // Real files exist at the traversal targets, so only the path rule can stop them.
+    for (const p of [join(work, 'rights.html'), join(outDir, 'rights.html'), join(outDir, 'sub', 'rights.html')]) writeFileSync(p, pageBytes);
+    const run = (page, output = out) => spawnSync(process.execPath,
+      [cli, '--inventory', inv, '--tile-base', tileBase, '--rights-page', page, '--output', output], {encoding: 'utf8'});
+    let r = run('rights.html');
+    assert.equal(r.status, 0, r.stderr);
+    const before = readFileSync(out);
+    for (const page of ['sub/rights.html', './rights.html']) {
+      r = run(page, join(outDir, 'other.json'));
+      assert.equal(r.status, 0, `${page}: ${r.stderr}`);
+    }
+    for (const page of BAD_PAGES.filter(p => typeof p === 'string' && p.trim() && !p.startsWith('-'))) {
+      r = run(page);
+      assert.equal(r.status, 2, page); assert.match(r.stderr, /rights page must be a relative file inside the manifest directory/, page);
+      assert.deepEqual(readFileSync(out), before, page);
+    }
+    // Output aliasing the linked page: refused before writing; the page stays byte-identical.
+    for (const [page, output] of [['rights.html', join(outDir, 'rights.html')], ['./rights.html', join(outDir, 'rights.html')],
+      ['rights.html', join(outDir, 'sub', '..', 'rights.html')], ['rights.html', join(outDir, 'sub', 'rights.html')]]) {
+      r = run(page, output);
+      assert.equal(r.status, 2, page); assert.match(r.stderr, /must not overwrite the linked rights page/, page);
+    }
+    symlinkSync(join(outDir, 'rights.html'), join(outDir, 'alias.json'));
+    r = run('rights.html', join(outDir, 'alias.json'));
+    assert.equal(r.status, 2); assert.match(r.stderr, /must not overwrite the linked rights page/);
+    for (const p of [join(work, 'rights.html'), join(outDir, 'rights.html'), join(outDir, 'sub', 'rights.html')]) {
+      assert.deepEqual(readFileSync(p), pageBytes, p);
+    }
+    assert.deepEqual(readFileSync(out), before);
+    // Existing input protections still hold.
+    r = run('rights.html', inv);
+    assert.equal(r.status, 2); assert.match(r.stderr, /must not overwrite an input/);
   } finally { rmSync(work, {recursive: true, force: true}); }
 });

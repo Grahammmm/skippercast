@@ -1,6 +1,6 @@
 import {
   CSUMB_NOTICE, GEBCO_CAVEAT, NO_ENDORSEMENT, NOT_FOR_NAVIGATION, RIGHTS_REVIEW,
-  mentionsCsumb, mentionsGebco, validateMvpManifest,
+  isLocalAssetPath, mentionsCsumb, mentionsGebco, validateMvpManifest,
   type MvpManifest, type MvpSource,
 } from './mvp.ts';
 
@@ -43,6 +43,7 @@ export function adaptC5Rights(inventory: unknown, base: C3TileBase, link: Rights
     throw Error('C5 inventory must have schema_version=1 and sources[]');
   }
   if (!HEX64.test(String(link?.inventorySha256))) throw Error('inventory sha256 must be 64 lowercase hex characters');
+  if (!isLocalAssetPath(link.page)) throw Error('rights page must be a relative file inside the manifest directory');
   const seen = new Set<string>();
   const used: MvpSource[] = [];
   for (const raw of inv.sources) {
