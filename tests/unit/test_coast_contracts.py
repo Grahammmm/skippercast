@@ -146,3 +146,76 @@ def test_default_thresholds_and_no_operational_pairings():
     assert routing['qualified_reviewers']==[] and routing['allowed_pairs']==[]
     assert routing['allow_profile_fallback'] is False
     assert not (SHARED/'SKILL.md').exists()
+
+
+FIXTURE_ROOTS = {'queue:synthetic': 'queue', 'archive:synthetic:close01': 'archive', 'raw:campaign': 'raw'}
+
+
+def _tracked_fixture_paths():
+    out = subprocess.run(['git', 'ls-files', '-z', '--', 'tests/fixtures/coast'], cwd=ROOT,
+                         capture_output=True, check=True).stdout
+    return {p for p in out.decode().split('\0') if p}
+
+
+def _iter_refs(value):
+    if isinstance(value, dict):
+        if set(value) == {'root_id', 'path', 'sha256', 'bytes'}:
+            yield value
+        for item in value.values():
+            yield from _iter_refs(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _iter_refs(item)
+
+
+def untracked_fixture_refs(base, starts, tracked):
+    """Follow typed Refs from start fixtures; return every target that is not a tracked file.
+
+    CI checks out only tracked files, so a Ref that resolves locally to an
+    ignored/untracked file (for example under var/ or runs/) breaks there.
+    """
+    missing, seen, todo = [], set(), list(starts)
+    while todo:
+        rel = todo.pop()
+        if rel in seen:
+            continue
+        seen.add(rel)
+        try:
+            value = json.loads((base/rel).read_bytes())
+        except (OSError, ValueError):
+            continue
+        for ref in _iter_refs(value):
+            sub = FIXTURE_ROOTS.get(ref['root_id'])
+            if sub is None or not isinstance(ref['path'], str):
+                continue
+            target = f'tests/fixtures/coast/{sub}/{ref["path"]}'
+            if target not in tracked:
+                missing.append((rel, ref['root_id'], ref['path']))
+            elif target.endswith('.json'):
+                todo.append(target)
+    return missing
+
+
+def test_committed_fixture_refs_resolve_to_tracked_files():
+    tracked = _tracked_fixture_paths()
+    starts = sorted(p for p in tracked if p.startswith(('tests/fixtures/coast/queue/valid/',
+                                                        'tests/fixtures/coast/queue/diagnostic/')))
+    assert len(starts) >= len(schemas())
+    for wanted in ('tests/fixtures/coast/queue/plans/plan01/runs/run-00.json',
+                   'tests/fixtures/coast/queue/valid/run-summary.json'):
+        assert wanted in tracked
+    assert any(p.startswith('tests/fixtures/coast/queue/var/coastal/enqueue-intents/') for p in tracked)
+    assert untracked_fixture_refs(ROOT, starts, tracked) == []
+
+
+def test_untracked_fixture_ref_is_reported(tmp_path):
+    """Negative control: a Ref whose target exists only in the working tree is reported."""
+    base = tmp_path
+    (base/'tests/fixtures/coast/queue/var/x').mkdir(parents=True)
+    (base/'tests/fixtures/coast/queue/var/x/leaf.json').write_text('{}')
+    start = 'tests/fixtures/coast/queue/valid/a.json'
+    (base/'tests/fixtures/coast/queue/valid').mkdir(parents=True)
+    ref = dict(root_id='queue:synthetic', path='var/x/leaf.json', sha256='0'*64, bytes=2)
+    (base/start).write_text(json.dumps({'nested': [ref]}))
+    assert untracked_fixture_refs(base, [start], {start}) == [(start, 'queue:synthetic', 'var/x/leaf.json')]
+    assert untracked_fixture_refs(base, [start], {start, 'tests/fixtures/coast/queue/var/x/leaf.json'}) == []
