@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The Swell layer's selector switches between the primary swell, wind sea and secondary swell from the NOAA GFS-Wave wcoast.0p16 forecast, each drawn with height in feet, period and direction and named with its run time; the nearshore (CDIP MOP) rings are unchanged.
+- Chlorophyll feed limitations identify the current NOAA merged VIIRS product and its native grid spacing instead of the historical MODIS description; cloud gaps and freshness limits are unchanged.
+- Place a named waypoint on the Chart with a reef, wreck, bait, hazard or other category; save it in the browser’s region draft and export the category in GPX. User labels do not qualify habitat or depth, and current protected-area checks still apply.
 - The Chart's Stations layer shows configured buoy and tide stations, with provider links and timestamped readings labelled stale when old; bound CDIP MOP model sites are available without enabling the Swell field.
 - The Chart draws Morro Bay's shelf depth contours at every zoom: a line every 30 ft (heavier and labelled every 150 ft) to 480 ft, traced from the reviewed USGS/CSUMB 2 m survey grids (2008). A dashed survey edge marks where the reviewed grid stops; past it, a missing line means no reviewed data, not shallow water. Each line opens a card with its survey, date and vertical datum; the datum is unverified (the grids declare none), so these are not chart depths and not for navigation. The NOAA chart base is unchanged.
 - Choose a NOAA tide prediction station within the region, or the nearest listed station to the port. The browser remembers each region's choice and offline chart packs include its predictions; bar and shore assessments keep their reviewed reference station.

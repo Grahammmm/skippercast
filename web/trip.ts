@@ -18,7 +18,8 @@ import {atlasMarksURL, planIndexURL} from './startup-forms.ts';
 import {MARKS_SOURCE} from './map/layers.ts';
 import {markSources} from './map/marks.ts';
 import {NO_PLAN, fitCamera, rankedSpots, recheckPlan, screenRanked, type RankedPlan, type RankedScreen} from './map/ranked.ts';
-import {camera, cameraParam, type Camera} from './map/stage.ts';
+import {camera, cameraParam, choosePresentation, type Camera} from './map/stage.ts';
+import {beginWaypointPlacement, cancelWaypointPlacement} from './waypoint-placement.ts';
 import {appView, navigate, region, withParams, type UrlKey} from './state.ts';
 import {reachFor} from './reach.ts';
 import {tideSelection} from './tide-selection.ts';
@@ -71,7 +72,7 @@ const chartSize = () => { const r = document.querySelector('.app-chart')?.getBou
 type Loose<T> = (options: Record<string, unknown>) => T;
 const plain = (): string => location.href.split('#')[0]!;
 const go = (patch: Partial<Record<UrlKey, string | null>>): void => { navigate(withParams(plain(), patch)); };
-export const openTrip = (): void => { if (location.hash !== TRIP_HASH) navigate(plain() + TRIP_HASH); else tripOpen.value = true; };
+export const openTrip = (): void => { cancelWaypointPlacement(); if (location.hash !== TRIP_HASH) navigate(plain() + TRIP_HASH); else tripOpen.value = true; };
 export const closeTrip = (): void => { if (location.hash === TRIP_HASH) navigate(plain(), {replace: true}); tripOpen.value = false; refreshIds(); };
 
 const json = async (path: string): Promise<unknown> => {
@@ -120,6 +121,12 @@ async function startPlanner(id: string): Promise<Planner> {
       open: openTrip,
       showMap() { closeTrip(); if (appView.peek() !== 'coast') go({view: null}); },
       conditions(date: string) { closeTrip(); go({view: 'conditions', day: date}); },
+      chooseWaypoint(pick) {
+        closeTrip();
+        if (appView.peek() !== 'coast') go({view: null});
+        choosePresentation('chart');
+        beginWaypointPlacement(id, pick);
+      },
     }});
   plannerView.value = {model, View};
   void screen.refresh();
