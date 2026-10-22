@@ -302,9 +302,10 @@ test('the landing shows the hero and every reading with its source and age; a st
   await expect(page.locator('.landing-fresh')).toHaveText('Buoy feed updated 12 min ago');
   await expect(page.locator('#landing-readout-title')).toHaveText('Latest readings · Morro Bay & Avila area');
   await expect(page.locator('[data-fleet]')).toHaveCount(0);
-  await expect(page.locator('.landing-dots a[data-layer]')).toHaveCount(8);
+  await expect(page.locator('.landing-dots a[data-layer]')).toHaveCount(9);   // one per rail entry, Temp contrast, chlorophyll and stations included
   const layerIds = await page.locator('.landing-dots a[data-layer]').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-layer')));
-  expect(layerIds).toEqual(['seafloor', 'currents', 'water-temp', 'sst-contrast', 'swell', 'stations', 'fleet', 'clouds']);
+  expect(layerIds).toEqual(['seafloor', 'currents', 'water-temp', 'sst-contrast', 'chlorophyll', 'swell', 'stations', 'fleet', 'clouds']);
+  await expect(page.locator('.landing-dots a[data-layer="chlorophyll"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=chlorophyll&ui=v2$/);
   await expect(page.locator('.landing-dots a[data-layer="sst-contrast"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=sst-contrast&ui=v2$/);
   await expect(page.locator('.landing-dots a[data-layer="stations"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=stations&ui=v2$/);
   await expect(page.locator('.landing-dots a[data-layer="currents"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=currents&current=wcofs&ui=v2$/);
