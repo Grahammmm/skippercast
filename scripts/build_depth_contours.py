@@ -105,7 +105,7 @@ def merged_blocks(paths, lattice):
             source = np.full(merged.shape, -1, dtype='int8')
             for i, (grid, (col0, row0, _)) in enumerate(zip(grids, offsets)):
                 window = Window(col0, row0 + by * n, width * n, rows * n)
-                values = grid.read(1, window=window, boundless=True, masked=True).filled(np.nan).astype('float64')
+                values = grid.read(1, window=window, boundless=True, masked=True).astype('float64').filled(np.nan)
                 water = np.isfinite(values) & (values < 0) & (values >= -3000)
                 fill = water & (source < 0)
                 merged[fill], source[fill] = values[fill], i

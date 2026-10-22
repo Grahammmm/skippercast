@@ -114,3 +114,13 @@ def test_identity_packing_is_unambiguous(tmp_path, applied):
     path = grid(tmp_path, scale=1, offset=0, tags={'scale_offset_applied': applied})
     depth, _, _ = bdc.merged_blocks([path], bdc.lattice_for([path]))
     assert np.allclose(depth, 20 * dc.FEET_PER_M)
+
+
+def test_int16_nodata_only_invalidates_its_own_block(tmp_path):
+    values = np.full((16, 16), -20, 'int16')
+    values[2, 3] = -32768
+    path = write_tif(tmp_path / 'masked.tif', values, nodata=-32768)
+    depth, owner, _ = bdc.merged_blocks([path], bdc.lattice_for([path]))
+    assert np.isnan(depth[0, 0]) and owner[0, 0] == -1
+    assert np.allclose(depth[[0, 1, 1], [1, 0, 1]], 20 * dc.FEET_PER_M)
+    assert (owner[[0, 1, 1], [1, 0, 1]] == 0).all()
