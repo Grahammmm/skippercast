@@ -3,15 +3,14 @@ from copy import deepcopy
 import hashlib
 from html.parser import HTMLParser
 import json
-from pathlib import Path
 import subprocess
 import sys
 
 import pytest
 
+from research.lib.paths import ROOT
 from research.scripts.coast_mvp.coast_rights import render_manifest
 
-ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / "research/tests/fixtures/coast_mvp/rights-manifest.json"
 SCRIPT = ROOT / "research/scripts/coast_mvp/coast_rights.py"
 
