@@ -137,3 +137,35 @@ def test_orientation_refused_at_lattice_and_direct_merge(tmp_path, coefficients)
         bdc.lattice_for([path])
     with pytest.raises(ValueError, match='north-up'):
         bdc.merged_blocks([path], (500000, 4000000, 2, 2))
+
+
+def test_lattice_cap_exact_boundary_without_allocating():
+    assert bdc.checked_lattice((0, 0, 1, bdc.MAX_BLOCKS)) == (0, 0, 1, bdc.MAX_BLOCKS)
+    with pytest.raises(ValueError, match='exceeds'):
+        bdc.checked_lattice((0, 0, 1, bdc.MAX_BLOCKS + 1))
+    with pytest.raises(ValueError, match='exceeds'):
+        bdc.checked_lattice((0, 0, np.int64(2**32), np.int64(2**32)))
+
+
+def test_direct_oversize_lattice_refused_before_open_or_allocation(monkeypatch):
+    def fail(*args, **kwargs):
+        pytest.fail('oversize lattice must be refused before any I/O or allocation')
+    monkeypatch.setattr(bdc.rasterio, 'open', fail)
+    monkeypatch.setattr(bdc.np, 'full', fail)
+    with pytest.raises(ValueError, match='exceeds'):
+        bdc.merged_blocks(['not-opened.tif'], (0, 0, 1, bdc.MAX_BLOCKS + 1))
+
+
+@pytest.mark.parametrize('lattice', [(0, 0, 0, 1), (0, 0, -1, 1), (0, 0, 1.5, 2),
+                                     (0, 0, True, 2), (float('nan'), 0, 1, 1),
+                                     (0, float('inf'), 1, 1)])
+def test_malformed_lattice_refused(lattice):
+    with pytest.raises(ValueError, match='finite coordinates and positive integer'):
+        bdc.checked_lattice(lattice)
+
+
+def test_empty_sources_refused():
+    with pytest.raises(ValueError, match='At least one contour grid'):
+        bdc.lattice_for([])
+    with pytest.raises(ValueError, match='At least one contour grid'):
+        bdc.merged_blocks([], (0, 0, 1, 1))

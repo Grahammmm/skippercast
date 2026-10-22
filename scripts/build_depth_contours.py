@@ -35,6 +35,8 @@ from skippercast.platform import depth_contours as dc  # noqa: E402
 from skippercast.coastal import vertical  # noqa: E402
 
 STRIP_BLOCKS = 64
+# Fail before allocation for disjoint/absurd extents (ADV-SC 5).
+MAX_BLOCKS = 250_000_000
 # Survey-edge display: outline simplification, and the shortest piece kept (a smaller gap still stops the lines).
 EDGE_TOLERANCE_M = 12
 EDGE_MIN_LENGTH_M = 200
@@ -88,6 +90,18 @@ def require_contour_vertical(grid):
         raise ValueError(f'{grid.name}: unsupported scale_offset_applied metadata')
 
 
+def checked_lattice(lattice):
+    x0, y0, width, height = lattice
+    if (not np.isfinite(x0) or not np.isfinite(y0)
+            or any(isinstance(v, (bool, np.bool_)) or not isinstance(v, (int, np.integer)) or v <= 0
+                   for v in (width, height))):
+        raise ValueError('Contour lattice requires finite coordinates and positive integer dimensions')
+    # Python integers avoid overflow if an external caller supplies numpy ints.
+    if int(width) * int(height) > MAX_BLOCKS:
+        raise ValueError(f'Contour lattice exceeds {MAX_BLOCKS} blocks; use a bounded extent')
+    return lattice
+
+
 def merged_blocks(paths, lattice):
     """The grids merged cell by cell (the first grid with valid water wins each native cell) and averaged into CELL_M blocks.
 
@@ -95,7 +109,9 @@ def merged_blocks(paths, lattice):
     the index of the grid supplying most of a valid block's cells (-1 elsewhere). Merging native cells first means a
     block straddling a seam between two surveys still counts, so a seam is never a gap.
     """
-    _, _, width, height = lattice
+    _, _, width, height = checked_lattice(lattice)
+    if not paths:
+        raise ValueError('At least one contour grid is required')
     grids = [rasterio.open(p) for p in paths]
     try:
         for grid in grids:
@@ -129,6 +145,8 @@ def merged_blocks(paths, lattice):
 
 def lattice_for(paths):
     """The shared lattice (x0, y0, width, height) covering every grid, its corner on the first grid's native cell edges."""
+    if not paths:
+        raise ValueError('At least one contour grid is required')
     bounds = []
     for path in paths:
         with rasterio.open(path) as g:
@@ -140,7 +158,8 @@ def lattice_for(paths):
     px, py = bounds[0].left, bounds[0].top
     x0 = px - np.ceil((px - west) / dc.CELL_M) * dc.CELL_M
     y0 = py + np.ceil((north - py) / dc.CELL_M) * dc.CELL_M
-    return float(x0), float(y0), int(np.ceil((east - x0) / dc.CELL_M)), int(np.ceil((y0 - south) / dc.CELL_M))
+    return checked_lattice((float(x0), float(y0), int(np.ceil((east - x0) / dc.CELL_M)),
+                            int(np.ceil((y0 - south) / dc.CELL_M))))
 
 
 def to_lonlat(transformer, points):

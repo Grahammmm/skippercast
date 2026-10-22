@@ -147,8 +147,8 @@ def test_positive_down_depth_grid_is_not_silently_dropped(tmp_path):
 def test_lattice_for_refuses_absurd_extent(tmp_path):
     a = flat(tmp_path, 'a.tif', -10)
     b = flat(tmp_path, 'b.tif', -10, transform=Affine(2, 0, 500000 + 2_000_000, 0, -2, 4000000 + 2_000_000))
-    x0, y0, w, h = bdc.lattice_for([a, b])
-    assert w * h < 250_000_000, f'lattice of {w}x{h} blocks would be allocated as float64 + int8 arrays'
+    with pytest.raises(ValueError, match='exceeds 250000000 blocks'):
+        bdc.lattice_for([a, b])
 
 
 def test_to_lonlat_across_antimeridian_has_no_world_wide_jump():
