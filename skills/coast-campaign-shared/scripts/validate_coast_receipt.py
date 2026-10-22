@@ -32,7 +32,14 @@ NATIVE_FIELDS = {
                                  'native_facts.source_auxiliary.*', 'native_facts.rights.evidence.*'},
     'coastal-mapping-run-v1': {'source', 'outputs.*'},
     'coastal-terrain-summary-v1': set(),
+    # Leaf producer contracts reached from plan/job/mapping-input slots.
+    'coastal-private-input-review-v2': set(),
+    'vertical-v1': set(),
+    'vertical-observation-v1': set(),
 }
+VERTICAL_OBSERVATION_FIELDS = {'schema', 'source_sha256', 'header', 'header_sha256', 'facts', 'conflicts', 'sign_hint',
+                               'units', 'datum', 'scale', 'offset', 'scale_offset_applied'}
+REVIEW_FIELDS = {'schema', 'independent', 'reviewer_id', 'facts_digest', 'checked_at', 'valid_until', 'decision', 'holds_added'}
 # Rights evidence slots carry a producer-declared contract. Only these leaf
 # contracts are understood; each is validated strictly in rights_evidence().
 RIGHTS_SLOTS = {'selections.*.rights.evidence.*', 'rights.evidence.*', 'native_facts.rights.evidence.*'}
@@ -374,6 +381,30 @@ class GraphValidator:
         fields[bridge.RECEIPT] = (fields[bridge.DRY_RUN] - {'would_enqueue'}) | {'jobs', 'budget', 'segment'}
         if name in fields and set(doc) - fields[name]:
             raise ValueError('unknown producer field: ' + name)
+        if name == 'coastal-private-input-review-v2':
+            # handoff/common.review_holds() binding rules, checked structurally.
+            import re
+            from datetime import datetime
+            def epoch(stamp):
+                if not isinstance(stamp, str) or not stamp.endswith('Z'):
+                    raise ValueError('review timestamps must be UTC')
+                return datetime.fromisoformat(stamp[:-1] + '+00:00').timestamp()
+            if (set(doc) != REVIEW_FIELDS or doc['independent'] is not True or not isinstance(doc['reviewer_id'], str)
+                    or not doc['reviewer_id'].strip() or doc['reviewer_id'].startswith('coastal.')
+                    or not isinstance(doc['facts_digest'], str) or not re.fullmatch('[0-9a-f]{64}', doc['facts_digest'])
+                    or doc['decision'] not in ('qualified_private_terrain', 'accept')
+                    or not isinstance(doc['holds_added'], list) or any(not isinstance(h, str) or not h for h in doc['holds_added'])
+                    or not epoch(doc['checked_at']) < epoch(doc['valid_until'])):
+                raise ValueError('independent input review binding invalid')
+        if name == 'vertical-v1':
+            from skippercast.coastal import vertical
+            if not isinstance(vertical.validate(doc), list):
+                raise ValueError('vertical block invalid')
+        if name == 'vertical-observation-v1':
+            # vertical.from_raster() output: exact fields, header digest recomputed.
+            from skippercast.coastal import vertical
+            if set(doc) != VERTICAL_OBSERVATION_FIELDS or doc['header_sha256'] != vertical.digest(doc['header']):
+                raise ValueError('vertical observation binding invalid')
         if name == 'private-mapping-input-v2':
             from skippercast.coastal.coordinator.stages import digest
             facts = doc['native_facts']
@@ -416,7 +447,10 @@ class GraphValidator:
         def edge(ref, contract=None):
             if ref['root_id'] != root_id:
                 raise ValueError('legacy PC9 reference leaves its queue namespace')
-            return self.reference(versions.typed(ref), contract=contract or ref.get('contract'))
+            # Producer contract labels are enforced on JSON documents; binary
+            # artifacts (GeoTIFF support/terrain) are bound by exact SHA/bytes.
+            label = contract or (ref.get('contract') if ref['path'].endswith('.json') else None)
+            return self.reference(versions.typed(ref), contract=label)
         admission = edge(doc['admission'], 'coast-admission-v1')
         bridge_doc = edge(doc['bridge'], bridge.RECEIPT)
         if any(doc[k] != admission[k] for k in ('campaign_segment_id', 'coordinator_segment_id', 'plan_id', 'plan_sha256')):
@@ -557,10 +591,17 @@ class GraphValidator:
         if (math.ceil(x1/5000)-math.floor(x0/5000)) * (math.ceil(y1/5000)-math.floor(y0/5000)) > 4096:
             raise ValueError('campaign lattice exceeds 4096 record validation bound')
         records = from_bbox(campaign['bbox_crs84'], region=campaign['campaign_segment_id'])
+        # PC9 producer records may carry synthetic=True; bridge_run._context binds it
+        # to plan.synthetic. Only that exact producer label is excluded from the
+        # lattice comparison, and only when the plan agrees.
+        lattice = {k: v for k, v in record.items() if k != 'bbox_crs84'}
+        if 'synthetic' in record:
+            if record['synthetic'] is not True or plan.get('synthetic') is not True:
+                raise ValueError('synthetic segment record without synthetic plan')
+            del lattice['synthetic']
         # Projected lattice fields remain exact. Only inverse projection is
         # subject to the measured, two-ULP libm portability bound.
-        if not any({k:v for k,v in r.items() if k != 'bbox_crs84'} ==
-                   {k:v for k,v in record.items() if k != 'bbox_crs84'} and
+        if not any({k:v for k,v in r.items() if k != 'bbox_crs84'} == lattice and
                    inverse_bounds_equal(record['bbox_crs84'], r['bbox_crs84']) for r in records):
             raise ValueError('campaign lattice record mismatch')
         if record['segment_id'] != doc['coordinator_segment_id'] or plan['segment'] != {k: record[k] for k in ('segment_id', 'bbox_crs84')}:
