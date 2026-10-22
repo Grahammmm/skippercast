@@ -40,14 +40,14 @@ def policy():
 def row():
     return {'id':'native','sha256':'a'*64,'status':'usable','kind':'bathymetry',
             'resolution_m':2.,'vertical_datum':'unknown','license':'public-domain-us-gov',
-            'url':'https://example.test/original-depth','publisher':'Original publisher',
+            'url':'https://pubs.usgs.gov/synthetic/original-depth','publisher':'USGS',
             'adapter_review':{'requested_bounds_wgs84':[-122,35,-121,36]}}
 
 
 def binding():
     return {'row': {'id':'classes','sha256':'b'*64,'status':'candidate','kind':'substrate',
                    'format':'usgs-geotiff','license':'public-domain-us-gov',
-                   'url':'https://example.test/original-class','publisher':'Original publisher'},
+                   'url':'https://pubs.usgs.gov/synthetic/original-class','publisher':'USGS'},
         'binding': {'source_id':'classes','source_sha256':'b'*64,'depth_source_ids':['native'],
                     'review_status':'reviewed','metadata_url':policy()['metadata_url'],
                     'metadata_sha256':'c'*64,'same_survey_as_depth':True,

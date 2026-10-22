@@ -33,7 +33,7 @@ def isolated(root, rows):
 
 
 def row(ident, license='public-domain-us-gov'):
-    return {'id': ident, 'url': 'https://example.test/'+ident, 'license': license,
+    return {'id': ident, 'url': 'https://pubs.usgs.gov/synthetic/'+ident, 'publisher': 'USGS', 'license': license,
             'kind': 'bathymetry', 'status': 'usable', 'sha256': 'a'*64, 'derived_from': []}
 
 
@@ -159,6 +159,11 @@ class GovernmentScopeTests(unittest.TestCase):
                 self.assertFalse(unchanged)
                 self.assertEqual([call.args[0]['id'] for call in opening.call_args_list], ['native'])
                 self.assertEqual([s['id'] for s in receipt['inputs']['sources']], ['native'])
+                # Independent real runner receipt, not a fixture made by the verifier.
+                from skippercast.seafloor import physical_identity
+                with patch.object(physical_identity, 'load_manifest', return_value=manifest):
+                    self.assertEqual(physical_identity.current_physical_input_hash(root, 'r01'),
+                                     receipt['physical_input_hash'])
                 folder = root/'var/seafloor/reaches/r01'
                 self.assertEqual({c['source_id'] for c in read_json(folder/'cells.json')['cells']}, {'native'})
                 self.assertEqual(read_json(folder/'candidates.geojson')['calibration_source_ids'], ['native'])

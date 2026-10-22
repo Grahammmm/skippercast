@@ -58,12 +58,12 @@ class BedrockProductionTests(unittest.TestCase):
                 'bedrock_units':['Tus','Tm','KJug','KJug?','KJf','Ksl','Jo','Jo?'],
                 'excluded_units':['Qms/Tus','Qms/KJf','Qms/KJug','Qms/KJug?'],'invalid_original_records':[1],'native_windows':[[0,0,64,40]]}}
         row={'id':'native','sha256':'a'*64,'status':'usable','kind':'bathymetry','resolution_m':1.,
-             'vertical_datum':'NAVD88','license':'public-domain-us-gov','url':'https://example.test/depth',
-             'publisher':'Synthetic original depth'}
+             'vertical_datum':'NAVD88','license':'public-domain-us-gov','url':'https://pubs.usgs.gov/synthetic/depth',
+             'publisher':'USGS'}
         source={'id':'geology','sha256':source_sha,'status':'candidate','kind':'substrate','format':'vector',
                 'horizontal_crs':'EPSG:32610','license':'public-domain-us-gov',
                 'url':'https://pubs.usgs.gov/sim/3327/downloads/Geology_SanSimeon.zip',
-                'bytes':(cache/'source.zip').stat().st_size,'publisher':'USGS synthetic'}
+                'bytes':(cache/'source.zip').stat().st_size,'publisher':'USGS'}
         depth=root/'depth.tif'; data=np.full((40,64),30,dtype='float32')
         data[4:6,4:6]=np.nan; data[0:3,:]=100; data[37:,:]=2
         with rasterio.open(depth,'w',driver='GTiff',height=40,width=64,count=1,dtype='float32',

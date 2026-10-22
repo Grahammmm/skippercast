@@ -40,7 +40,8 @@ def processing_scope(root):
 def government_row(row, rows, visited=()):
     """Lineage cannot launder an excluded original into a government label."""
     ident = row.get('id')
-    if row.get('license') != LICENSE or ident in visited:
+    from .rights import government_source
+    if not government_source(row) or ident in visited:
         return False
     return all(parent in rows and government_row(rows[parent], rows, (*visited, ident))
                for parent in row.get('derived_from', []))

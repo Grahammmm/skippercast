@@ -157,7 +157,8 @@ class HabitatQualityTests(unittest.TestCase):
                         nodata=np.nan) as dst:
                     dst.write(depth, 1)
                 row = {'id': ident, 'resolution_m': resolution, 'year': 2020, 'vertical_datum': 'unknown',
-                    'license': 'public-domain-us-gov', 'url': 'https://example.org/'+ident, 'status': 'usable'}
+                    'license': 'public-domain-us-gov', 'url': 'https://pubs.usgs.gov/synthetic/'+ident,
+                    'publisher': 'USGS', 'status': 'usable'}
                 if ident == 'unselected-coarse': row['habitat_quality_hold'] = deepcopy(HOLD)
                 sources.append({'row': row, 'path': path, 'geometry': box(0, 0, 800, 800)})
             cells = [{'id': f'3310:{x}:{y}', 'reach': 'r01', 'band_area_m2': 62500, 'tier': 0}

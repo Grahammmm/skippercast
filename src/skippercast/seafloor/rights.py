@@ -1,5 +1,40 @@
 """Producer-specific release terms; distributor hosting grants no new rights."""
 from datetime import date
+from urllib.parse import urlsplit
+
+
+def government_source(row):
+    """Recognize original federal provenance, not a distributor/license label.
+
+    NCEI's ship archives include non-federal producers. Only its NOS survey
+    collection qualifies here; other federal collections need explicit review.
+    """
+    if row.get('license') != 'public-domain-us-gov':
+        return False
+    publisher = row.get('publisher')
+    url = row.get('url')
+    if not isinstance(publisher, str) or not isinstance(url, str):
+        return False
+    provenance = (publisher+' '+url).casefold()
+    if any(name in provenance for name in ('csumb', 'csu monterey bay', 'sfml',
+            'california state university monterey bay', 'seafloor mapping lab')):
+        return False
+    try:
+        parsed = urlsplit(url)
+        if (parsed.scheme != 'https' or parsed.username or parsed.password
+                or parsed.port not in (None, 443) or parsed.query or parsed.fragment
+                or '%' in parsed.path or '\\' in url
+                or any(part in {'.', '..'} for part in parsed.path.split('/'))):
+            return False
+    except ValueError:
+        return False
+    if publisher in {'USGS', 'U.S. Geological Survey', 'United States Geological Survey'}:
+        return parsed.hostname == 'usgs.gov' or (parsed.hostname or '').endswith('.usgs.gov')
+    if publisher in {'NOAA', 'NOAA NCEI', 'NOAA NOS', 'NOAA NOS Office of Coast Survey',
+            'NOAA NOS Office of Coast Survey; acquired by Fugro Pelagos under NOAA contract'}:
+        return (parsed.hostname == 'data.ngdc.noaa.gov'
+                and parsed.path.startswith('/platforms/ocean/nos/'))
+    return False
 
 CSUMB_LICENSE = 'csumb-public-use-noncommercial'
 CSUMB_POLICY = 'https://csumb.edu/undersea/sfml-data-library/'
@@ -22,6 +57,8 @@ def source_rights(row, *, use="noncommercial", today=None):
     if use not in {'noncommercial', 'for-profit'}:
         raise ValueError('Unknown deployment source-use profile')
     if row.get('license') == 'public-domain-us-gov':
+        if not government_source(row):
+            raise ValueError('Source public-domain rights require original government publisher and URL; producer permission unresolved')
         return {'source_id': row['id'], 'license': row['license'],
                 'source_url': row['url'], 'policy_url': row.get('adapter_review', {}).get('rights_source_url', ''),
                 'attribution': row.get('publisher', 'Original USGS / NOAA survey'),
