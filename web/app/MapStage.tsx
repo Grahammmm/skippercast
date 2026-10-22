@@ -27,11 +27,15 @@ import {coastPalette, readPalette} from '../map/palette.ts';
 import {createReach} from '../map/reach.ts';
 import {createContrast} from '../map/contrast.ts';
 import {createWaterTemp} from '../map/sst.ts';
+import {createChlorophyll} from '../map/chlorophyll.ts';
 import {createSwell} from '../map/swell.ts';
+import {createStations} from '../map/stations.ts';
+import {dailyFeed} from '../brief/Brief.tsx';
 import {createWind} from '../map/wind.ts';
 import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked} from '../map/stage.ts';
 import {poster, posterPlacement} from '../map/poster.ts';
 import {profile, region, species} from '../state.ts';
+import {cancelWaypointPlacement, waypointPlacement} from '../waypoint-placement.ts';
 import {currentRegionInfo, zone} from './App.tsx';
 
 export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> = [
@@ -45,6 +49,7 @@ export function PresentationToggle() {
   return (
     <div class="app-presentation">
       <p id={NOTE_ID} class="app-stage-note" role="status">{blocked ?? ''}</p>
+      {waypointPlacement.value === region.value && shown === 'chart' ? <p class="app-stage-note" role="status">Tap the Chart to place your waypoint. <button onClick={cancelWaypointPlacement}>Cancel waypoint</button></p> : null}
       <div role="group" aria-label="Map presentation" class="ui-segmented">
         {PRESENTATIONS.map(p => {
           const off = p.value !== 'chart' && !!blocked;
@@ -103,7 +108,8 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
     const place = () => regionPlace(currentRegionInfo(), profile.value, species.value ?? '');
     const stage = createStage({host: terrainHost.current!, palette, overlayPalette, center: () => currentRegionInfo()?.center ?? null, zone,
       renderers: [() => createChart({host: chartHost.current!, zone, place,
-        layers: [engine => createSwell({engine, zone, place}), engine => createContrast({engine, zone, place}), engine => createWind({engine, zone}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
+        layers: [engine => createChlorophyll({engine}), engine => createSwell({engine, zone, place}), engine => createContrast({engine, zone, place}), engine => createWind({engine, zone}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
+          engine => createStations({engine, zone, feed: () => dailyFeed.value}),
           engine => createAerial({engine, offer: () => currentRegionInfo()?.aerial ?? null}), engine => createDepthContours({engine}),
           engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
           engine => createReach({engine, host: chartHost.current!})]})]});

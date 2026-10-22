@@ -1056,11 +1056,11 @@ always-on), the presentations it draws in (`chart`, `terrain`, or both;
 product, its resolution and its age rule, shown in the rail's info popover
 and the legend), gating, and the `fish` module it ports. Draw order, bottom
 to top: basemap, aerial, ENC chart, relief, water temperature field, contours,
-temperature contrast cells, swell field, wind arrows, depth contours, MPAs, habitat polygons,
+temperature contrast cells, chlorophyll, swell field, wind arrows, depth contours, MPAs, habitat polygons,
 shore runs, seafloor candidates, charter
 grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents
 streamlines (canvas), clouds (raster, above fields so the loop reads as
-sky), reach ring, marks, selection, ranked trip spots, coastline glow.
+sky), reach ring, marks, selection, ranked trip spots, station pins, coastline glow.
 
 | Layer | Rail | Source | Rendering | Time | Basis (shape) | Task |
 | --- | --- | --- | --- | --- | --- | --- |

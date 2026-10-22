@@ -1211,3 +1211,43 @@ test('in 3D the terrain options sit in the Seafloor entry and the view buttons i
   await expect(view).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
+
+test('Stations legend stays bounded on phone and laptop and opens a station card from its list', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart'});
+  await showLayers(page);
+  const toggle = railToggle(page, 'Stations');
+  if (await toggle.getAttribute('aria-pressed') !== 'true') await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  const row = page.locator('.app-legend-stations');
+  await expect(row).toBeVisible();
+  for (const viewport of [{width: 390, height: 844}, {width: 1440, height: 900}]) {
+    await page.setViewportSize(viewport);
+    // On a narrow viewport the legend lives inside the sheet's Layers panel, so open it when it is not already open.
+    if (narrow(page)) {
+      const layersButton = page.getByRole('button', {name: 'Layers', exact: true});
+      await layersButton.waitFor();
+      if (await page.getByRole('button', {name: 'Done', exact: true}).count() === 0) await layersButton.click();
+    }
+    const geometry = await row.evaluate(el => {
+      const legendBox = el.closest('.app-legend')!.getBoundingClientRect();
+      const rowBox = el.getBoundingClientRect();
+      const controls = [...el.querySelectorAll('summary, button')].map(node => node.getBoundingClientRect());
+      return {legend: {left: legendBox.left, right: legendBox.right}, row: {left: rowBox.left, right: rowBox.right},
+        controls: controls.map(box => ({left: box.left, right: box.right})), scrollWidth: el.scrollWidth, clientWidth: el.clientWidth};
+    });
+    expect(geometry.row.left).toBeGreaterThanOrEqual(geometry.legend.left);
+    expect(geometry.row.right).toBeLessThanOrEqual(geometry.legend.right);
+    expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth);
+    for (const control of geometry.controls) {
+      expect(control.left).toBeGreaterThanOrEqual(geometry.legend.left);
+      expect(control.right).toBeLessThanOrEqual(geometry.legend.right);
+    }
+  }
+  await row.getByText('Station list', {exact: true}).click();
+  const stationButton = row.locator('details button').first();
+  await expect(stationButton).toBeVisible();
+  await stationButton.click();
+  await expect(page.locator('.app-mark')).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
