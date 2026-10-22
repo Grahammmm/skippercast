@@ -188,11 +188,19 @@ class Provenance:
         # Individual validation can temporarily bind its own native closure, but
         # no other envelope may repair it. Public registration occurs only after
         # all individual preflights and symmetric conflict checks succeed.
+        # graph.verified doubles as the traversal cache and the retention set
+        # (open_packet consumes it verbatim), so each envelope traverses against
+        # an empty cache and the union of every envelope's retained edges is
+        # restored only once all of them succeed, independent of supply order.
+        retained = set()
         for key, ref in distinct.items():
             self.pending = {}
             # No earlier envelope's traversal may repair this closure.
             graph.verified.clear()
             graph.reference(ref, contract=ENVELOPE)
+            retained |= graph.verified
+        graph.verified.clear()
+        graph.verified.update(retained)
         self.pending = {}
         self.preflighting = False
 

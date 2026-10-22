@@ -309,6 +309,47 @@ def test_compatible_historical_envelopes_coexist_order_independently(retained):
             graph.document(execution, root_id=ROOT)
 
 
+def retained_edges(envelope):
+    """Every edge an envelope must leave in the retention set (plan, snapshot, row, raw, originals)."""
+    edges = [envelope['plan'], envelope['snapshot']]
+    for selection in envelope['selections']:
+        edges += [selection['row'], selection['raw']] + list(selection['originals'])
+    return {refs.canonical(e) for e in edges}
+
+
+def retained_keys(graph):
+    return {key[0] for key in graph.verified}
+
+
+def test_preflight_retention_is_order_independent(retained):
+    """Per-envelope traversal-cache isolation must not drop earlier envelopes' retained edges."""
+    f = retained
+    second = second_plan_envelope(f)
+    docs = {refs.canonical(r): refs.loads((f.root / r['path']).read_text()) for r in (f.envelope_ref, second)}
+    expected = set().union(*(retained_edges(d) for d in docs.values())) | set(docs)
+    assert refs.canonical(f.envelope['plan']) != refs.canonical(docs[refs.canonical(second)]['plan'])
+    for order in ([f.envelope_ref, second], [second, f.envelope_ref]):
+        graph = validator.GraphValidator(f.resolver, raw_provenance=order)
+        assert expected <= retained_keys(graph), order
+        for execution in f.executions:
+            graph.document(execution, root_id=ROOT)
+        assert expected <= retained_keys(graph), order
+
+
+def test_admission_walk_retains_every_supplied_envelope(retained):
+    """Admission root walk with two compatible envelopes: pinned and historical (supplied, unreached) both retained."""
+    f = retained
+    admission, env_ref, plan_ref = admission_for(f)
+    env_doc = refs.loads((f.root / env_ref['path']).read_text())
+    expected = retained_edges(env_doc) | retained_edges(f.envelope) | {refs.canonical(env_ref), refs.canonical(f.envelope_ref),
+                                                                      refs.canonical(plan_ref), refs.canonical(f.envelope['plan'])}
+    for order in ([env_ref, f.envelope_ref], [f.envelope_ref, env_ref]):
+        graph = validator.GraphValidator(f.resolver, raw_provenance=order)
+        assert expected <= retained_keys(graph), order
+        graph.document(deepcopy(admission), root_id=ROOT)
+        assert expected <= retained_keys(graph), order
+
+
 def test_conflicting_raw_identity_refuses_r_raw(retained):
     f = retained
     original = f.envelope['selections'][0]['originals'][0]
