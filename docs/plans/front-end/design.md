@@ -1060,7 +1060,7 @@ temperature contrast cells, swell field, wind arrows, depth contours, MPAs, habi
 shore runs, seafloor candidates, charter
 grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents
 streamlines (canvas), clouds (raster, above fields so the loop reads as
-sky), reach ring, marks, selection, ranked trip spots, coastline glow.
+sky), reach ring, marks, selection, ranked trip spots, station pins, coastline glow.
 
 | Layer | Rail | Source | Rendering | Time | Basis (shape) | Task |
 | --- | --- | --- | --- | --- | --- | --- |

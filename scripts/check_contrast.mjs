@@ -375,8 +375,11 @@ export const SURFACE_SOURCE_SHA256 = {
   "panelCss": "fda5b83480f2c32243d5ff90b99e2581d459a46f88543d6a264705bdc8e821fb",
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "tokensCss": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
-  "appCss": "8a550d59481c70301e5c506bdef04cc2d4b286ae14068d7ed0c9eed66d7a110a",
-  "legendTsx": "ad3a42dac65927af22c1f4c3828d755f983db11ae8a55df97a59ddf85e51813a"
+  // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
+  "appCss": "4a3867af18c9eba3eb01391e84380a8052177bb8b841b4928f72287b2ef4dbd5",
+  // CI6-18 adds a Stations row using the existing text/muted glass roles.
+  // No backing, text paint or threshold changed; swatches/controls remain excluded.
+  "legendTsx": "77fb9d8fd18dac77937dc61aa19b0c86fbe1ac5fba0a4c40b088235e565f8389"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
