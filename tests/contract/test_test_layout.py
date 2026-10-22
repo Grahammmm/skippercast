@@ -12,6 +12,7 @@ import unittest
 from tests._support import GIS_PACKAGES, ROOT, SHARED_SURVEY_PACKAGES
 
 LAYERS = {'tests/unit', 'tests/contract', 'tests/integration', 'tests/gis',
+          'tests/audit_repro', 'tests/audit_repro/gis',
           'research/tests', 'research/tests/gis'}
 
 

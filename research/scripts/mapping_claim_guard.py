@@ -192,27 +192,59 @@ def validate_checkpoint(checkpoint: dict[str, Any], *, base_dir: Path | None = N
     _ = coordinator
 
 
+PUBLICATION_ROLES = {"rights", "restriction", "live_readback"}
+PUBLICATION_RECEIPT_SCHEMA = "mapping-publication-receipt-v1"
+
+
 def _require_publication_receipts(job: dict[str, Any], base_dir: Path | None) -> None:
+    """Check three distinct, job-bound receipts, not suggestive file names.
+
+    receipt_paths remains a list of paths; receipt_sha256 must independently pin
+    each path's raw bytes. Each JSON object declares schema, role, job_id and
+    status=PASS. These attest recorded checks, not scientific clearance.
+    """
     receipts = job.get("receipt_paths")
-    if not isinstance(receipts, list):
-        raise GuardError(f"published job {job['id']} needs rights, restriction, and live-readback receipts")
-    resolved = []
-    for item in receipts:
-        if not isinstance(item, str) or not item:
-            continue
-        path = Path(item)
-        resolved.append((path if path.is_absolute() else (base_dir or Path.cwd()) / path).resolve())
-    required = {"rights", "restriction", "live_readback"}
+    if (not isinstance(receipts, list) or len(receipts) != len(PUBLICATION_ROLES)
+            or any(not isinstance(p, str) or not p for p in receipts)):
+        raise GuardError(f"published job {job['id']} needs one receipt per publication role")
+    pins = job.get("receipt_sha256")
+    if not isinstance(pins, dict) or set(pins) != set(receipts):
+        raise GuardError("publication receipts need a pinned sha256 for every path")
     found: set[str] = set()
-    for path in resolved:
-        name = path.name.lower()
-        if path.is_file():
-            if "rights" in name: found.add("rights")
-            if "restriction" in name or "mpa" in name: found.add("restriction")
-            if "live" in name and ("readback" in name or "read-back" in name): found.add("live_readback")
-    missing = sorted(required - found)
-    if missing:
-        raise GuardError(f"published job {job['id']} missing existing receipt(s): {', '.join(missing)}")
+    files: set[tuple[int, int]] = set()
+    for item in receipts:
+        path = Path(item)
+        if not path.is_absolute():
+            path = (base_dir or Path.cwd()) / path
+        try:
+            if path.is_symlink() or not path.is_file():
+                raise GuardError(f"missing existing receipt or symlink: {item}")
+            with path.open("rb") as stream:
+                stat = os.fstat(stream.fileno())
+                identity = (stat.st_dev, stat.st_ino)
+                if identity in files:
+                    raise GuardError("publication roles require distinct receipt files")
+                files.add(identity)
+                raw = stream.read(65537)
+            if len(raw) > 65536:
+                raise GuardError("publication receipt exceeds 64 KiB")
+            if pins[item] != hashlib.sha256(raw).hexdigest():
+                raise GuardError(f"publication receipt hash differs: {item}")
+            doc = json.loads(raw)
+        except (OSError, ValueError, UnicodeError) as exc:
+            raise GuardError(f"invalid publication receipt {item}: {exc}") from exc
+        if not isinstance(doc, dict) or doc.get("schema") != PUBLICATION_RECEIPT_SCHEMA:
+            raise GuardError("publication receipt schema differs")
+        role = doc.get("role")
+        if not isinstance(role, str) or role not in PUBLICATION_ROLES or role in found:
+            raise GuardError("publication receipt role missing, unknown or duplicate")
+        if doc.get("job_id") != job["id"] or doc.get("status") != "PASS":
+            raise GuardError("publication receipt must pass for this job")
+        if doc.get("holds", []) != [] or doc.get("holds_added", []) != []:
+            raise GuardError("publication receipt held or malformed holds")
+        found.add(role)
+    if found != PUBLICATION_ROLES:
+        raise GuardError("missing publication receipt role")
 
 
 @contextmanager

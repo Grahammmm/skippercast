@@ -251,11 +251,15 @@ class MappingClaimGuardTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             record = job("p", state="published", receipt_paths=["rights-review.json", "restriction-check.json", "live-readback.json"])
+            record["receipt_sha256"] = dict.fromkeys(record["receipt_paths"], "0" * 64)
             with self.assertRaisesRegex(GuardError, "missing existing receipt"):
                 validate_checkpoint(checkpoint(record), base_dir=tmp_path)
-            for receipt in record["receipt_paths"]:
-                (tmp_path / receipt).write_text("synthetic receipt\n")
-            # Receipt presence is not a scientific-clearance claim.
+            for receipt, role in zip(record["receipt_paths"], ("rights", "restriction", "live_readback")):
+                raw = json.dumps(dict(schema="mapping-publication-receipt-v1", role=role,
+                                      job_id="p", status="PASS")).encode()
+                (tmp_path / receipt).write_bytes(raw)
+                record["receipt_sha256"][receipt] = hashlib.sha256(raw).hexdigest()
+            # Verified bookkeeping is still not a scientific-clearance claim.
             validate_checkpoint(checkpoint(record), base_dir=tmp_path)
 
     def test_checkpoint_symlink_alias_is_rejected_without_replacing_target(self):
