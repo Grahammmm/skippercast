@@ -44,6 +44,15 @@ REVIEW_FIELDS = {'schema', 'independent', 'reviewer_id', 'facts_digest', 'checke
 # contracts are understood; each is validated strictly in rights_evidence().
 RIGHTS_SLOTS = {'selections.*.rights.evidence.*', 'rights.evidence.*', 'native_facts.rights.evidence.*'}
 RIGHTS_CONTRACTS = {'coastal-rights-evidence-v1', 'synthetic-fixture-evidence-v1'}
+# Producer-declared coastal-rights-evidence-v1 leaf (fields read by
+# coordinator/authenticated.py rights binding, plus the optional
+# support_policy that partial-support candidate documents carry, see
+# tests/contract/test_four128_candidate_documents.py). Anything else refuses.
+RIGHTS_EVIDENCE_REQUIRED = {'schema', 'independent', 'reviewer_id', 'private_use', 'decision',
+                            'accepted_source_rights_for_declared_private_purpose', 'holds_added',
+                            'source_sha256', 'source_bytes', 'source_id', 'source_url', 'product_title',
+                            'checked_at', 'valid_until'}
+RIGHTS_EVIDENCE_FIELDS = RIGHTS_EVIDENCE_REQUIRED | {'synthetic', 'support_policy'}
 # private-mapping-input-v2 exact producer shape (handoff/mapping_input.produce).
 MAPPING_INPUT_FIELDS = {'schema', 'producer', 'segment_id', 'source', 'source_row', 'metadata_sha256', 'segment', 'window',
                         'declared_vertical', 'rights', 'synthetic', 'native_facts', 'valid_support', 'facts_digest',
@@ -332,18 +341,52 @@ class GraphValidator:
             if evidence != {'synthetic': True} or synthetic is not True:
                 raise ValueError('synthetic rights evidence outside a synthetic producer record')
             return
+        # Complete producer leaf shape first: undeclared scalar or nested
+        # path/reference fields refuse before any field is trusted, and no
+        # undeclared reference is ever resolved.
+        if not isinstance(evidence, dict):
+            raise ValueError('independent source-specific rights binding invalid')
+        unknown = sorted(set(evidence) - RIGHTS_EVIDENCE_FIELDS)
+        if unknown:
+            raise ValueError('unknown producer field: rights evidence ' + ', '.join(unknown))
+        missing = sorted(RIGHTS_EVIDENCE_REQUIRED - set(evidence))
+        if missing:
+            raise ValueError('rights evidence missing producer field: ' + ', '.join(missing))
+        if 'support_policy' in evidence and not isinstance(evidence['support_policy'], str):
+            raise ValueError('rights evidence producer field type invalid: support_policy')
+        # Owning producer-declared source row (nearest enclosing record that
+        # declares one), as authenticated.py binds row id/url/title. Missing or
+        # ambiguous identity refuses; absent values never match each other.
+        row = None
+        container = doc
+        chain = [doc]
+        for part in path[:path.index('rights')]:
+            container = container[int(part)] if isinstance(container, list) else container[part]
+            chain.append(container)
+        for record in reversed(chain):
+            if isinstance(record, dict) and 'source_row' in record:
+                row = record['source_row']
+                break
+        if (not isinstance(row, dict) or 'path' in row
+                or any(not isinstance(row.get(key), str) or not row[key].strip() for key in ('id', 'url', 'title'))):
+            raise ValueError('rights evidence owning source_row identity unavailable')
+        if not isinstance(source, dict) or ('sha256' in row and row['sha256'] != source.get('sha256')):
+            raise ValueError('rights evidence owning source_row identity unavailable')
         from datetime import datetime
         def epoch(stamp):
             if not isinstance(stamp, str) or not stamp.endswith('Z'):
                 raise ValueError('rights evidence timestamps must be UTC')
             return datetime.fromisoformat(stamp[:-1] + '+00:00').timestamp()
-        if (not isinstance(evidence, dict) or evidence.get('schema') != contract or evidence.get('independent') is not True
+        if (evidence.get('schema') != contract or evidence.get('independent') is not True
                 or not isinstance(evidence.get('reviewer_id'), str) or not evidence['reviewer_id'].strip()
                 or evidence.get('private_use') is not True
                 or evidence.get('decision') != 'accepted_private_processing_conditional_on_exact_expected_source_identity'
                 or evidence.get('accepted_source_rights_for_declared_private_purpose') is not True
-                or evidence.get('holds_added') != [] or not isinstance(source, dict)
+                or evidence.get('holds_added') != []
                 or evidence.get('source_sha256') != source.get('sha256') or evidence.get('source_bytes') != source.get('bytes')
+                or isinstance(evidence.get('source_bytes'), bool)
+                or evidence.get('source_id') != row['id'] or evidence.get('source_url') != row['url']
+                or evidence.get('product_title') != row['title']
                 or evidence.get('synthetic', False) is not (synthetic is True)):
             raise ValueError('independent source-specific rights binding invalid')
         if not epoch(evidence.get('checked_at')) < epoch(evidence.get('valid_until')):

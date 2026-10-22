@@ -9,6 +9,8 @@ import copy
 import hashlib
 import json
 import math
+import shutil
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -224,27 +226,110 @@ def test_native_rights_evidence_refs_refuse_unknown_tampered_traversal_and_names
     doc['synthetic'] = doc['native_facts']['synthetic'] = False
     with pytest.raises(ValueError, match='synthetic rights evidence'):
         check(g, rehash(doc))
-    # Rights evidence leaf contract: qualified coastal-rights-evidence-v1 must bind
-    # the exact source identity, private use, reviewer and validity window.
-    source = good['source']
-    leaf = dict(schema='coastal-rights-evidence-v1', independent=True, reviewer_id='synthetic-rights-reviewer', private_use=True,
+
+RIGHTS_ROW = dict(id='TEST_ONLY_SYNTHETIC_SOURCE', title='TEST_ONLY_SYNTHETIC.bag', kind='bathymetry', format='bag',
+                  url='https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/TEST/BAG/TEST_ONLY_SYNTHETIC.bag')
+
+
+def rights_leaf(source, row=RIGHTS_ROW):
+    """Complete producer-declared coastal-rights-evidence-v1 leaf (authenticated.py fields)."""
+    return dict(schema='coastal-rights-evidence-v1', independent=True, reviewer_id='synthetic-rights-reviewer', private_use=True,
                 decision='accepted_private_processing_conditional_on_exact_expected_source_identity',
                 accepted_source_rights_for_declared_private_purpose=True, holds_added=[], source_sha256=source['sha256'],
-                source_bytes=source['bytes'], synthetic=True, checked_at='2026-10-01T00:00:00Z', valid_until='2027-10-01T00:00:00Z')
-    for broken, message in [({}, None), (dict(reviewer_id=''), 'rights binding'), (dict(private_use=False), 'rights binding'),
-                            (dict(source_sha256='0' * 64), 'rights binding'), (dict(valid_until='2026-09-01T00:00:00Z'), 'validity')]:
-        value = dict(leaf, **broken)
-        name = 'rights-' + hashlib.sha256(refs.canonical(value)).hexdigest()[:8] + '.json'
-        ref = put(g.w.root, name, value)
-        evidence = dict(path=ref['path'], sha256=ref['sha256'], bytes=ref['bytes'], contract='coastal-rights-evidence-v1')
-        doc = copy.deepcopy(good)
-        doc['rights'] = dict(private_use=True, evidence=[evidence])
-        doc['native_facts']['rights'] = copy.deepcopy(doc['rights'])
-        if message is None:
-            check(g, rehash(doc))
-        else:
-            with pytest.raises(ValueError, match=message):
-                check(g, rehash(doc))
+                source_bytes=source['bytes'], source_id=row['id'], source_url=row['url'], product_title=row['title'],
+                synthetic=True, checked_at='2026-10-01T00:00:00Z', valid_until='2027-10-01T00:00:00Z')
+
+
+def with_rights_leaf(g, good, value, *, row=RIGHTS_ROW):
+    """Mapping input whose doc and native_facts rights both carry one leaf Ref (full graph)."""
+    name = 'rights-' + hashlib.sha256(refs.canonical(value)).hexdigest()[:8] + '.json'
+    ref = put(g.w.root, name, value)
+    evidence = dict(path=ref['path'], sha256=ref['sha256'], bytes=ref['bytes'], contract='coastal-rights-evidence-v1')
+    doc = copy.deepcopy(good)
+    doc['source_row'] = None if row is None else dict(row, sha256=good['source']['sha256'])
+    doc['rights'] = dict(private_use=True, evidence=[evidence])
+    doc['native_facts']['rights'] = copy.deepcopy(doc['rights'])
+    return rehash(doc)
+
+
+@pytest.mark.parametrize('world', ['real-stages-shared'], indirect=True)
+def test_rights_leaf_binds_owning_source_row_identity_and_refuses_unknown_fields(graph):
+    g = graph
+    good = mapping_input(g)
+    leaf = rights_leaf(good['source'])
+    # Complete positive control through the full mapping-input graph
+    # (rights.evidence.* and native_facts.rights.evidence.* slots).
+    check(g, with_rights_leaf(g, good, leaf))
+    check(g, with_rights_leaf(g, good, dict(leaf, support_policy='declared-partial-support')))
+    cases = [
+        (dict(reviewer_id=''), 'rights binding'),
+        (dict(private_use=False), 'rights binding'),
+        (dict(source_sha256='0' * 64), 'rights binding'),
+        (dict(source_bytes=True), 'rights binding'),
+        (dict(valid_until='2026-09-01T00:00:00Z'), 'validity'),
+        # Must-fix 1: each source identity component, wrong and missing, separately.
+        (dict(source_id='OTHER_SOURCE'), 'rights binding'),
+        (dict(source_url='https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/OTHER/BAG/OTHER.bag'), 'rights binding'),
+        (dict(product_title='OTHER.bag'), 'rights binding'),
+        # Must-fix 2: undeclared scalar and nested reference fields refuse.
+        (dict(not_a_producer_field='invented'), 'unknown producer field: rights evidence not_a_producer_field'),
+        (dict(undeclared_evidence=dict(path='../MUST-NOT-RESOLVE.json', sha256='0' * 64, bytes=1)),
+         'unknown producer field: rights evidence undeclared_evidence'),
+        (dict(support_policy=1), 'producer field type invalid: support_policy'),
+    ]
+    for broken, message in cases:
+        with pytest.raises(ValueError, match=message):
+            check(g, with_rights_leaf(g, good, dict(leaf, **broken)))
+    for field in ('source_id', 'source_url', 'product_title', 'schema', 'checked_at'):
+        value = {k: v for k, v in leaf.items() if k != field}
+        with pytest.raises(ValueError, match='rights evidence missing producer field: ' + field):
+            check(g, with_rights_leaf(g, good, value))
+    # No owning source_row, or an incomplete/ambiguous one, refuses: absent
+    # values never match absent evidence identity.
+    bare = {k: v for k, v in leaf.items() if k not in ('source_id', 'source_url', 'product_title')}
+    for value, row in [(leaf, None), (dict(bare, source_id=None, source_url=None, product_title=None), None),
+                       (leaf, {k: v for k, v in RIGHTS_ROW.items() if k != 'title'}), (leaf, dict(RIGHTS_ROW, url=''))]:
+        with pytest.raises(ValueError, match='owning source_row identity unavailable'):
+            check(g, with_rights_leaf(g, good, value, row=row))
+    doc = with_rights_leaf(g, good, leaf)
+    doc['source_row']['sha256'] = '0' * 64
+    with pytest.raises(ValueError, match='owning source_row identity unavailable'):
+        check(g, rehash(doc))
+
+
+def test_native_job_rights_slot_binds_owning_source_row(tmp_path):
+    """coastal-native-job-v1 rights.evidence.* parent slot: same leaf rules, and
+    a job that declares no source_row cannot back present evidence."""
+    root = tmp_path / 'queue'
+    shutil.copytree(Path(__file__).resolve().parents[1] / 'fixtures/coast/queue', root)
+    job = json.loads((root / 'plans/plan01/pc9-bridge/native-job-00.json').read_text())
+    resolver = refs.Resolver({'queue:job': str(root)}, allowed_root_ids={'queue:job'})
+    leaf = dict(rights_leaf(job['source']), synthetic=job['synthetic'] is True)
+
+    def run(value, *, row=RIGHTS_ROW):
+        doc = copy.deepcopy(job)
+        if row is not None:
+            doc['source_row'] = dict(row)
+        raw = refs.canonical(value)
+        name = 'rights-' + hashlib.sha256(raw).hexdigest()[:8] + '.json'
+        (root / name).write_bytes(raw)
+        doc['rights'] = dict(private_use=True, evidence=[dict(path=name, sha256=refs.sha256(raw), bytes=len(raw),
+                                                               contract='coastal-rights-evidence-v1')])
+        validator.GraphValidator(resolver).document(doc, root_id='queue:job')
+
+    validator.GraphValidator(resolver).document(copy.deepcopy(job), root_id='queue:job')  # structural empty evidence
+    run(leaf)  # complete positive
+    for field, other in (('source_id', 'OTHER'), ('source_url', 'https://example.invalid/OTHER.bag'), ('product_title', 'OTHER')):
+        with pytest.raises(ValueError, match='rights binding'):
+            run(dict(leaf, **{field: other}))
+        with pytest.raises(ValueError, match='missing producer field: ' + field):
+            run({k: v for k, v in leaf.items() if k != field})
+    with pytest.raises(ValueError, match='owning source_row identity unavailable'):
+        run(leaf, row=None)
+    with pytest.raises(ValueError, match='unknown producer field: rights evidence not_a_producer_field'):
+        run(dict(leaf, not_a_producer_field='invented'))
+    with pytest.raises(ValueError, match='unknown producer field: rights evidence undeclared_evidence'):
+        run(dict(leaf, undeclared_evidence=dict(path='../MUST-NOT-RESOLVE.json', sha256='0' * 64, bytes=1)))
 
 
 @pytest.mark.parametrize('world', ['real-stages-shared'], indirect=True)
