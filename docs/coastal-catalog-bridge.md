@@ -130,6 +130,106 @@ the bridged one. Neither command reuses an output directory. `--root` and
 checks containment or writes, so every recorded ref stays relative to the
 resolved queue root.
 
+## Running bridged jobs
+
+The host driver `skippercast.coastal.coordinator.bridge_run` runs one admitted
+plan through acquire, qualify and map, never render. It uses the campaign's
+existing shared Store at `var/coastal/coordinator.sqlite`; there is no per-plan
+database or policy override. This is bounded execution evidence, not scientific
+acceptance or publication authority. The survey stack is needed to authenticate
+the genuine EPSG:3310 lattice record and native pixel-centre ownership.
+
+Bind `SC_PY` to the checkout's existing shared venv interpreter, `C` to an
+absolute campaign queue root, `P` to its absolute `plans/<plan-id>` directory,
+and `RUN` to the new absolute `P/runs/run-00.json`. The parent output directories
+must already exist. `MAX_TICKS` and `UNTIL_EPOCH` are the card's explicit integer
+tick limit and finite epoch deadline. Every file argument is absolute. Set the
+runtime provenance environment explicitly: `COAST_AUTHOR_PROFILE`,
+`COAST_AUTHOR_MODEL` (the actual runtime, not an alias), `COAST_CARD_ID`,
+`COAST_CODE_COMMIT`, and `COAST_SKILL_COMMIT`. None is inferred from a profile.
+
+Before either writing command the operator must establish exclusive queue
+ownership and export `COAST_EXCLUSIVE_WRITER="$C"` for that invocation. The
+admission also records `preconditions.exclusive_writer=true` and a nonempty
+`preconditions.attested_by`. This is an operator assertion, not a security
+boundary: flock cannot exclude arbitrary writers ignoring the controller lock.
+If ownership is not established, execution refuses; never start another Store
+to work around contamination.
+
+```sh
+PYTHONPATH=src "$SC_PY" -m skippercast.coastal.coordinator.bridge_run enqueue \
+  --root "$C" --bridge-receipt "$P/bridge/bridge-receipt.json" \
+  --segment "$P/segment.json" --admission "$P/admission.json" \
+  --out "$P/bridge/enqueue-receipt.json"
+PYTHONPATH=src "$SC_PY" -m skippercast.coastal.coordinator.bridge_run run \
+  --root "$C" --enqueue-receipt "$P/bridge/enqueue-receipt.json" \
+  --stop-after map --max-ticks "$MAX_TICKS" --until "$UNTIL_EPOCH" --out "$RUN"
+PYTHONPATH=src "$SC_PY" -m skippercast.coastal.coordinator.bridge_run status --root "$C"
+```
+
+The local admission adapter consumes `coast-admission-v1`: campaign and
+coordinator IDs, plan label and canonical `plan_sha256`; typed queue-root Refs
+for `campaign`, `plan_file`, `segment_record`, `catalog` and `dry_run`; `holds=[]`;
+the ownership preconditions above; `grids[]` with `grid_sha256` and `definition`;
+and `windows[]` with `source_id`, `grid_sha256`, `idx`, `pixel_window`,
+`owner_segment_id`, `window_key` and `window_dir`. Refs carry `root_id`, `path`,
+`sha256`, `bytes`, with `root_id="queue:"+campaign_segment_id`. The full segment
+record must match `segments.from_bbox(campaign.bbox_crs84, region=campaign ID)`
+and the pinned plan. Campaign labels are never Store segment IDs.
+
+Until the separate PC-6 window-set contract is reviewed, each distinct source
+uses an admitted `single-selected-v1` one-window grid at `idx=0`. Its definition
+contains `source_sha256`, `raster_crs`, `affine_transform` (six coefficients
+a,b,c,d,e,f), raster `width`/`height`, `tile_width`/`tile_height`, `tiling_version`
+and the exact `pixel_window`. Its canonical digest is `grid_sha256`.
+`window_key=source_id+'#'+grid_sha256+'#'+str(idx)` and `window_dir` is its UTF-8
+SHA-256. No repeated-source window-set support or cap increase is implied.
+
+Enqueue authenticates all native manifests before writing a durable O_EXCL
+intent at `var/coastal/enqueue-intents/<bridge-file-sha256>.json`, before the
+first Store insertion. An existing intent refuses even if a crash prevented the
+final enqueue receipt. Reconciliation is separate operator work, not a retry.
+The receipt preserves actual acquire IDs in bridge index order; `new_row`
+compares the root-ID sets before/after, not SQLite's last event insertion.
+
+Under the normal controller lock, read-only whole-Store preflight precedes
+enqueue and every normal `reconcile=True` tick. All rows, including foreign
+terminal/render rows, must have the current code/deps identity, a known generic
+contract and safe state; no leases, even expired ones, may exist. Foreign
+source-free/authenticated mission authorities refuse too. Refusal occurs before
+constructing Store, invalidation, expiry, claim, events or charges. A run writes
+only its new external refusal summary. No recovery or gate disabling occurs.
+
+Lineage follows only SHA-verified committed results and their exact
+`next_job.input_manifest` identities inside the predecessor's recorded lease
+output directory. A similarly prefixed path is not lineage. Every tick selects
+one queued lineage ID deterministically by window key, stage order and ID;
+foreign jobs and render successors are not claimed. Foreign job rows, events,
+leases and charges are compared after every tick. A change is uncertainty, not
+success. Global tick/semantic-progress telemetry is not foreign-job evidence.
+
+The immutable `coast-run-summary-v1` partitions all admission windows into
+`map_done`, `held`, `failed_terminal`, `failed_uncertain`, `stale`, `cancelled`,
+or `unfinished`. Missing stages have reasons, not success. It pins stage
+results/products, qualify support and mask SHA, and copies the producer's map
+`native_valid_count` and complete `depth_m` verbatim (including `unknown`; no
+invented median). Usage comes from durable charges; unique-source byte reporting
+does not reduce bridge/Store accounting. `store_status` is the read-only
+`coastal.cli.queue_status` snapshot unchanged.
+
+Stop reasons are `terminal`, `deadline`, `max_ticks`, `not_claimable`,
+`preflight_refused`, `integrity_error`, or `failed_uncertain`. Only the first
+three bounded unfinished reasons (`deadline`, `max_ticks`, `not_claimable`)
+permit ordinary continuation. Use the run command again with
+`--continuation-of "$PREVIOUS_RUN"` and a new `RUN` ending in `run-01.json`
+(then 02, etc.). It pins the previous file's full-byte hash, increments sequence,
+and preserves all root IDs. Never call bridge/enqueue again. Legitimate
+qualify/map/render successors may increase the total row count. Stale identities
+need replacement admission; uncertain work needs operator recovery. Neither is
+a successful empty frontier. CLI exit 3 means a written refusal/integrity/
+uncertainty summary; malformed inputs or existing outputs exit 2. Status neither
+creates nor migrates a Store.
+
 ## Boundaries
 
 A bridged job is input for the coordinator's existing gates. It is not

@@ -30,6 +30,7 @@ import type {CoastReportContext} from '../../packages/coast/src/state/report-bin
 import {day, hour, layers} from '../state.ts';
 import {chartMark} from './chart.ts';
 import type {ChartMark} from './coastline.ts';
+import {DEPTH_BOTTOM} from './depth-contours.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {regionalContrast, type ContrastSample, type RegionalContrast} from './habitat-feed.ts';
 import {CONTRAST_SOURCE, layerEntry, setRailNote} from './layers.ts';
@@ -161,7 +162,7 @@ export function contrastFeatures(d: Pick<DrawnContrast, 'cells' | 'spacingDeg'>)
     coordinates: [[[c.lon - dx, c.lat - dy], [c.lon + dx, c.lat - dy], [c.lon + dx, c.lat + dy], [c.lon - dx, c.lat + dy], [c.lon - dx, c.lat - dy]]]}}))};
 }
 
-/** The cells as one fill layer on the fixed scale, under the swell field and the protected areas (§ 9 order). */
+/** The cells as one fill layer on the fixed scale, under the swell field, the depth contours and the protected areas (§ 9 order). */
 export function contrastOverlay(p: Palette): Overlay {
   const [low, high] = CONTRAST_SCALE;
   return {
@@ -239,7 +240,7 @@ export function createContrast(o: ContrastOptions): {reading(at: {lon: number; l
       if (k !== drawnKey) withdraw();
       drawnKey = k; drawnOn = e;
       if (!d) { e.setOverlay(REGISTRY_ID, null); return; }
-      e.setOverlay(REGISTRY_ID, contrastOverlay(palette()), [SWELL_LAYER, MPA_FILL]);
+      e.setOverlay(REGISTRY_ID, contrastOverlay(palette()), [SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]);
       e.setData(CONTRAST_SOURCE, contrastFeatures(d));
     }),
     // Re-judge at the age limit and at the next whole hour (the dock's default hour moves on).
