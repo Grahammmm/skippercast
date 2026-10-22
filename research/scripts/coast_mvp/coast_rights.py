@@ -79,7 +79,10 @@ def _used_sources(manifest: object) -> list[dict]:
             raise ValueError(f"{source_id}: rights.csumb_involved must be boolean")
         # Preserve the hold even if an obvious CSUMB source is incorrectly tagged false.
         evidence = " ".join((source_id, name, source_url, license_text, terms_url, attribution)).lower()
-        csumb = rights["csumb_involved"] or "csumb" in evidence or "seafloor mapping lab" in evidence
+        csumb = (rights["csumb_involved"] or "csumb" in evidence
+                 or "seafloor mapping lab" in evidence
+                 or re.search(r"\bcalifornia\s+state\s+university(?:\s*,\s*|\s+)monterey\s+bay\b",
+                              evidence) is not None)
         used.append(dict(source_id=source_id, name=name, source_url=source_url,
                          sha256=sha, contributed_cells=cells, license=license_text,
                          terms_url=terms_url, attribution=attribution, csumb=csumb))

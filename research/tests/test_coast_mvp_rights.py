@@ -122,6 +122,35 @@ def test_csumb_flag_survives_cc0_label_and_incorrect_boolean(manifest):
     assert "A public-domain or CC0 release label does not resolve" in page
 
 
+@pytest.mark.parametrize("university", [
+    "California State University, Monterey Bay",
+    "California State University Monterey Bay",
+    "California State University,Monterey Bay",
+    "cALIFORNIA sTATE uNIVERSITY, mONTEREY bAY",
+    "California\tState  University ,\n Monterey\tBay",
+])
+def test_spelled_out_csumb_keeps_permission_hold(manifest, university):
+    row = manifest["sources"][0]
+    manifest["sources"] = [row]
+    row["source_id"] = "fixture-university-release"
+    row["name"] = "Synthetic co-produced USGS release"
+    row["rights"].update(
+        license="US public domain",
+        terms_url="https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+        attribution=f"{university} and USGS",
+        csumb_involved=False,
+    )
+    # No acronym/lab-name evidence may mask a failure of full-name detection.
+    evidence = json.dumps(row).lower()
+    assert "csumb" not in evidence.replace('"csumb_involved"', '')
+    assert "seafloor mapping lab" not in evidence
+    page = render_manifest(manifest)
+    assert "needs_permission" in page
+    assert "For-profit permission question" in page
+    assert "review_required" in page
+    assert "Not for navigation" in page
+
+
 def test_html_is_escaped(manifest):
     manifest["sources"][0]["name"] = '<script>alert("x")</script>'
     manifest["sources"][0]["rights"]["attribution"] = '<img src=x onerror="x">'
