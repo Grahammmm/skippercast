@@ -7,7 +7,7 @@ import {useEffect} from 'preact/hooks';
 import {signal} from '@preact/signals';
 import {coordinates} from '../state.ts';
 import {formatCoordinates} from '../../dist/coordinates.js';
-import {exportEvidenceLabel} from '../../dist/trip-export.js';
+import {exportEvidenceLabel, USER_WAYPOINT_CATEGORIES} from '../../dist/trip-export.js';
 import {fitLabel} from '../../dist/spot-ranking.js';
 import type {Filters, LayerKey, Planner as Model, Preset, ProtectedHit, Target, TripSpecies} from '../planner.ts';
 
@@ -45,6 +45,10 @@ function SpotRow({t, checked, hit, onToggle}: {t: Target; checked: boolean; hit?
   );
 }
 
+function BoundaryNote({hit}: {hit?: ProtectedHit}) {
+  return hit ? <p>Inside a protected-area boundary; excluded as a fishing target by SkipperCast. Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</p> : null;
+}
+
 export function Planner({model: m, open}: {model: Model; open: boolean}) {
   // While the dialog shows: the screen's age each minute and new boundaries refresh the counts; opening restores a saved ranked plan.
   useEffect(() => {
@@ -72,6 +76,27 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
         </div>
         <p class="export-note" id="export-storage">{m.storageNote.value}</p>
       </div>
+      <section class="export-card" aria-label="Your waypoints">
+        <h2>Your waypoints</h2>
+        <p>User labels, not verified habitat, depth or navigation guidance. Saved in this browser’s region draft, separate from account trip alerts.</p>
+        <button id="waypoint-place" onClick={m.chooseWaypoint}>Place a waypoint on the Chart</button>
+        {m.waypointPosition.value ? <form onSubmit={e => {
+          e.preventDefault();
+          const data = new FormData(e.currentTarget);
+          m.saveWaypoint(String(data.get('name')), String(data.get('category')));
+        }}>
+          <p>{formatCoordinates(m.waypointPosition.value.latitude, m.waypointPosition.value.longitude, coordinates.value)}</p>
+          <label>Waypoint name<input name="name" maxLength={80} required /></label>
+          <label for="waypoint-category">Category</label><select id="waypoint-category" name="category">{USER_WAYPOINT_CATEGORIES.map(category => <option key={category} value={category}>{category}</option>)}</select>
+          <button type="submit">Save waypoint</button> <button type="button" onClick={() => { m.waypointPosition.value = null; }}>Cancel</button>
+        </form> : null}
+        {(d.userWaypoints ?? []).map(t => <article key={t.id}>
+          <label class="export-check"><input type="checkbox" checked={d.ids.includes(t.id)} onChange={e => m.toggleSpot(t.id, e.currentTarget.checked)} /><span>{t.name} · {t.category}</span></label>
+          <p>{formatCoordinates(t.latitude, t.longitude, coordinates.value)}</p>
+          {d.ids.includes(t.id) ? <BoundaryNote hit={m.protectedHits.value.find(h => h.id === t.id)} /> : null}
+          <button onClick={() => m.removeWaypoint(t.id)} aria-label={`Remove waypoint ${t.name}`}>Remove waypoint</button>
+        </article>)}
+      </section>
       <details class="export-card" id="export-spots" open>
         <summary><span>1. Choose your spots</span><strong id="export-selection-count">{d.ids.length} selected</strong></summary>
         <div class="export-card-body">
