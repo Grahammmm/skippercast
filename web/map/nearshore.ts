@@ -105,9 +105,10 @@ export function ringMark(r: Rings, id: unknown, now: Date, tz: string): ChartMar
   // Keep the shared time/cadence formatting, but validate its name prefix before stripping it.
   if (!label.startsWith(prefix)) throw new Error('Nearshore sample label is missing its site prefix');
   return {
-    id: `nearshore:${site.id}|${hour.at}`, name: site.name, kind: 'Nearshore model site',
+    id: `nearshore:${site.id}|${hour.at}`, name: site.name, kind: 'CDIP MOP model site',
     reading: `${ring.waveFt.toFixed(1)} ft${finite(hour.periodS) ? ` · ${hour.periodS.toFixed(1)} s` : ''}${from}`,
     source: `${r.product} · ${label.slice(prefix.length)}${issued}`,
-    basis: `${ringBasis(r.product)}${depth}`,
+    basis: `Model issued ${site.issuedAt}; retrieved ${site.fetchedAt}. ${ringBasis(r.product)}${depth}`,
+    provider: {href: site.url, label: `${r.product} model site`},
   };
 }

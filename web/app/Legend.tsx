@@ -42,11 +42,11 @@
 // Depth contours (CI6-13) are always on, Chart only: while they draw, their row keys
 // the contour and the dashed survey edge and names each survey, its date and datum;
 // withheld or failed contours say so, and a region without any shows no row.
-import {IconButton} from '../ui/Button.tsx';
+import {Button, IconButton} from '../ui/Button.tsx';
 import {current, grade, layers, profile, region, species} from '../state.ts';
 import {GRADE_LABELS, GRADE_MEANING} from '../grade.ts';
 import {targetLabel} from '../species.ts';
-import {chartFailed, unavailable} from '../map/chart.ts';
+import {chartFailed, chartMark, unavailable} from '../map/chart.ts';
 import {NOTES, groundsState} from '../map/charter-grounds.ts';
 import {cloudHeld, cloudStamp} from '../map/clouds.ts';
 import {AIS_CREDIT, aisOn, aisState} from '../map/commercial-ais.ts';
@@ -62,6 +62,7 @@ import {CONTRAST_SCALE, contrastState} from '../map/contrast.ts';
 import {HEIGHT_SCALE, frameSummary, nearshoreState, swellState} from '../map/swell.ts';
 import {windState} from '../map/wind.ts';
 import {ringBasis, ringSummary} from '../map/nearshore.ts';
+import {stationState} from '../map/stations.ts';
 import {WAVE_MODEL} from '../map/forecast-grid.ts';
 import {currentStatus, shownPresentation, terrainCoverage, terrainOptions} from '../map/stage.ts';
 import {drawnSpots} from '../map/ranked.ts';
@@ -310,6 +311,17 @@ export function DepthContoursRow() {
 }
 
 /** A row with nothing drawn behind it: the entry's name and why, with no key. */
+function StationsRow() {
+  const s = stationState.value, rings = nearshoreState.value, entry = layerEntry('stations');
+  return <li class="app-legend-stations">Stations
+    <Popover iconOnly summary="Stations basis">{entry.basis}<p>{entry.attribution}</p></Popover>
+    <p class="app-legend-note">{s.note}</p>
+    <ul>{entry.legend.map(row => <li key={row.label}><span class="app-key" aria-hidden="true" style={{background: `var(--${row.swatch})`}} />{row.label}</li>)}</ul>
+    <p class="app-legend-note">{rings ? ringSummary(rings, new Date()) : 'CDIP MOP model sites unavailable for this place and time.'}</p>
+    <details><summary>Station list</summary><ul>{s.pins.map(pin => <li key={pin.key}><Button variant="quiet" onClick={() => { chartMark.value = pin.mark; }}>{pin.mark.name}{pin.location ? '' : ' · location unavailable'}</Button></li>)}</ul></details>
+  </li>;
+}
+
 const PlainRow = ({id, label, reason}: {id: string; label: string; reason: string}) => (
   <li class="app-legend-plain">{label}<p class="app-legend-note" data-reason={id}>{reason}</p></li>
 );
@@ -326,6 +338,7 @@ export function Legend() {
           : e.id === 'sst-contrast' ? <ContrastRow key={e.id} />
           : e.id === 'swell' ? <><SwellRow key={e.id} /><WindRow /></> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
           : e.id === 'fleet' ? <FleetRow key={e.id} />
+          : e.id === 'stations' ? <StationsRow key={e.id} />
           : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
         <RankedRow />
         <DensityRow />
