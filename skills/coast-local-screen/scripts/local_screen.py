@@ -964,9 +964,12 @@ def _fixture_line(receipt):
 
     def down(v):
         return None if v is None else round(-float(v), 4)    # fixture depths are elevations (negative down)
+    # The real lane has no interpolation and holes = cells without valid support, so the fixture's
+    # hole + fill cells both count as holes; producer and derived counts are the same receipt value.
     return {"window_key": receipt.get("window_id"), "state": "map_done" if receipt.get("status") != "held" else "held",
             "holds": receipt.get("hold_reasons") or [], "cells_total": total, "valid_cells": valid,
-            "hole_cells": counts.get("hole"), "interpolated_cells": counts.get("fill"),
+            "hole_cells": total - valid if total is not None and valid is not None else None, "interpolated_cells": 0,
+            "producer_valid_cells": valid, "producer_native_valid_count": valid,
             "valid_fraction": round(valid / total, 6) if valid is not None and total else None,
             "depth_m_positive_down": {"min": down(depth.get("max")), "median": down(depth.get("median")),
                                       "max": down(depth.get("min"))},
