@@ -24,6 +24,12 @@ PROJECT = HOME + "/skippercast-data/2026-10-07-pge-south"
 
 
 def _load(name, env):
+    # Bind the installed reviewed package BEFORE the historical scripts prepend
+    # their legacy worktree paths. Otherwise a default-root test can import a
+    # stale operator checkout merely because it happens to exist on this host.
+    import skippercast
+    if Path(skippercast.__file__).resolve() != ROOT / 'src/skippercast/__init__.py':
+        raise RuntimeError('home-path tests require the reviewed package')
     # Load by file location; the scripts add their own directories to sys.path,
     # which is restored afterwards (tests/contract/test_test_layout.py).
     base = {k: v for k, v in os.environ.items() if k not in OVERRIDES}
