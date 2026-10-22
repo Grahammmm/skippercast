@@ -6,6 +6,7 @@ import catalog from '../catalog/station-locations.json' with {type: 'json'};
 import {counties} from '../packages/coast/src/counties.ts';
 import {configuredStations, selectedStations, readingState, stationPins, stationGeoJSON, located} from '../web/map/station-model.ts';
 import {createStations, stationState, STATION_DOTS, STATION_HIT} from '../web/map/stations.ts';
+import {tideSelection} from '../web/tide-selection.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
 import {chartMark} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
@@ -143,4 +144,66 @@ test('runtime draws configured dots, opens cards, ages readings, and clears on r
   browser('other'); assert.equal(stationState.value.pins.length, 0); assert.equal(chartMark.value, null);
   await flush(); assert.match(stationState.value.note, /unavailable/);
   syncFromURL('https://example.test/map?region=other&layers=none'); assert.equal(overlays.get('stations'), null);
+});
+
+test('tide choice: no chosen station adds no labels', () => {
+  for (const tideChoice of [null, {regionId: 'fixture', defaultStation: '9412553', chosen: null}]) {
+    const all = pins(undefined, {tideChoice});
+    assert.equal(at(all, 'coops:9412553').mark.kind, 'Tide prediction station');
+    assert.ok(!at(all, 'coops:9412553').mark.reading.includes('Region default tide station'));
+    assert.ok(!at(all, 'coops:9412553').mark.reading.includes('Chosen tide station'));
+  }
+});
+
+test('tide choice: choosing the default station is identical to no choice', () => {
+  const all = pins(undefined, {tideChoice: {regionId: 'fixture', defaultStation: '9412553', chosen: '9412553'}});
+  assert.equal(at(all, 'coops:9412553').mark.kind, 'Tide prediction station');
+  assert.ok(!at(all, 'coops:9412553').mark.reading.includes('Region default tide station'));
+  assert.ok(!at(all, 'coops:9412553').mark.reading.includes('Chosen tide station'));
+});
+
+test('tide choice: an unconfigured chosen station labels the region default and never adds a chosen pin', () => {
+  const all = pins(undefined, {tideChoice: {regionId: 'fixture', defaultStation: '9412553', chosen: '9412110'}});
+  const def = at(all, 'coops:9412553');
+  assert.equal(def.mark.kind, 'Region default tide station');
+  assert.match(def.mark.reading, /Region default tide station · the Brief uses your chosen station 9412110/);
+  assert.match(def.mark.reading, /4\.0 ft MLLW/);
+  assert.equal(at(all, 'coops:9412110'), undefined);
+  assert.equal(at(all, 'ndbc:46054').mark.kind, 'Observing buoy');
+});
+
+test('tide choice: a chosen configured context station is labelled chosen and keeps only its own product', () => {
+  const r = {...region, contexts: {other: {stations: {tide: '9412110', nearshore_buoy: '46215'}}}};
+  const t2110 = tide(); t2110.station = '9412110'; t2110.data.station = '9412110';
+  const all = stationPins({region: r, context: 'other', catalog, feed: {region_id: 'fixture', sources: {tides: t2110}}, now: NOW, at: NOW, tideChoice: {regionId: 'fixture', defaultStation: '9412553', chosen: '9412110'}});
+  const chosen = at(all, 'coops:9412110');
+  assert.equal(chosen.mark.kind, 'Chosen tide station');
+  assert.match(chosen.mark.reading, /4\.0 ft MLLW/);
+  assert.ok(!chosen.mark.reading.includes('Region default tide station'));
+});
+
+test('tide choice: a different region is ignored', () => {
+  const all = pins(undefined, {tideChoice: {regionId: 'elsewhere', defaultStation: '9412553', chosen: '9412110'}});
+  assert.equal(at(all, 'coops:9412553').mark.kind, 'Tide prediction station');
+  assert.ok(!at(all, 'coops:9412553').mark.reading.includes('Region default tide station'));
+});
+
+test('stations.ts labels the default pin and notes an unconfigured chosen station without leaking the chosen reading', async t => {
+  t.mock.timers.enable({apis: ['setInterval']}); browser();
+  const overlays = new Map(), data = new Map(), palette = readPalette(n => `token(${n})`);
+  const e = {setOverlay: (k, v) => overlays.set(k, v), setData: (k, v) => data.set(k, v)};
+  const now = NOW;
+  const s = createStations({engine: signal(e), zone: () => 'UTC', feed: () => ({region_id: 'fixture', sources: {buoy: buoy(), tides: tide()}}), fetchFn: async () => ({ok: true, json: async () => region}), palette: () => palette, now: () => now});
+  t.after(() => { s.destroy(); tideSelection.region.value = null; tideSelection.choice.value = null; tideSelection.reading.value = null; });
+  tideSelection.region.value = {id: 'fixture', bounds: [-125, 34, -119, 36], station: '9412553', name: 'Fixture'};
+  tideSelection.choice.value = '9412110';
+  tideSelection.reading.value = {station: {id: '9412110', name: 'Port San Luis', lat: 35.1, lng: -120.6, type: 'R'}, points: [{at: ago(0), heightFt: 99.9}], events: [], fetchedAt: ago(0), failed: false};
+  await flush();
+  const pins = stationState.value.pins;
+  const def = pins.find(p => p.key === 'coops:9412553');
+  assert.equal(def.mark.kind, 'Region default tide station');
+  assert.match(def.mark.reading, /Region default tide station · the Brief uses your chosen station 9412110/);
+  assert.equal(pins.some(p => p.key === 'coops:9412110'), false);
+  assert.match(stationState.value.note, /Chosen tide station 9412110 is shown in the Brief, not on this layer/);
+  assert.equal(pins.some(p => p.mark.reading.includes('99.9')), false);
 });

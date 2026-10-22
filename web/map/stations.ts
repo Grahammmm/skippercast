@@ -7,13 +7,14 @@ import {coastData} from '../coast-data.ts';
 import type {RegionalDailyFeed} from '../brief/types.ts';
 import {sharedFetch} from '../shared-fetch.ts';
 import {area, day, hour, layers, region} from '../state.ts';
+import {tideSelection} from '../tide-selection.ts';
 import {chartMark} from './chart.ts';
 import {COASTLINE_GLOW} from './coastline.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {layerEntry, setRailNote} from './layers.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {terrainHour} from './stage.ts';
-import {stationGeoJSON, stationPins, type StationPin, type StationRegion} from './station-model.ts';
+import {activeTideChoice, stationGeoJSON, stationPins, type StationPin, type StationRegion} from './station-model.ts';
 
 export const STATION_SOURCE = 'stations', STATION_DOTS = 'station-dots', STATION_HIT = 'station-hit';
 export const stationState = signal<{pins: readonly StationPin[]; note: string}>({pins: [], note: ''});
@@ -37,7 +38,9 @@ export function createStations(o: {engine: ReadonlySignal<Engine | null>; feed: 
     const report = coastData.coastBinding.value ? coastData.coastReport.value?.data ?? null : null;
     const county = report ? counties[report.countyId] ?? null : null;
     const t = now();
-    return stationPins({region: r, context: area.value, catalog: locations, feed: o.feed(), report, county, now: t, at: terrainHour(hour.value, t, day.value, o.zone())});
+    const tideRegion = tideSelection.region.value;
+    const tideChoice = tideRegion ? {regionId: tideRegion.id, defaultStation: tideRegion.station, chosen: tideSelection.choice.value} : null;
+    return stationPins({region: r, context: area.value, catalog: locations, feed: o.feed(), report, county, now: t, at: terrainHour(hour.value, t, day.value, o.zone()), tideChoice});
   });
   const disposers = [
     effect(() => {
@@ -58,8 +61,11 @@ export function createStations(o: {engine: ReadonlySignal<Engine | null>; feed: 
     effect(() => {
       const all = pins.value, enabled = on.value, e = o.engine.value;
       const missing = all.filter(p => !p.location).map(p => `${p.mark.name}: location unavailable`);
+      const tideRegion = tideSelection.region.value;
+      const chosen = region.value && tideRegion ? activeTideChoice(region.value, {regionId: tideRegion.id, defaultStation: tideRegion.station, chosen: tideSelection.choice.value}) : null;
+      const chosenNote = chosen && !all.some(p => p.key === `coops:${chosen}`) ? `Chosen tide station ${chosen} is shown in the Brief, not on this layer` : null;
       const note = !enabled ? '' : !all.length ? error.value ? 'Station configuration unavailable' : 'Loading station configuration'
-        : `${all.filter(p => p.location).length} station locations · latest readings with individual times${missing.length ? `; ${missing.join('; ')}` : ''}`;
+        : `${all.filter(p => p.location).length} station locations · latest readings with individual times${missing.length ? `; ${missing.join('; ')}` : ''}${chosenNote ? `; ${chosenNote}` : ''}`;
       stationState.value = {pins: all, note}; setRailNote('stations', note);
       if (e) {
         e.setOverlay('stations', enabled && all.length ? stationOverlay(palette()) : null, COASTLINE_GLOW);

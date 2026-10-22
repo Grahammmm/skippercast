@@ -15,7 +15,11 @@ export interface Location {provider: string; id: string; name: string; latitude:
 export interface StationCatalog {stations: Readonly<Record<string, Location>>}
 export interface StationIdentity {provider: Provider; id: string}
 export interface StationPin {key: string; location: Location | null; mark: ChartMark; stale: boolean}
-export const STATION_BASIS = 'NOAA NDBC buoy observations and CO-OPS tide predictions at station point locations (no grid), including CDIP/Scripps buoys served by NDBC. Locations remain visible; observations older than 3 hours and predictions retrieved over 36 hours ago are labelled stale, with last-good values and original times retained. Missing or invalid clocks are unavailable. CDIP MOP model sites use the bound report only: samples within 90 minutes of the selected hour, withheld after 48 hours from issue or 3 hours from retrieval. Model sites are not observing buoys.';
+export interface TideChoice {regionId: string; defaultStation: string; chosen: string | null}
+/** The chosen station id when a different station is actively chosen for this region; null otherwise (the Brief.tsx guard). */
+export const activeTideChoice = (regionId: string, tideChoice: TideChoice | null | undefined): string | null =>
+  tideChoice && tideChoice.regionId === regionId && tideChoice.chosen && tideChoice.chosen !== tideChoice.defaultStation ? tideChoice.chosen : null;
+export const STATION_BASIS = 'NOAA NDBC buoy observations and CO-OPS tide predictions at station point locations (no grid), including CDIP/Scripps buoys served by NDBC. Locations remain visible; observations older than 3 hours and predictions retrieved over 36 hours ago are labelled stale, with last-good values and original times retained. Missing or invalid clocks are unavailable. CDIP MOP model sites use the bound report only: samples within 90 minutes of the selected hour, withheld after 48 hours from issue or 3 hours from retrieval. Model sites are not observing buoys. Choosing a different tide station in the Brief labels the region-default CO-OPS pin and keeps every pin on its own values; a chosen station not drawn here is named in the layer note, and the chosen reading is never shown against another pin.';
 const HOUR = 3_600_000;
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 export const stationClock = (v: unknown): number => typeof v === 'string' && /(?:Z|[+-]\d\d:\d\d)$/.test(v) ? Date.parse(v) : NaN;
@@ -111,18 +115,27 @@ function predictions(id: string, sources: RegionalSource[], report: Report | nul
   if (!point || (curve.length && Math.abs(stationClock(point.at) - at) > 90 * 60_000)) return {text: `Tide prediction gap; ${stamp}`, stale: true};
   return {text: `Tide ${point.type}: ${point.value.toFixed(1)} ft ${product.datum} · valid ${point.at}; ${stamp}`, stale: state === 'stale'};
 }
-export function stationPins(input: {region: StationRegion; context?: string | null; catalog: StationCatalog; feed: RegionalDailyFeed | null; report?: Report | null; county?: County | null; now: Date; at: Date}): StationPin[] {
+export function stationPins(input: {region: StationRegion; context?: string | null; catalog: StationCatalog; feed: RegionalDailyFeed | null; report?: Report | null; county?: County | null; now: Date; at: Date; tideChoice?: TideChoice | null}): StationPin[] {
   const {region, catalog, now, at} = input, report = input.report ?? null, county = input.county ?? null;
+  const tideChoice = input.tideChoice ?? null, chosen = activeTideChoice(region.id, tideChoice);
   const sources = input.feed?.region_id === region.id ? Object.values(input.feed.sources).filter((s): s is RegionalSource => !!s) : [];
   return selectedStations(region, input.context ?? null, county).map(identity => {
     const {provider, id} = identity, key = `${provider}:${id}`, metadata = catalog.stations[key];
     const location = metadata?.id === id && metadata.provider === provider && located(metadata) ? metadata : null;
     const reading = provider === 'ndbc' ? observations(id, sources, report, now.getTime()) : predictions(id, sources, report, county, at.getTime(), now.getTime());
+    let kind = provider === 'ndbc' ? 'Observing buoy' : 'Tide prediction station';
+    let text = reading.text;
+    if (provider === 'coops' && chosen && tideChoice) {
+      if (id === tideChoice.defaultStation) {
+        kind = 'Region default tide station';
+        text = `Region default tide station · the Brief uses your chosen station ${chosen}. ${reading.text}`;
+      } else if (id === chosen) kind = 'Chosen tide station';
+    }
     const backups = [...new Set(sources.filter(s => matches(s, id)).map(s => sourceStation(s)?.backupFor).filter(Boolean))];
     const publisher = provider === 'coops' ? 'NOAA CO-OPS' : `NOAA NDBC${metadata?.owner ? ` · ${metadata.owner}` : ''}${metadata?.program ? ` · ${metadata.program}` : ''}`;
     return {key, location, stale: reading.stale, mark: {
       id: `station:${key}`, name: `${metadata?.name ?? id} · ${id}${backups.length ? ` (backup for ${backups.join(', ')})` : ''}`,
-      kind: provider === 'ndbc' ? 'Observing buoy' : 'Tide prediction station', reading: reading.text,
+      kind, reading: text,
       source: `${publisher}${location ? '' : ' · location unavailable'}`, basis: STATION_BASIS,
       provider: {href: provider === 'ndbc' ? ndbcStationURL(id) : tidePredictionURL(id), label: `${publisher} station ${id}`},
     }};
