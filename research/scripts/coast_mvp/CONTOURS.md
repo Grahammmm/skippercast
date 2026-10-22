@@ -59,4 +59,23 @@ analytical gradient displacement is checked within the half-cell bound, not
 claimed exact there. Regional hillshade/seam assessment and viewer inspection
 are deliberately not performed by this synthetic-only card.
 
-Hold merge for the one batched C1-C5 independent review. No publication.
+Real-data correction (2026-10-22, t_ac49d46e)
+
+The first full cached-C1 run exposed two defects that tiny fixtures missed:
+individually simplified depth bands could intersect one another, and GDAL's
+approximate warp selected some adjacent pixels instead of the exact nearest
+source cell. The corrected producer jointly simplifies each contributor's
+complete MultiLineString with topology preservation before its final mask clip.
+It also inverse-projects every XYZ pixel centre and samples the containing
+source pixel exactly, preserving unsupported-cell transparency. Neither change
+alters the half-cell bound, contour intervals, source masks or depth labels.
+The tests include negative controls exercising both previous algorithms.
+
+The explicitly admitted real run overrides only the cell cap to 130452268;
+the default remains 4000000 and the 64-tile cap is unchanged. Outputs and the
+full comparison/checksum report remain private under the task's data directory.
+Zoom 10 is a preview: MVT quantization and GDAL tiling/generalization are not
+full-resolution contour equivalence, and tile readability is not visual or
+navigation acceptance. All C1 datum/rights caveats still apply.
+
+Hold merge for independent review. No publication.

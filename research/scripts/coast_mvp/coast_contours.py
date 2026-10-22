@@ -18,8 +18,8 @@ import numpy as np
 import rasterio
 from rasterio.features import shapes
 from rasterio.transform import from_bounds
-from rasterio.warp import reproject, Resampling, transform_bounds
-from shapely.geometry import shape, mapping, LineString
+from rasterio.warp import transform_bounds
+from shapely.geometry import shape, mapping, LineString, MultiLineString
 from shapely.ops import unary_union, transform, linemerge
 from pyproj import Transformer
 
@@ -145,6 +145,43 @@ def tile_range(bounds, zoom):
     return [(x, y) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1)]
 
 
+def simplify_contours(lines, tolerance):
+    """Preserve topology BETWEEN contours as well as within each contour.
+
+    Independent Douglas-Peucker calls can move close depth bands across one
+    another. GEOS preserves their joint topology when given one collection;
+    component order and endpoints are retained for the parallel depth labels.
+    """
+    simplified = MultiLineString(lines).simplify(tolerance, preserve_topology=True)
+    result = list(simplified.geoms)
+    if len(result) != len(lines):
+        raise ValueError('Contour simplification changed component count')
+    return result
+
+
+def nearest_terrain(values, valid, source_affine, source_crs, tile_affine):
+    """Exact inverse projection of XYZ pixel centres, without warp approximation.
+
+    Floor maps pixel-corner coordinates to the containing source pixel, whose
+    centre is the nearest centre. Unsupported and outside pixels stay nodata.
+    This does not interpolate, fill holes, or imply source/datum accuracy.
+    """
+    rows, cols = np.indices((256, 256), dtype='float64')
+    x = tile_affine.a * (cols + 0.5) + tile_affine.c
+    y = tile_affine.e * (rows + 0.5) + tile_affine.f
+    project = Transformer.from_crs('EPSG:3857', source_crs, always_xy=True)
+    sx, sy = project.transform(x, y)
+    inverse = ~source_affine
+    cc = inverse.a * sx + inverse.b * sy + inverse.c
+    rr = inverse.d * sx + inverse.e * sy + inverse.f
+    inside = (np.isfinite(cc) & np.isfinite(rr) & (cc >= 0) & (rr >= 0)
+              & (cc < values.shape[1]) & (rr < values.shape[0]))
+    r, c = np.floor(rr[inside]).astype('int64'), np.floor(cc[inside]).astype('int64')
+    warped = np.full((256, 256), -999999, dtype='float32')
+    warped[inside] = np.where(valid[r, c], values[r, c], -999999)
+    return warped
+
+
 def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_000, max_tiles=64):
     """Build bounded local preview. Manifest uses C1 sources[].code/resolution_m."""
     if not isinstance(zoom, int) or not 0 <= zoom <= 18:
@@ -203,29 +240,38 @@ def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_
                 target.write(np.where(valid, values, -999999).astype('float32'), 1)
             raw = temporary / 'raw.geojson'
             engine.contours(clean, raw, depths, -999999)
+            by_source = {code: [] for code in masks}
             for feature in json.loads(raw.read_text())['features']:
                 line = shape(feature['geometry'])
                 depth = round(-feature['properties']['elevation_m'] / FOOT)
                 for code, mask in masks.items():
-                    # Simplify before the final clip so no simplification chord crosses a hole.
                     for segment in clipped_parts(line, mask):
-                        for clipped in clipped_parts(segment.simplify(tolerance), mask):
-                            if clipped.length == 0:
-                                continue
-                            if not clipped.is_simple or not clipped.is_valid:
-                                raise ValueError('Non-simple contour refused')
-                            if not clipped.is_closed:
-                                for endpoint in (clipped.coords[0], clipped.coords[-1]):
-                                    if LineString([endpoint, endpoint]).distance(mask.boundary) > tolerance * 1e-5:
-                                        raise ValueError('Open contour not clipped at contributor boundary')
-                            properties = dict(depth_ft=depth, depth_m=depth * FOOT,
-                                              depth_band='0-600ft' if depth <= 600 else '600ft+',
-                                              interval_ft=10 if depth <= 600 else 100,
-                                              source_code=code, source_id=sources[code]['id'],
-                                              source_resolution_m=sources[code]['resolution_m'],
-                                              navigation=LABEL)
-                            features.append(dict(type='Feature', properties=properties,
-                                                 geometry=mapping(transform(project, clipped))))
+                        if segment.length:
+                            by_source[code].append((depth, segment))
+            for code, entries in by_source.items():
+                if not entries:
+                    continue
+                mask = masks[code]
+                simplified = simplify_contours([line for _, line in entries], tolerance)
+                for (depth, _), segment in zip(entries, simplified):
+                    # Final clip prevents simplification chords spanning holes.
+                    for clipped in clipped_parts(segment, mask):
+                        if clipped.length == 0:
+                            continue
+                        if not clipped.is_simple or not clipped.is_valid:
+                            raise ValueError('Non-simple contour refused')
+                        if not clipped.is_closed:
+                            for endpoint in (clipped.coords[0], clipped.coords[-1]):
+                                if LineString([endpoint, endpoint]).distance(mask.boundary) > tolerance * 1e-5:
+                                    raise ValueError('Open contour not clipped at contributor boundary')
+                        properties = dict(depth_ft=depth, depth_m=depth * FOOT,
+                                          depth_band='0-600ft' if depth <= 600 else '600ft+',
+                                          interval_ft=10 if depth <= 600 else 100,
+                                          source_code=code, source_id=sources[code]['id'],
+                                          source_resolution_m=sources[code]['resolution_m'],
+                                          navigation=LABEL)
+                        features.append(dict(type='Feature', properties=properties,
+                                             geometry=mapping(transform(project, clipped))))
         if not features:
             raise ValueError('No supported contour lines generated')
         geojson = output / 'contours.geojson'
@@ -236,11 +282,7 @@ def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_
         for x, y in tiles:
             west, north = -WORLD + x * span, WORLD - y * span
             affine = from_bounds(west, north - span, west + span, north, 256, 256)
-            warped = np.full((256, 256), -999999, dtype='float32')
-            reproject(np.where(valid, values, -999999).astype('float32'), warped,
-                      src_transform=grid.transform, src_crs=grid.crs, src_nodata=-999999,
-                      dst_transform=affine, dst_crs='EPSG:3857', dst_nodata=-999999,
-                      resampling=Resampling.nearest)
+            warped = nearest_terrain(values, valid, grid.transform, grid.crs, affine)
             supported = warped != -999999
             encoded = np.rint((warped.astype('float64') + 10000) * 10)
             if ((encoded[supported] < 0) | (encoded[supported] > 16777215)).any():
@@ -256,6 +298,8 @@ def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_
                       contour_features=len(features), levels_ft=depths, simplify_m=tolerance,
                       zoom=zoom, terrain_tiles=len(tiles), value_convention='elevation_positive_up',
                       terrain_encoding='elevation_m = -10000 + (R*65536+G*256+B)*0.1; alpha=0 unsupported',
+                      terrain_sampling='exact inverse-projected XYZ pixel centres; nearest source cell',
+                      simplification='joint topology-preserving per contributor; half-cell tolerance',
                       contour_crs='EPSG:4326', tile_scheme='XYZ',
                       terrain_template='terrain/{z}/{x}/{y}.png', vector_template='vector/{z}/{x}/{y}.pbf',
                       limitations=['Synthetic/local preview only; no datum reconciliation or seam acceptance.'])
