@@ -10,7 +10,6 @@ import hashlib
 import json
 import math
 import shutil
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -19,7 +18,7 @@ from skippercast.coastal.coordinator import catalog_bridge, loop
 from skippercast.coastal.coordinator.segments import from_bbox
 from skippercast.coastal.coordinator.stages import digest
 from skippercast.coastal.handoff.common import write
-from tests._support import NOW
+from tests._support import FIXTURES, NOW
 from tests.coast_contract_factory import load_helper
 from tests.unit.test_coastal_bridge_run import enqueue, offline_and_provenance, run, world  # noqa: F401
 
@@ -301,7 +300,7 @@ def test_native_job_rights_slot_binds_owning_source_row(tmp_path):
     """coastal-native-job-v1 rights.evidence.* parent slot: same leaf rules, and
     a job that declares no source_row cannot back present evidence."""
     root = tmp_path / 'queue'
-    shutil.copytree(Path(__file__).resolve().parents[1] / 'fixtures/coast/queue', root)
+    shutil.copytree(FIXTURES / 'coast' / 'queue', root)
     job = json.loads((root / 'plans/plan01/pc9-bridge/native-job-00.json').read_text())
     resolver = refs.Resolver({'queue:job': str(root)}, allowed_root_ids={'queue:job'})
     leaf = dict(rights_leaf(job['source']), synthetic=job['synthetic'] is True)
