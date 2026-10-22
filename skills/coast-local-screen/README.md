@@ -58,7 +58,13 @@ hash (H2). Handoff line: `tier1 <plan-id>: N windows, M flag, K held, H hash mis
 ## What it checks, in fixed order
 
 1. Deterministic (no model can overrule): every ref re-hashes (`HASH_MISMATCH`; a plan-level receipt
-   mismatch flags every window), pipeline hold (`HOLD` -> tier1 `held`, holds copied, not screened),
+   mismatch flags every window), plan integrity (`PLAN_INTEGRITY` on every window when a required PC-9
+   ref - admission, bridge, enqueue - is absent, or when the run summary's windows differ from the
+   admitted population: an admitted window missing from the summary is kept as a non-pass record in state
+   `missing_from_run_summary`, extra and duplicate keys are kept and marked; the population is never
+   reduced), pipeline hold (`HOLD` whenever the window state is held, any stage is held or any stage
+   carries a hold reason: held windows -> tier1 `held`, not screened; a mapped window with a hold ->
+   `HOLD` + `STATE_INCONSISTENT` -> tier1 `flag`),
    other unmapped states (`NOT_MAPPED`), producer fields copied verbatim, derived statistics from the
    verified terrain + support bytes (valid/nodata/edge-valid fractions, depth median/p99, slope p99 using
    cells.json `native_resolution_m`), `COUNT_MISMATCH` (producer vs raster valid cells),
@@ -72,15 +78,20 @@ hash (H2). Handoff line: `tier1 <plan-id>: N windows, M flag, K held, H hash mis
 3. Vision model on each mapped window's hillshade (`prompts/vision.md`): azimuth 315, altitude 45,
    true cell size, linear depth stretch over the window's own range, nodata transparent, deterministic bytes.
 
-A window passes only when all three pass. Any model reply whose first word is not `pass` is a flag; the
+A window passes only when there is no hold and all three pass. A model reply is a pass only when the whole
+answer (after a closed `<think>` block) is the single line `pass` and the completion finished normally;
+anything else - contradictions such as `pass` then `flag`, extra lines, an unclosed think block, a
+truncated completion - is a flag, and `reply_format` (`pass`/`flag`/`malformed`/`truncated`) records
+which. The
 raw reply is kept. Endpoint down (after 2 retries 60 s apart) -> `ENDPOINT_UNAVAILABLE` in
 `summary.flags`, no further calls, every mapped window flagged. A missing thumbnail is a vision flag.
 
 ## Local-only
 
-The endpoint must be `http://` on 127.0.0.1 / localhost / ::1 (refused otherwise, before any call);
-proxies are ignored. No other network access, no cloud model, no writes outside `--out`, no job dirs
-touched, no stage re-run.
+The endpoint must be `http://` on 127.0.0.1 / localhost / ::1 (refused otherwise, before any call, and
+re-checked on every request URL); proxies are ignored and HTTP redirects are never followed (a 3xx,
+even to loopback, makes the call fail -> `ENDPOINT_UNAVAILABLE`). No other network access, no cloud
+model, no writes outside `--out`, no job dirs touched, no stage re-run.
 
 ## Bake-off fixtures
 

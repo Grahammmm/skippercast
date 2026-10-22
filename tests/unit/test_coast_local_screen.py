@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 import struct
 import urllib.error
+import urllib.parse
 import zlib
 
 import pytest
@@ -58,15 +59,36 @@ def model(monkeypatch):
 
 @pytest.mark.parametrize("reply,verdict,found", [
     ("pass", "pass", []), ("Pass.", "pass", []), ("<think>hmm flag?</think>\npass", "pass", []),
+    ("reasoning stripped of its opening tag</think>\npass", "pass", []),
     ("flag\nHOLES, EDGE_GAP", "flag", ["HOLES", "EDGE_GAP"]),
     ("The window looks fine, pass", "flag", ["OTHER"]), ("", "flag", ["OTHER"]), ("PASSABLE", "flag", ["OTHER"]),
     ("flag\nHOLES, VALID_LOW, EDGE_GAP, SLOPE_SPIKE", "flag", ["HOLES", "VALID_LOW", "EDGE_GAP"]),
+    # contradictory, extra-line or unclosed replies are never a pass (review round 1, item 4)
+    ("pass\nflag\nHOLES", "flag", ["HOLES"]), ("pass\nHOLES", "flag", ["HOLES"]), ("pass\nlooks fine", "flag", ["OTHER"]),
+    ("pass pass", "flag", ["OTHER"]), ("<think>still thinking about whether to pass", "flag", ["OTHER"]),
+    ("flag\npass", "flag", ["OTHER"]),
 ])
 def test_anything_not_pass_is_flag(reply, verdict, found):
     got = ls.parse_reply(reply, ls.TEXT_REASONS, upper=True)
     assert got[0] == verdict
     if verdict == "flag":
         assert got[1] == found
+        assert got[3] in {"flag", "malformed"}
+    else:
+        assert got[3] == "pass"
+
+
+def test_reply_format_distinguishes_flag_from_malformed():
+    assert ls.parse_reply("flag\nHOLES", ls.TEXT_REASONS, upper=True)[3] == "flag"
+    assert ls.parse_reply("pass\nflag\nHOLES", ls.TEXT_REASONS, upper=True)[3] == "malformed"
+    assert ls.parse_reply("pass\nflag\nstripe", ls.VISION_ARTEFACTS, upper=False)[:2] == ("flag", ["stripe"])
+
+
+@pytest.mark.parametrize("finish", ["length", "content_filter", "tool_calls"])
+def test_incomplete_completion_is_never_a_pass(finish):
+    verdict, found, _, fmt = ls.parse_reply("pass", ls.TEXT_REASONS, upper=True, finish_reason=finish)
+    assert (verdict, found, fmt) == ("flag", ["OTHER"], "truncated")
+    assert ls.parse_reply("pass", ls.TEXT_REASONS, upper=True, finish_reason="stop")[0] == "pass"
 
 
 def test_vision_artefacts_are_a_fixed_vocabulary():
@@ -84,6 +106,80 @@ def test_endpoint_must_be_loopback(endpoint):
 def test_loopback_endpoints_accepted():
     assert ls.check_endpoint("http://127.0.0.1:8003/v1/") == "http://127.0.0.1:8003/v1"
     assert ls.check_endpoint("http://localhost:8003/v1")
+
+
+class FakeTransport:
+    """Replaces urllib's default http transport (no socket): loopback answers per `answer`; any other
+    host is recorded as an off-loopback attempt and refused."""
+
+    def __init__(self, monkeypatch, answer):
+        import urllib.request
+        self.seen, self.off_loopback, self.answer = [], [], answer
+        fake = self
+
+        def http_open(handler, req):
+            import email.message
+            import io
+            import urllib.response
+            host = urllib.parse.urlparse(req.full_url).hostname
+            fake.seen.append((req.get_method(), req.full_url))
+            if host not in ls.LOOPBACK:
+                fake.off_loopback.append(req.full_url)
+                raise AssertionError("off-loopback transport attempted: " + req.full_url)
+            code, headers, body = fake.answer(req)
+            msg = email.message.Message()
+            for k, v in headers.items():
+                msg[k] = v
+            resp = urllib.response.addinfourl(io.BytesIO(body), msg, req.full_url, code)
+            resp.msg = "fake"
+            return resp
+        monkeypatch.setattr(urllib.request.HTTPHandler, "http_open", http_open)
+
+
+REDIRECT_TARGETS = ["http://203.0.113.1:9/review-no-connection", "http://127.0.0.1:8004/v1/models"]
+
+
+@pytest.mark.parametrize("target", REDIRECT_TARGETS)
+@pytest.mark.parametrize("method", ["GET", "POST"])
+def test_redirects_are_never_followed(monkeypatch, target, method):
+    transport = FakeTransport(monkeypatch, lambda req: (302, {"Location": target}, b""))
+    with pytest.raises(ls.Refused, match="redirect refused"):
+        if method == "GET":
+            ls._get("http://127.0.0.1:8003/v1/models", 1)
+        else:
+            ls._post("http://127.0.0.1:8003/v1/chat/completions", {"x": 1}, 1)
+    assert transport.off_loopback == []
+    assert transport.seen == [(method, "http://127.0.0.1:8003/v1/" + ("models" if method == "GET" else "chat/completions"))]
+
+
+def test_redirect_makes_the_client_unavailable_not_redirected(monkeypatch):
+    transport = FakeTransport(monkeypatch, lambda req: (307, {"Location": REDIRECT_TARGETS[0]}, b""))
+    client = ls.Client("http://127.0.0.1:8003/v1", "m", timeout=1, retries=1, retry_wait=0, max_tokens=8)
+    assert client.chat("x")["error"] == "ENDPOINT_UNAVAILABLE"
+    assert client.model_tag() is None
+    assert transport.off_loopback == [] and len(transport.seen) == 3        # 2 POST attempts + 1 GET, all loopback
+
+
+def test_local_get_and_post_still_work(monkeypatch):
+    def answer(req):
+        if req.get_method() == "GET":
+            return 200, {"Content-Type": "application/json"}, b'{"data":[{"id":"m1"}]}'
+        assert json.loads(req.data) == {"x": 1}
+        return 200, {"Content-Type": "application/json"}, b'{"ok":true}'
+    transport = FakeTransport(monkeypatch, answer)
+    assert ls._get("http://127.0.0.1:8003/v1/models", 1) == {"data": [{"id": "m1"}]}
+    assert ls._post("http://localhost:8003/v1/chat/completions", {"x": 1}, 1) == {"ok": True}
+    assert transport.off_loopback == []
+
+
+@pytest.mark.parametrize("url", ["http://203.0.113.1:9/v1/models", "file:///etc/passwd", "https://127.0.0.1/v1"])
+def test_transport_helpers_refuse_non_loopback_urls(monkeypatch, url):
+    transport = FakeTransport(monkeypatch, lambda req: (200, {}, b"{}"))
+    with pytest.raises(ls.Refused):
+        ls._get(url, 1)
+    with pytest.raises(ls.Refused):
+        ls._post(url, {}, 1)
+    assert transport.seen == []
 
 
 def test_png_is_deterministic_and_well_formed():
@@ -406,6 +502,134 @@ def test_outputs_are_write_once_and_confined(tmp_path, model, capsys):
     before = sorted(p.relative_to(plan).as_posix() for p in plan.rglob("*") if "review" not in p.parts)
     assert before == sorted(["admission.json", "bridge", "bridge/bridge-receipt.json", "bridge/enqueue-receipt.json",
                              "runs", "runs/run-00.json"])
+
+
+def _edit_summary(plan, edit):
+    path = plan / "runs/run-00.json"
+    summary = json.loads(path.read_text())
+    edit(summary)
+    path.write_bytes(ls.canonical(summary))
+
+
+ALL_PASS = (4, 3, 0, 1)   # windows, pass, flag, held for an untouched GRID4 control
+
+
+@pytest.mark.gis
+def test_control_untouched_plan_has_no_integrity_flags(tmp_path, model):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, GRID4)
+    _, doc = screen(plan)
+    s = doc["summary"]
+    assert (s["windows"], s["pass"], s["flag"], s["held"]) == ALL_PASS
+    assert s["plan_integrity_problems"] == [] and "PLAN_INTEGRITY" not in s["flags"]
+
+
+@pytest.mark.gis
+def test_missing_window_is_preserved_as_non_pass(tmp_path, model):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, GRID4[:2])
+    _edit_summary(plan, lambda s: s["windows"].pop(1))
+    code, doc = screen(plan)
+    assert code == 0
+    s = doc["summary"]
+    assert s["windows"] == 2 and s["pass"] == 0 and s["flag"] == 2
+    assert s["must_examine"] == sorted([f"src#{GRID}#0", f"src#{GRID}#1"])
+    assert "PLAN_INTEGRITY" in s["flags"] and any("missing" in p for p in s["plan_integrity_problems"])
+    gone = doc["windows"][1]
+    assert gone["deterministic"]["state"] == "missing_from_run_summary"
+    assert {"PLAN_INTEGRITY", "NOT_MAPPED"} <= set(gone["deterministic"]["flags"])
+    assert gone["deterministic"]["integrity"] == ["MISSING_FROM_RUN_SUMMARY"] and gone["text_model"] is None
+
+
+@pytest.mark.gis
+@pytest.mark.parametrize("ref", ["admission", "bridge", "enqueue"])
+def test_missing_required_ref_fails_closed(tmp_path, model, ref):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, GRID4[:2])
+    _edit_summary(plan, lambda s: s.pop(ref))
+    _, doc = screen(plan)
+    s = doc["summary"]
+    assert s["pass"] == 0 and s["flag"] == 2 and len(s["must_examine"]) == 2
+    assert "PLAN_INTEGRITY" in s["flags"] and f"required ref missing: {ref}" in s["plan_integrity_problems"]
+    assert all("PLAN_INTEGRITY" in w["deterministic"]["flags"] for w in doc["windows"])
+
+
+@pytest.mark.gis
+def test_extra_and_duplicate_windows_flag_the_plan(tmp_path, model):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, GRID4[:2])
+
+    def edit(s):
+        extra = json.loads(json.dumps(s["windows"][0]))
+        extra["window_key"] = f"src#{GRID}#99"
+        s["windows"].append(extra)
+        s["windows"].append(json.loads(json.dumps(s["windows"][1])))
+    _edit_summary(plan, edit)
+    _, doc = screen(plan)
+    s = doc["summary"]
+    keys = [w["window_key"] for w in doc["windows"]]
+    assert keys == [f"src#{GRID}#0", f"src#{GRID}#1", f"src#{GRID}#99"]
+    assert s["pass"] == 0 and s["flag"] == 3 and len(s["must_examine"]) == 3
+    by = {w["window_key"]: w for w in doc["windows"]}
+    assert by[f"src#{GRID}#99"]["deterministic"]["integrity"] == ["NOT_IN_ADMISSION"]
+    assert by[f"src#{GRID}#1"]["deterministic"]["integrity"] == ["DUPLICATE_IN_RUN_SUMMARY"]
+
+
+@pytest.mark.gis
+@pytest.mark.parametrize("stage", ["map", "qualify", "acquire"])
+def test_hold_on_a_mapped_window_is_never_a_pass(tmp_path, model, stage):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, GRID4[:2])
+    _edit_summary(plan, lambda s: s["windows"][0]["stages"][stage]["holds"].append("review_test_hold"))
+    _, doc = screen(plan)
+    w = doc["windows"][0]
+    assert w["deterministic"]["holds"] == ["review_test_hold"]
+    assert {"HOLD", "STATE_INCONSISTENT"} <= set(w["deterministic"]["flags"])
+    assert w["tier1"] == "flag" and w["window_key"] in doc["summary"]["must_examine"]
+    assert doc["windows"][1]["tier1"] == "pass"            # control
+
+
+@pytest.mark.gis
+def test_held_stage_state_on_a_mapped_window_is_never_a_pass(tmp_path, model):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, GRID4[:2])
+    _edit_summary(plan, lambda s: s["windows"][0]["stages"]["qualify"].update(state="held"))
+    _, doc = screen(plan)
+    w = doc["windows"][0]
+    assert {"HOLD", "STATE_INCONSISTENT"} <= set(w["deterministic"]["flags"]) and w["tier1"] == "flag"
+
+
+@pytest.mark.gis
+@pytest.mark.parametrize("text,vision", [("pass\nflag\nHOLES", "pass"), ("pass", "pass\nflag\nstripe"),
+                                         ("pass\nflag\nHOLES", "pass\nflag\nstripe")])
+def test_contradictory_model_replies_never_pass(tmp_path, model, text, vision):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, GRID4[:2])
+    model.text, model.vision = text, vision
+    _, doc = screen(plan)
+    s = doc["summary"]
+    assert s["pass"] == 0 and s["flag"] == 2 and len(s["must_examine"]) == 2
+    for w in doc["windows"]:
+        if text != "pass":
+            assert w["text_model"]["verdict"] == "flag" and w["text_model"]["reasons"] == ["HOLES"]
+            assert w["text_model"]["reply_format"] == "malformed"
+        if vision != "pass":
+            assert w["vision_model"]["verdict"] == "flag" and w["vision_model"]["artefacts"] == ["stripe"]
+
+
+@pytest.mark.gis
+def test_truncated_completion_never_passes(tmp_path, monkeypatch, model):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, GRID4[:1])
+
+    def truncated(url, body, timeout):
+        reply = model(url, body, timeout)
+        reply["choices"][0]["finish_reason"] = "length"
+        return reply
+    monkeypatch.setattr(ls, "_post", truncated)
+    _, doc = screen(plan)
+    w = doc["windows"][0]
+    assert w["tier1"] == "flag" and w["text_model"]["reply_format"] == "truncated"
 
 
 # ----------------------------------------------------------------------------- real PC-9 receipts

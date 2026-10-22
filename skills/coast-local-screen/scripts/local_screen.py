@@ -62,9 +62,9 @@ LOOPBACK = {"127.0.0.1", "localhost", "::1"}
 # --thresholds reads that file when it exists. The values in force are recorded in stats.json.
 DEFAULT_THRESHOLDS = {"tier1_valid_fraction_min": 0.5, "tier1_edge_valid_min": 0.5,
                       "tier1_slope_p99_max_deg": 60.0, "edge_step_should_m": 2.0}
-DETERMINISTIC_FLAGS = ("HASH_MISMATCH", "HOLD", "NOT_MAPPED", "DERIVED_UNAVAILABLE", "COUNT_MISMATCH",
-                       "DEPTH_RANGE_OUT", "VALID_FRACTION_LOW", "EDGE_VALID_LOW", "SLOPE_P99_HIGH",
-                       "NEIGHBOUR_STEP")
+DETERMINISTIC_FLAGS = ("HASH_MISMATCH", "PLAN_INTEGRITY", "HOLD", "STATE_INCONSISTENT", "NOT_MAPPED",
+                       "DERIVED_UNAVAILABLE", "COUNT_MISMATCH", "DEPTH_RANGE_OUT", "VALID_FRACTION_LOW",
+                       "EDGE_VALID_LOW", "SLOPE_P99_HIGH", "NEIGHBOUR_STEP")
 TEXT_REASONS = ("DEPTH_IMPLAUSIBLE", "VALID_LOW", "HOLES", "EDGE_GAP", "NEIGHBOUR_STEP",
                 "SLOPE_SPIKE", "COUNT_MISMATCH", "HOLD", "OTHER")
 VISION_ARTEFACTS = ("seam", "stripe", "misalignment", "void", "noise", "other")
@@ -218,15 +218,21 @@ def normalize(plan):
     ``terrain_ref``/``support_ref``/``cells_ref``) is the adapter.
     """
     s, root = plan.summary, plan.root
-    problems, admission, catalog = [], None, None
-    pc9 = "enqueue" in s
-    plan_refs = ([("admission", s.get("admission")), ("bridge", s.get("bridge")), ("enqueue", s.get("enqueue"))] if pc9 else
-                 [("bridge_receipt", s.get("bridge_receipt")), ("enqueue_receipt", s.get("enqueue_receipt"))])
+    problems, integrity, admission, catalog = [], [], None, None
+    # PC-9 is the default; only a summary carrying the design-3.2 receipt keys (and none of PC-9's) uses the
+    # adapter, so deleting a PC-9 ref can never switch the screener onto the adapter's lighter rules.
+    pc9 = any(k in s for k in ("admission", "bridge", "enqueue")) or not any(
+        k in s for k in ("bridge_receipt", "enqueue_receipt"))
+    required = ("admission", "bridge", "enqueue") if pc9 else ("bridge_receipt", "enqueue_receipt")
+    plan_refs = [(name, s.get(name)) for name in required]
     if s.get("continuation_of"):
         plan_refs.append(("continuation_of", s["continuation_of"]))
     checked = []
     for name, ref in plan_refs:
-        if ref is None:
+        if ref is None:                      # a required receipt that is absent fails closed, never skipped
+            checked.append({"name": name, "path": None, "ok": False})
+            problems.append(f"{name}: required ref missing from the run summary")
+            integrity.append(f"required ref missing: {name}")
             continue
         raw, problem = check_ref(root, ref, MAX_JSON_BYTES)
         checked.append({"name": name, "path": ref.get("path") if isinstance(ref, dict) else None, "ok": problem is None})
@@ -246,7 +252,10 @@ def normalize(plan):
             catalog = load_json(raw)
     if pc9 and s.get("problems"):
         problems.extend(f"run summary problem: {p}" for p in s["problems"])
-    adm_windows = {w.get("window_key"): w for w in (admission or {}).get("windows", []) if isinstance(w, dict)}
+    adm_list = [w for w in (admission or {}).get("windows", []) if isinstance(w, dict)]
+    adm_windows = {w.get("window_key"): w for w in adm_list}
+    if admission is not None and (len(adm_windows) != len(adm_list) or not all(isinstance(k, str) for k in adm_windows)):
+        integrity.append("admission windows have duplicate or invalid window_key")
     grids = {g.get("grid_sha256"): g.get("definition") for g in (admission or {}).get("grids", []) if isinstance(g, dict)}
     tiles = {}
     for src in (admission or {}).get("sources", []):
@@ -257,20 +266,63 @@ def normalize(plan):
         rng = (row.get("metadata") or {}).get("depth_range_m") if isinstance(row, dict) else None
         if isinstance(rng, list) and len(rng) == 2 and all(isinstance(v, (int, float)) for v in rng):
             depth_ranges[row.get("source_id")] = sorted(float(v) for v in rng)
-    windows = []
-    keys = set()
+    by_key, order = {}, []
     for w in s.get("windows", []):
-        key = w.get("window_key")
-        if not isinstance(key, str) or key in keys:
-            problems.append(f"duplicate or invalid window_key: {key!r}")
+        key = w.get("window_key") if isinstance(w, dict) else None
+        if not isinstance(key, str):
+            problems.append(f"invalid window_key: {key!r}")
+            integrity.append("run summary has a window without a valid window_key")
             continue
-        keys.add(key)
+        if key in by_key:                    # duplicate: keep the first, mark it, never silently drop the key
+            problems.append(f"duplicate window_key: {key}")
+            integrity.append(f"duplicate window_key in run summary: {key}")
+            by_key[key]["integrity"].append("DUPLICATE_IN_RUN_SUMMARY")
+            continue
         rec = (_pc9_window if pc9 else _design_window)(w, adm_windows.get(key), grids, tiles)
+        rec["integrity"] = []
+        by_key[key] = rec
+        order.append(key)
+    if admission is not None:
+        # The admitted population is the review population: every admitted key gets a record, in admission
+        # order; admitted keys missing from the run summary are preserved as non-pass, extra keys are kept.
+        expected = [k for k in adm_windows if isinstance(k, str)]
+        missing = [k for k in expected if k not in by_key]
+        extra = [k for k in order if k not in adm_windows]
+        for key in missing:
+            by_key[key] = _missing_window(key, adm_windows[key])
+        for key in extra:
+            by_key[key]["integrity"].append("NOT_IN_ADMISSION")
+        if missing or extra:
+            problems.append(f"run summary windows differ from admission windows: {len(missing)} missing, {len(extra)} extra")
+            integrity.extend([f"admitted window missing from run summary: {k}" for k in missing]
+                             + [f"run summary window not in admission: {k}" for k in extra])
+        observed = order
+        order = expected + extra
+        if not (missing or extra) and observed != expected:
+            problems.append("run summary window order differs from admission order")
+    elif pc9:
+        integrity.append("admission unavailable: the admitted window population cannot be reconciled")
+    windows = []
+    for key in order:
+        rec = by_key[key]
         rec["expected_depth_range_m"] = depth_ranges.get(rec["source_id"])
         windows.append(rec)
-    if pc9 and admission is not None and [w.get("window_key") for w in admission.get("windows", [])] != [w["window_key"] for w in windows]:
-        problems.append("run summary windows differ from admission windows")
-    return {"problems": problems, "plan_refs": checked, "windows": windows, "shape": "pc9" if pc9 else "design-3.2-fixture"}
+    return {"problems": problems, "integrity_problems": integrity, "plan_refs": checked, "windows": windows,
+            "shape": "pc9" if pc9 else "design-3.2-fixture"}
+
+
+def _missing_window(key, adm):
+    """An admitted window the run summary does not report: kept in the population, never a pass."""
+    pixel = adm.get("pixel_window")
+    window_dir = adm.get("window_dir")
+    if not isinstance(window_dir, str) or not HEX.fullmatch(window_dir):
+        window_dir = sha256(key.encode())
+    return {"window_key": key, "source_id": adm.get("source_id"), "idx": adm.get("idx"), "window_dir": window_dir,
+            "state": "missing_from_run_summary", "unfinished_reason": "missing_from_run_summary",
+            "stage_states": {}, "holds": [], "refs": [], "terrain_ref": None, "support_ref": None, "cells_ref": None,
+            "producer": {}, "grid": adm.get("grid_sha256"),
+            "origin": pixel[:2] if isinstance(pixel, list) and len(pixel) == 4 else None, "pixel_window": pixel,
+            "integrity": ["MISSING_FROM_RUN_SUMMARY"]}
 
 
 def _holds(stages):
@@ -524,7 +576,7 @@ def cmd_stats(args):
                "stage_states": rec["stage_states"], "holds": rec["holds"], "unfinished_reason": rec["unfinished_reason"],
                "producer": rec["producer"], "derived": None, "neighbours": [], "neighbour_delta_median_m": None,
                "neighbour_note": None, "depth_range_plausible": None, "depth_range_reason": "catalog_range_unavailable",
-               "flags": []}
+               "integrity": rec["integrity"], "flags": []}
         raws = {}
         for label, ref in rec["refs"]:
             limit = MAX_JSON_BYTES if str(ref.get("path", "")).endswith(".json") else MAX_RASTER_BYTES
@@ -540,10 +592,16 @@ def cmd_stats(args):
             det["hash_problems"].append("plan-level receipt problem (see summary.plan_problems)")
         if not det["hash_ok"]:
             det["flags"].append("HASH_MISMATCH")
-        if rec["state"] == "held":
+        if norm["integrity_problems"] or rec.get("integrity"):
+            det["flags"].append("PLAN_INTEGRITY")
+        held_stage = "held" in (rec["stage_states"] or {}).values()
+        held = rec["state"] == "held" or bool(rec["holds"]) or held_stage
+        if held:                                   # any hold, held stage or held state: never a pass
             det["flags"].append("HOLD")
-        elif rec["state"] != "map_done":
+        if rec["state"] not in ("held", "map_done"):
             det["flags"].append("NOT_MAPPED")
+        if (rec["state"] == "map_done" and (rec["holds"] or held_stage)) or (rec["state"] == "held" and not rec["holds"]):
+            det["flags"].append("STATE_INCONSISTENT")
         thumb = None
         if rec["state"] == "map_done":
             derived = {"from": {"terrain": (rec["terrain_ref"] or {}).get("sha256"),
@@ -594,6 +652,7 @@ def cmd_stats(args):
     doc = dict(header(STATS_SCHEMA, args, None), plan_id=plan.plan_id, plan_sha256=plan.summary.get("plan_sha256"),
                run_summary=plan.summary_ref, receipt_shape=norm["shape"], deterministic_checks_version=CHECKS_VERSION,
                thresholds=thresholds, thresholds_source=threshold_source, plan_problems=norm["problems"],
+               plan_integrity_problems=norm["integrity_problems"],
                plan_refs=norm["plan_refs"], windows=windows, wall_s=round(time.monotonic() - t0, 3))
     meta = write_once(plan.out / "stats.json", canonical(doc))
     flagged = sum(bool(w["deterministic"]["flags"]) for w in windows)
@@ -664,17 +723,29 @@ def check_endpoint(endpoint):
     return endpoint.rstrip("/")
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Never follow a redirect, even to loopback: a validated local endpoint must not lead anywhere else."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise Refused(f"local-only: HTTP {code} redirect refused (to {str(newurl)[:160]!r})")
+
+
+def _opener():
+    """No proxies, no redirects; only the default http handler (loopback URLs checked by the callers)."""
+    return urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+
+
 def _post(url, body, timeout):
-    """The only network call: loopback JSON POST (tests replace this function)."""
+    """The only model call: loopback JSON POST (tests replace this function)."""
+    check_endpoint(url)
     request = urllib.request.Request(url, json.dumps(body).encode(), {"Content-Type": "application/json"})
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    with opener.open(request, timeout=timeout) as response:
+    with _opener().open(request, timeout=timeout) as response:
         return json.loads(response.read())
 
 
 def _get(url, timeout):
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    with opener.open(url, timeout=timeout) as response:
+    check_endpoint(url)
+    with _opener().open(url, timeout=timeout) as response:
         return json.loads(response.read())
 
 
@@ -722,13 +793,31 @@ class Client:
 
 
 THINK = re.compile(r"<think>.*?</think>", re.S | re.I)
+PASS_LINE = re.compile(r"pass\.?", re.I)
+FLAG_LINE = re.compile(r"flag\.?", re.I)
 
 
-def parse_reply(content, vocabulary, *, upper):
-    """'pass' only when the reply's first word is pass; anything else is 'flag' (recall first)."""
-    text = THINK.sub("", content or "").strip()
-    words = re.findall(r"[A-Za-z_]+", text)
-    verdict = "pass" if words and words[0].lower() == "pass" else "flag"
+def parse_reply(content, vocabulary, *, upper, finish_reason=None):
+    """(verdict, found, raw, reply_format). 'pass' only for a complete reply whose whole answer is the
+    single line `pass` (prompt contract); everything else - contradictions, extra lines, an unclosed
+    think block, a truncated completion - is 'flag' (recall first). reply_format records why."""
+    text = THINK.sub("", content or "")
+    if re.search(r"</think>", text, re.I) and not re.search(r"<think>", text, re.I):
+        text = re.split(r"</think>", text, flags=re.I)[-1]   # server stripped the opening tag
+    text = text.strip()
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if finish_reason not in (None, "stop"):
+        fmt = "truncated"
+    elif re.search(r"</?think>", text, re.I):
+        fmt = "malformed"
+    elif len(lines) == 1 and PASS_LINE.fullmatch(lines[0]):
+        fmt = "pass"
+    elif lines and FLAG_LINE.fullmatch(lines[0]) and len(lines) <= 2 and not any(
+            re.search(r"\bpass\b", line, re.I) for line in lines[1:]):
+        fmt = "flag"
+    else:
+        fmt = "malformed"
+    verdict = "pass" if fmt == "pass" else "flag"
     found = []
     for word in re.findall(r"[A-Za-z_]+", text):
         token = word.upper() if upper else word.lower()
@@ -736,7 +825,7 @@ def parse_reply(content, vocabulary, *, upper):
             found.append(token)
     if verdict == "flag" and not found:
         found = ["OTHER" if upper else "other"]
-    return verdict, (found[:3] if upper else found), text[:2000]
+    return verdict, (found[:3] if upper else found), text[:2000], fmt
 
 
 def prompt(name):
@@ -806,11 +895,11 @@ def _screen(args, kind):
             out = {"verdict": None, "error": reply["error"], "detail": reply.get("detail"),
                    "latency_s": None, "tokens_in": None, "tokens_out": None, "raw": None, label: []}
         else:
-            verdict, found, raw = parse_reply(reply["content"], TEXT_REASONS if kind == "text" else VISION_ARTEFACTS,
-                                              upper=kind == "text")
+            verdict, found, raw, fmt = parse_reply(reply["content"], TEXT_REASONS if kind == "text" else VISION_ARTEFACTS,
+                                                   upper=kind == "text", finish_reason=reply["finish_reason"])
             out = {"verdict": verdict, "latency_s": reply["latency_s"], "tokens_in": reply["tokens_in"],
                    "tokens_out": reply["tokens_out"], "finish_reason": reply["finish_reason"], "raw": raw, "error": None,
-                   label: [] if verdict == "pass" else found}
+                   "reply_format": fmt, label: [] if verdict == "pass" else found}
         return window["window_key"], out
 
     with ThreadPoolExecutor(max_workers=max(1, args.slots)) as pool:
@@ -873,23 +962,26 @@ def cmd_assemble(args):
         v = vision["windows"].get(key) if mapped else None
         text_model = None if t is None else {"verdict": t["verdict"], "reasons": t.get("reasons") or [],
                                              "tokens_in": t["tokens_in"], "tokens_out": t["tokens_out"],
-                                             "latency_s": t["latency_s"], "error": t.get("error"), "raw": t.get("raw")}
+                                             "latency_s": t["latency_s"], "error": t.get("error"), "raw": t.get("raw"),
+                                             "reply_format": t.get("reply_format")}
         vision_model = None if v is None else {"thumbnail": w.get("thumbnail"), "verdict": v["verdict"],
                                                "artefacts": v.get("artefacts") or [], "tokens_in": v["tokens_in"],
                                                "tokens_out": v["tokens_out"], "latency_s": v["latency_s"],
-                                               "error": v.get("error"), "raw": v.get("raw")}
+                                               "error": v.get("error"), "raw": v.get("raw"),
+                                               "reply_format": v.get("reply_format")}
         reasons = list(det["flags"])
         if mapped and (text_model is None or text_model["verdict"] != "pass"):
             reasons.append("TEXT_" + ("UNAVAILABLE" if text_model is None or text_model["verdict"] is None else "FLAG"))
         if mapped and (vision_model is None or vision_model["verdict"] != "pass"):
             reasons.append("VISION_" + ("UNAVAILABLE" if vision_model is None or vision_model["verdict"] is None else "FLAG"))
-        # Fixed precedence: a hash mismatch is a flag whatever else; a hold is reported, not screened;
-        # any deterministic or model flag -> flag; pass only when all three passed.
+        # Fixed precedence: a hash mismatch is a flag whatever else; a held window is reported, not screened;
+        # a hold on any stage, a plan integrity problem or any deterministic or model flag -> flag;
+        # pass only when there is no hold and all three passed.
         if "HASH_MISMATCH" in det["flags"]:
             tier1 = "flag"
         elif det["state"] == "held":
             tier1 = "held"
-        elif reasons:
+        elif reasons or det["holds"] or "HOLD" in det["flags"]:
             tier1 = "flag"
         else:
             tier1 = "pass"
@@ -911,12 +1003,15 @@ def cmd_assemble(args):
         plan_flags.append("ENDPOINT_UNAVAILABLE")
     if stats["plan_problems"]:
         plan_flags.append("PLAN_RECEIPT_PROBLEM")
+    integrity_problems = stats.get("plan_integrity_problems", ["stats.json predates plan integrity checks"])
+    if integrity_problems:
+        plan_flags.append("PLAN_INTEGRITY")
     must = sorted(w["window_key"] for w in windows if w["tier1"] in {"flag", "held"})
     summary = {"windows": counts["windows"], "pass": counts["pass_"], "flag": counts["flag"], "held": counts["held"],
                "hash_mismatches": counts["hash_mismatches"], "deterministic_flags": counts["deterministic_flags"],
                "text_flags": counts["text_flags"], "vision_flags": counts["vision_flags"],
                "derived_unavailable": counts["derived_unavailable"], "flags": plan_flags,
-               "plan_problems": stats["plan_problems"],
+               "plan_problems": stats["plan_problems"], "plan_integrity_problems": integrity_problems,
                "wall_s": round(stats["wall_s"] + text["wall_s"] + vision["wall_s"] + time.monotonic() - t0, 3),
                "stage_wall_s": {"stats": stats["wall_s"], "text": text["wall_s"], "vision": vision["wall_s"]},
                "slots_used": max(text["screener"]["slots"], vision["screener"]["slots"]),
@@ -1006,9 +1101,11 @@ def cmd_fixture_eval(args):
 
         def one_text(item):
             reply = client.chat(template.replace("{stats}", json.dumps(_fixture_line(item["receipt"]), sort_keys=True)))
-            verdict = parse_reply(reply.get("content"), TEXT_REASONS, upper=True) if "error" not in reply else (None, [], None)
+            verdict = (parse_reply(reply.get("content"), TEXT_REASONS, upper=True, finish_reason=reply.get("finish_reason"))
+                       if "error" not in reply else (None, [], None, None))
             return {"id": item["id"], "gold": bool(item["gold"]["flag"]), "gold_type": item["gold"].get("type"),
-                    "verdict": verdict[0], "reasons": verdict[1], "latency_s": reply.get("latency_s")}
+                    "verdict": verdict[0], "reasons": verdict[1], "reply_format": verdict[3],
+                    "latency_s": reply.get("latency_s")}
         with ThreadPoolExecutor(max_workers=max(1, args.slots)) as pool:
             rows = list(pool.map(one_text, items))
         report["suites"]["text"] = {"fixtures": str(args.text_fixtures), "prompt_sha256": psha,
@@ -1024,10 +1121,11 @@ def cmd_fixture_eval(args):
                         "latency_s": None, "error": "fixture image sha256 mismatch"}
             reply = client.chat([{"type": "text", "text": template},
                                  {"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(png).decode()}}])
-            verdict = parse_reply(reply.get("content"), VISION_ARTEFACTS, upper=False) if "error" not in reply else (None, [], None)
+            verdict = (parse_reply(reply.get("content"), VISION_ARTEFACTS, upper=False, finish_reason=reply.get("finish_reason"))
+                       if "error" not in reply else (None, [], None, None))
             return {"id": item["id"], "gold": bool(item["gold"]["flag"]), "gold_type": item["gold"].get("type"),
                     "natural_feature": item["gold"].get("natural_feature"), "verdict": verdict[0],
-                    "artefacts": verdict[1], "latency_s": reply.get("latency_s")}
+                    "artefacts": verdict[1], "reply_format": verdict[3], "latency_s": reply.get("latency_s")}
         with ThreadPoolExecutor(max_workers=max(1, args.slots)) as pool:
             rows = list(pool.map(one_vision, items))
         report["suites"]["vision"] = {"fixtures": str(args.vision_fixtures), "prompt_sha256": psha,
