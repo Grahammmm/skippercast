@@ -429,7 +429,7 @@ class GraphValidator:
             bridge.check_catalog(doc)
         elif name == bridge.PLAN:
             bridge.check_budget(doc.get('budget'))
-            if not isinstance(doc.get('selections'), list) or not 1 <= len(doc['selections']) <= bridge.MAX_JOBS:
+            if not isinstance(doc.get('selections'), list) or not 1 <= len(doc['selections']) <= bridge.MAX_SOURCES:
                 raise ValueError('bounded bridge selections required')
         elif name in (bridge.DRY_RUN, bridge.RECEIPT):
             if (doc.get('review_required') is not True or doc.get('execution_authorized') is not False
@@ -623,7 +623,11 @@ class GraphValidator:
         for decision, selection in zip(decisions, plan['selections']):
             if 'source' in decision and decision['source'] != selection['source']:
                 raise ValueError('dry source differs from pinned plan')
+        # #806 derives the caps block from checked['selections']; a window-set
+        # selection yields raised caps and per-window jobs, which this
+        # single-window admission does not reproduce, so it fails closed below.
         checked = dict(segment=plan['segment'], catalog_ref=dry['catalog'], decisions=decisions,
+                       selections={s['source_id']: s for s in plan['selections']},
                        selected_bytes=sum(d['source']['bytes'] for d in selected))
         if checked['selected_bytes'] > plan['max_total_bytes'] or any(d['source']['bytes'] > plan['budget']['bytes'] for d in selected):
             raise ValueError('selected sources exceed plan budget')

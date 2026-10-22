@@ -52,12 +52,65 @@ is held, and the receipt records the reasons:
 
 These caps are fixed and checked before anything is written:
 
-- 1 to 4 selections (`MAX_JOBS`);
+- 1 to 4 distinct sources (`MAX_SOURCES`);
+- at most `MAX_JOBS` acquire jobs, with at most 64 windows per source
+  (`MAX_WINDOWS`), so a plan enqueues at most N x sources = 256 jobs;
 - `max_total_bytes` of selected cached sources, at most 2 GiB
-  (`MAX_TOTAL_BYTES`, the acquire stage's default per-job ceiling);
+  (`MAX_TOTAL_BYTES`, the acquire stage's default per-job ceiling; a cached
+  source is counted once no matter how many windows it tiles);
 - an acquire budget with exactly `wall_s` (at most 3,600), `memory_bytes`,
   `bytes` (at most the bridge cap, and at least the size of each selected
   source) and `requests` set to `0`.
+
+## Window-set plans (G5)
+
+A selection may carry a `windows` list instead of a single `window`: the
+deterministic 512 x 512 tiling of one source, listed row-major from the
+source's north-west valid cell. Each window becomes one acquire job, so a
+window-set plan enqueues one job per window through the ordinary
+`Store.enqueue`, and `enqueue` returns the job ids in that index order. The
+receipt lists every window with its `window_index`, its `window` and the
+`sha256` of its native-job manifest.
+
+A window-set selection must also declare the source's native geometry as
+`tiling`, so the bridge can prove the tiling without opening the raster:
+
+- `tile`: the canonical tile size, fixed at `512` native cells;
+- `width`, `height`: the full original raster's dimensions in native cells,
+  not a cropped valid-region size (each at most 32,768);
+- `origin`: required native `[column, row]` of the north-west valid cell in
+  that original raster. Both must be integers inside the full source bounds;
+  even a zero-origin source must declare `[0, 0]` explicitly;
+- `anchor`: the CRS84 `[west, north]` corner of the cell at `origin`;
+- `cell`: the CRS84 cell size in degrees as `[east, south]` (both positive for
+  a north-up raster).
+
+The bridge re-derives the deterministic tiling from that geometry (row-major
+from `origin`, with tiles clipped at the original raster's right/bottom bounds),
+restricts it to the tiles whose CRS84 footprint intersects
+the segment's `bbox_crs84`, and requires the plan's `windows` to be exactly
+that set in row-major order. So a non-canonical shape, an out-of-bounds,
+duplicated or out-of-order window, and any tile outside the segment bbox, all
+refuse the plan before any write. A missing or malformed `tiling` is refused,
+never silently accepted. Manifest windows retain original source-native offsets:
+for `origin=[128,256]`, the first full tile is `[128,256,512,512]`, never
+`[0,0,512,512]`. Footprints subtract `origin` before applying the geographic
+`anchor` and `cell` spacing. Geometry is owner-supplied, plan-hash-bound metadata
+associated with the selection's source SHA-256; the bridge checks its internal
+consistency, not its truth against raster bytes or nodata. It never opens or
+reprojects the raster. The owner must establish the north-west valid cell;
+interior nodata remains subject to the existing acquire/qualification gates.
+
+Each window is still held to the acquire stage's own bound of 262,144 cells
+(the per-job cap is unchanged), a window set is capped at `MAX_WINDOWS` (64)
+per source, and the whole plan at `MAX_JOBS` (N x sources). A 65th window is
+refused as `window_set_size` and an over-cap window as `native_window_bound`,
+both before any write.
+
+A single-window selection (today's shape) is unchanged: its receipt stays
+byte-identical to today's, caps block included. The raised job cap (`N x
+sources`) and the `max_sources` / `max_windows_per_source` keys appear only on
+window-set receipts.
 
 ## Commands
 
@@ -72,8 +125,9 @@ python -m skippercast.coastal.coordinator.catalog_bridge run \
 (`coastal-catalog-acquire-bridge-dry-run-v1`). The receipt lists the decision
 for every candidate, the caps and the jobs the bridge `would_enqueue`.
 
-`run` writes one read-only `native-job-NN.json` per selected lead inside the
-queue root, plus `bridge-receipt.json`
+`run` writes one read-only `native-job-NN.json` per window inside the queue
+root (one per selected lead for a single-window plan, one per window for a
+window set), plus `bridge-receipt.json`
 (`coastal-catalog-acquire-bridge-receipt-v1`). Each job carries
 `catalog_lineage`: the catalog ID and hash, the `source_id`, the access URL and
 the hash binding. `catalog_bridge.enqueue(store, receipt_ref, code_sha=...,

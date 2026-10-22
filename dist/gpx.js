@@ -35,6 +35,7 @@ export function tripGPX(atlas, ids, title='SkipperCast fishing set', options={})
 export function featuresGPX(atlas,features,title,options={}) {
   const selected=features.waypoints;
   const points=selected.map(t=>{
+  if(t.user_waypoint)return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(t.name)}</name><cmt>${xml(t.id)}</cmt><desc>User waypoint. User-supplied label; not verified habitat, depth or navigation guidance. Check current regulations, closures, conditions and official charts.</desc><type>${xml(t.category)}</type></wpt>`;
   const notes = [
     t.label,
     exportEvidenceLabel(t),
