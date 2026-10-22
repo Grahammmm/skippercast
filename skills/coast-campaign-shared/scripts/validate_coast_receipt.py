@@ -11,8 +11,9 @@ from pathlib import Path
 import sys
 
 from jsonschema import Draft202012Validator, FormatChecker
-from coast_refs import Resolver, REF_KEYS, canonical, loads, native_ref
+from coast_refs import Resolver, REF_KEYS, canonical, loads, native_ref, object_digest
 from coast_sample import sample, window_dir, window_key
+import coast_receipt_versions as versions
 
 SHARED = Path(__file__).resolve().parents[1]
 SCHEMAS = SHARED / 'schemas'
@@ -27,26 +28,47 @@ NATIVE_FIELDS = {
     'coastal-native-job-v1': {'source', 'review', 'source_row', 'rights.evidence.*'},
     'coastal-cached-observation-v1': {'source', 'facts.source', 'facts.source_auxiliary.*'},
     'coastal-stage-result-v1': {'artifacts.*', 'next_job.input_manifest'},
-    'private-mapping-input-v2': {'source', 'review', 'source_row', 'valid_support', 'rights.evidence.*', 'native_facts.source', 'native_facts.source_auxiliary.*'},
+    'private-mapping-input-v2': {'source', 'review', 'source_row', 'valid_support', 'rights.evidence.*', 'native_facts.source',
+                                 'native_facts.source_auxiliary.*', 'native_facts.rights.evidence.*'},
     'coastal-mapping-run-v1': {'source', 'outputs.*'},
     'coastal-terrain-summary-v1': set(),
 }
+# Rights evidence slots carry a producer-declared contract. Only these leaf
+# contracts are understood; each is validated strictly in rights_evidence().
+RIGHTS_SLOTS = {'selections.*.rights.evidence.*', 'rights.evidence.*', 'native_facts.rights.evidence.*'}
+RIGHTS_CONTRACTS = {'coastal-rights-evidence-v1', 'synthetic-fixture-evidence-v1'}
+# private-mapping-input-v2 exact producer shape (handoff/mapping_input.produce).
+MAPPING_INPUT_FIELDS = {'schema', 'producer', 'segment_id', 'source', 'source_row', 'metadata_sha256', 'segment', 'window',
+                        'declared_vertical', 'rights', 'synthetic', 'native_facts', 'valid_support', 'facts_digest',
+                        'machine_holds', 'review', 'publication_prohibited'}
+NATIVE_FACT_FIELDS = {'header', 'observed_vertical', 'vertical', 'source', 'source_auxiliary', 'source_lineage',
+                      'raw_valid_values_sha256', 'valid_count', 'valid_fraction', 'support', 'depth_values_sha256',
+                      'libs', 'implementation', 'segment', 'rights', 'synthetic'}
+OPTIONAL_NATIVE_FACT_FIELDS = {'deep_lane_support'}
+# mapping_input.bind_segment() support record embedded at native_facts.segment.
+BOUND_SEGMENT_FIELDS = {'schema', 'segment_id', 'region', 'crs', 'bbox', 'boundary_policy', 'halo_m',
+                        'intersection_area_m2', 'outside_support_area_m2'}
 OBSERVATION_FIELDS = {'expected_packet', 'observed_packet', 'problems', 'observations'}
 IDENTITY_ONLY_FIELDS = {'identity_provenance', 'run_author_provenance', 'posted_hashes', 'routing', 'thresholds', 'prompts'}
 WORKFLOW_EDGES = {
     'context': 'coast-review-context-v1', 'admission': 'coast-admission-v1',
-    'enqueue': 'coast-enqueue-receipt-v1', 'run': 'coast-run-summary-v1',
+    'enqueue': versions.ENQUEUE_V2, 'run': versions.RUN_V2,
+    'legacy_enqueue': versions.ENQUEUE_V1, 'legacy_run': versions.RUN_V1,
     'tier1': 'coast-tier1-screen-v1', 'open_report': 'coast-open-report-v1',
     'packet': 'coast-review-packet-v1', 'verdict_file': 'coast-review-verdict-v1',
     'routing': 'coast-review-routing-v1', 'manifest': 'coast-archive-manifest-v1',
 }
+# Native PC9 records keep their v1 IDs and are validated by legacy(), never by
+# the generic shared edge walk (their nested keys have native meanings).
+LEGACY = {versions.ENQUEUE_V1, versions.RUN_V1, versions.INTENT_V1}
+CONTINUABLE = {'deadline', 'max_ticks', 'not_claimable'}
 
 
 def validate_schema(value):
     if not isinstance(value, dict) or not isinstance(value.get('schema'), str):
         raise ValueError('workflow receipt needs a schema')
     name = value['schema']
-    if not name.startswith('coast-') or not name.endswith('-v1') or '/' in name or '\\' in name:
+    if not name.startswith('coast-') or not name.endswith(('-v1', '-v2')) or '/' in name or '\\' in name:
         raise ValueError('unknown workflow schema')
     path = SCHEMAS / (name + '.schema.json')
     if not path.is_file():
@@ -74,7 +96,7 @@ def _consistency(value):
                 raise ValueError('window owner differs from plan coordinator')
         # would_enqueue_count describes the producer dry-run list, not all
         # admission windows: held/cache-miss windows remain in windows[].
-    if name == 'coast-run-summary-v1':
+    if name == versions.RUN_V2:
         keys = [w['window_key'] for w in value['windows']]
         partition = [k for group in value['partition'].values() for k in group]
         if len(set(keys)) != len(keys) or sorted(keys) != sorted(partition):
@@ -84,6 +106,22 @@ def _consistency(value):
                 raise ValueError('window state/partition mismatch')
         if value['ticks_used'] > value['max_ticks']:
             raise ValueError('ticks_used exceeds max_ticks')
+        # Exactly one per-window cells record, in window order; no aggregate.
+        cells = value['window_cells']
+        if ([c['window_key'] for c in cells] != keys or [c['window_index'] for c in cells] != list(range(len(keys)))
+                or [c['state'] for c in cells] != [w['state'] for w in value['windows']]):
+            raise ValueError('window_cells must hold one record per window in window order')
+        for c in cells:
+            measured = c['producer'] is not None
+            if measured != (c['producer_contract'] is not None) or (measured and c['state'] != 'map_done'):
+                raise ValueError('window_cells producer binding inconsistent')
+            if not measured and (any(c[k] is not None for k in versions.STATS + ('native_valid_count',)) or not c['unknown']):
+                raise ValueError('unmeasured window must be explicitly unknown, never zero-filled')
+        evidence = value['store_status_evidence']
+        if evidence['source'] != value['legacy_run']:
+            raise ValueError('legacy embedded status must bind to the original run receipt')
+        if (value['sequence'] == 0) != (value['continuation_of'] is None):
+            raise ValueError('zero-based run sequence/continuation mismatch')
     if name == 'coast-review-packet-v1':
         if value['integrity_ok']:
             population = value['population']
@@ -169,7 +207,13 @@ class GraphValidator:
         if not isinstance(doc, dict):
             raise ValueError('referenced JSON document must be an object')
         name = doc.get('schema', '')
-        if name.startswith('coast-'):
+        if name in LEGACY:
+            validate_schema(doc)
+            try:
+                self.legacy(doc, root_id=root_id)
+            except (KeyError, TypeError, IndexError) as error:
+                raise ValueError('malformed legacy PC9 receipt: ' + name) from error
+        elif name.startswith('coast-'):
             validate_schema(doc)
             _consistency(doc)
             if scope == 'identity_snapshot':
@@ -237,9 +281,14 @@ class GraphValidator:
                 if (slot in allowed or pattern in allowed or wildcard in allowed) and 'path' in value:
                     if set(value) - {'path', 'sha256', 'bytes', 'contract', 'kind'}:
                         raise ValueError('unresolved-reference: unknown native ref field ' + slot)
-                    self.reference(native_ref(value, root_id))
+                    if pattern in RIGHTS_SLOTS:
+                        self.rights_evidence(value, doc, path, root_id=root_id)
+                    else:
+                        self.reference(native_ref(value, root_id))
                 elif 'path' in value or 'root_id' in value:
                     raise ValueError('unresolved-reference: unknown native ref slot ' + slot)
+                elif contract == 'private-mapping-input-v2' and slot == 'native_facts.segment':
+                    self.bound_segment(value, doc)
                 elif value is not doc and 'schema' in value and not (contract.startswith('coastal-catalog-acquire-bridge-') and slot == 'catalog'):
                     self.document(value, root_id=root_id)
                 else:
@@ -251,6 +300,64 @@ class GraphValidator:
                 for i, child in enumerate(value):
                     visit(child, path + [str(i)])
         visit(doc, [])
+
+    def rights_evidence(self, value, doc, path, *, root_id):
+        """Producer-declared rights evidence leaf (authenticated.py rules).
+
+        Structural PC9 records may carry no evidence (review-required, never
+        execution-authorized); any evidence that IS present must be a declared,
+        hash-bound, source-specific leaf. Validation never grants qualification.
+        """
+        contract = value.get('contract')
+        if contract not in RIGHTS_CONTRACTS:
+            raise ValueError('unresolved-reference: unknown rights evidence contract at ' + '.'.join(path))
+        owner = doc
+        for part in path[:path.index('rights')]:
+            owner = owner[int(part)] if isinstance(owner, list) else owner[part]
+        rights = owner['rights']
+        if not isinstance(rights, dict) or set(rights) - {'private_use', 'evidence'} or rights.get('private_use') is not True:
+            raise ValueError('rights evidence requires declared private use')
+        source = owner.get('source')
+        synthetic = owner.get('synthetic', doc.get('synthetic'))
+        evidence = loads(self.resolver.read(native_ref(value, root_id)))
+        if contract == 'synthetic-fixture-evidence-v1':
+            # Synthetic stand-in only: never valid for a non-synthetic producer record.
+            if evidence != {'synthetic': True} or synthetic is not True:
+                raise ValueError('synthetic rights evidence outside a synthetic producer record')
+            return
+        from datetime import datetime
+        def epoch(stamp):
+            if not isinstance(stamp, str) or not stamp.endswith('Z'):
+                raise ValueError('rights evidence timestamps must be UTC')
+            return datetime.fromisoformat(stamp[:-1] + '+00:00').timestamp()
+        if (not isinstance(evidence, dict) or evidence.get('schema') != contract or evidence.get('independent') is not True
+                or not isinstance(evidence.get('reviewer_id'), str) or not evidence['reviewer_id'].strip()
+                or evidence.get('private_use') is not True
+                or evidence.get('decision') != 'accepted_private_processing_conditional_on_exact_expected_source_identity'
+                or evidence.get('accepted_source_rights_for_declared_private_purpose') is not True
+                or evidence.get('holds_added') != [] or not isinstance(source, dict)
+                or evidence.get('source_sha256') != source.get('sha256') or evidence.get('source_bytes') != source.get('bytes')
+                or evidence.get('synthetic', False) is not (synthetic is True)):
+            raise ValueError('independent source-specific rights binding invalid')
+        if not epoch(evidence.get('checked_at')) < epoch(evidence.get('valid_until')):
+            raise ValueError('rights evidence validity window invalid')
+
+    def bound_segment(self, value, doc):
+        """Exact mapping_input.bind_segment() support record (no lattice bbox_crs84)."""
+        import math
+        if not isinstance(value, dict) or set(value) != BOUND_SEGMENT_FIELDS:
+            raise ValueError('unknown producer field: native_facts.segment')
+        x0, y0 = (int(p) for p in value['segment_id'].split(':')[2:4])
+        if (value['schema'] != 'coastal-segment-v1' or value['segment_id'] != doc['segment_id'] or value['crs'] != 'EPSG:3310'
+                or value['bbox'] != [x0, y0, x0 + 5000, y0 + 5000] or not isinstance(value['region'], str) or not value['region']
+                or value['boundary_policy'] != 'all_valid_native_support_contained' or value['halo_m'] != 0):
+            raise ValueError('bound native segment identity mismatch')
+        inside, outside = value['intersection_area_m2'], value['outside_support_area_m2']
+        if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or v < 0 for v in (inside, outside)):
+            raise ValueError('bound native segment areas invalid')
+        holds = doc['machine_holds']
+        if (inside <= 0) != ('native_support_disjoint_from_segment' in holds) or (outside > 1e-6) != ('native_support_outside_segment' in holds):
+            raise ValueError('bound native segment holds mismatch')
 
     def check_producer(self, doc):
         """Bounded native metadata adapters; no fetch, Store, or execution calls."""
@@ -267,6 +374,17 @@ class GraphValidator:
         fields[bridge.RECEIPT] = (fields[bridge.DRY_RUN] - {'would_enqueue'}) | {'jobs', 'budget', 'segment'}
         if name in fields and set(doc) - fields[name]:
             raise ValueError('unknown producer field: ' + name)
+        if name == 'private-mapping-input-v2':
+            from skippercast.coastal.coordinator.stages import digest
+            facts = doc['native_facts']
+            if set(doc) != MAPPING_INPUT_FIELDS:
+                raise ValueError('unknown producer field: ' + name)
+            if not isinstance(facts, dict) or not NATIVE_FACT_FIELDS <= set(facts) or set(facts) - NATIVE_FACT_FIELDS - OPTIONAL_NATIVE_FACT_FIELDS:
+                raise ValueError('unknown producer field: ' + name + ' native_facts')
+            # produce(): facts.update(rights=rights, synthetic=...) and facts_digest=digest(facts).
+            if (facts['rights'] != doc['rights'] or facts['synthetic'] != doc['synthetic'] or facts['source'] != doc['source']
+                    or doc['facts_digest'] != digest(facts) or doc['publication_prohibited'] is not True):
+                raise ValueError('mapping input native facts binding mismatch')
         if name == 'coastal-segment-v1':
             from pyproj import Transformer
             bbox = doc['bbox']
@@ -289,8 +407,101 @@ class GraphValidator:
             if not isinstance(doc.get('would_enqueue' if name == bridge.DRY_RUN else 'jobs'), list):
                 raise ValueError('bridge job population must be a list')
 
+    def legacy(self, doc, *, root_id):
+        """Native PC9v1 receipts: exact schema plus producer bindings, original queue only."""
+        from skippercast.coastal.coordinator import catalog_bridge as bridge
+        name = doc['schema']
+        if not root_id.startswith('queue:'):
+            raise ValueError('legacy PC9 receipts require the original queue root namespace')
+        def edge(ref, contract=None):
+            if ref['root_id'] != root_id:
+                raise ValueError('legacy PC9 reference leaves its queue namespace')
+            return self.reference(versions.typed(ref), contract=contract or ref.get('contract'))
+        admission = edge(doc['admission'], 'coast-admission-v1')
+        bridge_doc = edge(doc['bridge'], bridge.RECEIPT)
+        if any(doc[k] != admission[k] for k in ('campaign_segment_id', 'coordinator_segment_id', 'plan_id', 'plan_sha256')):
+            raise ValueError('legacy receipt identity differs from admission')
+        if name == versions.INTENT_V1:
+            return
+        if name == versions.ENQUEUE_V1:
+            intent = edge(doc['intent'], versions.INTENT_V1)
+            if (intent['bridge'] != doc['bridge'] or intent['admission'] != doc['admission']
+                    or intent['code_sha'] != doc['code_sha'] or intent['deps_sha'] != doc['deps_sha']):
+                raise ValueError('legacy intent binding mismatch')
+            jobs = doc['jobs']
+            if (len(jobs) != len(admission['windows']) or len(jobs) != len(bridge_doc['jobs'])
+                    or len({j['root_job_id'] for j in jobs}) != len(jobs)):
+                raise ValueError('legacy enqueue population mismatch')
+            for entry, window, job in zip(jobs, admission['windows'], bridge_doc['jobs']):
+                if (entry['window_key'] != window['window_key'] or entry['source_id'] != job['source_id']
+                        or entry['input_manifest'] != dict(job['input_manifest'], root_id=root_id)):
+                    raise ValueError('legacy enqueue root manifest mismatch')
+                edge(entry['input_manifest'])
+            return
+        enqueue = edge(doc['enqueue'], versions.ENQUEUE_V1)
+        if doc['admission'] != enqueue['admission'] or doc['bridge'] != enqueue['bridge'] or (doc['code_sha'], doc['deps_sha']) != (enqueue['code_sha'], enqueue['deps_sha']):
+            raise ValueError('legacy run/enqueue binding mismatch')
+        if doc['enqueued_job_ids'] != [j['root_job_id'] for j in enqueue['jobs']]:
+            raise ValueError('legacy run enqueued job population mismatch')
+        if [(w['window_key'], w['source_id'], w['root_job_id']) for w in doc['windows']] != [
+                (j['window_key'], j['source_id'], j['root_job_id']) for j in enqueue['jobs']]:
+            raise ValueError('legacy run window population mismatch')
+        counts = {state: sum(w['state'] == state for w in doc['windows']) for state in versions.STATES}
+        if any(doc['counts'][k] != v for k, v in counts.items()) or doc['counts']['windows'] != len(doc['windows']):
+            raise ValueError('legacy run counts mismatch')
+        if doc['bridge_caps'] != bridge_doc['caps'] or doc['ticks_used'] > doc['max_ticks']:
+            raise ValueError('legacy run caps/ticks mismatch')
+        if doc['continuation_of'] is None:
+            if doc['sequence'] != 0:
+                raise ValueError('legacy run sequence is zero-based')
+        else:
+            previous = edge(doc['continuation_of'], versions.RUN_V1)
+            if (previous['enqueue'] != doc['enqueue'] or previous['stop_reason'] not in CONTINUABLE
+                    or doc['sequence'] != previous['sequence'] + 1):
+                raise ValueError('legacy continuation not authorized')
+        for window in doc['windows']:
+            for info in window['stages'].values():
+                if info['state'] == 'missing':
+                    continue
+                edge(info['input_manifest'])
+                if info['result_ref'] is not None:
+                    edge(info['result_ref'], 'coastal-stage-result-v1')
+                for product in info['products'].values():
+                    edge(product)
+        # store_status is inherited embedded evidence: schema-checked only, never
+        # treated as an independently produced or store-consistent snapshot.
+
+    def run_v2(self, doc):
+        legacy = self.reference(doc['legacy_run'], contract=versions.RUN_V1)
+        enqueue = self.reference(doc['enqueue'], contract=versions.ENQUEUE_V2)
+        if versions.typed(legacy['enqueue']) != enqueue['legacy_enqueue']:
+            raise ValueError('v2 run enqueue differs from legacy run enqueue')
+        previous_ref = doc['continuation_of']
+        if previous_ref is not None:
+            previous = self.reference(previous_ref, contract=versions.RUN_V2)
+            if legacy['continuation_of'] is None or previous['legacy_run'] != versions.typed(legacy['continuation_of']):
+                raise ValueError('v2 continuation differs from legacy continuation')
+        if doc != versions.run_v2(legacy, doc['legacy_run'], doc['enqueue'], previous_ref):
+            raise ValueError('v2 run differs from hash-bound adapter output')
+        for cells in doc['window_cells']:
+            if cells['producer'] is None:
+                continue
+            producer = self.reference(cells['producer'], contract=cells['producer_contract'])
+            depth = producer['depth_m']
+            def numeric(value):
+                return value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+            if (producer['native_valid_count'] != cells['native_valid_count']
+                    or any(cells[k] != numeric(depth.get(k)) for k in versions.STATS)):
+                raise ValueError('window cells statistics differ from producer record')
+
     def crosscheck(self, doc, error_branch):
         name = doc['schema']
+        if name == versions.ENQUEUE_V2:
+            legacy = self.reference(doc['legacy_enqueue'], contract=versions.ENQUEUE_V1)
+            if doc != versions.enqueue_v2(legacy, doc['legacy_enqueue']):
+                raise ValueError('v2 enqueue differs from hash-bound adapter output')
+        if name == versions.RUN_V2:
+            self.run_v2(doc)
         if name == 'coast-admission-v1':
             try:
                 self.admission(doc)

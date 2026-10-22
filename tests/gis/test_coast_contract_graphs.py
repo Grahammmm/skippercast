@@ -8,7 +8,7 @@ import sys
 
 import pytest
 
-from tests.coast_contract_factory import ROOT, SHARED, SCRIPTS, load_helper, materialize, schemas
+from tests.coast_contract_factory import ROOT, SHARED, SCRIPTS, load_helper, materialize, schema_file, schemas
 
 refs = load_helper('coast_refs')
 sampling = load_helper('coast_sample')
@@ -41,7 +41,7 @@ def test_schema_roundtrip_and_ref_graph(name, graph):
     assert validator.validate(reopened, resolver, root_id='queue:synthetic') == value
     with pytest.raises(ValueError, match='schema'):
         validator.validate(dict(value, self_sha256=refs.sha256(raw)), resolver, root_id='queue:synthetic')
-    committed = refs.loads((SHARED/'schemas'/f'coast-{name}-v1.schema.json').read_bytes())
+    committed = refs.loads((SHARED/'schemas'/schema_file(name)).read_bytes())
     assert committed == schemas()[name]
 
 

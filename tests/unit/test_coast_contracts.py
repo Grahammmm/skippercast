@@ -8,7 +8,7 @@ import sys
 
 import pytest
 
-from tests.coast_contract_factory import ROOT, SHARED, SCRIPTS, load_helper, materialize, schemas
+from tests.coast_contract_factory import ROOT, SHARED, SCRIPTS, load_helper, materialize, schema_file, schemas
 
 refs = load_helper('coast_refs')
 sampling = load_helper('coast_sample')
@@ -26,7 +26,7 @@ def test_committed_schema_roundtrip_without_scientific_graph(name):
     validator.validate_schema(value)
     with pytest.raises(ValueError, match='schema'):
         validator.validate_schema(refs.loads((root/'invalid'/f'{name}.json').read_bytes()))
-    assert refs.loads((SHARED/'schemas'/f'coast-{name}-v1.schema.json').read_bytes()) == schemas()[name]
+    assert refs.loads((SHARED/'schemas'/schema_file(name)).read_bytes()) == schemas()[name]
 
 
 
