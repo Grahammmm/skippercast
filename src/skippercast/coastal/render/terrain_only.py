@@ -18,7 +18,8 @@ import zipfile
 from ..handoff.common import digest, load, ref, resolve, review_holds, write, validate_derived_geotiff
 from .. import vertical
 from .align import check_header, MAX_FILE_BYTES
-from .mesh import CAMERA, MAX_SIDE, WIDTH, HEIGHT, write_png, camera_projection
+from .mesh import (CAMERA, MAX_SIDE, WIDTH, HEIGHT, write_png, camera_projection,
+                   supported_triangles, mesh_support_counts)
 from .preview import output_path, publish_staging, sync_directory
 
 INPUT = 'coastal-terrain-only-input-v1'
@@ -187,21 +188,16 @@ def build_terrain(root, document):
         vertices = np.c_[x, y, -depth[valid]]
         index = np.full(ds.shape, -1, dtype='int32')
         index[valid] = np.arange(len(rows))
-        faces = []
-        for r in range(ds.height - 1):
-            for c in range(ds.width - 1):
-                for corners in (((r,c),(r+1,c),(r,c+1)), ((r,c+1),(r+1,c),(r+1,c+1))):
-                    ids = [int(index[p]) for p in corners]
-                    if min(ids) >= 0:
-                        faces.append(ids)
-        if not faces:
+        faces = supported_triangles(index)
+        if not len(faces):
             raise ValueError('no_measured_triangles')
         return dict(vertices=vertices, faces=np.asarray(faces,dtype='int32'),
                     grid_pixels=np.c_[cols,rows].astype('int32'), support=valid,
                     depth_m=depth, uncertainty_m=uncertainty_m, crs=ds.crs.to_string(),
                     crs_wkt=ds.crs.to_wkt(), affine=list(ds.transform),
                     nodata=repr(ds.nodata), vertical=stored_vertical,
-                    uncertainty_kind=document.get('uncertainty_kind','unavailable'))
+                    uncertainty_kind=document.get('uncertainty_kind','unavailable'),
+                    **mesh_support_counts(len(vertices), faces))
 
 
 def save_mesh(path, mesh):
@@ -475,6 +471,7 @@ def preview(root, acceptance, *, output_dir, now, style=None, minimum_valid_unti
         crs=mesh['crs'],crs_wkt=mesh['crs_wkt'],affine=mesh['affine'],vertical=mesh['vertical'],
         nodata=mesh['nodata'],support_cells=int(mesh['support'].sum()),
         vertices=len(mesh['vertices']),triangles=len(mesh['faces']),
+        **mesh_support_counts(len(mesh['vertices']),mesh['faces']),
         interpolation='planar_triangles_between_supported_samples_visualization_only',
         uncertainty_kind=document.get('uncertainty_kind','unavailable'),**rendered,
         artifacts=[dict(path=(out.relative_to(base)/name).as_posix(),**{k:v for k,v in ref(stage,name,contract,cap=MAX_FILE_BYTES).items() if k!='path'})

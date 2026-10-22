@@ -32,6 +32,36 @@ def camera_projection(vertices, vertical_exaggeration=1.0):
     return projected, basis
 
 
+def supported_triangles(index):
+    """Triangulate adjacent sample quads without inventing unsupported vertices.
+
+    Four corners retain the historical diagonal. Exactly three corners emit
+    their one triangle in the same winding; fewer cannot define a surface.
+    Isolated samples remain in the vertex array for provenance, not faces.
+    """
+    import numpy as np
+
+    faces = []
+    for row in range(index.shape[0] - 1):
+        for col in range(index.shape[1] - 1):
+            tl, bl, br, tr = (int(index[p]) for p in (
+                (row, col), (row+1, col), (row+1, col+1), (row, col+1)))
+            valid = [i for i in (tl, bl, br, tr) if i >= 0]
+            if len(valid) == 4:
+                faces.extend(((tl, bl, tr), (tr, bl, br)))
+            elif len(valid) == 3:
+                faces.append(valid)
+    return np.asarray(faces, dtype=np.int32).reshape(-1, 3)
+
+
+def mesh_support_counts(vertex_count, faces):
+    """Count supported samples in final faces, including imagery exclusions."""
+    import numpy as np
+
+    meshed = int(np.unique(faces).size)
+    return dict(meshed_support_cells=meshed, unmeshed_support_cells=vertex_count-meshed)
+
+
 def build_mesh(terrain_path, support_path, imagery_path, vertical):
     import numpy as np
     import rasterio
@@ -78,15 +108,8 @@ def build_mesh(terrain_path, support_path, imagery_path, vertical):
         vertices = np.c_[x, y, values[rows, cols]]
         index = np.full(valid.shape, -1, dtype=np.int32)
         index[rows, cols] = np.arange(len(rows))
-        faces = []
-        for row in range(ds.height - 1):
-            for col in range(ds.width - 1):
-                for pixels in (((row, col), (row + 1, col), (row, col + 1)),
-                               ((row, col + 1), (row + 1, col), (row + 1, col + 1))):
-                    ids = [int(index[p]) for p in pixels]
-                    if min(ids) >= 0:
-                        faces.append(ids)
-        if not faces:
+        faces = supported_triangles(index)
+        if not len(faces):
             raise ValueError("no_measured_triangles")
         # The minimum private adapter only textures co-CRS north-up grids. A
         # nonlinear reprojection needs curved-footprint rasterization first.
@@ -125,7 +148,8 @@ def build_mesh(terrain_path, support_path, imagery_path, vertical):
         return {"vertices": vertices, "faces": np.asarray(faces, dtype=np.int32),
                 "colors": colors, "grid_pixels": np.c_[cols, rows].astype(np.int32),
                 "support": valid, "crs": ds.crs.to_string(), "vertical": vertical,
-                "imagery_mask_excluded_triangles": excluded}
+                "imagery_mask_excluded_triangles": excluded,
+                **mesh_support_counts(len(vertices), faces)}
 
 
 def render_png(mesh, path):

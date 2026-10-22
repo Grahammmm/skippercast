@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Internal terrain meshes preserve the triangle when exactly three adjacent sample corners are supported, keep gaps with fewer than three corners open, and report supported samples omitted from final faces (including imagery exclusions); the private demo validates the same topology.
 - Internal terrain-only previews retain the deep-datum NOT FOR NAVIGATION warning and the source datum/tide caveat in both the PNG and receipt; publication remains prohibited.
 
 - The Swell layer's selector switches between the primary swell, wind sea and secondary swell from the NOAA GFS-Wave wcoast.0p16 forecast, each drawn with height in feet, period and direction and named with its run time; the nearshore (CDIP MOP) rings are unchanged.

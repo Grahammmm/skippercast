@@ -22,6 +22,7 @@ import zipfile
 from .. import vertical
 from ..handoff.common import digest, write
 from .preview import output_path, publish_staging, sync_directory
+from .mesh import supported_triangles, mesh_support_counts
 
 SCHEMA = 'coastal-terrain-demo-v1'
 MAX_JSON_BYTES = 2_000_000
@@ -219,16 +220,14 @@ def payload(root, receipt_ref):
             or receipt['support_cells'] != int(support.sum()) or receipt['vertices'] != len(vertices)):
         raise ValueError('mesh_original_vertices_mismatch')
     index = np.full(support.shape, -1, dtype='int32'); index[support] = np.arange(len(vertices))
-    expected_faces = []
-    for r in range(support.shape[0]-1):
-        for c in range(support.shape[1]-1):
-            for corners in (((r,c),(r+1,c),(r,c+1)), ((r,c+1),(r+1,c),(r+1,c+1))):
-                ids = [int(index[p]) for p in corners]
-                if min(ids) >= 0:
-                    expected_faces.append(ids)
-    if (not expected_faces or faces.dtype.kind not in 'iu' or not np.array_equal(faces, expected_faces)
+    expected_faces = supported_triangles(index)
+    if (not len(expected_faces) or faces.dtype.kind not in 'iu' or not np.array_equal(faces, expected_faces)
             or receipt['triangles'] != len(faces)):
         raise ValueError('mesh_supported_triangles_mismatch')
+    counts = mesh_support_counts(len(vertices), faces)
+    # Older receipts lack counts. When present, require accurate accounting.
+    if any(receipt.get(key, value) != value for key, value in counts.items()):
+        raise ValueError('mesh_support_counts_mismatch')
     def nullable(array):
         return np.where(np.isfinite(array), array, None).tolist()
     return dict(schema=SCHEMA, vertices=vertices.tolist(), faces=faces.tolist(), grid_pixels=pixels.tolist(),
@@ -238,6 +237,7 @@ def payload(root, receipt_ref):
         metadata=dict(crs=scalar('crs'), crs_wkt=scalar('crs_wkt'), affine=affine.tolist(), nodata=scalar('nodata'),
             vertical=block, acceptance=acceptance, render_binding=receipt['render_binding'],
             limitations=receipt['limitations'], support_cells=receipt['support_cells'], uncertainty_kind=kind,
+            **counts,
             interpolation='planar_supported_triangle_interpolation_visualization_only', **FLAGS))
 
 
@@ -283,11 +283,13 @@ def build_demo(root, receipt_ref, *, output_dir, style=None):
     base, out = output_path(root, output_dir)
     if out.exists():
         raise ValueError('demo_output_collision')
-    code_paths = [Path(__file__), Path(__file__).with_name('terrain_demo_core.js'), Path(__file__).with_name('terrain_demo_ui.js'), Path(vertical.__file__), Path(__file__).with_name('preview.py')]
+    code_paths = [Path(__file__), Path(__file__).with_name('terrain_demo_core.js'), Path(__file__).with_name('terrain_demo_ui.js'), Path(vertical.__file__), Path(__file__).with_name('preview.py'), Path(__file__).with_name('mesh.py')]
     result = dict(schema=SCHEMA, state='done', **FLAGS, render_receipt=receipt_ref,
         payload_sha256=digest(data), html=dict(path='terrain-demo.html',bytes=len(encoded),sha256=hashlib.sha256(encoded).hexdigest()),
         code_sha256={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in code_paths},
         vertices=len(data['vertices']), triangles=len(data['faces']), support_cells=data['metadata']['support_cells'],
+        meshed_support_cells=data['metadata']['meshed_support_cells'],
+        unmeshed_support_cells=data['metadata']['unmeshed_support_cells'],
         range_algorithm=dict(auto='visible_topmost_supported_pixel_centres_2nd_98th_percentiles',minimum_span_m=1,hysteresis_fraction=.08,
             locked='captures_current_range_until_mode_changed',manual='explicit_finite_min_less_than_max'),
         display_polish=dict(config=config, interpolation='bounded_monotone_hermite_display_only', backing_canvas=[1600,1000], shading='area_weighted_vertex_normals_barycentric_display_only',
