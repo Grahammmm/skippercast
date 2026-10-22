@@ -219,7 +219,8 @@ def _satellite_layer(samples, resolution, times, metadata_url, dataset, meta, ki
         limitations = f"Daily L4 foundation SST analysis, partly interpolated. Native {resolution[0]:.2f}° grid spacing is not independent observational accuracy. Surface only; not bottom temperature or fish presence. Error support is not a confidence interval."
     else:
         fields = ["latitude", "longitude", "chlorophyll_mg_m3"]
-        limitations = "Daily MODIS ocean-color observation; clouds and failed retrievals remain gaps. Approximately 4.6 km pixels; chlorophyll is not bait biomass or immediate feeding activity."
+        product = "NOAA NPP/NOAA-20 merged VIIRS OCI" if dataset.startswith("chlociVIIRSnpp-n20GlobalDailyWW00/") else "satellite"
+        limitations = f"Daily {product} ocean-color observation; clouds and failed retrievals remain gaps. Native {resolution[0]:g}° latitude by {resolution[1]:g}° longitude grid spacing; chlorophyll is not bait biomass or immediate feeding activity."
     when = times.pop()
     return {"kind": "analysis" if kind == "sst" else "observation", "sample_at": when,
             "resolution_degrees": resolution, "horizontal_datum": "WGS84", "fields": fields,
