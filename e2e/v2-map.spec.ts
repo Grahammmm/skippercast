@@ -1223,6 +1223,12 @@ test('Stations legend stays bounded on phone and laptop and opens a station card
   await expect(row).toBeVisible();
   for (const viewport of [{width: 390, height: 844}, {width: 1440, height: 900}]) {
     await page.setViewportSize(viewport);
+    // On a narrow viewport the legend lives inside the sheet's Layers panel, so open it when it is not already open.
+    if (narrow(page)) {
+      const layersButton = page.getByRole('button', {name: 'Layers', exact: true});
+      await layersButton.waitFor();
+      if (await page.getByRole('button', {name: 'Done', exact: true}).count() === 0) await layersButton.click();
+    }
     const geometry = await row.evaluate(el => {
       const legendBox = el.closest('.app-legend')!.getBoundingClientRect();
       const rowBox = el.getBoundingClientRect();
