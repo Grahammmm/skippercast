@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "jurisdiction_id": "california-northern",
+  "revision": "2026-10-20-northern-trinidad-klamath-1",
+  "reviewed_at": "2026-10-20T23:14:46Z",
+  "rules_content_sha256": "b59f3e181b0b9c8a50d6e4713bda893a129567ad67e2f8bb3aac789228297c1e",
+  "reviewed_species": ["lingcod", "rockfish", "halibut", "salmon", "albacore", "dungeness", "pacific-halibut"],
+  "reviewed_regions": [
+    {"id": "crescent-city", "fishing_bounds": [-124.6, 41.6, -124.1, 41.99]},
+    {"id": "humboldt-bay-cape-mendocino", "fishing_bounds": [-124.75, 40.2, -124.12, 40.92]},
+    {"id": "trinidad-klamath", "fishing_bounds": [-124.55, 40.95, -124.05, 41.55]}
+  ],
+  "record_path": "jurisdictions/reviews/2026-10-20-california-northern-trinidad-klamath.json",
+  "candidate_author": {"profile": "opus-coder", "model": "gpt-6-astra", "independent_semantic_review_required": true},
+  "scope_note": "Candidate semantic review of the three Northern ocean day-trip footprints, not inland Klamath fishing, tribal exemptions, live access or permission to fish. Source-specific conclusions below follow reading the preserved official text and relevant effective legal documents, not collection success. Independent different-model acceptance is required before merge.",
+  "evidence": {
+    "packet_directory": "var/rules/2026-10-20-california-northern-pc5b-final",
+    "collected_at": "2026-10-20T23:14:08Z",
+    "completed_at": "2026-10-20T23:14:12Z",
+    "archive_sha256": "673a6b68d22ab5b936732a34f95474ea3d11579d6649ecc6e20aee4d1f358525",
+    "reconciliation": "All 22 final source fingerprints equal the independently inspected pre-edit packet; the new immutable packet was collected against the final legal-content hash. Archive integrity independently recomputed all 22 identities, normalizers and fingerprints. The earlier packet and hashes were not rewritten.",
+    "linked_documents": [
+      {"url": "https://fgc.ca.gov/Regulations/2025-New-and-Proposed", "basis": "Effective-date history for the continuing groundfish and recreational crab rulemakings."},
+      {"url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=245296&inline", "basis": "Approved groundfish language effective May 19, 2026; sections 1.91, 27.25, 27.30, 27.35, 27.40 and 28.55. Supersedes reliance on the expired emergency extension."},
+      {"url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239977&inline", "basis": "Approved recreational crab gear language: sections 29.80, 705 and 705.1, effective January 1, 2026. Northern hoop-net markings and private-vessel versus CPFV validation distinction."},
+      {"url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=246749&inline", "basis": "White-shark gear emergency effective July 3 through December 31, 2026. Section 28.65 shore/nearshore wire and large-hook prohibition is south of Pigeon Point; Northern landing-net and aboard-groundfish limits still apply."},
+      {"url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=246781&inline", "basis": "Corrected section 27.80 effective May 16, 2026; read with subsequent KMZ in-season closure, not used to revive superseded August dates."},
+      {"url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=243744&inline", "basis": "Section 28.20 effective March 12, 2026: April 1 opening, November 15 or quota termination, one fish/no size minimum, one line/two hooks."},
+      {"url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=89905&inline", "basis": "Reading Rock SMR map/facts/regulations; cross-checked current CDFW page and 2026 booklet section 632(b)(7)."},
+      {"url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=90263&inline", "basis": "Reading Rock SMCA map/facts/regulations; cross-checked current CDFW page and booklet section 632(b)(6), including narrow recreational method exceptions."}
+    ],
+    "limitations": "Direct Westlaw section 632 retrieval was unavailable (collector host not allowed; no allowlist changes); current official CDFW booklet section 632, current MPA pages and linked facts/regulations supplied the inspected rules. The attempted Klamath map download was not usable as PDF and is not relied on. Klamath legal limits come from booklet section 27.75 and the current salmon flyer. Linked originals/receipts are preserved locally; none of these failures is represented as a successful source approval."
+  },
+  "neighbor_impact": "Both existing reviewed footprints and their species/notice dependencies are preserved. No source holds are applied. All three share the corrected Northern California-halibut filleting restriction and refreshed source comparisons. Any later shared-source hold or change still withholds dependent species in Crescent City, Humboldt and Trinidad; this review does not exempt neighbors or authorize a crab opener.",
+  "sources": {
+    "rules-gear": {
+      "decision": "approve",
+      "content_sha256": "389bd69628ba305b287b23869df4e5ec092c1328c2a756943bcc3422195a4819",
+      "note": "Read section 28.65 and the July 3 effective emergency language. Groundfish aboard restricts to one line/two hooks; salmon has separate rod/barbless rules. Landing net opening at least 18 inches is required for boat finfish, and undersized fish cannot be gaffed. New wire/large-hook shore restrictions are south of Pigeon Point, not this Northern footprint. Added the omitted landing-net reminder; no Northern hook permission was expanded."
+    },
+    "rules-invertebrates": {
+      "decision": "approve",
+      "content_sha256": "8c5a758c06f7fadf0a4da908edce580fdc4e25895250ae9bb8479c7d0818f9c2",
+      "note": "Read sections 29.80 and 29.85 with the January 1, 2026 approved crab gear language. Preserve private-boat ten-trap/validation, nine-day tending, seven-day pre-opener prohibition, six-loop snare and two-hour hoop inspection rules. Northern hoop buoy is at most 6 by 14 inches; optional orange H marker and surface-line markings differ from trap buoys. Season, toxin closures and trap declarations remain separate gates."
+    },
+    "rules-whales": {
+      "decision": "approve",
+      "content_sha256": "b49d091f8caf7109aefb5863fc433adce018eee38f69366a5f2e91e2101f3592",
+      "note": "Read the 2026-27 status and dated prior-season assessments: recreational and commercial seasons currently closed. June 2026 commercial Zones 1-2 depth/gear reductions and recreational Zones 3-5 trap prohibitions do not clear Northern recreational traps for November. No new-season recreational clearance is established. Approve the closed/scheduled representation only; preserve requires_opening_review and trap requires_clearance, rather than infer clearance from zone latitude or an old declaration."
+    },
+    "rules-health": {
+      "decision": "approve",
+      "content_sha256": "57139dac749afac9d1a95938296b8a288fe2325d6322b961661c33bc66d7ef47",
+      "note": "Read current health status: Del Norte razor clams closed October 9, Humboldt razor clams remain closed; Monterey anchovy consumption restrictions are outside these footprints. No current recreational Dungeness toxin closure is listed, but this is not a season opening, trap clearance or November health forecast. Commercial rock-crab closures are not private-boat Dungeness rules. Keep trip-time health checks and scheduled crab opener."
+    },
+    "rules-ocean": {
+      "decision": "approve",
+      "content_sha256": "485290944a3e0afe0c8b3e0201dfc04c10591a86f9558ae5516ae5ed8cd694ee",
+      "note": "Read CDFW ocean index as the authoritative source directory and followed Northern rules, booklet, in-season and Commission links. An index is not evidence of an open season or exact-position access. Species conclusions use the detailed legal records; no catch, habitat or navigation claim is derived from this page."
+    },
+    "rules-groundfish": {
+      "decision": "approve",
+      "content_sha256": "9338d6590c457dbbe5365ef0a03a47c6f0bf52d76b021e502a4365f8266fa8b8",
+      "note": "Read Northern groundfish summary and linked table alongside approved regular language effective May 19. Northern boat season is April 1-December 31 at all depths, not the Mendocino split-depth schedule. Retain descending-device, one-line/two-hook, RCG ten, one copper/two canary/four vermilion-sunset and prohibited-species restrictions; lingcod two at 22 inches remains separate."
+    },
+    "rules-inseason": {
+      "decision": "approve",
+      "content_sha256": "0bffb38234288f1eb5fe08d19671b07f4a89990f47e3fe1eabe8e6dbd2875e6d",
+      "note": "Read dated changes through October 9. July 28 notice closes KMZ recreational salmon; August San Francisco modifications do not reopen Northern waters. October Del Norte razor-clam closure does not change the seven displayed species. Commercial Northern crab depth restrictions and Central recreational trap restrictions are not a new Northern recreational opener. No listed Pacific-halibut quota closure overrides the retained conditional season as of retrieval."
+    },
+    "rules-salmon": {
+      "decision": "approve",
+      "content_sha256": "e6da76635014c566573b1775be4f667e59606dccf81058761d0c0e93fbac686b",
+      "note": "Read current salmon guidance with section 27.80 and in-season flyer. KMZ (Oregon border to 40 degrees 10 minutes N) remains closed for the rest of 2026; no fall opener transfers north. Salmon vessel possession is prohibited in closed KMZ. Section 27.75 Klamath mouth closure is year-round for salmon and expands in August; these limits do not certify other-species access or inland fishing. Keep empty salmon windows."
+    },
+    "rules-crab": {
+      "decision": "approve",
+      "content_sha256": "fcf5ffc550c2f62481d17590ac60e03fe685de82e145b4c4a9427d1633c6bcb3",
+      "note": "Read recreational regulations and 2026 FAQ, distinguishing commercial notices and CPFV passenger validation exceptions from this private-boat profile. Northern hoop changes are effective January 1, 2026, not pending. A trap restriction does not itself prohibit hoop/snare take, but neither method may bypass season/health closures. Ten Dungeness at 5.75 inches applies only when open; November 7 remains scheduled, not cleared."
+    },
+    "rules-book": {
+      "decision": "approve",
+      "content_sha256": "d0e1b4867bccc3ea33e16555fc638e61527b3a99148ae46a631173bc3bef90a1",
+      "note": "Read July 17 updated booklet sections 27.25, 27.65, 27.75, 27.80, 28.15, 28.20, 28.27, 28.38, 28.55, 28.65, 29.80, 29.85 and Northern section 632 entries. Corrected a substantive error: section 27.65's California-halibut fillet exception is SOUTH of Point Arena; Northern boat filleting/steaking/chunking and landing such pieces are prohibited. Pacific/California halibut remain distinct. Later KMZ in-season closure supersedes booklet summer openings. Reading Rock method exceptions do not remove whole-MPA exclusion."
+    },
+    "rules-proposals": {
+      "decision": "approve",
+      "content_sha256": "5b60ab09fdff240bfb1ecc636cef6a42bf150704ca80d57c8ff686fbf58d35f5",
+      "note": "Read 2026 index and continuing 2025 entries plus linked approved text. Effective: Pacific halibut March 12; salmon May 16 with later in-season closure; regular groundfish May 19; white-shark emergency July 3-December 31; crab gear January 1. October 14 adoption of white-shark extension still has pending OAL/effective fields; sport-fishing and tuna-harpoon proposals likewise are not operative permission. Do not use expired groundfish emergency extension as current authority. Inland Klamath section 7.40 is outside this ocean-only scope."
+    },
+    "rules-tuna-federal": {
+      "decision": "approve",
+      "content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
+      "note": "Read exact eCFR section 660.721 despite unchanged fingerprint. Northern albacore limit is 25; entering U.S. EEZ south of 34 degrees 27 minutes N limits the whole trip to ten. Per-24-hour-at-sea and one-calendar-day bag constraints remain. State section 28.38 adds albacore to general finfish limit; this review is day trips, not multi-day possession or Mexican waters."
+    },
+    "rules-salmon-pdf": {
+      "decision": "approve",
+      "content_sha256": "87f644927fa005c96536346d86c3a018d2eab8e5259b525405615a0877250e03",
+      "note": "Read complete official flyer, August 19 update with October 6 version footer. KMZ 3,900 Chinook guideline attained and August dates closed; fall only south of 38 degrees 02 minutes N. Smith/Klamath mouth salmon closures and August Klamath Control Zone persist. Closed KMZ vessel possession is not a transit exception. Seasonal closure is retained; no 2027 permission is asserted."
+    },
+    "rules-groundfish-pdf": {
+      "decision": "approve",
+      "content_sha256": "1e34c814c199f32a32fe4e97f0710fdf1064029cf57d0617f0be05dcc9a358d5",
+      "note": "Read the unchanged Northern table rather than assume unchanged means accepted. April-December all-depth boat season, RCG ten including one copper/two canary/four vermilion-sunset, no yelloweye/quillback/cowcod/bronzespotted, lingcod two at 22 inches and descending-device duty match final profiles and May 19 regular law. This is not a legal-location or bottom-depth clearance."
+    },
+    "rules-northern": {
+      "decision": "approve",
+      "content_sha256": "345157ac6c8cd22215be1206ba7018e23a7876ceec649ba104e1c4ad70a8e5c7",
+      "note": "Read October 9 Northern summary covering all three footprints north of 40 degrees 10 minutes N. California halibut two/22 inches year-round; Pacific halibut one/no minimum through November 15 or quota; KMZ salmon closed; Dungeness season closed with November 7 scheduled only. Northern table controls groundfish. New razor-clam/sturgeon text does not add species to this registry. Correct California-halibut processing by booklet, not an inferred Southern exception."
+    },
+    "mpa-pyramid": {
+      "decision": "approve",
+      "content_sha256": "7b817f30e129b3cf0c2f96be4f658b46be73e5d7318588813c127f05569ca3b5",
+      "note": "Read current Pyramid Point page and booklet section 632(b)(1). Recreational true-smelt dip/Hawaiian-net exception and named tribal exemption do not allow ordinary reef/halibut fishing. Preserve Crescent City dependency and conservative exclusion of the whole mapped MPA; Trinidad promotion removes no neighboring protection."
+    },
+    "mpa-st-george": {
+      "decision": "approve",
+      "content_sha256": "debc8b5f897b3620c1f334f61f4d1fb0ddcdf4e348b2b337275d9ae28690b5dd",
+      "note": "Read current Point St. George Reef Offshore page and booklet section 632(b)(2). Recreational salmon trolling and Dungeness by trap are narrow exceptions, subject to seasons/trap restrictions; commercial and tribal provisions are not general permission. Retain whole-MPA exclusion and existing Crescent City sources."
+    },
+    "mpa-reading": {
+      "decision": "approve",
+      "content_sha256": "39948ebeab623d5f99e23a4b45385db94c856c3d1e9228627a4690b58a28c0bd",
+      "note": "Read Reading Rock page, both linked facts/regulation PDFs and current booklet sections 632(b)(6)-(7). SMR prohibits marine-resource take; SMCA permits recreational salmon trolling, true smelt (page says surf smelt) by dip/Hawaiian throw net and Dungeness by trap/hoop/hand, plus named tribal exemptions. No general rockfish/lingcod/halibut exception. Updated notice distinguishes methods while retaining conservative exclusion of BOTH whole MPAs. Direct Westlaw fetch was unavailable and is not claimed inspected."
+    },
+    "rules-pacific-halibut": {
+      "decision": "approve",
+      "content_sha256": "2751d758e08235663183793d99f6204c28671ac1e5391599c2b2acfcb75e7034",
+      "note": "Read current Pacific-halibut page, Northern status and March 12 effective section 28.20. North of Point Arena: April 1-November 15 OR earlier quota closure, one fish/no minimum, one line/two hooks when angling. No current closure notice was present; catch tracking is not a prediction or clearance. Preserve quota warning and source dependencies so later notices withhold open; south-of-Point-Arena December dates do not transfer north."
+    },
+    "mpa-samoa": {
+      "decision": "approve",
+      "content_sha256": "73277cb5083b18bb98e19904c264041f8c0fc9049ad8708cf0f0e394b8596010",
+      "note": "Read current Samoa SMCA page and booklet section 632(b)(8): recreational salmon trolling, true-smelt nets and Dungeness trap/hoop/hand exceptions, with separate Wiyot exemption. They do not open reef/halibut fishing or supersede seasons. Preserve Humboldt notice dependency and whole-MPA target exclusion; this existing footprint is not silently dropped."
+    },
+    "mpa-south-humboldt": {
+      "decision": "approve",
+      "content_sha256": "2db17fb534d9477ff1c1d2560884f0350693cce1513e1a80310b9d269b2c7201",
+      "note": "Read South Humboldt Bay SMRMA page and booklet section 632(b)(9). Marine resource take prohibition, waterfowl under separate hunting regulations and named Wiyot exemption are not ordinary fishing permission. Preserve existing Humboldt protected-area notice and complete mapped exclusion."
+    },
+    "mpa-south-cape": {
+      "decision": "approve",
+      "content_sha256": "89e5d0c527a5d546ca6982301e72a37a076e5577f595f8491132d84eee9d13b5",
+      "note": "Read South Cape Mendocino/Sugarloaf/Steamboat page and booklet section 632 entries. Reserve prohibits marine-resource take; Sugarloaf has year-round 300-foot vessel restriction and Steamboat March-August 300-foot restriction, with specified official/emergency exceptions. Preserve Humboldt footprint, local notice dependencies and conservative protected-geometry exclusion; no operational access is certified."
+    }
+  }
+}
