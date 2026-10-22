@@ -346,6 +346,15 @@
       "type": "R",
       "reference_id": ""
     },
+    "coops:9419059": {
+      "provider": "coops",
+      "id": "9419059",
+      "name": "Trinidad Harbor",
+      "latitude": 41.0567,
+      "longitude": -124.147,
+      "type": "S",
+      "reference_id": "9419750"
+    },
     "coops:9419750": {
       "provider": "coops",
       "id": "9419750",
