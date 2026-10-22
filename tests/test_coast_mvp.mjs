@@ -22,3 +22,35 @@ test('C3 tile reads stay under the local manifest directory', () => {
   for(const path of ['../private.png','https://remote.example/tiles','//remote.example/x','/absolute',
     '%2e%2e/private','nested%2f..%2fprivate','%252e%252e/private','terrain.png?url=https://x','terrain.png#fragment','..\\private']) assert.throws(()=>localAsset(path,base),path);
 });
+import {decodeMapboxElevation as dec, encodeMapboxElevation as enc, maskTerrainRgba} from '../packages/coast/src/coast3d/mvp-mask.ts';
+function tile(size, hole) {
+  const d = new Uint8ClampedArray(size * size * 4);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const i = (y * size + x) * 4, inHole = hole(x, y);
+    const [r, g, b] = inHole ? [0, 0, 0] : enc(-(30 + 5 * x + y));
+    d.set([r, g, b, inHole ? 0 : 255], i);
+  }
+  return d;
+}
+const elevations = (d) => Array.from({length: d.length / 4}, (_, i) => dec(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]));
+test('C3 regression: raw RGB decode of an alpha=0 cell is a false -10000 m cliff', () => {
+  const raw = tile(16, (x, y) => x > 5 && x < 10 && y > 5 && y < 10);
+  assert.equal(Math.min(...elevations(raw)), -10000);
+});
+test('C3 masked path: alpha=0 hole never yields elevation below the real minimum', () => {
+  const size = 16, raw = tile(size, (x, y) => x > 5 && x < 10 && y > 5 && y < 10 || x === 0);
+  const real = Math.min(...elevations(raw).filter((_, i) => raw[i * 4 + 3] === 255));
+  const out = maskTerrainRgba(raw, size, size);
+  assert.ok(out.unsupported > 0);
+  const e = elevations(out.data);
+  assert.ok(Math.min(...e) >= real - 1e-6, `min ${Math.min(...e)} < ${real}`);
+  assert.ok(Math.max(...e) <= Math.max(...elevations(raw).filter((_, i) => raw[i * 4 + 3] === 255)) + 1e-6);
+  for (let i = 0; i < size * size; i++) assert.equal(out.data[i * 4 + 3], 255);
+  for (let i = 0; i < size * size; i++) if (raw[i * 4 + 3] === 255) assert.deepEqual(out.data.slice(i * 4, i * 4 + 3), raw.slice(i * 4, i * 4 + 3));
+});
+test('C3 masked path: partially transparent cells are unsupported; fully empty tile is rejected', () => {
+  const raw = tile(4, () => false); raw[3] = 128;
+  assert.equal(maskTerrainRgba(raw, 4, 4).unsupported, 1);
+  assert.equal(maskTerrainRgba(tile(4, () => true), 4, 4), null);
+  assert.throws(() => maskTerrainRgba(new Uint8ClampedArray(8), 4, 4));
+});

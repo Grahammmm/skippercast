@@ -1,6 +1,7 @@
 import * as maplibregl from 'maplibre-gl';
 import type {Map as CoastMap} from 'maplibre-gl';
 import {DEFAULT_COAST_PALETTE as palette} from '../palette.ts';
+import {MASK_PROTOCOL, registerMaskProtocol} from './mvp-mask.ts';
 
 /** Local C3 interchange contract. C2/C5 adapters are deliberately not assumed. */
 export type MvpManifest = {
@@ -47,7 +48,7 @@ export class CoastMvpViewer {
   readonly map: CoastMap;
   private chrome: HTMLElement;
   private constructor(host: HTMLElement, manifest: MvpManifest, base: URL) {
-    const terrain = localAsset(manifest.terrain, base), contours = localAsset(manifest.contours, base);
+    const terrain = MASK_PROTOCOL + '://' + localAsset(manifest.terrain, base), contours = localAsset(manifest.contours, base);
     // Inset exact XYZ edges to avoid admitting an adjacent tile at the boundary.
     const [w,s,e,n] = manifest.bounds;
     const tileBounds: [number,number,number,number] = [w+1e-9,s+1e-9,e-1e-9,n-1e-9];
@@ -64,7 +65,7 @@ export class CoastMvpViewer {
       if (s.url) { const link = document.createElement('a'); link.href = s.url; link.textContent = ' Source'; link.target = '_blank'; link.rel = 'noopener noreferrer'; row.append(link); }
       panel.append(row);
     }
-    const note = document.createElement('p'); note.textContent = 'Relief ×3 (display only). Contours: feet below reference; source detail varies. No accuracy claim. Review required.'; panel.append(note);
+    const note = document.createElement('p'); note.textContent = 'Relief ×3 (display only). Unsupported (no-data) cells are never read as depth; they are filled flat from the nearest supported cell. Contours: feet below reference; source detail varies. No accuracy claim. Review required.'; panel.append(note);
     this.chrome.append(banner, panel); host.append(this.chrome);
     try {
       this.map = new maplibregl.Map({container: host, center: manifest.center, zoom: manifest.zoom, pitch: 45, bearing: -25,
@@ -81,7 +82,9 @@ export class CoastMvpViewer {
       this.map.addControl(new maplibregl.NavigationControl());
     } catch (error) { this.chrome.remove(); throw error; }
   }
+  private static maskReady = false;
   static async load(host: HTMLElement, manifestUrl: string): Promise<CoastMvpViewer> {
+    if (!CoastMvpViewer.maskReady) { await registerMaskProtocol(maplibregl.addProtocol, location.origin); CoastMvpViewer.maskReady = true; }
     const url = new URL(manifestUrl, location.href);
     if (url.origin !== location.origin || url.username || url.password) throw Error('Local manifest required');
     const response = await fetch(url, {redirect: 'error', signal: AbortSignal.timeout(20000)});
