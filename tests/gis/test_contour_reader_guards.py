@@ -124,3 +124,16 @@ def test_int16_nodata_only_invalidates_its_own_block(tmp_path):
     assert np.isnan(depth[0, 0]) and owner[0, 0] == -1
     assert np.allclose(depth[[0, 1, 1], [1, 0, 1]], 20 * dc.FEET_PER_M)
     assert (owner[[0, 1, 1], [1, 0, 1]] == 0).all()
+
+
+@pytest.mark.parametrize('coefficients', [
+    (2, 0, 500000, 0, 2, 3999968), (-2, 0, 500032, 0, -2, 4000000),
+    (2, .1, 500000, 0, -2, 4000000), (2, 0, 500000, .1, -2, 4000000),
+])
+def test_orientation_refused_at_lattice_and_direct_merge(tmp_path, coefficients):
+    from rasterio.transform import Affine
+    path = grid(tmp_path, transform=Affine(*coefficients))
+    with pytest.raises(ValueError, match='north-up'):
+        bdc.lattice_for([path])
+    with pytest.raises(ValueError, match='north-up'):
+        bdc.merged_blocks([path], (500000, 4000000, 2, 2))

@@ -46,9 +46,16 @@ def sha256(path):
         return hashlib.file_digest(f, 'sha256').hexdigest()
 
 
+def require_north_up(grid):
+    t = grid.transform
+    if (not all(np.isfinite(v) for v in t) or t.b or t.d or t.a <= 0 or t.e >= 0):
+        raise ValueError(f'{grid.name}: contour grids require a finite, unrotated north-up raster')
+
+
 def native_offsets(grid, lattice):
     """The grid's native column and row at the lattice's top-left corner, and cells per block; refuses misaligned grids."""
     x0, y0, _, _ = lattice
+    require_north_up(grid)
     if grid.crs is None or not grid.crs.is_projected or grid.crs.linear_units != 'metre':
         raise ValueError(f'{grid.name}: expected a projected, metre-based survey grid')
     cell = grid.res[0]
@@ -125,6 +132,7 @@ def lattice_for(paths):
     bounds = []
     for path in paths:
         with rasterio.open(path) as g:
+            require_north_up(g)
             bounds.append(g.bounds)
     west, south = min(b.left for b in bounds), min(b.bottom for b in bounds)
     east, north = max(b.right for b in bounds), max(b.top for b in bounds)
