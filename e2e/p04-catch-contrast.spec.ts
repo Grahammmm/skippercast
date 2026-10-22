@@ -70,14 +70,18 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // changes Reports catch count paint or its backdrop. check_contrast.mjs only rebinds the Legend source hash.
 // Verified applicability: BODY09's rendered flow, sampled elements, paint, thresholds and surface checks are unchanged.
 // CI6-18 merge-forward: union of the entries above, contrast() untouched.
+// CI6-14: MapStage.tsx imports waypoint placement state and adds a Chart-only placement note/cancel button.
+// BODY09 mounts Reports/CatchCards, not PresentationToggle; catch count paint and its backdrop are unchanged.
+// Only the MapStage source hash is rebound; rendered checks, thresholds and contrast() are unchanged.
 // CI6-08 x CI6-18 merge-forward: MapStage keeps createChlorophyll and createStations; Legend keeps both rows;
 // only union hashes and line citations rebound, contrast() untouched.
+// CI6-08 x CI6-14 merge-forward keeps createChlorophyll and the placement note; only the union hash is rebound.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
   "web/app/App.tsx": "d8486f26dafbb97b0499cd7ef536c386c446c1b002c44b219d42151a5ab11446",
   "web/app/Masthead.tsx": "191309f6c9a54ee6bd24608a1983c6bf07141538267f87bef163f8ad4ccbea00",
   "web/app/LayerRail.tsx": "18db08dcba921446038b48d24552c0e756cba3fc52ecdbd005013521caf2566c",
-  "web/app/MapStage.tsx": "d286804ec6b38fc0e427e953dc0bfa95e7fb39c35d9c2152993e362ede2ea898",
+  "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
   "web/app/app.css": "4a3867af18c9eba3eb01391e84380a8052177bb8b841b4928f72287b2ef4dbd5",
