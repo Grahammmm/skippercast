@@ -71,8 +71,9 @@ model a coastline, repair holes or claim source continuity.
 
 Per the conductor's explicit fixture admission on t_fee137be, no live cache or
 C1/C2/C4/C5 file is read/mutated here. C1 t_229826b7 and C5 t_27a764f7 are now
-reviewed upstream work, but neither is a terrain-RGB/MVT viewer export. This
-fixture is NOT an adapter for C1's EPSG:3310 COG nor C5's rights schema.
+reviewed upstream work, but neither is a terrain-RGB/MVT viewer export. The
+default fixture is NOT an adapter for C1's EPSG:3310 COG; the C5 rights adapter
+is described below.
 
 The integration lane must consume admitted C2 tile exports and adapt the C5
 `schema_version=1` source inventory (`source_id`, `name`, `source_url`, sha256,
@@ -83,3 +84,49 @@ complete rights page. Do not infer commercial permission or equate a fixture
 licence with a real source's licence. Do not import research tooling from
 product code. C6 region look + redaction/rights/review gates still precede any
 publication. No R2 upload, source download, merge or deploy is performed here.
+
+## C5 rights adapter (t_68a03f26, fixture acceptance only)
+
+`adaptC5Rights` in `packages/coast/src/coast3d/mvp-rights.ts` turns a C5
+`schema_version=1` inventory plus a C3 tile base into a presentation manifest.
+It re-applies C5's contributor rules in product TypeScript (it does not import
+`research/`): `contributed_cells` must be a nonnegative integer (missing, string,
+boolean or fractional usage fails); only rows with `contributed_cells > 0` are
+kept; each kept row needs name, HTTPS `source_url`, lowercase sha256 and a
+complete `rights` object with an explicit boolean `csumb_involved`. Any failure
+rejects the whole inventory. Name, credit, licence, hash, terms link and cell
+count are copied verbatim. Per-source datum/spacing is not in the C5 schema, so
+it is `null` and the tile export's datum/spacing comes from the tile base.
+
+Permission is never inferred. Every row is `review_required`; CSUMB rows (flag
+true, or CSUMB / Seafloor Mapping Lab / California State University, Monterey
+Bay named in any field) become `needs_permission`. The manifest carries the
+not-for-navigation, review, no-endorsement (GEBCO/IHO/IOC), CSUMB and GEBCO
+caveats, the inventory's byte SHA-256 and a relative link to the complete C5
+rights page. `validateMvpManifest` rejects an adapted manifest that drops a
+CSUMB hold, invents one, loses a hash, terms link or required caveat, mixes in
+unadapted rows or points the rights page off-directory. The viewer shows the
+unresolved permission in the persistent banner, outside the collapsible panel.
+
+Reproduce (the C5 page is built by the unmodified C5 tool from PR #828 at
+399731982d1d, read with `git show`; nothing in the C5 branch is changed):
+
+    git show 399731982d1d1413a63e14a0ee1cd52538250a3b:research/scripts/coast_mvp/coast_rights.py > /tmp/coast_rights.py
+    python3 /tmp/coast_rights.py --manifest research/scripts/coast_mvp/fixtures/rights-adapter/inventory.json \
+      --output research/scripts/coast_mvp/fixtures/viewer-demo/rights.html
+    node research/scripts/coast_mvp/adapt_rights.mjs \
+      --inventory research/scripts/coast_mvp/fixtures/rights-adapter/inventory.json \
+      --tile-base research/scripts/coast_mvp/fixtures/rights-adapter/tile-base.json \
+      --rights-page rights.html --output research/scripts/coast_mvp/fixtures/viewer-demo/rights-adapted.json
+    node --test tests/test_coast_mvp_rights.mjs
+    C3_SCREENSHOTS=/absolute/task-owned/output node research/scripts/coast_mvp/capture_rights.mjs
+
+The inventory is synthetic (`fixture_only: true`, repeated-digit hashes, invented
+cell counts) and reuses the existing C3 synthetic tile; no tiles were generated.
+The adapter writes atomically and leaves the previous manifest on failure. The
+browser capture (`?manifest=rights-adapted`) checks that every attribution,
+licence, hash and link survives, that unused rows are absent, that the banner
+still shows `needs_permission` with the panel collapsed, and that the linked C5
+page pins the same inventory hash. Evidence: `viewer-evidence/rights-*.png` and
+`rights-acceptance.json`. Real C1/C2 exports still need coordinator admission;
+none were read or reproduced here.

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>C3 local terrain preview</title>
 <style>
-html,body,#map{margin:0;width:100%;height:100%;background:#12364a;color:#e4f5ef;font:14px system-ui} .coast-mvp-chrome{position:absolute;z-index:2;left:16px;top:16px;max-width:min(490px,calc(100% - 80px));pointer-events:none}.coast-mvp-chrome strong,.coast-mvp-chrome details{display:block;background:#092838ef;border:1px solid #79c7b5;padding:12px;border-radius:8px;margin-bottom:8px;pointer-events:auto}.coast-mvp-chrome strong{color:#ffe09a}.coast-mvp-chrome summary{cursor:pointer;font-weight:bold}.coast-mvp-chrome a{color:#a9e9dc}#status{position:absolute;z-index:2;bottom:16px;left:16px;background:#092838ef;padding:10px;border-radius:6px}
+html,body,#map{margin:0;width:100%;height:100%;background:#12364a;color:#e4f5ef;font:14px system-ui} .coast-mvp-chrome{position:absolute;z-index:2;left:16px;top:16px;max-width:min(490px,calc(100% - 80px));pointer-events:none}.coast-mvp-chrome strong,.coast-mvp-chrome details{display:block;background:#092838ef;border:1px solid #79c7b5;padding:12px;border-radius:8px;margin-bottom:8px;pointer-events:auto}.coast-mvp-chrome strong{color:#ffe09a}.coast-mvp-chrome details{max-height:calc(100vh - 230px);overflow:auto;overflow-wrap:anywhere}.coast-mvp-chrome summary{cursor:pointer;font-weight:bold}.coast-mvp-chrome a{color:#a9e9dc}#status{position:absolute;z-index:2;bottom:16px;left:16px;background:#092838ef;padding:10px;border-radius:6px}
 </style>
 <div id="map"></div><output id="status" role="status">Loading local fixture…</output>
 <script type="module">
@@ -12,7 +12,11 @@ maplibregl.setWorkerUrl(workerUrl);
 import {CoastMvpViewer} from '/packages/coast/src/coast3d/mvp.ts';
 const status=document.querySelector('#status');
 try {
-  const viewer=await CoastMvpViewer.load(document.querySelector('#map'),'./fixtures/viewer-demo/manifest.json');
+  // Fixed allowlist: the default C3 fixture, or the adapted C5-rights fixture (?manifest=rights-adapted).
+  const manifests={default:'manifest.json','rights-adapted':'rights-adapted.json'};
+  const name=new URLSearchParams(location.search).get('manifest')??'default';
+  if(!Object.hasOwn(manifests,name))throw Error('Unknown fixture manifest');
+  const viewer=await CoastMvpViewer.load(document.querySelector('#map'),'./fixtures/viewer-demo/'+manifests[name]);
   window.preview=viewer;
   viewer.map.on('error',e=>{status.textContent='FAILED: '+e.error.message;document.body.dataset.failed='true';});
   viewer.map.once('idle',()=>{if(!document.body.dataset.failed){status.textContent='Local terrain-RGB + contour MVT loaded · review required';document.body.dataset.ready='true';}});

@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "fixture_only": true,
+  "sources": [
+    {
+      "source_id": "c3fx-csumb-usgs-release",
+      "name": "Synthetic CSUMB/USGS co-produced multibeam release (C3 adapter fixture)",
+      "source_url": "https://cmgds.marine.usgs.gov/",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "contributed_cells": 1200,
+      "rights": {
+        "license": "US public domain release label; CSUMB non-profit use with acknowledgment; for-profit permission unresolved",
+        "terms_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "attribution": "C3 fixture credit: U.S. Geological Survey and CSUMB Seafloor Mapping Lab",
+        "csumb_involved": true
+      }
+    },
+    {
+      "source_id": "c3fx-gebco-grid",
+      "name": "Synthetic GEBCO_2026 contributor (C3 adapter fixture)",
+      "source_url": "https://www.gebco.net/data-products-gridded-bathymetry-data/gebco2026-grid",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "contributed_cells": 300,
+      "rights": {
+        "license": "Public domain; acknowledgment required; no endorsement; do not misrepresent; not for navigation; provided as is",
+        "terms_url": "https://www.gebco.net/data-products/gridded-bathymetry/terms-of-use",
+        "attribution": "C3 fixture citation only: GEBCO Bathymetric Compilation Group 2026, GEBCO_2026 Grid, NERC EDS British Oceanographic Data Centre. doi:10.5285/4f68d5c7-45eb-f999-e063-7086abc036fa",
+        "csumb_involved": false
+      }
+    },
+    {
+      "source_id": "c3fx-noaa-cc0",
+      "name": "Synthetic NOAA CC0 release (C3 adapter fixture)",
+      "source_url": "https://www.ncei.noaa.gov/",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "contributed_cells": 450,
+      "rights": {
+        "license": "CC0-1.0",
+        "terms_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "C3 fixture credit: NOAA NCCOS & NCEI <credit requested>",
+        "csumb_involved": false
+      }
+    },
+    {
+      "source_id": "c3fx-unused-with-rights",
+      "name": "Synthetic input masked out of the final mosaic (C3 adapter fixture)",
+      "source_url": "https://www.usgs.gov/",
+      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "contributed_cells": 0,
+      "rights": {
+        "license": "US public domain",
+        "terms_url": "https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+        "attribution": "C3 fixture credit: unused input that must not appear",
+        "csumb_involved": false
+      }
+    },
+    {
+      "source_id": "c3fx-unused-bare",
+      "contributed_cells": 0
+    }
+  ]
+}

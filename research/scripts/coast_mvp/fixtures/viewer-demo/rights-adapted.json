@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "region": "Central Coast · synthetic C3 demonstration with adapted C5 rights fixture",
+  "synthetic": true,
+  "bounds": [
+    -121.025390625,
+    35.389049966911664,
+    -120.9375,
+    35.4606699514953
+  ],
+  "center": [
+    -120.9814453125,
+    35.42485995920348
+  ],
+  "zoom": 15.5,
+  "tileZoom": 12,
+  "tileSize": 256,
+  "terrain": "{z}/{x}/{y}.png",
+  "contours": "{z}/{x}/{y}.mvt",
+  "contourLayer": "contours",
+  "mosaic": {
+    "datum": "Arbitrary synthetic zero; no geodetic datum",
+    "resolutionM": 31.14137682714201
+  },
+  "sources": [
+    {
+      "id": "c3fx-csumb-usgs-release",
+      "label": "Synthetic CSUMB/USGS co-produced multibeam release (C3 adapter fixture)",
+      "url": "https://cmgds.marine.usgs.gov/",
+      "attribution": "C3 fixture credit: U.S. Geological Survey and CSUMB Seafloor Mapping Lab",
+      "license": "US public domain release label; CSUMB non-profit use with acknowledgment; for-profit permission unresolved",
+      "datum": null,
+      "resolutionM": null,
+      "permissionRequired": true,
+      "rights": {
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "termsUrl": "https://csumb.edu/undersea/sfml-data-library/",
+        "contributedCells": 1200,
+        "csumbInvolved": true,
+        "status": "needs_permission"
+      }
+    },
+    {
+      "id": "c3fx-gebco-grid",
+      "label": "Synthetic GEBCO_2026 contributor (C3 adapter fixture)",
+      "url": "https://www.gebco.net/data-products-gridded-bathymetry-data/gebco2026-grid",
+      "attribution": "C3 fixture citation only: GEBCO Bathymetric Compilation Group 2026, GEBCO_2026 Grid, NERC EDS British Oceanographic Data Centre. doi:10.5285/4f68d5c7-45eb-f999-e063-7086abc036fa",
+      "license": "Public domain; acknowledgment required; no endorsement; do not misrepresent; not for navigation; provided as is",
+      "datum": null,
+      "resolutionM": null,
+      "permissionRequired": false,
+      "rights": {
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "termsUrl": "https://www.gebco.net/data-products/gridded-bathymetry/terms-of-use",
+        "contributedCells": 300,
+        "csumbInvolved": false,
+        "status": "review_required"
+      }
+    },
+    {
+      "id": "c3fx-noaa-cc0",
+      "label": "Synthetic NOAA CC0 release (C3 adapter fixture)",
+      "url": "https://www.ncei.noaa.gov/",
+      "attribution": "C3 fixture credit: NOAA NCCOS & NCEI <credit requested>",
+      "license": "CC0-1.0",
+      "datum": null,
+      "resolutionM": null,
+      "permissionRequired": false,
+      "rights": {
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "termsUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "contributedCells": 450,
+        "csumbInvolved": false,
+        "status": "review_required"
+      }
+    }
+  ],
+  "rightsInventory": {
+    "schemaVersion": 1,
+    "sha256": "4af98ee9769c5570dd2890a9e301300478dc8b8e9c1ef74880a7b502c88b4146",
+    "page": "rights.html",
+    "status": "review_required",
+    "caveats": [
+      "Not for navigation or any purpose involving safety at sea. Research preview only; not an official nautical chart.",
+      "Rights status: review_required. Recorded terms are not legal advice, permission to publish or commercial-use clearance.",
+      "Use does not imply endorsement by any source, GEBCO, the IHO or the IOC. Do not misrepresent the original data or these derivatives.",
+      "needs_permission: CSUMB Seafloor Mapping Lab policy permits non-profit use with acknowledgment. For-profit permission is unresolved; owner/counsel must resolve it. A public-domain or CC0 release label does not resolve this question. Commercial use and publication are held.",
+      "GEBCO: the recorded version-specific citation is retained verbatim; GEBCO, the IHO and the IOC do not endorse this preview."
+    ]
+  }
+}

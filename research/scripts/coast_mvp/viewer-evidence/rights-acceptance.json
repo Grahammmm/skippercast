@@ -1,0 +1,108 @@
+{
+  "manifest": "rights-adapted.json",
+  "inventorySha256": "4af98ee9769c5570dd2890a9e301300478dc8b8e9c1ef74880a7b502c88b4146",
+  "banner": "Not for navigation · SYNTHETIC FIXTURE — not measured bathymetry · Rights review required · For-profit permission unresolved (needs_permission)",
+  "rows": {
+    "c3fx-csumb-usgs-release": {
+      "status": "needs_permission",
+      "links": [
+        "https://cmgds.marine.usgs.gov/",
+        "https://csumb.edu/undersea/sfml-data-library/"
+      ]
+    },
+    "c3fx-gebco-grid": {
+      "status": "review_required",
+      "links": [
+        "https://www.gebco.net/data-products-gridded-bathymetry-data/gebco2026-grid",
+        "https://www.gebco.net/data-products/gridded-bathymetry/terms-of-use"
+      ]
+    },
+    "c3fx-noaa-cc0": {
+      "status": "review_required",
+      "links": [
+        "https://www.ncei.noaa.gov/",
+        "https://creativecommons.org/publicdomain/zero/1.0/"
+      ]
+    }
+  },
+  "unusedExcluded": [
+    "c3fx-unused-with-rights",
+    "c3fx-unused-bare"
+  ],
+  "caveats": [
+    "Not for navigation or any purpose involving safety at sea. Research preview only; not an official nautical chart.",
+    "Rights status: review_required. Recorded terms are not legal advice, permission to publish or commercial-use clearance.",
+    "Use does not imply endorsement by any source, GEBCO, the IHO or the IOC. Do not misrepresent the original data or these derivatives.",
+    "needs_permission: CSUMB Seafloor Mapping Lab policy permits non-profit use with acknowledgment. For-profit permission is unresolved; owner/counsel must resolve it. A public-domain or CC0 release label does not resolve this question. Commercial use and publication are held.",
+    "GEBCO: the recorded version-specific citation is retained verbatim; GEBCO, the IHO and the IOC do not endorse this preview."
+  ],
+  "rightsPage": "/research/scripts/coast_mvp/fixtures/viewer-demo/rights.html",
+  "views": [
+    {
+      "name": "rights-panel",
+      "pitch": 45,
+      "bearing": -25,
+      "zoom": 15.5,
+      "contourFeatures": 152
+    }
+  ],
+  "requests": [
+    {
+      "url": "/research/scripts/coast_mvp/viewer-preview.html?manifest=rights-adapted",
+      "status": 200
+    },
+    {
+      "url": "/research/scripts/coast_mvp/viewer-preview.html?html-proxy&index=0.js",
+      "status": 200
+    },
+    {
+      "url": "/research/scripts/coast_mvp/viewer-preview.html?manifest=rights-adapted",
+      "status": 200
+    },
+    {
+      "url": "/research/scripts/coast_mvp/viewer-preview.html?html-proxy&index=0.js",
+      "status": 200
+    },
+    {
+      "url": "/research/scripts/coast_mvp/fixtures/viewer-demo/rights-adapted.json",
+      "status": 200
+    },
+    {
+      "url": "/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.png",
+      "status": 200
+    },
+    {
+      "url": "/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "/research/scripts/coast_mvp/fixtures/viewer-demo/rights-adapted.json",
+      "status": 200
+    }
+  ],
+  "errors": []
+}
