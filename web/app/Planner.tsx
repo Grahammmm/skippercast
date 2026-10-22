@@ -9,7 +9,7 @@ import {coordinates} from '../state.ts';
 import {formatCoordinates} from '../../dist/coordinates.js';
 import {exportEvidenceLabel} from '../../dist/trip-export.js';
 import {fitLabel} from '../../dist/spot-ranking.js';
-import type {Filters, LayerKey, Planner as Model, Preset, Target, TripSpecies} from '../planner.ts';
+import type {Filters, LayerKey, Planner as Model, Preset, ProtectedHit, Target, TripSpecies} from '../planner.ts';
 
 const DEVICE_HELP: Readonly<Record<string, readonly [string, string, string]>> = {
   generic: ['Chartplotter model not selected', 'Download GPX, copy it to storage supported by your model, then use its Import menu. Most reviewed plotters use SD/microSD; USB support varies. Inserting media alone does not import a plan.', 'https://www8.garmin.com/manuals/webhelp/GUID-3E67C80C-0812-4EEC-BC60-699751B9CF6F/EN-US/GPSMAP_x3_OM_EN-US.pdf'],
@@ -28,7 +28,7 @@ const LAYERS: readonly (readonly [LayerKey, string, string])[] = [
 const PRESETS: readonly (readonly [Preset, string])[] = [['map', 'Current map'], ['filtered', 'Filtered research references'], ['region', 'Whole region'], ['none', 'Clear selection']];
 
 /** The spot's checkbox title and lines, as v1 listed them. */
-function SpotRow({t, checked, onToggle}: {t: Target; checked: boolean; onToggle: (on: boolean) => void}) {
+function SpotRow({t, checked, hit, onToggle}: {t: Target; checked: boolean; hit?: ProtectedHit; onToggle: (on: boolean) => void}) {
   const depth = t.canonical_habitat ? (t.neighborhood_depth_ft ?? []).map(n => Math.round(n)).join('–') : t.center_depth_ft;
   return (
     <label class="export-check">
@@ -39,6 +39,7 @@ function SpotRow({t, checked, onToggle}: {t: Target; checked: boolean; onToggle:
         <small>{formatCoordinates(t.latitude, t.longitude, coordinates.value)}</small>
         <small>{t.trip_rank ? t.name : t.id} · grade {t.habitat_grade} · {depth} ft</small>
         {t.trip_rank ? <small>{t.terrain_interpretation}</small> : null}
+        {hit ? <small>Inside a protected-area boundary; excluded as a fishing target by SkipperCast. Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</small> : null}
       </span>
     </label>
   );
@@ -108,7 +109,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
           <p id="export-scope-status" role="status">{m.scopeStatus.value}</p>
           <label>Find a spot<input id="export-search" type="search" placeholder="Name, ID or grade" autoComplete="off" value={m.search.value} onInput={e => { m.search.value = e.currentTarget.value; }} /></label>
           <div id="export-spot-list" class="export-spot-list" role="group" aria-label="Choose fishing spots">
-            {spots.length ? spots.map(t => <SpotRow key={t.id} t={t} checked={d.ids.includes(t.id)} onToggle={on => m.toggleSpot(t.id, on)} />)
+            {spots.length ? spots.map(t => <SpotRow key={t.id} t={t} checked={d.ids.includes(t.id)} hit={m.protectedHits.value.find(h => h.id === t.id)} onToggle={on => m.toggleSpot(t.id, on)} />)
               : <p>No matching measured reefs loaded. Select Best available to load the current screened publication, or deliberately opt in to research references. Your existing selection is retained.</p>}
           </div>
         </div>
@@ -136,9 +137,10 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
         <div class="export-actions">
           <button class="primary" id="export-download" disabled={!s.ok} onClick={() => void m.deliver('gpx')}>Download GPX</button>
           <button id="export-share" disabled={!s.ok} onClick={() => void m.deliver('share')}>Share / Save file</button>
-          <button id="export-notes" disabled={!s.ok} onClick={() => void m.deliver('notes')}>Download offline notes</button>
+          <button id="export-notes" disabled={!m.notesReady.value} onClick={() => void m.deliver('notes')}>Download offline notes</button>
         </div>
         <p id="export-action-status" role="status">{m.actionStatus.value}</p>
+        {!s.ok && m.notesReady.value ? <p>GPX withheld. Offline notes contain boundary context only, not fishing coordinates or guidance for the selected spots.</p> : null}
         <details class="export-help">
           <summary>USB, memory card &amp; iNavX help</summary>
           <label>Your chartplotter<select id="export-device" value={deviceChoice.value} onChange={e => { deviceChoice.value = e.currentTarget.value; }}>

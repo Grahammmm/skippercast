@@ -12,6 +12,7 @@
 - Deploys no longer stall while merges land faster than CI. Each deploy ships the newest `main` commit whose Offline checks passed, even when newer merges are still being checked. It never ships a commit with failed or pending checks, nor one older than the commit production already serves, and it holds when the commit production serves cannot be traced. A run that ships nothing reports "held", with the reason, through a neutral **Cloudflare deploy** check run and the job summary, instead of a plain success.
 - The Chart's Swell + wind control adds NOAA GFS wind arrows and knot labels at the selected forecast hour, with grid, run and age in the basis; stale wind is withheld independently of swell.
 - The deploy gate now traces Worker versions Cloudflare labels `version_upload` (what `wrangler deploy` 4.142.0 records) as code uploads, alongside `upload`, so an automatic deploy is no longer held when production serves the workflow's own deploy.
+- Trip plans name protected-area boundaries containing selected spots and link the agency rules; blocked plans can download context-only notes while GPX remains withheld.
 - The Chart can open a surveyed coverage cell's basis and credits; year and vertical datum stay explicit when they are not recorded.
 - The Text Advisor upload, my-data and admin pages use the app's dark visual system instead of the retired v1 palette.
 - The admin labelling view draws a trip's track map and speed strip again, each kind in a colour from the app's visual system.
