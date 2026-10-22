@@ -134,7 +134,7 @@ def trace(grid, depths):
         upper, lower = grid[r], grid[r + 1]
         for c in range(cols - 1):
             v = (upper[c], upper[c + 1], lower[c + 1], lower[c])
-            if None in v:
+            if any(value is None or not math.isfinite(value) for value in v):
                 continue
             low, high = min(v), max(v)
             crossing = [d for d in wanted if low < d <= high]
