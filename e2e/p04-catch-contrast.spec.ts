@@ -45,6 +45,8 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // (maplibre-gl 6.12.0->6.14.0, drizzle-orm, @axe-core/playwright, @cloudflare/workers-types, @playwright/test,
 // preact-render-to-string, vite). No CSS/TSX source in INPUTS, and not check_contrast.mjs's contrast(), is touched;
 // the Reports catch flow and its contrast results are unchanged. package.json and pnpm-lock.yaml rebound.
+// CI6-09 (swell partition selector): Legend.tsx gains an existing Segmented control; no paint chain changes.
+// check_contrast.mjs changes only the Legend.tsx hash and line citations, not contrast(). Rebound.
 // CI6-08 chlorophyll: MapStage adds only the createChlorophyll layer; check_contrast.mjs changes only the
 // legendTsx source hash and citations, leaving contrast() untouched. Both rebound.
 // CI6-13 (shelf depth contours): app.css adds only the two depth-contour legend swatch rules and joins the
@@ -76,6 +78,9 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // CI6-08 x CI6-18 merge-forward: MapStage keeps createChlorophyll and createStations; Legend keeps both rows;
 // only union hashes and line citations rebound, contrast() untouched.
 // CI6-08 x CI6-14 merge-forward keeps createChlorophyll and the placement note; only the union hash is rebound.
+// CI6-09 merge-forward retains the partition selector alongside wind, shelf contours, chlorophyll and Stations.
+// Legend.tsx changes only the selector import/control from main; existing text/muted glass roles and the Reports
+// catch path are unchanged. check_contrast.mjs rebinds only the Legend hash and line citations; contrast() is untouched.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
   "web/app/App.tsx": "d8486f26dafbb97b0499cd7ef536c386c446c1b002c44b219d42151a5ab11446",
@@ -94,7 +99,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "06fdc363022b6d8a731670655898a688dbb2e2aef6d2287ffdddd1c609cc337f",
+  "scripts/check_contrast.mjs": "1701f0ae0b6283f517c97b5fd5582c25400705b3f0101a0f24e79173a3af0c83",
   "package.json": "4675341e4ec0640f12cb96fe7ad6683739c4d601a32557a5e218430632db8719",
   "pnpm-lock.yaml": "68b00d873cb91ed71fb473d7145c31127602dfd3073ed847c0fbef7795dcc153",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
