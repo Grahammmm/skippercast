@@ -20,7 +20,7 @@ from rasterio.features import shapes
 from rasterio.transform import from_bounds
 from rasterio.warp import reproject, Resampling, transform_bounds
 from shapely.geometry import shape, mapping, LineString
-from shapely.ops import unary_union, transform
+from shapely.ops import unary_union, transform, linemerge
 from pyproj import Transformer
 
 LABEL = 'NOT FOR NAVIGATION; research preview; review_required'
@@ -125,6 +125,17 @@ def parts(geometry):
             yield from parts(item)
 
 
+def clipped_parts(line, mask):
+    """Rejoin clip fragments at a closed ring's arbitrary start/end vertex.
+
+    Extract only linework (intersection may also contain points), then merge
+    exactly shared endpoints. Do not snap or relax the boundary guard.
+    """
+    segments = [segment for segment in parts(line.intersection(mask)) if not segment.is_empty]
+    if segments:
+        yield from parts(linemerge(segments))
+
+
 def tile_range(bounds, zoom):
     span = 2 * WORLD / (2 ** zoom)
     west, south, east, north = bounds
@@ -197,8 +208,8 @@ def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_
                 depth = round(-feature['properties']['elevation_m'] / FOOT)
                 for code, mask in masks.items():
                     # Simplify before the final clip so no simplification chord crosses a hole.
-                    for segment in parts(line.intersection(mask)):
-                        for clipped in parts(segment.simplify(tolerance).intersection(mask)):
+                    for segment in clipped_parts(line, mask):
+                        for clipped in clipped_parts(segment.simplify(tolerance), mask):
                             if clipped.length == 0:
                                 continue
                             if not clipped.is_simple or not clipped.is_valid:

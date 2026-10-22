@@ -124,6 +124,50 @@ def test_closed_bowl_contours(stack, make_rasters):
     assert all(line.is_simple and line.is_valid for line in lines)
 
 
+@pytest.mark.parametrize('hole', [False, True])
+def test_closed_bowl_crossing_contributor_boundary(stack, make_rasters, hole):
+    _, rio, _, shape, Point, transform, Transformer, c2 = stack
+    from shapely.geometry import box
+    from shapely.ops import linemerge, snap, unary_union
+
+    directory = make_rasters('bowl', hole=hole, boundary=True)
+    run(c2, directory)
+    features = json.loads((directory / 'output/contours.geojson').read_text())['features']
+    project = Transformer.from_crs('EPSG:4326', 'EPSG:3310', always_xy=True).transform
+    with rio.open(directory / 'elevation.tif') as grid:
+        west, south, east, north = grid.bounds
+    boundary_x = west + 32 * 40
+    hole_mask = box(west + 24 * 40, north - 40 * 40,
+                    west + 40 * 40, north - 24 * 40)
+    masks = {1: box(west, south, boundary_x, north),
+             2: box(boundary_x, south, east, north)}
+    if hole:
+        masks = {code: mask.difference(hole_mask) for code, mask in masks.items()}
+    crossing = []
+    for feature in features:
+        line = transform(project, shape(feature['geometry']))
+        code = feature['properties']['source_code']
+        assert line.is_simple and line.is_valid
+        assert masks[code].buffer(0.001).covers(line)
+        if not line.is_closed:
+            for endpoint in (line.coords[0], line.coords[-1]):
+                assert Point(endpoint).distance(masks[code].boundary) < 0.001
+        # This level is a complete interior ring, outside the masked hole.
+        if feature['properties']['depth_ft'] == 300:
+            crossing.append((code, line))
+    assert sorted(code for code, _ in crossing) == [1, 2]
+    assert all(not line.is_closed for _, line in crossing)
+    assert all(abs(endpoint[0] - boundary_x) < 0.001
+               for _, line in crossing
+               for endpoint in (line.coords[0], line.coords[-1]))
+    # Inverse projection can introduce sub-mm endpoint drift; snap only that
+    # drift, not the half-cell simplification tolerance, before rejoining.
+    first, second = [line for _, line in crossing]
+    joined = linemerge(unary_union([first, snap(second, first, 0.001)]))
+    assert joined.geom_type == 'LineString'
+    assert joined.is_closed and joined.is_simple and joined.is_valid
+
+
 def test_terrain_rgb_and_mvt_open(stack, make_rasters):
     np, rio, *_, c2 = stack
     directory = make_rasters()
