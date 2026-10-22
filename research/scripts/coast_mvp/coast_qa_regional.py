@@ -10,6 +10,7 @@ from contextlib import ExitStack
 from itertools import combinations
 import json
 import math
+import os
 from pathlib import Path
 import shutil
 import struct
@@ -30,7 +31,7 @@ else:
 MAX_CELLS = 150_000_000
 MAX_SIDE = 20_000
 STRIP_ROWS = 64
-RESERVE_BYTES = 250 * 1024**3
+RESERVE_BYTES = int(os.environ.get('COAST_QA_RESERVE_BYTES', 250 * 1024**3))
 LIMITATIONS = [
     'Hole components include land, unsurveyed water and the enclosing projected rectangle; no water mask.',
     'Overlap RMS is a source-grid difference, not vertical accuracy or boundary continuity.',

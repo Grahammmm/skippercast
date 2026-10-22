@@ -38,7 +38,10 @@ Measurements use every native target cell, not the display overview:
   contributor masks, selected source elevations (rounded to C1 float32),
   manifest totals and per-source contributor counts. `consistency.passed`
   summarizes those checks, not scientific acceptance. Failed consistency is
-  retained in the diagnostic report and must not be treated as acceptance.
+  retained in the diagnostic report and must not be treated as acceptance;
+  the command also exits non-zero when `consistency.passed` is false.
+- The free-disk reserve defaults to 250 GiB; override it with the
+  `COAST_QA_RESERVE_BYTES` environment variable or `--reserve-bytes`.
 
 PNGs use azimuth 315 degrees, altitude 45 degrees and vertical factor 1, with
 transparent nodata and a one-cell halo. The full PNG retains every target

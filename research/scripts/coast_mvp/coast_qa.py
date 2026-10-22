@@ -15,6 +15,7 @@ import math
 from pathlib import Path
 import re
 import struct
+import sys
 import zlib
 
 LIMIT = 1_000_000
@@ -248,13 +249,19 @@ def main():
     parser.add_argument('--region-config', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--regional', action='store_true', help='Opt-in bounded native-grid C1 regional QA')
+    parser.add_argument('--reserve-bytes', type=int, help='Regional QA free-disk reserve (default 250 GiB, or COAST_QA_RESERVE_BYTES)')
     args = parser.parse_args()
     if args.regional:
+        import coast_qa_regional
         from coast_qa_regional import packet as regional_packet
+        if args.reserve_bytes is not None:
+            coast_qa_regional.RESERVE_BYTES = args.reserve_bytes
         result = regional_packet(args.region_config, args.output)
     else:
         result = packet(args.region_config, args.output)
     print(json.dumps(result, allow_nan=False))
+    if any(not seg.get('consistency', {}).get('passed', True) for seg in result.get('segments', [])):
+        sys.exit('Consistency checks failed; the packet is diagnostic only')
 
 
 if __name__ == '__main__':

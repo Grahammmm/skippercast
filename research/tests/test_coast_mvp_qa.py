@@ -111,3 +111,16 @@ class CoastQATest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'Duplicate'):
                 qa.packet(p,Path(d)/'bad')
             self.assertFalse((Path(d)/'bad').exists())
+
+    def test_cli_exits_nonzero_when_consistency_fails(self):
+        from unittest import mock
+        failed = dict(segments=[dict(consistency=dict(passed=False))])
+        with mock.patch.object(qa, 'packet', return_value=failed), \
+                mock.patch.object(sys, 'argv', ['coast_qa', '--region-config', 'x', '--output', 'y']), \
+                self.assertRaises(SystemExit) as ctx:
+            qa.main()
+        self.assertNotEqual(ctx.exception.code, 0)
+        ok = dict(segments=[dict(consistency=dict(passed=True))])
+        with mock.patch.object(qa, 'packet', return_value=ok), \
+                mock.patch.object(sys, 'argv', ['coast_qa', '--region-config', 'x', '--output', 'y']):
+            qa.main()
