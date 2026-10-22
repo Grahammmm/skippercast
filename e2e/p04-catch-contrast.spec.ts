@@ -45,6 +45,8 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // (maplibre-gl 6.12.0->6.14.0, drizzle-orm, @axe-core/playwright, @cloudflare/workers-types, @playwright/test,
 // preact-render-to-string, vite). No CSS/TSX source in INPUTS, and not check_contrast.mjs's contrast(), is touched;
 // the Reports catch flow and its contrast results are unchanged. package.json and pnpm-lock.yaml rebound.
+// CI6-08 chlorophyll: MapStage adds only the createChlorophyll layer; check_contrast.mjs changes only the
+// legendTsx source hash and citations, leaving contrast() untouched. Both rebound.
 // CI6-13 (shelf depth contours): app.css adds only the two depth-contour legend swatch rules and joins the
 // contour row to the wrapping legend rows; MapStage.tsx only adds createDepthContours to the Chart's layers. The
 // Reports catch flow renders neither, and check_contrast.mjs rebinds only the surface-proof hashes and cited lines
@@ -62,17 +64,20 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // CI6-10 wind adds a chart-only createWind factory to MapStage; Reports does not mount it. The reviewed contrast()
 // implementation and this test's rendered catch path are unchanged; MapStage and check_contrast source hashes rebound.
 // Wind/contour merge-forward retains all three factories and both legend rows; only union hashes/line citations rebound.
+// Chlorophyll merge-forward preserves Temp contrast, wind and depth contours; only union hashes and line citations change.
 // CI6-18: MapStage.tsx adds the Stations chart renderer; BODY09 mounts Reports/CatchCards only, never MapStage.
 // Legend.tsx adds station legend markup/basis/list and app.css adds layout rules scoped to that row; neither
 // changes Reports catch count paint or its backdrop. check_contrast.mjs only rebinds the Legend source hash.
 // Verified applicability: BODY09's rendered flow, sampled elements, paint, thresholds and surface checks are unchanged.
 // CI6-18 merge-forward: union of the entries above, contrast() untouched.
+// CI6-08 x CI6-18 merge-forward: MapStage keeps createChlorophyll and createStations; Legend keeps both rows;
+// only union hashes and line citations rebound, contrast() untouched.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
   "web/app/App.tsx": "d8486f26dafbb97b0499cd7ef536c386c446c1b002c44b219d42151a5ab11446",
   "web/app/Masthead.tsx": "191309f6c9a54ee6bd24608a1983c6bf07141538267f87bef163f8ad4ccbea00",
   "web/app/LayerRail.tsx": "18db08dcba921446038b48d24552c0e756cba3fc52ecdbd005013521caf2566c",
-  "web/app/MapStage.tsx": "637a57b7d761ad2efd3376cc31f28ca0b3fbc93e45937995606a1ad8ffc67c5d",
+  "web/app/MapStage.tsx": "d286804ec6b38fc0e427e953dc0bfa95e7fb39c35d9c2152993e362ede2ea898",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
   "web/app/app.css": "4a3867af18c9eba3eb01391e84380a8052177bb8b841b4928f72287b2ef4dbd5",
@@ -85,7 +90,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "40ff6930129fd937f26d5feb028185530370acf3258f7fa887185da9a06f9855",
+  "scripts/check_contrast.mjs": "06fdc363022b6d8a731670655898a688dbb2e2aef6d2287ffdddd1c609cc337f",
   "package.json": "4675341e4ec0640f12cb96fe7ad6683739c4d601a32557a5e218430632db8719",
   "pnpm-lock.yaml": "68b00d873cb91ed71fb473d7145c31127602dfd3073ed847c0fbef7795dcc153",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
