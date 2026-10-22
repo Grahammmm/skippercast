@@ -112,6 +112,45 @@ test('the commit production serves is traced from the live version\'s provenance
   assert.equal(liveCommit(laterLive, later), CUR_SHA);
 });
 
+test('a version made by "version_upload" (the pipeline\'s own wrangler deploy) is traced like "upload"', () => {
+  // Cloudflare annotates the pipeline's `wrangler deploy --message "<sha> run <id>"` as "version_upload".
+  const code = (id, at, message, triggeredBy) => ({
+    id, metadata: {created_on: at, source: 'wrangler', author_email: 'ci@example.com'},
+    annotations: message ? {'workers/message': message, 'workers/triggered_by': triggeredBy}
+                         : {'workers/triggered_by': triggeredBy},
+  });
+  const vCode = code(CUR_CODE, '2026-10-11T09:00:00.000Z', `${CUR_SHA} run 38173947179`, 'version_upload');
+  const versions = [VERSIONS[0], VERSIONS[1], vCode, VERSIONS[3]];
+  assert.equal(liveCommit(DEPLOYMENTS.slice(0, 3), versions), CUR_SHA, 'the code upload itself');
+  assert.equal(liveCommit(DEPLOYMENTS, versions), CUR_SHA, 'a secrets change chained onto the version_upload');
+
+  // A free-form message names no commit, whatever the trigger.
+  const freeform = code(CUR_CODE, '2026-10-11T09:00:00.000Z', `hotfix on top of ${CUR_SHA}`, 'version_upload');
+  const freeformTrace = traceLiveCommit(DEPLOYMENTS.slice(0, 3), [VERSIONS[0], VERSIONS[1], freeform, VERSIONS[3]]);
+  assert.equal(freeformTrace.commit, '');
+  assert.match(freeformTrace.reason, /no "<sha> run <id>" deploy message/);
+
+  // A version_upload with no message is unknown, never guessed.
+  const missing = code(CUR_CODE, '2026-10-11T09:00:00.000Z', null, 'version_upload');
+  const missingTrace = traceLiveCommit(DEPLOYMENTS.slice(0, 3), [VERSIONS[0], VERSIONS[1], missing, VERSIONS[3]]);
+  assert.equal(missingTrace.commit, '');
+  assert.match(missingTrace.reason, /no "<sha> run <id>" deploy message/);
+});
+
+test('the production listing shape (version_upload at 100%, "<sha> run <id>") is traced', () => {
+  // Regression for #766's hold: production served a wrangler deploy whose trigger Cloudflare
+  // labelled "version_upload" rather than "upload".
+  const SHA = 'ad1118ef747a35bcfb2fc401020399d24fbe6d7a';
+  const LIVE = 'f2b6afc8-b6d7-4a20-86df-44df78a55a76';
+  const versions = [{id: LIVE, metadata: {created_on: '2026-10-20T17:08:00.000Z'},
+    annotations: {'workers/triggered_by': 'version_upload', 'workers/message': `${SHA} run 39463174683`}}];
+  const deployments = [{id: 'd1', created_on: '2026-10-20T17:08:00.000Z', source: 'wrangler',
+    strategy: 'percentage', versions: [{version_id: LIVE, percentage: 100}]}];
+  const traced = traceLiveCommit(deployments, versions);
+  assert.equal(traced.commit, SHA, traced.reason);
+  assert.equal(liveCommit(deployments, versions), SHA);
+});
+
 test('a live commit that cannot be traced is unknown, never guessed', () => {
   const unknown = (deployments, versions, reason) => {
     const traced = traceLiveCommit(deployments, versions);

@@ -29,6 +29,9 @@ import {regionInfo, type RegionInfo} from '../app/App.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {buildCoastBrief, buildRegionalBrief} from './model.ts';
 import {Tiles} from './Tiles.tsx';
+import {TideStationControl} from './TideStationControl.tsx';
+import {tideSelection} from '../tide-selection.ts';
+import {withTideSelection} from '../tide-stations.ts';
 import {briefVerdict, VERDICT_WORD, type BriefVerdict} from './verdict.ts';
 import type {Brief as BriefModel, RegionalDailyFeed} from './types.ts';
 
@@ -169,8 +172,12 @@ export function briefFrom({info, feed, forecast = null, coast, profile: p, hour:
 /** The brief the shell shows now, read from the signals so a component re-renders when they change. */
 export function currentBrief(now: Date): BriefModel | null {
   const report = coastReport.value, binding = coastBinding.value;
-  return briefFrom({info: regionInfo.value, feed: dailyFeed.value, forecast: regionalForecast.value, coast: report && binding ? {report: report.data, areaId: binding.areaId} : null, profile: profile.value, hour: hour.value,
+  const brief = briefFrom({info: regionInfo.value, feed: dailyFeed.value, forecast: regionalForecast.value, coast: report && binding ? {report: report.data, areaId: binding.areaId} : null, profile: profile.value, hour: hour.value,
     limits: hasOwnLimits(profile.value) ? limitsFor(profile.value) : null}, now);
+  const chosen = tideSelection.choice.value, config = tideSelection.region.value;
+  if (!brief || !chosen || !config || config.id !== regionInfo.value?.id || chosen === config.station) return brief;
+  const station = tideSelection.stations.value.find(s => s.id === chosen) ?? {id: chosen, name: chosen};
+  return withTideSelection(brief, station, tideSelection.reading.value, regionInfo.value.timezone, now, hour.value);
 }
 
 export const Headline = ({brief}: {brief: BriefModel | null}) =>
@@ -229,7 +236,7 @@ export function Details({brief}: {brief: BriefModel | null}) {
 
 /** The four tiles: compact in the sheet below full, dense (short source, one row) in the desktop column. */
 export const BriefTiles = ({brief, compact = false, dense = false}: {brief: BriefModel | null; compact?: boolean; dense?: boolean}) =>
-  <Tiles tiles={brief?.tiles ?? null} compact={compact} dense={dense} nearshore={PROFILE_TABLE[profile.value].swellTile === 'nearshore'} />;
+  <><Tiles tiles={brief?.tiles ?? null} compact={compact} dense={dense} nearshore={PROFILE_TABLE[profile.value].swellTile === 'nearshore'} />{compact ? null : <TideStationControl />}</>;
 
 const clock = (iso: string, tz: string) => new Intl.DateTimeFormat('en-US', {hour: 'numeric', minute: '2-digit', timeZone: tz}).format(new Date(iso)).replace(':00', '').toLowerCase();
 

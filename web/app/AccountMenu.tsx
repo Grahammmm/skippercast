@@ -13,8 +13,10 @@ import {Button} from '../ui/Button.tsx';
 import {Icon} from '../ui/icons.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
 import {accountLabel, boat, choosePreset, ensureSession, followAccountHash, loadBoat, openAccountDialog, openBoatSheet, session, type Session} from '../account.ts';
-import {region, species} from '../state.ts';
+import {coordinates, region, setCoordinateFormat, species} from '../state.ts';
 import {offlineOpen, openTrip, tripIds} from '../trip.ts';
+import {tourTransition, type TourAction, type TourState} from '../tour.ts';
+import {ControlsTour} from './ControlsTour.tsx';
 
 const ACCOUNT_LINE: Readonly<Record<Session['state'], string>> = {
   'loading': 'Checking your account…',
@@ -38,7 +40,8 @@ function LazyAlerts({regionId}: {regionId: string}) {
 export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
   const [open, setOpen] = useState(false);
   const [alerts, setAlerts] = useState(false);
-  const root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null), panel = useRef<HTMLDivElement>(null);
+  const [tour, setTour] = useState<TourState>(null);
+  const root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null), panel = useRef<HTMLDivElement>(null), tourWasOpen = useRef(false);
   const id = useId();
   const s = session.value, b = boat.value, regionId = region.value;
 
@@ -56,7 +59,16 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
     return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('focusin', away); };
   }, [open]);
 
+  useEffect(() => {
+    if (tour !== null) tourWasOpen.current = true;
+    else if (tourWasOpen.current) { tourWasOpen.current = false; trigger.current?.focus(); }
+  }, [tour]);
+
   const close = () => { setOpen(false); trigger.current?.focus(); };
+  const tourAction = (action: TourAction) => {
+    const next = tourTransition(tour, action);
+    setTour(next);
+  };
   /** Close first so the v1 dialogs return focus to the menu button. */
   const run = (action: () => unknown) => () => { close(); void action(); };
   const onDismissKey = (event: KeyboardEvent) => {
@@ -96,6 +108,12 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
           </div>
           <Button size="sm" variant="quiet" onClick={run(openBoatSheet)}>Enter my exact boat</Button>
         </section>
+        <section aria-labelledby={`${id}-coordinates`}>
+          <h2 id={`${id}-coordinates`} class="ui-eyebrow">Coordinate format</h2>
+          <p>Saved in this browser. GPX always uses decimal degrees.</p>
+          {([['dd', 'Decimal degrees'], ['ddm', 'Degrees and decimal minutes'], ['dms', 'Degrees minutes seconds']] as const).map(([value, label]) =>
+            <Button key={value} size="sm" pressed={coordinates.value === value} onClick={() => setCoordinateFormat(value)}>{label}</Button>)}
+        </section>
         <section aria-labelledby={`${id}-alerts`}>
           <h2 id={`${id}-alerts`} class="ui-eyebrow">Trip alerts</h2>
           <p>{regionId ? 'Save a date, area and comfort limits; get material changes and a day-before assessment.' : 'Choose a port to save trip alerts for it.'}</p>
@@ -107,6 +125,7 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
             <li><Button size="sm" variant="quiet" icon="pin" disabled={!regionId} onClick={run(openTrip)}>
               Trip plan and GPX{tripIds.value.length ? ` · ${tripIds.value.length} saved` : ''}</Button></li>
             <li><Button size="sm" variant="quiet" icon="download" disabled={!regionId} onClick={run(() => { offlineOpen.value = true; })}>Save for offline</Button></li>
+            <li><Button size="sm" variant="quiet" onClick={run(() => tourAction('replay'))}>Replay controls tour</Button></li>
             <li><a href="downloads/spot-notes.html" target="_blank" rel="noopener"><Icon name="download" size={16} />Offline spot notes (new tab)</a></li>
           </ul>
         </section>
@@ -114,6 +133,7 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
       {alerts && regionId
         ? <PortDialog open onClose={() => { setAlerts(false); trigger.current?.focus(); }} title="Trip alerts"><LazyAlerts regionId={regionId} /></PortDialog>
         : null}
+      {tour !== null ? <ControlsTour step={tour} act={tourAction} /> : null}
     </div>
   );
 }

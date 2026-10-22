@@ -18,6 +18,8 @@
 // age and holds or resumes the loop (FE-22, web/map/clouds.ts).
 // Water temp (FE-16) gives the drawn analysis's range in whole °F, its product,
 // date and age, and the basis with its error, or why nothing draws.
+// Temp contrast (CI6-03) gives its fixed scale in °F per nautical mile, its product,
+// date and age, and the basis with its support rule, or why nothing draws.
 // Swell (FE-17) gives the drawn hour's heights, periods and direction, its fixed
 // colour scale, the model with its run, age and valid hour as a model forecast,
 // and the basis, or why nothing draws.
@@ -37,6 +39,9 @@
 // FE-80: in 2D and 3D the Seafloor row is the terrain's: its depth ramp, the
 // terrain basis, the screened candidates as "Chart only", and while Source
 // coverage is on the renderer's colour key and its sources with their dates, verbatim.
+// Depth contours (CI6-13) are always on, Chart only: while they draw, their row keys
+// the contour and the dashed survey edge and names each survey, its date and datum;
+// withheld or failed contours say so, and a region without any shows no row.
 import {IconButton} from '../ui/Button.tsx';
 import {current, grade, layers, profile, region, species} from '../state.ts';
 import {GRADE_LABELS, GRADE_MEANING} from '../grade.ts';
@@ -47,6 +52,7 @@ import {cloudHeld, cloudStamp} from '../map/clouds.ts';
 import {AIS_CREDIT, aisOn, aisState} from '../map/commercial-ais.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, activityStatus} from '../map/fleet.ts';
 import {currentsState} from '../map/currents.ts';
+import {contourState} from '../map/depth-contours.ts';
 import {CHART_ONLY, drawsIn, layerEntry} from '../map/layers.ts';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
@@ -54,7 +60,9 @@ import {legendKey, seafloorState, seafloorView, surveyList, surveySummary} from 
 import {waterTempState} from '../map/sst.ts';
 import {chlorophyllState} from '../map/chlorophyll.ts';
 import {PALETTE_TOKENS} from '../map/palette.ts';
+import {CONTRAST_SCALE, contrastState} from '../map/contrast.ts';
 import {HEIGHT_SCALE, frameSummary, nearshoreState, swellState} from '../map/swell.ts';
+import {windState} from '../map/wind.ts';
 import {ringBasis, ringSummary} from '../map/nearshore.ts';
 import {WAVE_MODEL} from '../map/forecast-grid.ts';
 import {currentStatus, shownPresentation, terrainCoverage, terrainOptions} from '../map/stage.ts';
@@ -170,7 +178,30 @@ function WaterTempRow() {
   );
 }
 
+/** The Temp contrast row (on the Chart): the fixed scale in °F per nautical mile, product and age, or why nothing draws. */
+function ContrastRow() {
+  const s = contrastState.value, d = s.drawn;
+  return (
+    <li class="app-legend-sst-contrast">
+      Temp contrast
+      <Popover iconOnly summary="Temp contrast basis">{s.basis}</Popover>
+      {d ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="sst-contrast">{CONTRAST_SCALE[0]}<span class="app-swatch" data-layer="sst-contrast" aria-hidden="true"></span><span class="app-visually-hidden"> to </span>{CONTRAST_SCALE[1]}+ °F per nautical mile</p> : null}
+      {d ? <p class="app-legend-note ui-mono" data-stamp="sst-contrast">{d.product} · {d.stamp}</p> : null}
+      {s.reason ? <p class="app-legend-note" data-reason="sst-contrast">{s.reason}</p> : null}
+    </li>
+  );
+}
+
 /** The Swell row (on the Chart): the drawn hour's reading, scale, model run and valid hour, or why nothing draws. */
+function WindRow() {
+  const s = windState.value;
+  return <li class="app-legend-wind">Wind · arrows toward · knots
+    <Popover iconOnly summary="Wind basis">{s.basis}</Popover>
+    {s.drawn ? <p class="app-legend-note ui-mono" data-stamp="wind">NOAA NCEP · GFS · {s.drawn.stamp}</p> : null}
+    {s.reason ? <p class="app-legend-note" data-reason="wind">{s.reason}</p> : null}
+  </li>;
+}
+
 function SwellRow() {
   const s = swellState.value, f = s.drawn, reason = s.reason, r = nearshoreState.value;
   const fieldReason = !f && r?.rings.length && reason.startsWith('Swell unavailable:')
@@ -272,6 +303,26 @@ export function DensityRow() {
   );
 }
 
+/** The depth contours (CI6-13): the key and surveys while they draw, or why they do not; nothing where none are published. */
+export function DepthContoursRow() {
+  const s = contourState.value, entry = layerEntry('depth-contours');
+  if (shownPresentation.value !== 'chart' || !['drawn', 'withheld', 'failed'].includes(s.status)) return null;
+  const drawn = s.status === 'drawn';
+  return (
+    <li class="app-legend-depth-contours">
+      {drawn ? <span class="app-swatch" data-layer="depth-contours" aria-hidden="true"></span> : null}{entry.label}
+      <Popover iconOnly summary="Depth contours basis">
+        <p>{entry.basis}</p>
+        {s.sources.map(x => <p key={x.source_id}>{x.name} · surveyed {x.survey_date} · {x.vertical_datum}</p>)}
+      </Popover>
+      {drawn ? <p class="app-legend-note" data-key="depth-contours">{entry.legend[0]?.label}</p> : null}
+      {drawn ? <p class="app-legend-note" data-key="depth-contours-edge"><span class="app-swatch" data-layer="depth-contours-edge" aria-hidden="true"></span>{entry.legend[1]?.label}</p> : null}
+      {drawn ? <p class="app-legend-note ui-mono" data-stamp="depth-contours">{[...new Set(s.sources.map(x => `surveyed ${x.survey_date} · ${x.vertical_datum}`))].join('; ')} · not for navigation</p> : null}
+      {s.note ? <p class="app-legend-note" data-reason="depth-contours">{s.note}</p> : null}
+    </li>
+  );
+}
+
 /** A row with nothing drawn behind it: the entry's name and why, with no key. */
 const PlainRow = ({id, label, reason}: {id: string; label: string; reason: string}) => (
   <li class="app-legend-plain">{label}<p class="app-legend-note" data-reason={id}>{reason}</p></li>
@@ -285,12 +336,14 @@ export function Legend() {
       <span class="ui-eyebrow">Legend</span>
       <ul>
         {on.map(e => !drawsIn(e.id, shown) ? <PlainRow key={e.id} id={e.id} label={e.label} reason={CHART_ONLY} />
-          : e.id === 'seafloor' ? shown === 'chart' ? <SeafloorRow key={e.id} /> : <TerrainSeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} /> : e.id === 'chlorophyll' ? <ChlorophyllRow key={e.id} />
-          : e.id === 'swell' ? <SwellRow key={e.id} /> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
+          : e.id === 'seafloor' ? shown === 'chart' ? <SeafloorRow key={e.id} /> : <TerrainSeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
+          : e.id === 'sst-contrast' ? <ContrastRow key={e.id} /> : e.id === 'chlorophyll' ? <ChlorophyllRow key={e.id} />
+          : e.id === 'swell' ? <><SwellRow key={e.id} /><WindRow /></> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
           : e.id === 'fleet' ? <FleetRow key={e.id} />
           : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
         <RankedRow />
         <DensityRow />
+        <DepthContoursRow />
         <MpaRow />
       </ul>
       {unavailable.value.filter(id => id !== 'mpas').map(id => <p key={id} class="app-empty" data-unavailable={id}>{layerEntry(id).label} unavailable.</p>)}

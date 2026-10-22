@@ -13,7 +13,7 @@ import {RAIL_IDS, type RailId} from '../profile.ts';
 export const DOT_CURRENT = 'wcofs';
 
 export const DOT_LABELS: Readonly<Record<RailId, string>> = {
-  seafloor: 'Seafloor', currents: 'Currents', 'water-temp': 'Water temp', chlorophyll: 'Chlorophyll', swell: 'Swell', fleet: 'Charter fleet', clouds: 'Clouds',
+  seafloor: 'Seafloor', currents: 'Currents', 'water-temp': 'Water temp', 'sst-contrast': 'Temp contrast', chlorophyll: 'Chlorophyll', swell: 'Swell + wind', fleet: 'Charter fleet', clouds: 'Clouds',
 };
 
 /** The app at `region` with only `layer` on (Currents with the rail's default source); the ui switch of `href` stays. */

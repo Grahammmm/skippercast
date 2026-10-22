@@ -24,6 +24,11 @@ CONTROL_PATHS = ('research/scripts/coastal_four128_runtime.py',
                  'research/scripts/coastal_four128_resources.py',
                  'research/scripts/coastal_four128_artifact_review.py')
 LEDGER_PATH = 'research/catalog/coastal-four128-charge-ledger.json'
+# Literal copy of profiles.PARTIAL_SUPPORT: config parsing must not import project
+# code before live_code() has run the source guard. issue() re-checks the pin.
+PARTIAL_SUPPORT = 'coastal-contained-partial-support-v1'
+PARTIAL_SCIENCE_STATUS = 'PASS_EXPECTED_SOURCE_METADATA_GEOMETRY_PARTIAL_POLICY'
+TOPOLOGY_SCRIPT = 'research/scripts/coastal_four128_mask_topology.py'
 DOCS = {
     'independent-four128-scientific-preflight': 'coastal-ordered-independent-scientific-preflight-v1',
     'independent-four128-scope-review': 'coastal-ordered-scope-review-v1',
@@ -97,6 +102,11 @@ def config_file(filename):
     require(set(cfg['controls']) == expected, 'complete reviewed controls required')
     for value in cfg['controls'].values():
         require(re.fullmatch(r'[0-9a-f]{64}', value), 'exact control hash required')
+    # Opt-in partial support (SC-5): absent means the strict policy, so every
+    # historical config and its replay bytes are unchanged.
+    if 'support_policy' in cfg:
+        require(cfg['mode'] == 'live' and cfg['support_policy'] == PARTIAL_SUPPORT, 'unsupported support policy')
+        require(set(cfg['inputs']) >= {'selection', 'prescan_review'}, 'partial support needs the reviewed mask-topology pre-scan')
     return cfg, digest(raw)
 
 
@@ -161,6 +171,9 @@ def prepare_inputs(cfg, package):
             (limits['source_prior_bytes'], limits['source_limit_bytes'], amendment['source']['fresh_allowance_bytes'], False), 'carry accounting differs')
     require((index['prior_scratch_bytes'], index['scratch_limit_bytes']) ==
             (limits['scratch_prior_bytes'], limits['scratch_limit_bytes']), 'index scratch differs')
+    policy = cfg.get('support_policy')
+    require(grant.get('support_policy') == policy and index.get('support_policy') == policy
+            and package.get('support_policy') == policy, 'support policy binding differs')
     retained = cfg['retained']
     require((grant['output_retention']['prior_retained_bytes'], grant['output_retention']['cumulative_cap_bytes'],
              grant['output_retention']['total_bytes'], grant['output_retention']['profile']) ==
@@ -176,6 +189,7 @@ def evidence_summary(cfg, now):
         raw = read_metadata(p)
         doc = json.loads(raw)
         require(doc['schema'] == contract and doc['window_set'] == cfg['windows'], 'evidence contract/windows differ')
+        require(doc.get('support_policy') == cfg.get('support_policy'), 'evidence support policy differs')
         require(epoch(doc['checked_at']) <= now and epoch(doc['valid_until']) > now + 7200, 'evidence freshness margin exhausted')
         require('HOLD' not in str(doc.get('status', '')).upper() and not doc.get('holds', doc.get('holds_added', [])), 'evidence held')
         require(doc.get('reviewer_id') and 'opus' not in doc['reviewer_id'].lower(), 'independent evidence required')
@@ -218,7 +232,7 @@ def render(cfg, *, observation, index, grant, amendment, package, controls, docs
         b4_fresh_download_budget=dict(cap_bytes=1500000000, used_bytes=0), native_operations=0, original_source_reads=0, downloads=0)
     closed_raw = encoded(closed)
     closed_ref = reference(OUTPUT_NAMES[0], closed_raw, closed['schema'])
-    bindings = dict(grant=index['grant'], carry=index['carry'], independent_preflight=index['independent_preflight'],
+    bindings: dict = dict(grant=index['grant'], carry=index['carry'], independent_preflight=index['independent_preflight'],
         prior_output_carry=closed_ref, prior_scratch_carry=closed_ref, prior_scratch_bytes=lim['scratch_prior_bytes'],
         runtime_controls=controls, controller_sha256=cfg['controller_sha256'], code_sha=index['code_sha'], deps_sha=index['deps_sha'])
     identity: dict = dict(commit=cfg['head'], checkout=str(path(cfg['code_root'])), slice='skippercast-four128approved'+cfg['run_tag']+'.slice',
@@ -226,8 +240,19 @@ def render(cfg, *, observation, index, grant, amendment, package, controls, docs
     if cfg['layout'] == 6:
         identity.update(origin_ref_head=observation['origin_ref_head'], origin_descendant_approved=False, prepare_sha256=cfg['prepare_sha256'])
     selection = dict(cfg['inputs']['selection'], path=str(path(cfg['inputs']['selection']['path'])))
+    partial = cfg.get('support_policy') is not None
+    if partial:
+        # Opt-in only: strict documents keep their exact historical keys and bytes.
+        prescan = dict(receipt=selection, review=dict(cfg['inputs']['prescan_review'],
+                                                      path=str(path(cfg['inputs']['prescan_review']['path']))),
+                       require_holes_met=True, independently_reviewed=True,
+                       meaning='Reviewed one-open mask-topology observation; not native quality or scientific acceptance.')
+        bindings.update(support_policy=cfg['support_policy'], mask_topology_prescan=prescan)
+    scope = ('Exact four pinned partial-support 128 windows (mask-invalid cells unsupported nodata), private native '
+             'acquisition/qualification and mapping only; rendering allocation 0.' if partial else
+             'Exact four canonical 128 windows, private native acquisition/qualification and mapping only; rendering allocation 0.')
     doc5 = dict(schema='coastal-four128-independent-prelaunch-v1', status='PASS_EXACT_FINITE_PRELAUNCH', holds=[], **common, **bindings,
-        scope='Exact four canonical 128 windows, private native acquisition/qualification and mapping only; rendering allocation 0.',
+        scope=scope,
         code_identity=identity, window_set=cfg['windows'], native_bounds=cfg['bounds'], block_selection=selection,
         accounting=dict(retained=dict(prior=ret['prior'], cap=ret['cap'], trial=ret['trial'], remaining_after_trial=remaining),
             source=dict(prior=lim['source_prior_bytes'], cap=lim['source_limit_bytes'], fresh=source['fresh_allowance_bytes'], downloads=0),
@@ -240,6 +265,9 @@ def render(cfg, *, observation, index, grant, amendment, package, controls, docs
         execution_authorized=False, native_operations=0, original_source_reads=0, downloads=0, network_requests=0)
     if cfg['layout'] == 6:
         doc5['mission_root'] = str(path(cfg['mission_root']))
+    if partial:
+        doc5['accounting']['source'].update(prescan_charged_in_prior=source['sc5_geometry_prescan_charged_bytes'],
+                                            run_admissions=8)
     doc5_raw = encoded(doc5)
     live = dict(index)
     live.pop('status', None)
@@ -367,12 +395,28 @@ def issue(cfg, config_sha):
     from coastal_four128_resources import budget_limits_bytes
     require(rt.PROJECT == path(cfg['project_root']), 'configured project differs from runtime/prepare project')
     from skippercast.coastal.coordinator.loop import implementation_hashes
-    from skippercast.coastal.coordinator.ordered_trial import LARGER_WINDOWS, LARGER_BOUNDS
-    require(cfg['windows'] == LARGER_WINDOWS and cfg['bounds'] == LARGER_BOUNDS, 'ruled windows differ from controller')
-    for name in ('selection', 'prior_carry'):
+    from skippercast.coastal.coordinator.ordered_trial import scope_windows
+    from skippercast.coastal.authenticated_v1.profiles import CONTAINED, PARTIAL_SUPPORT as PINNED_PARTIAL
+    require(PINNED_PARTIAL == PARTIAL_SUPPORT, 'partial support pin differs from profiles')
+    policy = cfg.get('support_policy')
+    # The shared scope pin chooses the geometry; a config cannot name its own windows.
+    windows, bounds = scope_windows(dict(execution_profile=CONTAINED, window_side=128, window_count=4,
+                                         **({'support_policy': policy} if policy else {})))
+    require(cfg['windows'] == windows and cfg['bounds'] == bounds, 'ruled windows differ from controller')
+    for name in ('selection', 'prior_carry') + (('prescan_review',) if policy else ()):
         pinned(cfg['inputs'][name])
-    selection = json.loads(pinned(cfg['inputs']['selection']))
-    require(selection['LARGER_WINDOWS'] == cfg['windows'] and selection['LARGER_BOUNDS'] == cfg['bounds'], 'selection geometry differs')
+    selection_raw = pinned(cfg['inputs']['selection'])
+    selection = json.loads(selection_raw)
+    if policy is None:
+        require(selection['LARGER_WINDOWS'] == cfg['windows'] and selection['LARGER_BOUNDS'] == cfg['bounds'], 'selection geometry differs')
+    else:
+        # Final launch stays unavailable until the ONE-open topology receipt meets the
+        # --require-holes intent AND an independent different-model review accepts it.
+        import coastal_four128_mask_topology as topology
+        require(digest(read_metadata(ROOT / TOPOLOGY_SCRIPT)) == selection['script']['sha256'], 'pre-scan script differs from receipt')
+        topology.validate_review(json.loads(pinned(cfg['inputs']['prescan_review'])), selection_raw)
+        require([w['window'] for w in selection['windows']] == cfg['windows'] and selection['native_bounds'] == cfg['bounds'],
+                'selection geometry differs')
     require(re.fullmatch('[0-9a-f]{40}', selection['code_head'])
             and git('merge-base', cfg['head'], selection['code_head']).decode().strip() == selection['code_head'], 'selection ancestor differs')
     require(budget_limits_bytes(pinned(cfg['inputs']['amendment'])) == cfg['limits'], 'live signed budget differs')
@@ -380,7 +424,33 @@ def issue(cfg, config_sha):
         '--staging-root', str(stage), '--mission-root', str(mission), '--evidence-root', str(path(cfg['evidence_root'])),
         '--cumulative-cap-bytes', str(cfg['retained']['cap']), '--prior-retained-bytes', str(cfg['retained']['prior']),
         '--budget-amendment', str(path(cfg['inputs']['amendment']['path'])), '--prospective-released-bytes']
-    result = subprocess.run(argv, check=True, capture_output=True, text=True, timeout=300)
+    if policy:
+        argv += ['--support-policy', policy]
+    try:
+        result = subprocess.run(argv, check=True, capture_output=True, text=True, timeout=300)
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr or ''
+        lines = (exc.stdout or '').strip().splitlines()
+        last_stdout = lines[-1] if lines else ''
+        if stderr:
+            print(stderr, file=sys.stderr, end='' if stderr.endswith('\n') else '\n')
+        if last_stdout:
+            print(last_stdout, file=sys.stderr)
+        # assemble() requires the successful issuance schema at issuance_receipt.
+        # Keep failure diagnostics beside it, never masquerading as that authority
+        # or modifying any partial stage bytes. Exclusive creation preserves prior
+        # diagnostics too; failure to save them must not hide the child output.
+        failed_receipt = str(cfg['issuance_receipt']) + '.failed.json'
+        report = dict(schema='coastal-four128-config-issuance-failure-v1',
+            status='ISSUANCE_FAILED_STAGE_PRESERVED', config_sha256=config_sha,
+            head=cfg['head'], run_tag=cfg['run_tag'], checked_at=iso(time.time()),
+            staging_root=str(stage), mission_root=str(mission), execution_authorized=False,
+            prepare=dict(returncode=exc.returncode, stderr=stderr, last_stdout_line=last_stdout))
+        try:
+            write_new(failed_receipt, encoded(report))
+        except (OSError, ValueError) as receipt_error:
+            print('Failed issuance receipt not written: ' + str(receipt_error), file=sys.stderr)
+        raise SystemExit(1) from exc
     package = json.loads(result.stdout.strip().splitlines()[-1])
     index, grant, amendment = prepare_inputs(cfg, package)
     require((index['code_sha'], index['deps_sha']) == implementation_hashes(ROOT), 'current implementation identity differs')

@@ -14,6 +14,7 @@ import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {lintFile} from '../scripts/check_tokens.mjs';
+import {waterState} from './helpers/land-water.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const APP_FILES = ['web/app', 'web/app/views'].flatMap(dir => readdirSync(join(ROOT, dir)).filter(name => name.includes('.')).map(name => `${dir}/${name}`));
@@ -33,6 +34,9 @@ async function load() {
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export * from './web/app/App.tsx';
+      export {Planner} from './web/app/Planner.tsx';
+      export {createPlanner} from './web/planner.ts';
+      export {AccountMenu} from './web/app/AccountMenu.tsx';
       export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, TAB_VIEWS, advisorOn, checkAdvisor, ChatEntry} from './web/app/Masthead.tsx';
       export {targetOptions, windowText} from './web/app/CommandBar.tsx';
       export {Brief, emptyTiles, DISCLAIMER} from './web/app/Desktop.tsx';
@@ -41,6 +45,7 @@ async function load() {
       export {chartMark} from './web/map/chart.ts';
       export {Legend, RankedRow} from './web/app/Legend.tsx';
       export {rankedSpots} from './web/map/ranked.ts';
+      export {landWater} from './web/land-water.ts';
       export {markScreen} from './web/map/marks.ts';
       export {CHECKING, assessScreen} from './web/map/habitat.ts';
       export {terrainMark, terrainReading} from './web/map/stage.ts';
@@ -58,6 +63,24 @@ async function load() {
   return shell;
 }
 const memory = () => { const m = new Map(); return {getItem: k => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v))}; };
+
+test('coordinate choice is exposed in settings and used by the plan rows', async () => {
+  const {Planner, createPlanner, AccountMenu, render, h, state} = await load();
+  state.configureStore({storage: memory()});
+  const t = {id: 'fixture', label: 'Fixture', latitude: -0.5, longitude: 0.5};
+  const model = createPlanner({atlas: {targets: [t], areas: []}, screen: {ready: () => false},
+    region: {id: 'test', timezone: 'UTC', mpa: {bounds: [-1, -1, 1, 1]}}, storage: null,
+    map: {getBounds: () => ({getWest: () => -1, getEast: () => 1, getSouth: () => -1, getNorth: () => 1})},
+    getVisible: () => [t], loadPorts: async () => null, nav: {}, emit() {}});
+  model.add(t.id);
+  try {
+    for (const [mode, label, expected] of [['dd', 'Decimal degrees', '0.50000° S, 0.50000° E'], ['ddm', 'Degrees and decimal minutes', '0° 30.000′ S, 0° 30.000′ E'], ['dms', 'Degrees minutes seconds', '0° 30′ 00.00″ S, 0° 30′ 00.00″ E']]) {
+      state.setCoordinateFormat(mode);
+      assert.ok(render(h(Planner, {model, open: false})).includes(expected));
+      assert.match(render(h(AccountMenu, {})), new RegExp(`aria-pressed="true"[^>]*>${label}</button>`));
+    }
+  } finally { state.setCoordinateFormat('dd'); model.dispose(); }
+});
 const count = (html, re) => (html.match(re) || []).length;
 const attrs = (html, re) => [...html.matchAll(re)].map(m => m[1]);
 
@@ -74,6 +97,8 @@ const dayChips = html => [...html.match(/aria-label="Day"[^>]*>(.*?)<\/div>/s)[1
 test('the shell has the masthead, the command bar, the brief column and the map chrome', async () => {
   const html = await renderShell(`${ORIGIN}?region=morro-bay`);
   assert.match(html, /<header class="app-masthead">/);
+  assert.match(html, /Replay controls tour<\/button>/);
+  assert.doesNotMatch(html, /Step 1 of 4/, 'the tour is opt-in, not competing with FirstRun or the flyover');
   assert.match(html, /class="app-brand" href="\/"[^>]*>.*SkipperCast/);
   assert.match(html, /class="app-location ui-mono" data-region="morro-bay">Morro Bay —</, 'the location names the region and leaves the centre blank until it loads');
   assert.match(html, /<nav aria-label="Views">/);
@@ -102,7 +127,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.match(html, /<section class="app-stage" aria-label="Map">/);
   assert.match(html, /<section class="app-legend" aria-label="Legend">/);
   assert.match(html, /role="group" aria-label="Layers"/);
-  assert.equal(count(html, /class="ui-rail-item"/g), 7);
+  assert.equal(count(html, /class="ui-rail-item"/g), 8);
   assert.match(html, /role="group" aria-label="Time"/);
   assert.match(html, /<input type="range" class="ui-range ui-dock-range" aria-label="Hour"/);
   assert.doesNotMatch(html, /app-mark/, 'no mark card without a selection');
@@ -158,7 +183,7 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   assert.match(html, /<label>Area<select><option value>Whole region<\/option><option selected value="estero">Estero<\/option><\/select>/);
   // Rail and legend: swell and water temp on, the rest off; protected areas stay listed while their geometry loads (FE-19).
   const rail = Object.fromEntries([...coastView.matchAll(/<li class="ui-rail-item" data-on="(true|false)"><button[^>]*>.*?<span class="ui-rail-label">([^<]+)<\/span>/gs)].map(m => [m[2], m[1]]));
-  assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', Chlorophyll: 'false', Swell: 'true', 'Charter fleet': 'false', Clouds: 'false'});
+  assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', 'Temp contrast': 'false', Chlorophyll: 'false', 'Swell + wind': 'true', 'Charter fleet': 'false', Clouds: 'false'});
   assert.match(coastView, /class="app-legend-water-temp"/);
   assert.deepEqual(attrs(coastView, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no colour key until a layer draws (FE-20)');
   // Dock: the chips run from the fixed clock (Monday), Tuesday 2026-10-06 is on and the slider sits at 2 pm local.
@@ -265,7 +290,7 @@ test('the mobile sheet reflects the address: the mark card stands in at peek, th
   state.syncFromURL(`${ORIGIN}?region=morro-bay&layers=clouds`);
   const panel = render(h(LayersPanel, {onClose: () => {}}));
   assert.match(panel, /^<div class="app-sheet-layers"><div class="app-sheet-head"><span class="ui-eyebrow">Layers<\/span><button[^>]*>.*?Done<\/button><\/div><div class="ui-rail app-rail" role="group" aria-label="Layers">/s);
-  assert.equal(count(panel, /class="ui-rail-item"/g), 7);
+  assert.equal(count(panel, /class="ui-rail-item"/g), 8);
   assert.match(panel, /<li class="app-legend-clouds"><span class="app-legend-text">Clouds</);
   assert.deepEqual(attrs(panel, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no cloud key until a frame shows (FE-20)');
   // Panel and detent rules: layers opens at half from peek, closes when the sheet drops to peek.
@@ -350,7 +375,12 @@ test('the mark card shows a Chart selection, then the terrain\'s on the Chart, t
     assert.equal(currentMark.value.name, 'r12', 'the terrain\'s selection shows only while the link names it');
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&spot=r12&habitat=reef:r1`);
     assert.deepEqual(currentMark.value, terrainCard(reef));
-    assert.equal(terrainCard(reef).reading, '35.3800° N, 120.8800° W');
+    assert.deepEqual(terrainCard(reef).position, {latitude: 35.38, longitude: -120.88});
+    for (const [mode, expected] of [['dd', '35.38000° N, 120.88000° W'], ['ddm', '35° 22.800′ N, 120° 52.800′ W'], ['dms', '35° 22′ 48.00″ N, 120° 52′ 48.00″ W']]) {
+      state.setCoordinateFormat(mode);
+      assert.ok(render(h(MarkCard, {})).includes(expected));
+    }
+    state.setCoordinateFormat('dd');
     chartMark.value = shore;
     assert.equal(currentMark.value, shore, 'a Chart click wins');
     const html = render(h(MarkCard, {}));
@@ -381,7 +411,7 @@ test('FE-80: in 2D and 3D a terrain reading is the card, with the renderer\'s la
     terrainReading.value = reading;
     assert.deepEqual(currentMark.value, readingCard(reading));
     const html = render(h(MarkCard, {}));
-    assert.match(html, /<h2 tabindex="-1">39 ft depth<\/h2>.*<p class="app-mark-kind">ORIGINAL SURVEY SAMPLE<\/p><p class="ui-reading">35\.37000° N · 120\.86000° W<\/p><p class="app-mark-source ui-mono">USGS survey · 2008-05-01 · 2 m display spacing\. Nominal\. Original spacing 2 m\. Vertical references have not been reconciled\.<\/p>/s);
+    assert.match(html, /<h2 tabindex="-1">39 ft depth<\/h2>.*<p class="app-mark-kind">ORIGINAL SURVEY SAMPLE<\/p><p class="ui-mono">35\.37000° N, 120\.86000° W<\/p><p class="app-mark-source ui-mono">USGS survey · 2008-05-01 · 2 m display spacing\. Nominal\. Original spacing 2 m\. Vertical references have not been reconciled\.<\/p>/s);
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&habitat=reef:r1`);
     assert.deepEqual(currentMark.value, terrainCard(reef), 'the Chart has no terrain reading');
   } finally { terrainMark.value = null; terrainReading.value = null; }
@@ -418,9 +448,10 @@ test('the time dock disables Play at the complete horizon end while preserving b
 });
 
 test('the legend keys the ranked trip spots while the Chart draws them (#422)', async () => {
-  const {Legend, RankedRow, rankedSpots, markScreen, CHECKING, assessScreen, render, h, state} = await load();
+  const {Legend, RankedRow, rankedSpots, markScreen, CHECKING, assessScreen, render, h, state, landWater} = await load();
   state.configureStore({v2: true, storage: memory()});
   const spot = {id: 's1', name: 'Spot 1', latitude: 35.37, longitude: -120.9, trip_rank: 1};
+  landWater.value = waterState('morro-bay', [spot]);
   try {
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart`);
     assert.equal(render(h(RankedRow, {})), '', 'no plan, no row');

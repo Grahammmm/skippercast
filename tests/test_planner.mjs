@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 
 const {createPlanner, nextFriday, planFit} = await import('../web/planner.ts');
 const {draftKey} = await import('../dist/trip-export.js');
+const {coordinates} = await import('../web/state.ts');
 
 const NOW = new Date('2026-10-12T18:00:00Z');  // Monday, Pacific
 const REGION = {id: 'test-coast', name: 'Test Coast', timezone: 'America/Los_Angeles', mpa: {bounds: [-10, -10, 10, 10]}};
@@ -30,16 +31,33 @@ function reefs(n = 5, sha = 'a'.repeat(64)) {
 }
 const ATLAS = {targets: [{id: 'old-1', label: 'Old 1', latitude: 0.5, longitude: 0.5, habitat_grade: 'B', center_depth_ft: 80, neighborhood_depth_ft: [70, 90]}], areas: [], drifts: []};
 
+// The land/water check (web/land-water.ts) for these synthetic reefs: water unless a test says otherwise.
+let place = () => ({state: 'water'});
+
 function harness({stored = null, loadReefs, ports = [{id: 'p1', name: 'Port 1', region: 'test-coast', match: [0, 0]}]} = {}) {
   const store = new Map(stored ? [[draftKey(REGION.id), stored]] : []);
   const storage = {getItem: k => store.get(k) ?? null, setItem: (k, v) => { store.set(k, v); }};
   const emitted = [], nav = [];
-  const planner = createPlanner({atlas: ATLAS, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], storage, now: () => NOW,
+  const planner = createPlanner({atlas: ATLAS, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], storage, now: () => NOW, landWater: async () => place,
     loadReefs: loadReefs ?? (async () => reefs()), loadPorts: async () => ({ports}), emit: d => emitted.push(d),
     nav: {open: () => nav.push('open'), showMap: () => nav.push('map'), conditions: date => nav.push(`conditions ${date}`)}});
   return {planner, store, emitted, nav, saved: () => JSON.parse(store.get(draftKey(REGION.id)))};
 }
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+test('downloaded notes follow the coordinate choice while GPX positions remain decimal degrees', async () => {
+  const {planner: p} = harness();
+  p.add('old-1'); p.setResearch(true);
+  try {
+    for (const [mode, expected] of [['dd', '0.50000° N, 0.50000° E'], ['ddm', '0° 30.000′ N, 0° 30.000′ E'], ['dms', '0° 30′ 00.00″ N, 0° 30′ 00.00″ E']]) {
+      coordinates.value = mode;
+      assert.ok((await (await p.exportFile('notes')).text()).includes(expected));
+      const gpx = await (await p.exportFile('gpx')).text();
+      assert.match(gpx, /lat="0\.5" lon="0\.5"/);
+      assert.doesNotMatch(gpx, /[°′″]/);
+    }
+  } finally { coordinates.value = 'dd'; p.dispose(); }
+});
 
 test('a draft saved before the port opens with its ids, name, date, layers and coverage, under the same key', () => {
   const v1 = JSON.stringify({ids: ['old-1', 'gone'], rankedPlan: null, name: 'Sunday reef', date: '2026-10-18', avoidScope: 'region',
@@ -54,7 +72,7 @@ test('a draft saved before the port opens with its ids, name, date, layers and c
 });
 
 test('blocked storage keeps the plan in the page and says so', () => {
-  const p = createPlanner({atlas: ATLAS, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], now: () => NOW, loadPorts: async () => null, emit: () => {},
+  const p = createPlanner({atlas: ATLAS, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], now: () => NOW, loadPorts: async () => null, emit: () => {}, landWater: async () => place,
     storage: {getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); }}, nav: {open() {}, showMap() {}, conditions() {}}});
   assert.equal(p.draft.value.name, 'My fishing day');
   assert.equal(p.draft.value.date, '2026-10-12', 'today in the region\'s zone');
@@ -65,7 +83,7 @@ test('blocked storage keeps the plan in the page and says so', () => {
 });
 
 test('the distance filter starts from the saved Boat range (#644), else 20 nm', () => {
-  const make = reachNm => createPlanner({atlas: ATLAS, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], now: () => NOW, loadPorts: async () => null, emit: () => {},
+  const make = reachNm => createPlanner({atlas: ATLAS, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], now: () => NOW, loadPorts: async () => null, emit: () => {}, landWater: async () => place,
     storage: null, nav: {open() {}, showMap() {}, conditions() {}}, ...(reachNm === undefined ? {} : {reachNm})});
   for (const [reachNm, distance] of [[undefined, 20], [null, 20], [12.5, 12.5]]) {
     const p = make(reachNm);

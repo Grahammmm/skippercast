@@ -47,15 +47,33 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // the Reports catch flow and its contrast results are unchanged. package.json and pnpm-lock.yaml rebound.
 // CI6-08 chlorophyll: MapStage adds only the createChlorophyll layer; check_contrast.mjs changes only the
 // legendTsx source hash and citations, leaving contrast() untouched. Both rebound.
+// CI6-13 (shelf depth contours): app.css adds only the two depth-contour legend swatch rules and joins the
+// contour row to the wrapping legend rows; MapStage.tsx only adds createDepthContours to the Chart's layers. The
+// Reports catch flow renders neither, and check_contrast.mjs rebinds only the surface-proof hashes and cited lines
+// (moved, byte-identical), with contrast() untouched. All three rebound.
+// CI6-17 (tide station selection): App.tsx only configures the tide selector
+// from region metadata; the Reports catch flow and its contrast results are unaffected.
+// CI6-03 (Temp contrast layer): web/tokens.css adds only theme-invariant --contrast-0/1/2 after --swell-3; app.css
+// adds only `.app-legend-sst-contrast` to an existing flex-wrap rule and an `.app-swatch[data-layer="sst-contrast"]`
+// rule; MapStage.tsx adds only the createContrast chart layer. The Reports catch flow mounts none of them.
+// check_contrast.mjs rebinds only the tokens/app/Legend surface hashes and their shifted line citations, with
+// surface results unchanged and contrast() untouched. All four rebound.
+// CI6-13 merge-forward onto CI6-03: the union of both entries above and nothing else. app.css carries both sides'
+// rules unchanged; MapStage.tsx adds both chart layers; check_contrast.mjs rebinds the union's surface hashes and
+// shifted line citations, with contrast() untouched. All four rebound.
+// CI6-10 wind adds a chart-only createWind factory to MapStage; Reports does not mount it. The reviewed contrast()
+// implementation and this test's rendered catch path are unchanged; MapStage and check_contrast source hashes rebound.
+// Wind/contour merge-forward retains all three factories and both legend rows; only union hashes/line citations rebound.
+// Chlorophyll merge-forward preserves Temp contrast, wind and depth contours; only union hashes and line citations change.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
-  "web/app/App.tsx": "e7d0e98592db84dc0a1584b8a4d740cc3e5d837f049cd65f671ef80e90815277",
+  "web/app/App.tsx": "d8486f26dafbb97b0499cd7ef536c386c446c1b002c44b219d42151a5ab11446",
   "web/app/Masthead.tsx": "191309f6c9a54ee6bd24608a1983c6bf07141538267f87bef163f8ad4ccbea00",
   "web/app/LayerRail.tsx": "18db08dcba921446038b48d24552c0e756cba3fc52ecdbd005013521caf2566c",
-  "web/app/MapStage.tsx": "aa60b23c2d670e2d46e3cdc92a6eafb99ea18f7688e2a64b2b5f2b4db1bff26e",
-  "web/tokens.css": "06db13ad1e8eeca76f9ebdcf01d95125abd52ad0f4bc21a51d7611e428d02428",
+  "web/app/MapStage.tsx": "7afa6991cc842de5fe6ce10feea7c94e69603a4dca38a59ca9279054cc1f6924",
+  "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
-  "web/app/app.css": "7172217e46b2f0eee4f3becd85755d15a6cf9c2137c96ced196d04ed7bd5a34b",
+  "web/app/app.css": "8a550d59481c70301e5c506bdef04cc2d4b286ae14068d7ed0c9eed66d7a110a",
   "packages/coast/panel.css": "fda5b83480f2c32243d5ff90b99e2581d459a46f88543d6a264705bdc8e821fb",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
@@ -65,7 +83,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "08a2d20e8eca212941c75a0096e5dad4c3badf27033725a97ed76c828440feb0",
+  "scripts/check_contrast.mjs": "7cad51f1b73da124f1cb3b9924d242a52bcae2f60b1aaa2b88c39d8bc7370490",
   "package.json": "4675341e4ec0640f12cb96fe7ad6683739c4d601a32557a5e218430632db8719",
   "pnpm-lock.yaml": "68b00d873cb91ed71fb473d7145c31127602dfd3073ed847c0fbef7795dcc153",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
