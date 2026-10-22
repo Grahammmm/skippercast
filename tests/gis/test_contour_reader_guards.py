@@ -89,3 +89,28 @@ def test_guard_runs_before_any_pixel_read(tmp_path, monkeypatch):
     monkeypatch.setattr(bdc.rasterio, 'open', lambda p: HeaderOnly(actual_open(p)))
     with pytest.raises(ValueError, match='vertical units'):
         bdc.merged_blocks([path], (500000, 4000000, 2, 2))
+
+
+@pytest.mark.parametrize('metadata', [
+    {'scale': .01}, {'scale': -1}, {'scale': 0}, {'offset': 10},
+    {'scale': float('nan')}, {'scale': float('inf')}, {'offset': float('nan')},
+    {'offset': float('inf')},
+    {'scale': .01, 'tags': {'scale_offset_applied': 'true'}},
+])
+def test_packing_is_refused_instead_of_guessed(tmp_path, metadata):
+    path = grid(tmp_path, **metadata)
+    with pytest.raises(ValueError, match='unpacked samples'):
+        bdc.merged_blocks([path], bdc.lattice_for([path]))
+
+
+def test_malformed_packing_tag_refused(tmp_path):
+    path = grid(tmp_path, tags={'scale_offset_applied': 'maybe'})
+    with pytest.raises(ValueError, match='unsupported scale_offset_applied'):
+        bdc.merged_blocks([path], bdc.lattice_for([path]))
+
+
+@pytest.mark.parametrize('applied', ['true', 'false'])
+def test_identity_packing_is_unambiguous(tmp_path, applied):
+    path = grid(tmp_path, scale=1, offset=0, tags={'scale_offset_applied': applied})
+    depth, _, _ = bdc.merged_blocks([path], bdc.lattice_for([path]))
+    assert np.allclose(depth, 20 * dc.FEET_PER_M)

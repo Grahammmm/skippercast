@@ -75,6 +75,10 @@ def require_contour_vertical(grid):
         raise ValueError(f'{grid.name}: contour grids require vertical units in metres')
     if observed['sign_hint'] not in (None, 'positive_up'):
         raise ValueError(f'{grid.name}: contour grids require positive-up elevation')
+    if observed['scale'] != 1 or observed['offset'] != 0:
+        raise ValueError(f'{grid.name}: contour grids require unpacked samples (scale=1, offset=0)')
+    if not isinstance(observed['scale_offset_applied'], bool):
+        raise ValueError(f'{grid.name}: unsupported scale_offset_applied metadata')
 
 
 def merged_blocks(paths, lattice):

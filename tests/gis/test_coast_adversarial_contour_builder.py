@@ -128,10 +128,10 @@ def test_integer_grid_does_not_crash_the_reader(tmp_path):
 
 
 def test_packed_scale_offset_is_applied(tmp_path):
-    """Stored -2000 with scale 0.01 is -20 m (65.6 ft); the builder uses the raw number (6561 ft)."""
+    """Refusal alternative from finding 2: never draw stored -2000 at scale .01 as 6561 ft."""
     p = write_tif(tmp_path / 'pk.tif', np.full((32, 32), -2000, 'float32'), scale=0.01, offset=0.0)
-    depth = blocks([p])[0]
-    assert np.nanmax(depth) == pytest.approx(20 * dc.FEET_PER_M, rel=0.01)
+    with pytest.raises(ValueError, match='unpacked samples'):
+        blocks([p])
 
 
 def test_positive_down_depth_grid_is_not_silently_dropped(tmp_path):
