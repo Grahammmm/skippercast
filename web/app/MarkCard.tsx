@@ -146,6 +146,7 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
       {selected.reading ? <p class="ui-reading">{selected.reading}</p> : null}
       {selected.position && !selected.withheld ? <p class="ui-mono">{formatCoordinates(selected.position.latitude, selected.position.longitude, coordinates.value)}</p> : null}
       <p class="app-mark-source ui-mono">{selected.source}</p>
+      {selected.provider ? <a href={selected.provider.href} target="_blank" rel="noopener">{selected.provider.label}</a> : null}
       {selected.rules ? (
         <p class="app-mark-rules">{selected.rules}{selected.regulations ? <>{' '}
           <a href={selected.regulations.href} target="_blank" rel="noopener" aria-label={`${selected.regulations.label} (official page, opens in a new tab)`}>{selected.regulations.label}</a>

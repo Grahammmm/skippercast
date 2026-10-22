@@ -73,7 +73,7 @@ test('rings are sized by height on the stated scale; the card names the site, th
     [['SL345', 15.4, [-120.87659, 35.36503]], ['SL400', 15.4, [-120.9, 35.4458]]]);
   assert.equal(ringSummary(r, NOW), '2 nearshore model sites · CDIP MOP · issued 6 h ago · ring 4 px + 3 px per ft');
   const mark = ringMark(r, 'SL345', NOW, TZ);
-  assert.deepEqual([mark.id, mark.name, mark.kind, mark.reading], ['nearshore:SL345|2026-10-09T20:00:00.000Z', 'Morro Rock', 'Nearshore model site', '3.8 ft · 13.0 s · from WNW 290°']);
+  assert.deepEqual([mark.id, mark.name, mark.kind, mark.reading], ['nearshore:SL345|2026-10-09T20:00:00.000Z', 'Morro Rock', 'CDIP MOP model site', '3.8 ft · 13.0 s · from WNW 290°']);
   assert.match(mark.source, /^CDIP MOP · sample Oct 9, 1:00\s?PM PDT · 1h model sampling · issued 6 h ago$/);
   assert.match(mark.basis, /Model output, not a buoy observation and not breakers at a beach\. Ring radius 4 px plus 3 px per foot; 15 ft and above draw alike\. The site is in 15 m of water \(MSL\)\.$/);
   assert.equal(ringMark(r, 'nope', NOW, TZ), null);
@@ -147,6 +147,21 @@ test('outside a report binding Swell renders exactly as before FE-27', async t =
   // And with a grid, the field's overlay is FE-17's, with no ring source.
   assert.deepEqual(swellOverlay(sentinel), swellOverlay(sentinel, {field: true, rings: false}));
   assert.deepEqual(Object.keys(swellOverlay(sentinel).sources), [SWELL_SOURCE, ISOLINE_SOURCE, STROKE_SOURCE]);
+});
+
+test('Stations alone accesses bound MOP rings, and both controls share one set of targets', async t => {
+  const {s, e} = await swell(t, {href: `${PAGE}?region=morro-bay&layers=stations&hour=${AT_PARAM}`,
+    place: () => ({regionId: 'morro-bay'}), data: {coastReport: signal({data: report()}), coastBinding: signal({areaId: 'central'})}});
+  assert.deepEqual(e.overlay.layers.map(l => l.id), [NEARSHORE_HIT, NEARSHORE_LAYER]);
+  const card = s.pick.mark(NEARSHORE_HIT, {id: 'SL345'});
+  assert.equal(card.kind, 'CDIP MOP model site');
+  assert.equal(card.provider.href, 'https://example.test/cdip');
+  syncFromURL(`${PAGE}?region=morro-bay&layers=stations,swell&hour=${AT_PARAM}`);
+  await flush();
+  assert.equal(e.overlay.layers.filter(l => l.id === NEARSHORE_HIT).length, 1);
+  assert.equal(nearshoreState.value.rings.length, 2);
+  syncFromURL(`${PAGE}?region=morro-bay&layers=none&hour=${AT_PARAM}`);
+  assert.equal(nearshoreState.value, null);
 });
 
 test('with a grid, unbound Swell matches no-place engine calls and keeps only the field drawn', async t => {

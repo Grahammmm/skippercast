@@ -29,6 +29,8 @@ import {createContrast} from '../map/contrast.ts';
 import {createWaterTemp} from '../map/sst.ts';
 import {createChlorophyll} from '../map/chlorophyll.ts';
 import {createSwell} from '../map/swell.ts';
+import {createStations} from '../map/stations.ts';
+import {dailyFeed} from '../brief/Brief.tsx';
 import {createWind} from '../map/wind.ts';
 import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked} from '../map/stage.ts';
 import {poster, posterPlacement} from '../map/poster.ts';
@@ -105,6 +107,7 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
     const stage = createStage({host: terrainHost.current!, palette, overlayPalette, center: () => currentRegionInfo()?.center ?? null, zone,
       renderers: [() => createChart({host: chartHost.current!, zone, place,
         layers: [engine => createChlorophyll({engine}), engine => createSwell({engine, zone, place}), engine => createContrast({engine, zone, place}), engine => createWind({engine, zone}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
+          engine => createStations({engine, zone, feed: () => dailyFeed.value}),
           engine => createAerial({engine, offer: () => currentRegionInfo()?.aerial ?? null}), engine => createDepthContours({engine}),
           engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
           engine => createReach({engine, host: chartHost.current!})]})]});
