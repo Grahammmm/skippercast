@@ -20,10 +20,12 @@ import {sample as v1Sample} from '../dist/marine-data.js';
 import {fieldColor} from '../packages/coast/src/map/surface-field.ts';
 import {FILES, luminance, themes} from '../scripts/check_contrast.mjs';
 import {chartMark} from '../web/map/chart.ts';
+import {CONTRAST_LAYER} from '../web/map/contrast.ts';
 import {createEngine} from '../web/map/engine.ts';
-import {WAVE_MODEL, latticePoints, parseForecast, sample, swellPoints} from '../web/map/forecast-grid.ts';
+import {WAVE_MODEL, latticePoints, loadForecast, parseForecast, sample, swellPoints} from '../web/map/forecast-grid.ts';
 import {forecastTime} from '../web/map/frames.ts';
 import {railNotes} from '../web/map/layers.ts';
+import {DEPTH_BOTTOM, contoursOverlay} from '../web/map/depth-contours.ts';
 import {MPA_FILL} from '../web/map/mpa.ts';
 import {ramps, readPalette} from '../web/map/palette.ts';
 import {CONTOUR_LABELS, CONTOUR_LAYER, SST_LAYER, waterTempOverlay} from '../web/map/sst.ts';
@@ -185,6 +187,10 @@ test('the selector maps primary swell, wind sea and secondary swell to their own
     assert.ok(Math.abs(secondary[n].values[0] - primary[n].values[0] * 2 / 3) < 1e-9, 'secondary height');
     assert.ok(Math.abs(wind[n].values[1] - (primary[n].values[1] - 5)) < 1e-9, 'wind period');
     assert.ok(Math.abs(secondary[n].values[1] - (primary[n].values[1] + 4)) < 1e-9, 'secondary period');
+    assert.ok(Math.abs(wind[n].values[2] - primary[n].values[3]) < 1e-9, 'wind direction sine');
+    assert.ok(Math.abs(wind[n].values[3] + primary[n].values[2]) < 1e-9, 'wind direction cosine');
+    assert.ok(Math.abs(secondary[n].values[2] + primary[n].values[2]) < 1e-9, 'secondary direction sine');
+    assert.ok(Math.abs(secondary[n].values[3] + primary[n].values[3]) < 1e-9, 'secondary direction cosine');
   }
   // Each partition frames its own field, keyed apart and named in its basis and mark card.
   const a = swellStatus(true, ready(f), AT, NOW, TZ);
@@ -203,9 +209,30 @@ test('the selector maps primary swell, wind sea and secondary swell to their own
   assert.equal(swellMark(a.drawn, {lon: -121.5, lat: 35.3}, NOW, TZ).name, 'Primary swell');
 });
 
+test('the shared modelId loader keeps every swell partition on GFS-Wave, with no wind-model fallback', async () => {
+  const body = feed();
+  // A usable decoy makes a model mix-up visible even if it carries wave-shaped fields.
+  body.models.gfs_global = feed({values: () => [99, 20, 180]}).models[WAVE_MODEL.id];
+  const fetchFn = async () => ({ok: true, json: async () => body});
+  const wave = await loadForecast('morro-bay', fetchFn, PAGE);
+  const wind = await loadForecast('morro-bay', fetchFn, PAGE, 'gfs_global');
+  assert.deepEqual(wave, parseForecast(body, 'morro-bay', WAVE_MODEL.id));
+  assert.deepEqual(wind, parseForecast(body, 'morro-bay', 'gfs_global'));
+  for (const partition of ['primary', 'wind', 'secondary']) {
+    assert.deepEqual(swellPoints(wave, AT.getTime() / 1000, partition), swellPoints(parsed(), AT.getTime() / 1000, partition));
+    assert.notDeepEqual(swellPoints(wave, AT.getTime() / 1000, partition), swellPoints(wind, AT.getTime() / 1000, partition));
+  }
+  delete body.models[WAVE_MODEL.id];
+  const missing = await loadForecast('morro-bay', fetchFn, PAGE);
+  assert.equal(missing.model, null, 'the other model cannot stand in for GFS-Wave');
+  for (const partition of ['primary', 'wind', 'secondary']) assert.equal(swellStatus(true, ready(missing), AT, NOW, TZ, partition).drawn, null);
+});
+
 test('the 36-hour run limit and the feed gate withhold every partition alike', () => {
+  const boundary = parsed({issued: (NOW.getTime() - 36 * HOUR) / 1000});
   const old = parsed({issued: (NOW.getTime() - 37 * HOUR) / 1000});
   for (const partition of ['primary', 'wind', 'secondary']) {
+    assert.ok(swellStatus(true, ready(boundary), AT, NOW, TZ, partition).drawn, `${partition}: exactly 36 hours`);
     const s = swellStatus(true, ready(old), AT, NOW, TZ, partition);
     assert.equal(s.drawn, null, partition);
     assert.equal(s.note, 'no fresh forecast · run Oct 7, 10 pm');
@@ -300,7 +327,7 @@ test('toggling Swell adds the texture, isolines and strokes only; off removes th
   await flush();
   assert.deepEqual(asked, ['https://s.test/api/forecast?region=morro-bay']);
   assert.deepEqual(e.calls, [['overlay', [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER]], ['image', SWELL_SOURCE], ['data', ISOLINE_SOURCE], ['data', STROKE_SOURCE]]);
-  assert.equal(e.before, MPA_FILL, 'under the protected areas (§ 9 order)');
+  assert.deepEqual(e.before, ['wind-casing', DEPTH_BOTTOM, MPA_FILL], 'under wind, depth contours and protected areas (§ 9 order)');
   assert.equal(railNotes.value.swell, 'valid Fri 1 pm · run 12 h old');
   assert.equal(swellState.value.drawn.field.quads.length, 4);
   chartMark.value = s.reading({lon: -121.5, lat: 35.3});
@@ -381,7 +408,7 @@ test('a failed refresh keeps the last good run; a region change withdraws the fi
   assert.equal(chartMark.value, null, 'destroy clears a field card');
 });
 
-test('in the stack the water temperature sits under the swell field, whichever is drawn first', () => {
+test('in the stack the water temperature sits under the swell field, and both under the depth contours, whichever is drawn first', () => {
   const maps = [];
   class FakeMap {
     constructor(options) { this.handlers = {}; this.sources = {}; this.layers = options.style.layers.map(l => l.id); this.keyboard = this.touchZoomRotate = {disableRotation() {}}; maps.push(this); }
@@ -399,18 +426,20 @@ test('in the stack the water temperature sits under the swell field, whichever i
   const control = class {}, module = {lib: {Map: FakeMap, NavigationControl: control, ScaleControl: control, AttributionControl: control, setWorkerUrl() {}, addProtocol() {}},
     workerUrl: '/w.js', Protocol: class { constructor() { this.tile = () => {}; } }};
   const swellIds = [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER], sstIds = [SST_LAYER, CONTOUR_LAYER, CONTOUR_LABELS];
-  for (const order of [['sst', 'swell'], ['swell', 'sst']]) {
+  // The `before` lists the layers pass (sst.ts, swell.ts, depth-contours.ts), in every order they can arrive.
+  const contours = contoursOverlay(sentinel, {type: 'FeatureCollection', features: []}), contourIds = contours.layers.map(l => l.id);
+  const draw = {sst: e => e.setOverlay('water-temp', waterTempOverlay(sentinel), [CONTRAST_LAYER, SWELL_LAYER, DEPTH_BOTTOM, MPA_FILL]),
+    swell: e => e.setOverlay('swell', swellOverlay(sentinel), [DEPTH_BOTTOM, MPA_FILL]), contours: e => e.setOverlay('depth-contours', contours, MPA_FILL)};
+  const orders = [['sst', 'swell', 'contours'], ['sst', 'contours', 'swell'], ['swell', 'sst', 'contours'], ['swell', 'contours', 'sst'], ['contours', 'sst', 'swell'], ['contours', 'swell', 'sst']];
+  for (const order of orders) {
     const eng = createEngine(module, {host: {}, style: {version: 8, sources: {}, layers: [{id: 'water'}, {id: MPA_FILL}, {id: 'coastline'}]},
       camera: {latitude: 35.3, longitude: -120.9, zoom: 10}, onMove() {}, onLayerError() {}});
     const map = maps.at(-1);
     map.fire('style.load');
-    for (const which of order) {
-      if (which === 'sst') eng.setOverlay('water-temp', waterTempOverlay(sentinel), [SWELL_LAYER, MPA_FILL]);
-      else eng.setOverlay('swell', swellOverlay(sentinel), MPA_FILL);
-    }
-    assert.deepEqual(map.layers, ['water', ...sstIds, ...swellIds, MPA_FILL, 'coastline'], order.join(' then '));
+    for (const which of order) draw[which](eng);
+    assert.deepEqual(map.layers, ['water', ...sstIds, ...swellIds, ...contourIds, MPA_FILL, 'coastline'], order.join(' then '));
     eng.setOverlay('swell', null);
-    assert.deepEqual(map.layers, ['water', ...sstIds, MPA_FILL, 'coastline']);
+    assert.deepEqual(map.layers, ['water', ...sstIds, ...contourIds, MPA_FILL, 'coastline']);
   }
 });
 
@@ -442,7 +471,7 @@ test('the legend gives the hour\'s reading, the fixed scale and the model run as
   // The selector offers the three partitions, with the primary swell chosen.
   assert.match(legend, /role="group" aria-label="Swell"[\s\S]*Primary swell[\s\S]*Wind sea[\s\S]*Secondary swell/);
   assert.match(legend, /aria-pressed="true"[^>]*>Primary swell</);
-  assert.match(m.render(m.h(m.LayerRail)), /Swell<\/span><span class="ui-rail-note ui-mono">valid Fri 1 pm · run 12 h old<\/span>/);
+  assert.match(m.render(m.h(m.LayerRail)), /Swell \+ wind<\/span><span class="ui-rail-note ui-mono">valid Fri 1 pm · run 12 h old<\/span>/);
   m.swellState.value = swellStatus(true, {state: 'error', region: 'morro-bay', forecast: null, at: 0}, AT, NOW, TZ);
   const none = m.render(m.h(m.Legend));
   assert.doesNotMatch(none, /data-range="swell"|data-stamp="swell"/);

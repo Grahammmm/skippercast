@@ -14,6 +14,7 @@ import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {lintFile} from '../scripts/check_tokens.mjs';
+import {waterState} from './helpers/land-water.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const APP_FILES = ['web/app', 'web/app/views'].flatMap(dir => readdirSync(join(ROOT, dir)).filter(name => name.includes('.')).map(name => `${dir}/${name}`));
@@ -44,6 +45,7 @@ async function load() {
       export {chartMark} from './web/map/chart.ts';
       export {Legend, RankedRow} from './web/app/Legend.tsx';
       export {rankedSpots} from './web/map/ranked.ts';
+      export {landWater} from './web/land-water.ts';
       export {markScreen} from './web/map/marks.ts';
       export {CHECKING, assessScreen} from './web/map/habitat.ts';
       export {terrainMark, terrainReading} from './web/map/stage.ts';
@@ -95,6 +97,8 @@ const dayChips = html => [...html.match(/aria-label="Day"[^>]*>(.*?)<\/div>/s)[1
 test('the shell has the masthead, the command bar, the brief column and the map chrome', async () => {
   const html = await renderShell(`${ORIGIN}?region=morro-bay`);
   assert.match(html, /<header class="app-masthead">/);
+  assert.match(html, /Replay controls tour<\/button>/);
+  assert.doesNotMatch(html, /Step 1 of 4/, 'the tour is opt-in, not competing with FirstRun or the flyover');
   assert.match(html, /class="app-brand" href="\/"[^>]*>.*SkipperCast/);
   assert.match(html, /class="app-location ui-mono" data-region="morro-bay">Morro Bay —</, 'the location names the region and leaves the centre blank until it loads');
   assert.match(html, /<nav aria-label="Views">/);
@@ -123,7 +127,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.match(html, /<section class="app-stage" aria-label="Map">/);
   assert.match(html, /<section class="app-legend" aria-label="Legend">/);
   assert.match(html, /role="group" aria-label="Layers"/);
-  assert.equal(count(html, /class="ui-rail-item"/g), 7);
+  assert.equal(count(html, /class="ui-rail-item"/g), 9);
   assert.match(html, /role="group" aria-label="Time"/);
   assert.match(html, /<input type="range" class="ui-range ui-dock-range" aria-label="Hour"/);
   assert.doesNotMatch(html, /app-mark/, 'no mark card without a selection');
@@ -179,7 +183,7 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   assert.match(html, /<label>Area<select><option value>Whole region<\/option><option selected value="estero">Estero<\/option><\/select>/);
   // Rail and legend: swell and water temp on, the rest off; protected areas stay listed while their geometry loads (FE-19).
   const rail = Object.fromEntries([...coastView.matchAll(/<li class="ui-rail-item" data-on="(true|false)"><button[^>]*>.*?<span class="ui-rail-label">([^<]+)<\/span>/gs)].map(m => [m[2], m[1]]));
-  assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', 'Temp contrast': 'false', Swell: 'true', 'Charter fleet': 'false', Clouds: 'false'});
+  assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', 'Temp contrast': 'false', Chlorophyll: 'false', 'Swell + wind': 'true', Stations: 'false', 'Charter fleet': 'false', Clouds: 'false'});
   assert.match(coastView, /class="app-legend-water-temp"/);
   assert.deepEqual(attrs(coastView, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no colour key until a layer draws (FE-20)');
   // Dock: the chips run from the fixed clock (Monday), Tuesday 2026-10-06 is on and the slider sits at 2 pm local.
@@ -286,7 +290,7 @@ test('the mobile sheet reflects the address: the mark card stands in at peek, th
   state.syncFromURL(`${ORIGIN}?region=morro-bay&layers=clouds`);
   const panel = render(h(LayersPanel, {onClose: () => {}}));
   assert.match(panel, /^<div class="app-sheet-layers"><div class="app-sheet-head"><span class="ui-eyebrow">Layers<\/span><button[^>]*>.*?Done<\/button><\/div><div class="ui-rail app-rail" role="group" aria-label="Layers">/s);
-  assert.equal(count(panel, /class="ui-rail-item"/g), 7);
+  assert.equal(count(panel, /class="ui-rail-item"/g), 9);
   assert.match(panel, /<li class="app-legend-clouds"><span class="app-legend-text">Clouds</);
   assert.deepEqual(attrs(panel, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no cloud key until a frame shows (FE-20)');
   // Panel and detent rules: layers opens at half from peek, closes when the sheet drops to peek.
@@ -444,9 +448,10 @@ test('the time dock disables Play at the complete horizon end while preserving b
 });
 
 test('the legend keys the ranked trip spots while the Chart draws them (#422)', async () => {
-  const {Legend, RankedRow, rankedSpots, markScreen, CHECKING, assessScreen, render, h, state} = await load();
+  const {Legend, RankedRow, rankedSpots, markScreen, CHECKING, assessScreen, render, h, state, landWater} = await load();
   state.configureStore({v2: true, storage: memory()});
   const spot = {id: 's1', name: 'Spot 1', latitude: 35.37, longitude: -120.9, trip_rank: 1};
+  landWater.value = waterState('morro-bay', [spot]);
   try {
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart`);
     assert.equal(render(h(RankedRow, {})), '', 'no plan, no row');

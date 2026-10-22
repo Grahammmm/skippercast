@@ -70,15 +70,15 @@ export function latticePoints(points: readonly Omit<GridPoint, 'index'>[]): Grid
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
-/** The feed for `region` as Swell reads it, or null when it is not that region's feed. */
-export function parseForecast(json: unknown, region: string): WaveForecast | null {
+/** One explicitly named model on the regional grid (Swell by default); no model fallback. */
+export function parseForecast(json: unknown, region: string, modelId: string = WAVE_MODEL.id): WaveForecast | null {
   const f = json as {region_id?: unknown; retrieved?: unknown; requested_points?: unknown; models?: Record<string, {data?: unknown; meta?: {last_run_initialisation_time?: unknown; data_end_time?: unknown}}>} | null;
   if (!f || f.region_id !== region || !finite(f.retrieved) || !Array.isArray(f.requested_points)) return null;
   const points = f.requested_points.map(p => Array.isArray(p) && typeof p[0] === 'string' && finite(p[1]) && finite(p[2]) ? {id: p[0], lat: p[1], lon: p[2]} : null);
   if (points.some(p => p === null)) return null;
   const lattice = latticePoints(points as Omit<GridPoint, 'index'>[]);
   const step = surfaceField(lattice.map(p => ({lon: p.lon, lat: p.lat, values: [0]})))?.step ?? null;
-  const m = f.models?.[WAVE_MODEL.id], issued = m?.meta?.last_run_initialisation_time, end = m?.meta?.data_end_time;
+  const m = f.models?.[modelId], issued = m?.meta?.last_run_initialisation_time, end = m?.meta?.data_end_time;
   const data = Array.isArray(m?.data) && m.data.length === points.length ? m.data as unknown[] : null;
   const times = (data?.[lattice[0]?.index ?? -1] as Series | undefined)?.hourly?.time;
   const model = data && finite(issued) && finite(end) && Array.isArray(times) && times.every(finite)
@@ -102,9 +102,9 @@ export function swellPoints(f: WaveForecast, epoch: number, partition: SwellPart
 }
 
 /** The feed for `region`, or null when it fails to load or is not that region's. */
-export async function loadForecast(region: string, fetchFn: typeof fetch, page: string): Promise<WaveForecast | null> {
+export async function loadForecast(region: string, fetchFn: typeof fetch, page: string, modelId: string = WAVE_MODEL.id): Promise<WaveForecast | null> {
   try {
     const response = await fetchFn(new URL(`/api/forecast?region=${encodeURIComponent(region)}`, page).href, {signal: AbortSignal.timeout(15000)});
-    return response.ok ? parseForecast(await response.json(), region) : null;
+    return response.ok ? parseForecast(await response.json(), region, modelId) : null;
   } catch { return null; }
 }

@@ -18,6 +18,8 @@ import {
   CONTRAST_BASIS, CONTRAST_LAYER, CONTRAST_SCALE, F_PER_NMI, MAX_AGE_MS, contrastCells, contrastFeatures, contrastMark, contrastOverlay, contrastState,
   contrastStatus, createContrast,
 } from '../web/map/contrast.ts';
+import {DEPTH_BOTTOM, contoursOverlay} from '../web/map/depth-contours.ts';
+import {windOverlay} from '../web/map/wind.ts';
 import {createEngine} from '../web/map/engine.ts';
 import {regionalContrast} from '../web/map/habitat-feed.ts';
 import {CONTRAST_SOURCE, LAYERS, layerEntry, railNotes} from '../web/map/layers.ts';
@@ -181,7 +183,8 @@ test('the basis names product, grid and age, the support rule and what the field
   assert.match(e.legend[0].label, /°F per nautical mile/);
   const ids = LAYERS.map(l => l.id);
   assert.equal(ids.indexOf('sst-contrast'), ids.indexOf('water-temp-contours') + 1, '§ 9: above Water temp, under Swell');
-  assert.equal(ids.indexOf('swell'), ids.indexOf('sst-contrast') + 1);
+  assert.equal(ids.indexOf('chlorophyll'), ids.indexOf('sst-contrast') + 1);
+  assert.equal(ids.indexOf('swell'), ids.indexOf('chlorophyll') + 1);
   assert.ok(RAIL_IDS.includes('sst-contrast'));
   for (const p of Object.values(PROFILE_TABLE)) assert.ok(!p.defaultLayers.includes('sst-contrast'), `off by default for ${p.id}`);
 });
@@ -250,7 +253,7 @@ test('off by default; on, it reads the feed once an hour and draws; off again or
   await until(() => contrastState.value.drawn);
   assert.equal(s.asked.length, 3, 'the manifest and its two tiles');
   assert.equal(railNotes.value['sst-contrast'], 'analysis Oct 15 · 24 h old');
-  assert.deepEqual(e.before, [SWELL_LAYER, MPA_FILL]);
+  assert.deepEqual(e.before, [SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]);
   assert.deepEqual(e.data.at(-1)[0], CONTRAST_SOURCE);
   assert.equal(e.data.at(-1)[1].features.length, 6);
   chartMark.value = c.reading({lon: lon(2), lat: lat(2)});
@@ -271,7 +274,7 @@ test('off by default; on, it reads the feed once an hour and draws; off again or
   assert.equal(railNotes.value['sst-contrast'], 'no fresh analysis · last Oct 15');
 });
 
-test('in the stack Temp contrast sits over Water temp and under the swell field, whichever is drawn first', () => {
+test('in the stack Temp contrast sits over Water temp and under swell, wind and depth contours, whichever is drawn first', () => {
   const maps = [];
   class FakeMap {
     constructor(options) { this.handlers = {}; this.sources = {}; this.layers = options.style.layers.map(l => l.id); this.keyboard = this.touchZoomRotate = {disableRotation() {}}; maps.push(this); }
@@ -289,19 +292,26 @@ test('in the stack Temp contrast sits over Water temp and under the swell field,
   const control = class {}, module = {lib: {Map: FakeMap, NavigationControl: control, ScaleControl: control, AttributionControl: control, setWorkerUrl() {}, addProtocol() {}},
     workerUrl: '/w.js', Protocol: class { constructor() { this.tile = () => {}; } }};
   const sst = [SST_LAYER, CONTOUR_LAYER, CONTOUR_LABELS], swell = [SWELL_LAYER, ISOLINE_LAYER, ISOLINE_LABELS, STROKE_CASING, STROKE_LAYER];
+  // The production `before` lists (sst, contrast, swell, wind, depth-contours), in every arrival order.
+  const contours = contoursOverlay(sentinel, {type: 'FeatureCollection', features: []}), contourIds = contours.layers.map(l => l.id);
+  const wind = windOverlay(sentinel), windIds = wind.layers.map(l => l.id);
   const draw = {
-    sst: eng => eng.setOverlay('water-temp', waterTempOverlay(sentinel), [CONTRAST_LAYER, SWELL_LAYER, MPA_FILL]),
-    contrast: eng => eng.setOverlay('sst-contrast', contrastOverlay(sentinel), [SWELL_LAYER, MPA_FILL]),
-    swell: eng => eng.setOverlay('swell', swellOverlay(sentinel), MPA_FILL),
+    sst: eng => eng.setOverlay('water-temp', waterTempOverlay(sentinel), [CONTRAST_LAYER, SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]),
+    contrast: eng => eng.setOverlay('sst-contrast', contrastOverlay(sentinel), [SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]),
+    swell: eng => eng.setOverlay('swell', swellOverlay(sentinel), ['wind-casing', DEPTH_BOTTOM, MPA_FILL]),
+    wind: eng => eng.setOverlay('wind', wind, [DEPTH_BOTTOM, MPA_FILL]),
+    contours: eng => eng.setOverlay('depth-contours', contours, MPA_FILL),
   };
-  const orders = [['sst', 'contrast', 'swell'], ['sst', 'swell', 'contrast'], ['contrast', 'sst', 'swell'], ['contrast', 'swell', 'sst'], ['swell', 'sst', 'contrast'], ['swell', 'contrast', 'sst']];
+  const permutations = xs => xs.length < 2 ? [xs] : xs.flatMap((x, i) => permutations([...xs.slice(0, i), ...xs.slice(i + 1)]).map(rest => [x, ...rest]));
+  const orders = permutations(Object.keys(draw));
+  assert.equal(orders.length, 120);
   for (const order of orders) {
     const eng = createEngine(module, {host: {}, style: {version: 8, sources: {}, layers: [{id: 'water'}, {id: MPA_FILL}, {id: 'coastline'}]},
       camera: {latitude: 35.3, longitude: -120.9, zoom: 10}, onMove() {}, onLayerError() {}});
     const map = maps.at(-1);
     map.fire('style.load');
     for (const which of order) draw[which](eng);
-    assert.deepEqual(map.layers, ['water', ...sst, CONTRAST_LAYER, ...swell, MPA_FILL, 'coastline'], order.join(' then '));
+    assert.deepEqual(map.layers, ['water', ...sst, CONTRAST_LAYER, ...swell, ...windIds, ...contourIds, MPA_FILL, 'coastline'], order.join(' then '));
   }
 });
 
