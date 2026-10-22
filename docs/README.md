@@ -40,6 +40,7 @@ Dated audit, rollout, source-request and review records live in [archive/](archi
 | [recent-intel.md](recent-intel.md) | Recent local fishing-discussion research pipeline and its review rules |
 | [dynamic-species-method.md](dynamic-species-method.md) | Dated water-mass layers (temperature, fronts, chlorophyll, currents) and their limits |
 | [atlas-methodology.md](atlas-methodology.md) | How the dated Morro Bay–Avila habitat atlas was derived |
+| [land-water-method.md](land-water-method.md) | Proposed land/water check for ranked places, built from the CUSP shoreline (CI6-01B step 0, round 2, in review) |
 | [seafloor.md](seafloor.md) | The seafloor pipeline: original surveys to graded, legally screened habitat tiles |
 | [california-seabed-coverage.md](california-seabed-coverage.md) | Statewide seabed coverage and the gate for promoting an area to fishing targets |
 | [data-quality-rollout.md](data-quality-rollout.md) | Quality gates from regional evidence to a published coastal map |

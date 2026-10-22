@@ -71,7 +71,8 @@ class RefreshManifest(unittest.TestCase):
         self.assertEqual(m['status'], 'degraded')  # a failed and a degraded region, but the gate passed
         self.assertIsNone(m['error'])
         regions = m['regions']
-        self.assertEqual(len(regions), len(list((REPO / 'regions').glob('*/region.json'))))
+        published = [p for p in (REPO / 'regions').glob('*/region.json') if json.loads(p.read_text())['status'] != 'draft']
+        self.assertEqual(len(regions), len(published))
         self.assertEqual((regions['big-sur-coast']['status'], regions['big-sur-coast']['error_class']), ('failed', 'ValueError'))
         self.assertIn('buoy contract changed', regions['big-sur-coast']['error'])
         crescent = regions['crescent-city']

@@ -14,6 +14,8 @@ import {Masthead} from './Masthead.tsx';
 import {Mobile} from './Mobile.tsx';
 import {Trip} from './Trip.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
+import {tideRegion, type TideRegion} from '../tide-stations.ts';
+import {tideSelection} from '../tide-selection.ts';
 import {loadPlans} from '../species.ts';
 import {region, setRegionDefaultBase} from '../state.ts';
 
@@ -30,6 +32,7 @@ export interface RegionInfo {
   readonly aerial?: AerialBase;
   /** The region's published charter grounds (region.json `assets.charters`), read by the Reports view; absent where none are published. */
   readonly charters?: string;
+  readonly tide?: TideRegion;
 }
 export const regionInfo = signal<RegionInfo | null>(null);
 /** The zone the dock and the command bar format times in (every active region is Pacific until the region loads). */
@@ -55,6 +58,7 @@ effect(() => {
   regionRequest = null;
   batch(() => {
     if (regionInfo.peek()?.id !== id) regionInfo.value = null;
+    tideSelection.configure(null);
     regionLoad.value = null;
   });
 });
@@ -96,7 +100,9 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch
       if (typeof json.name !== 'string' || !center || center.length !== 2 || !center.every(Number.isFinite)) return null;
       const areas = Array.isArray(json.map?.local_areas) ? json.map.local_areas as ReportLocalArea[] : [];
       const aerial = aerialBase(json);
+      const tide = tideRegion(id, json);
       const info: RegionInfo = {id, name: json.name, center: [center[0], center[1]], timezone: json.timezone ?? DEFAULT_ZONE,
+        ...tide ? {tide} : {},
         localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), ...aerial ? {aerial} : {}, ...typeof json.assets?.charters === 'string' ? {charters: json.assets.charters} : {}};
       return info;
     };
@@ -106,6 +112,7 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch
     if (retry && fetchFn === sharedFetch) recoveredRegionInfo.set(id, info);
     batch(() => {
       regionInfo.value = info;
+      tideSelection.configure(info.tide ?? null);
       regionLoad.value = {id, state: 'ready'};
       setRegionDefaultBase(info.aerial?.byDefault ? 'aerial' : 'night');
     });

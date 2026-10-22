@@ -42,6 +42,7 @@ import {CONTRAST_LAYER} from './contrast.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {fieldTexture, isolines} from './field.ts';
 import {layerEntry, setRailNote} from './layers.ts';
+import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {COAST_NOT_SAVED, NOT_SAVED, TILES_NOT_SAVED, watchOffline} from './offline.ts';
 import {MPA_FILL} from './mpa.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
@@ -286,8 +287,8 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       drawnKey = key; drawnOn = e;
       if (!a) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
-      // § 9 order: under Temp contrast, else the swell field, else the protected areas.
-      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [CONTRAST_LAYER, SWELL_LAYER, MPA_FILL]);
+      // § 9 order: under Temp contrast, else swell, wind, depth contours, or protected areas.
+      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [CONTRAST_LAYER, SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]);
       e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramps(p).sst, v => v[0]!));
       e.setData(CONTOUR_SOURCE, contourLines(a.field, a.range));
     }),
