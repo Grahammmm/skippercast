@@ -12,7 +12,16 @@ The shared admission serializer adopts the existing PC-9 input contract rather t
 - grid_sha256 is the existing producer digest(definition): sorted compact finite JSON, UTF-8, WITHOUT newline. The source identity, raster size/transform and selected pixel window all affect it. Never infer adjacency between separate single-selected grids.
 - preconditions is exactly {exclusive_writer:true,attested_by:nonempty-string}. This is an actual operator attestation, not an inferred model/profile identity. PC-9's separate COAST_EXCLUSIVE_WRITER invocation requirement is unchanged. Synthetic fixture attestations authorize nothing live.
 
-The old flat-grid/object-window/array-preconditions shapes are rejected, not alternate execution spellings. Fixtures and downstream hashes are regenerated. No released implementation is migrated; this is an unreleased-v1 contract correction. No bridge caps, Store gates, queue paths or execution APIs change. PC-6 multi-window tiling remains held pending its separately reviewed adapter.
+The old flat-grid/object-window/array-preconditions shapes are rejected, not alternate execution spellings. Fixtures and downstream hashes are regenerated. No released implementation is migrated; this is an unreleased-v1 contract correction. No bridge caps, Store gates, queue paths or execution APIs change.
+
+## #806 window-set admissions (shared validator)
+
+A bridge selection that carries `windows` + `tiling` (G5 window set, #806) admits one admission window per native window, in the plan's row-major order:
+
+- windows[] for that selection are exactly `selection.windows`; `idx` is the window's index within its selection (the same index as the dry run's `window_index`), and `pixel_window` is that native window. The window key stays source ID + grid digest + idx.
+- The selection has exactly ONE execution grid. Its definition is exactly {source_sha256,raster_crs,affine_transform,width,height,tile_width,tile_height,tiling_version,tiling} with tiling_version window-set-v1, `tiling` equal to the selection's tiling, width/height equal to tiling width/height and tile_width=tile_height=tiling tile. grid cols/rows are the distinct column/row offsets of the windows and total is the window count.
+- The validator re-derives the dry run exactly as `catalog_bridge.dry_run` does (raised caps from the window-set selection, one acquire job per window with window_index/window). Each window keeps the single-window centre-owner, footprint and overlap checks. A single-selected definition cannot stand in for a window set and vice versa.
+- PC9 `bridge_run.py` itself still drives single-selected admissions only (its own `_context` refuses window sets); window-set run/enqueue receipts in the shared fixtures are synthetic PC9-v1 shapes converted by the hash-bound v2 adapter, not evidence of a PC9 window-set run.
 
 ## Campaign and discovery ownership
 

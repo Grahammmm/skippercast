@@ -623,21 +623,33 @@ class GraphValidator:
         for decision, selection in zip(decisions, plan['selections']):
             if 'source' in decision and decision['source'] != selection['source']:
                 raise ValueError('dry source differs from pinned plan')
-        # #806 derives the caps block from checked['selections']; a window-set
-        # selection yields raised caps and per-window jobs, which this
-        # single-window admission does not reproduce, so it fails closed below.
+        # #806 semantics: the caps block derives from checked['selections'] (raised
+        # caps for window-set plans) and the dry run lists one acquire job per
+        # window, carrying window_index/window only for window-set selections.
         checked = dict(segment=plan['segment'], catalog_ref=dry['catalog'], decisions=decisions,
                        selections={s['source_id']: s for s in plan['selections']},
                        selected_bytes=sum(d['source']['bytes'] for d in selected))
         if checked['selected_bytes'] > plan['max_total_bytes'] or any(d['source']['bytes'] > plan['budget']['bytes'] for d in selected):
             raise ValueError('selected sources exceed plan budget')
         expected = bridge._receipt(bridge.DRY_RUN, plan, checked)
-        selections = {s['source_id']: s for s in plan['selections']}
-        expected['would_enqueue'] = [dict(stage='acquire', source_id=d['source_id'], native_job_sha256=digest(
-            bridge.native_job(plan, selections[d['source_id']], d, dry['catalog']))) for d in selected]
+        selections = checked['selections']
+        would_enqueue = []
+        for d in selected:
+            selection = selections[d['source_id']]
+            for index, native_window in enumerate(bridge._selection_windows(selection)):
+                entry = dict(stage='acquire', source_id=d['source_id'], native_job_sha256=digest(
+                    bridge.native_job(plan, selection, d, dry['catalog'], window=native_window)))
+                if 'windows' in selection:
+                    entry.update(window_index=index, window=native_window)
+                would_enqueue.append(entry)
+        expected['would_enqueue'] = would_enqueue
         if expected != dry:
             raise ValueError('dry caps/native job binding mismatch')
-        if [w['source_id'] for w in doc['windows']] != [s['source_id'] for s in plan['selections']]:
+        # Admission windows: exactly each selection's native windows in plan
+        # order, idx = the window's index within its selection (0 for single).
+        population = [(s['source_id'], index, native_window) for s in plan['selections']
+                      for index, native_window in enumerate(bridge._selection_windows(s))]
+        if [(w['source_id'], w['idx'], w['pixel_window']) for w in doc['windows']] != population:
             raise ValueError('plan window population mismatch')
         source_ids = [s['source_id'] for s in doc['sources']]
         if len(set(source_ids)) != len(source_ids) or set(source_ids) != {s['source_id'] for s in plan['selections']}:
@@ -652,12 +664,33 @@ class GraphValidator:
         grids = {g['grid_sha256']: g for g in doc['grids']}
         if len(grids) != len(doc['grids']):
             raise ValueError('duplicate grid identity')
-        for window, selection in zip(doc['windows'], plan['selections']):
+        # One execution grid per selection; every window of a selection binds to it.
+        selection_grid = {}
+        for window in doc['windows']:
+            if selection_grid.setdefault(window['source_id'], window['grid_sha256']) != window['grid_sha256']:
+                raise ValueError('selection windows bind to more than one grid')
+        if sorted(selection_grid.values()) != sorted(grids):
+            raise ValueError('admission grid population mismatch')
+        for window in doc['windows']:
+            selection = selections[window['source_id']]
             grid = grids[window['grid_sha256']]
             definition = grid.get('definition')
-            if (not definition or digest(definition) != window['grid_sha256'] or window['idx'] != 0
-                    or definition['pixel_window'] != selection['window'] or window['pixel_window'] != selection['window']
+            if (not definition or digest(definition) != window['grid_sha256']
                     or definition['source_sha256'] != selection['source']['sha256'] or grid['source_id'] != window['source_id']):
+                raise ValueError('grid/window source binding mismatch')
+            if 'windows' in selection:
+                tiling = selection['tiling']
+                native_windows = selection['windows']
+                if (definition['tiling_version'] != 'window-set-v1' or definition['tiling'] != tiling
+                        or (definition['width'], definition['height']) != (tiling['width'], tiling['height'])
+                        or (definition['tile_width'], definition['tile_height']) != (tiling['tile'], tiling['tile'])
+                        or grid['total'] != len(native_windows)
+                        or grid['cols'] != len({w[0] for w in native_windows})
+                        or grid['rows'] != len({w[1] for w in native_windows})):
+                    raise ValueError('window-set grid/window binding mismatch')
+            elif (definition['tiling_version'] != 'single-selected-v1' or window['idx'] != 0
+                    or definition['pixel_window'] != selection['window'] or window['pixel_window'] != selection['window']
+                    or (grid['cols'], grid['rows'], grid['total']) != (1, 1, 1)):
                 raise ValueError('single-selected grid/window binding mismatch')
             if window['window_key'] not in campaign['intended_windows']:
                 raise ValueError('window absent from frozen campaign inventory')

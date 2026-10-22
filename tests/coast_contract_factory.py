@@ -162,11 +162,20 @@ def schemas():
     def add(name, payload, **kw):
         result[name] = schema(name, payload, **kw)
     pixel = arr(I, minItems=4, maxItems=4)
-    definition = obj(source_sha256=H, raster_crs=S, affine_transform=arr(dict(type='number'), minItems=6, maxItems=6),
-                     width=dict(type='integer', minimum=1), height=dict(type='integer', minimum=1),
-                     tile_width=dict(type='integer', minimum=1), tile_height=dict(type='integer', minimum=1),
+    affine = arr(dict(type='number'), minItems=6, maxItems=6)
+    positive = dict(type='integer', minimum=1)
+    definition = obj(source_sha256=H, raster_crs=S, affine_transform=affine,
+                     width=positive, height=positive, tile_width=positive, tile_height=positive,
                      tiling_version=enum('single-selected-v1'), pixel_window=pixel)
-    execution_grid = obj(source_id=S, grid_sha256=H, definition=definition, cols=enum(1), rows=enum(1), total=enum(1))
+    # #806 window-set grid: the selection's exact `tiling` is part of the hashed
+    # definition, so every window of the set binds to the producer tiling.
+    pair = arr(dict(type='number'), minItems=2, maxItems=2)
+    tiling = obj(tile=positive, width=positive, height=positive, origin=arr(I, minItems=2, maxItems=2), anchor=pair, cell=pair)
+    set_definition = obj(source_sha256=H, raster_crs=S, affine_transform=affine,
+                         width=positive, height=positive, tile_width=positive, tile_height=positive,
+                         tiling_version=enum('window-set-v1'), tiling=tiling)
+    execution_grid = dict(oneOf=[obj(source_id=S, grid_sha256=H, definition=definition, cols=enum(1), rows=enum(1), total=enum(1)),
+                                 obj(source_id=S, grid_sha256=H, definition=set_definition, cols=positive, rows=positive, total=positive)])
     admission_window = copy.deepcopy(WINDOW)
     admission_window['properties']['pixel_window'] = pixel
     add('campaign', dict(campaign_segment_id=IDENTITY['campaign_segment_id'], bbox_crs84=arr(dict(type='number'), minItems=4, maxItems=4),
@@ -263,11 +272,15 @@ THRESHOLDS = dict(version=1, edge_step_should_m=2, edge_step_must_m=10, mask_con
                   history=[dict(version=1, reason='Rev4 defaults; changes require measured review, not per-run tuning')])
 
 
-def materialize(destination):
+def materialize(destination, windows=1):
     """Complete tiny fixture graph, all hashes real, rooted only under destination.
 
     Admission edges pin real producer-native JSON and a complete actual lattice.
-    Other downstream synthetic leaves are not evidence of mapping or execution.
+    ``windows`` > 1 builds a real #806 window-set plan (one source tiled into
+    512x512 native windows) and one PC9 legacy job/run window per native window.
+    Downstream review leaves stay single-window templates (callers such as the
+    sign-off tests rebuild them per window). Synthetic leaves are not evidence
+    of mapping or execution.
     """
     destination = Path(destination)
     queue = destination / 'queue'
@@ -306,7 +319,7 @@ def materialize(destination):
         windows=[window], budgets=dict(requests=0,bytes=1024,wall_s=1,cells=1), usage_before=usage, usage_delta=usage,
         dry_run=leaf, would_enqueue_count=1, selected_source_ids=['source/a'], held_source_ids=[], preconditions=[], holds=[], replacement_plan_of=None)
     from tests.coast_real_admission_factory import populate_admission
-    admission, bindings = populate_admission(admission, {'queue:synthetic':str(queue.absolute())}, destination)
+    admission, bindings = populate_admission(admission, {'queue:synthetic':str(queue.absolute())}, destination, windows=windows)
     identity.update(coordinator_segment_id=admission['coordinator_segment_id'], plan_sha256=admission['plan_sha256'])
     key = admission['windows'][0]['window_key']
     # Normal fixtures now pin real producer-native JSON, not opaque text leaves.
@@ -333,17 +346,18 @@ def materialize(destination):
     native_header = dict(common, **identity)
     intent = put('var/coastal/enqueue-intents/' + bridge_ref['sha256'] + '.json', dict(native_header, schema=versions.INTENT_V1,
         bridge=bridge_ref, admission=ar, code_sha=h, deps_sha=h))
-    legacy_jobs = [dict(window_key=key, source_id=job['source_id'], root_job_id='job:' + '0'*24, new_row=True,
-                        input_manifest=dict(job['input_manifest'], root_id='queue:synthetic')) for job in bridge_doc['jobs']]
+    legacy_jobs = [dict(window_key=window['window_key'], source_id=job['source_id'], root_job_id='job:' + f'{index:024d}', new_row=True,
+                        input_manifest=dict(job['input_manifest'], root_id='queue:synthetic'))
+                   for index, (window, job) in enumerate(zip(admission['windows'], bridge_doc['jobs'], strict=True))]
     legacy_enqueue = put('plans/plan01/pc9-bridge/enqueue-receipt.json', dict(native_header, schema=versions.ENQUEUE_V1,
         admission=ar, bridge=bridge_ref, code_sha=h, deps_sha=h, store_path='var/coastal/coordinator.sqlite', intent=intent, jobs=legacy_jobs))
     status = dict(schema='coastal-coordinator-status-v1', state='uninitialized', jobs=[], events=0, charges=[], progress=[], last_tick_epoch=None)
     legacy_run_doc = dict(native_header, schema=versions.RUN_V1, sequence=0, continuation_of=None, admission=ar, bridge=bridge_ref,
         enqueue=legacy_enqueue, code_sha=h, deps_sha=h, enqueued_job_ids=[j['root_job_id'] for j in legacy_jobs], stop_reason='terminal',
         problems=[], started_utc=common['created_utc'], finished_utc=common['created_utc'], wall_s=0, ticks_used=0, max_ticks=1,
-        until_epoch=1, stop_after='map', windows=[dict(window_key=key, source_id=j['source_id'], root_job_id=j['root_job_id'], state='held',
+        until_epoch=1, stop_after='map', windows=[dict(window_key=j['window_key'], source_id=j['source_id'], root_job_id=j['root_job_id'], state='held',
             unfinished_reason=None, stages={}) for j in legacy_jobs],
-        counts=dict({state: (1 if state == 'held' else 0) for state in STATES}, windows=1, by_hold_reason={}),
+        counts=dict({state: (len(legacy_jobs) if state == 'held' else 0) for state in STATES}, windows=len(legacy_jobs), by_hold_reason={}),
         bridge_caps=bridge_doc['caps'], bytes=dict(unique_sources=sum(d['source']['bytes'] for d in bridge_doc['decisions'] if d['state'] == 'selected')),
         usage=dict(requests=0, bytes_in=0), untouched=dict(foreign_queued_jobs_seen=0, render_jobs_left_queued=0), store_status=status)
     legacy_run = put('plans/plan01/runs/run-00.json', legacy_run_doc)
