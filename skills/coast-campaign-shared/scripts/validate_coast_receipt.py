@@ -11,37 +11,80 @@ from pathlib import Path
 import sys
 
 from jsonschema import Draft202012Validator, FormatChecker
-from coast_refs import Resolver, REF_KEYS, canonical, loads, native_ref
+from coast_refs import Resolver, REF_KEYS, canonical, loads, native_ref, object_digest
 from coast_sample import sample, window_dir, window_key
+import coast_receipt_versions as versions
 
 SHARED = Path(__file__).resolve().parents[1]
 SCHEMAS = SHARED / 'schemas'
 # Enumerated producer-native contracts. Only these explicitly named reference
 # slots receive the original queue namespace. Unknown path-bearing fields refuse.
 NATIVE_FIELDS = {
+    'coastal-segment-v1': set(),
+    'coastal-frozen-discovery-catalog-v1': set(),
+    'coastal-catalog-acquire-bridge-plan-v1': {'selections.*.source', 'selections.*.review', 'selections.*.source_row', 'selections.*.rights.evidence.*'},
+    'coastal-catalog-acquire-bridge-dry-run-v1': {'decisions.*.source'},
+    'coastal-catalog-acquire-bridge-receipt-v1': {'decisions.*.source', 'jobs.*.input_manifest'},
     'coastal-native-job-v1': {'source', 'review', 'source_row', 'rights.evidence.*'},
     'coastal-cached-observation-v1': {'source', 'facts.source', 'facts.source_auxiliary.*'},
     'coastal-stage-result-v1': {'artifacts.*', 'next_job.input_manifest'},
-    'private-mapping-input-v2': {'source', 'review', 'source_row', 'valid_support', 'rights.evidence.*', 'native_facts.source', 'native_facts.source_auxiliary.*'},
+    'private-mapping-input-v2': {'source', 'review', 'source_row', 'valid_support', 'rights.evidence.*', 'native_facts.source',
+                                 'native_facts.source_auxiliary.*', 'native_facts.rights.evidence.*'},
     'coastal-mapping-run-v1': {'source', 'outputs.*'},
     'coastal-terrain-summary-v1': set(),
+    # Leaf producer contracts reached from plan/job/mapping-input slots.
+    'coastal-private-input-review-v2': set(),
+    'vertical-v1': set(),
+    'vertical-observation-v1': set(),
 }
+VERTICAL_OBSERVATION_FIELDS = {'schema', 'source_sha256', 'header', 'header_sha256', 'facts', 'conflicts', 'sign_hint',
+                               'units', 'datum', 'scale', 'offset', 'scale_offset_applied'}
+REVIEW_FIELDS = {'schema', 'independent', 'reviewer_id', 'facts_digest', 'checked_at', 'valid_until', 'decision', 'holds_added'}
+# Rights evidence slots carry a producer-declared contract. Only these leaf
+# contracts are understood; each is validated strictly in rights_evidence().
+RIGHTS_SLOTS = {'selections.*.rights.evidence.*', 'rights.evidence.*', 'native_facts.rights.evidence.*'}
+RIGHTS_CONTRACTS = {'coastal-rights-evidence-v1', 'synthetic-fixture-evidence-v1'}
+# Producer-declared coastal-rights-evidence-v1 leaf (fields read by
+# coordinator/authenticated.py rights binding, plus the optional
+# support_policy that partial-support candidate documents carry, see
+# tests/contract/test_four128_candidate_documents.py). Anything else refuses.
+RIGHTS_EVIDENCE_REQUIRED = {'schema', 'independent', 'reviewer_id', 'private_use', 'decision',
+                            'accepted_source_rights_for_declared_private_purpose', 'holds_added',
+                            'source_sha256', 'source_bytes', 'source_id', 'source_url', 'product_title',
+                            'checked_at', 'valid_until'}
+RIGHTS_EVIDENCE_FIELDS = RIGHTS_EVIDENCE_REQUIRED | {'synthetic', 'support_policy'}
+# private-mapping-input-v2 exact producer shape (handoff/mapping_input.produce).
+MAPPING_INPUT_FIELDS = {'schema', 'producer', 'segment_id', 'source', 'source_row', 'metadata_sha256', 'segment', 'window',
+                        'declared_vertical', 'rights', 'synthetic', 'native_facts', 'valid_support', 'facts_digest',
+                        'machine_holds', 'review', 'publication_prohibited'}
+NATIVE_FACT_FIELDS = {'header', 'observed_vertical', 'vertical', 'source', 'source_auxiliary', 'source_lineage',
+                      'raw_valid_values_sha256', 'valid_count', 'valid_fraction', 'support', 'depth_values_sha256',
+                      'libs', 'implementation', 'segment', 'rights', 'synthetic'}
+OPTIONAL_NATIVE_FACT_FIELDS = {'deep_lane_support'}
+# mapping_input.bind_segment() support record embedded at native_facts.segment.
+BOUND_SEGMENT_FIELDS = {'schema', 'segment_id', 'region', 'crs', 'bbox', 'boundary_policy', 'halo_m',
+                        'intersection_area_m2', 'outside_support_area_m2'}
 OBSERVATION_FIELDS = {'expected_packet', 'observed_packet', 'problems', 'observations'}
 IDENTITY_ONLY_FIELDS = {'identity_provenance', 'run_author_provenance', 'posted_hashes', 'routing', 'thresholds', 'prompts'}
 WORKFLOW_EDGES = {
     'context': 'coast-review-context-v1', 'admission': 'coast-admission-v1',
-    'enqueue': 'coast-enqueue-receipt-v1', 'run': 'coast-run-summary-v1',
+    'enqueue': versions.ENQUEUE_V2, 'run': versions.RUN_V2,
+    'legacy_enqueue': versions.ENQUEUE_V1, 'legacy_run': versions.RUN_V1,
     'tier1': 'coast-tier1-screen-v1', 'open_report': 'coast-open-report-v1',
     'packet': 'coast-review-packet-v1', 'verdict_file': 'coast-review-verdict-v1',
     'routing': 'coast-review-routing-v1', 'manifest': 'coast-archive-manifest-v1',
 }
+# Native PC9 records keep their v1 IDs and are validated by legacy(), never by
+# the generic shared edge walk (their nested keys have native meanings).
+LEGACY = {versions.ENQUEUE_V1, versions.RUN_V1, versions.INTENT_V1}
+CONTINUABLE = {'deadline', 'max_ticks', 'not_claimable'}
 
 
 def validate_schema(value):
     if not isinstance(value, dict) or not isinstance(value.get('schema'), str):
         raise ValueError('workflow receipt needs a schema')
     name = value['schema']
-    if not name.startswith('coast-') or not name.endswith('-v1') or '/' in name or '\\' in name:
+    if not name.startswith('coast-') or not name.endswith(('-v1', '-v2')) or '/' in name or '\\' in name:
         raise ValueError('unknown workflow schema')
     path = SCHEMAS / (name + '.schema.json')
     if not path.is_file():
@@ -69,7 +112,7 @@ def _consistency(value):
                 raise ValueError('window owner differs from plan coordinator')
         # would_enqueue_count describes the producer dry-run list, not all
         # admission windows: held/cache-miss windows remain in windows[].
-    if name == 'coast-run-summary-v1':
+    if name == versions.RUN_V2:
         keys = [w['window_key'] for w in value['windows']]
         partition = [k for group in value['partition'].values() for k in group]
         if len(set(keys)) != len(keys) or sorted(keys) != sorted(partition):
@@ -79,6 +122,22 @@ def _consistency(value):
                 raise ValueError('window state/partition mismatch')
         if value['ticks_used'] > value['max_ticks']:
             raise ValueError('ticks_used exceeds max_ticks')
+        # Exactly one per-window cells record, in window order; no aggregate.
+        cells = value['window_cells']
+        if ([c['window_key'] for c in cells] != keys or [c['window_index'] for c in cells] != list(range(len(keys)))
+                or [c['state'] for c in cells] != [w['state'] for w in value['windows']]):
+            raise ValueError('window_cells must hold one record per window in window order')
+        for c in cells:
+            measured = c['producer'] is not None
+            if measured != (c['producer_contract'] is not None) or (measured and c['state'] != 'map_done'):
+                raise ValueError('window_cells producer binding inconsistent')
+            if not measured and (any(c[k] is not None for k in versions.STATS + ('native_valid_count',)) or not c['unknown']):
+                raise ValueError('unmeasured window must be explicitly unknown, never zero-filled')
+        evidence = value['store_status_evidence']
+        if evidence['source'] != value['legacy_run']:
+            raise ValueError('legacy embedded status must bind to the original run receipt')
+        if (value['sequence'] == 0) != (value['continuation_of'] is None):
+            raise ValueError('zero-based run sequence/continuation mismatch')
     if name == 'coast-review-packet-v1':
         if value['integrity_ok']:
             population = value['population']
@@ -164,7 +223,13 @@ class GraphValidator:
         if not isinstance(doc, dict):
             raise ValueError('referenced JSON document must be an object')
         name = doc.get('schema', '')
-        if name.startswith('coast-'):
+        if name in LEGACY:
+            validate_schema(doc)
+            try:
+                self.legacy(doc, root_id=root_id)
+            except (KeyError, TypeError, IndexError) as error:
+                raise ValueError('malformed legacy PC9 receipt: ' + name) from error
+        elif name.startswith('coast-'):
             validate_schema(doc)
             _consistency(doc)
             if scope == 'identity_snapshot':
@@ -197,6 +262,10 @@ class GraphValidator:
             if errors:
                 raise ValueError('threshold schema: ' + errors[0].message)
         elif name in NATIVE_FIELDS:
+            try:
+                self.check_producer(doc)
+            except (KeyError, TypeError, IndexError) as error:
+                raise ValueError('malformed native producer: ' + name) from error
             self.walk_native(doc, root_id=root_id, contract=name)
         else:
             raise ValueError('unresolved-reference: unsupported JSON producer schema ' + repr(name))
@@ -226,21 +295,295 @@ class GraphValidator:
             wildcard = '.'.join(path[:-1] + ['*'])
             if isinstance(value, dict):
                 if (slot in allowed or pattern in allowed or wildcard in allowed) and 'path' in value:
-                    self.reference(native_ref(value, root_id))
+                    if set(value) - {'path', 'sha256', 'bytes', 'contract', 'kind'}:
+                        raise ValueError('unresolved-reference: unknown native ref field ' + slot)
+                    if pattern in RIGHTS_SLOTS:
+                        self.rights_evidence(value, doc, path, root_id=root_id)
+                    else:
+                        self.reference(native_ref(value, root_id))
                 elif 'path' in value or 'root_id' in value:
                     raise ValueError('unresolved-reference: unknown native ref slot ' + slot)
-                elif value is not doc and 'schema' in value:
+                elif contract == 'private-mapping-input-v2' and slot == 'native_facts.segment':
+                    self.bound_segment(value, doc)
+                elif value is not doc and 'schema' in value and not (contract.startswith('coastal-catalog-acquire-bridge-') and slot == 'catalog'):
                     self.document(value, root_id=root_id)
                 else:
                     for key, child in value.items():
+                        if key.endswith(('_path', '_ref', '_file')):
+                            raise ValueError('unresolved-reference: unknown native path field ' + '.'.join(path + [key]))
                         visit(child, path + [key])
             elif isinstance(value, list):
                 for i, child in enumerate(value):
                     visit(child, path + [str(i)])
         visit(doc, [])
 
+    def rights_evidence(self, value, doc, path, *, root_id):
+        """Producer-declared rights evidence leaf (authenticated.py rules).
+
+        Structural PC9 records may carry no evidence (review-required, never
+        execution-authorized); any evidence that IS present must be a declared,
+        hash-bound, source-specific leaf. Validation never grants qualification.
+        """
+        contract = value.get('contract')
+        if contract not in RIGHTS_CONTRACTS:
+            raise ValueError('unresolved-reference: unknown rights evidence contract at ' + '.'.join(path))
+        owner = doc
+        for part in path[:path.index('rights')]:
+            owner = owner[int(part)] if isinstance(owner, list) else owner[part]
+        rights = owner['rights']
+        if not isinstance(rights, dict) or set(rights) - {'private_use', 'evidence'} or rights.get('private_use') is not True:
+            raise ValueError('rights evidence requires declared private use')
+        source = owner.get('source')
+        synthetic = owner.get('synthetic', doc.get('synthetic'))
+        evidence = loads(self.resolver.read(native_ref(value, root_id)))
+        if contract == 'synthetic-fixture-evidence-v1':
+            # Synthetic stand-in only: never valid for a non-synthetic producer record.
+            if evidence != {'synthetic': True} or synthetic is not True:
+                raise ValueError('synthetic rights evidence outside a synthetic producer record')
+            return
+        # Complete producer leaf shape first: undeclared scalar or nested
+        # path/reference fields refuse before any field is trusted, and no
+        # undeclared reference is ever resolved.
+        if not isinstance(evidence, dict):
+            raise ValueError('independent source-specific rights binding invalid')
+        unknown = sorted(set(evidence) - RIGHTS_EVIDENCE_FIELDS)
+        if unknown:
+            raise ValueError('unknown producer field: rights evidence ' + ', '.join(unknown))
+        missing = sorted(RIGHTS_EVIDENCE_REQUIRED - set(evidence))
+        if missing:
+            raise ValueError('rights evidence missing producer field: ' + ', '.join(missing))
+        if 'support_policy' in evidence and not isinstance(evidence['support_policy'], str):
+            raise ValueError('rights evidence producer field type invalid: support_policy')
+        # Owning producer-declared source row (nearest enclosing record that
+        # declares one), as authenticated.py binds row id/url/title. Missing or
+        # ambiguous identity refuses; absent values never match each other.
+        row = None
+        container = doc
+        chain = [doc]
+        for part in path[:path.index('rights')]:
+            container = container[int(part)] if isinstance(container, list) else container[part]
+            chain.append(container)
+        for record in reversed(chain):
+            if isinstance(record, dict) and 'source_row' in record:
+                row = record['source_row']
+                break
+        if (not isinstance(row, dict) or 'path' in row
+                or any(not isinstance(row.get(key), str) or not row[key].strip() for key in ('id', 'url', 'title'))):
+            raise ValueError('rights evidence owning source_row identity unavailable')
+        if not isinstance(source, dict) or ('sha256' in row and row['sha256'] != source.get('sha256')):
+            raise ValueError('rights evidence owning source_row identity unavailable')
+        from datetime import datetime
+        def epoch(stamp):
+            if not isinstance(stamp, str) or not stamp.endswith('Z'):
+                raise ValueError('rights evidence timestamps must be UTC')
+            return datetime.fromisoformat(stamp[:-1] + '+00:00').timestamp()
+        if (evidence.get('schema') != contract or evidence.get('independent') is not True
+                or not isinstance(evidence.get('reviewer_id'), str) or not evidence['reviewer_id'].strip()
+                or evidence.get('private_use') is not True
+                or evidence.get('decision') != 'accepted_private_processing_conditional_on_exact_expected_source_identity'
+                or evidence.get('accepted_source_rights_for_declared_private_purpose') is not True
+                or evidence.get('holds_added') != []
+                or evidence.get('source_sha256') != source.get('sha256') or evidence.get('source_bytes') != source.get('bytes')
+                or isinstance(evidence.get('source_bytes'), bool)
+                or evidence.get('source_id') != row['id'] or evidence.get('source_url') != row['url']
+                or evidence.get('product_title') != row['title']
+                or evidence.get('synthetic', False) is not (synthetic is True)):
+            raise ValueError('independent source-specific rights binding invalid')
+        if not epoch(evidence.get('checked_at')) < epoch(evidence.get('valid_until')):
+            raise ValueError('rights evidence validity window invalid')
+
+    def bound_segment(self, value, doc):
+        """Exact mapping_input.bind_segment() support record (no lattice bbox_crs84)."""
+        import math
+        if not isinstance(value, dict) or set(value) != BOUND_SEGMENT_FIELDS:
+            raise ValueError('unknown producer field: native_facts.segment')
+        x0, y0 = (int(p) for p in value['segment_id'].split(':')[2:4])
+        if (value['schema'] != 'coastal-segment-v1' or value['segment_id'] != doc['segment_id'] or value['crs'] != 'EPSG:3310'
+                or value['bbox'] != [x0, y0, x0 + 5000, y0 + 5000] or not isinstance(value['region'], str) or not value['region']
+                or value['boundary_policy'] != 'all_valid_native_support_contained' or value['halo_m'] != 0):
+            raise ValueError('bound native segment identity mismatch')
+        inside, outside = value['intersection_area_m2'], value['outside_support_area_m2']
+        if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or v < 0 for v in (inside, outside)):
+            raise ValueError('bound native segment areas invalid')
+        holds = doc['machine_holds']
+        if (inside <= 0) != ('native_support_disjoint_from_segment' in holds) or (outside > 1e-6) != ('native_support_outside_segment' in holds):
+            raise ValueError('bound native segment holds mismatch')
+
+    def check_producer(self, doc):
+        """Bounded native metadata adapters; no fetch, Store, or execution calls."""
+        from skippercast.coastal.coordinator import catalog_bridge as bridge
+        from skippercast.coastal.coordinator.segments import segment
+        name = doc['schema']
+        canonical(doc)
+        fields = {
+            'coastal-segment-v1': {'schema', 'segment_id', 'region', 'crs', 'bbox', 'bbox_crs84', 'synthetic'},
+            bridge.CATALOG: {'schema', 'region', 'bbox', 'source_revision', 'policy_revision', 'method_revision', 'plan_sha256', 'manifest_sha256', 'checked_from', 'checked_until', 'manifest_status', 'bounded_plan_finished', 'discovery_complete', 'unattempted_queries', 'lead_source_ids', 'usable_source_ids', 'candidates', 'mapping_accepted', 'execution_authorized', 'review_required', 'coordinator_boundary', 'catalog_id'},
+            bridge.PLAN: {'schema', 'catalog_id', 'catalog_sha256', 'segment', 'synthetic', 'max_total_bytes', 'budget', 'selections'},
+            bridge.DRY_RUN: {'schema', 'plan_sha256', 'catalog', 'segment_id', 'decisions', 'selected_source_ids', 'held_source_ids', 'caps', 'network_requests', 'source_opens', 'source_bytes_read', 'review_required', 'mapping_accepted', 'execution_authorized', 'note', 'would_enqueue'},
+        }
+        fields[bridge.RECEIPT] = (fields[bridge.DRY_RUN] - {'would_enqueue'}) | {'jobs', 'budget', 'segment'}
+        if name in fields and set(doc) - fields[name]:
+            raise ValueError('unknown producer field: ' + name)
+        if name == 'coastal-private-input-review-v2':
+            # handoff/common.review_holds() binding rules, checked structurally.
+            import re
+            from datetime import datetime
+            def epoch(stamp):
+                if not isinstance(stamp, str) or not stamp.endswith('Z'):
+                    raise ValueError('review timestamps must be UTC')
+                return datetime.fromisoformat(stamp[:-1] + '+00:00').timestamp()
+            if (set(doc) != REVIEW_FIELDS or doc['independent'] is not True or not isinstance(doc['reviewer_id'], str)
+                    or not doc['reviewer_id'].strip() or doc['reviewer_id'].startswith('coastal.')
+                    or not isinstance(doc['facts_digest'], str) or not re.fullmatch('[0-9a-f]{64}', doc['facts_digest'])
+                    or doc['decision'] not in ('qualified_private_terrain', 'accept')
+                    or not isinstance(doc['holds_added'], list) or any(not isinstance(h, str) or not h for h in doc['holds_added'])
+                    or not epoch(doc['checked_at']) < epoch(doc['valid_until'])):
+                raise ValueError('independent input review binding invalid')
+        if name == 'vertical-v1':
+            from skippercast.coastal import vertical
+            if not isinstance(vertical.validate(doc), list):
+                raise ValueError('vertical block invalid')
+        if name == 'vertical-observation-v1':
+            # vertical.from_raster() output: exact fields, header digest recomputed.
+            from skippercast.coastal import vertical
+            if set(doc) != VERTICAL_OBSERVATION_FIELDS or doc['header_sha256'] != vertical.digest(doc['header']):
+                raise ValueError('vertical observation binding invalid')
+        if name == 'private-mapping-input-v2':
+            from skippercast.coastal.coordinator.stages import digest
+            facts = doc['native_facts']
+            if set(doc) != MAPPING_INPUT_FIELDS:
+                raise ValueError('unknown producer field: ' + name)
+            if not isinstance(facts, dict) or not NATIVE_FACT_FIELDS <= set(facts) or set(facts) - NATIVE_FACT_FIELDS - OPTIONAL_NATIVE_FACT_FIELDS:
+                raise ValueError('unknown producer field: ' + name + ' native_facts')
+            # produce(): facts.update(rights=rights, synthetic=...) and facts_digest=digest(facts).
+            if (facts['rights'] != doc['rights'] or facts['synthetic'] != doc['synthetic'] or facts['source'] != doc['source']
+                    or doc['facts_digest'] != digest(facts) or doc['publication_prohibited'] is not True):
+                raise ValueError('mapping input native facts binding mismatch')
+        if name == 'coastal-segment-v1':
+            from pyproj import Transformer
+            bbox = doc['bbox']
+            expected = segment(bbox[0], bbox[1], region=doc['region'])
+            if any(doc.get(k) != v for k, v in expected.items()):
+                raise ValueError('lattice ID/projected bbox mismatch')
+            inverse = Transformer.from_crs('EPSG:3310', 'OGC:CRS84', always_xy=True)
+            if not inverse_bounds_equal(doc.get('bbox_crs84'), list(inverse.transform_bounds(*bbox, densify_pts=41))):
+                raise ValueError('lattice CRS84 bbox mismatch')
+        elif name == bridge.CATALOG:
+            bridge.check_catalog(doc)
+        elif name == bridge.PLAN:
+            bridge.check_budget(doc.get('budget'))
+            if not isinstance(doc.get('selections'), list) or not 1 <= len(doc['selections']) <= bridge.MAX_SOURCES:
+                raise ValueError('bounded bridge selections required')
+        elif name in (bridge.DRY_RUN, bridge.RECEIPT):
+            if (doc.get('review_required') is not True or doc.get('execution_authorized') is not False
+                    or doc.get('mapping_accepted') is not False or doc.get('network_requests') != 0):
+                raise ValueError('bridge is review-required source-free metadata')
+            if not isinstance(doc.get('would_enqueue' if name == bridge.DRY_RUN else 'jobs'), list):
+                raise ValueError('bridge job population must be a list')
+
+    def legacy(self, doc, *, root_id):
+        """Native PC9v1 receipts: exact schema plus producer bindings, original queue only."""
+        from skippercast.coastal.coordinator import catalog_bridge as bridge
+        name = doc['schema']
+        if not root_id.startswith('queue:'):
+            raise ValueError('legacy PC9 receipts require the original queue root namespace')
+        def edge(ref, contract=None):
+            if ref['root_id'] != root_id:
+                raise ValueError('legacy PC9 reference leaves its queue namespace')
+            # Producer contract labels are enforced on JSON documents; binary
+            # artifacts (GeoTIFF support/terrain) are bound by exact SHA/bytes.
+            label = contract or (ref.get('contract') if ref['path'].endswith('.json') else None)
+            return self.reference(versions.typed(ref), contract=label)
+        admission = edge(doc['admission'], 'coast-admission-v1')
+        bridge_doc = edge(doc['bridge'], bridge.RECEIPT)
+        if any(doc[k] != admission[k] for k in ('campaign_segment_id', 'coordinator_segment_id', 'plan_id', 'plan_sha256')):
+            raise ValueError('legacy receipt identity differs from admission')
+        if name == versions.INTENT_V1:
+            return
+        if name == versions.ENQUEUE_V1:
+            intent = edge(doc['intent'], versions.INTENT_V1)
+            if (intent['bridge'] != doc['bridge'] or intent['admission'] != doc['admission']
+                    or intent['code_sha'] != doc['code_sha'] or intent['deps_sha'] != doc['deps_sha']):
+                raise ValueError('legacy intent binding mismatch')
+            jobs = doc['jobs']
+            if (len(jobs) != len(admission['windows']) or len(jobs) != len(bridge_doc['jobs'])
+                    or len({j['root_job_id'] for j in jobs}) != len(jobs)):
+                raise ValueError('legacy enqueue population mismatch')
+            for entry, window, job in zip(jobs, admission['windows'], bridge_doc['jobs']):
+                if (entry['window_key'] != window['window_key'] or entry['source_id'] != job['source_id']
+                        or entry['input_manifest'] != dict(job['input_manifest'], root_id=root_id)):
+                    raise ValueError('legacy enqueue root manifest mismatch')
+                edge(entry['input_manifest'])
+            return
+        enqueue = edge(doc['enqueue'], versions.ENQUEUE_V1)
+        if doc['admission'] != enqueue['admission'] or doc['bridge'] != enqueue['bridge'] or (doc['code_sha'], doc['deps_sha']) != (enqueue['code_sha'], enqueue['deps_sha']):
+            raise ValueError('legacy run/enqueue binding mismatch')
+        if doc['enqueued_job_ids'] != [j['root_job_id'] for j in enqueue['jobs']]:
+            raise ValueError('legacy run enqueued job population mismatch')
+        if [(w['window_key'], w['source_id'], w['root_job_id']) for w in doc['windows']] != [
+                (j['window_key'], j['source_id'], j['root_job_id']) for j in enqueue['jobs']]:
+            raise ValueError('legacy run window population mismatch')
+        counts = {state: sum(w['state'] == state for w in doc['windows']) for state in versions.STATES}
+        if any(doc['counts'][k] != v for k, v in counts.items()) or doc['counts']['windows'] != len(doc['windows']):
+            raise ValueError('legacy run counts mismatch')
+        if doc['bridge_caps'] != bridge_doc['caps'] or doc['ticks_used'] > doc['max_ticks']:
+            raise ValueError('legacy run caps/ticks mismatch')
+        if doc['continuation_of'] is None:
+            if doc['sequence'] != 0:
+                raise ValueError('legacy run sequence is zero-based')
+        else:
+            previous = edge(doc['continuation_of'], versions.RUN_V1)
+            if (previous['enqueue'] != doc['enqueue'] or previous['stop_reason'] not in CONTINUABLE
+                    or doc['sequence'] != previous['sequence'] + 1):
+                raise ValueError('legacy continuation not authorized')
+        for window in doc['windows']:
+            for info in window['stages'].values():
+                if info['state'] == 'missing':
+                    continue
+                edge(info['input_manifest'])
+                if info['result_ref'] is not None:
+                    edge(info['result_ref'], 'coastal-stage-result-v1')
+                for product in info['products'].values():
+                    edge(product)
+        # store_status is inherited embedded evidence: schema-checked only, never
+        # treated as an independently produced or store-consistent snapshot.
+
+    def run_v2(self, doc):
+        legacy = self.reference(doc['legacy_run'], contract=versions.RUN_V1)
+        enqueue = self.reference(doc['enqueue'], contract=versions.ENQUEUE_V2)
+        if versions.typed(legacy['enqueue']) != enqueue['legacy_enqueue']:
+            raise ValueError('v2 run enqueue differs from legacy run enqueue')
+        previous_ref = doc['continuation_of']
+        if previous_ref is not None:
+            previous = self.reference(previous_ref, contract=versions.RUN_V2)
+            if legacy['continuation_of'] is None or previous['legacy_run'] != versions.typed(legacy['continuation_of']):
+                raise ValueError('v2 continuation differs from legacy continuation')
+        if doc != versions.run_v2(legacy, doc['legacy_run'], doc['enqueue'], previous_ref):
+            raise ValueError('v2 run differs from hash-bound adapter output')
+        for cells in doc['window_cells']:
+            if cells['producer'] is None:
+                continue
+            producer = self.reference(cells['producer'], contract=cells['producer_contract'])
+            depth = producer['depth_m']
+            def numeric(value):
+                return value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+            if (producer['native_valid_count'] != cells['native_valid_count']
+                    or any(cells[k] != numeric(depth.get(k)) for k in versions.STATS)):
+                raise ValueError('window cells statistics differ from producer record')
+
     def crosscheck(self, doc, error_branch):
         name = doc['schema']
+        if name == versions.ENQUEUE_V2:
+            legacy = self.reference(doc['legacy_enqueue'], contract=versions.ENQUEUE_V1)
+            if doc != versions.enqueue_v2(legacy, doc['legacy_enqueue']):
+                raise ValueError('v2 enqueue differs from hash-bound adapter output')
+        if name == versions.RUN_V2:
+            self.run_v2(doc)
+        if name == 'coast-admission-v1':
+            try:
+                self.admission(doc)
+            except (KeyError, TypeError, IndexError) as error:
+                raise ValueError('malformed admission producer binding') from error
         if 'context' in doc:
             context = loads(self.resolver.read(doc['context']))
             for key in ('campaign_segment_id','coordinator_segment_id','plan_id','plan_sha256','review_round','attempt'):
@@ -266,6 +609,185 @@ class GraphValidator:
             for key in ('verdict','packet','open_report','context','validation_scope'):
                 if doc[key] != verdict[key]:
                     raise ValueError('ledger/verdict mismatch: ' + key)
+
+    def admission(self, doc):
+        from skippercast.coastal.coordinator import catalog_bridge as bridge
+        from skippercast.coastal.coordinator.segments import from_bbox
+        from skippercast.coastal.coordinator.stages import digest
+        contracts = {'campaign': 'coast-campaign-v1', 'plan_file': bridge.PLAN,
+                     'segment_record': 'coastal-segment-v1', 'catalog': bridge.CATALOG,
+                     'dry_run': bridge.DRY_RUN, 'discovery': 'coast-discovery-evidence-v1'}
+        values = {k: self.reference(doc[k], contract=v) for k, v in contracts.items()}
+        campaign, plan, record, catalog, dry, discovery = (values[k] for k in contracts)
+        if campaign['campaign_segment_id'] != doc['campaign_segment_id'] or discovery['catalog'] != doc['catalog']:
+            raise ValueError('campaign/discovery binding mismatch')
+        # Bound lattice expansion before the native producer constructs its list.
+        from pyproj import Transformer
+        import math
+        west,south,east,north = campaign['bbox_crs84']
+        if not (-180 <= west < east <= 180 and -90 <= south < north <= 90):
+            raise ValueError('invalid campaign bbox')
+        projected = Transformer.from_crs('OGC:CRS84','EPSG:3310',always_xy=True).transform_bounds(west,south,east,north,densify_pts=41)
+        if not all(math.isfinite(v) for v in projected):
+            raise ValueError('invalid campaign projected bounds')
+        x0,y0,x1,y1 = projected
+        if (math.ceil(x1/5000)-math.floor(x0/5000)) * (math.ceil(y1/5000)-math.floor(y0/5000)) > 4096:
+            raise ValueError('campaign lattice exceeds 4096 record validation bound')
+        records = from_bbox(campaign['bbox_crs84'], region=campaign['campaign_segment_id'])
+        # PC9 producer records may carry synthetic=True; bridge_run._context binds it
+        # to plan.synthetic. Only that exact producer label is excluded from the
+        # lattice comparison, and only when the plan agrees.
+        lattice = {k: v for k, v in record.items() if k != 'bbox_crs84'}
+        if 'synthetic' in record:
+            if record['synthetic'] is not True or plan.get('synthetic') is not True:
+                raise ValueError('synthetic segment record without synthetic plan')
+            del lattice['synthetic']
+        # Projected lattice fields remain exact. Only inverse projection is
+        # subject to the measured, two-ULP libm portability bound.
+        if not any({k:v for k,v in r.items() if k != 'bbox_crs84'} == lattice and
+                   inverse_bounds_equal(record['bbox_crs84'], r['bbox_crs84']) for r in records):
+            raise ValueError('campaign lattice record mismatch')
+        if record['segment_id'] != doc['coordinator_segment_id'] or plan['segment'] != {k: record[k] for k in ('segment_id', 'bbox_crs84')}:
+            raise ValueError('plan segment binding mismatch')
+        if digest(plan) != doc['plan_sha256'] or dry['plan_sha256'] != doc['plan_sha256']:
+            raise ValueError('plan digest binding mismatch')
+        bridge.check_plan(plan, self.resolver.read(doc['catalog']), catalog)
+        if dry['catalog'] != dict(sha256=doc['catalog']['sha256'], bytes=doc['catalog']['bytes'], catalog_id=catalog['catalog_id'], schema=bridge.CATALOG):
+            raise ValueError('dry catalog binding mismatch')
+        if (dry['segment_id'] != record['segment_id'] or doc['would_enqueue_count'] != len(dry['would_enqueue'])
+                or any(doc[k] != dry[k] for k in ('selected_source_ids', 'held_source_ids'))):
+            raise ValueError('dry population/segment binding mismatch')
+        decisions = dry['decisions']
+        if [d['source_id'] for d in decisions] != [s['source_id'] for s in plan['selections']]:
+            raise ValueError('dry decisions population mismatch')
+        selected = [d for d in decisions if d['state'] == 'selected']
+        if any(d['state'] not in ('selected', 'held') or (d['state'] == 'selected' and d['holds']) for d in decisions):
+            raise ValueError('dry decision state/holds mismatch')
+        for decision, selection in zip(decisions, plan['selections']):
+            if 'source' in decision and decision['source'] != selection['source']:
+                raise ValueError('dry source differs from pinned plan')
+        # #806 semantics: the caps block derives from checked['selections'] (raised
+        # caps for window-set plans) and the dry run lists one acquire job per
+        # window, carrying window_index/window only for window-set selections.
+        checked = dict(segment=plan['segment'], catalog_ref=dry['catalog'], decisions=decisions,
+                       selections={s['source_id']: s for s in plan['selections']},
+                       selected_bytes=sum(d['source']['bytes'] for d in selected))
+        if checked['selected_bytes'] > plan['max_total_bytes'] or any(d['source']['bytes'] > plan['budget']['bytes'] for d in selected):
+            raise ValueError('selected sources exceed plan budget')
+        expected = bridge._receipt(bridge.DRY_RUN, plan, checked)
+        selections = checked['selections']
+        would_enqueue = []
+        for d in selected:
+            selection = selections[d['source_id']]
+            for index, native_window in enumerate(bridge._selection_windows(selection)):
+                entry = dict(stage='acquire', source_id=d['source_id'], native_job_sha256=digest(
+                    bridge.native_job(plan, selection, d, dry['catalog'], window=native_window)))
+                if 'windows' in selection:
+                    entry.update(window_index=index, window=native_window)
+                would_enqueue.append(entry)
+        expected['would_enqueue'] = would_enqueue
+        if expected != dry:
+            raise ValueError('dry caps/native job binding mismatch')
+        # Admission windows: exactly each selection's native windows in plan
+        # order, idx = the window's index within its selection (0 for single).
+        population = [(s['source_id'], index, native_window) for s in plan['selections']
+                      for index, native_window in enumerate(bridge._selection_windows(s))]
+        if [(w['source_id'], w['idx'], w['pixel_window']) for w in doc['windows']] != population:
+            raise ValueError('plan window population mismatch')
+        source_ids = [s['source_id'] for s in doc['sources']]
+        if len(set(source_ids)) != len(source_ids) or set(source_ids) != {s['source_id'] for s in plan['selections']}:
+            raise ValueError('admission source population mismatch')
+        sources = {s['source_id']: s for s in doc['sources']}
+        for selection in plan['selections']:
+            hot = native_ref(selection['source'], doc['plan_file']['root_id'])
+            if hot not in sources[selection['source_id']]['hot_cache']:
+                raise ValueError('source hot-cache binding mismatch')
+        if not set(doc['selected_source_ids'] + doc['held_source_ids']) <= set(campaign['source_inventory']):
+            raise ValueError('source absent from frozen campaign inventory')
+        grids = {g['grid_sha256']: g for g in doc['grids']}
+        if len(grids) != len(doc['grids']):
+            raise ValueError('duplicate grid identity')
+        # One execution grid per selection; every window of a selection binds to it.
+        selection_grid = {}
+        for window in doc['windows']:
+            if selection_grid.setdefault(window['source_id'], window['grid_sha256']) != window['grid_sha256']:
+                raise ValueError('selection windows bind to more than one grid')
+        if sorted(selection_grid.values()) != sorted(grids):
+            raise ValueError('admission grid population mismatch')
+        for window in doc['windows']:
+            selection = selections[window['source_id']]
+            grid = grids[window['grid_sha256']]
+            definition = grid.get('definition')
+            if (not definition or digest(definition) != window['grid_sha256']
+                    or definition['source_sha256'] != selection['source']['sha256'] or grid['source_id'] != window['source_id']):
+                raise ValueError('grid/window source binding mismatch')
+            if 'windows' in selection:
+                tiling = selection['tiling']
+                native_windows = selection['windows']
+                if (definition['tiling_version'] != 'window-set-v1' or definition['tiling'] != tiling
+                        or (definition['width'], definition['height']) != (tiling['width'], tiling['height'])
+                        or (definition['tile_width'], definition['tile_height']) != (tiling['tile'], tiling['tile'])
+                        or grid['total'] != len(native_windows)
+                        or grid['cols'] != len({w[0] for w in native_windows})
+                        or grid['rows'] != len({w[1] for w in native_windows})):
+                    raise ValueError('window-set grid/window binding mismatch')
+            elif (definition['tiling_version'] != 'single-selected-v1' or window['idx'] != 0
+                    or definition['pixel_window'] != selection['window'] or window['pixel_window'] != selection['window']
+                    or (grid['cols'], grid['rows'], grid['total']) != (1, 1, 1)):
+                raise ValueError('single-selected grid/window binding mismatch')
+            if window['window_key'] not in campaign['intended_windows']:
+                raise ValueError('window absent from frozen campaign inventory')
+            from pyproj import Transformer
+            import math
+            col, row, width, height = window['pixel_window']
+            bridge._window(window['pixel_window'])
+            if col + width > definition['width'] or row + height > definition['height']:
+                raise ValueError('window outside raster grid')
+            a,b,c,d,e,f = definition['affine_transform']
+            x,y = col + width/2, row + height/2
+            cx,cy = Transformer.from_crs(definition['raster_crs'], 'EPSG:3310', always_xy=True).transform(a*x+b*y+c,d*x+e*y+f)
+            owner = f'seg:3310:{math.floor(cx/5000)*5000}:{math.floor(cy/5000)*5000}:5000'
+            if owner != record['segment_id']:
+                raise ValueError('pixel centre owner mismatch')
+            from shapely.geometry import Polygon, box
+            geographic = Transformer.from_crs(definition['raster_crs'], 'OGC:CRS84', always_xy=True)
+            corners = [(col,row),(col+width,row),(col+width,row+height),(col,row+height)]
+            points = []
+            for start,end in zip(corners,corners[1:]+corners[:1]):
+                for step in range(42):
+                    px = start[0]+(end[0]-start[0])*step/42
+                    py = start[1]+(end[1]-start[1])*step/42
+                    points.append(geographic.transform(a*px+b*py+c,d*px+e*py+f))
+            footprint = Polygon(points)
+            if (not footprint.is_valid or footprint.is_empty
+                    or footprint.intersection(box(*campaign['bbox_crs84'])).area <= 0
+                    or footprint.intersection(box(*record['bbox_crs84'])).area <= 0
+                    or any(abs(expected-observed) > 1e-10 for expected,observed in zip(footprint.bounds,window['footprint']))):
+                raise ValueError('window footprint binding mismatch')
+            overlaps = sorted(r['segment_id'] for r in records if footprint.intersection(box(*r['bbox_crs84'])).area > 0)
+            if sorted(window['overlapping_segment_ids']) != overlaps:
+                raise ValueError('window overlap inventory mismatch')
+
+
+def inverse_bounds_equal(observed, expected):
+    """Compare inverse-projected bounds within two representable doubles.
+
+    Ubuntu 24.04 and 26.04 with pyproj 3.8.0 / PROJ 9.8.1 produce
+    one/two-ULP latitude differences for the committed native lattice fixture.
+    This is not a geographic epsilon: hashes, projected cells and pinned
+    record-to-plan coordinates remain exact. No relative/decimal tolerance.
+    """
+    import math
+    if not isinstance(observed, list) or len(observed) != 4:
+        return False
+    for actual, target in zip(observed, expected):
+        if isinstance(actual, bool) or not isinstance(actual, (int, float)) or not math.isfinite(actual):
+            return False
+        lower = math.nextafter(math.nextafter(target, -math.inf), -math.inf)
+        upper = math.nextafter(math.nextafter(target, math.inf), math.inf)
+        if not lower <= actual <= upper:
+            return False
+    return True
 
 
 def validate(value, resolver, *, root_id):

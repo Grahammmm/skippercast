@@ -1,0 +1,31 @@
+{
+  "catalog_lineage": {
+    "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/input.bag",
+    "catalog_hash_binding": "matched",
+    "catalog_id": "a0bc09edb93ff6b60759afed3ec379c0525f3c8823f5c4c6c43ddc999d81de12",
+    "catalog_sha256": "bc61f09d5facf02f457c1ea5006b7c82234b455e3ec480962b338811a9c05549",
+    "publisher_id": "input.bag",
+    "review_required": true,
+    "source_id": "ncei:input.bag"
+  },
+  "rights": {
+    "evidence": [],
+    "private_use": true
+  },
+  "schema": "coastal-native-job-v1",
+  "segment_id": "seg:3310:-55000:-400000:5000",
+  "source": {
+    "bytes": 73,
+    "contract": "native-raster-v1",
+    "path": "cache/source/input.bag",
+    "sha256": "938a6e12ad520722743a61910d6ac73957d613c7f8968144040392e9f5c9ecdf"
+  },
+  "synthetic": false,
+  "vertical": null,
+  "window": [
+    0,
+    0,
+    4,
+    4
+  ]
+}
