@@ -13,6 +13,12 @@ The PR head, posted on the task, is the compatible pin. Do not use either old
 head alone or change either author's branch. No producer or existing SKILL.md
 changes are included.
 
+The current integration also merges main `622dc9616813e06473cbe9d78ca7c0da2d6ff46a`
+(reviewed #816) without rebasing the #827/#832 ancestry. PC9-native v1 receipts
+remain unchanged; shared enqueue/run edges require the hash-bound v2 adapters in
+`coast_receipt_versions.py`. #806 window-set admission and per-window v2 cells
+records remain supported. This is not a PC9 window-set execution qualification.
+
 ## Trusted selection for unchanged schema-less job.json
 
 An ordinary Store/Coordinator job descriptor has NO schema. It remains unchanged.
@@ -74,15 +80,24 @@ extension. Native edges with no known contract refuse (except enumerated slots
 whose producer contract selects it). Binary contracts cannot label .json/.jsonl
 files. The source adapter is structural and hash-validating, not a raster science
 verifier; real native readers were exercised only on synthetic fixtures.
-Rights evidence is an explicit closed `coast-native-rights-evidence-v1` statement
-receipt with the common runtime header and synthetic flag, not a rewrite or
-semantic approval of a legacy legal document. Existing other evidence contracts
-remain held until independently reconciled; do not relabel existing bytes.
+Rights slots preserve #816's exact `coastal-rights-evidence-v1` producer leaf
+(required source id/URL/title/hash/bytes, review/validity fields, closed field
+set, optional string support_policy). The nearest declaring source_row must
+bind that identity; absent identities never match. `synthetic-fixture-evidence-v1`
+is only `{"synthetic":true}` on a synthetic producer. The existing #827 workflow
+`coast-native-rights-evidence-v1` statement keeps its common runtime header and
+is likewise restricted to synthetic evidence on a synthetic producer. These
+are distinct contracts, not alternate labels for rewritten bytes. Successful
+rights leaves are included in the retained verification set. Native source-row
+lineage still additionally requires its registered raw envelope, even when a
+rights leaf passes. No legal or scientific acceptance is implied.
 
-Segments support both canonical segment() records (no inverse bbox) and the
-from_bbox() records (inverse bbox checked). mapping_input.bind_segment's inline
-boundary-policy/halo/intersection/outside-support fields are explicitly admitted.
-Admission still requires the full campaign-generated inverse-bbox record.
+Standalone geographic segments require the full inverse-bbox record under
+#816, with the measured two-ULP inverse-projection check. Synthetic fixtures
+materialize that field before producer execution. mapping_input.bind_segment's
+inline native_facts.segment is a separate exact shape: boundary policy, zero
+halo and intersection/outside-support fields, without bbox_crs84. It is checked
+by the bound-segment adapter, not confused with a standalone geographic record.
 
 ## Precisely held provenance (never silently dropped)
 

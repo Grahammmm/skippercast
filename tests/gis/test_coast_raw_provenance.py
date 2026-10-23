@@ -508,3 +508,47 @@ def test_cli_explicit_origin_and_envelopes(retained, tmp_path):
     assert validator.main(base + ['--raw-provenance', str(tmp_path / 'envelopes.json')]) == 3  # no independent origin
     assert validator.main(full[:-4] + ['--original-raw-roots', 'origins.json', full[-2], full[-1]]) == 3
     assert validator.main(full[:7] + full[9:]) == 3  # raw:campaign not card-admitted
+
+
+@pytest.mark.parametrize('case', ['valid', 'wrong_id', 'missing_title', 'extra', 'nested_extra', 'missing_leaf'])
+def test_816_rights_leaf_with_registered_raw_lineage(retained, case):
+    """Full #816 leaf dispatch plus #832 envelope; not a science/rights verdict."""
+    from tests.gis.test_pc9_receipt_versions import rights_leaf
+    f = retained
+    inventory = f.envelope['selections'][0]['inventory_row']
+    source = deepcopy(f.vr['source'])  # Original BAG, not a relabelled derived raster.
+    leaf = rights_leaf(source, inventory)
+    if case == 'wrong_id':
+        leaf['source_id'] = 'OTHER_SYNTHETIC_SOURCE'
+    elif case == 'missing_title':
+        del leaf['product_title']
+    elif case == 'extra':
+        leaf['unknown'] = 'not producer metadata'
+    elif case == 'nested_extra':
+        leaf['unknown'] = dict(path='../DO-NOT-OPEN.json', sha256='0'*64, bytes=1)
+    rights_ref = f.put('native-rights-leaf.json', leaf)
+    rights = dict(private_use=True, evidence=[dict(path=rights_ref['path'], sha256=rights_ref['sha256'],
+        bytes=rights_ref['bytes'], contract='coastal-rights-evidence-v1')])
+    plan = deepcopy(f.plan)
+    plan['selections'][0].update(source=source, rights=rights)
+    plan['selections'][0].pop('review', None)
+    plan_ref = f.put('rights-plan.json', plan)
+    job = refs.loads((f.root / 'native.json').read_bytes())
+    job.update(source=source, rights=rights)
+    job.pop('review', None)
+    job_ref = f.put('rights-native-job.json', job)
+    envelope = deepcopy(f.envelope)
+    envelope.update(plan=plan_ref)
+    envelope['selections'][0]['native_documents'] = [job_ref]
+    envelope_ref = f.put('rights-envelope.json', envelope)
+    if case == 'missing_leaf':
+        (f.root / rights_ref['path']).unlink()  # Owned synthetic evidence only.
+    if case != 'valid':
+        with pytest.raises((ValueError, OSError)):
+            validator.GraphValidator(f.resolver, raw_provenance=[envelope_ref])
+        return
+    graph = validator.GraphValidator(f.resolver, raw_provenance=[envelope_ref])
+    graph.reference(job_ref, contract='coastal-native-job-v1')
+    assert refs.canonical(rights_ref) in {key[0] for key in graph.verified}
+    with pytest.raises(ValueError, match='held:'):
+        validator.GraphValidator(f.resolver).reference(job_ref, contract='coastal-native-job-v1')

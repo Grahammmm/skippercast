@@ -27,3 +27,20 @@ def test_native_wrapper_schema_roundtrip_and_unknown_ref_refusal(name):
     del value['author_model']
     with pytest.raises(ValueError, match='schema'):
         validator.validate_schema(value)
+
+
+def test_checkout_cli_confines_target_and_pins_child_import(tmp_path):
+    import subprocess
+    import sys
+    from tests.coast_contract_factory import ROOT, SCRIPTS
+    runner = ROOT / 'tests/coast_checkout_cli.py'
+    good = subprocess.run([sys.executable, str(runner), str(SCRIPTS / 'validate_coast_receipt.py'),
+        '--hash-dir', str(tmp_path)], capture_output=True, text=True)
+    assert good.returncode == 0, good.stderr
+    assert refs.loads(good.stdout) == []  # runner checked child package origin first
+    foreign = tmp_path / 'foreign-checkout.py'
+    foreign.write_text("raise AssertionError('foreign checkout executed')\n")
+    bad = subprocess.run([sys.executable, str(runner), str(foreign)], capture_output=True, text=True)
+    assert bad.returncode != 0
+    assert 'inside this checkout' in bad.stderr
+    assert 'foreign checkout executed' not in bad.stderr

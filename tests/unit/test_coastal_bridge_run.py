@@ -67,16 +67,18 @@ def world(tmp_path, monkeypatch, request):
     for i in range(2):
         source = fx.cache_file(root, f"cache/s{i}.tif", data=b"II*\x00synthetic-source-"+str(i).encode())
         extra = {}
-        if getattr(request, "param", None) == "real-stages":
+        if getattr(request, "param", None) in ("real-stages", "real-stages-shared"):
             import numpy as np
             import rasterio
             from rasterio.transform import from_origin
             from skippercast.coastal import vertical
             from skippercast.coastal.handoff import mapping_input
             path = root/source["path"]
+            # Shared-admission mode needs distinct source bytes per window (grid identity).
+            offset = 16 * i if request.param == "real-stages-shared" else 0
             with rasterio.open(path, "w", driver="GTiff", width=4, height=4, count=1, dtype="float32",
                                crs="EPSG:3310", transform=from_origin(record["bbox"][0]+1000, record["bbox"][3]-1000, 250, 250)) as ds:
-                ds.write(-np.arange(1, 17, dtype="float32").reshape(4, 4), 1)
+                ds.write(-np.arange(1 + offset, 17 + offset, dtype="float32").reshape(4, 4), 1)
                 ds.set_band_unit(1, "m")
                 ds.update_tags(vertical_sign="positive_up", vertical_datum="MLLW", scale_offset_applied="false")
             source = ref(root, path, "native-raster-v1")

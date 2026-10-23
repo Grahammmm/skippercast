@@ -37,6 +37,9 @@ def native_graph(tmp_path, monkeypatch):
     root = tmp_path / 'queue'
     root.mkdir()
     record = dict(segment(0, 0, region='synthetic'), synthetic=True)
+    from pyproj import Transformer
+    record['bbox_crs84'] = list(Transformer.from_crs('EPSG:3310', 'OGC:CRS84', always_xy=True).transform_bounds(
+        *record['bbox'], densify_pts=41))
     source_path = root / 'native.tif'
     with rasterio.open(source_path, 'w', driver='GTiff', width=4, height=4,
                        count=1, dtype='float32', crs='EPSG:3310',
@@ -106,6 +109,14 @@ def test_complete_native_execution_graph(native_graph):
     for suffix in ('job.json', 'observation.json', 'mapping-input.json', 'run.json', 'cells.json', 'terrain.tif', 'support.tif', 'native-support.tif', 'result.json', 'stdout.log', 'stderr.log'):
         assert any(p.endswith('/' + suffix) for p in visited), suffix
     assert all(p.read_bytes() == raw for p, raw in original.items())
+
+
+def test_workflow_rights_standin_cannot_back_real_source(native_graph):
+    root, _, resolver = native_graph
+    doc = refs.loads((root / 'native.json').read_bytes())
+    doc['synthetic'] = False
+    with pytest.raises(ValueError, match='synthetic rights evidence outside'):
+        validator.GraphValidator(resolver).document(doc, root_id='queue:synthetic')
 
 
 @pytest.mark.parametrize('mutation', ['missing_input', 'changed_input', 'wrong_contract', 'extra_path', 'cross_root', 'result_identity', 'historical'])

@@ -8,7 +8,7 @@ import sys
 
 import pytest
 
-from tests.coast_contract_factory import ROOT, SHARED, SCRIPTS, load_helper, materialize, schemas
+from tests.coast_contract_factory import ROOT, SHARED, SCRIPTS, load_helper, materialize, schema_file, schemas
 
 refs = load_helper('coast_refs')
 sampling = load_helper('coast_sample')
@@ -41,7 +41,7 @@ def test_schema_roundtrip_and_ref_graph(name, graph):
     assert validator.validate(reopened, resolver, root_id='queue:synthetic') == value
     with pytest.raises(ValueError, match='schema'):
         validator.validate(dict(value, self_sha256=refs.sha256(raw)), resolver, root_id='queue:synthetic')
-    committed = refs.loads((SHARED/'schemas'/f'coast-{name}-v1.schema.json').read_bytes())
+    committed = refs.loads((SHARED/'schemas'/schema_file(name)).read_bytes())
     assert committed == schemas()[name]
 
 
@@ -210,12 +210,12 @@ def test_cli_roundtrip_and_hash_dir(graph,tmp_path):
     _, bindings, _=graph
     roots=tmp_path/'roots.json'
     roots.write_bytes(refs.canonical(bindings))
-    command=[sys.executable,str(SCRIPTS/'validate_coast_receipt.py'),str(Path(bindings['queue:synthetic'])/'valid/review-verdict.json'),
+    command=[sys.executable,str(ROOT/'tests/coast_checkout_cli.py'),str(SCRIPTS/'validate_coast_receipt.py'),str(Path(bindings['queue:synthetic'])/'valid/review-verdict.json'),
         '--roots',str(roots),'--root-id','queue:synthetic','--allowed-root-id','queue:synthetic','--allowed-root-id','archive:synthetic:close01','--allowed-root-id','raw:campaign']
     result=subprocess.run(command,capture_output=True,text=True)
     assert result.returncode == 0,result.stderr
     assert json.loads(result.stdout)['scientific_acceptance'] is False
-    result=subprocess.run([sys.executable,str(SCRIPTS/'validate_coast_receipt.py'),'--hash-dir',bindings['queue:synthetic']],capture_output=True,text=True)
+    result=subprocess.run([sys.executable,str(ROOT/'tests/coast_checkout_cli.py'),str(SCRIPTS/'validate_coast_receipt.py'),'--hash-dir',bindings['queue:synthetic']],capture_output=True,text=True)
     assert result.returncode == 0,result.stderr
     assert len(json.loads(result.stdout)) > 26
     (Path(bindings['queue:synthetic'])/'bad-link').symlink_to('/etc/passwd')
