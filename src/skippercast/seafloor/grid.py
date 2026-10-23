@@ -51,9 +51,12 @@ def assign_reaches(spine, reaches, x, y):
 
     Centers whose closest point is a terminal endpoint are outside this scope.
     """
-    distance = shapely.line_locate_point(spine, shapely.points(x, y))
+    x, y = np.asarray(x, dtype='float64'), np.asarray(y, dtype='float64')
+    finite = np.isfinite(x) & np.isfinite(y)
+    distance = np.full(x.shape, np.nan)
+    distance[finite] = shapely.line_locate_point(spine, shapely.points(x[finite], y[finite]))
     index = np.searchsorted([r['end_m'] for r in reaches], distance, side='right')
-    return np.where((distance > 0) & (distance < spine.length), index, -1)
+    return np.where(finite & (distance > 0) & (distance < spine.length), index, -1)
 
 
 def classify_reference(elevation):
