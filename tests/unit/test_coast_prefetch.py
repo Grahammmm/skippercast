@@ -177,6 +177,64 @@ def test_full_entity_fallback(tmp_path, monkeypatch, ignore_range, validator):
     assert len(server.calls) == 2
 
 
+class Replaced(Server):
+    """Serves `old` for the HEAD and first GET, then the publisher swaps in `new`."""
+
+    def __init__(self, old, new):
+        super().__init__()
+        self.old, self.new = old, new
+
+    def factory(self, host, port, addresses, **kwargs):
+        server = self
+
+        class Connection:
+            def request(self, method, target, headers):
+                self.method, self.headers = method, headers
+                server.calls.append((host, method, target, headers))
+
+            def getresponse(self):
+                body, extra = server.old if len(server.calls) <= 2 else server.new
+                headers = {'Content-Length': str(len(body)), **extra}
+                if self.method == 'HEAD':
+                    return Reply(headers=headers)
+                begin, end = map(int, self.headers['Range'].removeprefix('bytes=').split('-'))
+                part = body[begin:end + 1]
+                return Reply(206, part, {**headers, 'Content-Length': str(len(part)),
+                                         'Content-Range': f'bytes {begin}-{end}/{len(body)}'})
+
+            def close(self):
+                pass
+        return Connection()
+
+
+@pytest.mark.parametrize('old,new', [
+    ({'ETag': 'W/"v1"', 'Last-Modified': 'Wed, 21 Oct 2026 07:28:00 GMT'},
+     {'ETag': 'W/"v2"', 'Last-Modified': 'Wed, 21 Oct 2026 07:28:00 GMT'}),
+    ({'Last-Modified': 'Wed, 21 Oct 2026 07:28:00 GMT'}, {'Last-Modified': 'Wed, 21 Oct 2026 07:28:00 GMT'}),
+    ({}, {}),
+])
+def test_ranges_never_stitched_without_strong_etag(tmp_path, monkeypatch, old, new):
+    # A weak ETag or Last-Modified (1 s resolution) is not byte identity: one full GET, never two versions.
+    monkeypatch.setattr(p, 'RANGE_BYTES', 4)
+    server = Replaced((b'AAAAAAAAAA', old), (b'BBBBBBBBBB', new))
+    run = runner(tmp_path, server, plan(row(sha256=None)))
+    assert run.run() == 0
+    assert [c[3].get('Range') for c in server.calls] == [None, 'bytes=0-9']
+    assert all('If-Range' not in c[3] for c in server.calls)
+    assert Path(receipt(run)['path']).read_bytes() == b'AAAAAAAAAA'
+
+
+@pytest.mark.parametrize('new', [{'ETag': '"v2"'}, {'ETag': '"v1"', 'Last-Modified': 'Thu, 22 Oct 2026 00:00:00 GMT'},
+                                 {'ETag': 'W/"v1"'}])
+def test_any_etag_or_last_modified_change_mid_transfer_holds(tmp_path, monkeypatch, new):
+    monkeypatch.setattr(p, 'RANGE_BYTES', 4)
+    old = {'ETag': '"v1"', 'Last-Modified': 'Wed, 21 Oct 2026 07:28:00 GMT'}
+    server = Replaced((b'AAAAAAAAAA', old), (b'BBBBBBBBBB', new))
+    run = runner(tmp_path, server, plan(row(sha256=None)))
+    assert run.run() == 2
+    assert not (run.root / 'noaa-nos' / p.filename(row())).exists()
+
+
 @pytest.mark.parametrize('status,delay', [(429, 900), (500, 86400), (503, 86400), (502, 900), (599, 900)])
 def test_http_failures_park_entire_host_across_restarts(tmp_path, status, delay):
     server = Server(status=status)
