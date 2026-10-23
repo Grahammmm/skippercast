@@ -28,6 +28,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import base64
 import hashlib
+import http.client
 import json
 import math
 import os
@@ -776,7 +777,8 @@ class Client:
             t0 = time.monotonic()
             try:
                 reply = _post(self.endpoint + "/chat/completions", body, self.timeout)
-            except (urllib.error.URLError, OSError, TimeoutError, ValueError) as error:
+            except (urllib.error.URLError, http.client.HTTPException, OSError, TimeoutError, ValueError) as error:
+                # HTTPException covers IncompleteRead: a truncated body is a failed attempt, never a reply.
                 last = f"{error.__class__.__name__}: {str(error)[:160]}"
                 continue
             latency = round(time.monotonic() - t0, 3)
@@ -1208,6 +1210,15 @@ class Round:
 
     def __init__(self, roots, context_path):
         self.common = c = _shared_review()
+        # Launcher-supplied actual runtime, not the requested endpoint alias;
+        # checked before any write or model call so no mode runs unattributed.
+        self.provenance = {}
+        for field in ("author_profile", "author_model", "card_id", "code_commit", "skill_commit"):
+            supplied = os.environ.get("COAST_" + field.upper())
+            if not supplied:
+                raise Refused("actual screener provenance required: COAST_" + field.upper())
+            self.provenance[field] = supplied
+        self._derived = None
         bindings = _metadata(roots)  # operator-selected bindings, not a receipt
         self.resolver = c.Resolver(bindings, allowed_root_ids=bindings)
         self.context_ref = c.pin(self.resolver, context_path)
@@ -1234,6 +1245,12 @@ class Round:
     def doc(self, ref):
         return self.common.document(self.resolver, ref)
 
+    def derived(self):
+        """Stats re-derived from the pinned inputs; a supplied stats file is a claim, not proof."""
+        if self._derived is None:
+            self._derived = _derive_stats(self)
+        return self._derived
+
     def read(self, path):
         ref = self.common.pin(self.resolver, path)
         return self.doc(ref), ref
@@ -1250,12 +1267,7 @@ class Round:
 
     def base(self, kind):
         value = self.common.review_base(kind, self.context, self.context_ref, None)
-        # Launcher-supplied actual runtime, not the requested endpoint alias.
-        for field in ("author_profile", "author_model", "card_id", "code_commit", "skill_commit"):
-            supplied = os.environ.get("COAST_" + field.upper())
-            if not supplied:
-                raise Refused("actual screener provenance required: COAST_" + field.upper())
-            value[field] = supplied
+        value.update(self.provenance)
         value["created_utc"] = utc()
         return value
 
@@ -1288,7 +1300,19 @@ def _canonical_stats(round_, args):
         _no_symlinks(thumb_path)
         if thumb_path.exists():
             raise FileExistsError("partial attempt thumbnail exists; prepare a new attempt")
-    rows, arrays = [], {}
+    # Every check runs on the complete in-memory result before the first write.
+    doc, thumbnails = r.derived()
+    _validate_intermediate(doc, "stats")
+    for path, (expected, png) in thumbnails.items():
+        if _round_write(r.resolver, path, png) != expected:
+            raise Refused("thumbnail write differs from its derivation")
+    return doc
+
+
+def _derive_stats(round_):
+    """Pure: no writes. Returns the stats document and the thumbnails it references."""
+    r = round_
+    rows, arrays, thumbnails = [], {}, {}
     for window in r.windows:
         key = window["window_key"]
         cell, native = r.cells[key], r.native[key]
@@ -1320,6 +1344,10 @@ def _canonical_stats(round_, args):
             from coast_receipt_versions import typed
             if producer is None:
                 raise Refused("mapped window has no bound cells producer")
+            if depth_range is not None:
+                if not isinstance(depth_range, list) or len(depth_range) != 2 or not all(type(v) in (int, float) for v in depth_range):
+                    raise Refused("invalid stated catalog depth range")
+                depth_range = sorted(depth_range)
             products = native["stages"]["map"]["products"]
             terrain, support = typed(products["terrain"]), typed(products["mask"])
             inputs += [terrain, support]
@@ -1328,18 +1356,18 @@ def _canonical_stats(round_, args):
             depth, terrain_valid, mask, res = read_window(r.resolver.read(terrain), r.resolver.read(support))
             res = _resolution(r.resolver.read(producer) if producer else None, res)
             derived, valid = derive(depth, terrain_valid, mask, res)
+            png = hillshade_png(depth, valid, res)
+            thumb_path = r.directory / "windows" / window["window_dir"] / "hillshade.png"
+            root_id, relative = r.common.location(r.resolver, thumb_path)
+            thumbnail = dict(root_id=root_id, path=relative, sha256=sha256(png), bytes=len(png))
+            # Commit window evidence only after every input check above passed.
             arrays[key] = dict(window_key=key, depth=depth, valid=valid, origin=window["pixel_window"][:2])
+            thumbnails[thumb_path] = (thumbnail, png)
+            entry["thumbnail"] = thumbnail
             for name in REQUIRED_MEASUREMENTS:
                 value = derived[name]
                 entry["measurements"][name] = (_measurement("measured", value, inputs=inputs) if value is not None else
                     _measurement("unavailable", reason=derived["unavailable_reason"] or "derivation unavailable", inputs=inputs))
-            png = hillshade_png(depth, valid, res)
-            entry["thumbnail"] = _round_write(r.resolver, args.thumbnail_dir / window["window_dir"] / "hillshade.png", png)
-
-            if depth_range is not None:
-                if not isinstance(depth_range, list) or len(depth_range) != 2 or not all(type(v) in (int, float) for v in depth_range):
-                    raise Refused("invalid stated catalog depth range")
-                depth_range = sorted(depth_range)
             rec = dict(producer=dict(native_valid_count=cell["native_valid_count"]), expected_depth_range_m=depth_range)
             det = dict(derived=derived, flags=[], depth_range_plausible=None)
             _deterministic_rules(det, rec, r.thresholds)
@@ -1349,8 +1377,6 @@ def _canonical_stats(round_, args):
                 _measurement("not_applicable", reason="catalog_range_absent") if depth_range is None else
                 _measurement("unavailable", reason="catalog_range_not_evaluated", inputs=inputs) if det["depth_range_plausible"] is None else
                 _measurement("measured", int(det["depth_range_plausible"]), inputs=[*inputs, r.admission["catalog"]]))
-        except FileExistsError:
-            raise  # partial attempt evidence must never be reused
         except (ValueError, OSError, KeyError, TypeError) as error:
             for name in REQUIRED_MEASUREMENTS:
                 entry["measurements"][name] = _measurement("unavailable", reason=str(error), inputs=inputs)
@@ -1386,7 +1412,7 @@ def _canonical_stats(round_, args):
                 entry["flags"].append(_flag(key, "NEIGHBOUR_STEP", "shared-edge median exceeds pinned threshold", inputs))
         entry["measurements"]["neighbour_delta"] = measurement
     return dict(schema=CANONICAL_VERSION, mode="stats", context=r.context_ref, run=r.context["run"],
-                thresholds=r.context["thresholds"], windows=rows)
+                thresholds=r.context["thresholds"], windows=rows), thumbnails
 
 
 def _validate_intermediate(doc, mode):
@@ -1442,6 +1468,9 @@ def _bind_stats_window(position, row, window, cell, round_):
                 return [key]
             if any(m["status"] == "measured" and producer not in m["inputs"] for m in entry["measurements"].values()):
                 return [key]
+        derived = round_.derived()[0]["windows"]
+        if position >= len(derived) or entry != derived[position]["entry"]:
+            return [key]  # measurements, flags or thumbnail differ from what the pinned inputs give
         thumb = entry["thumbnail"]
         if thumb is not None:
             expected = (round_.directory / "windows" / window["window_dir"] / "hillshade.png").relative_to(

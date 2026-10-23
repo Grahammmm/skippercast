@@ -5,6 +5,7 @@ GeoTIFF derivation. No endpoint or Store is opened; U5 owns driver integration.
 Inherited factory/algorithms retain their baseline authorship; new tests are Astra.
 """
 import copy
+import http.client
 import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
@@ -23,6 +24,7 @@ _spec = importlib.util.spec_from_file_location('canonical_screen_under_test', RO
 ls = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(ls)
 common = ls._shared_review()
+_real_post = ls._post  # captured before the autouse fake replaces it
 
 
 class World:
@@ -354,3 +356,125 @@ def test_mapped_without_bound_cells_is_unavailable_not_pass(tmp_path):
     assert row['measurements']['catalog_range']['reason'] == 'catalog_range_absent'
     assert 'DERIVED_UNAVAILABLE' in {f['code'] for f in row['flags']}
     validator.validate(doc, w.resolver, root_id='queue:synthetic')
+
+
+# ------------------------------------------------- review fixes (claude/b2-fixes-848)
+
+class _TruncatedReply:
+    """Fake HTTP response whose body ends early; no socket is opened."""
+
+    def __init__(self, opened):
+        self.opened = opened
+
+    def open(self, request, timeout):
+        self.opened.append(timeout)
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def read(self):
+        raise http.client.IncompleteRead(b'{"choices": [{"mess', 512)
+
+
+def test_truncated_reply_is_typed_unavailable_not_crash(tmp_path, monkeypatch):
+    opened = []
+    monkeypatch.setattr(ls, '_post', _real_post)
+    monkeypatch.setattr(ls, '_opener', lambda: _TruncatedReply(opened))
+    w = World(tmp_path, ('map_done', 'map_done')).stages()
+    assert opened == [60, 60, 60, 60]  # existing bound: two attempts per mode, then down
+    assert w.call('assemble') == 0
+    rows = w.read('flagged-windows.json')['windows']
+    for row in rows:
+        assert row['status'] == 'flag'
+        assert row['text_verdict'] == row['vision_verdict'] == 'unavailable'
+        assert {f['code'] for f in row['flags']} == {'ENDPOINT_UNAVAILABLE'}
+        for mode in ('text', 'vision'):
+            assert w.round.doc(row[mode + '_response'])['raw']['error'] == 'ENDPOINT_UNAVAILABLE'
+    for mode in ('text', 'vision'):  # the first window records why; later ones short-circuit
+        assert 'IncompleteRead' in w.round.doc(rows[0][mode + '_response'])['raw']['detail']
+
+
+def test_truncated_reply_legacy_client_bounded(monkeypatch):
+    opened = []
+    monkeypatch.setattr(ls, '_post', _real_post)
+    monkeypatch.setattr(ls, '_opener', lambda: _TruncatedReply(opened))
+    client = ls.Client('http://127.0.0.1:9/v1', 'synthetic', timeout=5, retries=2, retry_wait=0, max_tokens=8)
+    reply = client.chat('synthetic')
+    assert reply['error'] == 'ENDPOINT_UNAVAILABLE' and 'IncompleteRead' in reply['detail']
+    assert opened == [5, 5, 5]
+    assert client.chat('synthetic') == {'error': 'ENDPOINT_UNAVAILABLE'} and len(opened) == 3
+
+
+def _forged_stats(w):
+    """Claim every required measurement of a window the screener could not measure."""
+    doc = w.read('stats.json')
+    entry = doc['windows'][0]['entry']
+    producer = doc['windows'][0]['producer']
+    for name in ls.REQUIRED_MEASUREMENTS:
+        entry['measurements'][name] = ls._measurement('measured', 1.0, inputs=[producer])
+    entry['flags'] = []
+    ls._validate_intermediate(doc, 'stats')
+    return w.queue / w.put('mutants/forged-stats.json', doc)['path']
+
+
+@pytest.mark.parametrize('mode', ['text', 'vision'])
+def test_forged_stats_never_reach_model_or_output(tmp_path, monkeypatch, capsys, mode):
+    w = World(tmp_path, no_resolution=True)
+    assert w.call('stats') == 0
+    forged = _forged_stats(w)
+    monkeypatch.setattr(ls, '_post', lambda *a: pytest.fail('forged stats must not reach the model'))
+    assert w.call(mode, stats=forged) == 2
+    assert 'WINDOW_BINDING' in capsys.readouterr().err
+    assert not (w.directory / (mode + '.json')).exists()
+    assert not list((w.directory / 'windows').rglob(mode + '-response.txt'))
+
+
+def test_forged_stats_cannot_assemble_a_pass(tmp_path, monkeypatch):
+    # Even with every downstream stage generated from the forgery, the
+    # assembler re-derives the measurements instead of trusting the claim.
+    w = World(tmp_path, no_resolution=True)
+    assert w.call('stats') == 0
+    forged = _forged_stats(w)
+    real_bind = ls._bind_stats_window
+    with monkeypatch.context() as control:
+        control.setattr(ls, '_bind_stats_window', lambda *args: [])
+        for kind in ('text', 'vision'):
+            assert w.call(kind, stats=forged) == 0
+    assert ls._bind_stats_window is real_bind
+    assert w.call('assemble', stats=forged) == 2
+    assert not (w.directory / 'flagged-windows.json').exists()
+
+
+def test_provenance_gates_before_any_side_effect(tmp_path, monkeypatch):
+    w = World(tmp_path)
+    monkeypatch.delenv('COAST_AUTHOR_MODEL')
+    assert w.call('stats') == 2
+    assert not w.directory.exists()
+    monkeypatch.setenv('COAST_AUTHOR_MODEL', 'synthetic-no-inference')
+    assert w.call('stats') == 0
+    monkeypatch.delenv('COAST_AUTHOR_MODEL')
+    monkeypatch.setattr(ls, '_post', lambda *a: pytest.fail('provenance must gate before the model'))
+    for mode in ('text', 'vision'):
+        assert w.call(mode) == 2
+        assert not (w.directory / (mode + '.json')).exists()
+    assert not list((w.directory / 'windows').rglob('*-response.txt'))
+
+
+def test_invalid_catalog_range_gates_before_thumbnail_write(tmp_path):
+    w = World(tmp_path, ('map_done', 'map_done'))
+    source = w.windows[0]['source_id']
+    w.round.catalog = dict(w.round.catalog, candidates=[dict(source_id=source, metadata=dict(depth_range_m='bogus'))])
+    args = SimpleNamespace(out=w.directory / 'stats.json', thumbnail_dir=w.directory / 'windows')
+    doc = ls._canonical_stats(w.round, args)
+    for window, row in zip(w.windows, doc['windows'], strict=True):
+        entry = row['entry']
+        thumb = w.directory / 'windows' / window['window_dir'] / 'hillshade.png'
+        if window['source_id'] != source:
+            continue
+        assert all(entry['measurements'][n]['status'] == 'unavailable' for n in ls.REQUIRED_MEASUREMENTS)
+        assert entry['thumbnail'] is None and not thumb.exists()
+        assert entry['measurements']['neighbour_delta']['status'] != 'measured'
