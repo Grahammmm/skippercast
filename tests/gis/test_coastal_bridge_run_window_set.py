@@ -222,6 +222,15 @@ def mutate(w, case):
         a['grids'][0]['source_id'] = 'other'
     elif case == 'N11':
         a['grids'][0]['total'] = 3
+    elif case == 'N14':
+        grid = a['grids'][0]
+        affine = grid['definition']['affine_transform']
+        affine[2] += 512 * affine[0]            # affine no longer puts the declared anchor at origin
+        grid['grid_sha256'] = digest(grid['definition'])
+        for win in a['windows']:
+            win['grid_sha256'] = grid['grid_sha256']
+            rekey(win)
+        campaign_changed = True
     elif case in ('N9a', 'N9b'):
         grid = a['grids'][0]
         definition = grid['definition']
@@ -274,6 +283,8 @@ MATRIX = [
     ('N9a', 'tiling_version: window-set grid requires reviewed PC-6 support', 'window-set grid/window binding mismatch'),
     ('N9b', 'tiling_version: window-set grid requires reviewed PC-6 support', 'single-selected grid/window binding mismatch'),
     ('N13', 'population', 'admission grid population mismatch'),
+    ('N14', 'grid_geometry: window-set tiling anchor disagrees with the grid affine',
+     'window-set tiling anchor disagrees with the grid affine'),
 ]
 
 

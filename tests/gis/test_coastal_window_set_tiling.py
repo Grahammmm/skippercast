@@ -148,6 +148,39 @@ def context(w):
     return driver._context(w.root, w.p/'admission.json', w.p/'bridge/bridge-receipt.json', w.p/'segment.json')
 
 
+def true_tiles(w, width, height):
+    """Tiles that really intersect the segment, using the raster's real affine (anchor/cell = truth)."""
+    segment = dict(bbox_crs84=w.record['bbox_crs84'])
+    return catalog_bridge._expected_windows(512, width, height, [0, 0], [w.west, w.north], [PIXEL, PIXEL], segment)
+
+
+# --- Finding 1 -------------------------------------------------------------------------------
+
+def test_window_set_tiling_geometry_not_bound_to_affine(tmp_path):
+    """A wrong declared cell (1 degree, not 1e-5) makes the bridge want 1 tile of 4; it is refused."""
+    w = world(tmp_path, raster_shape=(1024, 1024), nw_offset_m=(2000, 3000), windows=None,
+              tiling_override=dict(cell=[1.0, 1.0]))
+    assert w.windows == [[0, 0, 512, 512]]                      # bridge's "complete" tiling
+    assert len(true_tiles(w, 1024, 1024)) == 4                  # what really intersects the segment
+    with pytest.raises(ValueError, match='grid_geometry: window-set tiling cell disagrees'):
+        context(w)
+
+
+def test_window_set_tiling_anchor_must_match_affine(tmp_path):
+    shifted = lambda tiling: dict(anchor=[tiling['anchor'][0] + 512*PIXEL, tiling['anchor'][1]])  # noqa: E731
+    w = world(tmp_path/'probe', raster_shape=(1024, 1024), nw_offset_m=(2000, 3000), windows=None)
+    w = world(tmp_path/'shifted', raster_shape=(1024, 1024), nw_offset_m=(2000, 3000), windows=None,
+              tiling_override=shifted(w.tiling))
+    with pytest.raises(ValueError, match='grid_geometry: window-set tiling anchor disagrees'):
+        context(w)
+
+
+def test_interior_window_set_with_matching_geometry_admitted(tmp_path):
+    w = world(tmp_path, raster_shape=(1024, 1024), nw_offset_m=(2000, 3000), windows=None)
+    assert len(w.windows) == 4
+    assert len(context(w)[0]['windows']) == 4
+
+
 def test_run_executes_windows_in_admission_index_order(tmp_path, monkeypatch, synthetic_dispatch):
     """A bounded run advances windows in admission order (0, 1, 2, ...), never window_key order
     (0, 1, 10, 11, 2, ...): with 9 ticks (acquire, qualify, map) windows 0-2 finish and 10 is untouched."""

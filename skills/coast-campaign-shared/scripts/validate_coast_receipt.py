@@ -731,6 +731,9 @@ class GraphValidator:
                         or grid['cols'] != len({w[0] for w in native_windows})
                         or grid['rows'] != len({w[1] for w in native_windows})):
                     raise ValueError('window-set grid/window binding mismatch')
+                problem = bridge.tiling_affine_problem(tiling, definition)
+                if problem:
+                    raise ValueError(problem)
             elif (definition['tiling_version'] != 'single-selected-v1' or window['idx'] != 0
                     or definition['pixel_window'] != selection['window'] or window['pixel_window'] != selection['window']
                     or (grid['cols'], grid['rows'], grid['total']) != (1, 1, 1)):

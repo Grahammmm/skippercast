@@ -281,6 +281,8 @@ def _bind_window(position, job, window, item, grids, record, campaign, keys):
             or any(not isinstance(v, (int, float)) or not math.isfinite(v) for v in (a, b, c, d, e, f))
             or col+width > definition["width"] or row+height > definition["height"]):
         refuse("owner", "invalid source grid/window bounds")
+    if is_set and (problem := catalog_bridge.tiling_affine_problem(selection["tiling"], definition)):
+        refuse("grid_geometry", problem)
     x, y = col + width/2, row + height/2
     transform = Transformer.from_crs(definition["raster_crs"], "EPSG:3310", always_xy=True)
     cx, cy = transform.transform(a*x+b*y+c, d*x+e*y+f)
