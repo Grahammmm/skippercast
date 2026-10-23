@@ -189,7 +189,9 @@ Fixed production locations (no CLI reserve or host-policy override):
   `/mnt/agentorange-backup/skippercast-campaign/raw/<source>/<url-hash>-<file>`
 - Primary source manifests: `raw/<source>/manifest.jsonl` on the same disk.
 - Byte-identical manifest mirrors:
-  `~/skippercast-data/campaign-raw-manifest/<source>.jsonl`.
+  `~/skippercast-data/campaign-raw-manifest/<source>.jsonl`. A mirror holding
+  receipts the primary lacks (primary lost or truncated) stops the run; both are
+  preserved for the operator instead of the mirror being overwritten.
 - Host retry state: `~/skippercast-data/campaign-raw-manifest/retry-state.json`.
   Its adjacent `.lock` file synchronizes all prefetch modes on the local filesystem.
 - Dashboard: `~/agent-work/reports/coast-pilot/prefetch-status.json`.

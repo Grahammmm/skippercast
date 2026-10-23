@@ -601,3 +601,21 @@ def test_request_and_parking_are_one_cross_instance_transaction(tmp_path, monkey
         two.result(timeout=5)
     assert calls == [URL]
     assert p.read_json(a.retry_state)['data.ngdc.noaa.gov']['retry_at'] == 87400
+
+
+@pytest.mark.parametrize('primary', ['missing', 'truncated'])
+def test_lost_primary_manifest_never_erases_mirror_receipts(tmp_path, primary):
+    server = Server()
+    run = runner(tmp_path, server)
+    assert run.run() == 0
+    mirror = (run.mirror / 'noaa-nos.jsonl').read_text()
+    manifest = run.root / 'noaa-nos/manifest.jsonl'
+    if primary == 'missing':
+        manifest.unlink()
+    else:
+        manifest.write_text('')
+    server.calls.clear()
+    with pytest.raises(p.Hold, match='primary lacks'):
+        runner(tmp_path, server).run()
+    assert not server.calls
+    assert (run.mirror / 'noaa-nos.jsonl').read_text() == mirror

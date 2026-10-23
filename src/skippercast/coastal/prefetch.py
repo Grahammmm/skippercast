@@ -199,6 +199,19 @@ class GuardedSink:
         return result
 
 
+def mirror_urls(path):
+    """URLs receipted in a mirror manifest; unparseable lines are stale and carry none."""
+    urls = []
+    for line in path.read_text().splitlines():
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(row, dict) and isinstance(row.get('url'), str):
+            urls.append(row['url'])
+    return urls
+
+
 class Prefetch:
     def __init__(self, plan: dict, session: Session, *, root=RAW, mirror=MIRROR,
                  status=STATUS, mount=MOUNT, clock=time.time, disk_usage=shutil.disk_usage,
@@ -364,6 +377,10 @@ class Prefetch:
             for line in path.read_text().splitlines():
                 row = json.loads(line)
                 records[row['url']] = row
+        mirror = self.mirror / (source + '.jsonl')
+        if mirror.exists() and set(mirror_urls(mirror)) - set(records):
+            # A lost or truncated primary must never erase the only other copy of receipts.
+            raise Hold(f'Mirror manifest has receipts the primary lacks; preserve both: {mirror}')
         self.records[source] = records
         self.flush_manifest(source)  # repair a stale/missing second copy after a crash
 
