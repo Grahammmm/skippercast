@@ -64,7 +64,8 @@ hash (H2). Handoff line: `tier1 <plan-id>: N windows, M flag, K held, H hash mis
    `missing_from_run_summary`, extra and duplicate keys are kept and marked; the population is never
    reduced), pipeline hold (`HOLD` whenever the window state is held, any stage is held or any stage
    carries a hold reason: held windows -> tier1 `held`, not screened; a mapped window with a hold ->
-   `HOLD` + `STATE_INCONSISTENT` -> tier1 `flag`),
+   `HOLD` + `STATE_INCONSISTENT` -> tier1 `flag`; a mapped window whose acquire, qualify or map stage is
+   not `done` -> `STATE_INCONSISTENT`),
    other unmapped states (`NOT_MAPPED`), producer fields copied verbatim, derived statistics from the
    verified terrain + support bytes (valid/nodata/edge-valid fractions, depth median/p99, slope p99 using
    cells.json `native_resolution_m`), `COUNT_MISMATCH` (producer vs raster valid cells),

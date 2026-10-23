@@ -600,7 +600,9 @@ def cmd_stats(args):
             det["flags"].append("HOLD")
         if rec["state"] not in ("held", "map_done"):
             det["flags"].append("NOT_MAPPED")
-        if (rec["state"] == "map_done" and (rec["holds"] or held_stage)) or (rec["state"] == "held" and not rec["holds"]):
+        unfinished_stage = any(v != "done" for v in (rec["stage_states"] or {}).values())
+        if ((rec["state"] == "map_done" and (rec["holds"] or held_stage or unfinished_stage))
+                or (rec["state"] == "held" and not rec["holds"])):
             det["flags"].append("STATE_INCONSISTENT")
         thumb = None
         if rec["state"] == "map_done":

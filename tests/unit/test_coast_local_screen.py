@@ -680,3 +680,15 @@ def test_screens_a_real_pc9_run_summary(world, monkeypatch, model):
     # two different sources share no grid: no adjacency across sources
     assert all(x["deterministic"]["neighbours"] == [] for x in doc["windows"])
     assert doc["run_summary"]["path"] == "plans/pilot01/runs/run-00.json"
+
+
+@pytest.mark.gis
+@pytest.mark.parametrize("stage,state", [("map", "failed"), ("qualify", "failed"), ("acquire", "missing")])
+def test_mapped_window_with_an_unfinished_stage_is_never_a_pass(tmp_path, model, stage, state):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, GRID4[:2])
+    _edit_summary(plan, lambda s: s["windows"][0]["stages"][stage].update(state=state))
+    _, doc = screen(plan)
+    w = doc["windows"][0]
+    assert "STATE_INCONSISTENT" in w["deterministic"]["flags"] and w["tier1"] == "flag"
+    assert doc["windows"][1]["tier1"] == "pass"            # control
