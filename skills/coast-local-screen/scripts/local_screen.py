@@ -243,6 +243,8 @@ def normalize(plan):
     if admission is None and not pc9 and (plan.dir / "admission.json").is_file():
         raw = read_bytes(root, (plan.dir / "admission.json").relative_to(root).as_posix())
         admission = load_json(raw)
+    if pc9 and admission is not None and not isinstance(admission.get("catalog"), dict):
+        integrity.append("admission has no catalog ref")    # DEPTH_RANGE_OUT would silently never fire
     if admission and isinstance(admission.get("catalog"), dict):
         raw, problem = check_ref(root, admission["catalog"], MAX_JSON_BYTES)
         checked.append({"name": "catalog", "path": admission["catalog"].get("path"), "ok": problem is None})

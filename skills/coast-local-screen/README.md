@@ -59,7 +59,7 @@ hash (H2). Handoff line: `tier1 <plan-id>: N windows, M flag, K held, H hash mis
 
 1. Deterministic (no model can overrule): every ref re-hashes (`HASH_MISMATCH`; a plan-level receipt
    mismatch flags every window), plan integrity (`PLAN_INTEGRITY` on every window when a required PC-9
-   ref - admission, bridge, enqueue - is absent, or when the run summary's windows differ from the
+   ref - admission, bridge, enqueue - is absent, when the admission has no catalog ref, or when the run summary's windows differ from the
    admitted population: an admitted window missing from the summary is kept as a non-pass record in state
    `missing_from_run_summary`, extra and duplicate keys are kept and marked; the population is never
    reduced), pipeline hold (`HOLD` whenever the window state is held, any stage is held or any stage

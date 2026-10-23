@@ -701,3 +701,17 @@ def test_empty_population_is_never_a_clean_screen(tmp_path, model):
     code, doc = screen(plan)
     assert code == 0
     assert doc["summary"]["windows"] == 0 and "EMPTY_POPULATION" in doc["summary"]["flags"]
+
+
+@pytest.mark.gis
+def test_admission_without_catalog_ref_flags_the_plan(tmp_path, model):
+    pytest.importorskip("rasterio")
+    root, plan = build_plan(tmp_path, GRID4[:1], depth_range=[0.0, 5.0])
+    admission = json.loads((plan / "admission.json").read_text())
+    del admission["catalog"]
+    _write(plan / "admission.json", ls.canonical(admission))
+    _edit_summary(plan, lambda s: s.update(admission=_ref(root, plan / "admission.json")))
+    _, doc = screen(plan)
+    assert "PLAN_INTEGRITY" in doc["summary"]["flags"]
+    assert "admission has no catalog ref" in doc["summary"]["plan_integrity_problems"]
+    assert doc["windows"][0]["tier1"] == "flag"
