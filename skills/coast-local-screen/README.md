@@ -74,7 +74,9 @@ hash (H2). Handoff line: `tier1 <plan-id>: N windows, M flag, K held, H hash mis
    `catalog_range_unavailable`), `NEIGHBOUR_STEP` (|median shared-edge step| > 2 m against an adjacent
    mapped window of the same grid; adjacency from `pixel_window` edges, never across sources or rows).
    A null statistic never passes: `DERIVED_UNAVAILABLE`. Thresholds: built-in design 5.4 defaults, or
-   `--thresholds skills/coast-campaign-shared/config/tier2-thresholds.json` once B1a lands.
+   `--thresholds skills/coast-campaign-shared/config/tier2-thresholds.json` once B1a lands. A thresholds
+   file is refused when a tier-1 value is not a finite number or a `tier1_*` key is unknown (tier-2 keys
+   in the shared file are ignored).
 2. Text model on each mapped window's stats line (`prompts/text.md`).
 3. Vision model on each mapped window's hillshade (`prompts/vision.md`): azimuth 315, altitude 45,
    true cell size, linear depth stretch over the window's own range, nodata transparent, deterministic bytes.

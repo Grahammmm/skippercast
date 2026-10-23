@@ -556,10 +556,20 @@ def load_thresholds(path):
         return dict(DEFAULT_THRESHOLDS), {"source": "builtin-defaults (design 5.4)"}
     raw = Path(path).read_bytes()
     doc = load_json(raw)
+    if not isinstance(doc, dict):
+        raise Refused(f"{path}: thresholds must be a JSON object")
+    # The shared tier2 file also carries tier-2 keys; only a misspelt tier1_* key is unknown here.
+    unknown = sorted(k for k in doc if k.startswith("tier1_") and k not in DEFAULT_THRESHOLDS)
+    if unknown:
+        raise Refused(f"{path}: unknown tier-1 thresholds {unknown}")
     values = dict(DEFAULT_THRESHOLDS)
     for key in DEFAULT_THRESHOLDS:
-        if isinstance(doc.get(key), (int, float)):
-            values[key] = float(doc[key])
+        if key not in doc:
+            continue
+        value = doc[key]
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            raise Refused(f"{path}: threshold {key} must be a finite number, not {value!r}")
+        values[key] = float(value)
     return values, {"source": str(path), "sha256": sha256(raw), "bytes": len(raw)}
 
 

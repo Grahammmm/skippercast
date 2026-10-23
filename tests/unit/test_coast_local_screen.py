@@ -715,3 +715,25 @@ def test_admission_without_catalog_ref_flags_the_plan(tmp_path, model):
     assert "PLAN_INTEGRITY" in doc["summary"]["flags"]
     assert "admission has no catalog ref" in doc["summary"]["plan_integrity_problems"]
     assert doc["windows"][0]["tier1"] == "flag"
+
+
+@pytest.mark.gis
+@pytest.mark.parametrize("doc", [{"tier1_slope_p99_max_deg": "0.001"}, {"tier1_slope_p99_max_deg": True},
+                                 {"tier1_slope_p99_max_dg": 0.001}, [0.001]])
+def test_bad_thresholds_file_is_refused(tmp_path, model, capsys, doc):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, GRID4[:1])
+    thresholds = tmp_path / "thresholds.json"
+    thresholds.write_text(json.dumps(doc))
+    code, result = screen(plan, "--thresholds", str(thresholds))
+    assert code == 2 and result is None
+    assert "threshold" in capsys.readouterr().err
+
+
+@pytest.mark.gis
+def test_shared_tier2_thresholds_file_is_accepted(tmp_path, model):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, GRID4[:1])
+    shared = ROOT / "skills/coast-campaign-shared/config/tier2-thresholds.json"
+    code, doc = screen(plan, "--thresholds", str(shared))
+    assert code == 0 and doc["windows"][0]["tier1"] == "pass"
