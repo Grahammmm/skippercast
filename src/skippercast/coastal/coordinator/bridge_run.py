@@ -672,8 +672,9 @@ def run(root, enqueue_receipt, out, *, max_ticks, until, stop_after="map", conti
                     stop = "max_ticks"
                     break
                 rows = _rows(db)
-                frontier = sorted((w["window_key"], STAGES.index(stage), info["job_id"])
-                                  for w in windows for stage, info in w["stages"].items()
+                # Admission (receipt jobs) order, never window_key: its decimal idx sorts 0, 1, 10, 2.
+                frontier = sorted((order, STAGES.index(stage), info["job_id"])
+                                  for order, w in enumerate(windows) for stage, info in w["stages"].items()
                                   if stage != "render" and info["state"] == "queued"
                                   and rows[info["job_id"]]["not_before"] <= clock()
                                   and rows[info["job_id"]]["attempts"] < rows[info["job_id"]]["max_attempts"])
