@@ -143,6 +143,12 @@ def main():
     for ident in order:
         if sources[ident]['review_status'] != 'approved' or 'bathymetry' not in sources[ident]['needs']:
             raise SystemExit(f'{ident} is not an approved bathymetry source')
+        native = sources[ident].get('native_resolution_m')
+        with rasterio.open(grids[ident]) as grid:
+            res = grid.res
+        # The provenance labels each grid with the reviewed native cell; a resample must not carry that label.
+        if not isinstance(native, (int, float)) or any(abs(r - native) > 1e-9 for r in res):
+            raise SystemExit(f'{ident}: grid cell {res} differs from reviewed native_resolution_m {native}')
     hashes = {ident: sha256(grids[ident]) for ident in order}
     if len(set(hashes.values())) != len(hashes):
         raise SystemExit('Two --grid sources are the same file; each binding needs its own survey grid')

@@ -79,3 +79,10 @@ def test_same_file_under_two_sources_is_refused(tmp_path, monkeypatch):
     a = _tif(tmp_path / 'a.tif', _slope((64, 64)), X0, Y0)
     with pytest.raises(SystemExit, match='same file'):
         _run_builder(monkeypatch, {'usgs-a': a, 'usgs-b': a}, _sources('usgs-a', 'usgs-b'))
+
+
+@pytest.mark.parametrize('cell,native', [(4.0, 2), (2.0, None)])
+def test_grid_cell_must_match_reviewed_native_resolution(tmp_path, monkeypatch, cell, native):
+    a = _tif(tmp_path / 'a.tif', _slope((32, 32)), X0, Y0, cell=cell)
+    with pytest.raises(SystemExit, match='differs from reviewed native_resolution_m'):
+        _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a', native=native))
