@@ -45,11 +45,26 @@ def sha256(path):
         return hashlib.file_digest(f, 'sha256').hexdigest()
 
 
+MAX_LATTICE_BLOCKS = 250_000_000
+METRES_PER_UNIT = {'m': 1.0, 'metre': 1.0, 'meter': 1.0, 'ft': 0.3048, 'foot': 0.3048, 'feet': 0.3048}
+
+
+def metres_per_unit(grid):
+    """Metres in one stored vertical unit: the band's declared units (or a z_units tag), metres when none; refuses others."""
+    unit = (grid.units[0] or grid.tags().get('z_units') or 'm').strip().lower()
+    if unit not in METRES_PER_UNIT:
+        raise ValueError(f'{grid.name}: unsupported vertical unit {unit!r}; expected metres or feet')
+    return METRES_PER_UNIT[unit]
+
+
 def native_offsets(grid, lattice):
     """The grid's native column and row at the lattice's top-left corner, and cells per block; refuses misaligned grids."""
     x0, y0, _, _ = lattice
     if grid.crs is None or not grid.crs.is_projected or grid.crs.linear_units != 'metre':
         raise ValueError(f'{grid.name}: expected a projected, metre-based survey grid')
+    t = grid.transform
+    if t.b or t.d or t.e >= 0 or t.a <= 0:
+        raise ValueError(f'{grid.name}: expected a north-up grid without rotation')
     cell = grid.res[0]
     if abs(grid.res[0] - grid.res[1]) > 1e-9 or (dc.CELL_M / cell) % 1:
         raise ValueError(f'{grid.name}: square cells dividing {dc.CELL_M} m are required, got {grid.res}')
@@ -70,6 +85,8 @@ def merged_blocks(paths, lattice):
     grids = [rasterio.open(p) for p in paths]
     try:
         offsets = [native_offsets(g, lattice) for g in grids]
+        scale_offset = [(g.scales[0], g.offsets[0]) for g in grids]
+        unit_to_m = [metres_per_unit(g) for g in grids]
         if len({n for _, _, n in offsets}) != 1 or len({str(g.crs) for g in grids}) != 1:
             raise ValueError('Every grid must share one projected CRS and cell size')
         n = offsets[0][2]
@@ -81,7 +98,9 @@ def merged_blocks(paths, lattice):
             source = np.full(merged.shape, -1, dtype='int8')
             for i, (grid, (col0, row0, _)) in enumerate(zip(grids, offsets)):
                 window = Window(col0, row0 + by * n, width * n, rows * n)
-                values = grid.read(1, window=window, boundless=True, masked=True).filled(np.nan).astype('float64')
+                values = grid.read(1, window=window, boundless=True, masked=True).astype('float64').filled(np.nan)
+                values = values * scale_offset[i][0] + scale_offset[i][1]
+                values = values * unit_to_m[i]
                 water = np.isfinite(values) & (values < 0) & (values >= -3000)
                 fill = water & (source < 0)
                 merged[fill], source[fill] = values[fill], i
@@ -108,7 +127,10 @@ def lattice_for(paths):
     px, py = bounds[0].left, bounds[0].top
     x0 = px - np.ceil((px - west) / dc.CELL_M) * dc.CELL_M
     y0 = py + np.ceil((north - py) / dc.CELL_M) * dc.CELL_M
-    return float(x0), float(y0), int(np.ceil((east - x0) / dc.CELL_M)), int(np.ceil((y0 - south) / dc.CELL_M))
+    width, height = int(np.ceil((east - x0) / dc.CELL_M)), int(np.ceil((y0 - south) / dc.CELL_M))
+    if width * height > MAX_LATTICE_BLOCKS:
+        raise ValueError(f'The grids span {width} x {height} blocks, over the {MAX_LATTICE_BLOCKS} limit; are they in one region?')
+    return float(x0), float(y0), width, height
 
 
 def to_lonlat(transformer, points):
