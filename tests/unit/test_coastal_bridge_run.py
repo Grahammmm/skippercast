@@ -75,7 +75,7 @@ def world(tmp_path, monkeypatch, request):
             from skippercast.coastal.handoff import mapping_input
             path = root/source["path"]
             # Shared-admission mode needs distinct source bytes per window (grid identity).
-            offset = 16 * i if request.param == "real-stages-shared" else 0
+            offset = 16 * i
             with rasterio.open(path, "w", driver="GTiff", width=4, height=4, count=1, dtype="float32",
                                crs="EPSG:3310", transform=from_origin(record["bbox"][0]+1000, record["bbox"][3]-1000, 250, 250)) as ds:
                 ds.write(-np.arange(1 + offset, 17 + offset, dtype="float32").reshape(4, 4), 1)
@@ -100,7 +100,8 @@ def world(tmp_path, monkeypatch, request):
                     affine_transform=[250, 0, record["bbox"][0]+1000, 0, -250, record["bbox"][3]-1000],
                     width=4, height=4, tile_width=4, tile_height=4, tiling_version="single-selected-v1", pixel_window=[0, 0, 4, 4])
         grid_sha = digest(grid)
-        grids.append(dict(grid_sha256=grid_sha, definition=grid))
+        grids.append(dict(source_id=row["source_id"], grid_sha256=grid_sha,
+                          definition=grid, cols=1, rows=1, total=1))
         key = f"{row['source_id']}#{grid_sha}#0"
         windows.append(dict(window_key=key, window_dir=hashlib.sha256(key.encode()).hexdigest(),
                             source_id=row["source_id"], grid_sha256=grid_sha, idx=0,
