@@ -692,3 +692,12 @@ def test_mapped_window_with_an_unfinished_stage_is_never_a_pass(tmp_path, model,
     w = doc["windows"][0]
     assert "STATE_INCONSISTENT" in w["deterministic"]["flags"] and w["tier1"] == "flag"
     assert doc["windows"][1]["tier1"] == "pass"            # control
+
+
+@pytest.mark.gis
+def test_empty_population_is_never_a_clean_screen(tmp_path, model):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, [])
+    code, doc = screen(plan)
+    assert code == 0
+    assert doc["summary"]["windows"] == 0 and "EMPTY_POPULATION" in doc["summary"]["flags"]

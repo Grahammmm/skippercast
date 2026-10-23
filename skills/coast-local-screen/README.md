@@ -86,6 +86,7 @@ truncated completion - is a flag, and `reply_format` (`pass`/`flag`/`malformed`/
 which. The
 raw reply is kept. Endpoint down (after 2 retries 60 s apart) -> `ENDPOINT_UNAVAILABLE` in
 `summary.flags`, no further calls, every mapped window flagged. A missing thumbnail is a vision flag.
+A plan with no windows to screen gets `EMPTY_POPULATION` in `summary.flags`; it is never a clean screen.
 
 ## Local-only
 

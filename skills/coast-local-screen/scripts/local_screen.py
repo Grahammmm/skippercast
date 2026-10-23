@@ -1001,6 +1001,8 @@ def cmd_assemble(args):
                         "deterministic": det, "stats_file": w.get("stats_file"), "text_model": text_model,
                         "vision_model": vision_model, "tier1": tier1, "tier1_reasons": reasons})
     plan_flags = []
+    if not counts["windows"]:
+        plan_flags.append("EMPTY_POPULATION")      # nothing screened is never a clean screen
     if endpoint_down:
         plan_flags.append("ENDPOINT_UNAVAILABLE")
     if stats["plan_problems"]:
