@@ -8,9 +8,9 @@ The owner approved the observed-layer direction with stated coverage gaps and cl
 
 The original three-date provider-axis acceptance item remains **not demonstrated**. No replacement measurement is claimed. The last admitted check, 2026-10-23T13:52:42–45Z, returned HTTP 404 text/html for CDaily, PMDay, PMNight and KDaily, not time-axis CSV. Each response was 34,988 bytes with SHA256 `f93b382123420fe9b7e44711bc707a4375aca48c75717110a69307f38a6ca523`. Raw responses and request receipts are retained in the task workspace's `.acspo-diagnosis/run-1089/`. No additional network probe was made for this disposition. Earlier checks attributed the failure to IPv6; the latest receipts show working IPv4 and upstream HTML 404s instead.
 
-Adopt `noaacwLEOACSPOSSTL3SnrtCDaily` (degrees C) as the proposed observed 1-day sea-temperature field for the 15 California regions in this review's original scope. Do not mark the catalog entry approved. Do not ingest in this card. The proposed `catalog/sources.json` object is `catalog/candidates/noaa-acspo-l3s-leo-daily.sources-entry.json` with `review_status` `candidate`. It is not inserted into `catalog/sources.json`. An approved entry's license must be one of public-domain, CC0-1.0, CC-BY-4.0, CC-BY-NC-4.0 or facts-only (`schemas/source.schema.json`). This license string is none of those. Owner adoption of the product direction does not supply that missing rights mapping.
+Adopt `noaacwLEOACSPOSSTL3SnrtCDaily` (degrees C) as the proposed observed 1-day sea-temperature field for the 15 California regions in this review's original scope. Do not mark the catalog entry approved. Do not ingest in this card. The proposed `catalog/sources.json` object is in the JSON block under "Source-entry proposal" below with `review_status` `candidate`. It is not inserted into `catalog/sources.json`. An approved entry's license must be one of public-domain, CC0-1.0, CC-BY-4.0, CC-BY-NC-4.0 or facts-only (`schemas/source.schema.json`). This license string is none of those. Owner adoption of the product direction does not supply that missing rights mapping.
 
-Checked 2026-10-20. `coastwatch.noaa.gov` ERDDAP time-constraint requests did not return from this host. Live reads that did return are named below. A prior note on this card cited a NEFSC end of 2026-10-17T12:00:00Z. That claim is withdrawn: the live NEFSC info page read this run ends 2026-03-15T12:00:00Z.
+Checked 2026-10-20. `coastwatch.noaa.gov` ERDDAP time-constraint requests did not return from this host. Live reads that did return are named below. A prior note on this card cited a NEFSC end of 2026-10-17T12:00:00Z. That claim is withdrawn: the live NEFSC info page read on 2026-10-20 ends 2026-03-15T12:00:00Z.
 
 ## Historical provider research (2026-10-20)
 
@@ -21,7 +21,7 @@ The following metadata findings and citations are retained from the prior resear
 - AOML CoastWatch DAS and DDS, live, dataset `noaacwLEOACSPOSSTL3SnrtCDaily`: https://cwcgom.aoml.noaa.gov/erddap/griddap/noaacwLEOACSPOSSTL3SnrtCDaily.das
 - NEFSC info page, live, dataset `noaa_coastwatch_acspo_v2_nrt`, sourceUrl `https://coastwatch.noaa.gov/erddap/griddap/noaacwLEOACSPOSSTL3SnrtCDaily`: https://comet.nefsc.noaa.gov/erddap/info/noaa_coastwatch_acspo_v2_nrt/index.html
 - NASA CMR granules, live, collection C2805339147-POCLOUD, the `metadata_link` on the AOML DAS: https://cmr.earthdata.nasa.gov/search/granules.json?concept_id=C2805339147-POCLOUD&page_size=3&sort_key=-start_date
-- The same host's info pages for `noaacwLEOACSPOSSTL3SnrtKDaily`, `PMDay` and `PMNight` returned an HTTP error. Those three IDs are not on the AOML node.
+- AOML's info pages for `noaacwLEOACSPOSSTL3SnrtKDaily`, `PMDay` and `PMNight` returned an HTTP error. Those three IDs are not on the AOML node.
 
 Indexed CoastWatch ERDDAP pages were not used as a time-axis measurement. A 2025-07-20 Wayback copy was not used.
 
@@ -97,6 +97,65 @@ The published grid contains every region box below. This is envelope containment
 - morro-bay: -121.95, 34.95, -120.55, 35.85
 - point-arguello-conception: -121.25, 34.45, -120.35, 35.07
 - southern-california: -121, 32.5, -117.05, 34.45
+
+## Source-entry proposal
+
+This object is a proposal, not a discovery-candidate document or an operational catalog entry.
+
+```json
+{
+  "id": "noaa-acspo-l3s-leo-daily",
+  "name": "NOAA ACSPO L3S-LEO near-real-time daily SST",
+  "provider": "NOAA/NESDIS/STAR; NOAA CoastWatch",
+  "needs": ["sea-temperature"],
+  "documentation_url": "https://coastwatch.noaa.gov/cwn/products/acspo-global-002o-gridded-super-collated-sst-and-thermal-fronts-low-earth-orbiting.html",
+  "adapter": "erddap-grid",
+  "review_status": "candidate",
+  "reviewed_at": "2026-10-23",
+  "adoption_decision": {
+    "decision": "adopt-with-limits",
+    "authority": "Owner disposition on task t_7eaa1d53, 2026-10-23",
+    "scope": "Observed-layer direction with stated coverage gaps and cloud masking; offline implementation only until remaining gates clear",
+    "bulk_downloads_approved": false,
+    "provider_axis_latency_measured": false,
+    "publication_approved": false
+  },
+  "rights": {
+    "license": "GHRSST protocol describes data use as free and open",
+    "attribution": "Group for High Resolution Sea Surface Temperature (GHRSST) and NOAA. Also acknowledge NOAA CoastWatch when the CoastWatch service is used.",
+    "terms_url": "https://coastwatch.noaa.gov/erddap/info/noaacwLEOACSPOSSTL3SnrtCDaily/index.html",
+    "commercial_use": "unknown",
+    "attribution_required": true,
+    "commercial_note": "The file license string is free and open under the GHRSST protocol, with acknowledgement requested. It is not a catalog public-rights value, so this entry must not be approved."
+  },
+  "authenticity": {
+    "basis": "NOAA CoastWatch product page, STAR data description, AOML ERDDAP DAS, and the GHRSST collection linked from that DAS",
+    "transport": "HTTPS; official NOAA CoastWatch, STAR and the dataset's own CMR metadata link"
+  },
+  "coverage_note": "Global 0.02 degree WGS84 grid, lat -89.99 to 89.99, lon -179.99 to 179.99. The envelope contains all 15 California region boxes. Cloud and land gaps were not sampled.",
+  "limitations": [
+    "Owner approved adopt-with-limits as an observed-layer direction, not rights clearance, restored service or public activation. Bulk downloads remain held. Candidate only: do not bind a live region until the license string is mapped and independent review approves it.",
+    "Observed field: keep quality_level 5 only. Fill -327.68 degree_C and every other quality level are gaps, not values to interpolate.",
+    "1-day means one CDaily grid (dataset noaacwLEOACSPOSSTL3SnrtCDaily), reference time 12:00:00Z. It is not one satellite overpass.",
+    "No provider 3-day composite: an application-derived mean of valid quality_level 5 SST over three consecutive CDaily reference days ending on the newest day. Missing days stay missing; retain per-cell contributing count and oldest/newest times. No clear valid input means a gap.",
+    "Do not also ingest noaacwLEOACSPOSSTL3SnrtKDaily. The product page labels it as the Kelvin form of the same Daily line.",
+    "PM day and night files are orbit-time slices, not the 1-day or 3-day view.",
+    "Published latency is 24 hours. Provider-axis latency over three dates per variant remains unmeasured; historical catalog insertion is not delivery latency. Proposed application policy: withhold past 72 hours from the newest input reference time, not retrieval time; disclose older contributions in a derived 3-day view.",
+    "Last admitted axis check 2026-10-23T13:52:42-45Z: CDaily, PMDay, PMNight and KDaily each returned HTTP 404 HTML, not CSV. No source restoration established, no extra retry admitted. Missing/failed/stale input must remain unavailable.",
+    "Fetch noaacwLEOACSPOSSTL3SnrtCDaily from coastwatch.noaa.gov. On 2026-10-20 the AOML copy lagged by six days and the NEFSC copy's metadata ended 2026-03-15."
+  ],
+  "dataset_id": "noaacwLEOACSPOSSTL3SnrtCDaily",
+  "allowed_hosts": ["coastwatch.noaa.gov"],
+  "max_age_hours": 72,
+  "request": {
+    "base_url": "https://coastwatch.noaa.gov/erddap",
+    "dataset": "noaacwLEOACSPOSSTL3SnrtCDaily",
+    "variables": ["sea_surface_temperature", "quality_level", "sst_front_position"],
+    "stride": 1,
+    "max_age_hours": 72
+  }
+}
+```
 
 ## Decision
 
