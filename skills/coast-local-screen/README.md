@@ -1,5 +1,11 @@
 # coast-local-screen (tier 1) scripts
 
+Canonical B2 round-addressed workflow: use [SKILL.md](SKILL.md). The legacy
+interface below is retained for compatibility only; its latest-run selection,
+mutable defaults and pre-round receipt shape are not the canonical contract.
+Canonical mode requires explicit --roots/--context and per-mode input/output
+files, validates the shared receipt graph, and never rewrites legacy producers.
+
 COAST-LOCALSCREEN (t_6438ac24). The tier-1 first pass over EVERY window of one finished window-set
 plan, on the local GPU model, before any cloud model looks at it. Design: COAST skills design rev 3,
 sections 3.3 and 5.4. The SKILL.md that wraps these scripts is the B2 card's (t_de9b2254); this file is
