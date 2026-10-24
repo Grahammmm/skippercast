@@ -155,6 +155,7 @@ def _check_references(schema):
     """
     anchors = {node[key] for _, node in _walk(schema) if isinstance(node, dict)
                for key in ANCHOR_KEYWORDS if isinstance(node.get(key), str)}
+    admitted = []
     for parts, node in _walk(schema):
         if not isinstance(node, dict):
             continue
@@ -170,11 +171,51 @@ def _check_references(schema):
             if not reference.startswith('#'):
                 raise RecipeError(NOT_ADMITTED + 'external resource' + where)
             fragment = reference[1:]
-            if fragment == '' or (fragment.startswith('/') and _pointer_target(schema, fragment)):
-                continue
-            if PLAIN_NAME.match(fragment) and fragment in anchors:
+            if (fragment == '' or (fragment.startswith('/') and _pointer_target(schema, fragment))
+                    or (PLAIN_NAME.match(fragment) and fragment in anchors)):
+                admitted.append((where, reference))
                 continue
             raise RecipeError(NOT_ADMITTED + 'unresolved local fragment' + where)
+    return admitted
+
+
+def _local_lookup(schema, validator_class):
+    """Offline lookup of a same-document reference, exactly as the validator's
+    own resolver would resolve it, with retrieval refused. Returns a callable
+    mapping a reference string to its target contents."""
+    registry = _registry_api()
+    if registry is not None:
+        from referencing.jsonschema import specification_with
+        specification = specification_with(validator_class.META_SCHEMA['$id'])
+        base = schema.get('$id', '') if isinstance(schema, dict) else ''
+        resolver = registry(retrieve=lambda uri: _refuse_retrieval(uri)).with_resource(
+            base, specification.create_resource(schema)).resolver(base_uri=base)
+        return lambda reference: resolver.lookup(reference).contents
+    resolver = _offline_validator(validator_class, schema).resolver
+    return lambda reference: resolver.resolve(reference)[1]
+
+
+def _check_local_targets(schema, references, meta, validator_class):
+    """Every admitted local reference must resolve, offline, to a usable schema.
+
+    A JSON value that merely exists (a title string, the required array, an
+    example number) is not a schema; nor is an object the metaschema rejects.
+    This runs on the whole document before evaluation, so a malformed target in
+    an otherwise unused branch is refused too, never deferred to a library crash.
+    """
+    lookup = _local_lookup(schema, validator_class)
+    unresolvable = _resolution_errors() + (RecipeError, LookupError)
+    for where, reference in references:
+        try:
+            target = lookup(reference)
+        except unresolvable as error:
+            raise RecipeError(NOT_ADMITTED + 'unresolved local fragment' + where) from error
+        if isinstance(target, bool):
+            continue
+        if not isinstance(target, dict):
+            raise RecipeError(NOT_ADMITTED + 'local target is not a schema' + where)
+        for _ in meta.iter_errors(target):
+            raise RecipeError(NOT_ADMITTED + 'local target is not a valid schema' + where)
 
 
 def _registry_api():
@@ -242,10 +283,18 @@ def _shape(document, metadata_root):
         for problem in meta.iter_errors(schema):
             raise RecipeError('schema document invalid at ' + _location(problem.absolute_path)
                               + ': ' + problem.message)
-        _check_references(schema)
+        references = _check_references(schema)
+        if references:
+            _check_local_targets(schema, references, meta, Draft202012Validator)
         problems = list(_offline_validator(Draft202012Validator, schema).iter_errors(document))
     except unresolvable as error:
         raise RecipeError('schema reference unresolvable offline: ' + str(error)) from error
+    except RecursionError as error:
+        # A same-document reference cycle that never consumes the instance.
+        raise RecipeError('schema reference cycle does not terminate') from error
+    except (AttributeError, TypeError) as error:
+        # Backstop only: the admission checks above should make this unreachable.
+        raise RecipeError('schema evaluation failed offline: ' + type(error).__name__) from error
     if problems:
         first = problems[0]
         raise RecipeError('schema ' + '/'.join(map(str, first.absolute_path)) + ': ' + first.message)

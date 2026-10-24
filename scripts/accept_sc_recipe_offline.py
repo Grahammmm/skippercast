@@ -25,6 +25,17 @@ Suites (docs/engineering/sc_recipe_offline.md):
             pass on the positive and restored controls            (A3)
 Exit 0 only when every named assertion passed with zero failures, errors and
 skips. Success is REVIEW REQUIRED, not full CI or semantic acceptance.
+
+Runner-only input/output contract (not a production budget): every file the
+runner reads is lstat-checked from its allowed root to the leaf (no symlink,
+no '..', ancestors directories, leaf a regular file) and size-checked BEFORE it
+is opened (O_NOFOLLOW|O_NONBLOCK, same inode re-checked), then bound to an
+expected identity before parse/use: committed HEAD blob ids for code, pinned
+sha256 for the two unchanged inputs, and the chain stdout marker ->
+child-report.json -> junit.xml for child outputs. Bounds: 2 MiB per file,
+16 MiB aggregate input, 4096 rows, 8 MiB aggregate report output. The child
+runs under RLIMIT_FSIZE = 2 MiB so captures cannot grow unbounded, and a
+900 s timeout. Reports are deterministic, nonfinite-free and never overwrite.
 """
 import sys
 
@@ -71,20 +82,170 @@ CHILD_TIMEOUT_SECONDS = 900
 SCRUBBED_ENV = ('PYTHONPATH', 'PYTHONHOME', 'PYTHONSTARTUP', 'PYTHONUSERBASE',
                 'PYTHONSAFEPATH', 'PYTEST_ADDOPTS', 'PYTEST_PLUGINS', 'SKIPPERCAST_NETWORK',
                 'SKIPPERCAST_REQUIRE_GIS')
+# Runner-only diagnostic bounds (frozen card contract). They govern what THIS
+# tool reads and writes; they do not change any production API or budget.
+MIB = 1024 * 1024
+MAX_FILE_BYTES = 2 * MIB           # per input file read by the runner
+MAX_TOTAL_INPUT_BYTES = 16 * MIB   # aggregate runner reads (parent or child)
+MAX_ROWS = 4096                    # listed fixtures, tree rows, JUnit cases, git lines
+MAX_OUTPUT_BYTES = 8 * MIB         # aggregate report bytes in the run directory
+REPORT_MARKER = 'child-report-sha256='
 
 
-def sha256_file(path):
-    digest = hashlib.sha256()
-    with open(path, 'rb') as handle:
-        for block in iter(lambda: handle.read(1 << 16), b''):
-            digest.update(block)
-    return digest.hexdigest()
+class Refused(Exception):
+    """A diagnostic input or output violated the runner's safety contract."""
+
+
+class InputBudget:
+    def __init__(self, total=MAX_TOTAL_INPUT_BYTES):
+        self.total, self.used = total, 0
+
+    def take(self, size):
+        if self.used + size > self.total:
+            raise Refused('refused: aggregate input budget of %d bytes exceeded' % self.total)
+        self.used += size
+
+
+class OutputBudget:
+    def __init__(self, total=MAX_OUTPUT_BYTES):
+        self.total, self.used = total, 0
+
+    def take(self, size):
+        if self.used + size > self.total:
+            raise Refused('refused: output budget of %d bytes exceeded' % self.total)
+        self.used += size
+
+
+def _checked(path, root, leaf_directory=False):
+    """lstat every component from `root` to the leaf before any open.
+
+    The path must be absolute, without '..', inside `root`; no component may be
+    a symlink; ancestors must be directories and the leaf a regular file (or a
+    directory when listing). Nothing is opened here."""
+    path, root = Path(path), Path(root)
+    if not path.is_absolute() or '..' in path.parts:
+        raise Refused('refused: parent traversal or relative path: ' + str(path))
+    if not (path == root or root in path.parents):
+        raise Refused('refused: outside allowed root: ' + str(path))
+    current = root
+    components = [root] + [current := current / part for part in path.parts[len(root.parts):]]
+    for index, component in enumerate(components):
+        try:
+            info = component.lstat()
+        except FileNotFoundError:
+            raise Refused('refused: missing input: ' + str(component)) from None
+        if stat.S_ISLNK(info.st_mode):
+            raise Refused('refused: symlink: ' + str(component))
+        last = index == len(components) - 1
+        if not last or leaf_directory:
+            if not stat.S_ISDIR(info.st_mode):
+                raise Refused('refused: not a directory: ' + str(component))
+        elif not stat.S_ISREG(info.st_mode):
+            raise Refused('refused: not a regular file: ' + str(component))
+    return info
+
+
+def git_blob_id(data):
+    return hashlib.sha1(b'blob %d\0' % len(data) + data).hexdigest()
+
+
+def read_bounded(path, root, budget, expected_sha256=None, expected_blob=None,
+                 limit=MAX_FILE_BYTES):
+    """Read one regular file inside `root` with every check BEFORE any byte is
+    read, then bind its identity before the caller may parse or use it."""
+    info = _checked(path, root)
+    limit = min(limit, MAX_FILE_BYTES)
+    if info.st_size > limit:
+        raise Refused('refused: input exceeds %d bytes: %s' % (limit, path))
+    budget.take(info.st_size)
+    flags = os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0)
+    descriptor = os.open(path, flags | getattr(os, 'O_CLOEXEC', 0))
+    try:
+        opened = os.fstat(descriptor)
+        if (not stat.S_ISREG(opened.st_mode) or (opened.st_dev, opened.st_ino)
+                != (info.st_dev, info.st_ino)):
+            raise Refused('refused: input changed between check and open: ' + str(path))
+        chunks, size = [], 0
+        while True:
+            chunk = os.read(descriptor, min(1 << 16, limit + 1 - size))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            size += len(chunk)
+            if size > limit:
+                raise Refused('refused: input exceeds %d bytes: %s' % (limit, path))
+    finally:
+        os.close(descriptor)
+    data = b''.join(chunks)
+    if size != info.st_size:
+        raise Refused('refused: input size changed while reading: ' + str(path))
+    if expected_sha256 is not None and hashlib.sha256(data).hexdigest() != expected_sha256:
+        raise Refused('refused: sha256 mismatch: ' + str(path))
+    if expected_blob is not None and git_blob_id(data) != expected_blob:
+        raise Refused('refused: git blob mismatch: ' + str(path))
+    return data
+
+
+def sha256_file(path, root, budget, **expected):
+    return hashlib.sha256(read_bounded(path, root, budget, **expected)).hexdigest()
+
+
+def list_regular_files(directory, root, rows=MAX_ROWS):
+    """Names of the regular files directly in `directory`; any symlink,
+    special file or subdirectory is refused rather than followed or skipped."""
+    _checked(directory, root, leaf_directory=True)
+    names = []
+    with os.scandir(directory) as entries:
+        for entry in entries:
+            if len(names) >= rows:
+                raise Refused('refused: more than %d rows: %s' % (rows, directory))
+            if not entry.is_file(follow_symlinks=False):
+                raise Refused('refused: fixture entry is not a regular file: ' + entry.path)
+            names.append(entry.name)
+    return sorted(names)
+
+
+def _serialize(value):
+    try:
+        return (json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + '\n').encode()
+    except ValueError as error:
+        raise Refused('refused: non-finite value in report: ' + str(error)) from error
+
+
+def write_bounded(run_dir, name, value, budget, limit=MAX_OUTPUT_BYTES):
+    """Deterministic, nonfinite-free, size-bounded and never-overwriting write
+    of one report into a validated run directory."""
+    run_dir = Path(run_dir)
+    _checked(run_dir, Path(run_dir.anchor), leaf_directory=True)
+    if '/' in name or name in ('', '.', '..'):
+        raise Refused('refused: report name must be a plain file name')
+    data = _serialize(value)
+    if len(data) > limit:
+        raise Refused('refused: output budget of %d bytes exceeded by %s' % (limit, name))
+    target = run_dir / name
+    if os.path.lexists(target):
+        raise Refused('refused: output exists (write-once): ' + str(target))
+    budget.take(len(data))
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0)
+    descriptor = os.open(target, flags, 0o600)
+    with os.fdopen(descriptor, 'wb') as handle:
+        handle.write(data)
+    return hashlib.sha256(data).hexdigest()
 
 
 def write_json(path, value):
-    data = json.dumps(value, sort_keys=True, indent=2, allow_nan=False) + '\n'
-    with open(path, 'x', encoding='utf-8') as handle:
-        handle.write(data)
+    """Child-side report write (same bounds; the child has no shared budget)."""
+    path = Path(path)
+    return write_bounded(path.parent, path.name, value, OutputBudget())
+
+
+def bound_report_sha256(stdout):
+    """The child prints exactly one marker line binding its report's sha256."""
+    found = [line[len(REPORT_MARKER):] for line in stdout.decode('utf-8', 'replace').splitlines()
+             if line.startswith(REPORT_MARKER)]
+    if len(found) != 1 or len(found[0]) != 64 or any(c not in '0123456789abcdef' for c in found[0]):
+        raise Refused('refused: child report identity marker missing, repeated or malformed')
+    return found[0]
 
 
 def no_symlink_ancestry(path):
@@ -117,19 +278,43 @@ def new_run_dir(output):
 
 
 def git(*args):
+    """Run one read-only git query; output is capped at the per-file input
+    budget and MAX_ROWS lines (anything larger is a problem, not truncated)."""
     import subprocess
-    done = subprocess.run(['git', '-C', str(REPO), *args], capture_output=True, text=True,
+    done = subprocess.run(['git', '-C', str(REPO), *args], capture_output=True,
                           timeout=60, check=False)
-    return {'argv': ['git', '-C', str(REPO), *args], 'exit': done.returncode,
-            'stdout': done.stdout.strip(), 'stderr': done.stderr.strip()}
+    row = {'argv': ['git', '-C', str(REPO), *args], 'exit': done.returncode,
+           'stdout': done.stdout.decode('utf-8', 'replace').strip(),
+           'stderr': done.stderr.decode('utf-8', 'replace').strip()[:4096]}
+    if len(done.stdout) > MAX_FILE_BYTES or len(row['stdout'].splitlines()) > MAX_ROWS:
+        row.update(exit=-1, stdout='', stderr='refused: git output exceeds runner bounds')
+    return row
 
 
-def junit_counts(path):
+def head_tree(paths):
+    """{path: blob id} for the committed HEAD entries of `paths` (regular blobs only)."""
+    listing = git('ls-tree', '-r', '--full-tree', 'HEAD', '--', *paths)
+    if listing['exit'] != 0:
+        raise Refused('refused: git ls-tree failed: ' + listing['stderr'])
+    tree = {}
+    for line in listing['stdout'].splitlines():
+        meta, _, name = line.partition('\t')
+        mode, kind, blob = meta.split()
+        if kind != 'blob' or mode not in ('100644', '100755'):
+            raise Refused('refused: committed input is not a regular blob: ' + name)
+        tree[name] = blob
+    return tree
+
+
+def junit_counts(data, rows=MAX_ROWS):
+    """Counts from already identity-bound JUnit bytes (never a path)."""
     import xml.etree.ElementTree as ElementTree
-    root = ElementTree.parse(path).getroot()
+    root = ElementTree.fromstring(data)
     totals = {'tests': 0, 'failures': 0, 'errors': 0, 'skipped': 0}
     by_file = {}
     for case in root.iter('testcase'):
+        if totals['tests'] >= rows:
+            raise Refused('refused: more than %d rows in JUnit report' % rows)
         name = case.get('classname', '')
         key = name.split('.')[-1] if name else '?'
         row = by_file.setdefault(key, dict.fromkeys(totals, 0))
@@ -148,9 +333,10 @@ def junit_counts(path):
     return totals, by_file
 
 
-def collection_check():
+def collection_check(pyproject):
+    """Discovery check on identity-bound pyproject.toml bytes."""
     import tomllib
-    config = tomllib.loads((REPO / 'pyproject.toml').read_text(encoding='utf-8'))
+    config = tomllib.loads(pyproject.decode('utf-8'))
     options = config['tool']['pytest']['ini_options']
     testpaths, patterns = options['testpaths'], options['python_files']
     rows = {}
@@ -166,58 +352,110 @@ def collection_check():
             'full_discovery': 'operator-run (not part of this scoped runner)'}
 
 
+FALLBACK_RECEIPT_BYTES = 64 * 1024
+
+
+def _limit_child_output():
+    """Child pre-exec: no single file the child writes (captured stdout/stderr,
+    JUnit, report, test scratch) may exceed the per-file input bound."""
+    import resource
+    resource.setrlimit(resource.RLIMIT_FSIZE, (MAX_FILE_BYTES, MAX_FILE_BYTES))
+
+
 def parent(args):
     import platform
     import subprocess
     import time
     run_dir = new_run_dir(args.output)
     problems = []
-    pins = {name: sha256_file(REPO / name) for name in PINNED}
-    for name, expected in PINNED.items():
-        if pins[name] != expected:
-            problems.append('pinned unchanged input differs: ' + name)
+    reads = InputBudget()
+    out_budget = OutputBudget(MAX_OUTPUT_BYTES - FALLBACK_RECEIPT_BYTES)
     head = git('rev-parse', 'HEAD')
     ancestry = git('merge-base', '--is-ancestor', BASE, 'HEAD')
     if ancestry['exit'] != 0:
         problems.append('base ' + BASE + ' is not an ancestor of HEAD')
     status = git('status', '--porcelain', '--untracked-files=all')
     changed = git('diff', '--name-only', BASE, 'HEAD')
-    inputs = {name: sha256_file(REPO / name) for name in CODE_INPUTS}
-    fixtures = {str(p.relative_to(REPO)): sha256_file(p)
-                for p in sorted((REPO / FIXTURE_DIR).iterdir()) if p.is_file()}
+    pins, inputs, fixtures, collection = {}, {}, {}, None
+    try:
+        # Every input is bound to its committed HEAD blob before parse or use;
+        # the two unchanged inputs are additionally bound to their frozen sha256.
+        tree = head_tree(CODE_INPUTS + [FIXTURE_DIR])
+        missing = [name for name in CODE_INPUTS if name not in tree]
+        if missing:
+            raise Refused('refused: input not committed at HEAD: ' + ', '.join(missing))
+        for name in CODE_INPUTS:
+            data = read_bounded(REPO / name, REPO, reads, expected_blob=tree[name],
+                                expected_sha256=PINNED.get(name))
+            inputs[name] = hashlib.sha256(data).hexdigest()
+            if name in PINNED:
+                pins[name] = inputs[name]
+            if name == 'pyproject.toml':
+                collection = collection_check(data)
+        listed = list_regular_files(REPO / FIXTURE_DIR, REPO)
+        committed = sorted(name.rsplit('/', 1)[1] for name in tree
+                           if name.startswith(FIXTURE_DIR + '/'))
+        if listed != committed:
+            raise Refused('refused: fixture directory differs from HEAD tree')
+        for name in listed:
+            relative = FIXTURE_DIR + '/' + name
+            fixtures[relative] = sha256_file(REPO / relative, REPO, reads,
+                                             expected_blob=tree[relative])
+    except Refused as error:
+        problems.append(str(error))
+    if collection is not None and not collection['ok']:
+        problems.append('new or contract test file is outside pyproject discovery')
     python = Path(args.python) if args.python else REPO / '.venv' / 'bin' / 'python3'
     if not python.is_absolute() or not os.access(python, os.X_OK):
         problems.append('child interpreter is not an executable absolute path: ' + str(python))
-    collection = collection_check()
-    if not collection['ok']:
-        problems.append('new or contract test file is outside pyproject discovery')
     env = {key: value for key, value in os.environ.items()
            if key not in SCRUBBED_ENV and not key.startswith('LD_')}
     env['PYTHONDONTWRITEBYTECODE'] = '1'
     env['PYTHONNOUSERSITE'] = '1'
     argv = [str(python), '-B', str(Path(__file__).resolve()), '--child', args.suite,
             '--run-dir', str(run_dir)]
-    child = {'argv': argv, 'cwd': str(REPO), 'exit': None}
+    child = {'argv': argv, 'cwd': str(REPO), 'exit': None,
+             'file_size_limit_bytes': MAX_FILE_BYTES}
+    report, counts, by_file = None, {}, {}
     if not problems:
         started = time.time()
-        with open(run_dir / 'stdout.txt', 'xb') as out, open(run_dir / 'stderr.txt', 'xb') as err:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0)
+        with os.fdopen(os.open(run_dir / 'stdout.txt', flags, 0o600), 'wb') as out, \
+                os.fdopen(os.open(run_dir / 'stderr.txt', flags, 0o600), 'wb') as err:
             try:
                 done = subprocess.run(argv, cwd=REPO, env=env, stdout=out, stderr=err,
-                                      timeout=CHILD_TIMEOUT_SECONDS, check=False)
+                                      timeout=CHILD_TIMEOUT_SECONDS, check=False,
+                                      preexec_fn=_limit_child_output)
                 child['exit'] = done.returncode
             except subprocess.TimeoutExpired:
                 problems.append('child timed out')
         child['seconds'] = round(time.time() - started, 3)
-        child['stdout_sha256'] = sha256_file(run_dir / 'stdout.txt')
-        child['stderr_sha256'] = sha256_file(run_dir / 'stderr.txt')
         if child['exit'] != 0:
             problems.append('child exited ' + str(child['exit']))
-    report_path = run_dir / 'child-report.json'
-    report = json.loads(report_path.read_text(encoding='utf-8')) if report_path.exists() else None
-    counts, by_file = ({}, {})
-    if (run_dir / 'junit.xml').exists():
-        counts, by_file = junit_counts(run_dir / 'junit.xml')
-        child['junit_sha256'] = sha256_file(run_dir / 'junit.xml')
+        try:
+            stdout = read_bounded(run_dir / 'stdout.txt', run_dir, reads)
+            stderr = read_bounded(run_dir / 'stderr.txt', run_dir, reads)
+            child['stdout_sha256'] = hashlib.sha256(stdout).hexdigest()
+            child['stderr_sha256'] = hashlib.sha256(stderr).hexdigest()
+            out_budget.take(len(stdout) + len(stderr))
+            if child['exit'] is not None:
+                # Identity chain: stdout marker -> child-report.json -> junit.xml.
+                report_sha256 = bound_report_sha256(stdout)
+                raw_report = read_bounded(run_dir / 'child-report.json', run_dir, reads,
+                                          expected_sha256=report_sha256)
+                out_budget.take(len(raw_report))
+                report = json.loads(raw_report, parse_constant=_no_constant)
+                child['child_report_sha256'] = report_sha256
+                expected_junit = report.get('junit_sha256') if isinstance(report, dict) else None
+                if not (isinstance(expected_junit, str) and len(expected_junit) == 64):
+                    raise Refused('refused: child report carries no JUnit identity')
+                junit = read_bounded(run_dir / 'junit.xml', run_dir, reads,
+                                     expected_sha256=expected_junit)
+                out_budget.take(len(junit))
+                child['junit_sha256'] = expected_junit
+                counts, by_file = junit_counts(junit)
+        except (Refused, ValueError) as error:
+            problems.append(str(error))
     if not problems:
         if report is None:
             problems.append('child wrote no report')
@@ -241,14 +479,29 @@ def parent(args):
                 'changed_since_base': changed['stdout'].splitlines()},
         'pinned_unchanged_inputs': pins, 'base_validator_sha256': BASE_VALIDATOR_SHA256,
         'input_sha256': inputs, 'fixture_sha256': fixtures, 'collection': collection,
+        'bounds': {'max_file_bytes': MAX_FILE_BYTES, 'max_total_input_bytes': MAX_TOTAL_INPUT_BYTES,
+                   'max_rows': MAX_ROWS, 'max_output_bytes': MAX_OUTPUT_BYTES,
+                   'input_bytes_read': reads.used,
+                   'report_bytes_before_receipt': out_budget.used},
         'problems': problems,
     }
-    write_json(run_dir / 'receipt.json', receipt)
-    summary = {'suite': args.suite, 'status': receipt['status'], 'counts': counts,
-               'counts_by_file': by_file, 'head': head['stdout'], 'run_dir': str(run_dir),
-               'receipt_sha256': sha256_file(run_dir / 'receipt.json'), 'problems': problems}
+    try:
+        receipt_sha256 = write_bounded(run_dir, 'receipt.json', receipt, out_budget)
+    except Refused as error:
+        problems.append(str(error))
+        receipt = {'card': 't_b73efb9a', 'suite': args.suite, 'status': 'FAIL',
+                   'problems': problems[-64:], 'child_exit': child['exit']}
+        receipt_sha256 = write_bounded(run_dir, 'receipt.json', receipt,
+                                       OutputBudget(FALLBACK_RECEIPT_BYTES))
+    summary = {'suite': args.suite, 'status': 'PASS' if not problems else 'FAIL',
+               'counts': counts, 'counts_by_file': by_file, 'head': head['stdout'],
+               'run_dir': str(run_dir), 'receipt_sha256': receipt_sha256, 'problems': problems}
     print(json.dumps(summary, sort_keys=True, indent=2))
     return 0 if not problems else 1
+
+
+def _no_constant(value):
+    raise ValueError('refused: non-finite literal in child report: ' + value)
 
 
 # --- child -----------------------------------------------------------------
@@ -395,6 +648,11 @@ def child(args):
         mutation = mutation_proof(run_dir)
     outside, project = module_trace()
     import importlib.metadata
+    try:
+        junit_sha256 = sha256_file(run_dir / 'junit.xml', run_dir, InputBudget())
+    except Refused as error:
+        junit_sha256 = None
+        CALLS.append(str(error))     # forces ok=False below
     report = {
         'pytest_argv': requested, 'pytest_exit': exit_code, 'interpreter': sys.executable,
         'interpreter_realpath': os.path.realpath(sys.executable), 'version': sys.version,
@@ -402,17 +660,20 @@ def child(args):
         'dont_write_bytecode': sys.dont_write_bytecode,
         'versions': {name: importlib.metadata.version(name)
                      for name in ('jsonschema', 'referencing', 'pytest')},
-        'preloaded_before_sentinels': preloaded, 'sentinel_calls': CALLS,
+        'preloaded_before_sentinels': preloaded, 'sentinel_calls': CALLS[:MAX_ROWS],
+        'sentinel_call_count': len(CALLS),
         'imported_module_count': len(set(IMPORTS)),
-        'modules_outside_staged_roots': outside, 'project_modules': project,
-        'mutation_proof': mutation,
+        'modules_outside_staged_roots': outside[:MAX_ROWS],
+        'modules_outside_count': len(outside), 'project_modules': project,
+        'mutation_proof': mutation, 'junit_sha256': junit_sha256,
     }
     ok = (exit_code == 0 and not CALLS and not outside and not preloaded
           and project.get('validate_recipe') == str(REPO / 'validate_recipe.py')
           and 'skippercast' not in project
           and (args.suite != 'negative' or (mutation is not None and mutation['ok'])))
     report['ok'] = ok
-    write_json(run_dir / 'child-report.json', report)
+    digest = write_json(run_dir / 'child-report.json', report)
+    print(REPORT_MARKER + digest)
     print('child report ok=' + str(ok))
     return 0 if ok else 1
 

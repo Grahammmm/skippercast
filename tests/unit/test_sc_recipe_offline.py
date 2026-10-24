@@ -322,10 +322,296 @@ def test_a3_raw_schema_negatives(name, reason, tmp_path):
     assert (FIXTURE / name).read_bytes() == raw
 
 
+TARGET_CASES = [key for key, case in REJECTED.items() if key.startswith('target-')
+                or key == 'anchor-in-data-position']
+
+
+@pytest.mark.parametrize('case_id', TARGET_CASES)
+def test_a3_malformed_local_target_is_recipe_error_before_evaluation(case_id, tmp_path):
+    """A pointer that merely exists (string, array, number, null) or an object
+    the metaschema rejects is refused during admission, also when unused, and
+    always as RecipeError; an empty instance proves evaluation never started."""
+    case = REJECTED[case_id]
+    metadata, workspace = stage(tmp_path, edited(case))
+    before = snapshot(tmp_path)
+    for document in (load(), {}):
+        try:
+            recipe.validate_recipe(document, metadata_root=metadata, workspace_root=workspace)
+        except recipe.RecipeError as error:
+            message = str(error)
+        else:
+            raise AssertionError('admitted ' + case_id)
+        assert message.startswith(NOT_ADMITTED + case['reason'] + ' at /'), message
+    assert RETRIEVALS == [] and TRANSPORT == []
+    assert snapshot(tmp_path) == before
+
+
+@pytest.mark.parametrize('case_id', ['target-title-string', 'target-required-array',
+                                     'target-example-number', 'target-invalid-object',
+                                     'target-title-unused', 'target-nested-unused-branch'])
+def test_a3_cli_malformed_local_target_one_invalid_exit_1(case_id, tmp_path, capsys):
+    case = REJECTED[case_id]
+    metadata, workspace = stage(tmp_path, edited(case))
+    path = tmp_path / 'synthetic-recipe.json'
+    path.write_text(json.dumps(load()), encoding='utf-8')
+    code = recipe.main([str(path), '--workspace-root', str(workspace),
+                        '--metadata-root', str(metadata)])
+    captured = capsys.readouterr()
+    assert code == 1 and captured.err == ''
+    results = json.loads(captured.out)
+    assert len(results) == 1 and set(results[0]) == INVALID_FIELDS
+    assert results[0]['status'] == 'INVALID' and results[0]['valid'] is False
+    assert results[0]['error'].startswith(NOT_ADMITTED + case['reason'] + ' at /')
+    assert RETRIEVALS == []
+
+
+def test_a3_malformed_target_reason_names_stable_location(tmp_path):
+    metadata, workspace = stage(tmp_path, edited(REJECTED['target-title-string']))
+    assert outcome(metadata, workspace) == (
+        NOT_ADMITTED + 'local target is not a schema at /properties/slug/$ref')
+    metadata, workspace = stage(tmp_path / 'b', edited(REJECTED['target-nested-unused-branch']))
+    assert outcome(metadata, workspace) == (
+        NOT_ADMITTED + 'local target is not a schema at /properties/depth_target_ft/anyOf/1/$ref')
+    metadata, workspace = stage(tmp_path / 'c', edited(REJECTED['target-dynamic-scalar']))
+    assert outcome(metadata, workspace) == (
+        NOT_ADMITTED + 'local target is not a schema at /$defs/d1/$dynamicRef')
+
+
+def test_a3_boolean_and_object_targets_keep_local_semantics(tmp_path):
+    case = {'inserts': [[['$defs', 'never'], False],
+                        [['properties', 'notes'], {'$ref': '#/$defs/never'}]]}
+    metadata, workspace = stage(tmp_path, edited(case))
+    assert outcome(metadata, workspace) is None                 # unused boolean target
+    document = load()
+    document['notes'] = 'x'
+    message = outcome(metadata, workspace, document)            # false target enforced
+    assert message is not None and message.startswith('schema notes: '), message
+    assert RETRIEVALS == []
+
+
+def test_a3_traversed_reference_cycle_is_recipe_error(tmp_path):
+    case = {'inserts': [[['$defs', 'loop'], {'$ref': '#/$defs/loop'}],
+                        [['properties', 'slug'], {'$ref': '#/$defs/loop'}]]}
+    metadata, workspace = stage(tmp_path, edited(case))
+    message = outcome(metadata, workspace)
+    assert message == 'schema reference cycle does not terminate', message
+    assert RETRIEVALS == []
+
+
 def test_a3_nonfinite_recipe_value_still_refused(tmp_path):
     document = load()
     document['depth_target_ft'] = float('inf')
     assert outcome(ROOT, tmp_path, document) == 'non-finite numeric value'
+
+
+# A3 runner input/output contract (synthetic trees only) ----------------------
+
+def load_runner():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        'sc_recipe_offline_runner_under_test', ROOT / 'scripts' / 'accept_sc_recipe_offline.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+runner = load_runner()
+MIB = 1024 * 1024
+
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def read_window(callable_, *args, **kwargs):
+    """Run a runner call while the audit hook records every open/listdir."""
+    AUDIT['opened'] = opened = []
+    try:
+        try:
+            return callable_(*args, **kwargs), None, opened
+        except runner.Refused as error:
+            return None, str(error), opened
+    finally:
+        AUDIT['opened'] = None
+
+
+def test_a3_runner_frozen_bounds():
+    assert runner.MAX_FILE_BYTES == 2 * MIB
+    assert runner.MAX_TOTAL_INPUT_BYTES == 16 * MIB
+    assert runner.MAX_ROWS == 4096
+    assert runner.MAX_OUTPUT_BYTES == 8 * MIB
+
+
+def test_a3_runner_reads_exact_boundary_and_refuses_one_more(tmp_path):
+    exact = tmp_path / 'exact.bin'
+    exact.write_bytes(b'a' * runner.MAX_FILE_BYTES)
+    budget = runner.InputBudget()
+    data = runner.read_bounded(exact, tmp_path, budget, expected_sha256=sha(exact.read_bytes()))
+    assert len(data) == runner.MAX_FILE_BYTES and budget.used == runner.MAX_FILE_BYTES
+    small = tmp_path / 'small.bin'
+    small.write_bytes(b'0123456789')
+    assert runner.read_bounded(small, tmp_path, runner.InputBudget(), limit=10) == b'0123456789'
+    small.write_bytes(b'0123456789A')
+    result, error, opened = read_window(runner.read_bounded, small, tmp_path,
+                                        runner.InputBudget(), limit=10)
+    assert result is None and error.startswith('refused: input exceeds 10 bytes'), error
+    assert opened == []                                          # refused from metadata
+
+
+def test_a3_runner_aggregate_input_budget(tmp_path):
+    for name in ('a', 'b'):
+        (tmp_path / name).write_bytes(b'x' * 6)
+    budget = runner.InputBudget(total=10)
+    runner.read_bounded(tmp_path / 'a', tmp_path, budget)
+    result, error, opened = read_window(runner.read_bounded, tmp_path / 'b', tmp_path, budget)
+    assert result is None and error.startswith('refused: aggregate input budget'), error
+    assert opened == [] and budget.used == 6
+
+
+def test_a3_runner_refuses_symlink_leaf_without_reading_target(tmp_path):
+    outside = tmp_path / 'outside'
+    outside.mkdir()
+    target = outside / 'secret.txt'
+    target.write_bytes(b'tiny')
+    root = tmp_path / 'root'
+    root.mkdir()
+    (root / 'link.txt').symlink_to(target)
+    result, error, opened = read_window(runner.read_bounded, root / 'link.txt', root,
+                                        runner.InputBudget())
+    assert result is None and error.startswith('refused: symlink'), error
+    assert opened == []
+    with pytest.raises(runner.Refused, match='^refused: symlink'):
+        runner.sha256_file(root / 'link.txt', root, runner.InputBudget())
+
+
+def test_a3_runner_refuses_symlink_ancestry_and_outside_root(tmp_path):
+    real = tmp_path / 'real'
+    real.mkdir()
+    (real / 'f.txt').write_bytes(b'x')
+    root = tmp_path / 'root'
+    root.mkdir()
+    (root / 'dir').symlink_to(real, target_is_directory=True)
+    for path, reason in ((root / 'dir' / 'f.txt', 'refused: symlink'),
+                         (real / 'f.txt', 'refused: outside allowed root'),
+                         (root / '..' / 'real' / 'f.txt', 'refused: parent traversal')):
+        result, error, opened = read_window(runner.read_bounded, path, root, runner.InputBudget())
+        assert result is None and error.startswith(reason), (path, error)
+        assert opened == []
+
+
+def test_a3_runner_refuses_fifo_and_directory_without_hang(tmp_path):
+    fifo = tmp_path / 'pipe'
+    os.mkfifo(fifo)
+    (tmp_path / 'sub').mkdir()
+    for path in (fifo, tmp_path / 'sub'):
+        result, error, opened = read_window(runner.read_bounded, path, tmp_path,
+                                            runner.InputBudget())
+        assert result is None and error.startswith('refused: not a regular file'), error
+        assert opened == []
+
+
+def test_a3_runner_binds_expected_identity_before_use(tmp_path):
+    path = tmp_path / 'pinned.json'
+    path.write_bytes(b'{"a": 1}\n')
+    before = path.read_bytes()
+    with pytest.raises(runner.Refused, match='^refused: sha256 mismatch'):
+        runner.read_bounded(path, tmp_path, runner.InputBudget(), expected_sha256='0' * 64)
+    with pytest.raises(runner.Refused, match='^refused: git blob mismatch'):
+        runner.read_bounded(path, tmp_path, runner.InputBudget(), expected_blob='0' * 40)
+    blob = runner.git_blob_id(before)
+    assert runner.read_bounded(path, tmp_path, runner.InputBudget(), expected_blob=blob) == before
+    # Same object id as git hash-object would give for these bytes.
+    assert runner.git_blob_id(b'') == 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391'
+    assert path.read_bytes() == before
+
+
+def test_a3_runner_fixture_listing_refuses_links_special_and_row_overflow(tmp_path):
+    fixtures = tmp_path / 'fixtures'
+    fixtures.mkdir()
+    for index in range(3):
+        (fixtures / ('f%d.json' % index)).write_bytes(b'{}')
+    assert runner.list_regular_files(fixtures, tmp_path) == ['f0.json', 'f1.json', 'f2.json']
+    with pytest.raises(runner.Refused, match='^refused: more than 2 rows'):
+        runner.list_regular_files(fixtures, tmp_path, rows=2)
+    (fixtures / 'zlink.json').symlink_to(fixtures / 'f0.json')
+    with pytest.raises(runner.Refused, match='^refused: fixture entry is not a regular file'):
+        runner.list_regular_files(fixtures, tmp_path)
+    special = tmp_path / 'special'
+    special.mkdir()
+    (special / 'f0.json').write_bytes(b'{}')
+    os.mkfifo(special / 'zpipe')
+    with pytest.raises(runner.Refused, match='^refused: fixture entry is not a regular file'):
+        runner.list_regular_files(special, tmp_path)
+
+
+def test_a3_runner_writes_are_bounded_and_never_overwrite(tmp_path):
+    run_dir = tmp_path / 'run'
+    run_dir.mkdir()
+    budget = runner.OutputBudget(total=64)
+    digest = runner.write_bounded(run_dir, 'ok.json', {'b': 1, 'a': [1, 2]}, budget)
+    data = (run_dir / 'ok.json').read_bytes()
+    assert data == b'{\n  "a": [\n    1,\n    2\n  ],\n  "b": 1\n}\n' and digest == sha(data)
+    with pytest.raises(runner.Refused, match='^refused: output exists'):
+        runner.write_bounded(run_dir, 'ok.json', {'c': 3}, budget)
+    assert (run_dir / 'ok.json').read_bytes() == data
+    with pytest.raises(runner.Refused, match='^refused: output budget'):
+        runner.write_bounded(run_dir, 'big.json', {'x': 'y' * 64}, budget)
+    assert not (run_dir / 'big.json').exists()
+    with pytest.raises(runner.Refused, match='^refused: non-finite'):
+        runner.write_bounded(run_dir, 'nan.json', {'x': float('nan')}, budget)
+    assert not (run_dir / 'nan.json').exists()
+    linked = tmp_path / 'linked'
+    linked.symlink_to(run_dir, target_is_directory=True)
+    with pytest.raises(runner.Refused, match='^refused: symlink'):
+        runner.write_bounded(linked, 'via-link.json', {}, runner.OutputBudget())
+    assert not (run_dir / 'via-link.json').exists()
+    assert sorted(path.name for path in run_dir.iterdir()) == ['ok.json']
+
+
+def test_a3_runner_junit_rows_and_report_binding(tmp_path):
+    case = b'<testcase classname="tests.unit.test_x" name="t"/>'
+    junit = b'<testsuites><testsuite>' + case * 3 + b'</testsuite></testsuites>'
+    totals, by_file = runner.junit_counts(junit)
+    assert totals == {'tests': 3, 'failures': 0, 'errors': 0, 'skipped': 0}
+    assert by_file == {'test_x': totals}
+    with pytest.raises(runner.Refused, match='^refused: more than 2 rows'):
+        runner.junit_counts(junit, rows=2)
+    digest = 'a' * 64
+    assert runner.bound_report_sha256(b'noise\n' + runner.REPORT_MARKER.encode() + digest.encode()
+                                      + b'\nchild report ok=True\n') == digest
+    for stdout in (b'no marker\n',
+                   (runner.REPORT_MARKER + digest + '\n') .encode() * 2,
+                   (runner.REPORT_MARKER + 'xyz\n').encode()):
+        with pytest.raises(runner.Refused, match='^refused: child report identity'):
+            runner.bound_report_sha256(stdout)
+
+
+def test_a3_runner_refusals_leave_inputs_unchanged(tmp_path):
+    frozen = tmp_path / 'frozen'
+    frozen.mkdir()
+    (frozen / 'input.json').write_bytes(b'{"keep": true}\n')
+    (frozen / 'link.json').symlink_to(frozen / 'input.json')
+    before = {path.name: (path.is_symlink(), path.read_bytes()) for path in frozen.iterdir()}
+    for call in (lambda: runner.read_bounded(frozen / 'link.json', frozen, runner.InputBudget()),
+                 lambda: runner.read_bounded(frozen / 'input.json', frozen, runner.InputBudget(),
+                                             expected_sha256='1' * 64),
+                 lambda: runner.write_bounded(frozen, 'input.json', {}, runner.OutputBudget())):
+        with pytest.raises(runner.Refused):
+            call()
+    after = {path.name: (path.is_symlink(), path.read_bytes()) for path in frozen.iterdir()}
+    assert after == before
+
+
+def test_a3_runner_new_output_root_is_write_once(tmp_path):
+    existing = tmp_path / 'existing'
+    existing.mkdir()
+    with pytest.raises(SystemExit, match='already exists'):
+        runner.new_run_dir(str(existing))
+    linked = tmp_path / 'linked'
+    linked.symlink_to(tmp_path, target_is_directory=True)
+    with pytest.raises(SystemExit, match='symlink'):
+        runner.new_run_dir(str(linked / 'run'))
+    assert not (tmp_path / 'run').exists()
 
 
 def disable_reference_gate(monkeypatch):

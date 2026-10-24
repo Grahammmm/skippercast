@@ -37,12 +37,28 @@ traceback. Validation is now unconditionally offline for every metadata root.
    The root `$id` and `$schema` are identifiers, not fetch instructions, and
    stay admitted. Reference keywords inside data positions (for example
    `const` or `enum` values) are refused conservatively.
+   Every admitted local reference is then resolved, still before evaluation
+   and still for unused branches, through an offline resolver built exactly
+   like the validator's (retrieval refused). Its target must be a usable
+   schema:
+   - `schema reference not admitted: local target is not a schema at ...`
+     when it resolves to a string, array, number or null (for example
+     `#/title`, `#/required`, `#/examples/0`);
+   - `schema reference not admitted: local target is not a valid schema at ...`
+     when it resolves to an object the Draft 2020-12 metaschema rejects;
+   - `unresolved local fragment` also covers an anchor that only appears in
+     a data position (such as inside `examples`), which the resolver ignores.
+   Boolean and object schema targets keep their normal local semantics.
 4. The validator is built with a `referencing` registry whose only retrieval
    callback, `_refuse_retrieval`, raises without any I/O; jsonschema combines
    it with its bundled specifications only. Releases of jsonschema without
    `referencing` use a `RefResolver` whose `resolve_remote` is the same
    callback. Any resolution failure becomes
-   `schema reference unresolvable offline: ...`.
+   `schema reference unresolvable offline: ...`. A traversed same-document
+   reference cycle that never consumes the instance becomes
+   `schema reference cycle does not terminate`; any remaining library
+   `AttributeError`/`TypeError` during evaluation is a backstop
+   `schema evaluation failed offline: ...`, never a traceback.
 5. Every refusal is a `RecipeError`, so the CLI prints one deterministic
    `INVALID` result and exits 1 instead of a traceback. Successful output and
    all CLI arguments are unchanged; missing jsonschema still fails closed with
@@ -75,6 +91,37 @@ pytest, the validator or jsonschema, traces imported modules and writes a
 write-once receipt with hashes and counts. Both test files match the existing
 `pyproject.toml` `testpaths`/`python_files`, so normal CI discovery collects
 them; full-repository discovery and remote CI are separate gates.
+
+### Runner input/output contract
+
+These bounds apply only to the new runner's own diagnostic reads and report
+writes; no production API, coast run, download or model budget changes.
+
+- Reads: every path is checked from its allowed root (the staged repository
+  or the run directory) to the leaf with `lstat` before it is opened: no
+  `..`, no symlink anywhere, directories above, a regular file at the leaf
+  (FIFOs, devices and directories are refused without opening, so nothing can
+  hang). The size is checked first, the file is opened with
+  `O_NOFOLLOW|O_NONBLOCK` and its inode re-checked. Limits: 2 MiB per file and
+  16 MiB aggregate.
+- Identity before use: code and fixture inputs must equal their committed
+  HEAD blob ids (`git ls-tree`), the unchanged schema and coast test also
+  their pinned sha256; `pyproject.toml` is parsed only after that check. The
+  child prints one `child-report-sha256=` line; the parent reads the report
+  only under that hash and the JUnit file only under the hash in the report.
+- Rows: at most 4096 fixture entries (symlinks/special files refused, not
+  skipped), committed tree rows, git output lines and JUnit test cases.
+- Writes: deterministic sorted JSON with non-finite values refused, created
+  with `O_EXCL|O_NOFOLLOW` in a validated write-once run directory, at most
+  8 MiB of report bytes per run (stdout, stderr, JUnit, child report, receipt).
+  The child runs with `RLIMIT_FSIZE` = 2 MiB and a 900 s timeout, so a capture
+  cannot grow without bound. `tmp/` holds pytest's synthetic staging and is
+  bounded per file by the same limit, not counted as report output.
+
+The `a3_runner_*` tests exercise these rules on synthetic trees: exact and
+one-over boundaries, aggregate and row overflow, symlink leaf and ancestry,
+FIFO and directory, outside-root and `..` paths, hash/blob mismatch, the
+report identity marker, no overwrite and unchanged inputs after refusal.
 
 Valid still means REVIEW REQUIRED: no source-use, navigation or semantic
 approval follows from a passing validation or test run.
