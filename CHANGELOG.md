@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Native seafloor ingestion refuses explicit non-metre vertical units, packed scale/offset values and positive-down or unsupported sign metadata instead of silently mislabelling them as metre depth. Existing untagged-source conventions and nominal datum limitations are unchanged.
+
 - The Swell layer's selector switches between the primary swell, wind sea and secondary swell from the NOAA GFS-Wave wcoast.0p16 forecast, each drawn with height in feet, period and direction and named with its run time; the nearshore (CDIP MOP) rings are unchanged.
 - Chlorophyll feed limitations identify the current NOAA merged VIIRS product and its native grid spacing instead of the historical MODIS description; cloud gaps and freshness limits are unchanged.
 - Place a named waypoint on the Chart with a reef, wreck, bait, hazard or other category; save it in the browser’s region draft and export the category in GPX. User labels do not qualify habitat or depth, and current protected-area checks still apply.

@@ -49,9 +49,51 @@ def chunks(window, size=512):
                          min(size, window.row_off + window.height-y))
 
 
+def _require_native_vertical(dataset, *, uncertainty_band=None):
+    """Refuse metadata incompatible with the legacy metre/elevation reader.
+
+    This adapter does not convert units or packed samples. Missing metadata
+    retains the existing producer-elevation convention; it is not evidence of
+    a resolved vertical contract or datum. Sources needing conversion belong in
+    the evidence-bound coastal.vertical path, not an implicit conversion here.
+    """
+    metre_units = {'m', 'metre', 'metres', 'meter', 'meters'}
+    for band in (1,) if uncertainty_band is None else (1, uncertainty_band):
+        if dataset.scales[band-1] != 1 or dataset.offsets[band-1] != 0:
+            raise ValueError('Native raster requires unpacked samples (scale=1, offset=0)')
+        units = dataset.units[band-1]
+        if units is not None and units.lower() not in metre_units:
+            raise ValueError('Native raster requires vertical units in metres')
+        for tags in (dataset.tags(), dataset.tags(band)):
+            if 'z_units' in tags and tags['z_units'].lower() not in metre_units:
+                raise ValueError('Native raster requires vertical units in metres')
+            # Uncertainty magnitudes have no up/down convention. Only the
+            # elevation band is negated to produce positive-down depth.
+            if band == 1:
+                for key in ('vertical_sign', 'z_positive', 'positive'):
+                    if key in tags and tags[key] not in {'up', 'positive_up'}:
+                        raise ValueError('Native raster requires positive-up elevation')
+    if dataset.crs:
+        crs = CRS.from_user_input(dataset.crs)
+        parts = crs.sub_crs_list if crs.is_compound else [crs]
+        verticals = [part for part in parts if part.is_vertical]
+        if len(verticals) > 1:
+            raise ValueError('Native raster requires an unambiguous vertical CRS')
+        for vertical in verticals:
+            if len(vertical.axis_info) != 1:
+                raise ValueError('Native raster requires one vertical CRS axis')
+            axis = vertical.axis_info[0]
+            if axis.unit_name.lower() not in metre_units or axis.unit_conversion_factor != 1:
+                raise ValueError('Native raster requires vertical CRS units in metres')
+            # BAG stores an elevation array even when its CRS axis is depth.
+            if dataset.driver != 'BAG' and axis.direction != 'up':
+                raise ValueError('Native raster requires positive-up elevation CRS')
+
+
 def read_native(dataset, window, row, *, uncertainty_band=None, interpolated_band=None):
     if window.width * window.height > 1_048_576:
         raise ValueError('Use bounded native windows (at most 1,048,576 pixels)')
+    _require_native_vertical(dataset, uncertainty_band=uncertainty_band)
     elevation = dataset.read(1, window=window, masked=True).astype('float32')
     raw = elevation.filled(np.nan)
     valid = ~np.ma.getmaskarray(elevation) & np.isfinite(raw)
