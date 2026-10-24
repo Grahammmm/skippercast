@@ -138,13 +138,14 @@ def test_reference_symlink_parent_leaf_fifo_and_bytes(graph):
 
 def test_native_adapter_preserves_bytes_unknown_slots_refuse(graph):
     instances, _, resolver = graph
-    typed = instances['admission']['campaign']
-    native = {k:v for k,v in typed.items() if k != 'root_id'} | {'contract':'synthetic-file'}
-    doc=dict(schema='coastal-native-job-v1',source=native,segment_id='synthetic',window={'width':1})
+    typed = instances['admission']['sources'][0]['hot_cache'][0]
+    native = {k:v for k,v in typed.items() if k != 'root_id'} | {'contract':'native-raster-v1'}
+    doc=dict(schema='coastal-native-job-v1',source=native,segment_id=instances['admission']['coordinator_segment_id'],
+             synthetic=True, window=[0,0,1,1], vertical=None, rights=dict(private_use=True,evidence=[]))
     raw=refs.canonical(doc)
     validator.GraphValidator(resolver).document(doc,root_id='queue:synthetic')
     assert refs.canonical(doc) == raw
-    with pytest.raises(ValueError,match='unknown native ref slot'):
+    with pytest.raises(ValueError,match='unknown or missing native producer field'):
         validator.GraphValidator(resolver).document(dict(doc,unknown=native),root_id='queue:synthetic')
     with pytest.raises(ValueError,match='unsupported JSON producer'):
         validator.GraphValidator(resolver).document(dict(schema='unknown-v1',source=native),root_id='queue:synthetic')
@@ -209,12 +210,12 @@ def test_cli_roundtrip_and_hash_dir(graph,tmp_path):
     _, bindings, _=graph
     roots=tmp_path/'roots.json'
     roots.write_bytes(refs.canonical(bindings))
-    command=[sys.executable,str(SCRIPTS/'validate_coast_receipt.py'),str(Path(bindings['queue:synthetic'])/'valid/review-verdict.json'),
+    command=[sys.executable,str(ROOT/'tests/coast_checkout_cli.py'),str(SCRIPTS/'validate_coast_receipt.py'),str(Path(bindings['queue:synthetic'])/'valid/review-verdict.json'),
         '--roots',str(roots),'--root-id','queue:synthetic','--allowed-root-id','queue:synthetic','--allowed-root-id','archive:synthetic:close01','--allowed-root-id','raw:campaign']
     result=subprocess.run(command,capture_output=True,text=True)
     assert result.returncode == 0,result.stderr
     assert json.loads(result.stdout)['scientific_acceptance'] is False
-    result=subprocess.run([sys.executable,str(SCRIPTS/'validate_coast_receipt.py'),'--hash-dir',bindings['queue:synthetic']],capture_output=True,text=True)
+    result=subprocess.run([sys.executable,str(ROOT/'tests/coast_checkout_cli.py'),str(SCRIPTS/'validate_coast_receipt.py'),'--hash-dir',bindings['queue:synthetic']],capture_output=True,text=True)
     assert result.returncode == 0,result.stderr
     assert len(json.loads(result.stdout)) > 26
     (Path(bindings['queue:synthetic'])/'bad-link').symlink_to('/etc/passwd')

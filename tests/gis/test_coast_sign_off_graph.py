@@ -170,7 +170,7 @@ class Cycle:
         return result
 
     def cli(self, script, *args):
-        return subprocess.run([sys.executable, str(SCRIPTS / script), '--roots', str(self.roots),
+        return subprocess.run([sys.executable, str(ROOT / 'tests/coast_checkout_cli.py'), str(SCRIPTS / script), '--roots', str(self.roots),
                                *[f'--allowed-root-id={root}' for root in self.bindings], *map(str, args)], capture_output=True, text=True)
 
 
@@ -222,7 +222,7 @@ def test_changed_input_cli_corrective_error_is_valid(tmp_path, target):
     assert verdict['windows_examined'] == []
     assert not verdict['next_tile_card_authorized']
     for path in (c.r / 'tier3/open-report.json', c.r / 'tier3/verdict.json'):
-        checked = subprocess.run([sys.executable, str(validator.SHARED / 'scripts/validate_coast_receipt.py'), str(path),
+        checked = subprocess.run([sys.executable, str(ROOT / 'tests/coast_checkout_cli.py'), str(validator.SHARED / 'scripts/validate_coast_receipt.py'), str(path),
                                   '--roots', str(c.roots), *[f'--allowed-root-id={root}' for root in c.bindings],
                                   '--root-id', 'queue:synthetic'], capture_output=True, text=True)
         assert checked.returncode == 0, checked.stderr

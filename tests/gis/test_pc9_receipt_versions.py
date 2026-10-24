@@ -187,6 +187,18 @@ def check(g, doc):
     validator.GraphValidator(g.resolver).document(doc, root_id=g.root_id)
 
 
+def check_rights(g, doc):
+    """Exercise #816 leaf slots without claiming raw lineage acceptance.
+
+    The incomplete RIGHTS_ROW is not a #832 inventory. Full source-row graphs
+    additionally require a supplied raw-provenance envelope.
+    """
+    graph = validator.GraphValidator(g.resolver)
+    for path in (['rights', 'evidence', '0'], ['native_facts', 'rights', 'evidence', '0']):
+        owner = doc if path[0] == 'rights' else doc['native_facts']
+        graph.rights_evidence(owner['rights']['evidence'][0], doc, path, root_id=g.root_id)
+
+
 @pytest.mark.parametrize('world', ['real-stages-shared'], indirect=True)
 def test_native_rights_evidence_refs_refuse_unknown_tampered_traversal_and_namespace(graph):
     g = graph
@@ -256,10 +268,11 @@ def test_rights_leaf_binds_owning_source_row_identity_and_refuses_unknown_fields
     g = graph
     good = mapping_input(g)
     leaf = rights_leaf(good['source'])
-    # Complete positive control through the full mapping-input graph
-    # (rights.evidence.* and native_facts.rights.evidence.* slots).
-    check(g, with_rights_leaf(g, good, leaf))
-    check(g, with_rights_leaf(g, good, dict(leaf, support_policy='declared-partial-support')))
+    # Positive leaf controls for both slots, separate from raw lineage.
+    check_rights(g, with_rights_leaf(g, good, leaf))
+    check_rights(g, with_rights_leaf(g, good, dict(leaf, support_policy='declared-partial-support')))
+    with pytest.raises(ValueError, match='held: lineage requires registered native document Ref'):
+        check(g, with_rights_leaf(g, good, leaf))
     cases = [
         (dict(reviewer_id=''), 'rights binding'),
         (dict(private_use=False), 'rights binding'),
@@ -278,22 +291,22 @@ def test_rights_leaf_binds_owning_source_row_identity_and_refuses_unknown_fields
     ]
     for broken, message in cases:
         with pytest.raises(ValueError, match=message):
-            check(g, with_rights_leaf(g, good, dict(leaf, **broken)))
+            check_rights(g, with_rights_leaf(g, good, dict(leaf, **broken)))
     for field in ('source_id', 'source_url', 'product_title', 'schema', 'checked_at'):
         value = {k: v for k, v in leaf.items() if k != field}
         with pytest.raises(ValueError, match='rights evidence missing producer field: ' + field):
-            check(g, with_rights_leaf(g, good, value))
+            check_rights(g, with_rights_leaf(g, good, value))
     # No owning source_row, or an incomplete/ambiguous one, refuses: absent
     # values never match absent evidence identity.
     bare = {k: v for k, v in leaf.items() if k not in ('source_id', 'source_url', 'product_title')}
     for value, row in [(leaf, None), (dict(bare, source_id=None, source_url=None, product_title=None), None),
                        (leaf, {k: v for k, v in RIGHTS_ROW.items() if k != 'title'}), (leaf, dict(RIGHTS_ROW, url=''))]:
         with pytest.raises(ValueError, match='owning source_row identity unavailable'):
-            check(g, with_rights_leaf(g, good, value, row=row))
+            check_rights(g, with_rights_leaf(g, good, value, row=row))
     doc = with_rights_leaf(g, good, leaf)
     doc['source_row']['sha256'] = '0' * 64
     with pytest.raises(ValueError, match='owning source_row identity unavailable'):
-        check(g, rehash(doc))
+        check_rights(g, rehash(doc))
 
 
 def test_native_job_rights_slot_binds_owning_source_row(tmp_path):
@@ -314,7 +327,8 @@ def test_native_job_rights_slot_binds_owning_source_row(tmp_path):
         (root / name).write_bytes(raw)
         doc['rights'] = dict(private_use=True, evidence=[dict(path=name, sha256=refs.sha256(raw), bytes=len(raw),
                                                                contract='coastal-rights-evidence-v1')])
-        validator.GraphValidator(resolver).document(doc, root_id='queue:job')
+        validator.GraphValidator(resolver).rights_evidence(doc['rights']['evidence'][0], doc,
+            ['rights', 'evidence', '0'], root_id='queue:job')
 
     validator.GraphValidator(resolver).document(copy.deepcopy(job), root_id='queue:job')  # structural empty evidence
     run(leaf)  # complete positive
