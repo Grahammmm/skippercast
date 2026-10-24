@@ -5,8 +5,10 @@ staged acceptance runner can execute them in-process with the installed python3;
 collects them normally through pyproject testpaths/python_files. Test names carry the
 acceptance row: test_a1_* focused, test_a2_* producer contract, test_a3_* negative.
 """
+import contextlib
 import copy
 import hashlib
+import io
 import importlib.util
 import json
 import os
@@ -36,8 +38,65 @@ def _load(name, path):
     return module
 
 
+RUNNER_PATH = ROOT / 'scripts' / 'accept_sc_sample_audit.py'
+
 producer = _load('_sc_sample_audit_test_producer', PRODUCER_PATH)
 audit = _load('sc_sample_audit_sample_coverage', AUDIT_PATH)
+runner = _load('_sc_sample_audit_runner_under_test', RUNNER_PATH)
+
+
+@contextlib.contextmanager
+def real_tmpdir():
+    """Temporary directory addressed by its physical path (macOS /var and /tmp are links)."""
+    with tempfile.TemporaryDirectory(prefix='sc-sample-audit-') as tmp:
+        yield Path(os.path.realpath(tmp))
+
+
+class RecordingOs:
+    """In-memory double for the audit module's os: records every open/lstat path."""
+
+    def __init__(self):
+        self.opened, self.lstated = [], []
+
+    def __getattr__(self, name):
+        return getattr(os, name)
+
+    def open(self, path, *args, **kwargs):
+        self.opened.append(os.fspath(path))
+        return os.open(path, *args, **kwargs)
+
+    def lstat(self, path, *args, **kwargs):
+        self.lstated.append(os.fspath(path))
+        return os.lstat(path, *args, **kwargs)
+
+
+@contextlib.contextmanager
+def recording_os():
+    double = RecordingOs()
+    original = audit.os
+    audit.os = double
+    try:
+        yield double
+    finally:
+        audit.os = original
+
+
+def raises_refused(reason, fn, *args, **kwargs):
+    try:
+        fn(*args, **kwargs)
+    except audit.SampleAuditRefused as error:
+        assert error.reason == reason, (error.reason, reason, str(error))
+        return error
+    raise AssertionError('expected SampleAuditRefused(%s)' % reason)
+
+
+def tree_snapshot(path):
+    """Every entry below path, never following symlinks."""
+    entries = []
+    for current, dirs, files in os.walk(path, followlinks=False):
+        for name in dirs + files:
+            entries.append(os.path.relpath(os.path.join(current, name), path))
+    return sorted(entries)
 
 GROUP_FIELDS = ('map_done', 'eligible', 'selected', 'eligible_unselected', 'ineligible')
 REPORT_FIELDS = {
@@ -309,8 +368,8 @@ def test_a2_producer_unchanged_and_used_for_recompute():
 
 def test_a2_cli_round_trip_writes_deterministic_report():
     fixture, document = focused_document()
-    with tempfile.TemporaryDirectory(prefix='sc-sample-audit-') as tmp:
-        sample_path = Path(tmp) / 'sample.json'
+    with real_tmpdir() as tmp:
+        sample_path = tmp / 'sample.json'
         sample_path.write_text(json.dumps(document), encoding='utf-8')
         outs = []
         for name in ('one.json', 'two.json'):
@@ -428,7 +487,7 @@ def test_a3_cli_refusals_preserve_inputs_and_outputs():
     fixture, document = focused_document()
     plan, bridge = fixture['plan_sha256'], fixture['bridge_sha256']
     good = json.dumps(document).encode()
-    with tempfile.TemporaryDirectory(prefix='sc-sample-audit-') as tmp:
+    with real_tmpdir() as tmp:
         # INVALID content: exit 3, input unchanged, no output.
         bad = json.dumps(dict(document, seed=h('x'))).encode()
         status, sample_path, out = _cli(tmp, bad, plan=plan, bridge=bridge)
@@ -499,3 +558,156 @@ def test_a3_serializer_rejects_nonfinite_and_oversize():
         assert error.reason == 'output_too_large'
     else:
         raise AssertionError('oversize output must be refused')
+
+
+def _link_layout(tmp):
+    """tmp/{sample.json, link -> far/target, far/sample.json, far/target/sample.json}."""
+    _, document = focused_document()
+    data = json.dumps(document).encode()
+    far = tmp / 'far'
+    target = far / 'target'
+    target.mkdir(parents=True)
+    for path in (tmp / 'sample.json', far / 'sample.json', target / 'sample.json'):
+        path.write_bytes(data)
+    os.symlink(target, tmp / 'link')
+    return data, far, target
+
+
+def test_a3_input_symlink_ancestry_refused_before_any_open():
+    with real_tmpdir() as tmp:
+        data, far, target = _link_layout(tmp)
+        before = tree_snapshot(tmp)
+        cases = [
+            ('symlink_refused', tmp / 'link' / 'sample.json'),             # intermediate link
+            ('dotdot_refused', str(tmp / 'link') + '/../sample.json'),     # link plus ..
+            ('dotdot_refused', str(tmp / 'far') + '/../sample.json'),      # plain .. also refused
+            ('symlink_refused', tmp / 'link'),                             # leaf link (directory)
+        ]
+        leaf = tmp / 'leaf.json'
+        os.symlink(tmp / 'sample.json', leaf)
+        cases.append(('symlink_refused', leaf))                           # leaf link (file)
+        for reason, path in cases:
+            with recording_os() as double:
+                raises_refused(reason, audit.read_bounded, path)
+            assert double.opened == [], (path, double.opened)
+            assert not any(p.startswith(str(tmp / 'link') + os.sep) for p in double.lstated), double.lstated
+            assert not any(p.startswith(str(target)) for p in double.lstated), double.lstated
+        assert tree_snapshot(tmp) == sorted(before + ['leaf.json'])
+        # Positive control: the same bytes read through an ordinary real path.
+        assert audit.read_bounded(tmp / 'sample.json') == data
+        assert audit.read_bounded(str(tmp) + '/./sample.json') == data
+
+
+def test_a3_output_symlink_ancestry_refused_before_any_creation():
+    with real_tmpdir() as tmp:
+        _link_layout(tmp)
+        before_target = tree_snapshot(tmp / 'far')
+        cases = [
+            ('symlink_refused', tmp / 'link' / 'r.json'),
+            ('dotdot_refused', str(tmp / 'link') + '/../r.json'),
+            ('dotdot_refused', str(tmp) + '/../r.json'),
+            ('symlink_refused', tmp / 'link'),
+        ]
+        for reason, path in cases:
+            with recording_os() as double:
+                raises_refused(reason, audit.write_new, path, b'{}\n')
+            assert double.opened == [], (path, double.opened)
+        assert tree_snapshot(tmp / 'far') == before_target
+        assert not (tmp / 'r.json').exists() and not (tmp.parent / 'r.json').exists()
+        assert not (tmp / 'far' / 'r.json').exists()
+        assert audit.write_new(tmp / 'ok.json', b'{}\n') == tmp / 'ok.json'
+
+
+def test_a3_cli_symlink_plus_dotdot_paths_exit_refused():
+    fixture, _ = focused_document()
+    plan, bridge = fixture['plan_sha256'], fixture['bridge_sha256']
+    with real_tmpdir() as tmp:
+        data, far, target = _link_layout(tmp)
+        before = tree_snapshot(tmp)
+        argv_in = ['--sample', str(tmp / 'link') + '/../sample.json', '--plan-sha256', plan,
+                   '--bridge-sha256', bridge, '--out', str(tmp / 'in.json')]
+        argv_out = ['--sample', str(tmp / 'sample.json'), '--plan-sha256', plan,
+                    '--bridge-sha256', bridge, '--out', str(tmp / 'link') + '/../out.json']
+        for argv in (argv_in, argv_out):
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                status = audit.main(argv)
+            assert status == audit.EXIT_REFUSED, (argv, err.getvalue())
+            assert err.getvalue().startswith('REFUSED ') and 'Traceback' not in err.getvalue()
+        assert tree_snapshot(tmp) == before
+        for path in (tmp / 'sample.json', far / 'sample.json', target / 'sample.json'):
+            assert path.read_bytes() == data
+
+
+def test_a3_runner_run_dir_refuses_symlinked_or_dotdot_ancestry():
+    with real_tmpdir() as tmp:
+        far = tmp / 'far'
+        target = far / 'target'
+        target.mkdir(parents=True)
+        os.symlink(target, tmp / 'link')
+        before = tree_snapshot(tmp)
+        for output in (tmp / 'link' / 'runner-root', tmp / 'link',
+                       str(tmp / 'link') + '/../root2', str(tmp) + '/../root3',
+                       tmp / 'link' / 'a' / 'b'):
+            try:
+                runner.make_run_dir(output)
+            except SystemExit as error:
+                assert str(error).startswith('REFUSED '), str(error)
+            else:
+                raise AssertionError('runner must refuse %s' % output)
+        assert tree_snapshot(tmp) == before, 'nothing may be created behind a refused path'
+        assert list(target.iterdir()) == [] and not (far / 'root2').exists()
+        assert not (tmp.parent / 'root3').exists()
+        # Ordinary real-directory first run and re-run give distinct write-once directories.
+        first = runner.make_run_dir(tmp / 'out' / 'nested')
+        second = runner.make_run_dir(tmp / 'out' / 'nested')
+        assert first != second and first.parent == second.parent == tmp / 'out' / 'nested'
+        assert (first / 'tmp').is_dir() and (second / 'tmp').is_dir()
+        assert not first.is_symlink() and not second.is_symlink()
+
+
+def _numeric_document(target_literal):
+    _, document = focused_document()
+    text = json.dumps(dict(document, target=123456789))
+    assert text.count('123456789') == 1
+    return text.replace('123456789', target_literal).encode()
+
+
+def test_a3_cli_overlimit_or_nonfinite_numbers_invalid_without_traceback():
+    fixture, document = focused_document()
+    plan, bridge = fixture['plan_sha256'], fixture['bridge_sha256']
+    digits_limit = sys.get_int_max_str_digits() if hasattr(sys, 'get_int_max_str_digits') else None
+    with real_tmpdir() as tmp:
+        existing = tmp / 'existing.json'
+        existing.write_bytes(b'prior report\n')
+        literals = ['9' * 5000, '-' + '9' * 5000, '1e999', '-1e999', '1' + '0' * 400 + '.5', '8.0', '8e0']
+        for index, literal in enumerate(literals):
+            raw = _numeric_document(literal)
+            assert len(raw) < audit.MAX_FILE_BYTES
+            sample = tmp / ('num-%d.json' % index)
+            sample.write_bytes(raw)
+            for out in (existing, tmp / ('fresh-%d.json' % index)):
+                err = io.StringIO()
+                with contextlib.redirect_stderr(err):
+                    status = audit.main(['--sample', str(sample), '--plan-sha256', plan,
+                                         '--bridge-sha256', bridge, '--out', str(out)])
+                assert status == audit.EXIT_INVALID == 3, (literal[:20], status, err.getvalue()[:300])
+                assert err.getvalue().startswith('INVALID ') and 'Traceback' not in err.getvalue()
+            assert sample.read_bytes() == raw
+            assert existing.read_bytes() == b'prior report\n'
+            assert not (tmp / ('fresh-%d.json' % index)).exists()
+        # Valid-number positive control through the same path.
+        good = tmp / 'good.json'
+        good.write_bytes(_numeric_document(str(document['target'])))
+        assert audit.main(['--sample', str(good), '--plan-sha256', plan, '--bridge-sha256', bridge,
+                           '--out', str(tmp / 'good-report.json')]) == audit.EXIT_OK
+        assert json.loads((tmp / 'good-report.json').read_bytes())['sample']['target'] == document['target']
+    if digits_limit is not None:
+        assert sys.get_int_max_str_digits() == digits_limit, 'global int limit must not change'
+
+
+def test_a3_api_overlimit_integer_invalid():
+    fixture, document = focused_document()
+    raises_invalid('bad_type', audit.audit_sample, dict(document, target=10 ** 5000),
+                   fixture['plan_sha256'], fixture['bridge_sha256'])
+    raises_invalid('bad_json', audit._parse_json, b'{"target": ' + b'7' * 5000 + b'}')

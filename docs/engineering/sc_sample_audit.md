@@ -43,16 +43,27 @@ report dict or raises `SampleAuditInvalid` with a `reason` code.
 Exit codes: 0 report written; 3 INVALID (for example `missing_field`, `duplicate_key`,
 `malformed_key`, `method_mismatch`, `seed_mismatch`, `target_mismatch`, `size_mismatch`,
 `selected_not_eligible`, `selected_mismatch`, `eligible_not_in_map_done`,
-`row_cap_exceeded`, `bad_json`); 4 refused (symlink in the path, non-regular input,
-oversized file, existing output); 2 usage error.
+`row_cap_exceeded`, `bad_json` including numbers beyond the interpreter's integer
+string-conversion limit, `bad_type` including non-finite or non-integer counts);
+4 refused (symlink or `..` in the path, non-regular input, oversized file, existing
+output); 2 usage error.
 
 ## Bounds
 
 Tool-local limits for this report only: 2 MiB input file, 16 MiB aggregate input,
-4096 keys per population and 8 MiB output. The input path must have no symlink in any
-component and must be a regular file. The output is created exclusively (never
-overwritten) with deterministic JSON; non-finite numbers are refused. These limits do
+4096 keys per population and 8 MiB output. Input and output paths are checked
+component by component as supplied, before any open or creation: a symlink at any
+existing component and any `..` component are refused (no lexical normalization can
+erase a `link/..`), and the input must be a regular file. The acceptance runner applies
+the same rule to its `--output` root before creating any directory. The output is
+created exclusively (never overwritten) with deterministic JSON; non-finite numbers are
+refused. The interpreter's global integer-digit limit is never raised. These limits do
 not change any coast run, download or model cap, or `coast_sample.py` itself.
+
+Open admission item: the frozen CLI has no trusted expected-hash argument for the
+sample file. The report records the observed `sample_file_sha256` and canonical
+`input_sha256`; recording is not verification, and the disposition of the brief's
+expected-hash clause belongs to the card's admission owner.
 
 ## Tests
 

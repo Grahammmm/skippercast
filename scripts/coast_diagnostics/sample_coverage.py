@@ -268,12 +268,36 @@ def serialize_report(report):
     return data
 
 
+def _original_parts(path):
+    """Components of the path as supplied, without lexical normalization.
+
+    os.path.abspath/normpath would erase 'link/..' before any component is inspected,
+    so '..' is refused outright and only empty and '.' components are dropped. A
+    relative path is anchored at os.getcwd(), which the kernel reports physically.
+    """
+    try:
+        text = os.fspath(path)
+    except TypeError:
+        raise SampleAuditRefused('bad_path', 'path must be a string') from None
+    if not isinstance(text, str) or not text or '\x00' in text:
+        raise SampleAuditRefused('bad_path', repr(text)[:200])
+    if not os.path.isabs(text):
+        text = os.path.join(os.getcwd(), text)
+    parts = [part for part in text.split(os.sep) if part not in ('', '.')]
+    if '..' in parts:
+        raise SampleAuditRefused('dotdot_refused', text[:400])
+    if not parts:
+        raise SampleAuditRefused('bad_path', 'filesystem root')
+    return parts
+
+
 def _check_ancestry(path):
-    """Refuse a symlink at any existing component; return lstat of the leaf or None."""
-    absolute = Path(os.path.abspath(path))
-    current = Path(absolute.anchor)
+    """Refuse '..' and a symlink at any existing component; return (path, leaf lstat or None)."""
+    parts = _original_parts(path)
+    absolute = Path(os.sep, *parts)
+    current = Path(os.sep)
     leaf = None
-    for part in absolute.parts[1:]:
+    for part in parts:
         current = current / part
         try:
             info = os.lstat(current)
@@ -329,7 +353,11 @@ def _parse_json(data):
 
     try:
         return json.loads(data.decode('utf-8'), object_pairs_hook=pairs, parse_constant=constant)
-    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as error:
+    except SampleAuditInvalid:
+        raise
+    except (UnicodeDecodeError, RecursionError, ValueError) as error:
+        # ValueError covers JSONDecodeError and the interpreter's integer string-conversion
+        # limit (e.g. a 5000-digit literal); the global limit is never raised.
         raise SampleAuditInvalid('bad_json', str(error)[:200]) from None
 
 

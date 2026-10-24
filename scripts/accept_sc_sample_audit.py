@@ -22,6 +22,7 @@ import io  # noqa: E402
 import json  # noqa: E402
 import os  # noqa: E402
 from pathlib import Path  # noqa: E402
+import stat  # noqa: E402
 import tempfile  # noqa: E402
 import time  # noqa: E402
 import tomllib  # noqa: E402
@@ -29,7 +30,6 @@ import traceback  # noqa: E402
 import zlib  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO))  # this staged repository only; never a shared checkout
 
 BASE_COMMIT = '59fca09b2cc7f5c81a4796902504e263d7f06960'
 SOURCE_PINS = {
@@ -152,16 +152,64 @@ def git_identity():
             'base_verified': sha == BASE_COMMIT}
 
 
+def _safe_components(output):
+    """Supplied output components without lexical normalization; '..' is refused outright."""
+    text = os.fspath(output)
+    if not isinstance(text, str) or not text or '\x00' in text:
+        raise SystemExit('REFUSED output path is not a usable string: %r' % (text,))
+    if not os.path.isabs(text):
+        text = os.path.join(os.getcwd(), text)  # getcwd is reported physically
+    parts = [part for part in text.split(os.sep) if part not in ('', '.')]
+    if '..' in parts:
+        raise SystemExit('REFUSED output path contains "..": %s' % text)
+    if not parts:
+        raise SystemExit('REFUSED output path is the filesystem root')
+    return parts
+
+
+def _real_directory(path):
+    try:
+        info = os.lstat(path)
+    except FileNotFoundError:
+        return None
+    if stat.S_ISLNK(info.st_mode):
+        raise SystemExit('REFUSED output path component is a symlink: %s' % path)
+    if not stat.S_ISDIR(info.st_mode):
+        raise SystemExit('REFUSED output path component is not a directory: %s' % path)
+    return info
+
+
 def make_run_dir(output):
-    root = Path(os.path.abspath(output))
-    if root.is_symlink():
-        raise SystemExit('REFUSED output root is a symlink: %s' % root)
-    root.mkdir(parents=True, exist_ok=True)
+    """Validate every existing ancestor before creating anything, then create one level at a time."""
+    parts = _safe_components(output)
+    paths, current = [], Path(os.sep)
+    for part in parts:
+        current = current / part
+        paths.append(current)
+    missing_from = len(paths)
+    for position, path in enumerate(paths):  # first pass: no creation at all
+        if _real_directory(path) is None:
+            missing_from = position
+            break
+    for path in paths[missing_from:]:
+        try:
+            os.mkdir(path, 0o755)
+        except FileExistsError:
+            pass
+        if _real_directory(path) is None:
+            raise SystemExit('REFUSED output path component vanished: %s' % path)
+    root = paths[-1]
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
-    run_dir = root / ('run-%s-%d' % (stamp, os.getpid()))
-    run_dir.mkdir(exist_ok=False)
-    (run_dir / 'tmp').mkdir()
-    return run_dir
+    for attempt in range(100):
+        suffix = '' if attempt == 0 else '-%d' % attempt
+        run_dir = root / ('run-%s-%d%s' % (stamp, os.getpid(), suffix))
+        try:
+            os.mkdir(run_dir, 0o755)
+        except FileExistsError:
+            continue
+        os.mkdir(run_dir / 'tmp', 0o755)
+        return run_dir
+    raise SystemExit('REFUSED could not create a unique run directory under %s' % root)
 
 
 def write_once(path, text):
@@ -264,6 +312,7 @@ def main(argv=None):
     parser.add_argument('--suite', required=True, choices=sorted(SUITE_PREFIX))
     parser.add_argument('--output', required=True)
     args = parser.parse_args(argv)
+    sys.path.insert(0, str(REPO))  # this staged repository only; never a shared checkout
     run_dir = make_run_dir(args.output)
     log_lines = []
 
