@@ -146,6 +146,86 @@ def test_malformed_and_semantic_negatives(field, value, tmp_path):
     assert not list(tmp_path.iterdir())
 
 
+@pytest.fixture
+def synthetic_metadata(tmp_path):
+    """Independent regular-file snapshot; mutations never touch frozen inputs."""
+    metadata = tmp_path / 'metadata'
+    names = ['schemas/coast-recipe-v1.schema.json', 'catalog/sources.json',
+             'catalog/coastal-sectors.json']
+    names += ['regions/' + slug + '/region.json' for slug in ROWS]
+    for name in names:
+        source = ROOT / name
+        assert not source.is_symlink()
+        target = metadata / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(source.read_bytes())
+        assert target.is_file() and not target.is_symlink()
+    workspace = tmp_path / 'workspace'
+    workspace.mkdir()
+    return metadata, workspace
+
+
+@pytest.mark.parametrize('slug', ROWS)
+@pytest.mark.parametrize('edge,limit,direction', [
+    (1, 32.5343, -math.inf), (3, 42.0, math.inf),
+])
+def test_ca_coverage_gate_with_matching_synthetic_region(
+        slug, edge, limit, direction, synthetic_metadata):
+    metadata, workspace = synthetic_metadata
+    document = load(slug)
+    region_path = metadata / 'regions' / slug / 'region.json'
+    region = json.loads(region_path.read_text())
+    original_box = deepcopy(document['bbox'])
+
+    def bind_edge(value):
+        document['bbox'][edge] = value
+        region['bounds'] = deepcopy(document['bbox'])
+        region_path.write_text(json.dumps(region))
+
+    # Exact and one-ULP-inside edges are valid discovery latitude bounds.
+    # The opposite edge, longitude, sources and all other gates stay unchanged.
+    for value in (limit, math.nextafter(limit, -direction)):
+        bind_edge(value)
+        assert recipe.validate_recipe(document, metadata_root=metadata,
+                                      workspace_root=workspace)['valid']
+    bind_edge(math.nextafter(limit, direction))
+    with pytest.raises(recipe.RecipeError, match='outside supported CA'):
+        recipe.validate_recipe(document, metadata_root=metadata, workspace_root=workspace)
+    document['bbox'] = original_box
+    region['bounds'] = deepcopy(original_box)
+    region_path.write_text(json.dumps(region))
+    assert recipe.validate_recipe(document, metadata_root=metadata,
+                                  workspace_root=workspace)['valid']
+    assert not list(workspace.iterdir())
+
+
+@pytest.mark.parametrize('slug,source', [
+    (slug, source) for slug, (_, sources) in ROWS.items() for source in sources
+])
+@pytest.mark.parametrize('change', ['remove-bathymetry', 'empty'])
+def test_catalog_bathymetry_support_gate_isolated(
+        slug, source, change, synthetic_metadata):
+    metadata, workspace = synthetic_metadata
+    document = load(slug)
+    catalog_path = metadata / 'catalog/sources.json'
+    catalog = json.loads(catalog_path.read_text())
+    row = next(row for row in catalog['sources'] if row['id'] == source)
+    original_needs = deepcopy(row['needs'])
+    assert 'bathymetry' in original_needs
+    assert recipe.validate_recipe(document, metadata_root=metadata,
+                                  workspace_root=workspace)['valid']
+    row['needs'] = ([need for need in original_needs if need != 'bathymetry']
+                    if change == 'remove-bathymetry' else [])
+    catalog_path.write_text(json.dumps(catalog))
+    with pytest.raises(recipe.RecipeError, match='source lacks catalog bathymetry support'):
+        recipe.validate_recipe(document, metadata_root=metadata, workspace_root=workspace)
+    row['needs'] = original_needs
+    catalog_path.write_text(json.dumps(catalog))
+    assert recipe.validate_recipe(document, metadata_root=metadata,
+                                  workspace_root=workspace)['valid']
+    assert not list(workspace.iterdir())
+
+
 @pytest.mark.parametrize('slug', ROWS)
 @pytest.mark.parametrize('axis', range(4))
 @pytest.mark.parametrize('direction', [-math.inf, math.inf])
