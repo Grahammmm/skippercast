@@ -13,7 +13,8 @@ could be fresh on one machine and stale on another.
   for a float are refused with `ValueError("finite clock required")` (the last
   previously escaped as `OverflowError`).
 - A string must be a complete extended date-time with an explicit offset:
-  `YYYY-MM-DDTHH:MM:SS[.f{1,6}](Z|+HH:MM|-HH:MM)`, ASCII digits only, upper-case
+  `YYYY-MM-DDTHH:MM:SS`, an optional fraction of 1-6 digits, then `Z`,
+  `+HH:MM` or `-HH:MM`; ASCII digits only, upper-case
   `T` and `Z`, offset hours 00-23 and minutes 00-59. `-00:00` (RFC 3339
   "offset unknown") is refused. Any other string, including naive, date-only,
   minute-precision, basic-format, space-separated, out-of-range calendar/time
