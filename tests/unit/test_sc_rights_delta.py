@@ -250,6 +250,48 @@ def test_a1_unsupported_shapes_are_invalid():
         _expect_invalid(good, bad, code)
 
 
+MALFORMED_SOURCE_USES = ([], {}, ["noncommercial"], {"use": "noncommercial"}, 7, 1.5, True, False, "",
+                         "Noncommercial", "for profit")
+
+
+def test_a1_malformed_source_use_is_invalid_in_api_and_cli():
+    """Containers and scalars outside the two profiles are INVALID on either side, never an exception."""
+    rows = [_row()]
+    good = _envelope(rows)
+    work = _fresh_dir()
+    good_path = _write(work / "good.json", good)
+    for index, value in enumerate(MALFORMED_SOURCE_USES):
+        bad = _envelope(rows, source_use=value)
+        for left, right, side in ((bad, good, "left"), (good, bad, "right")):
+            report = _expect_invalid(left, right, "SOURCE_USE_INVALID")
+            assert {"side": side, "code": "SOURCE_USE_INVALID", "pointer": "/source_use"} in report["errors"], value
+        bad_path = _write(work / f"bad-{index}.json", bad)
+        for left_path, right_path in ((bad_path, good_path), (good_path, bad_path)):
+            out = work / f"out-{index}.json"
+            assert _cli(left_path, right_path, out) == 2, value
+            assert not out.exists(), value
+    # Preserved controls: both valid profiles compare; missing and null stay UNVERIFIED.
+    for profile in ("noncommercial", "for-profit"):
+        assert rd.compare_rights(_envelope(rows, source_use=profile),
+                                 _envelope(rows, source_use=profile))["status"] == "COMPARED"
+    for absent in (_envelope(rows, source_use=None), _envelope(rows, drop=("source_use",))):
+        report = rd.compare_rights(good, absent)
+        assert report["status"] == "UNVERIFIED" and "RIGHT_SOURCE_USE_ABSENT" in report["unverified_reasons"]
+
+
+def test_a1_membership_only_changes_set_changed():
+    """Adding or removing a source_id-only row is a change even with no field diffs."""
+    bare = [{"source_id": "bare"}]
+    added = rd.compare_rights(_envelope([]), _envelope(bare))
+    assert added["status"] == "COMPARED" and added["sources_added"] == ["bare"]
+    assert added["changes"] == [] and added["changed"] is True
+    removed = rd.compare_rights(_envelope(bare), _envelope([]))
+    assert removed["sources_removed"] == ["bare"] and removed["changes"] == [] and removed["changed"] is True
+    same = rd.compare_rights(_envelope(bare), _envelope(copy.deepcopy(bare)))
+    assert same["changes"] == [] and same["sources_added"] == [] and same["sources_removed"] == []
+    assert same["changed"] is False
+
+
 def test_a1_row_cap_boundary_is_accepted():
     rows = [{"source_id": f"s{i:05d}"} for i in range(rd.ROW_CAP)]
     report = rd.compare_rights(_envelope(rows), _envelope(rows))
@@ -523,6 +565,74 @@ def test_a3_symlink_fifo_and_special_inputs_are_refused():
         assert _cli(good, bad, out) == 4, bad
         assert not out.exists(), bad
     assert stat.S_ISFIFO(os.lstat(fifo).st_mode)
+
+
+def _load_runner():
+    import importlib.util
+    path = REPO / "scripts" / "accept_sc_rights_delta.py"
+    spec = importlib.util.spec_from_file_location("sc_rights_delta_runner_under_test", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _cancelled_symlink_tree():
+    """work/link -> work/elsewhere/deep, so link/.. is physically work/elsewhere, lexically work."""
+    work = _fresh_dir()
+    deep = work / "elsewhere" / "deep"
+    deep.mkdir(parents=True)
+    os.symlink(deep, work / "link")
+    good = _write(work / "good.json", _envelope([_row()]))
+    _write(work / "elsewhere" / "good.json", _envelope([_row(notice="physical target")]))
+    prior = _write(work / "prior.json", b"prior evidence\n")
+    return work, good, prior
+
+
+def _snapshot(root):
+    return sorted((str(p.relative_to(root)), p.is_symlink() or p.is_dir() or p.read_bytes())
+                  for p in root.rglob("*"))
+
+
+def test_a3_cancelled_symlink_component_paths_are_refused():
+    """A symlink or '..' component cancelled by lexical normalization must not evade refusal."""
+    work, good, prior = _cancelled_symlink_tree()
+    before = _snapshot(work)
+    cwd = os.getcwd()
+    try:
+        os.chdir(work)
+        bad_inputs = (str(work / "link" / ".." / "good.json"), os.path.join("link", "..", "good.json"),
+                      str(work / "elsewhere" / ".." / "good.json"), os.path.join(".", "..", work.name, "good.json"))
+        for bad in bad_inputs:
+            out = work / "out.json"
+            assert _cli(bad, good, out) == 4, bad
+            assert _cli(good, bad, out) == 4, bad
+            assert not out.exists(), bad
+        bad_outputs = (str(work / "link" / ".." / "through.json"), os.path.join("link", "..", "through.json"),
+                       str(work / "link" / ".." / "prior.json"), os.path.join("elsewhere", "..", "through.json"))
+        for bad in bad_outputs:
+            assert _cli(good, good, bad) == 4, bad
+            assert not (work / "through.json").exists() and not (work / "elsewhere" / "through.json").exists()
+        assert prior.read_bytes() == b"prior evidence\n"
+        assert _snapshot(work) == before
+
+        runner = _load_runner()
+        for bad in (str(work / "link" / ".." / "run-abs"), os.path.join("link", "..", "run-rel")):
+            try:
+                runner.make_run_root(bad)
+            except SystemExit as refusal:
+                assert "refused" in str(refusal.code), bad
+            else:
+                raise AssertionError(f"runner admitted cancelled run root {bad}")
+        assert _snapshot(work) == before
+
+        # Ordinary absolute and relative paths still work.
+        assert _cli(str(good), "good.json", str(work / "ok-abs.json")) == 0
+        assert _cli("good.json", str(good), "ok-rel.json") == 0
+        assert (work / "ok-abs.json").is_file() and (work / "ok-rel.json").is_file()
+        made = runner.make_run_root("run-ok")
+        assert made == work / "run-ok" and (made / "tmp").is_dir()
+    finally:
+        os.chdir(cwd)
 
 
 def test_a3_oversized_input_is_refused_before_parsing():

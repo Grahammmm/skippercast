@@ -34,7 +34,7 @@ synthetic fixtures are not retrospective approval evidence. It has exactly these
 | `COMPARED` | 0 | both sides are valid, both producer objects are complete and identical, and `source_use` is identical | report with `changes` |
 | `UNVERIFIED` | 3 | a producer is absent or incomplete, the producers differ, `source_use` is absent, or `source_use` differs | report with `binding_mismatches` and `unverified_reasons`, and `changes: null` (no delta is computed) |
 | `INVALID` | 2 | wrong schema, missing or unknown (authority-bearing) fields, a malformed producer, an unsupported value shape, a duplicate `source_id`, too many rows, a hash mismatch, duplicate JSON keys, NaN/Infinity, or bad UTF-8. Usage errors also exit 2 | nothing written; a diagnostic goes to stderr |
-| `REFUSED` | 4 | a symlink anywhere in the path, a non-regular input (FIFO, directory), a missing file, more than 2 MiB per file or 16 MiB in total, an expected-hash mismatch, an output that already exists or has a symlinked ancestor, or a report over 8 MiB | nothing written |
+| `REFUSED` | 4 | a symlink anywhere in the path, a `..` component in any supplied path, a non-regular input (FIFO, directory), a missing file, more than 2 MiB per file or 16 MiB in total, an expected-hash mismatch, an output that already exists or has a symlinked ancestor, or a report over 8 MiB | nothing written |
 
 `INVALID` on either side takes precedence over `UNVERIFIED`, which takes precedence over
 `COMPARED`. Inputs are never modified.
@@ -53,6 +53,11 @@ synthetic fixtures are not retrospective approval evidence. It has exactly these
   attribution, notice, commercial use, navigation use or review date) is removed, or a
   whole source is removed, the report flags it `*_NOT_A_GRANT`. The removal is a diff, never
   a permission.
+- `changed` is true when there is any field change or any added or removed source, including
+  a row that carries only its `source_id`.
+- A `source_use` that is not one of the two profile strings (for example a list, an object,
+  a number, a boolean or another string) is `INVALID`. A missing or null `source_use` is
+  `UNVERIFIED`.
 - Changes are sorted by (`source_id`, `pointer`) in code-point order. When only the row
   order changes there are no field changes, and the report sets `row_order_changed: true`.
 - The output is deterministic ASCII JSON. Raw strings are kept, JSON-escaped and never
@@ -70,7 +75,9 @@ python3 scripts/coast_diagnostics/rights_delta.py --left A.json --right B.json -
 
 The tool reads only the two named files and never follows a path that appears inside a
 document. It writes one new file with exclusive create, so an existing output is never
-replaced.
+replaced. A path with a `..` component is refused, for inputs, the output and the acceptance
+run directory, because lexical normalization would cancel a preceding symlink before the
+ancestry check.
 
 ## Acceptance
 
@@ -86,7 +93,8 @@ directory, and writes are confined to the run directory. It then runs the plain 
 [`tests/unit/test_sc_rights_delta.py`](../../tests/unit/test_sc_rights_delta.py) in-process,
 and pytest collects the same functions. The contract suite checks that opening
 deployment policy and catalog files is denied. The negative suite uses in-memory doubles
-that normalize credit text, disable the producer binding, or disable the unknown-field gate.
+that normalize credit text, disable the producer binding, disable the unknown-field gate, or
+disable the `..` path refusal.
 Each double must make its exact regression fail and leave an unrelated control passing.
 Each run writes `receipt.json` and `console.txt` into a new directory.
 

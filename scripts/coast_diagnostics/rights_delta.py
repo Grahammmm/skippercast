@@ -152,7 +152,7 @@ def _validate(envelope, side):
                 if key in producer and not check(producer[key]):
                     error("PRODUCER_INVALID", "/producer/" + key)
     source_use = envelope.get("source_use")
-    if source_use is not None and source_use not in SOURCE_USES:
+    if source_use is not None and not (isinstance(source_use, str) and source_use in SOURCE_USES):
         error("SOURCE_USE_INVALID", "/source_use")
 
     digest = envelope.get("canonical_rows_sha256")
@@ -316,12 +316,29 @@ def compare_rights(left_envelope, right_envelope):
     flags.sort(key=lambda f: (f["source_id"], f["pointer"], f["code"]))
     shared = [s for s in left["order"] if s in right["rows"]]
     shared_right = [s for s in right["order"] if s in left["rows"]]
-    return _report("COMPARED", changes=changes, changed=bool(changes), sources_added=added,
+    return _report("COMPARED", changes=changes, changed=bool(changes or added or removed), sources_added=added,
                    sources_removed=removed, review_flags=flags,
                    row_order_changed=shared != shared_right, **common)
 
 
 # ---------------------------------------------------------------- bounded file I/O
+
+def _has_parent_reference(raw_path):
+    """True when the supplied path has a '..' component.
+
+    Lexical normalization (os.path.abspath) would cancel such a component together with
+    whatever precedes it, which may be a symlink, before ancestry is checked. These paths
+    are refused outright rather than resolved.
+    """
+    return os.pardir in os.fsdecode(raw_path).split(os.sep)
+
+
+def _admit_path(raw_path):
+    """Reject '..' components, then return the absolute path for ancestry checking."""
+    if _has_parent_reference(raw_path):
+        raise Refused("path has a '..' component")
+    return os.path.abspath(raw_path)
+
 
 def _check_ancestry(path):
     """Refuse a symlink at the root, any intermediate component or the leaf."""
@@ -341,7 +358,7 @@ def _check_ancestry(path):
 
 def read_bounded(raw_path, expected_sha256=None, *, budget):
     """Read one staged regular file after ancestry/type/size checks; returns (bytes, sha256)."""
-    path = os.path.abspath(raw_path)
+    path = _admit_path(raw_path)
     if not _check_ancestry(path):
         raise Refused("input missing")
     info = os.lstat(path)
@@ -381,7 +398,7 @@ def write_new(raw_path, data):
     """Create a new report file: validated parent, no symlinks, no overwrite, bounded bytes."""
     if len(data) > OUTPUT_CAP:
         raise Refused("report exceeds output cap")
-    path = os.path.abspath(raw_path)
+    path = _admit_path(raw_path)
     parent = os.path.dirname(path)
     if not _check_ancestry(parent) or not stat.S_ISDIR(os.lstat(parent).st_mode):
         raise Refused("output parent is not an existing directory")
@@ -419,6 +436,7 @@ def main(argv=None):
         return EXIT_INVALID if exit_.code else EXIT_COMPARED
     budget = [AGGREGATE_INPUT_CAP]
     try:
+        _admit_path(args.out)  # refuse a '..' output path before any input is read
         left_bytes, left_sha = read_bounded(args.left, args.left_sha256, budget=budget)
         right_bytes, right_sha = read_bounded(args.right, args.right_sha256, budget=budget)
     except (Refused, OSError) as error:

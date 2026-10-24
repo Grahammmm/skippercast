@@ -106,6 +106,10 @@ def check_no_symlink_ancestry(path):
 
 
 def make_run_root(raw):
+    # A '..' component would let lexical normalization cancel a preceding symlink before
+    # the ancestry check, so such run roots are refused outright.
+    if os.pardir in os.fsdecode(raw).split(os.sep):
+        raise SystemExit(f"refused: run root has a '..' component: {raw}")
     path = Path(os.path.abspath(raw))
     check_no_symlink_ancestry(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -267,6 +271,8 @@ def mutation_controls(rd, tests):
          "test_a3_mismatched_producer_with_identical_rows_is_unverified", "test_a1_unchanged_rows_give_no_changes"),
         ("M3-disable-unknown-field-gate", "_unknown_keys", lambda *a, **k: [],
          "test_a3_unknown_authority_bearing_fields_are_invalid", "test_a1_unchanged_rows_give_no_changes"),
+        ("M4-disable-parent-reference-refusal", "_has_parent_reference", lambda *a, **k: False,
+         "test_a3_cancelled_symlink_component_paths_are_refused", "test_a3_symlink_fifo_and_special_inputs_are_refused"),
     ]
     results = []
     for name, attribute, double, regression, unaffected in controls:
