@@ -35,7 +35,7 @@ from pathlib import Path  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
 SUITES = {'focused': 'test_a1_', 'contract': 'test_a2_', 'negative': 'test_a3_'}
-EXPECTED = {'focused': 6, 'contract': 4, 'negative': 11}
+EXPECTED = {'focused': 7, 'contract': 4, 'negative': 14}
 # Existing repository layout contracts the new test module must satisfy.
 LAYOUT_CONTRACTS = ('tests.contract.test_test_layout', 'tests.contract.test_research_boundary')
 HASHED = ('scripts/accept_sc_segment_delta.py', 'scripts/coast_diagnostics/segment_receipt_delta.py',
@@ -98,10 +98,89 @@ def git_head():
     return None
 
 
-def write_once(path, data):
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
+def write_once(dir_fd, name, data):
+    """Create ``name`` inside an already-verified directory descriptor; never overwrite or follow."""
+    fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644, dir_fd=dir_fd)
     with os.fdopen(fd, 'wb') as handle:
         handle.write(data)
+
+
+class RunRootRefused(Exception):
+    """--output is unsafe (symlink, non-directory, not normalized): nothing was written."""
+
+
+def _output_parts(output):
+    text = os.fspath(output)
+    if '\0' in text:
+        raise RunRootRefused('NUL byte in --output')
+    absolute = text if os.path.isabs(text) else os.path.join(os.getcwd(), text)
+    if absolute != os.path.normpath(absolute) or absolute.startswith('//'):
+        raise RunRootRefused(f'--output must be normalized (no ., .., // or trailing /): {text}')
+    parts = absolute.split('/')[1:]
+    if not parts or not all(parts):
+        raise RunRootRefused(f'--output must name a directory below /: {text}')
+    return absolute, parts
+
+
+def open_output_root(output):
+    """Open --output from / one component at a time with O_NOFOLLOW.
+
+    Every existing ancestor and the leaf must be a real directory (a symlink
+    anywhere is refused before any mkdir). Missing trailing components are
+    created with mkdir relative to the verified parent descriptor and then
+    re-opened with O_NOFOLLOW. Returns (descriptor, absolute path).
+    """
+    absolute, parts = _output_parts(output)
+    no_follow = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    fd = os.open('/', os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        for part in parts:
+            try:
+                new = os.open(part, no_follow, dir_fd=fd)
+            except FileNotFoundError:
+                try:
+                    os.mkdir(part, 0o700, dir_fd=fd)
+                except FileExistsError:
+                    pass
+                except OSError as error:
+                    raise RunRootRefused(f'cannot create {part!r} in --output {absolute}: {error.strerror}') from None
+                try:
+                    new = os.open(part, no_follow, dir_fd=fd)
+                except OSError as error:
+                    raise RunRootRefused(f'refused --output {absolute} at {part!r}: {error.strerror}') from None
+            except OSError as error:  # ELOOP (symlink), ENOTDIR (file), EACCES ...
+                raise RunRootRefused(f'refused --output {absolute} at {part!r}: symlink or non-directory '
+                                     f'({error.strerror})') from None
+            os.close(fd)
+            fd = new
+        return fd, absolute
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def prepare_run_dir(output, started):
+    """Create a new exclusive run directory with tmp/ and work/; return (Path, descriptor)."""
+    root_fd, absolute = open_output_root(output)
+    name = f"{started.replace(':', '').replace('.', '-')}-{os.getpid()}-{secrets.token_hex(4)}"
+    try:
+        try:
+            os.mkdir(name, 0o700, dir_fd=root_fd)  # exclusive: an existing name is refused
+            run_fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=root_fd)
+        except OSError as error:
+            raise RunRootRefused(f'cannot create run directory {name} in {absolute}: {error.strerror}') from None
+    finally:
+        os.close(root_fd)
+    try:
+        for sub in ('tmp', 'work'):
+            os.mkdir(sub, 0o700, dir_fd=run_fd)
+        run_dir = os.path.join(absolute, name)
+        if os.path.realpath(run_dir) != run_dir:
+            raise RunRootRefused(f'run directory path is not canonical: {run_dir}')
+    except BaseException:
+        os.close(run_fd)
+        raise
+    return Path(run_dir), run_fd
 
 
 def install_sentinels(run_dir, violations):
@@ -151,17 +230,15 @@ def run_layout_contracts():
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--suite', required=True, choices=sorted(SUITES))
-    parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--output', required=True, help='run root; every component must be a real directory')
     args = parser.parse_args(argv)
 
     started = utc()
-    output = args.output.absolute()
-    output.mkdir(parents=True, exist_ok=True)
-    run_dir = output / f"{started.replace(':', '').replace('.', '-')}-{os.getpid()}-{secrets.token_hex(4)}"
-    run_dir.mkdir(exist_ok=False)
-    run_dir = Path(os.path.realpath(run_dir))
-    (run_dir / 'tmp').mkdir()
-    (run_dir / 'work').mkdir()
+    try:
+        run_dir, run_fd = prepare_run_dir(args.output, started)
+    except RunRootRefused as error:  # before any write; exit 2 like other unsafe input
+        print('REFUSED: ' + str(error), file=sys.stderr)
+        return 2
 
     out_tee, err_tee = Tee(sys.stdout), Tee(sys.stderr)
     violations = []
@@ -248,9 +325,10 @@ def main(argv=None):
     receipt.update(finished_utc=utc(), tests=tests, counts=counts, mutation_controls=controls,
                    layout_contracts=layout, sentinel_violations=violations, imported_modules=imported,
                    sys_path=list(sys.path), result='PASS' if ok else 'FAIL', exit_code=0 if ok else 1)
-    write_once(run_dir / 'stdout.txt', out_tee.buffer_text.getvalue().encode())
-    write_once(run_dir / 'stderr.txt', err_tee.buffer_text.getvalue().encode())
-    write_once(run_dir / 'receipt.json', (json.dumps(receipt, sort_keys=True, indent=2) + '\n').encode())
+    write_once(run_fd, 'stdout.txt', out_tee.buffer_text.getvalue().encode())
+    write_once(run_fd, 'stderr.txt', err_tee.buffer_text.getvalue().encode())
+    write_once(run_fd, 'receipt.json', (json.dumps(receipt, sort_keys=True, indent=2) + '\n').encode())
+    os.close(run_fd)
     print(f'receipt: {run_dir / "receipt.json"} sha256={sha256_file(run_dir / "receipt.json")}')
     return 0 if ok else 1
 

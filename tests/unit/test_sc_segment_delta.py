@@ -26,6 +26,7 @@ from tests._support import FIXTURES, ROOT
 
 FIXTURE_DIR = FIXTURES / 'sc_segment_delta'
 MODULE_PATH = ROOT / 'scripts' / 'coast_diagnostics' / 'segment_receipt_delta.py'
+RUNNER_PATH = ROOT / 'scripts' / 'accept_sc_segment_delta.py'
 PRODUCER_PATH = ROOT / 'scripts' / 'validate_coast_receipt.py'
 SCHEMA_PATH = ROOT / 'skills' / 'coast-campaign-shared' / 'schemas' / 'coast-segment-receipt-v1.schema.json'
 # Pins measured by the planner at Grahammmm/skippercast main 59fca09b.
@@ -46,6 +47,7 @@ FLAGS = dict(evidence_scope='declared_metadata_only', referenced_bytes_verified=
 WORK_ROOT = None
 _COUNTER = itertools.count()
 _MODULE = None
+_RUNNER = None
 
 
 # ---------------------------------------------------------------- helpers ---
@@ -59,6 +61,45 @@ def delta():
         spec.loader.exec_module(module)
         _MODULE = module
     return _MODULE
+
+
+def runner():
+    """The acceptance runner module (its run-root helpers only; suites are never re-entered)."""
+    global _RUNNER
+    if _RUNNER is None:
+        spec = importlib.util.spec_from_file_location('sc_segment_delta_runner_under_test', RUNNER_PATH)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _RUNNER = module
+    return _RUNNER
+
+
+def canon(value):
+    """Canonical text: distinguishes 0.0 from -0.0 and 1 from 1.0, unlike ==."""
+    return json.dumps(value, sort_keys=True, allow_nan=False)
+
+
+def nest(levels, leaf=0):
+    """`levels` nested single-key objects, built without recursion."""
+    value = leaf
+    for _ in range(levels):
+        value = {'d': value}
+    return value
+
+
+def tree(root):
+    """Every entry (files, dirs, links) under root with file hashes / link targets."""
+    entries = {}
+    for current, dirs, files in os.walk(root):
+        for name in dirs + files:
+            path = Path(current) / name
+            if path.is_symlink():
+                entries[str(path)] = 'link:' + os.readlink(path)
+            elif path.is_file():
+                entries[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
+            else:
+                entries[str(path)] = 'dir'
+    return entries
 
 
 def fixture(name):
@@ -329,6 +370,46 @@ def test_a1_content_changes_have_exact_pointer_and_digest():
         for facet in facets:
             assert all(r['section'] == 'content' for r in report['facets'][facet])
         assert report['semantic_comparability'] == 'UNVERIFIED'
+
+
+def test_a1_signed_zero_and_numeric_equality_follow_canonical_identity():
+    """Scalar equality must agree with the frozen canonical digest encoding (0.0 != -0.0 there)."""
+    pointer = '/outputs/0/parameters/cell'
+    positive = variant('open-receipt.json', lambda v: v['outputs'][0]['parameters'].update(cell=0.0))
+    negative = variant('open-receipt.json', lambda v: v['outputs'][0]['parameters'].update(cell=-0.0))
+    assert golden_digest(positive) != golden_digest(negative)
+    for left, right in ((positive, negative), (negative, positive)):
+        report = delta().compare_receipts(left, right)
+        assert report['status'] == 'DIAGNOSTIC' and report['determinism_digest']['changed'] is True
+        expected = [row(pointer, left['outputs'][0]['parameters']['cell'], right['outputs'][0]['parameters']['cell'])]
+        assert canon(report['content_changes']) == canon(expected), report['content_changes']
+        assert report['bookkeeping_changes'] == []
+        assert canon([r['pointer'] for r in report['facets']['parameters']]) == canon([pointer])
+    # Alongside another content change the signed-zero row must not be concealed.
+    for left_cell, right_cell in ((0.0, -0.0), (-0.0, 0.0)):
+        left = variant('open-receipt.json', lambda v: v['outputs'][0]['parameters'].update(cell=left_cell))
+        right = variant('open-receipt.json', lambda v: v['outputs'][0]['parameters'].update(cell=right_cell,
+                                                                                            nodata=12345))
+        report = delta().compare_receipts(left, right)
+        assert canon(report['content_changes']) == canon([row(pointer, left_cell, right_cell),
+                                                          row('/outputs/0/parameters/nodata', None, 12345)]), \
+            report['content_changes']
+    # Ordinary numeric equality stays equal; int/float type changes stay visible.
+    for value in (0.0, -0.0, 1.5, 7, 0):
+        same = variant('open-receipt.json', lambda v: v['outputs'][0]['parameters'].update(cell=value))
+        report = delta().compare_receipts(same, copy.deepcopy(same))
+        assert report['content_changes'] == [] and report['determinism_digest']['changed'] is False, value
+    integer = variant('open-receipt.json', lambda v: v['outputs'][0]['parameters'].update(cell=0))
+    report = delta().compare_receipts(integer, positive)
+    assert canon(report['content_changes']) == canon([row(pointer, 0, 0.0)])
+    # The written CLI report keeps the sign.
+    work = workdir('signed-zero')
+    left_path = write_json(work / 'left.json', positive)
+    right_path = write_json(work / 'right.json', negative)
+    code, _, stderr = run_cli(['--left', left_path, '--right', right_path, '--out', work / 'report.json'])
+    assert code == 0, stderr
+    written = json.loads((work / 'report.json').read_bytes())
+    assert canon(written['content_changes']) == canon([row(pointer, 0.0, -0.0)])
 
 
 def test_a1_different_segment_identity_is_not_comparable():
@@ -641,6 +722,168 @@ def test_a3_unsafe_paths_and_bounds_are_refused_without_side_effects():
     assert code == 2, 'all three explicit files are required'
 
 
+INVALID_DATE_TIMES = ('not-a-dateZ', '2026-13-01T00:00:00Z', '2026-00-10T00:00:00Z', '2026-02-29T00:00:00Z',
+                      '2026-04-31T00:00:00Z', '2026-10-21T24:00:00Z', '2026-10-21T00:60:00Z', '2026-10-21T00:00:61Z',
+                      '2026-10-21 00:00:00Z', '2026-10-21T00:00Z', '2026-1-21T00:00:00Z', '2026-10-21T00:00:00.Z',
+                      '\uff12026-10-21T00:00:00Z', '2026-10-21Z', 'T00:00:00Z', '2026-10-21T00:00:00+25:00Z')
+VALID_DATE_TIMES = ('2026-10-21T00:00:00Z', '2026-10-21T23:59:59.123456Z', '2024-02-29T12:00:00Z',
+                    '2016-12-31T23:59:60Z', '2000-01-01t00:00:00Z')
+
+
+def test_a3_date_time_format_is_enforced_or_fails_closed():
+    module = delta()
+    left = fixture('open-receipt.json')
+    for value in INVALID_DATE_TIMES:
+        bad = variant('open-receipt.json', lambda v: v.update(created_utc=value), reseal=False)
+        error = expect_invalid(lambda: module.compare_receipts(left, bad), 'schema')
+        assert '/created_utc' in str(error), (value, error)
+        expect_invalid(lambda: module.compare_receipts(bad, left), '/created_utc')
+    for value in VALID_DATE_TIMES:
+        good = variant('open-receipt.json', lambda v: v.update(created_utc=value), reseal=False)
+        report = module.compare_receipts(left, good)
+        assert report['status'] == 'DIAGNOSTIC', value
+        expected = [] if value == left['created_utc'] else [row('/created_utc', left['created_utc'], value)]
+        assert report['bookkeeping_changes'] == expected, value
+    # CLI: malformed date-time is exit 2 with no report.
+    work = workdir('date-time')
+    bad = write_json(work / 'bad.json', variant('open-receipt.json', lambda v: v.update(created_utc='not-a-dateZ'),
+                                                reseal=False))
+    code, _, stderr = run_cli(['--left', FIXTURE_DIR / 'open-receipt.json', '--right', bad, '--out', work / 'o.json'])
+    assert code == 2 and '/created_utc' in stderr and not (work / 'o.json').exists()
+    # Fail closed: a schema format without an enforced offline checker is a capability refusal, never ignored.
+    for schema in ({'type': 'string', 'format': 'email'},
+                   {'type': 'object', 'properties': {'a': {'type': 'string', 'format': 'uri'}}}):
+        expect_invalid(lambda: module.build_validator(schema), 'capability')
+    checker_schema = {'type': 'string', 'format': 'date-time'}
+    validator = module.build_validator(checker_schema)
+    assert not list(validator.iter_errors('2026-10-21T00:00:00Z'))
+    assert list(validator.iter_errors('2026-10-21T00:00:00')), 'missing offset must fail the format'
+
+
+def receipt_with_parameters(parameters):
+    """A resealed open receipt whose outputs/0/parameters is replaced (depth = 3 + nesting)."""
+    return variant('open-receipt.json', lambda v: v['outputs'][0].update(parameters=parameters))
+
+
+def test_a3_unsafe_nesting_is_refused_consistently():
+    module = delta()
+    cap = module.MAX_DEPTH
+    assert 32 <= cap <= 256, 'nesting cap must stay a small tool-local bound'
+    left = fixture('open-receipt.json')
+    # Boundary: total depth == cap passes; cap + 1 is refused on both API paths.
+    at_cap = receipt_with_parameters(nest(cap - 3))
+    report = module.compare_receipts(left, at_cap)
+    assert report['status'] == 'DIAGNOSTIC'
+    assert '/outputs/0/parameters' + '/d' * (cap - 3) in [r['pointer'] for r in report['content_changes']]
+    raw_at_cap = (json.dumps(at_cap, sort_keys=True) + '\n').encode()
+    assert module.compare_receipts(raw_at_cap, raw_at_cap)['content_changes'] == []
+    over = receipt_with_parameters(nest(cap - 2))
+    expect_invalid(lambda: module.compare_receipts(left, over), 'nesting depth')
+    expect_invalid(lambda: module.compare_receipts(over, left), 'nesting depth')
+    raw_over = (json.dumps(over, sort_keys=True) + '\n').encode()
+    expect_invalid(lambda: module.compare_receipts(raw_over, fixture_bytes('open-receipt.json')), 'nesting depth')
+    # Reviewer-class samples: small resealed 600-level object, and parser-deep raw input.
+    deep = receipt_with_parameters(nest(600))
+    expect_invalid(lambda: module.compare_receipts(left, deep), 'nesting depth')
+    raw_deep = (json.dumps(deep, sort_keys=True) + '\n').encode()
+    assert len(raw_deep) < 16 * 1024
+    expect_invalid(lambda: module.compare_receipts(raw_deep, raw_deep), 'nesting depth')
+    raw_parser_deep = fixture_bytes('open-receipt.json').replace(
+        b'"cell": 1,', b'"cell": ' + b'[' * 5000 + b']' * 5000 + b',', 1)
+    assert raw_parser_deep != fixture_bytes('open-receipt.json')
+    expect_invalid(lambda: module.compare_receipts(fixture_bytes('open-receipt.json'), raw_parser_deep),
+                   'nesting depth')
+    # Parsed-object hazards: cycles, shared-subtree blow-up, non-JSON types.
+    cyclic = copy.deepcopy(left)
+    cyclic['outputs'][0]['parameters']['self'] = cyclic['outputs'][0]['parameters']
+    expect_invalid(lambda: module.compare_receipts(left, cyclic), 'nesting depth')
+    shared = [0]
+    for _ in range(40):
+        shared = [shared, shared]
+    blown = copy.deepcopy(left)
+    blown['outputs'][0]['parameters']['shared'] = shared
+    expect_invalid(lambda: module.compare_receipts(left, blown), 'node cap')
+    for alien in ((1, 2), {1, 2}, {1: 'x'}, b'bytes', object()):
+        weird = copy.deepcopy(left)
+        weird['outputs'][0]['parameters']['alien'] = alien
+        expect_invalid(lambda: module.compare_receipts(left, weird), 'not a JSON value')
+    # CLI: exit 2, no partial output, inputs preserved.
+    work = workdir('depth')
+    deep_path = work / 'deep.json'
+    deep_path.write_bytes(raw_deep)
+    parser_path = work / 'parser-deep.json'
+    parser_path.write_bytes(raw_parser_deep)
+    before = snapshot(work)
+    for path in (deep_path, parser_path):
+        for argv in (['--left', FIXTURE_DIR / 'open-receipt.json', '--right', path],
+                     ['--left', path, '--right', FIXTURE_DIR / 'open-receipt.json']):
+            out = work / f'report-{next(_COUNTER)}.json'
+            code, stdout, stderr = run_cli(argv + ['--out', out])
+            assert code == 2 and 'nesting depth' in stderr, (code, stderr)
+            assert not out.exists() and stdout == ''
+    assert snapshot(work) == before
+
+
+def test_a3_runner_output_root_refuses_symlinks_before_writing():
+    module = runner()
+    work = workdir('runner-root')
+    target = work / 'target'
+    target.mkdir()
+    (target / 'keep.txt').write_bytes(b'keep')
+    (work / 'leaf-link').symlink_to(target, target_is_directory=True)
+    (work / 'anc-link').symlink_to(target, target_is_directory=True)
+    (work / 'dangling').symlink_to(work / 'nowhere')
+    (work / 'plain-file').write_bytes(b'file')
+    refused = [work / 'leaf-link', work / 'anc-link' / 'sub', work / 'anc-link' / 'sub' / 'deeper',
+               work / 'dangling', work / 'dangling' / 'sub', work / 'plain-file', work / 'plain-file' / 'sub',
+               str(work / 'x' / '..' / 'y'), str(work) + '//z', 'relative/../escape']
+    before = tree(work)
+    for output in refused:
+        try:
+            module.prepare_run_dir(output, '2026-10-24T00:00:00.000000Z')
+        except module.RunRootRefused:
+            pass
+        else:
+            raise AssertionError(f'output symlink followed or unsafe run root accepted: {output}')
+        assert tree(work) == before, f'refusal changed the filesystem: {output}'
+    assert not (work / 'nowhere').exists() and not (work / 'y').exists() and not (work / 'z').exists()
+    # The runner CLI refuses with exit 2 before any write.
+    for output in (work / 'leaf-link', work / 'anc-link' / 'sub'):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = module.main(['--suite', 'focused', '--output', str(output)])
+        assert code == 2 and 'REFUSED' in err.getvalue(), (code, err.getvalue())
+        assert tree(work) == before
+    # Fresh root (missing ancestors created without following links) and a rerun get distinct run dirs.
+    fresh = work / 'fresh' / 'a'
+    first, first_fd = module.prepare_run_dir(fresh, '2026-10-24T00:00:00.000000Z')
+    second, second_fd = module.prepare_run_dir(fresh, '2026-10-24T00:00:00.000000Z')
+    try:
+        assert first != second and first.parent == second.parent == fresh
+        for run in (first, second):
+            assert os.path.realpath(run) == str(run)
+            assert (run / 'tmp').is_dir() and (run / 'work').is_dir()
+        module.write_once(first_fd, 'receipt.json', b'first')
+        try:
+            module.write_once(first_fd, 'receipt.json', b'second')
+        except FileExistsError:
+            pass
+        else:
+            raise AssertionError('evidence file was overwritten')
+        assert (first / 'receipt.json').read_bytes() == b'first'
+        os.symlink(target / 'keep.txt', first / 'stdout.txt')
+        try:
+            module.write_once(first_fd, 'stdout.txt', b'through-link')
+        except OSError:
+            pass
+        else:
+            raise AssertionError('evidence write followed a symlink')
+        assert (target / 'keep.txt').read_bytes() == b'keep'
+    finally:
+        os.close(first_fd)
+        os.close(second_fd)
+
+
 # ------------------------------------------------------ mutation controls ---
 # Each control pairs a regression check with an in-memory callable double that
 # breaks exactly the behaviour it guards. The negative suite requires the check
@@ -736,6 +979,82 @@ def check_refs_never_accessed():
     test_a3_referenced_files_are_never_statted_or_opened()
 
 
+def check_signed_zero_rows():
+    pointer = '/outputs/0/parameters/cell'
+    left = variant('open-receipt.json', lambda v: v['outputs'][0]['parameters'].update(cell=0.0))
+    right = variant('open-receipt.json', lambda v: v['outputs'][0]['parameters'].update(cell=-0.0, nodata=12345))
+    try:
+        rows = delta().compare_receipts(left, right)['content_changes']
+    except delta().InvalidReceipt as error:
+        raise AssertionError(f'signed zero lost: refused as {error}') from None
+    assert canon(rows) == canon([row(pointer, 0.0, -0.0), row('/outputs/0/parameters/nodata', None, 12345)]), \
+        f'signed zero lost: {rows}'
+
+
+def check_date_time_enforced():
+    bad = variant('open-receipt.json', lambda v: v.update(created_utc='not-a-dateZ'), reseal=False)
+    expect_invalid(lambda: delta().compare_receipts(fixture('open-receipt.json'), bad), '/created_utc')
+
+
+def check_nesting_gate():
+    deep = receipt_with_parameters(nest(600))
+    module = delta()
+    try:
+        module.compare_receipts(fixture('open-receipt.json'), deep)
+    except module.InvalidReceipt as error:
+        assert 'nesting depth' in str(error), f'nesting escaped the depth gate: {error}'
+        return
+    except RecursionError:
+        raise AssertionError('nesting escaped the exit contract (RecursionError)') from None
+    raise AssertionError('nesting escaped: a 600-level receipt was explained')
+
+
+def check_runner_refuses_symlink_output():
+    module = runner()
+    work = workdir('runner-control')
+    target = work / 'target'
+    target.mkdir()
+    (work / 'link').symlink_to(target, target_is_directory=True)
+    try:
+        result = module.prepare_run_dir(work / 'link', '2026-10-24T00:00:00.000000Z')
+    except module.RunRootRefused:
+        assert os.listdir(target) == [], f'output symlink followed: target changed despite refusal {os.listdir(target)}'
+        return
+    os.close(result[1])
+    raise AssertionError(f'output symlink followed: wrote {os.listdir(target)} into the link target')
+
+
+def _double_scalar_equality(module):
+    def lenient(a, b):
+        if type(a) is not type(b):
+            return False
+        if isinstance(a, (dict, list)):
+            return module.canonical_compact(a) == module.canonical_compact(b)
+        return a == b
+    return patched(module, _same=lenient)
+
+
+def _double_format_checker_absent(module):
+    original = module.build_validator
+
+    def unchecked(schema):
+        validator = original(schema)
+        return type(validator)(schema, format_checker=None)
+    return patched(module, build_validator=unchecked, _VALIDATOR=None)
+
+
+def _double_depth_gate_disabled(module):
+    return patched(module, MAX_DEPTH=10 ** 9)
+
+
+def _double_runner_follows_links(module):
+    def following(output):
+        path = os.path.abspath(os.fspath(output))
+        os.makedirs(path, exist_ok=True)
+        return os.open(path, os.O_RDONLY | os.O_DIRECTORY), path
+    return patched(runner(), open_output_root=following)
+
+
 MUTATION_CONTROLS = (
     ('projection_drops_changed_source_sha', check_projection_includes_content, _double_projection_drops_source_sha,
      'projection differs'),
@@ -745,11 +1064,20 @@ MUTATION_CONTROLS = (
     ('identity_gate_disabled', check_identity_gate, _double_identity_gate_disabled, 'refused'),
     ('missing_normalized_to_null', check_missing_vs_null, _double_missing_as_null, 'missing/null'),
     ('declared_refs_statted', check_refs_never_accessed, _double_stats_declared_refs, 'Ref-named paths'),
+    ('signed_zero_equal_scalars', check_signed_zero_rows, _double_scalar_equality, 'signed zero lost'),
+    ('date_time_format_unchecked', check_date_time_enforced, _double_format_checker_absent, 'expected InvalidReceipt'),
+    ('nesting_gate_disabled', check_nesting_gate, _double_depth_gate_disabled, 'nesting escaped'),
+    ('runner_output_symlink_followed', check_runner_refuses_symlink_output, _double_runner_follows_links,
+     'output symlink followed'),
 )
 
 
 def run_mutation_controls():
-    """Return one result per control; never raises for an expected detection."""
+    """Return one result per control; never raises for an expected detection.
+
+    Detection requires an AssertionError carrying the control's fragment; any
+    other exception under the double is recorded as NOT detected.
+    """
     module = delta()
     results = []
     for name, check, double, fragment in MUTATION_CONTROLS:
@@ -760,12 +1088,14 @@ def run_mutation_controls():
             except AssertionError as error:
                 message = str(error)
                 detected = fragment in message
+            except Exception as error:  # noqa: BLE001 - recorded, never counted as detection
+                message = f'undetected: {type(error).__name__}: {error}'
         positive = True
         try:
             check()
-        except AssertionError as error:
-            positive, message = False, message + ' | positive control failed: ' + str(error)
-        results.append(dict(control=name, detected=detected, positive_passed=positive, message=message))
+        except Exception as error:  # noqa: BLE001
+            positive, message = False, message + f' | positive control failed: {type(error).__name__}: {error}'
+        results.append(dict(control=name, detected=detected, positive_passed=positive, message=message[:2000]))
     return results
 
 

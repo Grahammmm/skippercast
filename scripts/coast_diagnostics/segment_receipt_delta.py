@@ -29,6 +29,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import stat
 import sys
 from pathlib import Path
@@ -58,6 +59,12 @@ MAX_INPUT_BYTES = 2 * 1024 * 1024
 MAX_AGGREGATE_BYTES = 16 * 1024 * 1024
 MAX_ROWS = 4096
 MAX_OUTPUT_BYTES = 8 * 1024 * 1024
+# Nesting/node bounds checked iteratively before any recursive step (parse, schema,
+# copy, diff), so unsafe nesting is a refusal (exit 2), never a RecursionError.
+# Every JSON value takes at least one input byte, so the node cap never binds a
+# document that already fits the per-file input cap.
+MAX_DEPTH = 64
+MAX_NODES = MAX_INPUT_BYTES
 FLAGS = dict(evidence_scope='declared_metadata_only', referenced_bytes_verified=False,
              semantic_approval=False, closure_verified=False, semantic_comparability='UNVERIFIED')
 
@@ -87,31 +94,42 @@ def loads_strict(raw):
         value = json.loads(text, object_pairs_hook=pairs, parse_constant=nonfinite)
     except InvalidReceipt:
         raise
-    except (UnicodeDecodeError, ValueError, RecursionError) as error:
+    except RecursionError:
+        raise InvalidReceipt(f'nesting depth cap exceeded ({MAX_DEPTH} levels; parser recursion)') from None
+    except (UnicodeDecodeError, ValueError) as error:
         raise InvalidReceipt(f'malformed JSON: {error}') from None
     require_finite(value)
     return value
 
 
 def require_finite(value):
-    try:
-        json.dumps(value, allow_nan=False)
-    except ValueError:
-        raise InvalidReceipt('nonfinite JSON number (NaN/Infinity or overflow)') from None
-    except (TypeError, RecursionError) as error:
-        raise InvalidReceipt(f'schema: not a JSON value: {error}') from None
-    if _has_nonfinite(value):
-        raise InvalidReceipt('nonfinite JSON number (NaN/Infinity or overflow)')
+    """Iterative JSON-tree gate, run before anything recursive touches ``value``.
 
-
-def _has_nonfinite(value):
-    if isinstance(value, float):
-        return not math.isfinite(value)
-    if isinstance(value, dict):
-        return any(_has_nonfinite(v) for v in value.values())
-    if isinstance(value, list):
-        return any(_has_nonfinite(v) for v in value)
-    return False
+    Refuses non-JSON types and non-string keys, nonfinite numbers, nesting
+    deeper than MAX_DEPTH containers (which also refuses cycles) and more than
+    MAX_NODES values (which also refuses shared-subtree blow-up).
+    """
+    stack, nodes = [(value, 1)], 0
+    while stack:
+        item, depth = stack.pop()
+        nodes += 1
+        if nodes > MAX_NODES:
+            raise InvalidReceipt(f'node cap exceeded ({MAX_NODES} JSON values)')
+        if isinstance(item, (dict, list)):
+            if depth > MAX_DEPTH:
+                raise InvalidReceipt(f'nesting depth cap exceeded ({MAX_DEPTH} levels)')
+            if isinstance(item, dict):
+                for key, child in item.items():
+                    if not isinstance(key, str):
+                        raise InvalidReceipt(f'schema: not a JSON value: non-string object key {type(key).__name__}')
+                    stack.append((child, depth + 1))
+            else:
+                stack.extend((child, depth + 1) for child in item)
+        elif isinstance(item, float):
+            if not math.isfinite(item):
+                raise InvalidReceipt('nonfinite JSON number (NaN/Infinity or overflow)')
+        elif item is not None and not isinstance(item, (str, int)):  # bool is an int
+            raise InvalidReceipt(f'schema: not a JSON value: {type(item).__name__}')
 
 
 def canonical_compact(value):
@@ -142,11 +160,66 @@ def _contains_reference(value):
     return False
 
 
+_RFC3339_DATE_TIME = re.compile(
+    r'([0-9]{4})-([0-9]{2})-([0-9]{2})[Tt]([0-9]{2}):([0-9]{2}):([0-9]{2})(?:\.[0-9]+)?'
+    r'(?:[Zz]|[+-]([0-9]{2}):([0-9]{2}))', re.ASCII)
+
+
+def is_rfc3339_date_time(value):
+    """Strict RFC 3339 section 5.6 date-time (ASCII digits, real calendar date)."""
+    if not isinstance(value, str):
+        return True  # format assertions apply to strings only
+    match = _RFC3339_DATE_TIME.fullmatch(value)
+    if not match:
+        return False
+    year, month, day, hour, minute, second = (int(match.group(i)) for i in range(1, 7))
+    leap = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+    month_days = (31, 29 if leap else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+    if not (1 <= month <= 12 and 1 <= day <= month_days[month - 1]):
+        return False
+    if hour > 23 or minute > 59 or second > 60:  # 60: RFC 3339 leap second
+        return False
+    if match.group(7) is not None and (int(match.group(7)) > 23 or int(match.group(8)) > 59):
+        return False
+    return True
+
+
+# Every format the pinned schema uses must have an enforced local checker here;
+# jsonschema's optional third-party format dependencies are never relied upon.
+ENFORCED_FORMATS = {'date-time': is_rfc3339_date_time}
+
+
+def _schema_formats(schema):
+    found, stack = set(), [schema]
+    while stack:
+        item = stack.pop()
+        if isinstance(item, dict):
+            if isinstance(item.get('format'), str):
+                found.add(item['format'])
+            stack.extend(item.values())
+        elif isinstance(item, list):
+            stack.extend(item)
+    return found
+
+
+def enforced_format_checker(schema):
+    """A FormatChecker that enforces every format named by ``schema`` or refuses."""
+    missing = sorted(_schema_formats(schema) - set(ENFORCED_FORMATS))
+    if missing:
+        raise InvalidReceipt('capability: schema format(s) without an enforced offline checker: '
+                             + ', '.join(missing) + '; refusing to claim schema validation')
+    checker = FormatChecker(formats=())
+    for name, function in ENFORCED_FORMATS.items():
+        checker.checks(name)(function)
+    return checker
+
+
 def build_validator(schema):
-    """Draft 2020-12 validator that can never fetch anything."""
+    """Draft 2020-12 validator that can never fetch anything and enforces formats."""
     if _contains_reference(schema):
         raise InvalidReceipt('schema references are refused (no retrieval is permitted)')
     Draft202012Validator.check_schema(schema)
+    format_checker = enforced_format_checker(schema)
     try:
         import referencing  # jsonschema >= 4.18
         options = dict(registry=referencing.Registry(retrieve=deny_retrieval))
@@ -157,7 +230,7 @@ def build_validator(schema):
             def resolve_remote(self, uri):
                 deny_retrieval(uri)
         options = dict(resolver=DenyResolver.from_schema(schema))
-    return Draft202012Validator(schema, format_checker=FormatChecker(), **options)
+    return Draft202012Validator(schema, format_checker=format_checker, **options)
 
 
 def receipt_validator(budget=None):
@@ -199,11 +272,8 @@ def make_row(pointer, before_present, before, after_present, after):
 
 
 def _same(a, b):
-    if type(a) is not type(b):
-        return False
-    if isinstance(a, (dict, list)):
-        return canonical_compact(a) == canonical_compact(b)
-    return a == b
+    """Equality exactly as the frozen canonical encoding sees it (0.0 vs -0.0, 1 vs 1.0 differ)."""
+    return type(a) is type(b) and canonical_compact(a) == canonical_compact(b)
 
 
 def _leaves(value, pointer):
@@ -303,7 +373,7 @@ def _prepare(value, side, budget=None):
         receipt = loads_strict(raw)
         info = dict(supplied=True, raw_sha256=hashlib.sha256(raw).hexdigest(), raw_bytes=len(raw))
     elif isinstance(value, dict):
-        require_finite(value)
+        require_finite(value)  # iterative depth/node/type gate before deepcopy or schema
         receipt = copy.deepcopy(value)
         info = dict(supplied=False, raw_sha256=None, raw_bytes=None)
     else:
@@ -323,6 +393,23 @@ def compare_receipts(left, right, *, _budget=None):
     Raises InvalidReceipt for malformed input; returns status NOT_COMPARABLE
     for different segment identities. Never reads anything a Ref names.
     """
+    try:
+        return _compare(left, right, _budget)
+    except RecursionError:  # defensive: the iterative gate should make this unreachable
+        raise InvalidReceipt('unsafe recursion while comparing (defensive guard)') from None
+
+
+def _check_consistency(before, after, content):
+    """Every content field changed by canonical bytes has rows, and only those fields do."""
+    for key in CONTENT_FIELDS:
+        changed = canonical_compact(before[key]) != canonical_compact(after[key])
+        prefix = '/' + escape(key)
+        has_rows = any(item['pointer'] == prefix or item['pointer'].startswith(prefix + '/') for item in content)
+        if changed != has_rows:
+            raise InvalidReceipt(f'internal projection/digest inconsistency at {prefix}')
+
+
+def _compare(left, right, _budget):
     before, left_info, left_digest = _prepare(left, 'left', _budget)
     after, right_info, right_digest = _prepare(right, 'right', _budget)
     report = dict(schema=REPORT_SCHEMA, review_status='REVIEW REQUIRED', **FLAGS,
@@ -350,6 +437,7 @@ def compare_receipts(left, right, *, _budget=None):
     bookkeeping = bookkeeping[len(content):]
     if bool(content) != report['determinism_digest']['changed']:
         raise InvalidReceipt('internal projection/digest inconsistency')
+    _check_consistency(before, after, content)
     facets = {name: [] for name in FACETS}
     for section, rows in (('content', content), ('bookkeeping', bookkeeping)):
         for item in rows:
