@@ -181,6 +181,92 @@ def test_interior_window_set_with_matching_geometry_admitted(tmp_path):
     assert len(context(w)[0]['windows']) == 4
 
 
+def _equivalent_crs(name):
+    from pyproj import CRS
+    return CRS('EPSG:4326').to_wkt() if name == 'wkt' else name
+
+
+def _rebind_crs(w, crs):
+    """Change representation only; keep all dependent admission identities valid."""
+    grid = w.admission['grids'][0]
+    grid['definition']['raster_crs'] = crs
+    grid['grid_sha256'] = digest(grid['definition'])
+    for win in w.admission['windows']:
+        win['grid_sha256'] = grid['grid_sha256']
+        win['window_key'] = f"{win['source_id']}#{grid['grid_sha256']}#{win['idx']}"
+        win['window_dir'] = refs.sha256(win['window_key'].encode())
+    campaign = read(w.root/'campaign.json')
+    campaign['intended_windows'] = [win['window_key'] for win in w.admission['windows']]
+    put(w.root/'campaign.json', campaign)
+    w.admission['campaign'] = driver._ref(w.root, w.root/'campaign.json', 'queue:synthetic')
+    put(w.p/'admission.json', w.admission)
+
+
+def _affine_intersecting_tiles(w):
+    """Independent oracle: affine corner polygons, not the declared tiling helper."""
+    from shapely.geometry import Polygon, box
+    a, b, c, d, e, f = w.admission['grids'][0]['definition']['affine_transform']
+    transform = Transformer.from_crs(w.admission['grids'][0]['definition']['raster_crs'],
+                                     'OGC:CRS84', always_xy=True)
+    segment = box(*w.record['bbox_crs84'])
+    return [[x, y, 512, 512] for y in (0, 512) for x in (0, 512)
+            if Polygon([transform.transform(a*col+b*row+c, d*col+e*row+f)
+                        for col, row in ((x, y), (x+512, y), (x+512, y+512), (x, y+512))]
+                       ).intersection(segment).area > 0]
+
+
+@pytest.mark.parametrize('crs', ['EPSG:4326', 'OGC:CRS84', 'epsg:4326',
+                                'urn:ogc:def:crs:EPSG::4326', 'wkt',
+                                'urn:ogc:def:crs:OGC:1.3:CRS84'])
+@pytest.mark.parametrize('problem', [None, 'cell', 'anchor'])
+@pytest.mark.parametrize('consumer', ['driver', 'validator'])
+def test_crs_equivalence_geometry_gate(tmp_path, monkeypatch, crs, problem, consumer):
+    from tests.gis.test_coastal_bridge_run_window_set import validator
+    override = {'cell': [1.0, 1.0]} if problem == 'cell' else None
+    if problem == 'anchor':
+        probe = world(tmp_path/'probe', raster_shape=(1024, 1024),
+                      nw_offset_m=(2000, 3000), windows=None)
+        override = {'anchor': [probe.west + 512*PIXEL, probe.north]}
+    w = world(tmp_path/'case', raster_shape=(1024, 1024), nw_offset_m=(2000, 3000),
+              windows=None, tiling_override=override)
+    _rebind_crs(w, _equivalent_crs(crs))
+    assert _affine_intersecting_tiles(w) == [[x, y, 512, 512] for y in (0, 512) for x in (0, 512)]
+    assert len(w.windows) == (1 if problem == 'cell' else 4)
+    validator.validate_schema(w.admission)
+
+    def admit():
+        if consumer == 'driver':
+            return context(w)
+        return validator.validate(w.admission, refs.Resolver({'queue:synthetic': str(w.root)},
+                                  allowed_root_ids={'queue:synthetic'}), root_id='queue:synthetic')
+
+    before = {p.relative_to(w.root): p.read_bytes() for p in w.root.rglob('*') if p.is_file()}
+    if problem is None:
+        admit()
+    else:
+        # The exact same fixture admits with ONLY this gate disabled. Schema,
+        # hash, cardinality, campaign and ownership checks therefore cannot mask it.
+        with monkeypatch.context() as control:
+            control.setattr(catalog_bridge, 'tiling_affine_problem', lambda *_: None)
+            admit()
+        prefix = 'window binding mismatch: grid_geometry: ' if consumer == 'driver' else ''
+        with pytest.raises(ValueError) as error:
+            admit()
+        assert str(error.value) == prefix + f'window-set tiling {problem} disagrees with the grid affine'
+    assert {p.relative_to(w.root): p.read_bytes() for p in w.root.rglob('*') if p.is_file()} == before
+
+
+@pytest.mark.parametrize('crs', ['EPSG:3310', 'EPSG:4269'])
+def test_crs_equivalence_does_not_reclassify_other_grids(crs):
+    # Projected metres and a genuinely different geographic datum are not
+    # CRS84-degree affines. Preserve the helper's existing unchecked contract.
+    definition = dict(raster_crs=crs, affine_transform=[2, 0, 100, 0, -2, 200])
+    tiling = dict(origin=[0, 0], anchor=[0, 0], cell=[1, 1])
+    assert catalog_bridge.tiling_affine_problem(tiling, definition) is None
+    definition['affine_transform'][1] = 1
+    assert catalog_bridge.tiling_affine_problem(tiling, definition) == 'window-set grid affine must not be rotated'
+
+
 def test_run_executes_windows_in_admission_index_order(tmp_path, monkeypatch, synthetic_dispatch):
     """A bounded run advances windows in admission order (0, 1, 2, ...), never window_key order
     (0, 1, 10, 11, 2, ...): with 9 ticks (acquire, qualify, map) windows 0-2 finish and 10 is untouched."""

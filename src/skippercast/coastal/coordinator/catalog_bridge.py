@@ -177,9 +177,6 @@ def _canonical_tiles(tile, width, height, origin):
             for y in range(origin[1], height, tile) for x in range(origin[0], width, tile)]
 
 
-GEOGRAPHIC_CRS = ("EPSG:4326", "OGC:CRS84")
-
-
 def tiling_affine_problem(tiling, definition):
     """Why a window-set ``tiling`` disagrees with its grid's ``affine_transform``, or None.
 
@@ -192,7 +189,11 @@ def tiling_affine_problem(tiling, definition):
     a, b, c, d, e, f = definition["affine_transform"]
     if b != 0 or d != 0:
         return "window-set grid affine must not be rotated"
-    if definition["raster_crs"] not in GEOGRAPHIC_CRS:
+    # Both consumers use always_xy coordinates, so EPSG:4326 and CRS84's
+    # axis-order variants have the same degree affine/tiling contract. Compare
+    # CRS semantics, not spelling: lowercase, URN and WKT must not skip N2.
+    from pyproj import CRS
+    if not CRS.from_user_input(definition["raster_crs"]).equals(CRS("OGC:CRS84"), ignore_axis_order=True):
         return None
     (x, y), (west, north), (dx, dy) = tiling["origin"], tiling["anchor"], tiling["cell"]
     if not (math.isclose(dx, a, rel_tol=1e-9) and math.isclose(dy, -e, rel_tol=1e-9)):
