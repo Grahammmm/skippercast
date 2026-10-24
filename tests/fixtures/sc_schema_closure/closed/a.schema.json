@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.test/schemas/a.schema.json",
+  "type": "object",
+  "properties": {
+    "slug": {"$ref": "b.schema.json#/$defs/slug"},
+    "named": {"$ref": "b.schema.json#slug-anchor"},
+    "local": {"$ref": "#/$defs/local"}
+  },
+  "$defs": {
+    "local": {"type": "string"}
+  }
+}
