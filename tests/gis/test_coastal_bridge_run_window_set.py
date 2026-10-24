@@ -84,6 +84,8 @@ def make_world(destination, windows=4, second=False):
     tiling = dict(tile=512, width=2048, height=2048, origin=[1024, 1024],
                   anchor=[west+1024*pixel, north-1024*pixel], cell=[pixel, pixel])
     rows, selections, grids, admission_windows, sources = [], [], [], [], []
+    raw_root = destination/'raw'
+    raw_root.mkdir()
     for number in range(2 if second else 1):
         name = f'input{number}.tif'
         path = root/'cache'/name
@@ -119,7 +121,11 @@ def make_world(destination, windows=4, second=False):
                 owner_segment_id=record['segment_id'], footprint=[west+x*pixel, north-(y+h)*pixel, west+(x+w)*pixel, north-y*pixel],
                 overlapping_segment_ids=[record['segment_id']]))
         hot = dict(root_id='queue:synthetic', **{k: source[k] for k in ('path', 'sha256', 'bytes')})
-        sources.append(dict(source_id=row['source_id'], raw_provenance=[hot], retained_inputs=[], hot_cache=[hot],
+        # raw_provenance takes a raw:campaign payload Ref (#832 edge contract); the
+        # GeoTIFF stays in hot_cache, as in tests/coast_real_admission_factory.py.
+        (raw_root/name).write_bytes(path.read_bytes())
+        raw = dict(hot, root_id='raw:campaign', path=name)
+        sources.append(dict(source_id=row['source_id'], raw_provenance=[raw], retained_inputs=[], hot_cache=[hot],
                             rights='synthetic private use', datum='unknown', reader='native-raster-v1'))
     catalog = fx.frozen_catalog(rows)
     catalog_sha = fx.write_catalog(root/'catalog.json', catalog)
@@ -142,7 +148,7 @@ def make_world(destination, windows=4, second=False):
     put(p/'admission.json', admission)
     (p/'runs').mkdir()
     w = SimpleNamespace(root=root, p=p, admission=admission, plan=plan, record=record,
-                        bindings={'queue:synthetic': str(root)}, ops=ops)
+                        bindings={'queue:synthetic': str(root), 'raw:campaign': str(raw_root.absolute())}, ops=ops)
     check(w)
     return w
 
@@ -164,7 +170,8 @@ def clone(w, destination):
     root = destination/'synthetic'
     shutil.copytree(w.root, root)
     return SimpleNamespace(root=root, p=root/'plans/plan01', admission=deepcopy(w.admission),
-                           plan=deepcopy(w.plan), record=w.record, bindings={'queue:synthetic': str(root)})
+                           plan=deepcopy(w.plan), record=w.record,
+                           bindings=dict(w.bindings, **{'queue:synthetic': str(root)}))
 
 
 def rekey(window):
