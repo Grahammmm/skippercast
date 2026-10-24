@@ -539,13 +539,27 @@ def _walk(state, path, start, start_pointer, start_base, promoted):
     return changed
 
 
+def _array_index(token, length):
+    """Return the in-range index named by a JSON Pointer token, else None.
+
+    The digit count is compared with the (bounded) array length before any int()
+    conversion, so arbitrarily long decimal tokens never reach the interpreter's
+    integer-string digit limit; they are simply out of range.
+    """
+    if not INDEX.fullmatch(token) or len(token) > len(str(length)):
+        return None
+    index = int(token)
+    return index if index < length else None
+
+
 def _locate(document, tokens):
     node = document
     for token in tokens:
+        index = _array_index(token, len(node)) if isinstance(node, list) else None
         if isinstance(node, dict) and token in node:
             node = node[token]
-        elif isinstance(node, list) and INDEX.fullmatch(token) and int(token) < len(node):
-            node = node[int(token)]
+        elif index is not None:
+            node = node[index]
         else:
             return False, None
     return True, node

@@ -754,6 +754,57 @@ class TestNegativeClosure(unittest.TestCase):
             "/properties/dyn/$dynamicRef": "unverified_dynamic"})
         self.assertEqual(report["exit_code"], 1)
 
+    def test_long_numeric_pointer_indices_are_findings_not_crashes(self):
+        # Round-2 return: _locate converted unbounded decimal tokens with int(), which raised
+        # ValueError past the interpreter's integer-string digit limit. Long indices must be
+        # ordinary missing_pointer_target findings (exit 1) with the safeguard left untouched.
+        limit_before = sys.get_int_max_str_digits() if hasattr(sys, "get_int_max_str_digits") else None
+        lengths = (4300, 4301, 5000, 20000)
+        props = {f"long_{n}": {"$ref": "#/prefixItems/" + "1" * n} for n in lengths}
+        props.update({
+            "valid_0": {"$ref": "#/prefixItems/0"}, "missing_1": {"$ref": "#/prefixItems/1"},
+            "missing_100": {"$ref": "#/prefixItems/100"},
+            "leading_zero_long": {"$ref": "#/prefixItems/" + "0" * 5000},
+            "long_object_key": {"$ref": "#/$defs/" + "7" * 5000},
+        })
+        manifest, root = stage({"a.json": doc(A, **{"prefixItems": [{}],
+                                                     "$defs": {"7" * 5000: {"type": "string"}},
+                                                     "properties": props})})
+        before = (root / "a.json").read_bytes()
+        report = sc.inspect_closure(manifest, root)
+        expected = {f"/properties/long_{n}/$ref": "missing_pointer_target" for n in lengths}
+        expected.update({"/properties/valid_0/$ref": "resolved", "/properties/missing_1/$ref": "missing_pointer_target",
+                         "/properties/missing_100/$ref": "missing_pointer_target",
+                         "/properties/leading_zero_long/$ref": "missing_pointer_target",
+                         "/properties/long_object_key/$ref": "resolved"})
+        self.assertEqual(classify(report), expected)
+        missing = [f for f in report["findings"] if f["code"] == "missing_pointer_target"]
+        self.assertEqual(len(missing), len(lengths) + 3)
+        for row in missing:
+            self.assertEqual(row["source_path"], "a.json")
+            self.assertEqual(row["resolution_target"]["path"], "a.json")
+        self.assertEqual(report["exit_code"], 1)
+        # Actual CLI: report written, exit 1, inputs unchanged, safeguard unchanged, no overwrite.
+        work = fresh_dir()
+        manifest_path = work / "manifest.json"
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        out = work / "report.json"
+        with mock.patch.object(sys, "stderr", io.StringIO()), mock.patch.object(sys, "stdout", io.StringIO()):
+            status = sc.main(["--manifest", str(manifest_path), "--input-root", str(root), "--out", str(out)])
+        self.assertEqual(status, 1)
+        self.assertEqual(classify(load_json(out)), expected)
+        written = out.read_bytes()
+        self.assertEqual((root / "a.json").read_bytes(), before)
+        stderr = io.StringIO()
+        with mock.patch.object(sys, "stderr", stderr), mock.patch.object(sys, "stdout", io.StringIO()):
+            status = sc.main(["--manifest", str(manifest_path), "--input-root", str(root), "--out", str(out)])
+        self.assertEqual(status, 2)
+        self.assertEqual(json.loads(stderr.getvalue())["code"], "output_exists")
+        self.assertEqual(out.read_bytes(), written)
+        self.assertEqual((root / "a.json").read_bytes(), before)
+        if limit_before is not None:
+            self.assertEqual(sys.get_int_max_str_digits(), limit_before)
+
     def test_malformed_anchor_suffixes_and_lone_surrogates(self):
         # Review round 1 item 5: whole-string grammar; malformed Unicode is typed exit 2, no crash.
         manifest, root = stage({"a.json": doc(A, **{"$defs": {

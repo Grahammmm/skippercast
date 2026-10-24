@@ -74,6 +74,10 @@ value starting with `/` is a JSON Pointer, anything else must fully match the an
 `[A-Za-z_][-A-Za-z0-9._]*`. The raw reference text is kept in the report. Double-encoded
 fragments therefore do not resolve. All grammar checks (anchors, array indices, SHA256, URI
 scheme) are whole-string matches, so a trailing newline or control character is malformed.
+An array-index token whose digit count exceeds that of the array length is out of range
+without any integer conversion, so arbitrarily long decimal indices are ordinary
+`missing_pointer_target` findings; the interpreter's integer-string digit limit is never
+raised or disabled.
 
 | Severity | Codes |
 | --- | --- |
