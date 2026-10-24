@@ -3,6 +3,7 @@ import copy
 import os
 from pathlib import Path
 import sqlite3
+import stat
 
 import pytest
 
@@ -70,10 +71,27 @@ def test_quiet_store_read_has_no_source_side_effects(closed, wal):
         if wal:
             db.execute('PRAGMA journal_mode=WAL')
     db.close()
-    before = {p: (p.read_bytes(), p.stat().st_ino) for p in root.iterdir()}
+    def inventory():
+        entries = {}
+        for path in [root, *root.rglob('*')]:
+            info = path.lstat()
+            if stat.S_ISLNK(info.st_mode):
+                value = ('symlink', info.st_ino, info.st_mode, os.readlink(path))
+            elif stat.S_ISDIR(info.st_mode):
+                children = sorted(p.name for p in path.iterdir()
+                                  if not (path == root and p.name == 'coordinator.lock'))
+                value = ('directory', info.st_ino, info.st_mode, children)
+            else:
+                assert stat.S_ISREG(info.st_mode)
+                value = ('file', info.st_ino, info.st_mode, path.read_bytes())
+            entries[path.relative_to(root)] = value
+        return entries
+    before = inventory()
     f.archive_now()
-    assert before == {p: (p.read_bytes(), p.stat().st_ino) for p in before}
-    assert {p.name for p in root.iterdir()} == {p.name for p in before} | {'coordinator.lock'}
+    after = inventory()
+    assert before == {p: after[p] for p in before}
+    assert set(after) == set(before) | {Path('coordinator.lock')}
+    assert after[Path('coordinator.lock')][0] == 'file'
 
 
 @pytest.mark.parametrize('boundary', ['segment', 'campaign', 'segment-snapshot', 'campaign-snapshot'])
@@ -223,3 +241,39 @@ def test_normal_historical_ref_corruption_still_refuses(closed):
         f.archive_now()
     assert f.ledger.read_bytes() == before
     assert not (f.archive / close_common.MANIFEST).exists()
+
+
+@pytest.mark.parametrize('case', ['diagnostic', 'diagnostic-corrupt', 'normal-corrupt', 'diagnostic-root', 'current-corrupt'])
+def test_supersedes_preserves_edge_roles(tmp_path, case):
+    from tests.gis.test_coast_sign_off_graph import Cycle, prepare, validator
+    c = Cycle(tmp_path).round()
+    if case == 'normal-corrupt':
+        previous = c.context_ref
+    else:
+        diagnostic = copy.deepcopy(c.context)
+        diagnostic.update(admission=None, attempt=2, supersedes=c.context_ref, mode='diagnostic',
+                          observations=[dict(code='POSTED_SHA_ABSENT', path='admission',
+                                             expected='independent posted Ref', observed=None)])
+        attempt = c.r.parent / 'a02'
+        attempt.mkdir()
+        previous, is_diagnostic = prepare.prepare(c.resolver, diagnostic, 1, 2, attempt / 'context.json')
+        assert is_diagnostic
+    current = copy.deepcopy(c.context)
+    current.update(review_round=2, supersedes=previous)
+    if case == 'diagnostic-root':
+        with pytest.raises(ValueError, match='diagnostic context is not a full-graph scientific input'):
+            validator.GraphValidator(c.resolver).reference(previous, contract='coast-review-context-v1')
+        return
+    if case == 'diagnostic-corrupt':
+        target = c.path(previous)
+    elif case in ('normal-corrupt', 'current-corrupt'):
+        target = c.path(c.context['run'])
+    else:
+        target = None
+    if target is not None:
+        raw = target.read_bytes()
+        target.write_bytes(raw[:-1] + (b' ' if raw[-1:] != b' ' else b'\n'))
+        with pytest.raises(ValueError, match='mismatch'):
+            validator.validate(current, c.resolver, root_id=QUEUE)
+    else:
+        assert validator.validate(current, c.resolver, root_id=QUEUE) == current

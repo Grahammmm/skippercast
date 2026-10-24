@@ -341,6 +341,15 @@ class GraphValidator:
                     continue  # schema-validated diagnostic scalars, not Ref edges
                 if key == 'context' and error_branch:
                     self.reference(child, scope='identity_snapshot', contract=WORKFLOW_EDGES[key])
+                elif name == 'coast-review-context-v1' and key == 'supersedes' and child is not None:
+                    # Only historical diagnostic contexts are identity snapshots;
+                    # normal history retains its complete scientific graph.
+                    if child['bytes'] > 32 * 1024 * 1024:
+                        raise ValueError('structured receipt exceeds 32 MiB validation bound')
+                    previous = loads(self.resolver.read(child))
+                    diagnostic = (isinstance(previous, dict) and previous.get('schema') == name
+                                  and previous.get('mode') == 'diagnostic')
+                    self.reference(child, scope='identity_snapshot' if diagnostic else 'full_graph', contract=name)
                 elif key in WORKFLOW_EDGES and child is not None:
                     self.reference(child, contract=WORKFLOW_EDGES[key])
                 else:
