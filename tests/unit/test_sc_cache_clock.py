@@ -8,8 +8,13 @@ the awareness gate, ``aware_positive`` tests are its positive control and
 """
 from datetime import datetime, timedelta, timezone
 import hashlib
+import importlib.util
+import io
 import json
 import math
+import os
+from pathlib import Path
+import sys
 from unittest.mock import patch
 
 import pytest
@@ -21,6 +26,13 @@ VECTORS = json.loads((FIXTURES / "sc_cache_clock" / "vectors.json").read_text(en
 GROUPS = VECTORS["equivalent_instants"]
 INVALID = [(kind, text) for kind in ("naive", "date_only", "incomplete", "out_of_range",
                                      "invalid_offset", "malformed") for text in VECTORS[kind]]
+AWARE_STRINGS = [text for group in GROUPS for text in group["strings"]]
+RUNNER_PATH = Path(__file__).resolve().parents[2] / "scripts" / "accept_sc_cache_clock.py"
+
+
+def base_parse(text):
+    """The base (59fca09b) string branch of epoch, used only as a compatibility oracle."""
+    return datetime.fromisoformat(text.replace("Z", "+00:00"))
 CLOCK_ERROR = "explicit-offset complete date-time required"
 N = 1767225600  # 2026-01-01T00:00:00Z
 H = N + 3600
@@ -151,6 +163,62 @@ def test_a1_invalid_clock_arguments_rejected_before_reads(tmp_path, now, horizon
     assert not output.exists()
 
 
+def write_cli_plan(tmp_path, value):
+    plan_dir = tmp_path / "cli"
+    plan_dir.mkdir(exist_ok=True)
+    plan_file = plan_dir / "plan.json"
+    payload = ci.encoded(value)
+    plan_file.write_bytes(payload)
+    return plan_file, payload
+
+
+def run_cli(tmp_path, plan_file, payload, now, horizon):
+    argv = ["cached_inventory", "--root", str(tmp_path), "--plan", str(plan_file),
+            "--out", str(tmp_path / "output"), "--now=" + now, "--horizon=" + horizon,
+            "--plan-sha256", hashlib.sha256(payload).hexdigest(), "--plan-bytes", str(len(payload))]
+    stdout = io.StringIO()
+    with patch.object(sys, "argv", argv), patch.object(sys, "stdout", stdout):
+        ci.main()
+    return json.loads(stdout.getvalue())
+
+
+CLI_BAD_CLOCKS = [("nan", "3600"), ("0", "nan"), ("inf", "3600"), ("-inf", "3600"), ("0", "inf"),
+                  ("200", "100"), ("100", "100"), ("100", "3701"), (str(N), str(N + 3601))]
+
+
+@pytest.mark.parametrize("now,horizon", CLI_BAD_CLOCKS)
+def test_a1_cli_invalid_clock_rejected_before_any_read_or_write(tmp_path, now, horizon):
+    value = legacy_plan(tmp_path, times(N, H), times(N, H))
+    plan_file, payload = write_cli_plan(tmp_path, value)
+    before = sorted(p.name for p in tmp_path.iterdir())
+    refuse = AssertionError("no read or write before CLI clock validation")
+    with patch.object(ci, "read_metadata", side_effect=refuse), \
+            patch.object(ci, "bounded_metadata_read", side_effect=refuse), \
+            patch.object(ci, "owned", side_effect=refuse), \
+            patch.object(ci, "sync_directory", side_effect=refuse), \
+            patch.object(ci, "output_tree_bytes", side_effect=refuse):
+        with pytest.raises(ValueError, match="finite clock required|prospective discovery horizon"):
+            run_cli(tmp_path, plan_file, payload, now, horizon)
+    assert not (tmp_path / "output").exists()
+    assert sorted(p.name for p in tmp_path.iterdir()) == before
+    assert plan_file.read_bytes() == payload
+
+
+def test_a1_aware_positive_cli_ordinary_run_unchanged(tmp_path):
+    value = legacy_plan(tmp_path, times(N, H), times(N, H))
+    plan_file, payload = write_cli_plan(tmp_path, value)
+    result = run_cli(tmp_path, plan_file, payload, str(N), str(H))
+    assert result["status"] == "completed"
+    assert result["control_plan_bytes_read_this_call"] == len(payload)
+    assert result["result"]["now"] == N and result["result"]["prospective_horizon"] == H
+    assert result["result"]["sources"][0]["holds"] == FRESH_HOLDS
+    assert sorted(p.name for p in (tmp_path / "output").iterdir()) == sorted(
+        ["checkpoint.json", "cli-plan-admission.json", "inventory.lock", "metadata-admission.json",
+         "result-intent.json", "usable-inputs.json"])
+    again = run_cli(tmp_path, plan_file, payload, str(N), str(H))
+    assert again["status"] == "completed_reused" and again["control_plan_bytes_read_this_call"] == 0
+
+
 def test_a1_aware_positive_string_clock_arguments_match_numeric(tmp_path):
     value = legacy_plan(tmp_path, times(N, H), times(N, H))
     numeric, _ = traced_inventory(tmp_path, value, now=N, horizon=H)
@@ -202,6 +270,22 @@ def test_a2_bad_scope_time_holds_scope(tmp_path):
     result, names = traced_inventory(tmp_path, legacy_plan(tmp_path, times(N, H),
                                                            times("2026-01-01T00:00:00", H)))
     assert result["sources"][0]["holds"] == sorted(FRESH_HOLDS + ["prospective_geographic_scope_unreviewed"])
+    assert sorted(names) == METADATA_READS
+
+
+@pytest.mark.parametrize("rights,scope", [
+    (times("20260101T000000Z", "2026-01-01 06:30:00+0530"),
+     times("2026-01-01t00:00:00Z", "20260101T010000.0000009+00")),
+    (times("2026-W01-4T00:00:00-00:00", "2026-01-01T06:30:00+05:30:00"),
+     times("2025-12-31 16:00:00,000-0800", "2026W014T010000Z")),
+])
+def test_a2_aware_positive_base_complete_forms_through_inventory(tmp_path, rights, scope):
+    """Complete explicitly offset forms the base parser accepted stay fresh through inventory."""
+    for text in list(rights.values()) + list(scope.values()):
+        assert base_parse(text).utcoffset() is not None
+    assert ci.freshness(rights, N, H) is True and ci.freshness(scope, N, H) is True
+    result, names = traced_inventory(tmp_path, legacy_plan(tmp_path, rights, scope))
+    assert result["sources"][0]["holds"] == FRESH_HOLDS
     assert sorted(names) == METADATA_READS
 
 
@@ -299,3 +383,215 @@ def test_a3_freshness_does_not_treat_missing_time_as_now():
     assert ci.freshness(dict(valid_until=H), N, H) is False
     assert ci.freshness(dict(checked_at=N), N, H) is False
     assert ci.freshness(times(None, None), N, H) is False
+
+
+# A3 base-compatibility oracle ----------------------------------------------
+
+@pytest.mark.parametrize("text", AWARE_STRINGS)
+def test_a3_aware_positive_base_value_preserved(text):
+    """Every complete explicit-offset vector keeps exactly the base parser's value."""
+    parsed = base_parse(text)
+    assert parsed.utcoffset() is not None
+    assert ci.epoch(text) == parsed.timestamp()
+
+
+def test_a3_newly_refused_aware_forms_are_only_incomplete_or_bad_offset_fields():
+    """No complete, validly offset form the base accepted is narrowed away."""
+    newly_refused = []
+    for _, text in INVALID:
+        try:
+            parsed = base_parse(text)
+        except ValueError:
+            continue
+        if parsed.utcoffset() is None:
+            continue  # naive or date-only: refused by design
+        newly_refused.append(text)
+    assert sorted(newly_refused) == sorted(VECTORS["base_accepted_now_refused"]["strings"])
+    assert set(newly_refused) <= set(VECTORS["incomplete"]) | set(VECTORS["invalid_offset"])
+
+
+# A3 runner input contract (synthetic trees only) ---------------------------
+
+@pytest.fixture()
+def runner():
+    """Load the acceptance runner as a plain module; main() only ever runs to a preflight refusal here."""
+    flag = sys.dont_write_bytecode
+    spec = importlib.util.spec_from_file_location("sc_cache_clock_runner_under_test", RUNNER_PATH)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = flag
+    return module
+
+
+INPUT_FILES = {"a.txt": b"alpha\n", "sub/b.json": b"{\"b\": 1}\n"}
+PINS_NAME = "pins/input-pins.json"
+
+
+def synthetic_repo(tmp_path, runner, files=INPUT_FILES):
+    repo = tmp_path / "repo"
+    for name, data in files.items():
+        (repo / name).parent.mkdir(parents=True, exist_ok=True)
+        (repo / name).write_bytes(data)
+    pins = dict(schema=runner.PINS_SCHEMA, inputs={
+        name: dict(sha256=hashlib.sha256(data).hexdigest(), bytes=len(data)) for name, data in files.items()})
+    (repo / PINS_NAME).parent.mkdir(parents=True, exist_ok=True)
+    (repo / PINS_NAME).write_bytes(json.dumps(pins, sort_keys=True).encode())
+    return repo
+
+
+def tree_state(root):
+    """Names, link/type flags and regular-file bytes; never follows a symlink."""
+    state = []
+    for folder, dirs, names in os.walk(root, followlinks=False):
+        for name in sorted(dirs + names):
+            path = Path(folder) / name
+            info = path.lstat()
+            regular = path.is_file() and not path.is_symlink()
+            state.append((str(path.relative_to(root)), info.st_mode >> 12, path.read_bytes() if regular else None))
+    return sorted(state)
+
+
+def test_a3_runner_input_matching_regular_tree_accepted(tmp_path, runner):
+    repo = synthetic_repo(tmp_path, runner)
+    before = tree_state(tmp_path)
+    checked = runner.preflight(repo, tuple(INPUT_FILES), PINS_NAME)
+    assert checked["data"] == INPUT_FILES
+    assert checked["sha256"] == {n: hashlib.sha256(d).hexdigest() for n, d in INPUT_FILES.items()}
+    assert checked["pins_sha256"] == hashlib.sha256((repo / PINS_NAME).read_bytes()).hexdigest()
+    assert tree_state(tmp_path) == before
+
+
+def assert_refused(tmp_path, runner, repo, match, inputs=tuple(INPUT_FILES)):
+    before = tree_state(tmp_path)
+    with pytest.raises(ValueError, match=match):
+        runner.preflight(repo, inputs, PINS_NAME)
+    assert tree_state(tmp_path) == before  # inputs and prior outputs untouched, nothing created
+
+
+def test_a3_runner_input_hash_mismatch_refused(tmp_path, runner):
+    repo = synthetic_repo(tmp_path, runner)
+    (repo / "a.txt").write_bytes(b"alphA\n")  # same size, different bytes
+    assert_refused(tmp_path, runner, repo, "does not match its frozen pin")
+
+
+def test_a3_runner_input_size_mismatch_refused(tmp_path, runner):
+    repo = synthetic_repo(tmp_path, runner)
+    (repo / "sub/b.json").write_bytes(b"{\"b\": 12}\n")
+    assert_refused(tmp_path, runner, repo, "does not match its frozen pin")
+
+
+def test_a3_runner_input_unpinned_or_extra_pin_refused(tmp_path, runner):
+    repo = synthetic_repo(tmp_path, runner)
+    assert_refused(tmp_path, runner, repo, "pins must cover exactly", inputs=("a.txt",))
+    assert_refused(tmp_path, runner, repo, "pins must cover exactly", inputs=("a.txt", "sub/b.json", "c.txt"))
+
+
+def test_a3_runner_input_symlink_root_refused(tmp_path, runner):
+    repo = synthetic_repo(tmp_path, runner)
+    alias = tmp_path / "alias"
+    alias.symlink_to(repo, target_is_directory=True)
+    assert_refused(tmp_path, runner, alias, "symlink or non-directory ancestry")
+
+
+def test_a3_runner_input_symlink_root_ancestor_refused(tmp_path, runner):
+    synthetic_repo(tmp_path, runner)
+    alias = tmp_path / "alias"
+    alias.symlink_to(tmp_path, target_is_directory=True)
+    assert_refused(tmp_path, runner, alias / "repo", "symlink or non-directory ancestry")
+
+
+def test_a3_runner_input_symlink_intermediate_refused(tmp_path, runner):
+    repo = synthetic_repo(tmp_path, runner)
+    (repo / "sub").rename(tmp_path / "real-sub")
+    (repo / "sub").symlink_to(tmp_path / "real-sub", target_is_directory=True)
+    assert_refused(tmp_path, runner, repo, "symlink or non-directory ancestry")
+
+
+def test_a3_runner_input_symlink_leaf_refused(tmp_path, runner):
+    repo = synthetic_repo(tmp_path, runner)
+    (repo / "a.txt").rename(tmp_path / "real-a.txt")
+    (repo / "a.txt").symlink_to(tmp_path / "real-a.txt")
+    assert_refused(tmp_path, runner, repo, "symlink or special input refused")
+
+
+def test_a3_runner_input_symlink_pins_refused(tmp_path, runner):
+    repo = synthetic_repo(tmp_path, runner)
+    (repo / PINS_NAME).rename(tmp_path / "real-pins.json")
+    (repo / PINS_NAME).symlink_to(tmp_path / "real-pins.json")
+    assert_refused(tmp_path, runner, repo, "symlink or special input refused")
+
+
+def test_a3_runner_input_special_file_refused(tmp_path, runner):
+    repo = synthetic_repo(tmp_path, runner)
+    (repo / "a.txt").rename(tmp_path / "real-a.txt")
+    os.mkfifo(repo / "a.txt")
+    assert_refused(tmp_path, runner, repo, "regular input file required")
+
+
+def test_a3_runner_input_directory_as_leaf_refused(tmp_path, runner):
+    repo = synthetic_repo(tmp_path, runner)
+    (repo / "a.txt").rename(tmp_path / "real-a.txt")
+    (repo / "a.txt").mkdir()
+    assert_refused(tmp_path, runner, repo, "regular input file required")
+
+
+def test_a3_runner_input_oversize_refused_before_read(tmp_path, runner):
+    big = b"x" * (runner.FILE_CAP + 1)
+    repo = synthetic_repo(tmp_path, runner, files={"a.txt": big, "sub/b.json": b"{}\n"})
+    original = runner.read_chunk
+
+    def refuse_oversize(fd, size):
+        assert os.fstat(fd).st_size <= runner.FILE_CAP, "no read of an oversize input"
+        return original(fd, size)
+    with patch.object(runner, "read_chunk", side_effect=refuse_oversize):
+        assert_refused(tmp_path, runner, repo, "per-file input cap")
+
+
+def test_a3_runner_input_aggregate_cap_refused(tmp_path, runner):
+    repo = synthetic_repo(tmp_path, runner)
+    room = (repo / PINS_NAME).stat().st_size + len(INPUT_FILES["a.txt"]) + 3  # b.json does not fit
+    with patch.object(runner, "TOTAL_CAP", room):
+        assert_refused(tmp_path, runner, repo, "aggregate input cap exceeded: sub/b.json")
+
+
+def test_a3_runner_input_growth_during_read_refused(tmp_path, runner):
+    repo = synthetic_repo(tmp_path, runner)
+    original = runner.read_chunk
+    target = (repo / "a.txt").stat().st_ino
+    grown = []
+
+    def grow_then_read(fd, size):
+        if not grown and os.fstat(fd).st_ino == target:
+            with open(repo / "a.txt", "ab") as stream:
+                stream.write(b"more")
+            grown.append(True)
+        return original(fd, size)
+    with patch.object(runner, "read_chunk", side_effect=grow_then_read):
+        with pytest.raises(ValueError, match="changed during bounded read"):
+            runner.preflight(repo, tuple(INPUT_FILES), PINS_NAME)
+    assert grown
+
+
+def test_a3_runner_input_preflight_failure_writes_no_output(tmp_path, runner):
+    repo = synthetic_repo(tmp_path, runner)
+    (repo / "a.txt").write_bytes(b"alphA\n")
+    out_root = tmp_path / "out"
+    out_root.mkdir()
+    (out_root / "prior-run").mkdir()
+    (out_root / "prior-run" / "receipt.json").write_bytes(b"{}\n")
+    before = tree_state(tmp_path)
+    argv = ["accept_sc_cache_clock.py", "--suite", "focused", "--output", str(out_root / "new-run")]
+    stdout = io.StringIO()
+    with patch.object(runner, "REPO", repo), patch.object(runner, "OUT_ROOT", out_root), \
+            patch.object(runner, "INPUTS", tuple(INPUT_FILES)), patch.object(runner, "PINS", PINS_NAME), \
+            patch.object(runner, "install_guards", side_effect=AssertionError("no guard install")), \
+            patch.object(sys, "argv", argv), patch.object(sys, "stdout", stdout):
+        with pytest.raises(SystemExit) as stopped:
+            runner.main()
+    assert stopped.value.code == 3
+    assert json.loads(stdout.getvalue())["status"] == "REFUSED"
+    assert tree_state(tmp_path) == before
+    assert not (out_root / "new-run").exists()

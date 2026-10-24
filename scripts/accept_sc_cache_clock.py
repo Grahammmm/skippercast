@@ -10,8 +10,11 @@ another checkout loads). Network/subprocess/model sentinels are installed first.
 They are regression guards, not a hostile-code sandbox.
 
 Exit status: 0 every named assertion passed; 1 an acceptance assertion failed;
-2 usage or output-root refusal (nothing written); 3 environment capability
-failure (missing dependency or import-closure violation). Local success is
+2 usage or output-root refusal (nothing written); 3 input-identity refusal
+(an input differs from tests/fixtures/sc_cache_clock/input-pins.json, or is a
+symlink, special file or over the caps, checked through no-follow descriptors
+before any import or write) or environment capability failure (missing
+dependency or import-closure violation). Local success is
 REVIEW REQUIRED, not CI, source qualification or semantic acceptance.
 """
 import sys
@@ -20,6 +23,7 @@ sys.dont_write_bytecode = True
 
 import argparse  # noqa: E402
 import contextlib  # noqa: E402
+import errno  # noqa: E402
 import hashlib  # noqa: E402
 import io  # noqa: E402
 import json  # noqa: E402
@@ -29,7 +33,7 @@ import sysconfig  # noqa: E402
 import tempfile  # noqa: E402
 from pathlib import Path  # noqa: E402
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(os.path.abspath(__file__)).parents[1]  # unresolved: ancestry is checked, not followed
 CANDIDATE = REPO.parent
 OUT_ROOT = CANDIDATE / "out"
 SRC = REPO / "src"
@@ -41,10 +45,15 @@ MODULE = "skippercast.coastal.cached_inventory"
 INPUTS = ("scripts/accept_sc_cache_clock.py", "src/skippercast/coastal/cached_inventory.py", TEST_FILE,
           PRODUCER_TEST, "tests/fixtures/sc_cache_clock/vectors.json", "tests/conftest.py",
           "tests/_support.py", "pyproject.toml")
+# Frozen expected identities of INPUTS; the pins file itself is the recorded root of trust.
+PINS = "tests/fixtures/sc_cache_clock/input-pins.json"
+PINS_SCHEMA = "sc-cache-clock-input-pins-v1"
+PINS_CAP = 64 * 1024
 FILE_CAP = 2 * 1024 * 1024
 TOTAL_CAP = 16 * 1024 * 1024
 OUTPUT_CAP = 8 * 1024 * 1024
 ROW_CAP = 4096
+INPUT_BYTES = {}
 NETWORK_EVENTS = {"socket.connect", "socket.getaddrinfo", "socket.gethostbyname", "socket.gethostbyaddr",
                   "socket.getnameinfo", "socket.sendto", "http.client.connect", "urllib.Request",
                   "ftplib.connect", "smtplib.connect", "webbrowser.open"}
@@ -127,21 +136,98 @@ def module_root(module):
     return "OUTSIDE"
 
 
-def checked_bytes(relative, budget):
-    path = REPO / relative
-    current = REPO
-    for part in Path(relative).parts:
-        current = current / part
-        if current.is_symlink():
-            raise ValueError("symlink input rejected: " + relative)
-    info = path.lstat()
-    if not stat.S_ISREG(info.st_mode) or info.st_size > FILE_CAP or budget[0] + info.st_size > TOTAL_CAP:
-        raise ValueError("bounded regular input required: " + relative)
-    data = path.read_bytes()
-    if len(data) != info.st_size:
-        raise ValueError("input changed during read: " + relative)
-    budget[0] += len(data)
-    return data
+def read_chunk(fd, size):
+    """Single bounded descriptor read (a seam for the synthetic growth control)."""
+    return os.read(fd, size)
+
+
+def identity(info):
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+
+
+def pinned_read(root, relative, expected, budget, cap):
+    """Read one input through no-follow descriptors from / down, bounded and pinned.
+
+    Every component of the unresolved root and of ``relative`` is opened with
+    O_NOFOLLOW relative to its parent descriptor, so a symlink anywhere in the
+    ancestry, a special file or a non-regular leaf is refused before any byte is
+    read. Size is checked against the per-file and aggregate caps (and the pin)
+    on the open descriptor, at most size+1 bytes are read, the descriptor
+    identity must be unchanged afterwards, and the SHA-256 must equal the pin.
+    """
+    rel = Path(relative)
+    if rel.is_absolute() or not rel.parts or any(part in ("", ".", "..") for part in rel.parts):
+        raise ValueError("relative input path required: " + str(relative))
+    components = list(Path(os.path.abspath(root)).parts[1:]) + list(rel.parts)
+    directory = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+    try:
+        for part in components[:-1]:
+            try:
+                child = os.open(part, directory, dir_fd=fd)
+            except OSError as error:
+                raise ValueError(f"symlink or non-directory ancestry refused ({errno_name(error)}): {relative}") from None
+            os.close(fd)
+            fd = child
+        try:
+            child = os.open(components[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_NOCTTY | os.O_CLOEXEC,
+                            dir_fd=fd)
+        except OSError as error:
+            raise ValueError(f"symlink or special input refused ({errno_name(error)}): {relative}") from None
+        os.close(fd)
+        fd = child
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode):
+            raise ValueError("regular input file required: " + str(relative))
+        if before.st_size > cap:
+            raise ValueError("per-file input cap exceeded: " + str(relative))
+        if budget[0] + before.st_size > TOTAL_CAP:
+            raise ValueError("aggregate input cap exceeded: " + str(relative))
+        if expected is not None and before.st_size != expected["bytes"]:
+            raise ValueError(str(relative) + " does not match its frozen pin (size)")
+        chunks, remaining = [], before.st_size + 1
+        while remaining:
+            data = read_chunk(fd, min(65536, remaining))
+            if not data:
+                break
+            chunks.append(data)
+            remaining -= len(data)
+        payload = b"".join(chunks)
+        if len(payload) != before.st_size or identity(os.fstat(fd)) != identity(before):
+            raise ValueError("input changed during bounded read: " + str(relative))
+    finally:
+        os.close(fd)
+    if expected is not None and hashlib.sha256(payload).hexdigest() != expected["sha256"]:
+        raise ValueError(str(relative) + " does not match its frozen pin (sha256)")
+    budget[0] += len(payload)
+    return payload
+
+
+def errno_name(error):
+    return errno.errorcode.get(error.errno, str(error.errno))
+
+
+def preflight(repo, inputs, pins_relative):
+    """Verify every declared input against the frozen pins before any import, decode or write."""
+    budget = [0]
+    raw = pinned_read(repo, pins_relative, None, budget, PINS_CAP)
+    try:
+        pins = json.loads(raw.decode("utf-8"))
+    except ValueError:
+        raise ValueError("input pins are not UTF-8 JSON") from None
+    if (not isinstance(pins, dict) or set(pins) != {"schema", "inputs"} or pins["schema"] != PINS_SCHEMA
+            or not isinstance(pins["inputs"], dict)):
+        raise ValueError("input pins schema " + PINS_SCHEMA + " required")
+    if len(set(inputs)) != len(inputs) or sorted(pins["inputs"]) != sorted(inputs):
+        raise ValueError("input pins must cover exactly the declared inputs")
+    for name, pin in pins["inputs"].items():
+        if (not isinstance(pin, dict) or set(pin) != {"sha256", "bytes"} or type(pin["bytes"]) is not int
+                or pin["bytes"] < 0 or not isinstance(pin["sha256"], str) or len(pin["sha256"]) != 64
+                or set(pin["sha256"]) - set("0123456789abcdef")):
+            raise ValueError("malformed input pin: " + name)
+    data = {name: pinned_read(repo, name, pins["inputs"][name], budget, FILE_CAP) for name in inputs}
+    return dict(data=data, sha256={name: hashlib.sha256(value).hexdigest() for name, value in data.items()},
+                pins_sha256=hashlib.sha256(raw).hexdigest(), input_bytes_total=budget[0])
 
 
 def git_head():
@@ -244,7 +330,7 @@ def suite_contract(run_dir, assertions):
     check(assertions, "fake host-offset variants executed", len(fake) >= 18, len(fake))
     collect = run_pytest(run_dir, 3, "collect-tests-unit", ["tests/unit"], collect_only=True)
     mine = [n for n in collect["collected"] if n.startswith(TEST_FILE + "::")]
-    config = tomllib.loads((REPO / "pyproject.toml").read_text())["tool"]["pytest"]["ini_options"]
+    config = tomllib.loads(INPUT_BYTES["pyproject.toml"].decode("utf-8"))["tool"]["pytest"]["ini_options"]
     check(assertions, "new test module discovered by existing testpaths/python_files",
           collect["exit"] == 0 and "tests" in config["testpaths"] and config["python_files"] == ["test_*.py"]
           and len(mine) >= 60, dict(discovered=len(mine), testpaths=config["testpaths"]))
@@ -303,11 +389,13 @@ def main():
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
     output = validated_output(args.output)
-    budget = [0]
     try:
-        inputs = {name: hashlib.sha256(checked_bytes(name, budget)).hexdigest() for name in INPUTS}
+        checked = preflight(REPO, INPUTS, PINS)
     except (OSError, ValueError) as error:
         refuse("input check failed: " + str(error), 3)
+    INPUT_BYTES.clear()
+    INPUT_BYTES.update(checked["data"])
+    inputs = checked["sha256"]
     if not VENV_SITE.is_dir():
         refuse("repository-local dependency site-packages absent; no install attempted", 3)
     OUT_ROOT.mkdir(exist_ok=True)
@@ -342,6 +430,8 @@ def main():
                    verdict="PASS_REVIEW_REQUIRED" if status == 0 else "FAIL",
                    argv=[sys.executable] + sys.argv, cwd=os.getcwd(), interpreter=sys.executable,
                    python=sys.version, dependency_versions=versions, git_head=git_head(), input_sha256=inputs,
+                   input_pins=dict(path=PINS, sha256=checked["pins_sha256"], verified_before_import=True),
+                   input_bytes_total=checked["input_bytes_total"],
                    sys_path=sys.path, import_roots={r: sum(1 for v in imported.values() if v == r) for r in sorted(set(imported.values()))},
                    preexisting_outside_modules=preexisting, sentinels=dict(COUNTERS),
                    assertions=assertions, phases=phases,

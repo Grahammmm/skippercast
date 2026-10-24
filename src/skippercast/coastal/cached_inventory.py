@@ -19,9 +19,15 @@ def digest(value):
     return hashlib.sha256(encoded(value)).hexdigest()
 def encoded(value):
     return (json.dumps(value,sort_keys=True,separators=(",",":"),allow_nan=False)+"\n").encode()
-# A complete extended date-time; the offset is optional here only so that the
-# awareness gate below, not this pattern, is what refuses a naive value.
-CLOCK_TEXT=re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?(?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])?",re.ASCII)
+# Completeness gate over the base parser's own grammar: a full calendar or
+# week date (extended or basic), any single separator the parser accepts, and
+# a time with seconds (extended or basic, optional fraction). Hour/minute-only
+# times and week dates without a day are incomplete. Everything else the base
+# parser accepted keeps its base value. The offset is optional here only so
+# that the awareness gate below, not this pattern, refuses a naive value.
+CLOCK_TEXT=re.compile(r"(?:[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{8}|[0-9]{4}-W[0-9]{2}-[0-9]|[0-9]{4}W[0-9]{3})."
+    r"[0-9]{2}(?::[0-9]{2}:[0-9]{2}|[0-9]{4})(?:[.,][0-9]*)?"
+    r"(?:Z|[+-][0-9]{2}(?::?([0-9]{2})(?::?([0-9]{2})(?:[.,][0-9]+)?)?)?)?",re.ASCII|re.DOTALL)
 CLOCK_TEXT_ERROR="explicit-offset complete date-time required"
 def aware_instant(parsed):
     """Refuse a clock without an explicit UTC offset; host local time is never assumed."""
@@ -29,8 +35,9 @@ def aware_instant(parsed):
     return parsed
 def epoch(value):
     if isinstance(value,str):
-        # RFC 3339 -00:00 means "offset unknown", so it is not an explicit offset.
-        if not CLOCK_TEXT.fullmatch(value) or value.endswith("-00:00"):raise ValueError(CLOCK_TEXT_ERROR)
+        text=CLOCK_TEXT.fullmatch(value)
+        # Offset minute/second fields of 60+ (which the parser silently carried) are invalid.
+        if not text or any(field is not None and int(field)>=60 for field in text.groups()):raise ValueError(CLOCK_TEXT_ERROR)
         try:value=aware_instant(datetime.fromisoformat(value.replace("Z","+00:00"))).timestamp()
         except (ValueError,OverflowError):raise ValueError(CLOCK_TEXT_ERROR) from None
     try:finite=not isinstance(value,bool) and isinstance(value,(int,float)) and math.isfinite(value)
@@ -40,6 +47,11 @@ def epoch(value):
 def integer(value,maximum):
     if type(value) is not int or not 0<value<=maximum:raise ValueError("bounded positive integer required")
     return value
+def clock_window(now,horizon):
+    """Validate explicit clocks and the prospective horizon before any read or write."""
+    now=epoch(now);horizon=epoch(horizon)
+    if not now<horizon<=now+3600:raise ValueError("prospective discovery horizon at most60min required")
+    return now,horizon
 def owned(root,name):
     if not isinstance(name,str) or not name or Path(name).is_absolute() or ".." in Path(name).parts:raise ValueError("owned relative path required")
     current=Path(root).resolve(strict=True)
@@ -212,8 +224,7 @@ def held_inventory(root,plan,*,now,horizon):
     return result
 
 def inventory(root,plan,*,now,horizon):
-    now=epoch(now);horizon=epoch(horizon)
-    if not now<horizon<=now+3600:raise ValueError("prospective discovery horizon at most60min required")
+    now,horizon=clock_window(now,horizon)
     if plan.get("schema")==LEAD_PLAN:return held_inventory(root,plan,now=now,horizon=horizon)
     if (plan.get("schema")!=PLAN or not isinstance(plan.get("region"),str) or not plan["region"]
         or plan.get("network_bytes")!=0 or plan.get("source_read_bytes")!=0
@@ -352,8 +363,7 @@ def metadata_reservation(plan):
     return reservation
 
 def produce(root,plan,output,*,now,horizon,plan_descriptor=None):
-    now=epoch(now);horizon=epoch(horizon)
-    if not now<horizon<=now+3600:raise ValueError("prospective discovery horizon at most60min required")
+    now,horizon=clock_window(now,horizon)
     if len(encoded(plan))>MAX_FILE:raise ValueError("canonical plan bound")
     reservation=metadata_reservation(plan)
     output=Path(output).absolute()
@@ -450,6 +460,8 @@ def main():
     a.add_argument("--out",type=Path,required=True);a.add_argument("--now",type=float,required=True);a.add_argument("--horizon",type=float,required=True)
     a.add_argument("--plan-sha256",required=True);a.add_argument("--plan-bytes",type=int,required=True)
     x=a.parse_args()
+    # Explicit clocks and their horizon are refused before any output, reservation or plan access.
+    clock_window(x.now,x.horizon)
     integer(x.plan_bytes,MAX_FILE)
     if not re.fullmatch("[a-f0-9]{64}",x.plan_sha256) or x.plan.suffix.lower()!=".json":raise ValueError("byte-bound JSON plan required")
     descriptor=dict(path=str(x.plan.absolute()),sha256=x.plan_sha256,bytes=x.plan_bytes)
