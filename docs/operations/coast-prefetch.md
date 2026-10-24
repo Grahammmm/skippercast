@@ -189,7 +189,9 @@ Fixed production locations (no CLI reserve or host-policy override):
   `/mnt/agentorange-backup/skippercast-campaign/raw/<source>/<url-hash>-<file>`
 - Primary source manifests: `raw/<source>/manifest.jsonl` on the same disk.
 - Byte-identical manifest mirrors:
-  `~/skippercast-data/campaign-raw-manifest/<source>.jsonl`.
+  `~/skippercast-data/campaign-raw-manifest/<source>.jsonl`. A mirror holding
+  receipts the primary lacks (primary lost or truncated) stops the run; both are
+  preserved for the operator instead of the mirror being overwritten.
 - Host retry state: `~/skippercast-data/campaign-raw-manifest/retry-state.json`.
   Its adjacent `.lock` file synchronizes all prefetch modes on the local filesystem.
 - Dashboard: `~/agent-work/reports/coast-pilot/prefetch-status.json`.
@@ -209,7 +211,7 @@ or cross-filesystem renames are needed on exFAT. Manifest writes also preserve t
 reserve. Local process exclusion uses a Linux lock under
 `~/.cache/skippercast/coast-prefetch/`, keyed by the raw root.
 
-A HEAD identifies size and a strong ETag or Last-Modified validator. Download GETs
+A HEAD identifies size and a strong ETag validator. Download GETs
 use 64 MiB ranges with If-Range, exact Content-Range and length validation, and
 checkpoint `.part.json` receipts. A disconnected range is retried from its prior
 checkpoint after the host cooldown; at most one in-flight range is discarded.
@@ -219,10 +221,11 @@ A crash before the very first checkpoint may leave an empty `.part` with no
 receipt; restart safely initializes it because there are no bytes to authenticate.
 Nonempty unreceipted partials and existing invalid/identity-changed receipts are
 still preserved and held; an empty file is not permission to ignore a receipt.
-A changed validator, redirect target or corrupted prefix is held for investigation.
+A changed validator, redirect target or corrupted prefix is held for investigation;
+any ETag change (weak or strong) or Last-Modified change on a response is a hold.
 A server ignoring Range can return one complete file, but that response replaces
-the partial—it is never appended. Without validators, only one whole-file response
-is accepted (no unsafe multi-request concatenation).
+the partial—it is never appended. Without a strong ETag (a weak ETag or
+Last-Modified alone is not byte identity), only one whole-file response is accepted (no unsafe multi-request concatenation).
 
 The verified final file is skipped on subsequent passes only after its size and
 SHA-256 are checked against its manifest and any plan pins. No source request is

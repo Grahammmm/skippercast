@@ -18,6 +18,7 @@ import type {RailId} from '../profile.ts';
 import type {ChartMark} from './coastline.ts';
 import type {Palette, PaletteKey} from './palette.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from './style.ts';
+import {STATION_BASIS} from './station-model.ts';
 
 /** Where a layer draws: the MapLibre Chart, the packages/coast terrain (2D and 3D), or both. */
 export type LayerPresentation = 'chart' | 'terrain';
@@ -116,8 +117,12 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     legend: [{label: 'Temperature change per distance, °F per nautical mile', swatch: 'contrast1'}],
     basis: 'The region\'s published daily sea-surface temperature analysis, partly interpolated, with gaps under cloud filled, drawn as the change in temperature per nautical mile only in grid cells where the change across neighbouring cells exceeds their summed analysis error; named with its product, grid and age where it draws and withheld past its 72-hour age limit. Surface water only; a contrast cell is not a fish or catch location.',
     task: 'CI6-03'}),
-  entry({id: 'swell', label: 'Swell', control: 'swell', presentations: ['chart'], time: ['hour'], legend: [{label: 'Primary swell height', swatch: 'swell2'}],
-    basis: 'NOAA GFS-Wave model forecast of the primary swell on the region\'s forecast grid, from a run issued within 36 hours, and where a coast report binds, its nearshore model sites (CDIP MOP) as rings; model output, not buoy observations.', task: 'FE-17'}),
+  entry({id: 'chlorophyll', label: 'Chlorophyll', control: 'chlorophyll', presentations: ['chart'], sources: ['chlorophyll'], time: ['observed'],
+    legend: [{label: '≤0.01 mg/m³', swatch: 'depth0'}, {label: '0.1 mg/m³', swatch: 'blue'}, {label: '1 mg/m³', swatch: 'mint'}, {label: '10 mg/m³', swatch: 'amber'}, {label: '100 mg/m³', swatch: 'coral'}],
+    attribution: 'NOAA NESDIS STAR / CoastWatch',
+    basis: 'NOAA NPP/NOAA-20 merged OCI surface chlorophyll proxy on its native 0.0375° grid, labelled with its sample date and withheld at the manifest age limit; cloud gaps stay empty. Not bait or fish.', task: 'CI6-08'}),
+  entry({id: 'swell', label: 'Swell', control: 'swell', presentations: ['chart'], time: ['hour'], legend: [{label: 'Swell height', swatch: 'swell2'}],
+    basis: 'NOAA GFS-Wave model forecast (wcoast.0p16 grid) of the primary swell, wind sea or secondary swell on the region\'s forecast grid, from a run issued within 36 hours, and where a coast report binds, its nearshore model sites (CDIP MOP) as rings; model output, not buoy observations.', task: 'FE-17'}),
   entry({id: 'wind', label: 'Wind', control: 'swell', presentations: ['chart'], sources: ['wind-arrows', 'wind-labels'], time: ['hour'],
     attribution: 'NOAA NCEP', legend: [{label: '10 m wind · arrows toward · knots', swatch: 'text'}],
     basis: 'NOAA GFS 10 m wind from the native approximately 13 km forecast tiles, sampled on the regional forecast grid, not observations; runs older than 36 hours or retrievals older than 6 hours are withheld. Arrows point toward; labels are knots.', task: 'CI6-10'}),
@@ -174,6 +179,9 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
   entry({id: 'trip-ranked', label: 'Ranked trip spots', control: 'always', presentations: ['chart'], sources: [RANKED_SOURCE], gate: 'a ranked trip plan',
     legend: [{label: 'Ranked trip spot; number: the planner\'s order', swatch: 'mint'}],
     basis: 'The trip planner\'s ranked reefs from the current seafloor publication, numbered in its order and drawn while its protected-area check and the marks\' run-time screen are current.', task: 'FE-51'}),
+  entry({id: 'stations', label: 'Stations', control: 'stations', presentations: ['chart'], sources: ['stations'], time: ['observed', 'hour'],
+    legend: [{label: 'Buoy observation', swatch: 'blue'}, {label: 'Tide prediction', swatch: 'mint'}, {label: 'Stale or unavailable', swatch: 'muted'}, {label: 'CDIP MOP model site: ring', swatch: 'blue'}],
+    attribution: 'NOAA NDBC · NOAA CO-OPS · CDIP/Scripps', basis: STATION_BASIS, task: 'CI6-18'}),
   entry({id: 'coastline', label: 'Coastline', control: 'always', presentations: ['chart'], sources: [COASTLINE_SOURCE], attribution: COASTLINE_ATTRIBUTION,
     basis: 'NOAA NGS CUSP shoreline, 1994–2010 sources.', task: 'FE-11'}),
 ]);

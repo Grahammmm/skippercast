@@ -191,6 +191,44 @@ test('a reef mark joins the trip from its card, and GPX opens the plan with it',
   expect(pageErrors).toEqual([]);
 });
 
+test('a Chart click saves a categorized user waypoint, restores it and exports standard GPX type', async ({page, pageErrors, v2, isMobile}) => {
+  await stubLiveFeeds(page);
+  const writes: string[] = [];
+  page.on('request', request => { if (request.method() !== 'GET' && request.method() !== 'HEAD') writes.push(new URL(request.url()).pathname); });
+  await v2.open('app', {...AREA, view: '35.43,-121.17,12'});
+  await openPlan(page, isMobile);
+  await page.locator('#waypoint-place').click();
+  await expect(page.getByRole('dialog', {name: 'Trip plan and GPX'})).toBeHidden();
+  await expect(page.getByRole('button', {name: 'Cancel waypoint'})).toBeVisible();
+  if (isMobile) await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'peek');
+  // Pick exposed Chart space, not a fixed geography that may be under mobile chrome.
+  const canvas = page.locator('.app-chart canvas.maplibregl-canvas');
+  const chart = (await canvas.boundingBox())!;
+  if (isMobile) await canvas.click({position: {x: chart.width / 4, y: chart.height / 3}});
+  else await clickChart(page, {latitude: 35.43, longitude: -121.17});
+  const dialog = page.getByRole('dialog', {name: 'Trip plan and GPX'});
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel('Waypoint name').fill('Synthetic user marker');
+  await dialog.getByLabel('Category', {exact: true}).selectOption('wreck');
+  await dialog.getByRole('button', {name: 'Save waypoint', exact: true}).click();
+  const points = dialog.getByRole('region', {name: 'Your waypoints'});
+  await expect(points).toContainText('Synthetic user marker · wreck');
+  await expect(page.locator('#export-research')).not.toBeChecked();
+  await expect(page.locator('#export-download')).toBeEnabled();
+  expect(await download(page)).toContain('<type>wreck</type>');
+  await page.reload();
+  await expect(points).toContainText('Synthetic user marker · wreck');
+  const restored = await download(page);
+  expect(restored).toContain('<name>Synthetic user marker</name>');
+  expect(restored).toContain('<type>wreck</type>');
+  await v2.a11y('v2-user-waypoint');
+  await points.getByRole('button', {name: 'Remove waypoint Synthetic user marker'}).click();
+  await expect(points).not.toContainText('Synthetic user marker');
+  await expect(page.locator('#export-download')).toBeDisabled();
+  expect(writes.filter(path => path.startsWith('/api/') && path !== '/api/telemetry')).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+
 test.describe('offline', () => {
   test.use({serviceWorkers: 'allow'});
   test('a region saved from v2 opens offline from its pack, the app included', async ({page, context, pageErrors, v2, isMobile}) => {
