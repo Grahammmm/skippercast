@@ -1,0 +1,775 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:skippercast:coast-segment-receipt-v1",
+  "description": "Additive source-bound receipt. Shape validity is REVIEW REQUIRED, never semantic approval. Closure needs existing independent verdict and archive-only verification.",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "enum": [
+        "coast-segment-receipt-v1"
+      ]
+    },
+    "schema_version": {
+      "enum": [
+        1
+      ]
+    },
+    "created_utc": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "author_profile": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "author_model": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "card_id": {
+      "pattern": "^t_[0-9a-f]{8}$",
+      "type": "string"
+    },
+    "code_commit": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "skill_commit": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "campaign_segment_id": {
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "type": "string"
+    },
+    "coordinator_segment_id": {
+      "pattern": "^seg:3310:-?[0-9]+:-?[0-9]+:5000$",
+      "type": "string"
+    },
+    "segment_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "recipe_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "recipe": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "minLength": 1,
+          "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+          "type": "string"
+        },
+        "root_id": {
+          "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "root_id",
+        "path",
+        "sha256",
+        "bytes"
+      ],
+      "type": "object"
+    },
+    "run": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "path": {
+          "minLength": 1,
+          "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+          "type": "string"
+        },
+        "root_id": {
+          "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "root_id",
+        "path",
+        "sha256",
+        "bytes"
+      ],
+      "type": "object"
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "source_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "cache": {
+            "additionalProperties": false,
+            "properties": {
+              "bytes": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "path": {
+                "minLength": 1,
+                "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+                "type": "string"
+              },
+              "root_id": {
+                "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "root_id",
+              "path",
+              "sha256",
+              "bytes"
+            ],
+            "type": "object"
+          },
+          "rights": {
+            "additionalProperties": false,
+            "properties": {
+              "bytes": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "path": {
+                "minLength": 1,
+                "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+                "type": "string"
+              },
+              "root_id": {
+                "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "root_id",
+              "path",
+              "sha256",
+              "bytes"
+            ],
+            "type": "object"
+          },
+          "datum": {
+            "additionalProperties": false,
+            "properties": {
+              "bytes": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "path": {
+                "minLength": 1,
+                "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+                "type": "string"
+              },
+              "root_id": {
+                "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "root_id",
+              "path",
+              "sha256",
+              "bytes"
+            ],
+            "type": "object"
+          },
+          "resolution": {
+            "additionalProperties": false,
+            "properties": {
+              "bytes": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "path": {
+                "minLength": 1,
+                "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+                "type": "string"
+              },
+              "root_id": {
+                "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "root_id",
+              "path",
+              "sha256",
+              "bytes"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "source_id",
+          "source_sha256",
+          "cache",
+          "rights",
+          "datum",
+          "resolution"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "artifact": {
+            "additionalProperties": false,
+            "properties": {
+              "bytes": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "path": {
+                "minLength": 1,
+                "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+                "type": "string"
+              },
+              "root_id": {
+                "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "root_id",
+              "path",
+              "sha256",
+              "bytes"
+            ],
+            "type": "object"
+          },
+          "contributing_sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "\\S"
+                },
+                "source_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              },
+              "required": [
+                "source_id",
+                "source_sha256"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "tool": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "version": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "code_commit": {
+                "pattern": "^[0-9a-f]{40}$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "version",
+              "code_commit"
+            ],
+            "additionalProperties": false
+          },
+          "parameters": {
+            "type": "object"
+          },
+          "measured_format": {
+            "additionalProperties": false,
+            "properties": {
+              "bytes": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "path": {
+                "minLength": 1,
+                "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+                "type": "string"
+              },
+              "root_id": {
+                "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "root_id",
+              "path",
+              "sha256",
+              "bytes"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "artifact",
+          "contributing_sources",
+          "tool",
+          "parameters",
+          "measured_format"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "qa": {
+      "type": "object",
+      "properties": {
+        "report": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "path": {
+              "minLength": 1,
+              "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+              "type": "string"
+            },
+            "root_id": {
+              "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "root_id",
+            "path",
+            "sha256",
+            "bytes"
+          ],
+          "type": "object"
+        },
+        "hole_numerator": {
+          "type": "number",
+          "minimum": 0
+        },
+        "coverage_denominator": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "units": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "spatial_support": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "path": {
+              "minLength": 1,
+              "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+              "type": "string"
+            },
+            "root_id": {
+              "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "root_id",
+            "path",
+            "sha256",
+            "bytes"
+          ],
+          "type": "object"
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "uniqueItems": true
+        },
+        "threshold_config": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "path": {
+              "minLength": 1,
+              "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+              "type": "string"
+            },
+            "root_id": {
+              "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "root_id",
+            "path",
+            "sha256",
+            "bytes"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "report",
+        "hole_numerator",
+        "coverage_denominator",
+        "units",
+        "spatial_support",
+        "flags",
+        "threshold_config"
+      ],
+      "additionalProperties": false
+    },
+    "tier1": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "enum": [
+                "text_only",
+                "text_and_vision",
+                "unavailable"
+              ]
+            },
+            "text_result": {
+              "enum": [
+                "pass",
+                "flag",
+                "held",
+                "unavailable"
+              ]
+            },
+            "vision_result": {
+              "enum": [
+                "pass",
+                "flag",
+                "held",
+                "unavailable"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            },
+            "report": {
+              "additionalProperties": false,
+              "properties": {
+                "bytes": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "path": {
+                  "minLength": 1,
+                  "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+                  "type": "string"
+                },
+                "root_id": {
+                  "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+                  "type": "string"
+                },
+                "sha256": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "root_id",
+                "path",
+                "sha256",
+                "bytes"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "mode",
+            "text_result",
+            "vision_result",
+            "reason",
+            "report"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mode": {
+              "enum": [
+                "unavailable"
+              ]
+            },
+            "text_result": {
+              "enum": [
+                "unavailable"
+              ]
+            },
+            "vision_result": {
+              "enum": [
+                "unavailable"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          },
+          "required": [
+            "mode",
+            "text_result",
+            "vision_result",
+            "reason"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "determinism_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "closed": {
+      "type": "boolean"
+    },
+    "signoff": {
+      "type": "object",
+      "properties": {
+        "verdict": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "path": {
+              "minLength": 1,
+              "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+              "type": "string"
+            },
+            "root_id": {
+              "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "root_id",
+            "path",
+            "sha256",
+            "bytes"
+          ],
+          "type": "object"
+        },
+        "artifact": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "path": {
+              "minLength": 1,
+              "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+              "type": "string"
+            },
+            "root_id": {
+              "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "root_id",
+            "path",
+            "sha256",
+            "bytes"
+          ],
+          "type": "object"
+        },
+        "reviewed_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "verdict",
+        "artifact",
+        "reviewed_digest"
+      ],
+      "additionalProperties": false
+    },
+    "archive": {
+      "type": "object",
+      "properties": {
+        "manifest": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "path": {
+              "minLength": 1,
+              "pattern": "^(?!.*\\/$)(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)[^\\u0000-\\u001f]+$",
+              "type": "string"
+            },
+            "root_id": {
+              "pattern": "(?:queue:[A-Za-z0-9_-]+|repo:[0-9a-f]{40}|archive:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+|raw:campaign)$",
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "root_id",
+            "path",
+            "sha256",
+            "bytes"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "manifest"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "created_utc",
+    "author_profile",
+    "author_model",
+    "card_id",
+    "code_commit",
+    "skill_commit",
+    "campaign_segment_id",
+    "coordinator_segment_id",
+    "segment_slug",
+    "recipe_sha256",
+    "recipe",
+    "run",
+    "inputs",
+    "outputs",
+    "qa",
+    "tier1",
+    "determinism_digest",
+    "closed"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "closed": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "signoff",
+          "archive"
+        ]
+      }
+    }
+  ]
+}
