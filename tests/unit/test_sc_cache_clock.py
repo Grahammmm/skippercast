@@ -228,6 +228,62 @@ def test_a1_aware_positive_string_clock_arguments_match_numeric(tmp_path):
     assert numeric["now"] == N and numeric["prospective_horizon"] == H
 
 
+# Class-level layouts: every complete date/time prefix crossed with every offset spelling.
+CLASS_DATES = ("2026-01-01", "20260101", "2026-W01-4", "2026W014")
+CLASS_SEPARATORS = ("T", " ", "t")
+CLASS_TIMES = ("05:30:00", "053000")
+CLASS_FRACTIONS = ("", ".5", ",25", ".1234567")
+CLASS_PREFIXES = [d + s + t + f for d in CLASS_DATES for s in CLASS_SEPARATORS
+                  for t in CLASS_TIMES for f in CLASS_FRACTIONS]
+# Offset spellings the base parser accepts, including fractions after the offset
+# hour, minute or second field (dot or comma, plus or minus, basic or extended).
+CLASS_OFFSETS = ("Z", "+00:00", "-00:00", "+05", "-05", "+0530", "-0530", "+05:30", "+05:30:00",
+                 "+053000", "+05.5", "+05,5", "-05.5", "-05,5", "+05:30.5", "-05:30,5", "+0530.5",
+                 "-0530,25", "+05:30:00.5", "+053000,5", "+05.123456789", "+05:59.999",
+                 "+23:59:59.999999", "+05:30:00:00")
+CLASS_BAD_OFFSET_FIELDS = ("+05:60", "+0560", "+05:30:60", "+053060", "+05:60.5", "+0560,5",
+                           "-05:60.5", "+05:30:60.5", "+05:59:60,5")
+
+
+@pytest.mark.parametrize("offset", CLASS_OFFSETS)
+def test_a1_aware_positive_offset_class_keeps_base_value(offset):
+    """Every complete prefix with this offset spelling keeps exactly its base value."""
+    for prefix in CLASS_PREFIXES:
+        text = prefix + offset
+        parsed = base_parse(text)
+        assert parsed.utcoffset() is not None, text
+        assert ci.epoch(text) == parsed.timestamp(), text
+
+
+@pytest.mark.parametrize("offset", CLASS_OFFSETS)
+def test_a1_aware_positive_offset_class_freshness_matches_base(offset):
+    for prefix in CLASS_PREFIXES:
+        value = base_parse(prefix + offset).timestamp()
+        doc = times(prefix + offset, prefix + offset)
+        assert ci.freshness(doc, value, value) is True, prefix + offset
+        assert ci.freshness(doc, value - 1e-3, value) is False, prefix + offset
+
+
+def test_a1_naive_regression_class_prefixes_refused():
+    """The same complete prefixes without any offset are naive and refused."""
+    for prefix in CLASS_PREFIXES:
+        with pytest.raises(ValueError, match=CLOCK_ERROR):
+            ci.epoch(prefix)
+
+
+@pytest.mark.parametrize("offset", CLASS_BAD_OFFSET_FIELDS)
+def test_a3_offset_minute_second_fields_of_60_refused_with_fractions(offset):
+    for prefix in CLASS_PREFIXES:
+        text = prefix + offset
+        try:
+            base_parse(text)
+        except ValueError:
+            pass  # already refused by the base parser
+        with pytest.raises(ValueError, match=CLOCK_ERROR):
+            ci.epoch(text)
+        assert ci.freshness(times(text, text), N, H) is False
+
+
 # A2 producer contract ------------------------------------------------------
 
 FRESH_HOLDS = ["header_metadata_missing", "prepared_acquisition_metadata_missing"]
@@ -286,6 +342,37 @@ def test_a2_aware_positive_base_complete_forms_through_inventory(tmp_path, right
     assert ci.freshness(rights, N, H) is True and ci.freshness(scope, N, H) is True
     result, names = traced_inventory(tmp_path, legacy_plan(tmp_path, rights, scope))
     assert result["sources"][0]["holds"] == FRESH_HOLDS
+    assert sorted(names) == METADATA_READS
+
+
+@pytest.mark.parametrize("rights,scope", [
+    (times("2026-01-01T05:30:00+05:30.5", "2026-01-01T06:30:01+05:30.5"),
+     times("2026-01-01T05:00:00+05.5", "2026-01-01T06:30:01+0530.5")),
+    (times("2026-01-01 05:00:00,5+05,5", "2026-01-01T06:00:00,5+05,5"),
+     times("2025-12-31T18:29:59,75-0530,25", "20260101T063000.5+053000,5")),
+])
+def test_a2_aware_positive_fractional_offsets_through_inventory(tmp_path, rights, scope):
+    """Fractional offset fields keep their base value through freshness and inventory."""
+    for text in list(rights.values()) + list(scope.values()):
+        assert ci.epoch(text) == base_parse(text).timestamp()
+    assert ci.freshness(rights, N, H) is True and ci.freshness(scope, N, H) is True
+    result, names = traced_inventory(tmp_path, legacy_plan(tmp_path, rights, scope))
+    assert result["sources"][0]["holds"] == FRESH_HOLDS
+    assert sorted(names) == METADATA_READS
+    usage = result["usage"]
+    assert (usage["source_read_bytes"], usage["source_hashes"], usage["network_requests"],
+            usage["network_bytes"]) == (0, 0, 0, 0)
+
+
+@pytest.mark.parametrize("field,value,hold", [
+    ("checked_at", "2026-01-01T05:30:01+05:30.5", "private_source_rights_unreviewed"),  # N + 0.5
+    ("valid_until", "2026-01-01T06:29:59+0530.5", "private_source_rights_unreviewed"),  # H - 1.5
+    ("checked_at", "2026-01-01T00:00:00+05:60.5", "private_source_rights_unreviewed"),  # bad field
+])
+def test_a2_fractional_offset_boundaries_hold_without_extra_read(tmp_path, field, value, hold):
+    rights = times(N, H); rights[field] = value
+    result, names = traced_inventory(tmp_path, legacy_plan(tmp_path, rights, times(N, H)))
+    assert result["sources"][0]["holds"] == sorted(FRESH_HOLDS + [hold])
     assert sorted(names) == METADATA_READS
 
 

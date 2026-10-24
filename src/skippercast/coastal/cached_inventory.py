@@ -19,25 +19,31 @@ def digest(value):
     return hashlib.sha256(encoded(value)).hexdigest()
 def encoded(value):
     return (json.dumps(value,sort_keys=True,separators=(",",":"),allow_nan=False)+"\n").encode()
-# Completeness gate over the base parser's own grammar: a full calendar or
-# week date (extended or basic), any single separator the parser accepts, and
-# a time with seconds (extended or basic, optional fraction). Hour/minute-only
-# times and week dates without a day are incomplete. Everything else the base
-# parser accepted keeps its base value. The offset is optional here only so
-# that the awareness gate below, not this pattern, refuses a naive value.
-CLOCK_TEXT=re.compile(r"(?:[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{8}|[0-9]{4}-W[0-9]{2}-[0-9]|[0-9]{4}W[0-9]{3})."
-    r"[0-9]{2}(?::[0-9]{2}:[0-9]{2}|[0-9]{4})(?:[.,][0-9]*)?"
-    r"(?:Z|[+-][0-9]{2}(?::?([0-9]{2})(?::?([0-9]{2})(?:[.,][0-9]+)?)?)?)?",re.ASCII|re.DOTALL)
 CLOCK_TEXT_ERROR="explicit-offset complete date-time required"
+# Completeness gate on the date and time part only: a full calendar or week date
+# (extended or basic), any single separator the parser accepts, and a time with
+# seconds (extended or basic, optional fraction). Hour/minute-only times and week
+# dates without a day are incomplete. The offset after this prefix is never
+# matched here; the base parser reads it and the awareness gate refuses a missing one.
+CLOCK_PREFIX=re.compile(r"(?:[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{8}|[0-9]{4}-W[0-9]{2}-[0-9]|[0-9]{4}W[0-9]{3})."
+    r"[0-9]{2}(?::[0-9]{2}:[0-9]{2}|[0-9]{4})(?:[.,][0-9]*)?",re.ASCII|re.DOTALL)
+def complete_date_time(text):
+    """Return the offset text that follows a complete date and time-with-seconds."""
+    prefix=CLOCK_PREFIX.match(text)
+    if not prefix:raise ValueError(CLOCK_TEXT_ERROR)
+    return text[prefix.end():]
+def offset_fields_in_range(offset):
+    """Refuse offset minute/second fields of 60+, which the base parser silently carried."""
+    whole=re.split("[.,]",offset[1:],maxsplit=1)[0]
+    fields=whole.split(":") if ":" in whole else [whole[i:i+2] for i in range(0,len(whole),2)]
+    if any(field.isascii() and field.isdigit() and int(field)>=60 for field in fields[1:]):raise ValueError(CLOCK_TEXT_ERROR)
 def aware_instant(parsed):
     """Refuse a clock without an explicit UTC offset; host local time is never assumed."""
     if parsed.tzinfo is None or parsed.utcoffset() is None:raise ValueError(CLOCK_TEXT_ERROR)
     return parsed
 def epoch(value):
     if isinstance(value,str):
-        text=CLOCK_TEXT.fullmatch(value)
-        # Offset minute/second fields of 60+ (which the parser silently carried) are invalid.
-        if not text or any(field is not None and int(field)>=60 for field in text.groups()):raise ValueError(CLOCK_TEXT_ERROR)
+        offset_fields_in_range(complete_date_time(value))
         try:value=aware_instant(datetime.fromisoformat(value.replace("Z","+00:00"))).timestamp()
         except (ValueError,OverflowError):raise ValueError(CLOCK_TEXT_ERROR) from None
     try:finite=not isinstance(value,bool) and isinstance(value,(int,float)) and math.isfinite(value)
