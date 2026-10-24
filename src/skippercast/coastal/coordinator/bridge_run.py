@@ -281,6 +281,8 @@ def _bind_window(position, job, window, item, grids, record, campaign, keys):
             or any(not isinstance(v, (int, float)) or not math.isfinite(v) for v in (a, b, c, d, e, f))
             or col+width > definition["width"] or row+height > definition["height"]):
         refuse("owner", "invalid source grid/window bounds")
+    if is_set and (problem := catalog_bridge.tiling_affine_problem(selection["tiling"], definition)):
+        refuse("grid_geometry", problem)
     x, y = col + width/2, row + height/2
     transform = Transformer.from_crs(definition["raster_crs"], "EPSG:3310", always_xy=True)
     cx, cy = transform.transform(a*x+b*y+c, d*x+e*y+f)
@@ -672,8 +674,9 @@ def run(root, enqueue_receipt, out, *, max_ticks, until, stop_after="map", conti
                     stop = "max_ticks"
                     break
                 rows = _rows(db)
-                frontier = sorted((w["window_key"], STAGES.index(stage), info["job_id"])
-                                  for w in windows for stage, info in w["stages"].items()
+                # Admission (receipt jobs) order, never window_key: its decimal idx sorts 0, 1, 10, 2.
+                frontier = sorted((order, STAGES.index(stage), info["job_id"])
+                                  for order, w in enumerate(windows) for stage, info in w["stages"].items()
                                   if stage != "render" and info["state"] == "queued"
                                   and rows[info["job_id"]]["not_before"] <= clock()
                                   and rows[info["job_id"]]["attempts"] < rows[info["job_id"]]["max_attempts"])

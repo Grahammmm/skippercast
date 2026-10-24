@@ -680,3 +680,60 @@ def test_screens_a_real_pc9_run_summary(world, monkeypatch, model):
     # two different sources share no grid: no adjacency across sources
     assert all(x["deterministic"]["neighbours"] == [] for x in doc["windows"])
     assert doc["run_summary"]["path"] == "plans/pilot01/runs/run-00.json"
+
+
+@pytest.mark.gis
+@pytest.mark.parametrize("stage,state", [("map", "failed"), ("qualify", "failed"), ("acquire", "missing")])
+def test_mapped_window_with_an_unfinished_stage_is_never_a_pass(tmp_path, model, stage, state):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, GRID4[:2])
+    _edit_summary(plan, lambda s: s["windows"][0]["stages"][stage].update(state=state))
+    _, doc = screen(plan)
+    w = doc["windows"][0]
+    assert "STATE_INCONSISTENT" in w["deterministic"]["flags"] and w["tier1"] == "flag"
+    assert doc["windows"][1]["tier1"] == "pass"            # control
+
+
+@pytest.mark.gis
+def test_empty_population_is_never_a_clean_screen(tmp_path, model):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, [])
+    code, doc = screen(plan)
+    assert code == 0
+    assert doc["summary"]["windows"] == 0 and "EMPTY_POPULATION" in doc["summary"]["flags"]
+
+
+@pytest.mark.gis
+def test_admission_without_catalog_ref_flags_the_plan(tmp_path, model):
+    pytest.importorskip("rasterio")
+    root, plan = build_plan(tmp_path, GRID4[:1], depth_range=[0.0, 5.0])
+    admission = json.loads((plan / "admission.json").read_text())
+    del admission["catalog"]
+    _write(plan / "admission.json", ls.canonical(admission))
+    _edit_summary(plan, lambda s: s.update(admission=_ref(root, plan / "admission.json")))
+    _, doc = screen(plan)
+    assert "PLAN_INTEGRITY" in doc["summary"]["flags"]
+    assert "admission has no catalog ref" in doc["summary"]["plan_integrity_problems"]
+    assert doc["windows"][0]["tier1"] == "flag"
+
+
+@pytest.mark.gis
+@pytest.mark.parametrize("doc", [{"tier1_slope_p99_max_deg": "0.001"}, {"tier1_slope_p99_max_deg": True},
+                                 {"tier1_slope_p99_max_dg": 0.001}, [0.001]])
+def test_bad_thresholds_file_is_refused(tmp_path, model, capsys, doc):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, GRID4[:1])
+    thresholds = tmp_path / "thresholds.json"
+    thresholds.write_text(json.dumps(doc))
+    code, result = screen(plan, "--thresholds", str(thresholds))
+    assert code == 2 and result is None
+    assert "threshold" in capsys.readouterr().err
+
+
+@pytest.mark.gis
+def test_shared_tier2_thresholds_file_is_accepted(tmp_path, model):
+    pytest.importorskip("rasterio")
+    _, plan = build_plan(tmp_path, GRID4[:1])
+    shared = ROOT / "skills/coast-campaign-shared/config/tier2-thresholds.json"
+    code, doc = screen(plan, "--thresholds", str(shared))
+    assert code == 0 and doc["windows"][0]["tier1"] == "pass"

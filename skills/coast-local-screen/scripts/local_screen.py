@@ -244,6 +244,8 @@ def normalize(plan):
     if admission is None and not pc9 and (plan.dir / "admission.json").is_file():
         raw = read_bytes(root, (plan.dir / "admission.json").relative_to(root).as_posix())
         admission = load_json(raw)
+    if pc9 and admission is not None and not isinstance(admission.get("catalog"), dict):
+        integrity.append("admission has no catalog ref")    # DEPTH_RANGE_OUT would silently never fire
     if admission and isinstance(admission.get("catalog"), dict):
         raw, problem = check_ref(root, admission["catalog"], MAX_JSON_BYTES)
         checked.append({"name": "catalog", "path": admission["catalog"].get("path"), "ok": problem is None})
@@ -555,10 +557,20 @@ def load_thresholds(path):
         return dict(DEFAULT_THRESHOLDS), {"source": "builtin-defaults (design 5.4)"}
     raw = Path(path).read_bytes()
     doc = load_json(raw)
+    if not isinstance(doc, dict):
+        raise Refused(f"{path}: thresholds must be a JSON object")
+    # The shared tier2 file also carries tier-2 keys; only a misspelt tier1_* key is unknown here.
+    unknown = sorted(k for k in doc if k.startswith("tier1_") and k not in DEFAULT_THRESHOLDS)
+    if unknown:
+        raise Refused(f"{path}: unknown tier-1 thresholds {unknown}")
     values = dict(DEFAULT_THRESHOLDS)
     for key in DEFAULT_THRESHOLDS:
-        if isinstance(doc.get(key), (int, float)):
-            values[key] = float(doc[key])
+        if key not in doc:
+            continue
+        value = doc[key]
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            raise Refused(f"{path}: threshold {key} must be a finite number, not {value!r}")
+        values[key] = float(value)
     return values, {"source": str(path), "sha256": sha256(raw), "bytes": len(raw)}
 
 
@@ -601,7 +613,9 @@ def cmd_stats(args):
             det["flags"].append("HOLD")
         if rec["state"] not in ("held", "map_done"):
             det["flags"].append("NOT_MAPPED")
-        if (rec["state"] == "map_done" and (rec["holds"] or held_stage)) or (rec["state"] == "held" and not rec["holds"]):
+        unfinished_stage = any(v != "done" for v in (rec["stage_states"] or {}).values())
+        if ((rec["state"] == "map_done" and (rec["holds"] or held_stage or unfinished_stage))
+                or (rec["state"] == "held" and not rec["holds"])):
             det["flags"].append("STATE_INCONSISTENT")
         thumb = None
         if rec["state"] == "map_done":
@@ -1001,6 +1015,8 @@ def cmd_assemble(args):
                         "deterministic": det, "stats_file": w.get("stats_file"), "text_model": text_model,
                         "vision_model": vision_model, "tier1": tier1, "tier1_reasons": reasons})
     plan_flags = []
+    if not counts["windows"]:
+        plan_flags.append("EMPTY_POPULATION")      # nothing screened is never a clean screen
     if endpoint_down:
         plan_flags.append("ENDPOINT_UNAVAILABLE")
     if stats["plan_problems"]:
