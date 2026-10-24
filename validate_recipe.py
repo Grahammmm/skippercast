@@ -97,6 +97,10 @@ REFERENCE_KEYWORDS = ('$ref', '$dynamicRef')
 ANCHOR_KEYWORDS = ('$anchor', '$dynamicAnchor')
 PLAIN_NAME = re.compile(r'[A-Za-z_][-A-Za-z0-9._]*\Z')
 ARRAY_INDEX = re.compile(r'(?:0|[1-9][0-9]*)\Z')
+# No list can have more elements than sys.maxsize, so a canonical index with
+# more digits can never resolve; refusing it before int() keeps admission
+# independent of the interpreter's integer-string conversion limit.
+MAX_INDEX_DIGITS = len(str(sys.maxsize))
 NOT_ADMITTED = 'schema reference not admitted: '
 
 
@@ -135,7 +139,8 @@ def _pointer_target(schema, fragment):
         segment = raw.replace('~1', '/').replace('~0', '~')
         if isinstance(node, dict) and segment in node:
             node = node[segment]
-        elif isinstance(node, list) and ARRAY_INDEX.match(segment) and int(segment) < len(node):
+        elif (isinstance(node, list) and len(segment) <= MAX_INDEX_DIGITS
+                and ARRAY_INDEX.match(segment) and int(segment) < len(node)):
             node = node[int(segment)]
         else:
             return False

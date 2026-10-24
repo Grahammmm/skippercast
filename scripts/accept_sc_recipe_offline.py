@@ -33,9 +33,15 @@ is opened (O_NOFOLLOW|O_NONBLOCK, same inode re-checked), then bound to an
 expected identity before parse/use: committed HEAD blob ids for code, pinned
 sha256 for the two unchanged inputs, and the chain stdout marker ->
 child-report.json -> junit.xml for child outputs. Bounds: 2 MiB per file,
-16 MiB aggregate input, 4096 rows, 8 MiB aggregate report output. The child
-runs under RLIMIT_FSIZE = 2 MiB so captures cannot grow unbounded, and a
-900 s timeout. Reports are deterministic, nonfinite-free and never overwrite.
+16 MiB aggregate input, 4096 rows, 8 MiB aggregate report output. The 8 MiB
+is split BEFORE the child starts into fixed per-artifact reservations
+(OUTPUT_RESERVATIONS: stdout 1 MiB, stderr 1 MiB, junit 2 MiB, child report
+2 MiB, receipt 2 MiB - 64 KiB, fallback receipt 64 KiB) that sum to exactly
+8 MiB; every write is refused before it happens if it exceeds its share.
+stdout/stderr are pipes drained by the parent within their shares (the child
+is killed on overflow); the child runs under RLIMIT_FSIZE = 2 MiB, equal to
+the share of each artifact it writes, and a 900 s timeout. Reports are
+deterministic, nonfinite-free and never overwrite.
 """
 import sys
 
@@ -107,12 +113,58 @@ class InputBudget:
 
 
 class OutputBudget:
+    """A single aggregate output cap (kept for isolated writes)."""
+
     def __init__(self, total=MAX_OUTPUT_BYTES):
         self.total, self.used = total, 0
 
-    def take(self, size):
+    def take(self, size, slot=None):
         if self.used + size > self.total:
             raise Refused('refused: output budget of %d bytes exceeded' % self.total)
+        self.used += size
+
+
+# Shared report-output reservation for one run directory. Every artifact has a
+# fixed share decided BEFORE the child starts; the shares sum to exactly the
+# 8 MiB aggregate, so no combination of artifacts (including the fallback
+# receipt, which is only written when the primary receipt was refused) can
+# exceed it. Child-written artifacts get exactly the child's kernel per-file
+# cap, so a child that ignored the runner still could not exceed its share.
+CHILD_FILE_LIMIT = 2 * MIB
+OUTPUT_RESERVATIONS = {
+    'stdout': 1 * MIB,                          # parent-written from a bounded pipe
+    'stderr': 1 * MIB,                          # parent-written from a bounded pipe
+    'junit': CHILD_FILE_LIMIT,                  # child-written, RLIMIT_FSIZE-capped
+    'child_report': CHILD_FILE_LIMIT,           # child-written, pre-write checked too
+    'receipt': 2 * MIB - 64 * 1024,             # parent-written receipt.json
+    'fallback_receipt': 64 * 1024,              # receipt.json when the primary is refused
+}
+ARTIFACTS = {'stdout': 'stdout.txt', 'stderr': 'stderr.txt', 'junit': 'junit.xml',
+             'child_report': 'child-report.json'}
+
+
+class OutputLedger:
+    """Pre-write enforcement of fixed per-artifact output reservations."""
+
+    def __init__(self, reservations=None, total=MAX_OUTPUT_BYTES):
+        self.reservations = dict(OUTPUT_RESERVATIONS if reservations is None else reservations)
+        if sum(self.reservations.values()) > total:
+            raise Refused('refused: output reservations exceed the %d byte aggregate' % total)
+        self.total, self.used, self.taken = total, 0, {}
+
+    def capacity(self, slot):
+        if slot not in self.reservations:
+            raise Refused('refused: unknown output reservation: ' + str(slot))
+        return self.reservations[slot]
+
+    def take(self, size, slot=None):
+        capacity = self.capacity(slot)
+        if slot in self.taken:
+            raise Refused('refused: output reservation %s already used' % slot)
+        if size > capacity:
+            raise Refused('refused: output reservation %s of %d bytes exceeded (%d)'
+                          % (slot, capacity, size))
+        self.taken[slot] = size
         self.used += size
 
 
@@ -212,20 +264,25 @@ def _serialize(value):
         raise Refused('refused: non-finite value in report: ' + str(error)) from error
 
 
-def write_bounded(run_dir, name, value, budget, limit=MAX_OUTPUT_BYTES):
+def write_bounded(run_dir, name, value, budget, limit=MAX_OUTPUT_BYTES, slot=None):
     """Deterministic, nonfinite-free, size-bounded and never-overwriting write
     of one report into a validated run directory."""
+    return write_bytes_bounded(run_dir, name, _serialize(value), budget, limit, slot)
+
+
+def write_bytes_bounded(run_dir, name, data, budget, limit=MAX_OUTPUT_BYTES, slot=None):
+    """Write `data` as a new file only after the path, the per-file limit and
+    the budget (or the artifact's ledger reservation `slot`) admitted it."""
     run_dir = Path(run_dir)
     _checked(run_dir, Path(run_dir.anchor), leaf_directory=True)
     if '/' in name or name in ('', '.', '..'):
         raise Refused('refused: report name must be a plain file name')
-    data = _serialize(value)
     if len(data) > limit:
         raise Refused('refused: output budget of %d bytes exceeded by %s' % (limit, name))
     target = run_dir / name
     if os.path.lexists(target):
         raise Refused('refused: output exists (write-once): ' + str(target))
-    budget.take(len(data))
+    budget.take(len(data), slot)
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0)
     descriptor = os.open(target, flags, 0o600)
     with os.fdopen(descriptor, 'wb') as handle:
@@ -234,9 +291,11 @@ def write_bounded(run_dir, name, value, budget, limit=MAX_OUTPUT_BYTES):
 
 
 def write_json(path, value):
-    """Child-side report write (same bounds; the child has no shared budget)."""
+    """Child-side report write, refused before writing beyond the child
+    report's reservation (the kernel per-file cap backs this up)."""
     path = Path(path)
-    return write_bounded(path.parent, path.name, value, OutputBudget())
+    return write_bounded(path.parent, path.name, value, OutputBudget(),
+                         limit=OUTPUT_RESERVATIONS['child_report'])
 
 
 def bound_report_sha256(stdout):
@@ -352,24 +411,137 @@ def collection_check(pyproject):
             'full_discovery': 'operator-run (not part of this scoped runner)'}
 
 
-FALLBACK_RECEIPT_BYTES = 64 * 1024
-
-
 def _limit_child_output():
-    """Child pre-exec: no single file the child writes (captured stdout/stderr,
-    JUnit, report, test scratch) may exceed the per-file input bound."""
+    """Child pre-exec: no single file the child writes (JUnit, report, test
+    scratch) may exceed CHILD_FILE_LIMIT, which is exactly the reservation of
+    each child-written artifact. stdout/stderr are pipes, bounded by the parent."""
     import resource
-    resource.setrlimit(resource.RLIMIT_FSIZE, (MAX_FILE_BYTES, MAX_FILE_BYTES))
+    resource.setrlimit(resource.RLIMIT_FSIZE, (CHILD_FILE_LIMIT, CHILD_FILE_LIMIT))
+
+
+def capture_streams(fds, caps, timeout, stop):
+    """Drain pipe read ends {name: fd} keeping at most caps[name] bytes each.
+
+    The first time any stream exceeds its cap, or the deadline passes, `stop()`
+    is called once (the parent kills the child); excess bytes are discarded,
+    never written. Closes every fd. Returns {name: bytes, 'refused': [...],
+    'timed_out': bool}."""
+    import selectors
+    import time
+    deadline = time.monotonic() + timeout
+    kept = {name: bytearray() for name in fds}
+    over = {name: False for name in fds}
+    stopped, timed_out = False, False
+    selector = selectors.DefaultSelector()
+    try:
+        for name, fd in fds.items():
+            selector.register(fd, selectors.EVENT_READ, name)
+        while selector.get_map():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                timed_out = True
+                break
+            for key, _ in selector.select(min(remaining, 1.0)):
+                name = key.data
+                chunk = os.read(key.fd, 1 << 16)
+                if not chunk:
+                    selector.unregister(key.fd)
+                    continue
+                room = caps[name] - len(kept[name])
+                kept[name] += chunk[:max(room, 0)]
+                if len(chunk) > room and not over[name]:
+                    over[name] = True
+                    if not stopped:
+                        stopped = True
+                        stop()
+        if timed_out and not stopped:
+            stopped = True
+            stop()
+    finally:
+        selector.close()
+        for fd in fds.values():
+            os.close(fd)
+    result = {name: bytes(data) for name, data in kept.items()}
+    result['refused'] = ['refused: %s capture exceeds %d bytes' % (name, caps[name])
+                         for name in fds if over[name]]
+    result['timed_out'] = timed_out
+    return result
+
+
+def launch_child(argv, env, ledger, timeout=CHILD_TIMEOUT_SECONDS):
+    """Start the child with piped stdout/stderr bounded by their reservations."""
+    import subprocess
+    process = subprocess.Popen(argv, cwd=REPO, env=env, stdin=subprocess.DEVNULL,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               preexec_fn=_limit_child_output)
+    fds = {'stdout': os.dup(process.stdout.fileno()), 'stderr': os.dup(process.stderr.fileno())}
+    process.stdout.close()
+    process.stderr.close()
+    captured = capture_streams(fds, {name: ledger.capacity(name) for name in fds}, timeout,
+                               stop=process.kill)
+    try:
+        captured['exit'] = process.wait(timeout=30)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        captured['exit'] = process.wait()
+    if captured['timed_out']:
+        captured['refused'].append('child timed out')
+    return captured
+
+
+def settle_child(run_dir, launched, reads, ledger, problems):
+    """Write the bounded captures under their reservations, then accept the
+    child-written report and JUnit only within their reservations and only
+    through the identity chain stdout marker -> child-report.json -> junit.xml.
+    Returns (child fields, report, counts, by_file); problems are appended."""
+    child = {'exit': launched['exit']}
+    problems.extend(launched.get('refused', []))
+    report, counts, by_file = None, {}, {}
+    try:
+        for slot in ('stdout', 'stderr'):
+            child[slot + '_sha256'] = write_bytes_bounded(run_dir, ARTIFACTS[slot],
+                                                          launched[slot], ledger, slot=slot)
+        if launched['exit'] is not None:
+            report_sha256 = bound_report_sha256(launched['stdout'])
+            raw_report = read_bounded(run_dir / ARTIFACTS['child_report'], run_dir, reads,
+                                      expected_sha256=report_sha256,
+                                      limit=ledger.capacity('child_report'))
+            ledger.take(len(raw_report), 'child_report')
+            report = json.loads(raw_report, parse_constant=_no_constant)
+            child['child_report_sha256'] = report_sha256
+            expected_junit = report.get('junit_sha256') if isinstance(report, dict) else None
+            if not (isinstance(expected_junit, str) and len(expected_junit) == 64):
+                raise Refused('refused: child report carries no JUnit identity')
+            junit = read_bounded(run_dir / ARTIFACTS['junit'], run_dir, reads,
+                                 expected_sha256=expected_junit, limit=ledger.capacity('junit'))
+            ledger.take(len(junit), 'junit')
+            child['junit_sha256'] = expected_junit
+            counts, by_file = junit_counts(junit)
+    except (Refused, ValueError) as error:
+        problems.append(str(error))
+        counts, by_file = {}, {}
+    return child, report, counts, by_file
+
+
+def write_receipt(run_dir, receipt, minimal, ledger, problems):
+    """receipt.json within its reservation; if refused, a minimal FAIL receipt
+    within the separate fallback reservation. Both shares are pre-reserved."""
+    try:
+        return write_bounded(run_dir, 'receipt.json', receipt, ledger, slot='receipt')
+    except Refused as error:
+        problems.append(str(error))
+    fallback = dict(minimal, status='FAIL',
+                    problems=[str(problem)[:512] for problem in problems[-16:]])
+    return write_bounded(run_dir, 'receipt.json', fallback, ledger, slot='fallback_receipt')
 
 
 def parent(args):
     import platform
-    import subprocess
     import time
     run_dir = new_run_dir(args.output)
     problems = []
     reads = InputBudget()
-    out_budget = OutputBudget(MAX_OUTPUT_BYTES - FALLBACK_RECEIPT_BYTES)
+    ledger = OutputLedger()
     head = git('rev-parse', 'HEAD')
     ancestry = git('merge-base', '--is-ancestor', BASE, 'HEAD')
     if ancestry['exit'] != 0:
@@ -415,47 +587,22 @@ def parent(args):
     argv = [str(python), '-B', str(Path(__file__).resolve()), '--child', args.suite,
             '--run-dir', str(run_dir)]
     child = {'argv': argv, 'cwd': str(REPO), 'exit': None,
-             'file_size_limit_bytes': MAX_FILE_BYTES}
+             'file_size_limit_bytes': CHILD_FILE_LIMIT}
     report, counts, by_file = None, {}, {}
     if not problems:
         started = time.time()
-        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0)
-        with os.fdopen(os.open(run_dir / 'stdout.txt', flags, 0o600), 'wb') as out, \
-                os.fdopen(os.open(run_dir / 'stderr.txt', flags, 0o600), 'wb') as err:
-            try:
-                done = subprocess.run(argv, cwd=REPO, env=env, stdout=out, stderr=err,
-                                      timeout=CHILD_TIMEOUT_SECONDS, check=False,
-                                      preexec_fn=_limit_child_output)
-                child['exit'] = done.returncode
-            except subprocess.TimeoutExpired:
-                problems.append('child timed out')
+        try:
+            launched = launch_child(argv, env, ledger)
+        except OSError as error:
+            launched = None
+            problems.append('child could not start: ' + type(error).__name__)
         child['seconds'] = round(time.time() - started, 3)
+        if launched is not None:
+            settled, report, counts, by_file = settle_child(run_dir, launched, reads, ledger,
+                                                            problems)
+            child.update(settled)
         if child['exit'] != 0:
             problems.append('child exited ' + str(child['exit']))
-        try:
-            stdout = read_bounded(run_dir / 'stdout.txt', run_dir, reads)
-            stderr = read_bounded(run_dir / 'stderr.txt', run_dir, reads)
-            child['stdout_sha256'] = hashlib.sha256(stdout).hexdigest()
-            child['stderr_sha256'] = hashlib.sha256(stderr).hexdigest()
-            out_budget.take(len(stdout) + len(stderr))
-            if child['exit'] is not None:
-                # Identity chain: stdout marker -> child-report.json -> junit.xml.
-                report_sha256 = bound_report_sha256(stdout)
-                raw_report = read_bounded(run_dir / 'child-report.json', run_dir, reads,
-                                          expected_sha256=report_sha256)
-                out_budget.take(len(raw_report))
-                report = json.loads(raw_report, parse_constant=_no_constant)
-                child['child_report_sha256'] = report_sha256
-                expected_junit = report.get('junit_sha256') if isinstance(report, dict) else None
-                if not (isinstance(expected_junit, str) and len(expected_junit) == 64):
-                    raise Refused('refused: child report carries no JUnit identity')
-                junit = read_bounded(run_dir / 'junit.xml', run_dir, reads,
-                                     expected_sha256=expected_junit)
-                out_budget.take(len(junit))
-                child['junit_sha256'] = expected_junit
-                counts, by_file = junit_counts(junit)
-        except (Refused, ValueError) as error:
-            problems.append(str(error))
     if not problems:
         if report is None:
             problems.append('child wrote no report')
@@ -481,18 +628,14 @@ def parent(args):
         'input_sha256': inputs, 'fixture_sha256': fixtures, 'collection': collection,
         'bounds': {'max_file_bytes': MAX_FILE_BYTES, 'max_total_input_bytes': MAX_TOTAL_INPUT_BYTES,
                    'max_rows': MAX_ROWS, 'max_output_bytes': MAX_OUTPUT_BYTES,
+                   'child_file_limit_bytes': CHILD_FILE_LIMIT,
+                   'output_reservations': ledger.reservations,
                    'input_bytes_read': reads.used,
-                   'report_bytes_before_receipt': out_budget.used},
+                   'report_bytes_before_receipt': ledger.used},
         'problems': problems,
     }
-    try:
-        receipt_sha256 = write_bounded(run_dir, 'receipt.json', receipt, out_budget)
-    except Refused as error:
-        problems.append(str(error))
-        receipt = {'card': 't_b73efb9a', 'suite': args.suite, 'status': 'FAIL',
-                   'problems': problems[-64:], 'child_exit': child['exit']}
-        receipt_sha256 = write_bounded(run_dir, 'receipt.json', receipt,
-                                       OutputBudget(FALLBACK_RECEIPT_BYTES))
+    minimal = {'card': 't_b73efb9a', 'suite': args.suite, 'child_exit': child['exit']}
+    receipt_sha256 = write_receipt(run_dir, receipt, minimal, ledger, problems)
     summary = {'suite': args.suite, 'status': 'PASS' if not problems else 'FAIL',
                'counts': counts, 'counts_by_file': by_file, 'head': head['stdout'],
                'run_dir': str(run_dir), 'receipt_sha256': receipt_sha256, 'problems': problems}

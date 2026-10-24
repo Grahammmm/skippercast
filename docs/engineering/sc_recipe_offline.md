@@ -29,7 +29,10 @@ traceback. Validation is now unconditionally offline for every metadata root.
    - `schema reference not admitted: unresolved local fragment at ...` for a
      missing, traversal (`#/..`, `#/%2e%2e`), badly escaped, badly
      percent-encoded or out-of-range pointer and an unknown or malformed
-     anchor;
+     anchor. An array-index segment must be a canonical decimal (`0` or no
+     leading zero) of at most `len(str(sys.maxsize))` digits, checked before
+     any integer conversion, so an impossible index such as 5000 digits is
+     refused here and never reaches the interpreter's integer-string limit;
    - `schema reference not admitted: embedded resource identifier at ...` for
      a nested `$id`, which would rebase later fragments onto another resource;
    - `schema reference not admitted: malformed reference at ...` for a
@@ -113,15 +116,28 @@ writes; no production API, coast run, download or model budget changes.
   skipped), committed tree rows, git output lines and JUnit test cases.
 - Writes: deterministic sorted JSON with non-finite values refused, created
   with `O_EXCL|O_NOFOLLOW` in a validated write-once run directory, at most
-  8 MiB of report bytes per run (stdout, stderr, JUnit, child report, receipt).
-  The child runs with `RLIMIT_FSIZE` = 2 MiB and a 900 s timeout, so a capture
-  cannot grow without bound. `tmp/` holds pytest's synthetic staging and is
-  bounded per file by the same limit, not counted as report output.
+  8 MiB of report bytes per run. The 8 MiB is divided before the child starts
+  into fixed reservations that sum to exactly 8 MiB: `stdout.txt` 1 MiB,
+  `stderr.txt` 1 MiB, `junit.xml` 2 MiB, `child-report.json` 2 MiB,
+  `receipt.json` 2 MiB - 64 KiB and a 64 KiB fallback receipt (written only
+  when the primary receipt is refused). Each write is refused before it
+  happens when it would exceed its share; a later artifact can never spend an
+  earlier one's share. The child's stdout and stderr are pipes the parent
+  drains within their shares (the child is killed on overflow and the run
+  fails; excess bytes are discarded, never written). The child runs with
+  `RLIMIT_FSIZE` = 2 MiB, which is exactly the share of each artifact it
+  writes itself, plus a 900 s timeout. `tmp/` holds pytest's synthetic
+  staging and is bounded per file by the same limit, not counted as report
+  output.
 
 The `a3_runner_*` tests exercise these rules on synthetic trees: exact and
 one-over boundaries, aggregate and row overflow, symlink leaf and ancestry,
 FIFO and directory, outside-root and `..` paths, hash/blob mismatch, the
-report identity marker, no overwrite and unchanged inputs after refusal.
+report identity marker, no overwrite and unchanged inputs after refusal. The
+composed tests drive the parent's real capture and settle functions with
+`os.pipe` streams and synthetic child artifacts (no subprocess): exact fit,
+capture overflow, oversized child artifacts refused unread, and the fallback
+receipt within its own share, always within the aggregate.
 
 Valid still means REVIEW REQUIRED: no source-use, navigation or semantic
 approval follows from a passing validation or test run.
