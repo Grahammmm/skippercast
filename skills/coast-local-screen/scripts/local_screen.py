@@ -28,6 +28,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import base64
 import hashlib
+import http.client
 import json
 import math
 import os
@@ -776,7 +777,8 @@ class Client:
             t0 = time.monotonic()
             try:
                 reply = _post(self.endpoint + "/chat/completions", body, self.timeout)
-            except (urllib.error.URLError, OSError, TimeoutError, ValueError) as error:
+            except (urllib.error.URLError, http.client.HTTPException, OSError, TimeoutError, ValueError) as error:
+                # HTTPException covers IncompleteRead: a truncated body is a failed attempt, never a reply.
                 last = f"{error.__class__.__name__}: {str(error)[:160]}"
                 continue
             latency = round(time.monotonic() - t0, 3)
@@ -1139,6 +1141,523 @@ def cmd_fixture_eval(args):
     return 0
 
 
+# ----------------------------------------------------------- canonical round mode
+
+REQUIRED_MEASUREMENTS = ("valid_fraction", "depth_median_m", "depth_p99_m",
+                         "nodata_fraction", "edge_valid_fraction", "slope_p99_deg")
+CANONICAL_VERSION = "coast-tier1-canonical-v1"
+
+
+def _shared_review():
+    # Script-local dependency, never imported by product code. Legacy mode does
+    # not import the shared/GIS validation stack until canonical mode is selected.
+    import importlib.util
+    name = "review_common"
+    if name not in sys.modules:
+        path = Path(__file__).resolve().parents[2] / "coast-sign-off/scripts/review_common.py"
+        spec = importlib.util.spec_from_file_location(name, path)
+        if spec is None or spec.loader is None:
+            raise Refused("shared review helper unavailable")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+def _metadata(path):
+    """Only CLI-selected deployment metadata is read before root resolution."""
+    common = _shared_review()
+    path = common.absolute(str(path))
+    with common.directory_fd(path.parent) as fd:
+        leaf = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
+        with os.fdopen(leaf, "rb") as stream:
+            info = os.fstat(stream.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_size > common.LIMIT:
+                raise Refused("bounded regular root metadata required")
+            return common.loads(stream.read(common.LIMIT + 1))
+
+
+def _round_write(resolver, path, raw):
+    """Create only admitted descendants via no-follow directory descriptors."""
+    common = _shared_review()
+    root_id, relative = common.location(resolver, path)
+    parts = relative.split("/")
+    with common.directory_fd(resolver.bindings[root_id]) as root:
+        fd = os.dup(root)
+        try:
+            for part in parts[:-1]:
+                try:
+                    os.mkdir(part, mode=0o700, dir_fd=fd)
+                except FileExistsError:
+                    pass
+                child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+                os.close(fd)
+                fd = child
+            leaf = os.open(parts[-1], os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=fd)
+            with os.fdopen(leaf, "wb") as stream:
+                stream.write(raw)
+                stream.flush()
+                os.fsync(stream.fileno())
+        finally:
+            os.close(fd)
+    ref = dict(root_id=root_id, path=relative, sha256=sha256(raw), bytes=len(raw))
+    resolver.read(ref)
+    return ref
+
+
+class Round:
+    """Explicit immutable context; no glob, latest lookup or producer rewrite."""
+
+    def __init__(self, roots, context_path):
+        self.common = c = _shared_review()
+        # Launcher-supplied actual runtime, not the requested endpoint alias;
+        # checked before any write or model call so no mode runs unattributed.
+        self.provenance = {}
+        for field in ("author_profile", "author_model", "card_id", "code_commit", "skill_commit"):
+            supplied = os.environ.get("COAST_" + field.upper())
+            if not supplied:
+                raise Refused("actual screener provenance required: COAST_" + field.upper())
+            self.provenance[field] = supplied
+        self._derived = None
+        bindings = _metadata(roots)  # operator-selected bindings, not a receipt
+        self.resolver = c.Resolver(bindings, allowed_root_ids=bindings)
+        self.context_ref = c.pin(self.resolver, context_path)
+        self.context = c.trusted_context(self.resolver, self.context_ref)
+        if self.context["mode"] != "normal":
+            raise Refused("diagnostic context requires corrective integrity review, not screening")
+        c.GraphValidator(self.resolver).reference(self.context_ref, contract="coast-review-context-v1")
+        self.queue_id = "queue:" + self.context["campaign_segment_id"]
+        self.admission = self.doc(self.context["admission"])
+        self.run = self.doc(self.context["run"])
+        if self.run["schema"] != "coast-run-summary-v2":
+            raise Refused("hash-bound coast_receipt_versions v2 run required")
+        self.legacy = self.doc(self.run["legacy_run"])
+        self.thresholds = self.doc(self.context["thresholds"])
+        self.catalog = self.doc(self.admission["catalog"])
+        self.windows = self.admission["windows"]
+        self.cells = {w["window_key"]: w for w in self.run["window_cells"]}
+        self.native = {w["window_key"]: w for w in self.legacy["windows"]}
+        if set(self.cells) != {w["window_key"] for w in self.windows}:
+            raise Refused("run/admission window population mismatch")
+        self.directory = (self.resolver.bindings[self.queue_id] / "plans" / self.context["plan_id"] /
+                          "review" / f"r{self.context['review_round']:02d}" / f"a{self.context['attempt']:02d}" / "tier1")
+
+    def doc(self, ref):
+        return self.common.document(self.resolver, ref)
+
+    def derived(self):
+        """Stats re-derived from the pinned inputs; a supplied stats file is a claim, not proof."""
+        if self._derived is None:
+            self._derived = _derive_stats(self)
+        return self._derived
+
+    def read(self, path):
+        ref = self.common.pin(self.resolver, path)
+        return self.doc(ref), ref
+
+    def output_path(self, path, name):
+        if path != self.directory / name:
+            raise Refused("output must use its immutable plan/round/attempt address")
+        _no_symlinks(path)
+        if path.exists():
+            raise Refused("output exists; prepare a new attempt")
+
+    def write(self, path, value):
+        return _round_write(self.resolver, path, canonical(value))
+
+    def base(self, kind):
+        value = self.common.review_base(kind, self.context, self.context_ref, None)
+        value.update(self.provenance)
+        value["created_utc"] = utc()
+        return value
+
+
+def _measurement(status, value=None, reason=None, inputs=()):
+    return dict(status=status, value=value, reason=reason, inputs=list(inputs), method_version=CANONICAL_VERSION)
+
+
+def _flag(key, code, detail, evidence=()):
+    return dict(window_key=key, severity="must", code=code, detail=detail, evidence=list(evidence))
+
+
+def _adjacent(a, b):
+    if a["source_id"] != b["source_id"] or a["grid_sha256"] != b["grid_sha256"]:
+        return False
+    ax, ay, aw, ah = a["pixel_window"]
+    bx, by, bw, bh = b["pixel_window"]
+    return ((ax + aw == bx or bx + bw == ax) and max(ay, by) < min(ay + ah, by + bh) or
+            (ay + ah == by or by + bh == ay) and max(ax, bx) < min(ax + aw, bx + bw))
+
+
+def _canonical_stats(round_, args):
+    r = round_
+    r.output_path(args.out, "stats.json")
+    if args.thumbnail_dir != r.directory / "windows":
+        raise Refused("thumbnail directory must belong to this round/attempt")
+    _no_symlinks(args.thumbnail_dir)
+    for window in r.windows:
+        thumb_path = args.thumbnail_dir / window["window_dir"] / "hillshade.png"
+        _no_symlinks(thumb_path)
+        if thumb_path.exists():
+            raise FileExistsError("partial attempt thumbnail exists; prepare a new attempt")
+    # Every check runs on the complete in-memory result before the first write.
+    doc, thumbnails = r.derived()
+    _validate_intermediate(doc, "stats")
+    for path, (expected, png) in thumbnails.items():
+        if _round_write(r.resolver, path, png) != expected:
+            raise Refused("thumbnail write differs from its derivation")
+    return doc
+
+
+def _derive_stats(round_):
+    """Pure: no writes. Returns the stats document and the thumbnails it references."""
+    r = round_
+    rows, arrays, thumbnails = [], {}, {}
+    for window in r.windows:
+        key = window["window_key"]
+        cell, native = r.cells[key], r.native[key]
+        state, producer = cell["state"], cell["producer"]
+        held = state == "held" or any(s.get("holds") or s.get("state") == "held" for s in native["stages"].values())
+        entry = dict(window_key=key, stage_state=state, status="held" if held else "unavailable",
+                     producer_fields=[], measurements={}, text_response=None, vision_response=None,
+                     text_verdict="not_mapped", vision_verdict="not_mapped", thumbnail=None, flags=[])
+        rows.append(dict(window_key=key, producer=producer, entry=entry))
+        if held:
+            entry["flags"].append(_flag(key, "HOLD", "pipeline hold; never quality acceptance"))
+        for name in (*REQUIRED_MEASUREMENTS, "neighbour_delta", "catalog_range"):
+            entry["measurements"][name] = _measurement("not_applicable", reason="pipeline_not_mapped")
+        if producer is not None:
+            cells = r.doc(producer)
+            for name in ("count", "min", "max", "mean", "p80"):
+                entry["producer_fields"].append(dict(field_path="depth_m." + name, source=producer,
+                                                      value=cells.get("depth_m", {}).get(name)))
+        if state != "map_done":
+            if not held:
+                entry["flags"].append(_flag(key, "NOT_MAPPED", state))
+            continue
+        entry["status"] = "flag" if producer is not None else "unavailable"
+        entry["text_verdict"] = entry["vision_verdict"] = "unavailable"
+        inputs = [] if producer is None else [producer]
+        catalog_row = next((v for v in r.catalog.get("candidates", []) if v.get("source_id") == window["source_id"]), {})
+        depth_range = catalog_row.get("metadata", {}).get("depth_range_m")
+        try:
+            from coast_receipt_versions import typed
+            if producer is None:
+                raise Refused("mapped window has no bound cells producer")
+            if depth_range is not None:
+                if not isinstance(depth_range, list) or len(depth_range) != 2 or not all(type(v) in (int, float) for v in depth_range):
+                    raise Refused("invalid stated catalog depth range")
+                depth_range = sorted(depth_range)
+            products = native["stages"]["map"]["products"]
+            terrain, support = typed(products["terrain"]), typed(products["mask"])
+            inputs += [terrain, support]
+            if max(terrain["bytes"], support["bytes"]) > MAX_RASTER_BYTES:
+                raise Refused("raster byte bound exceeded")
+            depth, terrain_valid, mask, res = read_window(r.resolver.read(terrain), r.resolver.read(support))
+            res = _resolution(r.resolver.read(producer) if producer else None, res)
+            derived, valid = derive(depth, terrain_valid, mask, res)
+            png = hillshade_png(depth, valid, res)
+            thumb_path = r.directory / "windows" / window["window_dir"] / "hillshade.png"
+            root_id, relative = r.common.location(r.resolver, thumb_path)
+            thumbnail = dict(root_id=root_id, path=relative, sha256=sha256(png), bytes=len(png))
+            # Commit window evidence only after every input check above passed.
+            arrays[key] = dict(window_key=key, depth=depth, valid=valid, origin=window["pixel_window"][:2])
+            thumbnails[thumb_path] = (thumbnail, png)
+            entry["thumbnail"] = thumbnail
+            for name in REQUIRED_MEASUREMENTS:
+                value = derived[name]
+                entry["measurements"][name] = (_measurement("measured", value, inputs=inputs) if value is not None else
+                    _measurement("unavailable", reason=derived["unavailable_reason"] or "derivation unavailable", inputs=inputs))
+            rec = dict(producer=dict(native_valid_count=cell["native_valid_count"]), expected_depth_range_m=depth_range)
+            det = dict(derived=derived, flags=[], depth_range_plausible=None)
+            _deterministic_rules(det, rec, r.thresholds)
+            for code in det["flags"]:
+                entry["flags"].append(_flag(key, code, "deterministic raster check", inputs))
+            entry["measurements"]["catalog_range"] = (
+                _measurement("not_applicable", reason="catalog_range_absent") if depth_range is None else
+                _measurement("unavailable", reason="catalog_range_not_evaluated", inputs=inputs) if det["depth_range_plausible"] is None else
+                _measurement("measured", int(det["depth_range_plausible"]), inputs=[*inputs, r.admission["catalog"]]))
+        except (ValueError, OSError, KeyError, TypeError) as error:
+            for name in REQUIRED_MEASUREMENTS:
+                entry["measurements"][name] = _measurement("unavailable", reason=str(error), inputs=inputs)
+            entry["measurements"]["catalog_range"] = (_measurement("not_applicable", reason="catalog_range_absent") if depth_range is None else
+                                                      _measurement("unavailable", reason="raster_unavailable", inputs=inputs))
+        if any(entry["measurements"][name]["status"] == "unavailable" for name in REQUIRED_MEASUREMENTS):
+            if not any(f["code"] == "DERIVED_UNAVAILABLE" for f in entry["flags"]):
+                entry["flags"].append(_flag(key, "DERIVED_UNAVAILABLE", "required raster measurement unavailable", inputs))
+    for window, row in zip(r.windows, rows, strict=True):
+        entry, key = row["entry"], row["window_key"]
+        if entry["stage_state"] != "map_done":
+            continue
+        neighbours = [w for w in r.windows if w != window and _adjacent(window, w)]
+        inputs = [] if row["producer"] is None else [row["producer"]]
+        deltas = []
+        for other in neighbours:
+            theirs = arrays.get(other["window_key"])
+            mine = arrays.get(key)
+            if mine is not None and theirs is not None:
+                delta = edge_delta(mine, theirs)
+                if delta is not None and delta["delta_median_m"] is not None:
+                    deltas.append(delta["delta_median_m"])
+                    inputs.append(r.cells[other["window_key"]]["producer"])
+        if not neighbours:
+            measurement = _measurement("not_applicable", reason="no_geometric_neighbours")
+        elif len(deltas) != len(neighbours):
+            measurement = _measurement("unavailable", reason="expected_neighbour_evidence_unavailable", inputs=inputs)
+            entry["flags"].append(_flag(key, "DERIVED_UNAVAILABLE", "expected neighbour unavailable", inputs))
+        else:
+            value = max(deltas, key=abs)
+            measurement = _measurement("measured", value, inputs=inputs)
+            if abs(value) > r.thresholds["edge_step_should_m"]:
+                entry["flags"].append(_flag(key, "NEIGHBOUR_STEP", "shared-edge median exceeds pinned threshold", inputs))
+        entry["measurements"]["neighbour_delta"] = measurement
+    return dict(schema=CANONICAL_VERSION, mode="stats", context=r.context_ref, run=r.context["run"],
+                thresholds=r.context["thresholds"], windows=rows), thumbnails
+
+
+def _validate_intermediate(doc, mode):
+    """B2-owned shape; no invented fields in the shared Tier1 contract."""
+    keys = {"schema", "mode", "context", "run", "windows"}
+    keys |= {"thresholds"} if mode == "stats" else {"stats", "telemetry"}
+    if not isinstance(doc, dict) or set(doc) != keys or doc["schema"] != CANONICAL_VERSION or doc["mode"] != mode:
+        raise Refused("invalid canonical intermediate shape")
+    if not isinstance(doc["windows"], list):
+        raise Refused("canonical windows must be an ordered list")
+    from jsonschema import Draft202012Validator
+    shared = Path(__file__).resolve().parents[2] / "coast-campaign-shared/schemas/coast-tier1-screen-v1.schema.json"
+    definition = load_json(shared.read_bytes())
+    entry_schema = Draft202012Validator(definition["properties"]["windows"]["items"])
+    ref_schema = Draft202012Validator(definition["properties"]["run"])
+    for name in ("context", "run", "thresholds" if mode == "stats" else "stats"):
+        if list(ref_schema.iter_errors(doc[name])):
+            raise Refused("invalid intermediate Ref: " + name)
+    if mode != "stats" and list(Draft202012Validator(definition["properties"]["telemetry"]).iter_errors(doc["telemetry"])):
+        raise Refused("invalid intermediate telemetry")
+    for row in doc["windows"]:
+        expected = {"window_key", "producer", "entry"} if mode == "stats" else {"window_key", "producer", "response", "verdict", "error"}
+        if not isinstance(row, dict) or set(row) != expected or not isinstance(row["window_key"], str):
+            raise Refused("invalid canonical window shape")
+        if row["producer"] is not None and list(ref_schema.iter_errors(row["producer"])):
+            raise Refused("invalid intermediate producer Ref")
+        if mode == "stats":
+            if list(entry_schema.iter_errors(row["entry"])):
+                raise Refused("invalid canonical stats entry")
+        elif (row["verdict"] not in ("pass", "flag", "not_mapped", "unavailable") or
+              row["error"] is not None and not isinstance(row["error"], str) or
+              row["response"] is not None and list(ref_schema.iter_errors(row["response"]))):
+            raise Refused("invalid canonical model entry")
+
+
+def _bind_stats_window(position, row, window, cell, round_):
+    """One deciding gate for positional identity and producer binding, all modes."""
+    key, producer = window["window_key"], cell["producer"]
+    if row is None or row["window_key"] != key or row["producer"] != producer:
+        return [key]
+    entry = row.get("entry")
+    if entry is not None:
+        if entry["window_key"] != key or entry["stage_state"] != cell["state"]:
+            return [key]
+        if producer is None:
+            if entry["producer_fields"] or entry["status"] not in ("held", "unavailable"):
+                return [key]
+        else:
+            fields = round_.doc(producer).get("depth_m", {})
+            expected_fields = [dict(field_path="depth_m." + name, source=producer, value=fields.get(name))
+                               for name in ("count", "min", "max", "mean", "p80")]
+            if entry["producer_fields"] != expected_fields:
+                return [key]
+            if any(m["status"] == "measured" and producer not in m["inputs"] for m in entry["measurements"].values()):
+                return [key]
+        derived = round_.derived()[0]["windows"]
+        if position >= len(derived) or entry != derived[position]["entry"]:
+            return [key]  # measurements, flags or thumbnail differ from what the pinned inputs give
+        thumb = entry["thumbnail"]
+        if thumb is not None:
+            expected = (round_.directory / "windows" / window["window_dir"] / "hillshade.png").relative_to(
+                round_.resolver.bindings[round_.queue_id]).as_posix()
+            if thumb["root_id"] != round_.queue_id or thumb["path"] != expected:
+                return [key]
+            round_.resolver.read(thumb)
+    if entry is None and cell["state"] == "map_done" and row["response"] is None:
+        return [key]
+    if entry is None and cell["state"] != "map_done" and (row["response"] is not None or row["verdict"] != "not_mapped"):
+        return [key]
+    response = row.get("response")
+    if response is not None:
+        value = round_.doc(response)
+        if (value["window_key"] != key or value["producer"] != producer or
+                value["context"] != round_.context_ref or value["verdict"] != row["verdict"] or value["error"] != row["error"]):
+            return [key]
+    return []
+
+
+def _bound_intermediate(round_, path, mode, stats_ref=None):
+    r = round_
+    doc, ref = r.read(path)
+    _validate_intermediate(doc, mode)
+    if doc["context"] != r.context_ref or doc["run"] != r.context["run"]:
+        raise Refused("intermediate context/run pin mismatch")
+    if mode == "stats" and doc["thresholds"] != r.context["thresholds"]:
+        raise Refused("intermediate threshold pin mismatch")
+    if mode != "stats" and doc["stats"] != stats_ref:
+        raise Refused("model response stats pin mismatch")
+    problems = []
+    for i, window in enumerate(r.windows):
+        row = doc["windows"][i] if i < len(doc["windows"]) else None
+        problems.extend(_bind_stats_window(i, row, window, r.cells[window["window_key"]], r))
+    if len(doc["windows"]) > len(r.windows):
+        problems += [row["window_key"] for row in doc["windows"][len(r.windows):]]
+    if problems:
+        raise Refused("WINDOW_BINDING: " + ", ".join(problems))
+    if mode != "stats":
+        for row in doc["windows"]:
+            if row["response"] is None:
+                continue
+            response = r.doc(row["response"])
+            if response["stats"] != doc["stats"] or response["prompt"] not in r.context["prompts"]:
+                raise Refused("response input binding mismatch")
+            raw = response["raw"]
+            expected = "unavailable" if raw.get("error") else parse_reply(
+                raw.get("content"), TEXT_REASONS if mode == "text" else VISION_ARTEFACTS,
+                upper=mode == "text", finish_reason=raw.get("finish_reason"))[0]
+            if row["verdict"] != expected or row["error"] != raw.get("error"):
+                raise Refused("response verdict differs from retained reply")
+    return doc, ref
+
+
+def _canonical_screen(r, args):
+    kind = args.command
+    r.output_path(args.out, kind + ".json")
+    stats, stats_ref = _bound_intermediate(r, args.stats, "stats")
+    if args.slots < 1:
+        raise Refused("slots must be positive and card-admitted")
+    for window in r.windows:
+        path = r.directory / "windows" / window["window_dir"] / (kind + "-response.txt")
+        _no_symlinks(path)
+        if path.exists():
+            raise Refused("partial response exists; prepare a new attempt")
+    client = Client(args.endpoint, args.model, timeout=60, retries=1, retry_wait=0, max_tokens=1024)
+    prompts = [ref for ref in r.context["prompts"] if Path(ref["path"]).name == kind + ".md"]
+    if len(prompts) != 1:
+        raise Refused("context must pin exactly one " + kind + ".md prompt")
+    template = r.resolver.read(prompts[0]).decode()
+    started = time.monotonic()
+
+    def chat(content):
+        try:
+            return client.chat(content)
+        except (ValueError, KeyError, TypeError, IndexError, AttributeError) as error:
+            return dict(error="MALFORMED_RESPONSE", detail=f"{type(error).__name__}: {error}")
+
+    def one(row):
+        key, entry = row["window_key"], row["entry"]
+        result = dict(window_key=key, producer=row["producer"], response=None, verdict="not_mapped", error=None)
+        if entry["stage_state"] != "map_done":
+            return result
+        if kind == "text":
+            content = template.replace("{stats}", json.dumps(entry, sort_keys=True))
+            reply = chat(content)
+        elif entry["thumbnail"] is None:
+            reply = dict(error="THUMBNAIL_UNAVAILABLE")
+        else:
+            png = r.resolver.read(entry["thumbnail"])
+            content = [{"type": "text", "text": template},
+                       {"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(png).decode()}}]
+            reply = chat(content)
+        verdict = "unavailable"
+        if "error" not in reply:
+            verdict = parse_reply(reply["content"], TEXT_REASONS if kind == "text" else VISION_ARTEFACTS,
+                                  upper=kind == "text", finish_reason=reply["finish_reason"])[0]
+        value = dict(window_key=key, producer=row["producer"], context=r.context_ref, stats=stats_ref,
+                     verdict=verdict, error=reply.get("error"), raw=reply, endpoint=client.endpoint,
+                     model=args.model, prompt=prompts[0])
+        response = r.write(r.directory / "windows" / sha256(key.encode()) / (kind + "-response.txt"), value)
+        return dict(result, response=response, verdict=verdict, error=reply.get("error"))
+
+    # Sequential consumption caps an unavailable endpoint at TWO attempts for
+    # the whole mode. slots records the admitted ceiling, not a new concurrency grant.
+    results = [one(row) for row in stats["windows"]]
+    tokens = []
+    for row in results:
+        if row["response"] is not None:
+            raw = r.doc(row["response"])["raw"]
+            tokens.extend([raw.get("tokens_in"), raw.get("tokens_out")])
+    telemetry = dict(wall_s=round(time.monotonic() - started, 6),
+                     tokens=sum(tokens) if tokens and all(type(n) is int and n >= 0 for n in tokens) else None,
+                     endpoint=client.endpoint, model=args.model, prompt_sha256=prompts[0]["sha256"], slots=args.slots)
+    return dict(schema=CANONICAL_VERSION, mode=kind, context=r.context_ref, run=r.context["run"],
+                stats=stats_ref, windows=results, telemetry=telemetry)
+
+
+def _canonical_assemble(r, args):
+    import copy
+    r.output_path(args.out, "flagged-windows.json")
+    stats, stats_ref = _bound_intermediate(r, args.stats, "stats")
+    text, text_ref = _bound_intermediate(r, args.text, "text", stats_ref)
+    vision, vision_ref = _bound_intermediate(r, args.vision, "vision", stats_ref)
+    windows = []
+    for row, tx, vi in zip(stats["windows"], text["windows"], vision["windows"], strict=True):
+        entry = copy.deepcopy(row["entry"])
+        if entry["stage_state"] == "map_done":
+            unavailable = any(entry["measurements"][name]["status"] != "measured" for name in REQUIRED_MEASUREMENTS)
+            unavailable |= entry["measurements"]["neighbour_delta"]["status"] == "unavailable"
+            if unavailable and not any(f["code"] == "DERIVED_UNAVAILABLE" for f in entry["flags"]):
+                entry["flags"].append(_flag(entry["window_key"], "DERIVED_UNAVAILABLE", "required evidence incomplete"))
+        for kind, result in (("text", tx), ("vision", vi)):
+            entry[kind + "_response"] = result["response"]
+            entry[kind + "_verdict"] = result["verdict"]
+            if entry["stage_state"] == "map_done" and result["verdict"] != "pass":
+                entry["flags"].append(_flag(entry["window_key"], result["error"] or kind.upper() + "_FLAG",
+                                             kind + " assessment is not pass", [result["response"]] if result["response"] else []))
+        if entry["stage_state"] == "map_done":
+            entry["status"] = "unavailable" if row["producer"] is None else "flag" if entry["flags"] else "pass"
+        windows.append(entry)
+    telemetry = dict(vision["telemetry"])
+    telemetry["wall_s"] += text["telemetry"]["wall_s"]
+    a, b = text["telemetry"]["tokens"], vision["telemetry"]["tokens"]
+    telemetry["tokens"] = a + b if a is not None and b is not None else None
+    # Shared schema has one model/endpoint/prompt slot: identify both precisely
+    # in the pinned per-window envelopes, never claim one alias ran both modes.
+    telemetry["model"] = json.dumps(dict(text=text["telemetry"]["model"], vision=vision["telemetry"]["model"]), sort_keys=True)
+    telemetry["endpoint"] = json.dumps(dict(text=text["telemetry"]["endpoint"], vision=vision["telemetry"]["endpoint"]), sort_keys=True)
+    telemetry["prompt_sha256"] = sha256(canonical(dict(text=text["telemetry"]["prompt_sha256"], vision=vision["telemetry"]["prompt_sha256"])))
+    counts = {"pass_count" if state == "pass" else state: sum(w["status"] == state for w in windows)
+              for state in ("pass", "flag", "held", "unavailable")}
+    doc = dict(r.base("tier1-screen"), run=r.context["run"], windows=windows, counts=counts, telemetry=telemetry)
+    r.common.validate(doc, r.resolver, root_id=r.queue_id)
+    return doc
+
+
+def canonical_main(argv):
+    c = _shared_review()
+    parser = argparse.ArgumentParser(description="Immutable round-addressed Tier1 adapter")
+    parser.add_argument("command", choices=("stats", "text", "vision", "assemble"))
+    for name in ("roots", "context", "out"):
+        parser.add_argument("--" + name, required=True, type=c.absolute)
+    for name in ("stats", "text", "vision", "thumbnail-dir"):
+        parser.add_argument("--" + name, type=c.absolute)
+    parser.add_argument("--endpoint")
+    parser.add_argument("--model")
+    parser.add_argument("--slots", type=int)
+    args = parser.parse_args(argv)
+    try:
+        required = {"stats": ("thumbnail_dir",), "text": ("stats", "endpoint", "model", "slots"),
+                    "vision": ("stats", "endpoint", "model", "slots"), "assemble": ("stats", "text", "vision")}[args.command]
+        if any(getattr(args, key) is None for key in required):
+            raise Refused("explicit mode inputs required: " + ", ".join(required))
+        r = Round(args.roots, args.context)
+        doc = (_canonical_stats(r, args) if args.command == "stats" else
+               _canonical_assemble(r, args) if args.command == "assemble" else _canonical_screen(r, args))
+        if args.command != "assemble":
+            _validate_intermediate(doc, args.command)
+        ref = r.write(args.out, doc)
+        print(json.dumps(dict(output=ref, windows=len(doc["windows"])), sort_keys=True))
+        return 0
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        print(json.dumps(dict(schema="coast-local-screen-error-v1", command=args.command, error=str(error))), file=sys.stderr)
+        return 2
+
+
 # ----------------------------------------------------------------------------- cli
 
 def parser():
@@ -1179,6 +1698,9 @@ COMMANDS = {"stats": cmd_stats, "text": cmd_text, "vision": cmd_vision, "assembl
 
 
 def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if any(arg == "--roots" or arg.startswith("--roots=") or arg == "--context" or arg.startswith("--context=") for arg in argv):
+        return canonical_main(argv)
     args = parser().parse_args(argv)
     try:
         return COMMANDS[args.command](args)
