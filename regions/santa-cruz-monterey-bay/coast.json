@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "slug": "santa-cruz-monterey-bay",
+  "bbox": [
+    -122.75,
+    36.6,
+    -121.6,
+    37.18333333333333
+  ],
+  "depth_target_ft": 300,
+  "sources": [
+    "noaa-bag"
+  ],
+  "source_review_status": {
+    "noaa-bag": "candidate"
+  },
+  "datum_policy": {
+    "mode": "preserve-source-datum",
+    "vertical_datum_by_source": {
+      "noaa-bag": "unknown"
+    }
+  },
+  "output_root": "runs/coast-recipes/santa-cruz-monterey-bay",
+  "cache_budget_bytes": 25000000000,
+  "not_for_navigation": true
+}
