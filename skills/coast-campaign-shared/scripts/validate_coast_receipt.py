@@ -66,7 +66,7 @@ OPTIONAL_NATIVE_FACT_FIELDS = {'deep_lane_support'}
 # mapping_input.bind_segment() support record embedded at native_facts.segment.
 BOUND_SEGMENT_FIELDS = {'schema', 'segment_id', 'region', 'crs', 'bbox', 'boundary_policy', 'halo_m',
                         'intersection_area_m2', 'outside_support_area_m2'}
-OBSERVATION_FIELDS = {'expected_packet', 'observed_packet', 'problems', 'observations'}
+OBSERVATION_FIELDS = {'expected_packet', 'observed_packet', 'problems', 'observations', 'validation_observations'}
 IDENTITY_ONLY_FIELDS = {'identity_provenance', 'run_author_provenance', 'posted_hashes', 'routing', 'thresholds', 'prompts'}
 WORKFLOW_EDGES = {
     'context': 'coast-review-context-v1', 'admission': 'coast-admission-v1',
@@ -180,6 +180,14 @@ def _consistency(value):
             if key in mapping and mapping[key] != retained:
                 raise ValueError('ambiguous archive mapping')
             mapping[key] = retained
+        for candidate in value['cache_candidates']:
+            source = candidate['source_ref']
+            if canonical(source) not in mapping:
+                raise ValueError('cache candidate has no retained archive/raw mapping')
+            if source['root_id'] != 'queue:' + value['campaign_segment_id'] or source['path'].split('/')[0] != 'cache':
+                raise ValueError('cache candidate outside the segment cache subtree')
+            if candidate['size'] != source['bytes']:
+                raise ValueError('cache candidate size differs from its Ref')
     if name == 'coast-release-list-v1':
         if value['total_files'] != len(value['candidates']) or value['total_bytes'] != sum(c['size'] for c in value['candidates']):
             raise ValueError('release totals mismatch')
@@ -316,6 +324,18 @@ class GraphValidator:
                                 self.reference(edge)
                             else:
                                 self.reference(edge, contract=raw_provenance_contracts.ENVELOPE)
+                    continue
+                if name == 'coast-archive-manifest-v1' and key in ('files', 'cache_candidates'):
+                    # Retention/identity table, not scientific edges (rev4 4.3):
+                    # source_ref is an original-namespace lookup key and is never
+                    # opened; retained bytes are hash-checked with no contract
+                    # dispatch. Their scientific validation happens only where the
+                    # inventory/verdict graph reaches them (e.g. raw envelopes via
+                    # admission raw_provenance). Cache candidates are checked
+                    # structurally against this table in _consistency.
+                    if key == 'files':
+                        for item in child:
+                            self.resolver.read(item['retained_ref'], retain=False)
                     continue
                 if key in OBSERVATION_FIELDS:
                     continue  # schema-validated diagnostic scalars, not Ref edges
