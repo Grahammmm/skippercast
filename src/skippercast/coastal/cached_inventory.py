@@ -19,9 +19,23 @@ def digest(value):
     return hashlib.sha256(encoded(value)).hexdigest()
 def encoded(value):
     return (json.dumps(value,sort_keys=True,separators=(",",":"),allow_nan=False)+"\n").encode()
+# A complete extended date-time; the offset is optional here only so that the
+# awareness gate below, not this pattern, is what refuses a naive value.
+CLOCK_TEXT=re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?(?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])?",re.ASCII)
+CLOCK_TEXT_ERROR="explicit-offset complete date-time required"
+def aware_instant(parsed):
+    """Refuse a clock without an explicit UTC offset; host local time is never assumed."""
+    if parsed.tzinfo is None or parsed.utcoffset() is None:raise ValueError(CLOCK_TEXT_ERROR)
+    return parsed
 def epoch(value):
-    if isinstance(value,str):value=datetime.fromisoformat(value.replace("Z","+00:00")).timestamp()
-    if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value):raise ValueError("finite clock required")
+    if isinstance(value,str):
+        # RFC 3339 -00:00 means "offset unknown", so it is not an explicit offset.
+        if not CLOCK_TEXT.fullmatch(value) or value.endswith("-00:00"):raise ValueError(CLOCK_TEXT_ERROR)
+        try:value=aware_instant(datetime.fromisoformat(value.replace("Z","+00:00"))).timestamp()
+        except (ValueError,OverflowError):raise ValueError(CLOCK_TEXT_ERROR) from None
+    try:finite=not isinstance(value,bool) and isinstance(value,(int,float)) and math.isfinite(value)
+    except OverflowError:finite=False
+    if not finite:raise ValueError("finite clock required")
     return value
 def integer(value,maximum):
     if type(value) is not int or not 0<value<=maximum:raise ValueError("bounded positive integer required")
