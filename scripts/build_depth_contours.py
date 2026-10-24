@@ -143,6 +143,15 @@ def main():
     for ident in order:
         if sources[ident]['review_status'] != 'approved' or 'bathymetry' not in sources[ident]['needs']:
             raise SystemExit(f'{ident} is not an approved bathymetry source')
+        native = sources[ident].get('native_resolution_m')
+        with rasterio.open(grids[ident]) as grid:
+            res = grid.res
+        # The provenance labels each grid with the reviewed native cell; a resample must not carry that label.
+        if not isinstance(native, (int, float)) or any(abs(r - native) > 1e-9 for r in res):
+            raise SystemExit(f'{ident}: grid cell {res} differs from reviewed native_resolution_m {native}')
+    hashes = {ident: sha256(grids[ident]) for ident in order}
+    if len(set(hashes.values())) != len(hashes):
+        raise SystemExit('Two --grid sources are the same file; each binding needs its own survey grid')
     lattice = lattice_for([grids[i] for i in order])
     x0, y0, _, _ = lattice
     block = Affine(dc.CELL_M, 0, x0, 0, -dc.CELL_M, y0)
@@ -155,7 +164,7 @@ def main():
         mine = owner == i
         survey_date = str(reviewed['survey_year'])
         entry = {'source_id': ident, 'name': reviewed['name'], 'url': reviewed['documentation_url'],
-                 'attribution': reviewed['rights']['attribution'], 'sha256': sha256(grids[ident]), 'survey_date': survey_date,
+                 'attribution': reviewed['rights']['attribution'], 'sha256': hashes[ident], 'survey_date': survey_date,
                  'vertical_datum': reviewed.get('vertical_datum') or dc.UNVERIFIED_DATUM,
                  'native_cell_m': reviewed.get('native_resolution_m'), 'supported_blocks': int(mine.sum())}
         listed.append(entry)
@@ -183,6 +192,10 @@ def main():
         if lines:
             features.append({'type': 'Feature', 'id': f'{ident}-edge', 'geometry': {'type': 'MultiLineString', 'coordinates': lines},
                              'properties': {'kind': 'survey-edge', **common}})
+    empty = [entry['source_id'] for entry in listed if not entry['supported_blocks']]
+    if empty:
+        # A supplied grid that adds nothing (wrong sign, no water, fully overlapped) would look like full coverage.
+        raise SystemExit(f'Supplied grids contribute no valid water block: {empty}')
     xs = [pt[0] for f in features for line in f['geometry']['coordinates'] for pt in line]
     ys = [pt[1] for f in features for line in f['geometry']['coordinates'] for pt in line]
     collection = {'type': 'FeatureCollection', 'schema_version': dc.SCHEMA_VERSION, 'provenance': {
