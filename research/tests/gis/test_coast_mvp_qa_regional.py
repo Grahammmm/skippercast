@@ -1,6 +1,8 @@
 """Offline parity and refusal controls for the opt-in native-grid C4 path."""
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 import numpy as np
 import pytest
@@ -10,6 +12,7 @@ from rasterio.transform import from_origin
 
 from research.scripts.coast_mvp import coast_qa as reference
 from research.scripts.coast_mvp import coast_qa_regional as regional
+from tests._support import ROOT
 
 
 @pytest.fixture
@@ -147,3 +150,40 @@ def test_holes_empty_and_single_pixel():
     assert regional.hole_components(np.zeros((3, 3), dtype=bool)) == []
     assert regional.hole_components(np.ones((1, 1), dtype=bool)) == [
         dict(cells=1, pixel_bbox=[0, 0, 1, 1], touches_boundary=True)]
+
+
+def tamper_valid_cells(packet):
+    report = json.loads((packet/'qa.json').read_text())
+    report['segments'][0]['stats']['valid_cells'] += 1
+    (packet/'qa.json').write_text(json.dumps(report))
+
+
+def test_verifier_refuses_tampered_packet_with_explicit_exception(inputs):
+    from research.scripts.coast_mvp.verify_c4_real import VerificationError, verify
+    path, config, _, _ = inputs
+    regional.packet(config, path/'packet')
+    tamper_valid_cells(path/'packet')
+    with pytest.raises(VerificationError, match='valid_cells mismatch'):
+        verify(path/'packet', path/'manifest.json')
+
+
+def test_verifier_refusal_survives_python_optimize(inputs):
+    # Under `python -O` an assert-based check would be stripped and report PASS.
+    path, config, _, _ = inputs
+    regional.packet(config, path/'packet')
+    tamper_valid_cells(path/'packet')
+    code = ('import sys; from research.scripts.coast_mvp.verify_c4_real import verify; '
+            'verify(sys.argv[1], sys.argv[2])')
+    run = subprocess.run([sys.executable, '-O', '-c', code, str(path/'packet'), str(path/'manifest.json')],
+                         cwd=ROOT, capture_output=True, text=True)
+    assert run.returncode != 0
+    assert 'VerificationError: valid_cells mismatch' in run.stderr
+
+
+def test_regional_flag_imports_when_run_as_package(inputs, monkeypatch, capsys):
+    path, config, _, _ = inputs
+    monkeypatch.setattr(sys, 'argv', ['coast_qa', '--regional', '--region-config', str(config),
+                                      '--output', str(path/'packet')])
+    reference.main()
+    assert json.loads(capsys.readouterr().out)['processing'] == 'bounded-regional-v1'
+    assert (path/'packet/qa.json').exists()

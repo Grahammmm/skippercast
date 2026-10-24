@@ -25,18 +25,27 @@ def digest(path):
     return h.hexdigest()
 
 
+class VerificationError(RuntimeError):
+    """A packet disagrees with its inputs; raised explicitly so `python -O` cannot skip it."""
+
+
+def require(condition, message):
+    if not condition:
+        raise VerificationError(message)
+
+
 def verify(packet, manifest_path):
     packet, manifest_path = Path(packet), Path(manifest_path)
     report = json.loads((packet/'qa.json').read_text())
     segment = report['segments'][0]
     manifest = json.loads(manifest_path.read_text())
-    assert report['inputs'][0]['manifest_sha256'] == digest(manifest_path)
-    assert segment['consistency']['passed'], segment['consistency']
+    require(report['inputs'][0]['manifest_sha256'] == digest(manifest_path), 'manifest sha256 mismatch')
+    require(segment['consistency']['passed'], f"packet consistency failed: {segment['consistency']}")
     input_hashes = {}
     for entry in segment['inputs']:
         path = Path(entry['path'])
         actual = digest(path)
-        assert actual == entry['sha256'], entry['role']
+        require(actual == entry['sha256'], f"input sha256 mismatch: {entry['role']}")
         input_hashes[entry['role']] = actual
     paths = {key: manifest_path.parent/value['path'] for key, value in manifest['outputs'].items()}
     counts = np.zeros(len(manifest['sources'])+1, dtype=np.int64)
@@ -44,15 +53,15 @@ def verify(packet, manifest_path):
     valid_cells, overlap_cells, alpha_errors = 0, 0, 0
     with rasterio.open(paths['elevation']) as elevation, rasterio.open(paths['contributor']) as contributor, \
             rasterio.open(paths['support_count']) as support, rasterio.open(packet/segment['hillshade']) as image:
-        assert image.shape == elevation.shape and image.count == 2
+        require(image.shape == elevation.shape and image.count == 2, 'hillshade shape or band count mismatch')
         for start in range(0, elevation.height, 256):
             window = Window(0, start, elevation.width, min(256, elevation.height-start))
             values = elevation.read(1, window=window, masked=True)
             valid = ~np.ma.getmaskarray(values) & np.isfinite(values.data)
             c = contributor.read(1, window=window)
             n = support.read(1, window=window)
-            assert np.array_equal(valid, c > 0)
-            assert np.array_equal(valid, n > 0)
+            require(np.array_equal(valid, c > 0), f'contributor mask mismatch in rows {start}+')
+            require(np.array_equal(valid, n > 0), f'support_count mask mismatch in rows {start}+')
             counts += np.bincount(c.ravel(), minlength=len(counts))
             valid_cells += int(valid.sum())
             alpha_errors += int(np.count_nonzero((image.read(2, window=window) > 0) != valid))
@@ -60,11 +69,12 @@ def verify(packet, manifest_path):
             overlap_cells += len(r)
             if len(r):
                 coords.append((r+start, col))
-        assert valid_cells == segment['stats']['valid_cells']
-        assert overlap_cells == segment['stats']['overlap_cells']
-        assert alpha_errors == 0
-        assert sum(h['cells'] for h in segment['holes']) == int(counts[0])
-        assert all(s['contributor_cells'] == counts[s['code']] for s in segment['sources'])
+        require(valid_cells == segment['stats']['valid_cells'], 'valid_cells mismatch')
+        require(overlap_cells == segment['stats']['overlap_cells'], 'overlap_cells mismatch')
+        require(alpha_errors == 0, f'hillshade alpha mismatches: {alpha_errors}')
+        require(sum(h['cells'] for h in segment['holes']) == int(counts[0]), 'hole cell total mismatch')
+        require(all(s['contributor_cells'] == counts[s['code']] for s in segment['sources']),
+                'contributor cell counts mismatch')
         if coords:
             rr = np.concatenate([x[0] for x in coords])
             cc = np.concatenate([x[1] for x in coords])
@@ -93,13 +103,13 @@ def verify(packet, manifest_path):
         delta = delta[np.isfinite(delta)]
         ids = [manifest['sources'][k]['id'] for k in (i, j)]
         expected = next(s for s in segment['seam_rms'] if s['sources'] == ids)
-        assert len(delta) == expected['overlap_cells'], ids
+        require(len(delta) == expected['overlap_cells'], f'seam overlap_cells mismatch: {ids}')
         rms, mean = (float(np.sqrt(np.mean(delta**2))), float(np.mean(delta))) if len(delta) else (None, None)
         if len(delta):
-            assert math.isclose(rms, expected['rms_m'], abs_tol=1e-10), (ids, rms, expected['rms_m'])
-            assert math.isclose(mean, expected['mean_delta_m'], abs_tol=1e-10)
+            require(math.isclose(rms, expected['rms_m'], abs_tol=1e-10), f"seam rms mismatch: {ids} {rms} {expected['rms_m']}")
+            require(math.isclose(mean, expected['mean_delta_m'], abs_tol=1e-10), f'seam mean delta mismatch: {ids}')
         else:
-            assert expected['rms_m'] is None
+            require(expected['rms_m'] is None, f'seam rms reported without overlap: {ids}')
         seams.append(dict(sources=ids, overlap_cells=len(delta), rms_m=rms, mean_delta_m=mean))
     pngs = []
     for entry in segment['images']:
