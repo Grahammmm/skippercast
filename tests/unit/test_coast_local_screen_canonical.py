@@ -59,9 +59,17 @@ class World:
                         ds.write(values, 1)
                     products[name] = self.put(f'products/window-{i}/{name}.tif', mem.read())
             depth = dict(count=width*height, min=10.0, max=10.0, mean=10.0, p80='unknown')
-            cells = dict(schema='coastal-terrain-summary-v1', native_valid_count=width*height, depth_m=depth)
-            if not no_resolution:
-                cells['native_resolution_m'] = [1.0, 1.0]
+            # Producer-complete coastal-terrain-summary-v1 field set (mapping.py writes every
+            # key; coast_native.py refuses a partial summary). Values are synthetic.
+            # no_resolution: the key stays (the strict contract requires it) but carries the
+            # repo's 'unknown' marker, so no metric cell size is known and, with the
+            # geographic raster below, slope stays unavailable.
+            admission = instances['admission']
+            cells = dict(schema='coastal-terrain-summary-v1', segment_id=admission['coordinator_segment_id'],
+                         segment={k: admission['segment_record'][k] for k in ('path', 'sha256', 'bytes')},
+                         native_valid_count=width*height, depth_m=depth,
+                         derivatives={}, support=dict(synthetic=True), interpolated=False, habitat='unassessed',
+                         native_resolution_m='unknown' if no_resolution else [1.0, 1.0], publication_prohibited=True)
             products['cells'] = dict(self.put(f'products/window-{i}/cells.json', cells), contract=versions.CELLS_CONTRACT)
             window['stages'] = dict(map=dict(job_id=f'synthetic-map-{i}', state='done', holds=[],
                 input_manifest=jobs[i]['input_manifest'], result_ref=None, missing_reason=None,
