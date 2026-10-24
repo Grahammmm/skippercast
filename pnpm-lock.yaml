@@ -13,7 +13,7 @@ importers:
         version: 2.0.0
       '@preact/signals':
         specifier: 2.11.3
-        version: 2.11.3(preact@10.29.8)
+        version: 2.11.3(preact@11.0.1)
       '@simplewebauthn/server':
         specifier: 14.0.3
         version: 14.0.3
@@ -30,8 +30,8 @@ importers:
         specifier: 4.5.0
         version: 4.5.0
       preact:
-        specifier: 10.29.8
-        version: 10.29.8(preact-render-to-string@6.8.1)
+        specifier: 11.0.1
+        version: 11.0.1(preact-render-to-string@6.8.1)
       suncalc:
         specifier: 2.1.1
         version: 2.1.1
@@ -62,7 +62,7 @@ importers:
         version: 0.28.2
       preact-render-to-string:
         specifier: 6.8.1
-        version: 6.8.1(preact@10.29.8)
+        version: 6.8.1(preact@11.0.1)
       typescript:
         specifier: 7.0.2
         version: 7.0.2
@@ -1190,10 +1190,10 @@ packages:
     peerDependencies:
       preact: '>=10 || >= 11.0.0-0'
 
-  preact@10.29.8:
-    resolution: {integrity: sha512-ej2aVZ+vZ8WO7tvlQWRM9N63A0KzF9q4mWJfDUHgYaIofWY9hu74QdnQrjoPMmZi2/nZ5gN0bJCQF49xQqx09Q==}
+  preact@11.0.1:
+    resolution: {integrity: sha512-TNNwEq++jYNHy747LziCjPRVgEwnLSOIOAw/oYcjI3Tdnubx2EXtt76I0an8PATvUWtx/DX1kFIg1eFN+O/fkw==}
     peerDependencies:
-      preact-render-to-string: '>=5'
+      preact-render-to-string: '>=6.7.0'
     peerDependenciesMeta:
       preact-render-to-string:
         optional: true
@@ -1734,10 +1734,10 @@ snapshots:
 
   '@preact/signals-core@1.14.4': {}
 
-  '@preact/signals@2.11.3(preact@10.29.8)':
+  '@preact/signals@2.11.3(preact@11.0.1)':
     dependencies:
       '@preact/signals-core': 1.14.4
-      preact: 10.29.8(preact-render-to-string@6.8.1)
+      preact: 11.0.1(preact-render-to-string@6.8.1)
 
   '@rolldown/binding-android-arm-eabi@1.2.14':
     optional: true
@@ -2115,13 +2115,13 @@ snapshots:
 
   potpack@2.1.0: {}
 
-  preact-render-to-string@6.8.1(preact@10.29.8):
+  preact-render-to-string@6.8.1(preact@11.0.1):
     dependencies:
-      preact: 10.29.8(preact-render-to-string@6.8.1)
+      preact: 11.0.1(preact-render-to-string@6.8.1)
 
-  preact@10.29.8(preact-render-to-string@6.8.1):
+  preact@11.0.1(preact-render-to-string@6.8.1):
     optionalDependencies:
-      preact-render-to-string: 6.8.1(preact@10.29.8)
+      preact-render-to-string: 6.8.1(preact@11.0.1)
 
   protocol-buffers-schema@3.6.1: {}
 
