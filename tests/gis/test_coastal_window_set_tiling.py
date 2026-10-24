@@ -116,7 +116,11 @@ def world(destination, *, raster_shape, nw_offset_m, windows, tiling_override=No
             footprint=[west+x*PIXEL, north-(y+h)*PIXEL, west+(x+w)*PIXEL, north-y*PIXEL],
             overlapping_segment_ids=[record['segment_id']]))
     hot = dict(root_id='queue:synthetic', **{k: source[k] for k in ('path', 'sha256', 'bytes')})
-    sources = [dict(source_id=row['source_id'], raw_provenance=[hot], retained_inputs=[], hot_cache=[hot],
+    raw_root = destination/'raw'
+    raw_root.mkdir()
+    (raw_root/name).write_bytes(path.read_bytes())
+    raw = dict(hot, root_id='raw:campaign', path=name)
+    sources = [dict(source_id=row['source_id'], raw_provenance=[raw], retained_inputs=[], hot_cache=[hot],
                     rights='synthetic private use', datum='unknown', reader='native-raster-v1')]
     catalog = fx.frozen_catalog([row])
     catalog_sha = fx.write_catalog(root/'catalog.json', catalog)
@@ -141,7 +145,8 @@ def world(destination, *, raster_shape, nw_offset_m, windows, tiling_override=No
     put(p/'admission.json', admission)
     (p/'runs').mkdir()
     return SimpleNamespace(root=root, p=p, admission=admission, plan=plan, record=record, tiling=tiling,
-                           windows=chosen, west=west, north=north)
+                           windows=chosen, west=west, north=north,
+                           bindings={'queue:synthetic': str(root), 'raw:campaign': str(raw_root.absolute())})
 
 
 def context(w):
@@ -237,8 +242,8 @@ def test_crs_equivalence_geometry_gate(tmp_path, monkeypatch, crs, problem, cons
     def admit():
         if consumer == 'driver':
             return context(w)
-        return validator.validate(w.admission, refs.Resolver({'queue:synthetic': str(w.root)},
-                                  allowed_root_ids={'queue:synthetic'}), root_id='queue:synthetic')
+        return validator.validate(w.admission, refs.Resolver(w.bindings,
+                                  allowed_root_ids=w.bindings), root_id='queue:synthetic')
 
     before = {p.relative_to(w.root): p.read_bytes() for p in w.root.rglob('*') if p.is_file()}
     if problem is None:
