@@ -760,6 +760,58 @@ def test_a3_date_time_format_is_enforced_or_fails_closed():
     assert list(validator.iter_errors('2026-10-21T00:00:00')), 'missing offset must fail the format'
 
 
+# RFC 3339 5.6/5.7: seconds=60 is only a leap second at UTC 23:59:60 on the last day of a month.
+IMPOSSIBLE_LEAP_SECONDS = ('2016-12-31T12:34:60Z', '2016-12-30T23:59:60Z', '2016-12-31T23:58:60Z',
+                           '2016-12-31T22:59:60Z', '2017-01-01T00:59:60Z', '2016-12-31T23:59:60-08:00',
+                           '2016-12-31T23:59:60+00:01', '2016-02-28T23:59:60Z', '2015-06-29T23:59:60.5Z')
+GENUINE_LEAP_SECONDS = ('2016-12-31T23:59:60Z', '2015-06-30T23:59:60Z', '2016-06-30T23:59:60.5Z',
+                        '2016-02-29T23:59:60Z')
+# The pinned schema additionally pins created_utc to a 'Z' suffix, so offset forms are checked at
+# the format-function level only (receipt-level they are refused by the schema pattern anyway).
+GENUINE_OFFSET_LEAP_SECONDS = ('2016-12-31T15:59:60-08:00', '2017-01-01T00:59:60+01:00',
+                               '2016-12-31T23:59:60-00:00', '2016-12-31T23:59:60+00:00')
+
+
+def test_a3_leap_second_placement_is_enforced():
+    module = delta()
+    left = fixture('open-receipt.json')
+    left_raw = fixture_bytes('open-receipt.json')
+    for value in IMPOSSIBLE_LEAP_SECONDS:
+        assert not module.is_rfc3339_date_time(value), value
+        bad = variant('open-receipt.json', lambda v: v.update(created_utc=value), reseal=False)
+        bad_raw = (json.dumps(bad, sort_keys=True, indent=2) + '\n').encode()
+        for pair in ((left, bad), (bad, left), (left_raw, bad_raw), (bad_raw, left_raw)):
+            error = expect_invalid(lambda: module.compare_receipts(*pair), '/created_utc')
+            assert value in str(error) or 'date-time' in str(error), (value, error)
+        work = workdir('leap-cli')
+        bad_path = write_json(work / 'bad.json', bad)
+        before = hashlib.sha256(bad_path.read_bytes()).hexdigest()
+        for argv in (['--left', FIXTURE_DIR / 'open-receipt.json', '--right', bad_path],
+                     ['--left', bad_path, '--right', FIXTURE_DIR / 'open-receipt.json']):
+            code, _, stderr = run_cli(argv + ['--out', work / 'o.json'])
+            assert code == 2 and '/created_utc' in stderr, (value, code, stderr)
+            assert not (work / 'o.json').exists(), value
+        assert hashlib.sha256(bad_path.read_bytes()).hexdigest() == before, 'input changed on failure'
+        assert fixture_bytes('open-receipt.json') == left_raw, 'frozen fixture changed on failure'
+    for value in GENUINE_LEAP_SECONDS + GENUINE_OFFSET_LEAP_SECONDS:
+        assert module.is_rfc3339_date_time(value), value
+    # Calendar edges stay total (no datetime range errors): years 0000 and 9999 with offsets.
+    assert module.is_rfc3339_date_time('0000-12-31T23:59:60Z')
+    assert module.is_rfc3339_date_time('0001-01-01T00:59:60+01:00')
+    assert not module.is_rfc3339_date_time('9999-12-31T23:59:60-23:59')
+    assert not module.is_rfc3339_date_time('0000-01-01T00:00:60+23:59')
+    for value in GENUINE_LEAP_SECONDS:
+        good = variant('open-receipt.json', lambda v: v.update(created_utc=value), reseal=False)
+        for pair in ((left, good), (good, left)):
+            report = module.compare_receipts(*pair)
+            assert report['status'] == 'DIAGNOSTIC' and report['content_changes'] == [], value
+        work = workdir('leap-cli-ok')
+        good_path = write_json(work / 'good.json', good)
+        code, _, stderr = run_cli(['--left', FIXTURE_DIR / 'open-receipt.json', '--right', good_path,
+                                   '--out', work / 'o.json'])
+        assert code == 0 and (work / 'o.json').exists(), (value, code, stderr)
+
+
 def receipt_with_parameters(parameters):
     """A resealed open receipt whose outputs/0/parameters is replaced (depth = 3 + nesting)."""
     return variant('open-receipt.json', lambda v: v['outputs'][0].update(parameters=parameters))
@@ -996,6 +1048,11 @@ def check_date_time_enforced():
     expect_invalid(lambda: delta().compare_receipts(fixture('open-receipt.json'), bad), '/created_utc')
 
 
+def check_leap_second_placement():
+    bad = variant('open-receipt.json', lambda v: v.update(created_utc='2016-12-31T12:34:60Z'), reseal=False)
+    expect_invalid(lambda: delta().compare_receipts(fixture('open-receipt.json'), bad), '/created_utc')
+
+
 def check_nesting_gate():
     deep = receipt_with_parameters(nest(600))
     module = delta()
@@ -1043,6 +1100,11 @@ def _double_format_checker_absent(module):
     return patched(module, build_validator=unchecked, _VALIDATOR=None)
 
 
+def _double_range_only_date_time(module):
+    """Range-only checker (the r2 defect): any seconds=60 passes the placement rule."""
+    return patched(module, _leap_second_placement_ok=lambda *parts: True, _VALIDATOR=None)
+
+
 def _double_depth_gate_disabled(module):
     return patched(module, MAX_DEPTH=10 ** 9)
 
@@ -1066,6 +1128,8 @@ MUTATION_CONTROLS = (
     ('declared_refs_statted', check_refs_never_accessed, _double_stats_declared_refs, 'Ref-named paths'),
     ('signed_zero_equal_scalars', check_signed_zero_rows, _double_scalar_equality, 'signed zero lost'),
     ('date_time_format_unchecked', check_date_time_enforced, _double_format_checker_absent, 'expected InvalidReceipt'),
+    ('date_time_range_only_leap_second', check_leap_second_placement, _double_range_only_date_time,
+     'expected InvalidReceipt'),
     ('nesting_gate_disabled', check_nesting_gate, _double_depth_gate_disabled, 'nesting escaped'),
     ('runner_output_symlink_followed', check_runner_refuses_symlink_output, _double_runner_follows_links,
      'output symlink followed'),

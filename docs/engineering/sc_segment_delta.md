@@ -18,7 +18,11 @@ python3 scripts/coast_diagnostics/segment_receipt_delta.py --left BEFORE.json --
 2. Validates each receipt's shape (Draft 2020-12). Every `format` the schema
    names must have an enforced local checker (today only `date-time`: strict
    RFC 3339 section 5.6 with ASCII digits, a real calendar date, hour 00-23,
-   minute 00-59, second 00-60 and a valid offset). jsonschema's optional
+   minute 00-59, second 00-60 and a valid offset; second 60 is accepted only
+   where RFC 3339 sections 5.6/5.7 allow a leap second, i.e. the time minus
+   its offset is UTC 23:59:60 on the last day of a month. No leap-second
+   table is consulted, so this is the necessary placement rule only).
+   jsonschema's optional
    third-party format packages are never relied on. A schema format with no
    enforced checker is refused as a `capability:` error (exit 2) rather than
    silently skipped. The schema may not contain `$ref`; any remote retrieval

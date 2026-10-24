@@ -35,7 +35,7 @@ from pathlib import Path  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
 SUITES = {'focused': 'test_a1_', 'contract': 'test_a2_', 'negative': 'test_a3_'}
-EXPECTED = {'focused': 7, 'contract': 4, 'negative': 14}
+EXPECTED = {'focused': 7, 'contract': 4, 'negative': 15}
 # Existing repository layout contracts the new test module must satisfy.
 LAYOUT_CONTRACTS = ('tests.contract.test_test_layout', 'tests.contract.test_research_boundary')
 HASHED = ('scripts/accept_sc_segment_delta.py', 'scripts/coast_diagnostics/segment_receipt_delta.py',

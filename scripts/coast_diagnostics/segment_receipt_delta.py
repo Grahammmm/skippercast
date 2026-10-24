@@ -177,11 +177,34 @@ def is_rfc3339_date_time(value):
     month_days = (31, 29 if leap else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
     if not (1 <= month <= 12 and 1 <= day <= month_days[month - 1]):
         return False
-    if hour > 23 or minute > 59 or second > 60:  # 60: RFC 3339 leap second
+    if hour > 23 or minute > 59 or second > 60:
         return False
-    if match.group(7) is not None and (int(match.group(7)) > 23 or int(match.group(8)) > 59):
-        return False
+    offset_minutes = 0
+    if match.group(7) is not None:
+        offset_hour, offset_minute = int(match.group(7)), int(match.group(8))
+        if offset_hour > 23 or offset_minute > 59:
+            return False
+        sign = -1 if value[match.start(7) - 1] == '-' else 1
+        offset_minutes = sign * (offset_hour * 60 + offset_minute)
+    if second == 60:
+        return _leap_second_placement_ok(day, month_days[month - 1], hour, minute, offset_minutes)
     return True
+
+
+def _leap_second_placement_ok(day, days_in_month, hour, minute, offset_minutes):
+    """RFC 3339 5.6/5.7: a leap second (second=60) is only possible at UTC 23:59:60 on the last
+    day of a month. The local time minus the numeric offset must land there; no leap-second
+    table is consulted (offline), so this enforces the necessary placement constraint only.
+    Pure integer arithmetic: no datetime range limits (years 0000-9999 stay total)."""
+    day_shift, utc_minute_of_day = divmod(hour * 60 + minute - offset_minutes, 1440)
+    if utc_minute_of_day != 23 * 60 + 59:
+        return False
+    if day_shift == 0:
+        return day == days_in_month
+    if day_shift == -1:  # UTC date is the previous day: last day of the previous month iff day == 1
+        return day == 1
+    # day_shift == 1: UTC date is the next day, a month end only if it is still in this month.
+    return day + 1 == days_in_month
 
 
 # Every format the pinned schema uses must have an enforced local checker here;
