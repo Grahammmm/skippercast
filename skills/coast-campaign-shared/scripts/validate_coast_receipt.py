@@ -341,6 +341,8 @@ class GraphValidator:
                     continue  # schema-validated diagnostic scalars, not Ref edges
                 if key == 'context' and error_branch:
                     self.reference(child, scope='identity_snapshot', contract=WORKFLOW_EDGES[key])
+                elif name == 'coast-open-report-v1' and key == 'verified_refs':
+                    self.report_verified_refs(doc, root_id=root_id, error_branch=error_branch)
                 elif name == 'coast-review-context-v1' and key == 'supersedes' and child is not None:
                     # Only historical diagnostic contexts are identity snapshots;
                     # normal history retains its complete scientific graph.
@@ -371,6 +373,36 @@ class GraphValidator:
             self.walk_native(doc, root_id=root_id, contract=name, ref=ref)
         else:
             raise ValueError('unresolved-reference: unsupported JSON producer schema ' + repr(name))
+
+    def report_verified_refs(self, doc, *, root_id, error_branch):
+        # open_packet flattens graph.verified to Refs, losing edge roles. Recover
+        # ONLY diagnostic context snapshots anchored by this report's context /
+        # supersedes chain, never from another traversal's cached verified set.
+        # Validate the anchor first so JSON member order cannot grant an opt-down.
+        contract = 'coast-review-context-v1'
+        edge = doc['context']
+        context = self.reference(edge, scope='identity_snapshot' if error_branch else 'full_graph',
+                                 contract=contract)
+        snapshots, seen = set(), set()
+        while edge is not None:
+            key = canonical(edge)
+            if key in seen:
+                raise ValueError('cyclic receipt graph')
+            seen.add(key)
+            if context['mode'] == 'diagnostic':
+                snapshots.add(key)
+                break  # its own downstream pins are expectations, not edges
+            if error_branch:
+                break  # do not reopen an error context's failed expectations
+            edge = context['supersedes']
+            if edge is not None:
+                # The normal anchor already validated this exact historical edge.
+                context = loads(self.resolver.read(edge))
+        for edge in doc['verified_refs']:
+            if canonical(edge) in snapshots:
+                self.reference(edge, scope='identity_snapshot', contract=contract)
+            else:
+                self.walk(edge, root_id=root_id)
 
     def walk(self, value, *, root_id):
         if isinstance(value, dict):

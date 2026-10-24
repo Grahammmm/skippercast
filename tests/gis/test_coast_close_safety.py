@@ -277,3 +277,57 @@ def test_supersedes_preserves_edge_roles(tmp_path, case):
             validator.validate(current, c.resolver, root_id=QUEUE)
     else:
         assert validator.validate(current, c.resolver, root_id=QUEUE) == current
+
+
+@pytest.mark.parametrize('case', ['anchored', 'reordered', 'diagnostic-corrupt',
+                                  'normal-history-corrupt', 'unanchored', 'cached-unanchored'])
+def test_open_report_recovers_only_anchored_diagnostic_roles(tmp_path, case):
+    from tests.gis.test_coast_sign_off_graph import Cycle, prepare, validator, opener, writer
+    c = Cycle(tmp_path).round()
+    normal_ref = c.context_ref
+    normal_run = c.context['run']
+    diagnostic = copy.deepcopy(c.context)
+    diagnostic.update(admission=None, attempt=2, supersedes=normal_ref, mode='diagnostic',
+                      observations=[dict(code='POSTED_SHA_ABSENT', path='admission',
+                                         expected='independent posted Ref', observed=None)])
+    attempt = c.r.parent / 'a02'
+    attempt.mkdir()
+    previous, is_diagnostic = prepare.prepare(c.resolver, diagnostic, 1, 2, attempt / 'context.json')
+    assert is_diagnostic
+    if case not in ('unanchored', 'cached-unanchored'):
+        (attempt / 'tier3').mkdir()
+        report_ref, code = opener.open_packet(c.resolver, previous, c.path(c.packet_ref), c.packet_ref['sha256'],
+                                              'synthetic-reviewer', c.reviewer_ref, attempt / 'tier3/open-report.json')
+        assert code == 3
+        result = writer.write_verdict(c.resolver, previous, report_ref, c.decisions(), 1,
+                                      attempt / 'tier3/verdict.json', c.queue / 'ledger.jsonl',
+                                      c.queue.parent / 'campaign-ledger.jsonl')
+        c.previous_verdict = result['verdict']
+        c.previous_context = previous
+        c.round(number=2)
+    assert c.open() == 0
+    report = refs.loads(c.resolver.read(c.report_ref))
+    if case in ('unanchored', 'cached-unanchored'):
+        assert previous not in report['verified_refs']
+        report['verified_refs'].append(previous)
+    else:
+        assert previous in report['verified_refs']
+    # Even a normal historical context listed alongside the diagnostic one
+    # remains a scientific edge, not an identity-table exemption.
+    report['verified_refs'].append(normal_ref)
+    graph = validator.GraphValidator(c.resolver)
+    if case == 'cached-unanchored':
+        graph.reference(previous, scope='identity_snapshot', contract='coast-review-context-v1')
+    if case == 'reordered':
+        report = dict(verified_refs=report.pop('verified_refs'), **report)
+    if case in ('diagnostic-corrupt', 'normal-history-corrupt'):
+        target = c.path(previous if case == 'diagnostic-corrupt' else normal_run)
+        raw = target.read_bytes()
+        target.write_bytes(raw[:-1] + (b' ' if raw[-1:] != b' ' else b'\n'))
+        with pytest.raises(ValueError, match='mismatch'):
+            graph.document(report, root_id=QUEUE)
+    elif case in ('unanchored', 'cached-unanchored'):
+        with pytest.raises(ValueError, match='diagnostic context is not a full-graph scientific input'):
+            graph.document(report, root_id=QUEUE)
+    else:
+        graph.document(report, root_id=QUEUE)
