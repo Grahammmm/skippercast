@@ -221,7 +221,115 @@ def _preflight_checked(root, db, binding):
     return reasons
 
 
+def _bind_window(position, job, window, item, grids, record, campaign, keys):
+    """Bind one ordered expansion item, before any queue or output is created.
+
+    item carries the four expansion fields plus read-only manifest context;
+    grids carries entries and the per-selection grid identities seen so far.
+    Refusal order is part of the admission contract.
+    """
+    selection, decision, index, native_window = item["expansion"]
+    source_id = selection["source_id"]
+    is_set = "windows" in selection
+
+    def refuse(code, detail=None):
+        raise ValueError("window binding mismatch: " + code + (": " + detail if detail else ""))
+
+    if window["window_key"] in keys:
+        refuse("duplicate")
+    keys.add(window["window_key"])
+    if (job.get("source_id") != source_id
+            or is_set and (job.get("window_index") != index or job.get("window") != native_window)
+            or not is_set and ("window_index" in job or "window" in job)):
+        refuse("job")
+    grid_sha, idx = window["grid_sha256"], window["idx"]
+    key = f"{window['source_id']}#{grid_sha}#{idx}"
+    if (type(idx) is not int or idx != index or window["window_key"] != key
+            or window["window_dir"] != hashlib.sha256(key.encode()).hexdigest()):
+        refuse("idx", "window/grid/owner binding mismatch")
+    if window["pixel_window"] != native_window:
+        refuse("pixel_window")
+    if window["source_id"] != source_id:
+        refuse("source")
+    grid = grids["entries"].get(grid_sha)
+    if (grid is None or digest(grid["definition"]) != grid_sha
+            or grids["selection_grid"].setdefault(source_id, grid_sha) != grid_sha):
+        refuse("grid")
+    definition = grid["definition"]
+    if (grid["source_id"] != source_id or definition["source_sha256"] != selection["source"]["sha256"]):
+        refuse("grid_source")
+    if definition["tiling_version"] != ("window-set-v1" if is_set else "single-selected-v1"):
+        refuse("tiling_version", "window-set grid requires reviewed PC-6 support")
+    if is_set:
+        tiling = selection["tiling"]
+        native_windows = selection["windows"]
+        if (definition["tiling"] != tiling
+                or (definition["width"], definition["height"]) != (tiling["width"], tiling["height"])
+                or (definition["tile_width"], definition["tile_height"]) != (tiling["tile"], tiling["tile"])
+                or grid["total"] != len(native_windows)
+                or grid["cols"] != len({w[0] for w in native_windows})
+                or grid["rows"] != len({w[1] for w in native_windows})):
+            refuse("grid_shape")
+    elif (definition["pixel_window"] != selection["window"]
+            or (grid["cols"], grid["rows"], grid["total"]) != (1, 1, 1)):
+        refuse("grid_shape")
+    # Prove the native pixel-centre owner; an admission label is not geography.
+    from pyproj import Transformer
+    col, row, width, height = window["pixel_window"]
+    a, b, c, d, e, f = definition["affine_transform"]
+    if (any(type(definition[k]) is not int or definition[k] <= 0 for k in ("width", "height", "tile_width", "tile_height"))
+            or any(not isinstance(v, (int, float)) or not math.isfinite(v) for v in (a, b, c, d, e, f))
+            or col+width > definition["width"] or row+height > definition["height"]):
+        refuse("owner", "invalid source grid/window bounds")
+    if is_set and (problem := catalog_bridge.tiling_affine_problem(selection["tiling"], definition)):
+        refuse("grid_geometry", problem)
+    x, y = col + width/2, row + height/2
+    transform = Transformer.from_crs(definition["raster_crs"], "EPSG:3310", always_xy=True)
+    cx, cy = transform.transform(a*x+b*y+c, d*x+e*y+f)
+    owner = segment(math.floor(cx/5000)*5000, math.floor(cy/5000)*5000, region=item["root"].name)
+    if window["owner_segment_id"] != record["segment_id"]:
+        refuse("owner", "window/grid/owner binding mismatch")
+    if owner["segment_id"] != record["segment_id"]:
+        refuse("owner", "pixel centre owner mismatch")
+    from shapely.geometry import Polygon, box
+    geographic = Transformer.from_crs(definition["raster_crs"], "OGC:CRS84", always_xy=True)
+    corners = [(col, row), (col+width, row), (col+width, row+height), (col, row+height)]
+    edge = []
+    for start, end in zip(corners, corners[1:]+corners[:1]):
+        for step in range(41):
+            px = start[0] + (end[0]-start[0])*step/41
+            py = start[1] + (end[1]-start[1])*step/41
+            edge.append(geographic.transform(a*px+b*py+c, d*px+e*py+f))
+    footprint = Polygon(edge)
+    if (not footprint.is_valid or footprint.is_empty
+            or footprint.intersection(box(*campaign["bbox_crs84"])).area <= 0
+            or footprint.intersection(box(*record["bbox_crs84"])).area <= 0):
+        refuse("footprint", "window footprint does not overlap campaign/owner")
+    try:
+        native = _verify(item["root"], job["input_manifest"], item["root_id"])
+        expected_native = catalog_bridge.native_job(item["plan"], selection, decision,
+                                                    item["catalog_ref"], window=native_window)
+        if native != expected_native:
+            refuse("native", "native manifest differs from pinned plan/catalog")
+        catalog_bridge.cached_source(item["root"], native["source"])
+        catalog_bridge._window(native["window"])
+        if (job.get("stage") != "acquire" or native.get("schema") != catalog_bridge.NATIVE_JOB
+                or native.get("segment_id") != record["segment_id"] or native["source"] != selection["source"]
+                or native["window"] != native_window or native["catalog_lineage"]["source_id"] != source_id
+                or native["catalog_lineage"]["catalog_sha256"] != item["catalog_ref"]["sha256"]):
+            refuse("native", "native manifest binding mismatch")
+    except (KeyError, TypeError, IndexError) as error:
+        raise ValueError("window binding mismatch: native") from error
+
+
 def _context(root, admission_path, bridge_path, segment_path):
+    try:
+        return _context_checked(root, admission_path, bridge_path, segment_path)
+    except (KeyError, TypeError, IndexError) as error:
+        raise ValueError("invalid admission binding") from error
+
+
+def _context_checked(root, admission_path, bridge_path, segment_path):
     root_id = "queue:" + root.name
     admission = _json(root, _absolute(admission_path).relative_to(root).as_posix())
     if (admission.get("schema") != "coast-admission-v1" or admission.get("campaign_segment_id") != root.name
@@ -275,71 +383,32 @@ def _context(root, admission_path, bridge_path, segment_path):
     expected_bridge = catalog_bridge._receipt(catalog_bridge.RECEIPT, plan, checked)
     expected_bridge.update(jobs=jobs, budget=plan["budget"], segment=checked["segment"])
     expected_dry = catalog_bridge._receipt(catalog_bridge.DRY_RUN, plan, checked)
-    expected_dry["would_enqueue"] = [dict(stage="acquire", source_id=d["source_id"],
-        native_job_sha256=digest(catalog_bridge.native_job(plan, checked["selections"][d["source_id"]], d, checked["catalog_ref"])))
-        for d in checked["decisions"] if d["state"] == "selected"]
+    decisions = {d["source_id"]: d for d in checked["decisions"]}
+    expected = [(selection, decisions[selection["source_id"]], index, native_window)
+                for selection in plan["selections"]
+                for index, native_window in enumerate(catalog_bridge._selection_windows(selection))]
+    expected_dry["would_enqueue"] = []
+    for selection, decision, index, native_window in expected:
+        entry = dict(stage="acquire", source_id=selection["source_id"], native_job_sha256=digest(
+            catalog_bridge.native_job(plan, selection, decision, checked["catalog_ref"], window=native_window)))
+        if "windows" in selection:
+            entry.update(window_index=index, window=native_window)
+        expected_dry["would_enqueue"].append(entry)
     if bridge != expected_bridge or dry != expected_dry:
         raise ValueError("bridge/dry decisions or caps differ from pinned plan")
-    if (not 1 <= len(jobs) <= catalog_bridge.MAX_JOBS or len(jobs) != len(windows)
-            or len(plan["selections"]) != len(jobs) or len(dry["would_enqueue"]) != len(jobs)
-            or bridge["selected_source_ids"] != [j["source_id"] for j in jobs]):
+    if (not 1 <= len(jobs) <= catalog_bridge.MAX_JOBS
+            or all("windows" not in s for s in plan["selections"]) and len(jobs) > catalog_bridge.LEGACY_MAX_JOBS
+            or not len(jobs) == len(windows) == len(expected) == len(dry["would_enqueue"])
+            or bridge["selected_source_ids"] != list(dict.fromkeys(s["source_id"] for s in plan["selections"]))):
         raise ValueError("admission window population mismatch")
-    grids = {g["grid_sha256"]: g["definition"] for g in admission["grids"]}
-    if any(digest(definition) != sha for sha, definition in grids.items()):
-        raise ValueError("grid digest mismatch")
+    grids = dict(entries={g["grid_sha256"]: g for g in admission["grids"]}, selection_grid={})
     keys = set()
-    for job, window, selection in zip(jobs, windows, plan["selections"]):
-        source_id, grid, idx = window["source_id"], window["grid_sha256"], window["idx"]
-        key = f"{source_id}#{grid}#{idx}"
-        if (not HEX.fullmatch(grid) or type(idx) is not int or idx < 0 or key in keys
-                or window["window_key"] != key or window["window_dir"] != hashlib.sha256(key.encode()).hexdigest()
-                or window["owner_segment_id"] != record["segment_id"] or source_id != job["source_id"]
-                or source_id != selection["source_id"] or window["pixel_window"] != selection["window"]
-                or grids[grid]["source_sha256"] != selection["source"]["sha256"]):
-            raise ValueError("window/grid/owner binding mismatch")
-        keys.add(key)
-        definition = grids[grid]
-        # Prove the native pixel-centre owner; an admission label is not geography.
-        from pyproj import Transformer
-        col, row, width, height = window["pixel_window"]
-        a, b, c, d, e, f = definition["affine_transform"]
-        if (any(type(definition[k]) is not int or definition[k] <= 0 for k in ("width", "height", "tile_width", "tile_height"))
-                or any(not isinstance(v, (int, float)) or not math.isfinite(v) for v in (a, b, c, d, e, f))
-                or col+width > definition["width"] or row+height > definition["height"]):
-            raise ValueError("invalid source grid/window bounds")
-        x, y = col + width/2, row + height/2
-        transform = Transformer.from_crs(definition["raster_crs"], "EPSG:3310", always_xy=True)
-        cx, cy = transform.transform(a*x+b*y+c, d*x+e*y+f)
-        owner = segment(math.floor(cx/5000)*5000, math.floor(cy/5000)*5000, region=root.name)
-        if owner["segment_id"] != record["segment_id"]:
-            raise ValueError("pixel centre owner mismatch")
-        from shapely.geometry import Polygon, box
-        geographic = Transformer.from_crs(definition["raster_crs"], "OGC:CRS84", always_xy=True)
-        corners = [(col, row), (col+width, row), (col+width, row+height), (col, row+height)]
-        edge = []
-        for start, end in zip(corners, corners[1:]+corners[:1]):
-            for step in range(41):
-                px = start[0] + (end[0]-start[0])*step/41
-                py = start[1] + (end[1]-start[1])*step/41
-                edge.append(geographic.transform(a*px+b*py+c, d*px+e*py+f))
-        footprint = Polygon(edge)
-        if (not footprint.is_valid or footprint.is_empty
-                or footprint.intersection(box(*campaign["bbox_crs84"])).area <= 0
-                or footprint.intersection(box(*record["bbox_crs84"])).area <= 0):
-            raise ValueError("window footprint does not overlap campaign/owner")
-        if definition["tiling_version"] != "single-selected-v1" or idx != 0 or definition.get("pixel_window") != selection["window"]:
-            raise ValueError("window-set grid requires reviewed PC-6 support")
-        native = _verify(root, job["input_manifest"], root_id)
-        expected_native = catalog_bridge.native_job(plan, selection, checked["decisions"][len(keys)-1], checked["catalog_ref"])
-        if native != expected_native:
-            raise ValueError("native manifest differs from pinned plan/catalog")
-        catalog_bridge.cached_source(root, native["source"])
-        catalog_bridge._window(native["window"])
-        if (job.get("stage") != "acquire" or native.get("schema") != catalog_bridge.NATIVE_JOB
-                or native.get("segment_id") != record["segment_id"] or native["source"] != selection["source"]
-                or native["window"] != selection["window"] or native["catalog_lineage"]["source_id"] != source_id
-                or native["catalog_lineage"]["catalog_sha256"] != admission["catalog"]["sha256"]):
-            raise ValueError("native manifest binding mismatch")
+    for position, (job, window, expansion) in enumerate(zip(jobs, windows, expected)):
+        item = dict(expansion=expansion, root=root, root_id=root_id, plan=plan, catalog_ref=checked["catalog_ref"])
+        _bind_window(position, job, window, item, grids, record, campaign, keys)
+    if (len(grids["entries"]) != len(admission["grids"])
+            or {w["grid_sha256"] for w in windows} != set(grids["entries"])):
+        raise ValueError("admission grid population mismatch")
     catalog_bridge.check_budget(bridge["budget"])
     if sum(s["source"]["bytes"] for s in plan["selections"]) > plan["max_total_bytes"]:
         raise ValueError("bridge total byte cap")
@@ -605,8 +674,9 @@ def run(root, enqueue_receipt, out, *, max_ticks, until, stop_after="map", conti
                     stop = "max_ticks"
                     break
                 rows = _rows(db)
-                frontier = sorted((w["window_key"], STAGES.index(stage), info["job_id"])
-                                  for w in windows for stage, info in w["stages"].items()
+                # Admission (receipt jobs) order, never window_key: its decimal idx sorts 0, 1, 10, 2.
+                frontier = sorted((order, STAGES.index(stage), info["job_id"])
+                                  for order, w in enumerate(windows) for stage, info in w["stages"].items()
                                   if stage != "render" and info["state"] == "queued"
                                   and rows[info["job_id"]]["not_before"] <= clock()
                                   and rows[info["job_id"]]["attempts"] < rows[info["job_id"]]["max_attempts"])
