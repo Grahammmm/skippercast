@@ -53,16 +53,17 @@ ERROR_CODES = (
     "missing_pointer_target", "pointer_target_not_schema", "unbound_file_reference",
     "unbound_relative_id", "unbound_relative_reference", "unresolved_resource",
 )
-UNVERIFIED_CODES = ("dynamic_resolution_unverified",)
+UNVERIFIED_CODES = ("dynamic_resolution_unverified", "promoted_scope_unverified")
 INFO_CODES = ("cycle", "reference_outside_schema_location", "unused_schema")
 
-URI = re.compile(r"^(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?$", re.S)
-SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*$")
+# Grammar patterns are applied with fullmatch only (a "$" anchor would accept a trailing newline).
+URI = re.compile(r"(?:([^:/?#]+):)?(?://([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?", re.S)
+SCHEME = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*")
 BAD_PERCENT = re.compile(r"%(?![0-9A-Fa-f]{2})")
 BAD_CHARS = re.compile(r"[\x00-\x20\x7f\"<>\\^`{|}]")
-ANCHOR = re.compile(r"^[A-Za-z_][-A-Za-z0-9._]*$")
-SHA256 = re.compile(r"^[0-9a-f]{64}$")
-INDEX = re.compile(r"^(?:0|[1-9][0-9]*)$")
+ANCHOR = re.compile(r"[A-Za-z_][-A-Za-z0-9._]*")
+SHA256 = re.compile(r"[0-9a-f]{64}")
+INDEX = re.compile(r"0|[1-9][0-9]*")
 UNRESERVED = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
 
 
@@ -85,8 +86,8 @@ class _NonFinite(ValueError):
 # ---------------------------------------------------------------- URI handling (RFC 3986, no I/O)
 
 def _split(uri):
-    scheme, authority, path, query, fragment = URI.match(uri).groups()
-    if scheme is not None and not SCHEME.match(scheme):
+    scheme, authority, path, query, fragment = URI.fullmatch(uri).groups()
+    if scheme is not None and not SCHEME.fullmatch(scheme):
         scheme, path = None, uri.split("#", 1)[0].split("?", 1)[0]
     return scheme, authority, path, query, fragment
 
@@ -179,19 +180,20 @@ def _escape(token):
 
 
 def _decode_fragment(fragment):
+    """Percent-decode a (BAD_PERCENT-validated) fragment exactly once; None if not strict UTF-8."""
     raw = bytearray()
     index = 0
-    while index < len(fragment):
-        char = fragment[index]
-        if char == "%":
-            raw.append(int(fragment[index + 1:index + 3], 16))
-            index += 3
-        else:
-            raw.extend(char.encode("utf-8"))
-            index += 1
     try:
+        while index < len(fragment):
+            char = fragment[index]
+            if char == "%":
+                raw.append(int(fragment[index + 1:index + 3], 16))
+                index += 3
+            else:
+                raw.extend(char.encode("utf-8"))
+                index += 1
         return raw.decode("utf-8")
-    except UnicodeDecodeError:
+    except (UnicodeError, ValueError):
         return None
 
 
@@ -229,7 +231,7 @@ def _validate_manifest(manifest):
     for row in files:
         if not isinstance(row, dict) or set(row) != {"path", "sha256"}:
             raise ClosureInputError("manifest_malformed", "each files row must have exactly 'path' and 'sha256'")
-        if not isinstance(row["sha256"], str) or not SHA256.match(row["sha256"]):
+        if not isinstance(row["sha256"], str) or not SHA256.fullmatch(row["sha256"]):
             raise ClosureInputError("manifest_malformed", "sha256 must be 64 lower-case hex characters")
         _check_logical_path(row["path"])
         key = row["path"].casefold()
@@ -247,6 +249,26 @@ def _lstat(path, missing_code="missing_file"):
         raise ClosureInputError(missing_code, f"{path} does not exist") from None
     except OSError as error:
         raise ClosureInputError("path_unsafe", f"{path}: {error.strerror}") from None
+
+
+def _check_ancestors(path, symlink_code, missing_code, other_code):
+    """lstat EVERY proper ancestor of the absolute `path`, top down, before any read/mkdir/write.
+
+    Each must be an existing real directory; a symlink anywhere in the chain is refused.
+    """
+    current = os.sep
+    for part in [p for p in path.split(os.sep)[:-1] if p]:
+        current = os.path.join(current, part)
+        try:
+            info = os.lstat(current)
+        except FileNotFoundError:
+            raise ClosureInputError(missing_code, f"ancestor {current} does not exist") from None
+        except OSError as error:
+            raise ClosureInputError(other_code, f"ancestor {current}: {error.strerror}") from None
+        if stat.S_ISLNK(info.st_mode):
+            raise ClosureInputError(symlink_code, f"symlinked ancestor {current}")
+        if not stat.S_ISDIR(info.st_mode):
+            raise ClosureInputError(other_code, f"non-directory ancestor {current}")
 
 
 def _check_file(root, logical):
@@ -312,8 +334,16 @@ def _reject_constant(name):
     raise _NonFinite(name)
 
 
+def _strict_unicode(text):
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return True
+
+
 def parse_json_bytes(data, label):
-    """Strict JSON: UTF-8, no duplicate keys, no NaN/Infinity, bounded depth."""
+    """Strict JSON: UTF-8, no duplicate keys, no NaN/Infinity, no lone surrogates, bounded depth."""
     try:
         text = data.decode("utf-8")
         value = json.loads(text, object_pairs_hook=_reject_duplicates, parse_constant=_reject_constant)
@@ -330,7 +360,13 @@ def parse_json_bytes(data, label):
         node, depth = stack.pop()
         if depth > MAX_DEPTH:
             raise ClosureInputError("json_too_deep", f"{label}: nesting deeper than {MAX_DEPTH}")
-        if isinstance(node, dict):
+        if isinstance(node, str):
+            if not _strict_unicode(node):
+                raise ClosureInputError("json_invalid_unicode", f"{label}: string with a lone surrogate escape")
+        elif isinstance(node, dict):
+            for key in node:
+                if not _strict_unicode(key):
+                    raise ClosureInputError("json_invalid_unicode", f"{label}: key with a lone surrogate escape")
             stack.extend((child, depth + 1) for child in node.values())
         elif isinstance(node, list):
             stack.extend((child, depth + 1) for child in node)
@@ -368,88 +404,139 @@ class _State:
     def __init__(self):
         self.resources = {}       # canonical uri -> list of (path, pointer, raw, kind, synthetic)
         self.anchors = {}         # (canonical uri, name) -> list of (path, pointer, dynamic)
-        self.occurrences = []
+        self.node_rows = 0        # declared (non-synthetic) $id resources
+        self.anchor_rows = 0
+        self.occurrences = {}     # (path, pointer) -> occurrence; a schema-location record wins
         self.dialects = []
         self.findings = []
         self.schema_nodes = set()
         self.containment = []     # (parent node, child node)
         self.documents = {}
+        self.base_at = {}         # (path, pointer) -> base URI in effect at a non-schema object/boolean
 
 
-def _walk_document(state, path, document):
-    base = SYNTHETIC_BASE + path
-    state.resources.setdefault(base, []).append((path, "", base, "document", True))
-    stack = [(document, "", base, True, None)]
+def _cap(count, what):
+    """The frozen 4096-row bound, enforced as each emitted collection grows (typed exit 2)."""
+    if count > MAX_ROWS:
+        raise ClosureInputError("row_cap_exceeded", f"more than {MAX_ROWS} {what} rows")
+
+
+def _add_finding(state, row):
+    state.findings.append(row)
+    _cap(len(state.findings), "finding")
+
+
+def _add_occurrence(state, occurrence):
+    key = (occurrence["source_path"], occurrence["pointer"])
+    old = state.occurrences.get(key)
+    if old is not None and (occurrence["outside"] or not old["outside"]):
+        return False
+    state.occurrences[key] = occurrence
+    _cap(len(state.occurrences), "reference")
+    return True
+
+
+def _walk(state, path, start, start_pointer, start_base, promoted):
+    """Walk one schema location and everything below it. Returns occurrence keys added/upgraded.
+
+    `promoted` marks an object that is a schema only because a resolved JSON Pointer reached it
+    from outside the keyword structure. Validators enter such an object with the enclosing base;
+    identifiers and anchors declared inside it are not registered resources there, so they are
+    reported as promoted_scope_unverified (UNVERIFIED) instead of being registered or ignored.
+    """
+    changed = []
+    stack = [(start, start_pointer, start_base, True, None)]
     while stack:
         node, pointer, base, is_schema, parent = stack.pop()
-        if is_schema:
-            state.schema_nodes.add((path, pointer))
-            if parent is not None:
-                state.containment.append((parent, (path, pointer)))
-        if not isinstance(node, (dict, list)):
-            continue
-        if isinstance(node, list):
-            for index in range(len(node) - 1, -1, -1):
-                stack.append((node[index], f"{pointer}/{index}", base, False, None))
+        here = (path, pointer)
+        if here in state.schema_nodes:
             continue
         if not is_schema:
-            for keyword in REF_KEYWORDS:
-                if keyword in node:
-                    where = pointer + "/" + _escape(keyword)
-                    reference = node[keyword] if isinstance(node[keyword], str) else None
-                    state.occurrences.append({"source_path": path, "pointer": where, "keyword": keyword,
-                                              "reference": reference, "base": base, "outside": True,
-                                              "node": None})
-            for key in sorted(node, reverse=True):
-                stack.append((node[key], pointer + "/" + _escape(key), base, False, None))
+            if isinstance(node, (dict, bool)):
+                state.base_at.setdefault(here, base)
+            if isinstance(node, list):
+                for index in range(len(node) - 1, -1, -1):
+                    stack.append((node[index], f"{pointer}/{index}", base, False, None))
+            elif isinstance(node, dict):
+                for keyword in REF_KEYWORDS:
+                    if keyword in node:
+                        where = pointer + "/" + _escape(keyword)
+                        reference = node[keyword] if isinstance(node[keyword], str) else None
+                        if _add_occurrence(state, {"source_path": path, "pointer": where, "keyword": keyword,
+                                                   "reference": reference, "base": base, "outside": True,
+                                                   "node": None}):
+                            changed.append((path, where))
+                for key in sorted(node, reverse=True):
+                    stack.append((node[key], pointer + "/" + _escape(key), base, False, None))
             continue
-        here = (path, pointer)
-        if "$id" in node:
+        state.schema_nodes.add(here)
+        if parent is not None:
+            state.containment.append((parent, here))
+        if not isinstance(node, dict):
+            continue
+        if promoted:
+            for keyword in ("$id", "$anchor", "$dynamicAnchor"):
+                if keyword in node:
+                    value = node[keyword]
+                    _add_finding(state, _finding(
+                        "promoted_scope_unverified", path, pointer + "/" + keyword,
+                        value if isinstance(value, str) else None,
+                        detail=f"{keyword} inside an object reached only by JSON Pointer is not a registered "
+                               "resource or anchor; its resolution scope is UNVERIFIED"))
+        if "$id" in node and not promoted:
             value, where = node["$id"], pointer + "/$id"
             target = None
             if (isinstance(value, str) and not BAD_CHARS.search(value) and not BAD_PERCENT.search(value)
                     and _split(value)[4] in (None, "")):
                 target, unbound = _resolve(base, value)
                 if unbound:
-                    state.findings.append(_finding("unbound_relative_id", path, where, value,
-                                                   detail="relative $id under a non-hierarchical base"))
+                    _add_finding(state, _finding("unbound_relative_id", path, where, value,
+                                                 detail="relative $id under a non-hierarchical base"))
                     target = None
             else:
-                state.findings.append(_finding("malformed_id", path, where, value if isinstance(value, str) else None,
-                                               detail="$id must be a valid URI-reference without a non-empty fragment"))
+                _add_finding(state, _finding("malformed_id", path, where, value if isinstance(value, str) else None,
+                                             detail="$id must be a valid URI-reference without a non-empty fragment"))
             if target is not None:
                 raw = _join(*_split(target)[:4])
                 kind = "document" if pointer == "" else "embedded"
                 state.resources.setdefault(_canonical(raw), []).append((path, pointer, raw, kind, False))
+                state.node_rows += 1
+                _cap(state.node_rows, "node")
                 base = raw
         if "$schema" in node:
             value = node["$schema"]
             if isinstance(value, str):
                 state.dialects.append({"source_path": path, "pointer": pointer + "/$schema", "dialect": value})
+                _cap(len(state.dialects), "dialect")
             else:
-                state.findings.append(_finding("malformed_dialect", path, pointer + "/$schema",
-                                               detail="$schema must be a string"))
+                _add_finding(state, _finding("malformed_dialect", path, pointer + "/$schema",
+                                             detail="$schema must be a string"))
         for keyword, code, dynamic in (("$anchor", "malformed_anchor", False),
                                        ("$dynamicAnchor", "malformed_dynamic_anchor", True)):
-            if keyword in node:
+            if keyword in node and not promoted:
                 value = node[keyword]
-                if isinstance(value, str) and ANCHOR.match(value):
+                if isinstance(value, str) and ANCHOR.fullmatch(value):
                     key = (_canonical(base), value)
                     state.anchors.setdefault(key, []).append((path, pointer, dynamic))
+                    state.anchor_rows += 1
+                    _cap(state.anchor_rows, "anchor")
                 else:
-                    state.findings.append(_finding(code, path, pointer + "/" + keyword,
-                                                   value if isinstance(value, str) else None,
-                                                   detail="anchor must match ^[A-Za-z_][-A-Za-z0-9._]*$"))
+                    _add_finding(state, _finding(code, path, pointer + "/" + keyword,
+                                                 value if isinstance(value, str) else None,
+                                                 detail="anchor must fully match [A-Za-z_][-A-Za-z0-9._]*"))
         for keyword in REF_KEYWORDS:
             if keyword in node:
                 value = node[keyword]
-                state.occurrences.append({"source_path": path, "pointer": pointer + "/" + _escape(keyword),
-                                          "keyword": keyword, "reference": value if isinstance(value, str) else None,
-                                          "malformed": not isinstance(value, str), "base": base, "outside": False,
-                                          "node": here})
+                where = pointer + "/" + _escape(keyword)
+                if _add_occurrence(state, {"source_path": path, "pointer": where, "keyword": keyword,
+                                           "reference": value if isinstance(value, str) else None,
+                                           "malformed": not isinstance(value, str), "base": base,
+                                           "outside": False, "node": here}):
+                    changed.append((path, where))
         children = list(_schema_children(node, pointer))
         for child, child_pointer, child_is_schema in reversed(children):
             stack.append((child, child_pointer, base, child_is_schema, here if child_is_schema else None))
+    return changed
 
 
 def _locate(document, tokens):
@@ -457,7 +544,7 @@ def _locate(document, tokens):
     for token in tokens:
         if isinstance(node, dict) and token in node:
             node = node[token]
-        elif isinstance(node, list) and INDEX.match(token) and int(token) < len(node):
+        elif isinstance(node, list) and INDEX.fullmatch(token) and int(token) < len(node):
             node = node[int(token)]
         else:
             return False, None
@@ -503,28 +590,32 @@ def _resolve_reference(occurrence, state):
     dynamic = False
     if fragment in (None, ""):
         target_pointer = res_pointer
-    elif fragment.startswith("/"):
-        decoded = _decode_fragment(fragment)
-        tokens = _pointer_tokens(decoded) if decoded is not None else None
-        if tokens is None:
-            return fail("invalid_fragment", detail="fragment is not a valid JSON Pointer")
-        target_pointer = res_pointer + "".join("/" + _escape(t) for t in tokens)
-        found, node = _locate(resource_node, tokens)
-        if not found:
-            return fail("missing_pointer_target", {"path": res_path, "pointer": target_pointer})
-        if not isinstance(node, (dict, bool)):
-            return fail("pointer_target_not_schema", {"path": res_path, "pointer": target_pointer})
     else:
-        if not ANCHOR.match(fragment):
-            return fail("invalid_fragment", detail="plain-name fragment must match the anchor grammar")
-        found = state.anchors.get((_canonical(resource_uri), fragment), [])
-        if not found:
-            return fail("missing_anchor", detail=f"anchor {fragment!r} not declared in {resource_uri}")
-        locations = sorted({(p, q) for p, q, _ in found})
-        if len(locations) > 1:
-            return fail("ambiguous_resource", detail=f"anchor {fragment!r} declared at {len(locations)} locations")
-        target_pointer = locations[0][1]
-        dynamic = keyword == "$dynamicRef" and any(d for _, _, d in found)
+        # Decode the (escape-validated) fragment exactly once, THEN dispatch pointer vs anchor.
+        decoded = _decode_fragment(fragment)
+        if decoded is None:
+            return fail("invalid_fragment", detail="fragment is not valid percent-encoded UTF-8")
+        if decoded.startswith("/"):
+            tokens = _pointer_tokens(decoded)
+            if tokens is None:
+                return fail("invalid_fragment", detail="fragment is not a valid JSON Pointer")
+            target_pointer = res_pointer + "".join("/" + _escape(t) for t in tokens)
+            found, node = _locate(resource_node, tokens)
+            if not found:
+                return fail("missing_pointer_target", {"path": res_path, "pointer": target_pointer})
+            if not isinstance(node, (dict, bool)):
+                return fail("pointer_target_not_schema", {"path": res_path, "pointer": target_pointer})
+        else:
+            if not ANCHOR.fullmatch(decoded):
+                return fail("invalid_fragment", detail="plain-name fragment must fully match the anchor grammar")
+            found = state.anchors.get((_canonical(resource_uri), decoded), [])
+            if not found:
+                return fail("missing_anchor", detail=f"anchor {decoded!r} not declared in {resource_uri}")
+            locations = sorted({(p, q) for p, q, _ in found})
+            if len(locations) > 1:
+                return fail("ambiguous_resource", detail=f"anchor {decoded!r} declared at {len(locations)} locations")
+            target_pointer = locations[0][1]
+            dynamic = keyword == "$dynamicRef" and any(d for _, _, d in found)
     target = {"path": res_path, "pointer": target_pointer}
     edge = {"source_path": path, "pointer": pointer, "keyword": keyword, "reference": reference,
             "target_path": res_path, "target_pointer": target_pointer,
@@ -592,6 +683,7 @@ def inspect_closure(manifest, input_root):
     """
     rows = _validate_manifest(manifest)
     root = os.path.abspath(os.fspath(input_root))
+    _check_ancestors(root, "input_root_unsafe", "input_root_unsafe", "input_root_unsafe")
     info = _lstat(root, "input_root_unsafe")
     if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
         raise ClosureInputError("input_root_unsafe", "input root must be an existing directory, not a symlink")
@@ -615,9 +707,31 @@ def inspect_closure(manifest, input_root):
             raise ClosureInputError("not_a_schema", f"{logical!r} is neither a JSON object nor a boolean schema")
         state.documents[logical] = document
     for logical in sorted(state.documents):
-        _walk_document(state, logical, state.documents[logical])
-    if len(state.occurrences) > MAX_ROWS:
-        raise ClosureInputError("row_cap_exceeded", f"{len(state.occurrences)} reference rows exceed {MAX_ROWS}")
+        base = SYNTHETIC_BASE + logical
+        state.resources.setdefault(base, []).append((logical, "", base, "document", True))
+        _walk(state, logical, state.documents[logical], "", base, False)
+
+    # Resolve every occurrence. A resolved JSON Pointer that lands on an object outside the
+    # keyword structure makes that object a schema: walk it (worklist, each location at most
+    # once, so cycles terminate) and resolve the references it contains, until nothing changes.
+    outcomes = {}
+    pending = sorted(state.occurrences)
+    while pending:
+        reached = set()
+        for key in pending:
+            outcome = _resolve_reference(state.occurrences[key], state)
+            outcomes[key] = outcome
+            edge = outcome["edge"]
+            if edge is not None and (edge["target_path"], edge["target_pointer"]) not in state.schema_nodes:
+                reached.add((edge["target_path"], edge["target_pointer"]))
+        changed = set()
+        for target_path, target_pointer in sorted(reached):
+            if (target_path, target_pointer) in state.schema_nodes:
+                continue
+            _, node = _locate(state.documents[target_path], _pointer_tokens(target_pointer))
+            base = state.base_at[(target_path, target_pointer)]
+            changed.update(_walk(state, target_path, node, target_pointer, base, True))
+        pending = sorted(changed)
 
     findings = list(state.findings)
     nodes = []
@@ -638,8 +752,8 @@ def inspect_closure(manifest, input_root):
     anchors = sorted({(p, q, name, dyn) for (uri, name), entries in state.anchors.items() for p, q, dyn in entries})
 
     references, edges = [], []
-    for occurrence in sorted(state.occurrences, key=lambda o: (o["source_path"], o["pointer"])):
-        outcome = _resolve_reference(occurrence, state)
+    for key in sorted(state.occurrences):
+        occurrence, outcome = state.occurrences[key], outcomes[key]
         references.append({"source_path": occurrence["source_path"], "pointer": occurrence["pointer"],
                            "keyword": occurrence["keyword"], "reference": occurrence["reference"],
                            "classification": outcome["classification"],
@@ -734,6 +848,7 @@ def serialize(report):
 
 def _load_manifest_file(path):
     path = os.path.abspath(path)
+    _check_ancestors(path, "symlink_in_path", "missing_file", "path_unsafe")
     info = _lstat(path)
     if stat.S_ISLNK(info.st_mode):
         raise ClosureInputError("symlink_in_path", "manifest is a symlink")
@@ -745,20 +860,15 @@ def _load_manifest_file(path):
 
 
 def _check_output(path):
+    """Every ancestor must be a real directory (no symlink anywhere) and the report must be new."""
     path = os.path.abspath(path)
+    _check_ancestors(path, "output_unsafe", "output_unsafe", "output_unsafe")
     try:
         os.lstat(path)
     except FileNotFoundError:
         pass
     else:
         raise ClosureInputError("output_exists", "output already exists; reports are never overwritten")
-    parent = os.path.dirname(path)
-    try:
-        info = os.lstat(parent)
-    except OSError:
-        raise ClosureInputError("output_unsafe", "output parent directory does not exist") from None
-    if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
-        raise ClosureInputError("output_unsafe", "output parent must be a directory, not a symlink")
     return path
 
 

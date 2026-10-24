@@ -26,6 +26,7 @@ import json  # noqa: E402
 import os  # noqa: E402
 from pathlib import Path  # noqa: E402
 import platform  # noqa: E402
+import stat  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
 MODULE = REPO / "scripts" / "coast_diagnostics" / "schema_closure.py"
@@ -169,16 +170,37 @@ def negative_controls(sc, tests, receipt):
     receipt["controls"] = controls
 
 
-def main(argv=None):
-    args = parse_args(sys.argv[1:] if argv is None else argv)
-    output = Path(os.path.abspath(args.output))
-    if not output.parent.is_dir() or output.parent.is_symlink():
-        print(f"output parent must be an existing non-symlink directory: {output.parent}", file=sys.stderr)
-        return 2
+def prepare_output(output):
+    """Create the write-once run directory. Returns an error string, or None on success.
+
+    Every ancestor is lstat-checked top down BEFORE mkdir: each must be an existing real
+    directory, never a symlink (also above the immediate parent).
+    """
+    output = os.path.abspath(output)
+    current = os.sep
+    for part in [p for p in output.split(os.sep)[:-1] if p]:
+        current = os.path.join(current, part)
+        try:
+            info = os.lstat(current)
+        except OSError:
+            return f"output ancestor missing or unreadable: {current}"
+        if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
+            return f"output ancestor must be a real directory, not a symlink: {current}"
     try:
         os.mkdir(output)
     except FileExistsError:
-        print(f"output already exists (write-once): {output}", file=sys.stderr)
+        return f"output already exists (write-once): {output}"
+    except OSError as error:
+        return f"cannot create output {output}: {error.strerror}"
+    return None
+
+
+def main(argv=None):
+    args = parse_args(sys.argv[1:] if argv is None else argv)
+    output = Path(os.path.abspath(args.output))
+    error = prepare_output(str(output))
+    if error is not None:
+        print(error, file=sys.stderr)
         return 2
     stdout, stderr = Tee(sys.stdout), Tee(sys.stderr)
     sys.stdout, sys.stderr = stdout, stderr

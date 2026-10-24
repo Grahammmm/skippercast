@@ -38,8 +38,32 @@ def load_module():
 sc = load_module()
 
 
+RUNNER_PATH = REPO / "scripts" / "accept_sc_schema_closure.py"
+
+
 def fresh_dir():
-    return Path(tempfile.mkdtemp(prefix="sc-schema-closure-"))
+    # Physical (symlink-free) path: platforms alias their temporary directory through a
+    # symlink, and the tool refuses every symlinked ancestor.
+    return Path(os.path.realpath(tempfile.mkdtemp(prefix="sc-schema-closure-")))
+
+
+def load_runner():
+    spec = importlib.util.spec_from_file_location("accept_sc_schema_closure_under_test", RUNNER_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def classify(report):
+    return {r["pointer"]: r["classification"] for r in report["references"]}
+
+
+def targets(report):
+    return {r["pointer"]: (r["resolution_target"] or {}).get("pointer") for r in report["references"]}
+
+
+def stop_io(*args, **kwargs):
+    raise AssertionError("I/O reached through an unsafe path")
 
 
 def stage(documents, root=None):
@@ -265,6 +289,57 @@ class TestFocusedClosure(unittest.TestCase):
         report = sc.inspect_closure(manifest, root)
         self.assertEqual(report["edges"][0]["target_pointer"], "/$defs/t")
         self.assertEqual(report["exit_code"], 0)
+
+    def test_pointer_reached_object_dependency_is_not_ignored(self):
+        # Review round 1 item 2: a reference into a non-keyword location makes that object a
+        # schema; its own unresolved dependency must keep the closure open.
+        manifest, root = stage({"a.json": doc("https://example.test/p.json", **{
+            "$ref": "#/custom", "custom": {"$ref": "https://missing.test/not-staged.json"}})})
+        report = sc.inspect_closure(manifest, root)
+        self.assertEqual(classify(report), {"/$ref": "resolved", "/custom/$ref": "unresolved_resource"})
+        self.assertNotIn("reference_outside_schema_location", codes(report))
+        self.assertEqual((report["status"], report["exit_code"]), ("open", 1))
+
+    def test_pointer_reached_chains_repeats_and_cycles_are_analysed(self):
+        manifest, root = stage({
+            "a.json": doc(A, **{"allOf": [{"$ref": "#/x"}, {"$ref": "#/x"}],
+                                "x": {"$ref": "#/y", "properties": {"p": {"$ref": "b.schema.json"}}},
+                                "y": {"$ref": "#/x"},
+                                "const": {"$ref": "#/nowhere"}}),
+            "b.json": doc(B, type="string"),
+        })
+        report = sc.inspect_closure(manifest, root)
+        self.assertEqual(classify(report), {
+            "/allOf/0/$ref": "resolved", "/allOf/1/$ref": "resolved", "/x/$ref": "resolved",
+            "/x/properties/p/$ref": "resolved", "/y/$ref": "resolved",
+            "/const/$ref": "outside_schema_location"})
+        self.assertEqual(targets(report)["/x/properties/p/$ref"], "")
+        self.assertEqual(targets(report)["/y/$ref"], "/x")
+        self.assertEqual([f["pointer"] for f in report["findings"] if f["code"] == "reference_outside_schema_location"],
+                         ["/const/$ref"])
+        self.assertEqual(len(report["cycles"]), 1)
+        self.assertEqual({(e["pointer"], e["target_pointer"]) for e in report["cycles"][0]["edges"]},
+                         {("/x/$ref", "/y"), ("/y/$ref", "/x")})
+        self.assertEqual(report["document_edges"],
+                         [{"source_path": "a.json", "target_path": "b.json", "count": 1}])
+        self.assertEqual((report["status"], report["exit_code"]), ("closed", 0))
+
+    def test_percent_encoded_fragments_resolve_after_one_decode(self):
+        manifest, root = stage({"a.json": doc(A, **{
+            "$defs": {"leaf": {"$anchor": "leaf", "type": "string"}, "a/b": {}, "caf\u00e9": {}},
+            "properties": {"enc_ptr": {"$ref": "#%2F$defs%2Fleaf"}, "enc_anchor": {"$ref": "#%6Ceaf"},
+                           "enc_token": {"$ref": "#/$defs/a%7E1b"}, "utf8": {"$ref": "#/$defs/caf%C3%A9"},
+                           "raw_utf8": {"$ref": "#/$defs/caf\u00e9"}, "plain": {"$ref": "#/$defs/leaf"}}})})
+        report = sc.inspect_closure(manifest, root)
+        self.assertEqual(set(classify(report).values()), {"resolved"})
+        self.assertEqual(targets(report), {
+            "/properties/enc_ptr/$ref": "/$defs/leaf", "/properties/enc_anchor/$ref": "/$defs/leaf",
+            "/properties/enc_token/$ref": "/$defs/a~1b", "/properties/utf8/$ref": "/$defs/caf\u00e9",
+            "/properties/raw_utf8/$ref": "/$defs/caf\u00e9", "/properties/plain/$ref": "/$defs/leaf"})
+        raw = {r["pointer"]: r["reference"] for r in report["references"]}
+        self.assertEqual(raw["/properties/enc_ptr/$ref"], "#%2F$defs%2Fleaf")
+        self.assertEqual(raw["/properties/enc_anchor/$ref"], "#%6Ceaf")
+        self.assertEqual((report["status"], report["exit_code"]), ("closed", 0))
 
 
 class TestContractRealFamily(unittest.TestCase):
@@ -497,8 +572,9 @@ class TestNegativeClosure(unittest.TestCase):
 
     def test_more_than_128_entries_refused_before_any_file_access(self):
         rows = [{"path": f"f{i}.json", "sha256": "0" * 64} for i in range(sc.MAX_FILES + 1)]
+        root = fresh_dir()
         with mock.patch("os.lstat", side_effect=AssertionError("file access before count check")):
-            self.refused({"schema": "sc-schema-closure-input-v1", "files": rows}, fresh_dir(), "manifest_too_many_files")
+            self.refused({"schema": "sc-schema-closure-input-v1", "files": rows}, root, "manifest_too_many_files")
 
     def test_row_cap_refused(self):
         props = {f"p{i}": {"$ref": "#/$defs/x"} for i in range(sc.MAX_ROWS + 1)}
@@ -565,6 +641,153 @@ class TestNegativeClosure(unittest.TestCase):
                               "--out", str(work / "r.json")])
         self.assertEqual((status, json.loads(err.getvalue())["code"]), (2, "symlink_in_path"))
         self.assertFalse((work / "r.json").exists())
+
+    def test_higher_symlink_ancestors_refused_before_io(self):
+        # Review round 1 item 1: every ancestor, not only the root or immediate parent.
+        base = fresh_dir()
+        real = base / "real"
+        manifest, nested = stage({"dir/a.json": doc(A)}, root=real / "nested")
+        manifest_path = nested / "manifest.json"
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        os.symlink(real, base / "link")
+        via = base / "link" / "nested"
+        with mock.patch.object(sc, "_read_checked", stop_io):
+            self.refused(manifest, via, "input_root_unsafe")
+        for argv, code, never in (
+                ([str(via / "manifest.json"), str(nested), str(base / "out1.json")], "symlink_in_path",
+                 base / "out1.json"),
+                ([str(manifest_path), str(via), str(base / "out2.json")], "input_root_unsafe", base / "out2.json"),
+                ([str(manifest_path), str(nested), str(via / "out3.json")], "output_unsafe", nested / "out3.json"),
+                ([str(manifest_path), str(nested), str(via / "deeper" / "out4.json")], "output_unsafe",
+                 nested / "deeper")):
+            with self.subTest(code=code, argv=argv):
+                stderr = io.StringIO()
+                with mock.patch.object(sc, "_read_checked", stop_io) if code != "input_root_unsafe" else \
+                        mock.patch.object(sc, "_write_new", stop_io), \
+                        mock.patch.object(sys, "stderr", stderr), mock.patch.object(sys, "stdout", io.StringIO()):
+                    status = sc.main(["--manifest", argv[0], "--input-root", argv[1], "--out", argv[2]])
+                self.assertEqual((status, json.loads(stderr.getvalue())["code"]), (2, code))
+                self.assertFalse(never.exists())
+        # Real-directory positives on the same physical tree.
+        self.assertEqual(sc.inspect_closure(manifest, nested)["exit_code"], 0)
+        with mock.patch.object(sys, "stderr", io.StringIO()), mock.patch.object(sys, "stdout", io.StringIO()):
+            status = sc.main(["--manifest", str(manifest_path), "--input-root", str(nested),
+                              "--out", str(nested / "ok.json")])
+        self.assertEqual(status, 0)
+        self.assertEqual(json.loads((nested / "ok.json").read_text(encoding="utf-8"))["exit_code"], 0)
+
+    def test_runner_output_refuses_symlinked_higher_ancestor(self):
+        runner = load_runner()
+        base = fresh_dir()
+        (base / "real" / "nested").mkdir(parents=True)
+        os.symlink(base / "real", base / "link")
+        with mock.patch("os.mkdir", side_effect=AssertionError("mkdir reached through a symlink")):
+            error = runner.prepare_output(str(base / "link" / "nested" / "run"))
+        self.assertIsNotNone(error)
+        self.assertFalse((base / "real" / "nested" / "run").exists())
+        self.assertIsNone(runner.prepare_output(str(base / "real" / "nested" / "run")))
+        self.assertTrue((base / "real" / "nested" / "run").is_dir())
+        self.assertIsNotNone(runner.prepare_output(str(base / "real" / "nested" / "run")))  # write-once
+
+    def test_row_cap_applies_to_every_emitted_collection(self):
+        # Review round 1 item 4: on-boundary passes, one over is refused before resolution.
+        cap = sc.MAX_ROWS
+
+        def ids(n):
+            return {"a.json": doc(A, **{"$defs": {f"d{i}": {"$id": f"https://example.test/ids/{i}.json"}
+                                                  for i in range(n)}})}
+
+        def anchors(n):
+            return {"a.json": doc(A, **{"$defs": {f"d{i}": {"$anchor": f"a{i}"} for i in range(n)}})}
+
+        def dialects(n):
+            return {"a.json": doc(A, **{"$defs": {f"d{i}": {"$schema": DIALECT} for i in range(n)}})}
+
+        def refs(n):
+            return {"a.json": doc(A, properties={f"p{i}": {"$ref": "#/$defs/x"} for i in range(n)},
+                                  **{"$defs": {"x": {}}})}
+
+        def bad_anchors(n):
+            return {"a.json": doc(A, **{"$defs": {f"d{i}": {"$anchor": "1bad"} for i in range(n)}})}
+
+        cases = (("nodes", ids, cap - 1, True), ("anchors", anchors, cap, True),
+                 ("dialects", dialects, cap - 1, True), ("references", refs, cap, False),
+                 ("findings", bad_anchors, cap - 1, False))
+        for name, build, boundary, before_resolution in cases:
+            with self.subTest(collection=name):
+                manifest, root = stage(build(boundary))
+                report = sc.inspect_closure(manifest, root)
+                self.assertEqual(len(report[name]), cap)
+                manifest, root = stage(build(boundary + 1))
+                if before_resolution:
+                    with mock.patch.object(sc, "_resolve_reference", stop_io):
+                        self.refused(manifest, root, "row_cap_exceeded")
+                else:
+                    self.refused(manifest, root, "row_cap_exceeded")
+
+    def test_promoted_scope_identifiers_are_unverified_not_registered(self):
+        manifest, root = stage({"a.json": doc(A, **{
+            "$ref": "#/c", "c": {"$id": "https://example.test/c.json", "$anchor": "k",
+                                 "$dynamicAnchor": "d", "$defs": {"q": {}}}})})
+        report = sc.inspect_closure(manifest, root)
+        rows = sorted((f["pointer"], f["severity"]) for f in report["findings"] if f["code"] == "promoted_scope_unverified")
+        self.assertEqual(rows, [("/c/$anchor", "unverified"), ("/c/$dynamicAnchor", "unverified"),
+                                ("/c/$id", "unverified")])
+        self.assertNotIn("https://example.test/c.json", [n["id"] for n in report["nodes"]])
+        self.assertEqual(report["anchors"], [])
+        self.assertEqual((report["status"], report["exit_code"]), ("open", 1))
+
+    def test_malformed_and_double_encoded_fragments(self):
+        manifest, root = stage({"a.json": doc(A, **{
+            "$dynamicAnchor": "node", "prefixItems": [{}],
+            "$defs": {"leaf": {"$anchor": "leaf"}},
+            "properties": {"bad_utf8": {"$ref": "#%FF"}, "double": {"$ref": "#%252F$defs%252Fleaf"},
+                           "double_anchor": {"$ref": "#%256Ceaf"}, "missing": {"$ref": "#%2F$defs%2Fnope"},
+                           "index_nl": {"$ref": "#/prefixItems/0%0A"}, "anchor_nl": {"$ref": "#leaf%0A"},
+                           "dyn": {"$dynamicRef": "#%6Eode"}}})})
+        report = sc.inspect_closure(manifest, root)
+        self.assertEqual(classify(report), {
+            "/properties/bad_utf8/$ref": "invalid_fragment", "/properties/double/$ref": "invalid_fragment",
+            "/properties/double_anchor/$ref": "invalid_fragment",
+            "/properties/missing/$ref": "missing_pointer_target",
+            "/properties/index_nl/$ref": "missing_pointer_target", "/properties/anchor_nl/$ref": "invalid_fragment",
+            "/properties/dyn/$dynamicRef": "unverified_dynamic"})
+        self.assertEqual(report["exit_code"], 1)
+
+    def test_malformed_anchor_suffixes_and_lone_surrogates(self):
+        # Review round 1 item 5: whole-string grammar; malformed Unicode is typed exit 2, no crash.
+        manifest, root = stage({"a.json": doc(A, **{"$defs": {
+            "n": {"$dynamicAnchor": "node\n"}, "m": {"$anchor": "ok\n"}, "c": {"$anchor": "ok\u0001"},
+            "fine": {"$anchor": "fine"}}})})
+        report = sc.inspect_closure(manifest, root)
+        rows = sorted((f["code"], f["pointer"]) for f in report["findings"] if f["severity"] == "error")
+        self.assertEqual(rows, [("malformed_anchor", "/$defs/c/$anchor"), ("malformed_anchor", "/$defs/m/$anchor"),
+                                ("malformed_dynamic_anchor", "/$defs/n/$dynamicAnchor")])
+        self.assertEqual([a["name"] for a in report["anchors"]], ["fine"])
+        self.assertEqual(report["exit_code"], 1)
+        for raw in (b'{"$ref": "#/\\ud800"}', b'{"$ref": "#/\\udc00"}', b'{"\\ud800": {}}',
+                    b'{"$defs": {"x": {"$anchor": "a\\udfff"}}}'):
+            with self.subTest(raw=raw):
+                manifest, root = stage({"a.json": raw})
+                self.refused(manifest, root, "json_invalid_unicode")
+                work = fresh_dir()
+                (work / "m.json").write_text(json.dumps(manifest), encoding="utf-8")
+                stderr = io.StringIO()
+                with mock.patch.object(sys, "stderr", stderr), mock.patch.object(sys, "stdout", io.StringIO()):
+                    status = sc.main(["--manifest", str(work / "m.json"), "--input-root", str(root),
+                                      "--out", str(work / "r.json")])
+                self.assertEqual((status, json.loads(stderr.getvalue())["code"]), (2, "json_invalid_unicode"))
+                self.assertFalse((work / "r.json").exists())
+                self.assertEqual((root / "a.json").read_bytes(), raw)
+        manifest, root = stage({"a.json": b'{"$defs": {"\\ud83d\\ude00": {}}, "$ref": "#/$defs/\\ud83d\\ude00"}'})
+        report = sc.inspect_closure(manifest, root)
+        self.assertEqual(classify(report), {"/$ref": "resolved"})
+        self.assertEqual(report["exit_code"], 0)
+
+    def test_whole_string_grammar_for_manifest_hashes(self):
+        manifest, root = stage({"a.json": doc(A)})
+        row = manifest["files"][0]
+        self.refused(dict(manifest, files=[dict(row, sha256=row["sha256"] + "\n")]), root, "manifest_malformed")
 
     def test_removing_one_real_edge_fails_closure_completeness(self):
         manifest = load_json(FIXTURES / "real" / "pinned-manifest.json")
