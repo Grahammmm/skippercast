@@ -10,20 +10,19 @@ envelope/snapshot/row entries no longer refuse; every original refusal remains
 where the SCIENTIFIC graph reaches those bytes.
 """
 from pathlib import Path
-import sys
 
 import pytest
 
 from tests._support import ROOT as REPO
 from tests.gis.test_coast_raw_provenance import retained, vr_bag, emit, HEADER, ROOT  # noqa: F401
 from tests.coast_contract_factory import load_helper
+from tests.gis.test_coast_segment_close import close_common
 
 pytestmark = pytest.mark.gis
 refs = load_helper('coast_refs')
 validator = load_helper('validate_coast_receipt')
 ledger = load_helper('coast_ledger')
-sys.path.insert(0, str(REPO / 'skills/coast-segment-close/scripts'))
-import close_common  # noqa: E402
+
 
 AID = 'archive:synthetic:close01'
 
@@ -194,7 +193,8 @@ def test_archive_only_full_native_raw_derived_closure(native):
     assert all(o['artifact']['path'] in retained_paths for o in f.vr['outputs'])
     for leaf in ('terrain.tif', 'support.tif', 'cells.json', 'run.json', 'job.json', 'stdout.log', 'stderr.log', 'result.json'):
         assert any(p.endswith('/' + leaf) for p in retained_paths), leaf
-    assert any(p.split('/')[-2] != 'output' and p.endswith('/job.json') for p in retained_paths)  # lease-qualified job dir
+    jobs = [p.split('/') for p in retained_paths if p.endswith('/job.json')]
+    assert jobs and all(len(parts) >= 2 and parts[-2] != 'output' for parts in jobs)  # lease-qualified job dir
     assert f.envelope['selections'][0]['raw'] in [refs.loads(k[0]) for k in graph.verified]
 
 

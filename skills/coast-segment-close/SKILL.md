@@ -31,6 +31,13 @@ by a headless agent. Tests may unlink only their own synthetic temporary files.
   `archive:<segment>:<close-id>` -> A, and `raw:campaign` -> ARCHIVE_ROOT/raw.
   Use absolute paths. Roots come from the card binding, never from receipts.
 - A quiescent campaign: no active execution leases, controllers or admissions.
+  The operator must supply the existing PC9 `COAST_EXCLUSIVE_WRITER=C` assertion
+  covering all controllers, other admissions and consumers. A lock alone is not
+  proof of ownership. Both archive and release acquire the actual coordinator
+  lock plus close lock; a read-only private Store snapshot refuses all leases
+  (expired included), unsafe states and queued non-render consumers. Store is
+  never opened/recovered/mutated to make this check pass. Release holds these
+  locks plus both ledger locks through unlink and receipt finalization.
 - A unique, never-reused close-id and an empty destination A.
 - Enough SanDisk capacity, keeping a reserve of at least 200 GB
   (`--reserve-bytes`, default 200e9). Closed segments go to
@@ -61,6 +68,13 @@ The archive step runs in this order and appends no row early:
 3. Append the `archived` row through `coast_ledger.append`.
    `archive_segment.py` is the only writer of `archived` rows.
 4. Copy the final segment and campaign ledger snapshots.
+
+An identical same-writer retry may reconcile a manifest-durable crash using
+the immutable original header, inventory, graph and ledger prefixes. It finishes
+only missing index/snapshots, never overwrites bytes or duplicates rows. A crash
+before the manifest, changed payload, mismatched snapshot or later ledger write
+stays refused for attended reconciliation; do not reuse the close-id for a new
+close. No archive success is announced before both index and snapshots exist.
 
 Products keep their lease ID in their archive path, so retry evidence is never
 overwritten. Runner scratch, live leases and live SQLite are excluded. If a
@@ -110,7 +124,13 @@ Without `--execute` the release step deletes nothing.
 - The release step then unlinks one file at a time. Before each unlink it repeats
   the identity checks, then unlinks relative to the directory FD. It never
   deletes a directory or uses a wildcard. It writes `release-receipt.json` next
-  to the list.
+  to the list. Before the first unlink it reserves that exact write-once receipt
+  destination and fsyncs `release-accounting/intent.json`. Every candidate has
+  a durable `NNNNNN-before.json` marker before unlink and an `-after.json` marker
+  after it. An unmatched before marker means UNKNOWN outcome, not permission to
+  retry. Existing receipt/journal evidence refuses without deletion. If final
+  receipt I/O fails, the command fails and the journal preserves the prefix;
+  an empty/truncated reserved receipt is NOT a completed release.
 
 # Failure modes
 
@@ -123,7 +143,7 @@ These all exit 3, emit no release list and delete nothing:
 - an unresolved inventory item;
 - an unknown historical reference;
 - insufficient disk;
-- a reused close-id;
+- a reused close-id with different payload or unverifiable crash residue;
 - any overlap with `--forbid`.
 
 Preflight refusals also leave every cache file in place. These include a changed
@@ -137,14 +157,25 @@ any correction needs a new close-id.
 
 # Metrics emitted
 
-- `archive_segment.py` stdout: retained file count, copied bytes and number of
-  cache candidates.
+- `archive_segment.py` stdout: retained file count, copied bytes, number of
+  cache candidates, and `metrics` (`coast-close-metrics-v1`). The latter is
+  recomputable from the pinned manifest, without hot reads.
 - Release list: proposed `total_bytes` and candidate count.
-- Release receipt: actually released files and `released_bytes`.
+- Release receipt: actually released files, `released_bytes`,
+  `proposed_release_bytes`, and the recomputed `archive_metrics`.
 
-Not yet emitted: the rev4 7.8 split of archived bytes into raw-equivalent,
-derived and products, and peak hot cache size. The operator records those
-separately until they are added.
+`archived_bytes` categories are logical retained bytes, deduplicated per exact
+retained object (root/path/hash/bytes) WITHIN each category: `raw_equivalent`
+is cache mapped byte-identically to raw (not newly copied archive bytes),
+`derived` is other retained cache input, `products` is retained job lineage
+under var/coastal/jobs, and `metadata` is all remaining receipts/config. They
+are not physical disk allocation, compression or content-wide dedup claims.
+Proposed/actual release counts each listed cache path separately, even for
+content-identical copies. `copied_bytes` deduplicates all archive destinations.
+
+`peak_hot_cache` explicitly emits status=unavailable, bytes=null and a reason:
+no campaign-wide high-water telemetry is pinned. A close-time candidate total
+cannot be substituted for a historical peak. No measured peak is claimed.
 
 Verified booleans in the release list are explanatory only. They never authorize
 a release by themselves.

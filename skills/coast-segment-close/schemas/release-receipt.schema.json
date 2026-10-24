@@ -5,6 +5,32 @@
   "type": "object",
   "additionalProperties": false,
   "$defs": {
+    "metrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "archived_bytes", "proposed_release_bytes", "peak_hot_cache"],
+      "properties": {
+        "schema": {"const": "coast-close-metrics-v1"},
+        "archived_bytes": {
+          "type": "object", "additionalProperties": false,
+          "required": ["raw_equivalent", "derived", "products", "metadata"],
+          "properties": {
+            "raw_equivalent": {"type": "integer", "minimum": 0},
+            "derived": {"type": "integer", "minimum": 0},
+            "products": {"type": "integer", "minimum": 0},
+            "metadata": {"type": "integer", "minimum": 0}
+          }
+        },
+        "proposed_release_bytes": {"type": "integer", "minimum": 0},
+        "peak_hot_cache": {
+          "type": "object", "additionalProperties": false,
+          "required": ["status", "bytes", "reason"],
+          "properties": {
+            "status": {"const": "unavailable"}, "bytes": {"type": "null"},
+            "reason": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
     "ref": {
       "type": "object",
       "additionalProperties": false,
@@ -18,7 +44,8 @@
     }
   },
   "required": ["schema", "created_utc", "author_profile", "author_model", "card_id", "code_commit", "skill_commit",
-               "campaign_segment_id", "close_id", "release_list_sha256", "status", "released", "released_bytes", "failure", "remaining"],
+               "campaign_segment_id", "close_id", "release_list_sha256", "status", "released", "released_bytes", "failure", "remaining",
+               "proposed_release_bytes", "archive_metrics"],
   "properties": {
     "schema": {"const": "coast-segment-close-release-receipt-v1"},
     "created_utc": {"type": "string", "minLength": 1},
@@ -33,6 +60,8 @@
     "status": {"enum": ["complete", "partial"]},
     "released": {"type": "array", "items": {"$ref": "#/$defs/ref"}},
     "released_bytes": {"type": "integer", "minimum": 0},
+    "proposed_release_bytes": {"type": "integer", "minimum": 0},
+    "archive_metrics": {"$ref": "#/$defs/metrics"},
     "failure": {
       "anyOf": [
         {"type": "null"},

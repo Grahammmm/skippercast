@@ -10,27 +10,19 @@ and ledger locks. Then unlinks file by file (never a directory) after a
 per-file recheck, and writes release-receipt.json next to the list. A later
 unexpected failure stops and is reported as an honest partial release.
 """
-import fcntl
+
 import json
 import os
 from pathlib import Path
 import stat
+from contextlib import ExitStack
 
 from close_common import (HEADER, Refused, Resolver, absolute, canonical, coast_ledger, directory_fd, find_root,
                           finish, header, load_json, observe, parser, relative_parts, require, sha256, verify_closed,
                           release_candidates, validate_schema, _consistency, write_once)
+from close_common import archive_metrics, exclusive_lock, quiescent
 
 RECEIPT_SCHEMA = 'coast-segment-close-release-receipt-v1'
-
-
-def lock(path):
-    fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
-    try:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError as error:
-        os.close(fd)
-        raise Refused('exclusive writer lock unavailable: ' + str(path)) from error
-    return fd
 
 
 def check_candidate(queue_root, candidate):
@@ -70,6 +62,10 @@ def unlink_checked(queue_root, candidate):
                 os.close(leaf)
             named = os.stat(parts[-1], dir_fd=fd, follow_symlinks=False)
             require((named.st_dev, named.st_ino) == (st.st_dev, st.st_ino), 'directory entry changed before unlink')
+            with directory_fd(Path(queue_root).joinpath(*parts[:-1])) as current:
+                expected, actual = os.fstat(fd), os.fstat(current)
+                require((expected.st_dev, expected.st_ino) == (actual.st_dev, actual.st_ino),
+                        'admitted cache parent changed before unlink')
             os.unlink(parts[-1], dir_fd=fd)
         finally:
             os.close(fd)
@@ -88,8 +84,10 @@ def release(bindings, *, list_path, expected_sha256, execute, ledger, campaign_l
     archive_id = find_root(bindings, 'archive:')
     queue_root = Path(bindings[queue_id])
     require(queue_id == 'queue:' + listing['campaign_segment_id'], 'release list belongs to another segment')
-    held = [lock(queue_root / 'close.lock'), lock(Path(str(ledger) + '.lock')), lock(Path(str(campaign_ledger) + '.lock'))]
-    try:
+    with ExitStack() as held:
+        held.enter_context(quiescent(queue_root))
+        held.enter_context(exclusive_lock(Path(str(ledger) + '.lock')))
+        held.enter_context(exclusive_lock(Path(str(campaign_ledger) + '.lock')))
         # Fresh archive-only closure: hot queue/repo reads disabled.
         archive_only = {k: str(v) for k, v in bindings.items() if k.startswith(('archive:', 'raw:'))}
         inner = Resolver(archive_only, allowed_root_ids=set(archive_only))
@@ -109,12 +107,32 @@ def release(bindings, *, list_path, expected_sha256, execute, ledger, campaign_l
         for candidate in listing['candidates']:
             require(candidate['source_ref']['root_id'] == queue_id, 'candidate outside the segment queue root')
             check_candidate(queue_root, candidate)
-        # Preflight complete; per-file recheck + unlink.
+        # Reserve BOTH accounting destinations before any destructive action.
+        # Existing evidence is never replaced. The durable intent + per-file
+        # markers remain authoritative if the final receipt cannot be written.
+        target = Path(list_path).with_name('release-receipt.json')
+        journal = target.with_name('release-accounting')
+        with directory_fd(target.parent) as parent:
+            require(not target.exists() and not target.is_symlink(), 'release receipt already exists')
+            os.mkdir(journal.name, mode=0o700, dir_fd=parent)
+            os.fsync(parent)
+        write_once(journal / 'intent.json', dict(schema='coast-release-intent-v1', **head,
+                   release_list_sha256=expected_sha256, candidates=listing['candidates'],
+                   note='A before marker without an after marker means outcome UNKNOWN; no automatic retry.'))
+        # O_EXCL reserves the exact final output, including permissions/capacity
+        # checks. fsync the open reservation and its parent before the first unlink.
+        with directory_fd(target.parent) as parent:
+            receipt_fd = os.open(target.name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=parent)
+            held.callback(os.close, receipt_fd)
+            os.fsync(receipt_fd)
+            os.fsync(parent)
         released, failure = [], None
-        for candidate in listing['candidates']:
+        for index, candidate in enumerate(listing['candidates']):
             try:
+                write_once(journal / f'{index:06d}-before.json', dict(source_ref=candidate['source_ref'], status='pending'))
                 unlink_checked(queue_root, candidate)
                 released.append(candidate['source_ref'])
+                write_once(journal / f'{index:06d}-after.json', dict(source_ref=candidate['source_ref'], status='unlinked'))
             except (Refused, ValueError, OSError) as error:
                 failure = dict(path=candidate['source_ref']['path'], error=str(error))
                 break
@@ -122,13 +140,17 @@ def release(bindings, *, list_path, expected_sha256, execute, ledger, campaign_l
         receipt = dict(schema=RECEIPT_SCHEMA, **head, campaign_segment_id=listing['campaign_segment_id'], close_id=listing['close_id'],
                        release_list_sha256=expected_sha256, status='partial' if failure else 'complete', released=released,
                        released_bytes=sum(r['bytes'] for r in released), failure=failure,
+                       proposed_release_bytes=listing['total_bytes'], archive_metrics=archive_metrics(closed['manifest']),
                        remaining=[c['source_ref'] for c in listing['candidates'] if canonical(c['source_ref']) not in done])
-        target = Path(list_path).with_name('release-receipt.json')
-        write_once(target, receipt)
+        # Final receipt is written once to the already exclusively reserved FD.
+        # Failure here raises (never success); the journal preserves every prefix.
+        data = memoryview(canonical(receipt))
+        while data:
+            size = os.write(receipt_fd, data)
+            require(size > 0, 'short release receipt write; consult release-accounting')
+            data = data[size:]
+        os.fsync(receipt_fd)
         return receipt, target
-    finally:
-        for fd in held:
-            os.close(fd)
 
 
 def main():

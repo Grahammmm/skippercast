@@ -6,7 +6,6 @@ index, via coast_ledger.append_index; this script is the ONLY archived writer)
 -> ledger snapshots into the archive. Never deletes, never writes raw, never
 overwrites: the close-id directory must be new and empty.
 """
-import fcntl
 import json
 import os
 from pathlib import Path
@@ -16,6 +15,7 @@ from close_common import (CAMPAIGN_SNAPSHOT, HEADER, MANIFEST, SEGMENT_SNAPSHOT,
                           Resolver, absolute, canonical, check_inventory, coast_ledger, collect_envelopes, excluded,
                           find_root, finish, header, load_json, loads, locate, observe, parser, require,
                           retained_path, sha256, traverse, write_once, write_retained, GraphValidator)
+from close_common import archive_metrics, quiescent
 
 DEFAULT_RESERVE = 200 * 10**9
 
@@ -40,14 +40,12 @@ def archive(resolver, *, campaign_path, ledger, campaign_ledger, head, reserve_b
     segment_id = queue_id.split(':', 1)[1]
     require(archive_id == 'archive:' + segment_id + ':' + close_id, 'archive root id must be archive:<segment>:<close-id>')
     dest = Path(bindings[archive_id])
-    require(not any(dest.iterdir()), 'close-id archive directory must be new and empty (never overwritten)')
     require(locate(bindings, ledger)[0] == queue_id, 'segment ledger must live in the campaign segment root')
-    lock_fd = os.open(Path(bindings[queue_id]) / 'close.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
-    try:
-        try:
-            fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as error:
-            raise Refused('another close holds the campaign close lock') from error
+    with quiescent(bindings[queue_id]):
+        if (dest / MANIFEST).exists():
+            return reconcile(resolver, campaign_path=campaign_path, ledger=ledger, campaign_ledger=campaign_ledger,
+                             head=head, close_id=close_id)
+        require(not any(dest.iterdir()), 'close-id archive directory must be new and empty (never overwritten)')
         segment_raw = Path(ledger).read_bytes()
         campaign_raw = Path(campaign_ledger).read_bytes() if Path(campaign_ledger).exists() else b''
         rows = coast_ledger.verify_bytes(segment_raw)
@@ -106,27 +104,85 @@ def archive(resolver, *, campaign_path, ledger, campaign_ledger, head, reserve_b
         GraphValidator(resolver, raw_provenance=envelopes).document(manifest, root_id=archive_id)
         write_once(dest / MANIFEST, manifest)
         manifest_ref = dict(root_id=archive_id, path=MANIFEST, **{k: v for k, v in observe(dest, MANIFEST)[0].items() if k != 'path'})
-        last = selected[-1]
-        payload = dict(schema='coast-segment-ledger-v1', **head, campaign_segment_id=segment_id,
-                       coordinator_segment_id=last['coordinator_segment_id'], plan_id=last['plan_id'],
-                       plan_sha256=last['plan_sha256'], ledger_role='segment', segment_row_sha256=None, kind='archived',
-                       close_id=close_id, manifest=manifest_ref, inventory=campaign_ref,
-                       previous_segment_tip_sha256=tip(segment_raw), previous_campaign_tip_sha256=tip(campaign_raw))
-        appended = coast_ledger.append_index(ledger, campaign_ledger, payload, writer='archive_segment.py',
-                                             resolver=resolver, root_id=queue_id, raw_provenance=envelopes)
-        snapshots = {}
-        for source, relative in ((ledger, SEGMENT_SNAPSHOT), (campaign_ledger, CAMPAIGN_SNAPSHOT)):
-            raw = Path(source).read_bytes()
-            require(sha256(raw.splitlines(keepends=True)[-1]) in (appended['segment_row_sha256'], appended['campaign_row_sha256']),
-                    'ledger changed after the archived row; reconcile and use a new close-id')
+        return complete(resolver, manifest, manifest_ref, selected, envelopes, ledger, campaign_ledger)
+
+
+def complete(resolver, manifest, manifest_ref, selected, envelopes, ledger, campaign_ledger):
+    """Same writer, immutable payload; append_index already reconciles exact keys."""
+    archive_id = manifest_ref['root_id']
+    queue_id = 'queue:' + manifest['campaign_segment_id']
+    dest = resolver.bindings[archive_id]
+    last = selected[-1]
+    payload = dict(schema='coast-segment-ledger-v1', **{k: manifest[k] for k in HEADER},
+                   campaign_segment_id=manifest['campaign_segment_id'],
+                   coordinator_segment_id=last['coordinator_segment_id'], plan_id=last['plan_id'],
+                   plan_sha256=last['plan_sha256'], ledger_role='segment', segment_row_sha256=None, kind='archived',
+                   close_id=manifest['close_id'], manifest=manifest_ref, inventory=manifest['inventory'],
+                   previous_segment_tip_sha256=manifest['original_segment_tip_sha256'],
+                   previous_campaign_tip_sha256=manifest['original_campaign_tip_sha256'])
+    appended = coast_ledger.append_index(ledger, campaign_ledger, payload, writer='archive_segment.py',
+                                         resolver=resolver, root_id=queue_id, raw_provenance=envelopes)
+    snapshots = {}
+    for source, relative, digest in ((ledger, SEGMENT_SNAPSHOT, appended['segment_row_sha256']),
+                                    (campaign_ledger, CAMPAIGN_SNAPSHOT, appended['campaign_row_sha256'])):
+        raw = Path(source).read_bytes()
+        require(tip(raw) == digest, 'ledger changed after the archived row; use a new close-id')
+        target = Path(dest) / relative
+        if target.exists() or target.is_symlink():
+            ident, _ = observe(dest, relative)
+            require((ident['sha256'], ident['bytes']) == (sha256(raw), len(raw)), 'existing snapshot differs; never overwritten')
+        else:
             write_retained(dest, relative, raw)
-            snapshots[relative] = dict(root_id=archive_id, path=relative, sha256=sha256(raw), bytes=len(raw))
-        return dict(manifest=manifest_ref, archived_row_sha256=appended['segment_row_sha256'],
-                    campaign_row_sha256=appended['campaign_row_sha256'], snapshots=snapshots,
-                    retained_files=len(files), copied_bytes=need, cache_candidates=len(candidates),
-                    envelopes=envelopes, scientific_acceptance=False)
-    finally:
-        os.close(lock_fd)
+        snapshots[relative] = dict(root_id=archive_id, path=relative, sha256=sha256(raw), bytes=len(raw))
+    copied = {canonical(i['retained_ref']): i['retained_ref']['bytes'] for i in manifest['files']
+              if i['retained_ref']['root_id'] == archive_id}
+    return dict(manifest=manifest_ref, archived_row_sha256=appended['segment_row_sha256'],
+                campaign_row_sha256=appended['campaign_row_sha256'], snapshots=snapshots,
+                retained_files=len(manifest['files']), copied_bytes=sum(copied.values()),
+                cache_candidates=len(manifest['cache_candidates']), metrics=archive_metrics(manifest),
+                envelopes=envelopes, scientific_acceptance=False)
+
+
+def reconcile(resolver, *, campaign_path, ledger, campaign_ledger, head, close_id):
+    """Only manifest-durable crashes are recoverable. Earlier residue stays held.
+
+    Revalidate the immutable manifest, original graph and frozen ledger prefixes.
+    No new close, changed metadata, appended correction or differing snapshot can
+    reuse this close-id. No original evidence is overwritten or removed.
+    """
+    aid = find_root(resolver.bindings, 'archive:')
+    qid = find_root(resolver.bindings, 'queue:')
+    dest = resolver.bindings[aid]
+    ident, _ = observe(dest, MANIFEST)
+    manifest_ref = dict(root_id=aid, **ident)
+    manifest = loads(resolver.read(manifest_ref))
+    require(manifest['close_id'] == close_id and manifest['campaign_segment_id'] == qid.split(':', 1)[1],
+            'reconciliation close identity differs')
+    require({k: manifest[k] for k in HEADER} == head, 'reconciliation runtime payload differs')
+    root, relative = locate(resolver.bindings, campaign_path)
+    ident, _ = observe(resolver.bindings[root], relative)
+    require(dict(root_id=root, **ident) == manifest['inventory'], 'reconciliation inventory differs')
+    prefixes = []
+    for source, key in ((ledger, 'original_segment_tip_sha256'), (campaign_ledger, 'original_campaign_tip_sha256')):
+        raw = Path(source).read_bytes() if Path(source).exists() else b''
+        rows = coast_ledger.verify_bytes(raw)
+        if rows and rows[-1]['kind'] == 'archived' and rows[-1]['close_id'] == close_id:
+            require(rows[-1]['manifest'] == manifest_ref, 'reconciliation archived payload differs')
+            raw = b''.join(raw.splitlines(keepends=True)[:-1])
+            rows = rows[:-1]
+        require(tip(raw) == manifest[key], 'reconciliation frozen ledger prefix differs')
+        prefixes.append(rows)
+    campaign = loads(resolver.read(manifest['inventory']))
+    selected = check_inventory(resolver, campaign, prefixes[0])
+    require([r['verdict_file'] for r in selected] == manifest['selected_verdicts'], 'reconciliation verdicts differ')
+    envelopes = collect_envelopes(resolver, prefixes[0])
+    GraphValidator(resolver, raw_provenance=envelopes).document(manifest, root_id=aid)
+    def lookup(root_id, path):
+        found, _ = observe(resolver.bindings[root_id], path)
+        return dict(root_id=root_id, **found)
+    traverse(resolver, [campaign] + prefixes[0] + prefixes[1], root_id=qid,
+             envelopes=envelopes, head=head, lookup=lookup)
+    return complete(resolver, manifest, manifest_ref, selected, envelopes, ledger, campaign_ledger)
 
 
 def main():

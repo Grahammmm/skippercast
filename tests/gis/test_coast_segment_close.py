@@ -6,6 +6,7 @@ hot cache or network. The review chain is the real B1c sign-off fixture
 cached source is byte-identical to its raw mirror copy.
 """
 import copy
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -19,11 +20,20 @@ from tests.gis.test_coast_sign_off_graph import Cycle
 
 pytestmark = pytest.mark.gis
 SCRIPTS = ROOT / 'skills/coast-segment-close/scripts'
-sys.path.insert(0, str(SCRIPTS))
-import close_common  # noqa: E402
-import archive_segment  # noqa: E402
-import verify_archive  # noqa: E402
-import release_hot_cache  # noqa: E402
+def close_module(name):
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, SCRIPTS / (name + '.py'))
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+close_common = close_module('close_common')
+archive_segment = close_module('archive_segment')
+verify_archive = close_module('verify_archive')
+release_hot_cache = close_module('release_hot_cache')
 
 refs = close_common
 validator = sys.modules['validate_coast_receipt']
@@ -83,6 +93,11 @@ class Closed:
                               capture_output=True, text=True)
 
 
+@pytest.fixture(autouse=True)
+def exclusive_synthetic_campaign(tmp_path, monkeypatch):
+    monkeypatch.setenv('COAST_EXCLUSIVE_WRITER', str(tmp_path / 'queue'))
+
+
 @pytest.fixture
 def closed(tmp_path):
     return Closed(tmp_path)
@@ -124,11 +139,12 @@ def test_archive_order_manifest_and_archived_row(closed):
         validator.validate(row, f.resolver(), root_id=QUEUE)
 
 
-def test_archive_refuses_second_close_and_nonempty_destination(closed):
+def test_archive_same_writer_retry_preserves_bytes(closed):
     f = closed
-    f.archive_now()
-    with pytest.raises(close_common.Refused, match='already has an archived row|new and empty'):
-        f.archive_now()
+    first = f.archive_now()
+    before = {p: p.read_bytes() for p in f.archive.rglob('*') if p.is_file()}
+    assert f.archive_now() == first
+    assert before == {p: p.read_bytes() for p in before}
 
 
 def test_archive_refuses_unaccepted_latest_verdict(tmp_path):

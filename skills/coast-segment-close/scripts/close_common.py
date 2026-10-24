@@ -6,11 +6,15 @@ superseded), with the explicit raw-provenance envelope union collected from the
 admissions those rows pin. Nothing is found by globbing the hot tree.
 """
 import argparse
+from contextlib import contextmanager
+import fcntl
 import hashlib
 import os
 from pathlib import Path
+import sqlite3
 import stat
 import sys
+import tempfile
 
 SHARED = Path(__file__).resolve().parents[2] / 'coast-campaign-shared/scripts'
 sys.path.insert(0, str(SHARED))
@@ -176,12 +180,121 @@ def collect_envelopes(resolver, rows):
         if row['kind'] != 'verdict':
             continue
         context = loads(resolver.read(row['context']))
+        if row.get('validation_scope') == 'identity_snapshot':
+            # The shared graph validates the context/report's diagnostic edges.
+            # Its failed admission/run expectations are not scientific inputs.
+            continue
         admission = loads(resolver.read(context['admission']))
         for source in admission['sources']:
             for item in source['raw_provenance']:
                 if item['root_id'] != 'raw:campaign':
                     envelopes[canonical(item)] = item
     return [envelopes[k] for k in sorted(envelopes)]
+
+
+@contextmanager
+def exclusive_lock(path):
+    path = Path(path)
+    with directory_fd(path.parent) as parent:
+        fd = os.open(path.name, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600, dir_fd=parent)
+        try:
+            st = os.fstat(fd)
+            require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1, 'writer lock must be single-link regular')
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as error:
+                raise Refused('exclusive writer lock unavailable: ' + str(path)) from error
+            yield
+        finally:
+            os.close(fd)
+
+
+def check_store_idle(root):
+    """Read a private SQLite snapshot; never open Store or the source DB in SQLite.
+
+    The real controller lock and operator-exclusive ownership cover the copy.
+    Any leases (including expired ones) or unsafe/claimable cache consumers refuse.
+    SQLite may recover/create sidecars ONLY in the private temporary copy.
+    """
+    relative = 'var/coastal/coordinator.sqlite'
+    db = Path(root) / relative
+    if not db.exists() and not db.is_symlink():
+        return  # no Store has ever been installed (e.g. accepted held-only work)
+    observed = {}
+    with tempfile.TemporaryDirectory(prefix='coast-close-store-') as tmp:
+        for suffix in ('', '-wal', '-shm', '-journal'):
+            path = Path(str(db) + suffix)
+            if not path.exists() and not path.is_symlink():
+                continue
+            ident, st = observe(root, relative + suffix)
+            require(st.st_nlink == 1, 'Store snapshot hardlink alias')
+            ref = dict(root_id='queue:snapshot', **ident)
+            raw = Resolver({'queue:snapshot': str(root)}, allowed_root_ids={'queue:snapshot'}).read(ref)
+            (Path(tmp) / ('coordinator.sqlite' + suffix)).write_bytes(raw)
+            observed[suffix] = (ident, st.st_dev, st.st_ino, st.st_mtime_ns)
+        for suffix, expected in observed.items():
+            ident, st = observe(root, relative + suffix)
+            require((ident, st.st_dev, st.st_ino, st.st_mtime_ns) == expected, 'Store changed during quiescence preflight')
+        try:
+            db_copy = sqlite3.connect(str(Path(tmp) / 'coordinator.sqlite'))
+            try:
+                db_copy.execute('PRAGMA query_only=ON')
+                require(not db_copy.execute('SELECT 1 FROM leases LIMIT 1').fetchone(),
+                        'leases present (expired or unexpired); attended recovery required')
+                for state, stage in db_copy.execute('SELECT state, stage FROM jobs'):
+                    require(state in {'queued', 'done', 'held', 'failed_terminal', 'cancelled'},
+                            'active or unsafe cache consumer state: ' + str(state))
+                    require(state != 'queued' or stage == 'render', 'pending admission/cache consumer: ' + str(stage))
+            finally:
+                db_copy.close()
+        except sqlite3.Error as error:
+            raise Refused('unclassifiable Store snapshot: ' + str(error)) from error
+
+
+@contextmanager
+def quiescent(root):
+    """Existing PC9 ownership assertion excludes other writers/admissions.
+
+    Locks alone cannot exclude uncooperative writers; the operator must supply
+    the SAME assertion as bridge_run. Never infer exclusive ownership from idle.
+    """
+    root = Path(root)
+    require(os.environ.get('COAST_EXCLUSIVE_WRITER') == str(root),
+            'current operator exclusive writer assertion absent (controllers/admissions/consumers)')
+    controller = root / 'var/coastal'
+    with directory_fd(root) as top:
+        parent = os.dup(top)
+        try:
+            for part in ('var', 'coastal'):
+                try:
+                    os.mkdir(part, 0o700, dir_fd=parent)
+                except FileExistsError:
+                    pass
+                child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+                os.close(parent)
+                parent = child
+        finally:
+            os.close(parent)
+    with exclusive_lock(controller / 'coordinator.lock'), exclusive_lock(root / 'close.lock'):
+        check_store_idle(root)
+        yield
+
+
+def archive_metrics(manifest):
+    """Logical unique-byte categories, not physical disk allocation or throughput."""
+    buckets = {k: {} for k in ('raw_equivalent', 'derived', 'products', 'metadata')}
+    for item in manifest['files']:
+        src, dst = item['source_ref'], item['retained_ref']
+        if src['path'].startswith('cache/'):
+            category = 'raw_equivalent' if dst['root_id'].startswith('raw:') else 'derived'
+        else:
+            category = 'products' if src['path'].startswith('var/coastal/jobs/') else 'metadata'
+        buckets[category][(dst['root_id'], dst['path'], dst['sha256'], dst['bytes'])] = dst['bytes']
+    return dict(schema='coast-close-metrics-v1',
+                archived_bytes={k: sum(v.values()) for k, v in buckets.items()},
+                proposed_release_bytes=sum(c['size'] for c in manifest['cache_candidates']),
+                peak_hot_cache=dict(status='unavailable', bytes=None,
+                                    reason='No campaign-wide high-water telemetry is pinned; close-time candidates are not a historical peak.'))
 
 
 def selected_verdicts(rows):
@@ -259,16 +372,31 @@ def retained_path(ref):
 
 
 def write_retained(archive_root, relative, raw):
-    target = Path(archive_root) / relative
-    target.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-    try:
-        view = memoryview(raw)
-        while view:
-            view = view[os.write(fd, view):]
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+    parts = relative_parts(relative)
+    with directory_fd(archive_root) as top:
+        parent = os.dup(top)
+        try:
+            for part in parts[:-1]:
+                try:
+                    os.mkdir(part, 0o700, dir_fd=parent)
+                except FileExistsError:
+                    pass
+                child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent)
+                os.close(parent)
+                parent = child
+            fd = os.open(parts[-1], os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=parent)
+            try:
+                view = memoryview(raw)
+                while view:
+                    size = os.write(fd, view)
+                    require(size > 0, 'short retained-file write')
+                    view = view[size:]
+                os.fsync(fd)
+                os.fsync(parent)
+            finally:
+                os.close(fd)
+        finally:
+            os.close(parent)
 
 
 def archive_ref(inner, archive_id, relative):
