@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "slug": "cambria-san-simeon",
+  "bbox": [
+    -121.95,
+    35.45,
+    -120.95,
+    35.66
+  ],
+  "depth_target_ft": 300,
+  "sources": [
+    "usgs-san-simeon",
+    "noaa-bag",
+    "csumb-cambria"
+  ],
+  "source_review_status": {
+    "usgs-san-simeon": "approved",
+    "noaa-bag": "candidate",
+    "csumb-cambria": "restricted"
+  },
+  "datum_policy": {
+    "mode": "preserve-source-datum",
+    "vertical_datum_by_source": {
+      "usgs-san-simeon": "unknown",
+      "noaa-bag": "unknown",
+      "csumb-cambria": "unknown"
+    }
+  },
+  "output_root": "runs/coast-recipes/cambria-san-simeon",
+  "cache_budget_bytes": 25000000000,
+  "not_for_navigation": true
+}
