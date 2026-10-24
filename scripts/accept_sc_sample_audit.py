@@ -293,6 +293,19 @@ def mutation_controls(module):
     finally:
         audit._build_groups, audit._check_complete = original_build, original_check
     control('positive-after-restore', {'outcome': 'passed'}, targets)
+
+    # Isolated control for the trusted sample-hash check (rule-29 disposition, option A).
+    original_hash_check = audit.check_sample_hash
+    hash_target = ['test_a3_cli_sample_hash_mismatch_invalid_before_parse_or_write']
+    control('sample-hash/positive-before', {'outcome': 'passed'}, hash_target)
+    try:
+        audit.check_sample_hash = lambda raw, expected: audit.hashlib.sha256(raw).hexdigest()
+        control('sample-hash/comparison-disabled',
+                {'outcome': 'failed', 'error_type': 'AssertionError', 'error_reason': None,
+                 'message': 'hash mismatch must be INVALID'}, hash_target)
+    finally:
+        audit.check_sample_hash = original_hash_check
+    control('sample-hash/positive-after-restore', {'outcome': 'passed'}, hash_target)
     return controls
 
 

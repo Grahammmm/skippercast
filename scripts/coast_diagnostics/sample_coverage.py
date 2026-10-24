@@ -7,8 +7,12 @@ tampered document; it never emits a newly chosen sample, applies quotas or minim
 resamples, or calls a model. Composition is not source quality, coverage, eligibility
 proof or scientific acceptance. See docs/engineering/sc_sample_audit.md.
 
-CLI: sample_coverage.py --sample FILE --plan-sha256 HEX --bridge-sha256 HEX --out NEWFILE
-Exit 0 report written; 3 INVALID document/bindings; 4 refused path/size/output; 2 usage.
+CLI: sample_coverage.py --sample FILE --sample-sha256 HEX --plan-sha256 HEX --bridge-sha256 HEX
+     --out NEWFILE
+--sample-sha256 is the trusted expected digest of the sample file bytes; it is checked
+after the bounded read and before any parse or write (rule-29 disposition, option A).
+Exit 0 report written; 3 INVALID document/bindings/sample hash; 4 refused path/size/output;
+2 usage.
 """
 import argparse
 import hashlib
@@ -386,18 +390,32 @@ def write_new(path, data):
     return absolute
 
 
+def check_sample_hash(raw, expected_sha256):
+    """Compare the bounded bytes read against the trusted expected digest before any parse."""
+    actual = hashlib.sha256(raw).hexdigest()
+    if actual != expected_sha256:
+        raise SampleAuditInvalid('sample_hash_mismatch', 'supplied %s, read %s' % (expected_sha256, actual))
+    return actual
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description='coast-sample-v1 composition report (read-only)')
     parser.add_argument('--sample', required=True, help='coast-sample-v1 output JSON file')
+    parser.add_argument('--sample-sha256', required=True,
+                        help='trusted expected SHA256 (lowercase hex) of the sample file bytes')
     parser.add_argument('--plan-sha256', required=True)
     parser.add_argument('--bridge-sha256', required=True)
     parser.add_argument('--out', required=True, help='new report file; never overwritten')
     args = parser.parse_args(argv)
     try:
+        if not _is_sha256(args.sample_sha256):
+            raise SampleAuditInvalid('invalid_sample_sha256', 'must be 64 lowercase hex characters')
         raw = read_bounded(args.sample)
+        digest = check_sample_hash(raw, args.sample_sha256)
         document = _parse_json(raw)
         report = audit_sample(document, args.plan_sha256, args.bridge_sha256)
-        report['sample_file_sha256'] = hashlib.sha256(raw).hexdigest()
+        report['sample_file_sha256'] = digest
+        report['sample_file_sha256_check'] = 'MATCHED_SUPPLIED_EXPECTED'
         data = serialize_report(report)
         write_new(args.out, data)
     except SampleAuditInvalid as error:

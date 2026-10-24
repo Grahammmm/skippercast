@@ -35,7 +35,7 @@ There are no quotas, per-source minimums, resampling or model calls.
 ## Usage
 
     python3 scripts/coast_diagnostics/sample_coverage.py --sample SAMPLE.json \
-        --plan-sha256 HEX --bridge-sha256 HEX --out NEW_REPORT.json
+        --sample-sha256 HEX --plan-sha256 HEX --bridge-sha256 HEX --out NEW_REPORT.json
 
 Python API: `audit_sample(sample_document, plan_sha256, bridge_sha256)` returns the
 report dict or raises `SampleAuditInvalid` with a `reason` code.
@@ -43,7 +43,8 @@ report dict or raises `SampleAuditInvalid` with a `reason` code.
 Exit codes: 0 report written; 3 INVALID (for example `missing_field`, `duplicate_key`,
 `malformed_key`, `method_mismatch`, `seed_mismatch`, `target_mismatch`, `size_mismatch`,
 `selected_not_eligible`, `selected_mismatch`, `eligible_not_in_map_done`,
-`row_cap_exceeded`, `bad_json` including numbers beyond the interpreter's integer
+`row_cap_exceeded`, `invalid_sample_sha256`, `sample_hash_mismatch`, `bad_json`
+including numbers beyond the interpreter's integer
 string-conversion limit, `bad_type` including non-finite or non-integer counts);
 4 refused (symlink or `..` in the path, non-regular input, oversized file, existing
 output); 2 usage error.
@@ -60,10 +61,15 @@ created exclusively (never overwritten) with deterministic JSON; non-finite numb
 refused. The interpreter's global integer-digit limit is never raised. These limits do
 not change any coast run, download or model cap, or `coast_sample.py` itself.
 
-Open admission item: the frozen CLI has no trusted expected-hash argument for the
-sample file. The report records the observed `sample_file_sha256` and canonical
-`input_sha256`; recording is not verification, and the disposition of the brief's
-expected-hash clause belongs to the card's admission owner.
+Trusted sample hash (operator rule-29 checkpoint disposition 2026-10-24 15:30 PDT,
+option A): the CLI requires `--sample-sha256`, the caller's trusted expected SHA256 of
+the sample file bytes. It must be 64 lowercase hex characters (otherwise INVALID
+`invalid_sample_sha256` before anything is read). After the bounded read and before
+any parse or write, the digest of the bytes read is compared with it; a mismatch is
+INVALID `sample_hash_mismatch` (exit 3) with inputs and existing outputs unchanged and
+no output created. The report records `sample_file_sha256` and
+`sample_file_sha256_check: MATCHED_SUPPLIED_EXPECTED`. The Python API
+`audit_sample(sample_document, ...)` takes an already parsed document and is unchanged.
 
 ## Tests
 
@@ -74,4 +80,5 @@ them offline with the installed `python3` (`--suite focused|contract|negative --
 DIR`). The runner installs network, subprocess and model-import sentinels, keeps
 temporary files inside a new run directory, records hashes and per-test results, and for
 the negative suite proves that an in-memory double omitting the zero-selected group is
-caught. A passing run is review-required local evidence, not full CI.
+caught and that disabling the sample-hash comparison is caught. A passing run is
+review-required local evidence, not full CI.

@@ -81,6 +81,25 @@ def recording_os():
         audit.os = original
 
 
+def trusted_sha256(path):
+    """Test-side expected digest of a staged sample (zeros when it is not a readable file)."""
+    try:
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    except OSError:
+        return '0' * 64
+
+
+def cli_main(argv):
+    """audit.main with the required --sample-sha256 supplied as the test's trusted digest.
+
+    Path and content refusals are therefore tested independently of the hash check.
+    """
+    argv = list(argv)
+    if '--sample-sha256' not in argv:
+        argv += ['--sample-sha256', trusted_sha256(argv[argv.index('--sample') + 1])]
+    return audit.main(argv)
+
+
 def raises_refused(reason, fn, *args, **kwargs):
     try:
         fn(*args, **kwargs)
@@ -374,7 +393,7 @@ def test_a2_cli_round_trip_writes_deterministic_report():
         outs = []
         for name in ('one.json', 'two.json'):
             out = Path(tmp) / name
-            status = audit.main(['--sample', str(sample_path), '--plan-sha256', fixture['plan_sha256'],
+            status = cli_main(['--sample', str(sample_path), '--plan-sha256', fixture['plan_sha256'],
                                  '--bridge-sha256', fixture['bridge_sha256'], '--out', str(out)])
             assert status == 0
             outs.append(out.read_bytes())
@@ -478,7 +497,7 @@ def _cli(tmp, document_bytes, out_name='report.json', plan=PLAN, bridge=BRIDGE):
     if document_bytes is not None:
         sample_path.write_bytes(document_bytes)
     out = Path(tmp) / out_name
-    status = audit.main(['--sample', str(sample_path), '--plan-sha256', plan,
+    status = cli_main(['--sample', str(sample_path), '--plan-sha256', plan,
                          '--bridge-sha256', bridge, '--out', str(out)])
     return status, sample_path, out
 
@@ -509,20 +528,20 @@ def test_a3_cli_refusals_preserve_inputs_and_outputs():
         # Symlinked input and symlinked output parent refused.
         link = Path(tmp) / 'link.json'
         os.symlink(sample_path, link)
-        status = audit.main(['--sample', str(link), '--plan-sha256', plan, '--bridge-sha256', bridge,
+        status = cli_main(['--sample', str(link), '--plan-sha256', plan, '--bridge-sha256', bridge,
                              '--out', str(Path(tmp) / 'via-link.json')])
         assert status == audit.EXIT_REFUSED and not (Path(tmp) / 'via-link.json').exists()
         real_dir = Path(tmp) / 'real'
         real_dir.mkdir()
         os.symlink(real_dir, Path(tmp) / 'dirlink')
-        status = audit.main(['--sample', str(sample_path), '--plan-sha256', plan, '--bridge-sha256', bridge,
+        status = cli_main(['--sample', str(sample_path), '--plan-sha256', plan, '--bridge-sha256', bridge,
                              '--out', str(Path(tmp) / 'dirlink' / 'r.json')])
         assert status == audit.EXIT_REFUSED and list(real_dir.iterdir()) == []
         # Special file (directory as input) refused; missing input refused.
-        status = audit.main(['--sample', str(real_dir), '--plan-sha256', plan, '--bridge-sha256', bridge,
+        status = cli_main(['--sample', str(real_dir), '--plan-sha256', plan, '--bridge-sha256', bridge,
                              '--out', str(Path(tmp) / 'dir-in.json')])
         assert status == audit.EXIT_REFUSED
-        status = audit.main(['--sample', str(Path(tmp) / 'absent.json'), '--plan-sha256', plan,
+        status = cli_main(['--sample', str(Path(tmp) / 'absent.json'), '--plan-sha256', plan,
                              '--bridge-sha256', bridge, '--out', str(Path(tmp) / 'absent-out.json')])
         assert status == audit.EXIT_REFUSED
         assert sample_path.read_bytes() == good
@@ -631,7 +650,7 @@ def test_a3_cli_symlink_plus_dotdot_paths_exit_refused():
         for argv in (argv_in, argv_out):
             err = io.StringIO()
             with contextlib.redirect_stderr(err):
-                status = audit.main(argv)
+                status = cli_main(argv)
             assert status == audit.EXIT_REFUSED, (argv, err.getvalue())
             assert err.getvalue().startswith('REFUSED ') and 'Traceback' not in err.getvalue()
         assert tree_snapshot(tmp) == before
@@ -689,7 +708,7 @@ def test_a3_cli_overlimit_or_nonfinite_numbers_invalid_without_traceback():
             for out in (existing, tmp / ('fresh-%d.json' % index)):
                 err = io.StringIO()
                 with contextlib.redirect_stderr(err):
-                    status = audit.main(['--sample', str(sample), '--plan-sha256', plan,
+                    status = cli_main(['--sample', str(sample), '--plan-sha256', plan,
                                          '--bridge-sha256', bridge, '--out', str(out)])
                 assert status == audit.EXIT_INVALID == 3, (literal[:20], status, err.getvalue()[:300])
                 assert err.getvalue().startswith('INVALID ') and 'Traceback' not in err.getvalue()
@@ -699,7 +718,7 @@ def test_a3_cli_overlimit_or_nonfinite_numbers_invalid_without_traceback():
         # Valid-number positive control through the same path.
         good = tmp / 'good.json'
         good.write_bytes(_numeric_document(str(document['target'])))
-        assert audit.main(['--sample', str(good), '--plan-sha256', plan, '--bridge-sha256', bridge,
+        assert cli_main(['--sample', str(good), '--plan-sha256', plan, '--bridge-sha256', bridge,
                            '--out', str(tmp / 'good-report.json')]) == audit.EXIT_OK
         assert json.loads((tmp / 'good-report.json').read_bytes())['sample']['target'] == document['target']
     if digits_limit is not None:
@@ -711,3 +730,83 @@ def test_a3_api_overlimit_integer_invalid():
     raises_invalid('bad_type', audit.audit_sample, dict(document, target=10 ** 5000),
                    fixture['plan_sha256'], fixture['bridge_sha256'])
     raises_invalid('bad_json', audit._parse_json, b'{"target": ' + b'7' * 5000 + b'}')
+
+
+# ------------------------------------- A3 trusted sample-file hash (rule-29 disposition, option A)
+
+
+def _hash_setup(tmp):
+    fixture, document = focused_document()
+    raw = json.dumps(document).encode()
+    sample = tmp / 'sample.json'
+    sample.write_bytes(raw)
+    base = ['--sample', str(sample), '--plan-sha256', fixture['plan_sha256'],
+            '--bridge-sha256', fixture['bridge_sha256']]
+    return raw, sample, base, hashlib.sha256(raw).hexdigest()
+
+
+def test_a3_cli_sample_hash_is_required():
+    with real_tmpdir() as tmp:
+        _, sample, base, _ = _hash_setup(tmp)
+        out = tmp / 'r.json'
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            try:
+                audit.main(base + ['--out', str(out)])
+            except SystemExit as error:
+                assert error.code == 2, error.code
+            else:
+                raise AssertionError('--sample-sha256 must be a required argument')
+        assert '--sample-sha256' in err.getvalue()
+        assert not out.exists() and tree_snapshot(tmp) == ['sample.json']
+
+
+def test_a3_cli_sample_hash_malformed_invalid_before_any_read():
+    with real_tmpdir() as tmp:
+        raw, sample, base, digest = _hash_setup(tmp)
+        out = tmp / 'r.json'
+        for bad in (digest.upper(), digest[:-1], digest + '0', 'g' * 64, '', ' ' + digest[1:]):
+            err = io.StringIO()
+            with recording_os() as double, contextlib.redirect_stderr(err):
+                status = audit.main(base + ['--sample-sha256', bad, '--out', str(out)])
+            assert status == audit.EXIT_INVALID, (bad, status, err.getvalue())
+            assert err.getvalue().startswith('INVALID invalid_sample_sha256'), err.getvalue()
+            assert double.opened == [] and double.lstated == [], 'nothing may be read for a bad digest'
+        assert sample.read_bytes() == raw and not out.exists()
+
+
+def test_a3_cli_sample_hash_mismatch_invalid_before_parse_or_write():
+    with real_tmpdir() as tmp:
+        raw, sample, base, digest = _hash_setup(tmp)
+        existing = tmp / 'existing.json'
+        existing.write_bytes(b'prior report\n')
+        parsed = []
+        original = audit._parse_json
+
+        def recording_parse(data):
+            parsed.append(data)
+            return original(data)
+
+        audit._parse_json = recording_parse
+        try:
+            for supplied in (h('some other sample'), hashlib.sha256(raw + b' ').hexdigest()):
+                for out in (existing, tmp / 'fresh.json'):
+                    err = io.StringIO()
+                    with contextlib.redirect_stderr(err):
+                        status = audit.main(base + ['--sample-sha256', supplied, '--out', str(out)])
+                    assert status == audit.EXIT_INVALID == 3, 'hash mismatch must be INVALID'
+                    assert err.getvalue().startswith('INVALID sample_hash_mismatch'), err.getvalue()
+                    assert 'Traceback' not in err.getvalue()
+            assert parsed == [], 'a mismatched sample must be rejected before parsing'
+            assert sample.read_bytes() == raw and existing.read_bytes() == b'prior report\n'
+            assert not (tmp / 'fresh.json').exists()
+            # Matching-hash positive control through the same CLI path.
+            matched = tmp / 'matched.json'
+            assert audit.main(base + ['--sample-sha256', digest, '--out', str(matched)]) == audit.EXIT_OK
+            assert parsed == [raw]
+        finally:
+            audit._parse_json = original
+        report = json.loads(matched.read_bytes())
+        assert report['sample_file_sha256'] == digest
+        assert report['sample_file_sha256_check'] == 'MATCHED_SUPPLIED_EXPECTED'
+        assert tree_snapshot(tmp) == ['existing.json', 'matched.json', 'sample.json']
