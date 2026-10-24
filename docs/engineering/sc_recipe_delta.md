@@ -40,6 +40,23 @@ Strings inside a JSON document never select a file. The only metadata compared i
 what the validator actually read, so a cache, payload or unstaged path is never
 traversed.
 
+The staged schema is checked before the validator hands it to jsonschema, because
+jsonschema's reference resolver does not go through the bounded reader (it would
+retrieve an unknown URI with urllib, for http(s) and file alike). Only
+document-internal references are admitted: every `$ref`, `$dynamicRef` and
+`$recursiveRef` must be a string starting with `#`; `$id` and `$schema` may appear only
+at the schema root, and `$schema` only as the 2020-12 dialect. Anything else (an
+http(s), `file:` or relative reference, a nested `$id` that rebases resolution, another
+dialect) is INVALID before any resolution is attempted. The check looks at those keys
+wherever they occur, so an unusual but harmless schema may be refused; that is the
+intended fail-closed direction. The frozen schema (root `$id`, `#/$defs/...` references)
+is accepted.
+
+Imports made by the tool never write bytecode: the validator is loaded, and each side is
+validated, with `sys.dont_write_bytecode` temporarily set (the caller's setting is
+restored), and the standalone CLI turns it on for its whole process before loading the
+validator.
+
 ## Report
 
 The logical object compared on each side is
@@ -76,11 +93,17 @@ Serialisation is deterministic: sorted keys, two-space indent, ASCII, and no non
 
 ## Output and exit codes
 
-* Exit 0: one new report file is created with `O_CREAT|O_EXCL|O_NOFOLLOW`. A one-line JSON
-  summary with the report sha256 goes to stdout.
+* Exit 0: one new, complete report file is published. The bytes are first written to a
+  new exclusive `.<name>.incomplete-<pid>-<random>` file beside the target, fsynced and
+  closed, and only then hard-linked to the requested name (`link` never replaces an
+  existing name). The temporary name, created by that same call, is then removed. A
+  one-line JSON summary with the report sha256 goes to stdout.
 * Exit 2 (INVALID): any validation failure, duplicate key, non-finite number, unsafe or
-  oversized input, cap breach or refused output. No report is written, and a JSON error
-  object goes to stderr.
+  oversized input, refused schema reference, cap breach, refused output or report I/O
+  failure (write, fsync, close or publish). No report is published under the requested
+  name, and a JSON error object goes to stderr. If the failure happened after the
+  temporary file was created, its incomplete bytes are kept under that distinct
+  `.incomplete-` name as failure evidence, and the error names it.
 
 The output must not already exist, and its parent directory must already exist. Its
 ancestry must contain no symlinks. It may not lie inside either metadata snapshot or the

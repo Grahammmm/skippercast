@@ -15,9 +15,10 @@ CLI:
       --left-metadata LEFT_ROOT --right-recipe R.json --right-metadata RIGHT_ROOT \\
       --workspace-root WS --out NEW_REPORT.json
 
-Exit 0 writes one new report (never overwrites). Exit 2 = INVALID (any validation
-failure, duplicate JSON key, non-finite number, unsafe path, cap, or refused output):
-no report is written, and a JSON error goes to stderr. A report is REVIEW REQUIRED
+Exit 0 publishes one new, complete report (never overwrites). Exit 2 = INVALID (any
+validation failure, duplicate JSON key, non-finite number, unsafe path, refused schema
+reference, cap, refused output or report I/O failure): nothing is published under the
+requested name, and a JSON error goes to stderr. A report is REVIEW REQUIRED
 only: semantic_approval and execution_allowed are always false. v1 admits no new
 slug, makes no compatibility judgement, computes no budget and changes no source
 permission.
@@ -64,6 +65,17 @@ class RecipeDeltaError(ValueError):
     """INVALID: no success report may be produced."""
 
 
+@contextlib.contextmanager
+def _no_bytecode():
+    """Imports made by this read-only tool never write __pycache__; the caller's setting returns."""
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        yield
+    finally:
+        sys.dont_write_bytecode = previous
+
+
 def _load_validator():
     """The validate_recipe.py next to this checkout (or relocated copy); no sys.path search."""
     existing = sys.modules.get('validate_recipe')
@@ -79,13 +91,17 @@ def _load_validator():
     module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
     try:
-        spec.loader.exec_module(module)
+        with _no_bytecode():
+            spec.loader.exec_module(module)
     except BaseException:
         sys.modules.pop(name, None)
         raise
     return module
 
 
+if __name__ == '__main__':
+    # Standalone CLI: no import made by this process (validator, lazy jsonschema) writes bytecode.
+    sys.dont_write_bytecode = True
 validator = _load_validator()
 
 
@@ -198,6 +214,49 @@ def _metadata_relative(root, path):
     return relative
 
 
+SCHEMA_RELATIVE = 'schemas/coast-recipe-v1.schema.json'
+SCHEMA_DIALECT = 'https://json-schema.org/draft/2020-12/schema'
+_REFERENCE_KEYS = ('$ref', '$dynamicRef', '$recursiveRef')
+
+
+def _closed_schema(schema, label):
+    """Fail closed before jsonschema can resolve anything outside this one staged document.
+
+    The validator hands the staged schema to jsonschema, whose reference resolver does
+    not go through read_json: an unknown URI would be retrieved (urllib for http(s) and
+    file). So only document-internal references are admitted: every $ref/$dynamicRef/
+    $recursiveRef must be a string fragment beginning with '#'; $id is allowed only at the
+    root (it then just names the root resource, so '#...' still resolves inside it);
+    $schema only at the root and only as the 2020-12 dialect the validator uses. Keys are
+    checked wherever they occur (including under properties/const/default), which may
+    refuse an unusual but harmless schema; that is the intended fail-closed direction.
+    """
+    def refuse(pointer, why):
+        raise RecipeDeltaError(label + ': schema reference refused at ' + (pointer or '/') + ': ' + why)
+
+    if not isinstance(schema, dict):
+        refuse('', 'schema root must be an object')
+    if '$schema' in schema and schema['$schema'] != SCHEMA_DIALECT:
+        refuse('/$schema', 'only the 2020-12 dialect is admitted')
+    if '$id' in schema and not isinstance(schema['$id'], str):
+        refuse('/$id', 'root $id must be a string')
+
+    def walk(value, pointer, root):
+        if isinstance(value, dict):
+            for key, item in value.items():
+                here = pointer + '/' + _escape(key)
+                if key in _REFERENCE_KEYS and not (isinstance(item, str) and item.startswith('#')):
+                    refuse(here, 'only document-internal fragment references are admitted')
+                if not root and key in ('$id', '$schema'):
+                    refuse(here, 'nested ' + key + ' would change reference resolution')
+                walk(item, here, False)
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                walk(item, pointer + '/' + str(index), False)
+
+    walk(schema, '', True)
+
+
 # ------------------------------------------------------------------ one side
 
 def _validate_side(recipe_path, metadata_root, workspace_root, budget, side):
@@ -223,10 +282,12 @@ def _validate_side(recipe_path, metadata_root, workspace_root, budget, side):
             raise RecipeDeltaError(side + ' missing metadata file: ' + relative) from error
         data, digest = _read_bounded(target, budget, side + ' metadata ' + relative)
         parsed = _parse(data, side + ' metadata ' + relative)
+        if relative == SCHEMA_RELATIVE:
+            _closed_schema(parsed, side + ' metadata ' + relative)   # before jsonschema sees it
         files[relative] = (digest, parsed)
         return copy.deepcopy(parsed)
 
-    with _LOCK, _replaced(validator, 'read_json', recording_read_json):
+    with _LOCK, _no_bytecode(), _replaced(validator, 'read_json', recording_read_json):
         result = validator.validate_recipe(copy.deepcopy(document), workspace_root=Path(workspace_root),
                                            metadata_root=root)
     if not isinstance(result, dict) or result.get('valid') is not True:
@@ -358,26 +419,54 @@ def _check_output(out, protected_roots):
 
 
 def write_report(report, out, *, protected_roots):
-    """Create exactly one new bounded file; refuse symlinks, overwrite and protected roots."""
+    """Publish exactly one new, complete, bounded file; never overwrite or leave a partial final name.
+
+    Bytes go to a new exclusive '.<name>.incomplete-<pid>-<random>' file beside the
+    target, are fully written, fsynced and closed, and only then hard-linked to the final
+    name (link() refuses an existing name, so a concurrent writer is never overwritten).
+    The temporary name, created by this call, is then unlinked. On any write, fsync,
+    close or publish failure the final name is untouched, the incomplete bytes are kept
+    under their distinct name as failure evidence (named in the error) and INVALID is raised.
+    """
     data = serialize_report(report)
     if len(data) > MAX_OUTPUT_BYTES:
         raise RecipeDeltaError('report exceeds the output cap')
     out = _check_output(out, protected_roots)
+    temporary = out.parent / ('.' + out.name + '.incomplete-' + str(os.getpid()) + '-' + os.urandom(4).hex())
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_CLOEXEC', 0)
     try:
-        descriptor = os.open(out, flags, 0o644)
-    except FileExistsError as error:
-        raise RecipeDeltaError('output exists; reports are never overwritten') from error
+        descriptor = os.open(temporary, flags, 0o644)
     except OSError as error:
         raise RecipeDeltaError('output cannot be created safely (' + error.__class__.__name__ + ')') from error
+    failure = None
     try:
         view = memoryview(data)
         while view:
             written = os.write(descriptor, view)
+            if written <= 0:
+                raise OSError('write made no progress')
             view = view[written:]
         os.fsync(descriptor)
-    finally:
+    except OSError as error:
+        failure = error
+    try:
         os.close(descriptor)
+    except OSError as error:
+        failure = failure or error
+    if failure is not None:
+        raise RecipeDeltaError('report write failed (' + failure.__class__.__name__ + ': ' + str(failure)
+                               + '); final name not published; incomplete bytes retained as '
+                               + temporary.name) from failure
+    try:
+        os.link(temporary, out)   # our own fresh regular file; link() never replaces an existing name
+    except FileExistsError as error:
+        raise RecipeDeltaError('output exists; reports are never overwritten; unpublished report retained as '
+                               + temporary.name) from error
+    except OSError as error:
+        raise RecipeDeltaError('report write failed (publish ' + error.__class__.__name__
+                               + '); final name not published; report retained as ' + temporary.name) from error
+    with contextlib.suppress(OSError):
+        os.unlink(temporary)   # only the temporary name this call created; the final link remains
     return hashlib.sha256(data).hexdigest()
 
 
@@ -399,7 +488,7 @@ def main(argv=None):
         report = compare_recipes(args.left_recipe, args.right_recipe, args.left_metadata,
                                  args.right_metadata, args.workspace_root)
         digest = write_report(report, args.out, protected_roots=protected)
-    except RecipeDeltaError as error:
+    except (RecipeDeltaError, OSError) as error:   # any residual I/O failure is INVALID, never a traceback
         print(_invalid(error), file=sys.stderr)
         return EXIT_INVALID
     print(json.dumps({'status': report['status'], 'change_count': report['change_count'],

@@ -7,16 +7,20 @@ Everything is offline: no download, recipe execution, subprocess or model call.
 A1 = focused rows, A2 = producer contract, A3 = negative and preservation.
 """
 import ast
+import errno
 import fnmatch
 import hashlib
 import http.client
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
+import runpy
 import shutil
 import socket
 import subprocess
+import sys
 import tomllib
 import urllib.request
 
@@ -328,6 +332,49 @@ def test_a2_new_test_module_is_discovered_by_configured_patterns():
     assert 'gis' not in here.parts  # collected by both the GIS and the no-GIS CI jobs
 
 
+def bytecode_files(root):
+    return sorted(p.relative_to(root).as_posix() for p in root.rglob('*')
+                  if p.name == '__pycache__' or p.suffix == '.pyc')
+
+
+@pytest.mark.parametrize('mode', ['cli-success', 'cli-invalid', 'library'])
+def test_a2_standalone_relocated_tool_writes_no_bytecode(mode, tmp_path, workspace, monkeypatch, capsys):
+    """Fresh relocated two-file source tree; NOT masked by the runner's bytecode suppression."""
+    relocated = tmp_path / 'fresh-relocated-repo'
+    for name in ('validate_recipe.py', 'scripts/coast_diagnostics/recipe_delta.py'):
+        destination = relocated / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / name, destination)
+    script = relocated / 'scripts/coast_diagnostics/recipe_delta.py'
+    data = tmp_path / 'data'
+    monkeypatch.setattr(sys, 'dont_write_bytecode', False)
+    if mode == 'library':
+        namespace = runpy.run_path(str(script), run_name='sc_recipe_delta_fresh_library')
+        assert Path(namespace['validator'].__file__) == relocated / 'validate_recipe.py'
+        assert sys.dont_write_bytecode is False          # a library caller's setting is restored
+        assert_changed_rows(namespace['compare_recipes'](*pair(data), workspace))
+        assert sys.dont_write_bytecode is False
+    else:
+        paths = pair(data, right=('mismatch', 'base')) if mode == 'cli-invalid' else pair(data)
+        out = tmp_path / 'reports' / 'delta.json'
+        out.parent.mkdir()
+        monkeypatch.setattr(sys, 'argv', [
+            str(script), '--left-recipe', str(paths[0]), '--left-metadata', str(paths[2]),
+            '--right-recipe', str(paths[1]), '--right-metadata', str(paths[3]),
+            '--workspace-root', str(workspace), '--out', str(out)])
+        with pytest.raises(SystemExit) as raised:
+            runpy.run_path(str(script), run_name='__main__')     # standalone entry point, in process
+        captured = capsys.readouterr()
+        if mode == 'cli-invalid':
+            assert raised.value.code == 2 and not out.exists()
+            assert json.loads(captured.err)['status'] == 'INVALID'
+        else:
+            assert raised.value.code == 0, captured.err
+            assert_changed_rows(json.loads(out.read_text()))
+    assert bytecode_files(relocated) == []
+    assert not list(workspace.iterdir())
+
+
 # ---------------------------------------------------------------- A3 negative
 
 def _write(path, text):
@@ -589,6 +636,185 @@ def test_a3_size_row_and_output_caps(cap, tmp_path, workspace, monkeypatch, caps
         monkeypatch.setattr(delta, 'MAX_OUTPUT_BYTES', size)
         code, captured = cli(paths, workspace, out, capsys)
         assert code == 0 and len(out.read_bytes()) == size          # exactly at the cap: written
+
+
+SCHEMA_POINTER = '/metadata/schemas~1coast-recipe-v1.schema.json'
+
+
+def _append_all_of(subschema):
+    def mutate(schema):
+        schema.setdefault('allOf', []).append(subschema)
+    return mutate
+
+
+def _rebase_root(schema):
+    schema['$id'] = 'file:///inert-root/coast-recipe-v1.schema.json'
+    schema.setdefault('allOf', []).append({'$ref': 'unstaged-sibling.json'})
+
+
+def _root_dialect(schema):
+    schema['$schema'] = 'https://example.invalid/dialect'
+
+
+# Every case could select a resource outside the staged, pinned snapshot (or rebases
+# resolution so that it could). The tool must refuse BEFORE jsonschema resolves it.
+EXTERNAL_REFERENCE_CASES = {
+    'https-ref': _append_all_of({'$ref': 'https://example.invalid/sc-delta-schema.json'}),
+    'http-ref': _append_all_of({'$ref': 'http://example.invalid/sc-delta-schema.json#/x'}),
+    'file-ref': _append_all_of({'$ref': 'file:///inert-unstaged-schema.json'}),
+    'relative-ref': _append_all_of({'$ref': 'unstaged-sibling.json'}),
+    'parent-relative-ref': _append_all_of({'$ref': '../catalog/sources.json#/sources'}),
+    'nested-id-rebase': _append_all_of({'$id': 'file:///inert-rebased/',
+                                        'allOf': [{'$ref': 'unstaged-sibling.json'}]}),
+    'nested-id-fragment': _append_all_of({'$id': 'https://example.invalid/nested.json',
+                                          '$ref': '#/$defs/slug'}),
+    'root-id-rebase': _rebase_root,
+    'dynamic-ref': _append_all_of({'$dynamicRef': 'https://example.invalid/meta#node'}),
+    'nested-dialect': _append_all_of({'$schema': 'https://example.invalid/dialect'}),
+    'root-dialect': _root_dialect,
+    'non-string-ref': _append_all_of({'$ref': {'inert': True}}),
+}
+
+
+@pytest.fixture
+def retrieval(monkeypatch):
+    """Inert in-memory URL double (never a real request): records any reference retrieval."""
+    calls = []
+
+    def inert_urlopen(request, *args, **kwargs):
+        calls.append(getattr(request, 'full_url', request))
+        return io.BytesIO(b'{"type": "object"}')
+
+    monkeypatch.setattr(urllib.request, 'urlopen', inert_urlopen)
+    return calls
+
+
+def stage_schema(meta, mutate):
+    target = meta / SCHEMA
+    schema = json.loads(target.read_text())
+    mutate(schema)
+    target.write_text(json.dumps(schema, indent=2))
+    # A decoy next to the schema that an unstaged relative reference would select.
+    (meta / 'schemas' / 'unstaged-sibling.json').write_text('{"type": "object"}')
+
+
+@pytest.mark.parametrize('case', EXTERNAL_REFERENCE_CASES)
+def test_a3_external_schema_references_refused_without_retrieval(case, tmp_path, workspace, capsys,
+                                                                 retrieval, opened):
+    paths = pair(tmp_path, right=('base', 'base'))
+    stage_schema(paths[3], EXTERNAL_REFERENCE_CASES[case])
+    opened.clear()
+    with pytest.raises(delta.RecipeDeltaError, match='schema reference refused'):
+        compare(paths, workspace)
+    out = tmp_path / 'reports' / 'delta.json'
+    out.parent.mkdir()
+    before = tree_state(tmp_path)
+    code, captured = cli(paths, workspace, out, capsys)
+    assert code == 2
+    result = json.loads(captured.err)
+    assert result['status'] == 'INVALID' and 'schema reference refused' in result['error']
+    assert captured.out == '' and not out.exists()
+    assert tree_state(tmp_path) == before
+    assert retrieval == []                                            # nothing was resolved remotely
+    assert not any(p.endswith('unstaged-sibling.json') for p in opened)   # nor read from disk
+
+
+def test_a3_internal_schema_fragment_reference_still_compares(tmp_path, workspace, retrieval):
+    paths = pair(tmp_path, right=('base', 'base'))
+
+    def internal(schema):
+        schema['$defs']['syn-object'] = {'type': 'object'}
+        schema['allOf'] = [{'$ref': '#/$defs/syn-object'}]
+
+    stage_schema(paths[3], internal)
+    report = compare(paths, workspace)
+    assert report['changes'] == [
+        row(SCHEMA_POINTER + '/$defs/syn-object', ABSENT, {'type': 'object'}),
+        row(SCHEMA_POINTER + '/allOf', ABSENT, [{'$ref': '#/$defs/syn-object'}]),
+    ]
+    assert report['status'] == 'CHANGED_REVIEW_REQUIRED'
+    assert report['right']['metadata_sha256'][SCHEMA] == sha(paths[3] / SCHEMA)
+    assert set(report['right']['metadata_sha256']) == READ_SET     # the decoy sibling is never read
+    assert retrieval == []
+    # The unmodified frozen schema (root $id + internal fragment refs) is the ordinary control.
+    assert compare(pair(tmp_path / 'control', right=('base', 'base')), workspace)['changes'] == []
+
+
+WRITE_FAILURES = ('none', 'first-write', 'partial-write', 'fsync', 'close', 'publish-race')
+
+
+@pytest.mark.parametrize('failure', WRITE_FAILURES)
+def test_a3_report_write_failures_publish_nothing(failure, tmp_path, workspace, monkeypatch, capsys):
+    paths = pair(tmp_path)
+    reports = tmp_path / 'reports'
+    reports.mkdir()
+    (reports / 'previous.json').write_text('inert previous report')
+    out = reports / 'delta.json'
+    inputs = {name: tree_state(tmp_path / name) for name in ('recipes', 'left-meta', 'right-meta', 'workspace')}
+    real_open, real_write, real_fsync, real_close, real_link = os.open, os.write, os.fsync, os.close, os.link
+    ours, wrote = set(), []
+
+    def opening(path, flags, *args, **kwargs):                       # in-memory doubles only
+        descriptor = real_open(path, flags, *args, **kwargs)
+        if Path(os.fspath(path)).absolute().parent == reports.absolute() and flags & os.O_WRONLY:
+            ours.add(descriptor)
+        return descriptor
+
+    def writing(descriptor, data):
+        if descriptor in ours and failure == 'first-write':
+            raise OSError(errno.ENOSPC, 'synthetic first-write failure')
+        if descriptor in ours and failure == 'partial-write':
+            if wrote:
+                raise OSError(errno.ENOSPC, 'synthetic partial-write failure')
+            wrote.append(16)
+            return real_write(descriptor, bytes(data)[:16])
+        return real_write(descriptor, data)
+
+    def syncing(descriptor):
+        if descriptor in ours and failure == 'fsync':
+            raise OSError(errno.EIO, 'synthetic fsync failure')
+        return real_fsync(descriptor)
+
+    def closing(descriptor):
+        real_close(descriptor)
+        if descriptor in ours:
+            ours.discard(descriptor)
+            if failure == 'close':
+                raise OSError(errno.EIO, 'synthetic close failure')
+
+    def linking(source, destination, *args, **kwargs):
+        if failure == 'publish-race':                                 # a concurrent writer wins
+            Path(destination).write_text('inert concurrent report')
+        return real_link(source, destination, *args, **kwargs)
+
+    monkeypatch.setattr(os, 'open', opening)
+    monkeypatch.setattr(os, 'write', writing)
+    monkeypatch.setattr(os, 'fsync', syncing)
+    monkeypatch.setattr(os, 'close', closing)
+    monkeypatch.setattr(os, 'link', linking)
+    code, captured = cli(paths, workspace, out, capsys)
+    monkeypatch.undo()
+    assert {name: tree_state(tmp_path / name) for name in inputs} == inputs
+    assert (reports / 'previous.json').read_text() == 'inert previous report'
+    names = sorted(p.name for p in reports.iterdir())
+    if failure == 'none':
+        assert code == 0, captured.err
+        assert names == ['delta.json', 'previous.json']               # no temporary residue
+        assert out.read_bytes() == delta.serialize_report(compare(paths, workspace))
+        return
+    assert code == 2
+    result = json.loads(captured.err)
+    assert result['status'] == 'INVALID' and captured.out == ''
+    if failure == 'publish-race':
+        assert 'output exists' in result['error']
+        assert out.read_text() == 'inert concurrent report'          # never overwritten
+    else:
+        assert 'report write failed' in result['error']
+        assert not out.exists()                                       # final name never published
+    # Failed bytes are retained only under a distinct, clearly incomplete name.
+    retained = [n for n in names if n not in ('delta.json', 'previous.json')]
+    assert len(retained) == 1 and retained[0].startswith('.delta.json.incomplete-')
+    assert retained[0] in result['error']
 
 
 def test_a3_mutation_suppressing_changed_leaf_is_detected(tmp_path, workspace, monkeypatch):

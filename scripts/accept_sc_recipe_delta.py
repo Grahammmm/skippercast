@@ -69,6 +69,7 @@ EXPECTED = {
         'test_a2_metadata_only_change_reported_with_identical_recipe',
         'test_a2_cli_from_relocated_repository_copy',
         'test_a2_new_test_module_is_discovered_by_configured_patterns',
+        'test_a2_standalone_relocated_tool_writes_no_bytecode',
     ],
     'negative': [
         'test_a3_invalid_inputs_exit_2_without_artifact',
@@ -76,6 +77,9 @@ EXPECTED = {
         'test_a3_reads_outside_allowlist_refused',
         'test_a3_output_refusals_preserve_everything',
         'test_a3_size_row_and_output_caps',
+        'test_a3_external_schema_references_refused_without_retrieval',
+        'test_a3_internal_schema_fragment_reference_still_compares',
+        'test_a3_report_write_failures_publish_nothing',
         'test_a3_mutation_suppressing_changed_leaf_is_detected',
         'test_a3_module_imports_are_offline_stdlib_only',
     ],
