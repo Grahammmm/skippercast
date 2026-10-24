@@ -93,16 +93,159 @@ def _finite(value):
             _finite(item)
 
 
+REFERENCE_KEYWORDS = ('$ref', '$dynamicRef')
+ANCHOR_KEYWORDS = ('$anchor', '$dynamicAnchor')
+PLAIN_NAME = re.compile(r'[A-Za-z_][-A-Za-z0-9._]*\Z')
+ARRAY_INDEX = re.compile(r'(?:0|[1-9][0-9]*)\Z')
+NOT_ADMITTED = 'schema reference not admitted: '
+
+
+def _location(parts):
+    return '/' + '/'.join(str(part).replace('~', '~0').replace('/', '~1') for part in parts)
+
+
+def _refuse_retrieval(uri):
+    """Retrieval callback for the validator: never fetch, never touch I/O."""
+    raise RecipeError('schema retrieval refused: ' + str(uri))
+
+
+def _walk(node, parts=()):
+    yield parts, node
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield from _walk(value, parts + (key,))
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            yield from _walk(value, parts + (index,))
+
+
+def _pointer_target(schema, fragment):
+    """Resolve a same-document JSON pointer exactly, or return False."""
+    from urllib.parse import unquote
+    if re.search(r'%(?![0-9A-Fa-f]{2})', fragment):
+        return False
+    try:
+        decoded = unquote(fragment[1:], errors='strict')
+    except UnicodeError:
+        return False
+    node = schema
+    for raw in decoded.split('/'):
+        if re.search(r'~(?![01])', raw):
+            return False
+        segment = raw.replace('~1', '/').replace('~0', '~')
+        if isinstance(node, dict) and segment in node:
+            node = node[segment]
+        elif isinstance(node, list) and ARRAY_INDEX.match(segment) and int(segment) < len(node):
+            node = node[int(segment)]
+        else:
+            return False
+    return True
+
+
+def _check_references(schema):
+    """Admit only same-document fragments of this self-contained schema.
+
+    Runs before any instance evaluation and walks the WHOLE document, so a
+    reference in a branch no instance would traverse is refused too. Anything
+    that needs another resource (absolute, file, relative, protocol-relative,
+    URN, empty or dynamic external references) is refused, as is an embedded
+    resource identifier, which would rebase later fragments. The root $id and
+    $schema are identifiers, not fetch instructions. Keywords inside data
+    positions such as const/enum are refused conservatively as well.
+    """
+    anchors = {node[key] for _, node in _walk(schema) if isinstance(node, dict)
+               for key in ANCHOR_KEYWORDS if isinstance(node.get(key), str)}
+    for parts, node in _walk(schema):
+        if not isinstance(node, dict):
+            continue
+        if parts and '$id' in node:
+            raise RecipeError(NOT_ADMITTED + 'embedded resource identifier at ' + _location(parts + ('$id',)))
+        for key in REFERENCE_KEYWORDS:
+            if key not in node:
+                continue
+            where = ' at ' + _location(parts + (key,))
+            reference = node[key]
+            if not isinstance(reference, str):
+                raise RecipeError(NOT_ADMITTED + 'malformed reference' + where)
+            if not reference.startswith('#'):
+                raise RecipeError(NOT_ADMITTED + 'external resource' + where)
+            fragment = reference[1:]
+            if fragment == '' or (fragment.startswith('/') and _pointer_target(schema, fragment)):
+                continue
+            if PLAIN_NAME.match(fragment) and fragment in anchors:
+                continue
+            raise RecipeError(NOT_ADMITTED + 'unresolved local fragment' + where)
+
+
+def _registry_api():
+    """The referencing Registry class (jsonschema >= 4.18), else None."""
+    try:
+        from referencing import Registry
+    except ImportError:
+        return None
+    return Registry
+
+
+def _offline_validator(validator_class, schema, **options):
+    """A validator whose resolver can only see bundled metaschemas and `schema`."""
+    registry = _registry_api()
+    if registry is not None:
+        # jsonschema combines this with its bundled specifications only; the
+        # retrieval callback replaces the default remote-retrieving registry.
+        offline = registry(retrieve=lambda uri: _refuse_retrieval(uri))
+        return validator_class(schema, registry=offline, **options)
+    from jsonschema import RefResolver
+
+    class OfflineResolver(RefResolver):
+        def resolve_remote(self, uri):
+            return _refuse_retrieval(uri)
+
+    return validator_class(schema, resolver=OfflineResolver.from_schema(
+        schema, id_of=validator_class.ID_OF), **options)
+
+
+def _resolution_errors():
+    """Reference-resolution failures of either jsonschema resolver generation."""
+    import jsonschema.exceptions as exceptions
+    errors = []
+    try:
+        from referencing.exceptions import Unresolvable
+        errors.append(Unresolvable)
+    except ImportError:
+        pass
+    legacy = (getattr(exceptions, '_RefResolutionError', None)
+              or vars(exceptions).get('RefResolutionError'))
+    if legacy is not None:
+        errors.append(legacy)
+    return tuple(errors)
+
+
 def _shape(document, metadata_root):
     # Do not use validate.check: its emergency off/missing-dependency fallback is
-    # inappropriate here. Missing jsonschema fails closed; no remote refs exist.
+    # inappropriate here. Missing jsonschema fails closed. Validation is offline
+    # for any operator-supplied metadata root: references are checked before
+    # evaluation and the resolver has no retrieval (docs/engineering/sc_recipe_offline.md).
     try:
         from jsonschema import Draft202012Validator
     except ImportError as error:
         raise RecipeError('jsonschema is required for recipe validation') from error
     schema = read_json(metadata_root / 'schemas/coast-recipe-v1.schema.json')
-    Draft202012Validator.check_schema(schema)
-    problems = list(Draft202012Validator(schema).iter_errors(document))
+    try:
+        _finite(schema)
+    except RecipeError as error:
+        raise RecipeError('schema document ' + str(error)) from error
+    unresolvable = _resolution_errors()
+    try:
+        meta = _offline_validator(Draft202012Validator, Draft202012Validator.META_SCHEMA,
+                                  format_checker=Draft202012Validator.FORMAT_CHECKER)
+        # Same first-error rule as Draft202012Validator.check_schema, offline.
+        for problem in meta.iter_errors(schema):
+            raise RecipeError('schema document invalid at ' + _location(problem.absolute_path)
+                              + ': ' + problem.message)
+        _check_references(schema)
+        problems = list(_offline_validator(Draft202012Validator, schema).iter_errors(document))
+    except unresolvable as error:
+        raise RecipeError('schema reference unresolvable offline: ' + str(error)) from error
     if problems:
         first = problems[0]
         raise RecipeError('schema ' + '/'.join(map(str, first.absolute_path)) + ': ' + first.message)
