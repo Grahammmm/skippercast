@@ -398,6 +398,97 @@ def test_a3_traversed_reference_cycle_is_recipe_error(tmp_path):
     assert RETRIEVALS == []
 
 
+OVERLONG_INDEX = '9' * 5000       # far beyond sys.get_int_max_str_digits()
+INDEX_CASES = {
+    # id: (inserts, location of the refused keyword)
+    'index-overlong-used': (
+        [[['examples'], [True]],
+         [['properties', 'slug'], {'$ref': '#/examples/' + OVERLONG_INDEX}]],
+        '/properties/slug/$ref'),
+    'index-overlong-unused': (
+        [[['examples'], [True]],
+         [['$defs', 'unused'], {'$ref': '#/examples/' + OVERLONG_INDEX}]],
+        '/$defs/unused/$ref'),
+    'index-overlong-dynamic-unused': (
+        [[['examples'], [True]],
+         [['$defs', 'unusedDyn'], {'$dynamicRef': '#/examples/' + OVERLONG_INDEX}]],
+        '/$defs/unusedDyn/$dynamicRef'),
+    'index-twenty-digits-unused': (
+        [[['examples'], [True]],
+         [['$defs', 'unused'], {'$ref': '#/examples/' + '1' * 20}]],
+        '/$defs/unused/$ref'),
+    'index-leading-zero-unused': (
+        [[['examples'], [True]],
+         [['$defs', 'unused'], {'$ref': '#/examples/00'}]],
+        '/$defs/unused/$ref'),
+}
+
+
+@pytest.mark.parametrize('case_id', sorted(INDEX_CASES))
+def test_a3_impossible_array_index_is_recipe_error_before_conversion(case_id, tmp_path):
+    """An array-index segment that cannot index any list is refused during
+    admission as the stable local-fragment reason, used or unused, without
+    ever reaching the interpreter's integer-conversion limit."""
+    inserts, where = INDEX_CASES[case_id]
+    metadata, workspace = stage(tmp_path, edited({'inserts': inserts}))
+    before = snapshot(tmp_path)
+    for document in (load(), {}):
+        try:
+            recipe.validate_recipe(document, metadata_root=metadata, workspace_root=workspace)
+        except recipe.RecipeError as error:
+            assert type(error) is recipe.RecipeError
+            message = str(error)
+        else:
+            raise AssertionError('admitted ' + case_id)
+        assert message == NOT_ADMITTED + 'unresolved local fragment at ' + where, message
+    assert RETRIEVALS == [] and TRANSPORT == []
+    assert snapshot(tmp_path) == before
+
+
+@pytest.mark.parametrize('case_id', ['index-overlong-used', 'index-overlong-unused'])
+def test_a3_cli_impossible_array_index_one_invalid_exit_1(case_id, tmp_path, capsys):
+    inserts, where = INDEX_CASES[case_id]
+    metadata, workspace = stage(tmp_path, edited({'inserts': inserts}))
+    path = tmp_path / 'synthetic-recipe.json'
+    path.write_text(json.dumps(load()), encoding='utf-8')
+    code = recipe.main([str(path), '--workspace-root', str(workspace),
+                        '--metadata-root', str(metadata)])
+    captured = capsys.readouterr()
+    assert code == 1 and captured.err == ''
+    results = json.loads(captured.out)
+    assert len(results) == 1 and set(results[0]) == INVALID_FIELDS
+    assert results[0]['status'] == 'INVALID' and results[0]['valid'] is False
+    assert results[0]['error'] == NOT_ADMITTED + 'unresolved local fragment at ' + where
+    assert 'digits' not in results[0]['error']                # no interpreter message
+    assert RETRIEVALS == []
+
+
+def test_a3_pointer_index_rule_is_exact():
+    """Unit rule: canonical decimal index, at most len(str(sys.maxsize))
+    digits, below the list length; never an exception for any length."""
+    schema = {'a': [True, {'type': 'string'}]}
+    assert recipe._pointer_target(schema, '/a/0') and recipe._pointer_target(schema, '/a/1')
+    for fragment in ('/a/2', '/a/00', '/a/01', '/a/-1', '/a/+1', '/a/ 1', '/a/1.0',
+                     '/a/' + '0' * 19, '/a/' + '9' * 20, '/a/' + OVERLONG_INDEX,
+                     '/a/' + '9' * 100_000):
+        assert recipe._pointer_target(schema, fragment) is False, fragment[:24]
+    assert recipe.MAX_INDEX_DIGITS == len(str(sys.maxsize))
+    assert recipe._pointer_target({'a': [True] * 12}, '/a/11')
+
+
+def test_a3_valid_array_index_targets_keep_local_semantics(tmp_path):
+    case = {'inserts': [[['examples'], [True, {'type': 'string', 'maxLength': 1}]],
+                        [['$defs', 'unused'], {'$ref': '#/examples/0'}],
+                        [['properties', 'notes'], {'$ref': '#/examples/1'}]]}
+    metadata, workspace = stage(tmp_path, edited(case))
+    assert outcome(metadata, workspace) is None                 # valid indices admitted
+    document = load()
+    document['notes'] = 'xy'
+    message = outcome(metadata, workspace, document)            # indexed target enforced
+    assert message is not None and message.startswith('schema notes: '), message
+    assert RETRIEVALS == []
+
+
 def test_a3_nonfinite_recipe_value_still_refused(tmp_path):
     document = load()
     document['depth_target_ft'] = float('inf')
@@ -612,6 +703,194 @@ def test_a3_runner_new_output_root_is_write_once(tmp_path):
     with pytest.raises(SystemExit, match='symlink'):
         runner.new_run_dir(str(linked / 'run'))
     assert not (tmp_path / 'run').exists()
+
+
+# A3 runner shared output reservation (composed, inert: os.pipe + synthetic files)
+
+TINY = {'stdout': 256, 'stderr': 64, 'junit': 512, 'child_report': 512,
+        'receipt': 8192, 'fallback_receipt': 1024}
+
+
+def disk_bytes(root):
+    return sum(path.stat().st_size for path in root.rglob('*') if path.is_file())
+
+
+def pipe_with(data, close=True):
+    """A read end preloaded with `data` (small, fits the pipe buffer)."""
+    read_end, write_end = os.pipe()
+    os.write(write_end, data)
+    if close:
+        os.close(write_end)
+        return read_end
+    return read_end, write_end
+
+
+def padded_junit(size, cases=1):
+    body = (b'<testsuites><testsuite>'
+            + b'<testcase classname="tests.unit.test_x" name="t"/>' * cases
+            + b'</testsuite></testsuites>')
+    pad = size - len(body) - len(b'<!---->')
+    assert pad >= 0
+    return b'<!--' + b'p' * pad + b'-->' + body
+
+
+def padded_report(size, junit_sha256):
+    value = {'junit_sha256': junit_sha256, 'pad': ''}
+    value['pad'] = 'p' * (size - len(runner._serialize(value)))
+    data = runner._serialize(value)
+    assert len(data) == size
+    return data
+
+
+def fake_child(run_dir, *, junit_size=TINY['junit'], report_size=TINY['child_report'],
+               stdout_size=TINY['stdout'], stderr_size=TINY['stderr']):
+    """What a well-behaved child leaves behind: junit.xml and child-report.json
+    on disk, plus stdout carrying the report-identity marker."""
+    junit = padded_junit(junit_size)
+    (run_dir / 'junit.xml').write_bytes(junit)
+    report = padded_report(report_size, sha(junit))
+    (run_dir / 'child-report.json').write_bytes(report)
+    line = (runner.REPORT_MARKER + sha(report) + '\n').encode()
+    stdout = line + b'x' * (stdout_size - len(line))
+    return pipe_with(stdout), pipe_with(b'e' * stderr_size)
+
+
+def settle(run_dir, stdout_fd, stderr_fd, ledger, exit_code=0):
+    stopped = []
+    captured = runner.capture_streams({'stdout': stdout_fd, 'stderr': stderr_fd},
+                                      {'stdout': ledger.capacity('stdout'),
+                                       'stderr': ledger.capacity('stderr')},
+                                      timeout=10, stop=lambda: stopped.append('stop'))
+    launched = dict(captured, exit=exit_code)
+    problems = []
+    child, report, counts, by_file = runner.settle_child(run_dir, launched, runner.InputBudget(),
+                                                         ledger, problems)
+    return problems, child, report, counts, stopped
+
+
+def test_a3_runner_production_reservations_cover_every_artifact():
+    reserved = runner.OUTPUT_RESERVATIONS
+    assert set(reserved) == {'stdout', 'stderr', 'junit', 'child_report', 'receipt',
+                             'fallback_receipt'}
+    assert sum(reserved.values()) <= runner.MAX_OUTPUT_BYTES == 8 * MIB
+    # Every child-written artifact's reservation covers the kernel per-file cap,
+    # so the child cannot exceed its share even if it ignores the runner.
+    assert runner.CHILD_FILE_LIMIT == reserved['junit'] == reserved['child_report']
+    assert runner.CHILD_FILE_LIMIT <= runner.MAX_FILE_BYTES
+    recorded = []
+    import resource
+    original = resource.setrlimit
+    resource.setrlimit = lambda kind, limits: recorded.append((kind, limits))
+    try:
+        runner._limit_child_output()
+    finally:
+        resource.setrlimit = original
+    assert recorded == [(resource.RLIMIT_FSIZE, (runner.CHILD_FILE_LIMIT,) * 2)]
+    with pytest.raises(runner.Refused, match='^refused: output reservations'):
+        runner.OutputLedger(dict(reserved, stdout=reserved['stdout'] + 1))
+
+
+def test_a3_runner_ledger_refuses_before_any_write(tmp_path):
+    ledger = runner.OutputLedger({'a': 10, 'b': 5}, total=15)
+    run_dir = tmp_path / 'run'
+    run_dir.mkdir()
+    runner.write_bytes_bounded(run_dir, 'a.txt', b'x' * 10, ledger, slot='a')
+    with pytest.raises(runner.Refused, match='^refused: output reservation b of 5 bytes'):
+        runner.write_bytes_bounded(run_dir, 'b.txt', b'x' * 6, ledger, slot='b')
+    with pytest.raises(runner.Refused, match='^refused: output reservation a already used'):
+        runner.write_bytes_bounded(run_dir, 'a2.txt', b'', ledger, slot='a')
+    with pytest.raises(runner.Refused, match='^refused: unknown output reservation'):
+        runner.write_bytes_bounded(run_dir, 'c.txt', b'', ledger, slot='c')
+    assert sorted(path.name for path in run_dir.iterdir()) == ['a.txt']
+    assert ledger.used == 10
+
+
+def test_a3_runner_composed_artifacts_exact_fit(tmp_path):
+    run_dir = tmp_path / 'run'
+    run_dir.mkdir()
+    ledger = runner.OutputLedger(TINY, total=sum(TINY.values()))
+    stdout_fd, stderr_fd = fake_child(run_dir)
+    problems, child, report, counts, stopped = settle(run_dir, stdout_fd, stderr_fd, ledger)
+    assert problems == [] and stopped == [], problems
+    assert counts == {'tests': 1, 'failures': 0, 'errors': 0, 'skipped': 0}
+    receipt = {'status': 'PASS', 'child': child, 'pad': ''}
+    runner.write_receipt(run_dir, receipt, {'status': 'FAIL'}, ledger, problems)
+    assert problems == []
+    sizes = {path.name: path.stat().st_size for path in run_dir.iterdir()}
+    assert sizes['stdout.txt'] == TINY['stdout'] and sizes['stderr.txt'] == TINY['stderr']
+    assert sizes['junit.xml'] == TINY['junit'] and sizes['child-report.json'] == TINY['child_report']
+    assert json.loads((run_dir / 'receipt.json').read_bytes())['status'] == 'PASS'
+    assert disk_bytes(run_dir) <= sum(TINY.values())
+
+
+def test_a3_runner_composed_capture_overflow_is_refused_and_bounded(tmp_path):
+    run_dir = tmp_path / 'run'
+    run_dir.mkdir()
+    ledger = runner.OutputLedger(TINY, total=sum(TINY.values()))
+    stdout_fd, stderr_fd = fake_child(run_dir, stdout_size=TINY['stdout'] + 1,
+                                      stderr_size=TINY['stderr'] + 1)
+    problems, child, report, counts, stopped = settle(run_dir, stdout_fd, stderr_fd, ledger)
+    assert stopped == ['stop']                                   # child stopped once
+    assert 'refused: stdout capture exceeds 256 bytes' in problems, problems
+    assert 'refused: stderr capture exceeds 64 bytes' in problems, problems
+    assert (run_dir / 'stdout.txt').stat().st_size == TINY['stdout']   # never beyond share
+    assert (run_dir / 'stderr.txt').stat().st_size == TINY['stderr']
+    runner.write_receipt(run_dir, {'status': 'FAIL', 'problems': problems}, {'status': 'FAIL'},
+                         ledger, problems)
+    assert json.loads((run_dir / 'receipt.json').read_bytes())['status'] == 'FAIL'
+    assert disk_bytes(run_dir) <= sum(TINY.values())
+
+
+def test_a3_runner_composed_child_artifact_overflow_refused_unread(tmp_path):
+    for junit_size, report_size, reason in (
+            (TINY['junit'], TINY['child_report'] + 1, 'refused: input exceeds 512 bytes'),
+            (TINY['junit'] + 1, TINY['child_report'], 'refused: input exceeds 512 bytes')):
+        run_dir = tmp_path / ('run-%d-%d' % (junit_size, report_size))
+        run_dir.mkdir()
+        ledger = runner.OutputLedger(TINY, total=sum(TINY.values()))
+        stdout_fd, stderr_fd = fake_child(run_dir, junit_size=junit_size, report_size=report_size)
+        before = {name: (run_dir / name).read_bytes() for name in ('junit.xml', 'child-report.json')}
+        AUDIT['opened'] = opened = []
+        try:
+            problems, child, report, counts, stopped = settle(run_dir, stdout_fd, stderr_fd, ledger)
+        finally:
+            AUDIT['opened'] = None
+        assert any(problem.startswith(reason) for problem in problems), problems
+        oversize = 'child-report.json' if report_size > TINY['child_report'] else 'junit.xml'
+        assert str(run_dir / oversize) not in opened              # refused from metadata
+        assert counts == {} and (report is None or oversize == 'junit.xml')
+        assert {name: (run_dir / name).read_bytes() for name in before} == before
+
+
+def test_a3_runner_composed_receipt_overflow_uses_fallback_reservation(tmp_path):
+    run_dir = tmp_path / 'run'
+    run_dir.mkdir()
+    ledger = runner.OutputLedger(TINY, total=sum(TINY.values()))
+    stdout_fd, stderr_fd = fake_child(run_dir)
+    problems, child, report, counts, stopped = settle(run_dir, stdout_fd, stderr_fd, ledger)
+    assert problems == []
+    receipt = {'status': 'PASS', 'pad': 'p' * TINY['receipt']}    # cannot fit its share
+    digest = runner.write_receipt(run_dir, receipt, {'card': 't', 'status': 'FAIL'},
+                                  ledger, problems)
+    data = (run_dir / 'receipt.json').read_bytes()
+    assert digest == sha(data) and len(data) <= TINY['fallback_receipt']
+    fallback = json.loads(data)
+    assert fallback['status'] == 'FAIL'
+    assert problems and problems[0].startswith('refused: output reservation receipt'), problems
+    assert fallback['problems'] == problems
+    assert disk_bytes(run_dir) <= sum(TINY.values())
+
+
+def test_a3_runner_capture_timeout_stops_without_hang(tmp_path):
+    read_end, write_end = pipe_with(b'partial', close=False)
+    stopped = []
+    try:
+        captured = runner.capture_streams({'stdout': read_end}, {'stdout': 64}, timeout=0.2,
+                                          stop=lambda: stopped.append('stop'))
+    finally:
+        os.close(write_end)
+    assert captured['stdout'] == b'partial' and captured['timed_out'] is True
+    assert stopped == ['stop'] and captured['refused'] == []
 
 
 def disable_reference_gate(monkeypatch):
