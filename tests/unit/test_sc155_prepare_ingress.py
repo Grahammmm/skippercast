@@ -433,10 +433,10 @@ class PrepareIngressTests(unittest.TestCase):
         case, inputs, raw, value = self.build_positive(name)
         view = OsView("inputs.json")
         transform = None
+        state = {"first": True}
         if name == "ancestor_churn":
             # Healthy control for the ancestry predicate: unrelated entries appear in every held
             # ancestor mid-read (their mtimes change, their identities do not); input must pass.
-            state = {"first": True}
 
             def churn(fd, size):
                 if state["first"]:
@@ -448,14 +448,19 @@ class PrepareIngressTests(unittest.TestCase):
             view.read_hook = churn
 
             def transform(before):
+                if state["first"]:  # the churn hook only fires on a descriptor-bound os.read path
+                    return before
                 return dict(before, **{"churn-dir": ("dir",), "top/churn-dir": ("dir",),
                                        "top/mid/churn.txt": ("file", digest(b"churn\n"))})
         before = snapshot(case.dir)
         outcome, error, calls, still_open = self.run_main(case, inputs, view)
         after = snapshot(case.dir)
+        churned = name == "ancestor_churn" and not state["first"]
         RECORDS.append(dict(test=self.id(), case=name, label=label, outcome=outcome, bytes=len(raw),
-                            inputs_sha256=digest(raw), error=str(error) if error else None,
+                            inputs_sha256=digest(raw), error=str(error) if error else None, churned=churned,
                             requests=view.requests[:8], request_total=sum(view.requests), still_open=still_open))
+        if name == "ancestor_churn" and hasattr(self.product, "_intact"):
+            self.assertTrue(churned, "ancestor churn control did not run during the bounded read")
         self.assertEqual(outcome, "prepare", repr(error))
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0]["inputs"], value, "decoded object changed")
