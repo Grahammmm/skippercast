@@ -61,6 +61,7 @@ def main():
     captured_out, captured_err = [], []
     exit_code = 1
     result_details = {}
+    module = None
     try:
         sys.dont_write_bytecode = True
         if (manifest.get("schema") != "agentorange.source-manifest/v1"
@@ -161,6 +162,22 @@ def main():
         exit_code = 1
     stdout_bytes = ("SC143 suite=" + args.suite + " tests=" + str(result_details.get("tests_run", 0)) + " exit=" + str(exit_code) + "\n").encode()
     stderr_bytes = ("\n".join(captured_err) + ("\n" if captured_err else "")).encode()
+    synthetic_root = run_dir / "synthetic"
+    if synthetic_root.exists():
+        inventory = {}
+        for path in sorted(synthetic_root.rglob("*")):
+            if path.is_file():
+                resolved = path.resolve(strict=True)
+                if not resolved.is_relative_to(synthetic_root.resolve()):
+                    exit_code = 1
+                    raise ValueError("synthetic output escaped its run root")
+                inventory[str(path.relative_to(synthetic_root))] = sha_bytes(path.read_bytes())
+        result_details["synthetic_inventory_sha256"] = inventory
+    if args.suite == "regression":
+        preservation = module.RetentionCompletionBooleanTests.preservation_results if module is not None else []
+        result_details["malformed_preservation"] = preservation
+        if len(preservation) != 24 or not all(item["unchanged"] for item in preservation):
+            exit_code = 1
     stdout_path.write_bytes(stdout_bytes)
     stderr_path.write_bytes(stderr_bytes)
     receipt = {

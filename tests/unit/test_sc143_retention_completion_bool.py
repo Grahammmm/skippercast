@@ -16,6 +16,7 @@ class Truthy:
 
 class RetentionCompletionBooleanTests(unittest.TestCase):
     negative_control_result = {}
+    preservation_results = []
 
     @classmethod
     def setUpClass(cls):
@@ -99,7 +100,12 @@ class RetentionCompletionBooleanTests(unittest.TestCase):
                                 self.ledger.settle(slot, completed=value)
                         audit.assert_not_called()
                         lock.assert_not_called()
-                        self.assertEqual(self._tree_snapshot(), before)
+                        after = self._tree_snapshot()
+                        unchanged = after == before
+                        RetentionCompletionBooleanTests.preservation_results.append({
+                            "initial_state": initial_state, "value": repr(value),
+                            "before": before, "after": after, "unchanged": unchanged})
+                        self.assertEqual(after, before)
                         self.assertTrue(any(name.endswith("retained.bin") for name in before))
 
     def test_negative_control_detects_truthiness_regression(self):
