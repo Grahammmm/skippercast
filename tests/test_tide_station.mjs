@@ -61,7 +61,8 @@ test('saved list adds three, rejects fourth with a message, switches, removes an
   assert.deepEqual(model.saved.value, [b.id, c.id, d.id]);
   const before = storage.getItem(tideSavedKey(config.id)), reading = model.reading.value;
   assert.equal(model.choose(e.id), false);
-  assert.match(model.error.value, /three.*Remove one/);
+  assert.match(model.notice.value, /three.*Remove one/);
+  assert.equal(model.error.value, '', 'cap notice is not a data failure');
   assert.deepEqual(model.saved.value, [b.id, c.id, d.id]);
   assert.equal(model.choice.value, d.id); assert.equal(model.reading.value, reading);
   assert.equal(storage.getItem(tideSavedKey(config.id)), before);
@@ -83,6 +84,63 @@ test('saved list adds three, rejects fourth with a message, switches, removes an
   assert.deepEqual(restarted.saved.value, [b.id, d.id]);
   restarted.choose(null); restarted.remove('9999999');
   assert.deepEqual(readSavedTideStations(config.id, storage), {saved: [b.id, d.id], active: null});
+});
+
+test('non-active removal preserves a prediction failure for the active station', async () => {
+  const storage = memory();
+  const model = createTideSelection(async url => url === TIDE_DIRECTORY_URL
+    ? savedFetcher(url) : new Response('Unavailable', {status: 500}), storage);
+  model.configure(config); await model.list();
+  for (const station of [b, c]) { assert.equal(model.choose(station.id), true); await model.refresh(); }
+  const error = model.error.value, reading = model.reading.value;
+  assert.match(error, /Some chosen-station predictions are unavailable/);
+  assert.equal(reading.failed, true);
+  model.remove(b.id);
+  assert.equal(model.error.value, error, 'removing another saved station must not hide a data failure');
+  assert.equal(model.reading.value, reading); assert.equal(model.choice.value, c.id);
+  assert.deepEqual(readSavedTideStations(config.id, storage), {saved: [c.id], active: c.id});
+  model.remove(c.id);
+  assert.equal(model.choice.value, null); assert.equal(model.error.value, '');
+});
+
+test('non-active removal preserves a directory failure for the restored active station', async () => {
+  const storage = memory();
+  saveSavedTideStations(config.id, {saved: [b.id, c.id], active: c.id}, storage);
+  const model = createTideSelection(async () => new Response('Unavailable', {status: 500}), storage);
+  model.configure(config); await model.refresh();
+  const error = model.error.value;
+  assert.match(error, /NOAA station directory unavailable/);
+  model.remove(b.id);
+  assert.equal(model.error.value, error, 'removing another saved station must not hide a directory failure');
+  assert.equal(model.reading.value, null); assert.equal(model.choice.value, c.id);
+  assert.deepEqual(readSavedTideStations(config.id, storage), {saved: [c.id], active: c.id});
+});
+
+test('cap refusal preserves the active data failure and exposes a separate notice', async () => {
+  const storage = memory();
+  const model = createTideSelection(async url => url === TIDE_DIRECTORY_URL
+    ? savedFetcher(url) : new Response('Unavailable', {status: 500}), storage);
+  model.configure(config); await model.list();
+  for (const station of [b, c, d]) { assert.equal(model.choose(station.id), true); await model.refresh(); }
+  const error = model.error.value, reading = model.reading.value, before = storage.getItem(tideSavedKey(config.id));
+  assert.match(error, /Some chosen-station predictions are unavailable/); assert.equal(reading.failed, true);
+  assert.equal(model.choose(e.id), false);
+  assert.equal(model.error.value, error, 'a cap refusal must not replace the active data failure');
+  assert.match(model.notice.value, /three.*Remove one/);
+  assert.equal(model.choice.value, d.id); assert.equal(model.reading.value, reading);
+  assert.deepEqual(model.saved.value, [b.id, c.id, d.id]);
+  assert.equal(storage.getItem(tideSavedKey(config.id)), before);
+  model.remove(b.id);
+  assert.equal(model.notice.value, '', 'freeing a slot clears the cap notice, not the data failure');
+  assert.equal(model.error.value, error);
+  assert.equal(model.choose(e.id), true); await model.refresh();
+  assert.equal(model.notice.value, ''); assert.match(model.error.value, /Some chosen-station predictions are unavailable/);
+  assert.equal(model.choose(b.id), false); assert.match(model.notice.value, /three/);
+  assert.equal(model.choose(c.id), true); await model.refresh();
+  assert.equal(model.notice.value, '', 'switching clears the old refusal');
+  assert.equal(model.choose(b.id), false); assert.match(model.notice.value, /three/);
+  model.configure({...config, id: 'other'});
+  assert.equal(model.notice.value, ''); assert.equal(model.error.value, '');
 });
 
 test('offline pack snapshots exactly the active station, never all saved stations', async () => {

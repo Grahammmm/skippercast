@@ -19,7 +19,10 @@ test('tide chooser saves three, switches, removes and restores; active only at 3
   }});
   await page.route('**/api/coast/report', route => route.fulfill({status: 503, json: {error: 'Fixture unavailable'}}));
   await page.route('**/mdapi/prod/webapi/stations.json?*', route => route.fulfill({json: {stations}}));
-  await page.route('**/api/prod/datagetter?*', route => route.fulfill({json: {predictions: [{t: '2026-10-08 21:00', v: '2.3', type: 'H'}]}}));
+  let failPredictions = false;
+  await page.route('**/api/prod/datagetter?*', route => route.fulfill(failPredictions
+    ? {status: 500, json: {error: 'Fixture unavailable'}}
+    : {json: {predictions: [{t: '2026-10-08 21:00', v: '2.3', type: 'H'}]}}));
   await v2.open('app', {region: 'morro-bay'});
   const root = page.locator(isMobile ? '.app-sheet-brief' : 'aside.app-brief');
   const open = async () => {
@@ -47,6 +50,7 @@ test('tide chooser saves three, switches, removes and restores; active only at 3
   await expect(saved.getByRole('button', {name: /^Use /})).toHaveCount(3);
   await picker.selectOption('9000005'); await add.click();
   await expect(root.getByRole('status').filter({hasText: /Up to three/})).toBeVisible();
+  await expect(root.getByRole('button', {name: 'Retry tide station'})).toHaveCount(0);
   await expect(saved.getByRole('button', {name: /^Use /})).toHaveCount(3);
   await expect(tide.locator('.ui-tile-source')).toContainText('9000004 Fixture South');
   await saved.getByRole('button', {name: 'Use Fixture North', exact: true}).click();
@@ -62,6 +66,23 @@ test('tide chooser saves three, switches, removes and restores; active only at 3
   await page.reload(); await open();
   await expect(saved.getByRole('button', {name: /^Use /})).toHaveCount(3);
   await expect(picker).toHaveValue('9000001');
+  // A saved-list edit or cap refusal must never conceal an active source failure.
+  failPredictions = true;
+  await saved.getByRole('button', {name: 'Use Fixture North', exact: true}).click();
+  const failure = root.getByRole('status').filter({hasText: /Some chosen-station predictions are unavailable/});
+  const retry = root.getByRole('button', {name: 'Retry tide station'});
+  await expect(failure).toBeVisible(); await expect(retry).toBeVisible();
+  await picker.selectOption('9000005'); await add.click();
+  const cap = root.getByRole('status').filter({hasText: /Up to three/});
+  await expect(cap).toBeVisible(); await expect(failure).toBeVisible();
+  await expect(cap.getByRole('button')).toHaveCount(0);
+  await saved.getByRole('button', {name: 'Remove Fixture Port', exact: true}).click();
+  await expect(cap).toHaveCount(0); await expect(failure).toBeVisible(); await expect(retry).toBeVisible();
+  await expect(saved.getByRole('button', {name: 'Use Fixture North', exact: true})).toHaveAttribute('aria-pressed', 'true');
+  failPredictions = false;
+  await retry.click();
+  await expect(failure).toHaveCount(0); await expect(retry).toHaveCount(0);
+  await expect(tide.locator('.ui-reading')).toHaveText('2.3');
   await saved.getByRole('button', {name: 'Remove Fixture North', exact: true}).click();
   await expect(picker).toHaveValue('');
   await expect(tide.locator('.ui-tile-source')).toContainText('Configured station');
