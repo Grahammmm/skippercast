@@ -119,6 +119,7 @@ def qualify_row(row, receipt, *, rights_url, physical_only=False):
         source_rights(row)
         if row['license'] != 'public-domain-us-gov' and rights_url != row['rights_review']['policy_url']:
             raise ValueError('Producer policy URL conflicts with rights review')
+    _require_native_counts(receipt)
     if (receipt['source_id'] != row['id'] or receipt['source_sha256'] != row['sha256']
             or receipt['adapter_version'] != ('measured-multibeam-grid-v1' if row.get('format') == 'measured-multibeam-grid' else 'original-native-adapters-v1')
             or not 0 < receipt['nominal_0_300ft_pixels_in_requested_bounds']
@@ -148,6 +149,15 @@ def qualify_row(row, receipt, *, rights_url, physical_only=False):
     if physical_only:
         result['notes'] += ' Private physical processing only; rights are not granted and publication/export remain prohibited.'
     return result
+
+
+def _require_native_counts(receipt):
+    """Native counts are discrete observations: exact integers, never bools, floats or text."""
+    counts = [receipt.get(field) for field in ('source_bytes', 'valid_pixels_in_requested_bounds',
+                                               'nominal_0_300ft_pixels_in_requested_bounds')]
+    if any(type(value) is not int for value in counts) or not (counts[0] > 0 and 0 < counts[2] <= counts[1]):
+        raise ValueError('native_receipt_counts_invalid: source bytes and pixel counts must be integers '
+                         'with positive bytes and 0 < shallow <= valid')
 
 
 def promote_draft(path, *, rights_url, root=REPO, physical_only=False):

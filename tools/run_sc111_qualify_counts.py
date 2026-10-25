@@ -158,11 +158,12 @@ class Boundary:
             if raw in self.catalog or raw.is_relative_to(self.fixture):
                 no_links(raw)
                 return
+            if (any(resolved.is_relative_to(library) for library in self.libraries)
+                    and (not raw.is_relative_to(self.repo) or raw.is_relative_to(self.repo / '.venv'))):
+                return  # installed files (also via the admitted .venv link) are read-only imports
             if raw.is_relative_to(self.repo) and raw.suffix in {'.py', '.pyc'}:
                 no_links(raw)
                 return
-            if any(resolved.is_relative_to(library) for library in self.libraries):
-                return  # installed files are read-only and only for normal imports
         raise BoundaryError('SC111 denied ' + ('write: ' if write else 'read: ') + str(raw))
 
     def audit(self, event, args, control=False):
