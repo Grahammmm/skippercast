@@ -102,9 +102,13 @@ class RenderFacesTests(unittest.TestCase):
         self.np = importlib.import_module("numpy")
         self.assertEqual(Path(self.api.__file__).resolve(),
                          REPO / "src/skippercast/coastal/render/mesh.py")
-        parent = RUN_ROOT or REPO.parent / "out/ordinary"
-        parent.mkdir(parents=True, exist_ok=True)
-        self.root = Path(tempfile.mkdtemp(prefix="sc116-case-", dir=parent))
+        if RUN_ROOT is None:
+            temporary = tempfile.TemporaryDirectory(prefix="sc116-case-")
+            self.addCleanup(temporary.cleanup)
+            self.root = Path(temporary.name)
+        else:
+            RUN_ROOT.mkdir(parents=True, exist_ok=True)
+            self.root = Path(tempfile.mkdtemp(prefix="sc116-case-", dir=RUN_ROOT))
         self.baseline = json.loads((FIXTURES / "baseline.json").read_text())
         self.assertEqual(self.baseline["base"], BASE)
         self.assertEqual(self.baseline["mesh_sha256"], MESH_SHA)
@@ -167,6 +171,20 @@ class RenderFacesTests(unittest.TestCase):
 
     def test_regression_object(self):
         self.refusal(self.np.array([[0, 1, 2]], dtype=object))
+
+    def test_regression_non_index_dtypes(self):
+        for dtype in ("timedelta64[s]", "datetime64[s]", "complex128", "U1"):
+            with self.subTest(dtype=dtype):
+                self.refusal(self.np.array([[0, 1, 2]], dtype=dtype))
+
+    def test_regression_array_subclasses(self):
+        class FaceArray(self.np.ndarray):
+            pass
+
+        plain = self.np.array([[0, 1, 2]], dtype=self.np.int64)
+        for faces in (self.np.matrix(plain), plain.view(FaceArray)):
+            with self.subTest(kind=type(faces).__name__):
+                self.refusal(faces)
 
     def test_regression_empty(self):
         self.refusal(self.np.empty((0, 3), dtype=self.np.int64))

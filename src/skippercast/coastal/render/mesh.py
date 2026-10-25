@@ -132,9 +132,9 @@ def _validate_preview_faces(faces, vertex_count):
     """Reject malformed indexes in their original dtype, before projection."""
     import numpy as np
 
-    if (not isinstance(faces, np.ndarray) or np.ma.isMaskedArray(faces)
+    if (type(faces) is not np.ndarray
             or faces.ndim != 2 or faces.shape[1] != 3 or not len(faces)
-            or not np.issubdtype(faces.dtype, np.integer)):
+            or faces.dtype.kind not in "iu"):
         raise ValueError("preview_faces_invalid")
     if (faces < 0).any() or (faces >= vertex_count).any():
         raise ValueError("preview_faces_invalid")

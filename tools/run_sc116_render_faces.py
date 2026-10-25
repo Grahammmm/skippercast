@@ -17,8 +17,8 @@ import uuid
 BASE = "2979d59bfbb7d724eb83b34a48102b914ee8eaa3"
 MESH_SHA = "c3a6f0678a693a7b0f0ada2d891add312bb3454548fea15f8fb68156cdc7d757"
 REPO = Path(__file__).resolve().parents[1]
-REGRESSION = ["boolean", "degenerate", "empty", "float", "huge_unsigned", "masked",
-              "negative_index", "not_array", "object", "one_dimension", "ragged",
+REGRESSION = ["array_subclasses", "boolean", "degenerate", "empty", "float", "huge_unsigned", "masked",
+              "negative_index", "non_index_dtypes", "not_array", "object", "one_dimension", "ragged",
               "three_dimensions", "valid", "vertex_count_index", "wrong_columns"]
 COMPATIBILITY = ["four_vertices", "log_seals", "three_vertices"]
 
