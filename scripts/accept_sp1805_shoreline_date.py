@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import time
@@ -44,7 +45,8 @@ def main():
         stderr = proc.stderr.encode()
         (out / f'{name}.stdout').write_bytes(stdout)
         (out / f'{name}.stderr').write_bytes(stderr)
-        records.append({'name': name, 'argv': argv, 'cwd': str(repo), 'runtime': sys.executable if argv[0].endswith('python3') else argv[0], 'started_epoch': started, 'exit': proc.returncode, 'stdout_sha256': hashlib.sha256(stdout).hexdigest(), 'stderr_sha256': hashlib.sha256(stderr).hexdigest()})
+        tap_counts = {key: int(value) for key, value in re.findall(r'^# (tests|pass|fail|skipped) (\d+)$', proc.stdout, re.MULTILINE)}
+        records.append({'name': name, 'argv': argv, 'cwd': str(repo), 'runtime': argv[0], 'started_epoch': started, 'exit': proc.returncode, 'counts': tap_counts, 'stdout_sha256': hashlib.sha256(stdout).hexdigest(), 'stderr_sha256': hashlib.sha256(stderr).hexdigest()})
     payload = {'phase': args.phase, 'repo': str(repo), 'head': subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=repo, capture_output=True, text=True, check=True).stdout.strip(), 'tests_sha256': hashlib.sha256(TEST.read_bytes()).hexdigest(), 'records': records}
     (out / 'receipt.json').write_text(json.dumps(payload, indent=2) + '\n')
     if args.phase == 'baseline':
