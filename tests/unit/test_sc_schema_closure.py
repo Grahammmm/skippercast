@@ -6,7 +6,7 @@ Three groups, selected by class name in scripts/accept_sc_schema_closure.py:
                             independent oracle expectations frozen in the fixtures
     TestNegativeClosure     A3 unsafe/malformed input, refusals and preservation
 
-Paths derive from this file; nothing reads a box-specific location. Temporary trees are
+Paths derive from tests._support.ROOT; nothing reads a box-specific location. Temporary trees are
 created with tempfile.mkdtemp and never removed by the tests (no deletion).
 """
 import hashlib
@@ -22,8 +22,9 @@ import tempfile
 import unittest
 from unittest import mock
 
-REPO = Path(__file__).resolve().parents[2]
-FIXTURES = REPO / "tests" / "fixtures" / "sc_schema_closure"
+from tests._support import FIXTURES as _FIXTURES, ROOT as REPO
+
+FIXTURES = _FIXTURES / "sc_schema_closure"
 MODULE_PATH = REPO / "scripts" / "coast_diagnostics" / "schema_closure.py"
 DIALECT = "https://json-schema.org/draft/2020-12/schema"
 
