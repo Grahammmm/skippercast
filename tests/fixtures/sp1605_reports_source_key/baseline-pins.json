@@ -1,0 +1,7 @@
+{
+  "tests/test_sp1605_reports_source_key.mjs": "1630a17e98319597ff3b09fe9fc5391deff1d1509d0098317f55657f6bd070ba",
+  "tests/fixtures/sp1605_reports_source_key/harness.mjs": "97e2fe73d6ce44a1961ea1195997d8a9e4c47a8dd6acad0b42cbab4c931d12a0",
+  "tests/fixtures/sp1605_reports_source_key/entry.ts": "f80d9a76b4497aa4b341d1f63a8cfc99275822b4d6630fb709daebaa28386e27",
+  "tests/fixtures/sp1605_reports_source_key/effects.ts": "aec77d4a3ea31e52e0f4707d345cfe51d29aaa8052701df6655d4765b66e5906",
+  "tests/fixtures/sp1605_reports_source_key/offline.mjs": "e6ce11279487ccf9a165de8edd9b8b1a19cc08c1fc69abb29aaf5dc17d357344"
+}
