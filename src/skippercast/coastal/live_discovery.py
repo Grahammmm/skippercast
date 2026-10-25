@@ -227,6 +227,8 @@ def diff(previous, current, previous_ref=None):
 
 
 def frozen_catalog(manifest, manifest_bytes):
+    from copy import deepcopy
+
     keys = ("source_id", "publisher_id", "title", "catalog_id", "provenance", "metadata", "extent",
             "access_url", "unknowns", "rejection_reasons", "alternate_of", "terrain", "habitat",
             "render", "next_action", "expires_at", "field_evidence")
@@ -245,6 +247,8 @@ def frozen_catalog(manifest, manifest_bytes):
                 review_required=True,
                 coordinator_boundary=("Metadata catalog only. The coordinator discover stage reads an explicit "
                                       "coastal-local-discovery-plan-v1; this catalog does not enqueue work."))
+    # Detach every retained JSON value before binding the snapshot's identity.
+    body = deepcopy(body)
     body["catalog_id"] = _digest(body)
     return body
 
