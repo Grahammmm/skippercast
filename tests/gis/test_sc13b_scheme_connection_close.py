@@ -80,11 +80,13 @@ def make_scheme(root, kind='valid'):
 
 @contextmanager
 def product_context(root):
-    """Only scoped patches in ordinary discovery; restore even on import failure."""
-    paths = importlib.import_module('skippercast.paths')
-    with patch.object(paths, 'repo_root', return_value=root):
-        reference = importlib.import_module('skippercast.seafloor.reference')
-    yield reference
+    """Explicit API roots only; ordinary discovery never rewrites peer defaults.
+
+    The standalone runner owns pre-import guards and root redirection in its
+    exclusive process. This module must not bind contracts.REPO to a test root
+    when ordinary discovery is the first product importer.
+    """
+    yield importlib.import_module('skippercast.seafloor.reference')
 
 
 def context_manager_only(config, root, cache, fetch=False):
