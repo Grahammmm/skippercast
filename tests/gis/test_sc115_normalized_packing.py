@@ -8,7 +8,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-REPO = Path(__file__).resolve().parents[2]
+from tests._support import ROOT as REPO
+
 FIXTURES = REPO / 'tests/fixtures/sc115-normalized-packing'
 RUN_ROOT = None
 EVENTS = []
@@ -26,9 +27,6 @@ class PackingTests(unittest.TestCase):
         self.scope = ExitStack()
         self.addCleanup(self.scope.close)
         self.scope.enter_context(patch.object(sys, 'dont_write_bytecode', True))
-        old_path = sys.path[:]
-        sys.path.insert(0, str(REPO / 'src'))
-        self.scope.callback(lambda: sys.path.__setitem__(slice(None), old_path))
         self.fixtures = load_file('sc115_constructors', FIXTURES / 'constructors.py')
         self.scope.enter_context(self.fixtures.offline_scope())
         import numpy as np
