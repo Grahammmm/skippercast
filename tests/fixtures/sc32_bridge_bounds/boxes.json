@@ -46,5 +46,9 @@
     "string": "-120.62,34.44,-120.56,34.5",
     "null": null,
     "number": 34.5
+  },
+  "world_edge_tilings": {
+    "east-edge": {"bbox": [179, 0, 180, 1], "width": 1024, "height": 512, "anchor": [179, 1], "cell": [0.001, 0.001], "required_windows": 2},
+    "south-edge": {"bbox": [0, -90, 1, -89], "width": 512, "height": 1024, "anchor": [0, -89], "cell": [0.001, 0.001], "required_windows": 2}
   }
 }

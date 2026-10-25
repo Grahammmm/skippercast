@@ -142,11 +142,13 @@ def _crs84_bbox(box):
 
 
 def _overlaps(a, b):
-    """Positive-area overlap of two valid CRS84 boxes; a malformed box never overlaps."""
-    if not (_crs84_bbox(a) and _crs84_bbox(b)):
+    try:
+        w1, s1, e1, n1 = (float(v) for v in a)
+        w2, s2, e2, n2 = (float(v) for v in b)
+    except (TypeError, ValueError):
         return False
-    w1, s1, e1, n1 = a
-    w2, s2, e2, n2 = b
+    if not (w1 < e1 and s1 < n1 and w2 < e2 and s2 < n2):
+        return False
     return min(e1, e2) > max(w1, w2) and min(n1, n2) > max(s1, s2)
 
 
@@ -389,7 +391,7 @@ def _decide(root, selection, row, catalog, segment, allowlist, now):
     if refused:
         holds.append(refused)
     extent = row.get("extent") or {}
-    if extent.get("bbox_crs") not in GEOGRAPHIC or not _overlaps(extent.get("bbox"), segment["bbox_crs84"]):
+    if extent.get("bbox_crs") not in GEOGRAPHIC or not _crs84_bbox(extent.get("bbox")) or not _overlaps(extent.get("bbox"), segment["bbox_crs84"]):
         holds.append("catalog_extent_does_not_overlap_segment")
     try:
         if _stamp(row.get("expires_at")) <= now:

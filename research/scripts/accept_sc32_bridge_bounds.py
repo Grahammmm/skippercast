@@ -8,16 +8,21 @@ pytest API. It never reimplements a check or makes up a result.
   --suite focused   every A1 and A2 row of the new test module
   --suite contract  the A4 rows, the original tests/unit/test_coastal_catalog_bridge.py
                     and tests/contract/test_research_boundary.py (unchanged)
-  --suite negative  the test_mutation_controls_* rows, then one decisive in-memory
-                    mutation of the staged catalog_bridge module (production bytes
-                    are never edited):
-                      legacy-overlaps   catalog_bridge._overlaps <- the test-local
-                                        pre-SC32 float-coercing predicate
-                                        (legacy_overlaps); the named typed/range
-                                        detector cases must fail with their SC32
-                                        marker while the valid-overlap and
-                                        edge-adjacency controls stay green
-                    followed by a clean restored rerun that must pass.
+  --suite negative  the test_mutation_controls_* rows, then two decisive in-memory
+                    mutations of the staged catalog_bridge module (production bytes
+                    are never edited), each followed by a clean restored rerun:
+                      legacy-bbox-gate        catalog_bridge._crs84_bbox <- the
+                                              test-local legacy_bbox_gate (no
+                                              contract, the pre-SC32 path); the
+                                              typed/range detector cases must fail
+                                              with their SC32 marker while the
+                                              valid-overlap, edge-adjacency and
+                                              world-edge controls stay green
+                      round1-strict-overlaps  catalog_bridge._overlaps <- the
+                                              test-local round-1 strict predicate;
+                                              the world-edge completeness cases must
+                                              fail with SC32-WINDOW-OMITTED while the
+                                              same controls stay green
 
 Order of operations: bytecode writing is turned off first. The import path is set
 in code to this staged repository's src/ and root (plus its staged .venv
@@ -74,9 +79,10 @@ EXPECTED = {
         'test_a1_segment_boxes_on_exact_geographic_edges_plan_normally',
         'test_a1_overlap_predicate_is_positive_area_only_and_symmetric',
         'test_a1_ordinary_dry_run_keeps_its_receipt_shape',
-        'test_a2_overlaps_rejects_a_malformed_coordinate',
-        'test_a2_overlaps_rejects_a_malformed_shape',
-        'test_a2_overlaps_rejects_tuples_and_numeric_string_boxes',
+        'test_a1_world_edge_window_set_keeps_baseline_completeness',
+        'test_a2_bbox_contract_rejects_a_malformed_coordinate',
+        'test_a2_bbox_contract_rejects_a_malformed_shape',
+        'test_a2_bbox_contract_rejects_tuples_and_numeric_string_boxes',
         'test_a2_malformed_segment_coordinate_is_refused_before_any_source_or_output',
         'test_a2_malformed_segment_shape_is_refused_before_any_source_or_output',
         'test_a2_malformed_candidate_coordinate_is_held',
@@ -89,31 +95,45 @@ EXPECTED = {
         'test_a4_new_test_module_is_discovered_by_configured_patterns',
     ],
     'negative': [
-        'test_mutation_controls_legacy_predicate_accepts_what_production_refuses',
+        'test_mutation_controls_unguarded_gate_accepts_what_production_refuses',
         'test_mutation_controls_legacy_and_production_agree_on_valid_boxes',
+        'test_mutation_controls_overlaps_matches_the_frozen_base_predicate',
+        'test_mutation_controls_round1_strict_predicate_drops_a_required_world_edge_window',
         'test_mutation_controls_production_predicate_is_not_the_legacy_callable',
     ],
 }
-# Exact focused parametrized case count recorded on the staged baseline red run
-# (23 A1 cases + 170 A2 cases); fewer collected cases is a silent subset.
-FOCUSED_MINIMUM = 193
+# Exact focused parametrized case count (25 A1 cases + 170 A2 cases). The round-0
+# baseline red run collected 193 (before the two world-edge cases were added);
+# fewer collected cases is a silent subset.
+FOCUSED_MINIMUM = 195
 # Minimum original compatibility test counts (honest collection; no silent subset).
 COMPAT_MINIMUM = {'tests/unit/test_coastal_catalog_bridge.py': 71,
                   'tests/contract/test_research_boundary.py': 8}
 CONTROLS = ['test_a1_valid_candidate_extent_is_selected',
             'test_a1_edge_adjacent_and_disjoint_candidates_are_held',
             'test_a1_overlap_predicate_is_positive_area_only_and_symmetric']
+WORLD_EDGE = 'test_a1_world_edge_window_set_keeps_baseline_completeness'
 MUTATIONS = {
-    'legacy-overlaps': dict(attribute='_overlaps', legacy='legacy_overlaps', detectors=[
-        ('test_a2_overlaps_rejects_a_malformed_coordinate', 'west-numeric-string', 'SC32-OVERLAP-ACCEPTED'),
-        ('test_a2_overlaps_rejects_a_malformed_coordinate', 'east-inf', 'SC32-OVERLAP-ACCEPTED'),
-        ('test_a2_overlaps_rejects_a_malformed_coordinate', 'west-minus-inf', 'SC32-OVERLAP-ACCEPTED'),
-        ('test_a2_overlaps_rejects_a_malformed_coordinate', 'north-huge-int', 'SC32-OVERLAP-RAISED'),
-        ('test_a2_overlaps_rejects_a_malformed_shape', 'east-above-180', 'SC32-OVERLAP-ACCEPTED'),
+    'legacy-bbox-gate': dict(attribute='_crs84_bbox', double='legacy_bbox_gate',
+                             controls=CONTROLS + [WORLD_EDGE], detectors=[
+        ('test_a2_bbox_contract_rejects_a_malformed_coordinate', 'west-numeric-string', 'SC32-OVERLAP-ACCEPTED'),
+        ('test_a2_bbox_contract_rejects_a_malformed_coordinate', 'east-inf', 'SC32-OVERLAP-ACCEPTED'),
+        ('test_a2_bbox_contract_rejects_a_malformed_coordinate', 'west-minus-inf', 'SC32-OVERLAP-ACCEPTED'),
+        ('test_a2_bbox_contract_rejects_a_malformed_coordinate', 'north-huge-int', 'SC32-OVERLAP-RAISED'),
+        ('test_a2_bbox_contract_rejects_a_malformed_shape', 'east-above-180', 'SC32-OVERLAP-ACCEPTED'),
+        ('test_a2_malformed_segment_coordinate_is_refused_before_any_source_or_output', 'south-numeric-string',
+         'SC32-SEGMENT-ACCEPTED'),
+        ('test_a2_malformed_segment_shape_is_refused_before_any_source_or_output', 'east-just-above-180',
+         'SC32-SEGMENT-ACCEPTED'),
         ('test_a2_malformed_candidate_coordinate_is_held', 'south-numeric-string', 'SC32-CANDIDATE-SELECTED'),
         ('test_a2_malformed_candidate_coordinate_is_held', 'east-huge-int', 'SC32-CANDIDATE-RAISED'),
         ('test_a2_malformed_candidate_shape_is_held', 'east-just-above-180', 'SC32-CANDIDATE-SELECTED'),
         ('test_a2_malformed_candidate_shape_is_held', 'north-just-above-90', 'SC32-CANDIDATE-SELECTED'),
+    ]),
+    'round1-strict-overlaps': dict(attribute='_overlaps', double='round1_strict_overlaps',
+                                   controls=list(CONTROLS), detectors=[
+        (WORLD_EDGE, 'east-edge', 'SC32-WINDOW-OMITTED'),
+        (WORLD_EDGE, 'south-edge', 'SC32-WINDOW-OMITTED'),
     ]),
 }
 FORBIDDEN_MODULES = ('requests', 'urllib3', 'httpx', 'aiohttp', 'openai', 'anthropic', 'ollama',
@@ -447,12 +467,13 @@ def negative_controls(pytest, out):
             detail[label] = {'attribute': f'{MODULE_NAME}.{spec["attribute"]}', 'absent': True}
             continue
         detector_targets = [str(REPO / TEST_FILE) + f'::{fn}[{case}]' for fn, case, _ in spec['detectors']]
-        mutation = make_mutation(pytest, spec['attribute'], spec['legacy'])
-        mutated = run_session(pytest, out, 'mutated-' + label, detector_targets + targets_for(CONTROLS),
+        controls = spec['controls']
+        mutation = make_mutation(pytest, spec['attribute'], spec['double'])
+        mutated = run_session(pytest, out, 'mutated-' + label, detector_targets + targets_for(controls),
                               extra_plugins=[mutation])
         runs.append(mutated)
         row = {'attribute': f'{MODULE_NAME}.{spec["attribute"]}',
-               'legacy_callable': f'{TEST_FILE}::{spec["legacy"]}', 'detectors': {}, 'controls': {}}
+               'double_callable': f'{TEST_FILE}::{spec["double"]}', 'detectors': {}, 'controls': {}}
         if mutated['collect_errors']:
             problems.append(f'{label}: collection errors under mutation')
         for function, case, marker in spec['detectors']:
@@ -470,31 +491,31 @@ def negative_controls(pytest, out):
             elif marker not in text:
                 problems.append(f'{label}: detector {nodeid} failed without its marker {marker}')
             if mutation.calls.get(nodeid, 0) < 1:
-                problems.append(f'{label}: legacy double never called by detector {nodeid}')
-        control_ids = [n for n in mutated['collected'] if function_name(n) in CONTROLS]
-        if len(control_ids) < len(CONTROLS):
+                problems.append(f'{label}: in-memory double never called by detector {nodeid}')
+        control_ids = [n for n in mutated['collected'] if function_name(n) in controls]
+        if {function_name(n) for n in control_ids} != set(controls):
             problems.append(f'{label}: controls not collected under mutation')
         for nodeid in control_ids:
             row['controls'][nodeid] = {'result': mutated['results'].get(nodeid),
-                                       'legacy_calls': mutation.calls.get(nodeid, 0)}
+                                       'double_calls': mutation.calls.get(nodeid, 0)}
             if mutated['results'].get(nodeid) != 'passed':
                 problems.append(f'{label}: legitimate control {nodeid} did not stay green')
             if mutation.calls.get(nodeid, 0) < 1:
-                problems.append(f'{label}: legacy double not exercised by control {nodeid}')
+                problems.append(f'{label}: in-memory double not exercised by control {nodeid}')
         restored = getattr(sys.modules[MODULE_NAME], spec['attribute'])
         row['restored_function'] = f'{restored.__module__}.{restored.__qualname__}'
         if row['restored_function'] != f'{MODULE_NAME}.{spec["attribute"]}':
             problems.append(f'{label}: the in-memory double was not removed after the mutated session')
         detail[label] = row
-        restored_run = run_session(pytest, out, 'restored', detector_targets + targets_for(EXPECTED['negative']
-                                                                                            + CONTROLS))
+        restored_run = run_session(pytest, out, 'restored-' + label,
+                                   detector_targets + targets_for(EXPECTED['negative'] + controls))
         runs.append(restored_run)
         problems += clean(restored_run, None)
         for function, case, _ in spec['detectors']:
             ids = [n for n in restored_run['collected']
                    if function_name(n) == function and case_tokens(n) == case]
             if len(ids) != 1 or restored_run['results'].get(ids[0]) != 'passed':
-                problems.append(f'restored: detector {function}[{case}] not passed on the restored module')
+                problems.append(f'restored-{label}: detector {function}[{case}] not passed on the restored module')
     return runs, problems, detail
 
 

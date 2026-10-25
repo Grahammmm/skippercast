@@ -1,29 +1,42 @@
 """SC32-BRIDGE-BOUNDS: malformed CRS84 boxes never plan a coast catalog bridge.
 
-The bridge's existing CRS84 bbox contract, made explicit: four finite non-boolean
-int/float coordinates ``[west, south, east, north]``, longitude in -180..180,
-latitude in -90..90, ``west < east`` and ``south < north``. No wrapping and no
-anti-meridian interpretation. ``check_plan`` refuses a malformed plan segment box
-with ValueError before any candidate or cached source is inspected and before any
-output exists; ``_overlaps`` is false for a malformed box and true only for a
-positive-area overlap of two valid boxes, so a malformed catalog extent is held
-with the existing ``catalog_extent_does_not_overlap_segment`` reason.
+The bridge's existing CRS84 bbox contract, made explicit as ``_crs84_bbox``: four
+finite non-boolean int/float coordinates ``[west, south, east, north]``,
+longitude in -180..180, latitude in -90..90, ``west < east`` and
+``south < north``. No wrapping and no anti-meridian interpretation.
+
+* ``check_plan`` refuses a malformed plan segment box with ValueError before any
+  candidate or cached source is inspected and before any output exists.
+* The candidate gate in ``_decide`` holds a malformed catalog extent with the
+  existing ``catalog_extent_does_not_overlap_segment`` reason; a valid extent is
+  selected only on a positive-area overlap (edge-only adjacency is not overlap).
+* ``_overlaps`` itself is byte-identical to the frozen base. It also decides which
+  computed window footprints a window set must carry (``_expected_windows``), and
+  a footprint may legitimately reach past the world edge, so the strict contract is
+  applied to the external boxes only, never to computed footprints (operator
+  refreeze, option 1, after the round-1 review).
 
 Every case runs the complete staged ``catalog_bridge`` module through its public
-``dry_run`` / ``check_plan`` entry points (plus ``_overlaps`` for non-finite
-coordinates, which a frozen catalog cannot carry). The producer shapes come from
-``tests._coastal_catalog_fixture``; cached sources are tiny placeholder files
-that the bridge only lstat-checks. Sockets are disabled for every test.
+``dry_run`` / ``run`` / ``check_plan`` entry points, plus the gate as ``_decide``
+composes it for non-finite coordinates, which a frozen catalog cannot carry. The
+producer shapes come from ``tests._coastal_catalog_fixture``; cached sources are
+tiny placeholder files that the bridge only lstat-checks. Sockets are disabled.
 
-``legacy_overlaps`` is the test-local copy of the pre-SC32 float-coercing
-predicate. The acceptance runner's negative suite swaps it in, in memory, to show
-the typed/range assertions below fail without the correction.
+Test-local callables used by the acceptance runner's negative suite (swapped in,
+in memory; production bytes are never edited):
+``legacy_bbox_gate``       no contract at all, the pre-SC32 decision path;
+``round1_strict_overlaps`` the round-1 predicate that applied the contract inside
+                           ``_overlaps`` and so dropped required world-edge windows.
+``legacy_overlaps`` is the frozen-base predicate, verbatim.
 """
+import ast
 import copy
+import inspect
 import json
 import math
 from pathlib import Path
 import socket
+import textwrap
 import tomllib
 
 import pytest
@@ -45,6 +58,8 @@ ACCEPTED = 'SC32-OVERLAP-ACCEPTED'
 RAISED = 'SC32-OVERLAP-RAISED'
 SELECTED = 'SC32-CANDIDATE-SELECTED'
 CRASHED = 'SC32-CANDIDATE-RAISED'
+SEGMENT_ACCEPTED = 'SC32-SEGMENT-ACCEPTED'
+WINDOW_OMITTED = 'SC32-WINDOW-OMITTED'
 
 # A box whose every coordinate is valid on its own; one position is then replaced.
 BASE = [-120.6, 34.45, -120.5, 34.55]
@@ -72,7 +87,7 @@ def _replaced(position_name, kind):
 
 
 def legacy_overlaps(a, b):
-    """The pre-SC32 catalog_bridge._overlaps, verbatim: float coercion, no range check."""
+    """The frozen-base catalog_bridge._overlaps, verbatim: float coercion, no range check."""
     try:
         w1, s1, e1, n1 = (float(v) for v in a)
         w2, s2, e2, n2 = (float(v) for v in b)
@@ -80,6 +95,20 @@ def legacy_overlaps(a, b):
         return False
     if not (w1 < e1 and s1 < n1 and w2 < e2 and s2 < n2):
         return False
+    return min(e1, e2) > max(w1, w2) and min(n1, n2) > max(s1, s2)
+
+
+def legacy_bbox_gate(box):
+    """The pre-SC32 decision path had no bbox contract: every box reached _overlaps."""
+    return True
+
+
+def round1_strict_overlaps(a, b):
+    """The round-1 (b1d5fd98) _overlaps: the strict contract applied to every call."""
+    if not (bridge._crs84_bbox(a) and bridge._crs84_bbox(b)):
+        return False
+    w1, s1, e1, n1 = a
+    w2, s2, e2, n2 = b
     return min(e1, e2) > max(w1, w2) and min(n1, n2) > max(s1, s2)
 
 
@@ -121,11 +150,27 @@ def _dry(world, path, plan, label='dry'):
     return bridge.dry_run(world['root'], path, plan, world['tmp'] / label, allowlist=ALLOW)
 
 
-def _overlap_or_marker(a, b):
+def _candidate_gate_or_marker(box, segment=SEGMENT):
+    """The candidate extent gate exactly as _decide composes it (bbox contract, then overlap)."""
     try:
-        return bridge._overlaps(a, b)
+        return bool(bridge._crs84_bbox(box) and bridge._overlaps(box, segment))
     except Exception as error:  # noqa: BLE001 - a crash is the defect the marker names
-        pytest.fail(f'{RAISED}: _overlaps raised {type(error).__name__} for {a!r} / {b!r}')
+        pytest.fail(f'{RAISED}: the candidate gate raised {type(error).__name__} for {box!r}')
+
+
+def _legacy_expected_windows(geometry, segment):
+    """Frozen-base window completeness: unchanged production tiling with the base predicate."""
+    bbox = segment['bbox_crs84']
+    origin = geometry['origin']
+    return [w for w in bridge._canonical_tiles(geometry['tile'], geometry['width'], geometry['height'], origin)
+            if legacy_overlaps(bridge._window_bbox(geometry['anchor'], geometry['cell'], w[0] - origin[0],
+                                                   w[1] - origin[1], w[2], w[3]), bbox)]
+
+
+def _edge_case(name):
+    case = BOXES['world_edge_tilings'][name]
+    geometry = fx.tiling(case['width'], case['height'], anchor=tuple(case['anchor']), cell=tuple(case['cell']))
+    return case, geometry, dict(segment_id='synthetic-world-edge', bbox_crs84=list(case['bbox']))
 
 
 # --- A1 valid and boundary behaviour ----------------------------------------------------
@@ -169,12 +214,15 @@ def test_a1_segment_boxes_on_exact_geographic_edges_plan_normally(world, name):
 
 def test_a1_overlap_predicate_is_positive_area_only_and_symmetric():
     for name, box in BOXES['candidate_overlapping'].items():
+        assert bridge._crs84_bbox(box) is True, name
         assert bridge._overlaps(box, SEGMENT) is True, name
         assert bridge._overlaps(SEGMENT, box) is True, name
     for name, box in BOXES['candidate_not_overlapping'].items():
+        assert bridge._crs84_bbox(box) is True, name
         assert bridge._overlaps(box, SEGMENT) is False, name
         assert bridge._overlaps(SEGMENT, box) is False, name
     for name, box in BOXES['segment_valid_geographic_edges'].items():
+        assert bridge._crs84_bbox(box) is True, name
         assert bridge._overlaps(box, box) is True, name
 
 
@@ -192,28 +240,86 @@ def test_a1_ordinary_dry_run_keeps_its_receipt_shape(world):
     assert receipt['network_requests'] == receipt['source_opens'] == 0
 
 
+@pytest.mark.parametrize('name', sorted(BOXES['world_edge_tilings']))
+def test_a1_world_edge_window_set_keeps_baseline_completeness(world, name):
+    """A valid world-edge segment keeps every frozen-base window, whose footprint may cross the edge.
+
+    The complete window set is selected with one acquire job per window; the same
+    plan omitting the edge-crossing tile is refused, exactly as on the frozen base.
+    """
+    case, geometry, segment = _edge_case(name)
+    baseline = _legacy_expected_windows(geometry, segment)
+    assert len(baseline) == case['required_windows'], baseline
+    last = baseline[-1]
+    footprint = bridge._window_bbox(geometry['anchor'], geometry['cell'], last[0] - geometry['origin'][0],
+                                    last[1] - geometry['origin'][1], last[2], last[3])
+    west, south, east, north = footprint
+    assert not (-180 <= west and east <= 180 and -90 <= south and north <= 90), \
+        'the fixture must exercise an edge-crossing footprint'
+    produced = bridge._expected_windows(geometry['tile'], geometry['width'], geometry['height'],
+                                        geometry['origin'], geometry['anchor'], geometry['cell'], segment)
+    if produced != baseline:
+        pytest.fail(f'{WINDOW_OMITTED}: _expected_windows gave {produced!r}, frozen base {baseline!r}')
+
+    source = world['source']
+    row = fx.candidate('edge.bag', bbox=list(case['bbox']), size=source['bytes'], source_hash=source['sha256'])
+    catalog = fx.frozen_catalog([row])
+    path = world['tmp'] / 'catalog-edge.json'
+    sha = fx.write_catalog(path, catalog)
+
+    complete = fx.plan(catalog, sha, [fx.window_set(row['source_id'], source, baseline, tiling=geometry)],
+                       bbox=list(case['bbox']), segment_id=segment['segment_id'])
+    receipt = _dry(world, path, complete, label='complete')
+    assert receipt['selected_source_ids'] == [row['source_id']], receipt['decisions']
+    assert [entry['stage'] for entry in receipt['would_enqueue']] == ['acquire'] * len(baseline)
+    assert receipt['network_requests'] == receipt['source_opens'] == 0
+
+    omitted = fx.plan(catalog, sha, [fx.window_set(row['source_id'], source, baseline[:-1], tiling=geometry)],
+                      bbox=list(case['bbox']), segment_id=segment['segment_id'])
+    try:
+        _dry(world, path, omitted, label='omitted')
+    except ValueError as error:
+        assert 'deterministic tiling' in str(error), error
+    else:
+        pytest.fail(f'{WINDOW_OMITTED}: a plan omitting required window {last!r} was accepted')
+    assert not (world['tmp'] / 'omitted').exists()
+
+
 # --- A2 malformed input and preservation -------------------------------------------------
 
 @pytest.mark.parametrize('position, kind', COORDINATE_CASES)
-def test_a2_overlaps_rejects_a_malformed_coordinate(position, kind):
+def test_a2_bbox_contract_rejects_a_malformed_coordinate(position, kind):
     box = _replaced(position, kind)
-    for a, b in ((box, SEGMENT), (SEGMENT, box)):
-        result = _overlap_or_marker(a, b)
-        assert result is False, f'{ACCEPTED}: _overlaps({a!r}, {b!r}) returned {result!r}'
+    result = _candidate_gate_or_marker(box)
+    assert result is False, f'{ACCEPTED}: the candidate gate accepted {box!r}'
+    assert bridge._crs84_bbox(box) is False, f'{ACCEPTED}: _crs84_bbox accepted {box!r}'
 
 
 @pytest.mark.parametrize('name', sorted(BOXES['malformed_shapes']))
-def test_a2_overlaps_rejects_a_malformed_shape(name):
+def test_a2_bbox_contract_rejects_a_malformed_shape(name):
     box = BOXES['malformed_shapes'][name]
-    for a, b in ((box, SEGMENT), (SEGMENT, box)):
-        result = _overlap_or_marker(a, b)
-        assert result is False, f'{ACCEPTED}: _overlaps({a!r}, {b!r}) returned {result!r}'
+    result = _candidate_gate_or_marker(box)
+    assert result is False, f'{ACCEPTED}: the candidate gate accepted {box!r}'
+    assert bridge._crs84_bbox(box) is False, f'{ACCEPTED}: _crs84_bbox accepted {box!r}'
 
 
-def test_a2_overlaps_rejects_tuples_and_numeric_string_boxes():
-    assert bridge._overlaps(tuple(BASE), SEGMENT) is False
-    assert bridge._overlaps([str(v) for v in BASE], SEGMENT) is False
-    assert bridge._overlaps(BASE, [str(v) for v in SEGMENT]) is False
+def test_a2_bbox_contract_rejects_tuples_and_numeric_string_boxes():
+    assert bridge._crs84_bbox(tuple(BASE)) is False
+    assert bridge._crs84_bbox([str(v) for v in BASE]) is False
+    assert _candidate_gate_or_marker(tuple(BASE)) is False
+    assert _candidate_gate_or_marker([str(v) for v in BASE]) is False
+
+
+def _expect_segment_refusal(call):
+    try:
+        call()
+    except ValueError as error:
+        if 'bbox_crs84' not in str(error):
+            pytest.fail(f'{SEGMENT_ACCEPTED}: refused for another reason: {error}')
+        return
+    except Exception as error:  # noqa: BLE001 - reaching a later stage is the defect the marker names
+        pytest.fail(f'{SEGMENT_ACCEPTED}: the malformed segment reached {type(error).__name__}: {error}')
+    pytest.fail(f'{SEGMENT_ACCEPTED}: the malformed segment plan was accepted')
 
 
 def _assert_refused_before_inspection(world, monkeypatch, segment_bbox):
@@ -230,12 +336,11 @@ def _assert_refused_before_inspection(world, monkeypatch, segment_bbox):
     monkeypatch.setattr(bridge, 'cached_source', spy('cached_source'))
     monkeypatch.setattr(bridge, '_decide', spy('_decide'))
     monkeypatch.setattr(bridge, '_overlaps', spy('_overlaps'))
-    with pytest.raises(ValueError, match='bbox_crs84'):
-        bridge.dry_run(world['root'], path, plan, world['tmp'] / 'dry', allowlist=ALLOW)
-    with pytest.raises(ValueError, match='bbox_crs84'):
-        bridge.run(world['root'], path, plan, world['root'] / 'bridge', allowlist=ALLOW)
-    with pytest.raises(ValueError, match='bbox_crs84'):
-        bridge.check_plan(plan, path.read_bytes(), catalog)
+    _expect_segment_refusal(lambda: bridge.dry_run(world['root'], path, plan, world['tmp'] / 'dry',
+                                                   allowlist=ALLOW))
+    _expect_segment_refusal(lambda: bridge.run(world['root'], path, plan, world['root'] / 'bridge',
+                                               allowlist=ALLOW))
+    _expect_segment_refusal(lambda: bridge.check_plan(plan, path.read_bytes(), catalog))
     assert touched == []
     assert not (world['tmp'] / 'dry').exists() and not (world['root'] / 'bridge').exists()
     assert sorted(p.relative_to(world['root']).as_posix() for p in world['root'].rglob('*')) == [
@@ -283,7 +388,7 @@ def test_a2_malformed_candidate_shape_is_held(world, name):
 
 @pytest.mark.parametrize('position, kind', [c for c in COORDINATE_CASES if c[1] in NONFINITE])
 def test_a2_nonfinite_candidate_extent_cannot_enter_a_frozen_catalog(position, kind):
-    """A frozen catalog's canonical digest refuses NaN/infinity, so _overlaps covers them directly."""
+    """A frozen catalog's canonical digest refuses NaN/infinity, so the gate covers them directly."""
     row = fx.candidate('c.bag')
     row['extent']['bbox'] = _replaced(position, kind)
     with pytest.raises(ValueError, match='JSON compliant'):
@@ -308,29 +413,62 @@ def test_a2_candidate_failures_keep_the_existing_hold_vocabulary(world):
 
 # --- A3 decisive synthetic mutation -----------------------------------------------------
 
-def test_mutation_controls_legacy_predicate_accepts_what_production_refuses():
+def test_mutation_controls_unguarded_gate_accepts_what_production_refuses():
     string_box = [str(v) for v in BASE]
     wide_east = [-120.6, 34.45, 200.0, 34.55]
     open_west = [-math.inf, 34.45, -120.5, 34.55]
-    assert legacy_overlaps(string_box, SEGMENT) is True
-    assert legacy_overlaps(wide_east, SEGMENT) is True
-    assert legacy_overlaps(open_west, SEGMENT) is True
+    huge_east = [-120.6, 34.45, HUGE, 34.55]
+    for box in (string_box, wide_east, open_west):
+        assert (legacy_bbox_gate(box) and legacy_overlaps(box, SEGMENT)) is True
     with pytest.raises(OverflowError):
-        legacy_overlaps([-120.6, 34.45, HUGE, 34.55], SEGMENT)
-    for box in (string_box, wide_east, open_west, [-120.6, 34.45, HUGE, 34.55]):
-        assert bridge._overlaps(box, SEGMENT) is False
+        legacy_bbox_gate(huge_east) and legacy_overlaps(huge_east, SEGMENT)
+    for box in (string_box, wide_east, open_west, huge_east):
+        assert bridge._crs84_bbox(box) is False
+        assert _candidate_gate_or_marker(box) is False
 
 
 def test_mutation_controls_legacy_and_production_agree_on_valid_boxes():
     for box in BOXES['candidate_overlapping'].values():
         assert legacy_overlaps(box, SEGMENT) is bridge._overlaps(box, SEGMENT) is True
+        assert _candidate_gate_or_marker(box) is True
     for box in BOXES['candidate_not_overlapping'].values():
         assert legacy_overlaps(box, SEGMENT) is bridge._overlaps(box, SEGMENT) is False
+        assert _candidate_gate_or_marker(box) is False
+
+
+def _function_ast(function):
+    tree = ast.parse(textwrap.dedent(inspect.getsource(function)))
+    node = tree.body[0]
+    node.name = '_overlaps'
+    if ast.get_docstring(node) is not None:
+        node.body = node.body[1:]
+    return ast.dump(node)
+
+
+def test_mutation_controls_overlaps_matches_the_frozen_base_predicate():
+    """Computed window footprints keep the frozen-base predicate: _overlaps is unchanged."""
+    assert _function_ast(bridge._overlaps) == _function_ast(legacy_overlaps)
+    assert _function_ast(bridge._overlaps) != _function_ast(round1_strict_overlaps)
+
+
+@pytest.mark.parametrize('name', sorted(BOXES['world_edge_tilings']))
+def test_mutation_controls_round1_strict_predicate_drops_a_required_world_edge_window(name):
+    case, geometry, segment = _edge_case(name)
+    baseline = _legacy_expected_windows(geometry, segment)
+    original = bridge._overlaps
+    try:
+        bridge._overlaps = round1_strict_overlaps
+        strict = bridge._expected_windows(geometry['tile'], geometry['width'], geometry['height'],
+                                          geometry['origin'], geometry['anchor'], geometry['cell'], segment)
+    finally:
+        bridge._overlaps = original
+    assert len(baseline) == case['required_windows'] and strict == baseline[:-1]
 
 
 def test_mutation_controls_production_predicate_is_not_the_legacy_callable():
-    assert bridge._overlaps is not legacy_overlaps
-    assert bridge._overlaps.__module__ == bridge.__name__
+    for double in (legacy_overlaps, legacy_bbox_gate, round1_strict_overlaps):
+        assert bridge._overlaps is not double and bridge._crs84_bbox is not double
+    assert bridge._overlaps.__module__ == bridge._crs84_bbox.__module__ == bridge.__name__
     assert Path(bridge.__file__).resolve() == MODULE_PATH.resolve()
 
 
@@ -338,7 +476,8 @@ def test_mutation_controls_production_predicate_is_not_the_legacy_callable():
 
 def test_a4_tests_import_the_complete_staged_production_module():
     assert Path(bridge.__file__).resolve() == MODULE_PATH.resolve()
-    for name in ('check_plan', 'evaluate', 'dry_run', 'run', 'enqueue', '_overlaps', '_decide'):
+    for name in ('check_plan', 'evaluate', 'dry_run', 'run', 'enqueue', '_overlaps', '_crs84_bbox', '_decide',
+                 '_expected_windows'):
         assert callable(getattr(bridge, name))
 
 
