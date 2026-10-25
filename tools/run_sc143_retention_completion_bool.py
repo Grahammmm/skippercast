@@ -116,10 +116,17 @@ def main():
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         selected.append("sc143_test_module")
+        loaded_sources = {}
+        source_root = (repo / "src").resolve()
+        for name, loaded in sorted(sys.modules.items()):
+            origin_value = getattr(loaded, "__file__", None)
+            if not origin_value:
+                continue
+            origin = Path(origin_value).resolve()
+            if origin.is_relative_to(source_root) and origin.is_file():
+                loaded_sources[name] = {"origin": str(origin), "sha256": sha_bytes(origin.read_bytes())}
         result_details["source_closure"] = {
-            "imports": {name: {"origin": str(Path(imported[name].__file__).resolve()),
-                               "sha256": sha_bytes(Path(imported[name].__file__).read_bytes())}
-                        for name in imported},
+            "imports": loaded_sources,
             "test_file": {"origin": str((repo / TEST_FILE).resolve()),
                           "sha256": sha_bytes((repo / TEST_FILE).read_bytes())},
             "runner_sha256": sha_bytes(Path(__file__).read_bytes()),
