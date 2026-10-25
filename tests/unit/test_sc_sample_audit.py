@@ -16,8 +16,9 @@ from pathlib import Path
 import sys
 import tempfile
 
-ROOT = Path(__file__).resolve().parents[2]
-FIXTURES = ROOT / 'tests' / 'fixtures' / 'sc_sample_audit'
+from tests._support import FIXTURES as _FIXTURES, ROOT
+
+FIXTURES = _FIXTURES / 'sc_sample_audit'
 PRODUCER_PATH = ROOT / 'skills' / 'coast-campaign-shared' / 'scripts' / 'coast_sample.py'
 AUDIT_PATH = ROOT / 'scripts' / 'coast_diagnostics' / 'sample_coverage.py'
 
