@@ -5,14 +5,14 @@ uses the committed read-only fixture and never installs process-global guards.
 """
 import copy
 import json
-from pathlib import Path
 import unittest
 from unittest.mock import patch
 
 from skippercast.seafloor import verify
 from tests import http_fixture
+from tests._support import FIXTURES
 
-FIXTURE_ROOT = Path(__file__).resolve().parents[1] / 'fixtures' / 'sc87-public-manifest-binding'
+FIXTURE_ROOT = FIXTURES / 'sc87-public-manifest-binding'
 MISMATCH = 'Public manifest does not match R2 publication'
 RAW = b'PMTiles\x03' + b'\0' * 119
 
