@@ -7,6 +7,14 @@ Every invocation writes a fresh unique child of --output (which must sit under
 <candidate>/out) and never overwrites earlier evidence. Success is a scoped
 machine verdict only: REVIEW REQUIRED, not whole-repository, semantic or release
 acceptance. Explicit exit checks decide the verdict, never a bare assert.
+
+Preflight (before any fixture byte is hashed or any child is launched): the
+SOURCE-MANIFEST head must equal the admitted staged base literally and still be
+an ancestor with the pinned primary bytes; the fixture subtree and committed
+inputs must be real directories/regular files with no links; and the frozen
+SP-14-v1 specification representation must match its pinned SHA-256, which is
+recorded in every receipt. --suite selftest exercises those refusals on
+disposable synthetic trees inside the run directory.
 """
 from __future__ import annotations
 
@@ -18,6 +26,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import uuid
@@ -28,10 +37,18 @@ SPEC = "SP-14-v1"
 CARD = "SP1401-FLOW-GAPS"
 MANIFEST_SCHEMA = "agentorange.source-manifest/v1"
 PRIMARY = "web/map/flow.ts"
+# The exact admitted staged base (Grahammmm/skippercast main). SOURCE-MANIFEST
+# head must equal it literally; an ancestor with the same primary bytes is not
+# the admitted source identity.
+STAGED_BASE = "33734f90073a2150eac5a418564ea314c4a591ac"
 # Frozen SHA-256 of the pinned, unchanged primary file at the staged base.
 PRIMARY_BASE_SHA256 = "d49ca52211025475ca104a5436d2a1b63470c82b6b3ae5c77e8e9ddaede58505"
 NEW_TEST = "tests/test_sp1401_flow_gaps.mjs"
 FIXTURE_DIR = "tests/fixtures/sp1401_flow_gaps"
+FIXTURE_CASES = FIXTURE_DIR + "/cases.json"
+# Portable byte representation of the frozen SP-14-v1 requirements for this card.
+FROZEN_SPEC = FIXTURE_DIR + "/frozen-spec-SP-14-v1.json"
+FROZEN_SPEC_SHA256 = "bd6cd2ac09259d76855fc86090324ce977c5a5053ef89cd8850ab8dd46caee30"
 NOTE = "docs/engineering/sp1401_flow_gaps.md"
 REGRESSION_FILES = ["tests/test_flow.mjs"]
 BASELINE_NAMES = {"primary regression": False, "healthy control": True}  # name -> expected to pass
@@ -73,8 +90,26 @@ def sha_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def is_regular_nolink(path: Path) -> bool:
+    """lstat only: a regular file that is not itself a symlink. Never opens it."""
+    try:
+        st = os.lstat(path)
+    except OSError:
+        return False
+    return stat.S_ISREG(st.st_mode)
+
+
+def is_dir_nolink(path: Path) -> bool:
+    try:
+        st = os.lstat(path)
+    except OSError:
+        return False
+    return stat.S_ISDIR(st.st_mode)
+
+
 def sha_file(path: Path) -> str | None:
-    return sha_bytes(path.read_bytes()) if path.is_file() else None
+    """Hash only a regular, non-link file; links and other inputs are not read."""
+    return sha_bytes(path.read_bytes()) if is_regular_nolink(path) else None
 
 
 def refuse(message: str) -> int:
@@ -91,8 +126,62 @@ def has_symlink(path: Path) -> bool:
     return False
 
 
-def git(*args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(["git", "-C", str(REPO), *args], text=True, capture_output=True)
+def git(*args: str, repo: Path = REPO) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", "-C", str(repo), *args], text=True, capture_output=True)
+
+
+def check_fixture_tree(repo: Path) -> dict:
+    """Validate fixture ancestry inside the repo before any fixture byte is read.
+
+    Every component from the repo root down to the fixture directory must be a
+    real directory (lstat), and every entry below it must be a real directory or
+    a regular file. Symlinks, FIFOs, sockets and devices are refused without
+    following or opening them. Staged shared links elsewhere in the repo (for
+    example .venv or node_modules) are outside this subtree and untouched.
+    """
+    errors: list[str] = []
+    current = repo
+    for part in Path(FIXTURE_DIR).parts:
+        current = current / part
+        if not is_dir_nolink(current):
+            kind = "symlink" if os.path.islink(current) else "not a real directory"
+            errors.append(f"{current.relative_to(repo)}: {kind}")
+            return {"ok": False, "errors": errors, "files": []}
+    root = repo / FIXTURE_DIR
+    files: list[str] = []
+    pending = [root]
+    while pending:
+        directory = pending.pop()
+        with os.scandir(directory) as entries:
+            for entry in sorted(entries, key=lambda e: e.name):
+                rel = str(Path(entry.path).relative_to(repo))
+                mode = entry.stat(follow_symlinks=False).st_mode
+                if stat.S_ISLNK(mode):
+                    errors.append(f"{rel}: symlink")
+                elif stat.S_ISDIR(mode):
+                    pending.append(Path(entry.path))
+                elif stat.S_ISREG(mode):
+                    files.append(rel)
+                else:
+                    errors.append(f"{rel}: non-regular input")
+    for required in (FIXTURE_CASES, FROZEN_SPEC):
+        if required not in files:
+            errors.append(f"{required}: missing regular committed fixture")
+    return {"ok": not errors, "errors": errors, "files": sorted(files)}
+
+
+def check_base(base: str, repo: Path = REPO) -> dict:
+    """Bind preflight to the literal admitted staged base, then ancestry and bytes."""
+    result = {"staged_base_exact": base == STAGED_BASE,
+              "base_is_ancestor": bool(base) and git("merge-base", "--is-ancestor", base, "HEAD", repo=repo).returncode == 0}
+    shown = subprocess.run(["git", "-C", str(repo), "show", f"{base}:{PRIMARY}"], capture_output=True) if base else None
+    result["primary_base_bytes_pinned"] = bool(shown) and shown.returncode == 0 and sha_bytes(shown.stdout) == PRIMARY_BASE_SHA256
+    return result
+
+
+def check_spec(path: Path) -> dict:
+    digest = sha_file(path)
+    return {"regular_nolink": digest is not None, "sha256": digest, "pinned": digest == FROZEN_SPEC_SHA256}
 
 
 def run(argv: list[str], cwd: Path, env: dict, run_dir: Path, label: str, timeout: int = 1800) -> dict:
@@ -181,10 +270,120 @@ def node_suite(suite: str, run_dir: Path, node: str) -> tuple[bool, dict, list[d
     return ok, checks, children
 
 
+def self_test(run_dir: Path) -> tuple[bool, dict]:
+    """Preflight negatives/positives on disposable synthetic trees under run_dir.
+
+    Nothing outside run_dir is created; the real repo is only queried read-only
+    (git show / merge-base / rev-list and the committed fixture tree). Link
+    targets are made unreadable while the checks run so a followed link would
+    raise instead of silently hashing the target.
+    """
+    root = run_dir / "selftest"
+    root.mkdir()
+    cases_bytes = (REPO / FIXTURE_CASES).read_bytes() if is_regular_nolink(REPO / FIXTURE_CASES) else b"{}\n"
+    spec_bytes = (REPO / FROZEN_SPEC).read_bytes() if is_regular_nolink(REPO / FROZEN_SPEC) else b"{}\n"
+
+    def make_tree(name: str) -> Path:
+        repo = root / name
+        fixture = repo / FIXTURE_DIR
+        fixture.mkdir(parents=True)
+        (fixture / "cases.json").write_bytes(cases_bytes)
+        (fixture / Path(FROZEN_SPEC).name).write_bytes(spec_bytes)
+        return repo
+
+    outside = root / "outside"
+    outside.mkdir()
+    secret = outside / "target.json"
+    secret.write_bytes(cases_bytes)
+    outside_tree = make_tree("outside-tree")
+
+    expectations: dict[str, tuple[dict, bool]] = {}
+    positive = make_tree("regular")
+    expectations["fixture_regular_synthetic_positive"] = (check_fixture_tree(positive), True)
+
+    t = root / "root-link"
+    (t / "tests" / "fixtures").mkdir(parents=True)
+    (t / FIXTURE_DIR).symlink_to(outside_tree / FIXTURE_DIR, target_is_directory=True)
+    root_link = t
+
+    t = root / "intermediate-link"
+    (t / "tests").mkdir(parents=True)
+    (t / "tests" / "fixtures").symlink_to(outside_tree / "tests" / "fixtures", target_is_directory=True)
+    intermediate_link = t
+
+    t = root / "tests-link"
+    t.mkdir()
+    (t / "tests").symlink_to(outside_tree / "tests", target_is_directory=True)
+    tests_link = t
+
+    t = root / "leaf-link"
+    (t / FIXTURE_DIR).mkdir(parents=True)
+    (t / FROZEN_SPEC).write_bytes(spec_bytes)
+    (t / FIXTURE_CASES).symlink_to(secret)
+    leaf_link = t
+
+    t = make_tree("nonregular-leaf")
+    os.mkfifo(t / FIXTURE_DIR / "extra.fifo")
+    fifo_tree = t
+
+    # Make every link target unreadable during the negative checks.
+    guarded = [secret, outside_tree / FIXTURE_CASES]
+    for path in guarded:
+        os.chmod(path, 0)
+    try:
+        expectations["fixture_root_link_negative"] = (check_fixture_tree(root_link), False)
+        expectations["fixture_intermediate_link_negative"] = (check_fixture_tree(intermediate_link), False)
+        expectations["fixture_tests_dir_link_negative"] = (check_fixture_tree(tests_link), False)
+        expectations["fixture_leaf_link_negative"] = (check_fixture_tree(leaf_link), False)
+        expectations["fixture_leaf_link_not_hashed"] = ({"sha": sha_file(leaf_link / FIXTURE_CASES),
+                                                        "ok": sha_file(leaf_link / FIXTURE_CASES) is None}, True)
+        expectations["fixture_fifo_negative"] = (check_fixture_tree(fifo_tree), False)
+    finally:
+        for path in guarded:
+            os.chmod(path, 0o600)
+    expectations["fixture_committed_repo_positive"] = (check_fixture_tree(REPO), True)
+
+    exact = check_base(STAGED_BASE)
+    expectations["base_exact_positive"] = ({**exact, "ok": all(exact.values())}, True)
+    after = git("rev-list", "--reverse", f"{STAGED_BASE}..HEAD").stdout.split()
+    if after:
+        drift = check_base(after[0])
+        # A real wrong-but-ancestor base with the same primary bytes: only the
+        # exact-base check may reject it.
+        same_bytes_ancestor = drift["base_is_ancestor"] and drift["primary_base_bytes_pinned"]
+        expectations["base_wrong_ancestor_same_bytes_negative"] = (
+            {**drift, "probe_base": after[0], "probe_is_ancestor_with_pinned_bytes": same_bytes_ancestor,
+             "ok": all(drift.values()) or not same_bytes_ancestor}, False)
+    else:
+        expectations["base_wrong_ancestor_same_bytes_negative"] = ({"ok": True, "error": "no commit after base"}, False)
+
+    spec_real = check_spec(REPO / FROZEN_SPEC)
+    expectations["spec_committed_positive"] = ({**spec_real, "ok": spec_real["pinned"]}, True)
+    changed = root / "spec-changed.json"
+    changed.write_bytes(spec_bytes.replace(b"one-pixel", b"two-pixel", 1))
+    spec_changed = check_spec(changed)
+    expectations["spec_changed_negative"] = ({**spec_changed, "ok": spec_changed["pinned"],
+                                              "distinct_identity": spec_changed["sha256"] != spec_real["sha256"]}, False)
+    spec_link = root / "spec-link.json"
+    spec_link.symlink_to(REPO / FROZEN_SPEC)
+    spec_linked = check_spec(spec_link)
+    expectations["spec_link_negative"] = ({**spec_linked, "ok": spec_linked["pinned"]}, False)
+
+    results = {}
+    passed = True
+    for name, (observed, want) in expectations.items():
+        good = bool(observed["ok"]) == want
+        if name == "spec_changed_negative":
+            good = good and observed["distinct_identity"]
+        results[name] = {"expected_ok": want, "observed": observed, "matched": good}
+        passed = passed and good
+    return passed, results
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="SP1401-FLOW-GAPS offline acceptance launcher")
     parser.add_argument("--suite", required=True,
-                        choices=("baseline", "focused", "regression", "repository", "typecheck", "build"))
+                        choices=("baseline", "focused", "regression", "repository", "typecheck", "build", "selftest"))
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
@@ -211,16 +410,23 @@ def main() -> int:
         "manifest_repo": Path(manifest.get("repo", "")).resolve() == REPO,
         "manifest_write_root": Path(manifest.get("write_root", "")).resolve() == CANDIDATE,
         "credential_scan_python3_declared": bool(runtime.get("credential_scan_python3")),
-        "base_is_ancestor": git("merge-base", "--is-ancestor", base, "HEAD").returncode == 0 if base else False,
+        **check_base(base),
     }
-    base_primary = subprocess.run(["git", "-C", str(REPO), "show", f"{base}:{PRIMARY}"], capture_output=True)
-    preflight["primary_base_bytes_pinned"] = (base_primary.returncode == 0
-                                              and sha_bytes(base_primary.stdout) == PRIMARY_BASE_SHA256)
+    # Fixture ancestry and committed inputs are validated by lstat before any
+    # of their bytes are hashed or any child is launched.
+    fixture_check = check_fixture_tree(REPO)
+    preflight["fixture_tree_regular_nolink"] = fixture_check["ok"]
+    inputs = [PRIMARY, NEW_TEST, NOTE, *REGRESSION_FILES]
+    input_check = {rel: is_regular_nolink(REPO / rel) for rel in inputs}
+    preflight["committed_inputs_regular_nolink"] = all(input_check.values())
+    spec_check = check_spec(REPO / FROZEN_SPEC) if fixture_check["ok"] else {"regular_nolink": False, "sha256": None, "pinned": False}
+    preflight["frozen_spec_pinned"] = spec_check["pinned"]
 
     head = git("rev-parse", "HEAD").stdout.strip()
     status = git("status", "--porcelain", "--untracked-files=all").stdout
+    # Material commits are always listed from the admitted staged base.
     log = git("log", "--format=%H%x1f%s%x1f%(trailers:key=Material-Author,valueonly,separator=%x2c)%x1f%(trailers:key=Signed-off-by,valueonly,separator=%x2c)",
-              f"{base}..HEAD").stdout if base else ""
+              f"{STAGED_BASE}..HEAD").stdout
     commits = []
     for line in log.splitlines():
         parts = line.split("\x1f")
@@ -228,18 +434,23 @@ def main() -> int:
             commits.append({"commit": parts[0], "subject": parts[1], "material_author": parts[2].strip(),
                             "signed_off_by": parts[3].strip()})
     primary_now = sha_file(REPO / PRIMARY)
-    fixtures = {str(p.relative_to(REPO)): sha_file(p) for p in sorted((REPO / FIXTURE_DIR).rglob("*")) if p.is_file()}
+    fixtures = ({rel: sha_file(REPO / rel) for rel in fixture_check["files"]} if fixture_check["ok"] else None)
     node = shutil.which("node")
     pnpm = runtime.get("pnpm") or shutil.which("pnpm")
     identity = {
         "specification": SPEC, "card": CARD, "suite": args.suite,
-        "phase": "baseline-before-product-edit" if args.suite == "baseline" else "candidate",
-        "staged_base": base, "head": head, "worktree_clean": status == "", "worktree_status": status,
+        "specification_file": FROZEN_SPEC, "specification_sha256": spec_check["sha256"],
+        "specification_sha256_pinned": FROZEN_SPEC_SHA256,
+        "phase": ("baseline-before-product-edit" if args.suite == "baseline"
+                  else "preflight-self-test" if args.suite == "selftest" else "candidate"),
+        "staged_base": base, "staged_base_admitted": STAGED_BASE, "head": head,
+        "worktree_clean": status == "", "worktree_status": status,
         "commits_since_base": commits,
+        "fixture_check": fixture_check, "committed_input_check": input_check,
         "hashes": {"source_manifest": sha_file(manifest_path), PRIMARY: primary_now,
                    "primary_matches_base": primary_now == PRIMARY_BASE_SHA256,
                    NEW_TEST: sha_file(REPO / NEW_TEST), "scripts/accept_sp1401_flow_gaps.py": sha_file(Path(__file__).resolve()),
-                   NOTE: sha_file(REPO / NOTE), "fixtures": fixtures,
+                   NOTE: sha_file(REPO / NOTE), "frozen_spec": spec_check["sha256"], "fixtures": fixtures,
                    **{rel: sha_file(REPO / rel) for rel in REGRESSION_FILES}},
         "runtime": {"launcher_python": sys.executable, "launcher_version": sys.version.split()[0],
                     "node": node, "pnpm": pnpm, "credential_scan_python3": runtime.get("credential_scan_python3"),
@@ -254,6 +465,9 @@ def main() -> int:
 
     if not ok:
         verdict = "PREFLIGHT_REFUSED"
+    elif args.suite == "selftest":
+        ok, checks["suite"] = self_test(run_dir)
+        verdict = "PREFLIGHT_SELFTEST_PASSED_REVIEW_REQUIRED" if ok else "FAILED"
     elif args.suite in ("baseline", "focused", "regression"):
         if not node:
             return refuse("installed node runtime not found; no fallback")

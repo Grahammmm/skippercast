@@ -29,7 +29,7 @@ taken from the seed, and all drawing (`drawBase`, `drawDashes`).
 
 Tests are in `tests/test_sp1401_flow_gaps.mjs`; synthetic inputs are in
 `tests/fixtures/sp1401_flow_gaps/cases.json`. The runner is
-`scripts/accept_sp1401_flow_gaps.py` (`--suite baseline|focused|regression|repository|typecheck|build`).
+`scripts/accept_sp1401_flow_gaps.py` (`--suite baseline|focused|regression|repository|typecheck|build|selftest`).
 
 | Row | Mode | Test(s) |
 | --- | --- | --- |
@@ -38,6 +38,38 @@ Tests are in `tests/test_sp1401_flow_gaps.mjs`; synthetic inputs are in
 | A3 | focused | `A3: each five-pixel segment is sampled a constant bounded number of times at most one pixel apart`; `A3: zero support, short paths and the viewport edge keep their existing results`; `A3: the vector function, its field and masks are not mutated` |
 | A4 | baseline, then focused | `primary regression` (the first A1 case against the complete module) and `healthy control` (the identical eastward fixture without the strip keeps the original line and direction). Baseline mode registers only this pair and requires exactly one assertion failure (`ERR_ASSERTION`, no product exception or setup error), one pass, no skips: `BASELINE_GAP_REPRODUCED`. After the product edit the same two tests pass inside focused mode. |
 | compatibility | regression | `tests/test_flow.mjs`, unchanged, all 14 tests, no skips |
+
+## Launcher preflight and evidence identity
+
+Before any fixture byte is hashed or any child is launched, every mode of
+`scripts/accept_sp1401_flow_gaps.py` requires:
+
+- `SOURCE-MANIFEST.json` `head` to equal the admitted staged base
+  `33734f90073a2150eac5a418564ea314c4a591ac` literally, and that commit to be an
+  ancestor of HEAD whose `web/map/flow.ts` bytes match the pinned SHA-256. A
+  later ancestor with the same primary bytes (for example the A4 test commit)
+  is refused. `commits_since_base` is always listed from the admitted base.
+- the fixture ancestry `tests`, `tests/fixtures`, `tests/fixtures/sp1401_flow_gaps`
+  to be real directories and every entry below it to be a real directory or a
+  regular file (lstat only: links, FIFOs and other inputs are refused without
+  being followed or opened); the primary, new test, this note and the
+  regression files must be regular, non-link files. Staged shared links outside
+  this subtree (`.venv`, `node_modules`) are not inspected or changed.
+- `tests/fixtures/sp1401_flow_gaps/frozen-spec-SP-14-v1.json`, a verbatim
+  portable transcription of the frozen SP-14-v1 item for this card (not a test
+  input), to match the SHA-256 pinned in the launcher. Every receipt records
+  `specification_file`, `specification_sha256` and the pinned value, so a
+  changed specification representation yields a different evidence identity
+  and is refused.
+
+`--suite selftest` exercises these refusals on disposable synthetic trees inside
+its own run directory: fixture root, intermediate, `tests` and leaf links and a
+FIFO leaf are refused (link targets are made unreadable during the checks, so a
+followed link would raise), regular synthetic and committed fixture trees pass;
+the exact base passes and the first commit after it (a real ancestor with the
+pinned primary bytes) is refused; the committed spec passes while a one-byte
+change or a link to it is refused, with a distinct hash. Self-test success is a
+launcher contract check only.
 
 The expected values for A2 and A3 come from an independent oracle in the test
 file: the unchanged midpoint rule written for a constant unit field, not a copy
