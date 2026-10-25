@@ -35,7 +35,7 @@ PEERS = ('APeerBeforeTests', 'ZPeerAfterTests')
 METHODS = ['test_regression', 'test_compatibility', 'test_negative_control', 'test_preservation']
 # Frozen subcase counts per method; a missing or extra subcase fails acceptance.
 EXPECTED_CASES = {'test_regression': 47, 'test_compatibility': 27,
-                  'test_negative_control': 27, 'test_preservation': 13}
+                  'test_negative_control': 27, 'test_preservation': 15}
 GUARDED = ('socket.create_connection', 'socket.getaddrinfo', 'socket.socket.connect',
            'socket.socket.connect_ex', 'socket.socket.sendto', 'subprocess.Popen', 'os.system',
            'os.popen', 'os.execv', 'os.execve', 'os.execl', 'os.execlp', 'os.execvp',

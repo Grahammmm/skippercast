@@ -131,12 +131,21 @@ def output_root():
     return root
 
 
+def ambient_product_modules():
+    """Ambient product modules by object; another suite may legitimately preload them."""
+    return {k: v for k, v in sys.modules.items() if k == 'skippercast' or k.startswith('skippercast.')}
+
+
+def same_modules(left, right):
+    return sorted(left) == sorted(right) and all(left[k] is right[k] for k in left)
+
+
 class APeerBeforeTests(unittest.TestCase):
     """Harmless peer that runs before the SC172 class in ordinary discovery."""
 
     def test_peer(self):
         PEER['before'] = load_support().peer_state()
-        self.assertNotIn(MODULE, sys.modules)
+        PEER['modules'] = ambient_product_modules()
 
 
 class PreparationReceiptJsonTests(unittest.TestCase):
@@ -189,6 +198,27 @@ class PreparationReceiptJsonTests(unittest.TestCase):
         folder = self.run_root / self._testMethodName / ('%04d' % self.counter)
         folder.mkdir(parents=True, exist_ok=False)
         return folder
+
+    def peer_cycle(self):
+        """Run both harmless peers around a nested guard import, with a scoped PEER."""
+        outcomes = []
+        with patch.dict(PEER, clear=True):
+            outcomes.append(self.run_peer(APeerBeforeTests))
+            outer = sys.modules.get(MODULE)
+            with self.support.OfflineProduct(self.fresh()) as nested:
+                inner = importlib.import_module(MODULE)
+                self.assertIsNot(inner, outer)
+                self.assertTrue(Path(inner.__file__).resolve().is_relative_to(REPO / 'src'))
+            self.assertEqual(nested.events, [])
+            self.assertIs(sys.modules.get(MODULE), outer)
+            outcomes.append(self.run_peer(ZPeerAfterTests))
+        return tuple(outcomes)
+
+    @staticmethod
+    def run_peer(cls):
+        result = unittest.TestResult()
+        cls('test_peer').run(result)
+        return result.testsRun == 1 and result.wasSuccessful() and not result.skipped
 
     def row(self, receipt_sha256):
         """Otherwise-valid derived-grid row; the receipt hash is recomputed per case."""
@@ -463,6 +493,25 @@ class PreparationReceiptJsonTests(unittest.TestCase):
                 module, name = target.rsplit('.', 1)
                 self.assertEqual(getattr(importlib.import_module(module), name), self.guard.refuse)
             self.assertEqual(self.guard.events, [])
+        with self.case('nested-guard-preserves-preloaded-ambient-module'):
+            # R1-1: another suite (e.g. survey pytest collection) already imported the
+            # real module; the guard and both peers must preserve it by identity.
+            before = ambient_product_modules()
+            self.assertIs(before.get(MODULE), self.mg)
+            self.assertEqual(self.peer_cycle(), (True, True))
+            self.assertTrue(same_modules(ambient_product_modules(), before))
+            self.assertIs(sys.modules[MODULE], self.mg)
+        with self.case('nested-guard-preserves-empty-ambient-state'):
+            saved = ambient_product_modules()
+            for key in saved:
+                sys.modules.pop(key)
+            try:
+                self.assertEqual(ambient_product_modules(), {})
+                self.assertEqual(self.peer_cycle(), (True, True))
+                self.assertEqual(ambient_product_modules(), {})
+            finally:
+                sys.modules.update(saved)
+            self.assertTrue(same_modules(ambient_product_modules(), saved))
         with self.case('decoder-and-module-constants-unchanged'):
             self.assertIs(self.mg._decode_receipt, self.genuine)
             self.assertEqual(typed((self.mg.FORMAT, self.mg.VERSION, self.mg.DESCRIPTIONS)), self.constants)
@@ -486,9 +535,12 @@ class ZPeerAfterTests(unittest.TestCase):
 
     def test_peer(self):
         after = load_support().peer_state()
-        self.assertNotIn(MODULE, sys.modules)
         if 'before' in PEER:
             self.assertEqual(after, PEER['before'])
+            # Preserve whatever product modules pre-existed (none, or a peer's own
+            # import) by identity; never demand global absence.
+            self.assertTrue(same_modules(ambient_product_modules(), PEER['modules']),
+                            'ambient product modules changed by the SC172 suite')
 
 
 if __name__ == '__main__':
