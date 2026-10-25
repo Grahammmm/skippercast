@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "row": {
+    "id": "survey-valid",
+    "title": "Synthetic source product",
+    "url": "https://example.invalid/survey.tif",
+    "publisher": "Synthetic producer",
+    "landing_page": "https://example.invalid/landing",
+    "year": "unknown",
+    "resolution_m": "unknown",
+    "horizontal_crs": "unknown",
+    "vertical_datum": "unknown",
+    "license": "unknown",
+    "sha256": "unknown",
+    "bytes": "unknown",
+    "hold_reason": "unreviewed",
+    "format": "usgs-geotiff",
+    "kind": "bathymetry",
+    "derived_from": [],
+    "status": "candidate",
+    "archive_member": "original.tif",
+    "evidence": ["synthetic-evidence"],
+    "field_evidence": {"title": ["synthetic-evidence"]},
+    "inspection_level": "native",
+    "lineage_status": "unknown",
+    "notes": "Synthetic only. No native data, rights or publication qualification."
+  },
+  "adapter_review": {
+    "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source_bytes": 123,
+    "horizontal_crs": "EPSG:4326",
+    "vertical_datum": "unknown",
+    "native_resolution_m": [2.0, 3.0]
+  }
+}
