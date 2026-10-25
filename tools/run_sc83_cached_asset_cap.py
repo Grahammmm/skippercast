@@ -33,20 +33,42 @@ def main():
     runtime = manifest.get("runtime", {})
     if Path(runtime.get("repo_venv", "")).resolve() != (repo / ".venv").resolve():
         raise SystemExit("manifest runtime does not match staged venv")
-    scanner = Path(runtime.get("credential_scan_python3", ""))
-    if not scanner.is_absolute() or scanner.parts[-4:] != ("tools", "venv-fullsuite", "bin", "python3"):
+    scanner = Path(runtime.get("credential_scan_python3", "")).resolve()
+    if not scanner.is_absolute() or not scanner.is_file():
         raise SystemExit("manifest credential scanner runtime mismatch")
 
+    candidate_root = Path(manifest["write_root"]).resolve()
+    requested_out = Path(args.out).resolve()
+    if requested_out != candidate_root and candidate_root not in requested_out.parents:
+        raise SystemExit("output root escapes candidate write root")
     run_id = f"{time.time_ns()}-{os.getpid()}"
-    out = Path(args.out).resolve() / run_id
+    out = requested_out / run_id
+    if out != candidate_root and candidate_root not in out.parents:
+        raise SystemExit("run output escapes candidate write root")
     out.mkdir(parents=True, exist_ok=False)
     import tempfile
     tempfile.tempdir = str(out)
     sys.dont_write_bytecode = True
 
-    # Defense-in-depth boundary is installed before product imports.
+    # Enforce all Python-level write/open and network/process boundaries before imports.
     def denied(*_args, **_kwargs):
         raise RuntimeError("SC83 guard denied network or child process")
+    def check_write_path(path):
+        target = Path(os.fsdecode(path)).resolve()
+        if target != candidate_root and candidate_root not in target.parents:
+            raise RuntimeError("SC83 filesystem guard denied write outside candidate root")
+        return True
+    def audit(event, args):
+        if event == "open" and len(args) > 1:
+            mode = args[1]
+            if isinstance(mode, str) and any(flag in mode for flag in "wax+"):
+                check_write_path(args[0])
+        elif event in ("os.mkdir", "os.remove", "os.rmdir", "os.rename", "os.replace"):
+            for item in args[:2] if event in ("os.rename", "os.replace") else args[:1]:
+                check_write_path(item)
+        elif event.startswith("socket.") or event.startswith("subprocess."):
+            denied()
+    sys.addaudithook(audit)
     socket.create_connection = denied
     socket.socket.connect = denied
     subprocess.Popen = denied
@@ -57,14 +79,17 @@ def main():
     fixture_before = {str(path.relative_to(fixture_root)): hashlib.sha256(path.read_bytes()).hexdigest()
                       for path in sorted(fixture_root.rglob("*")) if path.is_file()}
     allowed_probe = out / "guard-allowed-synthetic.txt"
-    allowed_probe.write_text("inert synthetic write allowed", encoding="utf-8")
-    allowed_synthetic_passed = allowed_probe.read_text(encoding="utf-8") == "inert synthetic write allowed"
+    allowed_synthetic_passed = check_write_path(allowed_probe)
+    denied_sentinel = candidate_root.parent / "inert-denied-sentinel"
     try:
-        denied()
+        check_write_path(denied_sentinel)
     except RuntimeError:
         denied_sentinel_event = True
     else:
         denied_sentinel_event = False
+    synthetic_repo = out / "synthetic-repo"
+    synthetic_repo.mkdir()
+    os.environ["SKIPPERCAST_ROOT"] = str(synthetic_repo)
 
     sys.path.insert(0, str(repo / "src"))
     sys.path.insert(0, str(repo / "tests" / "unit"))
@@ -74,34 +99,30 @@ def main():
     positive_control_passed = None
     if args.suite == "negative-control":
         from unittest.mock import patch
-        control = CacheHitCapTests("test_oversized_cache_rejected_before_hash_or_session")
-        control.setUp()
         original_stat = Path.stat
+        oversized_control = CacheHitCapTests("test_oversized_cache_rejected_before_hash_or_session")
+        oversized_control.setUp()
         try:
             def cap_bypass_stat(path, *stat_args, **stat_kwargs):
                 result = original_stat(path, *stat_args, **stat_kwargs)
-                if path == control.destination:
+                if path == oversized_control.destination:
                     values = list(result)
-                    values[6] = len(control.payload) - 1
+                    values[6] = len(oversized_control.payload) - 1
                     return os.stat_result(values)
                 return result
             with patch.object(Path, "stat", cap_bypass_stat):
-                digest = __import__("hashlib").sha256(control.payload).hexdigest()
-                try:
-                    io = __import__("skippercast.seafloor.io", fromlist=["verified_file"])
-                    io.verified_file(control.url, digest, control.destination, False,
-                                     max_bytes=len(control.payload) - 1)
-                except ValueError as error:
-                    mutant_detected = "Source exceeds byte limit" not in str(error)
-                else:
-                    mutant_detected = True
+                control_result = unittest.TestResult()
+                oversized_control.run(control_result)
+                mutant_detected = (control_result.testsRun == 1 and len(control_result.failures) == 1
+                                   and not control_result.errors and "ValueError not raised" in control_result.failures[0][1])
         finally:
-            control.tearDown()
+            oversized_control.tearDown()
         positive = CacheHitCapTests("test_matching_cache_exact_cap")
         positive.setUp()
         try:
-            positive.test_matching_cache_exact_cap()
-            positive_control_passed = True
+            positive_result = unittest.TestResult()
+            positive.run(positive_result)
+            positive_control_passed = positive_result.wasSuccessful() and positive_result.testsRun == 1
         finally:
             positive.tearDown()
 
@@ -111,11 +132,11 @@ def main():
                        "test_cache_checksum_mismatch_unchanged", "test_missing_offline_refusal_unchanged",
                        "test_small_download_remains_accepted",
                        "test_download_oversize_failure_preserves_absent_destination",
-                       "test_download_hash_failure_preserves_existing_destination"],
+                       "test_download_hash_failure_preserves_absent_destination"],
         "compatibility": ["test_cache_checksum_mismatch_unchanged", "test_missing_offline_refusal_unchanged",
                            "test_small_download_remains_accepted", "test_matching_cache_exact_cap",
                            "test_download_oversize_failure_preserves_absent_destination",
-                           "test_download_hash_failure_preserves_existing_destination"],
+                           "test_download_hash_failure_preserves_absent_destination"],
         "negative-control": ["test_matching_cache_exact_cap", "test_oversized_cache_rejected_before_hash_or_session"],
     }[args.suite]
     suite = unittest.TestSuite(CacheHitCapTests(name) for name in selected)

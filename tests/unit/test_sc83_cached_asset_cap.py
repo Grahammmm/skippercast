@@ -23,14 +23,18 @@ class CacheHitCapTests(unittest.TestCase):
 
     def test_matching_cache_below_cap(self):
         session = Mock()
-        self.assertEqual(io.verified_file(self.url, self.expected, self.destination, False,
-                                          max_bytes=len(self.payload) + 1, session=session), self.expected)
+        with patch.object(io.http, "default_session") as factory:
+            self.assertEqual(io.verified_file(self.url, self.expected, self.destination, False,
+                                              max_bytes=len(self.payload) + 1, session=session), self.expected)
+        factory.assert_not_called()
         session.download.assert_not_called()
 
     def test_matching_cache_exact_cap(self):
         session = Mock()
-        self.assertEqual(io.verified_file(self.url, self.expected, self.destination, False,
-                                          max_bytes=len(self.payload), session=session), self.expected)
+        with patch.object(io.http, "default_session") as factory:
+            self.assertEqual(io.verified_file(self.url, self.expected, self.destination, False,
+                                              max_bytes=len(self.payload), session=session), self.expected)
+        factory.assert_not_called()
         session.download.assert_not_called()
 
     def test_oversized_cache_rejected_before_hash_or_session(self):
@@ -40,11 +44,12 @@ class CacheHitCapTests(unittest.TestCase):
         sentinel.write_bytes(b"untouched")
         partial = self.destination.with_suffix(self.destination.suffix + ".part")
         partial.write_bytes(b"prior-partial")
-        with patch.object(io, "sha256", wraps=io.sha256) as reader:
+        with patch.object(io, "sha256", wraps=io.sha256) as reader, patch.object(io.http, "default_session") as factory:
             with self.assertRaisesRegex(ValueError, "Source exceeds byte limit"):
                 io.verified_file(self.url, self.expected, self.destination, True,
                                  max_bytes=len(self.payload) - 1, session=session)
             reader.assert_not_called()
+        factory.assert_not_called()
         session.download.assert_not_called()
         self.assertEqual(self.destination.read_bytes(), original)
         self.assertEqual(sentinel.read_bytes(), b"untouched")
@@ -91,16 +96,21 @@ class CacheHitCapTests(unittest.TestCase):
         self.assertFalse(dest.exists())
         self.assertFalse(dest.with_suffix(".bin.part").exists())
 
-    def test_download_hash_failure_preserves_existing_destination(self):
+    def test_download_hash_failure_preserves_absent_destination(self):
         class MemorySession:
+            def __init__(self):
+                self.calls = 0
             def download(self, url, output, **kwargs):
+                self.calls += 1
                 output.write(b"wrong")
         dest = self.root / "hash-failure.bin"
-        dest.write_bytes(b"prior")
-        with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
-            io.verified_file(self.url, self.expected, dest, True, max_bytes=100, session=MemorySession())
-        self.assertEqual(dest.read_bytes(), b"prior")
+        session = MemorySession()
+        with self.assertRaisesRegex(ValueError, "SHA-256 mismatch for downloaded asset"):
+            io.verified_file(self.url, self.expected, dest, True, max_bytes=100, session=session)
+        self.assertEqual(session.calls, 1)
+        self.assertFalse(dest.exists())
         self.assertFalse(dest.with_suffix(".bin.part").exists())
+
 
 
 if __name__ == "__main__":
