@@ -34,7 +34,7 @@ export function TideStationControl() {
       <div role="group" aria-label="Saved tide stations">
         <p>Saved stations ({selection.saved.value.length}/3)</p>
         {selection.saved.value.map(id => <div key={id} style={{display: 'flex', flexWrap: 'wrap', gap: '0.25rem'}}>
-          <Button size="sm" aria-pressed={chosen === id} onClick={() => { setNotice(''); setDraft(null); selection.choose(id); }}>Use {stationName(id)}</Button>
+          <Button size="sm" pressed={chosen === id} onClick={() => { setNotice(''); setDraft(null); selection.choose(id); }}>Use {stationName(id)}</Button>
           <Button size="sm" variant="quiet" aria-label={`Remove ${stationName(id)}`} onClick={() => { setDraft(null); selection.remove(id); setNotice(`${stationName(id)} removed from saved stations.`); }}>Remove</Button>
         </div>)}
       </div>
