@@ -68,11 +68,11 @@ FOCUSED = [PRIMARY, CONTROL] + [MODULE + '.' + name for name in (
     'ValidatorPreservationTests.test_a4_tile_identity_and_artifact_integrity_still_bound')]
 # Only these paths may differ from the pinned base (brief: product + new files).
 ALLOWED = {PRODUCT, NEW_TEST, DOC, HELPER}
-# Unchanged originals every phase depends on.
+# Unchanged originals every phase depends on. Every other path outside ALLOWED
+# (including the research producer and publisher) is covered by the scope check.
 ORIGINALS = ['tests/integration/test_qualified_scope.py', 'tests/_support.py', 'tests/__init__.py',
              'tests/unit/__init__.py', 'tests/integration/__init__.py', 'scripts/check_repository.py',
-             'src/skippercast/platform/bottom_targets.py', 'src/skippercast/platform/contracts.py',
-             'research/scripts/build_socal_targets.py', 'research/scripts/publish_bottom_subset.py']
+             'src/skippercast/platform/bottom_targets.py', 'src/skippercast/platform/contracts.py']
 BLOCKED_EVENTS = {'socket.connect', 'socket.getaddrinfo', 'socket.gethostbyname', 'socket.gethostbyaddr',
                   'socket.bind', 'socket.sendto', 'socket.sendmsg', 'urllib.Request', 'http.client.connect',
                   'subprocess.Popen', 'os.system', 'os.exec', 'os.posix_spawn', 'os.spawn', 'os.fork',
