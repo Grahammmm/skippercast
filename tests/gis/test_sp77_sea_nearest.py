@@ -1,15 +1,14 @@
 """Synthetic producer-shaped grids; no decoder, acquired masks or forecast data."""
 import json
 import math
-from pathlib import Path
 import unittest
 
 import numpy as np
 
 from skippercast.forecast import ensemble
+from tests._support import FIXTURES
 
-FIXTURES = Path(__file__).resolve().parents[1] / 'fixtures' / 'sp77_sea_nearest'
-CASES = json.loads((FIXTURES / 'cases.json').read_text())
+CASES = json.loads((FIXTURES / 'sp77_sea_nearest' / 'cases.json').read_text())
 
 
 def equatorial_lons(kilometres):

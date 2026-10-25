@@ -20,9 +20,9 @@ ROOT = REPO.parent
 BASE = 'a1f648632e64561d82dcbeb20d9bda19f812560a'
 SOURCE = 'src/skippercast/forecast/ensemble.py'
 SOURCE_HASH = '66f469764c2d089653bb306cc36044e4667619eed8f74ed140bed2e9cb889be2'
-TEST = 'tests/unit/test_sp77_sea_nearest.py'
+TEST = 'tests/gis/test_sp77_sea_nearest.py'
 FIXTURE = 'tests/fixtures/sp77_sea_nearest'
-FOCUSED = 'tests.unit.test_sp77_sea_nearest.NearestSeaTests'
+FOCUSED = 'tests.gis.test_sp77_sea_nearest.NearestSeaTests'
 REGRESSION = ('tests.unit.test_forecast_ensemble.LocationTests',)
 PRIMARY = FOCUSED + '.test_primary_round_up_selects_column_zero'
 CONTROL = FOCUSED + '.test_healthy_mask_control_selects_column_zero'
@@ -33,7 +33,7 @@ CLOSURE = (
     SOURCE, 'src/skippercast/forecast/fetch.py', 'src/skippercast/forecast/models.py',
     'src/skippercast/http.py', 'src/skippercast/paths.py',
     'src/skippercast/util/__init__.py', 'src/skippercast/util/time.py',
-    'tests/__init__.py', 'tests/unit/__init__.py',
+    'tests/__init__.py', 'tests/_support.py', 'tests/unit/__init__.py', 'tests/gis/__init__.py',
     'tests/unit/test_forecast_ensemble.py', TEST,
 )
 
