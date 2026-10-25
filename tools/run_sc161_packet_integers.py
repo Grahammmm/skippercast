@@ -326,14 +326,38 @@ def main():
                'exit': 0 if successful else 1}
     # Seal only after every writer (unittest, pytest, details) has finished.
     receipt['logs'] = log_inventory(root, log_names)
-    dump(root / 'receipt.json', receipt)
+    receipt['result_file'] = 'result.json'
+    finalize(root, receipt, log_names)
+    print(json.dumps({'result': str(root / 'result.json'), 'receipt': str(root / 'receipt.json'),
+                      'tests': result.testsRun, 'cases': counts,
+                      'failures': len(result.failures), 'errors': len(result.errors),
+                      'selectors': selectors['passed'], 'checks': checks,
+                      'exit': receipt['exit']}, sort_keys=True))
+    return receipt['exit']
+
+
+RESULT_NAMES = ('result.json', 'receipt.json')
+
+
+def finalize(root, receipt, log_names):
+    """Write result.json (required) plus the receipt.json alias, then verify.
+
+    Any late log mutation or a missing/unequal result file forces exit 1 and is
+    recorded truthfully in the final result.
+    """
+    for name in RESULT_NAMES:
+        dump(root / name, receipt)
+    problems = []
     if log_inventory(root, log_names) != receipt['logs']:
-        receipt.update(exit=1, late_log_mutation=True)
-        dump(root / 'receipt.json', receipt)
-    print(json.dumps({'receipt': str(root / 'receipt.json'), 'tests': result.testsRun,
-                      'cases': counts, 'failures': len(result.failures),
-                      'errors': len(result.errors), 'selectors': selectors['passed'],
-                      'checks': checks, 'exit': receipt['exit']}, sort_keys=True))
+        problems.append('late_log_mutation')
+    for name in RESULT_NAMES:
+        path = root / name
+        if not path.is_file() or json.loads(path.read_text()) != receipt:
+            problems.append('result_file_invalid:' + name)
+    if problems:
+        receipt.update(exit=1, finalize_problems=problems)
+        for name in RESULT_NAMES:
+            dump(root / name, receipt)
     return receipt['exit']
 
 
