@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -9,7 +10,12 @@ from skippercast.coastal.handoff import common
 
 class ReviewerIdentityTests(unittest.TestCase):
     def setUp(self):
-        self.root = Path(os.environ["SC144_RUN_ROOT"]) / "synthetic-root"
+        run_root = os.environ.get("SC144_RUN_ROOT")
+        if run_root is None:
+            temporary = tempfile.TemporaryDirectory(prefix="sc144-reviewer-identity-")
+            self.addCleanup(temporary.cleanup)
+            run_root = temporary.name
+        self.root = Path(run_root) / "synthetic-root"
         self.root.mkdir(parents=True, exist_ok=True)
         self.review = self.make_review({"reviewer_id": " fixture-reviewer "})
 
@@ -67,6 +73,8 @@ class ReviewerIdentityTests(unittest.TestCase):
         self.assertIn("independent_review_binding_invalid", self.holds((artifact, None)))
 
     def test_T05_invalid_identity_preserves_independent_holds(self):
+        artifact, _ = self.make_review({"reviewer_id": " ", "valid_until": "2026-10-25T10:30:00+00:00", "holds_added": ["source_review_required"]})
+        self.assertEqual(["independent_review_binding_invalid", "review_expired_or_future", "source_review_required"], self.holds((artifact, None), digest="wrong"))
         artifact, _ = self.make_review({"reviewer_id": " ", "valid_until": "2026-10-25T10:30:00+00:00", "holds_added": None})
         self.assertEqual(["independent_review_binding_invalid", "review_expired_or_future", "review_holds_invalid"], self.holds((artifact, None), digest="wrong"))
 

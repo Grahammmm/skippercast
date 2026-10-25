@@ -12,6 +12,8 @@ import sys
 import time
 import unittest
 
+sys.dont_write_bytecode = True
+
 
 def forbidden(*args, **kwargs):
     raise RuntimeError("SC144 offline guard refused network or child process")
@@ -33,20 +35,34 @@ def main():
     raw_manifest = manifest_path.read_bytes()
     manifest = json.loads(raw_manifest)
     head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, text=True).stdout.strip()
+    if manifest.get("head") != "8a805820c30895f5f037e26af9079fd3dc015b0f":
+        raise SystemExit("preflight manifest head is not the frozen pinned base")
     ancestor = subprocess.run(["git", "merge-base", "--is-ancestor", manifest["head"], "HEAD"], cwd=root, check=False, capture_output=True, text=True)
     if ancestor.returncode != 0:
         raise SystemExit("preflight candidate HEAD is not descended from admitted base")
     report = {"suite": args.suite, "argv": sys.argv, "cwd": os.getcwd(), "run_dir": str(run_dir), "manifest_sha256": hashlib.sha256(raw_manifest).hexdigest(), "base": manifest["head"], "head": head, "started": started}
-    if manifest.get("schema") != "agentorange.source-manifest/v1" or manifest.get("repo") != str(root):
+    if manifest.get("schema") != "agentorange.source-manifest/v1" or manifest.get("repo") != str(root) or manifest.get("card") != root.parent.name:
         raise SystemExit("preflight manifest identity mismatch")
     venv = root / ".venv"
     if not venv.exists() or not (venv / "bin/python3").exists() or str(venv.resolve()) != manifest.get("runtime", {}).get("repo_venv"):
         raise SystemExit("preflight admitted repo venv identity missing or mismatched")
     credential_python = manifest.get("runtime", {}).get("credential_scan_python3")
-    if not credential_python or Path(credential_python).name != "python3" or not Path(credential_python).is_file():
-        raise SystemExit("preflight credential scan interpreter missing or malformed")
+    expected_credential_python = "/home/user/agent-work/tools/venv-fullsuite/bin/python3"
+    if credential_python != expected_credential_python or not Path(credential_python).is_file():
+        raise SystemExit("preflight credential scan interpreter missing or mismatched")
     if args.suite == "preflight":
-        report.update({"status": "PASS", "checks": ["manifest_schema", "repo_identity", "frozen_base", "repo_venv_present"], "source_closure": ["read-only: runner, tests/unit/test_sc144_handoff_reviewer_identity.py, src/skippercast/coastal/handoff/common.py", "synthetic: unique run_dir/synthetic-root"]})
+        status = subprocess.run(["git", "status", "--porcelain=v1"], cwd=root, check=True, capture_output=True, text=True).stdout
+        if status:
+            raise SystemExit("preflight candidate stage is not clean")
+        socket.socket = forbidden
+        socket.create_connection = forbidden
+        subprocess.Popen = forbidden
+        subprocess.run = forbidden
+        subprocess.call = forbidden
+        os.system = forbidden
+        sys.path.insert(0, str(root / "src"))
+        from skippercast.coastal.handoff import common
+        report.update({"status": "PASS", "checks": ["manifest_schema", "repo_identity", "frozen_base", "repo_venv_present", "credential_scan_interpreter", "clean_stage", "guarded_import_closure"], "source_closure": ["read-only: runner, test module, common.py and Python runtime imports", "synthetic: unique run_dir/synthetic-root; no product data roots read"]})
         (run_dir / "report.json").write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
         print(json.dumps(report, sort_keys=True))
         return 0
