@@ -219,10 +219,14 @@ class Collector:
     """pytest plugin: record every collected node and its final outcome."""
 
     def __init__(self):
-        self.collected, self.outcomes, self.longrepr = [], {}, {}
+        self.collected, self.deselected, self.outcomes, self.longrepr = [], [], {}, {}
 
-    def pytest_collection_modifyitems(self, session, config, items):
-        self.collected = [item.nodeid for item in items]
+    def pytest_deselected(self, items):
+        self.deselected.extend(item.nodeid for item in items)
+
+    def pytest_collection_finish(self, session):
+        # After -k deselection: exactly the items that will run.
+        self.collected = [item.nodeid for item in session.items]
 
     def pytest_runtest_logreport(self, report):
         current = self.outcomes.get(report.nodeid)
@@ -338,6 +342,10 @@ def main(argv=None):
             counts_match=all(c['collected'] == c['expected'] == c['passed'] for c in counts.values()),
             no_failed_skipped_or_unrun=all(c['failed'] == c['skipped'] == c['not_run'] == 0 for c in counts.values()),
             all_collected_in_named_files=len(collector.collected) == sum(c['collected'] for c in counts.values()),
+            selection_exact=suite['select'] is None and not collector.deselected
+            or suite['select'] is not None and all(n.split('::')[-1].startswith(suite['select'])
+                                                   for n in collector.collected)
+            and not any(n.split('::')[-1].startswith(suite['select']) for n in collector.deselected),
             production_module_staged=receipt['production_module'] is not None
             and Path(receipt['production_module']).resolve() == (SRC / 'skippercast/coastal/cached_inventory.py'),
             inputs_unchanged=hashes_after == hashes_before,
@@ -348,7 +356,8 @@ def main(argv=None):
                 c['detected'] and c['positive_passed'] for c in controls)
         ok = all(checks.values())
         result, exit_code = ('PASS', 0) if ok else ('FAIL', 1)
-        receipt.update(pytest_exit=pytest_exit, collected=collector.collected, outcomes=collector.outcomes,
+        receipt.update(pytest_exit=pytest_exit, collected=collector.collected, deselected=collector.deselected,
+                       outcomes=collector.outcomes,
                        failures=collector.longrepr, counts=counts, checks=checks, mutation_controls=controls,
                        input_hashes_after=hashes_after, sentinel_violations=violations, sys_path=list(sys.path))
         print(f'[{utc()}] RESULT {result} suite={args.suite} counts={json.dumps(counts, sort_keys=True)} '
