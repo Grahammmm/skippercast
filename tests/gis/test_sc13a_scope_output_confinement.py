@@ -11,6 +11,7 @@ import io
 import json
 import os
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -277,10 +278,14 @@ class ScopeCompatibility(ScopeCase):
             self.assert_valid('noncentral', config, value)
         self.assertIs(paths.repo_root, original)
         # Exercise standard collection of this exact file (not peer suites).
-        # Both unittest discovery and package-name loading use the ordinary suite layout.
-        collected = unittest.TestLoader().discover(
-            str(ROOT / 'tests/gis'), pattern='test_sc13a_scope_output_confinement.py')
-        self.assertGreater(collected.countTestCases(), 0)
+        # Discovery's own temporary sys.path addition is scoped and restored.
+        path_before = sys.path
+        with patch.object(sys, 'path', list(sys.path)):
+            collected = unittest.TestLoader().discover(
+                str(ROOT / 'tests/gis'), pattern='test_sc13a_scope_output_confinement.py')
+            self.assertGreater(collected.countTestCases(), 0)
+            self.assertIsNone(sys.modules['test_sc13a_scope_output_confinement'].RUN_ROOT)
+        self.assertIs(sys.path, path_before)
         ordinary = unittest.defaultTestLoader.loadTestsFromName(
             'tests.gis.test_sc13a_scope_output_confinement')
         self.assertGreater(ordinary.countTestCases(), 0)
