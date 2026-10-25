@@ -68,6 +68,10 @@ def main():
                             text=True).stdout
     base_ancestor = subprocess.run(['git', '-C', str(repo), 'merge-base', '--is-ancestor',
                                     base, head], capture_output=True).returncode == 0
+    baseline_source = subprocess.run(['git', '-C', str(repo), 'show',
+                                      base + ':src/skippercast/seafloor/classified_geometry.py'],
+                                     check=True, capture_output=True).stdout
+    baseline_source_sha256 = hashlib.sha256(baseline_source).hexdigest()
     selected_closure = [
         'runner: tools/run_sc137_classified_polygon_shapes.py',
         'test: tests/gis/test_sc137_classified_polygon_shapes.py',
@@ -95,15 +99,11 @@ def main():
             check(manifest.get('schema') == 'agentorange.source-manifest/v1', 'manifest schema')
             check(manifest.get('write_root') == str(write_root), 'manifest write_root identity')
             check(Path(manifest.get('repo', '')).resolve() == repo, 'manifest repo identity')
-            check(manifest.get('clean') is True and head == base,
-                  'operator manifest attests clean staged baseline and pinned base HEAD')
-            allowed_dirty = ('?? tests/gis/test_sc137_classified_polygon_shapes.py',
-                             '?? tools/run_sc137_classified_polygon_shapes.py')
-            dirty_rows = [line for line in status.splitlines() if line]
-            check(all(row in allowed_dirty for row in dirty_rows),
-                  'only this card named test and runner are untracked before implementation')
-            check(sha256(source) == 'f43299dca9090ef70f68eff74fd7fb62a2610d292fdbdbfecce4418ae34fa103',
-                  'product implementation remains unchanged at preflight')
+            check(manifest.get('clean') is True and base_ancestor,
+                  'operator manifest attests clean staged baseline and is ancestor of candidate HEAD')
+            check(status == '', 'candidate worktree clean for frozen acceptance')
+            check(baseline_source_sha256 == 'f43299dca9090ef70f68eff74fd7fb62a2610d292fdbdbfecce4418ae34fa103',
+                  'source bytes at admitted base match pinned baseline hash')
             check(manifest.get('inputs') == [], 'operator manifest inputs empty as admitted')
             check(manifest.get('card') == write_root.name, 'candidate basename matches manifest card')
             expected_venv = Path(manifest['runtime']['repo_venv']).resolve(strict=True)
