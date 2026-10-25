@@ -6,6 +6,7 @@ inputs. Changed inputs, expiry or invalid evidence return a lead to the queue.
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import math
 from pathlib import Path
 
 from skippercast.platform.contracts import atomic_json, read_json
@@ -35,6 +36,32 @@ def context(root, manifest):
                    for p in sorted(Path(__file__).parent.rglob('*.py'))}})
 
 
+def _unique_pairs(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f'Duplicate source-review checkpoint key: {key}')
+        result[key] = value
+    return result
+
+
+def _nonfinite(value):
+    raise ValueError(f'Non-finite source-review checkpoint number: {value}')
+
+
+def _finite_float(text):
+    value = float(text)
+    if not math.isfinite(value):
+        raise ValueError(f'Overflowing source-review checkpoint number: {text}')
+    return value
+
+
+def _decode_checkpoint(text):
+    """Strict local decoding: no duplicate decoded keys at any depth, no non-finite numbers."""
+    return json.loads(text, object_pairs_hook=_unique_pairs, parse_constant=_nonfinite,
+                      parse_float=_finite_float)
+
+
 def load(root):
     path = Path(root)/RELATIVE
     if not path.exists():
@@ -42,7 +69,7 @@ def load(root):
     if (path.is_symlink() or not path.resolve().is_relative_to(Path(root).resolve())
             or path.stat().st_size > MAX_BYTES):
         raise ValueError('Unsafe source-review checkpoint')
-    data = read_json(path)
+    data = _decode_checkpoint(path.read_text())
     if not isinstance(data, dict) or data.get('version') != 1 or not isinstance(data.get('reviews'), list):
         raise ValueError('Invalid source-review checkpoint')
     return data
