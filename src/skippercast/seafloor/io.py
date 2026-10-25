@@ -12,6 +12,10 @@ NOAA_PREFIX = 'https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/'
 
 def verified_file(url, expected, destination, fetch, *, max_bytes=128 * 1024 * 1024,
                   allowed_prefix=NOAA_PREFIX, session=None):
+    if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes <= 0:
+        raise ValueError("max_bytes must be a positive integer")
+    if destination.exists() and destination.is_file() and destination.stat().st_size > max_bytes:
+        raise ValueError('Source exceeds byte limit')
     if not destination.exists():
         if not fetch:
             raise FileNotFoundError(destination)
