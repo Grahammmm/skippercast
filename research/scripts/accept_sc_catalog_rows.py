@@ -14,8 +14,12 @@ staged ``src`` and repository root are put on sys.path in code before any
 project import; an audit sentinel refuses sockets, subprocesses and model-client
 imports for the whole run. The installed pytest API runs literal test files with
 plugin autoload disabled, the cache provider off and ``--basetemp`` inside the
-run directory. A missing pytest/jsonschema is INPUT_UNAVAILABLE (exit 3), never a
-skip.
+run directory. Python's default tempfile root (cached ``tempfile.tempdir`` plus
+TMPDIR/TEMP/TMP for children) is redirected to a fresh ``tempfile-root`` inside
+the run directory for the pytest window and restored afterwards; an audit
+witness records every mkdtemp/mkstemp/mkdir/write-open path in that window and
+the run fails if any resolves outside the run directory. A missing
+pytest/jsonschema is INPUT_UNAVAILABLE (exit 3), never a skip.
 
 Each invocation writes a NEW directory DIR/<utc>-<pid>-<token>/ containing
 receipt.json, stdout.txt and stderr.txt (created exclusively, never overwritten).
@@ -67,6 +71,25 @@ BLOCKED_EVENTS = frozenset({
     'os.exec', 'os.posix_spawn', 'os.spawn', 'os.fork', 'os.forkpty', 'pty.spawn', 'webbrowser.open'})
 MODEL_MODULES = ('openai', 'anthropic', 'ollama', 'litellm', 'google.generativeai')
 SENTINEL = []
+TEMP_ENV = ('TMPDIR', 'TEMP', 'TMP')
+WRITE_FLAGS = os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_APPEND | os.O_TRUNC
+# Filesystem-creation witness, filled only while WITNESS['active'] (the pytest window).
+WITNESS = {'active': False}
+WITNESS_EVENTS = []
+
+
+def _witness_path(event, args):
+    """Return the filesystem path an audited creation/write event targets, else None."""
+    if event in ('tempfile.mkdtemp', 'tempfile.mkstemp', 'os.mkdir') and args:
+        return args[0]
+    if event == 'os.rename' and len(args) >= 2:
+        return args[1]  # destination of os.rename / os.replace (py_compile's atomic .pyc write)
+    if event == 'open' and len(args) >= 3:
+        path, mode, flags = args[0], args[1], args[2]
+        writes = (isinstance(flags, int) and flags & WRITE_FLAGS) or (
+            isinstance(mode, str) and any(c in mode for c in 'wax+'))
+        return path if writes else None
+    return None
 
 
 def _sentinel(event, args):
@@ -74,6 +97,51 @@ def _sentinel(event, args):
     if event in BLOCKED_EVENTS or any(name == m or name.startswith(m + '.') for m in MODEL_MODULES):
         SENTINEL.append(dict(event=event, detail=repr(args)[:300]))
         raise RuntimeError(f'SC-CATALOG-ROWS acceptance sentinel refused {event}')
+    if WITNESS['active']:
+        path = _witness_path(event, args)
+        if isinstance(path, (str, bytes, os.PathLike)):
+            WITNESS_EVENTS.append((event, os.path.abspath(os.fsdecode(path))))
+
+
+def outside_root(events, root):
+    """Pure check: every witnessed creation/write path must resolve inside ``root``.
+
+    The only exemption is the null device (pytest's capture opens it for writing);
+    it creates nothing on disk.
+    """
+    root = Path(os.path.realpath(root))
+    outside = []
+    for event, path in events:
+        if event == 'open' and path == os.devnull:
+            continue
+        resolved = Path(os.path.realpath(path))
+        if resolved != root and not resolved.is_relative_to(root):
+            outside.append(dict(event=event, path=path))
+    return outside
+
+
+@contextlib.contextmanager
+def contained_tempdir(root):
+    """Make ``root`` the default tempfile directory for this process and children; restore on exit.
+
+    Covers tempfile's cached ``tempfile.tempdir`` and the TMPDIR/TEMP/TMP defaults
+    child processes would inherit. The ambient values are restored exactly.
+    """
+    import tempfile
+    saved_env = {name: os.environ.get(name) for name in TEMP_ENV}
+    saved_tempdir = tempfile.tempdir
+    try:
+        for name in TEMP_ENV:
+            os.environ[name] = str(root)
+        tempfile.tempdir = str(root)
+        yield
+    finally:
+        tempfile.tempdir = saved_tempdir
+        for name, value in saved_env.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
 
 
 def utc():
@@ -255,12 +323,52 @@ def main(argv=None):
                 pytest_args += ['-k', keyword]
             receipt['pytest_args'] = pytest_args
             recorder = Recorder()
+            import tempfile
+            temp_root = run / 'tempfile-root'
+            temp_root.mkdir(mode=0o700)  # exclusive, fresh per run
+            ambient = dict(tempdir=tempfile.tempdir, env={name: os.environ.get(name) for name in TEMP_ENV})
+            witness = dict(root=str(temp_root), run_root=str(run))
             os.chdir(REPO)
             try:
-                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-                    code = pytest.main(pytest_args, plugins=[recorder])
+                with contained_tempdir(temp_root):
+                    witness['gettempdir'] = tempfile.gettempdir()
+                    WITNESS_EVENTS.clear()
+                    WITNESS['active'] = True
+                    try:
+                        # Synthetic probe: the default TemporaryDirectory + a py_compile cfile write,
+                        # the same shape as the original research-boundary compile test.
+                        import py_compile
+                        with tempfile.TemporaryDirectory() as probe:
+                            witness['probe_dir'] = probe
+                            witness['probe_pyc'] = py_compile.compile(
+                                __file__, cfile=str(Path(probe) / 'x.pyc'), doraise=True)
+                        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                            code = pytest.main(pytest_args, plugins=[recorder])
+                        replay = replay_negative() if args.suite == 'negative' else None
+                    finally:
+                        WITNESS['active'] = False
             finally:
                 os.chdir(original_cwd)
+            witness['ambient_restored'] = (
+                tempfile.tempdir == ambient['tempdir']
+                and all(os.environ.get(name) == value for name, value in ambient['env'].items()))
+            events = list(WITNESS_EVENTS)
+            by_event = {}
+            for event, _ in events:
+                by_event[event] = by_event.get(event, 0) + 1
+            witness_outside = outside_root(events, run)
+            witness.update(events=len(events), by_event=by_event, outside=witness_outside[:50],
+                           mkdtemp_paths=[p for e, p in events if e == 'tempfile.mkdtemp'][:50],
+                           pyc_writes=[p for e, p in events if '.pyc' in p][:20])
+            receipt['temp_witness'] = witness
+            if not Path(witness['gettempdir']).resolve().is_relative_to(temp_root.resolve()):
+                failures.append(f'default tempfile root not contained: {witness["gettempdir"]}')
+            if not Path(witness['probe_dir']).resolve().is_relative_to(temp_root.resolve()):
+                failures.append(f'probe TemporaryDirectory escaped: {witness["probe_dir"]}')
+            if witness_outside:
+                failures.append(f'filesystem writes outside the acceptance run root: {witness_outside[:5]}')
+            if not witness['ambient_restored']:
+                failures.append('ambient tempfile state not restored')
             receipt['pytest_exit'] = int(code)
             counts = {}
             for entry in recorder.results.values():
@@ -281,7 +389,7 @@ def main(argv=None):
                 missing = [name for name in NEGATIVE_REQUIRED if name not in ran]
                 if missing:
                     failures.append(f'negative controls not run: {missing}')
-                replay = replay_negative()
+                replay = replay or dict(ok=False, reason='replay did not run')
                 receipt['negative_replay'] = replay
                 if not replay.get('ok'):
                     failures.append('runner-level negative replay did not detect the mutation cleanly')

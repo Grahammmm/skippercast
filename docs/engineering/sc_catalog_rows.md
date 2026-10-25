@@ -63,7 +63,17 @@ Runner: `research/scripts/accept_sc_catalog_rows.py --suite focused|contract|neg
 derives the repository from its own path, disables bytecode, puts the staged
 `src` first on `sys.path` in code, installs the audit sentinel and calls the
 installed pytest API on literal test files (plugin autoload off, cache off,
-`--basetemp` inside the run directory). It needs an interpreter with pytest and
+`--basetemp` inside the run directory). For the pytest window it also points
+Python's default tempfile root (the cached `tempfile.tempdir` and the
+`TMPDIR`/`TEMP`/`TMP` defaults children inherit) at a fresh
+`tempfile-root/` inside the run directory and restores the ambient values on
+exit, so the original `test_research_scripts_compile` `TemporaryDirectory()`
+and its `.pyc` writes stay inside the run. An audit witness records every
+`tempfile.mkdtemp`/`mkstemp`, `os.mkdir`, `os.rename`/`os.replace` destination
+and write-mode `open` path in that window (receipt `temp_witness`; the null
+device that pytest's capture opens is the only exemption) and the run fails if any resolves outside the
+run directory, if a default-`TemporaryDirectory` + `py_compile` probe escapes,
+or if the ambient tempfile state is not restored. It needs an interpreter with pytest and
 jsonschema; without them it exits 3 (INPUT_UNAVAILABLE), never a skip. Each run
 writes a new `DIR/<utc>-<pid>-<token>/` with `receipt.json`, `stdout.txt` and
 `stderr.txt`. Expected collected counts are frozen: focused 60, contract 15
