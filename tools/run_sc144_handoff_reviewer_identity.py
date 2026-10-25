@@ -47,7 +47,7 @@ def main():
     if not venv.exists() or not (venv / "bin/python3").exists() or str(venv.resolve()) != manifest.get("runtime", {}).get("repo_venv"):
         raise SystemExit("preflight admitted repo venv identity missing or mismatched")
     credential_python = manifest.get("runtime", {}).get("credential_scan_python3")
-    expected_credential_python = "/home/user/agent-work/tools/venv-fullsuite/bin/python3"
+    expected_credential_python = str(root.parents[2] / "tools" / "venv-fullsuite" / "bin" / "python3")
     if credential_python != expected_credential_python or not Path(credential_python).is_file():
         raise SystemExit("preflight credential scan interpreter missing or mismatched")
     if args.suite == "preflight":
@@ -92,12 +92,14 @@ def main():
             raise SystemExit("negative control requires isolated identity predicate")
         original = common._valid_reviewer_identity
         common._valid_reviewer_identity = lambda value: bool(value) and not value.startswith("coastal.")
-        test_module = __import__("test_sc144_handoff_reviewer_identity")
-        mutant_suite = unittest.defaultTestLoader.loadTestsFromName("ReviewerIdentityTests.test_T03_invalid_identity_shapes_fail_closed_without_crash", test_module)
-        mutant_stream = open(run_dir / "mutant.log", "w")
-        mutant_result = unittest.TextTestRunner(stream=mutant_stream, verbosity=2).run(mutant_suite)
-        mutant_stream.close()
-        common._valid_reviewer_identity = original
+        try:
+            test_module = __import__("test_sc144_handoff_reviewer_identity")
+            mutant_suite = unittest.defaultTestLoader.loadTestsFromName("ReviewerIdentityTests.test_T03_invalid_identity_shapes_fail_closed_without_crash", test_module)
+            mutant_stream = open(run_dir / "mutant.log", "w")
+            mutant_result = unittest.TextTestRunner(stream=mutant_stream, verbosity=2).run(mutant_suite)
+            mutant_stream.close()
+        finally:
+            common._valid_reviewer_identity = original
         positive_suite = unittest.defaultTestLoader.loadTestsFromName("ReviewerIdentityTests.test_T07_valid_control", test_module)
         positive_stream = open(run_dir / "positive.log", "w")
         positive_result = unittest.TextTestRunner(stream=positive_stream, verbosity=2).run(positive_suite)
