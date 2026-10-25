@@ -13,7 +13,10 @@
     "A1 a closing self-link on a new line keeps the sentence before it",
     "A2 CRLF, blank lines, tabs and !/? line ends keep every preceding sentence",
     "A3 no-link, period-space, bare-link and middle-link behavior is unchanged",
+    "A2 LF, CRLF or a blank line between the lead-in colon and the link still drops the lead-in",
     "A4 portPage renders a stored multi-line daily answer without its self-link (en)",
-    "A4 portPage renders a stored multi-line daily answer without its self-link (es)"
+    "A4 portPage renders a stored multi-line daily answer without its self-link (es)",
+    "A4 portPage renders a stored multi-line daily answer without its self-link (en, line break after the lead-in colon)",
+    "A4 portPage renders a stored multi-line daily answer without its self-link (es, line break after the lead-in colon)"
   ]
 }

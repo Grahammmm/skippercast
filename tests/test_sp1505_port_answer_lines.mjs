@@ -60,14 +60,17 @@ if (process.env.SP1505_SUITE !== 'baseline') {
   scenario('A1 a closing self-link on a new line keeps the sentence before it', () => check(fixture.a1, 'A1'));
   scenario('A2 CRLF, blank lines, tabs and !/? line ends keep every preceding sentence', () => check(fixture.a2, 'A2'));
   scenario('A3 no-link, period-space, bare-link and middle-link behavior is unchanged', () => check(fixture.a3, 'A3'));
+  // Round 2 (sol-reviewer run 1859 must-fix 1): line breaks between the lead-in colon and the link.
+  const colon = read('./fixtures/sp1505_port_answer_lines/colon_whitespace.json');
+  scenario('A2 LF, CRLF or a blank line between the lead-in colon and the link still drops the lead-in', () => check(colon.a2, 'A2-colon'));
 
-  for (const language of ['en', 'es']) {
-    scenario(`A4 portPage renders a stored multi-line daily answer without its self-link (${language})`, async () => {
+  for (const [label, rows] of [['', fixture.a4], [', line break after the lead-in colon', colon.a4]]) for (const language of ['en', 'es']) {
+    scenario(`A4 portPage renders a stored multi-line daily answer without its self-link (${language}${label})`, async () => {
       inject();
       const {sql, db} = advisorDatabase();
       try {
-        const row = fixture.a4[language];
-        const other = fixture.a4[language === 'es' ? 'en' : 'es'];
+        const row = rows[language];
+        const other = rows[language === 'es' ? 'en' : 'es'];
         // Synthetic stored answer for today; feeds are down, so the stored row is the one shown (todaysAnswer).
         sql.prepare('INSERT INTO advisor_daily_answers(key,text_en,text_es,inputs_hash,generated_at) VALUES(?,?,?,?,?)')
           .run(`${fixture.port}:${fixture.date}`, fill(language === 'en' ? row.stored : other.stored), fill(language === 'es' ? row.stored : other.stored),
