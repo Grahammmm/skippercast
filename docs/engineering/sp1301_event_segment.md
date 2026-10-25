@@ -61,14 +61,26 @@ Frozen test-first hashes (sha256, commit `6ae4b777`; unchanged by the repair com
 - `focused`: the whole new file against the named A1–A4 case map. Zero skips allowed.
 - `regression`: `tests/test_fleet_activity.mjs`, which must be unchanged from the base. All of
   its tests run, with zero skips.
+- `helper-paths`: `tests/fixtures/sp1301_event_segment/helper_paths_cases.py` under the staged
+  `.venv` interpreter with unittest's runner (12 named cases). They are synthetic regressions for
+  the helper's own `--output` preflight. Each case builds an invented candidate root inside the
+  run's scratch directory and checks the following. A symlinked parent with a missing child, a
+  deeper symlinked intermediate, a symlinked leaf, a symlinked `out` root and a dangling link are
+  all refused. So are `..` traversal (absolute, inside `out`, relative), an absolute path outside
+  `out`, `out` itself and a file in the ancestry. Every refusal leaves the case tree, links
+  included, exactly as it was. Fresh outputs get distinct `run-*` children and earlier receipts
+  are preserved.
 - `repository`: the unchanged `scripts/check_repository.py`, under the operator manifest's
   `runtime.credential_scan_python3`.
 - `typecheck`: `pnpm exec tsc --noEmit -p` run separately for `tsconfig.json`,
   `web/tsconfig.json` and `packages/coast/tsconfig.json`.
 
 The helper derives the repository from its own location and reads the candidate's operator
-`SOURCE-MANIFEST.json`. Each run writes to a new unique `run-*` child of DIR, and symlinked
-ancestry is refused. Node children get a scratch HOME/TMPDIR, no inherited credentials, and
+`SOURCE-MANIFEST.json`. Each run writes to a new unique `run-*` child of DIR. Before creating
+anything, `--output` must sit under the candidate's `out` directory with no `..` component, and
+every existing component from `out` down to the leaf must be a real directory, not a symlink.
+Only then are the missing components created, one exclusive `mkdir` at a time (round 1 review
+fix: the helper used to `mkdir -p` first and check for symlinks afterwards). Node children get a scratch HOME/TMPDIR, no inherited credentials, and
 `tests/fixtures/sp1301_event_segment/tripwire.mjs` preloaded, which fails any fetch, socket, DNS
 or http(s) attempt. The tripwire catches mistakes; it is not a sandbox. Each run records argv,
 cwd, exit codes, runtime versions, test names and counts, raw stdout/stderr with their hashes,

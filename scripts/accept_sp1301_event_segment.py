@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """SP1301-EVENT-SEGMENT (SP-13-v2) offline acceptance helper.
 
-    python3 scripts/accept_sp1301_event_segment.py --suite {baseline,focused,regression,repository,typecheck} --output DIR
+    python3 scripts/accept_sp1301_event_segment.py --suite {baseline,focused,regression,helper-paths,repository,typecheck} --output DIR
 
 The repository is derived from this file's location and the candidate is its parent, which
 must hold the operator-written SOURCE-MANIFEST.json (schema agentorange.source-manifest/v1).
@@ -17,6 +17,9 @@ Modes:
               errors or skips, on unchanged base bytes of server/fleet/activity.ts.
   focused     the whole new test file: every named A1-A4 case runs and passes, zero skips.
   regression  tests/test_fleet_activity.mjs unchanged from the base; all its tests pass, zero skips.
+  helper-paths  tests/fixtures/sp1301_event_segment/helper_paths_cases.py under the staged .venv
+              interpreter: synthetic regressions proving --output refusals (symlink ancestry,
+              traversal, escape) create nothing and fresh outputs get unique children.
   repository  unchanged scripts/check_repository.py under the manifest's
               runtime.credential_scan_python3 (no system-Python fallback).
   typecheck   pnpm exec tsc --noEmit -p for each of the three programs, separately.
@@ -64,6 +67,21 @@ CASE_MAP = {
     "A3": ["A3: missing trip, missing segment, duplicate derived segment and isolated cross-trip segment refuse before side effects"],
     "A4": PAIR,
 }
+HELPER_CASES = FIXTURE_DIR + "/helper_paths_cases.py"
+HELPER_PATH_CASES = [
+    "test_symlink_parent_nonexistent_child_creates_nothing_through_link",
+    "test_symlink_intermediate_deeper_creates_nothing",
+    "test_symlink_leaf_refused",
+    "test_symlinked_out_root_refused",
+    "test_dangling_symlink_parent_refused",
+    "test_traversal_out_dotdot_refused",
+    "test_traversal_inside_out_refused",
+    "test_relative_traversal_refused",
+    "test_escaping_absolute_path_refused",
+    "test_out_root_itself_refused",
+    "test_file_in_ancestry_refused",
+    "test_fresh_outputs_get_unique_children_and_preserve_receipts",
+]
 AUTHORED = [PRIMARY, TEST, HELPER, NOTE]
 PRIVATE_PATH = re.compile(r"/(?:Users|home)/[A-Za-z0-9_.-]+/")
 
@@ -122,15 +140,51 @@ def load_manifest():
     return manifest, sha256_file(path)
 
 
-def make_run_dir(output):
-    output = Path(output).absolute()
-    out_root = CANDIDATE / "out"
+def plan_output(output, candidate):
+    """Validate --output WITHOUT touching the filesystem; return (output, directories to create).
+
+    The output must be a lexical descendant of <candidate>/out with no '..' component. Every
+    existing component from <candidate>/out down to the output (leaf included) must be a real
+    directory, never a symlink; the first missing component starts the list to create.
+    """
+    candidate = Path(candidate)
+    out_root = candidate / "out"
+    raw = Path(output)
+    if ".." in raw.parts:
+        raise Gate(f"--output must not contain '..': {output}")
+    if not raw.is_absolute():
+        raw = Path(os.getcwd()) / raw
+    if ".." in raw.parts:
+        raise Gate(f"--output must not contain '..': {raw}")
     try:
-        output.relative_to(out_root)
+        rel = raw.relative_to(out_root)
     except ValueError:
         raise Gate(f"--output must be under {out_root}") from None
-    output.mkdir(parents=True, exist_ok=True)
-    no_symlink_ancestry(output, CANDIDATE)
+    if not rel.parts:
+        raise Gate(f"--output must be a child of {out_root}, not the out directory itself")
+    if candidate.resolve() != candidate or not candidate.is_dir() or candidate.is_symlink():
+        raise Gate(f"candidate root is not a real directory: {candidate}")
+    create = []
+    for current in [out_root, *(out_root.joinpath(*rel.parts[:i + 1]) for i in range(len(rel.parts)))]:
+        if create:
+            create.append(current)  # below a missing component nothing can exist
+        elif os.path.islink(current):
+            raise Gate(f"symlink in output ancestry: {current}")
+        elif not os.path.lexists(current):
+            create.append(current)
+        elif not current.is_dir():
+            raise Gate(f"output ancestry component is not a directory: {current}")
+    return raw, create
+
+
+def make_run_dir(output, candidate=None):
+    candidate = Path(CANDIDATE if candidate is None else candidate)
+    output, create = plan_output(output, candidate)
+    for directory in create:
+        os.mkdir(directory)  # exclusive: a component that appears meanwhile fails loudly
+    no_symlink_ancestry(output, candidate)
+    if output.resolve() != output:
+        raise Gate(f"output does not resolve to itself: {output}")
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     run = output / f"run-{stamp}-{os.getpid()}-{secrets.token_hex(3)}"
     os.mkdir(run)  # exclusive: an existing child is never reused
@@ -273,6 +327,37 @@ def suite_regression(runner, run, base):
     return ("REGRESSION_PASS", []) if not problems else ("REGRESSION_FAIL", problems)
 
 
+def suite_helper_paths(runner, run, base):
+    python = REPO / ".venv" / "bin" / "python3"
+    if not python.is_file():
+        raise Gate(f"staged interpreter missing: {python}")
+    scratch = run / "tmp" / "helper-paths"
+    os.mkdir(scratch)
+    report = run / "helper-paths.report.json"
+    proc, record = runner("helper-paths", [python, REPO / HELPER_CASES, "--scratch", scratch, "--report", report],
+                          child_env(run))
+    problems = []
+    if not report.is_file():
+        raise Gate("helper-paths child wrote no report")
+    data = json.loads(report.read_text(encoding="utf-8"))
+    tests = data.get("tests", [])
+    record.update(report=report.name, report_sha256=sha256_file(report), tests=tests, counts=counts(tests),
+                  python=data.get("python"), helper_file=data.get("helper_file"))
+    if Path(data.get("helper_file") or "").resolve() != REPO / HELPER:
+        problems.append(f"helper-paths loaded {data.get('helper_file')}, not this repository's helper")
+    names = [t["name"] for t in tests]
+    problems += [f"missing case {n}" for n in HELPER_PATH_CASES if n not in names]
+    problems += [f"unexpected test {n}" for n in names if n not in HELPER_PATH_CASES]
+    problems += [f"{t['name']}: {t['outcome']}" for t in tests if t["outcome"] != "pass"]
+    if data.get("tests_run") != len(HELPER_PATH_CASES):
+        problems.append(f"tests_run {data.get('tests_run')}, expected {len(HELPER_PATH_CASES)}")
+    if proc.returncode != 0:
+        problems.append(f"child exit {proc.returncode}")
+    if record.get("tripwire"):
+        problems.append("network tripwire fired")
+    return ("HELPER_PATHS_PASS", []) if not problems else ("HELPER_PATHS_FAIL", problems)
+
+
 def suite_repository(runner, run, base, manifest):
     scan = manifest["runtime"]["credential_scan_python3"]
     problems = [] if unchanged_from_base(base, CHECKER) else [f"{CHECKER} differs from the base"]
@@ -333,7 +418,7 @@ def authored_checks():
 
 def main():
     parser = argparse.ArgumentParser(description="SP1301-EVENT-SEGMENT offline acceptance helper")
-    parser.add_argument("--suite", required=True, choices=["baseline", "focused", "regression", "repository", "typecheck"])
+    parser.add_argument("--suite", required=True, choices=["baseline", "focused", "regression", "helper-paths", "repository", "typecheck"])
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
@@ -344,7 +429,8 @@ def main():
         run = make_run_dir(args.output)
         runner = Runner(run)
         problems = authored_checks()
-        suites = {"baseline": suite_baseline, "focused": suite_focused, "regression": suite_regression}
+        suites = {"baseline": suite_baseline, "focused": suite_focused, "regression": suite_regression,
+                  "helper-paths": suite_helper_paths}
         if args.suite in suites:
             verdict, more = suites[args.suite](runner, run, base)
         elif args.suite == "repository":
