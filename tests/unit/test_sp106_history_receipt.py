@@ -13,7 +13,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/sp106_history_receipt"
+from tests._support import FIXTURES as ALL_FIXTURES, ROOT
+
+FIXTURES = ALL_FIXTURES / "sp106_history_receipt"
 URL = "https://www.ndbc.noaa.gov/data/historical/stdmet/46215h2025.txt.gz"
 OTHER_URL = "https://www.ndbc.noaa.gov/data/historical/stdmet/46028h2025.txt.gz"
 STATION, YEAR, RECORD = "46215", 2025, "46215:annual:2025"
@@ -23,16 +25,15 @@ class RegressionTests(unittest.TestCase):
     def setUp(self):
         self.stack = ExitStack()
         self.addCleanup(self.stack.close)
-        root = Path(__file__).resolve().parents[2]
         self.stack.enter_context(patch.dict(os.environ, {
-            "SKIPPERCAST_ROOT": str(root), "SKIPPERCAST_HTTP_CACHE": "",
+            "SKIPPERCAST_ROOT": str(ROOT), "SKIPPERCAST_HTTP_CACHE": "",
         }))
         # No import-time filesystem API calls; every test owns its fresh cache.
         from skippercast.pipeline import ndbc_history
         from skippercast.http import FakeSession
         self.nh, self.FakeSession = ndbc_history, FakeSession
         self.assertEqual(Path(ndbc_history.__file__).resolve(),
-                         root / "src/skippercast/pipeline/ndbc_history.py")
+                         ROOT / "src/skippercast/pipeline/ndbc_history.py")
         self.tmp = self.stack.enter_context(tempfile.TemporaryDirectory())
         self.cache = Path(self.tmp)
         self.body = (FIXTURES / "cached.txt").read_bytes()
