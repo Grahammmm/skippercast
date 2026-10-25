@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import time
@@ -22,6 +23,18 @@ def digest(path):
         for block in iter(lambda: stream.read(1024 * 1024), b''):
             h.update(block)
     return h.hexdigest()
+
+
+def tap_counts(text):
+    names = ('tests', 'pass', 'fail', 'skipped', 'todo', 'cancelled')
+    counts = {}
+    for name in names:
+        matches = re.findall(rf'^# {name} (\d+)\s*$', text, re.MULTILINE)
+        if matches:
+            counts[name] = int(matches[-1])
+    if len(counts) != len(names):
+        raise ValueError('missing TAP summary fields')
+    return counts
 
 
 def main():
@@ -63,6 +76,16 @@ def main():
                   'expected_exit': expected, 'stdout_sha256': hashlib.sha256(stdout).hexdigest(),
                   'stderr_sha256': hashlib.sha256(stderr).hexdigest(), 'source_head': subprocess.run(
                       ['git', 'rev-parse', 'HEAD'], cwd=ROOT, capture_output=True, text=True, check=True).stdout.strip()}
+        if args.suite in ('baseline', 'focused', 'regression'):
+            try:
+                counts = tap_counts(proc.stdout + proc.stderr)
+            except ValueError as error:
+                raise SystemExit(f"invalid TAP summary ({error}); evidence: {out}") from error
+            record['test_counts'] = counts
+            if counts['tests'] == 0 or counts['skipped'] or counts['todo'] or counts['cancelled']:
+                raise SystemExit(f"TAP tests missing or skipped/todo/cancelled; evidence: {out}")
+            if args.suite == 'focused' and counts['tests'] != 4:
+                raise SystemExit(f"focused test count {counts['tests']} != expected 4; evidence: {out}")
         records.append(record)
         if proc.returncode != expected:
             raise SystemExit(f"unexpected exit {proc.returncode}; evidence: {out}")
