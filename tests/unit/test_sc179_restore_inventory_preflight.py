@@ -203,47 +203,27 @@ class RestoreInventoryPreflightTests(unittest.TestCase):
             with self.subTest(case=name):
                 self.assert_rejected_without_effects(files)
                 self.event(name)
-        # Test root, base, intermediate and leaf links, including same-root targets.
-        for component in ('root', 'var', 'base', 'intermediate', 'leaf', 'dangling', 'outside'):
-            # Every case uses a fresh synthetic layout with no deletion.
-            def layout(root, component=component):
+        # Preserve baseline leaf refusal and resolved confinement, not a new
+        # blanket prohibition on legitimate root/ancestor or internal aliases.
+        for component in ('intermediate', 'leaf', 'dangling', 'outside'):
+            with self.subTest(case='symlink-'+component):
+                root = self.child()
+                self.seed(root)
                 target = root/'link-target'
                 target.mkdir()
                 base = root/'var/seafloor'
-                if component == 'root':
-                    (root/'root-link').symlink_to(root, target_is_directory=True)
-                elif component == 'var':
-                    (root/'var-link').symlink_to(root/'var', target_is_directory=True)
-                elif component == 'base':
-                    (root/'base-link').symlink_to(base, target_is_directory=True)
-                elif component in ('intermediate', 'outside'):
+                if component in ('intermediate', 'outside'):
                     (base/'private-reaches').symlink_to(target, target_is_directory=True)
                 else:
                     (base/'reference/run.json').symlink_to(
                         target/'missing' if component == 'dangling' else base/'reference/cells.json')
-            with self.subTest(case='symlink-'+component):
-                root = self.child()
-                self.seed(root)
-                layout(root)
-                passed_root = {'root': root/'root-link', 'var': root/'var-link/..',
-                               'base': root}.get(component, root)
-                # Explicit base/var symlinks require an alternate root, built without replacing state.
-                if component in ('var', 'base'):
-                    alternate = root/'alternate'
-                    alternate.mkdir()
-                    if component == 'var':
-                        (alternate/'var').symlink_to(root/'var', target_is_directory=True)
-                    else:
-                        (alternate/'var').mkdir()
-                        (alternate/'var/seafloor').symlink_to(root/'var/seafloor', target_is_directory=True)
-                    passed_root = alternate
                 path = 'private-reaches/r01/run.json' if component in ('intermediate', 'outside') else 'reference/run.json'
                 scope = 'r01' if component in ('intermediate', 'outside') else 'shared'
                 before = snapshot(root)
                 with patch.object(self.cache, 'restore_private') as restore, patch.object(Path, 'unlink') as unlink:
                     with self.assertRaises(ValueError):
                         self.cache.restore(self.f.MemoryS3(self.f.inventory(scope, [self.f.row(path)]), scope),
-                                           'synthetic', passed_root, scope)
+                                           'synthetic', root, scope)
                     self.assertEqual((unlink.call_count, restore.call_count), (0, 0))
                 self.assertEqual(snapshot(root), before)
                 self.event('symlink-'+component)
@@ -293,6 +273,59 @@ class RestoreInventoryPreflightTests(unittest.TestCase):
                         self.assertIs(self.cache.restore(s3, 'synthetic', destination, scope, include_cache=include), True)
                         restore.assert_not_called()
                     self.event(label)
+        # These save-produced batches were accepted by the pinned implementation.
+        # Root/ancestor aliases and in-base directory aliases must stay compatible.
+        for component in ('ancestor', 'root', 'var', 'base', 'internal'):
+            for paths in ([], ['reference/run.json', 'reference/cells.json'],
+                          ['reference/run.json', 'screen/refresh-failure.json']):
+                for include in (False, True):
+                    label = 'valid-symlink-'+component+'-'+','.join(paths)+'-'+str(include)
+                    with self.subTest(case=label):
+                        source, container = self.child(), self.child()
+                        originals = []
+                        for relative in paths:
+                            path = source/'var/seafloor'/relative
+                            path.parent.mkdir(parents=True, exist_ok=True)
+                            path.write_bytes(f.PAYLOAD)
+                            originals.append(path)
+                        s3 = f.MemoryS3()
+                        document = self.cache.save(s3, 'synthetic', source, 'shared', originals)
+                        real = container/'real'
+                        real.mkdir()
+                        if component in ('ancestor', 'root'):
+                            (container/'alias').symlink_to(real, target_is_directory=True)
+                            destination = container/'alias'
+                            if component == 'ancestor':
+                                (real/'child').mkdir()
+                                destination /= 'child'
+                        else:
+                            destination = real
+                            if component == 'var':
+                                (container/'actual-var').mkdir()
+                                (real/'var').symlink_to(container/'actual-var', target_is_directory=True)
+                            elif component == 'base':
+                                (container/'actual-base').mkdir()
+                                (real/'var').mkdir()
+                                (real/'var/seafloor').symlink_to(container/'actual-base', target_is_directory=True)
+                            else:
+                                target = real/'var/seafloor/reference-target'
+                                target.mkdir(parents=True)
+                                (real/'var/seafloor/reference').symlink_to(target, target_is_directory=True)
+                        with patch.object(Path, 'unlink', autospec=True) as unlink, patch.object(
+                                self.cache, 'restore_private', wraps=self.cache.restore_private) as restore:
+                            self.assertIs(self.cache.restore(s3, 'synthetic', destination, 'shared', include_cache=include), True)
+                            expected = [r['path'] for r in document['files']]
+                            self.assertEqual([call.args[2].relative_to(destination/'var/seafloor').as_posix()
+                                              for call in restore.call_args_list], expected)
+                            marker = destination/'var/seafloor/screen/refresh-failure.json'
+                            self.assertEqual(len([call for call in unlink.call_args_list if call.args[0] == marker]),
+                                             int('screen/refresh-failure.json' not in paths))
+                            for relative in expected:
+                                self.assertEqual((destination/'var/seafloor'/relative).read_bytes(), f.PAYLOAD)
+                        with patch.object(Path, 'unlink'), patch.object(self.cache, 'restore_private') as restore:
+                            self.assertIs(self.cache.restore(s3, 'synthetic', destination, 'shared', include_cache=include), True)
+                            restore.assert_not_called()
+                        self.event(label)
         with self.subTest(case='missing'):
             self.assertIs(self.cache.restore(f.MemoryS3(), 'synthetic', self.child(), 'shared'), False)
             self.event('missing')

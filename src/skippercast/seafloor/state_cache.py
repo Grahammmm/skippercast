@@ -69,10 +69,9 @@ def _preflight_restore(base, name, entries):
             raise ValueError('Unreviewed private restore path')
         seen.add(relative)
         path = base/relative
-        # Reject links in every component, including the supplied root/base and
-        # links pointing inside the root. resolve() alone permits those aliases.
-        if (any(part.is_symlink() for part in (path, *path.parents))
-                or not path.resolve().is_relative_to(base.resolve())):
+        # Match save/restore's existing leaf and resolved-confinement policy.
+        # Legitimate root/ancestor and confined directory aliases stay valid.
+        if path.is_symlink() or not path.resolve().is_relative_to(base.resolve()):
             raise ValueError('Private restore escapes its root')
 
 
