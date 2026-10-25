@@ -15,7 +15,9 @@ import unittest
 from unittest.mock import patch
 import uuid
 
-FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/sc82-draft-id"
+from tests._support import FIXTURES as SUPPORT_FIXTURES, ROOT
+
+FIXTURES = SUPPORT_FIXTURES / "sc82-draft-id"
 URL = "https://example.invalid/survey.tif"
 BOUNDS = [0, 0, 1, 1]
 INVALID = {
@@ -62,7 +64,7 @@ class DraftIDCases(unittest.TestCase):
         # uses explicit API roots without changing cached product defaults for
         # unrelated peer suites in the same interpreter.
         self.draft = importlib.import_module("skippercast.seafloor.draft")
-        expected = Path(__file__).resolve().parents[2] / "src/skippercast/seafloor/draft.py"
+        expected = ROOT / "src/skippercast/seafloor/draft.py"
         self.assertEqual(Path(self.draft.__file__).resolve(), expected)
         if self.external_root is not None:
             self.assertEqual(self.draft.REPO, self.external_root)
