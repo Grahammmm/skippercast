@@ -40,8 +40,9 @@ const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'obj
  * object; a model's data (required to be an array unless the model is an explicit
  * provider-error record) holds only null or object points; a point's hourly, when
  * present, is an object whose time, when present, is an array. Absent forecast, models,
- * data, hourly or time keep the ordinary unavailable outcome. An error record's array
- * points are checked too, because windowConditions reads gfs_global times either way.
+ * data, hourly or time keep the ordinary unavailable outcome. An error record's array or
+ * keyed-object points are checked too, because windowConditions reads gfs_global times
+ * without looking at error.
  */
 function forecastContainersOk(feed: unknown): boolean {
   if (!isRecord(feed)) return false;
@@ -54,11 +55,16 @@ function forecastContainersOk(feed: unknown): boolean {
     const model = models[id];
     if (model === undefined) continue;
     if (!isRecord(model)) return false;
-    if (!Array.isArray(model.data)) {
-      if (model.data === undefined || model.error) continue;
-      return false;
-    }
-    for (const point of model.data) {
+    const data = model.data;
+    let points: unknown[];
+    if (Array.isArray(data)) points = data;
+    else if (data === undefined) continue;
+    else if (!model.error) return false;
+    // An error record may carry non-array data, but data[point] is still indexed, so a
+    // keyed object's entries are checked as points; other values index to nothing.
+    else if (isRecord(data)) points = Object.values(data);
+    else continue;
+    for (const point of points) {
       if (point === null) continue;
       if (!isRecord(point)) return false;
       if (point.hourly === undefined) continue;

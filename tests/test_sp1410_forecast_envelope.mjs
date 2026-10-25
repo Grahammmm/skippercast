@@ -102,7 +102,7 @@ if (!BASELINE) {
   // ---- A1: malformed containers are unavailable ------------------------------------------------
 
   test('A1 every malformed forecast container in an otherwise correct-region feed is unavailable (null)', async () => {
-    assert.ok(CASES.length >= 19, 'the frozen case table is complete');
+    assert.ok(CASES.length >= 21, 'the frozen case table is complete');
     for (const c of CASES) {
       const feed = applyCase(c);
       assert.equal(feed.region_id, 'morro-bay', `${c.id}: the region stays correct`);
@@ -125,6 +125,27 @@ if (!BASELINE) {
       assert.deepEqual(out.advisories.map(a => [a.event, a.zone]), [['Small Craft Advisory', 'PZZ645']], c.id);
       assert.equal(out.lead_with_advisory, true, c.id);
       assert.match(out.advisory_line, /^SMALL CRAFT ADVISORY/, c.id);
+    }
+  });
+
+  test('A1 provider-error GFS records with keyed-object data and a malformed time are unavailable through windowConditions and get_conditions', async () => {
+    // windowConditions indexes gfs_global.data[point].hourly.time without consulting error,
+    // so an error record's keyed-object data is a consumed container too (review round 1).
+    const keyed = CASES.filter(c => c.id.startsWith('error-record-gfs-keyed-data-'));
+    assert.deepEqual(keyed.map(c => c.id), ['error-record-gfs-keyed-data-time-string', 'error-record-gfs-keyed-data-time-object']);
+    for (const c of keyed) {
+      const feed = applyCase(c);
+      assert.ok(feed.forecast.models.gfs_global.error && !Array.isArray(feed.forecast.models.gfs_global.data), `${c.id}: error record with non-array data`);
+      const admitted = await intelligenceFeed(REGION, readerFor(feed));
+      assert.equal(admitted, null, `${c.id}: refused`);
+      let day;
+      assert.doesNotThrow(() => { day = windowConditions(admitted, REGION, POINT, DATE); }, `${c.id}: windowConditions does not throw`);
+      assert.deepEqual([day.available, day.reason], [false, 'regional forecast unavailable'], `${c.id}: unavailable`);
+      const out = await conditionsFor(applyCase(c));
+      assert.equal(out.error, undefined, `${c.id}: no error result`);
+      assert.deepEqual(out.days[0], day, `${c.id}: get_conditions gives the same unavailable day`);
+      assert.deepEqual(out.advisories.map(a => [a.event, a.zone]), [['Small Craft Advisory', 'PZZ645']], `${c.id}: daily advisories survive`);
+      assert.equal(out.lead_with_advisory, true, c.id);
     }
   });
 
@@ -172,6 +193,9 @@ if (!BASELINE) {
       ['explicit provider-error wave record without data', applyCase({path: [...P, 'ncep_gfswave016'], value: {meta: null, error: 'synthetic timeout'}}), true],
       ['explicit provider-error GFS record', applyCase({path: [...P, 'gfs_global'], value: {data: [], meta: null, error: 'synthetic HTTP 500'}}), false],
       ['provider-error GFS record with non-array data', applyCase({path: [...P, 'gfs_global'], value: {data: null, meta: null, error: 'synthetic HTTP 500'}}), false],
+      ['provider-error GFS record with string data', applyCase({path: [...P, 'gfs_global'], value: {data: 'synthetic', meta: null, error: 'synthetic HTTP 500'}}), false],
+      ['provider-error GFS record with keyed-object data and an empty time array', applyCase({path: [...P, 'gfs_global'], value: {data: {1: {hourly: {time: []}}}, meta: null, error: 'synthetic timeout'}}), false],
+      ['provider-error GFS record with keyed-object data and a null point', applyCase({path: [...P, 'gfs_global'], value: {data: {1: null}, meta: null, error: 'synthetic timeout'}}), false],
       ['provider-error ECMWF record keeping well-formed earlier points', (() => { const f = fixture('complete.json'); f.forecast.models.ecmwf_ifs025.error = 'synthetic stale'; return f; })(), true],
     ];
     for (const [label, feed, available] of variants) {

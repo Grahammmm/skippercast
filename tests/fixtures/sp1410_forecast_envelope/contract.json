@@ -219,6 +219,46 @@
     "meta": null,
     "error": "synthetic provider timeout"
    }
+  },
+  {
+   "id": "error-record-gfs-keyed-data-time-string",
+   "path": [
+    "forecast",
+    "models",
+    "gfs_global"
+   ],
+   "value": {
+    "data": {
+     "1": {
+      "hourly": {
+       "time": "bad"
+      }
+     }
+    },
+    "error": "synthetic timeout",
+    "meta": null
+   }
+  },
+  {
+   "id": "error-record-gfs-keyed-data-time-object",
+   "path": [
+    "forecast",
+    "models",
+    "gfs_global"
+   ],
+   "value": {
+    "data": {
+     "1": {
+      "hourly": {
+       "time": {
+        "0": 1790607600
+       }
+      }
+     }
+    },
+    "error": "synthetic timeout",
+    "meta": null
+   }
   }
  ]
 }

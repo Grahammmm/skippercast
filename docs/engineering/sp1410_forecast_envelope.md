@@ -24,8 +24,12 @@ gate (`forecastContainersOk`) for the containers the conditions readers index in
 - each recognized model present (`gfs_global`, `ecmwf_ifs025`, `ncep_gfswave016`,
   `ecmwf_wam`) is a plain object;
 - a model's `data` is an array, except that an explicit provider-error record
-  (truthy `error`) may carry no array; absent `data` stays allowed;
-- every point in a `data` array is `null` or a plain object; a point's `hourly`,
+  (truthy `error`) may carry no array; absent `data` stays allowed. When such an
+  error record's `data` is a keyed (non-array) object, its values are checked as
+  points, because `windowConditions` still indexes `gfs_global.data[point]`
+  without looking at `error`; other non-array values index to nothing;
+- every point in a `data` array (or error-record keyed object) is `null` or a
+  plain object; a point's `hourly`,
   when present, is a plain object, and its `time`, when present, is an array.
 
 Anything else returns `null`, which every caller already treats as "no forecast".
@@ -41,7 +45,7 @@ modules with an injected offline reader. Fixtures are card-owned synthetic JSON 
 tests/fixtures/sp1410_forecast_envelope/: `complete.json` (producer-shaped
 intelligence feed, two points, four models), `minimal.json` (matching region,
 empty GFS time arrays), `daily.json` (valid daily feed with one Small Craft
-Advisory for PZZ645) and `contract.json` (the 19 malformed-container cases, each a
+Advisory for PZZ645) and `contract.json` (the 21 malformed-container cases, each a
 path and value applied to a fresh copy of `complete.json`). `offline.mjs` is the
 test's offline boundary, imported before any product module.
 
@@ -49,6 +53,7 @@ test's offline boundary, imported before any product module.
 | --- | --- |
 | A1 | `A1 every malformed forecast container in an otherwise correct-region feed is unavailable (null)` |
 | A1 | `A1 get_conditions answers a malformed feed with an unavailable forecast and keeps the daily advisories` |
+| A1 | `A1 provider-error GFS records with keyed-object data and a malformed time are unavailable through windowConditions and get_conditions` (review round 1) |
 | A2 | `A2 the card-owned producer-shaped feed is admitted unchanged and gives the same conditions` |
 | A2 | `A2 the committed producer fixture tests/fixtures/feeds/intelligence.json is admitted and gives the same conditions` |
 | A2 | `A2 valid empty arrays, absent models, null points, absent containers and provider-error records keep the missing-data outcome` |
@@ -85,12 +90,24 @@ its docstring for every suite, exit code and receipt field).
   is a malformed container and is refused; only points may be `null`. The feed
   schema (src/skippercast/coastal/resources/intelligence-feed.schema.json) has
   each model as an object with an array `data`, so these nulls are outside it.
-- A provider-error record whose `data` array holds malformed point containers is
-  refused, because `windowConditions` reads `gfs_global` times without looking at
-  `error`. Error records with an empty, absent or non-array `data`, or with
-  well-formed earlier points, are admitted as before.
+- A provider-error record whose `data` array, or keyed-object `data`, holds
+  malformed point containers is refused, because `windowConditions` reads
+  `gfs_global` times without looking at `error`. Error records with an empty,
+  absent, null or string `data`, a keyed object of well-formed or null points,
+  or well-formed earlier points, are admitted as before.
 - Feeds without a `forecast` block (snapshots predating it, which the schema
   still allows) or without `forecast.models` stay admitted, as before.
+
+## Review round 1 and refreeze
+
+Sol's round-1 review of 823922b6 found that an error record with keyed-object
+`data` and a string/object `time` was admitted and then threw in
+`windowConditions`. Two contract cases, one dedicated A1 test and three A2
+safe-error controls were added. Because the freeze identity (test + fixture
+bytes) changed, the operator-admitted refreeze was repeated: the primary file
+was restored to its pinned bytes, a new baseline was run (same A4 pair, same
+semantic assertions), and then the fix was applied. Every earlier receipt is
+retained under `out/`.
 
 ## Limitations
 

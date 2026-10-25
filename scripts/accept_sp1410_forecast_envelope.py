@@ -75,6 +75,7 @@ FOCUSED_TESTS = [
     "healthy control",
     "A1 every malformed forecast container in an otherwise correct-region feed is unavailable (null)",
     "A1 get_conditions answers a malformed feed with an unavailable forecast and keeps the daily advisories",
+    "A1 provider-error GFS records with keyed-object data and a malformed time are unavailable through windowConditions and get_conditions",
     "A2 the card-owned producer-shaped feed is admitted unchanged and gives the same conditions",
     "A2 the committed producer fixture tests/fixtures/feeds/intelligence.json is admitted and gives the same conditions",
     "A2 valid empty arrays, absent models, null points, absent containers and provider-error records keep the missing-data outcome",
