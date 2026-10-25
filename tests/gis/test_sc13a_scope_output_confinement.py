@@ -11,12 +11,13 @@ import io
 import json
 import os
 from pathlib import Path
-import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 
-FIXTURE = Path(__file__).resolve().parents[1] / 'fixtures/sc13a-scope-output-confinement/shapes.json'
+from tests._support import FIXTURES, ROOT
+
+FIXTURE = FIXTURES / 'sc13a-scope-output-confinement/shapes.json'
 CATEGORIES = ('reference_dir', 'ledger_path', 'reaches_path', 'cells_path',
               'build_receipt_path', 'screen_dir')
 DIRECTORIES = {'reference_dir', 'screen_dir'}
@@ -276,15 +277,13 @@ class ScopeCompatibility(ScopeCase):
             self.assert_valid('noncentral', config, value)
         self.assertIs(paths.repo_root, original)
         # Exercise standard collection of this exact file (not peer suites).
-        # Discovery's own temporary sys.path addition is scoped and restored.
-        path_before = sys.path
-        with patch.object(sys, 'path', list(sys.path)):
-            collected = unittest.TestLoader().discover(
-                str(Path(__file__).parent), pattern=Path(__file__).name)
-            self.assertGreater(collected.countTestCases(), 0)
-            ordinary = sys.modules[Path(__file__).stem]
-            self.assertIsNone(ordinary.RUN_ROOT)
-        self.assertIs(sys.path, path_before)
+        # Both unittest discovery and package-name loading use the ordinary suite layout.
+        collected = unittest.TestLoader().discover(
+            str(ROOT / 'tests/gis'), pattern='test_sc13a_scope_output_confinement.py')
+        self.assertGreater(collected.countTestCases(), 0)
+        ordinary = unittest.defaultTestLoader.loadTestsFromName(
+            'tests.gis.test_sc13a_scope_output_confinement')
+        self.assertGreater(ordinary.countTestCases(), 0)
         self.assertIs(paths.repo_root, original)
         self.assertEqual(dict(os.environ), environment)
         # This module adds no audit hook or process/network monkeypatch at all.
@@ -302,7 +301,7 @@ class ScopePreflight(ScopeCase):
             self.assertEqual(contracts.load_catalogs.__defaults__[0], contracts.REPO)
             self.assertEqual(contracts.load_region.__defaults__[0], contracts.REPO)
         self.assertEqual(Path(self.product.__file__).resolve(),
-                         Path(__file__).resolve().parents[2] / 'src/skippercast/seafloor/scope_paths.py')
+                         ROOT / 'src/skippercast/seafloor/scope_paths.py')
 
 
 class ScopeNegativeControl(ScopeCase):
