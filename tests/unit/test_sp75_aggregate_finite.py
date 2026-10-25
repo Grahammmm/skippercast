@@ -2,13 +2,13 @@
 import copy
 import hashlib
 import json
-from pathlib import Path
 import unittest
 from types import MappingProxyType
 
 from skippercast.fleet.ais.aggregate.base import AggregateParams
+from tests._support import FIXTURES
 
-FIXTURE = Path(__file__).resolve().parents[1] / "fixtures/sp75_aggregate_finite/healthy.json"
+FIXTURE = FIXTURES / "sp75_aggregate_finite/healthy.json"
 HEALTHY = json.loads(FIXTURE.read_text(encoding="utf-8"))["aggregate"]
 NONFINITE = (float("nan"), float("inf"), float("-inf"))
 HEALTHY_JSON = '{"delay_hours":24,"min_distinct_vessels":2,"module":"grid","resolution_m":1000}'
