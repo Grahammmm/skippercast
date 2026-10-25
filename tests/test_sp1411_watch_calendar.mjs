@@ -8,11 +8,30 @@ globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.SHELLS = {'/': '/index.0123456789.html', '/admin.html': '/admin.0123456789.html'};
 globalThis.BUILD_ID = 'build-test';
-// Fail closed if application code tries network, model, or persistent storage access.
+// Block fetch (including HTTP model calls) before product import and in every case.
+// Storage is the injected, migration-backed in-memory D1; no live bindings are supplied.
 const savedFetch = globalThis.fetch;
-globalThis.fetch = async () => { throw new Error('network sentinel: unexpected fetch'); };
-const {watchUpdate} = await import('../server/fleet/watch.ts');
-if (savedFetch) globalThis.fetch = savedFetch;
+const denyFetch = async () => { throw new Error('network sentinel: unexpected fetch'); };
+globalThis.fetch = denyFetch;
+const {watchUpdate, watchDeps} = await import('../server/fleet/watch.ts');
+const savedNow = watchDeps.now;
+const NOW = '2026-10-25T12:00:00.000Z';
+const LATER = '2026-10-25T12:30:00.000Z';
+let clock = NOW;
+test.beforeEach(async () => {
+  globalThis.fetch = denyFetch;
+  clock = NOW;
+  watchDeps.now = () => new Date(clock);
+  await assert.rejects(globalThis.fetch('https://skippercast.invalid/sentinel-control'), /network sentinel: unexpected fetch/);
+});
+test.afterEach(() => {
+  globalThis.fetch = savedFetch;
+  watchDeps.now = savedNow;
+});
+test.after(() => {
+  globalThis.fetch = savedFetch;
+  watchDeps.now = savedNow;
+});
 
 const REGION = 'CA';
 const RUN_ID = 'ais-20261025T120000Z';
@@ -95,6 +114,8 @@ if (!baselineOnly) test('canonical timestamps, leap day, precision, ordering and
     ];
     assert.equal((await submit(db, valid)).status, 200);
     const snapshot = sql.prepare('SELECT mmsi,first_seen_at,last_seen_at,updated_at FROM fleet_ais_watch ORDER BY mmsi').all();
+    assert.ok(snapshot.every(stored => stored.updated_at === NOW));
+    clock = LATER;
     assert.equal((await submit(db, valid)).body.changed, 0);
     assert.deepEqual(sql.prepare('SELECT mmsi,first_seen_at,last_seen_at,updated_at FROM fleet_ais_watch ORDER BY mmsi').all(), snapshot);
     for (const invalid of fixtures.unsupported_formats) {
