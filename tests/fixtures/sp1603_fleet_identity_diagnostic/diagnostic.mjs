@@ -2,7 +2,7 @@
 // unexpected error. A green wrapper must check the complete expected-red report.
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {readFileSync, writeFileSync, mkdirSync} from 'node:fs';
+import {readFileSync, writeFileSync, mkdirSync, existsSync} from 'node:fs';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
@@ -84,7 +84,15 @@ export function evaluate(corpus, python, worker) {
     runtimes: {python: python.runtime, worker: worker.runtime}, cases};
 }
 
-export function collect(directory, {fixture = path.join(HERE, 'corpus.json'), python = path.join(ROOT, '.venv/bin/python3')} = {}) {
+// Ordinary discovery also runs in CI checkouts with setup-python but no stage.
+// Explicit runtimes (including the acceptance launcher's staged path) never fall
+// back. Producer runtime.executable and the child argv retain the actual choice.
+export function discoveryPython() {
+  const staged = path.join(ROOT, '.venv/bin/python3');
+  return existsSync(staged) ? staged : 'python3';
+}
+
+export function collect(directory, {fixture = path.join(HERE, 'corpus.json'), python = discoveryPython()} = {}) {
   checkPins(fixture);
   const p = child([python, path.join(HERE, 'python_entry.py'), 'producer', '--fixture', fixture, '--output', directory], directory, 'python-producer');
   if (p.receipt.exit !== 0 || p.receipt.error) throw Error(`PYTHON_RUNTIME_FAILURE:${p.receipt.error ?? p.receipt.exit}`);

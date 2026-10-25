@@ -62,7 +62,14 @@ python3 scripts/accept_sp1603_fleet_identity_diagnostic.py --suite typecheck --o
 python3 scripts/accept_sp1603_fleet_identity_diagnostic.py --suite build --output ../out/author-build
 ```
 
-The launcher validates the standard stage schema, card, repo, base tree,
+Ordinary `node --test tests/test_sp1603_fleet_identity_diagnostic.mjs` discovery
+uses this checkout's `.venv/bin/python3` when present, otherwise the installed
+`python3` on PATH (as provided by CI setup-python). It needs neither a stage
+manifest nor a virtualenv link. Producer reports retain the actual interpreter
+executable/version, and child receipts retain its launch argv. Explicit producer
+runtime overrides never fall back; a missing runtime still fails closed.
+
+The acceptance launcher validates the standard stage schema, card, repo, base tree,
 ancestry, source pins, shared dependencies and credential-scan runtime.
 There is no fallback interpreter or install. All subprocesses use explicit
 argv and cwd, without a shell, inline source or interpreter environment-path

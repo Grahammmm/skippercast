@@ -1,14 +1,25 @@
 // A1-A4 characterization: success means truthful red evidence, NOT parity.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync, mkdirSync, writeFileSync} from 'node:fs';
+import {mkdtempSync, mkdirSync, writeFileSync, existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {collect, evaluate, child, load, HERE, ROOT, families} from './fixtures/sp1603_fleet_identity_diagnostic/diagnostic.mjs';
+import {collect, evaluate, child, load, discoveryPython, HERE, ROOT, families} from './fixtures/sp1603_fleet_identity_diagnostic/diagnostic.mjs';
 
 const directory = mkdtempSync(path.join(process.env.SP1603_OUTPUT ?? tmpdir(), 'sp1603-characterization-'));
 const corpus = load(path.join(HERE, 'corpus.json'));
+const python = discoveryPython();
 const report = collect(path.join(directory, 'positive'));
+test('discovery selects staged Python when available, otherwise installed python3, and records actual runtime', () => {
+  const staged = path.join(ROOT, '.venv/bin/python3');
+  assert.equal(python, existsSync(staged) ? staged : 'python3');
+  const receipt = load(path.join(directory, 'positive/python-producer.receipt.json'));
+  assert.equal(receipt.argv[0], python);
+  assert.equal(receipt.exit, 0);
+  assert.ok(path.isAbsolute(report.runtimes.python.executable));
+  assert.ok(existsSync(report.runtimes.python.executable));
+  assert.ok(report.runtimes.python.version.length > 0);
+});
 for (const item of report.cases.filter(c => c.family === 'control')) {
   test(`A2 ordinary control: ${item.id}`, () => {
     assert.equal(item.equal, true);
@@ -67,7 +78,7 @@ for (const negative of ['corrupt-fixture', 'missing-runtime']) {
   test(`A4 actual acceptance wrapper rejects ${negative} as unexpected, not expected red`, () => {
     const out = path.join(directory, negative);
     mkdirSync(out);
-    const args = [path.join(ROOT, '.venv/bin/python3'), path.join(ROOT, 'scripts/accept_sp1603_fleet_identity_diagnostic.py'),
+    const args = [python, path.join(ROOT, 'scripts/accept_sp1603_fleet_identity_diagnostic.py'),
       '--suite', 'baseline', '--output', out];
     if (negative === 'corrupt-fixture') {
       const bad = path.join(out, 'corrupt.json');
@@ -90,7 +101,7 @@ for (const negative of ['corrupt-fixture', 'missing-runtime']) {
   });
 }
 test('offline sentinels precede Python bound defaults and Worker imports', () => {
-  const p = child([path.join(ROOT, '.venv/bin/python3'), path.join(HERE, 'python_entry.py'), 'guard-probe', '--output', path.join(directory, 'guards')], directory, 'python-guards');
+  const p = child([python, path.join(HERE, 'python_entry.py'), 'guard-probe', '--output', path.join(directory, 'guards')], directory, 'python-guards');
   assert.equal(p.receipt.exit, 0, p.stderr);
   assert.deepEqual(JSON.parse(p.stdout), {checks: 4, passed: 4, skipped: 0});
   const w = child([process.execPath, path.join(HERE, 'guard_probe.mjs')], directory, 'worker-guards');
