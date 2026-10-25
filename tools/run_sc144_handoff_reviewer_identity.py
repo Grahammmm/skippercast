@@ -32,6 +32,8 @@ def main():
     run_dir.mkdir()
     root = Path(__file__).resolve().parents[1]
     manifest_path = Path(args.source_manifest)
+    tracked_inputs = [manifest_path, Path(__file__).resolve(), root / "tests/unit/test_sc144_handoff_reviewer_identity.py", root / "src/skippercast/coastal/handoff/common.py"]
+    before_hashes = {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in tracked_inputs}
     raw_manifest = manifest_path.read_bytes()
     manifest = json.loads(raw_manifest)
     head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, text=True).stdout.strip()
@@ -61,7 +63,13 @@ def main():
         subprocess.call = forbidden
         os.system = forbidden
         sys.path.insert(0, str(root / "src"))
+        sys.path.insert(0, str(root / "tests" / "unit"))
         from skippercast.coastal.handoff import common
+        import test_sc144_handoff_reviewer_identity
+        after_hashes = {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in tracked_inputs}
+        report.update({"input_hashes_before": before_hashes, "input_hashes_after": after_hashes, "inputs_unchanged": before_hashes == after_hashes, "run_root_confined": run_dir.resolve().parent == out.resolve()})
+        if not report["inputs_unchanged"] or not report["run_root_confined"]:
+            raise SystemExit("preflight source mutation or run-root escape")
         report.update({"status": "PASS", "checks": ["manifest_schema", "repo_identity", "frozen_base", "repo_venv_present", "credential_scan_interpreter", "clean_stage", "guarded_import_closure"], "source_closure": ["read-only: runner, test module, common.py and Python runtime imports", "synthetic: unique run_dir/synthetic-root; no product data roots read"]})
         (run_dir / "report.json").write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
         print(json.dumps(report, sort_keys=True))
@@ -104,6 +112,10 @@ def main():
         positive_stream = open(run_dir / "positive.log", "w")
         positive_result = unittest.TextTestRunner(stream=positive_stream, verbosity=2).run(positive_suite)
         positive_stream.close()
+        after_hashes = {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in tracked_inputs}
+        report.update({"input_hashes_before": before_hashes, "input_hashes_after": after_hashes, "inputs_unchanged": before_hashes == after_hashes, "run_root_confined": run_dir.resolve().parent == out.resolve()})
+        if not report["inputs_unchanged"] or not report["run_root_confined"]:
+            raise SystemExit("negative-control source mutation or run-root escape")
         report.update({"mutant_detected": not mutant_result.wasSuccessful(), "mutant_failure_count": len(mutant_result.failures) + len(mutant_result.errors), "positive_passed": positive_result.wasSuccessful()})
         if not report["mutant_detected"] or not report["positive_passed"]:
             return 1
@@ -115,6 +127,10 @@ def main():
     stream = open(run_dir / "unittest.log", "w")
     result = unittest.TextTestRunner(stream=stream, verbosity=2).run(suite)
     stream.close()
+    after_hashes = {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in tracked_inputs}
+    report.update({"input_hashes_before": before_hashes, "input_hashes_after": after_hashes, "inputs_unchanged": before_hashes == after_hashes, "run_root_confined": run_dir.resolve().parent == out.resolve()})
+    if not report["inputs_unchanged"] or not report["run_root_confined"]:
+        raise SystemExit("test source mutation or run-root escape")
     report.update({"status": "PASS" if result.wasSuccessful() else "FAIL", "tests_run": result.testsRun, "failures": len(result.failures), "errors": len(result.errors), "skips": len(result.skipped)})
     (run_dir / "report.json").write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
     print(json.dumps(report, sort_keys=True))
