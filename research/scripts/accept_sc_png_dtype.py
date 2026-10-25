@@ -97,14 +97,16 @@ SENTINEL_EVENTS = ('socket.connect', 'socket.getaddrinfo', 'socket.gethostbyname
                    'urllib.Request', 'http.client.connect', 'webbrowser.open')
 TRIPS = []
 ARMED = [False]
-# Enumerated process allowance: rasterio's import pulls in h5py, whose type setup reads
-# platform.uname().processor; on Linux the stdlib computes that lazily by running exactly
-# `uname -p` (platform._Processor.from_subprocess). Only that argv, only from the stdlib
-# platform module, is passed through; each use is recorded in the receipt. Anything else
-# still trips the sentinel.
-ALLOWED_PROCESS_ARGV = ['uname', '-p']
-ALLOWED_PROCESS_CALLS = []
-IN_ALLOWANCE = [False]
+# No process allowance. The compatibility imports (rasterio -> h5py) read
+# platform.uname().processor; on Linux the stdlib computes that lazily by running
+# `uname -p` (platform._Processor.from_subprocess). Before any import, that lookup is
+# replaced by a deterministic test-local double that runs no child process and returns ''
+# (the stdlib's own "undetermined" value). Each use is recorded; every real process
+# attempt stays fatal.
+PROCESSOR_DOUBLE_VALUE = ''
+PROCESSOR_DOUBLE_CALLS = []
+TEMP_EVENTS = ('tempfile.mkdtemp', 'tempfile.mkstemp')
+TEMP_CREATIONS = []
 
 
 def sha256(path):
@@ -170,9 +172,43 @@ def git_head():
 
 
 def audit(event, args):
-    if ARMED[0] and event in SENTINEL_EVENTS and not IN_ALLOWANCE[0]:
+    if event in TEMP_EVENTS:
+        TEMP_CREATIONS.append({'event': event, 'path': str(args[0]) if args else None})
+    if ARMED[0] and event in SENTINEL_EVENTS:
         TRIPS.append({'event': event, 'args': repr(args)[:200]})
         raise RuntimeError(f'offline sentinel: {event} is forbidden during acceptance')
+
+
+def redirect_tempfile(out):
+    """Point stdlib temporary-directory resolution at a fresh directory in this run.
+
+    Done before pytest or any project module is imported. tempfile.tempdir is assigned
+    directly, so an interpreter-cached earlier value cannot survive; TMPDIR/TEMP/TMP are
+    set for anything that re-resolves. Every mkdtemp/mkstemp is recorded by the audit hook
+    and must stay inside this root.
+    """
+    import tempfile
+    root = out / 'tmp'
+    root.mkdir(exist_ok=False)
+    # Deliberately resolve (and so cache) the ambient value first, so the override is
+    # proven against the previously cached tempfile.tempdir case on every run.
+    ambient = tempfile.gettempdir()
+    info = {'root': str(root), 'ambient_cached_before': ambient, 'cached_before': tempfile.tempdir,
+            'env_before': {k: os.environ.get(k) for k in ('TMPDIR', 'TEMP', 'TMP')}}
+    for key in ('TMPDIR', 'TEMP', 'TMP'):
+        os.environ[key] = str(root)
+    tempfile.tempdir = str(root)
+    info['gettempdir_after'] = tempfile.gettempdir()
+    if Path(info['gettempdir_after']).resolve() != root.resolve():
+        raise SystemExit('tempfile redirection failed')
+    return info
+
+
+def temp_problems(root):
+    root = Path(root).resolve()
+    stray = [c for c in TEMP_CREATIONS
+             if c['path'] is None or root not in Path(c['path']).resolve().parents]
+    return [f'temporary paths created outside the run tmp root: {stray}'] if stray else []
 
 
 def install_sentinels():
@@ -183,44 +219,33 @@ def install_sentinels():
     import subprocess
     import urllib.request
 
-    def refuse(name, original=None):
+    def refuse(name):
         def refused(*args, **kwargs):
-            if original is not None and IN_ALLOWANCE[0]:
-                return original(*args, **kwargs)   # internal step of the enumerated `uname -p`
             TRIPS.append({'event': name, 'args': ''})
             raise RuntimeError(f'offline sentinel: {name} is forbidden during acceptance')
         return refused
 
-    original_check_output = subprocess.check_output
-    refused_check_output = refuse('subprocess.check_output')
-
-    def check_output(*args, **kwargs):
+    def processor_double():
+        """Test-local double for platform._Processor.from_subprocess: no child process."""
         caller = sys._getframe(1).f_globals.get('__file__')
-        argv = list(args[0]) if args and isinstance(args[0], (list, tuple)) else None
-        if argv == ALLOWED_PROCESS_ARGV and caller == platform.__file__:
-            ALLOWED_PROCESS_CALLS.append({'argv': argv, 'caller': caller, 'at': now()})
-            IN_ALLOWANCE[0] = True
-            try:
-                return original_check_output(*args, **kwargs)
-            finally:
-                IN_ALLOWANCE[0] = False
-        return refused_check_output(*args, **kwargs)
+        PROCESSOR_DOUBLE_CALLS.append({'caller': caller, 'returned': PROCESSOR_DOUBLE_VALUE, 'at': now()})
+        return PROCESSOR_DOUBLE_VALUE
 
+    platform._Processor.from_subprocess = staticmethod(processor_double)
     for owner, attr in ((socket, 'create_connection'), (socket, 'getaddrinfo'),
                         (socket, 'gethostbyname'), (socket, 'gethostbyaddr'),
                         (subprocess, 'run'), (subprocess, 'call'),
-                        (subprocess, 'check_call'),
+                        (subprocess, 'check_call'), (subprocess, 'check_output'),
+                        (subprocess, 'getoutput'), (subprocess, 'getstatusoutput'),
                         (os, 'system'), (os, 'popen'), (urllib.request, 'urlopen'),
                         (http.client.HTTPConnection, 'connect')):
-        setattr(owner, attr, refuse(f'{getattr(owner, "__name__", owner)}.{attr}',
-                                    getattr(owner, attr) if owner is subprocess else None))
-    # Popen itself stays a class (the allowance needs it); its construction is still
-    # refused by the audit hook's subprocess.Popen event outside the allowance.
-    subprocess.check_output = check_output
+        setattr(owner, attr, refuse(f'{getattr(owner, "__name__", owner)}.{attr}'))
+    # Direct subprocess.Popen construction is refused by the audit hook's subprocess.Popen event.
     sys.addaudithook(audit)
     ARMED[0] = True
-    return {'events': list(SENTINEL_EVENTS), 'allowed_process_argv': ALLOWED_PROCESS_ARGV,
-            'allowed_process_caller': platform.__file__}
+    return {'events': list(SENTINEL_EVENTS), 'process_allowance': None,
+            'processor_double': 'platform._Processor.from_subprocess -> '
+                                f'{PROCESSOR_DOUBLE_VALUE!r} (no child process)'}
 
 
 def resolve_dependencies():
@@ -442,6 +467,7 @@ def main(argv):
     receipt['base_pins_reported'] = {n: {'base': p, 'current': receipt['hashes_before'].get(n)}
                                      for n, p in BASE_PINS_REPORTED.items()}
     problems += [f'source pin mismatch: {n}' for n, row in receipt['pins'].items() if row['expected'] != row['actual']]
+    receipt['tempfile'] = redirect_tempfile(out)
     receipt['sentinels'] = install_sentinels()
     modules_before = set(sys.modules)
     receipt['dependencies'], missing = resolve_dependencies()
@@ -493,7 +519,12 @@ def main(argv):
                 problems.append(f'{name} did not resolve from the staged venv')
     ARMED[0] = False
     receipt['sentinel_trips'] = list(TRIPS)
-    receipt['allowed_process_calls'] = list(ALLOWED_PROCESS_CALLS)
+    receipt['allowed_process_calls'] = []
+    receipt['processor_double_calls'] = list(PROCESSOR_DOUBLE_CALLS)
+    receipt['temp_creations'] = list(TEMP_CREATIONS)
+    problems += temp_problems(receipt['tempfile']['root'])
+    if args.suite == 'contract' and not missing and not TEMP_CREATIONS:
+        problems.append('contract: no compatibility TemporaryDirectory creation was observed')
     if TRIPS:
         problems.append(f'offline sentinel tripped: {[t["event"] for t in TRIPS]}')
     receipt['hashes_after'] = {name: sha256(REPO / name) for name in watched}
