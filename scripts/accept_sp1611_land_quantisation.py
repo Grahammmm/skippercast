@@ -49,7 +49,15 @@ def main():
     if manifest.get('schema') != 'agentorange.source-manifest/v1' or manifest.get('repo') != str(REPO):
         raise SystemExit('SOURCE-MANIFEST identity/schema mismatch')
     if manifest.get('head') != '8a805820c30895f5f037e26af9079fd3dc015b0f':
-        raise SystemExit('SOURCE-MANIFEST pinned head mismatch')
+        raise SystemExit('SOURCE-MANIFEST pinned base head mismatch')
+    identity = subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=REPO, capture_output=True, text=True, check=False)
+    if identity.returncode:
+        raise SystemExit('cannot resolve candidate HEAD')
+    actual_head = identity.stdout.strip()
+    ancestry = subprocess.run(['git', 'merge-base', '--is-ancestor', manifest['head'], actual_head],
+                              cwd=REPO, capture_output=True, text=True, check=False)
+    if ancestry.returncode:
+        raise SystemExit('candidate HEAD is not descended from the staged manifest base')
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=True)
     child_dir = output / f'{args.suite}-{time.strftime("%Y%m%dT%H%M%S")}-{uuid.uuid4().hex}'
@@ -89,7 +97,8 @@ def main():
         outcome = 'REPOSITORY_PASS' if ok else 'REPOSITORY_FAIL'
         records = [run]
     receipt = {'spec_version': 'SP-16-v1', 'suite': args.suite, 'outcome': outcome,
-               'repo': str(REPO), 'manifest_head': manifest['head'], 'child_dir': str(child_dir),
+               'repo': str(REPO), 'manifest_base_head': manifest['head'], 'actual_head': actual_head,
+               'child_dir': str(child_dir),
                'runs': [{k: v for k, v in r.items() if k not in ('stdout', 'stderr')} for r in records]}
     raw = json.dumps(receipt, sort_keys=True, indent=2).encode() + b'\n'
     (child_dir / 'receipt.json').write_bytes(raw)
