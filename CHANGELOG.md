@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SP-MAP-NOW: Withhold cloud tiles and native current frames when an explicitly supplied decision clock is not a valid Date. Omitted clocks still use the current time; source ages, forecast and observation selection, publisher hosts and tile queries are unchanged.
+
 - SP-RULES-STATUS: The rules line on a mark card no longer says "Verified" when the rules state is "Check rules" or "Choose fishing location". That covers a trip date outside the reviewed rule period, a review time later than allowed, and a season that applies only within a geographic area, even when every source check is fresh. These now read "Needs recheck · last check <date>". Seasons, limits, source checks and their wording are unchanged. A verified date only records when the sources were checked; it is not clearance to fish.
 
 - The Swell layer's selector switches between the primary swell, wind sea and secondary swell from the NOAA GFS-Wave wcoast.0p16 forecast, each drawn with height in feet, period and direction and named with its run time; the nearshore (CDIP MOP) rings are unchanged.
