@@ -54,6 +54,28 @@ def save(s3, bucket, root, name, paths):
     return document
 
 
+def _preflight_restore(base, name, entries):
+    """Reject the entire metadata batch before marker or transfer side effects."""
+    if not isinstance(entries, list):
+        raise ValueError('Invalid private restore inventory')
+    seen = set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise ValueError('Invalid private restore entry')
+        relative, digest = entry.get('path'), entry.get('sha256')
+        if (not isinstance(relative, str) or relative in seen
+                or not allowed(name, relative) or not isinstance(digest, str)
+                or not re.fullmatch('[a-f0-9]{64}', digest)):
+            raise ValueError('Unreviewed private restore path')
+        seen.add(relative)
+        path = base/relative
+        # Reject links in every component, including the supplied root/base and
+        # links pointing inside the root. resolve() alone permits those aliases.
+        if (any(part.is_symlink() for part in (path, *path.parents))
+                or not path.resolve().is_relative_to(base.resolve())):
+            raise ValueError('Private restore escapes its root')
+
+
 def restore(s3, bucket, root, name, *, include_cache=True):
     name = scope_name(name)
     try:
@@ -69,6 +91,7 @@ def restore(s3, bucket, root, name, *, include_cache=True):
     if data['scope'] != name or data['version'] != 1:
         raise ValueError('Private state scope mismatch')
     base = Path(root)/'var/seafloor'
+    _preflight_restore(base, name, data.get('files'))
     if name == 'shared' and not any(e['path'] == 'screen/refresh-failure.json' for e in data['files']):
         (base/'screen/refresh-failure.json').unlink(missing_ok=True)
     for entry in data['files']:
