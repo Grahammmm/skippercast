@@ -18,8 +18,10 @@ import unittest
 from unittest.mock import patch
 import zlib
 
-REPO = Path(__file__).resolve().parents[2]
-FIXTURES = REPO / "tests/fixtures/sc116-render-faces"
+from tests._support import FIXTURES as TEST_FIXTURES, ROOT
+
+REPO = ROOT
+FIXTURES = TEST_FIXTURES / "sc116-render-faces"
 RUN_ROOT = None
 EVENTS = []
 BASE = "2979d59bfbb7d724eb83b34a48102b914ee8eaa3"
