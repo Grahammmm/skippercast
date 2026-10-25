@@ -293,16 +293,36 @@ def file_sha(path):
     return sha256(read_file(path)).hexdigest()
 
 
-def tool_identity(stage):
-    """Measured tool binding: driver, stage-module and helper bytes plus native versions."""
+def runtime_identity():
+    """Measured runtime/native identities of every output-shaping library.
+
+    rasterio/GDAL/PROJ (bundled) and numpy shape every raster stage; the C2
+    contour stage additionally projects with pyproj/PROJ and builds geometry
+    with Shapely/GEOS. Values are read from the loaded modules (not metadata
+    files) so the binding reflects what actually runs. No install or update.
+    """
     import numpy
+    import pyproj
     import rasterio
+    import shapely
+    return dict(rasterio=rasterio.__version__, gdal=rasterio.__gdal_version__,
+                rasterio_proj=rasterio.__proj_version__, numpy=numpy.__version__,
+                pyproj=pyproj.__version__, pyproj_proj=pyproj.proj_version_str,
+                shapely=shapely.__version__, geos=shapely.geos_version_string)
+
+
+def tool_identity(stage):
+    """Measured tool binding: driver, stage-module and helper bytes plus native runtime identities.
+
+    Every stage binds the full runtime identity (conservative): a drift in any
+    output-shaping library makes the first affected stage stale and refused.
+    """
     here = Path(__file__).resolve()
     return dict(driver_sha256=file_sha(here),
                 stages={name: file_sha(here.parent / (name + '.py')) for name in STAGE_TOOLS[stage]},
                 helpers={'validate_recipe.py': file_sha(REPO / 'validate_recipe.py'),
                          'validate_coast_receipt.py': file_sha(REPO / 'scripts/validate_coast_receipt.py')},
-                rasterio=rasterio.__version__, gdal=rasterio.__gdal_version__, numpy=numpy.__version__)
+                runtime=runtime_identity())
 
 
 def owned_paths(state, stage):
@@ -347,13 +367,33 @@ def load_stage(root, stage):
     return (value, 'sealed') if sealed else (None, 'partial')
 
 
+def guard_workspace(root):
+    """Refuse any symlink (live or dangling) or special file anywhere in the workspace.
+
+    Runs before any quarantine, stage, manifest or history write so a redirected
+    stages/, stages/.pending/, manifests/ or quarantine/ ancestor cannot carry a
+    write outside the workspace. Single-writer assumption; individual writes also
+    re-check their own path via child()/safe().
+    """
+    root = safe(root, directory=True)
+    for current, dirs, files in os.walk(root, followlinks=False):
+        for name in dirs + files:
+            mode = os.lstat(os.path.join(current, name)).st_mode
+            relative = Path(current, name).relative_to(root).as_posix()
+            require(not stat.S_ISLNK(mode), 'symlink in segment workspace refused: ' + relative)
+            require(stat.S_ISDIR(mode) or stat.S_ISREG(mode), 'special file in segment workspace refused: ' + relative)
+
+
 def write_stage(root, stage, value):
     """Fully written + fsynced pending file, then renamed into a never-existing name."""
     value = {k: v for k, v in value.items() if k != 'seal_sha256'}
     value['seal_sha256'] = stage_seal(value)
-    final = root / STAGE_DIR / (stage + '.json')
-    pending = root / STAGE_DIR / '.pending' / f'{stage}-{uuid4().hex}.json'
+    final = child(root, f'{STAGE_DIR}/{stage}.json')
+    pending = child(root, f'{STAGE_DIR}/.pending/{stage}-{uuid4().hex}.json')
     pending.parent.mkdir(parents=True, exist_ok=True)
+    # Re-check after mkdir: no ancestor of the pending or final name may be a link.
+    safe(pending.parent, root=root, directory=True)
+    safe(final.parent, root=root, directory=True)
     with pending.open('xb') as stream:
         stream.write(canonical(value))
         stream.flush()
@@ -572,34 +612,104 @@ def _write_manifest(state, prefix, value):
     return ref(root, path, state['root_id'])
 
 
+HISTORY_SCHEMA = 'coast-segment-manifest-history-v1'
+HISTORY_TIPS = MANIFEST_DIR + '/history-tips'
+HISTORY_KEYS = {'schema', 'seq', 'previous_row_sha256', 'row_seal_sha256', 'determinism_digest', 'code_commit',
+                'executed', 'reused', 'quarantined', 'archive_candidates', 'viewer'}
+
+
+def row_seal(row):
+    return sha256(canonical({k: v for k, v in row.items() if k != 'row_seal_sha256'})).hexdigest()
+
+
+def _manifest_ref_ok(state, item, prefix):
+    """A history row's manifest ref must name an existing, byte-exact write-once manifest."""
+    root = state['workspace']
+    if not (isinstance(item, dict) and set(item) == {'root_id', 'path', 'sha256', 'bytes'}
+            and item['root_id'] == state['root_id'] and isinstance(item['path'], str)
+            and re.fullmatch(MANIFEST_DIR + '/' + prefix + '-[0-9a-f]{16}[.]json', item['path'])):
+        return False
+    path = child(root, item['path'])
+    if path.is_symlink() or not path.is_file():
+        return False
+    raw = read_file(path)
+    return (sha256(raw).hexdigest(), len(raw)) == (item['sha256'], item['bytes']) and \
+        item['path'].endswith(item['sha256'][:16] + '.json')
+
+
+def _history_row_ok(state, item, index, previous):
+    stages = set(STAGES)
+    executed, reused = item.get('executed'), item.get('reused')
+    return (isinstance(item, dict) and set(item) == HISTORY_KEYS and item['schema'] == HISTORY_SCHEMA
+            and item['seq'] == index and item['previous_row_sha256'] == previous
+            and item['row_seal_sha256'] == row_seal(item)
+            and isinstance(item['determinism_digest'], str) and re.fullmatch('[0-9a-f]{64}', item['determinism_digest'])
+            and isinstance(item['code_commit'], str) and re.fullmatch('[0-9a-f]{40}', item['code_commit'])
+            and isinstance(executed, list) and isinstance(reused, list)
+            and all(isinstance(s, str) for s in executed + reused)
+            and len(executed) + len(reused) == len(stages) and set(executed) | set(reused) == stages
+            and [s for s in STAGES if s in executed] == executed and [s for s in STAGES if s in reused] == reused
+            and isinstance(item['quarantined'], list) and all(isinstance(p, str) for p in item['quarantined'])
+            and _manifest_ref_ok(state, item['archive_candidates'], 'archive-candidates')
+            and (item['viewer'] is None or _manifest_ref_ok(state, item['viewer'], 'viewer')))
+
+
+def _tip_path(state, seq):
+    return child(state['workspace'], f'{HISTORY_TIPS}/{seq:08d}.json')
+
+
 def verify_history(state):
-    """Return (rows, tip sha). Any partial/edited/reordered row refuses."""
-    path = state['workspace'] / HISTORY
-    if not path.exists() and not path.is_symlink():
-        return 0, None
-    raw, previous = read_file(child(state['workspace'], HISTORY)), None
-    lines = raw.splitlines(keepends=True)
+    """Return (rows, tip sha). Any partial, edited, reordered, dropped or unsealed row refuses.
+
+    Each row carries a seal over its full content (including the tip row), a
+    seq/previous-row hash chain, and references to existing byte-exact
+    manifests. A write-once tip record per row (manifests/history-tips/) makes
+    dropping complete trailing rows detectable. These are unkeyed integrity
+    checks against accidental or partial damage, not authenticated approval.
+    """
+    root = state['workspace']
+    path, tips_dir = root / HISTORY, root / HISTORY_TIPS
+    damaged = 'manifest history damaged; attended reconciliation required'
+    lines, previous = [], None
+    if path.exists() or path.is_symlink():
+        lines = read_file(child(root, HISTORY)).splitlines(keepends=True)
     for index, line in enumerate(lines):
         try:
             item = receipt_api.loads(line)
-            ok = (line == canonical(item) and item.get('seq') == index and item.get('previous_row_sha256') == previous)
-        except (ValueError, TypeError, AttributeError, RecursionError):
+            ok = line.endswith(b'\n') and line == canonical(item) and _history_row_ok(state, item, index, previous)
+        except (ValueError, TypeError, AttributeError, KeyError, RecursionError):
             ok = False
-        require(ok, 'manifest history damaged; attended reconciliation required')
+        require(ok, damaged)
         previous = sha256(line).hexdigest()
+    tips = []
+    if tips_dir.exists() or tips_dir.is_symlink():
+        tips = sorted(p.name for p in safe(tips_dir, root=root, directory=True).iterdir())
+    require(tips == [f'{seq:08d}.json' for seq in range(len(lines))], damaged)
+    for seq, line in enumerate(lines):
+        try:
+            ok = read_file(_tip_path(state, seq)) == canonical(dict(
+                schema=HISTORY_SCHEMA + '-tip', seq=seq, row_sha256=sha256(line).hexdigest()))
+        except (ValueError, OSError):
+            ok = False
+        require(ok, damaged)
     return len(lines), previous
 
 
 def _append_history(state, row):
     count, previous = verify_history(state)
-    row = dict(row, schema='coast-segment-manifest-history-v1', seq=count, previous_row_sha256=previous)
+    row = dict(row, schema=HISTORY_SCHEMA, seq=count, previous_row_sha256=previous)
+    row['row_seal_sha256'] = row_seal(row)
     data = canonical(row)
     path = child(state['workspace'], HISTORY)
     path.parent.mkdir(parents=True, exist_ok=True)
+    # Row first, then its write-once tip; a crash between them leaves a row with
+    # no tip, which refuses (fail closed) until attended reconciliation.
     with path.open('ab') as stream:
         stream.write(data)
         stream.flush()
         os.fsync(stream.fileno())
+    write_json(_tip_path(state, count), dict(schema=HISTORY_SCHEMA + '-tip', seq=count,
+                                             row_sha256=sha256(data).hexdigest()))
     return dict(seq=count, rows=count + 1, row_sha256=sha256(data).hexdigest())
 
 
@@ -695,6 +805,7 @@ def _execute(input_root, *, workspace, admitted_root, recipe_sha256, plan_sha256
     pins, params = _pins(recipe_sha256, plan_sha256, run_sha256, code_commit), _params(reserve_gib)
     root = state['workspace']
     if root.exists():
+        guard_workspace(root)  # no symlinked/special ancestor or entry before any write
         verify_history(state)  # refuse a damaged history before any stage work
     with native_offline():
         if not root.exists():
@@ -733,6 +844,8 @@ def segment_status(input_root, *, workspace, admitted_root=DEFAULT_ADMITTED,
     state = prepare(input_root, admitted_root=admitted_root, workspace=workspace, recipe_sha256=recipe_sha256,
                     plan_sha256=plan_sha256, run_sha256=run_sha256, code_commit=code_commit, resume=True)
     require(math.isfinite(reserve_gib) and reserve_gib >= 0, 'invalid reserve')
+    if state['workspace'].exists():
+        guard_workspace(state['workspace'])
     _, _, report = _walk(state, pins=_pins(recipe_sha256, plan_sha256, run_sha256, code_commit),
                          params=_params(reserve_gib), execute=False)
     return dict(stages=report, complete=all(r['status'] == 'complete' for r in report),

@@ -355,8 +355,12 @@ def status(case, **changes):
 
 
 def tree(root, skip=()):
-    return {p.relative_to(root).as_posix(): (sha256(p.read_bytes()).hexdigest(), p.stat().st_mtime_ns)
-            for p in sorted(root.rglob('*')) if p.is_file() and p.relative_to(root).as_posix() not in skip}
+    out = {}
+    for p in sorted(root.rglob('*')):
+        rel = p.relative_to(root).as_posix()
+        if p.is_file() and rel not in skip and not any(rel.startswith(s + '/') for s in skip):
+            out[rel] = (sha256(p.read_bytes()).hexdigest(), p.stat().st_mtime_ns)
+    return out
 
 
 def history(root):
@@ -380,7 +384,7 @@ def test_resume_noop_rerun_preserves_digest_with_zero_stage_work(case):
     first = run(case)
     root = case['kwargs']['workspace']
     assert first['executed'] == ALL and first['reused'] == []
-    before = tree(root, skip={driver.HISTORY})
+    before = tree(root, skip={driver.HISTORY, driver.HISTORY_TIPS})
     rows = history(root)
     second = resume(case)
     assert second['executed'] == [] and second['reused'] == ALL
@@ -388,12 +392,14 @@ def test_resume_noop_rerun_preserves_digest_with_zero_stage_work(case):
     assert second['receipt'] == first['receipt']
     assert second['validation'] == first['validation']
     assert second['manifests']['archive_candidates'] == first['manifests']['archive_candidates']
-    assert tree(root, skip={driver.HISTORY}) == before  # bytes AND mtimes: zero new stage work
+    assert tree(root, skip={driver.HISTORY, driver.HISTORY_TIPS}) == before  # bytes AND mtimes: zero new stage work
     after = history(root)
     assert after[:len(rows)] == rows and len(after) == len(rows) + 1  # append-only
     row = json.loads(after[-1])
     assert row['executed'] == [] and row['reused'] == ALL and row['seq'] == 1
     assert row['previous_row_sha256'] == sha256(rows[-1]).hexdigest()
+    assert row['row_seal_sha256'] == driver.row_seal(row)
+    assert sorted(p.name for p in (root / driver.HISTORY_TIPS).iterdir()) == ['00000000.json', '00000001.json']
     assert set(status(case).values()) == {'complete'}
 
 
@@ -608,3 +614,134 @@ def test_resume_cli_status_and_resume_modes(case, capsys):
     assert json.loads(capsys.readouterr().out)['complete'] is True
     assert driver.main(args) == 3  # plain run never adopts an existing workspace
     assert 'fresh exclusive workspace' in capsys.readouterr().err
+
+
+def snapshot(path):
+    """Bytes, mtimes and entry kinds of an inert sibling directory (never followed)."""
+    return {p.relative_to(path).as_posix(): (p.is_symlink(), p.is_file() and sha256(p.read_bytes()).hexdigest(),
+                                             p.lstat().st_mtime_ns) for p in sorted(path.rglob('*'))}
+
+
+@pytest.mark.parametrize('target', ['pending', 'stages', 'manifests', 'quarantine', 'dangling'])
+def test_resume_refuses_symlinked_staging_ancestors_without_mutation(case, area, target):
+    first = run(case)
+    root = case['kwargs']['workspace']
+    # Losing the final seal forces real receipt-stage work, so a staging write would occur.
+    (root / 'stages/receipt.json').rename(area / 'receipt-seal-aside.json')
+    sibling = area / 'inert-sibling-not-workspace'
+    sibling.mkdir()
+    (sibling / 'keep.txt').write_bytes(b'inert synthetic sibling\n')
+    name = {'pending': 'stages/.pending', 'stages': 'stages', 'manifests': 'manifests',
+            'quarantine': 'quarantine', 'dangling': 'stages/.pending'}[target]
+    link, retained = root / name, area / ('retained-' + target)
+    if link.exists():
+        link.rename(retained)
+    if target == 'dangling':
+        link.symlink_to(area / 'never-created-target', target_is_directory=True)
+    elif target == 'stages':
+        retained.rename(sibling / 'stages')  # live link to a copy of the real receipts outside the workspace
+        link.symlink_to(sibling / 'stages', target_is_directory=True)
+    else:
+        link.symlink_to(sibling, target_is_directory=True)
+    before, outside = tree(root), snapshot(sibling)
+    with pytest.raises(ValueError, match='symlink in segment workspace refused: ' + name):
+        resume(case)
+    with pytest.raises(ValueError, match='symlink in segment workspace refused: ' + name):
+        status(case)
+    assert tree(root) == before and snapshot(sibling) == outside  # zero mutation, no sibling writes
+    assert not (area / 'never-created-target').exists()
+    # Positive control: restoring the real directory restarts only the unsealed receipt stage.
+    link.rename(area / ('link-aside-' + target))
+    if target == 'stages':
+        (sibling / 'stages').rename(link)
+    elif retained.exists():
+        retained.rename(link)
+    resumed = resume(case)
+    assert resumed['executed'] == ['receipt'] and resumed['reused'] == ALL[:-1]
+    assert resumed['receipt']['determinism_digest'] == first['receipt']['determinism_digest']
+    assert set(status(case).values()) == {'complete'}
+
+
+def rows_of(root):
+    return [json.loads(line) for line in history(root)]
+
+
+def write_rows(root, lines):
+    (root / driver.HISTORY).write_bytes(b''.join(lines))
+
+
+@pytest.mark.parametrize('how', ['only_row_payload', 'tip_row_payload', 'resealed_tip_row', 'middle_row_payload',
+                                 'resealed_middle_row', 'dropped_last_row', 'truncated_last_row', 'missing_tip_record',
+                                 'unsealed_row'])
+def test_resume_refuses_edited_or_truncated_history_rows(case, how):
+    run(case)
+    root = case['kwargs']['workspace']
+    if how != 'only_row_payload':
+        resume(case)
+        resume(case, viewer=True)
+        assert [r['seq'] for r in rows_of(root)] == [0, 1, 2]
+    lines = history(root)
+    tip = len(lines) - 1
+    if how in ('only_row_payload', 'tip_row_payload', 'resealed_tip_row', 'middle_row_payload', 'resealed_middle_row'):
+        index = 1 if 'middle' in how else tip
+        row = json.loads(lines[index])
+        row['executed'], row['reused'] = (ALL, []) if row['executed'] == [] else ([], ALL)
+        assert row['seq'] == index  # seq and previous pointer retained
+        if how.startswith('resealed'):
+            row['row_seal_sha256'] = driver.row_seal(row)
+        lines[index] = driver.canonical(row)
+        write_rows(root, lines)
+    elif how == 'dropped_last_row':
+        write_rows(root, lines[:-1])
+    elif how == 'truncated_last_row':
+        write_rows(root, lines[:-1] + [lines[-1][:len(lines[-1]) // 2]])
+    elif how == 'missing_tip_record':
+        (root / driver.HISTORY_TIPS / f'{tip:08d}.json').rename(root / 'tip-aside.json')
+    else:
+        row = json.loads(lines[tip])
+        row.pop('row_seal_sha256')
+        lines[tip] = driver.canonical(row)
+        write_rows(root, lines)
+    before = tree(root)
+    with pytest.raises(ValueError, match='manifest history damaged'):
+        resume(case)
+    assert tree(root) == before  # validated before any quarantine, stage, manifest or history write
+
+
+def test_resume_valid_history_appends_with_seal_chain_and_tips(case):
+    run(case)
+    root = case['kwargs']['workspace']
+    for viewer in (False, True, False):
+        resume(case, viewer=viewer)
+    rows, lines = rows_of(root), history(root)
+    assert [r['seq'] for r in rows] == [0, 1, 2, 3]
+    previous = None
+    for row, line in zip(rows, lines):
+        assert row['previous_row_sha256'] == previous and row['row_seal_sha256'] == driver.row_seal(row)
+        tip = json.loads((root / driver.HISTORY_TIPS / f"{row['seq']:08d}.json").read_bytes())
+        assert tip['row_sha256'] == sha256(line).hexdigest()
+        previous = sha256(line).hexdigest()
+    assert driver.verify_history(dict(workspace=root, root_id='queue:synthetic')) == (4, previous)
+
+
+@pytest.mark.parametrize('attribute', [('pyproj', '__version__'), ('pyproj', 'proj_version_str'),
+                                       ('shapely', '__version__'), ('shapely', 'geos_version_string'),
+                                       ('rasterio', '__proj_version__'), ('numpy', '__version__')],
+                         ids=lambda a: '.'.join(a))
+def test_resume_refuses_reuse_after_runtime_identity_drift(case, monkeypatch, attribute):
+    import importlib
+    run(case)
+    root = case['kwargs']['workspace']
+    before = tree(root)
+    module = importlib.import_module(attribute[0])
+    original = getattr(module, attribute[1])
+    assert set(status(case).values()) == {'complete'}  # unchanged runtime: everything reusable
+    monkeypatch.setattr(module, attribute[1], 'resume-drifted-runtime-identity')
+    report = status(case)
+    assert report == dict(inputs='stale', c1='blocked', c2='blocked', c4='blocked', c5='blocked', receipt='blocked')
+    with pytest.raises(ValueError, match='stale stage binding refused: inputs'):
+        resume(case)
+    assert tree(root) == before  # bytes and mtimes preserved
+    monkeypatch.setattr(module, attribute[1], original)  # targeted restore; offline guards stay patched
+    again = resume(case)
+    assert again['executed'] == [] and again['reused'] == ALL
