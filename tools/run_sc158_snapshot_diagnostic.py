@@ -3,22 +3,25 @@
 
 Suites: regression (A1), compatibility (A2) and negative-control (A3) over
 tests/unit/test_sc158_snapshot_diagnostic.py. Each invocation writes a new
-run directory beneath --out containing stdout.txt, stderr.txt and a sealed
-receipt.json (plus receipt.json.sha256). Read-only git identity is measured
-before any guard is installed; network, child-process and model-client
-sentinels and a run-root write guard are installed before product imports,
-and skippercast.paths.repo_root is redirected to synthetic state before
-skippercast.platform.contracts is imported. The exit status is explicit.
+run directory beneath --out. The parent process measures read-only git
+identity and preflight, qualifies its finalization lifecycle with real
+exit-hook late writers, then runs the suite in a guarded child process of this
+same file. Network, child-process and model-client sentinels and a write guard
+(run_root/child only) are installed in that child before product imports, and
+skippercast.paths.repo_root is redirected to synthetic state before
+skippercast.platform.contracts is imported. Only after the child has exited
+and its pipes reached EOF (so its exit hooks have finished) does the parent
+drain its own exit hooks and seal the child's raw stdout/stderr bytes into
+stdout.txt, stderr.txt and receipt.json (plus receipt.json.sha256); it then
+ends with an explicit status and runs no later writer.
 """
 import sys
 
 sys.dont_write_bytecode = True
 
 import argparse  # noqa: E402
-import contextlib  # noqa: E402
 from datetime import datetime, timezone  # noqa: E402
 import hashlib  # noqa: E402
-import io  # noqa: E402
 import json  # noqa: E402
 import os  # noqa: E402
 from pathlib import Path  # noqa: E402
@@ -75,11 +78,15 @@ def seal_run(run_dir, receipt, logs):
     """
     run_dir = Path(run_dir)
     receipt_path = run_dir / 'receipt.json'
-    if receipt_path.exists() or (run_dir / 'receipt.json.sha256').exists():
+    if os.path.lexists(receipt_path) or os.path.lexists(run_dir / 'receipt.json.sha256'):
         raise FileExistsError('receipt already sealed for this run directory')
+    present = [name for name in REQUIRED_LOGS if os.path.lexists(run_dir / name)]
+    if present:
+        raise FileExistsError('log already present before sealing: ' + ', '.join(present))
     bound = {}
     for name in REQUIRED_LOGS:
-        data = logs.get(name, '').encode('utf-8')
+        data = logs.get(name, b'')
+        data = data.encode('utf-8') if isinstance(data, str) else bytes(data)
         with open(run_dir / name, 'xb') as stream:
             stream.write(data)
         bound[name] = {'sha256': sha256_bytes(data), 'bytes': len(data)}
@@ -332,36 +339,160 @@ def module_origins(repo):
     return origins, outside
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument('--suite', required=True, choices=sorted(SUITES))
-    parser.add_argument('--source-manifest', required=True)
-    parser.add_argument('--out', required=True)
-    args = parser.parse_args()
-    repo = Path(__file__).resolve().parents[1]
-    out = Path(args.out).resolve()
-    out.mkdir(parents=True, exist_ok=True)
-    run_root = out / f'run-{time.time_ns()}-{os.getpid()}'
-    run_root.mkdir()
-    started = datetime.now(timezone.utc)
-    clock = time.monotonic()
-    receipt = {'schema': 'sc158.acceptance-receipt/v1', 'suite': args.suite, 'argv': list(sys.argv),
-               'cwd': os.getcwd(), 'interpreter': sys.executable, 'python': sys.version,
-               'repo': str(repo), 'run_root': str(run_root), 'started_utc': started.isoformat()}
-    stdout, stderr = io.StringIO(), io.StringIO()
-    refusals = []
-    status = 'FAIL'
+
+# ---------------------------------------------------------------- supervised lifecycle
+CHILD_DIR = 'child'
+CHILD_RESULT = 'child-result.json'
+QUALIFICATION_ENV = 'SC158_FINALIZATION_QUALIFICATION'
+LATE_LINE = 'SC158 synthetic exit-hook late writer\n'
+PROBE_MODES = ('late-stream', 'late-file')
+
+
+def write_child_result(child_root, result):
+    with open(Path(child_root) / CHILD_RESULT, 'x', encoding='utf-8') as stream:
+        stream.write(json.dumps(result, indent=2, sort_keys=True, default=str) + '\n')
+
+
+def drain_exit_writers():
+    """Run (and clear) every exit hook registered in this process, then flush, before sealing."""
+    import atexit
+    atexit._run_exitfuncs()
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+
+def supervise(run_root, argv, env=None):
+    """Run one child process to completion; return its raw output and result file.
+
+    subprocess.run returns only after the child has exited and both pipes reached
+    EOF, so every exit hook of the child has finished and its stream writes are in
+    the raw bytes. The child may write only beneath run_root/child; any other new
+    top-level entry (for example a late writer creating stderr.txt) is reported.
+    """
+    run_root = Path(run_root)
+    before = set(os.listdir(run_root))
+    done = subprocess.run(argv, capture_output=True, env=env)
+    unexpected = sorted(set(os.listdir(run_root)) - before - {CHILD_DIR})
+    result_path = run_root / CHILD_DIR / CHILD_RESULT
+    child_result, result_sha = None, None
+    if result_path.is_file() and not result_path.is_symlink():
+        payload = result_path.read_bytes()
+        result_sha = sha256_bytes(payload)
+        try:
+            child_result = json.loads(payload)
+        except ValueError:
+            child_result = None
+    return {'argv': list(argv), 'returncode': done.returncode, 'stdout': done.stdout, 'stderr': done.stderr,
+            'unexpected_entries': unexpected, 'child_result': child_result, 'child_result_sha256': result_sha}
+
+
+def finalize(run_root, receipt, outcome, extra_gates=None, before_seal=None):
+    """Decide from the completed child, then seal its raw output once; return (exit_code, summary).
+
+    A late writer that already created a log, or a seal that does not verify,
+    yields a nonzero FAIL; an existing receipt is never resealed.
+    """
+    child = outcome['child_result'] if isinstance(outcome['child_result'], dict) else {}
+    child_gates = child.get('gates') if isinstance(child.get('gates'), dict) else {}
+    gates = {
+        'child_exit_zero': outcome['returncode'] == 0,
+        'child_result_present': outcome['child_result_sha256'] is not None,
+        'child_reported_pass': child.get('status') == 'PASS',
+        'child_gates_all_true': bool(child_gates) and all(child_gates.values()),
+        'no_unexpected_run_root_entries': outcome['unexpected_entries'] == [],
+    }
+    gates.update(extra_gates or {})
+    status = 'PASS' if all(gates.values()) else 'FAIL'
+    sealed = dict(receipt, child={'argv': outcome['argv'], 'exit_code': outcome['returncode'],
+                                  'result_sha256': outcome['child_result_sha256'],
+                                  'unexpected_entries': outcome['unexpected_entries']},
+                  child_result=outcome['child_result'], final_gates=gates, status=status,
+                  exit_code=0 if status == 'PASS' else 1)
+    if before_seal is not None:
+        before_seal()
     try:
-        receipt['source'] = read_only_identity(repo)
-        receipt.update(preflight(repo, Path(args.source_manifest).resolve(), receipt['source']))
-        receipt['inputs'] = input_hashes(repo)
-        receipt['candidate_source_sha256'] = receipt['inputs'][PRODUCT]
-        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            receipt['guards'] = install_guards(run_root, refusals)
-            receipt['synthetic_repo_root'] = redirect_repo_root(repo, run_root)
-            module, result, tests = run_suite(repo, args.suite, stderr)
-        receipt['tests'] = tests
-        receipt['module_origins'], outside = module_origins(repo)
+        seal_run(run_root, sealed, {'stdout.txt': outcome['stdout'], 'stderr.txt': outcome['stderr']})
+        problems = verify_sealed(run_root)
+    except FileExistsError as exc:
+        problems = ['unsealable: ' + str(exc)]
+    exit_code = sealed['exit_code'] if not problems else 1
+    return exit_code, {'status': status if not problems else 'FAIL', 'exit_code': exit_code,
+                       'run_root': str(run_root), 'seal_problems': problems, 'gates': gates}
+
+
+def qualify_finalization(root):
+    """Exercise the genuine supervise/finalize lifecycle with real exit-hook late writers.
+
+    late-stream: a guarded child's exit hook writes to stderr after its result is
+    written; the sealed stderr.txt must contain that line and verify (positive).
+    late-file: an unguarded child's exit hook appends to the parent's stderr.txt
+    path; finalization must reject nonzero and never seal a PASS (negative).
+    """
+    root = Path(root)
+    root.mkdir(parents=True)
+    modes = {}
+    for mode in PROBE_MODES:
+        probe_root = root / mode
+        probe_root.mkdir()
+        argv = [sys.executable, str(Path(__file__).resolve()), '--finalization-probe', mode,
+                '--child-run-root', str(probe_root)]
+        outcome = supervise(probe_root, argv)
+        code, summary = finalize(probe_root, {'schema': 'sc158.finalization-probe/v1', 'mode': mode}, outcome)
+        late = LATE_LINE.encode('utf-8')
+        sealed_log = probe_root / 'stderr.txt'
+        sealed_has_late = sealed_log.is_file() and late in sealed_log.read_bytes()
+        record = {'argv': argv, 'exit_code': code, 'status': summary['status'],
+                  'seal_problems': summary['seal_problems'], 'unexpected_entries': outcome['unexpected_entries'],
+                  'child_exit_code': outcome['returncode'], 'late_line_in_raw_stderr': late in outcome['stderr'],
+                  'late_line_in_sealed_stderr': sealed_has_late, 'probe_root': str(probe_root)}
+        if mode == 'late-stream':
+            record['passed'] = (code == 0 and summary['status'] == 'PASS' and summary['seal_problems'] == []
+                                and record['late_line_in_raw_stderr'] and sealed_has_late)
+        else:
+            record['passed'] = (code != 0 and summary['status'] == 'FAIL'
+                                and 'stderr.txt' in outcome['unexpected_entries']
+                                and not (probe_root / 'receipt.json').exists())
+        modes[mode] = record
+    return {'passed': all(item['passed'] for item in modes.values()), 'modes': modes}
+
+
+def probe_main(mode, run_root):
+    """A finalization probe child: write its result, then let a real exit hook write late."""
+    import atexit
+    run_root = Path(run_root).resolve()
+    child_root = run_root / CHILD_DIR
+    child_root.mkdir()
+    refusals = []
+    if mode == 'late-stream':
+        install_guards(child_root, refusals)
+
+        def late_writer():
+            sys.stderr.write(LATE_LINE)
+            sys.stderr.flush()
+    else:
+        def late_writer():
+            with open(run_root / 'stderr.txt', 'a', encoding='utf-8') as stream:
+                stream.write(LATE_LINE)
+    atexit.register(late_writer)
+    write_child_result(child_root, {'status': 'PASS', 'mode': mode, 'gates': {'probe_completed': True},
+                                    'guard_refusals': refusals})
+    print('SC158 finalization probe ' + mode + ' wrote its result before exit hooks')
+    return 0
+
+
+def child_main(args, repo):
+    """The guarded test process: sentinels before product imports, writes only under run_root/child."""
+    run_root = Path(args.child_run_root).resolve()
+    child_root = run_root / CHILD_DIR
+    child_root.mkdir()
+    refusals = []
+    result = {'schema': 'sc158.child-result/v1', 'suite': args.suite, 'status': 'FAIL', 'pid': os.getpid()}
+    try:
+        result['guards'] = install_guards(child_root, refusals)
+        result['synthetic_repo_root'] = redirect_repo_root(repo, child_root)
+        module, _, tests = run_suite(repo, args.suite, sys.stderr)
+        result['tests'] = tests
+        result['module_origins'], outside = module_origins(repo)
         gates = {
             'all_required_methods_collected': tests['required_collected'],
             'selected_matches_expected': tests['selected_ids'] == tests['expected_ids'],
@@ -375,30 +506,94 @@ def main():
         }
         if args.suite == 'negative-control':
             evidence = list(module.NEGATIVE_EVIDENCE)
-            receipt['negative_control'] = evidence
+            result['negative_control'] = evidence
             gates['mutant_detected'] = any(item.get('detected') for item in evidence)
             gates['positive_passed_after_restore'] = any(item.get('passed') for item in evidence)
-        receipt['gates'] = gates
+        result['gates'] = gates
         if all(gates.values()):
-            status = 'PASS'
+            result['status'] = 'PASS'
+    except Exception as exc:  # recorded, never swallowed into a pass
+        result['exception'] = repr(exc)
+    result['guard_refusals'] = list(refusals)
+    write_child_result(child_root, result)
+    print(json.dumps({'child_status': result['status'], 'suite': args.suite,
+                      'tests_run': result.get('tests', {}).get('tests_run'),
+                      'subtest_cases': result.get('tests', {}).get('subtest_case_count')}, sort_keys=True))
+    return 0 if result['status'] == 'PASS' else 1
+
+
+def parent_main(args, repo):
+    """Measure identity, qualify finalization, run the guarded child, then seal its raw output."""
+    out = Path(args.out).resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    run_root = out / f'run-{time.time_ns()}-{os.getpid()}'
+    run_root.mkdir()
+    started = datetime.now(timezone.utc)
+    clock = time.monotonic()
+    manifest = Path(args.source_manifest).resolve()
+    receipt = {'schema': 'sc158.acceptance-receipt/v2', 'suite': args.suite, 'argv': list(sys.argv),
+               'cwd': os.getcwd(), 'interpreter': sys.executable, 'python': sys.version,
+               'repo': str(repo), 'run_root': str(run_root), 'started_utc': started.isoformat()}
+    try:
+        receipt['source'] = read_only_identity(repo)
+        receipt.update(preflight(repo, manifest, receipt['source']))
+        receipt['inputs'] = input_hashes(repo)
+        receipt['candidate_source_sha256'] = receipt['inputs'][PRODUCT]
+        qualification = qualify_finalization(run_root / 'finalization-qualification')
+        receipt['finalization_qualification'] = qualification
+        qualification_path = run_root / 'finalization-qualification.json'
+        with open(qualification_path, 'x', encoding='utf-8') as stream:
+            stream.write(json.dumps(qualification, indent=2, sort_keys=True) + '\n')
+        receipt['finalization_qualification_sha256'] = sha256_file(qualification_path)
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1')
+        env[QUALIFICATION_ENV] = str(qualification_path)
+        argv = [sys.executable, str(Path(__file__).resolve()), '--suite', args.suite,
+                '--source-manifest', str(manifest), '--out', str(out), '--child-run-root', str(run_root)]
+        outcome = supervise(run_root, argv, env)
+        receipt['source_after'] = read_only_identity(repo)
+        extra = {'finalization_qualified': qualification['passed'],
+                 'tracked_clean_before': receipt['source']['tracked_clean'],
+                 'head_unchanged': receipt['source_after']['head'] == receipt['source']['head'],
+                 'tracked_clean_after': receipt['source_after']['tracked_clean']}
     except Exception as exc:  # recorded, never swallowed into a pass
         receipt['exception'] = repr(exc)
-    receipt['guard_refusals'] = refusals
-    receipt['status'] = status
-    receipt['exit_code'] = 0 if status == 'PASS' else 1
+        outcome = {'argv': [], 'returncode': None, 'stdout': b'', 'stderr': repr(exc).encode('utf-8'),
+                   'unexpected_entries': [], 'child_result': None, 'child_result_sha256': None}
+        extra = {'parent_completed': False}
     receipt['finished_utc'] = datetime.now(timezone.utc).isoformat()
     receipt['elapsed_seconds'] = round(time.monotonic() - clock, 6)
-    seal_run(run_root, receipt, {'stdout.txt': stdout.getvalue(), 'stderr.txt': stderr.getvalue()})
-    problems = verify_sealed(run_root)
-    exit_code = receipt['exit_code'] if not problems else 1
-    summary = {'suite': args.suite, 'status': status if not problems else 'FAIL', 'exit_code': exit_code,
-               'run_root': str(run_root), 'seal_problems': problems,
-               'head': receipt.get('source', {}).get('head'),
-               'tests_run': receipt.get('tests', {}).get('tests_run'),
-               'subtest_cases': receipt.get('tests', {}).get('subtest_case_count'),
-               'gates': receipt.get('gates'), 'exception': receipt.get('exception')}
+    code, summary = finalize(run_root, receipt, outcome, extra, before_seal=drain_exit_writers)
+    child = outcome['child_result'] if isinstance(outcome['child_result'], dict) else {}
+    summary.update({'suite': args.suite, 'head': receipt.get('source', {}).get('head'),
+                    'tests_run': child.get('tests', {}).get('tests_run'),
+                    'subtest_cases': child.get('tests', {}).get('subtest_case_count'),
+                    'child_gates': child.get('gates'), 'exception': receipt.get('exception')})
     print(json.dumps(summary, indent=2, sort_keys=True))
-    return exit_code
+    return code
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument('--suite', choices=sorted(SUITES))
+    parser.add_argument('--source-manifest')
+    parser.add_argument('--out')
+    parser.add_argument('--child-run-root', help=argparse.SUPPRESS)
+    parser.add_argument('--finalization-probe', choices=PROBE_MODES, help=argparse.SUPPRESS)
+    args = parser.parse_args()
+    repo = Path(__file__).resolve().parents[1]
+    if args.finalization_probe:
+        if not args.child_run_root:
+            parser.error('--finalization-probe needs --child-run-root')
+        return probe_main(args.finalization_probe, args.child_run_root)
+    if not (args.suite and args.source_manifest and args.out):
+        parser.error('--suite, --source-manifest and --out are required')
+    if args.child_run_root:
+        return child_main(args, repo)
+    code = parent_main(args, repo)
+    # The seal is final: flush, then end without running any later exit-hook writer.
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(code)
 
 
 if __name__ == '__main__':

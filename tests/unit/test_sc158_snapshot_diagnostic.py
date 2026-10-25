@@ -7,7 +7,7 @@ CI), never under ``tests/fixtures``. Every patch is fixture-scoped and reversibl
 nothing here writes, installs hooks or changes the environment at import time.
 """
 import builtins
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 from datetime import datetime, timezone
 import hashlib
 import importlib.util
@@ -41,14 +41,16 @@ POSITIVE_CASES = ('absent-snapshot', 'absent-screen-dir', 'tiny-regular-snapshot
 MALFORMED_CASES = ('leaf-symlink-inside', 'leaf-symlink-outside', 'dangling-leaf-link', 'directory-leaf',
                    'modeled-special-file', 'growth-before-open', 'growth-during-read',
                    'replacement-before-open', 'replacement-during-read', 'vanished-before-open',
-                   'modeled-name-replacement-after-read')
+                   'modeled-name-replacement-after-read', 'same-inode-change-at-final-name',
+                   'modeled-final-name-type-change')
 COMPATIBILITY_CASES = ('resolve-scope-noncentral-paths', 'resolve-scope-central-paths',
                        'sc75-config-outside-root-refused', 'sc13a-in-root-ancestor-alias-preserved',
                        'held-result-matches-legacy-for-accepted-inputs', 'require-noncentral-unchanged',
                        'central-replacement-refused')
 ISOLATION_CASES = ('staged-module-origin', 'temporary-root-admitted', 'module-import-has-no-side-effects',
                    'peer-and-ambient-state-restored', 'finalization-complete-positive',
-                   'finalization-missing-log', 'finalization-mutated-log', 'finalization-late-append')
+                   'finalization-missing-log', 'finalization-mutated-log', 'finalization-late-append',
+                   'finalization-exit-hook-lifecycle')
 NEGATIVE_CASES = ('legacy-leaf-alias-mutant-detected', 'restored-real-reader-positive')
 SUBTEST_CASES = {
     'test_positive_contract': POSITIVE_CASES,
@@ -60,6 +62,26 @@ SUBTEST_CASES = {
 PEER_TEST = 'tests.unit.test_check_repository.ScopeTests.test_fixtures_plan_and_advisor_runbooks_are_scanned'
 # Filled by test_deciding_negative_control; the runner binds it into its receipt.
 NEGATIVE_EVIDENCE = []
+# test id -> {case: 'pass' | 'fail' | 'skip'}; a recorded failure is never overwritten by a later pass.
+EXECUTED = {}
+# Opt-in path (set only by an evidence caller) for this module's executed cases and loaded origins.
+DISCOVERY_EVIDENCE_ENV = 'SC158_DISCOVERY_EVIDENCE'
+
+
+def tearDownModule():
+    """Write executed IDs, case outcomes and loaded origins only when a caller asked for them."""
+    target = os.environ.get(DISCOVERY_EVIDENCE_ENV, '').strip()
+    if not target:
+        return
+    origins = {name: getattr(module, '__file__', None) for name, module in sorted(sys.modules.items())
+               if name.split('.')[0] in ('skippercast', 'tests', 'pyproj', 'shapely')
+               and getattr(module, '__file__', None)}
+    evidence = {'schema': 'sc158.discovery-evidence/v1', 'module': __name__, 'module_file': __file__,
+                'interpreter': sys.executable, 'required_tests': list(REQUIRED_TESTS),
+                'subtest_cases': {name: list(cases) for name, cases in SUBTEST_CASES.items()},
+                'executed': EXECUTED, 'module_origins': origins}
+    with open(target, 'x', encoding='utf-8') as stream:
+        stream.write(json.dumps(evidence, indent=2, sort_keys=True) + '\n')
 
 
 class Product:
@@ -298,9 +320,27 @@ def modeled_fifo(result):
 
 class SnapshotDiagnosticTests(unittest.TestCase):
     def setUp(self):
+        EXECUTED.setdefault(self.id(), {})
         self.product = staged_product()
         self.fixture = Fixture(self)
         self.enterContext(mock.patch.object(self.product.contracts, 'REPO', self.fixture.root))
+
+    @contextmanager
+    def subTest(self, msg=None, **params):
+        """unittest's subTest, also recording each case outcome in EXECUTED."""
+        record = EXECUTED.setdefault(self.id(), {})
+        case = params.get('case', msg)
+        outcome = 'fail'
+        with (super().subTest(msg, **params) if msg is not None else super().subTest(**params)):
+            try:
+                yield
+                outcome = 'pass'
+            except unittest.SkipTest:
+                outcome = 'skip'
+                raise
+            finally:
+                if record.get(case) in (None, 'pass'):
+                    record[case] = outcome
 
     def load(self, fixture, scope_config=None, now=None):
         return self.product.scoped.load_snapshot(
@@ -453,6 +493,45 @@ class SnapshotDiagnosticTests(unittest.TestCase):
                                            lstat_override=second_lstat_names_another_file)
             self.assertEqual(len(calls), 2)
             self.assertEqual(len([entry for entry in spy.opened if spy.is_snapshot(entry[0])]), 1)
+        with self.subTest(case='same-inode-change-at-final-name'):
+            # A real append lands after the descriptor checks but before the final
+            # name observation; the same inode now reports a new size and times.
+            fx = Fixture(self)
+            fx.write_snapshot()
+            original_inode = os.lstat(fx.snapshot).st_ino
+            holder, sizes = [], []
+
+            def append_before_final_lstat(result):
+                sizes.append(result.st_size)
+                if len(sizes) < 2:
+                    return result
+                holder[0].append_to_snapshot()
+                return holder[0].real_lstat(fx.snapshot)
+
+            spy = self.assert_safe_refusal(fx, protected=[fx.external], static=False, spy_out=holder,
+                                           reason='name changed while it was read',
+                                           lstat_override=append_before_final_lstat)
+            self.assertEqual(len(sizes), 2)
+            self.assertEqual(os.lstat(fx.snapshot).st_ino, original_inode, 'model must keep the same inode')
+            self.assertGreater(os.lstat(fx.snapshot).st_size, sizes[0])
+            self.assertEqual(len([entry for entry in spy.opened if spy.is_snapshot(entry[0])]), 1)
+        with self.subTest(case='modeled-final-name-type-change'):
+            fx = Fixture(self)
+            fx.write_snapshot()
+            calls = []
+
+            def second_lstat_is_a_link(result):
+                calls.append(result)
+                if len(calls) < 2:
+                    return result
+                values = list(result[:10])
+                values[0] = stat.S_IFLNK | 0o777
+                return os.stat_result(values)
+
+            self.assert_safe_refusal(fx, protected=[fx.external], static=False,
+                                     reason='name was replaced while it was read',
+                                     lstat_override=second_lstat_is_a_link)
+            self.assertEqual(len(calls), 2)
 
     def test_baseline_compatibility(self):
         product = self.product
@@ -544,9 +623,10 @@ class SnapshotDiagnosticTests(unittest.TestCase):
             peer_before = self._run_peer()
             ambient_before = self._ambient()
             entries_before = self._sc158_entries()
-            inner = unittest.TestSuite([type(self)('test_positive_contract'), type(self)('test_rejects_malformed')])
+            # TestCase.run directly: a nested TestSuite would also run module fixtures.
             inner_result = unittest.TestResult()
-            inner.run(inner_result)
+            for name in ('test_positive_contract', 'test_rejects_malformed'):
+                type(self)(name).run(inner_result)
             self.assertEqual((inner_result.testsRun, len(inner_result.failures), len(inner_result.errors),
                               len(inner_result.skipped)), (2, 0, 0, 0))
             self.assertEqual(self._ambient(), ambient_before)
@@ -574,6 +654,34 @@ class SnapshotDiagnosticTests(unittest.TestCase):
             with open(run_dir / 'stderr.txt', 'a', encoding='utf-8') as stream:
                 stream.write('late writer\n')
             self.assertIn('changed log stderr.txt', runner.verify_sealed(run_dir))
+            with self.assertRaises(FileExistsError):
+                runner.seal_run(run_dir, receipt, logs)
+        with self.subTest(case='finalization-exit-hook-lifecycle'):
+            # Real child processes with real exit hooks through the runner's genuine
+            # supervise/finalize lifecycle. Under the runner that lifecycle ran in the
+            # unguarded parent before this guarded child started (child execution is
+            # refused here); its sealed record is checked. Under ordinary discovery
+            # the same lifecycle runs now beneath this fixture's temporary root.
+            recorded = os.environ.get(runner.QUALIFICATION_ENV, '').strip()
+            if recorded:
+                qualification = json.loads(Path(recorded).read_text(encoding='utf-8'))
+            else:
+                qualification = runner.qualify_finalization(self.fixture.tmp / 'finalization-qualification')
+            modes = qualification['modes']
+            self.assertEqual(sorted(modes), sorted(runner.PROBE_MODES))
+            stream_mode, file_mode = modes['late-stream'], modes['late-file']
+            self.assertEqual((stream_mode['exit_code'], stream_mode['status'], stream_mode['seal_problems']),
+                             (0, 'PASS', []))
+            self.assertTrue(stream_mode['late_line_in_raw_stderr'])
+            self.assertTrue(stream_mode['late_line_in_sealed_stderr'], 'late exit-hook bytes missing from seal')
+            self.assertNotEqual(file_mode['exit_code'], 0)
+            self.assertEqual(file_mode['status'], 'FAIL')
+            self.assertIn('stderr.txt', file_mode['unexpected_entries'])
+            self.assertTrue(any(problem.startswith('unsealable') for problem in file_mode['seal_problems']))
+            self.assertTrue(qualification['passed'])
+            for mode in modes.values():
+                self.assertEqual(runner.verify_sealed(mode['probe_root']),
+                                 [] if mode is stream_mode else ['missing receipt'])
 
     def test_deciding_negative_control(self):
         product = self.product

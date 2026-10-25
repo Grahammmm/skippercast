@@ -48,8 +48,11 @@ def _snapshot_sha256(snapshot):
             current = os.lstat(snapshot)
         except OSError as error:
             raise ValueError(f'{_UNSAFE_SNAPSHOT}: snapshot leaf name changed while it was read') from error
-        if (current.st_dev, current.st_ino) != (opened.st_dev, opened.st_ino):
+        if (not stat.S_ISREG(current.st_mode)
+                or (current.st_dev, current.st_ino) != (opened.st_dev, opened.st_ino)):
             raise ValueError(f'{_UNSAFE_SNAPSHOT}: snapshot leaf name was replaced while it was read')
+        if _snapshot_identity(current) != _snapshot_identity(opened):
+            raise ValueError(f'{_UNSAFE_SNAPSHOT}: snapshot leaf name changed while it was read')
     finally:
         os.close(descriptor)
     return digest.hexdigest()
