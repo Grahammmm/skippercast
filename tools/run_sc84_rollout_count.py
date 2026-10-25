@@ -307,6 +307,9 @@ def main():
               and not run_root.is_relative_to(REPO/'tests/fixtures'), str(run_root))
         fixture_before = {p.relative_to(REPO).as_posix(): digest(p) for p in sorted(FIXTURE_DIR.rglob('*')) if p.is_file()}
         changed_before = {name: digest(REPO/name) for name in CHANGED}
+        sentinel_path = FIXTURE_DIR/'fixture.json'
+        sentinel_before = digest(sentinel_path) if sentinel_path.is_file() else None
+        receipt['sentinel'] = {'path': sentinel_path.relative_to(REPO).as_posix(), 'sha256_before': sentinel_before}
 
         # Guards precede every product/test import.
         product_preloaded = sorted(m for m in sys.modules if m == 'skippercast' or m.startswith(('skippercast.', 'tests.')))
@@ -315,13 +318,17 @@ def main():
         guard.active = True
         check(isolation, 'pre-import guard installed before product imports', not product_preloaded, product_preloaded)
         allowed_probe = guard.decide('open', (str(synthetic/'probe.json'), 'w', 0))
-        denied_target = CANDIDATE.parent/'SC84-INERT-DENIED-SENTINEL'
+        # The denied event names the authored, read-only fixture.json (outside run_root). It is only
+        # passed to Guard.decide; no real write or open of it is attempted. Its bytes are hashed
+        # before the event and again after every test, and the two hashes must match.
+        denied_target = sentinel_path
         denied_probe = guard.decide('open', (str(denied_target), 'w', 0))
         network_probe = guard.decide('socket.connect', (None, ('192.0.2.1', 9)))
         child_probe = guard.decide('subprocess.Popen', ('true', ['true'], None, None))
         check(isolation, 'allowed synthetic path event', allowed_probe is None, str(synthetic/'probe.json'))
-        check(isolation, 'inert denied sentinel event', denied_probe is not None and not denied_target.exists(),
-              {'target': str(denied_target), 'decision': denied_probe})
+        check(isolation, 'inert denied sentinel event', denied_probe is not None and sentinel_before is not None
+              and not denied_target.is_relative_to(run_root),
+              {'target': str(denied_target), 'decision': denied_probe, 'sha256_before': sentinel_before})
         check(isolation, 'inert network and child events denied', network_probe is not None and child_probe is not None,
               {'network': network_probe, 'child': child_probe})
 
@@ -379,6 +386,11 @@ def main():
         fixture_after = {p.relative_to(REPO).as_posix(): digest(p) for p in sorted(FIXTURE_DIR.rglob('*')) if p.is_file()}
         evidence = list(cases.EVIDENCE)
         check(isolation, 'unchanged authored fixture bytes', fixture_before == fixture_after and bool(fixture_after), fixture_after)
+        sentinel_after = digest(sentinel_path) if sentinel_path.is_file() else None
+        receipt['sentinel']['sha256_after'] = sentinel_after
+        check(isolation, 'denied sentinel bytes preserved before and after', sentinel_before is not None
+              and sentinel_after == sentinel_before,
+              {'path': str(sentinel_path), 'sha256_before': sentinel_before, 'sha256_after': sentinel_after})
         check(isolation, 'changed source files unchanged during run',
               changed_before == {name: digest(REPO/name) for name in CHANGED})
         check(isolation, 'synthetic trees unchanged by every test', bool(evidence)
