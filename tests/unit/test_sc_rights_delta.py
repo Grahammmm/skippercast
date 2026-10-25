@@ -3,7 +3,7 @@
 Plain test_* functions with no pytest fixtures or imports, so the existing pytest discovery
 collects them and scripts/accept_sc_rights_delta.py can run the same functions in-process.
 Name prefixes map to the card's acceptance rows: test_a1_* focused, test_a2_* producer
-contract, test_a3_* negative and preservation. Every path derives from this file.
+contract, test_a3_* negative and preservation. Every path derives from tests._support.ROOT.
 """
 import copy
 import hashlib
@@ -16,8 +16,9 @@ from pathlib import Path
 
 from scripts.coast_diagnostics import rights_delta as rd
 from skippercast.seafloor import rights
+from tests._support import ROOT
 
-REPO = Path(__file__).resolve().parents[2]
+REPO = ROOT
 FIXTURES = REPO / "tests" / "fixtures" / "sc_rights_delta"
 PIN_COMMIT = "59fca09b2cc7f5c81a4796902504e263d7f06960"
 PIN_MODULE_SHA256 = "7411657fefaea64f73bbd566ba1d37eb0f4d787b83a2afcec117d882e579ee0d"
@@ -373,7 +374,7 @@ def test_a2_frozen_observation_bytes_are_bound_to_the_measured_producer():
 def test_a2_feature_rights_rows_match_source_rights_rows():
     document = rd.parse_json_strict((FIXTURES / "producer_inputs_left.json").read_bytes())
     sources = {row["id"]: row for row in document["rows"]}
-    # feature_rights uses date.today(); the fixture review date is in the past, so this is stable.
+    # feature_rights reads the current date itself; the fixture review date is in the past, so this is stable.
     listed = rights.feature_rights(list(reversed(list(sources))), sources)
     assert listed == sorted(_producer_rows("producer_inputs_left.json"), key=lambda r: r["source_id"])
     observation = rd.build_observation(listed, producer=_producer(function="feature_rights"),
