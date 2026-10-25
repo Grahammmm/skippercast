@@ -109,7 +109,7 @@ def main():
                 record['checked_files'] = re.findall(r'Checked (\d+)', text)
             receipt['children'].append(record)
             if args.suite in ('baseline', 'focused', 'regression'):
-                expected_tests = 2 if args.suite == 'baseline' else 8
+                expected_tests = {'baseline': 2, 'focused': 9, 'regression': 8}[args.suite]
                 if counts.get('tests') != expected_tests or any(counts.get(k) != 0 for k in ('cancelled', 'skipped', 'todo')):
                     raise RuntimeError('unexpected tests, skips or setup/teardown errors')
                 if args.suite == 'baseline':

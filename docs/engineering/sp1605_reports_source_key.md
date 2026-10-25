@@ -6,8 +6,12 @@ Spec: SP-16-v1. Pinned staged base:
 ## Bounded change
 
 Only `web/app/views/Reports.tsx` changes product behavior. Its settled key,
-pending key and view admission use the same JSON tuple of region, target and
-charter source (including null). A per-request object prevents an obsolete
+pending key and view admission use one helper: null charter sources preserve
+the legacy `region:target` key, while non-null sources use a JSON tuple of
+region, target and source. This preserves the unchanged BODY09 preloaded-data
+consumer in `e2e/p04-catch-contrast.spec.ts` without weakening source identity.
+Valid region slugs do not start with `[`, so the two encodings are distinct.
+A per-request object prevents an obsolete
 A-B-A completion from passing a same-key check. Returning to matching settled
 data also supersedes an unrelated pending load. Identical requests remain
 coalesced. No loader policy, source availability/scoring, seasonal watch,
@@ -37,7 +41,7 @@ baseline; neither tests nor product were changed for that correction.
 
 `tests/fixtures/sp1605_reports_source_key/baseline-pins.json` freezes the
 baseline test and all its fixture bytes. Focused mode checks these exact
-hashes before executing the identical pair plus six additional test cases.
+hashes before executing the identical pair plus seven additional test cases.
 Baseline mode intentionally requires original product bytes; do not run it
 against repaired product or reinterpret the historical red receipt as green.
 
@@ -57,8 +61,8 @@ raw stdout/stderr and their hashes. No shell child or fallback interpreter.
 The standard-stage manifest is read relative to this clone, not a plan or
 operator input bundle. Repository scan uses its credential-scan interpreter.
 
-Focused: eight cases, zero skips; the frozen pair covers A1/healthy target
-changes. A2 covers A-to-B-to-null, delimiter collision avoidance and identical
+Focused: nine cases, zero skips; the frozen pair covers A1/healthy target
+changes. A2 covers A-to-B-to-null, non-null tuple delimiter collision avoidance and identical
 pending/settled coalescing. A3 covers obsolete success/rejection in both
 completion orders, null/path pending transitions, same-key ABA, return to
 settled data, and a current source transport failure. A4 renders actual
@@ -66,7 +70,10 @@ Reports with the installed Preact string renderer, injects only its effect
 scheduler and App's regionInfo host, executes the actual effect callbacks,
 and checks stale evidence is withheld before effects and matching evidence
 appears afterward. Real state, loader, source mappers, ReportsBody and section
-components are not copied. Seasonal freshness/unavailable rules are asserted.
+components are not copied. A separate A4 compatibility case injects legacy
+`synthetic-region:reef` data with regionInfo null, verifies actual Reports
+renders it, and executes the captured effect with zero fetch calls. Browser/e2e
+execution itself remains an operator gate. Seasonal freshness/unavailable rules are asserted.
 A malformed synthetic source deliberately triggers an old load rejection;
 this does not claim to fix malformed-source validation.
 
@@ -89,7 +96,7 @@ all repository tests or separate credential-audit gates have executed.
 ## Provenance and retained gates
 
 All new material authored by actual gpt-6.1-sol, provider openai-codex,
-profile sol-reviewer, task t_19c86d75, run 2002, under explicit author-route
+profile sol-reviewer, task t_19c86d75, runs 2002 and 2078, under explicit author-route
 admission. Every material commit is signed off and identifies that runtime.
 Sole same-card independent reviewer: actual Claude Opus 5.5 on
 opus-coder-bopus. No self-review approval. Final exact-head receipts and

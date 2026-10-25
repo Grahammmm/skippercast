@@ -148,6 +148,27 @@ test('A3/A4: a current charter source failure stays unavailable without reviving
   assert.doesNotMatch(html, /Synthetic A/);
 });
 
+test('A4: legacy source-less preloaded data renders and its effect starts zero fetches', async () => {
+  const m = await load(), calls = [], original = globalThis.fetch;
+  globalThis.fetch = transport(calls);
+  try {
+    m.region.value = 'synthetic-region'; m.species.value = 'reef';
+    m.regionInfo.value = null;
+    const loaded = {key: 'synthetic-region:reef', data: {evidence: null,
+      discussions: {status: 'unavailable', candidates: [], checkedQueries: 0, totalQueries: 0},
+      watch: null, charters: null}};
+    m.reportsData.value = loaded;
+    const html = view(m);
+    assert.doesNotMatch(html, /Loading dated reports/);
+    assert.match(html, /Recent discussion search is unavailable/);
+    assert.match(html, /No geographically specific charter evidence/);
+    assert.equal(m.effects.length, 1);
+    m.effects.shift()(); await flush();
+    assert.strictEqual(m.reportsData.peek(), loaded);
+    assert.deepEqual(calls, [], 'matching legacy cache prevents any Reports fetch');
+  } finally { globalThis.fetch = original; }
+});
+
 test('A4: actual Reports admission and effect use current region, target and source before/after loading', async () => {
   const m = await load(), calls = [], original = globalThis.fetch;
   const synthetic = transport(calls);
