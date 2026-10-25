@@ -24,11 +24,32 @@ def sha256(path):
 
 
 def file_manifest(root):
+    if not root.is_dir():
+        raise RuntimeError('required fixture directory is missing: ' + str(root))
     rows = []
-    if root.exists():
-        for path in sorted(p for p in root.rglob('*') if p.is_file()):
-            rows.append({'path': path.relative_to(root).as_posix(), 'sha256': sha256(path)})
+    for path in sorted(p for p in root.rglob('*') if p.is_file()):
+        rows.append({'path': path.relative_to(root).as_posix(), 'sha256': sha256(path)})
     return rows
+
+
+def validate_admission(manifest, write_root, repo):
+    if manifest.get('schema') != 'agentorange.source-manifest/v1':
+        return False, 'manifest schema'
+    if manifest.get('write_root') != str(write_root) or Path(manifest.get('repo', '')).resolve() != repo:
+        return False, 'manifest root identity'
+    if manifest.get('head') != '33734f90073a2150eac5a418564ea314c4a591ac':
+        return False, 'exact admitted baseline head'
+    runtime = manifest.get('runtime', {})
+    if runtime.get('credential_scan_python3') != '/home/user/agent-work/tools/venv-fullsuite/bin/python3':
+        return False, 'exact credential scanner interpreter'
+    if manifest.get('clean') is not True or manifest.get('inputs') != []:
+        return False, 'clean staged baseline and empty inputs'
+    return True, 'admitted manifest'
+
+
+def preserved_snapshot(source, test_path, spec_path, manifest_path, fixture_root):
+    return {'source': sha256(source), 'test': sha256(test_path), 'spec': sha256(spec_path),
+            'manifest': sha256(manifest_path), 'fixtures': file_manifest(fixture_root)}
 
 
 def guard(event, args):
@@ -88,6 +109,12 @@ def main():
     stderr_text = ''
     inner_failure = None
     checks = []
+    fixture_root = repo / 'tests/fixtures/sc137-classified-polygon-shapes'
+    before_snapshot = None
+    sentinel_path = run_root / 'synthetic-sentinel.txt'
+    sentinel_path.write_text('SC137 immutable test sentinel\\n', encoding='utf-8')
+    sentinel_before = sha256(sentinel_path)
+    run_root_confined = run_root.resolve().is_relative_to(out_parent.resolve())
 
     def check(condition, label):
         checks.append({'check': label, 'passed': bool(condition)})
@@ -96,40 +123,88 @@ def main():
 
     if args.suite == 'preflight':
         try:
-            check(manifest.get('schema') == 'agentorange.source-manifest/v1', 'manifest schema')
+            valid_manifest, _ = validate_admission(manifest, write_root, repo)
+            check(valid_manifest, 'exact operator manifest schema/root/base/scanner/runtime admission')
+            negative_base = dict(manifest, head='0' * 40)
+            negative_scanner = dict(manifest, runtime=dict(manifest['runtime'],
+                                   credential_scan_python3='/tmp/not-the-approved-scanner'))
+            check(not validate_admission(negative_base, write_root, repo)[0],
+                  'synthetic wrong-base manifest rejected')
+            check(not validate_admission(negative_scanner, write_root, repo)[0],
+                  'synthetic wrong-scanner manifest rejected')
             check(manifest.get('write_root') == str(write_root), 'manifest write_root identity')
             check(Path(manifest.get('repo', '')).resolve() == repo, 'manifest repo identity')
             check(manifest.get('clean') is True and base_ancestor,
-                  'operator manifest attests clean staged baseline and is ancestor of candidate HEAD')
+                  'operator staged clean baseline is ancestor of candidate HEAD')
             check(status == '', 'candidate worktree clean for frozen acceptance')
+            check(base == '33734f90073a2150eac5a418564ea314c4a591ac',
+                  'manifest head is exact admitted full base')
             check(baseline_source_sha256 == 'f43299dca9090ef70f68eff74fd7fb62a2610d292fdbdbfecce4418ae34fa103',
                   'source bytes at admitted base match pinned baseline hash')
-            check(manifest.get('inputs') == [], 'operator manifest inputs empty as admitted')
-            check(manifest.get('card') == write_root.name, 'candidate basename matches manifest card')
+            check(manifest.get('inputs') == [] and manifest.get('card') == write_root.name,
+                  'operator manifest inputs/card identity')
             expected_venv = Path(manifest['runtime']['repo_venv']).resolve(strict=True)
-            actual_venv = (repo / '.venv').resolve(strict=True)
-            check(actual_venv == expected_venv, 'linked repo .venv matches manifest runtime')
+            check((repo / '.venv').resolve(strict=True) == expected_venv,
+                  'linked repo .venv matches manifest runtime')
             check((repo / '.venv/bin/python3').is_file(), 'repo venv interpreter exists')
-            check(Path(manifest['runtime']['credential_scan_python3']).is_file(),
-                  'operator credential-scan interpreter exists')
+            check(Path(manifest['runtime']['credential_scan_python3']).resolve(strict=True)
+                  == Path('/home/user/agent-work/tools/venv-fullsuite/bin/python3'),
+                  'credential scanner path exactly matches admitted interpreter')
             check(source.is_file() and test_path.is_file() and spec_path.is_file(),
                   'selected source/test/spec closure exists')
-            stdout_text = json.dumps({'preflight': 'passed', 'base': base, 'head': head,
+            check(run_root_confined and run_root.parent == out_parent,
+                  'exclusive run root confined to selected output parent')
+            fixture_before = file_manifest(fixture_root)
+            check(bool(fixture_before), 'submitted synthetic fixture closure exists')
+            before_snapshot = preserved_snapshot(source, test_path, spec_path, manifest_path, fixture_root)
+            check(sha256(sentinel_path) == sentinel_before and sentinel_path.parent == run_root,
+                  'synthetic sentinel begins unchanged inside run root')
+            sys.addaudithook(guard)
+            sys.path.insert(0, str(repo / 'src'))
+            import skippercast.paths as paths
+            paths.repo_root = lambda: run_root / 'synthetic-repo-root'
+            module_spec = importlib.util.spec_from_file_location('sc137_preflight_tests', test_path)
+            if module_spec is None or module_spec.loader is None:
+                raise RuntimeError('could not load selected preflight test closure')
+            test_module = importlib.util.module_from_spec(module_spec)
+            module_spec.loader.exec_module(test_module)
+            check(test_module.cg.polygon(test_module.valid_shell_hole()).is_valid,
+                  'guarded selected product/test import closure executes valid fixture')
+            after_snapshot = preserved_snapshot(source, test_path, spec_path, manifest_path, fixture_root)
+            check(after_snapshot == before_snapshot, 'preflight preserves source/test/spec/manifest/fixture hashes')
+            check(sha256(sentinel_path) == sentinel_before,
+                  'preflight preserves synthetic sentinel hash')
+            check(file_manifest(fixture_root) == fixture_before,
+                  'guarded preflight preserves submitted fixture identities')
+            stdout_text = json.dumps({'preflight': 'passed', 'base': base, 'candidate_head': head,
                                       'selected_import_fixture_closure': selected_closure,
+                                      'imported_modules': ['skippercast.paths',
+                                                           'skippercast.seafloor.classified_geometry',
+                                                           'sc137_preflight_tests'],
                                       'checks': checks}, sort_keys=True, indent=2) + '\n'
         except Exception as exc:
             rc = 1
             stderr_text = str(exc) + '\n'
-            stdout_text = json.dumps({'preflight': 'failed', 'base': base, 'head': head,
+            stdout_text = json.dumps({'preflight': 'failed', 'base': base, 'candidate_head': head,
                                       'selected_import_fixture_closure': selected_closure,
                                       'checks': checks}, sort_keys=True, indent=2) + '\n'
     else:
         try:
             check(manifest.get('schema') == 'agentorange.source-manifest/v1', 'manifest schema')
             check(manifest.get('write_root') == str(write_root), 'manifest write_root identity')
+            check(base == '33734f90073a2150eac5a418564ea314c4a591ac',
+                  'operator manifest head is exact admitted base')
+            check(manifest.get('runtime', {}).get('credential_scan_python3')
+                  == '/home/user/agent-work/tools/venv-fullsuite/bin/python3',
+                  'credential scanner path exactly matches admitted interpreter')
             check(base_ancestor, 'admitted base is an ancestor of candidate HEAD')
             check(source.is_file() and test_path.is_file() and spec_path.is_file(),
                   'selected source/test/spec closure exists')
+            check(run_root_confined and run_root.parent == out_parent,
+                  'exclusive run root confined to selected output parent')
+            before_snapshot = preserved_snapshot(source, test_path, spec_path, manifest_path, fixture_root)
+            check(sha256(sentinel_path) == sentinel_before,
+                  'synthetic sentinel begins unchanged inside run root')
             checks.append({'check': 'guards installed before product and test imports', 'passed': True})
             sys.addaudithook(guard)
             sys.path.insert(0, str(repo / 'src'))
@@ -159,11 +234,22 @@ def main():
             if test_count != len(method_sets[args.suite]):
                 failures.append({'test': 'suite completeness',
                                 'traceback': 'required named test count mismatch'})
+            after_snapshot = preserved_snapshot(source, test_path, spec_path, manifest_path, fixture_root)
+            check(after_snapshot == before_snapshot,
+                  'suite preserves submitted source/test/spec/manifest/fixture identities')
+            check(sha256(sentinel_path) == sentinel_before and sentinel_path.parent == run_root,
+                  'suite preserves synthetic sentinel and run-root confinement')
             if args.suite == 'negative-control':
-                positive = test_module.valid_shell_hole()
-                inner_failure = {'mutant_detected': test_count == 1 and not failures and not skips,
-                                 'positive_passed': test_module.cg.polygon(positive) is positive,
-                                 'detail': 'old boundary yielded AttributeError; typed-refusal assertion detected it'}
+                observation = test_module.NEGATIVE_CONTROL_OBSERVATION
+                inner_failure = {
+                    'mutant_detected': observation.get('typed_refusal_failure', {}).get('type') == 'AttributeError',
+                    'mutant_positive_passed': observation.get('mutant_positive_passed') is True,
+                    'positive_passed': observation.get('restored_positive_passed') is True,
+                    'observed_typed_refusal_failure': observation.get('typed_refusal_failure'),
+                }
+                check(inner_failure['mutant_detected'] and inner_failure['mutant_positive_passed']
+                      and inner_failure['positive_passed'],
+                      'negative control derives mutant and positives from observed execution')
             rc = 0 if (test_count > 0 and not failures and not skips) else 1
             if args.suite == 'negative-control' and not inner_failure['positive_passed']:
                 rc = 1
@@ -179,6 +265,11 @@ def main():
         'exit_code': rc, 'test_ids': test_ids, 'test_count': test_count,
         'failures': failures, 'skips': skips, 'inner_failure': inner_failure,
         'preflight_checks': checks, 'selected_import_fixture_closure': selected_closure,
+        'preservation_before': before_snapshot, 'preservation_after': locals().get('after_snapshot'),
+        'synthetic_sentinel': {'path': str(sentinel_path), 'sha256_before': sentinel_before,
+                               'sha256_after': sha256(sentinel_path),
+                               'confined_to_run_root': sentinel_path.parent == run_root},
+        'run_root_confined': run_root_confined and run_root.parent == out_parent,
         'base': base, 'candidate_head': head,
         'hashes': {'source': sha256(source), 'test': sha256(test_path),
                    'spec': sha256(spec_path), 'manifest': sha256(manifest_path),

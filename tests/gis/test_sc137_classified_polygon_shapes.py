@@ -30,6 +30,9 @@ def assert_typed_refusal(testcase, value):
         cg.polygon(value)
 
 
+NEGATIVE_CONTROL_OBSERVATION = {}
+
+
 class ClassifiedPolygonShapeTests(unittest.TestCase):
     def test_positive_polygon_and_multipolygon_object_identity_and_properties(self):
         for value in (valid_shell_hole(), MultiPolygon([box(0, 0, 2, 3), box(5, 7, 8, 9)])):
@@ -61,6 +64,8 @@ class ClassifiedPolygonShapeTests(unittest.TestCase):
             {'type': 'Polygon', 'coordinates': []},
             {'type': 'Polygon', 'coordinates': [[0, 1]]},
             {'type': 'Polygon', 'coordinates': 'not coordinates'},
+            {'type': 'Polygon', 'coordinates': [[(0, 0), (10**400, 0), (1, 1), (0, 0)]]},
+            {'type': 'MultiPolygon', 'coordinates': [[[(0, 0), (10**400, 0), (1, 1), (0, 0)]]]},
             {'type': 'Feature', 'geometry': mapping(box(0, 0, 1, 1)), 'properties': {}},
             Point(0, 0), LineString([(0, 0), (1, 1)]), GeometryCollection([box(0, 0, 1, 1)]),
             Polygon(), Polygon([(0, 0), (2, 2), (0, 2), (2, 0), (0, 0)]),
@@ -94,15 +99,24 @@ class ClassifiedPolygonShapeTests(unittest.TestCase):
                 raise ValueError(MESSAGE)
             return decoded
 
-        detected = False
+        observation = {'mutant_positive_passed': False, 'typed_refusal_failure': None,
+                       'restored_positive_passed': False}
         with patch.object(cg, 'polygon', unchecked_old_boundary):
+            positive = valid_shell_hole()
+            observation['mutant_positive_passed'] = cg.polygon(positive) is positive
             try:
                 assert_typed_refusal(self, None)
-            except AttributeError:
-                detected = True
-        self.assertTrue(detected, 'typed-refusal regression must detect old AttributeError boundary')
-        positive = valid_shell_hole()
-        self.assertIs(cg.polygon(positive), positive)
+            except AttributeError as exc:
+                observation['typed_refusal_failure'] = {
+                    'type': type(exc).__name__, 'message': str(exc)}
+        positive_after = valid_shell_hole()
+        observation['restored_positive_passed'] = cg.polygon(positive_after) is positive_after
+        NEGATIVE_CONTROL_OBSERVATION.update(observation)
+        self.assertTrue(observation['mutant_positive_passed'],
+                        'old boundary must accept genuine valid polygon under mutant')
+        self.assertEqual(observation['typed_refusal_failure']['type'], 'AttributeError')
+        self.assertTrue(observation['restored_positive_passed'],
+                        'restored boundary must accept genuine valid polygon')
 
 
 if __name__ == '__main__':

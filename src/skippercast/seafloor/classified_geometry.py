@@ -38,7 +38,7 @@ def polygon(geometry):
             raise ValueError('Invalid classified polygon representation')
         try:
             value = shape(geometry)
-        except (AttributeError, IndexError, KeyError, TypeError, ValueError, GEOSException) as exc:
+        except (AttributeError, IndexError, KeyError, OverflowError, TypeError, ValueError, GEOSException) as exc:
             raise ValueError('Invalid classified polygon representation') from exc
     else:
         value = geometry
