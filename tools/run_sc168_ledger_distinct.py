@@ -69,11 +69,11 @@ def main():
     metadata = {'schema': 'sc168.acceptance/v1', 'argv': sys.argv, 'cwd': str(Path.cwd()),
                 'interpreter': sys.executable, 'base': BASE, 'head': git('rev-parse', 'HEAD'),
                 'baseline': False, 'source_manifest_sha256': sha(args.source_manifest),
-                'spec_sha256': sha(ROOT.parent / 'SPEC.json'),
+                'spec_sha256': sha(ROOT.parent / 'SPEC-REFREEZE-v2.json'),
                 'product_sha256': sha(ROOT / 'skills/coast-campaign-shared/scripts/coast_ledger.py')}
     sys.dont_write_bytecode = True
     sys.path[:0] = [str(ROOT), str(ROOT / 'src')]
-    from tests.unit import test_sc168_ledger_distinct as tests
+    from tests.gis import test_sc168_ledger_distinct as tests
     tests.LedgerDistinctTests.output_parent = out
     names = list(tests.EXPECTED)
     plugin = Originals()
