@@ -37,6 +37,7 @@ def offline_scope():
         raise RuntimeError("sc116_offline_boundary")
     with ExitStack() as stack:
         for target in ("socket.socket.connect", "socket.socket.connect_ex",
+                       "socket.socket.send", "socket.socket.sendall", "socket.socket.sendto",
                        "socket.create_connection", "socket.getaddrinfo",
                        "subprocess.Popen", "subprocess.run", "os.system",
                        "os.posix_spawn", "os.posix_spawnp", "os.fork"):
@@ -171,13 +172,19 @@ class RenderFacesTests(unittest.TestCase):
         self.refusal(self.np.empty((0, 3), dtype=self.np.int64))
 
     def test_regression_ragged(self):
-        self.refusal([[0, 1, 2], [0, 1]])
+        ragged = self.np.empty(2, dtype=object)
+        ragged[:] = [[0, 1, 2], [0, 1]]
+        for faces in ([[0, 1, 2], [0, 1]], ragged):
+            with self.subTest(kind=type(faces).__name__):
+                self.refusal(faces)
 
     def test_regression_not_array(self):
         self.refusal([[0, 1, 2]])
 
     def test_regression_one_dimension(self):
-        self.refusal(self.np.array([0, 1, 2]))
+        for faces in (self.np.array([0, 1, 2]), self.np.array(0)):
+            with self.subTest(shape=faces.shape):
+                self.refusal(faces)
 
     def test_regression_wrong_columns(self):
         for columns in (0, 1, 2, 4):

@@ -99,6 +99,8 @@ def main():
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     sys.dont_write_bytecode = True
+    if not args.out.resolve().is_relative_to(REPO.parent / "out"):
+        raise ValueError("sc116_output_root_invalid")
     args.out.mkdir(parents=True, exist_ok=True)
     root = args.out / ("run-" + uuid.uuid4().hex)
     root.mkdir()
