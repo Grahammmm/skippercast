@@ -10,8 +10,7 @@ import unittest
 from unittest.mock import patch
 
 from scripts.coast_diagnostics import rights_coverage as coverage
-
-ROOT = Path(__file__).resolve().parents[2]
+from tests._support import ROOT
 
 
 class RightsCoverageTests(unittest.TestCase):
