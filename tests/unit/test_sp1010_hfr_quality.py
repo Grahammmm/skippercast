@@ -8,14 +8,14 @@ from contextlib import ExitStack
 import importlib
 import json
 import math
-from pathlib import Path
 import re
 import unittest
 from unittest.mock import patch
 from urllib.parse import unquote
 
-ROOT = Path(__file__).resolve().parents[2]
-FIXTURE = ROOT / 'tests/fixtures/sp1010_hfr_quality/producer.json'
+from tests._support import FIXTURES, ROOT
+
+FIXTURE = FIXTURES / 'sp1010_hfr_quality/producer.json'
 BASE = 'https://dods.ndbc.noaa.gov/thredds/dodsC/hfradar_uswc_6km'
 FIELDS = ('u', 'v', 'hdop', 'number_of_sites')
 
@@ -82,7 +82,7 @@ class RegressionTests(unittest.TestCase):
                        'socket.getaddrinfo', 'subprocess.Popen'):
             stack.enter_context(patch(target, side_effect=AssertionError('SP1010 offline-only')))
         self.ocean = importlib.import_module('skippercast.pipeline.ocean')
-        self.assertEqual(Path(str(self.ocean.__file__)).resolve(), ROOT / 'src/skippercast/pipeline/ocean.py')
+        self.assertEqual(self.ocean.__file__, str(ROOT / 'src/skippercast/pipeline/ocean.py'))
         self.fixture = json.loads(FIXTURE.read_text())
 
     def cell(self, **changes):
