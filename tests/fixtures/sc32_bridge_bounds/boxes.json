@@ -1,0 +1,50 @@
+{
+  "schema": "sc32-bridge-bounds-fixture-v1",
+  "note": "Synthetic CRS84 [west, south, east, north] boxes for SC32-BRIDGE-BOUNDS. The segment is tests._coastal_catalog_fixture.SEGMENT_BBOX. Non-finite and huge-integer coordinate kinds are built in the test module because strict JSON cannot carry them.",
+  "segment": [-120.62, 34.44, -120.56, 34.5],
+  "candidate_overlapping": {
+    "producer-default-float": [-120.6, 34.45, -120.5, 34.55],
+    "integer-box-containing": [-121, 34, -120, 35],
+    "mixed-int-float": [-121, 34.45, -120.5, 35],
+    "contained-in-segment": [-120.61, 34.45, -120.57, 34.49],
+    "equal-to-segment": [-120.62, 34.44, -120.56, 34.5],
+    "intersecting-north-east": [-120.58, 34.48, -120.4, 34.7],
+    "intersecting-south-west": [-120.7, 34.3, -120.6, 34.46],
+    "whole-world-integer": [-180, -90, 180, 90],
+    "whole-world-float": [-180.0, -90.0, 180.0, 90.0]
+  },
+  "candidate_not_overlapping": {
+    "edge-adjacent-east": [-120.56, 34.44, -120.5, 34.5],
+    "edge-adjacent-west": [-120.7, 34.44, -120.62, 34.5],
+    "edge-adjacent-north": [-120.62, 34.5, -120.56, 34.6],
+    "edge-adjacent-south": [-120.62, 34.4, -120.56, 34.44],
+    "corner-touch": [-120.56, 34.5, -120.5, 34.6],
+    "disjoint-far": [10.0, 10.0, 11.0, 11.0]
+  },
+  "segment_valid_geographic_edges": {
+    "whole-world-integer": [-180, -90, 180, 90],
+    "whole-world-float": [-180.0, -90.0, 180.0, 90.0],
+    "west-edge": [-180, 0, -179.5, 1],
+    "east-edge": [179.5, 0, 180, 1],
+    "south-pole-edge": [0, -90, 1, -89.5],
+    "north-pole-edge": [0, 89.5, 1, 90]
+  },
+  "malformed_shapes": {
+    "west-just-below-minus-180": [-180.000001, 34.44, -120.56, 34.5],
+    "east-just-above-180": [-120.62, 34.44, 180.000001, 34.5],
+    "south-just-below-minus-90": [-120.62, -90.000001, -120.56, 34.5],
+    "north-just-above-90": [-120.62, 34.44, -120.56, 90.000001],
+    "east-above-180": [-120.62, 34.44, 200.0, 34.5],
+    "reversed-longitude": [-120.56, 34.44, -120.62, 34.5],
+    "reversed-latitude": [-120.62, 34.5, -120.56, 34.44],
+    "zero-width": [-120.6, 34.44, -120.6, 34.5],
+    "zero-height": [-120.62, 34.47, -120.56, 34.47],
+    "three-coordinates": [-120.62, 34.44, -120.56],
+    "five-coordinates": [-120.62, 34.44, -120.56, 34.5, 0.0],
+    "empty-list": [],
+    "object": {"west": -120.62, "south": 34.44, "east": -120.56, "north": 34.5},
+    "string": "-120.62,34.44,-120.56,34.5",
+    "null": null,
+    "number": 34.5
+  }
+}

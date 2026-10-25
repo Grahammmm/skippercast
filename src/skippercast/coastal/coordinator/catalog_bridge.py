@@ -125,14 +125,28 @@ def host_decision(url, allowlist):
     return host, None
 
 
+def _crs84_bbox(box):
+    """True only for the bridge's CRS84 bbox contract, checked as submitted (never coerced).
+
+    A list of four finite non-boolean int/float ``[west, south, east, north]``,
+    longitude within -180..180, latitude within -90..90, ``west < east`` and
+    ``south < north``. No wrapping or anti-meridian reading. The range test uses
+    exact comparisons, so a huge integer is refused without a float conversion.
+    """
+    if (not isinstance(box, list) or len(box) != 4
+            or any(isinstance(v, bool) or not isinstance(v, (int, float)) for v in box)
+            or any(isinstance(v, float) and not math.isfinite(v) for v in box)):
+        return False
+    west, south, east, north = box
+    return -180 <= west < east <= 180 and -90 <= south < north <= 90
+
+
 def _overlaps(a, b):
-    try:
-        w1, s1, e1, n1 = (float(v) for v in a)
-        w2, s2, e2, n2 = (float(v) for v in b)
-    except (TypeError, ValueError):
+    """Positive-area overlap of two valid CRS84 boxes; a malformed box never overlaps."""
+    if not (_crs84_bbox(a) and _crs84_bbox(b)):
         return False
-    if not (w1 < e1 and s1 < n1 and w2 < e2 and s2 < n2):
-        return False
+    w1, s1, e1, n1 = a
+    w2, s2, e2, n2 = b
     return min(e1, e2) > max(w1, w2) and min(n1, n2) > max(s1, s2)
 
 
@@ -322,6 +336,9 @@ def check_plan(plan, catalog_raw, catalog):
     if (not isinstance(segment, dict) or not isinstance(segment.get("segment_id"), str)
             or not isinstance(segment.get("bbox_crs84"), list) or len(segment["bbox_crs84"]) != 4):
         raise ValueError("plan segment_id and bbox_crs84 required")
+    if not _crs84_bbox(segment["bbox_crs84"]):
+        raise ValueError("plan segment bbox_crs84 must be four finite CRS84 coordinates [west, south, east, "
+                         "north] within -180..180 / -90..90 with west < east and south < north")
     if type(plan.get("synthetic", False)) is not bool:
         raise ValueError("synthetic must be a boolean")
     limit = plan.get("max_total_bytes")
