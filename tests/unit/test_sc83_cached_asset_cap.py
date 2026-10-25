@@ -12,8 +12,9 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from skippercast.seafloor import io
+from tests._support import FIXTURES
 
-FIXTURE_ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "sc83-cached-asset-cap"
+FIXTURE_ROOT = FIXTURES / "sc83-cached-asset-cap"
 
 # test name -> assertion class, reported by the acceptance runner.
 ASSERTION_CLASSES = {
