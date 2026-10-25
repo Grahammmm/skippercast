@@ -5,6 +5,9 @@ fail-on-access sentinels, so the download path is never exercised; network
 and subprocess entry points are refused for every test. The cached asset is a
 small text fixture whose digest was frozen independently with sha256sum.
 The product module is imported in setUp, after those sentinels are in place.
+A cold import binds some entry points as defaults (skippercast.http.Session
+resolver=socket.getaddrinfo), so cleanup rebinds any default or module global
+that captured a sentinel back to the original before the patches stop.
 """
 import copy
 import hashlib
@@ -14,7 +17,9 @@ import os
 from pathlib import Path
 import socket
 import subprocess
+import sys
 import tempfile
+import types
 import unittest
 from unittest import mock
 
@@ -26,6 +31,7 @@ ASSET = json.loads(FIXTURE.read_text(encoding='utf-8'))
 DIGEST = ASSET['sha256']
 DECIDING_VALUE = 'z' * 64   # 64 characters, none of them hex
 NEGATIVE_CONTROL_EVIDENCE = {}
+ISOLATION_EVIDENCE = []
 
 
 def mixed_case(text):
@@ -110,6 +116,71 @@ def _preflight_disabled(expected):
     return None
 
 
+REFUSED_ENTRY_POINTS = (
+    (socket.socket, 'connect', 'socket.socket.connect'),
+    (socket, 'create_connection', 'socket.create_connection'),
+    (socket, 'getaddrinfo', 'socket.getaddrinfo'),
+    (subprocess, 'Popen', 'subprocess.Popen'),
+    (os, 'system', 'os.system'),
+)
+
+
+def _functions(holder):
+    if isinstance(holder, (staticmethod, classmethod)):
+        holder = holder.__func__
+    if isinstance(holder, property):
+        return [f for f in (holder.fget, holder.fset, holder.fdel) if isinstance(f, types.FunctionType)]
+    return [holder] if isinstance(holder, types.FunctionType) else []
+
+
+def import_captures(module_names, lookup, apply=False):
+    """Find module globals, class attributes and function defaults holding a replaced object.
+
+    lookup(value) returns (True, original) for a captured object. With apply,
+    each capture is rebound to its original. Returns the capture locations.
+    """
+    found = []
+    for name in sorted(module_names):
+        module = sys.modules.get(name)
+        if module is None:
+            continue
+        for key, value in list(vars(module).items()):
+            hit, original = lookup(value)
+            if hit:
+                found.append(f'{name}.{key}')
+                if apply:
+                    setattr(module, key, original)
+                continue
+            if isinstance(value, type) and value.__module__ == name:
+                owner, holders = value, list(vars(value).items())
+            elif isinstance(value, types.FunctionType) and value.__module__ == name:
+                owner, holders = None, [(key, value)]
+            else:
+                continue
+            for attr, holder in holders:
+                where = f'{name}.{key}' + (f'.{attr}' if owner is not None else '')
+                hit, original = lookup(holder)
+                if hit and owner is not None:
+                    found.append(where)
+                    if apply:
+                        setattr(owner, attr, original)
+                    continue
+                for function in _functions(holder):
+                    defaults = function.__defaults__ or ()
+                    if any(lookup(d)[0] for d in defaults):
+                        found.append(f'{where}.__defaults__')
+                        if apply:
+                            function.__defaults__ = tuple(
+                                lookup(d)[1] if lookup(d)[0] else d for d in defaults)
+                    for kw, default in list((function.__kwdefaults__ or {}).items()):
+                        hit, original = lookup(default)
+                        if hit:
+                            found.append(f'{where}.__kwdefaults__[{kw}]')
+                            if apply:
+                                function.__kwdefaults__[kw] = original
+    return found
+
+
 def tree(root):
     """Every path under root with its bytes (None for a directory)."""
     return {p.relative_to(root).as_posix(): (None if p.is_dir() else p.read_bytes())
@@ -119,12 +190,19 @@ def tree(root):
 class AssetHashPreflightTest(unittest.TestCase):
 
     def setUp(self):
-        self.activity = {}
-        for target in ('socket.socket.connect', 'socket.create_connection', 'socket.getaddrinfo',
-                       'subprocess.Popen', 'os.system'):
-            self.activity[target] = self._refuse(target)
+        self.activity, self.replaced = {}, {}
+        for owner, name, label in REFUSED_ENTRY_POINTS:
+            original = getattr(owner, name)
+            double = self._refuse(owner, name, label)
+            self.activity[label] = double
+            self.replaced[id(double)] = (double, original, label)
+        loaded = set(sys.modules)
         self.io = importlib.import_module('skippercast.seafloor.io')
-        self.activity['http.default_session'] = self._refuse('default_session', owner=self.io.http)
+        self.scanned = {n for n in sys.modules if n not in loaded or n.split('.')[0] == 'skippercast'}
+        self.addCleanup(self._assert_isolated)
+        self.addCleanup(self._rebind_import_captures)
+        self.activity['http.default_session'] = self._refuse(self.io.http, 'default_session',
+                                                             'default_session')
         spy = mock.patch.object(self.io, 'sha256', wraps=self.io.sha256)
         self.hashes = spy.start()
         self.addCleanup(spy.stop)
@@ -137,14 +215,28 @@ class AssetHashPreflightTest(unittest.TestCase):
         self.cached.write_bytes(ASSET['payload'].encode('utf-8'))
         self.assertEqual(hashlib.sha256(self.cached.read_bytes()).hexdigest(), DIGEST)
 
-    def _refuse(self, target, owner=None):
+    def _refuse(self, owner, name, label):
         def refused(*args, **kwargs):
-            raise UnapprovedActivity(f'unapproved activity: {target}')
-        patcher = (mock.patch.object(owner, target, side_effect=refused) if owner is not None
-                   else mock.patch(target, side_effect=refused))
+            raise UnapprovedActivity(f'unapproved activity: {label}')
+        patcher = mock.patch.object(owner, name, side_effect=refused)
         double = patcher.start()
         self.addCleanup(patcher.stop)
         return double
+
+    def _lookup(self, value):
+        entry = self.replaced.get(id(value))
+        return (True, entry[1]) if entry is not None and entry[0] is value else (False, None)
+
+    def _rebind_import_captures(self):
+        """Rebind defaults/globals that a cold import bound to a sentinel back to the original."""
+        rebound = import_captures(self.scanned, self._lookup, apply=True)
+        ISOLATION_EVIDENCE.append(dict(test=self.id().rsplit('.', 1)[-1], rebound=rebound))
+
+    def _assert_isolated(self):
+        self.assertEqual(import_captures(self.scanned, self._lookup), [])
+        resolver = self.io.http.Session.__init__.__kwdefaults__['resolver']
+        original = next(o for d, o, label in self.replaced.values() if label == 'socket.getaddrinfo')
+        self.assertIs(resolver, original)
 
     def _assert_no_activity(self):
         self.assertEqual({k: v.call_count for k, v in self.activity.items() if v.call_count}, {})

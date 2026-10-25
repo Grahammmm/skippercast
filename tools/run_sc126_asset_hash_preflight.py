@@ -127,17 +127,24 @@ def git_identity(base, phase, problems):
 
 
 class Sentinel:
-    """Process-level refusal of network and subprocess entry points, installed before product import."""
+    """Process-level refusal of network and subprocess entry points, installed before product import.
+
+    A cold product import binds some of these as defaults (http.Session resolver),
+    so restore() also rebinds every captured default/global back to the original.
+    """
 
     def __init__(self):
         import socket
-        self.calls, self.saved = {}, []
+        self.calls, self.saved, self.refusers, self.rebound = {}, [], {}, []
+        self.loaded = set(sys.modules)
         for owner, name in ((socket.socket, 'connect'), (socket, 'create_connection'),
                             (socket, 'getaddrinfo'), (subprocess, 'Popen'), (os, 'system')):
             label = f'{owner.__name__}.{name}'
             self.saved.append((owner, name, getattr(owner, name)))
             self.calls[label] = 0
-            setattr(owner, name, self._refuser(label))
+            refuser = self._refuser(label)
+            self.refusers[id(refuser)] = (refuser, getattr(owner, name))
+            setattr(owner, name, refuser)
 
     def _refuser(self, label):
         def refused(*args, **kwargs):
@@ -145,9 +152,40 @@ class Sentinel:
             raise RuntimeError(f'sc126 runner refused {label}')
         return refused
 
+    def _lookup(self, value):
+        entry = self.refusers.get(id(value))
+        return (True, entry[1]) if entry is not None and entry[0] is value else (False, None)
+
+    def scanned(self):
+        return {n for n in sys.modules if n not in self.loaded or n.split('.')[0] == 'skippercast'}
+
     def restore(self):
         for owner, name, value in reversed(self.saved):
             setattr(owner, name, value)
+        tests = sys.modules.get(MODULE)
+        if tests is not None:
+            self.rebound = tests.import_captures(self.scanned(), self._lookup, apply=True)
+
+
+def isolation_probe(originals, sentinel):
+    """After restore: entry points, captured defaults and the http.Session resolver are original."""
+    import socket
+    from unittest import mock
+    tests = sys.modules.get(MODULE)
+    http = sys.modules.get('skippercast.http')
+    record: dict = dict(entry_points_restored=all(getattr(o, n) is v for o, n, v in originals),
+                        sentinel_rebound=sentinel.rebound)
+
+    def leftover(value):
+        return (isinstance(value, mock.NonCallableMock) or sentinel._lookup(value)[0], None)
+    record['leftover_doubles'] = (tests.import_captures(sentinel.scanned(), leftover)
+                                  if tests is not None else None)
+    record['session_resolver_default_is_original_getaddrinfo'] = (
+        http is not None and http.Session.__init__.__kwdefaults__['resolver'] is socket.getaddrinfo
+        and socket.getaddrinfo is next(v for o, n, v in originals if n == 'getaddrinfo'))
+    record['ok'] = (record['entry_points_restored'] and record['leftover_doubles'] == []
+                    and record['session_resolver_default_is_original_getaddrinfo'])
+    return record
 
 
 class Recorder(unittest.TestResult):
@@ -213,6 +251,24 @@ def run_tests():
     return recorder, dict(module.NEGATIVE_CONTROL_EVIDENCE), origins, io_module
 
 
+def isolated_pass(label):
+    """One guarded in-process suite run followed by restore and the peer isolation probe."""
+    preimported = 'skippercast.http' in sys.modules
+    sentinel = Sentinel()
+    try:
+        outcome = run_tests()
+    finally:
+        sentinel.restore()
+    probe = isolation_probe(sentinel.saved, sentinel)
+    tests = sys.modules.get(MODULE)
+    probe.update(label=label, http_preimported=preimported,
+                 test_cleanup_rebound=list(getattr(tests, 'ISOLATION_EVIDENCE', [])),
+                 sentinel_calls=dict(sentinel.calls))
+    if tests is not None:
+        tests.ISOLATION_EVIDENCE.clear()
+    return outcome, sentinel, probe
+
+
 def judge(phase, recorder, evidence, origins, problems):
     for name, origin in origins.items():
         if origin is None or not Path(origin).resolve().is_relative_to(REPO):
@@ -273,17 +329,31 @@ def main(argv=None):
             sys.path.remove(entry)
         sys.path.insert(0, entry)
     tempfile.tempdir = str(scratch)
-    sentinel = Sentinel()
     log = stdio.StringIO()
-    try:
-        recorder, evidence, origins, io_module = run_tests()
-    finally:
-        sentinel.restore()
+    (recorder, evidence, origins, io_module), sentinel, cold = isolated_pass('cold_import')
+    (repeat, _, _, _), repeat_sentinel, warm = isolated_pass('preimported')
     for test, trace in recorder.failures + recorder.errors:
         log.write(f'== {test.id()}\n{trace}\n')
+    for test, trace in repeat.failures + repeat.errors:
+        log.write(f'== preimported {test.id()}\n{trace}\n')
     by_method = judge(args.phase, recorder, evidence, origins, problems)
-    if any(sentinel.calls.values()):
-        problems.append(f'runner sentinel saw unapproved activity: {sentinel.calls}')
+    isolation = dict(cold_import=cold, preimported=warm,
+                     preimported_tests_run=repeat.testsRun, preimported_failures=len(repeat.failures),
+                     preimported_errors=len(repeat.errors), preimported_skipped=len(repeat.skipped),
+                     preimported_subtests=len(repeat.subtests),
+                     preimported_subtests_passed=sum(1 for s in repeat.subtests if s['outcome'] == 'pass'))
+    if cold['http_preimported'] or not warm['http_preimported']:
+        problems.append('isolation: expected a cold first pass and a preimported second pass')
+    if not (cold['ok'] and warm['ok']):
+        problems.append('isolation: a sentinel/double stayed bound after restore')
+    if args.phase == 'candidate':
+        if not any(row['rebound'] for row in cold['test_cleanup_rebound']):
+            problems.append('isolation: cold pass did not exercise the import-capture rebind')
+        if (repeat.testsRun != len(METHODS) or repeat.failures or repeat.errors or repeat.skipped
+                or isolation['preimported_subtests_passed'] != len(recorder.subtests)):
+            problems.append('isolation: preimported second pass did not fully pass')
+    if any(sentinel.calls.values()) or any(repeat_sentinel.calls.values()):
+        problems.append(f'runner sentinel saw unapproved activity: {sentinel.calls} {repeat_sentinel.calls}')
     hashes_after = input_hashes()
     if hashes_after != hashes_before:
         problems.append('inputs changed during the run')
@@ -308,6 +378,7 @@ def main(argv=None):
         subtest_outcomes={m: {o: sum(1 for v in rows.values() if v == o) for o in sorted(set(rows.values()))}
                           for m, rows in by_method.items()},
         subtests=recorder.subtests, negative_control=evidence, sentinel_calls=sentinel.calls,
+        isolation=isolation,
         output_root=str(out), failures_log_sha256=sha256_bytes((out / 'failures.log').read_bytes()))
     (out / 'result.json').write_text(json.dumps(result, indent=2, sort_keys=True) + '\n', encoding='utf-8')
     print(f'SC126 {args.phase}: {result["verdict"]}; tests_run={recorder.testsRun} '
@@ -315,6 +386,10 @@ def main(argv=None):
           f'subtests={len(recorder.subtests)} outcomes={json.dumps(result["subtest_outcomes"], sort_keys=True)}')
     print(f'methods={json.dumps(recorder.tests, sort_keys=True)}')
     print(f'negative_control={json.dumps(evidence, sort_keys=True)}')
+    print(f'isolation cold_import ok={cold["ok"]} preimported ok={warm["ok"]} '
+          f'test_cleanup_rebound={json.dumps(cold["test_cleanup_rebound"])} '
+          f'sentinel_rebound={json.dumps(cold["sentinel_rebound"])} '
+          f'preimported tests_run={repeat.testsRun} subtests_passed={isolation["preimported_subtests_passed"]}')
     print(f'head={identity.get("head")} base={base}')
     print(f'result={out / "result.json"} sha256={sha256_bytes((out / "result.json").read_bytes())}')
     for problem in problems:
