@@ -142,7 +142,8 @@ class AcceptanceTests(FixtureCase):
             with self.subTest(json_number=token):
                 root = self.materialize()
                 path = root / CANDIDATE
-                text = path.read_text().replace('"resolution_m": 0.000001', f'"resolution_m": {token}')
+                current = json.dumps(self.inputs[CANDIDATE]['spatial']['resolution_m'])
+                text = path.read_text().replace(f'"resolution_m": {current}', f'"resolution_m": {token}')
                 self.assertIn(f'"resolution_m": {token}', text)
                 path.write_text(text)
                 with isolated_readiness(root) as module:
