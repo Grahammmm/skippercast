@@ -13,6 +13,6 @@
   "verified_at": "2026-09-27T19:00:00.000Z",
   "created_at": "2026-09-27T19:00:00.000Z",
   "updated_at": "2026-09-27T19:00:00.000Z",
-  "valid_handles": ["seaexample_fishing", "SEAEXAMPLE_FISHING", "SeaExample_Fishing", "Example.09_", "A", "a", "Example_012345678901234567890123"],
-  "invalid_handles": [null, "", "Example_0123456789012345678901234", "example/boat", "example:boat", "<b>example</b>", "éxample", "Ｅxample", "example-boat", " example", "@example"]
+  "valid_handles": ["seaexample_fishing", "SEAEXAMPLE_FISHING", "SeaExample_Fishing", "Example.09_", "A", "a", "Example_0123456789012345678901"],
+  "invalid_handles": [null, "", "Example_01234567890123456789012", "example/boat", "example:boat", "<b>example</b>", "éxample", "Ｅxample", "example-boat", " example", "@example"]
 }
