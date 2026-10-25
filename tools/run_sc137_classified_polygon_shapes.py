@@ -196,8 +196,8 @@ def main():
             check(manifest.get('write_root') == str(write_root), 'manifest write_root identity')
             check(base == '33734f90073a2150eac5a418564ea314c4a591ac',
                   'operator manifest head is exact admitted base')
-            check(manifest.get('runtime', {}).get('credential_scan_python3')
-                  == '/home/user/agent-work/tools/venv-fullsuite/bin/python3',
+            expected_scanner = str(Path.home() / 'agent-work/tools/venv-fullsuite/bin/python3')
+            check(manifest.get('runtime', {}).get('credential_scan_python3') == expected_scanner,
                   'credential scanner path exactly matches admitted interpreter')
             check(base_ancestor, 'admitted base is an ancestor of candidate HEAD')
             check(source.is_file() and test_path.is_file() and spec_path.is_file(),
