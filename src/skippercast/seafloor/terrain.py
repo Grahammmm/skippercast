@@ -13,7 +13,13 @@ def mean_full(values, valid, size):
     return np.where(count >= 1-1e-10, total, np.nan)
 
 
+def _validate_support_mask(valid):
+    if not isinstance(valid, np.ndarray) or valid.ndim != 2 or valid.dtype != np.bool_:
+        raise ValueError('Invalid terrain support mask: expected a 2D boolean array')
+
+
 def derivatives(depth, valid, resolution_m):
+    _validate_support_mask(valid)
     if resolution_m <= 0 or depth.ndim != 2 or depth.shape != valid.shape:
         raise ValueError('Invalid terrain grid')
     good = valid & np.isfinite(depth)
