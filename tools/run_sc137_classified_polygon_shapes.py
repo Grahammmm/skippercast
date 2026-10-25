@@ -147,8 +147,9 @@ def main():
             check((repo / '.venv').resolve(strict=True) == expected_venv,
                   'linked repo .venv matches manifest runtime')
             check((repo / '.venv/bin/python3').is_file(), 'repo venv interpreter exists')
-            check(Path(manifest['runtime']['credential_scan_python3']).resolve(strict=True)
-                  == Path('/home/user/agent-work/tools/venv-fullsuite/bin/python3'),
+            check(manifest['runtime']['credential_scan_python3']
+                  == '/home/user/agent-work/tools/venv-fullsuite/bin/python3'
+                  and Path(manifest['runtime']['credential_scan_python3']).is_file(),
                   'credential scanner path exactly matches admitted interpreter')
             check(source.is_file() and test_path.is_file() and spec_path.is_file(),
                   'selected source/test/spec closure exists')
