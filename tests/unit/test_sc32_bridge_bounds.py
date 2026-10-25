@@ -44,10 +44,10 @@ import pytest
 from skippercast.coastal.coordinator import catalog_bridge as bridge
 from skippercast.http import Allowlist
 from tests import _coastal_catalog_fixture as fx
+from tests._support import FIXTURES as SUPPORT_FIXTURES, ROOT
 
-ROOT = Path(__file__).resolve().parents[2]
 MODULE_PATH = ROOT / 'src/skippercast/coastal/coordinator/catalog_bridge.py'
-FIXTURES = ROOT / 'tests/fixtures/sc32_bridge_bounds'
+FIXTURES = SUPPORT_FIXTURES / 'sc32_bridge_bounds'
 BOXES = json.loads((FIXTURES / 'boxes.json').read_text(encoding='utf-8'))
 SEGMENT = BOXES['segment']
 ALLOW = Allowlist([fx.HOST])
@@ -484,6 +484,7 @@ def test_a4_tests_import_the_complete_staged_production_module():
 def test_a4_new_test_module_is_discovered_by_configured_patterns():
     config = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
     options = config['tool']['pytest']['ini_options']
-    relative = Path(__file__).resolve().relative_to(ROOT)
+    relative = Path(*__name__.split('.')).with_suffix('.py')
+    assert (ROOT / relative).is_file()
     assert relative.parts[0] in options['testpaths']
     assert any(Path(relative.name).match(pattern) for pattern in options['python_files'])
