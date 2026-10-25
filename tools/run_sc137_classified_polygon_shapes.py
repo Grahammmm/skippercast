@@ -40,7 +40,8 @@ def validate_admission(manifest, write_root, repo):
     if manifest.get('head') != '33734f90073a2150eac5a418564ea314c4a591ac':
         return False, 'exact admitted baseline head'
     runtime = manifest.get('runtime', {})
-    if runtime.get('credential_scan_python3') != '/home/user/agent-work/tools/venv-fullsuite/bin/python3':
+    expected_scanner = str(Path.home() / 'agent-work/tools/venv-fullsuite/bin/python3')
+    if runtime.get('credential_scan_python3') != expected_scanner:
         return False, 'exact credential scanner interpreter'
     if manifest.get('clean') is not True or manifest.get('inputs') != []:
         return False, 'clean staged baseline and empty inputs'
@@ -147,8 +148,8 @@ def main():
             check((repo / '.venv').resolve(strict=True) == expected_venv,
                   'linked repo .venv matches manifest runtime')
             check((repo / '.venv/bin/python3').is_file(), 'repo venv interpreter exists')
-            check(manifest['runtime']['credential_scan_python3']
-                  == '/home/user/agent-work/tools/venv-fullsuite/bin/python3'
+            expected_scanner = str(Path.home() / 'agent-work/tools/venv-fullsuite/bin/python3')
+            check(manifest['runtime']['credential_scan_python3'] == expected_scanner
                   and Path(manifest['runtime']['credential_scan_python3']).is_file(),
                   'credential scanner path exactly matches admitted interpreter')
             check(source.is_file() and test_path.is_file() and spec_path.is_file(),
