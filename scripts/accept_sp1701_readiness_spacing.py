@@ -50,6 +50,7 @@ def unittest_child(selector):
                      'os.system', 'sqlite3.connect'}:
             raise RuntimeError('SP1701 offline child forbids external/model/process/live-store access')
     sys.addaudithook(offline)
+    sys.path.insert(0, str(ROOT))
     sys.path.insert(0, str(ROOT / 'src'))
     os.environ['SKIPPERCAST_ROOT'] = str(ROOT)
     sys.argv = ['unittest', '-v', selector]
@@ -101,6 +102,10 @@ def main():
             work.mkdir()
             env['SP1701_TEST_OUTPUT'] = str(work / 'synthetic-roots')
             env['TMPDIR'] = str(work)
+            version_argv = [argv[0], '--version']
+            version = subprocess.run(version_argv, cwd=ROOT, env=env, capture_output=True, check=False)
+            if version.returncode != 0:
+                raise RuntimeError('Child interpreter version probe failed')
             child = subprocess.run(argv, cwd=ROOT, env=env, capture_output=True, check=False)
             stdout, stderr = work / 'stdout.txt', work / 'stderr.txt'
             stdout.write_bytes(child.stdout)
@@ -126,6 +131,10 @@ def main():
                 count = int(scan.group(1)) if scan else None
                 ok = child.returncode == 0 and count is not None and count > 0
             row = {'label': label, 'argv': argv, 'cwd': str(ROOT), 'exit': child.returncode,
+                   'runtime_probe': {'argv': version_argv, 'exit': version.returncode,
+                                     'stdout': version.stdout.decode(errors='replace'),
+                                     'stderr': version.stderr.decode(errors='replace'),
+                                     'stdout_sha256': sha(version.stdout), 'stderr_sha256': sha(version.stderr)},
                    'count': count, 'skips': skipped, 'expected': expected, 'contract_passed': ok,
                    'stdout': str(stdout), 'stdout_sha256': sha(child.stdout),
                    'stderr': str(stderr), 'stderr_sha256': sha(child.stderr)}
