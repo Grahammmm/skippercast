@@ -374,8 +374,19 @@ def test_a2_frozen_observation_bytes_are_bound_to_the_measured_producer():
 def test_a2_feature_rights_rows_match_source_rights_rows():
     document = rd.parse_json_strict((FIXTURES / "producer_inputs_left.json").read_bytes())
     sources = {row["id"]: row for row in document["rows"]}
-    # feature_rights reads the current date itself; the fixture review date is in the past, so this is stable.
-    listed = rights.feature_rights(list(reversed(list(sources))), sources)
+
+    class _FixedDate(date):
+        # feature_rights has no today= parameter, so freeze the producer's clock here.
+        @classmethod
+        def today(cls):
+            return cls(FIXED_TODAY.year, FIXED_TODAY.month, FIXED_TODAY.day)
+
+    original = rights.date
+    rights.date = _FixedDate
+    try:
+        listed = rights.feature_rights(list(reversed(list(sources))), sources)
+    finally:
+        rights.date = original
     assert listed == sorted(_producer_rows("producer_inputs_left.json"), key=lambda r: r["source_id"])
     observation = rd.build_observation(listed, producer=_producer(function="feature_rights"),
                                        source_use="noncommercial")
