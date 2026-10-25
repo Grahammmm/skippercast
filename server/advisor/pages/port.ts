@@ -60,8 +60,10 @@ export function withoutSelfLink(text: string, url: string): string {
   if (at < 0) return text.trim();
   const before = text.slice(0, at), after = text.slice(at + url.length);
   if (!after.trim()) {
-    // The link closes the text: drop it and its lead-in ("Full picture:") back to the last sentence end.
-    const end = Math.max(before.lastIndexOf('. '), before.lastIndexOf('! '), before.lastIndexOf('? '));
+    // The link closes the text: drop it and its lead-in ("Full picture:") back to the last sentence end,
+    // a . ! or ? followed by any whitespace (a space, a tab, LF, CRLF or a blank line), or a line break.
+    let end = -1;
+    for (const m of before.matchAll(/[.!?](?=\s)|\n/g)) end = m.index;
     const lead = before.slice(end + 1);
     return (/:\s*$/.test(lead) ? before.slice(0, end + 1) : before).trim();
   }
