@@ -147,7 +147,9 @@ def qualify_row(row, receipt, *, rights_url, physical_only=False):
                            'Unknown datum/accuracy/correction history retained; one acquisition lineage.')
     if physical_only:
         result['notes'] += ' Private physical processing only; rights are not granted and publication/export remain prohibited.'
-    return result
+    # Detach all retained receipt metadata, including optional/nested collections
+    # and top-level receipt values, without changing qualification or serialization.
+    return deepcopy(result)
 
 
 def promote_draft(path, *, rights_url, root=REPO, physical_only=False):
