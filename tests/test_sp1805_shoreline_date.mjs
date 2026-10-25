@@ -33,16 +33,23 @@ test('A3 preserves literal historical/future dates and existing text conversion'
   assert.equal(coastlineMark({...healthy, source_date: 20240229}), null);
 });
 
-test('A4 preserves metadata and does not mutate input across accuracy/source identity variants', () => {
-  for (const extra of [{HOR_ACC: undefined, SOURCE_ID: 'id'}, {HOR_ACC: '2.5', SOURCE_ID: 'id'}, {HOR_ACC: '0', SOURCE_ID: '', source_tile: 'tile/1'}]) {
+test('A4 preserves the full mark and does not mutate input across accuracy/source identity variants', () => {
+  const variants = [
+    {extra: {HOR_ACC: undefined, SOURCE_ID: 'id'}, id: 'coastline:id', reading: 'Lidar'},
+    {extra: {HOR_ACC: '2.5', SOURCE_ID: 'id'}, id: 'coastline:id', reading: 'Lidar · ±2.5 m stated'},
+    {extra: {HOR_ACC: '0', SOURCE_ID: '', source_tile: 'tile/1'}, id: 'coastline:tile/1', reading: 'Lidar'},
+  ];
+  for (const {extra, id, reading} of variants) {
     const props = {...healthy, ...extra};
     const before = structuredClone(props);
-    const mark = coastlineMark(props);
-    assert.ok(mark);
-    assert.equal(mark.name, 'Shoreline');
-    assert.equal(mark.source, 'NOAA NGS CUSP · source date 2024-02-29');
+    assert.deepEqual(coastlineMark(props), {
+      id,
+      name: 'Shoreline',
+      kind: 'Mean High Water · Natural',
+      reading,
+      source: 'NOAA NGS CUSP · source date 2024-02-29',
+      basis: 'NOAA NGS CUSP shoreline, 1994–2010 sources.',
+    });
     assert.deepEqual(props, before);
-    if (extra.SOURCE_ID) assert.equal(mark.id, 'coastline:id');
-    else assert.equal(mark.id, 'coastline:tile/1');
   }
 });
