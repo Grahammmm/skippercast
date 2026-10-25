@@ -57,11 +57,14 @@ HASHED = ('src/skippercast/coastal/handoff/render.py', 'tests/unit/test_bm1_rend
           'scripts/accept_bm1_render_private.py')
 BASE_PIN = '59fca09b2cc7f5c81a4796902504e263d7f06960'
 RENDER = 'src/skippercast/coastal/handoff/render.py'
+# Operator plan files live outside the repository; resolved from the launching
+# user's home at import time (before the run redirects HOME) so no private
+# path is committed.
+PLANS = Path.home() / 'agent-work' / 'plans' / 'astra-refill-BM-1'
 FROZEN = {
-    'brief': Path('/home/user/agent-work/plans/astra-refill-BM-1/briefs/skippercast-BM1-RENDER-PRIVATE.brief'),
-    'items': Path('/home/user/agent-work/plans/astra-refill-BM-1/ITEMS.json'),
-    'verification_blueprint': Path('/home/user/agent-work/plans/astra-refill-BM-1/verification/'
-                                   'skippercast-V-BM1-RENDER-PRIVATE.md'),
+    'brief': PLANS / 'briefs' / 'skippercast-BM1-RENDER-PRIVATE.brief',
+    'items': PLANS / 'ITEMS.json',
+    'verification_blueprint': PLANS / 'verification' / 'skippercast-V-BM1-RENDER-PRIVATE.md',
 }
 SUITES = {
     'focused': ('PositiveA1', 'NegativeA2', 'BoundaryA3'),
