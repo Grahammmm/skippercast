@@ -191,6 +191,9 @@ class AssetHashPreflightTest(unittest.TestCase):
 
     def setUp(self):
         self.activity, self.replaced = {}, {}
+        preloaded_http = sys.modules.get('skippercast.http')
+        self.resolver_before = (preloaded_http.Session.__init__.__kwdefaults__['resolver']
+                                if preloaded_http is not None else socket.getaddrinfo)
         for owner, name, label in REFUSED_ENTRY_POINTS:
             original = getattr(owner, name)
             double = self._refuse(owner, name, label)
@@ -235,8 +238,7 @@ class AssetHashPreflightTest(unittest.TestCase):
     def _assert_isolated(self):
         self.assertEqual(import_captures(self.scanned, self._lookup), [])
         resolver = self.io.http.Session.__init__.__kwdefaults__['resolver']
-        original = next(o for d, o, label in self.replaced.values() if label == 'socket.getaddrinfo')
-        self.assertIs(resolver, original)
+        self.assertIs(resolver, self.resolver_before)
 
     def _assert_no_activity(self):
         self.assertEqual({k: v.call_count for k, v in self.activity.items() if v.call_count}, {})
