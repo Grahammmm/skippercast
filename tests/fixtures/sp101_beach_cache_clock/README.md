@@ -1,0 +1,1 @@
+Synthetic fixtures for SP101-BEACH-CACHE-CLOCK. All source URLs use the reserved example.invalid domain; no operational data or network requests are involved. Test cases write independent JSON bytes under fresh temporary roots.
