@@ -210,7 +210,9 @@ def validate_inventory(plan):
         old = indexed.get(row['url'])
         if old and any(old.get(k) != row.get(k) for k in ('source', 'bytes', 'sha256', 'licence')):
             raise Invalid('Conflicting inventory identity')
-        indexed[row['url']] = row
+        merged = dict(row)
+        merged['segments'] = sorted(set(row['segments']) | set(old['segments'] if old else ()))
+        indexed[row['url']] = merged
     return indexed
 
 
@@ -299,8 +301,13 @@ def check(input_root, *, receipts='receipts', inventory='inventory.json',
                 set_gate('receipt_schema', 'PASS', 'PRODUCER_SHAPE')
                 covered = {r['url'] for r in records}
                 coverage = covered == set(indexed) and not plan.get('unresolved')
-                set_gate('inventory_coverage', 'PASS' if coverage else 'FAIL',
-                         'EXACT_INVENTORY_COVERAGE' if coverage else 'INVENTORY_COVERAGE_MISMATCH')
+                if not coverage:
+                    set_gate('inventory_coverage', 'FAIL', 'INVENTORY_COVERAGE_MISMATCH')
+                elif any(set(r['segments']) != set(indexed[r['url']]['segments'])
+                         or r['licence'] != indexed[r['url']]['licence'] for r in records):
+                    set_gate('inventory_coverage', 'FAIL', 'INVENTORY_METADATA_MISMATCH')
+                else:
+                    set_gate('inventory_coverage', 'PASS', 'EXACT_INVENTORY_COVERAGE')
                 hashes = all(r['url'] in indexed and sha(indexed[r['url']].get('sha256'))
                              and r['sha256'] == indexed[r['url']]['sha256'] for r in records)
                 sizes = all(r['url'] in indexed and indexed[r['url']].get('bytes') == r['bytes']
