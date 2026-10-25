@@ -78,6 +78,32 @@ def top_level(source):
     return names, imports
 
 
+RUNTIME_ROOTS = []
+
+
+def admitted_venv(shared):
+    """The repo interpreter is the manifest's shared venv, either linked as .venv or wrapped by
+    the operator's per-candidate overlay venv whose only path entries are this checkout and the
+    shared venv's own site-packages. Anything else is a staging mismatch for the staging owner."""
+    venv = REPO / ".venv"
+    prefix = Path(sys.prefix).resolve()
+    require(prefix == venv.resolve(), "admitted repo interpreter unavailable or mismatched")
+    if venv.is_symlink():
+        require(venv.resolve() == shared, "admitted repo interpreter unavailable or mismatched")
+        return "shared-venv-link"
+    version = "python%d.%d" % sys.version_info[:2]
+    site = venv / "lib" / version / "site-packages"
+    entries = sorted(p.name for p in site.iterdir())
+    require(entries == ["00-candidate-overlay.pth"], "overlay venv has unexpected site entries")
+    lines = (site / entries[0]).read_text().splitlines()
+    checkout = REPO / "src" if (REPO / "src").is_dir() else REPO
+    require([Path(x).resolve() for x in lines] == [checkout, shared / "lib" / version / "site-packages"],
+            "overlay venv paths differ from this checkout and the admitted shared venv")
+    config = (venv / "pyvenv.cfg").read_text()
+    require("include-system-site-packages = false" in config.splitlines(), "overlay venv exposes system site")
+    return "candidate-overlay-of-shared-venv"
+
+
 def preflight(manifest_path, suite):
     raw = manifest_path.read_bytes()
     manifest = json.loads(raw)
@@ -94,8 +120,9 @@ def preflight(manifest_path, suite):
     require(manifest["tree"] == initial["tree"] == git("rev-parse", base + "^{tree}").decode().strip(), "staged tree")
     require(sha(raw) == initial["manifest_sha256"] == spec["manifest_sha256"], "manifest changed")
     runtime = manifest["runtime"]
-    require(Path(runtime["repo_venv"]).resolve() == (REPO / ".venv").resolve() == Path(sys.prefix).resolve(),
-            "admitted repo interpreter unavailable or mismatched")
+    shared = Path(runtime["repo_venv"]).resolve()
+    venv_mode = admitted_venv(shared)
+    RUNTIME_ROOTS.append(shared)
     require(runtime["credential_scan_python3"] == spec["credential_scan_python3"], "scan interpreter mismatch")
     require(Path(runtime["credential_scan_python3"]).is_file(), "scan interpreter absent")
     require(manifest["inputs"] == [], "unexpected source inputs")
@@ -123,7 +150,7 @@ def preflight(manifest_path, suite):
     require(set(preservation["new_top_level"]) <= NEW_HELPERS, "unadmitted new product definitions")
     require(imports <= PRODUCT_IMPORTS, "unadmitted product import closure")
     return dict(head=head, base=base, initial_stage=initial, manifest_sha256=sha(raw),
-                acceptance_spec_sha256=sha(spec_path.read_bytes()), runtime=runtime,
+                acceptance_spec_sha256=sha(spec_path.read_bytes()), runtime=runtime, venv_mode=venv_mode,
                 tracked_status=git("status", "--porcelain", "--untracked-files=all").decode().splitlines(),
                 base_preservation=preservation,
                 declared_data_closure="No product data roots; main receives explicit synthetic --roots/--inputs/--out "
@@ -134,7 +161,7 @@ def preflight(manifest_path, suite):
 def install_guard(root):
     """Process-scoped audit guard for this runner only (not a hostile-code sandbox)."""
     root = root.resolve()
-    readable = [REPO, root] + [Path(p).resolve() for p in {sys.prefix, sys.base_prefix, sys.exec_prefix,
+    readable = [REPO, root] + RUNTIME_ROOTS + [Path(p).resolve() for p in {sys.prefix, sys.base_prefix, sys.exec_prefix,
                                                             sysconfig.get_path("stdlib"),
                                                             sysconfig.get_path("platstdlib")}]
     events = dict(writes=0, reads_outside_code=0, active=True)
@@ -328,7 +355,8 @@ def main():
     report["guard_events"] = guard
     report["skippercast_imported"] = any(m == "skippercast" or m.startswith("skippercast.") for m in sys.modules)
     report["sys_path_outside_repo_and_runtime"] = [p for p in sys.path if p and not any(
-        Path(p).resolve().is_relative_to(b) for b in (REPO, Path(sys.prefix).resolve(), Path(sys.base_prefix).resolve()))]
+        Path(p).resolve().is_relative_to(b) for b in (REPO, Path(sys.prefix).resolve(), Path(sys.base_prefix).resolve(),
+                                                      *RUNTIME_ROOTS))]
     report["loaded_runtime_code"] = sorted({str(Path(m.__file__).resolve()) for m in tuple(sys.modules.values())
                                             if getattr(m, "__file__", None) and not str(m.__file__).startswith("<")})
     report["fixture_sha256"] = sha((REPO / FIXTURE).read_bytes())
