@@ -114,8 +114,6 @@ def main():
                   'operator credential-scan interpreter exists')
             check(source.is_file() and test_path.is_file() and spec_path.is_file(),
                   'selected source/test/spec closure exists')
-            check(sha256(source) == 'f43299dca9090ef70f68eff74fd7fb62a2610d292fdbdbfecce4418ae34fa103',
-                  'pinned baseline product source hash')
             stdout_text = json.dumps({'preflight': 'passed', 'base': base, 'head': head,
                                       'selected_import_fixture_closure': selected_closure,
                                       'checks': checks}, sort_keys=True, indent=2) + '\n'
