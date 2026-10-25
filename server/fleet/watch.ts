@@ -69,7 +69,11 @@ export async function watchList(db: D1Database, region: string | undefined, curs
 
 const text = (v: unknown, max: number, re?: RegExp): boolean => typeof v === 'string' && v.length > 0 && v.length <= max && (!re || re.test(v));
 const oneOf = (values: readonly string[], v: unknown): boolean => typeof v === 'string' && values.includes(v);
-const iso = (v: unknown): boolean => typeof v === 'string' && ISO.test(v) && Number.isFinite(Date.parse(v));
+const iso = (v: unknown): boolean => {
+  if (typeof v !== 'string' || !ISO.test(v) || !Number.isFinite(Date.parse(v))) return false;
+  try { return new Date(v).toISOString() === v; }
+  catch { return false; }
+};
 
 /** One watch row with exactly its columns, or throws Invalid. */
 function checkRow(raw: unknown, i: number, region: string): Row {
