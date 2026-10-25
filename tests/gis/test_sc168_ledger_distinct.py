@@ -38,6 +38,18 @@ def snapshot(root):
             for p in root.rglob('*') if p.is_file() and not p.is_symlink()}
 
 
+def peer_environment():
+    # Pytest owns this phase indicator and changes it between setup/call/teardown.
+    return {key: value for key, value in os.environ.items() if key != 'PYTEST_CURRENT_TEST'}
+
+
+def discovery_parent():
+    if os.environ.get('CI'):
+        return Path(os.environ.get('TMPDIR') or os.environ.get('RUNNER_TEMP')
+                    or tempfile.gettempdir())
+    return ROOT.parent / 'out/discovery'
+
+
 def denied(*args, **kwargs):
     raise RuntimeError('SC168 offline boundary: network/model/child execution forbidden')
 
@@ -135,13 +147,12 @@ class LedgerDistinctTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        inherited = os.environ.get('TMPDIR') if os.environ.get('CI') else None
-        parent = cls.output_parent or (Path(inherited) if inherited else ROOT.parent / 'out/discovery')
+        parent = cls.output_parent or discovery_parent()
         parent.mkdir(parents=True, exist_ok=True)
         cls.run_root = Path(tempfile.mkdtemp(prefix='sc168-', dir=parent))
         cls.events, cls.control = [], {}
         cls.peer = (sys.path[:], sys.meta_path[:], sys.dont_write_bytecode,
-                    socket.socket.connect, subprocess.Popen, dict(os.environ))
+                    socket.socket.connect, subprocess.Popen, peer_environment())
         cls.context = offline(cls.run_root)
         try:
             cls.graph, cls.origins = cls.context.__enter__()
@@ -154,7 +165,7 @@ class LedgerDistinctTests(unittest.TestCase):
     def finish(cls):
         cls.context.__exit__(None, None, None)
         current = (sys.path[:], sys.meta_path[:], sys.dont_write_bytecode,
-                   socket.socket.connect, subprocess.Popen, dict(os.environ))
+                   socket.socket.connect, subprocess.Popen, peer_environment())
         if current != cls.peer:
             raise AssertionError('harmless peer observes leaked global state')
         (cls.run_root / 'discovery.json').write_text(json.dumps({
@@ -337,7 +348,29 @@ class LedgerDistinctTests(unittest.TestCase):
             with mock.patch.object(self.graph.ledger_module, '_same_ledger_destination', return_value=False):
                 pass
             self.assertIs(self.graph.ledger_module._same_ledger_destination, predicate)
-            self.assertEqual(dict(os.environ), self.peer[-1])
+            self.assertEqual(peer_environment(), self.peer[-1])
+            # Only pytest's owned phase key is ignored; other leaks still differ.
+            before = peer_environment()
+            with mock.patch.dict(os.environ, {'PYTEST_CURRENT_TEST': 'synthetic phase'}):
+                self.assertEqual(peer_environment(), before)
+            with mock.patch.dict(os.environ, {'SC168_SYNTHETIC_PEER': before.get('SC168_SYNTHETIC_PEER', '') + '-changed'}):
+                self.assertNotEqual(peer_environment(), before)
+            self.assertEqual(peer_environment(), before)
+            # Exercise every CI fallback without writing to a host temp location.
+            temp = self.run_root / 'synthetic-temp'
+            runner = self.run_root / 'synthetic-runner-temp'
+            inherited = self.run_root / 'synthetic-tmpdir'
+            with mock.patch.object(tempfile, 'gettempdir', return_value=str(temp)):
+                for env, expected in [
+                    ({'CI': 'true', 'TMPDIR': str(inherited), 'RUNNER_TEMP': str(runner)}, inherited),
+                    ({'CI': 'true', 'RUNNER_TEMP': str(runner)}, runner),
+                    ({'CI': 'true', 'TMPDIR': '', 'RUNNER_TEMP': ''}, temp),
+                    ({'CI': 'true'}, temp),
+                    ({'TMPDIR': str(inherited), 'RUNNER_TEMP': str(runner)}, ROOT.parent / 'out/discovery'),
+                ]:
+                    with mock.patch.dict(os.environ, env, clear=True):
+                        self.assertEqual(discovery_parent(), expected)
+            self.assertEqual(peer_environment(), before)
 
 
 if __name__ == '__main__':
