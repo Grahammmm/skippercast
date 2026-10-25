@@ -1,0 +1,26 @@
+{
+  "description": "SC172 small text fixtures: raw JSON spellings that a byte-bound multibeam preparation receipt must refuse. Every case is embedded by the unit test into an otherwise-valid receipt whose SHA256 is recomputed into the binding.",
+  "nonfinite_tokens": {
+    "nan": "NaN",
+    "infinity": "Infinity",
+    "negative-infinity": "-Infinity",
+    "overflow-1e999": "1e999",
+    "negative-overflow-1e999": "-1e999"
+  },
+  "top_level": {
+    "null": "null",
+    "empty-list": "[]",
+    "string": "\"private-multibeam-grid-parity\"",
+    "number": "0",
+    "true": "true",
+    "false": "false"
+  },
+  "malformed": {
+    "empty": "",
+    "truncated": "{\"scope\": ",
+    "trailing-comma": "{\"scope\": \"private-multibeam-grid-parity\",}",
+    "single-quotes": "{'scope': 'private-multibeam-grid-parity'}",
+    "unquoted-key": "{scope: 1}",
+    "trailing-garbage": "{} trailing"
+  }
+}
