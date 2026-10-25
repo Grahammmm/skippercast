@@ -38,7 +38,7 @@ MANIFEST_SCHEMA = 'agentorange.source-manifest/v1'
 # The operator full-suite interpreter lives beside the candidates directory.
 SCAN_PYTHON = CANDIDATE.parent.parent/'tools/venv-fullsuite/bin/python3'
 FIXTURE_DIR = REPO/'tests/fixtures/sc84-rollout-count'
-CHANGED = ('src/skippercast/seafloor/rollout.py', 'tests/unit/test_sc84_rollout_count.py',
+CHANGED = ('src/skippercast/seafloor/rollout.py', 'tests/gis/test_sc84_rollout_count.py',
            'tests/fixtures/sc84-rollout-count/fixture.json', 'tools/run_sc84_rollout_count.py')
 ORIGINAL_SELECTOR = ('tests.gis.test_seafloor_rollout.RolloutTests.'
                      'test_plan_uses_reviewed_windows_without_counting_envelopes_as_coverage')
@@ -341,7 +341,7 @@ def main():
               and rollout.plan.__defaults__[0] == synthetic, str(contracts.REPO))
         check(isolation, 'product imported from candidate src',
               Path(rollout.__file__).resolve() == (REPO/'src/skippercast/seafloor/rollout.py').resolve(), rollout.__file__)
-        from tests.unit import test_sc84_rollout_count as cases
+        from tests.gis import test_sc84_rollout_count as cases
         classes = dict(cases.ASSERTION_CLASSES)
         load = unittest.defaultTestLoader
 

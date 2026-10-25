@@ -20,8 +20,9 @@ from pyproj import Transformer
 from skippercast.platform.contracts import atomic_json
 from skippercast.seafloor import rollout
 from skippercast.seafloor.io import sha256
+from tests._support import FIXTURES
 
-FIXTURE = Path(__file__).resolve().parents[1]/'fixtures/sc84-rollout-count/fixture.json'
+FIXTURE = FIXTURES/'sc84-rollout-count/fixture.json'
 EVIDENCE = []
 
 # Assertion class per test method, reported by tools/run_sc84_rollout_count.py.
