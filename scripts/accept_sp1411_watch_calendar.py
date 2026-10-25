@@ -15,6 +15,7 @@ CANDIDATE = REPO.parent
 MANIFEST = CANDIDATE / 'SOURCE-MANIFEST.json'
 SPEC = 'SP-14-v1'
 CARD = 'SP1411-WATCH-CALENDAR'
+MATERIAL_AUTHOR = {'profile': 'luna-worker', 'model': 'gpt-6-luna', 'provider': 'openai-codex'}
 TEST = 'tests/test_sp1411_watch_calendar.mjs'
 ORIGINAL = 'tests/test_fleet_watch.mjs'
 
@@ -48,6 +49,7 @@ def run(argv, cwd, env, folder, label):
     (folder / 'node-version.stderr.txt').write_bytes(node_probe_stderr)
     receipt = {
         'spec': SPEC, 'card': CARD, 'phase': label,
+        'material_author': MATERIAL_AUTHOR,
         'argv': argv, 'cwd': str(cwd), 'exit': proc.returncode,
         'test_counts': counts,
         'test_names': [line[2:] for line in text.splitlines() if line.startswith('# Subtest: ')],

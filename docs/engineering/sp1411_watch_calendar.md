@@ -8,6 +8,6 @@ A2: `canonical timestamps, leap day, precision, ordering and replay remain compa
 
 A3: synthetic cases in `tests/fixtures/sp1411_watch_calendar/cases.json` cover February 29 non-leap year, February 30, April 31, month/day zero, 24-hour rollover, leap seconds, and timezone/precision forms that remain rejected.
 
-Compatibility delta: only `server/fleet/watch.ts` timestamp predicate changes. The original `tests/test_fleet_watch.mjs` is run unchanged by regression mode. Fixture data is synthetic and card-owned. No live source, external service, production database, AIS listener, or model is used.
+Compatibility delta: only `server/fleet/watch.ts` timestamp predicate changes. The original `tests/test_fleet_watch.mjs` is run unchanged by regression mode. Fixture data is synthetic and card-owned. No live source, external service, production database, AIS listener, or model is used. Material author: Luna worker, actual `gpt-6-luna` via `openai-codex` (per-task admission); sole reviewer: `sol-reviewer`, actual GPT-6.1 Sol high.
 
 Limitations: the focused and selected original tests are scoped evidence only. Repository checks, typechecks and build are distinct acceptance rows; the full repository matrix, required CI, semantic review, publication, and release remain owned by the operator. Machine-valid output is REVIEW REQUIRED and does not imply whole-repository or release acceptance.
