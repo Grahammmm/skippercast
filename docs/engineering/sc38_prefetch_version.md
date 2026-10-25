@@ -52,14 +52,33 @@ python3 research/scripts/accept_sc38_prefetch_version.py --suite negative --outp
   and `tests/contract/test_test_layout.py`.
 - `negative` runs `test_mutation_controls`.
 
-The runner disables bytecode writing. If the invoking interpreter lacks pytest,
-it re-executes once with the checkout's own `.venv/bin/python3` and records both
-interpreters. Before any product import, it points `HOME` and `TMPDIR` into a
-new write-once run directory and puts this checkout's `src/` first on
-`sys.path`. It also installs audit-hook sentinels for network,
+The runner disables bytecode writing and uses only the interpreter that invoked
+it. It never re-executes itself or picks another runtime. If that interpreter
+cannot import pytest, it writes an `INPUT_UNAVAILABLE` receipt and exits 3; the
+staging owner supplies a qualified runtime.
+
+Before any product import or test collection, it points `HOME` and `TMPDIR`
+into a new write-once run directory and drops `SKIPPERCAST_ROOT`,
+`SKIPPERCAST_HTTP_CACHE` and `SKIPPERCAST_NETWORK`. It puts this checkout's
+`src/` first on `sys.path` and installs audit-hook sentinels for network,
 subprocess/exec, model-client imports and writes outside the run directory.
-It then checks that the `Path.home()`-derived prefetch constants landed inside
-that directory.
+
+`prefetch.py` hard-codes `MOUNT = Path('/mnt/agentorange-backup')`, and
+`Prefetch.__init__` binds `MOUNT`, `RAW`, `MIRROR` and `STATUS` as keyword
+defaults when the module runs. Late monkeypatching cannot undo that capture.
+So the runner executes the genuine `prefetch.py` itself, before collection,
+with one test-only path substitution: that single `MOUNT` line points at
+`<run_dir>/mount`. Nothing else changes. The receipt records the genuine and
+staged source hashes and the one changed line. The code object keeps the real
+file name, so `inspect` still reads the genuine file. The runner then checks
+that every module path constant, every bound path default, `Path.home()` (the
+`lock_dir` default) and the temp directory are inside the run directory.
+
+It also installs guards before collection, for every suite. Constructing
+`Prefetch`, constructing `TransferSession` without an injected resolver and
+connection factory, and calling prefetch's `default_allowlist` each record a
+violation and raise. Each guard is probed once and must refuse. pytest does not
+start unless all of these checks pass.
 
 Each run writes `receipt.json`, `stdout.txt` and `stderr.txt`. The receipt
 records argv, cwd, interpreter, package versions, source and fixture hashes,

@@ -3,21 +3,32 @@
     python3 research/scripts/accept_sc38_prefetch_version.py --suite focused|contract|negative --output DIR
 
 Runs literal pytest selectors through the installed pytest API, in this staged
-checkout only. Bytecode writing is disabled first. If the invoking interpreter
-has no pytest, the runner re-executes itself once with this checkout's own
-``.venv/bin/python3`` (the staged repository runtime) and records both
-interpreters; with neither it writes an INPUT_UNAVAILABLE receipt and exits 3.
+checkout only. Bytecode writing is disabled first. The runner uses only the
+interpreter that invoked it; it never re-executes itself or selects another
+runtime. If that interpreter cannot import pytest it writes an
+INPUT_UNAVAILABLE receipt and exits 3 (the staging owner supplies the runtime).
 
 Before any product import or test collection it creates a new write-once run
 directory under DIR, points HOME and TMPDIR into it (prefetch derives MIRROR,
-RETRY_STATE and STATUS from Path.home() at import), puts this checkout's src/
-first on sys.path (dropping any other skippercast source path, such as an
-editable install of another checkout) and installs audit-hook sentinels for
-network, subprocess/exec, model-client imports and writes outside the run
-directory. It then imports prefetch and checks those path constants landed in
-the run directory (the fresh-process import boundary). Tests additionally
-redirect MOUNT/RAW and the Prefetch bound defaults and refuse every transfer
-constructor themselves.
+RETRY_STATE and STATUS from Path.home() at import), drops SKIPPERCAST_ROOT,
+SKIPPERCAST_HTTP_CACHE and SKIPPERCAST_NETWORK, puts this checkout's src/ first
+on sys.path (dropping any other skippercast source path) and installs
+audit-hook sentinels for network, subprocess/exec, model-client imports and
+writes outside the run directory.
+
+prefetch hard-codes ``MOUNT = Path('/mnt/agentorange-backup')`` and binds MOUNT,
+RAW, MIRROR and STATUS into ``Prefetch.__init__`` keyword defaults when the
+module executes. So, still before collection, the runner executes the genuine
+prefetch.py itself with one documented test-only path substitution: that single
+MOUNT line points at <run_dir>/mount. No other byte changes (the receipt records
+both source hashes and the one changed line); the code object keeps the real
+file name, so inspect/linecache still read the genuine file. It then verifies
+that every module path constant, every bound path default, Path.home() (the
+lock_dir default) and the temp directory are inside the run directory, and
+installs operational guards that record a violation and raise: constructing
+Prefetch, constructing TransferSession without an injected resolver and
+connection factory, and prefetch's default_allowlist. Tests that need their
+own refusals still install them; the runner's guards apply to every suite.
 
 Each run writes DIR/<utc>-<pid>-<token>/{receipt.json,stdout.txt,stderr.txt}.
 Exit 0 only when pytest exits 0, the collected node IDs equal the frozen list
@@ -43,9 +54,14 @@ from pathlib import Path  # noqa: E402
 
 SCRIPT = Path(__file__).resolve()
 REPO = SCRIPT.parents[2]
-REPO_PYTHON = REPO / '.venv' / 'bin' / 'python3'
-REEXEC_MARK = 'SC38_ACCEPT_INVOKED_BY'
-SCHEMA = 'sc38-prefetch-version-acceptance-v1'
+SCHEMA = 'sc38-prefetch-version-acceptance-v2'
+PREFETCH_MODULE = 'skippercast.coastal.prefetch'
+PREFETCH_REL = 'src/skippercast/coastal/prefetch.py'
+# The only line the test-only staging substitutes (path plumbing, not logic).
+MOUNT_LINE = "MOUNT = Path('/mnt/agentorange-backup')"
+PATH_CONSTANTS = ('MOUNT', 'RAW', 'MIRROR', 'RETRY_STATE', 'STATUS')
+BOUND_PATH_DEFAULTS = ('root', 'mirror', 'status', 'mount')
+SCRUBBED_ENV = ('SKIPPERCAST_ROOT', 'SKIPPERCAST_HTTP_CACHE', 'SKIPPERCAST_NETWORK')
 
 NEW = 'tests/unit/test_sc38_prefetch_version.py'
 OLD = 'tests/unit/test_coast_prefetch.py'
@@ -290,16 +306,126 @@ class Recorder:
                                   longrepr=str(report.longrepr) if report.failed else '')
 
 
-def import_boundary(run_dir):
-    """Fresh-process check: prefetch's Path.home()-derived constants land in the run directory."""
-    from skippercast.coastal import prefetch
-    home = run_dir / 'home'
-    derived = {name: str(getattr(prefetch, name)) for name in ('MIRROR', 'RETRY_STATE', 'STATUS')}
-    fixed = {name: str(getattr(prefetch, name)) for name in ('MOUNT', 'RAW')}
-    ok = (prefetch.__file__ == str(REPO / 'src/skippercast/coastal/prefetch.py')
-          and all(value.startswith(str(home) + os.sep) for value in derived.values()))
-    return dict(ok=ok, module=prefetch.__file__, home=str(home), home_derived=derived,
-                fixed_constants_redirected_by_test_fixture=fixed)
+class StagingRefused(Exception):
+    """The genuine prefetch source could not be staged safely; nothing was imported."""
+
+
+def stage_prefetch(run_dir):
+    """Execute the genuine prefetch.py with only its MOUNT line pointed into the run directory.
+
+    Must run before anything imports prefetch. Returns (module, evidence).
+    """
+    import importlib
+    import importlib.util
+    if PREFETCH_MODULE in sys.modules:
+        raise StagingRefused(f'{PREFETCH_MODULE} was imported before staging')
+    path = REPO / PREFETCH_REL
+    data = path.read_bytes()
+    source = data.decode('utf-8')
+    lines = source.splitlines(keepends=True)
+    hits = [i for i, line in enumerate(lines) if line.rstrip('\n') == MOUNT_LINE]
+    if len(hits) != 1:
+        raise StagingRefused(f'expected exactly one {MOUNT_LINE!r} line, found {len(hits)}')
+    mount = run_dir / 'mount'
+    replacement = f'MOUNT = Path({str(mount)!r})\n'
+    staged_lines = list(lines)
+    staged_lines[hits[0]] = replacement
+    staged = ''.join(staged_lines)
+    changed = [dict(line=i + 1, genuine=a.rstrip('\n'), staged=b.rstrip('\n'))
+               for i, (a, b) in enumerate(zip(lines, staged_lines)) if a != b]
+    if len(changed) != 1 or len(staged_lines) != len(lines):
+        raise StagingRefused('staging changed more than the MOUNT line')
+    importlib.import_module('skippercast.coastal')  # package __init__ only (docstring)
+    spec = importlib.util.spec_from_file_location(PREFETCH_MODULE, path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[PREFETCH_MODULE] = module
+    try:
+        # dont_inherit: only the file's own future imports apply, as in a normal import.
+        exec(compile(staged, str(path), 'exec', dont_inherit=True), module.__dict__)
+    except BaseException:
+        sys.modules.pop(PREFETCH_MODULE, None)
+        raise
+    setattr(sys.modules['skippercast.coastal'], 'prefetch', module)
+    evidence = dict(kind='test-only path substitution before module execution (path plumbing only)',
+                    module=module.__file__, genuine_sha256=hashlib.sha256(data).hexdigest(),
+                    staged_sha256=hashlib.sha256(staged.encode('utf-8')).hexdigest(),
+                    changed_lines=changed, line_count=len(lines))
+    return module, evidence
+
+
+def inside(path, run_dir):
+    return (os.path.normpath(os.path.abspath(os.fspath(path))) + os.sep).startswith(str(run_dir) + os.sep)
+
+
+def install_operational_guards(prefetch, violations):
+    """Record and refuse operational constructors before collection, in every suite."""
+    def refused(kind):
+        violations.append(dict(event=kind, detail='operational path reached'))
+        raise RuntimeError('sentinel: ' + kind)
+
+    prefetch_init = prefetch.Prefetch.__init__
+
+    def prefetch_guard(self, *args, **kwargs):
+        refused('Prefetch-constructor')
+    # Keep the (already redirected) bound defaults visible to tests that inspect them.
+    prefetch_guard.__kwdefaults__ = dict(prefetch_init.__kwdefaults__)
+    prefetch.Prefetch.__init__ = prefetch_guard
+
+    transfer_init = prefetch.TransferSession.__init__
+
+    def transfer_guard(self, *args, **kwargs):
+        # Only inert test helpers: an injected resolver and connection factory.
+        if not (callable(kwargs.get('resolver')) and callable(kwargs.get('connection_factory'))):
+            refused('TransferSession-without-injected-transport')
+        return transfer_init(self, *args, **kwargs)
+    prefetch.TransferSession.__init__ = transfer_guard
+
+    def allowlist_guard(*args, **kwargs):
+        refused('prefetch-default_allowlist')
+    prefetch.default_allowlist = allowlist_guard
+    return dict(Prefetch_init=prefetch.Prefetch.__init__ is prefetch_guard,
+                TransferSession_init=prefetch.TransferSession.__init__ is transfer_guard,
+                default_allowlist=prefetch.default_allowlist is allowlist_guard)
+
+
+def import_boundary(run_dir, violations):
+    """Fresh-process, pre-collection boundary: stage prefetch, verify every path, install guards."""
+    import pathlib
+    prefetch, staging = stage_prefetch(run_dir)
+    constants = {name: str(getattr(prefetch, name)) for name in PATH_CONSTANTS}
+    kwdefaults = prefetch.Prefetch.__init__.__kwdefaults__ or {}
+    bound = {name: str(kwdefaults.get(name)) for name in BOUND_PATH_DEFAULTS}
+    runtime = dict(path_home=str(pathlib.Path.home()), tempdir=tempfile.gettempdir(),
+                   lock_dir_default=str(pathlib.Path.home() / '.cache/skippercast/coast-prefetch'))
+    env = {name: os.environ.get(name) for name in SCRUBBED_ENV}
+    guards = install_operational_guards(prefetch, violations)
+    # Probe each guard once: it must raise and record. Probe records are moved to the receipt.
+    probes, mark = {}, len(violations)
+    for name, call in (('Prefetch', lambda: prefetch.Prefetch({}, None)),
+                       ('TransferSession', lambda: prefetch.TransferSession()),
+                       ('default_allowlist', lambda: prefetch.default_allowlist())):
+        try:
+            call()
+            probes[name] = 'NOT REFUSED'
+        except RuntimeError as error:
+            probes[name] = str(error)
+    probe_records = violations[mark:]
+    del violations[mark:]
+    checks = dict(
+        module_is_this_checkout=prefetch.__file__ == str(REPO / PREFETCH_REL),
+        single_mount_line_substituted=len(staging['changed_lines']) == 1,
+        genuine_source_matches_receipt_hash=staging['genuine_sha256'] == sha256_file(REPO / PREFETCH_REL),
+        constants_inside_run_dir=all(inside(v, run_dir) for v in constants.values()),
+        bound_defaults_inside_run_dir=bool(kwdefaults) and all(inside(v, run_dir) for v in bound.values()),
+        runtime_defaults_inside_run_dir=all(inside(v, run_dir) for v in runtime.values()),
+        scrubbed_environment=all(v is None for v in env.values()),
+        guards_installed_before_collection=all(guards.values()),
+        guards_refuse_and_record=(all(v.startswith('sentinel: ') for v in probes.values())
+                                  and len(probe_records) == 3),
+    )
+    return dict(ok=all(checks.values()), checks=checks, run_dir=str(run_dir), staging=staging,
+                path_constants=constants, bound_path_defaults=bound, runtime_defaults=runtime,
+                scrubbed_environment=env, guards=guards, guard_probes=probes, guard_probe_records=probe_records)
 
 
 def package_versions():
@@ -324,9 +450,6 @@ def main(argv=None):
         have_pytest = True
     except ImportError:
         have_pytest = False
-    if not have_pytest and not os.environ.get(REEXEC_MARK) and os.access(REPO_PYTHON, os.X_OK):
-        env = dict(os.environ, **{REEXEC_MARK: sys.executable})
-        os.execve(str(REPO_PYTHON), [str(REPO_PYTHON), str(SCRIPT), *sys.argv[1:]], env)
 
     started = utc()
     try:
@@ -337,9 +460,8 @@ def main(argv=None):
     head, ref = git_head()
     receipt = dict(schema=SCHEMA, suite=args.suite, argv=list(sys.argv), cwd=os.getcwd(), started_utc=started,
                    run_dir=str(run_dir), repo=str(REPO), git_head_file_read=head, git_ref=ref,
-                   python=dict(executable=sys.executable, version=sys.version,
-                               invoked_by=os.environ.get(REEXEC_MARK) or sys.executable,
-                               reexecuted=bool(os.environ.get(REEXEC_MARK))),
+                   python=dict(executable=sys.executable, version=sys.version, prefix=sys.prefix,
+                               runtime_selection='invoking interpreter only; no re-exec or fallback'),
                    code_hashes={rel: sha256_file(REPO / rel) for rel in HASHED},
                    fixture_hashes={f.name: sha256_file(f) for f in sorted((REPO / FIXTURE_DIR).glob('*'))},
                    selectors=SELECTORS[args.suite], expected_ids=EXPECTED[args.suite],
@@ -348,17 +470,20 @@ def main(argv=None):
                          'acceptance; full discovery = operator-run')
     if not have_pytest:
         receipt.update(result='INPUT_UNAVAILABLE', exit_code=3, finished_utc=utc(),
-                       detail='pytest is not importable by the invoking interpreter or the staged .venv')
+                       detail='pytest is not importable by the invoking interpreter; the runner does not '
+                              'select another runtime. The staging owner must supply a qualified runtime.')
         write_once(run_fd, 'receipt.json', (json.dumps(receipt, sort_keys=True, indent=2) + '\n').encode())
         os.close(run_fd)
-        print('INPUT_UNAVAILABLE: pytest not importable; receipt ' + str(run_dir / 'receipt.json'), file=sys.stderr)
+        print(f'INPUT_UNAVAILABLE: pytest not importable by {sys.executable}; receipt '
+              + str(run_dir / 'receipt.json'), file=sys.stderr)
         return 3
 
-    # Redirect HOME/TMPDIR and the import path BEFORE any product import or collection.
+    # Redirect HOME/TMPDIR, scrub path/cache env and fix the import path BEFORE any product import.
     os.environ['HOME'] = str(run_dir / 'home')
     os.environ['TMPDIR'] = str(run_dir / 'tmp')
     tempfile.tempdir = str(run_dir / 'tmp')
-    os.environ.pop('SKIPPERCAST_NETWORK', None)
+    for name in SCRUBBED_ENV:
+        os.environ.pop(name, None)
     receipt['sys_path_removed'] = isolate_import_path()
     violations = []
     install_sentinels(run_dir, violations)
@@ -371,8 +496,13 @@ def main(argv=None):
     with contextlib.redirect_stdout(out_tee), contextlib.redirect_stderr(err_tee):
         print(f'[{utc()}] suite={args.suite} run_dir={run_dir} python={sys.executable}')
         try:
-            boundary = import_boundary(run_dir)
-            print(f"BOUNDARY ok={boundary['ok']} {boundary['home_derived']}")
+            boundary = import_boundary(run_dir, violations)
+            print(f"BOUNDARY ok={boundary['ok']} checks={boundary['checks']}")
+            print(f"BOUNDARY path_constants={boundary['path_constants']}")
+            print(f"BOUNDARY bound_path_defaults={boundary['bound_path_defaults']}")
+            print(f"BOUNDARY staging_changed_lines={boundary['staging']['changed_lines']}")
+            if not boundary['ok']:
+                raise StagingRefused('pre-collection boundary failed; pytest not started')
             pytest_args = ['-c', str(REPO / 'pyproject.toml'), '--rootdir', str(REPO), '-p', 'no:cacheprovider',
                            '--basetemp', str(run_dir / 'pytest-tmp'), '--capture=sys', '-v', '-rA',
                            *[str(REPO / s.split('::', 1)[0]) + ('::' + s.split('::', 1)[1] if '::' in s else '')
