@@ -20,14 +20,14 @@ from unittest.mock import patch
 import pytest
 
 from skippercast.coastal import cached_inventory as ci
-from tests._support import FIXTURES
+from tests._support import FIXTURES, ROOT
 
 VECTORS = json.loads((FIXTURES / "sc_cache_clock" / "vectors.json").read_text(encoding="utf-8"))
 GROUPS = VECTORS["equivalent_instants"]
 INVALID = [(kind, text) for kind in ("naive", "date_only", "incomplete", "out_of_range",
                                      "invalid_offset", "malformed") for text in VECTORS[kind]]
 AWARE_STRINGS = [text for group in GROUPS for text in group["strings"]]
-RUNNER_PATH = Path(__file__).resolve().parents[2] / "scripts" / "accept_sc_cache_clock.py"
+RUNNER_PATH = ROOT / "scripts" / "accept_sc_cache_clock.py"
 
 
 def base_parse(text):
