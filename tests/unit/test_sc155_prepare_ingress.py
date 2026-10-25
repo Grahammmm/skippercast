@@ -31,17 +31,27 @@ SCRIPT_MODULES = ("prepare_round", "review_common", "coast_refs", "coast_sample"
                   "coast_receipt_versions", "validate_coast_receipt", "coast_ledger", "tests.coast_contract_factory")
 REQUIRED = ("test_positive_contract", "test_rejects_malformed", "test_baseline_compatibility",
             "test_isolation_and_discovery", "test_deciding_negative_control")
-POSITIVE_CASES = ("tiny", "limit_minus_one", "limit_exact")
+POSITIVE_CASES = ("tiny", "limit_minus_one", "limit_exact", "ancestor_churn")
 MALFORMED_CASES = ("limit_plus_one", "oversize_modeled", "directory", "symlink_component_0", "symlink_component_1",
                    "symlink_component_2", "fifo_modeled", "char_device_modeled", "block_device_modeled",
                    "socket_modeled", "growth_metadata", "growth_read", "shrink_read", "replacement_real",
-                   "missing_leaf", "missing_intermediate")
+                   "missing_leaf", "missing_intermediate", "ancestor_dir_replaced_top", "ancestor_dir_replaced_mid",
+                   "ancestor_symlink_replaced_top", "ancestor_symlink_replaced_mid")
+COMPATIBILITY_CASES = ("limit_and_decoder_identity", "factory_vocabulary_and_schema", "exact_bytes",
+                       "unavailable_file_oserror_and_finish", "roots_policy_runs_first_unchanged",
+                       "argument_policy_unchanged")
+# A3 deciding mutants: (disabled seam, refusal case fed through the same check_refusal assertion).
+MUTANT_PLAN = (("unbounded_reader", "oversize_modeled"), ("identity_disabled", "growth_metadata"),
+               ("identity_disabled", "replacement_real"), ("ancestry_disabled", "ancestor_dir_replaced_mid"),
+               ("ancestry_disabled", "ancestor_symlink_replaced_top"))
+PRODUCT_MODULES = ("prepare_round", "review_common", "coast_refs")
 EXPECTED_LIMIT = 32 * 1024 * 1024
 UNBOUNDED = 1 << 62
 LARGE = 1024 * 1024
 ROOT_ID = "queue:synthetic"
 RUN_ROOT = None  # set by tools/run_sc155_prepare_ingress.py to its exclusive invocation root
 RECORDS = []
+ORIGINS = []  # actual product module origins, captured while the fixture-scoped real modules are loaded
 _MISSING = object()
 
 
@@ -92,6 +102,15 @@ def fd_is_open(fd):
     except OSError:
         return False
     return True
+
+
+def moved(before, old, new, extra):
+    """Expected snapshot after a case's own rename of ``old`` to ``new`` plus its replacement entries."""
+    after = {}
+    for key, value in before.items():
+        after[new + key[len(old):] if key == old or key.startswith(old + "/") else key] = value
+    after.update(extra)
+    return after
 
 
 class PrepareReached(Exception):
@@ -195,6 +214,13 @@ class PrepareIngressTests(unittest.TestCase):
         self.refs = sys.modules["coast_refs"]
         self.fx = load_file("sc155_constructors", CONSTRUCTORS, register=False)
         self.limit = self.common.LIMIT
+        origins = {}
+        for name in PRODUCT_MODULES:
+            origin = Path(sys.modules[name].__file__).resolve()
+            self.assertTrue(origin.is_relative_to(REPO.resolve()), "product module outside staged checkout: " + name)
+            origins[name] = dict(file=str(origin), sha256=digest(origin.read_bytes()))
+        self.assertEqual(origins["prepare_round"]["file"], str(PRODUCT.resolve()))
+        ORIGINS.append(dict(test=self.id(), modules=origins))
 
     # ----- fixture construction -------------------------------------------------
     def new_case(self, name):
@@ -243,6 +269,7 @@ class PrepareIngressTests(unittest.TestCase):
         case = self.new_case(name)
         value = self.fx.prepare_inputs()
         raw = {"tiny": lambda: self.fx.encode(value),
+               "ancestor_churn": lambda: self.fx.encode(value),
                "limit_minus_one": lambda: self.fx.padded(value, self.limit - 1),
                "limit_exact": lambda: self.fx.padded(value, self.limit)}[name]()
         inputs = self.put(case.dir / "top/mid/inputs.json", raw)
@@ -330,6 +357,39 @@ class PrepareIngressTests(unittest.TestCase):
         elif name == "missing_intermediate":
             (case.dir / "top").mkdir(parents=True)
             expect = dict(kind="oserror", reason=None, pre_read=True)
+        elif name.startswith("ancestor_"):
+            # A real ancestor directory (top or top/mid) is renamed away mid-read and its old
+            # name replaced by an ordinary directory holding identical bytes, or by a symlink to
+            # the moved original. The held descriptors still see the original file unchanged.
+            self.put(inputs, tiny)
+            old = "top" if name.endswith("_top") else "top/mid"
+            new = old + "-moved"
+            symlink = "_symlink_" in name
+            state = {"first": True}
+
+            def swap(fd, size):
+                if state["first"]:
+                    state["first"] = False
+                    os.rename(case.dir / old, case.dir / new)
+                    if symlink:
+                        os.symlink(Path(new).name, case.dir / old)
+                    else:
+                        (case.dir / old).mkdir()
+                        if old == "top":
+                            (case.dir / "top/mid").mkdir()
+                        (case.dir / "top/mid/inputs.json").write_bytes(tiny)
+                return os.read(fd, min(size, LARGE))
+            view.read_hook = swap
+            expect = dict(kind="value", reason="parent directory was replaced", pre_read=False)
+
+            def transform(before):
+                if symlink:
+                    extra = {old: ("link", Path(new).name)}
+                else:
+                    extra = {"top/mid": ("dir",), "top/mid/inputs.json": before["top/mid/inputs.json"]}
+                    if old == "top":
+                        extra["top"] = ("dir",)
+                return moved(before, old, new, extra)
         else:
             raise KeyError(name)
         return case, inputs, view, expect, transform
@@ -372,6 +432,24 @@ class PrepareIngressTests(unittest.TestCase):
     def check_accept(self, name, label="real"):
         case, inputs, raw, value = self.build_positive(name)
         view = OsView("inputs.json")
+        transform = None
+        if name == "ancestor_churn":
+            # Healthy control for the ancestry predicate: unrelated entries appear in every held
+            # ancestor mid-read (their mtimes change, their identities do not); input must pass.
+            state = {"first": True}
+
+            def churn(fd, size):
+                if state["first"]:
+                    state["first"] = False
+                    (case.dir / "churn-dir").mkdir()
+                    (case.dir / "top/churn-dir").mkdir()
+                    (case.dir / "top/mid/churn.txt").write_bytes(b"churn\n")
+                return os.read(fd, min(size, LARGE))
+            view.read_hook = churn
+
+            def transform(before):
+                return dict(before, **{"churn-dir": ("dir",), "top/churn-dir": ("dir",),
+                                       "top/mid/churn.txt": ("file", digest(b"churn\n"))})
         before = snapshot(case.dir)
         outcome, error, calls, still_open = self.run_main(case, inputs, view)
         after = snapshot(case.dir)
@@ -388,10 +466,10 @@ class PrepareIngressTests(unittest.TestCase):
         self.assertLessEqual(sum(view.requests), self.limit + 1)
         self.assertEqual(still_open, [])
         self.assertEqual(sorted(view.opened), sorted(view.closed))
-        self.assertEqual(after, before, "acceptance created or changed files")
+        self.assertEqual(after, transform(before) if transform else before, "acceptance created or changed files")
         self.assertFalse(case.out.exists())
         self.assertEqual(len(raw), {"tiny": len(self.fx.encode(value)), "limit_minus_one": self.limit - 1,
-                                    "limit_exact": self.limit}[name])
+                                    "limit_exact": self.limit, "ancestor_churn": len(self.fx.encode(value))}[name])
 
     # ----- A1 ------------------------------------------------------------------
     def test_positive_contract(self):
@@ -494,26 +572,158 @@ class PrepareIngressTests(unittest.TestCase):
     # ----- A3 ------------------------------------------------------------------
     def test_deciding_negative_control(self):
         detected = {}
-        # Mutant 1: only the input reader routed through an unbounded adapter (spied, never large).
-        with mock.patch.object(self.product, "_read_inputs", functools.partial(unbounded_reader, self.product)):
-            with self.assertRaises(AssertionError) as caught:
-                self.check_refusal("oversize_modeled", label="mutant-unbounded")
-        message = str(caught.exception)
-        self.assertIn("payload read requested before metadata refusal", message)
-        self.assertEqual(RECORDS[-1]["requests"][:1], [UNBOUNDED])
-        detected["unbounded_reader"] = message
-        self.check_refusal("oversize_modeled", label="restored")
-        # Mutant 2: identity predicate disabled; changed descriptor/name must be detected.
-        for name in ("growth_metadata", "replacement_real"):
-            with mock.patch.object(self.product, "_stable", lambda before, after, named: True):
+        seams = {"unbounded_reader": ("_read_inputs", functools.partial(unbounded_reader, self.product),
+                                      "payload read requested before metadata refusal"),
+                 "identity_disabled": ("_stable", lambda before, after, named: True, "refused input reached prepare"),
+                 "ancestry_disabled": ("_intact", lambda chain, names: True, "refused input reached prepare")}
+        for seam, name in MUTANT_PLAN:
+            attribute, broken, expected = seams[seam]
+            # Only this one seam is broken; every unrelated prerequisite of the case stays valid.
+            with mock.patch.object(self.product, attribute, broken):
                 with self.assertRaises(AssertionError) as caught:
-                    self.check_refusal(name, label="mutant-identity-disabled")
+                    self.check_refusal(name, label="mutant-" + seam.replace("_", "-"))
             message = str(caught.exception)
-            self.assertIn("refused input reached prepare", message)
-            self.assertLessEqual(RECORDS[-1]["request_total"], self.limit + 1)
-            detected["identity_disabled:" + name] = message
+            self.assertIn(expected, message)
+            if seam == "unbounded_reader":
+                self.assertEqual(RECORDS[-1]["requests"][:1], [UNBOUNDED])
+            else:
+                self.assertEqual(RECORDS[-1]["outcome"], "prepare")
+                self.assertLessEqual(RECORDS[-1]["request_total"], self.limit + 1)
+            detected[seam + ":" + name] = message
+            # Real path restored: the same deciding assertion now passes on a fresh case.
             self.check_refusal(name, label="restored")
-        # Healthy finite positive with the real reader restored.
-        self.assertIsNot(self.product._read_inputs, None)
+        # Healthy finite positives with the real reader restored.
         self.check_accept("tiny", label="restored-positive")
+        self.check_accept("ancestor_churn", label="restored-positive")
         RECORDS.append(dict(test=self.id(), case="negative-control-summary", detected=detected))
+
+
+# ----- A4 ordinary-discovery execution evidence ---------------------------------
+def required_subtests():
+    return ({("test_positive_contract", case) for case in POSITIVE_CASES} |
+            {("test_rejects_malformed", case) for case in MALFORMED_CASES} |
+            {("test_baseline_compatibility", case) for case in COMPATIBILITY_CASES})
+
+
+def execution_problems(executed, subtests, skips, failures, errors, origins):
+    """Fail-closed completeness check over what one invocation actually executed."""
+    problems = []
+    names = [test_id.rsplit(".", 1)[-1] for test_id in executed]
+    if sorted(names) != sorted(REQUIRED):
+        problems.append("executed methods differ from required: " + repr(sorted(names)))
+    if skips:
+        problems.append("required tests skipped: " + repr(skips))
+    if failures or errors:
+        problems.append("failures/errors: " + repr(failures + errors))
+    seen = {}
+    for item in subtests:
+        seen.setdefault((item["method"], item["params"].get("case")), []).append(item["outcome"])
+    for key in sorted(required_subtests()):
+        if seen.get(key) != ["pass"]:
+            problems.append("required subtest missing or not passed once: %s/%s %r" % (key[0], key[1], seen.get(key)))
+    for name in REQUIRED:
+        loaded = [o for o in origins if o["test"].rsplit(".", 1)[-1] == name]
+        if not loaded or any(set(o["modules"]) != set(PRODUCT_MODULES) for o in loaded):
+            problems.append("product origins not captured for " + name)
+    return problems
+
+
+def git_head():
+    """Read the checkout HEAD from repository files (no child process)."""
+    git = REPO / ".git"
+    try:
+        if git.is_file():
+            text = git.read_text().strip()
+            git = (REPO / text.split(":", 1)[1].strip()).resolve()
+        head = (git / "HEAD").read_text().strip()
+        if not head.startswith("ref:"):
+            return head
+        ref = head[4:].strip()
+        if (git / ref).is_file():
+            return (git / ref).read_text().strip()
+        for line in (git / "packed-refs").read_text().splitlines():
+            if line.endswith(" " + ref):
+                return line.split(" ", 1)[0]
+    except (OSError, IndexError):
+        return None
+    return None
+
+
+class EvidenceSuite(unittest.TestSuite):
+    """Ordinary-discovery wrapper (load_tests protocol): records this invocation's executed IDs,
+    subtest outcomes, skips/failures/errors and product origins on the live result object through
+    instance attributes that are removed again after the run, then writes one receipt."""
+
+    HOOKS = ("startTest", "addSubTest", "addSkip", "addFailure", "addError", "addUnexpectedSuccess")
+
+    def run(self, result, debug=False):
+        executed, subtests, skips, failures, errors = [], [], [], [], []
+        first_origin, first_record = len(ORIGINS), len(RECORDS)
+        saved = {name: result.__dict__.get(name, _MISSING) for name in self.HOOKS}
+        original = {name: getattr(result, name) for name in self.HOOKS}
+
+        def start(test):
+            executed.append(test.id())
+            original["startTest"](test)
+
+        def sub(test, subtest, err):
+            outcome = "pass" if err is None else ("fail" if issubclass(err[0], test.failureException) else "error")
+            subtests.append(dict(id=subtest.id(), method=test._testMethodName, params=dict(subtest.params),
+                                 outcome=outcome))
+            original["addSubTest"](test, subtest, err)
+
+        def note(bucket, name):
+            def hook(test, *args):
+                bucket.append(dict(id=test.id(), detail=str(args[0])[:2000] if args else None))
+                original[name](test, *args)
+            return hook
+
+        hooks = dict(startTest=start, addSubTest=sub, addSkip=note(skips, "addSkip"),
+                     addFailure=note(failures, "addFailure"), addError=note(errors, "addError"),
+                     addUnexpectedSuccess=note(failures, "addUnexpectedSuccess"))
+        for name, hook in hooks.items():
+            setattr(result, name, hook)
+        try:
+            super().run(result, debug)
+        finally:
+            for name, value in saved.items():
+                if value is _MISSING:
+                    result.__dict__.pop(name, None)
+                else:
+                    result.__dict__[name] = value
+        origins, records = ORIGINS[first_origin:], RECORDS[first_record:]
+        problems = execution_problems(executed, subtests, skips, failures, errors, origins)
+        spec = REPO.parent / "ACCEPTANCE-SPEC.json"
+        sources = (PRODUCT, COMMON, CONSTRUCTORS, Path(__file__).resolve(), REPO / "tools/run_sc155_prepare_ingress.py")
+        receipt = dict(
+            schema="sc155-discovery-receipt/v1", argv=list(sys.argv), orig_argv=list(getattr(sys, "orig_argv", [])),
+            cwd=os.getcwd(), interpreter=sys.executable, prefix=sys.prefix, python=sys.version, head=git_head(),
+            spec_sha256=digest(spec.read_bytes()) if spec.is_file() else None,
+            source_hashes={p.relative_to(REPO).as_posix(): digest(p.read_bytes()) for p in sources if p.is_file()},
+            executed_ids=executed, count=len(executed), subtests=subtests, subtest_count=len(subtests),
+            required_subtest_count=len(required_subtests()), skips=skips, failures=failures, errors=errors,
+            product_origins=origins, cases=records, problems=problems, complete=not problems)
+        directory = Path(tempfile.mkdtemp(prefix="discovery-receipt-", dir=case_parent()))
+        raw = json.dumps(receipt, indent=2, default=str).encode() + b"\n"
+        (directory / "receipt.json").write_bytes(raw)
+        sys.stderr.write("\nSC155-DISCOVERY-RECEIPT %s %s\n" % (directory / "receipt.json", digest(raw)))
+        if problems:
+            error = ValueError("SC155 discovery evidence incomplete: " + "; ".join(problems))
+            result.addError(unittest.suite._ErrorHolder("sc155-discovery-evidence"), (ValueError, error, None))
+        return result
+
+
+def _method_names(suite):
+    for item in suite:
+        if isinstance(item, unittest.TestSuite):
+            yield from _method_names(item)
+        else:
+            yield getattr(item, "_testMethodName", None)
+
+
+def load_tests(loader, standard_tests, pattern):
+    """Unfiltered ordinary discovery of this module gets the evidence wrapper; a filtered
+    selection (for example -k) runs unwrapped and makes no completeness claim."""
+    if set(REQUIRED) <= set(_method_names(standard_tests)):
+        return EvidenceSuite([standard_tests])
+    return standard_tests

@@ -36,7 +36,7 @@ UNCHANGED = ("skills/coast-sign-off/scripts/review_common.py", "skills/coast-cam
              "skills/coast-campaign-shared/scripts/validate_coast_receipt.py", "tests/unit/test_coast_sign_off.py",
              "tests/coast_contract_factory.py", "tests/gis/test_coast_sign_off_graph.py", "conftest.py",
              "tests/conftest.py", "pyproject.toml")
-NEW_HELPERS = {"_CHUNK", "_snapshot", "_stable", "_open_component", "_read_inputs"}
+NEW_HELPERS = {"_CHUNK", "_snapshot", "_stable", "_intact", "_open_component", "_read_inputs"}
 PRODUCT_IMPORTS = {"errno", "os", "pathlib", "stat", "review_common", "json"}
 SELECTOR = "tests/unit/test_coast_sign_off.py::test_prepare_round_requests_shared_v2_contracts"
 CLASS = "PrepareIngressTests"
@@ -332,8 +332,11 @@ def main():
     elif args.suite == "compatibility":
         result, details = run_tests(tests, SUITES[args.suite], run, "tests")
         report["tests"] = details
+        cases = required_cases(tests, details, tests.COMPATIBILITY_CASES)
+        report["required_cases"] = cases
         report["original_selector"] = run_selector(run)
-        ok = details["success"] and report["original_selector"]["success"]
+        ok = (details["success"] and report["original_selector"]["success"]
+              and all(v == "pass" for v in cases.values()))
     else:
         result, details = run_tests(tests, SUITES[args.suite], run, "tests")
         report["tests"] = details
@@ -341,13 +344,27 @@ def main():
         mutants = [r for r in tests.RECORDS if str(r.get("label", "")).startswith("mutant")]
         restored = [r for r in tests.RECORDS if str(r.get("label", "")).startswith("restored")]
         detected = summary[0]["detected"] if summary else {}
+        plan = [seam + ":" + name for seam, name in tests.MUTANT_PLAN]
+        report["mutant_plan"] = plan
         report["mutants"] = mutants
-        report["mutant_detected"] = (len(detected) == 3 and len(mutants) == 3 and
+        report["mutant_detected"] = (sorted(detected) == sorted(plan) and len(mutants) == len(plan) and
                                      mutants[0]["requests"][:1] == [tests.UNBOUNDED] and
                                      all(m["outcome"] == "prepare" for m in mutants))
-        report["positive_passed"] = details["success"] and any(r["label"] == "restored-positive" and
-                                                               r["outcome"] == "prepare" for r in restored)
+        positives = [r for r in restored if r["label"] == "restored-positive"]
+        report["positive_passed"] = (details["success"] and len(positives) == 2 and
+                                     all(r["outcome"] == "prepare" for r in positives) and
+                                     sum(r["label"] == "restored" and r["outcome"] == "raised" for r in restored)
+                                     == len(plan))
         ok = details["success"] and report["mutant_detected"] and report["positive_passed"]
+    # Product origins captured by each test's setUp while the real staged modules were loaded.
+    executed = set(report.get("tests", {}).get("executed_ids", []))
+    report["product_origins"] = tests.ORIGINS
+    origin_ok = all(set(o["modules"]) == set(tests.PRODUCT_MODULES) and all(
+        Path(m["file"]).is_relative_to(REPO) and m["sha256"] == sha(Path(m["file"]).read_bytes())
+        for m in o["modules"].values()) for o in tests.ORIGINS)
+    report["product_origins_complete"] = bool(executed) and origin_ok and executed <= {o["test"] for o in tests.ORIGINS}
+    if args.suite != "preflight" and not report["product_origins_complete"]:
+        ok = False
     report["duration_seconds"] = time.monotonic() - started
     # Test execution finished: the guard is switched off before candidate-level identity rechecks.
     guard["active"] = False

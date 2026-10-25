@@ -87,6 +87,19 @@ def _stable(before, after, named):
     return _snapshot(before) == _snapshot(after) == _snapshot(named)
 
 
+def _intact(chain, names):
+    """Every held directory descriptor is still the no-follow directory its name binds."""
+    for parent, held, name in zip(chain, chain[1:], names):
+        try:
+            named = os.stat(name, dir_fd=parent, follow_symlinks=False)
+        except FileNotFoundError:
+            return False
+        current = os.fstat(held)
+        if not stat.S_ISDIR(named.st_mode) or (named.st_dev, named.st_ino) != (current.st_dev, current.st_ino):
+            return False
+    return True
+
+
 def _open_component(name, flags, parent):
     try:
         return os.open(name, flags | os.O_NOFOLLOW, dir_fd=parent)
@@ -107,12 +120,12 @@ def _read_inputs(path):
     path = Path(path)
     if not path.is_absolute() or path.name in ('', '.', '..') or any(p in ('.', '..') for p in path.parts):
         raise ValueError('--inputs must be absolute and normalized')
-    parent = os.open('/', os.O_RDONLY | os.O_DIRECTORY)
+    # Every directory descriptor stays held so the whole name chain is rechecked at completion.
+    chain = [os.open('/', os.O_RDONLY | os.O_DIRECTORY)]
     try:
         for part in path.parts[1:-1]:
-            child = _open_component(part, os.O_RDONLY | os.O_DIRECTORY, parent)
-            os.close(parent)
-            parent = child
+            chain.append(_open_component(part, os.O_RDONLY | os.O_DIRECTORY, chain[-1]))
+        parent = chain[-1]
         leaf = _open_component(path.name, os.O_RDONLY | os.O_NONBLOCK, parent)
         try:
             before = os.fstat(leaf)
@@ -137,10 +150,13 @@ def _read_inputs(path):
                 raise ValueError('--inputs changed while it was read') from error
             if len(raw) != before.st_size or not _stable(before, after, named):
                 raise ValueError('--inputs changed while it was read')
+            if not _intact(chain, path.parts[1:-1]):
+                raise ValueError('--inputs changed while it was read: a parent directory was replaced')
         finally:
             os.close(leaf)
     finally:
-        os.close(parent)
+        for descriptor in reversed(chain):
+            os.close(descriptor)
     return raw
 
 
