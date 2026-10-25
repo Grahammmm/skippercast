@@ -17,11 +17,15 @@ UNVERIFIED.
 
 ## Change
 
-The boundary is now the last `.`, `!` or `?` followed by any whitespace, or the
-last line break. The kept text is the original bytes up to that boundary,
-trimmed; internal line breaks are not rewritten. No-link input, the
-period-space and bare-link forms, and a link in the middle of the text behave
-as before.
+Whitespace between the text and the link is set aside first. If what remains
+does not end in a colon (a bare link), it is kept as is. If it does end in a
+colon, the lead-in is dropped back to the last `.`, `!` or `?` followed by any
+whitespace, or the last line break. Because the trailing whitespace is set
+aside first, a line break between the colon and the link (`Full picture:` LF
+link) is never taken as the boundary (review round 1, sol-reviewer run 1859).
+The kept text is the original bytes up to that boundary, trimmed; internal
+line breaks are not rewritten. No-link input, the period-space and bare-link
+forms, and a link in the middle of the text behave as before.
 
 ## Tests
 
@@ -33,7 +37,10 @@ as before.
 - A1 LF forms, A2 CRLF/blank-line/tab/`!`/`?`/Spanish forms, A3 unchanged
   behavior (also passes on the unchanged module), A4 the named request function
   `portPage` over real migrations in in-memory SQLite with a synthetic stored
-  `advisor_daily_answers` row in English and Spanish, feeds as a throwing double.
+  `advisor_daily_answers` row in English and Spanish, feeds as a throwing double;
+- round 2, `colon_whitespace.json`: LF, CRLF and blank lines between the
+  lead-in colon and the link, with a space or a line break before the lead-in,
+  through `withoutSelfLink` (A2) and `portPage` in both languages (A4).
 
 Offline sentinels (network, child processes, file writes, on-disk SQLite) are
 installed by `bootstrap.mjs` before any product import.
