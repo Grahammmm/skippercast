@@ -4,32 +4,55 @@
 Usage: python3 scripts/accept_bm1_render_private.py --suite {focused,compatibility,negative,isolation}
            --output-root <absolute directory outside this repository>
 
-Each invocation creates a fresh unique child of the output root, launches the
-test module as a file in a fresh interpreter (``-I -B``, explicit argv, no
-shell), and records argv/cwd/interpreter, git HEAD and dirty state, source/test
-hashes, the frozen brief hash, raw child stdout/stderr and per-test statuses.
+The runner is the file-launched process. It first re-executes itself once with
+the same argv under ``-I -B`` (isolated, no bytecode). It then refuses bad
+arguments or output roots before writing, creates a fresh unique child of the
+output root and records argv/cwd/interpreter, git HEAD and dirty state,
+source/test hashes and the frozen brief hash. Only then does it install the
+offline sentinels, redirect tempfile/TMPDIR/HOME into the run directory and put
+the repository (``src`` first) on sys.path, BEFORE importing the test module
+or any project module. The selected test classes run in this process with
+their stdout/stderr captured raw; an isolation report (pre-import modules,
+sentinels, closure, bytecode, path defaults) is written for every run.
 The exit status comes from explicit checks, never from ``assert``.
+
+The test module itself follows the repository layout contract (ROOT from
+tests._support, no sys.path edits); the repository-relative bootstrap lives
+only here, in the script surface.
 
 Exit 0 means PASS_REVIEW_REQUIRED: machine-valid scoped evidence only. It is not
 semantic, scientific, legal, source, full-suite or live acceptance and grants no
 publication authority. Exit 1: a check failed (evidence kept). Exit 2: refused
 arguments or output root (nothing written).
 """
-import argparse
-import ast
-from datetime import datetime, timezone
-import hashlib
-import json
-import os
-from pathlib import Path
-import platform
-import re
-import secrets
-import subprocess
 import sys
 
-REPO = Path(__file__).resolve().parents[1]
+sys.dont_write_bytecode = True
+
+import argparse  # noqa: E402
+import ast  # noqa: E402
+import contextlib  # noqa: E402
+from datetime import datetime, timezone  # noqa: E402
+import hashlib  # noqa: E402
+import importlib  # noqa: E402
+import inspect  # noqa: E402
+import io  # noqa: E402
+import json  # noqa: E402
+import os  # noqa: E402
+from pathlib import Path  # noqa: E402
+import platform  # noqa: E402
+import re  # noqa: E402
+import secrets  # noqa: E402
+import subprocess  # noqa: E402
+import tempfile  # noqa: E402
+import traceback  # noqa: E402
+import unittest  # noqa: E402
+
+SCRIPT = Path(__file__).resolve()
+REPO = SCRIPT.parents[1]
+TEST_MODULE = 'tests.unit.test_bm1_render_private'
 TEST_FILE = REPO / 'tests' / 'unit' / 'test_bm1_render_private.py'
+PYCACHE = REPO / 'src' / 'skippercast' / 'coastal' / 'handoff' / '__pycache__'
 HASHED = ('src/skippercast/coastal/handoff/render.py', 'tests/unit/test_bm1_render_private.py',
           'scripts/accept_bm1_render_private.py')
 BASE_PIN = '59fca09b2cc7f5c81a4796902504e263d7f06960'
@@ -48,11 +71,23 @@ SUITES = {
 }
 AUTHOR_DECLARED = dict(profile='opus-coder-bopus', model='claude-opus-5-5', provider='anthropic',
                        note='declared label recorded by the runner; not runtime proof')
-LINE = re.compile(r'^(test\w+) \(__main__\.(\w+)\.(test\w+)\) \.\.\. (.*)$')
+OFFLINE_MESSAGE = 'BM1 offline sentinel: network access refused'
+LAUNCH_ENV = 'BM1_RUNNER_LAUNCH'
+LINE = re.compile(r'^(test\w+) \(' + re.escape(TEST_MODULE) + r'\.(\w+)\.(test\w+)\) \.\.\. (.*)$')
 
 
 class Refused(Exception):
     pass
+
+
+def relaunch_isolated():
+    """Re-execute once under -I -B with the same argv; record the outer launch."""
+    if sys.flags.isolated:
+        return
+    os.environ[LAUNCH_ENV] = json.dumps(dict(argv=[sys.executable, *sys.argv], cwd=os.getcwd(),
+                                             flags=dict(isolated=sys.flags.isolated,
+                                                        dont_write_bytecode=sys.flags.dont_write_bytecode)))
+    os.execv(sys.executable, [sys.executable, '-I', '-B', str(SCRIPT), *sys.argv[1:]])
 
 
 def sha256_file(path):
@@ -101,6 +136,89 @@ def write_json(path, value):
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + '\n')
 
 
+def project_modules():
+    return sorted(m for m in sys.modules if m == 'skippercast' or m.startswith('skippercast.'))
+
+
+def pycache_listing():
+    return sorted(p.name for p in PYCACHE.iterdir()) if PYCACHE.is_dir() else []
+
+
+def install_bootstrap(tmp):
+    """Offline sentinels, redirected filesystem globals and the repository-relative
+    import path, installed BEFORE any project or test module is imported."""
+    tmp = tmp.resolve()
+    tempfile.tempdir = str(tmp)
+    os.environ['TMPDIR'] = str(tmp)
+    os.environ['HOME'] = str(tmp)
+    import socket
+
+    def refuse(*args, **kwargs):
+        raise OSError(OFFLINE_MESSAGE)
+
+    socket.socket.connect = refuse
+    socket.socket.connect_ex = refuse
+    socket.create_connection = refuse
+    socket.getaddrinfo = refuse
+    for entry in (str(REPO), str(REPO / 'src')):
+        while entry in sys.path:
+            sys.path.remove(entry)
+    sys.path[0:0] = [str(REPO / 'src'), str(REPO)]
+
+
+def sentinel_probe():
+    import socket
+    observed = {}
+    for label, attempt in (('create_connection', lambda: socket.create_connection(('192.0.2.1', 9), timeout=1)),
+                           ('socket_connect', lambda: socket.socket().connect(('192.0.2.1', 9))),
+                           ('getaddrinfo', lambda: socket.getaddrinfo('example.invalid', 80))):
+        try:
+            attempt()
+            observed[label] = 'NOT_BLOCKED'
+        except OSError as error:
+            observed[label] = str(error)
+    return observed
+
+
+def path_defaults(names):
+    found = []
+    for name in names:
+        for attr, obj in vars(sys.modules[name]).items():
+            if inspect.isfunction(obj) and obj.__module__ == name:
+                for value in list(obj.__defaults__ or ()) + list((obj.__kwdefaults__ or {}).values()):
+                    if isinstance(value, os.PathLike) or (isinstance(value, str) and ('/' in value or '\\' in value)):
+                        found.append(f'{name}.{attr}={value!r}')
+    return found
+
+
+def run_suite(classes, tmp):
+    """Install the bootstrap, then import and run the selected classes in-process."""
+    install_bootstrap(tmp)
+    report = dict(pre_import_project_modules=project_modules(),
+                  pre_import_test_module_loaded=TEST_MODULE in sys.modules,
+                  sentinel=sentinel_probe(), pycache_before=pycache_listing(),
+                  dont_write_bytecode=sys.dont_write_bytecode, isolated_flag=sys.flags.isolated,
+                  sys_path_head=sys.path[:2])
+    out, err = io.StringIO(), io.StringIO()
+    successful = False
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        try:
+            module = importlib.import_module(TEST_MODULE)
+            loader = unittest.TestLoader()
+            suite = unittest.TestSuite(loader.loadTestsFromName(name, module) for name in classes)
+            successful = unittest.TextTestRunner(stream=err, verbosity=2).run(suite).wasSuccessful()
+        except BaseException:  # recorded as evidence; the explicit checks decide the exit
+            traceback.print_exc(file=err)
+            successful = False
+    closure = {name: getattr(sys.modules[name], '__file__', None) for name in project_modules()}
+    report.update(closure=closure, path_defaults=path_defaults(closure),
+                  render_file=getattr(sys.modules.get('skippercast.coastal.handoff.render'), '__file__', None),
+                  test_module_file=getattr(sys.modules.get(TEST_MODULE), '__file__', None),
+                  pycache_after=pycache_listing(), tempdir=tempfile.gettempdir(), home=os.environ.get('HOME'),
+                  cwd=os.getcwd(), executable=sys.executable)
+    return successful, out.getvalue().encode('utf-8'), err.getvalue().encode('utf-8'), report
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--suite', required=True, choices=sorted(SUITES))
@@ -123,19 +241,20 @@ def main(argv=None):
 
     classes = SUITES[args.suite]
     expected = expected_tests(classes)
-    child_argv = [sys.executable, '-I', '-B', str(TEST_FILE), '-v', *classes]
-    env = {k: v for k, v in os.environ.items() if not k.startswith('PYTHON')}
-    env.update(TMPDIR=str(tmp), BM1_EVIDENCE_TMP=str(tmp))
     head = git('rev-parse', 'HEAD')
     porcelain = git('status', '--porcelain', '--untracked-files=all')
     tracked = git('status', '--porcelain', '--untracked-files=no')
     base_render = subprocess.run(['git', 'show', f'{BASE_PIN}:{RENDER}'], cwd=REPO, capture_output=True,
                                  timeout=60)
+    launch = os.environ.get(LAUNCH_ENV)
     invocation = dict(
-        schema='bm1-render-private-acceptance-invocation/v1', suite=args.suite,
-        argv=[sys.executable, *sys.argv] if argv is None else [sys.executable, __file__, *argv],
+        schema='bm1-render-private-acceptance-invocation/v2', suite=args.suite,
+        argv=[sys.executable, *sys.argv] if argv is None else [sys.executable, str(SCRIPT), *argv],
+        launch=json.loads(launch) if launch else None,
         cwd=os.getcwd(), interpreter=dict(executable=sys.executable, version=sys.version,
-                                          implementation=platform.python_implementation()),
+                                          implementation=platform.python_implementation(),
+                                          isolated=sys.flags.isolated,
+                                          dont_write_bytecode=sys.dont_write_bytecode),
         repo=str(REPO), run_dir=str(child), started_utc=datetime.now(timezone.utc).isoformat(),
         git=dict(head=head['stdout'].strip(), head_rc=head['returncode'], porcelain_all=porcelain['stdout'],
                  tracked_dirty=bool(tracked['stdout'].strip()), base_pin=BASE_PIN,
@@ -144,18 +263,21 @@ def main(argv=None):
         hashes={rel: sha256_file(REPO / rel) for rel in HASHED},
         fixture=dict(path=str(TEST_FILE), sha256=sha256_file(TEST_FILE)),
         frozen={name: dict(path=str(p), sha256=sha256_file(p) if p.is_file() else None) for name, p in FROZEN.items()},
-        author_declared=AUTHOR_DECLARED, child_argv=child_argv, child_cwd=str(REPO),
-        child_env_overrides=dict(TMPDIR=str(tmp), BM1_EVIDENCE_TMP=str(tmp)), removed_env='PYTHON*',
+        author_declared=AUTHOR_DECLARED, test_module=TEST_MODULE, execution='in-process after bootstrap',
+        bootstrap=dict(tempdir=str(tmp), home=str(tmp), sys_path_head=[str(REPO / 'src'), str(REPO)],
+                       sentinels=['socket.socket.connect', 'socket.socket.connect_ex',
+                                  'socket.create_connection', 'socket.getaddrinfo']),
         selectors=list(classes), expected_tests=[f'{c}.{n}' for c, n in expected],
         expected_counts={c: sum(1 for k, _ in expected if k == c) for c in classes},
         acceptance_note='PASS_REVIEW_REQUIRED only; not semantic, scientific, legal, source, full-suite or live acceptance',
     )
     write_json(child / 'invocation.json', invocation)
 
-    done = subprocess.run(child_argv, cwd=REPO, env=env, capture_output=True, timeout=1500)
-    (child / 'child.stdout.txt').write_bytes(done.stdout)
-    (child / 'child.stderr.txt').write_bytes(done.stderr)
-    text = done.stderr.decode('utf-8', 'replace')
+    successful, stdout, stderr, report = run_suite(classes, tmp)
+    (child / 'suite.stdout.txt').write_bytes(stdout)
+    (child / 'suite.stderr.txt').write_bytes(stderr)
+    write_json(child / 'isolation-report.json', report)
+    text = stderr.decode('utf-8', 'replace')
     statuses = {}
     duplicates = []
     for line in text.splitlines():
@@ -169,8 +291,11 @@ def main(argv=None):
     final = [line for line in text.splitlines() if line.startswith(('OK', 'FAILED'))]
     skipped = sum(1 for s in statuses.values() if s.startswith('skipped'))
     want = invocation['expected_tests']
+    src = (REPO / 'src').resolve()
+    outside = sorted(name for name, file in report['closure'].items()
+                     if not file or not Path(file).resolve().is_relative_to(src))
     checks = [
-        ('child_exit_zero', done.returncode == 0, done.returncode),
+        ('suite_successful', successful is True, successful),
         ('expected_tests_nonzero', len(want) > 0, len(want)),
         ('every_selector_has_tests', all(invocation['expected_counts'][c] > 0 for c in classes),
          invocation['expected_counts']),
@@ -182,15 +307,28 @@ def main(argv=None):
         ('no_duplicates', not duplicates, duplicates),
         ('zero_skips', skipped == 0, skipped),
         ('git_head_known', head['returncode'] == 0, head['returncode']),
+        ('isolated_interpreter', sys.flags.isolated == 1 and sys.dont_write_bytecode is True,
+         [sys.flags.isolated, sys.dont_write_bytecode]),
+        ('no_project_module_before_bootstrap', report['pre_import_project_modules'] == []
+         and report['pre_import_test_module_loaded'] is False,
+         [report['pre_import_project_modules'], report['pre_import_test_module_loaded']]),
+        ('sentinels_refuse_network', set(report['sentinel'].values()) == {OFFLINE_MESSAGE}, report['sentinel']),
+        ('closure_inside_repo_src', bool(report['closure']) and not outside, outside),
+        ('render_is_candidate', report['render_file'] is not None
+         and Path(report['render_file']).resolve() == (REPO / RENDER).resolve(), report['render_file']),
+        ('no_path_like_bound_defaults', report['path_defaults'] == [], report['path_defaults']),
+        ('no_bytecode_written', report['pycache_after'] == report['pycache_before'],
+         [report['pycache_before'], report['pycache_after']]),
     ]
     passed = all(ok for _, ok, _ in checks)
     result = dict(
-        schema='bm1-render-private-acceptance-result/v1', suite=args.suite,
-        verdict='PASS_REVIEW_REQUIRED' if passed else 'FAIL', child_returncode=done.returncode,
+        schema='bm1-render-private-acceptance-result/v2', suite=args.suite,
+        verdict='PASS_REVIEW_REQUIRED' if passed else 'FAIL', suite_successful=successful,
         tests_expected=len(want), tests_ran=int(ran[0]) if len(ran) == 1 else None, skipped=skipped,
         statuses=statuses, checks=[dict(name=n, ok=ok, observed=obs) for n, ok, obs in checks],
-        child_stdout_sha256=hashlib.sha256(done.stdout).hexdigest(),
-        child_stderr_sha256=hashlib.sha256(done.stderr).hexdigest(),
+        suite_stdout_sha256=hashlib.sha256(stdout).hexdigest(),
+        suite_stderr_sha256=hashlib.sha256(stderr).hexdigest(),
+        isolation_report_sha256=sha256_file(child / 'isolation-report.json'),
         invocation_sha256=sha256_file(child / 'invocation.json'),
         ended_utc=datetime.now(timezone.utc).isoformat(),
     )
@@ -204,4 +342,5 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
+    relaunch_isolated()
     sys.exit(main())

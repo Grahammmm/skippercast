@@ -16,9 +16,13 @@ Suites (scripts/accept_bm1_render_private.py):
   negative      GateControl  (A4: test-only module copy without the gate)
   isolation     Isolation    (A6: fresh file-launched process and the runner)
 
-Ordinary pytest discovery imports this module without touching sys.path,
-sockets or the process environment. Only a file launch (``python3 <this file>``)
-runs the bootstrap below, which must precede every project import.
+This module follows the repository layout contract: it takes ROOT from
+tests._support and never edits sys.path. Ordinary discovery (pytest, or
+``python -m unittest`` with the package importable) runs it like any other unit
+module. The acceptance runner owns the file-launched process: it installs the
+offline sentinels, redirected filesystem globals and the repository-relative
+import path BEFORE importing this module, and records the isolation report the
+Isolation tests read back from a fresh runner process.
 """
 import collections
 import contextlib
@@ -37,47 +41,14 @@ import tempfile
 import unittest
 from unittest import mock
 
-TEST_FILE = Path(__file__).resolve()
-REPO = TEST_FILE.parents[2]
-RUNNER = REPO / 'scripts' / 'accept_bm1_render_private.py'
+from tests._support import ROOT
+
+from skippercast.coastal.handoff import common, render
+
+REPO = ROOT
+RUNNER = ROOT / 'scripts' / 'accept_bm1_render_private.py'
+RENDER_FILE = ROOT / 'src' / 'skippercast' / 'coastal' / 'handoff' / 'render.py'
 OFFLINE_MESSAGE = 'BM1 offline sentinel: network access refused'
-
-
-def _bm1_bootstrap():
-    """File-launch only: offline sentinels, redirected filesystem globals and a
-    repository-relative import path, all BEFORE any project module executes."""
-    sys.dont_write_bytecode = True
-    tmp = Path(os.environ.get('BM1_EVIDENCE_TMP') or tempfile.gettempdir()).resolve()
-    if tmp == REPO or REPO in tmp.parents:
-        raise SystemExit('BM1: evidence temporary root inside the repository refused')
-    tmp.mkdir(parents=True, exist_ok=True)
-    tempfile.tempdir = str(tmp)
-    os.environ['TMPDIR'] = str(tmp)
-    os.environ['HOME'] = str(tmp)
-    import socket
-
-    def refuse(*args, **kwargs):
-        raise OSError(OFFLINE_MESSAGE)
-
-    socket.socket.connect = refuse
-    socket.socket.connect_ex = refuse
-    socket.create_connection = refuse
-    socket.getaddrinfo = refuse
-    for entry in (str(REPO), str(REPO / 'src')):
-        if entry in sys.path:
-            sys.path.remove(entry)
-    sys.path[0:0] = [str(REPO / 'src'), str(REPO)]
-    return tmp
-
-
-if __name__ == '__main__':
-    _BM1_TMP = _bm1_bootstrap()
-    _PYCACHE = REPO / 'src/skippercast/coastal/handoff/__pycache__'
-    _PYCACHE_BEFORE = sorted(p.name for p in _PYCACHE.iterdir()) if _PYCACHE.is_dir() else []
-
-_PRE_IMPORT_PROJECT_MODULES = sorted(m for m in sys.modules if m == 'skippercast' or m.startswith('skippercast.'))
-
-from skippercast.coastal.handoff import common, render  # noqa: E402
 
 PROHIBITION_ERROR = 'render publication prohibition required'
 PURPOSE_ERROR = 'explicit known render purpose required'
@@ -532,72 +503,56 @@ class GateControl(unittest.TestCase):
         self.assertTrue(result.wasSuccessful())
 
 
-def _isolation_probe(report_path):
-    """Fresh file-launched process: report the pre-import boundary and closure."""
-    sentinel = {}
-    import socket
-    for label, attempt in (('create_connection', lambda: socket.create_connection(('192.0.2.1', 9), timeout=1)),
-                           ('socket_connect', lambda: socket.socket().connect(('192.0.2.1', 9))),
-                           ('getaddrinfo', lambda: socket.getaddrinfo('example.invalid', 80))):
-        try:
-            attempt()
-            sentinel[label] = 'NOT_BLOCKED'
-        except OSError as error:
-            sentinel[label] = str(error)
-    closure = {name: getattr(module, '__file__', None) for name, module in sorted(sys.modules.items())
-               if name == 'skippercast' or name.startswith('skippercast.')}
-    path_defaults = []
-    for name, module in closure.items():
-        for attr, obj in vars(sys.modules[name]).items():
-            if inspect.isfunction(obj) and obj.__module__ == name:
-                for value in list(obj.__defaults__ or ()) + list((obj.__kwdefaults__ or {}).values()):
-                    if isinstance(value, os.PathLike) or (isinstance(value, str) and ('/' in value or '\\' in value)):
-                        path_defaults.append(f'{name}.{attr}={value!r}')
-    pycache_after = sorted(p.name for p in _PYCACHE.iterdir()) if _PYCACHE.is_dir() else []
-    report = dict(pre_import_project_modules=_PRE_IMPORT_PROJECT_MODULES, closure=closure,
-                  render_file=render.__file__, sentinel=sentinel, path_defaults=path_defaults,
-                  dont_write_bytecode=sys.dont_write_bytecode, pycache_before=_PYCACHE_BEFORE,
-                  pycache_after=pycache_after, tempdir=tempfile.gettempdir(), home=os.environ.get('HOME'),
-                  cwd=os.getcwd(), sys_path_head=sys.path[:2], executable=sys.executable)
-    Path(report_path).write_text(json.dumps(report, indent=2, sort_keys=True))
-    return 0
-
-
 class Isolation(unittest.TestCase):
-    """A6: fresh file-launched import closure and the authored runner's boundary."""
+    """A6: the authored runner's fresh file-launched process, its import closure
+    and its argument/output-root boundary. The runner is launched twice for the
+    compatibility suite; every run records the isolation report it measured
+    in-process before and after importing this module and the candidate."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.base = Path(tempfile.mkdtemp(prefix='bm1-isolation-class-'))
+        cls.out = cls.base / 'runner-out'
+        cls.receipts = [cls._launch(cls.base, '--suite', 'compatibility', '--output-root', str(cls.out))
+                        for _ in range(2)]
+        cls.children = sorted(p for p in cls.out.iterdir() if p.is_dir()) if cls.out.is_dir() else []
+
+    @staticmethod
+    def _launch(cwd, *args):
+        env = {k: v for k, v in os.environ.items() if not k.startswith('PYTHON')}
+        env.update(TMPDIR=str(cwd))
+        return subprocess.run([sys.executable, str(RUNNER), *args], cwd=cwd, env=env,
+                              capture_output=True, text=True, timeout=600)
 
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix='bm1-isolation-'))
-        self.env = {k: v for k, v in os.environ.items() if not k.startswith('PYTHON')}
-        self.env.update(TMPDIR=str(self.tmp), BM1_EVIDENCE_TMP=str(self.tmp / 'probe-tmp'))
-
-    def _probe(self):
-        report = self.tmp / 'probe-report.json'
-        done = subprocess.run([sys.executable, '-I', '-B', str(TEST_FILE), '--bm1-isolation-probe', str(report)],
-                              cwd=self.tmp, env=self.env, capture_output=True, text=True, timeout=120)
-        self.assertEqual(done.returncode, 0, done.stderr)
-        return json.loads(report.read_text())
 
     def _runner(self, *args):
-        return subprocess.run([sys.executable, '-I', '-B', str(RUNNER), *args], cwd=self.tmp, env=self.env,
-                              capture_output=True, text=True, timeout=600)
+        return self._launch(self.tmp, *args)
+
+    def _report(self):
+        for done in self.receipts:
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(len(self.children), 2)
+        return self.children[0], json.loads((self.children[0] / 'isolation-report.json').read_text())
 
     def test_fresh_process_offline_before_project_import(self):
-        report = self._probe()
+        child, report = self._report()
         self.assertEqual(report['pre_import_project_modules'], [])
+        self.assertIs(report['pre_import_test_module_loaded'], False)
         self.assertEqual(report['sentinel'], dict.fromkeys(('create_connection', 'socket_connect', 'getaddrinfo'),
                                                            OFFLINE_MESSAGE))
         self.assertIs(report['dont_write_bytecode'], True)
+        self.assertEqual(report['isolated_flag'], 1)
         self.assertEqual(report['pycache_after'], report['pycache_before'])
-        probe_tmp = (self.tmp / 'probe-tmp').resolve()
-        self.assertEqual(Path(report['tempdir']).resolve(), probe_tmp)
-        self.assertEqual(Path(report['home']).resolve(), probe_tmp)
+        run_tmp = (child / 'tmp').resolve()
+        self.assertEqual(Path(report['tempdir']).resolve(), run_tmp)
+        self.assertEqual(Path(report['home']).resolve(), run_tmp)
         self.assertEqual(report['sys_path_head'], [str(REPO / 'src'), str(REPO)])
 
     def test_fresh_process_imports_only_the_candidate_closure(self):
-        report = self._probe()
-        self.assertEqual(Path(report['render_file']).resolve(),
-                         (REPO / 'src/skippercast/coastal/handoff/render.py').resolve())
+        _, report = self._report()
+        self.assertEqual(Path(report['render_file']).resolve(), RENDER_FILE.resolve())
         self.assertIn('skippercast.coastal.handoff.render', report['closure'])
         self.assertIn('skippercast.coastal.mapping', report['closure'])
         for name, file in report['closure'].items():
@@ -638,15 +593,11 @@ class Isolation(unittest.TestCase):
                 self.assertEqual(list(real.iterdir()), [])
 
     def test_runner_writes_fresh_bound_evidence(self):
-        out = self.tmp / 'runner-out'
-        receipts = []
-        for _ in range(2):
-            done = self._runner('--suite', 'compatibility', '--output-root', str(out))
+        for done in self.receipts:
             self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
-            receipts.append(done)
-        children = sorted(p for p in out.iterdir() if p.is_dir())
-        self.assertEqual(len(children), 2)
-        for child in children:
+        self.assertEqual(len(self.children), 2)
+        self.assertNotEqual(self.children[0].name, self.children[1].name)
+        for child in self.children:
             result = json.loads((child / 'result.json').read_text())
             invocation = json.loads((child / 'invocation.json').read_text())
             self.assertEqual(result['verdict'], 'PASS_REVIEW_REQUIRED')
@@ -654,15 +605,17 @@ class Isolation(unittest.TestCase):
             self.assertGreater(result['tests_ran'], 0)
             self.assertEqual(result['skipped'], 0)
             for stream in ('stdout', 'stderr'):
-                raw = (child / f'child.{stream}.txt').read_bytes()
-                self.assertEqual(hashlib.sha256(raw).hexdigest(), result[f'child_{stream}_sha256'])
+                raw = (child / f'suite.{stream}.txt').read_bytes()
+                self.assertEqual(hashlib.sha256(raw).hexdigest(), result[f'suite_{stream}_sha256'])
+            self.assertEqual(hashlib.sha256((child / 'isolation-report.json').read_bytes()).hexdigest(),
+                             result['isolation_report_sha256'])
+            self.assertEqual(hashlib.sha256((child / 'invocation.json').read_bytes()).hexdigest(),
+                             result['invocation_sha256'])
             self.assertEqual(invocation['suite'], 'compatibility')
             self.assertEqual(invocation['hashes']['src/skippercast/coastal/handoff/render.py'],
-                             hashlib.sha256((REPO / 'src/skippercast/coastal/handoff/render.py').read_bytes()).hexdigest())
+                             hashlib.sha256(RENDER_FILE.read_bytes()).hexdigest())
             self.assertRegex(invocation['git']['head'], '^[0-9a-f]{40}$')
 
 
 if __name__ == '__main__':
-    if len(sys.argv) >= 3 and sys.argv[1] == '--bm1-isolation-probe':
-        sys.exit(_isolation_probe(sys.argv[2]))
     unittest.main()
