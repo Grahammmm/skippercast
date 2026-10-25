@@ -16,6 +16,18 @@ def offline_scope():
     def refused(*args, **kwargs):
         raise RuntimeError('SC115 offline sentinel: network/model/subprocess forbidden')
     with ExitStack() as stack:
+        # rasterio's native startup may set these certificate-location variables.
+        # Restore only its process-local import side effects; never set a new value.
+        absent = object()
+        original = {name: os.environ.get(name, absent)
+                    for name in ('GDAL_CURL_CA_BUNDLE', 'PROJ_CURL_CA_BUNDLE')}
+        def restore_native_environment():
+            for name, value in original.items():
+                if value is absent:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = value
+        stack.callback(restore_native_environment)
         for owner, names in ((socket, ('connect', 'connect_ex')),
                              (subprocess, ('Popen',)),
                              (os, ('system', 'popen', 'fork', 'posix_spawn', 'posix_spawnp'))):

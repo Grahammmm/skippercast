@@ -58,14 +58,18 @@ class PackingTests(unittest.TestCase):
         before = self.fixtures.hashes(self.root)
         result = self.api.raster_identity(path)
         self.assertEqual(before, self.fixtures.hashes(self.root))
-        EVENTS.append({'id': self.id(), 'raster': path.name, 'identity': result})
+        EVENTS.append({'id': self.id(), 'raster': path.name, 'identity': result,
+                       'fixture_before': before, 'fixture_after': self.fixtures.hashes(self.root)})
         return result
 
     def refusal(self, path):
         before = self.fixtures.hashes(self.root)
         with self.assertRaisesRegex(ValueError, self.fixtures.MESSAGE):
             self.api.raster_identity(path)
-        self.assertEqual(before, self.fixtures.hashes(self.root))
+        after = self.fixtures.hashes(self.root)
+        self.assertEqual(before, after)
+        EVENTS.append({'id': self.id(), 'rejected_raster': path.name,
+                       'fixture_before': before, 'fixture_after': after})
 
     def test_regression_equal_samples_nonunit_scale_rejected(self):
         plain = self.make('plain')

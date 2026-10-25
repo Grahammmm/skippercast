@@ -129,7 +129,8 @@ def validate_manifest(path):
             Path(data['repo']).resolve() != REPO or
             Path(data['write_root']).resolve() != REPO.parent or
             data.get('head') != BASE or data.get('clean') is not True or
-            (REPO / '.venv').resolve() != Path(data['runtime']['repo_venv']).resolve()):
+            (REPO / '.venv').resolve() != Path(data['runtime']['repo_venv']).resolve() or
+            Path(sys.prefix).resolve() != Path(data['runtime']['repo_venv']).resolve()):
         raise ValueError('Staging manifest mismatch')
     return data
 
@@ -203,12 +204,18 @@ def main():
                                     'AssertionError: ValueError not raised' in mutant.failures[0][1])
                         positive_passed = all(r.wasSuccessful() and r.testsRun == 1 and not r.skipped
                                               for r in (mutant_positive, restored_positive, restored_regression))
+                        expected_ids = [tests.PackingTests(n).id() for n in
+                                        (deciding, positive, positive, deciding)]
+                        actual_ids = [i for r in (mutant, mutant_positive, restored_positive,
+                                                  restored_regression) for i in r.executed]
                         receipt.update(mutant_detected=detected, positive_passed=positive_passed,
+                                       expected_ids=expected_ids, actual_ids=actual_ids,
                                        expected_count=4, actual_count=sum(r.testsRun for r in
                                            (mutant, mutant_positive, restored_positive, restored_regression)),
                                        results=[result_data(r) for r in
                                            (mutant, mutant_positive, restored_positive, restored_regression)])
-                        receipt['exit'] = 0 if detected and positive_passed else 1
+                        receipt['exit'] = 0 if (detected and positive_passed and
+                                               actual_ids == expected_ids) else 1
                     else:
                         names = (REGRESSION if args.suite == 'regression' else COMPATIBILITY
                                  if args.suite == 'compatibility' else
