@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -30,8 +31,23 @@ class RegressionTests(unittest.TestCase):
         parse_watch(json.loads(payload.decode("utf-8")), "XX")
         return payload
 
+    def _write_bytes(self, payload):
+        # Match the producer's atomic replacement, not timestamp resolution.
+        # Every version deliberately has the same mtime to exercise same-tick writes.
+        previous = self.watch_path.stat() if self.watch_path.exists() else None
+        replacement = self.watch_path.with_name("watch.next")
+        self.assertFalse(replacement.exists())
+        replacement.write_bytes(payload)
+        stamp = 1_700_000_000_000_000_000
+        os.utime(replacement, ns=(stamp, stamp))
+        os.replace(replacement, self.watch_path)
+        if previous is not None:
+            current = self.watch_path.stat()
+            self.assertEqual(current.st_mtime_ns, previous.st_mtime_ns)
+            self.assertNotEqual(current.st_ino, previous.st_ino)
+
     def _write_fixture(self, name):
-        self.watch_path.write_bytes(self._fixture_bytes(name))
+        self._write_bytes(self._fixture_bytes(name))
 
     def _invalid_cases(self):
         healthy = self._fixture_bytes()
@@ -49,7 +65,7 @@ class RegressionTests(unittest.TestCase):
         self.assertTrue(watch.poll())
         accepted = watch.current
         self.assertEqual(accepted.watched, frozenset({INITIAL}))
-        self.watch_path.write_bytes(self._invalid_cases()["leading"])
+        self._write_bytes(self._invalid_cases()["leading"])
         observed_exception = None
         try:
             outcome = watch.poll()
@@ -83,7 +99,7 @@ class RegressionTests(unittest.TestCase):
                 watch = WatchFile(self.watch_path, "XX")
                 self.assertTrue(watch.poll())
                 accepted = watch.current
-                self.watch_path.write_bytes(invalid)
+                self._write_bytes(invalid)
                 self.assertIs(watch.poll(), False)
                 self.assertIs(watch.current, accepted)
                 self.assertEqual(watch.current.watched, frozenset({INITIAL}))
@@ -105,7 +121,7 @@ class RegressionTests(unittest.TestCase):
             with self.subTest(case=name):
                 watch = WatchFile(self.watch_path, "XX")
                 empty = watch.current
-                self.watch_path.write_bytes(invalid)
+                self._write_bytes(invalid)
                 self.assertIs(watch.poll(), False)
                 self.assertIs(watch.current, empty)
                 self.assertEqual(watch.current.watched, frozenset())
@@ -132,7 +148,7 @@ class RegressionTests(unittest.TestCase):
                  (json.dumps(invalid_schema).encode(), "watch.json schema_version must be 1")]
         for payload, diagnostic in cases:
             with self.subTest(diagnostic=diagnostic):
-                self.watch_path.write_bytes(payload)
+                self._write_bytes(payload)
                 self.assertIs(watch.poll(), False)
                 self.assertIs(watch.current, accepted)
                 self.assertEqual(watch.last_error, diagnostic)
@@ -150,7 +166,7 @@ class RegressionTests(unittest.TestCase):
         self.assertEqual(watch.last_error, "watch.json cannot be read: synthetic denied")
         self.assertEqual(watch.errors, 1)
         # A changed file is required: unchanged unreadable bytes are not retried.
-        self.watch_path.write_bytes(self._fixture_bytes("valid-updated.json") + b"\n")
+        self._write_bytes(self._fixture_bytes("valid-updated.json") + b"\n")
         self.assertTrue(watch.poll())
         self.assertEqual(watch.current.watched, frozenset({UPDATED}))
         self.assertIsNone(watch.last_error)

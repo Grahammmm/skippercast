@@ -21,6 +21,8 @@ Fixtures are complete synthetic schema-version-1 producer documents in `tests/fi
 
 ## Portable runner and evidence
 
+All new test content changes use a sibling temporary file and `os.replace`, like the producer's atomic write. Every version is deliberately stamped with the same fixed mtime; the helper asserts equal timestamps and a changed inode on replacement. Thus the healthy same-size transition, mid-document rejection and recovery are tested without depending on filesystem timestamp resolution. Repeated polls do not replace the file, preserving the unchanged-poll controls. Review round 1's timestamp-dependence finding is addressed without changing product code, original tests or fixture bytes; the changed test/note bytes require fresh pinned-product baseline and final evidence.
+
 The helper derives its repository and candidate roots from its own location and validates the operator source manifest, pinned base source hash and ancestry. The `.venv` link is the explicitly admitted staged runtime. Repository mode uses only `runtime.credential_scan_python3`, records its real argv/version and never falls back.
 
 The dedicated test child suppresses bytecode, installs offline network/DNS/bind, subprocess and model-import tripwires before product imports, redirects package/fleet roots and temporary storage, and verifies imported product/test files belong to the staged repository. `WatchFile` and `AisStore` take explicit paths; no operational filesystem function with an implicit live root is called. These tripwires are mistake detectors, not a hostile-code sandbox. They are deliberately not installed in imported test modules, so ordinary suite discovery does not poison unrelated tests or alter their environment.
