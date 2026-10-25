@@ -33,7 +33,8 @@ def main():
     runtime = manifest.get("runtime", {})
     if Path(runtime.get("repo_venv", "")).resolve() != (repo / ".venv").resolve():
         raise SystemExit("manifest runtime does not match staged venv")
-    if runtime.get("credential_scan_python3") != "/home/user/agent-work/tools/venv-fullsuite/bin/python3":
+    scanner = Path(runtime.get("credential_scan_python3", ""))
+    if not scanner.is_absolute() or scanner.parts[-4:] != ("tools", "venv-fullsuite", "bin", "python3"):
         raise SystemExit("manifest credential scanner runtime mismatch")
 
     run_id = f"{time.time_ns()}-{os.getpid()}"
