@@ -11,6 +11,7 @@ import io
 import json
 import os
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -66,11 +67,10 @@ class ScopeCase(unittest.TestCase):
         self.sibling.mkdir()
         (self.sibling / 'sentinel.txt').write_text('unchanged synthetic sentinel\n')
         self.shapes = json.loads(FIXTURE.read_text())
-        from skippercast import paths
-        original = paths.repo_root
-        with patch.object(paths, 'repo_root', return_value=self.root):
-            self.product = importlib.import_module('skippercast.seafloor.scope_paths')
-        self.assertIs(paths.repo_root, original)
+        # Standalone guards redirect contracts before loading this module.
+        # Ordinary tests must not bind contracts' cached defaults to a temporary
+        # fixture: import normally and always pass explicit roots instead.
+        self.product = importlib.import_module('skippercast.seafloor.scope_paths')
 
     def config(self, layout):
         value = copy.deepcopy(self.shapes[layout])
@@ -274,6 +274,17 @@ class ScopeCompatibility(ScopeCase):
         value, config = self.config('noncentral')
         with patch.object(paths, 'repo_root', return_value=self.root):
             self.assert_valid('noncentral', config, value)
+        self.assertIs(paths.repo_root, original)
+        # Exercise standard collection of this exact file (not peer suites).
+        # Discovery's own temporary sys.path addition is scoped and restored.
+        path_before = sys.path
+        with patch.object(sys, 'path', list(sys.path)):
+            collected = unittest.TestLoader().discover(
+                str(Path(__file__).parent), pattern=Path(__file__).name)
+            self.assertGreater(collected.countTestCases(), 0)
+            ordinary = sys.modules[Path(__file__).stem]
+            self.assertIsNone(ordinary.RUN_ROOT)
+        self.assertIs(sys.path, path_before)
         self.assertIs(paths.repo_root, original)
         self.assertEqual(dict(os.environ), environment)
         # This module adds no audit hook or process/network monkeypatch at all.
