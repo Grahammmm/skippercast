@@ -13,8 +13,9 @@ import unittest
 from unittest.mock import patch
 
 from skippercast.seafloor import restore
+from tests._support import FIXTURES
 
-SEED = Path(__file__).resolve().parents[1] / 'fixtures/sc8c-restore-paths/seed.json'
+SEED = FIXTURES / 'sc8c-restore-paths/seed.json'
 UNSAFE = 'Unsafe reference restore path'
 INPUTS = (
     ('root', 'dist/data/seafloor-ledger.json'),
