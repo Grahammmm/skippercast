@@ -1,0 +1,19 @@
+{
+  "version": "SP-15-v1",
+  "card": "SP1505-PORT-ANSWER-LINES",
+  "task": "t_5e600d8a",
+  "primary": "server/advisor/pages/port.ts",
+  "symbol": "withoutSelfLink",
+  "test": "tests/test_sp1505_port_answer_lines.mjs",
+  "originals": ["tests/test_advisor_pages.mjs"],
+  "baseline_tests": ["primary regression", "healthy control"],
+  "focused_tests": [
+    "primary regression",
+    "healthy control",
+    "A1 a closing self-link on a new line keeps the sentence before it",
+    "A2 CRLF, blank lines, tabs and !/? line ends keep every preceding sentence",
+    "A3 no-link, period-space, bare-link and middle-link behavior is unchanged",
+    "A4 portPage renders a stored multi-line daily answer without its self-link (en)",
+    "A4 portPage renders a stored multi-line daily answer without its self-link (es)"
+  ]
+}
