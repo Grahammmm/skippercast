@@ -4,11 +4,13 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from tests._support import FIXTURES
+
 DATA_ROOT = None
 
 
 def load_factory():
-    path = Path(__file__).resolve().parents[1] / 'fixtures' / 'sc6a' / 'factory.py'
+    path = FIXTURES / 'sc6a' / 'factory.py'
     spec = importlib.util.spec_from_file_location('sc6a_factory', path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
