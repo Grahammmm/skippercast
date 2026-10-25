@@ -11,12 +11,13 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 
+from tests._support import FIXTURES as ALL_FIXTURES
 from skippercast.fleet import ingest, ops
 from skippercast.fleet.adapters.base import Candidate, RunContext
 from skippercast.fleet.refresh import detect, discovery_history
 from skippercast.fleet.resolve import Snapshot
 
-FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "sp1308_discovery_partial"
+FIXTURES = ALL_FIXTURES / "sp1308_discovery_partial"
 AT = "2026-10-05T09:47:00Z"
 LAYOUT = {"url": "https://fleet.example.com/synthetic/unread-page", "reason": "layout"}
 CASE_MAP = {
