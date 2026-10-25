@@ -1,0 +1,18 @@
+{
+  "schema_note": "Synthetic advisor_boats row; columns follow the real migration-backed D1 adapter and the original advisor page suite. No real vessel or account is claimed.",
+  "id": "sp1707-example",
+  "slug": "sp1707-example",
+  "name": "Sea Example",
+  "landing": "Example Landing",
+  "port": "morro-bay",
+  "region": "morro-bay",
+  "instagram": "SeaExample_Fishing",
+  "booking_url": null,
+  "phone_public": null,
+  "status": "verified",
+  "verified_at": "2026-09-27T19:00:00.000Z",
+  "created_at": "2026-09-27T19:00:00.000Z",
+  "updated_at": "2026-09-27T19:00:00.000Z",
+  "valid_handles": ["seaexample_fishing", "SEAEXAMPLE_FISHING", "SeaExample_Fishing", "Example.09_", "A", "a", "Example_012345678901234567890123"],
+  "invalid_handles": [null, "", "Example_0123456789012345678901234", "example/boat", "example:boat", "<b>example</b>", "éxample", "Ｅxample", "example-boat", " example", "@example"]
+}
