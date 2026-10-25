@@ -37,9 +37,13 @@ class PackingTests(unittest.TestCase):
         self.np, self.rio, self.api = np, rasterio, normalized
         self.assertEqual(Path(normalized.__file__).resolve(),
                          REPO / 'src/skippercast/seafloor/normalized.py')
-        parent = Path(RUN_ROOT) if RUN_ROOT else REPO.parent / 'out/sc115-ordinary'
-        parent.mkdir(parents=True, exist_ok=True)
-        self.root = Path(tempfile.mkdtemp(prefix='case-', dir=parent))
+        if RUN_ROOT is None:
+            self.root = Path(self.scope.enter_context(
+                tempfile.TemporaryDirectory(prefix='case-')))
+        else:
+            parent = Path(RUN_ROOT)
+            parent.mkdir(parents=True, exist_ok=True)
+            self.root = Path(tempfile.mkdtemp(prefix='case-', dir=parent))
         self.sentinel = self.root / 'sentinel.txt'
         self.sentinel.write_text('SC115 retained synthetic sentinel\n')
         self.before_sentinel = self.fixtures.hashes(self.root)
