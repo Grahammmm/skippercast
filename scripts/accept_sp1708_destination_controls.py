@@ -84,6 +84,9 @@ def main() -> int:
             ok = (result['exit'] == 1 and result['counts'].get('tests') == 2 and result['counts'].get('pass') == 1
                   and result['counts'].get('fail') == 1 and result['counts'].get('skipped') == 0
                   and 'AssertionError' in result['output'] and 'bo-control-ok' in result['output'])
+        elif ns.phase == 'regression':
+            ok = (result['exit'] == 0 and result['counts'].get('tests') == 8 and result['counts'].get('pass') == 8
+                  and result['counts'].get('fail') == 0 and result['counts'].get('skipped') == 0)
         else:
             ok = result['exit'] == 0
         if not ok:
