@@ -8,9 +8,10 @@ from unittest import TestCase, mock
 
 from skippercast.http import FakeSession
 from skippercast.pipeline import beach_health as bh
+from tests._support import FIXTURES as _FIXTURES
 
 NOW = datetime(2026, 10, 8, 15, tzinfo=timezone.utc)
-FIXTURES = Path(__file__).resolve().parents[1] / "fixtures/sp101_beach_cache_clock"
+FIXTURES = _FIXTURES / "sp101_beach_cache_clock"
 BASE = {"schemaVersion": 1, "countyId": "slo", "regionId": "morro-bay",
         "generatedAt": "2026-10-08T15:00:00Z", "waterQuality": [], "sources": [{
             "id": "synthetic-beach-status", "label": "Invented beach status",
