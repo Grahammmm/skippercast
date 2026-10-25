@@ -6,13 +6,13 @@ The golden catalog was recorded from the pinned, unmodified full module.
 import copy
 import hashlib
 import json
-from pathlib import Path
 
 import pytest
 
 from skippercast.coastal import live_discovery as ld
+from tests._support import FIXTURES
 
-GOLDEN = Path(__file__).resolve().parents[1] / "fixtures" / "sc44" / "golden.json"
+GOLDEN = FIXTURES / "sc44" / "golden.json"
 CANDIDATE_FIELDS = (
     "metadata", "provenance", "extent", "unknowns", "field_evidence",
     "rejection_reasons", "terrain", "habitat", "render",
