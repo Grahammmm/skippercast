@@ -1,0 +1,139 @@
+{
+  "actual_builder": "gpt-6.1-sol / openai-codex / sol-reviewer run2458",
+  "admission_scope": "bounded synthetic candidate only; no inherited review or hold release",
+  "authority": "operator disposition 2026-10-25 10:42, card t_2773af86",
+  "baseline": "35cfd0ecefce1c9ad3819b73d6dc775677d8d9fe",
+  "files": [
+    {
+      "bytes": 19178,
+      "path": "research/scripts/coast_mvp/coast_mosaic.py",
+      "sha256": "f3f600a77722a076811d1ca8ae1723de0bcd2bfc33a2f5f8a99a8a9f3de8f6b4",
+      "source_commit": "fc269e21aca49e56bf9fb56626e64a20e21f2d39",
+      "source_repository": "existing-local-coast-mvp-integration",
+      "unchanged": true
+    },
+    {
+      "bytes": 14553,
+      "path": "research/scripts/coast_mvp/coast_contours.py",
+      "sha256": "46fde1940dcae4ccc649731a1bf9c5850e5f79aa72f13ebe0c8918bad48119d5",
+      "source_commit": "fc269e21aca49e56bf9fb56626e64a20e21f2d39",
+      "source_repository": "existing-local-coast-mvp-integration",
+      "unchanged": true
+    },
+    {
+      "bytes": 12669,
+      "path": "research/scripts/coast_mvp/coast_qa.py",
+      "sha256": "be690acdfd81453d36a31e0e64f8ce3b09080bc6d4e9194577217f3b2572ff6f",
+      "source_commit": "fc269e21aca49e56bf9fb56626e64a20e21f2d39",
+      "source_repository": "existing-local-coast-mvp-integration",
+      "unchanged": true
+    },
+    {
+      "bytes": 8891,
+      "path": "research/scripts/coast_mvp/coast_rights.py",
+      "sha256": "76c1e470d2ceeb37b963cb4e738bc12f7c7a50789f10bee20426c7d701954702",
+      "source_commit": "fc269e21aca49e56bf9fb56626e64a20e21f2d39",
+      "source_repository": "existing-local-coast-mvp-integration",
+      "unchanged": true
+    },
+    {
+      "bytes": 12600,
+      "path": "scripts/validate_coast_receipt.py",
+      "sha256": "c6dd85090739032205723c47378757a0da1cbb904ca28a9fc939d64530ea98a7",
+      "source_commit": "a0e3413ee8e2a2239f8c4cb032666a17fcffea0c",
+      "source_repository": "existing-local-S-019",
+      "unchanged": true
+    },
+    {
+      "bytes": 20966,
+      "path": "skills/coast-campaign-shared/schemas/coast-segment-receipt-v1.schema.json",
+      "sha256": "73dc8b02224d7c8e958bd9a9534f06cc66a7c2fea64cd562313520f784506550",
+      "source_commit": "a0e3413ee8e2a2239f8c4cb032666a17fcffea0c",
+      "source_repository": "existing-local-S-019",
+      "unchanged": true
+    },
+    {
+      "bytes": 24635,
+      "path": "tests/unit/test_segment_receipt.py",
+      "sha256": "120b937087885a5e9f7440d8f7444f71f7123db484d46ec20114651b3489dfc6",
+      "source_commit": "a0e3413ee8e2a2239f8c4cb032666a17fcffea0c",
+      "source_repository": "existing-local-S-019",
+      "unchanged": true
+    },
+    {
+      "bytes": 8565,
+      "path": "validate_recipe.py",
+      "sha256": "7f14c349497d647c540aa67f4a389da562908430b83e687098f493b15788dad3",
+      "source_commit": "229129fe9267ad3ba3ef4f05745d179e2a8c4bbf",
+      "source_repository": "existing-local-S-021",
+      "unchanged": true
+    },
+    {
+      "bytes": 2865,
+      "path": "schemas/coast-recipe-v1.schema.json",
+      "sha256": "a659d136536a553043fac917473428ae0c6e51bdb179cc66bdd295e09ebf1593",
+      "source_commit": "229129fe9267ad3ba3ef4f05745d179e2a8c4bbf",
+      "source_repository": "existing-local-S-021",
+      "unchanged": true
+    },
+    {
+      "bytes": 18155,
+      "path": "tests/unit/test_coast_recipe.py",
+      "sha256": "020dc5f5f736ac09cfefc50c7e8315079bb34e12d512a4bed054c84986413410",
+      "source_commit": "229129fe9267ad3ba3ef4f05745d179e2a8c4bbf",
+      "source_repository": "existing-local-S-021",
+      "unchanged": true
+    },
+    {
+      "bytes": 772,
+      "path": "regions/morro-bay/coast.json",
+      "sha256": "762144fdc5cd6cd764b3fcc2bd313041f5d7f5abb1e90afef393197b5abb7457",
+      "source_commit": "229129fe9267ad3ba3ef4f05745d179e2a8c4bbf",
+      "source_repository": "existing-local-S-021",
+      "unchanged": true
+    },
+    {
+      "bytes": 683,
+      "path": "regions/cambria-san-simeon/coast.json",
+      "sha256": "7b969be33efc79bf4688c696f57d5385e3a3d0f17f7b1951437ac6017975c869",
+      "source_commit": "229129fe9267ad3ba3ef4f05745d179e2a8c4bbf",
+      "source_repository": "existing-local-S-021",
+      "unchanged": true
+    },
+    {
+      "bytes": 508,
+      "path": "regions/south-big-sur-san-simeon/coast.json",
+      "sha256": "25fd196db8bb088b610efd92b05f138d69f3c8f76066c648e6b83109c48de5e5",
+      "source_commit": "229129fe9267ad3ba3ef4f05745d179e2a8c4bbf",
+      "source_repository": "existing-local-S-021",
+      "unchanged": true
+    },
+    {
+      "bytes": 519,
+      "path": "regions/santa-cruz-monterey-bay/coast.json",
+      "sha256": "68d5a8d836039ae8cf1ed30e62c1d11ed99179caf71787fac228d417e14e3a34",
+      "source_commit": "229129fe9267ad3ba3ef4f05745d179e2a8c4bbf",
+      "source_repository": "existing-local-S-021",
+      "unchanged": true
+    },
+    {
+      "bytes": 16144,
+      "path": "research/scripts/coast_mvp/prefetch_receipts_check.py",
+      "sha256": "dec832df258becc13c0348c78d2d86c674b82ddca84a36630d5332802a779299",
+      "source_commit": "8314c87a2dde2975bfa43a34c9257becda628fae",
+      "source_repository": "existing-local-S-029",
+      "unchanged": true
+    },
+    {
+      "bytes": 16286,
+      "path": "research/tests/test_prefetch_receipts_check.py",
+      "sha256": "98c0f43bea4e42a0dafe548df9d16fcaa075028c4c4d56bd12ccd39d17dd0615",
+      "source_commit": "8314c87a2dde2975bfa43a34c9257becda628fae",
+      "source_repository": "existing-local-S-029",
+      "unchanged": true
+    }
+  ],
+  "full_ci": "PENDING operator exact-head population",
+  "inherited_material": "Copied bytes retain original review coverage and holds. No new independent approval of inherited stages is asserted; sole Opus reviewer covers Sol driver/integration delta.",
+  "schema": "s020-local-source-supply-v1"
+}
