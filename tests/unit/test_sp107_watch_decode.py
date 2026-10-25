@@ -8,11 +8,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from tests._support import FIXTURES
 from skippercast.fleet.ais.watch import WatchFile, parse_watch
 
 
-REPO = Path(__file__).resolve().parents[2]
-FIXTURES = REPO / "tests" / "fixtures" / "sp107_watch_decode"
+FIXTURES = FIXTURES / "sp107_watch_decode"
 INITIAL = 367000001
 UPDATED = 367000002
 
