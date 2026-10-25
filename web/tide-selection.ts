@@ -1,9 +1,10 @@
 import {signal} from '@preact/signals';
-import {loadTideReading, readTideChoice, saveTideChoice, stationsInRegion, TIDE_DIRECTORY_URL, tidePackURLs, type TideReading, type TideRegion, type TideStation} from './tide-stations.ts';
+import {loadTideReading, readSavedTideStations, saveSavedTideStations, MAX_SAVED_TIDE_STATIONS, stationsInRegion, TIDE_DIRECTORY_URL, tidePackURLs, type TideReading, type TideRegion, type TideStation} from './tide-stations.ts';
 
-export function createTideSelection(fetcher: typeof fetch = (...args) => fetch(...args)) {
+export function createTideSelection(fetcher: typeof fetch = (...args) => fetch(...args), storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>) {
   const region = signal<TideRegion | null>(null), stations = signal<readonly TideStation[]>([]);
   const choice = signal<string | null>(null), reading = signal<TideReading | null>(null);
+  const saved = signal<readonly string[]>([]);
   const loading = signal(false), error = signal('');
   let generation = 0, directory: Promise<unknown> | null = null;
   function catalog(): Promise<unknown> {
@@ -44,15 +45,40 @@ export function createTideSelection(fetcher: typeof fetch = (...args) => fetch(.
   function configure(next: TideRegion | null): void {
     generation++;
     region.value = next; stations.value = []; reading.value = null; loading.value = false; error.value = '';
-    choice.value = next ? readTideChoice(next.id) : null;
+    const restored = next ? readSavedTideStations(next.id, storage) : {saved: [], active: null};
+    saved.value = restored.saved;
+    choice.value = restored.active;
+    if (restored.saved.length && !restored.active) void list();
     void load();
   }
-  function choose(id: string | null): void {
+  function persist(): void {
     const selected = region.peek();
-    if (!selected || (id !== null && id !== selected.station && !stations.peek().some(s => s.id === id))) return;
-    choice.value = id === selected.station ? null : id;
-    saveTideChoice(selected.id, choice.peek());
+    if (selected) saveSavedTideStations(selected.id, {saved: [...saved.peek()], active: choice.peek()}, storage);
+  }
+  function choose(id: string | null): boolean {
+    const selected = region.peek();
+    if (!selected || (id !== null && id !== selected.station && !stations.peek().some(s => s.id === id) && !saved.peek().includes(id))) return false;
+    const active = id === selected.station ? null : id;
+    if (active && !saved.peek().includes(active)) {
+      if (saved.peek().length >= MAX_SAVED_TIDE_STATIONS) {
+        error.value = 'Up to three tide stations can be saved per region. Remove one before adding another.';
+        return false;
+      }
+      saved.value = [...saved.peek(), active];
+    }
+    choice.value = active;
+    persist();
     void load();
+    return true;
+  }
+  function remove(id: string): void {
+    if (!saved.peek().includes(id)) return;
+    saved.value = saved.peek().filter(s => s !== id);
+    if (choice.peek() === id) {
+      choice.value = null;
+      void load();
+    } else error.value = '';
+    persist();
   }
   /** Snapshot the choice before saving; changing it during the save cannot mix stations. */
   async function packURLs(id: string, now = Date.now()): Promise<string[]> {
@@ -62,6 +88,6 @@ export function createTideSelection(fetcher: typeof fetch = (...args) => fetch(.
     if (!station) throw new Error('The chosen tide station could not be resolved. Retry or select the region default before saving.');
     return tidePackURLs(station, now);
   }
-  return {region, stations, choice, reading, loading, error, configure, list, choose, refresh: load, packURLs};
+  return {region, stations, saved, choice, reading, loading, error, configure, list, choose, remove, refresh: load, packURLs};
 }
 export const tideSelection = createTideSelection();
