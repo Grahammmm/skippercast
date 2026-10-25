@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 import time
@@ -27,9 +28,18 @@ def run_child(label, argv, cwd, child_dir):
     stderr = proc.stderr.encode()
     (child_dir / f'{label}.stdout').write_bytes(stdout)
     (child_dir / f'{label}.stderr').write_bytes(stderr)
+    combined = proc.stdout + proc.stderr
+    count = re.search(r'Ran (\d+) tests?', combined)
+    skips = re.search(r'OK \(skipped=(\d+)\)', combined)
+    failures = re.search(r'failures=(\d+)', combined)
+    errors = re.search(r'errors=(\d+)', combined)
     return {'label': label, 'argv': argv, 'cwd': str(cwd), 'exit': proc.returncode,
-            'runtime_seconds': round(elapsed, 6), 'stdout_sha256': sha256(stdout),
-            'stderr_sha256': sha256(stderr), 'stdout': proc.stdout, 'stderr': proc.stderr}
+            'runtime_seconds': round(elapsed, 6), 'test_count': int(count.group(1)) if count else None,
+            'skip_count': int(skips.group(1)) if skips else 0,
+            'failure_count': int(failures.group(1)) if failures else 0,
+            'error_count': int(errors.group(1)) if errors else 0,
+            'stdout_sha256': sha256(stdout), 'stderr_sha256': sha256(stderr),
+            'stdout': proc.stdout, 'stderr': proc.stderr}
 
 
 def baseline_result(run):
