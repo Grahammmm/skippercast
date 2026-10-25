@@ -33,7 +33,10 @@ PortDialog) are redirected before module execution. Deterministic injected hooks
 provide state slots, refs and effect scheduling; public button callbacks exercise
 refresh after synthetic save/delete. Test globals are restored after each test.
 Network/model fetch, browser networking and live-store sentinels precede import.
-The bundle is written to a fresh directory under this candidate's `out`, never
+With the acceptance launcher's override, bundles use fresh directories under
+this candidate's `out`. Ordinary test discovery without that override uses
+`mkdtemp(join(os.tmpdir(), 'sp1502-pack-inventory-'))`, respecting the inherited
+temporary root rather than writing next to the checkout. Neither mode writes
 fixtures. The original regression selectors run unchanged in separate Node test
 processes with the file-based pre-import offline guard.
 
@@ -107,7 +110,13 @@ Final external handoff receipts bind that exact head and the author runtime.
 
 ## Remaining gates
 
-Author: actual gpt-6.1-sol / openai-codex, sol-reviewer, run 1977, under the
+Round-1 review requested a portable temporary directory for ordinary discovery.
+Run 2070 changes only that output selection and this note; all semantic assertions,
+fixtures, and product code remain unchanged. A fresh pinned-product baseline
+refreezes the revised test before exact-head acceptance. Historical receipts
+remain intact, including the original review and earlier development failure.
+
+Author: actual gpt-6.1-sol / openai-codex, sol-reviewer, runs 1977 and 2070, under the
 operator's explicit Sol-builder admission. Sole independent reviewer: actual
 Claude Opus 5.5 on opus-coder-bopus. This document is self-review, not approval.
 Scoped green is REVIEW REQUIRED. Operator owns PR publication, exact-head CI,

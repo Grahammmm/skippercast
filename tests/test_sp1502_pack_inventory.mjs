@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdtemp, readFile, mkdir} from 'node:fs/promises';
-import {resolve, dirname, relative} from 'node:path';
+import {resolve, dirname, relative, join} from 'node:path';
+import {tmpdir} from 'node:os';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 
@@ -43,12 +44,17 @@ async function harness(t, responses) {
     }
     assert.deepEqual(blocked, [], 'no live/network/model/store access');
   });
-  // Discovery can run this file without the helper. Its default is still candidate-local.
-  const candidateOut = resolve(root, '../out');
-  const output = resolve(process.env.SP1502_TEST_OUTPUT ?? resolve(candidateOut, 'direct-tests'));
-  assert.ok(relative(candidateOut, output) !== '..' && !relative(candidateOut, output).startsWith('../'), 'candidate-local test output');
-  await mkdir(output, {recursive: true});
-  const dir = await mkdtemp(resolve(output, 'ssr-'));
+  // Ordinary discovery uses the inherited temporary root, not a checkout sibling.
+  let dir;
+  if (process.env.SP1502_TEST_OUTPUT) {
+    const candidateOut = resolve(root, '../out');
+    const output = resolve(process.env.SP1502_TEST_OUTPUT);
+    assert.ok(relative(candidateOut, output) !== '..' && !relative(candidateOut, output).startsWith('../'), 'candidate-local test output');
+    await mkdir(output, {recursive: true});
+    dir = await mkdtemp(resolve(output, 'ssr-'));
+  } else {
+    dir = await mkdtemp(join(tmpdir(), 'sp1502-pack-inventory-'));
+  }
   const result = await build({
     entryPoints: [resolve(fixtures, 'entry.mjs')], outfile: resolve(dir, 'trip.mjs'),
     bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', jsxImportSource: 'preact',
