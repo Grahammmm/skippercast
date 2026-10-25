@@ -1,9 +1,17 @@
 """Bounded cached-only SYNTHETIC segment composition; REVIEW REQUIRED.
 
-No discovery, fetch, coordinator execution, resume, signoff or archive. The caller
+No discovery, fetch, coordinator execution, signoff or archive. The caller
 pins recipe/plan/run bytes and supplies a dedicated admitted root. Stage APIs are
 used directly: no engine CLI children are spawned. Native GDAL utility APIs do
 real mosaic/contour work. Real-data application is deliberately not supported.
+
+S-026 resume: every stage writes a sealed, write-once stage receipt binding its
+exact inputs, outputs, tool bytes and recipe/plan/run pins. A rerun skips only
+stages whose binding and output bytes still match; stale or tampered stages are
+refused, never silently reused or overwritten. Residue of an interrupted stage is
+moved (renamed) into quarantine/; nothing is ever deleted and no cache is
+released. Manifests are write-once and recorded in an append-only hash-chained
+history. Archiving stays with skills/coast-segment-close.
 """
 from __future__ import annotations
 
@@ -14,10 +22,12 @@ from hashlib import sha256
 import importlib.util
 import json
 import math
+import os
 from pathlib import Path
 import re
 import stat
 import sys
+from uuid import uuid4
 
 REPO = Path(__file__).resolve().parents[3]
 DEFAULT_ADMITTED = REPO.parent / 'out'
@@ -184,12 +194,19 @@ def verify_cog(path):
         lib.GDALClose(dataset)
 
 
-def prepare(input_root, *, admitted_root, workspace, recipe_sha256, plan_sha256, run_sha256, code_commit):
+def prepare(input_root, *, admitted_root, workspace, recipe_sha256, plan_sha256, run_sha256, code_commit,
+            resume=False):
     admitted = safe(admitted_root, directory=True)
     require(admitted.is_dir(), 'admitted root must exist')
     inputs = safe(input_root, root=admitted, directory=True)
     workspace = safe(workspace, root=admitted, directory=True)
-    require(not workspace.exists(), 'fresh exclusive workspace required')
+    existing = resume and workspace.exists()
+    if existing:
+        marker = workspace / MARKER
+        require(workspace.is_dir() and marker.is_file() and not marker.is_symlink(),
+                'resume requires an existing marked segment workspace')
+    else:
+        require(not workspace.exists(), 'fresh exclusive workspace required')
     require(not inputs.is_relative_to(workspace) and not workspace.is_relative_to(inputs), 'input/output roots overlap')
     for value in (recipe_sha256, plan_sha256, run_sha256):
         require(isinstance(value, str) and re.fullmatch('[0-9a-f]{64}', value), 'exact frozen SHA256 required')
@@ -237,8 +254,11 @@ def prepare(input_root, *, admitted_root, workspace, recipe_sha256, plan_sha256,
         require(type(row['resolution_m']) in (int, float) and math.isfinite(row['resolution_m']) and row['resolution_m'] > 0, 'resolution required')
         sources.append(dict(source_id=row['source_id'], bytes=cache['bytes'], cached=exists, cache_need_bytes=0 if exists else cache['bytes']))
     require(total <= recipe['cache_budget_bytes'] and total <= admission['budgets']['bytes'], 'cache budget exceeded')
-    return dict(inputs=inputs, workspace=workspace, recipe=recipe, plan=plan, run=run, admission=admission,
-                root_id=root_id, sources=sources, bytes=total, cache_need_bytes=cache_need)
+    state = dict(inputs=inputs, workspace=workspace, recipe=recipe, plan=plan, run=run, admission=admission,
+                 root_id=root_id, sources=sources, bytes=total, cache_need_bytes=cache_need)
+    if existing:
+        require(read_json(workspace / MARKER) == workspace_marker(state), 'resume workspace marker mismatch')
+    return state
 
 
 @contextmanager
@@ -254,19 +274,374 @@ def native_offline():
         pyproj.network.set_network_enabled(was_enabled)
 
 
-def run_segment(input_root, *, workspace, admitted_root=DEFAULT_ADMITTED,
-                recipe_sha256, plan_sha256, run_sha256, code_commit, dry_run=False, reserve_gib=250):
-    state = prepare(input_root, admitted_root=admitted_root, workspace=workspace,
-                    recipe_sha256=recipe_sha256, plan_sha256=plan_sha256, run_sha256=run_sha256, code_commit=code_commit)
-    summary = {key: state[key] for key in ('sources', 'bytes', 'cache_need_bytes')}
-    summary.update(fetch=False, synthetic_only=True, status='REVIEW REQUIRED', semantic_approval=False)
-    if dry_run:
-        return summary
+STAGES = ('inputs', 'c1', 'c2', 'c4', 'c5', 'receipt')
+STAGE_TOOLS = {'inputs': (), 'c1': ('coast_mosaic',), 'c2': ('coast_contours',), 'c4': ('coast_qa',),
+               'c5': ('coast_rights',), 'receipt': ()}
+STAGE_SCHEMA = 'coast-segment-stage-v1'
+MARKER = 'segment-workspace.json'
+STAGE_DIR, MANIFEST_DIR, QUARANTINE_DIR = 'stages', 'manifests', 'quarantine'
+HISTORY = MANIFEST_DIR + '/history.jsonl'
+ARCHIVE_OWNER = 'skills/coast-segment-close (archive_segment.py, verify_archive.py; release_hot_cache.py operator-only)'
+
+
+def workspace_marker(state):
+    return dict(schema='coast-segment-workspace-v1', root_id=state['root_id'], segment_slug=state['recipe']['slug'],
+                campaign_segment_id=state['run']['campaign_segment_id'])
+
+
+def file_sha(path):
+    return sha256(read_file(path)).hexdigest()
+
+
+def tool_identity(stage):
+    """Measured tool binding: driver, stage-module and helper bytes plus native versions."""
+    import numpy
+    import rasterio
+    here = Path(__file__).resolve()
+    return dict(driver_sha256=file_sha(here),
+                stages={name: file_sha(here.parent / (name + '.py')) for name in STAGE_TOOLS[stage]},
+                helpers={'validate_recipe.py': file_sha(REPO / 'validate_recipe.py'),
+                         'validate_coast_receipt.py': file_sha(REPO / 'scripts/validate_coast_receipt.py')},
+                rasterio=rasterio.__version__, gdal=rasterio.__gdal_version__, numpy=numpy.__version__)
+
+
+def owned_paths(state, stage):
+    """Workspace-relative paths a stage creates. Later stages never write here."""
+    if stage == 'inputs':
+        return ['recipe.json', 'plan.json', 'run.json', state['run']['admission']['path'],
+                *[row['cache']['path'] for row in state['plan']['sources']], 'stage-region.json', 'stage-sources.json']
+    return {'c1': ['c1'], 'c2': ['c2'], 'c4': ['c1/qa-manifest.json', 'qa-config.json', 'c4'],
+            'c5': ['rights-manifest.json', 'rights.html'], 'receipt': ['evidence', 'receipt.json']}[stage]
+
+
+def stage_binding(state, stage, upstream, pins, params):
+    if stage == 'inputs':
+        copied = owned_paths(state, 'inputs')[:-2]
+        inputs = [ref(state['inputs'], child(state['inputs'], relative), 'input') for relative in copied]
+    else:
+        inputs = list(upstream)
+    return dict(schema='coast-segment-stage-binding-v1', stage=stage, recipe=dict(pins, parameters=params),
+                tool=tool_identity(stage), inputs=inputs)
+
+
+def stage_seal(value):
+    return sha256(canonical({k: v for k, v in value.items() if k != 'seal_sha256'})).hexdigest()
+
+
+def load_stage(root, stage):
+    """Return (receipt, 'sealed') or (None, 'absent'|'partial'). Never trusts partial bytes."""
+    path = root / STAGE_DIR / (stage + '.json')
+    require(not path.is_symlink(), 'symlinked stage receipt refused: ' + stage)
+    if not path.exists():
+        return None, 'absent'
+    value, sealed = None, False
+    try:
+        raw = read_file(path)
+        value = receipt_api.loads(raw)
+        sealed = (isinstance(value, dict) and raw == canonical(value) and value.get('schema') == STAGE_SCHEMA
+                  and value.get('stage') == stage and value.get('complete') is True
+                  and isinstance(value.get('outputs'), list) and value.get('seal_sha256') == stage_seal(value)
+                  and value.get('binding_sha256') == sha256(canonical(value.get('binding'))).hexdigest())
+    except (ValueError, TypeError, KeyError, RecursionError):
+        sealed = False
+    return (value, 'sealed') if sealed else (None, 'partial')
+
+
+def write_stage(root, stage, value):
+    """Fully written + fsynced pending file, then renamed into a never-existing name."""
+    value = {k: v for k, v in value.items() if k != 'seal_sha256'}
+    value['seal_sha256'] = stage_seal(value)
+    final = root / STAGE_DIR / (stage + '.json')
+    pending = root / STAGE_DIR / '.pending' / f'{stage}-{uuid4().hex}.json'
+    pending.parent.mkdir(parents=True, exist_ok=True)
+    with pending.open('xb') as stream:
+        stream.write(canonical(value))
+        stream.flush()
+        os.fsync(stream.fileno())
+    require(not final.exists() and not final.is_symlink(), 'stage receipt already exists; never overwritten')
+    os.rename(pending, final)
+    return value
+
+
+def residue(state, stage):
+    root = state['workspace']
+    return any((root / r).exists() or (root / r).is_symlink()
+               for r in owned_paths(state, stage) + [f'{STAGE_DIR}/{stage}.json'])
+
+
+def quarantine(state, stage, attempt):
+    """Rename (never delete) an incomplete stage's residue and partial receipt aside."""
+    root, moved = state['workspace'], []
+    for relative in owned_paths(state, stage) + [f'{STAGE_DIR}/{stage}.json']:
+        source = child(root, relative)
+        if source.exists():
+            dest = child(root, f'{QUARANTINE_DIR}/{attempt}/{stage}/{relative}')
+            require(not dest.exists(), 'quarantine collision')
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            os.rename(source, dest)
+            moved.append(dest.relative_to(root).as_posix())
+    return moved
+
+
+def collect_outputs(state, stage):
+    root, refs = state['workspace'], []
+    for relative in owned_paths(state, stage):
+        path = child(root, relative)
+        files = sorted(p for p in path.rglob('*') if not p.is_dir()) if path.is_dir() else [path]
+        refs += [ref(root, p, state['root_id']) for p in files]
+    return sorted(refs, key=lambda r: r['path'])
+
+
+def verify_outputs(root, outputs):
+    for item in outputs:
+        path = child(root, item['path'])
+        if path.is_symlink() or not path.is_file():
+            return 'missing output ' + item['path']
+        raw = read_file(path)
+        if (sha256(raw).hexdigest(), len(raw)) != (item['sha256'], item['bytes']):
+            return 'output hash mismatch ' + item['path']
+    return None
+
+
+def _save(state, name, value):
+    path = child(state['workspace'], name)
+    write_json(path, value)
+    return ref(state['workspace'], path, state['root_id'])
+
+
+def _run_inputs(state, stages, results, pins, params):
+    root = state['workspace']
+    # Preserve exact supplied recipe/run/admission bytes and cached inputs.
+    for relative in owned_paths(state, 'inputs')[:-2]:
+        dest = child(root, relative)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        with dest.open('xb') as stream:
+            stream.write(read_file(child(state['inputs'], relative)))
+    _save(state, 'stage-region.json', dict(id=state['recipe']['slug'], bounds=state['recipe']['bbox']))
+    _save(state, 'stage-sources.json', dict(schema_version=1, sources=state['rows']))
+    return {}
+
+
+def _run_c1(state, stages, results, pins, params):
+    root = state['workspace']
+    mosaic = stages['coast_mosaic'].mosaic(root / 'stage-region.json', root / 'stage-sources.json',
+                root / 'c1', reserve_gib=state['reserve_gib'], max_cells=MAX_CELLS)
+    measured = {name: verify_cog(root / 'c1' / row['path']) for name, row in mosaic['outputs'].items()}
+    return dict(mosaic=mosaic, measured=measured)
+
+
+def _run_c2(state, stages, results, pins, params):
+    root = state['workspace']
+    stages['coast_contours'].build(root / 'c1/elevation.tif', root / 'c1/contributor.tif', root / 'c1/manifest.json',
+                root / 'c2', max_cells=MAX_CELLS, max_tiles=params['max_tiles'])
+    return {}
+
+
+def _run_c4(state, stages, results, pins, params):
+    root, recipe = state['workspace'], state['recipe']
+    # C1 manifests contain physical source paths: create a root-independent
+    # copy for QA, without changing the frozen C1 receipt or cached bytes.
+    stable_mosaic = json.loads(json.dumps(results['c1']['mosaic']))
+    for row in stable_mosaic['sources']:
+        index = int(row['id'].split('-')[1])
+        row['path'] = '../' + state['plan']['sources'][index]['cache']['path']
+    _save(state, 'c1/qa-manifest.json', stable_mosaic)
+    _save(state, 'qa-config.json', dict(region=recipe['slug'], segments=[dict(id=recipe['slug'], manifest='c1/qa-manifest.json')]))
+    return dict(qa=stages['coast_qa'].packet(root / 'qa-config.json', root / 'c4'))
+
+
+def _run_c5(state, stages, results, pins, params):
+    mosaic, rights_rows = results['c1']['mosaic'], []
+    for index, row in enumerate(state['plan']['sources']):
+        code = next(s['code'] for s in mosaic['sources'] if s['id'] == 'source-' + str(index))
+        rights_rows.append(dict(source_id=row['source_id'], name='Synthetic ' + row['source_id'],
+            source_url=row['source_url'], sha256=row['cache']['sha256'], rights=row['rights'],
+            contributed_cells=mosaic['contributor_cells'][str(code)]))
+    rights_manifest = dict(schema_version=1, fixture_only=True, sources=rights_rows)
+    _save(state, 'rights-manifest.json', rights_manifest)
+    with child(state['workspace'], 'rights.html').open('xb') as stream:
+        stream.write(stages['coast_rights'].render_manifest(rights_manifest).encode('utf-8'))
+    return {}
+
+
+def _run_receipt(state, stages, results, pins, params):
+    root, plan, recipe, run = state['workspace'], state['plan'], state['recipe'], state['run']
+    mosaic, measured, qa = results['c1']['mosaic'], results['c1']['measured'], results['c4']['qa']
+    save = lambda name, value: _save(state, name, value)  # noqa: E731
+    bindings = [dict(source_id=row['source_id'], source_sha256=row['cache']['sha256']) for row in plan['sources']]
+    inputs = []
+    for index, row in enumerate(plan['sources']):
+        evidence = save(f'evidence/source-{index}.json', dict(rights=row['rights'], datum=row['datum'],
+                        resolution_m=row['resolution_m'], synthetic_only=True))
+        inputs.append(dict(source_id=row['source_id'], source_sha256=row['cache']['sha256'], cache=row['cache'],
+                           rights=evidence, datum=evidence, resolution=evidence))
+    # Only accepted products are output rows; C1 volatile envelope remains
+    # available for audit, but is not a root-independent content product.
+    products = [(root / 'c1' / row['path'], 'coast_mosaic', measured[name]) for name, row in mosaic['outputs'].items()]
+    products += [(p, 'coast_contours', dict(format=p.suffix[1:])) for p in sorted((root / 'c2').rglob('*')) if p.is_file()]
+    products += [(p, 'coast_qa', dict(format=p.suffix[1:])) for p in sorted((root / 'c4').iterdir()) if p.is_file()]
+    products.append((root / 'rights.html', 'coast_rights', dict(format='html')))
+    outputs = []
+    for index, (path, tool, measurement) in enumerate(products):
+        format_ref = save(f'evidence/format-{index}.json', measurement)
+        outputs.append(dict(artifact=ref(root, path, state['root_id']), contributing_sources=bindings,
+            tool=dict(name=tool, version=STAGE_HASHES[tool], code_commit=pins['code_commit']),
+            parameters=dict(driver_sha256=sha256(Path(__file__).read_bytes()).hexdigest(),
+                            plan_sha256=pins['plan_sha256'], synthetic_only=True),
+            measured_format=format_ref))
+    stats = qa['segments'][0]['stats']
+    support = save('evidence/support.json', dict(crs=mosaic['crs'], bounds=mosaic['bounds_projected'],
+                width=mosaic['width'], height=mosaic['height'], resolution_m=10, water_mask='unavailable'))
+    threshold = save('evidence/threshold.json', dict(hole_fraction_above=0.1, denominator='entire rectangular regular grid'))
+    receipt = dict(schema='coast-segment-receipt-v1', schema_version=1,
+        **{key: run[key] for key in ('created_utc', 'author_profile', 'author_model', 'card_id', 'code_commit',
+                'skill_commit', 'campaign_segment_id', 'coordinator_segment_id')},
+        segment_slug=recipe['slug'], recipe_sha256=pins['recipe_sha256'], recipe=ref(root, root / 'recipe.json', state['root_id']),
+        run=ref(root, root / 'run.json', state['root_id']), inputs=inputs, outputs=outputs,
+        qa=dict(report=ref(root, root / 'c4/qa.json', state['root_id']), hole_numerator=stats['hole_cells'],
+            coverage_denominator=stats['grid_cells'], units='regular grid cells', spatial_support=support,
+            flags=['holes_above_10_percent'] if stats['hole_cells'] / stats['grid_cells'] > 0.1 else [], threshold_config=threshold),
+        tier1=dict(mode='unavailable', text_result='unavailable', vision_result='unavailable',
+                   reason='S-023 owns screening; no model or vision check performed'), closed=False)
+    receipt['determinism_digest'] = receipt_api.determinism_digest(receipt)
+    resolver = receipt_api.Resolver({state['root_id']: str(root)}, allowed_root_ids={state['root_id']})
+    receipt_api.validate_receipt(receipt, resolver, root_id=state['root_id'])
+    save('receipt.json', receipt)
+    return dict(receipt=receipt)
+
+
+RUNNERS = {'inputs': _run_inputs, 'c1': _run_c1, 'c2': _run_c2, 'c4': _run_c4, 'c5': _run_c5, 'receipt': _run_receipt}
+
+
+def _walk(state, *, pins, params, execute, stages=None):
+    """Classify each stage in order; in execute mode reuse, refuse or run it.
+
+    Status values: complete (sealed receipt, exact binding, output bytes match),
+    stale (sealed receipt with a different binding), tampered (exact binding but
+    missing/changed output), incomplete (partial receipt or residue), pending
+    (nothing written), blocked (an upstream stage is not complete).
+    """
+    root, upstream, results, values, report = state['workspace'], [], {}, {}, []
+    attempt, blocked = uuid4().hex, False
+    for stage in STAGES:
+        if blocked:
+            report.append(dict(stage=stage, status='blocked'))
+            continue
+        binding = stage_binding(state, stage, upstream, pins, params)
+        digest = sha256(canonical(binding)).hexdigest()
+        value, why = load_stage(root, stage) if root.exists() else (None, 'absent')
+        problem = None
+        if value is None:
+            status = 'incomplete' if why == 'partial' or (root.exists() and residue(state, stage)) else 'pending'
+        elif value['binding_sha256'] != digest:
+            status = 'stale'
+        else:
+            problem = verify_outputs(root, value['outputs'])
+            status = 'tampered' if problem else 'complete'
+        if not execute:
+            report.append(dict(stage=stage, status=status, **({'reason': problem} if problem else {})))
+            blocked = status != 'complete'
+            if not blocked:
+                upstream += value['outputs']
+            continue
+        require(status != 'stale', 'stale stage binding refused: ' + stage)
+        require(status != 'tampered', f'tampered stage output refused: {stage}: {problem}')
+        if status == 'complete':
+            report.append(dict(stage=stage, action='reused', quarantined=[]))
+        else:
+            moved = quarantine(state, stage, attempt) if status == 'incomplete' else []
+            result = receipt_api.loads(canonical(RUNNERS[stage](state, stages, results, pins, params)))
+            value = write_stage(root, stage, dict(schema=STAGE_SCHEMA, stage=stage, binding=binding,
+                binding_sha256=digest, outputs=collect_outputs(state, stage), result=result, complete=True,
+                status='REVIEW REQUIRED', semantic_approval=False))
+            report.append(dict(stage=stage, action='executed', quarantined=moved))
+        results[stage], values[stage] = value['result'], value
+        upstream += value['outputs']
+    return results, values, report
+
+
+def _write_manifest(state, prefix, value):
+    root, raw = state['workspace'], canonical(value)
+    path = child(root, f'{MANIFEST_DIR}/{prefix}-{sha256(raw).hexdigest()[:16]}.json')
+    if path.exists():
+        require(read_file(path) == raw, 'existing manifest differs; never overwritten')
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open('xb') as stream:
+            stream.write(raw)
+    return ref(root, path, state['root_id'])
+
+
+def verify_history(state):
+    """Return (rows, tip sha). Any partial/edited/reordered row refuses."""
+    path = state['workspace'] / HISTORY
+    if not path.exists() and not path.is_symlink():
+        return 0, None
+    raw, previous = read_file(child(state['workspace'], HISTORY)), None
+    lines = raw.splitlines(keepends=True)
+    for index, line in enumerate(lines):
+        try:
+            item = receipt_api.loads(line)
+            ok = (line == canonical(item) and item.get('seq') == index and item.get('previous_row_sha256') == previous)
+        except (ValueError, TypeError, AttributeError, RecursionError):
+            ok = False
+        require(ok, 'manifest history damaged; attended reconciliation required')
+        previous = sha256(line).hexdigest()
+    return len(lines), previous
+
+
+def _append_history(state, row):
+    count, previous = verify_history(state)
+    row = dict(row, schema='coast-segment-manifest-history-v1', seq=count, previous_row_sha256=previous)
+    data = canonical(row)
+    path = child(state['workspace'], HISTORY)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open('ab') as stream:
+        stream.write(data)
+        stream.flush()
+        os.fsync(stream.fileno())
+    return dict(seq=count, rows=count + 1, row_sha256=sha256(data).hexdigest())
+
+
+def _manifests(state, values, report, *, viewer):
+    root, root_id = state['workspace'], state['root_id']
+    receipt = values['receipt']['result']['receipt']
+    stage_receipts = [ref(root, root / STAGE_DIR / (stage + '.json'), root_id) for stage in STAGES]
+    files = sorted((item for stage in STAGES for item in values[stage]['outputs']), key=lambda r: r['path'])
+    archive = _write_manifest(state, 'archive-candidates', dict(
+        schema='coast-segment-archive-candidates-v1', campaign_segment_id=state['run']['campaign_segment_id'],
+        segment_slug=state['recipe']['slug'], determinism_digest=receipt['determinism_digest'],
+        receipt=ref(root, root / 'receipt.json', root_id), stage_receipts=stage_receipts, files=files,
+        cache_files=[item for item in files if item['path'].startswith('cache/')],
+        archive_owner=ARCHIVE_OWNER, archived=False, archive_verified=False,
+        cache_release='not performed; release_hot_cache.py is operator-only', closed=False,
+        status='REVIEW REQUIRED', semantic_approval=False))
+    viewer_ref = None
+    if viewer:
+        layers = sorted((item for stage in ('c1', 'c2', 'c4') for item in values[stage]['outputs']
+                         if item['path'].startswith(('c1/', 'c2/', 'c4/'))), key=lambda r: r['path'])
+        viewer_ref = _write_manifest(state, 'viewer', dict(
+            schema='coast-segment-local-viewer-v1', opt_in=True, local_only=True, publication_allowed=False,
+            mask_qualified=False, terrain_mask_gate='HELD; this manifest never implies mask qualification',
+            segment_slug=state['recipe']['slug'], determinism_digest=receipt['determinism_digest'],
+            receipt=ref(root, root / 'receipt.json', root_id), layers=layers, status='REVIEW REQUIRED'))
+    history = _append_history(state, dict(
+        determinism_digest=receipt['determinism_digest'], code_commit=state['run']['code_commit'],
+        executed=[r['stage'] for r in report if r['action'] == 'executed'],
+        reused=[r['stage'] for r in report if r['action'] == 'reused'],
+        quarantined=[path for r in report for path in r['quarantined']],
+        archive_candidates=archive, viewer=viewer_ref))
+    return dict(archive_candidates=archive, viewer=viewer_ref), history
+
+
+def _preflight(state, reserve_gib):
+    """All checks that precede any workspace write."""
     require(state['cache_need_bytes'] == 0, 'missing cached sources; fetching is disabled')
     stages = qualify_stages()
+    state['reserve_gib'] = reserve_gib
     import rasterio
     from rasterio.warp import transform_bounds
-    recipe, plan, root = state['recipe'], state['plan'], state['workspace']
+    recipe, plan = state['recipe'], state['plan']
     require(math.isfinite(reserve_gib) and reserve_gib >= 0, 'invalid reserve')
     # C1 exact projection/cell formula is checked before any output write.
     projected = transform_bounds('EPSG:4326', 'EPSG:3310', *recipe['bbox'], densify_pts=101)
@@ -294,83 +669,74 @@ def run_segment(input_root, *, workspace, admitted_root=DEFAULT_ADMITTED,
         for row in rows:
             with rasterio.open(row['path'], driver='GTiff') as grid:
                 require(grid.driver == 'GTiff' and grid.width * grid.height <= MAX_CELLS, 'bounded native TIFF required')
-        root.mkdir(parents=True, exist_ok=False)
-        def save(name, value):
-            path = child(root, name)
-            write_json(path, value)
-            return ref(root, path, state['root_id'])
-        # Preserve exact supplied recipe/run/admission bytes and cached inputs.
-        for relative in ('recipe.json', 'plan.json', 'run.json', state['run']['admission']['path'],
-                         *[row['cache']['path'] for row in plan['sources']]):
-            dest = child(root, relative)
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            with dest.open('xb') as stream:
-                stream.write(read_file(child(state['inputs'], relative)))
-        save('stage-region.json', dict(id=recipe['slug'], bounds=recipe['bbox']))
-        save('stage-sources.json', dict(schema_version=1, sources=rows))
-        mosaic = stages['coast_mosaic'].mosaic(root / 'stage-region.json', root / 'stage-sources.json',
-                    root / 'c1', reserve_gib=reserve_gib, max_cells=MAX_CELLS)
-        measured = {name: verify_cog(root / 'c1' / row['path']) for name, row in mosaic['outputs'].items()}
-        stages['coast_contours'].build(root / 'c1/elevation.tif', root / 'c1/contributor.tif', root / 'c1/manifest.json',
-                    root / 'c2', max_cells=MAX_CELLS, max_tiles=4)
-        # C1 manifests contain physical source paths: create a root-independent
-        # copy for QA, without changing the frozen C1 receipt or cached bytes.
-        stable_mosaic = json.loads(json.dumps(mosaic))
-        for row in stable_mosaic['sources']:
-            index = int(row['id'].split('-')[1])
-            row['path'] = '../' + plan['sources'][index]['cache']['path']
-        save('c1/qa-manifest.json', stable_mosaic)
-        save('qa-config.json', dict(region=recipe['slug'], segments=[dict(id=recipe['slug'], manifest='c1/qa-manifest.json')]))
-        qa = stages['coast_qa'].packet(root / 'qa-config.json', root / 'c4')
-        rights_rows = []
-        for index, row in enumerate(plan['sources']):
-            rights_rows.append(dict(source_id=row['source_id'], name='Synthetic ' + row['source_id'],
-                source_url=row['source_url'], sha256=row['cache']['sha256'], rights=row['rights'],
-                contributed_cells=mosaic['contributor_cells'][str(next(s['code'] for s in mosaic['sources'] if s['id'] == 'source-' + str(index)))]))
-        rights_manifest = dict(schema_version=1, fixture_only=True, sources=rights_rows)
-        save('rights-manifest.json', rights_manifest)
-        (root / 'rights.html').write_text(stages['coast_rights'].render_manifest(rights_manifest))
-        bindings = [dict(source_id=row['source_id'], source_sha256=row['cache']['sha256']) for row in plan['sources']]
-        inputs = []
-        for index, row in enumerate(plan['sources']):
-            evidence = save(f'evidence/source-{index}.json', dict(rights=row['rights'], datum=row['datum'],
-                            resolution_m=row['resolution_m'], synthetic_only=True))
-            inputs.append(dict(source_id=row['source_id'], source_sha256=row['cache']['sha256'], cache=row['cache'],
-                               rights=evidence, datum=evidence, resolution=evidence))
-        # Only accepted products are output rows; C1 volatile envelope remains
-        # available for audit, but is not a root-independent content product.
-        products = [(root / 'c1' / row['path'], 'coast_mosaic', measured[name]) for name, row in mosaic['outputs'].items()]
-        products += [(p, 'coast_contours', dict(format=p.suffix[1:])) for p in sorted((root / 'c2').rglob('*')) if p.is_file()]
-        products += [(p, 'coast_qa', dict(format=p.suffix[1:])) for p in sorted((root / 'c4').iterdir()) if p.is_file()]
-        products.append((root / 'rights.html', 'coast_rights', dict(format='html')))
-        outputs = []
-        for index, (path, tool, measurement) in enumerate(products):
-            format_ref = save(f'evidence/format-{index}.json', measurement)
-            outputs.append(dict(artifact=ref(root, path, state['root_id']), contributing_sources=bindings,
-                tool=dict(name=tool, version=STAGE_HASHES[tool], code_commit=code_commit),
-                parameters=dict(driver_sha256=sha256(Path(__file__).read_bytes()).hexdigest(),
-                                plan_sha256=plan_sha256, synthetic_only=True),
-                measured_format=format_ref))
-        stats = qa['segments'][0]['stats']
-        support = save('evidence/support.json', dict(crs=mosaic['crs'], bounds=mosaic['bounds_projected'],
-                    width=mosaic['width'], height=mosaic['height'], resolution_m=10, water_mask='unavailable'))
-        threshold = save('evidence/threshold.json', dict(hole_fraction_above=0.1, denominator='entire rectangular regular grid'))
-        run = state['run']
-        receipt = dict(schema='coast-segment-receipt-v1', schema_version=1,
-            **{key: run[key] for key in ('created_utc', 'author_profile', 'author_model', 'card_id', 'code_commit',
-                    'skill_commit', 'campaign_segment_id', 'coordinator_segment_id')},
-            segment_slug=recipe['slug'], recipe_sha256=recipe_sha256, recipe=ref(root, root / 'recipe.json', state['root_id']),
-            run=ref(root, root / 'run.json', state['root_id']), inputs=inputs, outputs=outputs,
-            qa=dict(report=ref(root, root / 'c4/qa.json', state['root_id']), hole_numerator=stats['hole_cells'],
-                coverage_denominator=stats['grid_cells'], units='regular grid cells', spatial_support=support,
-                flags=['holes_above_10_percent'] if stats['hole_cells'] / stats['grid_cells'] > 0.1 else [], threshold_config=threshold),
-            tier1=dict(mode='unavailable', text_result='unavailable', vision_result='unavailable',
-                       reason='S-023 owns screening; no model or vision check performed'), closed=False)
-        receipt['determinism_digest'] = receipt_api.determinism_digest(receipt)
+    state['rows'] = rows
+    return stages
+
+
+def _pins(recipe_sha256, plan_sha256, run_sha256, code_commit):
+    return dict(recipe_sha256=recipe_sha256, plan_sha256=plan_sha256, run_sha256=run_sha256, code_commit=code_commit)
+
+
+def _params(reserve_gib):
+    # The disk reserve is a run-time precondition, not an output-shaping input,
+    # so it is enforced on execution but deliberately not part of stage bindings.
+    return dict(max_cells=MAX_CELLS, max_tiles=4, synthetic_only=True)
+
+
+def _execute(input_root, *, workspace, admitted_root, recipe_sha256, plan_sha256, run_sha256, code_commit,
+             dry_run, reserve_gib, resume, viewer):
+    state = prepare(input_root, admitted_root=admitted_root, workspace=workspace, recipe_sha256=recipe_sha256,
+                    plan_sha256=plan_sha256, run_sha256=run_sha256, code_commit=code_commit, resume=resume)
+    summary = {key: state[key] for key in ('sources', 'bytes', 'cache_need_bytes')}
+    summary.update(fetch=False, synthetic_only=True, status='REVIEW REQUIRED', semantic_approval=False)
+    if dry_run:
+        return summary
+    stages = _preflight(state, reserve_gib)
+    pins, params = _pins(recipe_sha256, plan_sha256, run_sha256, code_commit), _params(reserve_gib)
+    root = state['workspace']
+    if root.exists():
+        verify_history(state)  # refuse a damaged history before any stage work
+    with native_offline():
+        if not root.exists():
+            root.mkdir(parents=True, exist_ok=False)
+            write_json(root / MARKER, workspace_marker(state))
+        results, values, report = _walk(state, pins=pins, params=params, execute=True, stages=stages)
+        receipt = results['receipt']['receipt']
         resolver = receipt_api.Resolver({state['root_id']: str(root)}, allowed_root_ids={state['root_id']})
         validation = receipt_api.validate_receipt(receipt, resolver, root_id=state['root_id'])
-        save('receipt.json', receipt)
-        return dict(**summary, receipt=receipt, validation=validation)
+        manifests, history = _manifests(state, values, report, viewer=viewer)
+    return dict(**summary, receipt=receipt, validation=validation, stages=report,
+                executed=[r['stage'] for r in report if r['action'] == 'executed'],
+                reused=[r['stage'] for r in report if r['action'] == 'reused'],
+                manifests=manifests, history=history)
+
+
+def run_segment(input_root, *, workspace, admitted_root=DEFAULT_ADMITTED,
+                recipe_sha256, plan_sha256, run_sha256, code_commit, dry_run=False, reserve_gib=250, viewer=False):
+    """Fresh exclusive workspace only (S-020 contract); stage receipts make it resumable."""
+    return _execute(input_root, workspace=workspace, admitted_root=admitted_root, recipe_sha256=recipe_sha256,
+                    plan_sha256=plan_sha256, run_sha256=run_sha256, code_commit=code_commit, dry_run=dry_run,
+                    reserve_gib=reserve_gib, resume=False, viewer=viewer)
+
+
+def resume_segment(input_root, *, workspace, admitted_root=DEFAULT_ADMITTED,
+                   recipe_sha256, plan_sha256, run_sha256, code_commit, dry_run=False, reserve_gib=250, viewer=False):
+    """Resume a marked workspace (or start a fresh one). Reuses only exactly bound stages."""
+    return _execute(input_root, workspace=workspace, admitted_root=admitted_root, recipe_sha256=recipe_sha256,
+                    plan_sha256=plan_sha256, run_sha256=run_sha256, code_commit=code_commit, dry_run=dry_run,
+                    reserve_gib=reserve_gib, resume=True, viewer=viewer)
+
+
+def segment_status(input_root, *, workspace, admitted_root=DEFAULT_ADMITTED,
+                   recipe_sha256, plan_sha256, run_sha256, code_commit, reserve_gib=250):
+    """Read-only truthful per-stage status for the given pins. Writes nothing."""
+    state = prepare(input_root, admitted_root=admitted_root, workspace=workspace, recipe_sha256=recipe_sha256,
+                    plan_sha256=plan_sha256, run_sha256=run_sha256, code_commit=code_commit, resume=True)
+    require(math.isfinite(reserve_gib) and reserve_gib >= 0, 'invalid reserve')
+    _, _, report = _walk(state, pins=_pins(recipe_sha256, plan_sha256, run_sha256, code_commit),
+                         params=_params(reserve_gib), execute=False)
+    return dict(stages=report, complete=all(r['status'] == 'complete' for r in report),
+                status='REVIEW REQUIRED', semantic_approval=False, closed=False)
 
 
 def main(argv=None):
@@ -380,10 +746,19 @@ def main(argv=None):
     parser.add_argument('--admitted-root', default=DEFAULT_ADMITTED, type=Path)
     for name in ('recipe-sha256', 'plan-sha256', 'run-sha256', 'code-commit'):
         parser.add_argument('--' + name, required=True)
-    parser.add_argument('--dry-run', action='store_true')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--dry-run', action='store_true')
+    mode.add_argument('--status', action='store_true', help='read-only per-stage status')
+    parser.add_argument('--resume', action='store_true', help='reuse exactly bound stages of a marked workspace')
+    parser.add_argument('--viewer', action='store_true', help='opt-in local viewer manifest (never mask qualification)')
     args = vars(parser.parse_args(argv))
+    status, resume = args.pop('status'), args.pop('resume')
     try:
-        result = run_segment(**args)
+        if status:
+            args.pop('dry_run'), args.pop('viewer')
+            result = segment_status(**args)
+        else:
+            result = (resume_segment if resume else run_segment)(**args)
     except (ValueError, OSError, KeyError, TypeError) as error:
         print('REFUSED: ' + str(error), file=sys.stderr)
         return 3

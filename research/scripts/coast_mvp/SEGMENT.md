@@ -27,9 +27,35 @@ existing coordinator run/admission schemas. The small analytical grid is NOT a
 Central coast measurement. Held coordinator window states are retained verbatim;
 composition does not promote those windows to map_done. The source code commit
 and exact driver/stage byte hashes are bound in the resulting open receipt.
-Every result is REVIEW REQUIRED, closed=false, semantic_approval=false. Screening,
-resume and archive remain with S-023, S-026 and S-024. Rights rendering is not
+Every result is REVIEW REQUIRED, closed=false, semantic_approval=false. Screening
+and archive remain with S-023 and S-024. Rights rendering is not
 legal permission. Unknown datum remains unknown, without a geodetic transform.
+
+S-026 resume and manifests
+Stages run in order: inputs, c1, c2, c4, c5, receipt. Each writes a sealed
+stages/<stage>.json (schema coast-segment-stage-v1). The receipt is written in full
+and fsynced under stages/.pending/, then renamed to a name that does not yet exist.
+It binds the recipe/plan/run/code pins, measured tool bytes (driver, stage module,
+helpers, rasterio/GDAL/numpy versions), exact input refs (frozen input bytes, or
+all upstream stage outputs) and output refs. resume_segment()/--resume reuses a
+stage only if its sealed binding matches and every output still hashes equal.
+A changed recipe, input or tool means stale, and a changed or missing output means
+tampered. Both are refused before that stage writes anything: no rerun, no overwrite.
+An empty, truncated or unsealed receipt, or leftover outputs without a sealed
+receipt, mean incomplete. That residue is renamed into quarantine/<attempt>/ and
+the stage runs again. Nothing is deleted. segment_status()/--status is read-only
+and reports complete, stale, tampered, incomplete, pending or blocked for each
+stage. run_segment() still requires a fresh workspace, and resume requires the
+workspace marker. A no-op resume does zero stage work and keeps the receipt digest.
+
+manifests/archive-candidates-<sha>.json lists the stage receipts, outputs and
+cache copies for the existing skills/coast-segment-close owner. It records
+archived=false, closed=false and cache_release "not performed". The local viewer
+manifest is written only with viewer=True/--viewer. It is local-only, not for
+publication, and mask_qualified=false: the terrain-mask gate stays HELD. Each
+successful invocation appends a hash-chained row to manifests/history.jsonl. A
+damaged history is refused and needs attended reconciliation.
+The disk reserve is enforced on execution but is not part of stage bindings.
 
 COG verification independently opens each analytic C1 GeoTIFF through the public
 GDAL C API and checks LAYOUT, tile geometry, TIFF IFD offsets, block byte bounds

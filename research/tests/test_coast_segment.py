@@ -341,3 +341,270 @@ def test_cli_dry_run_is_same_cached_summary(case):
         '--code-commit', case['kwargs']['code_commit'], '--dry-run'])
     assert result == 0
     assert not case['kwargs']['workspace'].exists()
+
+
+# ---- S-026 resume, stage receipts and manifests (all names contain "resume") ----
+
+def resume(case, **changes):
+    return driver.resume_segment(case['input'], **(case['kwargs'] | changes))
+
+
+def status(case, **changes):
+    kwargs = {k: v for k, v in (case['kwargs'] | changes).items() if k not in ('dry_run', 'viewer')}
+    return {row['stage']: row['status'] for row in driver.segment_status(case['input'], **kwargs)['stages']}
+
+
+def tree(root, skip=()):
+    return {p.relative_to(root).as_posix(): (sha256(p.read_bytes()).hexdigest(), p.stat().st_mtime_ns)
+            for p in sorted(root.rglob('*')) if p.is_file() and p.relative_to(root).as_posix() not in skip}
+
+
+def history(root):
+    return (root / driver.HISTORY).read_bytes().splitlines(keepends=True)
+
+
+def reseal_cache(case):
+    inputs = case['input']
+    cache_ref = driver.ref(inputs, inputs / 'cache/source.tif', 'queue:synthetic')
+    case['admission']['sources'][0]['hot_cache'] = [cache_ref]
+    save(inputs / 'admission.json', case['admission'])
+    case['run']['admission'] = driver.ref(inputs, inputs / 'admission.json', 'queue:synthetic')
+    case['plan']['sources'][0]['cache'] = cache_ref
+    return seal(case)
+
+
+ALL = list(driver.STAGES)
+
+
+def test_resume_noop_rerun_preserves_digest_with_zero_stage_work(case):
+    first = run(case)
+    root = case['kwargs']['workspace']
+    assert first['executed'] == ALL and first['reused'] == []
+    before = tree(root, skip={driver.HISTORY})
+    rows = history(root)
+    second = resume(case)
+    assert second['executed'] == [] and second['reused'] == ALL
+    assert second['receipt']['determinism_digest'] == first['receipt']['determinism_digest']
+    assert second['receipt'] == first['receipt']
+    assert second['validation'] == first['validation']
+    assert second['manifests']['archive_candidates'] == first['manifests']['archive_candidates']
+    assert tree(root, skip={driver.HISTORY}) == before  # bytes AND mtimes: zero new stage work
+    after = history(root)
+    assert after[:len(rows)] == rows and len(after) == len(rows) + 1  # append-only
+    row = json.loads(after[-1])
+    assert row['executed'] == [] and row['reused'] == ALL and row['seq'] == 1
+    assert row['previous_row_sha256'] == sha256(rows[-1]).hexdigest()
+    assert set(status(case).values()) == {'complete'}
+
+
+def test_resume_restart_after_interrupted_stage_matches_uninterrupted_digest(case, area, monkeypatch):
+    crash = {'on': True}
+    real = driver.qualify_stages
+    def interrupted():
+        stages = real()
+        packet = stages['coast_qa'].packet
+        def crashing(*args, **kwargs):
+            result = packet(*args, **kwargs)  # outputs written, receipt never sealed
+            if crash['on']:
+                raise RuntimeError('simulated crash inside c4')
+            return result
+        stages['coast_qa'].packet = crashing
+        return stages
+    monkeypatch.setattr(driver, 'qualify_stages', interrupted)
+    with pytest.raises(RuntimeError, match='simulated crash'):
+        run(case)
+    root = case['kwargs']['workspace']
+    assert not (root / 'receipt.json').exists() and (root / 'c4/qa.json').exists()
+    assert status(case) == dict(inputs='complete', c1='complete', c2='complete', c4='incomplete',
+                                c5='blocked', receipt='blocked')
+    kept = {stage: (root / f'stages/{stage}.json').read_bytes() for stage in ('inputs', 'c1', 'c2')}
+    c1_before = tree(root / 'c1')
+    residue = (root / 'c4/qa.json').read_bytes()
+    crash['on'] = False
+    resumed = resume(case)
+    assert resumed['reused'] == ['inputs', 'c1', 'c2'] and resumed['executed'] == ['c4', 'c5', 'receipt']
+    assert {stage: (root / f'stages/{stage}.json').read_bytes() for stage in kept} == kept
+    assert tree(root / 'c1', skip={'qa-manifest.json'}) == {k: v for k, v in c1_before.items() if k != 'qa-manifest.json'}
+    moved = [p for r in resumed['stages'] for p in r['quarantined']]
+    assert any(p.endswith('/c4/c4') for p in moved)  # residue renamed aside, never deleted
+    quarantined = next(root.glob('quarantine/*/c4/c4/qa.json'))
+    assert quarantined.read_bytes() == residue
+    fresh = run(case, workspace=area / 'fresh-uninterrupted')
+    assert resumed['receipt']['determinism_digest'] == fresh['receipt']['determinism_digest']
+    assert set(status(case).values()) == {'complete'}
+
+
+@pytest.mark.parametrize('change', ['recipe', 'input', 'tool'])
+def test_resume_refuses_stale_reuse_without_writing(case, monkeypatch, change):
+    run(case)
+    root = case['kwargs']['workspace']
+    before = tree(root)
+    expected = 'inputs'
+    if change == 'recipe':
+        case['recipe']['cache_budget_bytes'] -= 1
+        seal(case)
+    elif change == 'input':
+        import numpy as np
+        import rasterio
+        path = case['input'] / 'cache/source.tif'
+        with rasterio.open(path) as src:
+            profile, grid = src.profile, src.read(1)
+        with rasterio.open(path, 'w', **profile) as dst:
+            dst.write((grid + np.float32(1)).astype('float32'), 1)
+        reseal_cache(case)
+    else:
+        real = driver.tool_identity
+        monkeypatch.setattr(driver, 'tool_identity',
+                            lambda stage: real(stage) | ({'gdal': 'changed-tool'} if stage == 'c2' else {}))
+        expected = 'c2'
+    report = status(case)
+    assert report[expected] == 'stale'
+    assert all(report[s] == 'complete' for s in ALL[:ALL.index(expected)])
+    assert all(report[s] == 'blocked' for s in ALL[ALL.index(expected) + 1:])
+    with pytest.raises(ValueError, match='stale stage binding refused: ' + expected):
+        resume(case)
+    assert tree(root) == before
+
+
+@pytest.mark.parametrize('how', ['flipped', 'missing'])
+def test_resume_refuses_tampered_output(case, area, how):
+    run(case)
+    root = case['kwargs']['workspace']
+    if how == 'flipped':
+        target, stage = sorted(p for p in (root / 'c2').rglob('*') if p.is_file())[0], 'c2'
+        raw = target.read_bytes()
+        target.write_bytes(raw[:-1] + bytes([raw[-1] ^ 1]))
+    else:
+        target, stage = root / 'c4/qa.json', 'c4'
+        target.rename(area / 'moved-aside-qa.json')
+    before = tree(root)
+    report = status(case)
+    assert report[stage] == 'tampered'
+    assert all(report[s] == 'blocked' for s in ALL[ALL.index(stage) + 1:])
+    with pytest.raises(ValueError, match='tampered stage output refused: ' + stage):
+        resume(case)
+    assert tree(root) == before
+
+
+@pytest.mark.parametrize('how', ['truncated', 'forged', 'empty'])
+def test_resume_partial_stage_receipt_never_marks_complete(case, how):
+    first = run(case)
+    root = case['kwargs']['workspace']
+    path = root / 'stages/c4.json'
+    raw = path.read_bytes()
+    if how == 'truncated':
+        path.write_bytes(raw[:len(raw) // 2])
+    elif how == 'empty':
+        path.write_bytes(b'')
+    else:
+        value = json.loads(raw)
+        value['outputs'] = value['outputs'][:-1]  # seal no longer matches
+        path.write_bytes(driver.canonical(value))
+    damaged = path.read_bytes()
+    assert status(case) == dict(inputs='complete', c1='complete', c2='complete', c4='incomplete',
+                                c5='blocked', receipt='blocked')
+    resumed = resume(case)
+    assert resumed['executed'] == ['c4'] and resumed['reused'] == ['inputs', 'c1', 'c2', 'c5', 'receipt']
+    assert resumed['receipt']['determinism_digest'] == first['receipt']['determinism_digest']
+    assert next(root.glob('quarantine/*/c4/stages/c4.json')).read_bytes() == damaged
+    assert set(status(case).values()) == {'complete'}
+
+
+def test_resume_a_b_a_binding_retains_truthful_status(case):
+    a = run(case)
+    root = case['kwargs']['workspace']
+    pins_a = dict(case['kwargs'])
+    url = case['plan']['sources'][0]['source_url']
+    before = tree(root)
+    case['plan']['sources'][0]['source_url'] = 'https://example.invalid/synthetic-grid-b'
+    seal(case)
+    assert case['kwargs']['plan_sha256'] != pins_a['plan_sha256']
+    assert status(case)['inputs'] == 'stale'
+    with pytest.raises(ValueError, match='stale stage binding refused: inputs'):
+        resume(case)
+    assert tree(root) == before
+    case['plan']['sources'][0]['source_url'] = url
+    seal(case)
+    assert case['kwargs'] == pins_a
+    assert set(status(case).values()) == {'complete'}
+    again = resume(case)
+    assert again['executed'] == [] and again['reused'] == ALL
+    assert again['receipt']['determinism_digest'] == a['receipt']['determinism_digest']
+    assert len(history(root)) == 2  # refused B appended nothing
+
+
+def test_resume_mixed_completed_and_incomplete_stage_status_is_truthful(case, area):
+    assert status(case) == dict(inputs='pending', c1='blocked', c2='blocked', c4='blocked', c5='blocked', receipt='blocked')
+    assert not case['kwargs']['workspace'].exists()  # status is read-only
+    run(case)
+    root = case['kwargs']['workspace']
+    (root / 'stages/c2.json').rename(area / 'c2-receipt-aside.json')
+    report = status(case)
+    assert report == dict(inputs='complete', c1='complete', c2='incomplete', c4='blocked', c5='blocked', receipt='blocked')
+
+
+def test_resume_viewer_manifest_is_opt_in_and_archive_manifest_releases_nothing(case):
+    first = run(case)
+    root = case['kwargs']['workspace']
+    assert first['manifests']['viewer'] is None and not list(root.glob('manifests/viewer-*'))
+    archive = json.loads((root / first['manifests']['archive_candidates']['path']).read_text())
+    assert archive['archived'] is False and archive['archive_verified'] is False and archive['closed'] is False
+    assert 'skills/coast-segment-close' in archive['archive_owner']
+    assert archive['cache_release'].startswith('not performed')
+    assert [f['path'] for f in archive['cache_files']] == ['cache/source.tif']
+    assert archive['determinism_digest'] == first['receipt']['determinism_digest']
+    second = resume(case, viewer=True)
+    assert second['executed'] == []
+    viewer = json.loads((root / second['manifests']['viewer']['path']).read_text())
+    assert viewer['opt_in'] is True and viewer['mask_qualified'] is False
+    assert viewer['publication_allowed'] is False and viewer['local_only'] is True
+    assert 'HELD' in viewer['terrain_mask_gate']
+    assert {layer['path'].split('/')[0] for layer in viewer['layers']} == {'c1', 'c2', 'c4'}
+    assert second['manifests']['archive_candidates'] == first['manifests']['archive_candidates']
+    assert json.loads(history(root)[-1])['viewer'] == second['manifests']['viewer']
+    # No cache release: the workspace copy and the frozen input cache both remain.
+    for item in archive['cache_files']:
+        assert sha256((root / item['path']).read_bytes()).hexdigest() == item['sha256']
+    assert (case['input'] / 'cache/source.tif').exists()
+
+
+def test_resume_refuses_unmarked_or_foreign_workspace(case):
+    root = case['kwargs']['workspace']
+    root.mkdir()
+    with pytest.raises(ValueError, match='marked segment workspace'):
+        resume(case)
+    (root / driver.MARKER).write_bytes(driver.canonical(dict(schema='coast-segment-workspace-v1', root_id='queue:other',
+                                                             segment_slug='x', campaign_segment_id='x')))
+    with pytest.raises(ValueError, match='marker mismatch'):
+        resume(case)
+    assert sorted(p.name for p in root.iterdir()) == [driver.MARKER]
+
+
+@pytest.mark.parametrize('how', ['edited', 'partial'])
+def test_resume_refuses_damaged_manifest_history(case, how):
+    run(case)
+    root = case['kwargs']['workspace']
+    path = root / driver.HISTORY
+    raw = path.read_bytes()
+    path.write_bytes(raw.replace(b'"seq":0', b'"seq":7') if how == 'edited' else raw + b'{"seq":1')
+    before = tree(root)
+    with pytest.raises(ValueError, match='manifest history damaged'):
+        resume(case)
+    assert tree(root) == before
+
+
+def test_resume_cli_status_and_resume_modes(case, capsys):
+    args = ['--input-root', str(case['input']), '--workspace', str(case['kwargs']['workspace']),
+            '--admitted-root', str(case['kwargs']['admitted_root']), '--recipe-sha256', case['kwargs']['recipe_sha256'],
+            '--plan-sha256', case['kwargs']['plan_sha256'], '--run-sha256', case['kwargs']['run_sha256'],
+            '--code-commit', case['kwargs']['code_commit']]
+    # The CLI keeps C1's production reserve default; a 250 GiB reserve is not
+    # changed here, so only status (read-only) and refusals are exercised.
+    assert driver.main(args + ['--status']) == 0
+    assert json.loads(capsys.readouterr().out)['stages'][0] == dict(stage='inputs', status='pending')
+    assert not case['kwargs']['workspace'].exists()
+    run(case)
+    assert driver.main(args + ['--status']) == 0
+    assert json.loads(capsys.readouterr().out)['complete'] is True
+    assert driver.main(args) == 3  # plain run never adopts an existing workspace
+    assert 'fresh exclusive workspace' in capsys.readouterr().err
