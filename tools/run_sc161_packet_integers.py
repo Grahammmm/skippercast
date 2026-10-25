@@ -125,7 +125,7 @@ class OfflineProduct:
                 def guarded(file, mode='r', *args, _open=original, **kwargs):
                     if isinstance(file, (str, bytes, os.PathLike)) and any(c in mode for c in 'wax+'):
                         path = Path(os.fsdecode(file)).absolute()
-                        if not path.is_relative_to(self.allowed):
+                        if not (path.is_relative_to(self.allowed) or str(path) == os.devnull):
                             self.events.append('refused-write')
                             raise RuntimeError('offline write outside admitted root refused')
                     return _open(file, mode, *args, **kwargs)
