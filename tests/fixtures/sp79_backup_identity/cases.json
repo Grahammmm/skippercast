@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "provenance": "Synthetic station-source shapes derived from StationSource and tests/test_station_label.mjs src/liveFeed; no live records.",
+  "primary": {
+    "name": "A4 primary declared backup without identity",
+    "source": {"name": "Synthetic unidentified observation", "status": "ok", "fallback_for": "46053", "data": {"observations": []}},
+    "fallback": "46053",
+    "expected": null
+  },
+  "control": {
+    "name": "A4 healthy explicit backup control",
+    "source": {"name": "Synthetic identified observation", "status": "ok", "station": "46054", "fallback_for": "46053", "data": {"station": "46054", "observations": []}},
+    "fallback": "46053",
+    "expected": {"id": "46054", "backupFor": "46053"}
+  },
+  "invalid_identifiers": [null, "", "   ", "<script>", "a.b", "a/b", "station id", "12345678901234567", 46054, false, {}, []],
+  "valid_identifiers": ["A", "a-Z_09", "1234567890123456", " 46054 "],
+  "caller_fallbacks": ["46053", "OTHER_1"],
+  "identified": [
+    {"name": "A2 explicit station wins data disagreement", "source": {"station": "46054", "fallback_for": "46053", "data": {"station": "46055"}}, "fallback": "OTHER_1", "expected": {"id": "46054", "backupFor": "46053"}},
+    {"name": "A2 absent station uses data identity", "source": {"fallback_for": "46053", "data": {"station": "46054"}}, "fallback": "OTHER_1", "expected": {"id": "46054", "backupFor": "46053"}},
+    {"name": "A2 invalid station uses data identity", "source": {"station": "<script>", "fallback_for": "46053", "data": {"station": "46054"}}, "fallback": "OTHER_1", "expected": {"id": "46054", "backupFor": "46053"}},
+    {"name": "A2 explicit primary retains primary result", "source": {"station": "46053", "fallback_for": "46053", "data": {"station": "46054"}}, "fallback": "OTHER_1", "expected": {"id": "46053", "backupFor": null}},
+    {"name": "A2 data primary retains primary result", "source": {"fallback_for": "46053", "data": {"station": "46053"}}, "fallback": "OTHER_1", "expected": {"id": "46053", "backupFor": null}},
+    {"name": "A2 trim all identities", "source": {"station": " 46054 ", "fallback_for": " 46053 ", "data": {"station": "46055"}}, "fallback": "OTHER_1", "expected": {"id": "46054", "backupFor": "46053"}},
+    {"name": "A2 trim data identity", "source": {"fallback_for": " 46053 ", "data": {"station": " 46054 "}}, "fallback": "46053", "expected": {"id": "46054", "backupFor": "46053"}}
+  ]
+}
