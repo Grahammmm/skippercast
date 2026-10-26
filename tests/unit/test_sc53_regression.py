@@ -2,13 +2,12 @@
 from copy import deepcopy
 from datetime import date
 import json
-from pathlib import Path
 
 import pytest
 
 from skippercast.seafloor import rights
+from tests._support import ROOT
 
-ROOT = Path(__file__).resolve().parents[2]
 TODAY = date(2026, 9, 28)
 PREFIXES = (
     'https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/',
