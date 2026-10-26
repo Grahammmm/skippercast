@@ -93,6 +93,11 @@ def cell_counts(mosaic, pixels_per_cell):
 
 
 def mosaic_reference(config, tiles, sampled):
+    """Mosaic positional tile/sample pairs; incomplete populations are invalid."""
+    tiles = list(tiles)
+    sampled = list(sampled)
+    if len(tiles) != len(sampled):
+        raise ValueError('reference_tile_sample_count_mismatch')
     pixel = config['reference_pixel_m']
     cell = config['cell_size_m']
     if cell != 250 or pixel != 25 or config['reference_depth_m'] != [0, 100]:
