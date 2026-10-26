@@ -5,15 +5,15 @@ import hashlib
 import importlib.util
 import json
 import os
-from pathlib import Path
 import socket
 import subprocess
 import sys
 import unittest
 from unittest.mock import patch
 
-REPO = Path(__file__).resolve().parents[2]
-_FIXTURE = REPO / 'tests/fixtures/sc176-scope-catalog-ids/constructors.py'
+from tests._support import ROOT
+
+_FIXTURE = ROOT / 'tests/fixtures/sc176-scope-catalog-ids/constructors.py'
 _spec = importlib.util.spec_from_file_location('sc176_constructors', _FIXTURE)
 if _spec is None or _spec.loader is None:
     raise RuntimeError('Missing SC176 portable constructors')
