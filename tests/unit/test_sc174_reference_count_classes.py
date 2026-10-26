@@ -18,7 +18,7 @@ import types
 import unittest
 from unittest.mock import patch
 
-REPO = Path(__file__).resolve().parents[2]
+from tests._support import ROOT as REPO
 METHODS = ('test_regression', 'test_compatibility', 'test_negative_control', 'test_preservation')
 
 
@@ -62,7 +62,6 @@ def offline_product(root):
                 if hasattr(obj, name):
                     stack.enter_context(patch.object(obj, name, deny))
             sys.meta_path.insert(0, NoModels(events))
-            sys.path.insert(0, str(REPO / 'src'))
             # paths has no initialization effects. Override before contracts REPO
             # and its function defaults are evaluated, not after first import.
             paths = importlib.import_module('skippercast.paths')
