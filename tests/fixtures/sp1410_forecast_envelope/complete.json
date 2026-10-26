@@ -1,0 +1,447 @@
+{
+ "schema_version": 1,
+ "region_id": "morro-bay",
+ "generated_at": "2026-09-28T12:00:00Z",
+ "completed_at": "2026-09-28T12:05:00Z",
+ "ocean_collected_at": "2026-09-28T12:00:00Z",
+ "sources": {
+  "model-gfs_global": {
+   "id": "model-gfs_global",
+   "name": "gfs_global",
+   "kind": "forecast",
+   "checked_at": "2026-09-28T12:00:00Z",
+   "status": "ok"
+  }
+ },
+ "verification": {
+  "status": "ok"
+ },
+ "forecast": {
+  "region_id": "morro-bay",
+  "requested_points": [
+   [
+    "north",
+    35.45,
+    -121.02
+   ],
+   [
+    "central",
+    35.36,
+    -120.94
+   ]
+  ],
+  "models": {
+   "gfs_global": {
+    "data": [
+     {
+      "latitude": 35.45,
+      "longitude": -121.02,
+      "generationtime_ms": 1,
+      "utc_offset_seconds": 0,
+      "timezone": "UTC",
+      "timezone_abbreviation": "UTC",
+      "elevation": 0,
+      "hourly_units": {
+       "time": "unixtime",
+       "wind_speed_10m": "kn",
+       "wind_gusts_10m": "kn",
+       "wind_direction_10m": "°"
+      },
+      "hourly": {
+       "time": [
+        1790607600,
+        1790611200,
+        1790614800
+       ],
+       "wind_speed_10m": [
+        9.0,
+        10.5,
+        11.0
+       ],
+       "wind_gusts_10m": [
+        12.0,
+        13.0,
+        14.0
+       ],
+       "wind_direction_10m": [
+        300,
+        302,
+        305
+       ]
+      }
+     },
+     {
+      "latitude": 35.36,
+      "longitude": -120.94,
+      "generationtime_ms": 1,
+      "utc_offset_seconds": 0,
+      "timezone": "UTC",
+      "timezone_abbreviation": "UTC",
+      "elevation": 0,
+      "hourly_units": {
+       "time": "unixtime",
+       "wind_speed_10m": "kn",
+       "wind_gusts_10m": "kn",
+       "wind_direction_10m": "°"
+      },
+      "hourly": {
+       "time": [
+        1790607600,
+        1790611200,
+        1790614800
+       ],
+       "wind_speed_10m": [
+        10.2,
+        11.6,
+        12.4
+       ],
+       "wind_gusts_10m": [
+        13.1,
+        14.2,
+        15.3
+       ],
+       "wind_direction_10m": [
+        298,
+        300,
+        303
+       ]
+      }
+     }
+    ],
+    "meta": {
+     "provider": "Synthetic GFS",
+     "temporal_resolution_seconds": 3600
+    },
+    "error": null
+   },
+   "ecmwf_ifs025": {
+    "data": [
+     {
+      "latitude": 35.45,
+      "longitude": -121.02,
+      "generationtime_ms": 1,
+      "utc_offset_seconds": 0,
+      "timezone": "UTC",
+      "timezone_abbreviation": "UTC",
+      "elevation": 0,
+      "hourly_units": {
+       "time": "unixtime",
+       "wind_speed_10m": "kn",
+       "wind_gusts_10m": "kn",
+       "wind_direction_10m": "°"
+      },
+      "hourly": {
+       "time": [
+        1790607600,
+        1790611200,
+        1790614800
+       ],
+       "wind_speed_10m": [
+        8.8,
+        10.1,
+        10.9
+       ],
+       "wind_gusts_10m": [
+        12.5,
+        13.5,
+        14.5
+       ],
+       "wind_direction_10m": [
+        301,
+        303,
+        306
+       ]
+      }
+     },
+     {
+      "latitude": 35.36,
+      "longitude": -120.94,
+      "generationtime_ms": 1,
+      "utc_offset_seconds": 0,
+      "timezone": "UTC",
+      "timezone_abbreviation": "UTC",
+      "elevation": 0,
+      "hourly_units": {
+       "time": "unixtime",
+       "wind_speed_10m": "kn",
+       "wind_gusts_10m": "kn",
+       "wind_direction_10m": "°"
+      },
+      "hourly": {
+       "time": [
+        1790607600,
+        1790611200,
+        1790614800
+       ],
+       "wind_speed_10m": [
+        9.9,
+        11.2,
+        12.0
+       ],
+       "wind_gusts_10m": [
+        13.6,
+        14.4,
+        15.0
+       ],
+       "wind_direction_10m": [
+        297,
+        299,
+        302
+       ]
+      }
+     }
+    ],
+    "meta": {
+     "provider": "Synthetic IFS",
+     "temporal_resolution_seconds": 3600
+    },
+    "error": null
+   },
+   "ncep_gfswave016": {
+    "data": [
+     {
+      "latitude": 35.45,
+      "longitude": -121.02,
+      "generationtime_ms": 1,
+      "utc_offset_seconds": 0,
+      "timezone": "UTC",
+      "timezone_abbreviation": "UTC",
+      "elevation": 0,
+      "hourly_units": {
+       "time": "unixtime",
+       "wave_height": "ft",
+       "wave_period": "s",
+       "wave_direction": "°",
+       "swell_wave_height": "ft",
+       "swell_wave_period": "s",
+       "swell_wave_direction": "°"
+      },
+      "hourly": {
+       "time": [
+        1790607600,
+        1790611200,
+        1790614800
+       ],
+       "wave_height": [
+        4.1,
+        4.3,
+        4.4
+       ],
+       "wave_period": [
+        9.1,
+        9.2,
+        9.3
+       ],
+       "wave_direction": [
+        290,
+        291,
+        292
+       ],
+       "swell_wave_height": [
+        3.0,
+        3.1,
+        3.2
+       ],
+       "swell_wave_period": [
+        12.1,
+        12.2,
+        12.3
+       ],
+       "swell_wave_direction": [
+        285,
+        286,
+        287
+       ]
+      }
+     },
+     {
+      "latitude": 35.36,
+      "longitude": -120.94,
+      "generationtime_ms": 1,
+      "utc_offset_seconds": 0,
+      "timezone": "UTC",
+      "timezone_abbreviation": "UTC",
+      "elevation": 0,
+      "hourly_units": {
+       "time": "unixtime",
+       "wave_height": "ft",
+       "wave_period": "s",
+       "wave_direction": "°",
+       "swell_wave_height": "ft",
+       "swell_wave_period": "s",
+       "swell_wave_direction": "°"
+      },
+      "hourly": {
+       "time": [
+        1790607600,
+        1790611200,
+        1790614800
+       ],
+       "wave_height": [
+        3.8,
+        4.0,
+        4.2
+       ],
+       "wave_period": [
+        9.0,
+        9.1,
+        9.2
+       ],
+       "wave_direction": [
+        289,
+        290,
+        291
+       ],
+       "swell_wave_height": [
+        2.8,
+        2.9,
+        3.0
+       ],
+       "swell_wave_period": [
+        12.0,
+        12.1,
+        12.2
+       ],
+       "swell_wave_direction": [
+        284,
+        285,
+        286
+       ]
+      }
+     }
+    ],
+    "meta": {
+     "provider": "Synthetic GFS-Wave",
+     "temporal_resolution_seconds": 3600
+    },
+    "error": null
+   },
+   "ecmwf_wam": {
+    "data": [
+     {
+      "latitude": 35.45,
+      "longitude": -121.02,
+      "generationtime_ms": 1,
+      "utc_offset_seconds": 0,
+      "timezone": "UTC",
+      "timezone_abbreviation": "UTC",
+      "elevation": 0,
+      "hourly_units": {
+       "time": "unixtime",
+       "wave_height": "ft",
+       "wave_period": "s",
+       "wave_direction": "°",
+       "swell_wave_height": "ft",
+       "swell_wave_period": "s",
+       "swell_wave_direction": "°"
+      },
+      "hourly": {
+       "time": [
+        1790607600,
+        1790611200,
+        1790614800
+       ],
+       "wave_height": [
+        4.0,
+        4.2,
+        4.3
+       ],
+       "wave_period": [
+        8.5,
+        8.6,
+        8.7
+       ],
+       "wave_direction": [
+        288,
+        289,
+        290
+       ],
+       "swell_wave_height": [
+        null,
+        null,
+        null
+       ],
+       "swell_wave_period": [
+        null,
+        null,
+        null
+       ],
+       "swell_wave_direction": [
+        null,
+        null,
+        null
+       ]
+      }
+     },
+     {
+      "latitude": 35.36,
+      "longitude": -120.94,
+      "generationtime_ms": 1,
+      "utc_offset_seconds": 0,
+      "timezone": "UTC",
+      "timezone_abbreviation": "UTC",
+      "elevation": 0,
+      "hourly_units": {
+       "time": "unixtime",
+       "wave_height": "ft",
+       "wave_period": "s",
+       "wave_direction": "°",
+       "swell_wave_height": "ft",
+       "swell_wave_period": "s",
+       "swell_wave_direction": "°"
+      },
+      "hourly": {
+       "time": [
+        1790607600,
+        1790611200,
+        1790614800
+       ],
+       "wave_height": [
+        3.9,
+        4.1,
+        4.3
+       ],
+       "wave_period": [
+        8.4,
+        8.5,
+        8.6
+       ],
+       "wave_direction": [
+        287,
+        288,
+        289
+       ],
+       "swell_wave_height": [
+        null,
+        null,
+        null
+       ],
+       "swell_wave_period": [
+        null,
+        null,
+        null
+       ],
+       "swell_wave_direction": [
+        null,
+        null,
+        null
+       ]
+      }
+     }
+    ],
+    "meta": {
+     "provider": "Synthetic WAM",
+     "temporal_resolution_seconds": 3600
+    },
+    "error": null
+   }
+  },
+  "retrieved": 1790596800000,
+  "coverage": {}
+ },
+ "health": {
+  "status": "ok",
+  "issues": [],
+  "coverage_gaps": []
+ }
+}
