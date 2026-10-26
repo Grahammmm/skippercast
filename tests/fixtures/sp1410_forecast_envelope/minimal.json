@@ -1,0 +1,24 @@
+{
+ "schema_version": 1,
+ "region_id": "morro-bay",
+ "forecast": {
+  "models": {
+   "gfs_global": {
+    "data": [
+     {
+      "hourly": {
+       "time": []
+      }
+     },
+     {
+      "hourly": {
+       "time": []
+      }
+     }
+    ],
+    "meta": null,
+    "error": null
+   }
+  }
+ }
+}

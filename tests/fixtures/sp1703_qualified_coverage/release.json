@@ -1,0 +1,59 @@
+{
+  "description": "Wholly synthetic qualified-subset release template for SP1703. Mirrors the shape used by tests/integration/test_qualified_scope.py; no real survey, closure or fleet data.",
+  "region_id": "test-coast",
+  "target_prefix": "TEST-Q",
+  "spec": {
+    "id": "NOAA-TEST",
+    "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/test.bag",
+    "bytes": 100,
+    "vertical_datum": "MLLW",
+    "documentation_url": "https://data.ngdc.noaa.gov/test.pdf",
+    "survey_start": "2017-01-01",
+    "horizontal_crs": "EPSG:26911",
+    "qualification_resolution_limit_m": 4
+  },
+  "source_bounds": [-121, 33, -117, 35],
+  "fishing_bounds": [-121, 33, -117, 35],
+  "boat_bottom_depth_limit_ft": 200,
+  "closures": [
+    {"asset": "protected_areas", "west": -120.8, "south": 34.4, "east": -120.7, "north": 34.6},
+    {"asset": "closures", "west": -120.5, "south": 34.4, "east": -120.4, "north": 34.6}
+  ],
+  "checked_at": "2020-01-01T00:00:00Z",
+  "config": {
+    "depth_limit_ft": 200,
+    "minimum_depth_ft": 25,
+    "planning_margin_m": 2,
+    "maximum_product_uncertainty_m": 1,
+    "maximum_native_cell_m": 4,
+    "closure_clearance_m": 75
+  },
+  "qualification": {
+    "native_datum": "MLLW",
+    "full_geometry_screened": true,
+    "verified_catches": false,
+    "planning_margin_m": 2,
+    "maximum_product_uncertainty_m": 1,
+    "closure_clearance_m": 75,
+    "native_resolution_limit_m": 4,
+    "max_depth_including_uncertainty_and_margin_ft": 120,
+    "source_cell_count_in_outline": 100
+  },
+  "recorded_validation": {
+    "datum": "MLLW",
+    "missing_depth": false,
+    "minimum_ft": 80,
+    "maximum_ft": 110,
+    "closure_clearance_m": 1000
+  },
+  "tile": {
+    "cell_m": 4,
+    "native_cell_m": 1,
+    "encoding": "base64-int16-le",
+    "nodata": -32768,
+    "elevation_unit_m": 0.1
+  },
+  "target_spacing_deg": 0.5,
+  "first_target": {"longitude": -119, "latitude": 34},
+  "area_half_width_deg": 0.1
+}
