@@ -19,7 +19,8 @@ import unittest
 from unittest import mock
 import urllib.request
 
-ROOT = Path(__file__).resolve().parents[2]
+from tests._support import ROOT
+
 FIXTURE = ROOT / 'tests/fixtures/sp1701_readiness_spacing/root-inputs.json'
 CANDIDATE = 'catalog/candidates/synthetic-grid.json'
 SECTOR = 'synthetic-sector-00'
@@ -52,7 +53,6 @@ def isolated_readiness(root):
             guards.enter_context(mock.patch.object(urllib.request, 'urlopen', forbidden))
             guards.enter_context(mock.patch.object(subprocess, 'Popen', forbidden))
             guards.enter_context(mock.patch.object(sqlite3, 'connect', forbidden))
-            sys.path.insert(0, str(ROOT / 'src'))
             module = importlib.import_module('skippercast.platform.readiness')
             if Path(module.__file__).resolve() != ROOT / 'src/skippercast/platform/readiness.py':
                 raise RuntimeError('Readiness import escaped the staged clone')
