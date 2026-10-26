@@ -59,6 +59,12 @@ def feature_evidence(row):
 
 def classify(values, valid):
     import numpy as np
+    # Exact ndarrays only: masked/other subclasses would silently drop their
+    # masks, and integer or broadcast masks would fancy-index the codes.
+    if (type(values) is not np.ndarray or type(valid) is not np.ndarray or values.ndim != 2
+            or valid.shape != values.shape or valid.dtype != np.bool_):
+        raise ValueError('invalid_terrain_support_mask: values and valid must be same-shape '
+                         'two-dimensional arrays with a boolean validity mask')
     used = values[valid]
     if not np.isfinite(used).all() or not (used == np.floor(used)).all():
         raise ValueError('Terrain support codes must be finite integers')

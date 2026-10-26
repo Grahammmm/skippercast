@@ -1,0 +1,365 @@
+[
+  {
+    "id": "primary_unmatched_svg",
+    "html": "<p class=\"visible\">before</p><template></svg><b class=\"hidden\">hidden</b></template><p class=\"visible\">after</p>",
+    "text": "beforeafter"
+  },
+  {
+    "id": "healthy_balanced_template",
+    "html": "<p class=\"visible\">before</p><template><b class=\"hidden\">hidden</b></template><p class=\"visible\">after</p>",
+    "text": "beforeafter"
+  },
+  {
+    "id": "unmatched_noscript",
+    "html": "<p class=\"visible\">before</p><template></noscript><b class=\"hidden\">hidden</b></template><p class=\"visible\">after</p>",
+    "text": "beforeafter"
+  },
+  {
+    "id": "proper_nested",
+    "html": "before<template><noscript><svg><b class=\"hidden\">hidden</b></svg></noscript></template>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "nested_same_tag",
+    "html": "before<template><template>hidden</template><b class=\"hidden\">hidden</b></template>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "ancestor_unwind",
+    "html": "before<template><svg><noscript>hidden</template>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "nearest_matching_ancestor",
+    "html": "before<template><svg><template><noscript>hidden</template><b class=\"hidden\">hidden</b></svg></template>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "repeated_closer_inside",
+    "html": "before<template><svg>hidden</svg></svg><b class=\"hidden\">hidden</b></template>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "ordinary_closer_inside",
+    "html": "<div>before<template></div><b class=\"hidden\">hidden</b></template>after</div>",
+    "text": "beforeafter",
+    "selections": [
+      {
+        "tag": "div",
+        "texts": [
+          "beforeafter"
+        ],
+        "parents": [
+          "#document"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "repeated_closer_after",
+    "html": "before<template>hidden</template></template><p class=\"visible\">after</p>",
+    "text": "beforeafter"
+  },
+  {
+    "id": "normal_siblings",
+    "html": "<div><p class=\"visible\">before</p><template><p class=\"hidden\">hidden</p></template><p class=\"visible\">after</p></div>",
+    "text": "beforeafter",
+    "selections": [
+      {
+        "tag": "p",
+        "texts": [
+          "before",
+          "after"
+        ],
+        "parents": [
+          "div",
+          "div"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "script_raw_text",
+    "html": "before<script>hidden<template></svg></style><b class=\"hidden\">hidden</b></script>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "style_raw_text",
+    "html": "before<style>hidden<template></svg></script><b class=\"hidden\">hidden</b></style>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "raw_script_inside_template",
+    "html": "before<template><script>hidden</template></svg></script><b class=\"hidden\">hidden</b></template>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "raw_style_inside_template",
+    "html": "before<template><style>hidden</template></svg></style><b class=\"hidden\">hidden</b></template>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "unclosed_script_in_template",
+    "html": "before<template><script>hidden</template>after",
+    "text": "before"
+  },
+  {
+    "id": "unclosed_style_in_template",
+    "html": "before<template><style>hidden</template>after",
+    "text": "before"
+  },
+  {
+    "id": "case_insensitive",
+    "html": "before<TeMpLaTe></SVG><b class=\"hidden\">hidden</b></TEMPLATE>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "implicit_p",
+    "html": "<p>one<p>two",
+    "text": "onetwo",
+    "selections": [
+      {
+        "tag": "p",
+        "texts": [
+          "one",
+          "two"
+        ],
+        "parents": [
+          "#document",
+          "#document"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "implicit_li",
+    "html": "<ul><li>one<li>two</ul>",
+    "text": "onetwo",
+    "selections": [
+      {
+        "tag": "li",
+        "texts": [
+          "one",
+          "two"
+        ],
+        "parents": [
+          "ul",
+          "ul"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "implicit_td_th",
+    "html": "<table><tr><th>head<td>one<td>two<tr><th>next<th>end</table>",
+    "text": "headonetwonextend",
+    "selections": [
+      {
+        "tag": "tr",
+        "texts": [
+          "headonetwonextend",
+          "nextend"
+        ],
+        "parents": [
+          "table",
+          "tr"
+        ]
+      },
+      {
+        "tag": "td",
+        "texts": [
+          "one",
+          "two"
+        ],
+        "parents": [
+          "tr",
+          "tr"
+        ]
+      },
+      {
+        "tag": "th",
+        "texts": [
+          "head",
+          "next",
+          "end"
+        ],
+        "parents": [
+          "tr",
+          "tr",
+          "tr"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "implicit_dd_dt",
+    "html": "<dl><dt>term<dd>one<dd>two<dt>end</dl>",
+    "text": "termonetwoend",
+    "selections": [
+      {
+        "tag": "dd",
+        "texts": [
+          "one",
+          "two"
+        ],
+        "parents": [
+          "dl",
+          "dl"
+        ]
+      },
+      {
+        "tag": "dt",
+        "texts": [
+          "term",
+          "end"
+        ],
+        "parents": [
+          "dl",
+          "dl"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "spacing_entities_classes_stray",
+    "html": "</aside><p class=\"vessel visible\">Kelp &amp; Fixture<br>Boat &#35;1<br/> End</aside></p><i/>",
+    "text": "Kelp & Fixture Boat #1 End",
+    "selections": [
+      {
+        "tag": "p",
+        "texts": [
+          "Kelp & Fixture Boat #1 End"
+        ],
+        "parents": [
+          "#document"
+        ],
+        "classes": [
+          [
+            "vessel",
+            "visible"
+          ]
+        ]
+      },
+      {
+        "tag": "br",
+        "texts": [
+          "",
+          ""
+        ],
+        "parents": [
+          "p",
+          "p"
+        ]
+      },
+      {
+        "tag": "i",
+        "texts": [
+          ""
+        ],
+        "parents": [
+          "#document"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "balanced_script",
+    "html": "before<script>hidden</script>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "unclosed_script",
+    "html": "before<script>hidden",
+    "text": "before"
+  },
+  {
+    "id": "selfclosing_script",
+    "html": "before<script/>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "selfclosing_nested_script",
+    "html": "before<template><script/><b class=\"hidden\">hidden</b></template>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "balanced_style",
+    "html": "before<style>hidden</style>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "unclosed_style",
+    "html": "before<style>hidden",
+    "text": "before"
+  },
+  {
+    "id": "selfclosing_style",
+    "html": "before<style/>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "selfclosing_nested_style",
+    "html": "before<template><style/><b class=\"hidden\">hidden</b></template>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "balanced_noscript",
+    "html": "before<noscript>hidden</noscript>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "unclosed_noscript",
+    "html": "before<noscript>hidden",
+    "text": "before"
+  },
+  {
+    "id": "selfclosing_noscript",
+    "html": "before<noscript/>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "selfclosing_nested_noscript",
+    "html": "before<template><noscript/><b class=\"hidden\">hidden</b></template>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "balanced_template",
+    "html": "before<template>hidden</template>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "unclosed_template",
+    "html": "before<template>hidden",
+    "text": "before"
+  },
+  {
+    "id": "selfclosing_template",
+    "html": "before<template/>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "selfclosing_nested_template",
+    "html": "before<template><template/><b class=\"hidden\">hidden</b></template>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "balanced_svg",
+    "html": "before<svg>hidden</svg>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "unclosed_svg",
+    "html": "before<svg>hidden",
+    "text": "before"
+  },
+  {
+    "id": "selfclosing_svg",
+    "html": "before<svg/>after",
+    "text": "beforeafter"
+  },
+  {
+    "id": "selfclosing_nested_svg",
+    "html": "before<template><svg/><b class=\"hidden\">hidden</b></template>after",
+    "text": "beforeafter"
+  }
+]

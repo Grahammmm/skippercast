@@ -124,6 +124,8 @@ class Retention:
                         source_volume_accounted=False,physical_io_measured=False,disk_quota=False)
 
     def settle(self,slot,*,completed):
+        if type(completed) is not bool:
+            raise ValueError('completed must be a bool')
         before=self.audit()
         with self.lock():
             state=self.read();entry=state['reservations'][slot]

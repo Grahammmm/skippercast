@@ -75,6 +75,7 @@ def read_metadata(root,descriptor,cache,usage):
     usage["metadata_bytes"]+=len(data);usage["metadata_files"]+=1
     if hashlib.sha256(data).hexdigest()!=descriptor["sha256"]:raise ValueError("metadata hash changed")
     value=json.loads(data)
+    if not isinstance(value,dict):raise ValueError("metadata JSON object required")
     if descriptor["contract"]!="cached-source-json-v1" and value.get("schema")!=descriptor["contract"]:raise ValueError("metadata schema changed")
     cache[key]=value
     return value

@@ -1,0 +1,1 @@
+Synthetic fixture derived from advisor report `counts_json` producer shape. It includes unknown, measured, explicit-zero, and released-only rows; it contains no real catch or personal data. It is an authored fixture, not live-source evidence.

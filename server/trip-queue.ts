@@ -63,7 +63,7 @@ export async function scheduleTripChecks(env: Env, now = Date.now(), feedRead: P
   if (!env.DB) return {action: 'no-db'};
   const feed = await feedRead, publication = publicationMarker(feed);
   if (!publication) return {action: 'no-feed'};
-  const published = Date.parse(feed.published_at || feed.completed_at);
+  const published = Date.parse(feed.published_at || feed.completed_at || feed.generated_at);
   if (Number.isFinite(published) && now - published < SETTLE_MS) return {action: 'settling', publication};
   const previous = (await db(env).prepare('SELECT value FROM job_state WHERE key=?').bind(STATE_KEY).first<{value: string}>())?.value ?? null;
   if (previous === publication) return {action: 'unchanged', publication};

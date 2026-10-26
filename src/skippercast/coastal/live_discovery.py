@@ -194,6 +194,8 @@ def listing_annotation(discover, row, allowed_hosts):
         parts = urllib.parse.urlsplit(link)
         name = parts.path.rstrip("/").rsplit("/", 1)[-1]
         if parts.hostname in allowed_hosts and name.lower().endswith(LISTING_SUFFIXES) and not parts.query:
+            if name in found and found[name] != link:
+                raise ValueError("listing_basename_collision")
             found.setdefault(name, link)
     return dict(response_sha256=row["sha256"], candidates=[
         dict(publisher_id=name, title=name, bbox=None, bbox_crs=None, catalog_geometry=None,
