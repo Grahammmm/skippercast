@@ -17,7 +17,8 @@ from tempfile import TemporaryDirectory
 from unittest import TestCase
 from unittest.mock import patch
 
-ROOT = Path(__file__).resolve().parents[2]
+from tests._support import ROOT
+
 FIXTURE = ROOT / 'tests/fixtures/sp1807_sector_endpoint/scenario.json'
 
 
@@ -40,10 +41,6 @@ class FixtureCase(TestCase):
         temporary = self.stack.enter_context(TemporaryDirectory(prefix='sp1807-fixture-', dir=out))
         self.root = Path(temporary)
         self.data = json.loads(FIXTURE.read_text())
-        # Anchor imports to the staged product, not an editable install elsewhere.
-        original_path = sys.path[:]
-        self.stack.callback(lambda: sys.path.__setitem__(slice(None), original_path))
-        sys.path.insert(0, str(ROOT / 'src'))
         from skippercast import paths
         # contracts has no import-time I/O. Keep its other bound defaults on the
         # staged static checkout, while redirecting the compiler before import.
