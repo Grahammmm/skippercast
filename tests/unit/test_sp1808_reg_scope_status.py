@@ -14,7 +14,8 @@ import sys
 import unittest
 from unittest.mock import patch
 
-ROOT = Path(__file__).resolve().parents[2]
+from tests._support import ROOT
+
 FIXTURE = ROOT / 'tests/fixtures/sp1808_reg_scope_status/coverage.json'
 
 
