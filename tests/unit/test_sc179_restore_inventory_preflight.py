@@ -15,7 +15,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-REPO = Path(__file__).resolve().parents[2]
+from tests._support import ROOT
+
+REPO = ROOT
 CASE_OUTPUT = None
 EVENTS = []
 ORIGINS = {}
