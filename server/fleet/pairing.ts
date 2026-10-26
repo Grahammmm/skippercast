@@ -67,18 +67,22 @@ export async function landingRows(ports: Iterable<string>, from: string): Promis
   const wanted = new Set(ports), urls = new Set<string>();
   for (const port of wanted) { const url = regions[portRegion.get(port) ?? '']?.daily_feed; if (url) urls.add(url); }
   const loaded = await Promise.allSettled([...urls].map(url => pairingDeps.readFeed(url)));
-  const rows: LandingRow[] = [], seen = new Set<string>();
+  // null is a sticky conflict for this collection, including across feed boundaries.
+  // Judge only otherwise eligible rows; omitted IDs keep historical prune semantics.
+  const identities = new Map<string, LandingRow | null>();
   for (const result of loaded) {
     if (result.status !== 'fulfilled' || !Array.isArray(result.value?.reports)) continue;
     for (const r of result.value.reports) {
       const port = typeof r?.port === 'string' ? landingPort.get(r.port.toLowerCase()) : undefined;
       const norm = typeof r?.boat === 'string' ? nameNorm(r.boat) : '';
-      if (!port || !wanted.has(port) || !norm || typeof r.id !== 'string' || seen.has(r.id)) continue;
+      if (!port || !wanted.has(port) || !norm || typeof r.id !== 'string') continue;
       if (typeof r.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(r.date) || r.date < from) continue;
-      seen.add(r.id);
-      rows.push({id: r.id, norm, port, date: r.date});
+      const previous = identities.get(r.id);
+      if (previous === undefined) identities.set(r.id, {id: r.id, norm, port, date: r.date});
+      else if (previous && (previous.norm !== norm || previous.port !== port || previous.date !== r.date)) identities.set(r.id, null);
     }
   }
+  const rows = [...identities.values()].filter((row): row is LandingRow => row !== null);
   return {rows, feeds: urls.size, unavailable: loaded.filter(r => r.status !== 'fulfilled' || !Array.isArray(r.value?.reports)).length};
 }
 

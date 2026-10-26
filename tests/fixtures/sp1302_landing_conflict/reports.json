@@ -1,0 +1,7 @@
+{
+  "a": {"id": "conflict-example", "boat": "Alpha Example", "port": "Morro Bay", "date": "2026-10-01"},
+  "b": {"id": "conflict-example", "boat": "Beta Example", "port": "Morro Bay", "date": "2026-10-01"},
+  "healthy": {"id": "healthy-example", "boat": "The Alpha Example", "port": "Morro Bay", "date": "2026-10-01"},
+  "now": "2026-10-05T12:00:00.000Z",
+  "from": "2026-09-04"
+}
