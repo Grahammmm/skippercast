@@ -2,13 +2,12 @@
 from dataclasses import fields, replace
 import hashlib
 import json
-from pathlib import Path
 from types import MappingProxyType
 import unittest
 
 from scripts.accept_sp1510_classifier_identity import offline_boundary
+from tests._support import ROOT
 
-ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = ROOT / 'tests/fixtures/sp1510_classifier_identity/synthetic.json'
 
 
