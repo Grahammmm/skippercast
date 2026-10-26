@@ -48,11 +48,13 @@ def planning_spine(config, cache, fetch=False):
 
 
 def scheme_tiles(config, root, cache, fetch=False):
+    from contextlib import closing
+
     pin = read_json(root / config['blue_topo_pin'])
     path = cache / Path(pin['scheme_url']).name
     verified_file(pin['scheme_url'], pin['scheme_sha256'], path, fetch, max_bytes=20_000_000)
     selected = []
-    with sqlite3.connect(f'file:{path}?mode=ro', uri=True) as db:
+    with closing(sqlite3.connect(f'file:{path}?mode=ro', uri=True)) as db, db:
         db.row_factory = sqlite3.Row
         tables = [r[0] for r in db.execute("SELECT table_name FROM gpkg_contents WHERE data_type='features'")]
         if len(tables) != 1 or not tables[0].startswith('BlueTopo_Tile_Scheme_'):

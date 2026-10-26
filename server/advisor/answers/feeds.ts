@@ -21,10 +21,56 @@ export async function dailyFeed(region: Region, read: FeedReader): Promise<Exter
   } catch { return null; }
 }
 
-/** The region's intelligence feed (forecast models), or null when missing, unreadable or for another region. */
+/** The region's intelligence feed (forecast models), or null when missing, unreadable, for another region or with a malformed forecast container. */
 export async function intelligenceFeed(region: Region, read: FeedReader): Promise<ExternalJSON | null> {
   try {
     const feed = await read(region.intelligence_feed);
-    return feed?.region_id === region.id ? feed : null;
+    return feed?.region_id === region.id && forecastContainersOk(feed) ? feed : null;
   } catch { return null; }
+}
+
+// The forecast models conditions.ts reads (readHour, windowConditions). Their sample
+// values, units and freshness stay that module's policy; this only checks the containers.
+const FORECAST_MODELS = ['gfs_global', 'ecmwf_ifs025', 'ncep_gfswave016', 'ecmwf_wam'] as const;
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/**
+ * Read-only shape gate for the containers the conditions readers index into: the feed,
+ * forecast and forecast.models are plain objects; each recognized model present is an
+ * object; a model's data (required to be an array unless the model is an explicit
+ * provider-error record) holds only null or object points; a point's hourly, when
+ * present, is an object whose time, when present, is an array. Absent forecast, models,
+ * data, hourly or time keep the ordinary unavailable outcome. An error record's array or
+ * keyed-object points are checked too, because windowConditions reads gfs_global times
+ * without looking at error.
+ */
+function forecastContainersOk(feed: unknown): boolean {
+  if (!isRecord(feed)) return false;
+  if (feed.forecast === undefined) return true;
+  if (!isRecord(feed.forecast)) return false;
+  const models = feed.forecast.models;
+  if (models === undefined) return true;
+  if (!isRecord(models)) return false;
+  for (const id of FORECAST_MODELS) {
+    const model = models[id];
+    if (model === undefined) continue;
+    if (!isRecord(model)) return false;
+    const data = model.data;
+    let points: unknown[];
+    if (Array.isArray(data)) points = data;
+    else if (data === undefined) continue;
+    else if (!model.error) return false;
+    // An error record may carry non-array data, but data[point] is still indexed, so a
+    // keyed object's entries are checked as points; other values index to nothing.
+    else if (isRecord(data)) points = Object.values(data);
+    else continue;
+    for (const point of points) {
+      if (point === null) continue;
+      if (!isRecord(point)) return false;
+      if (point.hourly === undefined) continue;
+      if (!isRecord(point.hourly)) return false;
+      if (point.hourly.time !== undefined && !Array.isArray(point.hourly.time)) return false;
+    }
+  }
+  return true;
 }

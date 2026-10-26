@@ -71,6 +71,7 @@ def source_rights(row, *, use="noncommercial", today=None):
 
 def feature_rights(source_ids, sources, *, use="noncommercial"):
     """Every contributor must resolve, including interpreted substrate sources."""
+    source_ids = list(source_ids)
     if not source_ids or any(ident not in sources for ident in source_ids):
         raise ValueError('Feature source attribution is incomplete')
     return [source_rights(sources[ident], use=use) for ident in sorted(set(source_ids))]

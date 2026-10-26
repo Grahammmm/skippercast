@@ -33,7 +33,11 @@ DEFAULT_STYLE = dict(display_units='m', vertical_exaggeration=1.0,
 
 
 def bounded_json(path):
-    """Bound regular external CLI files before reading; FIFO opens never wait."""
+    """Bound regular external CLI files before reading; FIFO opens never wait.
+
+    Ambiguous JSON is refused: a duplicate key at any depth, NaN/Infinity tokens
+    and numbers that overflow to infinity. Other documents parse as before.
+    """
     fd = os.open(path,os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
     try:
         header = os.fstat(fd)
@@ -49,7 +53,19 @@ def bounded_json(path):
         raise ValueError('cli_json_byte_bound')
     def reject(value):
         raise ValueError('cli_json_nonfinite:' + value)
-    document = json.loads(data.decode('utf-8'),parse_constant=reject)
+    def finite(text):
+        value = float(text)
+        if not math.isfinite(value):  # e.g. 1e999: valid JSON grammar, but parses to infinity
+            raise ValueError('cli_json_nonfinite:overflow')
+        return value
+    def unique(pairs):
+        document = {}
+        for key, value in pairs:  # keys arrive decoded, so "x" and "\u0078" collide
+            if key in document:
+                raise ValueError('cli_json_duplicate_key')
+            document[key] = value
+        return document
+    document = json.loads(data.decode('utf-8'),parse_constant=reject,parse_float=finite,object_pairs_hook=unique)
     if not isinstance(document,dict):
         raise ValueError('cli_json_object_required')
     return document
