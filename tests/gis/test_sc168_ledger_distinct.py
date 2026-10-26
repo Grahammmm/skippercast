@@ -15,7 +15,8 @@ import unittest
 from unittest import mock
 import urllib.request
 
-ROOT = Path(__file__).resolve().parents[2]
+from tests._support import ROOT
+
 TOKEN = 'distinct_segment_campaign_ledgers_required'
 EXPECTED = {
     'test_regression': ['exact', 'relative_absolute', 'dot', 'dotdot', 'string_path',
