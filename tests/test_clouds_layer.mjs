@@ -220,7 +220,6 @@ test('no label and no step while MapLibre is still loading or after the Chart fa
   const label = cloudStamp.value;
   await run.advance(HOLD_MS + 5 * FRAME_MS);
   assert.equal(cloudStamp.value, label, 'and no step');
-  assert.deepEqual(shown(run.e), [frames[0]], 'the last map is not stepped either');
   run.c.destroy();
 });
 

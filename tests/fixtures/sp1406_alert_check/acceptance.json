@@ -1,0 +1,18 @@
+{
+  "spec_version": "SP-14-v1",
+  "card": "SP1406-ALERT-CHECK",
+  "staged_base": "33734f90073a2150eac5a418564ea314c4a591ac",
+  "primary": "server/advisor/answers/planning.ts",
+  "baseline_primary_sha256": "569cac7d016d92822a13a24a847341f4003ffe12e8b12b85bce3b6e6c4662647",
+  "author": {"model": "gpt-6.1-sol", "provider": "openai-codex", "profile": "sol-reviewer", "run": 1809},
+  "sole_reviewer": "opus-coder-bopus on actual Claude Opus 5.5",
+  "baseline_pair": ["primary regression", "healthy control"],
+  "requirements": {
+    "A1": "Missing/invalid required-zone status, alerts or checked_at yields checked false, null as_of and existing could-not-check note; unrelated zones cannot fill gaps.",
+    "A2": "A nonempty required zone list with all source objects status ok, alerts arrays and parseable checked_at is complete; as_of is the oldest required check by instant, independent of insertion order. No new age threshold.",
+    "A3": "Preserve all known warnings and advisory lead independently of completeness, including English/Spanish order and NWS closer; forecast and season untouched.",
+    "A4": "At unchanged pinned product, baseline registers exactly primary regression and healthy control. Expected child exit 1, only primary fails its corrected semantic assertion; identical pair passes after fix."
+  },
+  "regression_files": ["tests/test_advisor_tools.mjs"],
+  "owed_operator_ci": "Unchanged local full suite, PR publication and required exact-head CI including all groups listed on the card; no scoped result is release acceptance."
+}
