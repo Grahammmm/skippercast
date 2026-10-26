@@ -5,13 +5,13 @@ The acceptance runner installs process-local offline guards before imports.
 """
 import copy
 import json
-from pathlib import Path
 import unittest
 from urllib.parse import urlsplit
 
 from skippercast.fleet.normalize import clean_url
+from tests._support import ROOT
 
-FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "sp71_url_port" / "urls.json"
+FIXTURES = ROOT / "tests" / "fixtures" / "sp71_url_port" / "urls.json"
 CASES = json.loads(FIXTURES.read_text(encoding="utf-8"))
 
 
