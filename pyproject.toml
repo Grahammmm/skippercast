@@ -53,7 +53,7 @@ advisor = ["Pillow==12.3.0", "pillow-heif==1.8.1"]
 # Zstandard decoder for the MarineCadastre AIS backfill. No requirements file: the fleet workflows install the extra.
 fleet = ["jsonschema==4.26.0", "zstandard==0.25.0"]
 # Everything a contributor needs to run the full suite and every job locally.
-dev = ["skippercast[ocean,survey,publish,test,tls,advisor]", "ruff==0.17.2"]
+dev = ["skippercast[ocean,survey,publish,test,tls,advisor]", "ruff==0.16.10"]
 
 [project.scripts]
 skippercast = "skippercast.__main__:main"
