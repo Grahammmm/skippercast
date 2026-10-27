@@ -1,0 +1,8 @@
+{
+  "region": "synthetic-central",
+  "segments": [{
+    "id": "fixture",
+    "mosaic": "mosaic.asc",
+    "sources": [{"id": "a", "path": "a.asc"}, {"id": "b", "path": "b.asc"}]
+  }]
+}

@@ -1,0 +1,36 @@
+{
+  "schema": "skippercast.sp1401-flow-gaps.fixture/v1",
+  "synthetic": true,
+  "note": "Card-owned synthetic screen-sampler inputs for SP1401 (tests/test_sp1401_flow_gaps.mjs). Screen pixels only: no map, raster, field packet or geographic source. Blocked regions are closed rectangles [x0, x1] x [y0, y1]; a strip spans the whole screen on its other axis.",
+  "constants": {"step_px": 5, "max_steps": 13, "min_points_exclusive": 5, "sample_px": 1},
+  "screen": {"width": 128, "height": 64, "seeds": [[24, 24], [88, 24]]},
+  "speed_knots": 1,
+  "primary": {
+    "name": "east flow, one-pixel vertical null strip east of the seed (diagnostic flow-substep-gap)",
+    "direction": [1, 0],
+    "blocked": {"x0": 24.5, "x1": 25.5, "y0": -1000, "y1": 1000}
+  },
+  "one_pixel_gaps": [
+    {"name": "east flow, strip east of seed", "direction": [1, 0], "blocked": {"x0": 24.5, "x1": 25.5, "y0": -1000, "y1": 1000}},
+    {"name": "east flow, strip west of seed", "direction": [1, 0], "blocked": {"x0": 22.5, "x1": 23.5, "y0": -1000, "y1": 1000}},
+    {"name": "west flow, strip east of seed", "direction": [-1, 0], "blocked": {"x0": 24.5, "x1": 25.5, "y0": -1000, "y1": 1000}},
+    {"name": "west flow, strip west of seed", "direction": [-1, 0], "blocked": {"x0": 22.5, "x1": 23.5, "y0": -1000, "y1": 1000}},
+    {"name": "south flow, strip south of seed", "direction": [0, 1], "blocked": {"x0": -1000, "x1": 1000, "y0": 24.5, "y1": 25.5}},
+    {"name": "south flow, strip north of seed", "direction": [0, 1], "blocked": {"x0": -1000, "x1": 1000, "y0": 22.5, "y1": 23.5}},
+    {"name": "north flow, strip south of seed", "direction": [0, -1], "blocked": {"x0": -1000, "x1": 1000, "y0": 24.5, "y1": 25.5}},
+    {"name": "north flow, strip north of seed", "direction": [0, -1], "blocked": {"x0": -1000, "x1": 1000, "y0": 22.5, "y1": 23.5}},
+    {"name": "south-east diagonal through the centre of a one-pixel cell 1 px ahead of the seed", "direction": [1, 1], "blocked": {"x0": 24.2071, "x1": 25.2071, "y0": 24.2071, "y1": 25.2071}},
+    {"name": "south-east diagonal through the centre of a one-pixel cell 1 px behind the seed", "direction": [1, 1], "blocked": {"x0": 22.7929, "x1": 23.7929, "y0": 22.7929, "y1": 23.7929}},
+    {"name": "north-east diagonal through the centre of a one-pixel cell 1 px ahead of the seed", "direction": [1, -1], "blocked": {"x0": 24.2071, "x1": 25.2071, "y0": 22.7929, "y1": 23.7929}},
+    {"name": "north-east diagonal through the centre of a one-pixel cell 1 px behind the seed", "direction": [1, -1], "blocked": {"x0": 22.7929, "x1": 23.7929, "y0": 24.2071, "y1": 25.2071}}
+  ],
+  "broad_gap": {"name": "east flow, broad strip that the unchanged probes already catch", "direction": [1, 0], "blocked": {"x0": 24.5, "x1": 29.5, "y0": -1000, "y1": 1000}},
+  "supported_directions": [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [3, -4]],
+  "large_screen": {"width": 3840, "height": 2160},
+  "edge_screen": {"height": 48, "widths": [34, 49, 84]},
+  "short_path": {
+    "dropped": {"direction": [1, 0], "supported_x": [14, 36]},
+    "kept": {"direction": [1, 0], "supported_x": [9, 39]}
+  },
+  "still_sample_ms": [0.005, 0.005]
+}
