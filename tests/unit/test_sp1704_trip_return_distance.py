@@ -12,17 +12,14 @@ are the committed ``regions/CA/fleet.json`` values, read through the real
 ``classify_trip``. ``expected.json`` pins the values the unchanged staged base
 produced for every field the repair must not move.
 
-The module anchors ``sys.path`` to this checkout before importing product code
-and refuses a ``skippercast`` package imported from anywhere else.
+The checkout root comes from ``tests._support`` (the acceptance launcher anchors
+``sys.path`` to the checkout under test); the module refuses a ``skippercast``
+package imported from anywhere other than that checkout's ``src``.
 """
 import sys
 from pathlib import Path
 
-_REPO = Path(__file__).resolve().parents[2]
-for _entry in (str(_REPO), str(_REPO / 'src')):
-    while _entry in sys.path:
-        sys.path.remove(_entry)
-    sys.path.insert(0, _entry)  # final order: <repo>/src, <repo>, ...
+from tests._support import FIXTURES, ROOT
 
 
 def _inside(module, root):
@@ -30,7 +27,7 @@ def _inside(module, root):
     return bool(origin) and Path(origin).resolve().is_relative_to(root)
 
 
-if 'skippercast' in sys.modules and not _inside(sys.modules['skippercast'], _REPO / 'src'):
+if 'skippercast' in sys.modules and not _inside(sys.modules['skippercast'], ROOT / 'src'):
     raise ImportError(f"skippercast already imported from outside this checkout: {sys.modules['skippercast'].__file__}")
 
 from dataclasses import fields, replace  # noqa: E402
@@ -43,10 +40,9 @@ from skippercast.fleet.ais.classify import classify_trip  # noqa: E402
 from skippercast.fleet.ais.segment import ActivityThresholds, distance_nm, split_trips  # noqa: E402
 from skippercast.fleet.ais.sources.base import AisPosition  # noqa: E402
 from skippercast.fleet.config import Port  # noqa: E402
-from tests._support import FIXTURES, ROOT  # noqa: E402
 
-if not _inside(skippercast, _REPO / 'src') or ROOT != _REPO:
-    raise ImportError(f'product or test support imported from outside {_REPO}: {skippercast.__file__}, {ROOT}')
+if not _inside(skippercast, ROOT / 'src'):
+    raise ImportError(f'product imported from outside {ROOT / "src"}: {skippercast.__file__}')
 
 FIXTURE_DIR = FIXTURES / 'sp1704_trip_return_distance'
 DATA = json.loads((FIXTURE_DIR / 'tracks.json').read_text(encoding='utf-8'))
