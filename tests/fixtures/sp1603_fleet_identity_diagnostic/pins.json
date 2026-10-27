@@ -1,0 +1,14 @@
+{
+  "spec_version": "SP-16-v1",
+  "id": "SP1603-FLEET-IDENTITY-DIAGNOSTIC",
+  "base": "8a805820c30895f5f037e26af9079fd3dc015b0f",
+  "repository": "Grahammmm/skippercast",
+  "sources": {
+    "server/fleet/ids.ts": "bfaef1336f533818fcb8bddd03406602df0c4d42089b6b933d9b156027fbc011",
+    "server/advisor/ids.ts": "76b2708f25439f277af7e1abcd17641410d0b1ac50dc01d4bbdd4d08af6df8db",
+    "src/skippercast/fleet/ops.py": "7539ce779e4852fac0116f33bbd8f908e825be20510ee71f4b11de03cf704a07",
+    "tests/test_fleet_jobs.mjs": "8e6353214e3405456433bc6902afad97715cb452f7e1a18a0328bdb5175d2e88",
+    "tests/unit/test_fleet_sinks.py": "6a4aed8988851587e3407c7357c9e3c88f9bbbf03be1f899f034f983b19f72a0"
+  },
+  "corpus_sha256": "e77404a335bb76751db334f2770f11456155052759c2ae9810c82b5ba49fabb2"
+}
