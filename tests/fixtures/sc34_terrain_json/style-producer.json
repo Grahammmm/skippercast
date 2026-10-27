@@ -1,0 +1,16 @@
+{
+  "display_units": "ft",
+  "vertical_exaggeration": 2.5,
+  "light_azimuth_degrees": 315,
+  "light_elevation_degrees": 4.5e1,
+  "light_intensity": 0.65,
+  "exposure": 1.0,
+  "contrast": 1,
+  "depth_bands": 8,
+  "contour_interval_m": 1E+1,
+  "slope_overlay": 0,
+  "uncertainty_overlay": -0.0,
+  "no_data_overlay": true,
+  "color_range": "locked",
+  "locked_depth_range_m": [-0.0, 1.25e2]
+}

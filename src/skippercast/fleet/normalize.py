@@ -133,7 +133,12 @@ def clean_url(url: str | None) -> str | None:
         return None
     if parts.scheme.lower() != "https" or not host or parts.username or parts.password:
         return None
-    netloc = host.lower() + (f":{parts.port}" if parts.port else "")
+    try:
+        port = parts.port
+    except ValueError:
+        return None
+    authority_host = f"[{host.lower()}]" if ":" in host else host.lower()
+    netloc = authority_host + (f":{port}" if port is not None else "")
     query = urlencode([(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True) if not TRACKING.match(k)])
     return urlunsplit(("https", netloc, parts.path or "/", query, ""))
 

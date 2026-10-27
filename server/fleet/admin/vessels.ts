@@ -5,7 +5,7 @@
 //   GET  /api/admin/fleet/vessels       ?region= &port= &class= &status= &profile_status= &ais=watched|unwatched
 //                                       &completeness_max=0..1 &cursor=   by name, 100 a page
 //   GET  /api/admin/fleet/vessels/:id   the vessel with every private column, each column's value, pin and
-//                                       winning fact, every fact (history included), aliases, offerings,
+//                                       winning fact, bounded fact history with truncation status, aliases, offerings,
 //                                       changes, AIS watch rows, recent trips, linked advisor boats, open reviews
 //   POST /api/admin/fleet/vessels/:id   {fields?: {<column>: value|null}, unpin?: [<column>], removal_requested?: true}
 //   POST /api/admin/fleet/vessels/:id/link-advisor   {boat_id, unlink?: true}
@@ -186,9 +186,14 @@ const VALUE_COLUMNS = EDITABLE.filter(c => c !== 'map_display_consent');
 export async function vesselDetail(db: D1Database, id: string): Promise<Record<string, unknown> | null> {
   const row = await vesselRow(db, id);
   if (!row) return null;
-  const [facts, aliases, offerings, changes, watch, trips, boats, reviews, operator] = await Promise.all([
+  const [facts, currentFacts, aliases, offerings, changes, watch, trips, boats, reviews, operator] = await Promise.all([
     db.prepare(`SELECT id,field,value_json,source_id,source_url,method,confidence,rights,retrieved_at,first_seen_at,last_seen_at,superseded_at,superseded_by,run_id
-      FROM fleet_vessel_facts WHERE vessel_id=? ORDER BY field,superseded_at IS NOT NULL,retrieved_at DESC,id LIMIT ?`).bind(id, DETAIL_LIMITS.facts).all<FactRow>(),
+      FROM fleet_vessel_facts WHERE vessel_id=? ORDER BY field,superseded_at IS NOT NULL,retrieved_at DESC,id LIMIT ?`).bind(id, DETAIL_LIMITS.facts + 1).all<FactRow>(),
+    // Winning provenance is not a projection of the bounded history page. Keep
+    // its ordering so exact ranking ties retain the historical ID tie-break.
+    db.prepare(`SELECT id,field,value_json,method,confidence,retrieved_at FROM fleet_vessel_facts
+      WHERE vessel_id=? AND superseded_at IS NULL ORDER BY field,retrieved_at DESC,id`).bind(id)
+      .all<Pick<FactRow, 'id' | 'field' | 'value_json' | 'method' | 'confidence' | 'retrieved_at'>>(),
     db.prepare('SELECT alias,alias_norm,kind,source_url,first_seen_at,last_seen_at FROM fleet_aliases WHERE vessel_id=? ORDER BY alias_norm').bind(id).all(),
     db.prepare('SELECT * FROM fleet_offerings WHERE vessel_id=? ORDER BY status,name').bind(id).all<Record<string, unknown>>(),
     db.prepare('SELECT id,kind,before_json,after_json,detected_at,run_id,review_id FROM fleet_changes WHERE vessel_id=? ORDER BY detected_at DESC,id LIMIT ?').bind(id, DETAIL_LIMITS.changes)
@@ -204,7 +209,7 @@ export async function vesselDetail(db: D1Database, id: string): Promise<Record<s
   const pinOf = (col: string): unknown => pinAll ? true : (pins as Record<string, unknown>)[col] ?? null;
   // Each column's winning fact as the Worker can see it: a current fact whose value equals the column's,
   // an admin fact first, then the highest confidence, then the latest. The Python resolver chose the value.
-  const current = facts.results.filter(f => f.superseded_at === null);
+  const current = currentFacts.results;
   const fields: Record<string, unknown> = {};
   for (const col of [...VALUE_COLUMNS, 'map_display_consent']) {
     const stored = row[col] as SqlValue, value = col.endsWith('_json') ? parse(stored as string | null) : stored;
@@ -217,7 +222,8 @@ export async function vesselDetail(db: D1Database, id: string): Promise<Record<s
   return {
     vessel: {...vessel, waters: parse(waters_json as string | null), pinned: pinnedNames(pinned_json)},
     fields,
-    facts: facts.results.map(({value_json, ...f}) => ({...f, value: parse(value_json)})),
+    facts: facts.results.slice(0, DETAIL_LIMITS.facts).map(({value_json, ...f}) => ({...f, value: parse(value_json)})),
+    facts_truncated: facts.results.length > DETAIL_LIMITS.facts,
     aliases: aliases.results,
     offerings: offerings.results.map(({days_json, target_species_json, source_fact_ids_json, ...o}) =>
       ({...o, days: parse(days_json as string | null), target_species: parse(target_species_json as string | null), source_fact_ids: parse(source_fact_ids_json as string | null)})),
