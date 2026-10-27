@@ -1,5 +1,9 @@
 ## 3. Immutable receipts, review rounds and bad-evidence outcomes
 
+Implementation reconciliation: [Admission producer adapters and PC-9 serialization](admission-producers.md) defines the corrected unreleased-v1 campaign/discovery evidence shapes, exact execution encoding and enumerated native references. It does not change the rev4 execution API or authorize execution.
+
+Retained-provenance reconciliation: [Native job edge contracts and explicit holds](native-provenance.md) pins compatible #820/#822 ancestry, the unchanged schema-less Store descriptor adapter, current slot coverage, original queue namespace, and precisely held source-row/raw-snapshot/derivation lanes. Structural validation is not universal archive closure or semantic acceptance.
+
 ### 3.1 Shared shapes and hashing
 
 Every NEW campaign workflow receipt has schema, created_utc, author_profile, author_model (actual runtime, not requested alias), card_id, code_commit, skill_commit. Plan receipts also have campaign_segment_id, coordinator_segment_id, plan_id, plan_sha256. Review receipts add review_round, attempt, context Ref. Producer-native receipts remain byte-for-byte in their original schema and encoding; adapters do not rewrite them to this common header.

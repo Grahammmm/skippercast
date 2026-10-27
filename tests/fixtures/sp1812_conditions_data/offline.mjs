@@ -1,0 +1,21 @@
+// Process-local preload: installed before product modules and bound fetch defaults.
+import {syncBuiltinESMExports} from 'node:module';
+import net from 'node:net';
+import tls from 'node:tls';
+import http from 'node:http';
+import https from 'node:https';
+import dgram from 'node:dgram';
+import dns from 'node:dns';
+let violations = 0;
+const deny = () => { violations++; throw Error('SP1812_OFFLINE_BOUNDARY'); };
+globalThis.fetch = deny;
+globalThis.WebSocket = class { constructor() { deny(); } };
+net.connect = net.createConnection = net.Socket.prototype.connect = deny;
+tls.connect = deny;
+http.request = http.get = https.request = https.get = deny;
+dgram.createSocket = deny;
+dns.lookup = dns.resolve = deny;
+syncBuiltinESMExports();
+process.on('beforeExit', () => { if (violations) process.exitCode = 1; });
+globalThis.SP1812_OFFLINE = true;
+console.log('SP1812_OFFLINE_INSTALLED');

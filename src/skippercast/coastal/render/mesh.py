@@ -186,6 +186,11 @@ def write_png(path, rgb):
     h, w, channels = rgb.shape
     if channels != 3 or w != WIDTH or h != HEIGHT:
         raise ValueError("fixed_preview_size_required")
+    # The IHDR below always declares 8-bit samples: refuse any other dtype before encoding
+    # or opening the target (no implicit scaling, narrowing or reinterpretation).
+    dtype = getattr(rgb, "dtype", None)
+    if getattr(dtype, "kind", None) != "u" or getattr(dtype, "itemsize", None) != 1:
+        raise ValueError("fixed_preview_uint8_required")
     data = b"".join(b"\0" + row.tobytes() for row in rgb)
     encoded = (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
                + chunk(b"IDAT", zlib.compress(data, 6)) + chunk(b"IEND", b""))
