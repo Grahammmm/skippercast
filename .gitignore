@@ -49,3 +49,8 @@ wrangler.dev.jsonc
 # Browser tests (Playwright): results and traces (their wrangler state is under .wrangler/)
 test-results/
 playwright-report/
+
+# Committed synthetic COAST fixtures mirror runtime var/ and runs/ layouts;
+# their typed Refs must resolve in a clean checkout.
+!tests/fixtures/coast/queue/var/
+!tests/fixtures/coast/queue/plans/plan01/runs/

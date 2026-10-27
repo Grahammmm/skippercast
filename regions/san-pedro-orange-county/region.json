@@ -1,0 +1,509 @@
+{
+  "schema_version": 1,
+  "id": "san-pedro-orange-county",
+  "name": "San Pedro Bay\u2013Orange County",
+  "status": "draft",
+  "timezone": "America/Los_Angeles",
+  "jurisdiction": "California \u00b7 Southern Groundfish Management Area",
+  "bounds": [
+    -118.35,
+    33.35,
+    -117.5,
+    33.8
+  ],
+  "fishing_bounds": [
+    -118.35,
+    33.35,
+    -117.5,
+    33.8
+  ],
+  "map": {
+    "center": [
+      33.575,
+      -117.925
+    ],
+    "zoom": 9,
+    "focus_areas": [
+      {
+        "id": "orange-county",
+        "name": "Orange County coast",
+        "bounds": [
+          -118.15,
+          33.36,
+          -117.62,
+          33.75
+        ],
+        "forecast_point": "newport"
+      }
+    ],
+    "locality_method": "Discovery extents route published regional data and prioritize nearby notices. They are not legal boundaries or evidence of fish presence. Protected areas use the authoritative polygon screen. Closed seasons remain selectable for future planning.",
+    "region_notice_ids": [
+      "health"
+    ],
+    "unavailable_targets": {
+      "dungeness": "Dungeness is not a promoted Southern California target. Crab traps and snares are prohibited south of Point Arguello; this is not a blanket prohibition on every method of crab collection. See official CDFW invertebrate rules.",
+      "salmon": "Salmon is not in this region\u2019s researched target list. That is not a closed-season determination; check the official CDFW salmon rules."
+    },
+    "local_areas": [
+      {
+        "id": "catalina",
+        "name": "Santa Catalina",
+        "bounds": [
+          -118.68,
+          33.26,
+          -118.23,
+          33.52
+        ],
+        "notice_ids": [
+          "catalina"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "orange-county",
+        "name": "Orange County coast",
+        "bounds": [
+          -118.15,
+          33.36,
+          -117.62,
+          33.75
+        ],
+        "notice_ids": []
+      },
+      {
+        "id": "pendleton",
+        "name": "Camp Pendleton coast",
+        "bounds": [
+          -117.85,
+          33.1,
+          -117.3,
+          33.45
+        ],
+        "notice_ids": [
+          "pendleton-fallbrook"
+        ]
+      },
+      {
+        "id": "los-angeles-coast",
+        "name": "Los Angeles coast",
+        "bounds": [
+          -118.82,
+          33.65,
+          -118.05,
+          34.08
+        ],
+        "notice_ids": []
+      }
+    ],
+    "discovery_bounds": [
+      -118.35,
+      33.35,
+      -117.5,
+      33.8
+    ],
+    "unavailable_target_sources": {
+      "dungeness": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
+      "salmon": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern"
+    }
+  },
+  "harbor": {
+    "name": "Newport Beach (reference)",
+    "latitude": 33.61,
+    "longitude": -117.93,
+    "entrance_note": "Choose your actual departure harbor; this is a regional reference. No route or entrance clearance is implied.",
+    "information_url": "https://dbw.parks.ca.gov/BoatingFacilities/",
+    "watch_keywords": [
+      "Boating Facility",
+      "California State Parks"
+    ]
+  },
+  "boat": {
+    "name": "2019 Parker 23",
+    "cruise_knots": 20,
+    "bottom_depth_limit_ft": 200
+  },
+  "forecast_points": [
+    {
+      "id": "newport",
+      "name": "Newport / Huntington",
+      "latitude": 33.59,
+      "longitude": -118.02,
+      "context": "orange-county"
+    },
+    {
+      "id": "dana-point",
+      "name": "Dana Point",
+      "latitude": 33.43,
+      "longitude": -117.9,
+      "context": "orange-county"
+    }
+  ],
+  "marine_zones": {
+    "coastal": "PZZ655",
+    "offshore": "PZZ745"
+  },
+  "stations": {
+    "tide": "9410660",
+    "tide_name": "Los Angeles",
+    "tide_note": "Los Angeles is a reference water-level station. It does not predict local drift, slack water or entrance currents.",
+    "airport": "KSNA",
+    "airport_name": "John Wayne airport",
+    "nearshore_buoy": "46222",
+    "nearshore_buoy_name": "San Pedro",
+    "offshore_buoy": "46025",
+    "offshore_buoy_name": "Santa Monica Basin",
+    "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+    "roles": {
+      "tide": {
+        "stations": [
+          "9410660",
+          "9410680"
+        ],
+        "evidence": "catalog/station-failover.json"
+      }
+    }
+  },
+  "mpa": {
+    "bounds": [
+      -118.35,
+      33.35,
+      -117.5,
+      33.8
+    ],
+    "minimum_features": 4
+  },
+  "species": [
+    "kelp-bass",
+    "yellowtail",
+    "halibut",
+    "white-seabass",
+    "sand-bass",
+    "spotted-bass",
+    "bluefin",
+    "yellowfin",
+    "dorado",
+    "bonito",
+    "barracuda",
+    "sheephead",
+    "whitefish",
+    "lobster",
+    "reef",
+    "albacore"
+  ],
+  "source_bindings": {
+    "bathymetry": [
+      "noaa-bag"
+    ],
+    "substrate": [
+      "cdfw-artificial-reefs",
+      "noaa-west-coast-substrate"
+    ],
+    "groundtruth": [
+      "usgs-camera-samples"
+    ],
+    "kelp": [
+      "cdfw-kelp-2016",
+      "kelpwatch"
+    ],
+    "protected-areas": [
+      "cdfw-mpas",
+      "noaa-socal-gea"
+    ],
+    "regulations": [
+      "cdfw-rules"
+    ],
+    "dynamic-closures": [
+      "cdfw-rules",
+      "noaa-socal-gea",
+      "ecfr-security"
+    ],
+    "wind-forecast": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "nws-weather"
+    ],
+    "wave-forecast": [
+      "noaa-gfs-wave",
+      "ecmwf-wam"
+    ],
+    "wave-observations": [
+      "ndbc-buoys"
+    ],
+    "weather-observations": [
+      "ndbc-buoys",
+      "nws-weather"
+    ],
+    "tides": [
+      "noaa-tides"
+    ],
+    "surface-currents": [
+      "noaa-ndbc-hfr-uswc-6km",
+      "noaa-hfr-thredds",
+      "noaa-wcofs",
+      "ioos-hfr"
+    ],
+    "subsurface-ocean": [
+      "regional-roms",
+      "noaa-survey-catches"
+    ],
+    "sea-temperature": [
+      "noaa-blended-sst",
+      "mur-sst",
+      "noaa-wcofs"
+    ],
+    "chlorophyll": [
+      "noaa-viirs-merged-chlorophyll",
+      "modis-chlorophyll"
+    ],
+    "species-occurrence": [
+      "noaa-survey-catches",
+      "obis-occurrences"
+    ],
+    "catch-effort": [
+      "noaa-survey-catches",
+      "recfin",
+      "landing-reports"
+    ],
+    "charter-identity": [
+      "fleet-registry"
+    ],
+    "ais-history": [
+      "noaa-ais",
+      "gfw-effort"
+    ],
+    "harbor-access": [
+      "nws-weather",
+      "harbor-authority"
+    ],
+    "wind-ensemble": [
+      "noaa-gefs-members"
+    ],
+    "wave-ensemble": [
+      "noaa-gefs-wave-prob"
+    ],
+    "forecast-verification": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "noaa-gfs-wave",
+      "ecmwf-wam",
+      "ndbc-buoys"
+    ]
+  },
+  "coverage": {
+    "bathymetry": {
+      "status": "research",
+      "reason": "COAST campaign run segment S4. Native-survey discovery and qualification for this footprint have not run; no depth-qualified footprint is published in this package."
+    },
+    "substrate": {
+      "status": "research",
+      "reason": "Bound regional substrate sources are not yet clipped to this footprint or its native depth masks; no substrate claim is published here."
+    },
+    "groundtruth": {
+      "status": "research",
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+    },
+    "kelp": {
+      "status": "research",
+      "reason": "CDFW 2016 canopy detections are imported for the southern-california package only; none are published in this package yet."
+    },
+    "protected-areas": {
+      "status": "research",
+      "reason": "No package-specific CDFW DS582 snapshot yet. A bounded snapshot and the NOAA Groundfish Exclusion Areas screen are required before preview."
+    },
+    "regulations": {
+      "status": "partial",
+      "reason": "Southern jurisdiction rules apply, but this footprint is not yet in the reviewed Southern regulation registry. The package stays draft until that hash-bound legal review."
+    },
+    "dynamic-closures": {
+      "status": "partial",
+      "reason": "CDFW in-season, health and gear watches plus NOAA exclusion areas. Navy/security access requires direct local clearance."
+    },
+    "wind-forecast": {
+      "status": "ready",
+      "reason": "NOAA GFS and ECMWF IFS at regional sea-grid samples."
+    },
+    "wave-forecast": {
+      "status": "ready",
+      "reason": "NOAA GFS Wave and ECMWF WAM at regional sea-grid samples."
+    },
+    "wave-observations": {
+      "status": "partial",
+      "reason": "Reference buoys 46222 San Pedro, CA (092), 46025 Santa Monica Basin - 33NM WSW of Santa Monica, CA; not continuous nearshore observations of this footprint."
+    },
+    "weather-observations": {
+      "status": "partial",
+      "reason": "Source discovery and regional evidence gaps remain visible; this is not a complete measurement of the region."
+    },
+    "tides": {
+      "status": "ready",
+      "reason": "NOAA reference stations Los Angeles 9410660. These are not local current or drift predictions."
+    },
+    "surface-currents": {
+      "status": "partial",
+      "reason": "Operational HFR observations and WCOFS surface forecasts; local reception holes remain blank and horizon is at most 72 hours."
+    },
+    "subsurface-ocean": {
+      "status": "research",
+      "reason": "Promising primary sources identified; regional records, precision and rights still need review."
+    },
+    "sea-temperature": {
+      "status": "partial",
+      "reason": "Native 0.01-degree MUR analysis with dated source errors and masks; NOAA 0.04-degree WCOFS surface-temperature forecasts at actual populated times through at most 72 hours. Neither establishes fish-depth temperature or catch probability."
+    },
+    "chlorophyll": {
+      "status": "partial",
+      "reason": "Source discovery and regional evidence gaps remain visible; this is not a complete measurement of the region."
+    },
+    "species-occurrence": {
+      "status": "research",
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+    },
+    "catch-effort": {
+      "status": "research",
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+    },
+    "charter-identity": {
+      "status": "missing",
+      "reason": "0 charter fleet ports map to this region; the charter fleet registry counts no boats here."
+    },
+    "ais-history": {
+      "status": "research",
+      "reason": "No verified local vessel histories or dwell clusters imported."
+    },
+    "harbor-access": {
+      "status": "partial",
+      "reason": "Reference harbor only. Actual departure harbor, route and entrance clearance remain trip-specific."
+    },
+    "wind-ensemble": {
+      "status": "ready",
+      "reason": "Reviewed live adapter with source/member metadata and grid distances; per-run availability is checked separately."
+    },
+    "wave-ensemble": {
+      "status": "ready",
+      "reason": "Reviewed live adapter with source/member metadata and grid distances; per-run availability is checked separately."
+    },
+    "forecast-verification": {
+      "status": "partial",
+      "reason": "New prospective archive begins with deployment; no backfilled skill or calibrated catch probability."
+    }
+  },
+  "assets": {
+    "atlas": "regions/san-pedro-orange-county/atlas.json",
+    "habitats": "regions/san-pedro-orange-county/habitats.json",
+    "protected_areas": "regions/san-pedro-orange-county/protected-areas.geojson",
+    "regulations": "regions/southern-california/regulations.json",
+    "charters": null,
+    "ais_evidence": null,
+    "commercial_ais": null,
+    "daily_evidence": null,
+    "bottom_index": "regions/san-pedro-orange-county/bottom/index.json",
+    "geology": null,
+    "ecology": "regions/san-pedro-orange-county/ecology.json",
+    "search_plans": "regions/san-pedro-orange-county/search-plans.json"
+  },
+  "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/san-pedro-orange-county/latest.json",
+  "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/san-pedro-orange-county/latest.json",
+  "landing_names": [],
+  "coverage_note": "COAST campaign run segment S4 (draft). Regional conditions sources are bound; no fishing target, qualified depth footprint or habitat claim is published. Unmapped areas and fish presence remain unknown.",
+  "landing_note": "No catch-position dataset has been imported for this footprint; landing totals are not fishing coordinates.",
+  "jurisdiction_id": "california-southern",
+  "pipeline_sources": {
+    "sst": "noaa-blended-sst",
+    "chlorophyll": "noaa-viirs-merged-chlorophyll",
+    "currents": "noaa-ndbc-hfr-uswc-6km"
+  },
+  "intelligence": {
+    "hfr_resolutions_km": [
+      1,
+      6
+    ],
+    "regional_current_model": "wcofs",
+    "wind_ensemble_model": "gfs025",
+    "wave_ensemble_provider": "noaa-gefs",
+    "verification_stations": [
+      {
+        "id": "46222",
+        "latitude": 33.614,
+        "longitude": -118.314,
+        "name": "San Pedro, CA (092)",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46222"
+      },
+      {
+        "id": "46025",
+        "latitude": 33.765,
+        "longitude": -119.077,
+        "name": "Santa Monica Basin - 33NM WSW of Santa Monica, CA",
+        "variables": [
+          "wave_height",
+          "wind_speed_10m"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46025",
+        "wind_verification": "ndbc-derived-10m",
+        "anemometer_height_m": 3.8
+      }
+    ],
+    "comfort_defaults": {
+      "wind_knots": 8,
+      "gust_knots": 12,
+      "sea_feet": 3
+    },
+    "ecology_profile": "california-southern",
+    "providers": {
+      "hfr": "noaa-hfr-thredds",
+      "regional_current": "noaa-wcofs",
+      "wind_ensemble": "noaa-gefs-members",
+      "wave_ensemble": "noaa-gefs-wave-prob",
+      "spectra": "ndbc-buoys"
+    }
+  },
+  "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/san-pedro-orange-county/intelligence.json",
+  "default_forecast_point": "newport",
+  "contexts": {
+    "orange-county": {
+      "name": "Orange County",
+      "stations": {
+        "tide": "9410660",
+        "tide_name": "Los Angeles",
+        "tide_note": "Los Angeles is a reference water-level station. It does not predict local drift, slack water or entrance currents.",
+        "airport": "KSNA",
+        "airport_name": "John Wayne airport",
+        "nearshore_buoy": "46222",
+        "nearshore_buoy_name": "San Pedro",
+        "offshore_buoy": "46025",
+        "offshore_buoy_name": "Santa Monica Basin",
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+        "roles": {
+          "tide": {
+            "stations": [
+              "9410660",
+              "9410680"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
+      },
+      "marine_zones": {
+        "coastal": "PZZ655",
+        "offshore": "PZZ745"
+      }
+    }
+  },
+  "closure_check": {
+    "url": "https://www.fisheries.noaa.gov/s3/2026-06/geas-updated-06-23-2026.csv",
+    "source_id": "noaa-socal-gea"
+  },
+  "regulations_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+  "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/san-pedro-orange-county/habitat-dynamics.json",
+  "target_labels": {
+    "reef": "Rockfish"
+  }
+}

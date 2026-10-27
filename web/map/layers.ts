@@ -18,6 +18,7 @@ import type {RailId} from '../profile.ts';
 import type {ChartMark} from './coastline.ts';
 import type {Palette, PaletteKey} from './palette.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from './style.ts';
+import {STATION_BASIS} from './station-model.ts';
 
 /** Where a layer draws: the MapLibre Chart, the packages/coast terrain (2D and 3D), or both. */
 export type LayerPresentation = 'chart' | 'terrain';
@@ -76,9 +77,13 @@ export const DENSITY_SOURCE = 'marks-density';
 export const SELECTION_SOURCE = 'selection';
 /** The trip planner's ranked spots (web/map/ranked.ts, #495). */
 export const RANKED_SOURCE = 'trip-ranked';
+/** Temp contrast's supported analysis cells (web/map/contrast.ts, CI6-03). */
+export const CONTRAST_SOURCE = 'sst-contrast';
 export const COASTLINE_ATTRIBUTION = 'NOAA NGS · CUSP shoreline';
 export const ENC_ATTRIBUTION = 'NOAA ENC display · planning only';
 export const MPA_SOURCE = 'mpas';
+/** The region's shelf depth contours (web/map/depth-contours.ts, CI6-13). */
+export const DEPTH_CONTOURS_SOURCE = 'depth-contours';
 /**
  * The on-map CC BY 4.0 credit for ds582 (catalog `cdfw-mpas`): creator, dataset, licence. The legend
  * row's basis gives it in full with the metadata and licence links. Kept short so that, beside the
@@ -106,8 +111,26 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     basis: 'The bound coast report\'s daily sea-surface temperature analysis, or else the region\'s own published analysis checked by hash in the browser, named with its product, grid and age where it draws and withheld past its 72-hour age limit; surface water only, neither bottom temperature nor a forecast.', task: 'FE-16'}),
   entry({id: 'water-temp-contours', label: 'Water temp contours', control: 'water-temp', presentations: ['chart'], time: ['observed'],
     basis: 'Half-degree Fahrenheit contours of the same analysis, labelled at whole degrees.', task: 'FE-16'}),
-  entry({id: 'swell', label: 'Swell', control: 'swell', presentations: ['chart'], time: ['hour'], legend: [{label: 'Primary swell height', swatch: 'swell2'}],
-    basis: 'NOAA GFS-Wave model forecast of the primary swell on the region\'s forecast grid, from a run issued within 36 hours, and where a coast report binds, its nearshore model sites (CDIP MOP) as rings; model output, not buoy observations.', task: 'FE-17'}),
+  // CI6-03: its own rail entry, off by default, because Water temp (on by default for Shore) must not turn it on.
+  entry({id: 'sst-contrast', label: 'Temp contrast', control: 'sst-contrast', presentations: ['chart'], time: ['observed'], sources: [CONTRAST_SOURCE],
+    attribution: 'NOAA CoastWatch SST analysis',
+    legend: [{label: 'Temperature change per distance, °F per nautical mile', swatch: 'contrast1'}],
+    basis: 'The region\'s published daily sea-surface temperature analysis, partly interpolated, with gaps under cloud filled, drawn as the change in temperature per nautical mile only in grid cells where the change across neighbouring cells exceeds their summed analysis error; named with its product, grid and age where it draws and withheld past its 72-hour age limit. Surface water only; a contrast cell is not a fish or catch location.',
+    task: 'CI6-03'}),
+  entry({id: 'chlorophyll', label: 'Chlorophyll', control: 'chlorophyll', presentations: ['chart'], sources: ['chlorophyll'], time: ['observed'],
+    legend: [{label: '≤0.01 mg/m³', swatch: 'depth0'}, {label: '0.1 mg/m³', swatch: 'blue'}, {label: '1 mg/m³', swatch: 'mint'}, {label: '10 mg/m³', swatch: 'amber'}, {label: '100 mg/m³', swatch: 'coral'}],
+    attribution: 'NOAA NESDIS STAR / CoastWatch',
+    basis: 'NOAA NPP/NOAA-20 merged OCI surface chlorophyll proxy on its native 0.0375° grid, labelled with its sample date and withheld at the manifest age limit; cloud gaps stay empty. Not bait or fish.', task: 'CI6-08'}),
+  entry({id: 'swell', label: 'Swell', control: 'swell', presentations: ['chart'], time: ['hour'], legend: [{label: 'Swell height', swatch: 'swell2'}],
+    basis: 'NOAA GFS-Wave model forecast (wcoast.0p16 grid) of the primary swell, wind sea or secondary swell on the region\'s forecast grid, from a run issued within 36 hours, and where a coast report binds, its nearshore model sites (CDIP MOP) as rings; model output, not buoy observations.', task: 'FE-17'}),
+  entry({id: 'wind', label: 'Wind', control: 'swell', presentations: ['chart'], sources: ['wind-arrows', 'wind-labels'], time: ['hour'],
+    attribution: 'NOAA NCEP', legend: [{label: '10 m wind · arrows toward · knots', swatch: 'text'}],
+    basis: 'NOAA GFS 10 m wind from the native approximately 13 km forecast tiles, sampled on the regional forecast grid, not observations; runs older than 36 hours or retrievals older than 6 hours are withheld. Arrows point toward; labels are knots.', task: 'CI6-10'}),
+  // CI6-13: shelf contours from reviewed survey grids, every zoom, Chart only; the ENC base above zoom 10 is unchanged.
+  entry({id: 'depth-contours', label: 'Depth contours', control: 'always', presentations: ['chart'], sources: [DEPTH_CONTOURS_SOURCE],
+    attribution: 'USGS · CSUMB survey grids', legend: [{label: 'Depth contour every 30 ft; heavier every 150 ft', swatch: 'depth1'}, {label: 'Survey edge: no reviewed grid beyond', swatch: 'muted'}],
+    basis: 'Shelf depth contours every 30 ft to 600 ft, traced from reviewed seafloor survey grids (in Morro Bay the USGS/CSUMB 2 m grids, surveyed 2008, averaged to 16 m blocks) and withheld one year after their source review; depths are feet below each survey\'s own vertical datum, which the grids leave unverified (the USGS report names MLLW), so they are not chart depths and not for navigation, and the lines stop at the dashed survey edge where no reviewed grid continues.', task: 'CI6-13'}),
+
   entry({id: 'mpas', label: 'Marine protected areas', control: 'always', presentations: ['chart', 'terrain'],
     terrain: {kind: 'fill', color: 'mpaFill', opacity: 'mpaFillOpacity', outline: 'mpaLine'}, sources: [MPA_SOURCE], attribution: MPA_ATTRIBUTION,
     legend: [{label: 'Marine protected area', swatch: 'mpaLine'}],
@@ -156,6 +179,9 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
   entry({id: 'trip-ranked', label: 'Ranked trip spots', control: 'always', presentations: ['chart'], sources: [RANKED_SOURCE], gate: 'a ranked trip plan',
     legend: [{label: 'Ranked trip spot; number: the planner\'s order', swatch: 'mint'}],
     basis: 'The trip planner\'s ranked reefs from the current seafloor publication, numbered in its order and drawn while its protected-area check and the marks\' run-time screen are current.', task: 'FE-51'}),
+  entry({id: 'stations', label: 'Stations', control: 'stations', presentations: ['chart'], sources: ['stations'], time: ['observed', 'hour'],
+    legend: [{label: 'Buoy observation', swatch: 'blue'}, {label: 'Tide prediction', swatch: 'mint'}, {label: 'Stale or unavailable', swatch: 'muted'}, {label: 'CDIP MOP model site: ring', swatch: 'blue'}],
+    attribution: 'NOAA NDBC · NOAA CO-OPS · CDIP/Scripps', basis: STATION_BASIS, task: 'CI6-18'}),
   entry({id: 'coastline', label: 'Coastline', control: 'always', presentations: ['chart'], sources: [COASTLINE_SOURCE], attribution: COASTLINE_ATTRIBUTION,
     basis: 'NOAA NGS CUSP shoreline, 1994–2010 sources.', task: 'FE-11'}),
 ]);

@@ -1,0 +1,58 @@
+{
+  "caps": {
+    "acquire_budget": {
+      "bytes": 1000000,
+      "memory_bytes": 4294967296,
+      "requests": 0,
+      "wall_s": 120
+    },
+    "max_jobs": 4,
+    "max_total_bytes": 2147483648,
+    "plan_max_total_bytes": 10000000,
+    "selected_bytes": 73
+  },
+  "catalog": {
+    "bytes": 2674,
+    "catalog_id": "a0bc09edb93ff6b60759afed3ec379c0525f3c8823f5c4c6c43ddc999d81de12",
+    "schema": "coastal-frozen-discovery-catalog-v1",
+    "sha256": "bc61f09d5facf02f457c1ea5006b7c82234b455e3ec480962b338811a9c05549"
+  },
+  "decisions": [
+    {
+      "access_host": "data.ngdc.noaa.gov",
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/input.bag",
+      "catalog_hash_binding": "matched",
+      "holds": [],
+      "publisher_id": "input.bag",
+      "source": {
+        "bytes": 73,
+        "contract": "native-raster-v1",
+        "path": "cache/source/input.bag",
+        "sha256": "938a6e12ad520722743a61910d6ac73957d613c7f8968144040392e9f5c9ecdf"
+      },
+      "source_id": "ncei:input.bag",
+      "state": "selected"
+    }
+  ],
+  "execution_authorized": false,
+  "held_source_ids": [],
+  "mapping_accepted": false,
+  "network_requests": 0,
+  "note": "Source-free bridge: catalog and plan JSON read, cached sources lstat-checked only. Acquire, qualify, map and render keep their own gates; nothing here is accepted.",
+  "plan_sha256": "bc8e63c824c022674041134139ae5a6f6403dd427c18fd56cd0e95ab4615875a",
+  "review_required": true,
+  "schema": "coastal-catalog-acquire-bridge-dry-run-v1",
+  "segment_id": "seg:3310:-55000:-400000:5000",
+  "selected_source_ids": [
+    "ncei:input.bag"
+  ],
+  "source_bytes_read": 0,
+  "source_opens": 0,
+  "would_enqueue": [
+    {
+      "native_job_sha256": "6a05418259d224f3c2d8c9bc782f8a55ff6e501c474c4b0dabc57c59f32d3d9b",
+      "source_id": "ncei:input.bag",
+      "stage": "acquire"
+    }
+  ]
+}

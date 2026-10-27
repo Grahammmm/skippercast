@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "slug": "morro-bay",
+  "bbox": [
+    -121.95,
+    34.95,
+    -120.55,
+    35.85
+  ],
+  "depth_target_ft": 300,
+  "sources": [
+    "usgs-point-buchon",
+    "usgs-morro-bay",
+    "usgs-point-estero",
+    "noaa-bag"
+  ],
+  "source_review_status": {
+    "usgs-point-buchon": "approved",
+    "usgs-morro-bay": "approved",
+    "usgs-point-estero": "approved",
+    "noaa-bag": "candidate"
+  },
+  "datum_policy": {
+    "mode": "preserve-source-datum",
+    "vertical_datum_by_source": {
+      "usgs-point-buchon": "unknown",
+      "usgs-morro-bay": "unknown",
+      "usgs-point-estero": "unknown",
+      "noaa-bag": "unknown"
+    }
+  },
+  "output_root": "runs/coast-recipes/morro-bay",
+  "cache_budget_bytes": 25000000000,
+  "not_for_navigation": true
+}
