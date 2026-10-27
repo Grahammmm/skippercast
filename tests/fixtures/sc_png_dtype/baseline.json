@@ -1,0 +1,28 @@
+{
+  "images": {
+    "all_zero": {
+      "ihdr_hex": "00000280000001e00802000000",
+      "png_length": 972,
+      "png_sha256": "441da7236f6ffdd8fb4cdfa2d9ce7b8d8df8cf2f7a8e82c530714d92266ce613",
+      "raw_scanlines_length": 922080,
+      "raw_scanlines_sha256": "af980f3474de03ac9f089d0ceb7c6acd66af61c168fb848d9e4e8ff8282bf5df"
+    },
+    "pattern": {
+      "ihdr_hex": "00000280000001e00802000000",
+      "png_length": 185741,
+      "png_sha256": "c1661415c10274849a29a9398811de628d2aa5a359b341a302330e801f925e50",
+      "raw_scanlines_length": 922080,
+      "raw_scanlines_sha256": "0fa8dba0699d0e98d856a135c744cf6445e4c9f11e381c18114b0a69c70d00f1"
+    }
+  },
+  "pattern": "(x*7 + y*13 + c*101 + (x*y) % 17) % 256 for row y, column x, channel c",
+  "producer": {
+    "base_commit": "59fca09b2cc7f5c81a4796902504e263d7f06960",
+    "function": "skippercast.coastal.render.mesh.write_png",
+    "mesh_py_sha256": "c3a6f0678a693a7b0f0ada2d891add312bb3454548fea15f8fb68156cdc7d757",
+    "numpy": "2.5.3"
+  },
+  "schema": "skippercast.test.sc_png_dtype.baseline/v1",
+  "zlib_compile_version": "1.3",
+  "zlib_runtime_version": "1.3"
+}

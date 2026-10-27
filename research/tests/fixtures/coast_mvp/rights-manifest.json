@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "fixture_only": true,
+  "sources": [
+    {
+      "source_id": "fixture-csumb",
+      "name": "Synthetic CSUMB co-produced USGS release",
+      "source_url": "https://cmgds.marine.usgs.gov/",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "contributed_cells": 10,
+      "rights": {
+        "license": "US public domain release; CSUMB non-profit use with acknowledgment; for-profit permission unresolved",
+        "terms_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "attribution": "Fixture credit: USGS and CSUMB Seafloor Mapping Lab",
+        "csumb_involved": true
+      }
+    },
+    {
+      "source_id": "fixture-noaa-cc0",
+      "name": "Synthetic NOAA CC0 release",
+      "source_url": "https://www.ncei.noaa.gov/",
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "contributed_cells": 20,
+      "rights": {
+        "license": "CC0-1.0",
+        "terms_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "attribution": "Fixture credit: NOAA NCCOS / NCEI; credit requested",
+        "csumb_involved": false
+      }
+    },
+    {
+      "source_id": "fixture-usgs-public-domain",
+      "name": "Synthetic USGS public-domain release",
+      "source_url": "https://cmgds.marine.usgs.gov/",
+      "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "contributed_cells": 30,
+      "rights": {
+        "license": "US public domain",
+        "terms_url": "https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+        "attribution": "Fixture credit: U.S. Geological Survey; credit requested",
+        "csumb_involved": false
+      }
+    },
+    {
+      "source_id": "fixture-gebco-2026",
+      "name": "Synthetic GEBCO_2026 contributor",
+      "source_url": "https://www.gebco.net/data-products-gridded-bathymetry-data/gebco2026-grid",
+      "sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+      "contributed_cells": 40,
+      "rights": {
+        "license": "Public domain; acknowledgment required; no endorsement; do not misrepresent; not for navigation; provided as is",
+        "terms_url": "https://www.gebco.net/data-products/gridded-bathymetry/terms-of-use",
+        "attribution": "Fixture citation only: GEBCO Bathymetric Compilation Group 2026, GEBCO_2026 Grid, NERC EDS British Oceanographic Data Centre. doi:10.5285/4f68d5c7-45eb-f999-e063-7086abc036fa",
+        "csumb_involved": false
+      }
+    },
+    {
+      "source_id": "fixture-unused-input",
+      "contributed_cells": 0
+    }
+  ]
+}
