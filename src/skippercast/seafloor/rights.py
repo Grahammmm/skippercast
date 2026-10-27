@@ -1,5 +1,6 @@
 """Producer-specific release terms; distributor hosting grants no new rights."""
 from datetime import date
+from urllib.parse import urlsplit
 
 CSUMB_LICENSE = 'csumb-public-use-noncommercial'
 CSUMB_POLICY = 'https://csumb.edu/undersea/sfml-data-library/'
@@ -15,6 +16,20 @@ CSUMB_ARCHIVES = (
     'https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/',
     'https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/',
 )
+
+
+def _sc53_archive_locator(url):
+    """Match literal archive descendants, never normalize an ambiguous locator."""
+    if (not isinstance(url, str) or not url.startswith(CSUMB_ARCHIVES)
+            or any(ord(char) <= 32 or ord(char) >= 127 for char in url)
+            or any(char in url for char in '%\\?#')):
+        return False
+    # Percent escapes are deliberately not decoded: even apparently harmless
+    # escapes can acquire separator/traversal meaning in a second decoder.
+    locator = urlsplit(url)
+    return (locator.scheme == 'https' and locator.netloc == 'data.ngdc.noaa.gov'
+            and all(char.isalnum() or char in "/-._~!$&'()*+,;=:@" for char in locator.path)
+            and all(segment not in {'', '.', '..'} for segment in locator.path.split('/')[1:]))
 
 
 def source_rights(row, *, use="noncommercial", today=None):
@@ -37,8 +52,9 @@ def source_rights(row, *, use="noncommercial", today=None):
             or review.get('attribution') != CSUMB_CREDIT
             or review.get('navigation_use') is not False
             or review.get('for_profit_permission') != 'required-not-obtained'
-            or not (row.get('url', '').startswith(CSUMB_ARCHIVES)
-                    or row.get('url') in CSUMB_EXACT_ARCHIVES)
+            or not (isinstance(row.get('url'), str)
+                    and (_sc53_archive_locator(row['url'])
+                         or row['url'] in CSUMB_EXACT_ARCHIVES))
             or not ('CSUMB' in row.get('publisher', '') or 'CSU Monterey Bay' in row.get('publisher', ''))):
         raise ValueError('Source publication rights are unqualified or conflict with producer review')
     try:
@@ -55,6 +71,7 @@ def source_rights(row, *, use="noncommercial", today=None):
 
 def feature_rights(source_ids, sources, *, use="noncommercial"):
     """Every contributor must resolve, including interpreted substrate sources."""
+    source_ids = list(source_ids)
     if not source_ids or any(ident not in sources for ident in source_ids):
         raise ValueError('Feature source attribution is incomplete')
     return [source_rights(sources[ident], use=use) for ident in sorted(set(source_ids))]

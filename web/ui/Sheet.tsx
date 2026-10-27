@@ -55,7 +55,7 @@ export type SheetProps = {
   class?: string;
 };
 
-type Drag = {y: number; base: number; sheet: HTMLElement; moved: boolean};
+type Drag = {pointerId: number; y: number; base: number; sheet: HTMLElement; moved: boolean};
 
 export function Sheet({label, detent, onDetent, edge, children, onBodyFocus, class: cls}: SheetProps) {
   const drag = useRef<Drag | null>(null);
@@ -66,17 +66,19 @@ export function Sheet({label, detent, onDetent, edge, children, onBodyFocus, cla
     if (next !== detent) onDetent(next);
   };
   const onPointerDown = (event: PointerEvent) => {
+    // A second pointer must not replace the active gesture or its capture.
+    if (drag.current) return;
     const handle = event.currentTarget as HTMLElement, sheet = handle.closest<HTMLElement>('.ui-sheet');
     if (!sheet || event.button !== 0) return;
     const base = new DOMMatrixReadOnly(getComputedStyle(sheet).transform).m42;
     // A cancelled drag (pointercancel fires no click) would otherwise leave the flag to swallow the next tap.
     delete handle.dataset.dragged;
-    drag.current = {y: event.clientY, base, sheet, moved: false};
+    drag.current = {pointerId: event.pointerId, y: event.clientY, base, sheet, moved: false};
     handle.setPointerCapture(event.pointerId);
   };
   const onPointerMove = (event: PointerEvent) => {
     const d = drag.current;
-    if (!d) return;
+    if (!d || event.pointerId !== d.pointerId) return;
     const dy = event.clientY - d.y;
     if (Math.abs(dy) >= TAP_MAX) d.moved = true;
     d.sheet.style.transition = 'none';
@@ -84,7 +86,7 @@ export function Sheet({label, detent, onDetent, edge, children, onBodyFocus, cla
   };
   const onPointerUp = (event: PointerEvent) => {
     const d = drag.current;
-    if (!d) return;
+    if (!d || event.pointerId !== d.pointerId) return;
     drag.current = null;
     d.sheet.style.transition = '';
     d.sheet.style.transform = '';
@@ -95,9 +97,9 @@ export function Sheet({label, detent, onDetent, edge, children, onBodyFocus, cla
   const onPointerCancel = (event: PointerEvent) => {
     // Cancellation abandons the gesture; only a normal release chooses a detent.
     const d = drag.current;
+    if (!d || event.pointerId !== d.pointerId) return;
     drag.current = null;
     delete (event.currentTarget as HTMLElement).dataset.dragged;
-    if (!d) return;
     d.sheet.style.transition = '';
     d.sheet.style.transform = '';
   };
