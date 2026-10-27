@@ -1,0 +1,42 @@
+{
+  "note": "Synthetic SP1505 inputs shaped like the stored advisor_daily_answers text (composeDaily/resolveLinks output ending in the port self-link). {url} is replaced by the page's own ?s=txt link; {other} by a different port's link.",
+  "base": "https://skippercast.com",
+  "port": "morro-bay",
+  "date": "2026-09-28",
+  "now": "2026-09-28T19:00:00Z",
+  "url": "https://skippercast.com/ports/morro-bay?s=txt",
+  "other": "https://skippercast.com/ports/port-san-luis?s=txt",
+  "primary": {"input": "Quiet day.\nFull picture: {url}", "expected": "Quiet day."},
+  "control": {"input": "Quiet day. Full picture: {url}", "expected": "Quiet day."},
+  "a1": [
+    {"name": "LF before the closing lead-in", "input": "Quiet day.\nFull picture: {url}", "expected": "Quiet day."},
+    {"name": "LF with a trailing newline after the link", "input": "Quiet day.\nFull picture: {url}\n", "expected": "Quiet day."}
+  ],
+  "a2": [
+    {"name": "CRLF", "input": "Morro Bay, Mon Sep 28: quiet.\r\nFull picture: {url}", "expected": "Morro Bay, Mon Sep 28: quiet."},
+    {"name": "CRLF blank line and trailing CRLF", "input": "Wind building after noon.\r\n\r\nFull picture: {url}\r\n", "expected": "Wind building after noon."},
+    {"name": "blank lines between sentences", "input": "Seas 7 ft at 17 s.\n\nLingcod fair on the reef.\n\nFull picture: {url}", "expected": "Seas 7 ft at 17 s.\n\nLingcod fair on the reef."},
+    {"name": "exclamation then LF", "input": "Lingcod biting!\nFull picture: {url}", "expected": "Lingcod biting!"},
+    {"name": "question then LF", "input": "Heading out early?\nFull picture: {url}", "expected": "Heading out early?"},
+    {"name": "tab after the sentence end", "input": "Quiet day.\tFull picture: {url}", "expected": "Quiet day."},
+    {"name": "decimal inside the kept sentence", "input": "Seas 7.5 ft.\nFull picture: {url}", "expected": "Seas 7.5 ft."},
+    {"name": "colon inside an earlier line is kept", "input": "Morro Bay, Mon Sep 28: quiet.\nRockfish: steady.\nFull picture: {url}", "expected": "Morro Bay, Mon Sep 28: quiet.\nRockfish: steady."},
+    {"name": "lead-in on its own line after unpunctuated text", "input": "Quiet day\nFull picture: {url}", "expected": "Quiet day"},
+    {"name": "Spanish lead-in after LF", "input": "Morro Bay, lun 28 sep: tranquilo.\nPanorama completo: {url}", "expected": "Morro Bay, lun 28 sep: tranquilo."}
+  ],
+  "a3": [
+    {"name": "no link: existing trim only", "input": "  No link here.\nSecond line.  ", "expected": "No link here.\nSecond line."},
+    {"name": "no link: another port's link is not this page", "input": "Quiet day.\nFull picture: {other}", "expected": "Quiet day.\nFull picture: {other}"},
+    {"name": "period-space lead-in (original test)", "input": "Morro Bay, Mon Sep 28: quiet. Full picture: {url}", "expected": "Morro Bay, Mon Sep 28: quiet."},
+    {"name": "bare trailing link after a space", "input": "Quiet day. {url}", "expected": "Quiet day."},
+    {"name": "bare trailing link after LF", "input": "Quiet day.\n{url}", "expected": "Quiet day."},
+    {"name": "trailing text without a colon is kept", "input": "Quiet day. Seas: 7 ft {url}", "expected": "Quiet day. Seas: 7 ft"},
+    {"name": "only the lead-in and link", "input": "Full picture: {url}", "expected": ""},
+    {"name": "middle link keeps both sides", "input": "Quiet day. See {url} for more. Winds light.", "expected": "Quiet day. See for more. Winds light."},
+    {"name": "middle link on its own line keeps both sides", "input": "Quiet day.\n{url}\nWinds light.", "expected": "Quiet day. Winds light."}
+  ],
+  "a4": {
+    "en": {"stored": "Morro Bay, Mon Sep 28: quiet.\nSeas 7 ft at 17 s.\n\nFull picture: {url}", "shown": "Morro Bay, Mon Sep 28: quiet.\nSeas 7 ft at 17 s."},
+    "es": {"stored": "Morro Bay, lun 28 sep: tranquilo.\r\nOlas de 7 pies.\r\nPanorama completo: {url}", "shown": "Morro Bay, lun 28 sep: tranquilo.\r\nOlas de 7 pies."}
+  }
+}

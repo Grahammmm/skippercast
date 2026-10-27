@@ -1,0 +1,33 @@
+{
+  "now": "2026-10-05T12:30:00.000Z",
+  "heartbeat": {
+    "source": "aisstream",
+    "written_at": "2026-10-05T12:29:00Z",
+    "started_at": "2026-10-01T00:00:00Z",
+    "last_message_at": "2026-10-05T12:25:00Z",
+    "connected": true,
+    "messages_per_min": 412,
+    "watched_messages_per_min": 9,
+    "vessels": 218,
+    "reconnects": 2,
+    "dropped": 0,
+    "queue_depth": 3,
+    "watch_size": 2,
+    "git_sha": "abc1234",
+    "received_at": "2026-10-05T12:03:29.512Z",
+    "messages_24h": 590000
+  },
+  "pushed_at": "2026-10-05T12:03:30.000Z",
+  "future": "2026-10-06T12:30:00.000Z",
+  "cases": [
+    ["one millisecond future", "2026-10-05T12:30:00.001Z", null, true],
+    ["far future", "2099-12-31T23:59:59.999Z", null, true],
+    ["positive offset", "2026-10-06T18:00:00.000+05:30", null, true],
+    ["negative offset", "2026-10-06T05:30:00.000-07:00", null, true],
+    ["exact now", "2026-10-05T12:30:00.000Z", 0, false],
+    ["past fractional second", "2026-10-05T12:29:58.001Z", 1, false],
+    ["exact threshold", "2026-10-05T09:30:00.000Z", 10800, false],
+    ["threshold plus fractional second", "2026-10-05T09:29:59.001Z", 10800, false],
+    ["threshold plus one second", "2026-10-05T09:29:59.000Z", 10801, true]
+  ]
+}
