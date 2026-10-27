@@ -1,0 +1,14 @@
+{
+  "provenance": "Entirely synthetic analytical rasters; no survey or cache data",
+  "shape": [64, 64],
+  "cell_m": 40,
+  "crs": "EPSG:3310",
+  "origin": [-150000, -100000],
+  "gradient_depth_ft": [0, 1000],
+  "hole_rows_cols": [24, 40, 24, 40],
+  "source_boundary_column": 32,
+  "sources": [
+    {"id": "synthetic-fine", "code": 1, "resolution_m": 2},
+    {"id": "synthetic-coarse", "code": 2, "resolution_m": 10}
+  ]
+}
