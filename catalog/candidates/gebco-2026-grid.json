@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "id": "gebco-2026-grid",
+  "name": "GEBCO_2026 Grid",
+  "region_ids": [
+    "bodega-point-reyes",
+    "big-sur-coast",
+    "cambria-san-simeon",
+    "crescent-city",
+    "fort-bragg-point-arena",
+    "humboldt-bay-cape-mendocino",
+    "monterey-point-sur",
+    "morro-bay",
+    "point-arena-bodega",
+    "point-arguello-conception",
+    "point-reyes-pigeon",
+    "santa-cruz-monterey-bay",
+    "shelter-cove-north-mendocino",
+    "south-big-sur-san-simeon",
+    "southern-california"
+  ],
+  "need_ids": ["bathymetry"],
+  "documentation_url": "https://www.gebco.net/data-products-gridded-bathymetry-data/gebco2026-grid",
+  "access_url": "https://dap.ceda.ac.uk/bodc/gebco/global/gebco_2026/ice_surface_elevation/netcdf/GEBCO_2026.zip?download=1",
+  "access_status": "partial",
+  "producer": {
+    "name": "GEBCO Bathymetric Compilation Group 2026, NERC EDS British Oceanographic Data Centre",
+    "url": "https://www.gebco.net/"
+  },
+  "variables": ["elevation"],
+  "units": {"elevation": "m"},
+  "rights": {
+    "license": "Public domain. Free to copy, publish, distribute, adapt and commercially exploit. Must acknowledge the source. Must not imply that GEBCO, the IHO or the IOC endorses the use. Must not misrepresent the grid. Not for navigation or any other purpose involving safety at sea. Provided as is.",
+    "terms_url": "https://www.gebco.net/data-products/gridded-bathymetry/terms-of-use",
+    "redistribution_reviewed": true
+  },
+  "spatial": {
+    "bounds": [-124.8, 32.5, -117.05, 42.0],
+    "resolution_m": 463,
+    "horizontal_crs": "WGS84",
+    "vertical_datum": "Assumed mean sea level; shallow-water cells may use another datum",
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://www.gebco.net/data-products-gridded-bathymetry-data/gebco2026-grid",
+    "resolution_basis": "advertised"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-10-20T18:15:00Z",
+    "update_cadence": "Annual global grid, generally released in July. GEBCO_2026 was published 23 April 2026 and is static until the next release.",
+    "coverage_start": "2026-04-23",
+    "coverage_end": "2026-04-23"
+  },
+  "evidence": [
+    {
+      "url": "https://www.gebco.net/data-products/gridded-bathymetry/terms-of-use",
+      "supports": "Public-domain grant, acknowledgement duty, no-endorsement duty, and not-for-navigation disclaimer, checked 2026-10-20."
+    },
+    {
+      "url": "https://www.gebco.net/data-products-gridded-bathymetry-data/gebco2026-grid",
+      "supports": "15 arc-second pixel-centre grid, WGS84, metres, April 2026 publication, DOI 10.5285/4f68d5c7-45eb-f999-e063-7086abc036fa, and the requested attribution sentence."
+    },
+    {
+      "url": "https://www.gebco.net/data-products/gridded-bathymetry-data",
+      "supports": "Official CEDA download URLs for the ice-surface grid, the sub-ice grid and the TID grid. The 4 GB file was not downloaded."
+    }
+  ],
+  "limitations": [
+    "Not for navigation or safety at sea. Not a chart sounding and not an MLLW or NAVD88 survey.",
+    "15 arc-second spacing is about 463 m in latitude. At 32.5 to 42 N the longitude spacing is shorter, about 344 to 391 m. It cannot identify boulders, overhangs or small caves, and it must not qualify a fishing target.",
+    "Many cells are predicted or interpolated. The TID grid is required. TID 40, 41, 70 and 71 are not measured depth.",
+    "Checked envelope is the union of the 15 region bounds, not the global footprint. The published grid is global.",
+    "The 4 GB CEDA file was not downloaded, so no sha256 is recorded. Access is partial.",
+    "Publication in the app waits for N-13. This candidate is not an approved source."
+  ],
+  "provenance": {
+    "access_service": "https://dap.ceda.ac.uk/bodc/gebco/global/gebco_2026/",
+    "raw_sha256": null,
+    "transformations": [
+      "Read the official product page, terms page and download index on 2026-10-20. Did not download the grid."
+    ]
+  }
+}

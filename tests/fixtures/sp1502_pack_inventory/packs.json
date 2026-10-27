@@ -1,0 +1,29 @@
+[
+  {
+    "cache": "skippercast-pack-fixture-harbor-20261020",
+    "meta": {
+      "schema_version": 1,
+      "region_id": "fixture-harbor",
+      "region_name": "Fixture Harbor",
+      "saved_at": "2026-10-20T12:00:00Z",
+      "bytes": 2048,
+      "files": {"saved": 2, "requested": 3, "from_session": 0},
+      "tiles": {"saved": 2, "planned": 3, "min_zoom": 8, "max_zoom": 9, "requested_max_zoom": 12, "layers": "0,1"},
+      "missing": ["https://example.test/fixture-missing"],
+      "v2": {"build": "fixture", "shell": {"saved": 1, "requested": 1}, "basemap": {"archive": null, "saved": 1, "planned": 2, "min_zoom": 7, "max_zoom": 8}, "missing": []}
+    }
+  },
+  {
+    "cache": "skippercast-pack-fixture-bay-20261021",
+    "meta": {
+      "schema_version": 1,
+      "region_id": "fixture-bay",
+      "region_name": "Fixture Bay",
+      "saved_at": "2026-10-21T12:00:00Z",
+      "bytes": 4096,
+      "files": {"saved": 1, "requested": 1, "from_session": 0},
+      "tiles": {"saved": 1, "planned": 1, "min_zoom": 8, "max_zoom": null, "requested_max_zoom": 12, "layers": "0,1"},
+      "missing": []
+    }
+  }
+]

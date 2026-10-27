@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "slug": "south-big-sur-san-simeon",
+  "bbox": [
+    -122.0,
+    35.66,
+    -121.2,
+    35.9
+  ],
+  "depth_target_ft": 300,
+  "sources": [
+    "noaa-bag"
+  ],
+  "source_review_status": {
+    "noaa-bag": "candidate"
+  },
+  "datum_policy": {
+    "mode": "preserve-source-datum",
+    "vertical_datum_by_source": {
+      "noaa-bag": "unknown"
+    }
+  },
+  "output_root": "runs/coast-recipes/south-big-sur-san-simeon",
+  "cache_budget_bytes": 25000000000,
+  "not_for_navigation": true
+}

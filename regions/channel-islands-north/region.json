@@ -1,0 +1,695 @@
+{
+  "schema_version": 1,
+  "id": "channel-islands-north",
+  "name": "Northern Channel Islands",
+  "status": "draft",
+  "timezone": "America/Los_Angeles",
+  "jurisdiction": "California \u00b7 Southern Groundfish Management Area",
+  "bounds": [
+    -120.6,
+    33.85,
+    -119.3,
+    34.15
+  ],
+  "fishing_bounds": [
+    -120.6,
+    33.85,
+    -119.3,
+    34.15
+  ],
+  "map": {
+    "center": [
+      34.0,
+      -119.95
+    ],
+    "zoom": 9,
+    "focus_areas": [
+      {
+        "id": "north-islands",
+        "name": "Northern Channel Islands",
+        "bounds": [
+          -120.57,
+          33.84,
+          -119.29,
+          34.15
+        ],
+        "forecast_point": "channel-islands"
+      },
+      {
+        "id": "anacapa",
+        "name": "Anacapa",
+        "bounds": [
+          -119.49,
+          33.94,
+          -119.31,
+          34.06
+        ],
+        "forecast_point": "anacapa"
+      },
+      {
+        "id": "santa-cruz",
+        "name": "Santa Cruz",
+        "bounds": [
+          -119.96,
+          33.89,
+          -119.51,
+          34.11
+        ],
+        "forecast_point": "channel-islands"
+      },
+      {
+        "id": "santa-rosa",
+        "name": "Santa Rosa",
+        "bounds": [
+          -120.28,
+          33.85,
+          -119.98,
+          34.07
+        ],
+        "forecast_point": "santa-rosa"
+      },
+      {
+        "id": "san-miguel",
+        "name": "San Miguel",
+        "bounds": [
+          -120.51,
+          33.97,
+          -120.28,
+          34.1
+        ],
+        "forecast_point": "san-miguel"
+      }
+    ],
+    "locality_method": "Discovery extents route published regional data and prioritize nearby notices. They are not legal boundaries or evidence of fish presence. Protected areas use the authoritative polygon screen. Closed seasons remain selectable for future planning.",
+    "region_notice_ids": [
+      "health"
+    ],
+    "unavailable_targets": {
+      "dungeness": "Dungeness is not a promoted Southern California target. Crab traps and snares are prohibited south of Point Arguello; this is not a blanket prohibition on every method of crab collection. See official CDFW invertebrate rules.",
+      "salmon": "Salmon is not in this region\u2019s researched target list. That is not a closed-season determination; check the official CDFW salmon rules."
+    },
+    "local_areas": [
+      {
+        "id": "north-islands",
+        "name": "Northern Channel Islands",
+        "bounds": [
+          -120.57,
+          33.84,
+          -119.29,
+          34.15
+        ],
+        "notice_ids": [
+          "northern-islands"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "anacapa",
+        "name": "Anacapa",
+        "bounds": [
+          -119.49,
+          33.94,
+          -119.31,
+          34.06
+        ],
+        "notice_ids": [
+          "anacapa",
+          "northern-islands"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "santa-cruz",
+        "name": "Santa Cruz",
+        "bounds": [
+          -119.96,
+          33.89,
+          -119.51,
+          34.11
+        ],
+        "notice_ids": [
+          "northern-islands"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "santa-rosa",
+        "name": "Santa Rosa",
+        "bounds": [
+          -120.28,
+          33.85,
+          -119.98,
+          34.07
+        ],
+        "notice_ids": [
+          "northern-islands"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "san-miguel",
+        "name": "San Miguel",
+        "bounds": [
+          -120.51,
+          33.97,
+          -120.28,
+          34.1
+        ],
+        "notice_ids": [
+          "san-miguel",
+          "northern-islands"
+        ],
+        "hidden_targets": [
+          {
+            "id": "spotted-bass",
+            "reason": "Spotted sand bass is a bay and estuary target. It is not promoted on these offshore island grounds. This is habitat guidance, not a legal prohibition.",
+            "source_url": "https://marinespecies.wildlife.ca.gov/spotted-sand-bass/management/"
+          }
+        ]
+      },
+      {
+        "id": "point-mugu",
+        "name": "Point Mugu coast",
+        "bounds": [
+          -119.35,
+          34.03,
+          -118.88,
+          34.25
+        ],
+        "notice_ids": [
+          "point-mugu"
+        ]
+      }
+    ],
+    "discovery_bounds": [
+      -120.6,
+      33.85,
+      -119.3,
+      34.15
+    ],
+    "unavailable_target_sources": {
+      "dungeness": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
+      "salmon": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern"
+    }
+  },
+  "harbor": {
+    "name": "Ventura / Channel Islands harbors (reference)",
+    "latitude": 34.25,
+    "longitude": -119.26,
+    "entrance_note": "Choose your actual departure harbor; this is a regional reference. No route or entrance clearance is implied.",
+    "information_url": "https://www.nps.gov/chis/planyourvisit/boating.htm",
+    "watch_keywords": [
+      "Santa Barbara Channel",
+      "boating"
+    ]
+  },
+  "boat": {
+    "name": "2019 Parker 23",
+    "cruise_knots": 20,
+    "bottom_depth_limit_ft": 200
+  },
+  "forecast_points": [
+    {
+      "id": "channel-islands",
+      "name": "Northern Channel Islands",
+      "latitude": 34.05,
+      "longitude": -119.72,
+      "context": "ventura"
+    },
+    {
+      "id": "anacapa",
+      "name": "Anacapa Island",
+      "latitude": 33.99,
+      "longitude": -119.4,
+      "context": "anacapa"
+    },
+    {
+      "id": "santa-rosa",
+      "name": "Santa Rosa Island",
+      "latitude": 34.04,
+      "longitude": -120.12,
+      "context": "western-islands"
+    },
+    {
+      "id": "san-miguel",
+      "name": "San Miguel Island",
+      "latitude": 34.1,
+      "longitude": -120.43,
+      "context": "western-islands"
+    }
+  ],
+  "marine_zones": {
+    "coastal": "PZZ650",
+    "offshore": "PZZ673",
+    "los-angeles": "PZZ655"
+  },
+  "stations": {
+    "tide": "9411340",
+    "tide_name": "Santa Barbara",
+    "tide_note": "Santa Barbara is a reference water-level station. It does not predict local drift, slack water or entrance currents.",
+    "airport": "KOXR",
+    "airport_name": "Oxnard airport",
+    "nearshore_buoy": "46053",
+    "nearshore_buoy_name": "East Santa Barbara Channel",
+    "offshore_buoy": "46054",
+    "offshore_buoy_name": "West Santa Barbara Channel",
+    "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+    "roles": {
+      "nearshore_buoy": {
+        "stations": [
+          "46053",
+          "46054"
+        ],
+        "evidence": "catalog/station-failover.json"
+      }
+    }
+  },
+  "mpa": {
+    "bounds": [
+      -120.6,
+      33.85,
+      -119.3,
+      34.15
+    ],
+    "minimum_features": 11
+  },
+  "species": [
+    "kelp-bass",
+    "yellowtail",
+    "halibut",
+    "white-seabass",
+    "sand-bass",
+    "spotted-bass",
+    "bluefin",
+    "yellowfin",
+    "dorado",
+    "bonito",
+    "barracuda",
+    "sheephead",
+    "whitefish",
+    "lobster",
+    "reef",
+    "albacore"
+  ],
+  "source_names": {
+    "NOAA-H13093": "NOAA H13093: Vicinity of Anacapa Island",
+    "NOAA-H13323": "NOAA H13323: Cavern Point to Smugglers Cove"
+  },
+  "source_bindings": {
+    "bathymetry": [
+      "noaa-h13093",
+      "noaa-h13323",
+      "noaa-cinms-bathymetry-2025",
+      "noaa-bag"
+    ],
+    "substrate": [
+      "noaa-cinms-substrate-2006",
+      "cdfw-artificial-reefs",
+      "noaa-west-coast-substrate"
+    ],
+    "groundtruth": [
+      "usgs-camera-samples"
+    ],
+    "kelp": [
+      "cdfw-kelp-2016",
+      "kelpwatch"
+    ],
+    "protected-areas": [
+      "cdfw-mpas",
+      "noaa-socal-gea"
+    ],
+    "regulations": [
+      "cdfw-rules"
+    ],
+    "dynamic-closures": [
+      "cdfw-rules",
+      "noaa-socal-gea",
+      "ecfr-security"
+    ],
+    "wind-forecast": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "nws-weather"
+    ],
+    "wave-forecast": [
+      "noaa-gfs-wave",
+      "ecmwf-wam"
+    ],
+    "wave-observations": [
+      "ndbc-buoys"
+    ],
+    "weather-observations": [
+      "ndbc-buoys",
+      "nws-weather"
+    ],
+    "tides": [
+      "noaa-tides"
+    ],
+    "surface-currents": [
+      "noaa-ndbc-hfr-uswc-6km",
+      "noaa-hfr-thredds",
+      "noaa-wcofs",
+      "ioos-hfr"
+    ],
+    "subsurface-ocean": [
+      "regional-roms",
+      "noaa-survey-catches"
+    ],
+    "sea-temperature": [
+      "noaa-blended-sst",
+      "mur-sst",
+      "noaa-wcofs"
+    ],
+    "chlorophyll": [
+      "noaa-viirs-merged-chlorophyll",
+      "modis-chlorophyll"
+    ],
+    "species-occurrence": [
+      "noaa-survey-catches",
+      "obis-occurrences"
+    ],
+    "catch-effort": [
+      "noaa-survey-catches",
+      "recfin",
+      "landing-reports"
+    ],
+    "charter-identity": [
+      "fleet-registry"
+    ],
+    "ais-history": [
+      "noaa-ais",
+      "gfw-effort"
+    ],
+    "harbor-access": [
+      "nws-weather",
+      "harbor-authority"
+    ],
+    "wind-ensemble": [
+      "noaa-gefs-members"
+    ],
+    "wave-ensemble": [
+      "noaa-gefs-wave-prob"
+    ],
+    "forecast-verification": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "noaa-gfs-wave",
+      "ecmwf-wam",
+      "ndbc-buoys"
+    ]
+  },
+  "coverage": {
+    "bathymetry": {
+      "status": "research",
+      "reason": "COAST campaign run segment S2. Native-survey discovery and qualification for this footprint have not run; no depth-qualified footprint is published in this package. The southern-california package keeps its own eleven qualified Anacapa and eastern Santa Cruz reef patches; they are not copied here."
+    },
+    "substrate": {
+      "status": "research",
+      "reason": "Bound regional substrate sources are not yet clipped to this footprint or its native depth masks; no substrate claim is published here."
+    },
+    "groundtruth": {
+      "status": "research",
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+    },
+    "kelp": {
+      "status": "research",
+      "reason": "CDFW 2016 canopy detections are imported for the southern-california package only; none are published in this package yet."
+    },
+    "protected-areas": {
+      "status": "research",
+      "reason": "No package-specific CDFW DS582 snapshot yet. A bounded snapshot and the NOAA Groundfish Exclusion Areas screen are required before preview."
+    },
+    "regulations": {
+      "status": "partial",
+      "reason": "Southern jurisdiction rules apply, but this footprint is not yet in the reviewed Southern regulation registry. The package stays draft until that hash-bound legal review."
+    },
+    "dynamic-closures": {
+      "status": "partial",
+      "reason": "CDFW in-season, health and gear watches plus NOAA exclusion areas. Navy/security access requires direct local clearance."
+    },
+    "wind-forecast": {
+      "status": "ready",
+      "reason": "NOAA GFS and ECMWF IFS at regional sea-grid samples."
+    },
+    "wave-forecast": {
+      "status": "ready",
+      "reason": "NOAA GFS Wave and ECMWF WAM at regional sea-grid samples."
+    },
+    "wave-observations": {
+      "status": "partial",
+      "reason": "Reference buoys 46053 EAST SANTA BARBARA  - 12NM Southwest of Santa Barbara, CA, 46054 WEST SANTA BARBARA  38 NM West of Santa Barbara, CA; not continuous nearshore observations of this footprint."
+    },
+    "weather-observations": {
+      "status": "partial",
+      "reason": "Source discovery and regional evidence gaps remain visible; this is not a complete measurement of the region."
+    },
+    "tides": {
+      "status": "ready",
+      "reason": "NOAA reference stations Santa Barbara 9411340. These are not local current or drift predictions."
+    },
+    "surface-currents": {
+      "status": "partial",
+      "reason": "Operational HFR observations and WCOFS surface forecasts; local reception holes remain blank and horizon is at most 72 hours."
+    },
+    "subsurface-ocean": {
+      "status": "research",
+      "reason": "Promising primary sources identified; regional records, precision and rights still need review."
+    },
+    "sea-temperature": {
+      "status": "partial",
+      "reason": "Native 0.01-degree MUR analysis with dated source errors and masks; NOAA 0.04-degree WCOFS surface-temperature forecasts at actual populated times through at most 72 hours. Neither establishes fish-depth temperature or catch probability."
+    },
+    "chlorophyll": {
+      "status": "partial",
+      "reason": "Source discovery and regional evidence gaps remain visible; this is not a complete measurement of the region."
+    },
+    "species-occurrence": {
+      "status": "research",
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+    },
+    "catch-effort": {
+      "status": "research",
+      "reason": "Regional data not imported. No neighboring region\u2019s evidence is reused."
+    },
+    "charter-identity": {
+      "status": "missing",
+      "reason": "0 charter fleet ports map to this region; the charter fleet registry counts no boats here."
+    },
+    "ais-history": {
+      "status": "research",
+      "reason": "No verified local vessel histories or dwell clusters imported."
+    },
+    "harbor-access": {
+      "status": "partial",
+      "reason": "Reference harbor only. Actual departure harbor, route and entrance clearance remain trip-specific."
+    },
+    "wind-ensemble": {
+      "status": "ready",
+      "reason": "Reviewed live adapter with source/member metadata and grid distances; per-run availability is checked separately."
+    },
+    "wave-ensemble": {
+      "status": "ready",
+      "reason": "Reviewed live adapter with source/member metadata and grid distances; per-run availability is checked separately."
+    },
+    "forecast-verification": {
+      "status": "partial",
+      "reason": "New prospective archive begins with deployment; no backfilled skill or calibrated catch probability."
+    }
+  },
+  "assets": {
+    "atlas": "regions/channel-islands-north/atlas.json",
+    "habitats": "regions/channel-islands-north/habitats.json",
+    "protected_areas": "regions/channel-islands-north/protected-areas.geojson",
+    "regulations": "regions/southern-california/regulations.json",
+    "charters": null,
+    "ais_evidence": null,
+    "commercial_ais": null,
+    "daily_evidence": null,
+    "bottom_index": "regions/channel-islands-north/bottom/index.json",
+    "geology": null,
+    "ecology": "regions/channel-islands-north/ecology.json",
+    "search_plans": "regions/channel-islands-north/search-plans.json"
+  },
+  "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/channel-islands-north/latest.json",
+  "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/channel-islands-north/latest.json",
+  "landing_names": [],
+  "coverage_note": "COAST campaign run segment S2 (draft). Regional conditions sources are bound; no fishing target, qualified depth footprint or habitat claim is published. Unmapped areas and fish presence remain unknown.",
+  "landing_note": "No catch-position dataset has been imported for this footprint; landing totals are not fishing coordinates.",
+  "jurisdiction_id": "california-southern",
+  "pipeline_sources": {
+    "sst": "noaa-blended-sst",
+    "chlorophyll": "noaa-viirs-merged-chlorophyll",
+    "currents": "noaa-ndbc-hfr-uswc-6km"
+  },
+  "intelligence": {
+    "hfr_resolutions_km": [
+      1,
+      6
+    ],
+    "regional_current_model": "wcofs",
+    "wind_ensemble_model": "gfs025",
+    "wave_ensemble_provider": "noaa-gefs",
+    "verification_stations": [
+      {
+        "id": "46053",
+        "latitude": 34.246,
+        "longitude": -119.842,
+        "name": "EAST SANTA BARBARA  - 12NM Southwest of Santa Barbara, CA",
+        "variables": [
+          "wave_height",
+          "wind_speed_10m"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46053",
+        "wind_verification": "ndbc-derived-10m",
+        "anemometer_height_m": 4.1
+      },
+      {
+        "id": "46054",
+        "latitude": 34.274,
+        "longitude": -120.468,
+        "name": "WEST SANTA BARBARA  38 NM West of Santa Barbara, CA",
+        "variables": [
+          "wave_height",
+          "wind_speed_10m"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46054",
+        "wind_verification": "ndbc-derived-10m",
+        "anemometer_height_m": 3.8
+      }
+    ],
+    "comfort_defaults": {
+      "wind_knots": 8,
+      "gust_knots": 12,
+      "sea_feet": 3
+    },
+    "ecology_profile": "california-southern",
+    "providers": {
+      "hfr": "noaa-hfr-thredds",
+      "regional_current": "noaa-wcofs",
+      "wind_ensemble": "noaa-gefs-members",
+      "wave_ensemble": "noaa-gefs-wave-prob",
+      "spectra": "ndbc-buoys"
+    }
+  },
+  "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/channel-islands-north/intelligence.json",
+  "default_forecast_point": "channel-islands",
+  "contexts": {
+    "ventura": {
+      "name": "Ventura / Channel Islands",
+      "stations": {
+        "tide": "9411340",
+        "tide_name": "Santa Barbara",
+        "tide_note": "Santa Barbara is a reference water-level station. It does not predict local drift, slack water or entrance currents.",
+        "airport": "KOXR",
+        "airport_name": "Oxnard airport",
+        "nearshore_buoy": "46053",
+        "nearshore_buoy_name": "East Santa Barbara Channel",
+        "offshore_buoy": "46054",
+        "offshore_buoy_name": "West Santa Barbara Channel",
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+        "roles": {
+          "nearshore_buoy": {
+            "stations": [
+              "46053",
+              "46054"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
+      },
+      "marine_zones": {
+        "coastal": "PZZ650",
+        "offshore": "PZZ673"
+      }
+    },
+    "anacapa": {
+      "name": "Anacapa Island",
+      "stations": {
+        "tide": "9411340",
+        "tide_name": "Santa Barbara",
+        "tide_note": "Santa Barbara is a reference water-level station. It does not predict local drift, slack water or entrance currents. This mainland station is not an island current or local tidal-height prediction.",
+        "airport": "KOXR",
+        "airport_name": "Oxnard airport",
+        "nearshore_buoy": "46053",
+        "nearshore_buoy_name": "East Santa Barbara Channel",
+        "offshore_buoy": "46054",
+        "offshore_buoy_name": "West Santa Barbara Channel",
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+        "roles": {
+          "nearshore_buoy": {
+            "stations": [
+              "46053",
+              "46054"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
+      },
+      "marine_zones": {
+        "coastal": "PZZ655",
+        "offshore": "PZZ655"
+      }
+    },
+    "western-islands": {
+      "name": "San Miguel / Santa Rosa",
+      "stations": {
+        "tide": "9411340",
+        "tide_name": "Santa Barbara",
+        "tide_note": "Santa Barbara is a reference water-level station. It does not predict local drift, slack water or entrance currents. This distant mainland station is not an island current or local tidal-height prediction.",
+        "airport": "KSBA",
+        "airport_name": "Santa Barbara airport",
+        "nearshore_buoy": "46054",
+        "nearshore_buoy_name": "West Santa Barbara Channel",
+        "offshore_buoy": "46053",
+        "offshore_buoy_name": "East Santa Barbara Channel",
+        "offshore_buoy_note": "Regional offshore reference; see station coordinates and observation time.",
+        "roles": {
+          "offshore_buoy": {
+            "stations": [
+              "46053",
+              "46054"
+            ],
+            "evidence": "catalog/station-failover.json"
+          }
+        }
+      },
+      "marine_zones": {
+        "coastal": "PZZ673",
+        "offshore": "PZZ673"
+      }
+    }
+  },
+  "closure_check": {
+    "url": "https://www.fisheries.noaa.gov/s3/2026-06/geas-updated-06-23-2026.csv",
+    "source_id": "noaa-socal-gea"
+  },
+  "regulations_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Southern",
+  "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/channel-islands-north/habitat-dynamics.json",
+  "target_labels": {
+    "reef": "Rockfish"
+  }
+}
