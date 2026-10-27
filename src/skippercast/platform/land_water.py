@@ -334,8 +334,12 @@ def assemble(shore, region):
     accs = [l['acc'] for l in lines]
     if not lines:
         causes.append('no shoreline lines')
-    elif None in accs or not _number(quantum):
-        causes.append('HOR_ACC or display quantisation missing')
+    elif None in accs:
+        causes.append('HOR_ACC missing')
+    elif not _number(quantum):
+        causes.append('invalid display quantisation')
+    elif isinstance(quantum, (int, float)) and not isinstance(quantum, bool) and quantum < 0:
+        causes.append('invalid display quantisation')
     elif 2 * (max(accs) + quantum + ROUNDING_M) > EDGE_M:
         causes.append(f'stated error 2 x ({max(accs)} + {quantum} + {ROUNDING_M}) m exceeds EDGE_M {EDGE_M} m')
     if causes:
