@@ -93,7 +93,7 @@ def compile_readiness(root=REPO):
         resolution = spatial.get('resolution_m')
         if (candidate.get('access_status') != 'accessible'
                 or not isinstance(resolution, (int, float)) or isinstance(resolution, bool)
-                or resolution > 10 or spatial.get('resolution_basis') != 'inspected'
+                or not 0 < resolution <= 10 or spatial.get('resolution_basis') != 'inspected'
                 or not spatial.get('bounds')
                 or not {'bathymetry', 'substrate'} & set(candidate.get('need_ids', []))):
             continue
