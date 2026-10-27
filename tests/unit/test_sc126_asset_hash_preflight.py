@@ -23,7 +23,9 @@ import types
 import unittest
 from unittest import mock
 
-FIXTURE = Path(__file__).resolve().parents[1] / 'fixtures' / 'sc126-asset-hash-preflight' / 'cached-asset.json'
+from tests._support import FIXTURES
+
+FIXTURE = FIXTURES / 'sc126-asset-hash-preflight' / 'cached-asset.json'
 CODE = 'invalid_asset_sha256'
 HELPER = '_require_asset_sha256_declaration'
 URL = 'https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/sc126/synthetic.tif'
