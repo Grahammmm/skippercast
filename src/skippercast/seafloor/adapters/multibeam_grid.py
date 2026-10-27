@@ -40,51 +40,13 @@ def validate_binding(row):
     return binding
 
 
-class _NotStrictJSON(ValueError):
-    pass
-
-
-def _unique_fields(pairs):
-    decoded = {}
-    for key, value in pairs:
-        if key in decoded:
-            raise _NotStrictJSON('Preparation receipt is not strict JSON: repeated field')
-        decoded[key] = value
-    return decoded
-
-
-def _refuse_constant(token):
-    raise _NotStrictJSON('Preparation receipt is not strict JSON: non-finite number')
-
-
-def _finite_float(text):
-    value = float(text)
-    if not math.isfinite(value):
-        raise _NotStrictJSON('Preparation receipt is not strict JSON: overflowing number')
-    return value
-
-
-def _decode_receipt(data):
-    """Strictly decode exact receipt bytes: one object, unique fields at every depth, finite numbers."""
-    try:
-        receipt = json.loads(data, object_pairs_hook=_unique_fields,
-                             parse_constant=_refuse_constant, parse_float=_finite_float)
-    except _NotStrictJSON:
-        raise
-    except ValueError as exc:  # Malformed text/encoding or an integer beyond the digit limit.
-        raise _NotStrictJSON('Preparation receipt is not strict JSON: malformed or unbounded') from exc
-    if type(receipt) is not dict:
-        raise _NotStrictJSON('Preparation receipt is not strict JSON: top level is not an object')
-    return receipt
-
-
 def reviewed_receipt(path, row):
     binding = validate_binding(row)
     if not Path(path).is_file() or Path(path).stat().st_size > 1_000_000:
         raise ValueError('Preparation receipt missing or exceeds bound')
     if sha256(path) != binding['preparation_receipt_sha256']:
         raise ValueError('Preparation receipt checksum mismatch')
-    receipt = _decode_receipt(Path(path).read_bytes())
+    receipt = json.loads(Path(path).read_bytes())
     if (receipt.get('scope') != 'private-multibeam-grid-parity'
             or receipt.get('output_sha256') != row['sha256']
             or receipt.get('derived_bin_spacing_m') != binding['grid_spacing_m']
