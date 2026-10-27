@@ -1,0 +1,7 @@
+{
+  "sources": [
+    {"id": "syn-alpha", "needs": ["bathymetry"], "review_status": "approved", "vertical_datum": "NAVD88"},
+    {"id": "syn-beta", "needs": ["bathymetry", "substrate"], "review_status": "approved", "vertical_datum": null},
+    {"id": "syn-gamma", "needs": ["bathymetry"], "review_status": "restricted"}
+  ]
+}

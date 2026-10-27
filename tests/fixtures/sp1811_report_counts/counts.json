@@ -1,0 +1,10 @@
+{
+  "schema": "synthetic-advisor-report-counts/v1",
+  "rows": [
+    {"id":"a1","counts_json":"[{\"species_key\":\"rockfish\",\"label\":\"Reds\",\"kept\":0,\"released\":1}]"},
+    {"id":"a2","counts_json":"[{\"species_key\":\"lingcod\",\"label\":\"Lings\",\"kept\":2,\"released\":0}]"},
+    {"id":"a3","counts_json":"[{\"species_key\":\"cabezon\",\"label\":\"Cabezon\",\"kept\":9007199254740991,\"released\":0}]"},
+    {"id":"a4","counts_json":"[{\"species_key\":\"rockfish\",\"label\":\"Reds\",\"kept\":-3,\"released\":1}]"},
+    {"id":"a5","counts_json":"[{\"species_key\":\"rockfish\",\"label\":\"Reds\",\"kept\":9007199254740992,\"released\":1}]"}
+  ]
+}
