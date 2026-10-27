@@ -272,5 +272,54 @@ class RefusalsStayBeforeReservationAndAfterWrite(unittest.TestCase):
                 outputs.write_bytes("a.bin", b"a", role="control", max_bytes=9, intent="a")
 
 
+class ReserveOverlapUsesRegisterDisjoint(unittest.TestCase):
+    """_reserve_locked checks the new path with register_disjoint, not the O(N)
+    pairwise is_relative_to scan (SC-8e follow-up). The refusal stays identical:
+    the exact overlap cases T08-FIX4 pinned still raise the same ValueError."""
+
+    def test_overlap_refusal_is_unchanged(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = make_outputs(tmp)
+            outputs.reserve_file("metadata/a.json", role="control", max_bytes=16, intent="a")
+            outputs.reserve_file("metadata/ab.json", role="control", max_bytes=16, intent="ab")
+            for name in ("metadata", "metadata/a.json/x"):
+                with self.subTest(name=name):
+                    with self.assertRaisesRegex(ValueError, "^managed output paths overlap$"):
+                        outputs.reserve_file(name, role="control", max_bytes=16, intent="x")
+
+    def test_new_path_is_checked_by_register_disjoint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = make_outputs(tmp)
+            outputs.reserve_file("metadata/a.json", role="control", max_bytes=16, intent="a")
+            entries = len(outputs._read()["files"])
+            with mock.patch.object(output_writer, "register_disjoint", wraps=output_writer.register_disjoint) as rd:
+                outputs.reserve_file("metadata/c.json", role="control", max_bytes=16, intent="c")
+            # _read_disjoint() registers each stored entry, then the reservation
+            # registers exactly one more path (the new one). There is no second
+            # O(N) pairwise is_relative_to re-scan of the whole ledger.
+            self.assertEqual(rd.call_count, entries + 1)
+            self.assertEqual(rd.call_args.args[0], Path("metadata/c.json"))
+
+    def test_write_checkpoint_temporary_sees_shared_sets(self):
+        """The checkpoint and its temporary are reserved through the same
+        register_disjoint sets, so the temporary's overlap is refused on the
+        second reservation and the ledger stays readable. A set-copy mutant
+        (register_disjoint(Path(name), set(registered), set(ancestors))) lets the
+        temporary in too, then every later _read() raises the overlap error."""
+        with tempfile.TemporaryDirectory() as tmp:
+            outputs = make_outputs(tmp)
+            # name='.managed-checkpoints' makes the temporary
+            # '.managed-checkpoints/.managed-checkpoints', which lies inside the
+            # checkpoint path and must be refused on the second reservation.
+            with self.assertRaisesRegex(ValueError, "^managed output paths overlap$"):
+                outputs.write_checkpoint(".managed-checkpoints", {"v": 1}, role="control", max_bytes=64, intent="ck")
+            # The checkpoint was reserved (and saved) before the temporary was
+            # refused; the ledger stays readable with the checkpoint in the same
+            # state HEAD^ leaves it, and the temporary must be absent.
+            files = outputs._read()["files"]
+            self.assertEqual(list(files), [".managed-checkpoints"])
+            self.assertEqual(files[".managed-checkpoints"]["state"], "reserved")
+
+
 if __name__ == "__main__":
     unittest.main()

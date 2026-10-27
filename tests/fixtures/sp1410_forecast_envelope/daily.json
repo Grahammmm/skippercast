@@ -1,0 +1,39 @@
+{
+ "schema_version": 1,
+ "generated_at": "2026-09-28T12:00:00Z",
+ "region_id": "morro-bay",
+ "sources": {
+  "alerts-PZZ645": {
+   "id": "alerts-PZZ645",
+   "kind": "advisory",
+   "status": "ok",
+   "checked_at": "2026-09-28T12:00:00Z",
+   "data": {
+    "alerts": [
+     {
+      "event": "Small Craft Advisory",
+      "headline": "Synthetic Small Craft Advisory for the SP1410 fixture",
+      "onset": "2026-09-28T05:00:00-07:00",
+      "ends": "2026-09-28T21:00:00-07:00"
+     }
+    ]
+   }
+  },
+  "alerts-PZZ670": {
+   "id": "alerts-PZZ670",
+   "kind": "advisory",
+   "status": "ok",
+   "checked_at": "2026-09-28T12:00:00Z",
+   "data": {
+    "alerts": []
+   }
+  }
+ },
+ "reports": [],
+ "catch_probability": null,
+ "bite_score": null,
+ "health": {
+  "status": "ok",
+  "issues": []
+ }
+}

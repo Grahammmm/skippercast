@@ -1,0 +1,6 @@
+{
+  "now": "2026-10-25T12:00:00.000Z",
+  "recent": {"run_id": "synthetic-generated", "generated_at": "2026-10-25T11:59:30.000Z"},
+  "old": {"run_id": "synthetic-generated", "generated_at": "2026-10-25T11:50:00.000Z"},
+  "provenance": "Synthetic timestamp-only projections of conditions feed fields consumed by server/watchdog.ts and server/trip-queue.ts; original tests/test_trip_queue.mjs supplies migration, adapter and producer shapes. No real owner or feed bytes."
+}
