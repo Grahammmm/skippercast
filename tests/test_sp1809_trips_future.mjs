@@ -1,6 +1,8 @@
 // SP-18-v1 / SP1809-TRIPS-FUTURE. No copied SQL, sliced source or fake DB.
-import './fixtures/sp1809_trips_future/offline.mjs';
-import test from 'node:test';
+import {installOffline} from './fixtures/sp1809_trips_future/offline.mjs';
+import test, {after} from 'node:test';
+// Install before the dynamic product imports, including ordinary suite runs.
+after(installOffline());
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url), 'utf8'));
@@ -14,7 +16,6 @@ if (sqliteUnavailable) throw new Error(sqliteUnavailable); // never skip
 const {getTrips, MAX_BOATS, TRIP_TYPE_DAYS} = await import('../server/advisor/tools/get_trips.ts');
 const {advisorSettings} = await import('../server/advisor/settings.ts');
 const {localDate, addDays} = await import('../server/advisor/answers/time.ts');
-const {after} = await import('node:test');
 after(() => {
   for (const [k, descriptor] of Object.entries(previous)) {
     if (descriptor) Object.defineProperty(globalThis, k, descriptor);

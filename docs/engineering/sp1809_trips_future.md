@@ -24,8 +24,9 @@ and primary regression separately against the pinned unchanged base
 `SP1809_A1_FUTURE_INVARIANCE` failed as an assertion (one test, child exit 1).
 The launcher classified this only as `BASELINE_GAP_REPRODUCED`. The original raw
 receipts retain the test/fixture/launcher hashes and original source identity;
-they are not repaired or re-labelled as success. The same test bytes pass after
-the SQL change. Baseline mode intentionally refuses a repaired product checkout.
+they are not repaired or re-labelled as success. The same semantic assertions pass
+after the SQL change; the later layout fix changes only tripwire setup/teardown.
+Baseline mode intentionally refuses a repaired product checkout.
 
 The new suite imports the full real staged TypeScript modules using installed
 Node type stripping and runs their SQL through the existing migration-backed
@@ -45,15 +46,18 @@ The nine tests are the healthy control, the primary A1 regression, and rows A1â€
 - A7: real port aliases, other-port exclusion, HTTPS/no-booking/insecure controls,
   boat-page/landing fields, few/empty wording and unranked output.
 
-Each run uses isolated processes. The preload fixture installs network/model
-sentinels before product imports; the focused context binds only the synthetic DB
-and inert feed/model dependencies. There is no live D1 or file-backed DB default
-in this path. Actual static catalog inputs and Worker globals follow the existing
-advisor test shapes. The hooks restore patched globals in their own process and
-make even a caught network attempt fail at teardown. These sentinels are an
-accidental-side-effect guard, not a hostile-code sandbox. Existing compatibility
-suites use their own synthetic inputs and recording channel engines. No UI test
-or renderer is required for this SQL-only change.
+Each run uses isolated processes. The fixture is inert on import and has no test
+runner dependency. The focused suite explicitly installs network sentinels before
+dynamic product imports, including ordinary `node --test` runs. Its teardown
+restores patched globals and fails even a caught network attempt. The acceptance
+launcher sets `SP1809_OFFLINE=1` to arm the preload before unchanged compatibility
+suites; an exit hook restores globals and fails caught attempts in those processes
+too. The focused context binds only the synthetic DB and inert feed/model
+dependencies. There is no live D1 or file-backed DB default in this path. Actual
+static catalog inputs and Worker globals follow the existing advisor test shapes.
+These sentinels are an accidental-side-effect guard, not a hostile-code sandbox.
+Existing compatibility suites use their own synthetic inputs and recording
+channel engines. No UI test or renderer is required for this SQL-only change.
 
 ## Portable acceptance and evidence
 

@@ -86,6 +86,8 @@ def main():
             if re.search(r'KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL', key, re.I):
                 env.pop(key)
         env.pop('SP1809_CASE', None)
+        # The preload is inert during inventory; explicitly arm Node test runs.
+        env['SP1809_OFFLINE'] = '1'
         if selection:
             env['SP1809_CASE'] = selection
         started = dt.datetime.now(dt.timezone.utc).isoformat()
