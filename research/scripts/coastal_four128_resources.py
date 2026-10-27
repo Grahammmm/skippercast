@@ -64,6 +64,14 @@ ENV = {"PYTHONDONTWRITEBYTECODE": "1", "OMP_NUM_THREADS": "1",
 # eight settled source admissions (294,060,544 B) are charged, no refunds, and
 # exhaust the revision-5 cap exactly. Revision 6 authorises rerun 2 only (one fresh
 # eight-admission allowance). A revision-5 amendment, which omits rerun 1, is refused.
+# Revision 7 of the amendment (signed 2026-10-20T17:29Z, astra-orchestrator) adds
+# T15 rerun 2, which COMPLETED (run tag 20261020r2): its eight settled admissions
+# (294,060,544 B) are charged and exhaust the revision-6 cap exactly. It also
+# charges, in advance and never refunded, ONE cached-BAG SC-5 mask-geometry
+# pre-scan open (36,757,568 B): that open is a separate advance charge inside the
+# prior, never a ninth runtime admission. Revision 7 authorises one fresh
+# eight-admission allowance for the partial-support run (tag 20261020p1). A
+# revision-6 amendment, which omits rerun 2 and the pre-scan, is refused.
 BUDGET_AMENDMENT = "coastal-four128-budget-amendment-v1"
 AMENDMENT_STATUS = "SIGNED_DELEGATED_BUDGET_AUTHORITY"
 AMENDMENT_SIGNERS = ("fable-2nd-look", "astra-orchestrator")
@@ -126,6 +134,8 @@ FAILED_TRIAL5_SOURCE_CHARGED = SOURCE_CHARGES['failed_trial_5_charged_bytes']
 TRIAL6_SOURCE_CHARGED = SOURCE_CHARGES['trial_6_charged_bytes']
 VALIDATION_HASH_SOURCE_CHARGED = SOURCE_CHARGES['validation_hash_reads_charged_bytes']
 RERUN1_SOURCE_CHARGED = SOURCE_CHARGES['rerun_1_charged_bytes']
+RERUN2_SOURCE_CHARGED = SOURCE_CHARGES['rerun_2_charged_bytes']
+SC5_PRESCAN_SOURCE_CHARGED = SOURCE_CHARGES['sc5_geometry_prescan_charged_bytes']
 SOURCE_PRIOR_FLOOR = sum(SOURCE_CHARGES.values())
 RECORDED_SOURCE_LIMIT = CHARGE_LEDGER['source']['previous_cumulative_limit_bytes']
 FRESH_SOURCE = CHARGE_LEDGER['source']['fresh_allowance_bytes']

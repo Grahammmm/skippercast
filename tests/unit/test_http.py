@@ -10,6 +10,7 @@ import gzip
 import hashlib
 from io import BytesIO
 import ipaddress
+import json
 from pathlib import Path
 import re
 import socket
@@ -337,6 +338,25 @@ class PolicyUnitTests(unittest.TestCase):
         self.assertTrue(all(allowlist.allows(h) for h in http.EXTRA_HOSTS))
         self.assertFalse(allowlist.allows('example.org'))
         self.assertTrue(http.default_allowlist(['example.org']).allows('EXAMPLE.org.'))
+
+    def test_deep_fill_and_footprint_hosts_are_exact_and_reviewed(self):
+        # COAST-HOSTS (G2, 2026-10-20): exactly these four hosts, each named by a catalog
+        # source that records its licence and attribution; lookalikes stay off the list.
+        allowlist = http.default_allowlist()
+        added = {'www.gebco.net', 'dap.ceda.ac.uk', 'www.gmrt.org', 'gis.ngdc.noaa.gov'}
+        self.assertTrue(all(allowlist.allows(h) for h in added))
+        for host in ('gebco.net', 'download.gebco.net', 'data.ceda.ac.uk', 'ceda.ac.uk', 'gmrt.org',
+                     'www.bodc.ac.uk', 'ngdc.noaa.gov', 'www.gebco.net.evil.example'):
+            self.assertFalse(allowlist.allows(host), host)
+        sources = json.loads((http.repo_root() / 'catalog/sources.json').read_text())['sources']
+        for host in added:
+            with self.subTest(host=host):
+                (source,) = [s for s in sources if host in s.get('allowed_hosts', [])]
+                self.assertIn(host, source['host_terms'])
+                self.assertTrue(source['rights']['attribution'])
+                self.assertTrue(source['rights']['terms_url'].startswith('https://'))
+                self.assertIsInstance(source['rights']['attribution_required'], bool)
+                self.assertNotEqual(source['review_status'], 'approved')  # publication is a separate review
 
     def test_wildcards(self):
         allowlist = http.Allowlist(['*.usgs.gov', 'www.ecfr.gov'])

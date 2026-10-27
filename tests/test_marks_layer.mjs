@@ -89,6 +89,7 @@ test('a mark\'s card: fit, grade and depth range; source and age; the regulation
   const card = atlasCard(ATLAS.targets.find(t => t.id === 'SC26-001'), data, 'lingcod');
   assert.deepEqual({...card, basis: undefined}, {
     id: 'spot:SC26-001', name: 'Southern rocky rise', kind: 'Reef mark · grade A · ~135–184 ft', reading: 'Fits lingcod habitat 3 of 3',
+    position: {latitude: 35.164314, longitude: -120.843179},
     source: 'Avila / Point Buchon · surveyed 2008 · atlas 2026-09-27',
     rules: 'Screened against protected areas with 2992 m clearance in the atlas of 2026-09-27; check current rules before you fish.',
     regulations: {href: 'https://wildlife.ca.gov/Fishing/Ocean/Regulations', label: 'CDFW ocean fishing regulations'}, basis: undefined,
@@ -145,9 +146,9 @@ test('the terrain\'s evidence lines read verbatim in the card, with its fit in t
   assert.equal(terrainDetailCard({...detail, facts: 'Nominal 40–80 ft · physical score 72/100 · species fit 2/3'}, 'rockfish-reef').reading.endsWith('fits reef rockfish habitat 2 of 3'), true);
   assert.equal(terrainDetailCard({...detail, facts: 'Nominal 40–80 ft · physical score 72/100'}, 'all').reading, 'Nominal 40–80 ft · physical score 72/100');
   const receipt = {id: 'reef:r1', latitude: 35.38, longitude: -120.88, expiresAt: '2027-01-02T00:00:00.000Z', kind: 'reef'};
-  assert.deepEqual(receiptCard(receipt), {id: 'habitat:reef:r1', name: 'Reef habitat', kind: 'Terrain habitat · reef:r1', reading: '35.3800° N, 120.8800° W',
+  assert.deepEqual(receiptCard(receipt), {id: 'habitat:reef:r1', name: 'Reef habitat', kind: 'Terrain habitat · reef:r1', reading: '', position: {latitude: 35.38, longitude: -120.88},
     source: 'Reviewed coastal habitat · valid until 2027-01-02', basis: 'Restored from the reviewed habitat release; its evidence lines show in the 2D and 3D terrain.'});
-  assert.equal(terrainCard({latitude: 35.38, longitude: -120.88, id: 'reef:r1'}).reading, '35.3800° N, 120.8800° W');
+  assert.deepEqual(terrainCard({latitude: 35.38, longitude: -120.88, id: 'reef:r1'}).position, {latitude: 35.38, longitude: -120.88});
   // The rewrite depends on the renderer's own facts string: a change there fails here, not silently in the card.
   const viewer = readFileSync(new URL('../packages/coast/src/coast3d/viewer.ts', import.meta.url), 'utf8');
   assert.match(viewer, /' · species fit '\+p\[this\.option\(\)\.field!\]\+'\/3'/, 'packages/coast still writes "species fit n/3"');

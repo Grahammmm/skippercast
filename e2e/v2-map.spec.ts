@@ -323,6 +323,14 @@ const narrow = (page: Page) => page.viewportSize()!.width < 1024;
 /** The rail and legend: on a phone they are the sheet's Layers panel. */
 const showLayers = async (page: Page) => { if (narrow(page)) await page.getByRole('button', {name: 'Layers', exact: true}).click(); };
 const hideLayers = async (page: Page) => { if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click(); };
+/** Phone only: after the Layers panel, the sheet rests at half and covers the chart's centre (where the contours and fields draw). Drop it back to peek so the map is visible again. */
+const collapseSheet = async (page: Page) => {
+  if (!narrow(page)) return;
+  await page.locator('.ui-sheet-handle').focus();
+  await page.keyboard.press('Home');
+  await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'peek');
+  await page.locator('.ui-sheet').evaluateAll(sheets => Promise.all(sheets.flatMap(sheet => sheet.getAnimations().map(slide => slide.finished.catch(() => undefined)))));
+};
 // A phone sheet still sliding to peek (220 ms) covers the centre: a click there lands in the Brief, the sheet
 // moves to half and every later click hits the hour slider. Let the slide finish first.
 const clickCentre = async (page: Page) => {
@@ -531,6 +539,16 @@ test('a shared ?spot= names its mark in the terrain too, and Escape clears it', 
 // Currents (FE-15): a synthetic WCOFS packet on a 0.04° grid off Morro Bay, three-hourly native
 // frames around now, answered for the bound place's ocean snapshot; the rest of the bridge is held.
 const CURRENT_VIEW = '35.32000,-120.90000,11';
+// Open-water points inside each synthetic field but clear of the always-on depth contours: those lines and
+// their dashed survey edge cover the surveyed nearshore, so each point sits in a measured gap of the committed
+// dist/regions/morro-bay/depth-contours-overview.geojson at CURRENT_VIEW (on both the phone and laptop canvases).
+const SST_POINT = {lon: -121.00, lat: 35.34};
+const CURRENT_POINT = {lon: -120.99, lat: 35.33};
+const SWELL_POINT = {lon: -120.98, lat: 35.35};
+// A deeper contour (270 ft) and a survey edge from that overview: the shallow contours run under the ranked
+// reef marks and the protected areas, so a deep open-water contour and a clear edge are the reliable pick targets.
+const CONTOUR_POINT = {lon: -120.9499, lat: 35.2903};
+const EDGE_POINT = {lon: -120.9681, lat: 35.2592};
 async function serveOcean(page: Page) {
   const now = Date.now(), three = 3 * HOUR_MS, first = Math.floor(now / three) * three - three, iso = (ms: number) => new Date(ms).toISOString();
   const cells = [];
@@ -558,6 +576,23 @@ const flowOnLand = (page: Page, view: string) => page.evaluate(view => {
 }, view);
 const openLayers = async (page: Page) => { if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click(); };
 const baseSelect = (page: Page) => page.locator('.app-rail-base').getByRole('combobox', {name: 'Base'});
+/** The page coordinates of a lon/lat in a `?view=` (lat,lon,zoom): Web Mercator, 256 px tiles at that zoom, the map centred in its canvas (as e2e/v2-trip.spec.ts `clickChart`). */
+const chartPoint = async (page: Page, view: string, lon: number, lat: number) => {
+  const [lat0, lon0, zoom] = view.split(',').map(Number) as [number, number, number];
+  const world = 256 * 2 ** zoom;
+  const x = (l: number) => (l + 180) / 360 * world;
+  const y = (l: number) => { const s = Math.sin(l * Math.PI / 180); return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * world; };
+  await page.locator('.app-chart canvas.maplibregl-canvas').waitFor({state: 'visible'});
+  const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!;
+  return {x: box.x + box.width / 2 + x(lon) - x(lon0), y: box.y + box.height / 2 + y(lat) - y(lat0)};
+};
+/** Never mistake a sheet/legend click for a map pick. Use the real canvas with actionability checks. */
+const clickChartPoint = async (page: Page, point: {x: number; y: number}) => {
+  await collapseSheet(page);
+  const canvas = page.locator('.app-chart canvas.maplibregl-canvas');
+  const box = (await canvas.boundingBox())!;
+  await canvas.click({position: {x: point.x - box.x, y: point.y - box.y}});
+};
 
 test('Currents draw the bound forecast as animated streamlines, read on click and follow ?current=', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
@@ -568,15 +603,9 @@ test('Currents draw the bound forecast as animated streamlines, read on click an
   const drawn = await flowOnLand(page, CURRENT_VIEW);
   expect(drawn.land, 'the land mask clips paths, arrowheads and source dots').toBe(0);
   expect(drawn.water).toBeGreaterThan(1000);
-  // A click on open water inside the field reads the blended current.
-  const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!;
-  // Left of the desktop rail, below the phone's header and above its sheet's peek, and above the laptop's
-  // legend (CI6-02: the laptop command bar may wrap to two rows, which shortens the map and brings the
-  // legend up to 40% of its height).
-  const [x, y] = [box.x + box.width * 0.3, box.y + box.height * (narrow(page) ? 0.4 : 0.3)];
-  expect(await page.evaluate(([x, y]) => document.elementFromPoint(x!, y!)?.matches('canvas.maplibregl-canvas, canvas.chart-flow--dash') ?? false, [x, y]),
-    'the click reaches the map, not the chrome over it').toBe(true);
-  await page.mouse.click(x, y);
+  // A click on open water inside the field reads the blended current (clear of the always-on depth contours).
+  const currentProbe = await chartPoint(page, CURRENT_VIEW, CURRENT_POINT.lon, CURRENT_POINT.lat);
+  await clickChartPoint(page, currentProbe);
   await expect(page.locator('.app-mark h2')).toHaveText('Surface current');
   await expect(page.locator('.app-mark .ui-reading')).toHaveText(/^\d\.\d\d kt toward \d{1,3}° true$/);
   await expect(page.locator('.app-mark-source')).toHaveText('NOAA WCOFS surface forecast · issued 3 h ago');
@@ -857,12 +886,16 @@ test('?layers= restores the rail, a Fish ?layer= opens its entry, and a profile 
   expect(params(page).current, 'the link names no source: its list turns on the forecast (#482)').toBeUndefined();
   await expect(page.locator('.app-legend-seafloor')).toBeVisible();
   await expect(page.locator('.app-legend-currents')).toBeVisible();
-  await expect(page.locator('.app-legend .app-swatch:not([data-layer="mpas"])'), 'no colour key until a layer draws').toHaveCount(0);
+  // The held seafloor and currents show no colour key until their layer draws; the always-on depth contours
+  // do draw, so only their key and the dashed survey-edge key (plus the MPAs') are present.
+  await expect(page.locator('.app-legend .app-swatch:not([data-layer="mpas"]):not([data-layer="depth-contours"]):not([data-layer="depth-contours-edge"])'), 'no optional-layer colour key until its layer draws').toHaveCount(0);
+  await expect(page.locator('.app-legend .app-swatch[data-layer="depth-contours"]'), 'the always-on depth contours key while they draw').toHaveCount(1);
+  await expect(page.locator('.app-legend .app-swatch[data-layer="depth-contours-edge"]'), 'the survey-edge key while contours draw').toHaveCount(1);
 
   await page.locator('[aria-label="Profile"] button', {hasText: 'Shore'}).click();
   await expect.poll(() => params(page).profile).toBe('shore');
   expect(params(page).layers, 'a switch drops the link\'s list').toBeUndefined();
-  await expect.poll(() => pressedEntries(page)).toEqual(['Water temp', 'Swell']);
+  await expect.poll(() => pressedEntries(page)).toEqual(['Water temp', 'Swell + wind']);
   await page.locator('[aria-label="Profile"] button', {hasText: 'Boat'}).click();
   await expect.poll(() => pressedEntries(page), 'Boat\'s own list comes back').toEqual(['Seafloor', 'Currents']);
 
@@ -951,8 +984,8 @@ test('Water temp draws the bound analysis as a field with contours, names it, re
   await holdCoastData(page);
   await serveReport(page);
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'none'});
-  const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!, x = box.x + box.width * 0.3, y = box.y + box.height * 0.35;
-  // Open water before the layer is on, once the chart has settled.
+  const sstProbe = await chartPoint(page, CURRENT_VIEW, SST_POINT.lon, SST_POINT.lat), x = sstProbe.x, y = sstProbe.y;
+  // Open water (clear of the always-on depth contours) before the layer is on, once the chart has settled.
   let water: number[] = [];
   await expect.poll(async () => { const a = await pixel(page, x, y); await page.waitForTimeout(400); water = await pixel(page, x, y); return apart(a, water); }).toBe(0);
 
@@ -968,10 +1001,11 @@ test('Water temp draws the bound analysis as a field with contours, names it, re
   await expect(page.locator('[data-unavailable="water-temp"]')).toHaveCount(0);
   await v2.a11y('v2-map-water-temp');
   if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click();
+  await collapseSheet(page);
   await expect.poll(async () => apart(await pixel(page, x, y), water), {message: 'the field is drawn over the water'}).toBeGreaterThan(60);
 
   // A click on the field reads the analysis there, with its error, date and product.
-  await page.mouse.click(x, y);
+  await clickChartPoint(page, {x, y});
   await expect(page.locator('.app-mark h2')).toHaveText('Surface temperature');
   await expect(page.locator('.app-mark .ui-reading')).toHaveText(/^(?:5[7-9]|6[0-5])\.\d °F · analysis error 0\.6 °F$/);
   await expect(page.locator('.app-mark-source')).toHaveText(/^NASA JPL MUR · analysis \w{3} \d{1,2} · 30 h old$/);
@@ -983,7 +1017,8 @@ test('Water temp draws the bound analysis as a field with contours, names it, re
   await expect(row).toHaveCount(0);
   await expect(page.locator('.app-mark')).toHaveCount(0);
   if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click();
-  // The phone's sheet may rest at another height now, and its shadow tints the water by a few levels.
+  // Compare unobscured chart pixels at the same sheet detent as the baseline.
+  await collapseSheet(page);
   await expect.poll(async () => apart(await pixel(page, x, y), water), {message: 'the water shows again'}).toBeLessThan(12);
   expect(pageErrors).toEqual([]);
 });
@@ -1001,6 +1036,47 @@ test('Water temp draws nothing for a stale analysis or a region no report covers
   await openLayers(page);
   await expect(page.locator('.ui-rail-item', {hasText: 'Water temp'}).locator('.ui-rail-note')).toHaveText('no analysis for this region');
   await expect(page.locator('[data-reason="water-temp"]')).toHaveText('Water temp unavailable: no local surface-temperature analysis covers this region yet.');
+});
+
+test('the always-on depth contours read on click: a contour names its depth, the survey edge its limit, and off-contour water still reads the field', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await serveReport(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'water-temp'});
+  // The always-on contours draw and key themselves while the water-temp field is on (the phone's legend lives in the Layers sheet).
+  await showLayers(page);
+  await expect(page.locator('.app-legend .app-swatch[data-layer="depth-contours"]')).toHaveCount(1);
+  await hideLayers(page);
+
+  // A click on a deep (270 ft) contour reads it first (contour-first pick over the field underneath).
+  const contour = await chartPoint(page, CURRENT_VIEW, CONTOUR_POINT.lon, CONTOUR_POINT.lat);
+  await clickChartPoint(page, contour);
+  await expect(page.locator('.app-mark h2')).toHaveText('270 ft depth contour');
+  await expect(page.locator('.app-mark .app-mark-kind')).toHaveText('Depth contour · every 30 ft');
+  await expect(page.locator('.app-mark .ui-reading')).toContainText("270 ft below the survey's unverified source datum");
+  await expect(page.locator('.app-mark-source')).toContainText('surveyed 2008 · unverified source datum');
+
+  // A click on the dashed survey edge says where the reviewed grid stops.
+  const edge = await chartPoint(page, CURRENT_VIEW, EDGE_POINT.lon, EDGE_POINT.lat);
+  await clickChartPoint(page, edge);
+  await expect(page.locator('.app-mark h2')).toHaveText('Survey edge');
+  await expect(page.locator('.app-mark .app-mark-kind')).toHaveText('Where the reviewed survey grid stops');
+  await expect(page.locator('.app-mark .ui-reading')).toContainText('no contours are drawn beyond it');
+
+  // Off-contour open water still reads the field underneath.
+  const off = await chartPoint(page, CURRENT_VIEW, SST_POINT.lon, SST_POINT.lat);
+  await clickChartPoint(page, off);
+  await expect(page.locator('.app-mark h2')).toHaveText('Surface temperature');
+
+  expect(pageErrors).toEqual([]);
+});
+
+test('a region without published contours shows no depth-contour key', async ({page, pageErrors, v2}) => {
+  await v2.open('app', {region: 'santa-cruz-monterey-bay', presentation: 'chart', layers: 'seafloor'});
+  await showLayers(page);
+  await expect(page.locator('.app-legend-depth-contours')).toHaveCount(0);
+  await expect(page.locator('.app-legend .app-swatch[data-layer="depth-contours"]')).toHaveCount(0);
+  await expect(page.locator('.app-legend .app-swatch[data-layer="depth-contours-edge"]')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
 });
 
 // FE-17: a synthetic regional forecast feed whose NOAA GFS-Wave grid (3 × 3 points 0.2° apart) lies over the
@@ -1023,8 +1099,8 @@ test('Swell draws the model grid as a field with period lines and strokes, names
   await serveForecast(page);
   // Tomorrow has all 24 hours, so the slider can always step.
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'none', hour: hourParam(horizonStart() + 24 * HOUR_MS)});
-  // Inside the grid and clear of the legend, which grows over the chart's lower left while Swell is on.
-  const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!, x = box.x + box.width * 0.3, y = box.y + box.height * 0.25;
+  // Inside the grid and clear of the legend and the always-on depth contours.
+  const swellProbe = await chartPoint(page, CURRENT_VIEW, SWELL_POINT.lon, SWELL_POINT.lat), x = swellProbe.x, y = swellProbe.y;
   let water: number[] = [];
   await expect.poll(async () => { const a = await pixel(page, x, y); await page.waitForTimeout(400); water = await pixel(page, x, y); return apart(a, water); }).toBe(0);
 
@@ -1042,6 +1118,7 @@ test('Swell draws the model grid as a field with period lines and strokes, names
   await v2.a11y('v2-map-swell');
   const before = await stamp.textContent();
   if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click();
+  await collapseSheet(page);
   let drawn: number[] = [];
   await expect.poll(async () => apart(drawn = await pixel(page, x, y), water), {message: 'the field is drawn over the water'}).toBeGreaterThan(40);
 
@@ -1049,13 +1126,14 @@ test('Swell draws the model grid as a field with period lines and strokes, names
   const slider = page.locator('input[aria-label="Hour"]');
   await slider.focus();
   await page.keyboard.press(await slider.inputValue() === await slider.getAttribute('max') ? 'ArrowLeft' : 'ArrowRight');
+  await collapseSheet(page);
   await expect.poll(async () => apart(await pixel(page, x, y), drawn), {message: 'the texture follows the hour'}).toBeGreaterThan(30);
   await openLayers(page);
   await expect(stamp).not.toHaveText(before!);
   if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click();
 
-  // A click on the field reads the model there (on a phone, south-west of the reef marks the probe sits among).
-  await page.mouse.click(...(narrow(page) ? [box.x + box.width * 0.12, box.y + box.height * 0.36] : [x, y]) as [number, number]);
+  // A click on the field reads the model there (clear of the depth contours and the reef marks).
+  await clickChartPoint(page, {x, y});
   await expect(page.locator('.app-mark h2')).toHaveText('Primary swell');
   await expect(page.locator('.app-mark .ui-reading')).toHaveText(/^\d\.\d ft · 1[123]\.\d s · from WNW \d{3}°$/);
   await expect(page.locator('.app-mark-source')).toHaveText(/^NOAA GFS-Wave · run \w{3} \d{1,2}, \d{1,2} [ap]m · 6 h old · valid /);
@@ -1066,6 +1144,7 @@ test('Swell draws the model grid as a field with period lines and strokes, names
   await expect(row).toHaveCount(0);
   await expect(page.locator('.app-mark')).toHaveCount(0);
   if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click();
+  await collapseSheet(page);
   await expect.poll(async () => apart(await pixel(page, x, y), water), {message: 'the water shows again'}).toBeLessThan(12);
   expect(pageErrors).toEqual([]);
 });
@@ -1130,5 +1209,45 @@ test('in 3D the terrain options sit in the Seafloor entry and the view buttons i
   await expect.poll(() => new URL(page.url()).searchParams.get('presentation')).toBe('2d');
   await toggle(page, 'Chart').click();
   await expect(view).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
+
+test('Stations legend stays bounded on phone and laptop and opens a station card from its list', async ({page, pageErrors, v2}) => {
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart'});
+  await showLayers(page);
+  const toggle = railToggle(page, 'Stations');
+  if (await toggle.getAttribute('aria-pressed') !== 'true') await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  const row = page.locator('.app-legend-stations');
+  await expect(row).toBeVisible();
+  for (const viewport of [{width: 390, height: 844}, {width: 1440, height: 900}]) {
+    await page.setViewportSize(viewport);
+    // On a narrow viewport the legend lives inside the sheet's Layers panel, so open it when it is not already open.
+    if (narrow(page)) {
+      const layersButton = page.getByRole('button', {name: 'Layers', exact: true});
+      await layersButton.waitFor();
+      if (await page.getByRole('button', {name: 'Done', exact: true}).count() === 0) await layersButton.click();
+    }
+    const geometry = await row.evaluate(el => {
+      const legendBox = el.closest('.app-legend')!.getBoundingClientRect();
+      const rowBox = el.getBoundingClientRect();
+      const controls = [...el.querySelectorAll('summary, button')].map(node => node.getBoundingClientRect());
+      return {legend: {left: legendBox.left, right: legendBox.right}, row: {left: rowBox.left, right: rowBox.right},
+        controls: controls.map(box => ({left: box.left, right: box.right})), scrollWidth: el.scrollWidth, clientWidth: el.clientWidth};
+    });
+    expect(geometry.row.left).toBeGreaterThanOrEqual(geometry.legend.left);
+    expect(geometry.row.right).toBeLessThanOrEqual(geometry.legend.right);
+    expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth);
+    for (const control of geometry.controls) {
+      expect(control.left).toBeGreaterThanOrEqual(geometry.legend.left);
+      expect(control.right).toBeLessThanOrEqual(geometry.legend.right);
+    }
+  }
+  await row.getByText('Station list', {exact: true}).click();
+  const stationButton = row.locator('details button').first();
+  await expect(stationButton).toBeVisible();
+  await stationButton.click();
+  await expect(page.locator('.app-mark')).toBeVisible();
   expect(pageErrors).toEqual([]);
 });

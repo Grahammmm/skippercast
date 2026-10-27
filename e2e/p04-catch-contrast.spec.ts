@@ -45,21 +45,58 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // (maplibre-gl 6.12.0->6.14.0, drizzle-orm, @axe-core/playwright, @cloudflare/workers-types, @playwright/test,
 // preact-render-to-string, vite). No CSS/TSX source in INPUTS, and not check_contrast.mjs's contrast(), is touched;
 // the Reports catch flow and its contrast results are unchanged. package.json and pnpm-lock.yaml rebound.
+// CI6-09 (swell partition selector): Legend.tsx gains an existing Segmented control; no paint chain changes.
+// check_contrast.mjs changes only the Legend.tsx hash and line citations, not contrast(). Rebound.
+// CI6-08 chlorophyll: MapStage adds only the createChlorophyll layer; check_contrast.mjs changes only the
+// legendTsx source hash and citations, leaving contrast() untouched. Both rebound.
+// CI6-13 (shelf depth contours): app.css adds only the two depth-contour legend swatch rules and joins the
+// contour row to the wrapping legend rows; MapStage.tsx only adds createDepthContours to the Chart's layers. The
+// Reports catch flow renders neither, and check_contrast.mjs rebinds only the surface-proof hashes and cited lines
+// (moved, byte-identical), with contrast() untouched. All three rebound.
+// CI6-17 (tide station selection): App.tsx only configures the tide selector
+// from region metadata; the Reports catch flow and its contrast results are unaffected.
+// CI6-03 (Temp contrast layer): web/tokens.css adds only theme-invariant --contrast-0/1/2 after --swell-3; app.css
+// adds only `.app-legend-sst-contrast` to an existing flex-wrap rule and an `.app-swatch[data-layer="sst-contrast"]`
+// rule; MapStage.tsx adds only the createContrast chart layer. The Reports catch flow mounts none of them.
+// check_contrast.mjs rebinds only the tokens/app/Legend surface hashes and their shifted line citations, with
+// surface results unchanged and contrast() untouched. All four rebound.
+// CI6-13 merge-forward onto CI6-03: the union of both entries above and nothing else. app.css carries both sides'
+// rules unchanged; MapStage.tsx adds both chart layers; check_contrast.mjs rebinds the union's surface hashes and
+// shifted line citations, with contrast() untouched. All four rebound.
+// CI6-10 wind adds a chart-only createWind factory to MapStage; Reports does not mount it. The reviewed contrast()
+// implementation and this test's rendered catch path are unchanged; MapStage and check_contrast source hashes rebound.
+// Wind/contour merge-forward retains all three factories and both legend rows; only union hashes/line citations rebound.
+// Chlorophyll merge-forward preserves Temp contrast, wind and depth contours; only union hashes and line citations change.
+// CI6-18: MapStage.tsx adds the Stations chart renderer; BODY09 mounts Reports/CatchCards only, never MapStage.
+// Legend.tsx adds station legend markup/basis/list and app.css adds layout rules scoped to that row; neither
+// changes Reports catch count paint or its backdrop. check_contrast.mjs only rebinds the Legend source hash.
+// Verified applicability: BODY09's rendered flow, sampled elements, paint, thresholds and surface checks are unchanged.
+// CI6-18 merge-forward: union of the entries above, contrast() untouched.
+// CI6-14: MapStage.tsx imports waypoint placement state and adds a Chart-only placement note/cancel button.
+// BODY09 mounts Reports/CatchCards, not PresentationToggle; catch count paint and its backdrop are unchanged.
+// Only the MapStage source hash is rebound; rendered checks, thresholds and contrast() are unchanged.
+// CI6-08 x CI6-18 merge-forward: MapStage keeps createChlorophyll and createStations; Legend keeps both rows;
+// only union hashes and line citations rebound, contrast() untouched.
+// CI6-08 x CI6-14 merge-forward keeps createChlorophyll and the placement note; only the union hash is rebound.
+// CI6-09 merge-forward retains the partition selector alongside wind, shelf contours, chlorophyll and Stations.
+// Legend.tsx changes only the selector import/control from main; existing text/muted glass roles and the Reports
+// catch path are unchanged. check_contrast.mjs rebinds only the Legend hash and line citations; contrast() is untouched.
 // CI6-02 (#769, species honesty in the target picker): web/species.ts adds a TargetState per menu option
 // (targetState, regionMenu, optionText) and two region signals (regionUnavailable, regionAtlas) reset by its
 // existing region effect; web/app/App.tsx adds an optional RegionInfo.unavailableTargets that loadRegion fills
 // and publishes; web/app/LayerRail.tsx changes only Look for's option text and disables the region's unavailable
 // targets. Reports reads only regionInfo's id and charters (unchanged) and never imports species.ts, the target
 // menu or the rail; no CSS, class, token or catch markup is touched, and contrast() is untouched. All three rebound.
+// CI6-02 merge-forward onto main: union of the entries above; only the species/App/LayerRail hashes rebound.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c375f21a58e70a0523e95f3be786ab3cfa417e8b0e208c671b240aa48c554a14",
-  "web/app/App.tsx": "f49938b31c81df492ca7bfd065959a9af00d1e4a066a83270fe683da5302f504",
+  "web/app/App.tsx": "ade4f4b09862475af1c57e554ef2b37833528d339232b22b125d6093bd00367e",
   "web/app/Masthead.tsx": "191309f6c9a54ee6bd24608a1983c6bf07141538267f87bef163f8ad4ccbea00",
   "web/app/LayerRail.tsx": "46e42485435483269872176bb53cba563d042ad7ea02cdddcb5372f031026d85",
-  "web/app/MapStage.tsx": "25a446d17624bf555b684077e0a56091cfa6f32a94a03560aaa5be54a85bd367",
-  "web/tokens.css": "06db13ad1e8eeca76f9ebdcf01d95125abd52ad0f4bc21a51d7611e428d02428",
+  "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
+  "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
-  "web/app/app.css": "7172217e46b2f0eee4f3becd85755d15a6cf9c2137c96ced196d04ed7bd5a34b",
+  "web/app/app.css": "4a3867af18c9eba3eb01391e84380a8052177bb8b841b4928f72287b2ef4dbd5",
   "packages/coast/panel.css": "fda5b83480f2c32243d5ff90b99e2581d459a46f88543d6a264705bdc8e821fb",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
@@ -69,7 +106,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "32e6c43cbd87fe14536cef1835a1b1b4bb79f92662529ba98df249a91fa4d7c5",
+  "scripts/check_contrast.mjs": "1701f0ae0b6283f517c97b5fd5582c25400705b3f0101a0f24e79173a3af0c83",
   "package.json": "4675341e4ec0640f12cb96fe7ad6683739c4d601a32557a5e218430632db8719",
   "pnpm-lock.yaml": "68b00d873cb91ed71fb473d7145c31127602dfd3073ed847c0fbef7795dcc153",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"

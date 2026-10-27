@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "id": "gebco-undersea-feature-names",
+  "name": "IHO-IOC GEBCO Gazetteer of Undersea Feature Names",
+  "region_ids": [
+    "bodega-point-reyes",
+    "big-sur-coast",
+    "cambria-san-simeon",
+    "crescent-city",
+    "fort-bragg-point-arena",
+    "humboldt-bay-cape-mendocino",
+    "monterey-point-sur",
+    "morro-bay",
+    "point-arena-bodega",
+    "point-arguello-conception",
+    "point-reyes-pigeon",
+    "santa-cruz-monterey-bay",
+    "shelter-cove-north-mendocino",
+    "south-big-sur-san-simeon",
+    "southern-california"
+  ],
+  "need_ids": ["bathymetry"],
+  "documentation_url": "https://www.gebco.net/data-products/undersea-feature-names",
+  "access_url": "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/Undersea_Features/FeatureServer",
+  "access_status": "partial",
+  "producer": {
+    "name": "GEBCO Sub-Committee on Undersea Feature Names (SCUFN), hosted by IHO DCDB at NOAA NCEI",
+    "url": "https://www.gebco.net/data-products/undersea-feature-names"
+  },
+  "variables": ["feature_name", "feature_type"],
+  "units": {"feature_name": null, "feature_type": null},
+  "rights": {
+    "license": "No public-domain grant found. The gazetteer page asks for this citation when names are reproduced: IHO-IOC GEBCO Gazetteer of Undersea Feature Names, www.gebco.net. The GEBCO Grid public-domain terms do not name this gazetteer. The feature-service copyrightText field was not re-read this pass, so no copyright sentence is claimed. Commercial redistribution of the name database is not expressly granted.",
+    "terms_url": "https://www.gebco.net/data-products/undersea-feature-names",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [-124.8, 32.5, -117.05, 42.0],
+    "resolution_m": null,
+    "horizontal_crs": "WGS84",
+    "vertical_datum": null,
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/Undersea_Features/FeatureServer",
+    "resolution_basis": "unknown"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-10-20T18:15:00Z",
+    "update_cadence": "NCEI describes an annual gazetteer update after SCUFN decisions. No release instant was read from the service.",
+    "coverage_start": null,
+    "coverage_end": null
+  },
+  "evidence": [
+    {
+      "url": "https://www.gebco.net/data-products/undersea-feature-names",
+      "supports": "Citation required when gazetteer data are used or reproduced. Host is IHO DCDB at NCEI. No public-domain sentence on this page."
+    },
+    {
+      "url": "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/Undersea_Features/FeatureServer?f=json",
+      "supports": "Service metadata retrieved 2026-10-20. Capabilities are Query and Extract. copyrightText wording was not re-read this pass. Layers are point, line and polygon. No feature rows were downloaded."
+    }
+  ],
+  "limitations": [
+    "Names may be shown as labels only with the citation IHO-IOC GEBCO Gazetteer of Undersea Feature Names, www.gebco.net.",
+    "This is not the grid public-domain grant. Display waits for N-13.",
+    "A gazetteer point is a published position, not the extent of the feature and not a surveyed name.",
+    "Do not draw a gazetteer name inside a reviewed-survey extent when it conflicts with a surveyed name.",
+    "SCUFN international naming concern is mainly outside the territorial sea. A name inside 12 nautical miles is not, by itself, an international name.",
+    "No in-box feature count was taken. Coverage of the 15 region bounds is inferred from the global service extent, not from a downloaded extract."
+  ],
+  "provenance": {
+    "access_service": "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/Undersea_Features/FeatureServer",
+    "raw_sha256": null,
+    "transformations": [
+      "Read the GEBCO gazetteer page and the ArcGIS feature-service metadata on 2026-10-20. Did not download feature rows."
+    ]
+  }
+}

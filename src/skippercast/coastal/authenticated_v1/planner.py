@@ -2,15 +2,10 @@
 import hashlib,math
 from pathlib import Path
 from urllib.parse import urlparse
-from affine import Affine
-from pyproj import CRS,Transformer
-from shapely.geometry import box,shape,Polygon
-from shapely.ops import transform as project
-from shapely import segmentize
-from skippercast.coastal import vertical
 from skippercast.coastal.handoff.common import digest
-from .metadata_bag import inspect_metadata
-from .adapter_bag import _reviewed_horizontal_crs
+
+# validate_spec/geometry_roles are pure metadata predicates. Keep native/GIS
+# dependencies at their actual call sites so dry admission needs no survey stack.
 
 SPEC='coastal-fixed-window-spec-v1'
 LARGER_SPEC='coastal-fixed-native-window-spec-v2'
@@ -31,6 +26,8 @@ def geometry_roles(spec):
 def _finite(values,n):
     return isinstance(values,list) and len(values)==n and all(type(v) in (int,float) and math.isfinite(v) for v in values)
 def rectangle(bounds,source,target):
+    from pyproj import Transformer
+    from shapely.geometry import Polygon
     x0,y0,x1,y1=bounds
     if not _finite(list(bounds),4) or x0>=x1 or y0>=y1:raise ValueError('finite nonempty rectangle required')
     points=[]
@@ -42,6 +39,10 @@ def rectangle(bounds,source,target):
     if not geometry.is_valid or geometry.is_empty or not _finite(list(geometry.bounds),4):raise ValueError('invalid projected footprint')
     return geometry
 def geometry_in_target(record,target='EPSG:3310'):
+    from pyproj import CRS,Transformer
+    from shapely.geometry import shape
+    from shapely.ops import transform as project
+    from shapely import segmentize
     source=CRS.from_user_input(record['crs'])
     if 'bbox' in record:return rectangle(record['bbox'],source,target)
     geometry=shape(record['geometry'])
@@ -69,6 +70,10 @@ def validate_spec(spec,source):
         if not isinstance(spec.get(role),dict):raise ValueError('all approved geometry roles required')
     return spec
 def read_header(view,source,row,metadata_sha256,declared_vertical=None):
+    from pyproj import CRS
+    from skippercast.coastal import vertical
+    from .metadata_bag import inspect_metadata
+    from .adapter_bag import _reviewed_horizontal_crs
     survey=Path(urlparse(row['url']).path).name.split('_')[0]
     metadata=inspect_metadata(view,survey)
     if metadata['metadata_sha256']!=metadata_sha256 or metadata.get('vertical_datum')!='MLLW' or metadata.get('uncertainty_type')!='productUncert':
@@ -87,6 +92,10 @@ def read_header(view,source,row,metadata_sha256,declared_vertical=None):
             horizontal_crs=horizontal[0].to_wkt(),compound_crs=crs.to_wkt(),observed_vertical=observed,
             vertical=block,metadata_sha256=metadata_sha256,metadata=metadata)
 def plan_header(header,spec):
+    from affine import Affine
+    from pyproj import CRS
+    from shapely.geometry import box
+    from skippercast.coastal import vertical
     source=header['source'];validate_spec(spec,source)
     dims=header.get('shape');values=header.get('transform')
     if header.get('driver')!='BAG' or type(header.get('count')) is not int or header['count']!=2:

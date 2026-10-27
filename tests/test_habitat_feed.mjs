@@ -7,11 +7,12 @@ import {createHash} from 'node:crypto';
 import test from 'node:test';
 import {signal} from '@preact/signals';
 import {validCurrentField} from '../packages/coast/src/state/current-layer.ts';
-import {regionalCurrentsStatus} from '../web/map/currents.ts';
+import {createCurrents, currentsState, currentsStatus, regionalCurrentsStatus} from '../web/map/currents.ts';
 import {habitatManifestURL, habitatTileURL, regionalCurrents, regionalSST} from '../web/map/habitat-feed.ts';
 import {railNotes} from '../web/map/layers.ts';
 import {readPalette} from '../web/map/palette.ts';
-import {createWaterTemp, regionalStatus, waterTempState} from '../web/map/sst.ts';
+import {analysisStatus, createWaterTemp, regionalStatus, waterTempState} from '../web/map/sst.ts';
+import {watchOffline} from '../web/map/offline.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
 import {feedServer, wcofsFeed} from './helpers/wcofs-feed.mjs';
 
@@ -58,6 +59,55 @@ function server({manifest, tiles}, {manifestStatus = 200, tileStatus = 200} = {}
 }
 const read = (f, opts) => regionalSST(REGION, {fetchFn: server(f, opts).fetchFn, page: PAGE, now: NOW});
 
+test('offline ocean misses say not saved, while online, invalid and expired data retain their reasons', async () => {
+  for (const reader of [regionalSST, regionalCurrents]) {
+    const missed = await reader(REGION, {fetchFn: async () => { throw new TypeError('offline'); }, page: PAGE, now: NOW});
+    assert.deepEqual(missed, {state: 'error', network: true});
+    const status = reader === regionalSST
+      ? offline => regionalStatus(true, missed, AT, NOW, TZ, offline)
+      : offline => regionalCurrentsStatus('wcofs', missed, AT, NOW, TZ, offline);
+    assert.equal(status(true).note, 'not saved for offline');
+    assert.equal(status(true).drawn, null);
+    assert.equal(status(false).note, 'unavailable');
+  }
+  assert.equal(regionalStatus(true, {state: 'error'}, AT, NOW, TZ, true).note, 'unavailable');
+  assert.equal(regionalCurrentsStatus('wcofs', {state: 'error'}, AT, NOW, TZ, true).note, 'unavailable');
+  for (const status of [
+    (state, offline) => analysisStatus(true, state, null, AT, NOW, TZ, offline),
+    (state, offline) => currentsStatus('wcofs', state, null, AT, NOW, TZ, offline),
+  ]) {
+    assert.equal(status('error', true).note, 'not saved for offline');
+    assert.equal(status('error', false).note, 'unavailable');
+    assert.equal(status('invalid', true).note, 'unavailable');
+    assert.equal(status('expired', true).note, 'expired');
+  }
+  assert.equal(analysisStatus(false, 'error', null, AT, NOW, TZ, true).note, '');
+  assert.equal(currentsStatus('off', 'error', null, AT, NOW, TZ, true).note, '');
+});
+
+test('connectivity status follows offline and online events and removes its listeners', () => {
+  const navigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const old = {addEventListener: globalThis.addEventListener, removeEventListener: globalThis.removeEventListener};
+  const events = new EventTarget(), connection = {onLine: true};
+  Object.defineProperty(globalThis, 'navigator', {value: connection, configurable: true});
+  globalThis.addEventListener = events.addEventListener.bind(events);
+  globalThis.removeEventListener = events.removeEventListener.bind(events);
+  try {
+    const watched = watchOffline();
+    assert.equal(watched.offline.value, false);
+    connection.onLine = false; events.dispatchEvent(new Event('offline'));
+    assert.equal(watched.offline.value, true);
+    connection.onLine = true; events.dispatchEvent(new Event('online'));
+    assert.equal(watched.offline.value, false);
+    watched.destroy();
+    connection.onLine = false; events.dispatchEvent(new Event('offline'));
+    assert.equal(watched.offline.value, false);
+  } finally {
+    Object.assign(globalThis, old);
+    if (navigator) Object.defineProperty(globalThis, 'navigator', navigator); else delete globalThis.navigator;
+  }
+});
+
 test('tile references stay inside the manifest\'s own region folder', () => {
   const manifestURL = habitatManifestURL(REGION, PAGE), record = feed().tiles[0].record;
   assert.equal(manifestURL, `${BASE}habitat-dynamics.json`);
@@ -74,6 +124,7 @@ test('a checked feed becomes the report\'s analysis shape, in °F, without land 
   const f = feed(), got = await read(f);
   assert.equal(got.state, 'ready');
   assert.equal(got.product, 'NOAA Geo-Polar Blended night SST');
+  assert.deepEqual(regionalStatus(true, got, AT, NOW, TZ, true), regionalStatus(true, got, AT, NOW, TZ), 'usable saved SST is not mislabelled missing');
   assert.equal(got.maxAgeMs, 72 * HOUR);
   const {points, ...rest} = got.sst;
   assert.deepEqual(rest, {sourceId: 'noaa-blended-sst', analysedAt: '2026-10-15T12:00:00.000Z', fetchedAt: '2026-10-16T06:00:00Z', nativeResolutionDeg: 0.05,
@@ -161,6 +212,34 @@ const settle = () => new Promise(resolve => setImmediate(resolve));
 /** Waits until `done()` (the tiles' SHA-256 checks are asynchronous and slow under a loaded suite), at most 5 s. */
 async function until(done) { for (const end = Date.now() + 5000; !done() && Date.now() < end;) await new Promise(resolve => setTimeout(resolve, 5)); }
 
+test('Morro Bay layers display the offline reason on startup and update it on reconnect', () => {
+  browser(`${PAGE}?region=morro-bay&layers=water-temp&current=wcofs`);
+  const navigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const old = {addEventListener: globalThis.addEventListener, removeEventListener: globalThis.removeEventListener};
+  const events = new EventTarget(), connection = {onLine: false};
+  Object.defineProperty(globalThis, 'navigator', {value: connection, configurable: true});
+  globalThis.addEventListener = events.addEventListener.bind(events);
+  globalThis.removeEventListener = events.removeEventListener.bind(events);
+  const data = {coastReport: signal(null), coastOcean: signal(null), coastStatus: signal({report: 'error', ocean: 'error'}), setPlace() {}, load: async () => {}};
+  const options = {zone: () => TZ, place: () => ({regionId: 'morro-bay'}), data, now: () => NOW, palette: () => readPalette(name => `token(${name})`)};
+  let water, currents;
+  try {
+    water = createWaterTemp({...options, engine: signal(engine())});
+    currents = createCurrents({...options, view: {}, doc: null, source: () => 'wcofs'});
+    assert.equal(railNotes.value['water-temp'], 'not saved for offline');
+    assert.equal(currentsState.value.note, 'not saved for offline');
+    assert.match(waterTempState.value.reason, /Save Coastal readings/);
+    assert.match(currentsState.value.reason, /Save Coastal readings/);
+    connection.onLine = true; events.dispatchEvent(new Event('online'));
+    assert.equal(railNotes.value['water-temp'], 'unavailable');
+    assert.equal(currentsState.value.note, 'unavailable');
+  } finally {
+    water?.destroy(); currents?.destroy();
+    Object.assign(globalThis, old);
+    if (navigator) Object.defineProperty(globalThis, 'navigator', navigator); else delete globalThis.navigator;
+  }
+});
+
 test('a place with no local report draws its region\'s feed; a bound place never asks for it', async t => {
   browser(`${PAGE}?region=${REGION}&layers=none`);
   const e = engine(), s = server(feed());
@@ -240,6 +319,10 @@ test('Currents from the feed: the forecast frame and its grid, its last frame wh
   assert.equal(regionalCurrentsStatus('off', ready, C_AT, C_NOW, TZ).note, '');
   assert.equal(regionalCurrentsStatus('wcofs', null, C_AT, C_NOW, TZ).note, 'loading');
   const drawn = regionalCurrentsStatus('wcofs', ready, C_AT, C_NOW, TZ);
+  const saved = regionalCurrentsStatus('wcofs', ready, C_AT, C_NOW, TZ, true);
+  assert.equal(saved.note, drawn.note, 'usable saved currents are not mislabelled missing');
+  assert.equal(saved.drawn.frame, drawn.drawn.frame);
+  assert.equal(saved.drawn.expiresAt, drawn.drawn.expiresAt, 'the existing age gate is unchanged');
   assert.equal(drawn.note, 'forecast Wed 5 am');
   assert.equal(drawn.drawn.frame.validAt, '2026-10-07T12:00:00.000Z');
   assert.match(drawn.basis, /^NOAA WCOFS surface forecast, about 4 km, issued 9 h ago;/);

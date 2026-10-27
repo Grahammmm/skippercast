@@ -7,7 +7,7 @@
 // itself never opens on its own.
 import {render} from 'preact';
 import {effect} from '@preact/signals';
-import {configureStore, coast, profile, region, species, startURLSync} from '../state.ts';
+import {configureStore, coast, loadCoordinateFormat, profile, region, species, startURLSync} from '../state.ts';
 import {savedHomeURL} from '../ports.ts';
 import {loadCruise, loadLimits} from '../limits.ts';
 import {loadReach} from '../reach.ts';
@@ -19,6 +19,7 @@ import {regionPlace} from '../map/currents.ts';
 import {initTelemetry} from '../telemetry.ts';
 
 configureStore({v2: true});
+loadCoordinateFormat();
 startURLSync();
 // Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
 initTelemetry();
