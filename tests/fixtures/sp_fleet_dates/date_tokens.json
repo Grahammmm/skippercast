@@ -1,0 +1,15 @@
+{
+  "about": "Synthetic last_date tokens for tests/test_sp_fleet_dates.mjs (SP-FLEET-DATES). No real cells, vessels or dates from any feed. A public cell's last_date must be an exact YYYY-MM-DD calendar date; every valid token here is on or before the frozen test cutoff 2026-10-20.",
+  "valid": ["2026-10-20", "2026-10-19", "2026-01-01", "2025-12-31", "2024-02-29", "2000-02-29", "2020-01-31", "2020-04-30", "1999-12-31"],
+  "invalid": {
+    "empty or whitespace": ["", " ", "  ", "\t", "\n", "\u00a0"],
+    "padded with whitespace": [" 2020-01-01", "2020-01-01 ", "2020-01-01\n", "\t2020-01-01"],
+    "partial or unpadded": ["2020", "2020-01", "2020-1-01", "2020-01-1", "2020-1-1", "20-01-01", "202-01-01", "02020-01-01", "+002020-01-01", "2020-01-"],
+    "timestamp-shaped": ["2020-01-01T00:00:00Z", "2020-01-01T00:00:00.000Z", "2020-01-01T12:00", "2020-01-01 00:00", "2020-01-01Z", "2020-01-01+00:00"],
+    "other date shapes": ["2020/01/01", "20200101", "2020.01.01", "01-01-2020", "Jan 1 2020", "\uff12\uff10\uff12\uff10-01-01", "2020-01-0\u0661", "abcd-ef-gh"],
+    "invalid month or day": ["2020-00-10", "2020-13-01", "2020-01-00", "2020-01-32", "2020-99-99"],
+    "non-leap February 29": ["2021-02-29", "1900-02-29", "2100-02-29", "2026-02-29"],
+    "February 30 and short months": ["2020-02-30", "2020-02-31", "2020-04-31", "2020-06-31", "2020-09-31", "2020-11-31"]
+  },
+  "normalized_by_date_parse": ["2021-02-29", "2020-02-30", "2020-02-31", "2020-04-31", "1900-02-29", "2026-02-29"]
+}

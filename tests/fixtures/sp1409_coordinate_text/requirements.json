@@ -1,0 +1,28 @@
+{
+  "spec": "SP-14-v1",
+  "card": "SP1409-COORDINATE-TEXT",
+  "staged_base": "33734f90073a2150eac5a418564ea314c4a591ac",
+  "primary_baseline_sha256": "6dee4f8a557ff2209a7a75f752bc4be719aad24660aad73ef2f1b0c648fe33df",
+  "requirements": {
+    "A1": "Remove unprimed DDM sentence; retain next sentence; one to three degree digits, bounded case-insensitive compass token, optional degree/minute symbols; preserve existing decimal/degree-sign/Loran-like filters.",
+    "A2": "Keep ordinary depth, weight, line strength, clock and dimension text; no bare-number filter or catalog changes.",
+    "A3": "Test complete real module publicOnly/publicAreas/strategyFor; preserve order, null-on-empty and committed catalog controls.",
+    "A4": "Before product edit exactly primary regression fails semantically and healthy control passes, child exit 1, no skips/errors. Same frozen pair passes after edit."
+  },
+  "baseline_test_names": ["primary regression", "healthy control"],
+  "focused_test_names": [
+    "primary regression",
+    "healthy control",
+    "A1 coordinate grammar variants drop the sentence without replacement",
+    "A2 ordinary fishing units clock dimensions and bounded tokens survive",
+    "A3 publicOnly preserves order and null-on-empty behavior",
+    "A3 publicAreas keeps committed public catalog and excludes invented grounds",
+    "A3 strategyFor retains unchanged catalog strategy and null controls"
+  ],
+  "regression_files": ["tests/test_advisor_tools.mjs"],
+  "author_model": "gpt-6.1-sol",
+  "author_provider": "openai-codex",
+  "author_profile": "sol-reviewer",
+  "author_run": 1808,
+  "sole_reviewer": "opus-coder-bopus / actual claude-opus-5-5"
+}
