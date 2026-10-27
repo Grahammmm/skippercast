@@ -46,10 +46,24 @@ def government_row(row, rows, visited=()):
                for parent in row.get('derived_from', []))
 
 
+def _validate_catalog_ids(surveys):
+    """Every lineage key must identify exactly one unchanged catalog row."""
+    if not isinstance(surveys, list):
+        raise ValueError('Invalid government survey inventory: expected a list')
+    seen = set()
+    for row in surveys:
+        if not isinstance(row, dict) or not isinstance(row.get('id'), str) or not row['id']:
+            raise ValueError('Invalid government survey inventory: expected nonempty string ids')
+        if row['id'] in seen:
+            raise ValueError('Duplicate government survey id')
+        seen.add(row['id'])
+
+
 def scoped_manifest(root, manifest):
     scope = processing_scope(root)
     if scope == 'all':
         return manifest, None
+    _validate_catalog_ids(manifest.get('surveys'))
     rows = {row['id']: row for row in manifest['surveys']}
     admitted = [row for row in manifest['surveys'] if government_row(row, rows)]
     admitted_ids = {row['id'] for row in admitted}
