@@ -81,6 +81,8 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // CI6-09 merge-forward retains the partition selector alongside wind, shelf contours, chlorophyll and Stations.
 // Legend.tsx changes only the selector import/control from main; existing text/muted glass roles and the Reports
 // catch path are unchanged. check_contrast.mjs rebinds only the Legend hash and line citations; contrast() is untouched.
+// COAST C3 rights adapter: package.json adds only a `check` script alias for `pnpm typecheck`; no dependency,
+// build or served asset changes, and the Reports catch path is untouched. Only the package.json hash is rebound.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
   "web/app/App.tsx": "d8486f26dafbb97b0499cd7ef536c386c446c1b002c44b219d42151a5ab11446",
@@ -100,7 +102,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
   "scripts/check_contrast.mjs": "1701f0ae0b6283f517c97b5fd5582c25400705b3f0101a0f24e79173a3af0c83",
-  "package.json": "4675341e4ec0640f12cb96fe7ad6683739c4d601a32557a5e218430632db8719",
+  "package.json": "714c1869b08a1bb2c915406050167c41ea9c57431f2fef5449b4ea8c6d3f080b",
   "pnpm-lock.yaml": "68b00d873cb91ed71fb473d7145c31127602dfd3073ed847c0fbef7795dcc153",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
