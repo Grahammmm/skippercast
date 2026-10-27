@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Save up to three NOAA tide prediction stations per region in this browser and switch between them; existing choices migrate, the region default is unchanged, and offline packs still include only the active station.
 - SP-BAR-EVENTS: The harbour bar tide estimate ignores malformed event rows and stays unknown when either selected tide timestamp has conflicting high/low tags. Ordinary ebb/flood timing, bar hazard rules and the Coast Guard check reminder are unchanged; this is not clearance to cross.
 
 - SP-RULES-STATUS: The rules line on a mark card no longer says "Verified" when the rules state is "Check rules" or "Choose fishing location". That covers a trip date outside the reviewed rule period, a review time later than allowed, and a season that applies only within a geographic area, even when every source check is fresh. These now read "Needs recheck · last check <date>". Seasons, limits, source checks and their wording are unchanged. A verified date only records when the sources were checked; it is not clearance to fish.
