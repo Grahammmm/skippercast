@@ -16,7 +16,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-FIXTURE = Path(__file__).resolve().parents[1] / 'fixtures/sc13a-scope-output-confinement/shapes.json'
+from tests._support import FIXTURES, ROOT
+
+FIXTURE = FIXTURES / 'sc13a-scope-output-confinement/shapes.json'
 CATEGORIES = ('reference_dir', 'ledger_path', 'reaches_path', 'cells_path',
               'build_receipt_path', 'screen_dir')
 DIRECTORIES = {'reference_dir', 'screen_dir'}
@@ -280,7 +282,7 @@ class ScopeCompatibility(ScopeCase):
         path_before = sys.path
         with patch.object(sys, 'path', list(sys.path)):
             collected = unittest.TestLoader().discover(
-                str(Path(__file__).parent), pattern=Path(__file__).name)
+                str(ROOT / 'tests/gis'), pattern=Path(__file__).name)
             self.assertGreater(collected.countTestCases(), 0)
             ordinary = sys.modules[Path(__file__).stem]
             self.assertIsNone(ordinary.RUN_ROOT)
@@ -302,7 +304,7 @@ class ScopePreflight(ScopeCase):
             self.assertEqual(contracts.load_catalogs.__defaults__[0], contracts.REPO)
             self.assertEqual(contracts.load_region.__defaults__[0], contracts.REPO)
         self.assertEqual(Path(self.product.__file__).resolve(),
-                         Path(__file__).resolve().parents[2] / 'src/skippercast/seafloor/scope_paths.py')
+                         ROOT / 'src/skippercast/seafloor/scope_paths.py')
 
 
 class ScopeNegativeControl(ScopeCase):
