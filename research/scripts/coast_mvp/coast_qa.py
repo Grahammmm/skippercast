@@ -247,8 +247,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--region-config', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--regional', action='store_true', help='Opt-in bounded native-grid C1 regional QA')
     args = parser.parse_args()
-    result = packet(args.region_config, args.output)
+    if args.regional:
+        if __package__:
+            from .coast_qa_regional import packet as regional_packet
+        else:
+            from coast_qa_regional import packet as regional_packet
+        result = regional_packet(args.region_config, args.output)
+    else:
+        result = packet(args.region_config, args.output)
     print(json.dumps(result, allow_nan=False))
 
 

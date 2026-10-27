@@ -47,7 +47,7 @@ bytes, QA support/denominator/config and presentation artifacts remain bound.
 Digest equality is asserted across distinct fresh output roots.
 
 Local acceptance (all writes under the admitted candidate):
-  .venv/bin/pytest research/tests/test_coast_segment.py -q
+  .venv/bin/pytest research/tests/gis/test_coast_segment.py -q
 Candidate-pinned compatibility is run by the durable out/run2458-tools runner;
 it preserves complete raw logs and JUnit results. Do not mistake these focused
 and compatibility populations for full CI. The operator still owes the COMPLETE
