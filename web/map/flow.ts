@@ -28,6 +28,20 @@ export const FAST_PERCENTILE = 0.8;
 export const DASH = [11, 43] as const;
 /** At most this many seeds, so streamlines, on any screen: 64 px seeds would trace about 2,000 on a 4K display. */
 export const MAX_PATHS = 300;
+/**
+ * Each proposed step is sampled at most this many px apart, both ends included, before it is
+ * drawn, so a gap of one screen pixel between the midpoint probes still ends the path (a
+ * screen-resolution guarantee, not a sub-pixel geometry proof): six samples per 5 px step.
+ */
+export const SAMPLE_PX = 1;
+
+/** True where `vector` supports every point of the step p → q, sampled at most SAMPLE_PX apart; p is already sampled. */
+function stepSupported(vector: ScreenVector, p: Point, q: Point): boolean {
+  if (!vector(q.x, q.y)) return false;
+  const n = Math.max(1, Math.ceil(Math.hypot(q.x - p.x, q.y - p.y) / SAMPLE_PX - 1e-9));
+  for (let k = 1; k < n; k++) if (!vector(p.x + (q.x - p.x) * k / n, p.y + (q.y - p.y) * k / n)) return false;
+  return true;
+}
 
 /** Seed spacing in px: fish's 64, widened evenly on a large screen so that at most MAX_PATHS seeds fall on it. */
 export function seedSpacing(width: number, height: number): number {
@@ -85,7 +99,7 @@ export function flowPaths(vector: ScreenVector, width: number, height: number, f
           const b = vector(p.x + sign * a.x * STEP_PX / 2, p.y + sign * a.y * STEP_PX / 2);
           if (!b) break;
           const next = {x: p.x + sign * b.x * STEP_PX, y: p.y + sign * b.y * STEP_PX};
-          if (!inside(next) || !vector(next.x, next.y)) break;
+          if (!inside(next) || !stepSupported(vector, p, next)) break;
           points.push(next);
           p = next;
         }

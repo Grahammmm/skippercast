@@ -34,8 +34,10 @@ const NOT_FOUND = (): Response => json({error: 'Not found'}, 404);
 /** The stored URL as a redirect target: https, a host, no credentials, bounded; else null. */
 export function safeTarget(stored: unknown): URL | null {
   if (typeof stored !== 'string' || !stored || stored.length > MAX_URL) return null;
+  const candidate = stored.trim();
+  if (/[\u0000-\u001f\u007f]/.test(candidate)) return null;
   let url: URL;
-  try { url = new URL(stored.trim()); } catch { return null; }
+  try { url = new URL(candidate); } catch { return null; }
   if (url.protocol !== 'https:' || !url.hostname || url.username || url.password) return null;
   return url;
 }

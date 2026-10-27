@@ -1,0 +1,20 @@
+{
+  "synthetic": true,
+  "schema_basis": "advisor_boats and advisor_reports migrations; tests/test_advisor_tools.mjs seedTrips",
+  "now": "2026-10-25T18:00:00Z",
+  "pacific_evening": "2026-10-26T06:30:00Z",
+  "today": "2026-10-25",
+  "yesterday": "2026-10-24",
+  "tomorrow": "2026-10-26",
+  "much_later": "2027-04-01",
+  "since": "2026-08-26",
+  "before_since": "2026-08-25",
+  "boats": [
+    {"id": "alpha", "slug": "alpha", "name": "Alpha", "port": "morro-bay", "region": "morro-bay", "status": "verified", "landing": "Example Landing", "booking_url": "https://example.com/alpha"},
+    {"id": "beta", "slug": "beta", "name": "Beta", "port": "morro-bay", "region": "morro-bay", "status": "verified", "landing": null, "booking_url": null}
+  ],
+  "reports": [
+    {"id": "alpha-past", "boat_id": "alpha", "report_date": "2026-10-24", "trip_type": "half-day", "status": "published"},
+    {"id": "beta-past", "boat_id": "beta", "report_date": "2026-10-23", "trip_type": "full-day", "status": "published"}
+  ]
+}
