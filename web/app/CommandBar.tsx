@@ -61,7 +61,7 @@ export function TargetSelect() {
       <label>Target
         <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
           {groups.map(g => (
-            <optgroup key={g.label} label={g.label}>{g.options.map(t => <option key={t.id} value={t.id} disabled={t.group === 'other'}>{optionText(t)}</option>)}</optgroup>
+            <optgroup key={g.label} label={g.label}>{g.options.map(t => <option key={t.id} value={t.id} disabled={!!t.unavailable}>{optionText(t)}</option>)}</optgroup>
           ))}
         </select>
       </label>

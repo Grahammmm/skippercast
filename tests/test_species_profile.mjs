@@ -40,6 +40,7 @@ async function loadMenu() {
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {TargetSelect} from './web/app/CommandBar.tsx';
+      export {LookFor} from './web/app/LayerRail.tsx';
       export * as state from './web/state.ts';
       export {regionAtlas, regionPlans, regionUnavailable} from './web/species.ts';
       export {render} from 'preact-render-to-string';
@@ -271,5 +272,27 @@ test('CI6-02: the command bar shows each target\'s state and lists the region\'s
   assert.match(html, /<optgroup label="Other targets"><option value="lobster" disabled>/, 'listed, never selectable');
   // The search narrows by name, never by state words.
   assert.deepEqual(options(html), ['lingcod', 'reef', 'halibut', 'salmon', 'albacore', 'bluefin', 'dungeness', 'rockfish-reef', 'gopher-rockfish', 'cabezon-shallow-reef']);
+  m.regionPlans.value = null; m.regionUnavailable.value = null;
+});
+
+test('CI6-02: a linked target the region names unavailable stays listed but disabled in both pickers', async () => {
+  const m = await loadMenu();
+  m.state.configureStore({v2: true, storage: null});
+  const option = (html, id) => html.match(new RegExp(`<option[^>]*value="${id}"[^>]*>`))?.[0] ?? '';
+  for (const [region, target] of [['morro-bay', 'lobster'], ['southern-california', 'salmon'], ['southern-california', 'dungeness']]) {
+    m.state.syncFromURL(`${ORIGIN}?region=${region}&profile=boat&target=${target}`);
+    m.regionPlans.value = {region, plans: plansOf(region)};
+    m.regionUnavailable.value = {region, targets: unavailableTargets(regionData(region))};
+    for (const [name, picker] of [['command bar', m.TargetSelect], ['rail', m.LookFor]]) {
+      const html = m.render(m.h(picker)), tag = option(html, target);
+      assert.ok(tag, `${name} lists ${target} in ${region}`);
+      assert.match(tag, /\bdisabled\b/, `${name}: ${target} in ${region} is not selectable`);
+      assert.equal((html.match(new RegExp(`value="${target}"`, 'g')) ?? []).length, 1, `${name}: ${target} listed once`);
+    }
+  }
+  // A target the region does not name unavailable stays selectable.
+  m.state.syncFromURL(`${ORIGIN}?region=morro-bay&profile=boat&target=lingcod`);
+  m.regionUnavailable.value = {region: 'morro-bay', targets: unavailableTargets(regionData('morro-bay'))};
+  for (const picker of [m.TargetSelect, m.LookFor]) assert.doesNotMatch(option(m.render(m.h(picker)), 'lingcod'), /\bdisabled\b/);
   m.regionPlans.value = null; m.regionUnavailable.value = null;
 });

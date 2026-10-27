@@ -41,7 +41,11 @@ export const TARGET_STATE_TEXT: Readonly<Record<TargetState, string>> = {
   ranked: 'ranked by mapped habitat', plan: 'search plan only', unresearched: 'not researched in this region',
 };
 /** A target as the menu lists it; `state` is null while the data that decides it is still loading. */
-export interface TargetOption {readonly id: string; readonly label: string; readonly group?: TargetGroup; readonly state?: TargetState | null}
+export interface TargetOption {
+  readonly id: string; readonly label: string; readonly group?: TargetGroup; readonly state?: TargetState | null;
+  /** The region names it unavailable (`map.unavailable_targets`): listed, never selectable, whichever group holds it. */
+  readonly unavailable?: boolean;
+}
 
 /** The region's search plans, keyed by region so another region's never lists. */
 export const regionPlans = signal<{region: string; plans: Readonly<Record<string, Plan>>} | null>(null);
@@ -175,7 +179,7 @@ export function targetsFor(profile: Profile, region: string | null, plans: Reado
 /** The region's unavailable targets that `list` does not already hold: listed in the `other` group, never selectable. */
 export function unresearchedTargets(list: readonly TargetOption[], unavailable: Readonly<Record<string, string>>): TargetOption[] {
   const listed = new Set(list.map(t => t.id));
-  return Object.keys(unavailable).filter(id => !listed.has(id)).map(id => ({id, label: title(id), group: 'other' as const, state: 'unresearched' as const}));
+  return Object.keys(unavailable).filter(id => !listed.has(id)).map(id => ({id, label: title(id), group: 'other' as const, state: 'unresearched' as const, unavailable: true}));
 }
 
 /** What a menu option reads: the target's name, then its state once known ("Chinook salmon · search plan only"). */
@@ -208,7 +212,10 @@ export function regionTargets(profile: Profile, region: string | null, current: 
 
 /** The command bar's and the rail's menu: the region's targets, then its unavailable targets, in their groups. */
 export function regionMenu(profile: Profile, region: string | null, current: string | null, list: readonly TargetOption[] = regionTargets(profile, region, current)) {
-  return targetGroups([...list, ...unresearchedTargets(list, regionCoverage(region).unavailable ?? {})], PROFILE_TABLE[profile].label);
+  const unavailable = regionCoverage(region).unavailable ?? {};
+  // A link's or the profile's own target keeps its group, but the region's unavailable list still disables it.
+  const marked = list.map(t => Object.hasOwn(unavailable, t.id) ? {...t, unavailable: true} : t);
+  return targetGroups([...marked, ...unresearchedTargets(list, unavailable)], PROFILE_TABLE[profile].label);
 }
 
 /** The current target's label in `region` (the command bar's own words), for the legend's density line (#620). */
