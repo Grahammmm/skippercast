@@ -306,9 +306,12 @@ assigns; this PR stays design-only.
 
 ## 6. Owner decisions (acceptance 5)
 
-Deadline for all three: **16:00 PDT, October 20, 2026**. NEEDS G 1 and 2
-are reversible and proceed with the recommended option after the deadline,
-with a comment on the card. NEEDS G 3 is N-4 and waits for G.
+Deadline for all three: **16:00 PDT, October 20, 2026**. NEEDS G 1 is
+reversible and proceeds with the recommended option after the deadline,
+with a comment on the card; that option only opens a source-review card and
+uses no data. NEEDS G 2 stays an open G decision after the deadline: it
+retains a new operational dataset, which is not a deadline-default class.
+NEEDS G 3 is N-4 and waits for G.
 
 **NEEDS G 1: outcome data for validation**
 
@@ -335,6 +338,10 @@ with a comment on the card. NEEDS G 3 is N-4 and waits for G.
 3. No archive; rely on re-downloading past cycles from NOAA. Downside:
    past-cycle availability is unverified, so forecast-hour tests may never
    be possible.
+
+Choosing an option here does not start an archive. Any archive run or
+publication needs its own separately admitted and approved execution gate;
+storage paths, format and retention mechanics stay with the internal owner.
 
 **NEEDS G 3: any number on a place (already recorded as N-4 in the parity plan)**
 
