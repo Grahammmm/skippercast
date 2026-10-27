@@ -17,9 +17,10 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-PIN = 'de60e9c2efc706f23493e285376e0343e9d48e73'
+# Current PR base; keep the protected byte checks explicit and fail closed.
+PIN = '32f24af48837826c155b8733f239f45b25f37832'
 PROTECTED = {
-    'src/skippercast/seafloor/rights.py': '7411657fefaea64f73bbd566ba1d37eb0f4d787b83a2afcec117d882e579ee0d',
+    'src/skippercast/seafloor/rights.py': '35253bfa59aea113bfa74252d61471065fc0e386716120e02cf2b183917c01fb',
     'tests/contract/test_seafloor_source_rights.py': '34426c86d2e868fd0e038a761295535c756cb382f937b6f5d00c79d9189db6c8',
     'scripts/check_repository.py': 'cf39ee4dab44893fae58d4553c8a159942c5674f5ce33f22ca9c441d0a74dec8',
 }
@@ -80,7 +81,7 @@ def portable_copy(destination):
     destination.mkdir()
     for name in ('src', 'catalog', 'regions'):
         shutil.copytree(ROOT / name, destination / name, ignore=shutil.ignore_patterns('__pycache__'))
-    for name in AUTHORED:
+    for name in (*AUTHORED, 'tests/_support.py'):
         source = ROOT / name
         if source.exists():
             target = destination / name
