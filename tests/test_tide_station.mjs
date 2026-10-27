@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {stationsInRegion, nearestTideStation, tideRegion, readTideChoice, saveTideChoice, tidePredictionsURL, parseTidePredictions, loadTideReading, tidePackURLs, saveTidePack, withTideSelection, TIDE_DIRECTORY_URL} from '../web/tide-stations.ts';
+import {stationsInRegion, nearestTideStation, tideRegion, readTideChoice, saveTideChoice, readSavedTideStations, saveSavedTideStations, tideChoiceKey, tideSavedKey, tidePredictionsURL, parseTidePredictions, loadTideReading, tidePackURLs, saveTidePack, withTideSelection, TIDE_DIRECTORY_URL} from '../web/tide-stations.ts';
 import {createTideSelection} from '../web/tide-selection.ts';
 import {buildCoastBrief} from '../web/brief/model.ts';
 import {slo} from '../packages/coast/src/counties.ts';
@@ -16,6 +16,176 @@ const curve = {predictions: [{t: '2026-10-08 17:00', v: '1.2'}, {t: '2026-10-08 
 const now = new Date('2026-10-08T17:00:00Z');
 const fetcher = async url => Response.json(url === TIDE_DIRECTORY_URL ? directory : new URL(url).searchParams.get('interval') === 'hilo' ? hilo : curve);
 const flush = () => new Promise(resolve => setImmediate(resolve));
+const memory = () => {
+  const values = new Map();
+  return {values, getItem: k => values.get(k) ?? null, setItem: (k, v) => values.set(k, v), removeItem: k => values.delete(k)};
+};
+const c = {...b, id: '9000005', name: 'Fixture third'}, d = {...a, id: '9000006', name: 'Fixture fourth'}, e = {...b, id: '9000007', name: 'Fixture fifth'};
+const savedFetcher = async url => url === TIDE_DIRECTORY_URL ? Response.json({stations: [a, b, c, d, e]}) : fetcher(url);
+
+test('legacy single choice migrates once to a one-element saved list and active choice', () => {
+  const storage = memory();
+  storage.setItem(tideChoiceKey('one'), b.id);
+  assert.deepEqual(readSavedTideStations('one', storage), {saved: [b.id], active: b.id});
+  assert.deepEqual(JSON.parse(storage.getItem(tideSavedKey('one'))), {saved: [b.id], active: b.id});
+  assert.equal(storage.getItem(tideChoiceKey('one')), null);
+  storage.setItem(tideChoiceKey('one'), c.id);
+  assert.deepEqual(readSavedTideStations('one', storage), {saved: [b.id], active: b.id}, 'v2 takes precedence');
+  assert.deepEqual(readSavedTideStations('other', storage), {saved: [], active: null});
+  const failed = memory(); failed.setItem(tideChoiceKey('one'), b.id);
+  failed.setItem = () => { throw Error('blocked'); };
+  assert.deepEqual(readSavedTideStations('one', failed), {saved: [b.id], active: b.id});
+  assert.equal(failed.getItem(tideChoiceKey('one')), b.id, 'prior state survives write failure');
+});
+
+test('malformed saved state is not accepted or written over prior state', () => {
+  const storage = memory();
+  const invalid = [null, {}, {saved: null, active: null}, {saved: [b.id, b.id], active: b.id},
+    {saved: [b.id, c.id, d.id, e.id], active: b.id}, {saved: ['bad'], active: null},
+    {saved: [b.id], active: c.id}, {saved: [b.id]}, {saved: [1234567], active: null}];
+  for (const value of invalid) {
+    storage.setItem(tideSavedKey('one'), JSON.stringify(value));
+    assert.deepEqual(readSavedTideStations('one', storage), {saved: [], active: null});
+    storage.setItem(tideSavedKey('one'), 'previous');
+    saveSavedTideStations('one', value, storage);
+    assert.equal(storage.getItem(tideSavedKey('one')), 'previous');
+  }
+  storage.setItem(tideSavedKey('one'), '{');
+  assert.deepEqual(readSavedTideStations('one', storage), {saved: [], active: null});
+});
+
+test('saved list adds three, rejects fourth with a message, switches, removes and restores per region', async () => {
+  const storage = memory(), model = createTideSelection(savedFetcher, storage);
+  model.configure(config); await model.list();
+  for (const station of [b, c, d]) { assert.equal(model.choose(station.id), true); await model.refresh(); }
+  assert.deepEqual(model.saved.value, [b.id, c.id, d.id]);
+  const before = storage.getItem(tideSavedKey(config.id)), reading = model.reading.value;
+  assert.equal(model.choose(e.id), false);
+  assert.match(model.notice.value, /three.*Remove one/);
+  assert.equal(model.error.value, '', 'cap notice is not a data failure');
+  assert.deepEqual(model.saved.value, [b.id, c.id, d.id]);
+  assert.equal(model.choice.value, d.id); assert.equal(model.reading.value, reading);
+  assert.equal(storage.getItem(tideSavedKey(config.id)), before);
+  assert.equal(model.choose(b.id), true); await model.refresh();
+  assert.deepEqual(model.saved.value, [b.id, c.id, d.id], 'switch does not duplicate');
+  const brief = buildCoastBrief({report: fixture, county: slo, areaId: 'central', profile: 'boat', date: '2026-10-08', now});
+  const overlay = withTideSelection(brief, model.reading.value.station, model.reading.value, slo.timezone, now);
+  assert.match(overlay.tiles.find(t => t.id === 'tide').source, /9000002 Fixture subordinate/);
+  assert.equal(overlay.tiles.find(t => t.id === 'tide').value, 3.2);
+  model.remove(c.id); assert.equal(model.choice.value, b.id); assert.ok(model.reading.value);
+  assert.equal(model.choose(e.id), true); await model.refresh();
+  const restarted = createTideSelection(savedFetcher, storage);
+  restarted.configure(config); await restarted.refresh();
+  assert.deepEqual(restarted.saved.value, [b.id, d.id, e.id]); assert.equal(restarted.choice.value, e.id);
+  restarted.configure({...config, id: 'other'});
+  assert.deepEqual(restarted.saved.value, []); assert.equal(restarted.choice.value, null);
+  restarted.configure(config); await restarted.refresh();
+  restarted.remove(e.id); assert.equal(restarted.choice.value, null); assert.equal(restarted.reading.value, null);
+  assert.deepEqual(restarted.saved.value, [b.id, d.id]);
+  restarted.choose(null); restarted.remove('9999999');
+  assert.deepEqual(readSavedTideStations(config.id, storage), {saved: [b.id, d.id], active: null});
+});
+
+test('non-active removal preserves a prediction failure for the active station', async () => {
+  const storage = memory();
+  const model = createTideSelection(async url => url === TIDE_DIRECTORY_URL
+    ? savedFetcher(url) : new Response('Unavailable', {status: 500}), storage);
+  model.configure(config); await model.list();
+  for (const station of [b, c]) { assert.equal(model.choose(station.id), true); await model.refresh(); }
+  const error = model.error.value, reading = model.reading.value;
+  assert.match(error, /Some chosen-station predictions are unavailable/);
+  assert.equal(reading.failed, true);
+  model.remove(b.id);
+  assert.equal(model.error.value, error, 'removing another saved station must not hide a data failure');
+  assert.equal(model.reading.value, reading); assert.equal(model.choice.value, c.id);
+  assert.deepEqual(readSavedTideStations(config.id, storage), {saved: [c.id], active: c.id});
+  model.remove(c.id);
+  assert.equal(model.choice.value, null); assert.equal(model.error.value, '');
+});
+
+test('non-active removal preserves a directory failure for the restored active station', async () => {
+  const storage = memory();
+  saveSavedTideStations(config.id, {saved: [b.id, c.id], active: c.id}, storage);
+  const model = createTideSelection(async () => new Response('Unavailable', {status: 500}), storage);
+  model.configure(config); await model.refresh();
+  const error = model.error.value;
+  assert.match(error, /NOAA station directory unavailable/);
+  model.remove(b.id);
+  assert.equal(model.error.value, error, 'removing another saved station must not hide a directory failure');
+  assert.equal(model.reading.value, null); assert.equal(model.choice.value, c.id);
+  assert.deepEqual(readSavedTideStations(config.id, storage), {saved: [c.id], active: c.id});
+});
+
+test('cap refusal preserves the active data failure and exposes a separate notice', async () => {
+  const storage = memory();
+  const model = createTideSelection(async url => url === TIDE_DIRECTORY_URL
+    ? savedFetcher(url) : new Response('Unavailable', {status: 500}), storage);
+  model.configure(config); await model.list();
+  for (const station of [b, c, d]) { assert.equal(model.choose(station.id), true); await model.refresh(); }
+  const error = model.error.value, reading = model.reading.value, before = storage.getItem(tideSavedKey(config.id));
+  assert.match(error, /Some chosen-station predictions are unavailable/); assert.equal(reading.failed, true);
+  assert.equal(model.choose(e.id), false);
+  assert.equal(model.error.value, error, 'a cap refusal must not replace the active data failure');
+  assert.match(model.notice.value, /three.*Remove one/);
+  assert.equal(model.choice.value, d.id); assert.equal(model.reading.value, reading);
+  assert.deepEqual(model.saved.value, [b.id, c.id, d.id]);
+  assert.equal(storage.getItem(tideSavedKey(config.id)), before);
+  model.remove(b.id);
+  assert.equal(model.notice.value, '', 'freeing a slot clears the cap notice, not the data failure');
+  assert.equal(model.error.value, error);
+  assert.equal(model.choose(e.id), true); await model.refresh();
+  assert.equal(model.notice.value, ''); assert.match(model.error.value, /Some chosen-station predictions are unavailable/);
+  assert.equal(model.choose(b.id), false); assert.match(model.notice.value, /three/);
+  assert.equal(model.choose(c.id), true); await model.refresh();
+  assert.equal(model.notice.value, '', 'switching clears the old refusal');
+  assert.equal(model.choose(b.id), false); assert.match(model.notice.value, /three/);
+  model.configure({...config, id: 'other'});
+  assert.equal(model.notice.value, ''); assert.equal(model.error.value, '');
+});
+
+test('offline pack snapshots exactly the active station, never all saved stations', async () => {
+  const model = createTideSelection(savedFetcher, memory());
+  model.configure(config); await model.list();
+  for (const station of [b, c, d]) model.choose(station.id);
+  assert.deepEqual(await model.packURLs(config.id, now.getTime()), tidePackURLs(d, now.getTime()));
+  model.choose(b.id);
+  const pending = model.packURLs(config.id, now.getTime());
+  model.choose(d.id);
+  assert.deepEqual(await pending, tidePackURLs(b, now.getTime()), 'snapshot survives a concurrent switch');
+  model.choose(null);
+  assert.deepEqual(await model.packURLs(config.id), []);
+  assert.deepEqual(model.saved.value, [b.id, c.id, d.id], 'default retains saved list');
+});
+
+test('unavailable restored stations stay named by ID without default substitution or invalid pack', async () => {
+  const storage = memory(); saveSavedTideStations(config.id, {saved: [e.id], active: e.id}, storage);
+  const model = createTideSelection(fetcher, storage);
+  model.configure(config); await model.refresh();
+  assert.equal(model.choice.value, e.id); assert.equal(model.reading.value, null);
+  assert.match(model.error.value, /unavailable in this region/);
+  await assert.rejects(model.packURLs(config.id), /could not be resolved/);
+  model.remove(e.id); assert.deepEqual(model.saved.value, []); assert.equal(model.choice.value, null);
+});
+
+test('migrated model choice resolves the real catalog and blocked storage still permits this visit', async () => {
+  const storage = memory(); storage.setItem(tideChoiceKey(config.id), b.id);
+  const model = createTideSelection(savedFetcher, storage);
+  model.configure(config); await model.refresh();
+  assert.deepEqual(model.saved.value, [b.id]); assert.equal(model.reading.value.station.id, b.id);
+  const blocked = {getItem() { throw Error('blocked'); }, setItem() { throw Error('blocked'); }, removeItem() { throw Error('blocked'); }};
+  const visit = createTideSelection(savedFetcher, blocked);
+  visit.configure(config); await visit.list();
+  assert.equal(visit.choose(c.id), true); await visit.refresh();
+  assert.deepEqual(visit.saved.value, [c.id]); assert.equal(visit.reading.value.station.id, c.id);
+});
+
+test('removing an active station invalidates its outstanding prediction response', async () => {
+  let release;
+  const model = createTideSelection(async url => url === TIDE_DIRECTORY_URL ? Response.json(directory) : new Promise(r => { release = r; }), memory());
+  model.configure(config); await model.list(); model.choose(b.id); await flush();
+  model.remove(b.id); release(Response.json(hilo)); await flush();
+  assert.equal(model.choice.value, null); assert.equal(model.reading.value, null); assert.deepEqual(model.saved.value, []);
+});
 
 test('configured default stays intact and no directory/prediction request runs until selection', async () => {
   const calls = [], model = createTideSelection(async url => { calls.push(url); return fetcher(url); });
