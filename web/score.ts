@@ -128,7 +128,7 @@ export function comfortCosts(
   const crossing =
     finite(c.secondary.height) >= T.crossingSecondaryHeight * S && (angleBetween(c.swell.from, c.secondary.from) ?? -1) >= T.crossingAngle
       ? T.crossingPenalty : 0;
-  const short = chop >= T.shortChopHeight * S && finite(c.chop.period) <= boat.chopPeriod ? T.shortChopPenalty : 0;
+  const short = chop >= T.shortChopHeight * S && Number.isFinite(c.chop.period) && (c.chop.period as number) <= boat.chopPeriod ? T.shortChopPenalty : 0;
   return {wind, gust, sea, chop, costs: {
     wind: Math.max(0, wind - T.comfortWindStart * W) * T.comfortWindSlope / W + Math.max(0, gust - T.comfortGustStart * W) * T.comfortGustSlope / W,
     seas: Math.max(0, sea - T.comfortSeaStart * S) * T.comfortSeaSlope / S,
@@ -273,7 +273,7 @@ export function rateComfort(h: FeedHour, boat: BoatFactors = REFERENCE_BOAT): Co
   const winds = [h.wind, h.other_wind].filter(isNum), seas = [h.sea, h.other_sea].filter(isNum);
   if (!winds.length || !seas.length) return null;
   const gusts = ([[h.wind, h.gust], [h.other_wind, h.other_gust]] as const).filter(([w, g]) => isNum(w) && isNum(g) && g >= w).map(([, g]) => g as number);
-  const complete = [h.wind, h.sea, h.sea_period, h.chop, h.swell, h.swell_from, h.other_wind, h.other_sea].every(isNum) && gusts.length === 2;
+  const complete = [h.wind, h.sea, h.sea_period, h.chop, h.chop_period, h.swell, h.swell_from, h.other_wind, h.other_sea].every(isNum) && gusts.length === 2;
   if (complete) {
     const c: HourConditions = {wind: h.wind, gust: h.gust, sea: {height: h.sea}, chop: {height: h.chop, period: h.chop_period},
       swell: {height: h.swell, from: h.swell_from}, secondary: {height: h.secondary, from: h.secondary_from}};
