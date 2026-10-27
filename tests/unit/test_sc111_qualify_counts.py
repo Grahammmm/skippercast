@@ -13,7 +13,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-REPO = Path(__file__).resolve().parents[2]
+from tests._support import ROOT as REPO
 FIXTURE = REPO / 'tests/fixtures/sc111-qualify-counts/qualification.json'
 RUNNER = REPO / 'tools/run_sc111_qualify_counts.py'
 CATALOG = REPO / 'catalog/surveys.json'
