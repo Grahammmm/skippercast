@@ -1,10 +1,13 @@
 """The discover, resolve and ingest steps (design sections 4, 6, 7 and 9).
 
 - ``discover`` runs the adapter of every enabled discovery binding and writes
-  ``candidates.jsonl`` and ``discover.json`` (per binding: a count, a skip or the
-  error; ``complete`` when no binding failed, which ``refresh`` needs before it
-  counts an unlisted vessel towards ``vanished``). One failing source does not
-  stop the others.
+  ``candidates.jsonl`` and ``discover.json`` (per binding: a status, a count, the
+  fetch skips by reason or the error; ``gaps``, the bindings with a known-gap
+  status (``GAP_STATUSES``: not-implemented, unsupported, unavailable, empty);
+  ``complete`` when every binding that ran listed its boats (none failed,
+  unsupported or unavailable), which ``refresh`` needs before it counts an
+  unlisted vessel towards ``vanished``). One failing source does not stop the
+  others.
 - ``resolve`` resolves the candidates (and a file import's ``imported.jsonl``)
   against the registry snapshot and writes ``resolved.jsonl``, the vessels
   enrich-code works on.
@@ -117,8 +120,38 @@ def run_candidates(run_dir: Path) -> list[Candidate]:
 
 # ---- steps -------------------------------------------------------------------------------
 
+# Binding statuses that are known gaps (T17): recorded with their reason, never a failure.
+#   not-implemented  the adapter id is registered but has no implementation yet (``ais-static``)
+#   unsupported      no candidates, and a fetched page's structure is one the adapter does not read
+#                    (a ``layout`` or ``unsupported-list`` skip)
+#   unavailable      no candidates, and every fetch was refused or failed (robots fail-closed, 5xx, budget)
+#   empty            no candidates and nothing skipped
+# ``unsupported`` and ``unavailable`` mean the source did not list its boats, so the run's discovery is not
+# ``complete`` (``refresh`` then neither counts unlisted vessels towards ``vanished`` nor retires offerings).
+GAP_STATUSES = ("not-implemented", "unsupported", "unavailable", "empty")
+INCOMPLETE_STATUSES = frozenset({"failed", "unsupported", "unavailable"})
+UNSUPPORTED_SKIPS = frozenset({"layout", "unsupported-list"})
+
+
+def _binding_status(found: int, skips: list[Mapping[str, Any]]) -> str:
+    if found:
+        return "ok"
+    if not skips:
+        return "empty"
+    return "unsupported" if any(s.get("reason") in UNSUPPORTED_SKIPS for s in skips) else "unavailable"
+
+
+def _skip_counts(skips: list[Mapping[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for skip in skips:
+        reason = str(skip.get("reason") or "unknown")
+        counts[reason] = counts.get(reason, 0) + 1
+    return dict(sorted(counts.items()))
+
+
 def discover(ctx: RunContext, sink, adapters: Mapping[str, Any] | None = None) -> dict:
     adapters, rows, report = dict(adapters or {}), [], {}
+    skips = getattr(ctx.net, "skips", None)
     for binding in ctx.region.enabled_sources():
         scout = binding.adapter == "file-import" and binding.params.get("columns") == "scout-candidates-v1"
         if binding.adapter in NOT_DISCOVERY and not scout:
@@ -126,22 +159,29 @@ def discover(ctx: RunContext, sink, adapters: Mapping[str, Any] | None = None) -
         try:
             adapter = adapters.get(binding.adapter) or get(binding.adapter)()
         except NotImplementedError as error:
-            report[binding.id] = {"status": "skipped", "reason": str(error)}
+            report[binding.id] = {"status": "not-implemented", "reason": str(error)}
             continue
         if getattr(adapter, "kind", "discover") not in ("discover", "both"):
             continue
+        before = len(skips) if skips is not None else 0
         try:
             found = [c.as_dict() for c in adapter.discover(binding, ctx)]
         except Exception as error:  # one source failing never stops the others; the run is then partial
             report[binding.id] = {"status": "failed", "error": f"{type(error).__name__}: {error}"[:500]}
             continue
+        mine = list(skips[before:]) if skips is not None else []
         rows += found
-        report[binding.id] = {"status": "ok", "candidates": len(found),
+        status = _binding_status(len(found), mine)
+        report[binding.id] = {"status": status, "candidates": len(found),
+                              **({"skips": _skip_counts(mine)} if mine else {}),
                               **(getattr(adapter, "report", {}).get(binding.id, {}) if scout else {})}
     failed = sum(r["status"] == "failed" for r in report.values())
-    doc = {"at": ops.iso(ctx.clock(), "at"), "complete": not failed, "bindings": report}
+    gaps = {bid: r["status"] for bid, r in sorted(report.items()) if r["status"] in GAP_STATUSES}
+    complete = not any(r["status"] in INCOMPLETE_STATUSES for r in report.values())
+    doc = {"at": ops.iso(ctx.clock(), "at"), "complete": complete, "bindings": report, "gaps": gaps}
     (ctx.run_dir / "discover.json").write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return {"candidates": write_jsonl(ctx.run_dir / "candidates.jsonl", rows), "bindings": len(report), "failed": failed}
+    return {"candidates": write_jsonl(ctx.run_dir / "candidates.jsonl", rows), "bindings": len(report), "failed": failed,
+            "gaps": len(gaps)}
 
 
 def resolve_step(ctx: RunContext, sink, load: Loader = load_snapshot) -> dict:

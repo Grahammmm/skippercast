@@ -138,6 +138,8 @@ test('with storage denied the chooser still navigates', async ({page, pageErrors
   await expect(dialog.getByRole('button', {name: 'Forget saved home'})).toHaveCount(0);
   const input = dialog.locator('input[type="search"]');
   await input.fill('san d');
+  // #605: Enter submits the rendered top match; wait until the directory has loaded and matched, as above.
+  await expect(dialog.locator('[data-port]')).toHaveText([/San Diego/]);
   await input.press('Enter');
   await expect(dialog).toBeHidden();
   await expect(page).toHaveURL(/[?&]region=southern-california/);
@@ -165,6 +167,101 @@ test('first run asks for the profile once and never when the address names one',
   await expect(card).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
+
+test('a 200ms pointer press chooses Boat without moving the half-height sheet', async ({page, pageErrors, v2, isMobile}) => {
+  test.skip(!isMobile, 'phone layout only');
+  await page.setViewportSize({width: 390, height: 844});
+  await v2.open('app', {region: 'morro-bay'});
+  const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');
+  const card = sheet.locator('.app-firstrun'), boat = card.locator('button[data-profile="boat"]');
+  await handle.click();
+  await expect(sheet).toHaveAttribute('data-detent', 'half');
+  await expect(boat).toBeInViewport({ratio: 1});
+  // Hover waits for the half-height transition to settle before beginning the press.
+  await boat.hover();
+  const before = (await boat.boundingBox())!;
+  await page.mouse.down();
+  await page.waitForTimeout(200);
+  await expect(sheet, 'pointer-generated focus must retain the press target').toHaveAttribute('data-detent', 'half');
+  const held = (await boat.boundingBox())!;
+  expect(held.y).toBeCloseTo(before.y, 1);
+  await page.mouse.up();
+  await expect(card).toHaveCount(0);
+  await expect(page).toHaveURL(/[?&]profile=boat/);
+  expect(pageErrors).toEqual([]);
+});
+
+for (const [width, height] of [[320, 568], [390, 844]] as const) {
+  test(`Tab from peek reveals every first-run choice on the ${width}px phone`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(!isMobile, 'phone layout only');
+    await page.setViewportSize({width, height});
+    await v2.open('app', {region: 'morro-bay'});
+    const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');
+    const card = sheet.locator('.app-firstrun');
+    await expect(sheet).toHaveAttribute('data-detent', 'peek');
+    await handle.focus();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('slider', {name: 'Hour', exact: true})).toBeFocused();
+    const controls = card.getByRole('button');
+    await expect(controls).toHaveCount(5);
+    for (const control of await controls.all()) {
+      await page.keyboard.press('Tab');
+      await expect(control).toBeFocused();
+      await expect(sheet).toHaveAttribute('data-detent', 'full');
+      await expect(control).toBeInViewport({ratio: 1});
+      await expect.poll(async () => {
+        const target = (await control.boundingBox())!, tabs = (await page.locator('.app-tabs').boundingBox())!;
+        return target.y + target.height <= tabs.y;
+      }, {message: 'focused choice is above the fixed navigation'}).toBe(true);
+    }
+    // Return to Kayak and choose using only the keyboard.
+    await page.keyboard.press('Shift+Tab');
+    await expect(card.locator('button[data-profile="kayak"]')).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(card).toHaveCount(0);
+    await expect(page).toHaveURL(/[?&]profile=kayak/);
+    await page.reload();
+    await expect(page.locator('.app-firstrun')).toHaveCount(0);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test(`first-run choices stay inside the ${width}px phone sheet and every choice is reachable`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(!isMobile, 'phone layout only');
+    await page.setViewportSize({width, height});
+    await v2.open('app', {region: 'morro-bay'});
+    const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');
+    const card = sheet.locator('.ui-sheet-body > .app-firstrun');
+    await expect(card).toBeVisible();
+    await expect(card).not.toHaveAttribute('aria-modal', 'true');
+    await expect(handle).toBeInViewport();
+    // Real handle clicks can expand through both detents while the choice is due.
+    await handle.click();
+    await expect(sheet).toHaveAttribute('data-detent', 'half');
+    await handle.click();
+    await expect(sheet).toHaveAttribute('data-detent', 'full');
+    const controls = card.getByRole('button');
+    await expect(controls).toHaveCount(5);
+    for (const control of await controls.all()) {
+      await control.scrollIntoViewIfNeeded();
+      await expect(control).toBeInViewport();
+      const box = (await control.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(await handle.evaluate(el => {
+        const b = el.getBoundingClientRect();
+        return document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)?.closest('.ui-sheet-handle') === el;
+      }), 'the scrolled profile card never covers the handle').toBe(true);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await card.locator('button[data-profile="kayak"]').click();
+    await expect(card).toHaveCount(0);
+    await expect(page).toHaveURL(/[?&]profile=kayak/);
+    await page.reload();
+    await expect(page.locator('.app-firstrun')).toHaveCount(0);
+    expect(pageErrors).toEqual([]);
+  });
+}
 
 // FE-07: synthetic feeds at a fixed clock (no test reads the real time or a live service).
 const NOW = Date.parse('2026-10-07T20:00:00Z');
@@ -205,7 +302,12 @@ test('the landing shows the hero and every reading with its source and age; a st
   await expect(page.locator('.landing-fresh')).toHaveText('Buoy feed updated 12 min ago');
   await expect(page.locator('#landing-readout-title')).toHaveText('Latest readings · Morro Bay & Avila area');
   await expect(page.locator('[data-fleet]')).toHaveCount(0);
-  await expect(page.locator('.landing-dots a[data-layer]')).toHaveCount(6);
+  await expect(page.locator('.landing-dots a[data-layer]')).toHaveCount(9);   // one per rail entry, Temp contrast, chlorophyll and stations included
+  const layerIds = await page.locator('.landing-dots a[data-layer]').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-layer')));
+  expect(layerIds).toEqual(['seafloor', 'currents', 'water-temp', 'sst-contrast', 'chlorophyll', 'swell', 'stations', 'fleet', 'clouds']);
+  await expect(page.locator('.landing-dots a[data-layer="chlorophyll"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=chlorophyll&ui=v2$/);
+  await expect(page.locator('.landing-dots a[data-layer="sst-contrast"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=sst-contrast&ui=v2$/);
+  await expect(page.locator('.landing-dots a[data-layer="stations"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=stations&ui=v2$/);
   await expect(page.locator('.landing-dots a[data-layer="currents"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=currents&current=wcofs&ui=v2$/);
   await page.locator('[data-reading="tide"] summary').click();
   await expect(page.locator('[data-reading="tide"] .ui-popover-body')).toContainText('mean lower low water');

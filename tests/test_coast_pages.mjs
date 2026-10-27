@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 globalThis.REGIONS={};
 globalThis.DEPLOYMENT={allowed_origins:['https://skippercast.com']};
+const {serveCoastData}=await import('../server/coast-data.ts');
 const {serveCoastPage,readableSelection}=await import('../server/coast-pages.ts');
 const regions=Object.fromEntries(['morro-bay','cambria-san-simeon'].map(id=>[id,JSON.parse(readFileSync(new URL('../regions/'+id+'/region.json',import.meta.url)))]));
 const template=readFileSync(new URL('../dist/coast-readable.html',import.meta.url),'utf8');
@@ -16,6 +17,19 @@ const selection=query=>readableSelection(new URL(request('/report'+query).url),r
 test('default readable report explicitly labels SLO reference without native controls or JS',async()=>{
  const response=await serveCoastPage(request(),options()),html=await response.text();
  assert.equal(response.status,200);assert.match(html,/SLO reference report/);assert.match(html,/Wind \/ gust/);assert.match(html,/8 \/ 12 kt/);assert.doesNotMatch(html,/<script|<select|type=["']range|<canvas/i);assert.match(html,/2026-10-07T11:50:00Z/);assert.match(html,/2026-10-07T10:30:00Z/);
+});
+test('readable and information pages carry a canonical, description and share metadata',async()=>{
+ for(const path of ['/report','/about','/methodology']){
+  const response=await serveCoastPage(request(path),options()),html=await response.text();
+  assert.equal(response.status,200,path);
+  assert.ok(html.includes(`<link rel="canonical" href="https://skippercast.com${path}">`),path);
+  assert.match(html,/<meta name="description" content="[^"]+">/,path);
+  assert.ok(html.includes('<meta property="og:type" content="website">'),path);
+  assert.ok(html.includes(`<meta property="og:url" content="https://skippercast.com${path}">`),path);
+  assert.ok(html.includes('<meta property="og:title" content="'),path);
+  assert.ok(html.includes('<meta property="og:description" content="'),path);
+  assert.ok(html.includes('<meta name="twitter:card" content="summary">'),path);
+ }
 });
 test('original Fish aliases preserve profile, target, geographic binding and exact hour',()=>{
  const result=selection('?area=north&mode=spear&species=gopher&hour=2026-10-07T12:00:00Z');
@@ -160,3 +174,51 @@ test('FE-86 methodology and about link to the sources page; the pages need nothi
  }
  assert.doesNotMatch(template,/<style|<script|\sstyle=|https?:\/\//i,'no inline style or script and no other origin');
 });
+
+
+test('readable and RSS use the same approved configured report as the coast API',async()=>{
+ const clock=new Date(),generatedAt=clock.toISOString(),observedAt=new Date(clock.getTime()-60000).toISOString();
+ const own={...structuredClone(report),generatedAt,catchStatus:'unavailable',visibility:{},observations:[{stationId:'configured<&',observedAt,waterTempF:61}],sources:[]};
+ const bytes=new TextEncoder().encode(JSON.stringify(own)),keys=[];
+ const store={get:async key=>{keys.push(key);return key==='conditions/regions/morro-bay/coast-report.json'?{size:bytes.length,arrayBuffer:async()=>bytes.buffer}:null;},head:async()=>null};
+ const seen=[],original=globalThis.fetch;globalThis.fetch=async req=>{seen.push(req);return new Response('unavailable',{status:503});};
+ try{
+ const configured={...options(),readReport:undefined,now:clock,store};
+ const api=await serveCoastData(request('/api/coast/report'),store);assert.equal(api.status,200);
+ const expected=await api.json();assert.equal(expected.generatedAt,generatedAt);assert.equal(expected.observations[0].stationId,'configured<&');
+ for(const path of ['/report','/feed.xml']){
+  const init={headers:{Cookie:'private=synthetic',Authorization:'Bearer synthetic',Referer:'https://private.example/'}};
+  const response=await serveCoastPage(request(path,init),configured),body=await response.text();
+  assert.equal(response.status,200);assert.match(body,/configured&lt;&amp;/);assert.ok(body.includes(path==='/report'?generatedAt:new Date(generatedAt).toUTCString()));
+  assert.ok(body.includes(path==='/report'?observedAt:new Date(observedAt).toUTCString()));assert.doesNotMatch(body,/46028|private=synthetic|Bearer synthetic/);
+  const head=await serveCoastPage(request(path,{method:'HEAD'}),configured);assert.equal(head.status,200);assert.equal(await head.text(),'');
+ }
+ assert.ok(keys.includes('conditions/regions/morro-bay/coast-report.json'));
+ assert.equal(seen.length,0,'no outbound request');
+ }finally{globalThis.fetch=original;}
+});
+
+test('an unusable configured report cannot fabricate a readable report or RSS',async()=>{
+ const generatedAt=new Date().toISOString();
+ const invalid={...report,generatedAt,countyId:'other',catchStatus:'unavailable',visibility:{}};
+ for(const mode of ['missing','failed','invalid','expired']){
+  const data=mode==='expired'?{...invalid,countyId:'slo',generatedAt:'2000-01-01T00:00:00Z'}:invalid;
+  const bytes=new TextEncoder().encode(JSON.stringify(data));
+  const store={get:async()=>{if(mode==='failed')throw new Error('synthetic store failure');return mode==='missing'?null:{size:bytes.length,arrayBuffer:async()=>bytes.buffer};},head:async()=>null};
+  for(const path of ['/report','/feed.xml']){
+   const response=await serveCoastPage(request(path),{...options(),readReport:undefined,store});
+   assert.equal(response.status,503,mode+' '+path);const body=await response.text();assert.match(body,/unavailable/i);assert.doesNotMatch(body,/<lastBuildDate>|Report assembled|46028/);
+  }
+ }
+});
+test('FE-61 legal pages: licence summaries keep a 44 px target and dark panels do not print (#703 review)',()=>{
+ const css=readFileSync(new URL('../dist/coast-readable.css',import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\//g,'');
+ const rule=(text,selector)=>text.match(new RegExp(selector.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*\\{([^}]*)\\}'))?.[1]??'';
+ const summary=rule(css,'.coast-readable summary');
+ assert.match(summary,/min-height:\s*var\(--touch-min\)/,'the summary is at least the touch minimum');
+ assert.doesNotMatch(summary,/display\s*:/,'it stays a list item, keeping the disclosure marker');
+ const print=css.slice(css.indexOf('@media print'));
+ const reset=rule(print,'.coast-readable .legal-draft, .coast-readable details pre');
+ assert.match(reset,/background:\s*none/);assert.match(reset,/color:\s*inherit/,'ink on paper in print');
+});
+

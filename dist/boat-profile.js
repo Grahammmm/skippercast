@@ -130,15 +130,6 @@ function sheet() {
   $('#boat-query').focus();
 }
 
-export function initBoatProfile() {
-  const button = document.getElementById('boat-button');
-  if (!button) return;
-  const saved = savedBoat();
-  button.textContent = shortName(saved?.boat);
-  button.setAttribute('aria-label', saved?.boat ? `Boat profile: ${saved.boat.name || shortName(saved.boat)}` : 'Set your boat');
-  button.addEventListener('click', sheet);
-}
-
 export {REFERENCE};
 /** The boat sheet without v1's #boat-button: the v2 account menu opens it (web/account.ts). */
 export {sheet as openBoatProfile};

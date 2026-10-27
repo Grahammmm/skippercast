@@ -17,6 +17,7 @@ import type {ComfortLimits} from '../../packages/coast/src/limits.ts';
 import {resolveReportBinding, type CoastReportContext} from '../../packages/coast/src/state/report-binding.ts';
 import type {Alert, Area, ChlorophyllReading, County, ForecastHour, Observation, Report, SourceStatus, TideEvent} from '../../packages/coast/src/types.ts';
 import {profileSemantics, type Profile} from '../profile.ts';
+import {beachNotices} from './shore.ts';
 import {TIDE_UNAVAILABLE, tideTrend} from '../tides.ts';
 import {ndbcStationURL, sourceStation, stationText, tidePredictionURL} from '../station-label.ts';
 import {ageText} from '../confidence.ts';
@@ -108,7 +109,8 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
       site ? {label: site.name, url: site.url} : null, site?.fetchedAt ?? null, TILE_LIMIT_MS.nearshore, now);
   }
 
-  const observation = report.observations.filter(item => item.stationId === county.temperatureStationId && finite(item.waterTempF))
+  // Use the model's selected reading; retain the latest reading during an outage or on a future day.
+  const observation = daily.tempObservation ?? report.observations.filter(item => item.stationId === county.temperatureStationId && finite(item.waterTempF))
     .sort((a, b) => Date.parse(b.observedAt) - Date.parse(a.observedAt))[0];
   const buoyName = observation ? stationText({id: observation.stationId, backupFor: context.buoyBackupFor ?? null}) : '';
   const water = tile('water', 'Water', observation?.waterTempF ?? null, '°F', observation ? `buoy ${buoyName}` : 'no fresh buoy',
@@ -125,7 +127,7 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     tideSource, tideSource?.fetchedAt ?? null, TILE_LIMIT_MS.tide, now, tideSource?.outcome === 'error');
 
   return {
-    basis, profile, date: daily.date, label: daily.label, provisional: daily.confidence.includes('provisional'),
+    basis, profile, date: daily.date, label: daily.label, provisional: daily.provisional,
     headline: daily.headline, deck: daily.summary, status: daily.status, confidence: daily.confidence,
     tiles: [wind, swell, water, tide], windows: daily.windows, caveat: profileSemantics(profile).caveat,
     notice: beachNotice(report, area, now), fleet: fleetLine(context.reports ?? [], context.port ?? [], county.timezone, now),
@@ -134,22 +136,11 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
   };
 }
 
-/** The county beach-health source the notice reads (packages/coast enrichment). */
-export const BEACH_HEALTH_SOURCE = 'slo-beach-water-quality';
-/** A published status that is a notice; "Beach Open" is not. The v1 rule (packages/coast presentation.ts reportPanel, ui/briefing.ts). */
-export const BEACH_NOTICE_STATUS = /advisory|closed|warning/i;
-const BEACH_HEALTH_MAX_AGE_MS = 3 * HOUR, BEACH_HEALTH_SKEW_MS = 5 * 60_000;
+export {BEACH_HEALTH_SOURCE, BEACH_NOTICE_STATUS} from './shore.ts';
 
-/**
- * The area's first beach under an advisory, closure or warning, decided as v1 does: from the
- * status, and only while the county source fetched cleanly within 3 h. The advisory text is not
- * the test: the county writes one for open beaches too ("There are no advisory notes at this time.").
- */
+/** The area's first beach under a fresh county advisory, closure or warning (web/brief/shore.ts `beachNotices`, v1's rule). */
 export function beachNotice(report: Report, area: Area, now: Date): BriefNotice | null {
-  const health = report.sources.find(item => item.id === BEACH_HEALTH_SOURCE);
-  const age = health ? now.getTime() - Date.parse(health.fetchedAt) : NaN;
-  if (health?.outcome !== 'ok' || !(age >= -BEACH_HEALTH_SKEW_MS && age < BEACH_HEALTH_MAX_AGE_MS)) return null;
-  const notice = (report.waterQuality ?? []).find(item => item.areaId === area.id && BEACH_NOTICE_STATUS.test(item.status));
+  const [notice] = beachNotices(report, area.id, now.getTime());
   return notice ? {name: notice.name, advisory: notice.advisory ?? notice.status, url: notice.url} : null;
 }
 

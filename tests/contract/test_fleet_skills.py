@@ -1,6 +1,7 @@
 """The charter fleet skills name only commands, workflow inputs and runbooks that exist (N8).
 
-skills/skippercast-fleet-registry and skills/skippercast-fleet-activity are prose an
+The registry/activity workflows and the separate local schedule-evidence CLI are
+prose an
 agent follows on the data runner's host. A renamed CLI step, flag, workflow input or
 runbook would break them silently, so every `python -m skippercast.fleet ...` and
 `python -m skippercast.fleet.ais ...` they name is checked against the real parsers,
@@ -11,13 +12,16 @@ no email, phone number, 9-digit number (an MMSI) or URL outside the allowed host
 import contextlib
 import io
 import re
+import subprocess
+import sys
 import unittest
 
 from skippercast.fleet import cli
 from skippercast.fleet.ais.__main__ import COMMANDS as AIS_COMMANDS, main as ais_main
 from tests._support import ROOT
 
-SKILLS = ('skippercast-fleet-registry', 'skippercast-fleet-activity')
+SKILLS = ('skippercast-fleet-registry', 'skippercast-fleet-activity', 'skippercast-fleet-schedule-evidence')
+SCHEDULE_SCRIPT = ROOT / 'scripts' / 'fleet' / 'schedule_evidence.py'
 WORKFLOWS = ROOT / '.github' / 'workflows'
 RUNBOOKS = ROOT / 'docs' / 'operations' / 'runbooks'
 ALLOWED_HOSTS = ('github.com', 'skippercast.com', 'wildlife.ca.gov', 'marinecadastre.gov')
@@ -124,6 +128,14 @@ class FleetSkillTests(unittest.TestCase):
     def test_every_named_command_and_flag_exists(self):
         for name, text in self.texts.items():
             commands = COMMAND.findall(text)
+            if name == 'skippercast-fleet-schedule-evidence':
+                self.assertTrue(SCHEDULE_SCRIPT.is_file())
+                usage = subprocess.run([sys.executable, str(SCHEDULE_SCRIPT), '--help'], check=True,
+                                       capture_output=True, text=True).stdout
+                for flag in FLAG.findall(text):
+                    with self.subTest(skill=name, flag=flag):
+                        self.assertIn(flag, usage)
+                continue
             self.assertTrue(commands, name)
             for ais, step, rest in commands:
                 with self.subTest(skill=name, command=f'{ais} {step}'):

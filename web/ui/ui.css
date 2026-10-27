@@ -28,7 +28,9 @@
 .ui-button--quiet:not(:disabled):hover { color: var(--text); background: var(--panel-2); }
 .ui-button[aria-pressed="true"] { border-color: var(--mint); background: color-mix(in srgb, var(--mint) 14%, var(--panel-2)); color: var(--text); }
 .ui-button--sm { padding: var(--space-1) var(--space-3); }
-.ui-icon-button { padding: var(--space-2); }
+/* Half a pixel over the touch minimum: in a sheet placed by a fractional translate, a measured box can come out a
+   float-rounding hair under 44 px (#600). */
+.ui-icon-button { padding: var(--space-2); min-width: calc(var(--touch-min) + 0.5px); min-height: calc(var(--touch-min) + 0.5px); }
 
 /* Chips and the segmented switch */
 .ui-chip { border-radius: var(--radius-pill); }

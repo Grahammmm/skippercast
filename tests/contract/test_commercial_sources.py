@@ -29,11 +29,19 @@ RUNTIME_SERVICES = {
 
 # Hosts that identify a runtime call to a third-party service. Documentation
 # links (for example open-meteo.com/en/terms) deliberately do not match.
+# nowCOAST is bound only at the CSP origin or the reviewed satellite WMS
+# endpoint. Start only at a text boundary, whitespace or quote delimiter so
+# another URL cannot inherit the binding through fragment or path punctuation.
+NOWCOAST_RUNTIME = re.compile(
+    r'''(?<![^\s'"`])https://nowcoast\.noaa\.gov'''
+    r'''(?:/geoserver/observations/satellite/ows(?=[?'"`\s]|$)|(?=['"`\s]|$))'''
+)
 RUNTIME_HOSTS = {
     re.compile(r'https://(?:[a-z]+-)?api\.open-meteo\.com'): 'open-meteo-api',
     re.compile(r'https://tile\.openstreetmap\.org'): 'osm-tiles',
     re.compile(r'https://gis\.charttools\.noaa\.gov'): 'noaa-enc-display',
     re.compile(r'https://imagery\.nationalmap\.gov'): 'usgs-naip',
+    NOWCOAST_RUNTIME: 'noaa-goes-nowcoast',
 }
 
 # If an asset's text contains one of these hosts, its mapping must name the
@@ -206,6 +214,10 @@ def asset_sources(kind, path, cache):
     return result
 
 
+def runtime_sources(text):
+    return {ident for pattern, ident in RUNTIME_HOSTS.items() if pattern.search(text)}
+
+
 def usages():
     """(usage label, source id) pairs for everything shipped or called."""
     found, unmapped, cache, sources = set(), set(), {}, catalog()
@@ -256,9 +268,8 @@ def usages():
              *sorted((ROOT / 'packages/coast/src').rglob('*.ts'))]
     for path in files:
         text = path.read_text(encoding='utf-8')
-        for pattern, ident in RUNTIME_HOSTS.items():
-            if pattern.search(text):
-                found.add(('runtime:' + path.relative_to(ROOT).as_posix(), ident))
+        for ident in runtime_sources(text):
+            found.add(('runtime:' + path.relative_to(ROOT).as_posix(), ident))
     return found, unmapped, cache
 
 
@@ -272,6 +283,77 @@ class CommercialSourceTests(unittest.TestCase):
     def setUpClass(cls):
         cls.sources = catalog()
         cls.found, cls.unmapped, cls.cache = usages()
+
+    def test_nowcoast_runtime_origin_and_satellite_endpoint_have_exact_binding(self):
+        for text in (
+            "'https://nowcoast.noaa.gov'",  # CSP origin
+            'https://nowcoast.noaa.gov/geoserver/observations/satellite/ows',
+            '"https://nowcoast.noaa.gov/geoserver/observations/satellite/ows?service=WMS&request=GetCapabilities"',
+            '`https://nowcoast.noaa.gov/geoserver/observations/satellite/ows?request=GetMap&time=${observedAt}`',
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(runtime_sources(text), {'noaa-goes-nowcoast'})
+        for path in ('packages/coast/src/map-sources.ts', 'server/security-headers.ts'):
+            with self.subTest(path=path):
+                self.assertIn(('runtime:' + path, 'noaa-goes-nowcoast'), self.found)
+        self.assertEqual(commercial_use('noaa-goes-nowcoast', self.sources), 'allowed')
+
+    def test_nowcoast_lookalike_hosts_and_unreviewed_paths_do_not_inherit_binding(self):
+        endpoint = '/geoserver/observations/satellite/ows'
+        for text in (
+            'http://nowcoast.noaa.gov' + endpoint,
+            'https://nowcoast.noaa.gov.evil.example' + endpoint,
+            'https://sub.nowcoast.noaa.gov' + endpoint,
+            'https://nowcoast-noaa.gov' + endpoint,
+            'https://nowcoast.noaa.gov:443' + endpoint,
+            'https://nowcoast.noaa.gov@evil.example' + endpoint,
+            'https://user@nowcoast.noaa.gov' + endpoint,
+            'https://nowcoast.noaa.gov/geoserver/other/ows',
+            'https://nowcoast.noaa.gov' + endpoint + '-other',
+            'https://nowcoast.noaa.gov' + endpoint + '/other',
+            'https://nowcoast.noaa.gov/documentation',
+            'https://nowcoast.noaa.gov/%67eoserver/observations/satellite/ows',
+            'https://evil.example/?next=https://nowcoast.noaa.gov' + endpoint,
+            'https://evil.example/https://nowcoast.noaa.gov' + endpoint,
+            'https://evil.example/#https://nowcoast.noaa.gov' + endpoint,
+            'https://evil.example/;https://nowcoast.noaa.gov' + endpoint,
+            'prefixhttps://nowcoast.noaa.gov' + endpoint,
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(runtime_sources(text), set())
+
+    def test_existing_runtime_source_recognizers_are_preserved(self):
+        for text, ident in (
+            ('https://api.open-meteo.com/v1/forecast', 'open-meteo-api'),
+            ('https://marine-api.open-meteo.com/v1/marine', 'open-meteo-api'),
+            ('https://tile.openstreetmap.org/1/2/3.png', 'osm-tiles'),
+            ('https://gis.charttools.noaa.gov/arcgis/rest/services', 'noaa-enc-display'),
+            ('https://imagery.nationalmap.gov/arcgis/rest/services', 'usgs-naip'),
+        ):
+            with self.subTest(source=ident):
+                self.assertEqual(runtime_sources(text), {ident})
+
+    def test_nowcoast_missing_unlisted_or_uncleared_catalog_binding_fails_contract(self):
+        ident = 'noaa-goes-nowcoast'
+        missing = CommercialSourceTests('test_every_bound_asset_maps_to_a_reviewed_source')
+        missing.sources = {key: value for key, value in self.sources.items() if key != ident}
+        missing.found, missing.unmapped = self.found, self.unmapped
+        with self.assertRaisesRegex(AssertionError, 'unknown source noaa-goes-nowcoast'):
+            missing.test_every_bound_asset_maps_to_a_reviewed_source()
+
+        unlisted = CommercialSourceTests('test_every_bound_asset_maps_to_a_reviewed_source')
+        unlisted.sources = self.sources
+        unlisted.found = self.found | {('runtime:synthetic-nowcoast', ident + '-unlisted')}
+        unlisted.unmapped = self.unmapped
+        with self.assertRaisesRegex(AssertionError, 'unknown source noaa-goes-nowcoast-unlisted'):
+            unlisted.test_every_bound_asset_maps_to_a_reviewed_source()
+
+        uncleared = CommercialSourceTests('test_non_commercial_sources_are_exactly_the_known_blockers')
+        uncleared.sources = {**self.sources, ident: {**self.sources[ident],
+            'rights': {**self.sources[ident]['rights'], 'commercial_use': 'unknown'}}}
+        uncleared.found = self.found
+        with self.assertRaisesRegex(AssertionError, 'New assets or calls rely on sources not cleared'):
+            uncleared.test_non_commercial_sources_are_exactly_the_known_blockers()
 
     def test_every_bound_asset_maps_to_a_reviewed_source(self):
         self.assertFalse(self.unmapped, 'Add these assets to ASSET_SOURCES and the register: '

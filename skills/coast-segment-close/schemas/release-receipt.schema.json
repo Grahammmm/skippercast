@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:skippercast:coast-segment-close-release-receipt-v1",
+  "description": "Owner-local release receipt written by release_hot_cache.py (rev4 3: small owner receipts are documented and validated by their owner tests, not by the shared validator).",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "metrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "archived_bytes", "proposed_release_bytes", "peak_hot_cache"],
+      "properties": {
+        "schema": {"const": "coast-close-metrics-v1"},
+        "archived_bytes": {
+          "type": "object", "additionalProperties": false,
+          "required": ["raw_equivalent", "derived", "products", "metadata"],
+          "properties": {
+            "raw_equivalent": {"type": "integer", "minimum": 0},
+            "derived": {"type": "integer", "minimum": 0},
+            "products": {"type": "integer", "minimum": 0},
+            "metadata": {"type": "integer", "minimum": 0}
+          }
+        },
+        "proposed_release_bytes": {"type": "integer", "minimum": 0},
+        "peak_hot_cache": {
+          "type": "object", "additionalProperties": false,
+          "required": ["status", "bytes", "reason"],
+          "properties": {
+            "status": {"const": "unavailable"}, "bytes": {"type": "null"},
+            "reason": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
+    "ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root_id", "path", "sha256", "bytes"],
+      "properties": {
+        "root_id": {"type": "string", "pattern": "^queue:[A-Za-z0-9_-]+$"},
+        "path": {"type": "string", "pattern": "^cache/"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "bytes": {"type": "integer", "minimum": 0}
+      }
+    }
+  },
+  "required": ["schema", "created_utc", "author_profile", "author_model", "card_id", "code_commit", "skill_commit",
+               "campaign_segment_id", "close_id", "release_list_sha256", "status", "released", "released_bytes", "failure", "remaining",
+               "proposed_release_bytes", "archive_metrics"],
+  "properties": {
+    "schema": {"const": "coast-segment-close-release-receipt-v1"},
+    "created_utc": {"type": "string", "minLength": 1},
+    "author_profile": {"type": "string", "minLength": 1},
+    "author_model": {"type": "string", "minLength": 1},
+    "card_id": {"type": "string", "pattern": "^t_[0-9a-f]{8}$"},
+    "code_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "skill_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "campaign_segment_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+    "close_id": {"type": "string", "minLength": 1},
+    "release_list_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "status": {"enum": ["complete", "partial"]},
+    "released": {"type": "array", "items": {"$ref": "#/$defs/ref"}},
+    "released_bytes": {"type": "integer", "minimum": 0},
+    "proposed_release_bytes": {"type": "integer", "minimum": 0},
+    "archive_metrics": {"$ref": "#/$defs/metrics"},
+    "failure": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "object", "additionalProperties": false, "required": ["path", "error"],
+         "properties": {"path": {"type": "string"}, "error": {"type": "string"}}}
+      ]
+    },
+    "remaining": {"type": "array", "items": {"$ref": "#/$defs/ref"}}
+  }
+}

@@ -13,6 +13,8 @@ from .coasts import compile_coasts
 from .sectors import compile_sectors
 from .readiness import compile_readiness
 from .shoreline import publish_shoreline
+from .depth_contours import publish_depth_contours
+from .land_water import publish_land_water
 from .startup_forms import publish_startup_forms
 
 
@@ -106,8 +108,12 @@ def build(root=REPO, now=None):
         # The CUSP shoreline (FE-10) ships beside the package, outside region.assets and the manifest,
         # so v1 offline packs (every manifest asset) stay the same until the v2 Chart reads it.
         publish_shoreline(root, region, output)
+        # CI6-13: shelf depth contours from the reviewed survey grids, beside the shoreline (outside the manifest too).
+        publish_depth_contours(root, region, output, sources)
         # #617: light copies of the atlas, the search plans and the shoreline for the map's first view.
         publish_startup_forms(root, region, output)
+        # CI6-01B: the land/water screen for ranked places, derived from that shoreline (docs/land-water-method.md).
+        publish_land_water(root, region, output)
         report = requirement_report(region, root)
         atlas = read_json(within(root / "dist", region["assets"]["atlas"]))
         qualified=validate_qualified_scope(region,atlas,root)

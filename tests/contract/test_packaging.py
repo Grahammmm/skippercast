@@ -1,5 +1,6 @@
 """The package declares what src/ imports, and requirements files match its extras."""
 import ast
+from importlib.resources import files
 import os
 from pathlib import Path
 import re
@@ -111,6 +112,19 @@ class ExtrasTests(unittest.TestCase):
                 self.assertIn(module, DISTRIBUTION, f'{module} (imported by {files[0]}) has no distribution mapping')
                 self.assertIn(DISTRIBUTION[module].lower(), declared,
                               f'{module} (imported by {files[0]}) is not declared in any extra')
+
+
+class CoastalSchemaResourceTests(unittest.TestCase):
+    def test_packaged_schema_copies_match_canonical_contracts(self):
+        resources = {p.name: p for p in files('skippercast.coastal.resources').iterdir()
+                     if p.name.endswith('.schema.json')}
+        self.assertIn('region.schema.json', resources)
+        self.assertIn('fleet-region.schema.json', resources)
+        for canonical in sorted((ROOT / 'schemas').glob('*.schema.json')):
+            if canonical.name in resources:
+                with self.subTest(schema=canonical.name):
+                    self.assertEqual(resources[canonical.name].read_bytes(), canonical.read_bytes(),
+                                     f'packaged {canonical.name} differs from its canonical contract')
 
 
 class RepoRootTests(unittest.TestCase):

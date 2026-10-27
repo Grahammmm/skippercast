@@ -9,12 +9,16 @@
 // Boat adds the cruise speed the brief's run times use (web/brief/run.ts):
 // blank until the user types one, with no default, and kept apart from the
 // limits so Reset to defaults leaves it alone.
+// Boat and Kayak add the range to consider (#644, web/reach.ts): how far out,
+// one way, "Where to look" and the Chart's reach ring use; blank until the
+// user types one, no default, and also left alone by Reset to defaults.
 import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import type {ComponentChildren} from 'preact';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {defaultLimits, LIMIT_BOUNDS, LIMIT_FIELDS, LIMIT_SURGE_BANDS, type ComfortLimits, type LimitField, type LimitSurge} from '../../packages/coast/src/limits.ts';
 import {PROFILE_TABLE, type Profile} from '../profile.ts';
 import {CRUISE_BOUNDS, cruiseSpeed, hasOwnLimits, limitsFor, resetLimits, saveCruise, saveLimits} from '../limits.ts';
+import {isReachProfile, REACH_BOUNDS, reachFor, saveReach} from '../reach.ts';
 import {profile} from '../state.ts';
 
 const fmt = (n: number) => Number(n.toFixed(1)).toString();
@@ -29,11 +33,16 @@ export function fieldLabel(p: Profile, field: LimitField): {label: string; unit:
 type Draft = Record<LimitField, string> & {surge?: LimitSurge};
 const draftOf = (limits: ComfortLimits): Draft => ({wind: fmt(limits.wind), gust: fmt(limits.gust), seas: fmt(limits.seas), ...(limits.surge ? {surge: limits.surge} : {})});
 
-/** The form: one number field per limit (and the surge band for spear, the cruise speed for boat), Save and Reset to defaults. `focusCruise` marks the cruise speed autofocus, so the modal opens on it. */
-export function LimitsForm({profile: p, onDone, focusCruise = false}: {profile: Profile; onDone?: () => void; focusCruise?: boolean}) {
+/**
+ * The form: one number field per limit (and the surge band for spear, the cruise speed for boat, the range to
+ * consider for boat and kayak), Save and Reset to defaults. `focusCruise` or `focusReach` marks that field
+ * autofocus, so the modal opens on it.
+ */
+export function LimitsForm({profile: p, onDone, focusCruise = false, focusReach = false}: {profile: Profile; onDone?: () => void; focusCruise?: boolean; focusReach?: boolean}) {
   const id = useId();
   const [draft, setDraft] = useState<Draft>(() => draftOf(limitsFor(p)));
   const [cruise, setCruise] = useState(() => cruiseSpeed.peek() === null ? '' : fmt(cruiseSpeed.peek()!));
+  const [reach, setReach] = useState(() => { const nm = reachFor(p); return nm === null ? '' : fmt(nm); });
   useEffect(() => setDraft(draftOf(limitsFor(p))), [p]);
   const base = defaultLimits(p), bounds = LIMIT_BOUNDS[p], own = hasOwnLimits(p);
   const set = (field: keyof Draft, value: string) => setDraft(prev => ({...prev, [field]: value}));
@@ -41,6 +50,7 @@ export function LimitsForm({profile: p, onDone, focusCruise = false}: {profile: 
     event.preventDefault();
     saveLimits(p, draft);
     if (p === 'boat') saveCruise(cruise);
+    if (isReachProfile(p)) saveReach(p, reach);
     onDone?.();
   };
   const reset = () => { resetLimits(p); setDraft(draftOf(base)); };
@@ -73,6 +83,14 @@ export function LimitsForm({profile: p, onDone, focusCruise = false}: {profile: 
           <input id={`${id}-cruise`} autoFocus={focusCruise} name="cruise" type="number" inputMode="decimal" min={CRUISE_BOUNDS.min} max={CRUISE_BOUNDS.max} step={CRUISE_BOUNDS.step}
             value={cruise} onInput={event => setCruise((event.currentTarget as HTMLInputElement).value)} aria-describedby={`${id}-cruise-hint`} />
           <span id={`${id}-cruise-hint`} class="app-limits-hint ui-mono">No default · {fmt(CRUISE_BOUNDS.min)}–{fmt(CRUISE_BOUNDS.max)} · run times only · blank clears it</span>
+        </div>
+      ) : null}
+      {isReachProfile(p) ? (
+        <div class="app-limits-field">
+          <label for={`${id}-reach`}>Range to consider <span class="ui-mono">(nm, one way)</span></label>
+          <input id={`${id}-reach`} autoFocus={focusReach} name="reach" type="number" inputMode="decimal" min={REACH_BOUNDS[p].min} max={REACH_BOUNDS[p].max} step={REACH_BOUNDS[p].step}
+            value={reach} onInput={event => setReach((event.currentTarget as HTMLInputElement).value)} aria-describedby={`${id}-reach-hint`} />
+          <span id={`${id}-reach-hint`} class="app-limits-hint ui-mono">No default · {fmt(REACH_BOUNDS[p].min)}–{fmt(REACH_BOUNDS[p].max)} · straight line from the harbor, not a route · blank clears it</span>
         </div>
       ) : null}
       <p id={`${id}-note`} class="app-limits-note">

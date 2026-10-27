@@ -1,0 +1,4 @@
+interface:
+  display_name: "SkipperCast Fleet Schedule Evidence"
+  short_description: "Collect private schedule snapshots and conservative AIS identity evidence"
+  default_prompt: "Use $skippercast-fleet-schedule-evidence to report CA status with --report; return counts only and keep schedule, reported operation, and AIS reception evidence separate."

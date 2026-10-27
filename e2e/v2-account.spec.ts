@@ -90,6 +90,23 @@ test('signing in from the account menu completes the passkey flow and keeps the 
   expect(pageErrors).toEqual([]);
 });
 
+test('Escape closes the open account menu after Shift+Tab returns to its trigger (FE-50)', async ({page, pageErrors, v2, isMobile}) => {
+  await stubAuth(page, 'unused');
+  await v2.open('app', AREA);
+  const trigger = await accountButton(page, isMobile), panel = page.locator('.app-account-panel');
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('button', {name: 'Sign in or create an account'})).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(trigger).toBeFocused();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Escape');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(panel).toBeHidden();
+  await expect(trigger).toBeFocused();
+  expect(pageErrors).toEqual([]);
+});
+
 test('the menu is keyboard operable and Escape returns focus to its button', async ({page, pageErrors, v2, isMobile}) => {
   await stubAuth(page, 'unused');
   await v2.open('app', AREA);
@@ -126,6 +143,29 @@ test('the menu is keyboard operable and Escape returns focus to its button', asy
   await v2.a11y('v2-account-alerts');
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
+  expect(pageErrors).toEqual([]);
+});
+
+test('controls tour can be skipped and replayed with focus restored after closing', async ({page, pageErrors, v2, isMobile}) => {
+  await stubAuth(page, 'unused');
+  await v2.open('app', AREA);
+  const trigger = await accountButton(page, isMobile);
+  await trigger.click();
+  await page.getByRole('button', {name: 'Replay controls tour'}).click();
+  const dialog = page.getByRole('dialog', {name: 'Controls tour'});
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', {name: 'Skip tour'}).click();
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await page.getByRole('button', {name: 'Replay controls tour'}).click();
+  await expect(dialog.getByText('Step 1 of 4')).toBeVisible();
+  await dialog.getByRole('button', {name: 'Next'}).click();
+  await dialog.getByRole('button', {name: 'Next'}).click();
+  await dialog.getByRole('button', {name: 'Next'}).click();
+  await dialog.getByRole('button', {name: 'Finish'}).click();
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
   expect(pageErrors).toEqual([]);
 });
 

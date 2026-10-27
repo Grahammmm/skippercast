@@ -1,0 +1,264 @@
+{
+ "about": "SP1410 A1 malformed-container cases. Each case sets the value at path in a fresh copy of complete.json (an empty path replaces the whole feed). The first case is the A4 primary regression.",
+ "cases": [
+  {
+   "id": "gfs-time-string",
+   "path": [
+    "forecast",
+    "models",
+    "gfs_global",
+    "data",
+    1,
+    "hourly",
+    "time"
+   ],
+   "value": "1790607600,1790611200,1790614800"
+  },
+  {
+   "id": "gfs-time-object",
+   "path": [
+    "forecast",
+    "models",
+    "gfs_global",
+    "data",
+    1,
+    "hourly",
+    "time"
+   ],
+   "value": {
+    "0": 1790607600
+   }
+  },
+  {
+   "id": "gfs-data-object",
+   "path": [
+    "forecast",
+    "models",
+    "gfs_global",
+    "data"
+   ],
+   "value": {
+    "1": {
+     "hourly": {
+      "time": "1790607600"
+     }
+    }
+   }
+  },
+  {
+   "id": "gfs-data-string",
+   "path": [
+    "forecast",
+    "models",
+    "gfs_global",
+    "data"
+   ],
+   "value": "points"
+  },
+  {
+   "id": "forecast-array",
+   "path": [
+    "forecast"
+   ],
+   "value": []
+  },
+  {
+   "id": "forecast-string",
+   "path": [
+    "forecast"
+   ],
+   "value": "forecast"
+  },
+  {
+   "id": "models-array",
+   "path": [
+    "forecast",
+    "models"
+   ],
+   "value": []
+  },
+  {
+   "id": "models-null",
+   "path": [
+    "forecast",
+    "models"
+   ],
+   "value": null
+  },
+  {
+   "id": "model-string",
+   "path": [
+    "forecast",
+    "models",
+    "ecmwf_ifs025"
+   ],
+   "value": "unavailable"
+  },
+  {
+   "id": "model-array",
+   "path": [
+    "forecast",
+    "models",
+    "ncep_gfswave016"
+   ],
+   "value": []
+  },
+  {
+   "id": "model-null",
+   "path": [
+    "forecast",
+    "models",
+    "ecmwf_wam"
+   ],
+   "value": null
+  },
+  {
+   "id": "point-string",
+   "path": [
+    "forecast",
+    "models",
+    "gfs_global",
+    "data",
+    0
+   ],
+   "value": "north"
+  },
+  {
+   "id": "point-array",
+   "path": [
+    "forecast",
+    "models",
+    "ncep_gfswave016",
+    "data",
+    1
+   ],
+   "value": []
+  },
+  {
+   "id": "hourly-array",
+   "path": [
+    "forecast",
+    "models",
+    "ecmwf_ifs025",
+    "data",
+    1,
+    "hourly"
+   ],
+   "value": []
+  },
+  {
+   "id": "hourly-string",
+   "path": [
+    "forecast",
+    "models",
+    "ecmwf_wam",
+    "data",
+    0,
+    "hourly"
+   ],
+   "value": "none"
+  },
+  {
+   "id": "hourly-null",
+   "path": [
+    "forecast",
+    "models",
+    "gfs_global",
+    "data",
+    1,
+    "hourly"
+   ],
+   "value": null
+  },
+  {
+   "id": "wave-time-string",
+   "path": [
+    "forecast",
+    "models",
+    "ncep_gfswave016",
+    "data",
+    1,
+    "hourly",
+    "time"
+   ],
+   "value": "1790607600"
+  },
+  {
+   "id": "wam-time-number",
+   "path": [
+    "forecast",
+    "models",
+    "ecmwf_wam",
+    "data",
+    1,
+    "hourly",
+    "time"
+   ],
+   "value": 1790607600
+  },
+  {
+   "id": "error-record-gfs-time-string",
+   "path": [
+    "forecast",
+    "models",
+    "gfs_global"
+   ],
+   "value": {
+    "data": [
+     {
+      "hourly": {
+       "time": []
+      }
+     },
+     {
+      "hourly": {
+       "time": "1790607600"
+      }
+     }
+    ],
+    "meta": null,
+    "error": "synthetic provider timeout"
+   }
+  },
+  {
+   "id": "error-record-gfs-keyed-data-time-string",
+   "path": [
+    "forecast",
+    "models",
+    "gfs_global"
+   ],
+   "value": {
+    "data": {
+     "1": {
+      "hourly": {
+       "time": "bad"
+      }
+     }
+    },
+    "error": "synthetic timeout",
+    "meta": null
+   }
+  },
+  {
+   "id": "error-record-gfs-keyed-data-time-object",
+   "path": [
+    "forecast",
+    "models",
+    "gfs_global"
+   ],
+   "value": {
+    "data": {
+     "1": {
+      "hourly": {
+       "time": {
+        "0": 1790607600
+       }
+      }
+     }
+    },
+    "error": "synthetic timeout",
+    "meta": null
+   }
+  }
+ ]
+}

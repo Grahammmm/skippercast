@@ -1,6 +1,6 @@
 // The mark card's regulations line (FE-54, docs/plans/front-end/dev-plan.md; design § 6, § 9, § 12):
 // web/regs.ts restates dist/regulations.js's state and "rules at a glance" row with the region passed
-// in; these tests pin it to v1's output over the committed registry (dist/data/regulations.json with
+// in; these tests pin it to v1's output over frozen FE-61 registry and region inputs with
 // fresh synthetic source checks, as tests/test_regulations.mjs builds it, plus synthetic edits for an
 // opening time, a latitude band and a depth line), including #396's guard against inherited ids, and
 // render the card's line. web/regs.ts runs by type stripping; the card is bundled with esbuild.
@@ -17,9 +17,17 @@ import {createHash} from 'node:crypto';
 import {CDFW_OCEAN, loadRegs, officialURL, regsData, regulationState, ruleProfile, ruleSummary, validRegulations, verifiedText} from '../web/regs.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const read = path => JSON.parse(readFileSync(new URL(`../dist/${path}`, import.meta.url), 'utf8'));
-const MORRO = read('regions/morro-bay/region.json');
-const ORIGINAL = read('data/regulations.json');
+// Both inputs affect the historical digests: species/order, rules, source ids/URLs,
+// jurisdiction, timezone and authority hosts must not follow generated dist data.
+const fixtureBytes = readFileSync(new URL('./fixtures/regulations/fe61-v1.json', import.meta.url));
+const fixture = JSON.parse(fixtureBytes);
+const MORRO = fixture.region;
+const ORIGINAL = fixture.regulations;
+test('the frozen v1 oracle inputs retain their reviewed identity', () => {
+  assert.equal(createHash('sha256').update(fixtureBytes).digest('hex'),
+    '5c170912135231fa42aab6918694e8947fa08dd2287ce3caf45a05d0e46ecda3');
+  assert.equal(fixture.provenance.commit, 'db50a71da352c2b06c3e736067a1677be17328c7');
+});
 const NOW = Date.parse('2026-09-21T18:00:00Z');
 const HOUR = 3600000;
 function data(at = NOW) {
@@ -32,7 +40,7 @@ function data(at = NOW) {
   }
   return d;
 }
-/** Synthetic windows v1 supports that the committed registry does not use today. */
+/** Synthetic windows v1 supports that the frozen registry does not use. */
 function edited(at = NOW) {
   const d = data(at), band = d.species.salmon.source_ids[0];
   d.species.salmon.windows = [{start: '2026-09-21', end: '2026-09-30', start_at: '2026-09-21T05:00:00-07:00'}];
@@ -47,11 +55,15 @@ const INHERITED = ['constructor', 'toString', '__proto__', 'hasOwnProperty', '',
 const fields = s => ({status: s.status, label: s.label, today: s.today, reason: s.reason, issues: s.issues});
 // FE-61 deleted dist/regulations.js with the v1 shell. Its output over these cases is
 // pinned by digest (state fields and row, in loop order), computed from v1 before the deletion.
-const V1_DIGEST = {grid: '2a00529fc1145ddaf4d3b74ee98130a4ccb7274b3f579e7301e7eba85a2d2a7b', evidence: '9845ca291ad962d581d162241d51f0cd41dcf147405a061ea8fd05806235586b'};
+// SP-RULES-STATUS departs from v1 on purpose in exactly 50 grid rows: an unknown state with fresh,
+// reviewed checks (outside the rule period, or a latitude-band season with no location) no longer
+// carries `verified`; that date moves to `checked`. Every state field is still v1's. v1's own grid
+// digest was 2a00529fc1145ddaf4d3b74ee98130a4ccb7274b3f579e7301e7eba85a2d2a7b.
+const V1_DIGEST = {grid: 'e48a0a7730896a7b4fae6a4000d565c264a0361778a397889ff72c7e2e4a5cdc', evidence: '9845ca291ad962d581d162241d51f0cd41dcf147405a061ea8fd05806235586b'};
 const digest = rows => createHash('sha256').update(JSON.stringify(rows)).digest('hex');
 
 test('state and row equal dist/regulations.js for every species, date and trip hour', () => {
-  assert.ok(validRegulations(data(), MORRO), 'the committed registry passes for Morro Bay');
+  assert.ok(validRegulations(data(), MORRO), 'the frozen registry passes for Morro Bay');
   const dates = ['2026-09-21T18:00:00Z', '2026-09-21T11:00:00Z', '2026-09-21T13:00:00Z', '2026-10-01T06:59:00Z', '2026-10-01T07:00:00Z', '2026-11-07T08:00:00Z', '2027-01-01T08:00:00Z'];
   const rows = [];
   for (const build of [data, edited]) {

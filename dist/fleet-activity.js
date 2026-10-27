@@ -216,9 +216,11 @@ const IGNORED_NAMES = {vessel: "boat", port: "port", class: "class", trip_type: 
 /** The status line for the drawn layers. */
 export function statusText(results) {
   const parts = [];
-  if (results.events) parts.push(`${results.events.features.length}${results.events.more ? "+" : ""} stops`);
-  if (results.tracks) parts.push(`${results.tracks.trips}${results.tracks.more ? "+" : ""} trips`);
-  if (results.heat) parts.push(`${results.heat.features.length}${results.heat.more ? "+" : ""} heat cells`);
+  // "1 stop", but "1+ stops": more remain beyond the one counted.
+  const count = (n, more, noun) => `${n}${more ? "+" : ""} ${noun}${n === 1 && !more ? "" : "s"}`;
+  if (results.events) parts.push(count(results.events.features.length, results.events.more, "stop"));
+  if (results.tracks) parts.push(count(results.tracks.trips, results.tracks.more, "trip"));
+  if (results.heat) parts.push(count(results.heat.features.length, results.heat.more, "heat cell"));
   if (!parts.length) return "Fleet activity is off. Turn on a layer to load it.";
   let text = parts.join(" · ") + " · inferred from movement";
   if (Object.values(results).some(r => r?.more)) text += ". More remain: zoom in or narrow the filters";

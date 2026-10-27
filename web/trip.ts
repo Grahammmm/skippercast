@@ -18,8 +18,12 @@ import {atlasMarksURL, planIndexURL} from './startup-forms.ts';
 import {MARKS_SOURCE} from './map/layers.ts';
 import {markSources} from './map/marks.ts';
 import {NO_PLAN, fitCamera, rankedSpots, recheckPlan, screenRanked, type RankedPlan, type RankedScreen} from './map/ranked.ts';
-import {camera, cameraParam, type Camera} from './map/stage.ts';
+import {camera, cameraParam, choosePresentation, type Camera} from './map/stage.ts';
+import {beginWaypointPlacement, cancelWaypointPlacement} from './waypoint-placement.ts';
 import {appView, navigate, region, withParams, type UrlKey} from './state.ts';
+import {reachFor} from './reach.ts';
+import {tideSelection} from './tide-selection.ts';
+import {saveTidePack} from './tide-stations.ts';
 
 /** The v2 app's page key in a pack (dist/sw.js `V2_SHELL`). */
 export const V2_SHELL = '/map';
@@ -68,7 +72,7 @@ const chartSize = () => { const r = document.querySelector('.app-chart')?.getBou
 type Loose<T> = (options: Record<string, unknown>) => T;
 const plain = (): string => location.href.split('#')[0]!;
 const go = (patch: Partial<Record<UrlKey, string | null>>): void => { navigate(withParams(plain(), patch)); };
-export const openTrip = (): void => { if (location.hash !== TRIP_HASH) navigate(plain() + TRIP_HASH); else tripOpen.value = true; };
+export const openTrip = (): void => { cancelWaypointPlacement(); if (location.hash !== TRIP_HASH) navigate(plain() + TRIP_HASH); else tripOpen.value = true; };
 export const closeTrip = (): void => { if (location.hash === TRIP_HASH) navigate(plain(), {replace: true}); tripOpen.value = false; refreshIds(); };
 
 const json = async (path: string): Promise<unknown> => {
@@ -110,11 +114,19 @@ async function startPlanner(id: string): Promise<Planner> {
   drawRanked();
   const model = createPlanner({atlas, screen, region: regions.getRegion() as import('./planner.ts').PlannerDeps['region'],
     map: {getSize: () => mapView(camera.peek(), chartSize()).getSize(), getBounds: () => mapView(camera.peek(), chartSize()).getBounds()},
+    // Read when the planner starts for the region; a range changed later applies to the next region's planner, and the planner measures from its chosen port.
+    reachNm: reachFor('boat'),
     getVisible: () => { const ids = new Set((markSources[MARKS_SOURCE]?.value.features ?? []).map(f => f.properties.id)); return atlas.targets.filter(t => ids.has(t.id)); },
     nav: {
       open: openTrip,
       showMap() { closeTrip(); if (appView.peek() !== 'coast') go({view: null}); },
       conditions(date: string) { closeTrip(); go({view: 'conditions', day: date}); },
+      chooseWaypoint(pick) {
+        closeTrip();
+        if (appView.peek() !== 'coast') go({view: null});
+        choosePresentation('chart');
+        beginWaypointPlacement(id, pick);
+      },
     }});
   plannerView.value = {model, View};
   void screen.refresh();
@@ -171,6 +183,8 @@ export function rangeRecorder(url: string, put: Extras['put'], signal: AbortSign
 /** savePack's `more`: this app's page and files (precache.json `v2`), the basemap manifest, both shoreline forms, the startup copies (#617) and tiles. */
 async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds: number[]) {
   const page = location.href, origin = location.origin, misses: string[] = [];
+  const tideURLs = await tideSelection.packURLs(id);
+  await saveTidePack(tideURLs, put, signal);
   const list = await fetch('/precache.json', {cache: 'no-cache', signal}).then(r => r.ok ? r.json() : null, () => null) as {build?: string; v2?: {assets?: unknown[]; static?: unknown[]}} | null;
   const hashed = [...list?.v2?.assets ?? [], ...list?.v2?.static ?? []].filter((p): p is string => typeof p === 'string' && /^\/(?!\/)/.test(p));
   const files: [string, string, RequestInit][] = [[origin + V2_SHELL, origin + V2_SHELL, {}],

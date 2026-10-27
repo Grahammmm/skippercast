@@ -3,7 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- noindex: with no area in the address the app replaces itself with the saved home or the landing (web/app/main.tsx), so a crawler sees /map as a redirect to /. -->
     <meta name="robots" content="noindex" />
+    <meta name="description" content="Wind, swell, tide and water temperature for the Central California coast on one map, beside the seafloor, habitat candidates and protected areas." />
     <title>SkipperCast · Map</title>
     <!-- The web manifest, theme colour (v1's; design.md names none) and icons that v1's dist/index.html carried until FE-61 (tests/test_v2_head.mjs). -->
     <meta name="theme-color" content="#082e3b" />

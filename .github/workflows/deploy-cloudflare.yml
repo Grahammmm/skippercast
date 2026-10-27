@@ -7,8 +7,15 @@ name: Deploy to Cloudflare
 # CLOUDFLARE_ACCOUNT_ID secrets exist. CLOUDFLARE_SITE_URL names the host the
 # smoke test checks (the custom domain once it is attached).
 #
-# Only a main commit that passed "Offline checks" is deployed, and exactly that
-# commit. After deploying, the site is smoke-tested; a failure rolls the Worker
+# The newest main commit whose "Offline checks" passed is deployed: never one with
+# failed or pending checks, and never one older than production serves. The source
+# job walks main's first parents from the head, so a merge landing while CI runs no
+# longer holds the commit CI just passed. The deploy job runs its guards from this
+# workflow's own revision (the controller), so an older candidate's scripts are never
+# trusted, and it holds when the commit production serves cannot be traced. A run
+# that ships nothing reports "held" (a neutral check run, a warning and the job
+# summary), not a plain success.
+# After deploying, the site is smoke-tested; a failure rolls the Worker
 # back to the version that was live before the deploy (recorded by the deploy
 # script) and checks the site no longer serves the failed build. D1 migrations are forward-only:
 # the deploy script backs up the database first (docs/operations/runbooks/rollback-release.md).
@@ -20,7 +27,7 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: "deploy the current main, or roll back to an earlier Worker version (see version)"
+        description: "deploy the newest main commit whose Offline checks passed, or roll back to an earlier Worker version (see version)"
         type: choice
         options: [deploy, rollback]
         default: deploy
@@ -49,13 +56,19 @@ jobs:
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     outputs:
       eligible: ${{ steps.current.outputs.eligible }}
+      sha: ${{ steps.current.outputs.sha }}
+      reason: ${{ steps.current.outputs.reason }}
     env:
-      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      # The commit whose CI completion (or the dispatch) started this run; reported, not deployed.
+      TRIGGER_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      # The workflow's own read-only token (permissions: contents: read), only so the
+      # metadata read is not refused by the shared runners' anonymous rate limit (#422).
+      SOURCE_READ_TOKEN: ${{ github.token }}
     steps:
-      - name: Check current source before checkout or deployment credentials
+      - name: Select the newest checked main commit before checkout or deployment credentials
         id: current
         run: |
           python3 - <<'PY'
@@ -64,7 +77,58 @@ jobs:
           import re
           import sys
           from pathlib import Path
-          from urllib.request import Request, urlopen
+          from urllib.error import HTTPError
+          from urllib.parse import urlencode
+          from urllib.request import HTTPRedirectHandler, Request, build_opener
+
+          # First-parent main commits searched, newest first, for one whose checks passed.
+          DEPTH = 20
+          SHA = re.compile(r'[0-9a-f]{40}')
+
+          class RefuseRedirect(HTTPRedirectHandler):
+              # urllib would copy Authorization to a redirect target, another host or plain HTTP included.
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  raise HTTPError(newurl, code, 'deploy source metadata redirect refused', headers, fp)
+
+          def is_sha(value):
+              return isinstance(value, str) and SHA.fullmatch(value) is not None
+
+          def read(path):
+              headers = {'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2026-03-10',
+                         'User-Agent': 'SkipperCast-deploy-source-check'}
+              if os.environ.get('SOURCE_READ_TOKEN'):
+                  headers['Authorization'] = 'Bearer ' + os.environ['SOURCE_READ_TOKEN']
+              request = Request('https://api.github.com/repos/' + repository + path, headers=headers)
+              with build_opener(RefuseRedirect).open(request, timeout=15) as response:
+                  return json.load(response)
+
+          def checks(sha):
+              # The latest push/main Offline checks run for exactly this commit, so a newer failed
+              # or pending rerun is never hidden by an older success. None when it has no run.
+              query = urlencode({'event': 'push', 'branch': 'main', 'head_sha': sha, 'per_page': 100})
+              listing = read('/actions/workflows/ci.yml/runs?' + query)
+              runs = listing.get('workflow_runs') if isinstance(listing, dict) else None
+              count = listing.get('total_count') if isinstance(listing, dict) else None
+              if (not isinstance(runs, list) or not isinstance(count, int) or isinstance(count, bool)
+                      or not 0 <= count <= 100 or len(runs) != count):
+                  raise ValueError('CI run listing for ' + sha + ' is incomplete or invalid')
+              for run in runs:
+                  if (not isinstance(run, dict) or not isinstance(run.get('id'), int)
+                          or isinstance(run.get('id'), bool) or run['id'] <= 0):
+                      raise ValueError('invalid CI run identity')
+              if not runs:
+                  return None
+              latest = max(runs, key=lambda run: run['id'])
+              origin = latest.get('head_repository')
+              exact = (latest.get('path') == '.github/workflows/ci.yml' and latest.get('name') == 'Offline checks'
+                       and latest.get('event') == 'push' and latest.get('head_branch') == 'main'
+                       and latest.get('head_sha') == sha and isinstance(origin, dict)
+                       and origin.get('full_name') == repository)
+              if not exact:
+                  return 'wrong-provenance'
+              if latest.get('status') != 'completed':
+                  return 'pending'
+              return latest.get('conclusion') or 'unknown'
 
           try:
               event = os.environ.get('GITHUB_EVENT_NAME')
@@ -72,31 +136,52 @@ jobs:
                   raise ValueError('unsupported deployment event')
               if os.environ.get('GITHUB_REF') != 'refs/heads/main':
                   raise ValueError('deployment requires refs/heads/main')
-              repository, selected = os.environ.get('GITHUB_REPOSITORY', ''), os.environ.get('DEPLOY_SHA', '')
+              repository, trigger = os.environ.get('GITHUB_REPOSITORY', ''), os.environ.get('TRIGGER_SHA', '')
               if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9][A-Za-z0-9_.-]*', repository):
                   raise ValueError('invalid repository identity')
-              if not re.fullmatch(r'[0-9a-f]{40}', selected):
-                  raise ValueError('invalid selected deployment SHA')
-              request = Request('https://api.github.com/repos/' + repository + '/git/ref/heads/main', headers={
-                  'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2026-03-10',
-                  'User-Agent': 'SkipperCast-deploy-source-check'})
-              with urlopen(request, timeout=15) as response:
-                  main = json.load(response)
+              if not is_sha(trigger):
+                  raise ValueError('invalid triggering SHA')
+              main = read('/git/ref/heads/main')
               if not isinstance(main, dict) or main.get('ref') != 'refs/heads/main':
                   raise ValueError('main ref metadata unavailable')
               current = main.get('object')
-              if (not isinstance(current, dict) or current.get('type') != 'commit'
-                      or not re.fullmatch(r'[0-9a-f]{40}', current.get('sha', '') if isinstance(current.get('sha'), str) else '')):
+              if not isinstance(current, dict) or current.get('type') != 'commit' or not is_sha(current.get('sha')):
                   raise ValueError('main commit metadata unavailable')
-              eligible = current['sha'] == selected
-              if not eligible and event == 'workflow_dispatch':
-                  raise ValueError('selected SHA is no longer current main; dispatch main again')
-              with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
-                  output.write('eligible=' + ('true' if eligible else 'false') + '\n')
-              if eligible:
-                  print('Current main source eligible:', selected)
+              head = current['sha']
+              history = read('/commits?' + urlencode({'sha': head, 'per_page': 100}))
+              if not isinstance(history, list):
+                  raise ValueError('main history metadata unavailable')
+              first_parent = {}
+              for commit in history:
+                  if not isinstance(commit, dict) or not is_sha(commit.get('sha')) or not isinstance(commit.get('parents'), list):
+                      raise ValueError('main history metadata invalid')
+                  first = commit['parents'][0] if commit['parents'] else None
+                  first_parent[commit['sha']] = first.get('sha') if isinstance(first, dict) and is_sha(first.get('sha')) else None
+              if head not in first_parent:
+                  raise ValueError('main history does not start at the main head')
+              selected, passed, sha = None, [], head
+              while sha in first_parent and len(passed) < DEPTH:
+                  state = checks(sha)
+                  if state == 'success':
+                      selected = sha
+                      break
+                  passed.append(sha[:9] + ' ' + (state or 'no run'))
+                  sha = first_parent[sha]
+              if selected:
+                  newer = ' (newer: ' + ', '.join(passed) + ')' if passed else ''
+                  reason = 'newest main commit with successful Offline checks' + newer
               else:
-                  print('::notice::Selected CI source is no longer current main; deployment held before checkout.')
+                  reason = ('no commit among the newest ' + str(len(passed)) + ' on main has successful Offline checks'
+                            + (' (' + ', '.join(passed) + ')' if passed else ''))
+              with Path(os.environ['GITHUB_OUTPUT']).open('a') as output:
+                  output.write('eligible=' + ('true' if selected else 'false') + '\n')
+                  output.write('sha=' + (selected or '') + '\n')
+                  output.write('reason=' + reason + '\n')
+              print('Main head:', head, '| triggered by:', trigger)
+              if selected:
+                  print('Selected for deployment:', selected, '-', reason)
+              else:
+                  print('::warning title=Deploy held::' + reason + '; nothing deployed, deployment held before checkout.')
           except (OSError, ValueError, TypeError, KeyError) as error:
               print('::error::Deployment source eligibility unavailable:', error, file=sys.stderr)
               sys.exit(1)
@@ -115,10 +200,17 @@ jobs:
       )
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      held: ${{ steps.recheck.outputs.hold }}
+      reason: ${{ steps.recheck.outputs.reason }}
+      production: ${{ steps.production.outputs.sha }}
+      production_state: ${{ steps.production.outputs.state }}
+      deployed: ${{ steps.deploy.outputs.deployed }}
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      GITHUB_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      # The commit the source job selected; the deploy script names it in the Worker version's message.
+      DEPLOY_SHA: ${{ needs.source.outputs.sha }}
     steps:
       - name: Reject manual non-main deployment before checkout
         if: github.event_name == 'workflow_dispatch'
@@ -130,11 +222,33 @@ jobs:
           fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The commit CI tested, not whatever main is by the time this runs.
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-      - name: Require current main and successful exact-SHA CI
-        run: python3 scripts/check_deploy_source.py
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+          # The selected commit CI tested, not whatever main is by the time this runs.
+          ref: ${{ needs.source.outputs.sha }}
+      # The deploy controller: the source guard and the live-commit helper from this workflow's
+      # own revision. The candidate may predate them (an older checked ancestor), so its copies
+      # of these scripts are never run; only its build and its deploy script are.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .deploy-controller
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/check_deploy_source.py
+            scripts/worker_versions.mjs
+          sparse-checkout-cone-mode: false
+      - name: Move the deploy controller out of the candidate tree
+        run: |
+          # Out of the tree the build and the deploy script see.
+          rm -rf "$RUNNER_TEMP/deploy-controller"
+          mv .deploy-controller "$RUNNER_TEMP/deploy-controller"
+          echo "CONTROLLER=$RUNNER_TEMP/deploy-controller" >> "$GITHUB_ENV"
+      - name: Require a main commit with successful exact-SHA CI
+        env:
+          SOURCE_READ_TOKEN: ${{ github.token }}
+          # The checkout must be exactly DEPLOY_SHA.
+          DEPLOY_TREE: ${{ github.workspace }}
+        run: python3 "$CONTROLLER/scripts/check_deploy_source.py"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -158,10 +272,49 @@ jobs:
             echo "::error::CLOUDFLARE_SITE_URL is unset, so this deploy could not be smoke-tested. Set the repository variable (docs/cloudflare.md)."
             exit 1
           fi
+      - name: Read the commit production serves
+        id: production
+        run: |
+          # Read-only Wrangler listings, before any production write. The recheck below holds a
+          # deploy when production's commit is unknown, is this commit or is newer. Only missing
+          # credentials count as unconfigured (the deploy script then writes nothing); a listing
+          # that fails or a live version that cannot be traced is unknown, which holds.
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "Cloudflare is not configured; there is no production version to compare."
+            echo "state=unconfigured" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mkdir -p var
+          state=unknown
+          sha=""
+          why="the Worker deployment or version listing could not be read"
+          if node scripts/wrangler_config.mjs 00000000-0000-0000-0000-000000000000 skippercast-feeds wrangler.production.jsonc &&
+             $WRANGLER deployments list --json --config wrangler.production.jsonc > var/deployments.json &&
+             $WRANGLER versions list --json --config wrangler.production.jsonc > var/versions.json; then
+            if sha=$(node "$CONTROLLER/scripts/worker_versions.mjs" live-commit var/deployments.json var/versions.json 2> var/live-commit.err); then
+              state=known
+              why=""
+              echo "Production serves commit $sha"
+            else
+              sha=""
+              why=$(tr '\n' ' ' < var/live-commit.err | cut -c 1-300)
+            fi
+          fi
+          if [ "$state" = unknown ]; then echo "::warning title=Production commit unknown::$why"; fi
+          { echo "state=$state"; echo "sha=$sha"; echo "reason=$why"; } >> "$GITHUB_OUTPUT"
+          rm -f var/deployments.json var/versions.json var/live-commit.err wrangler.production.jsonc
       - name: Recheck source immediately before production writes
-        run: python3 scripts/check_deploy_source.py
+        id: recheck
+        env:
+          SOURCE_READ_TOKEN: ${{ github.token }}
+          DEPLOY_TREE: ${{ github.workspace }}
+          PRODUCTION_STATE: ${{ steps.production.outputs.state }}
+          PRODUCTION_SHA: ${{ steps.production.outputs.sha }}
+          PRODUCTION_REASON: ${{ steps.production.outputs.reason }}
+        run: python3 "$CONTROLLER/scripts/check_deploy_source.py" --production
       - name: Back up D1, migrate and deploy
         id: deploy
+        if: steps.recheck.outputs.hold == 'false'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           # Text Advisor phone-number key, uploaded as the Worker secret ADVISOR_PHONE_KEY. Named
@@ -240,7 +393,9 @@ jobs:
           WORKERS_INVOCATION_LOGS: ${{ vars.WORKERS_INVOCATION_LOGS }}
         run: |
           mkdir -p var
-          bash scripts/cloudflare_deploy.sh
+          # GITHUB_SHA is set for the script too: a candidate older than DEPLOY_SHA support labels
+          # its Worker version and D1 backup with GITHUB_SHA, which is otherwise the newer main head.
+          GITHUB_SHA="$DEPLOY_SHA" bash scripts/cloudflare_deploy.sh
       - name: Smoke-test the deployed site (/, /map, /coast and the APIs)
         id: smoke
         if: steps.deploy.outputs.deployed == 'true'
@@ -261,28 +416,28 @@ jobs:
           # The version live before this deploy, not a bare `wrangler rollback`: the secrets
           # upload adds a second deployment, so Wrangler's default is this commit's own code (#568).
           if [ -z "$PREVIOUS" ]; then
-            echo "::error::Deployment of ${GITHUB_SHA} ${reason} and was NOT rolled back: the version live before it was not recorded. Roll back by hand; see docs/operations/runbooks/rollback-release.md."
+            echo "::error::Deployment of ${DEPLOY_SHA} ${reason} and was NOT rolled back: the version live before it was not recorded. Roll back by hand; see docs/operations/runbooks/rollback-release.md."
             exit 1
           fi
           node scripts/wrangler_config.mjs 00000000-0000-0000-0000-000000000000 skippercast-feeds wrangler.rollback.jsonc
-          if ! $WRANGLER rollback "$PREVIOUS" --config wrangler.rollback.jsonc --yes --message "Smoke test or deploy failed for ${GITHUB_SHA} (run ${GITHUB_RUN_ID})"; then
-            echo "::error::Deployment of ${GITHUB_SHA} ${reason} and the rollback to Worker version ${PREVIOUS} FAILED; roll back by hand (docs/operations/runbooks/rollback-release.md)."
+          if ! $WRANGLER rollback "$PREVIOUS" --config wrangler.rollback.jsonc --yes --message "Smoke test or deploy failed for ${DEPLOY_SHA} (run ${GITHUB_RUN_ID})"; then
+            echo "::error::Deployment of ${DEPLOY_SHA} ${reason} and the rollback to Worker version ${PREVIOUS} FAILED; roll back by hand (docs/operations/runbooks/rollback-release.md)."
             exit 1
           fi
           # Confirm by the version Cloudflare reports live, not by the build id: a commit that
           # changed no client files has the same build id as the version it replaced.
           mkdir -p var
           if ! $WRANGLER deployments list --json --config wrangler.rollback.jsonc > var/deployments.json; then
-            echo "::error::Deployment of ${GITHUB_SHA} ${reason}; rollback reported success by Wrangler but the live version could not be confirmed. Check by hand; see docs/operations/runbooks/rollback-release.md."
+            echo "::error::Deployment of ${DEPLOY_SHA} ${reason}; rollback reported success by Wrangler but the live version could not be confirmed. Check by hand; see docs/operations/runbooks/rollback-release.md."
             exit 1
           fi
           live=$(node scripts/worker_versions.mjs live var/deployments.json || true)
           if [ -z "$live" ]; then
-            echo "::error::Deployment of ${GITHUB_SHA} ${reason}; the rollback to Worker version ${PREVIOUS} could not be confirmed: no live version found in Cloudflare's deployment list. Check by hand; see docs/operations/runbooks/rollback-release.md."
+            echo "::error::Deployment of ${DEPLOY_SHA} ${reason}; the rollback to Worker version ${PREVIOUS} could not be confirmed: no live version found in Cloudflare's deployment list. Check by hand; see docs/operations/runbooks/rollback-release.md."
             exit 1
           fi
           if [ "$live" != "$PREVIOUS" ]; then
-            echo "::error::Deployment of ${GITHUB_SHA} ${reason}; the rollback to Worker version ${PREVIOUS} did not take effect: Cloudflare reports version ${live} live. See docs/operations/runbooks/rollback-release.md."
+            echo "::error::Deployment of ${DEPLOY_SHA} ${reason}; the rollback to Worker version ${PREVIOUS} did not take effect: Cloudflare reports version ${live} live. See docs/operations/runbooks/rollback-release.md."
             exit 1
           fi
           # The site's build id is only reported, never a reason to fail.
@@ -303,8 +458,97 @@ jobs:
               note=" (site serves build ${served})"
             fi
           fi
-          echo "::error::Deployment of ${GITHUB_SHA} ${reason} and was rolled back to Worker version ${PREVIOUS}, now live${note}. D1 migrations, if any, were not reverted; see docs/operations/runbooks/rollback-release.md."
+          echo "::error::Deployment of ${DEPLOY_SHA} ${reason} and was rolled back to Worker version ${PREVIOUS}, now live${note}. D1 migrations, if any, were not reverted; see docs/operations/runbooks/rollback-release.md."
           exit 1
+
+  report:
+    # A run that deploys nothing still ends "success" in GitHub Actions (a skipped job is not a
+    # failure), so this job states the outcome: a "Cloudflare deploy" check run on the commit,
+    # neutral when held or unconfigured and success when deployed, plus the job summary. A
+    # failed deploy fails its own job and this one does not run.
+    needs: [source, deploy]
+    if: >-
+      needs.source.result == 'success' && !cancelled() &&
+      (needs.deploy.result == 'success' || needs.deploy.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    # The only write this workflow's token gets: check runs. No checkout and no secrets here.
+    permissions:
+      checks: write
+    env:
+      REPORT_TOKEN: ${{ github.token }}
+      TRIGGER_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      SOURCE_ELIGIBLE: ${{ needs.source.outputs.eligible }}
+      SOURCE_REASON: ${{ needs.source.outputs.reason }}
+      SELECTED_SHA: ${{ needs.source.outputs.sha }}
+      DEPLOY_RESULT: ${{ needs.deploy.result }}
+      DEPLOY_HELD: ${{ needs.deploy.outputs.held }}
+      DEPLOY_REASON: ${{ needs.deploy.outputs.reason }}
+      DEPLOYED: ${{ needs.deploy.outputs.deployed }}
+      PRODUCTION_SHA: ${{ needs.deploy.outputs.production }}
+      PRODUCTION_STATE: ${{ needs.deploy.outputs.production_state }}
+    steps:
+      - name: Report deployed or held
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from urllib.error import HTTPError
+          from urllib.request import HTTPRedirectHandler, Request, build_opener
+
+          class RefuseRedirect(HTTPRedirectHandler):
+              # urllib would copy Authorization to a redirect target, another host or plain HTTP included.
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  raise HTTPError(newurl, code, 'deploy report redirect refused', headers, fp)
+
+          env = os.environ
+          trigger, selected, production = env.get('TRIGGER_SHA', ''), env.get('SELECTED_SHA', ''), env.get('PRODUCTION_SHA', '')
+          held = 'Held: nothing deployed'
+          if env.get('SOURCE_ELIGIBLE') != 'true':
+              conclusion, sha, title = 'neutral', trigger, held
+              text = env.get('SOURCE_REASON') or 'no main commit was eligible'
+          elif env.get('DEPLOY_RESULT') != 'success':
+              conclusion, sha, title = 'neutral', selected, held
+              text = 'the deploy job did not run for ' + selected
+          elif env.get('DEPLOY_HELD') == 'true':
+              conclusion, sha, title = 'neutral', selected, held
+              text = env.get('DEPLOY_REASON') or 'held before production writes'
+          elif env.get('DEPLOYED') == 'true':
+              conclusion, sha, title = 'success', selected, 'Deployed ' + selected[:9]
+              text = ('deployed ' + selected + ' (' + (env.get('SOURCE_REASON') or 'selected') + ') and its smoke test passed'
+                      + ('; production served ' + production + ' before' if production else ''))
+          elif env.get('PRODUCTION_STATE') == 'unconfigured':
+              conclusion, sha, title = 'neutral', selected, 'Not deployed: Cloudflare is not configured'
+              text = 'CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is unset, so nothing was deployed'
+          else:
+              conclusion, sha, title = 'neutral', selected, held
+              text = 'the deploy step reported no deployment of ' + selected
+          lines = ['### Deploy to Cloudflare: ' + ('deployed' if conclusion == 'success' else 'HELD (nothing deployed)'), '',
+                   '- Outcome: ' + title, '- Why: ' + text, '- Triggered by: `' + (trigger or 'unknown') + '`',
+                   '- Selected: `' + (selected or 'none') + '`', '- Production before this run: `' + (production or 'not read') + '`']
+          if env.get('GITHUB_STEP_SUMMARY'):
+              with open(env['GITHUB_STEP_SUMMARY'], 'a') as summary:
+                  summary.write('\n'.join(lines) + '\n')
+          print('::notice title=Deploy outcome::' + title + ': ' + text)
+          repository = env.get('GITHUB_REPOSITORY', '')
+          if not re.fullmatch(r'[0-9a-f]{40}', sha) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9][A-Za-z0-9_.-]*', repository):
+              print('::warning::No valid commit or repository to attach the deploy check run to.')
+              raise SystemExit(0)
+          body = {'name': 'Cloudflare deploy', 'head_sha': sha, 'status': 'completed', 'conclusion': conclusion,
+                  'output': {'title': title[:255], 'summary': '\n'.join(lines[2:])[:60000]}}
+          request = Request('https://api.github.com/repos/' + repository + '/check-runs', data=json.dumps(body).encode(), method='POST',
+                            headers={'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2026-03-10',
+                                     'User-Agent': 'SkipperCast-deploy-report', 'Content-Type': 'application/json',
+                                     'Authorization': 'Bearer ' + env.get('REPORT_TOKEN', '')})
+          try:
+              with build_opener(RefuseRedirect).open(request, timeout=15) as response:
+                  created = json.load(response)
+              print('Check run', created.get('id'), conclusion, 'on', sha)
+          except (OSError, ValueError) as error:
+              # The summary above still says what happened; a missing check run must not turn a deploy red.
+              print('::warning::Could not create the deploy check run:', error)
+          PY
 
   rollback:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'rollback'
@@ -315,7 +559,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
       - name: Roll back to a Worker version from a different commit

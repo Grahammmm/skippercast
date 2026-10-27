@@ -78,3 +78,62 @@ test('the shared clock updates its URL without requiring a forecast bundle',()=>
  try{syncFromURL();followForecastHour(doc);listeners['skippercast:time']({detail:{epoch:start}});input.value='168';listeners['skippercast:time']({detail:{epoch:start+168*3600}});assert.equal(new URL(location.href).searchParams.get('hour'),'2026-10-13T12:00Z');assert.equal(hour.value,'2026-10-13T12:00Z');}
  finally{Object.assign(globalThis,saved);hour.value=null;}
 });
+
+test('profile switches restore each chosen Currents source with its rail list', async () => {
+  const s = await import('../web/state.ts');
+  const values = new Map();
+  s.configureStore({v2: true, storage: {getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value)}});
+  let href = 'https://s.test/map?region=morro-bay&profile=boat&layers=currents,clouds&current=hfr-6&target=reef&base=aerial&hour=2026-10-06T12:00Z';
+  const go = patch => { href = s.withParams(href, patch); s.syncFromURL(href); };
+  try {
+    go({});
+    go(s.profilePatch('shore'));
+    assert.equal(s.current.value, 'off');
+    go({layers: 'currents,swell', current: 'hfr-1'});
+    go(s.profilePatch('boat'));
+    assert.equal(s.current.value, 'hfr-6');
+    assert.deepEqual(s.layers.value, ['currents', 'clouds']);
+    assert.equal(s.species.value, null);
+    assert.equal(s.base.value, 'aerial');
+    assert.equal(s.hour.value, '2026-10-06T12:00Z');
+    go(s.profilePatch('shore'));
+    assert.equal(s.current.value, 'hfr-1');
+    assert.deepEqual(s.layers.value, ['currents', 'swell']);
+    go({current: 'off'});
+    go(s.profilePatch('boat'));
+    go(s.profilePatch('shore'));
+    assert.equal(s.current.value, 'off', 'explicit off survives too');
+    go(s.profilePatch('kayak'));
+    assert.equal(s.current.value, 'wcofs', 'an unchosen profile keeps its default');
+  } finally { s.configureStore({v2: false, storage: null}); }
+});
+
+test('source persistence ignores invalid choices and preserves URL and v1 rules', async () => {
+  const s = await import('../web/state.ts');
+  const values = new Map();
+  const storage = {getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value)};
+  s.configureStore({v2: true, storage});
+  try {
+    s.syncFromURL('https://s.test/map?profile=boat&layers=currents&current=hfr-1');
+    for (const value of ['bogus', '']) {
+      s.syncFromURL(`https://s.test/map?profile=boat&current=${value}`);
+      assert.equal(s.current.value, s.UNSUPPORTED);
+      assert.equal(s.profilePatch('boat').current, 'hfr-1');
+    }
+    s.syncFromURL('https://s.test/map?profile=boat&layers=currents');
+    assert.equal(s.current.value, 'wcofs', 'an ordinary link without current retains its default rule');
+    s.configureStore({v2: false});
+    s.syncFromURL('https://s.test/map?profile=boat&current=hfr-6');
+    assert.equal(s.profilePatch('boat').current, null, 'v1 neither restores nor overwrites saved sources');
+    s.configureStore({v2: true});
+    assert.equal(s.profilePatch('boat').current, 'hfr-1');
+    for (const raw of ['{', '[]', '"hfr-6"', '{"boat":7}', '{"boat":"bogus"}']) {
+      values.set(s.STORAGE_KEYS.current, raw);
+      assert.equal(s.profilePatch('boat').current, null, raw);
+    }
+    s.configureStore({storage: {getItem() { throw Error('blocked'); }, setItem() { throw Error('blocked'); }}});
+    s.syncFromURL('https://s.test/map?profile=boat&current=hfr-6');
+    assert.equal(s.current.value, 'hfr-6', 'storage failures leave URL choices usable');
+    assert.equal(s.profilePatch('boat').current, null);
+  } finally { s.configureStore({v2: false, storage: null}); }
+});

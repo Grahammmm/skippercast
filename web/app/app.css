@@ -81,6 +81,8 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-where { display: flex; flex-direction: column; gap: var(--space-2); }
 .app-where-head { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; }
 .app-where-source { margin-inline-start: auto; color: var(--muted); }
+/* #644: the range to consider, its own row under the list */
+.app-where-range { align-self: flex-start; }
 .app-pick { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: baseline; inline-size: 100%; min-block-size: 44px; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel-2); color: var(--text); font: inherit; text-align: start; cursor: pointer; }
 .app-pick:hover { border-color: var(--muted); }
 .app-pick[aria-pressed="true"] { border-color: var(--mint); }
@@ -111,7 +113,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-brief-footer { margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--line); color: var(--muted); font-size: var(--text-11); }
 
 /* Map stage and its chrome */
-.app-stage { position: relative; min-height: 480px; background: var(--bg-deep); overflow: hidden; }
+.app-stage { --app-terrain-controls-bottom: calc(2 * var(--touch-min) + var(--space-7) + var(--space-3)); --app-terrain-controls-height: calc(4 * var(--touch-min) + 2px); position: relative; min-height: 480px; background: var(--bg-deep); overflow: hidden; }
 .app-map { position: absolute; inset: 0; z-index: var(--z-map); display: grid; place-items: center; color: var(--muted); }
 /* FE-71: the terrain host (packages/coast mounts in its shadow root), the Chart / 2D / 3D toggle and the stage's status line. */
 .app-terrain { position: absolute; inset: 0; z-index: var(--z-map); }
@@ -130,8 +132,27 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-stage-note { margin: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); color: var(--text); font-size: var(--text-13); box-shadow: var(--elev-2); }
 .app-stage-note:empty { padding: 0; border: 0; box-shadow: none; }
 .app-rail { position: absolute; top: var(--space-4); right: var(--space-4); }
+/* Reserve all four terrain buttons, their outer borders and a gap. Long desktop
+   rails scroll within the remaining space; the phone's sheet keeps its layout. */
+@media (min-width: 1024px) {
+  .app-stage > .app-rail {
+    box-sizing: border-box;
+    width: min(280px, calc(100% - 2 * var(--space-4)));
+    max-height: calc(100% - var(--space-4) - var(--app-terrain-controls-bottom) - var(--app-terrain-controls-height) - var(--space-3));
+    overflow-y: auto;
+  }
+  /* Absolute, end-aligned popovers escape a narrow scroll origin. Open basis
+     details instead occupy a full row and grow the same scrollable content. */
+  .app-stage > .app-rail .ui-popover[open] { flex-basis: 100%; min-width: 0; }
+  .app-stage > .app-rail .ui-popover[open] > .ui-popover-body {
+    position: static; box-sizing: border-box; width: 100%; max-width: none;
+    overflow-wrap: anywhere;
+  }
+  .app-stage > .app-rail .ui-rail-toggle { min-width: 0; }
+  .app-stage > .app-rail .ui-rail-text { min-width: 0; overflow-wrap: anywhere; }
+}
 /* FE-80: the terrain's zoom, reset and top view as one group styled and placed as the Chart's MapLibre zoom control (web/map/chart.css). */
-.app-terrain-controls { position: absolute; right: var(--space-4); bottom: calc(2 * var(--touch-min) + var(--space-7) + var(--space-3)); z-index: var(--z-map-chrome); display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); box-shadow: var(--elev-2); overflow: hidden; }
+.app-terrain-controls { position: absolute; right: var(--space-4); bottom: var(--app-terrain-controls-bottom); z-index: var(--z-map-chrome); display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--panel); box-shadow: var(--elev-2); overflow: hidden; }
 .app-terrain-controls .ui-button { width: var(--touch-min); height: var(--touch-min); border: 0; border-radius: 0; color: var(--text); }
 .app-terrain-controls .ui-button + .ui-button { border-top: 1px solid var(--line); }
 @media (max-width: 1023px) { .app-terrain-controls { top: calc(var(--app-strip, 84px) + 2 * var(--touch-min) + var(--space-5) + var(--space-4)); bottom: auto; } }
@@ -155,14 +176,24 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-legend { position: absolute; left: var(--space-4); bottom: calc(var(--touch-min) + var(--space-7)); z-index: var(--z-map-chrome); min-width: 160px; max-width: 280px; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); }
 .app-legend ul { margin: var(--space-1) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-13); }
 .app-legend li { display: flex; align-items: center; gap: var(--space-2); }
+.app-legend li.app-legend-stations { min-width: 0; flex-direction: column; align-items: stretch; overflow-wrap: anywhere; }
+.app-legend-stations > ul { width: 100%; min-width: 0; }
+.app-legend-stations > ul > li { min-width: 0; }
+.app-legend-stations details, .app-legend-stations details > ul { width: 100%; min-width: 0; }
+.app-legend-stations details > ul > li { min-width: 0; }
+.app-legend-stations details .ui-button { max-width: 100%; white-space: normal; text-align: left; }
 /* FE-22: the Clouds row's frame label (an .app-legend-note: acquisition time and age) under its name, and the loop toggle beside it. */
 .app-legend-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .app-swatch { width: var(--space-4); height: var(--space-2); border-radius: var(--radius-sm); background: var(--muted); }
 .app-swatch[data-layer="seafloor"] { background: linear-gradient(90deg, var(--depth-0), var(--depth-3)); }
+.app-swatch[data-layer="depth-contours"] { height: 0; border-top: 2px solid var(--depth-1); }
+.app-swatch[data-layer="depth-contours-edge"] { height: 0; border-top: 1px dashed var(--muted); }
+.app-swatch[data-layer="trip-ranked"] { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--mint); }
 .app-swatch[data-layer="marks-density"] { border-radius: var(--radius-pill); background: radial-gradient(circle, var(--depth-0), var(--depth-1) 45%, transparent 75%); }
 .app-swatch[data-layer="currents"] { background: var(--flow); }
 .app-swatch[data-layer="currents-fast"] { background: var(--flow-fast); }
-.app-legend-currents, .app-legend-density { flex-wrap: wrap; }
+.app-legend-currents, .app-legend-density, .app-legend-depth-contours { flex-wrap: wrap; }
+.app-legend-note[data-key="depth-contours-edge"] { display: flex; align-items: center; gap: var(--space-2); }
 .app-legend-note { flex-basis: 100%; margin: 0; color: var(--muted); font-size: var(--text-11); }
 .app-rail-source { flex-basis: 100%; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-2) var(--space-1); color: var(--muted); font-size: var(--text-11); }
 .app-rail-source select { flex: 1; min-width: 0; }
@@ -179,7 +210,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-legend-plain { flex-wrap: wrap; }
 /* FE-16: the whole ramp, cold to warm, as the texture draws it; the row adds the analysis's range in °F, its product and age. */
 .app-swatch[data-layer="water-temp"] { background: linear-gradient(90deg, var(--sst-0), var(--sst-1), var(--sst-2), var(--sst-3), var(--sst-4), var(--sst-5)); }
-.app-legend-water-temp, .app-legend-swell { flex-wrap: wrap; }
+.app-legend-water-temp, .app-legend-swell, .app-legend-sst-contrast { flex-wrap: wrap; }
+/* CI6-03: Temp contrast's fixed scale, weaker to stronger change per nautical mile. */
+.app-swatch[data-layer="sst-contrast"] { background: linear-gradient(90deg, var(--contrast-0), var(--contrast-1), var(--contrast-2)); }
 .app-legend-range { color: var(--text); font-size: var(--text-11); }
 /* FE-17: the swell ramp, low to high, and its fixed scale as a wider swatch between its ends. */
 .app-swatch[data-layer="swell"] { background: linear-gradient(90deg, var(--swell-0), var(--swell-1), var(--swell-2), var(--swell-3)); }

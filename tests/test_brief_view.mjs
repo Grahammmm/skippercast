@@ -12,6 +12,7 @@ import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
+import coastReport from './fixtures/coast/skippercast-report.json' with {type: 'json'};
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const INFO = {id: 'monterey-point-sur', name: 'Monterey', center: [36.62, -121.9], timezone: 'America/Los_Angeles'};
@@ -269,6 +270,28 @@ test('#473: the fleet line counts the region\'s trips by its landing names, not 
     reports: [{date: '2026-10-07', boat: 'Avenger', port: 'Morro Bay'}, {date: '2026-10-07', boat: 'Flying Fish', port: 'Avila Beach'}]};
   const brief = briefFrom(sources({info: MORRO_INFO, feed}), NOW);
   assert.equal(brief.fleet?.text, '2 boats reported from Morro Bay & Avila Beach in the last 7 days');
+});
+
+test('#557: the coast brief counts matching landing ports and excludes foreign ports', async () => {
+  const {briefFrom} = await load();
+  const foreign = {date: '2026-10-07', boat: 'Fixture Foreign', port: 'Monterey'};
+  const feed = {...montereyDaily, region_id: MORRO_INFO.id, landing_names: ['Morro Bay', 'Avila'],
+    reports: [{date: '2026-10-07', boat: 'Fixture Morro', port: 'Morro Bay'},
+      {date: '2026-10-07', boat: 'Fixture Avila', port: 'Avila Beach'}, foreign]};
+  const coast = {report: coastReport, areaId: 'central'};
+  const brief = briefFrom(sources({info: MORRO_INFO, feed, coast}), NOW);
+  assert.equal(brief?.basis, 'coast-report', 'the valid county and area must reach the coast branch');
+  const expectedFleet = {count: 2, port: 'Morro Bay & Avila Beach',
+    text: '2 boats reported from Morro Bay & Avila Beach in the last 7 days', href: '/report'};
+  assert.deepEqual(brief.fleet, expectedFleet, 'both matching ports count; the third boat at Monterey does not');
+
+  const foreignOnly = briefFrom(sources({info: MORRO_INFO, feed: {...feed, reports: [foreign]}, coast}), NOW);
+  assert.equal(foreignOnly?.basis, 'coast-report');
+  assert.equal(foreignOnly.fleet, null, 'a coast brief with only a foreign port has no fleet line');
+
+  const regional = briefFrom(sources({info: MORRO_INFO, feed, coast: null}), NOW);
+  assert.equal(regional?.basis, 'regional', 'the explicit null coast control takes the other branch');
+  assert.deepEqual(regional.fleet, expectedFleet, 'the regional branch keeps the same landing-name filter');
 });
 
 test('#473: the brief asks for the coast report where the region binds one, with no layer on, and only once', async t => {

@@ -1,0 +1,41 @@
+{
+  "schema": "coastal-four128-charge-ledger-v1",
+  "trust": "Repository-reviewed accounting projection of signed delegated-authority amendments. Signer fields are historical role attestations, not cryptographic signatures. Original bytes remain archived and are hash-bound below; this file issues no new authority.",
+  "head": {
+    "revision": 7,
+    "path": "~/agent-work/t08a/budget/four128-budget-amendment-v7.json",
+    "sha256": "b644414e17d01fa47daef3416ecf860a4267a5bf181cc15a519b8f8964a4ee47",
+    "supersedes_sha256": "7ef41e152ac8b8fad0677e2718f2c4f2589621120a33e1d2eb1a2715fd8bc890",
+    "status": "SIGNED_DELEGATED_BUDGET_AUTHORITY",
+    "signer": {"model": "claude-fable-5-1", "profile": "astra-orchestrator", "reviewer_id": "astra-orchestrator-claude-fable-5-1-t_c6674145", "task": "t_c6674145"},
+    "signed_at": "2026-10-20T17:29:29.143369+00:00"
+  },
+  "source": {
+    "pre_failure_prior_bytes": 821491388,
+    "failed_trial_charged_bytes": 73515136,
+    "failed_trial_2_charged_bytes": 36757568,
+    "failed_trial_4_charged_bytes": 110272704,
+    "window_prescan_charged_bytes": 73515136,
+    "failed_trial_5_charged_bytes": 257302976,
+    "trial_6_charged_bytes": 294060544,
+    "validation_hash_reads_charged_bytes": 73515136,
+    "rerun_1_charged_bytes": 294060544,
+    "rerun_2_charged_bytes": 294060544,
+    "sc5_geometry_prescan_charged_bytes": 36757568,
+    "prior_effective_bytes": 2365309244,
+    "previous_cumulative_limit_bytes": 1115551932,
+    "additional_bytes": 1543817856,
+    "cumulative_limit_bytes": 2659369788,
+    "fresh_allowance_bytes": 294060544,
+    "refunds": false,
+    "downloads": 0
+  },
+  "scratch": {
+    "charged_prior_bytes": 1616905649,
+    "previous_cumulative_maximum_bytes": 2147483648,
+    "additional_bytes": 6292913,
+    "cumulative_maximum_bytes": 2153776561,
+    "trial_reservation_bytes": 536870912,
+    "refunds": false
+  }
+}
