@@ -3,6 +3,8 @@
 ## Unreleased
 
 - The coast map's report, surface currents, history, terrain and habitat now come only from SkipperCast's own published data; the old SLO Fish Report service is no longer read. When one of SkipperCast's feeds is missing or out of date, that part is shown as unavailable instead of being filled from the old service, and the report leaves out nearshore wave or beach rows it cannot vouch for (FE-62, part b).
+- SP-MAP-NOW: Withhold cloud tiles and native current frames when an explicitly supplied decision clock is not a valid Date. Omitted clocks still use the current time; source ages, forecast and observation selection, publisher hosts and tile queries are unchanged.
+
 - Save up to three NOAA tide prediction stations per region in this browser and switch between them; existing choices migrate, the region default is unchanged, and offline packs still include only the active station.
 - SP-BAR-EVENTS: The harbour bar tide estimate ignores malformed event rows and stays unknown when either selected tide timestamp has conflicting high/low tags. Ordinary ebb/flood timing, bar hazard rules and the Coast Guard check reminder are unchanged; this is not clearance to cross.
 

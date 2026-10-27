@@ -1,0 +1,13 @@
+{
+  "schema": "coastal-batch-source-reuse-v1",
+  "grant_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source": {"bytes": 16, "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+  "windows": [[0, 0, 1, 1]],
+  "owner": [123, "synthetic-start", "synthetic-boot"],
+  "deadline": 1234.5,
+  "generation": "cccccccccccccccccccccccccccccccc",
+  "state": "admitted",
+  "leases": {},
+  "source_ledger": "synthetic/source-ledger.json",
+  "runtime_ledger": "synthetic/runtime-ledger.json"
+}
