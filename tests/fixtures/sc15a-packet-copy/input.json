@@ -1,0 +1,67 @@
+{
+  "provenance": {
+    "base": "8a805820c30895f5f037e26af9079fd3dc015b0f",
+    "shapes": [
+      "tests/contract/test_four128_candidate_documents.py: candidate_documents template and role descriptors",
+      "tests/unit/test_coastal_partial_support.py: _grant, _scoped_grant, _review strict scope",
+      "tests/unit/child_release_fixture.py: fixture continuation numeric authorities",
+      "src/skippercast/coastal/coordinator/saved_area.py: continuation_grant constants"
+    ],
+    "limits": "Synthetic metadata only. No adoption validation, source, runtime, execution or scientific authority."
+  },
+  "grant": {
+    "schema": "coastal-authenticated-policy-v1",
+    "source": {"path": "TEST_ONLY_SYNTHETIC.bag", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "bytes": 36757568},
+    "source_root": "${STATE}/never-created-source",
+    "source_relative_path": "TEST_ONLY_SYNTHETIC.bag",
+    "execution_profile": "coastal-contained-windows-v3",
+    "window_side": 128,
+    "window_count": 4,
+    "window_set": [[3762,3488,128,128],[3890,3488,128,128],[3762,3360,128,128],[3890,3360,128,128]],
+    "ordered_scope_contract": "coastal-ordered-four128-v2",
+    "geographic_review": {"path": "metadata/scope-review.json", "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "bytes": 128, "contract": "coastal-ordered-scope-review-v1"},
+    "output_retention": {"profile": "coastal-managed-output-32-v2", "limits": {"native": 16777216, "mapping": 3145728, "render": 7340032, "control": 6291456}, "total_bytes": 33554432, "prior_retained_bytes": 0, "cumulative_cap_bytes": 33554432},
+    "output_root": "${STATE}/never-created-output",
+    "larger_runtime_contract": "coastal-managed-eight-copy-four128-v1",
+    "execution_authorized": false,
+    "code_sha": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "deps_sha": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "saved_area_continuation_contract": "coastal-saved-area-continuation-v1",
+    "saved_area_adoption": {"path": "metadata/adoption.json", "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "bytes": 128, "contract": "coastal-saved-area-adoption-v1"},
+    "source_volume_cap_bytes": 220545408,
+    "prior_effective_bytes": 895006524,
+    "cumulative_limit_bytes": 1115551932
+  },
+  "template": {
+    "schema": "coastal-authenticated-input-v1",
+    "stage": "acquire",
+    "execution_contract": "coastal-authenticated-job-v1",
+    "synthetic": true,
+    "segment_id": "synthetic-scope-segment",
+    "source_row": {"id": "TEST_ONLY_SYNTHETIC_SOURCE", "title": "TEST_ONLY_SYNTHETIC.bag", "url": "https://example.invalid/TEST_ONLY_SYNTHETIC.bag", "kind": "bathymetry", "format": "bag", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+    "metadata_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "fixed_center_plan": {
+      "schema": "coastal-contained-native-window-spec-v3",
+      "execution_profile": "coastal-contained-windows-v3",
+      "window_side": 128,
+      "window_count": 4,
+      "window_shape": [128,128],
+      "halo": 0,
+      "minimum_margin_m": 0.1,
+      "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "native_window": [3762,3488,128,128],
+      "center_native": [728743,3819051],
+      "safety_bbox_native": [728515,3818823,729227,3819535],
+      "segment": {"schema": "coastal-segment-v1", "segment_id": "synthetic-scope-segment"},
+      "ordered_scope_contract": "coastal-ordered-four128-v2",
+      "scope_basis": "new_native_grid_target",
+      "historical_support_qualified": false,
+      "native_interest": {"crs": "EPSG:26910", "bbox": [728515,3818823,729227,3819535]}
+    }
+  },
+  "roles": {
+    "rights": [{"path": "metadata/rights.json", "sha256": "1111111111111111111111111111111111111111111111111111111111111111", "bytes": 128, "contract": "coastal-rights-evidence-v1"}],
+    "trial": {"path": "metadata/trial.json", "sha256": "2222222222222222222222222222222222222222222222222222222222222222", "bytes": 128, "contract": "coastal-bounded-patch-quality-policy-v3"},
+    "segment": {"path": "metadata/segment.json", "sha256": "3333333333333333333333333333333333333333333333333333333333333333", "bytes": 128, "contract": "coastal-segment-v1"}
+  }
+}

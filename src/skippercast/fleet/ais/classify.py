@@ -57,7 +57,8 @@ inferred-from-movement`` (D10: never "confirmed fishing") and the
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, fields
 import hashlib
 import json
 import math
@@ -70,18 +71,33 @@ from .sources.base import AisPosition
 __all__ = ["ALGORITHM_VERSION", "BASIS", "KINDS", "FISHING_KINDS", "Classification", "Segment", "Stats",
            "classifier_version", "classify_trip", "label_positions", "window_stats"]
 
-# Bump when the classification code changes behaviour, so classifier_version changes with it.
-ALGORITHM_VERSION = 2
+# Bump when classification behaviour or the fingerprint representation changes.
+ALGORITHM_VERSION = 3
 KINDS = ("in-port", "transit", "drift-anchor", "troll-slow", "troll-pelagic", "uncertain", "gap")
 FISHING_KINDS = ("drift-anchor", "troll-slow", "troll-pelagic")
 _SUSTAINED = {"drift-anchor": "drift_min_minutes", "troll-slow": "troll_slow_min_minutes",
               "troll-pelagic": "troll_pelagic_min_minutes"}
 
 
+def _identity_value(value):
+    """Canonical JSON containers, including read-only threshold mappings."""
+    if isinstance(value, Mapping):
+        return {key: _identity_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_identity_value(item) for item in value]
+    return value
+
+
 def classifier_version(thresholds: ActivityThresholds) -> str:
-    """``c<ALGORITHM_VERSION>-<16 hex>``: changes whenever any activity threshold or the algorithm version does."""
-    body = json.dumps({"algorithm": ALGORITHM_VERSION, "activity": thresholds.raw}, sort_keys=True,
-                      separators=(",", ":"))
+    """``c<ALGORITHM_VERSION>-<16 hex>``: binds raw settings AND effective typed fields.
+
+    Typed fields may differ from raw after dataclasses.replace or direct
+    construction. Retain raw-only auxiliary settings as part of the identity.
+    """
+    effective = {field.name: getattr(thresholds, field.name)
+                 for field in fields(thresholds) if field.name != "raw"}
+    body = json.dumps(_identity_value({"algorithm": ALGORITHM_VERSION, "activity": thresholds.raw,
+                                       "effective": effective}), sort_keys=True, separators=(",", ":"))
     return f"c{ALGORITHM_VERSION}-{hashlib.sha256(body.encode('utf-8')).hexdigest()[:16]}"
 
 
