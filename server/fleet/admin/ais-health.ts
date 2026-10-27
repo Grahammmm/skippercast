@@ -89,7 +89,10 @@ async function regionHealth(db: D1Database, region: string, now: number): Promis
     try { const v = JSON.parse(beat.value); if (v && typeof v === 'object' && !Array.isArray(v)) doc = v; else unreadable = true; }
     catch { unreadable = true; }
   }
-  const lastMessage = str(doc?.last_message_at), lastAge = ageS(lastMessage, now);
+  const lastMessage = str(doc?.last_message_at);
+  // A future message clock is unknown, not evidence of a fresh listener.
+  // Leave ageS's existing clamp unchanged for heartbeat/processor clocks.
+  const lastAge = lastMessage !== null && Date.parse(lastMessage) > now ? null : ageS(lastMessage, now);
 
   const hours24 = Array.from({length: 24}, (_, i) => {
     const key = hourKey(from24 + i * HOUR_MS), r = hours.get(key);

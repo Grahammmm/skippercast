@@ -1,0 +1,8 @@
+{
+  "spec_version": "SP-16-v1",
+  "fixture_kind": "synthetic published CUSP FeatureCollection parameters",
+  "cases": {
+    "primary regression": {"hor_acc": 20, "display_quantisation_m": -20, "expected_status": "unavailable", "expected_cause": "invalid display quantisation"},
+    "healthy control": {"hor_acc": 4.31, "display_quantisation_m": 1.96, "expected_status": "available"}
+  }
+}

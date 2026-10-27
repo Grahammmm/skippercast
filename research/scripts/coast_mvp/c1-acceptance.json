@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "status": "review_required",
+  "navigation": "NOT FOR NAVIGATION \u2014 research preview; review required",
+  "segment": "morro-bay",
+  "region_sha256": "f315741cc7a71d319675c9ad6ee9eab95ac3502b1104d80108a83ee50f66e95b",
+  "source_table_sha256": "6b4e34e8bb0bf73d7d1312d01a5608a04a5b5a0a47c69c9c73b5d7b4a1b57b7e",
+  "crs": "EPSG:3310",
+  "resolution_m": 10,
+  "bounds_wgs84": [
+    -121.95,
+    34.95,
+    -120.55,
+    35.85
+  ],
+  "bounds_projected": [
+    -177970,
+    -340600,
+    -49610,
+    -238970
+  ],
+  "width": 12836,
+  "height": 10163,
+  "value_convention": "elevation_positive_up",
+  "units": "m",
+  "vertical_reference": "mixed_source_references_explicit_offsets_only",
+  "priority": "finest native resolution first; lexical id ties; GDAL last-valid stack reversed",
+  "resampling": "nearest (no cross-source interpolation)",
+  "gdal_version": "3.12.4",
+  "sources": [
+    {
+      "id": "csmp-buchon",
+      "path": "RESTORE_LOCAL_CACHE_PATH/csmp-buchon.tif",
+      "sha256": "6c43b4661c1d90bd201b4ca8f3a4032ad90eb05d62ed817cae0b2dc8e6e2ed65",
+      "resolution_m": 2.0,
+      "units": "m",
+      "vertical_datum": "unstated",
+      "vertical_offset_m": 0,
+      "value_convention": "elevation_positive_up",
+      "citation": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9KBGELE/21b585e020ab4afba49b2754075826a7/Bathymetry_OffshorePointBuchon.zip",
+      "rights": "USGS public data; source-specific notices must be reviewed before publication",
+      "attribution": "USGS California State Waters Map Series; see original source metadata",
+      "offset_note": "Zero offset: no vertical reconciliation; source datum not yet verified in this table",
+      "archive_sha256": "c825293fc999ad757b32ee2acefcae590690d451d12fd367b2f8b3e9e6d731d4",
+      "source_crs": "EPSG:32610",
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "bytes": 344544112,
+      "datum_unresolved": true,
+      "vertical_transform_status": "explicit_constant_only_not_a_geodetic_transform",
+      "code": 1
+    },
+    {
+      "id": "csmp-estero",
+      "path": "RESTORE_LOCAL_CACHE_PATH/csmp-estero.tif",
+      "sha256": "8cbd047609c6dc38163335136a97eb014dbac22e93aa56140bb5a2539a83ed2b",
+      "resolution_m": 2.0,
+      "units": "m",
+      "vertical_datum": "unstated",
+      "vertical_offset_m": 0,
+      "value_convention": "elevation_positive_up",
+      "citation": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9ZSTUK1/379fedd24ed54b1d9a079e07c3e7f7e5/Bathymetry_OffshorePointEstero.zip",
+      "rights": "USGS public data; source-specific notices must be reviewed before publication",
+      "attribution": "USGS California State Waters Map Series; see original source metadata",
+      "offset_note": "Zero offset: no vertical reconciliation; source datum not yet verified in this table",
+      "archive_sha256": "43244d9ca2e61f6c4154bd50c9ec05286b1d01772e1354fc247f905176e8d37a",
+      "source_crs": "EPSG:32610",
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "bytes": 79230396,
+      "datum_unresolved": true,
+      "vertical_transform_status": "explicit_constant_only_not_a_geodetic_transform",
+      "code": 2
+    },
+    {
+      "id": "csmp-morro",
+      "path": "RESTORE_LOCAL_CACHE_PATH/csmp-morro.tif",
+      "sha256": "4da54faeca049274ae2772a426f7637a26051ea5680c2cd674d483748c984547",
+      "resolution_m": 2.0,
+      "units": "m",
+      "vertical_datum": "unstated",
+      "vertical_offset_m": 0,
+      "value_convention": "elevation_positive_up",
+      "citation": "https://cmgds.marine.usgs.gov/data-releases/media/2022/10.5066-P9HEZNRO/7c8afd6a626a4054b41d268dbd18244d/Bathymetry_OffshoreMorroBay.zip",
+      "rights": "USGS public data; source-specific notices must be reviewed before publication",
+      "attribution": "USGS California State Waters Map Series; see original source metadata",
+      "offset_note": "Zero offset: no vertical reconciliation; source datum not yet verified in this table",
+      "archive_sha256": "1f215612bbd0bac0eed8b7738cfc608a8403ebdcb8d1705123e864fd81f24aed",
+      "source_crs": "EPSG:32610",
+      "native_resolution_m": [
+        2.0,
+        2.0
+      ],
+      "bytes": 344544116,
+      "datum_unresolved": true,
+      "vertical_transform_status": "explicit_constant_only_not_a_geodetic_transform",
+      "code": 3
+    },
+    {
+      "id": "cal-dig-i",
+      "path": "RESTORE_LOCAL_CACHE_PATH/cal-dig-i.tif",
+      "sha256": "85bec38a4b2d712316abbbe2c473d38c1ea3ab16d53cf7c1016d1a9e26f7687d",
+      "resolution_m": 10,
+      "units": "m",
+      "vertical_datum": "unstated",
+      "vertical_offset_m": 0,
+      "value_convention": "elevation_positive_up",
+      "citation": "https://doi.org/10.5066/P9QQZ27U",
+      "rights": "USGS/BOEM release; original third-party credits and reuse terms require review before publication",
+      "attribution": "USGS/BOEM Cal DIG I v2; producer composite includes NOS, MBARI98 and SR1604",
+      "offset_note": "Datum not stated; zero offset explicitly unresolved, not a datum conversion",
+      "source_crs": "EPSG:26910",
+      "native_resolution_m": [
+        10.0,
+        10.0
+      ],
+      "bytes": 327890845,
+      "datum_unresolved": true,
+      "vertical_transform_status": "explicit_constant_only_not_a_geodetic_transform",
+      "code": 4
+    }
+  ],
+  "outputs": {
+    "elevation": {
+      "path": "elevation.tif",
+      "sha256": "525d26a42e42d4f9afbeb747e14c0f5f04ac0c8d52ce8339e430d6093dbed319",
+      "bytes": 265612503
+    },
+    "contributor": {
+      "path": "contributor.tif",
+      "sha256": "cd5f24d3c391e4aabb3238f31b1f8733cc3d87b052ab088ba0b3e89b0b5ba484",
+      "bytes": 606089
+    },
+    "support_count": {
+      "path": "support_count.tif",
+      "sha256": "dc1f44a792bbb9f315e89fc586d0c2765e9b8e9481f8fda38c3dea5dc5a2c3ab",
+      "bytes": 603359
+    }
+  },
+  "stats": {
+    "grid_cells": 130452268,
+    "valid_cells": 65830271,
+    "hole_cells": 64621997,
+    "overlap_cells": 201088,
+    "extra_source_cell_observations": 201088,
+    "minimum_elevation_m": -1621.446044921875,
+    "maximum_elevation_m": -0.22001704573631287
+  },
+  "contributor_cells": {
+    "1": 1264827,
+    "2": 1249827,
+    "3": 932293,
+    "4": 62383324
+  },
+  "limitations": [
+    "Hole cells include land and unsurveyed water; no water mask was supplied.",
+    "No seamless vertical-datum reconciliation is claimed; constant offsets are not VDatum.",
+    "Unstated datum uses zero offset and is explicitly unresolved.",
+    "Bounding box is conservatively enclosed in the projected rectangular grid.",
+    "Not a navigation, rights-clearance, or semantic acceptance."
+  ]
+}
