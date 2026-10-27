@@ -202,14 +202,15 @@ const nearshoreNow = (s: Json, now: number) => s.freshness === 'current' && !(no
 /** A recorded series whose last observation is over 3 h old is stale now, though it was current when published (weekly). */
 const historyNow = (d: Json, now: number) => ({...d, stations: d.stations.map((s: Json) =>
   ({...s, recent: {...s.recent, stale: s.recent.stale === true || !(now - clock(s.recent.lastObservedAt) <= 3 * HOUR)}}))});
-/** SkipperCast's report with the nearshore and beach rows and their source statuses from their own feeds, where those are used. */
+/** SkipperCast's report with the nearshore and beach rows and their source statuses only from their own feeds, where those are used.
+ *  Rows or statuses already embedded in the report base are dropped first, so a feed that is not used never leaves rows behind. */
 function overlay(report: Json, own: Partial<Record<CoastFeed, Json>>, now: number): Json {
-  let out: Json = {...report, sources: Array.isArray(report.sources) ? report.sources : []};
+  const {nearshore: _n, waterQuality: _w, ...base} = report;
+  const enrichment = (s: Json) => String(s?.id).startsWith('cdip-') || s?.id === 'slo-beach-water-quality';
+  let out: Json = {...base, sources: Array.isArray(report.sources) ? report.sources.filter((s: Json) => !enrichment(s)) : []};
   const nearshore = own.nearshore, water = own['water-quality'];
-  if (nearshore) out = {...out, nearshore: nearshore.nearshore.map((s: Json) => nearshoreNow(s, now)),
-    sources: [...out.sources.filter((s: Json) => !String(s?.id).startsWith('cdip-')), ...nearshore.sources]};
-  if (water) out = {...out, waterQuality: water.waterQuality,
-    sources: [...out.sources.filter((s: Json) => s?.id !== 'slo-beach-water-quality'), ...water.sources]};
+  if (nearshore) out = {...out, nearshore: nearshore.nearshore.map((s: Json) => nearshoreNow(s, now)), sources: [...out.sources, ...nearshore.sources]};
+  if (water) out = {...out, waterQuality: water.waterQuality, sources: [...out.sources, ...water.sources]};
   return out;
 }
 /** A SkipperCast packet, re-checked against the route's byte limit after any merge (as the service worker does). */

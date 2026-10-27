@@ -379,6 +379,25 @@ test('FE-62: a report whose nearshore or beach feed is not current is served wit
   assert.equal((await serveCoastData(request('/api/coast/report'), broken)).headers.get('X-Coast-Upstream'), 'report=skippercast, nearshore=unavailable (unreadable), water-quality=unavailable (missing)');
 });
 
+test('FE-62 review: nearshore and beach rows already in the report base are dropped unless their own feed is used', async () => {
+  const clean = reportFeed();
+  const embedded = {...clean, nearshore: [site('EMBED', 'central')], waterQuality: [{id: 'embedded-beach', status: 'Beach Open', fetchedAt: ago(0.1)}],
+    sources: [...clean.sources, {id: 'cdip-EMBED', outcome: 'ok', fetchedAt: ago(0.1)}, {id: 'slo-beach-water-quality', outcome: 'ok', fetchedAt: ago(0.1)}]};
+  const everyFeed = coastFeeds(), refusedEnrichment = new Set([...everyFeed].filter(name => !['nearshore', 'water-quality'].includes(name)));
+  for (const [files, feeds, reason] of [[{}, everyFeed, 'missing'], [{[NEARSHORE]: nearshoreFeed(ago(3.1)), [BEACH]: beachFeed(ago(3.5))}, everyFeed, 'stale'],
+    [{[NEARSHORE]: nearshoreFeed(), [BEACH]: beachFeed()}, refusedEnrichment, 'refused']]) {
+    const r = await report({[REPORT]: embedded, ...files}, feeds);
+    assert.equal(r.status, 200, reason);
+    assert.equal(r.headers.get('X-Coast-Upstream'), `report=skippercast, nearshore=unavailable (${reason}), water-quality=unavailable (${reason})`);
+    const data = await r.json();
+    assert.deepEqual([data.nearshore, data.waterQuality, data.sources], [undefined, undefined, clean.sources], reason);
+  }
+  // With both feeds used, their rows and statuses replace the embedded ones.
+  const near = nearshoreFeed(), beach = beachFeed();
+  const used = await (await report({[REPORT]: embedded, [NEARSHORE]: near, [BEACH]: beach})).json();
+  assert.deepEqual([used.nearshore.map(s => s.id), used.waterQuality, used.sources], [['SL345'], beach.waterQuality, [...clean.sources, ...near.sources, ...beach.sources]]);
+});
+
 test('a site whose model issue reached 48 h is served stale, never current, with its clocks unchanged', async () => {
   const old = site('SL552', 'north', {issuedAt: ago(48.2)}), feed = nearshoreFeed(ago(0.5), [site('SL345', 'central'), old]);
   const data = await (await report({[REPORT]: reportFeed(), [NEARSHORE]: feed})).json();
