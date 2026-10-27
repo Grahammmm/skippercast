@@ -1,0 +1,49 @@
+{
+  "schema": "sp1406.synthetic/v1",
+  "provenance": "Synthetic inputs shaped like tests/fixtures/feeds/daily-latest.json; no downloaded source, real fleet or provider observations.",
+  "now": "2026-09-28T19:00:00Z",
+  "region": {
+    "id": "morro-bay",
+    "timezone": "America/Los_Angeles",
+    "jurisdiction_id": "california-central",
+    "species": ["rockfish"],
+    "daily_feed": "https://example.test/synthetic/latest.json",
+    "intelligence_feed": "https://example.test/synthetic/intelligence.json",
+    "marine_zones": {"coastal": "PZZ645", "offshore": "PZZ670"},
+    "forecast_points": [{"id": "central"}]
+  },
+  "daily": {
+    "schema_version": 1,
+    "generated_at": "2026-09-28T19:00:00Z",
+    "region_id": "morro-bay",
+    "sources": {},
+    "reports": [],
+    "health": {},
+    "catch_probability": null,
+    "bite_score": null
+  },
+  "intel": {"region_id": "morro-bay", "completed_at": "2026-09-28T18:30:00Z"},
+  "healthy_sources": {
+    "alerts-PZZ645": {
+      "id": "alerts-PZZ645", "kind": "advisory", "status": "ok",
+      "checked_at": "2026-09-28T18:00:00Z",
+      "data": {"issued_at": "2026-09-28T18:00:00Z", "alerts": []}
+    },
+    "alerts-PZZ670": {
+      "id": "alerts-PZZ670", "kind": "advisory", "status": "ok",
+      "checked_at": "2026-09-28T17:00:00Z",
+      "data": {"issued_at": "2026-09-28T17:00:00Z", "alerts": []}
+    }
+  },
+  "invalid_statuses": ["failed", "retained", "stale", "unknown", "OK", "", null],
+  "invalid_alerts": [null, {}, "not-an-array", 1],
+  "invalid_times": ["not-a-date", "", null, 1780000000000, {}, []],
+  "gale": {
+    "id": "synthetic-gale", "event": "Gale Warning", "headline": "Synthetic gale warning",
+    "onset": "2026-09-28T06:00:00-07:00", "ends": "2026-09-28T23:00:00-07:00"
+  },
+  "small_craft": {
+    "id": "synthetic-small-craft", "event": "Small Craft Advisory", "headline": "Synthetic small craft advisory",
+    "onset": "2026-09-28T06:00:00-07:00", "ends": "2026-09-28T23:00:00-07:00"
+  }
+}
