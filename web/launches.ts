@@ -25,17 +25,26 @@ export function parseLaunchPoints(json: unknown, region: string): LaunchPoint[] 
     ? [{id: p.id, name: p.name, kind: typeof p.kind === 'string' ? p.kind : 'launch', latitude: p.latitude, longitude: p.longitude}] : []);
 }
 
-const asked = new Set<string>();
-/** Load `region`'s list once; a failure leaves it empty. */
+// One read per region, kept for revisits; only the region asked for last publishes, so a late answer for a
+// region already left never replaces the current one.
+const asked = new Map<string, Promise<LaunchPoint[]>>();
+let latest: string | null = null;
+/** Load `region`'s list once and publish it on every visit; a failure leaves it empty. */
 export async function loadLaunchPoints(region: string, page: string = location.href, fetchFn: typeof fetch = sharedFetch): Promise<void> {
-  if (asked.has(region)) return;
-  asked.add(region);
-  let points: LaunchPoint[] = [];
-  try {
-    const r = await fetchFn(new URL(`regions/${encodeURIComponent(region)}/launch-points.json`, page).href);
-    if (r.ok) points = parseLaunchPoints(await r.json(), region);
-  } catch { /* no list: the harbor */ }
-  launchPoints.value = {region, points};
+  latest = region;
+  let read = asked.get(region);
+  if (!read) {
+    read = (async (): Promise<LaunchPoint[]> => {
+      try {
+        const r = await fetchFn(new URL(`regions/${encodeURIComponent(region)}/launch-points.json`, page).href);
+        if (r.ok) return parseLaunchPoints(await r.json(), region);
+      } catch { /* no list: the harbor */ }
+      return [];
+    })();
+    asked.set(region, read);
+  }
+  const points = await read;
+  if (latest === region && (launchPoints.peek()?.region !== region || launchPoints.peek()?.points !== points)) launchPoints.value = {region, points};
 }
 
 /** The chosen launch for `region` as a distance origin, or null (none chosen, not loaded, or no longer listed). */
@@ -45,4 +54,4 @@ export function launchOrigin(region: string | null, list = launchPoints.value, c
 }
 
 /** Test seam: forget which regions were asked for. */
-export const resetLaunchPoints = (): void => { asked.clear(); launchPoints.value = null; };
+export const resetLaunchPoints = (): void => { asked.clear(); latest = null; launchPoints.value = null; };

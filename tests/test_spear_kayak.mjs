@@ -158,6 +158,70 @@ test('the shoreline loads once per region; a failure claims no distance', async 
   resetShoreLines();
 });
 
+// Committed region files over a fake network: a missing file answers 404; `hold` delays one region's answer.
+const committedFetch = (hold = {}) => async url => {
+  const path = new URL(String(url)).pathname.replace(/^\//, ''), region = decodeURIComponent(path.split('/')[1] ?? '');
+  if (hold[region]) await hold[region];
+  try { return new Response(readFileSync(new URL(`../dist/${path}`, import.meta.url))); } catch { return new Response('', {status: 404}); }
+};
+const deferred = () => { let open; const promise = new Promise(r => { open = r; }); return {promise, open}; };
+
+test('the shoreline comes back on a region revisit and a late answer never replaces the current region', async () => {
+  resetShoreLines();
+  const fetchFn = committedFetch();
+  await loadShoreLines('morro-bay', 'https://example.test/', fetchFn);
+  await loadShoreLines('big-sur-coast', 'https://example.test/', fetchFn);
+  assert.equal(shoreLines.value.region, 'big-sur-coast');
+  await loadShoreLines('morro-bay', 'https://example.test/', fetchFn);
+  assert.equal(shoreLines.value.region, 'morro-bay', 'A -> B -> A restores A');
+  assert.equal(shoreLines.value.lines.length, LINES.length);
+  // The saved swim still filters with the restored lines.
+  const yards = ATLAS.targets.map(t => yardsFromShore(t, LINES)).filter(y => y !== null).sort((a, b) => a - b);
+  const maxYd = Math.ceil(yards[Math.floor(yards.length / 3)] / 25) * 25;
+  const near = ranking(inputs({shore: {maxYd, lines: shoreLines.value.lines}}));
+  assert.match(near.basis, /within \d+ yd of the mapped shoreline/);
+  for (const p of near.picks) assert.ok(yardsFromShore(ATLAS.targets.find(t => t.id === p.id), LINES) <= maxYd, p.id);
+  // Morro Bay answers late, after the visitor moved to Big Sur: Big Sur stays.
+  resetShoreLines();
+  const late = deferred(), slow = committedFetch({'morro-bay': late.promise});
+  const first = loadShoreLines('morro-bay', 'https://example.test/', slow);
+  await loadShoreLines('big-sur-coast', 'https://example.test/', slow);
+  late.open(); await first;
+  assert.equal(shoreLines.value.region, 'big-sur-coast', 'the obsolete answer is not published');
+  resetShoreLines();
+});
+
+test('the saved Kayak launch comes back on a region revisit and a late list never replaces the current region', async () => {
+  resetLaunchPoints();
+  const data = memory();
+  reach.loadLaunch();
+  const fetchFn = committedFetch(), points = parseLaunchPoints(LAUNCHES, 'morro-bay'), pick = points.at(-1);
+  reach.saveLaunch('morro-bay', pick.id);
+  const origin = {latitude: pick.latitude, longitude: pick.longitude, name: pick.name};
+  await loadLaunchPoints('morro-bay', 'https://example.test/', fetchFn);
+  assert.deepEqual(launchOrigin('morro-bay'), origin);
+  await loadLaunchPoints('big-sur-coast', 'https://example.test/', fetchFn);
+  assert.equal(launchOrigin('morro-bay'), null, 'away from Morro Bay its launch is not the origin');
+  await loadLaunchPoints('morro-bay', 'https://example.test/', fetchFn);
+  assert.deepEqual(launchOrigin('morro-bay'), origin, 'A -> B -> A restores the saved launch');
+  // Distances, the range filter and the ring all run from the restored launch.
+  const r = ranking(inputs({profile: 'kayak', origin: launchOrigin('morro-bay'), reachNm: 10}));
+  assert.equal(r.harbor, pick.name);
+  for (const p of r.picks) assert.ok(p.nm <= 10, p.id);
+  assert.match(reachFeatures(launchOrigin('morro-bay'), 3).features[1].properties.label, new RegExp(`3 nm from ${pick.name}`));
+  // Morro Bay's list answers late, after the visitor moved to Big Sur: Big Sur stays.
+  resetLaunchPoints();
+  const late = deferred(), slow = committedFetch({'morro-bay': late.promise});
+  const first = loadLaunchPoints('morro-bay', 'https://example.test/', slow);
+  await loadLaunchPoints('big-sur-coast', 'https://example.test/', slow);
+  late.open(); await first;
+  assert.equal(launchPoints.value.region, 'big-sur-coast', 'the obsolete list is not published');
+  assert.ok(data.has(STORAGE_KEYS.launch));
+  resetLaunchPoints();
+  configureStore({storage: null});
+  reach.launchChoice.value = {};
+});
+
 test('the Chart\'s seafloor layer redraws when the diver\'s depth changes, as the marks and the list do', () => {
   const src = readFileSync(new URL('../web/map/seafloor.ts', import.meta.url), 'utf8');
   assert.match(src, /effect\(\(\) => \{[^}]*ownSpearDepthFt\.value;[^}]*untracked\(\(\) => void draw\(\)\)/, 'the redraw effect tracks the saved depth');

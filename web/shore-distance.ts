@@ -43,16 +43,26 @@ export function yardsFromShore(p: {latitude: number; longitude: number}, lines: 
   return Number.isFinite(best) ? best : null;
 }
 
-const asked = new Set<string>();
-/** Load `region`'s overview shoreline once; a failure leaves `lines` null, so no distance is claimed. */
+type Lines = readonly (readonly number[])[][] | null;
+// One read per region, kept for revisits; only the region asked for last publishes, so a late answer for a
+// region already left never replaces the current one.
+const asked = new Map<string, Promise<Lines>>();
+let latest: string | null = null;
+/** Load `region`'s overview shoreline once and publish it on every visit; a failure leaves `lines` null, so no distance is claimed. */
 export async function loadShoreLines(region: string, page: string = location.href, fetchFn: typeof fetch = sharedFetch): Promise<void> {
-  if (asked.has(region)) return;
-  asked.add(region);
-  let lines: number[][][] | null = null;
-  try {
-    const r = await fetchFn(new URL(`regions/${encodeURIComponent(region)}/shoreline-overview.geojson`, page).href);
-    if (r.ok) { const l = linesOf(await r.json()); lines = l.length ? l : null; }
-  } catch { /* none */ }
-  shoreLines.value = {region, lines};
+  latest = region;
+  let read = asked.get(region);
+  if (!read) {
+    read = (async (): Promise<Lines> => {
+      try {
+        const r = await fetchFn(new URL(`regions/${encodeURIComponent(region)}/shoreline-overview.geojson`, page).href);
+        if (r.ok) { const l = linesOf(await r.json()); return l.length ? l : null; }
+      } catch { /* none */ }
+      return null;
+    })();
+    asked.set(region, read);
+  }
+  const lines = await read;
+  if (latest === region && (shoreLines.peek()?.region !== region || shoreLines.peek()?.lines !== lines)) shoreLines.value = {region, lines};
 }
-export const resetShoreLines = (): void => { asked.clear(); shoreLines.value = null; };
+export const resetShoreLines = (): void => { asked.clear(); latest = null; shoreLines.value = null; };
