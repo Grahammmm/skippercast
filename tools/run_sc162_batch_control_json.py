@@ -98,8 +98,8 @@ def main():
     out = Path(tempfile.mkdtemp(prefix='run-', dir=args.out))
     previous_path = list(sys.path)
     try:
-        sys.path.insert(0, str(REPO / 'tests/unit'))
-        tests = importlib.import_module('test_sc162_batch_control_json')
+        sys.path.insert(0, str(REPO))
+        tests = importlib.import_module('tests.unit.test_sc162_batch_control_json')
     finally:
         sys.path[:] = previous_path
     cases = [tests.BatchControlJSONTests(name) for name in tests.REQUIRED_CASES]

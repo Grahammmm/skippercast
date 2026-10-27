@@ -18,7 +18,8 @@ import tempfile
 import unittest
 from unittest import mock
 
-REPO = Path(__file__).resolve().parents[2]
+from tests._support import ROOT as REPO
+
 FIXTURE = REPO / "tests/fixtures/sc162-batch-control-json/control.json"
 MODULE = "skippercast.coastal.authenticated_v1.source_reuse"
 REGRESSION_CASES = {
@@ -100,7 +101,6 @@ def offline_module():
     finder = NoModelImports()
     try:
         sys.dont_write_bytecode = True
-        sys.path.insert(0, str(REPO / "src"))
         sys.meta_path.insert(0, finder)
         with ExitStack() as stack:
             for target in ("socket.socket.connect", "socket.socket.connect_ex",
