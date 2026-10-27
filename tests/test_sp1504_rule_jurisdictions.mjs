@@ -1,9 +1,12 @@
 // SP-15-v1 / SP1504-RULE-JURISDICTIONS. Complete real module, real ruleKeys,
 // real catalogs and migration-backed in-memory SQLite; no planner doubles.
+import {installOffline, offlineEnv} from './fixtures/sp1504_rule_jurisdictions/offline.mjs';
 import test, {after} from 'node:test';
+// Install before the dynamic product import below, also in ordinary suite runs;
+// this module owns the restore and attempted-boundary check.
+after(installOffline());
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {offlineEnv} from './fixtures/sp1504_rule_jurisdictions/offline.mjs';
 import {advisorDatabase, sqliteUnavailable} from './_advisor_d1.mjs';
 
 if (sqliteUnavailable) throw new Error(sqliteUnavailable); // never silently skip

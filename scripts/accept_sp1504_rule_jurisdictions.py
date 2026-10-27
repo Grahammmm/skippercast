@@ -119,7 +119,9 @@ def main():
         if args.suite in {"baseline", "focused", "regression"}:
             selector = REGRESSION if args.suite == "regression" else TEST
             argv = [node, "--import", guard, "--test", "--test-reporter=tap", selector]
-            entry, out, err = child(args.suite, argv, {"SP1504_MODE": args.suite})
+            # SP1504_OFFLINE=1 arms the preload so unchanged suites run behind the
+            # sentinels too; merely importing the fixture patches nothing.
+            entry, out, err = child(args.suite, argv, {"SP1504_MODE": args.suite, "SP1504_OFFLINE": "1"})
             counts = tap_result(out)
             entry["counts"] = counts
             require(all(counts[key] == 0 for key in ("cancelled", "skipped", "todo")), "incomplete/skipped tests")
@@ -127,7 +129,7 @@ def main():
                 require(entry["exit"] == 1 and counts["tests"] == 2 and counts["pass"] == counts["fail"] == 1, "unexpected baseline counts/exit")
                 require(counts["failed_names"] == ["primary regression"] and counts["passed_names"] == ["healthy control"], "unexpected baseline test identities")
                 require("A1_JURISDICTION_FALLBACK: southern own must not hide northern parent" in out and "ERR_ASSERTION" in out and "deepStrictEqual" in out, "baseline was not the exact semantic assertion")
-                require(not re.search(r"(?:ERR_MODULE_NOT_FOUND|SyntaxError|ReferenceError|hookFailed|SP1504_OFFLINE_BOUNDARY)", out + err), "baseline setup/boundary error")
+                require(not re.search(r"(?:ERR_MODULE_NOT_FOUND|SyntaxError|ReferenceError|hookFailed|SP1504_OFFLINE_BOUNDARY|SP1504 offline boundary attempted)", out + err), "baseline setup/boundary error")
                 receipt["status"] = "BASELINE_GAP_REPRODUCED"
             else:
                 expected_count = 8 if args.suite == "focused" else len(re.findall(r"^(?:test|dbTest)\(", (ROOT / REGRESSION).read_text(), re.M))

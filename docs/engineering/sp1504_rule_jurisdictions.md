@@ -24,9 +24,16 @@ columns. The unchanged `_advisor_d1.mjs` applies all committed migrations to
 `:memory:` SQLite. Tests seed rows, expose only SELECT to product code, and close
 the synthetic DB in `finally`. No real D1, records, services, or legal facts are used.
 
-The file-based pre-import sentinel is installed before product initialization
-(including before the original regression suite's imports). It rejects fetch,
-network sockets and child-process/model commands, so bound fetch defaults cannot
+The file-based pre-import sentinel is installed before product initialization.
+Importing the fixture alone patches nothing, and it does not import the test
+runner, so it stays outside Node test discovery. The focused suite calls
+`installOffline()` before its dynamic product import and registers the returned
+restore/check in its own `after` hook. The acceptance launcher also preloads the
+fixture with `--import` and `SP1504_OFFLINE=1`, which installs it before the
+original regression suite's imports; an exit hook then restores the bindings and
+fails the process if any boundary was attempted, even when the attempt was caught.
+The sentinel rejects fetch, network sockets and child-process/model commands, so
+bound fetch defaults cannot
 capture a live implementation. The complete species-page import closure consists
 of local catalogs, resolution, time, configuration and rendering; no I/O-capable
 store initializer or bound live-store default exists in that closure. Page tests
