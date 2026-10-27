@@ -17,6 +17,10 @@ import unittest
 import uuid
 
 REPO = Path(__file__).resolve().parents[1]
+# The test module imports ROOT/FIXTURES from tests._support. Started as a script,
+# only tools/ is on sys.path, so put the repository root there before loading it.
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
 BASE = '8a805820c30895f5f037e26af9079fd3dc015b0f'
 TEST = REPO / 'tests/unit/test_sc142_prefetch_metadata_binding.py'
 PRODUCT = REPO / 'research/scripts/coast_mvp/prefetch_receipts_check.py'

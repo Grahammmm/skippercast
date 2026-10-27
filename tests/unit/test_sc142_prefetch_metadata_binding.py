@@ -21,9 +21,10 @@ import tempfile
 import unittest
 from unittest import mock
 
-REPO = Path(__file__).resolve().parents[2]
-PRODUCT = REPO / 'research/scripts/coast_mvp/prefetch_receipts_check.py'
-FIXTURE = REPO / 'tests/fixtures/sc142-prefetch-metadata-binding/metadata.json'
+from tests._support import FIXTURES, ROOT
+
+PRODUCT = ROOT / 'research/scripts/coast_mvp/prefetch_receipts_check.py'
+FIXTURE = FIXTURES / 'sc142-prefetch-metadata-binding/metadata.json'
 RUN_ROOT = None
 EVIDENCE = []
 EXPECTED_GATES = ('input_schema', 'receipt_schema', 'inventory_coverage',
