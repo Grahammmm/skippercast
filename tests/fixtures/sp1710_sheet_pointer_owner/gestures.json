@@ -1,0 +1,19 @@
+{
+  "schema": "sp1710.synthetic-gestures/v1",
+  "sheetHeight": 700,
+  "baseTranslation": 400,
+  "owner": {"pointerId": 1, "button": 0, "clientY": 300},
+  "interloper": {"pointerId": 2, "button": 0, "clientY": 600},
+  "ownerEndY": 220,
+  "thresholds": [
+    {"from": "peek", "dy": -47, "to": "peek"},
+    {"from": "peek", "dy": -48, "to": "half"},
+    {"from": "peek", "dy": -315, "to": "half"},
+    {"from": "peek", "dy": -316, "to": "full"},
+    {"from": "half", "dy": 47, "to": "half"},
+    {"from": "half", "dy": 48, "to": "peek"},
+    {"from": "full", "dy": 315, "to": "half"},
+    {"from": "full", "dy": 316, "to": "peek"},
+    {"from": "full", "dy": -80, "to": "full"}
+  ]
+}

@@ -42,7 +42,8 @@ export function targetFor(speciesKey: string): string | null {
 }
 
 // Coordinate-like text: decimal degrees (35.1794), a degree sign, degrees-minutes (35 10.5 N), loran-ish digit runs.
-export const COORDINATE = /\d{2}\.\d{3,}|°|\b\d{2,3}\s*[°º]?\s*\d{1,2}(?:\.\d+)?\s*['′]\s*[NSEW]?\b|\b\d{5}\.\d\b/;
+// Unprimed degrees/minutes require a bounded compass token, not just two numbers.
+export const COORDINATE = /\d{2}\.\d{3,}|°|\b\d{2,3}\s*[°º]?\s*\d{1,2}(?:\.\d+)?\s*['′]\s*[NSEW]?\b|\b\d{5}\.\d\b|(?<![\w.])\d{1,3}(?:\s*[°º]\s*|\s+)\d{1,2}(?:\.\d+)?\s*['′]?\s*[NSEW]\b/i;
 /** Drop any sentence that carries a coordinate-like number (a belt-and-braces check on catalog text). */
 export function publicOnly(text: string | null | undefined): string | null {
   if (!text) return null;

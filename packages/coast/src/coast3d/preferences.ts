@@ -50,7 +50,7 @@ export function saveBrowserPreferences(storage:{cookie:string},p:HomePreferences
 export function homeURL(input:URL,p:HomePreferences,reset=false):URL{
  const url=new URL(input);
  if(reset){url.search='';url.hash='';}
- if(!url.searchParams.has('place')&&!url.searchParams.has('area'))url.searchParams.set('place',p.place);
+ if(!url.searchParams.has('place')&&!url.searchParams.has('area')&&!url.searchParams.has('region')&&!url.searchParams.has('coast'))url.searchParams.set('place',p.place);
  if(!url.searchParams.has('profile'))url.searchParams.set('profile',p.mode);
  return url;
 }
