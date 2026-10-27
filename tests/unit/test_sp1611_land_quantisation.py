@@ -1,13 +1,12 @@
 """SP-16-v1 baseline pair for the negative shoreline-quantisation gate."""
 import json
-from pathlib import Path
 import unittest
 
+from tests._support import FIXTURES
 from tests.unit import test_land_water as producer
 from skippercast.platform import land_water
 
-ROOT = Path(__file__).resolve().parents[2]
-BASELINE = json.loads((ROOT / 'tests/fixtures/sp1611_land_quantisation/baseline.json').read_text())
+BASELINE = json.loads((FIXTURES / 'sp1611_land_quantisation/baseline.json').read_text())
 
 
 def published_shore(case):
