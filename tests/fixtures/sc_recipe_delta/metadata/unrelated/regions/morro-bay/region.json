@@ -1,0 +1,6 @@
+{
+  "id": "morro-bay",
+  "bounds": [-121.5, 35.25, -121.0, 35.5],
+  "boat": {"bottom_depth_limit_ft": 120},
+  "source_bindings": {"bathymetry": ["syn-alpha", "syn-beta"]}
+}
