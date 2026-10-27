@@ -1,0 +1,1148 @@
+{
+  "dist/data/coastal-sectors.json": {
+    "sectors": [
+      {
+        "id": "synthetic-sector-00",
+        "coast": "synthetic",
+        "name": "synthetic-sector-00",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-01",
+        "coast": "synthetic",
+        "name": "synthetic-sector-01",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-02",
+        "coast": "synthetic",
+        "name": "synthetic-sector-02",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-03",
+        "coast": "synthetic",
+        "name": "synthetic-sector-03",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-04",
+        "coast": "synthetic",
+        "name": "synthetic-sector-04",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-05",
+        "coast": "synthetic",
+        "name": "synthetic-sector-05",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-06",
+        "coast": "synthetic",
+        "name": "synthetic-sector-06",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-07",
+        "coast": "synthetic",
+        "name": "synthetic-sector-07",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-08",
+        "coast": "synthetic",
+        "name": "synthetic-sector-08",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-09",
+        "coast": "synthetic",
+        "name": "synthetic-sector-09",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-10",
+        "coast": "synthetic",
+        "name": "synthetic-sector-10",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-11",
+        "coast": "synthetic",
+        "name": "synthetic-sector-11",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-12",
+        "coast": "synthetic",
+        "name": "synthetic-sector-12",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-13",
+        "coast": "synthetic",
+        "name": "synthetic-sector-13",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-14",
+        "coast": "synthetic",
+        "name": "synthetic-sector-14",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-15",
+        "coast": "synthetic",
+        "name": "synthetic-sector-15",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-16",
+        "coast": "synthetic",
+        "name": "synthetic-sector-16",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-17",
+        "coast": "synthetic",
+        "name": "synthetic-sector-17",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      },
+      {
+        "id": "synthetic-sector-18",
+        "coast": "synthetic",
+        "name": "synthetic-sector-18",
+        "bounds": [
+          -123,
+          35,
+          -122,
+          36
+        ],
+        "partial_package_ids": [],
+        "published_candidate_points": 0
+      }
+    ]
+  },
+  "dist/data/noaa-native-sector-review.json": {
+    "audit_collected_at": "2026-01-01T00:00:00Z",
+    "sectors": [
+      {
+        "sector_id": "synthetic-sector-00",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-01",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-02",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-03",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-04",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-05",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-06",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-07",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-08",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-09",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-10",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-11",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-12",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-13",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-14",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-15",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-16",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-17",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      },
+      {
+        "sector_id": "synthetic-sector-18",
+        "catalog_survey_leads": 0,
+        "georeferenced_bag_bboxes_intersecting_sector": 0,
+        "eligible_for_native_substrate_review_bboxes": 0,
+        "eligible_substrate_review_bag_urls": [],
+        "held_substrate_overlap_screen_bboxes": 0,
+        "screen_survey_ids": [],
+        "held_survey_ids": []
+      }
+    ]
+  },
+  "dist/data/noaa-vr-native-depth-expanded-review.json": {
+    "scope": "california-expanded-original-vr-depth-inventory",
+    "survey_file_count": 0,
+    "files": [],
+    "sectors": [
+      {
+        "sector_id": "synthetic-sector-00",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-01",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-02",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-03",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-04",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-05",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-06",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-07",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-08",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-09",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-10",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-11",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-12",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-13",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-14",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-15",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-16",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-17",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-18",
+        "source_files_with_eligible_cells": 0
+      }
+    ]
+  },
+  "dist/data/noaa-regular-native-depth-review.json": {
+    "status": "ok",
+    "files": [],
+    "sectors": [
+      {
+        "sector_id": "synthetic-sector-00",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-01",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-02",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-03",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-04",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-05",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-06",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-07",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-08",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-09",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-10",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-11",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-12",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-13",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-14",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-15",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-16",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-17",
+        "source_files_with_eligible_cells": 0
+      },
+      {
+        "sector_id": "synthetic-sector-18",
+        "source_files_with_eligible_cells": 0
+      }
+    ]
+  },
+  "dist/data/noaa-survey-discovery.json": {
+    "last_complete_scan_at": "2026-01-01T00:00:00Z",
+    "sectors": [
+      {
+        "sector_id": "synthetic-sector-00",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-01",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-02",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-03",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-04",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-05",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-06",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-07",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-08",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-09",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-10",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-11",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-12",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-13",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-14",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-15",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-16",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-17",
+        "status": "ok",
+        "surveys": []
+      },
+      {
+        "sector_id": "synthetic-sector-18",
+        "status": "ok",
+        "surveys": []
+      }
+    ]
+  },
+  "dist/data/noaa-seabed-samples-sector-review.json": {
+    "scope": "california-historical-nos-seabed-sample-sector-audit",
+    "retrieved_at": "2026-01-01T00:00:00Z",
+    "sectors": [
+      {
+        "sector_id": "synthetic-sector-00",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-01",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-02",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-03",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-04",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-05",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-06",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-07",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-08",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-09",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-10",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-11",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-12",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-13",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-14",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-15",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-16",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-17",
+        "historical_sample_count": 0
+      },
+      {
+        "sector_id": "synthetic-sector-18",
+        "historical_sample_count": 0
+      }
+    ]
+  },
+  "dist/data/noaa-central-deepwater-native-depth-screen.json": {
+    "scope": "noaa-original-central-coast-vr-depth-band-screen",
+    "depth_band_ft_mllw": [
+      25,
+      200
+    ],
+    "sources": [
+      {
+        "survey_id": "H13089",
+        "raw_cells_in_25_to_200_ft_mllw_band": 0,
+        "nearshore_depth_lead": false
+      },
+      {
+        "survey_id": "H13151",
+        "raw_cells_in_25_to_200_ft_mllw_band": 0,
+        "nearshore_depth_lead": false
+      }
+    ]
+  },
+  "dist/data/nbs-hard-footprint-tile-inventory.json": {
+    "scope": "noaa-nbs-tiles-intersecting-displayed-usgs-hard-context",
+    "fishing_target": false,
+    "tile_count": 0,
+    "tiles": []
+  },
+  "dist/data/nbs-hard-footprint-depth-audit.json": {
+    "scope": "noaa-nbs-hard-footprint-native-depth-source-audit",
+    "status": "complete",
+    "failed_tiles": 0,
+    "inventory_sha256": "BOUND_AT_MATERIALIZATION",
+    "tiles": []
+  },
+  "dist/data/nbs-hard-footprint-original-class-overlap.json": {
+    "scope": "california-nbs-displayed-hard-footprint-original-class-review",
+    "status": "research-leads-only",
+    "depth_audit_sha256": "BOUND_AT_MATERIALIZATION",
+    "fishing_target": false,
+    "coasts": [],
+    "reviewed_at": "2026-01-01T00:00:00Z"
+  },
+  "catalog/noaa-survey-lead-holds.json": {
+    "scope": "reviewed-noaa-survey-fishing-lead-holds",
+    "schema_version": 1,
+    "holds": []
+  },
+  "catalog/csumb-scc-source-leads.json": {
+    "series": "scc",
+    "survey_count": 0,
+    "surveys": []
+  },
+  "catalog/csumb-bss-source-leads.json": {
+    "series": "bss",
+    "survey_count": 0,
+    "surveys": []
+  },
+  "catalog/usgs-ds781-source-leads.json": {
+    "map_areas": [
+      {
+        "name": "Synthetic area 00",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 01",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 02",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 03",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 04",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 05",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 06",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 07",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 08",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 09",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 10",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 11",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 12",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 13",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 14",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 15",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 16",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 17",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 18",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 19",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 20",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 21",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 22",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 23",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 24",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 25",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 26",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 27",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 28",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 29",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 30",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 31",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 32",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 33",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      },
+      {
+        "name": "Synthetic area 34",
+        "catalog_url": "https://example.invalid/synthetic",
+        "priority_product_status": "synthetic-empty",
+        "planning_sector_ids": [],
+        "products": []
+      }
+    ]
+  },
+  "catalog/usgs-ds781-metadata-review.json": {
+    "scope": "usgs-ds781-original-fgdc-metadata-triage",
+    "records": []
+  },
+  "dist/data/usgs-ds781-native-character-review.json": {
+    "scope": "usgs-ds781-statewide-original-character-raster-audit",
+    "failed_count": 0,
+    "fishing_target": false,
+    "exportable": false,
+    "product_count": 0,
+    "inspected_count": 0,
+    "held_count": 0,
+    "products": [],
+    "sectors": []
+  },
+  "dist/data/usgs-ds781-character-semantics.json": {
+    "scope": "usgs-ds781-original-fgdc-class-semantics",
+    "source_native_audit_sha256": "BOUND_AT_MATERIALIZATION",
+    "source_metadata_inventory_sha256": "BOUND_AT_MATERIALIZATION",
+    "opened_metadata_count": 0,
+    "verified_product_count": 0,
+    "fishing_target": false,
+    "exportable": false,
+    "products": [],
+    "reviewed_at": "2026-01-01T00:00:00Z"
+  },
+  "dist/regions/index.json": {
+    "regions": []
+  },
+  "catalog/candidates/synthetic-grid.json": {
+    "id": "synthetic-grid",
+    "access_status": "accessible",
+    "need_ids": [
+      "bathymetry"
+    ],
+    "sector_ids": [
+      "synthetic-sector-00"
+    ],
+    "spatial": {
+      "resolution_m": 4,
+      "resolution_basis": "inspected",
+      "bounds": [
+        -123,
+        35,
+        -122,
+        36
+      ]
+    }
+  }
+}

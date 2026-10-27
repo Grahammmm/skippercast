@@ -1,0 +1,22 @@
+{
+  "description": "Synthetic bottom-view rasters as literal little-endian int16 bytes (hex) with independently counted valid samples. 0080 is the nodata sentinel -32768; 9cff is -100; 0180 is -32767; 0001 is 256; ff7f is 32767; 0100 is 1.",
+  "healthy": {"width": 2, "height": 2, "hex": "0001000100010001", "valid": 4, "declared": 1},
+  "all_nodata": {"width": 2, "height": 2, "hex": "0080008000800080", "valid": 0, "declared": 1},
+  "matching": [
+    {"name": "one valid cell -100 at full coverage", "width": 1, "height": 1, "hex": "9cff", "valid": 1, "declared": 1},
+    {"name": "three of four valid", "width": 2, "height": 2, "hex": "9cff00800001ff7f", "valid": 3, "declared": 0.75},
+    {"name": "one of three valid rounds down", "width": 3, "height": 1, "hex": "008000800100", "valid": 1, "declared": 0.3333},
+    {"name": "two of three valid rounds up", "width": 1, "height": 3, "hex": "010000800180", "valid": 2, "declared": 0.6667},
+    {"name": "one of seven valid rounds at four decimals", "width": 7, "height": 1, "hex": "0100008000800080008000800080", "valid": 1, "declared": 0.1429}
+  ],
+  "mismatched": [
+    {"name": "all nodata single cell claims full coverage", "width": 1, "height": 1, "hex": "0080", "valid": 0, "declared": 1},
+    {"name": "three of four valid claims one half", "width": 2, "height": 2, "hex": "9cff00800001ff7f", "valid": 3, "declared": 0.5},
+    {"name": "three of four valid claims full coverage", "width": 2, "height": 2, "hex": "9cff00800001ff7f", "valid": 3, "declared": 1},
+    {"name": "one of seven valid claims the unrounded fraction", "width": 7, "height": 1, "hex": "0100008000800080008000800080", "valid": 1, "declared": 0.14285714285714285},
+    {"name": "one of seven valid claims a truncated fraction", "width": 7, "height": 1, "hex": "0100008000800080008000800080", "valid": 1, "declared": 0.1428},
+    {"name": "all valid claims less than full coverage", "width": 2, "height": 2, "hex": "0001000100010001", "valid": 4, "declared": 0.9999}
+  ],
+  "zero_actual": {"width": 2, "height": 2, "hex": "0080008000800080", "valid": 0, "positive_claims": [1, 0.25, 0.0001]},
+  "little_endian_signed": {"width": 2, "height": 2, "hex": "0080008001809cff", "valid": 2, "declared": 0.5, "misread_claims": [1, 0.75, 0.25]}
+}
