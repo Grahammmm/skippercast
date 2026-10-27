@@ -151,21 +151,23 @@ const sameRule = (a: RuleSummary, b: RuleSummary): boolean => a.stale === b.stal
  */
 export function rulesText(top: RuleSummary | null, topKey: string, second: {rule: RuleSummary; label: string} | null, language: Language): string {
   const link = `{{link:rules:${topKey}}}`;
-  if (!top) return t(language, 'fishid_rules_none', {link});
-  const head = {source: top.source_name, date: monthDay(top.checked, language)!};
   const out: string[] = [];
-  if (top.stale) out.push(t(language, 'fishid_rules_stale', {...head, link}));
+  if (!top) out.push(t(language, 'fishid_rules_none', {link}));
   else {
-    const parts = ruleParts(top, language);
-    out.push(parts.length ? t(language, 'fishid_rules', {...head, parts: parts.join(', ')}) : t(language, 'fishid_rules_see', head));
+    const head = {source: top.source_name, date: monthDay(top.checked, language)!};
+    if (top.stale) out.push(t(language, 'fishid_rules_stale', {...head, link}));
+    else {
+      const parts = ruleParts(top, language);
+      out.push(parts.length ? t(language, 'fishid_rules', {...head, parts: parts.join(', ')}) : t(language, 'fishid_rules_see', head));
+    }
   }
   if (second) {
     const parts = ruleParts(second.rule, language);
-    out.splice(top.stale ? 0 : 1, 0, second.rule.stale || !parts.length
+    out.splice(top?.stale ? 0 : 1, 0, second.rule.stale || !parts.length
       ? t(language, 'fishid_rules_second_stale', {a_second: withArticle(second.label, language)})
       : t(language, 'fishid_rules_second', {a_second: withArticle(second.label, language), parts: parts.join(', ')}));
   }
-  if (!top.stale) out.push(t(language, 'fishid_rules_link', {link}));
+  if (top && !top.stale) out.push(t(language, 'fishid_rules_link', {link}));
   return out.join(' ');
 }
 

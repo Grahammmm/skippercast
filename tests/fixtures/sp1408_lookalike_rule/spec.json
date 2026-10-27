@@ -1,0 +1,13 @@
+{
+  "version": "SP-14-v1",
+  "card": "SP1408-LOOKALIKE-RULE",
+  "base": "33734f90073a2150eac5a418564ea314c4a591ac",
+  "primary_sha256": "bfcea797e00e1ec81b148b7783e2c0936cdbc7e0a2ef3489091df9ef07de5dad",
+  "A1": "Full English and Spanish medium answerFor replies retain no-top-rule caveat, top link and current second bag-zero warning.",
+  "A2": "Stale second wording without numeric limits; missing second unchanged; distinct current top/second unchanged; stale top ordering preserved.",
+  "A3": "Null/unknown top key, single candidate, high/ask bands, identical-rule suppression, protected warning order and no widened candidate selection.",
+  "A4": "Only primary regression and healthy control registered in baseline. Exact primary semantic mismatch, child exit 1, healthy pass, no skip/setup errors. Same frozen tests green after scoped product delta.",
+  "regression": ["tests/test_advisor_fishid.mjs", "tests/test_advisor_rules.mjs"],
+  "required_modes": ["baseline", "focused", "regression", "repository", "typecheck", "build"],
+  "limits": "Scoped machine-valid output is REVIEW REQUIRED. Operator owns PR publication, unchanged full suites and exact-head required CI. No legal, scientific, release or live authority."
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "region_id": "synthetic-coast",
+  "generated_at": "2026-09-28T12:00:00Z",
+  "forecast": {
+    "models": {
+      "gfs_global": {"data": [{"hourly_units": {"time": "unixtime", "wind_speed_10m": "kn"}, "hourly": {"time": [1790600400, 1790604000], "wind_speed_10m": [5, 5]}}]},
+      "ncep_gfswave016": {"data": [{"hourly_units": {"time": "unixtime", "wave_height": "ft"}, "hourly": {"time": [1790600400, 1790604000], "wave_height": [2, 2]}}]},
+      "ecmwf_ifs025": {"data": []},
+      "ecmwf_wam": {"data": []}
+    }
+  }
+}
