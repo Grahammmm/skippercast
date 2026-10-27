@@ -72,6 +72,16 @@ export interface ChartMark {
 const text = (value: unknown): string => typeof value === 'string' ? value.trim() : typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Accept only an actual Gregorian calendar date in the existing YYYY-MM-DD form. */
+const validCalendarDate = (date: string): boolean => {
+  if (!DATE.test(date)) return false;
+  const year = Number(date.slice(0, 4)), month = Number(date.slice(5, 7)), day = Number(date.slice(8, 10));
+  if (month < 1 || month > 12 || day < 1) return false;
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day <= (days[month - 1] ?? 0);
+};
+
 /**
  * The mark for a clicked shoreline feature, from its own properties: CUSP's
  * ATTRIBUTE ("Natural.Mean High Water") and DATA_SOURC, the source date FE-10
@@ -81,7 +91,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export function coastlineMark(properties: Record<string, unknown> | null | undefined): ChartMark | null {
   const p = properties ?? {};
   const date = text(p.source_date);
-  if (!DATE.test(date)) return null;
+  if (!validCalendarDate(date)) return null;
   const [kind, line] = text(p.ATTRIBUTE).split('.', 2).map(s => s.trim());
   const method = text(p.DATA_SOURC), accuracy = Number(text(p.HOR_ACC));
   return {
