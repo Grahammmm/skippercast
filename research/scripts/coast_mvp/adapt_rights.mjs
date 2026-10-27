@@ -2,11 +2,25 @@
 // C3 presentation manifest. No network, raster reads or C5 file writes.
 // See README-viewer.md "Rights adapter".
 import {createHash} from 'node:crypto';
-import {existsSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync} from 'node:fs';
-import {dirname, resolve} from 'node:path';
+import {existsSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync} from 'node:fs';
+import {basename, dirname, join, resolve} from 'node:path';
 import {parseArgs} from 'node:util';
 import {adaptC5Rights} from '../../../packages/coast/src/coast3d/mvp-rights.ts';
 import {isLocalAssetPath} from '../../../packages/coast/src/coast3d/mvp.ts';
+
+// The file a path names after following every symlink, including symlinked parent directories.
+// A missing leaf is joined to its real parent; a missing parent throws, which refuses the run.
+function canonical(path) {
+  const abs = resolve(path);
+  return existsSync(abs) ? realpathSync(abs) : join(realpathSync(dirname(abs)), basename(abs));
+}
+// True when two paths name one file: same canonical path, or (for hard links) same device and inode.
+function sameFile(x, y) {
+  if (canonical(x) === canonical(y)) return true;
+  if (!existsSync(x) || !existsSync(y)) return false;
+  const [s, t] = [statSync(x), statSync(y)];
+  return s.dev === t.dev && s.ino === t.ino;
+}
 
 const {values: a} = parseArgs({options: {
   inventory: {type: 'string'}, 'tile-base': {type: 'string'},
@@ -18,8 +32,9 @@ try {
   // Same containment rules as the viewer, checked before any filesystem access.
   if (!isLocalAssetPath(a['rights-page'])) throw Error('rights page must be a relative file inside the manifest directory');
   const page = resolve(dirname(output), a['rights-page']);
-  if ([resolve(a.inventory), resolve(a['tile-base'])].includes(output)) throw Error('output must not overwrite an input');
-  if (page === output || (existsSync(output) && existsSync(page) && realpathSync(output) === realpathSync(page))) {
+  // Compare real files, not lexical paths: a symlinked parent or file, or a hard link, must not alias an input.
+  if (sameFile(output, a.inventory) || sameFile(output, a['tile-base'])) throw Error('output must not overwrite an input');
+  if (page === output || sameFile(output, page)) {
     throw Error('output must not overwrite the linked rights page');
   }
   // The complete C5 page must already sit beside the manifest; the viewer only links it.

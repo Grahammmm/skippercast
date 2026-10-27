@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
-import {copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync} from 'node:fs';
+import {copyFileSync, linkSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -246,5 +246,42 @@ test('adapter CLI rejects unsafe rights-page paths and output aliasing without t
     // Existing input protections still hold.
     r = run('rights.html', inv);
     assert.equal(r.status, 2); assert.match(r.stderr, /must not overwrite an input/);
+  } finally { rmSync(work, {recursive: true, force: true}); }
+});
+
+// Review 2026-10-27 (P1): a symlinked parent directory, a symlinked file or a hard link must not let the
+// output alias an input; lexical path comparison alone let renameSync replace the inventory.
+test('adapter CLI refuses outputs that alias an input through filesystem links', () => {
+  const work = mkdtempSync(join(process.env.TMPDIR || tmpdir(), 'c3-rights-input-alias-'));
+  try {
+    const cli = fileURLToPath(new URL('../research/scripts/coast_mvp/adapt_rights.mjs', import.meta.url));
+    const src = join(work, 'src'), link = join(work, 'src-link'), outDir = join(work, 'out');
+    mkdirSync(src); mkdirSync(outDir); symlinkSync(src, link);
+    const inv = join(src, 'inventory.json'), tileBase = join(src, 'tile-base.json');
+    copyFileSync(new URL('rights-adapter/inventory.json', dir), inv);
+    copyFileSync(new URL('rights-adapter/tile-base.json', dir), tileBase);
+    const pageBytes = Buffer.from('<!doctype html><title>complete C5 rights page</title>\n');
+    for (const d of [src, outDir]) writeFileSync(join(d, 'rights.html'), pageBytes);
+    const run = output => spawnSync(process.execPath,
+      [cli, '--inventory', inv, '--tile-base', tileBase, '--rights-page', 'rights.html', '--output', output], {encoding: 'utf8'});
+    const out = join(outDir, 'manifest.json');
+    let r = run(out);
+    assert.equal(r.status, 0, r.stderr);
+    const prior = readFileSync(out);
+    const inputs = [inv, tileBase].map(p => [p, readFileSync(p)]);
+    symlinkSync(inv, join(outDir, 'inv-link.json')); symlinkSync(tileBase, join(outDir, 'tile-link.json'));
+    linkSync(inv, join(outDir, 'inv-hard.json')); linkSync(tileBase, join(outDir, 'tile-hard.json'));
+    for (const output of [join(link, 'inventory.json'), join(link, 'tile-base.json'),
+      join(outDir, 'inv-link.json'), join(outDir, 'tile-link.json'), join(outDir, 'inv-hard.json'), join(outDir, 'tile-hard.json')]) {
+      r = run(output);
+      assert.equal(r.status, 2, output); assert.match(r.stderr, /must not overwrite an input/, output);
+      for (const [p, bytes] of inputs) assert.deepEqual(readFileSync(p), bytes, `${output} changed ${p}`);
+    }
+    for (const d of [src, outDir]) assert.deepEqual(readFileSync(join(d, 'rights.html')), pageBytes);
+    assert.deepEqual(readFileSync(out), prior);
+    // Control: a distinct output beside the inputs, reached through the same symlinked directory, still builds.
+    r = run(join(link, 'manifest.json'));
+    assert.equal(r.status, 0, r.stderr);
+    for (const [p, bytes] of inputs) assert.deepEqual(readFileSync(p), bytes);
   } finally { rmSync(work, {recursive: true, force: true}); }
 });
