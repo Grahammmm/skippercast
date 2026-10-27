@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "id": "noaa-acspo-l3s-leo-daily",
+  "name": "NOAA ACSPO L3S-LEO near-real-time daily SST",
+  "region_ids": [
+    "crescent-city",
+    "humboldt-bay-cape-mendocino",
+    "shelter-cove-north-mendocino",
+    "fort-bragg-point-arena",
+    "point-arena-bodega",
+    "bodega-point-reyes",
+    "point-reyes-pigeon",
+    "santa-cruz-monterey-bay",
+    "monterey-point-sur",
+    "big-sur-coast",
+    "south-big-sur-san-simeon",
+    "cambria-san-simeon",
+    "morro-bay",
+    "point-arguello-conception",
+    "southern-california"
+  ],
+  "need_ids": ["sea-temperature"],
+  "documentation_url": "https://coastwatch.noaa.gov/cwn/products/acspo-global-002o-gridded-super-collated-sst-and-thermal-fronts-low-earth-orbiting.html",
+  "access_url": "https://coastwatch.noaa.gov/erddap/griddap/noaacwLEOACSPOSSTL3SnrtCDaily.html",
+  "access_status": "unavailable",
+  "rights": {
+    "license": "GHRSST protocol describes data use as free and open",
+    "terms_url": "https://coastwatch.noaa.gov/erddap/info/noaacwLEOACSPOSSTL3SnrtCDaily/index.html",
+    "redistribution_reviewed": false
+  },
+  "spatial": {
+    "bounds": [-179.99, -89.99, 179.99, 89.99],
+    "resolution_m": null,
+    "horizontal_crs": "WGS84",
+    "vertical_datum": null,
+    "footprint_kind": "catalog-envelope",
+    "footprint_url": "https://cwcgom.aoml.noaa.gov/erddap/griddap/noaacwLEOACSPOSSTL3SnrtCDaily.das",
+    "resolution_basis": "advertised"
+  },
+  "temporal": {
+    "source_time": null,
+    "checked_at": "2026-10-23T13:52:45Z",
+    "update_cadence": "Advertised daily, 12:00:00Z reference time; product page publishes 24-hour NRT latency and best-effort access. Actual provider-axis delivery latency is unmeasured. Last admitted check returned HTTP 404 HTML for all four requested variants, not time-axis CSV.",
+    "coverage_start": null,
+    "coverage_end": null
+  },
+  "evidence": [
+    {
+      "url": "https://coastwatch.noaa.gov/cwn/products/acspo-global-002o-gridded-super-collated-sst-and-thermal-fronts-low-earth-orbiting.html",
+      "supports": "Live product page, 2026-10-20. NRT ERDDAP lists KDaily as Kelvin and CDaily as degrees Celsius. Published latency details: 24 hours. Grid 0.02 degree. Sample names are PM/AM day and night files plus a Daily file. No 3-day product."
+    },
+    {
+      "url": "https://cwcgom.aoml.noaa.gov/erddap/griddap/noaacwLEOACSPOSSTL3SnrtCDaily.das",
+      "supports": "Live NOAA AOML CoastWatch DAS, history 2026-10-20T18:28:26Z. Same dataset id, local files. License string, quality_level 0-5, fill -327.68 degree_C, 0.02 degree WGS84 grid. time_coverage_end 2026-10-14T12:00:00Z. This copy lags the granule catalog."
+    },
+    {
+      "url": "https://cmr.earthdata.nasa.gov/search/granules.json?concept_id=C2805339147-POCLOUD&page_size=3&sort_key=-start_date",
+      "supports": "Live NASA CMR read 2026-10-20T18:30:37Z of the collection named in the DAS metadata_link. Three Daily granules, reference times 2026-10-17, 2026-10-18 and 2026-10-19 at 12:00:00Z. Newest catalogued 2026-10-20T03:56:59Z."
+    },
+    {
+      "url": "https://www.star.nesdis.noaa.gov/pub/socd2/coastwatch/sst/nrt/l3s/leo/data_description.txt",
+      "supports": "Live STAR variable list. quality_level 5 is clear-sky and recommended for operational use. Front indicator is 1 or 0 in the valid clear-sky domain."
+    }
+  ],
+  "limitations": [
+    "Owner decision on task t_7eaa1d53, 2026-10-23: adopt-with-limits for an observed layer with stated coverage gaps and cloud masking. Bulk downloads remain held. This does not clear rights or authorize live activation; offline implementation may proceed within those limits.",
+    "The license string is not a public-rights enum value, so the sources-entry proposal stays candidate and is not inserted into catalog/sources.json. Redistribution review remains false.",
+    "Clouds are missing pixels (fill -327.68 degree_C). Keep only quality_level 5. Do not fill gaps.",
+    "No provider 3-day composite: an application-derived mean of valid quality_level 5 SST over three consecutive CDaily reference days ending on the newest day, with missing days left missing. Retain per-cell contributing count and oldest/newest reference times; cells with no valid input stay empty. Never substitute older days or an analysis field.",
+    "KDaily is the Kelvin form of the same Daily line, labeled as such on the product page. Do not ingest noaacwLEOACSPOSSTL3SnrtKDaily as well as CDaily.",
+    "PM day and night files are orbit slices, not the 1-day or 3-day view. Their ERDDAP time axis was not measured live.",
+    "Published latency is 24 hours; historical catalog insertion lag is not delivery latency. Three actual provider-axis dates per variant remain not demonstrated. Last check 2026-10-23T13:52:42-45Z returned HTTP 404 HTML for CDaily, PMDay, PMNight and KDaily. Do not retry without fresh bounded admission or substitute catalog/inferred timestamps.",
+    "Proposed application age policy: withhold after 72 hours from the newest grid reference time, never from fetch/catalog time; withhold missing/failed data. A derived 3-day view must disclose older contributing observations within its fixed window.",
+    "AOML's local copy ended 2026-10-14T12:00:00Z. NEFSC's remote copy of the same griddap ended 2026-03-15T12:00:00Z on a live read. Do not use either as the freshness source.",
+    "Coverage is the published global envelope against the 15 region boxes. No California cell was sampled."
+  ],
+  "producer": {
+    "name": "NOAA/NESDIS/STAR",
+    "url": "https://coastwatch.noaa.gov/cwn/products/acspo-global-002o-gridded-super-collated-sst-and-thermal-fronts-low-earth-orbiting.html"
+  },
+  "variables": ["sea_surface_temperature", "quality_level", "sst_front_position"],
+  "units": {
+    "sea_surface_temperature": "degree_C",
+    "quality_level": "1",
+    "sst_front_position": "1"
+  },
+  "provenance": {
+    "access_service": "NOAA CoastWatch ERDDAP",
+    "raw_sha256": null,
+    "transformations": []
+  }
+}

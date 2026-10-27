@@ -120,11 +120,24 @@ export function entranceFor(countyId: string | undefined, areaId: string | undef
 
 /** Ebb or flood from the high and low events either side of `at`, and whether it is mid-ebb. */
 export function barTide(at: number, events: readonly TideEvent[]): BarTide {
-  const sorted = events.filter(e => Number.isFinite(Date.parse(e.at))).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
-  const previous = [...sorted].reverse().find(e => Date.parse(e.at) <= at), next = sorted.find(e => Date.parse(e.at) > at);
-  if (!previous || !next || previous.type === next.type) return {stage: null, midEbb: false, fraction: null};
-  const fraction = (at - Date.parse(previous.at)) / (Date.parse(next.at) - Date.parse(previous.at));
-  const stage = previous.type === 'H' ? 'ebb' : 'flood';
+  const unknown: BarTide = {stage: null, midEbb: false, fraction: null};
+  if (!Number.isFinite(at)) return unknown;
+  // Keep a conflicting timestamp as an unknown boundary, rather than dropping
+  // it and inventing a wider bracket. Exact same-type duplicates can collapse.
+  const groups = new Map<number, 'H' | 'L' | null>();
+  for (const event of events) {
+    if (!event || typeof event !== 'object' || Array.isArray(event) || typeof event.at !== 'string'
+      || (event.type !== 'H' && event.type !== 'L')) continue;
+    const time = Date.parse(event.at);
+    if (!Number.isFinite(time)) continue;
+    if (!groups.has(time)) groups.set(time, event.type);
+    else if (groups.get(time) !== event.type) groups.set(time, null);
+  }
+  const sorted = [...groups].sort(([a], [b]) => a - b);
+  const previous = [...sorted].reverse().find(([time]) => time <= at), next = sorted.find(([time]) => time > at);
+  if (!previous || !next || previous[1] === null || next[1] === null || previous[1] === next[1]) return unknown;
+  const fraction = (at - previous[0]) / (next[0] - previous[0]);
+  const stage = previous[1] === 'H' ? 'ebb' : 'flood';
   return {stage, midEbb: stage === 'ebb' && fraction >= BAR.midEbb.from && fraction <= BAR.midEbb.to, fraction: round(fraction, 2)};
 }
 
