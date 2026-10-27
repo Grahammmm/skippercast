@@ -112,6 +112,7 @@ def main():
     try:
         manifest, head = preflight(args.source_manifest)
         receipt.update(head=head, source_manifest_sha256=sha(args.source_manifest))
+        sys.path.insert(0, str(REPO))
         sys.path.insert(0, str(REPO / "src"))
         module = load_tests()
         module.RUN_ROOT = root
