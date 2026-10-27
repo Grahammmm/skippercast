@@ -16,7 +16,8 @@ BASE = '67ff9bcf34257698a41585bc2ad163171dc68259'
 REPO = Path(__file__).resolve().parents[1]
 ROOT = REPO.parent
 PRODUCT = 'src/skippercast/seafloor/terrain.py'
-SCOPED = [PRODUCT, 'tests/unit/test_sc173_derivative_mask.py',
+TESTS = 'tests/gis/test_sc173_derivative_mask.py'
+SCOPED = [PRODUCT, TESTS,
           'tests/fixtures/sc173-derivative-mask/constructors.py',
           'tests/fixtures/sc173-derivative-mask/pinned_terrain.py.txt', 'tools/run_sc173_derivative_mask.py']
 
@@ -91,7 +92,10 @@ def main():
     old_bytecode = sys.dont_write_bytecode
     try:
         sys.dont_write_bytecode = True
-        location = importlib.util.spec_from_file_location('sc173_tests', REPO / 'tests/unit/test_sc173_derivative_mask.py')
+        # The test imports ROOT from tests._support; the runner may set sys.path itself.
+        if str(REPO) not in sys.path:
+            sys.path.insert(0, str(REPO))
+        location = importlib.util.spec_from_file_location('sc173_tests', REPO / TESTS)
         if location is None or location.loader is None:
             raise ValueError('Missing test loader')
         module = importlib.util.module_from_spec(location)

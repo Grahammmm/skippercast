@@ -17,9 +17,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from tests._support import ROOT as REPO
+
 BASE = '67ff9bcf34257698a41585bc2ad163171dc68259'
 BASE_SHA256 = 'd93d8a65a350927451eff74ccf0c38cd1c9a6bad811417c42374b61e02ce44e7'
-REPO = Path(__file__).resolve().parents[2]
 PRODUCT = 'src/skippercast/seafloor/terrain.py'
 METHOD_CASES = {
     'test_regression': ['int_zero', 'int_one', 'int_two', 'int_mixed', 'uint_one',
@@ -96,8 +97,13 @@ def load_file(name, path):
     return module
 
 
+def peer_environment():
+    # Pytest owns this phase indicator and changes it between setup/call/teardown.
+    return {key: value for key, value in os.environ.items() if key != 'PYTEST_CURRENT_TEST'}
+
+
 def peer_state():
-    return (dict(os.environ), list(sys.path), list(sys.meta_path), sys.dont_write_bytecode,
+    return (peer_environment(), list(sys.path), list(sys.meta_path), sys.dont_write_bytecode,
             builtins.open, io.open, os.open, os.mkdir, socket.socket.connect,
             socket.create_connection, subprocess.Popen)
 
