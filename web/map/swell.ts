@@ -40,9 +40,10 @@ import {chartMark} from './chart.ts';
 import type {ChartMark} from './coastline.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {fieldTexture, isolines} from './field.ts';
-import {WAVE_MODEL, loadForecast, swellPoints, type WaveForecast} from './forecast-grid.ts';
+import {WAVE_MODEL, loadForecast, swellPoints, type SwellPartition, type WaveForecast} from './forecast-grid.ts';
 import {forecastTime} from './frames.ts';
 import {layerEntry, setRailNote} from './layers.ts';
+import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {MPA_FILL} from './mpa.ts';
 import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, ringHitLayer, ringLayer, ringMark, type Rings} from './nearshore.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
@@ -68,6 +69,15 @@ const HOUR = 3_600_000;
 /** The feed is read again this often while Swell is on (it is cached for five minutes at the edge). */
 export const REFRESH_MS = 30 * 60_000;
 
+/** The selector's label for each partition, in basis sentences: "the primary swell", "the wind sea", "the secondary swell". */
+export const PARTITION_LABEL: Readonly<Record<SwellPartition, string>> =
+  {primary: 'primary swell', wind: 'wind sea', secondary: 'secondary swell'};
+/** The selector's short name for each partition, in the mark card and the selector itself. */
+export const PARTITION_NAME: Readonly<Record<SwellPartition, string>> =
+  {primary: 'Primary swell', wind: 'Wind sea', secondary: 'Secondary swell'};
+/** Which partition Swell draws: primary swell (the default), wind sea, or secondary swell. */
+export const swellPartition = signal<SwellPartition>('primary');
+
 /** The field for one listed hour. */
 export interface SwellFrame {
   /** Changes with the run, its retrieval or the hour: a new key is a new texture. */
@@ -81,6 +91,8 @@ export interface SwellFrame {
   readonly period: readonly [number, number];
   /** The samples' blended from-direction, degrees true, or null when they disagree. */
   readonly from: number | null;
+  /** Which partition this frame is: primary swell, wind sea, or secondary swell. */
+  readonly partition: SwellPartition;
   /** "run Oct 8, 5 pm · 13 h old · valid Thu Oct 9, 3 pm" */
   readonly stamp: string;
 }
@@ -120,34 +132,35 @@ const bearing = (sin: number, cos: number): number | null => Math.hypot(sin, cos
 export const frameSummary = (f: SwellFrame): string =>
   `${span(f.height, 'ft')} · ${span(f.period, 's')} · ${f.from === null ? 'direction mixed' : `from ${compass(f.from)}`}`;
 
-/** The frame's sentence: model, grid, run, valid hour, what it is not, and how it is drawn. */
+/** The frame's sentence: model, grid, partition, run, valid hour, what it is not, and how it is drawn. */
 export function frameBasis(f: SwellFrame, now: Date, tz: string): string {
   const [dx, dy] = f.step, grid = Math.abs(dx - dy) < 1e-6 ? deg(dx) : `${deg(dx)} × ${deg(dy)}`;
-  return `${WAVE_MODEL.name} (${WAVE_MODEL.resolution}) model forecast of the primary swell, sampled on the region's ${grid} forecast grid; `
+  return `${WAVE_MODEL.name} (${WAVE_MODEL.grid}) model forecast of the ${PARTITION_LABEL[f.partition]}, sampled on the region's ${grid} forecast grid; `
     + `run of ${runText(f.issuedAt, tz)} (${age(now.getTime() - f.issuedAt)} old), valid ${validText(f.validAt, tz, true)}. A model forecast, not a buoy observation. `
     + `Colour runs from ${HEIGHT_SCALE[0]} ft to ${HEIGHT_SCALE[1]} ft and above at every hour; dashed lines join equal period in whole seconds; strokes run the way the swell travels. Outside the grid stays blank.`;
 }
 
-// One frame per forecast and hour: play and the clock re-judge the gate, never rebuild a field.
-const frames = new WeakMap<WaveForecast, Map<number, SwellFrame | null>>();
-/** The field at listed hour `validAt` (epoch ms), or null when no complete grid cell has height, period and direction. */
-export function swellFrame(f: WaveForecast, validAt: number, now: Date, tz: string): SwellFrame | null {
+// One frame per forecast, hour and partition: play, the clock and the selector re-judge the gate, never rebuild a field.
+const frames = new WeakMap<WaveForecast, Map<string, SwellFrame | null>>();
+/** The field at listed hour `validAt` (epoch ms) for `partition`, or null when no complete grid cell has height, period and direction. */
+export function swellFrame(f: WaveForecast, validAt: number, now: Date, tz: string, partition: SwellPartition = 'primary'): SwellFrame | null {
   let memo = frames.get(f);
   if (!memo) frames.set(f, memo = new Map());
-  if (!memo.has(validAt)) {
-    const points = swellPoints(f, validAt / 1000), field = f.step && f.model ? surfaceField(points, {step: [f.step[0], f.step[1]]}) : null;
+  const memoKey = `${validAt}|${partition}`;
+  if (!memo.has(memoKey)) {
+    const points = swellPoints(f, validAt / 1000, partition), field = f.step && f.model ? surfaceField(points, {step: [f.step[0], f.step[1]]}) : null;
     const used = field ? points.filter(p => field.quads.some(q => q.corners.includes(p))) : [];
     const range = (k: number): [number, number] => [Math.min(...used.map(p => p.values[k]!)), Math.max(...used.map(p => p.values[k]!))];
     const sum = (k: number): number => used.reduce((n, p) => n + p.values[k]!, 0) / used.length;
-    memo.set(validAt, field && f.step && f.model ? {key: `${f.region}|${f.model.issued}|${f.retrieved}|${validAt}`, field, validAt, issuedAt: f.model.issued * 1000,
-      step: f.step, height: range(0), period: range(1), from: bearing(sum(2), sum(3)), stamp: ''} : null);
+    memo.set(memoKey, field && f.step && f.model ? {key: `${f.region}|${f.model.issued}|${f.retrieved}|${validAt}|${partition}`, field, validAt, issuedAt: f.model.issued * 1000,
+      step: f.step, height: range(0), period: range(1), from: bearing(sum(2), sum(3)), partition, stamp: ''} : null);
   }
-  const frame = memo.get(validAt) ?? null;
+  const frame = memo.get(memoKey) ?? null;
   return frame && {...frame, stamp: `run ${runText(frame.issuedAt, tz)} · ${age(now.getTime() - frame.issuedAt)} old · valid ${validText(validAt, tz, true)}`};
 }
 
-/** What Swell shows for the feed's state at the dock's hour `at`. */
-export function swellStatus(on: boolean, load: SwellLoad, at: Date, now: Date, tz: string): SwellStatus {
+/** What Swell shows for the feed's state at the dock's hour `at`, for `partition`. */
+export function swellStatus(on: boolean, load: SwellLoad, at: Date, now: Date, tz: string, partition: SwellPartition = 'primary'): SwellStatus {
   if (!on) return OFF;
   const f = load.forecast, name = WAVE_MODEL.name;
   if (!f) return load.state === 'error' ? none('unavailable', 'Swell unavailable: the regional wave forecast failed to load.') : none('loading', 'Loading the regional wave forecast.');
@@ -166,7 +179,7 @@ export function swellStatus(on: boolean, load: SwellLoad, at: Date, now: Date, t
       return none('no forecast for this hour', `Swell unavailable: the selected hour is outside the ${name} run of ${run}${last === undefined ? '' : `, which ends ${validText(last * 1000, tz, true)}`}.`);
     return none(`no forecast hour near ${validText(at.getTime(), tz)}`, `Swell unavailable: the ${name} run of ${run} lists no hour within 90 minutes of ${validText(at.getTime(), tz, true)}.`);
   }
-  const frame = swellFrame(f, t, now, tz);
+  const frame = swellFrame(f, t, now, tz, partition);
   if (!frame) return none(`no complete grid cell · valid ${validText(t, tz)}`,
     `Swell unavailable: no cell of the ${name} grid has height, period and direction at all four corners for ${validText(t, tz, true)}; missing samples stay blank.`);
   return {drawn: frame, note: `valid ${validText(t, tz)} · run ${age(now.getTime() - issued)} old`, reason: '', basis: frameBasis(frame, now, tz)};
@@ -228,7 +241,7 @@ export function swellMark(f: SwellFrame, at: {lon: number; lat: number}, now: Da
   if (!v) return null;
   const from = bearing(v[2]!, v[3]!);
   return {
-    id: `swell:${f.key}`, name: 'Primary swell', kind: `Model forecast · valid ${validText(f.validAt, tz, true)}`,
+    id: `swell:${f.key}`, name: PARTITION_NAME[f.partition], kind: `Model forecast · valid ${validText(f.validAt, tz, true)}`,
     reading: `${v[0]!.toFixed(1)} ft · ${v[1]!.toFixed(1)} s · ${from === null ? 'direction mixed' : `from ${compass(from)} ${Math.round(from)}°`}`,
     source: `${WAVE_MODEL.name} · ${f.stamp}`,
     basis: `${frameBasis(f, now, tz)} Display interpolation between adjacent grid samples, which adds no measurements.`,
@@ -261,15 +274,17 @@ export function createSwell(o: SwellOptions): {
     place = () => null, data = coastData} = o;
   const tick = signal(0), load = signal<SwellLoad>({state: 'idle', region: null, forecast: null, at: 0});
   const on = computed(() => layers.value.includes(REGISTRY_ID));
+  // One renderer/hit target owns MOP rings even with both controls enabled.
+  const ringsOn = computed(() => on.value || layers.value.includes('stations'));
   const status = computed(() => {
     void tick.value;
     const t = now(), l = load.value, id = region.value;
-    return swellStatus(on.value, l.region === id ? l : {state: 'loading', region: id, forecast: null, at: 0}, terrainHour(hour.value, t, day.value, zone()), t, zone());
+    return swellStatus(on.value, l.region === id ? l : {state: 'loading', region: id, forecast: null, at: 0}, terrainHour(hour.value, t, day.value, zone()), t, zone(), swellPartition.value);
   });
   // The rings read the bound report at the dock's hour; outside a binding the report is null and nothing draws.
   const rings = computed(() => {
     void tick.value;
-    if (!on.value) return null;
+    if (!ringsOn.value) return null;
     const t = now(), report = data.coastReport.value?.data ?? null;
     return nearshoreRings(report, report ? data.coastBinding.value?.areaId ?? null : null, terrainHour(hour.value, t, day.value, zone()), t);
   });
@@ -299,7 +314,7 @@ export function createSwell(o: SwellOptions): {
     // Ask for the coast report only while Swell is on, for the region's place once it is known.
     effect(() => {
       const p = place();
-      if (!on.value || !p) return;
+      if (!ringsOn.value || !p) return;
       data.setPlace(p);
       void data.load('report');
     }),
@@ -324,7 +339,8 @@ export function createSwell(o: SwellOptions): {
       drawnKey = key; drawnShape = shape; drawnOn = e;
       if (!f && !r) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
-      e.setOverlay(REGISTRY_ID, swellOverlay(p, {field: !!f, rings: !!r}), MPA_FILL);
+      // § 9 order: under wind, else depth contours, else protected areas.
+      e.setOverlay(REGISTRY_ID, swellOverlay(p, {field: !!f, rings: !!r}), ['wind-casing', DEPTH_BOTTOM, MPA_FILL]);
       if (f) {
         e.setImage(SWELL_SOURCE, fieldTexture(f.field, HEIGHT_SCALE, ramps(p).swell, v => v[0]!));
         e.setData(ISOLINE_SOURCE, periodLines(f));
@@ -336,7 +352,7 @@ export function createSwell(o: SwellOptions): {
     effect(() => {
       const l = load.value, f = l.forecast, t = now().getTime();
       clearTimeout(timer);
-      if (!on.value) return;
+      if (!ringsOn.value) return;
       // A ring leaves when its site's run passes 48 hours or its retrieval 3 hours (freshNearshore).
       const sites = (rings.value?.rings ?? []).flatMap(r => [Date.parse(r.site.issuedAt ?? '') + 48 * HOUR, Date.parse(r.site.fetchedAt) + 3 * HOUR]);
       const limits = [...l.region ? [l.at + REFRESH_MS] : [], ...[...f?.model ? [f.model.issued * 1000 + 36 * HOUR, f.retrieved + 6 * HOUR] : [], ...sites].filter(x => x > t)];

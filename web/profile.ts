@@ -13,7 +13,7 @@ export const METHODS = ['boat', 'shore', 'dive'] as const;
 export type Method = typeof METHODS[number];
 
 /** Layer rail ids (§ 9) that `web/map/layers.ts` registers. */
-export const RAIL_IDS = ['seafloor', 'currents', 'water-temp', 'swell', 'fleet', 'clouds'] as const;
+export const RAIL_IDS = ['seafloor', 'currents', 'water-temp', 'sst-contrast', 'chlorophyll', 'swell', 'stations', 'fleet', 'clouds'] as const;
 export type RailId = typeof RAIL_IDS[number];
 
 export interface ProfileSemantics {

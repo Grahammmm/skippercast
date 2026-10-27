@@ -8,7 +8,7 @@ import copy,math,os
 from pathlib import Path
 from .authenticated import INPUT_CONTRACT,metadata_document,validate_input,_source_identity
 from .loop import implementation_hashes
-from .ordered_trial import LARGER_SCOPE,LARGER_WINDOWS,validate_scope_review,validate_scope_packet,validate_larger_runtime
+from .ordered_trial import LARGER_SCOPE,SUPPORTED_WINDOW_SIDES,scope_windows,validate_scope_review,validate_scope_packet,validate_larger_runtime
 from ..authenticated_v1.profiles import profile,grant_identity,prepare_window_batch
 from ..authenticated_v1.policy import policy_for_profile,policy_sha
 from ..handoff.common import digest,epoch,ref,write
@@ -26,9 +26,9 @@ def _horizon(now,horizon):
 def _grant_context(grant,code,deps):
     grant_identity(grant);_source_identity(grant['source'])
     selected=profile(grant.get('execution_profile'),grant)
-    if selected['name']!='coastal-contained-windows-v3' or selected['side'] not in (32,128) or selected['window_count']!=4:
-        raise ValueError('only contained-v3 four32 or explicit four128 admission supported')
-    if selected['side']==128 and (grant.get('ordered_scope_contract')!=LARGER_SCOPE or grant.get('window_set')!=LARGER_WINDOWS):
+    if selected['name']!='coastal-contained-windows-v3' or selected['side'] not in SUPPORTED_WINDOW_SIDES or selected['window_count']!=4:
+        raise ValueError('only contained-v3 four-window 32/64/128 admission supported')
+    if selected['side']==128 and (grant.get('ordered_scope_contract')!=LARGER_SCOPE or grant.get('window_set')!=scope_windows(grant)[0]):
         raise ValueError('explicit exact ordered four128 scope required')
     if grant.get('code_sha')!=code or grant.get('deps_sha')!=deps:
         raise ValueError('grant current code/dependency identity mismatch')
@@ -49,6 +49,8 @@ def canonical_packet(template,grant,*,rights,trial,segment,code_sha,deps_sha):
         trial_policy_evidence=copy.deepcopy(trial),trial_policy_sha256=trial['sha256'])
     if selected['name']=='coastal-contained-windows-v3':
         packet.update(window_side=selected['side'],window_count=selected['window_count'])
+    if grant.get('support_policy') is not None:packet['support_policy']=grant['support_policy']
+    else:packet.pop('support_policy',None)
     if selected['side']==128:
         packet.update(ordered_scope_contract=LARGER_SCOPE,geographic_review=copy.deepcopy(grant['geographic_review']),output_retention=copy.deepcopy(grant['output_retention']),output_root=grant['output_root'])
         if grant.get('larger_runtime_contract') is not None:
@@ -56,7 +58,7 @@ def canonical_packet(template,grant,*,rights,trial,segment,code_sha,deps_sha):
         else:packet.pop('larger_runtime_contract',None)
     if grant.get('saved_area_continuation_contract') is not None:
         for key in ('saved_area_continuation_contract','saved_area_adoption','source_volume_cap_bytes','prior_effective_bytes','cumulative_limit_bytes'):
-            packet[key]=grant[key]
+            packet[key]=copy.deepcopy(grant[key])
     else:
         for key in ('saved_area_continuation_contract','saved_area_adoption','source_volume_cap_bytes','prior_effective_bytes','cumulative_limit_bytes'):packet.pop(key,None)
     if grant.get('source_reuse_contract') is not None:

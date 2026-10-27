@@ -11,6 +11,9 @@ MAX_RECORDS=40
 MAX_METADATA=16*1024*1024
 MAX_FILE=131072
 MAX_OUTPUT=524288
+LEAD_PLAN="coastal-held-discovery-plan-v1"
+LEAD_SCHEMA="coastal-discovery-lead-v1"
+LEAD_MANIFEST="coastal-held-discovery-inputs-v1"
 
 def digest(value):
     return hashlib.sha256(encoded(value)).hexdigest()
@@ -72,6 +75,7 @@ def read_metadata(root,descriptor,cache,usage):
     usage["metadata_bytes"]+=len(data);usage["metadata_files"]+=1
     if hashlib.sha256(data).hexdigest()!=descriptor["sha256"]:raise ValueError("metadata hash changed")
     value=json.loads(data)
+    if not isinstance(value,dict):raise ValueError("metadata JSON object required")
     if descriptor["contract"]!="cached-source-json-v1" and value.get("schema")!=descriptor["contract"]:raise ValueError("metadata schema changed")
     cache[key]=value
     return value
@@ -83,9 +87,121 @@ def freshness(doc,now,horizon):
     try:return epoch(doc["checked_at"])<=now and epoch(doc["valid_until"])>=horizon
     except (KeyError,ValueError):return False
 
+
+def lead_candidates(plan):
+    """Validate the separate metadata-only plan before reserving any reads."""
+    expected={"schema","region","candidates","metadata_bytes","output_bytes",
+              "network_bytes","source_read_bytes","output_root","proposed_limits"}
+    if set(plan)!=expected or plan.get("schema")!=LEAD_PLAN:
+        raise ValueError("exact held-discovery plan required")
+    if (not isinstance(plan["region"],str) or not plan["region"]
+        or plan["metadata_bytes"]!=MAX_METADATA or plan["output_bytes"]!=MAX_OUTPUT
+        or type(plan["network_bytes"]) is not int or plan["network_bytes"]!=0
+        or type(plan["source_read_bytes"]) is not int or plan["source_read_bytes"]!=0):
+        raise ValueError("fixed source-free inventory contract required")
+    limits=plan["proposed_limits"]
+    if not isinstance(limits,dict) or set(limits)!={"pending_candidates","native_active"}:
+        raise ValueError("explicit proposed intake limits required")
+    integer(limits["pending_candidates"],MAX_RECORDS)
+    if type(limits["native_active"]) is not int or limits["native_active"]!=1:
+        raise ValueError("proposed single native executor required")
+    candidates=plan["candidates"]
+    if not isinstance(candidates,list) or not 1<=len(candidates)<=MAX_RECORDS:
+        raise ValueError("finite1..40 explicit candidates required")
+    for item in candidates:
+        if not isinstance(item,dict) or set(item)!={"lead"}:
+            raise ValueError("held metadata descriptor required")
+        if item["lead"].get("contract")!=LEAD_SCHEMA:
+            raise ValueError("held metadata schema required")
+    return candidates
+
+def held_inventory(root,plan,*,now,horizon):
+    """Read only explicit JSON descriptors; never open/stat a native payload.
+
+    This is a proposal for the owner's existing tracker, not an operational
+    queue. Every pending record remains held, even below the proposed cap.
+    """
+    from importlib.resources import files
+    from jsonschema import Draft202012Validator
+
+    candidates=lead_candidates(plan)
+    schema=json.loads(files("skippercast.coastal.resources").joinpath(
+        "coastal-discovery-lead-v1.schema.json").read_text())
+    validator=Draft202012Validator(schema)
+    usage=dict(metadata_bytes=0,metadata_files=0,source_read_bytes=0,source_hashes=0,
+               network_requests=0,network_bytes=0,source_stat_checks=0)
+    cache={};groups={}
+    for item in sorted(candidates,key=digest):
+        lead=read_metadata(root,item["lead"],cache,usage)
+        validator.validate(lead)
+        # JSON Schema accepts integral floats as integers; native indices do not.
+        scope=lead["scope"]
+        if scope["kind"]=="native_window":
+            window=scope["window"]
+            if (any(type(n) is not int for n in window) or min(window[:2])<0
+                or not 1<=window[2]==window[3]<=128):
+                raise ValueError("explicit bounded square native window required")
+        elif scope["kind"]=="fixed_center":
+            integer(scope["size_cells"],128)
+        native=lead["source"]
+        url=urlsplit(native["url"])
+        if url.scheme!="https" or not url.hostname or url.username or url.password or url.fragment:
+            raise ValueError("exact HTTPS source locator required")
+        identity=(native["kind"]+":"+native["sha256"] if native["sha256"]
+                  else "unresolved-lead:"+digest([lead["lead_id"],native["url"]]))
+        # Deliberately distinct from Store's path/code/dependency/budget job key.
+        key=digest(["coastal-metadata-scope-v1",identity,lead["purpose"],scope])
+        groups.setdefault(key,[]).append(dict(descriptor=item["lead"],record=lead))
+    entries=[]
+    for key,records in sorted(groups.items()):
+        # Preserve conflicting assertions and all evidence; never choose a winner.
+        unique={digest(r):r for r in records}
+        retained=[unique[k] for k in sorted(unique)]
+        facts=set()
+        for wrapped in records:
+            record=wrapped["record"]
+            semantic_source={k:v for k,v in record["source"].items() if k not in ("url","cache_path")}
+            facts.add(digest(dict(source=semantic_source,metadata=record["metadata"],
+                                  lifecycle=record["lifecycle"],closed_receipt=record["closed_receipt"])))
+        pending=any(r["record"]["lifecycle"]=="pending" for r in records)
+        holds=set()
+        if len(facts)>1:holds.add("conflicting_retained_metadata")
+        if pending:
+            holds.update(("fresh_execution_allocation_required","native_identity_unverified",
+                          "independent_native_quality_unreviewed"))
+            for wrapped in records:
+                record=wrapped["record"];native=record["source"]
+                if native["kind"]=="archive":holds.add("archive_member_identity_unresolved")
+                elif native["format"]=="variable_resolution_bag":holds.add("native_vr_reader_scope_unapproved")
+                if native["sha256"] is None or native["bytes"] is None:holds.add("native_source_identity_unresolved")
+                if record["scope"]["kind"]!="native_window":holds.add("native_window_unresolved")
+                if record["metadata"]["horizontal_crs"] is None:holds.add("native_crs_unresolved")
+                if record["metadata"]["vertical_datum"] is None:holds.add("vertical_datum_unresolved")
+        entries.append(dict(candidate_key=key,lifecycle="pending" if pending else "closed_control",
+                            records=retained,duplicate_records=len(records)-len(retained),
+                            holds=sorted(holds),execution_authorized=False,
+                            native_identity_verified=False,native_quality_accepted=False,
+                            actual_data_support=None))
+    pending=sum(e["lifecycle"]=="pending" for e in entries)
+    limit=plan["proposed_limits"]["pending_candidates"]
+    result=dict(schema=LEAD_MANIFEST,plan_sha256=digest(plan),region=plan["region"],
+                now=now,prospective_horizon=horizon,status="HELD_METADATA_ONLY",candidates=entries,
+                usage=usage,execution_authorized=False,rendering_accepted=False,
+                queue_binding=dict(status="unbound",artifact=None,writer=None,consumer=None),
+                backpressure=dict(pending_candidates=pending,closed_controls=len(entries)-pending,
+                                  proposed_pending_limit=limit,over_proposed_limit=pending>limit,
+                                  proposed_native_active_limit=plan["proposed_limits"]["native_active"],
+                                  observed_native_active=None,enforced_by_dispatch=False),
+                holds=["authoritative_queue_custody_unbound","generic_native_admission_unqualified"]
+                      +(["proposed_pending_limit_exceeded"] if pending>limit else []),
+                acceptance="Retained metadata only; no queue mutation, native admission, support or quality acceptance.")
+    if len(encoded(result))>MAX_OUTPUT:raise ValueError("bounded inventory output ceiling")
+    return result
+
 def inventory(root,plan,*,now,horizon):
     now=epoch(now);horizon=epoch(horizon)
     if not now<horizon<=now+3600:raise ValueError("prospective discovery horizon at most60min required")
+    if plan.get("schema")==LEAD_PLAN:return held_inventory(root,plan,now=now,horizon=horizon)
     if (plan.get("schema")!=PLAN or not isinstance(plan.get("region"),str) or not plan["region"]
         or plan.get("network_bytes")!=0 or plan.get("source_read_bytes")!=0
         or plan.get("metadata_bytes")!=MAX_METADATA or plan.get("output_bytes")!=MAX_OUTPUT):
@@ -200,13 +316,15 @@ def output_tree_bytes(output):
     return observed
 
 def metadata_reservation(plan):
-    if plan.get("schema")!=PLAN or not isinstance(plan.get("candidates"),list) or not 1<=len(plan["candidates"])<=MAX_RECORDS:
+    held=plan.get("schema")==LEAD_PLAN
+    if held:lead_candidates(plan)
+    if plan.get("schema") not in (PLAN,LEAD_PLAN) or not isinstance(plan.get("candidates"),list) or not 1<=len(plan["candidates"])<=MAX_RECORDS:
         raise ValueError("finite inventory plan required")
     if plan.get("metadata_bytes")!=MAX_METADATA or plan.get("output_bytes")!=MAX_OUTPUT or plan.get("network_bytes")!=0 or plan.get("source_read_bytes")!=0:
         raise ValueError("fixed source-free inventory contract required")
     descriptors={}
     for candidate in plan["candidates"]:
-        for role in ("source_manifest","header","rights","scope","prepared_acquisition"):
+        for role in (("lead",) if held else ("source_manifest","header","rights","scope","prepared_acquisition")):
             if role not in candidate:continue
             d=candidate[role]
             if not isinstance(d,dict) or set(d)!={"path","sha256","bytes","contract"}:raise ValueError("exact metadata descriptor required")

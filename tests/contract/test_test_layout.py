@@ -6,9 +6,10 @@ a test that lands in the wrong place silently changes which CI job runs it.
 """
 import ast
 import re
+import tomllib
 import unittest
 
-from tests._support import GIS_PACKAGES, ROOT
+from tests._support import GIS_PACKAGES, ROOT, SHARED_SURVEY_PACKAGES
 
 LAYERS = {'tests/unit', 'tests/contract', 'tests/integration', 'tests/gis',
           'research/tests', 'research/tests/gis'}
@@ -73,7 +74,21 @@ class LayoutTest(unittest.TestCase):
         imports = {'pylerc': 'lerc', 'pyshp': 'shapefile', 'laspy[lazrs]': 'laspy'}
         pins = [line.split('==')[0] for line in (ROOT / 'requirements-survey.txt').read_text().splitlines()
                 if line and not line.startswith('#')]
-        self.assertEqual(sorted(imports.get(pin, pin) for pin in pins), sorted(GIS_PACKAGES))
+        self.assertEqual(sorted(imports.get(pin, pin) for pin in pins),
+                         sorted([*GIS_PACKAGES, *SHARED_SURVEY_PACKAGES]))
+
+    def test_shared_survey_packages_are_pinned_the_same_in_the_test_extra(self):
+        # A shared package may be imported outside gis/ only because the `test` extra
+        # installs it everywhere; the two pins must stay identical.
+        survey = dict(line.split('==') for line in (ROOT / 'requirements-survey.txt').read_text().splitlines()
+                      if line and not line.startswith('#'))
+        test_extra = tomllib.loads((ROOT / 'pyproject.toml').read_text())['project']['optional-dependencies']['test']
+        test_pins = dict(spec.split('==') for spec in test_extra)
+        self.assertFalse(set(SHARED_SURVEY_PACKAGES) & set(GIS_PACKAGES))
+        for name in SHARED_SURVEY_PACKAGES:
+            with self.subTest(name=name):
+                self.assertIn(name, test_pins, 'a shared survey package must be in the test extra')
+                self.assertEqual(survey.get(name), test_pins[name])
 
 
 if __name__ == '__main__':

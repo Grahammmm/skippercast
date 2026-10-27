@@ -6,7 +6,11 @@ counts in ``state.json``, writes one ``fleet_runs`` row through the sink
 (``run.record``, id ``<run_id>:<step>``) and updates ``report.json``. ``run``
 chains ``discover -> resolve -> enrich-code -> ingest -> refresh`` (``--steps``
 picks a subset, in that order) in one run and stops at the first failed step;
-a discovery binding that failed makes the run ``partial``. ``plan-agent
+a discovery binding that failed makes the run ``partial``, and with none failed
+a known gap (an adapter not implemented yet, a source whose pages the adapter
+does not support, a source unavailable or empty; ``discover.json`` ``gaps``)
+makes it ``complete-with-known-gaps`` (``report.json`` ``known_gaps``; the
+``fleet_runs`` row stays ``ok`` with ``gaps`` in its counts). ``plan-agent
 [--mode full|refresh]`` writes the OSINT agent's batch manifests
 (``fleet.agent``); ``ingest --profiles DIR`` ingests the agent's profiles
 instead of the run's discovery output, and a refused profile makes the step
@@ -34,6 +38,7 @@ from .runs import Run, now
 from .sinks import SinkError, open_sink
 
 PIPELINE = ("discover", "resolve", "enrich-code", "ingest", "refresh")
+KNOWN_GAPS = "complete-with-known-gaps"  # no step failed; a binding is a known gap (ingest.GAP_STATUSES)
 
 
 STEPS: dict[str, Callable[..., dict]] = {
@@ -67,13 +72,24 @@ def execute(run: Run, ctx: RunContext, sink, steps, options: Mapping[str, Mappin
                 pass
             raise
         counts = {**counts, "skips": len(getattr(ctx.net, "skips", ())) - skips}
-        status = "partial" if counts.get("failed") else "ok"
+        status = "partial" if counts.get("failed") else KNOWN_GAPS if counts.get("gaps") else "ok"
         run.step_finished(step, counts)
-        _record(sink, step, started, status, counts, None)
+        # fleet_runs keeps its ok/partial/failed vocabulary; the gaps are in counts_json
+        _record(sink, step, started, "ok" if status == KNOWN_GAPS else status, counts, None)
         report["steps"][step] = {"status": status, "counts": counts}
-    report["status"] = "partial" if any(s.get("status") == "partial" for s in report["steps"].values()) else "ok"
+    report["status"] = run_status(report["steps"])
+    discovered = run.dir / "discover.json"
+    if discovered.exists():
+        report["known_gaps"] = json.loads(discovered.read_text(encoding="utf-8")).get("gaps") or {}
     run.write_report(report)
     return report
+
+
+def run_status(steps: Mapping[str, Mapping[str, Any]]) -> str:
+    """The run's status from its steps': ``partial`` when one is, else ``complete-with-known-gaps`` when a step
+    recorded a known gap (a binding not implemented, unsupported, unavailable or empty), else ``ok``."""
+    statuses = {s.get("status") for s in steps.values()}
+    return "partial" if "partial" in statuses else KNOWN_GAPS if KNOWN_GAPS in statuses else "ok"
 
 
 def run_step(step: str, region_id: str, sink_kind: str = "staging", run_id: str | None = None,

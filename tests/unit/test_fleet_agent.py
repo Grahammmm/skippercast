@@ -350,6 +350,67 @@ class ProfileIngestTests(unittest.TestCase):
                 self.assertEqual(profiled[other["vessel_id"]], "2026-10-06T08:17:00.000Z")
                 self.assertIsNone(profiled[doc["vessel_id"]], "a refused profile moves nothing forward")
 
+    def test_text_in_a_numeric_field_or_an_http_source_refuses_the_record(self):
+        """T17: the junk earlier agent runs wrote (review text as a rating, http:// sources) never reaches a fact."""
+        reputation = {"google_rating": None, "google_reviews": None, "other": [leaf("4.8 stars on the landing page")]}
+        cases = {"rating-text.json": (kelp(reputation=reputation), "numbers only"),
+                 "length-text.json": (kelp(length_ft=leaf("sixty-five feet")), "boat/length_ft"),
+                 "http-source.json": (kelp(passengers_max=leaf(44, url="http://kelp-test-charters.example/")),
+                                      "must be an https URL")}
+        for name, (doc, expected) in cases.items():
+            with self.subTest(name), tempfile.TemporaryDirectory() as tmp:
+                p, folder = Registry(tmp), Path(tmp) / "profiles"
+                p.run(DAY0, *baseline(DAY0))
+                write(folder, name, doc)
+                write(folder, "valid.json", party())
+                run, result = p.ingest(day(1), folder)
+                self.assertEqual((result["status"], result["counts"]["ingested"], result["counts"]["refused"]),
+                                 ("partial", 1, 1))
+                (refused,) = json.loads((run.dir / "profiles-ingest.json").read_text())["refused"]
+                self.assertEqual(refused["file"], name)
+                self.assertTrue(any(expected in e for e in refused["errors"]), refused)
+                facts = [f for f in p.rows("fleet_vessel_facts") if f["vessel_id"] == KELP and f["source_id"] == "osint"]
+                self.assertEqual(facts, [], "nothing of a refused profile is stored")
+
+    def test_an_http_conflict_citation_refuses_the_whole_profile(self):
+        """T17: a conflicts[] citation must be https too; the refused profile stores no fact, review or timestamp."""
+        def with_conflict(url):
+            doc = kelp()
+            doc["conflicts"] = [{"field": "length_ft", "note": "the registry and the operator disagree",
+                                 "values": [{"value": 26, "source_url": url},
+                                            {"value": 28, "source_url": "https://kelp-test-charters.example/"}]}]
+            return doc
+
+        for url, refused in (("http://registry.example/", True), ("https://user:pw@registry.example/", True),
+                             ("https://registry.example/", False)):
+            with self.subTest(url), tempfile.TemporaryDirectory() as tmp:
+                p, folder = Registry(tmp), Path(tmp) / "profiles"
+                p.run(DAY0, *baseline(DAY0))
+                write(folder, "kelp.json", with_conflict(url))
+                write(folder, "valid.json", party())
+                run, result = p.ingest(day(1), folder)
+                facts = [f for f in p.rows("fleet_vessel_facts") if f["vessel_id"] == KELP and f["source_id"] == "osint"]
+                reviews = [r for r in p.rows("fleet_reviews") if r["kind"] == "fact-conflict" and r["subject_id"] == KELP]
+                profiled = {v["id"]: v["last_profiled_at"] for v in p.rows("fleet_vessels")}
+                self.assertIsNotNone(profiled[SEA], "the valid profile in the same run still lands")
+                if refused:
+                    self.assertEqual((result["status"], result["counts"]["ingested"], result["counts"]["refused"]),
+                                     ("partial", 1, 1))
+                    (report,) = json.loads((run.dir / "profiles-ingest.json").read_text())["refused"]
+                    self.assertEqual(report["file"], "kelp.json")
+                    self.assertTrue(any(e.startswith("conflicts[0].values[0]: source_url must be an https URL")
+                                        for e in report["errors"]), report)
+                    self.assertEqual(facts, [], "nothing of a refused profile is stored")
+                    self.assertEqual(reviews, [], "a refused profile opens no conflict review")
+                    self.assertIsNone(profiled[KELP], "a refused profile moves nothing forward")
+                else:
+                    self.assertEqual((result["status"], result["counts"]["ingested"], result["counts"]["refused"]),
+                                     ("ok", 2, 0))
+                    self.assertTrue(facts)
+                    self.assertEqual([json.loads(r["candidate_json"])["values"][0]["source_url"] for r in reviews],
+                                     [url], "the https conflict opens one review with its citation")
+                    self.assertIsNotNone(profiled[KELP])
+
     def test_a_missing_profiles_directory_fails_the_step(self):
         with self.assertRaises(FileNotFoundError):
             self.p.ingest(day(1), self.dir / "absent")

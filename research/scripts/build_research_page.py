@@ -34,7 +34,7 @@ while i<len(lines):
         while i<len(lines) and lines[i].strip() and not lines[i].startswith(('#','|','- ')):line+=' '+lines[i];i+=1
         out.append('<p>'+inline(line)+'</p>')
 page=('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-      '<title>Species & ocean research · SkipperCast</title><meta name="color-scheme" content="dark"><link rel="icon" href="app-icon.svg">'
+      '<title>Species & ocean research · SkipperCast</title><link rel="canonical" href="https://skippercast.com/species-research.html" /><meta name="color-scheme" content="dark"><link rel="icon" href="app-icon.svg">'
       '<!-- FE-61 part 2: the v2 tokens and the readable pages\' sheet (FE-86), as sources.html. -->'
       '<link rel="stylesheet" href="../web/tokens.css"><link rel="stylesheet" href="coast-readable.css"></head>'
       '<body class="coast-readable"><a class="skip-link" href="#content">Skip to content</a><header><a class="brand" href="./">SkipperCast</a>'

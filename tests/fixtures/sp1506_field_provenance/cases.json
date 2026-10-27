@@ -1,0 +1,10 @@
+{
+  "schema": "sp1506.synthetic/v1",
+  "vessel_id": "15060000000000000000000000000001",
+  "winner_id": "15060000000000000000000000000002",
+  "year_built": 1999,
+  "time": "2026-10-01T09:00:00.000Z",
+  "later": "2026-10-05T09:00:00.000Z",
+  "history_cap": 1000,
+  "provenance": "Synthetic rows shaped from test_fleet_admin.mjs setup; actual committed migrations via _advisor_d1.mjs. No records or planner imports."
+}

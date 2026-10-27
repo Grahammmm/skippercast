@@ -26,13 +26,14 @@ const ident = (value: unknown): string | null => typeof value === 'string' && /^
 
 /**
  * The station behind `source`: its `station`, or (for a backup without one)
- * its data's station; `fallback` (the caller's existing choice) when the
- * source names none. Null when nothing names a station.
+ * its data's station. A declared backup without either identity returns null;
+ * only sources without a valid `fallback_for` may use `fallback` (the caller's
+ * existing choice). Null when nothing eligible names a station.
  */
 export function sourceStation(source: StationSource | null | undefined, fallback?: string | null): SourceStation | null {
   const primary = ident(source?.fallback_for);
   const dataStation = ident((source?.data as {station?: unknown} | null | undefined)?.station);
-  const id = ident(source?.station) ?? (primary ? dataStation : null) ?? ident(fallback ?? null);
+  const id = ident(source?.station) ?? (primary ? dataStation : ident(fallback ?? null));
   if (!id) return null;
   return {id, backupFor: primary && primary !== id ? primary : null};
 }

@@ -176,15 +176,24 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-legend { position: absolute; left: var(--space-4); bottom: calc(var(--touch-min) + var(--space-7)); z-index: var(--z-map-chrome); min-width: 160px; max-width: 280px; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); }
 .app-legend ul { margin: var(--space-1) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-13); }
 .app-legend li { display: flex; align-items: center; gap: var(--space-2); }
+.app-legend li.app-legend-stations { min-width: 0; flex-direction: column; align-items: stretch; overflow-wrap: anywhere; }
+.app-legend-stations > ul { width: 100%; min-width: 0; }
+.app-legend-stations > ul > li { min-width: 0; }
+.app-legend-stations details, .app-legend-stations details > ul { width: 100%; min-width: 0; }
+.app-legend-stations details > ul > li { min-width: 0; }
+.app-legend-stations details .ui-button { max-width: 100%; white-space: normal; text-align: left; }
 /* FE-22: the Clouds row's frame label (an .app-legend-note: acquisition time and age) under its name, and the loop toggle beside it. */
 .app-legend-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .app-swatch { width: var(--space-4); height: var(--space-2); border-radius: var(--radius-sm); background: var(--muted); }
 .app-swatch[data-layer="seafloor"] { background: linear-gradient(90deg, var(--depth-0), var(--depth-3)); }
+.app-swatch[data-layer="depth-contours"] { height: 0; border-top: 2px solid var(--depth-1); }
+.app-swatch[data-layer="depth-contours-edge"] { height: 0; border-top: 1px dashed var(--muted); }
 .app-swatch[data-layer="trip-ranked"] { width: var(--space-2); height: var(--space-2); border-radius: var(--radius-pill); background: var(--mint); }
 .app-swatch[data-layer="marks-density"] { border-radius: var(--radius-pill); background: radial-gradient(circle, var(--depth-0), var(--depth-1) 45%, transparent 75%); }
 .app-swatch[data-layer="currents"] { background: var(--flow); }
 .app-swatch[data-layer="currents-fast"] { background: var(--flow-fast); }
-.app-legend-currents, .app-legend-density { flex-wrap: wrap; }
+.app-legend-currents, .app-legend-density, .app-legend-depth-contours { flex-wrap: wrap; }
+.app-legend-note[data-key="depth-contours-edge"] { display: flex; align-items: center; gap: var(--space-2); }
 .app-legend-note { flex-basis: 100%; margin: 0; color: var(--muted); font-size: var(--text-11); }
 .app-rail-source { flex-basis: 100%; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-2) var(--space-1); color: var(--muted); font-size: var(--text-11); }
 .app-rail-source select { flex: 1; min-width: 0; }
@@ -201,7 +210,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-legend-plain { flex-wrap: wrap; }
 /* FE-16: the whole ramp, cold to warm, as the texture draws it; the row adds the analysis's range in °F, its product and age. */
 .app-swatch[data-layer="water-temp"] { background: linear-gradient(90deg, var(--sst-0), var(--sst-1), var(--sst-2), var(--sst-3), var(--sst-4), var(--sst-5)); }
-.app-legend-water-temp, .app-legend-swell { flex-wrap: wrap; }
+.app-legend-water-temp, .app-legend-swell, .app-legend-sst-contrast { flex-wrap: wrap; }
+/* CI6-03: Temp contrast's fixed scale, weaker to stronger change per nautical mile. */
+.app-swatch[data-layer="sst-contrast"] { background: linear-gradient(90deg, var(--contrast-0), var(--contrast-1), var(--contrast-2)); }
 .app-legend-range { color: var(--text); font-size: var(--text-11); }
 /* FE-17: the swell ramp, low to high, and its fixed scale as a wider swatch between its ends. */
 .app-swatch[data-layer="swell"] { background: linear-gradient(90deg, var(--swell-0), var(--swell-1), var(--swell-2), var(--swell-3)); }

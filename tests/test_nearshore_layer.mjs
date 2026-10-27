@@ -16,6 +16,7 @@ import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {chartMark} from '../web/map/chart.ts';
 import {WAVE_MODEL} from '../web/map/forecast-grid.ts';
 import {createEngine} from '../web/map/engine.ts';
+import {DEPTH_BOTTOM} from '../web/map/depth-contours.ts';
 import {MPA_FILL} from '../web/map/mpa.ts';
 import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, ringMark, ringRadius, ringSummary} from '../web/map/nearshore.ts';
 import {readPalette} from '../web/map/palette.ts';
@@ -72,7 +73,7 @@ test('rings are sized by height on the stated scale; the card names the site, th
     [['SL345', 15.4, [-120.87659, 35.36503]], ['SL400', 15.4, [-120.9, 35.4458]]]);
   assert.equal(ringSummary(r, NOW), '2 nearshore model sites · CDIP MOP · issued 6 h ago · ring 4 px + 3 px per ft');
   const mark = ringMark(r, 'SL345', NOW, TZ);
-  assert.deepEqual([mark.id, mark.name, mark.kind, mark.reading], ['nearshore:SL345|2026-10-09T20:00:00.000Z', 'Morro Rock', 'Nearshore model site', '3.8 ft · 13.0 s · from WNW 290°']);
+  assert.deepEqual([mark.id, mark.name, mark.kind, mark.reading], ['nearshore:SL345|2026-10-09T20:00:00.000Z', 'Morro Rock', 'CDIP MOP model site', '3.8 ft · 13.0 s · from WNW 290°']);
   assert.match(mark.source, /^CDIP MOP · sample Oct 9, 1:00\s?PM PDT · 1h model sampling · issued 6 h ago$/);
   assert.match(mark.basis, /Model output, not a buoy observation and not breakers at a beach\. Ring radius 4 px plus 3 px per foot; 15 ft and above draw alike\. The site is in 15 m of water \(MSL\)\.$/);
   assert.equal(ringMark(r, 'nope', NOW, TZ), null);
@@ -148,11 +149,26 @@ test('outside a report binding Swell renders exactly as before FE-27', async t =
   assert.deepEqual(Object.keys(swellOverlay(sentinel).sources), [SWELL_SOURCE, ISOLINE_SOURCE, STROKE_SOURCE]);
 });
 
+test('Stations alone accesses bound MOP rings, and both controls share one set of targets', async t => {
+  const {s, e} = await swell(t, {href: `${PAGE}?region=morro-bay&layers=stations&hour=${AT_PARAM}`,
+    place: () => ({regionId: 'morro-bay'}), data: {coastReport: signal({data: report()}), coastBinding: signal({areaId: 'central'})}});
+  assert.deepEqual(e.overlay.layers.map(l => l.id), [NEARSHORE_HIT, NEARSHORE_LAYER]);
+  const card = s.pick.mark(NEARSHORE_HIT, {id: 'SL345'});
+  assert.equal(card.kind, 'CDIP MOP model site');
+  assert.equal(card.provider.href, 'https://example.test/cdip');
+  syncFromURL(`${PAGE}?region=morro-bay&layers=stations,swell&hour=${AT_PARAM}`);
+  await flush();
+  assert.equal(e.overlay.layers.filter(l => l.id === NEARSHORE_HIT).length, 1);
+  assert.equal(nearshoreState.value.rings.length, 2);
+  syncFromURL(`${PAGE}?region=morro-bay&layers=none&hour=${AT_PARAM}`);
+  assert.equal(nearshoreState.value, null);
+});
+
 test('with a grid, unbound Swell matches no-place engine calls and keeps only the field drawn', async t => {
   const body = withGrid();
   const before = await swell(t, {body});
   assert.deepEqual(before.e.calls.slice(-4), [
-    ['overlay', FIELD, MPA_FILL], ['image', SWELL_SOURCE],
+    ['overlay', FIELD, ['wind-casing', DEPTH_BOTTOM, MPA_FILL]], ['image', SWELL_SOURCE],
     ['data', ISOLINE_SOURCE, undefined], ['data', STROKE_SOURCE, undefined],
   ], 'the synthetic grid really draws');
   before.s.destroy();
@@ -173,7 +189,7 @@ test('in a binding the rings draw above the field, follow the hour, leave with t
   const reportSignal = signal({data: report()}), binding = signal({areaId: 'central', localAreaId: 'morro-bay'});
   const {s, e, asked} = await swell(t, {place: () => ({regionId: 'morro-bay'}), data: {coastReport: reportSignal, coastBinding: binding}, clock: () => new Date(clock)});
   assert.deepEqual(asked, [['place', 'morro-bay'], ['load', 'report']], 'the report is asked for while Swell is on');
-  assert.deepEqual(e.calls.at(-2), ['overlay', [NEARSHORE_HIT, NEARSHORE_LAYER], MPA_FILL], 'without a grid, the rings alone');
+  assert.deepEqual(e.calls.at(-2), ['overlay', [NEARSHORE_HIT, NEARSHORE_LAYER], ['wind-casing', DEPTH_BOTTOM, MPA_FILL]], 'without a grid, the rings alone');
   assert.deepEqual(e.calls.at(-1), ['data', NEARSHORE_SOURCE, ['SL345', 'SL400']]);
   assert.deepEqual(swellOverlay(sentinel, {rings: true}).layers.map(l => l.id), [...FIELD, NEARSHORE_HIT, NEARSHORE_LAYER], 'with a grid, above the field');
   const ring = swellOverlay(sentinel, {rings: true}).layers.at(-1);
@@ -185,7 +201,7 @@ test('in a binding the rings draw above the field, follow the hour, leave with t
 
   e.calls.length = 0;
   setParams({hour: '2026-10-09T23:00Z'});
-  assert.deepEqual(e.calls, [['overlay', [NEARSHORE_HIT, NEARSHORE_LAYER], MPA_FILL], ['data', NEARSHORE_SOURCE, ['SL345', 'SL400']]], 'a new hour, new rings at once');
+  assert.deepEqual(e.calls, [['overlay', [NEARSHORE_HIT, NEARSHORE_LAYER], ['wind-casing', DEPTH_BOTTOM, MPA_FILL]], ['data', NEARSHORE_SOURCE, ['SL345', 'SL400']]], 'a new hour, new rings at once');
   assert.equal(nearshoreState.value.rings[0].waveFt.toFixed(1), '4.1');
   assert.equal(chartMark.value, null, 'the card of the previous hour goes');
 

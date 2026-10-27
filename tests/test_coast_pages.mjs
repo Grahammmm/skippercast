@@ -18,6 +18,19 @@ test('default readable report explicitly labels SLO reference without native con
  const response=await serveCoastPage(request(),options()),html=await response.text();
  assert.equal(response.status,200);assert.match(html,/SLO reference report/);assert.match(html,/Wind \/ gust/);assert.match(html,/8 \/ 12 kt/);assert.doesNotMatch(html,/<script|<select|type=["']range|<canvas/i);assert.match(html,/2026-10-07T11:50:00Z/);assert.match(html,/2026-10-07T10:30:00Z/);
 });
+test('readable and information pages carry a canonical, description and share metadata',async()=>{
+ for(const path of ['/report','/about','/methodology']){
+  const response=await serveCoastPage(request(path),options()),html=await response.text();
+  assert.equal(response.status,200,path);
+  assert.ok(html.includes(`<link rel="canonical" href="https://skippercast.com${path}">`),path);
+  assert.match(html,/<meta name="description" content="[^"]+">/,path);
+  assert.ok(html.includes('<meta property="og:type" content="website">'),path);
+  assert.ok(html.includes(`<meta property="og:url" content="https://skippercast.com${path}">`),path);
+  assert.ok(html.includes('<meta property="og:title" content="'),path);
+  assert.ok(html.includes('<meta property="og:description" content="'),path);
+  assert.ok(html.includes('<meta name="twitter:card" content="summary">'),path);
+ }
+});
 test('original Fish aliases preserve profile, target, geographic binding and exact hour',()=>{
  const result=selection('?area=north&mode=spear&species=gopher&hour=2026-10-07T12:00:00Z');
  assert.equal(result.context.regionId,'cambria-san-simeon');assert.equal(result.context.profile,'spear');assert.equal(result.context.target,'gopher');assert.equal(result.context.at.toISOString(),at);assert.match(result.workspace,/region=cambria-san-simeon/);

@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 
 const {createPlanner, nextFriday, planFit} = await import('../web/planner.ts');
 const {draftKey} = await import('../dist/trip-export.js');
+const {coordinates} = await import('../web/state.ts');
 
 const NOW = new Date('2026-10-12T18:00:00Z');  // Monday, Pacific
 const REGION = {id: 'test-coast', name: 'Test Coast', timezone: 'America/Los_Angeles', mpa: {bounds: [-10, -10, 10, 10]}};
@@ -23,20 +24,40 @@ function reefs(n = 5, sha = 'a'.repeat(64)) {
     area_ids: [`area-${i}`], terrain_interpretation: 'Raised structure', source_url: 'https://example.org/s', evidence_status: 'Fish presence unverified.',
   }));
   const areas = targets.map((t, i) => ({id: `area-${i}`, target_ids: [t.id], geometry: {type: 'Polygon', coordinates: [ring(t.longitude, t.latitude)]}}));
-  return {targets, areas, publication: {export_sha256: sha, status: 'ready', expires_at: '2026-10-20T00:00:00Z', region: 'test-coast'}, source_validation_date: '2026-10-01'};
+  // `expires_at` is a far-future constant, not a date near the test's frozen NOW:
+  // buildExport compares against the real clock (its `now` default), so a near date
+  // would "expire" once wall-clock time passes it and fail the export guards below.
+  return {targets, areas, publication: {export_sha256: sha, status: 'ready', expires_at: '2099-12-31T00:00:00Z', region: 'test-coast'}, source_validation_date: '2026-10-01'};
 }
 const ATLAS = {targets: [{id: 'old-1', label: 'Old 1', latitude: 0.5, longitude: 0.5, habitat_grade: 'B', center_depth_ft: 80, neighborhood_depth_ft: [70, 90]}], areas: [], drifts: []};
+
+// The land/water check (web/land-water.ts) for these synthetic reefs: water unless a test says otherwise.
+let place = () => ({state: 'water'});
 
 function harness({stored = null, loadReefs, ports = [{id: 'p1', name: 'Port 1', region: 'test-coast', match: [0, 0]}]} = {}) {
   const store = new Map(stored ? [[draftKey(REGION.id), stored]] : []);
   const storage = {getItem: k => store.get(k) ?? null, setItem: (k, v) => { store.set(k, v); }};
   const emitted = [], nav = [];
-  const planner = createPlanner({atlas: ATLAS, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], storage, now: () => NOW,
+  const planner = createPlanner({atlas: ATLAS, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], storage, now: () => NOW, landWater: async () => place,
     loadReefs: loadReefs ?? (async () => reefs()), loadPorts: async () => ({ports}), emit: d => emitted.push(d),
     nav: {open: () => nav.push('open'), showMap: () => nav.push('map'), conditions: date => nav.push(`conditions ${date}`)}});
   return {planner, store, emitted, nav, saved: () => JSON.parse(store.get(draftKey(REGION.id)))};
 }
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+test('downloaded notes follow the coordinate choice while GPX positions remain decimal degrees', async () => {
+  const {planner: p} = harness();
+  p.add('old-1'); p.setResearch(true);
+  try {
+    for (const [mode, expected] of [['dd', '0.50000° N, 0.50000° E'], ['ddm', '0° 30.000′ N, 0° 30.000′ E'], ['dms', '0° 30′ 00.00″ N, 0° 30′ 00.00″ E']]) {
+      coordinates.value = mode;
+      assert.ok((await (await p.exportFile('notes')).text()).includes(expected));
+      const gpx = await (await p.exportFile('gpx')).text();
+      assert.match(gpx, /lat="0\.5" lon="0\.5"/);
+      assert.doesNotMatch(gpx, /[°′″]/);
+    }
+  } finally { coordinates.value = 'dd'; p.dispose(); }
+});
 
 test('a draft saved before the port opens with its ids, name, date, layers and coverage, under the same key', () => {
   const v1 = JSON.stringify({ids: ['old-1', 'gone'], rankedPlan: null, name: 'Sunday reef', date: '2026-10-18', avoidScope: 'region',
@@ -51,7 +72,7 @@ test('a draft saved before the port opens with its ids, name, date, layers and c
 });
 
 test('blocked storage keeps the plan in the page and says so', () => {
-  const p = createPlanner({atlas: ATLAS, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], now: () => NOW, loadPorts: async () => null, emit: () => {},
+  const p = createPlanner({atlas: ATLAS, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], now: () => NOW, loadPorts: async () => null, emit: () => {}, landWater: async () => place,
     storage: {getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); }}, nav: {open() {}, showMap() {}, conditions() {}}});
   assert.equal(p.draft.value.name, 'My fishing day');
   assert.equal(p.draft.value.date, '2026-10-12', 'today in the region\'s zone');
@@ -62,7 +83,7 @@ test('blocked storage keeps the plan in the page and says so', () => {
 });
 
 test('the distance filter starts from the saved Boat range (#644), else 20 nm', () => {
-  const make = reachNm => createPlanner({atlas: ATLAS, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], now: () => NOW, loadPorts: async () => null, emit: () => {},
+  const make = reachNm => createPlanner({atlas: ATLAS, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], now: () => NOW, loadPorts: async () => null, emit: () => {}, landWater: async () => place,
     storage: null, nav: {open() {}, showMap() {}, conditions() {}}, ...(reachNm === undefined ? {} : {reachNm})});
   for (const [reachNm, distance] of [[undefined, 20], [null, 20], [12.5, 12.5]]) {
     const p = make(reachNm);
@@ -90,6 +111,35 @@ test('Best available ranks distinct reefs, sets the ranked layers, names the pla
   assert.deepEqual(emitted.at(-1).targets.map(t => t.id), d.ids);
   assert.deepEqual(p.spots.value.map(t => t.trip_rank), [1, 2, 3, 4, 5], 'the list shows only ranked reefs, in rank order');
   p.dispose();
+});
+
+// CI6-01A: the planner's distances run from the chosen listed port, never the device position.
+test('Best available measures distance from the chosen port; without one there is no distance and no device fallback', async () => {
+  const {distanceNm} = await import('../dist/spot-ranking.js');
+  const saved = Object.getOwnPropertyDescriptor(globalThis, 'navigator'), calls = [];
+  Object.defineProperty(globalThis, 'navigator', {configurable: true, writable: true, value: {geolocation: {
+    getCurrentPosition(ok) { calls.push('get'); ok({coords: {latitude: 0.5, longitude: 0.5}}); }, watchPosition() { calls.push('watch'); return 1; }, clearWatch() {}}}});
+  try {
+    const ports = [{id: 'p1', name: 'Port 1', region: 'test-coast', match: [0, 0]}, {id: 'p2', name: 'Launch 2', region: 'test-coast', match: [0.05, 0.03]}];
+    for (const id of ['p1', 'p2']) {
+      const {planner: p} = harness({ports});
+      await settle();
+      p.setFilter('port', id);
+      await p.selectBest();
+      const [lat, lon] = ports.find(x => x.id === id).match;
+      assert.equal(p.ranked.value, true, p.scopeStatus.value);
+      for (const t of p.spots.value) assert.equal(t.distance_nm, distanceNm({latitude: lat, longitude: lon}, t), `${t.id} from ${id}`);
+      p.dispose();
+    }
+    const {planner: none} = harness({ports: []});
+    await settle();
+    assert.equal(none.filters.value.port, '');
+    await none.selectBest();
+    assert.equal(none.ranked.value, true, none.scopeStatus.value);
+    assert.ok(none.spots.value.length > 0 && none.spots.value.every(t => t.distance_nm === null), 'no port, no distance');
+    none.dispose();
+    assert.deepEqual(calls, [], 'the planner never asks for the device position');
+  } finally { if (saved) Object.defineProperty(globalThis, 'navigator', saved); else delete globalThis.navigator; }
 });
 
 test('a selection made while Best available loads wins over its answer', async () => {

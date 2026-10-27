@@ -406,9 +406,12 @@ class Store:
             if job["stage"] in {"acquire", "qualify"} and manifest.get("schema") == "coastal-native-job-v1":
                 # Dispatch starts measurement; it is not scientific qualification.
                 from skippercast.coastal.handoff.common import validate_native_source
+                from skippercast.coastal.handoff.mapping_input import MAX_CELLS
                 validate_native_source(self.root, manifest["source"])
                 window = manifest["window"]
-                if len(window) != 4 or any(not isinstance(v, int) for v in window) or min(window) < 0 or not 0 < window[2]*window[3] <= 1048576:
+                # Refuse exactly what the acquire stage (mapping_input.observe) refuses.
+                if (not isinstance(window, list) or len(window) != 4 or any(type(v) is not int for v in window)
+                        or min(window[:2]) < 0 or min(window[2:]) <= 0 or window[2]*window[3] > MAX_CELLS):
                     return False, ["native_window_bound"]
                 return True, []
             if job["stage"] == "render" and manifest.get("schema") == "coastal-mapping-run-v1":
@@ -538,6 +541,14 @@ class Store:
                     except ValueError as exc:
                         self.db.execute("UPDATE jobs SET state='held',holds_json=? WHERE job_id=?", (json.dumps(["budget_authority_invalid:"+str(exc)]), row["job_id"]))
                         self.event(row["job_id"], "budget_authority_invalid", {"reason": str(exc)})
+                        continue
+                    if (decision.reason == "failed_uncertain" and not job.get("execution_contract")
+                            and not job.get("sourcefree_contract")):
+                        # Another generic execution awaits explicit recovery. That
+                        # pauses the mission; it is no verdict on this job, which
+                        # stays queued (unclaimed, unreserved) so recovery can
+                        # resume it. Dedicated lanes keep their own stop rules.
+                        self.event(row["job_id"], "budget_paused_uncertain", {"reason": decision.reason})
                         continue
                     if not decision.allowed or any(job["budget"][key] > decision.remaining[key]
                         for key in (("bytes","requests") if job.get("execution_contract") else ("wall_s","bytes","requests"))):

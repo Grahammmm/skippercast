@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:skippercast:coast-native-rights-evidence-v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema", "created_utc", "author_profile", "author_model", "card_id", "code_commit", "skill_commit", "statement", "synthetic"],
+  "properties": {
+    "created_utc": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "author_profile": {"type": "string", "minLength": 1},
+    "author_model": {"type": "string", "minLength": 1},
+    "card_id": {"type": "string", "pattern": "^t_[0-9a-f]{8}$"},
+    "code_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "skill_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "schema": {"const": "coast-native-rights-evidence-v1"},
+    "statement": {"type": "string", "minLength": 1},
+    "synthetic": {"type": "boolean"}
+  }
+}
