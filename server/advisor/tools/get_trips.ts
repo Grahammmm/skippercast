@@ -24,13 +24,13 @@ export const getTrips: AdvisorTool = {
   async run(input, ctx) {
     const resolved = resolvePort(String(input.port ?? ''), ctx.contact, ctx.settings);
     if (!resolved) return {result: {error: 'unknown port'}};
-    const port = resolved.port, since = addDays(localDate(ctx.now), -TRIP_TYPE_DAYS);
+    const port = resolved.port, today = localDate(ctx.now), since = addDays(today, -TRIP_TYPE_DAYS);
     const boats = (await ctx.db.prepare(`SELECT b.id,b.slug,b.name,b.landing,b.booking_url,
-        (SELECT MAX(r.report_date) FROM advisor_reports r WHERE r.boat_id=b.id AND r.status='published') AS last_report
+        (SELECT MAX(r.report_date) FROM advisor_reports r WHERE r.boat_id=b.id AND r.status='published' AND r.report_date<=?) AS last_report
         FROM advisor_boats b WHERE b.port=? AND b.status=? ORDER BY last_report IS NULL, last_report DESC, b.name LIMIT ?`)
-      .bind(port, VERIFIED, MAX_BOATS).all<BoatRow>()).results;
+      .bind(today, port, VERIFIED, MAX_BOATS).all<BoatRow>()).results;
     const types = boats.length ? (await ctx.db.prepare(`SELECT DISTINCT boat_id, trip_type FROM advisor_reports WHERE boat_id IN (${boats.map(() => '?').join(',')})
-        AND status='published' AND report_date>=? AND trip_type IS NOT NULL ORDER BY trip_type`).bind(...boats.map(b => b.id), since).all<{boat_id: string; trip_type: string}>()).results : [];
+        AND status='published' AND report_date>=? AND report_date<=? AND trip_type IS NOT NULL ORDER BY trip_type`).bind(...boats.map(b => b.id), since, today).all<{boat_id: string; trip_type: string}>()).results : [];
     const list = boats.map(b => ({
       name: b.name, landing: b.landing, booking_url: b.booking_url && /^https:\/\//.test(b.booking_url) ? b.booking_url : null,
       boat_page: `{{link:boat:${b.slug}}}`, trip_types: types.filter(t => t.boat_id === b.id).map(t => t.trip_type), last_report: b.last_report,

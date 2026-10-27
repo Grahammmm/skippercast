@@ -1,0 +1,36 @@
+{
+  "provenance": "Synthetic clean_url string inputs shaped like NormalizeTests.test_roman_phone_url_slug and fleet source_url values; no acquired records.",
+  "invalid": [
+    {"name":"alphabetic_port","input":"https://example.test:bad/path"},
+    {"name":"negative_port","input":"https://example.test:-1/path"},
+    {"name":"above_range_port","input":"https://example.test:65536/path"},
+    {"name":"malformed_bracket_host","input":"https://[2001:db8::1/path"},
+    {"name":"invalid_ipv6_literal","input":"https://[not-ipv6]/path"},
+    {"name":"non_https","input":"http://example.test/path"},
+    {"name":"non_string_null","input":null},
+    {"name":"non_string_integer","input":7},
+    {"name":"non_string_object","input":{"url":"https://example.test/"}},
+    {"name":"userinfo_rejected","input":"https://user:pass@example.test/path"},
+    {"name":"empty_string","input":""}
+  ],
+  "valid_authorities": [
+    {"name":"ipv6_no_port","input":"https://[2001:db8::1]/path","expected":"https://[2001:db8::1]/path"},
+    {"name":"ipv6_443","input":"https://[2001:db8::1]:443/path","expected":"https://[2001:db8::1]:443/path"},
+    {"name":"ipv6_8443","input":"https://[2001:db8::1]:8443/path","expected":"https://[2001:db8::1]:8443/path"},
+    {"name":"lowercase_domain","input":"https://EXAMPLE.TEST/path","expected":"https://example.test/path"},
+    {"name":"port_zero","input":"https://example.test:0/path","expected":"https://example.test:0/path"},
+    {"name":"ipv6_port_zero","input":"https://[2001:db8::1]:0/path","expected":"https://[2001:db8::1]:0/path"},
+    {"name":"maximum_port","input":"https://example.test:65535/path","expected":"https://example.test:65535/path"}
+  ],
+  "preservation": [
+    {"name":"tracking_empty_path_fragment","input":"https://EXAMPLE.TEST?utm_source=synthetic&keep=one#frag","expected":"https://example.test/?keep=one"},
+    {"name":"query_order_blank_value","input":"https://example.test/p?b=2&utm_medium=test&a=&c=3#section","expected":"https://example.test/p?b=2&a=&c=3"},
+    {"name":"original_tracking_example","input":"https://Boat.Example.com/book?utm_source=x&trip=half&fbclid=1#top","expected":"https://boat.example.com/book?trip=half"},
+    {"name":"string_normalization","input":"  HTTPS://EXAMPLE.TEST  ","expected":"https://example.test/"},
+    {"name":"retained_query_values","input":"https://example.test/p?keep=a%2Fb&keep=two+words&empty=&ref=ok#gone","expected":"https://example.test/p?keep=a%2Fb&keep=two+words&empty=&ref=ok"}
+  ],
+  "baseline": [
+    {"name":"primary_bad_port","input":"https://example.test:bad/path"},
+    {"name":"healthy_control","input":"https://example.test/path","expected":"https://example.test/path"}
+  ]
+}
