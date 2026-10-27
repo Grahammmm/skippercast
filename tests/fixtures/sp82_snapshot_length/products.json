@@ -1,0 +1,18 @@
+{
+  "/api/coast/report": {
+    "schemaVersion": 1,
+    "countyId": "slo",
+    "generatedAt": "2026-10-07T10:00:00Z",
+    "forecasts": [], "observations": [], "tides": [], "tideEvents": [],
+    "alerts": [], "sources": [{"title": "Synthetic café 🌊", "observedAt": "2026-10-06T11:00:00Z"}],
+    "catches": [], "visibility": {}
+  },
+  "/api/coast/ocean": {
+    "schemaVersion": 1, "countyId": "slo", "generatedAt": "2026-10-07T10:00:00Z",
+    "currents": [], "sources": [{"title": "Synthetic marée 🌊"}]
+  },
+  "/api/coast/history": {
+    "schemaVersion": 1, "countyId": "slo", "generatedAt": "2026-10-07T10:00:00Z",
+    "stations": [], "recentWindowDays": 14, "syntheticLabel": "Synthetic côte 🌊"
+  }
+}

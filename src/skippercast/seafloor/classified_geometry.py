@@ -11,7 +11,8 @@ import pyproj
 from pyproj import Transformer
 import shapely
 from shapely import make_valid, segmentize
-from shapely.geometry import shape
+from shapely.errors import GEOSException
+from shapely.geometry import MultiPolygon, Polygon, shape
 from shapely.ops import transform, unary_union
 
 VERSION = 'native-classified-geometry-v1'
@@ -31,7 +32,18 @@ def runtime():
 
 
 def polygon(geometry):
-    value = shape(geometry) if isinstance(geometry, dict) else geometry
+    if isinstance(geometry, dict):
+        if not isinstance(geometry.get('type'), str) or geometry['type'].lower() not in {
+                'polygon', 'multipolygon'}:
+            raise ValueError('Invalid classified polygon representation')
+        try:
+            value = shape(geometry)
+        except (AttributeError, IndexError, KeyError, OverflowError, TypeError, ValueError, GEOSException) as exc:
+            raise ValueError('Invalid classified polygon representation') from exc
+    else:
+        value = geometry
+    if not isinstance(value, (Polygon, MultiPolygon)):
+        raise ValueError('Invalid classified polygon representation')
     if (value.geom_type not in {'Polygon', 'MultiPolygon'} or value.is_empty
             or not value.is_valid or not math.isfinite(value.area) or value.area <= 0
             or not all(math.isfinite(v) for v in value.bounds)):

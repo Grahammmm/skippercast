@@ -12,6 +12,7 @@ import hashlib
 import math
 from pathlib import Path
 import re
+import struct
 
 from .bottom_targets import VERSION, source_url_allowed, target_prefix
 from .contracts import read_json, within, load_catalogs
@@ -367,8 +368,14 @@ def _validate(region, atlas, root, *, bottom_index=None):
                  and _number(tile.get("elevation_unit_m"), .001, 1)
                  and _number(tile.get("coverage_fraction"), 0, 1)
                  and tile["coverage_fraction"] == record["coverage_fraction"], "Unsupported bottom-view raster contract")
-        _require(len(base64.b64decode(tile["elevations"], validate=True)) == tile["width"] * tile["height"] * 2,
-                 "Bottom view raster is incomplete")
+        samples = tile["width"] * tile["height"]
+        raster = base64.b64decode(tile["elevations"], validate=True)
+        _require(len(raster) == samples * 2, "Bottom view raster is incomplete")
+        # Bind the claim to the decoded raster exactly as the producer computes it:
+        # the fraction of samples unequal to nodata, rounded to four decimals.
+        valid = sum(1 for (value,) in struct.iter_unpack("<h", raster) if value != tile["nodata"])
+        _require(tile["coverage_fraction"] == round(valid / samples, 4),
+                 "Bottom view coverage differs from its decoded valid samples")
     _require(used_areas == set(areas), "Orphan qualified footprint")
     return {"ready": True, "scope": "Only the explicitly qualified survey footprints", "target_count": len(targets),
             "complete_region_coverage": False, "method": VERSION, "manifest": asset,
