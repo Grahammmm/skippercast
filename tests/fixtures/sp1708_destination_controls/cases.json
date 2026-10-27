@@ -1,0 +1,20 @@
+{
+  "schema": "skippercast.sp1708.synthetic-cases/v1",
+  "vessel": {
+    "id": "v-sp1708",
+    "slug": "sp1708-example",
+    "region": "morro-bay",
+    "status": "active",
+    "profile_status": "listed"
+  },
+  "controls": [
+    {"name": "lf", "position": "path", "value": "\n"},
+    {"name": "cr", "position": "path", "value": "\r"},
+    {"name": "tab", "position": "path", "value": "\t"},
+    {"name": "nul", "position": "path", "value": "\u0000"},
+    {"name": "del", "position": "path", "value": "\u007f"},
+    {"name": "host-lf", "position": "host", "value": "\n"},
+    {"name": "query-tab", "position": "query", "value": "\t"}
+  ],
+  "clean_booking_url": "https://book.example.com/trips?boat=sp1708&utm_source=operator#top"
+}
