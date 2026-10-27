@@ -193,6 +193,18 @@ class ManagedOutputs:
         sync_directory(self.root)
 
     def _read(self):
+        return self._read_disjoint()[0]
+
+    def _read_disjoint(self):
+        """Read and validate the ledger, returning (state, registered, ancestors).
+
+        registered and ancestors are the O(depth) disjoint-path sets built while
+        validating the ledger. They are valid only inside the lock hold that
+        took this read and only until the ledger is mutated; pass them to
+        _reserve_locked so a reservation checks its new path in O(depth) set
+        lookups instead of an O(N) pairwise is_relative_to scan. Never keep them
+        across a lock release.
+        """
         if self.path.is_symlink() or self.path.stat().st_nlink!=1 or self.path.stat().st_size>METADATA_MAX:
             raise ValueError('bounded single-link ledger required')
         state=json.loads(self.path.read_text())
@@ -214,7 +226,7 @@ class ManagedOutputs:
             for field, maximum in (('updates',1024),('revisions',4)):
                 if field in e and (type(e[field]) is not int or not 0<=e[field]<=maximum):
                     raise ValueError('finite mutable output counter changed')
-        return state
+        return state, registered, ancestors
 
     def validate_finite_identity(self,name,intent):
         """Compact-v3 finite registry identities, checked before entry/file creation."""
@@ -293,15 +305,19 @@ class ManagedOutputs:
         if role not in LIMITS or type(max_bytes) is not int or max_bytes<0 or not isinstance(intent,str) or not intent:
             raise ValueError('exact role, byte ceiling and intent required')
 
-    def _reserve_locked(self,state,seen,name,*,role,max_bytes,intent):
+    def _reserve_locked(self,state,seen,name,*,registered,ancestors,role,max_bytes,intent):
         """reserve_file() body. The caller holds the lock and passes the state
         from its own _read() and a walk from _observe() taken in this lock hold
-        after that state's last save. Returns (live ledger entry, saved).
+        after that state's last save, plus the disjoint-path sets from that same
+        _read(). Returns (live ledger entry, saved).
 
         A new entry is charged twice over ONE walk: before it is added and
         after. Between the two nothing touches the tree, and the new path is
         refused above if anything exists there, so a second walk would see the
-        same files classified the same way.
+        same files classified the same way. Its path overlap is refused in
+        O(depth) set lookups by register_disjoint, which also records the path
+        in registered/ancestors so a second reservation in the same lock hold
+        (write_checkpoint's temporary) sees it.
         """
         self._charge(state,seen)
         entry:dict=dict(role=role,bytes=max_bytes,intent=intent,state='reserved',
@@ -312,8 +328,7 @@ class ManagedOutputs:
                 raise ValueError('managed file identity changed; no refund or new lease')
             return old,False
         if len(state['files'])>=MAX_FILES:raise ValueError('file registry exhausted')
-        if any(Path(name).is_relative_to(Path(other)) or Path(other).is_relative_to(Path(name))
-               for other in state['files']):raise ValueError('managed output paths overlap')
+        register_disjoint(Path(name),registered,ancestors)
         if self._target(name).exists():raise ValueError('unregistered existing file preserved')
         state['files'][name]=entry
         self._charge(state,seen)
@@ -323,8 +338,8 @@ class ManagedOutputs:
     def reserve_file(self,name,*,role,max_bytes,intent):
         self._admit(name,role,max_bytes,intent)
         with self.lock():
-            state=self._read()
-            entry,_=self._reserve_locked(state,self._observe(),name,role=role,max_bytes=max_bytes,intent=intent)
+            state,registered,ancestors=self._read_disjoint()
+            entry,_=self._reserve_locked(state,self._observe(),name,registered=registered,ancestors=ancestors,role=role,max_bytes=max_bytes,intent=intent)
             return dict(entry)
 
     @contextmanager
@@ -334,8 +349,8 @@ class ManagedOutputs:
         # save (bounded by _save) happens between it and the open below.
         self._admit(name,role,max_bytes,intent)
         with self.lock():
-            state=self._read()
-            entry,_=self._reserve_locked(state,self._observe(),name,role=role,max_bytes=max_bytes,intent=intent)
+            state,registered,ancestors=self._read_disjoint()
+            entry,_=self._reserve_locked(state,self._observe(),name,registered=registered,ancestors=ancestors,role=role,max_bytes=max_bytes,intent=intent)
             with self._publish_locked(state,entry,name,max_bytes) as stream:
                 yield stream
 
@@ -371,8 +386,8 @@ class ManagedOutputs:
         self._admit(name,role,max_bytes,intent)
         target=self._target(name)
         with self.lock():
-            state=self._read()
-            e,_=self._reserve_locked(state,self._observe(),name,role=role,max_bytes=max_bytes,intent=intent)
+            state,registered,ancestors=self._read_disjoint()
+            e,_=self._reserve_locked(state,self._observe(),name,registered=registered,ancestors=ancestors,role=role,max_bytes=max_bytes,intent=intent)
             if e['state']=='complete':
                 if target.stat().st_size!=len(data) or e.get('actual_bytes')!=len(data) or e.get('sha256')!=hashlib.sha256(data).hexdigest() or hashlib.sha256(target.read_bytes()).hexdigest()!=e['sha256']:
                     raise ValueError('completed managed output bytes changed')
@@ -515,8 +530,8 @@ class ManagedOutputs:
         name=self.relative_path(name)
         self._admit(name,role,max_bytes,intent)
         with self.lock():
-            state=self._read()
-            entry,_=self._reserve_locked(state,self._observe(),name,role=role,max_bytes=max_bytes,intent=intent)
+            state,registered,ancestors=self._read_disjoint()
+            entry,_=self._reserve_locked(state,self._observe(),name,registered=registered,ancestors=ancestors,role=role,max_bytes=max_bytes,intent=intent)
             path=self._target(name);size=path.stat().st_size if path.exists() else 0
             if path.exists() and (entry['state']!='complete' or entry.get('actual_bytes')!=size
                     or hashlib.sha256(path.read_bytes()).hexdigest()!=entry.get('sha256')):
@@ -565,14 +580,14 @@ class ManagedOutputs:
         temporary=f'.managed-checkpoints/{name}'
         temporary_intent=digest([intent,'checkpoint-temporary'])
         with self.lock():
-            state=self._read();seen=self._observe()
-            entry,saved=self._reserve_locked(state,seen,name,role=role,max_bytes=max_bytes,intent=intent)
+            state,registered,ancestors=self._read_disjoint();seen=self._observe()
+            entry,saved=self._reserve_locked(state,seen,name,registered=registered,ancestors=ancestors,role=role,max_bytes=max_bytes,intent=intent)
             # Same order as two reserve_file() calls: the checkpoint is reserved
             # (and saved) before the temporary's arguments are checked. Walk
             # again only if that reservation saved the ledger.
             self._admit(temporary,role,max_bytes,temporary_intent)
             if saved:seen=self._observe()
-            self._reserve_locked(state,seen,temporary,role=role,max_bytes=max_bytes,intent=temporary_intent)
+            self._reserve_locked(state,seen,temporary,registered=registered,ancestors=ancestors,role=role,max_bytes=max_bytes,intent=temporary_intent)
             target=self._target(name);staged=self._target(temporary)
             updates=entry.get('updates',0)
             if updates>=max_updates:raise ValueError('finite checkpoint update allowance exhausted')
