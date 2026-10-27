@@ -1,0 +1,23 @@
+{
+  "schema": "skippercast.fleet-identity-fixtures/v1",
+  "provenance": "Synthetic value_json shapes from tests/test_fleet_jobs.mjs fact() and tests/unit/test_fleet_sinks.py fact(); no records or stored identities.",
+  "cases": [
+    {"id": "ordinary_fraction", "family": "control", "value": 1.5},
+    {"id": "integral_float", "family": "control", "value": 30.0},
+    {"id": "negative_integral_float", "family": "control", "value": -2.0},
+    {"id": "zero", "family": "control", "value": 0.0},
+    {"id": "string", "family": "control", "value": "Synthetic Boat é 𐀀"},
+    {"id": "escaped_string", "family": "control", "value": "line\nquote\"\\"},
+    {"id": "true", "family": "control", "value": true},
+    {"id": "false", "family": "control", "value": false},
+    {"id": "null", "family": "control", "value": null},
+    {"id": "array", "family": "control", "value": [1.5, 30.0, "synthetic", true, null, {"b": 2, "a": 1}]},
+    {"id": "ascii_object", "family": "control", "value": {"b": [2, {"d": 1, "c": "é", "e": 58.5}], "a": null, "n": 30.0}},
+    {"id": "empty_array", "family": "control", "value": []},
+    {"id": "empty_object", "family": "control", "value": {}},
+    {"id": "exponent", "family": "exponent_parity", "value": 0.00001},
+    {"id": "exponent_nested", "family": "exponent_parity", "value": {"value_json": [0.00001, {"n": 0.00001}]}},
+    {"id": "astral_keys", "family": "astral_key_parity", "value": {"": 1, "𐀀": 2}},
+    {"id": "astral_keys_nested", "family": "astral_key_parity", "value": [{"value_json": {"": 1, "𐀀": 2}}]}
+  ]
+}

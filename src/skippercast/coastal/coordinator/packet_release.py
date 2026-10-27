@@ -58,7 +58,7 @@ def canonical_packet(template,grant,*,rights,trial,segment,code_sha,deps_sha):
         else:packet.pop('larger_runtime_contract',None)
     if grant.get('saved_area_continuation_contract') is not None:
         for key in ('saved_area_continuation_contract','saved_area_adoption','source_volume_cap_bytes','prior_effective_bytes','cumulative_limit_bytes'):
-            packet[key]=grant[key]
+            packet[key]=copy.deepcopy(grant[key])
     else:
         for key in ('saved_area_continuation_contract','saved_area_adoption','source_volume_cap_bytes','prior_effective_bytes','cumulative_limit_bytes'):packet.pop(key,None)
     if grant.get('source_reuse_contract') is not None:

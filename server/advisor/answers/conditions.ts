@@ -133,6 +133,11 @@ export function windowConditions(feed: Feed, region: Region, pointId: string, da
   });
   if (!times.length) return empty('the forecast does not cover this window yet');
   const hours = times.map(t => readHour(feed, point, t));
+  // Cached timestamps are not measurements; only readHour's validated samples count.
+  if (!hours.some(h => [h.wind, h.gust, h.wind_from, h.sea, h.sea_period, h.chop, h.chop_period,
+    h.swell, h.swell_period, h.swell_from, h.secondary, h.secondary_from, h.other_wind, h.other_gust, h.other_sea].some(finite))) {
+    return empty('no usable forecast measurements for this window');
+  }
   const scores = hours.map(rateHour);
   const rated = scores.filter(finite);
   const verdict: Verdict = rated.length ? verdictFor({conditions: Math.min(...rated)}) : 'unknown';

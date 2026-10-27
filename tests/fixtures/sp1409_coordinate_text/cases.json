@@ -1,0 +1,45 @@
+{
+  "schema": "sp1409.synthetic/v1",
+  "spec": "SP-14-v1",
+  "primary": {
+    "input": "Fish at 35 10.5 N, 120 49.0 W. Use a slow drift.",
+    "expected": "Use a slow drift."
+  },
+  "healthy": {
+    "input": "Use 20.25 lb line. Drift 150 feet.",
+    "expected": "Use 20.25 lb line. Drift 150 feet."
+  },
+  "coordinates": [
+    "Fish at 35 10.5 n, 120 49.0 w.",
+    "Fish at 5 10 N, 9 49 E.",
+    "Fish at 135 10.5 S, 120 49 W.",
+    "Fish at 35°10.5′N, 120º49.0'w.",
+    "Fish at 35 10.5′ N, 120 49.0' W.",
+    "Fish at 35º 10.5 N, 120º 49.0 W.",
+    "Fish at (35\t10.5\tN; 120\t49.0\tw)!",
+    "Fish at 35\n10.5\nN, 120 49.0 W?",
+    "Fish at 35 10.5 N, 120 49.0 W.",
+    "Fish at +35.17938, -120.81661.",
+    "Fish at -35.17938, +120.81661.",
+    "Fish at 35.1794.",
+    "Fish at 35°.",
+    "Fish at 12345.6."
+  ],
+  "ordinary": [
+    "Drift 150 feet. Use 8 oz weight and 20 lb line.",
+    "Use 20.25 lb line. Drift 150 feet.",
+    "Start at 10:35 AM. Return at 12:49 PM.",
+    "A dimension of 35 by 10 fits. Keep 120 by 49 clear.",
+    "Use 35 10 sinkers. Keep 120 49 weights.",
+    "Use 35 10 North labels. Keep 120 49 West labels.",
+    "Use x35 10 N labels. Keep 35 10 Noodle labels.",
+    "Use 1234 10 N labels. Keep 35 100 N labels.",
+    "Use 35 10_N labels. Keep 35 10 N_ labels."
+  ],
+  "ordering": {
+    "input": "Keep the first sentence. Fish at 35 10.5 N, 120 49.0 W. Keep the last sentence!",
+    "expected": "Keep the first sentence. Keep the last sentence!"
+  },
+  "public_areas": ["Pecho Rock", "Diablo coast", "Morro Bay coast"],
+  "excluded_names": ["Secret Hole", "SC-AREA-001", "Estero Bay shallow sand & mud"]
+}
