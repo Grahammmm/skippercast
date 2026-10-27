@@ -1,0 +1,24 @@
+{
+  "note": "Synthetic SP1505 round-2 class (sol-reviewer run 1859 must-fix 1): LF, CRLF or a blank line between the lead-in colon and the closing self-link, with a space or a line break before the lead-in. {url} is the page's own ?s=txt link. The lead-in must go and every substantive sentence before it must stay.",
+  "a2": [
+    {"name": "space before lead-in, LF after colon", "input": "Quiet day. Full picture:\n{url}", "expected": "Quiet day."},
+    {"name": "space before lead-in, CRLF after colon", "input": "Quiet day. Full picture:\r\n{url}", "expected": "Quiet day."},
+    {"name": "space before lead-in, blank line after colon", "input": "Quiet day. Full picture:\n\n{url}", "expected": "Quiet day."},
+    {"name": "space before lead-in, CRLF blank line after colon and trailing CRLF", "input": "Quiet day. Full picture:\r\n\r\n{url}\r\n", "expected": "Quiet day."},
+    {"name": "LF before lead-in, LF after colon", "input": "Quiet day.\nFull picture:\n{url}", "expected": "Quiet day."},
+    {"name": "CRLF before lead-in, CRLF after colon", "input": "Quiet day.\r\nFull picture:\r\n{url}", "expected": "Quiet day."},
+    {"name": "blank line before lead-in, blank line after colon", "input": "Seas 7 ft at 17 s.\n\nLingcod fair on the reef.\n\nFull picture:\n\n{url}", "expected": "Seas 7 ft at 17 s.\n\nLingcod fair on the reef."},
+    {"name": "exclamation then LF before lead-in, LF after colon", "input": "Lingcod biting!\nFull picture:\n{url}", "expected": "Lingcod biting!"},
+    {"name": "question then space before lead-in, LF after colon", "input": "Heading out early? Full picture:\n{url}", "expected": "Heading out early?"},
+    {"name": "unpunctuated line before lead-in, LF after colon", "input": "Quiet day\nFull picture:\n{url}", "expected": "Quiet day"},
+    {"name": "earlier colon lines kept, LF after closing colon", "input": "Morro Bay, Mon Sep 28: quiet.\nRockfish: steady.\nFull picture:\n{url}", "expected": "Morro Bay, Mon Sep 28: quiet.\nRockfish: steady."},
+    {"name": "Spanish lead-in, space before and LF after colon", "input": "Morro Bay, lun 28 sep: tranquilo. Panorama completo:\n{url}", "expected": "Morro Bay, lun 28 sep: tranquilo."},
+    {"name": "only the lead-in, LF after colon", "input": "Full picture:\n{url}", "expected": ""},
+    {"name": "bare link after a blank line still keeps the text", "input": "Quiet day.\n\n{url}", "expected": "Quiet day."},
+    {"name": "trailing text without a colon then LF link is kept", "input": "Quiet day. Seas: 7 ft\n{url}", "expected": "Quiet day. Seas: 7 ft"}
+  ],
+  "a4": {
+    "en": {"stored": "Morro Bay, Mon Sep 28: quiet.\nSeas 7 ft at 17 s. Full picture:\n\n{url}", "shown": "Morro Bay, Mon Sep 28: quiet.\nSeas 7 ft at 17 s."},
+    "es": {"stored": "Morro Bay, lun 28 sep: tranquilo.\r\nOlas de 7 pies.\r\nPanorama completo:\r\n{url}", "shown": "Morro Bay, lun 28 sep: tranquilo.\r\nOlas de 7 pies."}
+  }
+}

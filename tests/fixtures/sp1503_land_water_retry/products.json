@@ -1,0 +1,29 @@
+{
+  "region": "sp1503-synthetic",
+  "index": {
+    "schema_version": 1,
+    "product": "land-water",
+    "region_id": "sp1503-synthetic",
+    "status": "available",
+    "bounds": [-100000, -100000, 100000, 100000],
+    "constants": {"edge_m": 25, "tile_zoom": 0, "grid": 1, "unit": 100000},
+    "derived_from": {"sha256": "1111111111111111111111111111111111111111111111111111111111111111"},
+    "lines": {"sha256": "computed-from-synthetic-lines-by-test"},
+    "tiles": {"0/0/0": "w1"}
+  },
+  "lines": {
+    "schema_version": 1,
+    "product": "land-water-lines",
+    "region_id": "sp1503-synthetic",
+    "derived_from": {"sha256": "1111111111111111111111111111111111111111111111111111111111111111"},
+    "unit": 100000,
+    "edge": [[0, -100000, 0, 200000]],
+    "parity": [[0, -100000, 200000, 0, 0, 200000, -200000, 0, 0, -200000]]
+  },
+  "points": {
+    "water": {"latitude": 0.5, "longitude": -0.5},
+    "land": {"latitude": 0.5, "longitude": 0.5},
+    "edge": {"latitude": 0.5, "longitude": 0.0001},
+    "outside": {"latitude": 5, "longitude": 5}
+  }
+}

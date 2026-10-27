@@ -1,0 +1,17 @@
+{
+  "preferences": {"v": 1, "place": "morro", "mode": "boat"},
+  "locations": [
+    {"id": "region", "query": "region=southern-california"},
+    {"id": "region-extra", "query": "region=southern-california&utm_source=friend&target=reef"},
+    {"id": "coast", "query": "coast=central"},
+    {"id": "coast-extra", "query": "coast=central&utm_source=friend&target=reef"},
+    {"id": "empty-region", "query": "region="},
+    {"id": "empty-coast", "query": "coast="},
+    {"id": "both", "query": "coast=central&region=monterey"},
+    {"id": "empty-both-extra", "query": "region=&coast=&utm_source=friend"},
+    {"id": "place", "query": "place=cambria"},
+    {"id": "area", "query": "area=north"},
+    {"id": "empty-place", "query": "place="},
+    {"id": "empty-area", "query": "area="}
+  ]
+}
