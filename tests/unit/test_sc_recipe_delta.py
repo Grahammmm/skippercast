@@ -326,7 +326,10 @@ def test_a2_cli_from_relocated_repository_copy(tmp_path, workspace, capsys):
 
 def test_a2_new_test_module_is_discovered_by_configured_patterns():
     config = tomllib.loads((ROOT / 'pyproject.toml').read_text())['tool']['pytest']['ini_options']
-    here = Path(__file__).resolve().relative_to(ROOT)
+    # Derive the module's repository path from its dotted name (the layout contract
+    # forbids file-relative roots) and check that it names this real file.
+    here = Path(*__name__.split('.')).with_suffix('.py')
+    assert (ROOT / here).is_file()
     assert here.parts[0] in config['testpaths']
     assert any(fnmatch.fnmatch(here.name, pattern) for pattern in config['python_files'])
     assert 'gis' not in here.parts  # collected by both the GIS and the no-GIS CI jobs
