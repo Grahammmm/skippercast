@@ -35,6 +35,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 from typing import Any, Iterable, Mapping, Protocol, Sequence
 from zoneinfo import ZoneInfo
 
@@ -87,6 +88,18 @@ def prefer_sources(events: Iterable[Event], precedence: Sequence[str]) -> list[E
     return [e for e in events if (e.vessel_id, e.trip_id) in keep]
 
 
+def _reject_nonfinite(value: Any, where: str = "thresholds.aggregate") -> None:
+    """Validate the normalized JSON tree before numeric conversion or arithmetic."""
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError(f"{where} must be finite")
+    if isinstance(value, Mapping):
+        for key, nested in value.items():
+            _reject_nonfinite(nested, f"{where}.{key}")
+    elif isinstance(value, list):
+        for index, nested in enumerate(value):
+            _reject_nonfinite(nested, f"{where}[{index}]")
+
+
 def _optional_number(raw: Mapping[str, Any], key: str, *, integer: bool = False, minimum: float = 0):
     value = raw.get(key)
     if value is None:
@@ -134,6 +147,7 @@ class AggregateParams:
         """From a region's ``thresholds`` (or just its ``aggregate`` member)."""
         raw = thresholds["aggregate"] if "aggregate" in thresholds else thresholds
         plain = json.loads(json.dumps(raw, default=dict))
+        _reject_nonfinite(plain)
         resolution_m = _optional_number(plain, "resolution_m", minimum=1)
         return cls(module=str(plain["module"]),
                    resolution_m=resolution_m,
