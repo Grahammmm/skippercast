@@ -1,0 +1,11 @@
+{
+  "spec": "SP-16-v1",
+  "baseline_product_sha256": "c8bb4c72952bcbbd0de675fd5b0204d741299b82c394f3bc934c20c278d60669",
+  "inputs_sha256": {
+    "tests/test_sp1601_generated_settle.mjs": "abd55df766b8619dfad2f33f52bb2ad2e5b66ec11a4c7e7b35e17ad97c4e9a4b",
+    "tests/fixtures/sp1601_generated_settle/feeds.json": "2cf9be95f9227edc4abd1dfaac5d2dd6e31be068ef0711a719d25354d178e813",
+    "tests/fixtures/sp1601_generated_settle/focused.mjs": "62fee71cf8d82e0529b1af4f44f055cd76b03f8b1beb5cb9f3766844b724bddd",
+    "tests/fixtures/sp1601_generated_settle/offline.mjs": "3508aa29295ade456921d14a2c1b6f7eddef894437cdb288f0a9ab81c9891e62",
+    "tests/fixtures/sp1601_generated_settle/preload.mjs": "90b23486a260ba9f5f390dd13cf9eac6968805ca37c8d3eeaa9ae95e4b5413fe"
+  }
+}
