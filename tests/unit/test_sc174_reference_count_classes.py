@@ -18,7 +18,12 @@ import types
 import unittest
 from unittest.mock import patch
 
+import pytest
+
 from tests._support import ROOT as REPO
+
+# grid.py imports numpy, which the no-GIS CI job lacks; survey-science runs these.
+pytestmark = pytest.mark.gis
 METHODS = ('test_regression', 'test_compatibility', 'test_negative_control', 'test_preservation')
 
 
