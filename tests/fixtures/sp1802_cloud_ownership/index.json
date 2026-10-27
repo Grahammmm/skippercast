@@ -1,0 +1,16 @@
+{
+  "id": "goes-longwave",
+  "kind": "observation",
+  "observedAt": "2026-10-02T02:53:00.000Z",
+  "fetchedAt": "2026-10-02T02:55:00.000Z",
+  "availableTimes": [
+    "2026-10-02T02:43:00.000Z",
+    "2026-10-02T02:48:00.000Z",
+    "2026-10-02T02:53:00.000Z"
+  ],
+  "layer": "goes_longwave_imagery",
+  "url": "https://nowcoast.noaa.gov/",
+  "attribution": "NOAA / NESDIS · GOES",
+  "license": "public-domain-us-gov",
+  "limitations": "Synthetic listed observations for offline ownership tests; no real acquisition."
+}
