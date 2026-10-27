@@ -1,6 +1,5 @@
 // Offline preload for the two unchanged regression test files only.
 import assert from 'node:assert/strict';
-import {after} from 'node:test';
 const names = ['fetch', 'localStorage', 'sessionStorage'];
 const descriptors = new Map(names.map(k => [k, Object.getOwnPropertyDescriptor(globalThis, k)]));
 const originals = new Map();
@@ -16,7 +15,11 @@ const storage = () => {
 Object.defineProperty(globalThis, 'fetch', {configurable: true, writable: true, value: async () => {fetchCalls++; throw Error('SP-MAP-NOW offline fetch refused');}});
 Object.defineProperty(globalThis, 'localStorage', {configurable: true, value: storage()});
 Object.defineProperty(globalThis, 'sessionStorage', {configurable: true, value: storage()});
-after(() => {
+// Report from each per-file test child at exit (the runner parent sets no
+// NODE_TEST_CONTEXT). Not a node test module itself, so it stays out of the
+// tests/test_*.mjs suite glob.
+process.on('exit', () => {
+  if (!process.env.NODE_TEST_CONTEXT) return;
   for (const [key, fn] of originals) assert[key] = fn;
   for (const [key, desc] of descriptors) {
     if (desc) Object.defineProperty(globalThis, key, desc);
