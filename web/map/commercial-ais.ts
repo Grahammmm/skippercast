@@ -55,9 +55,12 @@ export const shownCells = (data: AisCollection | null, screen: MarkScreen): AisF
 export const cellCollection = (cells: readonly AisFeature[]): Collection => ({type: 'FeatureCollection',
   features: cells.map(f => ({type: 'Feature', geometry: f.geometry, properties: {id: f.properties.id, hours: f.properties.apparent_fishing_hours}}))});
 
+/** The installed opacity scale follows the displayed cells, with v1's one-hour floor. */
+const heatMaximum = (data: Collection): number => Math.max(1, ...data.features.map(f => Number(f.properties.hours) || 0));
+
 /** The heat fill and its outline in the --fleet colour; opacity rises with the cell's apparent fishing hours. */
 export function aisOverlay(p: Palette, data: Collection): Overlay {
-  const most = Math.max(1, ...data.features.map(f => Number(f.properties.hours) || 0));
+  const most = heatMaximum(data);
   return {
     sources: {[AIS_SOURCE]: {type: 'geojson', data, attribution: layerEntry(REGISTRY_ID).attribution} as MapLibre.SourceSpecification},
     layers: [
@@ -92,7 +95,7 @@ export function createCommercialAis({engine, fetchFn = (...a) => fetch(...a), pa
   const on = computed(() => layers.value.includes('fleet') && aisOn.value);
   const path = computed(() => { const m = markData.value; return m && m.region.id === region.value ? m.region.assets?.commercial_ais ?? '' : null; });
   const cells = computed(() => { const l = loaded.value; return l && l.path === path.value && l.data ? shownCells(l.data, markScreen.value) : []; });
-  let drawn = false, drawnOn: Engine | null = null;
+  let drawn = false, drawnOn: Engine | null = null, drawnMaximum = 1;
   const disposers = [
     effect(() => {
       const p = path.value;
@@ -109,11 +112,14 @@ export function createCommercialAis({engine, fetchFn = (...a) => fetch(...a), pa
       const e = engine.value, list = on.value ? cells.value : [];
       if (!e) return;
       if (!list.length) { if (drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, null); drawn = false; drawnOn = e; return; }
-      const data = cellCollection(list);
+      const data = cellCollection(list), most = heatMaximum(data);
+      // Engine.setOverlay retains existing layer styles. Replace only this overlay
+      // when its scale changes; a data-only update is enough for an unchanged maximum.
+      if (drawn && e === drawnOn && most !== drawnMaximum) { e.setOverlay(REGISTRY_ID, null); drawn = false; }
       // § 9 draw order: above the charter grounds, under the fleet activity layers, the cloud frames and the marks.
       if (!drawn || e !== drawnOn) e.setOverlay(REGISTRY_ID, aisOverlay(palette(), data), aisBefore());
       e.setData(AIS_SOURCE, data);
-      drawn = true; drawnOn = e;
+      drawn = true; drawnOn = e; drawnMaximum = most;
     }),
   ];
   return {
