@@ -21,7 +21,8 @@ import tempfile
 import unittest
 from unittest import mock
 
-REPO = Path(__file__).resolve().parents[2]
+from tests._support import ROOT as REPO
+
 RUN_ROOT = None  # standalone runner supplies its exclusive retained directory
 CLOSURE = (
     'skippercast', 'skippercast.paths', 'skippercast.coastal',
@@ -95,7 +96,9 @@ def offline_preview(root):
     finder = NoOperationalImports()
     try:
         sys.dont_write_bytecode = True
-        sys.path.insert(0, str(REPO / 'src'))
+        # The product closure resolves through the installed checkout (pip install -e
+        # under CI, or the standalone runner's sys.path); test_preflight asserts it is
+        # REPO/src. No path hack here: tests/contract/test_test_layout.py forbids it.
         sys.meta_path.insert(0, finder)
         with ExitStack() as stack:
             stack.enter_context(mock.patch('builtins.open', guarded_open))

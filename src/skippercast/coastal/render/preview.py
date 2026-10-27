@@ -4,6 +4,7 @@ import ctypes
 import errno
 from datetime import datetime, timezone
 import json
+import math
 import os
 import tempfile
 from pathlib import Path
@@ -23,8 +24,6 @@ def _sc145_unique_json_object(pairs):
 
 
 def read_json(path):
-    import math
-
     path = Path(path)
     if path.stat().st_size > 2 * 1024 * 1024:
         raise ValueError("json_byte_bound")

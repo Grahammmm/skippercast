@@ -101,6 +101,9 @@ def main():
             receipt.update(head=head, base=BASE, initial_stage=initial,
                            manifest_sha256=sha(manifest_path), spec_sha256=sha(spec_path),
                            git_status=status, implementation_sha256=sha(REPO / 'src/skippercast/coastal/render/preview.py'))
+            # sys.path[0] is tools/ here; the test module imports tests._support and the
+            # product closure, so put the checkout and its src/ first (runner-only).
+            sys.path[:0] = [str(REPO / 'src'), str(REPO)]
             module_spec = importlib.util.spec_from_file_location('sc145_private_tests', test_path)
             module = importlib.util.module_from_spec(module_spec)
             module_spec.loader.exec_module(module)
