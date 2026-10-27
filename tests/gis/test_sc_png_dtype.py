@@ -33,7 +33,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-REPO = Path(__file__).resolve().parents[2]
+from tests._support import ROOT as REPO
+
 MODULE_NAME = 'skippercast.coastal.render.mesh'
 MODULE_FILE = REPO / 'src' / 'skippercast' / 'coastal' / 'render' / 'mesh.py'
 FIXTURE = REPO / 'tests' / 'fixtures' / 'sc_png_dtype' / 'baseline.json'
@@ -390,9 +391,9 @@ def test_a4_tests_import_the_complete_staged_production_module(mesh):
     assert sys.modules[MODULE_NAME] is mesh
 
 
-def test_a4_new_test_file_matches_configured_discovery():
+def test_a4_new_test_file_matches_configured_discovery(request):
     config = tomllib.loads((REPO / 'pyproject.toml').read_text(encoding='utf-8'))['tool']['pytest']['ini_options']
-    relative = Path(__file__).resolve().relative_to(REPO)
+    relative = request.path.resolve().relative_to(REPO)
     assert relative.parts[0] in config['testpaths'] and relative.parts[1] == 'gis'
     assert any(fnmatch.fnmatch(relative.name, pattern) for pattern in config['python_files'])
 
