@@ -1,0 +1,34 @@
+{
+  "schema": "sp1408.synthetic/v1",
+  "note": "Synthetic rule facts for composition tests only, not fishing regulations.",
+  "now": "2026-10-03T17:00:00Z",
+  "region": "sp1408-fixture",
+  "jurisdiction": "sp1408-synthetic",
+  "top": {"species_key": "sp1408-top", "label": "Fixture fish", "confidence": 0.7, "cues": []},
+  "second": {"species_key": "sp1408-second", "label": "Fixture lookalike", "confidence": 0.2, "cues": []},
+  "row": {"size_min_in": null, "size_max_in": null, "bag_limit": 0, "season_open": null, "season_close": null, "depth_limit_ft": null, "status": "active", "reviewed_at": "2026-10-01", "review_due": "2026-12-31", "source_name": "Synthetic fixture rules", "source_url": "https://example.invalid/sp1408"},
+  "prefix": {
+    "en": "Looks like a fixture fish, could be a fixture lookalike. A side-on shot with the fins spread would settle it.",
+    "es": "Parece un fixture fish, podría ser un fixture lookalike. Una foto de lado con las aletas abiertas lo aclararía."
+  },
+  "none": {
+    "en": "I have no reviewed rule for it, so check the current CDFW rules before you keep it: {{link:rules:sp1408-top}}",
+    "es": "No tengo una regla revisada para este, así que revisa las reglas vigentes de CDFW antes de quedártelo: {{link:rules:sp1408-top}}"
+  },
+  "secondCurrent": {
+    "en": "If it's a fixture lookalike: no take.",
+    "es": "Si es un fixture lookalike: no se puede quedar."
+  },
+  "secondStale": {
+    "en": "If it's a fixture lookalike, its rule is due for review: double-check.",
+    "es": "Si es un fixture lookalike, su regla está pendiente de revisión: confírmala."
+  },
+  "topCurrent": {
+    "en": "Rules (Synthetic fixture rules, checked Oct 1): bag 2, open all year.",
+    "es": "Reglas (Synthetic fixture rules, revisadas 1 oct): límite 2 por persona, abierta todo el año."
+  },
+  "link": {
+    "en": "Double-check before you keep it: {{link:rules:sp1408-top}}",
+    "es": "Confírmalo antes de quedártelo: {{link:rules:sp1408-top}}"
+  }
+}
