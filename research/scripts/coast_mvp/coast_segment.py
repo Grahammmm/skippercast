@@ -34,7 +34,7 @@ DEFAULT_ADMITTED = REPO.parent / 'out'
 STAGE_HASHES = {
     'coast_mosaic': 'f3f600a77722a076811d1ca8ae1723de0bcd2bfc33a2f5f8a99a8a9f3de8f6b4',
     'coast_contours': '46fde1940dcae4ccc649731a1bf9c5850e5f79aa72f13ebe0c8918bad48119d5',
-    'coast_qa': 'be690acdfd81453d36a31e0e64f8ce3b09080bc6d4e9194577217f3b2572ff6f',
+    'coast_qa': '0c5816fbe3b0f5fe2ca4010bdfcf632d665cec28185a4bfa07b06946cee57235',
     'coast_rights': '76c1e470d2ceeb37b963cb4e738bc12f7c7a50789f10bee20426c7d701954702',
 }
 MAX_FILE_BYTES = 32 * 1024 * 1024
@@ -111,7 +111,7 @@ def qualify_stages():
     """Exact API closure: four static modules, no process/network launch APIs.
 
     Not the separately held integration launcher or its refused contract suite.
-    No CLI is called, including coast_qa's optional regional CLI branch.
+    No CLI is called.
     """
     import ast
     result = {}

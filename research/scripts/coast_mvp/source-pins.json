@@ -21,11 +21,11 @@
       "unchanged": true
     },
     {
-      "bytes": 12669,
+      "bytes": 12283,
       "path": "research/scripts/coast_mvp/coast_qa.py",
-      "sha256": "be690acdfd81453d36a31e0e64f8ce3b09080bc6d4e9194577217f3b2572ff6f",
-      "source_commit": "fc269e21aca49e56bf9fb56626e64a20e21f2d39",
-      "source_repository": "existing-local-coast-mvp-integration",
+      "sha256": "0c5816fbe3b0f5fe2ca4010bdfcf632d665cec28185a4bfa07b06946cee57235",
+      "source_commit": "4f8f6282a60cc0e05dbde182ac62e3961ea23013",
+      "source_repository": "Grahammmm/skippercast main",
       "unchanged": true
     },
     {
