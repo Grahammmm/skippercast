@@ -17,7 +17,7 @@ import unittest  # noqa: E402
 REPO = Path(__file__).resolve().parents[1]
 BASE = '67ff9bcf34257698a41585bc2ad163171dc68259'
 SOURCE = 'src/skippercast/seafloor/screen.py'
-TEST = 'tests/unit/test_sc178_species_fit_types.py'
+TEST = 'tests/gis/test_sc178_species_fit_types.py'
 FIXTURE = 'tests/fixtures/sc178-species-fit-types/constructors.py'
 ROOT_MODULE = 'skippercast.seafloor.screen'
 # Producers the tests import explicitly in addition to the screen closure.
@@ -143,6 +143,9 @@ def main():
         with redirect_stdout(output), redirect_stderr(errors):
             try:
                 print(json.dumps(identity, indent=2))
+                # The test module imports tests._support, so the repo root must be importable.
+                if str(REPO) not in sys.path:
+                    sys.path.insert(0, str(REPO))
                 spec = importlib.util.spec_from_file_location('test_sc178_species_fit_types', REPO / TEST)
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)

@@ -21,7 +21,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-REPO = Path(__file__).resolve().parents[2]
+from tests._support import ROOT as REPO
 FIXTURES = REPO / 'tests/fixtures/sc178-species-fit-types'
 METHODS = ('test_regression', 'test_compatibility', 'test_negative_control', 'test_preservation')
 HELD = 'habitat-contract-incomplete'
@@ -48,7 +48,11 @@ class NoModels(importlib.abc.MetaPathFinder):
 
 
 def ambient_state():
-    return (dict(os.environ), tuple(sys.path), tuple(sys.meta_path), sys.dont_write_bytecode,
+    # six (and botocore's vendored copy), pulled in by the survey stack, appends its
+    # importer to sys.meta_path on first import; that one-time library side effect is
+    # not a test leak, so it is excluded, which keeps the check order-independent.
+    meta_path = tuple(f for f in sys.meta_path if type(f).__name__ != '_SixMetaPathImporter')
+    return (dict(os.environ), tuple(sys.path), meta_path, sys.dont_write_bytecode,
             socket.getaddrinfo, socket.create_connection, socket.socket.connect,
             subprocess.Popen, os.system, io.open)
 
