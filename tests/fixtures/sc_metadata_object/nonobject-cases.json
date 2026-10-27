@@ -1,0 +1,14 @@
+{
+  "schema": "sc-metadata-object-cases-v1",
+  "note": "Synthetic top-level JSON payloads that are valid JSON but not objects. Each is written to a fresh .json metadata file in a test-local root; no real cache or source is read.",
+  "nonobject": {
+    "array-empty": "[]",
+    "array": "[{\"sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"bytes\":4}]",
+    "null": "null",
+    "string": "\"cached-source-json-v1\"",
+    "integer": "7",
+    "float": "2.5",
+    "true": "true",
+    "false": "false"
+  }
+}
