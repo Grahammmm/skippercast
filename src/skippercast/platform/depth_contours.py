@@ -119,6 +119,18 @@ def _walk(links):
     return chains
 
 
+def _clean_chain(points):
+    """Drop consecutive duplicate coordinates and chains with no geometric extent.
+
+    Compare exactly: short real lines survive, as does a ring's closing point.
+    """
+    clean = []
+    for point in points:
+        if not clean or point != clean[-1]:
+            clean.append(point)
+    return clean if len(clean) >= 2 else []
+
+
 def trace(grid, depths):
     """Marching squares: {depth: lines} of each depth in `depths` across `grid` (rows of numbers, None where invalid).
 
@@ -147,7 +159,9 @@ def trace(grid, depths):
                 for p, q in _square_links(v, nodes, d):
                     graph.setdefault(p, []).append(q)
                     graph.setdefault(q, []).append(p)
-    return {d: [[_cross(grid, edge, d) for edge in chain] for chain in _walk(links[d])] for d in wanted}
+    return {d: [points for chain in _walk(links[d])
+                if (points := _clean_chain(_cross(grid, edge, d) for edge in chain))]
+            for d in wanted}
 
 
 def feature_lines(geometry):
