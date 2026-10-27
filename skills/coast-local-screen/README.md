@@ -1,5 +1,11 @@
 # coast-local-screen (tier 1) scripts
 
+Canonical B2 round-addressed workflow: use [SKILL.md](SKILL.md). The legacy
+interface below is retained for compatibility only; its latest-run selection,
+mutable defaults and pre-round receipt shape are not the canonical contract.
+Canonical mode requires explicit --roots/--context and per-mode input/output
+files, validates the shared receipt graph, and never rewrites legacy producers.
+
 COAST-LOCALSCREEN (t_6438ac24). The tier-1 first pass over EVERY window of one finished window-set
 plan, on the local GPU model, before any cloud model looks at it. Design: COAST skills design rev 3,
 sections 3.3 and 5.4. The SKILL.md that wraps these scripts is the B2 card's (t_de9b2254); this file is
@@ -59,12 +65,13 @@ hash (H2). Handoff line: `tier1 <plan-id>: N windows, M flag, K held, H hash mis
 
 1. Deterministic (no model can overrule): every ref re-hashes (`HASH_MISMATCH`; a plan-level receipt
    mismatch flags every window), plan integrity (`PLAN_INTEGRITY` on every window when a required PC-9
-   ref - admission, bridge, enqueue - is absent, or when the run summary's windows differ from the
+   ref - admission, bridge, enqueue - is absent, when the admission has no catalog ref, or when the run summary's windows differ from the
    admitted population: an admitted window missing from the summary is kept as a non-pass record in state
    `missing_from_run_summary`, extra and duplicate keys are kept and marked; the population is never
    reduced), pipeline hold (`HOLD` whenever the window state is held, any stage is held or any stage
    carries a hold reason: held windows -> tier1 `held`, not screened; a mapped window with a hold ->
-   `HOLD` + `STATE_INCONSISTENT` -> tier1 `flag`),
+   `HOLD` + `STATE_INCONSISTENT` -> tier1 `flag`; a mapped window whose acquire, qualify or map stage is
+   not `done` -> `STATE_INCONSISTENT`),
    other unmapped states (`NOT_MAPPED`), producer fields copied verbatim, derived statistics from the
    verified terrain + support bytes (valid/nodata/edge-valid fractions, depth median/p99, slope p99 using
    cells.json `native_resolution_m`), `COUNT_MISMATCH` (producer vs raster valid cells),
@@ -73,7 +80,9 @@ hash (H2). Handoff line: `tier1 <plan-id>: N windows, M flag, K held, H hash mis
    `catalog_range_unavailable`), `NEIGHBOUR_STEP` (|median shared-edge step| > 2 m against an adjacent
    mapped window of the same grid; adjacency from `pixel_window` edges, never across sources or rows).
    A null statistic never passes: `DERIVED_UNAVAILABLE`. Thresholds: built-in design 5.4 defaults, or
-   `--thresholds skills/coast-campaign-shared/config/tier2-thresholds.json` once B1a lands.
+   `--thresholds skills/coast-campaign-shared/config/tier2-thresholds.json` once B1a lands. A thresholds
+   file is refused when a tier-1 value is not a finite number or a `tier1_*` key is unknown (tier-2 keys
+   in the shared file are ignored).
 2. Text model on each mapped window's stats line (`prompts/text.md`).
 3. Vision model on each mapped window's hillshade (`prompts/vision.md`): azimuth 315, altitude 45,
    true cell size, linear depth stretch over the window's own range, nodata transparent, deterministic bytes.
@@ -85,6 +94,7 @@ truncated completion - is a flag, and `reply_format` (`pass`/`flag`/`malformed`/
 which. The
 raw reply is kept. Endpoint down (after 2 retries 60 s apart) -> `ENDPOINT_UNAVAILABLE` in
 `summary.flags`, no further calls, every mapped window flagged. A missing thumbnail is a vision flag.
+A plan with no windows to screen gets `EMPTY_POPULATION` in `summary.flags`; it is never a clean screen.
 
 ## Local-only
 

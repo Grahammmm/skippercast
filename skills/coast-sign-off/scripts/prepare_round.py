@@ -44,8 +44,10 @@ def prepare(resolver, inputs, review_round, attempt, out):
             problems.append(problem('POSTED_SHA_ABSENT', key, 'independent posted Ref', None))
             continue
         try:
+            # Shared tooling consumes the hash-bound v2 adapter records; PC9's
+            # native v1 receipts are reached only through legacy_enqueue/legacy_run.
             value = graph.reference(context[key], contract={'admission': 'coast-admission-v1',
-                'run': 'coast-run-summary-v1', 'enqueue': 'coast-enqueue-receipt-v1'}.get(key))
+                'run': 'coast-run-summary-v2', 'enqueue': 'coast-enqueue-receipt-v2'}.get(key))
             if key in ('admission', 'run', 'enqueue'):
                 if any(value[k] != context[k] for k in IDENTITY):
                     raise ValueError('producer identity mismatch')

@@ -30,6 +30,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -174,6 +175,32 @@ def _canonical_tiles(tile, width, height, origin):
     """Tile from the NW-valid native pixel, clipped at the full source bounds."""
     return [[x, y, min(tile, width - x), min(tile, height - y)]
             for y in range(origin[1], height, tile) for x in range(origin[0], width, tile)]
+
+
+def tiling_affine_problem(tiling, definition):
+    """Why a window-set ``tiling`` disagrees with its grid's ``affine_transform``, or None.
+
+    ``anchor`` and ``cell`` decide which tiles are required; the affine decides
+    ownership and footprint. A rotated affine never matches the axis-aligned tiling.
+    For a CRS84-degree raster the anchor must be the affine at ``origin`` and the
+    cell must be ``(a, -e)``. Projected rasters have no exact degree cell; their
+    binding is not checked here.
+    """
+    a, b, c, d, e, f = definition["affine_transform"]
+    if b != 0 or d != 0:
+        return "window-set grid affine must not be rotated"
+    # Both consumers use always_xy coordinates, so EPSG:4326 and CRS84's
+    # axis-order variants have the same degree affine/tiling contract. Compare
+    # CRS semantics, not spelling: lowercase, URN and WKT must not skip N2.
+    from pyproj import CRS
+    if not CRS.from_user_input(definition["raster_crs"]).equals(CRS("OGC:CRS84"), ignore_axis_order=True):
+        return None
+    (x, y), (west, north), (dx, dy) = tiling["origin"], tiling["anchor"], tiling["cell"]
+    if not (math.isclose(dx, a, rel_tol=1e-9) and math.isclose(dy, -e, rel_tol=1e-9)):
+        return "window-set tiling cell disagrees with the grid affine"
+    if abs(west - (a*x + c)) > 1e-6 * abs(a) or abs(north - (e*y + f)) > 1e-6 * abs(e):
+        return "window-set tiling anchor disagrees with the grid affine"
+    return None
 
 
 def _expected_windows(tile, width, height, origin, anchor, cell, segment):

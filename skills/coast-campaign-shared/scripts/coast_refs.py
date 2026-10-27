@@ -90,7 +90,7 @@ class Resolver:
                 if path.is_relative_to(other) or other.is_relative_to(path):
                     raise ValueError("overlapping operator roots")
 
-    def read(self, ref, *, retain=True):
+    def read(self, ref, *, retain=True, reject_structured=False):
         if not isinstance(ref, dict) or set(ref) != REF_KEYS:
             raise ValueError("typed Ref requires exactly root_id/path/sha256/bytes")
         if ref["root_id"] not in self.bindings:
@@ -118,11 +118,18 @@ class Resolver:
                     digest = hashlib.sha256()
                     size = 0
                     remaining = ref["bytes"] + 1
+                    first_token = None
                     while remaining:
                         chunk = os.read(leaf, min(remaining, 1024 * 1024))
                         if not chunk:
                             break
                         digest.update(chunk)
+                        if reject_structured and first_token is None:
+                            token = chunk.lstrip(b' \t\r\n')
+                            if token:
+                                first_token = token[:1]
+                                if first_token in (b'{', b'[') or token.startswith(b'\xef\xbb\xbf'):
+                                    raise ValueError('binary contract cannot hide structured provenance')
                         size += len(chunk)
                         if retain:
                             chunks.append(chunk)
