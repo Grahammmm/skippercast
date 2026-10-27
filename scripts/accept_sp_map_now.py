@@ -18,7 +18,7 @@ FOCUSED = "tests/test_sp_map_now.mjs"
 REGRESSION = ["tests/test_frames.mjs", "tests/test_security_headers.mjs"]
 SOURCE_PATHS = ["packages/coast/src/map-sources.ts", "package.json", "pnpm-lock.yaml", "CHANGELOG.md",
                 FOCUSED, "scripts/accept_sp_map_now.py", "tests/fixtures/sp_map_now/contract.json",
-                "tests/fixtures/sp_map_now/regression-setup.mjs"]
+                "scripts/sp_map_now_regression_setup.mjs"]
 
 
 def sha(data):
@@ -135,7 +135,7 @@ def main():
             raise RuntimeError("installed Node differs from the frozen admitted runtime")
         argv = [str(NODE), "--experimental-strip-types"]
         if args.suite == "regression":
-            argv += ["--import", "./tests/fixtures/sp_map_now/regression-setup.mjs", "--test", "--test-reporter=tap", *REGRESSION]
+            argv += ["--import", "./scripts/sp_map_now_regression_setup.mjs", "--test", "--test-reporter=tap", *REGRESSION]
         else:
             argv += [FOCUSED]
             if args.suite == "negative":
