@@ -1,0 +1,14 @@
+{
+  "spec_version": "SP-14-v1",
+  "card": "SP1402-NEARSHORE-PRODUCT",
+  "base": "33734f90073a2150eac5a418564ea314c4a591ac",
+  "requirements": {
+    "A1": "Per-ring report source label in kind, source, basis and provider label; order-independent attribution; mixed summary exactly multiple nearshore models.",
+    "A2": "Single/same-CDIP card, links, sample/cadence/time-zone wording and summary unchanged; unknown clicked ID returns null.",
+    "A3": "Absent/unusable label falls back to exact sourceId. Preserve geometry, radius, hit area, run age, freshness/span admission, ordering and model-not-observation-or-breakers warning.",
+    "A4": "Unchanged complete module baseline registers exactly primary regression and healthy control; primary fails SP1402_A1_SECOND_KIND with expected Synthetic Other model site and actual CDIP MOP model site; healthy passes. Identical tests/fixtures rerun green after product delta."
+  },
+  "compatibility": ["tests/test_nearshore_layer.mjs"],
+  "scope_status": "SCOPED_GREEN_IS_REVIEW_REQUIRED_NOT_RELEASE_ACCEPTANCE",
+  "ownership": "Operator retains PR publication, unchanged full-repository suites and exact-head required CI; sole independent reviewer for actual Sol-built material is Claude Opus 5.5 on opus-coder-bopus."
+}
