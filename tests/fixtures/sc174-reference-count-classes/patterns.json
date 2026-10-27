@@ -1,0 +1,6 @@
+{
+  "mosaic": [[0, 1, 2, 2], [2, 0, 1, 0], [1, 2, 0, 1], [2, 2, 2, 0]],
+  "shallow": [[1, 2], [3, 1]],
+  "unknown": [[2, 1], [0, 2]],
+  "producer_shape": "tests/gis/test_seafloor_grid.py:39-50; uint8 classified mosaic, ten pixels per cell"
+}

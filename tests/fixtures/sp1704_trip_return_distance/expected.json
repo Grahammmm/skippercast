@@ -1,0 +1,255 @@
+{
+  "_note": "Pinned from the unchanged staged base segment.py (SOURCE-MANIFEST head): every scenario field the SP1704 repair must not move. distance_nm is the base value; only closed trips may differ, by exactly their return leg.",
+  "closed": {
+    "classifier_version": "c2-30923daf159568b4",
+    "distance_nm": 10.126047,
+    "fields": {
+      "basis": "inferred-from-movement",
+      "depart_port_id": "port-a",
+      "departed_at": 20,
+      "max_offshore_nm": 7.6815,
+      "mmsi": 999017040,
+      "return_port_id": "port-a",
+      "returned_at": 100,
+      "status": "closed"
+    },
+    "positions_min": [
+      20,
+      50,
+      80
+    ],
+    "segments": [
+      [
+        "transit",
+        20,
+        100,
+        3
+      ]
+    ]
+  },
+  "closed_to_port_b": {
+    "classifier_version": "c2-30923daf159568b4",
+    "distance_nm": 24.399744,
+    "fields": {
+      "basis": "inferred-from-movement",
+      "depart_port_id": "port-a",
+      "departed_at": 20,
+      "max_offshore_nm": 13.706953,
+      "mmsi": 999017040,
+      "return_port_id": "port-b",
+      "returned_at": 95,
+      "status": "closed"
+    },
+    "positions_min": [
+      20,
+      50,
+      80
+    ],
+    "segments": [
+      [
+        "transit",
+        20,
+        95,
+        3
+      ]
+    ]
+  },
+  "closed_with_dip": {
+    "classifier_version": "c2-30923daf159568b4",
+    "distance_nm": 10.643096,
+    "fields": {
+      "basis": "inferred-from-movement",
+      "depart_port_id": "port-a",
+      "departed_at": 20,
+      "max_offshore_nm": 7.6815,
+      "mmsi": 999017040,
+      "return_port_id": "port-a",
+      "returned_at": 100,
+      "status": "closed"
+    },
+    "positions_min": [
+      20,
+      50,
+      60,
+      61,
+      80
+    ],
+    "segments": [
+      [
+        "transit",
+        20,
+        100,
+        5
+      ]
+    ]
+  },
+  "gap_truncated": {
+    "classifier_version": "c2-30923daf159568b4",
+    "distance_nm": 5.912831,
+    "fields": {
+      "basis": "inferred-from-movement",
+      "depart_port_id": "port-a",
+      "departed_at": 20,
+      "max_offshore_nm": 7.6815,
+      "mmsi": 999017040,
+      "return_port_id": null,
+      "returned_at": 50,
+      "status": "truncated"
+    },
+    "positions_min": [
+      20,
+      50
+    ],
+    "segments": [
+      [
+        "transit",
+        20,
+        50,
+        2
+      ]
+    ]
+  },
+  "open": {
+    "classifier_version": "c2-30923daf159568b4",
+    "distance_nm": 10.126047,
+    "fields": {
+      "basis": "inferred-from-movement",
+      "depart_port_id": "port-a",
+      "departed_at": 20,
+      "max_offshore_nm": 7.6815,
+      "mmsi": 999017040,
+      "return_port_id": null,
+      "returned_at": 80,
+      "status": "open"
+    },
+    "positions_min": [
+      20,
+      50,
+      80
+    ],
+    "segments": [
+      [
+        "transit",
+        20,
+        80,
+        3
+      ]
+    ]
+  },
+  "open_aged": {
+    "classifier_version": "c2-30923daf159568b4",
+    "distance_nm": 10.126047,
+    "fields": {
+      "basis": "inferred-from-movement",
+      "depart_port_id": "port-a",
+      "departed_at": 20,
+      "max_offshore_nm": 7.6815,
+      "mmsi": 999017040,
+      "return_port_id": null,
+      "returned_at": 80,
+      "status": "truncated"
+    },
+    "positions_min": [
+      20,
+      50,
+      80
+    ],
+    "segments": [
+      [
+        "transit",
+        20,
+        80,
+        3
+      ]
+    ]
+  },
+  "open_port_hint": {
+    "classifier_version": "c2-30923daf159568b4",
+    "distance_nm": 16.79037,
+    "fields": {
+      "basis": "inferred-from-movement",
+      "depart_port_id": "port-a",
+      "departed_at": 20,
+      "max_offshore_nm": 7.6815,
+      "mmsi": 999017040,
+      "return_port_id": null,
+      "returned_at": 101,
+      "status": "open"
+    },
+    "positions_min": [
+      20,
+      50,
+      80,
+      100,
+      101
+    ],
+    "segments": [
+      [
+        "transit",
+        20,
+        101,
+        5
+      ]
+    ]
+  },
+  "open_zero_final": {
+    "classifier_version": "c2-30923daf159568b4",
+    "distance_nm": 10.126047,
+    "fields": {
+      "basis": "inferred-from-movement",
+      "depart_port_id": "port-a",
+      "departed_at": 20,
+      "max_offshore_nm": 7.6815,
+      "mmsi": 999017040,
+      "return_port_id": null,
+      "returned_at": 90,
+      "status": "open"
+    },
+    "positions_min": [
+      20,
+      50,
+      80,
+      90
+    ],
+    "segments": [
+      [
+        "transit",
+        20,
+        80,
+        2
+      ],
+      [
+        "uncertain",
+        80,
+        90,
+        2
+      ]
+    ]
+  },
+  "start_unknown": {
+    "classifier_version": "c2-30923daf159568b4",
+    "distance_nm": 5.912831,
+    "fields": {
+      "basis": "inferred-from-movement",
+      "depart_port_id": null,
+      "departed_at": 0,
+      "max_offshore_nm": 7.6815,
+      "mmsi": 999017040,
+      "return_port_id": "port-a",
+      "returned_at": 50,
+      "status": "truncated"
+    },
+    "positions_min": [
+      0,
+      30
+    ],
+    "segments": [
+      [
+        "transit",
+        0,
+        50,
+        2
+      ]
+    ]
+  }
+}

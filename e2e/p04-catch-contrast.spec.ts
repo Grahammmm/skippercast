@@ -88,11 +88,13 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // targets. Reports reads only regionInfo's id and charters (unchanged) and never imports species.ts, the target
 // menu or the rail; no CSS, class, token or catch markup is touched, and contrast() is untouched. All three rebound.
 // CI6-02 merge-forward onto main: union of the entries above; only the species/App/LayerRail hashes rebound.
+// CI6-02 review fix: species.ts marks the region's unavailable targets on every menu option and LayerRail's Look for
+// disables by that mark. Reports never imports either; no CSS, token or catch markup changes. Both rebound.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
-  "web/species.ts": "c375f21a58e70a0523e95f3be786ab3cfa417e8b0e208c671b240aa48c554a14",
+  "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
   "web/app/App.tsx": "ade4f4b09862475af1c57e554ef2b37833528d339232b22b125d6093bd00367e",
   "web/app/Masthead.tsx": "191309f6c9a54ee6bd24608a1983c6bf07141538267f87bef163f8ad4ccbea00",
-  "web/app/LayerRail.tsx": "46e42485435483269872176bb53cba563d042ad7ea02cdddcb5372f031026d85",
+  "web/app/LayerRail.tsx": "248402b3100855ef1561c742ee32c3922d9b6475080cb6420957a553e5872abb",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
