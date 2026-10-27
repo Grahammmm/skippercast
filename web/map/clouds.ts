@@ -167,6 +167,10 @@ export function createClouds(options: CloudsOptions): {destroy(): void} {
   motion?.addEventListener('change', motionChange);
 
   let drawn: Overlay | null = null, drawnOn: Engine | null = null;
+  const clearOwned = (): void => {
+    drawnOn?.setOverlay(REGISTRY_ID, null);
+    drawn = null; drawnOn = null; drawnFrames = [];
+  };
   const disposers = [
     // The clock (ages, the 90-minute gate, the index refresh) runs while Clouds is on and the page is shown.
     effect(() => {
@@ -185,6 +189,9 @@ export function createClouds(options: CloudsOptions): {destroy(): void} {
     // One effect, so the frames exist before one of them is shown.
     effect(() => {
       const e = engine.value, o = overlay.value, at = shown.value;
+      // The previous map must relinquish this controller's overlay before a
+      // replacement adopts it (including a null/loading engine transition).
+      if (drawnOn !== e) clearOwned();
       if (!e) return;
       // § 9 draw order: above the fields, under the marks, the selection and the coastline glow.
       if (o !== drawn || e !== drawnOn) { e.setOverlay(REGISTRY_ID, o, MARK_PICK); drawn = o; drawnOn = e; drawnFrames = o?.layers.map(l => l.id) ?? []; }
@@ -210,7 +217,8 @@ export function createClouds(options: CloudsOptions): {destroy(): void} {
       for (const dispose of disposers) dispose();
       doc.removeEventListener('visibilitychange', visibility);
       motion?.removeEventListener('change', motionChange);
-      cloudStamp.value = null; setRailNote(REGISTRY_ID, ''); drawnFrames = [];
+      clearOwned();
+      cloudStamp.value = null; setRailNote(REGISTRY_ID, '');
     },
   };
 }
