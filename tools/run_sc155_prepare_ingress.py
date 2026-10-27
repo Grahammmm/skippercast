@@ -283,10 +283,17 @@ def run_selector(run):
 
 
 def load_tests_module():
-    spec = importlib.util.spec_from_file_location("sc155_tests", REPO / TEST)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["sc155_tests"] = module
-    spec.loader.exec_module(module)
+    # The test module imports ROOT from tests._support (the repository test-layout rule), so the
+    # candidate repository is importable while it loads; sys.path is restored afterwards.
+    path = list(sys.path)
+    sys.path.insert(0, str(REPO))
+    try:
+        spec = importlib.util.spec_from_file_location("sc155_tests", REPO / TEST)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["sc155_tests"] = module
+        spec.loader.exec_module(module)
+    finally:
+        sys.path[:] = path
     return module
 
 

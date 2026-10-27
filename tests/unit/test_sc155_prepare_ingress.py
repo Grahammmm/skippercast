@@ -22,7 +22,8 @@ import unittest
 from unittest import mock
 import uuid
 
-REPO = Path(__file__).resolve().parents[2]
+from tests._support import ROOT as REPO
+
 SCRIPTS = REPO / "skills/coast-sign-off/scripts"
 PRODUCT = SCRIPTS / "prepare_round.py"
 COMMON = SCRIPTS / "review_common.py"
@@ -699,7 +700,8 @@ class EvidenceSuite(unittest.TestSuite):
         origins, records = ORIGINS[first_origin:], RECORDS[first_record:]
         problems = execution_problems(executed, subtests, skips, failures, errors, origins)
         spec = REPO.parent / "ACCEPTANCE-SPEC.json"
-        sources = (PRODUCT, COMMON, CONSTRUCTORS, Path(__file__).resolve(), REPO / "tools/run_sc155_prepare_ingress.py")
+        sources = (PRODUCT, COMMON, CONSTRUCTORS, REPO / "tests/unit/test_sc155_prepare_ingress.py",
+                   REPO / "tools/run_sc155_prepare_ingress.py")
         receipt = dict(
             schema="sc155-discovery-receipt/v1", argv=list(sys.argv), orig_argv=list(getattr(sys, "orig_argv", [])),
             cwd=os.getcwd(), interpreter=sys.executable, prefix=sys.prefix, python=sys.version, head=git_head(),
