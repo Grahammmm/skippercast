@@ -1,0 +1,21 @@
+{
+  "schema": "skippercast.sp1401-frozen-spec/v1",
+  "note": "Portable byte representation of the frozen SP-14-v1 requirements for card SP1401-FLOW-GAPS, transcribed verbatim from the planner item. The acceptance launcher pins the SHA-256 of this file and records it in every receipt; any byte change yields a different evidence identity and is refused. Not a test input.",
+  "version": "SP-14-v1",
+  "planning_task": "t_9b1e9239",
+  "item": {
+    "id": "SP1401-FLOW-GAPS",
+    "goal": "Stop illustrative current streamlines at screen-resolved land gaps between integration probes.",
+    "primary": "web/map/flow.ts",
+    "symbol": "flowPaths, lines 70-99",
+    "diagnostic": "analysis-web/diagnostic-output.json#flow-substep-gap",
+    "premise": "On a 128 by 64 synthetic eastward field, the unchanged integrator returns one line segment crossing a one-pixel null strip at x=24.5 to 25.5. A wider-strip control has no crossing. This is a pure sampler contract, not navigation or real terrain qualification.",
+    "scope": "Add bounded segment-support sampling within flowPaths, at no more than one screen-pixel spacing including endpoints, before accepting each proposed five-pixel segment. Do not change integration direction, seed grid, caps, STEP_PX, MAX_STEPS, field interpolation, masks or drawing policy. This is a one-pixel screen-resolution guarantee, never an arbitrary subpixel geometry proof.",
+    "A1": "With the synthetic one-pixel vertical gap used by the diagnostic, no emitted segment crosses the null strip; test complete segments, not just vertices. Mirror east/west and north/south and use diagonal segments through the center of a one-pixel blocked cell.",
+    "A2": "A fully supported constant vector preserves baseline points, seed cap, fast flag, speed, direction and still-water behavior. Existing broad-gap, ragged-grid and boundary controls remain green.",
+    "A3": "Count sampler calls and prove a constant bounded number per five-pixel segment, with sampling intervals at most one pixel. Zero-support, short path and viewport-edge inputs preserve existing results. Do not mutate the vector function, field or masks.",
+    "healthy": "The identical eastward fixture with no blocked strip preserves the original supported line and direction.",
+    "regressions": ["tests/test_flow.mjs"],
+    "fixture": "Synthetic screen sampler and blocked-pixel masks shaped like tests/test_flow.mjs; no map service, raster or geographic source."
+  }
+}
