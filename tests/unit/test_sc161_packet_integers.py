@@ -24,8 +24,9 @@ import unittest
 from unittest.mock import patch
 import uuid
 
-REPO = Path(__file__).resolve().parents[2]
-FIXTURE = REPO / 'tests/fixtures/sc161-packet-integers'
+from tests._support import FIXTURES, ROOT as REPO
+
+FIXTURE = FIXTURES / 'sc161-packet-integers'
 RUNNER = REPO / 'tools/run_sc161_packet_integers.py'
 CODE = 'packet_integer_binding_invalid'
 OUTSIDE = 'window outside immutable finite grant'
