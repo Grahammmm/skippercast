@@ -114,6 +114,10 @@ def epoch(now):
     return number
 
 
+def _valid_reviewer_identity(value):
+    return isinstance(value, str) and bool(value.strip()) and not value.startswith('coastal.')
+
+
 def review_holds(root, review, facts_digest, *, now, minimum_valid_until=None, schema='coastal-private-input-review-v2'):
     if review is None:
         return ['independent_review_missing']
@@ -121,7 +125,7 @@ def review_holds(root, review, facts_digest, *, now, minimum_valid_until=None, s
     document = load(root, review, contract=schema)
     holds = []
     if (document.get('schema') != schema or document.get('independent') is not True
-            or not document.get('reviewer_id') or document['reviewer_id'].startswith('coastal.')
+            or not _valid_reviewer_identity(document.get('reviewer_id'))
             or document.get('facts_digest') != facts_digest):
         holds.append('independent_review_binding_invalid')
     try:

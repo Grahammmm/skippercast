@@ -1,0 +1,126 @@
+{
+  "caps": {
+    "acquire_budget": {
+      "bytes": 1000000,
+      "memory_bytes": 4294967296,
+      "requests": 0,
+      "wall_s": 120
+    },
+    "max_jobs": 4,
+    "max_total_bytes": 2147483648,
+    "plan_max_total_bytes": 10000000,
+    "selected_bytes": 68
+  },
+  "catalog": {
+    "bytes": 7729,
+    "catalog_id": "4467299f8ac61d5a0a463cdf0b42d31bb4c4d8d39132c4525d3fe22b5dc7cc65",
+    "schema": "coastal-frozen-discovery-catalog-v1",
+    "sha256": "481af49cbba9eadfadec4b558a5eb4cbb2ee644ceb3399828d4ccfa25078b78f"
+  },
+  "decisions": [
+    {
+      "access_host": "data.ngdc.noaa.gov",
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/s0.bag",
+      "catalog_hash_binding": "matched",
+      "holds": [],
+      "publisher_id": "s0.bag",
+      "source": {
+        "bytes": 17,
+        "contract": "native-raster-v1",
+        "path": "sources/H11952_MB_2m_MLLW_1of1.bag",
+        "sha256": "6e323b8ce58b91e667e92035d0fa548cddc491df8f73c659b43ef319eb4e6b66"
+      },
+      "source_id": "ncei:s0.bag",
+      "state": "selected"
+    },
+    {
+      "access_host": "data.ngdc.noaa.gov",
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/s1.bag",
+      "catalog_hash_binding": "matched",
+      "holds": [],
+      "publisher_id": "s1.bag",
+      "source": {
+        "bytes": 17,
+        "contract": "native-raster-v1",
+        "path": "sources/H11952_MB_2m_MLLW_1of1.bag",
+        "sha256": "6e323b8ce58b91e667e92035d0fa548cddc491df8f73c659b43ef319eb4e6b66"
+      },
+      "source_id": "ncei:s1.bag",
+      "state": "selected"
+    },
+    {
+      "access_host": "data.ngdc.noaa.gov",
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/s2.bag",
+      "catalog_hash_binding": "matched",
+      "holds": [],
+      "publisher_id": "s2.bag",
+      "source": {
+        "bytes": 17,
+        "contract": "native-raster-v1",
+        "path": "sources/H11952_MB_2m_MLLW_1of1.bag",
+        "sha256": "6e323b8ce58b91e667e92035d0fa548cddc491df8f73c659b43ef319eb4e6b66"
+      },
+      "source_id": "ncei:s2.bag",
+      "state": "selected"
+    },
+    {
+      "access_host": "data.ngdc.noaa.gov",
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H10001-H12000/H11952/BAG/s3.bag",
+      "catalog_hash_binding": "matched",
+      "holds": [],
+      "publisher_id": "s3.bag",
+      "source": {
+        "bytes": 17,
+        "contract": "native-raster-v1",
+        "path": "sources/H11952_MB_2m_MLLW_1of1.bag",
+        "sha256": "6e323b8ce58b91e667e92035d0fa548cddc491df8f73c659b43ef319eb4e6b66"
+      },
+      "source_id": "ncei:s3.bag",
+      "state": "selected"
+    }
+  ],
+  "execution_authorized": false,
+  "held_source_ids": [],
+  "mapping_accepted": false,
+  "network_requests": 0,
+  "note": "Source-free bridge: catalog and plan JSON read, cached sources lstat-checked only. Acquire, qualify, map and render keep their own gates; nothing here is accepted.",
+  "output": {
+    "bytes": 4061,
+    "path": "bridge-dry-run-receipt.json",
+    "sha256": "d38c24209354162d40a8fa65598fc572075a0935e1eb5200b446cab961a92a48"
+  },
+  "plan_sha256": "efdd69b3a911b5c53100a207a01e6eefae345ef33b2d0ea2975e0bf5e591b60f",
+  "review_required": true,
+  "schema": "coastal-catalog-acquire-bridge-dry-run-v1",
+  "segment_id": "seg:3310:0:0:5000",
+  "selected_source_ids": [
+    "ncei:s0.bag",
+    "ncei:s1.bag",
+    "ncei:s2.bag",
+    "ncei:s3.bag"
+  ],
+  "source_bytes_read": 0,
+  "source_opens": 0,
+  "would_enqueue": [
+    {
+      "native_job_sha256": "1c48a385745918cc87177e4fc6a2541bf175111ff0fe25193699c976e9d65239",
+      "source_id": "ncei:s0.bag",
+      "stage": "acquire"
+    },
+    {
+      "native_job_sha256": "6ff34d110e07d22703cd7c739827177fbcca0df31268eb35f36945a511844484",
+      "source_id": "ncei:s1.bag",
+      "stage": "acquire"
+    },
+    {
+      "native_job_sha256": "78c2c4a28ab78e8fbd8462486e703c254b1be865421bc389240695b4f8d1cfa5",
+      "source_id": "ncei:s2.bag",
+      "stage": "acquire"
+    },
+    {
+      "native_job_sha256": "6352e93f84d25760c9f2aa726ed1293f8463c6923587dbb203fdf31cc1e6b107",
+      "source_id": "ncei:s3.bag",
+      "stage": "acquire"
+    }
+  ]
+}

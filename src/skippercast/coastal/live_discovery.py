@@ -210,6 +210,8 @@ def listing_annotation(discover, row, allowed_hosts):
         if parts.hostname in allowed_hosts and name.lower().endswith(LISTING_SUFFIXES) and not parts.query:
             if name.lower().endswith(NETCDF_SUFFIX) and not _plain_netcdf_file(parts.path):
                 continue
+            if name in found and found[name] != link:
+                raise ValueError("listing_basename_collision")
             found.setdefault(name, link)
     return dict(response_sha256=row["sha256"], candidates=[
         dict(publisher_id=name, title=name, bbox=None, bbox_crs=None, catalog_geometry=None,
@@ -220,18 +222,35 @@ def listing_annotation(discover, row, allowed_hosts):
         for name, url in sorted(found.items())])
 
 
-def _candidates(document):
+def _candidates(document, label="catalog"):
+    """Map catalog rows by their literal source_id, refusing any ambiguous identity.
+
+    Every row must be an object with a nonempty string source_id, and no two rows
+    may share one (byte-identical or conflicting). IDs are never stripped,
+    case-folded, repaired or invented, and the original row objects are returned.
+    """
     if not isinstance(document, dict) or document.get("schema") not in (CATALOG, "coastal-source-v1"):
         raise ValueError("previous catalog must be a frozen catalog or finalized source manifest")
     rows = document.get("candidates")
     if not isinstance(rows, list):
         raise ValueError("previous catalog candidates required")
-    return {row["source_id"]: row for row in rows}
+    by_id, first = {}, {}
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise ValueError(f"{label} candidate {index} must be an object")
+        source_id = row.get("source_id")
+        if not isinstance(source_id, str) or not source_id:
+            raise ValueError(f"{label} candidate {index} needs a nonempty string source_id")
+        if source_id in by_id:
+            raise ValueError(f"{label} candidate {index} duplicates source_id {source_id!r} "
+                             f"first seen at candidate {first[source_id]}")
+        by_id[source_id], first[source_id] = row, index
+    return by_id
 
 
 def diff(previous, current, previous_ref=None):
-    old = _candidates(previous) if previous is not None else {}
-    new = _candidates(current)
+    old = _candidates(previous, "previous") if previous is not None else {}
+    new = _candidates(current, "current")
     changed = sorted(k for k in set(old) & set(new)
                      if any(old[k].get(f) != new[k].get(f) for f in DIFF_FIELDS))
     return dict(schema=DIFF, previous=previous_ref, current_catalog_id=current.get("catalog_id"),
