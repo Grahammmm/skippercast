@@ -2,6 +2,7 @@
 import builtins
 from contextlib import ExitStack, contextmanager
 import importlib
+import importlib.util
 import io
 import json
 import os
@@ -13,17 +14,28 @@ import tempfile
 import unittest
 from unittest import mock
 
-REPO = Path(__file__).resolve().parents[2]
+from tests._support import ROOT as REPO
+
 EVENTS = []
 ORIGINS = {}
 CONTROL = {}
+# The worker imports authenticated_v1.supplement, which needs numpy at import time.
+# The no-GIS CI lane lacks it; survey-science and the repo venv run these tests.
+# find_spec only locates numpy; it never imports or initialises it.
+HAS_NUMPY = importlib.util.find_spec('numpy') is not None
+# pytest rewrites this per test phase; it is runner bookkeeping, not peer state.
+RUNNER_ENV = frozenset({'PYTEST_CURRENT_TEST'})
+
+
+def peer_state():
+    environ = {k: v for k, v in os.environ.items() if k not in RUNNER_ENV}
+    return (list(sys.path), sys.dont_write_bytecode, environ,
+            subprocess.Popen, socket.socket.connect, os.open)
 
 
 def peer_check(expected):
     def harmless_peer():
-        actual = (list(sys.path), sys.dont_write_bytecode, dict(os.environ),
-                  subprocess.Popen, socket.socket.connect, os.open)
-        unittest.TestCase().assertEqual(actual, expected)
+        unittest.TestCase().assertEqual(peer_state(), expected)
     result = unittest.TestResult()
     unittest.FunctionTestCase(harmless_peer).run(result)
     if not result.wasSuccessful() or result.testsRun != 1:
@@ -61,11 +73,11 @@ def producer():
     return json.loads((REPO / 'tests/fixtures/sc163-worker-json/producer.json').read_text())
 
 
+@unittest.skipUnless(HAS_NUMPY, 'worker imports numpy via authenticated_v1.supplement; no-GIS lane lacks it')
 class WorkerJSONTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.before = (list(sys.path), sys.dont_write_bytecode, dict(os.environ),
-                      subprocess.Popen, socket.socket.connect, os.open)
+        cls.before = peer_state()
         peer_check(cls.before)
         base = globals().get('OUTPUT_ROOT')
         if base is None:
@@ -112,10 +124,11 @@ class WorkerJSONTests(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.stack.close()
-        after = (list(sys.path), sys.dont_write_bytecode, dict(os.environ),
-                 subprocess.Popen, socket.socket.connect, os.open)
+        after = peer_state()
         if after != cls.before:
-            raise AssertionError('peer state not restored')
+            names = ('sys.path', 'dont_write_bytecode', 'os.environ', 'Popen', 'socket.connect', 'os.open')
+            raise AssertionError('peer state not restored: ' + ', '.join(
+                name for name, old, new in zip(names, cls.before, after) if old != new))
         peer_check(cls.before)
         (cls.root / 'discovery.json').write_text(json.dumps(dict(
             events=EVENTS, origins=ORIGINS, control=CONTROL, peer_state_restored=True,

@@ -79,6 +79,10 @@ def main():
     with (out / 'stdout.log').open('w') as stdout, (out / 'stderr.log').open('w') as stderr:
         with redirect_stdout(stdout), redirect_stderr(stderr):
             try:
+                # The test imports ROOT from tests._support (repo layout rule), so the
+                # candidate root must be importable when this runner loads it by path.
+                if str(REPO) not in sys.path:
+                    sys.path.insert(0, str(REPO))
                 spec.loader.exec_module(module)
                 module.OUTPUT_ROOT = out
                 suite = unittest.TestSuite(module.WorkerJSONTests(name) for name in METHODS)
