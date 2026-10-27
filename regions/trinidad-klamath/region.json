@@ -1,0 +1,453 @@
+{
+  "schema_version": 1,
+  "id": "trinidad-klamath",
+  "name": "Trinidad to Klamath River",
+  "status": "draft",
+  "timezone": "America/Los_Angeles",
+  "jurisdiction": "California \u00b7 Northern Groundfish Management Area",
+  "bounds": [
+    -124.6,
+    40.95,
+    -124.0,
+    41.55
+  ],
+  "fishing_bounds": [
+    -124.55,
+    40.95,
+    -124.05,
+    41.55
+  ],
+  "map": {
+    "center": [
+      41.25,
+      -124.25
+    ],
+    "zoom": 9,
+    "locality_method": "Northern outer-coast discovery extent from the Mad River mouth past Trinidad Head and Reading Rock to the Klamath River, filling the gap between the Humboldt Bay\u2013Cape Mendocino and Crescent City packages. This rectangle is not a legal fishing boundary, qualified spot or navigation clearance.",
+    "region_notice_ids": [
+      "northern-mpas"
+    ],
+    "local_areas": [],
+    "discovery_bounds": [
+      -124.6,
+      40.95,
+      -124.0,
+      41.55
+    ],
+    "unavailable_targets": {},
+    "unavailable_target_sources": {}
+  },
+  "harbor": {
+    "name": "Trinidad Harbor and Pier",
+    "latitude": 41.0565,
+    "longitude": -124.144,
+    "entrance_note": "Trinidad is an open roadstead in the lee of Trinidad Head with a seasonal hoist and launch, not a protected bar harbor. Swell, wind and launch hours govern access; tide level is not launch or anchorage clearance.",
+    "information_url": "https://www.seascape-pier.com/launch",
+    "watch_keywords": [
+      "Trinidad",
+      "launch",
+      "harbor",
+      "Rancheria"
+    ]
+  },
+  "boat": {
+    "name": "2019 Parker 23 \u00b7 planning profile",
+    "cruise_knots": 20,
+    "bottom_depth_limit_ft": 200
+  },
+  "forecast_points": [
+    {
+      "id": "trinidad-outer",
+      "name": "Outside Trinidad Head",
+      "latitude": 41.05,
+      "longitude": -124.2,
+      "context": "trinidad"
+    },
+    {
+      "id": "mad-river",
+      "name": "Mad River outer coast",
+      "latitude": 40.97,
+      "longitude": -124.19,
+      "context": "trinidad"
+    },
+    {
+      "id": "patricks-point",
+      "name": "Off Patrick's Point",
+      "latitude": 41.14,
+      "longitude": -124.22,
+      "context": "trinidad"
+    },
+    {
+      "id": "orick-coast",
+      "name": "Orick outer coast",
+      "latitude": 41.28,
+      "longitude": -124.14,
+      "context": "klamath"
+    },
+    {
+      "id": "klamath-outer",
+      "name": "Off the Klamath River",
+      "latitude": 41.5,
+      "longitude": -124.14,
+      "context": "klamath"
+    },
+    {
+      "id": "offshore",
+      "name": "Trinidad offshore reference",
+      "latitude": 41.25,
+      "longitude": -124.5,
+      "context": "trinidad",
+      "offshore": true
+    }
+  ],
+  "marine_zones": {
+    "coastal": "PZZ450",
+    "offshore": "PZZ470"
+  },
+  "stations": {
+    "tide": "9419059",
+    "tide_name": "Trinidad Harbor",
+    "tide_note": "Trinidad Harbor is a subordinate prediction station referenced to Crescent City; it predicts water level, not swell, surge at the launch or bottom drift.",
+    "airport": "KACV",
+    "airport_name": "Arcata\u2013Eureka airport, McKinleyville",
+    "nearshore_buoy": "46244",
+    "nearshore_buoy_name": "Humboldt Bay North Spit \u00b7 southern wave reference",
+    "offshore_buoy": "46022",
+    "offshore_buoy_name": "Eel River \u00b7 17 NM WSW of Eureka",
+    "offshore_buoy_note": "South of the region in 456 m water; not an observation of Trinidad or Klamath fishing grounds."
+  },
+  "mpa": {
+    "bounds": [
+      -124.6,
+      40.95,
+      -124.0,
+      41.55
+    ],
+    "minimum_features": 2
+  },
+  "species": [
+    "reef",
+    "pacific-halibut",
+    "halibut",
+    "salmon",
+    "dungeness",
+    "albacore"
+  ],
+  "source_names": {},
+  "source_bindings": {
+    "bathymetry": [
+      "noaa-bag"
+    ],
+    "substrate": [
+      "noaa-west-coast-substrate"
+    ],
+    "groundtruth": [
+      "usgs-camera-samples"
+    ],
+    "kelp": [
+      "kelpwatch"
+    ],
+    "protected-areas": [
+      "cdfw-mpas"
+    ],
+    "regulations": [
+      "cdfw-rules"
+    ],
+    "dynamic-closures": [
+      "cdfw-rules",
+      "ecfr-security"
+    ],
+    "wind-forecast": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "nws-weather"
+    ],
+    "wave-forecast": [
+      "noaa-gfs-wave",
+      "ecmwf-wam"
+    ],
+    "wave-observations": [
+      "ndbc-buoys"
+    ],
+    "weather-observations": [
+      "ndbc-buoys",
+      "nws-weather"
+    ],
+    "tides": [
+      "noaa-tides"
+    ],
+    "surface-currents": [
+      "noaa-ndbc-hfr-uswc-6km",
+      "noaa-hfr-thredds",
+      "noaa-wcofs",
+      "ioos-hfr"
+    ],
+    "subsurface-ocean": [
+      "regional-roms",
+      "noaa-survey-catches"
+    ],
+    "sea-temperature": [
+      "noaa-blended-sst",
+      "mur-sst",
+      "noaa-wcofs"
+    ],
+    "chlorophyll": [
+      "noaa-viirs-merged-chlorophyll",
+      "modis-chlorophyll"
+    ],
+    "species-occurrence": [
+      "usgs-camera-samples",
+      "noaa-survey-catches",
+      "obis-occurrences"
+    ],
+    "catch-effort": [
+      "noaa-survey-catches",
+      "recfin"
+    ],
+    "charter-identity": [
+      "fleet-registry"
+    ],
+    "ais-history": [
+      "noaa-ais"
+    ],
+    "harbor-access": [
+      "nws-weather",
+      "harbor-authority"
+    ],
+    "wind-ensemble": [
+      "noaa-gefs-members"
+    ],
+    "wave-ensemble": [
+      "noaa-gefs-wave-prob"
+    ],
+    "forecast-verification": [
+      "noaa-gfs",
+      "ecmwf-ifs",
+      "noaa-gfs-wave",
+      "ecmwf-wam",
+      "ndbc-buoys"
+    ]
+  },
+  "coverage": {
+    "bathymetry": {
+      "status": "research",
+      "reason": "No original NOAA survey grid in this footprint has had its native cells, datum and MPA overlap reviewed. Discovery-feed BAG leads are not verified bottom coverage and no fishing target is qualified."
+    },
+    "substrate": {
+      "status": "research",
+      "reason": "Statewide predicted-substrate context has not been reviewed for this footprint; it would not be verified natural rock or a local fishing target."
+    },
+    "groundtruth": {
+      "status": "research",
+      "reason": "This Trinidad\u2013Klamath source role has not yet passed a local coverage and update review; a source binding does not imply data availability."
+    },
+    "kelp": {
+      "status": "research",
+      "reason": "This Trinidad\u2013Klamath source role has not yet passed a local coverage and update review; a source binding does not imply data availability."
+    },
+    "protected-areas": {
+      "status": "partial",
+      "reason": "A CDFW DS582 envelope query for this footprint on 2026-10-20 returned Reading Rock SMR and Reading Rock SMCA. Exact current geometry, their differing take exceptions and site-specific access still gate any target."
+    },
+    "regulations": {
+      "status": "research",
+      "reason": "Draft: this footprint is not yet in the hash-bound Northern regulation review, so no rule card may be shown for it. Shared Northern species rules do not transfer without that review."
+    },
+    "dynamic-closures": {
+      "status": "research",
+      "reason": "This Trinidad\u2013Klamath source role has not yet passed a local coverage and update review; a source binding does not imply data availability."
+    },
+    "wind-forecast": {
+      "status": "research",
+      "reason": "NOAA GFS and ECMWF IFS samples are configured for the Trinidad and Klamath contexts but have no regional collection yet; official PZZ450/PZZ470 advisories still govern each trip."
+    },
+    "wave-forecast": {
+      "status": "research",
+      "reason": "NOAA GFS Wave and ECMWF WAM samples are configured but have no regional collection yet."
+    },
+    "wave-observations": {
+      "status": "research",
+      "reason": "No NDBC buoy lies inside the footprint. 46244 Humboldt Bay North Spit (south), 46027 St Georges (north) and offshore 46022 Eel River are labelled outside references only."
+    },
+    "weather-observations": {
+      "status": "research",
+      "reason": "KACV McKinleyville and the outside buoys are context; no live Trinidad launch or Klamath ground measurement is established."
+    },
+    "tides": {
+      "status": "research",
+      "reason": "NOAA Trinidad Harbor 9419059 returned high/low predictions on 2026-10-20. It is a subordinate station referenced to Crescent City 9419750 and predicts water level only, not launch, surge or bottom-drift conditions."
+    },
+    "surface-currents": {
+      "status": "research",
+      "reason": "This Trinidad\u2013Klamath source role has not yet passed a local coverage and update review; a source binding does not imply data availability."
+    },
+    "subsurface-ocean": {
+      "status": "research",
+      "reason": "This Trinidad\u2013Klamath source role has not yet passed a local coverage and update review; a source binding does not imply data availability."
+    },
+    "sea-temperature": {
+      "status": "research",
+      "reason": "This Trinidad\u2013Klamath source role has not yet passed a local coverage and update review; a source binding does not imply data availability."
+    },
+    "chlorophyll": {
+      "status": "research",
+      "reason": "This Trinidad\u2013Klamath source role has not yet passed a local coverage and update review; a source binding does not imply data availability."
+    },
+    "species-occurrence": {
+      "status": "research",
+      "reason": "This Trinidad\u2013Klamath source role has not yet passed a local coverage and update review; a source binding does not imply data availability."
+    },
+    "catch-effort": {
+      "status": "research",
+      "reason": "This Trinidad\u2013Klamath source role has not yet passed a local coverage and update review; a source binding does not imply data availability."
+    },
+    "charter-identity": {
+      "status": "missing",
+      "reason": "0 charter fleet ports map to this region; the charter fleet registry counts no boats here."
+    },
+    "ais-history": {
+      "status": "research",
+      "reason": "This Trinidad\u2013Klamath source role has not yet passed a local coverage and update review; a source binding does not imply data availability."
+    },
+    "harbor-access": {
+      "status": "research",
+      "reason": "The Trinidad Rancheria harbor page and NWS PZZ450 supply launch-hour and advisory leads, not live launch, mooring or anchorage clearance."
+    },
+    "wind-ensemble": {
+      "status": "research",
+      "reason": "This Trinidad\u2013Klamath source role has not yet passed a local coverage and update review; a source binding does not imply data availability."
+    },
+    "wave-ensemble": {
+      "status": "research",
+      "reason": "This Trinidad\u2013Klamath source role has not yet passed a local coverage and update review; a source binding does not imply data availability."
+    },
+    "forecast-verification": {
+      "status": "research",
+      "reason": "This Trinidad\u2013Klamath source role has not yet passed a local coverage and update review; a source binding does not imply data availability."
+    }
+  },
+  "assets": {
+    "atlas": "regions/trinidad-klamath/atlas.json",
+    "habitats": "regions/trinidad-klamath/habitats.json",
+    "protected_areas": "data/protected-areas.geojson",
+    "regulations": "data/regulations-northern.json",
+    "charters": null,
+    "ais_evidence": null,
+    "commercial_ais": null,
+    "daily_evidence": null,
+    "bottom_index": "regions/trinidad-klamath/bottom/index.json",
+    "geology": null,
+    "ecology": "regions/trinidad-klamath/ecology.json",
+    "search_plans": "regions/trinidad-klamath/search-plans.json"
+  },
+  "daily_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/trinidad-klamath/latest.json",
+  "conditions_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/trinidad-klamath/latest.json",
+  "landing_names": [
+    "Trinidad"
+  ],
+  "coverage_note": "Draft Trinidad\u2013Klamath package filling the 40.95\u201341.55\u00b0 N gap between Humboldt Bay\u2013Cape Mendocino and Crescent City. Not published: its footprint still needs the hash-bound Northern regulation review. No qualified fishing spots, bottom images or drift lines.",
+  "landing_note": "Port landings do not locate catches on Trinidad or Klamath grounds.",
+  "jurisdiction_id": "california-northern",
+  "ecology_profile": "california-northern",
+  "pipeline_sources": {
+    "sst": "noaa-blended-sst",
+    "chlorophyll": "noaa-viirs-merged-chlorophyll",
+    "currents": "noaa-ndbc-hfr-uswc-6km"
+  },
+  "intelligence_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/trinidad-klamath/intelligence.json",
+  "habitat_feed": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/trinidad-klamath/habitat-dynamics.json",
+  "contexts": {
+    "trinidad": {
+      "name": "Mad River to Big Lagoon",
+      "stations": {
+        "tide": "9419059",
+        "tide_name": "Trinidad Harbor",
+        "tide_note": "Trinidad Harbor is a subordinate prediction station referenced to Crescent City; it predicts water level, not swell, surge at the launch or bottom drift.",
+        "airport": "KACV",
+        "airport_name": "Arcata\u2013Eureka airport, McKinleyville",
+        "nearshore_buoy": "46244",
+        "nearshore_buoy_name": "Humboldt Bay North Spit \u00b7 southern wave reference",
+        "offshore_buoy": "46022",
+        "offshore_buoy_name": "Eel River \u00b7 17 NM WSW of Eureka",
+        "offshore_buoy_note": "South of the region in 456 m water; not an observation of Trinidad or Klamath fishing grounds."
+      },
+      "marine_zones": {
+        "coastal": "PZZ450",
+        "offshore": "PZZ470"
+      }
+    },
+    "klamath": {
+      "name": "Big Lagoon to the Klamath River",
+      "stations": {
+        "tide": "9419059",
+        "tide_name": "Trinidad Harbor",
+        "tide_note": "Trinidad Harbor predictions do not describe the Klamath River mouth, its bar or bottom drift.",
+        "airport": "KCEC",
+        "airport_name": "Crescent City airport \u00b7 northern reference",
+        "nearshore_buoy": "46027",
+        "nearshore_buoy_name": "St. Georges, CA \u00b7 northern wave reference",
+        "offshore_buoy": "46022",
+        "offshore_buoy_name": "Eel River \u00b7 17 NM WSW of Eureka",
+        "offshore_buoy_note": "South of the region in 456 m water; not an observation of Trinidad or Klamath fishing grounds."
+      },
+      "marine_zones": {
+        "coastal": "PZZ450",
+        "offshore": "PZZ470"
+      }
+    }
+  },
+  "intelligence": {
+    "hfr_resolutions_km": [
+      6
+    ],
+    "regional_current_model": "wcofs",
+    "wind_ensemble_model": "gfs025",
+    "wave_ensemble_provider": "noaa-gefs",
+    "verification_stations": [
+      {
+        "id": "46244",
+        "latitude": 40.896,
+        "longitude": -124.358,
+        "name": "Humboldt Bay North Spit \u00b7 southern wave reference",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46244"
+      },
+      {
+        "id": "46027",
+        "latitude": 41.84,
+        "longitude": -124.382,
+        "name": "St Georges \u00b7 northern wave reference",
+        "variables": [
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46027"
+      },
+      {
+        "id": "46022",
+        "latitude": 40.716,
+        "longitude": -124.54,
+        "name": "Eel River offshore",
+        "variables": [
+          "wind_speed",
+          "wave_height"
+        ],
+        "source_url": "https://www.ndbc.noaa.gov/station_page.php?station=46022"
+      }
+    ],
+    "comfort_defaults": {
+      "wind_knots": 8,
+      "gust_knots": 12,
+      "sea_feet": 3
+    },
+    "ecology_profile": "california-northern",
+    "providers": {
+      "hfr": "noaa-hfr-thredds",
+      "regional_current": "noaa-wcofs",
+      "wind_ensemble": "noaa-gefs-members",
+      "wave_ensemble": "noaa-gefs-wave-prob",
+      "spectra": "ndbc-buoys"
+    }
+  }
+}

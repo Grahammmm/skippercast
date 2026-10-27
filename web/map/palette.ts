@@ -16,6 +16,7 @@ export const PALETTE_TOKENS = {
   sst0: 'sst-0', sst1: 'sst-1', sst2: 'sst-2', sst3: 'sst-3', sst4: 'sst-4', sst5: 'sst-5',
   current0: 'current-0', current1: 'current-1', current2: 'current-2', current3: 'current-3', current4: 'current-4', current5: 'current-5',
   swell0: 'swell-0', swell1: 'swell-1', swell2: 'swell-2', swell3: 'swell-3',
+  contrast0: 'contrast-0', contrast1: 'contrast-1', contrast2: 'contrast-2',
   flow: 'flow', flowFast: 'flow-fast', mpaFill: 'mpa-fill', mpaFillOpacity: 'mpa-fill-opacity', mpaLine: 'mpa-line',
 } as const;
 

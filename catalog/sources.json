@@ -2389,6 +2389,130 @@
         "www.arcgis.com"
       ],
       "update_policy": "Manual reviewed import with the shore runs."
+    },
+    {
+      "id": "gebco-2026-grid",
+      "name": "GEBCO_2026 Grid and Type Identifier Grid (15 arc-second global terrain model)",
+      "provider": "GEBCO Bathymetric Compilation Group (Nippon Foundation-GEBCO Seabed 2030); archived by BODC with NERC CEDA",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.gebco.net/data-products/gridded-bathymetry-data",
+      "adapter": "gebco-grid-deep-fill",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-20",
+      "rights": {
+        "license": "public-domain (GEBCO terms of use); the CEDA archive copy is issued under OGL-UK-3.0",
+        "attribution": "GEBCO Bathymetric Compilation Group 2026 (2026). The GEBCO_2026 Grid - a continuous terrain model for oceans and land at 15 arc-second intervals. NERC EDS British Oceanographic Data Centre NOC. doi:10.5285/4f68d5c7-45eb-f999-e063-7086abc036fa",
+        "terms_url": "https://www.gebco.net/data-products/gridded-bathymetry/terms-of-use",
+        "archive_licence_url": "https://dap.ceda.ac.uk/bodc/gebco/global/gebco_2026/00README_catalogue_and_licence.txt",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "GEBCO's terms (checked 2026-10-20) place the grid in the public domain and allow copying, publishing and commercial exploitation, provided the source is acknowledged, no official status or GEBCO/IHO/IOC endorsement is implied and the grid is not misrepresented. The CEDA archive copy states OGL-UK-3.0 with the catalogue citation, which also allows commercial use with attribution. Use the citation above on every derived product; pending owner confirmation in the data-rights register."
+      },
+      "host_terms": {
+        "www.gebco.net": "Publisher documentation, terms of use and attribution text for the GEBCO grids. Public domain with acknowledgement; not for navigation or any purpose involving safety at sea.",
+        "dap.ceda.ac.uk": "NERC CEDA archive that serves the GEBCO_2026 files for BODC (public, no login). Its licence file names OGL-UK-3.0 and requires the catalogue citation; the GEBCO terms of use ship beside the data as GEBCO_Grid_terms_of_use.pdf."
+      },
+      "archive_url": "https://dap.ceda.ac.uk/bodc/gebco/global/gebco_2026/",
+      "authenticity": {
+        "basis": "Publisher documentation on www.gebco.net linking the CEDA archive directory; CEDA directory listing gives file sizes and dates; SHA-256 of every byte read recorded in the acquisition receipt",
+        "transport": "HTTPS; exact provider hosts only (www.gebco.net, dap.ceda.ac.uk); existing per-job and per-plan byte caps apply"
+      },
+      "coverage_note": "Global 15 arc-second grid (about 460 m north-south, about 370 m east-west at 36 N). Deep-fill candidate for lane D (>600 ft) seaward of the NOAA CRM extent; never a shelf or 0-300 ft source.",
+      "limitations": [
+        "15 arc-second cells are interpolated from heterogeneous sources; the TID grid must be read to tell direct measurements from interpolated or predicted cells, and a fine render does not make a predicted cell measured.",
+        "GEBCO assumes mean sea level for assimilated data, but some shallow areas use other datums; G3 (2026-10-20) admits this unstated/MSL datum in lanes M and D without an uncertainty bound, and every output stays labelled not for navigation.",
+        "Whole-file downloads are far beyond the per-job byte caps (GEBCO_2026.zip 4,252,016,343 bytes; GEBCO_2026.nc 7,466,018,396 bytes per the CEDA listing on 2026-10-20). Only bounded reads that fit the existing caps are admissible; dap.ceda.ac.uk answered an HTTP byte-range request on GEBCO_2026.nc with 206 on 2026-10-20.",
+        "download.gebco.net (user-defined area tool), data.ceda.ac.uk (browse UI) and www.bodc.ac.uk are NOT on the allowlist; this entry admits only www.gebco.net and dap.ceda.ac.uk.",
+        "Candidate only: catalog/review status must become approved in a separate reviewed change before any GEBCO-derived asset is published."
+      ],
+      "native_resolution_m": 460,
+      "vertical_datum": "MSL (assumed by GEBCO; mixed in some shallow areas)",
+      "survey_year": 2026,
+      "allowed_hosts": [
+        "www.gebco.net",
+        "dap.ceda.ac.uk"
+      ]
+    },
+    {
+      "id": "gmrt-synthesis",
+      "name": "Global Multi-Resolution Topography (GMRT) synthesis via GridServer",
+      "provider": "Lamont-Doherty Earth Observatory, Columbia University (GMRT; NSF-funded)",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://www.gmrt.org/services/gridserverinfo.php",
+      "adapter": "gmrt-gridserver-deep-fill",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-20",
+      "rights": {
+        "license": "CC-BY-4.0",
+        "attribution": "Ryan, W. B. F., et al. (2009), Global Multi-Resolution Topography (GMRT) synthesis data set, Geochem. Geophys. Geosyst., 10, Q03014, doi:10.1029/2008GC002332; data doi:10.1594/IEDA.100001",
+        "terms_url": "https://www.gmrt.org/about/terms_of_use.php",
+        "commercial_use": "allowed",
+        "attribution_required": true,
+        "commercial_note": "GMRT terms (checked 2026-10-20) license the site and its downloadable products under CC BY 4.0: commercial use is allowed with a byline/credit/link to GMRT and indication of changes. GMRT states its data should not be used for navigation and makes no accuracy claims for legacy data. Pending owner confirmation in the data-rights register."
+      },
+      "host_terms": {
+        "www.gmrt.org": "GMRT GridServer REST service and its terms of use. CC BY 4.0 with the citation above; not for navigation. No redirect to gmrt.org was observed on 2026-10-20; the bare gmrt.org host is NOT on the allowlist."
+      },
+      "authenticity": {
+        "basis": "Primary GMRT GridServer at Lamont-Doherty; request bounds, resolution, format and response SHA-256 recorded in the acquisition receipt; GMRT's attribution service names contributing cruises for a bounded area",
+        "transport": "HTTPS; exact provider host only (www.gmrt.org); existing per-job and per-plan byte caps apply"
+      },
+      "coverage_note": "Global multibeam synthesis at up to about 100 m where ship multibeam exists, GEBCO/other base grids elsewhere. Deep-fill candidate for lane D (>600 ft) seaward of the NOAA CRM extent; never a shelf or 0-300 ft source.",
+      "limitations": [
+        "Resolution varies by cell: contributed multibeam where present, a coarser base grid elsewhere; the request's attribution listing is needed to say which.",
+        "Legacy data carry no accuracy claim from the publisher; datum is treated as MSL/unstated under G3 (2026-10-20) and every output stays labelled not for navigation.",
+        "GridServer can return up to about 1 GB per request; every request must stay inside the existing per-job and per-plan byte caps.",
+        "Candidate only: catalog/review status must become approved in a separate reviewed change before any GMRT-derived asset is published."
+      ],
+      "native_resolution_m": 100,
+      "vertical_datum": "MSL/unstated",
+      "allowed_hosts": [
+        "www.gmrt.org"
+      ]
+    },
+    {
+      "id": "ncei-survey-footprints",
+      "name": "NOAA NCEI hydrographic and multibeam survey footprint services (ArcGIS REST)",
+      "provider": "NOAA National Centers for Environmental Information",
+      "needs": [
+        "bathymetry"
+      ],
+      "documentation_url": "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/nos_hydro_dynamic/MapServer",
+      "adapter": "ncei-footprint-discovery",
+      "review_status": "candidate",
+      "reviewed_at": "2026-10-20",
+      "rights": {
+        "license": "public-domain",
+        "attribution": "NOAA National Centers for Environmental Information",
+        "terms_url": "https://www.ngdc.noaa.gov/mgg/bathymetry/noshdb/",
+        "commercial_use": "allowed",
+        "attribution_required": false,
+        "commercial_note": "U.S. federal government footprint metadata (survey ids, extents, links). Discovery metadata only: it selects surveys, it is never terrain or published evidence itself."
+      },
+      "host_terms": {
+        "gis.ngdc.noaa.gov": "NCEI ArcGIS REST footprint layers (nos_hydro_dynamic, multibeam_dynamic, multibeam_footprints, multibeam_files). U.S. public domain; same publisher as the already-listed data.ngdc.noaa.gov and www.ngdc.noaa.gov."
+      },
+      "service_urls": [
+        "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/nos_hydro_dynamic/MapServer/0",
+        "https://gis.ngdc.noaa.gov/arcgis/rest/services/web_mercator/multibeam_dynamic/MapServer/0",
+        "https://gis.ngdc.noaa.gov/arcgis/rest/services/multibeam_footprints/MapServer/0"
+      ],
+      "authenticity": {
+        "basis": "Primary NCEI ArcGIS REST services; exact query URL, page completeness (object-id counts) and response SHA-256 recorded per query",
+        "transport": "HTTPS; exact provider host only (gis.ngdc.noaa.gov); bounded responses; original files are still fetched only from data.ngdc.noaa.gov"
+      },
+      "coverage_note": "Survey footprint and trackline metadata for U.S. waters; feeds survey enumeration (campaign P5) without adding a download host.",
+      "limitations": [
+        "A footprint or generalized trackline is a lead, not measured coverage of a cell; native files must still be qualified.",
+        "Paged ArcGIS responses must be checked for completeness before a count is reported."
+      ],
+      "allowed_hosts": [
+        "gis.ngdc.noaa.gov"
+      ]
     }
   ]
 }

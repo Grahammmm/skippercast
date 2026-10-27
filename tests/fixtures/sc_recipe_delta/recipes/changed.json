@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "slug": "morro-bay",
+  "bbox": [-121.5, 35.25, -121.0, 35.5],
+  "depth_target_ft": 120,
+  "sources": ["syn-alpha", "syn-beta"],
+  "source_review_status": {"syn-alpha": "approved", "syn-beta": "approved"},
+  "datum_policy": {
+    "mode": "preserve-source-datum",
+    "vertical_datum_by_source": {"syn-alpha": "NAVD88", "syn-beta": "unknown"}
+  },
+  "output_root": "runs/coast-recipes/morro-bay",
+  "cache_budget_bytes": 1000000,
+  "not_for_navigation": true
+}

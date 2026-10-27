@@ -129,9 +129,9 @@ fi
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
 backup="var/d1-$stamp.sql"
 $WRANGLER d1 export "$DB_NAME" --remote --output "$backup" --config "$CONFIG"
-$WRANGLER r2 object put "$BACKUP_BUCKET/d1/$stamp-${GITHUB_SHA:-local}.sql" --file "$backup" --remote --config "$CONFIG" >/dev/null
+$WRANGLER r2 object put "$BACKUP_BUCKET/d1/$stamp-${DEPLOY_SHA:-${GITHUB_SHA:-local}}.sql" --file "$backup" --remote --config "$CONFIG" >/dev/null
 rm -f "$backup"
-echo "D1 export saved to r2://$BACKUP_BUCKET/d1/$stamp-${GITHUB_SHA:-local}.sql"
+echo "D1 export saved to r2://$BACKUP_BUCKET/d1/$stamp-${DEPLOY_SHA:-${GITHUB_SHA:-local}}.sql"
 
 $WRANGLER d1 migrations apply "$DB_NAME" --remote --config "$CONFIG"
 # Record the version serving traffic now, so a failed smoke test can roll back to it.
@@ -150,7 +150,7 @@ for page in dist/client/*.html; do
   if [[ "$page" =~ \.([0-9a-f]{10})\.html$ ]]; then build=${BASH_REMATCH[1]}; break; fi
 done
 if [ -n "${GITHUB_OUTPUT:-}" ] && [ -n "$build" ]; then echo "build=$build" >> "$GITHUB_OUTPUT"; fi
-$WRANGLER deploy --config "$CONFIG" --message "${GITHUB_SHA:-local} run ${GITHUB_RUN_ID:-local}"
+$WRANGLER deploy --config "$CONFIG" --message "${DEPLOY_SHA:-${GITHUB_SHA:-local}} run ${GITHUB_RUN_ID:-local}"
 if [ -n "${GITHUB_OUTPUT:-}" ]; then echo "deployed=true" >> "$GITHUB_OUTPUT"; fi
 
 # Secrets uploaded to the Worker; optional ones only when provided to this job.
