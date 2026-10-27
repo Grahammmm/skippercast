@@ -228,7 +228,7 @@ export function countLines(json: string | null | undefined): CountLine[] {
 }
 /** "45 vermilion, 12 lingcod (2 released)". */
 export function countsText(lines: readonly CountLine[], copy: PageCopy): string {
-  return lines.map(c => {
+  return lines.filter(c => c.kept !== null || c.released !== null).map(c => {
     const kept = c.kept ?? 0, rel = c.released ?? 0;
     if (!kept && rel) return copy.releasedOnly(rel, c.label);
     return rel ? `${kept} ${c.label} (${copy.released(rel)})` : `${kept} ${c.label}`;
