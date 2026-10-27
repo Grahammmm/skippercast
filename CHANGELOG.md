@@ -3,6 +3,8 @@
 ## Unreleased
 
 - The mark card shows the forecast for a reef mark or ranked trip spot at the selected hour. NOAA and ECMWF wind and seas each get their own row, labelled with model and grid spacing. The forecast feed only has those at a few named points, so the card says so and shows the regional point's values, naming the point. The NOAA WCOFS surface current comes from the sampled ocean cell nearest the mark, with that cell's distance, when one is within 1.5 grid lengths.
+- SP-MAP-NOW: Withhold cloud tiles and native current frames when an explicitly supplied decision clock is not a valid Date. Omitted clocks still use the current time; source ages, forecast and observation selection, publisher hosts and tile queries are unchanged.
+
 - Save up to three NOAA tide prediction stations per region in this browser and switch between them; existing choices migrate, the region default is unchanged, and offline packs still include only the active station.
 - SP-BAR-EVENTS: The harbour bar tide estimate ignores malformed event rows and stays unknown when either selected tide timestamp has conflicting high/low tags. Ordinary ebb/flood timing, bar hazard rules and the Coast Guard check reminder are unchanged; this is not clearance to cross.
 
