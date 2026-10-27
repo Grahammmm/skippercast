@@ -15,7 +15,7 @@
 //
 // Erasable syntax only: the node tests import this file by type stripping.
 import {batch, computed, effect, signal, untracked} from '@preact/signals';
-import {buildExport, draftKey, exportPresetTargets, isMeasuredTarget, offlineNotes, readDraft} from '../dist/trip-export.js';
+import {buildExport, draftKey, exportPresetTargets, isMeasuredTarget, offlineNotes, protectedPlanHits, protectedPlanNotes, readDraft, userWaypoints, userWaypointTarget} from '../dist/trip-export.js';
 import {loadReefTrip} from '../dist/reef-trip-data.js';
 import {bestSpots, waypointTitle} from '../dist/spot-ranking.js';
 import {HOME_PORT_KEY} from '../dist/home-port.js';
@@ -27,13 +27,15 @@ export type Layers = {waypoints: boolean; outlines: boolean; alignments: boolean
 export type LayerKey = keyof Layers;
 export type TripSpecies = 'reef' | 'lingcod' | 'rockfish';
 export type RankedDraft = {sha256: string; species: TripSpecies; priorities: {id: string; rank: number}[]};
-export type Draft = {ids: string[]; rankedPlan: RankedDraft | null; name: string; date: string; avoidScope: 'map' | 'region'; layers: Layers};
+export type UserWaypoint = {id: string; name: string; category: string; latitude: number; longitude: number};
+export type Draft = {ids: string[]; userWaypoints?: UserWaypoint[]; rankedPlan: RankedDraft | null; name: string; date: string; avoidScope: 'map' | 'region'; layers: Layers};
 export type Target = {
   id: string; label: string; name?: string; latitude: number; longitude: number; habitat_grade?: string; canonical_habitat?: boolean;
   trip_rank?: number; trip_fit?: number; trip_species?: string; evidence_confidence?: {percent: number};
   neighborhood_depth_ft?: number[]; center_depth_ft?: number | null; terrain_interpretation?: string; species_fit?: Record<string, number>;
 };
 export type Area = {id: string};
+export type ProtectedHit = {id: string; label: string; matches: {name: string; url: string; agency: string}[]};
 export type Publication = {export_sha256?: string} & Record<string, unknown>;
 export type Atlas = {targets: Target[]; areas: Area[]; drifts?: unknown[]; publication?: Publication; source_validation_date?: string};
 export type Reefs = {targets: Target[]; areas: Area[]; publication: Publication & {export_sha256: string}; source_validation_date?: string};
@@ -60,7 +62,7 @@ export interface PlannerDeps {
   map: MapView;
   /** The atlas targets the Chart shows now. */
   getVisible(): Target[];
-  nav: {open(): void; showMap(): void; conditions(date: string): void};
+  nav: {open(): void; showMap(): void; conditions(date: string): void; chooseWaypoint?(pick: (at: {latitude: number; longitude: number}) => void): void};
   storage?: Pick<Storage, 'getItem' | 'setItem'> | null;
   now?: () => Date;
   loadReefs?: (region: string) => Promise<Reefs>;
@@ -116,6 +118,7 @@ export function createPlanner(deps: PlannerDeps) {
   try { savedPort = storage?.getItem(HOME_PORT_KEY) ?? null; } catch { /* storage blocked */ }
 
   const initial = readDraft(raw, atlas, today) as Draft;
+  const waypointPosition = signal<{latitude: number; longitude: number} | null>(null);
   const draft = signal<Draft>(initial);
   const tripAtlas = signal<Atlas>({...atlas, targets: [...atlas.targets], areas: [...atlas.areas]});
   const ranked = signal(false), filtersDirty = signal(false), restorePending = signal(!!initial.rankedPlan);
@@ -131,7 +134,10 @@ export function createPlanner(deps: PlannerDeps) {
     draft.value = next;
     try { storage?.setItem(draftKey(region.id), JSON.stringify(next)); storageNote.value = STORAGE_OK; } catch { storageNote.value = STORAGE_OFF; }
   };
-  const selected = (): Target[] => draft.value.ids.map(id => tripAtlas.value.targets.find(t => t.id === id)).filter((t): t is Target => !!t);
+  const selected = (): Target[] => {
+    const targets = [...tripAtlas.value.targets, ...(draft.value.userWaypoints ?? []).map(userWaypointTarget)];
+    return draft.value.ids.map(id => targets.find(t => t.id === id)).filter((t): t is Target => !!t);
+  };
   const rankedDetail = (): RankedDetail => ({targets: selected(), areas: tripAtlas.value.areas.filter(a => draft.value.ids.includes(a.id)), publication: tripAtlas.value.publication});
   const unrank = (): void => { ranked.value = false; emit({targets: [], areas: []}); };
 
@@ -141,15 +147,23 @@ export function createPlanner(deps: PlannerDeps) {
     if (filtersDirty.value) throw Error('Trip filters changed. Select Best available again before exporting.');
     if (d.layers.exclusions && d.avoidScope === 'map' && !map.getSize().x) throw Error('Open the map to choose its coverage first, or choose Whole selected region for protected-area outlines.');
     const b = map.getBounds();
-    return {allowResearch: allowResearch.value, atlas: tripAtlas.value, screen, ids: d.ids, layers: d.layers, region, title: `${d.name || 'My fishing day'} · ${d.date || today}`,
+    return {allowResearch: allowResearch.value, atlas: tripAtlas.value, userWaypoints: d.userWaypoints ?? [], screen, ids: d.ids, layers: d.layers, region, title: `${d.name || 'My fishing day'} · ${d.date || today}`,
       bounds: d.avoidScope === 'region' ? region.mpa.bounds : [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]};
   }
 
   /** What the counts depend on: a plan name or date keystroke never re-runs the screen or redraws the Chart. */
-  const exportKey = computed(() => { const d = draft.value; return JSON.stringify([d.ids, d.layers, d.avoidScope]); });
+  const exportKey = computed(() => { const d = draft.value; return JSON.stringify([d.ids, d.layers, d.avoidScope, d.userWaypoints]); });
   const summary = computed<Summary>(() => {
     void tick.value; void exportKey.value;
     try { return {ok: true, counts: (buildExport(request(draft.peek())) as {counts: Extract<Summary, {ok: true}>['counts']}).counts}; } catch (error) { return {ok: false, message: (error as Error).message}; }
+  });
+  const protectedHits = computed<ProtectedHit[]>(() => {
+    void tick.value;
+    return protectedPlanHits(screen, selected()) as ProtectedHit[];
+  });
+  const notesReady = computed(() => {
+    if (summary.value.ok) return true;
+    try { return !!protectedPlanNotes(request(), draft.value); } catch { return false; }
   });
   const spots = computed<Target[]>(() => {
     const q = search.value.trim().toLowerCase(), r = ranked.value, ids = draft.value.ids, research = allowResearch.value;
@@ -208,6 +222,27 @@ export function createPlanner(deps: PlannerDeps) {
     });
   }
   function open(): void { deps.nav.open(); tick.value++; }
+  function chooseWaypoint(): void {
+    deps.nav.chooseWaypoint?.(at => { waypointPosition.value = at; open(); });
+  }
+  function saveWaypoint(name: string, category: string): void {
+    const at = waypointPosition.value;
+    if (!at) return;
+    const candidate = {id: `user:${crypto.randomUUID()}`, name, category, ...at};
+    const points = userWaypoints([...(draft.value.userWaypoints ?? []), candidate]) as UserWaypoint[];
+    if (!points.some(t => t.id === candidate.id)) { actionStatus.value = 'Choose a name (up to 80 characters), a listed category and a valid map position. Limit: 100 waypoints.'; return; }
+    revision++;
+    batch(() => {
+      if (ranked.value) unrank();
+      persist({...draft.value, userWaypoints: points, ids: [...draft.value.ids, candidate.id]});
+      waypointPosition.value = null;
+      actionStatus.value = 'User waypoint saved on this browser. Category is your label, not verified habitat or navigation guidance.';
+    });
+  }
+  function removeWaypoint(id: string): void {
+    revision++;
+    persist({...draft.value, userWaypoints: (draft.value.userWaypoints ?? []).filter(t => t.id !== id), ids: draft.value.ids.filter(x => x !== id)});
+  }
 
   async function selectBest(): Promise<void> {
     const mine = ++revision, f = filters.value, b = map.getBounds();
@@ -289,7 +324,12 @@ export function createPlanner(deps: PlannerDeps) {
       tripAtlas.value = {...tripAtlas.value, publication: latest.publication};
     }
     // Repeat the authoritative screen here, even if the preview count was valid moments ago.
-    const d = draft.value, result = buildExport(request()) as {gpx: string; counts: {waypoints: number}};
+    const d = draft.value;
+    if (kind === 'notes') {
+      const context = protectedPlanNotes(request(), {...d, date: d.date || today});
+      if (context) return new File([context], `SkipperCast-${region.id}-${d.date || today}-boundary-context.html`, {type: 'text/html'});
+    }
+    const result = buildExport(request()) as {gpx: string; counts: {waypoints: number}};
     const base = `SkipperCast-${region.id}-${d.date || today}-${result.counts.waypoints}wp`;
     return kind === 'notes'
       ? new File([offlineNotes(result, region, {...d, date: d.date || today}, coordinates.value) as string], `${base}.html`, {type: 'text/html'})
@@ -326,7 +366,8 @@ export function createPlanner(deps: PlannerDeps) {
 
   return {
     today, region, draft, tripAtlas, ranked, filtersDirty, restorePending, allowResearch, search, loading, portsReady, filters, ports,
-    scopeStatus, actionStatus, storageNote, tick, summary, spots,
+    scopeStatus, actionStatus, storageNote, tick, summary, spots, protectedHits, notesReady, waypointPosition,
+    chooseWaypoint, saveWaypoint, removeWaypoint,
     setFilter, edit, setLayer, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, restore, exportFile, deliver, showOnMap, checkConditions,
     /** For tests and a region change: stop drawing the ranked set. */

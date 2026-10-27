@@ -26,6 +26,7 @@ import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {appView, base, habitat, region, selection, setParams, view} from '../state.ts';
 import {harborOrigin} from '../ranking.ts';
+import {placeWaypoint} from '../waypoint-placement.ts';
 import {shareStatic, sharedFetch} from '../shared-fetch.ts';
 import {loadPoster, poster} from './poster.ts';
 import {COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineFor, shorelineOverviewURL, shorelineURL, type ChartMark} from './coastline.ts';
@@ -202,6 +203,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
         pickFirst: () => drawn.flatMap(l => l.pick && !l.pick.ordered ? l.pick.layers : []),
         style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek(), shoreline: drawnShore = shorelineFor(id, start.zoom)}),
         onPick: (layer, properties, at) => {
+          if (placeWaypoint(region.peek(), at)) return;
           // A grouped ranked pin zooms to its spots and keeps the selection, as v1's does (#495).
           if (layer === RANKED_PICK && zoomToGroup(properties)) return;
           const other = layer === COASTLINE_PICK ? coastlineMark(properties) : layer === SEAFLOOR_PICK ? seafloor?.mark(String(properties?.id ?? '')) ?? null
