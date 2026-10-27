@@ -30,7 +30,9 @@ const LAUNCHES = read('regions/morro-bay/launch-points.json'), SHORE = read('reg
 const DATA = {region: {...MORRO, id: 'morro-bay'}, atlas: ATLAS, survey: null, geology: null};
 const NOW = Date.now();
 const CHECKED = assessScreen({areas: read('data/protected-areas.geojson').features, checkedAt: new Date(NOW).toISOString(), live: true}, NOW);
-const inputs = (patch = {}) => ({region: 'morro-bay', profile: 'spear', target: 'lingcod', coast: 'lingcod', data: DATA, screen: CHECKED, terrain: {state: 'unavailable'}, now: NOW, ...patch});
+// Every place is water here; the land/water check has its own tests (test_land_water.mjs).
+const WATER = () => ({state: 'water'});
+const inputs = (patch = {}) => ({region: 'morro-bay', profile: 'spear', target: 'lingcod', coast: 'lingcod', data: DATA, screen: CHECKED, terrain: {state: 'unavailable'}, now: NOW, place: WATER, ...patch});
 const CLAIMS = /safe|passage|reachable|guarantee|hotspot|catch/i;
 const LINES = linesOf(SHORE);
 

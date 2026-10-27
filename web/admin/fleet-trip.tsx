@@ -44,8 +44,10 @@ export const TRIP_COPY = {
 /** The nav and page-title label of the labelling views (web/admin/app.tsx FLEET_PAGES). */
 export const LABELS_LABEL = TRIP_COPY.heading;
 const COPY = TRIP_COPY;
-const KIND_COLOR: Record<string, string> = {'in-port': 'var(--ink-2)', 'transit': 'var(--brand)', 'drift-anchor': 'var(--kelp)', 'troll-slow': 'var(--caution)',
-  'troll-pelagic': 'var(--amber)', 'uncertain': 'var(--brand-tint)', 'gap': 'var(--line)'};
+// web/tokens.css names only (tests/test_admin_tokens.mjs). Each reaches 3:1 on --bg in the dark and light sets (WCAG 1.4.11);
+// the legend names every kind in words, so colour is never the only cue. Gap is also dashed on the map.
+const KIND_COLOR: Record<string, string> = {'in-port': 'var(--text)', 'transit': 'var(--blue)', 'drift-anchor': 'var(--depth-1)', 'troll-slow': 'var(--bathy-5)',
+  'troll-pelagic': 'var(--amber)', 'uncertain': 'var(--muted)', 'gap': 'var(--coral)'};
 
 interface TripRow {
   id: string; region: string; vessel_id: string; vessel_name: string | null; vessel_class: string | null; mmsi: string; depart_port_id: string | null;
@@ -261,9 +263,9 @@ function TrackMap({segments, range}: {segments: Segment[]; range: {from: string;
   const xy = ([lon, lat]: [number, number]): string => `${(PAD + (lon - w) * k * scale).toFixed(1)},${(MAP_H - PAD - (lat - s) * scale).toFixed(1)}`;
   const inRange = (seg: Segment): boolean => !!range && ms(seg.started_at) < ms(range.to) && ms(seg.ended_at) > ms(range.from);
   return (
-    <svg viewBox={`0 0 ${W} ${MAP_H}`} role="img" aria-label={COPY.mapLabel} style={{width: '100%', maxWidth: `${W}px`, background: 'var(--surface)'}}>
+    <svg viewBox={`0 0 ${W} ${MAP_H}`} role="img" aria-label={COPY.mapLabel} style={{width: '100%', maxWidth: `${W}px`, background: 'var(--bg)'}}>
       {segments.filter(seg => seg.coordinates.length).map(seg => (
-        <polyline key={seg.id} points={seg.coordinates.map(xy).join(' ')} fill="none" stroke={KIND_COLOR[seg.kind] ?? 'var(--ink)'}
+        <polyline key={seg.id} points={seg.coordinates.map(xy).join(' ')} fill="none" stroke={KIND_COLOR[seg.kind] ?? 'var(--text)'}
           stroke-width={inRange(seg) ? 5 : 2.5} stroke-dasharray={seg.kind === 'gap' ? '4 4' : undefined} stroke-linecap="round" stroke-linejoin="round">
           <title>{`${COPY.kinds[seg.kind] ?? seg.kind} (${COPY.inferred.toLowerCase()}), ${when(seg.started_at)}`}</title>
         </polyline>
@@ -281,23 +283,23 @@ function SpeedStrip({span, segments, labels, range, onPick}: {span: {from: strin
   const top = Math.max(10, ...segments.map(s => s.mean_sog ?? 0));
   const height = STRIP_H + LANE + 6;
   return (
-    <svg viewBox={`0 0 ${W} ${height}`} role="img" aria-label={COPY.stripLabel} style={{width: '100%', maxWidth: `${W}px`, background: 'var(--surface)'}}>
+    <svg viewBox={`0 0 ${W} ${height}`} role="img" aria-label={COPY.stripLabel} style={{width: '100%', maxWidth: `${W}px`, background: 'var(--bg)'}}>
       {segments.map(s => {
         const h = Math.max(2, ((s.mean_sog ?? 0) / top) * (STRIP_H - 4));
         return (
           <rect key={s.id} x={x(s.started_at)} y={STRIP_H - h} width={Math.max(1, x(s.ended_at) - x(s.started_at))} height={h}
-            fill={KIND_COLOR[s.kind] ?? 'var(--ink)'} style={{cursor: 'pointer'}} onClick={() => onPick(s)}>
+            fill={KIND_COLOR[s.kind] ?? 'var(--text)'} style={{cursor: 'pointer'}} onClick={() => onPick(s)}>
             <title>{`${COPY.kinds[s.kind] ?? s.kind} (${COPY.inferred.toLowerCase()}): ${s.mean_sog ?? '—'} kn, ${when(s.started_at)}`}</title>
           </rect>
         );
       })}
       {labels.map(l => (
         <rect key={l.id} x={x(l.started_at)} y={STRIP_H + 4} width={Math.max(1, x(l.ended_at) - x(l.started_at))} height={LANE}
-          fill={KIND_COLOR[l.label] ?? 'var(--ink)'} stroke="var(--ink)" stroke-width={1}>
+          fill={KIND_COLOR[l.label] ?? 'var(--text)'} stroke="var(--text)" stroke-width={1}>
           <title>{`${COPY.kinds[l.label] ?? l.label}: ${l.basis ?? ''}`}</title>
         </rect>
       ))}
-      {range ? <rect x={x(range.from)} y={1} width={Math.max(1, x(range.to) - x(range.from))} height={height - 2} fill="none" stroke="var(--ink)" stroke-width={2} /> : null}
+      {range ? <rect x={x(range.from)} y={1} width={Math.max(1, x(range.to) - x(range.from))} height={height - 2} fill="none" stroke="var(--text)" stroke-width={2} /> : null}
     </svg>
   );
 }

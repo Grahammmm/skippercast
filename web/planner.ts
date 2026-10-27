@@ -9,25 +9,33 @@
 // A selection revision guards the slow calls: a change made while Best available
 // or a restore loads wins over that call's answer, as in v1.
 //
+// CI6-01B: Best available and a restore first load the region's land/water check
+// (web/land-water.ts); only spots it confirms as water are ranked or restored, and
+// the status counts the ones it withheld.
+//
 // Erasable syntax only: the node tests import this file by type stripping.
 import {batch, computed, effect, signal, untracked} from '@preact/signals';
-import {buildExport, draftKey, exportPresetTargets, isMeasuredTarget, offlineNotes, readDraft} from '../dist/trip-export.js';
+import {buildExport, draftKey, exportPresetTargets, isMeasuredTarget, offlineNotes, protectedPlanHits, protectedPlanNotes, readDraft, userWaypoints, userWaypointTarget} from '../dist/trip-export.js';
 import {loadReefTrip} from '../dist/reef-trip-data.js';
 import {bestSpots, waypointTitle} from '../dist/spot-ranking.js';
 import {HOME_PORT_KEY} from '../dist/home-port.js';
 import {track} from './telemetry.ts';
+import {ensureLandWater, withheldNote, type Place} from './land-water.ts';
+import {coordinates} from './state.ts';
 
 export type Layers = {waypoints: boolean; outlines: boolean; alignments: boolean; exclusions: boolean};
 export type LayerKey = keyof Layers;
 export type TripSpecies = 'reef' | 'lingcod' | 'rockfish';
 export type RankedDraft = {sha256: string; species: TripSpecies; priorities: {id: string; rank: number}[]};
-export type Draft = {ids: string[]; rankedPlan: RankedDraft | null; name: string; date: string; avoidScope: 'map' | 'region'; layers: Layers};
+export type UserWaypoint = {id: string; name: string; category: string; latitude: number; longitude: number};
+export type Draft = {ids: string[]; userWaypoints?: UserWaypoint[]; rankedPlan: RankedDraft | null; name: string; date: string; avoidScope: 'map' | 'region'; layers: Layers};
 export type Target = {
   id: string; label: string; name?: string; latitude: number; longitude: number; habitat_grade?: string; canonical_habitat?: boolean;
   trip_rank?: number; trip_fit?: number; trip_species?: string; evidence_confidence?: {percent: number};
   neighborhood_depth_ft?: number[]; center_depth_ft?: number | null; terrain_interpretation?: string; species_fit?: Record<string, number>;
 };
 export type Area = {id: string};
+export type ProtectedHit = {id: string; label: string; matches: {name: string; url: string; agency: string}[]};
 export type Publication = {export_sha256?: string} & Record<string, unknown>;
 export type Atlas = {targets: Target[]; areas: Area[]; drifts?: unknown[]; publication?: Publication; source_validation_date?: string};
 export type Reefs = {targets: Target[]; areas: Area[]; publication: Publication & {export_sha256: string}; source_validation_date?: string};
@@ -54,7 +62,7 @@ export interface PlannerDeps {
   map: MapView;
   /** The atlas targets the Chart shows now. */
   getVisible(): Target[];
-  nav: {open(): void; showMap(): void; conditions(date: string): void};
+  nav: {open(): void; showMap(): void; conditions(date: string): void; chooseWaypoint?(pick: (at: {latitude: number; longitude: number}) => void): void};
   storage?: Pick<Storage, 'getItem' | 'setItem'> | null;
   now?: () => Date;
   loadReefs?: (region: string) => Promise<Reefs>;
@@ -63,6 +71,8 @@ export interface PlannerDeps {
   reachNm?: number | null;
   /** The ranked set the Chart draws (web/trip.ts listens for `skippercast:trip-ranked`). */
   emit?: (detail: RankedDetail) => void;
+  /** The region's land/water check for these spots (web/land-water.ts `ensureLandWater`). */
+  landWater?: (region: string, spots: readonly Target[]) => Promise<Place>;
 }
 
 const LOADING = 'Loading current screened reefs…';
@@ -100,6 +110,7 @@ export function createPlanner(deps: PlannerDeps) {
   const now = deps.now ?? (() => new Date());
   const loadReefs = deps.loadReefs ?? reefTrip;
   const emit = deps.emit ?? dispatch;
+  const landWater = deps.landWater ?? ((id: string, spots: readonly Target[]) => ensureLandWater(id, spots));
   const today = new Intl.DateTimeFormat('en-CA', {timeZone: region.timezone, year: 'numeric', month: '2-digit', day: '2-digit'}).format(now());
   let raw: string | null = null;
   try { raw = storage?.getItem(draftKey(region.id)) ?? null; } catch { /* storage blocked */ }
@@ -107,6 +118,7 @@ export function createPlanner(deps: PlannerDeps) {
   try { savedPort = storage?.getItem(HOME_PORT_KEY) ?? null; } catch { /* storage blocked */ }
 
   const initial = readDraft(raw, atlas, today) as Draft;
+  const waypointPosition = signal<{latitude: number; longitude: number} | null>(null);
   const draft = signal<Draft>(initial);
   const tripAtlas = signal<Atlas>({...atlas, targets: [...atlas.targets], areas: [...atlas.areas]});
   const ranked = signal(false), filtersDirty = signal(false), restorePending = signal(!!initial.rankedPlan);
@@ -122,7 +134,10 @@ export function createPlanner(deps: PlannerDeps) {
     draft.value = next;
     try { storage?.setItem(draftKey(region.id), JSON.stringify(next)); storageNote.value = STORAGE_OK; } catch { storageNote.value = STORAGE_OFF; }
   };
-  const selected = (): Target[] => draft.value.ids.map(id => tripAtlas.value.targets.find(t => t.id === id)).filter((t): t is Target => !!t);
+  const selected = (): Target[] => {
+    const targets = [...tripAtlas.value.targets, ...(draft.value.userWaypoints ?? []).map(userWaypointTarget)];
+    return draft.value.ids.map(id => targets.find(t => t.id === id)).filter((t): t is Target => !!t);
+  };
   const rankedDetail = (): RankedDetail => ({targets: selected(), areas: tripAtlas.value.areas.filter(a => draft.value.ids.includes(a.id)), publication: tripAtlas.value.publication});
   const unrank = (): void => { ranked.value = false; emit({targets: [], areas: []}); };
 
@@ -132,15 +147,23 @@ export function createPlanner(deps: PlannerDeps) {
     if (filtersDirty.value) throw Error('Trip filters changed. Select Best available again before exporting.');
     if (d.layers.exclusions && d.avoidScope === 'map' && !map.getSize().x) throw Error('Open the map to choose its coverage first, or choose Whole selected region for protected-area outlines.');
     const b = map.getBounds();
-    return {allowResearch: allowResearch.value, atlas: tripAtlas.value, screen, ids: d.ids, layers: d.layers, region, title: `${d.name || 'My fishing day'} · ${d.date || today}`,
+    return {allowResearch: allowResearch.value, atlas: tripAtlas.value, userWaypoints: d.userWaypoints ?? [], screen, ids: d.ids, layers: d.layers, region, title: `${d.name || 'My fishing day'} · ${d.date || today}`,
       bounds: d.avoidScope === 'region' ? region.mpa.bounds : [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]};
   }
 
   /** What the counts depend on: a plan name or date keystroke never re-runs the screen or redraws the Chart. */
-  const exportKey = computed(() => { const d = draft.value; return JSON.stringify([d.ids, d.layers, d.avoidScope]); });
+  const exportKey = computed(() => { const d = draft.value; return JSON.stringify([d.ids, d.layers, d.avoidScope, d.userWaypoints]); });
   const summary = computed<Summary>(() => {
     void tick.value; void exportKey.value;
     try { return {ok: true, counts: (buildExport(request(draft.peek())) as {counts: Extract<Summary, {ok: true}>['counts']}).counts}; } catch (error) { return {ok: false, message: (error as Error).message}; }
+  });
+  const protectedHits = computed<ProtectedHit[]>(() => {
+    void tick.value;
+    return protectedPlanHits(screen, selected()) as ProtectedHit[];
+  });
+  const notesReady = computed(() => {
+    if (summary.value.ok) return true;
+    try { return !!protectedPlanNotes(request(), draft.value); } catch { return false; }
   });
   const spots = computed<Target[]>(() => {
     const q = search.value.trim().toLowerCase(), r = ranked.value, ids = draft.value.ids, research = allowResearch.value;
@@ -199,6 +222,27 @@ export function createPlanner(deps: PlannerDeps) {
     });
   }
   function open(): void { deps.nav.open(); tick.value++; }
+  function chooseWaypoint(): void {
+    deps.nav.chooseWaypoint?.(at => { waypointPosition.value = at; open(); });
+  }
+  function saveWaypoint(name: string, category: string): void {
+    const at = waypointPosition.value;
+    if (!at) return;
+    const candidate = {id: `user:${crypto.randomUUID()}`, name, category, ...at};
+    const points = userWaypoints([...(draft.value.userWaypoints ?? []), candidate]) as UserWaypoint[];
+    if (!points.some(t => t.id === candidate.id)) { actionStatus.value = 'Choose a name (up to 80 characters), a listed category and a valid map position. Limit: 100 waypoints.'; return; }
+    revision++;
+    batch(() => {
+      if (ranked.value) unrank();
+      persist({...draft.value, userWaypoints: points, ids: [...draft.value.ids, candidate.id]});
+      waypointPosition.value = null;
+      actionStatus.value = 'User waypoint saved on this browser. Category is your label, not verified habitat or navigation guidance.';
+    });
+  }
+  function removeWaypoint(id: string): void {
+    revision++;
+    persist({...draft.value, userWaypoints: (draft.value.userWaypoints ?? []).filter(t => t.id !== id), ids: draft.value.ids.filter(x => x !== id)});
+  }
 
   async function selectBest(): Promise<void> {
     const mine = ++revision, f = filters.value, b = map.getBounds();
@@ -208,13 +252,17 @@ export function createPlanner(deps: PlannerDeps) {
       await portsLoaded;
       const loaded = await loadReefs(region.id);
       if (mine !== revision) return;
+      // Distances run from the chosen listed port (web/ranking.ts `Origin`), never the device position; no port, no distance.
       const port = ports.value.find(p => p.id === f.port);
       if (f.scope === 'map' && !map.getSize().x) throw Error('Open the map first to choose its area.');
       if (f.depth > 300 || f.depth < 25 || !Number.isFinite(f.distance) || f.distance <= 0) throw Error('Choose a depth from 25–300 ft and a positive distance.');
+      const place = await landWater(region.id, loaded.targets), stats = {withheld: 0};
+      if (mine !== revision) return;
       const best = rankBest(loaded, screen, {species: f.species, count: f.limit, maxDepth: f.depth, maxDistanceNm: f.distance,
         bounds: f.scope === 'map' ? [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()] : null,
-        origin: port ? {latitude: port.match[0], longitude: port.match[1]} : null});
-      if (!best.length) throw Error('No ranked reefs meet these filters and current checks. Widen the area or distance; no weaker spots were added.');
+        origin: port ? {latitude: port.match[0], longitude: port.match[1]} : null, place, stats});
+      const held = withheldNote(stats.withheld);
+      if (!best.length) throw Error(`No ranked reefs meet these filters and current checks.${held ? ` ${held}` : ''} Widen the area or distance; no weaker spots were added.`);
       canonical = loaded;
       const d = draft.value, ids = best.map(t => t.id);
       const name = d.name === 'My fishing day' ? 'Lingcod + rockfish' : d.name, date = d.date === today ? nextFriday(today) : d.date;
@@ -225,7 +273,7 @@ export function createPlanner(deps: PlannerDeps) {
         persist({...d, ids, name, date, layers: {...RANKED_LAYERS},
           rankedPlan: {sha256: loaded.publication.export_sha256, species: f.species, priorities: best.map(t => ({id: t.id, rank: t.trip_rank!}))}});
         ranked.value = true;
-        scopeStatus.value = `${best.length} distinct reef spots ranked. Waypoints + reef outlines only. ${best.length < f.limit ? 'Fewer than your requested limit qualified. ' : ''}Check conditions for ${date} before committing to the trip.`;
+        scopeStatus.value = `${best.length} distinct reef spots ranked. Waypoints + reef outlines only. ${best.length < f.limit ? 'Fewer than your requested limit qualified. ' : ''}${held ? `${held} ` : ''}Check conditions for ${date} before committing to the trip.`;
       });
     } catch (error) {
       if (mine === revision) scopeStatus.value = (error as Error).message;
@@ -245,6 +293,9 @@ export function createPlanner(deps: PlannerDeps) {
       if (!restorePending.value || !plan || mine !== revision) return;
       if (plan.sha256 !== loaded.publication.export_sha256) throw Error('Saved reef data changed. Select Best available again; your saved selections have been retained for review.');
       if (plan.priorities.some(p => !loaded.targets.some(t => t.id === p.id))) throw Error('Saved reefs are unavailable. Select Best available again.');
+      const saved = loaded.targets.filter(t => plan.priorities.some(p => p.id === t.id)), place = await landWater(region.id, saved);
+      if (!restorePending.value || mine !== revision) return;
+      if (saved.some(t => place(t).state !== 'water')) throw Error('A saved spot is not confirmed on water by the current land/water check. Select Best available again.');
       canonical = loaded;
       batch(() => {
         tripAtlas.value = {...tripAtlas.value, publication: loaded.publication, source_validation_date: loaded.source_validation_date, areas: [...atlas.areas, ...loaded.areas],
@@ -273,10 +324,15 @@ export function createPlanner(deps: PlannerDeps) {
       tripAtlas.value = {...tripAtlas.value, publication: latest.publication};
     }
     // Repeat the authoritative screen here, even if the preview count was valid moments ago.
-    const d = draft.value, result = buildExport(request()) as {gpx: string; counts: {waypoints: number}};
+    const d = draft.value;
+    if (kind === 'notes') {
+      const context = protectedPlanNotes(request(), {...d, date: d.date || today});
+      if (context) return new File([context], `SkipperCast-${region.id}-${d.date || today}-boundary-context.html`, {type: 'text/html'});
+    }
+    const result = buildExport(request()) as {gpx: string; counts: {waypoints: number}};
     const base = `SkipperCast-${region.id}-${d.date || today}-${result.counts.waypoints}wp`;
     return kind === 'notes'
-      ? new File([offlineNotes(result, region, {...d, date: d.date || today}) as string], `${base}.html`, {type: 'text/html'})
+      ? new File([offlineNotes(result, region, {...d, date: d.date || today}, coordinates.value) as string], `${base}.html`, {type: 'text/html'})
       : new File([result.gpx], `${base}.gpx`, {type: 'application/gpx+xml'});
   }
   const save = (file: File): void => {
@@ -310,7 +366,8 @@ export function createPlanner(deps: PlannerDeps) {
 
   return {
     today, region, draft, tripAtlas, ranked, filtersDirty, restorePending, allowResearch, search, loading, portsReady, filters, ports,
-    scopeStatus, actionStatus, storageNote, tick, summary, spots,
+    scopeStatus, actionStatus, storageNote, tick, summary, spots, protectedHits, notesReady, waypointPosition,
+    chooseWaypoint, saveWaypoint, removeWaypoint,
     setFilter, edit, setLayer, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, restore, exportFile, deliver, showOnMap, checkConditions,
     /** For tests and a region change: stop drawing the ranked set. */

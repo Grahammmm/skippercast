@@ -32,7 +32,7 @@ function counts(json: string): Count[] {
     if (!Array.isArray(v)) return [];
     return v.filter(c => c && typeof c === 'object').slice(0, 12).map(c => ({
       species_key: typeof c.species_key === 'string' ? c.species_key : 'other', label: typeof c.label === 'string' ? c.label.slice(0, 40) : '',
-      kept: Number.isFinite(c.kept) ? c.kept : null, released: Number.isFinite(c.released) ? c.released : null,
+      kept: Number.isSafeInteger(c.kept) && c.kept >= 0 ? c.kept : null, released: Number.isSafeInteger(c.released) && c.released >= 0 ? c.released : null,
     }));
   } catch { return []; }
 }

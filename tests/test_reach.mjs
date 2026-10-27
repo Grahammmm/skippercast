@@ -29,7 +29,8 @@ const MORRO = read('regions/morro-bay/region.json'), ATLAS = read('data/atlas.js
 const DATA = {region: {...MORRO, id: 'morro-bay'}, atlas: ATLAS, survey: null, geology: null};
 const NOW = Date.now();
 const CHECKED = assessScreen({areas: read('data/protected-areas.geojson').features, checkedAt: new Date(NOW).toISOString(), live: true}, NOW);
-const inputs = (patch = {}) => ({region: 'morro-bay', profile: 'boat', target: 'lingcod', coast: 'lingcod', data: DATA, screen: CHECKED, terrain: {state: 'unavailable'}, now: NOW, ...patch});
+const inputs = (patch = {}) => ({region: 'morro-bay', profile: 'boat', target: 'lingcod', coast: 'lingcod', data: DATA, screen: CHECKED, terrain: {state: 'unavailable'}, now: NOW,
+  place: () => ({state: 'water'}), ...patch});
 const HARBOR = harborOrigin(DATA);
 const CLAIMS = /safe|passage|reachable|guarantee|hotspot|catch/i;
 

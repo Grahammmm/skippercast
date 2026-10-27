@@ -9,7 +9,8 @@ import time
 from pathlib import Path
 
 from ..handoff.common import load, ref, write, digest, confined, epoch
-from ..authenticated_v1.profiles import grant_identity, validate_grant_packet, CONTAINED
+from ..authenticated_v1.profiles import grant_identity, validate_grant_packet, CONTAINED, PARTIAL_SUPPORT, PARTIAL_WINDOWS, support_policy
+from ..authenticated_v1.policy import WINDOW_QUALITY_HOLDS
 from .authenticated import INPUT_CONTRACT, actual_unit_check, metadata_document, _source_identity
 from .loop import Coordinator, controller_lock, implementation_hashes
 from .store import Store
@@ -19,12 +20,26 @@ PREPARATION = "coastal-ordered-trial-preparation-v1"
 ACTION = "coastal-ordered-trial-action-v1"
 STATE = "coastal-ordered-trial-state-v1"
 WINDOWS = [[4046,3531,32,32],[3958,3474,32,32],[3764,3429,32,32],[3859,3366,32,32]]
+SUPPORTED_WINDOW_SIDES = (32, 64, 128)
 LARGER_SCOPE = "coastal-ordered-four128-v2"
 LARGER_RUNTIME = "coastal-managed-eight-copy-four128-v1"
 SCOPE_REVIEW = "coastal-ordered-scope-review-v1"
-LARGER_WINDOWS = [[3890,3488,128,128],[4018,3488,128,128],[3890,3360,128,128],[4018,3360,128,128]]
-LARGER_BOUNDS = [728871,3818923,729383,3819435]
+# T08-FIX3 (G option A, Fable ruling 2026-10-19 21:50 PDT): attempt 4's block at
+# origin [3890,3360] had mask-invalid cells in B and D, so the whole 2x2 block
+# moved one column west to the fully valid block the window pre-scan selected.
+LARGER_WINDOWS = [[3762,3488,128,128],[3890,3488,128,128],[3762,3360,128,128],[3890,3360,128,128]]
+LARGER_BOUNDS = [728615,3818923,729127,3819435]
 LARGER_AFFINE = [2,0,721091,0,-2,3826155]
+# SC-5 (G option A, 2026-10-20): the separately pinned partial-support four128
+# set (PARTIAL_WINDOWS, pinned in authenticated_v1.profiles so grant identity
+# enforces it) and its native bounds. Admitted only with
+# support_policy=PARTIAL_SUPPORT; the strict scope keeps LARGER_WINDOWS.
+PARTIAL_BOUNDS = [728359,3818155,730151,3819179]
+
+def scope_windows(grant):
+    """The pinned four128 window set and native bounds for a grant's support policy."""
+    if support_policy(CONTAINED,grant)==PARTIAL_SUPPORT:return PARTIAL_WINDOWS,PARTIAL_BOUNDS
+    return LARGER_WINDOWS,LARGER_BOUNDS
 
 def validate_larger_runtime(grant):
     if grant.get('larger_runtime_contract') is None:return False
@@ -50,12 +65,15 @@ def validate_scope_review(root,grant,*,now,horizon):
     if domain.get("execution_profile")!=CONTAINED or domain.get("window_count")!=4:
         raise ValueError("contained four-window admission required")
     side=domain.get("window_side")
-    if side==32:
+    if side in SUPPORTED_WINDOW_SIDES and side != 128:
         if grant.get("ordered_scope_contract") is not None or grant.get("geographic_review") is not None:
             raise ValueError("legacy scope cannot inherit a new geographic admission")
+        if domain.get("support_policy") is not None:
+            raise ValueError("partial support is pinned to the ordered four128 scope")
         return None
+    windows,bounds=scope_windows(domain)
     if (side!=128 or grant.get("ordered_scope_contract")!=LARGER_SCOPE
-            or domain.get("window_set")!=LARGER_WINDOWS):
+            or domain.get("window_set")!=windows):
         raise ValueError("explicit exact ordered four128 scope required")
     from ..output_writer import validate_output_plan
     validate_output_plan(grant)
@@ -67,9 +85,10 @@ def validate_scope_review(root,grant,*,now,horizon):
             or review.get("holds")!=[] or review.get("source")!=grant["source"]
             or review.get("ordered_scope_contract")!=LARGER_SCOPE
             or review.get("execution_profile")!=CONTAINED
+            or review.get("support_policy")!=domain.get("support_policy")
             or type(review.get("window_side")) is not int or review["window_side"]!=128
             or type(review.get("window_count")) is not int or review["window_count"]!=4
-            or review.get("window_set")!=LARGER_WINDOWS):
+            or review.get("window_set")!=windows):
         raise ValueError("independent exact larger geographic scope binding")
     for key,length in (("grid_shape",2),("global_affine",6),("native_bounds",4)):
         values=review.get(key)
@@ -77,7 +96,7 @@ def validate_scope_review(root,grant,*,now,horizon):
                 or any(type(v) not in (int,float) or not math.isfinite(v) for v in values)):
             raise ValueError("finite nonboolean larger grid geometry")
     if (review.get("grid_shape")!=[10495,10034] or review.get("global_affine")!=LARGER_AFFINE
-            or review.get("native_crs")!="EPSG:26910" or review.get("native_bounds")!=LARGER_BOUNDS
+            or review.get("native_crs")!="EPSG:26910" or review.get("native_bounds")!=bounds
             or review.get("scope_basis")!="new_native_grid_target"
             or review.get("historical_support_qualified") is not False
             or review.get("native_quality_accepted") is not False
@@ -89,8 +108,8 @@ def validate_scope_review(root,grant,*,now,horizon):
     safety=review.get("safety_bbox_native")
     if (not isinstance(safety,list) or len(safety)!=4
             or any(type(v) not in (int,float) or not math.isfinite(v) for v in safety)
-            or safety[0]>LARGER_BOUNDS[0]-1 or safety[1]>LARGER_BOUNDS[1]-1
-            or safety[2]<LARGER_BOUNDS[2]+1 or safety[3]<LARGER_BOUNDS[3]+1):
+            or safety[0]>bounds[0]-1 or safety[1]>bounds[1]-1
+            or safety[2]<bounds[2]+1 or safety[3]<bounds[3]+1):
         raise ValueError("larger whole-block safety margin")
     segment=review.get("segment")
     if (not isinstance(segment,dict) or segment.get("schema")!="coastal-segment-v1"
@@ -109,6 +128,7 @@ def validate_scope_packet(root,grant,packet,*,now,horizon,review=None):
             or packet.get("geographic_review")!=grant["geographic_review"]
             or packet.get("output_retention")!=grant["output_retention"]
             or packet.get("output_root")!=grant["output_root"]
+            or packet.get("support_policy")!=grant.get("support_policy")
             or packet.get("larger_runtime_contract")!=grant.get("larger_runtime_contract")):
         raise ValueError("packet larger geographic review differs from grant")
     segment=metadata_document(root,packet["segment"],"coastal-segment-v1")
@@ -116,7 +136,7 @@ def validate_scope_packet(root,grant,packet,*,now,horizon,review=None):
         raise ValueError("packet larger segment differs from independent scope")
     spec=packet["fixed_center_plan"];window=spec["native_window"];c,r,w,h=window
     center=[721091+2*(c+w/2),3826155-2*(r+h/2)]
-    if (window not in LARGER_WINDOWS or spec.get("center_native")!=center
+    if (window not in scope_windows(grant)[0] or spec.get("center_native")!=center
             or spec.get("safety_bbox_native")!=review["safety_bbox_native"]
             or spec.get("segment")!=segment
             or spec.get("ordered_scope_contract")!=LARGER_SCOPE
@@ -214,6 +234,10 @@ def prepare(root, grant_ref, request_refs, *, start_epoch, deadline_epoch,
             raise ValueError("exact nonrefundable continuation source carry required")
     review=validate_scope_review(root,grant,now=start,horizon=end)
     windows=domain["window_set"]
+    # The verified 32-cell trial stays pinned to its four historical windows so it
+    # reproduces the prior 4,096 pairs byte-identically. 64 and 128 admit their own
+    # windows inside the same supported-side gate (128 is further bound by the
+    # larger-scope review above); this is a trial-preservation guard, not a size pin.
     if domain["window_side"]==32 and windows!=WINDOWS:
         raise ValueError("fixed ordered four-window scope required")
     from ..authenticated_v1.source_reuse import source_volume_cap
@@ -424,8 +448,7 @@ class RealAdapter:
                 or not epoch(review["checked_at"])<=self.native.clock()<epoch(review["valid_until"])
                 or epoch(review["valid_until"])<=preparation["deadline_epoch"]):
             raise ValueError("fresh independent rejected review required")
-        local={"native_support_empty","bounded_patch_nominal_support_incomplete",
-               "bounded_patch_nominal_depth_out_of_range","bounded_patch_uncertainty_quality_failed"}
+        local=WINDOW_QUALITY_HOLDS
         if hold.get("hold_scope") not in {"window_quality","common_source"}:
             raise ValueError("explicit bounded review hold scope required")
         if hold["hold_scope"]=="window_quality" and any(h not in local for h in holds):
@@ -744,8 +767,7 @@ class Controller:
                 if outcome["state"]=="held":
                     held=store.db.execute("SELECT holds_json FROM jobs WHERE job_id=?",(job,)).fetchone()
                     holds=json.loads(held["holds_json"])
-                    local={"native_support_empty","bounded_patch_nominal_support_incomplete",
-                        "bounded_patch_nominal_depth_out_of_range","bounded_patch_uncertainty_quality_failed"}
+                    local=WINDOW_QUALITY_HOLDS
                     record=json.loads(store.db.execute("SELECT record_json FROM jobs WHERE job_id=?",(job,)).fetchone()[0])
                     if record.get("hold_scope")=="common_source" or not holds or any(h not in local for h in holds):
                         state["stop_reason"]="common_hold"

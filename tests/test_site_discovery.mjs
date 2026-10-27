@@ -52,6 +52,11 @@ test('the pages served at two paths each name one canonical; the map and private
   for (const page of ['admin.html', 'chat.html', 'my-data.html', 'upload.html']) assert.deepEqual(meta(read(page), 'name', 'robots'), ['noindex'], `${page} stays out of search`);
 });
 
+test('the .html legal and research pages name one self-referencing canonical', () => {
+  for (const page of ['terms.html', 'licenses.html', 'species-research.html'])
+    assert.deepEqual(canonical(read(page)), [`${ORIGIN}/${page}`], page);
+});
+
 test('robots.txt allows crawling and names the sitemap; the sitemap lists only indexable public pages', () => {
   const robots = read('robots.txt').split('\n').filter(line => line && !line.startsWith('#'));
   assert.deepEqual(robots, ['User-agent: *', 'Allow: /', `Sitemap: ${ORIGIN}/sitemap.xml`]);
@@ -63,7 +68,7 @@ test('robots.txt allows crawling and names the sitemap; the sitemap lists only i
   assert.ok(!locs.includes(`${ORIGIN}/map`), 'the map redirects without an area');
   // Every entry is a page in dist (by its served path) or a server-rendered public page, and none is noindex.
   const served = {'/': 'landing.html', '/sources': 'sources.html', '/privacy': 'privacy.html'};
-  const serverPages = new Set(['/report']);
+  const serverPages = new Set(['/report', '/about', '/methodology']);
   for (const loc of locs) {
     assert.ok(loc.startsWith(`${ORIGIN}/`), loc);
     const path = loc.slice(ORIGIN.length);
