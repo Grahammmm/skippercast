@@ -109,7 +109,7 @@ a.admin-button { display: inline-flex; align-items: center; text-decoration: non
 .admin-funnel > section { padding: var(--space-4); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-md); }
 .admin-funnel-total { display: flex; align-items: flex-end; gap: var(--space-3); margin: var(--space-2) 0; font-size: var(--text-28); }
 .admin-spark rect, .admin-bar rect { fill: var(--mint); }
-.admin-scroll { max-width: 100%; overflow-x: auto; }
+.admin-scroll { position: relative; max-width: 100%; overflow-x: auto; }
 .admin-scroll:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
 .admin-visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
