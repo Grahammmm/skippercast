@@ -1,0 +1,20 @@
+{
+  "about": "SP1301-EVENT-SEGMENT synthetic parameters (card-owned). Invented vessels, 999-series MMSIs, a fixed clock. Every trip, segment and event id is derived by tests/test_sp1301_event_segment.mjs from these values (design section 5), never copied from real records.",
+  "region": "CA",
+  "source": "aisstream",
+  "now": "2026-10-05T12:00:00.000Z",
+  "classifier_version": "c1-sp1301fixture00",
+  "vessels": [
+    {"key": "alpha", "slug": "sp1301-alpha", "name": "SP1301 Alpha"},
+    {"key": "bravo", "slug": "sp1301-bravo", "name": "SP1301 Bravo"}
+  ],
+  "trips": [
+    {"key": "A", "vessel": "alpha", "mmsi": "999130101", "departed_at": "2026-10-02T08:00:00.000Z"},
+    {"key": "B", "vessel": "bravo", "mmsi": "999130102", "departed_at": "2026-10-02T09:00:00.000Z"}
+  ],
+  "window": {"from": "2026-10-01T00:00:00.000Z", "to": "2026-10-04T00:00:00.000Z"},
+  "segment_kinds": ["transit", "drift-anchor", "troll-slow", "transit"],
+  "event_segment_seq": 1,
+  "prior": {"key": "P", "vessel": "alpha", "mmsi": "999130101", "departed_at": "2026-10-06T08:00:00.000Z",
+    "window": {"from": "2026-10-06T00:00:00.000Z", "to": "2026-10-07T00:00:00.000Z"}}
+}

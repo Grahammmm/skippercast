@@ -1,0 +1,15 @@
+{
+  "provenance": "Synthetic values; FeedHour and ConditionsForecast shapes follow web/score.ts, web/brief/verdict.ts and unchanged tests/test_brief_verdict.mjs. Not observations or a safety clearance.",
+  "feed": {
+    "wind": 2, "gust": 3, "wind_from": 315,
+    "sea": 1, "sea_period": 12, "chop": 0.1, "chop_period": 8,
+    "swell": 1, "swell_period": 12, "swell_from": 300,
+    "secondary": 0, "secondary_from": 200,
+    "other_wind": 2, "other_sea": 1, "other_gust": 3
+  },
+  "clock": {
+    "now": "2026-10-13T12:00:00Z", "date": "2026-10-13",
+    "sunrise": "2026-10-13T14:10:00Z", "sunset": "2026-10-14T01:30:00Z",
+    "start": "2026-10-13T07:00:00Z", "timezone": "America/Los_Angeles"
+  }
+}
