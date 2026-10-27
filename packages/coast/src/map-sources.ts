@@ -15,6 +15,7 @@ export function naipSource() {
 
 /** Never use `current`/`latest` in tile URLs: every frame is pinned to a published acquisition time. */
 export function cloudSource(cloud:CloudImage,now:Date=new Date()) {
+ if(!(now instanceof Date)||!Number.isFinite(now.getTime()))return null;
  const sample=Date.parse(cloud.observedAt),age=now.getTime()-sample;
  if(!Number.isFinite(sample)||age < -300000||age>90*60000||!cloud.availableTimes.includes(cloud.observedAt))return null;
  return {type:'raster' as const,tileSize:512,minzoom:0,maxzoom:9,
@@ -24,6 +25,7 @@ export function cloudSource(cloud:CloudImage,now:Date=new Date()) {
 
 /** Returns a native frame; no interpolated forecast times or projected observations. */
 export function selectCurrentFrame(field:CurrentField,selectedAt:string|Date,now:Date=new Date()):CurrentFrame|null {
+ if(!(now instanceof Date)||!Number.isFinite(now.getTime()))return null;
  const selected=new Date(selectedAt).getTime(),clock=now.getTime();
  const fetched=Date.parse(field.fetchedAt);
  if(!Number.isFinite(selected)||!Number.isFinite(fetched)||fetched>clock+300000||clock-fetched>6*3600000)return null;

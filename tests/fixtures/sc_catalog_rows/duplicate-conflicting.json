@@ -1,0 +1,34 @@
+{
+  "candidates": [
+    {
+      "access_url": "https://synthetic.invalid/bag/a.bag",
+      "extent": null,
+      "metadata": {"crs": "EPSG:4326"},
+      "rejection_reasons": [],
+      "source_id": "synthetic:alpha",
+      "terrain": {"accepted": false},
+      "unknowns": [],
+      "vendor_extra": {"kept": true}
+    },
+    {
+      "access_url": "https://synthetic.invalid/bag/b-first.bag",
+      "extent": null,
+      "metadata": {"crs": "EPSG:4326"},
+      "rejection_reasons": [],
+      "source_id": "synthetic:bravo",
+      "terrain": {"accepted": false},
+      "unknowns": []
+    },
+    {
+      "access_url": "https://synthetic.invalid/bag/b-second.bag",
+      "extent": null,
+      "metadata": {"crs": "EPSG:3857"},
+      "rejection_reasons": [],
+      "source_id": "synthetic:bravo",
+      "terrain": {"accepted": false},
+      "unknowns": []
+    }
+  ],
+  "catalog_id": "synthetic-duplicate-catalog",
+  "schema": "coastal-frozen-discovery-catalog-v1"
+}
