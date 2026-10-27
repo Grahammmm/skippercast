@@ -13,15 +13,48 @@ export interface TideRegion {id: string; bounds: readonly number[]; station: str
 export interface TideReading {station: TideStation; points: TidePoint[]; events: TideEvent[]; fetchedAt: string; failed: boolean}
 const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 export const tideChoiceKey = (region: string): string => `skippercast-tide-station-v1.${region}`;
-export function readTideChoice(region: string, storage?: Pick<Storage, 'getItem'>): string | null {
-  try { const id = (storage ?? globalThis.localStorage)?.getItem(tideChoiceKey(region)); return id && /^\d{7}$/.test(id) ? id : null; } catch { return null; }
+export const tideSavedKey = (region: string): string => `skippercast-tide-stations-v2.${region}`;
+export const MAX_SAVED_TIDE_STATIONS = 3;
+export interface SavedTideStations {saved: string[]; active: string | null}
+type TideStorage = Pick<Storage, 'getItem'> & Partial<Pick<Storage, 'setItem' | 'removeItem'>>;
+const validId = (id: unknown): id is string => typeof id === 'string' && /^\d{7}$/.test(id);
+function validSaved(value: unknown): value is SavedTideStations {
+  return record(value) && Array.isArray(value.saved) && value.saved.length <= MAX_SAVED_TIDE_STATIONS
+    && value.saved.every(validId) && new Set(value.saved).size === value.saved.length
+    && (value.active === null || validId(value.active) && value.saved.includes(value.active));
 }
-export function saveTideChoice(region: string, id: string | null, storage?: Pick<Storage, 'setItem' | 'removeItem'>): void {
+export function readSavedTideStations(region: string, storage?: TideStorage): SavedTideStations {
+  const empty = (): SavedTideStations => ({saved: [], active: null});
   try {
-    const store = storage ?? globalThis.localStorage;
-    if (id && /^\d{7}$/.test(id)) store?.setItem(tideChoiceKey(region), id);
-    else store?.removeItem(tideChoiceKey(region));
-  } catch { /* A blocked store does not prevent this visit's selection. */ }
+    const store = storage ?? globalThis.localStorage, raw = store?.getItem(tideSavedKey(region));
+    if (raw !== null && raw !== undefined) {
+      const value: unknown = JSON.parse(raw);
+      return validSaved(value) ? {saved: [...value.saved], active: value.active} : empty();
+    }
+    const legacy = store?.getItem(tideChoiceKey(region));
+    if (!validId(legacy)) return empty();
+    const migrated = {saved: [legacy], active: legacy};
+    // Commit the replacement before removing the old key; blocked storage keeps
+    // the legacy choice recoverable and still usable for this visit.
+    try {
+      if (store?.setItem) {
+        store.setItem(tideSavedKey(region), JSON.stringify(migrated));
+        store.removeItem?.(tideChoiceKey(region));
+      }
+    } catch { /* Preserve the legacy key on a failed replacement write. */ }
+    return migrated;
+  } catch { return empty(); }
+}
+export function saveSavedTideStations(region: string, value: SavedTideStations, storage?: Pick<Storage, 'setItem'>): void {
+  if (!validSaved(value)) return;
+  try { (storage ?? globalThis.localStorage)?.setItem(tideSavedKey(region), JSON.stringify(value)); }
+  catch { /* A blocked store does not prevent this visit's selection. */ }
+}
+export function readTideChoice(region: string, storage?: TideStorage): string | null {
+  return readSavedTideStations(region, storage).active;
+}
+export function saveTideChoice(region: string, id: string | null, storage?: Pick<Storage, 'setItem'>): void {
+  saveSavedTideStations(region, {saved: validId(id) ? [id] : [], active: validId(id) ? id : null}, storage);
 }
 export function tideRegion(id: string, value: unknown): TideRegion | null {
   if (!record(value) || !record(value.stations) || !Array.isArray(value.bounds) || value.bounds.length !== 4 || !value.bounds.every(Number.isFinite)) return null;

@@ -121,7 +121,14 @@ def append(path, payload, *, writer, resolver, root_id, raw_provenance=()):
             os.close(lock)
 
 
+def _same_ledger_destination(segment_path, campaign_path):
+    """Compare lexical destinations only; append owns physical path checks."""
+    return os.path.abspath(segment_path) == os.path.abspath(campaign_path)
+
+
 def append_index(segment_path, campaign_path, payload, *, writer, resolver, root_id, raw_provenance=()):
+    if _same_ledger_destination(segment_path, campaign_path):
+        raise ValueError('distinct_segment_campaign_ledgers_required')
     if payload.get('ledger_role') != 'segment' or payload.get('segment_row_sha256') is not None:
         raise ValueError('append_index requires segment payload')
     row, digest = append(segment_path,payload,writer=writer,resolver=resolver,root_id=root_id,raw_provenance=raw_provenance)

@@ -60,8 +60,19 @@ type Row = {id: string; cell_id: string; params_json: string; lat: number; lon: 
 
 /** True when a row clears every public floor (the re-check of the SQL filter). */
 export function publicCell(row: Pick<Row, 'vessels_n' | 'last_date' | 'rights'>, cutoff: string): boolean {
-  return Number.isInteger(row.vessels_n) && row.vessels_n >= PUBLIC_HEAT.min_vessels && typeof row.last_date === 'string' &&
+  return Number.isInteger(row.vessels_n) && row.vessels_n >= PUBLIC_HEAT.min_vessels && calendarDate(row.last_date) &&
     row.last_date <= cutoff && (PUBLIC_HEAT.rights as readonly string[]).includes(row.rights);
+}
+
+const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** True only for an exact YYYY-MM-DD string naming a real calendar day. The SQL floor compares last_date as
+ *  text, so '', ' ', '2020-1-1', a timestamp or 2021-02-29 (which Date.parse rolls to March 1) would sort
+ *  before any cutoff; such a cell is withheld, never trimmed or normalized into a date. */
+export function calendarDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !CALENDAR_DATE.test(value)) return false;
+  const ms = Date.parse(`${value}T00:00:00Z`);
+  return Number.isFinite(ms) && new Date(ms).toISOString().slice(0, 10) === value;
 }
 
 /** One page of public heat cells, most dwell first. */
