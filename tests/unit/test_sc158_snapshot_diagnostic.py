@@ -22,7 +22,12 @@ import tempfile
 import unittest
 from unittest import mock
 
-REPO = Path(__file__).resolve().parents[2]
+import pytest
+
+from tests._support import ROOT as REPO
+
+# scoped imports screen's pyproj/shapely stack; survey-science runs these tests.
+pytestmark = pytest.mark.gis
 SRC = REPO / 'src'
 FIXTURES = REPO / 'tests' / 'fixtures' / 'sc158-snapshot-diagnostic'
 RUNNER = REPO / 'tools' / 'run_sc158_snapshot_diagnostic.py'
