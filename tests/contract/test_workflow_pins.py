@@ -27,7 +27,7 @@ class WorkflowPinTests(unittest.TestCase):
         header = ci.split('permissions:', 1)[0]
         # A distinct run ID for non-PR events also prevents replacement of a
         # pending main push by a manual run, which cannot trigger deployment.
-        self.assertIn('group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}', header)
+        self.assertIn("group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'latest' || github.run_id }}", header)
         self.assertIn("cancel-in-progress: ${{ github.event_name == 'pull_request' }}", header)
         publication = (ROOT / '.github/workflows/seafloor.yml').read_text()
         self.assertIn('group: seafloor-publication', publication)
