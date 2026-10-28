@@ -135,8 +135,9 @@ test('a snapshot covers a region only when its ds582 query envelope contains the
 test('every published region: complete only when reviewed and covered; anything less says an unoutlined area may be protected', () => {
   const expected = {
     'morro-bay': 'complete', 'cambria-san-simeon': 'complete', 'southern-california': 'complete',
-    // These four bind Morro Bay's shared snapshot, whose query envelope is Morro Bay's.
+    // These regions bind Morro Bay's shared snapshot, whose query envelope is Morro Bay's.
     'bodega-point-reyes': 'incomplete', 'crescent-city': 'incomplete', 'fort-bragg-point-arena': 'incomplete', 'humboldt-bay-cape-mendocino': 'incomplete',
+    'trinidad-klamath': 'incomplete',
   };
   for (const id of REGIONS) {
     const {config, coverage} = regionFiles(id);
@@ -145,6 +146,11 @@ test('every published region: complete only when reviewed and covered; anything 
     const {state, data} = assessMpas({region: id, config, snapshot, coverage, closures});
     const review = coverage.needs.find(n => n.id === 'protected-areas');
     assert.equal(state.status, expected[id] ?? 'partial', id);
+    if (expected[id] === 'incomplete') {
+      assert.equal(config.assets.protected_areas, 'data/protected-areas.geojson', id);
+      assert.equal(covers(snapshotEnvelope(snapshot.source_url), config.mpa.bounds), false, `${id} is outside the shared snapshot's query envelope`);
+      assert.match(state.detail, /The snapshot's query area does not cover this whole region\./, id);
+    }
     if (state.status === 'complete') {
       assert.equal(review.status, 'ready', `${id} is complete only after its review`);
       assert.equal(state.note, `CDFW ds582 snapshot for this region, checked ${snapshot.checked_at.slice(0, 10)}.`, 'the region, not whatever is in view');

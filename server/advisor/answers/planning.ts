@@ -89,6 +89,22 @@ export function leadsWithAdvisory(reply: string, events: readonly string[]): boo
 
 export interface ConditionsInput {port: string; date?: string | null; start_hour?: unknown; end_hour?: unknown}
 
+/** Oldest required-zone check, or null unless every configured zone has complete evidence. */
+function advisoryCheckTime(sources: Record<string, unknown> | undefined, zones: readonly string[]): string | null {
+  if (!zones.length) return null;
+  let oldest: string | null = null, oldestTime = Infinity;
+  for (const zone of zones) {
+    const value = sources?.[`alerts-${zone}`];
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const source = value as {status?: unknown; data?: {alerts?: unknown}; checked_at?: unknown};
+    if (source.status !== 'ok' || !Array.isArray(source.data?.alerts) || typeof source.checked_at !== 'string') return null;
+    const time = Date.parse(source.checked_at);
+    if (!Number.isFinite(time)) return null;
+    if (time < oldestTime) { oldestTime = time; oldest = source.checked_at; }
+  }
+  return oldest;
+}
+
 /** get_conditions' result (04 § Tools, 06 § planning steps 1-3). Advisories before the numbers. */
 export async function tripConditions(input: ConditionsInput, opts: PlanningOptions & {read?: FeedReader}): Promise<Record<string, unknown>> {
   const resolved = resolvePort(String(input.port ?? ''), opts.contact ?? null, opts.settings);
@@ -109,6 +125,7 @@ export async function tripConditions(input: ConditionsInput, opts: PlanningOptio
   const pointId = FORECAST_POINT.get(port) ?? region.forecast_points[0]?.id ?? '';
   const days: DayConditions[] = when.dates.map(date => windowConditions(intel, region, pointId, date, window));
   const zones = regionZones(region);
+  const advisoriesAsOf = advisoryCheckTime(daily?.sources, zones);
   const byDay = when.dates.map(date => { const [from, to] = windowEpochs(date, tz, window); return {date, advisories: daily ? advisoriesFrom(daily, zones, from, to) : []}; });
   const [from] = windowEpochs(when.dates[0]!, tz, window), [, to] = windowEpochs(when.dates.at(-1)!, tz, window);
   const alerts = daily ? advisoriesFrom(daily, zones, from, to) : null;
@@ -116,14 +133,14 @@ export async function tripConditions(input: ConditionsInput, opts: PlanningOptio
   return {
     ...head, beyond_horizon: false,
     advisories: alerts ?? [],
-    advisories_checked: alerts !== null,
-    advisories_as_of: daily?.sources ? (Object.entries(daily.sources).find(([k]) => k.startsWith('alerts-'))?.[1] as {checked_at?: string} | undefined)?.checked_at ?? null : null,
+    advisories_checked: advisoriesAsOf !== null,
+    advisories_as_of: advisoriesAsOf,
     lead_with_advisory: Boolean(alerts?.length),
     ...(line ? {advisory_line: line} : {}),
     days,
     forecast_issued: intel?.completed_at ?? null,
     note: [alerts?.length ? `Start the reply with advisory_line (the word in capitals, SMALL CRAFT ADVISORY), and end with "${t(language, 'nws_closer')}"` : null,
-      alerts === null ? 'NWS advisories could not be checked: say so and point to the NWS forecast.' : null,
+      advisoriesAsOf === null ? 'NWS advisories could not be checked: say so and point to the NWS forecast.' : null,
       'Comfort is for a mid-size center console; the person\'s own boat may differ. Never say the harbor bar is open or closed. Never give a percentage or a catch number.'].filter(Boolean).join(' '),
   };
 }

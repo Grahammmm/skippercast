@@ -78,7 +78,7 @@ export async function boatPage(env: Env, slug: string, language: PageLanguage, s
     publicPhotos(env, 'm.boat_id=?', [boat.id], BOAT_PHOTOS),
   ]);
   const booking = httpsUrl(boat.booking_url), phone = boat.phone_public && /^\+\d{8,15}$/.test(boat.phone_public) ? boat.phone_public : null;
-  const instagram = boat.instagram && /^[a-z0-9._]{1,30}$/.test(boat.instagram) ? boat.instagram : null;
+  const instagram = boat.instagram && /^[A-Za-z0-9._]{1,30}$/.test(boat.instagram) ? boat.instagram : null;
 
   const body = html`<header class="adv-title">
 <h1>${boat.name}</h1>
