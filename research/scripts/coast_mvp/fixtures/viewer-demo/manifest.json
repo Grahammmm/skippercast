@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "region": "Central Coast \u00b7 synthetic C3 demonstration",
+  "synthetic": true,
+  "bounds": [
+    -121.025390625,
+    35.389049966911664,
+    -120.9375,
+    35.4606699514953
+  ],
+  "center": [
+    -120.9814453125,
+    35.42485995920348
+  ],
+  "zoom": 15.5,
+  "tileZoom": 12,
+  "tileSize": 256,
+  "terrain": "{z}/{x}/{y}.png",
+  "contours": "{z}/{x}/{y}.mvt",
+  "contourLayer": "contours",
+  "sources": [
+    {
+      "id": "c3-analytic-fixture",
+      "label": "Analytic slope and waves (not a survey)",
+      "url": null,
+      "attribution": "SkipperCast C3 synthetic fixture generator",
+      "license": "Repository LICENSE; original synthetic fixture",
+      "datum": "Arbitrary synthetic zero; no geodetic datum",
+      "resolutionM": 31.14137682714201,
+      "permissionRequired": false
+    }
+  ]
+}
