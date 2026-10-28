@@ -18,7 +18,8 @@ import unittest
 from unittest.mock import patch
 import uuid
 
-REPO = Path(__file__).resolve().parents[2]
+from tests._support import ROOT as REPO
+
 FIXTURE = REPO / 'tests/fixtures/sc159-title33-metadata'
 TITLES_URL = 'https://www.ecfr.gov/api/versioner/v1/titles'
 NOTICE_SHA = '29c2983abd732a0e9ee44c69ed1bd7c024fd425749271ae00aaabe2bad440745'
@@ -237,7 +238,8 @@ class Title33MetadataTests(unittest.TestCase):
         old_modules = {k: v for k, v in sys.modules.items()
                        if k == 'tests' or k.startswith('tests.')}
         try:
-            sys.path.insert(0, str(REPO))
+            # The repository root is already importable (pytest `pythonpath`, or
+            # the SC159 runner); tests never edit sys.path themselves.
             for key in old_modules:
                 sys.modules.pop(key)
             peer = load_file('sc159_peer_dco', REPO / 'tests/unit/test_check_dco.py')

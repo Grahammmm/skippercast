@@ -195,7 +195,11 @@ class RecordingResult(unittest.TextTestResult):
 
 
 def load_tests_module():
-    path = REPO / 'tests/unit/test_sc159_title33_metadata.py'
+    # The test module imports ROOT from tests._support, as pytest's
+    # `pythonpath = ["."]` allows; give this direct runner the same root.
+    if str(REPO) not in sys.path:
+        sys.path.insert(0, str(REPO))
+    path = REPO / 'tests/gis/test_sc159_title33_metadata.py'
     spec = importlib.util.spec_from_file_location('test_sc159_title33_metadata', path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
