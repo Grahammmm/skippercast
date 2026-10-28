@@ -5,9 +5,9 @@
   fetch skips by reason or the error; ``gaps``, the bindings with a known-gap
   status (``GAP_STATUSES``: not-implemented, unsupported, unavailable, empty);
   ``complete`` when every binding that ran listed its boats (none failed,
-  unsupported or unavailable), which ``refresh`` needs before it counts an
-  unlisted vessel towards ``vanished``). One failing source does not stop the
-  others.
+  unsupported or unavailable, and none skipped source work), which ``refresh``
+  needs before it counts an unlisted vessel towards ``vanished``). One failing
+  source does not stop the others.
 - ``resolve`` resolves the candidates (and a file import's ``imported.jsonl``)
   against the registry snapshot and writes ``resolved.jsonl``, the vessels
   enrich-code works on.
@@ -128,6 +128,7 @@ def run_candidates(run_dir: Path) -> list[Candidate]:
 #   empty            no candidates and nothing skipped
 # ``unsupported`` and ``unavailable`` mean the source did not list its boats, so the run's discovery is not
 # ``complete`` (``refresh`` then neither counts unlisted vessels towards ``vanished`` nor retires offerings).
+# A binding with usable candidates stays ``ok``, but any of its skips also makes discovery incomplete.
 GAP_STATUSES = ("not-implemented", "unsupported", "unavailable", "empty")
 INCOMPLETE_STATUSES = frozenset({"failed", "unsupported", "unavailable"})
 UNSUPPORTED_SKIPS = frozenset({"layout", "unsupported-list"})
@@ -152,6 +153,7 @@ def _skip_counts(skips: list[Mapping[str, Any]]) -> dict[str, int]:
 def discover(ctx: RunContext, sink, adapters: Mapping[str, Any] | None = None) -> dict:
     adapters, rows, report = dict(adapters or {}), [], {}
     skips = getattr(ctx.net, "skips", None)
+    skipped_work = False
     for binding in ctx.region.enabled_sources():
         scout = binding.adapter == "file-import" and binding.params.get("columns") == "scout-candidates-v1"
         if binding.adapter in NOT_DISCOVERY and not scout:
@@ -170,6 +172,7 @@ def discover(ctx: RunContext, sink, adapters: Mapping[str, Any] | None = None) -
             report[binding.id] = {"status": "failed", "error": f"{type(error).__name__}: {error}"[:500]}
             continue
         mine = list(skips[before:]) if skips is not None else []
+        skipped_work = skipped_work or bool(mine)
         rows += found
         status = _binding_status(len(found), mine)
         report[binding.id] = {"status": status, "candidates": len(found),
@@ -177,7 +180,7 @@ def discover(ctx: RunContext, sink, adapters: Mapping[str, Any] | None = None) -
                               **(getattr(adapter, "report", {}).get(binding.id, {}) if scout else {})}
     failed = sum(r["status"] == "failed" for r in report.values())
     gaps = {bid: r["status"] for bid, r in sorted(report.items()) if r["status"] in GAP_STATUSES}
-    complete = not any(r["status"] in INCOMPLETE_STATUSES for r in report.values())
+    complete = not skipped_work and not any(r["status"] in INCOMPLETE_STATUSES for r in report.values())
     doc = {"at": ops.iso(ctx.clock(), "at"), "complete": complete, "bindings": report, "gaps": gaps}
     (ctx.run_dir / "discover.json").write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return {"candidates": write_jsonl(ctx.run_dir / "candidates.jsonl", rows), "bindings": len(report), "failed": failed,
