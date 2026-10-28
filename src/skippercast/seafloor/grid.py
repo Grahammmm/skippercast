@@ -71,7 +71,19 @@ def merge_reference(destination, incoming):
     destination[valid] = incoming[valid]
 
 
+def _validate_reference_mosaic(mosaic):
+    """Do not silently drop pixels outside the reference zero/one/two alphabet."""
+    if (not isinstance(mosaic, np.ndarray) or mosaic.ndim != 2
+            or mosaic.dtype.kind not in 'iu'):
+        raise ValueError('Reference mosaic must be a two-dimensional integer NumPy array')
+    if np.ma.isMaskedArray(mosaic) and np.any(np.ma.getmaskarray(mosaic)):
+        raise ValueError('Reference mosaic must not contain masked cells')
+    if np.any((mosaic < 0) | (mosaic > 2)):
+        raise ValueError('Reference mosaic values must be zero, one or two')
+
+
 def cell_counts(mosaic, pixels_per_cell):
+    _validate_reference_mosaic(mosaic)
     h, w = mosaic.shape
     n = pixels_per_cell
     if h % n or w % n:

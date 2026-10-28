@@ -282,11 +282,13 @@ class ScopeCompatibility(ScopeCase):
         path_before = sys.path
         with patch.object(sys, 'path', list(sys.path)):
             collected = unittest.TestLoader().discover(
-                str(ROOT / 'tests/gis'), pattern=Path(__file__).name)
+                str(ROOT / 'tests/gis'), pattern='test_sc13a_scope_output_confinement.py')
             self.assertGreater(collected.countTestCases(), 0)
-            ordinary = sys.modules[Path(__file__).stem]
-            self.assertIsNone(ordinary.RUN_ROOT)
+            self.assertIsNone(sys.modules['test_sc13a_scope_output_confinement'].RUN_ROOT)
         self.assertIs(sys.path, path_before)
+        ordinary = unittest.defaultTestLoader.loadTestsFromName(
+            'tests.gis.test_sc13a_scope_output_confinement')
+        self.assertGreater(ordinary.countTestCases(), 0)
         self.assertIs(paths.repo_root, original)
         self.assertEqual(dict(os.environ), environment)
         # This module adds no audit hook or process/network monkeypatch at all.
