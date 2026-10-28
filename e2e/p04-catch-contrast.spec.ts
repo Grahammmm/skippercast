@@ -81,6 +81,10 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // CI6-09 merge-forward retains the partition selector alongside wind, shelf contours, chlorophyll and Stations.
 // Legend.tsx changes only the selector import/control from main; existing text/muted glass roles and the Reports
 // catch path are unchanged. check_contrast.mjs rebinds only the Legend hash and line citations; contrast() is untouched.
+// #940 (Reports charter-source identity): only request coalescing, stale-result protection and matching-data
+// admission change. With no charter source, reportsKey preserves this fixture's `morro-bay:lingcod` preload,
+// so mounting Reports still starts no section fetches. CatchCards, ReportsBody, the catch renderer, CSS and
+// every paint/contrast/overlap/control assertion below are unchanged. Rebind only Reports.tsx's exact hash.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
   "web/app/App.tsx": "d8486f26dafbb97b0499cd7ef536c386c446c1b002c44b219d42151a5ab11446",
@@ -94,7 +98,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
-  "web/app/views/Reports.tsx": "8ef399a5024b6bf2b232934647c40029674e8f661ea3391b037460ca66246af1",
+  "web/app/views/Reports.tsx": "add6e0d2b1697c4d097d1e4a286f7377fe27372cb5a2b9033fb8dcb0181089c9",
   "web/app/CoastMarkup.tsx": "3d318379ff1194b26f68adadb523db08c21829ff71cf5e7cfe2ac903821f0efc",
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
