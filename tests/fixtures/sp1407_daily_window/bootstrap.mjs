@@ -33,5 +33,5 @@ export function installOffline() {
   return () => { for (const restore of undo.reverse()) restore(); syncBuiltinESMExports(); };
 }
 // The CLI loads this before original tests and before their transitive imports.
-// node:test isolates files; direct imports restore the preload in the suite hook.
+// The test runner isolates files; direct imports restore the preload in the suite hook.
 export const restorePreload = installOffline();
