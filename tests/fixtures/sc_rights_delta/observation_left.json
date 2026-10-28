@@ -1,0 +1,40 @@
+{
+  "canonical_rows_sha256": "ffcb1555154f07b2e74d70468c700500b1873785eabd93532b810e198cf5c50d",
+  "producer": {
+    "code_commit": "59fca09b2cc7f5c81a4796902504e263d7f06960",
+    "function": "source_rights",
+    "module_path": "src/skippercast/seafloor/rights.py",
+    "module_sha256": "7411657fefaea64f73bbd566ba1d37eb0f4d787b83a2afcec117d882e579ee0d"
+  },
+  "rows": [
+    {
+      "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+      "commercial_use": "permission-required",
+      "license": "csumb-public-use-noncommercial",
+      "navigation_use": false,
+      "notice": "Public noncommercial use only; for-profit use requires express CSUMB SFML permission. Not for navigation.",
+      "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+      "reviewed_on": "2026-03-01",
+      "source_id": "synthetic-csumb-a",
+      "source_url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/synthetic-fixture-a.tar.gz"
+    },
+    {
+      "attribution": "Synthetic NOAA survey fixture",
+      "license": "public-domain-us-gov",
+      "notice": "Original US government data; retain source attribution and survey limitations.",
+      "policy_url": "https://example.invalid/synthetic/usgov-a-terms",
+      "source_id": "synthetic-usgov-a",
+      "source_url": "https://example.invalid/synthetic/usgov-a.tif"
+    },
+    {
+      "attribution": "Original USGS / NOAA survey",
+      "license": "public-domain-us-gov",
+      "notice": "Original US government data; retain source attribution and survey limitations.",
+      "policy_url": "",
+      "source_id": "synthetic-usgov-b",
+      "source_url": "https://example.invalid/synthetic/usgov-b.tif"
+    }
+  ],
+  "schema": "sc-rights-observation-v1",
+  "source_use": "noncommercial"
+}
