@@ -255,14 +255,15 @@ export type SpearDay = {
 /** Roll the hours up for the day, over daylight when sunrise and sunset are known. */
 export function spearDay(hours: SpearHour[], sunrise: string | null, sunset: string | null): SpearDay {
   const rise = sunrise ? Date.parse(sunrise) : NaN, set = sunset ? Date.parse(sunset) : NaN;
-  const lit = Number.isFinite(rise) && Number.isFinite(set) ? hours.filter(h => {const t = Date.parse(h.at); return t >= rise && t + HOUR <= set;}) : hours;
-  const scope = lit.length ? lit : hours;
+  const daylightKnown = Number.isFinite(rise) && Number.isFinite(set) && rise < set;
+  // Empty known daylight is missing coverage, not permission to use night hours.
+  const scope = daylightKnown ? hours.filter(h => {const t = Date.parse(h.at); return t >= rise && t + HOUR <= set;}) : hours;
   const known = scope.filter(h => h.surge.band !== 'Unknown');
   const ranks = known.map(h => SURGE_RANK[h.surge.band]);
   const bands = Object.keys(SURGE_RANK) as SurgeBand[];
   const surgeRange = known.length ? {min: bands[Math.min(...ranks)]!, max: bands[Math.max(...ranks)]!} : null;
   const clear = scope.filter(h => h.clarity.band !== 'Unknown').sort((a, b) => CLARITY_RANK[b.clarity.band] - CLARITY_RANK[a.clarity.band])[0];
-  const clarityDay = clear?.clarity ?? scope[0]?.clarity ?? {band: 'Unknown', drivers: [], missing: ['forecast hours'], gaps: []};
+  const clarityDay = clear?.clarity ?? scope[0]?.clarity ?? {band: 'Unknown', drivers: [], missing: [daylightKnown ? 'daylight forecast hours' : 'forecast hours'], gaps: []};
   const order: Readonly<Record<SpearVerdict, number>> = {Calmer: 0, Marginal: 1, Rough: 2, Unknown: 3};
   const best = scope.filter(h => h.verdict !== 'Unknown' && h.verdict !== 'Rough').sort((a, b) => order[a.verdict] - order[b.verdict] || SURGE_RANK[a.surge.band] - SURGE_RANK[b.surge.band] || Date.parse(a.at) - Date.parse(b.at))[0] ?? null;
   const bases = new Set(known.map(h => h.surge.basis));
