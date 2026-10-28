@@ -384,10 +384,13 @@ def normalized_from_raster(dataset, *, source_sha256):
     """Check normalized tags against the physical header before another read."""
     try:
         block = json.loads(dataset.tags()['vertical_contract'])
+        if not isinstance(block, dict):
+            raise TypeError('normalized vertical contract must be an object')
         lineage = block['lineage']
     except (KeyError, ValueError, TypeError) as exc:
         raise VerticalHold(['normalized_vertical_contract_missing']) from exc
-    if (block.get('storage') != 'normalized_depth' or block.get('sign') != 'positive_down'
+    if (not isinstance(lineage, dict)
+            or block.get('storage') != 'normalized_depth' or block.get('sign') != 'positive_down'
             or block.get('units') != 'm' or block.get('scale') != 1 or block.get('offset') != 0
             or block.get('scale_offset_applied') is not True
             or lineage.get('datum_transform') is not False

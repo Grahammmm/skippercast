@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "region": "morro-bay",
+  "status": "ready",
+  "archive": "seafloor-morro-bay.pmtiles",
+  "archive_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "archive_bytes": 500,
+  "expires_at": "2026-10-26T00:00:00+00:00",
+  "built_at": "2026-10-25T00:00:00+00:00",
+  "ledger_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "export_file": "habitat-export.geojson.gz",
+  "export_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+}
