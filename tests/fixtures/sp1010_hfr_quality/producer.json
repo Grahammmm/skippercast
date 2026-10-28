@@ -1,0 +1,15 @@
+{
+  "schema": "sp1010.synthetic-dap/v1",
+  "provenance": "Invented numeric arrays in the DAP2 ASCII shape consumed by ocean.hfr; no downloaded observations.",
+  "identity": "https://example.invalid/synthetic-hfr",
+  "region": {"id": "example-hfr", "bounds": [-122, 34, -120, 36]},
+  "times": [1700000000, 1700003600],
+  "latitude": 35,
+  "longitude": -121,
+  "coordinate_step": 0.001,
+  "defaults": {"u": "100", "v": "0", "hdop": "100", "number_of_sites": "2"},
+  "invalid_hdop": ["NaN", "Infinity", "-Infinity", "-1", "200.0001"],
+  "finite_hdop": ["0", "0.0001", "1", "100", "199.9999", "200"],
+  "radar_counts": ["-1", "0", "1", "2", "20", "21", "NaN", "Infinity", "-Infinity"],
+  "das": "Attributes { time { String units \"seconds since 1970-01-01 00:00:00 UTC\"; } u { Float64 scale_factor 0.01; Int16 _FillValue -32767; } v { Float64 scale_factor 0.01; Int16 _FillValue -32767; } hdop { Float64 scale_factor 0.01; Int16 _FillValue -32767; } }"
+}
