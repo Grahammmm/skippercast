@@ -67,7 +67,7 @@ def hfr(client, region, resolution=6):
             for xi,longitude in enumerate(lon):
                 i=ti*n+yi*len(lon)+xi
                 u,v=arrays['u'][i],arrays['v'][i]; hdop=arrays['hdop'][i]; sites=arrays['number_of_sites'][i]
-                if u==-32767 or v==-32767 or hdop<0 or hdop*.01>2 or not 2<=sites<=20:continue
+                if u==-32767 or v==-32767 or not math.isfinite(hdop) or hdop<0 or hdop*.01>2 or not 2<=sites<=20:continue
                 vec=vector(u*.01,v*.01)
                 if vec:cells.append([round(latitude,6),round(longitude,6),*vec,round(hdop*.01,2),int(sites)])
         frames.append({'time':int(epoch),'cells':cells,'valid_cells':len(cells),'total_cells':n})
