@@ -3,7 +3,7 @@
 Reuses the statewide CDFW and NOAA collectors. Security boundaries require a
 reviewed local catalog: new geography is held until its restrictions are reviewed.
 """
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -108,12 +108,33 @@ def reviewed_dms_polygon(zone, section):
     return transform(unproject, transform(project, outline).buffer(zone['planning_margin_m']))
 
 
+def _title33_issue(document):
+    """Admit one unambiguous integer title and a URL-safe calendar issue."""
+    invalid = 'invalid title 33 metadata'
+    if not isinstance(document, dict) or not isinstance(document.get('titles'), list):
+        raise ValueError(invalid)
+    rows = document['titles']
+    if any(not isinstance(row, dict) for row in rows):
+        raise ValueError(invalid)
+    # Count numeric equivalents before requiring the selected number's exact
+    # type: an additional 33.0 must not hide behind a genuine integer 33.
+    matches = [row for row in rows if row.get('number') == 33]
+    if len(matches) != 1 or type(matches[0]['number']) is not int:
+        raise ValueError(invalid)
+    issue = matches[0].get('up_to_date_as_of')
+    if not isinstance(issue, str) or not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', issue):
+        raise ValueError(invalid)
+    try:
+        date.fromisoformat(issue)
+    except ValueError as error:
+        raise ValueError(invalid) from error
+    return issue
+
+
 def security_layer(config, getter=ecfr_bytes):
     titles_url = 'https://www.ecfr.gov/api/versioner/v1/titles'
     raw = getter(titles_url)
-    titles = json.loads(raw)['titles']
-    title = next(row for row in titles if row['number'] == 33)
-    issue = title['up_to_date_as_of']
+    issue = _title33_issue(json.loads(raw))
     features, receipts = [], []
     for zone in config['security_zones']:
         url = f"https://www.ecfr.gov/api/versioner/v1/full/{issue}/title-33.xml?section={zone['section']}"
