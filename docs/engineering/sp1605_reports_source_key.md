@@ -95,7 +95,7 @@ all repository tests or separate credential-audit gates have executed.
 
 ## Provenance and retained gates
 
-All new material authored by actual gpt-6.1-sol, provider openai-codex,
+Original implementation material authored by actual gpt-6.1-sol, provider openai-codex,
 profile sol-reviewer, task t_19c86d75, runs 2002 and 2078, under explicit author-route
 admission. Every material commit is signed off and identifies that runtime.
 Sole same-card independent reviewer: actual Claude Opus 5.5 on
@@ -107,7 +107,21 @@ acceptance. No other card artifacts or plans are runtime dependencies.
 Scoped success is REVIEW REQUIRED only. Operator retains PR publication,
 complete Node/Python discovery, survey/GIS skip accounting, regional/search
 parity, credential/privacy/link checks, web/client/copy/token checks,
-dependency audit, browser/e2e and required exact-head CI/release gates. No
-network/source download, outbound communication, push, merge, publication,
-live run or hold release was performed. All existing source/live/legal,
+dependency audit, browser/e2e and required exact-head CI/release gates.
+That original offline phase performed no network/source download, outbound communication,
+push, merge, publication, live run or hold release. All existing source/live/legal,
 public-viewer, terrain-mask, SC#1/PR846 and SC-5b holds remain unchanged.
+
+## PR #940 CI integration (2026-10-27)
+
+Task `t_f3b123ec`, actual gpt-6.1-sol / openai-codex on sol-escalation, run 3809,
+admits self-staging, normal branch pushes and required exact-head CI. BODY09's
+Reports source binding is updated after checking source-less preload compatibility;
+its paint assertions, thresholds, resources and negative controls remain unchanged.
+The seven focused cases now live in `tests/test_sp1605_reports_source_key_focused.mjs`
+so standard Node discovery executes them, with the same offline guard loaded first.
+The old fixture path remains an import shim for focused-mode compatibility. Frozen
+baseline files and pins remain unchanged, and the acceptance launcher includes the
+new module in its source identities. Sole independent review remains with
+opus-coder-bopus / actual Claude Opus 5.5. No merge, deployment or hold release is
+part of this repair.

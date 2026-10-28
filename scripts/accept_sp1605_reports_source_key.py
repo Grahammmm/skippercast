@@ -18,6 +18,7 @@ PRODUCT = 'web/app/views/Reports.tsx'
 REGRESSION = 'tests/test_reports_view.mjs'
 FIXTURE = 'tests/fixtures/sp1605_reports_source_key'
 TEST = 'tests/test_sp1605_reports_source_key.mjs'
+FOCUSED_TEST = 'tests/test_sp1605_reports_source_key_focused.mjs'
 PINS = {PRODUCT: '8ef399a5024b6bf2b232934647c40029674e8f661ea3391b037460ca66246af1',
         REGRESSION: '2ccee6f484847a28e9487a6af4cbf45d369a97c0ffb86d134f1628797db3e771'}
 BASELINE_FILES = [TEST] + [f'{FIXTURE}/{name}' for name in ('harness.mjs', 'entry.ts', 'effects.ts', 'offline.mjs')]
@@ -32,7 +33,7 @@ def git(*args):
 
 
 def identities():
-    paths = [PRODUCT, REGRESSION, TEST, 'scripts/accept_sp1605_reports_source_key.py']
+    paths = [PRODUCT, REGRESSION, TEST, FOCUSED_TEST, 'scripts/accept_sp1605_reports_source_key.py']
     paths += [p.relative_to(ROOT).as_posix() for p in sorted((ROOT / FIXTURE).rglob('*')) if p.is_file()]
     note = ROOT / 'docs/engineering/sp1605_reports_source_key.md'
     if note.exists():
