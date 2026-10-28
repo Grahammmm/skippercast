@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "trinidad-klamath",
   "name": "Trinidad to Klamath River",
-  "status": "draft",
+  "status": "preview",
   "timezone": "America/Los_Angeles",
   "jurisdiction": "California \u00b7 Northern Groundfish Management Area",
   "bounds": [
@@ -25,7 +25,8 @@
     "zoom": 9,
     "locality_method": "Northern outer-coast discovery extent from the Mad River mouth past Trinidad Head and Reading Rock to the Klamath River, filling the gap between the Humboldt Bay\u2013Cape Mendocino and Crescent City packages. This rectangle is not a legal fishing boundary, qualified spot or navigation clearance.",
     "region_notice_ids": [
-      "northern-mpas"
+      "northern-mpas",
+      "klamath-salmon-closures"
     ],
     "local_areas": [],
     "discovery_bounds": [
@@ -250,8 +251,8 @@
       "reason": "A CDFW DS582 envelope query for this footprint on 2026-10-20 returned Reading Rock SMR and Reading Rock SMCA. Exact current geometry, their differing take exceptions and site-specific access still gate any target."
     },
     "regulations": {
-      "status": "research",
-      "reason": "Draft: this footprint is not yet in the hash-bound Northern regulation review, so no rule card may be shown for it. Shared Northern species rules do not transfer without that review."
+      "status": "partial",
+      "reason": "The October 20, 2026 hash-bound Northern review covers this ocean browse footprint and all regional species. Reading Rock SMR and SMCA remain wholly excluded from fishing targets; Klamath salmon is closed, the November crab opener is unconfirmed, and Pacific halibut may close on quota. Daily source checks, exact position, method and trip-time access still gate fishing; inland river rules are not covered."
     },
     "dynamic-closures": {
       "status": "research",
@@ -345,7 +346,7 @@
   "landing_names": [
     "Trinidad"
   ],
-  "coverage_note": "Draft Trinidad\u2013Klamath package filling the 40.95\u201341.55\u00b0 N gap between Humboldt Bay\u2013Cape Mendocino and Crescent City. Not published: its footprint still needs the hash-bound Northern regulation review. No qualified fishing spots, bottom images or drift lines.",
+  "coverage_note": "Trinidad\u2013Klamath browse preview filling the 40.95\u201341.55\u00b0 N gap between Humboldt Bay\u2013Cape Mendocino and Crescent City. The Northern ocean regulation review covers this footprint, not legal-position or launch clearance. No qualified fishing spots, bottom images or drift lines; local source coverage remains research or partial.",
   "landing_note": "Port landings do not locate catches on Trinidad or Klamath grounds.",
   "jurisdiction_id": "california-northern",
   "ecology_profile": "california-northern",

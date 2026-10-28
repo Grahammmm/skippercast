@@ -1,0 +1,306 @@
+{
+  "base_commit": "59fca09b2cc7f5c81a4796902504e263d7f06960",
+  "count": 49,
+  "families": [
+    "schemas",
+    "skills/coast-campaign-shared/schemas"
+  ],
+  "files": [
+    {
+      "bytes": 2865,
+      "git_blob": "0ff2106a8c40ffe0eae3ec37b4d195306c8877f7",
+      "path": "schemas/coast-recipe-v1.schema.json",
+      "sha256": "a659d136536a553043fac917473428ae0c6e51bdb179cc66bdd295e09ebf1593"
+    },
+    {
+      "bytes": 10038,
+      "git_blob": "63096f69e969ee8a08c18d4a06b8245ed442f5ae",
+      "path": "schemas/coastal-discovery-lead-v1.schema.json",
+      "sha256": "491723dfa30910317903cbad8dd9da44de2aed72fc7d5361447f2ce24e5bfc08"
+    },
+    {
+      "bytes": 3252,
+      "git_blob": "20ab9c4f199b812960d088b43449dd40f6350bb0",
+      "path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "sha256": "8cac704665aae620d531ab98cc8b2a3464612debce4690cf73fdd8bc31978478"
+    },
+    {
+      "bytes": 1285,
+      "git_blob": "7cb3caf779e3853496e88b6121d0c7f53224da8b",
+      "path": "schemas/coastal-terrain-only-render-v1.schema.json",
+      "sha256": "6a3fa32e0594a37f985393d99f8243a03d4ac83a29ad310e5dc1f1a9c104aba9"
+    },
+    {
+      "bytes": 955,
+      "git_blob": "fe616791d834db4996668f5d8ef5296c2ea8e3a9",
+      "path": "schemas/coastal-terrain-only-science-review-v1.schema.json",
+      "sha256": "9fd08f202cea2965d518b8bfd33de0a4fd33a5ba5c04b444ac727b832e86123f"
+    },
+    {
+      "bytes": 5019,
+      "git_blob": "7b45162739ad24b62d3010dfb7ad2325abfac6e3",
+      "path": "schemas/common.schema.json",
+      "sha256": "dbd8d97b2eea98339583baeeaa5625003d313955d2a4ecd78829734a01fd9beb"
+    },
+    {
+      "bytes": 3015,
+      "git_blob": "62a0b6ff9a0555c20ed47470506fcb386163361d",
+      "path": "schemas/coverage.schema.json",
+      "sha256": "9b2b423c7dca7d66e39cf059d298c0a171354d40732a6d6e8ab0c647f4b95a91"
+    },
+    {
+      "bytes": 5068,
+      "git_blob": "0c354ccdd8a95d7a79988114c5fef63e5d14e0a2",
+      "path": "schemas/daily-feed.schema.json",
+      "sha256": "3cd44970a2c0b4627719a995333da38fb1689dd27ebca6259e0f608552a19040"
+    },
+    {
+      "bytes": 1403,
+      "git_blob": "4c37562ca6f81f33c994b3e81275bc7d3e6b40fd",
+      "path": "schemas/data-needs.schema.json",
+      "sha256": "e9d49a7c634612012ef4a16340e7eaf94fbb27e32a8ad37c66a14863aea92800"
+    },
+    {
+      "bytes": 14129,
+      "git_blob": "d4af45ed7cb1e8778b9552a2f00517223942c15a",
+      "path": "schemas/fleet-profile.schema.json",
+      "sha256": "7f05d2e8c890ba40df0a82dd4f476a19c47c7a5bc0d6f0bd98100ef73d10fafb"
+    },
+    {
+      "bytes": 16541,
+      "git_blob": "8d84474dcc111222187841fc7bae88188f71ccc8",
+      "path": "schemas/fleet-region.schema.json",
+      "sha256": "8c6701473387dd9a03f39585441ce43421e1d45c14291e6895761b96f6c59f51"
+    },
+    {
+      "bytes": 1979,
+      "git_blob": "e864b977e18c43b59144a11d2dce51b543f97a0b",
+      "path": "schemas/forecast-index.schema.json",
+      "sha256": "12ba12582fd6798fd7fe5992886b997608d28993b45620a8ee580619581d0ff4"
+    },
+    {
+      "bytes": 3284,
+      "git_blob": "1d66b521cc4a87034003f722700297df37d67d4c",
+      "path": "schemas/forecast-manifest.schema.json",
+      "sha256": "822717e401e399848b70bb8afa431e1886c2085535e75f705951a9b3a7c9b2a4"
+    },
+    {
+      "bytes": 1949,
+      "git_blob": "5ec9a0092a7de5e5aab81b12376de9e9dceddf66",
+      "path": "schemas/forecast-tile.schema.json",
+      "sha256": "86682354a20b8f56b1eeba355c8fc0fb8accedb3430b25231abe5afd35500177"
+    },
+    {
+      "bytes": 3772,
+      "git_blob": "351442cc549989dd2f447aa6f45915f7d9c74510",
+      "path": "schemas/intelligence-feed.schema.json",
+      "sha256": "2dfea0315f5e8ea8bda804e0ac715e7dd34765b9e6aaf16883524fa5d85e2f08"
+    },
+    {
+      "bytes": 2193,
+      "git_blob": "5815cc5e88e1b4f83be1686f93efe0e8cd209a45",
+      "path": "schemas/jurisdiction.schema.json",
+      "sha256": "790a8b2b366d276d38eb983302d3825b85af147a8eda1fd2eda0aa87b9eb987c"
+    },
+    {
+      "bytes": 2684,
+      "git_blob": "50151482423d0c03a7a9ae7f9559e26ff76500ed",
+      "path": "schemas/launch-points.schema.json",
+      "sha256": "189da7ce3e8505e952a8b918164388d6d3c04755b6ac8f63504a4f31c8f43fbe"
+    },
+    {
+      "bytes": 2308,
+      "git_blob": "67d074261465384899748c1b85ce72fae5c4510a",
+      "path": "schemas/live-feed.schema.json",
+      "sha256": "85aebc70bc03068b1313823bf07edb468c1d05f11520aa83a640788db9f94a5c"
+    },
+    {
+      "bytes": 3498,
+      "git_blob": "d3f89a85e52e20f5eb47479268a793855d3c478d",
+      "path": "schemas/private-mapping-input-v2.schema.json",
+      "sha256": "8f0a584ba1ecc4c1490b199bdcfe2affb86f60db5fe147548669445ebddc5fd3"
+    },
+    {
+      "bytes": 1444,
+      "git_blob": "3f8b954b7f568ab6ba144ac6974197144b836b09",
+      "path": "schemas/published-regions.schema.json",
+      "sha256": "a0b7a6d482a460c593cb48291dcb49b56bdf59358e43e361b97c1c60d35f2600"
+    },
+    {
+      "bytes": 1038,
+      "git_blob": "e5753248a2c5ea5df25b6edbf1a8c71974f8d8a8",
+      "path": "schemas/region-manifest.schema.json",
+      "sha256": "24342b543d289679172d6e8ebcafd8b3165fda251067475f82b1b37ac22768c6"
+    },
+    {
+      "bytes": 15993,
+      "git_blob": "673cb88381cff0d0ea271041d7f09d1ea0b45b51",
+      "path": "schemas/region.schema.json",
+      "sha256": "75e594d74ab8a3338420fda34d2b509407137bed34599a2202f48422bf7390fc"
+    },
+    {
+      "bytes": 2800,
+      "git_blob": "fef66000d89a2263b880ef893dcc97bea24b91d5",
+      "path": "schemas/regions-index.schema.json",
+      "sha256": "a539ea0cceff7927471c649b5895a4f06f2325819d8936c0fa7d87778fe78e08"
+    },
+    {
+      "bytes": 6563,
+      "git_blob": "73a7237ba5d4d4c43566297f9c746812548cd991",
+      "path": "schemas/render-handoff-v2.1.schema.json",
+      "sha256": "2ede561460cc8c2870d77b2b111bb61de76ac6ce74642c00890ef9b41a4af4a1"
+    },
+    {
+      "bytes": 6919,
+      "git_blob": "6ed079e5b25dd62a43ea5a8f90e067a7481cee98",
+      "path": "schemas/shore-habitat.schema.json",
+      "sha256": "8052e171505636a4472549811df18368bba9569efc51418f6073a0517e782fa2"
+    },
+    {
+      "bytes": 3813,
+      "git_blob": "d206fc7e8d1d208b3fbe1e1ae7d26a56dbb879b3",
+      "path": "schemas/source.schema.json",
+      "sha256": "b2c1301d87fddb2be8cfca10795742bcf02a74a9b36913153ee23bce9052f6b6"
+    },
+    {
+      "bytes": 540,
+      "git_blob": "596c2737decb34d9c31724b74ae90a5e073c437a",
+      "path": "schemas/sources-catalog.schema.json",
+      "sha256": "2b1b071a6058637c1d70d21627d101459cd1261e5e5c41be31cc0660680356fd"
+    },
+    {
+      "bytes": 4626,
+      "git_blob": "ffb0ede7291dfe46bfefeb6ef2d98450d624b3c4",
+      "path": "schemas/vertical-v1.schema.json",
+      "sha256": "17047a1ddf732326e90d08e262811428154a6800e76a5aa7878acb672002e1ac"
+    },
+    {
+      "bytes": 11080,
+      "git_blob": "73900de7f4897b1c6417c23d34fe7750c7e47554",
+      "path": "skills/coast-campaign-shared/schemas/coast-admission-v1.schema.json",
+      "sha256": "07b5cb3bd06ae0d363f21b145132a5b1a37a79b85190bcfd8eeba8beb7267c84"
+    },
+    {
+      "bytes": 4443,
+      "git_blob": "11f101ff5b85b4edea97bc633e60d5f8ede1cd5b",
+      "path": "skills/coast-campaign-shared/schemas/coast-archive-manifest-v1.schema.json",
+      "sha256": "a524310f13eb1bac8c215d150208834692b110a48a56475d2efcaf52ef83cff4"
+    },
+    {
+      "bytes": 1107,
+      "git_blob": "850d5ab17bfa7b75c97674d39c2e734850a9d896",
+      "path": "skills/coast-campaign-shared/schemas/coast-campaign-v1.schema.json",
+      "sha256": "3485b5334c7f2749095a685f448e87e717496dd3e9f709b0096c3f25cb240820"
+    },
+    {
+      "bytes": 1656,
+      "git_blob": "d050a56365830ce5df9fd2f823ca372276fd5072",
+      "path": "skills/coast-campaign-shared/schemas/coast-discovery-evidence-v1.schema.json",
+      "sha256": "bc3f0d9933f715b2686774a2c4e835bc0f6857d0379adf0d739530027e72c1a2"
+    },
+    {
+      "bytes": 2226,
+      "git_blob": "ee61e9bce49ee06521808d870bd43572f655ea32",
+      "path": "skills/coast-campaign-shared/schemas/coast-enqueue-intent-v1.schema.json",
+      "sha256": "5cd6dcce68ad24af61dff99e83b96dc7666e6ebe50e8a79656816917b5292423"
+    },
+    {
+      "bytes": 3776,
+      "git_blob": "60d1bc0b2a73ffe02b9b1b302f3249d4fda57668",
+      "path": "skills/coast-campaign-shared/schemas/coast-enqueue-receipt-v1.schema.json",
+      "sha256": "27318f2a24e6599b71802e5b9c6eb6969b8d35f5c8bcb58e9b62c3141d32d0c2"
+    },
+    {
+      "bytes": 3995,
+      "git_blob": "f05bc65f351a652344125b1f8b95988ca07cc0c6",
+      "path": "skills/coast-campaign-shared/schemas/coast-enqueue-receipt-v2.schema.json",
+      "sha256": "9ec963f8c78042a99e2a83751d7113c114512d76b4d0b900c688eee5c91928d6"
+    },
+    {
+      "bytes": 1401,
+      "git_blob": "12472a8c61889f34a8b154bedf981b097755b176",
+      "path": "skills/coast-campaign-shared/schemas/coast-native-execution-v1.schema.json",
+      "sha256": "18a96ab503219fdb8ad1fd82c3f75434f6a525c2ec9840f08c02e10d74109c1d"
+    },
+    {
+      "bytes": 886,
+      "git_blob": "c9127e12aa044be74b3f3da4f3357886e273152f",
+      "path": "skills/coast-campaign-shared/schemas/coast-native-rights-evidence-v1.schema.json",
+      "sha256": "5c0c2140144c7b76363eeb11dba50d411811542128c5d13e13322f38ed5300a2"
+    },
+    {
+      "bytes": 4664,
+      "git_blob": "0275a74d90f16dbca21c5ca9b7c7539ea9af8bff",
+      "path": "skills/coast-campaign-shared/schemas/coast-open-report-v1.schema.json",
+      "sha256": "32d7b4372c8a9a60c2dd5e8b186db90fd29c66c65b35e51b0c8fd2de3df4d08f"
+    },
+    {
+      "bytes": 4802,
+      "git_blob": "4540fd88a053882ec9cebf95cbb4bb043809aeb1",
+      "path": "skills/coast-campaign-shared/schemas/coast-release-list-v1.schema.json",
+      "sha256": "08583f88dc4812500435bfbc97b24366289221531ac1985fd2ab22c156e94806"
+    },
+    {
+      "bytes": 16679,
+      "git_blob": "a9bdb12554fb9557fe870bfefb50816b3d9dd1b2",
+      "path": "skills/coast-campaign-shared/schemas/coast-review-context-v1.schema.json",
+      "sha256": "ee045d61e73d987a2b636a4f326b3f2fc1890473d292c1cfd8be4dc3e7dca5e8"
+    },
+    {
+      "bytes": 15306,
+      "git_blob": "47c65b8fe7b354bdd543ab048741cc943b019985",
+      "path": "skills/coast-campaign-shared/schemas/coast-review-packet-v1.schema.json",
+      "sha256": "29bc5c283cd4816c81977a98cb2d2c5144a679e432eaf15b55aea6fe19436946"
+    },
+    {
+      "bytes": 2360,
+      "git_blob": "14b242acb37d3ad3696e92185e4695310721047e",
+      "path": "skills/coast-campaign-shared/schemas/coast-review-routing-v1.schema.json",
+      "sha256": "6012a1b36a7fa0db8520ac16f457e4b5d6f55e86fefb3c3801ecd9c860fed544"
+    },
+    {
+      "bytes": 12992,
+      "git_blob": "9537186853985ea370aeb8fe1843ed3f052db6a1",
+      "path": "skills/coast-campaign-shared/schemas/coast-review-verdict-v1.schema.json",
+      "sha256": "9584d01ed06f596885371d5753e3a07e4b948376a72bcc4e81d514df689882fb"
+    },
+    {
+      "bytes": 18000,
+      "git_blob": "ae2ac7acecf6738860e18f830b551affc1c801fb",
+      "path": "skills/coast-campaign-shared/schemas/coast-run-summary-v1.schema.json",
+      "sha256": "7f32e4cfb7491d6e12241e219ae02102f2067d04a4f9effd790b77c2e8959ae0"
+    },
+    {
+      "bytes": 10036,
+      "git_blob": "6c48a0752879d77c06b1c492e4afcf328d6eec63",
+      "path": "skills/coast-campaign-shared/schemas/coast-run-summary-v2.schema.json",
+      "sha256": "a6e9df20001a7ee3404323118cd4e439daa39a58c2aaff6b4fc7a0cab13dde59"
+    },
+    {
+      "bytes": 9208,
+      "git_blob": "af21d4eafc4b9d8f2413977bbe9ecfaa8ee92076",
+      "path": "skills/coast-campaign-shared/schemas/coast-segment-ledger-v1.schema.json",
+      "sha256": "73a8bd798eec7f791f4bd9dfe48e0c2006c0a175c0ec83f96864ba03c7ee472a"
+    },
+    {
+      "bytes": 20966,
+      "git_blob": "29434d169faf8a38342f724c946bb88b62454500",
+      "path": "skills/coast-campaign-shared/schemas/coast-segment-receipt-v1.schema.json",
+      "sha256": "73dc8b02224d7c8e958bd9a9534f06cc66a7c2fea64cd562313520f784506550"
+    },
+    {
+      "bytes": 19286,
+      "git_blob": "aa2e914b53262df2552e3083c2874a270cb8cdd1",
+      "path": "skills/coast-campaign-shared/schemas/coast-tier1-screen-v1.schema.json",
+      "sha256": "ac4ecd259bc17f30bec4da8ca32fcdd7dc236922dd4c850b5d754d8063fc79c7"
+    },
+    {
+      "bytes": 3753,
+      "git_blob": "19f25328318478bc92c17b47c3cfd7d9c02db15e",
+      "path": "skills/coast-campaign-shared/schemas/coast-tier2-check-v1.schema.json",
+      "sha256": "dba307f6402d192847baa241d3a788752b7cf174da4ffd9d32e05a200067c6f1"
+    }
+  ],
+  "schema": "sc-schema-closure-pinned-provenance-v1",
+  "selection": "git ls-tree -r <base> -- <families>; mode 100644 blobs named *.schema.json that are direct children of a family directory"
+}
