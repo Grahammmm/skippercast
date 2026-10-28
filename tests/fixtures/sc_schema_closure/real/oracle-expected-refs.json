@@ -1,0 +1,2739 @@
+{
+  "counts": {
+    "all_reference_keys": 303,
+    "schema_location_references": 303
+  },
+  "manifest_sha256": "c5f411924d9ca0c3ce4bed0206cd708c97078d3b664f6539b316e1ca5a617413",
+  "oracle": "referencing (python-jsonschema) Registry.crawl + Resolver.lookup, Draft 2020-12 subresources_of; no retrieve",
+  "reference_keys_outside_schema_locations": [],
+  "references": [
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/datum_policy/properties/vertical_datum_by_source/propertyNames/$ref",
+      "reference": "#/$defs/slug",
+      "source_path": "schemas/coast-recipe-v1.schema.json",
+      "target_path": "schemas/coast-recipe-v1.schema.json",
+      "target_pointer": "/$defs/slug"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/slug/$ref",
+      "reference": "#/$defs/slug",
+      "source_path": "schemas/coast-recipe-v1.schema.json",
+      "target_path": "schemas/coast-recipe-v1.schema.json",
+      "target_pointer": "/$defs/slug"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/source_review_status/propertyNames/$ref",
+      "reference": "#/$defs/slug",
+      "source_path": "schemas/coast-recipe-v1.schema.json",
+      "target_path": "schemas/coast-recipe-v1.schema.json",
+      "target_pointer": "/$defs/slug"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sources/items/$ref",
+      "reference": "#/$defs/slug",
+      "source_path": "schemas/coast-recipe-v1.schema.json",
+      "target_path": "schemas/coast-recipe-v1.schema.json",
+      "target_pointer": "/$defs/slug"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/artifact/properties/sha256/$ref",
+      "reference": "#/$defs/hash",
+      "source_path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "target_path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "target_pointer": "/$defs/hash"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/mask/allOf/0/$ref",
+      "reference": "#/$defs/artifact",
+      "source_path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "target_path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "target_pointer": "/$defs/artifact"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/provenance/properties/source_sha256s/items/$ref",
+      "reference": "#/$defs/hash",
+      "source_path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "target_path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "target_pointer": "/$defs/hash"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/provenance/properties/upstream_receipt_sha256/$ref",
+      "reference": "#/$defs/hash",
+      "source_path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "target_path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "target_pointer": "/$defs/hash"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/scientific_review/allOf/0/$ref",
+      "reference": "#/$defs/artifact",
+      "source_path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "target_path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "target_pointer": "/$defs/artifact"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/terrain/allOf/0/$ref",
+      "reference": "#/$defs/artifact",
+      "source_path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "target_path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "target_pointer": "/$defs/artifact"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/uncertainty/allOf/0/$ref",
+      "reference": "#/$defs/artifact",
+      "source_path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "target_path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "target_pointer": "/$defs/artifact"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/collected_source/properties/checked_at/$ref",
+      "reference": "#/$defs/timestamp",
+      "source_path": "schemas/common.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/collected_source/properties/data_retrieved_at/anyOf/0/$ref",
+      "reference": "#/$defs/timestamp",
+      "source_path": "schemas/common.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/collected_source/properties/last_success_at/anyOf/0/$ref",
+      "reference": "#/$defs/timestamp",
+      "source_path": "schemas/common.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/collected_source/properties/requests/items/$ref",
+      "reference": "#/$defs/request_receipt",
+      "source_path": "schemas/common.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/request_receipt"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/collected_source/properties/status/$ref",
+      "reference": "#/$defs/source_status",
+      "source_path": "schemas/common.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/source_status"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/publication/properties/published_at/$ref",
+      "reference": "#/$defs/timestamp",
+      "source_path": "schemas/common.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/request_receipt/properties/retrieved_at/$ref",
+      "reference": "#/$defs/timestamp",
+      "source_path": "schemas/common.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/request_receipt/properties/sha256/$ref",
+      "reference": "#/$defs/sha256",
+      "source_path": "schemas/common.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/sha256"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/sources_map/additionalProperties/$ref",
+      "reference": "#/$defs/collected_source",
+      "source_path": "schemas/common.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/collected_source"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/capabilities/additionalProperties/properties/gaps/items/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/coverage.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/needs/items/properties/approved_sources/items/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/coverage.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/needs/items/properties/gates/items/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/coverage.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/needs/items/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/coverage.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/needs/items/properties/sources/items/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/coverage.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/region_id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/coverage.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/allOf/0/$ref",
+      "reference": "common.schema.json#/$defs/publication",
+      "source_path": "schemas/daily-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/publication"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/bounds/$ref",
+      "reference": "common.schema.json#/$defs/bbox",
+      "source_path": "schemas/daily-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/bbox"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/completed_at/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/daily-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/generated_at/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/daily-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/health/properties/issues/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/daily-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/health/properties/status/$ref",
+      "reference": "common.schema.json#/$defs/health_status",
+      "source_path": "schemas/daily-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/health_status"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/landing_names/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/daily-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/region_id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/daily-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/report_window/properties/end/$ref",
+      "reference": "common.schema.json#/$defs/date",
+      "source_path": "schemas/daily-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/date"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/report_window/properties/start/$ref",
+      "reference": "common.schema.json#/$defs/date",
+      "source_path": "schemas/daily-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/date"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/reports/items/properties/date/$ref",
+      "reference": "common.schema.json#/$defs/date",
+      "source_path": "schemas/daily-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/date"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/reports/items/properties/source_url/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/daily-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/reports/items/properties/species/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/daily-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sources/$ref",
+      "reference": "common.schema.json#/$defs/sources_map",
+      "source_path": "schemas/daily-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/sources_map"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/needs/items/properties/fields/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/data-needs.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/needs/items/properties/gates/items/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/data-needs.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/needs/items/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/data-needs.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/leafInteger/oneOf/1/allOf/0/$ref",
+      "reference": "#/$defs/prov",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/prov"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/leafNumber/oneOf/1/allOf/0/$ref",
+      "reference": "#/$defs/prov",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/prov"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/leafString/oneOf/1/allOf/0/$ref",
+      "reference": "#/$defs/prov",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/prov"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/socialAccount/oneOf/1/properties/followers/$ref",
+      "reference": "#/$defs/leafInteger",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafInteger"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/socialAccount/oneOf/1/properties/handle/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/socialAccount/oneOf/1/properties/posting_frequency/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/socialAccount/oneOf/1/properties/url/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/ais/properties/confidence/$ref",
+      "reference": "#/$defs/leafNumber",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafNumber"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/ais/properties/last_seen_source/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/ais/properties/match_method/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/ais/properties/mmsi/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/ais/properties/notes/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/amenities/items/$ref",
+      "reference": "#/$defs/prov",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/prov"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/beam_ft/$ref",
+      "reference": "#/$defs/leafNumber",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafNumber"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/booking_platform/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/booking_url/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/builder/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/bunks/$ref",
+      "reference": "#/$defs/leafInteger",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafInteger"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/call_sign/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/cancellation_policy/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/captains/items/properties/name/$ref",
+      "reference": "#/$defs/prov",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/prov"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/captains/items/properties/role/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/catch_reporting/properties/frequency/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/catch_reporting/properties/sources/items/$ref",
+      "reference": "#/$defs/prov",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/prov"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/contact_form_url/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/cruising_speed_kn/$ref",
+      "reference": "#/$defs/leafNumber",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafNumber"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/email_business/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/former_names/items/$ref",
+      "reference": "#/$defs/prov",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/prov"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/fuel_surcharge/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/home_marina/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/hull_id/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/landing/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/length_ft/$ref",
+      "reference": "#/$defs/leafNumber",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafNumber"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/mmsi/oneOf/1/allOf/0/$ref",
+      "reference": "#/$defs/prov",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/prov"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/name/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/operator_business/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/passengers_max/$ref",
+      "reference": "#/$defs/leafInteger",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafInteger"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/phone_business/oneOf/1/allOf/0/$ref",
+      "reference": "#/$defs/prov",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/prov"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/photos/items/properties/attribution/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/photos/items/properties/url/$ref",
+      "reference": "#/$defs/prov",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/prov"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/port/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/reputation/properties/google_rating/$ref",
+      "reference": "#/$defs/leafNumber",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafNumber"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/reputation/properties/google_reviews/$ref",
+      "reference": "#/$defs/leafInteger",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafInteger"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/reputation/properties/other/items/$ref",
+      "reference": "#/$defs/prov",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/prov"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/social/properties/facebook/$ref",
+      "reference": "#/$defs/socialAccount",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/socialAccount"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/social/properties/instagram/$ref",
+      "reference": "#/$defs/socialAccount",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/socialAccount"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/social/properties/tiktok/$ref",
+      "reference": "#/$defs/socialAccount",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/socialAccount"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/social/properties/youtube/$ref",
+      "reference": "#/$defs/socialAccount",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/socialAccount"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/state_registration/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/trip_types/items/properties/departs/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/trip_types/items/properties/duration_h/$ref",
+      "reference": "#/$defs/leafNumber",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafNumber"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/trip_types/items/properties/name/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/trip_types/items/properties/price_usd/$ref",
+      "reference": "#/$defs/leafNumber",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafNumber"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/trip_types/items/properties/season/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/trip_types/items/properties/target_species/items/$ref",
+      "reference": "#/$defs/prov",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/prov"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/uscg_doc_number/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/vessel_class/oneOf/1/allOf/0/$ref",
+      "reference": "#/$defs/prov",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/prov"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/waters/items/allOf/0/$ref",
+      "reference": "#/$defs/prov",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/prov"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/website/$ref",
+      "reference": "#/$defs/leafString",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafString"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/boat/properties/year_built/$ref",
+      "reference": "#/$defs/leafInteger",
+      "source_path": "schemas/fleet-profile.schema.json",
+      "target_path": "schemas/fleet-profile.schema.json",
+      "target_pointer": "/$defs/leafInteger"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/agency/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/agency/properties/records_request_url/oneOf/0/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/binding/properties/adapter/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/binding/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/binding/properties/rights/$ref",
+      "reference": "#/$defs/rights",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/rights"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/landing/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/landing/properties/point/$ref",
+      "reference": "#/$defs/latlon",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/latlon"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/landing/properties/port/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/landing/properties/website/oneOf/0/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/lead_score_catalog/properties/weights/additionalProperties/$ref",
+      "reference": "#/$defs/unit",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/unit"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/polygon/properties/coordinates/items/items/$ref",
+      "reference": "#/$defs/lonlat",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/lonlat"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/port/properties/geofence/$ref",
+      "reference": "#/$defs/polygon",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/polygon"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/port/properties/home_port/oneOf/0/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/port/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/port/properties/point/$ref",
+      "reference": "#/$defs/latlon",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/latlon"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/port/properties/region/oneOf/0/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/port/properties/waters/$ref",
+      "reference": "#/$defs/waters",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/waters"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/resolver_catalog/properties/fields/additionalProperties/$ref",
+      "reference": "#/$defs/resolver_rule",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/resolver_rule"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/resolver_rule/properties/min_confidence/$ref",
+      "reference": "#/$defs/unit",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/unit"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/resolver_rule/properties/priority/items/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/resolver_rule_override/properties/min_confidence/$ref",
+      "reference": "#/$defs/unit",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/unit"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/resolver_rule_override/properties/priority/items/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/drift/properties/max_sog_kn/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/drift/properties/min_minutes/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/gap_split_hours/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/gap_unknown_min/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/in_port_debounce_min/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/max_open_trip_hours/properties/inspected-party/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/max_open_trip_hours/properties/long-range/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/max_open_trip_hours/properties/six-pack/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/min_segment_minutes/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/min_trip_minutes/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/min_trip_offshore_nm/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/offshore_min_nm/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/simplify_tolerance_m/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/transit/properties/min_straightness/$ref",
+      "reference": "#/$defs/unit",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/unit"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/troll_pelagic/properties/max_sog_kn/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/troll_pelagic/properties/min_minutes/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/troll_pelagic/properties/min_sog_kn/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/troll_pelagic/properties/stop_max_minutes/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/troll_slow/properties/max_sog_kn/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/troll_slow/properties/max_straightness/$ref",
+      "reference": "#/$defs/unit",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/unit"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/troll_slow/properties/min_heading_variance/$ref",
+      "reference": "#/$defs/unit",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/unit"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/troll_slow/properties/min_minutes/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/troll_slow/properties/min_sog_kn/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/activity/properties/window_min/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/aggregate/properties/resolution_by_kind/additionalProperties/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/aggregate/properties/resolution_m/$ref",
+      "reference": "#/$defs/positive",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/positive"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/match/properties/auto_merge/$ref",
+      "reference": "#/$defs/unit",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/unit"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/match/properties/mmsi_auto/$ref",
+      "reference": "#/$defs/unit",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/unit"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/thresholds/properties/match/properties/review_min/$ref",
+      "reference": "#/$defs/unit",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/unit"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/agencies/items/$ref",
+      "reference": "#/$defs/agency",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/agency"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/ais/properties/bbox/items/$ref",
+      "reference": "#/$defs/latlon",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/latlon"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/landings/items/$ref",
+      "reference": "#/$defs/landing",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/landing"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/ports/items/$ref",
+      "reference": "#/$defs/port",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/port"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/resolver_overrides/additionalProperties/$ref",
+      "reference": "#/$defs/resolver_rule_override",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/resolver_rule_override"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/seasons/properties/parts/items/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sources/items/$ref",
+      "reference": "#/$defs/binding",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/binding"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/thresholds/$ref",
+      "reference": "#/$defs/thresholds",
+      "source_path": "schemas/fleet-region.schema.json",
+      "target_path": "schemas/fleet-region.schema.json",
+      "target_pointer": "/$defs/thresholds"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/generated_at/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/forecast-index.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/models/additionalProperties/oneOf/0/properties/built_at/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/forecast-index.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/models/additionalProperties/oneOf/0/properties/cycle/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/forecast-index.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/models/propertyNames/$ref",
+      "reference": "forecast-manifest.schema.json#/$defs/model_id",
+      "source_path": "schemas/forecast-index.schema.json",
+      "target_path": "schemas/forecast-manifest.schema.json",
+      "target_pointer": "/$defs/model_id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/built_at/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/forecast-manifest.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/cycle_iso/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/forecast-manifest.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/documentation/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/forecast-manifest.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/model/$ref",
+      "reference": "#/$defs/model_id",
+      "source_path": "schemas/forecast-manifest.schema.json",
+      "target_path": "schemas/forecast-manifest.schema.json",
+      "target_pointer": "/$defs/model_id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/tiles/items/$ref",
+      "reference": "#/$defs/tile_key",
+      "source_path": "schemas/forecast-manifest.schema.json",
+      "target_path": "schemas/forecast-manifest.schema.json",
+      "target_pointer": "/$defs/tile_key"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/times/$ref",
+      "reference": "#/$defs/times",
+      "source_path": "schemas/forecast-manifest.schema.json",
+      "target_path": "schemas/forecast-manifest.schema.json",
+      "target_pointer": "/$defs/times"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/fields/additionalProperties/properties/data/$ref",
+      "reference": "#/$defs/base64",
+      "source_path": "schemas/forecast-tile.schema.json",
+      "target_path": "schemas/forecast-tile.schema.json",
+      "target_pointer": "/$defs/base64"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/key/$ref",
+      "reference": "forecast-manifest.schema.json#/$defs/tile_key",
+      "source_path": "schemas/forecast-tile.schema.json",
+      "target_path": "schemas/forecast-manifest.schema.json",
+      "target_pointer": "/$defs/tile_key"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/model/$ref",
+      "reference": "forecast-manifest.schema.json#/$defs/model_id",
+      "source_path": "schemas/forecast-tile.schema.json",
+      "target_path": "schemas/forecast-manifest.schema.json",
+      "target_pointer": "/$defs/model_id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sea/$ref",
+      "reference": "#/$defs/base64",
+      "source_path": "schemas/forecast-tile.schema.json",
+      "target_path": "schemas/forecast-tile.schema.json",
+      "target_pointer": "/$defs/base64"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/times/$ref",
+      "reference": "forecast-manifest.schema.json#/$defs/times",
+      "source_path": "schemas/forecast-tile.schema.json",
+      "target_path": "schemas/forecast-manifest.schema.json",
+      "target_pointer": "/$defs/times"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/allOf/0/$ref",
+      "reference": "common.schema.json#/$defs/publication",
+      "source_path": "schemas/intelligence-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/publication"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/completed_at/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/intelligence-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/forecast/properties/region_id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/intelligence-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/generated_at/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/intelligence-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/health/properties/coverage_gaps/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/intelligence-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/health/properties/forecast_coverage/$ref",
+      "reference": "#/$defs/forecast_coverage",
+      "source_path": "schemas/intelligence-feed.schema.json",
+      "target_path": "schemas/intelligence-feed.schema.json",
+      "target_pointer": "/$defs/forecast_coverage"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/health/properties/issues/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/intelligence-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/ocean_collected_at/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/intelligence-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/region_id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/intelligence-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sources/$ref",
+      "reference": "common.schema.json#/$defs/sources_map",
+      "source_path": "schemas/intelligence-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/sources_map"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/verification/properties/generated_at/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/intelligence-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/jurisdiction.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/required_source_ids/items/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/jurisdiction.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/watches/additionalProperties/properties/keywords/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/jurisdiction.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/watches/additionalProperties/properties/url/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/jurisdiction.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/watches/propertyNames/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/jurisdiction.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/allOf/0/$ref",
+      "reference": "common.schema.json#/$defs/publication",
+      "source_path": "schemas/live-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/publication"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/completed_at/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/live-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/generated_at/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/live-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/health/properties/issues/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/live-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/region_id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/live-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sources/additionalProperties/allOf/0/$ref",
+      "reference": "common.schema.json#/$defs/collected_source",
+      "source_path": "schemas/live-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/collected_source"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sources/additionalProperties/allOf/1/properties/data/then/properties/sample_at/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/live-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sources/additionalProperties/allOf/1/properties/station_url/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/live-feed.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/default_region/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/published-regions.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/regions/items/properties/discovery_bounds/$ref",
+      "reference": "common.schema.json#/$defs/bbox",
+      "source_path": "schemas/published-regions.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/bbox"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/regions/items/properties/fishing_bounds/$ref",
+      "reference": "common.schema.json#/$defs/bbox",
+      "source_path": "schemas/published-regions.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/bbox"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/regions/items/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/published-regions.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/regions/items/properties/manifest/$ref",
+      "reference": "common.schema.json#/$defs/sha256",
+      "source_path": "schemas/published-regions.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/sha256"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/assets/additionalProperties/properties/sha256/$ref",
+      "reference": "common.schema.json#/$defs/sha256",
+      "source_path": "schemas/region-manifest.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/sha256"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/region_id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/region-manifest.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/basemap/properties/aerial/properties/acquired/properties/first/$ref",
+      "reference": "common.schema.json#/$defs/date",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/date"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/basemap/properties/aerial/properties/acquired/properties/last/$ref",
+      "reference": "common.schema.json#/$defs/date",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/date"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/basemap/properties/aerial/properties/checked_at/$ref",
+      "reference": "common.schema.json#/$defs/date",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/date"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/basemap/properties/aerial/properties/source/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/bounds/$ref",
+      "reference": "common.schema.json#/$defs/bbox",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/bbox"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/closure_check/properties/source_id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/closure_check/properties/url/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/conditions_feed/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/contexts/additionalProperties/properties/marine_zones/additionalProperties/$ref",
+      "reference": "#/$defs/marine_zone",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/region.schema.json",
+      "target_pointer": "/$defs/marine_zone"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/contexts/additionalProperties/properties/stations/$ref",
+      "reference": "#/$defs/stations",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/region.schema.json",
+      "target_pointer": "/$defs/stations"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/contexts/propertyNames/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/daily_feed/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/ecology_profile/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/fishing_bounds/$ref",
+      "reference": "common.schema.json#/$defs/bbox",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/bbox"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/habitat_feed/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/harbor/properties/information_url/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/harbor/properties/watch_keywords/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/intelligence/properties/ecology_profile/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/intelligence/properties/providers/additionalProperties/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/intelligence/properties/verification_stations/items/properties/source_url/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/intelligence/properties/verification_stations/items/properties/variables/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/intelligence_feed/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/jurisdiction_id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/landing_names/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/map/properties/discovery_bounds/$ref",
+      "reference": "common.schema.json#/$defs/bbox",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/bbox"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/map/properties/focus_areas/items/properties/bounds/$ref",
+      "reference": "common.schema.json#/$defs/bbox",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/bbox"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/map/properties/focus_areas/items/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/map/properties/local_areas/items/properties/bounds/$ref",
+      "reference": "common.schema.json#/$defs/bbox",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/bbox"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/map/properties/local_areas/items/properties/hidden_targets/items/properties/source_url/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/map/properties/local_areas/items/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/map/properties/local_areas/items/properties/notice_ids/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/map/properties/region_notice_ids/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/map/properties/unavailable_target_sources/additionalProperties/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/marine_zones/additionalProperties/$ref",
+      "reference": "#/$defs/marine_zone",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/region.schema.json",
+      "target_pointer": "/$defs/marine_zone"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/mpa/properties/bounds/$ref",
+      "reference": "common.schema.json#/$defs/bbox",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/bbox"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/pipeline_sources/additionalProperties/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/source_bindings/additionalProperties/items/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/source_bindings/propertyNames/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/stations/$ref",
+      "reference": "#/$defs/stations",
+      "source_path": "schemas/region.schema.json",
+      "target_path": "schemas/region.schema.json",
+      "target_pointer": "/$defs/stations"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/completed_at/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/regions-index.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/regions/items/properties/completed_at/anyOf/0/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/regions-index.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/regions/items/properties/coverage_gaps/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/regions-index.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/regions/items/properties/forecast_coverage/anyOf/0/$ref",
+      "reference": "intelligence-feed.schema.json#/$defs/forecast_coverage",
+      "source_path": "schemas/regions-index.schema.json",
+      "target_path": "schemas/intelligence-feed.schema.json",
+      "target_pointer": "/$defs/forecast_coverage"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/regions/items/properties/issues/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/regions-index.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/regions/items/properties/region_id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/regions-index.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/regions/items/properties/status/$ref",
+      "reference": "common.schema.json#/$defs/health_status",
+      "source_path": "schemas/regions-index.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/health_status"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/access/properties/checkedAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/access/properties/coordinates/$ref",
+      "reference": "#/$defs/position",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/position"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/access/properties/sourceUrl/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/receipt/properties/fetchedAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/receipt/properties/responseSha256/$ref",
+      "reference": "common.schema.json#/$defs/sha256",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/sha256"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/receipt/properties/url/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/review/properties/expiresAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/review/properties/reviewedAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/geometry/properties/coordinates/items/items/$ref",
+      "reference": "#/$defs/position",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/position"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/access/items/$ref",
+      "reference": "#/$defs/access",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/access"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/accessReviewExpiresAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/accessReviewedAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/accessUrl/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/checkedAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/legalReviewExpiresAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/legalReviewedAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/legalSourceUrl/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/region/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/reviewExpiresAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/sourceUrl/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/builtAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/features/items/$ref",
+      "reference": "#/$defs/run",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/run"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/regionId/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/reviews/properties/access/$ref",
+      "reference": "#/$defs/review",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/review"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/reviews/properties/legal/$ref",
+      "reference": "#/$defs/review",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/review"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/reviews/properties/source/$ref",
+      "reference": "#/$defs/review",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/review"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sourceChecks/properties/accessTermsUrl/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sourceChecks/properties/accessUrl/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sourceChecks/properties/acquisitions/properties/access/$ref",
+      "reference": "#/$defs/receipt",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/receipt"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sourceChecks/properties/acquisitions/properties/noaa/$ref",
+      "reference": "#/$defs/receipt",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/receipt"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sourceChecks/properties/acquisitions/properties/terms/$ref",
+      "reference": "#/$defs/receipt",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/receipt"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sourceChecks/properties/noaaUrl/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/bounds/$ref",
+      "reference": "common.schema.json#/$defs/bbox",
+      "source_path": "schemas/source.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/bbox"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/documentation_url/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/source.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/id/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/source.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/limitations/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/source.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/needs/items/$ref",
+      "reference": "common.schema.json#/$defs/id",
+      "source_path": "schemas/source.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/id"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/request/properties/base_url/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/source.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/request/properties/variables/$ref",
+      "reference": "common.schema.json#/$defs/string_list",
+      "source_path": "schemas/source.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/string_list"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/reviewed_at/$ref",
+      "reference": "common.schema.json#/$defs/date",
+      "source_path": "schemas/source.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/date"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/rights/properties/terms_url/$ref",
+      "reference": "common.schema.json#/$defs/https_url",
+      "source_path": "schemas/source.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/sources/items/$ref",
+      "reference": "source.schema.json",
+      "source_path": "schemas/sources-catalog.schema.json",
+      "target_path": "schemas/source.schema.json",
+      "target_pointer": ""
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/lineage/properties/source_vertical/$ref",
+      "reference": "#",
+      "source_path": "schemas/vertical-v1.schema.json",
+      "target_path": "schemas/vertical-v1.schema.json",
+      "target_pointer": ""
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/job/$ref",
+      "reference": "#/$defs/ref",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-native-execution-v1.schema.json",
+      "target_path": "skills/coast-campaign-shared/schemas/coast-native-execution-v1.schema.json",
+      "target_pointer": "/$defs/ref"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/logs/items/$ref",
+      "reference": "#/$defs/ref",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-native-execution-v1.schema.json",
+      "target_path": "skills/coast-campaign-shared/schemas/coast-native-execution-v1.schema.json",
+      "target_pointer": "/$defs/ref"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/properties/result/$ref",
+      "reference": "#/$defs/ref",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-native-execution-v1.schema.json",
+      "target_path": "skills/coast-campaign-shared/schemas/coast-native-execution-v1.schema.json",
+      "target_pointer": "/$defs/ref"
+    }
+  ],
+  "schema": "sc-schema-closure-oracle-v1"
+}
