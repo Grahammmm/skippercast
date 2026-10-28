@@ -71,6 +71,19 @@ def resolve_scope(root, *, scope_config=None, scope_id=None):
         cells_path = reference_dir / 'cells.json'
         build_receipt_path = reference_dir / 'run.json'
         screen_dir = scope_root / 'screen'
+    _sc13a_require_artifact_paths(
+        root, (reference_dir, ledger_path, reaches_path, cells_path,
+               build_receipt_path, screen_dir))
     return config, ScopePaths(ident, config_path, is_central, reference_dir,
                               ledger_path, reaches_path, cells_path,
                               build_receipt_path, screen_dir)
+
+
+def _sc13a_require_artifact_paths(root, paths):
+    """Check existing links and absent descendants without creating outputs.
+
+    Keep lexical return paths; this planning-time check is not a writer lock.
+    """
+    for path in paths:
+        if not path.resolve().is_relative_to(root):
+            raise ValueError(f'Scope artifact path escapes repository root: {path}')
