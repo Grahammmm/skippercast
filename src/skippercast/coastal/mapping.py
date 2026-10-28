@@ -39,6 +39,10 @@ def run(root, mapping_manifest, *, output_dir, now, review=None, minimum_valid_u
     if not checked['ready']:
         return dict(schema=SCHEMA, segment_id=manifest['segment_id'], state='held', holds=checked['holds'])
     facts, _, _, valid, transform, crs, depth = observation
+    if facts['header'].get('horizontal_units') == 'degree':
+        # Slope/rugosity need metric spacing; a geographic netCDF grid is held, not resampled.
+        return dict(schema=SCHEMA, segment_id=manifest['segment_id'], state='held',
+                    holds=['native_geographic_grid_derivatives_unsupported'])
     if facts['header']['resolution_m'][0] != facts['header']['resolution_m'][1]:
         return dict(schema=SCHEMA, segment_id=manifest['segment_id'], state='held',
                     holds=['native_rectangular_grid_derivatives_unsupported'])
@@ -105,6 +109,8 @@ def verify(root, run_manifest, *, now, minimum_valid_until=None):
         source_row=source_manifest.get('source_row'), metadata_sha256=source_manifest.get('metadata_sha256'))
     mapping_input.bind_segment(root,source_manifest.get('segment'),source_manifest['segment_id'],facts)
     facts.update(rights=source_manifest.get('rights'),synthetic=source_manifest.get('synthetic'))
+    if facts['header'].get('horizontal_units') == 'degree':
+        raise ValueError('native_geographic_grid_derivatives_unsupported')
     if facts['header']['resolution_m'][0] != facts['header']['resolution_m'][1]:
         raise ValueError('native_rectangular_grid_derivatives_unsupported')
     if document['facts_digest'] != checked['facts_digest'] or document['vertical'] != vertical.normalized(facts['vertical']):
