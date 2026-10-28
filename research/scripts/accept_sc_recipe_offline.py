@@ -1,6 +1,6 @@
 """SC-RECIPE-OFFLINE acceptance runner: focused, contract or negative suite.
 
-    python3 scripts/accept_sc_recipe_offline.py --suite focused --output OUT
+    python3 research/scripts/accept_sc_recipe_offline.py --suite focused --output OUT
 
 OUT must not exist; it becomes the write-once run directory holding raw
 stdout/stderr, the JUnit report, the child sentinel report and receipt.json
@@ -55,7 +55,7 @@ import os  # noqa: E402
 from pathlib import Path  # noqa: E402
 import stat  # noqa: E402
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]
 BASE = '59fca09b2cc7f5c81a4796902504e263d7f06960'
 PINNED = {
     'schemas/coast-recipe-v1.schema.json':
@@ -73,7 +73,7 @@ SUITES = {
     'negative': {'files': [NEW_TEST], 'select': 'a3_'},
 }
 CODE_INPUTS = [
-    'validate_recipe.py', 'scripts/accept_sc_recipe_offline.py', NEW_TEST, COAST_TEST,
+    'validate_recipe.py', 'research/scripts/accept_sc_recipe_offline.py', NEW_TEST, COAST_TEST,
     'tests/__init__.py', 'tests/unit/__init__.py', 'tests/conftest.py', 'tests/_support.py',
     'pyproject.toml', 'schemas/coast-recipe-v1.schema.json', 'catalog/sources.json',
     'catalog/coastal-sectors.json', 'src/skippercast/coastal/prefetch.py',

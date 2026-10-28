@@ -85,7 +85,7 @@ to prove every open stays inside the staged roots on the error path too) and
 the reference gate; the regression must then fail on the retrieval counter,
 and pass again once the gate is restored.
 
-[`scripts/accept_sc_recipe_offline.py`](../../scripts/accept_sc_recipe_offline.py)
+[`research/scripts/accept_sc_recipe_offline.py`](../../research/scripts/accept_sc_recipe_offline.py)
 runs `--suite focused|contract|negative --output NEW_DIR`. The contract suite
 runs [`tests/unit/test_coast_recipe.py`](../../tests/unit/test_coast_recipe.py)
 unchanged together with the new file. The runner starts one child under the

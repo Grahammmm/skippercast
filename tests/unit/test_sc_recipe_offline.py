@@ -500,7 +500,7 @@ def test_a3_nonfinite_recipe_value_still_refused(tmp_path):
 def load_runner():
     import importlib.util
     spec = importlib.util.spec_from_file_location(
-        'sc_recipe_offline_runner_under_test', ROOT / 'scripts' / 'accept_sc_recipe_offline.py')
+        'sc_recipe_offline_runner_under_test', ROOT / 'research' / 'scripts' / 'accept_sc_recipe_offline.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
