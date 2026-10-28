@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SP61-SPEAR-DAYLIGHT: Withhold the daily spear best hour, surge range and clarity estimate when known daylight has no fully covered forecast hour. Nighttime readings remain available per hour; unknown sunrise or sunset keeps the existing all-hour fallback.
+
 - Wrap full current-rejection reasons within the desktop layer rail so chart marks and selected-mark actions remain clickable.
 
 - Defer the daily feed until the map shell has had a paint opportunity, and keep source freshness, day choices and dock controls on one advancing clock.
@@ -9,6 +11,7 @@
 - Explain rejected current grids in the rail and cancel obsolete landing warm-ups with deadlines through response bodies.
 - Bound cold coast-data verification reads with shared isolate admission; reject saturation immediately while preserving same-key sharing and independent failures.
 - Internal: freeze historical regulations-wrapper regression inputs and report deterministic glyph-build provenance without changing published glyphs or claiming current-law or native-render acceptance.
+
 - Add an opt-in local coast terrain-RGB / contour-MVT preview with synthetic fixtures, a persistent not-for-navigation banner and manifest-derived source rights. The public coast route is unchanged; measured-source integration and publication remain held.
 - SP-MAP-NOW: Withhold cloud tiles and native current frames when an explicitly supplied decision clock is not a valid Date. Omitted clocks still use the current time; source ages, forecast and observation selection, publisher hosts and tile queries are unchanged.
 
@@ -145,6 +148,8 @@
 - The new home page and map now send the site's anonymous usage statistics: uncaught error reports (scrubbed message, script file name, line and column, build, hashed request id) and three visit steps, each with the region, build and `s` visit source: `port_selected` (a port chosen in the map's port chooser), `spot_saved` (a spot added to the trip) and `offline_saved` (a region saved for offline). The new home page sends error reports only. No cookies or identifiers, and nothing under Do Not Track or Global Privacy Control. The privacy notice now describes exactly what is collected, where it is stored (Cloudflare Workers Analytics Engine, kept three months) and that the daily operations report copies step counts and the top scrubbed errors into public GitHub Actions run summaries. The v1 About text no longer says there is no analytics.
 
 ### Internal
+
+- Design only, no app change: `docs/plans/pelagic-context/design.md` sets what albacore and bluefin pelagic context may show at a selected hour (separate dated evidence lines, only WCOFS lines change with the hour, bluefin keeps no temperature range, no score, rank or probability), the held-out validation test a search priority must pass first (not evaluable on the data held today, so priority stays off), and records that the species-search-plans search strips were retired with the v1 map (#561).
 
 - SP-FLEET-DATES: the public fleet heat route (`/api/fleet/public/heat`, still off by default) withholds a cell whose `last_date` is not an exact `YYYY-MM-DD` calendar day. The code re-check now rejects empty, padded, partial, timestamp-shaped and impossible dates such as 2021-02-29 before the 72-hour delay comparison, which the text comparison in SQL let through. The delay, vessel floor, rights allowlist, whole-season filter and paging are unchanged (`tests/test_sp_fleet_dates.mjs`, `scripts/accept_sp_fleet_dates.py`).
 
