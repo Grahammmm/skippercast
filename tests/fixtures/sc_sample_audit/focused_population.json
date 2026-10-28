@@ -1,0 +1,22 @@
+{
+  "description": "Synthetic sc-sample-audit focused fixture. Window keys are source_id#grid_sha256#index for index 0..map_done-1; the first `eligible` indices are eligible. Expected counts were recorded by hand from the unchanged coast_sample.sample output for these bindings, independent of the audit module.",
+  "plan_sha256": "48bd570824cc91f535276ed2826114a8633a52510ceda71479d4b2674d04b8b9",
+  "bridge_sha256": "b04accdc835c02187ac7c8bd3907d989cfc5456eab954b69af2ad60719381931",
+  "layout": [
+    {"source_id": "alpha", "grid_sha256": "5dcc6dac0a39600d0597e6e7e0fd6858181db9411271f9d5d821829ac61b0861", "map_done": 12, "eligible": 10},
+    {"source_id": "alpha", "grid_sha256": "15322240bd24f0493ea5604ff856e54321a43afc5f88b571618a41aebb505470", "map_done": 4, "eligible": 3},
+    {"source_id": "beta", "grid_sha256": "31cad8ec7c019ce20067e0a05862e64332319acfd86b8e222afa9b1d87b5a604", "map_done": 3, "eligible": 2},
+    {"source_id": "gamma", "grid_sha256": "c3b747f1ff3fcf3fe7aa3ac64ff9724176436faffb41b9c63279cb141ba915b2", "map_done": 2, "eligible": 0}
+  ],
+  "expected": {
+    "target": 8,
+    "size": 8,
+    "groups": [
+      {"source_id": "alpha", "grid_sha256": "15322240bd24f0493ea5604ff856e54321a43afc5f88b571618a41aebb505470", "map_done_count": 4, "eligible_count": 3, "selected_count": 2, "eligible_unselected_count": 1, "ineligible_count": 1},
+      {"source_id": "alpha", "grid_sha256": "5dcc6dac0a39600d0597e6e7e0fd6858181db9411271f9d5d821829ac61b0861", "map_done_count": 12, "eligible_count": 10, "selected_count": 6, "eligible_unselected_count": 4, "ineligible_count": 2},
+      {"source_id": "beta", "grid_sha256": "31cad8ec7c019ce20067e0a05862e64332319acfd86b8e222afa9b1d87b5a604", "map_done_count": 3, "eligible_count": 2, "selected_count": 0, "eligible_unselected_count": 2, "ineligible_count": 1},
+      {"source_id": "gamma", "grid_sha256": "c3b747f1ff3fcf3fe7aa3ac64ff9724176436faffb41b9c63279cb141ba915b2", "map_done_count": 2, "eligible_count": 0, "selected_count": 0, "eligible_unselected_count": 0, "ineligible_count": 2}
+    ],
+    "totals": {"map_done": 21, "eligible": 15, "selected": 8, "eligible_unselected": 7, "ineligible": 6, "groups": 4}
+  }
+}
