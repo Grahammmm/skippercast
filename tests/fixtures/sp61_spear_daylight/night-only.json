@@ -1,0 +1,23 @@
+{
+  "description": "Synthetic ForecastHour and Report fields follow packages/coast/src/types.ts; no live data.",
+  "sunrise": "2026-10-24T14:00:00.000Z",
+  "sunset": "2026-10-25T01:00:00.000Z",
+  "hour": {
+    "at": "2026-10-24T03:00:00.000Z",
+    "windKnots": 5,
+    "gustKnots": 8,
+    "waveFt": 1,
+    "wavePeriodS": 10,
+    "swellFt": 0.5,
+    "swellPeriodS": 10,
+    "airTempF": 60,
+    "precipPct": 0
+  },
+  "chlorophyll": {
+    "mgM3": 0.8,
+    "sampleAt": "2026-10-23T12:00:00.000Z",
+    "cells": 4,
+    "label": "Synthetic chlorophyll",
+    "url": "https://example.invalid/chlorophyll"
+  }
+}

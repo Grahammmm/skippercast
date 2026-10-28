@@ -21,11 +21,12 @@ permissions:
 
 jobs:
   survey-science:
-    # Self-hosted CI is opt-in only after its complete setup is verified.
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
+    # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
+    # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
           cache: pip
@@ -70,7 +71,7 @@ jobs:
   web-changed:
     # Does this change touch anything `pnpm build` or the browser tests read?
     # Unknown base (first push, force-push) counts as changed.
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     outputs:
       changed: ${{ steps.d.outputs.changed }}
@@ -99,8 +100,9 @@ jobs:
     # `wrangler dev` (e2e/serve.mjs), at 390x844 and 1280x800.
     # On PRs, skipped (a skipped required check passes) only when web-changed
     # says no site input changed; if web-changed itself fails, e2e still runs.
-    # Self-hosted CI is opt-in only after its complete setup is verified.
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
+    # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
+    # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     needs: web-changed
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.web-changed.outputs.changed != 'false') }}
@@ -135,15 +137,16 @@ jobs:
           path: test-results/
           retention-days: 7
   check:
-    # Self-hosted CI is opt-in only after its complete setup is verified.
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
+    # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
+    # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     strategy:
       matrix:
         # PRs: 3.13 only (survey-science already runs every non-GIS test on 3.13; the Node steps need one leg). Main push: both.
         python: ${{ github.event_name == 'pull_request' && fromJSON('["3.13"]') || fromJSON('["3.11","3.13"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python }}
       - name: Package installs and imports outside the checkout
