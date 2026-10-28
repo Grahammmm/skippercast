@@ -86,6 +86,8 @@ def read_watch(path: Path, region: str) -> WatchList:
         text = Path(path).read_text(encoding="utf-8")
     except FileNotFoundError:
         return WatchList(region, frozenset())
+    except UnicodeDecodeError:
+        raise WatchFileError("watch.json is not valid UTF-8") from None
     except OSError as error:
         raise WatchFileError(f"watch.json cannot be read: {error.strerror or error}") from None
     try:
