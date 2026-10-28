@@ -110,7 +110,9 @@ class KnownGapTests(unittest.TestCase):
         doc = discovered(p, result["run_id"])
         self.assertEqual(doc["bindings"]["landing-pages"], {"status": "ok", "candidates": 4, "skips": {"layout": 1}})
         self.assertEqual(doc["gaps"], {"ais-static": "not-implemented"})
-        self.assertTrue(doc["complete"])
+        # SP1308: the skipped page may have listed boats too, so discovery is not complete
+        # (refresh must not count an unlisted vessel towards vanished on this run).
+        self.assertFalse(doc["complete"], "a binding that skipped work did not list all its boats")
 
     def test_an_adapter_that_raises_still_makes_the_run_partial(self):
         p = gap_pipeline(self.tmp.name, **{"landing-layout": Skipping("layout")})
