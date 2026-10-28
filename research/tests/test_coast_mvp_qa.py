@@ -82,6 +82,20 @@ class CoastQATest(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 qa.packet(FIXTURE,out)
 
+    def test_cli_package_form_and_no_regional_mode(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d)/'packet'
+            run = subprocess.run([sys.executable,'-m','research.scripts.coast_mvp.coast_qa',
+                                  '--region-config',str(FIXTURE),'--output',str(out)],
+                                 cwd=ROOT,capture_output=True,text=True,check=True)
+            self.assertEqual(json.loads(run.stdout)['segments'][0]['seam_rms'][0]['rms_m'],3)
+            for cmd in (['research/scripts/coast_mvp/coast_qa.py'],['-m','research.scripts.coast_mvp.coast_qa']):
+                refused = subprocess.run([sys.executable,*cmd,'--regional','--region-config',str(FIXTURE),
+                                          '--output',str(Path(d)/'regional')],cwd=ROOT,capture_output=True,text=True)
+                self.assertEqual(refused.returncode,2)
+                self.assertIn('unrecognized arguments: --regional',refused.stderr)
+                self.assertFalse((Path(d)/'regional').exists())
+
     def test_bad_geometry_and_unsafe_identifier_refused(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)/'bad.asc'
