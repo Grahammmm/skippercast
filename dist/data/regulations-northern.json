@@ -1,20 +1,21 @@
 {
   "schema_version": 1,
-  "revision": "2026-09-24-northern-humboldt-cape-1",
-  "reviewed_at": "2026-09-25T03:25:14Z",
+  "revision": "2026-10-20-northern-trinidad-klamath-1",
+  "reviewed_at": "2026-10-20T23:14:46Z",
   "valid_from": "2026-01-01",
   "valid_through": "2026-12-31",
   "timezone": "America/Los_Angeles",
   "area": "California Northern Groundfish Management Area · Oregon border to 40°10′ N",
-  "scope": "Reviewed 2026 official recreational boat rules within the Crescent City–Del Norte and Humboldt Bay–Cape Mendocino browse footprints. In-season closures, exact MPA geometry, method, harbor and route clearance remain separate checks.",
+  "scope": "Reviewed 2026 official recreational boat rules within the Crescent City–Del Norte, Humboldt Bay–Cape Mendocino and Trinidad–Klamath browse footprints. Ocean day trips only, not inland river fishing. In-season closures, exact MPA geometry, method, harbor and route clearance remain separate checks.",
   "check_interval_hours": 24,
   "max_age_hours": 36,
   "common_notes": [
     "Northern Management Area is Oregon border to 40°10′ N. MPA and federal closures are position- and method-specific. A boat depth limit is not a legal depth boundary.",
-    "A regional rules card is not an open-season or exact-position clearance. Fresh source status, MPA geometry, method and in-season access remain separate checks."
+    "A regional rules card is not an open-season or exact-position clearance. Fresh source status, MPA geometry, method and in-season access remain separate checks.",
+    "When taking finfish from a boat, have a landing net with an opening at least 18 inches in diameter available for immediate use to land undersized fish. Do not gaff an undersized fish (§28.65)."
   ],
   "official_map_url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Northern",
-  "checked_at": "2026-09-25T03:25:14Z",
+  "checked_at": "2026-10-20T23:16:41Z",
   "review_required": [],
   "jurisdiction_id": "california-northern",
   "authority_hosts": [
@@ -44,115 +45,124 @@
         -124.12,
         40.92
       ]
+    },
+    {
+      "id": "trinidad-klamath",
+      "fishing_bounds": [
+        -124.55,
+        40.95,
+        -124.05,
+        41.55
+      ]
     }
   ],
-  "review_record": "jurisdictions/reviews/2026-09-24-california-northern-humboldt-cape.json",
-  "approved_rules_content_sha256": "4b4f698c407a635597a6e43bbe11b8e730ced4195df6c45a79699dbf881d874d",
+  "review_record": "jurisdictions/reviews/2026-10-20-california-northern-trinidad-klamath.json",
+  "approved_rules_content_sha256": "b59f3e181b0b9c8a50d6e4713bda893a129567ad67e2f8bb3aac789228297c1e",
   "rules_review_status": "reviewed",
   "checks": {
     "rules-gear": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:28Z",
-      "content_sha256": "499f7caea6ab785f3becbf81a21e8281f4088b01a719c76ef9ff3b249540239f",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:09Z",
+      "content_sha256": "389bd69628ba305b287b23869df4e5ec092c1328c2a756943bcc3422195a4819",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "rules-invertebrates": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:28Z",
-      "content_sha256": "619c3420bfda1aeadf13cbd7f3151803ad9bea49384a9c73a417351196227582",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:09Z",
+      "content_sha256": "8c5a758c06f7fadf0a4da908edce580fdc4e25895250ae9bb8479c7d0818f9c2",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "rules-whales": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:28Z",
-      "content_sha256": "72852d5fff39e9882b444366a434e959a049f08760cb1fd2b5d835c7cbde15a5",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:09Z",
+      "content_sha256": "b49d091f8caf7109aefb5863fc433adce018eee38f69366a5f2e91e2101f3592",
       "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "rules-health": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:28Z",
-      "content_sha256": "598336053084e316362daf6531380cb888d2c7b4f4f93f7cdaf3ecc202969eba",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:09Z",
+      "content_sha256": "57139dac749afac9d1a95938296b8a288fe2325d6322b961661c33bc66d7ef47",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "rules-ocean": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:29Z",
-      "content_sha256": "aa99f150e6f39a5c01cbb65d1dadd17317974429ea166d89b0199abf25a391a4",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:09Z",
+      "content_sha256": "485290944a3e0afe0c8b3e0201dfc04c10591a86f9558ae5516ae5ed8cd694ee",
       "url": "https://wildlife.ca.gov/Fishing/Ocean",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "rules-groundfish": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:29Z",
-      "content_sha256": "7b4c9bd0f71f9fa812735171ae0d9ada52514cd1dd564a1368eb6dc9824b4b0b",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:09Z",
+      "content_sha256": "9338d6590c457dbbe5365ef0a03a47c6f0bf52d76b021e502a4365f8266fa8b8",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "rules-inseason": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:29Z",
-      "content_sha256": "75cf221228831bf99550e55a2943e84f356a7d3886411b6cf1cc1fb675a14c99",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:09Z",
+      "content_sha256": "0bffb38234288f1eb5fe08d19671b07f4a89990f47e3fe1eabe8e6dbd2875e6d",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "rules-salmon": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:29Z",
-      "content_sha256": "f0530f309bced157f4a9687a62f87d241543af164a320debf9b8373d69bfccb1",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:09Z",
+      "content_sha256": "e6da76635014c566573b1775be4f667e59606dccf81058761d0c0e93fbac686b",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "rules-crab": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:30Z",
-      "content_sha256": "c5426397ad8ff91ca1d161c435bf3ba707939a39d2e58a443fc3f1d1e1affdf6",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:09Z",
+      "content_sha256": "fcf5ffc550c2f62481d17590ac60e03fe685de82e145b4c4a9427d1633c6bcb3",
       "url": "https://wildlife.ca.gov/Conservation/Marine/Invertebrates/Crabs",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "rules-book": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:31Z",
-      "content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:11Z",
+      "content_sha256": "d0e1b4867bccc3ea33e16555fc638e61527b3a99148ae46a631173bc3bef90a1",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
       "normalization": "pdf-bytes-v1",
       "source_status": "ok"
     },
     "rules-proposals": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:30Z",
-      "content_sha256": "8a780ba99038595a2c4a5866bf170e4304c9529db2f5ebad3770cc69f479b055",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:09Z",
+      "content_sha256": "5b60ab09fdff240bfb1ecc636cef6a42bf150704ca80d57c8ff686fbf58d35f5",
       "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "rules-tuna-federal": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:30Z",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:10Z",
       "content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
       "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
       "normalization": "ecfr-section-text-v1",
@@ -160,17 +170,17 @@
     },
     "rules-salmon-pdf": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:30Z",
-      "content_sha256": "9f62960093fe97bb3bfad585141c3e30135b9c95965b4aef4420ae6c77a677c3",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:10Z",
+      "content_sha256": "87f644927fa005c96536346d86c3a018d2eab8e5259b525405615a0877250e03",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
       "normalization": "pdf-bytes-v1",
       "source_status": "ok"
     },
     "rules-groundfish-pdf": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:31Z",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:10Z",
       "content_sha256": "1e34c814c199f32a32fe4e97f0710fdf1064029cf57d0617f0be05dcc9a358d5",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185055&inline=",
       "normalization": "pdf-bytes-v1",
@@ -178,72 +188,72 @@
     },
     "rules-northern": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:31Z",
-      "content_sha256": "4a933bde340ce6f613a4595bebff90ef91f7eeb5e261426da1bc8ddcfa8c233b",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:10Z",
+      "content_sha256": "345157ac6c8cd22215be1206ba7018e23a7876ceec649ba104e1c4ad70a8e5c7",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Northern",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "mpa-pyramid": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:32Z",
-      "content_sha256": "369506652cd23ddc781095a1839d1e78a2f051c9ac784b5fc319fe48a0764fcc",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:10Z",
+      "content_sha256": "7b817f30e129b3cf0c2f96be4f658b46be73e5d7318588813c127f05569ca3b5",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Pyramid-Point",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "mpa-st-george": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:32Z",
-      "content_sha256": "f8cb7e1028b09cf879e9ea39d5a3ce6667aa49d3489c62469a32ec1a76d55824",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:10Z",
+      "content_sha256": "debc8b5f897b3620c1f334f61f4d1fb0ddcdf4e348b2b337275d9ae28690b5dd",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-St-George-Reef",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "mpa-reading": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:32Z",
-      "content_sha256": "cb69c9b5a49c8baf1b775dc5f7ff178bbe44fd1661f98e85dc430531aef01b49",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:11Z",
+      "content_sha256": "39948ebeab623d5f99e23a4b45385db94c856c3d1e9228627a4690b58a28c0bd",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Reading-Rock",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "rules-pacific-halibut": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:32Z",
-      "content_sha256": "3ecf742e9969b582bec4e1ef56439e7ca66333e2c4ac43880bbc641704786f65",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:11Z",
+      "content_sha256": "2751d758e08235663183793d99f6204c28671ac1e5391599c2b2acfcb75e7034",
       "url": "https://wildlife.ca.gov/Conservation/Marine/Pacific-Halibut",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "mpa-samoa": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:33Z",
-      "content_sha256": "6b9de9e386881b4fe3444365566b110737ec45b334f0031bba34f1ffe14dfcdd",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:11Z",
+      "content_sha256": "73277cb5083b18bb98e19904c264041f8c0fc9049ad8708cf0f0e394b8596010",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Samoa",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "mpa-south-humboldt": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:33Z",
-      "content_sha256": "7ba33d46336205e35d6ef2ae487b9bff518d22407b839b281d7810b86484ef45",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:12Z",
+      "content_sha256": "2db17fb534d9477ff1c1d2560884f0350693cce1513e1a80310b9d269b2c7201",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/South-Humboldt-Bay",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
     },
     "mpa-south-cape": {
       "status": "unchanged",
-      "checked_at": "2026-09-25T03:24:27Z",
-      "data_retrieved_at": "2026-09-25T03:24:33Z",
-      "content_sha256": "468f676d094d799dadb72915e3eefffc6ac8b227d9b2993edfe2b679f70f8ecc",
+      "checked_at": "2026-10-20T23:14:08Z",
+      "data_retrieved_at": "2026-10-20T23:14:12Z",
+      "content_sha256": "89e5d0c527a5d546ca6982301e72a37a076e5577f595f8491132d84eee9d13b5",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/South-Cape-Mendocino-Sugarloaf-Island-Steamboat-Rock",
       "normalization": "text-and-links-v3",
       "source_status": "ok"
@@ -253,178 +263,178 @@
     "rules-gear": {
       "name": "CDFW finfish gear and general rules",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/General-Ocean-Fishing-Regs",
-      "approved_content_sha256": "499f7caea6ab785f3becbf81a21e8281f4088b01a719c76ef9ff3b249540239f",
+      "approved_content_sha256": "389bd69628ba305b287b23869df4e5ec092c1328c2a756943bcc3422195a4819",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed 2026 CDFW general finfish gear: rockfish and lingcod aboard impose one-line/two-hook limits; salmon has separate Northern boat gear restrictions. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read section 28.65 and the July 3 effective emergency language. Groundfish aboard restricts to one line/two hooks; salmon has separate rod/barbless rules. Landing net opening at least 18 inches is required for boat finfish, and undersized fish cannot be gaffed. New wire/large-hook shore restrictions are south of Pigeon Point, not this Northern footprint. Added the omitted landing-net reminder; no Northern hook permission was expanded."
     },
     "rules-invertebrates": {
       "name": "CDFW invertebrate gear rules",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Sport-Fishing/Invertebrate-Fishing-Regs",
-      "approved_content_sha256": "619c3420bfda1aeadf13cbd7f3151803ad9bea49384a9c73a417351196227582",
+      "approved_content_sha256": "8c5a758c06f7fadf0a4da908edce580fdc4e25895250ae9bb8479c7d0818f9c2",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed current CDFW section 29.80 recreational trap, hoop, snare, marking and tending rules; a scheduled crab season does not authorize traps without current declarations. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read sections 29.80 and 29.85 with the January 1, 2026 approved crab gear language. Preserve private-boat ten-trap/validation, nine-day tending, seven-day pre-opener prohibition, six-loop snare and two-hour hoop inspection rules. Northern hoop buoy is at most 6 by 14 inches; optional orange H marker and surface-line markings differ from trap buoys. Season, toxin closures and trap declarations remain separate gates."
     },
     "rules-whales": {
       "name": "CDFW whale-safe crab restrictions",
       "url": "https://wildlife.ca.gov/Conservation/Marine/Whale-Safe-Fisheries",
-      "approved_content_sha256": "72852d5fff39e9882b444366a434e959a049f08760cb1fd2b5d835c7cbde15a5",
+      "approved_content_sha256": "b49d091f8caf7109aefb5863fc433adce018eee38f69366a5f2e91e2101f3592",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed whale-safe fishery status and declaration process; Northern November 2026 recreational crab trap clearance cannot be presumed in September. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read the 2026-27 status and dated prior-season assessments: recreational and commercial seasons currently closed. June 2026 commercial Zones 1-2 depth/gear reductions and recreational Zones 3-5 trap prohibitions do not clear Northern recreational traps for November. No new-season recreational clearance is established. Approve the closed/scheduled representation only; preserve requires_opening_review and trap requires_clearance, rather than infer clearance from zone latitude or an old declaration."
     },
     "rules-health": {
       "name": "CDFW fishery health closures",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Health-Advisories",
-      "approved_content_sha256": "598336053084e316362daf6531380cb888d2c7b4f4f93f7cdaf3ecc202969eba",
+      "approved_content_sha256": "57139dac749afac9d1a95938296b8a288fe2325d6322b961661c33bc66d7ef47",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed CDFW health notice index; shellfish and Dungeness health closures must be checked again on the actual trip date. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read current health status: Del Norte razor clams closed October 9, Humboldt razor clams remain closed; Monterey anchovy consumption restrictions are outside these footprints. No current recreational Dungeness toxin closure is listed, but this is not a season opening, trap clearance or November health forecast. Commercial rock-crab closures are not private-boat Dungeness rules. Keep trip-time health checks and scheduled crab opener."
     },
     "rules-ocean": {
       "name": "CDFW official regulation index",
       "url": "https://wildlife.ca.gov/Fishing/Ocean",
-      "approved_content_sha256": "aa99f150e6f39a5c01cbb65d1dadd17317974429ea166d89b0199abf25a391a4",
+      "approved_content_sha256": "485290944a3e0afe0c8b3e0201dfc04c10591a86f9558ae5516ae5ed8cd694ee",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed CDFW ocean regulation index as a source directory; it does not grant position-specific fishing permission. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read CDFW ocean index as the authoritative source directory and followed Northern rules, booklet, in-season and Commission links. An index is not evidence of an open season or exact-position access. Species conclusions use the detailed legal records; no catch, habitat or navigation claim is derived from this page."
     },
     "rules-groundfish": {
       "name": "CDFW groundfish",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Groundfish-Summary",
-      "approved_content_sha256": "7b4c9bd0f71f9fa812735171ae0d9ada52514cd1dd564a1368eb6dc9824b4b0b",
+      "approved_content_sha256": "9338d6590c457dbbe5365ef0a03a47c6f0bf52d76b021e502a4365f8266fa8b8",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed CDFW 2026 groundfish summary and linked Northern table; Northern boat season Apr–Dec all depths and species limits differ from Mendocino. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read Northern groundfish summary and linked table alongside approved regular language effective May 19. Northern boat season is April 1-December 31 at all depths, not the Mendocino split-depth schedule. Retain descending-device, one-line/two-hook, RCG ten, one copper/two canary/four vermilion-sunset and prohibited-species restrictions; lingcod two at 22 inches remains separate."
     },
     "rules-inseason": {
       "name": "CDFW in-season changes",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Inseason",
-      "approved_content_sha256": "75cf221228831bf99550e55a2943e84f356a7d3886411b6cf1cc1fb675a14c99",
+      "approved_content_sha256": "0bffb38234288f1eb5fe08d19671b07f4a89990f47e3fe1eabe8e6dbd2875e6d",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed dated CDFW in-season changes through September 2026, including Klamath salmon closure; later notices must be rechecked. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read dated changes through October 9. July 28 notice closes KMZ recreational salmon; August San Francisco modifications do not reopen Northern waters. October Del Norte razor-clam closure does not change the seven displayed species. Commercial Northern crab depth restrictions and Central recreational trap restrictions are not a new Northern recreational opener. No listed Pacific-halibut quota closure overrides the retained conditional season as of retrieval."
     },
     "rules-salmon": {
       "name": "CDFW salmon",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Salmon",
-      "approved_content_sha256": "f0530f309bced157f4a9687a62f87d241543af164a320debf9b8373d69bfccb1",
+      "approved_content_sha256": "e6da76635014c566573b1775be4f667e59606dccf81058761d0c0e93fbac686b",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed CDFW 2026 salmon page: Klamath Management Zone has no remaining 2026 opener; Smith River mouth closure and one-rod/barbless Northern boat rules apply. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read current salmon guidance with section 27.80 and in-season flyer. KMZ (Oregon border to 40 degrees 10 minutes N) remains closed for the rest of 2026; no fall opener transfers north. Salmon vessel possession is prohibited in closed KMZ. Section 27.75 Klamath mouth closure is year-round for salmon and expands in August; these limits do not certify other-species access or inland fishing. Keep empty salmon windows."
     },
     "rules-crab": {
       "name": "CDFW crab",
       "url": "https://wildlife.ca.gov/Conservation/Marine/Invertebrates/Crabs",
-      "approved_content_sha256": "c5426397ad8ff91ca1d161c435bf3ba707939a39d2e58a443fc3f1d1e1affdf6",
+      "approved_content_sha256": "fcf5ffc550c2f62481d17590ac60e03fe685de82e145b4c4a9427d1633c6bcb3",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed CDFW permanent redirect to the canonical crab page and its September 24 recreational regulations and FAQ. The normalized content hash matches the previously reviewed source; current season, gear, whale and health checks remain separate. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read recreational regulations and 2026 FAQ, distinguishing commercial notices and CPFV passenger validation exceptions from this private-boat profile. Northern hoop changes are effective January 1, 2026, not pending. A trap restriction does not itself prohibit hoop/snare take, but neither method may bypass season/health closures. Ten Dungeness at 5.75 inches applies only when open; November 7 remains scheduled, not cleared."
     },
     "rules-book": {
       "name": "CDFW 2026 ocean sport fishing booklet",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=239985",
-      "approved_content_sha256": "5c6dfb3fe5b621398dc8f80a7a619222b2a9f45fd14b2f5ccaaf3af401ca973e",
+      "approved_content_sha256": "d0e1b4867bccc3ea33e16555fc638e61527b3a99148ae46a631173bc3bef90a1",
       "normalization": "pdf-bytes-v1",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed original 2026 CDFW ocean booklet for California halibut, albacore, Dungeness and on-board gear/fillet requirements; regional notices remain controlling. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read July 17 updated booklet sections 27.25, 27.65, 27.75, 27.80, 28.15, 28.20, 28.27, 28.38, 28.55, 28.65, 29.80, 29.85 and Northern section 632 entries. Corrected a substantive error: section 27.65's California-halibut fillet exception is SOUTH of Point Arena; Northern boat filleting/steaking/chunking and landing such pieces are prohibited. Pacific/California halibut remain distinct. Later KMZ in-season closure supersedes booklet summer openings. Reading Rock method exceptions do not remove whole-MPA exclusion."
     },
     "rules-proposals": {
       "name": "California FGC rulemaking: effective and pending changes",
       "url": "https://fgc.ca.gov/Regulations/2026-New-and-Proposed",
-      "approved_content_sha256": "8a780ba99038595a2c4a5866bf170e4304c9529db2f5ebad3770cc69f479b055",
+      "approved_content_sha256": "5b60ab09fdff240bfb1ecc636cef6a42bf150704ca80d57c8ff686fbf58d35f5",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed 2026 Fish and Game Commission proposal index; proposed changes without an effective date were not treated as operative Northern rules. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read 2026 index and continuing 2025 entries plus linked approved text. Effective: Pacific halibut March 12; salmon May 16 with later in-season closure; regular groundfish May 19; white-shark emergency July 3-December 31; crab gear January 1. October 14 adoption of white-shark extension still has pending OAL/effective fields; sport-fishing and tuna-harpoon proposals likewise are not operative permission. Do not use expired groundfish emergency extension as current authority. Inland Klamath section 7.40 is outside this ocean-only scope."
     },
     "rules-tuna-federal": {
       "name": "Federal recreational Pacific tuna rules · 50 CFR 660.721",
       "url": "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-K/section-660.721",
       "approved_content_sha256": "0799bb1a7b08712821a373e7fefec86f5c8b9898b47b5c76d20b8a206555922b",
       "normalization": "ecfr-section-text-v1",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed current eCFR 50 CFR 660.721: 25 albacore north of Point Conception, with trip/day possession constraints and southern-EEZ exception. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read exact eCFR section 660.721 despite unchanged fingerprint. Northern albacore limit is 25; entering U.S. EEZ south of 34 degrees 27 minutes N limits the whole trip to ten. Per-24-hour-at-sea and one-calendar-day bag constraints remain. State section 28.38 adds albacore to general finfish limit; this review is day trips, not multi-day possession or Mexican waters."
     },
     "rules-salmon-pdf": {
       "name": "CDFW 2026 ocean salmon season flyer · August update",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=242581&inline=",
-      "approved_content_sha256": "9f62960093fe97bb3bfad585141c3e30135b9c95965b4aef4420ae6c77a677c3",
+      "approved_content_sha256": "87f644927fa005c96536346d86c3a018d2eab8e5259b525405615a0877250e03",
       "normalization": "pdf-bytes-v1",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed original August 19 2026 CDFW salmon flyer: Klamath summer guideline reached, no fall opening north of 38°02 N, and Smith/Klamath mouth closures. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read complete official flyer, August 19 update with October 6 version footer. KMZ 3,900 Chinook guideline attained and August dates closed; fall only south of 38 degrees 02 minutes N. Smith/Klamath mouth salmon closures and August Klamath Control Zone persist. Closed KMZ vessel possession is not a transit exception. Seasonal closure is retained; no 2027 permission is asserted."
     },
     "rules-groundfish-pdf": {
       "name": "CDFW Northern groundfish season table",
       "url": "https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=185055&inline=",
       "approved_content_sha256": "1e34c814c199f32a32fe4e97f0710fdf1064029cf57d0617f0be05dcc9a358d5",
       "normalization": "pdf-bytes-v1",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed original January 1 2026 Northern table: Apr 1–Dec 31 at all depths, RCG ten with one copper/two canary/four vermilion-sunset, lingcod two at 22 inches, descending device. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read the unchanged Northern table rather than assume unchanged means accepted. April-December all-depth boat season, RCG ten including one copper/two canary/four vermilion-sunset, no yelloweye/quillback/cowcod/bronzespotted, lingcod two at 22 inches and descending-device duty match final profiles and May 19 regular law. This is not a legal-location or bottom-depth clearance."
     },
     "rules-northern": {
       "name": "CDFW Northern Region rules",
       "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Northern",
-      "approved_content_sha256": "4a933bde340ce6f613a4595bebff90ef91f7eeb5e261426da1bc8ddcfa8c233b",
+      "approved_content_sha256": "345157ac6c8cd22215be1206ba7018e23a7876ceec649ba104e1c4ad70a8e5c7",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed Northern regional page updated August 31: 42°–40°10 N, Klamath salmon closed, Dungeness closed with scheduled Nov 7 opening, Pacific halibut open subject to quota. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read October 9 Northern summary covering all three footprints north of 40 degrees 10 minutes N. California halibut two/22 inches year-round; Pacific halibut one/no minimum through November 15 or quota; KMZ salmon closed; Dungeness season closed with November 7 scheduled only. Northern table controls groundfish. New razor-clam/sturgeon text does not add species to this registry. Correct California-halibut processing by booklet, not an inferred Southern exception."
     },
     "mpa-pyramid": {
       "name": "CDFW Pyramid Point SMCA",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Pyramid-Point",
-      "approved_content_sha256": "369506652cd23ddc781095a1839d1e78a2f051c9ac784b5fc319fe48a0764fcc",
+      "approved_content_sha256": "7b817f30e129b3cf0c2f96be4f658b46be73e5d7318588813c127f05569ca3b5",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed CDFW Pyramid Point SMCA page: only surf smelt dip/throw-net recreational exception; app excludes all MPA geometry from fishing targets. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read current Pyramid Point page and booklet section 632(b)(1). Recreational true-smelt dip/Hawaiian-net exception and named tribal exemption do not allow ordinary reef/halibut fishing. Preserve Crescent City dependency and conservative exclusion of the whole mapped MPA; Trinidad promotion removes no neighboring protection."
     },
     "mpa-st-george": {
       "name": "CDFW Point St. George Reef Offshore SMCA",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Point-St-George-Reef",
-      "approved_content_sha256": "f8cb7e1028b09cf879e9ea39d5a3ce6667aa49d3489c62469a32ec1a76d55824",
+      "approved_content_sha256": "debc8b5f897b3620c1f334f61f4d1fb0ddcdf4e348b2b337275d9ae28690b5dd",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed CDFW Point St George Reef Offshore SMCA page: salmon troll and Dungeness trap exceptions, plus tribal exemptions; app excludes all MPA geometry. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read current Point St. George Reef Offshore page and booklet section 632(b)(2). Recreational salmon trolling and Dungeness by trap are narrow exceptions, subject to seasons/trap restrictions; commercial and tribal provisions are not general permission. Retain whole-MPA exclusion and existing Crescent City sources."
     },
     "mpa-reading": {
       "name": "CDFW Reading Rock MPAs",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Reading-Rock",
-      "approved_content_sha256": "cb69c9b5a49c8baf1b775dc5f7ff178bbe44fd1661f98e85dc430531aef01b49",
+      "approved_content_sha256": "39948ebeab623d5f99e23a4b45385db94c856c3d1e9228627a4690b58a28c0bd",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed CDFW Reading Rock SMR/SMCA page: SMR no take; SMCA has salmon, surf smelt and Dungeness exceptions; app excludes all MPA geometry. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read Reading Rock page, both linked facts/regulation PDFs and current booklet sections 632(b)(6)-(7). SMR prohibits marine-resource take; SMCA permits recreational salmon trolling, true smelt (page says surf smelt) by dip/Hawaiian throw net and Dungeness by trap/hoop/hand, plus named tribal exemptions. No general rockfish/lingcod/halibut exception. Updated notice distinguishes methods while retaining conservative exclusion of BOTH whole MPAs. Direct Westlaw fetch was unavailable and is not claimed inspected."
     },
     "rules-pacific-halibut": {
       "name": "CDFW Pacific halibut season and quota",
       "url": "https://wildlife.ca.gov/Conservation/Marine/Pacific-Halibut",
-      "approved_content_sha256": "3ecf742e9969b582bec4e1ef56439e7ca66333e2c4ac43880bbc641704786f65",
+      "approved_content_sha256": "2751d758e08235663183793d99f6204c28671ac1e5391599c2b2acfcb75e7034",
       "normalization": "text-and-links-v3",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Reviewed CDFW Pacific halibut page: north of Point Arena Apr 1–Nov 15 or earlier quota closure, one fish no minimum length, one line with two hooks when angling. Rechecked unchanged hash in new Humboldt footprint review."
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read current Pacific-halibut page, Northern status and March 12 effective section 28.20. North of Point Arena: April 1-November 15 OR earlier quota closure, one fish/no minimum, one line/two hooks when angling. No current closure notice was present; catch tracking is not a prediction or clearance. Preserve quota warning and source dependencies so later notices withhold open; south-of-Point-Arena December dates do not transfer north."
     },
     "mpa-samoa": {
       "name": "CDFW Samoa SMCA",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/Samoa",
       "normalization": "text-and-links-v3",
-      "approved_content_sha256": "6b9de9e386881b4fe3444365566b110737ec45b334f0031bba34f1ffe14dfcdd",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Read current CDFW Samoa SMCA regulations: salmon trolling, surf smelt nets and Dungeness trap/hoop/hand are narrow recreational exceptions; rockfish and lingcod take is prohibited there. App policy excludes the whole mapped MPA."
+      "approved_content_sha256": "73277cb5083b18bb98e19904c264041f8c0fc9049ad8708cf0f0e394b8596010",
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read current Samoa SMCA page and booklet section 632(b)(8): recreational salmon trolling, true-smelt nets and Dungeness trap/hoop/hand exceptions, with separate Wiyot exemption. They do not open reef/halibut fishing or supersede seasons. Preserve Humboldt notice dependency and whole-MPA target exclusion; this existing footprint is not silently dropped."
     },
     "mpa-south-humboldt": {
       "name": "CDFW South Humboldt Bay SMRMA",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/South-Humboldt-Bay",
       "normalization": "text-and-links-v3",
-      "approved_content_sha256": "7ba33d46336205e35d6ef2ae487b9bff518d22407b839b281d7810b86484ef45",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Read current CDFW South Humboldt Bay SMRMA regulations: marine take prohibited except waterfowl under general hunting rules and named tribal exemption; app excludes the mapped management area from target fishing."
+      "approved_content_sha256": "2db17fb534d9477ff1c1d2560884f0350693cce1513e1a80310b9d269b2c7201",
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read South Humboldt Bay SMRMA page and booklet section 632(b)(9). Marine resource take prohibition, waterfowl under separate hunting regulations and named Wiyot exemption are not ordinary fishing permission. Preserve existing Humboldt protected-area notice and complete mapped exclusion."
     },
     "mpa-south-cape": {
       "name": "CDFW South Cape Mendocino SMR and special closures",
       "url": "https://wildlife.ca.gov/Conservation/Marine/MPAs/South-Cape-Mendocino-Sugarloaf-Island-Steamboat-Rock",
       "normalization": "text-and-links-v3",
-      "approved_content_sha256": "468f676d094d799dadb72915e3eefffc6ac8b227d9b2993edfe2b679f70f8ecc",
-      "reviewed_at": "2026-09-25T03:25:14Z",
-      "review_note": "Read current CDFW South Cape Mendocino SMR page: reserve prohibits marine take; Sugarloaf Island has year-round 300 ft vessel restriction, Steamboat Rock Mar 1 to Aug 31 300 ft restriction; app excludes protected geometry."
+      "approved_content_sha256": "89e5d0c527a5d546ca6982301e72a37a076e5577f595f8491132d84eee9d13b5",
+      "reviewed_at": "2026-10-20T23:14:46Z",
+      "review_note": "Read South Cape Mendocino/Sugarloaf/Steamboat page and booklet section 632 entries. Reserve prohibits marine-resource take; Sugarloaf has year-round 300-foot vessel restriction and Steamboat March-August 300-foot restriction, with specified official/emergency exceptions. Preserve Humboldt footprint, local notice dependencies and conservative protected-geometry exclusion; no operational access is certified."
     }
   },
   "species": {
@@ -513,8 +523,7 @@
       "details": [
         "California halibut only; Pacific halibut has a different season and rules.",
         "General ocean hook-and-line rules apply. With rockfish or lingcod aboard, use one line and no more than two hooks; salmon aboard triggers salmon gear rules.",
-        "Fillets aboard: at least 16¾ in with all skin attached. Do not gaff an undersized fish.",
-        "Do not halve halibut fillets. A lengthwise midline split is allowed only if the pieces remain joined for at least two inches at one end; retain all skin and the minimum fillet length."
+        "Do not fillet, steak or cut California halibut into chunks aboard a boat or bring it ashore in those forms in this Northern footprint. The §27.65 California-halibut fillet exception applies only south of Point Arena, not here. Do not gaff an undersized fish."
       ],
       "source_ids": [
         "rules-northern",
@@ -541,7 +550,9 @@
       "size": "Not applicable during the 2026 closed season.",
       "details": [
         "CDFW says the Klamath Management Zone remains closed for the rest of 2026; do not use a Central/Southern fall opener here.",
-        "Future seasons depend on federal and state action and require a new review."
+        "Future seasons depend on federal and state action and require a new review.",
+        "The Klamath River mouth has a year-round ocean salmon closure under §27.75(b), expanding into the Klamath Control Zone in August. These are salmon-specific closures, not a blanket authorization or prohibition for other species. Consult exact boundaries; inland river fishing is outside this review.",
+        "Salmon may not be possessed aboard a vessel in the Klamath Management Zone while its salmon season is closed (§27.80). A catch from another management area does not authorize transit possession here."
       ],
       "source_ids": [
         "rules-northern",
@@ -688,11 +699,22 @@
     {
       "id": "northern-mpas",
       "name": "Northern California MPAs",
-      "note": "Pyramid Point, Point St. George Reef Offshore, Reading Rock and other MPAs have different take exceptions. Conservative app policy excludes them from fishing targets; exact coordinates and method-specific regulations still require review.",
+      "note": "Reading Rock SMR prohibits take of living, geological and cultural marine resources. Reading Rock SMCA permits recreational salmon by trolling, true smelt by dip net or Hawaiian throw net, and Dungeness crab by trap, hoop net or hand, subject to other seasons and restrictions; named tribal exemptions are separate. Pyramid Point and Point St. George Reef Offshore have different exceptions. The app conservatively excludes each whole mapped MPA from fishing targets, including the SMCA; this is not an exception-aware fishing permission. Consult exact coordinates and methods in §632.",
       "source_ids": [
         "mpa-pyramid",
         "mpa-st-george",
         "mpa-reading"
+      ]
+    },
+    {
+      "id": "klamath-salmon-closures",
+      "name": "Klamath mouth and ocean salmon closures",
+      "note": "Ocean salmon is closed throughout the Klamath Management Zone for the remainder of 2026, with no vessel possession during closure. The Klamath River mouth has a year-round salmon closure that expands in August into the Klamath Control Zone (§27.75(b)); exact boundaries matter. These are salmon-specific restrictions, not blanket clearance for other species. Inland river rules, river-bar access and route safety are not covered by this ocean preview.",
+      "source_ids": [
+        "rules-book",
+        "rules-salmon",
+        "rules-salmon-pdf",
+        "rules-inseason"
       ]
     },
     {
