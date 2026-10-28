@@ -55,8 +55,13 @@ when `CI_SELF_HOSTED_READY=true` **and** the run is not a pull request from a fo
 Dependabot: pushes to `main`, manual dispatches and pull requests from branches in this
 repository (people with write access) use `CI_RUNNER`; a fork's pull request and a
 Dependabot update (whose new packages run install scripts) always run on GitHub-hosted Ubuntu.
-`tests/contract/test_workflow_pins.py` pins that expression. CI jobs hold no secrets
-(`permissions: contents: read`).
+`tests/contract/test_workflow_pins.py` pins that expression. The guarantee CI gives is
+limited: its jobs get no repository secrets injected and a read-only `GITHUB_TOKEN`
+(`permissions: contents: read`). That restricts the token only. It does not stop a job
+from reading files or credentials on the host, and a same-repository branch is a
+write-access trust boundary, not proof that the code was reviewed. The current runners
+run as the operator account and can read the operator's credentials, so CI must not move
+onto them until isolation is verified (see [CI readiness gate](#ci-readiness-gate)).
 
 ## Setting up the box
 
@@ -201,13 +206,26 @@ failures: [fleet OSINT run](runbooks/fleet-osint.md).
 libraries must already be present (Ubuntu 24.04 desktop has them; the setup
 script installs them otherwise).
 
-
 CI uses GitHub-hosted Ubuntu until `CI_SELF_HOSTED_READY=true` is set alongside
-`CI_RUNNER`, and fork and Dependabot pull requests stay hosted even then. Setting a runner label alone does not move CI. Before enabling the
-gate, verify browser system dependencies install without an interactive password,
-parallel pnpm installs use separate directories, and the complete CI suite passes
-on the configured runner. Keep the gate disabled while any prerequisite fails.
-Other data jobs continue to use `DATA_RUNNER` independently.
+`CI_RUNNER`, and fork and Dependabot pull requests stay hosted even then. Setting a
+runner label alone does not move CI. Before enabling the gate, verify all of these:
+
+1. **Credential isolation.** The CI runner runs as an account that cannot read the
+   operator's credentials or home directory (SSH keys, cloud and GitHub tokens,
+   `~/.config/skippercast/`, password stores). A read-only `GITHUB_TOKEN` does not
+   provide this; only host-level separation does.
+2. **Workload isolation.** CI jobs cannot reach the secret-bearing `DATA_RUNNER` and
+   `SEAFLOOR_RUNNER` workloads: not their runner directories, work trees, caches,
+   environment files or processes.
+3. Browser system dependencies install without an interactive password.
+4. Parallel pnpm installs use separate directories.
+5. A complete proof run of the CI suite passes green on the configured runner.
+
+Today's runners run as the operator account and do not meet items 1 and 2, so
+`CI_SELF_HOSTED_READY` stays unset until that isolation is verified and a complete
+proof run is green. Keep the gate disabled while any prerequisite fails. Merging a
+change to `ci.yml` does not enable it. Other data jobs continue to use `DATA_RUNNER`
+independently.
 
 ## Seafloor isolation
 
