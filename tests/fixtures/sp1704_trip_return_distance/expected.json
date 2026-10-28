@@ -1,7 +1,7 @@
 {
-  "_note": "Pinned from the unchanged staged base segment.py (SOURCE-MANIFEST head): every scenario field the SP1704 repair must not move. distance_nm is the base value; only closed trips may differ, by exactly their return leg.",
+  "_note": "Pinned from the unchanged staged base segment.py (SOURCE-MANIFEST head): every scenario field the SP1704 repair must not move. distance_nm is the base value; only closed trips may differ, by exactly their return leg. Classifier identity pins follow the c3 fingerprint introduced by 6163fab1; all segmentation and trip-field pins remain unchanged.",
   "closed": {
-    "classifier_version": "c2-30923daf159568b4",
+    "classifier_version": "c3-8d41413b7b157168",
     "distance_nm": 10.126047,
     "fields": {
       "basis": "inferred-from-movement",
@@ -28,7 +28,7 @@
     ]
   },
   "closed_to_port_b": {
-    "classifier_version": "c2-30923daf159568b4",
+    "classifier_version": "c3-8d41413b7b157168",
     "distance_nm": 24.399744,
     "fields": {
       "basis": "inferred-from-movement",
@@ -55,7 +55,7 @@
     ]
   },
   "closed_with_dip": {
-    "classifier_version": "c2-30923daf159568b4",
+    "classifier_version": "c3-8d41413b7b157168",
     "distance_nm": 10.643096,
     "fields": {
       "basis": "inferred-from-movement",
@@ -84,7 +84,7 @@
     ]
   },
   "gap_truncated": {
-    "classifier_version": "c2-30923daf159568b4",
+    "classifier_version": "c3-8d41413b7b157168",
     "distance_nm": 5.912831,
     "fields": {
       "basis": "inferred-from-movement",
@@ -110,7 +110,7 @@
     ]
   },
   "open": {
-    "classifier_version": "c2-30923daf159568b4",
+    "classifier_version": "c3-8d41413b7b157168",
     "distance_nm": 10.126047,
     "fields": {
       "basis": "inferred-from-movement",
@@ -137,7 +137,7 @@
     ]
   },
   "open_aged": {
-    "classifier_version": "c2-30923daf159568b4",
+    "classifier_version": "c3-8d41413b7b157168",
     "distance_nm": 10.126047,
     "fields": {
       "basis": "inferred-from-movement",
@@ -164,7 +164,7 @@
     ]
   },
   "open_port_hint": {
-    "classifier_version": "c2-30923daf159568b4",
+    "classifier_version": "c3-8d41413b7b157168",
     "distance_nm": 16.79037,
     "fields": {
       "basis": "inferred-from-movement",
@@ -193,7 +193,7 @@
     ]
   },
   "open_zero_final": {
-    "classifier_version": "c2-30923daf159568b4",
+    "classifier_version": "c3-8d41413b7b157168",
     "distance_nm": 10.126047,
     "fields": {
       "basis": "inferred-from-movement",
@@ -227,7 +227,7 @@
     ]
   },
   "start_unknown": {
-    "classifier_version": "c2-30923daf159568b4",
+    "classifier_version": "c3-8d41413b7b157168",
     "distance_nm": 5.912831,
     "fields": {
       "basis": "inferred-from-movement",

@@ -1,0 +1,6 @@
+{
+  "description": "SC126 synthetic cached asset. The digest was computed independently with sha256sum over the UTF-8 bytes of payload; it is a test oracle, not survey data or a source hash.",
+  "file_name": "asset.tif",
+  "payload": "SC126 synthetic cached asset: test bytes only, not survey data.\n",
+  "sha256": "8b67adac20a81db5df802eb66a2b86b17605207bd183ca0a9ddaf53604b31526"
+}
