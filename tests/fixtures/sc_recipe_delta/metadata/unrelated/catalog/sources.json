@@ -1,0 +1,7 @@
+{
+  "sources": [
+    {"id": "syn-alpha", "needs": ["bathymetry"], "review_status": "approved", "vertical_datum": null},
+    {"id": "syn-beta", "needs": ["bathymetry", "substrate"], "review_status": "candidate"},
+    {"id": "syn-gamma", "needs": ["bathymetry"], "review_status": "unavailable"}
+  ]
+}

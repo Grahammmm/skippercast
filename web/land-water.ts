@@ -215,6 +215,8 @@ const page = (): string => globalThis.location?.href ?? 'http://localhost/';
 interface Job {readonly region: string; readonly model: LandWaterModel | null; readonly promise: Promise<LandWaterState>}
 let indexJob: Job | null = null;
 let linesJob: Job | null = null;
+// Only the selected region's settled transport/429/5xx failure is retryable.
+let indexTransientFailure = false;
 
 function startJob(region: string, model: LandWaterModel | null, work: (current: () => boolean) => Promise<LandWaterState>, slot: 'index' | 'lines'): Job {
   let job: Job | null = null;
@@ -226,22 +228,30 @@ function startJob(region: string, model: LandWaterModel | null, work: (current: 
 
 /**
  * Load `region`'s index once and resolve with its settled state; a missing or failed one leaves the region
- * unavailable (every place unknown). Concurrent callers share one request.
+ * unavailable (every place unknown). Only an explicit `retryTransient: true` retries a settled transport,
+ * HTTP 429 or HTTP 5xx failure. Ready, invalid and permanently unavailable products remain memoized.
+ * There are no automatic retries. Concurrent callers, including explicit retries, share one request.
  */
-export function loadLandWater(region: string, fetchFn: Fetch = (...a) => fetch(...a)): Promise<LandWaterState> {
+export function loadLandWater(region: string, fetchFn: Fetch = (...a) => fetch(...a), options: {readonly retryTransient?: boolean} = {}): Promise<LandWaterState> {
   const now = landWater.peek();
-  if (now.region === region && (now.state === 'ready' || now.state === 'unavailable')) return Promise.resolve(now);
+  if (now.region === region && (now.state === 'ready' || (now.state === 'unavailable' && !(options.retryTransient === true && indexTransientFailure)))) return Promise.resolve(now);
   if (indexJob?.region === region) return indexJob.promise;
   linesJob = null;
+  indexTransientFailure = false;
   landWater.value = {...IDLE, region, state: 'loading'};
   return startJob(region, null, async current => {
     let model: LandWaterModel | null = null;
+    let transient = false;
     try {
       const r = await fetchFn(new URL(landWaterURL(region), page()).href);
-      model = r.ok ? landWaterModel(await r.json(), region) : null;
-    } catch { model = null; }
+      if (r.ok) {
+        // Invalid JSON/schema is a product failure, not a transport retry grant.
+        try { model = landWaterModel(await r.json(), region); } catch { model = null; }
+      } else transient = r.status === 429 || (r.status >= 500 && r.status <= 599);
+    } catch { transient = true; }
     if (!current()) return landWater.peek();
     indexJob = null;
+    indexTransientFailure = transient;
     return landWater.value = {...IDLE, region, state: model ? 'ready' : 'unavailable', model};
   }, 'index').promise;
 }
@@ -291,4 +301,4 @@ export async function ensureLandWater(region: string, points: readonly Point[], 
 }
 
 /** Tests: forget the loaded region and any request in flight. */
-export function resetLandWater(): void { indexJob = null; linesJob = null; landWater.value = IDLE; }
+export function resetLandWater(): void { indexJob = null; linesJob = null; indexTransientFailure = false; landWater.value = IDLE; }

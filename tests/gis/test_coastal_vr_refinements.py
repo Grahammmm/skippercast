@@ -501,3 +501,25 @@ def test_cli_emit_then_verify(vr_bag, capsys):
     assert json.loads(capsys.readouterr().out)['supergrids'] == 4
     vr.main(['verify', '--root', str(root), '--receipt', 'cli/vr-refinements-receipt.json'])
     assert json.loads(capsys.readouterr().out)['ok'] is True
+
+
+def test_overview_fill_other_than_the_bag_null_is_refused(tmp_path):
+    # Refinement nulls are 1e6 whatever the overview says; a -9999 fill would make them +1,000,000 m soundings.
+    source = tmp_path / 'H11879_MB_VR_MLLW.bag'
+    xml = make_vr_bag(source)
+    with h5py.File(source, 'r+') as bag:
+        root = bag['BAG_root']
+        for name in ('elevation', 'uncertainty'):
+            data, attrs = root[name][:], dict(root[name].attrs)
+            del root[name]
+            band = root.create_dataset(name, data=data, fillvalue=np.float32(-9999), maxshape=(None, None), chunks=True)
+            for key, value in attrs.items():
+                band.attrs[key] = value
+    artifact = ref(tmp_path, source, 'native-raster-v1')
+    row = dict(id='synthetic-vr-bag', title=source.name, kind='bathymetry', format='bag',
+               url='https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H11879/BAG/' + source.name,
+               sha256=artifact['sha256'], horizontal_crs='EPSG:26911', vertical_datum='MLLW')
+    with pytest.raises(ValueError, match='BAG nodata must be the BAG null'):
+        vr.emit(tmp_path, artifact, source_row=row, metadata_sha256=hashlib.sha256(xml.encode()).hexdigest(),
+                output_dir='derived')
+    assert not (tmp_path / 'derived').exists()

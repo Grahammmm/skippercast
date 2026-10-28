@@ -59,6 +59,7 @@ KINDS = {
     "fleet-region": "fleet-region.schema.json",
     "fleet-profile": "fleet-profile.schema.json",
 
+    'coast-recipe-v1': 'coast-recipe-v1.schema.json',
     'coastal-discovery-lead-v1': 'coastal-discovery-lead-v1.schema.json',
     'coastal-terrain-only-input-v1': 'coastal-terrain-only-input-v1.schema.json',
     'coastal-terrain-only-render-v1': 'coastal-terrain-only-render-v1.schema.json',
@@ -66,6 +67,7 @@ KINDS = {
     'private-mapping-input-v2': 'private-mapping-input-v2.schema.json',
     'render-handoff-v2.1': 'render-handoff-v2.1.schema.json',
     'vertical-v1': 'vertical-v1.schema.json',
+    'coast-recipe-v1': 'coast-recipe-v1.schema.json',
 }
 INSTALL_HINT = "JSON Schema validation needs the optional 'jsonschema' package: pip install -r requirements-test.txt"
 SWITCH = "SKIPPERCAST_VALIDATE"

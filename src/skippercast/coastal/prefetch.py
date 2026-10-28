@@ -199,6 +199,19 @@ class GuardedSink:
         return result
 
 
+def mirror_urls(path):
+    """URLs receipted in a mirror manifest; unparseable lines are stale and carry none."""
+    urls = []
+    for line in path.read_text().splitlines():
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(row, dict) and isinstance(row.get('url'), str):
+            urls.append(row['url'])
+    return urls
+
+
 class Prefetch:
     def __init__(self, plan: dict, session: Session, *, root=RAW, mirror=MIRROR,
                  status=STATUS, mount=MOUNT, clock=time.time, disk_usage=shutil.disk_usage,
@@ -364,6 +377,10 @@ class Prefetch:
             for line in path.read_text().splitlines():
                 row = json.loads(line)
                 records[row['url']] = row
+        mirror = self.mirror / (source + '.jsonl')
+        if mirror.exists() and set(mirror_urls(mirror)) - set(records):
+            # A lost or truncated primary must never erase the only other copy of receipts.
+            raise Hold(f'Mirror manifest has receipts the primary lacks; preserve both: {mirror}')
         self.records[source] = records
         self.flush_manifest(source)  # repair a stale/missing second copy after a crash
 
@@ -382,10 +399,20 @@ class Prefetch:
 
     @staticmethod
     def validator(headers):
+        # Only a strong ETag may stitch ranges: a weak ETag is not byte identity and
+        # Last-Modified has 1 s resolution. Without one, fetch one full entity.
         etag = headers.get('ETag')
         if etag and not etag.startswith('W/'):
             return etag
-        return headers.get('Last-Modified')
+        return None
+
+    @staticmethod
+    def entity_changed(head, response):
+        """Any ETag change (weak or strong) or Last-Modified change means another entity."""
+        if response.get('ETag') != head.get('ETag'):
+            return True
+        modified = head.get('Last-Modified')
+        return bool(modified and response.get('Last-Modified') not in (None, modified))
 
     def fetch(self, row):
         self.guard()
@@ -421,7 +448,7 @@ class Prefetch:
             if (meta.get('url') != row['url'] or meta.get('total') != total
                     or meta.get('final_url') != head.final_url
                     or (meta.get('bytes') and not validator) or meta.get('validator') != validator):
-                raise Hold('Partial identity changed or has no strong ETag/Last-Modified; preserve for operator')
+                raise Hold('Partial identity changed or has no strong ETag; preserve for operator')
             offset = meta.get('bytes', -1)
             if (type(offset) is not int or not 0 <= offset <= total
                     or partial.stat().st_size < offset):
@@ -472,8 +499,7 @@ class Prefetch:
                 raise Hold('Remote redirect target changed during transfer')
             if response.headers.get('Content-Encoding', 'identity').lower() != 'identity':
                 raise Hold('Encoded response refused: raw byte identity required')
-            observed = self.validator(response.headers)
-            if validator and observed != validator:
+            if self.entity_changed(head.headers, response.headers):
                 raise Hold('Remote validator changed during transfer')
             if response.status == 206:
                 expected = f'bytes {offset}-{end}/{total}'

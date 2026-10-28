@@ -1,8 +1,9 @@
 """Publish a region's shelf depth contours from its reviewed survey grids (CI6-13).
 
 scripts/build_depth_contours.py traces the contours from the region's
-approved, bound bathymetry grids (the original survey GeoTIFFs, checked by
-SHA-256) and writes catalog/depth-contours/<id>.geojson. The platform build
+approved, bound bathymetry grids (the original survey GeoTIFFs at their
+reviewed native cell size; each SHA-256 is recorded, not checked against a
+pin) and writes catalog/depth-contours/<id>.geojson. The platform build
 checks that file and writes its published form to
 dist/regions/<id>/depth-contours.geojson, plus an overview form
 (depth-contours-overview.geojson) that the Chart draws below
@@ -118,6 +119,18 @@ def _walk(links):
     return chains
 
 
+def _clean_chain(points):
+    """Drop consecutive duplicate coordinates and chains with no geometric extent.
+
+    Compare exactly: short real lines survive, as does a ring's closing point.
+    """
+    clean = []
+    for point in points:
+        if not clean or point != clean[-1]:
+            clean.append(point)
+    return clean if len(clean) >= 2 else []
+
+
 def trace(grid, depths):
     """Marching squares: {depth: lines} of each depth in `depths` across `grid` (rows of numbers, None where invalid).
 
@@ -146,7 +159,9 @@ def trace(grid, depths):
                 for p, q in _square_links(v, nodes, d):
                     graph.setdefault(p, []).append(q)
                     graph.setdefault(q, []).append(p)
-    return {d: [[_cross(grid, edge, d) for edge in chain] for chain in _walk(links[d])] for d in wanted}
+    return {d: [points for chain in _walk(links[d])
+                if (points := _clean_chain(_cross(grid, edge, d) for edge in chain))]
+            for d in wanted}
 
 
 def feature_lines(geometry):

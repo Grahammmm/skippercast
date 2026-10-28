@@ -82,15 +82,13 @@ class _Builder(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.root = Node("#document")
         self.stack = [self.root]
-        self.skipping = 0
+        self.skipping: list[str] = []
 
     def handle_starttag(self, tag, attrs):
-        if self.skipping:
-            if tag in SKIP:
-                self.skipping += 1
-            return
         if tag in SKIP:
-            self.skipping = 1
+            self.skipping.append(tag)
+            return
+        if self.skipping:
             return
         group = IMPLICIT.get(tag)
         if group:
@@ -107,15 +105,19 @@ class _Builder(HTMLParser):
             self.stack.append(node)
 
     def handle_startendtag(self, tag, attrs):
-        if self.skipping:
+        if self.skipping or tag in SKIP:
             return
         node = Node(tag, {k: v or "" for k, v in attrs}, self.stack[-1])
         self.stack[-1].children.append(node)
 
     def handle_endtag(self, tag):
         if self.skipping:
-            if tag in SKIP:
-                self.skipping -= 1
+            # Only an actually open skipped container can end suppression.
+            # Its matching close also unwinds any unclosed skipped descendants.
+            for depth in range(len(self.skipping) - 1, -1, -1):
+                if self.skipping[depth] == tag:
+                    del self.skipping[depth:]
+                    break
             return
         for depth in range(len(self.stack) - 1, 0, -1):
             if self.stack[depth].tag == tag:

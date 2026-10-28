@@ -61,7 +61,7 @@ import {waterTempState} from '../map/sst.ts';
 import {chlorophyllState} from '../map/chlorophyll.ts';
 import {PALETTE_TOKENS} from '../map/palette.ts';
 import {CONTRAST_SCALE, contrastState} from '../map/contrast.ts';
-import {HEIGHT_SCALE, frameSummary, nearshoreState, swellState} from '../map/swell.ts';
+import {HEIGHT_SCALE, frameSummary, nearshoreState, swellPartition, swellState} from '../map/swell.ts';
 import {windState} from '../map/wind.ts';
 import {ringBasis, ringSummary} from '../map/nearshore.ts';
 import {stationState} from '../map/stations.ts';
@@ -211,6 +211,8 @@ function SwellRow() {
     <li class="app-legend-swell">
       {f ? <span class="app-swatch" data-layer="swell" aria-hidden="true"></span> : null}Swell
       <Popover iconOnly summary="Swell basis">{s.basis}{r ? <> {ringBasis(r.product)}</> : null}</Popover>
+      <Segmented label="Swell" value={swellPartition.value} onChange={v => { swellPartition.value = v; }}
+        options={[{value: 'primary', label: 'Primary swell'}, {value: 'wind', label: 'Wind sea'}, {value: 'secondary', label: 'Secondary swell'}]} />
       {f ? <p class="app-legend-note app-legend-range ui-mono" data-range="swell">{frameSummary(f)}</p> : null}
       {f ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="swell">{HEIGHT_SCALE[0]} ft<span class="app-swatch" data-layer="swell" aria-hidden="true"></span><span class="app-visually-hidden"> to </span>{HEIGHT_SCALE[1]}+ ft</p> : null}
       {f ? <p class="app-legend-note ui-mono" data-stamp="swell">{WAVE_MODEL.name} model forecast · {f.stamp}</p> : null}

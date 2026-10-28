@@ -1,0 +1,44 @@
+{
+  "schema": "coastal-terrain-only-input-v1",
+  "creator_id": "synthetic-creator-sc34",
+  "segment_id": "synthetic-segment-\u00e9-\u6c34\u6df1",
+  "terrain": {
+    "path": "derived/terrain.tif",
+    "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "bytes": 4096,
+    "contract": "coastal-normalized-terrain-v1"
+  },
+  "mask": {
+    "path": "derived/mask.tif",
+    "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+    "bytes": 1024,
+    "contract": "coastal-native-support-v2"
+  },
+  "vertical": {
+    "schema": "vertical-v1",
+    "sign": "positive_down",
+    "units": "m",
+    "datum": "synthetic-datum",
+    "scale": 1,
+    "offset": 0,
+    "scale_offset_applied": true,
+    "storage": "normalized_depth",
+    "evidence": {"note": null, "items": [null, {"inner": null}]},
+    "lineage": []
+  },
+  "crs": "EPSG:32610",
+  "affine": [2.0, 0, 500000.5, 0.0, -2.0, 4.0e6, 0, -0.0, 1],
+  "provenance": {
+    "source_sha256s": ["3333333333333333333333333333333333333333333333333333333333333333"],
+    "upstream_receipt_sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+  },
+  "support_kind": "native_grid_cell_footprints",
+  "limitations": ["synthetic fixture \u2014 no source accessed", "Profundidad \u00f1 \u6c34\u6df1 \ud83c\udf0a", "caf\u00e9", "cafe\u0301"],
+  "synthetic": true,
+  "source_accessed": false,
+  "imagery_used": false,
+  "internal_diagnostic": true,
+  "publication_prohibited": true,
+  "website": "held",
+  "habitat": "unassessed"
+}

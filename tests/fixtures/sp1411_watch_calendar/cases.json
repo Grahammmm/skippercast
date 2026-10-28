@@ -1,0 +1,22 @@
+{
+  "schema": "SP1411-WATCH-CALENDAR/synthetic-cases-v1",
+  "invalid_timestamps": [
+    {"field": "first_seen_at", "value": "2026-02-30T00:00:00.000Z"},
+    {"field": "last_seen_at", "value": "2026-04-31T00:00:00.000Z"},
+    {"field": "first_seen_at", "value": "2025-02-29T00:00:00.000Z"},
+    {"field": "last_seen_at", "value": "2026-02-29T00:00:60.000Z"},
+    {"field": "last_seen_at", "value": "2026-01-01T24:00:00.000Z"},
+    {"field": "first_seen_at", "value": "2026-00-01T00:00:00.000Z"},
+    {"field": "last_seen_at", "value": "2026-01-00T00:00:00.000Z"}
+  ],
+  "unsupported_formats": [
+    "2024-02-29T00:00:00Z",
+    "2024-02-29T00:00:00.1234Z",
+    "2024-02-29T00:00:00.123+00:00"
+  ],
+  "valid_timestamps": [
+    "2024-02-29T00:00:00.123Z",
+    "2024-02-29T00:00:00.001Z",
+    "2024-03-01T00:00:00.999Z"
+  ]
+}
