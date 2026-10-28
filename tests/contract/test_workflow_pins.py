@@ -74,10 +74,12 @@ class RunnerSwitchTests(unittest.TestCase):
     HOSTED_ONLY = {'deploy-cloudflare.yml', 'dco.yml', 'release.yml', 'fleet-health.yml'}
 
     # ci.yml is the one pull_request workflow that can reach the box. A pull request from a
-    # fork stays on GitHub-hosted runners even with the readiness gate on (the repo is public).
+    # fork, or a Dependabot update (third-party install scripts), stays on GitHub-hosted runners
+    # even with the readiness gate on (the repo is public).
     CI_RUNS_ON = (
         "${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request'"
-        " || github.event.pull_request.head.repo.full_name == github.repository)"
+        " || github.event.pull_request.head.repo.full_name == github.repository"
+        " && github.event.pull_request.user.login != 'dependabot[bot]')"
         " && vars.CI_RUNNER || 'ubuntu-latest' }}"
     )
 

@@ -51,9 +51,10 @@ skipped (charter fleet [Q13](../plans/charter-fleet/open-questions.md#q13-self-h
 [threat model § 10.4](../legal/threat-model.md) row E). `tests/unit/test_fleet_install_script.py`
 checks the trigger rule for every workflow that names either variable. `ci.yml` is the one
 `pull_request` workflow with a self-hosted switch (`CI_RUNNER`). Its jobs reach the box only
-when `CI_SELF_HOSTED_READY=true` **and** the run is not a pull request from a fork: pushes to
-`main`, manual dispatches and pull requests from branches in this repository (people with
-write access) use `CI_RUNNER`; a fork's pull request always runs on GitHub-hosted Ubuntu.
+when `CI_SELF_HOSTED_READY=true` **and** the run is not a pull request from a fork or from
+Dependabot: pushes to `main`, manual dispatches and pull requests from branches in this
+repository (people with write access) use `CI_RUNNER`; a fork's pull request and a
+Dependabot update (whose new packages run install scripts) always run on GitHub-hosted Ubuntu.
 `tests/contract/test_workflow_pins.py` pins that expression. CI jobs hold no secrets
 (`permissions: contents: read`).
 
@@ -202,7 +203,7 @@ script installs them otherwise).
 
 
 CI uses GitHub-hosted Ubuntu until `CI_SELF_HOSTED_READY=true` is set alongside
-`CI_RUNNER`, and fork pull requests stay hosted even then. Setting a runner label alone does not move CI. Before enabling the
+`CI_RUNNER`, and fork and Dependabot pull requests stay hosted even then. Setting a runner label alone does not move CI. Before enabling the
 gate, verify browser system dependencies install without an interactive password,
 parallel pnpm installs use separate directories, and the complete CI suite passes
 on the configured runner. Keep the gate disabled while any prerequisite fails.

@@ -19,8 +19,8 @@ permissions:
 jobs:
   survey-science:
     # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
-    # always stay on GitHub-hosted runners (docs/operations/runners.md).
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.CI_RUNNER || 'ubuntu-latest' }}
+    # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -69,8 +69,8 @@ jobs:
     # Browser tests (P4-09a): Playwright + axe against the built site under
     # `wrangler dev` (e2e/serve.mjs), at 390x844 and 1280x800.
     # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
-    # always stay on GitHub-hosted runners (docs/operations/runners.md).
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.CI_RUNNER || 'ubuntu-latest' }}
+    # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -104,8 +104,8 @@ jobs:
           retention-days: 7
   check:
     # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
-    # always stay on GitHub-hosted runners (docs/operations/runners.md).
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.CI_RUNNER || 'ubuntu-latest' }}
+    # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     strategy:
       matrix:
         python: ["3.11", "3.13"]
