@@ -16,7 +16,7 @@ From the repository root, using Node >=22.18 and the existing pnpm toolchain:
 
     pnpm install --offline --frozen-lockfile
     python3 research/scripts/coast_mvp/make_viewer_fixture.py
-    pnpm check
+    pnpm typecheck
     node --test tests/test_*.mjs
     pnpm build
     pnpm exec vite --config research/scripts/coast_mvp/vite.viewer.config.mjs

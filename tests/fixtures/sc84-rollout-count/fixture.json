@@ -1,0 +1,27 @@
+{
+  "description": "Synthetic rollout planning tree for the max_new batch-count regression. No real survey, reach or source data.",
+  "scope": "central-coast",
+  "cells": [
+    {"id": "3310:5:0", "reach": "r06", "band_area_m2": 40000},
+    {"id": "3310:2:0", "reach": "r03", "band_area_m2": 50000},
+    {"id": "3310:0:0", "reach": "r01", "band_area_m2": 60000},
+    {"id": "3310:3:0", "reach": "r04", "band_area_m2": 70000},
+    {"id": "3310:1:0", "reach": "r02", "band_area_m2": 50000},
+    {"id": "3310:80:0", "reach": "r05", "band_area_m2": 90000}
+  ],
+  "reaches": [
+    {"id": "r06", "region": "central", "status": "unassessed", "tier1_km2": 0, "tier2_km2": 0},
+    {"id": "r03", "region": "central", "status": "unassessed", "tier1_km2": 0, "tier2_km2": 0},
+    {"id": "r01", "region": "central", "status": "unassessed", "tier1_km2": 0, "tier2_km2": 0},
+    {"id": "r04", "region": "south", "status": "measured", "tier1_km2": 0.07, "tier2_km2": 0},
+    {"id": "r02", "region": "central", "status": "unassessed", "tier1_km2": 0, "tier2_km2": 0},
+    {"id": "r05", "region": "south", "status": "unassessed", "tier1_km2": 0, "tier2_km2": 0}
+  ],
+  "reviewed_reaches": ["r04"],
+  "source_bounds_epsg3310": [-100, -100, 1600, 350],
+  "surveys": [
+    {"id": "synthetic-native", "status": "usable", "kind": "bathymetry"},
+    {"id": "synthetic-lead", "kind": "bathymetry", "status": "candidate", "publisher": "Synthetic",
+     "title": "unverified synthetic lead", "url": "https://example.org/data", "hold_reason": "unknown"}
+  ]
+}
