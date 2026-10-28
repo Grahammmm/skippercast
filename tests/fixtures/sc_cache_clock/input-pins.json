@@ -1,0 +1,37 @@
+{
+ "inputs": {
+  "pyproject.toml": {
+   "bytes": 4183,
+   "sha256": "4f05a71d3b00043a5b2d9d7a80c4c4cda5699bc047df6dbe1f13ea80bce31834"
+  },
+  "scripts/accept_sc_cache_clock.py": {
+   "bytes": 23246,
+   "sha256": "fe06be8bb4eff31797728514e7b01d2c967c9bc1861c37ededcce2ad8fb55061"
+  },
+  "src/skippercast/coastal/cached_inventory.py": {
+   "bytes": 34815,
+   "sha256": "7fcead7e62fd3a91131c03567c1efb4d0a63c53ffefbcfbb6d0c5ae07ce5a312"
+  },
+  "tests/_support.py": {
+   "bytes": 3645,
+   "sha256": "fb8b199bbe99ea83feee7c3e3ec8f3e73bdc6363556074fba6206911bea67cb3"
+  },
+  "tests/conftest.py": {
+   "bytes": 855,
+   "sha256": "52558d7b4880d26f961f98d5820eb86da2b2c9b0941ae7ee453b04c7918289df"
+  },
+  "tests/fixtures/sc_cache_clock/vectors.json": {
+   "bytes": 3690,
+   "sha256": "44cfd2b568fd074a3f5048e3faba15c48aea965a0a529f69b5dcfb293074581a"
+  },
+  "tests/unit/test_coastal_cached_intake.py": {
+   "bytes": 11610,
+   "sha256": "c9a5f7ad69e415a6e903fe900951cc48249bde3db48d68f75fb78eb6b21fc81e"
+  },
+  "tests/unit/test_sc_cache_clock.py": {
+   "bytes": 31615,
+   "sha256": "3bacce89302bf2de742d75a13fe6a62c5abdc9d82ef7eaac4daa655743bca520"
+  }
+ },
+ "schema": "sc-cache-clock-input-pins-v1"
+}

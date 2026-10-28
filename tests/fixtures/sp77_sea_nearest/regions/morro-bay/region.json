@@ -1,0 +1,5 @@
+{
+  "id": "morro-bay",
+  "intelligence": {"wind_ensemble_model": "gfs025"},
+  "forecast_points": [{"latitude": 35.0, "longitude": -121.0}]
+}
