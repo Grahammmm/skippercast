@@ -392,10 +392,10 @@ def test_a4_tests_import_the_complete_staged_production_module(mesh):
     assert sys.modules[MODULE_NAME] is mesh
 
 
-def test_a4_new_test_file_matches_configured_discovery():
+def test_a4_new_test_file_matches_configured_discovery(request):
     config = tomllib.loads((REPO / 'pyproject.toml').read_text(encoding='utf-8'))['tool']['pytest']['ini_options']
-    relative = TEST_FILE
-    assert (REPO / relative).samefile(__file__), __file__
+    relative = request.path.resolve().relative_to(REPO)
+    assert relative == TEST_FILE, relative
     assert relative.parts[0] in config['testpaths'] and relative.parts[1] == 'gis'
     assert any(fnmatch.fnmatch(relative.name, pattern) for pattern in config['python_files'])
 

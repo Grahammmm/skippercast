@@ -1,0 +1,27 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {"type": "Polygon", "coordinates": [[[9.9,9.9],[10.1,9.9],[10.1,10.1],[9.9,10.1],[9.9,9.9]]]},
+      "properties": {
+        "id": "SYNTHETIC-LOW", "label": "Synthetic aggregate low", "gear_label": "Synthetic gear",
+        "resolution_note": "Synthetic grid only", "fishing_location_confidence": "Synthetic confidence",
+        "vessel_count_note": "Aggregate only", "days_with_apparent_fishing": 2, "apparent_fishing_hours": 2,
+        "active_dates_utc": ["2024-07-01", "2024-09-01"], "latitude": 10, "longitude": 10,
+        "attribution": "Synthetic test input", "source_url": "https://example.invalid/synthetic-aggregate"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Polygon", "coordinates": [[[19.9,19.9],[20.1,19.9],[20.1,20.1],[19.9,20.1],[19.9,19.9]]]},
+      "properties": {
+        "id": "SYNTHETIC-HIGH", "label": "Synthetic aggregate high", "gear_label": "Synthetic gear",
+        "resolution_note": "Synthetic grid only", "fishing_location_confidence": "Synthetic confidence",
+        "vessel_count_note": "Aggregate only", "days_with_apparent_fishing": 2, "apparent_fishing_hours": 20,
+        "active_dates_utc": ["2024-07-01", "2024-09-01"], "latitude": 20, "longitude": 20,
+        "attribution": "Synthetic test input", "source_url": "https://example.invalid/synthetic-aggregate"
+      }
+    }
+  ]
+}

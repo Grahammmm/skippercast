@@ -1,0 +1,7 @@
+{
+  "provenance": "Tiny textual schema from tests/contract/test_seafloor_ledger.py:test_reference_restore_cannot_overwrite_ledger_or_accept_changed_cells at the admitted base; no source payload.",
+  "cells": {"input_hash": "baseline", "cells": []},
+  "reaches": "same reaches",
+  "ledger_extra": {"tier1_km2": 12},
+  "sentinel": "synthetic outside sentinel\n"
+}

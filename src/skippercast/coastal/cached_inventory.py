@@ -19,13 +19,45 @@ def digest(value):
     return hashlib.sha256(encoded(value)).hexdigest()
 def encoded(value):
     return (json.dumps(value,sort_keys=True,separators=(",",":"),allow_nan=False)+"\n").encode()
+CLOCK_TEXT_ERROR="explicit-offset complete date-time required"
+# Completeness gate on the date and time part only: a full calendar or week date
+# (extended or basic), any single separator the parser accepts, and a time with
+# seconds (extended or basic, optional fraction). Hour/minute-only times and week
+# dates without a day are incomplete. The offset after this prefix is never
+# matched here; the base parser reads it and the awareness gate refuses a missing one.
+CLOCK_PREFIX=re.compile(r"(?:[0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{8}|[0-9]{4}-W[0-9]{2}-[0-9]|[0-9]{4}W[0-9]{3})."
+    r"[0-9]{2}(?::[0-9]{2}:[0-9]{2}|[0-9]{4})(?:[.,][0-9]*)?",re.ASCII|re.DOTALL)
+def complete_date_time(text):
+    """Return the offset text that follows a complete date and time-with-seconds."""
+    prefix=CLOCK_PREFIX.match(text)
+    if not prefix:raise ValueError(CLOCK_TEXT_ERROR)
+    return text[prefix.end():]
+def offset_fields_in_range(offset):
+    """Refuse offset minute/second fields of 60+, which the base parser silently carried."""
+    whole=re.split("[.,]",offset[1:],maxsplit=1)[0]
+    fields=whole.split(":") if ":" in whole else [whole[i:i+2] for i in range(0,len(whole),2)]
+    if any(field.isascii() and field.isdigit() and int(field)>=60 for field in fields[1:]):raise ValueError(CLOCK_TEXT_ERROR)
+def aware_instant(parsed):
+    """Refuse a clock without an explicit UTC offset; host local time is never assumed."""
+    if parsed.tzinfo is None or parsed.utcoffset() is None:raise ValueError(CLOCK_TEXT_ERROR)
+    return parsed
 def epoch(value):
-    if isinstance(value,str):value=datetime.fromisoformat(value.replace("Z","+00:00")).timestamp()
-    if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value):raise ValueError("finite clock required")
+    if isinstance(value,str):
+        offset_fields_in_range(complete_date_time(value))
+        try:value=aware_instant(datetime.fromisoformat(value.replace("Z","+00:00"))).timestamp()
+        except (ValueError,OverflowError):raise ValueError(CLOCK_TEXT_ERROR) from None
+    try:finite=not isinstance(value,bool) and isinstance(value,(int,float)) and math.isfinite(value)
+    except OverflowError:finite=False
+    if not finite:raise ValueError("finite clock required")
     return value
 def integer(value,maximum):
     if type(value) is not int or not 0<value<=maximum:raise ValueError("bounded positive integer required")
     return value
+def clock_window(now,horizon):
+    """Validate explicit clocks and the prospective horizon before any read or write."""
+    now=epoch(now);horizon=epoch(horizon)
+    if not now<horizon<=now+3600:raise ValueError("prospective discovery horizon at most60min required")
+    return now,horizon
 def owned(root,name):
     if not isinstance(name,str) or not name or Path(name).is_absolute() or ".." in Path(name).parts:raise ValueError("owned relative path required")
     current=Path(root).resolve(strict=True)
@@ -75,6 +107,7 @@ def read_metadata(root,descriptor,cache,usage):
     usage["metadata_bytes"]+=len(data);usage["metadata_files"]+=1
     if hashlib.sha256(data).hexdigest()!=descriptor["sha256"]:raise ValueError("metadata hash changed")
     value=json.loads(data)
+    if not isinstance(value,dict):raise ValueError("metadata JSON object required")
     if descriptor["contract"]!="cached-source-json-v1" and value.get("schema")!=descriptor["contract"]:raise ValueError("metadata schema changed")
     cache[key]=value
     return value
@@ -198,8 +231,7 @@ def held_inventory(root,plan,*,now,horizon):
     return result
 
 def inventory(root,plan,*,now,horizon):
-    now=epoch(now);horizon=epoch(horizon)
-    if not now<horizon<=now+3600:raise ValueError("prospective discovery horizon at most60min required")
+    now,horizon=clock_window(now,horizon)
     if plan.get("schema")==LEAD_PLAN:return held_inventory(root,plan,now=now,horizon=horizon)
     if (plan.get("schema")!=PLAN or not isinstance(plan.get("region"),str) or not plan["region"]
         or plan.get("network_bytes")!=0 or plan.get("source_read_bytes")!=0
@@ -338,8 +370,7 @@ def metadata_reservation(plan):
     return reservation
 
 def produce(root,plan,output,*,now,horizon,plan_descriptor=None):
-    now=epoch(now);horizon=epoch(horizon)
-    if not now<horizon<=now+3600:raise ValueError("prospective discovery horizon at most60min required")
+    now,horizon=clock_window(now,horizon)
     if len(encoded(plan))>MAX_FILE:raise ValueError("canonical plan bound")
     reservation=metadata_reservation(plan)
     output=Path(output).absolute()
@@ -436,6 +467,8 @@ def main():
     a.add_argument("--out",type=Path,required=True);a.add_argument("--now",type=float,required=True);a.add_argument("--horizon",type=float,required=True)
     a.add_argument("--plan-sha256",required=True);a.add_argument("--plan-bytes",type=int,required=True)
     x=a.parse_args()
+    # Explicit clocks and their horizon are refused before any output, reservation or plan access.
+    clock_window(x.now,x.horizon)
     integer(x.plan_bytes,MAX_FILE)
     if not re.fullmatch("[a-f0-9]{64}",x.plan_sha256) or x.plan.suffix.lower()!=".json":raise ValueError("byte-bound JSON plan required")
     descriptor=dict(path=str(x.plan.absolute()),sha256=x.plan_sha256,bytes=x.plan_bytes)

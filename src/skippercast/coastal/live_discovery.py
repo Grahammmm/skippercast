@@ -44,7 +44,12 @@ WALL_SECONDS = 1800
 CLEANUP_SECONDS = 300
 PROFILE = "discovery30"
 ADAPTERS = ("arcgis", "stac", "listing")
-LISTING_SUFFIXES = (".bag", ".bag.gz", ".tif", ".tiff", ".zip", ".xml")
+LISTING_SUFFIXES = (".bag", ".bag.gz", ".tif", ".tiff", ".zip", ".xml", ".nc")
+# netCDF links are kept only as plain file downloads. Under THREDDS that is the
+# HTTPServer service (/thredds/fileServer/...); OPeNDAP, NCSS, WCS, WMS and ISO
+# endpoints for the same file are services, not native files.
+NETCDF_SUFFIX = ".nc"
+THREDDS_FILE_SERVICE = "fileServer"
 SCRIPT = Path("skills/skippercast-discover-coastal-sources/scripts/discover.py")
 DIFF_FIELDS = ("access_url", "metadata", "extent", "rejection_reasons", "unknowns", "terrain")
 
@@ -181,6 +186,15 @@ def dry_run(plan, out, *, root=None, allowlist=None, clock=time.time):
     return receipt
 
 
+def _plain_netcdf_file(path):
+    """False for a THREDDS service path other than the HTTPServer file service."""
+    segments = path.split("/")
+    if "thredds" not in segments:
+        return True
+    index = segments.index("thredds")
+    return len(segments) > index + 2 and segments[index + 1] == THREDDS_FILE_SERVICE
+
+
 def listing_annotation(discover, row, allowed_hosts):
     """Deterministic candidates from literal links in a saved directory listing.
 
@@ -194,6 +208,10 @@ def listing_annotation(discover, row, allowed_hosts):
         parts = urllib.parse.urlsplit(link)
         name = parts.path.rstrip("/").rsplit("/", 1)[-1]
         if parts.hostname in allowed_hosts and name.lower().endswith(LISTING_SUFFIXES) and not parts.query:
+            if name.lower().endswith(NETCDF_SUFFIX) and not _plain_netcdf_file(parts.path):
+                continue
+            if name in found and found[name] != link:
+                raise ValueError("listing_basename_collision")
             found.setdefault(name, link)
     return dict(response_sha256=row["sha256"], candidates=[
         dict(publisher_id=name, title=name, bbox=None, bbox_crs=None, catalog_geometry=None,
@@ -204,18 +222,35 @@ def listing_annotation(discover, row, allowed_hosts):
         for name, url in sorted(found.items())])
 
 
-def _candidates(document):
+def _candidates(document, label="catalog"):
+    """Map catalog rows by their literal source_id, refusing any ambiguous identity.
+
+    Every row must be an object with a nonempty string source_id, and no two rows
+    may share one (byte-identical or conflicting). IDs are never stripped,
+    case-folded, repaired or invented, and the original row objects are returned.
+    """
     if not isinstance(document, dict) or document.get("schema") not in (CATALOG, "coastal-source-v1"):
         raise ValueError("previous catalog must be a frozen catalog or finalized source manifest")
     rows = document.get("candidates")
     if not isinstance(rows, list):
         raise ValueError("previous catalog candidates required")
-    return {row["source_id"]: row for row in rows}
+    by_id, first = {}, {}
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise ValueError(f"{label} candidate {index} must be an object")
+        source_id = row.get("source_id")
+        if not isinstance(source_id, str) or not source_id:
+            raise ValueError(f"{label} candidate {index} needs a nonempty string source_id")
+        if source_id in by_id:
+            raise ValueError(f"{label} candidate {index} duplicates source_id {source_id!r} "
+                             f"first seen at candidate {first[source_id]}")
+        by_id[source_id], first[source_id] = row, index
+    return by_id
 
 
 def diff(previous, current, previous_ref=None):
-    old = _candidates(previous) if previous is not None else {}
-    new = _candidates(current)
+    old = _candidates(previous, "previous") if previous is not None else {}
+    new = _candidates(current, "current")
     changed = sorted(k for k in set(old) & set(new)
                      if any(old[k].get(f) != new[k].get(f) for f in DIFF_FIELDS))
     return dict(schema=DIFF, previous=previous_ref, current_catalog_id=current.get("catalog_id"),
@@ -227,6 +262,8 @@ def diff(previous, current, previous_ref=None):
 
 
 def frozen_catalog(manifest, manifest_bytes):
+    from copy import deepcopy
+
     keys = ("source_id", "publisher_id", "title", "catalog_id", "provenance", "metadata", "extent",
             "access_url", "unknowns", "rejection_reasons", "alternate_of", "terrain", "habitat",
             "render", "next_action", "expires_at", "field_evidence")
@@ -245,6 +282,8 @@ def frozen_catalog(manifest, manifest_bytes):
                 review_required=True,
                 coordinator_boundary=("Metadata catalog only. The coordinator discover stage reads an explicit "
                                       "coastal-local-discovery-plan-v1; this catalog does not enqueue work."))
+    # Detach every retained JSON value before binding the snapshot's identity.
+    body = deepcopy(body)
     body["catalog_id"] = _digest(body)
     return body
 
