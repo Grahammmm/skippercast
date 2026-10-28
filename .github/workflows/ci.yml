@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Merge queue: required checks must also report on the queued merge commit.
+  merge_group:
+    types: [checks_requested]
   # Bot pull requests opened with GITHUB_TOKEN (seafloor.yml) dispatch this run.
   workflow_dispatch:
 
@@ -77,7 +80,7 @@ jobs:
           fetch-depth: 0
       - id: d
         env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         # Build inputs: scripts/build-worker.mjs, scripts/client-build.mjs and vite.config.mjs read dist/,
         # regions/ and deployments/; server/ and web/ import catalog/, jurisdictions/, packages/ and tools/;
         # e2e/serve.mjs applies drizzle/ and reads e2e/seed; e2e specs import scripts/*.mjs and *.json
@@ -213,7 +216,7 @@ jobs:
         # the branch's previous tip on push. Never the current tip of main, which
         # may have shrunk the baseline since this branch was cut.
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: |
           if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = 0000000000000000000000000000000000000000 ]; then
             node scripts/check_copy.mjs
@@ -227,7 +230,7 @@ jobs:
       # (scripts/token-lint-baseline.json) may only shrink relative to the base.
       - name: Token lint (baseline only shrinks)
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: |
           if [ -n "$BASE_SHA" ] && [ "$BASE_SHA" != 0000000000000000000000000000000000000000 ] && git fetch --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null; then
             node scripts/check_tokens.mjs --base FETCH_HEAD
