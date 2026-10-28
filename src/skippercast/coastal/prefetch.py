@@ -116,7 +116,7 @@ def filename(row: dict) -> str:
 
 def load_plan(path: Path, session: Session) -> dict:
     plan = read_json(path)
-    if plan.get('schema_version') != 1 or not isinstance(plan.get('files'), list):
+    if type(plan.get('schema_version')) is not int or plan.get('schema_version') != 1 or not isinstance(plan.get('files'), list):
         raise Hold('Expected schema_version=1 and files array')
     if not plan['files']:
         raise Hold('Empty inventory is not a completed campaign')
