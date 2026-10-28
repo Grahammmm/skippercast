@@ -1,0 +1,36 @@
+{
+  "note": "Synthetic producer-shaped catalog rows for tests/unit/test_sc_rights_delta.py. Not a real survey, review or permission record. Called through skippercast.seafloor.rights.source_rights with use=noncommercial and today=2026-10-24.",
+  "rows": [
+    {
+      "id": "synthetic-csumb-a",
+      "license": "csumb-public-use-noncommercial",
+      "url": "https://data.ngdc.noaa.gov/platforms/ocean/ships/harold_heath/synthetic-fixture-a.tar.gz",
+      "publisher": "CSUMB Seafloor Mapping Lab (synthetic fixture)",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "rights_review": {
+        "policy_url": "https://csumb.edu/undersea/sfml-data-library/",
+        "source_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "producer": "CSUMB SFML",
+        "allowed_use": "noncommercial",
+        "attribution": "Data used in this study were acquired, processed, archived, and distributed by the Seafloor Mapping Lab of California State University Monterey Bay.",
+        "navigation_use": false,
+        "for_profit_permission": "required-not-obtained",
+        "reviewed_on": "2026-03-01"
+      }
+    },
+    {
+      "id": "synthetic-usgov-a",
+      "license": "public-domain-us-gov",
+      "url": "https://example.invalid/synthetic/usgov-a.tif",
+      "publisher": "Synthetic NOAA survey fixture",
+      "adapter_review": {
+        "rights_source_url": "https://example.invalid/synthetic/usgov-a-terms"
+      }
+    },
+    {
+      "id": "synthetic-usgov-b",
+      "license": "public-domain-us-gov",
+      "url": "https://example.invalid/synthetic/usgov-b.tif"
+    }
+  ]
+}

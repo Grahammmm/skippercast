@@ -224,16 +224,22 @@ def atomic(path, value, compact=True):
 
 
 def annual_receipt(session, cache, checkpoint, ident, year, revalidate=False):
-    """Reuse a checkpointed archive whose bytes still match its SHA-256; otherwise fetch and record it."""
+    """Reuse only an identity-bound, SHA-checked annual archive; otherwise fetch and record it."""
     key, saved = f"{ident}:annual:{year}", checkpoint["records"].get(f"{ident}:annual:{year}")
-    if saved and saved.get("outcome") == "ok" and not revalidate and KEY.fullmatch(saved.get("objectKey", "")):
+    url = annual_url(ident, year)
+    sha = saved.get("sha256") if isinstance(saved, dict) else None
+    if (not revalidate and isinstance(saved, dict) and saved.get("outcome") == "ok"
+            and saved.get("role") == "annual" and type(saved.get("year")) is int
+            and saved["year"] == year and saved.get("url") == url
+            and isinstance(sha, str) and re.fullmatch(r"[a-f0-9]{64}", sha)
+            and saved.get("objectKey") == f"ndbc/stdmet/{ident}/{year}/{sha}.bin"
+            and KEY.fullmatch(saved["objectKey"])):
         try:
             body = (cache / saved["objectKey"]).read_bytes()
-            if hashlib.sha256(body).hexdigest() == saved["sha256"]:
+            if hashlib.sha256(body).hexdigest() == sha:
                 return decode(body), saved
         except OSError:
             pass  # missing or corrupt receipt: refetch below
-    url = annual_url(ident, year)
     try:
         body, text, source = fetch(session, url, "annual", year)
     except (OSError, ValueError) as error:

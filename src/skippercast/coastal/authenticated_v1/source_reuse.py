@@ -76,6 +76,35 @@ def _open_source(root, leaf):
 def _fingerprint(st):
     return (st.st_dev,st.st_ino,st.st_mode,st.st_size,st.st_mtime_ns,st.st_ctime_ns)
 
+def _decode_batch_control_json(data):
+    """Decode finite object controls without ambiguous member replacement."""
+    def object_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate batch control member")
+            result[key] = value
+        return result
+
+    def finite_float(text):
+        value = float(text)
+        if not math.isfinite(value):
+            raise ValueError("nonfinite batch control number")
+        return value
+
+    def reject_constant(text):
+        raise ValueError("nonfinite batch control constant")
+
+    try:
+        value = json.loads(data.decode("utf-8"), object_pairs_hook=object_pairs,
+                           parse_float=finite_float, parse_constant=reject_constant)
+        if not isinstance(value, dict):
+            raise ValueError("batch control object required")
+        return value
+    except (ValueError, RecursionError) as exc:
+        raise ValueError("invalid_batch_control_json") from exc
+
+
 def _load(path):
     fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     try:
@@ -88,7 +117,7 @@ def _load(path):
             if not chunk: raise ValueError("batch control truncated")
             data.extend(chunk)
         if _fingerprint(os.fstat(fd)) != _fingerprint(before): raise ValueError("batch control changed while reading")
-        return json.loads(data)
+        return _decode_batch_control_json(data)
     finally:
         os.close(fd)
 
