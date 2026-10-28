@@ -1,0 +1,68 @@
+{
+  "schema": "coastal-governed-live-discovery-plan-v1",
+  "region": "morro-bay",
+  "bbox": [
+    -121.95,
+    34.95,
+    -120.55,
+    35.85
+  ],
+  "source_revision": "C1-PC3-d78b6c9d2118-CalDIG-P9QQZ27U-v2",
+  "policy_revision": "COAST-pilot1-discovery30-metadata-only-G3-2026-10-20",
+  "byte_limit": 250000000,
+  "profile": "discovery30",
+  "wall_seconds": 1800,
+  "catalogs": [
+    {
+      "id": "usgs-caldig-i-v2",
+      "publisher": "U.S. Geological Survey / BOEM",
+      "authority_url": "https://doi.org/10.5066/P9QQZ27U",
+      "allowed_hosts": [
+        "cmgds.marine.usgs.gov",
+        "doi.org"
+      ],
+      "queries": [
+        {
+          "url": "https://doi.org/10.5066/P9QQZ27U",
+          "purpose": "metadata",
+          "max_bytes": 1000000
+        },
+        {
+          "url": "https://cmgds.marine.usgs.gov/data-releases/media/2021/10.5066-P9QQZ27U/f06321c9269d4c61baa4ba695f86e7fc/Cal_DIG_I_v2_Bathymetry_Metadata.txt",
+          "purpose": "metadata",
+          "max_bytes": 1000000
+        }
+      ]
+    },
+    {
+      "id": "noaa-nos-deep-c1",
+      "publisher": "NOAA NCEI",
+      "authority_url": "https://data.ngdc.noaa.gov/",
+      "allowed_hosts": [
+        "data.ngdc.noaa.gov"
+      ],
+      "queries": [
+        {
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13089/BAG/",
+          "purpose": "metadata",
+          "max_bytes": 1000000
+        },
+        {
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13151/BAG/",
+          "purpose": "metadata",
+          "max_bytes": 1000000
+        },
+        {
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13152/BAG/",
+          "purpose": "metadata",
+          "max_bytes": 1000000
+        },
+        {
+          "url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00479/BAG/",
+          "purpose": "metadata",
+          "max_bytes": 1000000
+        }
+      ]
+    }
+  ]
+}
