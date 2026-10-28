@@ -8,9 +8,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from tests._support import ROOT as REPO
+from tests._support import ROOT
 
-FIXTURES = REPO / 'tests/fixtures/sc115-normalized-packing'
+FIXTURES = ROOT / 'tests/fixtures/sc115-normalized-packing'
 RUN_ROOT = None
 EVENTS = []
 
@@ -34,7 +34,7 @@ class PackingTests(unittest.TestCase):
         from skippercast.seafloor import normalized
         self.np, self.rio, self.api = np, rasterio, normalized
         self.assertEqual(Path(normalized.__file__).resolve(),
-                         REPO / 'src/skippercast/seafloor/normalized.py')
+                         ROOT / 'src/skippercast/seafloor/normalized.py')
         if RUN_ROOT is None:
             self.root = Path(self.scope.enter_context(
                 tempfile.TemporaryDirectory(prefix='case-')))
@@ -177,7 +177,7 @@ class PackingTests(unittest.TestCase):
             self.api.raster_identity(infinite)
 
     def test_compatibility_complete_log_binding(self):
-        runner = load_file('sc115_runner_for_binding', REPO / 'tools/run_sc115_normalized_packing.py')
+        runner = load_file('sc115_runner_for_binding', ROOT / 'tools/run_sc115_normalized_packing.py')
         log = self.root / 'inert-log.txt'
         log.write_text('complete\n')
         binding = runner.bind_logs([log])
