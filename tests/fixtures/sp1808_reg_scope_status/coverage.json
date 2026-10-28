@@ -1,0 +1,34 @@
+{
+  "now": "2026-09-22T18:00:00+00:00",
+  "registry": {
+    "schema_version": 1,
+    "jurisdiction_id": "synthetic-jurisdiction",
+    "revision": "synthetic-review-v1",
+    "reviewed_at": "2026-09-22T17:00:00Z",
+    "valid_from": "2026-01-01",
+    "valid_through": "2026-12-31",
+    "timezone": "America/Los_Angeles",
+    "scope": "Synthetic offline reporting only; no legal conclusion.",
+    "sources": {
+      "local": {"name": "Synthetic local rules", "url": "https://example.org/local", "normalization": "text-and-links-v3", "approved_content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+      "remote": {"name": "Synthetic remote rules", "url": "https://example.org/remote", "normalization": "text-and-links-v3", "approved_content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+      "remote-two": {"name": "Synthetic second remote rules", "url": "https://example.org/remote-two", "normalization": "text-and-links-v3", "approved_content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+    },
+    "species": {
+      "local": {"name": "Synthetic local species", "season": "Synthetic season", "bag": "Not a limit", "size": "Not a size rule", "windows": [], "source_ids": ["local"]},
+      "remote": {"name": "Synthetic remote species", "season": "Synthetic season", "bag": "Not a limit", "size": "Not a size rule", "windows": [], "source_ids": ["remote"]},
+      "mixed": {"name": "Synthetic mixed species", "season": "Synthetic season", "bag": "Not a limit", "size": "Not a size rule", "windows": [], "source_ids": ["remote-two", "local", "remote"]}
+    },
+    "area_notices": [
+      {"id": "local", "name": "Synthetic local area", "source_ids": ["local"], "live_clearance_required": true},
+      {"id": "elsewhere", "name": "Synthetic remote area", "source_ids": ["remote"], "live_clearance_required": false},
+      {"id": "mixed", "name": "Synthetic mixed area", "source_ids": ["remote-two", "local", "remote"]},
+      {"id": "empty", "name": "Synthetic empty dependency area", "source_ids": []}
+    ]
+  },
+  "receipts": {
+    "local": {"status": "ok", "url": "https://example.org/local", "checked_at": "2026-09-22T18:00:00Z", "data_retrieved_at": "2026-09-22T17:59:00Z", "data": {"content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "normalization": "text-and-links-v3"}},
+    "remote": {"status": "ok", "url": "https://example.org/remote", "checked_at": "2026-09-22T18:00:00Z", "data_retrieved_at": "2026-09-22T17:59:00Z", "data": {"content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "normalization": "text-and-links-v3"}},
+    "remote-two": {"status": "ok", "url": "https://example.org/remote-two", "checked_at": "2026-09-22T18:00:00Z", "data_retrieved_at": "2026-09-22T17:59:00Z", "data": {"content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "normalization": "text-and-links-v3"}}
+  }
+}

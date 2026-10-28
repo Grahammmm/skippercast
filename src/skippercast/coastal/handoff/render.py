@@ -88,6 +88,8 @@ def verify(root, manifest, *, now, purpose='private_preview', minimum_valid_unti
     doc = load(root,manifest,contract=SCHEMA)
     if doc.get('schema') != SCHEMA:
         raise ValueError('render handoff contract mismatch')
+    if doc.get('publication_prohibited') is not True:
+        raise ValueError('render publication prohibition required')
     facts, holds = _facts(root,doc['run'],doc['facts'].get('imagery'),doc['facts'].get('alignment'),now=now,
                           rights=doc.get('rights'),minimum_valid_until=minimum_valid_until)
     if doc.get('segment_id') != doc['run']['segment_id'] or doc.get('segment') != doc['run']['segment']:

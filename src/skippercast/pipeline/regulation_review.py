@@ -69,7 +69,7 @@ def collect_packet(ident, output, root=REPO, now=None):
 def coverage(registry, sources, now, source_scope_ids=None):
     snapshot = regulatory_snapshot(sources, now, registry, source_scope_ids)
     local_date = now.astimezone(ZoneInfo(registry['timezone'])).date().isoformat()
-    return {'jurisdiction_id': registry['jurisdiction_id'], 'revision': registry['revision'],
+    report = {'jurisdiction_id': registry['jurisdiction_id'], 'revision': registry['revision'],
             'reviewed_at': registry['reviewed_at'], 'valid_through': registry['valid_through'],
             'rules_review_status': snapshot['rules_review_status'],
             'source_scope_ids': snapshot.get('source_scope_ids'),
@@ -83,6 +83,17 @@ def coverage(registry, sources, now, source_scope_ids=None):
             'species': {ident: {'name': p['name'], 'required_sources': p['source_ids'],
                 'issues': [s for s in p['source_ids'] if snapshot['checks'][s]['status'] != 'unchanged']}
                 for ident, p in registry['species'].items()}}
+    if source_scope_ids is not None:
+        # Assessment describes coverage, never approval. Keep conservative legacy
+        # issues (including omitted sources) and required_sources unchanged.
+        for group in ('species', 'areas'):
+            for row in report[group].values():
+                omitted = [s for s in row['required_sources']
+                           if snapshot['checks'][s]['status'] == 'out-of-scope']
+                row['out_of_scope_sources'] = omitted
+                row['assessment_status'] = ('evaluated' if not omitted else
+                    'not-evaluated' if len(omitted) == len(row['required_sources']) else 'partial')
+    return report
 
 
 def approved_registry(registry, jurisdiction, packet, decision, now=None):
