@@ -146,6 +146,8 @@ class Trip:
     ``positions`` run from the departure fix up to, not including, the return
     fix; ``returned_at`` is the return fix's time (or the last position for an
     open or truncated trip), so a trip covers ``[departed_at, returned_at]``.
+    ``distance_nm`` sums the observed legs between ``positions`` and, for a
+    ``closed`` trip, the final leg into the return fix.
     """
     mmsi: int
     depart_port_id: str | None
@@ -241,8 +243,12 @@ def prepare(positions: Iterable[AisPosition]) -> list[AisPosition]:
 
 # ---------------------------------------------------------------- trips
 
-def _make_trip(positions, ports, depart_port, return_port, departed_at, returned_at, status) -> Trip:
-    distance = sum(distance_nm(a.lat, a.lon, b.lat, b.lon) for a, b in zip(positions, positions[1:]))
+def _make_trip(positions, ports, depart_port, return_port, departed_at, returned_at, status,
+               return_fix: AisPosition | None = None) -> Trip:
+    # A confirmed return's port fix is not one of the trip's positions, but the
+    # observed leg from the last fix at sea into port is part of the trip's distance.
+    track = list(positions) if return_fix is None else [*positions, return_fix]
+    distance = sum(distance_nm(a.lat, a.lon, b.lat, b.lon) for a, b in zip(track, track[1:]))
     offshore = max((offshore_nm(ports, p.lat, p.lon) for p in positions), default=0.0)
     return Trip(mmsi=positions[0].mmsi, depart_port_id=depart_port, return_port_id=return_port,
                 departed_at=departed_at, returned_at=returned_at, status=status, positions=tuple(positions),
@@ -304,7 +310,9 @@ def split_trips(positions: Iterable[AisPosition], ports: Sequence[Geofence], thr
                 status = "truncated" if started_unknown else "closed"
                 start = current[0].ts if current else p.ts
                 if current:
-                    trips.append(_make_trip(current, ports, depart_port, port, start, p.ts, status))
+                    # Only a closed trip (known departure, confirmed return) counts its return leg.
+                    trips.append(_make_trip(current, ports, depart_port, port, start, p.ts, status,
+                                            return_fix=p if status == "closed" else None))
                 in_port, current, last_port = True, [], where[j]
                 i = j + 1
                 continue

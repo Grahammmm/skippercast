@@ -1,0 +1,7 @@
+{
+  "schema": "sc-schema-closure-input-v1",
+  "files": [
+    {"path": "closed/a.schema.json", "sha256": "7c60b1c8e11763a1456652380e67f5096a99b107f4dfaf2ae9cf277141f2e539"},
+    {"path": "closed/b.schema.json", "sha256": "f77acf1e77f1f67f89d03316313a359b3ab692b6dd6f7ac217cc89da0f82a848"}
+  ]
+}
