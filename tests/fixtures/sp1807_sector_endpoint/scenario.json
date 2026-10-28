@@ -1,0 +1,32 @@
+{
+  "source": {
+    "schema_version": 1,
+    "reviewed_at": "2026-10-24",
+    "scope": "Synthetic discovery-only boundary fixture, not fishing or legal evidence.",
+    "survey_feed_url": "https://example.org/survey-discovery.json",
+    "survey_product_feed_url": "https://example.org/survey-products.json",
+    "survey_discovery": [{"name": "Synthetic survey lead", "url": "https://example.org/survey"}],
+    "sectors": [
+      {"id": "south-band", "coast": "synthetic-coast", "name": "Synthetic south", "latitude": [34, 35]},
+      {"id": "north-band", "coast": "synthetic-coast", "name": "Synthetic north", "latitude": [35, 36]}
+    ]
+  },
+  "coasts": {
+    "schema_version": 1,
+    "regions": [{"id": "synthetic-coast", "name": "Synthetic coast", "latitude": [34, 36], "bounds": [-122, 34, -120, 36], "packages": ["synthetic-package"], "rules_url": "https://example.org/rules"}]
+  },
+  "packages": {
+    "schema_version": 1,
+    "default_region": "synthetic-package",
+    "regions": [{"id": "synthetic-package", "name": "Synthetic package", "status": "preview", "fishing_bounds": [-122, 33, -120, 38], "discovery_bounds": [-122, 33, -120, 38], "config": "regions/synthetic-package/region.json", "manifest": "synthetic-not-a-published-manifest"}]
+  },
+  "region": {"schema_version": 1, "id": "synthetic-package", "assets": {"atlas": "regions/synthetic-package/atlas.json"}},
+  "atlas": {
+    "schema_version": 1,
+    "targets": [
+      {"id": "south", "latitude": 34, "longitude": -121},
+      {"id": "seam", "latitude": 35, "longitude": -121},
+      {"id": "north", "latitude": 36, "longitude": -121}
+    ]
+  }
+}
