@@ -175,6 +175,8 @@ def main():
             try:
                 with ExitStack() as scope:
                     sys.path.insert(0, str(REPO / 'src'))
+                    # The test module imports ROOT from tests._support (layout contract).
+                    sys.path.insert(1, str(REPO))
                     constructors = load_file('sc115_runner_constructors', FIXTURES / 'constructors.py')
                     scope.enter_context(constructors.offline_scope())
                     scope.enter_context(patch.object(tempfile, 'tempdir', str(temporary)))
