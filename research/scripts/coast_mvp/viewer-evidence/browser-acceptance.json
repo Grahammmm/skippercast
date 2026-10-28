@@ -1,0 +1,153 @@
+{
+  "views": [
+    {
+      "name": "oblique",
+      "pitch": 45,
+      "bearing": -25,
+      "zoom": 15.5,
+      "actual": {
+        "zoom": 15.5,
+        "pitch": 45,
+        "bearing": -25
+      },
+      "contourFeatures": 152
+    },
+    {
+      "name": "overhead",
+      "pitch": 0,
+      "bearing": 0,
+      "zoom": 14.5,
+      "actual": {
+        "zoom": 14.5,
+        "pitch": 0,
+        "bearing": 0
+      },
+      "contourFeatures": 142
+    },
+    {
+      "name": "shelf-close",
+      "pitch": 55,
+      "bearing": 65,
+      "zoom": 16,
+      "actual": {
+        "zoom": 16,
+        "pitch": 55.00000000000001,
+        "bearing": 65
+      },
+      "contourFeatures": 117
+    }
+  ],
+  "requests": [
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.png",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/12/671/1616.mvt",
+      "status": 200
+    }
+  ],
+  "errors": [],
+  "elevation": -155.05690551269618,
+  "contourPixelDifference": true,
+  "sources": {
+    "mvp-terrain": {
+      "type": "raster-dem",
+      "tiles": [
+        "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/{z}/{x}/{y}.png"
+      ],
+      "tileSize": 256,
+      "minzoom": 12,
+      "maxzoom": 12,
+      "bounds": [
+        -121.025390624,
+        35.38904996791166,
+        -120.937500001,
+        35.4606699504953
+      ],
+      "encoding": "mapbox"
+    },
+    "mvp-contours": {
+      "type": "vector",
+      "tiles": [
+        "http://localhost:5179/research/scripts/coast_mvp/fixtures/viewer-demo/{z}/{x}/{y}.mvt"
+      ],
+      "minzoom": 12,
+      "maxzoom": 12,
+      "bounds": [
+        -121.025390624,
+        35.38904996791166,
+        -120.937500001,
+        35.4606699504953
+      ]
+    }
+  }
+}
