@@ -37,6 +37,9 @@ ALLOWED_SKIPS = frozenset({
     'Private coordinate fixture absent in CI',
     'Private reference grid absent; committed ledger tested separately',
     'Private review blocks (var/review, gitignored) are only on the maintainer machine',
+    # SC-4's retained source checkout is not distributed in CI; committed inventory
+    # identities, counts and handoff paths are checked without it in the same file.
+    'Retained coastal source snapshot unavailable; committed inventory checked separately',
     'run after fetching the pinned original ROV release',
 })
 

@@ -1,0 +1,782 @@
+"""Private ordered live controls. No native dispatch without parent release command."""
+import argparse,json,os,stat,sys,time,hashlib,subprocess
+from pathlib import Path
+# Mission root, code root and interpreter were pinned to the 2026-10-11 attempt.
+# A fresh run names its own (absent) mission root and the exact checkout/venv it
+# runs from; defaults keep the historical attempt's identity readable.
+# Every default hangs off one project root taken from the operator's home, never a
+# literal home path (scripts/check_repository.py). No extra override: transient
+# units get the same HOME, so driver and units resolve the same root.
+PROJECT=Path.home()/'skippercast-data'/'2026-10-07-pge-south'
+HISTORICAL_MISSION=PROJECT/'outputs/ordered-four128-approved-20261011'
+N=Path(os.environ.get('SKIPPERCAST_FOUR128_MISSION_ROOT',str(HISTORICAL_MISSION)))
+W=Path(os.environ.get('SKIPPERCAST_FOUR128_CODE_ROOT',str(PROJECT/'work/source-reuse-admission-20261011')))
+PYTHON=os.environ.get('SKIPPERCAST_FOUR128_PYTHON',str(PROJECT/'repo/.venv/bin/python'))
+R=N/'execution'; M=N/'mapping-execution'
+sys.dont_write_bytecode=True
+sys.path.insert(0,str(W/'src'))
+sys.path.insert(0,str(PROJECT/'work/combined-coastal-integration-20261009/var/python-integration-dependencies'))
+sys.path.insert(0,str(Path(__file__).parent))
+from coastal_four128_resources import capture,UNITS,CONTROL_UNITS,SLICE,RUN_TAG,HISTORICAL_RUN_TAG
+from coastal_four128_resources import budget_limits,BUDGET_AMENDMENT,FRESH_SOURCE,TRIAL_SCRATCH
+from coastal_four128_resources import CHARGE_LEDGER,LEDGER_RELATIVE
+from skippercast.coastal.receipts import managed_writes, atomic_json, digest as receipt_digest
+from skippercast.coastal.output_writer import ManagedOutputs
+
+from skippercast.coastal.coordinator.packet_release import validate_acquisition_package
+from skippercast.coastal.coordinator.ordered_trial import Controller,RealAdapter,prepare,inventory,ACTION
+from skippercast.coastal.coordinator.authenticated import metadata_document,INPUT_CONTRACT,actual_unit_check,_source_identity
+
+def policy_for(grant):
+    """Native Store policy for one exact authenticated grant.
+
+    Ported verbatim from the unmerged coordinator/authenticated_cli.py the 2026-10-11
+    harness imported; main never shipped that module."""
+    from importlib.resources import files
+    from skippercast.coastal.authenticated_v1.profiles import profile,grant_identity
+    grant_identity(grant);selected=profile(grant.get("execution_profile"),grant)
+    _source_identity(grant["source"])
+    if grant.get("schema")!="coastal-authenticated-policy-v1":raise ValueError("immutable authenticated grant required")
+    policy=json.loads(files("skippercast.coastal.coordinator").joinpath("policy.json").read_text())
+    policy.update(authenticated=grant,max_attempts=1,stagnation_s=selected["mission_seconds"],
+        budgets=dict(wall_s=selected["mission_seconds"],reserve_s=60,bytes=selected["reservations"]*grant["source"]["bytes"],requests=0,tokens=0))
+    policy["storage"]["job_output_bytes"]=4194304
+    return policy
+from skippercast.coastal.coordinator.loop import implementation_hashes
+from skippercast.coastal.coordinator.store import Store
+from skippercast.coastal.coordinator.source_free import policy as mapping_policy
+from skippercast.coastal.handoff.common import load,write,ref,epoch
+ROOTS=[str(N)]
+# Slice, unit and scratch names follow SKIPPERCAST_FOUR128_RUN_TAG (coastal_four128_resources).
+SCRATCH=PROJECT/('scratch/four128-approved-'+RUN_TAG)
+# Cumulative source prior/limit and scratch prior/limit are not constants: they come
+# from the signed budget amendment the released grant names (see budget_limits).
+WALL=3600
+# Seconds the driver/watchdog unit's RuntimeMaxSec leaves for its own launch
+# (bounded runner + systemd-run start-up), equal to the outer cleanup reserve.
+# Attempt 3 (2026-10-19) sized the units at deadline-2 s and a 4.2 s launch under
+# host load overshot the 0.5 s deadline margin control_envelope() requires.
+LAUNCH_ALLOWANCE_S=15
+
+def unit_runtime_for(deadline_monotonic,now_monotonic):
+    """RuntimeMaxSec for a driver/watchdog unit launched now under the outer deadline.
+
+    The unit's hard deadline is its actual start + this runtime; any launch latency
+    up to LAUNCH_ALLOWANCE_S-0.5 s keeps it within the deadline margin."""
+    import math
+    runtime=math.floor(deadline_monotonic-now_monotonic)-LAUNCH_ALLOWANCE_S
+    if runtime<=0:
+        raise ValueError('outer deadline leaves no control unit runtime after the '
+                         +str(LAUNCH_ALLOWANCE_S)+' s launch allowance')
+    return runtime
+
+def hard_deadline_within(started,runtime,deadline_monotonic):
+    """The unit's actual hard deadline stays at least 0.5 s inside the outer deadline."""
+    return started+runtime<=deadline_monotonic-.5
+
+def limits_for(grant):
+    """Exact cumulative accounting bound into one released grant."""
+    amendment=metadata_document(R,grant.get('approved_budget_amendment') or {},BUDGET_AMENDMENT)
+    if grant['approved_budget_amendment']['sha256']!=CHARGE_LEDGER['head']['sha256']:
+        raise ValueError('signed amendment differs from reviewed charge ledger head')
+    limits=budget_limits(amendment)
+    if (grant.get('prior_effective_bytes')!=limits['source_prior_bytes']
+            or grant.get('prior_effective_source_bytes')!=limits['source_prior_bytes']
+            or grant.get('cumulative_limit_bytes')!=limits['source_limit_bytes']
+            or grant.get('source_volume_cap_bytes')!=FRESH_SOURCE):
+        raise ValueError('grant source accounting differs from signed budget amendment')
+    return limits
+
+def control_ceiling(path):
+    path=Path(path)
+    if path.parent==R/'metadata':
+        name=path.name
+        if name.startswith('qualify-'):return 65536
+        if name.startswith('map-packet-'):return 16384
+        if name.startswith('map-plan-'):return 32768
+        if name.startswith('unit-'):return 8192
+        if name.startswith('action-'):return 4096
+        if name.startswith('independent-') and name.endswith('-review.json'):return 65536
+        if name.endswith('-descriptor.json'):return 1024
+        if name=='live-preparation.json':return 8192
+    if path.parent==N/'control':
+        if path.name.startswith('step-'):return 8192
+        if path.name.startswith('launch-'):return 4096
+        if path.name in ('outer-clock.json','run-started.json','driver-envelope.json',
+                         'parent-envelope.json','resource-probe.json','batch-completed.json','final-stop.json','native-clock-binding.json','finite-capacity-preflight.json','closed-finite-carry.json'):
+            return 8192
+    raise ValueError('unreviewed finite control family: '+str(path))
+
+def control_bytes(doc):
+    """Exact bytes put() commits for one control document."""
+    return (json.dumps(doc,sort_keys=True,separators=(',',':'),allow_nan=False)+'\n').encode()
+
+def put(path,doc,root=R):
+    if path.exists():raise ValueError('preserve existing artifact: '+str(path))
+    grant=load(R,json.loads((R/'metadata/live-index.json').read_text())['grant'])
+    raw=control_bytes(doc)
+    if len(raw)>control_ceiling(path):raise ValueError('bounded immutable control family receipt')
+    manager=ManagedOutputs(N,grant,receipt_digest(grant))
+    if not manager.write_bytes(manager.relative_path(path),raw,role='control',max_bytes=len(raw),
+                               intent='control:'+manager.relative_path(path)):
+        raise ValueError('immutable control receipt already committed')
+    return ref(root,path,doc['schema'])
+STRICT_SCIENCE_STATUS='PASS_EXPECTED_SOURCE_METADATA_GEOMETRY_STRICT_POLICY'
+PARTIAL_SCIENCE_STATUS='PASS_EXPECTED_SOURCE_METADATA_GEOMETRY_PARTIAL_POLICY'
+def validate_science(science,grant,*,now,horizon):
+    from skippercast.coastal.coordinator.ordered_trial import scope_windows
+    from skippercast.coastal.authenticated_v1.profiles import CONTAINED,PARTIAL_SUPPORT,support_policy
+    # The grant's own (pinned) support policy selects windows and the only status
+    # it may carry: strict stays strict; partial needs the exact partial evidence.
+    policy=support_policy(CONTAINED,grant)
+    windows=scope_windows(grant)[0]
+    status=PARTIAL_SCIENCE_STATUS if policy==PARTIAL_SUPPORT else STRICT_SCIENCE_STATUS
+    if (science.get('schema')!='coastal-ordered-independent-scientific-preflight-v1'
+            or science.get('independent') is not True
+            or science.get('status')!=status
+            or science.get('support_policy')!=policy
+            or grant.get('window_set')!=windows
+            or science.get('source')!=grant['source']
+            or science.get('native_window_set')!=windows
+            or science.get('window_count')!=4 or type(science.get('window_count')) is not int
+            or science.get('window_side')!=128 or type(science.get('window_side')) is not int
+            or science.get('holds_added')!=[]
+            or not epoch(science['checked_at'])<=now<horizon<epoch(science['valid_until'])
+            or science.get('scientific_acceptance') is not False
+            or science.get('current_source_identity_verified') is not False or science.get('rehearsal_synthetic',False) is not False):
+        raise ValueError('independent preflight status/scope/source/freshness differs')
+    return True
+def validate_runtime_review(d,review,*,now,horizon=None):
+    if review.get('independent') is not True or review.get('status')!='PASS_EXACT_FINITE_PRELAUNCH' or review.get('holds')!=[] or review.get('grant')!=d['grant']:
+        raise ValueError('current independent runtime acceptance required')
+    bindings=('runtime_controls','controller_sha256','code_sha','deps_sha','carry','independent_preflight','prior_output_carry','prior_scratch_carry','prior_scratch_bytes',
+              'support_policy','mask_topology_prescan')
+    if any(review.get(key)!=d.get(key) for key in bindings):
+        raise ValueError('independent review differs from exact runtime/code/carry/science bindings')
+    if review.get('support_policy') is not None:
+        # Opt-in partial support launches only behind a reviewed --require-holes pre-scan.
+        prescan=review.get('mask_topology_prescan')
+        if (not isinstance(prescan,dict) or prescan.get('require_holes_met') is not True
+                or prescan.get('independently_reviewed') is not True
+                or any(not isinstance(prescan.get(k),dict) or not prescan[k].get('sha256') for k in ('receipt','review'))):
+            raise ValueError('partial support requires the independently reviewed --require-holes pre-scan')
+    if not d['runtime_controls'] or {item['path'] for item in d['runtime_controls']}!={
+            'research/scripts/coastal_four128_runtime.py','research/scripts/coastal_four128_resources.py',
+            'research/scripts/coastal_four128_artifact_review.py',LEDGER_RELATIVE}:
+        raise ValueError('complete independently reviewed control set required')
+    horizon=now+3600 if horizon is None else horizon
+    if not epoch(review['checked_at'])<=now<horizon<epoch(review['valid_until']):
+        raise ValueError('independent runtime review expired')
+    return True
+
+def policy_bindings(d,review,grant):
+    """The live index and document 5 carry exactly the grant's (opt-in) support policy."""
+    if review.get('support_policy')!=grant.get('support_policy') or d.get('support_policy')!=grant.get('support_policy'):
+        raise ValueError('runtime review/index support policy differs from the exact grant')
+    return grant.get('support_policy')
+
+def index():
+    for root in (N,R,M):
+        if root.is_symlink() or not root.is_dir() or root.stat().st_uid!=os.getuid():
+            raise ValueError('exact owned runtime roots required')
+    p=R/'metadata/live-index.json'
+    if p.stat().st_size>131072:raise ValueError('index cap')
+    d=json.loads(p.read_text())
+    if d['schema']!='coastal-ordered-live-index-v1':raise ValueError('index contract')
+    if hashlib.sha256((W/'src/skippercast/coastal/coordinator/ordered_trial.py').read_bytes()).hexdigest()!=d['controller_sha256']:raise ValueError('controller code changed')
+    code,deps=implementation_hashes(R)
+    if (code,deps)!=(d['code_sha'],d['deps_sha']):raise ValueError('implementation changed')
+    grant=metadata_document(R,d['grant'],'coastal-authenticated-policy-v1')
+    if grant.get('execution_authorized') is not True:raise ValueError('grant held')
+    packets=[metadata_document(R,rr,INPUT_CONTRACT) for rr in d['requests']]
+    context=json.loads((N/'control/release-context.json').read_text())
+    if context['source']!=grant['source']:raise ValueError('context source differs from exact grant')
+    science=metadata_document(R,d['independent_preflight'],d['independent_preflight']['contract'])
+    if context['windows']!=grant['window_set'] or context['metadata_sha256']!=science['expected_metadata_sha256']:
+        raise ValueError('exact metadata/grid review differs')
+    if grant.get('larger_runtime_contract')!='coastal-managed-eight-copy-four128-v1' or grant.get('source_reuse_contract') is not None:
+        raise ValueError('exact reviewed eight-copy runtime contract required')
+    if grant['output_root']!=str(N) or grant['output_retention']['profile']!='coastal-managed-output-32-v3':
+        raise ValueError('exact compact cumulative output admission required')
+    review=metadata_document(R,d['independent_runtime_review'],'coastal-four128-independent-prelaunch-v1')
+    policy_bindings(d,review,grant)
+    review_now=time.time()
+    review_horizon=load(R,prepref())['deadline_epoch'] if (R/'metadata/live-preparation.json').exists() else review_now+3600
+    validate_runtime_review(d,review,now=review_now,horizon=review_horizon)
+    for item in d['runtime_controls']:
+        path=W/item['path']
+        if path.is_symlink() or path.stat().st_size!=item['bytes'] or hashlib.sha256(path.read_bytes()).hexdigest()!=item['sha256']:
+            raise ValueError('runtime control code changed')
+    limits=limits_for(grant)
+    output_carry=metadata_document(R,d['prior_output_carry'],'coastal-source-reuse-engineering-carry-v1')
+    scratch_carry=metadata_document(R,d['prior_scratch_carry'],'coastal-source-reuse-engineering-carry-v1')
+    if (output_carry.get('closed') is not True or scratch_carry.get('closed') is not True
+            or output_carry['retained_output']['cumulative_prior_bytes']!=grant['output_retention']['prior_retained_bytes']
+            or type(d['prior_scratch_bytes']) is not int
+            or d['prior_scratch_bytes']!=scratch_carry['scratch']['charged_prior_bytes']
+            or d['prior_scratch_bytes']!=limits['scratch_prior_bytes']
+            or scratch_carry['scratch'].get('cumulative_maximum_bytes')!=limits['scratch_limit_bytes']
+            or d['prior_scratch_bytes']+TRIAL_SCRATCH>limits['scratch_limit_bytes']):
+        raise ValueError('exact retained/scratch carry quantities differ from reviewed grant/index')
+    carry=metadata_document(R,d['carry'],'coastal-authenticated-carry-v1')
+    if (carry.get('prior_effective_bytes')!=limits['source_prior_bytes']
+            or carry.get('cumulative_limit_bytes')!=limits['source_limit_bytes']
+            or carry.get('remaining_bytes')!=limits['source_limit_bytes']-limits['source_prior_bytes']
+            or carry.get('refunds') is not False
+            or carry.get('budget_amendment')!=grant['approved_budget_amendment']):
+        raise ValueError('source carry differs from signed budget amendment')
+    science=metadata_document(R,d['independent_preflight'],d['independent_preflight']['contract'])
+    if science.get('native_operations',0)!=0:raise ValueError('preflight native assertion differs')
+    now=time.time()
+    frozen=R/'metadata/live-preparation.json'
+    horizon=load(R,prepref())['deadline_epoch'] if frozen.exists() else now+3600
+    validate_science(science,grant,now=now,horizon=horizon)
+    checked=validate_acquisition_package(R,d['grant'],d['requests'],now=now,horizon=horizon,validation_mode='released')
+    if checked['status']!='PASS_METADATA_ONLY':raise ValueError('full exact released acquisition chain held: '+json.dumps(checked['packets']))
+    return d,grant
+def envelope(key):
+    doc=capture(key)
+    # Controller native preflight uses epoch arithmetic before Store unit_context.
+    doc['phase_unit_start_utc_iso']=doc['phase_unit_start_utc']
+    doc['phase_unit_start_utc']=epoch(doc['phase_unit_start_utc'])
+    parent=Path('/sys/fs/cgroup'+doc['cgroup_path']).parent
+    if parent.name!=SLICE:raise ValueError('lane outside shared parent slice')
+    readings={f:(parent/f).read_text().strip() for f in ('memory.max','memory.swap.max','cpu.max','pids.max')}
+    if readings!={'memory.max':'3221225472','memory.swap.max':'0','cpu.max':'200000 100000','pids.max':'96'}:raise ValueError('shared aggregate envelope mismatch')
+    doc['shared_parent']=dict(slice=SLICE,path=str(parent),readings=readings)
+    rr=put(R/('metadata/unit-'+key+'.json'),doc)
+    actual_unit_check(dict(root=str(R),unit_context=rr,source_grant=index()[1]['source'],phase_unit_start_monotonic=doc['phase_unit_start_monotonic']))
+    return rr,doc
+def stores(grant):
+    p=policy_for(grant)
+    p['watermarks']=dict(high=3,low=1,held_cap=8)
+    p['storage']['total_bytes']=33554432
+    mp=mapping_policy();mp['managed_output_grant']=grant
+    return Store(R/'var/coastal/authenticated.sqlite',root=R,policy=p),Store(M/'var/coastal/ordered-map.sqlite',root=M,policy=mp)
+def prepref():
+    p=R/'metadata/live-preparation.json'
+    return ref(R,p,'coastal-ordered-trial-preparation-v1')
+def execute(key,request=None,mapping_plan=None,hold=None):
+    d,grant=index();limits=limits_for(grant);gate(key);ur,unit=envelope(key)
+    if key=='probe':
+        put(N/'control/resource-probe.json',dict(schema='coastal-ordered-resource-probe-v1',unit=unit,native_operations=0,Store_created=False,Budget_created=False),root=N)
+        return dict(state='resource_probe_pass',native_operations=0)
+    label,stage=key.split('-');i='ABCD'.index(label)
+    if not (R/'metadata/live-preparation.json').exists():
+        if key!='A-acquire':raise ValueError('only first native scope may freeze parent')
+        start=unit['phase_unit_start_utc']
+        # Nativemission retains exactactual first-unit origin; earlierouterwatchdog remains authoritative.
+        preparation=prepare(R,d['grant'],d['requests'],start_epoch=start,deadline_epoch=start+3600,
+            start_monotonic=unit['phase_unit_start_monotonic'],boot_id=unit['boot_id'],
+            cumulative_limit_bytes=limits['source_limit_bytes'],prior_effective_bytes=limits['source_prior_bytes'],
+            output_roots=ROOTS,scratch_roots=[str(SCRATCH)],output_cap_bytes=33554432,scratch_cap_bytes=TRIAL_SCRATCH)
+        put(R/'metadata/live-preparation.json',preparation)
+        outer=load_clock()
+        put(N/'control/native-clock-binding.json',dict(schema='coastal-four128-clock-binding-v1',
+            owner_outer_start_monotonic=outer['start_monotonic'],owner_outer_deadline_monotonic=outer['deadline_monotonic'],
+            native_start_monotonic=unit['phase_unit_start_monotonic'],native_deadline_monotonic=unit['phase_unit_start_monotonic']+3600,
+            startup_offset_seconds=unit['phase_unit_start_monotonic']-outer['start_monotonic'],
+            actual_execution_deadline='earlier owner outer clock enforced by verified shared watchdog and every phase gate'),root=N)
+    pr=prepref();frozen=load(R,pr)
+    if time.time()+120>=frozen['deadline_epoch']:raise ValueError('parent drain horizon exhausted')
+    action=dict(schema=ACTION,preparation=pr,index=i,stage='qualify' if stage=='hold' else stage)
+    if stage in ('acquire','qualify'):
+        action.update(released_grant=d['grant'],carry=d['carry'],unit=ur,
+            request=d['requests'][i] if stage=='acquire' else supplied(request))
+    elif stage=='map':action['mapping_plan']=supplied(mapping_plan)
+    elif stage=='hold':action['review_hold']=supplied(hold)
+    else:raise ValueError('finite stage')
+    ar=put(R/('metadata/action-'+key+'.json'),action)
+    native,mapping=stores(grant)
+    try:
+        c=Controller(R,pr);adapter=RealAdapter(native,mapping)
+        outcome=c.step(adapter,ar)
+        status=c.status(adapter)
+        intents=status.pop('intents')
+        status['durable_intents_summary']=dict(count=len(intents),sha256=receipt_digest(intents),
+            authoritative_state='ordered-controller durable checkpoint; full intents retained there')
+        result=dict(schema='coastal-ordered-live-step-v1',key=key,outcome=outcome,
+            status=status,inventory=inventory(frozen),aggregate_inventory=audit(),native_budget=adapter.accounting(frozen),
+            unit=ur,parent_preparation=pr)
+        put(N/('control/step-'+key+'.json'),result,root=N)
+        return result
+    finally:mapping.close();native.close()
+def supplied(path):
+    if not path:raise ValueError('independently prepared exact descriptor file required')
+    p=Path(path)
+    if not p.is_relative_to(R/'metadata') or p.is_symlink() or p.stat().st_size>4096:raise ValueError('owned descriptor admission')
+    d=json.loads(p.read_text())
+    if set(d)!={'path','bytes','sha256','contract'}:raise ValueError('exact descriptor')
+    load(R,d,contract=d['contract']);return d
+def preflight():
+    native_worker_ready()
+    d,grant=index();limits=limits_for(grant)
+    now=time.time()
+    p=prepare(R,d['grant'],d['requests'],start_epoch=now,deadline_epoch=now+3600,
+        cumulative_limit_bytes=limits['source_limit_bytes'],prior_effective_bytes=limits['source_prior_bytes'],output_roots=ROOTS,scratch_roots=[str(SCRATCH)],output_cap_bytes=33554432,scratch_cap_bytes=TRIAL_SCRATCH)
+    return dict(schema='coastal-ordered-driver-preflight-v1',source_allowance_sufficient=p['source_allowance_sufficient'],
+        execution_authorized=grant['execution_authorized'],actual_unit_unverified=True,native_operations=0,
+        Store_created=False,Budget_created=False,inventory=inventory(p),aggregate_inventory=audit(),
+        prospective_capacity=initial_capacity(),source_bytes_reserved=0)
+
+def managed_configuration_for(grant,role,max_bytes):
+    return dict(grant=grant,grant_digest=receipt_digest(grant),role=role,max_bytes=max_bytes)
+
+def manager():
+    d=json.loads((R/'metadata/live-index.json').read_text())
+    grant=load(R,d['grant'])
+    return ManagedOutputs(N,grant,receipt_digest(grant))
+
+def audit():
+    result=manager().audit()
+    if result['unmanaged_control_bytes']:
+        raise ValueError('unregistered retained output preserved; no downstream launch')
+    scratch=0
+    if SCRATCH.exists():
+        for parent,dirs,files in os.walk(SCRATCH,followlinks=False):
+            for name in dirs+files:
+                path=Path(parent)/name
+                if path.is_symlink():raise ValueError('trial scratch link')
+                if path.is_file():scratch+=path.stat().st_size
+    d=json.loads((R/'metadata/live-index.json').read_text())
+    limits=limits_for(load(R,d['grant']))
+    if (d['prior_scratch_bytes']!=limits['scratch_prior_bytes'] or scratch>TRIAL_SCRATCH
+            or scratch+d['prior_scratch_bytes']>limits['scratch_limit_bytes']):
+        raise ValueError('cumulative scratch allowance exhausted')
+    return dict(**result,trial_scratch_bytes=scratch,prior_scratch_bytes=d['prior_scratch_bytes'])
+
+def load_clock():
+    path=N/'control/outer-clock.json'
+    if path.is_symlink() or path.stat().st_size>4096:raise ValueError('bounded outer clock')
+    d=json.loads(path.read_text())
+    if d.get('schema')!='coastal-four128-outer-clock-v1' or d.get('wall_seconds')!=WALL:
+        raise ValueError('immutable outer clock contract')
+    for key in ('start_epoch','start_monotonic','deadline_epoch','deadline_monotonic'):
+        if type(d.get(key)) not in (float,int) or not __import__('math').isfinite(d[key]):
+            raise ValueError('finite outer clocks required')
+    if d['deadline_epoch']!=d['start_epoch']+WALL or d['deadline_monotonic']!=d['start_monotonic']+WALL:
+        raise ValueError('outer clock arithmetic changed')
+    if d['boot_id']!=Path('/proc/sys/kernel/random/boot_id').read_text().strip():
+        raise ValueError('outer boot changed')
+    return d
+
+def gate(key,*,duration=200):
+    import math
+    if type(duration) not in (int,float) or not math.isfinite(duration) or not 0<=duration<=200:
+        raise ValueError('bounded phase duration')
+    d=load_clock();mono=time.monotonic()
+    if not math.isfinite(mono) or mono<d['start_monotonic'] or mono+duration>=d['deadline_monotonic']-15:
+        raise ValueError('outer drain horizon exhausted')
+    if key in {w+'-'+phase for w in 'ABCD' for phase in ('acquire','qualify')}:
+        if mono>d['deadline_monotonic']-1380 or mono+180>d['deadline_monotonic']-1200:
+            raise ValueError('outer native cutoff exhausted')
+    live_watchdog();audit();return d
+
+def closed_sqlite(path):
+    import sqlite3
+    path=Path(path)
+    for suffix in ('-wal','-journal'):
+        pending=Path(str(path)+suffix)
+        if pending.is_symlink() or pending.exists() and pending.stat().st_size:
+            raise ValueError('closed producer required; nonempty journal preserved')
+    connection=sqlite3.connect(path.as_uri()+'?mode=ro&immutable=1',uri=True)
+    connection.row_factory=sqlite3.Row
+    return connection
+
+def result(label,stage):
+    from skippercast.coastal.handoff.common import digest
+    d,g=index();wanted=digest(g['window_set']['ABCD'.index(label)])
+    connection=closed_sqlite(R/'var/coastal/authenticated.sqlite')
+    try:
+        matches=[row for row in connection.execute('SELECT * FROM jobs WHERE stage=? AND state="done"',(stage,))
+                 if json.loads(row['record_json']).get('window_key')==wanted]
+        if len(matches)!=1:raise ValueError('exact unique committed window result required')
+        row=matches[0]
+        leases=connection.execute('SELECT DISTINCT lease_token FROM authenticated_artifacts WHERE job_id=? AND committed_result_sha=?',
+                                  (row['job_id'],row['result_sha'])).fetchall()
+        if len(leases)!=1:raise ValueError('exact committed lease required')
+        path=R/'var/coastal/jobs'/row['job_id'].replace(':','-')/leases[0][0]/'output/result.json'
+        rr=ref(R,path,'coastal-authenticated-stage-result-v1');doc=load(R,rr)
+        if rr['sha256']!=row['result_sha'] or doc['stage']!=stage or doc['state']!='done':
+            raise ValueError('committed result identity differs')
+        return rr,doc
+    finally:connection.close()
+
+def qualify_request(label,review):
+    d,g=index();rr,out=result(label,'acquire');observation=load(R,out['observation'])
+    load(R,review,contract='coastal-private-input-review-v2')
+    packet=load(R,d['requests']['ABCD'.index(label)])
+    packet.update(stage='qualify',reviewed_observation=out['observation'],review=review,window=observation['window'],
+                  vertical=observation['declared_vertical'],scientific_implementation=observation['native_facts']['implementation'])
+    pr=put(R/('metadata/qualify-'+label+'.json'),packet)
+    return put_descriptor('qualify-'+label,pr)
+
+def map_request(label,review):
+    d,g=index();rr,out=result(label,'qualify');observation=load(R,out['observation'])
+    load(R,review,contract='coastal-derived-window-review-v1')
+    packet=dict(schema='coastal-derived-window-v1',creator_id='private-four128-artifact-handoff',source_accessed=False,
+                synthetic=observation['synthetic'],qualified_result=rr,scientific_review=review,rehearsal_synthetic=False)
+    pr=put(R/('metadata/map-packet-'+label+'.json'),packet)
+    plan=dict(schema='coastal-contained-mapping-plan-v1',side=128,packets=[pr],parent_grant=d['grant'],
+              segment=load(R,d['requests'][0])['segment'],baselines=[],rehearsal_synthetic=False)
+    plan_ref=put(R/('metadata/map-plan-'+label+'.json'),plan)
+    return put_descriptor('map-plan-'+label,plan_ref)
+
+def put_descriptor(name,descriptor):
+    path=R/('metadata/'+name+'-descriptor.json')
+    if path.exists():raise ValueError('preserve existing descriptor')
+    raw=(json.dumps(descriptor,sort_keys=True,separators=(',',':'))+'\n').encode()
+    if len(raw)>1024:raise ValueError('finite descriptor ceiling')
+    m=manager();rel=m.relative_path(path)
+    m.write_bytes(rel,raw,role='control',max_bytes=len(raw),intent='descriptor:'+rel)
+    return str(path)
+
+def unit_command(key,extra=(),*,runtime=180,wait=True):
+    allowed={'probe'}|{w+'-'+phase for w in 'ABCD' for phase in ('acquire','qualify','map','review-acquire','review-qualify')}
+    if key not in allowed and key not in ('watchdog','driver'):raise ValueError('exact finite unit key required')
+    if type(runtime) is not int or not 0<runtime<=3600:raise ValueError('finite unit runtime')
+    if key not in ('watchdog','driver') and runtime!=180:raise ValueError('fixed stage runtime')
+    unit=CONTROL_UNITS[key] if key in ('watchdog','driver') else UNITS[key]
+    argv=['/usr/bin/systemd-run','--user','--collect','--unit='+unit,'--slice='+SLICE,
+          '--property=RuntimeMaxSec='+str(runtime),'--property=KillMode=control-group','--property=KillSignal=SIGKILL',
+          '--property=MemoryMax=1073741824','--property=MemorySwapMax=0','--property=CPUQuota=200%',
+          '--property=TasksMax=32','--property=LimitFSIZE=67108864','--property=WorkingDirectory='+str(W)]
+    if wait:argv+=['--wait','--pipe']
+    for k,v in {'PYTHONDONTWRITEBYTECODE':'1','OMP_NUM_THREADS':'1','OPENBLAS_NUM_THREADS':'1',
+                'MKL_NUM_THREADS':'1','GDAL_NUM_THREADS':'1','PROJ_NETWORK':'OFF',
+                # Transient units do not inherit the caller's environment: carry the roots explicitly.
+                'SKIPPERCAST_FOUR128_MISSION_ROOT':str(N),'SKIPPERCAST_FOUR128_CODE_ROOT':str(W),
+                'SKIPPERCAST_FOUR128_PYTHON':PYTHON,'SKIPPERCAST_FOUR128_RUN_TAG':RUN_TAG}.items():
+        argv+=['--setenv='+k+'='+v]
+    cpus=sorted(os.sched_getaffinity(0))[:2]
+    argv+=['/usr/bin/taskset','-c',','.join(map(str,cpus)),
+           PYTHON,'-I','-B']
+    if '-review-' in key:
+        label,_,phase=key.split('-')
+        if len(extra)!=1:raise ValueError('one exact result descriptor required for review')
+        argv+=[str(W/'research/scripts/coastal_four128_artifact_review.py'),label,phase,*extra]
+    else:
+        argv+=[str(Path(__file__).resolve()),key if key in ('watchdog','driver') else 'execute']
+        if key not in ('watchdog','driver'):argv+=[key,*extra]
+    return argv
+
+def read_loadavg(path='/proc/loadavg'):
+    """1-, 5- and 15-minute load averages, or None when unreadable.
+
+    Launch receipts record this before and after each bounded launch so a slow or
+    timed-out launch shows host load without journalctl. Tests replace it."""
+    try:
+        fields=Path(path).read_text().split()
+        values=[float(v) for v in fields[:3]]
+    except (OSError,ValueError):
+        return None
+    if len(values)!=3 or not all(0<=v<1e6 for v in values):return None
+    return values
+
+def bounded_command(name,argv,*,seconds=200):
+    from skippercast.coastal.runner import run_bounded
+    d,grant=index()
+    observed=[]
+    load_before=read_loadavg();called=time.monotonic()
+    outcome=run_bounded(argv,intent=N/('control/launcher-'+name+'.json'),
+                        scratch=N/('control/launcher-'+name),timeout_s=seconds,grace_s=1,
+                        output_limit_bytes=2048,managed_output=managed_configuration_for(grant,'control',32768),
+                        identity_callback=lambda identity:observed.append(time.monotonic()))
+    finished=time.monotonic();load_after=read_loadavg()
+    # Additive fields: every known reader of launch receipts uses .get() and no
+    # reader checks the exact key set, so the schema stays v1.
+    receipt=dict(schema='coastal-four128-launch-v1',name=name,argv=argv,status=outcome.status,rc=outcome.rc,
+                 elapsed_seconds=outcome.elapsed,intent=outcome.intent_path,stdout=outcome.stdout_path,stderr=outcome.stderr_path,
+                 loadavg_before=load_before,loadavg_after=load_after,
+                 launch_wall_seconds=round(finished-called,3),
+                 # When the runner parent first saw its child's identity (10 ms poll); None if never.
+                 child_observed_seconds=round(observed[0]-called,3) if observed else None)
+    put(N/('control/launch-'+name+'.json'),receipt,root=N)
+    if outcome.status!='ok' or outcome.rc!=0:raise ValueError('finite command held; no retry: '+name)
+    return receipt
+
+def stop_trial(reason):
+    completed=subprocess.run(['/usr/bin/systemctl','--user','stop',SLICE],capture_output=True,text=True,timeout=10)
+    result=subprocess.run(['/usr/bin/systemctl','--user','show',SLICE,'--property=ActiveState','--property=ControlGroup'],
+                          capture_output=True,text=True,timeout=5)
+    props=dict(line.split('=',1) for line in result.stdout.splitlines() if '=' in line)
+    empty=False
+    cg=props.get('ControlGroup')
+    if not cg and props.get('ActiveState')=='inactive':empty=True
+    elif cg and cg.startswith('/') and '..' not in Path(cg).parts:
+        cpath=Path('/sys/fs/cgroup'+cg)
+        empty=not any(p.read_text().strip() for p in cpath.rglob('cgroup.procs')) if cpath.exists() else props.get('ActiveState')=='inactive'
+    doc=dict(schema='coastal-four128-stop-proof-v1',reason=reason,stop_exit_code=completed.returncode,
+             query_exit_code=result.returncode,properties=props,descendants_empty=empty,observed_monotonic=time.monotonic())
+    if not (N/'control/final-stop.json').exists():put(N/'control/final-stop.json',doc,root=N)
+    if completed.returncode or result.returncode or not empty:raise ValueError('trial stop proof uncertain')
+    return doc
+
+def duration_seconds(value):
+    import re
+    matches=re.findall(r'(\d+(?:\.\d+)?)(us|ms|s|min|h|d)',value)
+    if not matches or ''.join(number+unit for number,unit in matches)!=value.replace(' ',''):
+        raise ValueError('finite precise unit runtime required')
+    factors={'us':.000001,'ms':.001,'s':1,'min':60,'h':3600,'d':86400}
+    return sum(float(number)*factors[unit] for number,unit in matches)
+
+def control_envelope(kind):
+    import re
+    if kind not in ('driver','watchdog'):raise ValueError('fixed control kind')
+    clock=load_clock();mono=time.monotonic()
+    membership=Path('/proc/self/cgroup').read_text().strip()
+    if not membership.startswith('0::/') or '\n' in membership:raise ValueError('unified control membership')
+    cg=membership[3:];leaf=Path('/sys/fs/cgroup'+cg);parent=leaf.parent
+    unit=CONTROL_UNITS[kind]
+    keys=('ExecMainPID','ControlGroup','RuntimeMaxUSec','ActiveState','InvocationID',
+          'ExecMainStartTimestampMonotonic','KillMode','KillSignal','MemoryMax','TasksMax','CPUQuotaPerSecUSec')
+    result=subprocess.run(['/usr/bin/systemctl','--user','show',unit,*['--property='+k for k in keys]],
+                          capture_output=True,text=True,check=True,timeout=5)
+    if len(result.stdout)>32768:raise ValueError('bounded unit response')
+    props=dict(line.split('=',1) for line in result.stdout.splitlines() if '=' in line)
+    expected={'memory.max':'3221225472','memory.swap.max':'0','cpu.max':'200000 100000','pids.max':'96'}
+    readings={k:(parent/k).read_text().strip() for k in expected}
+    leaf_expected=dict(expected,**{'memory.max':'1073741824','pids.max':'32'})
+    leaf_readings={k:(leaf/k).read_text().strip() for k in leaf_expected}
+    started=int(props.get('ExecMainStartTimestampMonotonic','0'))/1000000
+    actual_runtime=duration_seconds(props.get('RuntimeMaxUSec',''))
+    actual_deadline=started+actual_runtime
+    if (parent.name!=SLICE or leaf.name!=unit or readings!=expected or leaf_readings!=leaf_expected
+            or props.get('ExecMainPID')!=str(os.getpid()) or props.get('ControlGroup')!=cg
+            or props.get('ActiveState')!='active' or not re.fullmatch('[0-9a-f]{32}',props.get('InvocationID',''))
+            or props['InvocationID']=='0'*32 or props.get('KillMode')!='control-group' or props.get('KillSignal')!='9'
+            or props.get('MemoryMax')!='1073741824' or props.get('TasksMax')!='32'
+            or props.get('CPUQuotaPerSecUSec')!='2s' or not clock['start_monotonic']<=started<=mono
+            or not 0<actual_runtime<=3600 or not hard_deadline_within(started,actual_runtime,clock['deadline_monotonic'])
+            or len(os.sched_getaffinity(0))>2):
+        raise ValueError('actual bounded shared control envelope differs')
+    return dict(schema='coastal-four128-parent-envelope-v1',kind=kind,properties=props,
+        cgroup=cg,readings=readings,leaf_readings=leaf_readings,boot_id=clock['boot_id'],
+        deadline_monotonic=clock['deadline_monotonic']-15,actual_hard_deadline=actual_deadline,
+        pid=os.getpid(),observed_monotonic=mono,original_source_reads=0)
+
+def live_watchdog():
+    clock=load_clock();path=N/'control/parent-envelope.json'
+    if path.is_symlink() or path.stat().st_size>65536:raise ValueError('bounded watchdog receipt')
+    doc=json.loads(path.read_text());props=doc['properties']
+    unit=CONTROL_UNITS['watchdog']
+    result=subprocess.run(['/usr/bin/systemctl','--user','show',unit,'--property=ActiveState',
+                          '--property=ExecMainPID','--property=InvocationID','--property=ControlGroup'],
+                          capture_output=True,text=True,check=True,timeout=5)
+    current=dict(line.split('=',1) for line in result.stdout.splitlines() if '=' in line)
+    if (doc.get('kind')!='watchdog' or doc.get('boot_id')!=clock['boot_id']
+            or current.get('ActiveState')!='active'
+            or any(current.get(key)!=props.get(key) for key in ('ExecMainPID','InvocationID','ControlGroup'))
+            or doc.get('deadline_monotonic')!=clock['deadline_monotonic']-15
+            or not clock['start_monotonic']<=doc['observed_monotonic']<=time.monotonic()
+            or doc['actual_hard_deadline']>clock['deadline_monotonic']-.5):
+        raise ValueError('same live bounded watchdog invocation required')
+    return True
+
+def start():
+    index();audit();clock=load_clock()
+    put(N/'control/driver-envelope.json',control_envelope('driver'),root=N)
+    runtime=unit_runtime_for(clock['deadline_monotonic'],time.monotonic())
+    bounded_command('watchdog-start',unit_command('watchdog',runtime=runtime,wait=False),seconds=10)
+    end=time.monotonic()+30
+    while not (N/'control/parent-envelope.json').exists() and time.monotonic()<end:time.sleep(.1)
+    if not (N/'control/parent-envelope.json').exists():raise ValueError('actual watchdog envelope absent')
+    live_watchdog()
+    bounded_command('probe',unit_command('probe'))
+    if not (N/'control/resource-probe.json').exists():raise ValueError('actual stage resource probe absent')
+    return clock
+
+def watchdog():
+    doc=control_envelope('watchdog');clock=load_clock()
+    put(N/'control/parent-envelope.json',doc,root=N)
+    while time.monotonic()<clock['deadline_monotonic']-15:
+        time.sleep(min(1,max(0,clock['deadline_monotonic']-15-time.monotonic())))
+    subprocess.run(['/usr/bin/systemctl','--user','stop',SLICE],timeout=10)
+
+def review(label,phase):
+    rr,out=result(label,phase);descriptor=put_descriptor('result-'+label+'-'+phase,rr)
+    bounded_command(label+'-review-'+phase,unit_command(label+'-review-'+phase,[descriptor]))
+    path=R/('metadata/independent-'+label+'-'+phase+'-review.json')
+    doc=json.loads(path.read_text());review_ref=ref(R,path,doc['schema'])
+    if doc.get('holds_added') or doc.get('quality_accepted') is not True:raise ValueError('native independent science HOLD')
+    return review_ref
+
+def launch_stage(label,phase,extra=()):
+    key=label+'-'+phase;gate(key);bounded_command(key,unit_command(key,extra))
+    step=json.loads((N/('control/step-'+key+'.json')).read_text())
+    if step.get('outcome',{}).get('state')!='done':raise ValueError('semantic stage HOLD despite exit0')
+    return step
+
+def next_finite_phase(step):
+    """The coordinator's own next decision, read from the durable step receipt.
+
+    The 2026-10-11 driver walked A..D serially (acquire, qualify, map per window).
+    The ordered coordinator pipelines instead: after A-qualify its bounded decision
+    is B-acquire, and maps run once two qualified windows wait (or native work is
+    exhausted). Controller.step refuses any action that differs from that decision,
+    which is what stopped A-map. The driver therefore follows status.next and never
+    picks a phase itself."""
+    status=step.get('status') or {}
+    if status.get('stop_reason') or status.get('archived'):raise ValueError('durable parent stopped or archived')
+    decision=status.get('next') or {}
+    if decision.get('state')=='complete':return None
+    if (decision.get('state')!='ready' or decision.get('stage') not in ('acquire','qualify','map')
+            or type(decision.get('index')) is not int or decision['index'] not in range(4)):
+        raise ValueError('finite driver requires an exact ready coordinator decision: '+json.dumps(decision,sort_keys=True))
+    return 'ABCD'[decision['index']],decision['stage']
+
+def finite_driver():
+    index();start()
+    # Only A-acquire may freeze the parent preparation; every later phase is the
+    # coordinator's recorded decision. Twelve phases at most (4 windows x 3 stages).
+    phase=('A','acquire');seen=set();qualifiers={};mapping={}
+    for _ in range(12):
+        label,stage=phase;key=label+'-'+stage
+        if key in seen:raise ValueError('duplicate finite phase decision: '+key)
+        extra=()
+        if stage=='qualify':
+            if label not in qualifiers:raise ValueError('qualification lacks committed acquisition review')
+            extra=['--request',qualifiers[label]]
+        elif stage=='map':
+            if label not in mapping:raise ValueError('mapping lacks committed qualification review')
+            extra=['--mapping-plan',mapping[label]]
+        step=launch_stage(label,stage,extra);seen.add(key)
+        if stage=='acquire':qualifiers[label]=qualify_request(label,review(label,stage))
+        elif stage=='qualify':mapping[label]=map_request(label,review(label,stage))
+        phase=next_finite_phase(step)
+        if phase is None:break
+    else:raise ValueError('finite catalog exceeded twelve phases')
+    if phase is not None or len(seen)!=12:raise ValueError('finite catalog did not complete')
+    completed=dict(schema='coastal-four128-batch-completed-v1',windows=4,pairs=65536,
+        original_source_bytes_reserved=294060544,downloads=0,completed_monotonic=time.monotonic())
+    put(N/'control/batch-completed.json',completed,root=N)
+    return dict(status='FINITE_DRIVER_COMPLETE_PENDING_EXTERNAL_STOP_PROOF',windows=4)
+
+def initial_capacity():
+    from skippercast.coastal.coordinator.authenticated import managed_native_graph_plan,managed_ledger_growth_bound
+    d,grant=index();m=manager();m.audit()
+    with m.lock():
+        state=m._read()
+        entries=state['files']
+        if any(entry['role']!='control' or entry['state']!='complete' for entry in entries.values()):
+            raise ValueError('only complete immutable initial controls allowed before clock')
+        if any(not (name.startswith('execution/metadata/') or name=='control/release-context.json') for name in entries):
+            raise ValueError('unexpected initial retained output family')
+        reserved=sum(entry['bytes'] for entry in entries.values())
+        bound=managed_native_graph_plan(grant,initial_control_bytes=reserved,initial_control_files=len(entries))
+        bound["ledger_growth"]=managed_ledger_growth_bound(grant,entries)
+    return bound
+
+def fresh_run_identity():
+    """A new mission names a new run tag, and its trial scratch must be absent.
+
+    Checked before any clock or receipt is written, so a name collision holds the
+    run instead of failing at SCRATCH.mkdir after the outer clock has started."""
+    if N!=HISTORICAL_MISSION and RUN_TAG==HISTORICAL_RUN_TAG:
+        raise ValueError('fresh mission root requires its own SKIPPERCAST_FOUR128_RUN_TAG')
+    if SCRATCH.exists() or SCRATCH.is_symlink():
+        raise ValueError('trial scratch already exists; preserve it and choose a fresh run tag')
+    return True
+
+def native_worker_ready():
+    """The native stages can start: same checks the supervisor and worker make first.
+
+    Attempt 1 of 2026-10-19 died when the runner's source guard refused gitignored
+    __pycache__ under the code root; attempt 2 died at A-acquire because the native
+    worker bootstrap was absent. Both are checked here before any clock or receipt."""
+    package=W/'src/skippercast'
+    bootstrap=package/'coastal/authenticated_v1/bootstrap.py'
+    try:info=os.lstat(bootstrap)
+    except FileNotFoundError:raise ValueError('native worker bootstrap missing: '+str(bootstrap)) from None
+    if not stat.S_ISREG(info.st_mode):
+        raise ValueError('native worker bootstrap must be a regular file: '+str(bootstrap))
+    # coordinator/authenticated.py argv_for launches the bootstrap beside its own package.
+    coordinator=Path(os.path.abspath(sys.modules['skippercast.coastal.coordinator.authenticated'].__file__))
+    if Path(os.path.abspath(coordinator.parent.parent/'authenticated_v1/bootstrap.py'))!=Path(os.path.abspath(bootstrap)):
+        raise ValueError('coordinator would launch a native worker outside the pinned code root')
+    # The exact guard _runner_bootstrap.py and bootstrap.py run, loaded without importing the project.
+    guard=package/'coastal/_source_bootstrap.py'
+    namespace={'__name__':'_coastal_source_guard'}
+    exec(compile(guard.read_bytes(),str(guard),'exec'),namespace)
+    namespace['guard_project_source'](package)
+    return str(bootstrap)
+
+# Optional quiescence gate: when this is set to a positive number, run() refuses to
+# start the outer clock while the host 1-minute load average is above it. Unset
+# (the default) leaves the gate off.
+QUIESCENCE_ENV='SKIPPERCAST_FOUR128_MAX_LOAD1'
+
+def host_quiescent():
+    """The host is quiet enough to start the outer clock, or the gate is off.
+
+    Returns None when the gate is off, else the 1-minute load average that passed.
+    Checked before any clock or receipt, like native_worker_ready()."""
+    import math
+    raw=os.environ.get(QUIESCENCE_ENV,'').strip()
+    if not raw:return None
+    try:threshold=float(raw)
+    except ValueError:raise ValueError(QUIESCENCE_ENV+' must be a number') from None
+    if not math.isfinite(threshold) or threshold<=0:raise ValueError(QUIESCENCE_ENV+' must be a positive finite number')
+    load=read_loadavg()
+    if load is None:raise ValueError('quiescence gate set but /proc/loadavg is unreadable')
+    if load[0]>threshold:
+        raise ValueError('host not quiescent: 1-minute load average '+str(load[0])+' above '+QUIESCENCE_ENV+'='+raw)
+    return load[0]
+
+def run():
+    # External observer owns no scientific subprocesses; all driver/phase supervisors are in SLICE.
+    fresh_run_identity()
+    native_worker_ready()
+    _,grant=index();limits=limits_for(grant);audit();bound=initial_capacity()
+    if (N/'control/run-started.json').exists() or (N/'control/outer-clock.json').exists():
+        raise ValueError('finite batch already attempted; no retry or clock reset')
+    # Sampled last, just before the clock starts, so the refusal reflects current load.
+    host_quiescent()
+    utc=time.time();mono=time.monotonic();boot=Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+    clock=dict(schema='coastal-four128-outer-clock-v1',start_epoch=utc,start_monotonic=mono,
+               deadline_epoch=utc+WALL,deadline_monotonic=mono+WALL,wall_seconds=WALL,boot_id=boot,
+               source_prior_bytes=limits['source_prior_bytes'],source_limit_bytes=limits['source_limit_bytes'],
+               new_source_allowance=FRESH_SOURCE,cleanup_reserve_seconds=15)
+    put(N/'control/outer-clock.json',clock,root=N)
+    put(N/'control/finite-capacity-preflight.json',bound,root=N)
+    put(N/'control/run-started.json',dict(schema='coastal-four128-run-started-v1',started_epoch=utc,
+        source_allowance=294060544,downloads=0,finite_windows=4),root=N)
+    SCRATCH.mkdir(exist_ok=False)
+    try:
+        command=['/usr/bin/busctl','--user','call','org.freedesktop.systemd1','/org/freedesktop/systemd1',
+                 'org.freedesktop.systemd1.Manager','StartTransientUnit','ssa(sv)a(sa(sv))',SLICE,'fail','5',
+                 'Description','s','Skippercast private finite four128 trial','CPUQuotaPerSecUSec','t','2000000',
+                 'MemoryMax','t','3221225472','MemorySwapMax','t','0','TasksMax','t','96','0']
+        bounded_command('init-slice',command,seconds=10)
+        now=time.monotonic();remaining=__import__('math').floor(clock['deadline_monotonic']-now)
+        runtime=unit_runtime_for(clock['deadline_monotonic'],now)
+        bounded_command('driver-start',unit_command('driver',runtime=runtime),seconds=remaining-15)
+        marker=N/'control/batch-completed.json'
+        if marker.is_symlink() or not marker.is_file():raise ValueError('no completed finite batch marker')
+        doc=json.loads(marker.read_text())
+        if (doc.get('windows'),doc.get('pairs'),doc.get('original_source_bytes_reserved'),doc.get('downloads'))!=(4,65536,294060544,0):
+            raise ValueError('finite completion marker differs')
+        if not clock['start_monotonic']<=doc['completed_monotonic']<clock['deadline_monotonic']-15:
+            raise ValueError('finite completion exceeds outer deadline')
+        stop_trial('finite four-area batch completed early')
+        return dict(status='NATIVE_MAPPING_FINITE_BATCH_COMPLETE',original_source_bytes_reserved=294060544,
+                    windows=4,pairs=65536,downloads=0,rendering='private artifact handoff pending separate acceptance')
+    except BaseException:
+        stop_trial('finite batch interrupted or held; no retry')
+        raise
+
+def main():
+    parser=argparse.ArgumentParser();parser.add_argument('mode',choices=['preflight','run','execute','watchdog','driver'])
+    parser.add_argument('key',nargs='?');parser.add_argument('--request');parser.add_argument('--mapping-plan')
+    args=parser.parse_args()
+    if args.mode=='preflight':out=preflight()
+    elif args.mode=='run':out=run()
+    elif args.mode=='driver':out=finite_driver()
+    elif args.mode=='watchdog':watchdog();return
+    else:
+        if args.key not in {'probe'}|{w+'-'+stage for w in 'ABCD' for stage in ('acquire','qualify','map')}:
+            raise ValueError('fixed finite stage required')
+        out=execute(args.key,args.request,args.mapping_plan)
+        out=dict(key=args.key,state=out.get('state') or out.get('outcome',{}).get('state'),receipt='control/step-'+args.key+'.json')
+    print(json.dumps(out,sort_keys=True))
+if __name__=='__main__':main()

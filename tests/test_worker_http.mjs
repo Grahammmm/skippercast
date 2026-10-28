@@ -4,6 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {DatabaseSync} from 'node:sqlite';
 
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
@@ -82,6 +83,36 @@ test('/api/om answers an Open-Meteo-style query through worker.fetch from the pu
   } finally { globalThis.fetch = original; }
 });
 
+test('/api/om pins a real sampled tile while the release changes after manifest read', async () => {
+  const start = Math.floor(Date.now() / 3600000) * 3600, objects = new Map(), reads = [];
+  const hash = value => createHash('sha256').update(value).digest('hex');
+  function release(cycle, speed) {
+    const tile = windTile(start);
+    tile.fields.v10.data = Buffer.from(new Int16Array(Array(8).fill(-speed * 100)).buffer).toString('base64');
+    const rows = {'gfs_global/manifest.json': {cycle, tiles: ['35_-121']}, 'gfs_global/tiles/35_-121.json': tile}, files = {};
+    for (const [path, row] of Object.entries(rows)) { const bytes = JSON.stringify(row), sha = hash(bytes); files[path] = sha; objects.set('forecasts/.r2-objects/' + sha, bytes); }
+    const snapshot = JSON.stringify({schema_version: 1, files}), generation = hash(snapshot);
+    objects.set(`forecasts/.r2-releases/${generation}.json`, snapshot);
+    return {pointer: JSON.stringify({schema_version: 1, generation}), manifestKey: 'forecasts/.r2-objects/' + files['gfs_global/manifest.json']};
+  }
+  const old = release('old', 5), next = release('new', 10);
+  objects.set('forecasts/.r2-current.json', old.pointer);
+  const bucket = {async get(key) {
+    reads.push(key); const bytes = objects.get(key); if (!bytes) return null;
+    return {arrayBuffer: async () => new TextEncoder().encode(bytes).buffer, json: async () => {
+      if (key === old.manifestKey) objects.set('forecasts/.r2-current.json', next.pointer);
+      return JSON.parse(bytes);
+    }};
+  }};
+  const query = '/api/om/v1/forecast?latitude=35.1&longitude=-120.9&models=gfs_global&hourly=wind_speed_10m&wind_speed_unit=ms&timezone=UTC&timeformat=unixtime&forecast_days=1';
+  const r = await worker.fetch(request(query), {FEEDS: bucket}); assert.equal(r.status, 200);
+  const row = await r.json(), i = row.hourly.time.indexOf(start); assert.ok(i >= 0);
+  assert.equal(row.hourly.wind_speed_10m[i], 5, 'first request samples its old snapshot despite promotion');
+  assert.equal(reads.filter(key => key.endsWith('.r2-current.json')).length, 1);
+  const updated = await (await worker.fetch(request(query), {FEEDS: bucket})).json();
+  assert.equal(updated.hourly.wind_speed_10m[i], 10, 'next request observes the complete new release');
+});
+
 test('the per-owner budget allows 30 writes a minute, then answers 429', async () => {
   const {sql, adapter} = database(), realNow = Date.now, fixed = Date.now();
   Date.now = () => fixed;  // keep all requests inside one budget minute
@@ -154,7 +185,7 @@ test('a page path missing from SHELLS is fetched directly and still served no-st
     return new Response('page', {headers: {'Content-Type': 'text/html', 'Cache-Control': 'public, max-age=31536000'}}); }};
   delete globalThis.SHELLS['/landing.html'];
   try {
-    const shell = await worker.fetch(new Request(origin + '/?utm=x'), {ASSETS, UI_V2: 'true'});
+    const shell = await worker.fetch(new Request(origin + '/?utm=x'), {ASSETS});
     assert.equal(shell.status, 200);assert.equal(shell.headers.get('Cache-Control'), 'no-store');
     assert.deepEqual(requested, ['/landing'], 'the page path itself, without .html or the visitor query');
   } finally { globalThis.SHELLS['/landing.html'] = saved; }

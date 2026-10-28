@@ -1,12 +1,12 @@
 // The trip planner's ranked spots on the Chart (#495, web/map/ranked.ts): v1's draw gate
-// and 44 px grouping pinned to v1's own dist/trip-ranking-layer.js over a fake Leaflet with
-// EPSG:3857's projection, the marks' run-time screen (#492) over them, the style from the
+// and 44 px grouping pinned to v1's dist/trip-ranking-layer.js (by digest since FE-61 deleted
+// it), the marks' run-time screen (#492) over them, the style from the
 // palette, the card's wording, and the Chart path (source data, a lone pin's card, a group's
 // zoom, a screen that stops being ready, a cleared plan) over a fake MapLibre.
 // Synthetic plan: the 20 screened reefs of e2e/ranked-export.spec.ts, 0.007° apart.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {initTripRanking} from '../dist/trip-ranking-layer.js';
+import {createHash} from 'node:crypto';
 import {RANKED_SOURCE} from '../web/map/layers.ts';
 import {chartFailed, chartMark, createChart, unavailable} from '../web/map/chart.ts';
 import {CHECKING, assessScreen} from '../web/map/habitat.ts';
@@ -16,7 +16,9 @@ import {
   NO_PLAN, RANKED_PICK, RANKED_PIN, drawnSpots, fitCamera, rankedCard, rankedFeatures, rankedSpots, rankedStyle, recheckPlan, screenRanked, zoomToGroup,
 } from '../web/map/ranked.ts';
 import {createStage, terrainFailed} from '../web/map/stage.ts';
-import {configureStore, syncFromURL} from '../web/state.ts';
+import {configureStore, region, syncFromURL} from '../web/state.ts';
+import {landWater} from '../web/land-water.ts';
+import {waterState} from './helpers/land-water.mjs';
 
 const PAGE = 'https://s.test/map';
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -38,6 +40,8 @@ const reefs = Array.from({length: 20}, (_, i) => {
 });
 // The planner's order is the ranks; the event may list them in any order.
 const PLAN = {targets: reefs.map(r => r.target).reverse(), areas: reefs.map(r => r.area), publication};
+// Every synthetic reef is in a clean water cell: these tests are about the other draw gates (land/water: test_land_water.mjs).
+landWater.value = waterState('morro-bay', reefs.map(r => r.target));
 /** A screen that is current and withholds the named points and areas. */
 const screen = ({ready = true, points = [], areas = []} = {}) => ({
   ready: () => ready,
@@ -51,26 +55,8 @@ const marksReady = (areas = []) => assessScreen({areas, checkedAt: new Date().to
 const marksStale = () => assessScreen({areas: [], checkedAt: new Date(Date.now() - 37 * HOUR).toISOString(), live: false}, Date.now());
 const marksUnavailable = () => assessScreen({areas: null, checkedAt: null, live: false}, Date.now());
 
-/** v1's layer over a fake Leaflet: Leaflet's EPSG:3857 projection at `zoom`, and the pins it draws. */
-async function v1Pins(plan, s, zoom) {
-  const saved = Object.fromEntries(['L', 'document', 'fetch', 'setInterval', 'requestAnimationFrame'].map(k => [k, globalThis[k]]));
-  const R = 6378137, d = Math.PI / 180, k = 0.5 / (Math.PI * R), size = 256 * 2 ** zoom;
-  const point = (x, y) => ({x, y, distanceTo: o => Math.hypot(o.x - x, o.y - y)});
-  const pins = [], drawable = () => ({addTo() { return this; }, bindTooltip() { return this; }, on() { return this; }});
-  const layer = {clearLayers() { pins.length = 0; }, remove() {}, addTo() {}};
-  Object.assign(globalThis, {document: new EventTarget(), setInterval() {}, requestAnimationFrame() {},
-    L: {layerGroup: () => layer, canvas: () => ({}), geoJSON: drawable, divIcon: x => x,
-      marker: ([lat, lng], {icon, title}) => { pins.push({lat, lng, title, html: icon.html}); return drawable(); }}});
-  try {
-    const map = {on() {}, latLngToLayerPoint([lat, lng]) {
-      const sin = Math.sin(Math.max(Math.min(85.0511287798, lat), -85.0511287798) * d);
-      return point(size * (k * R * lng * d + 0.5), size * (-k * R * Math.log((1 + sin) / (1 - sin)) / 2 + 0.5));
-    }};
-    initTripRanking(map, s, () => {});
-    document.dispatchEvent(new CustomEvent('skippercast:trip-ranked', {detail: plan}));
-    return pins.map(p => ({rank: Number(/<span>(\d+)<\/span>/.exec(p.html)[1]), more: Number(/\+(\d+)/.exec(p.html)?.[1] ?? 0), coordinates: [p.lng, p.lat]}));
-  } finally { Object.assign(globalThis, saved); }
-}
+/** v1's pins for the cases below, in order (dist/trip-ranking-layer.js over EPSG:3857 at each zoom, before FE-61 deleted it). */
+const V1_PINS = '9e9e8e0a07b331a9dd5c4b73fe33c83e7eddf8eba13a6e449fef7085f76db766';
 const v2Pins = (plan, s, zoom) => rankedFeatures(screenRanked(plan, s, new Map(), 'morro-bay'), zoom).features
   .map(f => ({rank: f.properties.rank, more: f.properties.more, coordinates: f.geometry.coordinates}));
 
@@ -86,7 +72,9 @@ test('the pins are v1\'s: the same spots withheld, numbered by rank and grouped 
     ['a held publication', {...PLAN, publication: {...publication, status: 'held'}}, screen(), 12],
     ['a cleared plan', {targets: [], areas: []}, screen(), 12],
   ];
-  for (const [name, plan, s, zoom] of cases) assert.deepEqual(v2Pins(plan, s, zoom), await v1Pins(plan, s, zoom), name);
+  const pins = cases.map(([, plan, s, zoom]) => v2Pins(plan, s, zoom));
+  assert.deepEqual(pins.map(p => p.length), [4, 20, 4, 10, 0, 19, 0, 0, 0]);
+  assert.equal(createHash('sha256').update(JSON.stringify(pins)).digest('hex'), V1_PINS, 'the pins v1 drew for every case');
   const grouped = v2Pins(PLAN, screen(), 10.9);
   assert.deepEqual(grouped.map(p => [p.rank, p.more]), [[1, 4], [6, 4], [11, 4], [16, 4]], 'each pin sits at its best-ranked spot');
   assert.deepEqual(grouped[0].coordinates, [-121.169, 35.431]);
@@ -129,6 +117,8 @@ test('the every-minute re-check keeps a plan its publication still matches; a ch
 
 test('a spot the marks\' run-time screen (#492) withholds is not drawn, the others keep their ranks; no ready screen, no pins', () => {
   rankedSpots.value = screenRanked(PLAN, screen(), new Map(), 'morro-bay');
+  const before = region.value;
+  region.value = 'morro-bay';
   try {
     for (const s of [CHECKING, marksStale(), marksUnavailable()]) {
       markScreen.value = s;
@@ -140,7 +130,7 @@ test('a spot the marks\' run-time screen (#492) withholds is not drawn, the othe
     assert.deepEqual(rankedFeatures(drawnSpots.value, 16).features.map(f => f.properties.rank)[0], 2, 'pin 2 keeps its number');
     markScreen.value = marksReady();
     assert.equal(drawnSpots.value.length, 20);
-  } finally { rankedSpots.value = []; markScreen.value = CHECKING; }
+  } finally { rankedSpots.value = []; markScreen.value = CHECKING; region.value = before; }
 });
 
 test('the style: a 44 px target, a numbered disc and a "+n", all from the palette', () => {
@@ -169,6 +159,7 @@ test('a spot\'s card has v1\'s lines in the planner\'s order and reviews the spo
     regulations: {href: 'https://wildlife.ca.gov/Fishing/Ocean/Regulations', label: 'CDFW ocean fishing regulations'},
     basis: `${reefs[0].target.terrain_interpretation} ${reefs[0].target.special_note} ${reefs[0].target.evidence_status}`,
     trip: 'test-reef-00',
+    position: {latitude: reefs[0].target.latitude, longitude: reefs[0].target.longitude},
   });
   for (const line of [card.name, card.kind, card.reading, card.source, card.rules]) assert.doesNotMatch(line, PROMISE);
   assert.equal(rankedCard({...reefs[0].target, trip_fit: undefined, evidence_confidence: null}, null).reading, 'Habitat fit unrated');
@@ -215,7 +206,7 @@ test('on the Chart: the plan\'s pins, a lone pin\'s card, a group\'s zoom, and a
   const lib = library(), host = {dataset: {}};
   const stage = createStage({host: {dataset: {}, shadowRoot: {replaceChildren() {}}}, load: async () => ({styles: [], mountCoast: () => ({})}),
     center: () => [35.37, -120.86], viewDelay: 0, doc: {hidden: false, addEventListener() {}, removeEventListener() {}},
-    renderers: [() => createChart({host, load: async () => lib.module, fetchFn: files, palette: () => sentinel, page: () => PAGE, viewDelay: 0})]});
+    renderers: [() => createChart({host, diagnostics: true, load: async () => lib.module, fetchFn: files, palette: () => sentinel, page: () => PAGE, viewDelay: 0})]});
   await settle();
   markScreen.value = marksReady();
   const [map] = lib.maps;

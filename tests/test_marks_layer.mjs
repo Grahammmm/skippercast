@@ -8,8 +8,6 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {speciesFit} from '../dist/species-fit.js';
-import {matchesSpecies} from '../dist/species.js';
-import {habitatMatches} from '../dist/survey-habitat.js';
 import {
   CDFW_REGULATIONS, EMPTY, assessScreen, atlasCard, fitLine, geologyCard, geologyFeatures, geologyShown, habitatFamily, markFeatures, markFit, markShown,
   receiptCard, regulationsLink, surveyCard, surveyFeatures, surveyMatches, terrainCard, terrainDetailCard,
@@ -41,19 +39,13 @@ const SENTINELS = new Set(Object.values(sentinel));
 /** Words § 12 keeps off every card: no count, chance or promise of fish. */
 const PROMISE = /\b(?:hotspot|chance|odds|probab\w*|productive|best spot|catch rate|bite|guarantee\w*)\b/i;
 
+// FE-61 deleted v1's dist/species.js and dist/survey-habitat.js, which these rules were pinned to target by target.
 test('v1\'s rules are kept: marks per target, survey outlines per family and the geology kinds', () => {
-  for (const atlas of [ATLAS, SOCAL_ATLAS]) {
-    for (const id of ['reef', 'rockfish', 'lingcod', 'halibut', 'salmon', 'dungeness']) {
-      for (const t of atlas.targets) assert.equal(markShown(t, id), matchesSpecies(t, id), `${t.id} for ${id}`);
-    }
-  }
   assert.ok(ATLAS.targets.some(t => !markShown(t, 'lingcod')) && ATLAS.targets.some(t => markShown(t, 'lingcod')), 'lingcod keeps v1\'s rough-relief screen');
   assert.equal(markShown(ATLAS.targets[0], 'cabezon-shallow-reef'), true, 'a v2 reef target reads the reef marks');
-  for (const [region, survey] of [[CAMBRIA, SURVEY], [SOCAL, read('regions/southern-california/survey-habitat.geojson')]]) {
-    for (const option of region.target_options) {
-      for (const f of survey.features) assert.equal(surveyMatches(f.properties, option.id, region), habitatMatches(f, option.id, region), `${f.properties.id} for ${option.id}`);
-    }
-  }
+  const shown = CAMBRIA.target_options.flatMap(o => SURVEY.features.filter(f => surveyMatches(f.properties, o.id, CAMBRIA)).map(f => [o.id, f.properties]));
+  assert.ok(shown.length > 0 && shown.length < CAMBRIA.target_options.length * SURVEY.features.length, 'survey outlines show for some families only');
+  for (const [id, p] of shown.slice(0, 20)) assert.equal(surveyMatches({...p, military_access: 'unverified'}, id, CAMBRIA), false, 'unverified military access hides it');
   assert.equal(habitatFamily('lingcod'), 'reef');
   assert.equal(habitatFamily('kelp-bass'), 'kelp-bass', 'a target with its own habitat kinds keeps them');
   // dist/geology.js: rock and mixed for reef targets, sediment for halibut and dungeness, nothing else.
@@ -82,9 +74,9 @@ test('fit is v1\'s ordinal, 3 the strongest, in the one wording "fits <species> 
 
 test('marks are points with their fit badge, inside the profile\'s depth limit', () => {
   const boat = markFeatures(ATLAS, 'lingcod', 'boat', CHECKED);
-  assert.equal(boat.features.length, ATLAS.targets.filter(t => matchesSpecies(t, 'lingcod')).length);
+  assert.equal(boat.features.length, ATLAS.targets.filter(t => markShown(t, 'lingcod')).length);
   const first = boat.features.find(f => f.properties.id === 'SC26-001');
-  assert.deepEqual(first, {type: 'Feature', geometry: {type: 'Point', coordinates: [-120.843179, 35.164314]}, properties: {id: 'SC26-001', fit: '3'}});
+  assert.deepEqual(first, {type: 'Feature', geometry: {type: 'Point', coordinates: [-120.843179, 35.164314]}, properties: {id: 'SC26-001', fit: '3', weight: 1}});
   const spear = markFeatures(ATLAS, 'reef', 'spear', CHECKED);
   assert.ok(spear.features.length > 0 && spear.features.every(f => ATLAS.targets.find(t => t.id === f.properties.id).neighborhood_depth_ft[1] <= 60), 'Spear: 60 ft');
   assert.ok(markFeatures(ATLAS, 'cabezon-shallow-reef', 'spear', CHECKED).features.every(f => !('fit' in f.properties)), 'no badge without a fit');
@@ -97,6 +89,7 @@ test('a mark\'s card: fit, grade and depth range; source and age; the regulation
   const card = atlasCard(ATLAS.targets.find(t => t.id === 'SC26-001'), data, 'lingcod');
   assert.deepEqual({...card, basis: undefined}, {
     id: 'spot:SC26-001', name: 'Southern rocky rise', kind: 'Reef mark · grade A · ~135–184 ft', reading: 'Fits lingcod habitat 3 of 3',
+    position: {latitude: 35.164314, longitude: -120.843179},
     source: 'Avila / Point Buchon · surveyed 2008 · atlas 2026-09-27',
     rules: 'Screened against protected areas with 2992 m clearance in the atlas of 2026-09-27; check current rules before you fish.',
     regulations: {href: 'https://wildlife.ca.gov/Fishing/Ocean/Regulations', label: 'CDFW ocean fishing regulations'}, basis: undefined,
@@ -153,9 +146,9 @@ test('the terrain\'s evidence lines read verbatim in the card, with its fit in t
   assert.equal(terrainDetailCard({...detail, facts: 'Nominal 40–80 ft · physical score 72/100 · species fit 2/3'}, 'rockfish-reef').reading.endsWith('fits reef rockfish habitat 2 of 3'), true);
   assert.equal(terrainDetailCard({...detail, facts: 'Nominal 40–80 ft · physical score 72/100'}, 'all').reading, 'Nominal 40–80 ft · physical score 72/100');
   const receipt = {id: 'reef:r1', latitude: 35.38, longitude: -120.88, expiresAt: '2027-01-02T00:00:00.000Z', kind: 'reef'};
-  assert.deepEqual(receiptCard(receipt), {id: 'habitat:reef:r1', name: 'Reef habitat', kind: 'Terrain habitat · reef:r1', reading: '35.3800° N, 120.8800° W',
+  assert.deepEqual(receiptCard(receipt), {id: 'habitat:reef:r1', name: 'Reef habitat', kind: 'Terrain habitat · reef:r1', reading: '', position: {latitude: 35.38, longitude: -120.88},
     source: 'Reviewed coastal habitat · valid until 2027-01-02', basis: 'Restored from the reviewed habitat release; its evidence lines show in the 2D and 3D terrain.'});
-  assert.equal(terrainCard({latitude: 35.38, longitude: -120.88, id: 'reef:r1'}).reading, '35.3800° N, 120.8800° W');
+  assert.deepEqual(terrainCard({latitude: 35.38, longitude: -120.88, id: 'reef:r1'}).position, {latitude: 35.38, longitude: -120.88});
   // The rewrite depends on the renderer's own facts string: a change there fails here, not silently in the card.
   const viewer = readFileSync(new URL('../packages/coast/src/coast3d/viewer.ts', import.meta.url), 'utf8');
   assert.match(viewer, /' · species fit '\+p\[this\.option\(\)\.field!\]\+'\/3'/, 'packages/coast still writes "species fit n/3"');
@@ -347,7 +340,8 @@ test('the link\'s spot loads in any presentation; a failed file marks only its l
   t.mock.method(console, 'warn', () => {});
   browser(`${PAGE}?region=morro-bay&presentation=3d&spot=SC26-001`);
   const errors = [];
-  const marks = createMarks({fetchFn: files(['data/atlas.json']), page: () => PAGE, onError: layer => errors.push(layer)});
+  // #617: the atlas's startup copy fails, then the full atlas it falls back to.
+  const marks = createMarks({fetchFn: files(['regions/morro-bay/atlas-marks.json', 'data/atlas.json']), page: () => PAGE, onError: layer => errors.push(layer)});
   assert.equal(spotCard.value, undefined, 'loading: the card keeps its placeholder');
   await settle();
   assert.deepEqual(errors, ['marks']);
@@ -362,6 +356,19 @@ test('the link\'s spot loads in any presentation; a failed file marks only its l
   assert.equal(spotCard.value, null);
   assert.equal(markSources[GEOLOGY_SOURCE].value.features.length > 0, true);
   again.destroy();
+});
+
+test('the marks read the region\'s atlas copy (#617), and the full atlas only when the copy fails', async () => {
+  browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  for (const fail of [[], ['regions/morro-bay/atlas-marks.json']]) {
+    const asked = [], serve = files(fail);
+    const marks = createMarks({fetchFn: url => { asked.push(new URL(url).pathname.slice(1)); return serve(url); }, page: () => PAGE});
+    await settle();
+    assert.equal(markData.value.atlas.targets.length > 0, true);
+    assert.equal(asked.includes('regions/morro-bay/atlas-marks.json'), true);
+    assert.equal(asked.includes('data/atlas.json'), fail.length > 0, fail.length ? 'the full atlas after a failed copy' : 'no full atlas while the copy loads');
+    marks.destroy();
+  }
 });
 
 test('the selection hrefs drop ?focus= too, and a link naming both a spot and a habitat keeps the spot', async () => {

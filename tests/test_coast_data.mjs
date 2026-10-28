@@ -196,11 +196,126 @@ test('concurrent first reads of one object hash it once', async () => {
   const cold = tile.map(v => v * 3);  // bytes no earlier test verified
   const {store, entries} = await published({'/api/habitat/tiles?region=morro-bay': {bytes: cold, habitatRelease, expiresAt: '2099-01-01T00:00:00Z'}});
   const key = 'coast/objects/' + entries['/api/habitat/tiles?region=morro-bay'].sha256;
+  // Only an unpinned whole read hashes; a request that arrives after the hash has finished reads its pinned etag instead.
+  const get = store.get.bind(store), whole = [];
+  store.get = (k, options = {}) => { if (k === key && !options.onlyIf && !options.range) whole.push(k); return get(k, options); };
   const parts = await Promise.all([0, 8, 16, 24].map(start => serveCoastData(request('/api/coast/habitat/tiles?region=morro-bay',
     {headers: {Range: `bytes=${start}-${start + 7}`}}), noBridge, store)));
   assert.deepEqual(parts.map(r => r.status), [206, 206, 206, 206]);
   assert.deepEqual(new Uint8Array(await parts[1].arrayBuffer()), cold.slice(8, 16));
-  assert.equal(store.reads.filter(k => k === key).length, 1);
+  assert.equal(whole.length, 1, 'one unpinned whole-object read hashes it');
+});
+
+// Hold cold object bodies independently; pointer reads stay promise-only so one
+// event-loop checkpoint can drain same-key joiners after the manifest is warm.
+async function gatedAssets(t, files) {
+  const {store, entries} = await published(files);
+  const get = store.get.bind(store), pointer = await get('coast/current.json');
+  const pointerBytes = await pointer.arrayBuffer();
+  const gates = new Map(), jobs = [], counts = new Map();
+  let closed = false, active = 0, peak = 0, bridgeCalls = 0;
+  const fetcher = async () => { bridgeCalls++; throw Error('Must not reach the bridge'); };
+  const send = (path, init) => {
+    const job = serveCoastData(request(path, init), fetcher, store);
+    jobs.push(job); return job;
+  };
+  // Cache only the release, not an asset's verified etag.
+  assert.equal((await send('/coast-data/data/coast-wide/gate-absent.bin')).status, 404);
+  store.get = async (key, options) => {
+    if (key === 'coast/current.json') return {...pointer,
+      body: new Response(pointerBytes).body, arrayBuffer: async () => pointerBytes};
+    const gate = gates.get(key);
+    if (!gate) return get(key, options);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    const object = await get(key, options);
+    return {...object, arrayBuffer: async () => {
+      active++; peak = Math.max(peak, active); gate.entered.resolve();
+      try { await gate.body.promise; return await object.arrayBuffer(); }
+      finally { active--; }
+    }};
+  };
+  t.after(async () => {
+    closed = true;
+    for (const gate of gates.values()) gate.body.resolve();
+    for (const result of await Promise.allSettled(jobs)) {
+      if (result.status === 'fulfilled' && !result.value.bodyUsed) await result.value.body?.cancel();
+    }
+    store.get = get;
+  });
+  const arm = path => {
+    const key = 'coast/objects/' + entries[path].sha256;
+    const gate = {key, entered: Promise.withResolvers(), body: Promise.withResolvers()};
+    if (closed) gate.body.resolve();
+    gates.set(key, gate); return gate;
+  };
+  return {send, arm, counts, entries, stats: () => ({active, peak, bridgeCalls})};
+}
+
+test('distinct cold R2 keys overlap while same-key ranges share a read', {timeout: 5000}, async t => {
+  // Two is a control population, not an accepted global concurrency limit.
+  const a = '/data/coast-wide/gate-overlap-a.bin', b = '/data/coast-wide/gate-overlap-b.bin';
+  const bytesA = new TextEncoder().encode('synthetic overlap asset A'), bytesB = new TextEncoder().encode('synthetic overlap asset B');
+  const f = await gatedAssets(t, {[a]: {bytes: bytesA}, [b]: {bytes: bytesB}});
+  const ga = f.arm(a), gb = f.arm(b);
+  const first = f.send('/coast-data' + a, {headers: {Range: 'bytes=0-7'}});
+  const shared = f.send('/coast-data' + a, {headers: {Range: 'bytes=8-15'}});
+  const other = f.send('/coast-data' + b);
+  await Promise.all([ga.entered.promise, gb.entered.promise]);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(f.stats(), {active: 2, peak: 2, bridgeCalls: 0});
+  assert.equal(f.counts.get(ga.key), 1); assert.equal(f.counts.get(gb.key), 1);
+  // B finishes while A is still held: distinct keys have independent progress.
+  gb.body.resolve();
+  const otherResponse = await other;
+  assert.equal(otherResponse.status, 200);
+  assert.equal(otherResponse.headers.get('ETag'), `"sha256-${f.entries[b].sha256}"`);
+  assert.deepEqual(new Uint8Array(await otherResponse.arrayBuffer()), bytesB);
+  assert.equal(f.stats().active, 1);
+  ga.body.resolve();
+  const parts = await Promise.all([first, shared]);
+  for (const [i, part] of parts.entries()) {
+    assert.equal(part.status, 206);
+    assert.equal(part.headers.get('Content-Range'), `bytes ${i * 8}-${i * 8 + 7}/${bytesA.length}`);
+    assert.deepEqual(new Uint8Array(await part.arrayBuffer()), bytesA.slice(i * 8, i * 8 + 8));
+  }
+  assert.equal(f.counts.get(ga.key), 1);
+  assert.deepEqual(f.stats(), {active: 0, peak: 2, bridgeCalls: 0});
+});
+
+test('a shared R2 read rejection fails closed, leaves another key running and permits retry', {timeout: 5000}, async t => {
+  const a = '/data/coast-wide/gate-retry-a.bin', b = '/data/coast-wide/gate-retry-b.bin';
+  const bytesA = new TextEncoder().encode('synthetic retry asset A'), bytesB = new TextEncoder().encode('synthetic retry asset B');
+  const f = await gatedAssets(t, {[a]: {bytes: bytesA}, [b]: {bytes: bytesB}});
+  const ga = f.arm(a), gb = f.arm(b);
+  const first = f.send('/coast-data' + a), shared = f.send('/coast-data' + a, {method: 'HEAD'});
+  const other = f.send('/coast-data' + b);
+  await Promise.all([ga.entered.promise, gb.entered.promise]);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(f.counts.get(ga.key), 1);
+  assert.deepEqual(f.stats(), {active: 2, peak: 2, bridgeCalls: 0});
+  ga.body.reject(Error('synthetic R2 body failure'));
+  for (const failed of await Promise.all([first, shared])) {
+    assert.equal(failed.status, 503);
+    assert.equal(failed.headers.get('ETag'), null);
+    assert.deepEqual(await failed.json(), {error: 'Coast source unavailable'});
+  }
+  assert.equal(f.counts.get(ga.key), 1, 'both failed callers shared the rejected read');
+  assert.deepEqual(f.stats(), {active: 1, peak: 2, bridgeCalls: 0});
+  const retryGate = f.arm(a), retry = f.send('/coast-data' + a);
+  await retryGate.entered.promise;
+  assert.equal(f.counts.get(ga.key), 2, 'rejection removed the pending entry');
+  retryGate.body.resolve();
+  const recovered = await retry;
+  assert.equal(recovered.status, 200);
+  assert.equal(recovered.headers.get('ETag'), `"sha256-${f.entries[a].sha256}"`);
+  assert.deepEqual(new Uint8Array(await recovered.arrayBuffer()), bytesA);
+  assert.equal(f.stats().active, 1, 'retry did not wait for or cancel the other key');
+  gb.body.resolve();
+  const unaffected = await other;
+  assert.equal(unaffected.status, 200);
+  assert.deepEqual(new Uint8Array(await unaffected.arrayBuffer()), bytesB);
+  assert.equal(f.counts.get(gb.key), 1);
+  assert.deepEqual(f.stats(), {active: 0, peak: 2, bridgeCalls: 0});
 });
 
 test("the renderer's verified-asset and habitat HEAD checks pass against R2 and fail on tampering", async () => {
@@ -361,7 +476,14 @@ test('the fixture report passes packages/coast readiness in every county area', 
     assert.equal(days.length, 3, area.id);
     for (const mode of ['boat', 'shore']) {
       const brief = buildDaily(report, slo, area, mode, days[0].date, now);
-      assert.deepEqual(brief.missing, [mode === 'boat' ? 'Harbor entrance and full return route need a separate check' : 'Breaking surf, beach access and water quality need a local check'], area.id);
+      // Shore also lists its offshore surf estimate (the fixture carries no nearshore model) and, for Avila and Pismo, the
+      // missing shoreline bearing (#542).
+      const shore = ['Breaking surf, beach access and water quality need a local check', 'Surf is an offshore estimate where no fresh nearshore model covers the hour',
+        ...(area.id === 'south' ? ['Wind side unknown for this stretch of coast; wind judged on speed only'] : [])];
+      // Boat at Morro Bay (central) also lists the bar check's offshore swell estimate (#542).
+      const boat = ['Harbor entrance and full return route need a separate check',
+        ...(area.id === 'central' ? ['Bar swell is an offshore estimate where no fresh nearshore model covers the hour'] : [])];
+      assert.deepEqual(brief.missing, mode === 'boat' ? boat : shore, area.id);
       assert.ok(brief.hours.length && brief.tides.length && brief.tideEvents.length && brief.tempObservation, area.id);
     }
     assert.equal(assess(report, area, 'boat', now, slo.timezone).status, 'Caution', 'the active advisory, not missing data');
@@ -400,6 +522,30 @@ test('a SkipperCast report keeps Fish nearshore and beach rows only for the sour
   assert.equal(down.status, 200); assert.equal(down.headers.get('X-Coast-Upstream'), 'report=skippercast, fish=unavailable');
   const alone = await down.json();
   assert.deepEqual([alone.nearshore, alone.waterQuality, alone.sources], [undefined, undefined, own.sources]);
+});
+
+test('Fish enrichment preserves processing failure provenance with successful and failed source rows', async () => {
+  const own = reportFeed(), store = feedStore({[REPORT]: own});
+  const processing = {id: 'enrichment-processing', outcome: 'error', fetchedAt: ago(1), error: 'Synthetic enrichment processing failure'};
+  for (const outcome of ['ok', 'error']) {
+    const sources = [
+      {id: 'cdip-SL345', outcome, fetchedAt: ago(2)},
+      {id: 'slo-beach-water-quality', outcome, fetchedAt: ago(1)},
+      processing,
+    ];
+    const packet = {...fishReport, sources: [fishReport.sources[0], null, ...sources],
+      nearshore: outcome === 'ok' ? fishReport.nearshore : null, waterQuality: null};
+    const r = await serveCoastData(request('/api/coast/report'), async () => response(packet), store, coastFeeds('report'));
+    assert.equal(r.status, 200);
+    const report = await r.json();
+    assert.deepEqual(report.sources, [...own.sources, ...sources]);
+    assert.deepEqual(report.nearshore, outcome === 'ok' ? fishReport.nearshore : []);
+    assert.deepEqual(report.waterQuality, []);
+  }
+  // An unavailable Fish packet leaves the original report intact.
+  const r = await serveCoastData(request('/api/coast/report'), async () => response(null), store, coastFeeds('report'));
+  assert.equal(r.status, 200);
+  assert.deepEqual(await r.json(), own);
 });
 
 test('a stale, future or malformed report feed falls back to the Fish report exactly as before', async () => {

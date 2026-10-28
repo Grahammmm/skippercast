@@ -72,20 +72,26 @@ class ActivityThresholds:
     max_open_trip_hours: Mapping[str, float]
     window_min: float
     min_segment_minutes: float
+    offshore_min_nm: float
     drift_max_sog_kn: float
     drift_min_minutes: float
-    troll_min_sog_kn: float
-    troll_max_sog_kn: float
-    troll_max_straightness: float
-    troll_min_heading_variance: float
-    troll_min_minutes: float
+    troll_slow_min_sog_kn: float
+    troll_slow_max_sog_kn: float
+    troll_slow_max_straightness: float
+    troll_slow_min_heading_variance: float
+    troll_slow_min_minutes: float
+    troll_pelagic_min_sog_kn: float
+    troll_pelagic_max_sog_kn: float
+    troll_pelagic_stop_max_minutes: float
+    troll_pelagic_min_minutes: float
+    transit_min_straightness: float
     raw: Mapping[str, Any]
 
     @classmethod
     def from_mapping(cls, thresholds: Mapping[str, Any]) -> "ActivityThresholds":
         """From a region's ``thresholds`` (or just its ``activity`` member)."""
         activity = thresholds["activity"] if "activity" in thresholds else thresholds
-        drift, troll = activity["drift"], activity["troll"]
+        drift, slow, pelagic = activity["drift"], activity["troll_slow"], activity["troll_pelagic"]
         return cls(
             in_port_debounce_min=float(activity["in_port_debounce_min"]),
             min_trip_minutes=float(activity["min_trip_minutes"]),
@@ -95,13 +101,19 @@ class ActivityThresholds:
             max_open_trip_hours={str(k): float(v) for k, v in activity["max_open_trip_hours"].items()},
             window_min=float(activity["window_min"]),
             min_segment_minutes=float(activity["min_segment_minutes"]),
+            offshore_min_nm=float(activity["offshore_min_nm"]),
             drift_max_sog_kn=float(drift["max_sog_kn"]),
             drift_min_minutes=float(drift["min_minutes"]),
-            troll_min_sog_kn=float(troll["min_sog_kn"]),
-            troll_max_sog_kn=float(troll["max_sog_kn"]),
-            troll_max_straightness=float(troll["max_straightness"]),
-            troll_min_heading_variance=float(troll["min_heading_variance"]),
-            troll_min_minutes=float(troll["min_minutes"]),
+            troll_slow_min_sog_kn=float(slow["min_sog_kn"]),
+            troll_slow_max_sog_kn=float(slow["max_sog_kn"]),
+            troll_slow_max_straightness=float(slow["max_straightness"]),
+            troll_slow_min_heading_variance=float(slow["min_heading_variance"]),
+            troll_slow_min_minutes=float(slow["min_minutes"]),
+            troll_pelagic_min_sog_kn=float(pelagic["min_sog_kn"]),
+            troll_pelagic_max_sog_kn=float(pelagic["max_sog_kn"]),
+            troll_pelagic_stop_max_minutes=float(pelagic["stop_max_minutes"]),
+            troll_pelagic_min_minutes=float(pelagic["min_minutes"]),
+            transit_min_straightness=float(activity["transit"]["min_straightness"]),
             raw=_plain(activity),
         )
 
@@ -134,6 +146,8 @@ class Trip:
     ``positions`` run from the departure fix up to, not including, the return
     fix; ``returned_at`` is the return fix's time (or the last position for an
     open or truncated trip), so a trip covers ``[departed_at, returned_at]``.
+    ``distance_nm`` sums the observed legs between ``positions`` and, for a
+    ``closed`` trip, the final leg into the return fix.
     """
     mmsi: int
     depart_port_id: str | None
@@ -229,8 +243,12 @@ def prepare(positions: Iterable[AisPosition]) -> list[AisPosition]:
 
 # ---------------------------------------------------------------- trips
 
-def _make_trip(positions, ports, depart_port, return_port, departed_at, returned_at, status) -> Trip:
-    distance = sum(distance_nm(a.lat, a.lon, b.lat, b.lon) for a, b in zip(positions, positions[1:]))
+def _make_trip(positions, ports, depart_port, return_port, departed_at, returned_at, status,
+               return_fix: AisPosition | None = None) -> Trip:
+    # A confirmed return's port fix is not one of the trip's positions, but the
+    # observed leg from the last fix at sea into port is part of the trip's distance.
+    track = list(positions) if return_fix is None else [*positions, return_fix]
+    distance = sum(distance_nm(a.lat, a.lon, b.lat, b.lon) for a, b in zip(track, track[1:]))
     offshore = max((offshore_nm(ports, p.lat, p.lon) for p in positions), default=0.0)
     return Trip(mmsi=positions[0].mmsi, depart_port_id=depart_port, return_port_id=return_port,
                 departed_at=departed_at, returned_at=returned_at, status=status, positions=tuple(positions),
@@ -292,7 +310,9 @@ def split_trips(positions: Iterable[AisPosition], ports: Sequence[Geofence], thr
                 status = "truncated" if started_unknown else "closed"
                 start = current[0].ts if current else p.ts
                 if current:
-                    trips.append(_make_trip(current, ports, depart_port, port, start, p.ts, status))
+                    # Only a closed trip (known departure, confirmed return) counts its return leg.
+                    trips.append(_make_trip(current, ports, depart_port, port, start, p.ts, status,
+                                            return_fix=p if status == "closed" else None))
                 in_port, current, last_port = True, [], where[j]
                 i = j + 1
                 continue

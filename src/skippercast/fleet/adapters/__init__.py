@@ -31,7 +31,7 @@ REGISTRY: Mapping[str, type | str | None] = {
     "operator-site": "operator_site:OperatorSite",
     "google-places": "google_places:GooglePlaces",
     "file-import": "file_import:FileImport",
-    "ais-static": None,     # AIS tasks (section 11)
+    "ais-static": None,     # AIS tasks (section 11); discover reports the binding "not-implemented", a known gap
 }
 ADAPTERS = frozenset(REGISTRY)
 

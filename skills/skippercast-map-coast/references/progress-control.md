@@ -1,5 +1,11 @@
 # Control effort against a publishable result
 
+For the shared wall-clock/attempt executor and nonpublication output classes, use
+[bounded artifacts](bounded-artifacts.md). This legacy block remains the
+publication-lane readiness/active-effort guard, not the only definition of useful
+private work. Its active ceilings fit within the new wall-clock ceiling.
+
+
 Use at the start of a mapping run and before a new source, repair, review or
 release stage. Keep this control block in the existing private checkpoint;
 do not create another catalog, queue or scheduler. Explicit user allowances and

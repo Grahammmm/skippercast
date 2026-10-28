@@ -14,18 +14,19 @@ import {feedURL} from '../../dist/feeds.js';
 import {dailyPartPath} from '../../dist/offline-core.js';
 import {hasCoastTerrain} from '../coast-context.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt} from '../profile.ts';
-import {habitat, navigate, profile, region, selection, species, withParams} from '../state.ts';
+import {grade, habitat, navigate, profile, region, selection, species, withParams} from '../state.ts';
 import type {ChartMark} from './coastline.ts';
 import {
   CHECKING, EMPTY, acceptsFeed, assessScreen, atlasCard, closureCheckedAt, geologyCard, geologyFeatures, markFeatures, markShown, receiptCard, surveyCard,
   surveyFeatures, terrainCard, terrainDetailCard, validDailyPart, withheld, withheldCard,
   type Atlas, type Collection, type DailyRecord, type Geology, type HabitatReceipt, type MarkData, type MarkScreen, type RegionData, type ScreenInputs, type Survey,
 } from './habitat.ts';
-import {GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE, SURVEY_SOURCE, overlayFeatures, setTerrainLayer} from './layers.ts';
+import {DENSITY_SOURCE, GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE, SURVEY_SOURCE, overlayFeatures, setTerrainLayer} from './layers.ts';
 import {loadMpas, mpaQuery, validMpas} from './mpa.ts';
 import type {Palette} from './palette.ts';
 import {LABEL_FONT} from './style.ts';
-import {coastSpecies, shownPresentation, terrainDetail, terrainMark} from './stage.ts';
+import {camera, coastSpecies, shownPresentation, terrainDetail, terrainMark} from './stage.ts';
+import {atlasMarksURL} from '../startup-forms.ts';
 
 /** The pickable layers: a 44 px transparent target under each mark ring, and the two kinds of outline. */
 export const MARK_PICK = 'marks-target';
@@ -33,6 +34,8 @@ export const SURVEY_PICK = 'survey-habitat-fill';
 export const GEOLOGY_PICK = 'geology-fill';
 /** Habitat and marks draw from `?view=` zoom 10 (§ 9): MapLibre zoom 9. */
 const MIN_ZOOM = 9;
+/** The `?view=` zoom below which the marks read as a density instead (#620). */
+export const DENSITY_BELOW_VIEW_ZOOM = MIN_ZOOM + 1;
 
 /** The region's published layers; null while they load. */
 export const markData = signal<MarkData | null>(null);
@@ -57,13 +60,32 @@ export const markNote = computed(() => markData.value?.atlas?.targets.some(t => 
 const points = (at: readonly ({latitude: number; longitude: number} | null | undefined)[]): Collection => ({type: 'FeatureCollection',
   features: at.filter(p => !!p).map(p => ({type: 'Feature', geometry: {type: 'Point', coordinates: [p!.longitude, p!.latitude]}, properties: {}}))});
 
+const shownMarks = computed(() => markFeatures(markData.value?.atlas, target.value, profile.value, markScreen.value, grade.value));
+/**
+ * The wide view's density (#620): the same screened, graded marks, weighted by grade and fit. Shore draws none:
+ * its places are runs along the beach, not reefs.
+ */
+const densityMarks = computed(() => profile.value === 'shore' ? EMPTY : shownMarks.value);
+
 /** Each FE-18 source's GeoJSON for the Chart. */
 export const markSources: Readonly<Record<string, {readonly value: Collection}>> = {
   [SURVEY_SOURCE]: computed(() => surveyFeatures(markData.value, target.value)),
   [GEOLOGY_SOURCE]: computed(() => geologyFeatures(markData.value, target.value)),
-  [MARKS_SOURCE]: computed(() => markFeatures(markData.value?.atlas, target.value, profile.value, markScreen.value)),
+  [DENSITY_SOURCE]: densityMarks,
+  [MARKS_SOURCE]: shownMarks,
   [SELECTION_SOURCE]: computed(() => points([shownSpot(selection.value), linked.value ?? habitatReceipt.value])),
 };
+
+/**
+ * The density for the legend (#620): null unless the Chart is zoomed out below `?view=` zoom 10 for a reef profile
+ * and the marks' screen is ready (the protected-areas row says why marks are withheld otherwise); else how many
+ * marks it is drawn from, 0 meaning the target has none here.
+ */
+export const densityShown = computed<number | null>(() => {
+  const c = camera.value;
+  if (shownPresentation.value !== 'chart' || !c || c.zoom >= DENSITY_BELOW_VIEW_ZOOM || profile.value === 'shore') return null;
+  return markData.value && markScreen.value.status === 'ready' ? densityMarks.value.features.length : null;
+});
 
 /**
  * The link's atlas mark as a card, or why the screen withholds it; null without one or when the atlas lacks it
@@ -112,18 +134,33 @@ export function chartPick(layer: string | null, properties: Record<string, unkno
   return mark;
 }
 
-/** The Chart's FE-18 sources and layers, coloured from the palette: habitat fills and geology go in § 9's habitat slot, marks and the selection near the top. */
+/**
+ * The density below `?view=` zoom 10 (#620): a heatmap of the marks weighted by grade and fit, on the depth ramp
+ * (strongest brightest, as the seafloor key), fading out as the marks come in so the two never compete.
+ */
+export function densityLayer(p: Palette) {
+  return {id: 'marks-density', type: 'heatmap', source: DENSITY_SOURCE, maxzoom: MIN_ZOOM + 0.5, paint: {
+    'heatmap-weight': ['coalesce', ['get', 'weight'], 0],
+    'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 6, 10, 9, 32],
+    'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 6, 0.8, 9, 1.6],
+    'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'transparent', 0.15, p.depth2, 0.5, p.depth1, 1, p.depth0],
+    'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 6, 0.7, MIN_ZOOM - 0.5, 0.6, MIN_ZOOM + 0.5, 0],
+  }};
+}
+
+/** The Chart's FE-18 sources and layers, coloured from the palette: habitat fills and geology go in § 9's habitat slot, the density, marks and the selection near the top. */
 export function markStyle(p: Palette) {
   const source = () => ({type: 'geojson', data: EMPTY});
   const kind = ['match', ['get', 'kind'], 'rock', p.depth1, 'mixed', p.muted, 'sediment', p.amber, 'kelp', p.mint, p.muted];
   return {
-    sources: {[SURVEY_SOURCE]: source(), [GEOLOGY_SOURCE]: source(), [MARKS_SOURCE]: source(), [SELECTION_SOURCE]: source()},
+    sources: {[SURVEY_SOURCE]: source(), [GEOLOGY_SOURCE]: source(), [DENSITY_SOURCE]: source(), [MARKS_SOURCE]: source(), [SELECTION_SOURCE]: source()},
     habitat: [
       {id: SURVEY_PICK, type: 'fill', source: SURVEY_SOURCE, minzoom: MIN_ZOOM, paint: {'fill-color': kind, 'fill-opacity': 0.25}},
       {id: GEOLOGY_PICK, type: 'fill', source: GEOLOGY_SOURCE, minzoom: MIN_ZOOM, paint: {'fill-color': kind, 'fill-opacity': 0.06}},
       {id: 'geology-line', type: 'line', source: GEOLOGY_SOURCE, minzoom: MIN_ZOOM, paint: {'line-color': kind, 'line-width': 1.2, 'line-dasharray': [3, 2]}},
     ],
     marks: [
+      densityLayer(p),
       {id: MARK_PICK, type: 'circle', source: MARKS_SOURCE, minzoom: MIN_ZOOM, paint: {'circle-radius': 22, 'circle-color': p.bg, 'circle-opacity': 0}},
       {id: 'marks-ring', type: 'circle', source: MARKS_SOURCE, minzoom: MIN_ZOOM,
         paint: {'circle-radius': 9, 'circle-color': p.bg, 'circle-opacity': 0.75, 'circle-stroke-color': p.mint, 'circle-stroke-width': 2}},
@@ -196,9 +233,11 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
   async function read(id: string, current: number): Promise<void> {
     const meta = await json(`regions/${encodeURIComponent(id)}/region.json`) as RegionData;
     void screen(id, meta, current).catch(() => { if (current === run) setScreen({areas: null, checkedAt: null, live: false}); });
-    const part = async <T>(key: string, layer: string, valid: (d: never) => boolean): Promise<T | null> => {
+    const part = async <T>(key: string, layer: string, valid: (d: never) => boolean, light?: string): Promise<T | null> => {
       const path = meta.assets?.[key];
       if (!path) return null;
+      // #617: the region's startup copy first (web/startup-forms.ts); the full file when the copy is missing or wrong.
+      if (light) try { const d = await json(light); if (valid(d as never)) return d as T; } catch { /* the full file below */ }
       try {
         const d = await json(path);
         if (!valid(d as never)) throw new Error(`${path} is not ${id}'s ${key}`);
@@ -206,7 +245,7 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
       } catch (error) { if (current === run) onError(layer, error); return null; }
     };
     const [atlas, survey, geology] = await Promise.all([
-      part<Atlas>('atlas', 'marks', (d: Atlas | null) => Array.isArray(d?.targets)),
+      part<Atlas>('atlas', 'marks', (d: Atlas | null) => Array.isArray(d?.targets), atlasMarksURL(id)),
       part<Survey>('survey_habitat', 'habitat', (d: Survey | null) => isCollection(d, id)),
       part<Geology>('geology', 'habitat', (d: Geology | null) => isCollection(d, id)),
     ]);

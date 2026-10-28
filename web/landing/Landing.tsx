@@ -4,15 +4,18 @@
 // for a re-render; main.tsx renders these parts into their hosts around
 // them: the static shoreline, the minimal nav, the live readout (right under
 // the paragraph, so the sourced readings show before any choice, D4), the
-// profile pills and the port input (FE-08), and the layer dots. Choosing a
-// port saves it under v1's key and opens the app there with the chosen
-// profile. No map engine loads here (FE-25 adds the live map after first
-// paint).
-import {useEffect, useState} from 'preact/hooks';
+// guided first run, and the layer dots. #622 (walkthrough slice 4): the first
+// run asks for the port first (FE-08's input), starts warming that region
+// (region-warm.ts) and then asks how they fish (ProfileStep.tsx); choosing a
+// profile saves the port under v1's key and opens the app there with it.
+// "Explore the coast" takes the same second step with nothing to warm. No map
+// engine loads here (FE-25 adds the live map after first paint).
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {exploreURL, loadPorts, portURL, savePort, type Port} from '../ports.ts';
 import type {Profile} from '../profile.ts';
 import {PortInput} from './PortInput.tsx';
-import {ProfilePills} from './ProfilePills.tsx';
+import {ProfileStep} from './ProfileStep.tsx';
+import {warmRegion, type WarmState} from './region-warm.ts';
 import {DEFAULT_REGION, loadReadout, type Readout as Data} from './readings.ts';
 import {Readout} from './Readout.tsx';
 
@@ -23,20 +26,14 @@ export const NAV = [
   {label: 'How it’s built', href: '/sources'},
 ] as const;
 
-/** Keep the ui switch on a link into the v2 pages, so a preview stays in the new shell. */
-export function keepUI(href: string, path: string): string {
-  const ui = new URL(href).searchParams.get('ui');
-  return ui ? `${path}${path.includes('?') ? '&' : '?'}ui=${encodeURIComponent(ui)}` : path;
-}
-
-export function LandingHead({href}: {href: string}) {
+export function LandingHead(_props: {href: string}) {
   return (
     <header class="landing-head">
-      <a class="landing-brand" href={keepUI(href, '/')}>SkipperCast</a>
+      <a class="landing-brand" href="/">SkipperCast</a>
       <nav aria-label="Site">
         <ul class="landing-nav">
-          {NAV.map(item => <li key={item.label}><a href={item.href.startsWith('/map') ? keepUI(href, item.href) : item.href}>{item.label}</a></li>)}
-          <li><a href="/?ui=v1#account">Sign in</a></li>
+          {NAV.map(item => <li key={item.label}><a href={item.href}>{item.label}</a></li>)}
+          <li><a href="/map#account">Sign in</a></li>
         </ul>
       </nav>
     </header>
@@ -45,35 +42,59 @@ export function LandingHead({href}: {href: string}) {
 
 export type LandingAppProps = {
   href: string;
-  /** The stored profile, pressed at first; null leaves every pill up. */
+  /** The stored profile, shown pressed in the profile step; null leaves every choice up. */
   initialProfile?: Profile | null;
   /** The fleet line, passed only while the fleet flag is on. */
   fleet?: string | null;
   navigate?: (url: string) => void;
-  /** Start loading the ports and readings (off for string rendering in tests). */
+  /** Start loading the ports and readings, and warm a chosen region (off for string rendering in tests). */
   load?: boolean;
+  /** The region warm-up (region-warm.ts by default; tests pass stand-ins). */
+  warm?: (region: string) => Promise<{state: WarmState}>;
 };
 
-export function LandingApp({href, initialProfile = null, fleet = null, navigate = url => location.assign(url), load = true}: LandingAppProps) {
+/** Where the profile step leads: a port (warmed) or the central coast (nothing to warm). */
+type Choice = {place: string; port: Port | null};
+const EXPLORE_PLACE = 'Central coast';
+
+export function LandingApp({href, initialProfile = null, fleet = null, navigate = url => location.assign(url), load = true, warm = region => warmRegion(region, href)}: LandingAppProps) {
   const [ports, setPorts] = useState<Port[] | null>(null);
   const [readout, setReadout] = useState<Data | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(initialProfile);
+  const [choice, setChoice] = useState<Choice | null>(null);
+  const [warmth, setWarmth] = useState<WarmState | null>(null);
+  /** The region being warmed, so an answer for an earlier choice is ignored; and whether the visitor came back from step 2. */
+  const warming = useRef<string | null>(null);
+  const [back, setBack] = useState(false);
   useEffect(() => {
     if (!load) return;
     loadPorts().then(setPorts, () => setPorts([]));
     void loadReadout().then(setReadout);
   }, [load]);
-  const choose = (port: Port) => { savePort(port.id); navigate(portURL(href, port, profile)); };
-  const explore = () => {
+  // Step 1 → 2: remember the choice and warm its region while they pick a profile; a later choice ignores an earlier warm-up's answer.
+  const choose = (port: Port) => {
+    setChoice({place: port.name, port});
+    if (!load) return;
+    const region = port.region;
+    warming.current = region;
+    setWarmth('loading');
+    void warm(region).then(r => { if (warming.current === region) setWarmth(r.state); }, () => { if (warming.current === region) setWarmth('failed'); });
+  };
+  const explore = () => { warming.current = null; setChoice({place: EXPLORE_PLACE, port: null}); setWarmth(null); };
+  const restart = () => { warming.current = null; setChoice(null); setWarmth(null); setBack(true); };
+  // Step 2: the profile opens the app; only now is the port saved as home.
+  const finish = (profile: Profile) => {
+    if (!choice) return;
+    if (choice.port) { savePort(choice.port.id); navigate(portURL(href, choice.port, profile)); return; }
     const url = new URL(exploreURL(href));
-    if (profile) url.searchParams.set('profile', profile);
+    url.searchParams.set('profile', profile);
     navigate(url.href);
   };
   return (
     <>
-      <Readout data={readout} fleet={fleet} conditions={keepUI(href, `/map?region=${DEFAULT_REGION}&view=conditions`)} />
-      <ProfilePills value={profile} onChange={setProfile} />
-      <PortInput ports={ports} onChoose={choose} onExplore={explore} />
+      <Readout data={readout} fleet={fleet} conditions={`/map?region=${DEFAULT_REGION}&view=conditions`} />
+      {choice
+        ? <ProfileStep place={choice.place} warm={choice.port ? warmth : null} current={initialProfile} onChoose={finish} onBack={restart} />
+        : <PortInput ports={ports} onChoose={choose} onExplore={explore} autoFocus={back} />}
     </>
   );
 }

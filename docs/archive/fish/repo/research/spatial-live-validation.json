@@ -1,0 +1,46 @@
+{
+  "checkedAt": "2026-10-01T20:25:39.121Z",
+  "sources": [
+    {
+      "id": "cdfw-protected-areas",
+      "label": "CDFW · marine protected area boundaries",
+      "url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&geometry=-121.79%2C34.92%2C-120.51%2C35.82&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&outSR=4326&f=geojson",
+      "kind": "rule",
+      "outcome": "ok",
+      "fetchedAt": "2026-10-01T20:25:38.631Z"
+    },
+    {
+      "id": "mur-surface-temperature",
+      "label": "NASA JPL MUR · surface temperature analysis",
+      "url": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.csv?analysed_sst[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)],analysis_error[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)],mask[(last)][(34.92):2:(35.82)][(-121.79):2:(-120.51)]",
+      "kind": "analysis",
+      "outcome": "ok",
+      "fetchedAt": "2026-10-01T20:25:38.608Z"
+    }
+  ],
+  "sst": {
+    "analysedAt": "2026-09-30T09:00:00.000Z",
+    "points": 1971,
+    "sample": [
+      {
+        "lon": -121.79,
+        "lat": 34.92,
+        "tempF": 65.606,
+        "errorF": 0.666
+      },
+      {
+        "lon": -121.77,
+        "lat": 34.92,
+        "tempF": 65.561,
+        "errorF": 0.666
+      },
+      {
+        "lon": -121.75,
+        "lat": 34.92,
+        "tempF": 65.5232,
+        "errorF": 0.666
+      }
+    ]
+  },
+  "protectedFeatures": 8
+}

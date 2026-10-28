@@ -5,6 +5,7 @@ The web app receives public artifacts only; local paths and credentials stay out
 """
 from __future__ import annotations
 
+from datetime import date, datetime, timezone
 import hashlib
 import ipaddress
 import json
@@ -151,6 +152,25 @@ def load_region(ident, root=REPO):
     return region
 
 
+def validate_station_roles(region):
+    chains = {}
+    for stations in [region["stations"], *[c["stations"] for c in region.get("contexts", {}).values()]]:
+        roles = stations.get("roles", {})
+        if not isinstance(roles, dict) or set(roles) - {"nearshore_buoy", "offshore_buoy", "tide"}:
+            raise ValueError("Unknown station role")
+        for role, config in roles.items():
+            ids = config.get("stations") if isinstance(config, dict) else None
+            pattern = r"\d{7}" if role == "tide" else r"[A-Za-z0-9]{5}"
+            if (not isinstance(ids, list) or not 1 <= len(ids) <= 4 or
+                    any(not isinstance(s, str) or not re.fullmatch(pattern, s) for s in ids) or
+                    len(set(ids)) != len(ids) or ids[0] != stations[role]):
+                raise ValueError("Station priorities require distinct IDs with the legacy primary first")
+            key = (role == "tide", ids[0])
+            if key in chains and chains[key] != ids:
+                raise ValueError("Shared station roles require the same priority order")
+            chains[key] = ids
+
+
 def _region_shape(region):
     """Shape checks that schemas/region.schema.json also expresses.
 
@@ -192,8 +212,10 @@ def _region_shape(region):
         if not isinstance(bindings, list) or len(bindings) != len(set(bindings)):
             raise ValueError("Source bindings must be distinct source ids in preferred order")
     basemap = region.get('basemap', {})
-    if not isinstance(basemap, dict) or set(basemap) - {'aerial'}:
+    if not isinstance(basemap, dict) or set(basemap) - {'aerial', 'default'}:
         raise ValueError('Unknown regional base layer')
+    if basemap.get('default', 'night') not in {'night', 'aerial'} or (basemap.get('default') == 'aerial' and 'aerial' not in basemap):
+        raise ValueError('Default base must be night, or aerial where the region offers an aerial base')
     if 'aerial' in basemap:
         aerial = basemap['aerial']
         acquired = aerial.get('acquired') if isinstance(aerial, dict) else None
@@ -236,6 +258,7 @@ def validate_region(region, needs, sources, root=REPO):
     express: bounding-box ordering, time zones, catalog targets, ecology dossiers,
     legal notices, forecast points, stations, source bindings and assets."""
     check_region_shape(region)
+    validate_station_roles(region)
     bounds = bbox(region["bounds"])
     ZoneInfo(region["timezone"])
     targets = read_json(Path(root) / 'catalog/targets.json')['targets']
@@ -313,7 +336,15 @@ def validate_region(region, needs, sources, root=REPO):
                 or source['rights']['commercial_use'] != 'allowed' or not source['rights']['attribution']
                 or not endpoint or urlsplit(public_url(endpoint)).hostname not in source['allowed_hosts']):
             raise ValueError('Aerial base needs a reviewed live-tile source on a fixed host, cleared for commercial use')
-        if not aerial['acquired']['first'] <= aerial['acquired']['last'] <= aerial['checked_at']:
+        try:
+            first = date.fromisoformat(aerial['acquired']['first'])
+            last = date.fromisoformat(aerial['acquired']['last'])
+            checked = date.fromisoformat(aerial['checked_at'])
+        except ValueError:
+            raise ValueError('Aerial acquisition window and coverage check need real calendar dates') from None
+        if checked > datetime.now(timezone.utc).date():
+            raise ValueError('Aerial coverage check cannot be in the future (UTC)')
+        if not first <= last <= checked:
             raise ValueError('Aerial acquisition window must precede its coverage check')
     for asset in region["assets"].values():
         if asset is not None:

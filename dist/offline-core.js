@@ -16,7 +16,7 @@ const HALF = 20037508.342789244;
 
 /**
  * Cache key of one chart tile. dist/sw.js derives the same key from the URL
- * Leaflet requests (encTileKey), so a saved tile answers the map offline.
+ * the map requests (encTileKey), so a saved tile answers the map offline.
  */
 export function tileKey(layers, z, x, y, size = ENC_TILE_SIZE) {
   return `${ENC_ORIGIN}/__skippercast-tile/${layers}/${size}/${z}/${x}/${y}`;
@@ -32,7 +32,7 @@ function tileXY(lon, lat, n) {
 
 /**
  * The chart tiles covering bounds [west, south, east, north] from zoom min to
- * max, as Leaflet requests them: a 512 px tile at map zoom z is one cell of a
+ * max, as a WMS tile layer requests them: a 512 px tile at map zoom z is one cell of a
  * 2^(z-1) grid. Whole zoom levels only: when the next level would pass `cap`,
  * it and every deeper level are left out, and maxZoom says where it stopped.
  */

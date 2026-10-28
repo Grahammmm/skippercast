@@ -917,20 +917,135 @@ keeps the reload until FE-61.
 
 ### Profile semantics (ported from `fish` `experience.ts`, `daily.ts`, `opportunity.ts`)
 
-| | Boat | Shore | Spear |
-| --- | --- | --- | --- |
-| Default target | lingcod | surfperch | cabezon (shallow reef) |
-| Depth limit | 300 ft | none (shore runs) | 60 ft |
-| Species list | region species whose plans have a boat method | surfperch, halibut and region species with a shore method | region species with a dive method within 60 ft |
-| "Where to look" | reef marks and seafloor candidates by habitat fit within the limit | ESI sandy-shore runs ranked by the protected-area check and conditions; review dates do not set guidance priority; source publication visibility still applies (`opportunity.ts` priority 0–3) | reef marks within 60 ft, nearest fresh nearshore site first |
-| Swell tile | offshore buoy / forecast | nearest fresh nearshore model site | nearest fresh nearshore model site |
-| Default layers | Seafloor, Currents | Swell, Water temp | Seafloor, Swell |
-| Caveat | "Habitat describes a place to look; fish presence is unverified." | "Offshore seas do not measure breakers at your beach; check surf, access and water quality." | "In-water visibility is unverified; surface currents cannot clear a dive." |
-| Search plans | plans with boat methods | plans with shore methods | plans with dive methods |
+| | Boat | Shore | Spear | Kayak |
+| --- | --- | --- | --- | --- |
+| Default target | lingcod | surfperch | cabezon (shallow reef) | lingcod |
+| Depth limit | 300 ft | none (shore runs) | 60 ft | 120 ft (a screening choice for how deep a paddler usually fishes; depth is not distance from the launch) |
+| Species list | region species whose plans have a boat method | surfperch, halibut and region species with a shore method | region species with a dive method within 60 ft | region species whose plans have a boat method |
+| "Where to look" | reef marks and seafloor candidates by habitat fit within the limit | ESI sandy-shore runs ranked by the protected-area check and conditions; review dates do not set guidance priority; source publication visibility still applies (`opportunity.ts` priority 0–3) | reef marks within 60 ft, nearest fresh nearshore site first | reef marks and seafloor candidates by habitat fit within 120 ft |
+| Swell tile | offshore buoy / forecast | nearest fresh nearshore model site, with the hour's surf band (shore conditions below) | nearest fresh nearshore model site, with the hour's surge band | offshore forecast, with the hour's seas band, chop and launch surf (kayak conditions below) |
+| Default layers | Seafloor, Currents | Swell, Water temp | Seafloor, Swell | Seafloor, Currents |
+| Caveat | "Habitat describes a place to look; fish presence is unverified." | "Offshore seas do not measure breakers at your beach; check surf, access and water quality." | "In-water visibility is unverified; surface currents cannot clear a dive." | "Wind, offshore drift and surf at the launch set a kayak day; a forecast cannot clear a paddle." |
+| Search plans | plans with boat methods | plans with shore methods | plans with dive methods | plans with boat methods |
 
 `web/profile.ts` exports these as data so that tests cover them without the
 DOM. Species search plans (`search-plans.js`) are filtered by method in the
 wrapper, not edited.
+
+Spear conditions (issue #542, `packages/coast/src/spear.ts`): the spear
+brief scores each forecast hour for surge (H² · T from the nearshore model
+sample when fresh, else the offshore forecast, with long-period swell
+weighted up), chop (wind and gust) and a clarity estimate (satellite
+chlorophyll near the place from the daily feed, the highest rain chance in
+the prior 72 h, the largest swell in the prior 48 h, wind). Clarity reads
+"likely good", "fair", "likely poor" or "unknown" with the missing inputs
+named, and is always labelled an estimate. A high tide within 90 minutes is
+a mild bonus; water temperature is shown, not scored. The headline is the
+day's surge range and clarity estimate; spear windows use surge rather than
+the 3 ft offshore rule where a fresh nearshore model covers the hour. When
+fewer than 36 h of the swell look-back are sampled, clarity is capped at
+"fair" and the gap is listed; the chlorophyll value is an offshore area
+average and the brief says so. All
+thresholds are in the `SPEAR` table with their reasoning.
+
+Shore conditions (issue #542, `packages/coast/src/shore-conditions.ts`):
+the shore brief scores each forecast hour for surf (significant height from
+the nearshore model sample when fresh, else the offshore forecast's seas as
+an "offshore estimate" against its own 3/6/9 ft bands), a sneaker-wave caution when a
+swell of 1.5 ft or more runs at 14 s or longer, on the nearshore path too
+when the offshore swell partition qualifies though the nearshore peak period
+is short (it raises the score and the hour is never "Calmer"), wind (speed band, and onshore, offshore or
+cross-shore from the forecast direction against a vetted seaward bearing
+for that stretch of coast, read approximately from a chart: Morro Bay 260°,
+Cambria and San Simeon 230°, none for Avila and Pismo, which face south and
+west, or for regional places; speed only where the bearing or direction is
+missing, and the brief says so), tide phase (the rising tide and an hour either side of high are a
+mild bonus, an angler rule of thumb rather than a guarantee; a predicted
+height at or below 0 ft MLLW is flagged for rock access, not scored) and a
+mild dawn or dusk bonus. Each hour reads Calmer, Marginal, Rough or Unknown
+with reasons. The headline is the day's surf range and the calmest daylight
+hour, or "sneaker-wave risk"; status is Caution with long-period swell or no
+calmer or marginal daylight hour; shore windows use surf rather than the 3 ft
+offshore rule where a fresh nearshore model covers the hour. All thresholds
+are in the `SHORE` table with their reasoning.
+
+Harbour bar check (issue #542, `packages/coast/src/bar-conditions.ts`): the
+boat brief at one of the four bars regulated by 33 CFR 165.1196 (Morro Bay,
+Humboldt Bay, Noyo River, Crescent City Harbor; no other port) reads each
+forecast hour as No bar flag, Caution, Hazardous or Unknown from the tide
+stage (ebb from high to low water, with the middle half of the ebb as the
+strongest), swell height and period (the nearshore model when fresh, else
+the offshore seas as a labelled estimate on a higher scale) and, at Morro
+Bay only, using a shoreline bearing (260°) as a proxy rather than a vetted channel bearing, wind blowing in against the
+ebb. Mid-ebb against swell at the caution height, an ebb with long-period
+swell, or swell at the hazardous height is Hazardous; small swell without a
+tide stage is Unknown, never No bar flag (which is not a safe-bar claim). A Hazardous hour makes the status
+Caution and leads the headline ("Bar hazardous 11 AM–3 PM (estimate)"); a
+window whose departure or return hour is Hazardous is not suggested, and one
+crossing in a caution or unknown hour says so in its reasons. The Tide tile
+adds the hour's ebb and bar band ("no bar flag (estimate)" when nothing is flagged); the other three bars have no bearing. The deck always says the reading is an
+estimate rather than an official bar report and to check the Coast Guard
+bar status (VHF 16 or 22A) or the harbor patrol; it never calls a bar safe.
+All thresholds are in the `BAR` table with their reasoning. Headwind or
+following sea for a common run is not judged: it would need run bearings
+the data does not carry.
+
+Kayak conditions (issue #542, `packages/coast/src/kayak.ts`): kayak is a
+client-only profile (the legacy coast experience, saved /coast homes and the
+server keep boat, shore and spear; a kayak choice lives in the browser's
+stored profile and the address). The kayak brief scores each forecast hour
+for wind first (Light, Moderate, Fresh or Strong on sustained wind and gust;
+Calmer needs 10 kt sustained and 15 kt gusts at most, stricter than the boat
+rule, as a screening choice), offshore wind (from the forecast direction
+against the same vetted shoreline bearings as shore conditions; any offshore
+hour carries a caution and is capped at Marginal, so it is never the calmest
+daylight hour, and above Light it scores past Marginal; where the
+stretch of coast has no bearing, wind is speed only and the brief says so),
+combined seas (2/3/4.5 ft bands) with short-period chop (2 ft or more at 8 s
+or less) scored on top, and surf at the launch beach (the shore surf
+estimate: the fresh nearshore model, else the offshore seas labelled an
+estimate; at 3 ft or more the hour carries a launch caution). Hours outside
+daylight and hours under a fog or visibility marine alert are capped at
+Rough; the brief's inputs carry no visibility forecast, so the brief says
+fog is read only from alerts. Each hour reads Calmer, Marginal, Rough or
+Unknown with reasons. The headline is the day's wind range and the calmest
+daylight hour, or "offshore wind at times"; status is Caution with offshore
+wind, launch surf, a fog alert or no calmer or marginal daylight hour, and
+Mixed otherwise; kayak windows take hours that are not Rough, have no
+offshore wind and no launch caution, and they must also fit the shared
+non-boat limits in `assess` (8 kt wind, 12 kt gust), as shore and spear
+windows do. The harbor entrance bar is not scored for a kayak: at a regulated
+bar (Morro Bay in this region) the deck adds one line saying so, with the bar
+module's estimate wording and the pointer to the Coast Guard bar status.
+All thresholds are in the `KAYAK` table with their reasoning.
+
+Your limits (issue #542, `packages/coast/src/limits.ts`, `web/limits.ts`,
+`web/app/LimitsPanel.tsx`): each profile can carry the user's own comfort
+limits: highest sustained wind, highest gust, highest seas (surf for shore)
+and, for spear, the highest surge band. They are kept on the device only
+(`localStorage` `skippercast-limits-v1`, per profile), apart from the
+signed-in preferences, and are opened from the "Your limits" icon button
+beside the profile switch (in the phone's top bar on a phone; an icon so the
+laptop command bar stays one row) in the shared native dialog
+with Reset to defaults. Defaults are the window limits the brief already uses
+(`assess` `WINDOW_LIMITS`: boat 10 kt, 15 kt gust, 4 ft; the others 8 kt,
+12 kt, 3 ft; spear surge up to `SPEAR.windowMaxSurge`). Values are clamped to
+`LIMIT_BOUNDS` per profile; kayak seas can only be tightened, and Heavy surge
+is never offered. The limits replace the window rule's wind, gust and seas
+numbers; a stricter seas or surge limit also caps the height a nearshore
+model judged, and a stricter limit caps a Calmer hour at Marginal with the
+limit named in its reasons. A looser limit never lifts an hour's verdict.
+Hazard rules never read the limits: marine alerts, the long-period swell
+rule, the shore long-period caution, hazardous bar hours, kayak offshore
+wind and launch surf, and daylight still rule hours out. With the user's
+limits the brief screens the day once more with the defaults: a window the
+defaults would not suggest in full leads its reasons with "Using your limits
+(...)", the deck says "Using your limits: ..." (and that they are looser
+than the defaults, when one is), and counts hours the defaults would suggest
+that the user's limits leave out. A looser limit never puts a shore or spear
+window over an hour that profile grades Rough (kayak windows already skip
+Rough hours); the defaults' windows are unchanged. The Lower exposure line
+shows the window's safety caveat and the "Using your limits" note together.
 
 ## 9. Map layers
 
@@ -940,11 +1055,12 @@ always-on), the presentations it draws in (`chart`, `terrain`, or both;
 `observed`), legend entries, the **basis** sentence (one sentence naming the
 product, its resolution and its age rule, shown in the rail's info popover
 and the legend), gating, and the `fish` module it ports. Draw order, bottom
-to top: basemap, aerial, ENC chart, relief, water temperature field, contours, swell
-field, MPAs, habitat polygons, shore runs, seafloor candidates, charter
+to top: basemap, aerial, ENC chart, relief, water temperature field, contours,
+temperature contrast cells, chlorophyll, swell field, wind arrows, depth contours, MPAs, habitat polygons,
+shore runs, seafloor candidates, charter
 grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents
 streamlines (canvas), clouds (raster, above fields so the loop reads as
-sky), marks, selection, ranked trip spots, coastline glow.
+sky), reach ring, marks, selection, ranked trip spots, station pins, coastline glow.
 
 | Layer | Rail | Source | Rendering | Time | Basis (shape) | Task |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -952,11 +1068,14 @@ sky), marks, selection, ranked trip spots, coastline glow.
 | Coastline glow | always | NOAA CUSP extract per region (GeoJSON, § 11 row) | blurred line under a crisp line, as `fish` | static | "NOAA NGS CUSP shoreline, 1994–2010 sources." | FE-11 |
 | Terrain relief (2D and 3D) | Seafloor (terrain options) | `packages/coast` regional terrain and imagery, SHA-256-verified in the browser (`regional.ts`), size- and range-bounded (no hashing) by `server/coast-data.ts` from the Fish Worker until FE-85 moves them to R2 and adds server-side manifest verification | the Three scene of the Terrain presentations; relief, water and contour controls move to the rail in FE-80 | static | the renderer's existing source and coverage lines | #385, #392 (on `main`); FE-71, FE-79, FE-80. The PNG relief raster (FE-13, FE-26) is dropped |
 | Seafloor candidates and cells | Seafloor (option) | existing `tiles/seafloor/seafloor-<region>.pmtiles` | vector fill by terrain grade or species fit (existing views) | static | existing seafloor sentence | FE-14 |
-| Currents | Currents (source choice `?current=`) | `/api/coast/ocean` current fields where a report binds; `habitat-tiles/wcofs-surface-forecast-*.json` and HFR frames elsewhere; gates from `packages/coast` `selectCurrentFrame` and `selectedCurrent` through `frames.ts`; Terrain: `setCurrentLayer` | canvas streamlines from `packages/coast/src/map/surface-field.ts`: screen-spaced seeds, bounded midpoint integration through the interpolated field, dashed `--flow`, `--flow-fast` above the 80th percentile speed, clipped by the land mask; faint source dots; click reading | hour (forecast) / observed (radar) | "WCOFS surface forecast, about 4 km, issued <age>." or "HF radar, 6 km, observed <age>." | FE-15 |
-| Water temp | Water temp | `/api/coast/report` `spatial.surfaceTemperature` where a report binds, named by the report's status for its source id (NASA JPL MUR in Fish's report; NOAA Geo-Polar Blended in SkipperCast's own, FE-87); `habitat-tiles/sst-analysis-*.json` (MUR) elsewhere ([#491](https://github.com/Grahammmm/skippercast/issues/491)) | image source texture ≤ 1,024 px from `packages/coast` `surfaceField`, filled with pixels (no request), feathered inward at gaps; `fieldContours` every 0.5 °F, labelled at whole degrees with the unit; click reading with analysis time and error | observed (daily analysis, 72 h limit) | "<product> daily analysis on a <grid>, for <date> (<age> old), with an analysis error of <low> °F to <high> °F. Surface water only, neither bottom temperature nor a forecast; masked land and missing cells stay blank." | FE-16 |
+| Currents | Currents (source choice `?current=`) | `/api/coast/ocean` current fields where a report binds; elsewhere, on the Chart, the region's own `habitat-dynamics.json` `wcofs-surface-forecast` layer and its tiles, each checked by length and SHA-256 in the browser and loaded only while the layer's own status and `max_age_hours` allow (`web/map/habitat-feed.ts`, [#482](https://github.com/Grahammmm/skippercast/issues/482)); HF radar only in the packet; gates from `packages/coast` `selectCurrentFrame` and `selectedCurrent` through `frames.ts`; Terrain: `setCurrentLayer` | canvas streamlines from `packages/coast/src/map/surface-field.ts`: screen-spaced seeds, bounded midpoint integration through the interpolated field, dashed `--flow`, `--flow-fast` above the 80th percentile speed, clipped by the land mask; faint source dots; click reading | hour (forecast) / observed (radar) | "WCOFS surface forecast, about 4 km, issued <age>." or "HF radar, 6 km, observed <age>." | FE-15 |
+| Water temp | Water temp | `/api/coast/report` `spatial.surfaceTemperature` where a report binds, named by the report's status for its source id (NASA JPL MUR in Fish's report; NOAA Geo-Polar Blended in SkipperCast's own, FE-87); elsewhere the region's own `habitat-dynamics.json` `sst-analysis` layer and its `habitat-tiles/sst-analysis-*.json`, each tile checked by length and SHA-256 in the browser and gated by the layer's own status and `max_age_hours` (NOAA Geo-Polar Blended on 2026-10-18; `web/map/habitat-feed.ts`, [#491](https://github.com/Grahammmm/skippercast/issues/491)) | image source texture ≤ 1,024 px from `packages/coast` `surfaceField`, filled with pixels (no request), feathered inward at gaps; `fieldContours` every 0.5 °F, labelled at whole degrees with the unit; click reading with analysis time and error | observed (daily analysis, 72 h limit) | "<product> daily analysis on a <grid>, for <date> (<age> old), with an analysis error of <low> °F to <high> °F. Surface water only, neither bottom temperature nor a forecast; masked land and missing cells stay blank." | FE-16 |
+| Temp contrast | Temp contrast (its own entry, off in every profile's defaults: sharing Water temp would turn it on with Shore's default Water temp) | the region's own `habitat-dynamics.json` `sst-analysis` layer and its tiles, as Water temp's, with the pipeline's `temperature_gradient_c_per_km` and `thermal_contrast_supported` (`habitat_dynamics.py` `gradients`), read for every region, bound or not (`web/map/habitat-feed.ts` `regionalContrast`); gated by the layer's own status and `max_age_hours`, never past 72 h | each supported cell as its own grid-square fill (no interpolation) on a fixed 0–0.3+ °F per nautical mile scale (`--contrast-*`); only cells flagged supported whose west–east or south–north change, checked again in the browser, exceeds the pair's summed analysis error; click reading in °F per nautical mile and °C per km | observed (daily analysis, 72 h limit) | "<product> daily analysis on a <grid>, for <date> (<age> old), partly interpolated, with gaps under cloud filled. Drawn in °F per nautical mile only in the <n> of <m> cells where the change across neighbouring cells exceeds their summed analysis error, and withheld past its 72-hour age limit. Surface water only; a contrast cell is not a fish or catch location." Not the observed front (CI6-15) | CI6-03 |
 | Swell | Swell | forecast matrix grid (`forecast-matrix.js` data: `/api/forecast`, NOAA GFS-Wave's primary swell at the region's forecast points that form a lattice, Morro Bay's 3 × 3 and Cambria's 2 × 2 offshore points; [#501](https://github.com/Grahammmm/skippercast/issues/501) for the rest); hour through `frames.ts` (FE-12's forecast gate: run ≤ 36 h, feed ≤ 6 h); nearshore model sites from the coast report where one binds (`presentation.ts` `freshNearshore`), from FE-40 after FE-84 | field texture of significant height (`field.ts`, `--swell-*` over a fixed 0–15 ft scale) with dashed period isolines at whole seconds; direction as short strokes at low density (every half grid step, faint tail and bright head), never per-cell arrows; nothing animates; nearshore sites as rings sized by height | hour | "<model> model forecast of the primary swell, sampled on the region's <grid> forecast grid; run of <date> (<age> old), valid <hour>. A model forecast, not a buoy observation." with the scale; with a binding, "<product> nearshore model sites …: modelled significant wave height …; model output, not a buoy observation and not breakers at a beach; ring radius 4 px plus 3 px per foot." (FE-27) | FE-17 (field), FE-27 (nearshore rings: `freshNearshore` window, outline in `--blue`, card through `chartPick`) |
 | Habitat and marks | always (zoom ≥ 10) | existing survey habitat, geology, reef marks (GeoJSON from the region's `assets`) | habitat as fills at 0.25 with token hue by class; geology as dashed outline; marks as rings with a fit badge on a 44 px target; selected mark highlighted; marks re-screened at run time as v1 does (inside a current protected area or closure, or while that check is over 36 h old, a mark is withheld and the card and legend say why, #489) | static | existing sentences per source; a terrain selection keeps the renderer's evidence lines | FE-18 (atlas `?spot=` and coast `?habitat=` in one mark card, one selected at a time) |
 | Ranked trip spots | always, while the trip plan is ranked | the planner's `skippercast:trip-ranked` event (`dist/export-ui.js`), screened as v1's `trip-ranking-layer.js` screens it and by the marks' run-time screen ([#492](https://github.com/Grahammmm/skippercast/pull/492)) | numbered `--mint` discs in the planner's order on a 44 px target; spots within 44 px join the best-ranked pin as "+n", and its click zooms to them; a lone pin's card has v1's rank, fit and confidence lines and "Review & export" | static | "The trip planner's ranked reefs from the current seafloor publication, numbered in its order and drawn while its protected-area check and the marks' run-time screen are current." | FE-51 ([#495](https://github.com/Grahammmm/skippercast/issues/495)) |
+| Reach ring | always, Boat or Kayak with a saved range | the range to consider saved on the device (`web/reach.ts`) around the region's `harbor` | dashed `--blue` great-circle ring with one label "<n> nm from <harbor> · straight line, not a route"; under the marks | static | "The range to consider you saved on this device, drawn as a straight-line circle around the region's harbor; the real route is longer, and the ring says nothing about sea state, the bar or fuel." | FE-51 ([#644](https://github.com/Grahammmm/skippercast/issues/644)) |
+| Depth contours | always (Chart, every zoom) | `dist/regions/<id>/depth-contours.geojson` and its overview form (below MapLibre zoom 12), traced by `scripts/build_depth_contours.py` from the region's approved, bound survey grids and checked by the platform build (`src/skippercast/platform/depth_contours.py`); Morro Bay: the USGS/CSUMB 2 m grids, shelf only (30–600 ft) until CI6-16 reviews a deep-water grid | `--depth-1` lines every 30 ft, heavier and labelled every 150 ft, the others labelled from zoom 12; dashed `--muted` survey edge where the reviewed grid stops; a click opens a card with the survey, its date and datum; above the fields, under the MPAs; the ENC base is unchanged | static (withheld from `review_expires`, one year after the oldest source review) | "Shelf depth contours every 30 ft to 600 ft, traced from reviewed seafloor survey grids … feet below each survey's own vertical datum … not chart depths and not for navigation, and the lines stop at the dashed survey edge where no reviewed grid continues." | CI6-13 |
 | MPAs | always | CDFW ds582 (existing) | `--mpa-fill` 0.08, dashed `--mpa-line`; name label at zoom ≥ 11 | static | "CDFW marine protected areas, ds582; boundaries are context, rules are in the regulations page." | FE-19 |
 | Shore runs | with `profile=shore` | ESI runs and access points: `slo-shore-habitat.geojson` through the bridge today, FE-43's import later; in Terrain the renderer draws its own shore features | run as a wide soft line in `--amber` 0.6 with priority tint; access points as pins | static | "ESI 2006 sandy-shore runs; access points from the Coastal Commission inventory, checked <date>." | FE-36 |
 | Charter grounds | Fleet | `charter-grounds.json` | hatched polygons, name from zoom 11 (FE-21: no hover hook) | static | existing sentence | FE-21 |
@@ -1009,7 +1128,10 @@ profile. Outputs:
 - **Headline** by the first matching rule: active marine alert → its event
   name; after sunset today → "One last look. Plan the morning."; max seas
   ≥ 5 ft → "Swell sets the terms today."; max wind ≥ 12 kt → "Find your
-  water before the wind."; spear → "Read the swell. Check the visibility.";
+  water before the wind."; spear → the day's surge range and clarity estimate ("Low surge · Clarity estimate: fair");
+  shore → the day's surf range and calmest daylight hour ("Small surf · calmer at 7 AM", "(offshore estimate)" without a nearshore model, "sneaker-wave risk" with long-period swell);
+  boat at a regulated bar with a hazardous hour → the bar hours, then the wind and seas ("Bar hazardous 11 AM–3 PM (estimate) · 5–9 kt winds · 3–4 ft offshore seas");
+  kayak → the day's wind range and calmest daylight hour ("Light to moderate wind · calmer at 8 AM", "offshore wind at times" when the wind blows off the shore);
   otherwise "A clearer picture of your coast." Rules are data in
   `daily.ts` with a table test.
 - **Deck** sentence: wind range, seas range and period, plus the
@@ -1179,7 +1301,10 @@ v1 entries it deletes.
   gzipped; startup JSON for Morro Bay keeps the existing budget file and
   lowers `max_bytes` toward the 400 KB target as layers move to tiles;
   Largest Contentful Paint ≤ 2.5 s on Playwright's throttled mobile profile
-  against the built site; basemap tile fetch per session ≤ 150 tiles at the
+  against the built site (measured on the Night base; where a region opens
+  on Aerial the imagery credit lands near 8 s on that profile because the
+  tiles queue behind the bundle, a cost the owner accepted on 12 Oct 2026,
+  so that load has its own 10 s budget); basemap tile fetch per session ≤ 150 tiles at the
   default view. `three` and `CoastViewer` load only by dynamic import when a
   Terrain presentation is first chosen; `check_client.mjs` fails if the app
   entry's static imports reach `three`. Terrain streaming keeps the

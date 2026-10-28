@@ -57,6 +57,11 @@ def check_page_references(path):
                 assert "if(path === '/privacy') return '/privacy.html';" in assets, (path, ref)
                 assert (WEB / "privacy.html").exists(), (path, ref)
                 continue
+            if navigation and url.path == "/map":
+                assets = (ROOT / "server/routes/assets.ts").read_text()
+                assert "if (path === '/map') return V2_SHELLS.app;" in assets, (path, ref)
+                assert (WEB / "app.html").exists(), (path, ref)
+                continue
             if navigation and url.path == "/sources":
                 assets = (ROOT / "server/routes/assets.ts").read_text()
                 assert "if(path === '/sources') return '/sources.html';" in assets, (path, ref)
@@ -267,23 +272,55 @@ def markup_sinks(root=ROOT):
 LEGAL_PAGES = ("terms.html", "privacy.html", "licenses.html")
 
 
+def check_no_v1_sheets():
+    """FE-61 Accept 2: no page loads the retired v1 tokens.css or styles.css, and neither file returns."""
+    for page in sorted(WEB.glob("*.html")):
+        text = page.read_text()
+        assert not re.search(r'href="(?:\./)?(?:tokens|styles)\.css"', text), page.name
+    assert not (WEB / "tokens.css").exists() and not (WEB / "styles.css").exists(), "v1 sheets are retired"
+
+
 def check_legal_pages():
-    """Terms, privacy and licences exist, say they are drafts, and are reachable."""
+    """Terms, privacy and licences exist, say they are drafts, and are reachable.
+
+    FE-61: the v1 shell that linked them is gone; the landing's nav links the
+    sources page, and the sources page links all three.
+    """
     for name in LEGAL_PAGES:
         text = (WEB / name).read_text()
         assert "Draft — pending review by counsel" in text, name
-        assert 'href="styles.css"' in text, name
-    for page in ("index.html", "sources.html"):
-        parser = AssetParser()
-        parser.feed((WEB / page).read_text())
-        missing = set(LEGAL_PAGES) - set(parser.refs)
-        assert not missing, (page, sorted(missing))
+        # FE-61 part 2: the v2 tokens and the readable pages' sheet, as sources.html; no v1 sheet.
+        assert 'href="../web/tokens.css"' in text and 'href="coast-readable.css"' in text, name
+        assert 'href="styles.css"' not in text and 'href="tokens.css"' not in text, name
+    assert "href: '/sources'" in (ROOT / "web/landing/Landing.tsx").read_text(), "the landing links the sources page"
+    parser = AssetParser()
+    parser.feed((WEB / "sources.html").read_text())
+    missing = set(LEGAL_PAGES) - set(parser.refs)
+    assert not missing, ("sources.html", sorted(missing))
+
+
+BUNDLED_LIBRARIES = {"maplibre-gl": "MapLibre GL JS", "pmtiles": "PMTiles"}
+
+
+def check_bundled_licence_versions():
+    """The licences page and NOTICE name the bundled library versions package.json pins.
+
+    A dependency bump left both on MapLibre 6.11.2 after 6.12.0 shipped (#422, SC-FE422-body-14-02).
+    """
+    pins = json.loads((ROOT / "package.json").read_text())["dependencies"]
+    for package, name in BUNDLED_LIBRARIES.items():
+        assert re.fullmatch(r"\d+\.\d+\.\d+", pins.get(package, "")), f"package.json must pin {package} to an exact version for the licences page, found {pins.get(package)!r}"
+        for path in (WEB / "licenses.html", ROOT / "NOTICE.md"):
+            found = re.findall(rf"{re.escape(name)} (\d+\.\d+\.\d+)", path.read_text())
+            assert found and set(found) == {pins[package]}, f"{path.relative_to(ROOT)} must name {name} {pins[package]}, found {found}"
 
 
 def main():
-    assert (WEB / "index.html").is_file()
+    assert (WEB / "landing.html").is_file() and (WEB / "app.html").is_file()
     check_no_versioned_client_names()
     check_legal_pages()
+    check_no_v1_sheets()
+    check_bundled_licence_versions()
     sinks = markup_sinks()
     assert not sinks, f"markup written into the DOM outside {MARKUP_HOST} (mount packages/coast markup through it): {sinks}"
     readiness = json.loads((WEB / 'data/california-atlas-readiness.json').read_text())

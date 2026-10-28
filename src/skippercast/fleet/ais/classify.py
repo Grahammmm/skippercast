@@ -17,14 +17,33 @@ Positions whose time is suspect (``segment.is_suspect``: received more than
 speeds, headings and straightness, because those depend on when the fix was
 taken.
 
-Labels, in precedence order: ``in-port`` (inside a geofence); ``fishing-drift``
-(mean SOG at or below ``drift.max_sog_kn``); ``fishing-troll`` (mean SOG within
-``troll.min_sog_kn``-``troll.max_sog_kn`` and straightness at or below
-``troll.max_straightness`` or heading variance at or above
-``troll.min_heading_variance``); ``transit`` otherwise. Consecutive equal labels
-form runs. Runs shorter than ``min_segment_minutes`` merge into the longer
-neighbour (the earlier one on a tie); then a fishing run shorter than its
-``min_minutes`` becomes transit, and short runs merge again. Silences over
+Labels, in precedence order (``references/classification.md`` gives the
+sources):
+
+- ``in-port``: inside a geofence;
+- ``drift-anchor``: mean SOG at or below ``drift.max_sog_kn``;
+- ``troll-slow``: mean SOG within the ``troll_slow`` band and straightness at or
+  below ``troll_slow.max_straightness`` or heading variance at or above
+  ``troll_slow.min_heading_variance`` (``uncertain`` when the band holds but the
+  shape does not);
+- ``troll-pelagic``: mean SOG within the ``troll_pelagic`` band at least
+  ``offshore_min_nm`` from every port geofence (``segment.offshore_nm``: the
+  committed geofences are the only coastline every region has offline), straight
+  or not, since an offshore troll for tuna is a straight search;
+- ``transit``: mean SOG above the ``troll_pelagic`` band, or above the
+  ``troll_slow`` band with straightness at or above ``transit.min_straightness``,
+  so a straight run at trolling speed inshore is transit;
+- ``uncertain``: anything else (between bands, a turning run inshore at pelagic
+  speed, no speed at all). Not fishing; kept for the labelling view.
+
+No rule reads the time of day: a night drift offshore is ``drift-anchor``.
+
+Consecutive equal labels form runs. Runs shorter than ``min_segment_minutes``
+merge into the longer neighbour (the earlier one on a tie). Then the runs
+between two ``troll-pelagic`` runs of at least ``window_min`` each, if together
+they last at most ``troll_pelagic.stop_max_minutes`` and lie wholly offshore,
+join them (a stop at a kelp paddy does not split a pelagic search). Then a fishing run shorter than its ``min_minutes`` becomes
+``uncertain`` (too short to decide), and short runs merge again. Silences over
 ``gap_unknown_min`` become ``gap`` segments, which never merge, including a
 silence between the last fix at sea and the return fix. So a run between two
 gaps (or between a gap and the trip's start or end) has no neighbour to merge
@@ -38,29 +57,47 @@ inferred-from-movement`` (D10: never "confirmed fishing") and the
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, fields
 import hashlib
 import json
 import math
 from typing import Sequence
 
-from .segment import (BASIS, MINUTE_MS, ActivityThresholds, Geofence, Trip, distance_nm, is_suspect, port_at)
+from .segment import (BASIS, MINUTE_MS, ActivityThresholds, Geofence, Trip, distance_nm, is_suspect, offshore_nm,
+                      port_at)
 from .sources.base import AisPosition
 
 __all__ = ["ALGORITHM_VERSION", "BASIS", "KINDS", "FISHING_KINDS", "Classification", "Segment", "Stats",
            "classifier_version", "classify_trip", "label_positions", "window_stats"]
 
-# Bump when the classification code changes behaviour, so classifier_version changes with it.
-ALGORITHM_VERSION = 1
-KINDS = ("in-port", "transit", "fishing-drift", "fishing-troll", "gap")
-FISHING_KINDS = ("fishing-drift", "fishing-troll")
-_SUSTAINED = {"fishing-drift": "drift_min_minutes", "fishing-troll": "troll_min_minutes"}
+# Bump when classification behaviour or the fingerprint representation changes.
+ALGORITHM_VERSION = 3
+KINDS = ("in-port", "transit", "drift-anchor", "troll-slow", "troll-pelagic", "uncertain", "gap")
+FISHING_KINDS = ("drift-anchor", "troll-slow", "troll-pelagic")
+_SUSTAINED = {"drift-anchor": "drift_min_minutes", "troll-slow": "troll_slow_min_minutes",
+              "troll-pelagic": "troll_pelagic_min_minutes"}
+
+
+def _identity_value(value):
+    """Canonical JSON containers, including read-only threshold mappings."""
+    if isinstance(value, Mapping):
+        return {key: _identity_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_identity_value(item) for item in value]
+    return value
 
 
 def classifier_version(thresholds: ActivityThresholds) -> str:
-    """``c<ALGORITHM_VERSION>-<16 hex>``: changes whenever any activity threshold or the algorithm version does."""
-    body = json.dumps({"algorithm": ALGORITHM_VERSION, "activity": thresholds.raw}, sort_keys=True,
-                      separators=(",", ":"))
+    """``c<ALGORITHM_VERSION>-<16 hex>``: binds raw settings AND effective typed fields.
+
+    Typed fields may differ from raw after dataclasses.replace or direct
+    construction. Retain raw-only auxiliary settings as part of the identity.
+    """
+    effective = {field.name: getattr(thresholds, field.name)
+                 for field in fields(thresholds) if field.name != "raw"}
+    body = json.dumps(_identity_value({"algorithm": ALGORITHM_VERSION, "activity": thresholds.raw,
+                                       "effective": effective}), sort_keys=True, separators=(",", ":"))
     return f"c{ALGORITHM_VERSION}-{hashlib.sha256(body.encode('utf-8')).hexdigest()[:16]}"
 
 
@@ -82,6 +119,8 @@ class Segment:
     mean_sog: float | None
     straightness: float | None
     heading_var: float | None
+    p90_sog: float | None = None
+    distance_nm: float | None = None
     basis: str = BASIS
 
     @property
@@ -196,24 +235,32 @@ def window_stats(rows: Sequence[AisPosition], thresholds: ActivityThresholds) ->
     return out
 
 
+def _label(p: AisPosition, stats: Stats, ports: Sequence[Geofence], th: ActivityThresholds) -> str:
+    if port_at(ports, p.lat, p.lon) is not None:
+        return "in-port"
+    sog, straight, turn = stats.mean_sog, stats.straightness, stats.heading_var
+    if sog is None:
+        return "uncertain"
+    if sog <= th.drift_max_sog_kn:
+        return "drift-anchor"
+    if th.troll_slow_min_sog_kn <= sog <= th.troll_slow_max_sog_kn:
+        turning = ((straight is not None and straight <= th.troll_slow_max_straightness)
+                   or (turn is not None and turn >= th.troll_slow_min_heading_variance))
+        return "troll-slow" if turning else "uncertain"
+    if (th.troll_pelagic_min_sog_kn <= sog <= th.troll_pelagic_max_sog_kn
+            and offshore_nm(ports, p.lat, p.lon) >= th.offshore_min_nm):
+        return "troll-pelagic"
+    if sog > th.troll_pelagic_max_sog_kn:
+        return "transit"
+    if sog > th.troll_slow_max_sog_kn and straight is not None and straight >= th.transit_min_straightness:
+        return "transit"
+    return "uncertain"
+
+
 def label_positions(rows: Sequence[AisPosition], ports: Sequence[Geofence],
                     thresholds: ActivityThresholds) -> list[str]:
-    """The raw per-position label (before sustain and merge rules)."""
-    th = thresholds
-    labels = []
-    for p, stats in zip(rows, window_stats(rows, th)):
-        sog = stats.mean_sog
-        if port_at(ports, p.lat, p.lon) is not None:
-            labels.append("in-port")
-        elif sog is not None and sog <= th.drift_max_sog_kn:
-            labels.append("fishing-drift")
-        elif (sog is not None and th.troll_min_sog_kn <= sog <= th.troll_max_sog_kn
-              and ((stats.straightness is not None and stats.straightness <= th.troll_max_straightness)
-                   or (stats.heading_var is not None and stats.heading_var >= th.troll_min_heading_variance))):
-            labels.append("fishing-troll")
-        else:
-            labels.append("transit")
-    return labels
+    """The raw per-position label (before the merge, stop and sustain rules)."""
+    return [_label(p, stats, ports, thresholds) for p, stats in zip(rows, window_stats(rows, thresholds))]
 
 
 # ---------------------------------------------------------------- runs
@@ -265,6 +312,35 @@ def _merge_short(runs: list[_Run], minimum: float) -> list[_Run]:
         runs[:] = _coalesce(runs)
 
 
+_BRIDGEABLE = ("drift-anchor", "uncertain", "troll-slow")
+
+
+def _bridge_stops(runs: list[_Run], rows: Sequence[AisPosition], ports: Sequence[Geofence],
+                  th: ActivityThresholds) -> list[_Run]:
+    """Runs between two ``troll-pelagic`` runs, together short and wholly offshore, join them (a paddy stop).
+
+    Each side must last at least ``window_min``: a shorter one may be only the centred window blending a
+    fast run into a stop, which would otherwise pull a drift into a pelagic run. Only stop-like kinds
+    bridge, plus a ``transit`` run shorter than ``window_min`` (the window blending a fast run into a stop):
+    a real ``transit`` sprint between two pelagic runs stays transit.
+    """
+    pelagic = [k for k, r in enumerate(runs) if r.kind == "troll-pelagic" and r.minutes >= th.window_min]
+    for a, b in zip(pelagic, pelagic[1:]):
+        between = runs[a + 1:b]
+        if (all(r.kind in _BRIDGEABLE or (r.kind == "transit" and r.minutes < th.window_min) for r in between)
+                and runs[b].start - runs[a].end <= th.troll_pelagic_stop_max_minutes * MINUTE_MS
+                and all(offshore_nm(ports, p.lat, p.lon) >= th.offshore_min_nm
+                        for p in rows[runs[a].last + 1:runs[b].first])):
+            for run in between:
+                run.kind = "troll-pelagic"
+    return _coalesce(runs)
+
+
+def _p90(values) -> float | None:
+    known = sorted(v for v in values if v is not None)
+    return _round(known[max(0, math.ceil(0.9 * len(known)) - 1)]) if known else None
+
+
 def classify_trip(trip: Trip, ports: Sequence[Geofence], thresholds: ActivityThresholds) -> Classification:
     """Cut a trip into labelled segments (module docstring)."""
     th = thresholds
@@ -292,11 +368,11 @@ def classify_trip(trip: Trip, ports: Sequence[Geofence], thresholds: ActivityThr
     runs[-1].end = max(runs[-1].start, trip.returned_at)
 
     # Short blips first (so one noisy fix does not break a drift), then the sustain rule, then again.
-    runs = _merge_short(_coalesce(runs), th.min_segment_minutes)
+    runs = _bridge_stops(_merge_short(_coalesce(runs), th.min_segment_minutes), rows, ports, th)
     for run in runs:
         attr = _SUSTAINED.get(run.kind)
         if attr and run.minutes < getattr(th, attr):
-            run.kind = "transit"
+            run.kind = "uncertain"
     runs = _merge_short(_coalesce(runs), th.min_segment_minutes)
 
     speeds, courses = _measures(rows, gap_ms)
@@ -307,6 +383,8 @@ def classify_trip(trip: Trip, ports: Sequence[Geofence], thresholds: ActivityThr
             continue
         part = slice(run.first, run.last + 1)
         stats = _stats(rows[part], speeds[part], courses[part])
+        usable = [p for p in rows[part] if not is_suspect(p)]
+        distance = sum(distance_nm(a.lat, a.lon, b.lat, b.lon) for a, b in zip(usable, usable[1:]))
         segments.append(Segment(seq, run.kind, run.start, run.end, tuple(rows[part]), stats.mean_sog,
-                                stats.straightness, stats.heading_var))
+                                stats.straightness, stats.heading_var, _p90(speeds[part]), _round(distance)))
     return Classification(trip, tuple(segments), version)

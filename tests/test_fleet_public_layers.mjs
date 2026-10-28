@@ -153,22 +153,31 @@ test('overlay styles read tokens only', () => {
   assert.match(a.sources[AIS_SOURCE].attribution, /Global Fishing Watch · CC BY-NC 4\.0/);
 });
 
-test('Accept 2: the basis sentences are v1\'s, verbatim, and v1\'s commercial AIS copy is unchanged', () => {
-  const html = read('dist/commercial-ais.html'), aisJs = read('dist/commercial-ais.js'), chartersJs = read('dist/charter-grounds.js');
+test('Accept 2: the basis sentences are v1\'s, verbatim, and the commercial AIS page is unchanged', () => {
+  const html = read('dist/commercial-ais.html'), chartersJs = read('dist/charter-grounds.js');
   const sentences = s => s.match(/[^.]+?(?:\.(?=\s|$))/g).map(x => x.trim());
   for (const s of sentences(layerEntry('commercial-ais').basis)) assert.ok(html.includes(s), `commercial-ais.html says: ${s}`);
   assert.ok(html.includes(AIS_CREDIT), 'the credit is the page\'s');
   for (const s of sentences(layerEntry('charter-grounds').basis)) assert.ok(chartersJs.includes(s), `charter-grounds.js says: ${s}`);
-  // The card's fixed lines are v1's card lines.
+  // The card's fixed lines are v1's card lines (dist/commercial-ais.js until FE-61).
   const card = aisMark(CELLS.features[0].properties);
   for (const s of ['Apparent fishing activity, not a verified catch spot.', 'Depth and target species unknown. This offshore context is not qualified for the 200-foot fishing limit.',
     'Local sportfishing-charter identity remains unverified.']) {
-    assert.ok(aisJs.includes(s)); assert.ok(`${card.reading} ${card.basis}`.includes(s));
+    assert.ok(`${card.reading} ${card.basis}`.includes(s));
   }
-  // v1's commercial AIS page and module are byte for byte as before FE-21.
-  assert.deepEqual({html: sha('dist/commercial-ais.html'), js: sha('dist/commercial-ais.js')}, PINNED);
+  // The commercial AIS page's content is byte for byte as before FE-21, except FE-61's back link: the v1 shell's
+  // index.html#map is gone, so it opens the app at /map. FE-61 part 2 moved only its head and wrapper onto the
+  // v2 tokens and the readable pages' sheet, so the pin covers the <main> content, which is unchanged.
+  assert.equal((html.match(/href="\/map"/g) || []).length, 1);
+  const main = html.match(/<main id="content">([\s\S]*)<\/main>/)?.[1] ?? '';
+  assert.deepEqual({main: createHash('sha256').update(main.replace('<a href="/map">', '<a href="index.html#map">')).digest('hex')}, PINNED);
+  assert.match(html, /<link rel="stylesheet" href="\.\.\/web\/tokens\.css"><link rel="stylesheet" href="coast-readable\.css">/);
+  assert.doesNotMatch(html, /href="(?:tokens|styles)\.css"/, 'no v1 sheet');
   assert.ok(groundMark(GROUNDS.grounds[0], GROUNDS).basis.startsWith(layerEntry('charter-grounds').basis));
 });
 
-/** sha256 of dist/commercial-ais.html and dist/commercial-ais.js on main before FE-21. */
-const PINNED = {html: '096874dd13a971e64ea321fd30e652048416c1aaf7335e00e72569f71a341f8e', js: 'f4c19515b6ff40304ed67f4df481e3836ae9e598e634cbe585e760d517dc7d0a'};
+/**
+ * sha256 of dist/commercial-ais.html's <main> content as it was before FE-21. Until FE-61 part 2 this pinned the
+ * whole page (096874dd…, before FE-21); that page's <main> content hashes to this value.
+ */
+const PINNED = {main: 'f8f4339ad2caf92af03d93e709d5c5760011bc9efee8a3ef28b1daa0beb455d3'};

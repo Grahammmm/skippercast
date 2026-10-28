@@ -48,12 +48,12 @@ Rules for every task:
   `CHANGELOG.md` (say "behind `UI_V2`" until FE-60). Append a dated line to
   [README.md](README.md)'s status log when a phase starts or ends.
 
-## Status summary (2026-10-10)
+## Status summary (2026-10-11)
 
 | Status | Count | Tasks |
 | --- | --- | --- |
-| DONE on `main` | 63 | every task except the three below and the two dropped |
-| CHANGED, not started | 3 | FE-60 (flip `UI_V2` on; all dependencies merged), FE-61 (one release later), FE-62 (after the owner confirms deleting the fish repo) |
+| DONE on `main` | 64 | every task except the two below and the two dropped |
+| CHANGED, not started | 2 | FE-61 (after v0.8.0, the release that carries the flip), FE-62 (part a, the archive, built 2026-10-11; part b, the bridge, pending; then the owner deletes the fish repo) |
 | DROPPED | 2 | FE-13, FE-26 |
 
 Earlier summaries went stale as PRs merged; the per-task Status lines are the record.
@@ -532,7 +532,7 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 ## Phase 5: flip, delete, retire
 
 ### FE-60 · Flip `UI_V2` on by default · S
-- Status: CHANGED (dependencies and the one-map acceptance). Agent: Claude.
+- Status: DONE (#540; live fixes #556, #557; released as v0.8.0). Agent: Claude. Live check 2026-10-11 on desktop and phone: § 15 items 1–6 pass except the Chart basemap, which waits on the owner's first basemap publish (FE-10 publishing step on #474; the dry build passed).
 - Depends: FE-07, FE-11, FE-12, FE-14 … FE-25 (not FE-13), FE-27, FE-30 … FE-37, FE-50 … FE-55, FE-71 … FE-83, FE-86
 - Files: `deployments/production.json`, `.github/workflows/deploy-cloudflare.yml`, `CHANGELOG.md`, `docs/web-app.md`, `README.md` (status).
 - Build: default on; `?ui=v1` stays for one release; release notes.
@@ -542,15 +542,15 @@ bridge without a client change. None blocks the v2 shell; all block FE-62.
 - As built: `deployments/production.json` `ui_v2: true`; the smoke test (`scripts/smoke_test.sh`, run by the deploy workflow's smoke step) also opens `/map` and `/coast` (following its redirect), and while `/` is the v1 shell (`UI_V2=false`, or after a rollback to a Worker built before the flip) it opens `/map?ui=v2` instead, so a rollback's own smoke test still passes (`tests/test_smoke_script.mjs`). Acceptance 3 is `e2e/v2-shell.spec.ts` "FE-60: no duplicate map, picker or timeline". The Worker tests now pin `UI_V2=false` for the v1 cases (`tests/test_worker_routes.mjs`). Acceptance 2 and 4 follow the deploy (the PR body holds the owner's live checklist).
 
 ### FE-61 · Delete the v1 shell and the v1 coastal modules · L (mostly deletions)
-- Status: CHANGED (also removes Codex's v1 coastal glue, after Codex confirms on #413). Agent: Claude.
+- Status: part 1 of 3 DONE (#561, merged 2026-10-11 after v0.8.0; deploy fix #567): the v1 shell, coastal glue, Leaflet and vendor copies, the switch, cssMinify. The owner approved merging without Codex's reply on #413 ([record](https://github.com/Grahammmm/skippercast/pull/561#issuecomment-6113533440)); part 1 removed the v1 coastal glue Codex owned until FE-61, and `packages/coast/` is untouched. Part 2 moves the static and advisor pages onto `web/tokens.css` for Accept 2; part 3 removes `packages/coast`'s `var(--coast-…, literal)` fallbacks. Follow-ups from review: [#422 comment](https://github.com/Grahammmm/skippercast/issues/422#issuecomment-6113351334). Agent: Claude.
 - Depends: FE-60 (one release later)
-- Files: `dist/index.html` (becomes the v2 app at `/`), `dist/coast.html`, `dist/coast-entry.js`, `dist/coast-launch.js`, `dist/coast-workspace.js`, `dist/coast-conditions.js`, `dist/coastal-*.js` (the modules no v2 file imports), `dist/*.css` (v1 sheets), `dist/tokens.css`, `dist/vendor/leaflet*`, `dist/vendor/images`, `dist/vendor/maplibre-*`, `dist/vendor/pmtiles-*`, the `dist/*.js` modules fully replaced by `web/` wrappers, `packages/coast/*.css` fallbacks (§ 3A.4 item 4), `scripts/web-vendor-sha256.json`, `scripts/copy-lint-baseline.json`, `vite.config.mjs` (`cssMinify: true`), `server/routes/assets.ts` (remove the switch), tests.
+- Files: `dist/index.html` (deleted; `/` serves the landing), `dist/coast.html`, `dist/coast-entry.js`, `dist/coast-launch.js`, `dist/coast-workspace.js`, `dist/coast-conditions.js`, `dist/coastal-*.js` (the modules no v2 file imports), `dist/*.css` (v1 sheets), `dist/tokens.css`, `dist/vendor/leaflet*`, `dist/vendor/images`, `dist/vendor/maplibre-*`, `dist/vendor/pmtiles-*`, the `dist/*.js` modules fully replaced by `web/` wrappers, `packages/coast/*.css` fallbacks (§ 3A.4 item 4), `scripts/web-vendor-sha256.json`, `scripts/copy-lint-baseline.json`, `vite.config.mjs` (`cssMinify: true`), `server/routes/assets.ts` (remove the switch), tests.
 - Build: delete in dependency order (a script lists modules no test or page imports); turn CSS minification on and re-check every page; baselines shrink. Split by group if over 400 changed lines of non-deletion edits.
 - Accept: 1. No Leaflet reference remains (grep test). 2. `check_contrast.mjs` reads `web/tokens.css` only. 3. All checks green; the copy-lint and token-lint baselines shrink.
 - **Owner**: approve (`server/`).
 
 ### FE-62 · Archive `fish` receipts and retire the repository · M
-- Status: CHANGED (blocked on the bridge's retirement). Agent: Claude, with Codex for the data receipts.
+- Status: CHANGED, in two parts (#570). Part a, the archive: built 2026-10-11 (`claude/fe-62-archive`; [docs/archive/fish/](../../archive/fish/README.md)). Part b, retiring the bridge's Fish Worker fallback in `server/coast-data.ts` and completing `docs/FISH-MERGE-STATUS.md`: pending (`claude/fe-62-bridge`). Agent: Claude, with Codex for the data receipts.
 - Depends: FE-60, FE-84, FE-85, FE-87; FE-40 … FE-45 merged and run
 - Files: `docs/archive/fish/README.md`, `docs/archive/fish/**` (the § 15 item 9 list), `docs/plans/front-end/README.md` (status), `docs/data-sources.md`.
 - Build: copy the listed docs and receipts with the historical-note prefix; tick § 15's checklist with links; list the Cloudflare resources, including the Fish Worker the bridge used.
@@ -620,7 +620,7 @@ Phases 0–4 and FE-71 … FE-83, FE-86 ─► FE-60 ─► FE-61;  FE-84 ─►
 - **Light theme switch** (US-L1): a `data-theme` toggle in the account menu,
   the light contrast pass, map style day variant on the app; the token
   bridge's opt-in carries it into `packages/coast`.
-- **Admin restyle** (US-L3): `web/admin` on `web/tokens.css`.
+- **Admin restyle** (US-L3): `web/admin` on `web/tokens.css`. Status: DONE (#729). Agent: Claude.
 - **Second active region on the landing** (US-L2): region-aware readings
   once another region leaves preview.
 - **Terrain for further regions**: each is a mapping-pipeline task for

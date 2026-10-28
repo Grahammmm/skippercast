@@ -29,11 +29,19 @@ RUNTIME_SERVICES = {
 
 # Hosts that identify a runtime call to a third-party service. Documentation
 # links (for example open-meteo.com/en/terms) deliberately do not match.
+# nowCOAST is bound only at the CSP origin or the reviewed satellite WMS
+# endpoint. Start only at a text boundary, whitespace or quote delimiter so
+# another URL cannot inherit the binding through fragment or path punctuation.
+NOWCOAST_RUNTIME = re.compile(
+    r'''(?<![^\s'"`])https://nowcoast\.noaa\.gov'''
+    r'''(?:/geoserver/observations/satellite/ows(?=[?'"`\s]|$)|(?=['"`\s]|$))'''
+)
 RUNTIME_HOSTS = {
     re.compile(r'https://(?:[a-z]+-)?api\.open-meteo\.com'): 'open-meteo-api',
     re.compile(r'https://tile\.openstreetmap\.org'): 'osm-tiles',
     re.compile(r'https://gis\.charttools\.noaa\.gov'): 'noaa-enc-display',
     re.compile(r'https://imagery\.nationalmap\.gov'): 'usgs-naip',
+    NOWCOAST_RUNTIME: 'noaa-goes-nowcoast',
 }
 
 # If an asset's text contains one of these hosts, its mapping must name the
@@ -104,6 +112,9 @@ REGISTER_ROW = 'docs/legal/data-rights-register.md#'
 
 # source id -> (register anchor, date listed, offending usages). Remove an
 # entry (and update the register) when the blocker is resolved.
+# The map's startup copies (#617, src/skippercast/platform/startup_forms.py), beside each region package.
+STARTUP_COPIES = ('atlas-marks.json', 'search-plan-index.json', 'shoreline-overview.geojson', 'poster.svg')
+
 KNOWN_BLOCKERS = {
     'open-meteo-api': (REGISTER_ROW + 'b1--open-meteo-free-api-mostly-resolved', '2026-09-28', {
         # Runtime calls were removed in #51/#54; only the committed daily snapshot still carries Open-Meteo data.
@@ -114,33 +125,36 @@ KNOWN_BLOCKERS = {
     }),
     'usgs-point-buchon': (REGISTER_ROW + 'b3--csumb-co-produced-seafloor-data', '2026-09-28', {
         'data/atlas.json', 'data/habitat-regions.json', 'data/charter-grounds.json',
-        'regions/morro-bay/bottom/index.json', 'regions/morro-bay/search-plans.json',
+        'regions/morro-bay/bottom/index.json', 'regions/morro-bay/search-plans.json', 'regions/morro-bay/search-plan-index.json',
+        'regions/morro-bay/atlas-marks.json',  # #617: the map's startup copies carry their originals' sources
     }),
     'usgs-morro-bay': (REGISTER_ROW + 'b3--csumb-co-produced-seafloor-data', '2026-09-28', {
         'data/atlas.json', 'data/habitat-regions.json', 'data/charter-grounds.json',
-        'regions/morro-bay/bottom/index.json', 'regions/morro-bay/search-plans.json',
+        'regions/morro-bay/bottom/index.json', 'regions/morro-bay/search-plans.json', 'regions/morro-bay/search-plan-index.json',
+        'regions/morro-bay/atlas-marks.json',  # #617: the map's startup copies carry their originals' sources
     }),
     'usgs-point-estero': (REGISTER_ROW + 'b3--csumb-co-produced-seafloor-data', '2026-09-28', {
         'data/atlas.json', 'data/habitat-regions.json', 'data/charter-grounds.json',
-        'regions/morro-bay/bottom/index.json', 'regions/morro-bay/search-plans.json',
-        'regions/cambria-san-simeon/survey-habitat.geojson', 'regions/cambria-san-simeon/search-plans.json',
+        'regions/morro-bay/bottom/index.json', 'regions/morro-bay/search-plans.json', 'regions/morro-bay/search-plan-index.json',
+        'regions/morro-bay/atlas-marks.json',  # #617: the map's startup copies carry their originals' sources
+        'regions/cambria-san-simeon/survey-habitat.geojson', 'regions/cambria-san-simeon/search-plans.json', 'regions/cambria-san-simeon/search-plan-index.json',
     }),
     'usgs-csmp-seafloor-character': (REGISTER_ROW + 'b3--csumb-co-produced-seafloor-data', '2026-09-28', {
-        'regions/monterey-point-sur/survey-habitat.geojson', 'regions/monterey-point-sur/search-plans.json',
-        'regions/santa-cruz-monterey-bay/survey-habitat.geojson', 'regions/santa-cruz-monterey-bay/search-plans.json',
-        'regions/point-arguello-conception/survey-habitat.geojson', 'regions/point-arguello-conception/search-plans.json',
-        'regions/bodega-point-reyes/survey-habitat.geojson', 'regions/bodega-point-reyes/search-plans.json',
-        'regions/point-arena-bodega/survey-habitat.geojson', 'regions/point-arena-bodega/search-plans.json',
+        'regions/monterey-point-sur/survey-habitat.geojson', 'regions/monterey-point-sur/search-plans.json', 'regions/monterey-point-sur/search-plan-index.json',
+        'regions/santa-cruz-monterey-bay/survey-habitat.geojson', 'regions/santa-cruz-monterey-bay/search-plans.json', 'regions/santa-cruz-monterey-bay/search-plan-index.json',
+        'regions/point-arguello-conception/survey-habitat.geojson', 'regions/point-arguello-conception/search-plans.json', 'regions/point-arguello-conception/search-plan-index.json',
+        'regions/bodega-point-reyes/survey-habitat.geojson', 'regions/bodega-point-reyes/search-plans.json', 'regions/bodega-point-reyes/search-plan-index.json',
+        'regions/point-arena-bodega/survey-habitat.geojson', 'regions/point-arena-bodega/search-plans.json', 'regions/point-arena-bodega/search-plan-index.json',
     }),
     'pmep-hapc': (REGISTER_ROW + 'b4--pmep-habitat-compilation-terms-unreviewed', '2026-09-28', {
-        'regions/big-sur-coast/survey-habitat.geojson', 'regions/big-sur-coast/search-plans.json',
-        'regions/south-big-sur-san-simeon/survey-habitat.geojson', 'regions/south-big-sur-san-simeon/search-plans.json',
+        'regions/big-sur-coast/survey-habitat.geojson', 'regions/big-sur-coast/search-plans.json', 'regions/big-sur-coast/search-plan-index.json',
+        'regions/south-big-sur-san-simeon/survey-habitat.geojson', 'regions/south-big-sur-san-simeon/search-plans.json', 'regions/south-big-sur-san-simeon/search-plan-index.json',
     }),
     'landing-reports': (REGISTER_ROW + 'b5--landing-report-facts', '2026-09-28', {
         'data/charter-grounds.json', 'data/daily-evidence.json',
     }),
     'osm-tiles': (REGISTER_ROW + 'b6--openstreetmap-tile-service', '2026-09-28', {
-        'runtime:dist/chart-map.js', 'runtime:dist/map-test-common.js', 'runtime:server/security-headers.ts',
+        'runtime:dist/chart-map.js', 'runtime:server/security-headers.ts',
     }),
 }
 
@@ -200,6 +214,10 @@ def asset_sources(kind, path, cache):
     return result
 
 
+def runtime_sources(text):
+    return {ident for pattern, ident in RUNTIME_HOSTS.items() if pattern.search(text)}
+
+
 def usages():
     """(usage label, source id) pairs for everything shipped or called."""
     found, unmapped, cache, sources = set(), set(), {}, catalog()
@@ -216,11 +234,29 @@ def usages():
         shoreline = f"regions/{region['id']}/shoreline.geojson"
         if (ROOT / 'dist' / shoreline).is_file():
             found.add((shoreline, 'noaa-cusp-shoreline'))
+        # #617: the map's startup copies ship beside it too, and carry the sources of the file each derives from.
+        kinds = {path: kind for kind, path in region['assets'].items() if path}
+        for name in STARTUP_COPIES:
+            copy = f"regions/{region['id']}/{name}"
+            if not (ROOT / 'dist' / copy).is_file():
+                continue
+            origin = shoreline if name == 'poster.svg' else json.loads((ROOT / 'dist' / copy).read_text())['derived_from']['path']
+            if origin in (shoreline, f"regions/{region['id']}/shoreline-overview.geojson"):
+                found.add((copy, 'noaa-cusp-shoreline'))
+                continue
+            ids = asset_sources(kinds.get(origin), origin, cache)
+            if ids is None:
+                unmapped.add(f"{region['id']}:{name} from {origin}")
+                continue
+            found.update((copy, ident) for ident in ids)
         for role, ident in (region.get('intelligence') or {}).get('providers', {}).items():
             found.add((f'region.json:intelligence.providers.{role}', ident))
         for role, ident in region.get('pipeline_sources', {}).items():
             found.add((f'region.json:pipeline_sources.{role}', ident))
+        # `basemap.default` names which base opens, not a source; the bound layers carry the source ids.
         for layer, binding in region.get('basemap', {}).items():
+            if layer == 'default':
+                continue
             found.add((f'region.json:basemap.{layer}', binding['source']))
         for need in ('wind-forecast', 'wave-forecast'):
             # Mirrors the scheduled pipeline's model selection (settings.model_ids).
@@ -232,9 +268,8 @@ def usages():
              *sorted((ROOT / 'packages/coast/src').rglob('*.ts'))]
     for path in files:
         text = path.read_text(encoding='utf-8')
-        for pattern, ident in RUNTIME_HOSTS.items():
-            if pattern.search(text):
-                found.add(('runtime:' + path.relative_to(ROOT).as_posix(), ident))
+        for ident in runtime_sources(text):
+            found.add(('runtime:' + path.relative_to(ROOT).as_posix(), ident))
     return found, unmapped, cache
 
 
@@ -248,6 +283,77 @@ class CommercialSourceTests(unittest.TestCase):
     def setUpClass(cls):
         cls.sources = catalog()
         cls.found, cls.unmapped, cls.cache = usages()
+
+    def test_nowcoast_runtime_origin_and_satellite_endpoint_have_exact_binding(self):
+        for text in (
+            "'https://nowcoast.noaa.gov'",  # CSP origin
+            'https://nowcoast.noaa.gov/geoserver/observations/satellite/ows',
+            '"https://nowcoast.noaa.gov/geoserver/observations/satellite/ows?service=WMS&request=GetCapabilities"',
+            '`https://nowcoast.noaa.gov/geoserver/observations/satellite/ows?request=GetMap&time=${observedAt}`',
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(runtime_sources(text), {'noaa-goes-nowcoast'})
+        for path in ('packages/coast/src/map-sources.ts', 'server/security-headers.ts'):
+            with self.subTest(path=path):
+                self.assertIn(('runtime:' + path, 'noaa-goes-nowcoast'), self.found)
+        self.assertEqual(commercial_use('noaa-goes-nowcoast', self.sources), 'allowed')
+
+    def test_nowcoast_lookalike_hosts_and_unreviewed_paths_do_not_inherit_binding(self):
+        endpoint = '/geoserver/observations/satellite/ows'
+        for text in (
+            'http://nowcoast.noaa.gov' + endpoint,
+            'https://nowcoast.noaa.gov.evil.example' + endpoint,
+            'https://sub.nowcoast.noaa.gov' + endpoint,
+            'https://nowcoast-noaa.gov' + endpoint,
+            'https://nowcoast.noaa.gov:443' + endpoint,
+            'https://nowcoast.noaa.gov@evil.example' + endpoint,
+            'https://user@nowcoast.noaa.gov' + endpoint,
+            'https://nowcoast.noaa.gov/geoserver/other/ows',
+            'https://nowcoast.noaa.gov' + endpoint + '-other',
+            'https://nowcoast.noaa.gov' + endpoint + '/other',
+            'https://nowcoast.noaa.gov/documentation',
+            'https://nowcoast.noaa.gov/%67eoserver/observations/satellite/ows',
+            'https://evil.example/?next=https://nowcoast.noaa.gov' + endpoint,
+            'https://evil.example/https://nowcoast.noaa.gov' + endpoint,
+            'https://evil.example/#https://nowcoast.noaa.gov' + endpoint,
+            'https://evil.example/;https://nowcoast.noaa.gov' + endpoint,
+            'prefixhttps://nowcoast.noaa.gov' + endpoint,
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(runtime_sources(text), set())
+
+    def test_existing_runtime_source_recognizers_are_preserved(self):
+        for text, ident in (
+            ('https://api.open-meteo.com/v1/forecast', 'open-meteo-api'),
+            ('https://marine-api.open-meteo.com/v1/marine', 'open-meteo-api'),
+            ('https://tile.openstreetmap.org/1/2/3.png', 'osm-tiles'),
+            ('https://gis.charttools.noaa.gov/arcgis/rest/services', 'noaa-enc-display'),
+            ('https://imagery.nationalmap.gov/arcgis/rest/services', 'usgs-naip'),
+        ):
+            with self.subTest(source=ident):
+                self.assertEqual(runtime_sources(text), {ident})
+
+    def test_nowcoast_missing_unlisted_or_uncleared_catalog_binding_fails_contract(self):
+        ident = 'noaa-goes-nowcoast'
+        missing = CommercialSourceTests('test_every_bound_asset_maps_to_a_reviewed_source')
+        missing.sources = {key: value for key, value in self.sources.items() if key != ident}
+        missing.found, missing.unmapped = self.found, self.unmapped
+        with self.assertRaisesRegex(AssertionError, 'unknown source noaa-goes-nowcoast'):
+            missing.test_every_bound_asset_maps_to_a_reviewed_source()
+
+        unlisted = CommercialSourceTests('test_every_bound_asset_maps_to_a_reviewed_source')
+        unlisted.sources = self.sources
+        unlisted.found = self.found | {('runtime:synthetic-nowcoast', ident + '-unlisted')}
+        unlisted.unmapped = self.unmapped
+        with self.assertRaisesRegex(AssertionError, 'unknown source noaa-goes-nowcoast-unlisted'):
+            unlisted.test_every_bound_asset_maps_to_a_reviewed_source()
+
+        uncleared = CommercialSourceTests('test_non_commercial_sources_are_exactly_the_known_blockers')
+        uncleared.sources = {**self.sources, ident: {**self.sources[ident],
+            'rights': {**self.sources[ident]['rights'], 'commercial_use': 'unknown'}}}
+        uncleared.found = self.found
+        with self.assertRaisesRegex(AssertionError, 'New assets or calls rely on sources not cleared'):
+            uncleared.test_non_commercial_sources_are_exactly_the_known_blockers()
 
     def test_every_bound_asset_maps_to_a_reviewed_source(self):
         self.assertFalse(self.unmapped, 'Add these assets to ASSET_SOURCES and the register: '

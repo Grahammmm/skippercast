@@ -8,6 +8,7 @@ import {
   presentation, presentationFor, readURL, region, selection, stagePresentation, syncFromURL, withParams,
 } from '../web/state.ts';
 import {currentLayers, habitatURL, presentationFromURL} from '../web/coast-context.ts';
+import {choosePresentation} from '../web/map/stage.ts';
 
 const ORIGIN = 'https://s.test/map';
 const memory = () => {const m = new Map(); return {getItem: k => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)), map: m};};
@@ -38,6 +39,45 @@ test('each coast key round-trips through withParams and syncFromURL', () => {
     assert.equal(selection.value, 'r7', 'the atlas spot is independent of the habitat');
   }
   reset();
+});
+
+test('choosePresentation writes explicit chart and round-trips terrain without changing other URL keys', () => {
+  // The address/history fixture from test_map_stage.mjs, without mounting a renderer.
+  const saved = Object.fromEntries(['location', 'history', 'dispatchEvent'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+  const href = ORIGIN + '?region=morro-bay&presentation=3d&current=wcofs&habitat=reef%3Ar12&spot=r7&sentinel=keep#anchor';
+  const stack = [href];
+  const store = memory();
+  try {
+    globalThis.location = {href};
+    globalThis.history = {
+      state: null,
+      pushState(_s, _t, url) { stack.push(url); location.href = url; },
+      replaceState(_s, _t, url) { stack[stack.length - 1] = url; location.href = url; },
+    };
+    globalThis.dispatchEvent = () => true;
+    configureStore({v2: true, storage: store});
+    syncFromURL(href);
+    const unchanged = new URL(href);
+    unchanged.searchParams.delete('presentation');
+    for (const next of ['chart', '2d', '3d', 'chart']) {
+      choosePresentation(next);
+      const url = new URL(location.href);
+      assert.equal(url.searchParams.get('presentation'), next, `${next} is written explicitly`);
+      assert.equal(url.searchParams.has('presentationURL'), false, 'the v1 writer key is never introduced');
+      assert.equal(readURL(url.href).presentation, next, `${next} round-trips through the reader`);
+      assert.equal(presentation.value, next, 'navigation synchronizes the presentation signal');
+      assert.equal(store.map.get(STORAGE_KEYS.presentation), next, 'navigation stores the explicit choice');
+      url.searchParams.delete('presentation');
+      assert.equal(url.href, unchanged.href, 'unrelated URL keys and the fragment survive');
+    }
+    assert.equal(stack.length, 5, 'each presentation choice adds one history entry');
+  } finally {
+    reset();
+    for (const [key, descriptor] of Object.entries(saved)) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else delete globalThis[key];
+    }
+  }
 });
 
 test('an absent coast key is not reported, and the signals return to their defaults', () => {

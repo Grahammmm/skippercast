@@ -26,7 +26,7 @@ export type Filters = Partial<Record<FilterName, string>>;
 export const FILTER_LABELS: Readonly<Record<FilterName, string>> = {vessel: 'Boat', port: 'Port', class: 'Vessel class', trip_type: 'Trip type',
   kind: 'Activity type', from: 'From', to: 'To', season: 'Season', season_part: 'Season part'};
 /** v1's event labels (dist/fleet-activity.js `EVENT_STYLE`). */
-const KIND_LABELS: Readonly<Record<string, string>> = {'drift-anchor': 'Drift or anchor', troll: 'Troll'};
+const KIND_LABELS: Readonly<Record<string, string>> = {'drift-anchor': 'Drift or anchor', 'troll-slow': 'Slow troll', 'troll-pelagic': 'Offshore troll'};
 export const VESSELS_NOTE = 'The boat list shows the first 500 boats by name.';
 export const PLANNING_LABEL = 'Leave out NOAA planning-only rows';
 export const HOW_INFERRED = 'Stops and segment kinds come from AIS speed and track shape. Drift or anchor stops are filled circles; troll stops are rings. Dates are each trip\'s local departure date. Heat cells hold no boat, port, class, trip type or source.';
@@ -75,10 +75,24 @@ export function regionPorts(ports: readonly Port[], region: string | null, saved
   return [...here.filter(p => p.id === saved), ...here.filter(p => p.id !== saved)];
 }
 
+// Share only a pending HEAD, keyed by fetcher and exact page. Never retain a
+// settled answer: a later visit must still observe the public page's off gate.
+const directoryProbes = new WeakMap<typeof fetch, Map<string, Promise<boolean>>>();
+function directoryAnswers(url: string, fetcher: typeof fetch): Promise<boolean> {
+  let probes = directoryProbes.get(fetcher);
+  if (!probes) { probes = new Map(); directoryProbes.set(fetcher, probes); }
+  const pending = probes.get(url);
+  if (pending) return pending;
+  const answer = Promise.resolve().then(() => fetcher(url, {method: 'HEAD', credentials: 'omit', cache: 'no-store'}))
+    .then(r => r.ok, () => false).finally(() => { probes.delete(url); });
+  probes.set(url, answer);
+  return answer;
+}
+
 /**
  * The ports whose public boat list answers, else none. One HEAD of the first port's
  * page: the page 404s while it is switched off, so only an ok answer shows the link.
- * No cookie is sent and nothing is stored.
+ * Concurrent calls share that HEAD; no cookie is sent or settled answer stored.
  */
 export async function boatDirectory(region: string | null, saved: string | null = null, fetcher: typeof fetch = fetch,
   ports: () => Promise<readonly Port[]> = () => loadPorts(fetcher)): Promise<Port[]> {
@@ -86,7 +100,7 @@ export async function boatDirectory(region: string | null, saved: string | null 
   try {
     const here = regionPorts(await ports(), region, saved);
     if (!here.length) return [];
-    const r = await fetcher(directoryHref(here[0]!).split('#')[0]!, {method: 'HEAD', credentials: 'omit', cache: 'no-store'});
-    return r.ok ? here : [];
+    const ok = await directoryAnswers(directoryHref(here[0]!).split('#')[0]!, fetcher);
+    return ok ? here : [];
   } catch { return []; }
 }

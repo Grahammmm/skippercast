@@ -1,8 +1,7 @@
 // The trip plan and the offline section (FE-51, design § 6 and § 9). The plan
-// is v1's day planner (web/trip.ts wraps dist/export-ui.js): it draws into
-// #export-content, which Preact creates once and never touches again, inside a
-// modal dialog that follows `#export`, so Back closes it and a reload restores
-// a ranked plan. Offline is this app's own: the chart pack and the coastal
+// is the day planner (web/planner.ts, drawn by Planner.tsx and loaded on first
+// open) inside a modal dialog that follows `#export`, so Back closes it and a
+// reload restores a ranked plan. Offline is this app's own: the chart pack and the coastal
 // snapshots, each with its saved time, and each snapshot product with the time
 // its source assembled it.
 import {useEffect, useRef, useState} from 'preact/hooks';
@@ -11,7 +10,7 @@ import {Button, IconButton} from '../ui/Button.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
 import {region} from '../state.ts';
 import {
-  canSaveCoastal, closeTrip, deleteCoastal, listPacks, loadPlanner, offlineOpen, readCoastal, saveCoastal, savePack, tripError, tripOpen, tripReady,
+  canSaveCoastal, closeTrip, deleteCoastal, listPacks, loadPlanner, offlineOpen, plannerView, readCoastal, saveCoastal, savePack, tripError, tripOpen, tripReady,
   type PackMeta, type Progress,
 } from '../trip.ts';
 import {regionInfo, zone} from './App.tsx';
@@ -32,13 +31,12 @@ export function packTiles(m: PackMeta): string {
 }
 
 function TripDialog() {
-  const ref = useRef<HTMLDialogElement>(null), open = tripOpen.value, error = tripError.value;
+  const ref = useRef<HTMLDialogElement>(null), open = tripOpen.value, error = tripError.value, planner = plannerView.value;
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    // export-ui.js updates its counts and re-checks boundaries while v1's export view shows.
-    if (open && !dialog.open) { dialog.showModal(); document.body.dataset.view = 'export'; dialog.querySelector<HTMLElement>('#export-heading')?.focus(); }
-    if (!open) { if (dialog.open) dialog.close(); delete document.body.dataset.view; }
+    if (open && !dialog.open) { dialog.showModal(); dialog.scrollTop = 0; dialog.querySelector<HTMLElement>('#export-heading')?.focus(); }
+    if (!open && dialog.open) dialog.close();
   }, [open]);
   return (
     <dialog ref={ref} id="export-panel" class="app-trip" aria-labelledby="export-heading" onClose={closeTrip}>
@@ -48,7 +46,7 @@ function TripDialog() {
       </div>
       {tripReady.value ? null : <p role="status">{error || 'Loading the trip planner…'}</p>}
       {error ? <Button size="sm" onClick={() => void loadPlanner()}>Try again</Button> : null}
-      <div id="export-content" />
+      {planner ? <planner.View model={planner.model} open={open} /> : null}
     </dialog>
   );
 }
@@ -59,8 +57,22 @@ function ChartPack() {
   const [busy, setBusy] = useState<AbortController | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [status, setStatus] = useState('');
-  const refresh = () => listPacks().then(setPacks, () => setPacks([]));
-  useEffect(() => { void refresh(); }, []);
+  const [inventoryState, setInventoryState] = useState<'loading' | 'success' | 'error'>('loading');
+  const refreshId = useRef(0);
+  const refresh = async () => {
+    const request = ++refreshId.current;
+    setInventoryState('loading');
+    try {
+      const next = await listPacks();
+      if (request !== refreshId.current) return;
+      setPacks(next); setInventoryState('success');
+    } catch {
+      // An unreadable inventory is not evidence that the device has no packs.
+      // Keep the last successful listing, if any, but qualify it below.
+      if (request === refreshId.current) setInventoryState('error');
+    }
+  };
+  useEffect(() => { void refresh(); return () => { ++refreshId.current; }; }, []);
   const save = async () => {
     if (!id || busy) return;
     if (!navigator.onLine) { setStatus('You are offline. Connect to save this region; saved regions are unchanged.'); return; }
@@ -78,19 +90,25 @@ function ChartPack() {
     <section class="app-offline" aria-labelledby="app-offline-pack">
       <h3 id="app-offline-pack">Chart pack</h3>
       <p>Saves the region's data, rules, protected areas, latest forecast, NOAA chart tiles, base map at zoom 8–12 and this app on this device. The list below shows when each region was saved.</p>
+      <p>Check the saved pack before leaving coverage.</p>
+      <p>Water temp and current tiles are not prefetched. Recently viewed tiles may be saved; coverage varies. For Morro Bay and Cambria, save Coastal readings below for water temperature and currents.</p>
       <div class="app-offline-actions">
         <Button variant="primary" icon="download" disabled={!id || !!busy} onClick={() => void save()}>Save {name} for offline</Button>
         {busy ? <Button onClick={() => busy.abort()}>Cancel</Button> : null}
       </div>
       {progress ? <progress max={Math.max(1, progress.total)} value={progress.done} aria-label="Saving" /> : null}
       <p role="status" aria-live="polite">{progress ? `${PHASES[progress.phase] ?? progress.phase} · ${progress.done} of ${progress.total} · ${formatBytes(progress.bytes)}` : status}</p>
+      {inventoryState !== 'success' ? <p role="status" aria-live="polite">
+        {inventoryState === 'loading' ? 'Checking saved regions…' : 'Saved regions could not be checked. Offline storage may be unavailable.'}
+        {packs !== null ? ' Last checked listing; not rechecked.' : ''}
+      </p> : null}
       <ul class="app-offline-list">
         {packs?.length ? packs.map(({cache, meta}) => (
           <li key={cache}>
             <div><strong>{meta.region_name}</strong><span class="ui-mono">Saved <Saved iso={meta.saved_at} /> · {formatBytes(meta.bytes)}</span><span>{packTiles(meta)}</span></div>
             <Button size="sm" onClick={() => void remove(cache)} aria-label={`Delete the saved ${meta.region_name}`}>Delete</Button>
           </li>
-        )) : <li>{packs ? 'Nothing saved on this device yet.' : 'Checking saved regions…'}</li>}
+        )) : inventoryState === 'success' ? <li>Nothing saved on this device yet.</li> : null}
       </ul>
     </section>
   );
@@ -134,7 +152,7 @@ function CoastalReadings() {
   );
 }
 
-/** Both dialogs at the app's root: the plan's stays mounted, so a layout change keeps the planner's markup; the offline one mounts while open. */
+/** Both dialogs at the app's root: the plan's stays mounted, so a layout change keeps the planner's open sections; the offline one mounts while open. */
 export function Trip() {
   return (
     <>

@@ -50,12 +50,14 @@ export type SheetProps = {
   /** Content pinned at the top edge beside the handle (the hour slider). */
   edge?: ComponentChildren;
   children: ComponentChildren;
+  /** Let the parent reveal body controls when focus enters them. */
+  onBodyFocus?: (event: FocusEvent) => void;
   class?: string;
 };
 
-type Drag = {y: number; base: number; sheet: HTMLElement; moved: boolean};
+type Drag = {pointerId: number; y: number; base: number; sheet: HTMLElement; moved: boolean};
 
-export function Sheet({label, detent, onDetent, edge, children, class: cls}: SheetProps) {
+export function Sheet({label, detent, onDetent, edge, children, onBodyFocus, class: cls}: SheetProps) {
   const drag = useRef<Drag | null>(null);
   const onKeyDown = (event: KeyboardEvent) => {
     const next = nextDetent(detent, event.key);
@@ -64,17 +66,19 @@ export function Sheet({label, detent, onDetent, edge, children, class: cls}: She
     if (next !== detent) onDetent(next);
   };
   const onPointerDown = (event: PointerEvent) => {
+    // A second pointer must not replace the active gesture or its capture.
+    if (drag.current) return;
     const handle = event.currentTarget as HTMLElement, sheet = handle.closest<HTMLElement>('.ui-sheet');
     if (!sheet || event.button !== 0) return;
     const base = new DOMMatrixReadOnly(getComputedStyle(sheet).transform).m42;
     // A cancelled drag (pointercancel fires no click) would otherwise leave the flag to swallow the next tap.
     delete handle.dataset.dragged;
-    drag.current = {y: event.clientY, base, sheet, moved: false};
+    drag.current = {pointerId: event.pointerId, y: event.clientY, base, sheet, moved: false};
     handle.setPointerCapture(event.pointerId);
   };
   const onPointerMove = (event: PointerEvent) => {
     const d = drag.current;
-    if (!d) return;
+    if (!d || event.pointerId !== d.pointerId) return;
     const dy = event.clientY - d.y;
     if (Math.abs(dy) >= TAP_MAX) d.moved = true;
     d.sheet.style.transition = 'none';
@@ -82,13 +86,22 @@ export function Sheet({label, detent, onDetent, edge, children, class: cls}: She
   };
   const onPointerUp = (event: PointerEvent) => {
     const d = drag.current;
-    if (!d) return;
+    if (!d || event.pointerId !== d.pointerId) return;
     drag.current = null;
     d.sheet.style.transition = '';
     d.sheet.style.transform = '';
     const next = dragDetent(detent, event.clientY - d.y, d.sheet.offsetHeight);
     if (next !== detent) onDetent(next);
     if (d.moved) (event.currentTarget as HTMLElement).dataset.dragged = 'true';
+  };
+  const onPointerCancel = (event: PointerEvent) => {
+    // Cancellation abandons the gesture; only a normal release chooses a detent.
+    const d = drag.current;
+    if (!d || event.pointerId !== d.pointerId) return;
+    drag.current = null;
+    delete (event.currentTarget as HTMLElement).dataset.dragged;
+    d.sheet.style.transition = '';
+    d.sheet.style.transform = '';
   };
   const onClick = (event: MouseEvent) => {
     const handle = event.currentTarget as HTMLElement;
@@ -100,12 +113,12 @@ export function Sheet({label, detent, onDetent, edge, children, class: cls}: She
       <div class="ui-sheet-edge">
         <button type="button" class="ui-sheet-handle" aria-label={`${detent === 'full' ? 'Collapse' : 'Expand'} ${label}`}
           aria-expanded={detent !== 'peek'} data-detent={detent} onClick={onClick} onKeyDown={onKeyDown}
-          onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
+          onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}>
           <span class="ui-sheet-grip" aria-hidden="true"></span>
         </button>
         {edge}
       </div>
-      <div class="ui-sheet-body">{children}</div>
+      <div class="ui-sheet-body" onFocusIn={onBodyFocus}>{children}</div>
     </section>
   );
 }

@@ -1,0 +1,287 @@
+{
+  "authority": "installed-closure evidence only: a wheel built from the declared root installs into a clean venv and byte-matches the source checkout; guard negatives reject traversal/symlink/hash/byte-cap. No native, render, mission, execution or publication acceptance is implied.",
+  "canonical_positive": {
+    "coastal_differing": [],
+    "coastal_extra": [],
+    "coastal_installed_files": 87,
+    "coastal_match": true,
+    "coastal_missing": [],
+    "coastal_source_files": 87,
+    "full_package_installed_files": 251,
+    "full_package_source_files": 251
+  },
+  "date_utc": "2026-10-20T13:39:29.449593+00:00",
+  "declared_root": "src/skippercast",
+  "installed_distribution": {
+    "imported_module": "skippercast/coastal/cli.py",
+    "imported_module_from_source_checkout": false,
+    "imported_module_sha256": "8e18b824d98568b858722eef45eb292883f8c0d5ae5f274ca58c476f9e95fe2e",
+    "metadata_found": true,
+    "version": "0.8.0"
+  },
+  "launcher_identity": {
+    "cli_identity_returncode": 0,
+    "code_sha256": "fbf25b427b8500257f22936a9dc69312cd37ae5cdb8ea1d8248f4d8281f525a2",
+    "dependency_versions": {
+      "h5py": "unavailable",
+      "jsonschema": "unavailable",
+      "numpy": "unavailable",
+      "pyproj": "unavailable",
+      "rasterio": "unavailable",
+      "shapely": "unavailable"
+    },
+    "dependency_versions_sha256": "aa639c948d2d0356ddf0813a2aaae8af46de096ea98ad03fb9669c6aaf319c8e",
+    "launcher_module_sha256": {
+      "skippercast.coastal.cli": "8e18b824d98568b858722eef45eb292883f8c0d5ae5f274ca58c476f9e95fe2e",
+      "skippercast.coastal.coordinator.source_free": "f3a080ea720b188cd4cdb19d4d6554f7663373e77774a05fa476903ad03b667b"
+    },
+    "packaged_resources": [
+      {
+        "bytes": 10038,
+        "name": "coastal-discovery-lead-v1.schema.json",
+        "sha256": "491723dfa30910317903cbad8dd9da44de2aed72fc7d5361447f2ce24e5bfc08"
+      },
+      {
+        "bytes": 3252,
+        "name": "coastal-terrain-only-input-v1.schema.json",
+        "sha256": "8cac704665aae620d531ab98cc8b2a3464612debce4690cf73fdd8bc31978478"
+      },
+      {
+        "bytes": 1285,
+        "name": "coastal-terrain-only-render-v1.schema.json",
+        "sha256": "6a3fa32e0594a37f985393d99f8243a03d4ac83a29ad310e5dc1f1a9c104aba9"
+      },
+      {
+        "bytes": 955,
+        "name": "coastal-terrain-only-science-review-v1.schema.json",
+        "sha256": "9fd08f202cea2965d518b8bfd33de0a4fd33a5ba5c04b444ac727b832e86123f"
+      },
+      {
+        "bytes": 5019,
+        "name": "common.schema.json",
+        "sha256": "dbd8d97b2eea98339583baeeaa5625003d313955d2a4ecd78829734a01fd9beb"
+      },
+      {
+        "bytes": 3015,
+        "name": "coverage.schema.json",
+        "sha256": "9b2b423c7dca7d66e39cf059d298c0a171354d40732a6d6e8ab0c647f4b95a91"
+      },
+      {
+        "bytes": 5068,
+        "name": "daily-feed.schema.json",
+        "sha256": "3cd44970a2c0b4627719a995333da38fb1689dd27ebca6259e0f608552a19040"
+      },
+      {
+        "bytes": 1403,
+        "name": "data-needs.schema.json",
+        "sha256": "e9d49a7c634612012ef4a16340e7eaf94fbb27e32a8ad37c66a14863aea92800"
+      },
+      {
+        "bytes": 14129,
+        "name": "fleet-profile.schema.json",
+        "sha256": "7f05d2e8c890ba40df0a82dd4f476a19c47c7a5bc0d6f0bd98100ef73d10fafb"
+      },
+      {
+        "bytes": 16541,
+        "name": "fleet-region.schema.json",
+        "sha256": "8c6701473387dd9a03f39585441ce43421e1d45c14291e6895761b96f6c59f51"
+      },
+      {
+        "bytes": 1979,
+        "name": "forecast-index.schema.json",
+        "sha256": "12ba12582fd6798fd7fe5992886b997608d28993b45620a8ee580619581d0ff4"
+      },
+      {
+        "bytes": 3284,
+        "name": "forecast-manifest.schema.json",
+        "sha256": "822717e401e399848b70bb8afa431e1886c2085535e75f705951a9b3a7c9b2a4"
+      },
+      {
+        "bytes": 1949,
+        "name": "forecast-tile.schema.json",
+        "sha256": "86682354a20b8f56b1eeba355c8fc0fb8accedb3430b25231abe5afd35500177"
+      },
+      {
+        "bytes": 3772,
+        "name": "intelligence-feed.schema.json",
+        "sha256": "2dfea0315f5e8ea8bda804e0ac715e7dd34765b9e6aaf16883524fa5d85e2f08"
+      },
+      {
+        "bytes": 2193,
+        "name": "jurisdiction.schema.json",
+        "sha256": "790a8b2b366d276d38eb983302d3825b85af147a8eda1fd2eda0aa87b9eb987c"
+      },
+      {
+        "bytes": 2684,
+        "name": "launch-points.schema.json",
+        "sha256": "189da7ce3e8505e952a8b918164388d6d3c04755b6ac8f63504a4f31c8f43fbe"
+      },
+      {
+        "bytes": 2308,
+        "name": "live-feed.schema.json",
+        "sha256": "85aebc70bc03068b1313823bf07edb468c1d05f11520aa83a640788db9f94a5c"
+      },
+      {
+        "bytes": 3498,
+        "name": "private-mapping-input-v2.schema.json",
+        "sha256": "8f0a584ba1ecc4c1490b199bdcfe2affb86f60db5fe147548669445ebddc5fd3"
+      },
+      {
+        "bytes": 1444,
+        "name": "published-regions.schema.json",
+        "sha256": "a0b7a6d482a460c593cb48291dcb49b56bdf59358e43e361b97c1c60d35f2600"
+      },
+      {
+        "bytes": 1038,
+        "name": "region-manifest.schema.json",
+        "sha256": "24342b543d289679172d6e8ebcafd8b3165fda251067475f82b1b37ac22768c6"
+      },
+      {
+        "bytes": 15417,
+        "name": "region.schema.json",
+        "sha256": "a7d94f6cb56fedd2817e0afa40387bd5631e285e572ab251132cd0e63294c34c"
+      },
+      {
+        "bytes": 2800,
+        "name": "regions-index.schema.json",
+        "sha256": "a539ea0cceff7927471c649b5895a4f06f2325819d8936c0fa7d87778fe78e08"
+      },
+      {
+        "bytes": 6563,
+        "name": "render-handoff-v2.1.schema.json",
+        "sha256": "2ede561460cc8c2870d77b2b111bb61de76ac6ce74642c00890ef9b41a4af4a1"
+      },
+      {
+        "bytes": 18757,
+        "name": "render-handoff-v2.schema.json",
+        "sha256": "a1a6549616378b8b7c70533d66bc6c0ca6563dc389eea9da9107ef7396eb4139"
+      },
+      {
+        "bytes": 6919,
+        "name": "shore-habitat.schema.json",
+        "sha256": "8052e171505636a4472549811df18368bba9569efc51418f6073a0517e782fa2"
+      },
+      {
+        "bytes": 3813,
+        "name": "source.schema.json",
+        "sha256": "b2c1301d87fddb2be8cfca10795742bcf02a74a9b36913153ee23bce9052f6b6"
+      },
+      {
+        "bytes": 540,
+        "name": "sources-catalog.schema.json",
+        "sha256": "2b1b071a6058637c1d70d21627d101459cd1261e5e5c41be31cc0660680356fd"
+      },
+      {
+        "bytes": 4626,
+        "name": "vertical-v1.schema.json",
+        "sha256": "17047a1ddf732326e90d08e262811428154a6800e76a5aa7878acb672002e1ac"
+      }
+    ],
+    "source_free_help_returncode": 0
+  },
+  "negative_consumer_checks": {
+    "cli_symlink": {
+      "command": "python -m skippercast.coastal.cli --root <tmp> --db alias/queue.sqlite status",
+      "returncode": 2,
+      "stderr": "{\"schema\": \"coastal-inspection-error-v1\", \"error\": \"ValueError\", \"detail\": \"artifact symlinks refused\"}"
+    },
+    "cli_traversal": {
+      "command": "python -m skippercast.coastal.cli --root <tmp> --db ../outside.sqlite status",
+      "returncode": 2,
+      "stderr": "{\"schema\": \"coastal-inspection-error-v1\", \"error\": \"ValueError\", \"detail\": \"artifact path must be root-relative\"}"
+    },
+    "guards": {
+      "byte_cap": {
+        "error": "artifact byte cap exceeded",
+        "outcome": "REFUSED"
+      },
+      "hash": {
+        "error": "artifact bytes/hash changed",
+        "outcome": "REFUSED"
+      },
+      "positive_control": {
+        "outcome": "ACCEPTED",
+        "resolved_bytes": 100,
+        "sha256_matches": true
+      },
+      "symlink": {
+        "error": "artifact symlinks refused",
+        "outcome": "REFUSED"
+      },
+      "traversal": {
+        "error": "artifact path must be root-relative",
+        "outcome": "REFUSED"
+      }
+    }
+  },
+  "repo_head": "bde9c6dff45dfdf7b813ee217f0bfde058d4b274",
+  "schema": "coast-prod-02-installed-closure-v1",
+  "skills": {
+    "skippercast-discover-coastal-sources": {
+      "file_count": 15,
+      "files": {
+        "SKILL.md": "50060dd84c7674b732591ab7df9ffd8614c3e8e93f655dda58a7fae293ad6abf",
+        "references/bounded-discovery.md": "430a5b301a778db1aa99f69df387831d61d3d98e580f37847de7bb9ae88c545c",
+        "references/bounded-quality.md": "eda9bfab62299839692795745ca4b3a498098fdffb40c45cbb9aca70d862af04",
+        "references/coastal-pipeline.md": "aacc8b7c489ea81902db517b7226b8401035c1ffe85a691c6b7168d79a9b5777",
+        "references/format-readers.md": "577dd64797063f2e01afab5e608037b599a5451afd6f92bea43ace1736d782ab",
+        "references/gsf-resume-receipt-v1.schema.json": "008498875ca05b543ff82e82124cda46427d7e4fdfdbdb5c00c58af8e676b2d4",
+        "references/gsf-resume.md": "23f357394b2418f35fa5aabd6197a258f3338b4af6f037ef5d7855c1e5851969",
+        "references/quality-receipt-v1.schema.json": "83c175f4e147e75aff601f2896daa95050d03556f8a94320f251d1350c55613e",
+        "references/source-manifest-v1.schema.json": "9f8ee2d674c0a4cfa8a03bbb52e57e44d6074e4f592afc2cb3f2a4a51f87894d",
+        "scripts/discover.py": "82fa8b798ac7d710f52969b3372208241882e288724845542c68b5ae60d21327",
+        "scripts/formats.py": "57d47b448fa08885e6550a49e594d1ac21fc64f925cde42149bb9fe14bbd4b60",
+        "scripts/gsf_probe.c": "166f810caebf35c69cc1003a23884bdeb26bce02f846e758a65af1b62212c5be",
+        "scripts/gsf_resume.py": "2f51081696589970457b8784b6591d5ee366b7a0309425bdc42459ba69f664e4",
+        "scripts/gsf_scan.c": "846e2e398d352bfd75241a7aa62d5b6afaa6aaf1f0d159203935cb247763c45e",
+        "scripts/quality.py": "d14ee63bab88a0f060e3272cd1765a5b4d72523a4575ffd89c8a4c1feed82aaa"
+      }
+    },
+    "skippercast-map-coast": {
+      "file_count": 17,
+      "files": {
+        "SKILL.md": "2c5b4fd0e1d8bb1fbcfef1f9450f5c96bee648665e4e32f89daacd9fa6b70fba",
+        "assets/render-handoff-v2.schema.json": "a1a6549616378b8b7c70533d66bc6c0ca6563dc389eea9da9107ef7396eb4139",
+        "references/bounded-artifacts.md": "aa357a456bcd8dfa3f2126a3f99b41eb3a7c85ae9d8302dad9c6dc4e3ecca714",
+        "references/execution-and-release.md": "7e430904320b50717e79a6ddde503aa2a4a96a487b351187cced96daed391bbe",
+        "references/habitat-expansion-preflight.md": "799e0f982eaad392e35677c2773788422b6df9820325e9c9f3d6f0c6f4293c56",
+        "references/historical-blockers.md": "05318221b1c5716eb54f3b21d1c6a6ded4ce19bedef414d59c77eb940d0d8142",
+        "references/improvement-loop.md": "8cf2505015c90020ccd5676efeadfe9e7579044ba1e3ce765faa713cb4805039",
+        "references/overnight-contract.md": "759c19397312586ce514d198adfe021a2b58597da7da5eeb4b09f2ce021c46cc",
+        "references/parallel-pilot.md": "2ce359fc425cd84777a78a4009a9612d82c3c2239e935374a58e732ebd8d387d",
+        "references/progress-control.md": "51d16a2241de4377bfbd70279047c4f3c0477cec9587cde1fd9fb6b347f69517",
+        "references/render-handoff-contract.md": "17084e86827eeda03e19aeb98ab81a7294a7d7eccaf63cfb65d7741b3b567766",
+        "references/source-preparation-and-trials.md": "f11771f235adf1f65c70373aa053355603d1e351571ebbf60f316731eccfb8d8",
+        "references/source-recipes.md": "530343aae904ad58853126eae323fef7d6e1a28f78b95a1d680f2a3f07255936",
+        "references/source-review-checkpoints.md": "c8e725fa5e302976807639f519d99dcef4caa2534f985161cad2a8d24f4a7434",
+        "scripts/check_progress.py": "082f8bfa723b1688f5c8e53d34dff8978a0fc60887f6a85da8eb80528bb95de1",
+        "scripts/run_bounded.py": "b852be5108fe6e56df7790531929f5bc5043c572de43a0f27d98ab64a8b20a62",
+        "scripts/validate_handoff.py": "d72deb3088d4c9fb98a7817109ab2817c70e327553fd0dc2218c92ce1af74008"
+      }
+    },
+    "skippercast-render-coast-3d": {
+      "file_count": 5,
+      "files": {
+        "SKILL.md": "8bf538cef44c39bda36a3bcc18522d9708e826bb2ae419c28c923021b910f48b",
+        "agents/openai.yaml": "af941a85ce687c735566b1cac136b17d4aa90f90badf96dc929af3983292d434",
+        "references/calibration.md": "4870f646a77c6826899c02f39a730fb5a1d341211ff037f0d44a9c6b62caa677",
+        "references/mapping-handoff.md": "3d03ba7d4be43c2dedadf5f799c16e9597b9386e638783bf21b6d84d2d000349",
+        "scripts/model_trials.py": "bec9c06fd857085f65425bfa01c49b4137d3993a5c36dd47ba4797d201c2caa9"
+      }
+    }
+  },
+  "venv": {
+    "install": "pip install --no-deps <wheel>",
+    "install_returncode": 0,
+    "python_version": "3.11.15"
+  },
+  "wheel": {
+    "build": "SOURCE_DATE_EPOCH=<head-commit-epoch> python -m pip wheel --no-deps --no-build-isolation -w <build-dir> <repo-root>",
+    "build_returncode": 0,
+    "bytes": 894001,
+    "file": "skippercast-0.8.0-py3-none-any.whl",
+    "record_sha256": "72c2aea83f73f9b2b7991cdb4124caee4e1d10000d54a1142308e4e2479719a4",
+    "sha256": "e253d2d56731822dda31cf181edbcc44e3984c4c4b47b2ec0c3e3ac9ef5d45e6",
+    "source_date_epoch": "1792499397"
+  }
+}

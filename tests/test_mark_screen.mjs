@@ -71,7 +71,7 @@ function site({live = null, daily = {}, patch = {}} = {}) {
 const record = (hoursAgo, data, status = 'ok') => ({status, data_retrieved_at: iso(Date.now() - hoursAgo * HOUR), data});
 
 /**
- * v1's screen over the same answers: initProtectedAreas and its startup refresh, with a fake Leaflet and status line.
+ * v1's screen over the same answers: initProtectedAreas and its startup refresh, with a fake 2D map and status line.
  * v1 reads its active region on every check, so `region` stays active until the caller restores Morro Bay.
  */
 async function v1Screen(region, fetchFn) {

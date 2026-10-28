@@ -1,6 +1,6 @@
-/* Trip plan and offline (FE-51, docs/plans/front-end/design.md § 6): v1's day
-   planner (dist/export-ui.js) keeps its markup inside the app's dialog; these
-   rules give it the tokens, 44 px targets and focus rings, and lay out the
+/* Trip plan and offline (FE-51, docs/plans/front-end/design.md § 6): the day
+   planner (web/app/Planner.tsx) keeps v1's markup and classes inside the app's
+   dialog; these rules give it the tokens, 44 px targets and focus rings, and lay out the
    offline section. Loaded after web/app/account.css. Every value is a token. */
 
 .app-trip {
@@ -10,8 +10,6 @@
 }
 .app-trip::backdrop { background: color-mix(in srgb, var(--bg-deep) 70%, transparent); }
 .app-trip h2:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-/* The region comes from the command bar; v1's region list has no entries in the app. */
-.app-trip label:has(> #export-region) { display: none; }
 .app-trip .export-card { margin: 0 0 var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--panel-2); }
 .app-trip .export-plan, .app-trip .export-transfer, .app-trip .export-card-body { padding: var(--space-3) var(--space-4); }
 .app-trip .export-card > summary, .app-trip .export-card-body > details > summary, .app-trip .export-help > summary, .app-trip .export-trip-filters > summary {

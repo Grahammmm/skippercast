@@ -1,6 +1,11 @@
 import type {NearshoreSite,BeachWaterQuality} from './enrichment-types.ts';
 import type {SpatialData} from './spatial-types.ts';
 export type Mode = 'boat' | 'shore' | 'spear';
+/**
+ * The modes the daily brief scores: Mode plus the client-only kayak profile
+ * (kayak.ts). Area targets, saved preferences and the coast report keep Mode.
+ */
+export type BriefMode = Mode | 'kayak';
 export type SourceStatus = { id: string; label: string; url: string; kind: 'forecast'|'observation'|'prediction'|'report'|'rule'|'analysis'; outcome: 'ok'|'error'|'pending'; fetchedAt: string; issuedAt?: string; validThrough?: string; error?: string };
 export type ForecastHour = { at: string; windKnots: number|null; gustKnots: number|null; waveFt: number|null; wavePeriodS: number|null; swellFt?: number|null; swellPeriodS?: number|null; windWaveFt?: number|null; windDirectionDeg?: number|null; airTempF?: number|null; precipPct?: number|null; cloudCoverPct?: number|null; relativeHumidityPct?: number|null; daylight?: boolean };
 export type Area = { id: string; name: string; coast: string; mapLabel: string; lat: number; lon: number; landLat: number; landLon: number; modes: Mode[]; exposure: string; accessNote: string; targets: Record<Mode,string[]>; forecastZone?: string; waterQualityUrl: string };
@@ -12,6 +17,8 @@ export type TideEvent = TidePoint & { type: 'H'|'L' };
 export type Alert = { id:string;event:string;headline:string;description:string;effective:string|null;expires:string|null;url:string;areaIds?:string[] };
 export type CatchReport = { id:string;tripDate:string;boat:string;landing:string;anglers:number|null;tripType:string;species:{name:string;count:number;released?:boolean;disposition?:'reported'|'retained'|'released'}[];sourceUrl:string;reportedGround?:string;retrievedAt:string };
 export type CatchContext = {feedUrl:string;feedGeneratedAt:string;receivedAt:string;windowStart:string;windowEnd:string;latestTripDate:string|null;rights:{scope:'linked-factual-counts';reviewedAt:string;sourceCatalogUrl:string}};
-export type Report = { schemaVersion:1;countyId:string;generatedAt:string;forecasts:AreaForecast[];observations:Observation[];tides:TidePoint[];tideEvents:TideEvent[];alerts:Alert[];sources:SourceStatus[];catches:CatchReport[];catchStatus:string;catchContext?:CatchContext;visibility:{status:'unknown'|'observed';feet:number|null;observedAt:string|null;sourceUrl:string|null};habitatStatus:string;nearshore?:NearshoreSite[];waterQuality?:BeachWaterQuality[];spatial?:SpatialData };
+/** One satellite chlorophyll reading near a place: the median of nearby valid cells. */
+export type ChlorophyllReading = {mgM3:number;sampleAt:string;cells:number;label:string;url:string};
+export type Report = { schemaVersion:1;countyId:string;generatedAt:string;forecasts:AreaForecast[];observations:Observation[];tides:TidePoint[];tideEvents:TideEvent[];alerts:Alert[];sources:SourceStatus[];catches:CatchReport[];catchStatus:string;catchContext?:CatchContext;visibility:{status:'unknown'|'observed';feet:number|null;observedAt:string|null;sourceUrl:string|null};habitatStatus:string;nearshore?:NearshoreSite[];waterQuality?:BeachWaterQuality[];spatial?:SpatialData;chlorophyll?:ChlorophyllReading|null };
 export type Window = {start:string;end:string;label:string;confidence:'Moderate'|'Low';reasons:string[];wind:number;gust:number;wave:number;period:number|null};
 export type Assessment = {status:'Favorable'|'Mixed'|'Caution'|'Unknown';headline:string;summary:string;windows:Window[];reasons:string[];hours:ForecastHour[]};

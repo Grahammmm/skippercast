@@ -3,6 +3,7 @@ import { esc } from "./marine-charts.js";
 import { distanceNm } from "./marine-data.js";
 import { matchesTargetSpecies } from "./target-groups.js";
 import { whenView } from "./startup.js";
+import { ndbcStationURL, sourceStation, stationText } from "../web/station-label.ts";
 
 export const FEED_URL =
   getRegion().daily_feed;
@@ -233,8 +234,11 @@ function buoyHTML(data) {
       const row = source?.data?.observations?.find(
         (r) => Number.isFinite(r.WVHT) && Number.isFinite(r.DPD),
       );
-      const label =
-        id === "buoy-46215"
+      // A backup station (#554) is named as itself, never under the primary's name.
+      const station = sourceStation(source, id.slice(5));
+      const label = station?.backupFor
+        ? `NDBC ${esc(stationText(station))}`
+        : id === "buoy-46215"
           ? "Diablo Canyon · 46215"
           : "Cape San Martin · 46028";
       if (!row) return `<p>${label}: wave observation unavailable.</p>`;
@@ -242,7 +246,7 @@ function buoyHTML(data) {
         source.status === "ok" &&
         age(row.time, Date.now()) >= -1 &&
         age(row.time, Date.now()) <= 6;
-      return `<p><strong>${label}: ${(row.WVHT * 3.28084).toFixed(1)} ft at ${row.DPD.toFixed(0)} s</strong>${Number.isFinite(row.MWD) ? ` · mean direction from ${row.MWD}° true` : ""}<br><small>${fresh ? "Dated observation" : "Stale observation"} · ${when(row.time)}. Dominant wave period; this is regional buoy water, not the selected reef. <a href="${esc(safeURL(source.url))}" target="_blank" rel="noopener">Source ↗</a></small></p>`;
+      return `<p><strong>${label}: ${(row.WVHT * 3.28084).toFixed(1)} ft at ${row.DPD.toFixed(0)} s</strong>${Number.isFinite(row.MWD) ? ` · mean direction from ${row.MWD}° true` : ""}<br><small>${fresh ? "Dated observation" : "Stale observation"} · ${when(row.time)}. Dominant wave period; this is regional buoy water, not the selected reef. <a href="${esc(safeURL(station?.backupFor ? ndbcStationURL(station.id) : source.url))}" target="_blank" rel="noopener">Source ↗</a></small></p>`;
     })
     .join("");
 }

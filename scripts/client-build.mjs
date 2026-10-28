@@ -8,7 +8,7 @@
 //    URL is its identity, and the pages register '/sw.js').
 // 3. Pages get <meta name="skippercast-build"> and are renamed
 //    NAME.<buildId>.html. The Worker serves them only from their stable paths
-//    ('/', '/sources.html') with no-store, via the returned shells map, so a
+//    ('/landing.html', '/sources.html') with no-store, via the returned shells map, so a
 //    cached page can never pin an old set of assets.
 // 4. precache.json and the build id in sw.js (scripts/precache.mjs), _headers
 //    (server/security-headers.ts, plus a year's immutable caching for
@@ -69,7 +69,6 @@ export async function hashPages(out, pages) {
     await writeFile(join(out, name), stampBuild(html.get(name), buildId));
     await rename(join(out, name), join(out, hashName(name, buildId)));
     shells[`/${name}`] = `/${hashName(name, buildId)}`;
-    if (name === 'index.html') shells['/'] = shells['/index.html'];
   }
   return {buildId, shells};
 }

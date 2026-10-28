@@ -6,9 +6,10 @@
 // in the address. On the phone (FE-06) the port and locate controls sit in
 // the sheet's area group, so the sheet opens to full first. FE-83: a /coast
 // home opens in v2, Forget clears it everywhere, and denied storage still
-// navigates. The landing itself (FE-07): the readout with source, age and
+// navigates. #622: the guided first run (port, region warm-up, then profile).
+// The landing itself (FE-07): the readout with source, age and
 // stale state from stubbed feeds at a fixed clock, the saved-port redirect,
-// the port input with a profile pill, the layer dots, axe, no three request,
+// the port input, the layer dots, axe, no three request,
 // and LCP on the throttled mobile profile. FE-25: the live night map after
 // first paint over the synthetic basemap fixture and a synthetic WCOFS packet
 // (the coast bridge is otherwise held), its credit and Currents preview,
@@ -17,6 +18,7 @@
 import {readFileSync} from 'node:fs';
 import type {Page} from '@playwright/test';
 import {test, expect, checkA11y, LCP_BUDGET_MS} from './fixtures.ts';
+import {stubLiveFeeds} from '../scripts/measure_startup.mjs';
 
 const SHELL = '/map?region=morro-bay&ui=v2';
 const PORT_KEY = 'skippercast-home-port-v1';
@@ -70,10 +72,9 @@ test('the port chooser matches by name, Enter navigates in place, and v1 reads t
   expect(await stayed(page), 'no reload').toBe(true);
   expect(await page.evaluate(key => localStorage.getItem(key), PORT_KEY)).toBe('san-diego');
   await expect(page.locator('.app-port')).toContainText('San Diego');
-  // v1 (shared key): a bare visit opens the port v2 saved instead of its chooser.
-  await page.goto('/?ui=v1');
-  await expect(page).toHaveURL(/[?&]region=southern-california/);
-  await expect(page.locator('.home-port-card')).toHaveCount(0);
+  // A later bare visit to the app opens the saved port (FE-61: v1's chooser that shared the key is gone).
+  await page.goto('/map');
+  await expect(page).toHaveURL(/\/map\?[^#]*region=southern-california/);
   expect(pageErrors).toEqual([]);
 });
 
@@ -120,8 +121,8 @@ test('a home saved on /coast opens in v2, and Forget clears it for v1 and /coast
   expect(await page.evaluate(keys => keys.map(k => localStorage.getItem(k)), [PORT_KEY, PLACE_KEY, PROFILE_KEY])).toEqual([null, null, null]);
   expect((await context.cookies()).some(c => c.name === 'skippercast_home')).toBe(false);
   await expect(page).toHaveURL(/[?&]place=cambria/);   // this visit stays where it is
-  await page.goto('/?ui=v1');
-  await expect(page.locator('.home-port-card')).toBeVisible();   // v1 has no home either
+  await page.goto('/map');
+  await expect(page.locator('h1')).toContainText('Know the water');   // no home: a bare visit opens the landing
   expect(pageErrors).toEqual([]);
 });
 
@@ -137,6 +138,8 @@ test('with storage denied the chooser still navigates', async ({page, pageErrors
   await expect(dialog.getByRole('button', {name: 'Forget saved home'})).toHaveCount(0);
   const input = dialog.locator('input[type="search"]');
   await input.fill('san d');
+  // #605: Enter submits the rendered top match; wait until the directory has loaded and matched, as above.
+  await expect(dialog.locator('[data-port]')).toHaveText([/San Diego/]);
   await input.press('Enter');
   await expect(dialog).toBeHidden();
   await expect(page).toHaveURL(/[?&]region=southern-california/);
@@ -164,6 +167,101 @@ test('first run asks for the profile once and never when the address names one',
   await expect(card).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
+
+test('a 200ms pointer press chooses Boat without moving the half-height sheet', async ({page, pageErrors, v2, isMobile}) => {
+  test.skip(!isMobile, 'phone layout only');
+  await page.setViewportSize({width: 390, height: 844});
+  await v2.open('app', {region: 'morro-bay'});
+  const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');
+  const card = sheet.locator('.app-firstrun'), boat = card.locator('button[data-profile="boat"]');
+  await handle.click();
+  await expect(sheet).toHaveAttribute('data-detent', 'half');
+  await expect(boat).toBeInViewport({ratio: 1});
+  // Hover waits for the half-height transition to settle before beginning the press.
+  await boat.hover();
+  const before = (await boat.boundingBox())!;
+  await page.mouse.down();
+  await page.waitForTimeout(200);
+  await expect(sheet, 'pointer-generated focus must retain the press target').toHaveAttribute('data-detent', 'half');
+  const held = (await boat.boundingBox())!;
+  expect(held.y).toBeCloseTo(before.y, 1);
+  await page.mouse.up();
+  await expect(card).toHaveCount(0);
+  await expect(page).toHaveURL(/[?&]profile=boat/);
+  expect(pageErrors).toEqual([]);
+});
+
+for (const [width, height] of [[320, 568], [390, 844]] as const) {
+  test(`Tab from peek reveals every first-run choice on the ${width}px phone`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(!isMobile, 'phone layout only');
+    await page.setViewportSize({width, height});
+    await v2.open('app', {region: 'morro-bay'});
+    const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');
+    const card = sheet.locator('.app-firstrun');
+    await expect(sheet).toHaveAttribute('data-detent', 'peek');
+    await handle.focus();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('slider', {name: 'Hour', exact: true})).toBeFocused();
+    const controls = card.getByRole('button');
+    await expect(controls).toHaveCount(5);
+    for (const control of await controls.all()) {
+      await page.keyboard.press('Tab');
+      await expect(control).toBeFocused();
+      await expect(sheet).toHaveAttribute('data-detent', 'full');
+      await expect(control).toBeInViewport({ratio: 1});
+      await expect.poll(async () => {
+        const target = (await control.boundingBox())!, tabs = (await page.locator('.app-tabs').boundingBox())!;
+        return target.y + target.height <= tabs.y;
+      }, {message: 'focused choice is above the fixed navigation'}).toBe(true);
+    }
+    // Return to Kayak and choose using only the keyboard.
+    await page.keyboard.press('Shift+Tab');
+    await expect(card.locator('button[data-profile="kayak"]')).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(card).toHaveCount(0);
+    await expect(page).toHaveURL(/[?&]profile=kayak/);
+    await page.reload();
+    await expect(page.locator('.app-firstrun')).toHaveCount(0);
+    expect(pageErrors).toEqual([]);
+  });
+
+  test(`first-run choices stay inside the ${width}px phone sheet and every choice is reachable`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(!isMobile, 'phone layout only');
+    await page.setViewportSize({width, height});
+    await v2.open('app', {region: 'morro-bay'});
+    const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');
+    const card = sheet.locator('.ui-sheet-body > .app-firstrun');
+    await expect(card).toBeVisible();
+    await expect(card).not.toHaveAttribute('aria-modal', 'true');
+    await expect(handle).toBeInViewport();
+    // Real handle clicks can expand through both detents while the choice is due.
+    await handle.click();
+    await expect(sheet).toHaveAttribute('data-detent', 'half');
+    await handle.click();
+    await expect(sheet).toHaveAttribute('data-detent', 'full');
+    const controls = card.getByRole('button');
+    await expect(controls).toHaveCount(5);
+    for (const control of await controls.all()) {
+      await control.scrollIntoViewIfNeeded();
+      await expect(control).toBeInViewport();
+      const box = (await control.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(await handle.evaluate(el => {
+        const b = el.getBoundingClientRect();
+        return document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)?.closest('.ui-sheet-handle') === el;
+      }), 'the scrolled profile card never covers the handle').toBe(true);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await card.locator('button[data-profile="kayak"]').click();
+    await expect(card).toHaveCount(0);
+    await expect(page).toHaveURL(/[?&]profile=kayak/);
+    await page.reload();
+    await expect(page.locator('.app-firstrun')).toHaveCount(0);
+    expect(pageErrors).toEqual([]);
+  });
+}
 
 // FE-07: synthetic feeds at a fixed clock (no test reads the real time or a live service).
 const NOW = Date.parse('2026-10-07T20:00:00Z');
@@ -204,7 +302,12 @@ test('the landing shows the hero and every reading with its source and age; a st
   await expect(page.locator('.landing-fresh')).toHaveText('Buoy feed updated 12 min ago');
   await expect(page.locator('#landing-readout-title')).toHaveText('Latest readings · Morro Bay & Avila area');
   await expect(page.locator('[data-fleet]')).toHaveCount(0);
-  await expect(page.locator('.landing-dots a[data-layer]')).toHaveCount(6);
+  await expect(page.locator('.landing-dots a[data-layer]')).toHaveCount(9);   // one per rail entry, Temp contrast, chlorophyll and stations included
+  const layerIds = await page.locator('.landing-dots a[data-layer]').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-layer')));
+  expect(layerIds).toEqual(['seafloor', 'currents', 'water-temp', 'sst-contrast', 'chlorophyll', 'swell', 'stations', 'fleet', 'clouds']);
+  await expect(page.locator('.landing-dots a[data-layer="chlorophyll"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=chlorophyll&ui=v2$/);
+  await expect(page.locator('.landing-dots a[data-layer="sst-contrast"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=sst-contrast&ui=v2$/);
+  await expect(page.locator('.landing-dots a[data-layer="stations"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=stations&ui=v2$/);
   await expect(page.locator('.landing-dots a[data-layer="currents"]')).toHaveAttribute('href', /\/map\?region=morro-bay&layers=currents&current=wcofs&ui=v2$/);
   await page.locator('[data-reading="tide"] summary').click();
   await expect(page.locator('[data-reading="tide"] .ui-popover-body')).toContainText('mean lower low water');
@@ -227,30 +330,126 @@ test('with the feeds unavailable every tile still names its source, says unavail
   expect(pageErrors).toEqual([]);
 });
 
+// #554: a backup station is named as itself and "backup for" the primary; when it is also the
+// other role's station the readout says so; a retained backup stays stale.
+const backupSource = (status = 'ok') => ({station: '46011', fallback_for: '46215', status});
+const BACKUP_FEED = {...FEED, sources: {
+  offshore: {...FEED.sources.offshore, data: {...FEED.sources.offshore.data, station: '46011'}, station: '46011'},
+  'diablo-spectrum': {...FEED.sources['diablo-spectrum'], name: 'NOAA NDBC 46011 swell and wind waves', ...backupSource(), data: {...FEED.sources['diablo-spectrum'].data, station: '46011'}},
+  diablo: {...FEED.sources.diablo, name: 'NOAA NDBC 46011 observations', ...backupSource('retained'), data: {...FEED.sources.diablo.data, station: '46011'}},
+}};
+
+test('backup buoys name their own station, say when two tiles share it, and a retained one stays stale', async ({page, pageErrors, v2}) => {
+  await landingFeeds(page, BACKUP_FEED);
+  await v2.open('landing');
+  await expect(page.locator('[data-reading="swell"] .ui-tile-source')).toHaveText('NDBC 46011 (backup for 46215) · 34 min');
+  await expect(page.locator('[data-reading="water"] .ui-tile-source')).toHaveText('NDBC 46011 (backup for 46215) · 3 hstale');
+  await expect(page.locator('[data-reading="water"] .ui-tile')).toHaveAttribute('data-state', 'stale');
+  await expect(page.locator('[data-reading="wind"] .ui-tile-source')).toHaveText('NDBC 46011 · 20 min');
+  await page.locator('[data-reading="swell"] summary').click();
+  await expect(page.locator('[data-reading="swell"] .ui-popover-body')).toContainText('NDBC buoy 46011');
+  await expect(page.locator('[data-reading="swell"] .ui-popover-body')).toContainText('the backup for 46215');
+  await expect(page.locator('[data-reading="swell"] .ui-popover-body')).toContainText('Same station as the wind reading, not a separate measurement.');
+  await expect(page.locator('[data-reading="swell"] .ui-popover-body')).not.toContainText('Diablo Canyon');
+  // Nothing overflows the phone width.
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(pageErrors).toEqual([]);
+});
+
 test('a saved port and no parameters open the app there with the stored profile; any other parameter keeps the landing', async ({page, context, pageErrors}) => {
   await context.addInitScript(([port, profile]) => { try { localStorage.setItem(port, 'morro-bay'); localStorage.setItem(profile, 'spear'); } catch { /* storage blocked */ } }, [PORT_KEY, PROFILE_KEY]);
   await page.goto('/?ui=v2&from=newsletter');
   await expect(page.locator('h1')).toHaveText('Know the water before you leave the dock.');
-  await expect(page.locator('[data-profile="spear"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByLabel('Where are you launching?')).toBeVisible();   // #622: the first run starts at the port
   await page.goto('/?ui=v2');
   await expect(page).toHaveURL(/\/map\?/);
   expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ui: 'v2', region: 'morro-bay', profile: 'spear'});
   expect(pageErrors).toEqual([]);
 });
 
-test('a profile pill and a port from the landing input open the app with both and save the port', async ({page, pageErrors, v2}) => {
+// #622 (walkthrough slice 4): the guided first run asks for the port, warms that region while the visitor picks how
+// they fish, then opens the map with both; the port is saved only then, and the app's own profile card never shows.
+test('the first run asks for the port, warms that region, then asks the profile and opens the map with both', async ({page, pageErrors, v2}, info) => {
+  const requests: string[] = [];
+  page.on('request', r => { const u = new URL(r.url()); requests.push(u.pathname + u.search); });
+  await stubLiveFeeds(page);
   await landingFeeds(page);
   await v2.open('landing');
-  await page.locator('.landing-pills [data-profile="shore"]').click();
-  await expect(page.locator('.landing-pills [data-profile="shore"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.landing [data-profile]')).toHaveCount(0);   // no profile choice beside the port input
   const input = page.getByLabel('Where are you launching?');
   await input.fill('morro');
   await expect(page.locator('.landing [data-port]')).toHaveText([/Morro Bay/]);
   await input.press('Enter');
+  const step = page.locator('.landing-step[data-step="profile"]');
+  await expect(step.getByRole('heading', {name: 'How do you fish?'})).toBeFocused();
+  await expect(step.locator('.landing-step-place')).toHaveText('Morro Bay');
+  await expect(step.locator('[data-profile]')).toHaveCount(4);
+  await expect(step.locator('[role="status"]')).toHaveText('Morro Bay map files ready.');
+  for (const path of ['/regions/morro-bay/atlas-marks.json', '/regions/morro-bay/search-plan-index.json', '/regions/morro-bay/shoreline-overview.geojson',
+    '/regions/morro-bay/poster.svg', '/data/protected-areas.geojson', '/regions/morro-bay/coverage.json', '/api/forecast?region=morro-bay'])
+    expect(requests, `warmed ${path}`).toContain(path);
+  expect(requests.filter(p => /^\/regions\/(?!morro-bay\/)[^/]+\//.test(p)), 'nothing for a region not chosen').toEqual([]);
+  expect(await page.evaluate(key => localStorage.getItem(key), PORT_KEY), 'the port is saved only with the profile').toBeNull();
+  await checkA11y(page, 'v2-landing-profile-step', info.project.name);
+  // Change port goes back to the port step with the input focused.
+  await step.getByRole('button', {name: 'Change port'}).click();
+  await expect(input).toBeFocused();
+  await input.fill('morro');
+  await input.press('Enter');
+  await step.locator('[data-profile="shore"]').click();
   await expect(page).toHaveURL(/\/map\?/);
   expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ui: 'v2', region: 'morro-bay', profile: 'shore'});
   expect(await page.evaluate(key => localStorage.getItem(key), PORT_KEY)).toBe('morro-bay');
   await expect(page.locator('.app-firstrun')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
+});
+
+test('Explore the coast takes the profile step with nothing to warm, and Save-Data warms nothing', async ({page, pageErrors, v2}) => {
+  await page.addInitScript(() => { Object.defineProperty(navigator, 'connection', {value: {saveData: true}}); });
+  const requests: string[] = [];
+  page.on('request', r => requests.push(new URL(r.url()).pathname));
+  await landingFeeds(page);
+  await v2.open('landing');
+  await page.getByRole('button', {name: 'Explore the coast'}).click();
+  const step = page.locator('.landing-step[data-step="profile"]');
+  await expect(step.locator('.landing-step-place')).toHaveText('Central coast');
+  await expect(step.locator('[role="status"]')).toHaveText('');
+  await step.getByRole('button', {name: 'Change port'}).click();
+  const input = page.getByLabel('Where are you launching?');
+  await input.fill('morro');
+  await input.press('Enter');
+  await expect(step.locator('[role="status"]')).toHaveText('');
+  expect(requests.filter(p => /atlas-marks|search-plan-index|poster\.svg|\/api\/forecast/.test(p)), 'Save-Data: no warm-up').toEqual([]);
+  await step.locator('[data-profile="spear"]').click();
+  await expect(page).toHaveURL(/[?&]profile=spear/);
+  expect(pageErrors).toEqual([]);
+});
+
+// #622: every file the warm-up fetched is one the map then reads at startup (no wasted bytes), and the static ones are
+// answered by the browser cache (a revalidation or a cache hit, never a second full download).
+test('the map reads every warmed file at startup, the static ones from the browser cache', async ({page, pageErrors, v2}, info) => {
+  test.skip(info.project.name !== 'phone', 'checked once');
+  await stubLiveFeeds(page);
+  await landingFeeds(page);
+  const read = new Set<string>();
+  let onMap = false;
+  page.on('request', r => { const u = new URL(r.url()); if (onMap) read.add(u.pathname + u.search); });
+  await v2.open('landing');
+  const input = page.getByLabel('Where are you launching?');
+  await input.fill('morro');
+  await input.press('Enter');
+  await expect(page.locator('.landing-step [role="status"]')).toHaveText('Morro Bay map files ready.');
+  const list = ['/regions/morro-bay/atlas-marks.json', '/regions/morro-bay/search-plan-index.json', '/regions/morro-bay/shoreline-overview.geojson',
+    '/regions/morro-bay/poster.svg', '/data/protected-areas.geojson', '/regions/morro-bay/coverage.json', '/api/forecast?region=morro-bay'];
+  onMap = true;
+  await page.locator('.landing-step [data-profile="boat"]').click();
+  await expect(page.locator('.app-chart canvas.maplibregl-canvas')).toBeVisible();
+  await expect.poll(() => list.filter(p => !read.has(p)), {timeout: 30_000, message: 'the map reads each warmed file'}).toEqual([]);
+  // Committed files: the second read moved no full body (a 304 or a cache hit: fewer bytes over the wire than the body).
+  const sizes = await page.evaluate(paths => performance.getEntriesByType('resource').map(e => e as PerformanceResourceTiming)
+    .filter(e => paths.includes(new URL(e.name).pathname)).map(e => ({path: new URL(e.name).pathname, transfer: e.transferSize, body: e.encodedBodySize})),
+  list.filter(p => !p.startsWith('/api/')));
+  for (const s of sizes) expect(s.transfer, `${s.path} came from the cache (${s.transfer} of ${s.body} bytes moved)`).toBeLessThan(s.body);
   expect(pageErrors).toEqual([]);
 });
 
@@ -361,4 +560,33 @@ test('with WebGL disabled the landing keeps the shoreline SVG, never fetches Map
   expect(requests.filter(url => /\/assets\/(?:maplibre|NightMap)\./.test(new URL(url).pathname)), 'no MapLibre or night map request').toEqual([]);
   await checkA11y(page, 'v2-landing-no-webgl', info.project.name);
   expect(pageErrors).toEqual([]);
+});
+
+// #617: after its first paint the landing fetches the app's first-paint files (precache.json `warm`) at low
+// priority, and opening the app loads each of them, so the browser cache answers; Save-Data warms nothing.
+test('the landing warms the app\'s first-paint files, and none under Save-Data', async ({page, browser, baseURL, pageErrors}, info) => {
+  test.skip(info.project.name !== 'phone', 'checked once');
+  const precache = await (await page.request.get('/precache.json')).json() as {warm: string[]};
+  expect(precache.warm.length, 'the app has files the landing does not load itself').toBeGreaterThan(0);
+  const seen = new Set<string>();
+  page.on('request', r => { const u = new URL(r.url()); if (u.origin === new URL(baseURL!).origin) seen.add(u.pathname); });
+  await page.goto('/');
+  await expect.poll(() => precache.warm.filter(p => !seen.has(p)), {timeout: 30_000}).toEqual([]);
+  expect(precache.warm.filter(p => !p.startsWith('/assets/')), 'only hashed app files are warmed, nothing region-specific').toEqual([]);
+  seen.clear();
+  await page.goto(SHELL);
+  await expect(page.locator('.app-chart')).toBeVisible();
+  await expect.poll(() => precache.warm.filter(p => !seen.has(p)), {message: 'every warmed file is one the app loads'}).toEqual([]);
+  expect(pageErrors).toEqual([]);
+
+  const saving = await browser.newContext({baseURL, serviceWorkers: 'block'});
+  await saving.route(url => url.origin !== new URL(baseURL!).origin, route => route.abort('blockedbyclient'));
+  await saving.addInitScript(() => Object.defineProperty(navigator, 'connection', {value: {saveData: true}, configurable: true}));
+  const quiet = await saving.newPage(), asked: string[] = [];
+  quiet.on('request', r => asked.push(new URL(r.url()).pathname));
+  await quiet.goto('/');
+  await expect(quiet.locator('#landing-app input')).toBeVisible();
+  await quiet.waitForTimeout(1500);
+  expect(asked.filter(p => p === '/precache.json' || precache.warm.includes(p)), 'Save-Data: no warm-up').toEqual([]);
+  await saving.close();
 });

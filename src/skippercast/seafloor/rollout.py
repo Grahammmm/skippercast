@@ -42,7 +42,14 @@ def private_progress(root, ledger, manifest):
     return result
 
 
+def _require_count(max_new):
+    """A batch size is a plain integer; bool and float are refused before any input is read."""
+    if isinstance(max_new, bool) or not isinstance(max_new, int):
+        raise ValueError('max_new must be an integer between 0 and the number of catalog reaches')
+
+
 def plan(root=REPO, region=None, max_new=3, *, progress=None, physical_only=False):
+    _require_count(max_new)
     root = Path(root)
     ledger = read_json(root/'dist/data/seafloor-ledger.json')
     if not 0 <= max_new <= len(ledger['reaches']):

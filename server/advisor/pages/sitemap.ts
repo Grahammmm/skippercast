@@ -40,5 +40,8 @@ export async function sitemapXml(db: D1Database, base: string, options: {fleet?:
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${items}</urlset>\n`;
 }
 
-/** robots.txt while the advisor is on: everything allowed (as with no file) and the advisor sitemap. */
-export const robotsTxt = (base: string): string => `User-agent: *\nAllow: /\n\nSitemap: ${base}${SITEMAP_PATH}\n`;
+/** The static site's sitemap (dist/sitemap.xml), named alongside the advisor's. */
+export const SITE_SITEMAP_PATH = '/sitemap.xml';
+
+/** robots.txt while the advisor is on: everything allowed (as dist/robots.txt) and both sitemaps. */
+export const robotsTxt = (base: string): string => `User-agent: *\nAllow: /\n\nSitemap: ${base}${SITE_SITEMAP_PATH}\nSitemap: ${base}${SITEMAP_PATH}\n`;

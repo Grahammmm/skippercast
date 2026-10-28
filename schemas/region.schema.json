@@ -29,6 +29,16 @@
         "cruise_knots": {"type": "number", "exclusiveMinimum": 0, "maximum": 100}
       }
     },
+    "land_water": {
+      "description": "Land/water for ranked places (docs/land-water-method.md step 4): the bounds corners on the land side of the mainland shoreline, from the mainland path's end back to its start. Read by src/skippercast/platform/land_water.py.",
+      "type": "object",
+      "required": ["land_corners"],
+      "properties": {
+        "land_corners": {"type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": {"enum": ["NE", "SE", "SW", "NW"]}},
+        "note": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
     "harbor": {
       "type": "object",
       "required": ["name", "latitude", "longitude", "information_url", "watch_keywords"],
@@ -175,7 +185,13 @@
       "description": "Optional base layers offered where their coverage was checked for this region (FE-45). An absent key means the base is not offered here. validate_region checks the catalog source and the date order.",
       "type": "object",
       "additionalProperties": false,
+      "if": {"required": ["default"], "properties": {"default": {"const": "aerial"}}},
+      "then": {"required": ["aerial"]},
       "properties": {
+        "default": {
+          "description": "The base the Chart opens on when neither the link nor the viewer's saved choice names one. aerial needs basemap.aerial; absent means night.",
+          "enum": ["night", "aerial"]
+        },
         "aerial": {
           "description": "Live aerial tiles from a catalog source (usgs-naip). acquired is the acquisition window the publisher's catalog listed for the region bounds on checked_at.",
           "type": "object",
@@ -276,6 +292,81 @@
       "type": "object",
       "required": ["tide", "airport", "nearshore_buoy", "offshore_buoy", "nearshore_buoy_name", "offshore_buoy_name"],
       "properties": {
+        "roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "nearshore_buoy": {
+              "type": "object",
+              "required": [
+                "stations"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "stations": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 4,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9]{5}$"
+                  }
+                },
+                "evidence": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "offshore_buoy": {
+              "type": "object",
+              "required": [
+                "stations"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "stations": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 4,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9]{5}$"
+                  }
+                },
+                "evidence": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "tide": {
+              "type": "object",
+              "required": [
+                "stations"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "stations": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 4,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^\\d{7}$"
+                  }
+                },
+                "evidence": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
         "tide": {"type": "string", "pattern": "^\\d{7}$"},
         "airport": {"type": "string", "pattern": "^[A-Z0-9]{4}$"},
         "nearshore_buoy": {"type": "string", "pattern": "^[A-Za-z0-9]{5}$"},

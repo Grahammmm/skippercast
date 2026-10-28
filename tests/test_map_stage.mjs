@@ -6,9 +6,10 @@ import test from 'node:test';
 import {
   HOME_ZOOM, NO_TERRAIN, UNAVAILABLE, UNSUPPORTED_CURRENT, camera, cameraParam, choosePresentation, coastSpecies, createStage,
   currentStatus, locationFor, parseCamera, shownPresentation, spanForZoom, terrainBlocked, terrainFailed, terrainHour, terrainMark,
-  terrainState, zoomForSpan, TERRAIN_DEFAULTS, setTerrainOption, terrainActions, terrainCoverage, terrainOptions, terrainPick, terrainReading,
+  terrainState, zoomForSpan, TERRAIN_DEFAULTS, setTerrainOption, terrainActions, terrainCoverage, terrainOptions, terrainShading, terrainPick, terrainReading,
 } from '../web/map/stage.ts';
 import {configureStore, navigate, setParams, syncFromURL} from '../web/state.ts';
+import {dockTime} from '../web/hour.ts';
 
 const ORIGIN = 'https://s.test/map';
 const NOW = new Date('2026-10-05T20:17:00Z');
@@ -38,9 +39,11 @@ function terrain({ready = true, throws = false} = {}) {
   const fake = {calls: [], mounts: 0, destroyed: 0, options: null};
   const handle = {};
   for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'selectHabitat', 'setVisible',
-    'setRelief', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSourceCoverage', 'setHabitatVisible', 'zoom', 'resetView', 'topView', 'openSources']) {
+    'setRelief', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSunAzimuth', 'setPhotoMix', 'setFixedRamp', 'setSourceCoverage', 'setHabitatVisible', 'zoom', 'resetView', 'topView', 'openSources']) {
     handle[name] = value => { fake.calls.push([name, value]); return true; };
   }
+  // As packages/coast's viewer does: setPerspective reports the new mode through onPerspective, synchronously.
+  handle.setPerspective = value => { fake.calls.push(['setPerspective', value]); fake.options?.onPerspective?.(value); return true; };
   handle.load = async () => ready;
   handle.destroy = () => { fake.destroyed++; };
   fake.module = {
@@ -102,6 +105,10 @@ test('the flow table: profile sets the depth limit, target the species, hour, ca
   assert.deepEqual(terrainState({...base, hour: '2026-10-06T03:00Z'}).hour, new Date('2026-10-06T03:00:00Z'));
   assert.deepEqual(terrainState(base).hour, new Date('2026-10-05T20:00:00Z'), 'no hour: the current whole UTC hour');
   assert.deepEqual(terrainHour('nonsense', NOW), new Date('2026-10-05T20:00:00Z'));
+  for (const [value, dayValue] of [['2026-10-06T03:00Z', null], ['2026-10-06T03:00Z', '2026-10-07'], ['2026-10-12T23:00Z', null], ['2026-12-01T00:00Z', null]]) {
+    assert.deepEqual(terrainHour(value, NOW, dayValue, 'America/Los_Angeles'), new Date(dockTime(dayValue, value, NOW, 'America/Los_Angeles').at),
+      `?hour=${value} (day ${dayValue}) reads the same hour as the dock, inside or outside the horizon`);
+  }
   assert.equal(terrainState(base).location, null, 'no camera, no move');
   assert.deepEqual(terrainState({...base, camera: {latitude: 35.4, longitude: -120.9, zoom: 11}}).location, {latitude: 35.4, longitude: -120.9, span: 14600});
   assert.equal(terrainState({...base, current: 'wcofs'}).currentLayer, 'wcofs');
@@ -224,6 +231,68 @@ test('renderer callbacks write the store: selection to ?habitat= (Back restores)
   s.destroy();
 });
 
+test('Chart, 2D and 3D each select themselves from any other; the renderer\'s perspective echo never overrides the choice', async () => {
+  const nav = browser(`${ORIGIN}?region=morro-bay&presentation=2d&profile=spear&target=rockfish&hour=2026-10-06T03:00Z&habitat=reef:r1&view=35.5,-121,10`);
+  const fake = terrain();
+  const {stage: s} = stage(fake);
+  await tick();
+  assert.equal(fake.mounts, 1);
+  let from = '2d';
+  for (const next of ['chart', '2d', '3d', 'chart', '3d', '2d', 'chart', '2d']) {
+    const perspectiveCalls = fake.count('setPerspective');
+    choosePresentation(next);
+    assert.equal(nav.params().get('presentation'), next, `${from} → ${next}: the address keeps the choice`);
+    assert.equal(shownPresentation.value, next, `${from} → ${next}: the stage shows it`);
+    for (const key of ['region', 'profile', 'target', 'hour', 'habitat', 'view']) assert.ok(nav.params().get(key), `${from} → ${next}: ${key} kept`);
+    assert.equal(fake.last('setVisible') ?? true, next !== 'chart', `${from} → ${next}: terrain visibility`);
+    if (next !== 'chart') assert.equal(fake.last('setPerspective') ?? '2d', next, `${from} → ${next}: the camera mode`);
+    else assert.equal(fake.count('setPerspective'), perspectiveCalls, `${from} → Chart: hiding terrain sends no camera mode`);
+    from = next;
+  }
+  assert.equal(fake.mounts, 1, 'mounted once');
+  s.destroy();
+});
+
+test('FE-60: a renderer 3D control callback from 2D updates presentation without an echo or stale Chart override', async () => {
+  const nav = browser(`${ORIGIN}?region=morro-bay&presentation=2d&profile=spear&target=rockfish&hour=2026-10-06T03:00Z&habitat=reef:r1&view=35.5,-121,10`);
+  const fake = terrain();
+  const {stage: s} = stage(fake);
+  try {
+    await tick();
+    const kept = [...nav.params()].filter(([key]) => key !== 'presentation');
+    const assertPresentation = (mode, visible) => {
+      assert.equal(nav.params().get('presentation'), mode, 'the address follows the selected presentation');
+      assert.equal(shownPresentation.value, mode, 'the stage follows the selected presentation');
+      assert.equal(fake.last('setVisible') ?? fake.options.initial.visible, visible, 'terrain visibility follows the presentation');
+      assert.deepEqual([...nav.params()].filter(([key]) => key !== 'presentation'), kept, 'the other shared state is preserved');
+    };
+    assert.equal(fake.options.initial.perspective, '2d');
+    assertPresentation('2d', true);
+    const perspectiveCalls = fake.count('setPerspective');
+    fake.options.onPerspective('3d');
+    assertPresentation('3d', true);
+    assert.equal(fake.count('setPerspective'), perspectiveCalls, 'the renderer control is not echoed back');
+
+    choosePresentation('chart');
+    assertPresentation('chart', false);
+    assert.equal(fake.count('setPerspective'), perspectiveCalls, 'Chart sends no perspective to the renderer');
+    fake.options.onPerspective('2d');
+    assertPresentation('chart', false);
+    assert.equal(fake.count('setPerspective'), perspectiveCalls, 'a hidden renderer callback cannot echo or replace Chart');
+
+    choosePresentation('2d');
+    assertPresentation('2d', true);
+    assert.equal(fake.count('setPerspective'), perspectiveCalls + 1, 'returning from Chart sends the chosen mode once');
+    assert.equal(fake.last('setPerspective'), '2d');
+    fake.options.onPerspective('3d');
+    assertPresentation('3d', true);
+    assert.equal(fake.count('setPerspective'), perspectiveCalls + 1, 'the next renderer control also has no recursive echo');
+    assert.equal(fake.mounts, 1, 'all transitions reuse the renderer');
+  } finally {
+    s.destroy();
+  }
+});
+
 test('a graphics or asset failure returns the stage to Chart with v1\'s message', async () => {
   for (const options of [{ready: false}, {throws: true}]) {
     const nav = browser(`${ORIGIN}?region=morro-bay&presentation=3d`);
@@ -287,12 +356,14 @@ test('FE-80: host chrome; the Seafloor entry\'s options reach the setters, readi
   await tick();
   const o = fake.options;
   assert.equal(o.chrome, 'host', 'the renderer\'s own panels leave the scene');
-  const setters = ['setRelief', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSourceCoverage', 'setHabitatVisible'];
-  assert.deepEqual(setters.map(n => fake.count(n)), [0, 0, 0, 0, 0, 0], 'the defaults are the native controls\' own: nothing to send');
+  const setters = ['setRelief', 'setWaterVisible', 'setWaterOpacity', 'setContours', 'setSourceCoverage', 'setHabitatVisible', 'setSunAzimuth', 'setPhotoMix', 'setFixedRamp'];
+  assert.deepEqual(setters.map(n => fake.count(n)), [0, 0, 0, 0, 0, 0, 0, 0, 0], 'the defaults are the native controls\' own: nothing to send');
 
   setTerrainOption('relief', 9); setTerrainOption('water', false); setTerrainOption('waterOpacity', 0.3);
   setTerrainOption('contours', false); setTerrainOption('sourceCoverage', true);
   assert.deepEqual(setters.slice(0, 5).map(n => fake.last(n)), [9, false, 0.3, false, true]);
+  setTerrainOption('sunAzimuth', 200); setTerrainOption('photoMix', 0.25); setTerrainOption('fixedRamp', true);
+  assert.deepEqual(setters.slice(6).map(n => fake.last(n)), [200, 0.25, true]);
   setTerrainOption('relief', 9);
   assert.equal(fake.count('setRelief'), 1, 'an unchanged option is not sent again');
   setParams({layers: 'currents'});
@@ -310,6 +381,9 @@ test('FE-80: host chrome; the Seafloor entry\'s options reach the setters, readi
   assert.equal(terrainReading.value, null);
   o.onSourceCoverage({sources: [reading.source], key: 'Mint: lidar'});
   assert.equal(terrainCoverage.value.key, 'Mint: lidar');
+  const shading = {readout: 'Ramp 61–142 ft in view · contours 10 ft, index 50 ft', rampMinM: 18.6, rampMaxM: 43.3, contourMinorM: 3.048, contourIndexM: 15.24, fixedRamp: false, relief: 5};
+  o.onShading(shading);
+  assert.equal(terrainShading.value, shading, 'the shading readout arrives verbatim');
 
   const a = terrainActions.value;
   a.zoom('in'); a.zoom('out'); a.top(); a.sources();

@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-03T03:49:03.222729+00:00",
+  "baseCommit": "5150dc4c3a9c8841cf5839e888054de72b6b4c88",
+  "consumerContract": "fish-habitat-v1",
+  "speciesProfileSha256": "47da09674a7a5ca4cc4b15e78ddf830bc1c96da79f909f9d66026a17510a57e1",
+  "nodeTests": 190,
+  "typechecks": "both passed",
+  "build": "passed",
+  "independentReview": {
+    "reviewer": "source_registry",
+    "status": "pass",
+    "focusedTests": 35,
+    "resolvedFindings": [
+      "Pin entire reviewed species semantic document",
+      "Verify and repair every stored object before reporting unchanged"
+    ]
+  },
+  "recovery": {
+    "startedAt": "2026-10-03T03:43:24.328Z",
+    "checkedAt": "2026-10-03T03:45:04.513Z",
+    "oldReleaseId": "7916d7f3c0d54772d29384a9b56342d330a01591ae4d509a53520ae4b028ec86",
+    "result": {
+      "status": "promoted",
+      "releaseId": "a48f2a24f5f0f12748dbeacbf25e5612fb0295840ddc87590b9bcc6bb9a7a05d",
+      "scientificReleaseId": "cbbb5c6cf0e6858f4d4ece9468f4fc12716f8d33aa2f4d0155cd729a74ab8158",
+      "producerCommit": "0978207dd12cc4f0591302f7458f8db75fdfc782",
+      "featureCount": 2868,
+      "coverageCount": 12453,
+      "detailCount": 45,
+      "expiresAt": "2026-11-05T00:00:00+00:00"
+    },
+    "notice": "Recovery of the same scientifically reviewed data through a new consumer release. No new terrain or species evidence was fabricated.",
+    "runtime": [
+      {
+        "region": "morro-bay",
+        "status": 200,
+        "etag": "\"sha256-1eac589849c92625a64c5ef521f2e22c66cc93eabf2d739919f0008421d34f8a\""
+      },
+      {
+        "region": "cambria-san-simeon",
+        "status": 200,
+        "etag": "\"sha256-7e8cb47eec10b7b3587663ad2dbc43a6164de544f82eaf3feac14b2829dfe284\""
+      }
+    ],
+    "oldUrlStatus": 412
+  },
+  "browser": {
+    "native": true,
+    "beforeReleaseId": "7916d7f3c0d54772d29384a9b56342d330a01591ae4d509a53520ae4b028ec86",
+    "missingRequiredObjectWithdrawn": true,
+    "afterReleaseId": "a48f2a24f5f0f12748dbeacbf25e5612fb0295840ddc87590b9bcc6bb9a7a05d",
+    "reloadDuringWithdrawalOrRecovery": false,
+    "preservedSelection": {
+      "mode": "spear",
+      "area": "north",
+      "day": "2026-10-03",
+      "species": "cabezon-shallow-reef"
+    },
+    "screenshot": {
+      "path": "research/skippercast-upgrade-2026-10-03.jpg",
+      "sha256": "70ff227d656d3ff9b8908d4461d73763cbc842f2c0c53f42ffff3cd1715ec22c"
+    }
+  },
+  "feedRefresh": {
+    "schemaVersion": 1,
+    "countyId": "slo",
+    "attemptedAt": "2026-10-03T03:45:47.879Z",
+    "target": "local",
+    "datasets": {
+      "report-and-catches": {
+        "status": "updated",
+        "retainedLayers": [
+          "surfaceTemperature"
+        ]
+      },
+      "ocean": {
+        "status": "updated",
+        "retainedLayers": []
+      },
+      "habitat": {
+        "status": "not-requested",
+        "reason": "A new reviewed government build requires a pinned owned engine; the mixed public archive is not a substitute."
+      }
+    },
+    "finishedAt": "2026-10-03T03:45:49.579Z"
+  },
+  "sourceClocks": {
+    "reportGeneratedAt": "2026-10-03T03:45:49.236Z",
+    "oceanGeneratedAt": "2026-10-03T03:45:47.919Z",
+    "currents": [
+      {
+        "id": "wcofs",
+        "fetchedAt": "2026-10-03T02:42:03.000Z",
+        "issuedAt": "2026-10-02T03:00:00.000Z",
+        "sampleAt": null
+      },
+      {
+        "id": "hfr-1",
+        "fetchedAt": "2026-10-03T02:41:52.000Z",
+        "issuedAt": null,
+        "sampleAt": "2026-10-02T23:00:00.000Z"
+      },
+      {
+        "id": "hfr-6",
+        "fetchedAt": "2026-10-03T02:41:52.000Z",
+        "issuedAt": null,
+        "sampleAt": "2026-10-02T22:00:00.000Z"
+      }
+    ],
+    "cloudObservedAt": "2026-10-03T03:43:00.000Z",
+    "surfaceAnalysis": {
+      "analysedAt": "2026-09-30T09:00:00.000Z",
+      "fetchedAt": "2026-10-01T20:38:47.484Z"
+    },
+    "lastTripDate": "2026-10-01"
+  },
+  "historyBytesUnchanged": true,
+  "activation": {
+    "localR2Verified": true,
+    "cloudUploadPerformed": false,
+    "cloudProducerHookConfigured": false,
+    "newScheduleCreated": false,
+    "publicSiteDeployed": false
+  },
+  "limitations": [
+    "Same reviewed science was repaired, not a fabricated new survey edition.",
+    "Producer release hook and remote storage require cloud activation.",
+    "New models, counties or species meanings require adapter review."
+  ],
+  "dataRuntime": {
+    "checkedAt": "2026-10-03T03:49:31.343Z",
+    "checks": [
+      {
+        "path": "/api/report",
+        "status": 200,
+        "generatedAt": "2026-10-03T03:45:49.236Z",
+        "snapshotMatch": true
+      },
+      {
+        "path": "/api/ocean",
+        "status": 200,
+        "generatedAt": "2026-10-03T03:45:47.919Z",
+        "snapshotMatch": true
+      },
+      {
+        "path": "/api/history",
+        "status": 200,
+        "generatedAt": "2026-10-03T02:42:56.767Z",
+        "snapshotMatch": true
+      },
+      {
+        "path": "/api/health",
+        "status": 200,
+        "generatedAt": "2026-10-03T03:45:49.236Z"
+      }
+    ],
+    "all65AnnualBaselinesCatalogsAndOriginalReceiptsPreserved": true,
+    "murOriginalLayerAndClocksPreserved": true,
+    "retainedCatchFactsAndTripDatesPreserved": true,
+    "omittedPriorTrips": [],
+    "verificationCorrection": "Initial same-edition assertion rejected an actual new upstream edition; independently reviewed omissions are recorded separately.",
+    "report": {
+      "catchCount": 19,
+      "catchContext": {
+        "feedUrl": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/morro-bay/latest.json",
+        "feedGeneratedAt": "2026-10-03T03:23:33Z",
+        "receivedAt": "2026-10-03T03:45:47.916Z",
+        "windowStart": "2026-09-02",
+        "windowEnd": "2026-10-01",
+        "latestTripDate": "2026-10-01",
+        "rights": {
+          "scope": "linked-factual-counts",
+          "reviewedAt": "2026-09-21",
+          "sourceCatalogUrl": "https://github.com/Grahammmm/skippercast/blob/a481da68923649db6fda277af4bd6f40813f6436/catalog/sources.json"
+        }
+      },
+      "observations": [
+        {
+          "id": "46215",
+          "at": "2026-10-03T02:56:00.000Z"
+        },
+        {
+          "id": "46028",
+          "at": "2026-10-03T03:10:00.000Z"
+        }
+      ],
+      "nwsIssuedAt": [
+        {
+          "at": "2026-10-02T22:31:34.000Z"
+        },
+        {
+          "at": "2026-10-02T22:31:34.000Z"
+        },
+        {
+          "at": "2026-10-02T22:31:34.000Z"
+        }
+      ]
+    },
+    "ocean": {
+      "cloudObservedAt": "2026-10-03T03:43:00.000Z",
+      "currents": [
+        {
+          "id": "wcofs",
+          "kind": "forecast",
+          "issuedAt": "2026-10-02T03:00:00.000Z",
+          "sampleAt": null,
+          "fetchedAt": "2026-10-03T02:42:03.000Z"
+        },
+        {
+          "id": "hfr-1",
+          "kind": "observation",
+          "issuedAt": null,
+          "sampleAt": "2026-10-02T23:00:00.000Z",
+          "fetchedAt": "2026-10-03T02:41:52.000Z"
+        },
+        {
+          "id": "hfr-6",
+          "kind": "observation",
+          "issuedAt": null,
+          "sampleAt": "2026-10-02T22:00:00.000Z",
+          "fetchedAt": "2026-10-03T02:41:52.000Z"
+        }
+      ]
+    },
+    "history": {
+      "stations": [
+        {
+          "id": "46215",
+          "baselineYears": 22,
+          "latestObservation": "2026-10-03T01:56:00.000Z"
+        },
+        {
+          "id": "46028",
+          "baselineYears": 43,
+          "latestObservation": "2026-10-03T02:20:00.000Z"
+        }
+      ]
+    },
+    "scope": "Actual local backend verification; no browser rendering or cloud publication claim"
+  },
+  "repeatSync": {
+    "schemaVersion": 1,
+    "countyId": "slo",
+    "attemptedAt": "2026-10-03T03:49:02.194Z",
+    "target": "local",
+    "datasets": {
+      "habitat": {
+        "status": "unchanged",
+        "releaseId": "a48f2a24f5f0f12748dbeacbf25e5612fb0295840ddc87590b9bcc6bb9a7a05d",
+        "producerCommit": "0978207dd12cc4f0591302f7458f8db75fdfc782",
+        "featureCount": 2868,
+        "coverageCount": 12453,
+        "detailCount": 45,
+        "expiresAt": "2026-11-05T00:00:00+00:00"
+      }
+    },
+    "finishedAt": "2026-10-03T03:49:06.000Z"
+  }
+}

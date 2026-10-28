@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {getRegion,setRegion} from '../dist/region.js';
-import {regulationState,validRegulations} from '../dist/regulations.js';
+import {regulationState,validRegulations} from '../web/regs.ts';
 
 const region=JSON.parse(readFileSync(new URL('../regions/fort-bragg-point-arena/region.json',import.meta.url)));
 const reviewed=JSON.parse(readFileSync(new URL('../dist/data/regulations-mendocino.json',import.meta.url)));
@@ -25,17 +25,17 @@ test('Mendocino 2026 seasons and regional limits stay distinct from Northern and
   try{
     setRegion(region);
     const data=matchedFixture();
-    assert.ok(validRegulations(data));
-    assert.equal(regulationState(data,'reef',now,'2026-09-24').status,'open');
+    assert.ok(validRegulations(data,region));
+    assert.equal(regulationState(data,'reef',region,now,'2026-09-24').status,'open');
     assert.match(data.species.rockfish.details[0],/2 vermilion\/sunset/);
-    assert.equal(regulationState(data,'salmon',now,'2026-09-24').status,'closed');
-    assert.equal(regulationState(data,'dungeness',now,'2026-09-24').status,'closed');
-    assert.equal(regulationState(data,'dungeness',now,'2026-11-08').status,'scheduled');
-    assert.equal(regulationState(data,'pacific-halibut',now,'2026-11-16').status,'closed');
-    assert.equal(regulationState(data,'halibut',now,'2026-09-24').status,'open');
+    assert.equal(regulationState(data,'salmon',region,now,'2026-09-24').status,'closed');
+    assert.equal(regulationState(data,'dungeness',region,now,'2026-09-24').status,'closed');
+    assert.equal(regulationState(data,'dungeness',region,now,'2026-11-08').status,'scheduled');
+    assert.equal(regulationState(data,'pacific-halibut',region,now,'2026-11-16').status,'closed');
+    assert.equal(regulationState(data,'halibut',region,now,'2026-09-24').status,'open');
     assert.match(data.species.halibut.details.join(' '),/south of Point Arena/);
     data.checks['rules-mendocino'].status='changed';
-    assert.equal(regulationState(data,'reef',now,'2026-09-24').status,'unknown');
+    assert.equal(regulationState(data,'reef',region,now,'2026-09-24').status,'unknown');
   }finally{setRegion(previous);}
 });
 
@@ -45,6 +45,6 @@ test('loss of Mendocino legal approval withholds an opening',()=>{
     setRegion(region);
     const unreviewed=structuredClone(reviewed);
     unreviewed.rules_review_status='content-needs-review';
-    assert.equal(regulationState(unreviewed,'reef',now,'2026-09-24').status,'unknown');
+    assert.equal(regulationState(unreviewed,'reef',region,now,'2026-09-24').status,'unknown');
   }finally{setRegion(previous);}
 });

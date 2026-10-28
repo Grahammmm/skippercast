@@ -1,0 +1,171 @@
+{
+  "checkedAt": "2026-10-02T17:50:46.407Z",
+  "scope": "Local data API, reviewed catch-edition and current-feed recovery checks; actual browser verification unavailable.",
+  "verificationCorrections": [
+    "The initial unchanged-catch assertion failed because the feed added two October 1 trips. Corrected checks match the reviewed adapter and preserve all prior trip facts/dates.",
+    "Direct object comparison encountered negative zero from reconstructed current components. The production JSON representation normalizes it to zero; the corrected comparison uses that same serialized representation. No product data or validity threshold was altered."
+  ],
+  "checks": [
+    {
+      "path": "/api/health",
+      "status": 200,
+      "generatedAt": "2026-10-02T17:45:00.758Z"
+    },
+    {
+      "path": "/api/report",
+      "status": 200,
+      "generatedAt": "2026-10-02T17:45:00.758Z"
+    },
+    {
+      "path": "/api/ocean",
+      "status": 200,
+      "generatedAt": "2026-10-02T17:44:52.100Z"
+    },
+    {
+      "path": "/api/history",
+      "status": 200,
+      "generatedAt": "2026-10-02T17:44:54.094Z"
+    }
+  ],
+  "report": {
+    "latestTripDate": "2026-10-01",
+    "catchCount": 21,
+    "catchContext": {
+      "feedUrl": "https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/morro-bay/latest.json",
+      "feedGeneratedAt": "2026-10-02T16:38:50Z",
+      "receivedAt": "2026-10-02T17:44:50.248Z",
+      "windowStart": "2026-09-02",
+      "windowEnd": "2026-10-01",
+      "latestTripDate": "2026-10-01",
+      "rights": {
+        "scope": "linked-factual-counts",
+        "reviewedAt": "2026-09-21",
+        "sourceCatalogUrl": "https://github.com/Grahammmm/skippercast/blob/a481da68923649db6fda277af4bd6f40813f6436/catalog/sources.json"
+      }
+    },
+    "addedTrips": [
+      {
+        "id": "6331ec9bdd1c3ab7",
+        "boat": "Flying Fish",
+        "tripDate": "2026-10-01",
+        "retrievedAt": "2026-10-02T16:38:50Z",
+        "sourceUrl": "https://www.socalfishreports.com/dock_totals/boats.php?date=2026-10-01"
+      },
+      {
+        "id": "ec3ab66884748631",
+        "boat": "Sunny Day",
+        "tripDate": "2026-10-01",
+        "retrievedAt": "2026-10-02T16:38:50Z",
+        "sourceUrl": "https://www.socalfishreports.com/dock_totals/boats.php?date=2026-10-01"
+      }
+    ],
+    "allPriorTripFactsAndDatesPreserved": true,
+    "matchesReviewedCatchAdapter": true,
+    "nwsIssuedAt": "2026-10-02T12:41:28.000Z",
+    "cdipIssuedAt": [
+      {
+        "id": "cdip-SL097",
+        "at": "2026-10-02T13:43:24.000Z"
+      },
+      {
+        "id": "cdip-SL165",
+        "at": "2026-10-02T13:43:31.000Z"
+      },
+      {
+        "id": "cdip-SL345",
+        "at": "2026-10-02T13:43:51.000Z"
+      },
+      {
+        "id": "cdip-SL552",
+        "at": "2026-10-02T13:44:09.000Z"
+      },
+      {
+        "id": "cdip-SL400",
+        "at": "2026-10-02T13:43:56.000Z"
+      }
+    ],
+    "priorMurLayerAndClocksPreserved": true,
+    "sourceErrors": [
+      "mur-surface-temperature",
+      "landing-reports"
+    ]
+  },
+  "ocean": {
+    "cloudObservedAt": "2026-10-02T17:43:00.000Z",
+    "currentProducts": [
+      {
+        "id": "wcofs",
+        "kind": "forecast",
+        "issuedAt": "2026-10-02T03:00:00.000Z",
+        "sampleAt": null,
+        "fetchedAt": "2026-10-02T16:53:54.000Z",
+        "frames": 24
+      },
+      {
+        "id": "hfr-1",
+        "kind": "observation",
+        "issuedAt": null,
+        "sampleAt": "2026-10-02T15:00:00.000Z",
+        "fetchedAt": "2026-10-02T16:53:44.000Z",
+        "frames": 6
+      },
+      {
+        "id": "hfr-6",
+        "kind": "observation",
+        "issuedAt": null,
+        "sampleAt": "2026-10-02T15:00:00.000Z",
+        "fetchedAt": "2026-10-02T16:53:43.000Z",
+        "frames": 6
+      }
+    ],
+    "matchesReviewedAdapterJsonAndOriginalClocks": true,
+    "upstream": {
+      "url": "https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/morro-bay/intelligence.json",
+      "generatedAt": "2026-10-02T16:48:54Z",
+      "originalClocks": {
+        "wcofs": {
+          "status": "ok",
+          "dataRetrievedAt": "2026-10-02T16:53:54Z",
+          "lastSuccessAt": "2026-10-02T16:53:54Z",
+          "issuedAt": "2026-10-02T03:00:00Z"
+        },
+        "hfr-1": {
+          "status": "ok",
+          "dataRetrievedAt": "2026-10-02T16:53:44Z",
+          "lastSuccessAt": "2026-10-02T16:53:44Z",
+          "sampleAt": "2026-10-02T15:00:00Z"
+        },
+        "hfr-6": {
+          "status": "ok",
+          "dataRetrievedAt": "2026-10-02T16:53:43Z",
+          "lastSuccessAt": "2026-10-02T16:53:43Z",
+          "sampleAt": "2026-10-02T15:00:00Z"
+        }
+      }
+    }
+  },
+  "history": {
+    "baselineYears": [
+      22,
+      43
+    ],
+    "latestObservations": [
+      {
+        "id": "46215",
+        "at": "2026-10-02T16:56:00.000Z",
+        "stale": false
+      },
+      {
+        "id": "46028",
+        "at": "2026-10-02T17:10:00.000Z",
+        "stale": false
+      }
+    ],
+    "originalBaselinesCatalogsAndAnnualReceiptsPreserved": true
+  },
+  "habitat": {
+    "ready": false,
+    "error": "Reviewed habitat publication changed"
+  },
+  "coreDataPassed": true
+}

@@ -9,10 +9,14 @@
 //   report carries, named by the report's own status for that source id: on
 //   2026-10-09 the bridge served Fish's report with NASA JPL MUR (0.01°, sampled
 //   every 0.02°); SkipperCast's own report (FE-87) carries NOAA Geo-Polar Blended
-//   (0.05°). Other regions draw nothing and the rail says so.
+//   (0.05°). A place with no local report reads its region's own published
+//   analysis instead (web/map/habitat-feed.ts, #491): the conditions feed's
+//   NOAA Geo-Polar Blended layer, its tiles checked by SHA-256 in the browser.
+//   A region whose feed lists no analysis draws nothing and the rail says so.
 // - Gate: fish's rule, the analysis and its retrieval each under 72 hours old
 //   (at most 5 minutes ahead of the clock), the source's status `ok`, and the
-//   analysis no later than the dock's hour. Otherwise nothing draws, and the
+//   analysis no later than the dock's hour. A regional feed's analysis takes its
+//   layer's own status (`ok` or `retained`) and its own `max_age_hours`. Otherwise nothing draws, and the
 //   rail and legend give the reason and the analysis date.
 // - Grid: packages/coast `surfaceField` at the analysis's own sample spacing.
 //   The texture and contours cover complete quads only: masked land and missing
@@ -27,15 +31,19 @@
 import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {coastData, type CoastData, type CoastStatus} from '../coast-data.ts';
+import {regionalSST, type RegionalSST} from './habitat-feed.ts';
 import type {SurfaceTemperature} from '../../packages/coast/src/spatial-types.ts';
 import type {CoastReportContext} from '../../packages/coast/src/state/report-binding.ts';
 import type {Report} from '../../packages/coast/src/types.ts';
 import {day, hour, layers} from '../state.ts';
 import {chartMark} from './chart.ts';
 import type {ChartMark} from './coastline.ts';
+import {CONTRAST_LAYER} from './contrast.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {fieldTexture, isolines} from './field.ts';
 import {layerEntry, setRailNote} from './layers.ts';
+import {DEPTH_BOTTOM} from './depth-contours.ts';
+import {COAST_NOT_SAVED, NOT_SAVED, TILES_NOT_SAVED, watchOffline} from './offline.ts';
 import {MPA_FILL} from './mpa.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
@@ -69,6 +77,8 @@ export interface Analysis {
   readonly error: readonly [number, number];
   /** "analysis Oct 7 · 42 h old" */
   readonly stamp: string;
+  /** The age limit it was judged by: 72 hours for a report's, the layer's own for a regional feed's. */
+  readonly limitMs: number;
 }
 export interface WaterTempStatus {
   readonly drawn: Analysis | null;
@@ -93,7 +103,7 @@ export function dayText(iso: string, tz: string): string {
 }
 /** "under 1 h", "42 h", "3 d". */
 const age = (ms: number): string => { const h = Math.floor(Math.max(0, ms) / HOUR); return h < 1 ? 'under 1 h' : h < 72 ? `${h} h` : `${Math.floor(h / 24)} d`; };
-const fresh = (iso: string, now: Date): boolean => { const d = now.getTime() - Date.parse(iso); return Number.isFinite(d) && d >= -AHEAD_MS && d < MAX_AGE_MS; };
+const fresh = (iso: string, now: Date, limit = MAX_AGE_MS): boolean => { const d = now.getTime() - Date.parse(iso); return Number.isFinite(d) && d >= -AHEAD_MS && d < limit; };
 const deg = (value: number): string => `${Number(value.toFixed(3))}°`;
 const fahrenheit = (value: number): string => `${value.toFixed(1)} °F`;
 
@@ -118,8 +128,9 @@ function grid(sst: SurfaceTemperature): {field: SurfaceField; range: [number, nu
 }
 
 /** What Water temp shows for the report's state at the dock's hour `at`. */
-export function analysisStatus(on: boolean, status: CoastStatus, report: Report | null, at: Date, now: Date, tz: string): WaterTempStatus {
+export function analysisStatus(on: boolean, status: CoastStatus, report: Report | null, at: Date, now: Date, tz: string, offline = false): WaterTempStatus {
   if (!on) return OFF;
+  if (offline && status === 'error' && !report) return none(NOT_SAVED, COAST_NOT_SAVED);
   if (status === 'unbound') return none('no analysis for this region', 'Water temp unavailable: no local surface-temperature analysis covers this region yet.');
   if (status === 'error' || status === 'invalid') return none('unavailable', 'Water temp unavailable: the coast report failed to load.');
   if (status === 'expired') return none('expired', 'Water temp unavailable: the coast report passed its age limit.');
@@ -128,16 +139,38 @@ export function analysisStatus(on: boolean, status: CoastStatus, report: Report 
   const source = sst && Array.isArray(report.sources) ? report.sources.find(s => s?.id === sst.sourceId) : undefined;
   if (!sst || sst.kind !== 'analysis' || !Number.isFinite(Date.parse(sst.analysedAt)) || source?.outcome !== 'ok' || source.kind !== 'analysis' || typeof source.label !== 'string' || !source.label)
     return none('no analysis in the report', 'Water temp unavailable: the coast report carries no surface-temperature analysis that loaded.');
-  const product = source.label.split(' · ')[0]!.trim(), date = dayText(sst.analysedAt, tz);
-  if (!fresh(sst.analysedAt, now) || !fresh(sst.fetchedAt, now))
-    return none(`no fresh analysis · last ${date}`, `Water temp unavailable: the latest ${product} analysis, for ${date}, is past its 72-hour age limit.`);
+  return judge(sst, source.label.split(' · ')[0]!.trim(), MAX_AGE_MS, at, now, tz);
+}
+
+const stale = (product: string, analysedAt: string, limit: number, tz: string): WaterTempStatus => {
+  const date = dayText(analysedAt, tz);
+  return none(`no fresh analysis · last ${date}`, `Water temp unavailable: the latest ${product} analysis, for ${date}, is past its ${Math.round(limit / HOUR)}-hour age limit.`);
+};
+
+/** What Water temp shows from the region's own feed (`null` while it loads) for a place with no local report. */
+export function regionalStatus(on: boolean, feed: RegionalSST | null, at: Date, now: Date, tz: string, offline = false): WaterTempStatus {
+  if (!on) return OFF;
+  if (offline && feed?.state === 'error' && feed.network) return none(NOT_SAVED, TILES_NOT_SAVED);
+  if (!feed) return none('loading', 'Loading the region\'s surface-temperature analysis.');
+  if (feed.state === 'none') return none('no analysis for this region', 'Water temp unavailable: no local surface-temperature analysis covers this region yet.');
+  if (feed.state === 'error') return none('unavailable', 'Water temp unavailable: the region\'s surface-temperature analysis failed to load or failed its checks.');
+  if (feed.state === 'listed') return feed.analysedAt && (feed.layerStatus === 'stale' || !fresh(feed.analysedAt, now, feed.maxAgeMs))
+    ? stale(feed.product, feed.analysedAt, feed.maxAgeMs, tz)
+    : none('no analysis in the feed', 'Water temp unavailable: the region\'s feed carries no surface-temperature analysis that loaded.');
+  return judge(feed.sst, feed.product, feed.maxAgeMs, at, now, tz);
+}
+
+/** The shared gate: age (the analysis's and its retrieval's), the dock's hour, then the grid. */
+function judge(sst: SurfaceTemperature, product: string, limit: number, at: Date, now: Date, tz: string): WaterTempStatus {
+  const date = dayText(sst.analysedAt, tz);
+  if (!fresh(sst.analysedAt, now, limit) || !fresh(sst.fetchedAt, now, limit)) return stale(product, sst.analysedAt, limit, tz);
   if (Date.parse(sst.analysedAt) > at.getTime())
     return none(`analysis after this hour · ${date}`, `Water temp unavailable: the ${product} analysis, for ${date}, is later than the selected hour.`);
   const built = grid(sst);
   if (!built) return none(`grid cannot be drawn · ${date}`,
     `Water temp unavailable: the ${product} analysis for ${date} is not a grid that can be drawn without bridging gaps, and no earlier analysis is shown.`);
   const stamp = `analysis ${date} · ${age(now.getTime() - Date.parse(sst.analysedAt))} old`;
-  const drawn: Analysis = {key: `${sst.sourceId}|${sst.analysedAt}|${sst.fetchedAt}`, sst, product, ...built, stamp};
+  const drawn: Analysis = {key: `${sst.sourceId}|${sst.analysedAt}|${sst.fetchedAt}`, sst, product, ...built, stamp, limitMs: limit};
   return {drawn, note: stamp, reason: '', basis: analysisBasis(drawn, now, tz)};
 }
 
@@ -192,18 +225,32 @@ export interface WaterTempOptions {
   data?: Pick<CoastData, 'coastReport' | 'coastStatus' | 'setPlace' | 'load'>;
   palette?: () => Palette;
   now?: () => Date;
+  /** For the regional feed of a place with no local report. */
+  fetchFn?: typeof fetch;
+  page?: () => string;
 }
+/** A regional feed is read again after an hour, keeping the last result until the next arrives. */
+const FEED_REFRESH_MS = HOUR;
 
 export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number; lat: number}): ChartMark | null; destroy(): void} {
-  const {engine, zone, place, data = coastData, palette = () => readPalette(), now = () => new Date()} = o;
+  const {engine, zone, place, data = coastData, palette = () => readPalette(), now = () => new Date(),
+    fetchFn = (...a) => fetch(...a), page = () => location.href} = o;
   const tick = signal(0);
+  const connection = watchOffline();
   const on = computed(() => layers.value.includes(REGISTRY_ID));
+  const report = computed(() => place() !== null ? data.coastStatus.value.report : 'loading');
+  /** The regional feed's latest result for a region, null while its first read is in flight. */
+  const feed = signal<{region: string; result: RegionalSST | null} | null>(null);
   const status = computed(() => {
     void tick.value;
-    const t = now(), known = place() !== null;
-    return analysisStatus(on.value, known ? data.coastStatus.value.report : 'loading', data.coastReport.value?.data ?? null,
-      terrainHour(hour.value, t, day.value, zone()), t, zone());
+    const t = now(), p = place(), at = terrainHour(hour.value, t, day.value, zone());
+    if (report.value === 'unbound' && p) {
+      const f = feed.value;
+      return regionalStatus(on.value, f?.region === p.regionId ? f.result : null, at, t, zone(), connection.offline.value);
+    }
+    return analysisStatus(on.value, report.value, data.coastReport.value?.data ?? null, at, t, zone(), connection.offline.value);
   });
+  let feedRegion = '', feedAt = 0, feedAbort: AbortController | undefined;
   let drawnKey = '', drawnOn: Engine | null = null, timer: ReturnType<typeof setTimeout> | undefined;
   const withdraw = (): void => { if (chartMark.peek()?.id.startsWith('sst:')) chartMark.value = null; };
 
@@ -214,6 +261,18 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       if (!on.value || !p) return;
       data.setPlace(p);
       void data.load('report');
+    }),
+    // A place with no local report reads its region's feed, again after an hour while Water temp stays on.
+    effect(() => {
+      void tick.value;
+      const p = place(), id = p?.regionId ?? '', t = now().getTime();
+      if (!on.value || !p || report.value !== 'unbound' || (id === feedRegion && t - feedAt < FEED_REFRESH_MS)) return;
+      feedAbort?.abort();
+      const abort = feedAbort = new AbortController();
+      if (id !== feedRegion) feed.value = {region: id, result: null};
+      feedRegion = id; feedAt = t;
+      regionalSST(id, {fetchFn, page: page(), now: new Date(t), signal: abort.signal})
+        .then(result => { if (!abort.signal.aborted) feed.value = {region: id, result}; }, () => { /* aborted by a newer read */ });
     }),
     effect(() => {
       const s = status.value;
@@ -228,8 +287,8 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       drawnKey = key; drawnOn = e;
       if (!a) { e.setOverlay(REGISTRY_ID, null); return; }
       const p = palette();
-      // § 9 order: under the swell field when it is drawn, else under the protected areas.
-      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [SWELL_LAYER, MPA_FILL]);
+      // § 9 order: under Temp contrast, else swell, wind, depth contours, or protected areas.
+      e.setOverlay(REGISTRY_ID, waterTempOverlay(p), [CONTRAST_LAYER, SWELL_LAYER, 'wind-casing', DEPTH_BOTTOM, MPA_FILL]);
       e.setImage(SST_SOURCE, fieldTexture(a.field, a.range, ramps(p).sst, v => v[0]!));
       e.setData(CONTOUR_SOURCE, contourLines(a.field, a.range));
     }),
@@ -238,7 +297,7 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       const a = status.value.drawn, t = now().getTime();
       clearTimeout(timer);
       if (!on.value) return;
-      const limit = a ? Math.min(Date.parse(a.sst.analysedAt), Date.parse(a.sst.fetchedAt)) + MAX_AGE_MS : Infinity;
+      const limit = a ? Math.min(Date.parse(a.sst.analysedAt), Date.parse(a.sst.fetchedAt)) + a.limitMs : Infinity;
       timer = setTimeout(() => { tick.value++; }, Math.min(Math.max(1000, Math.min(limit, (Math.floor(t / HOUR) + 1) * HOUR) - t + 1000), 2 ** 31 - 1));
     }),
   ];
@@ -248,8 +307,10 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
       return a && drawnKey === a.key && shownPresentation.peek() === 'chart' ? sstMark(a, at, now(), zone()) : null;
     },
     destroy() {
+      connection.destroy();
       for (const dispose of disposers) dispose();
       clearTimeout(timer);
+      feedAbort?.abort();
       withdraw();
       waterTempState.value = OFF;
       setRailNote(REGISTRY_ID, '');

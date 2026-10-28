@@ -3,8 +3,43 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="description" content="Wind, swell, water temperature and tide from fixed buoys and a tide gauge on the Central California coast, each with its station and age." />
-    <title>SkipperCast · Know the water before you leave the dock</title>
+    <meta name="description" content="Central California fishing conditions: wind, swell, water temperature and tide from named buoys and a tide gauge, each with its age, beside the seafloor on one map." />
+    <title>SkipperCast · Central Coast fishing weather, tides and seafloor map</title>
+    <!-- Search and link previews (docs/web-app.md#search-and-link-previews): one canonical home, the share card v1's dist/index.html carried until FE-61,
+         and WebSite and Organization structured data (Google reads the site name from WebSite on the home page). The JSON-LD block is data, not script,
+         so the CSP's script-src does not apply to it. -->
+    <link rel="canonical" href="https://skippercast.com/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SkipperCast" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://skippercast.com/" />
+    <meta property="og:title" content="SkipperCast · Central Coast fishing weather, tides and seafloor map" />
+    <meta property="og:description" content="Central California fishing conditions: wind, swell, water temperature and tide from named buoys and a tide gauge, each with its age, beside the seafloor on one map." />
+    <meta property="og:image" content="https://skippercast.com/skippercast-parker-preview.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1736" />
+    <meta property="og:image:height" content="906" />
+    <meta property="og:image:alt" content="SkipperCast: Find your next great fishing day. A white fishing boat on a teal ocean beside a coastline, with fishing grounds, weather, waves and tides." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SkipperCast · Central Coast fishing weather, tides and seafloor map" />
+    <meta name="twitter:description" content="Central California fishing conditions: wind, swell, water temperature and tide from named buoys and a tide gauge, each with its age, beside the seafloor on one map." />
+    <meta name="twitter:image" content="https://skippercast.com/skippercast-parker-preview.jpg" />
+    <meta name="twitter:image:alt" content="SkipperCast: Find your next great fishing day. A white fishing boat on a teal ocean beside a coastline, with fishing grounds, weather, waves and tides." />
+    <script type="application/ld+json">
+      [
+        {"@context": "https://schema.org", "@type": "WebSite", "name": "SkipperCast", "url": "https://skippercast.com/"},
+        {"@context": "https://schema.org", "@type": "Organization", "name": "SkipperCast", "url": "https://skippercast.com/", "logo": "https://skippercast.com/app-icon-512.png"}
+      ]
+    </script>
+    <!-- The web manifest, theme colour (v1's; design.md names none) and icons that v1's dist/index.html carried until FE-61 (tests/test_v2_head.mjs). -->
+    <meta name="theme-color" content="#082e3b" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23082e3b'/%3E%3Cpath d='m20 5 7 24-7-4-7 4z' fill='%2354dacb'/%3E%3Cpath d='M8 33h24' stroke='white' stroke-width='3'/%3E%3C/svg%3E"
+    />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <!-- FE-07: the v2 tokens, the primitives, the port chooser's sheet and the landing's, in this order. The hero text and the footer line are static so the
          largest paint waits for neither the module nor a re-render; web/landing/main.tsx renders the shoreline, nav, readout, pills, port input,
          layer dots and the shoreline's credit (from its generated module) into the hosts below (the CSP allows no inline script); after first
@@ -30,6 +65,16 @@
       <div id="landing-dots" class="landing-host"></div>
       <footer class="landing-foot">
         <p>Forecasts, observations and habitat carry separate clocks; check the rules before you fish.</p>
+        <nav aria-label="Public information">
+          <ul class="landing-nav">
+            <li><a href="/about">About</a></li>
+            <li><a href="/report">Readable report</a></li>
+            <li><a href="/methodology">Methods</a></li>
+            <li><a href="/sources">How it’s built</a></li>
+            <li><a href="/privacy">Privacy</a></li>
+            <li><a href="/terms.html">Terms</a></li>
+          </ul>
+        </nav>
         <div id="landing-credit" class="landing-host"></div>
       </footer>
     </div>

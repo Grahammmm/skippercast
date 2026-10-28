@@ -16,6 +16,7 @@ import {pointInGeometry} from '../../dist/geo-screen.js';
 import {speciesFit} from '../../dist/species-fit.js';
 import type {CoastSelection, CoastTargetDetail} from '../../packages/coast/src/embed-types.ts';
 import {speciesOptions} from '../../packages/coast/src/habitat-types.ts';
+import {gradeAllows, type GradeFilter} from '../grade.ts';
 import {withinDepth, type Profile} from '../profile.ts';
 import type {ChartMark} from './coastline.ts';
 import {CDFW_MPA_PAGE, NOAA_GEA_PAGE, type ScreenSource} from './mpa.ts';
@@ -152,11 +153,26 @@ export function withheld(t: {latitude: number; longitude: number}, screen: MarkS
   return inside.length ? {reading: `Inside ${inside.map(b => b.name).join('; ')}`, inside} : null;
 }
 
-/** The marks the target, profile and run-time screen admit (the profile's depth limit on the deepest nearby depth), with their fit badge. */
-export function markFeatures(atlas: Atlas | null | undefined, target: string, profile: Profile, screen: MarkScreen): Collection {
-  return collection((atlas?.targets ?? []).filter(t => markShown(t, target) && withinDepth(profile, t.neighborhood_depth_ft?.[1]) && !withheld(t, screen)).map(t => {
+/** How much a terrain grade adds to the wide view's density (#620): A strongest; an ungraded mark counts as C. */
+const GRADE_WEIGHT: Readonly<Record<string, number>> = {A: 1, B: 0.6, C: 0.3};
+/**
+ * A mark's weight in the density below zoom 10, 0 to 1: its terrain grade times its habitat fit for the target
+ * (n of 3; two thirds where no screen rates it). Physical search priority only, never a count of fish.
+ */
+export function markWeight(t: AtlasTarget, target: string): number {
+  const fit = markFit(t, target), g = GRADE_WEIGHT[String(t.habitat_grade ?? '').toUpperCase()] ?? GRADE_WEIGHT.C!;
+  return Math.round(g * (fit ? fit.n / 3 : 2 / 3) * 1000) / 1000;
+}
+
+/**
+ * The marks the target, profile, grade filter and run-time screen admit (the profile's depth limit on the deepest
+ * nearby depth), with their fit badge and their density weight.
+ */
+export function markFeatures(atlas: Atlas | null | undefined, target: string, profile: Profile, screen: MarkScreen, grades: GradeFilter = 'all'): Collection {
+  return collection((atlas?.targets ?? []).filter(t => markShown(t, target) && withinDepth(profile, t.neighborhood_depth_ft?.[1]) && gradeAllows(grades, t.habitat_grade)
+    && !withheld(t, screen)).map(t => {
     const fit = markFit(t, target);
-    return {type: 'Feature', geometry: point(t), properties: {id: t.id, ...fit ? {fit: String(fit.n)} : {}}};
+    return {type: 'Feature', geometry: point(t), properties: {id: t.id, ...fit ? {fit: String(fit.n)} : {}, weight: markWeight(t, target)}};
   }));
 }
 export const surveyFeatures = (data: MarkData | null, target: string): Collection => !data?.survey ? EMPTY
@@ -188,6 +204,7 @@ export function atlasCard(t: AtlasTarget, data: MarkData, target: string): Chart
   return {
     id: `spot:${t.id}`, name: t.label, kind: joined('Reef mark', t.habitat_grade && `grade ${t.habitat_grade}`, depthRange(t.neighborhood_depth_ft)),
     reading: markFit(t, target)?.line ?? 'Habitat fit unrated for this target',
+    position: {latitude: t.latitude, longitude: t.longitude},
     source: joined(t.source_name ?? data.region.source_names?.[t.source_id ?? ''] ?? source?.name ?? t.source_id, t.survey_year && `surveyed ${t.survey_year}`, date && `atlas ${date}`),
     // v1's wording (dist/terrain-evidence.js): a build-time screen with its measured clearance, never a promise.
     rules: rules(typeof screened === 'number' && screened > 0 && !!date && `Screened against protected areas with ${Math.round(screened)} m clearance in the atlas of ${date}`),
@@ -235,12 +252,9 @@ export function geologyCard(p: Props, geology: Geology, region: RegionData): Cha
   };
 }
 
-const degrees = (value: number, positive: string, negative: string): string => `${Math.abs(value).toFixed(4)}° ${value >= 0 ? positive : negative}`;
-const place = (s: {latitude: number; longitude: number}): string => `${degrees(s.latitude, 'N', 'S')}, ${degrees(s.longitude, 'E', 'W')}`;
-
 /** The terrain's habitat selection before its evidence arrives: its id and position. */
 export const terrainCard = (s: CoastSelection): ChartMark => ({id: `habitat:${s.id ?? ''}`, name: 'Selected habitat', kind: s.id ? `Terrain habitat · ${s.id}` : 'Terrain habitat',
-  reading: place(s), source: 'Coastal terrain selection', basis: 'Chosen in the 2D or 3D terrain, where its evidence and source lines show.'});
+  reading: '', position: {latitude: s.latitude, longitude: s.longitude}, source: 'Coastal terrain selection', basis: 'Chosen in the 2D or 3D terrain, where its evidence and source lines show.'});
 
 /** The renderer's evidence (onTargetDetail) verbatim, its "species fit n/3" in § 12's wording; the first sentence is the source line. */
 export function terrainDetailCard(d: CoastTargetDetail, coastSpecies: string): ChartMark {
@@ -257,7 +271,7 @@ export function terrainDetailCard(d: CoastTargetDetail, coastSpecies: string): C
 export interface HabitatReceipt {readonly id: string; readonly latitude: number; readonly longitude: number; readonly expiresAt: string; readonly kind: 'reef' | 'shore'}
 /** A `?habitat=` restored without graphics: the reviewed release admits the id here until the receipt expires. */
 export const receiptCard = (r: HabitatReceipt): ChartMark => ({
-  id: `habitat:${r.id}`, name: r.kind === 'shore' ? 'Shore habitat' : 'Reef habitat', kind: `Terrain habitat · ${r.id}`, reading: place(r),
+  id: `habitat:${r.id}`, name: r.kind === 'shore' ? 'Shore habitat' : 'Reef habitat', kind: `Terrain habitat · ${r.id}`, reading: '', position: {latitude: r.latitude, longitude: r.longitude},
   source: `Reviewed coastal habitat · valid until ${r.expiresAt.slice(0, 10)}`,
   basis: 'Restored from the reviewed habitat release; its evidence lines show in the 2D and 3D terrain.',
 });

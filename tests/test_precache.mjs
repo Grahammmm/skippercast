@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {mkdtemp, mkdir, writeFile, readFile, rm} from 'node:fs/promises';
+import {mkdtemp, mkdir, writeFile, readFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {precacheManifest, writePrecache, BUILD_PLACEHOLDER, reachable, v2Only, landingShell} from '../scripts/precache.mjs';
+import {precacheManifest, writePrecache, BUILD_PLACEHOLDER, reachable, v2Only, landingShell, appWarm} from '../scripts/precache.mjs';
 
 // check_client's precache and worker checks run against a real Vite build in
 // tests/test_client_build.mjs; this file covers scripts/precache.mjs itself.
@@ -11,7 +11,6 @@ const BUILD = 'abc1234567';
 
 async function site() {
   const dir = await mkdtemp(join(tmpdir(), 'precache-'));
-  await mkdir(join(dir, 'vendor/images'), {recursive: true});
   await mkdir(join(dir, 'assets'), {recursive: true});
   await writeFile(join(dir, `index.${BUILD}.html`), '<script type="module" src="./assets/index.0123456789.js"></script>');
   await writeFile(join(dir, 'assets/index.0123456789.js'), "import './app.abcdef0123.js';");
@@ -22,9 +21,6 @@ async function site() {
   await writeFile(join(dir, 'manifest.webmanifest'), '{}');
   await writeFile(join(dir, 'app-icon-192.png'), 'png');
   await writeFile(join(dir, 'regulations.json'), '{}');
-  await writeFile(join(dir, 'vendor/leaflet.js'), '');
-  await writeFile(join(dir, 'vendor/leaflet.css'), '');
-  await writeFile(join(dir, 'vendor/images/marker-icon.png'), '');
   return dir;
 }
 
@@ -33,9 +29,9 @@ test('precache.json lists the shell, every hashed asset of the build and the sta
   const manifest = await writePrecache(dir, BUILD);
   assert.deepEqual(JSON.parse(await readFile(join(dir, 'precache.json'), 'utf8')), manifest);
   assert.equal(manifest.build, BUILD);
-  assert.deepEqual(manifest.shells, ['/', '/?ui=v1'], '#497: / is whichever page UI_V2 serves; ?ui=v1 keeps the v1 shell');
+  assert.deepEqual(manifest.shells, ['/'], 'FE-61: / is the landing; the v1 shell and its ?ui=v1 key are gone');
   assert.deepEqual(manifest.assets, ['/assets/app.abcdef0123.js', '/assets/index.0123456789.js', '/assets/styles.fedcba9876.css']);
-  assert.deepEqual(manifest.static, ['/app-icon-192.png', '/manifest.webmanifest', '/vendor/leaflet.js', '/vendor/leaflet.css', '/vendor/images/marker-icon.png']);
+  assert.deepEqual(manifest.static, ['/app-icon-192.png', '/manifest.webmanifest']);
   assert.ok(!manifest.assets.some(a => a.endsWith('.html')), 'pages are served only from their stable paths');
   assert.ok(!JSON.stringify(manifest).includes('regulations.json'), 'data is never precached; it is network-first');
   // The worker carries the build id, so a deploy changes its bytes and reinstalls it.
@@ -43,13 +39,10 @@ test('precache.json lists the shell, every hashed asset of the build and the sta
   assert.ok(sw.startsWith(`const BUILD = '${BUILD}';`));
 });
 
-test('the build refuses a worker without the build placeholder, and a missing vendor file', async () => {
+test('the build refuses a worker without the build placeholder', async () => {
   const dir = await site();
   await writeFile(join(dir, 'sw.js'), 'self.x=1');
   await assert.rejects(writePrecache(dir, 'abc1234567'), /must declare/);
-  const other = await site();
-  await rm(join(other, 'vendor/leaflet.css'));
-  await assert.rejects(precacheManifest(other, 'abc1234567'));
 });
 
 test('the committed worker declares the placeholder the build replaces', async () => {
@@ -80,7 +73,7 @@ test('only-v2 files leave the install precache; the v2 list is the app graph wit
     '/assets/maplibre-gl-worker.7777777777.js', '/assets/maplibre.6666666666.js', '/assets/terrain.8888888888.js'], 'three is shared with v1 (its coast workspace)');
   const out = await precacheManifest(dir, BUILD);
   assert.ok(out.assets.includes('/assets/shared.5555555555.js') && out.assets.includes('/assets/three.9999999999.js') && out.assets.includes('/assets/index.0123456789.js'));
-  // #497 adds back only the landing's first paint (here its entry), so '/' paints offline whichever page UI_V2 serves.
+  // #497 adds back only the landing's first paint (here its entry), so '/' paints offline.
   assert.ok(!out.assets.some(a => v2Only(manifest).has(a) && !landingShell(manifest).has(a)) && out.assets.includes('/assets/app.abcdef0123.js'), 'a visitor never installs the app or MapLibre');
   assert.ok(out.assets.includes('/assets/landing.4444444444.js'));
   assert.deepEqual(out.v2.assets, [...reachable(manifest, ['app.html'], new Set(['../web/map/terrain.js']))].sort());
@@ -89,7 +82,7 @@ test('only-v2 files leave the install precache; the v2 list is the app graph wit
   assert.deepEqual(out.v2.static, ['/basemap/glyphs/dm-sans-medium/0-255.pbf']);
 });
 
-// #497: UI_V2 is a runtime switch, so '/' may be the landing; its first paint joins the install list, MapLibre does not.
+// #497: '/' is the landing; its first paint joins the install list, MapLibre does not.
 test('the install list holds the landing\'s first paint (static imports, styles, fonts) and never its night map or the app', async () => {
   const dir = await site();
   const manifest = {
@@ -113,4 +106,7 @@ test('the install list holds the landing\'s first paint (static imports, styles,
   for (const f of ['/assets/NightMap.bbbbbbbbbb.js', '/assets/maplibre.6666666666.js', '/assets/maplibre-gl-worker.7777777777.js', '/assets/app.1111111111.js'])
     assert.ok(!out.assets.includes(f), `${f} stays out of the install list`);
   assert.deepEqual(out.assets, [...new Set(out.assets)].sort(), 'sorted, no duplicates');
+  // #617: the landing warms the app page's static graph, less what the landing loaded itself; never a dynamic import.
+  assert.deepEqual(appWarm(manifest), ['/assets/app.1111111111.js']);
+  assert.deepEqual(out.warm, appWarm(manifest));
 });

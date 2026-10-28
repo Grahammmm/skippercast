@@ -7,10 +7,13 @@
 // draws nothing. Pins are numbered in the planner's order (`trip_rank`), never a forecast
 // of fish. As in v1, spots within 44 px of an earlier pin at the camera's zoom join it
 // ("1 +4"); a click on such a pin zooms to its spots, and a lone pin opens the one mark
-// card with v1's lines and "Review & export". Erasable syntax only: Node tests import it.
+// card with v1's lines and "Review & export". CI6-01B: a pin draws only where the
+// region's land/water check (web/land-water.ts) confirms water, as the planner ranked
+// it; while that check loads, or without one, no pin draws. Erasable syntax only: Node tests import it.
 import {computed, signal} from '@preact/signals';
 import {manifestState} from '../../dist/seafloor-data.js';
-import {setParams} from '../state.ts';
+import {landWater, placeFor} from '../land-water.ts';
+import {region, setParams} from '../state.ts';
 import type {ChartMark} from './coastline.ts';
 import {regulationsLink, withheld, type Collection, type RegionData} from './habitat.ts';
 import {RANKED_SOURCE} from './layers.ts';
@@ -30,7 +33,7 @@ export interface RankedTarget {
   readonly trip_fit?: number; readonly evidence_confidence?: {readonly percent?: number} | null; readonly area_ids?: readonly string[];
   readonly terrain_interpretation?: string; readonly special_note?: string; readonly evidence_status?: string; readonly survey_year?: number;
 }
-/** The event's detail (dist/export-ui.js): no targets when the plan is cleared. */
+/** The event's detail (web/planner.ts): no targets when the plan is cleared. */
 export interface RankedPlan {
   readonly targets: readonly RankedTarget[];
   readonly areas: readonly {readonly id: string; readonly geometry: unknown}[];
@@ -52,9 +55,12 @@ export const rankedSpots = signal<readonly RankedTarget[]>([]);
 /**
  * The ranked spots the Chart draws: those the marks' run-time screen (#492) also shows, so the
  * Chart never draws a spot it withholds as a mark; while that screen is checking, stale or
- * unavailable, none. Ranks stay the planner's.
+ * unavailable, none. Only spots the land/water check confirms as water draw. Ranks stay the planner's.
  */
-export const drawnSpots = computed(() => { const s = markScreen.value; return rankedSpots.value.filter(t => !withheld(t, s)); });
+export const drawnSpots = computed(() => {
+  const s = markScreen.value, place = placeFor(landWater.value, region.value);
+  return rankedSpots.value.filter(t => !withheld(t, s) && place(t).state === 'water');
+});
 
 /**
  * v1's draw gate (dist/trip-ranking-layer.js): nothing unless the screen is current, the plan has
@@ -89,7 +95,7 @@ export function recheckPlan(plan: RankedPlan, gate: PublicationGate, rejected: M
   return {...plan, invalid: true};
 }
 
-/** Web Mercator in `?view=` pixels (256 px tiles), as v1's Leaflet measures its pins. */
+/** Web Mercator in `?view=` pixels (256 px tiles), as v1's 2D map measured its pins. */
 const pixel = (t: {latitude: number; longitude: number}, zoom: number) => {
   const world = 256 * 2 ** zoom, sin = Math.sin(t.latitude * Math.PI / 180);
   return {x: (t.longitude + 180) / 360 * world, y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * world};
@@ -163,6 +169,7 @@ export function rankedCard(t: RankedTarget, region: RegionData | null): ChartMar
     regulations: regulationsLink(region ?? {id: ''}),
     basis: [t.terrain_interpretation, t.special_note, t.evidence_status].filter(Boolean).join(' '),
     trip: t.id,
+    position: {latitude: t.latitude, longitude: t.longitude},
   };
 }
 

@@ -214,14 +214,14 @@ test('confidence: the server ladder equals dist/bite-evidence.js on the test_evi
   assert.deepEqual(CONFIDENCE_WORDS, ['Insufficient', 'Low', 'Moderate']);
 });
 
-test('comfort: the server copy scores the 150 golden cases exactly as web/score.ts', async () => {
+test('comfort: the advisor scores the 150 golden cases with web/score.ts, the one conditions model', async () => {
   const score = await import('../web/score.ts');
   const golden = read('./fixtures/score-golden.json');
   for (const [i, c] of golden.cases.entries()) {
     assert.equal(comfort.hourComfort(c.c, c.other, c.gust, c.factors), score.hourScores(c.c, c.other, score.controlModeFor(c.species), c.gust, c.factors).comfort, `case ${i}`);
     assert.equal(comfort.limitedComfort(c.c.wind ?? 0, c.c.sea.height ?? 0, c.gust, c.factors), score.limitedScores(c.c.wind ?? 0, c.c.sea.height ?? 0, c.gust, 'boat-comfort', c.factors).comfort, `limited ${i}`);
   }
-  for (const k of Object.keys(comfort.COMFORT)) if (k in score.THRESHOLDS) assert.equal(comfort.COMFORT[k], score.THRESHOLDS[k], k);
+  assert.equal(comfort.verdictFor, score.verdictFor, 'the advisor uses the model\'s verdict, not a copy');
   for (const r of [null, {conditions: 8}, {conditions: 7}, {conditions: 5}, {conditions: 3.9}, {conditions: 9, hazard: true}]) assert.equal(comfort.verdictFor(r), score.verdictFor(r));
   assert.deepEqual(comfort.REFERENCE_BOAT, {sea: 1, wind: 1, chopPeriod: 6});
   assert.ok(!Object.values(comfort.COMFORT_WORD).includes('go'), 'never a word that reads as a clearance');

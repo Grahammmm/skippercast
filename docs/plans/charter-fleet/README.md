@@ -250,3 +250,32 @@ Append a dated line when a phase starts or finishes; keep the older lines.
   (`skippercast-fleet-registry`, `skippercast-fleet-activity`), as #468 and
   #469 specify. Recorded in `open-questions.md`; N8 and N9 in `graph.md` updated.
 - 2026-10-11: [Fleet seed #521](https://github.com/Grahammmm/skippercast/issues/521): 347 scout rows across 28 ports transferred to AgentOrange with matching SHA-256. The draft importer's offline check yields 342 candidates and five skips for missing usable provenance. Gate (d) remains pending; no Worker registry job has been dispatched. The eight unscouted ports remain separate backlog.
+- 2026-10-11: N4 code half ([#570](https://github.com/Grahammmm/skippercast/issues/570)): `schedule-correlation` matching (5 matched at-sea and landing-report days over 14, no rival boat of the same port), the watched gate (strong method and confidence ≥ 0.85) in the Worker and the matcher, `python -m skippercast.fleet.ais watch-check` and `schedule-precision`. No precision figure yet: the January–June 2026 landing-report archive is not in the repository. The coverage run waits on N3.
+- 2026-10-11: N5 activity classifier in review (#570, branch
+  `claude/n5-classifier`). It adds the modes `drift-anchor`, `troll-slow`,
+  `troll-pelagic` and `uncertain`, and keeps every threshold in `fleet.json`
+  `thresholds.activity`. Offshore distance is measured to the nearest port
+  geofence. Transit keeps statistics only, and `classifier_version` is now
+  `c2-…`. Live rows are rewritten when the CF-45 processor and CF-47 backfill
+  reprocess them after merge. The tests use synthetic tracks only.
+- 2026-10-11: N6 heat-map aggregate in review (branch `claude/n6-heat-map`,
+  #570). CA and OR bin troll-pelagic into 3 km cells (`resolution_by_kind`),
+  other modes stay at 1 km; the new params change every cell id, so the next
+  processor run replaces the old cells of the seasons it reprocesses.
+  `GET /api/fleet/public/heat` returns whole-season cells only, with at
+  least 3 vessels, at least 72 h old and allowlisted rights, behind `FLEET_PUBLIC_HEAT_ENABLED` (off); it is empty until Q1 moves
+  aisstream to `api-terms`. The admin tracks layer now draws fishing segments
+  only. Tests use synthetic cells only.
+- 2026-10-11: N7 labelled validation set started (#570). N7a (branch
+  `claude/n7-validate`) adds the per-mode precision and recall gate, the
+  transit-lost minutes and coverage counts to `validate`, and `label export`
+  and `label import` for agent-proposed labels, with the
+  [labelling runbook](../../operations/runbooks/fleet-labelling.md). No labels
+  yet; N7b and the labelling run follow.
+- 2026-10-12: N8 skill packaging in review (branch `claude/n8-fleet-skills`,
+  #570): `skills/skippercast-fleet-registry/` and
+  `skills/skippercast-fleet-activity/`, each with modes, guardrails, stop
+  conditions and a counts-only end-of-run report, and a contract test that
+  every command and workflow input they name exists. They run on request over
+  the existing GitHub schedules; Hermes scheduling, Telegram alerts, the host
+  check and the status scripts are still gaps of #468 and #469.

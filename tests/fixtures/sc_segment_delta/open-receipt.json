@@ -1,0 +1,158 @@
+{
+  "author_model": "synthetic-author",
+  "author_profile": "fixture",
+  "campaign_segment_id": "synthetic",
+  "card_id": "t_366d24e2",
+  "closed": false,
+  "code_commit": "1111111111111111111111111111111111111111",
+  "coordinator_segment_id": "seg:3310:-55000:-400000:5000",
+  "created_utc": "2026-10-21T00:00:00Z",
+  "determinism_digest": "32fc2d822797c172c61d07abf3b1caf3d50880f6bec6143e5141a68dd279be67",
+  "inputs": [
+    {
+      "cache": {
+        "bytes": 64,
+        "path": "cache/source-a.json",
+        "root_id": "raw:campaign",
+        "sha256": "facfadae00627ff0825380d28c937fccf4642a4dc237fcf934dcfdad29b17e7f"
+      },
+      "datum": {
+        "bytes": 64,
+        "path": "metadata/evidence.json",
+        "root_id": "queue:synthetic",
+        "sha256": "ba70ef4d7347334038626b1386a77ae46109718639503605f31b765ae70f7787"
+      },
+      "resolution": {
+        "bytes": 64,
+        "path": "metadata/evidence.json",
+        "root_id": "queue:synthetic",
+        "sha256": "ba70ef4d7347334038626b1386a77ae46109718639503605f31b765ae70f7787"
+      },
+      "rights": {
+        "bytes": 64,
+        "path": "metadata/evidence.json",
+        "root_id": "queue:synthetic",
+        "sha256": "ba70ef4d7347334038626b1386a77ae46109718639503605f31b765ae70f7787"
+      },
+      "source_id": "synthetic-source-a",
+      "source_sha256": "facfadae00627ff0825380d28c937fccf4642a4dc237fcf934dcfdad29b17e7f"
+    },
+    {
+      "cache": {
+        "bytes": 64,
+        "path": "cache/source-b.json",
+        "root_id": "raw:campaign",
+        "sha256": "459e343cd01fb103909a2b40f0126d2c0929ceddacc9776ffe915e259ad56d56"
+      },
+      "datum": {
+        "bytes": 64,
+        "path": "metadata/evidence.json",
+        "root_id": "queue:synthetic",
+        "sha256": "ba70ef4d7347334038626b1386a77ae46109718639503605f31b765ae70f7787"
+      },
+      "resolution": {
+        "bytes": 64,
+        "path": "metadata/evidence.json",
+        "root_id": "queue:synthetic",
+        "sha256": "ba70ef4d7347334038626b1386a77ae46109718639503605f31b765ae70f7787"
+      },
+      "rights": {
+        "bytes": 64,
+        "path": "metadata/evidence.json",
+        "root_id": "queue:synthetic",
+        "sha256": "ba70ef4d7347334038626b1386a77ae46109718639503605f31b765ae70f7787"
+      },
+      "source_id": "synthetic-source-b",
+      "source_sha256": "459e343cd01fb103909a2b40f0126d2c0929ceddacc9776ffe915e259ad56d56"
+    }
+  ],
+  "outputs": [
+    {
+      "artifact": {
+        "bytes": 64,
+        "path": "outputs/synthetic.json",
+        "root_id": "queue:synthetic",
+        "sha256": "f4aab6dd306d65f69e01bdc4a0ecd68b2c9cfd32e44162d5febd4d59de87aa3e"
+      },
+      "contributing_sources": [
+        {
+          "source_id": "synthetic-source-a",
+          "source_sha256": "facfadae00627ff0825380d28c937fccf4642a4dc237fcf934dcfdad29b17e7f"
+        },
+        {
+          "source_id": "synthetic-source-b",
+          "source_sha256": "459e343cd01fb103909a2b40f0126d2c0929ceddacc9776ffe915e259ad56d56"
+        }
+      ],
+      "measured_format": {
+        "bytes": 64,
+        "path": "metadata/evidence.json",
+        "root_id": "queue:synthetic",
+        "sha256": "ba70ef4d7347334038626b1386a77ae46109718639503605f31b765ae70f7787"
+      },
+      "parameters": {
+        "bands": [
+          1,
+          2
+        ],
+        "cell": 1,
+        "nodata": null
+      },
+      "tool": {
+        "code_commit": "1111111111111111111111111111111111111111",
+        "name": "synthetic-tool",
+        "version": "v1"
+      }
+    }
+  ],
+  "qa": {
+    "coverage_denominator": 100,
+    "flags": [
+      "synthetic-flag-a",
+      "synthetic-flag-b"
+    ],
+    "hole_numerator": 10,
+    "report": {
+      "bytes": 64,
+      "path": "metadata/qa-report.json",
+      "root_id": "queue:synthetic",
+      "sha256": "b69ba3686204e06c7989a2f29bd55e6e6fb71a5339aa8dce2e3eaf664227725d"
+    },
+    "spatial_support": {
+      "bytes": 64,
+      "path": "metadata/qa-support.json",
+      "root_id": "queue:synthetic",
+      "sha256": "707a322e03b248c986b1bf0cb40996fd593ddb868a35f6d2a0b65cede4531fdf"
+    },
+    "threshold_config": {
+      "bytes": 64,
+      "path": "metadata/qa-threshold.json",
+      "root_id": "queue:synthetic",
+      "sha256": "7d9b993ddc97e0b68e2703b99ebb9798d69beb8603cba881cae6511e7c375ed6"
+    },
+    "units": "synthetic cells"
+  },
+  "recipe": {
+    "bytes": 64,
+    "path": "metadata/recipe.json",
+    "root_id": "queue:synthetic",
+    "sha256": "a6a077d6b2153e55f6aad9d3a7f7a370d17bfbc6ee44dad6fa42c701e1a47c22"
+  },
+  "recipe_sha256": "a6a077d6b2153e55f6aad9d3a7f7a370d17bfbc6ee44dad6fa42c701e1a47c22",
+  "run": {
+    "bytes": 64,
+    "path": "metadata/run.json",
+    "root_id": "queue:synthetic",
+    "sha256": "51389858c6095cc131fd954fa1347a2e34d21c7b5797d93c39f687d5dc261d43"
+  },
+  "schema": "coast-segment-receipt-v1",
+  "schema_version": 1,
+  "segment_slug": "synthetic-segment",
+  "skill_commit": "2222222222222222222222222222222222222222",
+  "tier1": {
+    "mode": "unavailable",
+    "reason": "offline synthetic fixture; no model check performed",
+    "text_result": "unavailable",
+    "vision_result": "unavailable"
+  }
+}

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {cacheKey, overLimit} from '../server/edge-cache.ts';
 import {useBucket, EDGE_CACHE_MAX_BYTES} from '../server/feeds.ts';
 
@@ -136,7 +137,7 @@ test('without caches.default the endpoints still answer', async () => {
 function bucket(objects, log) {
   return {async get(key, options = {}) {
     const header = options.range?.get?.('Range');
-    log.push(header ? 'range' : 'full');
+    log.push(key.endsWith('/.r2-current.json') ? 'release' : header ? 'range' : 'full');
     const text = objects[key];if (text === undefined) return null;
     const bytes = new TextEncoder().encode(text), size = bytes.length;
     const match = /^bytes=(\d+)-(\d+)$/.exec(header || '');
@@ -144,7 +145,7 @@ function bucket(objects, log) {
       const offset = Number(match[1]), length = Math.min(Number(match[2]), size - 1) - offset + 1;
       return {size, httpEtag: '"v1"', range: {offset, length}, body: new Blob([bytes.slice(offset, offset + length)]).stream()};
     }
-    return {size, httpEtag: '"v1"', body: new Blob([bytes]).stream(), json: async () => JSON.parse(text)};
+    return {size, httpEtag: '"v1"', body: new Blob([bytes]).stream(), json: async () => JSON.parse(text), arrayBuffer: async () => bytes.buffer};
   }};
 }
 
@@ -157,13 +158,13 @@ test('R2 feeds: whole objects are cached once and Range reads are served from th
   assert.equal(miss.headers.get('X-SC-Cache'), 'miss');assert.deepEqual(await miss.json(), {ok: true});await c.settle();
   const hit = await worker.fetch(get('/feeds/conditions/latest.json?cachebust=1'), env, ctx());
   assert.equal(hit.headers.get('X-SC-Cache'), 'hit');assert.equal(hit.headers.get('X-Feed-Source'), 'r2');
-  assert.deepEqual(await hit.json(), {ok: true});assert.deepEqual(log, ['full']);
+  assert.deepEqual(await hit.json(), {ok: true});assert.deepEqual(log, ['release', 'full', 'release']);
   // A first Range read comes from R2 as a range and fills the cache with the whole object after the reply.
   c = ctx();
   const first = await worker.fetch(get('/feeds/tiles/reefs.pmtiles', {Range: 'bytes=0-6'}), env, c);
   assert.equal(first.status, 206);assert.equal(first.headers.get('Content-Range'), `bytes 0-6/${archive.length}`);
   assert.equal(await first.text(), 'PMTiles');await c.settle();
-  assert.deepEqual(log.slice(1), ['range', 'full']);
+  assert.deepEqual(log.slice(3), ['range', 'full']);
   const stored = cache.entries.get('https://skippercast.com/feeds/tiles/reefs.pmtiles?sc-build=b1');
   assert.equal(stored.status, 200);assert.equal(new TextDecoder().decode(stored.body), archive);
   assert.equal(new Headers(stored.headers).get('Content-Range'), null, 'the stored whole object has no range headers');
@@ -174,7 +175,7 @@ test('R2 feeds: whole objects are cached once and Range reads are served from th
   assert.equal(later.headers.get('Content-Range'), `bytes 8-11/${archive.length}`);
   const unchanged = await worker.fetch(get('/feeds/tiles/reefs.pmtiles', {'If-None-Match': '"v1"'}), env, ctx());
   assert.equal(unchanged.status, 304);
-  assert.equal(log.length, 3, 'no further R2 reads');
+  assert.equal(log.length, 5, 'no further R2 reads');
 }));
 
 test('R2 feeds larger than the cache limit, 404s and seafloor archives are not cached', () => withEdge(async cache => {
@@ -242,3 +243,27 @@ test('wrangler.jsonc binds both per-IP limiters', () => {
   assert.deepEqual(limits.FEED_LIMITER.simple, {limit: 300, period: 60});
   assert.notEqual(limits.PUBLIC_LIMITER.namespace_id, limits.FEED_LIMITER.namespace_id);
 });
+
+
+test('snapshot cache separates logical MIME/TTL and reports the current generation for reused bytes', () => withEdge(async () => {
+  const objects = {}, sha = bytes => createHash('sha256').update(bytes).digest('hex');
+  const blob = '{}', bodyHash = sha(blob);
+  objects['conditions/.r2-objects/' + bodyHash] = blob;
+  function promote(extra = false) {
+    const files = {'latest.json': bodyHash, 'README.md': bodyHash, ...(extra ? {'other.json': bodyHash} : {})};
+    const bytes = JSON.stringify({schema_version: 1, files}), generation = sha(bytes);
+    objects[`conditions/.r2-releases/${generation}.json`] = bytes;
+    objects['conditions/.r2-current.json'] = JSON.stringify({schema_version: 1, generation});
+    return generation;
+  }
+  const first = promote(), env = {FEEDS: bucket(objects, [])};
+  let c = ctx(), r = await worker.fetch(get('/feeds/conditions/latest.json'), env, c); await c.settle();
+  assert.equal(r.headers.get('Content-Type'), 'application/json');assert.equal(r.headers.get('X-Feed-Generation'), first);
+  c = ctx();r = await worker.fetch(get('/feeds/conditions/README.md'), env, c);await c.settle();
+  assert.equal(r.headers.get('Content-Type'), 'text/markdown; charset=utf-8');assert.equal(r.headers.get('Cache-Control'), 'public, max-age=300');
+  const second = promote(true);
+  r = await worker.fetch(get('/feeds/conditions/latest.json'), env, ctx());
+  assert.equal(r.headers.get('X-SC-Cache'), 'hit');assert.equal(r.headers.get('X-Feed-Generation'), second);
+  assert.equal(r.headers.get('Cache-Control'), 'public, max-age=60');assert.equal(r.headers.get('Content-Type'), 'application/json');
+  assert.deepEqual(await r.json(), {});
+}));

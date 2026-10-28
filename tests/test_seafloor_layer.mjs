@@ -1,207 +1,7 @@
+// FE-61 deleted v1's dist/seafloor-layer.js with the v1 shell; its tests went with it.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { legendHTML, detailsHTML, VIEWS } from '../dist/seafloor-layer.js';
-
-test('bedrock sheet explains original geology without claiming rugose boulders', () => {
-  const html = detailsHTML({status: 'classified-area', classified_area: JSON.stringify({
-    profile: 'original-interpreted-bedrock-area-v1',
-    interpretation_method: 'original-interpreted-bedrock-v1',
-  }), fit_lingcod: 'unknown'});
-  assert.match(html, /exposed-bedrock habitat area/);
-  assert.match(html, /Rugosity, boulder size, terrain grade and species fit are unknown/);
-  assert.match(html, /processed survey window rather than a reef edge/);
-  assert.doesNotMatch(html, /interprets rugose rock and boulders/);
-  assert.match(legendHTML('terrain'), /Interpreted rock habitat · unranked/);
-});
-
-test('search area sheet explains limited evidence without inventing a grade', () => {
-  const html = detailsHTML({status: 'search-area', terrain_grade: 'unknown', fit_lingcod: 'unknown',
-    search_area: JSON.stringify({target_species: ['lingcod']}), depth_min_ft: 40, depth_max_ft: 50});
-  assert.match(html, /Limited confidence · unranked search area/);
-  assert.match(html, /surrounding measurements are insufficient/);
-  assert.match(html, /Potential habitat for lingcod/);
-  assert.doesNotMatch(html, /Terrain grade unknown|of 3/);
-  assert.match(legendHTML('terrain'), /Rough-bottom search area · unranked/);
-});
 import { GRADE_STYLE, FIT_STYLE } from '../dist/seafloor-data.js';
-
-test('producer notices survive tile JSON and unsafe credit text cannot become markup', () => {
-  const row={source_id:'original',attribution:'Producer <img src=x>',notice:'Noncommercial; not for navigation.',policy_url:'https://example.org/terms'};
-  const html=detailsHTML({source_rights:JSON.stringify([row])});
-  assert.match(html,/Producer &lt;img src=x&gt;/);
-  assert.match(html,/Noncommercial; not for navigation\./);
-  assert.match(html,/href="https:\/\/example.org\/terms"/);
-  assert.doesNotMatch(html,/<img src=x>/);
-  const unsafe=detailsHTML({source_rights:[{...row,policy_url:'javascript:alert(1)'}]});
-  assert.doesNotMatch(unsafe,/javascript:|Publisher terms/);
-  assert.match(unsafe,/Noncommercial/);
-});
-
-test('terrain and fit legends never share a key, and fit is never called a catch probability', () => {
-  const terrain = legendHTML('terrain'), fit = legendHTML('fit_lingcod');
-  for (const s of Object.values(GRADE_STYLE)) { assert.ok(terrain.includes(s.color)); assert.ok(!fit.includes(s.color)); }
-  for (const s of Object.values(FIT_STYLE)) { assert.ok(fit.includes(s.color)); assert.ok(!terrain.includes(s.color)); }
-  assert.match(fit, /not catch probability/);
-  assert.deepEqual(VIEWS.map((v) => v.id), ['terrain', 'fit_lingcod', 'fit_rockfish_reef']);
-});
-
-test('details carry the required caveats, escape text and keep unknowns unknown', () => {
-  const html = detailsHTML({ id: 'x', terrain_grade: 'A', fit_lingcod: 3, fit_rockfish_reef: 'unknown', depth_min_ft: 40, depth_max_ft: 90,
-    source_ids: '["<b>src</b>"]', vertical_datum: 'unknown', screen: '{"status":"pass"}' });
-  assert.match(html, /Habitat candidate, unverified/);
-  assert.match(html, /Nominal depth; verify on your sounder\./);
-  assert.match(html, /40–90 ft nominal/);
-  assert.match(html, /lingcod: 3 of 3/);
-  assert.match(html, /rockfish reef: unknown/);
-  assert.match(html, /not a catch probability/);
-  assert.match(html, /not a navigation chart/i);
-  assert.ok(html.includes('&lt;b&gt;src&lt;/b&gt;'));
-  assert.ok(!html.includes('<b>src</b>'));
-  assert.match(html, /id="seafloor-weather"/);
-});
-
-test('regional screened habitat opens for reef targets, respects off, and skips unrelated species', async t => {
-  const {initSeafloor} = await import('../dist/seafloor-layer.js');
-  const elements = new Map();
-  const element = (id, value='') => {
-    const handlers = {};
-    const e = {value, checked:false, hidden:false, textContent:'', add(){},
-      addEventListener(name, fn){handlers[name]=fn;}, change(){handlers.change?.();}};
-    elements.set(id,e); return e;
-  };
-  const species=element('species-select','reef'), toggle=element('layer-seafloor');
-  const cells=element('layer-seafloor-cells'), view=element('seafloor-view','terrain');
-  element('seafloor-status');element('seafloor-options');
-  const saved={document:globalThis.document,L:globalThis.L,Option:globalThis.Option,pmtiles:globalThis.pmtiles,location:globalThis.location};
-  t.after(()=>{for(const [key,val] of Object.entries(saved)){if(val===undefined)delete globalThis[key];else globalThis[key]=val;}});
-  globalThis.document={getElementById:id=>elements.get(id)};
-  globalThis.Option=class{constructor(label,id){this.value=id;}};
-  globalThis.location={href:'https://skippercast.com/'};
-  let visible=0;
-  const layer=()=>({shown:false,addTo(){if(!this.shown){this.shown=true;visible++;}return this;},remove(){if(this.shown){this.shown=false;visible--;}},clearLayers(){}});
-  globalThis.L={canvas:()=>({}),layerGroup:layer,control:()=>({...layer(),getContainer:()=>({})})};
-  const map={createPane:()=>({style:{}}),on(){},getZoom:()=>9};
-  let opened=0;
-  globalThis.pmtiles={PMTiles:class{constructor(){opened++;}async getHeader(){return {};}}};
-  const ready={status:'ready',region:'morro-bay',archive_sha256:'a'.repeat(64),expires_at:'2099-01-01T00:00:00Z',layers:{habitat:9},reach_inputs:{r01:'x',r02:'y'}};
-  let response=ready;
-  const settle=()=>new Promise(resolve=>setImmediate(resolve));
-  const reader=initSeafloor(map,()=>{}, {fetchImpl:async()=>({ok:true,status:200,json:async()=>response})});
-  await settle();
-  assert.equal(toggle.checked,true);assert.equal(cells.checked,false);
-  assert.equal(view.value,'fit_rockfish_reef');assert.equal(reader.state(),'ready');
-  assert.match(elements.get('seafloor-status').textContent,/2 published reach inputs/);
-  species.value='lingcod';species.change();await settle();assert.equal(view.value,'fit_lingcod');
-  response={...ready,archive_sha256:'b'.repeat(64)};species.change();await settle();
-  assert.equal(opened,2,'a changed publication discards its old reader');
-  toggle.checked=false;toggle.change();species.value='rockfish';species.change();await settle();
-  assert.equal(toggle.checked,false,'manual off survives a target change');
-  toggle.checked=true;response={status:'updating'};toggle.change();await settle();
-  assert.equal(reader.state(),'updating');assert.equal(opened,2,'held refresh does not open another archive');
-  assert.match(elements.get('seafloor-status').textContent,/updating/);
-  species.value='yellowfin';toggle.checked=false;
-  initSeafloor(map,()=>{}, {fetchImpl:async()=>({ok:true,status:200,json:async()=>ready})});
-  await settle();assert.equal(toggle.checked,false,'pelagic target does not open the reef layer');
-});
-
-test('defaults distinguish reef fishing from pelagic targets and count actual publication inputs', async () => {
-  const {habitatDefaults,publishedReachCount}=await import('../dist/seafloor-layer.js');
-  assert.equal(habitatDefaults('yellowfin').enabled,false);
-  assert.equal(habitatDefaults('reef').enabled,true);
-  assert.equal(habitatDefaults('lingcod').view,'fit_lingcod');
-  assert.equal(publishedReachCount({reach_inputs:{a:'x',b:'y',c:'z',d:'w'}}),4);
-  assert.equal(publishedReachCount({}),0);
-});
-
-test('transient publication recovers automatically, retries are bounded, and off cancels recovery', async t => {
-  const {initSeafloor}=await import('../dist/seafloor-layer.js');
-  const elements=new Map();
-  for(const id of ['species-select','layer-seafloor','layer-seafloor-cells','seafloor-view','seafloor-status','seafloor-options']){
-    const handlers={}; elements.set(id,{value:id==='species-select'?'reef':'terrain',checked:false,hidden:false,textContent:'',add(){},
-      addEventListener(name,fn){handlers[name]=fn;},change(){handlers.change?.();}});
-  }
-  const saved={document:globalThis.document,L:globalThis.L,Option:globalThis.Option,pmtiles:globalThis.pmtiles,location:globalThis.location};
-  t.after(()=>{for(const [key,value]of Object.entries(saved)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}});
-  globalThis.document={getElementById:id=>elements.get(id)};globalThis.Option=class{};
-  globalThis.location={href:'https://skippercast.com/'};
-  let visible=0;
-  const layer=()=>({shown:false,addTo(){if(!this.shown){this.shown=true;visible++;}return this;},remove(){if(this.shown){this.shown=false;visible--;}},clearLayers(){}});
-  globalThis.L={canvas:()=>({}),layerGroup:layer,control:()=>({...layer(),getContainer:()=>({})})};
-  let opened=0;globalThis.pmtiles={PMTiles:class{constructor(){opened++;}async getHeader(){return {};}}};
-  const map={createPane:()=>({style:{}}),on(){},getZoom:()=>9};
-  const ready={status:'ready',region:'morro-bay',archive_sha256:'a'.repeat(64),expires_at:'2099-01-01T00:00:00Z',layers:{habitat:9}};
-  let pendingFetch=null;
-  let response={status:'updating'}, clock=Date.parse('2030-01-01T00:00:00Z'), next=0;
-  const timers=new Map(), settle=()=>new Promise(resolve=>setImmediate(resolve));
-  const reader=initSeafloor(map,()=>{}, {fetchImpl:async()=>{if(pendingFetch)await pendingFetch;return {ok:true,status:200,json:async()=>response};},now:()=>clock,
-    setTimeoutImpl(fn,delay){const id=++next;timers.set(id,{fn,delay});return id;},clearTimeoutImpl(id){timers.delete(id);}});
-  t.after(()=>reader.dispose());await settle();
-  assert.equal(reader.state(),'updating');assert.equal(opened,0);
-  assert.equal(timers.size,1,'updating publication schedules automatic recovery');
-  assert.equal([...timers.values()][0].delay,30000);
-  const fire=async()=>{const [id,event]=timers.entries().next().value;timers.delete(id);event.fn();await settle();};
-  response=ready;await fire();assert.equal(reader.state(),'ready');assert.equal(opened,1);
-  response={status:'updating'};await reader.enable();
-  const delays=[];while(timers.size){delays.push([...timers.values()][0].delay);await fire();}
-  assert.deepEqual(delays,[30000,60000,120000,240000,300000]);
-  assert.match(elements.get('seafloor-status').textContent,/toggle layer to retry/);
-  await reader.enable();assert.equal(timers.size,1);
-  const toggle=elements.get('layer-seafloor');toggle.checked=false;toggle.change();await settle();assert.equal(timers.size,0);
-  toggle.checked=true;response={status:'held'};toggle.change();await settle();
-  assert.equal(reader.state(),'held');assert.equal(timers.size,0);assert.equal(opened,1);
-  response=ready;await reader.enable();assert.equal(reader.state(),'ready');assert.equal(timers.size,1);
-  assert.equal(visible,3);
-  let release;pendingFetch=new Promise(resolve=>{release=resolve;});
-  clock=Date.parse(ready.expires_at);await fire();
-  assert.equal(visible,0,'expiry hides all layers before a pending fetch completes');
-  assert.equal(reader.state(),'checking');
-  release();await settle();pendingFetch=null;
-  assert.equal(reader.state(),'expired');assert.equal(timers.size,0);
-  clock=Date.parse('2030-01-01T00:00:00Z');await reader.enable();assert.equal(visible,3);
-  pendingFetch=new Promise(resolve=>{release=resolve;});
-  const refresh=reader.enable();assert.equal(visible,0,'manual/species refresh hides old layers synchronously');
-  reader.dispose();release();await refresh;pendingFetch=null;
-  elements.get('species-select').change();toggle.change();elements.get('layer-seafloor-cells').change();
-  await reader.enable();await reader.draw();await settle();
-  assert.equal(reader.state(),'disposed');assert.equal(visible,0);assert.equal(timers.size,0);
-});
-
-
-test('classified area sheet separates publisher interpretation from terrain and species ranks', () => {
-  const html = detailsHTML({status: 'classified-area', terrain_grade: 'A', fit_lingcod: 3,
-    depth_min_ft: 25, depth_max_ft: 300, source_ids: '["depth","class"]'});
-  assert.match(html, /Publisher interpretation · unranked habitat area/);
-  assert.match(html, /original publisher interprets rugose rock and boulders/);
-  assert.match(html, /does not establish fish presence or a precise fishing position/);
-  assert.match(html, /Terrain grade and species fit are unknown/);
-  assert.match(html, /lingcod: unknown/);
-  assert.doesNotMatch(html, /surrounding measurements are insufficient|of 3|Terrain grade A/);
-  assert.match(legendHTML('terrain'), /Interpreted rock habitat · unranked/);
-});
-test('map movement during delayed archive initialization or refresh cannot draw before legend/header mount',async t=>{
- const {initSeafloor}=await import('../dist/seafloor-layer.js');
- const elements=new Map();for(const id of ['species-select','layer-seafloor','layer-seafloor-cells','seafloor-view','seafloor-status','seafloor-options']){
-  const handlers={};elements.set(id,{value:id==='species-select'?'reef':'terrain',checked:false,hidden:false,textContent:'',add(){},addEventListener(name,fn){handlers[name]=fn;},removeEventListener(){},change(){handlers.change?.();}});
- }
- const saved={document:globalThis.document,L:globalThis.L,Option:globalThis.Option,pmtiles:globalThis.pmtiles,location:globalThis.location};t.after(()=>Object.assign(globalThis,saved));
- globalThis.document={getElementById:id=>elements.get(id)};globalThis.Option=class{constructor(label,id){this.value=id;}};globalThis.location={href:'https://skippercast.com/'};
- let clears=0,mounted=false,legendHost,legendWrites=0,headerReads=0,release;
- const layer=()=>({addTo(){return this;},remove(){},clearLayers(){clears++;}});
- globalThis.L={canvas:()=>({}),layerGroup:layer,control:()=>({addTo(){mounted=true;legendHost={set innerHTML(value){legendWrites++;}};return this;},remove(){mounted=false;},getContainer:()=>legendHost})};
- const handlers={};const map={createPane:()=>({style:{}}),on(name,fn){handlers[name]=fn;},off(){},getZoom:()=>9,invalidateSize(){return handlers.moveend?.();}};
- let headerWait=new Promise(resolve=>{release=resolve;});globalThis.pmtiles={PMTiles:class{async getHeader(){headerReads++;await headerWait;return {};}}};
- const ready={status:'ready',region:'morro-bay',archive_sha256:'a'.repeat(64),expires_at:'2099-01-01T00:00:00Z',layers:{habitat:9}};
- const reader=initSeafloor(map,()=>{}, {fetchImpl:async()=>Response.json(ready),setTimeoutImpl:()=>0,clearTimeoutImpl:()=>{}});t.after(()=>reader.dispose());const settle=()=>new Promise(resolve=>setImmediate(resolve));await settle();
- assert.equal(reader.state(),'ready','publication admission can precede display readiness');assert.equal(mounted,false);assert.equal(headerReads,1);
- await assert.doesNotReject(async()=>map.invalidateSize());assert.equal(clears,0);assert.equal(legendWrites,0);
- release();await settle();assert.equal(mounted,true);assert.equal(legendWrites,1);assert.equal(clears,2);
- // Real Leaflet retains the old control container after removal. A truthy
- // getContainer alone therefore cannot authorize drawing during a refresh.
- headerWait=new Promise(resolve=>{release=resolve;});const refresh=reader.enable();await settle();assert.equal(mounted,false);assert.ok(legendHost);const previous={clears,legendWrites,headerReads};
- await assert.doesNotReject(async()=>map.invalidateSize());assert.deepEqual({clears,legendWrites,headerReads},previous);
- release();await refresh;assert.equal(mounted,true);assert.equal(legendWrites,previous.legendWrites+1);assert.equal(clears,previous.clears+2);
- reader.dispose();await assert.doesNotReject(async()=>reader.draw());assert.equal(mounted,false);
-});
 
 // ---- v2 Chart layer (FE-14, web/map/seafloor.ts) over tests/fixtures/seafloor/chart.pmtiles
 // (synthetic; built by build-chart.mjs). A fake engine records which MapLibre
@@ -212,17 +12,21 @@ import {PMTiles} from 'pmtiles';
 import {decodeTile as decodeV2, dedupeById as dedupeV2, manifestState, tileFeatures as tileFeaturesV2} from '../dist/seafloor-data.js';
 import {
   EXPIRED, INCOMPLETE, NO_PUBLICATION, SEAFLOOR_LAYERS, SEAFLOOR_SOURCE, admitCell, admitHabitat, createSeafloor, fitKey, legendKey,
-  publicationRights, seafloorLayers, seafloorMark, seafloorState, seafloorView, surveyLine, toneOf, viewBounds,
+  cellBasis, publicationRights, seafloorLayers, seafloorMark, seafloorState, seafloorView, surveyList, surveySummary, toneOf, viewBounds,
 } from '../web/map/seafloor.ts';
+import {clickMark} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {camera} from '../web/map/stage.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
 
 const FIXTURE = readFileSync(new URL('./fixtures/seafloor/chart.pmtiles', import.meta.url));
+// Reads and feed answers still in flight (not counting ones a test holds on purpose); settle() waits for them.
+let inflight = 0;
+const tracked = async work => { inflight++; try { return await work(); } finally { inflight--; } };
 /** The fixture archive; `bounds` widens its header (a region larger than the two tiles it holds). */
 const fixtureReader = (hold = null, bounds = null) => {
   const archive = new PMTiles({getKey: () => 'fixture', getBytes: async (offset, length) => ({data: FIXTURE.buffer.slice(FIXTURE.byteOffset + offset, FIXTURE.byteOffset + offset + length)})});
-  return {async getHeader() { return {...await archive.getHeader(), ...bounds}; }, async getZxy(z, x, y) { if (hold) await hold.promise; return archive.getZxy(z, x, y); }};
+  return {async getHeader() { return tracked(async () => ({...await archive.getHeader(), ...bounds})); }, async getZxy(z, x, y) { if (hold) await hold.promise; return tracked(() => archive.getZxy(z, x, y)); }};
 };
 async function fixtureFeatures() {
   const reader = fixtureReader(), habitat = [], cells = [];
@@ -270,6 +74,10 @@ test('v2: only screened, unheld, credited features of ledger-screened reaches ar
   const cell = admitCell(cells[0], PUB);
   assert.deepEqual(cell.rights.map(r => r.credit), ['Fixture Survey Lab']);
   assert.match(cell.basis, /coverage only, with no habitat rank\.$/);
+  // #422 FE-14 follow-up: a cell's basis names its survey; year and datum stay unknown (no revision binding on cells).
+  assert.match(cell.basis, /^Surveyed 250 m cell from survey fixture-survey-2m \(year and vertical datum not recorded for this cell\):/);
+  assert.equal(cell.survey.year, 'unknown');
+  assert.match(cellBasis('unknown'), /from an unnamed survey \(year and vertical datum not recorded/);
   assert.equal(admitCell(cells[0], {...PUB, rights: publicationRights({source_attribution: ['x']})}), null, 'cells need the publication\'s credits and use notice');
 });
 
@@ -296,8 +104,12 @@ test('v2: grade and fit draw on the depth ramp from palette tokens; the key keep
   assert.deepEqual(terrain.slice(0, 3).map(([, label]) => label), Object.values(GRADE_STYLE).map(s => s.label));
   assert.deepEqual(fit.slice(0, 3).map(([, label]) => label), Object.values(FIT_STYLE).map(s => s.label).reverse());
   for (const [, label] of [...terrain, ...fit]) assert.doesNotMatch(label, FORBIDDEN);
-  assert.equal(surveyLine(['a (2010)']), 'Survey a (2010)');
-  assert.equal(surveyLine(['a (2010)', 'b (2008)', 'c (2008)', 'd (2006)', 'e (2004)']), 'Surveys a (2010), b (2008), c (2008) and 2 more');
+  // #697: the legend counts the surveys and spans their years; the ids (source file names) move to the basis popover.
+  assert.equal(surveySummary(['a (2010)']), '1 survey, 2010');
+  assert.equal(surveySummary(['a (2010)', 'b (2008)', 'c (2008)', 'd (2006)']), '4 surveys, 2006–2010');
+  assert.equal(surveySummary(['a (2010)', 'a (unknown)']), '1 survey, 2010, some undated', 'one survey, its cells undated');
+  assert.equal(surveySummary(['a (unknown)', 'b (unknown)']), '2 surveys, undated');
+  assert.equal(surveyList(['a (2010)', 'b (2008)', 'c (2008)', 'd (2006)', 'e (2004)']), 'Surveys drawn: a (2010), b (2008), c (2008), d (2006), e (2004).', 'every survey, none elided');
 });
 
 test('v2: the mark card names the candidate, its nominal depth, survey and year, and carries basis and credits', async () => {
@@ -305,7 +117,8 @@ test('v2: the mark card names the candidate, its nominal depth, survey and year,
   const [a, , search] = habitat.map(f => admitHabitat(f, PUB));
   const mark = seafloorMark(a, 'fit_lingcod');
   assert.deepEqual({...mark, basis: undefined}, {id: 'seafloor:fixture-candidate-a', name: 'Habitat candidate, unverified',
-    kind: 'Terrain grade A · fits lingcod habitat 3 of 3', reading: '41–90 ft nominal', source: 'Survey fixture-survey-2m · 2010 · 2 m grid', basis: undefined});
+    kind: 'Terrain grade A · fits lingcod habitat 3 of 3', reading: '41–90 ft nominal', source: 'Survey fixture-survey-2m · 2010 · 2 m grid', basis: undefined,
+    terms: [{href: 'https://example.org/terms', label: 'Publisher terms'}]});
   assert.ok(mark.basis.startsWith(a.basis));
   assert.match(mark.basis, /Fixture Survey Lab Synthetic test credit; never survey data\. Planning only\. Not a navigation chart\. Check current CDFW regulations\.$/);
   assert.equal(seafloorMark(a, 'terrain').kind, 'Terrain grade A');
@@ -313,6 +126,11 @@ test('v2: the mark card names the candidate, its nominal depth, survey and year,
   assert.equal(seafloorMark(search, 'fit_lingcod').kind, 'Rough-bottom search area · unranked');
   assert.equal(seafloorMark(search, 'fit_lingcod').name, 'Measured rough-bottom search area');
   for (const m of [mark, seafloorMark(search, 'terrain')]) assert.doesNotMatch(Object.values(m).join(' '), FORBIDDEN);
+  // v1's "Publisher terms": one link per distinct page, named by credit when there are several; none without a page.
+  const right = a.rights[0], other = {...right, credit: 'Other Lab', policyURL: 'https://example.net/terms'};
+  assert.deepEqual(seafloorMark({...a, rights: [right, {...right, credit: 'Same page'}, other]}, 'terrain').terms, [
+    {href: 'https://example.org/terms', label: 'Publisher terms: Fixture Survey Lab'}, {href: 'https://example.net/terms', label: 'Publisher terms: Other Lab'}]);
+  assert.equal(seafloorMark({...a, rights: [{...right, policyURL: ''}]}, 'terrain').terms, undefined);
 });
 
 test('v2: view bounds follow web-mercator spans for a north-up camera', () => {
@@ -324,7 +142,12 @@ test('v2: view bounds follow web-mercator spans for a north-up camera', () => {
 });
 
 const PAGE_V2 = 'https://s.test/map';
-const settle = () => new Promise(resolve => setTimeout(resolve, 25));
+// Until no tracked read is in flight and a few macrotask turns pass with none starting (a loaded
+// machine can need longer than any fixed delay; before FE-61 the v1 tests above warmed the modules).
+const turn = () => new Promise(resolve => setTimeout(resolve, 5));
+async function settle() {
+  for (let quiet = 0, limit = Date.now() + 10_000; quiet < 4 && Date.now() < limit;) { await turn(); quiet = inflight ? 0 : quiet + 1; }
+}
 /** A seafloor layer over the fixture with injected feeds, clock and timers. */
 function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers = 'seafloor', target = '', bounds = null} = {}) {
   configureStore({v2: true, storage: null});
@@ -346,9 +169,11 @@ function seafloorRig({manifest = {}, ledger = LEDGER, profile = 'boat', layers =
       rig.requests.push(url);
       await null;  // the test may change the feeds right after creating the layer
       if (rig.hold) await rig.hold.promise;
-      if (url === '/feeds/tiles/seafloor/manifest-morro-bay.json') return rig.manifest === 404 ? new Response('{}', {status: 404}) : Response.json(rig.manifest);
-      if (url === '/feeds/tiles/seafloor/regions/morro-bay/ledger.json') return new Response(rig.ledger);
-      return new Response('{}', {status: 404});
+      return tracked(async () => {
+        if (url === '/feeds/tiles/seafloor/manifest-morro-bay.json') return rig.manifest === 404 ? new Response('{}', {status: 404}) : Response.json(rig.manifest);
+        if (url === '/feeds/tiles/seafloor/regions/morro-bay/ledger.json') return new Response(rig.ledger);
+        return new Response('{}', {status: 404});
+      });
     },
   });
   return rig;
@@ -375,7 +200,7 @@ test('v2: toggling Seafloor adds and removes exactly its layers; held reaches an
   const state = seafloorState.value;
   assert.deepEqual({...state, note: undefined}, {status: 'ready', note: undefined, view: 'fit', fit: 'lingcod', drawn: 5,
     surveys: ['fixture-survey-2m (2010)', 'fixture-survey-2m (unknown)'], credits: ['Fixture Survey Lab']});
-  assert.equal(state.note, '2 candidates · 2 unranked in view');
+  assert.equal(state.note, '2 candidates in view · 1 unranked search area · 1 unranked interpreted area · unverified; nominal depth');
   assert.equal(rig.layer.mark('fixture-candidate-a').kind, 'Terrain grade A · fits lingcod habitat 3 of 3');
   for (const id of ['fixture-held', 'fixture-held-reach', 'fixture-uncredited', '3310:fx:2']) assert.equal(rig.layer.mark(id), null, id);
 
@@ -394,6 +219,25 @@ test('v2: toggling Seafloor adds and removes exactly its layers; held reaches an
   assert.equal(rig.timers.size, 0, 'off cancels the expiry check');
 });
 
+test('v2: the status lines carry v1\'s counts and caveat when the manifest states them (#422 FE-14 follow-up)', async t => {
+  // Production's mix: layers.habitat (3968) also counts the unranked search and interpreted areas; only habitat_counts.habitat are candidates.
+  const rig = seafloorRig({manifest: {layers: {habitat: 3968, cells: 10101}, habitat_counts: {habitat: 3064, 'search-area': 81, 'classified-area': 823},
+    reach_inputs: {a: {}, b: {}, c: {}}}});
+  t.after(() => rig.layer.destroy());
+  await settle();
+  assert.equal(seafloorState.value.note, '2 candidates in view · 1 unranked search area · 1 unranked interpreted area · unverified; nominal depth · 3 published reach inputs in this region');
+  camera.value = {latitude: 35.353, longitude: -120.948, zoom: 9};
+  await settle();
+  assert.equal(seafloorState.value.note, 'Zoom in to see seafloor candidates · 3064 screened candidates across 3 published reach inputs', 'candidates only, not the layer total');
+  rig.layer.destroy();
+  const totalOnly = seafloorRig({manifest: {layers: {habitat: 3968}, reach_inputs: {a: {}}}});
+  t.after(() => totalOnly.layer.destroy());
+  await settle();
+  camera.value = {latitude: 35.353, longitude: -120.948, zoom: 9};
+  await settle();
+  assert.equal(seafloorState.value.note, 'Zoom in to see seafloor candidates', 'without per-status counts the mixed total is never called candidates');
+});
+
 test('v2: a view with cells and no candidates empties the source when it zooms out, leaves the archive or needs too many tiles', async t => {
   const onlyCells = LEDGER.replace('"morro-bay-fx1","region":"morro-bay","status":"habitat-screened"', '"morro-bay-fx1","region":"morro-bay","status":"terrain-pending"')
     .replace('"morro-bay-fx3","region":"morro-bay","status":"unassessed"', '"morro-bay-fx3","region":"morro-bay","status":"habitat-screened"');
@@ -402,10 +246,10 @@ test('v2: a view with cells and no candidates empties the source when it zooms o
   t.after(() => rig.layer.destroy());
   await settle();
   assert.deepEqual(drawnIds(rig), ['cell:3310:fx:3'], 'only the screened reach\'s cell');
-  assert.equal(seafloorState.value.note, '0 candidates · 0 unranked in view');
+  assert.equal(seafloorState.value.note, '0 candidates in view · unverified; nominal depth');
   for (const [move, note] of [
     [{latitude: 35.353, longitude: -120.948, zoom: 9}, 'Zoom in to see seafloor candidates'],
-    [{latitude: 35.0, longitude: -122.5, zoom: 13}, 'No published seafloor survey in this view; the rest of the coast is unassessed'],
+    [{latitude: 35.0, longitude: -122.5, zoom: 13}, 'No published seafloor survey in this view · the rest of the coast is not assessed'],
     [{latitude: 35.353, longitude: -120.948, zoom: 10.5}, 'Zoom in to load seafloor candidates'],
   ]) {
     camera.value = {latitude: 35.353, longitude: -120.948, zoom: 13};
@@ -424,7 +268,7 @@ test('v2: Spear leaves out candidates deeper than its limit; a target without pu
   t.after(() => rig.layer.destroy());
   await settle();
   assert.deepEqual(drawnIds(rig), ['cell:3310:fx:1', 'fixture-candidate-a', 'fixture-interpreted', 'fixture-search']);
-  assert.equal(seafloorState.value.note, '1 candidate · 2 unranked in view · 1 deeper than the Spear limit (60 ft nominal) left out');
+  assert.equal(seafloorState.value.note, '1 candidate in view · 1 unranked search area · 1 unranked interpreted area · unverified; nominal depth · 1 deeper than the Spear limit (60 ft nominal) left out');
   assert.deepEqual([seafloorState.value.view, seafloorState.value.fit], ['terrain', null], 'cabezon fit is not in this publication');
 });
 
@@ -516,4 +360,49 @@ test('v2: expiry hides candidates before the refresh answers, and a late tile ne
   late.tileHold.release();
   await settle();
   assert.ok(late.calls.every(c => c[0] !== 'data' || c[2] === 0), 'no features after off');
+});
+
+// #706: a person can open a drawn coverage cell's basis. Fixture cell 3310:fx:1 spans about -120.987 to -120.970,
+// 35.344 to 35.358 and overlaps candidate fixture-candidate-a east of -120.981; 3310:fx:2 lies in held reach fx2.
+const CELL_ONLY = {lon: -120.985, lat: 35.35}, OVERLAP = {lon: -120.975, lat: 35.35}, HELD_CELL = {lon: -120.961, lat: 35.337};
+test('v2: a drawn coverage cell opens its own card: its survey, year and datum not recorded, the credits, and no depth or fit', async t => {
+  const rig = seafloorRig();
+  t.after(() => rig.layer.destroy());
+  await settle();
+  const card = rig.layer.cellAt(CELL_ONLY);
+  assert.deepEqual({...card, basis: undefined}, {id: 'seafloor:cell:3310:fx:1', name: 'Surveyed 250 m cell', kind: 'Survey coverage · no habitat rank',
+    reading: 'Depth not given for this cell', source: 'Survey fixture-survey-2m · year and vertical datum not recorded for this cell', basis: undefined});
+  assert.ok(card.basis.startsWith(cellBasis('fixture-survey-2m')), 'the cell\'s own basis');
+  assert.match(card.basis, /Fixture Survey Lab .*Planning only\. Not a navigation chart\./, 'with the publication\'s credits and notice');
+  assert.doesNotMatch(`${card.kind} ${card.reading} ${card.source}`, /grade|fits|\bft\b|candidate/i, 'no terrain grade, fit or depth from the habitat branch');
+  assert.doesNotMatch(card.basis, FORBIDDEN);
+  assert.equal(rig.layer.cellAt(HELD_CELL), null, 'a held reach\'s cell never draws and never opens');
+  assert.equal(rig.layer.cellAt({lon: -120.5, lat: 35.0}), null, 'open water outside every cell');
+  assert.equal(rig.layer.mark('cell:3310:fx:1'), null, 'cells are not habitat marks');
+});
+
+test('v2: a cell reads only where nothing more specific is picked, and goes with an expired or hidden publication', async t => {
+  const rig = seafloorRig({manifest: {expires_at: '2030-01-01T00:01:00Z'}});
+  t.after(() => rig.layer.destroy());
+  await settle();
+  const cell = p => rig.layer.cellAt(p), habitat = rig.layer.mark('fixture-candidate-a');
+  assert.ok(cell(OVERLAP) && habitat, 'the candidate overlaps the cell');
+  // The candidate's pick wins over the cell under it; the cell comes before the current and water-temperature readings.
+  const field = () => ({id: 'current:x', name: 'Surface current', kind: '', reading: '', source: '', basis: ''});
+  assert.equal(clickMark(habitat, OVERLAP, [cell, field]), habitat);
+  assert.equal(clickMark(null, OVERLAP, [cell, field]).id, 'seafloor:cell:3310:fx:1');
+  assert.equal(clickMark(null, {lon: -120.5, lat: 35.0}, [cell, field]).id, 'current:x', 'no cell: the field reading');
+  assert.equal(clickMark(null, null, [cell, field]), null);
+
+  rig.clock = Date.parse('2030-01-01T00:02:00Z');
+  assert.equal(cell(CELL_ONLY), null, 'past expires_at the cell reads nothing, at the click');
+  assert.deepEqual([seafloorState.value.status, seafloorState.value.note], ['expired', EXPIRED]);
+
+  const off = seafloorRig();
+  t.after(() => off.layer.destroy());
+  await settle();
+  assert.ok(off.layer.cellAt(CELL_ONLY));
+  off.layers('currents');
+  await settle();
+  assert.equal(off.layer.cellAt(CELL_ONLY), null, 'off withdraws the cells');
 });

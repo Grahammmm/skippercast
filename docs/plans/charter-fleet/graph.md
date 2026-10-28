@@ -78,8 +78,9 @@ commands). A unit that fails twice moves up one tier.
 - Check: every `watched` row has confidence ≥ 0.85 and a method in {`fcc-uls`, `geofence-presence`, `admin`, `schedule-correlation`} (`call-sign` and `ais-static-name` are candidate-only) (assertion over the watch endpoint, exit 0); `pytest tests/unit/test_fleet_match.py` passes; for `schedule-correlation`, precision on the January–June 2026 history ≥ 0.9 against landing-report days, reported with the false-match count.
 - Runs: Large builds `schedule-correlation`; Orchestrator gates; Small polls runs.
 - Depends on: N3, and the listener healthy (#508). Reuses: CF-46 (`ais/match.py`, `server/fleet/watch.ts`), CF-47 backfill, CF-45 processor.
+- Status (2026-10-11): code half built on `claude/n4-schedule-correlation` ([#570](https://github.com/Grahammmm/skippercast/issues/570)): `schedule-correlation` (`ais/schedule.py`, thresholds `thresholds.match.schedule`), the watched gate in `watch.ts` and `match.py`, `watch-check` and `schedule-precision`. The coverage run waits on N3 and on a January–June 2026 landing-report history, which the repository does not hold.
 
-### N5 · Activity classifier
+### N5 · Activity classifier · **in review**
 
 - Purpose: turn watched boats' positions into fishing modes and drop transit.
 - Input: positions of `watched` MMSIs (raw store on Hermes, or MarineCadastre backfill), thresholds in `regions/CA/fleet.json` `thresholds.activity`.
@@ -87,8 +88,9 @@ commands). A unit that fails twice moves up one tier.
 - Check: `pytest tests/unit/test_fleet_classify.py` passes on synthetic tracks: harbor shuffle → no trip; 1 kn drift 30 min → `drift-anchor`; 2.5 kn salmon troll → `troll-slow`; straight 7 kn offshore search with paddy stops → one `troll-pelagic` run; straight 7 kn inshore run → transit; night drift offshore → fishing; changing any threshold changes `classifier_version`; transit segments carry no geometry.
 - Runs: Large researches and builds (`references/classification.md` with sources), a second Large reviews.
 - Depends on: N4 (needs watched boats to reprocess; code can start in parallel on synthetic tracks). Reuses: CF-43 (`segment.py`, `classify.py`), CF-44 events, CF-45 processor, CF-47 backfill.
+- Status: code and synthetic-track checks are in the `claude/n5-classifier` PR (#570). Rules and sources are in [references/classification.md](references/classification.md). Live reprocessing follows the merge.
 
-### N6 · Heat-map aggregate
+### N6 · Heat-map aggregate · **in review**
 
 - Purpose: a general heat map for the public and an unsuppressed one for the owner.
 - Input: N5 fishing events, `thresholds.aggregate` in `regions/CA/fleet.json`.
@@ -96,6 +98,7 @@ commands). A unit that fails twice moves up one tier.
 - Check: a test (`node --test tests/test_fleet_public_heat.mjs`, new) proves the public route returns only cell geometry, mode, season or month, dwell and distinct-vessel count: no `vessel`, `mmsi`, `port`, `class`, `trip`, `event` or `track` key in any response, no route under it returns events or tracks, every cell has ≥ 3 distinct vessels, nothing newer than 72 h, and `noaa-planning-only` cells are absent from paid surfaces; plus `pytest tests/unit/test_fleet_events.py` and `node --test tests/test_fleet_map.mjs` pass.
 - Runs: Large builds, a second Large reviews.
 - Depends on: N5. Reuses: CF-44 (`src/skippercast/fleet/ais/aggregate/grid.py`, privacy knobs), CF-50 (`server/fleet/map.ts`), CF-51 (`dist/fleet-activity.js`).
+- Status: in review on `claude/n6-heat-map` ([#570](https://github.com/Grahammmm/skippercast/issues/570)). `resolution_by_kind` gives troll-pelagic 3 km cells; `GET /api/fleet/public/heat` is behind `FLEET_PUBLIC_HEAT_ENABLED` (off) and empty while aisstream is `internal-only`; the admin tracks layer draws fishing segments only. Go-live: [fleet-public-heat.md](../../operations/runbooks/fleet-public-heat.md).
 
 ### N7 · Labelled validation set
 
@@ -105,6 +108,7 @@ commands). A unit that fails twice moves up one tier.
 - Check: **owner approves** the set (or labels it), recorded in `labeller`; then `python -m skippercast.fleet.ais validate` reports fishing precision ≥ 0.8 and recall ≥ 0.7, overall and per mode, and the fishing minutes transit discarding would have lost.
 - Runs: Large proposes labels; owner approves; Small runs `validate`.
 - Depends on: N5 (N6 public go-live waits on N7 and Q1). Reuses: CF-48 (`validate.py`, `server/fleet/admin/labels.ts`).
+- Status: in progress. N7a (`claude/n7-validate`): per-mode gate, transit-lost minutes, coverage counts, and `label export`/`label import` with the [labelling runbook](../../operations/runbooks/fleet-labelling.md). N7b (`claude/n7-labels-approve`) adds the job route, owner approval and the workflow input. The labelling run follows both.
 
 ### N8 · Skill packaging
 
@@ -114,6 +118,7 @@ commands). A unit that fails twice moves up one tier.
 - Check (applies to both skills): `python scripts/check_repository.py` exit 0; each SKILL.md front matter has `name` and `description`; every command the skill names exists (`python -m skippercast.fleet --help` and `python -m skippercast.fleet.ais` list them); a separate Large reviewer approves.
 - Runs: Large writes, a second Large reviews.
 - Depends on: N6, N7. Reuses: CF-61 report, the runbooks `fleet-registry.md`, `fleet-osint.md`, `fleet-ais-down.md`.
+- Status: in review on `claude/n8-fleet-skills` ([#570](https://github.com/Grahammmm/skippercast/issues/570)): both skill folders and `tests/contract/test_fleet_skills.py`, which checks every command, flag, workflow input and runbook the skills name. The skills run on request over the existing GitHub schedules; the host check, `check_registry.py`, `check_activity.py`, Hermes scheduling, Telegram alerts and the archive backup are named as gaps of #468 and #469, as is a workflow that runs `watch-check` and `report` with the job identity.
 
 ### N9 · Skill dry run
 

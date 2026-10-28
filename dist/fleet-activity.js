@@ -9,8 +9,8 @@
 // (server/fleet/map.ts, routes/fleet.ts), so the client never decides access.
 //
 // Layers: activity events (circles, radius ∝ √dwell, drift filled, troll
-// ringed), trip tracks (segments coloured by kind, gaps dashed; the API returns
-// them decoded) and heat (aggregate cells, opacity ∝ dwell). Filters are applied
+// ringed), trip tracks (segments coloured by kind, gaps dashed; transit keeps no
+// track; the API returns them decoded) and heat (aggregate cells, opacity ∝ dwell). Filters are applied
 // server-side; every layer pages on meta.next, never on feature counts. Rows
 // whose rights are NOAA planning-only (MarineCadastre, D9) are drawn dotted and
 // can be left out with one checkbox.
@@ -21,13 +21,16 @@ export const LAYERS = ["events", "tracks", "heat"];
 export const INFERRED = "Inferred from movement (speed and track shape). Not a confirmed fishing stop or catch.";
 export const EVENT_STYLE = {
   "drift-anchor": {color: "#1f5f8b", fill: true, label: "Drift or anchor"},
-  troll: {color: "#c0561b", fill: false, label: "Troll"},
+  "troll-slow": {color: "#c0561b", fill: false, label: "Slow troll"},
+  "troll-pelagic": {color: "#8a3b12", fill: false, label: "Offshore troll"},
 };
 export const SEGMENT_STYLE = {
   "in-port": {color: "#9aa9b0", weight: 1.5, label: "In port"},
   transit: {color: "#64747d", weight: 2, label: "Transit"},
-  "fishing-drift": {color: "#1f5f8b", weight: 4, label: "Drift or anchor"},
-  "fishing-troll": {color: "#c0561b", weight: 4, label: "Troll"},
+  "drift-anchor": {color: "#1f5f8b", weight: 4, label: "Drift or anchor"},
+  "troll-slow": {color: "#c0561b", weight: 4, label: "Slow troll"},
+  "troll-pelagic": {color: "#8a3b12", weight: 4, label: "Offshore troll"},
+  uncertain: {color: "#9aa9b0", weight: 2, dashArray: "2 4", label: "Uncertain"},
   gap: {color: "#64747d", weight: 2, dashArray: "6 6", label: "Gap in coverage"},
 };
 export const HEAT_COLOR = "#b4441e";
@@ -213,9 +216,11 @@ const IGNORED_NAMES = {vessel: "boat", port: "port", class: "class", trip_type: 
 /** The status line for the drawn layers. */
 export function statusText(results) {
   const parts = [];
-  if (results.events) parts.push(`${results.events.features.length}${results.events.more ? "+" : ""} stops`);
-  if (results.tracks) parts.push(`${results.tracks.trips}${results.tracks.more ? "+" : ""} trips`);
-  if (results.heat) parts.push(`${results.heat.features.length}${results.heat.more ? "+" : ""} heat cells`);
+  // "1 stop", but "1+ stops": more remain beyond the one counted.
+  const count = (n, more, noun) => `${n}${more ? "+" : ""} ${noun}${n === 1 && !more ? "" : "s"}`;
+  if (results.events) parts.push(count(results.events.features.length, results.events.more, "stop"));
+  if (results.tracks) parts.push(count(results.tracks.trips, results.tracks.more, "trip"));
+  if (results.heat) parts.push(count(results.heat.features.length, results.heat.more, "heat cell"));
   if (!parts.length) return "Fleet activity is off. Turn on a layer to load it.";
   let text = parts.join(" · ") + " · inferred from movement";
   if (Object.values(results).some(r => r?.more)) text += ". More remain: zoom in or narrow the filters";

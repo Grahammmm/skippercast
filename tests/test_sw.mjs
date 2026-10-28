@@ -85,8 +85,8 @@ async function dispatch(worker, request) {
 // undici's Request refuses mode 'navigate', so a navigation is a plain request-like object.
 const nav = path => ({url: ORIGIN + path, method: 'GET', mode: 'navigate', headers: new Headers()});
 const get = url => new Request(new URL(url, ORIGIN));
-const leafletTile = (z, x, y, layers = '0,1,2,6') => {
-  // The GetMap URL Leaflet 1.9 builds for L.tileLayer.wms(..., {version:'1.3.0', tileSize:512}).
+const chartTile = (z, x, y, layers = '0,1,2,6') => {
+  // The GetMap URL v1's 2D map library built for its WMS tile layer (version 1.3.0, 512 px tiles).
   const half = 20037508.342789244, span = 2 * half / 2 ** (z - 1);
   const bbox = [-half + x * span, half - (y + 1) * span, -half + (x + 1) * span, half - y * span].join(',');
   return `${ENC_WMS}?service=WMS&request=GetMap&layers=${layers}&styles=&format=image%2Fpng&transparent=false&version=1.3.0&width=512&height=512&crs=EPSG%3A3857&bbox=${bbox}`;
@@ -97,7 +97,7 @@ test('routing: shell, fingerprinted assets, public data and tiles; private and O
   const route = (request) => context.routeFor(request, ORIGIN);
   assert.equal(route(nav('/')), 'shell');
   assert.equal(route(get('/app.0123456789.js')), 'immutable');
-  assert.equal(route(get('/vendor/leaflet.js')), 'static');
+  assert.equal(route(get('/vendor/simplewebauthn-browser-14.0.0/index.umd.min.js')), 'static');
   for (const path of ['/api/forecast?region=morro-bay', '/api/intelligence?region=x', '/api/daily?region=morro-bay&part=regulations', '/api/om/v1/marine?a=1', '/feeds/conditions/x.json', '/regions/index.json', '/data/regulations.json'])
     assert.equal(route(get(path)), 'data', path);
   for (const path of ['/api/session', '/api/trips', '/api/subscription', '/api/boat/lookup', '/sw.js', '/precache.json',
@@ -106,19 +106,19 @@ test('routing: shell, fingerprinted assets, public data and tiles; private and O
   assert.equal(route(new Request(ORIGIN + '/api/forecast', {method: 'POST', body: '{}'})), null);
   assert.equal(route(get('https://tile.openstreetmap.org/10/100/200.png')), null, 'OSM tiles are never cached');
   assert.equal(route(get('https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions')), 'data');
-  assert.equal(route(get(leafletTile(11, 330, 800))), 'tile');
+  assert.equal(route(get(chartTile(11, 330, 800))), 'tile');
   assert.equal(route(get('https://example.com/x.json')), null);
 });
 
-test('a Leaflet chart tile and the trip pack\'s own tile URL share one cache key', () => {
+test('a chart tile and the trip pack\'s own tile URL share one cache key', () => {
   const {context} = loadWorker();
   for (const [z, x, y] of [[8, 20, 50], [12, 330, 800]]) {
     const key = tileKey('0,1,2,6', z, x, y);
-    assert.equal(context.encTileKey(leafletTile(z, x, y)), key);
+    assert.equal(context.encTileKey(chartTile(z, x, y)), key);
     assert.equal(context.encTileKey(tileURL({z, x, y}, '0,1,2,6')), key);
   }
   assert.equal(context.encTileKey(ENC_WMS + '?request=GetCapabilities'), null);
-  assert.equal(context.encTileKey(leafletTile(10, 1, 1).replace('EPSG%3A3857', 'EPSG%3A4326')), null);
+  assert.equal(context.encTileKey(chartTile(10, 1, 1).replace('EPSG%3A3857', 'EPSG%3A4326')), null);
 });
 
 test('data is network-first: stored with its saved time online, served marked offline when the network fails', async () => {
@@ -182,15 +182,15 @@ test('a saved tide prediction answers the next day\'s dated request for the same
 test('chart tiles come from a trip pack offline, marked with their saved time', async () => {
   const worker = loadWorker();
   await (await worker.storage.open('sc-pack-morro-bay-1')).put(tileKey('0,1,2,6', 11, 330, 800), new Response('png', {headers: {'X-SC-Saved-At': '2026-09-29T01:00:00.000Z'}}));
-  const response = await dispatch(worker, new Request(leafletTile(11, 330, 800), {mode: 'no-cors'}));
+  const response = await dispatch(worker, new Request(chartTile(11, 330, 800), {mode: 'no-cors'}));
   assert.equal(await response.text(), 'png');
   assert.equal(response.headers.get('X-SC-Offline'), '2026-09-29T01:00:00.000Z');
-  await assert.rejects(dispatch(worker, get(leafletTile(11, 331, 800))));
+  await assert.rejects(dispatch(worker, get(chartTile(11, 331, 800))));
 });
 
 test('install precaches the build manifest; navigation falls back to the cached shell offline', async () => {
   let online = true;
-  const manifest = {schema_version: 1, build: 'dev', shells: ['/', '/?ui=v1'], assets: ['/app.0123456789.js'], static: ['/vendor/leaflet.js']};
+  const manifest = {schema_version: 1, build: 'dev', shells: ['/'], assets: ['/app.0123456789.js'], static: ['/manifest.webmanifest']};
   const worker = loadWorker({network: request => {
     if (!online) throw new TypeError('offline');
     const url = new URL(request.url);
@@ -201,23 +201,22 @@ test('install precaches the build manifest; navigation falls back to the cached 
   worker.listeners.install.forEach(fn => fn({waitUntil: p => waits.push(p)}));
   await Promise.all(waits);
   const shell = await worker.storage.open('sc-shell-dev');
-  assert.deepEqual((await shell.keys()).map(r => { const u = new URL(r.url); return u.pathname + u.search; }).sort(), ['/', '/?ui=v1', '/app.0123456789.js', '/vendor/leaflet.js']);
+  assert.deepEqual((await shell.keys()).map(r => { const u = new URL(r.url); return u.pathname + u.search; }).sort(), ['/', '/app.0123456789.js', '/manifest.webmanifest']);
   online = false;
   assert.equal(await (await dispatch(worker, nav('/?region=morro-bay'))).text(), 'body of /');
   assert.equal(await (await dispatch(worker, get('/app.0123456789.js'))).text(), 'body of /app.0123456789.js');
   await assert.rejects(dispatch(worker, nav('/sources.html')), 'only the app shell has an offline fallback');
 });
 
-// #497: once UI_V2 is on, '/' stores the landing; the v1 shell stays offline at ?ui=v1 for the release that keeps the switch.
-test('with v2 the default, offline / opens the landing and its first paint, ?ui=v1 and /index.html the v1 shell', async () => {
+// #497: '/' stores the landing. FE-61 removed the v1 shell: ?ui=v1 and /index.html open the landing too.
+test('offline / opens the landing and its first paint, and so do ?ui=v1 and /index.html', async () => {
   let online = true;
-  const manifest = {schema_version: 1, build: 'dev', shells: ['/', '/?ui=v1'], assets: ['/assets/index.0123456789.js', '/assets/landing.1111111111.js'], static: []};
+  const manifest = {schema_version: 1, build: 'dev', shells: ['/'], assets: ['/assets/landing.1111111111.js'], static: []};
   const worker = loadWorker({network: request => {
     if (!online) throw new TypeError('offline');
     const url = new URL(request.url);
     if (url.pathname === '/precache.json') return Response.json(manifest);
-    // The Worker with UI_V2 on: '/' is the landing, '?ui=v1' forces the v1 shell.
-    if (url.pathname === '/') return new Response(url.searchParams.get('ui') === 'v1' ? 'v1 shell' : 'landing');
+    if (url.pathname === '/') return new Response('landing');
     return new Response(`body of ${url.pathname}`);
   }});
   const waits = [];
@@ -227,9 +226,8 @@ test('with v2 the default, offline / opens the landing and its first paint, ?ui=
   assert.equal(await (await dispatch(worker, nav('/'))).text(), 'landing');
   assert.equal(await (await dispatch(worker, nav('/?ui=v2'))).text(), 'landing');
   assert.equal(await (await dispatch(worker, get('/assets/landing.1111111111.js'))).text(), 'body of /assets/landing.1111111111.js', 'the landing paints offline');
-  assert.equal(await (await dispatch(worker, nav('/?ui=v1&region=morro-bay'))).text(), 'v1 shell');
-  assert.equal(await (await dispatch(worker, nav('/index.html'))).text(), 'v1 shell');
-  assert.equal(await (await dispatch(worker, get('/assets/index.0123456789.js'))).text(), 'body of /assets/index.0123456789.js');
+  assert.equal(await (await dispatch(worker, nav('/?ui=v1&region=morro-bay'))).text(), 'landing');
+  assert.equal(await (await dispatch(worker, nav('/index.html'))).text(), 'landing');
   await assert.rejects(dispatch(worker, nav('/map?region=morro-bay')), /offline/, 'the app opens offline only from a pack');
   await assert.rejects(dispatch(worker, get('/assets/maplibre.2222222222.js')), /offline/, 'MapLibre is never installed');
 });

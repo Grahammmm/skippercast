@@ -122,12 +122,14 @@ def nearest_sea(lats, lons, sea, lat, lon, radius_km=SEA_RADIUS_KM):
     delta = (lons - lon + 180) % 360 - 180
     cols = np.where(np.abs(delta) <= window / max(math.cos(math.radians(lat)), 0.1))[0]
     best = None
+    best_km = math.inf  # Compare full precision; rounding is presentation only.
     for r in rows:
         for c in cols:
             if not sea[r, c]:
                 continue
             km = distance_km(lat, lon, float(lats[r]), float(lons[c]))
-            if km <= radius_km and (best is None or km < best[4]):
+            if km <= radius_km and km < best_km:
+                best_km = km
                 best = (int(r), int(c), round(float(lats[r]), 5), round(float(lons[c]), 5), round(km, 2))
     return best
 

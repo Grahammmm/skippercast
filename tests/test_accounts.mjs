@@ -367,9 +367,7 @@ test('the cron prunes expired sessions and challenges', async () => {
   sql.close();
 });
 
-test('client: #account opens over the Guide, and passkey errors read plainly', async () => {
-  const {viewFromHash} = await import('../dist/navigation.js');
-  assert.equal(viewFromHash('#account'), 'guide');
+test('client: sign-in links stay in the page, and passkey errors read plainly', async () => {
   const {passkeyMessage, signInHref} = await import('../dist/account.js');
   // Sign-in links stay in the page (a full load of "/" would drop the region and view).
   assert.equal(signInHref('/#account'), '#account');
@@ -380,10 +378,9 @@ test('client: #account opens over the Guide, and passkey errors read plainly', a
   assert.match(passkeyMessage({name: 'InvalidStateError'}), /already has a passkey/);
   assert.match(passkeyMessage({status: 429, message: 'please try again shortly'}), /Too many attempts/);
   assert.equal(passkeyMessage({message: 'that passkey is not recognised here'}), 'That passkey is not recognised here.');
-  const html = readFileSync(new URL('../dist/index.html', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../dist/app.html', import.meta.url), 'utf8');
   assert.match(html, /<script src="vendor\/simplewebauthn-browser-14\.0\.0\/index\.umd\.min\.js" integrity="sha256-[^"]+" defer><\/script>/);
-  assert.match(html, /id="account-entry"/);
   // Destructive actions confirm in the page; window.confirm blocks the page and automation.
-  for (const file of ['../dist/account.js', '../dist/trip-alerts.js']) assert.doesNotMatch(readFileSync(new URL(file, import.meta.url), 'utf8'), /(^|[^.\w])confirm\(/, file);
-  for (const file of ['../dist/trip-alerts.js', '../dist/boat-profile.js']) assert.doesNotMatch(readFileSync(new URL(file, import.meta.url), 'utf8'), /coming soon|chatgpt/i, file);
+  for (const file of ['../dist/account.js', '../web/alerts.ts', '../web/app/TripAlerts.tsx']) assert.doesNotMatch(readFileSync(new URL(file, import.meta.url), 'utf8'), /(^|[^.\w])confirm\(/, file);
+  for (const file of ['../web/app/TripAlerts.tsx', '../dist/boat-profile.js']) assert.doesNotMatch(readFileSync(new URL(file, import.meta.url), 'utf8'), /coming soon|chatgpt/i, file);
 });

@@ -10,7 +10,8 @@
 //       events, then inserts `trips`, `segments` and `events`, so the same request twice
 //       leaves the same rows and nothing outside the windows is touched. Every trip must
 //       fall in a window of its MMSI and carry the request's source; segments and events
-//       must belong to the request's trips; ids must be the derived ones (design § 5);
+//       must belong to the request's trips, and an event's segment to that event's own trip;
+//       ids must be the derived ones (design § 5);
 //       trip vessels must be this region's. Labels (fleet_segment_labels) are never touched.
 //     aggregates: {module, season, cells, delete?, prune?}: upserts cells (by id), deletes
 //       the listed cell ids of that season, and with `prune` (a computed_at) deletes that
@@ -55,7 +56,8 @@ class Invalid extends Error {}
 
 const ENUMS: Record<string, readonly string[]> = {
   source: ['aisstream', 'marinecadastre', 'datalastic'], rights: FLEET_ENUMS.rights, status: ['open', 'closed', 'truncated'],
-  segment: ['in-port', 'transit', 'fishing-drift', 'fishing-troll', 'gap'], event: ['drift-anchor', 'troll'],
+  segment: ['in-port', 'transit', 'drift-anchor', 'troll-slow', 'troll-pelagic', 'uncertain', 'gap'],
+  event: ['drift-anchor', 'troll-slow', 'troll-pelagic'],
   basis: [BASIS], vesselClass: FLEET_ENUMS.vesselClass, tripType: FLEET_ENUMS.tripType,
 };
 const PATTERNS: Record<string, RegExp> = {
@@ -99,7 +101,7 @@ const TRIP = {id: 'id', region: 'token', vessel_id: 'id', mmsi: 'mmsi', depart_p
   trip_type_inferred: 'enum:tripType?', distance_nm: 'num?', max_offshore_nm: 'num?', fishing_min: 'int?', positions_n: 'int?',
   gap_min: 'int?', source: 'enum:source', rights: 'enum:rights', classifier_version: 'token', computed_at: 'iso'};
 const SEGMENT = {id: 'id', trip_id: 'id', seq: 'int', kind: 'enum:segment', started_at: 'iso', ended_at: 'iso', geometry: 'text?',
-  points_n: 'int?', mean_sog: 'num?', straightness: 'num?', heading_var: 'num?'};
+  points_n: 'int?', mean_sog: 'num?', p90_sog: 'num?', distance_nm: 'num?', straightness: 'num?', heading_var: 'num?'};
 const EVENT = {id: 'id', trip_id: 'id', segment_id: 'id', vessel_id: 'id', region: 'token', kind: 'enum:event', lat: 'lat', lon: 'lon',
   radius_m: 'num?', started_at: 'iso', ended_at: 'iso', dwell_min: 'int', port_id: 'token?', vessel_class: 'enum:vesselClass?',
   trip_type: 'enum:tripType?', season: 'season', season_part: 'token?', basis: 'enum:basis', source: 'enum:source',
@@ -164,7 +166,8 @@ async function applyActivity(db: D1Database, raw: Record<string, unknown>): Prom
   if (!windows.length && aggregates === undefined && processed === undefined) throw new Invalid('nothing to do');
 
   // Each trip inside a window of its MMSI; children inside the request; ids as derived (design § 5).
-  const tripsById = new Map<string, Row>(), segmentIds = new Set<string>();
+  // segmentTrips: each request segment's id -> its trip's id, so an event's segment must be its own trip's.
+  const tripsById = new Map<string, Row>(), segmentTrips = new Map<string, string>();
   for (const [i, w] of windows.entries()) if (!(w.from! < w.to!)) throw new Invalid(`replace[${i}]: from must be before to`);
   for (const [i, trip] of trips.entries()) {
     if (trip.region !== region || trip.source !== source) throw new Invalid(`trips[${i}]: region or source differs from the request`);
@@ -175,13 +178,14 @@ async function applyActivity(db: D1Database, raw: Record<string, unknown>): Prom
   }
   for (const [i, seg] of segments.entries()) {
     if (!tripsById.has(seg.trip_id as string)) throw new Invalid(`segments[${i}]: trip not in this request`);
-    if (seg.id !== await id32(seg.trip_id!, seg.seq!) || segmentIds.has(seg.id as string)) throw new Invalid(`segments[${i}]: id is not sha256(trip_id|seq) or repeats`);
-    segmentIds.add(seg.id as string);
+    if (seg.id !== await id32(seg.trip_id!, seg.seq!) || segmentTrips.has(seg.id as string)) throw new Invalid(`segments[${i}]: id is not sha256(trip_id|seq) or repeats`);
+    segmentTrips.set(seg.id as string, seg.trip_id as string);
   }
   const eventIds = new Set<string>();
   for (const [i, ev] of events.entries()) {
-    const trip = tripsById.get(ev.trip_id as string);
-    if (!trip || !segmentIds.has(ev.segment_id as string)) throw new Invalid(`events[${i}]: trip or segment not in this request`);
+    const trip = tripsById.get(ev.trip_id as string), segmentTrip = segmentTrips.get(ev.segment_id as string);
+    if (!trip || segmentTrip === undefined) throw new Invalid(`events[${i}]: trip or segment not in this request`);
+    if (segmentTrip !== ev.trip_id) throw new Invalid(`events[${i}]: segment belongs to another trip`);
     if (ev.region !== region || ev.source !== source || ev.vessel_id !== trip.vessel_id) throw new Invalid(`events[${i}]: region, source or vessel differs from its trip`);
     if (ev.id !== await id32(ev.trip_id!, ev.started_at!, ev.kind!) || eventIds.has(ev.id as string)) throw new Invalid(`events[${i}]: id is not sha256(trip_id|started_at|kind) or repeats`);
     eventIds.add(ev.id as string);

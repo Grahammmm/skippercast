@@ -98,10 +98,10 @@ export function currentPort(ports: readonly Port[], region: string | null, saved
   return inRegion.find(port => port.id === savedId) ?? inRegion[0] ?? null;
 }
 
-/** The app with `params` replacing the area keys; ui and any unrelated parameter stay. */
+/** The app with `params` replacing the area keys; unrelated parameters and exact #account intent stay. */
 function appURL(href: string, params: Record<string, string | undefined>): string {
   const url = new URL(href);
-  url.pathname = '/map'; url.hash = '';
+  url.pathname = '/map'; url.hash = url.hash === '#account' ? '#account' : '';
   for (const key of AREA_KEYS) url.searchParams.delete(key);
   for (const [key, value] of Object.entries(params)) if (value) url.searchParams.set(key, value);
   return url.href;
@@ -112,10 +112,10 @@ export const portURL = (href: string, port: Port, profile?: Profile | null): str
 /** "Explore the coast": the app over the central coast with no port. */
 export const exploreURL = (href: string): string => appURL(href, {coast: 'central'});
 
-/** The landing, keeping the ui switch so a preview stays in v2. */
+/** The landing, keeping the ui switch and exact #account intent through home resolution. */
 export function landingURL(href: string): string {
   const url = new URL(href), ui = url.searchParams.get('ui');
-  url.pathname = '/'; url.hash = ''; url.search = '';
+  url.pathname = '/'; url.hash = url.hash === '#account' ? '#account' : ''; url.search = '';
   if (ui) url.searchParams.set('ui', ui);
   return url.href;
 }
@@ -125,7 +125,8 @@ export type HomeStorage = StoreStorage & {removeItem?(key: string): void};
 /** `document`, or a test's stand-in: where the /coast preference cookie lives. */
 export type CookieJar = {cookie: string};
 /** A saved home: a listed port, or a /coast place with its fishing mode. */
-export type Home = {port: Port} | {native: HomePreferences};
+/** A /coast home; the mode is the stored profile when one is set, which may be the client-only kayak. */
+export type Home = {port: Port} | {native: Omit<HomePreferences, 'mode'> & {mode: Profile}};
 
 function browserStorage(): HomeStorage | null {
   try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; }
@@ -176,7 +177,7 @@ export function savedHomeMode(storage: HomeStorage | null = browserStorage(), ja
  */
 export function resolveHome(ports: readonly Port[], storage: HomeStorage | null = browserStorage(), cookies = ''): Home | null {
   const stored = read(storage, STORAGE_KEYS.profile), mode = isProfile(stored) ? stored : null;
-  const current = (p: HomePreferences): HomePreferences => mode ? {...p, mode} : p;
+  const current = (p: HomePreferences): Omit<HomePreferences, 'mode'> & {mode: Profile} => mode ? {...p, mode} : p;
   const id = read(storage, HOME_PORT_KEY), port = ports.find(item => item.id === id);
   if (port) return {port};
   const place = savedPlace(storage);

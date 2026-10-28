@@ -1,8 +1,8 @@
 // Account, boat and alerts for the v2 masthead (FE-50, design § 6 and § 7).
 // A wrapper, not a rewrite: the passkey dialog (dist/account.js), the exact
-// boat sheet (dist/boat-profile.js), the boat presets (dist/first-run.js) and
-// the saved-trip alerts (dist/trip-alerts.js) keep one implementation, so the
-// session cookie, the reload after sign in and every /api/ call are v1's.
+// boat sheet (dist/boat-profile.js) and the boat presets (dist/first-run.js)
+// keep one implementation, so the session cookie and the reload after sign in
+// are v1's. Saved-trip alerts are v2's own (web/alerts.ts, #602).
 // Each module loads on first use: the app entry carries none of them.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
@@ -21,6 +21,8 @@ export type Session =
   | {readonly state: 'signed-in'; readonly name: string | null};
 
 export const session = signal<Session>({state: 'loading'});
+let sessionRequest: Promise<Session> | null = null;
+let sessionGeneration = 0;
 
 /** The /api/session answer as the menu reads it: offline on any failure, disabled when the site offers no sign in. */
 export function readSession(data: unknown, ok = true): Session {
@@ -32,14 +34,29 @@ export function readSession(data: unknown, ok = true): Session {
   return {state: 'signed-in', name};
 }
 
-export async function refreshSession(fetchFn: typeof fetch = fetch): Promise<Session> {
-  let next: Session;
-  try {
-    const response = await fetchFn('/api/session', {signal: AbortSignal.timeout(20000)});
-    next = readSession(await response.json().catch(() => null), response.ok);
-  } catch { next = {state: 'offline'}; }
-  session.value = next;
-  return next;
+/** Mount initialization: share pending reads and reuse settled sessions across layout remounts. */
+export function ensureSession(fetchFn: typeof fetch = fetch): Promise<Session> {
+  if (sessionRequest) return sessionRequest;
+  const current = session.peek();
+  if (current.state !== 'loading' && current.state !== 'offline') return Promise.resolve(current);
+  return refreshSession(fetchFn);
+}
+
+/** Always fetch; only the latest requested read may update shared state. Offline reads remain retryable. */
+export function refreshSession(fetchFn: typeof fetch = fetch): Promise<Session> {
+  const generation = ++sessionGeneration;
+  sessionRequest = (async (): Promise<Session> => {
+    try {
+      const response = await fetchFn('/api/session', {signal: AbortSignal.timeout(20000)});
+      return readSession(await response.json().catch(() => null), response.ok);
+    } catch { return {state: 'offline'}; }
+  })().then(next => {
+    if (generation === sessionGeneration) session.value = next;
+    return next;
+  }).finally(() => {
+    if (generation === sessionGeneration) sessionRequest = null;
+  });
+  return sessionRequest;
 }
 
 /** The trigger's text: the account name, "Account", or "Sign in". */
@@ -106,26 +123,3 @@ export async function openBoatSheet(): Promise<void> {
   const {openBoatProfile} = await import('../dist/boat-profile.js');
   openBoatProfile();
 }
-
-/**
- * Render v1's saved-trip alerts into the hosts trip-alerts.js expects
- * (#trip-alerts, #comfort-feedback, #species-select, #comfort-heading) for
- * `regionId`, the alert species defaulting to the app's target when the
- * region lists it. Comfort feedback carries no forecast context in v2.
- */
-export async function mountTripAlerts(regionId: string, target: string | null): Promise<void> {
-  const [regions, {initTripAlerts}] = await Promise.all([import('../dist/region.js'), import('../dist/trip-alerts.js')]);
-  const response = await fetch(`regions/${encodeURIComponent(regionId)}/region.json`);
-  if (!response.ok) throw Error('The region could not be loaded. Try again when you are online.');
-  const json = await response.json() as {species: string[]};
-  regions.setRegion(json);
-  const r = regions.getRegion();
-  const select = document.getElementById('species-select') as HTMLSelectElement | null;
-  if (select) {
-    const initial = regions.initialTargetSelection(r, target && json.species.includes(target) ? target : null);
-    regions.renderTargetOptions(select, initial.options.filter((o: {id: string}) => json.species.includes(o.id)), initial.value);
-  }
-  await initTripAlerts({getState: () => null});
-  document.querySelector('#trip-alerts > details')?.setAttribute('open', '');
-}
-

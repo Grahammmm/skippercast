@@ -19,6 +19,7 @@ Dated audit, rollout, source-request and review records live in [archive/](archi
 | [regional-intelligence.md](regional-intelligence.md) | Regional forecast comparison, ensembles, currents and saved-trip alerts |
 | [boat-profile.md](boat-profile.md) | Entering your boat and how comfort and drift ratings scale to it |
 | [assessment-rubric.md](assessment-rubric.md) | The fixed 1–10 comfort and fishing-conditions rubric for reviewed assessments |
+| [conditions-model.md](conditions-model.md) | The one conditions model (`web/score.ts`): the graded score, the window rule, and where they differ |
 | [forecast-workflow.md](forecast-workflow.md) | Operator or agent review from forecast evidence to an assessment |
 | [species-search-plans.md](species-search-plans.md) | Per-species map shortlists and how they are built |
 | [fishing-strategies.md](fishing-strategies.md) | Reviewed starter methods for each target species |
@@ -39,6 +40,7 @@ Dated audit, rollout, source-request and review records live in [archive/](archi
 | [recent-intel.md](recent-intel.md) | Recent local fishing-discussion research pipeline and its review rules |
 | [dynamic-species-method.md](dynamic-species-method.md) | Dated water-mass layers (temperature, fronts, chlorophyll, currents) and their limits |
 | [atlas-methodology.md](atlas-methodology.md) | How the dated Morro Bay–Avila habitat atlas was derived |
+| [land-water-method.md](land-water-method.md) | Proposed land/water check for ranked places, built from the CUSP shoreline (CI6-01B step 0, round 2, in review) |
 | [seafloor.md](seafloor.md) | The seafloor pipeline: original surveys to graded, legally screened habitat tiles |
 | [california-seabed-coverage.md](california-seabed-coverage.md) | Statewide seabed coverage and the gate for promoting an area to fishing targets |
 | [data-quality-rollout.md](data-quality-rollout.md) | Quality gates from regional evidence to a published coastal map |
@@ -60,6 +62,8 @@ Dated audit, rollout, source-request and review records live in [archive/](archi
 | [engineering/testing.md](engineering/testing.md) | Test layers, what each covers and how to add a fixture |
 | [engineering/adr/](engineering/adr/README.md) | Architecture decision records |
 | [plans/text-advisor/](plans/text-advisor/README.md) | Build plan for the Text Advisor (iMessage/SMS fishing advisor, skipper intake, social pipeline, admin): decisions, architecture, data model, task breakdown |
+| [plans/pelagic-context/design.md](plans/pelagic-context/design.md) | Design only: per-species pelagic context that follows the selected hour, with no score, and the validation test any search priority must pass first |
+| [plans/offline-ocean-coverage.md](plans/offline-ocean-coverage.md) | Proposal: explicit SST/current coverage in offline chart packs (caps, partial-coverage metadata, age/hash gates, tests); regional tiles kept apart from coastal snapshots |
 
 Also for engineers: [AGENTS.md](../AGENTS.md) (branch, PR and rebuild rules), [CONTRIBUTING.md](../CONTRIBUTING.md) and [CHANGELOG.md](../CHANGELOG.md).
 
@@ -73,7 +77,7 @@ Also for engineers: [AGENTS.md](../AGENTS.md) (branch, PR and rebuild rules), [C
 | [operations/release-process.md](operations/release-process.md) | Versions, tags, changelog and deploying a release |
 | [operations/incident-response.md](operations/incident-response.md) | Severity levels, who acts, and postmortems |
 | [operations/runners.md](operations/runners.md) | Where the jobs run, what GitHub-hosted minutes cost on a private repository, and the self-hosted runner switch |
-| [operations/runbooks/](operations/runbooks/) | [Feed stale](operations/runbooks/feed-stale.md), [rollback a release](operations/runbooks/rollback-release.md), [D1 restore](operations/runbooks/d1-restore.md), [R2 outage](operations/runbooks/r2-outage.md), [secrets rotation](operations/runbooks/secrets-rotation.md), [advisor relay setup](operations/runbooks/advisor-relay-setup.md), [advisor relay down](operations/runbooks/advisor-relay-down.md), [advisor port to Twilio](operations/runbooks/advisor-port-to-twilio.md), [advisor Meta App Review](operations/runbooks/advisor-meta-app-review.md), [advisor queue stuck](operations/runbooks/advisor-queue-stuck.md), [fleet registry run](operations/runbooks/fleet-registry.md), [fleet OSINT run](operations/runbooks/fleet-osint.md) |
+| [operations/runbooks/](operations/runbooks/) | [Feed stale](operations/runbooks/feed-stale.md), [rollback a release](operations/runbooks/rollback-release.md), [D1 restore](operations/runbooks/d1-restore.md), [R2 outage](operations/runbooks/r2-outage.md), [secrets rotation](operations/runbooks/secrets-rotation.md), [advisor relay setup](operations/runbooks/advisor-relay-setup.md), [advisor relay down](operations/runbooks/advisor-relay-down.md), [advisor port to Twilio](operations/runbooks/advisor-port-to-twilio.md), [advisor Meta App Review](operations/runbooks/advisor-meta-app-review.md), [advisor queue stuck](operations/runbooks/advisor-queue-stuck.md), [fleet registry run](operations/runbooks/fleet-registry.md), [fleet OSINT run](operations/runbooks/fleet-osint.md), [fleet public heat map go-live](operations/runbooks/fleet-public-heat.md), [fleet labelling](operations/runbooks/fleet-labelling.md) |
 
 ## Legal
 

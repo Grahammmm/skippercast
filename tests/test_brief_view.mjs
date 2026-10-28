@@ -12,6 +12,7 @@ import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
+import coastReport from './fixtures/coast/skippercast-report.json' with {type: 'json'};
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const INFO = {id: 'monterey-point-sur', name: 'Monterey', center: [36.62, -121.9], timezone: 'America/Los_Angeles'};
@@ -28,6 +29,8 @@ async function load() {
       export {Tiles, tileProps, ageText, sourceLine} from './web/brief/Tiles.tsx';
       export {Brief} from './web/app/Desktop.tsx';
       export {regionInfo} from './web/app/App.tsx';
+      export {createCoastData} from './web/coast-data.ts';
+      export {regionPlace} from './web/map/currents.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
@@ -54,6 +57,18 @@ test('ageText and the source line: minutes, hours, days; no reading says unavail
   const {ageText, sourceLine} = await load();
   assert.deepEqual([ageText(45 * 60_000), ageText(5 * 3_600_000), ageText(72 * 3_600_000), ageText(-1)], ['45 min', '5 h', '3 d', 'clock ahead']);
   assert.equal(sourceLine({source: 'NDBC 46042', state: 'unavailable', ageMs: null}), 'NDBC 46042 · unavailable');
+  assert.equal(sourceLine({source: 'NOAA tides', state: 'stale', ageMs: 5 * 3_600_000, lastGood: true}), 'NOAA tides · last good 5 h old');
+  assert.equal(sourceLine({source: 'NOAA tides', state: 'stale', ageMs: 5 * 3_600_000, lastGood: true}, true), 'NOAA tides · last good 5 h');
+});
+
+test('a last-good tile renders stale and says the latest check failed', async () => {
+  const {Tiles, render, h} = await load();
+  const tile = {id: 'tide', label: 'Tide', value: 3.2, unit: 'ft', detail: 'next high · Monterey · MLLW', source: 'NOAA tides', sourceUrl: null,
+    at: NOW.toISOString(), ageMs: 5 * 3_600_000, limitMs: 36 * 3_600_000, state: 'stale', lastGood: true};
+  const html = render(h(Tiles, {tiles: [tile]}));
+  assert.match(html, /data-state="stale"/);
+  assert.match(html, /NOAA tides · last good 5 h old/);
+  assert.match(html, /The latest check failed; this is the last good reading\./);
 });
 
 test('acceptance 1: a tile past its limit renders the stale state and its age', async () => {
@@ -87,7 +102,7 @@ test('without a regional forecast the wind and swell tiles read "—" and unavai
   assert.match(html, /Reference level: MLLW\./, 'the tide basis names the reference level');
 });
 
-test('the column renders the model: headline, deck, lower-exposure line, caveat, local-report line', async () => {
+test('the column renders the model: verdict and limit first, Details with readings, deck and caveat, lower-exposure line, local-report line', async () => {
   const {Brief, briefFrom, dailyFeed, regionInfo, render, h} = await load();
   const expected = briefFrom(sources(), NOW);
   regionInfo.value = INFO;
@@ -95,7 +110,13 @@ test('the column renders the model: headline, deck, lower-exposure line, caveat,
   try {
     const html = render(h(Brief, {now: NOW}));
     assert.match(html, /<aside class="app-brief" aria-label="Brief" data-basis="regional">/);
-    assert.ok(html.includes(`<h1>${expected.headline}</h1>`));
+    // #616: without this region's forecast the verdict is Unknown and says why; the readings line moves into Details.
+    assert.match(html, /<div class="app-verdict" data-verdict="unknown"><div class="app-verdict-head"><h1><span class="app-verdict-word">Unknown<\/span>/);
+    assert.match(html, /<p class="app-verdict-limit">No forecast for this day yet\.<\/p>/);
+    assert.ok(html.indexOf('app-verdict-limit') < html.indexOf('class="ui-tile"'), 'verdict and limit come before the tiles');
+    assert.match(html, /<details class="app-details"><summary>Details/);
+    assert.ok(html.includes(`<p class="app-readings ui-mono">${expected.headline}</p>`));
+    assert.match(html, /<div class="app-tiles app-tiles--dense">/);
     assert.match(html, /<p class="app-deck">/);
     assert.match(html, /class="ui-eyebrow">Lower exposure</);
     assert.ok(html.includes(expected.caveat));
@@ -103,6 +124,22 @@ test('the column renders the model: headline, deck, lower-exposure line, caveat,
     assert.equal((html.match(/class="ui-tile"/g) || []).length, 4);
     assert.doesNotMatch(html, /best bite|hotspot/i);
   } finally { regionInfo.value = null; dailyFeed.value = null; }
+});
+
+test('#616: with this region\'s forecast the verdict word and its limit lead the column, with the basis named', async () => {
+  const {Brief, dailyFeed, regionInfo, regionalForecast, parseConditionsForecast, render, h} = await load();
+  regionInfo.value = INFO;
+  dailyFeed.value = montereyDaily;
+  regionalForecast.value = parseConditionsForecast(forecastFeed(), INFO.id, INFO.center);
+  const tomorrow = new Date('2026-10-09T12:00:00Z'); // 5 am PDT, the morning still ahead
+  try {
+    const html = render(h(Brief, {now: tomorrow}));
+    const verdict = /<span class="app-verdict-word">(Comfortable|Marginal|Rough)<\/span>/.exec(html);
+    assert.ok(verdict, 'a rated word, not Unknown');
+    assert.match(html, /<p class="app-verdict-limit">[^<]+\.(?: Held at Marginal: [^<]+\.)?<\/p>/);
+    assert.match(html, /reference 23 ft boat, not a bite forecast or a safety clearance/);
+    assert.doesNotMatch(html, /best bite|hotspot|safe passage/i);
+  } finally { regionInfo.value = null; dailyFeed.value = null; regionalForecast.value = null; }
 });
 
 test('a feed for another region, or no region, leaves the brief empty', async () => {
@@ -195,4 +232,122 @@ test('#542: a visible page reloads a forecast older than 30 minutes and retries 
     listeners[0][1]();
     assert.equal(calls, before + 2, 'a fresh forecast is not fetched again');
   } finally { delete globalThis.document; regionalForecast.value = null; }
+});
+
+// FE-60 live check (#473): defects found on /map?region=morro-bay.
+const MORRO_INFO = {id: 'morro-bay', name: 'Morro Bay & Avila', center: [35.34, -120.965], timezone: 'America/Los_Angeles',
+  localAreas: [{id: 'estero-bay', name: 'Estero Bay', bounds: [-121.05, 35.32, -120.78, 35.47]}]};
+
+test('#473: the brief reads the daily data feed (reports, tides) with the conditions feed\'s newer buoys first', async () => {
+  const {loadDailyFeed, dailyFeed} = await load();
+  const conditions = {schema_version: 1, region_id: 'monterey-point-sur', sources: {diablo: {id: 'diablo', name: 'NDBC 46042 every 30 min', kind: 'observation', url: 'https://example.test/46042', checked_at: NOW.toISOString(), status: 'ok', data: {station: '46042', observations: []}}}};
+  const paths = [];
+  const fetchFn = async path => {
+    paths.push(String(path));
+    return new Response(JSON.stringify(String(path).startsWith('/feeds/data/') ? montereyDaily : conditions), {status: 200});
+  };
+  try {
+    const feed = await loadDailyFeed('monterey-point-sur', fetchFn);
+    assert.deepEqual(paths.sort(), ['/feeds/conditions/regions/monterey-point-sur/latest.json', '/feeds/data/regions/monterey-point-sur/latest.json']);
+    assert.deepEqual(feed.reports, montereyDaily.reports, 'the landing reports come from the daily feed');
+    assert.equal(Object.keys(feed.sources)[0], 'diablo', 'the 30-minute buoy comes first');
+    assert.ok(feed.sources.tides, 'the daily feed keeps its tides');
+    // Where both feeds name one buoy key, the 30-minute copy wins.
+    const stale = {...conditions.sources.diablo, name: 'NDBC 46042 daily', checked_at: '2026-01-01T00:00:00Z'};
+    const collide = await loadDailyFeed('monterey-point-sur', async path => new Response(JSON.stringify(String(path).startsWith('/feeds/data/')
+      ? {...montereyDaily, sources: {...montereyDaily.sources, diablo: stale}} : conditions), {status: 200}));
+    assert.equal(collide.sources.diablo.name, 'NDBC 46042 every 30 min', 'the newer conditions buoy is not overwritten');
+    // Either feed stands alone when the other fails.
+    const only = prefix => async path => String(path).startsWith(prefix) ? fetchFn(path) : new Response('no', {status: 503});
+    assert.deepEqual((await loadDailyFeed('monterey-point-sur', only('/feeds/data/'))).sources, montereyDaily.sources);
+    assert.deepEqual((await loadDailyFeed('monterey-point-sur', only('/feeds/conditions/'))).sources, conditions.sources);
+  } finally { dailyFeed.value = null; }
+});
+
+test('#473: the fleet line counts the region\'s trips by its landing names, not its display name', async () => {
+  const {briefFrom} = await load();
+  const feed = {...montereyDaily, region_id: 'morro-bay', landing_names: ['Morro Bay', 'Avila'],
+    reports: [{date: '2026-10-07', boat: 'Avenger', port: 'Morro Bay'}, {date: '2026-10-07', boat: 'Flying Fish', port: 'Avila Beach'}]};
+  const brief = briefFrom(sources({info: MORRO_INFO, feed}), NOW);
+  assert.equal(brief.fleet?.text, '2 boats reported from Morro Bay & Avila Beach in the last 7 days');
+});
+
+test('#557: the coast brief counts matching landing ports and excludes foreign ports', async () => {
+  const {briefFrom} = await load();
+  const foreign = {date: '2026-10-07', boat: 'Fixture Foreign', port: 'Monterey'};
+  const feed = {...montereyDaily, region_id: MORRO_INFO.id, landing_names: ['Morro Bay', 'Avila'],
+    reports: [{date: '2026-10-07', boat: 'Fixture Morro', port: 'Morro Bay'},
+      {date: '2026-10-07', boat: 'Fixture Avila', port: 'Avila Beach'}, foreign]};
+  const coast = {report: coastReport, areaId: 'central'};
+  const brief = briefFrom(sources({info: MORRO_INFO, feed, coast}), NOW);
+  assert.equal(brief?.basis, 'coast-report', 'the valid county and area must reach the coast branch');
+  const expectedFleet = {count: 2, port: 'Morro Bay & Avila Beach',
+    text: '2 boats reported from Morro Bay & Avila Beach in the last 7 days', href: '/report'};
+  assert.deepEqual(brief.fleet, expectedFleet, 'both matching ports count; the third boat at Monterey does not');
+
+  const foreignOnly = briefFrom(sources({info: MORRO_INFO, feed: {...feed, reports: [foreign]}, coast}), NOW);
+  assert.equal(foreignOnly?.basis, 'coast-report');
+  assert.equal(foreignOnly.fleet, null, 'a coast brief with only a foreign port has no fleet line');
+
+  const regional = briefFrom(sources({info: MORRO_INFO, feed, coast: null}), NOW);
+  assert.equal(regional?.basis, 'regional', 'the explicit null coast control takes the other branch');
+  assert.deepEqual(regional.fleet, expectedFleet, 'the regional branch keeps the same landing-name filter');
+});
+
+test('#473: the brief asks for the coast report where the region binds one, with no layer on, and only once', async t => {
+  const {bindBriefReport, createCoastData, regionPlace} = await load();
+  const calls = [], original = globalThis.fetch;
+  globalThis.fetch = async path => { calls.push(String(path)); return new Response('no', {status: 503}); };
+  const client = createCoastData({clockEvents: null});
+  t.after(() => { globalThis.fetch = original; client.destroy(); });
+  const place = () => regionPlace(MORRO_INFO, 'boat', '');
+  const stop = bindBriefReport(place, client);
+  t.after(stop);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const reports = () => calls.filter(path => path.includes('coast/report')).length;
+  assert.equal(reports(), 1, 'requested with no layer on');
+  // The Swell layer asks for the same place: no second request.
+  client.setPlace(place());
+  await client.load('report');
+  assert.equal(reports(), 1);
+  // Outside a binding nothing is requested.
+  const before = calls.length, other = createCoastData({clockEvents: null});
+  bindBriefReport(() => regionPlace({id: 'monterey-point-sur', center: [36.62, -121.9], localAreas: []}, 'boat', ''), other)();
+  other.destroy();
+  assert.equal(calls.length, before);
+});
+
+test('P5 gaps: an unreadable feed says so and the headline stops waiting; unreadable both, readings unavailable', async () => {
+  const {loadDailyFeed, dailyFeed, feedGaps, FEED_GAP, Headline, BriefGaps, render, h} = await load();
+  const daily = async path => path.startsWith('/feeds/data/') ? new Response(JSON.stringify(montereyDaily), {status: 200}) : new Response('', {status: 503});
+  await loadDailyFeed('monterey-point-sur', daily);
+  assert.deepEqual(feedGaps.value, [FEED_GAP.conditions]);
+  assert.match(render(h(BriefGaps, {brief: null})), /Live buoy feed could not be read/);
+  const conditionsOnly = {schema_version: 1, region_id: 'monterey-point-sur', sources: {diablo: {id: 'diablo', name: 'Monterey Bay', kind: 'observation', url: '', checked_at: NOW.toISOString(), status: 'ok'}}};
+  await loadDailyFeed('monterey-point-sur', async path => path.startsWith('/feeds/data/') ? new Response('', {status: 404}) : new Response(JSON.stringify(conditionsOnly), {status: 200}));
+  assert.deepEqual(feedGaps.value, ['Daily feed could not be read: tide predictions and marine alert checks are missing.']);
+  // A slower load for a region no longer selected does not write its gap lines over the newer one's.
+  const pending = [];
+  const release = () => pending.forEach(resolve => resolve(new Response('', {status: 503})));
+  const slow = loadDailyFeed('monterey-point-sur', () => new Promise(resolve => pending.push(resolve)));
+  assert.deepEqual(feedGaps.value, [], 'a new load starts with no gap lines');
+  await loadDailyFeed('monterey-point-sur', async () => new Response(JSON.stringify(montereyDaily), {status: 200}));
+  release(); await slow;
+  assert.deepEqual(feedGaps.value, []);
+  await loadDailyFeed('monterey-point-sur', async () => new Response('', {status: 503}));
+  assert.deepEqual(feedGaps.value, [FEED_GAP.both]);
+  assert.match(render(h(Headline, {brief: null})), /Readings unavailable\./);
+  await loadDailyFeed('monterey-point-sur', async () => new Response(JSON.stringify(montereyDaily), {status: 200}));
+  assert.deepEqual(feedGaps.value, []);
+  assert.match(render(h(Headline, {brief: null})), /Waiting for readings\./);
+  dailyFeed.value = null;
+});
+
+test('P5 gaps: source gaps stay visible; what the model could not check folds into a disclosure', async () => {
+  const {BriefGaps, render, h} = await load();
+  const html = render(h(BriefGaps, {brief: {gaps: [{id: 'tides', label: 'NOAA tides', status: 'failed', text: 'NOAA tides: latest check failed; no earlier reading on hand.'}],
+    missing: ['Tide curve unavailable for this date', 'Harbor entrance and full return route need a separate check']}}));
+  assert.match(html, /<li data-status="failed">NOAA tides: latest check failed; no earlier reading on hand\.<\/li>/);
+  assert.match(html, /<details class="app-gaps-more"><summary>Not checked in this brief \(2\)<\/summary>/);
+  assert.equal(render(h(BriefGaps, {brief: {gaps: [], missing: []}})), '', 'nothing missing renders nothing');
 });

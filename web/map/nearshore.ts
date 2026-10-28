@@ -33,12 +33,12 @@ export const RING_PER_FT = 3;
 export const RING_MAX_FT = 15;
 const HOUR = 3_600_000;
 
-export interface Ring {readonly site: NearshoreSite; readonly hour: NearshoreHour; readonly waveFt: number}
+export interface Ring {readonly site: NearshoreSite; readonly hour: NearshoreHour; readonly waveFt: number; readonly product: string}
 export interface Rings {
   /** Changes with the sites, their runs and the samples drawn. */
   readonly key: string;
   readonly rings: readonly Ring[];
-  /** The product, from the report's status for the sites' source ("CDIP MOP"). */
+  /** The shared product, or "multiple nearshore models" when drawn products differ. */
   readonly product: string;
   readonly collection: {type: 'FeatureCollection'; features: {type: 'Feature'; properties: {id: string; radius: number}; geometry: {type: 'Point'; coordinates: [number, number]}}[]};
 }
@@ -50,7 +50,8 @@ export const ringRadius = (ft: number): number => RING_BASE + RING_PER_FT * Math
 /** The report's own name for a site's source: "CDIP MOP · nearshore model" gives "CDIP MOP". */
 function productOf(report: Report, sourceId: string): string {
   const label = Array.isArray(report.sources) ? report.sources.find(s => s?.id === sourceId)?.label : undefined;
-  return typeof label === 'string' && label ? label.split(' · ')[0]!.trim() : sourceId;
+  const product = typeof label === 'string' ? label.split(' · ')[0]!.trim() : '';
+  return product || sourceId;
 }
 
 /** The rings for the bound area at the dock's hour `at`, or null when none draws (no binding, no fresh site, no sample). */
@@ -59,11 +60,12 @@ export function nearshoreRings(report: Report | null, areaId: string | null, at:
   const rings: Ring[] = [];
   for (const site of freshNearshore(report, areaId, now)) {
     const hour = finite(site.lat) && finite(site.lon) ? nearshoreAt(site, at.toISOString()) : undefined;
-    if (hour && finite(hour.waveFt) && hour.waveFt >= 0) rings.push({site, hour, waveFt: hour.waveFt});
+    if (hour && finite(hour.waveFt) && hour.waveFt >= 0) rings.push({site, hour, waveFt: hour.waveFt, product: productOf(report, site.sourceId)});
   }
   if (!rings.length) return null;
   return {
-    key: rings.map(r => `${r.site.id}|${r.site.issuedAt}|${r.site.fetchedAt}|${r.hour.at}`).join(','), rings, product: productOf(report, rings[0]!.site.sourceId),
+    key: rings.map(r => `${r.site.id}|${r.site.issuedAt}|${r.site.fetchedAt}|${r.hour.at}`).join(','), rings,
+    product: rings.every(r => r.product === rings[0]!.product) ? rings[0]!.product : 'multiple nearshore models',
     collection: {type: 'FeatureCollection', features: rings.map(r => ({type: 'Feature', properties: {id: r.site.id, radius: ringRadius(r.waveFt)},
       geometry: {type: 'Point', coordinates: [r.site.lon, r.site.lat]}}))},
   };
@@ -98,13 +100,17 @@ export function ringSummary(r: Rings, now: Date): string {
 export function ringMark(r: Rings, id: unknown, now: Date, tz: string): ChartMark | null {
   const ring = r.rings.find(x => x.site.id === id);
   if (!ring) return null;
-  const {site, hour} = ring, from = finite(hour.directionDeg) ? ` · from ${compass(hour.directionDeg)} ${Math.round(hour.directionDeg)}°` : '';
+  const {site, hour, product} = ring, from = finite(hour.directionDeg) ? ` · from ${compass(hour.directionDeg)} ${Math.round(hour.directionDeg)}°` : '';
   const issued = site.issuedAt ? ` · issued ${age(now.getTime() - Date.parse(site.issuedAt))} ago` : '';
   const depth = finite(site.waterDepthM) ? ` The site is in ${site.waterDepthM} m of water (${site.depthDatum}).` : '';
+  const label = nearshoreSampleLabel(site, hour, tz), prefix = `${site.name} · `;
+  // Keep the shared time/cadence formatting, but validate its name prefix before stripping it.
+  if (!label.startsWith(prefix)) throw new Error('Nearshore sample label is missing its site prefix');
   return {
-    id: `nearshore:${site.id}|${hour.at}`, name: site.name, kind: 'Nearshore model site',
+    id: `nearshore:${site.id}|${hour.at}`, name: site.name, kind: `${product} model site`,
     reading: `${ring.waveFt.toFixed(1)} ft${finite(hour.periodS) ? ` · ${hour.periodS.toFixed(1)} s` : ''}${from}`,
-    source: `${r.product} · ${nearshoreSampleLabel(site, hour, tz).slice(site.name.length + 3)}${issued}`,
-    basis: `${ringBasis(r.product)}${depth}`,
+    source: `${product} · ${label.slice(prefix.length)}${issued}`,
+    basis: `Model issued ${site.issuedAt}; retrieved ${site.fetchedAt}. ${ringBasis(product)}${depth}`,
+    provider: {href: site.url, label: `${product} model site`},
   };
 }

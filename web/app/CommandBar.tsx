@@ -13,25 +13,27 @@
 // targets under their own headings, never merging their scores, and a search
 // field narrows it by name; the chosen target always stays listed.
 // The switch and the menus are exported for the mobile shell (FE-06).
+// #542: "Your limits" beside the switch opens the active profile's own comfort
+// limits (web/app/LimitsPanel.tsx).
 import {useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
 import {PortDialog, PortInput} from '../landing/PortInput.tsx';
 import {PROFILES, PROFILE_TABLE, type Profile} from '../profile.ts';
-import {regionPlans, targetGroups, targetsFor, type TargetOption} from '../species.ts';
+import {regionTargets, targetGroups, type TargetOption} from '../species.ts';
 import {currentPort, exploreURL, loadPorts, portURL, savedPortId, savePort, type Port} from '../ports.ts';
 import {area, navigate, profile, profilePatch, region, setParams, species} from '../state.ts';
 import {track} from '../telemetry.ts';
 import {zone} from './App.tsx';
 import {dayOptions, dockState, readout} from './TimeDock.tsx';
 import {titleCase} from './Masthead.tsx';
+import {LimitsControl} from './LimitsPanel.tsx';
 
 const PROFILE_OPTIONS = PROFILES.map(id => ({value: id, label: PROFILE_TABLE[id].label, icon: id} as const));
 
 /** The profile's target list in the current region, plus the link's target when it is not in it. */
 export function targetList(p: Profile, current: string | null): TargetOption[] {
-  const r = region.value, loaded = regionPlans.value;
-  return targetsFor(p, r, loaded && loaded.region === r ? loaded.plans : {}, current);
+  return regionTargets(p, region.value, current);
 }
 export const targetOptions = (p: Profile, current: string | null): string[] => targetList(p, current).map(t => t.id);
 
@@ -106,7 +108,11 @@ export function PortControl() {
 export function CommandBar({now = new Date()}: {now?: Date} = {}) {
   return (
     <section class="app-command" aria-label="Command bar">
-      <ProfileSwitch />
+      {/* The limits trigger is an icon beside the switch, so the bar stays one row on a 1280 px laptop. */}
+      <div class="app-profile-limits">
+        <ProfileSwitch />
+        <LimitsControl compact />
+      </div>
       <TargetSelect />
       <div class="app-area" role="group" aria-label="Area and port">
         <AreaSelect />

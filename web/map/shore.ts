@@ -9,7 +9,9 @@
 //
 // Expiry is honoured: a run past its source review is not drawn (the terrain's
 // rule, packages/coast viewer `loadShore`); only a protected-area check that is
-// not current holds guidance; a run or
+// not current, a marine alert check that is not current (or no coast report), a marine
+// alert for the area or a county beach-health notice holds
+// guidance (web/brief/shore.ts); a run or
 // access point inside a protected area is blocked and draws muted without pins.
 // Review age does not set priority; all original dates remain visible on the card.
 // The terrain draws its own shore features (packages/coast), so this is Chart only.
@@ -19,7 +21,7 @@ import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import type {Report} from '../../packages/coast/src/types.ts';
 import {geometryIntersects, pointInGeometry} from '../../dist/geo-screen.js';
-import {shoreGuidance, shoreReviewLines, shoreShown, shoreStatus, rankRuns, type ShoreRunClocks, type ShoreStatus} from '../brief/shore.ts';
+import {activeAlerts, alertCheckCurrent, beachNotices, nextShoreChange, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus, rankRuns, type ShoreRunClocks, type ShoreStatus} from '../brief/shore.ts';
 import {coastData} from '../coast-data.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {profile, region, species} from '../state.ts';
@@ -74,8 +76,14 @@ export function insideAreas(run: Run, screen: MarkScreen): string[] | null {
 /** The runs that draw at `now`, ranked, each with its status. */
 export function shownRuns(pkg: ShorePackage | null, screen: MarkScreen, report: Report | null, now: number): ShownRun[] {
   const runs = (pkg?.features ?? []).filter(f => f?.geometry?.type === 'MultiLineString' && f.properties?.region === pkg!.regionId && shoreShown(f.properties, now));
-  return rankRuns(runs.map(run => ({run, name: run.properties.name, status: shoreStatus(run.properties, {
-    now, inside: insideAreas(run, screen), conditions: !!report && freshNearshore(report, run.properties.areaId, new Date(now)).length > 0})})));
+  return rankRuns(runs.map(run => {
+    const area = run.properties.areaId;
+    return {run, name: run.properties.name, status: shoreStatus(run.properties, {
+      now, inside: insideAreas(run, screen), conditions: !!report && freshNearshore(report, area, new Date(now)).length > 0,
+      alertCheck: !!report && alertCheckCurrent(report, now),
+      alerts: report ? activeAlerts(report.alerts ?? [], area, now).map(a => a.event) : [],
+      notices: report ? beachNotices(report, area, now).map(n => n.name) : []})};
+  }));
 }
 
 /** The two GeoJSON sources: runs with their priority, and the access points of runs that are not blocked. */
@@ -106,12 +114,12 @@ export function shoreOverlay(p: Palette, data: ReturnType<typeof shoreCollection
 }
 
 /** The card for a run: its status and reasons, review dates, access points, method guidance and the rules link. */
-export function runMark(r: ShownRun, target: string): ChartMark {
+export function runMark(r: ShownRun, target: string, now = Date.now()): ChartMark {
   const p = r.run.properties, guide = shoreGuidance(target);
   const access = r.status.label === 'Blocked' ? '' : ` Public access: ${p.access.map(a => a.name).join('; ')}.`;
   return {
     id: `shore:${p.id}`, name: p.name, kind: `Shore run · ${r.status.label}`,
-    reading: `${r.status.reasons.join('; ')}.${access} ${shoreReviewLines(p)}.`,
+    reading: `${r.status.reasons.join('; ')}.${access} ${shoreReviewLines(p, now)}.`,
     source: `NOAA ESI ${p.sourceYear} · ${p.shoreClass} · access points from the California Coastal Commission inventory`,
     basis: `${layerEntry(REGISTRY_ID).basis} ${guide.text} Historical shoreline classification; access points are inventory references, not opening status or directions.`,
     regulations: {href: guide.href, label: guide.label},
@@ -135,6 +143,9 @@ export function createShore({engine, fetchFn = (...a) => fetch(...a), page = () 
   // Refresh model coverage and source visibility every RECHECK_MS.
   const tick = signal(0);
   const timer = setInterval(() => { tick.value++; }, RECHECK_MS);
+  // An alert or source clock that turns by the next tick (at it included) re-checks a second after it, past
+  // every strict boundary; a threshold landing exactly on a tick or on a report's arrival is not dropped.
+  let soon: ReturnType<typeof setTimeout> | undefined;
   const on = computed(() => profile.value === 'shore');
   const target = computed(() => species.value ?? PROFILE_TABLE[profile.value].defaultTarget);
   const shown = computed(() => {
@@ -144,6 +155,13 @@ export function createShore({engine, fetchFn = (...a) => fetch(...a), page = () 
   });
   let drawn = false, drawnOn: Engine | null = null;
   const disposers = [
+    effect(() => {
+      const r = report.value;
+      void tick.value;
+      clearTimeout(soon);
+      const t = now(), next = r ? nextShoreChange(r, t) : null;
+      if (next !== null && next - t <= RECHECK_MS) soon = setTimeout(() => { tick.value++; }, next - t + 1000);
+    }),
     effect(() => {
       const id = region.value;
       if (!on.value || !id || pkg.peek()?.region === id) return;
@@ -169,7 +187,7 @@ export function createShore({engine, fetchFn = (...a) => fetch(...a), page = () 
     return r ? runMark(r, target.peek()) : null;
   };
   return {
-    destroy() { clearInterval(timer); for (const dispose of disposers) dispose(); shoreState.value = {drawn: 0, held: 0, blocked: 0}; },
+    destroy() { clearInterval(timer); clearTimeout(soon); for (const dispose of disposers) dispose(); shoreState.value = {drawn: 0, held: 0, blocked: 0}; },
     pick: {layers: [ACCESS_HIT, RUNS_HIT] as const, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => pick(properties?.id)},
   };
 }

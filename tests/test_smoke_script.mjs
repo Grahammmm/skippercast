@@ -2,12 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {execFile} from 'node:child_process';
+import {mkdtempSync, mkdirSync, rmSync, writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {fileURLToPath} from 'node:url';
 
 // Runs scripts/smoke_test.sh against a local fake site. The home page is large
 // so a "curl | grep -q" pipeline would hit SIGPIPE under pipefail (the bug that
 // rolled back every deploy after #26).
 // FE-60: `v2` (the default) serves the landing at /, the app at /map and redirects /coast to it; `v1` is
-// UI_V2=false or a rolled-back Worker: / is the v1 shell, /map answers only with ?ui=v2, /coast is its own page.
+// a rolled-back Worker built before FE-61: / is the v1 shell, /map answers only with ?ui=v2, /coast is its own page.
 function site({forgedSignedIn=false, swCache='public, max-age=0, must-revalidate', publicKey='B'.repeat(87), shell='v2', broken=''}={}) {
   const body = shell === 'v2' ? '<body class="landing-body">\n' : '<body class="atlas-app">\n';
   const page = '<!doctype html>\n<html><head><title>SkipperCast</title></head>\n' + body + 'x'.repeat(400000) + '</body></html>';
@@ -35,12 +39,12 @@ function site({forgedSignedIn=false, swCache='public, max-age=0, must-revalidate
     res.writeHead(404); res.end();
   });
 }
-async function smoke(options) {
+async function smoke(options, {args = ['abcdef0123'], cwd} = {}) {
   const server = site(options);
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   const url = `http://127.0.0.1:${server.address().port}`;
   try {
-    return await new Promise(resolve => execFile('bash', ['scripts/smoke_test.sh', url, 'abcdef0123'], {env: {...process.env, HTTPS_PROXY: '', https_proxy: '', HTTP_PROXY: '', http_proxy: '', NO_PROXY: '*'}},
+    return await new Promise(resolve => execFile('bash', [fileURLToPath(new URL('../scripts/smoke_test.sh', import.meta.url)), url, ...args], {cwd, env: {...process.env, HTTPS_PROXY: '', https_proxy: '', HTTP_PROXY: '', http_proxy: '', NO_PROXY: '*'}},
       (error, stdout, stderr) => resolve({code: error ? error.code : 0, out: stdout + stderr})));
   } finally { server.close(); }
 }
@@ -76,7 +80,7 @@ test('smoke test checks /map and /coast with the v2 shell on (FE-60): /coast fol
   assert.match(out, /coast page ok/);
 });
 
-test('smoke test still passes with UI_V2=false or a rolled-back Worker: /map is checked through ?ui=v2', async () => {
+test('smoke test still passes after a rollback to a Worker that serves the v1 shell: /map is checked through ?ui=v2', async () => {
   const {code, out} = await smoke({shell: 'v1'});
   assert.equal(code, 0, out);
   assert.match(out, /map page ok \(\/map\?ui=v2\)/);
@@ -91,5 +95,28 @@ for (const broken of ['/map', '/coast']) test(`smoke test fails when ${broken} i
 test('the smoke test tells the shells apart by the landing body class, which only dist/landing.html carries', async () => {
   const {readFileSync} = await import('node:fs');
   assert.match(readFileSync('dist/landing.html', 'utf8'), /<body class="landing-body">/);
-  for (const page of ['dist/index.html', 'dist/app.html']) assert.doesNotMatch(readFileSync(page, 'utf8'), /class="landing-body"/, page);
+  for (const page of ['dist/app.html']) assert.doesNotMatch(readFileSync(page, 'utf8'), /class="landing-body"/, page);
+});
+
+// FE-61 removed index.html: the default build id comes from any stamped page, and no dist/client
+// must not abort the script (the ls-under-pipefail exit 2 that failed the dabb9c24 deploy).
+test('smoke test reads the build id from a stamped page when none is passed', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'smoke-'));
+  mkdirSync(join(dir, 'dist/client'), {recursive: true});
+  writeFileSync(join(dir, 'dist/client/app.abcdef0123.html'), '');
+  writeFileSync(join(dir, 'dist/client/landing.abcdef0123.html'), '');
+  try {
+    const {code, out} = await smoke({}, {args: [], cwd: dir});
+    assert.equal(code, 0, out);
+    assert.match(out, /health ok \(build abcdef0123\)/);
+  } finally { rmSync(dir, {recursive: true, force: true}); }
+});
+
+test('smoke test without a build id or dist/client skips the build match instead of exiting', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'smoke-'));
+  try {
+    const {code, out} = await smoke({}, {args: [], cwd: dir});
+    assert.equal(code, 0, out);
+    assert.match(out, /Smoke test passed/);
+  } finally { rmSync(dir, {recursive: true, force: true}); }
 });

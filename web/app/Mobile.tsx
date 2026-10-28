@@ -1,7 +1,8 @@
 // Mobile layout (FE-06, design § 6 mobile, D8): the map fills the viewport;
 // a top strip over it holds the brand and location card, the layers button
 // and the Boat / Shore / Spear switch; one bottom sheet with three detents
-// holds the brief (peek: the time window, freshness and headline; half: the
+// holds the brief (peek: the time window, freshness and the day verdict with
+// its limit (#616); half: the
 // four tiles and the top pick; full: the whole brief (FE-37: deck, the
 // lower-exposure window, caveat, notice, fleet and local lines) with the day, target
 // and area menus, the area group holding the port and locate controls as on
@@ -16,6 +17,7 @@
 // of the brief. Every piece is the desktop's, composed in this order. The
 // Reports view (FE-52) opens from the sheet's footer and replaces the sheet
 // with its page over the map.
+import type {ComponentChildren} from 'preact';
 import {useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
@@ -23,10 +25,12 @@ import {Range} from '../ui/Dock.tsx';
 import {Sheet, type Detent} from '../ui/Sheet.tsx';
 import {zone} from './App.tsx';
 import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
+import {LimitsControl} from './LimitsPanel.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
-import {BriefFooter, BriefLinks, BriefTiles, Caveat, Deck, Headline, LowerExposure, currentBrief} from '../brief/Brief.tsx';
+import {BriefFooter, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
+import {RunLine} from '../brief/Run.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
@@ -37,6 +41,7 @@ import {Fleet} from './views/Fleet.tsx';
 import {History} from './views/History.tsx';
 import {Reports} from './views/Reports.tsx';
 import {appView, setParams, withParams} from '../state.ts';
+import {waypointPlacement} from '../waypoint-placement.ts';
 import {dayOptions, dockState, hourText, localParts, readout, selectDay, selectHour} from './TimeDock.tsx';
 
 /** What the sheet shows: the brief, or the layer rail with the legend. */
@@ -76,13 +81,14 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
             <span class="ui-eyebrow">{windowText(now, tz)}</span>
             <FreshnessDot />
           </div>
-          <Headline brief={brief} />
+          <Verdict brief={brief} now={now} />
         </>
       )}
       <BriefTiles brief={brief} compact={detent !== 'full'} />
       <WhereToLook ranking={ranking} />
-      <Deck brief={brief} />
+      <Details brief={brief} />
       <LowerExposure brief={brief} />
+      <RunLine brief={brief} ranking={ranking} now={now} />
       <TideSpark brief={brief} now={now} />
       <div class="app-sheet-menus">
         <Segmented label="Day" options={dayOptions(now, tz, state.day)} value={state.day} onChange={d => selectDay(now, tz, d, state)} />
@@ -92,7 +98,6 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
           <PortControl />
         </div>
       </div>
-      <Caveat brief={brief} />
       <BriefLinks brief={brief} />
       <BriefFooter><ReportsLink /><AccountMenu inline /></BriefFooter>
     </div>
@@ -118,7 +123,7 @@ export function LayersPanel({onClose}: {onClose: () => void}) {
   );
 }
 
-export function Mobile({now = new Date()}: {now?: Date} = {}) {
+export function Mobile({now = new Date(), firstRun}: {now?: Date; firstRun?: ComponentChildren} = {}) {
   const [detent, setDetent] = useState<Detent>('peek');
   const [panel, setPanel] = useState<Panel>('brief');
   const apply = ({panel: p, detent: d}: {panel: Panel; detent: Detent}) => { setPanel(p); setDetent(d); };
@@ -133,11 +138,18 @@ export function Mobile({now = new Date()}: {now?: Date} = {}) {
             <Location />
           </div>
           <IconButton icon="layers" label="Layers" variant="ghost" pressed={layersOpen} onClick={() => apply(toggleLayers(panel, detent))} />
+          <LimitsControl compact />
         </div>
         <ProfileSwitch class="app-profile" />
       </header>
-      {appView.value === 'reports' ? <main class="app-mobile-page"><Reports now={now} /></main> : <Sheet label={layersOpen ? 'Layers' : appView.value === 'conditions' ? 'Conditions' : appView.value === 'fleet' ? 'Fleet' : appView.value === 'history' ? 'History' : 'Brief'} detent={detent} onDetent={next => apply(afterDetent(panel, next))}
-        class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<HourEdge now={now} />}>
+      {appView.value === 'reports' ? <main class="app-mobile-page">{firstRun}<Reports now={now} /></main> : <Sheet label={layersOpen ? 'Layers' : appView.value === 'conditions' ? 'Conditions' : appView.value === 'fleet' ? 'Fleet' : appView.value === 'history' ? 'History' : 'Brief'} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => apply(afterDetent(panel, next))}
+        class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<HourEdge now={now} />}
+        onBodyFocus={event => {
+          const target = event.target as Element | null;
+          // Pointer focus must not move a pressed choice before its click is delivered.
+          if (target?.closest('.app-firstrun') && target.matches(':focus-visible') && detent !== 'full') setDetent('full');
+        }}>
+        {firstRun}
         {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : appView.value === 'conditions' ? <Conditions now={now} /> : appView.value === 'fleet' ? <Fleet onShowMap={() => setDetent('peek')} /> : appView.value === 'history' ? <History now={now} /> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
       </Sheet>}
       <ViewNav icons class="app-tabs" />

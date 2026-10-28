@@ -21,7 +21,7 @@ import {configureStore, syncFromURL} from '../web/state.ts';
 const ROOT = new URL('..', import.meta.url);
 const until = async (ok, what) => { for (let i = 0; i < 200 && !ok(); i++) await new Promise(r => setTimeout(r, 5)); assert.ok(ok(), what); };
 const CHOICES = {region: 'CA', vessels: [{id: 'v1', name: 'Sea <b>Example</b>'}], truncated: true, ports: ['morro-bay'], classes: ['six-pack'],
-  trip_types: ['half-day'], kinds: ['drift-anchor', 'troll'], seasons: ['2026'], season_parts: ['summer'], dates: {min: '2026-06-01', max: '2026-07-30'}};
+  trip_types: ['half-day'], kinds: ['drift-anchor', 'troll-slow'], seasons: ['2026'], season_parts: ['summer'], dates: {min: '2026-06-01', max: '2026-07-30'}};
 const EVENT = (id, planning) => ({type: 'Feature', geometry: {type: 'Point', coordinates: [-120.9, 35.3]},
   properties: {id, vessel_name: 'Test Boat', kind: 'drift-anchor', dwell_min: 30, planning_only: planning}});
 
@@ -88,7 +88,7 @@ test('Accept 2: the admin\'s filters reach the map API exactly as v1 sends them;
   open(t, h, 'view=fleet&layers=fleet');
   await until(() => activityAccess.value, 'the probe answers');
   assert.equal(activityChoices.value.vessels[0].name, 'Sea <b>Example</b>');
-  const filters = readFilters({port: 'morro-bay', vessel: ' ', kind: 'troll', from: '2026-06-01', season_part: 'summer'});
+  const filters = readFilters({port: 'morro-bay', vessel: ' ', kind: 'troll-slow', from: '2026-06-01', season_part: 'summer'});
   activityFilters.value = filters;
   toggleActivity('events', true);
   await until(() => h.calls.some(c => c[0] === FLEET_SOURCE.events), 'events draw');
@@ -96,7 +96,7 @@ test('Accept 2: the admin\'s filters reach the map API exactly as v1 sends them;
   assert.equal(sent, v1.layerQuery('events', filters, {region: 'CA', bbox: [-121, 35.2, -120.6, 35.5]}));
   const u = new URL(sent, 'https://s.test');
   assert.equal(u.searchParams.get('port'), 'morro-bay');
-  assert.equal(u.searchParams.get('kind'), 'troll');
+  assert.equal(u.searchParams.get('kind'), 'troll-slow');
   assert.equal(u.searchParams.has('vessel'), false, 'empty filters are left out, as v1');
   assert.equal(h.calls.findLast(c => c[0] === FLEET_SOURCE.events)[1], 2);
   hidePlanning.value = true;
@@ -168,4 +168,54 @@ test('the view: grounds and the AIS 2024 option for everyone; the form, "inferre
   assert.match(desktop, /class="ui-rail-item"/);
   m.activityAccess.value = false;
   m.activityChoices.value = null;
+});
+
+test('directory probes share only concurrent requests for the same page and fetcher', async () => {
+  const ports = async () => [
+    {id: 'alpha', region: 'one', status: 'active'},
+    {id: 'beta', region: 'one', status: 'active'},
+    {id: 'gamma', region: 'two', status: 'active'},
+  ];
+  const pending = [];
+  const fetcher = (url, init) => new Promise((resolve, reject) => pending.push({url, init, resolve, reject}));
+  const first = boatDirectory('one', null, fetcher, ports);
+  const duplicate = boatDirectory('one', null, fetcher, ports);
+  const saved = boatDirectory('one', 'beta', fetcher, ports);
+  const changedRegion = boatDirectory('two', null, fetcher, ports);
+  const independent = [];
+  const otherFetcher = async url => { independent.push(url); return {ok: false}; };
+  assert.deepEqual(await boatDirectory('one', null, otherFetcher, ports), []);
+  assert.deepEqual(independent, ['/ports/alpha'], 'another fetcher does not share a pending gate result');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(pending.map(p => p.url), ['/ports/alpha', '/ports/beta', '/ports/gamma']);
+  for (const p of pending) {
+    assert.deepEqual(p.init, {method: 'HEAD', credentials: 'omit', cache: 'no-store'});
+    p.resolve({ok: true});
+  }
+  assert.deepEqual((await first).map(p => p.id), ['alpha', 'beta']);
+  assert.deepEqual(await duplicate, await first);
+  assert.deepEqual((await saved).map(p => p.id), ['beta', 'alpha']);
+  assert.deepEqual((await changedRegion).map(p => p.id), ['gamma']);
+
+  const off = boatDirectory('one', null, fetcher, ports);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(pending.length, 4, 'settled success is rechecked so switching off hides links');
+  pending[3].resolve({ok: false, status: 404});
+  assert.deepEqual(await off, []);
+  const retry = boatDirectory('one', null, fetcher, ports);
+  const retryDuplicate = boatDirectory('one', null, fetcher, ports);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(pending.length, 5, '404 is not cached');
+  pending[4].reject(Error('offline'));
+  assert.deepEqual(await retry, []);
+  assert.deepEqual(await retryDuplicate, []);
+  const recovered = boatDirectory('one', null, fetcher, ports);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(pending.length, 6, 'failed request is not cached');
+  pending[5].resolve({ok: true});
+  assert.equal((await recovered).length, 2);
+  const noPorts = async () => { throw Error('must not load for empty region'); };
+  assert.deepEqual(await boatDirectory(null, null, fetcher, noPorts), []);
+  assert.deepEqual(await boatDirectory('empty', null, fetcher, ports), []);
+  assert.equal(pending.length, 6);
 });

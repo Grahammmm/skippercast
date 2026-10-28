@@ -56,8 +56,6 @@ test('San Francisco salmon advisory follows the Point Reyes latitude and expires
 });
 test('clean chart removes cables, traffic and extra areas; full chart stays optional',()=>{
   assert.equal(chartLayers('fishing'),'0,1,2,6');assert.equal(chartLayers('nautical'),'0,1,2,3,4,5,6,7');
-  const html=fs.readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
-  assert.match(html,/id="coast-select"/);assert.ok(!/id="layer-drifts"[^>]*checked/.test(html));
 });
 
 test('workspace pan and explicit package handoffs preserve unsupported targets and shared clock',()=>{

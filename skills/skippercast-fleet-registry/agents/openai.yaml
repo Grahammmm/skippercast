@@ -1,0 +1,4 @@
+interface:
+  display_name: "SkipperCast Fleet Registry"
+  short_description: "Keep the charter boat registry and its AIS identities current"
+  default_prompt: "Use $skippercast-fleet-registry in cycle mode for region CA: a bounded 60-minute run over the existing fleet jobs, ending with a counts-only report and owner issues for any missing step."

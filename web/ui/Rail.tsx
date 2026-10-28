@@ -38,10 +38,11 @@ export function RailItem({id, label, icon, on, onToggle, note, basis, disabled, 
   );
 }
 
-/** `footer` follows the list inside the group (the app's base choice, FE-20). */
-export function Rail({label = 'Layers', children, footer, class: cls}: {label?: string; children: ComponentChildren; footer?: ComponentChildren; class?: string}) {
+/** `header` leads the group (the app's target and grade, #620); `footer` follows the list inside it (the app's base choice, FE-20). */
+export function Rail({label = 'Layers', children, header, footer, class: cls}: {label?: string; children: ComponentChildren; header?: ComponentChildren; footer?: ComponentChildren; class?: string}) {
   return (
     <div class={['ui-rail', cls].filter(Boolean).join(' ')} role="group" aria-label={label}>
+      {header}
       <ul class="ui-rail-list">{children}</ul>
       {footer}
     </div>

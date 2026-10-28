@@ -1,6 +1,6 @@
 // The v2 app shell behind ?ui=v2 (FE-05 desktop, FE-06 mobile;
 // docs/plans/front-end/dev-plan.md): at laptop width the brief column is
-// 332 px beside a map stage that fills the rest; under 1,024 px the map
+// 300 px (#616) beside a map stage that fills the rest; under 1,024 px the map
 // fills the viewport under a top strip, one sheet with three detents moved by
 // drag and keyboard, and a four-tab nav, at 390 and 320 px wide with no
 // horizontal page scroll and 44 px targets. View links, the profile switch,
@@ -9,7 +9,7 @@
 // viewport preset; axe is clean; the page paints within the LCP budget on
 // the throttled mobile profile (FE-09, design § 13).
 import type {Page} from '@playwright/test';
-import {test, expect, VIEWPORTS, LCP_BUDGET_MS} from './fixtures.ts';
+import {test, expect, VIEWPORTS, LCP_BUDGET_MS, AERIAL_LCP_BUDGET_MS} from './fixtures.ts';
 
 const AREA = {region: 'morro-bay'};
 const TABS = 56;
@@ -39,7 +39,7 @@ test('the shell lays out the brief beside the map (laptop) or under a sheet (pho
     if (viewport.width >= 1024) {
       await expect(brief).toBeVisible();
       const b = (await brief.boundingBox())!;
-      expect(Math.round(b.width), name).toBe(332);
+      expect(Math.round(b.width), name).toBe(300);
       expect(Math.round(s.x), name).toBe(Math.round(b.x + b.width));
       expect(Math.round(s.x + s.width), name).toBe(viewport.width);
     } else {
@@ -129,7 +129,8 @@ test('keyboard reaches every control', async ({page, pageErrors, v2, isMobile}) 
     : ['nav[aria-label="Views"] a[data-view="fleet"]', '[aria-label="Profile"] button:last-child', 'label:has-text("Target") select', 'label:has-text("Area") select',
       '.ui-rail-item:last-child .ui-rail-toggle', 'input[aria-label="Hour"]', 'button[aria-label="Play"]'];
   const reached = new Set<string>();
-  for (let i = 0; i < 60 && reached.size < wanted.length; i++) {
+  // #616 added the verdict basis and the Details summary to the brief column, before the rail in tab order.
+  for (let i = 0; i < 80 && reached.size < wanted.length; i++) {
     await page.keyboard.press('Tab');
     for (const selector of wanted) if (!reached.has(selector) && await page.locator(selector).evaluate(el => el === document.activeElement)) reached.add(selector);
   }
@@ -138,12 +139,26 @@ test('keyboard reaches every control', async ({page, pageErrors, v2, isMobile}) 
   expect(pageErrors).toEqual([]);
 });
 
-test('the shell paints within the LCP budget on the throttled mobile profile', async ({pageErrors, v2}, info) => {
+test('the shell paints within the LCP budget on the throttled mobile profile', async ({page, pageErrors, v2}, info) => {
   test.skip(info.project.name !== 'phone', 'measured once, at phone size');
-  const lcp = await v2.lcp('app', AREA);
+  // The shell on the Night base is the design § 13 budget; Morro Bay opens on Aerial, whose tiles land later (owner's call).
+  const lcp = await v2.lcp('app', {...AREA, base: 'night'});
   console.log(`v2 app shell LCP ${Math.round(lcp)} ms (budget ${LCP_BUDGET_MS}, design § 13)`);
+  // #617: the coast poster (web/map/poster.ts) is an inline path, never the LCP element; reported, and gone once the map has drawn.
+  const [poster, idle] = await page.evaluate(() => ['skippercast-poster', 'skippercast-chart-idle'].map(n => performance.getEntriesByName(n)[0]?.startTime ?? null));
+  console.log(`v2 app coast poster ${poster === null ? 'not shown (the map drew first)' : `${Math.round(poster)} ms`}; Chart first complete frame ${idle === null ? 'none' : `${Math.round(idle)} ms`}`);
+  await expect(page.locator('.app-poster')).toHaveCount(0);
   expect(lcp, 'Largest Contentful Paint recorded').toBeGreaterThan(0);
   expect(lcp).toBeLessThanOrEqual(LCP_BUDGET_MS);
+  expect(pageErrors).toEqual([]);
+});
+
+test('opening on the Aerial base paints within the budget the owner accepted for it', async ({pageErrors, v2}, info) => {
+  test.skip(info.project.name !== 'phone', 'measured once, at phone size');
+  const lcp = await v2.lcp('app', AREA);
+  console.log(`v2 app Aerial default LCP ${Math.round(lcp)} ms (budget ${AERIAL_LCP_BUDGET_MS}, design § 13)`);
+  expect(lcp, 'Largest Contentful Paint recorded').toBeGreaterThan(0);
+  expect(lcp).toBeLessThanOrEqual(AERIAL_LCP_BUDGET_MS);
   expect(pageErrors).toEqual([]);
 });
 
@@ -151,6 +166,36 @@ test.describe('phone', () => {
   test.skip(({isMobile}) => !isMobile, 'the phone project only');
 
   for (const width of [320, 390]) {
+    test(`at ${width} px cancelled drags retain every detent and the next tap still works`, async ({page, pageErrors, v2}) => {
+      await v2.open('app', AREA, width === 320 ? 'narrow' : 'phone');
+      const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');
+      for (const [detent, dy] of [['peek', -120], ['half', -400], ['half', 120], ['full', 120], ['peek', -20], ['half', 0]] as const) {
+        await handle.focus();
+        await page.keyboard.press('Home');
+        if (detent === 'half') await page.keyboard.press('ArrowUp');
+        if (detent === 'full') await page.keyboard.press('End');
+        await expect(sheet).toHaveAttribute('data-detent', detent);
+        // Let the real CSS transition finish before starting the captured drag.
+        await sheet.evaluate(async el => { await Promise.all(el.getAnimations().map(a => a.finished)); });
+        const box = (await handle.boundingBox())!;
+        const x = box.x + box.width / 2, y = box.y + box.height / 2;
+        await page.mouse.move(x, y);
+        await page.mouse.down();
+        await page.mouse.move(x, y + dy);
+        if (dy) expect(await sheet.evaluate(el => el.style.transform)).toMatch(/^translateY\(/);
+        await handle.dispatchEvent('pointercancel', {pointerId: 1, clientX: x, clientY: y + dy});
+        await expect(sheet, `${detent}, cancelled ${dy}px`).toHaveAttribute('data-detent', detent);
+        expect(await sheet.evaluate(el => [el.style.transform, el.style.transition])).toEqual(['', '']);
+        // dispatchEvent simulates cancellation; release the real mouse capture separately.
+        await handle.evaluate(el => { try { el.releasePointerCapture(1); } catch { /* not captured */ } });
+        await page.mouse.move(4, 4);
+        await page.mouse.up();
+        await handle.click();
+        await expect(sheet, 'the next tap steps exactly once').toHaveAttribute('data-detent', {peek: 'half', half: 'full', full: 'peek'}[detent]);
+      }
+      expect(pageErrors).toEqual([]);
+    });
+
     test(`at ${width} px the sheet peeks over the map, the detents move by drag and keyboard, and targets are 44 px`, async ({page, pageErrors, v2}) => {
       await v2.open('app', AREA, width === 320 ? 'narrow' : 'phone');
       const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle');
@@ -252,7 +297,7 @@ test.describe('phone', () => {
 
 // FE-60 acceptance 3: with v2 the default, one context draws one map, one of each picker and one timeline. The
 // contexts are the app at /map (Chart) and /coast, which moves to the app's 3D terrain (FE-78): the terrain lives
-// inside the same stage and its in-scene place and target controls stay hidden, and no v1 Leaflet map mounts.
+// inside the same stage and its in-scene place and target controls stay hidden, and no v1 map mounts.
 test('FE-60: no duplicate map, picker or timeline for one context (/map and /coast)', async ({page, pageErrors, v2, isMobile}) => {
   await page.route(/\/(?:api\/coast|coast-data)\//, () => { /* never answered: the terrain stays loading, offline */ });
   const contexts: Array<[string, string, 'chart' | 'terrain']> = [
@@ -268,7 +313,7 @@ test('FE-60: no duplicate map, picker or timeline for one context (/map and /coa
     await expect(page.locator(surface === 'chart' ? '.app-map' : '.app-terrain'), name).toBeVisible();
     await expect(page.locator(surface === 'chart' ? '.app-terrain' : '.app-map'), name).toBeHidden();
     expect(await page.locator('canvas.maplibregl-canvas').count(), `${name}: MapLibre canvases`).toBeLessThanOrEqual(1);
-    await expect(page.locator('.leaflet-container, #map'), `${name}: no v1 map`).toHaveCount(0);
+    await expect(page.locator('#map'), `${name}: no v1 map`).toHaveCount(0);
     // One of each picker: area and port, target, profile, presentation.
     for (const label of ['Area and port', 'Target species', 'Profile', 'Map presentation'])
       expect(await page.getByRole('group', {name: label, exact: true}).count(), `${name}: ${label}`).toBeLessThanOrEqual(1);

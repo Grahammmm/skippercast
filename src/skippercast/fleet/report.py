@@ -48,6 +48,8 @@ from .runs import fleet_var, new_run_id
 from .sinks import SinkError, SqliteSink, WorkerSink, worker_base
 
 HOUR, DAY = 3_600_000, 86_400_000
+# report.json statuses (fleet.cli); a run directory without one is "incomplete" (still running or stopped).
+RUN_STATUSES = ("ok", "complete-with-known-gaps", "partial", "failed")
 SEEN_DAYS = 30
 # server/fleet/admin/coverage.ts FIELD_GROUPS (the resolver's completeness columns, grouped).
 FIELD_GROUPS = {
@@ -125,7 +127,7 @@ def runs_summary(runs: Iterable[Mapping], now_ms: int) -> dict:
     """Pipeline runs created in the last 30 days by status, and their failed steps (no error text)."""
     since = iso(now_ms - 30 * DAY)[:19] + "Z"
     recent = sorted((r for r in runs if str(r.get("created_at") or "") >= since), key=lambda r: r["id"])
-    counts = {s: sum(r["status"] == s for r in recent) for s in ("ok", "partial", "failed", "incomplete")}
+    counts = {s.replace("-", "_"): sum(r["status"] == s for r in recent) for s in (*RUN_STATUSES, "incomplete")}
     return {"since": since, "runs": len(recent), **counts,
             "failed_steps": [{"run_id": r["id"], "step": s} for r in recent for s in r.get("failed_steps", ())]}
 
@@ -197,7 +199,8 @@ def markdown(r: Mapping) -> str:
                  f"(classifier `{v['classifier_version']}`, scored {v['computed_at']}). Segment kinds are inferred "
                  "from movement (speed and track shape), never confirmed fishing; hand labels are the reference.")
     lines += ["", "### Pipeline runs (30 days)", "",
-              f"- {runs['runs']} runs: {runs['ok']} ok, {runs['partial']} partial, {runs['failed']} failed, "
+              f"- {runs['runs']} runs: {runs['ok']} ok, {runs['complete_with_known_gaps']} complete with known gaps, "
+              f"{runs['partial']} partial, {runs['failed']} failed, "
               f"{runs['incomplete']} incomplete"]
     lines += [f"- Failed: run `{f['run_id']}` step `{f['step']}`" for f in runs["failed_steps"]]
     lines += ["", "### Review queue", "", "- Open reviews: " + (
@@ -252,7 +255,7 @@ def read_runs(region: FleetRegion, var: Path) -> list[dict]:
         calls = sum(int(b.get("searches") or 0) + int(b.get("details") or 0)
                     for k, b in (enrich.get("bindings") or {}).items() if k in places and isinstance(b, dict))
         out.append({"id": state.get("run_id", directory.name), "created_at": state.get("created_at"),
-                    "status": report.get("status") if report.get("status") in ("ok", "partial", "failed") else "incomplete",
+                    "status": report.get("status") if report.get("status") in RUN_STATUSES else "incomplete",
                     "failed_steps": [s for s, x in (state.get("steps") or {}).items() if x.get("status") == "failed"],
                     "places_calls": calls})
     return out

@@ -44,7 +44,7 @@ export async function initProtectedAreas(map, onChange) {
     }
   } catch { /* Without a boundary dataset, fail closed for target layers. */ }
   draw();
-  // Leaflet reprojects existing paths itself. Rebuild only when the boundary data changes.
+  // The map reprojects existing paths itself. Rebuild only when the boundary data changes.
   const revision=()=>`${checked}|${extraChecked}|${freshEnough()}`;
   const allowedGeometry=revisionCache(revision,g=>![...data.features,...(extra?.features||[])].some(f=>geometryIntersects(g,f.geometry)));
   const screen={
@@ -53,7 +53,8 @@ export async function initProtectedAreas(map, onChange) {
     exportExclusions:()=>freshEnough()?{checked_at:extra?new Date(Math.min(Date.parse(checked),Date.parse(extraChecked))).toISOString():checked,features:[...data.features,...(extra?.features||[])]}:null,
     inspect(p){
       const matches=[...(data?.features||[]),...(extra?.features||[])].filter(f=>p.geometry?geometryIntersects(p.geometry,f.geometry):pointInGeometry([p.longitude,p.latitude],f.geometry));
-      return {status:matches.length?'excluded':freshEnough()?'clear':'unavailable',fresh:freshEnough(),names:matches.map(f=>f.properties.FULLNAME||f.properties.NAME)};
+      return {status:matches.length?'excluded':freshEnough()?'clear':'unavailable',fresh:freshEnough(),names:matches.map(f=>f.properties.FULLNAME||f.properties.NAME),
+        matches:matches.map(({properties:p})=>({name:p.FULLNAME||p.NAME,url:p.Type==='GEA'?'https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas':sourceFor(p.NAME),agency:p.Type==='GEA'?'NOAA':'CDFW'}))};
     },
     snapshot:()=>freshEnough()?{revision:`${checked}|${extraChecked}|true`,geometries:[...data.features,...(extra?.features||[])].map(f=>f.geometry)}:null,
     pointAllowed:p=>freshEnough() && ![...data.features,...(extra?.features||[])].some(f=>pointInGeometry([p.longitude,p.latitude],f.geometry)),

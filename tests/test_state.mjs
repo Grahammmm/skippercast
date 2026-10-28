@@ -15,7 +15,7 @@ const ORIGIN = 'https://s.test/map';
 test('every v2 key round-trips through withParams, readURL and syncFromURL', () => {
   const store = memory();
   configureStore({storage: store});
-  const patch = {region: 'morro-bay', coast: null, view: 'conditions', target: 'halibut', hour: '2026-09-30T15:00Z',
+  const patch = {region: 'morro-bay', coast: null, view: 'conditions', target: 'halibut', grade: 'ab', hour: '2026-09-30T15:00Z',
     profile: 'shore', day: '2026-10-06', layers: 'swell,water-temp', area: 'estero', base: 'chart',
     presentation: '3d', current: 'hfr-1', habitat: 'reef:r12', station: '46215', metric: 'waveFt', range: '14'};
   assert.deepEqual(Object.keys(patch).sort(), [...URL_KEYS].sort(), 'the test covers every store key');
@@ -77,7 +77,7 @@ test('stored profile, layers and base restore when the URL omits them; layers ar
 
 test('without storage or parameters the profile defaults to boat with its layers; junk is ignored', () => {
   configureStore({storage: null});
-  syncFromURL(ORIGIN + '?profile=kayak&view=35.36000,-120.94000,10&day=2026-02-30&layers=,Bad!,&base=sepia&focus=estero');
+  syncFromURL(ORIGIN + '?profile=jetski&view=35.36000,-120.94000,10&day=2026-02-30&layers=,Bad!,&base=sepia&focus=estero');
   assert.equal(profile.value, 'boat');
   assert.deepEqual(layers.value, PROFILE_TABLE.boat.defaultLayers);
   assert.equal(base.value, 'night');

@@ -25,16 +25,17 @@ async function load() {
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {LayerRail, baseNote, baseOptions, shownBase} from './web/app/LayerRail.tsx';
       export {Legend} from './web/app/Legend.tsx';
+      export {mpaState} from './web/map/mpa.ts';
       export {RAIL_ENTRIES} from './web/app/rail.ts';
       export {CHART_ONLY, drawsIn} from './web/map/layers.ts';
       export {seafloorState} from './web/map/seafloor.ts';
-      export {currentsState} from './web/map/currents.ts';
+      export {currentsState, currentsStatus} from './web/map/currents.ts';
       export {waterTempState} from './web/map/sst.ts';
       export {swellState} from './web/map/swell.ts';
       export {cloudStamp} from './web/map/clouds.ts';
       export {groundsState} from './web/map/charter-grounds.ts';
       export {aisOn, aisState} from './web/map/commercial-ais.ts';
-      export {currentStatus, terrainOptions, TERRAIN_DEFAULTS} from './web/map/stage.ts';
+      export {currentStatus, terrainOptions, terrainShading, TERRAIN_DEFAULTS} from './web/map/stage.ts';
       export * as state from './web/state.ts';
       export {PROFILE_TABLE, RAIL_IDS} from './web/profile.ts';
       export {render} from 'preact-render-to-string';
@@ -96,19 +97,19 @@ test('switching profile with no ?layers= applies that profile\'s layers, its def
   go({});
   assert.deepEqual(s.layers.value, m.PROFILE_TABLE.boat.defaultLayers);
   assert.equal(s.current.value, 'wcofs', 'the boat profile\'s default Currents is drawn (#482)');
-  // The rail writes ?layers= (and Currents its source); a profile switch drops them with the target.
+  // The rail writes ?layers= and its Currents source; an unchosen profile uses its defaults.
   go({layers: 'seafloor,currents,clouds', current: 'hfr-6', target: 'vermilion'});
   let params = go(s.profilePatch('shore'));
   assert.deepEqual(['layers', 'current', 'target'].filter(key => params.has(key)), []);
   assert.equal(params.get('profile'), 'shore');
   assert.deepEqual(s.layers.value, m.PROFILE_TABLE.shore.defaultLayers);
   assert.equal(s.current.value, 'off');
-  assert.deepEqual(pressed(railItems(m.render(m.h(m.LayerRail)))), ['Water temp', 'Swell']);
-  // Each profile keeps its own last list; one never chosen gets its defaults.
+  assert.deepEqual(pressed(railItems(m.render(m.h(m.LayerRail)))), ['Water temp', 'Swell + wind']);
+  // Each profile keeps its own last list and Currents source; an unchosen one gets its defaults.
   go({layers: 'swell'});
   go(s.profilePatch('boat'));
   assert.deepEqual(s.layers.value, ['seafloor', 'currents', 'clouds']);
-  assert.equal(s.current.value, 'wcofs', 'the source is not stored: the list turns on the default');
+  assert.equal(s.current.value, 'hfr-6', 'the profile restores its chosen Currents source with its list');
   go(s.profilePatch('shore'));
   assert.deepEqual(s.layers.value, ['swell']);
   go(s.profilePatch('spear'));
@@ -117,24 +118,63 @@ test('switching profile with no ?layers= applies that profile\'s layers, its def
   s.configureStore({storage: null});
 });
 
+test('undrawable current grids expose the rejection reason in the rail and legend; a supported frame keeps its source and time', async t => {
+  const m = await load(), s = m.state, previous = m.currentsState.value;
+  t.after(() => { m.currentsState.value = previous; });
+  s.configureStore({v2: true, storage: null});
+  s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&layers=currents&current=wcofs`);
+  const now = new Date('2026-10-07T12:00:00Z');
+  const grid = (width, height, step) => Array.from({length: width * height}, (_, i) => ({
+    lon: -121 + (i % width) * step, lat: 35 + Math.floor(i / width) * step,
+    uMs: 1, vMs: 0, speedKnots: 1.943844492, towardDeg: 90,
+  }));
+  const field = cells => ({id: 'wcofs', kind: 'forecast', label: 'Synthetic original WCOFS', surfaceOnly: true,
+    fetchedAt: now.toISOString(), issuedAt: '2026-10-07T09:00:00Z', nativeResolutionKm: 4, sampleStride: 1,
+    frames: [{validAt: now.toISOString(), cells}]});
+  const ragged = grid(3, 3, .01);
+  ragged[4] = {...ragged[4], lon: ragged[4].lon + .003};
+  for (const [name, cells] of [['coarse', grid(3, 3, .2)], ['ragged', ragged], ['over 10000 cells', grid(101, 100, .01)]]) {
+    const state = m.currentsStatus('wcofs', 'ready', {currents: [field(cells)]}, now, now, 'UTC');
+    assert.equal(state.drawn, null, name);
+    assert.match(state.note, /^grid cannot be drawn/, name);
+    assert.match(state.reason, /NOAA WCOFS forecast frame valid Wed 12 pm.*without bridging gaps.*no other source is shown/, name);
+    m.currentsState.value = state;
+    assert.equal(railItems(m.render(m.h(m.LayerRail))).Currents.note, state.reason, `${name}: visible rail reason`);
+    const legend = m.render(m.h(m.Legend));
+    assert.equal(reasons(legend).currents, state.reason, `${name}: visible legend reason`);
+    assert.deepEqual(swatches(legend), [], `${name}: no drawn-current key`);
+  }
+  const valid = field(grid(3, 3, .01));
+  const state = m.currentsStatus('wcofs', 'ready', {currents: [valid]}, now, now, 'UTC');
+  assert.equal(state.drawn.field, valid, 'exact chosen source retained');
+  assert.equal(state.drawn.frame, valid.frames[0], 'exact chosen frame retained');
+  assert.ok(state.drawn.surface.quads.length > 0, 'supported grid can draw');
+  assert.equal(state.reason, '');
+  assert.equal(state.note, 'forecast Wed 12 pm');
+  m.currentsState.value = state;
+  assert.equal(railItems(m.render(m.h(m.LayerRail))).Currents.note, state.note);
+  assert.deepEqual(swatches(m.render(m.h(m.Legend))), ['currents', 'currents-fast']);
+});
+
 test('the legend shows a colour key only while its layer draws, and says why otherwise (Accept 3)', async t => {
   const m = await load(), s = m.state;
   t.after(() => {
     for (const [signal, value] of reset) signal.value = value;
   });
-  const reset = [m.seafloorState, m.currentsState, m.waterTempState, m.swellState, m.cloudStamp, m.currentStatus, m.groundsState, m.aisOn, m.aisState].map(signal => [signal, signal.value]);
+  const reset = [m.mpaState, m.seafloorState, m.currentsState, m.waterTempState, m.swellState, m.cloudStamp, m.currentStatus, m.groundsState, m.aisOn, m.aisState].map(signal => [signal, signal.value]);
   s.configureStore({v2: true, storage: null});
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&layers=seafloor,currents,water-temp,swell,fleet,clouds`);
   m.swellState.value = {...m.swellState.value, drawn: null, reason: 'Swell unavailable: no forecast grid for this region.'};
   m.currentsState.value = {...m.currentsState.value, drawn: null, note: 'loading', reason: 'Loading the surface-current packet.'};
   m.waterTempState.value = {...m.waterTempState.value, drawn: null, reason: 'Water temp unavailable: no analysis for this region.'};
   let html = m.render(m.h(m.Legend));
-  assert.deepEqual(swatches(html), ['mpas'], 'nothing draws: only the protected areas\' outline, which the Chart always draws');
+  assert.deepEqual(swatches(html), [], 'nothing draws, including boundaries that have not loaded');
   assert.equal(reasons(html)['charter-grounds'], 'Loading charter grounds.', 'FE-21: the grounds say why they do not draw');
   assert.equal(reasons(html).currents, 'Loading the surface-current packet.');
   assert.match(reasons(html)['water-temp'], /^Water temp unavailable/);
   assert.match(reasons(html).swell, /^Swell unavailable/);
   // Each key appears once its layer draws (synthetic states).
+  m.mpaState.value = {status: 'complete', note: '', detail: '', checked: '2026-09-21', count: 8};
   m.seafloorState.value = {status: 'ready', note: '', view: 'terrain', fit: null, surveys: [], credits: [], drawn: 3};
   m.currentsState.value = {...m.currentsState.value, drawn: {}, note: 'forecast Wed 5 am', reason: ''};
   m.waterTempState.value = {...m.waterTempState.value, drawn: {range: [57, 65], product: 'Synthetic analysis', stamp: 'Oct 8'}, reason: ''};
@@ -180,7 +220,7 @@ test('in Terrain, chart-only entries and the base read "Chart only" and cannot b
   s.configureStore({v2: true, storage: null});
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&layers=seafloor,water-temp`);
   let html = m.render(m.h(m.LayerRail)), items = railItems(html);
-  for (const label of ['Water temp', 'Swell', 'Clouds']) {
+  for (const label of ['Water temp', 'Swell + wind', 'Clouds']) {
     assert.deepEqual([items[label].disabled, items[label].note], [true, m.CHART_ONLY], label);
   }
   assert.deepEqual([items.Seafloor.disabled, items.Seafloor.note], [false, ''], 'FE-80: Seafloor holds the terrain\'s options');
@@ -210,6 +250,8 @@ test('the base choice: Night and Chart detail everywhere, Aerial where offered, 
   const html = baseChoice(m.render(m.h(m.LayerRail)));
   assert.match(html, /<label class="app-rail-source">Base<select aria-describedby="app-rail-base-note"><option value="night">Night<\/option><option selected value="chart">Chart detail<\/option><\/select><\/label>/);
   assert.match(html, /<summary class="ui-popover-summary ui-eyebrow" aria-label="Base basis">/);
+  // #620: the grade filter shares the row, its meaning read with it and kept out of its label.
+  assert.match(html, /<label class="app-rail-source app-rail-grade">Grade<select aria-describedby="app-rail-grade-meaning"><option selected value="all">All<\/option><option value="ab">A and B<\/option><option value="a">A only<\/option><\/select><\/label><span id="app-rail-grade-meaning" class="app-visually-hidden">Terrain grade ranks search priority from surveys, not catch\./);
   assert.match(html, /Chart detail: NOAA electronic navigational chart display service, drawn from zoom 10; for planning, never for navigation\./);
   assert.match(html, /class="ui-rail-note ui-mono">from zoom 10</);
 });
@@ -225,7 +267,13 @@ test('FE-80: in 2D and 3D the Seafloor entry holds the terrain\'s options with l
   assert.match(terrain, /<label for="terrain-water">Water opacity <b class="ui-mono">50%<\/b>/);
   assert.match(terrain, /Illustrative \+0\.8 m water surface\. Not a live tide\./, 'the native note, verbatim');
   const boxes = [...terrain.matchAll(/<label class="app-rail-option"><input type="checkbox"([^>]*)\/?>([^<]+)<\/label>/g)].map(x => [x[2], /checked/.test(x[1]), /disabled/.test(x[1])]);
-  assert.deepEqual(boxes, [['Water &amp; channels', true, false], ['Depth contours · 10 / 30 / 500 ft', true, false], ['Source coverage', false, false], ['Reefs &amp; species pins', true, false]]);
+  assert.deepEqual(boxes, [['Water &amp; channels', true, false], ['Depth contours · adapt to view', true, false], ['Fixed depth colours', false, false], ['Source coverage', false, false], ['Reefs &amp; species pins', true, false]]);
+  assert.match(terrain, /<label for="terrain-sun">Sun direction <b class="ui-mono">305°<\/b><\/label><input id="terrain-sun" type="range" min="0" max="360" step="5" value="305"/);
+  assert.match(terrain, /<label for="terrain-photo">Land <b class="ui-mono">Photo<\/b><\/label><input id="terrain-photo" type="range" min="0" max="1" step="0.05" value="1"/);
+  assert.doesNotMatch(terrain, /contours \d+ ft/, 'no readout before the renderer reports one');
+  m.terrainShading.value = {readout: 'Ramp 61–142 ft in view · contours 10 ft, index 50 ft', rampMinM: 18.6, rampMaxM: 43.3, contourMinorM: 3.048, contourIndexM: 15.24, fixedRamp: false, relief: 5};
+  assert.match(m.render(m.h(m.LayerRail)), /<p class="app-rail-hint" role="status">Ramp 61–142 ft in view · contours 10 ft, index 50 ft<\/p>/, 'the renderer\'s readout, verbatim');
+  m.terrainShading.value = null;
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&layers=currents`);
   html = m.render(m.h(m.LayerRail));
   assert.match(html, /<input type="checkbox" disabled\/?>Reefs &amp; species pins/, 'with Seafloor off the reefs and pins are off and fixed');

@@ -1,10 +1,15 @@
 {
-  "comment": "Startup JSON budget (P4-05): decoded bytes of the committed static JSON/GeoJSON files Morro Bay's map fetches with no interaction until the network is quiet, with live feeds stubbed (scripts/measure_startup.mjs --stub). Live feeds (/api/*, /feeds/*, the ArcGIS MPA query) move with upstream data and are reported, not budgeted. max_bytes is the measured value + 10%. The guide's target (all startup JSON) is 400 KB; lower this as later slices cut more.",
+  "comment": "Startup JSON budget (P4-05): decoded bytes of the committed static JSON/GeoJSON files Morro Bay's map fetches with no interaction until the network is quiet, with live feeds stubbed (scripts/measure_startup.mjs --stub). Live feeds (/api/*, /feeds/*, the ArcGIS MPA query) move with upstream data and are reported, not budgeted. max_bytes is the measured value + 10%. The guide's target (all startup JSON) is 400 KB; lower this as later slices cut more. #617 (2026-10-12) cut 2,503,888 to 663,384 bytes: the map reads the region's startup copies (src/skippercast/platform/startup_forms.py) of the atlas, the search plans and the shoreline. What remains is the protected areas (always on), the atlas marks the first view draws, the overview shoreline and the region files. CI6-01B (2026-10-20) adds dist/regions/<id>/land-water.json (5,150 bytes for Morro Bay), which the brief loads to check ranked places; land-water-lines.json (278,928 bytes) loads only when a candidate falls in a mixed cell of that index, which none of today's ranked marks do.",
   "morro-bay": {
-    "static_bytes": 2541391,
-    "measured_on": "2026-09-29",
-    "max_bytes": 2795531,
+    "static_bytes": 663384,
+    "measured_on": "2026-10-12",
+    "max_bytes": 729723,
     "target_bytes": 409600
+  },
+  "precache": {
+    "comment": "Service-worker precache budgets (#422 FE-51 follow-up), checked by scripts/check_client.mjs after the Vite build: raw bytes of every file precache.json lists. `install` is what every visitor's worker stores (assets and static files; the shell pages are not counted). `pack_shell` is the v2 app shell an offline pack stores when someone saves a region (precache.json `v2`: MapLibre, its worker, the app and the glyphs). Each max is the 2026-10-18 measurement (build a257bf69dd: 400,678 and 2,532,577 bytes) + 10%; lower them as slices cut more.",
+    "install_raw_max": 440746,
+    "pack_shell_raw_max": 2785835
   },
   "bundles": {
     "comment": "v2 page budgets (FE-09; docs/plans/front-end/design.md § 13), checked by scripts/check_client.mjs after the Vite build: gzipped bytes of each page's initial JavaScript (its entry and every static import; dynamic imports load after first paint) and of its stylesheets. The JavaScript numbers are the design's (landing 180 KB, app 350 KB); the CSS numbers are this task's choice.",

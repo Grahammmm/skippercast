@@ -10,6 +10,7 @@ import {join} from 'node:path';
 import test from 'node:test';
 import {pathToFileURL} from 'node:url';
 import {signal} from '@preact/signals';
+import {session} from '../web/account.ts';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import * as v1 from '../dist/fleet-activity.js';
@@ -30,7 +31,7 @@ const until = async (ok, what) => { for (let i = 0; i < 200 && !ok(); i++) await
 const EVENT = {type: 'Feature', id: 'ev-1', geometry: {type: 'Point', coordinates: [-120.9, 35.3]}, properties: {layer: 'event', id: 'ev-1', vessel_name: 'Test Boat',
   kind: 'drift-anchor', dwell_min: 49, local_date: '2026-09-01', started_at: '2026-09-01T16:00:00Z', ended_at: '2026-09-01T16:49:00Z', port_id: 'morro-bay',
   trip_type: 'half-day', basis: 'inferred-from-movement', source: 'aisstream', rights: 'internal', planning_only: false}};
-const TROLL = {...EVENT, id: 'ev-2', properties: {...EVENT.properties, id: 'ev-2', kind: 'troll', dwell_min: 4, planning_only: true}};
+const TROLL = {...EVENT, id: 'ev-2', properties: {...EVENT.properties, id: 'ev-2', kind: 'troll-slow', dwell_min: 4, planning_only: true}};
 const SEGMENT = (id, kind, extra = {}) => ({type: 'Feature', id, geometry: {type: 'LineString', coordinates: [[-120.9, 35.3], [-120.95, 35.32]]},
   properties: {layer: 'track', id, trip_id: 't-1', segment_kind: kind, vessel_name: 'Test Boat', local_date: '2026-09-01', departed_at: '2026-09-01T14:00:00Z',
     returned_at: null, depart_port_id: 'morro-bay', distance_nm: 12.25, max_offshore_nm: 4, fishing_min: 95, rights: 'internal', planning_only: false, ...extra}});
@@ -39,7 +40,7 @@ const CELL = (id, dwell) => ({type: 'Feature', id, geometry: {type: 'Polygon', c
 const result = features => ({features, more: false, ignored: [], trips: 1});
 
 test('features become the three sources with v1\'s sizes; the overlay is heat, tracks, dashed tracks, events in tokens only', () => {
-  const data = activityCollections(v1, {events: result([EVENT, TROLL]), tracks: result([SEGMENT('s1', 'fishing-drift'), SEGMENT('s2', 'gap'), SEGMENT('s3', 'transit', {planning_only: true})]),
+  const data = activityCollections(v1, {events: result([EVENT, TROLL]), tracks: result([SEGMENT('s1', 'drift-anchor'), SEGMENT('s2', 'gap'), SEGMENT('s3', 'transit', {planning_only: true})]),
     heat: result([CELL('c1', 100), CELL('c2', 25)])});
   assert.deepEqual(data.events.features.map(f => f.properties), [
     {key: 'ev-1', radius: v1.eventRadius(49), drift: true, planning: false}, {key: 'ev-2', radius: 4, drift: false, planning: true}]);
@@ -60,7 +61,7 @@ test('features become the three sources with v1\'s sizes; the overlay is heat, t
 
 test('Accept 2: every card says the activity is inferred from movement', () => {
   const cards = [activityMark(v1, 'events', EVENT.properties, 'America/Los_Angeles'), activityMark(v1, 'events', TROLL.properties, 'America/Los_Angeles'),
-    activityMark(v1, 'tracks', SEGMENT('s1', 'fishing-troll').properties, 'America/Los_Angeles'), activityMark(v1, 'heat', CELL('c1', 130).properties, 'America/Los_Angeles')];
+    activityMark(v1, 'tracks', SEGMENT('s1', 'troll-slow').properties, 'America/Los_Angeles'), activityMark(v1, 'heat', CELL('c1', 130).properties, 'America/Los_Angeles')];
   for (const card of cards) {
     assert.ok(card.reading.endsWith(v1.INFERRED), card.id);
     assert.match(card.basis, /^Inferred from movement; filters in the Fleet view\./);
@@ -69,7 +70,7 @@ test('Accept 2: every card says the activity is inferred from movement', () => {
   assert.equal(cards[0].kind, 'Fleet activity · admin');
   assert.equal(cards[1].kind, 'Fleet activity · admin · NOAA planning-only');
   assert.match(cards[1].basis, /keep it off paid surfaces\./);
-  assert.match(cards[2].reading, /^Troll segment · trip of 2026-09-01, 7:00 AM–open · Morro bay · 12\.3 nm, furthest 4\.0 nm offshore · fishing time 1 hr 35 min\./);
+  assert.match(cards[2].reading, /^Slow troll segment · trip of 2026-09-01, 7:00 AM–open · Morro bay · 12\.3 nm, furthest 4\.0 nm offshore · fishing time 1 hr 35 min\./);
   assert.match(cards[3].reading, /^2 hr 10 min total dwell · 3 boats · 7 stops · 2026-08-01 to 2026-09-30\./);
   for (const id of ['fleet-heat', 'fleet-tracks', 'fleet-events']) assert.equal(layerEntry(id).basis, 'Inferred from movement; filters in the Fleet view.');
   assert.match(v1.statusText({events: result([EVENT])}), /inferred from movement/, 'the legend\'s status line');
@@ -92,13 +93,13 @@ function harness({admin, flags}) {
     if (!admin || !flags) return missing;
     if (u.pathname === '/api/fleet/map/filters') return ok({region: u.searchParams.get('region')});
     const layer = u.pathname.split('/').pop();
-    const features = {events: [EVENT, TROLL], tracks: [SEGMENT('s1', 'fishing-drift'), SEGMENT('s2', 'gap')], heat: [CELL('c1', 60)]}[layer];
+    const features = {events: [EVENT, TROLL], tracks: [SEGMENT('s1', 'drift-anchor'), SEGMENT('s2', 'gap')], heat: [CELL('c1', 60)]}[layer];
     return ok({type: 'FeatureCollection', features, meta: {next: null, trips: 1, ignored: []}});
   };
   const view = {size: () => ({width: 400, height: 300}), unproject: (x, y) => ({lon: -121 + x / 1000, lat: 35.5 - y / 1000}), on: () => () => {}};
   const engine = signal({view, setOverlay: (layer, o, before) => calls.push(['overlay', layer, o && o.layers.map(l => l.id), before ?? null]),
     setData: (id, data) => calls.push(['data', id, data.features.length])});
-  return {asked, calls, engine, fetchFn};
+  return {asked, calls, engine, fetchFn, setAdmin: value => { admin = value; }};
 }
 
 function open(t, h, layers = 'fleet') {
@@ -160,12 +161,60 @@ test('an admin with both flags gets the options; each loads for the map\'s bound
   toggleActivity('heat', true);
   await until(() => activityStatus.value.includes('heat'), 'heat loads');
   assert.deepEqual(activityOn.value, ['events', 'heat']);
-  assert.equal(activityStatus.value, '2 stops · 1 heat cells · inferred from movement.');
+  assert.equal(activityStatus.value, '2 stops · 1 heat cell · inferred from movement.');
   assert.ok(fleet.pick.mark(FLEET_HEAT, {key: 'c1'}).reading.endsWith(v1.INFERRED));
 
   for (const name of ACTIVITY) toggleActivity(name, false);
   await until(() => h.calls.at(-1)[2] === null, 'the overlay leaves');
   assert.equal(activityStatus.value, '');
+});
+
+test('session changes invalidate cached access and drawn features; disposal ignores pending checks', async t => {
+  const h = harness({admin: true, flags: true});
+  const fleet = open(t, h);
+  await until(() => activityAccess.value, 'initial admin admitted');
+  toggleActivity('events', true);
+  await until(() => fleet.pick.mark(FLEET_EVENTS, {key: 'ev-1'}), 'initial features loaded');
+  h.setAdmin(false);
+  session.value = {state: 'signed-out'};
+  assert.equal(activityAccess.value, false, 'revoke immediately on session change');
+  assert.equal(fleet.pick.mark(FLEET_EVENTS, {key: 'ev-1'}), null, 'old features cannot be picked');
+  assert.equal(h.calls.at(-1)[2], null, 'old overlay removed');
+  await until(() => h.asked.filter(u => u === '/api/session').length === 2, 'logout rechecks');
+  h.setAdmin(true);
+  session.value = {state: 'signed-in', name: 'Synthetic admin'};
+  await until(() => activityAccess.value, 'login rechecks cached denial');
+  await until(() => fleet.pick.mark(FLEET_EVENTS, {key: 'ev-1'}), 'login reloads features');
+  session.value = {state: 'signed-out'};
+  fleet.destroy();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(activityAccess.value, false, 'pending access cannot republish after disposal');
+  assert.equal(fleet.pick.mark(FLEET_EVENTS, {key: 'ev-1'}), null);
+  const count = h.asked.length;
+  session.value = {state: 'signed-in', name: 'Synthetic admin'};
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.asked.length, count, 'disposed session subscription removed');
+});
+
+test('a superseded or disposed access response cannot restore admin access', async t => {
+  const h = harness({admin: true, flags: true});
+  const pending = [];
+  const fetchFn = h.fetchFn;
+  h.fetchFn = url => url === '/api/session' ? new Promise(resolve => pending.push(resolve)) : fetchFn(url);
+  const fleet = open(t, h);
+  await until(() => pending.length === 1, 'first session request pending');
+  session.value = {state: 'signed-out'};
+  await until(() => pending.length === 2, 'replacement session request pending');
+  pending[1]({ok: true, json: async () => ({is_admin: false})});
+  pending[0]({ok: true, json: async () => ({is_admin: true})});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(activityAccess.value, false, 'old admin response ignored');
+  session.value = {state: 'signed-in', name: 'Synthetic admin'};
+  await until(() => pending.length === 3, 'third request pending');
+  fleet.destroy();
+  pending[2]({ok: true, json: async () => ({is_admin: true})});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(activityAccess.value, false, 'disposed admin response ignored');
 });
 
 test('Accept 1: the rail offers the activity layers only with access; the legend keys them with v1\'s status line', async () => {
@@ -198,7 +247,9 @@ test('Accept 1: the rail offers the activity layers only with access; the legend
   assert.doesNotMatch(m.render(m.h(m.Legend)), /fleet-activity|fleet-events/, 'nothing for a viewer without access');
 });
 
-test('Accept 3: v1\'s fleet-activity.js is byte for byte as before FE-24', async () => {
+test('Accept 3: v1\'s fleet-activity.js is byte for byte as before FE-24, with N5\'s mode names', async () => {
+  // Re-pinned by charter-fleet N5, which renamed the event and segment kinds in EVENT_STYLE and SEGMENT_STYLE.
+  // Re-pinned again for statusText's singular counts ("1 stop", #422 FE-24 follow-up).
   const sha = createHash('sha256').update(await readFile(new URL('dist/fleet-activity.js', ROOT))).digest('hex');
-  assert.equal(sha, 'ae87a65ef41e5329ef9bb35a85fddb83bfb0a01ccc749e2487fe2b4d618bc1f8');
+  assert.equal(sha, '845efe4f02007b9d4756174b3716c8befffa123c3502cae435fbbecae9f5509d');
 });

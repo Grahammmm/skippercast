@@ -9,7 +9,8 @@
 // Never a catch number, never a clearance.
 import {addDays, daysBetween, localParts, PACIFIC} from './time.ts';
 import {fold} from './resolve.ts';
-import {hourComfort, limitedComfort, verdictFor, COMFORT_WORD, BOAT_PHRASE} from './comfort.ts';
+import {verdictFor, COMFORT_WORD, BOAT_PHRASE} from './comfort.ts';
+import {rateComfort, type FeedHour} from '../../../web/score.ts';
 import type {Verdict} from './comfort.ts';
 import type {Region} from '../../types.ts';
 
@@ -72,13 +73,7 @@ function sample(data: Feed, key: string, time: number, unit: string): number | n
   return h[key][i];
 }
 
-export interface Hour {
-  time: number; wind: number | null; gust: number | null; wind_from: number | null;
-  sea: number | null; sea_period: number | null; chop: number | null; chop_period: number | null;
-  swell: number | null; swell_period: number | null; swell_from: number | null;
-  secondary: number | null; secondary_from: number | null;
-  other_wind: number | null; other_sea: number | null; other_gust: number | null;
-}
+export interface Hour extends FeedHour {time: number}
 
 /** One hour at one forecast point: GFS wind and GFS-Wave partitions, with ECMWF wind and WAM seas as the second opinion. */
 export function readHour(feed: Feed, point: number, time: number): Hour {
@@ -98,13 +93,7 @@ export function readHour(feed: Feed, point: number, time: number): Hour {
 
 /** Comfort score for one hour, as the app scores it: the full rubric when every part is there, else the limited one (capped). */
 export function rateHour(h: Hour): number | null {
-  const winds = [h.wind, h.other_wind].filter(finite), seas = [h.sea, h.other_sea].filter(finite);
-  if (!winds.length || !seas.length) return null;
-  const gusts = ([[h.wind, h.gust], [h.other_wind, h.other_gust]] as const).filter(([w, g]) => finite(w) && finite(g) && g >= w).map(([, g]) => g as number);
-  const complete = [h.wind, h.sea, h.sea_period, h.chop, h.swell, h.swell_from, h.other_wind, h.other_sea].every(finite) && gusts.length === 2;
-  if (complete) return hourComfort({wind: h.wind, gust: h.gust, sea: {height: h.sea}, chop: {height: h.chop, period: h.chop_period}, swell: {height: h.swell, from: h.swell_from},
-    secondary: {height: h.secondary, from: h.secondary_from}}, {wind: h.other_wind, sea: {height: h.other_sea}}, Math.max(...gusts));
-  return Math.min(6.9, limitedComfort(Math.max(...winds), Math.max(...seas), gusts.length ? Math.max(...gusts) : null));
+  return rateComfort(h)?.score ?? null;
 }
 
 const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
@@ -144,6 +133,11 @@ export function windowConditions(feed: Feed, region: Region, pointId: string, da
   });
   if (!times.length) return empty('the forecast does not cover this window yet');
   const hours = times.map(t => readHour(feed, point, t));
+  // Cached timestamps are not measurements; only readHour's validated samples count.
+  if (!hours.some(h => [h.wind, h.gust, h.wind_from, h.sea, h.sea_period, h.chop, h.chop_period,
+    h.swell, h.swell_period, h.swell_from, h.secondary, h.secondary_from, h.other_wind, h.other_gust, h.other_sea].some(finite))) {
+    return empty('no usable forecast measurements for this window');
+  }
   const scores = hours.map(rateHour);
   const rated = scores.filter(finite);
   const verdict: Verdict = rated.length ? verdictFor({conditions: Math.min(...rated)}) : 'unknown';

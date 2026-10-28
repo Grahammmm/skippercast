@@ -469,7 +469,7 @@ def main(argv=None, session=None, now=None):
     parser.add_argument("--root", type=Path, required=True, help="the published tree: reads regions/morro-bay/latest.json "
                         "(this cycle's buoys), writes regions/morro-bay/coast-report.json")
     args = parser.parse_args(argv)
-    report = assemble(session or http.Session(allowed_hosts=HOSTS), _read(args.root / "regions" / REGION / "latest.json"), now)
+    report = assemble(session or http.Session(allowed_hosts=HOSTS, min_interval={"api.weather.gov": 1.0}), _read(args.root / "regions" / REGION / "latest.json"), now)
     print(json.dumps({"generatedAt": report["generatedAt"], "sources": {s["id"]: s["outcome"] for s in report["sources"]}}))
     if not publishable(report):
         print("No populated forecast area or recent buoy observation; the last coast report is kept.", file=sys.stderr)

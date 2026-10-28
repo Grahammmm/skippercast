@@ -1,5 +1,5 @@
-// FE-51: the v2 trip planner and offline pack (web/trip.ts). The planner is
-// v1's (dist/export-ui.js); these tests pin what the wrapper adds: the shared
+// FE-51: the v2 trip planner and offline pack (web/trip.ts). The planner's
+// own state is tests/test_planner.mjs; these tests pin what trip.ts adds: the shared
 // draft, the map adapter, the headless protected-area screen (the same GPX
 // bytes as v1's map screen), the basemap plan's budget and the range recorder.
 // tests/test_trip_export.mjs and the e2e ranked export cover the planner.
@@ -23,7 +23,7 @@ test('the account menu and mark card read the region\'s v1 draft, whatever it ho
   assert.deepEqual(trip.savedIds('morro-bay', {getItem() { throw new Error('blocked'); }}), []);
 });
 
-test('the planner\'s Leaflet calls come from the shared camera and the chart\'s size', () => {
+test('the planner\'s map calls come from the shared camera and the chart\'s size', () => {
   // ?view= zoom 10 (256 px convention): 262,144 px around the world, so 512 px span 0.703° of longitude.
   const view = trip.mapView({latitude: 35.37, longitude: -120.86, zoom: 10}, {width: 512, height: 512});
   assert.deepEqual(view.getSize(), {x: 512, y: 512});

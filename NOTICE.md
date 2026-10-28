@@ -34,7 +34,7 @@ Whether each source may be used in a paid product is tracked separately in the [
 
 ## Web map dependencies
 
-The static app bundles Leaflet 1.9.4 under its BSD 2-Clause license, preserved in [LEAFLET-LICENSE.txt](dist/vendor/LEAFLET-LICENSE.txt). Exact downloaded asset hashes are recorded in [the vendor manifest](scripts/web-vendor-sha256.json). The SkipperCast license does not replace Leaflet's terms.
+The app bundles MapLibre GL JS 6.14.0 and PMTiles 4.5.0, each under its BSD 3-Clause license, preserved in [MAPLIBRE-LICENSE.txt](dist/vendor/MAPLIBRE-LICENSE.txt) and [PMTILES-LICENSE.txt](dist/vendor/PMTILES-LICENSE.txt). Exact downloaded asset hashes are recorded in [the vendor manifest](scripts/web-vendor-sha256.json). The SkipperCast license does not replace their terms.
 
 The v2 pages self-host two typefaces under `web/fonts/` (Latin subsets of the variable fonts, as served by Google Fonts), both under the [SIL Open Font License 1.1](https://openfontlicense.org/) with no Reserved Font Name: DM Sans, Copyright 2014 The DM Sans Project Authors ([DM-SANS-OFL.txt](web/fonts/DM-SANS-OFL.txt)), and JetBrains Mono, Copyright 2020 The JetBrains Mono Project Authors ([JETBRAINS-MONO-OFL.txt](web/fonts/JETBRAINS-MONO-OFL.txt)). The font files' hashes are in the vendor manifest; no font is requested from Google at runtime.
 

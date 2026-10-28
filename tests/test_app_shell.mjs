@@ -14,6 +14,7 @@ import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {lintFile} from '../scripts/check_tokens.mjs';
+import {waterState} from './helpers/land-water.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const APP_FILES = ['web/app', 'web/app/views'].flatMap(dir => readdirSync(join(ROOT, dir)).filter(name => name.includes('.')).map(name => `${dir}/${name}`));
@@ -33,12 +34,20 @@ async function load() {
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export * from './web/app/App.tsx';
+      export {Planner} from './web/app/Planner.tsx';
+      export {createPlanner} from './web/planner.ts';
+      export {AccountMenu} from './web/app/AccountMenu.tsx';
       export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, TAB_VIEWS, advisorOn, checkAdvisor, ChatEntry} from './web/app/Masthead.tsx';
       export {targetOptions, windowText} from './web/app/CommandBar.tsx';
       export {Brief, emptyTiles, DISCLAIMER} from './web/app/Desktop.tsx';
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
       export {MarkCard, clearSelection, currentMark, placeholderMark, readingCard, terrainCard} from './web/app/MarkCard.tsx';
       export {chartMark} from './web/map/chart.ts';
+      export {Legend, RankedRow} from './web/app/Legend.tsx';
+      export {rankedSpots} from './web/map/ranked.ts';
+      export {landWater} from './web/land-water.ts';
+      export {markScreen} from './web/map/marks.ts';
+      export {CHECKING, assessScreen} from './web/map/habitat.ts';
       export {terrainMark, terrainReading} from './web/map/stage.ts';
       export {dayOptions, dockState, hourText, localParts, readout, zoneName} from './web/app/TimeDock.tsx';
       export {Mobile, LayersPanel, afterDetent, toggleLayers} from './web/app/Mobile.tsx';
@@ -54,6 +63,24 @@ async function load() {
   return shell;
 }
 const memory = () => { const m = new Map(); return {getItem: k => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v))}; };
+
+test('coordinate choice is exposed in settings and used by the plan rows', async () => {
+  const {Planner, createPlanner, AccountMenu, render, h, state} = await load();
+  state.configureStore({storage: memory()});
+  const t = {id: 'fixture', label: 'Fixture', latitude: -0.5, longitude: 0.5};
+  const model = createPlanner({atlas: {targets: [t], areas: []}, screen: {ready: () => false},
+    region: {id: 'test', timezone: 'UTC', mpa: {bounds: [-1, -1, 1, 1]}}, storage: null,
+    map: {getBounds: () => ({getWest: () => -1, getEast: () => 1, getSouth: () => -1, getNorth: () => 1})},
+    getVisible: () => [t], loadPorts: async () => null, nav: {}, emit() {}});
+  model.add(t.id);
+  try {
+    for (const [mode, label, expected] of [['dd', 'Decimal degrees', '0.50000° S, 0.50000° E'], ['ddm', 'Degrees and decimal minutes', '0° 30.000′ S, 0° 30.000′ E'], ['dms', 'Degrees minutes seconds', '0° 30′ 00.00″ S, 0° 30′ 00.00″ E']]) {
+      state.setCoordinateFormat(mode);
+      assert.ok(render(h(Planner, {model, open: false})).includes(expected));
+      assert.match(render(h(AccountMenu, {})), new RegExp(`aria-pressed="true"[^>]*>${label}</button>`));
+    }
+  } finally { state.setCoordinateFormat('dd'); model.dispose(); }
+});
 const count = (html, re) => (html.match(re) || []).length;
 const attrs = (html, re) => [...html.matchAll(re)].map(m => m[1]);
 
@@ -70,6 +97,8 @@ const dayChips = html => [...html.match(/aria-label="Day"[^>]*>(.*?)<\/div>/s)[1
 test('the shell has the masthead, the command bar, the brief column and the map chrome', async () => {
   const html = await renderShell(`${ORIGIN}?region=morro-bay`);
   assert.match(html, /<header class="app-masthead">/);
+  assert.match(html, /Replay controls tour<\/button>/);
+  assert.doesNotMatch(html, /Step 1 of 4/, 'the tour is opt-in, not competing with FirstRun or the flyover');
   assert.match(html, /class="app-brand" href="\/"[^>]*>.*SkipperCast/);
   assert.match(html, /class="app-location ui-mono" data-region="morro-bay">Morro Bay —</, 'the location names the region and leaves the centre blank until it loads');
   assert.match(html, /<nav aria-label="Views">/);
@@ -80,7 +109,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   // FE-50: sign in is the account menu's button, closed until pressed.
   assert.match(html, /<div class="app-account"><button type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded="false" aria-controls="([^"]+)">.*?Sign in<\/button><div id="\1" class="app-account-panel" hidden/);
   assert.match(html, /role="group" aria-label="Profile"/);
-  assert.equal(count(html, /(?:Boat|Shore|Spear)<\/button>/g), 3);
+  assert.equal(count(html, /(?:Boat|Shore|Spear|Kayak)<\/button>/g), 4);
   assert.equal(count(html, /<label>Target<select/g), 1);
   assert.equal(count(html, /<label>Area<select/g), 1);
   assert.match(html, /<output class="app-window ui-mono" aria-label="Time window">Today · 1 pm<\/output>/);
@@ -98,7 +127,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.match(html, /<section class="app-stage" aria-label="Map">/);
   assert.match(html, /<section class="app-legend" aria-label="Legend">/);
   assert.match(html, /role="group" aria-label="Layers"/);
-  assert.equal(count(html, /class="ui-rail-item"/g), 6);
+  assert.equal(count(html, /class="ui-rail-item"/g), 9);
   assert.match(html, /role="group" aria-label="Time"/);
   assert.match(html, /<input type="range" class="ui-range ui-dock-range" aria-label="Hour"/);
   assert.doesNotMatch(html, /app-mark/, 'no mark card without a selection');
@@ -120,6 +149,12 @@ test('the brief invents no number: every tile reads "—" and keeps its source l
   assert.match(html, /Nearshore site —/, 'spear takes the nearshore swell source');
   assert.match(html, /<p class="app-empty">Ranked places load with the map.<\/p>/, 'no ranked place before the region\'s marks load');
   assert.match(html, /In-water visibility is unverified/);
+  // Kayak reads the offshore swell source and its own caveat.
+  state.syncFromURL(`${ORIGIN}?profile=kayak`);
+  const kayak = render(h(Brief, {}));
+  assert.match(kayak, /Offshore —/, 'kayak takes the offshore swell source');
+  assert.match(kayak, /a forecast cannot clear a paddle\./);
+  state.syncFromURL(`${ORIGIN}?profile=spear`);
   const picks = [{id: 'r1', kind: 'spot', name: 'North reef', distance: '3.2 nm', depth: '~60–90 ft', fit: 'Fits lingcod habitat 3 of 3', reason: 'Hard bottom inside the limit.'}];
   const ranked = render(h(Brief, {ranking: {source: 'atlas', label: 'Survey reef atlas', basis: 'Basis.', picks, empty: ''}}));
   assert.match(ranked, /<ol class="app-picks"><li data-mark="r1"><button type="button" class="app-pick" aria-pressed="false">/);
@@ -135,8 +170,8 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   assert.equal(count(html, /class="ui-rail-item"/g), 0);
   const coastView = await renderShell(link.replace('&view=conditions', ''));
   // Profile switch: exactly Shore is on, and the shore caveat and swell source follow.
-  const chips = [...html.matchAll(/<button[^>]*class="ui-button ui-button--ghost ui-button--sm ui-chip"[^>]*aria-pressed="(true|false)"[^>]*>.*?<\/svg>(Boat|Shore|Spear)/gs)].map(m => [m[2], m[1]]);
-  assert.deepEqual(chips, [['Boat', 'false'], ['Shore', 'true'], ['Spear', 'false']]);
+  const chips = [...html.matchAll(/<button[^>]*class="ui-button ui-button--ghost ui-button--sm ui-chip"[^>]*aria-pressed="(true|false)"[^>]*>.*?<\/svg>(Boat|Shore|Spear|Kayak)/gs)].map(m => [m[2], m[1]]);
+  assert.deepEqual(chips, [['Boat', 'false'], ['Shore', 'true'], ['Spear', 'false'], ['Kayak', 'false']]);
   assert.match(html, /Offshore seas do not measure breakers/);
   assert.match(html, /Nearshore site —/);
   // Views: the current one is aria-current and every link carries ?view= (coast drops it).
@@ -146,11 +181,11 @@ test('every control reflects the address: profile, view, day, hour, layers and t
   // Target and area menus show the link's values.
   assert.match(html, /<label>Target<select><optgroup label="Shore targets"><option value="surfperch">Barred surfperch<\/option><option selected value="halibut">California halibut<\/option><\/optgroup><\/select>/, 'the coast targets\' names (FE-30)');
   assert.match(html, /<label>Area<select><option value>Whole region<\/option><option selected value="estero">Estero<\/option><\/select>/);
-  // Rail and legend: swell and water temp on, the rest off; the protected areas always draw on the Chart (FE-19).
+  // Rail and legend: swell and water temp on, the rest off; protected areas stay listed while their geometry loads (FE-19).
   const rail = Object.fromEntries([...coastView.matchAll(/<li class="ui-rail-item" data-on="(true|false)"><button[^>]*>.*?<span class="ui-rail-label">([^<]+)<\/span>/gs)].map(m => [m[2], m[1]]));
-  assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', Swell: 'true', 'Charter fleet': 'false', Clouds: 'false'});
+  assert.deepEqual(rail, {Seafloor: 'false', Currents: 'false', 'Water temp': 'true', 'Temp contrast': 'false', Chlorophyll: 'false', 'Swell + wind': 'true', Stations: 'false', 'Charter fleet': 'false', Clouds: 'false'});
   assert.match(coastView, /class="app-legend-water-temp"/);
-  assert.deepEqual(attrs(coastView, /class="app-swatch" data-layer="([a-z-]+)"/g), ['mpas'], 'no colour key until a layer draws (FE-20)');
+  assert.deepEqual(attrs(coastView, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no colour key until a layer draws (FE-20)');
   // Dock: the chips run from the fixed clock (Monday), Tuesday 2026-10-06 is on and the slider sits at 2 pm local.
   assert.deepEqual(dayChips(html), WEEK.map(label => [label, label === 'Tue']));
   assert.match(html, /aria-label="Hour" aria-valuetext="2 pm" min="0" max="23" step="1" value="14"/);
@@ -201,7 +236,14 @@ test('the helpers behind the controls round-trip through the store keys', async 
 async function renderMobile(href) {
   const {narrow} = await load();
   narrow.value = true;
-  try { return await renderShell(href); } finally { narrow.value = false; }
+  // FirstRun reads the browser address to distinguish a named profile from a new visit.
+  const previousLocation = globalThis.location;
+  globalThis.location = {href};
+  try { return await renderShell(href); } finally {
+    narrow.value = false;
+    if (previousLocation === undefined) delete globalThis.location;
+    else globalThis.location = previousLocation;
+  }
 }
 
 test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a four-tab nav', async () => {
@@ -211,17 +253,17 @@ test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a 
   // Top strip: the brand and location card, the layers button, then the full-width profile switch.
   assert.match(html, /<header class="app-top"><div class="app-top-row"><div class="app-top-card"><a class="app-brand" href="\/">.*?<span class="app-location ui-mono" data-region="morro-bay">Morro Bay —<\/span><\/div><button[^>]*aria-label="Layers"[^>]*aria-pressed="false"/s);
   assert.match(html, /role="group" aria-label="Profile" class="ui-segmented app-profile"/);
-  assert.equal(count(html, /(?:Boat|Shore|Spear)<\/button>/g), 3);
+  assert.equal(count(html, /(?:Boat|Shore|Spear|Kayak)<\/button>/g), 4);
   // One sheet at peek with the hour slider at its edge, then the brief in sheet order.
   assert.equal(count(html, /class="ui-sheet /g), 1);
   assert.match(html, /<section class="ui-sheet app-sheet" data-detent="peek" aria-label="Brief"><div class="ui-sheet-edge"><button type="button" class="ui-sheet-handle" aria-label="Expand Brief" aria-expanded="false"/);
   assert.match(html, /<\/button><div class="app-sheet-hour" role="group" aria-label="Time"><input type="range" class="ui-range ui-dock-range" aria-label="Hour" aria-valuetext="1 pm"[^>]*><output class="ui-dock-readout ui-mono" aria-live="off">1 pm<\/output><\/div><\/div>/);
   const body = html.slice(html.indexOf('<div class="ui-sheet-body">'), html.indexOf('<nav aria-label="Views"'));
-  const order = ['class="ui-eyebrow">Today · 1 pm</span>','class="app-fresh" role="status"', '<h1>Waiting for readings.</h1>', '<div class="app-tiles">', 'class="ui-eyebrow">Where to look', '<figure class="app-spark"',
-    '<div class="app-sheet-menus"><div role="group" aria-label="Day"', '<label>Target<select', '<label>Area<select', '<p class="app-caveat">', '<footer class="app-brief-footer">', '<div class="app-account" data-inline="true">'];
+  const order = ['class="ui-eyebrow">Today · 1 pm</span>','class="app-fresh" role="status"', '<h1>Waiting for readings.</h1>', '<div class="app-tiles">', 'class="ui-eyebrow">Where to look', '<details class="app-details">', '<p class="app-caveat">', '<figure class="app-spark"',
+    '<div class="app-sheet-menus"><div role="group" aria-label="Day"', '<label>Target<select', '<label>Area<select', '<footer class="app-brief-footer">', '<div class="app-account" data-inline="true">'];
   const at = order.map(s => body.indexOf(s));
   assert.ok(at.every(i => i >= 0), `every piece renders: ${JSON.stringify(order.filter((_, i) => at[i] < 0))}`);
-  assert.deepEqual(at, [...at].sort((a, b) => a - b), 'in sheet order: eyebrow, freshness, headline, tiles, picks, tide, menus, caveat, footer');
+  assert.deepEqual(at, [...at].sort((a, b) => a - b), 'in sheet order: eyebrow, freshness, headline, tiles, picks, Details with the caveat (#616), tide, menus, footer');
   assert.equal(count(body, /class="ui-tile"/g), 4);
   assert.equal(count(html, /<h1>/g), 1);
   assert.equal(count(html, /separate clocks/g), 1, 'one disclaimer line per page');
@@ -248,9 +290,9 @@ test('the mobile sheet reflects the address: the mark card stands in at peek, th
   state.syncFromURL(`${ORIGIN}?region=morro-bay&layers=clouds`);
   const panel = render(h(LayersPanel, {onClose: () => {}}));
   assert.match(panel, /^<div class="app-sheet-layers"><div class="app-sheet-head"><span class="ui-eyebrow">Layers<\/span><button[^>]*>.*?Done<\/button><\/div><div class="ui-rail app-rail" role="group" aria-label="Layers">/s);
-  assert.equal(count(panel, /class="ui-rail-item"/g), 6);
+  assert.equal(count(panel, /class="ui-rail-item"/g), 9);
   assert.match(panel, /<li class="app-legend-clouds"><span class="app-legend-text">Clouds</);
-  assert.deepEqual(attrs(panel, /class="app-swatch" data-layer="([a-z-]+)"/g), ['mpas'], 'no cloud key until a frame shows (FE-20)');
+  assert.deepEqual(attrs(panel, /class="app-swatch" data-layer="([a-z-]+)"/g), [], 'no cloud key until a frame shows (FE-20)');
   // Panel and detent rules: layers opens at half from peek, closes when the sheet drops to peek.
   assert.deepEqual(toggleLayers('brief', 'peek'), {panel: 'layers', detent: 'half'});
   assert.deepEqual(toggleLayers('brief', 'full'), {panel: 'layers', detent: 'full'});
@@ -333,11 +375,21 @@ test('the mark card shows a Chart selection, then the terrain\'s on the Chart, t
     assert.equal(currentMark.value.name, 'r12', 'the terrain\'s selection shows only while the link names it');
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&spot=r12&habitat=reef:r1`);
     assert.deepEqual(currentMark.value, terrainCard(reef));
-    assert.equal(terrainCard(reef).reading, '35.3800° N, 120.8800° W');
+    assert.deepEqual(terrainCard(reef).position, {latitude: 35.38, longitude: -120.88});
+    for (const [mode, expected] of [['dd', '35.38000° N, 120.88000° W'], ['ddm', '35° 22.800′ N, 120° 52.800′ W'], ['dms', '35° 22′ 48.00″ N, 120° 52′ 48.00″ W']]) {
+      state.setCoordinateFormat(mode);
+      assert.ok(render(h(MarkCard, {})).includes(expected));
+    }
+    state.setCoordinateFormat('dd');
     chartMark.value = shore;
     assert.equal(currentMark.value, shore, 'a Chart click wins');
     const html = render(h(MarkCard, {}));
     assert.match(html, /<h2 tabindex="-1">Shoreline<\/h2>.*Lidar · ±2 m stated.*NOAA NGS CUSP · source date 2010-11-01/s);
+    chartMark.value = {...shore, terms: [{href: 'https://example.org/terms', label: 'Publisher terms'}]};
+    assert.match(render(h(MarkCard, {})), /<a href="https:\/\/example.org\/terms" target="_blank" rel="noopener" aria-label="Publisher terms \(publisher's page, opens in a new tab\)">Publisher terms<\/a>/,
+      'a mark with publisher terms links them inside its basis');
+    assert.doesNotMatch(html, /Publisher terms/, 'a mark without them has none');
+    chartMark.value = shore;
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&spot=r12`);
     assert.equal(currentMark.value.name, 'r12', 'in the terrain its own panel speaks; the atlas mark stays');
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d`);
@@ -359,7 +411,7 @@ test('FE-80: in 2D and 3D a terrain reading is the card, with the renderer\'s la
     terrainReading.value = reading;
     assert.deepEqual(currentMark.value, readingCard(reading));
     const html = render(h(MarkCard, {}));
-    assert.match(html, /<h2 tabindex="-1">39 ft depth<\/h2>.*<p class="app-mark-kind">ORIGINAL SURVEY SAMPLE<\/p><p class="ui-reading">35\.37000° N · 120\.86000° W<\/p><p class="app-mark-source ui-mono">USGS survey · 2008-05-01 · 2 m display spacing\. Nominal\. Original spacing 2 m\. Vertical references have not been reconciled\.<\/p>/s);
+    assert.match(html, /<h2 tabindex="-1">39 ft depth<\/h2>.*<p class="app-mark-kind">ORIGINAL SURVEY SAMPLE<\/p><p class="ui-mono">35\.37000° N, 120\.86000° W<\/p><p class="app-mark-source ui-mono">USGS survey · 2008-05-01 · 2 m display spacing\. Nominal\. Original spacing 2 m\. Vertical references have not been reconciled\.<\/p>/s);
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&habitat=reef:r1`);
     assert.deepEqual(currentMark.value, terrainCard(reef), 'the Chart has no terrain reading');
   } finally { terrainMark.value = null; terrainReading.value = null; }
@@ -379,6 +431,38 @@ test('the shell files keep the token and copy rules, and app.html mounts the ent
   assert.match(page, /<script type="module" src="\.\.\/web\/app\/main\.tsx"><\/script>/);
   assert.deepEqual(attrs(page, /<link rel="stylesheet" href="([^"]+)"/g), ['../web/tokens.css', '../web/ui/ui.css', '../web/app/app.css', '../web/landing/port-input.css', '../web/app/account.css', '../web/app/trip.css'],
     'tokens first, then the primitives, then the shell, then the entry flow (FE-08), then the account dialogs (FE-50), then the trip plan (FE-51)');
-  assert.doesNotMatch(page, /leaflet/i, 'the v2 shell imports no Leaflet');
+  // FE-61: tests/test_no_v1_map_library.mjs checks that no tracked file names the retired 2D map library.
   assert.deepEqual(attrs(page, /src="(vendor\/[^"]+)"/g), ['vendor/simplewebauthn-browser-14.0.0/index.umd.min.js'], 'the only vendored script is the passkey library (FE-50)');
+});
+
+
+test('the time dock disables Play at the complete horizon end while preserving backward selection', async () => {
+  const last = new Date(NOW.getTime() + 168 * 3_600_000).toISOString().slice(0, 16) + 'Z';
+  const html = await renderShell(`${ORIGIN}?region=morro-bay&hour=${last}`);
+  const button = html.match(/<button[^>]*aria-label="Play"[^>]*>/)[0];
+  assert.match(button, / disabled(?:=|>| )/);
+  assert.doesNotMatch(html.match(/<input[^>]*aria-label="Hour"[^>]*>/)[0], / disabled/);
+  const before = new Date(NOW.getTime() + 167 * 3_600_000).toISOString().slice(0, 16) + 'Z';
+  const prior = await renderShell(`${ORIGIN}?region=morro-bay&hour=${before}`);
+  assert.doesNotMatch(prior.match(/<button[^>]*aria-label="Play"[^>]*>/)[0], / disabled/);
+});
+
+test('the legend keys the ranked trip spots while the Chart draws them (#422)', async () => {
+  const {Legend, RankedRow, rankedSpots, markScreen, CHECKING, assessScreen, render, h, state, landWater} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  const spot = {id: 's1', name: 'Spot 1', latitude: 35.37, longitude: -120.9, trip_rank: 1};
+  landWater.value = waterState('morro-bay', [spot]);
+  try {
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart`);
+    assert.equal(render(h(RankedRow, {})), '', 'no plan, no row');
+    rankedSpots.value = [spot];
+    markScreen.value = CHECKING;
+    assert.equal(render(h(RankedRow, {})), '', 'no spot drawn while the marks\' screen is checking');
+    markScreen.value = assessScreen({areas: [], checkedAt: new Date(Date.now() - 60_000).toISOString(), live: false, closures: undefined}, Date.now());
+    const html = render(h(Legend, {}));
+    assert.match(html, /<li class="app-legend-ranked"><span class="app-swatch" data-layer="trip-ranked" aria-hidden="true"><\/span>Ranked trip spot; number: the planner(&#39;|')s order/);
+    assert.match(html, /Ranked trip spots basis/);
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d`);
+    assert.equal(render(h(RankedRow, {})), '', 'the terrain draws no ranked pins, so no row');
+  } finally { rankedSpots.value = []; markScreen.value = CHECKING; }
 });

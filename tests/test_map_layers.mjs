@@ -11,7 +11,7 @@ import {COAST_OVERLAY_COLORS} from '../packages/coast/src/palette.ts';
 import {groundsOverlay} from '../web/map/charter-grounds.ts';
 import {markScreen, markStyle} from '../web/map/marks.ts';
 import {assessScreen} from '../web/map/habitat.ts';
-import {COASTLINE_GLOW, COASTLINE_LINE, COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL} from '../web/map/coastline.ts';
+import {COASTLINE_GLOW, COASTLINE_LINE, COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, SHORELINE_DETAIL_ZOOM} from '../web/map/coastline.ts';
 import {VIEW_ZOOM, ZOOM_OFFSET, createEngine, mapOptions} from '../web/map/engine.ts';
 import {BASEMAP_MANIFEST, ENC_LAYER, basemapArchive, chartFailed, chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
@@ -26,19 +26,19 @@ const sentinel = readPalette(name => `token(${name})`);
 const SENTINELS = new Set(Object.values(sentinel));
 
 // design.md § 9, "Draw order, bottom to top", as entry ids; the ENC chart base sits with the bases.
-const DESIGN_ORDER = ['basemap', 'aerial', 'chart', 'relief', 'water-temp', 'water-temp-contours', 'swell', 'mpas', 'habitat',
+const DESIGN_ORDER = ['basemap', 'aerial', 'chart', 'relief', 'water-temp', 'water-temp-contours', 'sst-contrast', 'chlorophyll', 'swell', 'wind', 'depth-contours', 'mpas', 'habitat',
   'shore-runs', 'seafloor', 'charter-grounds', 'commercial-ais', 'fleet-heat', 'fleet-tracks', 'fleet-events', 'currents',
-  'clouds', 'marks', 'selection', 'trip-ranked', 'coastline'];
+  'clouds', 'reach', 'marks', 'selection', 'trip-ranked', 'stations', 'coastline'];
 
 test('the registry is in § 9 draw order and every entry declares its presentations, time and basis', () => {
   assert.deepEqual(LAYERS.map(e => e.id), DESIGN_ORDER);
   const design = readFileSync(new URL('../docs/plans/front-end/design.md', import.meta.url), 'utf8');
-  assert.match(design, /Draw order, bottom\s+to top: basemap, aerial, ENC chart, relief, water temperature field, contours, swell\s+field, MPAs, habitat polygons, shore runs, seafloor candidates, charter\s+grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents\s+streamlines \(canvas\), clouds \(raster, above fields so the loop reads as\s+sky\), marks, selection, ranked trip spots, coastline glow\./, 'the design states the order this test pins');
+  assert.match(design, /Draw order, bottom\s+to top: basemap, aerial, ENC chart, relief, water temperature field, contours,\s+temperature contrast cells, chlorophyll, swell field, wind arrows, depth contours, MPAs, habitat polygons,\s+shore runs,\s+seafloor candidates, charter\s+grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents\s+streamlines \(canvas\), clouds \(raster, above fields so the loop reads as\s+sky\), reach ring, marks, selection, ranked trip spots, station pins, coastline glow\./, 'the design states the order this test pins');
   for (const e of LAYERS) {
     assert.ok(e.presentations.length > 0 && e.presentations.every(p => p === 'chart' || p === 'terrain'), `${e.id} presentations`);
     assert.ok(e.time.length > 0 && e.time.every(t => ['static', 'hour', 'observed'].includes(t)), `${e.id} time`);
     assert.match(e.basis, /^[A-Z].+\.$/, `${e.id} basis is one sentence`);
-    assert.match(e.task, /^FE-\d+$/);
+    assert.match(e.task, /^(FE|CI\d+)-\d+$/, `${e.id} names its dev-plan or roadmap task`);
   }
   assert.equal(new Set(LAYERS.map(e => e.id)).size, LAYERS.length, 'ids are unique');
   const owned = LAYERS.flatMap(e => e.sources);
@@ -90,6 +90,33 @@ test('a shoreline click becomes a mark with its own source date and stated accur
   assert.equal(coastlineMark({source_date: '1994-02-28'}).reading, 'Accuracy not stated');
 });
 
+test('every import line reads the same mark from the published shoreline (schema_version 2)', () => {
+  // The platform build merges import features with identical properties into one MultiLineString
+  // and rounds coordinates to 5 decimals; a click on any line must still give its old mark card.
+  const source = JSON.parse(readFileSync(new URL('../catalog/shoreline/morro-bay.geojson', import.meta.url), 'utf8'));
+  const published = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/shoreline.geojson', import.meta.url), 'utf8'));
+  assert.equal(published.type, 'FeatureCollection');
+  assert.equal(published.schema_version, 2);
+  const key = p => JSON.stringify(Object.keys(p).sort().map(k => [k, p[k]]));
+  const lines = g => g.type === 'LineString' ? [g.coordinates] : g.coordinates;
+  const byProps = new Map(published.features.map(f => [key(f.properties), f]));
+  assert.equal(byProps.size, published.features.length, 'one published feature per property set');
+  let matched = 0;
+  for (const feature of source.features) {
+    const merged = byProps.get(key(feature.properties));
+    assert.ok(merged, `${feature.id} has a published feature`);
+    assert.deepEqual(merged.properties, feature.properties);
+    assert.deepEqual(coastlineMark(merged.properties), coastlineMark(feature.properties));
+    assert.ok(coastlineMark(merged.properties), `${feature.id} stays selectable`);
+    for (const line of lines(feature.geometry)) {
+      const same = lines(merged.geometry).some(c => c.length === line.length && c.every(([x, y], i) => Math.abs(x - line[i][0]) <= 6e-6 && Math.abs(y - line[i][1]) <= 6e-6));
+      assert.ok(same, `${feature.id}: its line is in ${merged.id}`);
+      matched++;
+    }
+  }
+  assert.equal(published.features.reduce((n, f) => n + lines(f.geometry).length, 0), matched, 'no line added or lost');
+});
+
 test('the basemap archive comes from FE-10\'s manifest, and only a tiles/basemap/*.pmtiles key is accepted', async () => {
   const reply = (body, ok = true) => async url => { assert.equal(url, `https://s.test/${BASEMAP_MANIFEST}`); return {ok, json: async () => body}; };
   assert.equal(await basemapArchive(reply({key: 'tiles/basemap/ca-coast-20261008.pmtiles'}), PAGE), 'https://s.test/feeds/tiles/basemap/ca-coast-20261008.pmtiles');
@@ -103,7 +130,7 @@ function library() {
   const fake = {maps: [], workerUrls: [], protocols: [], features: []};
   class FakeMap {
     constructor(options) {
-      this.options = options; this.handlers = {}; this.controls = []; this.jumps = []; this.visibility = {}; this.data = {};
+      this.options = options; this.handlers = {}; this.controls = []; this.jumps = []; this.visibility = {}; this.data = {}; this.sources = {};
       this.center = {lat: options.center[1], lng: options.center[0]}; this.zoom = options.zoom; this.removed = false;
       this.keyboard = {disableRotation: () => { this.keyboardRotation = false; }};
       this.touchZoomRotate = {disableRotation: () => { this.touchRotation = false; }};
@@ -121,10 +148,18 @@ function library() {
     get loaded() { return this.styled ?? !fake.lateStyle; }
     getLayer(id) { return this.loaded && this.options.style.layers.some(l => l.id === id) ? {} : undefined; }
     setLayoutProperty(id, name, value) { this.visibility[id] = value; (this.layoutCalls ??= []).push([id, value]); }
-    getSource(id) { return this.loaded && this.options.style.sources[id] ? {setData: data => { this.data[id] = data; (this.dataCalls ??= []).push([id, data]); }} : undefined; }
-    queryRenderedFeatures(_point, {layers}) { return fake.features.filter(f => layers.includes(f.layer.id)); }
+    getSource(id) { return this.loaded && this.options.style.sources[id] ? this.sources[id] ??= {setData: data => { this.data[id] = data; (this.dataCalls ??= []).push([id, data]); }} : undefined; }
+    queryRenderedFeatures(point, options) { const {layers} = options ?? point; return fake.features.filter(f => layers.includes(f.layer.id)); }
     resize() {}
     remove() { this.removed = true; }
+    // The flyover (#646): eases are recorded; the pitch and bearing stay as the last ease or jump left them.
+    off(type, fn) { this.handlers[type] = (this.handlers[type] ?? []).filter(f => f !== fn); }
+    easeTo(o) { (this.eases ??= []).push(o); this.easing = true; }
+    // As MapLibre's: stopping a running ease fires moveend where the camera is.
+    stop() { if (this.easing) { this.easing = false; this.fire('moveend'); } }
+    getPitch() { return 0; }
+    getBearing() { return 0; }
+    setMaxPitch(p) { this.maxPitch = p; }
   }
   const control = kind => class { constructor(options) { this.kind = kind; this.options = options; } };
   fake.module = {
@@ -137,6 +172,17 @@ function library() {
   };
   return fake;
 }
+
+test('the MapLibre fake filters layers for both point and options-only rendered queries', () => {
+  const fake = library();
+  const map = new fake.module.lib.Map({center: [0, 0], zoom: 1});
+  const selected = {layer: {id: 'selected'}}, unrelated = {layer: {id: 'unrelated'}};
+  fake.features = [selected, unrelated];
+  assert.deepEqual(map.queryRenderedFeatures({layers: ['selected']}), [selected]);
+  assert.deepEqual(map.queryRenderedFeatures([10, 20], {layers: ['selected']}), [selected]);
+  assert.deepEqual(map.queryRenderedFeatures({layers: []}), []);
+  assert.deepEqual(map.queryRenderedFeatures([10, 20], {layers: []}), []);
+});
 
 test('MapLibre init: north up, nautical scale, worker and protocol once, and errors routed to their layer', t => {
   const fake = library(), errors = [], moves = [];
@@ -234,7 +280,7 @@ function serveDist(url) {
   return existsSync(file) ? {ok: true, json: async () => JSON.parse(readFileSync(file, 'utf8'))} : {ok: false, status: 404, json: async () => ({})};
 }
 
-function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}, overlayPalette} = {}) {
+function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}, overlayPalette, flyoverGate} = {}) {
   const fake = library(), land = terrain();
   const host = {dataset: {}};
   const fetches = [];
@@ -245,7 +291,7 @@ function chartStage({manifest = {key: 'tiles/basemap/ca-coast-20261008.pmtiles'}
   };
   terrainFailed.value = false; chartFailed.value = false; chartMark.value = null; unavailable.value = [];
   const stage = createStage({host: {dataset: {}, shadowRoot: {replaceChildren() {}}}, load: async () => land.module, center: () => [35.37, -120.86], doc: doc(), viewDelay: 0,
-    overlayPalette, renderers: [() => createChart({host, load: async () => fake.module, fetchFn, palette: () => sentinel, page: () => PAGE, viewDelay: 0})]});
+    overlayPalette, renderers: [() => createChart({host, load: async () => fake.module, fetchFn, palette: () => sentinel, page: () => PAGE, viewDelay: 0, flyoverGate})]});
   return {fake, land, host, stage, fetches};
 }
 
@@ -265,7 +311,13 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   ].sort());
   assert.ok(map.options.style.sources[BASEMAP_SOURCE], 'basemap source');
   assert.equal(map.controls[2][0].options.customAttribution, BASEMAP_ATTRIBUTION, 'the basemap credit always shows while it draws');
-  assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, 'https://s.test/regions/morro-bay/shoreline.geojson');
+  // #617: the first view (?view= zoom 12, MapLibre 11) draws the overview shoreline.
+  assert.equal(map.options.style.sources[COASTLINE_SOURCE].data, 'https://s.test/regions/morro-bay/shoreline-overview.geojson');
+  // The startup budget: the style's own source loads the shoreline once (it is not set again for the
+  // region the Chart opened on), and the marks and protected areas share each region file.
+  assert.deepEqual((map.dataCalls ?? []).filter(([id]) => id === COASTLINE_SOURCE), [], 'the shoreline is not requested twice');
+  const statics = fetches.filter(url => url.startsWith('https://s.test/regions/') || url.startsWith('https://s.test/data/'));
+  assert.deepEqual(statics, [...new Set(statics)], 'each committed region file is requested once');
   assert.deepEqual(map.options.center, [-120.86, 35.37], 'the region centre');
   assert.equal(host.dataset.view, '35.37000,-120.86000,12');
 
@@ -278,6 +330,11 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   assert.equal(map.jumps.length, jumps, 'the chart is not sent back where it already is');
   setParams({view: '35.30000,-120.80000,13'});
   assert.deepEqual(map.jumps.at(-1), {center: [-120.8, 35.3], zoom: 12}, 'a new ?view= moves the chart');
+  // At the detail zoom (MapLibre 12) the full shoreline replaces the overview, and stays on zooming back out.
+  const shore = () => (map.dataCalls ?? []).filter(([id]) => id === COASTLINE_SOURCE).map(([, data]) => data);
+  assert.deepEqual(shore(), ['https://s.test/regions/morro-bay/shoreline.geojson']);
+  setParams({view: '35.30000,-120.80000,11'});
+  assert.deepEqual(shore(), ['https://s.test/regions/morro-bay/shoreline.geojson'], 'no second request on zooming out');
 
   setParams({base: 'chart'});
   assert.equal(map.visibility[ENC_LAYER], 'visible', '?base=chart shows the ENC base');
@@ -285,6 +342,62 @@ test('the Chart mounts on its first view with the basemap and coastline, and fol
   assert.equal(map.visibility[ENC_LAYER], 'none');
   stage.destroy();
   assert.equal(map.removed, true, 'the stage destroys its renderers');
+});
+
+test('the first idle of a home-framed Chart flies once (#646); a linked view or a closed gate never does', async t => {
+  t.mock.method(console, 'warn', () => {});
+  const open = linked => ({reduced: false, saveData: false, hidden: false, linked, seen: false});
+  const nav = browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  let run = chartStage({flyoverGate: open});
+  await tick(); await tick();
+  let [map] = run.fake.maps;
+  map.fire('idle'); map.fire('idle');
+  assert.equal(run.host.dataset.flyover, 'flying');
+  assert.equal(map.eases.length, 1, 'one flight, on the first idle only');
+  assert.equal(map.maxPitch, 50);
+  camera.value = {latitude: 35.2, longitude: -120.7, zoom: 11};  // a camera move from outside the map (a region change, Back)
+  await tick();
+  assert.equal(run.host.dataset.flyover, 'stopped', 'a new camera stops it');
+  assert.equal(nav.params().get('view'), null, 'stopping writes no ?view=');
+  assert.deepEqual(camera.value, {latitude: 35.2, longitude: -120.7, zoom: 11}, 'the new camera stands');
+  assert.equal(map.maxPitch, 0);
+  run.stage.destroy();
+
+  browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  run = chartStage({flyoverGate: open});
+  await tick(); await tick();
+  [map] = run.fake.maps;
+  map.fire('idle');
+  assert.equal(run.host.dataset.flyover, 'flying');
+  setParams({presentation: '3d'});
+  assert.equal(run.host.dataset.flyover, 'stopped', 'another presentation stops it');
+  assert.equal(map.maxPitch, 0);
+  run.stage.destroy();
+
+  browser(`${PAGE}?region=morro-bay&presentation=chart&view=35.38000,-120.88000,12`);
+  run = chartStage({flyoverGate: open});
+  await tick(); await tick();
+  [map] = run.fake.maps;
+  map.fire('idle');
+  assert.equal(run.host.dataset.flyover, undefined, 'a link that names a view is not toured');
+  assert.equal(map.eases, undefined);
+  run.stage.destroy();
+
+  browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  run = chartStage({flyoverGate: () => ({...open(false), reduced: true})});
+  await tick(); await tick();
+  [map] = run.fake.maps;
+  map.fire('idle');
+  assert.equal(map.eases, undefined, 'reduced motion never moves the camera');
+  run.stage.destroy();
+
+  browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  run = chartStage();
+  await tick(); await tick();
+  [map] = run.fake.maps;
+  map.fire('idle');
+  assert.equal(map.eases, undefined, 'outside a browser the default gate never flies');
+  run.stage.destroy();
 });
 
 test('Chart → 3D → Chart keeps the centre within one zoom step', async t => {
@@ -325,9 +438,63 @@ test('a failing source marks its layer unavailable and the rest of the Chart kee
   setParams({region: 'cambria-san-simeon'});
   await tick();
   assert.deepEqual(unavailable.value, ['basemap'], 'a new region retries its coastline');
-  assert.equal(map.data[COASTLINE_SOURCE], 'https://s.test/regions/cambria-san-simeon/shoreline.geojson');
+  assert.equal(map.data[COASTLINE_SOURCE], 'https://s.test/regions/cambria-san-simeon/shoreline-overview.geojson');
   stage.destroy();
   assert.deepEqual(unavailable.value, []);
+});
+
+test('ENC recovers only from a loaded tile of the current source and region generation', async t => {
+  t.mock.method(console, 'warn', () => {});
+  browser(`${PAGE}?region=morro-bay&base=chart`);
+  const {fake, stage} = chartStage({manifest: null});
+  t.after(() => stage.destroy());
+  await tick(); await tick();
+  const [map] = fake.maps;
+  const fail = () => map.fire('error', {sourceId: ENC_SOURCE, error: new Error('ENC 503')});
+  const begin = (sourceId = ENC_SOURCE) => {
+    const tile = {state: 'loading'};
+    map.fire('sourcedataloading', {sourceId, tile});
+    return tile;
+  };
+  const complete = (tile, sourceId = ENC_SOURCE) => {
+    tile.state = 'loaded';
+    map.fire('sourcedata', {sourceId, tile});
+  };
+  fail();
+  assert.deepEqual(unavailable.value, ['basemap', 'chart']);
+  map.fire('idle');
+  map.fire('sourcedata', {sourceId: ENC_SOURCE, sourceDataType: 'metadata', isSourceLoaded: true});
+  complete({state: 'loading'});
+  const errored = begin(); errored.state = 'errored';
+  map.fire('sourcedata', {sourceId: ENC_SOURCE, tile: errored});
+  complete(begin(COASTLINE_SOURCE), COASTLINE_SOURCE);
+  assert.deepEqual(unavailable.value, ['basemap', 'chart'], 'idle, metadata, untracked, failed and unrelated tiles cannot recover ENC');
+
+  const replaced = begin();
+  map.sources[ENC_SOURCE] = {};
+  complete(replaced);
+  assert.deepEqual(unavailable.value, ['basemap', 'chart'], 'a replaced source cannot recover from its old tile');
+  const wrongSource = begin();
+  complete(wrongSource, COASTLINE_SOURCE);
+  assert.deepEqual(unavailable.value, ['basemap', 'chart'], 'the completion must name the request source');
+
+  const stale = begin();
+  setParams({region: 'cambria-san-simeon'});
+  await tick();
+  fail();
+  complete(stale);
+  assert.ok(unavailable.value.includes('chart'), 'old-region success cannot clear the current failure');
+  const away = begin();
+  setParams({region: 'morro-bay'});
+  await tick();
+  complete(away);
+  complete(stale);
+  assert.ok(unavailable.value.includes('chart'), 'switching back does not revive old requests');
+
+  complete(begin());
+  assert.deepEqual(unavailable.value, ['basemap'], 'verified ENC recovery preserves an unrelated failure');
+  fail();
+  assert.deepEqual(unavailable.value, ['basemap', 'chart'], 'a later failure is still reported');
 });
 
 test('a shoreline click fills the mark card; empty water clears it; no WebGL fails only the Chart', async t => {
@@ -431,4 +598,9 @@ test('FE-82: in Terrain the protected areas and reef marks drape without the Cha
   // A feed that goes leaves the terrain.
   setTerrainLayer('marks', null);
   assert.equal(land.overlays.has('marks'), false);
+});
+
+test('the map loads the full shoreline at the zoom the published overview was simplified for (#617)', () => {
+  const overview = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/shoreline-overview.geojson', import.meta.url), 'utf8'));
+  assert.equal(overview.provenance.overview.max_zoom, SHORELINE_DETAIL_ZOOM);
 });
