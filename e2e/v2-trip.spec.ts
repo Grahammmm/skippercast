@@ -35,6 +35,19 @@ async function rankedReefs(page: Page) {
   const manifest = () => ({region: 'morro-bay', status: 'ready', archive_sha256: 'a'.repeat(64), expires_at, export_file: 'habitat-export.geojson.gz',
     export_sha256: createHash('sha256').update(gzipSync(bytes)).digest('hex'), export_bytes: gzipSync(bytes).length, export_decoded_bytes: Buffer.byteLength(bytes)});
   await page.route('**/feeds/tiles/seafloor/manifest-morro-bay.json', r => r.fulfill({json: manifest()}));
+  // CI6-01B: the planner ranks only places the land/water check (web/land-water.ts) confirms as water. Most of these
+  // synthetic reefs lie offshore in zoom-12 tiles NOAA did not serve, which the check leaves unknown and withholds, so
+  // the committed index is extended with those tiles as clean water. The check itself is covered by
+  // e2e/land-water.spec.ts and tests/test_land_water.mjs; served tiles keep their committed cells.
+  await page.route('**/regions/morro-bay/land-water.json', async route => {
+    const response = await route.fetch(), index = await response.json(), n = 2 ** index.constants.tile_zoom;
+    for (let i = 0; i < 25; i++) {
+      const lon = -121.17 + i * .007 + .001, lat = 35.431;
+      const key = `${index.constants.tile_zoom}/${Math.floor((lon + 180) / 360 * n)}/${Math.floor((1 - Math.asinh(Math.tan(lat * Math.PI / 180)) / Math.PI) / 2 * n)}`;
+      index.tiles[key] ??= `w${index.constants.grid ** 2}`;
+    }
+    await route.fulfill({response, json: index});
+  });
   const gate = {hold: false, release: () => {}, started: () => {}};
   await page.route('**/feeds/tiles/seafloor/regions/morro-bay/habitat-export.geojson.gz', async r => {
     if (gate.hold) { gate.hold = false; gate.started(); await new Promise<void>(resolve => { gate.release = resolve; }); }
@@ -186,10 +199,56 @@ test('a reef mark joins the trip from its card, and GPX opens the plan with it',
   expect(pageErrors).toEqual([]);
 });
 
+test('a Chart click saves a categorized user waypoint, restores it and exports standard GPX type', async ({page, pageErrors, v2, isMobile}) => {
+  await stubLiveFeeds(page);
+  const writes: string[] = [];
+  page.on('request', request => { if (request.method() !== 'GET' && request.method() !== 'HEAD') writes.push(new URL(request.url()).pathname); });
+  await v2.open('app', {...AREA, view: '35.43,-121.17,12'});
+  await openPlan(page, isMobile);
+  await page.locator('#waypoint-place').click();
+  await expect(page.getByRole('dialog', {name: 'Trip plan and GPX'})).toBeHidden();
+  await expect(page.getByRole('button', {name: 'Cancel waypoint'})).toBeVisible();
+  if (isMobile) await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'peek');
+  // Pick exposed Chart space, not a fixed geography that may be under mobile chrome.
+  const canvas = page.locator('.app-chart canvas.maplibregl-canvas');
+  const chart = (await canvas.boundingBox())!;
+  if (isMobile) await canvas.click({position: {x: chart.width / 4, y: chart.height / 3}});
+  else await clickChart(page, {latitude: 35.43, longitude: -121.17});
+  const dialog = page.getByRole('dialog', {name: 'Trip plan and GPX'});
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel('Waypoint name').fill('Synthetic user marker');
+  await dialog.getByLabel('Category', {exact: true}).selectOption('wreck');
+  await dialog.getByRole('button', {name: 'Save waypoint', exact: true}).click();
+  const points = dialog.getByRole('region', {name: 'Your waypoints'});
+  await expect(points).toContainText('Synthetic user marker · wreck');
+  await expect(page.locator('#export-research')).not.toBeChecked();
+  await expect(page.locator('#export-download')).toBeEnabled();
+  expect(await download(page)).toContain('<type>wreck</type>');
+  await page.reload();
+  await expect(points).toContainText('Synthetic user marker · wreck');
+  const restored = await download(page);
+  expect(restored).toContain('<name>Synthetic user marker</name>');
+  expect(restored).toContain('<type>wreck</type>');
+  await v2.a11y('v2-user-waypoint');
+  await points.getByRole('button', {name: 'Remove waypoint Synthetic user marker'}).click();
+  await expect(points).not.toContainText('Synthetic user marker');
+  await expect(page.locator('#export-download')).toBeDisabled();
+  expect(writes.filter(path => path.startsWith('/api/') && path !== '/api/telemetry')).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
+
 test.describe('offline', () => {
   test.use({serviceWorkers: 'allow'});
   test('a region saved from v2 opens offline from its pack, the app included', async ({page, context, pageErrors, v2, isMobile}) => {
     await stubLiveFeeds(page);
+    const tideId = '9000002';
+    await page.addInitScript(id => localStorage.setItem('skippercast-tide-station-v1.morro-bay', id), tideId);
+    await page.route('**/mdapi/prod/webapi/stations.json?*', route => route.fulfill({json: {stations: [
+      {id: tideId, name: 'Offline fixture station', lat: 35.36, lng: -120.85, type: 'R'},
+    ]}}));
+    await page.route('**/api/prod/datagetter?*', route => route.fulfill({json: {predictions: [
+      {t: '2026-10-08 21:00', v: '2.3', type: 'H'}, {t: '2026-10-08 22:00', v: '1.2'},
+    ]}}));
     await v2.open('app', AREA);
     await (await accountMenu(page, isMobile)).getByRole('button', {name: 'Save for offline'}).click();
     const dialog = page.getByRole('dialog', {name: 'Save for offline'});
@@ -198,6 +257,15 @@ test.describe('offline', () => {
     await v2.a11y('v2-offline');
     await dialog.getByRole('button', {name: `Save ${NAME} for offline`}).click();
     await expect(dialog.getByRole('status').first()).toContainText(`Saved ${NAME} · `, {timeout: 90_000});
+    const tideKeys = await page.evaluate(async id => {
+      const cacheName = (await caches.keys()).find(name => name.startsWith('sc-pack-morro-bay-'));
+      if (!cacheName) return [];
+      return (await (await caches.open(cacheName)).keys()).map(request => request.url)
+        .filter(url => new URL(url).hostname === 'api.tidesandcurrents.noaa.gov' && new URL(url).pathname.endsWith('/datagetter'))
+        .map(url => new URL(url).searchParams).filter(params => params.get('station') === id)
+        .map(params => params.get('interval')).sort();
+    }, tideId);
+    expect(tideKeys).toEqual(['6', 'hilo']);
     await expect(dialog.locator('.app-offline-list li').first()).toContainText(new RegExp(`^${NAME}Saved (just now|\\d+ min ago) · `));
     await expect(dialog.locator('.app-offline-list li').first()).toContainText(/of 95 chart tiles · \d+ of 95 base map tiles \(zoom 8–12\)/);
     // The save registered the worker; once it controls the page, the pack answers offline.
@@ -208,5 +276,25 @@ test.describe('offline', () => {
     await expect(page.locator('.app-stage')).toBeAttached({timeout: 30_000});
     await context.setOffline(false);
     expect(pageErrors).toEqual([]);
+  });
+
+  test('a region saved without a tide-station choice adds no NOAA predictions to its pack', async ({page, v2, isMobile}) => {
+    await stubLiveFeeds(page);
+    await page.route('**/mdapi/prod/webapi/stations.json?*', route => route.fulfill({json: {stations: []}}));
+    await page.route('**/api/prod/datagetter?*', route => route.fulfill({json: {predictions: [{t: '2026-10-08 21:00', v: '2.3', type: 'H'}]}}));
+    await v2.open('app', AREA);
+    await (await accountMenu(page, isMobile)).getByRole('button', {name: 'Save for offline'}).click();
+    const dialog = page.getByRole('dialog', {name: 'Save for offline'});
+    await dialog.getByRole('button', {name: `Save ${NAME} for offline`}).click();
+    await expect(dialog.getByRole('status').first()).toContainText(`Saved ${NAME} · `, {timeout: 90_000});
+
+    const tidePackStations = await page.evaluate(async () => {
+      const cacheName = (await caches.keys()).find(name => name.startsWith('sc-pack-morro-bay-'));
+      if (!cacheName) return [];
+      return (await (await caches.open(cacheName)).keys()).map(request => request.url)
+        .filter(url => new URL(url).hostname === 'api.tidesandcurrents.noaa.gov' && new URL(url).pathname.endsWith('/datagetter'))
+        .map(url => new URL(url).searchParams.get('station'));
+    });
+    expect([...new Set(tidePackStations)].sort()).toEqual(['9412110']);
   });
 });

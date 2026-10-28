@@ -32,7 +32,8 @@ import type {ChartMark} from '../map/coastline.ts';
 import {habitatCard, markData, picked, spotCard} from '../map/marks.ts';
 import type {CoastReading} from '../../packages/coast/src/embed-types.ts';
 import {shownPresentation, terrainActions, terrainDetail, terrainMark, terrainPick, terrainReading} from '../map/stage.ts';
-import {navigate, profile, selection, setParams, species} from '../state.ts';
+import {coordinates, navigate, profile, selection, setParams, species} from '../state.ts';
+import {formatCoordinates} from '../../dist/coordinates.js';
 import {PROFILE_TABLE} from '../profile.ts';
 import {loadRegs, regsData, regulationState, ruleSummary, verifiedText, type RulesRegion} from '../regs.ts';
 import {zone} from './App.tsx';
@@ -49,7 +50,8 @@ export const placeholderMark = (id: string): Mark => ({id, name: id, kind: 'Mark
 export const READING = 'reading:';
 /** A terrain inspection as a card: the renderer's strings verbatim (label as the kind, its source line with the date). */
 export const readingCard = (r: CoastReading): Mark => ({
-  id: `${READING}${r.latitude.toFixed(5)},${r.longitude.toFixed(5)}`, name: r.value, kind: r.label, reading: r.location, source: r.detail,
+  id: `${READING}${r.latitude.toFixed(5)},${r.longitude.toFixed(5)}`, name: r.value, kind: r.label, reading: '', source: r.detail,
+  position: {latitude: r.latitude, longitude: r.longitude},
   basis: `${r.source.label}, ${r.source.kind}, dated ${r.source.sourceDate}. The reading is the original nearest displayed sample; not for navigation.`,
 });
 
@@ -141,8 +143,10 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
         <IconButton icon="close" label="Clear selection" size="sm" onClick={close} />
       </div>
       <p class="app-mark-kind">{selected.kind}</p>
-      <p class="ui-reading">{selected.reading}</p>
+      {selected.reading ? <p class="ui-reading">{selected.reading}</p> : null}
+      {selected.position && !selected.withheld ? <p class="ui-mono">{formatCoordinates(selected.position.latitude, selected.position.longitude, coordinates.value)}</p> : null}
       <p class="app-mark-source ui-mono">{selected.source}</p>
+      {selected.provider ? <a href={selected.provider.href} target="_blank" rel="noopener">{selected.provider.label}</a> : null}
       {selected.rules ? (
         <p class="app-mark-rules">{selected.rules}{selected.regulations ? <>{' '}
           <a href={selected.regulations.href} target="_blank" rel="noopener" aria-label={`${selected.regulations.label} (official page, opens in a new tab)`}>{selected.regulations.label}</a>
@@ -161,7 +165,9 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
         ) : <Button size="sm" icon="shield" disabled>Regulations</Button>}
       </div>
       <div class="app-mark-basis">
-        <Popover>{selected.basis}</Popover>
+        <Popover>{selected.basis}{selected.terms?.map(t => (
+          <p key={t.href}><a href={t.href} target="_blank" rel="noopener" aria-label={`${t.label} (publisher's page, opens in a new tab)`}>{t.label}</a></p>
+        ))}</Popover>
         {sources ? <Button variant="quiet" size="sm" icon="info" onClick={() => sources.sources()}>Terrain sources</Button> : null}
       </div>
     </section>

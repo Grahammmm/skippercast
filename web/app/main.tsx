@@ -7,7 +7,7 @@
 // itself never opens on its own.
 import {render} from 'preact';
 import {effect, signal} from '@preact/signals';
-import {configureStore, coast, profile, region, species, startURLSync} from '../state.ts';
+import {configureStore, coast, loadCoordinateFormat, profile, region, species, startURLSync} from '../state.ts';
 import {savedHomeURL} from '../ports.ts';
 import {loadCruise, loadLimits} from '../limits.ts';
 import {loadReach} from '../reach.ts';
@@ -40,6 +40,7 @@ export function deferDailyFeed({current = () => region.value, loaded = () => dai
 /** The browser entry; exporting the scheduler above does not boot a test document. */
 export function startApp(): void {
 configureStore({v2: true});
+loadCoordinateFormat();
 startURLSync();
 // Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
 initTelemetry();

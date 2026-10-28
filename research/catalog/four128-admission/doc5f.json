@@ -1,0 +1,115 @@
+{
+  "bounds": [
+    728615,
+    3818923,
+    729127,
+    3819435
+  ],
+  "code_root": "~/repos/skippercast/.worktrees/t_ac690fbf",
+  "controller_sha256": "ef83bd845a665ae28c4a67c0d09cf3ea1ea5d8c50f52f4c33c53e6a376931bc1",
+  "controls": {
+    "research/scripts/coastal_four128_artifact_review.py": "dd234989a2442adcf52b83618e2efe8509d24c558b21152b1ed6639abb05d7ac",
+    "research/scripts/coastal_four128_resources.py": "1e3f93c82b12cf0997e64f3f42c076997f8e158a279eaaf6dc919c7bda94806a",
+    "research/scripts/coastal_four128_runtime.py": "845ecd7542126f4a6cfcc03843b43b860d12ab0b2e83e099ef2140d798e068fa"
+  },
+  "docs": {
+    "independent-four128-rights-review": "coastal-rights-evidence-v1",
+    "independent-four128-scientific-preflight": "coastal-ordered-independent-scientific-preflight-v1",
+    "independent-four128-scope-review": "coastal-ordered-scope-review-v1",
+    "independent-four128-strict-trial-policy": "coastal-bounded-patch-quality-policy-v3"
+  },
+  "evidence_root": "~/agent-work/t08a/admission-v2",
+  "head": "292cb0aa29285dae73fa0629c7ceb14743508976",
+  "inputs": {
+    "amendment": {
+      "bytes": 8304,
+      "path": "~/agent-work/t08a/budget/four128-budget-amendment-v5.json",
+      "sha256": "150f78452dd1aeb1952c372ec4415edbe54a530780db500492d444e9b8bca9d9"
+    },
+    "issuer": {
+      "bytes": 24896,
+      "path": "~/agent-work/t08/doc5_issue_v6.py",
+      "sha256": "b9bb70d04e33840a8b2116e718c3d8b4465eda7f981ae8dcb949fd98fe7f99fe"
+    },
+    "package": {
+      "bytes": 5667,
+      "path": "~/skippercast-data/2026-10-07-pge-south/scratch/t15-four128-rerun1-20261020-staging-doc5f/prospective-package.json",
+      "sha256": "6a0c0f5574263271a737a3f9e5bd476db31be3f614c878681c32e6cb36f35100"
+    },
+    "prior_carry": {
+      "bytes": 16260,
+      "path": "~/skippercast-data/2026-10-07-pge-south/outputs/ordered-four128-approved-20261011/execution/metadata/closed-engineering-carry.json",
+      "sha256": "fcba46f9e323742e99da798b4aaa7679e69321f6a5ab76de91f39fa529c5ef83"
+    },
+    "receipt": {
+      "bytes": 7644,
+      "path": "~/agent-work/t08/doc5f-receipt.json",
+      "sha256": "430fea684412d0350b421cb0b723825d627afb7ff45cec5183c3330f75f05e96"
+    },
+    "selection": {
+      "bytes": 7114,
+      "path": "~/skippercast-data/2026-10-07-pge-south/outputs/t08-four128-20261019/window-prescan/block-selection.json",
+      "sha256": "c72283765485e78c05a5a0d38e2e36220d9b9038eab07c3670e619310febb095"
+    }
+  },
+  "interpreter": "~/repos/skippercast/.venv/bin/python",
+  "label": "doc5f",
+  "layout": 6,
+  "limits": {
+    "scratch_limit_bytes": 2153776561,
+    "scratch_prior_bytes": 1616905649,
+    "source_limit_bytes": 2034491132,
+    "source_prior_bytes": 1740430588
+  },
+  "mission_root": "~/skippercast-data/2026-10-07-pge-south/outputs/t15-four128-rerun1-20261020/mission",
+  "mode": "historical-replay",
+  "prepare_sha256": "24fa7c4916ea1a7d17cd21d7286b57ac9a8e2a1562d41081ea449d891c9e045d",
+  "project_root": "~/skippercast-data/2026-10-07-pge-south",
+  "retained": {
+    "cap": 167772160,
+    "prior": 68088433,
+    "trial": 33554432
+  },
+  "run_tag": "20261020r1",
+  "schema": "coastal-four128-admission-config-v1",
+  "staging_root": "~/skippercast-data/2026-10-07-pge-south/scratch/t15-four128-rerun1-20261020-staging-doc5f",
+  "texts": {
+    "checks": [
+      "executor approved head/clean; origin delta test-only, not approved",
+      "runtime control and controller sha256 recomputed",
+      "budget_limits(signed amendment)",
+      "prepare.py run into fresh staging; grant/carry/index accounting verified",
+      "documents 1-4 status and freshness",
+      "runtime validate_runtime_review self-check"
+    ],
+    "limitation": "Prelaunch runtime binding only; not scientific acceptance, not execution authority beyond coordinator gates. Source identity is recorded metadata only; BAG not reopened.",
+    "retained_meaning": "Signed amendment v5: doc5e prior 58,079,477 B plus attempt 6 charge 10,008,956 B = 68,088,433 B. Complete actual_bytes plus still-open reserved bytes; no refunds.",
+    "scratch_basis": "Fable ruling t_08ab4e95; signed amendment "
+  },
+  "windows": [
+    [
+      3762,
+      3488,
+      128,
+      128
+    ],
+    [
+      3890,
+      3488,
+      128,
+      128
+    ],
+    [
+      3762,
+      3360,
+      128,
+      128
+    ],
+    [
+      3890,
+      3360,
+      128,
+      128
+    ]
+  ]
+}

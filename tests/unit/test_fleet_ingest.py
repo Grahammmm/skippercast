@@ -94,6 +94,7 @@ class Pipeline:
     def __init__(self, tmp, worker=False):
         self.var, self.worker, self.count = Path(tmp), worker, 0
         self.landing, self.psix, self.enricher = Source(), Source(), Enricher("Sea Example")
+        self.region, self.net, self.extra = REGION, None, {}  # test_fleet_known_gaps adds bindings and a net
 
     def load(self, sink, region):
         return Snapshot.from_sqlite(sink.db, region, facts=not self.worker)
@@ -103,9 +104,9 @@ class Pipeline:
         self.landing.candidates, self.psix.candidates = list(landing), list(psix)
         run = Run("CA", run_id or at.replace("-", "").replace(":", "")[:15] + f"Z-{self.count:06x}", var=self.var)
         self.last = sink = SqliteSink(self.var / "CA.sqlite", "CA", run.id)
-        ctx = RunContext(region=REGION, net=None, run_dir=run.dir, clock=lambda: at)
+        ctx = RunContext(region=self.region, net=self.net, run_dir=run.dir, clock=lambda: at)
         try:
-            options = {"discover": {"adapters": {"landing-pages": self.landing, "uscg-psix": self.psix}},
+            options = {"discover": {"adapters": {"landing-pages": self.landing, "uscg-psix": self.psix, **self.extra}},
                        "resolve": {"load": self.load}, "ingest": {"load": self.load},
                        "enrich-code": {"adapters": {"operator-site": self.enricher}}}
             report = cli.execute(run, ctx, sink, steps, options)

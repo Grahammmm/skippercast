@@ -146,6 +146,29 @@ test('the menu is keyboard operable and Escape returns focus to its button', asy
   expect(pageErrors).toEqual([]);
 });
 
+test('controls tour can be skipped and replayed with focus restored after closing', async ({page, pageErrors, v2, isMobile}) => {
+  await stubAuth(page, 'unused');
+  await v2.open('app', AREA);
+  const trigger = await accountButton(page, isMobile);
+  await trigger.click();
+  await page.getByRole('button', {name: 'Replay controls tour'}).click();
+  const dialog = page.getByRole('dialog', {name: 'Controls tour'});
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', {name: 'Skip tour'}).click();
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await page.getByRole('button', {name: 'Replay controls tour'}).click();
+  await expect(dialog.getByText('Step 1 of 4')).toBeVisible();
+  await dialog.getByRole('button', {name: 'Next'}).click();
+  await dialog.getByRole('button', {name: 'Next'}).click();
+  await dialog.getByRole('button', {name: 'Next'}).click();
+  await dialog.getByRole('button', {name: 'Finish'}).click();
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+  expect(pageErrors).toEqual([]);
+});
+
 // #602: signed in, the alerts dialog is v2's own (web/app/TripAlerts.tsx) over v1's /api/ calls:
 // a saved window posts v1's body with limits from the reference boat, lists, deletes, and an
 // assessment is marked read; comfort feedback posts without forecast context; deleting the

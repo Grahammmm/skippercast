@@ -78,7 +78,10 @@ export function coastSpecies(target: string | null, p: Profile): string {
 const DOCK_ZONE = 'America/Los_Angeles';
 /** The time dock's hour (FE-12): `?hour=`; else the same hour on a later `?day=`; else the current whole UTC hour. */
 export function terrainHour(value: string | null, now: Date, dayValue: string | null = null, tz: string = DOCK_ZONE): Date {
-  return new Date(parseHour(value) === null && dayValue === null ? Math.floor(now.getTime() / HOUR_MS) * HOUR_MS : dockTime(dayValue, value, now, tz).at);
+  // A parsed `?hour=` is the hour itself (dockTime's `at`), so it skips building the 169-hour horizon on every camera move.
+  const seconds = parseHour(value);
+  if (seconds !== null) return new Date(seconds * 1000);
+  return new Date(dayValue === null ? Math.floor(now.getTime() / HOUR_MS) * HOUR_MS : dockTime(dayValue, value, now, tz).at);
 }
 
 export interface TerrainInput {

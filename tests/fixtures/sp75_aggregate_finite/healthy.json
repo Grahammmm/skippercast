@@ -1,0 +1,9 @@
+{
+  "description": "Synthetic valid factory input for SP75; invalid IEEE-754 values are constructed in-memory by the test.",
+  "aggregate": {
+    "module": "grid",
+    "resolution_m": 1000,
+    "delay_hours": 24,
+    "min_distinct_vessels": 2
+  }
+}

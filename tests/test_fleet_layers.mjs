@@ -242,9 +242,13 @@ test('tracks page on meta.next, never on feature counts, up to the page limit', 
 
 test('the status line counts trips, flags more pages and names filters heat ignores', () => {
   const text = statusText({tracks: {features: [], trips: 12, more: true}, heat: {features: [cell()], more: false, ignored: ['vessel', 'trip_type', 'from']}});
-  assert.match(text, /^12\+ trips · 1 heat cells · inferred from movement\. More remain/);
+  assert.match(text, /^12\+ trips · 1 heat cell · inferred from movement\. More remain/);
   assert.match(text, /Heat cells ignore boat, trip type, from date\.$/);
   assert.match(statusText({}), /Turn on a layer/);
+  const one = {features: [cell()], more: false};
+  assert.equal(statusText({events: one, tracks: {trips: 1, more: false}, heat: one}), '1 stop · 1 trip · 1 heat cell · inferred from movement.');
+  assert.match(statusText({events: {features: [cell()], more: true}}), /^1\+ stops · /, 'one counted but more remain reads plural');
+  assert.match(statusText({events: {features: [], more: false}}), /^0 stops · /);
   assert.equal(visibleFeatures([event(), event({planning_only: true})], true).length, 1);
   assert.equal(visibleFeatures([event(), event({planning_only: true})], false).length, 2);
   assert.ok(Math.abs(featureArea(cell(), 'x').latitude - 35.005) < 1e-9, 'a cell centres on its ring, closing point excluded');

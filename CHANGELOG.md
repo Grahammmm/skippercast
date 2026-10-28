@@ -9,6 +9,78 @@
 - Explain rejected current grids in the rail and cancel obsolete landing warm-ups with deadlines through response bodies.
 - Bound cold coast-data verification reads with shared isolate admission; reject saturation immediately while preserving same-key sharing and independent failures.
 - Internal: freeze historical regulations-wrapper regression inputs and report deterministic glyph-build provenance without changing published glyphs or claiming current-law or native-render acceptance.
+- Add an opt-in local coast terrain-RGB / contour-MVT preview with synthetic fixtures, a persistent not-for-navigation banner and manifest-derived source rights. The public coast route is unchanged; measured-source integration and publication remain held.
+- SP-MAP-NOW: Withhold cloud tiles and native current frames when an explicitly supplied decision clock is not a valid Date. Omitted clocks still use the current time; source ages, forecast and observation selection, publisher hosts and tile queries are unchanged.
+
+- Save up to three NOAA tide prediction stations per region in this browser and switch between them; existing choices migrate, the region default is unchanged, and offline packs still include only the active station.
+- SP-BAR-EVENTS: The harbour bar tide estimate ignores malformed event rows and stays unknown when either selected tide timestamp has conflicting high/low tags. Ordinary ebb/flood timing, bar hazard rules and the Coast Guard check reminder are unchanged; this is not clearance to cross.
+
+- SP-RULES-STATUS: The rules line on a mark card no longer says "Verified" when the rules state is "Check rules" or "Choose fishing location". That covers a trip date outside the reviewed rule period, a review time later than allowed, and a season that applies only within a geographic area, even when every source check is fresh. These now read "Needs recheck · last check <date>". Seasons, limits, source checks and their wording are unchanged. A verified date only records when the sources were checked; it is not clearance to fish.
+
+- The Swell layer's selector switches between the primary swell, wind sea and secondary swell from the NOAA GFS-Wave wcoast.0p16 forecast, each drawn with height in feet, period and direction and named with its run time; the nearshore (CDIP MOP) rings are unchanged.
+- Chlorophyll feed limitations identify the current NOAA merged VIIRS product and its native grid spacing instead of the historical MODIS description; cloud gaps and freshness limits are unchanged.
+- Place a named waypoint on the Chart with a reef, wreck, bait, hazard or other category; save it in the browser’s region draft and export the category in GPX. User labels do not qualify habitat or depth, and current protected-area checks still apply.
+- The Chart's Stations layer shows configured buoy and tide stations, with provider links and timestamped readings labelled stale when old; bound CDIP MOP model sites are available without enabling the Swell field.
+- The Chart draws Morro Bay's shelf depth contours at every zoom: a line every 30 ft (heavier and labelled every 150 ft) to 480 ft, traced from the reviewed USGS/CSUMB 2 m survey grids (2008). A dashed survey edge marks where the reviewed grid stops; past it, a missing line means no reviewed data, not shallow water. Each line opens a card with its survey, date and vertical datum; the datum is unverified (the grids declare none), so these are not chart depths and not for navigation. The NOAA chart base is unchanged.
+- Trinidad–Klamath is a browse preview with reviewed Northern ocean rules, not qualified fishing spots or launch clearance. Reading Rock MPAs remain excluded, Klamath salmon remains closed and the November crab opener is unconfirmed. Northern California-halibut guidance now correctly prohibits on-boat filleting and landing fillets north of Point Arena.
+- Choose a NOAA tide prediction station within the region, or the nearest listed station to the port. The browser remembers each region's choice and offline chart packs include its predictions; bar and shore assessments keep their reviewed reference station.
+- Ranked places (Where to look, the trip planner's Best available and its pins on the Chart) are now checked against the NOAA shoreline: only places confirmed on water are ranked. A place on land, within 25 m of the shoreline, or outside the shoreline's coverage is withheld, and the basis counts it ("N spots withheld: land/water not confirmed"). Regions without a shoreline rank no places until one is imported. This is a planning screen, not a navigation boundary.
+- Coastal discovery keeps plain `.nc` file links from THREDDS listings (HTTPServer only, never OPeNDAP or subset services), and the bridge-lane acquire and qualify stages read a local netCDF grid such as a NOAA CRM subset. Geographic grids are held at the map stage instead of being resampled.
+- Temp contrast, a new map layer that is off by default: it shows the change in sea-surface temperature per nautical mile in the region's published daily analysis. It draws only cells whose change exceeds the summed analysis error and is withheld past 72 hours (CI6-03).
+- Offline packs now remind you to check before leaving coverage and explain missing water-temperature and current data instead of leaving the layer blank without an offline reason.
+- Replay a short, skippable controls tour from the account menu on desktop or phone: time dock, layers, offline saving and evidence limits. Profile setup and the first-visit Chart flyover are unchanged.
+- Choose decimal degrees, degrees and decimal minutes, or degrees minutes seconds in the account menu for mark positions, trip plans and downloaded notes. GPX coordinates remain decimal degrees.
+- Deploys no longer stall while merges land faster than CI. Each deploy ships the newest `main` commit whose Offline checks passed, even when newer merges are still being checked. It never ships a commit with failed or pending checks, nor one older than the commit production already serves, and it holds when the commit production serves cannot be traced. A run that ships nothing reports "held", with the reason, through a neutral **Cloudflare deploy** check run and the job summary, instead of a plain success.
+- Add an optional surface chlorophyll map layer with native observed cells, a logarithmic mg/m³ legend and the feed's strict sample-age limit; cloud gaps stay empty.
+- The Chart's Swell + wind control adds NOAA GFS wind arrows and knot labels at the selected forecast hour, with grid, run and age in the basis; stale wind is withheld independently of swell.
+- The deploy gate now traces Worker versions Cloudflare labels `version_upload` (what `wrangler deploy` 4.142.0 records) as code uploads, alongside `upload`, so an automatic deploy is no longer held when production serves the workflow's own deploy.
+- Trip plans name protected-area boundaries containing selected spots and link the agency rules; blocked plans can download context-only notes while GPX remains withheld.
+- The Chart can open a surveyed coverage cell's basis and credits; year and vertical datum stay explicit when they are not recorded.
+- The Text Advisor upload, my-data and admin pages use the app's dark visual system instead of the retired v1 palette.
+- The admin labelling view draws a trip's track map and speed strip again, each kind in a colour from the app's visual system.
+- The species research and commercial AIS pages use the app's visual system, like the sources page. Their text is unchanged, except the species research page's chart paragraph, which now names the NOAA chart layer groups the map requests.
+- The terms, privacy and licences pages use the app's visual system, like the sources page, with the draft notice kept prominent.
+- The Seafloor legend summarises its surveys ("4 surveys, 2006–2010") instead of listing raw source file names; every survey is still listed in its basis.
+- After a brief nautical-chart (ENC) tile failure the Chart drops its "chart detail unavailable" note as soon as a fresh chart tile loads for the same region, instead of keeping it until the page is reloaded. Other layer failures stay reported.
+- While a ranked trip plan's numbered pins show on the Chart, the legend keys them and links their basis.
+- Shore runs on the Chart go on Hold, with the reason on the card, while a marine alert covers the area, the marine alert check is not current, or the county posts a beach-health advisory, closure or warning there.
+- A seafloor mark's basis links its source publisher's terms page again, as the classic map did.
+- The admin fleet activity status line counts one stop, trip or heat cell in the singular ("1 stop").
+- The admin fleet trip detail fits a phone screen without widening the page; its label and segment tables' hidden headers stay inside their scroll area.
+- The licences page and NOTICE name the MapLibre GL JS version the app ships (6.14.0), and a check keeps them in step with future updates.
+- "Where to look" distances always run from the region's harbor, never from your device's location; where a region has no published harbor position, each place shows a dash and the basis says no distance is shown.
+
+- The first Chart view of a visit now takes a slow look around: over about 20 seconds the map tilts and turns toward the region's harbor, then settles back north up and flat exactly where it started, so the link and the shared camera are unchanged. Any touch, click, scroll or key stops it at once and returns the map north up. It runs once per browser session, only on the region's opening view (never for a link to a view, spot or habitat), and never when your device asks for reduced motion or to save data. Gestures still cannot tilt or rotate the Chart. The desktop 3D orbit is planned separately (#646).
+### Coastal readiness inspection
+
+- Add coastal queue status and imported-code identity commands with explicit hold, attempt, dependency and schema receipts. Document the separate installed, native, science and operational readiness gates with synthetic unit coverage.
+
+- Refine report and advisor contrast surfaces while preserving fail-closed contrast checks through the CI adoption test.
+
+- Guard region details and target plans across delayed reads and retries; reserve terrain controls and let desktop layer explanations scroll within the rail.
+
+- Explain why a selected current grid cannot be drawn in the layer rail, while retaining source and time labels for supported frames.
+
+- Refresh conditional coastal jobs when the CDIP, beach-health or GOES collector adapters change.
+
+- Preserve Fish enrichment failure provenance and use configured coastal feed context for readable reports and RSS, retaining reviewed fallback and privacy behavior.
+
+- Apply one-second pacing to default National Weather Service coast-report requests while preserving injected sessions and other provider limits.
+
+- Use target-specific atlas explanations only for supported lingcod and rockfish screens; keep neutral terrain descriptions for other admitted targets. Add terrain-type and age-formatting regression coverage.
+
+- Check static client dependencies for terrain libraries; add offline regression fixtures for unavailable coastal-source rights and the historical regulations wrapper.
+
+- Remove the retired offline-pack card adapter while retaining saved-pack storage and the current trip interface.
+- Remove the unused legacy boat-button bootstrap while preserving the account menu's exact-boat sheet.
+- Verify saved shore-source receipts against their selected region and recognize only the reviewed nowCOAST satellite endpoint in commercial-source checks.
+
+- Link charter-trip summaries to their existing published fishing-report sources.
+
+- Recheck Fleet access when the signed-in session changes, including while an earlier check is pending.
+- Keep the nearshore rings explanation visible when the swell field is unavailable.
+
+- Withhold terrain waypoints when the current protected-area or closure screen is unavailable or rejects them; clarify that Chart reef density limits do not apply to reviewed terrain.
 
 - Use the daily-selected water observation in the brief, share overlapping Fleet directory probes without caching settled results, and format charter research dates consistently in the legend.
 
@@ -73,6 +145,12 @@
 - The new home page and map now send the site's anonymous usage statistics: uncaught error reports (scrubbed message, script file name, line and column, build, hashed request id) and three visit steps, each with the region, build and `s` visit source: `port_selected` (a port chosen in the map's port chooser), `spot_saved` (a spot added to the trip) and `offline_saved` (a region saved for offline). The new home page sends error reports only. No cookies or identifiers, and nothing under Do Not Track or Global Privacy Control. The privacy notice now describes exactly what is collected, where it is stored (Cloudflare Workers Analytics Engine, kept three months) and that the daily operations report copies step counts and the top scrubbed errors into public GitHub Actions run summaries. The v1 About text no longer says there is no analytics.
 
 ### Internal
+
+- SP-FLEET-DATES: the public fleet heat route (`/api/fleet/public/heat`, still off by default) withholds a cell whose `last_date` is not an exact `YYYY-MM-DD` calendar day. The code re-check now rejects empty, padded, partial, timestamp-shaped and impossible dates such as 2021-02-29 before the 72-hour delay comparison, which the text comparison in SQL let through. The delay, vessel floor, rights allowlist, whole-season filter and paging are unchanged (`tests/test_sp_fleet_dates.mjs`, `scripts/accept_sp_fleet_dates.py`).
+
+- The research-daily NOAA ENC hazard step retries NOAA's transient "Could not find service" 500 (bounded, capped backoff) on the same reviewed host; if NOAA stays down it writes an explicit `upstream_unavailable` receipt and the inventory report warns instead of failing, while a missing, corrupt or incomplete snapshot still fails closed. Each run attempt has its own identity (`github:<run id>:<attempt>`, or `ENC_INVOCATION_ID` locally), so output from an earlier run or attempt, or a status naming the wrong artifact, never counts. No new hosts were added. See [research-daily ENC unavailable](docs/operations/runbooks/research-daily-enc-unavailable.md).
+
+- Add regression coverage for perspective-mode isolation and camera behavior.
 
 - The AIS processor retains an unfinished full aggregate rebuild that was already authorized to prune. After a restart it replays the complete season with one timestamp before pruning and acknowledges that rebuild only after every chunk succeeds, so interruption cannot silently leave stale remote cells. Incremental uploads and fresh partial-state uploads keep their existing deletion tracking and prune protection (#624, A04).
 - Historical AIS reruns and MarineCadastre backfills now read eligible registry MMSIs plus already approved strong watch mappings, preserving registry precedence, exclusions and ambiguous-MMSI holds. Unresolved explicit targets fail before ingestion, and a changed selected mapping stops derivation while preserving acquired raw rows. Current bindings do not prove past MMSI ownership; NOAA-derived rows retain their planning-only rights (#624, A01).

@@ -250,7 +250,7 @@ function overlay(report: Json, own: Partial<Record<CoastFeed, Json>>, now: numbe
 /** Fish's nearshore and beach rows and statuses, kept in SkipperCast's report where their own feeds are not used. */
 function fishEnrichment(report: Json, fish: Json | null): Json {
   if (!fish) return report;
-  const enrichment = (s: Json) => String(s?.id).startsWith('cdip-') || s?.id === 'slo-beach-water-quality';
+  const enrichment = (s: Json) => String(s?.id).startsWith('cdip-') || s?.id === 'slo-beach-water-quality' || s?.id === 'enrichment-processing';
   return {...report, nearshore: Array.isArray(fish.nearshore) ? fish.nearshore : [], waterQuality: Array.isArray(fish.waterQuality) ? fish.waterQuality : [],
     sources: [...report.sources, ...(Array.isArray(fish.sources) ? fish.sources.filter(enrichment) : [])]};
 }

@@ -104,7 +104,7 @@ test('switching profile with no ?layers= applies that profile\'s layers, its def
   assert.equal(params.get('profile'), 'shore');
   assert.deepEqual(s.layers.value, m.PROFILE_TABLE.shore.defaultLayers);
   assert.equal(s.current.value, 'off');
-  assert.deepEqual(pressed(railItems(m.render(m.h(m.LayerRail)))), ['Water temp', 'Swell']);
+  assert.deepEqual(pressed(railItems(m.render(m.h(m.LayerRail)))), ['Water temp', 'Swell + wind']);
   // Each profile keeps its own last list and Currents source; an unchosen one gets its defaults.
   go({layers: 'swell'});
   go(s.profilePatch('boat'));
@@ -220,7 +220,7 @@ test('in Terrain, chart-only entries and the base read "Chart only" and cannot b
   s.configureStore({v2: true, storage: null});
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d&layers=seafloor,water-temp`);
   let html = m.render(m.h(m.LayerRail)), items = railItems(html);
-  for (const label of ['Water temp', 'Swell', 'Clouds']) {
+  for (const label of ['Water temp', 'Swell + wind', 'Clouds']) {
     assert.deepEqual([items[label].disabled, items[label].note], [true, m.CHART_ONLY], label);
   }
   assert.deepEqual([items.Seafloor.disabled, items.Seafloor.note], [false, ''], 'FE-80: Seafloor holds the terrain\'s options');

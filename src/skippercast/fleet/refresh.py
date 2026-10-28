@@ -18,7 +18,9 @@ ingest.
 
 Offerings of a vessel whose sources listed offerings in this run, but not that
 one, are retired (``offering.upsert`` with ``status: retired``), but only when
-every discovery binding of the run succeeded (``discover.json`` ``complete``):
+every discovery binding of the run listed its boats (``discover.json``
+``complete``: none failed, and none returned nothing because its pages were
+unsupported or its fetches refused; see ``ingest.GAP_STATUSES``):
 in a ``partial`` run the failed source's offerings are kept, so an outage records
 no ``schedule`` change. A vessel is "listed" when a candidate was assigned to it
 or proposed for it in a merge review. Runs count towards ``vanished`` only when

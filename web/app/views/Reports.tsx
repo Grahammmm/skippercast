@@ -104,7 +104,9 @@ export function ChartersSection({charters}: {charters: Charters | null}) {
       {charters.rows.length ? (
         <ul class="app-reports-list">
           {charters.rows.map(r => (
-            <li key={r.label}>{r.label}<small>Captains named “{r.ground}” · {r.trips} reported trip{r.trips === 1 ? '' : 's'} · {r.boats} boat{r.boats === 1 ? '' : 's'} · latest report {day(r.latest)}</small></li>
+            <li key={r.label}>{r.label}<small>Captains named “{r.ground}” · {r.trips} reported trip{r.trips === 1 ? '' : 's'} · {r.boats} boat{r.boats === 1 ? '' : 's'} · latest report {day(r.latest)}</small>
+              {r.sources.length ? <small>{r.sources.map((source, i) => <span key={`${source.url}:${source.date}:${source.boat}:${i}`}>{i ? ' · ' : 'Source reports: '}<Out href={source.url}>{day(source.date)} · {source.boat}</Out></span>)}</small> : null}
+            </li>
           ))}
         </ul>
       ) : <p>No charter grounds have reports for this target.</p>}

@@ -18,6 +18,8 @@
 // age and holds or resumes the loop (FE-22, web/map/clouds.ts).
 // Water temp (FE-16) gives the drawn analysis's range in whole °F, its product,
 // date and age, and the basis with its error, or why nothing draws.
+// Temp contrast (CI6-03) gives its fixed scale in °F per nautical mile, its product,
+// date and age, and the basis with its support rule, or why nothing draws.
 // Swell (FE-17) gives the drawn hour's heights, periods and direction, its fixed
 // colour scale, the model with its run, age and valid hour as a model forecast,
 // and the basis, or why nothing draws.
@@ -32,28 +34,40 @@
 // FE-82: protected areas, reef marks and charter grounds also drape on the
 // terrain, so the protected areas' row and the Charter fleet row show there too;
 // commercial AIS still draws on the Chart only and says so.
+// Ranked trip spots (FE-51, #495): while the Chart draws a ranked trip plan's
+// pins, a row keys them with the registry's label and basis (#422).
 // FE-80: in 2D and 3D the Seafloor row is the terrain's: its depth ramp, the
 // terrain basis, the screened candidates as "Chart only", and while Source
 // coverage is on the renderer's colour key and its sources with their dates, verbatim.
-import {IconButton} from '../ui/Button.tsx';
+// Depth contours (CI6-13) are always on, Chart only: while they draw, their row keys
+// the contour and the dashed survey edge and names each survey, its date and datum;
+// withheld or failed contours say so, and a region without any shows no row.
+import {Button, IconButton} from '../ui/Button.tsx';
 import {current, grade, layers, profile, region, species} from '../state.ts';
 import {GRADE_LABELS, GRADE_MEANING} from '../grade.ts';
 import {targetLabel} from '../species.ts';
-import {chartFailed, unavailable} from '../map/chart.ts';
+import {chartFailed, chartMark, unavailable} from '../map/chart.ts';
 import {NOTES, groundsState} from '../map/charter-grounds.ts';
 import {cloudHeld, cloudStamp} from '../map/clouds.ts';
 import {AIS_CREDIT, aisOn, aisState} from '../map/commercial-ais.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, activityStatus} from '../map/fleet.ts';
 import {currentsState} from '../map/currents.ts';
+import {contourState} from '../map/depth-contours.ts';
 import {CHART_ONLY, drawsIn, layerEntry} from '../map/layers.ts';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
 import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
-import {legendKey, seafloorState, seafloorView, surveyLine} from '../map/seafloor.ts';
+import {legendKey, seafloorState, seafloorView, surveyList, surveySummary} from '../map/seafloor.ts';
 import {waterTempState} from '../map/sst.ts';
-import {HEIGHT_SCALE, frameSummary, nearshoreState, swellState} from '../map/swell.ts';
+import {chlorophyllState} from '../map/chlorophyll.ts';
+import {PALETTE_TOKENS} from '../map/palette.ts';
+import {CONTRAST_SCALE, contrastState} from '../map/contrast.ts';
+import {HEIGHT_SCALE, frameSummary, nearshoreState, swellPartition, swellState} from '../map/swell.ts';
+import {windState} from '../map/wind.ts';
 import {ringBasis, ringSummary} from '../map/nearshore.ts';
+import {stationState} from '../map/stations.ts';
 import {WAVE_MODEL} from '../map/forecast-grid.ts';
 import {currentStatus, shownPresentation, terrainCoverage, terrainOptions} from '../map/stage.ts';
+import {drawnSpots} from '../map/ranked.ts';
 import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {RAIL_ENTRIES, railOn} from './rail.ts';
@@ -65,7 +79,7 @@ function SeafloorRow() {
       {ready ? <span class="app-swatch" data-layer="seafloor" aria-hidden="true"></span> : null}Seafloor
       <Popover iconOnly summary="Seafloor basis">
         <p>{layerEntry('seafloor').basis}</p>
-        {s.credits.map(credit => <p key={credit}>{credit}</p>)}
+        {[...s.credits, ...(s.surveys.length ? [surveyList(s.surveys)] : [])].map(line => <p key={line}>{line}</p>)}
       </Popover>
       {ready ? (
         <div class="app-legend-detail">
@@ -73,7 +87,7 @@ function SeafloorRow() {
             options={[{value: 'terrain', label: 'Terrain grade'}, {value: 'fit', label: `${s.fit[0]!.toUpperCase()}${s.fit.slice(1)} fit`}]} /> : null}
           <p class="app-legend-title">{s.view === 'fit' ? 'Physical habitat fit, not catch probability' : 'Terrain grade'}</p>
           <ul>{legendKey(s.view).map(([tone, label]) => <li key={tone}><span class="app-key" data-tone={tone} aria-hidden="true"></span>{label}</li>)}</ul>
-          {s.surveys.length ? <p class="app-legend-note" data-surveys="seafloor">{surveyLine(s.surveys)}</p> : null}
+          {s.surveys.length ? <p class="app-legend-note" data-surveys="seafloor">{surveySummary(s.surveys)}</p> : null}
         </div>
       ) : null}
       {s.note ? <p class="app-legend-note" data-reason="seafloor">{s.note}</p> : null}
@@ -139,7 +153,19 @@ function CurrentsRow() {
   );
 }
 
-/** The Water temp row (on the Chart): the drawn analysis's range, product and age, or why nothing draws. */
+/** The observed native cells, logarithmic scale and original sample date. */
+function ChlorophyllRow() {
+  const s = chlorophyllState.value, entry = layerEntry('chlorophyll');
+  return <li>Chlorophyll
+    <Popover iconOnly summary="Chlorophyll basis">{s.basis}</Popover>
+    {s.drawn ? <p class="app-legend-note">Log scale: {entry.legend.map(row => <span key={row.label}>
+      <span class="app-swatch" style={{background: `var(--${PALETTE_TOKENS[row.swatch!]})`}} aria-hidden="true"></span>{row.label}{' '}
+    </span>)}</p> : null}
+    <p class="app-legend-note ui-mono" data-stamp="chlorophyll">{s.note}</p>
+    <p class="app-legend-note">{entry.attribution}</p>
+  </li>;
+}
+
 function WaterTempRow() {
   const s = waterTempState.value, a = s.drawn;
   return (
@@ -153,18 +179,45 @@ function WaterTempRow() {
   );
 }
 
+/** The Temp contrast row (on the Chart): the fixed scale in °F per nautical mile, product and age, or why nothing draws. */
+function ContrastRow() {
+  const s = contrastState.value, d = s.drawn;
+  return (
+    <li class="app-legend-sst-contrast">
+      Temp contrast
+      <Popover iconOnly summary="Temp contrast basis">{s.basis}</Popover>
+      {d ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="sst-contrast">{CONTRAST_SCALE[0]}<span class="app-swatch" data-layer="sst-contrast" aria-hidden="true"></span><span class="app-visually-hidden"> to </span>{CONTRAST_SCALE[1]}+ °F per nautical mile</p> : null}
+      {d ? <p class="app-legend-note ui-mono" data-stamp="sst-contrast">{d.product} · {d.stamp}</p> : null}
+      {s.reason ? <p class="app-legend-note" data-reason="sst-contrast">{s.reason}</p> : null}
+    </li>
+  );
+}
+
 /** The Swell row (on the Chart): the drawn hour's reading, scale, model run and valid hour, or why nothing draws. */
+function WindRow() {
+  const s = windState.value;
+  return <li class="app-legend-wind">Wind · arrows toward · knots
+    <Popover iconOnly summary="Wind basis">{s.basis}</Popover>
+    {s.drawn ? <p class="app-legend-note ui-mono" data-stamp="wind">NOAA NCEP · GFS · {s.drawn.stamp}</p> : null}
+    {s.reason ? <p class="app-legend-note" data-reason="wind">{s.reason}</p> : null}
+  </li>;
+}
+
 function SwellRow() {
   const s = swellState.value, f = s.drawn, reason = s.reason, r = nearshoreState.value;
+  const fieldReason = !f && r?.rings.length && reason.startsWith('Swell unavailable:')
+    ? `Swell field unavailable:${reason.slice('Swell unavailable:'.length)} Nearshore rings remain visible.` : reason;
   return (
     <li class="app-legend-swell">
       {f ? <span class="app-swatch" data-layer="swell" aria-hidden="true"></span> : null}Swell
       <Popover iconOnly summary="Swell basis">{s.basis}{r ? <> {ringBasis(r.product)}</> : null}</Popover>
+      <Segmented label="Swell" value={swellPartition.value} onChange={v => { swellPartition.value = v; }}
+        options={[{value: 'primary', label: 'Primary swell'}, {value: 'wind', label: 'Wind sea'}, {value: 'secondary', label: 'Secondary swell'}]} />
       {f ? <p class="app-legend-note app-legend-range ui-mono" data-range="swell">{frameSummary(f)}</p> : null}
       {f ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="swell">{HEIGHT_SCALE[0]} ft<span class="app-swatch" data-layer="swell" aria-hidden="true"></span><span class="app-visually-hidden"> to </span>{HEIGHT_SCALE[1]}+ ft</p> : null}
       {f ? <p class="app-legend-note ui-mono" data-stamp="swell">{WAVE_MODEL.name} model forecast · {f.stamp}</p> : null}
       {r ? <p class="app-legend-note ui-mono" data-nearshore="swell"><span class="app-ring" aria-hidden="true"></span>{ringSummary(r, new Date())}</p> : null}
-      {reason ? <p class="app-legend-note" data-reason="swell">{reason}</p> : null}
+      {fieldReason ? <p class="app-legend-note" data-reason="swell">{fieldReason}</p> : null}
     </li>
   );
 }
@@ -224,6 +277,18 @@ function FleetRow() {
   );
 }
 
+/** The ranked trip plan's pins, while the Chart draws any. */
+export function RankedRow() {
+  const n = drawnSpots.value.length, entry = layerEntry('trip-ranked');
+  if (!n || shownPresentation.value !== 'chart') return null;
+  return (
+    <li class="app-legend-ranked">
+      <span class="app-swatch" data-layer="trip-ranked" aria-hidden="true"></span>{entry.legend[0]?.label ?? entry.label}
+      <Popover iconOnly summary="Ranked trip spots basis"><p>{entry.basis}</p></Popover>
+    </li>
+  );
+}
+
 /** The habitat-candidate density below zoom 10 (#620): what it shows, its grade filter and the zoom that resolves it; never a count of fish. */
 export function DensityRow() {
   const n = densityShown.value;
@@ -241,7 +306,38 @@ export function DensityRow() {
   );
 }
 
+/** The depth contours (CI6-13): the key and surveys while they draw, or why they do not; nothing where none are published. */
+export function DepthContoursRow() {
+  const s = contourState.value, entry = layerEntry('depth-contours');
+  if (shownPresentation.value !== 'chart' || !['drawn', 'withheld', 'failed'].includes(s.status)) return null;
+  const drawn = s.status === 'drawn';
+  return (
+    <li class="app-legend-depth-contours">
+      {drawn ? <span class="app-swatch" data-layer="depth-contours" aria-hidden="true"></span> : null}{entry.label}
+      <Popover iconOnly summary="Depth contours basis">
+        <p>{entry.basis}</p>
+        {s.sources.map(x => <p key={x.source_id}>{x.name} · surveyed {x.survey_date} · {x.vertical_datum}</p>)}
+      </Popover>
+      {drawn ? <p class="app-legend-note" data-key="depth-contours">{entry.legend[0]?.label}</p> : null}
+      {drawn ? <p class="app-legend-note" data-key="depth-contours-edge"><span class="app-swatch" data-layer="depth-contours-edge" aria-hidden="true"></span>{entry.legend[1]?.label}</p> : null}
+      {drawn ? <p class="app-legend-note ui-mono" data-stamp="depth-contours">{[...new Set(s.sources.map(x => `surveyed ${x.survey_date} · ${x.vertical_datum}`))].join('; ')} · not for navigation</p> : null}
+      {s.note ? <p class="app-legend-note" data-reason="depth-contours">{s.note}</p> : null}
+    </li>
+  );
+}
+
 /** A row with nothing drawn behind it: the entry's name and why, with no key. */
+function StationsRow() {
+  const s = stationState.value, rings = nearshoreState.value, entry = layerEntry('stations');
+  return <li class="app-legend-stations">Stations
+    <Popover iconOnly summary="Stations basis">{entry.basis}<p>{entry.attribution}</p></Popover>
+    <p class="app-legend-note">{s.note}</p>
+    <ul>{entry.legend.map(row => <li key={row.label}><span class="app-key" aria-hidden="true" style={{background: `var(--${row.swatch})`}} />{row.label}</li>)}</ul>
+    <p class="app-legend-note">{rings ? ringSummary(rings, new Date()) : 'CDIP MOP model sites unavailable for this place and time.'}</p>
+    <details><summary>Station list</summary><ul>{s.pins.map(pin => <li key={pin.key}><Button variant="quiet" onClick={() => { chartMark.value = pin.mark; }}>{pin.mark.name}{pin.location ? '' : ' · location unavailable'}</Button></li>)}</ul></details>
+  </li>;
+}
+
 const PlainRow = ({id, label, reason}: {id: string; label: string; reason: string}) => (
   <li class="app-legend-plain">{label}<p class="app-legend-note" data-reason={id}>{reason}</p></li>
 );
@@ -255,10 +351,14 @@ export function Legend() {
       <ul>
         {on.map(e => !drawsIn(e.id, shown) ? <PlainRow key={e.id} id={e.id} label={e.label} reason={CHART_ONLY} />
           : e.id === 'seafloor' ? shown === 'chart' ? <SeafloorRow key={e.id} /> : <TerrainSeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
-          : e.id === 'swell' ? <SwellRow key={e.id} /> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
+          : e.id === 'sst-contrast' ? <ContrastRow key={e.id} /> : e.id === 'chlorophyll' ? <ChlorophyllRow key={e.id} />
+          : e.id === 'swell' ? <><SwellRow key={e.id} /><WindRow /></> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
           : e.id === 'fleet' ? <FleetRow key={e.id} />
+          : e.id === 'stations' ? <StationsRow key={e.id} />
           : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
+        <RankedRow />
         <DensityRow />
+        <DepthContoursRow />
         <MpaRow />
       </ul>
       {unavailable.value.filter(id => id !== 'mpas').map(id => <p key={id} class="app-empty" data-unavailable={id}>{layerEntry(id).label} unavailable.</p>)}

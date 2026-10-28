@@ -1,16 +1,5 @@
 {
  "note": "Literals that predate the token lint (scripts/check_tokens.mjs). This list only shrinks: replace the literal with a var(--…) token, then run `node scripts/check_tokens.mjs --update`. Never add entries.",
  "entries": [
-  {"file":"packages/coast/src/map/surface-field.ts","rule":"colour-literal","text":"export const currentColors=['#245893','#228fab','#4bcbbb','#d2e59a','#f6c876','#ec8e68'];","count":6},
-  {"file":"packages/coast/src/map/surface-field.ts","rule":"colour-literal","text":"export const temperatureColors=['#244f9d','#188eb5','#39c6c2','#a6dda0','#efd477','#f18a65'];","count":6},
-  {"file":"packages/coast/src/presentation.ts","rule":"colour-literal","text":"<div class=\"daily-metrics\">${metric('Wind',range(b.wind),'kt',`Gusts to ${n(b.wind.gust)} kt`,'wind',spark(b.hours.ma...","count":4},
-  {"file":"packages/coast/src/presentation.ts","rule":"colour-literal","text":"const lines=[{label:'Wind',unit:'kt',color:'#147a83',points:b.hours.map(h=>({at:h.at,v:h.windKnots})),offset:36},{lab...","count":3},
-  {"file":"packages/coast/src/presentation.ts","rule":"colour-literal","text":"const pointer=x(at??b.hours[0]?.at??new Date(start).toISOString());svg+=`<line x1=\"${pointer}\" x2=\"${pointer}\" y1=\"20...","count":2},
-  {"file":"packages/coast/src/presentation.ts","rule":"colour-literal","text":"let svg=lines.map(row=>{const vals=row.points.map(p=>p.v).filter((v):v is number=>typeof v==='number'&&Number.isFinit..."},
-  {"file":"packages/coast/src/presentation.ts","rule":"colour-literal","text":"svg=b.windows.map(w=>`<rect x=\"${Math.max(88,x(w.start))}\" y=\"24\" width=\"${Math.max(0,Math.min(962,x(w.end))-Math.max..."},
-  {"file":"packages/coast/src/ui/briefing.ts","rule":"colour-literal","text":"const rows:Series[]=[{label:'Wind',unit:'knots',color:'#64e4c0',points:b.hours.map(h=>({at:h.at,value:h.windKnots})),...","count":7},
-  {"file":"packages/coast/src/ui/briefing.ts","rule":"colour-literal","text":"export function tideChart(s:AppState){const b=daily(s);if(b.tides.length<2)return '<div class=\"empty-chart\">Tide seri..."},
-  {"file":"packages/coast/src/ui/history.ts","rule":"colour-literal","text":"const metrics:Record<HistoryMetric,{label:string;unit:string;color:string}>={waterTempF:{label:'Sea temperature',unit...","count":6},
-  {"file":"packages/coast/src/ui/history.ts","rule":"colour-literal","text":"return `<svg class=\"history-chart\" viewBox=\"0 0 ${width} ${height}\" role=\"img\" aria-label=\"${spec.label}, previous ${..."}
  ]
 }

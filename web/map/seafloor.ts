@@ -70,7 +70,14 @@ const parse = (value: unknown): unknown => {
 };
 const KINDS: Readonly<Record<string, SeafloorFeature['kind']>> = {habitat: 'candidate', 'search-area': 'search', 'classified-area': 'interpreted'};
 const NOTICE = 'Planning only. Not a navigation chart. Check current CDFW regulations.';
-const CELL_BASIS = 'Surveyed 250 m cell: at least a quarter of its provisional reference band has valid original survey depth; coverage only, with no habitat rank.';
+/**
+ * A coverage cell's basis: the survey it names (#422 FE-14 follow-up). The public cell carries no year, datum or
+ * revision, and a shared survey id in loaded habitat does not prove the same source revision, so both stay unknown.
+ */
+export function cellBasis(sourceId: string): string {
+  const survey = sourceId === 'unknown' ? 'an unnamed survey' : `survey ${sourceId}`;
+  return `Surveyed 250 m cell from ${survey} (year and vertical datum not recorded for this cell): at least a quarter of its provisional reference band has valid original survey depth; coverage only, with no habitat rank.`;
+}
 
 /** A habitat feature that may draw, with its basis and rights, or null for anything held, unscreened or uncredited. */
 export function admitHabitat(feature: TileFeature, pub: Publication): SeafloorFeature | null {
@@ -99,8 +106,9 @@ export function admitCell(feature: TileFeature, pub: Publication): SeafloorFeatu
   const p = feature.properties ?? {};
   if (typeof p.id !== 'string' || !p.id || typeof p.reach !== 'string' || !pub.screened.has(p.reach)) return null;
   if (!(Number(p.tier) >= 1) || !pub.rights.length) return null;
+  const id = typeof p.source_id === 'string' && p.source_id ? p.source_id : 'unknown';
   return {id: `cell:${p.id}`, kind: 'cell', reach: p.reach, properties: p, geometry: feature.geometry,
-    survey: {id: typeof p.source_id === 'string' ? p.source_id : 'unknown', year: 'unknown'}, basis: CELL_BASIS, rights: pub.rights};
+    survey: {id, year: 'unknown'}, basis: cellBasis(id), rights: pub.rights};
 }
 
 /** The publication's credits from its manifest, for the coverage cells. */
@@ -182,11 +190,20 @@ export function legendKey(view: 'terrain' | 'fit'): [Tone, string][] {
   return [...ranked, ['search', 'Rough-bottom search area · unranked'], ['interpreted', 'Interpreted rock habitat · unranked'], ['cell', 'Surveyed 250 m cell']];
 }
 
-/** The legend's survey line, "Surveys a (2010), b (2008) and 2 more": at most three named. */
-export function surveyLine(surveys: readonly string[]): string {
-  const named = surveys.slice(0, 3).join(', '), more = surveys.length - 3;
-  return `${surveys.length === 1 ? 'Survey' : 'Surveys'} ${named}${more > 0 ? ` and ${more} more` : ''}`;
+const SURVEY = /^(.*) \((\d{4}|unknown)\)$/;
+/**
+ * The legend's survey note, "4 surveys, 2006–2010" (#697): the drawn surveys counted with their year range,
+ * since their ids are source file names. The ids stay in the basis popover (`surveyList`).
+ */
+export function surveySummary(surveys: readonly string[]): string {
+  const parsed = surveys.map(s => s.match(SURVEY)), ids = new Set(parsed.map((m, i) => m ? m[1] : surveys[i]));
+  const years = parsed.map(m => Number(m?.[2])).filter(Number.isFinite).sort((a, b) => a - b);
+  const undated = parsed.some(m => !m || m[2] === 'unknown'), first = years[0], last = years.at(-1);
+  const range = first === undefined ? '' : first === last ? `, ${first}` : `, ${first}–${last}`;
+  return `${ids.size} ${ids.size === 1 ? 'survey' : 'surveys'}${range}${undated ? (range ? ', some undated' : ', undated') : ''}`;
 }
+/** Every drawn survey with its year, for the basis popover: "Surveys drawn: a (2010), b (2008)." */
+export const surveyList = (surveys: readonly string[]): string => `Surveys drawn: ${surveys.join(', ')}.`;
 
 /** The mark card for a drawn feature: what it is, its nominal depth, its survey, and its basis with the source credits. */
 export function seafloorMark(f: SeafloorFeature, view: string): ChartMark {
@@ -195,11 +212,42 @@ export function seafloorMark(f: SeafloorFeature, view: string): ChartMark {
     ? [`Terrain grade ${d.grade}`, view === 'terrain' ? '' : [1, 2, 3].includes(fit as number) ? `fits ${fitName(view)} habitat ${fit} of 3` : `${fitName(view)} fit unknown`].filter(Boolean).join(' · ')
     : f.kind === 'search' ? 'Rough-bottom search area · unranked' : 'Interpreted rock habitat · unranked';
   const notice = typeof f.properties.planning_notice === 'string' ? f.properties.planning_notice : NOTICE;
+  // v1's "Publisher terms" (#488 dropped it): one link per distinct https page, named by its credit when there are several.
+  const pages = f.rights.filter((r, i, all) => r.policyURL && all.findIndex(o => o.policyURL === r.policyURL) === i);
+  const terms = pages.map(r => ({href: r.policyURL, label: pages.length > 1 ? `Publisher terms: ${r.credit}` : 'Publisher terms'}));
   return {
     id: `seafloor:${f.id}`, name: f.kind === 'candidate' ? HABITAT_LABEL : d.title, kind, reading: d.depth,
     source: `Survey ${f.survey.id} · ${f.survey.year} · ${d.source.resolution} grid`,
     basis: [f.basis, ...f.rights.map(r => `${r.credit} ${r.notice}`), notice].join(' '),
+    ...(terms.length ? {terms} : {}),
   };
+}
+
+/**
+ * The mark card for a drawn coverage cell (#706): what it is, the survey it names and that the cell records neither
+ * year nor vertical datum, with the publication's credits. Coverage only: no depth, grade or fit is read from it.
+ */
+export function cellMark(f: SeafloorFeature): ChartMark {
+  const pages = f.rights.filter((r, i, all) => r.policyURL && all.findIndex(o => o.policyURL === r.policyURL) === i);
+  const terms = pages.map(r => ({href: r.policyURL, label: pages.length > 1 ? `Publisher terms: ${r.credit}` : 'Publisher terms'}));
+  return {
+    id: `seafloor:${f.id}`, name: 'Surveyed 250 m cell', kind: 'Survey coverage · no habitat rank', reading: 'Depth not given for this cell',
+    source: `${f.survey.id === 'unknown' ? 'Unnamed survey' : `Survey ${f.survey.id}`} · year and vertical datum not recorded for this cell`,
+    basis: [f.basis, ...f.rights.map(r => `${r.credit} ${r.notice}`), NOTICE].join(' '),
+    ...(terms.length ? {terms} : {}),
+  };
+}
+
+/** Whether (lon, lat) falls inside a MultiPolygon: even-odd over every ring, so holes stay out. */
+export function insideGeometry(g: Geometry, lon: number, lat: number): boolean {
+  let inside = false;
+  for (const polygon of g.coordinates) for (const ring of polygon) {
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi = 0, yi = 0] = ring[i]!, [xj = 0, yj = 0] = ring[j]!;
+      if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) inside = !inside;
+    }
+  }
+  return inside;
 }
 
 /** The map's [west, south, east, north] for a north-up camera (`?view=` zoom, 256 px tiles) and a size in CSS pixels. */
@@ -252,14 +300,15 @@ export interface Manifest {
 type Gate = {state: string; reason: string; published?: boolean; manifest?: Manifest};
 type Tile = {habitat: TileFeature[]; cells: TileFeature[]};
 
-export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark | null; destroy(): void} {
+export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark | null; cellAt(at: {lon: number; lat: number}): ChartMark | null; destroy(): void} {
   const {engine, fetchFn = (...a) => fetch(...a), page = () => location.href, now = Date.now} = o;
   const setTimer = o.setTimer ?? ((fn, ms) => { const t = setTimeout(fn, ms) as unknown as {unref?: () => void}; t.unref?.(); return t; });
   const clearTimer = o.clearTimer ?? (t => clearTimeout(t as ReturnType<typeof setTimeout>));
   let state: SeafloorStatus = 'off', enabling = 0, loading = 0, attempt = 0, timer: unknown = null, alive = true, shown = false;
   let manifest: Gate['manifest'] | null = null, pub: Publication | null = null, archive: ArchiveReader | null = null, header: ArchiveHeader | null = null;
   // `drawn` holds the selectable features; `filled` says whether the source holds anything, cells included.
-  let archiveKey = '', drawn = new Map<string, SeafloorFeature>(), view = 'terrain', filled = false;
+  // `cells` holds the drawn coverage cells, read only by a click that picks nothing else (#706).
+  let archiveKey = '', drawn = new Map<string, SeafloorFeature>(), cells: SeafloorFeature[] = [], view = 'terrain', filled = false;
   const tiles = new Map<string, Promise<Tile>>();
   const publish = (s: Partial<SeafloorState>) => { seafloorState.value = {...OFF, ...s}; };
   const cancel = () => { if (timer !== null) clearTimer(timer); timer = null; };
@@ -267,7 +316,7 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
   function hide(): void {
     if (shown) for (const id of SEAFLOOR_LAYERS) engine.setVisible(id, false);
     if (shown || filled) { engine.setData(SEAFLOOR_SOURCE, EMPTY); o.onHide?.(); }
-    shown = false; filled = false; drawn = new Map();
+    shown = false; filled = false; drawn = new Map(); cells = [];
   }
   function drop(): void { archive = null; header = null; archiveKey = ''; tiles.clear(); }
   function fail(status: SeafloorStatus, reason: string, retry: boolean): void {
@@ -330,12 +379,18 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     const at = camera.peek(), head = header, reader = archive, admit = pub;
     if (!at || !head || !reader || !admit) return;
     const ready = (note: string, more: Partial<SeafloorState> = {}) => publish({status: 'ready', note, ...more});
-    const clear = (note: string) => { if (filled) { engine.setData(SEAFLOOR_SOURCE, EMPTY); filled = false; drawn = new Map(); o.onHide?.(); } ready(note); };
-    if (at.zoom < MIN_VIEW_ZOOM) return clear('Zoom in to see seafloor candidates');
+    const clear = (note: string) => { if (filled) { engine.setData(SEAFLOOR_SOURCE, EMPTY); filled = false; drawn = new Map(); cells = []; o.onHide?.(); } ready(note); };
+    // v1's status lines (dist/seafloor-layer.js before FE-61), with v2's "candidates": the counts, and the caveat in view.
+    // The candidate count is the publisher's per-status habitat_counts.habitat; layers.habitat also counts unranked areas.
+    const m = manifest as {habitat_counts?: {habitat?: number}; reach_inputs?: Record<string, unknown>} | null;
+    const reaches = Object.keys(m?.reach_inputs ?? {}).length;
+    const screenedCount = m?.habitat_counts?.habitat;
+    if (at.zoom < MIN_VIEW_ZOOM) return clear(['Zoom in to see seafloor candidates',
+      Number.isFinite(screenedCount) && reaches ? `${screenedCount} screened candidates across ${reaches} published reach inputs` : ''].filter(Boolean).join(' · '));
     const {width, height} = o.size();
     const [w, s, e, n] = viewBounds(at, width, height);
     const box: [number, number, number, number] = [Math.max(w, head.minLon), Math.max(s, head.minLat), Math.min(e, head.maxLon), Math.min(n, head.maxLat)];
-    if (box[0] >= box[2] || box[1] >= box[3]) return clear('No published seafloor survey in this view; the rest of the coast is unassessed');
+    if (box[0] >= box[2] || box[1] >= box[3]) return clear('No published seafloor survey in this view · the rest of the coast is not assessed');
     const wanted = tilesForBounds(box, Math.min(TILE_ZOOM, head.maxZoom)) as [number, number, number][];
     if (wanted.length > MAX_TILES) return clear('Zoom in to load seafloor candidates');
     const token = ++loading;
@@ -351,16 +406,20 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
     const admitted = (dedupeById(parts.flatMap(t => t.habitat)) as TileFeature[]).map(f => admitHabitat(f, admit)).filter(f => f !== null);
     const inDepth = admitted.filter(f => withinDepth(p, Number.isFinite(f.properties.depth_min_ft) ? f.properties.depth_min_ft as number : null));
     const g = grade.peek(), habitat = gradeFiltered(inDepth, g);
-    const cells = (dedupeById(parts.flatMap(t => t.cells)) as TileFeature[]).map(f => admitCell(f, admit)).filter(f => f !== null);
+    const admittedCells = (dedupeById(parts.flatMap(t => t.cells)) as TileFeature[]).map(f => admitCell(f, admit)).filter(f => f !== null);
     const key = fitKey(species.peek(), p), fit = key && habitat.some(f => f.kind === 'candidate' && Object.hasOwn(f.properties, key)) ? key : null;
     view = seafloorView.peek() === 'fit' && fit ? fit : 'terrain';
-    drawn = new Map(habitat.map(f => [f.id, f]));
+    drawn = new Map(habitat.map(f => [f.id, f])); cells = admittedCells;
     engine.setData(SEAFLOOR_SOURCE, collection([...cells, ...habitat], view));
     filled = cells.length + habitat.length > 0;
     const ranked = habitat.filter(f => f.kind === 'candidate').length, deeper = admitted.length - inDepth.length, graded = inDepth.length - habitat.length;
-    ready([`${ranked} candidate${ranked === 1 ? '' : 's'} · ${habitat.length - ranked} unranked in view`,
+    const search = habitat.filter(f => f.kind === 'search').length, interpreted = habitat.filter(f => f.kind === 'interpreted').length;
+    const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
+    ready([`${plural(ranked, 'candidate')} in view`, search ? plural(search, 'unranked search area') : '',
+      interpreted ? plural(interpreted, 'unranked interpreted area') : '', 'unverified; nominal depth',
       deeper ? `${deeper} deeper than the ${PROFILE_TABLE[p].label} limit (${limit} ft nominal) left out` : '',
-      graded ? `${graded} below grade ${g === 'a' ? 'A' : 'B'} or unranked left out` : ''].filter(Boolean).join(' · '), {
+      graded ? `${graded} below grade ${g === 'a' ? 'A' : 'B'} or unranked left out` : '',
+      reaches ? `${reaches} published reach inputs in this region` : ''].filter(Boolean).join(' · '), {
       view: view === 'terrain' ? 'terrain' : 'fit', fit: fit ? fitName(fit) : null, drawn: habitat.length + cells.length,
       surveys: [...new Set(habitat.map(f => `${f.survey.id} (${f.survey.year})`))].sort(),
       credits: [...new Set([...habitat, ...cells].flatMap(f => f.rights.map(r => r.credit)))],
@@ -390,11 +449,17 @@ export function createSeafloor(o: SeafloorOptions): {mark(id: string): ChartMark
   ];
   return {
     mark(id) { const f = drawn.get(id); return f ? seafloorMark(f, view) : null; },
+    // Re-judged at the click: an expired publication or another presentation reads nothing.
+    cellAt(at) {
+      if (!current() || shownPresentation.peek() !== 'chart') return null;
+      const f = cells.find(c => insideGeometry(c.geometry, at.lon, at.lat));
+      return f ? cellMark(f) : null;
+    },
     destroy() {
       if (!alive) return;
       alive = false; ++enabling; ++loading; cancel();
       for (const dispose of disposers) dispose();
-      drop(); drawn = new Map(); seafloorState.value = OFF;
+      drop(); drawn = new Map(); cells = []; seafloorState.value = OFF;
     },
   };
 }

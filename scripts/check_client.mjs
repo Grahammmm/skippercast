@@ -14,6 +14,8 @@
 //   shell `/` (#497), never MapLibre; its `v2` offline list resolves.
 // - The v2 pages stay within their gzipped JavaScript and CSS budgets
 //   (scripts/startup-budget.json "bundles"; FE-09, front-end design § 13).
+// - The install precache and the offline pack's app shell stay within their raw
+//   byte budgets (scripts/startup-budget.json "precache"; FE-51).
 import {readdir, readFile} from 'node:fs/promises';
 import {join, posix} from 'node:path';
 import {gzipSync} from 'node:zlib';
@@ -131,7 +133,29 @@ for (const [page, budget] of Object.entries(budgets)) {
   }
 }
 
-// 7. The v2 app loads three and the coast renderer only by dynamic import on the
+// 6b. Precache budgets: raw bytes of what every visitor's worker installs and of
+// what an offline pack stores for the v2 app shell (FE-51). Missing files are
+// reported by section 5; here they count as zero.
+// The repository's budget file must carry both keys; a misspelled or missing key fails rather than switching a check off.
+const precacheBudget = JSON.parse(await readFile(budgetFile, 'utf8')).precache;
+const defaultBudget = !process.argv[4];
+if (defaultBudget && !precacheBudget) problems.push(`${budgetFile} has no "precache" budgets`);
+if (precache) {
+  const raw = async paths => { let n = 0; for (const p of paths) n += await readFile(join(dir, p.slice(1))).then(b => b.length, () => 0); return n; };
+  const sizes = {
+    install: await raw([...(precache.assets || []), ...(precache.static || [])]),
+    pack_shell: await raw([...(precache.v2?.assets || []), ...(precache.v2?.static || [])]),
+  };
+  measured.push(`precache install ${sizes.install} B, pack shell ${sizes.pack_shell} B raw`);
+  for (const [name, size] of Object.entries(sizes)) {
+    const max = precacheBudget?.[`${name}_raw_max`];
+    if (precacheBudget && !Number.isFinite(max)) problems.push(`${budgetFile}: precache.${name}_raw_max is missing or not a number`);
+    else if (Number.isFinite(max) && size > max) problems.push(`precache ${name.replace('_', ' ')} is ${size} B raw, over its budget of ${max} B (${budgetFile})`);
+  }
+}
+
+// 7. The Chart loads MapLibre and PMTiles only by dynamic import (FE-11).
+// The v2 app loads three and the coast renderer only by dynamic import on the
 // first terrain choice (FE-71, front-end design § 3A.2): nothing the app entry
 // imports statically may come from three or packages/coast's renderer. Shared
 // chunks carry no `src` in the manifest, so each one is matched by its source
@@ -139,6 +163,8 @@ for (const [page, budget] of Object.entries(budgets)) {
 // its code (three.core sets window.__THREE__; the renderer warns as "THREE.").
 const RENDERER_SRC = /(?:^|\/)node_modules\/(?:\.pnpm\/three@[^/]+\/node_modules\/)?three\/|packages\/coast\/src\/(?:coast3d\/|embed\.ts)/;
 const RENDERER_CHUNK = /^(?:three|viewer|embed|OrbitControls)(?:\.|$)/i;
+const CHART_SRC = /(?:^|\/)node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?(?:maplibre-gl|pmtiles)\//;
+const CHART_CHUNK = /^(?:maplibre-gl|pmtiles)(?:\.|$)/i;
 const THREE_MARKERS = ['__THREE__', 'THREE.WebGLRenderer'];
 const chunkName = name => posix.basename(name).replace(/^_/, '');
 if (manifest['app.html']) {
@@ -148,7 +174,9 @@ if (manifest['app.html']) {
     if (!e || seen.has(key)) return;
     seen.add(key);
     const named = [e.src, key].some(n => n && RENDERER_SRC.test(n)) || [key, e.name, e.file].some(n => n && RENDERER_CHUNK.test(chunkName(n)));
+    const chart = [e.src, key].some(n => n && CHART_SRC.test(n)) || [key, e.name, e.file].some(n => n && CHART_CHUNK.test(chunkName(n)));
     const code = e.file.endsWith('.js') ? await readFile(join(dir, e.file), 'utf8').catch(() => '') : '';
+    if (chart) problems.push(`app.html statically imports ${e.src || key} (MapLibre and PMTiles load by dynamic import only)`);
     if (named) problems.push(`app.html statically imports ${e.src || key} (three and the coast renderer load by dynamic import only)`);
     else if (THREE_MARKERS.some(marker => code.includes(marker))) problems.push(`app.html statically imports ${e.file}, which contains three`);
     for (const next of e.imports || []) await walk(next);

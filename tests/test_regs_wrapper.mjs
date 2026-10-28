@@ -55,7 +55,11 @@ const INHERITED = ['constructor', 'toString', '__proto__', 'hasOwnProperty', '',
 const fields = s => ({status: s.status, label: s.label, today: s.today, reason: s.reason, issues: s.issues});
 // FE-61 deleted dist/regulations.js with the v1 shell. Its output over these cases is
 // pinned by digest (state fields and row, in loop order), computed from v1 before the deletion.
-const V1_DIGEST = {grid: '2a00529fc1145ddaf4d3b74ee98130a4ccb7274b3f579e7301e7eba85a2d2a7b', evidence: '9845ca291ad962d581d162241d51f0cd41dcf147405a061ea8fd05806235586b'};
+// SP-RULES-STATUS departs from v1 on purpose in exactly 50 grid rows: an unknown state with fresh,
+// reviewed checks (outside the rule period, or a latitude-band season with no location) no longer
+// carries `verified`; that date moves to `checked`. Every state field is still v1's. v1's own grid
+// digest was 2a00529fc1145ddaf4d3b74ee98130a4ccb7274b3f579e7301e7eba85a2d2a7b.
+const V1_DIGEST = {grid: 'e48a0a7730896a7b4fae6a4000d565c264a0361778a397889ff72c7e2e4a5cdc', evidence: '9845ca291ad962d581d162241d51f0cd41dcf147405a061ea8fd05806235586b'};
 const digest = rows => createHash('sha256').update(JSON.stringify(rows)).digest('hex');
 
 test('state and row equal dist/regulations.js for every species, date and trip hour', () => {

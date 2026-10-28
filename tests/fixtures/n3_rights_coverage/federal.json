@@ -1,0 +1,9 @@
+{
+  "id": "federal",
+  "license": "public-domain-us-gov",
+  "publisher": "Synthetic federal producer credit",
+  "url": "https://records.example.test/data/file?token=synthetic#fragment",
+  "adapter_review": {
+    "rights_source_url": "https://policy.example.test/terms/private"
+  }
+}

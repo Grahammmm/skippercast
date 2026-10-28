@@ -169,7 +169,10 @@ export function ruleSummary(data: Data, species: string, state: RuleState, regio
   const times = sourceIds.map(id => data.checks?.[id]?.data_retrieved_at).filter(s => Number.isFinite(Date.parse(s)));
   const oldest = times.length === sourceIds.length ? times.sort((a, b) => Date.parse(a) - Date.parse(b))[0] : null;
   const short = (s: unknown): string | null => Number.isFinite(Date.parse(String(s))) ? new Date(String(s)).toLocaleDateString('en-US', {timeZone: tz, month: 'short', day: 'numeric'}) : null;
-  if (oldest && !state.issues?.length && data.rules_review_status === 'reviewed') summary.verified = short(oldest);
+  // SP-RULES-STATUS: "Verified" is a source-check statement for a known state only. An unknown state (outside the
+  // reviewed rule period, a review time beyond the tolerance, a season that needs a fishing location) can have no
+  // source issues, so the state itself gates the badge; its last parseable check still reads as `checked`.
+  if (oldest && status !== 'unknown' && !state.issues?.length && data.rules_review_status === 'reviewed') summary.verified = short(oldest);
   else summary.checked = short(oldest);
   const primary = species === 'reef' ? 'rules-groundfish' : profiles[0].primary_source_id || profiles[0].source_ids[0];
   if (data.sources?.[primary]?.url) { summary.link = officialURL(data.sources[primary].url, region); summary.linkLabel = species === 'reef' ? 'Official groundfish rules' : 'Official rules'; }

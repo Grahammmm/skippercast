@@ -12,6 +12,9 @@ import re
 import tempfile
 from pathlib import Path
 from unittest import TestCase
+from unittest.mock import patch
+
+from tests import http_fixture
 
 from skippercast import http
 from skippercast.pipeline import coast_report as cr
@@ -292,12 +295,55 @@ class Catches(TestCase):
 
 
 class Publication(TestCase):
+    def test_default_session_spaces_only_nws_requests(self):
+        expected = report()
+        session_type = http.Session
+        elapsed = [100.0]
+        sleeps = []
+        requested_at = []
+
+        def sleep(seconds):
+            sleeps.append(seconds)
+            elapsed[0] += seconds
+
+        script = http_fixture.Scripted(*[(200, b"{}") for _ in range(7)])
+
+        def default_session(**options):
+            return session_type(**options, resolver=http_fixture.public_resolver, proxies={},
+                                connection_factory=script, context=object(),
+                                clock=lambda: elapsed[0], sleep=sleep)
+
+        def assemble(session, feed, now):
+            self.assertEqual(feed, live())
+            self.assertEqual(now, NOW)
+            for url in (cr.NWS + "points/1,2", cr.NWS + "gridpoints/LOX/1,2",
+                        cr.tide_url(NOW, "6"), cr.tide_url(NOW, "hilo"),
+                        cr.DAILY_URL, cr.DAILY_URL, cr.ALERTS_URL):
+                session.get(url)
+                requested_at.append(elapsed[0])
+            return expected
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "regions/morro-bay").mkdir(parents=True)
+            (root / "regions/morro-bay/latest.json").write_text(json.dumps(live()))
+            with patch.object(cr.http, "Session", side_effect=default_session) as constructor, \
+                    patch.object(cr, "assemble", side_effect=assemble):
+                self.assertEqual(cr.main(["--root", tmp], now=NOW), 0)
+            constructor.assert_called_once_with(allowed_hosts=cr.HOSTS, min_interval={"api.weather.gov": 1.0})
+            self.assertEqual(json.loads((root / "regions/morro-bay/coast-report.json").read_text()), expected)
+        self.assertEqual(sleeps, [1.0, 1.0])
+        self.assertEqual(requested_at, [100.0, 101.0, 101.0, 101.0, 101.0, 101.0, 102.0])
+        self.assertEqual(len(script.requests), 7)
+
     def test_main_writes_a_usable_report_and_keeps_the_last_one_otherwise(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "regions/morro-bay").mkdir(parents=True)
             (root / "regions/morro-bay/latest.json").write_text(json.dumps(live()))
-            self.assertEqual(cr.main(["--root", tmp], session=http.FakeSession(routes()), now=NOW), 0)
+            with patch.object(cr.http, "Session") as constructor:
+                self.assertEqual(cr.main(["--root", tmp], session=http.FakeSession(routes()), now=NOW), 0)
+            constructor.assert_not_called()
             path = root / "regions/morro-bay/coast-report.json"
             self.assertEqual(json.loads(path.read_text()), json.loads(FIXTURE.read_text()))
             down = {url: http.TransportError("offline") for url in routes()}

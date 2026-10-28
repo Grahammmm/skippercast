@@ -5,7 +5,7 @@
 // creates one stage while it is mounted and destroys it when it unmounts (a
 // layout change), which releases the terrain's WebGL context. The Chart's
 // run-time layers (FE-17's swell, FE-16's water temperature, FE-22's clouds, FE-23's
-// aerial base, FE-21's charter grounds and commercial AIS, FE-24's admin fleet activity) are created with it; the swell reads a click first, since it draws above
+// aerial base, CI6-13's depth contours, FE-21's charter grounds and commercial AIS, FE-24's admin fleet activity) are created with it; the swell reads a click first, since it draws above
 // the water temperature.
 // FE-80: in 2D and 3D the terrain's zoom, reset and top view are the stage's own
 // buttons, styled as the Chart's MapLibre zoom group and placed where it sits.
@@ -19,17 +19,24 @@ import {createCharterGrounds} from '../map/charter-grounds.ts';
 import {createShore} from '../map/shore.ts';
 import {chartFailed, createChart} from '../map/chart.ts';
 import {createCommercialAis} from '../map/commercial-ais.ts';
+import {createDepthContours} from '../map/depth-contours.ts';
 import {createClouds} from '../map/clouds.ts';
 import {createFleetActivity} from '../map/fleet.ts';
 import {regionPlace} from '../map/currents.ts';
 import {coastPalette, readPalette} from '../map/palette.ts';
 import {createReach} from '../map/reach.ts';
+import {createContrast} from '../map/contrast.ts';
 import {createWaterTemp} from '../map/sst.ts';
+import {createChlorophyll} from '../map/chlorophyll.ts';
 import {createSwell} from '../map/swell.ts';
+import {createStations} from '../map/stations.ts';
+import {dailyFeed} from '../brief/Brief.tsx';
+import {createWind} from '../map/wind.ts';
 import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked} from '../map/stage.ts';
 import {poster, posterPlacement} from '../map/poster.ts';
 import {profile, region, species} from '../state.ts';
-import {regionInfo, zone} from './App.tsx';
+import {cancelWaypointPlacement, waypointPlacement} from '../waypoint-placement.ts';
+import {currentRegionInfo, zone} from './App.tsx';
 
 export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> = [
   {value: 'chart', label: 'Chart'}, {value: '2d', label: '2D'}, {value: '3d', label: '3D'},
@@ -42,6 +49,7 @@ export function PresentationToggle() {
   return (
     <div class="app-presentation">
       <p id={NOTE_ID} class="app-stage-note" role="status">{blocked ?? ''}</p>
+      {waypointPlacement.value === region.value && shown === 'chart' ? <p class="app-stage-note" role="status">Tap the Chart to place your waypoint. <button onClick={cancelWaypointPlacement}>Cancel waypoint</button></p> : null}
       <div role="group" aria-label="Map presentation" class="ui-segmented">
         {PRESENTATIONS.map(p => {
           const off = p.value !== 'chart' && !!blocked;
@@ -97,11 +105,12 @@ const overlayPalette = () => { try { return readPalette(); } catch { return unde
 export function MapStage({children}: {children?: ComponentChildren} = {}) {
   const terrainHost = useRef<HTMLDivElement>(null), chartHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const place = () => regionPlace(regionInfo.value, profile.value, species.value ?? '');
-    const stage = createStage({host: terrainHost.current!, palette, overlayPalette, center: () => regionInfo.value?.center ?? null, zone,
+    const place = () => regionPlace(currentRegionInfo(), profile.value, species.value ?? '');
+    const stage = createStage({host: terrainHost.current!, palette, overlayPalette, center: () => currentRegionInfo()?.center ?? null, zone,
       renderers: [() => createChart({host: chartHost.current!, zone, place,
-        layers: [engine => createSwell({engine, zone, place}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
-          engine => createAerial({engine, offer: () => regionInfo.value?.id === region.value ? regionInfo.value?.aerial ?? null : null}),
+        layers: [engine => createChlorophyll({engine}), engine => createSwell({engine, zone, place}), engine => createContrast({engine, zone, place}), engine => createWind({engine, zone}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
+          engine => createStations({engine, zone, feed: () => dailyFeed.value}),
+          engine => createAerial({engine, offer: () => currentRegionInfo()?.aerial ?? null}), engine => createDepthContours({engine}),
           engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
           engine => createReach({engine, host: chartHost.current!})]})]});
     return () => stage.destroy();
