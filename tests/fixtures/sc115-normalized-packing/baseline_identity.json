@@ -1,0 +1,10 @@
+{
+  "baseline_commit": "2979d59bfbb7d724eb83b34a48102b914ee8eaa3",
+  "baseline_normalized_sha256": "7410585b87f25b4f03d99eeafb6c2cac8a66eeef14bfd42c62bd5b15a2452e4d",
+  "fixture_constructor": "constructors.py:make_raster defaults",
+  "identity": {
+    "version": "normalized-raster-content-v1",
+    "sha256": "75224ef92475b6c266bdc5ac8b371882be1856ae2fd4646cdf03ba23d229689c"
+  },
+  "provenance": "Observed before product edits: baseline suite, deciding regression ValueError not raised; default/explicit lossless positive passed. Static SC11 planning is not a runtime dependency."
+}

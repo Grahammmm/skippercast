@@ -3,6 +3,7 @@
 Synthetic responses only. Requests go through the real bounded script's
 `request`/`fetch` with an injected opener, so no socket is opened.
 """
+import hashlib
 import io
 import json
 import os
@@ -185,3 +186,75 @@ def test_access_stop_and_cutoff_skip_without_spending(tmp_path):
 def test_coordinator_discover_stage_is_unchanged():
     source = (Path(ld.__file__).parent / "stage_cli.py").read_text()
     assert "coastal-local-discovery-plan-v1" in source and ld.CATALOG not in source
+
+
+# PC-2: a THREDDS dataset page on www.ngdc.noaa.gov (NOAA CRM). Synthetic body.
+THREDDS = "www.ngdc.noaa.gov"
+CRM = "crm_socal_1as_vers2.nc"
+THREDDS_PAGE = f"https://{THREDDS}/thredds/catalog/crm/catalog.html?dataset=crmDatasets/{CRM}"
+FILE_SERVER = f"https://{THREDDS}/thredds/fileServer/crm/{CRM}"
+THREDDS_LISTING = "\n".join(f'<a href="{href}">x</a>' for href in (
+    f"/thredds/dodsC/crm/{CRM}",                       # OPeNDAP service, not a file
+    f"/thredds/dodsC/crm/{CRM}.html",
+    f"/thredds/fileServer/crm/{CRM}",                  # HTTPServer: the plain file
+    f"/thredds/ncss/crm/{CRM}",                        # NetcdfSubset service
+    f"/thredds/ncss/grid/crm/{CRM}/dataset.html",
+    f"/thredds/wcs/crm/{CRM}?service=WCS&version=1.0.0&request=GetCapabilities",
+    f"/thredds/iso/crm/{CRM}?catalog=x&dataset=y",
+    "/thredds/fileServer/",                            # no file name
+    f"catalog.html?dataset=crmDatasets/{CRM}",
+    "/mgg/coastal/crm_vol6.nc",                        # plain directory file, not THREDDS
+    "https://evil.example.test/thredds/fileServer/crm/x.nc",
+    "/thredds/fileServer/crm/crm_socal_1as_vers2.tif",
+)).encode()
+
+
+def thredds_plan():
+    return plan(region="coast-c1-morro-bay-synthetic", bbox=[-121.95, 34.95, -120.55, 35.85],
+                catalogs=[dict(id="ngdc-thredds", publisher="NOAA NCEI", authority_url=THREDDS_PAGE,
+                               allowed_hosts=[THREDDS],
+                               queries=[dict(url=THREDDS_PAGE, purpose="metadata", max_bytes=1_000_000,
+                                             adapter="listing")])])
+
+
+def test_thredds_listing_keeps_only_plain_netcdf_file_links(tmp_path):
+    discover, _ = ld.load_script()
+    body = tmp_path / "listing.html"
+    body.write_bytes(THREDDS_LISTING)
+    row = dict(body_path=str(body), url=discover.url_key(THREDDS_PAGE), sha256="0" * 64)
+    found = ld.listing_annotation(discover, row, [THREDDS])
+    urls = {c["publisher_id"]: c["access_url"] for c in found["candidates"]}
+    assert urls == {CRM: FILE_SERVER, "crm_vol6.nc": f"https://{THREDDS}/mgg/coastal/crm_vol6.nc",
+                    "crm_socal_1as_vers2.tif": f"https://{THREDDS}/thredds/fileServer/crm/crm_socal_1as_vers2.tif"}
+    assert all(c["bbox"] is None and c["vertical_datum"] is None for c in found["candidates"])
+    # The pre-existing suffixes are unchanged; .nc is the only addition.
+    assert ld.LISTING_SUFFIXES == (".bag", ".bag.gz", ".tif", ".tiff", ".zip", ".xml", ".nc")
+
+
+def test_thredds_listing_dry_run_receipt_without_network(tmp_path, monkeypatch):
+    discover, _ = ld.load_script()
+    monkeypatch.setattr(discover.urllib.request, "build_opener",
+                        lambda *a: pytest.fail("dry run must not build a network opener"))
+    receipt = ld.dry_run(thredds_plan(), tmp_path / "dry")
+    assert receipt["network_requests"] == 0
+    assert receipt["allowlist"]["hosts"] == {THREDDS: True}
+    assert receipt["caps"]["byte_limit"] == ld.MAX_BYTES and receipt["caps"]["wall_seconds"] == ld.WALL_SECONDS
+    assert [(s["adapter"], s["max_bytes"]) for s in receipt["schedule"]] == [("listing", 1_000_000)]
+    saved = (tmp_path / "dry" / "dry-run-receipt.json").read_bytes()
+    assert json.loads(saved)["plan_sha256"] == receipt["plan_sha256"]
+    assert receipt["output"]["sha256"] == hashlib.sha256(saved).hexdigest()
+
+
+def test_thredds_listing_run_freezes_netcdf_entry_offline(tmp_path):
+    discover, _ = ld.load_script()
+    opener = Opener({discover.url_key(THREDDS_PAGE): THREDDS_LISTING})
+    receipt = ld.run(thredds_plan(), tmp_path / "live", runner=runner_for(opener))
+    catalog = json.loads((tmp_path / "live" / "catalog.json").read_text())
+    rows = {c["publisher_id"]: c for c in catalog["candidates"]}
+    assert rows[CRM]["access_url"] == FILE_SERVER
+    assert rows[CRM]["source_id"] == f"ngdc-thredds:{CRM}"
+    assert not any("/dodsC/" in c["access_url"] or "/ncss/" in c["access_url"] for c in rows.values())
+    assert receipt["within_caps"] and receipt["network_requests"] == 1
+    assert receipt["budget_charged_bytes"] == len(THREDDS_LISTING)
+    assert catalog["mapping_accepted"] is False and catalog["review_required"] is True
+    assert all(len(o["sha256"]) == 64 for o in receipt["outputs"])
