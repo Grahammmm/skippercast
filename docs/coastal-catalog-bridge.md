@@ -185,13 +185,27 @@ and `windows[]` with `source_id`, `grid_sha256`, `idx`, `pixel_window`,
 record must match `segments.from_bbox(campaign.bbox_crs84, region=campaign ID)`
 and the pinned plan. Campaign labels are never Store segment IDs.
 
-Until the separate PC-6 window-set contract is reviewed, each distinct source
-uses an admitted `single-selected-v1` one-window grid at `idx=0`. Its definition
+Each single-window selection uses an admitted `single-selected-v1` grid at
+`idx=0`, with `source_id` and `cols=rows=total=1` on its grid entry. Its definition
 contains `source_sha256`, `raster_crs`, `affine_transform` (six coefficients
 a,b,c,d,e,f), raster `width`/`height`, `tile_width`/`tile_height`, `tiling_version`
 and the exact `pixel_window`. Its canonical digest is `grid_sha256`.
 `window_key=source_id+'#'+grid_sha256+'#'+str(idx)` and `window_dir` is its UTF-8
-SHA-256. No repeated-source window-set support or cap increase is implied.
+SHA-256. A `window-set-v1` selection instead binds one grid to all of its
+windows, in plan-selection order then native-window order. Its definition
+pins the exact selection `tiling`, full raster dimensions and tile dimensions;
+the grid entry records the distinct column/row origins and window count.
+Every bridge job, native manifest and admission window is bound to that
+ordered expansion before any Store, enqueue intent or receipt is created.
+`idx` is selection-local, matching the merged shared validator. Distinct
+selected source IDs are still reported once, not once per window; existing
+job/source/window/byte caps are unchanged.
+
+This qualifies only single-plan geographic window sets. Projected-CRS
+window sets remain unqualified, and multi-plan window-set campaigns over
+one source remain held pending the shared-contract global-index resolution.
+Code/dependency identities remain the actual `loop.implementation_hashes`
+values; changed driver bytes require a new implementation identity.
 
 Enqueue authenticates all native manifests before writing a durable O_EXCL
 intent at `var/coastal/enqueue-intents/<bridge-file-sha256>.json`, before the
@@ -260,6 +274,18 @@ transform is applied. Cells shallower than the lane floor (91.44 m for M,
 182.88 m for D) are dropped from depth and native support. A contract with no
 `depth_lane` is lane S, which keeps MLLW, MSL, NAVD88 and ellipsoid:WGS84 and
 holds a deep class on `vertical_datum_deep_lane_only`.
+
+A cached source may be a native BAG, a GeoTIFF or a local netCDF grid (`.nc`,
+such as a NOAA CRM subset). The acquire and qualify stages read a netCDF
+container only when it is netCDF classic, or netCDF-4 whose whole HDF5 tree is
+local (no soft or external links, no virtual or external-storage datasets), and
+only as one 2-D variable. Any GDAL sidecar next to it (`crm.nc.aux.xml`,
+`.msk`, `.ovr`, `.aux`, `crm.aux`, any case, including symlinks) is refused
+before GDAL opens the file, because a mask or overview can point GDAL at
+another dataset. A geographic (degree) netCDF grid
+is read as native cells and qualified, but the map stage holds it as
+`native_geographic_grid_derivatives_unsupported`: slope and rugosity need
+metric spacing and the pipeline does not resample.
 
 The bridge depends only on the catalog file's schema, not on the discovery
 module. Integration with live discovery waits for #734 to merge.

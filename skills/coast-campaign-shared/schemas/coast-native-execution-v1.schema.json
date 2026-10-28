@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:skippercast:coast-native-execution-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "created_utc", "author_profile", "author_model", "card_id", "code_commit", "skill_commit", "job", "result", "logs"],
+  "properties": {
+    "created_utc": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "author_profile": {"type": "string", "minLength": 1},
+    "author_model": {"type": "string", "minLength": 1},
+    "card_id": {"type": "string", "pattern": "^t_[0-9a-f]{8}$"},
+    "code_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "skill_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "schema": {"const": "coast-native-execution-v1"},
+    "job": {"$ref": "#/$defs/ref"},
+    "result": {"$ref": "#/$defs/ref"},
+    "logs": {"type": "array", "items": {"$ref": "#/$defs/ref"}, "minItems": 2, "maxItems": 2, "uniqueItems": true}
+  },
+  "$defs": {
+    "ref": {
+      "type": "object", "additionalProperties": false,
+      "required": ["root_id", "path", "sha256", "bytes"],
+      "properties": {
+        "root_id": {"type": "string", "pattern": "^queue:[A-Za-z0-9_-]+$"},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "bytes": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

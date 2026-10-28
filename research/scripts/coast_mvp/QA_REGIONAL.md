@@ -1,13 +1,16 @@
 # Native-grid C1 QA (private research only)
 
 The reviewed fixture CLI in `coast_qa.py` keeps its 1,000,000-cell cap.
-`--regional` opts into `coast_qa_regional.py`, a separate bounded native-grid
-backend for one cached C1 segment per regional packet. No acquisition, filling,
-smoothing, contours, release integration or publication is performed.
+`coast_qa.py` has no `--regional` flag. `coast_qa_regional.py` is a separate
+bounded native-grid backend for one cached C1 segment per regional packet,
+called as a library. No acquisition, filling, smoothing, contours, release
+integration or publication is performed.
 
 ```sh
-python research/scripts/coast_mvp/coast_qa.py --regional \
-  --region-config /path/to/region.json --output /path/to/new-packet
+python -c "import sys; from pathlib import Path; \
+from research.scripts.coast_mvp.coast_qa_regional import packet; \
+packet(Path(sys.argv[1]), Path(sys.argv[2]))" \
+  /path/to/region.json /path/to/new-packet
 ```
 
 The config is `{ "region": "central-c1", "segments": [

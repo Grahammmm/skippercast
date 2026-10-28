@@ -46,6 +46,7 @@ TABLE_CONTRACT = 'coastal-vr-refinement-supergrids-v1'
 OUTPUT_CONTRACT = 'native-raster-v1'
 PLACEMENTS = ('exact_lattice', 'nearest_cell')
 LATTICE_TOLERANCE_M = 1e-3
+BAG_NULL = 1_000_000.0          # BAG spec null for elevation, uncertainty and refinements
 MAX_REFINEMENT_RECORDS = 50_000_000
 MAX_OUTPUT_CELLS = 64 * 1024 * 1024
 MAX_OUTPUTS = 4096
@@ -170,6 +171,9 @@ def _read_source(root, source_ref, source_row, metadata_sha256):
         nodata = tuple(ds.nodatavals)
         if nodata[0] is None or not math.isfinite(nodata[0]) or nodata[0] != nodata[1]:
             raise ValueError('one finite BAG nodata value required for both bands')
+        if nodata[0] != BAG_NULL:
+            # Refinement nulls are always 1e6; another overview fill would turn them into soundings.
+            raise ValueError('BAG nodata must be the BAG null 1000000')
         model = dict(path=path, survey_id=survey_id, metadata=metadata, grids=grids, records=records,
                      left=float(ds.bounds.left), bottom=float(ds.bounds.bottom), top=float(ds.bounds.top),
                      right=float(ds.bounds.right), coarse=(float(ds.res[0]), float(ds.res[1])),

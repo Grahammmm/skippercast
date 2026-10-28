@@ -66,12 +66,15 @@ def verify(path):
             os.close(fd)
 
 
-def append(path, payload, *, writer, resolver, root_id):
+def append(path, payload, *, writer, resolver, root_id, raw_provenance=()):
     """Return exact existing/new row plus its full-line hash; retries never rewrite.
 
     Callers supply immutable payload WITHOUT seq/prev_row_sha256. An interrupted
     segment/index pair can be reconciled by repeating append_index with identical
     metadata; index failure must never be announced as accepted/archived.
+    raw_provenance is the explicit up-front envelope union (admission
+    sources[*].raw_provenance, selected and superseded) forwarded unchanged to
+    validate(); it is never discovered here.
     """
     if writer != WRITERS.get(payload.get('kind')):
         raise ValueError('ledger writer does not own this row kind')
@@ -99,11 +102,11 @@ def append(path, payload, *, writer, resolver, root_id):
                         if canonical(content) != canonical(payload):
                             raise ValueError('same ledger key with different payload')
                         from validate_coast_receipt import validate
-                        validate(existing,resolver,root_id=root_id)
+                        validate(existing,resolver,root_id=root_id,raw_provenance=raw_provenance)
                         return existing, sha256(canonical(existing))
                 row = dict(payload,seq=len(rows)+1,prev_row_sha256=sha256(raw.splitlines(keepends=True)[-1]) if rows else GENESIS)
                 from validate_coast_receipt import validate
-                validate(row,resolver,root_id=root_id)
+                validate(row,resolver,root_id=root_id,raw_provenance=raw_provenance)
                 line = canonical(row)
                 # O_APPEND + flock serializes cooperating writers. A short write
                 # is a preserved corrupt tail, never silently retried or repaired.
@@ -118,12 +121,19 @@ def append(path, payload, *, writer, resolver, root_id):
             os.close(lock)
 
 
-def append_index(segment_path, campaign_path, payload, *, writer, resolver, root_id):
+def _same_ledger_destination(segment_path, campaign_path):
+    """Compare lexical destinations only; append owns physical path checks."""
+    return os.path.abspath(segment_path) == os.path.abspath(campaign_path)
+
+
+def append_index(segment_path, campaign_path, payload, *, writer, resolver, root_id, raw_provenance=()):
+    if _same_ledger_destination(segment_path, campaign_path):
+        raise ValueError('distinct_segment_campaign_ledgers_required')
     if payload.get('ledger_role') != 'segment' or payload.get('segment_row_sha256') is not None:
         raise ValueError('append_index requires segment payload')
-    row, digest = append(segment_path,payload,writer=writer,resolver=resolver,root_id=root_id)
+    row, digest = append(segment_path,payload,writer=writer,resolver=resolver,root_id=root_id,raw_provenance=raw_provenance)
     index = dict(payload,ledger_role='campaign',segment_row_sha256=digest)
-    index_row,index_digest = append(campaign_path,index,writer=writer,resolver=resolver,root_id=root_id)
+    index_row,index_digest = append(campaign_path,index,writer=writer,resolver=resolver,root_id=root_id,raw_provenance=raw_provenance)
     return dict(segment_row=row,segment_row_sha256=digest,campaign_row=index_row,campaign_row_sha256=index_digest)
 
 
