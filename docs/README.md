@@ -62,6 +62,7 @@ Dated audit, rollout, source-request and review records live in [archive/](archi
 | [engineering/testing.md](engineering/testing.md) | Test layers, what each covers and how to add a fixture |
 | [engineering/adr/](engineering/adr/README.md) | Architecture decision records |
 | [plans/text-advisor/](plans/text-advisor/README.md) | Build plan for the Text Advisor (iMessage/SMS fishing advisor, skipper intake, social pipeline, admin): decisions, architecture, data model, task breakdown |
+| [plans/pelagic-context/design.md](plans/pelagic-context/design.md) | Design only: per-species pelagic context that follows the selected hour, with no score, and the validation test any search priority must pass first |
 | [plans/offline-ocean-coverage.md](plans/offline-ocean-coverage.md) | Proposal: explicit SST/current coverage in offline chart packs (caps, partial-coverage metadata, age/hash gates, tests); regional tiles kept apart from coastal snapshots |
 
 Also for engineers: [AGENTS.md](../AGENTS.md) (branch, PR and rebuild rules), [CONTRIBUTING.md](../CONTRIBUTING.md) and [CHANGELOG.md](../CHANGELOG.md).

@@ -1,0 +1,14 @@
+{
+  "schema": "sc161-packet-integers-fixture/v1",
+  "note": "Synthetic native-window shapes only. Values 0 and 1 make bool/float lookalikes equal to the bound integers.",
+  "unit": {"side": 1, "count": 1, "windows": [[1, 0, 1, 1]]},
+  "premise": {"side": 2, "count": 1, "windows": [[1, 0, 2, 2]]},
+  "pair": {"side": 32, "count": 2, "windows": [[0, 64, 32, 32], [100, 0, 32, 32]]},
+  "larger": {"windows": [[0, 128, 128, 128], [128, 128, 128, 128], [0, 0, 128, 128], [128, 0, 128, 128]]},
+  "out_of_grant": {
+    "unit": [2, 0, 1, 1],
+    "pair": [1, 64, 32, 32],
+    "larger": [256, 0, 128, 128],
+    "partial": [4403, 3872, 128, 128]
+  }
+}
