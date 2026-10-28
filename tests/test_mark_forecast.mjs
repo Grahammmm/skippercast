@@ -64,7 +64,7 @@ const MARK = {lat: 35.37, lon: -120.95};
 test('step 0: model wind and seas are point series in every committed region, lattice or not; each reads its regional point, named', () => {
   const regions = readdirSync(new URL('../dist/regions/', import.meta.url), {withFileTypes: true}).filter(d => d.isDirectory())
     .map(d => { try { return region(d.name); } catch { return null; } }).filter(r => r?.forecast_points);
-  assert.equal(regions.length, 15);
+  assert.equal(regions.length, 16);
   const meta = {last_run_initialisation_time: NOW / 1000 - 4 * 3600, data_end_time: T0 + 71 * 3600};
   for (const r of regions) {
     const pts = r.forecast_points.map(p => [p.id, p.latitude, p.longitude]);
