@@ -60,14 +60,15 @@ def build_mesh(terrain_path, support_path, imagery_path, vertical):
         # Mapping outputs must already be unpacked physical metres.
         if ds.scales != (1.0,) or ds.offsets != (0.0,):
             raise ValueError("unapplied_terrain_packing")
-        raw = ds.read(1, masked=True)
+        # Integer storage is valid for unpacked metres, but cannot hold a NaN fill.
+        raw = ds.read(1, masked=True).astype(np.float64)
         mask = support.read(1, masked=True)
         mask_values = mask.compressed()
         if not np.isin(mask_values, [0, 1]).all():
             raise ValueError("binary_support_required")
+        values = raw.filled(np.nan)
         valid = (~np.ma.getmaskarray(raw) & ~np.ma.getmaskarray(mask)
-                 & (mask.filled(0) == 1) & np.isfinite(raw.filled(np.nan)))
-        values = raw.filled(np.nan).astype(np.float64)
+                 & (mask.filled(0) == 1) & np.isfinite(values))
         if vertical["sign"] == "positive_down":
             values = -values
         rows, cols = np.nonzero(valid)
@@ -128,11 +129,24 @@ def build_mesh(terrain_path, support_path, imagery_path, vertical):
                 "imagery_mask_excluded_triangles": excluded}
 
 
+def _validate_preview_faces(faces, vertex_count):
+    """Reject malformed indexes in their original dtype, before projection."""
+    import numpy as np
+
+    if (type(faces) is not np.ndarray
+            or faces.ndim != 2 or faces.shape[1] != 3 or not len(faces)
+            or faces.dtype.kind not in "iu"):
+        raise ValueError("preview_faces_invalid")
+    if (faces < 0).any() or (faces >= vertex_count).any():
+        raise ValueError("preview_faces_invalid")
+
+
 def render_png(mesh, path):
     """Project actual mesh triangles, texture their faces, and resolve occlusion."""
     import numpy as np
 
     vertices, faces = mesh["vertices"], mesh["faces"]
+    _validate_preview_faces(faces, len(vertices))
     projected, _basis = camera_projection(vertices)
     # Fit and center the actual projected 2D bounds instead of the 3D box.
     span = np.ptp(projected[:, :2], axis=0)
@@ -186,6 +200,11 @@ def write_png(path, rgb):
     h, w, channels = rgb.shape
     if channels != 3 or w != WIDTH or h != HEIGHT:
         raise ValueError("fixed_preview_size_required")
+    # The IHDR below always declares 8-bit samples: refuse any other dtype before encoding
+    # or opening the target (no implicit scaling, narrowing or reinterpretation).
+    dtype = getattr(rgb, "dtype", None)
+    if getattr(dtype, "kind", None) != "u" or getattr(dtype, "itemsize", None) != 1:
+        raise ValueError("fixed_preview_uint8_required")
     data = b"".join(b"\0" + row.tobytes() for row in rgb)
     encoded = (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
                + chunk(b"IDAT", zlib.compress(data, 6)) + chunk(b"IEND", b""))

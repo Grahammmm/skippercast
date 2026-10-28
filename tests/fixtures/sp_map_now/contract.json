@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "baseline_head": "f8bc7d365c0c5aa4a2e59ba576a95146c92a0367",
+  "spec_version": 2,
+  "spec_sha256": "07674ace24927cfe58bf70786a4b0da9d5ffe49d036256390e05f84fc51cfe76",
+  "node_version": "v22.23.2",
+  "provenance": "Synthetic CloudImage and CurrentField shapes derived from tests/test_frames.mjs, tests/test_security_headers.mjs and packages/coast/src/ocean-types.ts at baseline_head. Test implementation authored by gpt-6.1-sol / openai-codex; no diagnostic code copied.",
+  "claims": {
+    "A1": "invalid-date/*, non-date/*, defaults/*",
+    "A2": "invalid-date/* covers label, NaN, Infinity and both finite out-of-range epochs; non-date/* covers null, number, string and getTime-shaped object; each covers cloud, forecast, observation and real wrappers",
+    "A3": "cloud-boundary/*, fetched-boundary/*, issued-boundary/*, nearest/*, observation/*, preserved/*, defaults/*",
+    "A4": "negative suite runs identical invalid-date assertions on unchanged complete baseline modules; only non-null cloud/forecast returns are intended failures; all observation and compatibility controls must pass",
+    "compatibility": "tests/test_frames.mjs and tests/test_security_headers.mjs only"
+  }
+}
