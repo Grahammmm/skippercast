@@ -25,6 +25,12 @@ adapters, sinks, or operational CLI/status policy. In particular, `ok` does not
 by itself promise completeness. Refresh consumes the genuine boolean receipt;
 it must not count partial discovery toward disappearance or retirement.
 
+This delta supersedes one earlier expectation:
+`tests/unit/test_fleet_known_gaps.py::test_a_skip_on_a_source_that_listed_boats_is_counted_not_a_gap`
+asserted `complete: true` for exactly the A1 shape (usable candidates plus a
+layout skip). It now asserts `complete: false`; its status, skip-count and
+gap-summary assertions are unchanged.
+
 ## Acceptance mapping and observed runs
 
 All tests use synthetic adapters/contexts, invented names and reserved example
