@@ -19,7 +19,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-REPO = Path(__file__).resolve().parents[2]
+from tests._support import ROOT as REPO
+
 FIXTURE = REPO / 'tests/fixtures/sc175-qualification-copy/ordinary.json'
 REVIEW_KEYS = (
     'adapter_version', 'source_sha256', 'cog_sha256', 'requested_bounds_wgs84',
@@ -144,7 +145,6 @@ def product_scope(root):
                     stack.enter_context(patch.object(obj, name, stop))
             sys.meta_path.insert(0, ExternalImportStop())
             sys.dont_write_bytecode = True
-            sys.path.insert(0, str(REPO / 'src'))
             for key in saved:
                 sys.modules.pop(key)
             paths = importlib.import_module('skippercast.paths')
@@ -229,7 +229,10 @@ class QualificationCopyTests(unittest.TestCase):
                 with self.subTest(case='receipt-failure', shape=label, field=field, value=value):
                     bad = deepcopy(receipt); bad[field] = value
                     before = canonical([row, bad])
-                    with self.assertRaisesRegex(ValueError, 'matching native adapter receipt'):
+                    error = ('native_receipt_counts_invalid' if field in {
+                        'nominal_0_300ft_pixels_in_requested_bounds',
+                        'valid_pixels_in_requested_bounds'} else 'matching native adapter receipt')
+                    with self.assertRaisesRegex(ValueError, error):
                         self.module.qualify_row(row, bad, rights_url=RIGHTS_URL, physical_only=private)
                     self.assertEqual(before, canonical([row, bad]))
             for url in ('http://example.org/policy', 'https://localhost/policy', 'file:///policy'):

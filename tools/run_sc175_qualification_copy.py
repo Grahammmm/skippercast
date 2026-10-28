@@ -88,6 +88,7 @@ def main():
               'cwd': str(Path.cwd()), 'interpreter': sys.executable, 'runtime_prefix': sys.prefix,
               'status': 'FAIL', 'run': str(run)}
     old_bytecode = sys.dont_write_bytecode
+    old_path = sys.path[:]
     exit_code = 1
     with (run / 'stdout.log').open('w') as stdout, (run / 'stderr.log').open('w') as stderr:
         with redirect_stdout(stdout), redirect_stderr(stderr):
@@ -102,6 +103,9 @@ def main():
                         (REPO / 'tests/fixtures/sc175-qualification-copy').rglob('*')) if p.is_file()},
                     runtime=stage['runtime'])
                 file = REPO / 'tests/unit/test_sc175_qualification_copy.py'
+                # Bootstrap standalone runner imports; tests use shared ROOT and
+                # the normal source path rather than managing their own paths.
+                sys.path[:0] = [str(REPO), str(REPO / 'src')]
                 spec = importlib.util.spec_from_file_location('sc175_tests', file)
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)
@@ -147,6 +151,7 @@ def main():
                 exit_code = 1
             finally:
                 sys.dont_write_bytecode = old_bytecode
+                sys.path[:] = old_path
     report['log_hashes'] = {name: digest(run / name) for name in ('stdout.log', 'stderr.log')}
     report['exit_code'] = exit_code
     (run / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
