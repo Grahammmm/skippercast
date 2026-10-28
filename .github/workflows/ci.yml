@@ -80,11 +80,12 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         # Build inputs: scripts/build-worker.mjs, scripts/client-build.mjs and vite.config.mjs read dist/,
         # regions/ and deployments/; server/ and web/ import catalog/, jurisdictions/, packages/ and tools/;
-        # e2e/serve.mjs applies drizzle/ and reads e2e/seed; e2e specs import scripts/*.mjs and *.json.
+        # e2e/serve.mjs applies drizzle/ and reads e2e/seed; e2e specs import scripts/*.mjs and *.json
+        # and read tests/fixtures/basemap/ and tests/fixtures/seafloor/.
         run: |
           if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then echo changed=true >> "$GITHUB_OUTPUT"; exit 0; fi
           git diff --name-only "$BASE" HEAD > "$RUNNER_TEMP/changed.txt"
-          if grep -qE '^(web/|server/|dist/|packages/|e2e/|catalog/|jurisdictions/|regions/|deployments/|db/|drizzle/|tools/|scripts/[^/]+\.(mjs|json)$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|playwright\.config\.ts$|vite\.config\.mjs$|tsconfig\.json$|wrangler\.jsonc$|\.github/workflows/ci\.yml$)' "$RUNNER_TEMP/changed.txt"; then
+          if grep -qE '^(web/|server/|dist/|packages/|e2e/|tests/fixtures/(basemap|seafloor)/|catalog/|jurisdictions/|regions/|deployments/|db/|drizzle/|tools/|scripts/[^/]+\.(mjs|json)$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|playwright\.config\.ts$|vite\.config\.mjs$|tsconfig\.json$|wrangler\.jsonc$|\.github/workflows/ci\.yml$)' "$RUNNER_TEMP/changed.txt"; then
             echo changed=true >> "$GITHUB_OUTPUT"
           else
             echo changed=false >> "$GITHUB_OUTPUT"
