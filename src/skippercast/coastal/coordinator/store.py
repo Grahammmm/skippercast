@@ -407,7 +407,7 @@ class Store:
                 # Dispatch starts measurement; it is not scientific qualification.
                 from skippercast.coastal.handoff.common import validate_native_source
                 from skippercast.coastal.handoff.mapping_input import MAX_CELLS
-                validate_native_source(self.root, manifest["source"])
+                validate_native_source(self.root, manifest["source"], netcdf=True)
                 window = manifest["window"]
                 # Refuse exactly what the acquire stage (mapping_input.observe) refuses.
                 if (not isinstance(window, list) or len(window) != 4 or any(type(v) is not int for v in window)

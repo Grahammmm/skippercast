@@ -44,7 +44,12 @@ WALL_SECONDS = 1800
 CLEANUP_SECONDS = 300
 PROFILE = "discovery30"
 ADAPTERS = ("arcgis", "stac", "listing")
-LISTING_SUFFIXES = (".bag", ".bag.gz", ".tif", ".tiff", ".zip", ".xml")
+LISTING_SUFFIXES = (".bag", ".bag.gz", ".tif", ".tiff", ".zip", ".xml", ".nc")
+# netCDF links are kept only as plain file downloads. Under THREDDS that is the
+# HTTPServer service (/thredds/fileServer/...); OPeNDAP, NCSS, WCS, WMS and ISO
+# endpoints for the same file are services, not native files.
+NETCDF_SUFFIX = ".nc"
+THREDDS_FILE_SERVICE = "fileServer"
 SCRIPT = Path("skills/skippercast-discover-coastal-sources/scripts/discover.py")
 DIFF_FIELDS = ("access_url", "metadata", "extent", "rejection_reasons", "unknowns", "terrain")
 
@@ -181,6 +186,15 @@ def dry_run(plan, out, *, root=None, allowlist=None, clock=time.time):
     return receipt
 
 
+def _plain_netcdf_file(path):
+    """False for a THREDDS service path other than the HTTPServer file service."""
+    segments = path.split("/")
+    if "thredds" not in segments:
+        return True
+    index = segments.index("thredds")
+    return len(segments) > index + 2 and segments[index + 1] == THREDDS_FILE_SERVICE
+
+
 def listing_annotation(discover, row, allowed_hosts):
     """Deterministic candidates from literal links in a saved directory listing.
 
@@ -194,6 +208,8 @@ def listing_annotation(discover, row, allowed_hosts):
         parts = urllib.parse.urlsplit(link)
         name = parts.path.rstrip("/").rsplit("/", 1)[-1]
         if parts.hostname in allowed_hosts and name.lower().endswith(LISTING_SUFFIXES) and not parts.query:
+            if name.lower().endswith(NETCDF_SUFFIX) and not _plain_netcdf_file(parts.path):
+                continue
             if name in found and found[name] != link:
                 raise ValueError("listing_basename_collision")
             found.setdefault(name, link)
