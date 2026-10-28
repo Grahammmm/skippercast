@@ -4,6 +4,7 @@ import ctypes
 import errno
 from datetime import datetime, timezone
 import json
+import math
 import os
 import tempfile
 from pathlib import Path
@@ -13,13 +14,31 @@ from .mesh import build_mesh, render_png
 from ..receipts import atomic_json
 
 
+def _sc145_unique_json_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate_json_key")
+        result[key] = value
+    return result
+
+
 def read_json(path):
     path = Path(path)
     if path.stat().st_size > 2 * 1024 * 1024:
         raise ValueError("json_byte_bound")
+
     def reject(value):
-        raise ValueError("nonfinite_json:" + value)
-    return json.loads(path.read_text(), parse_constant=reject)
+        raise ValueError("nonfinite_json")
+
+    def finite_float(value):
+        number = float(value)
+        if not math.isfinite(number):
+            raise ValueError("nonfinite_json")
+        return number
+
+    return json.loads(path.read_text(), parse_constant=reject,
+                      parse_float=finite_float, object_pairs_hook=_sc145_unique_json_object)
 
 
 def verified_path(root, ref):
