@@ -73,11 +73,21 @@ class RunnerSwitchTests(unittest.TestCase):
     # fleet-health.yml alerts when Hermes (the data runner) is down, so it cannot run there (charter-fleet design § 4).
     HOSTED_ONLY = {'deploy-cloudflare.yml', 'dco.yml', 'release.yml', 'fleet-health.yml'}
 
+    # ci.yml is the one pull_request workflow that can reach the box. A pull request from a
+    # fork, or a Dependabot update (third-party install scripts), stays on GitHub-hosted runners
+    # even with the readiness gate on (the repo is public).
+    CI_RUNS_ON = (
+        "${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request'"
+        " || github.event.pull_request.head.repo.full_name == github.repository"
+        " && github.event.pull_request.user.login != 'dependabot[bot]')"
+        " && vars.CI_RUNNER || 'ubuntu-latest' }}"
+    )
+
     def test_scheduled_and_ci_jobs_run_on_the_switchable_runner(self):
         wrong = []
         for path in sorted((ROOT / '.github/workflows').glob('*.y*ml')):
             expected = {
-                'ci.yml': "${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}",
+                'ci.yml': self.CI_RUNS_ON,
                 'seafloor.yml': "${{ vars.SEAFLOOR_RUNNER || 'ubuntu-latest' }}",
             }.get(path.name, "${{ vars.DATA_RUNNER || 'ubuntu-latest' }}")
             for line in re.findall(r'^\s*runs-on:\s*(.+?)\s*$', path.read_text(), re.M):

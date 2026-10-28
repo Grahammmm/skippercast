@@ -8,6 +8,12 @@ name: DCO
 
 on:
   pull_request:
+  # Merge queue: sign-off is a required check, so it must report on the queued
+  # merge commit too. Each pull request already passed sign-off on its own head
+  # to enter the queue, and a new push removes it from the queue, so the
+  # merge-group run only records that and checks nothing again.
+  merge_group:
+    types: [checks_requested]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
@@ -21,8 +27,13 @@ jobs:
   sign-off:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Merge queue group (commits were checked on each pull request)
+        if: github.event_name == 'merge_group'
+        run: echo "::notice title=DCO::sign-off was checked on each queued pull request's head"
+      - if: github.event_name == 'pull_request'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Use the base branch's checker
+        if: github.event_name == 'pull_request'
         # A pull request must not be able to edit its own gate. The first PR that
         # adds the checker has no base copy, so it falls back to its own.
         env:
@@ -35,6 +46,7 @@ jobs:
             cp scripts/check_dco.py "$RUNNER_TEMP/check_dco.py"
           fi
       - name: Check Signed-off-by on pull-request commits
+        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}

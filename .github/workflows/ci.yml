@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   changes:
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     outputs:
       python: ${{ steps.plan.outputs.python }}
       survey: ${{ steps.plan.outputs.survey }}
@@ -35,14 +35,14 @@ jobs:
   survey-shard:
     needs: changes
     if: needs.changes.outputs.survey == 'true'
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
           cache: pip
@@ -90,7 +90,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.e2e == 'true'
     # Unchanged browser flows, both phone and laptop projects, and axe thresholds.
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -134,14 +134,14 @@ jobs:
 
   check:
     needs: changes
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
         python: ${{ fromJSON(needs.changes.outputs.python) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: ${{ matrix.python }}
           cache: pip
@@ -196,7 +196,7 @@ jobs:
 
   web:
     # Python-independent checks run once, parallel to the Python matrix.
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -253,7 +253,7 @@ jobs:
     # Stable context even when a PR cannot affect the browser inputs.
     needs: [changes, e2e-tests]
     if: always()
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Require the selected browser checks
@@ -266,7 +266,7 @@ jobs:
     # as an intentional path skip; also require core and web checks to pass.
     needs: [changes, survey-shard, e2e-tests, check, web]
     if: always()
-    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Require every selected job to succeed
