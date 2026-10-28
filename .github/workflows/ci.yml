@@ -64,12 +64,41 @@ jobs:
           path: ${{ runner.temp }}/pytest-survey.xml
           if-no-files-found: ignore
           retention-days: 14
+  web-changed:
+    # Does this change touch anything `pnpm build` or the browser tests read?
+    # Unknown base (first push, force-push) counts as changed.
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    outputs:
+      changed: ${{ steps.d.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: d
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        # Build inputs: scripts/build-worker.mjs, scripts/client-build.mjs and vite.config.mjs read dist/,
+        # regions/ and deployments/; server/ and web/ import catalog/, jurisdictions/, packages/ and tools/;
+        # e2e/serve.mjs applies drizzle/ and reads e2e/seed; e2e specs import scripts/*.mjs and *.json.
+        run: |
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then echo changed=true >> "$GITHUB_OUTPUT"; exit 0; fi
+          git diff --name-only "$BASE" HEAD > "$RUNNER_TEMP/changed.txt"
+          if grep -qE '^(web/|server/|dist/|packages/|e2e/|catalog/|jurisdictions/|regions/|deployments/|db/|drizzle/|tools/|scripts/[^/]+\.(mjs|json)$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|playwright\.config\.ts$|vite\.config\.mjs$|tsconfig\.json$|wrangler\.jsonc$|\.github/workflows/ci\.yml$)' "$RUNNER_TEMP/changed.txt"; then
+            echo changed=true >> "$GITHUB_OUTPUT"
+          else
+            echo changed=false >> "$GITHUB_OUTPUT"
+          fi
   e2e:
     # Browser tests (P4-09a): Playwright + axe against the built site under
     # `wrangler dev` (e2e/serve.mjs), at 390x844 and 1280x800.
+    # On PRs, skipped (a skipped required check passes) only when web-changed
+    # says no site input changed; if web-changed itself fails, e2e still runs.
     # Self-hosted CI is opt-in only after its complete setup is verified.
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
+    needs: web-changed
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.web-changed.outputs.changed != 'false') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -105,7 +134,8 @@ jobs:
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && vars.CI_RUNNER || 'ubuntu-latest' }}
     strategy:
       matrix:
-        python: ["3.11", "3.13"]
+        # PRs: 3.13 only (survey-science already runs every non-GIS test on 3.13; the Node steps need one leg). Main push: both.
+        python: ${{ github.event_name == 'pull_request' && fromJSON('["3.13"]') || fromJSON('["3.11","3.13"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -209,5 +239,6 @@ jobs:
       - name: Every published script, style and page is fingerprinted and resolves
         run: node scripts/check_client.mjs
       - name: Production dependencies have no high or critical advisories
-        if: matrix.python == '3.13'
+        # Not on PRs: new advisories fail it for reasons unrelated to the change.
+        if: matrix.python == '3.13' && github.event_name != 'pull_request'
         run: pnpm audit --prod --audit-level high
