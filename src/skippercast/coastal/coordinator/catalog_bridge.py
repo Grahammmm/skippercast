@@ -55,7 +55,7 @@ MAX_DOCUMENT_BYTES = 4 * 1024 * 1024    # catalog / plan metadata read bound
 MAX_WINDOW_CELLS = MAX_CELLS            # the acquire stage's own bound (mapping_input.observe)
 WINDOW_TILE = 512                       # canonical window-set tile size in native cells
 MAX_GRID_EXTENT = MAX_WINDOWS * WINDOW_TILE  # bound on a window-set grid's native extent
-NATIVE_SUFFIXES = (".bag", ".tif", ".tiff")
+NATIVE_SUFFIXES = (".bag", ".tif", ".tiff", ".nc")
 GEOGRAPHIC = ("CRS84", "EPSG:4326")
 HEX64 = re.compile("[0-9a-f]{64}")
 
@@ -123,6 +123,22 @@ def host_decision(url, allowlist):
     if host not in allowlist.exact:
         return host, "access_host_not_on_reviewed_allowlist"
     return host, None
+
+
+def _crs84_bbox(box):
+    """True only for the bridge's CRS84 bbox contract, checked as submitted (never coerced).
+
+    A list of four finite non-boolean int/float ``[west, south, east, north]``,
+    longitude within -180..180, latitude within -90..90, ``west < east`` and
+    ``south < north``. No wrapping or anti-meridian reading. The range test uses
+    exact comparisons, so a huge integer is refused without a float conversion.
+    """
+    if (not isinstance(box, list) or len(box) != 4
+            or any(isinstance(v, bool) or not isinstance(v, (int, float)) for v in box)
+            or any(isinstance(v, float) and not math.isfinite(v) for v in box)):
+        return False
+    west, south, east, north = box
+    return -180 <= west < east <= 180 and -90 <= south < north <= 90
 
 
 def _overlaps(a, b):
@@ -284,7 +300,7 @@ def cached_source(root, source):
     if not isinstance(source.get("contract"), str) or not source["contract"]:
         raise ValueError("cached source contract required")
     if not path.lower().endswith(NATIVE_SUFFIXES):
-        raise ValueError("cached source must be a native BAG or GeoTIFF")
+        raise ValueError("cached source must be a native BAG or GeoTIFF, or a netCDF grid")
     cursor, info = Path(root), None
     for part in Path(path).parts:
         cursor = cursor / part
@@ -322,6 +338,9 @@ def check_plan(plan, catalog_raw, catalog):
     if (not isinstance(segment, dict) or not isinstance(segment.get("segment_id"), str)
             or not isinstance(segment.get("bbox_crs84"), list) or len(segment["bbox_crs84"]) != 4):
         raise ValueError("plan segment_id and bbox_crs84 required")
+    if not _crs84_bbox(segment["bbox_crs84"]):
+        raise ValueError("plan segment bbox_crs84 must be four finite CRS84 coordinates [west, south, east, "
+                         "north] within -180..180 / -90..90 with west < east and south < north")
     if type(plan.get("synthetic", False)) is not bool:
         raise ValueError("synthetic must be a boolean")
     limit = plan.get("max_total_bytes")
@@ -372,7 +391,7 @@ def _decide(root, selection, row, catalog, segment, allowlist, now):
     if refused:
         holds.append(refused)
     extent = row.get("extent") or {}
-    if extent.get("bbox_crs") not in GEOGRAPHIC or not _overlaps(extent.get("bbox"), segment["bbox_crs84"]):
+    if extent.get("bbox_crs") not in GEOGRAPHIC or not _crs84_bbox(extent.get("bbox")) or not _overlaps(extent.get("bbox"), segment["bbox_crs84"]):
         holds.append("catalog_extent_does_not_overlap_segment")
     try:
         if _stamp(row.get("expires_at")) <= now:
