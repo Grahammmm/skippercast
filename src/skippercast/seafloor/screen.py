@@ -120,6 +120,16 @@ def input_identity(state):
     return value
 
 
+def _ranked_fit(fit):
+    """Ordinary graded habitat ranks: a nonempty dict of exact JSON integers 1-3.
+
+    Booleans and floats are not ranks even where they compare equal; any other
+    shape is a habitat contract hold, never an uncaught error.
+    """
+    return (isinstance(fit, dict) and bool(fit)
+            and all(type(value) is int and value in (1, 2, 3) for value in fit.values()))
+
+
 def screen_candidates(candidates, state, *, native_geometries=None, native_exclusions=None):
     # Optional classified planning suppressions operate on original native
     # polygons, never display rings. Ordinary legal screens are unchanged.
@@ -170,7 +180,7 @@ def screen_candidates(candidates, state, *, native_geometries=None, native_exclu
             terrain = p.get('terrain')
             if not search and not classified and (not isinstance(terrain, dict) or terrain.get('grade') not in ('A', 'B', 'C')):
                 reasons.append('metric-support-incomplete')
-            if ((not search and not classified and (not p.get('fit') or any(v not in (1, 2, 3) for v in p['fit'].values())))
+            if ((not search and not classified and not _ranked_fit(p.get('fit')))
                     or not 0 < p['resolution_m'] <= 16
                     or not 25-1e-6 <= p['depth_min_ft'] <= p['depth_max_ft'] <= 300+1e-6
                     or local.area < 1000-0.01):
