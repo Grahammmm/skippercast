@@ -10,8 +10,20 @@ from ..util.hashing import sha256_file as sha256  # noqa: F401  (re-exported to 
 NOAA_PREFIX = 'https://noaa-ocs-nationalbathymetry-pds.s3.amazonaws.com/'
 
 
+def _require_asset_sha256_declaration(expected):
+    """Refuse a digest declaration that is not 64 ASCII hex characters (either case).
+
+    Runs before any cache lookup, hashing, directory creation or session use, so a
+    malformed declaration costs no I/O and a non-string is an input refusal.
+    """
+    if not (isinstance(expected, str) and len(expected) == 64
+            and all(c in '0123456789abcdefABCDEF' for c in expected)):
+        raise ValueError('invalid_asset_sha256: expected must be 64 ASCII hex characters')
+
+
 def verified_file(url, expected, destination, fetch, *, max_bytes=128 * 1024 * 1024,
                   allowed_prefix=NOAA_PREFIX, session=None):
+    _require_asset_sha256_declaration(expected)
     if not destination.exists():
         if not fetch:
             raise FileNotFoundError(destination)

@@ -1,0 +1,112 @@
+{
+  "schema": "sp1704-trip-return-distance-fixture/v1",
+  "note": "Synthetic tracks only: a made-up MMSI sailing from square harbor geofences drawn in open ocean. Not a real vessel, port or fleet record. Each fix is [minute after t0_ms, lat, lon, sog_kn]; received_at = ts + receipt_delay_ms unless a fix carries a fifth element (its own receipt delay).",
+  "mmsi": 999017040,
+  "t0_ms": 1780000000000,
+  "receipt_delay_ms": 2000,
+  "ports": [
+    {"id": "port-a", "name": "Port A", "center": [10.0, -150.0], "half_deg": 0.02},
+    {"id": "port-b", "name": "Port B", "center": [10.0, -149.5], "half_deg": 0.02}
+  ],
+  "tracks": {
+    "closed": {
+      "purpose": "A1/A4: harbor shuffle, departure, two sea legs, confirmed return to port A held past the debounce, then more harbor shuffle.",
+      "fixes": [
+        [0, 10.0, -150.0, 0.3],
+        [10, 10.005, -149.995, 0.3],
+        [20, 10.0, -149.95, 12.0],
+        [50, 10.0, -149.85, 12.0],
+        [80, 10.05, -149.9, 12.0],
+        [100, 10.0, -149.995, 6.0],
+        [110, 10.01, -150.01, 0.3],
+        [120, 10.0, -150.0, 0.3]
+      ]
+    },
+    "open": {
+      "purpose": "Healthy control/A2: the identical track ending at sea before any return.",
+      "fixes": [
+        [0, 10.0, -150.0, 0.3],
+        [10, 10.005, -149.995, 0.3],
+        [20, 10.0, -149.95, 12.0],
+        [50, 10.0, -149.85, 12.0],
+        [80, 10.05, -149.9, 12.0]
+      ]
+    },
+    "open_zero_final": {
+      "purpose": "A2: open track whose final recorded leg is zero length (stationary fix).",
+      "fixes": [
+        [0, 10.0, -150.0, 0.3],
+        [10, 10.005, -149.995, 0.3],
+        [20, 10.0, -149.95, 12.0],
+        [50, 10.0, -149.85, 12.0],
+        [80, 10.05, -149.9, 12.0],
+        [90, 10.05, -149.9, 0.0]
+      ]
+    },
+    "closed_to_port_b": {
+      "purpose": "A1: departure from port A, confirmed return into port B; the return leg ends at the port B return fix.",
+      "fixes": [
+        [0, 10.0, -150.0, 0.3],
+        [20, 10.0, -149.95, 12.0],
+        [50, 10.05, -149.75, 12.0],
+        [80, 10.0, -149.55, 12.0],
+        [95, 10.0, -149.505, 4.0],
+        [105, 10.0, -149.5, 0.3]
+      ]
+    },
+    "closed_with_dip": {
+      "purpose": "A3: a one-minute dip into port A (shorter than the debounce) stays inside the trip; the later held stay is the return.",
+      "fixes": [
+        [0, 10.0, -150.0, 0.3],
+        [10, 10.0, -150.0, 0.3],
+        [20, 10.0, -149.95, 12.0],
+        [50, 10.0, -149.97, 5.0],
+        [60, 10.0, -149.99, 3.0],
+        [61, 10.0, -149.97, 6.0],
+        [80, 10.0, -149.85, 12.0],
+        [100, 10.0, -149.995, 6.0],
+        [110, 10.0, -150.0, 0.3]
+      ]
+    },
+    "open_port_hint": {
+      "purpose": "A3: the data ends one minute after a first in-port fix, before the debounce: an in-port hint, not a confirmed return.",
+      "fixes": [
+        [0, 10.0, -150.0, 0.3],
+        [10, 10.005, -149.995, 0.3],
+        [20, 10.0, -149.95, 12.0],
+        [50, 10.0, -149.85, 12.0],
+        [80, 10.05, -149.9, 12.0],
+        [100, 10.0, -149.995, 6.0],
+        [101, 10.0, -150.0, 0.3]
+      ]
+    },
+    "gap_truncated": {
+      "purpose": "A2: a silence longer than gap_split_hours, next seen in port: truncated at the last fix before the silence, no return leg.",
+      "fixes": [
+        [0, 10.0, -150.0, 0.3],
+        [10, 10.0, -150.0, 0.3],
+        [20, 10.0, -149.95, 12.0],
+        [50, 10.0, -149.85, 12.0],
+        [830, 10.0, -149.995, 0.3],
+        [840, 10.0, -150.0, 0.3]
+      ]
+    },
+    "start_unknown": {
+      "purpose": "A2/A4: positions begin at sea (unknown start) and end with a held return: truncated status, distance policy unchanged.",
+      "fixes": [
+        [0, 10.0, -149.85, 12.0],
+        [30, 10.0, -149.95, 12.0],
+        [50, 10.0, -149.995, 6.0],
+        [60, 10.0, -150.0, 0.3]
+      ]
+    }
+  },
+  "noise": {
+    "purpose": "A3: replayed duplicates of an existing ts with a later receipt and a displaced position; prepare() keeps the earliest receipt.",
+    "duplicates": [
+      [80, 10.2, -149.6, 12.0, 9000],
+      [100, 10.3, -149.4, 6.0, 7000],
+      [20, 10.4, -149.3, 12.0, 5000]
+    ]
+  }
+}
