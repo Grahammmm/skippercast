@@ -13,11 +13,24 @@ from rasterio.windows import Window
 VERSION = 'normalized-raster-content-v1'
 
 
+def _validate_packing(ds):
+    """Normalized samples must already be physical values on every band."""
+    try:
+        unpacked = (len(ds.scales) == ds.count and len(ds.offsets) == ds.count
+                    and all(scale == 1 for scale in ds.scales)
+                    and all(offset == 0 for offset in ds.offsets))
+    except (TypeError, ValueError):
+        unpacked = False
+    if not unpacked:
+        raise ValueError('Normalized raster must contain unpacked physical values')
+
+
 def raster_identity(path):
     digest = hashlib.sha256()
     with rasterio.open(path) as ds:
         if any(dtype != 'float32' for dtype in ds.dtypes):
             raise ValueError('Normalized raster must contain exact float32 values')
+        _validate_packing(ds)
         authority = ds.crs.to_authority() if ds.crs else None
         if not authority:
             raise ValueError('Normalized raster needs an identified CRS for portable review')

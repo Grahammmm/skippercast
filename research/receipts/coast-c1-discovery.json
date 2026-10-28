@@ -1,0 +1,435 @@
+{
+  "budget_charged_bytes": 71161,
+  "candidates": [
+    {
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13089/BAG/H13089_MB_VR_Ellipsoid.bag",
+      "field_evidence": {
+        "access_url": "literal href in saved directory listing",
+        "acquire_hold": "P10",
+        "datum_label": "Ellipsoid (reference unspecified)",
+        "grid_class": "VR",
+        "grid_class_basis": "Literal _VR_ token in live producer filename",
+        "publisher_id": "file name of that href",
+        "survey_id": "H13089"
+      },
+      "metadata": {
+        "acquisition_date": null,
+        "crs": null,
+        "format": "VR BAG",
+        "limitations": "VR classification is from explicit producer filename; native refinement spacing and horizontal CRS unknown. No native cells inspected. MLLW/Ellipsoid tokens are file labels, not inspected datum.",
+        "processing_requirements": "P10: original VR BAG refused by regular reader; PC-8 derived native-refinement output plus its gates required.",
+        "quality": null,
+        "resolution": null,
+        "rights": null,
+        "size_bytes": null,
+        "source_date": null,
+        "source_hash": null,
+        "task_fit": "Held input; provenance and future VR reader candidate only.",
+        "vertical_datum": null,
+        "vertical_sign": null,
+        "z_units": null
+      },
+      "source_id": "noaa-nos-deep-c1:H13089_MB_VR_Ellipsoid.bag"
+    },
+    {
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13089/BAG/H13089_MB_VR_MLLW.bag",
+      "field_evidence": {
+        "access_url": "literal href in saved directory listing",
+        "acquire_hold": "P10",
+        "datum_label": "MLLW",
+        "grid_class": "VR",
+        "grid_class_basis": "Literal _VR_ token in live producer filename",
+        "publisher_id": "file name of that href",
+        "survey_id": "H13089"
+      },
+      "metadata": {
+        "acquisition_date": null,
+        "crs": null,
+        "format": "VR BAG",
+        "limitations": "VR classification is from explicit producer filename; native refinement spacing and horizontal CRS unknown. No native cells inspected. MLLW/Ellipsoid tokens are file labels, not inspected datum.",
+        "processing_requirements": "P10: original VR BAG refused by regular reader; PC-8 derived native-refinement output plus its gates required.",
+        "quality": null,
+        "resolution": null,
+        "rights": null,
+        "size_bytes": null,
+        "source_date": null,
+        "source_hash": null,
+        "task_fit": "Held input; provenance and future VR reader candidate only.",
+        "vertical_datum": null,
+        "vertical_sign": null,
+        "z_units": null
+      },
+      "source_id": "noaa-nos-deep-c1:H13089_MB_VR_MLLW.bag"
+    },
+    {
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13151/BAG/H13151_MB_VR_Ellipsoid.bag",
+      "field_evidence": {
+        "access_url": "literal href in saved directory listing",
+        "acquire_hold": "P10",
+        "datum_label": "Ellipsoid (reference unspecified)",
+        "grid_class": "VR",
+        "grid_class_basis": "Literal _VR_ token in live producer filename",
+        "publisher_id": "file name of that href",
+        "survey_id": "H13151"
+      },
+      "metadata": {
+        "acquisition_date": null,
+        "crs": null,
+        "format": "VR BAG",
+        "limitations": "VR classification is from explicit producer filename; native refinement spacing and horizontal CRS unknown. No native cells inspected. MLLW/Ellipsoid tokens are file labels, not inspected datum.",
+        "processing_requirements": "P10: original VR BAG refused by regular reader; PC-8 derived native-refinement output plus its gates required.",
+        "quality": null,
+        "resolution": null,
+        "rights": null,
+        "size_bytes": null,
+        "source_date": null,
+        "source_hash": null,
+        "task_fit": "Held input; provenance and future VR reader candidate only.",
+        "vertical_datum": null,
+        "vertical_sign": null,
+        "z_units": null
+      },
+      "source_id": "noaa-nos-deep-c1:H13151_MB_VR_Ellipsoid.bag"
+    },
+    {
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13151/BAG/H13151_MB_VR_MLLW.bag",
+      "field_evidence": {
+        "access_url": "literal href in saved directory listing",
+        "acquire_hold": "P10",
+        "datum_label": "MLLW",
+        "grid_class": "VR",
+        "grid_class_basis": "Literal _VR_ token in live producer filename",
+        "publisher_id": "file name of that href",
+        "survey_id": "H13151"
+      },
+      "metadata": {
+        "acquisition_date": null,
+        "crs": null,
+        "format": "VR BAG",
+        "limitations": "VR classification is from explicit producer filename; native refinement spacing and horizontal CRS unknown. No native cells inspected. MLLW/Ellipsoid tokens are file labels, not inspected datum.",
+        "processing_requirements": "P10: original VR BAG refused by regular reader; PC-8 derived native-refinement output plus its gates required.",
+        "quality": null,
+        "resolution": null,
+        "rights": null,
+        "size_bytes": null,
+        "source_date": null,
+        "source_hash": null,
+        "task_fit": "Held input; provenance and future VR reader candidate only.",
+        "vertical_datum": null,
+        "vertical_sign": null,
+        "z_units": null
+      },
+      "source_id": "noaa-nos-deep-c1:H13151_MB_VR_MLLW.bag"
+    },
+    {
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13152/BAG/H13152_MB_VR_Ellipsoid.bag",
+      "field_evidence": {
+        "access_url": "literal href in saved directory listing",
+        "acquire_hold": "P10",
+        "datum_label": "Ellipsoid (reference unspecified)",
+        "grid_class": "VR",
+        "grid_class_basis": "Literal _VR_ token in live producer filename",
+        "publisher_id": "file name of that href",
+        "survey_id": "H13152"
+      },
+      "metadata": {
+        "acquisition_date": null,
+        "crs": null,
+        "format": "VR BAG",
+        "limitations": "VR classification is from explicit producer filename; native refinement spacing and horizontal CRS unknown. No native cells inspected. MLLW/Ellipsoid tokens are file labels, not inspected datum.",
+        "processing_requirements": "P10: original VR BAG refused by regular reader; PC-8 derived native-refinement output plus its gates required.",
+        "quality": null,
+        "resolution": null,
+        "rights": null,
+        "size_bytes": null,
+        "source_date": null,
+        "source_hash": null,
+        "task_fit": "Held input; provenance and future VR reader candidate only.",
+        "vertical_datum": null,
+        "vertical_sign": null,
+        "z_units": null
+      },
+      "source_id": "noaa-nos-deep-c1:H13152_MB_VR_Ellipsoid.bag"
+    },
+    {
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/H12001-H14000/H13152/BAG/H13152_MB_VR_MLLW.bag",
+      "field_evidence": {
+        "access_url": "literal href in saved directory listing",
+        "acquire_hold": "P10",
+        "datum_label": "MLLW",
+        "grid_class": "VR",
+        "grid_class_basis": "Literal _VR_ token in live producer filename",
+        "publisher_id": "file name of that href",
+        "survey_id": "H13152"
+      },
+      "metadata": {
+        "acquisition_date": null,
+        "crs": null,
+        "format": "VR BAG",
+        "limitations": "VR classification is from explicit producer filename; native refinement spacing and horizontal CRS unknown. No native cells inspected. MLLW/Ellipsoid tokens are file labels, not inspected datum.",
+        "processing_requirements": "P10: original VR BAG refused by regular reader; PC-8 derived native-refinement output plus its gates required.",
+        "quality": null,
+        "resolution": null,
+        "rights": null,
+        "size_bytes": null,
+        "source_date": null,
+        "source_hash": null,
+        "task_fit": "Held input; provenance and future VR reader candidate only.",
+        "vertical_datum": null,
+        "vertical_sign": null,
+        "z_units": null
+      },
+      "source_id": "noaa-nos-deep-c1:H13152_MB_VR_MLLW.bag"
+    },
+    {
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00479/BAG/W00479_MB_VR_Ellipsoid_1of1.bag",
+      "field_evidence": {
+        "access_url": "literal href in saved directory listing",
+        "acquire_hold": "P10",
+        "datum_label": "Ellipsoid (reference unspecified)",
+        "grid_class": "VR",
+        "grid_class_basis": "Literal _VR_ token in live producer filename",
+        "publisher_id": "file name of that href",
+        "survey_id": "W00479"
+      },
+      "metadata": {
+        "acquisition_date": null,
+        "crs": null,
+        "format": "VR BAG",
+        "limitations": "VR classification is from explicit producer filename; native refinement spacing and horizontal CRS unknown. No native cells inspected. MLLW/Ellipsoid tokens are file labels, not inspected datum.",
+        "processing_requirements": "P10: original VR BAG refused by regular reader; PC-8 derived native-refinement output plus its gates required.",
+        "quality": null,
+        "resolution": null,
+        "rights": null,
+        "size_bytes": null,
+        "source_date": null,
+        "source_hash": null,
+        "task_fit": "Held input; provenance and future VR reader candidate only.",
+        "vertical_datum": null,
+        "vertical_sign": null,
+        "z_units": null
+      },
+      "source_id": "noaa-nos-deep-c1:W00479_MB_VR_Ellipsoid_1of1.bag"
+    },
+    {
+      "access_url": "https://data.ngdc.noaa.gov/platforms/ocean/nos/coast/W00001-W02000/W00479/BAG/W00479_MB_VR_MLLW_1of1.bag",
+      "field_evidence": {
+        "access_url": "literal href in saved directory listing",
+        "acquire_hold": "P10",
+        "datum_label": "MLLW",
+        "grid_class": "VR",
+        "grid_class_basis": "Literal _VR_ token in live producer filename",
+        "publisher_id": "file name of that href",
+        "survey_id": "W00479"
+      },
+      "metadata": {
+        "acquisition_date": null,
+        "crs": null,
+        "format": "VR BAG",
+        "limitations": "VR classification is from explicit producer filename; native refinement spacing and horizontal CRS unknown. No native cells inspected. MLLW/Ellipsoid tokens are file labels, not inspected datum.",
+        "processing_requirements": "P10: original VR BAG refused by regular reader; PC-8 derived native-refinement output plus its gates required.",
+        "quality": null,
+        "resolution": null,
+        "rights": null,
+        "size_bytes": null,
+        "source_date": null,
+        "source_hash": null,
+        "task_fit": "Held input; provenance and future VR reader candidate only.",
+        "vertical_datum": null,
+        "vertical_sign": null,
+        "z_units": null
+      },
+      "source_id": "noaa-nos-deep-c1:W00479_MB_VR_MLLW_1of1.bag"
+    },
+    {
+      "access_url": "https://cmgds.marine.usgs.gov/data-releases/media/2021/10.5066-P9QQZ27U/07133678547c4279920b7670e707d96e/Cal_DIG_I_v2_Bathymetry.zip",
+      "field_evidence": {
+        "access_url": {
+          "literal_archive_link": true,
+          "member": "Cal_DIG_I_v2_Bathymetry.tif",
+          "member_evidence": "research/catalog/usgs-caldig-v2.json and research/receipts/usgs-caldig-v2-native-review.json; not re-opened this run",
+          "release_request_id": 7,
+          "release_sha256": "4a8664a31763e29469df8a1229cfa9fdb3ab4815ae7191a10640463921b1a519"
+        },
+        "composition_discrepancy": "H13089 is confirmed separately by PC-3 and live NOAA listing, not corrected into producer metadata.",
+        "crs": "Horizontal_Datum_Name=NAD83; UTM_Zone_Number=10",
+        "depth_range": {
+          "basis": "Entity_and_Attribute_Overview, Statistics",
+          "maximum_elevation_m": -99.553,
+          "minimum_elevation_m": -1621.446
+        },
+        "historical_valid_cells": {
+          "evidence": "research/receipts/usgs-caldig-v2-native-review.json",
+          "fresh_native_scan": false,
+          "value": 91044551
+        },
+        "producer_gap_fill": "Process_Description: Small voids were filled using ArcGIS 10.7 image analysis tool.",
+        "resolution": "Abscissa_Resolution / Ordinate_Resolution / Planar_Distance_Units; Row_Count / Column_Count",
+        "source_composition_literal": "H1309, H13151, H13152, W00479, MBARI98, SR1604",
+        "stated_vertical_datum": "not stated",
+        "vertical_datum": "No vertical datum element in complete saved FGDC metadata; horizontal NAD83 is not a vertical datum."
+      },
+      "metadata": {
+        "acquisition_date": "1998/2019",
+        "crs": "EPSG:26910",
+        "format": "GeoTIFF in ZIP",
+        "limitations": "Vertical datum not stated. Not for navigation. Producer abstract literally says H1309, not H13089; preserve this discrepancy. Depth extrema are native-source elevations, not chart-datum depths.",
+        "processing_requirements": "Unzip original GeoTIFF; native bytes must be independently admitted and verified; G3 unstated datum requires lane M/D contract and native-header check.",
+        "quality": "Producer composite; metadata reports small voids filled in ArcGIS, so not every output cell is a raw measured sounding.",
+        "resolution": {
+          "columns": 11242,
+          "rows": 15227,
+          "units": "m",
+          "x": 10.0,
+          "y": 10.0
+        },
+        "rights": "CC0-1.0; attribution to USGS, BOEM, NOAA and MBARI; not for navigation",
+        "size_bytes": null,
+        "source_date": "2026-08-26",
+        "source_hash": null,
+        "task_fit": "Private deep-terrain qualification candidate only; no coverage or scientific acceptance.",
+        "vertical_datum": null,
+        "vertical_sign": "negative elevation",
+        "z_units": "m"
+      },
+      "source_id": "usgs-caldig-i-v2:Cal_DIG_I_v2_Bathymetry.tif"
+    }
+  ],
+  "catalog_sha256": "508cfc88e1f2595a493b053adfb4b80c0d93972cf658ac10fb27075616d6aa49",
+  "caveats": [
+    "Producer fills small voids: no blanket raw-measured-cell claim.",
+    "Producer metadata spells H1309; do not silently normalize to H13089.",
+    "91,044,551 valid cells is historical committed native audit only, not a fresh scan.",
+    "DOI 302 is retained as failed request; discovery_complete remains false conservatively."
+  ],
+  "elapsed_seconds": 88.173,
+  "holds": [
+    {
+      "reason": "P10: VR original not admitted; horizontal CRS and native refinements uninspected",
+      "source_id": "noaa-nos-deep-c1:H13089_MB_VR_Ellipsoid.bag"
+    },
+    {
+      "reason": "P10: VR original not admitted; horizontal CRS and native refinements uninspected",
+      "source_id": "noaa-nos-deep-c1:H13089_MB_VR_MLLW.bag"
+    },
+    {
+      "reason": "P10: VR original not admitted; horizontal CRS and native refinements uninspected",
+      "source_id": "noaa-nos-deep-c1:H13151_MB_VR_Ellipsoid.bag"
+    },
+    {
+      "reason": "P10: VR original not admitted; horizontal CRS and native refinements uninspected",
+      "source_id": "noaa-nos-deep-c1:H13151_MB_VR_MLLW.bag"
+    },
+    {
+      "reason": "P10: VR original not admitted; horizontal CRS and native refinements uninspected",
+      "source_id": "noaa-nos-deep-c1:H13152_MB_VR_Ellipsoid.bag"
+    },
+    {
+      "reason": "P10: VR original not admitted; horizontal CRS and native refinements uninspected",
+      "source_id": "noaa-nos-deep-c1:H13152_MB_VR_MLLW.bag"
+    },
+    {
+      "reason": "P10: VR original not admitted; horizontal CRS and native refinements uninspected",
+      "source_id": "noaa-nos-deep-c1:W00479_MB_VR_Ellipsoid_1of1.bag"
+    },
+    {
+      "reason": "P10: VR original not admitted; horizontal CRS and native refinements uninspected",
+      "source_id": "noaa-nos-deep-c1:W00479_MB_VR_MLLW_1of1.bag"
+    },
+    {
+      "reason": "PC-3 surveyed_cells_in_bbox=not_established; no regular pyramid admitted",
+      "source_id": "W00431"
+    },
+    {
+      "reason": "PC-3 surveyed_cells_in_bbox=not_established; no regular pyramid admitted",
+      "source_id": "W00433"
+    },
+    {
+      "reason": "PC-3 surveyed_cells_in_bbox=not_established; no regular pyramid admitted",
+      "source_id": "W00443"
+    },
+    {
+      "reason": "PC-3 surveyed_cells_in_bbox=not_established; no regular pyramid admitted",
+      "source_id": "W00444"
+    },
+    {
+      "reason": "PC-3 surveyed_cells_in_bbox=not_established; no regular pyramid admitted",
+      "source_id": "W00447"
+    }
+  ],
+  "manifest_sha256": "63a2d71fd667dd90f021c695fd654a5e334e05e4e09deea736901762073bc142",
+  "native_source_downloads": 0,
+  "network_requests": 7,
+  "observed_body_bytes": 71161,
+  "plan_sha256": "5ac6c3572672f9b62525eee2f9f9e41a2d93a142f22e2f11d3f14180f2ab933a",
+  "publication_accepted": false,
+  "receipt_sha256": "a0670c3ae8e109bad445ed3b07af985294687014e6f9ac58305a883933ecd743",
+  "regular_pyramids": [
+    {
+      "bridge_eligible": false,
+      "resolution_pyramid_m": [
+        8.0,
+        16.0,
+        32.0,
+        64.0,
+        128.0
+      ],
+      "survey_id": "W00431",
+      "surveyed_cells_in_bbox": "not_established"
+    },
+    {
+      "bridge_eligible": false,
+      "resolution_pyramid_m": [
+        8.0,
+        16.0,
+        32.0,
+        64.0,
+        128.0
+      ],
+      "survey_id": "W00433",
+      "surveyed_cells_in_bbox": "not_established"
+    },
+    {
+      "bridge_eligible": false,
+      "resolution_pyramid_m": [
+        16.0,
+        32.0,
+        64.0,
+        128.0
+      ],
+      "survey_id": "W00443",
+      "surveyed_cells_in_bbox": "not_established"
+    },
+    {
+      "bridge_eligible": false,
+      "resolution_pyramid_m": [
+        8.0,
+        16.0,
+        32.0,
+        64.0,
+        128.0
+      ],
+      "survey_id": "W00444",
+      "surveyed_cells_in_bbox": "not_established"
+    },
+    {
+      "bridge_eligible": false,
+      "resolution_pyramid_m": [
+        16.0,
+        32.0,
+        64.0,
+        128.0
+      ],
+      "survey_id": "W00447",
+      "surveyed_cells_in_bbox": "not_established"
+    }
+  ],
+  "review_required": true,
+  "schema": "coast-c1-discovery-summary-v1",
+  "semantic_accepted": false,
+  "source_head": "7f2e4811db7363e2d95d7570d84e5f7c73ec78ce",
+  "start_utc": "2026-10-21T00:10:46.868118Z",
+  "stop_utc": "2026-10-21T00:12:15.004913Z",
+  "task_id": "t_7b09857c",
+  "within_caps": true
+}

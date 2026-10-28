@@ -1,0 +1,3 @@
+#YYYY MM DD hh mm WVHT WTMP
+#yr mo dy hr mn m degC
+2025 01 01 00 00 1.0 12.0

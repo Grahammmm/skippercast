@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "description": "Synthetic one-dimensional latitude/longitude axes and row-major boolean sea grids, matching read_mask and nearest_sea; distances are equatorial arc lengths, not acquired data.",
+  "equatorial_km": {
+    "round_up": [0.996, 0.999],
+    "round_down": [1.004, 1.002],
+    "ordinary": [5.0, 2.0, 8.0]
+  },
+  "presentation": {
+    "latitude": 35.123456789,
+    "longitude": -121.987654321
+  }
+}

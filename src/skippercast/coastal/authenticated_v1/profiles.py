@@ -103,6 +103,16 @@ def grant_identity(grant):
         result.update({key:copy.deepcopy(grant[key]) for key in ('saved_area_continuation_contract','saved_area_adoption','source_volume_cap_bytes','prior_effective_bytes','cumulative_limit_bytes')})
     return result
 
+def _strict_ints(values):
+    """Packet shape bindings are exact ints: bool/float/str lookalikes never equal-match."""
+    return all(type(value) is int for value in values)
+
+def _packet_native_window(packet):
+    plan=packet.get('fixed_center_plan');window=plan.get('native_window') if isinstance(plan,dict) else None
+    if type(window) is not list or len(window)!=4 or not _strict_ints(window):
+        raise ValueError('packet_integer_binding_invalid: finite native_window must be a list of four integers')
+    return window
+
 def validate_grant_packet(grant,packet):
     domain=grant_identity(grant);selected=profile(domain.get('execution_profile'),domain)
     if packet.get('saved_area_continuation_contract')!=grant.get('saved_area_continuation_contract'):
@@ -118,11 +128,14 @@ def validate_grant_packet(grant,packet):
             raise ValueError('packet ordered geometry/output contract differs from immutable grant')
     if packet.get('execution_profile')!=selected['name']:raise ValueError('input profile differs from immutable grant')
     if packet.get('support_policy')!=domain.get('support_policy'):raise ValueError('packet support policy differs from immutable grant')
-    if selected['name']==CONTAINED and any(packet.get(k)!=domain[k] for k in ('window_side','window_count')):
-        raise ValueError('contained input shape/count differs from immutable grant')
+    if selected['name']==CONTAINED:
+        if not _strict_ints(packet.get(k) for k in ('window_side','window_count')):
+            raise ValueError('packet_integer_binding_invalid: contained window_side/window_count must be integers')
+        if any(packet.get(k)!=domain[k] for k in ('window_side','window_count')):
+            raise ValueError('contained input shape/count differs from immutable grant')
     if any(packet.get(key)!=domain[key] for key in ('source','source_root','source_relative_path')):
         raise ValueError('packet differs from exact source domain')
-    if selected['name'] and packet.get('fixed_center_plan',{}).get('native_window') not in domain['window_set']:
+    if selected['name'] and _packet_native_window(packet) not in domain['window_set']:
         raise ValueError('window outside immutable finite grant')
     return domain
 
