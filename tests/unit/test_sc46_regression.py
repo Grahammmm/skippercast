@@ -36,6 +36,7 @@ class HeaderDataset:
 
 
 def normalized_block(datum='MLLW', lane=None):
+    pytest.importorskip("pyproj")  # Core-only CI has no GIS packages; from_raster needs pyproj.
     observed = vertical.from_raster(HeaderDataset(raw=True, datum=datum), source_sha256=SOURCE)
     declared = dict(observed['facts'], evidence=[vertical.evidence_from_observation(observed)])
     if lane is not None:
