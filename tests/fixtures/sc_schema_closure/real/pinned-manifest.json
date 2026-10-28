@@ -1,0 +1,201 @@
+{
+  "files": [
+    {
+      "path": "schemas/coast-recipe-v1.schema.json",
+      "sha256": "a659d136536a553043fac917473428ae0c6e51bdb179cc66bdd295e09ebf1593"
+    },
+    {
+      "path": "schemas/coastal-discovery-lead-v1.schema.json",
+      "sha256": "491723dfa30910317903cbad8dd9da44de2aed72fc7d5361447f2ce24e5bfc08"
+    },
+    {
+      "path": "schemas/coastal-terrain-only-input-v1.schema.json",
+      "sha256": "8cac704665aae620d531ab98cc8b2a3464612debce4690cf73fdd8bc31978478"
+    },
+    {
+      "path": "schemas/coastal-terrain-only-render-v1.schema.json",
+      "sha256": "6a3fa32e0594a37f985393d99f8243a03d4ac83a29ad310e5dc1f1a9c104aba9"
+    },
+    {
+      "path": "schemas/coastal-terrain-only-science-review-v1.schema.json",
+      "sha256": "9fd08f202cea2965d518b8bfd33de0a4fd33a5ba5c04b444ac727b832e86123f"
+    },
+    {
+      "path": "schemas/common.schema.json",
+      "sha256": "dbd8d97b2eea98339583baeeaa5625003d313955d2a4ecd78829734a01fd9beb"
+    },
+    {
+      "path": "schemas/coverage.schema.json",
+      "sha256": "9b2b423c7dca7d66e39cf059d298c0a171354d40732a6d6e8ab0c647f4b95a91"
+    },
+    {
+      "path": "schemas/daily-feed.schema.json",
+      "sha256": "3cd44970a2c0b4627719a995333da38fb1689dd27ebca6259e0f608552a19040"
+    },
+    {
+      "path": "schemas/data-needs.schema.json",
+      "sha256": "e9d49a7c634612012ef4a16340e7eaf94fbb27e32a8ad37c66a14863aea92800"
+    },
+    {
+      "path": "schemas/fleet-profile.schema.json",
+      "sha256": "7f05d2e8c890ba40df0a82dd4f476a19c47c7a5bc0d6f0bd98100ef73d10fafb"
+    },
+    {
+      "path": "schemas/fleet-region.schema.json",
+      "sha256": "8c6701473387dd9a03f39585441ce43421e1d45c14291e6895761b96f6c59f51"
+    },
+    {
+      "path": "schemas/forecast-index.schema.json",
+      "sha256": "12ba12582fd6798fd7fe5992886b997608d28993b45620a8ee580619581d0ff4"
+    },
+    {
+      "path": "schemas/forecast-manifest.schema.json",
+      "sha256": "822717e401e399848b70bb8afa431e1886c2085535e75f705951a9b3a7c9b2a4"
+    },
+    {
+      "path": "schemas/forecast-tile.schema.json",
+      "sha256": "86682354a20b8f56b1eeba355c8fc0fb8accedb3430b25231abe5afd35500177"
+    },
+    {
+      "path": "schemas/intelligence-feed.schema.json",
+      "sha256": "2dfea0315f5e8ea8bda804e0ac715e7dd34765b9e6aaf16883524fa5d85e2f08"
+    },
+    {
+      "path": "schemas/jurisdiction.schema.json",
+      "sha256": "790a8b2b366d276d38eb983302d3825b85af147a8eda1fd2eda0aa87b9eb987c"
+    },
+    {
+      "path": "schemas/launch-points.schema.json",
+      "sha256": "189da7ce3e8505e952a8b918164388d6d3c04755b6ac8f63504a4f31c8f43fbe"
+    },
+    {
+      "path": "schemas/live-feed.schema.json",
+      "sha256": "85aebc70bc03068b1313823bf07edb468c1d05f11520aa83a640788db9f94a5c"
+    },
+    {
+      "path": "schemas/private-mapping-input-v2.schema.json",
+      "sha256": "8f0a584ba1ecc4c1490b199bdcfe2affb86f60db5fe147548669445ebddc5fd3"
+    },
+    {
+      "path": "schemas/published-regions.schema.json",
+      "sha256": "a0b7a6d482a460c593cb48291dcb49b56bdf59358e43e361b97c1c60d35f2600"
+    },
+    {
+      "path": "schemas/region-manifest.schema.json",
+      "sha256": "24342b543d289679172d6e8ebcafd8b3165fda251067475f82b1b37ac22768c6"
+    },
+    {
+      "path": "schemas/region.schema.json",
+      "sha256": "75e594d74ab8a3338420fda34d2b509407137bed34599a2202f48422bf7390fc"
+    },
+    {
+      "path": "schemas/regions-index.schema.json",
+      "sha256": "a539ea0cceff7927471c649b5895a4f06f2325819d8936c0fa7d87778fe78e08"
+    },
+    {
+      "path": "schemas/render-handoff-v2.1.schema.json",
+      "sha256": "2ede561460cc8c2870d77b2b111bb61de76ac6ce74642c00890ef9b41a4af4a1"
+    },
+    {
+      "path": "schemas/shore-habitat.schema.json",
+      "sha256": "8052e171505636a4472549811df18368bba9569efc51418f6073a0517e782fa2"
+    },
+    {
+      "path": "schemas/source.schema.json",
+      "sha256": "b2c1301d87fddb2be8cfca10795742bcf02a74a9b36913153ee23bce9052f6b6"
+    },
+    {
+      "path": "schemas/sources-catalog.schema.json",
+      "sha256": "2b1b071a6058637c1d70d21627d101459cd1261e5e5c41be31cc0660680356fd"
+    },
+    {
+      "path": "schemas/vertical-v1.schema.json",
+      "sha256": "17047a1ddf732326e90d08e262811428154a6800e76a5aa7878acb672002e1ac"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-admission-v1.schema.json",
+      "sha256": "07b5cb3bd06ae0d363f21b145132a5b1a37a79b85190bcfd8eeba8beb7267c84"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-archive-manifest-v1.schema.json",
+      "sha256": "a524310f13eb1bac8c215d150208834692b110a48a56475d2efcaf52ef83cff4"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-campaign-v1.schema.json",
+      "sha256": "3485b5334c7f2749095a685f448e87e717496dd3e9f709b0096c3f25cb240820"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-discovery-evidence-v1.schema.json",
+      "sha256": "bc3f0d9933f715b2686774a2c4e835bc0f6857d0379adf0d739530027e72c1a2"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-enqueue-intent-v1.schema.json",
+      "sha256": "5cd6dcce68ad24af61dff99e83b96dc7666e6ebe50e8a79656816917b5292423"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-enqueue-receipt-v1.schema.json",
+      "sha256": "27318f2a24e6599b71802e5b9c6eb6969b8d35f5c8bcb58e9b62c3141d32d0c2"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-enqueue-receipt-v2.schema.json",
+      "sha256": "9ec963f8c78042a99e2a83751d7113c114512d76b4d0b900c688eee5c91928d6"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-native-execution-v1.schema.json",
+      "sha256": "18a96ab503219fdb8ad1fd82c3f75434f6a525c2ec9840f08c02e10d74109c1d"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-native-rights-evidence-v1.schema.json",
+      "sha256": "5c0c2140144c7b76363eeb11dba50d411811542128c5d13e13322f38ed5300a2"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-open-report-v1.schema.json",
+      "sha256": "32d7b4372c8a9a60c2dd5e8b186db90fd29c66c65b35e51b0c8fd2de3df4d08f"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-release-list-v1.schema.json",
+      "sha256": "08583f88dc4812500435bfbc97b24366289221531ac1985fd2ab22c156e94806"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-review-context-v1.schema.json",
+      "sha256": "ee045d61e73d987a2b636a4f326b3f2fc1890473d292c1cfd8be4dc3e7dca5e8"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-review-packet-v1.schema.json",
+      "sha256": "29bc5c283cd4816c81977a98cb2d2c5144a679e432eaf15b55aea6fe19436946"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-review-routing-v1.schema.json",
+      "sha256": "6012a1b36a7fa0db8520ac16f457e4b5d6f55e86fefb3c3801ecd9c860fed544"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-review-verdict-v1.schema.json",
+      "sha256": "9584d01ed06f596885371d5753e3a07e4b948376a72bcc4e81d514df689882fb"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-run-summary-v1.schema.json",
+      "sha256": "7f32e4cfb7491d6e12241e219ae02102f2067d04a4f9effd790b77c2e8959ae0"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-run-summary-v2.schema.json",
+      "sha256": "a6e9df20001a7ee3404323118cd4e439daa39a58c2aaff6b4fc7a0cab13dde59"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-segment-ledger-v1.schema.json",
+      "sha256": "73a8bd798eec7f791f4bd9dfe48e0c2006c0a175c0ec83f96864ba03c7ee472a"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-segment-receipt-v1.schema.json",
+      "sha256": "73dc8b02224d7c8e958bd9a9534f06cc66a7c2fea64cd562313520f784506550"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-tier1-screen-v1.schema.json",
+      "sha256": "ac4ecd259bc17f30bec4da8ca32fcdd7dc236922dd4c850b5d754d8063fc79c7"
+    },
+    {
+      "path": "skills/coast-campaign-shared/schemas/coast-tier2-check-v1.schema.json",
+      "sha256": "dba307f6402d192847baa241d3a788752b7cf174da4ffd9d32e05a200067c6f1"
+    }
+  ],
+  "schema": "sc-schema-closure-input-v1"
+}

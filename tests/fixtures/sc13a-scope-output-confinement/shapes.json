@@ -1,0 +1,5 @@
+{
+  "provenance": "Synthetic direct-resolver subset of catalog/seafloor-scope.json and tests/gis/test_seafloor_scope_paths.py:fixture_root at 33734f90073a2150eac5a418564ea314c4a591ac. No source ingestion or grid build.",
+  "central": {"schema_version": 1, "id": "central-coast", "bounds": [0, 0, 1, 1], "priority_anchor": [0.5, 0.5], "regions": [{"id": "demo-region", "start_anchor": [0.1, 0.1]}]},
+  "noncentral": {"schema_version": 1, "id": "offline-demo", "bounds": [0, 0, 1, 1], "priority_anchor": [0.5, 0.5], "regions": [{"id": "demo-region", "start_anchor": [0.1, 0.1]}]}
+}
