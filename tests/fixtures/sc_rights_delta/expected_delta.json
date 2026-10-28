@@ -1,0 +1,187 @@
+{
+  "binding_mismatches": [],
+  "changed": true,
+  "changes": [
+    {
+      "after": "2026-09-15",
+      "after_present": true,
+      "before": "2026-03-01",
+      "before_present": true,
+      "pointer": "/reviewed_on",
+      "source_id": "synthetic-csumb-a"
+    },
+    {
+      "after": "Synthetic NOAA  survey fixture",
+      "after_present": true,
+      "before": "Synthetic NOAA survey fixture",
+      "before_present": true,
+      "pointer": "/attribution",
+      "source_id": "synthetic-usgov-a"
+    },
+    {
+      "after": "",
+      "after_present": true,
+      "before": "https://example.invalid/synthetic/usgov-a-terms",
+      "before_present": true,
+      "pointer": "/policy_url",
+      "source_id": "synthetic-usgov-a"
+    },
+    {
+      "after": null,
+      "after_present": false,
+      "before": "Original USGS / NOAA survey",
+      "before_present": true,
+      "pointer": "/attribution",
+      "source_id": "synthetic-usgov-b"
+    },
+    {
+      "after": null,
+      "after_present": false,
+      "before": "public-domain-us-gov",
+      "before_present": true,
+      "pointer": "/license",
+      "source_id": "synthetic-usgov-b"
+    },
+    {
+      "after": null,
+      "after_present": false,
+      "before": "Original US government data; retain source attribution and survey limitations.",
+      "before_present": true,
+      "pointer": "/notice",
+      "source_id": "synthetic-usgov-b"
+    },
+    {
+      "after": null,
+      "after_present": false,
+      "before": "",
+      "before_present": true,
+      "pointer": "/policy_url",
+      "source_id": "synthetic-usgov-b"
+    },
+    {
+      "after": null,
+      "after_present": false,
+      "before": "https://example.invalid/synthetic/usgov-b.tif",
+      "before_present": true,
+      "pointer": "/source_url",
+      "source_id": "synthetic-usgov-b"
+    },
+    {
+      "after": "Synthetic USGS survey fixture <b>bold</b>",
+      "after_present": true,
+      "before": null,
+      "before_present": false,
+      "pointer": "/attribution",
+      "source_id": "synthetic-usgov-c"
+    },
+    {
+      "after": "public-domain-us-gov",
+      "after_present": true,
+      "before": null,
+      "before_present": false,
+      "pointer": "/license",
+      "source_id": "synthetic-usgov-c"
+    },
+    {
+      "after": "Original US government data; retain source attribution and survey limitations.",
+      "after_present": true,
+      "before": null,
+      "before_present": false,
+      "pointer": "/notice",
+      "source_id": "synthetic-usgov-c"
+    },
+    {
+      "after": "",
+      "after_present": true,
+      "before": null,
+      "before_present": false,
+      "pointer": "/policy_url",
+      "source_id": "synthetic-usgov-c"
+    },
+    {
+      "after": "https://example.invalid/synthetic/usgov-c.tif",
+      "after_present": true,
+      "before": null,
+      "before_present": false,
+      "pointer": "/source_url",
+      "source_id": "synthetic-usgov-c"
+    }
+  ],
+  "comparable": true,
+  "coverage_claim": "observed-rows-only",
+  "input_pins": {
+    "left": {
+      "canonical_rows_sha256": "ffcb1555154f07b2e74d70468c700500b1873785eabd93532b810e198cf5c50d",
+      "file_bytes": 1865,
+      "file_sha256": "40bc107313806461f81119f56f5b5249d3e8d3a7e113bed576039b342a2df010",
+      "producer": {
+        "code_commit": "59fca09b2cc7f5c81a4796902504e263d7f06960",
+        "function": "source_rights",
+        "module_path": "src/skippercast/seafloor/rights.py",
+        "module_sha256": "7411657fefaea64f73bbd566ba1d37eb0f4d787b83a2afcec117d882e579ee0d"
+      },
+      "row_count": 3,
+      "schema": "sc-rights-observation-v1",
+      "source_use": "noncommercial"
+    },
+    "right": {
+      "canonical_rows_sha256": "ae7e52459d0d5be1417f559ff297918eb98ed4f433f2d3aa0e815d40bfbd2917",
+      "file_bytes": 1833,
+      "file_sha256": "277f59ac422bbfdb51895e72dd285a11b8073057435b926da41ff57f1afb9db3",
+      "producer": {
+        "code_commit": "59fca09b2cc7f5c81a4796902504e263d7f06960",
+        "function": "source_rights",
+        "module_path": "src/skippercast/seafloor/rights.py",
+        "module_sha256": "7411657fefaea64f73bbd566ba1d37eb0f4d787b83a2afcec117d882e579ee0d"
+      },
+      "row_count": 3,
+      "schema": "sc-rights-observation-v1",
+      "source_use": "noncommercial"
+    }
+  },
+  "notes": [],
+  "permission_effect": "none",
+  "publication_allowed": false,
+  "review_flags": [
+    {
+      "code": "SOURCE_REMOVED_NOT_A_GRANT",
+      "pointer": "",
+      "source_id": "synthetic-usgov-b"
+    },
+    {
+      "code": "TERM_FIELD_REMOVED_NOT_A_GRANT",
+      "pointer": "/attribution",
+      "source_id": "synthetic-usgov-b"
+    },
+    {
+      "code": "TERM_FIELD_REMOVED_NOT_A_GRANT",
+      "pointer": "/license",
+      "source_id": "synthetic-usgov-b"
+    },
+    {
+      "code": "TERM_FIELD_REMOVED_NOT_A_GRANT",
+      "pointer": "/notice",
+      "source_id": "synthetic-usgov-b"
+    },
+    {
+      "code": "TERM_FIELD_REMOVED_NOT_A_GRANT",
+      "pointer": "/policy_url",
+      "source_id": "synthetic-usgov-b"
+    }
+  ],
+  "row_counts": {
+    "left": 3,
+    "right": 3
+  },
+  "row_order_changed": false,
+  "schema": "sc-rights-delta-v1",
+  "semantic_approval": false,
+  "sources_added": [
+    "synthetic-usgov-c"
+  ],
+  "sources_removed": [
+    "synthetic-usgov-b"
+  ],
+  "status": "COMPARED",
+  "unverified_reasons": []
+}
