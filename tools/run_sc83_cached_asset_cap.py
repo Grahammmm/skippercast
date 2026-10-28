@@ -359,6 +359,7 @@ def main():
     os.environ["SKIPPERCAST_ROOT"] = str(synthetic_repo)
     preloaded = sorted(name for name in sys.modules if name == "skippercast" or name.startswith("skippercast."))
     sys.path.insert(0, str(repo / "src"))
+    sys.path.insert(0, str(repo))  # the test imports FIXTURES from tests._support
     sys.path.insert(0, str(repo / "tests" / "unit"))
     import test_sc83_cached_asset_cap as module
     from skippercast import paths

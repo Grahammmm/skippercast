@@ -1,0 +1,20 @@
+{
+  "source_id": "landing-pages",
+  "name": "Partial Listing Example",
+  "port_hint": "morro-bay",
+  "landing_hint": null,
+  "keys": {"uscg_doc": "1000099"},
+  "facts": [{
+    "field": "name",
+    "value": "Partial Listing Example",
+    "source_id": "landing-pages",
+    "source_url": "https://fleet.example.com/synthetic/partial-listing",
+    "method": "page",
+    "confidence": 0.9,
+    "rights": "facts-only",
+    "retrieved_at": "2026-10-05T09:47:00Z"
+  }],
+  "record_id": "https://fleet.example.com/synthetic/partial-listing",
+  "offerings": [],
+  "departures": []
+}
