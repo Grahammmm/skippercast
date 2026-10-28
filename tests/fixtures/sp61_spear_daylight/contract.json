@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "contract": "SP61-SPEAR-DAYLIGHT version 1",
+  "baseline_head": "f8bc7d365c0c5aa4a2e59ba576a95146c92a0367",
+  "A1": "Known ordered daylight with night-only hours: null best, surge and basis; Unknown clarity with missing daylight samples; preserve all hours and inputs.",
+  "A2": "Sunrise inclusion and exact sunset end qualify; crossing sunset does not. Only daylight contributes best, surge and clarity; empty stays empty.",
+  "A3": "Null or unparsable sun clocks retain all-hour fallback. Preserve ordering, early ties and Rough/Unknown exclusions. Actual buildDaily withholds night best and screens hazards.",
+  "A4": "Same primary assertion against the full unchanged baseline fails specifically for non-null best; unknown-daylight positive control passes. Exactly one expected failure, zero skips/setup failures.",
+  "compatibility": ["tests/test_spear.mjs", "tests/test_window_hazards.mjs"],
+  "limits": "Scoped offline checks only; independent review and operator full-suite/PR/CI closure remain required."
+}
