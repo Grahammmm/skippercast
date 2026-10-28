@@ -1,0 +1,616 @@
+{
+  "dialects": [
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/coast-recipe-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/coastal-discovery-lead-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/coastal-terrain-only-input-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/coastal-terrain-only-render-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/coastal-terrain-only-science-review-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/common.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/coverage.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/daily-feed.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/data-needs.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/fleet-profile.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/fleet-region.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/forecast-index.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/forecast-manifest.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/forecast-tile.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/intelligence-feed.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/jurisdiction.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/launch-points.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/live-feed.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/private-mapping-input-v2.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/published-regions.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/region-manifest.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/region.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/regions-index.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/render-handoff-v2.1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/shore-habitat.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/source.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/sources-catalog.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "schemas/vertical-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-admission-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-archive-manifest-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-campaign-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-discovery-evidence-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-enqueue-intent-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-enqueue-receipt-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-enqueue-receipt-v2.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-native-execution-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-native-rights-evidence-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-open-report-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-release-list-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-context-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/oneOf/0/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-context-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/oneOf/1/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-context-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-packet-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/oneOf/0/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-packet-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/oneOf/1/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-packet-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-routing-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-verdict-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/oneOf/0/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-verdict-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/oneOf/1/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-verdict-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-run-summary-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-run-summary-v2.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-segment-ledger-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/oneOf/0/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-segment-ledger-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/oneOf/1/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-segment-ledger-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/oneOf/2/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-segment-ledger-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-segment-receipt-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-tier1-screen-v1.schema.json"
+    },
+    {
+      "dialect": "https://json-schema.org/draft/2020-12/schema",
+      "pointer": "/$schema",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-tier2-check-v1.schema.json"
+    }
+  ],
+  "duplicate_ids": [
+    {
+      "id": "urn:skippercast:coast-review-context-v1",
+      "pointer": "/oneOf/0/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-context-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-review-context-v1",
+      "pointer": "/oneOf/1/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-context-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-review-packet-v1",
+      "pointer": "/oneOf/0/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-packet-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-review-packet-v1",
+      "pointer": "/oneOf/1/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-packet-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-review-verdict-v1",
+      "pointer": "/oneOf/0/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-verdict-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-review-verdict-v1",
+      "pointer": "/oneOf/1/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-verdict-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-segment-ledger-v1",
+      "pointer": "/oneOf/0/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-segment-ledger-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-segment-ledger-v1",
+      "pointer": "/oneOf/1/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-segment-ledger-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-segment-ledger-v1",
+      "pointer": "/oneOf/2/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-segment-ledger-v1.schema.json"
+    }
+  ],
+  "ids": [
+    {
+      "id": "https://skippercast.com/schemas/coast-recipe-v1.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/coast-recipe-v1.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/coastal-discovery-lead-v1.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/coastal-discovery-lead-v1.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/coastal-terrain-only-input-v1.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/coastal-terrain-only-input-v1.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/coastal-terrain-only-render-v1.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/coastal-terrain-only-render-v1.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/coastal-terrain-only-science-review-v1.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/coastal-terrain-only-science-review-v1.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/common.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/common.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/coverage.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/coverage.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/daily-feed.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/daily-feed.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/data-needs.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/data-needs.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/fleet-profile.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/fleet-profile.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/fleet-region.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/fleet-region.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/forecast-index.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/forecast-index.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/forecast-manifest.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/forecast-manifest.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/forecast-tile.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/forecast-tile.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/intelligence-feed.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/intelligence-feed.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/jurisdiction.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/jurisdiction.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/launch-points.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/launch-points.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/live-feed.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/live-feed.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/private-mapping-input-v2.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/private-mapping-input-v2.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/published-regions.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/published-regions.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/region-manifest.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/region-manifest.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/region.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/region.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/regions-index.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/regions-index.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/render-handoff-v2.1.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/render-handoff-v2.1.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/shore-habitat.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/shore-habitat.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/source.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/source.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/sources-catalog.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/sources-catalog.schema.json"
+    },
+    {
+      "id": "https://skippercast.com/schemas/vertical-v1.schema.json",
+      "pointer": "/$id",
+      "source_path": "schemas/vertical-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-admission-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-admission-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-archive-manifest-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-archive-manifest-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-campaign-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-campaign-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-discovery-evidence-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-discovery-evidence-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-enqueue-intent-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-enqueue-intent-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-enqueue-receipt-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-enqueue-receipt-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-enqueue-receipt-v2",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-enqueue-receipt-v2.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-native-execution-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-native-execution-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-native-rights-evidence-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-native-rights-evidence-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-open-report-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-open-report-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-release-list-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-release-list-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-review-context-v1",
+      "pointer": "/oneOf/0/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-context-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-review-context-v1",
+      "pointer": "/oneOf/1/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-context-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-review-packet-v1",
+      "pointer": "/oneOf/0/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-packet-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-review-packet-v1",
+      "pointer": "/oneOf/1/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-packet-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-review-routing-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-routing-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-review-verdict-v1",
+      "pointer": "/oneOf/0/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-verdict-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-review-verdict-v1",
+      "pointer": "/oneOf/1/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-review-verdict-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-run-summary-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-run-summary-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-run-summary-v2",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-run-summary-v2.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-segment-ledger-v1",
+      "pointer": "/oneOf/0/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-segment-ledger-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-segment-ledger-v1",
+      "pointer": "/oneOf/1/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-segment-ledger-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-segment-ledger-v1",
+      "pointer": "/oneOf/2/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-segment-ledger-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-segment-receipt-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-segment-receipt-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-tier1-screen-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-tier1-screen-v1.schema.json"
+    },
+    {
+      "id": "urn:skippercast:coast-tier2-check-v1",
+      "pointer": "/$id",
+      "source_path": "skills/coast-campaign-shared/schemas/coast-tier2-check-v1.schema.json"
+    }
+  ],
+  "manifest_sha256": "c5f411924d9ca0c3ce4bed0206cd708c97078d3b664f6539b316e1ca5a617413",
+  "oracle": "referencing.jsonschema.DRAFT202012 id_of + subresources_of; exact-string duplicate ids",
+  "schema": "sc-schema-closure-oracle-ids-v1"
+}
