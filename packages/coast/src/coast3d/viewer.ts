@@ -1,3 +1,5 @@
+// Explicit opt-in local MVP viewer; existing production CoastViewer is unchanged.
+export {CoastMvpViewer} from './mvp.ts';
 import {coastFetch} from '../transport.ts';
 import * as T from 'three';
 import {habitatDisplay,habitatTriangles} from './habitat-display.ts';
