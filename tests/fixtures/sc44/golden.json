@@ -1,0 +1,541 @@
+{
+  "baseline_commit": "2e02ded466eeb1febe6e0647a8f09c955d691462",
+  "baseline_source_sha256": "ee0ca0fad104bc3cdf2a871ab8092f902cf3b11dbd8abcc50a11bd971d731c8e",
+  "catalog": {
+    "bbox": [
+      -120.65,
+      34.44,
+      -120.46,
+      34.56
+    ],
+    "bounded_plan_finished": false,
+    "candidates": [
+      {
+        "access_url": "https://example.test/a.tif",
+        "alternate_of": null,
+        "catalog_id": "synthetic",
+        "expires_at": "2026-10-27T00:00:00Z",
+        "extent": {
+          "actual_data_support": null,
+          "actual_support_status": "unverified",
+          "bbox": [
+            -120.6,
+            34.45,
+            -120.5,
+            34.55
+          ],
+          "bbox_crs": "OGC:CRS84",
+          "catalog_geometry": {
+            "coordinates": [
+              [
+                [
+                  -120.6,
+                  34.45
+                ],
+                [
+                  -120.5,
+                  34.45
+                ],
+                [
+                  -120.5,
+                  34.55
+                ],
+                [
+                  -120.6,
+                  34.45
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "overlap_test": "bbox_only"
+        },
+        "field_evidence": {
+          "crs": {
+            "path": [
+              "properties",
+              "crs"
+            ]
+          }
+        },
+        "habitat": {
+          "accepted": false,
+          "blockers": [
+            "native review required"
+          ],
+          "status": "unassessed"
+        },
+        "metadata": {
+          "acquisition_date": null,
+          "crs": "EPSG:4326",
+          "format": "GeoTIFF",
+          "limitations": [
+            "no scientific acceptance"
+          ],
+          "processing_requirements": [
+            "review"
+          ],
+          "quality": {
+            "notes": [
+              "synthetic only"
+            ]
+          },
+          "resolution": {
+            "units": "m",
+            "value": [
+              2,
+              2
+            ]
+          },
+          "rights": "synthetic fixture",
+          "size_bytes": 128,
+          "source_date": null,
+          "source_hash": null,
+          "task_fit": null,
+          "vertical_datum": "MLLW",
+          "vertical_sign": "up",
+          "z_units": "m"
+        },
+        "next_action": "inspect one bounded native terrain window and unresolved metadata",
+        "provenance": {
+          "catalog_url": "https://example.test/catalog",
+          "checked_at": "2026-10-20T00:00:00Z",
+          "request_id": 1,
+          "response_body_path": "synthetic/body.json",
+          "response_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "publisher_id": "a",
+        "rejection_reasons": [],
+        "render": {
+          "accepted": false,
+          "blockers": [
+            "review required"
+          ],
+          "status": "blocked"
+        },
+        "source_id": "synthetic:a",
+        "terrain": {
+          "accepted": false,
+          "blockers": [],
+          "status": "candidate_for_qualification"
+        },
+        "title": "Synthetic a",
+        "unknowns": [
+          "source_hash"
+        ]
+      },
+      {
+        "access_url": "https://example.test/z.tif",
+        "alternate_of": null,
+        "catalog_id": "synthetic",
+        "expires_at": "2026-10-27T00:00:00Z",
+        "extent": {
+          "actual_data_support": null,
+          "actual_support_status": "unverified",
+          "bbox": [
+            -120.6,
+            34.45,
+            -120.5,
+            34.55
+          ],
+          "bbox_crs": "OGC:CRS84",
+          "catalog_geometry": {
+            "coordinates": [
+              [
+                [
+                  -120.6,
+                  34.45
+                ],
+                [
+                  -120.5,
+                  34.45
+                ],
+                [
+                  -120.5,
+                  34.55
+                ],
+                [
+                  -120.6,
+                  34.45
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "overlap_test": "bbox_only"
+        },
+        "field_evidence": {
+          "crs": {
+            "path": [
+              "properties",
+              "crs"
+            ]
+          }
+        },
+        "habitat": {
+          "accepted": false,
+          "blockers": [
+            "native review required"
+          ],
+          "status": "unassessed"
+        },
+        "metadata": {
+          "acquisition_date": null,
+          "crs": "EPSG:4326",
+          "format": "GeoTIFF",
+          "limitations": [
+            "no scientific acceptance"
+          ],
+          "processing_requirements": [
+            "review"
+          ],
+          "quality": {
+            "notes": [
+              "synthetic only"
+            ]
+          },
+          "resolution": {
+            "units": "m",
+            "value": [
+              2,
+              2
+            ]
+          },
+          "rights": "synthetic fixture",
+          "size_bytes": 128,
+          "source_date": null,
+          "source_hash": null,
+          "task_fit": null,
+          "vertical_datum": "MLLW",
+          "vertical_sign": "up",
+          "z_units": "m"
+        },
+        "next_action": "inspect one bounded native terrain window and unresolved metadata",
+        "provenance": {
+          "catalog_url": "https://example.test/catalog",
+          "checked_at": "2026-10-20T00:00:00Z",
+          "request_id": 1,
+          "response_body_path": "synthetic/body.json",
+          "response_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "publisher_id": "z",
+        "rejection_reasons": [],
+        "render": {
+          "accepted": false,
+          "blockers": [
+            "review required"
+          ],
+          "status": "blocked"
+        },
+        "source_id": "synthetic:z",
+        "terrain": {
+          "accepted": false,
+          "blockers": [],
+          "status": "candidate_for_qualification"
+        },
+        "title": "Synthetic z",
+        "unknowns": [
+          "source_hash"
+        ]
+      }
+    ],
+    "catalog_id": "d09e2ee3402d64cbb409e05e8f8c6a4008c4cac6938e93ee15dff52ca33b60fe",
+    "checked_from": "2026-10-20T00:00:00Z",
+    "checked_until": "2026-10-20T00:00:00Z",
+    "coordinator_boundary": "Metadata catalog only. The coordinator discover stage reads an explicit coastal-local-discovery-plan-v1; this catalog does not enqueue work.",
+    "discovery_complete": false,
+    "execution_authorized": false,
+    "lead_source_ids": [
+      "synthetic:a",
+      "synthetic:z"
+    ],
+    "manifest_sha256": "c5cbfc3950bfd133d10b9345adb9a383ebd72eff950d16b19596ed9938f2c9c3",
+    "manifest_status": "PARTIAL",
+    "mapping_accepted": false,
+    "method_revision": "synthetic-method-1",
+    "plan_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "policy_revision": "synthetic-policy-1",
+    "region": "synthetic-region",
+    "review_required": true,
+    "schema": "coastal-frozen-discovery-catalog-v1",
+    "source_revision": "synthetic-source-1",
+    "unattempted_queries": [
+      "synthetic|https://example.test/next"
+    ],
+    "usable_source_ids": [
+      "synthetic:a"
+    ]
+  },
+  "manifest": {
+    "bbox": [
+      -120.65,
+      34.44,
+      -120.46,
+      34.56
+    ],
+    "bounded_plan_finished": false,
+    "candidates": [
+      {
+        "access_url": "https://example.test/a.tif",
+        "alternate_of": null,
+        "cache": {
+          "path": null,
+          "sha256": null,
+          "status": "not_acquired"
+        },
+        "catalog_id": "synthetic",
+        "expires_at": "2026-10-27T00:00:00Z",
+        "extent": {
+          "actual_data_support": null,
+          "actual_support_status": "unverified",
+          "bbox": [
+            -120.6,
+            34.45,
+            -120.5,
+            34.55
+          ],
+          "bbox_crs": "OGC:CRS84",
+          "catalog_geometry": {
+            "coordinates": [
+              [
+                [
+                  -120.6,
+                  34.45
+                ],
+                [
+                  -120.5,
+                  34.45
+                ],
+                [
+                  -120.5,
+                  34.55
+                ],
+                [
+                  -120.6,
+                  34.45
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "overlap_test": "bbox_only"
+        },
+        "field_evidence": {
+          "crs": {
+            "path": [
+              "properties",
+              "crs"
+            ]
+          }
+        },
+        "habitat": {
+          "accepted": false,
+          "blockers": [
+            "native review required"
+          ],
+          "status": "unassessed"
+        },
+        "metadata": {
+          "acquisition_date": null,
+          "crs": "EPSG:4326",
+          "format": "GeoTIFF",
+          "limitations": [
+            "no scientific acceptance"
+          ],
+          "processing_requirements": [
+            "review"
+          ],
+          "quality": {
+            "notes": [
+              "synthetic only"
+            ]
+          },
+          "resolution": {
+            "units": "m",
+            "value": [
+              2,
+              2
+            ]
+          },
+          "rights": "synthetic fixture",
+          "size_bytes": 128,
+          "source_date": null,
+          "source_hash": null,
+          "task_fit": null,
+          "vertical_datum": "MLLW",
+          "vertical_sign": "up",
+          "z_units": "m"
+        },
+        "next_action": "inspect one bounded native terrain window and unresolved metadata",
+        "provenance": {
+          "catalog_url": "https://example.test/catalog",
+          "checked_at": "2026-10-20T00:00:00Z",
+          "request_id": 1,
+          "response_body_path": "synthetic/body.json",
+          "response_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "publisher_id": "a",
+        "rejection_reasons": [],
+        "render": {
+          "accepted": false,
+          "blockers": [
+            "review required"
+          ],
+          "status": "blocked"
+        },
+        "source_id": "synthetic:a",
+        "terrain": {
+          "accepted": false,
+          "blockers": [],
+          "status": "candidate_for_qualification"
+        },
+        "title": "Synthetic a",
+        "unknowns": [
+          "source_hash"
+        ]
+      },
+      {
+        "access_url": "https://example.test/z.tif",
+        "alternate_of": null,
+        "cache": {
+          "path": null,
+          "sha256": null,
+          "status": "not_acquired"
+        },
+        "catalog_id": "synthetic",
+        "expires_at": "2026-10-27T00:00:00Z",
+        "extent": {
+          "actual_data_support": null,
+          "actual_support_status": "unverified",
+          "bbox": [
+            -120.6,
+            34.45,
+            -120.5,
+            34.55
+          ],
+          "bbox_crs": "OGC:CRS84",
+          "catalog_geometry": {
+            "coordinates": [
+              [
+                [
+                  -120.6,
+                  34.45
+                ],
+                [
+                  -120.5,
+                  34.45
+                ],
+                [
+                  -120.5,
+                  34.55
+                ],
+                [
+                  -120.6,
+                  34.45
+                ]
+              ]
+            ],
+            "type": "Polygon"
+          },
+          "overlap_test": "bbox_only"
+        },
+        "field_evidence": {
+          "crs": {
+            "path": [
+              "properties",
+              "crs"
+            ]
+          }
+        },
+        "habitat": {
+          "accepted": false,
+          "blockers": [
+            "native review required"
+          ],
+          "status": "unassessed"
+        },
+        "metadata": {
+          "acquisition_date": null,
+          "crs": "EPSG:4326",
+          "format": "GeoTIFF",
+          "limitations": [
+            "no scientific acceptance"
+          ],
+          "processing_requirements": [
+            "review"
+          ],
+          "quality": {
+            "notes": [
+              "synthetic only"
+            ]
+          },
+          "resolution": {
+            "units": "m",
+            "value": [
+              2,
+              2
+            ]
+          },
+          "rights": "synthetic fixture",
+          "size_bytes": 128,
+          "source_date": null,
+          "source_hash": null,
+          "task_fit": null,
+          "vertical_datum": "MLLW",
+          "vertical_sign": "up",
+          "z_units": "m"
+        },
+        "next_action": "inspect one bounded native terrain window and unresolved metadata",
+        "provenance": {
+          "catalog_url": "https://example.test/catalog",
+          "checked_at": "2026-10-20T00:00:00Z",
+          "request_id": 1,
+          "response_body_path": "synthetic/body.json",
+          "response_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "publisher_id": "z",
+        "rejection_reasons": [],
+        "render": {
+          "accepted": false,
+          "blockers": [
+            "review required"
+          ],
+          "status": "blocked"
+        },
+        "source_id": "synthetic:z",
+        "terrain": {
+          "accepted": false,
+          "blockers": [],
+          "status": "candidate_for_qualification"
+        },
+        "title": "Synthetic z",
+        "unknowns": [
+          "source_hash"
+        ]
+      }
+    ],
+    "discovery_complete": false,
+    "lead_source_ids": [
+      "synthetic:a",
+      "synthetic:z"
+    ],
+    "manifest_status": "PARTIAL",
+    "method_revision": "synthetic-method-1",
+    "not_retained": {
+      "ignored": []
+    },
+    "plan_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "policy_revision": "synthetic-policy-1",
+    "region": "synthetic-region",
+    "schema": "coastal-source-v1",
+    "source_revision": "synthetic-source-1",
+    "start_utc": "2026-10-20T00:00:00Z",
+    "stopped_at": "2026-10-20T00:00:00Z",
+    "unattempted_queries": [
+      "synthetic|https://example.test/next"
+    ],
+    "usable_source_ids": [
+      "synthetic:a"
+    ]
+  }
+}
