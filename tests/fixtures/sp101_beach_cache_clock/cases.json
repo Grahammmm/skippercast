@@ -1,0 +1,12 @@
+{
+  "invalid_timestamps": [null, 7, false, [], {}, "", "not-a-date", "2026-10-08", "2026-10-08 15:00:00", "2026-10-08T14:59:00"],
+  "malformed_sources": [null, [], {}, "bad", [null], [7], ["bad"], [{}], {"0": {"outcome": "ok", "fetchedAt": "2026-10-08T15:00:00Z"}}],
+  "window": [
+    ["zero-z", "2026-10-08T15:00:00Z", false],
+    ["equivalent-offset", "2026-10-08T08:00:00-07:00", false],
+    ["just-below-interval", "2026-10-08T14:05:00.000001Z", false],
+    ["exact-interval", "2026-10-08T14:05:00Z", true],
+    ["older", "2026-10-08T14:04:59Z", true],
+    ["future", "2026-10-08T15:00:00.000001Z", true]
+  ]
+}

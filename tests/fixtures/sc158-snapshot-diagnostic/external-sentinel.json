@@ -1,0 +1,1 @@
+{"fixture": "sc158-external-sentinel", "note": "bytes outside the selected snapshot location; the held diagnostic must never read or label them"}

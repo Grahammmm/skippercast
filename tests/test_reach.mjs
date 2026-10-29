@@ -170,7 +170,8 @@ test('"Where to look" asks for a range or shows it for Boat and Kayak, and a Boa
   html = render(h(WhereToLook, {ranking: r}));
   assert.match(html, />Set range</, 'kayak has its own range');
   assert.doesNotMatch(html, /run ≥/, 'run times are the Boat brief\'s');
-  for (const p of ['shore', 'spear']) { profile.value = p; assert.doesNotMatch(render(h(WhereToLook, {ranking: r})), /app-where-range/); }
+  profile.value = 'shore'; assert.doesNotMatch(render(h(WhereToLook, {ranking: r})), /app-where-range/);
+  profile.value = 'spear'; assert.doesNotMatch(render(h(WhereToLook, {ranking: r})), /data-reach|Set range/, 'Spear shows its dive limits instead (tests/test_spear_kayak.mjs)');
   profile.value = 'boat';
   const {harbor: _, ...unmeasured} = r;
   assert.doesNotMatch(render(h(WhereToLook, {ranking: unmeasured})), /app-where-range/, 'no harbor to measure from: no range shown, none applied');

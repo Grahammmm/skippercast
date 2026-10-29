@@ -161,6 +161,8 @@ def due(path, now, minutes=POLL_MINUTES):
     try:
         source = json.loads(Path(path).read_text())["sources"][0]
         fetched = datetime.fromisoformat(source["fetchedAt"].replace("Z", "+00:00"))
+        if fetched.tzinfo is None or fetched.utcoffset() is None:
+            return True
     except (OSError, ValueError, KeyError, IndexError, TypeError, AttributeError):
         return True
     return source.get("outcome") != "ok" or not 0 <= (now - fetched).total_seconds() < minutes * 60
