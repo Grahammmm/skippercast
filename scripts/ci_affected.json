@@ -13,7 +13,8 @@
     },
     {
       "patterns": [
-        "tests/unit/*"
+        "tests/unit/*",
+        "tests/contract/*"
       ],
       "areas": [
         "core",
@@ -22,7 +23,6 @@
     },
     {
       "patterns": [
-        "tests/contract/*",
         "tests/integration/*"
       ],
       "areas": [
@@ -74,6 +74,7 @@
     }
   ],
   "fixtures": [
+    {"name": "seafloor rights contract has GIS consumers", "paths": ["tests/contract/test_seafloor_source_rights.py"], "areas": ["core", "survey"]},
     {"name": "coast contracts have Python consumers", "paths": ["packages/coast/src/types.ts"], "areas": ["core", "web"]},
     {"name": "package version has Python consumers", "paths": ["package.json"], "areas": ["core", "web"]},
     {"name": "fleet journal has Python consumers", "paths": ["drizzle/meta/_journal.json"], "areas": ["core", "web"]},
