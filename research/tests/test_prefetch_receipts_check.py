@@ -320,7 +320,8 @@ def test_nested_manifests_and_duplicate_inventory_association(evidence):
     write_json(evidence / 'inventory.json', plan)
     put_receipts(evidence)
     (evidence / 'receipts' / 'noaa-nos').mkdir()
-    (evidence / 'receipts' / 'noaa-nos' / 'manifest.jsonl').write_text(json.dumps(receipt()) + '\n')
+    (evidence / 'receipts' / 'noaa-nos' / 'manifest.jsonl').write_text(
+        json.dumps({**receipt(), 'segments': ['C1', 'C2']}) + '\n')
     result = c.check(evidence)
     assert_supported_pass(result)
     assert result == c.check(evidence)
