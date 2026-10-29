@@ -6,6 +6,6 @@ jsonschema==4.26.0
 # Test runner (docs/engineering/testing.md). Tests stay unittest.TestCase classes.
 pytest==9.1.1
 # In-memory S3 for the R2 publisher sync test (tests/integration/test_publish_r2.py).
-moto==5.2.3
+moto==5.2.4
 # Zstandard files for the MarineCadastre backfill tests (tests/unit/test_fleet_backfill.py).
 zstandard==0.25.0
