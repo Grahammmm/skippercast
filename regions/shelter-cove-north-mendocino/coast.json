@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "slug": "shelter-cove-north-mendocino",
+  "bbox": [
+    -124.8,
+    39.45,
+    -123.6,
+    40.166666666666664
+  ],
+  "depth_target_ft": 200,
+  "sources": [
+    "noaa-bag"
+  ],
+  "source_review_status": {
+    "noaa-bag": "candidate"
+  },
+  "datum_policy": {
+    "mode": "preserve-source-datum",
+    "vertical_datum_by_source": {
+      "noaa-bag": "unknown"
+    }
+  },
+  "output_root": "runs/coast-recipes/shelter-cove-north-mendocino",
+  "cache_budget_bytes": 25000000000,
+  "not_for_navigation": true
+}

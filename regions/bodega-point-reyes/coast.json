@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "slug": "bodega-point-reyes",
+  "bbox": [
+    -123.7,
+    37.95,
+    -122.7,
+    38.5
+  ],
+  "depth_target_ft": 200,
+  "sources": [
+    "noaa-bag"
+  ],
+  "source_review_status": {
+    "noaa-bag": "candidate"
+  },
+  "datum_policy": {
+    "mode": "preserve-source-datum",
+    "vertical_datum_by_source": {
+      "noaa-bag": "unknown"
+    }
+  },
+  "output_root": "runs/coast-recipes/bodega-point-reyes",
+  "cache_budget_bytes": 25000000000,
+  "not_for_navigation": true
+}

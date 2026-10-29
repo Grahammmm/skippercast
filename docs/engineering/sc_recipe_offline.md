@@ -71,7 +71,8 @@ The committed v1 schema bytes, its constraints, the optional dependency policy
 and `validate.check` (not used here) are unchanged.
 
 The recipe-delta acceptance test and runner pin the hardened `validate_recipe.py`
-bytes (`31b62ce0d0ac4926a9d47ab820eb6699c45a2572335ec2759b0247baf837901a`)
+<!-- pin refreshed for OC-STATE slug admission -->
+bytes (`50d8f1e36e5edf9974d121d29349bd821c8bf08e2d3eaf20526b2bc7162b736f`)
 in place of their original producer pin. This is an intentional producer revision,
 not a change to the frozen recipe/schema fixtures or their pins. The delta
 behavior and producer-contract tests still run against the actual validator.

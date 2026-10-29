@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "slug": "point-arena-bodega",
+  "bbox": [
+    -124.2,
+    38.4,
+    -122.85,
+    39.0
+  ],
+  "depth_target_ft": 200,
+  "sources": [
+    "noaa-bag"
+  ],
+  "source_review_status": {
+    "noaa-bag": "candidate"
+  },
+  "datum_policy": {
+    "mode": "preserve-source-datum",
+    "vertical_datum_by_source": {
+      "noaa-bag": "unknown"
+    }
+  },
+  "output_root": "runs/coast-recipes/point-arena-bodega",
+  "cache_budget_bytes": 25000000000,
+  "not_for_navigation": true
+}
