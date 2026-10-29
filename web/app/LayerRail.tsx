@@ -29,7 +29,7 @@
 // with the target species ("Look for": the command bar's list, the same `?target=`).
 import {GRADE_FILTERS, GRADE_LABELS, GRADE_MEANING, gradeParam, parseGrade} from '../grade.ts';
 import {PROFILE_TABLE} from '../profile.ts';
-import {regionTargets, targetGroups} from '../species.ts';
+import {optionText, regionMenu} from '../species.ts';
 import {Popover} from '../ui/Popover.tsx';
 import {Rail, RailItem} from '../ui/Rail.tsx';
 import {aerialOffer, flownText, type AerialBase} from '../map/aerial.ts';
@@ -210,14 +210,13 @@ function BaseChoice() {
 /** What to look for (#620): the target species at the head of the rail, shown in the phone's sheet only (app.css); on a computer the command bar holds it. */
 export function LookFor() {
   const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget;
-  const list = regionTargets(p, region.value, species.value);
   return (
     <div class="app-rail-look">
       {/* "Look for", not "Target": the command bar's Target select stays the one control by that name. */}
       <label class="app-rail-source app-rail-target">Look for
         <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
-          {targetGroups(list, PROFILE_TABLE[p].label).map(g => (
-            <optgroup key={g.label} label={g.label}>{g.options.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</optgroup>
+          {regionMenu(p, region.value, species.value).map(g => (
+            <optgroup key={g.label} label={g.label}>{g.options.map(t => <option key={t.id} value={t.id} disabled={!!t.unavailable}>{optionText(t)}</option>)}</optgroup>
           ))}
         </select>
       </label>

@@ -81,17 +81,31 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // CI6-09 merge-forward retains the partition selector alongside wind, shelf contours, chlorophyll and Stations.
 // Legend.tsx changes only the selector import/control from main; existing text/muted glass roles and the Reports
 // catch path are unchanged. check_contrast.mjs rebinds only the Legend hash and line citations; contrast() is untouched.
+// CI6-02 (#769, species honesty in the target picker): web/species.ts adds a TargetState per menu option
+// (targetState, regionMenu, optionText) and two region signals (regionUnavailable, regionAtlas) reset by its
+// existing region effect; web/app/App.tsx adds an optional RegionInfo.unavailableTargets that loadRegion fills
+// and publishes; web/app/LayerRail.tsx changes only Look for's option text and disables the region's unavailable
+// targets. Reports reads only regionInfo's id and charters (unchanged) and never imports species.ts, the target
+// menu or the rail; no CSS, class, token or catch markup is touched, and contrast() is untouched. All three rebound.
+// CI6-02 merge-forward onto main: union of the entries above; only the species/App/LayerRail hashes rebound.
+// CI6-02 review fix: species.ts marks the region's unavailable targets on every menu option and LayerRail's Look for
+// disables by that mark. Reports never imports either; no CSS, token or catch markup changes. Both rebound.
 // #1006 (npm-minor-and-patch group): only maplibre-gl 6.14.0->6.15.0,
 // @cloudflare/workers-types 5.20261016.1->5.20261024.1 and vite 8.3.4->8.3.5
 // pins and lockfile resolutions change. BODY09 bundles with esbuild and defers
 // MapLibre; neither Worker types nor Vite participates in its rendered catch
 // path. All CSS/TSX inputs, contrast(), assertions and thresholds are unchanged.
 // Rebind only the two dependency manifests for independent applicability review.
+// #1007: preact 10.29.8->11.0.2 and its peer resolutions change the runtime
+// used by productionBundle(). The accompanying type migrations touch only admin
+// inputs, TripAlerts and Button, not the Reports catch paint chain. All CSS/TSX
+// inputs above, contrast(), assertions and thresholds remain unchanged. Rebind
+// the manifests; the phone/laptop rendered checks exercise the upgraded runtime.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
-  "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
-  "web/app/App.tsx": "d8486f26dafbb97b0499cd7ef536c386c446c1b002c44b219d42151a5ab11446",
+  "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
+  "web/app/App.tsx": "ade4f4b09862475af1c57e554ef2b37833528d339232b22b125d6093bd00367e",
   "web/app/Masthead.tsx": "191309f6c9a54ee6bd24608a1983c6bf07141538267f87bef163f8ad4ccbea00",
-  "web/app/LayerRail.tsx": "18db08dcba921446038b48d24552c0e756cba3fc52ecdbd005013521caf2566c",
+  "web/app/LayerRail.tsx": "248402b3100855ef1561c742ee32c3922d9b6475080cb6420957a553e5872abb",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
@@ -106,8 +120,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
   "scripts/check_contrast.mjs": "1701f0ae0b6283f517c97b5fd5582c25400705b3f0101a0f24e79173a3af0c83",
-  "package.json": "54e88a3740c8235f57a075c4a235b4f98fb9bc82b6b992cdcf970839d4c0c043",
-  "pnpm-lock.yaml": "38c1284d8e42fce772427964dc530c18d9523df20711e553ab5ca5cb62c1d90c",
+  "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
+  "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {

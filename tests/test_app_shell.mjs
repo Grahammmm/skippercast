@@ -47,6 +47,7 @@ async function load() {
       export {rankedSpots} from './web/map/ranked.ts';
       export {landWater} from './web/land-water.ts';
       export {markScreen} from './web/map/marks.ts';
+      export {regionUnavailable} from './web/species.ts';
       export {CHECKING, assessScreen} from './web/map/habitat.ts';
       export {terrainMark, terrainReading} from './web/map/stage.ts';
       export {dayOptions, dockState, hourText, localParts, readout, zoneName} from './web/app/TimeDock.tsx';
@@ -309,13 +310,18 @@ test('the mobile sheet reflects the address: the mark card stands in at peek, th
 });
 
 test('loadRegion fills the masthead from regions/<id>/region.json and leaves placeholders on failure', async () => {
-  const {loadRegion, regionInfo, render, h, App, state} = await load();
+  const {loadRegion, regionInfo, regionUnavailable, render, h, App, state} = await load();
   const fetched = [];
   const area = {id: 'estero-bay', name: 'Estero Bay', bounds: [-121.05, 35.32, -120.78, 35.47]};
   const ok = async url => { fetched.push(url); return {ok: true, json: async () => ({name: 'Morro Bay & Avila', timezone: TZ, map: {center: [35.34, -120.965], local_areas: [area, {id: 7}, null]}})}; };
   // The reviewed local areas come along for the coast report binding (FE-15's currents packet); malformed ones are dropped.
   assert.deepEqual(await loadRegion('morro-bay', ok), {id: 'morro-bay', name: 'Morro Bay & Avila', center: [35.34, -120.965], timezone: TZ, localAreas: [area]});
   assert.deepEqual(fetched, ['regions/morro-bay/region.json']);
+  assert.deepEqual(regionUnavailable.value, {region: 'morro-bay', targets: {}});
+  // CI6-02: the region's unavailable targets reach the target picker; malformed reasons are dropped.
+  const named = async () => ({ok: true, json: async () => ({name: 'Morro Bay & Avila', timezone: TZ, map: {center: [35.34, -120.965], unavailable_targets: {lobster: 'Not in this region\u2019s researched list.', bad: 3}}})});
+  assert.deepEqual((await loadRegion('morro-bay', named)).unavailableTargets, {lobster: 'Not in this region\u2019s researched list.'});
+  assert.deepEqual(regionUnavailable.value, {region: 'morro-bay', targets: {lobster: 'Not in this region\u2019s researched list.'}});
   state.configureStore({storage: memory()});
   state.syncFromURL(`${ORIGIN}?region=morro-bay`);
   assert.match(render(h(App, {})), /data-region="morro-bay">Morro Bay &amp; Avila 35.34N 120.97W</);

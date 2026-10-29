@@ -1,0 +1,23 @@
+{
+  "provenance": "Synthetic values using pinned src/skippercast/coastal/prefetch.py load_plan rows 117-160 and final manifest rows 536-542. No real source data; downloader is never imported.",
+  "inventory": {
+    "schema_version": 1,
+    "files": [{"source": "synthetic-coast", "url": "https://coast.example.test/tile.bin", "bytes": 17, "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "licence": "Synthetic licence", "segments": ["C1"]}],
+    "unresolved": []
+  },
+  "receipt": {
+    "url": "https://coast.example.test/tile.bin",
+    "final_url": "https://coast.example.test/tile.bin",
+    "bytes": 17,
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "etag": null,
+    "last_modified": null,
+    "fetched_at": "2026-01-01T00:00:00+00:00",
+    "licence": "Synthetic licence",
+    "segments": ["C1"],
+    "path": "/synthetic/sc142/payload.bin",
+    "review_required": true,
+    "verification": "publisher-sha256"
+  },
+  "reviewed_hosts": ["coast.example.test"]
+}

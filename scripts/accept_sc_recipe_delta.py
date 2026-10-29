@@ -54,7 +54,7 @@ PINS = {
     'validate_recipe.py': '31b62ce0d0ac4926a9d47ab820eb6699c45a2572335ec2759b0247baf837901a',
     'schemas/coast-recipe-v1.schema.json': 'a659d136536a553043fac917473428ae0c6e51bdb179cc66bdd295e09ebf1593',
     'regions/morro-bay/coast.json': '762144fdc5cd6cd764b3fcc2bd313041f5d7f5abb1e90afef393197b5abb7457',
-    'tests/unit/test_coast_recipe.py': '020dc5f5f736ac09cfefc50c7e8315079bb34e12d512a4bed054c84986413410',
+    'tests/unit/test_coast_recipe.py': '7a2036c3a1c44f8e108c3552eed70b52bd3c396b19208c94992921613d2eecdf',
 }
 EXPECTED = {
     'focused': [

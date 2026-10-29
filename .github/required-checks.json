@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "required_checks": [
+    {"context": "survey-science", "app_id": 15368},
+    {"context": "check (3.13)", "app_id": 15368},
+    {"context": "e2e", "app_id": 15368},
+    {"context": "sign-off", "app_id": 15368}
+  ]
+}

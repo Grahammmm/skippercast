@@ -1,10 +1,10 @@
 // Buttons (FE-03, design § 5 and § 6): real <button>s styled by web/ui/ui.css
 // from tokens only, with a focus ring and a 44 px target. A toggle carries
 // aria-pressed; an icon-only button always has a visible-to-AT label.
-import type {ComponentChildren, JSX} from 'preact';
+import type {ButtonHTMLAttributes, ComponentChildren} from 'preact';
 import {Icon, type IconName} from './icons.tsx';
 
-type Native = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, 'icon' | 'size' | 'label'>;
+type Native = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'icon' | 'size' | 'label'>;
 
 export type ButtonProps = Native & {
   /** primary: the one mint action; ghost: outlined; quiet: text only. */

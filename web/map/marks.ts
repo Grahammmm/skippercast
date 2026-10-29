@@ -27,6 +27,7 @@ import type {Palette} from './palette.ts';
 import {LABEL_FONT} from './style.ts';
 import {camera, coastSpecies, shownPresentation, terrainDetail, terrainMark} from './stage.ts';
 import {atlasMarksURL} from '../startup-forms.ts';
+import {regionAtlas} from '../species.ts';
 
 /** The pickable layers: a 44 px transparent target under each mark ring, and the two kinds of outline. */
 export const MARK_PICK = 'marks-target';
@@ -249,7 +250,10 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
       part<Survey>('survey_habitat', 'habitat', (d: Survey | null) => isCollection(d, id)),
       part<Geology>('geology', 'habitat', (d: Geology | null) => isCollection(d, id)),
     ]);
-    if (current === run) markData.value = {region: {...meta, id}, atlas, survey, geology};
+    if (current !== run) return;
+    markData.value = {region: {...meta, id}, atlas, survey, geology};
+    // CI6-02: the target picker says "ranked by mapped habitat" only where places can be ranked.
+    regionAtlas.value = {region: id, marks: atlas?.targets?.length ?? 0};
   }
   const disposers = [
     // A link naming both an atlas spot and a terrain habitat keeps the spot, which every presentation shows: one selection.
