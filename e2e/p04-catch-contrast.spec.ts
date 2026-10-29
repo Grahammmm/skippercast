@@ -107,9 +107,15 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // inputs, TripAlerts and Button, not the Reports catch paint chain. All CSS/TSX
 // inputs above, contrast(), assertions and thresholds remain unchanged. Rebind
 // the manifests; the phone/laptop rendered checks exercise the upgraded runtime.
+// #1043 (W10B coastal startup): App.tsx moves loadRegion's region.json read into a
+// shared createRegionReader (bounded by region-warm.ts startupAdmission/startupDeadline)
+// and adds startupFreshness/bindStartupFreshness for the masthead age. RegionInfo's
+// shape and the id/charters fields Reports reads are unchanged; the new imports add no
+// top-level side effects, and no CSS, token, class or catch markup changes. contrast(),
+// assertions and thresholds are untouched. Rebind only App.tsx's exact hash.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
-  "web/app/App.tsx": "ade4f4b09862475af1c57e554ef2b37833528d339232b22b125d6093bd00367e",
+  "web/app/App.tsx": "8086311c36c000119bc48cc769ed69acefbfc4565840eb21a4318be6cdfe62ae",
   "web/app/Masthead.tsx": "191309f6c9a54ee6bd24608a1983c6bf07141538267f87bef163f8ad4ccbea00",
   "web/app/LayerRail.tsx": "248402b3100855ef1561c742ee32c3922d9b6475080cb6420957a553e5872abb",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
