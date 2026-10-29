@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "files": [
+    {
+      "source": "noaa-nos",
+      "url": "https://data.ngdc.noaa.gov/sc38/survey.bag",
+      "segments": ["C1"],
+      "bytes": 10,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "licence": "Public domain; not for navigation"
+    },
+    {
+      "source": "noaa-nos",
+      "url": "https://data.ngdc.noaa.gov/sc38/survey.bag",
+      "segments": ["C2"],
+      "bytes": 10,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "licence": "Public domain; not for navigation"
+    }
+  ],
+  "unresolved": []
+}

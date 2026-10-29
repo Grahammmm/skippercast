@@ -102,6 +102,11 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // Rebind only the two dependency manifests for independent applicability review.
 // Combined #769 + #940 + #1006: union of the three entries above and nothing else; each rebinds only its own
 // files' hashes (species/App/LayerRail, Reports.tsx, package.json/pnpm-lock.yaml), which are disjoint.
+// #1007: preact 10.29.8->11.0.2 and its peer resolutions change the runtime
+// used by productionBundle(). The accompanying type migrations touch only admin
+// inputs, TripAlerts and Button, not the Reports catch paint chain. All CSS/TSX
+// inputs above, contrast(), assertions and thresholds remain unchanged. Rebind
+// the manifests; the phone/laptop rendered checks exercise the upgraded runtime.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
   "web/app/App.tsx": "ade4f4b09862475af1c57e554ef2b37833528d339232b22b125d6093bd00367e",
@@ -121,8 +126,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
   "scripts/check_contrast.mjs": "1701f0ae0b6283f517c97b5fd5582c25400705b3f0101a0f24e79173a3af0c83",
-  "package.json": "54e88a3740c8235f57a075c4a235b4f98fb9bc82b6b992cdcf970839d4c0c043",
-  "pnpm-lock.yaml": "38c1284d8e42fce772427964dc530c18d9523df20711e553ab5ca5cb62c1d90c",
+  "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
+  "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {

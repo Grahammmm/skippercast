@@ -5,6 +5,7 @@
 // records the review (active, reviewed today, due again in 90 days or at the
 // season's end); retiring keeps the row but it is never quoted again.
 import {useEffect, useState} from 'preact/hooks';
+import type {TargetedInputEvent} from 'preact';
 import {ADMIN_COPY as COPY} from '../advisor/copy.ts';
 import {ApiError, createRule, editRule, getRules, retireRule, when} from './api.ts';
 import type {NewRule, Rule, RuleFields, RulesList} from './api.ts';
@@ -129,9 +130,12 @@ function changes(draft: Draft, base: Draft | null): RuleFields {
 }
 
 function Fields({id, draft, set}: {id: string; draft: Draft; set: (key: keyof Draft, value: string) => void}) {
-  const field = (key: keyof Draft, label: string, type = 'text', extra: Record<string, unknown> = {}) => (
-    <label for={`${id}-${key}`}>{label}<input id={`${id}-${key}`} type={type} value={draft[key]} onInput={e => set(key, (e.currentTarget as HTMLInputElement).value)} {...extra} /></label>
-  );
+  const field = (key: keyof Draft, label: string, type: 'text' | 'number' | 'url' = 'text', extra: Record<string, unknown> = {}) => {
+    const props = {id: `${id}-${key}`, value: draft[key], onInput: (e: TargetedInputEvent<HTMLInputElement>) => set(key, e.currentTarget.value), ...extra};
+    // Preact 11 discriminates input attributes by type and implicit ARIA role.
+    return <label for={props.id}>{label}{type === 'number' ? <input {...props} type="number" />
+      : type === 'url' ? <input {...props} type="url" /> : <input {...props} type="text" />}</label>;
+  };
   return (
     <>
       <div class="admin-editor-row">
