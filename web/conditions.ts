@@ -49,6 +49,8 @@ export interface ConditionsForecast {
   readonly retrieved: number;
   readonly point: {readonly id: string; readonly lat: number; readonly lon: number};
   readonly models: Readonly<Record<string, ModelRun>>;
+  /** The feed as loaded, every point: the mark card's forecast (web/brief/mark-forecast.ts) reads its other points. */
+  readonly feed?: unknown;
 }
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -68,7 +70,7 @@ export function parseConditionsForecast(json: unknown, region: string, near: rea
     const issued = m.meta?.last_run_initialisation_time, end = m.meta?.data_end_time;
     models[id] = {id, issued: finite(issued) ? issued : null, end: finite(end) ? end : null, data: m.data[point.index]};
   }
-  return {region, retrieved: f.retrieved, point: {id: point.id, lat: point.lat, lon: point.lon}, models};
+  return {region, retrieved: f.retrieved, point: {id: point.id, lat: point.lat, lon: point.lon}, models, feed: json};
 }
 
 /** The feed for `region`, or null when it fails to load or is not that region's. */
