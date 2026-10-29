@@ -1,0 +1,16 @@
+{
+  "execution_contract": "coastal-authenticated-job-v1",
+  "stage": "acquire",
+  "job_id": "synthetic:job",
+  "lease_token": "synthetic-lease",
+  "segment_id": "seg:3310:0:0:5000",
+  "code_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "deps_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "params_sha": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "input_manifest_sha": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "source_root": "synthetic-only",
+  "source_relative_path": "never-opened.tif",
+  "root": "synthetic-only",
+  "source_domain_grant": {"source": {"sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "bytes": 1}},
+  "optional": {"finite": [1.25, -2, 0, true, null], "tokens": ["NaN", "Infinity", "-Infinity"]}
+}

@@ -39,6 +39,9 @@ import {loadRegs, regsData, regulationState, ruleSummary, verifiedText, type Rul
 import {zone} from './App.tsx';
 import {dockState} from './TimeDock.tsx';
 import {addToTrip, reviewTrip, tripIds} from '../trip.ts';
+import {drawnSpots} from '../map/ranked.ts';
+import {MarkForecast} from '../brief/MarkForecast.tsx';
+import type {LatLon} from '../brief/mark-forecast.ts';
 
 export type Mark = ChartMark;
 export {terrainCard} from '../map/habitat.ts';
@@ -112,6 +115,19 @@ function clearMark(mark: Mark): void {
 /** The last pick the card answered with focus, and where focus was before it. */
 let answered = 0, returnTo: HTMLElement | null = null;
 
+/**
+ * Where a mark's forecast is read (BP CI6-06): an atlas reef mark the screen shows, or a ranked trip spot still drawn.
+ * Never for a withheld mark, whose position the card keeps to itself; other selections have no forecast row.
+ */
+export function markPlace(mark: Mark): LatLon | null {
+  if (mark.withheld) return null;
+  const at = (t: {latitude: number; longitude: number} | undefined): LatLon | null =>
+    t && Number.isFinite(t.latitude) && Number.isFinite(t.longitude) ? {lat: t.latitude, lon: t.longitude} : null;
+  if (mark.trip) return at(drawnSpots.value.find(s => s.id === mark.trip));
+  if (mark.id.startsWith('spot:') && mark === spotCard.value) return at(markData.value?.atlas?.targets.find(t => `spot:${t.id}` === mark.id));
+  return null;
+}
+
 export function MarkCard({mark}: {mark?: Mark} = {}) {
   const selected = mark ?? currentMark.value, request = picked.value;
   const heading = useRef<HTMLHeadingElement>(null);
@@ -129,6 +145,7 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
   // Only an atlas mark or a ranked spot joins a trip: v1's planner exports those. A mark the run-time screen withholds (#489) never does.
   const spot = selected === spotCard.value && !selected.withheld ? selection.value : selected.trip ?? null;
   const target = spot ? markData.value?.atlas?.targets.find(t => t.id === spot) as {canonical_habitat?: boolean} | undefined : undefined;
+  const place = markPlace(selected);
   const close = () => {
     const back = returnTo?.isConnected ? returnTo : document.querySelector<HTMLElement>('.app-chart canvas');
     returnTo = null;
@@ -153,6 +170,7 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
         </> : null}</p>
       ) : null}
       <RulesLine mark={selected} />
+      {place ? <MarkForecast place={place} /> : null}
       <div class="app-mark-actions">
         <Button size="sm" icon={spot && tripIds.value.includes(spot) ? 'check' : 'plus'} disabled={!spot} onClick={() => { if (spot) void addToTrip(spot); }}>
           {spot && tripIds.value.includes(spot) ? 'Added to trip' : target && target.canonical_habitat !== true ? 'Save research reference' : 'Add to trip'}</Button>
