@@ -90,6 +90,12 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // CI6-02 merge-forward onto main: union of the entries above; only the species/App/LayerRail hashes rebound.
 // CI6-02 review fix: species.ts marks the region's unavailable targets on every menu option and LayerRail's Look for
 // disables by that mark. Reports never imports either; no CSS, token or catch markup changes. Both rebound.
+// #1006 (npm-minor-and-patch group): only maplibre-gl 6.14.0->6.15.0,
+// @cloudflare/workers-types 5.20261016.1->5.20261024.1 and vite 8.3.4->8.3.5
+// pins and lockfile resolutions change. BODY09 bundles with esbuild and defers
+// MapLibre; neither Worker types nor Vite participates in its rendered catch
+// path. All CSS/TSX inputs, contrast(), assertions and thresholds are unchanged.
+// Rebind only the two dependency manifests for independent applicability review.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
   "web/app/App.tsx": "ade4f4b09862475af1c57e554ef2b37833528d339232b22b125d6093bd00367e",
@@ -109,8 +115,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
   "scripts/check_contrast.mjs": "1701f0ae0b6283f517c97b5fd5582c25400705b3f0101a0f24e79173a3af0c83",
-  "package.json": "4675341e4ec0640f12cb96fe7ad6683739c4d601a32557a5e218430632db8719",
-  "pnpm-lock.yaml": "68b00d873cb91ed71fb473d7145c31127602dfd3073ed847c0fbef7795dcc153",
+  "package.json": "54e88a3740c8235f57a075c4a235b4f98fb9bc82b6b992cdcf970839d4c0c043",
+  "pnpm-lock.yaml": "38c1284d8e42fce772427964dc530c18d9523df20711e553ab5ca5cb62c1d90c",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {
