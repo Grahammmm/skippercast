@@ -40,8 +40,8 @@ const FEATURES = [
 const READY = {state: 'ready', features: FEATURES, expiresAt: NOW + 3600000, rank: rankedHabitat};
 // These tests cover the other filters: every place is water here. The land/water check has its own (test_land_water.mjs).
 const WATER = () => ({state: 'water'});
-const atlasPicks = (data, screen, target, limit, origin = harborOrigin(data), maxNm = null) => checkedAtlasPicks(data, screen, target, limit, origin, maxNm, WATER);
-const habitatPicks = (ranked, screen, region, coast, limit, origin, maxNm = null) => checkedHabitatPicks(ranked, screen, region, coast, limit, origin, maxNm, WATER);
+const atlasPicks = (data, screen, target, limit, origin = harborOrigin(data), keep = undefined) => checkedAtlasPicks(data, screen, target, limit, origin, keep, WATER);
+const habitatPicks = (ranked, screen, region, coast, limit, origin, keep = undefined) => checkedHabitatPicks(ranked, screen, region, coast, limit, origin, keep, WATER);
 const inputs = (patch = {}) => ({region: 'morro-bay', profile: 'boat', target: 'lingcod', coast: 'lingcod', data: DATA, screen: CHECKED, terrain: {state: 'unavailable'}, now: NOW, place: WATER, ...patch});
 const upper = depth => Number(/–(\d+) ft$/.exec(depth)[1]);
 
@@ -82,7 +82,9 @@ test('atlas reasons use only the selected target screen, otherwise neutral terra
     assert.equal(pick.reason, expected, target);
     assert.equal(pick.fit, markFit(mark, target)?.line ?? 'Habitat fit unrated for this target');
     assert.deepEqual(atlasPicks(data, screen, target, 79), [], 'depth gate');
-    assert.deepEqual(atlasPicks(data, screen, target, 100, {latitude: 1, longitude: 1, name: 'Synthetic harbor'}, 1), [], 'range gate');
+    const range = {maxNm: 1, shore: null};
+    assert.deepEqual(atlasPicks(data, screen, target, 100, {latitude: 1, longitude: 1, name: 'Synthetic harbor'}, range), [], 'range gate');
+    assert.deepEqual(atlasPicks(data, screen, target, 100, {latitude: 0, longitude: 0, name: 'Synthetic harbor'}, range).map(p => p.id), [pick.id], 'range gate keeps a mark at the origin');
     assert.deepEqual(atlasPicks(data, CHECKING, target, 100), [], 'screen gate');
   }
   const noText = {...data, atlas: {targets: [{...mark, terrain_interpretation: undefined}]}};
@@ -312,6 +314,19 @@ test('clicking selects the mark or the habitat (one at a time) and opens the car
   assert.match(html, /<details class="ui-popover ui-popover--icon"[^>]*><summary[^>]*aria-label="About the reviewed terrain habitat ranking"/);
   const source = await readFile(join(ROOT, 'web/brief/WhereToLook.tsx'), 'utf8');
   assert.doesNotMatch(source, CLAIMS);
+});
+
+test('terrain current screen and Spear limits both apply: a pick must pass the check and sit within the depth and swim', () => {
+  // A north-south shore line at -120.96: allowed (35.3, -120.95) and withheld (35.1, -120.95) are both ~1,000 yd off it.
+  const lines = [[[-120.96, 34.9], [-120.96, 35.5]]];
+  const spear = patch => currentTerrain([reef('near-allowed', {depth_max_ft: 55}), reef('near-withheld', {depth_max_ft: 55, waypoint_latitude: 35.1}),
+    reef('too-deep', {depth_max_ft: 80})], {profile: 'spear', coast: 'cabezon-shallow-reef', target: 'cabezon-shallow-reef', ...patch});
+  assert.deepEqual(pickIds(spear({})), ['near-allowed'], 'the check withholds one, the 60 ft limit the other');
+  assert.deepEqual(pickIds(spear({shore: {maxYd: 1200, lines}})), ['near-allowed'], 'within the swim, and still never the withheld one');
+  assert.match(spear({shore: {maxYd: 1200, lines}}).picks[0].distance, /^~\d+ yd from shore$/);
+  const far = spear({shore: {maxYd: 500, lines}});
+  assert.deepEqual(far.picks, [], 'outside the swim');
+  assert.equal(far.empty, 'No reviewed terrain habitat passes the current protected-area and closure check within 60 ft and 500 yd of shore for this target.');
 });
 
 // CI6-01A: a run distance is measured from the chosen harbor or launch, never from the device.
