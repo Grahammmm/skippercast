@@ -1,0 +1,247 @@
+{
+  "description": "First matching rule wins; unknown, empty or invalid paths select every area. Shared data can reach all consumers. Narrow only with reviewed dependency evidence.",
+  "rules": [
+    {
+      "patterns": [
+        "tests/gis/*",
+        "research/tests/gis/*"
+      ],
+      "areas": [
+        "core",
+        "survey"
+      ]
+    },
+    {
+      "patterns": [
+        "tests/unit/*",
+        "tests/contract/*"
+      ],
+      "areas": [
+        "core",
+        "survey"
+      ]
+    },
+    {
+      "patterns": [
+        "tests/integration/*"
+      ],
+      "areas": [
+        "core"
+      ]
+    },
+    {
+      "patterns": [
+        "web/*",
+        "server/*",
+        "e2e/*",
+        "packages/*",
+        "drizzle/*",
+        "tests/*.mjs"
+      ],
+      "areas": [
+        "core",
+        "web"
+      ]
+    },
+    {
+      "patterns": [
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "tsconfig.json",
+        "vite.config.mjs",
+        "playwright.config.ts",
+        "wrangler.jsonc"
+      ],
+      "areas": [
+        "core",
+        "web"
+      ]
+    },
+    {
+      "patterns": [
+        "regions/*",
+        "catalog/*",
+        "schemas/*",
+        "src/*",
+        "dist/*"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    }
+  ],
+  "fixtures": [
+    {"name": "seafloor rights contract has GIS consumers", "paths": ["tests/contract/test_seafloor_source_rights.py"], "areas": ["core", "survey"]},
+    {"name": "coast contracts have Python consumers", "paths": ["packages/coast/src/types.ts"], "areas": ["core", "web"]},
+    {"name": "package version has Python consumers", "paths": ["package.json"], "areas": ["core", "web"]},
+    {"name": "fleet journal has Python consumers", "paths": ["drizzle/meta/_journal.json"], "areas": ["core", "web"]},
+    {"name": "Node layout has Python consumers", "paths": ["tests/test_contract.mjs"], "areas": ["core", "web"]},
+    {"name": "unit helpers have GIS consumers", "paths": ["tests/unit/test_coastal_bridge_run.py"], "areas": ["core", "survey"]},
+    {"name": "research GIS has core layout consumers", "paths": ["research/tests/gis/test_geometry.py"], "areas": ["core", "survey"]},
+    {
+      "name": "UI-only",
+      "paths": [
+        "web/map.ts",
+        "web/tokens.css"
+      ],
+      "areas": [
+        "core",
+        "web"
+      ]
+    },
+    {
+      "name": "Worker-only",
+      "paths": [
+        "server/index.ts"
+      ],
+      "areas": [
+        "core",
+        "web"
+      ]
+    },
+    {
+      "name": "GIS",
+      "paths": [
+        "tests/gis/test_search_plan_geometry.py"
+      ],
+      "areas": [
+        "core",
+        "survey"
+      ]
+    },
+    {
+      "name": "Python unit",
+      "paths": [
+        "tests/unit/test_contract.py"
+      ],
+      "areas": [
+        "core",
+        "survey"
+      ]
+    },
+    {
+      "name": "shared schema",
+      "paths": [
+        "schemas/region.json"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "shared producer",
+      "paths": [
+        "src/skippercast/platform/contracts.py"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "shared data",
+      "paths": [
+        "regions/example/region.json"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "unknown",
+      "paths": [
+        "new-tool/file.py"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "empty diff",
+      "paths": [],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "mixed",
+      "paths": [
+        "web/map.ts",
+        "tests/gis/test_geometry.py"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "rename out of GIS",
+      "paths": [
+        "tests/gis/old.py",
+        "web/new.ts"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "deleted data",
+      "paths": [
+        "catalog/old.json"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "workflow edit",
+      "paths": [
+        ".github/workflows/ci.yml"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "invalid absolute",
+      "paths": [
+        "/web/map.ts"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "invalid traversal",
+      "paths": [
+        "web/../catalog/data.json"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    }
+  ]
+}

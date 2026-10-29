@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 # CI policy R12 (fast PR tier). Pull requests run lint/type checks, the core
-# suite on one Python and the GIS layer without its three slow coast modules.
+# affected core/web areas on 3.12 and affected GIS without three slow coast modules.
 # Push to main, the merge queue, the nightly schedule and dispatches run the
 # full tier: the full GIS-required suite, the Python matrix and e2e.
 # Obsolete PR revisions are cancelled; main, scheduled and dispatched runs never are.
@@ -26,74 +26,48 @@ permissions:
   contents: read
 
 jobs:
-  # Path gate: decides whether a pull request touches anything the survey stack
-  # tests. Only a change confined to the website/Worker files below skips the
-  # GIS layer. Every other event, and a failed gate, runs it (fail open).
+  # Conservative shared-data/unknown fallback; explicit area omissions only.
+  # Rename/delete paths are included. Non-PR events select the full tier.
   changes:
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     outputs:
       survey: ${{ steps.filter.outputs.survey }}
+      core: ${{ steps.filter.outputs.core }}
+      web: ${{ steps.filter.outputs.web }}
     steps:
-      - if: github.event_name == 'pull_request'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The PR merge commit and its first parent (the base tip).
+          # Synthetic merge commit and first parent give the complete PR diff.
           fetch-depth: 2
+      - name: Affected-area fixtures
+        run: python3 scripts/ci_select.py --fixtures
       - name: Classify changed paths
         id: filter
         env:
           EVENT: ${{ github.event_name }}
-        run: |
-          if [ "$EVENT" != pull_request ]; then
-            echo "survey=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          files="$(git diff --name-only HEAD^1 HEAD)" || { echo "survey=true" >> "$GITHUB_OUTPUT"; exit 0; }
-          survey=false
-          while IFS= read -r path; do
-            [ -z "$path" ] && continue
-            case "$path" in
-              web/*|server/*|e2e/*|packages/*|drizzle/*|tests/*.mjs) ;;
-              package.json|pnpm-lock.yaml|pnpm-workspace.yaml|tsconfig.json|vite.config.mjs|playwright.config.ts|wrangler.jsonc) ;;
-              *) survey=true ;;
-            esac
-          done <<< "$files"
-          [ -z "$files" ] && survey=true
-          echo "survey=$survey" >> "$GITHUB_OUTPUT"
-          printf 'Changed paths: %s; GIS layer needed: %s\n' "$(printf '%s\n' "$files" | grep -c .)" "$survey" >> "$GITHUB_STEP_SUMMARY"
+        run: python3 scripts/ci_select.py
   # Required check (branch protection requires the `survey-science` context).
   # It always reports and passes only when `check` passed on every Python and
-  # `survey-tests` passed, or was skipped because the gate found a website-only
-  # pull request. A failed, cancelled or skipped dependency otherwise fails it.
+  # `survey-tests` passed, or a successful PR selector explicitly omitted GIS.
+  # Missing/failed/cancelled prerequisites are non-success, not defect auto-fixes.
   survey-science:
     needs: [changes, survey-tests, check]
     if: always()
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Core suite and GIS layer passed
         env:
           EVENT: ${{ github.event_name }}
           GATE: ${{ needs.changes.result }}
+          CORE: ${{ needs.changes.outputs.core }}
+          WEB: ${{ needs.changes.outputs.web }}
           SURVEY: ${{ needs.changes.outputs.survey }}
           TESTS: ${{ needs.survey-tests.result }}
           CHECK: ${{ needs.check.result }}
-        run: |
-          fail=0
-          if [ "$CHECK" != success ]; then
-            echo "::error::check (core suite, lint, type checks) result: $CHECK"
-            fail=1
-          fi
-          if [ "$TESTS" = success ]; then
-            echo "survey-tests passed"
-          elif [ "$TESTS" = skipped ] && [ "$EVENT" = pull_request ] && [ "$GATE" = success ] && [ "$SURVEY" = false ]; then
-            echo "survey-tests skipped: website-only pull request"
-          else
-            echo "::error::survey-tests (GIS layer / full suite) result: $TESTS"
-            fail=1
-          fi
-          exit "$fail"
+        run: python3 scripts/ci_select.py --gate
   survey-tests:
     # On a pull request it runs the GIS layer when the gate says the change can
     # reach it; a website-only pull request skips it. The full suite runs on
@@ -107,7 +81,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: "3.13"
+          python-version: ${{ github.event_name == 'pull_request' && '3.12' || '3.13' }}
           cache: pip
           cache-dependency-path: |
             requirements-survey.txt
@@ -118,9 +92,8 @@ jobs:
       - name: Install the package, pinned native survey tools, ocean decoders and test tools
         run: python -m pip install -e . -r requirements-survey.txt -r requirements-ocean.txt -r requirements-publish.txt -r requirements-test.txt
       - name: Rebuild and validate species search footprints
-        run: |
-          python scripts/build_search_plans.py
-          python -m pytest tests/gis/test_search_plan_geometry.py
+        # Geometry tests already belong to the selected GIS suite below.
+        run: python scripts/build_search_plans.py
       - name: Committed search plans match their sources
         run: |
           if ! git diff --quiet; then
@@ -201,13 +174,16 @@ jobs:
           path: test-results/
           retention-days: 7
   check:
+    needs: changes
+    # A broken selector runs conservative tests, but cannot pass the final gate.
+    if: ${{ !cancelled() }}
     # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
     # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     strategy:
       matrix:
         # One Python on pull requests (R12); the matrix runs in the full tier.
-        python: ${{ fromJSON(github.event_name == 'pull_request' && '["3.13"]' || '["3.11", "3.13"]') }}
+        python: ${{ fromJSON(github.event_name == 'pull_request' && '["3.12"]' || '["3.11", "3.13"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -222,15 +198,16 @@ jobs:
       # No survey/GIS packages here: the gis/ test directories run in survey-science.
       # Unit, contract, integration and claims tests run on both Pythons.
       - name: Python tests without GIS packages
+        if: needs.changes.outputs.core != 'false'
         run: python -m pytest -m "not gis" --durations=15 --junitxml="$RUNNER_TEMP/pytest-core.xml"
       - name: Test summary
-        if: always()
+        if: always() && needs.changes.outputs.core != 'false'
         run: |
           junit="$RUNNER_TEMP/pytest-core.xml"
           if [ ! -f "$junit" ]; then echo "::error::pytest wrote no JUnit report"; exit 1; fi
           python scripts/pytest_report.py "$junit" --title "Python ${{ matrix.python }}, no GIS packages" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload JUnit results
-        if: always()
+        if: always() && needs.changes.outputs.core != 'false'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pytest-core-${{ matrix.python }}
@@ -272,9 +249,17 @@ jobs:
       - name: Type-check the Worker (tsc --noEmit, strict)
         run: pnpm typecheck
       - name: Forecast handling and GPX checks
-        run: node --test tests/test_*.mjs
+        if: needs.changes.outputs.web != 'false'
+        run: |
+          # Keep the explicitly pinned contrast gate below, but run it only once.
+          files=()
+          for path in tests/test_*.mjs; do
+            if [ "$path" != tests/test_contrast_ci_adoption.mjs ]; then files+=("$path"); fi
+          done
+          node --test "${files[@]}"
       - name: Design token contrast (WCAG 4.5:1, light and dark)
         run: node --test tests/test_contrast_ci_adoption.mjs
+        if: needs.changes.outputs.web != 'false'
       # Guide 5.8: no two "not" sentences in a row, and no GFS/ECMWF/MLLW/datum
       # outside a disclosure. Existing copy is in scripts/copy-lint-baseline.json,
       # which may only shrink relative to the base branch.
