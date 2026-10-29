@@ -1,0 +1,36 @@
+{
+  "row": {
+    "id": "synthetic-depth",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "format": "usgs-geotiff",
+    "license": "public-domain-us-gov",
+    "url": "https://example.org/synthetic-depth.tif",
+    "publisher": "Synthetic US government fixture",
+    "kind": "bathymetry",
+    "status": "candidate",
+    "evidence": ["synthetic-only"],
+    "field_evidence": {"resolution_m": "synthetic-only"},
+    "derived_from": [],
+    "notes": "Synthetic, no source or rights approval."
+  },
+  "receipt": {
+    "source_id": "synthetic-depth",
+    "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "cog_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "adapter_version": "original-native-adapters-v1",
+    "source_bytes": 1234,
+    "horizontal_crs": "EPSG:4326",
+    "vertical_datum": "unknown",
+    "requested_bounds_wgs84": [-122.0, 35.0, -121.0, 36.0],
+    "native_resolution_m": [2.0, 3.0],
+    "valid_pixels_in_requested_bounds": 20,
+    "nominal_0_300ft_pixels_in_requested_bounds": 5,
+    "uncertainty_type": "unknown",
+    "interpolation_mask": "unknown"
+  },
+  "raster_identity": {
+    "version": "normalized-raster-content-v1",
+    "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "synthetic_extension": {"shape": [2, 3], "bands": [{"tags": {"synthetic": ["retained", "nested"]}}]}
+  }
+}

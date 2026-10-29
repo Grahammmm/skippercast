@@ -64,6 +64,10 @@ export const STORAGE_KEYS = {
   cruise: 'skippercast-cruise-v1',
   /** The range to consider per profile, one way from the harbor (web/reach.ts, #644); device only, never sent, no default. */
   reach: 'skippercast-reach-v1',
+  /** Spear's own deepest dive, where they dive from and the swim limit (web/reach.ts, #644); device only. */
+  spear: 'skippercast-spear-v1',
+  /** Kayak's chosen launch per region (web/reach.ts, #644); device only. */
+  launch: 'skippercast-launch-v1',
 } as const;
 /** `current` when ?current= names no listed source; the value stays in the URL (v1 rule, #402). */
 export const UNSUPPORTED = 'unsupported';
