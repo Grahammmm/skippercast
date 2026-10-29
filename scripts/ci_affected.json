@@ -7,12 +7,21 @@
         "research/tests/gis/*"
       ],
       "areas": [
+        "core",
         "survey"
       ]
     },
     {
       "patterns": [
-        "tests/unit/*",
+        "tests/unit/*"
+      ],
+      "areas": [
+        "core",
+        "survey"
+      ]
+    },
+    {
+      "patterns": [
         "tests/contract/*",
         "tests/integration/*"
       ],
@@ -30,6 +39,7 @@
         "tests/*.mjs"
       ],
       "areas": [
+        "core",
         "web"
       ]
     },
@@ -44,6 +54,7 @@
         "wrangler.jsonc"
       ],
       "areas": [
+        "core",
         "web"
       ]
     },
@@ -63,6 +74,12 @@
     }
   ],
   "fixtures": [
+    {"name": "coast contracts have Python consumers", "paths": ["packages/coast/src/types.ts"], "areas": ["core", "web"]},
+    {"name": "package version has Python consumers", "paths": ["package.json"], "areas": ["core", "web"]},
+    {"name": "fleet journal has Python consumers", "paths": ["drizzle/meta/_journal.json"], "areas": ["core", "web"]},
+    {"name": "Node layout has Python consumers", "paths": ["tests/test_contract.mjs"], "areas": ["core", "web"]},
+    {"name": "unit helpers have GIS consumers", "paths": ["tests/unit/test_coastal_bridge_run.py"], "areas": ["core", "survey"]},
+    {"name": "research GIS has core layout consumers", "paths": ["research/tests/gis/test_geometry.py"], "areas": ["core", "survey"]},
     {
       "name": "UI-only",
       "paths": [
@@ -70,6 +87,7 @@
         "web/tokens.css"
       ],
       "areas": [
+        "core",
         "web"
       ]
     },
@@ -79,6 +97,7 @@
         "server/index.ts"
       ],
       "areas": [
+        "core",
         "web"
       ]
     },
@@ -88,6 +107,7 @@
         "tests/gis/test_search_plan_geometry.py"
       ],
       "areas": [
+        "core",
         "survey"
       ]
     },
@@ -97,7 +117,8 @@
         "tests/unit/test_contract.py"
       ],
       "areas": [
-        "core"
+        "core",
+        "survey"
       ]
     },
     {
@@ -160,6 +181,7 @@
         "tests/gis/test_geometry.py"
       ],
       "areas": [
+        "core",
         "survey",
         "web"
       ]
@@ -171,6 +193,7 @@
         "web/new.ts"
       ],
       "areas": [
+        "core",
         "survey",
         "web"
       ]
