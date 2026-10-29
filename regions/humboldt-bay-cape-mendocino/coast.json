@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "slug": "humboldt-bay-cape-mendocino",
+  "bbox": [
+    -124.8,
+    40.166666666666664,
+    -123.9,
+    40.95
+  ],
+  "depth_target_ft": 200,
+  "sources": [
+    "noaa-bag"
+  ],
+  "source_review_status": {
+    "noaa-bag": "candidate"
+  },
+  "datum_policy": {
+    "mode": "preserve-source-datum",
+    "vertical_datum_by_source": {
+      "noaa-bag": "unknown"
+    }
+  },
+  "output_root": "runs/coast-recipes/humboldt-bay-cape-mendocino",
+  "cache_budget_bytes": 25000000000,
+  "not_for_navigation": true
+}

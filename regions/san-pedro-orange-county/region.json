@@ -176,7 +176,8 @@
       -117.5,
       33.8
     ],
-    "minimum_features": 4
+    "minimum_features": 4,
+    "conservative_union_invalid_names": ["Bolsa Chica Basin SMCA (No-Take)"]
   },
   "species": [
     "kelp-bass",

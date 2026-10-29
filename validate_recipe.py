@@ -5,7 +5,7 @@ Optional --metadata-root selects an explicit offline source snapshot (default: t
 checkout). ROOT is an already admitted local workspace, not a live coast root.
 No runtime/settings/downloader modules are imported. Valid means REVIEW REQUIRED,
 not native coverage, compatible datums, source-use permission or semantic approval.
-Future recipe expansion needs its owner's admission; v1 initially admits four slugs.
+Future recipe expansion needs its owner's admission; v1 admits 21 slugs (G 2026-10-29).
 """
 from __future__ import annotations
 
@@ -21,6 +21,12 @@ REPO = Path(__file__).resolve().parent
 ADMITTED_SLUGS = frozenset((
     'morro-bay', 'cambria-san-simeon', 'south-big-sur-san-simeon',
     'santa-cruz-monterey-bay',
+    'big-sur-coast', 'monterey-point-sur', 'point-arguello-conception',
+    'santa-barbara-channel', 'channel-islands-north', 'santa-monica-palos-verdes',
+    'san-pedro-orange-county', 'san-diego', 'outer-islands-borderland',
+    'point-reyes-pigeon', 'bodega-point-reyes', 'point-arena-bodega',
+    'fort-bragg-point-arena', 'shelter-cove-north-mendocino',
+    'humboldt-bay-cape-mendocino', 'trinidad-klamath', 'crescent-city',
 ))
 MAX_CACHE_BUDGET_BYTES = 25_000_000_000
 MAX_JSON_BYTES = 2_000_000

@@ -34,7 +34,8 @@ FIXTURE = FIXTURES / 'sc_recipe_delta'
 SCHEMA = 'schemas/coast-recipe-v1.schema.json'
 # Validator pin refreshed for SC-RECIPE-OFFLINE; snapshot pins remain unchanged.
 SOURCE_PINS = {
-    'validate_recipe.py': '31b62ce0d0ac4926a9d47ab820eb6699c45a2572335ec2759b0247baf837901a',
+    # pin refreshed for OC-STATE slug admission
+    'validate_recipe.py': '50d8f1e36e5edf9974d121d29349bd821c8bf08e2d3eaf20526b2bc7162b736f',
     SCHEMA: 'a659d136536a553043fac917473428ae0c6e51bdb179cc66bdd295e09ebf1593',
     'regions/morro-bay/coast.json': '762144fdc5cd6cd764b3fcc2bd313041f5d7f5abb1e90afef393197b5abb7457',
     'tests/unit/test_coast_recipe.py': '7a2036c3a1c44f8e108c3552eed70b52bd3c396b19208c94992921613d2eecdf',
