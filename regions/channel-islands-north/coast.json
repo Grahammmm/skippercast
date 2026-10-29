@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "slug": "channel-islands-north",
+  "bbox": [
+    -120.6,
+    33.85,
+    -119.3,
+    34.15
+  ],
+  "depth_target_ft": 200,
+  "sources": [
+    "noaa-h13093",
+    "noaa-h13323",
+    "noaa-cinms-bathymetry-2025",
+    "noaa-bag"
+  ],
+  "source_review_status": {
+    "noaa-h13093": "approved",
+    "noaa-h13323": "approved",
+    "noaa-cinms-bathymetry-2025": "approved",
+    "noaa-bag": "candidate"
+  },
+  "datum_policy": {
+    "mode": "preserve-source-datum",
+    "vertical_datum_by_source": {
+      "noaa-h13093": "MLLW",
+      "noaa-h13323": "MLLW",
+      "noaa-cinms-bathymetry-2025": "Unspecified merged hydrographic reference",
+      "noaa-bag": "unknown"
+    }
+  },
+  "output_root": "runs/coast-recipes/channel-islands-north",
+  "cache_budget_bytes": 25000000000,
+  "not_for_navigation": true
+}

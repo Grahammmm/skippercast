@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "slug": "crescent-city",
+  "bbox": [
+    -124.75,
+    41.55,
+    -124.05,
+    42.0
+  ],
+  "depth_target_ft": 200,
+  "sources": [
+    "noaa-bag"
+  ],
+  "source_review_status": {
+    "noaa-bag": "candidate"
+  },
+  "datum_policy": {
+    "mode": "preserve-source-datum",
+    "vertical_datum_by_source": {
+      "noaa-bag": "unknown"
+    }
+  },
+  "output_root": "runs/coast-recipes/crescent-city",
+  "cache_budget_bytes": 25000000000,
+  "not_for_navigation": true
+}

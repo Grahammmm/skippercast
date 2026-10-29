@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "slug": "point-arguello-conception",
+  "bbox": [
+    -121.25,
+    34.45,
+    -120.35,
+    35.07
+  ],
+  "depth_target_ft": 300,
+  "sources": [
+    "noaa-bag"
+  ],
+  "source_review_status": {
+    "noaa-bag": "candidate"
+  },
+  "datum_policy": {
+    "mode": "preserve-source-datum",
+    "vertical_datum_by_source": {
+      "noaa-bag": "unknown"
+    }
+  },
+  "output_root": "runs/coast-recipes/point-arguello-conception",
+  "cache_budget_bytes": 25000000000,
+  "not_for_navigation": true
+}

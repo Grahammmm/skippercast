@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "slug": "outer-islands-borderland",
+  "bbox": [
+    -119.7,
+    32.75,
+    -118.25,
+    33.6
+  ],
+  "depth_target_ft": 200,
+  "sources": [
+    "noaa-cinms-bathymetry-2025",
+    "noaa-bag"
+  ],
+  "source_review_status": {
+    "noaa-cinms-bathymetry-2025": "approved",
+    "noaa-bag": "candidate"
+  },
+  "datum_policy": {
+    "mode": "preserve-source-datum",
+    "vertical_datum_by_source": {
+      "noaa-cinms-bathymetry-2025": "Unspecified merged hydrographic reference",
+      "noaa-bag": "unknown"
+    }
+  },
+  "output_root": "runs/coast-recipes/outer-islands-borderland",
+  "cache_budget_bytes": 25000000000,
+  "not_for_navigation": true
+}

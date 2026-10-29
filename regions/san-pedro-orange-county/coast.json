@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "slug": "san-pedro-orange-county",
+  "bbox": [
+    -118.35,
+    33.35,
+    -117.5,
+    33.8
+  ],
+  "depth_target_ft": 200,
+  "sources": [
+    "noaa-bag"
+  ],
+  "source_review_status": {
+    "noaa-bag": "candidate"
+  },
+  "datum_policy": {
+    "mode": "preserve-source-datum",
+    "vertical_datum_by_source": {
+      "noaa-bag": "unknown"
+    }
+  },
+  "output_root": "runs/coast-recipes/san-pedro-orange-county",
+  "cache_budget_bytes": 25000000000,
+  "not_for_navigation": true
+}
