@@ -1,0 +1,21 @@
+{
+  "provenance": "Synthetic advisor_rules rows shaped after tests/test_advisor_pages.mjs and the unchanged RuleRow schema; no production observations or legal conclusions.",
+  "defaults": {
+    "region": "*", "jurisdiction": "california-southern", "species_key": "vermilion", "species_label": "Synthetic vermilion",
+    "size_min_in": null, "size_max_in": null, "bag_limit": 2, "bag_notes": "Synthetic fixture only",
+    "season_open": "04-01", "season_close": "12-31", "depth_limit_ft": null, "area_notes": null, "gear_notes": null,
+    "source_name": "Synthetic CDFW source", "source_url": "https://example.invalid/synthetic-rules",
+    "reviewed_at": "2026-06-01", "review_due": "2027-06-01", "status": "active",
+    "updated_by": "synthetic-test", "updated_at": "2026-09-28T19:00:00Z"
+  },
+  "rows": [
+    {"id": "own-south"},
+    {"id": "parent-north", "jurisdiction": "california-northern", "species_key": "rockfish", "species_label": "Synthetic northern rockfish", "status": "review"},
+    {"id": "parent-south", "species_key": "rockfish", "species_label": "Synthetic southern rockfish"},
+    {"id": "own-south-regional", "region": "southern-california", "species_label": "Synthetic regional vermilion"},
+    {"id": "parent-north-regional", "jurisdiction": "california-northern", "region": "synthetic-north", "species_key": "rockfish", "species_label": "Synthetic northern regional rockfish"},
+    {"id": "parent-central", "jurisdiction": "california-central", "species_key": "rockfish", "species_label": "Synthetic central rockfish", "review_due": "2026-01-01"},
+    {"id": "retired-own-north", "jurisdiction": "california-northern", "status": "retired"},
+    {"id": "unrelated", "species_key": "lingcod", "species_label": "Synthetic lingcod"}
+  ]
+}
