@@ -39,6 +39,21 @@ test('precache.json lists the shell, every hashed asset of the build and the sta
   assert.ok(sw.startsWith(`const BUILD = '${BUILD}';`));
 });
 
+test('warm files omit deferred CSS URL references but retain styles, fonts and offline panel assets', () => {
+  const panel = 'assets/panel.aaaaaaaaaa.css';
+  const manifest = {
+    'landing.html': {file: 'assets/landing.1111111111.js'},
+    'app.html': {file: 'assets/app.2222222222.js',
+      css: ['assets/app.3333333333.css'],
+      assets: [panel, 'assets/font.4444444444.woff2'],
+      imports: ['_panel.js']},
+    '_panel.js': {file: 'assets/panel.5555555555.js', assets: [panel]},
+  };
+  assert.deepEqual(appWarm(manifest), ['/assets/app.2222222222.js', '/assets/app.3333333333.css',
+    '/assets/font.4444444444.woff2', '/assets/panel.5555555555.js']);
+  assert.ok(reachable(manifest, ['app.html']).has(`/${panel}`), 'offline packs still include referenced panel styles');
+});
+
 test('the build refuses a worker without the build placeholder', async () => {
   const dir = await site();
   await writeFile(join(dir, 'sw.js'), 'self.x=1');

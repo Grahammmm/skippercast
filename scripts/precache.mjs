@@ -48,7 +48,11 @@ export function reachable(manifest, roots, skip = new Set(), dynamic = true) {
     const e = manifest[key];
     if (!e || seen.has(key) || skip.has(key)) return;
     seen.add(key);
-    for (const f of [e.file, ...(e.css || []), ...(e.assets || [])]) if (HASHED.test(f)) files.add(`/${f}`);
+    // CSS imported with ?url is only a reference (e.g. a panel's shadow-root
+    // stylesheet), not a first-paint load. Keep it for offline packs, but not
+    // static shell/warm graphs. Actual stylesheet dependencies live in e.css.
+    const assets = (e.assets || []).filter(f => dynamic || !f.endsWith('.css'));
+    for (const f of [e.file, ...(e.css || []), ...assets]) if (HASHED.test(f)) files.add(`/${f}`);
     for (const next of [...(e.imports || []), ...(dynamic ? e.dynamicImports || [] : [])]) walk(next);
   };
   roots.forEach(walk);
