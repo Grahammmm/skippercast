@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The target picker says what the region has for each target beside its name: ranked by mapped habitat, search plan only, or not researched in this region. Targets the region names as unresearched are listed but cannot be selected.
 - The mark card shows the forecast for a reef mark or ranked trip spot at the selected hour. NOAA and ECMWF wind and seas each get their own row, labelled with model and grid spacing. The forecast feed only has those at a few named points, so the card says so and shows the regional point's values, naming the point. The NOAA WCOFS surface current comes from the sampled ocean cell nearest the mark, with that cell's distance, when one is within 1.5 grid lengths.
 - SP61-SPEAR-DAYLIGHT: Withhold the daily spear best hour, surge range and clarity estimate when known daylight has no fully covered forecast hour. Nighttime readings remain available per hour; unknown sunrise or sunset keeps the existing all-hour fallback.
 
