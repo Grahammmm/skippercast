@@ -193,6 +193,9 @@ jobs:
         run: |
           python -m pip install -e .
           cd /tmp && python -c "import skippercast, skippercast.platform.contracts; print(skippercast.__version__)"
+      # e2e runs on main only (R12); its reviewed-source hash pins are guarded on every PR here.
+      - name: e2e reviewed-source pin guard
+        run: python scripts/check_e2e_pins.py
       - name: Install test tools
         run: python -m pip install -r requirements-test.txt
       # No survey/GIS packages here: the gis/ test directories run in survey-science.
