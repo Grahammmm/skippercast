@@ -104,7 +104,7 @@ export async function dailyInputs(env: Env, port: string, date: string, deps: Da
   const db = env.DB!;
   const rows = (await db.prepare(`SELECT r.id,r.version,r.report_date,r.trip_type,r.anglers,r.counts_json,r.verified,b.name AS boat_name
       FROM advisor_reports r JOIN advisor_boats b ON b.id=r.boat_id WHERE r.port=? AND r.status='published' AND r.report_date>=? AND r.report_date<=?
-      ORDER BY r.report_date DESC, r.id LIMIT 8`).bind(port, addDays(date, -DAILY_DAYS), date).all<ReportRow>()).results;
+      ORDER BY r.report_date DESC, r.id LIMIT 8`).bind(port, addDays(date, 1 - DAILY_DAYS), date).all<ReportRow>()).results;
   const skipper = rows.map(r => ({id: r.id, version: r.version, date: r.report_date, boat: r.verified ? r.boat_name : 'a boat', verified: Boolean(r.verified),
     trip_type: r.trip_type, anglers: r.anglers, counts: counts(r.counts_json)}));
 

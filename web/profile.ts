@@ -3,7 +3,11 @@
 // cover the table without the DOM. The brief (FE-30), the layer rail (FE-11)
 // and the command bar read it; nothing here promises fish.
 //
+// Spear's depth limit can be the diver's own (#644, web/reach.ts saves it on the
+// device): `ownSpearDepthFt` overrides the table's 60 ft wherever the limit is read.
+//
 // Erasable syntax only: Node tests import this file by type stripping.
+import {signal} from '@preact/signals';
 
 export const PROFILES = ['boat', 'shore', 'spear', 'kayak'] as const;
 export type Profile = typeof PROFILES[number];
@@ -118,6 +122,14 @@ export function speciesForProfile(plans: Readonly<Record<string, PlanLike>>, pro
   return ids.filter((id, i) => ids.indexOf(id) === i);
 }
 
+/** Spear's deepest dive set on this device (ft); null uses the table's limit. Written by web/reach.ts. */
+export const ownSpearDepthFt = signal<number | null>(null);
+
+/** The depth limit `profile` uses now: the table's, or for Spear the diver's own; null for no limit (Shore). */
+export function depthLimitFt(profile: Profile): number | null {
+  return profile === 'spear' ? ownSpearDepthFt.value ?? PROFILE_TABLE.spear.maxDepthFt : PROFILE_TABLE[profile].maxDepthFt;
+}
+
 /** The terrain renderer's deepest limit, which packages/coast `experience.ts` applies where a profile sets none. */
 export const TERRAIN_DEPTH_CEILING_FT = 300;
 
@@ -127,11 +139,11 @@ export const TERRAIN_DEPTH_CEILING_FT = 300;
  * `experience.ts` `maxDepth`, so the two tables cannot drift.
  */
 export function terrainDepthLimitFt(profile: Profile): number {
-  return PROFILE_TABLE[profile].maxDepthFt ?? TERRAIN_DEPTH_CEILING_FT;
+  return depthLimitFt(profile) ?? TERRAIN_DEPTH_CEILING_FT;
 }
 
 /** Whether a mark or candidate at `depthFt` is inside the profile's limit; unknown depth stays in. */
 export function withinDepth(profile: Profile, depthFt: number | null | undefined): boolean {
-  const limit = PROFILE_TABLE[profile].maxDepthFt;
+  const limit = depthLimitFt(profile);
   return limit === null || depthFt == null || !Number.isFinite(depthFt) || depthFt <= limit;
 }
