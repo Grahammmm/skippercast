@@ -24,7 +24,11 @@ per-request timeouts, attempt ceilings, access stops and no redirects.
   cannot be replayed into a fresh allowance.
 
 The `listing` adapter keeps only literal links to native-looking files on the
-catalog's own hosts. A file name is not metadata: footprint, CRS, datum and
+catalog's own hosts (`.bag`, `.bag.gz`, `.tif`, `.tiff`, `.zip`, `.xml`, `.nc`).
+A `.nc` link is kept only as a plain file download: under THREDDS that is the
+HTTPServer path (`/thredds/fileServer/...`); OPeNDAP (`dodsC`), NetcdfSubset
+(`ncss`), WCS, WMS and ISO endpoints for the same file are services and are
+dropped. A file name is not metadata: footprint, CRS, datum and
 rights stay unknown, so such leads remain `blocked` until resolved.
 
 ## Commands and outputs

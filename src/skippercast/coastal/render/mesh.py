@@ -60,14 +60,15 @@ def build_mesh(terrain_path, support_path, imagery_path, vertical):
         # Mapping outputs must already be unpacked physical metres.
         if ds.scales != (1.0,) or ds.offsets != (0.0,):
             raise ValueError("unapplied_terrain_packing")
-        raw = ds.read(1, masked=True)
+        # Integer storage is valid for unpacked metres, but cannot hold a NaN fill.
+        raw = ds.read(1, masked=True).astype(np.float64)
         mask = support.read(1, masked=True)
         mask_values = mask.compressed()
         if not np.isin(mask_values, [0, 1]).all():
             raise ValueError("binary_support_required")
+        values = raw.filled(np.nan)
         valid = (~np.ma.getmaskarray(raw) & ~np.ma.getmaskarray(mask)
-                 & (mask.filled(0) == 1) & np.isfinite(raw.filled(np.nan)))
-        values = raw.filled(np.nan).astype(np.float64)
+                 & (mask.filled(0) == 1) & np.isfinite(values))
         if vertical["sign"] == "positive_down":
             values = -values
         rows, cols = np.nonzero(valid)

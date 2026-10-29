@@ -14,6 +14,26 @@ def compile_sectors(root=REPO):
     public_url(source['survey_product_feed_url'])
     for lead in source['survey_discovery']:
         public_url(lead['url'])
+    def owned_to_north(point, package_id, package):
+        """Preserve an existing half-open owner before closing a terminal edge."""
+        latitude, longitude = point['latitude'], point['longitude']
+        west, psouth, east, pnorth = package['fishing_bounds']
+        for owner in coasts:
+            if package_id not in owner['packages']:
+                continue
+            owest, _, oeast, _ = owner['bounds']
+            if not owest <= longitude <= oeast:
+                continue
+            for band in source['sectors']:
+                if band['coast'] != owner['id']:
+                    continue
+                osouth, onorth = band['latitude']
+                if (osouth <= latitude < onorth
+                        and not (east < owest or west > oeast
+                                 or pnorth <= osouth or psouth >= onorth)):
+                    return True
+        return False
+
     result, seen = [], set()
     for coast in coasts:
         bands = [s for s in source['sectors'] if s['coast'] == coast['id']]
@@ -41,8 +61,12 @@ def compile_sectors(root=REPO):
                 overlapping.append(package_id)
                 region = read_json(root / 'regions' / package_id / 'region.json')
                 atlas = read_json(root / 'dist' / region['assets']['atlas'])
-                candidates += sum(bounds[0] <= p['longitude'] <= bounds[2]
-                                  and south <= p['latitude'] < north for p in atlas['targets'])
+                candidates += sum(
+                    bounds[0] <= p['longitude'] <= bounds[2]
+                    and (south <= p['latitude'] < north
+                         or (index == len(bands) - 1 and p['latitude'] == north
+                             and not owned_to_north(p, package_id, package)))
+                    for p in atlas['targets'])
             result.append({**sector, 'bounds': bounds, 'status': 'discovery',
                            'rules_url': coast['rules_url'],
                            'partial_package_ids': overlapping,
