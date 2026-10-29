@@ -1,0 +1,57 @@
+{
+  "bounds": [
+    -121.025390625,
+    35.389049966911664,
+    -120.9375,
+    35.4606699514953
+  ],
+  "center": [
+    -120.9814453125,
+    35.42485995920348
+  ],
+  "contourLayer": "contours",
+  "contours": "vector/{z}/{x}/{y}.pbf",
+  "limitations": [
+    "Input provenance/counts are declarations, not independent source verification.",
+    "C2 topology retained unchanged; no datum, scientific or publication acceptance.",
+    "All contributors remain held pending source and owner/counsel review."
+  ],
+  "navigation": "Not for navigation or any purpose involving safety at sea. Research preview only; not an official nautical chart. Depths, contours and datum adjustments may be incomplete or inaccurate.",
+  "provenance": {
+    "assets": {
+      "terrain/12/671/1616.png": "d921b6c21cd255d2d7fe3fd5251f53fc9a1290de068f0af7188da691ca469eb3",
+      "vector/12/671/1616.pbf": "d921b6c21cd255d2d7fe3fd5251f53fc9a1290de068f0af7188da691ca469eb3"
+    },
+    "c1Sha256": "74d3562d160e73f07cd6c36c1f999ebd676519db8ebde2c080af5fef6b65bcf7",
+    "c2Sha256": "1d53a5c384abeccca2b1c8ed88a30bcee5297a583968abca1de791e6d0f9d56c",
+    "contoursSha256": "024ebbd56aee10ff132430f73a7ded9a52c4ac1c9469e1508369e1065fd5b877",
+    "rightsSha256": "87e6715ef2b05446f0971d719d231ab2d0f73af450c21acd419527b7f24a2a2f"
+  },
+  "publicationHeld": true,
+  "region": "Synthetic demo",
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "attribution": "Synthetic author",
+      "contributedCells": 4,
+      "csumbInvolved": false,
+      "datum": "unstated",
+      "datumNote": "No datum reconciliation",
+      "id": "fixture",
+      "label": "Synthetic source",
+      "license": "Unknown terms; review required",
+      "permissionRequired": true,
+      "resolutionM": 2,
+      "rightsStatus": "review_required",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "termsUrl": "https://example.org/terms",
+      "url": "https://example.org/source"
+    }
+  ],
+  "status": "review_required",
+  "synthetic": true,
+  "terrain": "terrain/{z}/{x}/{y}.png",
+  "tileSize": 256,
+  "tileZoom": 12,
+  "zoom": 12
+}
