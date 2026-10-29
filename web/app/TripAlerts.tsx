@@ -4,7 +4,7 @@
 // limits from the saved boat and the same copy; the delete confirmation is in
 // the page, never window.confirm. Styles: web/app/account.css (.app-alerts).
 import {useEffect, useId, useRef, useState} from 'preact/hooks';
-import type {JSX} from 'preact';
+import type {TargetedSubmitEvent} from 'preact';
 import {Button} from '../ui/Button.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
 import {
@@ -83,7 +83,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const refreshFeedback = () => api<{feedback: Feedback[]}>('comfort').then(d => setFeedback(d.feedback), () => {});
   useEffect(() => { void refresh(); void refreshFeedback(); }, []);
 
-  const save = async (event: JSX.TargetedSubmitEvent<HTMLFormElement>) => {
+  const save = async (event: TargetedSubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const f = new FormData(event.currentTarget);
     const form: AlertForm = {date: String(f.get('date')), point: String(f.get('point')), start_hour: hours(f.get('start_hour')), end_hour: hours(f.get('end_hour')),
@@ -109,7 +109,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
     setStatus('Your account and records have been deleted.');
     setTimeout(() => location.reload(), 1200);
   });
-  const sendComfort = async (event: JSX.TargetedSubmitEvent<HTMLFormElement>) => {
+  const sendComfort = async (event: TargetedSubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const f = new FormData(event.currentTarget);
     try {
