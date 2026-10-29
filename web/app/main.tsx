@@ -12,9 +12,9 @@ import {savedHomeURL} from '../ports.ts';
 import {loadCruise, loadLimits} from '../limits.ts';
 import {loadLaunch, loadReach, loadSpear} from '../reach.ts';
 import {startTrip} from '../trip.ts';
-import {App, freshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
+import {App, bindStartupFreshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
 import {loadPlans, regionPlans} from '../species.ts';
-import {bindBriefReport, dailyFeed, ensureRegionalForecast, loadDailyFeed} from '../brief/Brief.tsx';
+import {bindBriefReport, currentBrief, dailyFeed, ensureRegionalForecast, loadDailyFeed} from '../brief/Brief.tsx';
 import {regionPlace} from '../map/currents.ts';
 import {initTelemetry} from '../telemetry.ts';
 
@@ -54,7 +54,6 @@ effect(() => {
 // The brief's coast report where the region binds one, whichever layers are on: the same place the
 // Swell and Water temp layers ask for (web/app/MapStage.tsx), so the client requests it once.
 bindBriefReport(() => { const info = regionInfo.value; return info?.id === region.value ? regionPlace(info, profile.value, species.value ?? '') : null; });
-const online = () => { freshness.value = navigator.onLine ? {state: 'unknown', age: null} : {state: 'offline', age: null}; };
-addEventListener('online', online);
-addEventListener('offline', online);
-online();
+// Reuse the displayed brief's original source clocks. Connectivity and cache access
+// never re-date a reading, and a switched-out region cannot supply the masthead age.
+bindStartupFreshness(() => regionInfo.value?.id === region.value ? currentBrief(new Date())?.tiles ?? [] : []);

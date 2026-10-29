@@ -14,6 +14,8 @@ import {Masthead} from './Masthead.tsx';
 import {Mobile} from './Mobile.tsx';
 import {Trip} from './Trip.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
+import {sourceFreshness, startupAdmission, startupDeadline} from '../landing/region-warm.ts';
+import type {BriefTile} from '../brief/types.ts';
 import {tideRegion, type TideRegion} from '../tide-stations.ts';
 import {tideSelection} from '../tide-selection.ts';
 import {loadPlans, regionUnavailable, unavailableTargets} from '../species.ts';
@@ -77,6 +79,58 @@ export function retryRegion(): void {
 export type Freshness = {state: 'ok' | 'stale' | 'offline' | 'unknown'; /** The oldest age, as shown ("4 min"); null before any reading. */ age: string | null};
 export const freshness = signal<Freshness>({state: 'unknown', age: null});
 
+/** Share parsed cold reads, not just headers: each admitted slot includes JSON consumption.
+ * Caller cancellation withdraws publication without freeing an abort-ignoring task's slot. */
+export function createRegionReader(fetchFn: typeof fetch, {limit = 4, timeoutMs = REGION_READ_TIMEOUT_MS} = {}) {
+  const admission = startupAdmission<RegionInfo | null>(limit, timeoutMs);
+  return (id: string, retry = false): Promise<RegionInfo | null> => admission.read(`${retry ? 'retry' : 'cached'}:${id}`, async signal => {
+    const response = await fetchFn(`regions/${encodeURIComponent(id)}/region.json`, {signal, ...(retry ? {cache: 'reload' as const} : {})});
+    if (!response.ok) { void response.body?.cancel().catch(() => {}); return null; }
+    const json = await response.json() as {name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}};
+    const center = json.map?.center;
+    if (typeof json.name !== 'string' || !center || center.length !== 2 || !center.every(Number.isFinite)) return null;
+    const areas = Array.isArray(json.map?.local_areas) ? json.map.local_areas as ReportLocalArea[] : [];
+    const aerial = aerialBase(json), tide = tideRegion(id, json), unavailable = unavailableTargets(json);
+    return {id, name: json.name, center: [center[0], center[1]], timezone: json.timezone ?? DEFAULT_ZONE,
+      ...tide ? {tide} : {},
+      localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), ...aerial ? {aerial} : {},
+      ...typeof json.assets?.charters === 'string' ? {charters: json.assets.charters} : {},
+      ...Object.keys(unavailable).length ? {unavailableTargets: unavailable} : {}};
+  });
+}
+const regionReaders = new WeakMap<typeof fetch, ReturnType<typeof createRegionReader>>();
+function regionReader(fetchFn: typeof fetch): ReturnType<typeof createRegionReader> {
+  let reader = regionReaders.get(fetchFn);
+  if (!reader) { reader = createRegionReader(fetchFn); regionReaders.set(fetchFn, reader); }
+  return reader;
+}
+
+type StartupReading = Pick<BriefTile, 'at' | 'limitMs' | 'value' | 'state' | 'lastGood'>;
+/** Source age, never arrival/cache age. Missing tiles cannot produce an all-fresh claim. */
+export function startupFreshness(readings: readonly StartupReading[], now: () => number = Date.now, online = true): Freshness {
+  if (!online) return {state: 'offline', age: null};
+  const clocks = readings.map(tile => ({tile, clock: sourceFreshness(tile.at, tile.limitMs, now)}));
+  const known = clocks.filter(({tile, clock}) => tile.value !== null && tile.state !== 'unavailable' && clock.ageMs !== null);
+  const oldest = known.length ? Math.max(...known.map(({clock}) => clock.ageMs!)) : null;
+  const age = oldest === null ? null : oldest < 3_600_000 ? `${Math.floor(oldest / 60_000)} min` : `${Math.floor(oldest / 3_600_000)} h`;
+  const stale = known.some(({tile, clock}) => tile.lastGood || tile.state === 'stale' || clock.state === 'stale');
+  return {state: stale ? 'stale' : !known.length || known.length !== readings.length ? 'unknown' : 'ok', age};
+}
+
+/** Re-evaluate existing sources, not the network, on minute ticks and connectivity changes.
+ * The reactive effect also withdraws age immediately when the current region's brief disappears. */
+export function bindStartupFreshness(read: () => readonly StartupReading[],
+  {now = Date.now, online = () => navigator.onLine, target = window}: {now?: () => number; online?: () => boolean; target?: EventTarget} = {}): () => void {
+  const refresh = () => { freshness.value = startupFreshness(read(), now, online()); };
+  const stop = effect(refresh);
+  const timer = setInterval(refresh, 60_000);
+  for (const event of ['online', 'offline', 'pageshow']) target.addEventListener(event, refresh);
+  return () => {
+    stop(); clearInterval(timer);
+    for (const event of ['online', 'offline', 'pageshow']) target.removeEventListener(event, refresh);
+  };
+}
+
 /** Only the current region and latest request may publish; failure withdraws its metadata. */
 /** `fetchFn` defaults to the shared static read, so the masthead and the Chart ask for region.json once. */
 export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch, retry = false): Promise<RegionInfo | null> {
@@ -86,31 +140,11 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch
   const controller = regionRequest = new AbortController();
   const current = (): boolean => generation === regionGeneration && id === region.peek();
   batch(() => { regionInfo.value = null; regionLoad.value = {id, state: 'loading'}; });
-  let rejectAborted: (() => void) | undefined;
-  const aborted = new Promise<never>((_resolve, reject) => {
-    rejectAborted = () => reject(new Error('Region read cancelled or timed out'));
-    controller.signal.addEventListener('abort', rejectAborted, {once: true});
-  });
-  const timer = setTimeout(() => controller.abort(), REGION_READ_TIMEOUT_MS);
   try {
-    const read = async (): Promise<RegionInfo | null> => {
-      if (!retry && fetchFn === sharedFetch && recoveredRegionInfo.has(id)) return recoveredRegionInfo.get(id)!;
-      const response = await fetchFn(`regions/${encodeURIComponent(id)}/region.json`, {signal: controller.signal, ...(retry ? {cache: 'reload' as const} : {})});
-      if (!response.ok) return null;
-      const json = await response.json() as {name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}};
-      const center = json.map?.center;
-      if (typeof json.name !== 'string' || !center || center.length !== 2 || !center.every(Number.isFinite)) return null;
-      const areas = Array.isArray(json.map?.local_areas) ? json.map.local_areas as ReportLocalArea[] : [];
-      const aerial = aerialBase(json);
-      const tide = tideRegion(id, json);
-      const unavailable = unavailableTargets(json);
-      const info: RegionInfo = {id, name: json.name, center: [center[0], center[1]], timezone: json.timezone ?? DEFAULT_ZONE,
-        ...tide ? {tide} : {},
-        localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), ...aerial ? {aerial} : {}, ...typeof json.assets?.charters === 'string' ? {charters: json.assets.charters} : {},
-        ...Object.keys(unavailable).length ? {unavailableTargets: unavailable} : {}};
-      return info;
-    };
-    const info = await Promise.race([read(), aborted]);
+    const info = await startupDeadline(() =>
+      !retry && fetchFn === sharedFetch && recoveredRegionInfo.has(id)
+        ? Promise.resolve(recoveredRegionInfo.get(id)!) : regionReader(fetchFn)(id, retry),
+    REGION_READ_TIMEOUT_MS, controller.signal);
     if (!current()) return null;
     if (!info) { regionLoad.value = {id, state: 'error'}; return null; }
     if (retry && fetchFn === sharedFetch) recoveredRegionInfo.set(id, info);
@@ -126,8 +160,6 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch
     if (current()) regionLoad.value = {id, state: 'error'};
     return null;
   } finally {
-    clearTimeout(timer);
-    if (rejectAborted) controller.signal.removeEventListener('abort', rejectAborted);
     if (regionRequest === controller) regionRequest = null;
   }
 }
