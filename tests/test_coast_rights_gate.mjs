@@ -67,7 +67,7 @@ test('an approved ocean control reads and serves its own synthetic feed', async 
   const store = {
     async get(key) {
       reads.push(key);
-      return {size: bytes.byteLength, arrayBuffer: async () => bytes.buffer};
+      return {size: bytes.byteLength, body: new Response(bytes).body, arrayBuffer: async () => bytes.buffer};
     },
   };
   let bridgeCalls = 0;

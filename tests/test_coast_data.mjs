@@ -228,11 +228,14 @@ async function gatedAssets(t, files) {
     if (!gate) return get(key, options);
     counts.set(key, (counts.get(key) ?? 0) + 1);
     const object = await get(key, options);
-    return {...object, arrayBuffer: async () => {
-      active++; peak = Math.max(peak, active); gate.entered.resolve();
-      try { await gate.body.promise; return await object.arrayBuffer(); }
-      finally { active--; }
-    }};
+    return {...object, body: new ReadableStream({
+      async start(controller) {
+        active++; peak = Math.max(peak, active); gate.entered.resolve();
+        try { await gate.body.promise; controller.enqueue(new Uint8Array(await object.arrayBuffer())); controller.close(); }
+        catch (error) { controller.error(error); }
+        finally { active--; }
+      },
+    })};
   };
   t.after(async () => {
     closed = true;
@@ -337,6 +340,51 @@ test("the renderer's verified-asset and habitat HEAD checks pass against R2 and 
     await assert.rejects(verifiedAsset(asset), /Asset unavailable/);
     await assert.rejects(validateHabitatHeads({...manifest, regions: [{...region, regionId: 'cambria-san-simeon'}]}, serve), /publication changed/);
   } finally { globalThis.fetch = original; }
+});
+
+test('W10A: cold-key saturation refuses promptly while an admitted key can still join', {timeout: 1000}, async t => {
+  const paths = Array.from({length: 5}, (_, i) => `/data/coast-wide/w10a-saturation-${i}.bin`);
+  const files = Object.fromEntries(paths.map((p, i) => [p, {bytes: new TextEncoder().encode(`synthetic bounded cold asset ${i}`)}]));
+  const f = await gatedAssets(t, files), gates = paths.map(p => f.arm(p));
+  const running = paths.slice(0, 4).map(p => f.send('/coast-data' + p));
+  await Promise.all(gates.slice(0, 4).map(g => g.entered.promise));
+  const refused = await f.send('/coast-data' + paths[4]);
+  assert.equal(refused.status, 503);
+  assert.equal(f.counts.get(gates[4].key), undefined, 'no storage read for refused work');
+  const join = f.send('/coast-data' + paths[0], {headers: {Range: 'bytes=0-3'}});
+  gates[0].body.resolve();
+  assert.equal((await join).status, 206);
+  assert.equal(f.counts.get(gates[0].key), 1);
+  const retry = f.send('/coast-data' + paths[4]);
+  await gates[4].entered.promise;
+  for (const gate of gates) gate.body.resolve();
+  assert.ok((await Promise.all([...running, retry])).every(r => r.status === 200));
+  assert.equal(f.stats().bridgeCalls, 0);
+});
+
+test('W10A: stalled cold bodies time out, cancel, and cannot later seed verification', async t => {
+  const path = '/data/coast-wide/w10a-stalled-body.bin';
+  const {store, entries} = await published({[path]: {bytes: new TextEncoder().encode('synthetic stalled cold body')}});
+  const key = 'coast/objects/' + entries[path].sha256, get = store.get.bind(store);
+  let cancelled = false, entered = Promise.withResolvers();
+  store.get = async (k, options) => {
+    const object = await get(k, options);
+    if (k !== key) return object;
+    return {...object, body: new ReadableStream({start() { entered.resolve(); }, cancel() { cancelled = true; }})};
+  };
+  t.mock.timers.enable({apis: ['setTimeout']});
+  const first = serveCoastData(request('/coast-data' + path), noBridge, store);
+  await entered.promise;
+  // Let body-reading continuations register before advancing the deadline.
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(20001);
+  assert.equal((await first).status, 503);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(cancelled, true);
+  store.get = get;
+  const recovered = await serveCoastData(request('/coast-data' + path), noBridge, store);
+  assert.equal(recovered.status, 200);
+  assert.equal(recovered.headers.get('ETag'), `"sha256-${entries[path].sha256}"`);
 });
 
 // FE-84: snapshot sources from SkipperCast's own feeds (synthetic packets in the FE-40, FE-41, FE-42 and coast_snapshots.py shapes).
@@ -452,6 +500,21 @@ test('switched ocean and history packets are served from R2 without the bridge; 
     const r = await serveCoastData(request('/api/coast/' + name), fish, stale, all);
     assert.equal(r.headers.get('X-Coast-Upstream'), `${name}=fish (stale)`); assert.equal(await r.text(), JSON.stringify(fishReport));
   }
+});
+
+test('W10A: repeated own-feed reads use the injected clock without renewing source age', async () => {
+  const generatedAt = '2026-10-29T12:00:00Z', start = Date.parse(generatedAt);
+  const ocean = oceanFeed(generatedAt), store = feedStore({[OCEAN]: ocean});
+  let now = start + 3_600_000;
+  const send = () => serveCoastData(request('/api/coast/ocean'), fish, store, coastFeeds('ocean'), {now: () => now});
+  const first = await send();
+  assert.equal(first.headers.get('X-Coast-Upstream'), 'ocean=skippercast');
+  assert.equal((await first.json()).generatedAt, generatedAt);
+  now = start + 3 * 3_600_000;
+  const expired = await send();
+  assert.equal(expired.headers.get('X-Coast-Upstream'), 'ocean=fish (stale)');
+  assert.deepEqual(await expired.json(), fishReport);
+  assert.equal(ocean.generatedAt, generatedAt);
 });
 
 test('the report still needs the bridge: a Fish failure is unavailable even with fresh SkipperCast rows', async () => {
