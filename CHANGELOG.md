@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The target picker says what the region has for each target beside its name: ranked by mapped habitat, search plan only, or not researched in this region. Targets the region names as unresearched are listed but cannot be selected.
 - SP61-SPEAR-DAYLIGHT: Withhold the daily spear best hour, surge range and clarity estimate when known daylight has no fully covered forecast hour. Nighttime readings remain available per hour; unknown sunrise or sunset keeps the existing all-hour fallback.
 
 - Add an opt-in local coast terrain-RGB / contour-MVT preview with synthetic fixtures, a persistent not-for-navigation banner and manifest-derived source rights. The public coast route is unchanged; measured-source integration and publication remain held.

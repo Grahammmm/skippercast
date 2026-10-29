@@ -81,11 +81,32 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // CI6-09 merge-forward retains the partition selector alongside wind, shelf contours, chlorophyll and Stations.
 // Legend.tsx changes only the selector import/control from main; existing text/muted glass roles and the Reports
 // catch path are unchanged. check_contrast.mjs rebinds only the Legend hash and line citations; contrast() is untouched.
+// CI6-02 (#769, species honesty in the target picker): web/species.ts adds a TargetState per menu option
+// (targetState, regionMenu, optionText) and two region signals (regionUnavailable, regionAtlas) reset by its
+// existing region effect; web/app/App.tsx adds an optional RegionInfo.unavailableTargets that loadRegion fills
+// and publishes; web/app/LayerRail.tsx changes only Look for's option text and disables the region's unavailable
+// targets. Reports reads only regionInfo's id and charters (unchanged) and never imports species.ts, the target
+// menu or the rail; no CSS, class, token or catch markup is touched, and contrast() is untouched. All three rebound.
+// CI6-02 merge-forward onto main: union of the entries above; only the species/App/LayerRail hashes rebound.
+// CI6-02 review fix: species.ts marks the region's unavailable targets on every menu option and LayerRail's Look for
+// disables by that mark. Reports never imports either; no CSS, token or catch markup changes. Both rebound.
+// #940 (Reports charter-source identity): only request coalescing, stale-result protection and matching-data
+// admission change. With no charter source, reportsKey preserves this fixture's `morro-bay:lingcod` preload,
+// so mounting Reports still starts no section fetches. CatchCards, ReportsBody, the catch renderer, CSS and
+// every paint/contrast/overlap/control assertion below are unchanged. Rebind only Reports.tsx's exact hash.
+// #1006 (npm-minor-and-patch group): only maplibre-gl 6.14.0->6.15.0,
+// @cloudflare/workers-types 5.20261016.1->5.20261024.1 and vite 8.3.4->8.3.5
+// pins and lockfile resolutions change. BODY09 bundles with esbuild and defers
+// MapLibre; neither Worker types nor Vite participates in its rendered catch
+// path. All CSS/TSX inputs, contrast(), assertions and thresholds are unchanged.
+// Rebind only the two dependency manifests for independent applicability review.
+// Combined #769 + #940 + #1006: union of the three entries above and nothing else; each rebinds only its own
+// files' hashes (species/App/LayerRail, Reports.tsx, package.json/pnpm-lock.yaml), which are disjoint.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
-  "web/species.ts": "c12ff47e9043360709771993682734f3fb56bccc8b8713a6a1e62c6d4ceb2a2d",
-  "web/app/App.tsx": "d8486f26dafbb97b0499cd7ef536c386c446c1b002c44b219d42151a5ab11446",
+  "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
+  "web/app/App.tsx": "ade4f4b09862475af1c57e554ef2b37833528d339232b22b125d6093bd00367e",
   "web/app/Masthead.tsx": "191309f6c9a54ee6bd24608a1983c6bf07141538267f87bef163f8ad4ccbea00",
-  "web/app/LayerRail.tsx": "18db08dcba921446038b48d24552c0e756cba3fc52ecdbd005013521caf2566c",
+  "web/app/LayerRail.tsx": "248402b3100855ef1561c742ee32c3922d9b6475080cb6420957a553e5872abb",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
@@ -94,14 +115,14 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
-  "web/app/views/Reports.tsx": "8ef399a5024b6bf2b232934647c40029674e8f661ea3391b037460ca66246af1",
+  "web/app/views/Reports.tsx": "add6e0d2b1697c4d097d1e4a286f7377fe27372cb5a2b9033fb8dcb0181089c9",
   "web/app/CoastMarkup.tsx": "3d318379ff1194b26f68adadb523db08c21829ff71cf5e7cfe2ac903821f0efc",
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
   "scripts/check_contrast.mjs": "1701f0ae0b6283f517c97b5fd5582c25400705b3f0101a0f24e79173a3af0c83",
-  "package.json": "4675341e4ec0640f12cb96fe7ad6683739c4d601a32557a5e218430632db8719",
-  "pnpm-lock.yaml": "68b00d873cb91ed71fb473d7145c31127602dfd3073ed847c0fbef7795dcc153",
+  "package.json": "54e88a3740c8235f57a075c4a235b4f98fb9bc82b6b992cdcf970839d4c0c043",
+  "pnpm-lock.yaml": "38c1284d8e42fce772427964dc530c18d9523df20711e553ab5ca5cb62c1d90c",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {
