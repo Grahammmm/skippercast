@@ -19,20 +19,29 @@ import type {Charters, Evidence, ReportsData, Watch} from '../../reports.ts';
 import {regionInfo} from '../App.tsx';
 import {CoastMarkup, isSafeCatchState} from '../CoastMarkup.tsx';
 
-/** The loaded sections and the region and target they were loaded for. */
+/** The loaded sections and the complete inputs they were loaded for. */
 export const reportsData = signal<{key: string; data: ReportsData} | null>(null);
-let pending = '';
+let pending: {key: string} | null = null;
+// Preserve source-less keys used by existing preloaded Reports consumers.
+const reportsKey = (id: string | null, target: string, charters: string | null): string =>
+  charters === null ? `${id}:${target}` : JSON.stringify([id, target, charters]);
 
-/** Load the sections once per region and target (web/reports.ts comes in with a dynamic import, outside the app entry). */
+/** Load once per region, target and charter source; only the current request may publish. */
 export async function openReports(id: string, target: string, charters: string | null, fetchFn: typeof fetch = fetch): Promise<void> {
-  const key = `${id}:${target}`;
-  if (reportsData.peek()?.key === key || pending === key) return;
-  pending = key;
+  const key = reportsKey(id, target, charters);
+  if (pending?.key === key) return;
+  if (reportsData.peek()?.key === key) {
+    // Returning to settled data also supersedes a different pending load.
+    pending = null;
+    return;
+  }
+  const request = {key};
+  pending = request;
   try {
     const {loadReports} = await import('../../reports.ts');
     const data = await loadReports({region: id, species: target, charters}, fetchFn);
-    if (pending === key) reportsData.value = {key, data};
-  } finally { if (pending === key) pending = ''; }
+    if (pending === request) reportsData.value = {key, data};
+  } finally { if (pending === request) pending = null; }
 }
 
 const day = (iso: string | null | undefined): string => {
@@ -150,7 +159,7 @@ export function Reports({now = new Date()}: {now?: Date} = {}) {
       <span class="ui-eyebrow">Dated evidence</span>
       <h1 id="reports-title">Reports</h1>
       <p class="app-deck">Trip counts, discussions and charter records with their dates and sources. Missing reports do not mean zero catch.</p>
-      <ReportsBody data={loaded?.key === `${id}:${target}` ? loaded.data : null} catches={report && county ? {report, county, now} : null} />
+      <ReportsBody data={loaded?.key === reportsKey(id, target, charters) ? loaded.data : null} catches={report && county ? {report, county, now} : null} />
     </article>
   );
 }

@@ -90,12 +90,18 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // CI6-02 merge-forward onto main: union of the entries above; only the species/App/LayerRail hashes rebound.
 // CI6-02 review fix: species.ts marks the region's unavailable targets on every menu option and LayerRail's Look for
 // disables by that mark. Reports never imports either; no CSS, token or catch markup changes. Both rebound.
+// #940 (Reports charter-source identity): only request coalescing, stale-result protection and matching-data
+// admission change. With no charter source, reportsKey preserves this fixture's `morro-bay:lingcod` preload,
+// so mounting Reports still starts no section fetches. CatchCards, ReportsBody, the catch renderer, CSS and
+// every paint/contrast/overlap/control assertion below are unchanged. Rebind only Reports.tsx's exact hash.
 // #1006 (npm-minor-and-patch group): only maplibre-gl 6.14.0->6.15.0,
 // @cloudflare/workers-types 5.20261016.1->5.20261024.1 and vite 8.3.4->8.3.5
 // pins and lockfile resolutions change. BODY09 bundles with esbuild and defers
 // MapLibre; neither Worker types nor Vite participates in its rendered catch
 // path. All CSS/TSX inputs, contrast(), assertions and thresholds are unchanged.
 // Rebind only the two dependency manifests for independent applicability review.
+// Combined #769 + #940 + #1006: union of the three entries above and nothing else; each rebinds only its own
+// files' hashes (species/App/LayerRail, Reports.tsx, package.json/pnpm-lock.yaml), which are disjoint.
 // #1007: preact 10.29.8->11.0.2 and its peer resolutions change the runtime
 // used by productionBundle(). The accompanying type migrations touch only admin
 // inputs, TripAlerts and Button, not the Reports catch paint chain. All CSS/TSX
@@ -114,7 +120,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
-  "web/app/views/Reports.tsx": "8ef399a5024b6bf2b232934647c40029674e8f661ea3391b037460ca66246af1",
+  "web/app/views/Reports.tsx": "add6e0d2b1697c4d097d1e4a286f7377fe27372cb5a2b9033fb8dcb0181089c9",
   "web/app/CoastMarkup.tsx": "3d318379ff1194b26f68adadb523db08c21829ff71cf5e7cfe2ac903821f0efc",
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
