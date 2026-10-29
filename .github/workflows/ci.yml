@@ -4,11 +4,19 @@ on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
+    types: [checks_requested]
+  # Nightly full tier (CI policy R12): the slow suites also run on main pushes.
+  schedule:
+    - cron: "0 9 * * *"
   # Bot pull requests opened with GITHUB_TOKEN (seafloor.yml) dispatch this run.
   workflow_dispatch:
 
-# PRs get one full check suite; obsolete PR revisions should not fill the queue.
-# Main and manually dispatched bot-PR checks are never interrupted here.
+# CI policy R12 (fast PR tier). Pull requests run lint/type checks, the core
+# suite on one Python and the GIS layer without its three slow coast modules.
+# Push to main, the merge queue, the nightly schedule and dispatches run the
+# full tier: the full GIS-required suite, the Python matrix and e2e.
+# Obsolete PR revisions are cancelled; main, scheduled and dispatched runs never are.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -17,7 +25,80 @@ permissions:
   contents: read
 
 jobs:
+  # Path gate: decides whether a pull request touches anything the survey stack
+  # tests. Only a change confined to the website/Worker files below skips the
+  # GIS layer. Every other event, and a failed gate, runs it (fail open).
+  changes:
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    outputs:
+      survey: ${{ steps.filter.outputs.survey }}
+    steps:
+      - if: github.event_name == 'pull_request'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The PR merge commit and its first parent (the base tip).
+          fetch-depth: 2
+      - name: Classify changed paths
+        id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != pull_request ]; then
+            echo "survey=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files="$(git diff --name-only HEAD^1 HEAD)" || { echo "survey=true" >> "$GITHUB_OUTPUT"; exit 0; }
+          survey=false
+          while IFS= read -r path; do
+            [ -z "$path" ] && continue
+            case "$path" in
+              web/*|server/*|e2e/*|packages/*|drizzle/*|tests/*.mjs) ;;
+              package.json|pnpm-lock.yaml|pnpm-workspace.yaml|tsconfig.json|vite.config.mjs|playwright.config.ts|wrangler.jsonc) ;;
+              *) survey=true ;;
+            esac
+          done <<< "$files"
+          [ -z "$files" ] && survey=true
+          echo "survey=$survey" >> "$GITHUB_OUTPUT"
+          printf 'Changed paths: %s; GIS layer needed: %s\n' "$(printf '%s\n' "$files" | grep -c .)" "$survey" >> "$GITHUB_STEP_SUMMARY"
+  # Required check (branch protection requires the `survey-science` context).
+  # It always reports and passes only when `check` passed on every Python and
+  # `survey-tests` passed, or was skipped because the gate found a website-only
+  # pull request. A failed, cancelled or skipped dependency otherwise fails it.
   survey-science:
+    needs: [changes, survey-tests, check]
+    if: always()
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    steps:
+      - name: Core suite and GIS layer passed
+        env:
+          EVENT: ${{ github.event_name }}
+          GATE: ${{ needs.changes.result }}
+          SURVEY: ${{ needs.changes.outputs.survey }}
+          TESTS: ${{ needs.survey-tests.result }}
+          CHECK: ${{ needs.check.result }}
+        run: |
+          fail=0
+          if [ "$CHECK" != success ]; then
+            echo "::error::check (core suite, lint, type checks) result: $CHECK"
+            fail=1
+          fi
+          if [ "$TESTS" = success ]; then
+            echo "survey-tests passed"
+          elif [ "$TESTS" = skipped ] && [ "$EVENT" = pull_request ] && [ "$GATE" = success ] && [ "$SURVEY" = false ]; then
+            echo "survey-tests skipped: website-only pull request"
+          else
+            echo "::error::survey-tests (GIS layer / full suite) result: $TESTS"
+            fail=1
+          fi
+          exit "$fail"
+  survey-tests:
+    # On a pull request it runs the GIS layer when the gate says the change can
+    # reach it; a website-only pull request skips it. The full suite runs on
+    # main, merge queue, nightly and dispatch. `survey-science` gates on it.
+    needs: changes
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.survey == 'true') }}
     # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
     # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
@@ -47,16 +128,30 @@ jobs:
             exit 1
           fi
       - name: Full Python suite (every layer, GIS required)
+        if: github.event_name != 'pull_request'
         env:
           SKIPPERCAST_REQUIRE_GIS: "1"
         # JUnit goes outside the checkout, so no report file can end up in a repository scan.
         run: python -m pytest --durations=15 --junitxml="$RUNNER_TEMP/pytest-survey.xml"
+      # PR tier: the core layers already run in `check`, and three coast modules take
+      # about 30 of the full suite's 40 minutes; they run on main and nightly.
+      - name: GIS layer, slow coast modules excluded (pull request tier)
+        if: github.event_name == 'pull_request'
+        env:
+          SKIPPERCAST_REQUIRE_GIS: "1"
+        run: >-
+          python -m pytest -m gis --durations=15 --junitxml="$RUNNER_TEMP/pytest-survey.xml"
+          --ignore=tests/gis/test_coast_close_safety.py
+          --ignore=tests/gis/test_coast_segment_close.py
+          --ignore=tests/gis/test_coast_sign_off_graph.py
       - name: Test summary; fail on any skip outside the private-cache allowlist
         if: always()
+        env:
+          TITLE: ${{ github.event_name == 'pull_request' && 'Python, GIS layer, PR tier (survey-science)' || 'Python, full suite (survey-science)' }}
         run: |
           junit="$RUNNER_TEMP/pytest-survey.xml"
           if [ ! -f "$junit" ]; then echo "::error::pytest wrote no JUnit report"; exit 1; fi
-          python scripts/pytest_report.py "$junit" --title "Python, full suite (survey-science)" --strict-skips >> "$GITHUB_STEP_SUMMARY"
+          python scripts/pytest_report.py "$junit" --title "$TITLE" --strict-skips >> "$GITHUB_STEP_SUMMARY"
       - name: Upload JUnit results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -68,6 +163,8 @@ jobs:
   e2e:
     # Browser tests (P4-09a): Playwright + axe against the built site under
     # `wrangler dev` (e2e/serve.mjs), at 390x844 and 1280x800.
+    # Full tier only (R12): main, merge queue, nightly and dispatch, not pull requests.
+    if: github.event_name != 'pull_request'
     # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
     # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
@@ -108,7 +205,8 @@ jobs:
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     strategy:
       matrix:
-        python: ["3.11", "3.13"]
+        # One Python on pull requests (R12); the matrix runs in the full tier.
+        python: ${{ fromJSON(github.event_name == 'pull_request' && '["3.13"]' || '["3.11", "3.13"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
