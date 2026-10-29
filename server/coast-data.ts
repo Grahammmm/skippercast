@@ -4,6 +4,7 @@
 // copied to R2 by scripts/coast/publish_assets.py are served from there instead,
 // each object hashed against its manifest entry before any byte leaves.
 import {json} from './http.ts';
+import {sourceFreshness, startupAdmission, startupDeadline} from '../web/landing/region-warm.ts';
 import catalog from '../catalog/sources.json' with {type: 'json'};
 
 const ORIGIN = 'https://fish-report.g4651.workers.dev';
@@ -64,7 +65,11 @@ export type CoastStore = Pick<R2Bucket, 'get' | 'head'>;
 const SHA = /^[a-f0-9]{64}$/, VERIFY_MAX = 32 * MB;
 const releases = new Map<string, Release>(); // immutable: keyed by the manifest digest
 const verified = new Map<string, string>();  // object key -> R2 etag whose full bytes matched
-const hashing = new Map<string, Promise<Uint8Array<ArrayBuffer>>>(); // one whole-object read per key at a time
+// Sixteen cold whole-object reads per binding, each at most 32 MiB; same-key ranges join.
+// A viewer overlaps four tiles and three evidence assets: allow two such viewers
+// plus two spare keys without an unbounded waiting queue.
+// Abort-ignoring storage retains admission until settled, rather than building a hidden queue.
+const hashing = new WeakMap<CoastStore, ReturnType<typeof startupAdmission<Uint8Array<ArrayBuffer>>>>();
 const hex = async (bytes: Uint8Array<ArrayBuffer>) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
 /** Same grouping as publish_assets.py group_of: a group is served from R2 only once it is published; null stays on the bridge. */
 export const assetGroup = (asset: string) => /^\/(?:api\/habitat\/|data\/skippercast-|data\/coast-wide\/reef-context\.)/.test(asset) ? 'habitat'
@@ -73,20 +78,28 @@ const validEntry = (e: Entry | undefined): e is Entry => !!e && typeof e === 'ob
   e.bytes <= VERIFY_MAX && /^[a-z]+\/[a-z0-9.+-]+$/.test(e.contentType) && (e.habitatRelease === undefined || SHA.test(e.habitatRelease)) &&
   (e.expiresAt === undefined || Number.isFinite(Date.parse(e.expiresAt)));
 
-async function small(store: CoastStore, key: string, max: number): Promise<Uint8Array<ArrayBuffer> | null> {
-  const object = await store.get(key); if (!object) return null;
+async function small(store: CoastStore, key: string, max: number, signal: AbortSignal): Promise<Uint8Array<ArrayBuffer> | null> {
+  signal.throwIfAborted();
+  const object = await store.get(key);
+  if (signal.aborted) { void object?.body.cancel().catch(() => {}); signal.throwIfAborted(); }
+  if (!object) return null;
   if (object.size > max) { await object.body.cancel(); throw Error('Byte limit'); }
-  return new Uint8Array(await object.arrayBuffer());
+  return r2Bytes(object, signal, max);
+}
+
+async function r2Bytes(object: R2ObjectBody, signal: AbortSignal, max = VERIFY_MAX): Promise<Uint8Array<ArrayBuffer>> {
+  // Own the reader: cancelling a body locked by arrayBuffer() cannot stop a stalled read.
+  return bounded(new Response(object.body), max, signal);
 }
 
 /** The verified current release, or null when nothing is published (the bridge stays the source). */
-async function currentRelease(store: CoastStore): Promise<Release | null> {
-  const raw = await small(store, 'coast/current.json', 4096); if (!raw) return null;
+async function currentRelease(store: CoastStore, signal: AbortSignal): Promise<Release | null> {
+  const raw = await small(store, 'coast/current.json', 4096, signal); if (!raw) return null;
   const pointer = JSON.parse(new TextDecoder().decode(raw)) as {schemaVersion?: number; status?: string; releaseId?: string};
   if (pointer.schemaVersion !== 1 || pointer.status !== 'ready' || !SHA.test(pointer.releaseId ?? '')) throw Error('Coast release held');
   let release = releases.get(pointer.releaseId!);
   if (!release) {
-    const bytes = await small(store, `coast/releases/${pointer.releaseId}.json`, 4 * MB);
+    const bytes = await small(store, `coast/releases/${pointer.releaseId}.json`, 4 * MB, signal);
     if (!bytes || await hex(bytes) !== pointer.releaseId) throw Error('Coast manifest identity');
     const data = JSON.parse(new TextDecoder().decode(bytes)) as Release & {schemaVersion: number; kind: string};
     if (data.schemaVersion !== 1 || data.kind !== 'skippercast-coast-assets' || !Array.isArray(data.groups) || !data.objects || typeof data.objects !== 'object') throw Error('Coast manifest shape');
@@ -96,45 +109,44 @@ async function currentRelease(store: CoastStore): Promise<Release | null> {
 }
 
 /** Whole-object digest once per R2 object version; later reads pin that version's etag. */
-async function verifiedRead(store: CoastStore, entry: Entry, method: string, range: {start: number; end: number} | null): Promise<Uint8Array<ArrayBuffer> | null> {
+async function verifiedRead(store: CoastStore, entry: Entry, method: string, range: {start: number; end: number} | null, signal: AbortSignal): Promise<Uint8Array<ArrayBuffer> | null> {
   const key = 'coast/objects/' + entry.sha256, etag = verified.get(key);
   if (etag !== undefined) {
     if (method === 'HEAD') { const head = await store.head(key); if (head?.etag === etag && head.size === entry.bytes) return null; }
     else {
       const object = await store.get(key, {onlyIf: {etagMatches: etag}, ...(range ? {range: {offset: range.start, length: range.end - range.start + 1}} : {})});
-      if (object && 'body' in object && object.etag === etag && object.size === entry.bytes) return new Uint8Array(await object.arrayBuffer());
+      if (object && 'body' in object && object.etag === etag && object.size === entry.bytes) return r2Bytes(object, signal);
       if (object && 'body' in object) await object.body.cancel();
     }
     verified.delete(key);
   }
-  let pending = hashing.get(key);
-  if (!pending) {
-    pending = (async () => {
-      const object = await store.get(key);
-      if (!object || object.size !== entry.bytes) { await object?.body.cancel(); throw Error('Coast object identity'); }
-      const bytes = new Uint8Array(await object.arrayBuffer());
-      if (bytes.byteLength !== entry.bytes || await hex(bytes) !== entry.sha256) throw Error('Coast object digest');
-      if (verified.size > 20000) verified.clear();
-      verified.set(key, object.etag);
-      return bytes;
-    })().finally(() => hashing.delete(key));
-    hashing.set(key, pending);
-  }
-  const bytes = await pending;
+  signal.throwIfAborted();
+  let pool = hashing.get(store);
+  if (!pool) { pool = startupAdmission(16, 20000); hashing.set(store, pool); }
+  const bytes = await pool.read(key, async coldSignal => {
+    const object = await store.get(key);
+    if (!object || object.size !== entry.bytes) { await object?.body.cancel(); throw Error('Coast object identity'); }
+    const bytes = await r2Bytes(object, coldSignal);
+    if (bytes.byteLength !== entry.bytes || await hex(bytes) !== entry.sha256) throw Error('Coast object digest');
+    coldSignal.throwIfAborted();
+    if (verified.size > 20000) verified.clear();
+    verified.set(key, object.etag);
+    return bytes;
+  });
   return method === 'HEAD' ? null : range ? bytes.slice(range.start, range.end + 1) : bytes.slice();
 }
 
-async function fromStore(store: CoastStore, target: {asset: string; release: string | null; max: number}, method: string, range: {start: number; end: number} | null): Promise<Response | undefined> {
+async function fromStore(store: CoastStore, target: {asset: string; release: string | null; max: number}, method: string, range: {start: number; end: number} | null, signal: AbortSignal, now: number): Promise<Response | undefined> {
   const group = assetGroup(target.asset); if (!group) return undefined;
-  const release = await currentRelease(store);
+  const release = await currentRelease(store, signal);
   if (!release || !release.groups.includes(group)) return undefined;
   const entry = Object.hasOwn(release.objects, target.asset) ? release.objects[target.asset] : undefined;
   if (!validEntry(entry)) return json({error: 'Unknown coast dataset'}, 404);
   if (target.release !== null && target.release !== entry.habitatRelease) return json({error: 'Unknown coast release'}, 404);
-  if (entry.expiresAt !== undefined && !(Date.parse(entry.expiresAt) > Date.now())) return json({error: 'Coast release expired'}, 503);
+  if (entry.expiresAt !== undefined && !(Date.parse(entry.expiresAt) > now)) return json({error: 'Coast release expired'}, 503);
   if (range && range.end >= entry.bytes) return new Response(null, {status: 416, headers: {'Content-Range': `bytes */${entry.bytes}`, 'Cache-Control': 'no-store'}});
   if (!range && method === 'GET' && entry.bytes > target.max) return json({error: 'Coast source unavailable'}, 503);
-  const bytes = await verifiedRead(store, entry, method, range);
+  const bytes = await verifiedRead(store, entry, method, range, signal);
   const out = new Headers({'Cache-Control': 'no-store', 'Content-Type': entry.contentType, ETag: `"sha256-${entry.sha256}"`, 'Accept-Ranges': 'bytes',
     'Content-Length': String(range ? range.end - range.start + 1 : entry.bytes), 'X-Content-Type-Options': 'nosniff'});
   if (entry.habitatRelease) out.set('X-Fish-Habitat-Release', entry.habitatRelease);
@@ -150,7 +162,7 @@ async function fromStore(store: CoastStore, target: {asset: string; release: str
 // FE-87: `report` is the report's base (forecasts, buoys, tides, alerts, catches, spatial layers).
 export type CoastFeed = 'nearshore' | 'water-quality' | 'ocean' | 'history' | 'report';
 type Json = Record<string, any>;
-const HOUR = 3_600_000, SKEW = 300_000;
+const HOUR = 3_600_000;
 const clock = (v: unknown) => typeof v === 'string' ? Date.parse(v) : NaN;
 const isClock = (v: unknown) => Number.isFinite(clock(v));
 const rows = (v: unknown): v is Json[] => Array.isArray(v) && v.every(x => !!x && typeof x === 'object' && !Array.isArray(x));
@@ -193,16 +205,15 @@ export function coastFeeds(value: string | undefined, sources: readonly CatalogR
 }
 
 /** A published feed, or why it is not used: missing, unreadable, invalid or stale (its own clock against this request's). */
-async function ownFeed(store: CoastStore | null, name: CoastFeed, now: number): Promise<Json | string> {
+async function ownFeed(store: CoastStore | null, name: CoastFeed, now: number, signal: AbortSignal): Promise<Json | string> {
   if (!store) return 'unbound';
   const feed = FEEDS[name];
   try {
-    const bytes = await small(store, feed.key, feed.max); if (!bytes) return 'missing';
+    const bytes = await small(store, feed.key, feed.max, signal); if (!bytes) return 'missing';
     const data = JSON.parse(new TextDecoder().decode(bytes)) as Json;
     if (!data || typeof data !== 'object' || !feed.valid(data) || !isClock(data[feed.generated])) return 'invalid';
-    const age = now - clock(data[feed.generated]);
-    return age >= -SKEW && age < feed.maxAge ? data : 'stale';
-  } catch { return 'unreadable'; }
+    return sourceFreshness(data[feed.generated], feed.maxAge, () => now).state === 'current' ? data : 'stale';
+  } catch { signal.throwIfAborted(); return 'unreadable'; }
 }
 
 /** Freshness against this request's clock: a model issue 48 h old or more is never current, whatever the collector said. */
@@ -228,11 +239,11 @@ function fishEnrichment(report: Json, fish: Json | null): Json {
     sources: [...report.sources, ...(Array.isArray(fish.sources) ? fish.sources.filter(enrichment) : [])]};
 }
 /** The Fish report as JSON for its enrichment rows, or null when it is unavailable or not the SLO snapshot. */
-async function fishReport(fetcher: typeof fetch, url: URL): Promise<Json | null> {
+async function fishReport(fetcher: typeof fetch, url: URL, signal: AbortSignal): Promise<Json | null> {
   try {
-    const upstream = await fetcher(new Request(url, {method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(20000)}));
+    const upstream = await fetcher(new Request(url, {method: 'GET', redirect: 'manual', signal}));
     if (upstream.status !== 200 || !/^application\/json\b/i.test(upstream.headers.get('Content-Type') ?? '')) { await upstream.body?.cancel(); return null; }
-    const data = JSON.parse(new TextDecoder().decode(await bounded(upstream, 8 * MB))) as Json;
+    const data = JSON.parse(new TextDecoder().decode(await bounded(upstream, 8 * MB, signal))) as Json;
     return data?.schemaVersion === 1 && data.countyId === 'slo' && isClock(data.generatedAt) && Array.isArray(data.sources) ? data : null;
   } catch { return null; }
 }
@@ -244,19 +255,22 @@ function ownResponse(data: Json, method: string, upstream: string, max: number):
     'Content-Length': String(bytes.byteLength), 'X-Content-Type-Options': 'nosniff', 'X-Coast-Upstream': upstream}});
 }
 
-async function bounded(response: Response, max: number): Promise<Uint8Array<ArrayBuffer>> {
+async function bounded(response: Response, max: number, signal: AbortSignal): Promise<Uint8Array<ArrayBuffer>> {
   const length = response.headers.get('Content-Length');
   if (length !== null && (!/^\d+$/.test(length) || Number(length) > max)) { await response.body?.cancel(); throw Error('Byte limit'); }
   const reader = response.body?.getReader(); if (!reader) throw Error('Missing data');
+  const cancel = () => { void reader.cancel().catch(() => {}); };
+  signal.addEventListener('abort', cancel, {once: true});
   const parts: Uint8Array[] = []; let size = 0;
   try {
+    signal.throwIfAborted();
     for (;;) {
-      const {done, value} = await reader.read(); if (done) break;
+      const {done, value} = await reader.read(); signal.throwIfAborted(); if (done) break;
       size += value.byteLength; if (size > max) throw Error('Byte limit');
       parts.push(value);
     }
-  } catch (error) { await reader.cancel(); throw error; }
-  finally { reader.releaseLock(); }
+  } catch (error) { cancel(); throw error; }
+  finally { signal.removeEventListener('abort', cancel); reader.releaseLock(); }
   const bytes = new Uint8Array(size); let offset = 0;
   for (const part of parts) { bytes.set(part, offset); offset += part.byteLength; }
   return bytes;
@@ -265,7 +279,16 @@ async function bounded(response: Response, max: number): Promise<Uint8Array<Arra
 /** Cookie/identity/auth headers never leave SkipperCast. Only bounded public GET/HEAD requests.
  * `feeds` (COAST_FEEDS) moves snapshot sources to SkipperCast's feeds; empty keeps every path as before FE-84. */
 export async function serveCoastData(request: Request, fetcher: typeof fetch = fetch, store: CoastStore | null = null,
-  feeds: ReadonlySet<CoastFeed> = new Set()): Promise<Response> {
+  feeds: ReadonlySet<CoastFeed> = new Set(), options: {timeoutMs?: number; now?: () => number} = {}): Promise<Response> {
+  const timeoutMs = options.timeoutMs ?? 20000, deadlineAt = performance.now() + timeoutMs;
+  try {
+    return await startupDeadline(signal => serveCoastRequest(request, fetcher, store, feeds, signal, (options.now ?? Date.now)(), deadlineAt),
+      timeoutMs, request.signal);
+  } catch { return json({error: 'Coast source unavailable'}, 503); }
+}
+
+async function serveCoastRequest(request: Request, fetcher: typeof fetch, store: CoastStore | null,
+  feeds: ReadonlySet<CoastFeed>, signal: AbortSignal, now: number, deadlineAt: number): Promise<Response> {
   if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', {status: 405, headers: {Allow: 'GET, HEAD'}});
   const target = coastTarget(new URL(request.url)); if (!target) return json({error: 'Unknown coast dataset'}, 404);
   const headers = new Headers();
@@ -280,31 +303,36 @@ export async function serveCoastData(request: Request, fetcher: typeof fetch = f
     try {
       const wanted = range ? /^bytes=(\d+)-(\d+)$/.exec(range)! : null;
       const local = await fromStore(store, {asset: target.asset, release: target.release, max: target.max}, request.method,
-        wanted ? {start: Number(wanted[1]), end: Number(wanted[2])} : null);
+        wanted ? {start: Number(wanted[1]), end: Number(wanted[2])} : null, signal, now);
       if (local) return local;
     } catch { return json({error: 'Coast source unavailable'}, 503); }
   }
   // FE-84: switched snapshot sources from SkipperCast's feeds; the rest of a report stays on the bridge.
-  const own: Partial<Record<CoastFeed, Json>> = {}, notes: string[] = [], now = Date.now();
+  const own: Partial<Record<CoastFeed, Json>> = {}, notes: string[] = [];
   if (target.snapshot) {
     for (const name of SNAPSHOT_FEEDS[target.snapshot]!.filter(n => feeds.has(n))) {
-      const result = await ownFeed(store, name, now);
+      const result = await ownFeed(store, name, now, signal);
       if (typeof result === 'string') notes.push(`${name}=fish (${result})`);
       else { own[name] = result; notes.push(`${name}=skippercast`); }
     }
     if (own.ocean) return ownResponse(own.ocean, request.method, notes.join(', '), target.max);
     if (own.history) return ownResponse(historyNow(own.history, now), request.method, notes.join(', '), target.max);
     if (own.report) {  // FE-87: an enrichment source not taken from its own feed still comes from Fish's report
-      const fish = own.nearshore && own['water-quality'] ? null : await fishReport(fetcher, target.url);
+      // Fish is optional enrichment, not a prerequisite for the fresh owned report.
+      // Reserve half the remaining (monotonic) budget for degrading and serializing;
+      // the nested race also bounds adapters that ignore abort, including bodies.
+      const fish = own.nearshore && own['water-quality'] ? null : await startupDeadline(
+        child => fishReport(fetcher, target.url, child), Math.max(0, (deadlineAt - performance.now()) / 2), signal).catch(() => null);
       if (!fish && !(own.nearshore && own['water-quality'])) notes.push('fish=unavailable');
       return ownResponse(overlay(fishEnrichment(own.report, fish), own, now), request.method, notes.join(', '), target.max);
     }
   }
+  signal.throwIfAborted();
   const overlaid = Object.keys(own).length > 0;
   // Do not forward client cookies, Origin, Referer, Authorization or arbitrary headers.
   try {
     const upstream = await fetcher(new Request(target.url, {method: request.method, headers,
-      redirect: 'manual', signal: AbortSignal.timeout(20000)}));
+      redirect: 'manual', signal}));
     if (![200, 206].includes(upstream.status)) {
       await upstream.body?.cancel();
       return json({error: 'Coast source unavailable'}, upstream.status === 404 ? 404 : 503);
@@ -333,7 +361,7 @@ export async function serveCoastData(request: Request, fetcher: typeof fetch = f
       await upstream.body?.cancel();
       return new Response(null, {status: upstream.status, headers: out});
     }
-    let bytes: Uint8Array = await bounded(upstream, target.max);
+    let bytes: Uint8Array = await bounded(upstream, target.max, signal);
     if (target.snapshot) {
       if (!/^application\/json\b/i.test(upstream.headers.get('Content-Type') ?? '')) throw Error('Unexpected format');
       const data = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;

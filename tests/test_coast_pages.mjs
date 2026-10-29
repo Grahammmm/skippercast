@@ -165,7 +165,7 @@ test('readable and RSS use the same approved configured report as the coast API'
  const clock=new Date(),generatedAt=clock.toISOString(),observedAt=new Date(clock.getTime()-60000).toISOString();
  const own={...structuredClone(report),generatedAt,catchStatus:'unavailable',visibility:{},observations:[{stationId:'configured<&',observedAt,waterTempF:61}],sources:[]};
  const bytes=new TextEncoder().encode(JSON.stringify(own)),keys=[];
- const store={get:async key=>{keys.push(key);return key==='conditions/regions/morro-bay/coast-report.json'?{size:bytes.length,arrayBuffer:async()=>bytes.buffer}:null;},head:async()=>null};
+ const store={get:async key=>{keys.push(key);return key==='conditions/regions/morro-bay/coast-report.json'?{size:bytes.length,body:new Response(bytes).body,arrayBuffer:async()=>bytes.buffer}:null;},head:async()=>null};
  const feeds=coastFeeds('report');assert.ok(feeds.has('report'));
  const seen=[];const fetcher=async req=>{seen.push(req);return new Response('unavailable',{status:503});};
  const configured={...options(),now:clock,store,feeds,fetcher};
@@ -188,7 +188,7 @@ test('unusable configured report and unavailable bridge cannot fabricate a reada
  for(const mode of ['missing','failed','invalid','expired']){
   const data=mode==='expired'?{...invalid,countyId:'slo',generatedAt:'2000-01-01T00:00:00Z'}:invalid;
   const bytes=new TextEncoder().encode(JSON.stringify(data));
-  const store={get:async()=>{if(mode==='failed')throw new Error('synthetic store failure');return mode==='missing'?null:{size:bytes.length,arrayBuffer:async()=>bytes.buffer};},head:async()=>null};
+  const store={get:async()=>{if(mode==='failed')throw new Error('synthetic store failure');return mode==='missing'?null:{size:bytes.length,body:new Response(bytes).body,arrayBuffer:async()=>bytes.buffer};},head:async()=>null};
   for(const path of ['/report','/feed.xml']){
    const response=await serveCoastPage(request(path),{...options(),store,feeds:coastFeeds('report'),fetcher:async()=>new Response('unavailable',{status:503})});
    assert.equal(response.status,503,mode+' '+path);const body=await response.text();assert.match(body,/unavailable/i);assert.doesNotMatch(body,/<lastBuildDate>|Report assembled|46028/);
