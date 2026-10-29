@@ -12,7 +12,7 @@
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import {signal} from '@preact/signals';
-import type {Profile} from './profile.ts';
+import {ownSpearDepthFt, PROFILE_TABLE, type Profile} from './profile.ts';
 import {readStored, STORAGE_KEYS, writeStored} from './state.ts';
 
 export type ReachProfile = 'boat' | 'kayak';
@@ -95,3 +95,78 @@ export function reachRing(origin: {latitude: number; longitude: number}, nm: num
 
 /** "12 nm", "2.5 nm". */
 export const nmText = (nm: number): string => `${Number(nm.toFixed(1))} nm`;
+
+// Spear (#644, slice 5 part 2): the diver's own deepest dive, where they dive
+// from, and how far from shore they will swim when diving from shore. Kept
+// on this device; nothing set means the table's 60 ft and no shore filter.
+
+/** The deepest dive a diver may set (ft); 60 ft is the table's default. */
+export const SPEAR_DEPTH_BOUNDS = Object.freeze({min: 10, max: 100, step: 5});
+/** The farthest swim from shore a diver may set (yards). */
+export const SHORE_SWIM_BOUNDS = Object.freeze({min: 25, max: 2000, step: 25});
+/** The table's Spear limit, which a saved depth equal to it clears. */
+const PROFILE_SPEAR_DEFAULT = PROFILE_TABLE.spear.maxDepthFt;
+export type DiveFrom = 'shore' | 'boat';
+export interface SpearPlan {readonly from: DiveFrom | null; readonly shoreYd: number | null}
+/** Where the diver dives from and the swim limit; the depth lives in profile.ts `ownSpearDepthFt`. */
+export const spearPlan = signal<SpearPlan>({from: null, shoreYd: null});
+
+const inBounds = (value: unknown, b: {min: number; max: number; step: number}): number | null => {
+  const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN;
+  return Number.isFinite(n) && n >= b.min && n <= b.max ? Math.round(n / b.step) * b.step : null;
+};
+export const parseSpearDepth = (value: unknown): number | null => inBounds(value, SPEAR_DEPTH_BOUNDS);
+export const parseShoreSwim = (value: unknown): number | null => inBounds(value, SHORE_SWIM_BOUNDS);
+const parseFrom = (value: unknown): DiveFrom | null => value === 'shore' || value === 'boat' ? value : null;
+
+/** Parse stored JSON into the depth (null: the table's) and the plan; anything unreadable is dropped. */
+export function parseStoredSpear(raw: string | null): {depthFt: number | null; plan: SpearPlan} {
+  let json: Record<string, unknown> = {};
+  try { const v: unknown = JSON.parse(raw ?? 'null'); if (v && typeof v === 'object' && !Array.isArray(v)) json = v as Record<string, unknown>; } catch { /* unreadable */ }
+  const depth = parseSpearDepth(json.depthFt);
+  return {depthFt: depth === PROFILE_SPEAR_DEFAULT ? null : depth, plan: {from: parseFrom(json.from), shoreYd: parseShoreSwim(json.shoreYd)}};
+}
+
+/** Load the stored Spear inputs into the signals. */
+export function loadSpear(): void {
+  const {depthFt, plan} = parseStoredSpear(readStored(STORAGE_KEYS.spear));
+  ownSpearDepthFt.value = depthFt;
+  spearPlan.value = plan;
+}
+
+/** Save the Spear inputs: a depth equal to the default or out of range clears it; a blank swim clears it. Returns what was saved. */
+export function saveSpear(input: {depthFt?: unknown; from?: unknown; shoreYd?: unknown}): {depthFt: number | null; plan: SpearPlan} {
+  const depth = parseSpearDepth(input.depthFt);
+  const depthFt = depth === PROFILE_SPEAR_DEFAULT ? null : depth;
+  const plan: SpearPlan = {from: parseFrom(input.from), shoreYd: parseShoreSwim(input.shoreYd)};
+  ownSpearDepthFt.value = depthFt;
+  spearPlan.value = plan;
+  writeStored(STORAGE_KEYS.spear, JSON.stringify({depthFt, ...plan}));
+  return {depthFt, plan};
+}
+
+/** The swim limit that applies now: only when diving from shore with a limit set. */
+export const shoreSwimLimit = (plan: SpearPlan = spearPlan.value): number | null => plan.from === 'shore' ? plan.shoreYd : null;
+
+// Kayak (#644, slice 5 part 2): the launch the paddle starts from, one of the
+// region's reviewed launch points (dist/regions/<id>/launch-points.json, web/launches.ts),
+// per region, kept on this device. None chosen: the region's harbor.
+
+/** The chosen launch id per region. */
+export const launchChoice = signal<Readonly<Record<string, string>>>({});
+
+export function parseStoredLaunch(raw: string | null): Record<string, string> {
+  let json: unknown;
+  try { json = JSON.parse(raw ?? 'null'); } catch { return {}; }
+  if (!json || typeof json !== 'object' || Array.isArray(json)) return {};
+  const ok = /^[a-z0-9-]{1,80}$/;
+  return Object.fromEntries(Object.entries(json as Record<string, unknown>).filter((e): e is [string, string] => ok.test(e[0]) && typeof e[1] === 'string' && ok.test(e[1])));
+}
+export function loadLaunch(): void { launchChoice.value = parseStoredLaunch(readStored(STORAGE_KEYS.launch)); }
+/** Save `id` as `region`'s launch; an empty id goes back to the harbor. */
+export function saveLaunch(region: string, id: string): void {
+  const next = {...launchChoice.peek()};
+  if (id && /^[a-z0-9-]{1,80}$/.test(id)) next[region] = id; else delete next[region];
+  launchChoice.value = next;
+  writeStored(STORAGE_KEYS.launch, JSON.stringify(next));
+}
