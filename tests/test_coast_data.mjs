@@ -342,21 +342,53 @@ test("the renderer's verified-asset and habitat HEAD checks pass against R2 and 
   } finally { globalThis.fetch = original; }
 });
 
+test('W10A: two viewers can each overlap four tiles and three evidence reads cold', {timeout: 1000}, async t => {
+  const paths = Array.from({length: 14}, (_, i) => `/data/coast-wide/w10a-viewer-${i}.bin`);
+  const files = Object.fromEntries(paths.map((p, i) => [p, {bytes: new TextEncoder().encode(`synthetic viewer cold asset ${i}`)}]));
+  const f = await gatedAssets(t, files), gates = paths.map(p => f.arm(p));
+  const running = paths.map(p => f.send('/coast-data' + p));
+  await Promise.all(gates.map(g => g.entered.promise));
+  assert.equal(f.stats().active, 14);
+  for (const gate of gates) gate.body.resolve();
+  const responses = await Promise.all(running);
+  assert.deepEqual(responses.map(r => r.status), paths.map(() => 200));
+  assert.equal(f.stats().peak, 14, 'four tiles + three evidence reads per viewer overlap');
+  for (const [i, r] of responses.entries()) {
+    assert.deepEqual(new Uint8Array(await r.arrayBuffer()), files[paths[i]].bytes);
+    assert.equal(f.counts.get(gates[i].key), 1);
+  }
+  assert.equal(f.stats().bridgeCalls, 0);
+});
+
+test('W10A: stalled abort-honouring Fish enrichment preserves the owned report', {timeout: 1000}, async () => {
+  const owned = reportFeed();
+  let aborted = false;
+  const stalled = req => new Promise((_resolve, reject) => {
+    req.signal.addEventListener('abort', () => { aborted = true; reject(req.signal.reason); }, {once: true});
+  });
+  const result = await serveCoastData(request('/api/coast/report'), stalled,
+    feedStore({[REPORT]: owned}), coastFeeds('report'), {timeoutMs: 200});
+  assert.equal(result.status, 200);
+  assert.equal(aborted, true);
+  assert.equal(result.headers.get('X-Coast-Upstream'), 'report=skippercast, fish=unavailable');
+  assert.deepEqual(await result.json(), owned);
+});
+
 test('W10A: cold-key saturation refuses promptly while an admitted key can still join', {timeout: 1000}, async t => {
-  const paths = Array.from({length: 5}, (_, i) => `/data/coast-wide/w10a-saturation-${i}.bin`);
+  const paths = Array.from({length: 17}, (_, i) => `/data/coast-wide/w10a-saturation-${i}.bin`);
   const files = Object.fromEntries(paths.map((p, i) => [p, {bytes: new TextEncoder().encode(`synthetic bounded cold asset ${i}`)}]));
   const f = await gatedAssets(t, files), gates = paths.map(p => f.arm(p));
-  const running = paths.slice(0, 4).map(p => f.send('/coast-data' + p));
-  await Promise.all(gates.slice(0, 4).map(g => g.entered.promise));
-  const refused = await f.send('/coast-data' + paths[4]);
+  const running = paths.slice(0, 16).map(p => f.send('/coast-data' + p));
+  await Promise.all(gates.slice(0, 16).map(g => g.entered.promise));
+  const refused = await f.send('/coast-data' + paths[16]);
   assert.equal(refused.status, 503);
-  assert.equal(f.counts.get(gates[4].key), undefined, 'no storage read for refused work');
+  assert.equal(f.counts.get(gates[16].key), undefined, 'no storage read for refused work');
   const join = f.send('/coast-data' + paths[0], {headers: {Range: 'bytes=0-3'}});
   gates[0].body.resolve();
   assert.equal((await join).status, 206);
   assert.equal(f.counts.get(gates[0].key), 1);
-  const retry = f.send('/coast-data' + paths[4]);
-  await gates[4].entered.promise;
+  const retry = f.send('/coast-data' + paths[16]);
+  await gates[16].entered.promise;
   for (const gate of gates) gate.body.resolve();
   assert.ok((await Promise.all([...running, retry])).every(r => r.status === 200));
   assert.equal(f.stats().bridgeCalls, 0);

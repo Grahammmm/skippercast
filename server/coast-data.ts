@@ -65,7 +65,9 @@ export type CoastStore = Pick<R2Bucket, 'get' | 'head'>;
 const SHA = /^[a-f0-9]{64}$/, VERIFY_MAX = 32 * MB;
 const releases = new Map<string, Release>(); // immutable: keyed by the manifest digest
 const verified = new Map<string, string>();  // object key -> R2 etag whose full bytes matched
-// Four cold whole-object reads per binding, each at most 32 MiB; same-key ranges join.
+// Sixteen cold whole-object reads per binding, each at most 32 MiB; same-key ranges join.
+// A viewer overlaps four tiles and three evidence assets: allow two such viewers
+// plus two spare keys without an unbounded waiting queue.
 // Abort-ignoring storage retains admission until settled, rather than building a hidden queue.
 const hashing = new WeakMap<CoastStore, ReturnType<typeof startupAdmission<Uint8Array<ArrayBuffer>>>>();
 const hex = async (bytes: Uint8Array<ArrayBuffer>) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), b => b.toString(16).padStart(2, '0')).join('');
@@ -120,7 +122,7 @@ async function verifiedRead(store: CoastStore, entry: Entry, method: string, ran
   }
   signal.throwIfAborted();
   let pool = hashing.get(store);
-  if (!pool) { pool = startupAdmission(4, 20000); hashing.set(store, pool); }
+  if (!pool) { pool = startupAdmission(16, 20000); hashing.set(store, pool); }
   const bytes = await pool.read(key, async coldSignal => {
     const object = await store.get(key);
     if (!object || object.size !== entry.bytes) { await object?.body.cancel(); throw Error('Coast object identity'); }
@@ -278,14 +280,15 @@ async function bounded(response: Response, max: number, signal: AbortSignal): Pr
  * `feeds` (COAST_FEEDS) moves snapshot sources to SkipperCast's feeds; empty keeps every path as before FE-84. */
 export async function serveCoastData(request: Request, fetcher: typeof fetch = fetch, store: CoastStore | null = null,
   feeds: ReadonlySet<CoastFeed> = new Set(), options: {timeoutMs?: number; now?: () => number} = {}): Promise<Response> {
+  const timeoutMs = options.timeoutMs ?? 20000, deadlineAt = performance.now() + timeoutMs;
   try {
-    return await startupDeadline(signal => serveCoastRequest(request, fetcher, store, feeds, signal, (options.now ?? Date.now)()),
-      options.timeoutMs ?? 20000, request.signal);
+    return await startupDeadline(signal => serveCoastRequest(request, fetcher, store, feeds, signal, (options.now ?? Date.now)(), deadlineAt),
+      timeoutMs, request.signal);
   } catch { return json({error: 'Coast source unavailable'}, 503); }
 }
 
 async function serveCoastRequest(request: Request, fetcher: typeof fetch, store: CoastStore | null,
-  feeds: ReadonlySet<CoastFeed>, signal: AbortSignal, now: number): Promise<Response> {
+  feeds: ReadonlySet<CoastFeed>, signal: AbortSignal, now: number, deadlineAt: number): Promise<Response> {
   if (!['GET', 'HEAD'].includes(request.method)) return new Response('Method not allowed', {status: 405, headers: {Allow: 'GET, HEAD'}});
   const target = coastTarget(new URL(request.url)); if (!target) return json({error: 'Unknown coast dataset'}, 404);
   const headers = new Headers();
@@ -315,7 +318,11 @@ async function serveCoastRequest(request: Request, fetcher: typeof fetch, store:
     if (own.ocean) return ownResponse(own.ocean, request.method, notes.join(', '), target.max);
     if (own.history) return ownResponse(historyNow(own.history, now), request.method, notes.join(', '), target.max);
     if (own.report) {  // FE-87: an enrichment source not taken from its own feed still comes from Fish's report
-      const fish = own.nearshore && own['water-quality'] ? null : await fishReport(fetcher, target.url, signal);
+      // Fish is optional enrichment, not a prerequisite for the fresh owned report.
+      // Reserve half the remaining (monotonic) budget for degrading and serializing;
+      // the nested race also bounds adapters that ignore abort, including bodies.
+      const fish = own.nearshore && own['water-quality'] ? null : await startupDeadline(
+        child => fishReport(fetcher, target.url, child), Math.max(0, (deadlineAt - performance.now()) / 2), signal).catch(() => null);
       if (!fish && !(own.nearshore && own['water-quality'])) notes.push('fish=unavailable');
       return ownResponse(overlay(fishEnrichment(own.report, fish), own, now), request.method, notes.join(', '), target.max);
     }
