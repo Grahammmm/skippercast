@@ -6,11 +6,14 @@
 // before the region's marks name a harbor. The ring is the same great-circle
 // distance "Where to look" filters by, so a listed place sits inside it.
 // It never says the water inside is reachable, safe or fishable.
+// Kayak's ring runs from its chosen launch (web/launches.ts) once the list
+// loads, else from the harbor (#644, part 2).
 //
 // Erasable syntax only: tests/test_reach.mjs imports it by type stripping.
 import {computed, effect, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {harborOrigin, type Origin} from '../ranking.ts';
+import {launchOrigin, loadLaunchPoints} from '../launches.ts';
 import {nmText, reachFor, reachRange, reachRing} from '../reach.ts';
 import {profile, region} from '../state.ts';
 import type {Engine, Overlay} from './engine.ts';
@@ -57,7 +60,12 @@ export interface ReachLayerOptions {engine: ReadonlySignal<Engine | null>; palet
 
 /** Draws the ring while the profile has a saved range and the region names a harbor; created with the Chart (web/map/chart.ts `layers`). */
 export function createReach({engine, palette = () => readPalette(), host}: ReachLayerOptions) {
-  const origin = computed(() => { const m = markData.value; return m && m.region.id === region.value ? harborOrigin(m) : null; });
+  const origin = computed(() => {
+    const m = markData.value, id = region.value;
+    if (!m || m.region.id !== id) return null;
+    return (profile.value === 'kayak' ? launchOrigin(id) : null) ?? harborOrigin(m);
+  });
+  const launches = effect(() => { const id = region.value; if (id && profile.value === 'kayak' && typeof location !== 'undefined') void loadLaunchPoints(id); });
   const data = computed(() => { void reachRange.value; return reachFeatures(origin.value, reachFor(profile.value)); });
   let drawn = false, drawnOn: Engine | null = null, stopIdle: (() => void) | null = null;
   // The host's `data-reach-drawn` reports how many ring features MapLibre drew in view at the last idle.
@@ -76,5 +84,5 @@ export function createReach({engine, palette = () => readPalette(), host}: Reach
     e.setData(REACH_SOURCE, d);
     drawn = true; drawnOn = e;
   });
-  return {destroy() { dispose(); watch(); stopIdle?.(); if (host) { delete host.dataset.reach; delete host.dataset.reachDrawn; } }};
+  return {destroy() { dispose(); watch(); launches(); stopIdle?.(); if (host) { delete host.dataset.reach; delete host.dataset.reachDrawn; } }};
 }
