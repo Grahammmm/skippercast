@@ -1,0 +1,1 @@
+{"type": "object", "properties": {"depth_target_ft": {"maximum": 1e999}}}
