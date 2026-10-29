@@ -181,6 +181,7 @@ def main():
     synthetic_default.mkdir()
     source_reads = {TEST.resolve(), FIXTURE.resolve(), Path(__file__).resolve(),
                     (REPO / 'tests/__init__.py').resolve(),
+                    (REPO / 'tests/gis/__init__.py').resolve(),
                     (REPO / 'tests/_support.py').resolve()}
     for name in CLOSURE:
         relative = Path(*name.split('.'))
