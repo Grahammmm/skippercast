@@ -82,11 +82,15 @@ def tiles_and_bounds(root, c2):
     x0, x1, y0, y1 = min(xs), max(xs) + 1, min(ys), max(ys) + 1
     if len(tiles) != (x1 - x0) * (y1 - y0):
         raise ValueError('Rectangular C2 terrain coverage required')
-    # C2's vector layer may be sparse, but never outside its terrain coverage.
-    for relative in assets:
+    # GDAL's MVT buffer can emit the immediately neighbouring vector tiles.
+    # Validate them above, but omit them from admitted assets: the viewer insets
+    # its requests to terrain bounds. Never widen bounds or change C2 bytes.
+    for relative in list(assets):
         kind, _, x, y = relative.split('/')
         if kind == 'vector' and (int(x), int(y[:-4])) not in tiles:
-            raise ValueError('Vector tile outside terrain coverage')
+            if not x0 - 1 <= int(x) <= x1 or not y0 - 1 <= int(y[:-4]) <= y1:
+                raise ValueError('Vector tile outside terrain buffer')
+            del assets[relative]
     lat = lambda y: math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * y / 2**zoom))))
     bounds = [x0 / 2**zoom * 360 - 180, lat(y1), x1 / 2**zoom * 360 - 180, lat(y0)]
     if not -85 <= bounds[1] < bounds[3] <= 85:

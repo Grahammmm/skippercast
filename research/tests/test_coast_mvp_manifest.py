@@ -172,6 +172,33 @@ def test_contour_units_and_provenance_refused(tmp_path, field, value):
         coast_manifest.build(c2, c1, rights, region='demo', synthetic=True)
 
 
+@pytest.mark.parametrize('dx,dy', [(-1, -1), (-1, 0), (-1, 1), (0, -1),
+                                  (0, 1), (1, -1), (1, 0), (1, 1)])
+def test_vector_buffer_tiles_omitted_without_changing_bounds_or_bytes(tmp_path, dx, dy):
+    c2, _, _ = inputs(tmp_path)
+    declaration = json.loads((c2 / 'manifest.json').read_text())
+    bounds, assets = coast_manifest.tiles_and_bounds(c2, declaration)
+    extra = c2 / f'vector/12/{671 + dx}/{1616 + dy}.pbf'
+    extra.parent.mkdir(parents=True, exist_ok=True)
+    extra.write_bytes(b'buffer tile')
+    assert coast_manifest.tiles_and_bounds(c2, declaration) == (bounds, assets)
+    assert extra.read_bytes() == b'buffer tile'
+
+
+@pytest.mark.parametrize('xyz,error', [
+    ('12/669/1616', 'terrain buffer'), ('12/673/1616', 'terrain buffer'),
+    ('12/671/1614', 'terrain buffer'), ('12/671/1618', 'terrain buffer'),
+    ('13/671/1617', 'zoom/range')])
+def test_distant_or_wrong_zoom_vector_tiles_refused(tmp_path, xyz, error):
+    c2, c1, rights = inputs(tmp_path)
+    extra = c2 / f'vector/{xyz}.pbf'
+    extra.parent.mkdir(parents=True, exist_ok=True)
+    extra.write_bytes(b'not a buffer tile')
+    with pytest.raises(ValueError, match=error):
+        coast_manifest.build(c2, c1, rights, region='demo', synthetic=True)
+    assert not (c2 / 'viewer-manifest.json').exists()
+
+
 def test_existing_output_never_overwritten(tmp_path):
     c2, c1, rights = inputs(tmp_path)
     coast_manifest.build(c2, c1, rights, region='demo', synthetic=True)

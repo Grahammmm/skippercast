@@ -34,7 +34,10 @@ independently accepted legal-clearance decision, even for CC0/public-domain text
 C2's original relative terrain/vector templates are the only admitted asset
 paths. Numeric XYZ files must stay below that directory without symlink hops;
 bounds are derived from its rectangular terrain coverage (maximum 64 tiles).
-Vector tiles may be sparse but cannot fall outside the terrain coverage.
+Vector tiles may be sparse. GDAL MVT buffer tiles in the one-tile ring just
+outside terrain coverage are validated but omitted from admitted provenance
+assets; the viewer insets requests to terrain bounds. C2 bytes remain untouched.
+Tiles farther outside coverage or at the wrong zoom are refused.
 Contour coordinates must be finite and within bounds; feet/metres and source
 labels/resolutions must agree. Geometry, holes, clip boundaries and tile bytes
 are never rewritten. GIS fixtures exercise gradient/hole, closed bowl and
