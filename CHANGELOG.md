@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The mark card shows the forecast for a reef mark or ranked trip spot at the selected hour. NOAA and ECMWF wind and seas each get their own row, labelled with model and grid spacing. The forecast feed only has those at a few named points, so the card says so and shows the regional point's values, naming the point. The NOAA WCOFS surface current comes from the sampled ocean cell nearest the mark, with that cell's distance, when one is within 1.5 grid lengths.
 - SP61-SPEAR-DAYLIGHT: Withhold the daily spear best hour, surge range and clarity estimate when known daylight has no fully covered forecast hour. Nighttime readings remain available per hour; unknown sunrise or sunset keeps the existing all-hour fallback.
 
 - Add an opt-in local coast terrain-RGB / contour-MVT preview with synthetic fixtures, a persistent not-for-navigation banner and manifest-derived source rights. The public coast route is unchanged; measured-source integration and publication remain held.
@@ -141,6 +142,8 @@
 
 ### Internal
 
+- Design only, no app change: `docs/plans/pelagic-context/design.md` sets what albacore and bluefin pelagic context may show at a selected hour (separate dated evidence lines, only WCOFS lines change with the hour, bluefin keeps no temperature range, no score, rank or probability), the held-out validation test a search priority must pass first (not evaluable on the data held today, so priority stays off), and records that the species-search-plans search strips were retired with the v1 map (#561).
+
 - SP-FLEET-DATES: the public fleet heat route (`/api/fleet/public/heat`, still off by default) withholds a cell whose `last_date` is not an exact `YYYY-MM-DD` calendar day. The code re-check now rejects empty, padded, partial, timestamp-shaped and impossible dates such as 2021-02-29 before the 72-hour delay comparison, which the text comparison in SQL let through. The delay, vessel floor, rights allowlist, whole-season filter and paging are unchanged (`tests/test_sp_fleet_dates.mjs`, `scripts/accept_sp_fleet_dates.py`).
 
 - The research-daily NOAA ENC hazard step retries NOAA's transient "Could not find service" 500 (bounded, capped backoff) on the same reviewed host; if NOAA stays down it writes an explicit `upstream_unavailable` receipt and the inventory report warns instead of failing, while a missing, corrupt or incomplete snapshot still fails closed. Each run attempt has its own identity (`github:<run id>:<attempt>`, or `ENC_INVOCATION_ID` locally), so output from an earlier run or attempt, or a status naming the wrong artifact, never counts. No new hosts were added. See [research-daily ENC unavailable](docs/operations/runbooks/research-daily-enc-unavailable.md).
@@ -174,6 +177,7 @@
 - `dist/regions/<id>/shoreline.geojson` is schema_version 2: the platform build merges import features with identical source properties into one MultiLineString each and rounds coordinates to 5 decimals (under half a zoom-12 CUSP tile unit, so every tile vertex keeps its grid position). The v2 `/map` startup test now holds its static JSON to the unchanged budget (2,529,983 of 2,795,531 bytes).
 
 - Boat and Kayak can set a range to consider under Your limits (nautical miles, one way, kept on this device, no default). The Chart then draws a dashed ring that far from the harbor, labelled as a straight line, not a route; "Where to look" lists only places inside it and says so; Boat picks show their one-way run time at your cruise speed; and the trip planner's distance filter starts from your Boat range. Nothing is derived from a boat model, fuel or horsepower (#644).
+- Spear sets its own deepest dive (10 to 100 ft, 60 by default), whether it dives from shore or a boat, and from shore the farthest swim; "Where to look" keeps to them, measuring the swim to the mapped shoreline as an approximate straight line. Kayak can start its range and distances from one of the region's listed public launches instead of the harbor (#644).
 
 ## 0.8.0 — 2026-10-11
 
