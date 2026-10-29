@@ -13,6 +13,22 @@ from .profiles import profile
 RESULT='coastal-authenticated-stage-result-v1'
 AUTH='coastal-authenticated-finalized-proof-v1'
 MAX_OUTPUT=4*1024*1024
+
+def _decode_job_request(data):
+    """Decode request JSON without ambiguous keys or overflowed numbers."""
+    def unique_object(pairs):
+        document={}
+        for key,value in pairs:
+            if key in document:raise ValueError('invalid_job_request_json: duplicate key')
+            document[key]=value
+        return document
+    def finite_float(token):
+        value=float(token)
+        if not math.isfinite(value):raise ValueError('invalid_job_request_json: nonfinite number')
+        return value
+    return json.loads(data,object_pairs_hook=unique_object,parse_float=finite_float,
+                      parse_constant=lambda value:(_ for _ in ()).throw(ValueError('nonfinite request')))
+
 def read_job(path):
     path=Path(os.path.abspath(path))
     if path.name!='job.json' or tuple(path.parts[-6:-3])!=('var','coastal','jobs'):
@@ -33,7 +49,7 @@ def read_job(path):
         after=os.fstat(fd)
         if os.read(fd,1) or (st.st_dev,st.st_ino,st.st_size,st.st_mtime_ns,st.st_ctime_ns)!=(after.st_dev,after.st_ino,after.st_size,after.st_mtime_ns,after.st_ctime_ns):
             raise ValueError('request changed')
-        document=json.loads(data,parse_constant=lambda value:(_ for _ in ()).throw(ValueError('nonfinite request')))
+        document=_decode_job_request(data)
         if not isinstance(document,dict):raise ValueError('object request required')
         return document
     finally:
