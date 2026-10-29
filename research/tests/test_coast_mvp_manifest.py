@@ -199,6 +199,21 @@ def test_distant_or_wrong_zoom_vector_tiles_refused(tmp_path, xyz, error):
     assert not (c2 / 'viewer-manifest.json').exists()
 
 
+def test_terrain_cap_and_ring_only_vector_refused(tmp_path):
+    c2, c1, rights = inputs(tmp_path)
+    (c2 / 'vector/12/671/1616.pbf').rename(c2 / 'vector/12/671/1617.pbf')
+    with pytest.raises(ValueError, match='inside terrain coverage'):
+        coast_manifest.build(c2, c1, rights, region='demo', synthetic=True)
+    for x in range(8):
+        for y in range(9):
+            tile = c2 / f'terrain/12/{700 + x}/{1600 + y}.png'
+            tile.parent.mkdir(parents=True, exist_ok=True)
+            tile.write_bytes(b'synthetic asset bytes')
+    with pytest.raises(ValueError, match=r'Terrain tile count must be in 1\.\.64'):
+        coast_manifest.build(c2, c1, rights, region='demo', synthetic=True)
+    assert not (c2 / 'viewer-manifest.json').exists()
+
+
 def test_existing_output_never_overwritten(tmp_path):
     c2, c1, rights = inputs(tmp_path)
     coast_manifest.build(c2, c1, rights, region='demo', synthetic=True)

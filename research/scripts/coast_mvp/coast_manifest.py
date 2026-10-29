@@ -53,14 +53,15 @@ def tiles_and_bounds(root, c2):
     # Accept only the producer's exact relative templates, never arbitrary URLs.
     if c2.get('terrain_template') != TERRAIN or c2.get('vector_template') != VECTOR:
         raise ValueError('C2 local tile templates required')
-    tiles, assets = set(), {}
-    for kind, extension in [('terrain', 'png'), ('vector', 'pbf')]:
+    tiles, assets, vector = set(), {}, set()
+
+    def collect(kind, extension, limit):
         directory = root / kind
         if not directory.is_dir() or directory.is_symlink():
             raise ValueError('Local tile directory required')
         paths = list(directory.rglob(f'*.{extension}'))
-        if not paths or len(paths) > 64:
-            raise ValueError('Tile count must be in 1..64')
+        if not paths or len(paths) > limit:
+            raise ValueError(f'{kind.capitalize()} tile count must be in 1..{limit}')
         for path in paths:
             relative = path.relative_to(root).as_posix()
             file = local_file(root, relative)
@@ -73,24 +74,33 @@ def tiles_and_bounds(root, c2):
             z, x, y = map(int, coordinates)
             if z != zoom or not 0 <= x < 2**z or not 0 <= y < 2**z:
                 raise ValueError('Tile outside C2 zoom/range')
-            if kind == 'terrain':
-                tiles.add((x, y))
-            assets[relative] = digest(file)
+            (tiles if kind == 'terrain' else vector).add((x, y))
+            assets[relative] = (file, x, y)
+
+    # C2 caps terrain at 64 tiles; bounds come from that rectangle only.
+    collect('terrain', 'png', 64)
     if type(c2.get('terrain_tiles')) is not int or len(tiles) != c2['terrain_tiles']:
         raise ValueError('C2 terrain tile count mismatch')
     xs, ys = [x for x, _ in tiles], [y for _, y in tiles]
     x0, x1, y0, y1 = min(xs), max(xs) + 1, min(ys), max(ys) + 1
     if len(tiles) != (x1 - x0) * (y1 - y0):
         raise ValueError('Rectangular C2 terrain coverage required')
-    # GDAL's MVT buffer can emit the immediately neighbouring vector tiles.
-    # Validate them above, but omit them from admitted assets: the viewer insets
-    # its requests to terrain bounds. Never widen bounds or change C2 bytes.
+    # GDAL's MVT buffer can emit the immediately neighbouring vector tiles, so the
+    # vector cap is the terrain rectangle plus its one-tile ring. Admitted vector
+    # tiles are a subset of terrain tiles, so they stay within C2's 64-tile cap.
+    collect('vector', 'pbf', (x1 - x0 + 2) * (y1 - y0 + 2))
+    # Validate ring tiles above, but omit them from admitted assets: the viewer
+    # insets its requests to terrain bounds. Never widen bounds or change C2 bytes.
     for relative in list(assets):
-        kind, _, x, y = relative.split('/')
-        if kind == 'vector' and (int(x), int(y[:-4])) not in tiles:
-            if not x0 - 1 <= int(x) <= x1 or not y0 - 1 <= int(y[:-4]) <= y1:
+        file, x, y = assets[relative]
+        if relative.startswith('vector/') and (x, y) not in tiles:
+            if not x0 - 1 <= x <= x1 or not y0 - 1 <= y <= y1:
                 raise ValueError('Vector tile outside terrain buffer')
             del assets[relative]
+            continue
+        assets[relative] = digest(file)
+    if not vector & tiles:
+        raise ValueError('Vector tiles inside terrain coverage required')
     lat = lambda y: math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * y / 2**zoom))))
     bounds = [x0 / 2**zoom * 360 - 180, lat(y1), x1 / 2**zoom * 360 - 180, lat(y0)]
     if not -85 <= bounds[1] < bounds[3] <= 85:

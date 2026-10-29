@@ -37,6 +37,8 @@ bounds are derived from its rectangular terrain coverage (maximum 64 tiles).
 Vector tiles may be sparse. GDAL MVT buffer tiles in the one-tile ring just
 outside terrain coverage are validated but omitted from admitted provenance
 assets; the viewer insets requests to terrain bounds. C2 bytes remain untouched.
+The vector cap is therefore the terrain rectangle plus that ring, while admitted
+vector assets stay within the terrain tiles; at least one must exist.
 Tiles farther outside coverage or at the wrong zoom are refused.
 Contour coordinates must be finite and within bounds; feet/metres and source
 labels/resolutions must agree. Geometry, holes, clip boundaries and tile bytes
