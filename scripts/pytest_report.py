@@ -10,8 +10,10 @@ receipt from private, gitignored caches (var/, original survey archives) that ex
 only on the maintainer's machine; each has a committed-output twin that does run.
 """
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 import argparse
+import json
 import sys
 import xml.etree.ElementTree as ET
 
@@ -90,13 +92,74 @@ def unexpected_skips(rows, allowed=ALLOWED_SKIPS):
     return [row for row in rows if row['outcome'] == 'skipped' and row['reason'] not in allowed]
 
 
+def ci_budget(runs):
+    """Report measured Actions wall/runner time, including independent DCO runs.
+
+    Input is a JSON list of `gh run view --json databaseId,createdAt,updatedAt,
+    status,conclusion,jobs` objects for the same head. Runner minutes are elapsed
+    job time, not billing-rounded minutes; wall time includes queue waits.
+    Incomplete/cancelled evidence never authorizes further feature admission.
+    """
+    lines = ['### Measured CI budget (R12)', '',
+             '| Run/job | Wall min | Runner min | Result |',
+             '| --- | ---: | ---: | --- |']
+    starts, ends, total = [], [], 0.0
+    complete = bool(runs)
+    seen = set()
+    for run in runs:
+        if run['databaseId'] in seen:
+            raise ValueError('duplicate run receipt')
+        seen.add(run['databaseId'])
+        start = datetime.fromisoformat(run['createdAt'].replace('Z', '+00:00'))
+        end = datetime.fromisoformat(run['updatedAt'].replace('Z', '+00:00'))
+        starts.append(start)
+        ends.append(end)
+        complete &= run['status'] == 'completed' and run['conclusion'] == 'success'
+        complete &= bool(run['jobs']) and end >= start
+        for job in run['jobs']:
+            result = job.get('conclusion')
+            if result == 'skipped':
+                lines.append(f"| {run['databaseId']}/{job['name']} | — | 0.00 | skipped |")
+                continue
+            complete &= job['status'] == 'completed' and result == 'success'
+            first, last = job.get('startedAt'), job.get('completedAt')
+            if not first or not last:
+                complete = False
+                lines.append(f"| {run['databaseId']}/{job['name']} | — | unknown | {result} |")
+                continue
+            seconds = (datetime.fromisoformat(last.replace('Z', '+00:00'))
+                       - datetime.fromisoformat(first.replace('Z', '+00:00'))).total_seconds()
+            complete &= seconds >= 0
+            minutes = max(seconds, 0) / 60
+            total += minutes
+            lines.append(f"| {run['databaseId']}/{job['name']} | — | {minutes:.2f} | {result} |")
+    wall = (max(ends) - min(starts)).total_seconds() / 60 if starts else 0
+    ok = complete and wall < 10 and total <= 30
+    lines.append(f'| **Total** | **{wall:.2f}** | **{total:.2f}** | {"PASS" if ok else "HOLD"} |')
+    lines += ['', 'Elapsed job time (not billing-rounded); wall time includes queue waits.',
+              'R12: <10 wall minutes and <=30 runner-minutes per commit.',
+              'Feature admission may continue.' if ok else
+              'BLOCK further feature admission: incomplete evidence or CI trimming required.']
+    return '\n'.join(lines) + '\n', ok
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument('junit', nargs='+', type=Path)
+    parser.add_argument('junit', nargs='*', type=Path)
+    parser.add_argument('--ci-runs', type=Path,
+                        help='JSON Actions run receipts; report R12 budget instead of JUnit')
     parser.add_argument('--title', default='Python tests')
     parser.add_argument('--strict-skips', action='store_true',
                         help='exit 1 if a test was skipped for a reason not in ALLOWED_SKIPS')
     args = parser.parse_args(argv)
+    if args.ci_runs:
+        if args.junit:
+            parser.error('--ci-runs cannot be combined with JUnit paths')
+        text, ok = ci_budget(json.loads(args.ci_runs.read_text()))
+        sys.stdout.write(text)
+        return 0 if ok else 1
+    if not args.junit:
+        parser.error('provide JUnit paths or --ci-runs')
     rows = list(cases(args.junit))
     sys.stdout.write(report(rows, args.title))
     if args.strict_skips:

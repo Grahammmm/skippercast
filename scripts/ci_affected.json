@@ -1,0 +1,223 @@
+{
+  "description": "First matching rule wins; unknown, empty or invalid paths select every area. Shared data can reach all consumers. Narrow only with reviewed dependency evidence.",
+  "rules": [
+    {
+      "patterns": [
+        "tests/gis/*",
+        "research/tests/gis/*"
+      ],
+      "areas": [
+        "survey"
+      ]
+    },
+    {
+      "patterns": [
+        "tests/unit/*",
+        "tests/contract/*",
+        "tests/integration/*"
+      ],
+      "areas": [
+        "core"
+      ]
+    },
+    {
+      "patterns": [
+        "web/*",
+        "server/*",
+        "e2e/*",
+        "packages/*",
+        "drizzle/*",
+        "tests/*.mjs"
+      ],
+      "areas": [
+        "web"
+      ]
+    },
+    {
+      "patterns": [
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "tsconfig.json",
+        "vite.config.mjs",
+        "playwright.config.ts",
+        "wrangler.jsonc"
+      ],
+      "areas": [
+        "web"
+      ]
+    },
+    {
+      "patterns": [
+        "regions/*",
+        "catalog/*",
+        "schemas/*",
+        "src/*",
+        "dist/*"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    }
+  ],
+  "fixtures": [
+    {
+      "name": "UI-only",
+      "paths": [
+        "web/map.ts",
+        "web/tokens.css"
+      ],
+      "areas": [
+        "web"
+      ]
+    },
+    {
+      "name": "Worker-only",
+      "paths": [
+        "server/index.ts"
+      ],
+      "areas": [
+        "web"
+      ]
+    },
+    {
+      "name": "GIS",
+      "paths": [
+        "tests/gis/test_search_plan_geometry.py"
+      ],
+      "areas": [
+        "survey"
+      ]
+    },
+    {
+      "name": "Python unit",
+      "paths": [
+        "tests/unit/test_contract.py"
+      ],
+      "areas": [
+        "core"
+      ]
+    },
+    {
+      "name": "shared schema",
+      "paths": [
+        "schemas/region.json"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "shared producer",
+      "paths": [
+        "src/skippercast/platform/contracts.py"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "shared data",
+      "paths": [
+        "regions/example/region.json"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "unknown",
+      "paths": [
+        "new-tool/file.py"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "empty diff",
+      "paths": [],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "mixed",
+      "paths": [
+        "web/map.ts",
+        "tests/gis/test_geometry.py"
+      ],
+      "areas": [
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "rename out of GIS",
+      "paths": [
+        "tests/gis/old.py",
+        "web/new.ts"
+      ],
+      "areas": [
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "deleted data",
+      "paths": [
+        "catalog/old.json"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "workflow edit",
+      "paths": [
+        ".github/workflows/ci.yml"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "invalid absolute",
+      "paths": [
+        "/web/map.ts"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    },
+    {
+      "name": "invalid traversal",
+      "paths": [
+        "web/../catalog/data.json"
+      ],
+      "areas": [
+        "core",
+        "survey",
+        "web"
+      ]
+    }
+  ]
+}
