@@ -16,7 +16,7 @@ dependencies = []
 # fails when they drift). The core app and scheduled live feed need none of them.
 [project.optional-dependencies]
 # Scheduled ocean collectors: NetCDF/GRIB decoders (requirements-ocean.txt).
-ocean = ["numpy==2.5.3", "netCDF4==1.7.4", "scipy==1.17.1", "eccodes==2.49.0"]
+ocean = ["numpy==2.5.3", "netCDF4==1.7.5.1.post1", "scipy==1.17.1", "eccodes==2.50.0"]
 # Daily NOAA SST subset parser (requirements-sst.txt).
 sst = ["numpy==2.5.3", "scipy==1.17.1"]
 # Original-survey and seafloor geometry (requirements-survey.txt); Python 3.12+ in CI.
@@ -24,13 +24,13 @@ survey = [
     "numpy==2.5.3",
     "scipy==1.17.1",
     "rasterio==1.5.1",
-    "shapely==2.1.2",
+    "shapely==2.2.0",
     "pyproj==3.8.0",
     "h5py==3.16.0",
     "affine==3.0.1",
     "pylerc==4.2.0",
     "pyshp==3.1.6",
-    "pypdf==6.19.0",
+    "pypdf==6.21.2",
     "laspy[lazrs]==2.7.0",
     "lazrs==0.8.2",
     # Coastal mapping validates its input and review contracts (terrain_only.verify).
@@ -38,17 +38,17 @@ survey = [
 ]
 # Publishing feeds to Cloudflare R2 (requirements-publish.txt). jsonschema turns on
 # validate-on-write, so a feed that does not match schemas/ is never published.
-publish = ["boto3==1.43.108", "jsonschema==4.26.0"]
+publish = ["boto3==1.43.118", "jsonschema==4.26.0"]
 # Test runner, JSON Schema validation for seafloor manifests and schemas/, and the
 # in-memory S3 used by the R2 publisher test (requirements-test.txt).
-test = ["jsonschema==4.26.0", "pytest==9.1.1", "moto==5.2.3", "zstandard==0.25.0"]
+test = ["jsonschema==4.26.0", "pytest==9.1.1", "moto==5.2.4", "zstandard==0.25.0"]
 # Scheduled seafloor ingestion and publication (requirements-seafloor.txt).
 seafloor = ["skippercast[survey,publish,test]"]
 # Operating-system trust store for skippercast.http (optional; stdlib TLS otherwise).
-tls = ["truststore==0.10.4"]
+tls = ["truststore==0.10.5"]
 # Text Advisor media runner job (scripts/advisor/media_job.py, .github/workflows/advisor-media.yml):
 # image decoding and drawing, HEIC through pillow-heif. No requirements file: the workflow installs the extra.
-advisor = ["Pillow==12.3.0", "pillow-heif==1.8.0"]
+advisor = ["Pillow==12.3.0", "pillow-heif==1.8.1"]
 # Charter fleet pipeline (python -m skippercast.fleet): region and profile validation, and the
 # Zstandard decoder for the MarineCadastre AIS backfill. No requirements file: the fleet workflows install the extra.
 fleet = ["jsonschema==4.26.0", "zstandard==0.25.0"]
