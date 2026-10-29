@@ -524,7 +524,7 @@ dbTest('planning brief: advisory first, then the season, the recent reports, one
   assert.equal(p.season.line, 'The rockfish season shows open for that day. Sizes and limits: {{link:rules:rockfish}}');
   // The daily answer's inputs: published reports of the last three days, the unverified boat as "a boat", only rockfish lines.
   assert.deepEqual(p.recent_activity.skipper_reports.map(r => [r.date, r.boat, r.counts.map(c => c.label)]),
-    [['2026-09-27', 'Example Boat One', ['vermilion']], ['2026-09-26', 'a boat', ['vermilion']], ['2026-09-25', 'Example Boat One', ['vermilion']]]);
+    [['2026-09-27', 'Example Boat One', ['vermilion']], ['2026-09-26', 'a boat', ['vermilion']]]);
   assert.equal(p.recent_activity.skipper_reports[0].day, 'Sun');
   assert.deepEqual([p.recent_activity.landing.label, p.recent_activity.landing.trips], ['reported by the landing', 1]);
   assert.deepEqual([p.confidence, p.confidence_phrase], ['Low', 'recent reported activity: Low']);

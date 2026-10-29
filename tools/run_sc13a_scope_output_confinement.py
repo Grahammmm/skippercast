@@ -90,7 +90,7 @@ def guard_reason(event, args, run, source_reads, runtime_roots):
         if isinstance(name, int):
             return 'unexpected directory descriptor'
         path = Path(os.fsdecode(name or '.')).resolve()
-        if not (relative_under(path, run) or path == TEST.parent or
+        if not (relative_under(path, run) or path in {REPO, REPO / 'tests', TEST.parent} or
                 relative_under(path, REPO / 'src') or
                 any(relative_under(path, r) for r in runtime_roots)):
             return 'directory traversal outside import/runtime/fixture closure'
@@ -179,7 +179,10 @@ def main():
     work.mkdir()
     synthetic_default = run / 'import-root'
     synthetic_default.mkdir()
-    source_reads = {TEST.resolve(), FIXTURE.resolve(), Path(__file__).resolve()}
+    source_reads = {TEST.resolve(), FIXTURE.resolve(), Path(__file__).resolve(),
+                    (REPO / 'tests/__init__.py').resolve(),
+                    (REPO / 'tests/gis/__init__.py').resolve(),
+                    (REPO / 'tests/_support.py').resolve()}
     for name in CLOSURE:
         relative = Path(*name.split('.'))
         file = REPO / 'src' / relative.with_suffix('.py')
@@ -220,6 +223,7 @@ def main():
     closure = {}
     try:
         with redirect_stdout(stdout), redirect_stderr(stderr):
+            sys.path.insert(0, str(REPO))
             sys.path.insert(0, str(REPO / 'src'))
             import skippercast.paths as paths
             with patch.object(paths, 'repo_root', return_value=synthetic_default):
