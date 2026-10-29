@@ -164,6 +164,9 @@ do not reopen them in a task PR. [design.md](design.md) and
 
 Append a dated line when a phase starts or finishes; keep the older lines.
 
+- 2026-10-11: #521 candidate seed run, [#541](https://github.com/Grahammmm/skippercast/pull/541), [registry run 38110691956](https://github.com/Grahammmm/skippercast/actions/runs/38110691956). Owner-approved Worker run finished all steps; source coverage partial (USCG PSIX inspections empty). Official CA Worker report: **351 active boats** (136 inspected-party, 15 long-range, 81 six-pack, 119 unclassified; 17 with no port); [per-port counts and gaps](https://github.com/Grahammmm/skippercast/issues/521#issuecomment-6105552803). N3 gate (d) **open**: 351 < 378, short by 27 to the gate / 69 to the ~420 estimate. Gates (b)/(c): all 1,763 run enrichment facts have nonempty HTTPS source URLs, zero configured D7 hosts; gate (a) not certified (no classification validation report). Seed 347 rows across 28 ports -> 342 candidates, five evidence skips; 142 identity matches held for review. Eight unscouted ports remain separate backlog. Closing sources: CDFW CPFV CPRA list, reviewed Google Places access, operator/landing/report sites; held identities and USCG source need review.
+
+
 - 2026-10-04: setup. Subagent definitions added in `.claude/agents/`
   (`charter-osint`, `charter-builder`, `charter-reviewer`). Research spikes
   next; the plan documents (`user-stories.md`, `design.md`, `dev-plan.md`,
