@@ -82,6 +82,245 @@ test('coordinate choice is exposed in settings and used by the plan rows', async
     }
   } finally { state.setCoordinateFormat('dd'); model.dispose(); }
 });
+test('startup region reader shares parsed cold work and refuses distinct-key saturation', async () => {
+  const {createRegionReader} = await load();
+  const gates = new Map();
+  const calls = [];
+  const reader = createRegionReader(async (url, init) => {
+    calls.push({url, init});
+    const gate = Promise.withResolvers();
+    gates.set(url, gate);
+    return gate.promise;
+  }, {limit: 2, timeoutMs: 1000});
+  const first = reader('a');
+  const same = reader('a');
+  assert.equal(first, same);
+  const second = reader('b');
+  await assert.rejects(reader('c'), /saturated/);
+  assert.equal(calls.length, 2);
+  gates.get('regions/a/region.json').resolve(new Response(JSON.stringify({name: 'A', map: {center: [1, 2]}})));
+  gates.get('regions/b/region.json').resolve(new Response(JSON.stringify({name: 'B', map: {center: [3, 4]}})));
+  assert.equal((await first).name, 'A');
+  assert.equal((await same).id, 'a');
+  assert.equal((await second).id, 'b');
+});
+
+test('startup region reader bounds body work and holds non-cooperative slots', async () => {
+  const {createRegionReader} = await load();
+  const body = Promise.withResolvers();
+  let reads = 0, signal;
+  const reader = createRegionReader(async (_url, init) => {
+    reads++; signal = init.signal;
+    return {ok: true, json: () => body.promise};
+  }, {limit: 1, timeoutMs: 15});
+  await assert.rejects(reader('a'));
+  assert.equal(signal.aborted, true);
+  await assert.rejects(reader('b'), /saturated/);
+  assert.equal(reads, 1);
+  body.resolve({name: 'Late A', map: {center: [1, 2]}});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal((await reader('b')).name, 'Late A');
+  assert.equal(reads, 2);
+});
+
+test('app region publication shares a cold read but only the latest selection publishes', async () => {
+  const {loadRegion, regionInfo, regionLoad, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  state.syncFromURL(`${ORIGIN}?region=morro-bay`);
+  const gates = new Map();
+  let calls = 0;
+  const fetcher = async url => {
+    calls++;
+    const gate = Promise.withResolvers(); gates.set(url, gate);
+    return gate.promise;
+  };
+  const first = loadRegion('morro-bay', fetcher);
+  await new Promise(resolve => setImmediate(resolve));
+  const latest = loadRegion('morro-bay', fetcher);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(calls, 1, 'same-key requests share JSON work, despite caller cancellation');
+  assert.equal(await first, null);
+  state.syncFromURL(`${ORIGIN}?region=southern-california`);
+  const south = loadRegion('southern-california', fetcher);
+  await new Promise(resolve => setImmediate(resolve));
+  gates.get('regions/southern-california/region.json').resolve(new Response(JSON.stringify({name: 'South', map: {center: [3, 4]}})));
+  assert.equal((await south).name, 'South');
+  gates.get('regions/morro-bay/region.json').resolve(new Response(JSON.stringify({name: 'Obsolete A', map: {center: [1, 2]}})));
+  assert.equal(await latest, null);
+  assert.equal(regionInfo.peek().name, 'South');
+  assert.deepEqual(regionLoad.peek(), {id: 'southern-california', state: 'ready'});
+});
+
+test('app region timeout withdraws metadata and a reload retry can recover', async t => {
+  const {loadRegion, regionInfo, regionLoad, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  state.syncFromURL(`${ORIGIN}?region=morro-bay`);
+  t.mock.timers.enable({apis: ['setTimeout']});
+  const body = Promise.withResolvers();
+  const inits = [];
+  const fetcher = async (_url, init) => {
+    inits.push(init);
+    return inits.length === 1 ? {ok: true, json: () => body.promise} :
+      new Response(JSON.stringify({name: 'Recovered', map: {center: [1, 2]}}));
+  };
+  const pending = loadRegion('morro-bay', fetcher);
+  await new Promise(resolve => setImmediate(resolve));
+  t.mock.timers.tick(10_001);
+  assert.equal(await pending, null);
+  assert.equal(regionInfo.peek(), null);
+  assert.deepEqual(regionLoad.peek(), {id: 'morro-bay', state: 'error'});
+  assert.equal(inits[0].signal.aborted, true);
+  assert.equal((await loadRegion('morro-bay', fetcher, true)).name, 'Recovered');
+  assert.equal(inits[1].cache, 'reload');
+  body.resolve({name: 'Too late', map: {center: [8, 9]}});
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(regionInfo.peek().name, 'Recovered');
+});
+
+test('app distinct-key saturation becomes an immediate visible region error', async () => {
+  const {loadRegion, regionInfo, regionLoad, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  const gates = [];
+  const fetcher = async () => {
+    const gate = Promise.withResolvers(); gates.push(gate); return gate.promise;
+  };
+  const pending = [];
+  try {
+    for (const id of ['one', 'two', 'three', 'four']) {
+      state.syncFromURL(`${ORIGIN}?region=${id}`);
+      pending.push(loadRegion(id, fetcher));
+      await new Promise(resolve => setImmediate(resolve));
+    }
+    state.syncFromURL(`${ORIGIN}?region=five`);
+    assert.equal(await loadRegion('five', fetcher), null);
+    assert.equal(gates.length, 4, 'saturation refuses before starting a fifth fetch');
+    assert.equal(regionInfo.peek(), null);
+    assert.deepEqual(regionLoad.peek(), {id: 'five', state: 'error'});
+  } finally {
+    for (const gate of gates) gate.resolve(new Response('{}'));
+    await Promise.all(pending);
+    await new Promise(resolve => setImmediate(resolve));
+  }
+});
+
+test('startup region reader bounds stalled headers and recovers after a rejection', async () => {
+  const {createRegionReader} = await load();
+  const gate = Promise.withResolvers();
+  let signal;
+  const reader = createRegionReader(async (_url, init) => {
+    signal = init.signal; return gate.promise;
+  }, {limit: 1, timeoutMs: 15});
+  await assert.rejects(reader('fixture'));
+  assert.equal(signal.aborted, true);
+  gate.reject(Error('late network failure'));
+  await new Promise(resolve => setImmediate(resolve));
+  await assert.rejects(reader('other'), /late network failure/);
+});
+
+test('app startup fixture baseline records cold/warm cache reads without a speed claim', async t => {
+  const {loadRegion, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  state.syncFromURL(`${ORIGIN}?region=morro-bay`);
+  const cache = new Map(); let downloads = 0;
+  const fetcher = async url => {
+    if (!cache.has(url)) {
+      downloads++;
+      cache.set(url, JSON.stringify({name: 'Local fixture', map: {center: [1, 2]}}));
+    }
+    return new Response(cache.get(url));
+  };
+  const coldStart = performance.now();
+  assert.equal((await loadRegion('morro-bay', fetcher)).name, 'Local fixture');
+  const coldMs = performance.now() - coldStart;
+  const warmStart = performance.now();
+  assert.equal((await loadRegion('morro-bay', fetcher)).name, 'Local fixture');
+  t.diagnostic(JSON.stringify({fixture: 'app metadata, synthetic browser cache', coldMs,
+    warmMs: performance.now() - warmStart, downloads}));
+  assert.equal(downloads, 1);
+});
+
+test('startup region reader rejects invalid metadata and allows a later same-key retry', async () => {
+  const {createRegionReader} = await load();
+  const bodies = [{}, {name: 'Invalid', map: {center: [null, 2]}},
+    {name: 'Valid', map: {center: [1, 2]}}];
+  const reader = createRegionReader(async () => new Response(JSON.stringify(bodies.shift())));
+  assert.equal(await reader('fixture'), null);
+  assert.equal(await reader('fixture'), null);
+  assert.equal((await reader('fixture')).name, 'Valid');
+});
+
+test('freshness uses source timestamps and injected clock on the existing masthead', async () => {
+  const {startupFreshness, freshness, render, h, App, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  state.syncFromURL(`${ORIGIN}?region=morro-bay`);
+  const at = '2026-10-29T12:00:00Z';
+  let now = Date.parse(at) + 60_000;
+  const tiles = [{at, limitMs: 120_000, value: 10, state: 'fresh'}];
+  const update = () => { freshness.value = startupFreshness(tiles, () => now, true); };
+  try {
+    update();
+    assert.deepEqual(freshness.peek(), {state: 'ok', age: '1 min'});
+    assert.match(render(h(App)), /data-state="ok"[^>]*aria-label="Freshness: Every reading is fresh".*?1 min/s);
+    now += 60_000;
+    update();
+    assert.deepEqual(freshness.peek(), {state: 'stale', age: '2 min'});
+    assert.match(render(h(App)), /data-state="stale"[^>]*aria-label="Freshness: A reading is stale".*?2 min/s);
+    update(); // Same cached objects are not a new source clock.
+    assert.equal(freshness.peek().age, '2 min');
+    assert.equal(tiles[0].at, at);
+  } finally { freshness.value = {state: 'unknown', age: null}; }
+});
+
+test('startup freshness binding advances without a network read and cleans up', async t => {
+  const {bindStartupFreshness, freshness, regionInfo} = await load();
+  regionInfo.value = null;
+  t.mock.timers.enable({apis: ['setInterval']});
+  const target = new EventTarget();
+  const at = '2026-10-29T12:00:00Z';
+  let now = Date.parse(at) + 60_000, online = true;
+  let sourceReads = 0;
+  const stop = bindStartupFreshness(() => {
+    sourceReads++;
+    return regionInfo.value ? [{at, limitMs: 120_000, value: 1, state: 'fresh'}] : [];
+  }, {now: () => now, online: () => online, target});
+  try {
+    assert.equal(freshness.peek().state, 'unknown');
+    regionInfo.value = {id: 'fixture'};
+    assert.deepEqual(freshness.peek(), {state: 'ok', age: '1 min'});
+    now += 60_000;
+    t.mock.timers.tick(60_000);
+    assert.deepEqual(freshness.peek(), {state: 'stale', age: '2 min'});
+    online = false; target.dispatchEvent(new Event('offline'));
+    assert.equal(freshness.peek().state, 'offline');
+    online = true; target.dispatchEvent(new Event('online'));
+    assert.deepEqual(freshness.peek(), {state: 'stale', age: '2 min'});
+    regionInfo.value = null;
+    assert.equal(freshness.peek().state, 'unknown', 'region withdrawal removes old source ages');
+    stop();
+    const before = sourceReads;
+    t.mock.timers.tick(60_000);
+    target.dispatchEvent(new Event('online'));
+    regionInfo.value = {id: 'after-dispose'};
+    assert.equal(sourceReads, before);
+  } finally { stop(); regionInfo.value = null; freshness.value = {state: 'unknown', age: null}; }
+});
+
+test('startup freshness never calls missing, retained or future readings fresh', async () => {
+  const {startupFreshness} = await load();
+  const now = Date.parse('2026-10-29T12:00:00Z');
+  const reading = {at: new Date(now - 60_000).toISOString(), limitMs: 120_000, value: 1, state: 'fresh'};
+  const fresh = (tiles, online = true) => startupFreshness(tiles, () => now, online);
+  assert.deepEqual(fresh([]), {state: 'unknown', age: null});
+  assert.equal(fresh([reading], false).state, 'offline');
+  assert.equal(fresh([{...reading, at: 'bad'}]).state, 'unknown');
+  assert.equal(fresh([{...reading, at: new Date(now + 300_001).toISOString()}]).state, 'unknown');
+  assert.equal(fresh([{...reading, value: null}]).state, 'unknown');
+  assert.equal(fresh([reading, {...reading, state: 'unavailable'}]).state, 'unknown');
+  assert.equal(fresh([{...reading, lastGood: true}]).state, 'stale');
+  assert.equal(fresh([{...reading, state: 'stale'}]).state, 'stale');
+  assert.equal(fresh([{...reading, at: new Date(now - 3_600_000).toISOString()}]).age, '1 h');
+});
+
 const count = (html, re) => (html.match(re) || []).length;
 const attrs = (html, re) => [...html.matchAll(re)].map(m => m[1]);
 

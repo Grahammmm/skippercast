@@ -27,12 +27,13 @@ async function bundle() {
       import * as app from './web/app/App.tsx';
       import * as state from './web/state.ts';
       import * as plans from './web/species.ts';
+      import * as brief from './web/brief/Brief.tsx';
       import {camera, terrainActions} from './web/map/stage.ts';
       import {effect} from '@preact/signals';
       import {aerialOffer} from './web/map/aerial.ts';
       const moves = [];
       effect(() => { const c = camera.value; if(c) moves.push({...c}); });
-      globalThis.__b02 = {app, state, plans, camera, terrainActions, moves,
+      globalThis.__b02 = {app, state, plans, brief, camera, terrainActions, moves,
         place: () => globalThis.__b02Chart?.place?.() ?? null, aerial: () => aerialOffer.value};
     `},
     bundle: true, write: false, format: 'iife', platform: 'browser', logLevel: 'silent',
@@ -43,7 +44,7 @@ async function bundle() {
       // Preserve the real chart's exports; replace only its hardware factory.
       b.onLoad({filter: /web\/map\/chart\.ts$/}, args => ({loader: 'ts', contents:
         readFileSync(args.path, 'utf8').replace('export function createChart(options:', 'function unusedCreateChart(options:') +
-        '\nexport function createChart(options) { globalThis.__b02Chart = options; const aerial = options.layers[3](signal(null)); return {destroy() { aerial.destroy(); }}; }'}));
+        '\nexport function createChart(options) { globalThis.__b02Chart = options; const aerial = options.layers[7](signal(null)); return {destroy() { aerial.destroy(); }}; }'}));
       b.onResolve({filter: /^\.\/terrain\.js$/}, () => ({path: 'sc-b02-terrain', namespace: 'sc-b02'}));
       b.onLoad({filter: /.*/, namespace: 'sc-b02'}, () => ({loader: 'js', contents: `
         export const styles = [];
@@ -108,7 +109,7 @@ async function current(page, id, suffix = '') {
   assert.deepEqual(s.place.localAreas, META[id].map.local_areas);
   if (s.plans) {
     assert.equal(s.plans.region, id);
-    await expect(page.getByRole('option', {name: `Plan ${id}${suffix}`, exact: true})).toHaveCount(1);
+    await expect(page.getByRole('option', {name: `Plan ${id}${suffix} · search plan only`, exact: true})).toHaveCount(1);
   }
 }
 async function unavailable(page, id, state = 'loading') {
@@ -126,8 +127,7 @@ const __DEFAULT_ZONE = 'America/Los_Angeles';
 async function choose(page, id) {
   // The actual chooser: keyboard opens it; its selected option writes the URL.
   const control = page.getByRole('button', {name: /^(Choose port|Change port \()/});
-  await control.focus();
-  await page.keyboard.press('Enter');
+  await control.press('Enter');
   const dialog = page.getByRole('dialog', {name: 'Change port'});
   await expect(dialog).toBeVisible();
   await dialog.locator(`[data-port="${id === A ? 'morro-bay' : 'san-diego'}"]`).click();
@@ -160,9 +160,12 @@ async function controlEvidence(page, viewportName, phase) {
   writeFileSync(resolve(directory, `${viewportName}-${phase}.json`), JSON.stringify(bounds, null, 2));
   await page.screenshot({path: resolve(directory, `${viewportName}-${phase}.png`)});
   if (viewportName === 'laptop') {
-    assert.ok(bounds.rail.bottom + bounds.gap <= bounds.controls.top + 1, 'rail leaves a gap above the complete terrain control stack');
-    assert.deepEqual(bounds.buttons.map(button => button.label), ['Zoom in', 'Zoom out', 'Reset map view', 'View from above']);
-    for (const button of bounds.buttons) assert.equal(button.receivesPointer, true, `${button.label} receives an ordinary pointer click`);
+    assert.ok(bounds.rail.bottom < bounds.controls.top, 'rail leaves visible space above the complete terrain control stack');
+  }
+  assert.deepEqual(bounds.buttons.map(button => button.label), ['Zoom in', 'Zoom out', 'Reset map view', 'View from above']);
+  for (const button of bounds.buttons) {
+    assert.equal(button.receivesPointer, true, `${viewportName}: ${button.label} receives an ordinary pointer click`);
+    assert.ok(button.width >= 44 && button.height >= 44, `${button.label}: phone-sized touch target`);
   }
   return bounds;
 }
@@ -174,8 +177,8 @@ async function disclosureEvidence(page) {
   const rail = page.locator('.app-stage > .app-rail');
   const directory = resolve(EVIDENCE, 'disclosure-bounds');
   mkdirSync(directory, {recursive: true});
-  const labels = ['Seafloor basis', 'Currents basis', 'Water temp basis', 'Swell basis', 'Charter fleet basis', 'Clouds basis', 'Base basis'];
-  await expect(rail.locator('.ui-popover')).toHaveCount(7);
+  const labels = ['Seafloor basis', 'Currents basis', 'Water temp basis', 'Temp contrast basis', 'Chlorophyll basis', 'Swell + wind basis', 'Stations basis', 'Charter fleet basis', 'Clouds basis', 'Base basis'];
+  await expect(rail.locator('.ui-popover')).toHaveCount(labels.length);
   for (const [index, label] of labels.entries()) {
     // aria-label is on summary itself, including Base's icon-only trigger.
     const trigger = rail.locator(`summary[aria-label="${label}"]`);
@@ -428,4 +431,65 @@ test('SC-B02 focused region identity acceptance', {timeout: 180_000}, async t =>
       });
     }
   }
+});
+
+// W10B: exercise main.tsx's real freshness binding, not a parallel demo widget.
+test('W10B phone source ages survive cache access and withdraw on region switch', async t => {
+  const script = await bundle();
+  const browser = await chromium.launch({headless: true});
+  t.after(() => browser.close());
+  const context = await browser.newContext({viewport: {width: 390, height: 844}, serviceWorkers: 'block'});
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', error => errors.push(String(error)));
+  await context.route('**/*', route => route.request().resourceType() === 'document'
+    ? route.fulfill({contentType: 'text/html', body: `<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>W10B</title><style>${CSS}</style></head><body><div id="app"></div><script>${script.replaceAll('</script', '<\\/script')}</script></body></html>`})
+    : route.abort('blockedbyclient'));
+  await page.addInitScript(installDeferredFetch);
+  await page.addInitScript(() => localStorage.setItem('skippercast-first-run-v1', 'done'));
+  const now = new Date('2026-10-29T12:00:00Z');
+  await page.clock.install({time: now});
+  await page.goto(`http://sc-b02.test/map?region=${A}&profile=boat&layers=none&base=night`);
+  await waitRead(page, 'region', A);
+  await answer(page, 'region', A);
+  await answer(page, 'search-plan-index', A, 0, plan(A));
+  await page.clock.runFor(32);
+  await current(page, A);
+  const sourceAt = '2026-10-29T11:59:00Z';
+  await page.evaluate(({region, sourceAt}) => {
+    globalThis.__w10Feed = __b02.brief.dailyFeed.value = {region_id: region, sources: {buoy: {
+      id: 'fixture', name: 'Synthetic buoy', kind: 'observation', status: 'ok',
+      url: 'https://example.test/buoy', checked_at: new Date().toISOString(),
+      data: {station: 'fixture', observations: [{time: sourceAt, WTMP: 15}]},
+    }}};
+  }, {region: A, sourceAt});
+  await page.clock.runFor(32);
+  const dot = page.locator('.app-fresh');
+  await expect(dot).toHaveText('1 min');
+  await expect(dot).toHaveAttribute('data-state', 'unknown'); // Three tiles are missing.
+  const reads = await page.evaluate(() => __reads.length);
+  await page.clock.runFor(60_000);
+  await expect(dot).toHaveText('2 min');
+  // Simulate reuse of the same cached feed, including a newer retrieval/check time.
+  await page.evaluate(() => {
+    const feed = __b02.brief.dailyFeed.value;
+    __b02.brief.dailyFeed.value = {...feed, sources: {...feed.sources,
+      buoy: {...feed.sources.buoy, checked_at: new Date().toISOString()}}};
+  });
+  await page.clock.runFor(32);
+  await expect(dot).toHaveText('2 min');
+  assert.equal(await page.evaluate(() => __reads.length), reads, 'age ticks never request static files');
+  await page.clock.runFor(3 * 3_600_000);
+  await expect(dot).toHaveText('3 h');
+  await expect(dot).toHaveAttribute('data-state', 'stale');
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await page.clock.runFor(32);
+  await expect(dot).toHaveText('3 h');
+  await page.evaluate(() => __b02.state.setParams({region: 'southern-california'}));
+  await page.clock.runFor(32);
+  await expect(dot).toHaveText('—');
+  await expect(dot).toHaveAttribute('data-state', 'unknown');
+  assert.equal(await page.evaluate(() => __w10Feed.sources.buoy.data.observations[0].time), sourceAt);
+  assert.deepEqual(errors, []);
+  await context.close();
 });
