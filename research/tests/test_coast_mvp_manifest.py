@@ -42,6 +42,15 @@ def inputs(tmp_path):
     return c2, c1, rights
 
 
+def test_committed_viewer_fixture_matches_adapter(tmp_path):
+    from tests._support import ROOT
+
+    fixture = ROOT / 'research/scripts/coast_mvp/fixtures/w11a-viewer-manifest.json'
+    result = coast_manifest.build(*inputs(tmp_path), region='Synthetic demo', synthetic=True)
+    assert json.loads(fixture.read_text()) == result
+    assert fixture.read_text() == json.dumps(result, indent=2, sort_keys=True) + '\n'
+
+
 def test_exports_local_viewer_contract_with_complete_held_provenance(tmp_path):
     c2, c1, rights = inputs(tmp_path)
     before = (c2 / 'contours.geojson').read_bytes()

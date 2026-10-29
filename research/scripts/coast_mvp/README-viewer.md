@@ -67,19 +67,26 @@ or tilted toward the edge. The initial view and three acceptance views stay
 inside it; source spacing remains 31.1 m regardless of camera zoom. It does not
 model a coastline, repair holes or claim source continuity.
 
-## Upstream integration remains separate
+## Load a local W11A adapter manifest
 
-Per the conductor's explicit fixture admission on t_fee137be, no live cache or
-C1/C2/C4/C5 file is read/mutated here. C1 t_229826b7 and C5 t_27a764f7 are now
-reviewed upstream work, but neither is a terrain-RGB/MVT viewer export. This
-fixture is NOT an adapter for C1's EPSG:3310 COG nor C5's rights schema.
+W11B now validates and displays the optional W11A provenance/rights group.
+The original fixture remains the default. With the local server running, open:
 
-The integration lane must consume admitted C2 tile exports and adapt the C5
-`schema_version=1` source inventory (`source_id`, `name`, `source_url`, sha256,
-`contributed_cells`, explicit `rights {license, terms_url, attribution,
-csumb_involved}`), keeping only actual contributors and all rights flags.
-Preserve C5's needs_permission/GEBCO/no-endorsement conditions and link its
-complete rights page. Do not infer commercial permission or equate a fixture
-licence with a real source's licence. Do not import research tooling from
-product code. C6 region look + redaction/rights/review gates still precede any
-publication. No R2 upload, source download, merge or deploy is performed here.
+    http://localhost:5179/research/scripts/coast_mvp/viewer-preview.html?manifest=var/w11b/c2/viewer-manifest.json
+
+The `manifest` parameter must be a repo-root-relative `.json` path; remote URLs,
+absolute paths, traversal, encoded separators, query strings and fragments are
+rejected. Tile paths stay under the manifest directory. Generate the adapter
+manifest locally using `README-manifest.md`; this page acquires no sources.
+For synthetic adapter browser evidence, use:
+
+    C3_MANIFEST=var/w11b/c2/viewer-manifest.json C3_SCREENSHOTS=var/w11b/adapter node research/scripts/coast_mvp/capture_viewer.mjs
+
+The panel shows source terms links, datum notes, rights status, navigation and
+limitations. The additive group is all-or-nothing: malformed hashes, missing
+provenance and cleared publication flags fail loading. Measured previews also
+require every source's permission hold, even without the additive group.
+CSUMB-involved contributors remain `needs_permission`; unknown terms remain
+held. Hashes pin supplied bytes, not scientific or legal acceptance. C6 region
+look + redaction/rights/review gates still precede publication. No source
+download, live cache, R2 upload or production route change is part of this path.

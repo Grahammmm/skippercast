@@ -3,7 +3,7 @@
 `coast_manifest.py` is an offline export adapter, not a terrain engine, source
 acquirer, viewer integration or publication gate. It writes **only** a new
 `viewer-manifest.json` beside existing C2 assets. Existing output is refused.
-W11B owns viewer wiring and any opt-in browser path; the viewer is unchanged.
+W11B wires this manifest into the opt-in local viewer; see `README-viewer.md`.
 
 From the repository root with the test/survey dependencies installed:
 
