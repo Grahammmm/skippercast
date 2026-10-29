@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Merge queue: required checks must also report on the queued merge commit.
   merge_group:
     types: [checks_requested]
   # Nightly full tier (CI policy R12): the slow suites also run on main pushes.
@@ -282,7 +283,7 @@ jobs:
         # the branch's previous tip on push. Never the current tip of main, which
         # may have shrunk the baseline since this branch was cut.
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: |
           if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = 0000000000000000000000000000000000000000 ]; then
             node scripts/check_copy.mjs
@@ -296,7 +297,7 @@ jobs:
       # (scripts/token-lint-baseline.json) may only shrink relative to the base.
       - name: Token lint (baseline only shrinks)
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
         run: |
           if [ -n "$BASE_SHA" ] && [ "$BASE_SHA" != 0000000000000000000000000000000000000000 ] && git fetch --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null; then
             node scripts/check_tokens.mjs --base FETCH_HEAD
@@ -310,5 +311,6 @@ jobs:
       - name: Every published script, style and page is fingerprinted and resolves
         run: node scripts/check_client.mjs
       - name: Production dependencies have no high or critical advisories
-        if: matrix.python == '3.13'
+        # Not on PRs: new advisories fail it for reasons unrelated to the change.
+        if: matrix.python == '3.13' && github.event_name != 'pull_request'
         run: pnpm audit --prod --audit-level high

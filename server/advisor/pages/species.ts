@@ -77,9 +77,11 @@ export async function speciesRules(db: D1Database, key: string, firstJurisdictio
   const rows = (await db.prepare(`SELECT * FROM advisor_rules WHERE species_key IN (${marks}) AND status IN ('active','review')
       ORDER BY CASE WHEN jurisdiction=? THEN 0 ELSE 1 END, jurisdiction, CASE WHEN region='*' THEN 1 ELSE 0 END, region, species_key, species_label LIMIT 80`)
     .bind(...keys, firstJurisdiction ?? '').all<RuleRow>()).results;
-  // A species with its own rows shows those; otherwise its group's (applies_as 'group', as get_rules).
-  const own = rows.filter(r => species.includes(r.species_key));
-  return (own.length ? own : rows).map(row => ({row, group: !species.includes(row.species_key)}));
+  // Prefer own-species rows independently in each jurisdiction; keep the group's
+  // rows only where that jurisdiction has no own rows. Filtering preserves SQL order.
+  const ownJurisdictions = new Set(rows.filter(r => species.includes(r.species_key)).map(r => r.jurisdiction));
+  return rows.filter(row => species.includes(row.species_key) || !ownJurisdictions.has(row.jurisdiction))
+    .map(row => ({row, group: !species.includes(row.species_key)}));
 }
 
 function rulesCard(rules: {row: RuleRow; group: boolean}[], copy: PageCopy, language: PageLanguage, today: string): Html {

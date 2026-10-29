@@ -361,7 +361,9 @@ function FieldEditor({col, value, onSave, onCancel}: {col: string; value: unknow
             : kind === 'status' ? options(VESSEL_STATUSES, COPY.vesselStatuses, false)
             : kind === 'profile' ? options(PROFILE_STATUSES, COPY.profileStatuses, false)
             : kind === 'consent' ? options(MAP_CONSENTS, COPY.mapConsents, false)
-            : <input id={inputId} type={kind === 'int' || kind === 'real' ? 'number' : 'text'} step={kind === 'real' ? 'any' : '1'} maxLength={254} value={text}
+            : kind === 'int' || kind === 'real' ? <input id={inputId} type="number" step={kind === 'real' ? 'any' : '1'} value={text}
+              aria-describedby={`${inputId}-help`} onInput={e => setText((e.currentTarget as HTMLInputElement).value)} />
+            : <input id={inputId} type="text" maxLength={254} value={text}
               aria-describedby={`${inputId}-help`} onInput={e => setText((e.currentTarget as HTMLInputElement).value)} />}
         </label>
       )}

@@ -16,7 +16,7 @@ import {Trip} from './Trip.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
 import {tideRegion, type TideRegion} from '../tide-stations.ts';
 import {tideSelection} from '../tide-selection.ts';
-import {loadPlans} from '../species.ts';
+import {loadPlans, regionUnavailable, unavailableTargets} from '../species.ts';
 import {region, setRegionDefaultBase} from '../state.ts';
 
 /** The mobile layout's media query (§ 6: under 1,024 px); main.tsx keeps `narrow` in step with it. */
@@ -33,6 +33,8 @@ export interface RegionInfo {
   /** The region's published charter grounds (region.json `assets.charters`), read by the Reports view; absent where none are published. */
   readonly charters?: string;
   readonly tide?: TideRegion;
+  /** The targets the region names as outside its researched list (region.json `map.unavailable_targets`, CI6-02): id → reason. */
+  readonly unavailableTargets?: Readonly<Record<string, string>>;
 }
 export const regionInfo = signal<RegionInfo | null>(null);
 /** The zone the dock and the command bar format times in (every active region is Pacific until the region loads). */
@@ -101,9 +103,11 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch
       const areas = Array.isArray(json.map?.local_areas) ? json.map.local_areas as ReportLocalArea[] : [];
       const aerial = aerialBase(json);
       const tide = tideRegion(id, json);
+      const unavailable = unavailableTargets(json);
       const info: RegionInfo = {id, name: json.name, center: [center[0], center[1]], timezone: json.timezone ?? DEFAULT_ZONE,
         ...tide ? {tide} : {},
-        localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), ...aerial ? {aerial} : {}, ...typeof json.assets?.charters === 'string' ? {charters: json.assets.charters} : {}};
+        localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), ...aerial ? {aerial} : {}, ...typeof json.assets?.charters === 'string' ? {charters: json.assets.charters} : {},
+        ...Object.keys(unavailable).length ? {unavailableTargets: unavailable} : {}};
       return info;
     };
     const info = await Promise.race([read(), aborted]);
@@ -114,6 +118,7 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch
       regionInfo.value = info;
       tideSelection.configure(info.tide ?? null);
       regionLoad.value = {id, state: 'ready'};
+      regionUnavailable.value = {region: id, targets: info.unavailableTargets ?? {}};
       setRegionDefaultBase(info.aerial?.byDefault ? 'aerial' : 'night');
     });
     return info;
