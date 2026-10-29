@@ -250,8 +250,16 @@ jobs:
         run: pnpm typecheck
       - name: Forecast handling and GPX checks
         if: needs.changes.outputs.web != 'false'
-        run: node --test tests/test_*.mjs
-      # Contrast is included by tests/test_*.mjs; do not run it twice.
+        run: |
+          # Keep the explicitly pinned contrast gate below, but run it only once.
+          files=()
+          for path in tests/test_*.mjs; do
+            if [ "$path" != tests/test_contrast_ci_adoption.mjs ]; then files+=("$path"); fi
+          done
+          node --test "${files[@]}"
+      - name: Design token contrast (WCAG 4.5:1, light and dark)
+        run: node --test tests/test_contrast_ci_adoption.mjs
+        if: needs.changes.outputs.web != 'false'
       # Guide 5.8: no two "not" sentences in a row, and no GFS/ECMWF/MLLW/datum
       # outside a disclosure. Existing copy is in scripts/copy-lint-baseline.json,
       # which may only shrink relative to the base branch.
