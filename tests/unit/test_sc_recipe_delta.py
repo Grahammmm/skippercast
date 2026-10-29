@@ -32,8 +32,9 @@ from scripts.coast_diagnostics import recipe_delta as delta
 
 FIXTURE = FIXTURES / 'sc_recipe_delta'
 SCHEMA = 'schemas/coast-recipe-v1.schema.json'
+# Validator pin refreshed for SC-RECIPE-OFFLINE; snapshot pins remain unchanged.
 SOURCE_PINS = {
-    'validate_recipe.py': '7f14c349497d647c540aa67f4a389da562908430b83e687098f493b15788dad3',
+    'validate_recipe.py': '31b62ce0d0ac4926a9d47ab820eb6699c45a2572335ec2759b0247baf837901a',
     SCHEMA: 'a659d136536a553043fac917473428ae0c6e51bdb179cc66bdd295e09ebf1593',
     'regions/morro-bay/coast.json': '762144fdc5cd6cd764b3fcc2bd313041f5d7f5abb1e90afef393197b5abb7457',
     'tests/unit/test_coast_recipe.py': '020dc5f5f736ac09cfefc50c7e8315079bb34e12d512a4bed054c84986413410',

@@ -70,6 +70,12 @@ traceback. Validation is now unconditionally offline for every metadata root.
 The committed v1 schema bytes, its constraints, the optional dependency policy
 and `validate.check` (not used here) are unchanged.
 
+The recipe-delta acceptance test and runner pin the hardened `validate_recipe.py`
+bytes (`31b62ce0d0ac4926a9d47ab820eb6699c45a2572335ec2759b0247baf837901a`)
+in place of their original producer pin. This is an intentional producer revision,
+not a change to the frozen recipe/schema fixtures or their pins. The delta
+behavior and producer-contract tests still run against the actual validator.
+
 ## Tests and acceptance
 
 [`tests/unit/test_sc_recipe_offline.py`](../../tests/unit/test_sc_recipe_offline.py)
