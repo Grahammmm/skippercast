@@ -61,10 +61,42 @@ jobs:
           [ -z "$files" ] && survey=true
           echo "survey=$survey" >> "$GITHUB_OUTPUT"
           printf 'Changed paths: %s; GIS layer needed: %s\n' "$(printf '%s\n' "$files" | grep -c .)" "$survey" >> "$GITHUB_STEP_SUMMARY"
+  # Required check (branch protection requires the `survey-science` context).
+  # It always reports and passes only when `check` passed on every Python and
+  # `survey-tests` passed, or was skipped because the gate found a website-only
+  # pull request. A failed, cancelled or skipped dependency otherwise fails it.
   survey-science:
-    # Required check. On a pull request it runs the GIS layer when the gate says
-    # the change can reach it; a website-only pull request skips it (reported as
-    # passed). The full suite runs on main, merge queue, nightly and dispatch.
+    needs: [changes, survey-tests, check]
+    if: always()
+    runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    steps:
+      - name: Core suite and GIS layer passed
+        env:
+          EVENT: ${{ github.event_name }}
+          GATE: ${{ needs.changes.result }}
+          SURVEY: ${{ needs.changes.outputs.survey }}
+          TESTS: ${{ needs.survey-tests.result }}
+          CHECK: ${{ needs.check.result }}
+        run: |
+          fail=0
+          if [ "$CHECK" != success ]; then
+            echo "::error::check (core suite, lint, type checks) result: $CHECK"
+            fail=1
+          fi
+          if [ "$TESTS" = success ]; then
+            echo "survey-tests passed"
+          elif [ "$TESTS" = skipped ] && [ "$EVENT" = pull_request ] && [ "$GATE" = success ] && [ "$SURVEY" = false ]; then
+            echo "survey-tests skipped: website-only pull request"
+          else
+            echo "::error::survey-tests (GIS layer / full suite) result: $TESTS"
+            fail=1
+          fi
+          exit "$fail"
+  survey-tests:
+    # On a pull request it runs the GIS layer when the gate says the change can
+    # reach it; a website-only pull request skips it. The full suite runs on
+    # main, merge queue, nightly and dispatch. `survey-science` gates on it.
     needs: changes
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.survey == 'true') }}
     # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
