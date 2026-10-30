@@ -13,7 +13,10 @@ The method, kept here so it is tested without the GIS stack:
 
 - Depths are feet below the survey's own vertical datum. For the Morro Bay
   grids that datum is unverified: the GeoTIFFs declare none, and only the
-  companion USGS report names MLLW. Every line says so; nothing here converts
+  companion USGS report names MLLW. A regular NOAA BAG carries the datum its
+  own metadata declares, copied verbatim (none declared reads as unverified);
+  an ellipsoid-referenced BAG is refused. Grids of different declared datums
+  never share a block. Every line says so; nothing here converts
   or certifies a datum.
 - The 2 m grid is averaged into CELL_M blocks. A block counts only when every
   native cell inside it is valid water, so no block is filled, extended or
