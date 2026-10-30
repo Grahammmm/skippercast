@@ -212,19 +212,30 @@ test('a region without contours draws none and shows no row; expired contours ar
 
 const NOAA_BAG = [{source_id: 'noaa-bag', review_status: 'candidate'}];
 const BAG_NOTE = '1 bound survey not drawn: noaa-bag (not yet reviewed).';
+// Morro Bay's committed files now carry noaa-bag as approved (G, 2026-10-30), so the unreviewed wording
+// is exercised on copies that state the survey as a candidate, as before.
+const withBagCandidate = file => { const d = clone(file); d.provenance.sources_omitted = clone(NOAA_BAG); return d; };
+const BAG_FULL = withBagCandidate(FULL);
+const BAG_FILES = {[depthContoursOverviewURL('morro-bay')]: withBagCandidate(OVERVIEW), [depthContoursURL('morro-bay')]: BAG_FULL};
+
+test('the committed Morro Bay file names noaa-bag as an approved survey it does not trace, with no unreviewed note', () => {
+  const r = assessContours(FULL, 'morro-bay', TODAY);
+  assert.deepEqual(r.omitted, [{source_id: 'noaa-bag', review_status: 'approved'}]);
+  assert.equal(omittedNote(r.omitted), '');
+});
 
 test('the file names the bound surveys it does not draw; the card and the drawn note say so in plain words', async t => {
-  const r = assessContours(FULL, 'morro-bay', TODAY);
+  const r = assessContours(BAG_FULL, 'morro-bay', TODAY);
   assert.deepEqual(r.omitted, NOAA_BAG);
-  const f150 = FULL.features.find(f => f.properties.kind === 'contour' && f.properties.depth_ft === 150);
+  const f150 = BAG_FULL.features.find(f => f.properties.kind === 'contour' && f.properties.depth_ft === 150);
   const m = contourMark(f150.properties, r.sources, r.omitted);
   assert.match(m.reading, /1 bound survey not drawn: noaa-bag \(not yet reviewed\)\./);
   assert.match(m.reading, /150 ft below the survey's unverified source datum/);
   assert.equal(m.name, '150 ft depth contour');
-  const edge = contourMark(FULL.features.find(f => f.properties.kind === 'survey-edge').properties, r.sources, r.omitted);
+  const edge = contourMark(BAG_FULL.features.find(f => f.properties.kind === 'survey-edge').properties, r.sources, r.omitted);
   assert.match(edge.reading, /No reviewed grid continues past this line/);
   assert.ok(edge.reading.endsWith(BAG_NOTE));
-  const {layer} = setup(t, {files: FILES});
+  const {layer} = setup(t, {files: BAG_FILES});
   await flush(); await flush();
   assert.equal(contourState.value.status, 'drawn');
   assert.equal(contourState.value.note, BAG_NOTE);

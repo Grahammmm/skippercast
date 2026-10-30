@@ -18,7 +18,7 @@
     "usgs-point-buchon": "approved",
     "usgs-morro-bay": "approved",
     "usgs-point-estero": "approved",
-    "noaa-bag": "candidate"
+    "noaa-bag": "approved"
   },
   "datum_policy": {
     "mode": "preserve-source-datum",

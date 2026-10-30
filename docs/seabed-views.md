@@ -12,7 +12,7 @@ The local manifest contains source paths, source IDs, survey years and datums. P
 
 Areas without supporting native data show an explicit unavailable message. In particular, San Simeon's smoothed 10 m contours and regional geology cannot generate the same detailed bottom view. There is no decorative stand-in that could be mistaken for measured terrain.
 
-A published depth-contour file (`dist/regions/<id>/depth-contours.geojson`) lists the grids it traced in `provenance.sources`. Its `provenance.sources_omitted` lists every other bathymetry survey bound to the region, each with its catalog `review_status` copied unchanged. For example, Morro Bay records `noaa-bag` as `candidate`. An omitted survey is not drawn and not converted. The Chart's contour card and the legend's contour line say so, for example "1 bound survey not drawn: noaa-bag (not yet reviewed)."
+A published depth-contour file (`dist/regions/<id>/depth-contours.geojson`) lists the grids it traced in `provenance.sources`. Its `provenance.sources_omitted` lists every other bathymetry survey bound to the region, each with its catalog `review_status` copied unchanged. For example, Morro Bay records `noaa-bag` as `approved` (a source family, not any one tile) and not traced. An omitted survey is not drawn and not converted. The Chart notes only bound surveys that are not yet approved, for example "1 bound survey not drawn: noaa-bag (not yet reviewed)", and reports approved ones it did not trace after them.
 
 ## Channel Islands context adapter
 

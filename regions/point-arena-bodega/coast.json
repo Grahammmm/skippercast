@@ -12,7 +12,7 @@
     "noaa-bag"
   ],
   "source_review_status": {
-    "noaa-bag": "candidate"
+    "noaa-bag": "approved"
   },
   "datum_policy": {
     "mode": "preserve-source-datum",

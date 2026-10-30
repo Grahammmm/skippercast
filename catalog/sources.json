@@ -164,8 +164,8 @@
       ],
       "documentation_url": "https://www.ngdc.noaa.gov/mgg/bathymetry/noshdb/",
       "adapter": "bag",
-      "review_status": "candidate",
-      "reviewed_at": "2026-09-21",
+      "review_status": "approved",
+      "reviewed_at": "2026-10-30",
       "rights": {
         "license": "CC0-1.0",
         "attribution": "NOAA National Centers for Environmental Information",
@@ -181,7 +181,10 @@
       "coverage_note": "Find an actual survey footprint for each new region.",
       "limitations": [
         "Project names can cover a much larger area than one survey.",
-        "Inspect BAG datum, native resolution and uncertainty before processing."
+        "Inspect BAG datum, native resolution and uncertainty before processing.",
+        "Approved as a source family only (G, 2026-10-30); this does not approve any individual tile or survey. Each file keeps its own identity, bounds, date, units, native resolution, uncertainty and declared vertical datum, carried verbatim and never converted.",
+        "Screening receipts are review-required evidence, not acceptance: FLAG tiles are skipped, and mixed MLLW, ellipsoid and NAVD88 references are not joined as if identical.",
+        "Not for navigation. CC0 is documented per survey (for example H11971); coastal DEM and BlueTopo contributors in the NOAA corpus have their own terms and are not covered by this entry."
       ],
       "allowed_hosts": [
         "www.ngdc.noaa.gov",
