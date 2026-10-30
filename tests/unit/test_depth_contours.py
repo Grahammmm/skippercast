@@ -186,3 +186,29 @@ def test_the_committed_morro_bay_publication_names_its_omitted_survey():
     for name in ('depth-contours.geojson', 'depth-contours-overview.geojson'):
         provenance = json.loads((ROOT / 'dist/regions/morro-bay' / name).read_text())['provenance']
         assert provenance['sources_omitted'] == [{'source_id': 'noaa-bag', 'review_status': 'approved'}], name
+
+
+@pytest.mark.parametrize('where', ['collection', 'provenance', 'feature properties'])
+def test_check_refuses_a_held_collection_wherever_it_is_marked(where):
+    c = collection()
+    target = {'collection': c, 'provenance': c['provenance'], 'feature properties': c['features'][0]['properties']}[where]
+    target['publication_held'] = True
+    with pytest.raises(ValueError, match='are held and cannot be published'):
+        dc.check_contours(c, REGION, SOURCES)
+
+
+def test_held_check_accepts_a_held_candidate_set_that_publication_refuses():
+    region = {**REGION, 'source_bindings': {'bathymetry': ['survey-a', 'survey-c']}}
+    c = collection(sources=('survey-a', 'survey-c'))
+    with pytest.raises(ValueError, match='approved bathymetry binding'):
+        dc.check_contours(c, region, SOURCES)
+    c['provenance'].update(publication_held=True, held_sources=[{'source_id': 'survey-c', 'review_status': 'candidate'}])
+    dc.check_held_contours(c, region, SOURCES)
+    with pytest.raises(ValueError, match='are held and cannot be published'):
+        dc.check_contours(c, region, SOURCES)
+    for wrong in ([], [{'source_id': 'survey-c', 'review_status': 'approved'}]):
+        with pytest.raises(ValueError, match='publication hold and held sources'):
+            dc.check_held_contours({**c, 'provenance': {**c['provenance'], 'held_sources': wrong}}, region, SOURCES)
+    restricted = {**SOURCES, 'survey-c': {**SOURCES['survey-c'], 'review_status': 'restricted'}}
+    with pytest.raises(ValueError, match='approved bathymetry binding'):
+        dc.check_held_contours(c, region, restricted)

@@ -33,16 +33,16 @@ def _sources(*ids, native=2):
                 'reviewed_at': '2026-10-01'} for i in ids}
 
 
-def _run_builder(monkeypatch, grids, sources):
+def _run_builder(monkeypatch, grids, sources, *extra, captured=None):
     pytest.importorskip('rasterio')
     bs = _load_builder()
     region = {'id': 'synthetic-bay', 'bounds': [-121.5, 35.0, -120.0, 36.0],
               'source_bindings': {'bathymetry': list(sources)}}
-    captured = {}
+    captured = {} if captured is None else captured
     monkeypatch.setattr(bs, 'load_region', lambda ident: region)
     monkeypatch.setattr(bs, 'load_catalogs', lambda: (None, sources))
-    monkeypatch.setattr(bs, 'atomic_json', lambda path, value: captured.setdefault('doc', value) and {'sha256': '0' * 64, 'bytes': 1})
-    argv = ['build_depth_contours.py', '--region', 'synthetic-bay']
+    monkeypatch.setattr(bs, 'atomic_json', lambda path, value: captured.update(doc=value, path=path) or {'sha256': '0' * 64, 'bytes': 1})
+    argv = ['build_depth_contours.py', '--region', 'synthetic-bay', *extra]
     for ident, path in grids.items():
         argv += ['--grid', f'{ident}={path}']
     monkeypatch.setattr(sys, 'argv', argv)
@@ -105,3 +105,44 @@ def test_omitted_binding_is_recorded_and_an_unapproved_grid_is_refused_before_an
     with pytest.raises(SystemExit, match='not an approved bathymetry source'):
         _run_builder(monkeypatch, {'usgs-a': a, 'noaa-x': x}, sources)
     assert calls == []
+
+
+def test_held_output_traces_a_candidate_grid_privately_and_the_default_still_refuses_it(tmp_path, monkeypatch):
+    import rasterio
+    from skippercast.platform import depth_contours as dc
+    sources = _sources('noaa-x')
+    sources['noaa-x'].update(review_status='candidate', rights={'attribution': 'Synthetic', 'license': 'CC0-1.0'})
+    x = _tif(tmp_path / 'x.tif', _slope((64, 64)), X0, Y0)
+    captured = {}
+    doc = _run_builder(monkeypatch, {'noaa-x': x}, sources, '--held-output', str(tmp_path / 'held.geojson'), captured=captured)
+    assert captured['path'] == (tmp_path / 'held.geojson').resolve()
+    assert doc['provenance']['publication_held'] is True
+    assert doc['provenance']['held_sources'] == [{'source_id': 'noaa-x', 'review_status': 'candidate'}]
+    assert any(f['properties']['kind'] == 'contour' for f in doc['features'])
+    calls = []
+    monkeypatch.setattr(rasterio, 'open', lambda *a, **k: calls.append(a))
+    with pytest.raises(SystemExit, match='is not an approved bathymetry source'):
+        _run_builder(monkeypatch, {'noaa-x': x}, sources)
+    assert calls == []
+    with pytest.raises(ValueError, match='are held and cannot be published'):
+        dc.check_contours(doc, {'id': 'synthetic-bay', 'bounds': [-121.5, 35.0, -120.0, 36.0],
+                                'source_bindings': {'bathymetry': ['noaa-x']}}, sources)
+
+
+@pytest.mark.parametrize('under_repo', [True, False])
+def test_held_output_in_the_repo_or_of_a_restricted_source_is_refused_before_any_read(tmp_path, monkeypatch, under_repo):
+    import rasterio
+    from skippercast.platform import contracts
+    sources = _sources('csumb-x')
+    if under_repo:
+        monkeypatch.setattr(contracts, 'REPO', tmp_path)
+        out, message = tmp_path / 'catalog/x.geojson', 'outside the work tree'
+    else:
+        sources['csumb-x'].update(review_status='restricted', rights={'attribution': 'Synthetic', 'license': 'unresolved'})
+        out, message = tmp_path / 'held.geojson', 'cannot be traced, even held: restricted, licence unresolved'
+    x = _tif(tmp_path / 'x.tif', _slope((64, 64)), X0, Y0)
+    calls, captured = [], {}
+    monkeypatch.setattr(rasterio, 'open', lambda *a, **k: calls.append(a))
+    with pytest.raises(SystemExit, match=message):
+        _run_builder(monkeypatch, {'csumb-x': x}, sources, '--held-output', str(out), captured=captured)
+    assert calls == [] and captured == {} and not out.exists()
