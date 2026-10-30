@@ -67,19 +67,22 @@ def build(region, sources, locations, screens):
         if never_read(src):
             rows.append({**base, 'use': 'skip', 'held_reason': 'none'})
             continue
-        found, missing = [], False
-        for e in (e for e in locations if e['source_id'] == sid):
+        entries = [e for e in locations if e['source_id'] == sid]
+        found, missing = [], not entries
+        for e in entries:
             w, s, ee, n = region['bounds']
             if e.get('bbox') and (e['bbox'][2] < w or ee < e['bbox'][0] or e['bbox'][3] < s or n < e['bbox'][1]):
                 outside += 1
                 continue
             try:
                 sha, size = file_identity(e['path'])
-            except OSError:
-                sha, size = '', 0
-            if size == 0:
+            except FileNotFoundError:
                 missing = True
                 continue
+            except OSError as err:
+                raise IntakeError(f"Cannot read {e['path']}: {err}") from err
+            if size == 0:
+                raise IntakeError(f"Empty data file: {e['path']}")
             path = os.path.realpath(e['path'])
             verdict, receipt = screens.get(path, ('UNSCREENED', ''))
             row = {**base, 'local_path': path, 'sha256': sha, 'bytes': size, 'crs': e.get('crs') or 'undeclared',
@@ -92,7 +95,7 @@ def build(region, sources, locations, screens):
                 row.update(use='held', held_reason='region-draft')
             found.append(row)
         rows += sorted(found, key=lambda r: r['local_path'])
-        if missing or not found:
+        if missing:
             rows.append({**base, 'use': 'missing-file', 'held_reason': f'missing-file:{sid}'})
     return rows, outside
 

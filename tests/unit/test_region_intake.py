@@ -70,6 +70,38 @@ def test_restricted_never_touched_and_unknown_id(world, monkeypatch, capsys):
     assert not folder.exists()
 
 
+def test_outside_only_is_counted_without_download_gap(world):
+    world["region"]["source_bindings"]["bathymetry"] = ["syn-approved"]
+    path = world["tmp"] / "locations.json"
+    path.write_text(json.dumps({"schema_version": 1, "files": [
+        {"source_id": "syn-approved", "path": str(world["tmp"] / "outside.tif"), "bbox": [0, 0, 1, 1]}]}))
+    code, folder = run(world, "outside")
+    assert code == 0 and rows_of(folder) == []
+    text = (folder / "INTAKE.md").read_text()
+    assert "out-of-bounds entries not listed: 1" in text
+    assert "operator: one G ask" not in text
+
+
+@pytest.mark.parametrize("failure", ["empty", "directory", "permission", "io"])
+def test_invalid_data_fails_before_write(world, monkeypatch, capsys, failure):
+    path = world["tmp"] / "approved.tif"
+    if failure == "empty":
+        path.write_bytes(b"")
+    elif failure == "directory":
+        path.unlink()
+        path.mkdir()
+    else:
+        original = ri.file_identity
+        def unreadable(name):
+            if name == str(path):
+                raise PermissionError("denied") if failure == "permission" else OSError("read failed")
+            return original(name)
+        monkeypatch.setattr(ri, "file_identity", unreadable)
+    code, folder = run(world, "bad-data")
+    assert code == 1 and str(path) in capsys.readouterr().err
+    assert not folder.exists()
+
+
 def test_check(world, capsys):
     _, folder = run(world, "one")
     assert ri.main(["--check", str(folder)], world["loader"]) == 0
