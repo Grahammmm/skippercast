@@ -386,15 +386,19 @@ def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_
         engine.mvt(geojson, output / 'vector', zoom)
         terrain = output / 'terrain'
         span = 2 * WORLD / (2 ** zoom)
+        # Unsupported pixels keep alpha 0 but encode the lowest supported
+        # elevation, never RGB=0 (-10000 m), so ignoring alpha cannot curtain.
+        floor_m = float(values[valid].min())
         for x, y in tiles:
             west, north = -WORLD + x * span, WORLD - y * span
             affine = from_bounds(west, north - span, west + span, north, 256, 256)
             warped = nearest_terrain(values, valid, grid.transform, grid.crs, affine)
             supported = warped != -999999
-            encoded = np.rint((warped.astype('float64') + 10000) * 10)
-            if ((encoded[supported] < 0) | (encoded[supported] > 16777215)).any():
+            filled = np.where(supported, warped.astype('float64'), floor_m)
+            encoded = np.rint((filled + 10000) * 10)
+            if ((encoded < 0) | (encoded > 16777215)).any():
                 raise ValueError('Elevation outside terrain-RGB range')
-            encoded = np.where(supported, encoded, 0).astype('uint32')
+            encoded = encoded.astype('uint32')
             rgba = np.stack([(encoded >> 16) & 255, (encoded >> 8) & 255,
                              encoded & 255, supported * 255]).astype('uint8')
             tile = terrain / str(zoom) / str(x) / f'{y}.png'
@@ -404,7 +408,8 @@ def build(elevation, contributor, manifest, output, *, zoom=10, max_cells=4_000_
         result = dict(schema_version=1, status='review_required', navigation=LABEL,
                       contour_features=len(features), levels_ft=depths, simplify_m=tolerance,
                       zoom=zoom, terrain_tiles=len(tiles), value_convention='elevation_positive_up',
-                      terrain_encoding='elevation_m = -10000 + (R*65536+G*256+B)*0.1; alpha=0 unsupported',
+                      terrain_encoding='elevation_m = -10000 + (R*65536+G*256+B)*0.1; alpha=0 unsupported (encoded at unsupported_fill_m, the lowest supported elevation; never -10000)',
+                      unsupported_fill_m=floor_m,
                       terrain_sampling='exact inverse-projected XYZ pixel centres; nearest source cell',
                       simplification='per-line topology-preserving, half-cell tolerance; a line reverts to unsimplified if another line in the contributor touches or lies inside an area its simplification sweeps across',
                       contour_crs='EPSG:4326', tile_scheme='XYZ',

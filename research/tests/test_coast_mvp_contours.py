@@ -252,6 +252,13 @@ def test_nearby_depths_do_not_cross_after_simplification(stack, make_rasters, mo
     assert all(line.is_simple for line in lines)
     assert not lines[0].intersects(lines[1])
     assert all(line.hausdorff_distance(original) <= 20.001 for line, original in zip(lines, raw))
+    # Negative control through the producer: per-segment simplify crosses.
+    monkeypatch.setattr(c2, 'simplify_contours', lambda lines, tolerance: [x.simplify(tolerance) for x in lines])
+    c2.build(directory / 'elevation.tif', directory / 'contributor.tif', directory / 'sources.json',
+             directory / 'output-per-segment', zoom=14)
+    features = json.loads((directory / 'output-per-segment/contours.geojson').read_text())['features']
+    old_lines = [transform(project, shape(f['geometry'])) for f in features]
+    assert old_lines[0].crosses(old_lines[1])
 
 
 def test_regional_terrain_exact_nearest_and_mask(stack, tmp_path):
@@ -306,6 +313,29 @@ def test_regional_terrain_exact_nearest_and_mask(stack, tmp_path):
         old_mismatches += int((old != expected).sum())
     assert supported and unsupported
     assert old_mismatches > 0, 'Fixture must expose the old approximate-warp regression'
+
+
+def test_unsupported_pixels_encode_lowest_supported_elevation_not_curtain(stack, make_rasters):
+    """Alpha-0 pixels (hole and outside grid) never decode to RGB=0, i.e. -10000 m."""
+    np, rio, *_, c2 = stack
+    directory = make_rasters()
+    result = run(c2, directory)
+    with rio.open(directory / 'elevation.tif') as grid:
+        values = grid.read(1)
+    floor_m = float(values[values != -999999].min())
+    assert result['unsupported_fill_m'] == floor_m
+    assert json.loads((directory / 'output/manifest.json').read_text())['unsupported_fill_m'] == floor_m
+    assert 'never -10000' in result['terrain_encoding']
+    holes = 0
+    for tile in (directory / 'output/terrain').rglob('*.png'):
+        with rio.open(tile) as png:
+            rgba = png.read().astype('int64')
+        decoded = -10000 + (rgba[0] * 65536 + rgba[1] * 256 + rgba[2]) * 0.1
+        unsupported = rgba[3] == 0
+        holes += int(unsupported.sum())
+        assert np.allclose(decoded[unsupported], floor_m, rtol=0, atol=0.051)
+        assert (decoded >= floor_m - 0.051).all()
+    assert holes
 
 
 def test_simplify_contours_reverts_conflicts_to_a_crossing_free_fixpoint(stack):

@@ -41,6 +41,8 @@ sampling to avoid inventing interpolation across contributor boundaries;
 RGB precision is 0.1 metre, not a statement of source accuracy. Transparent
 pixels must not be interpreted as measured elevation. PNG georeferencing is
 provided by XYZ placement, not an embedded GeoTIFF transform.
+Alpha-0 pixels encode manifest unsupported_fill_m (the lowest supported C1
+elevation), never RGB=0 (-10000 m); a viewer must still treat them as absent.
 
 Synthetic fixtures are analytical descriptions at
 research/tests/fixtures/coast_mvp/contours/synthetic.json. Tests generate tiny
