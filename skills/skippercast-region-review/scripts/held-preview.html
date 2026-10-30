@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Held contour preview</title>
+<style>
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #f4f6f8; color: #14212b; }
+  #held-banner { background: #8a1c1c; color: #fff; padding: 8px 12px; font-weight: 700; }
+  svg { display: block; width: 100%; height: 55vh; background: #dfeaf2; }
+  svg path { fill: none; stroke: #1c4e7a; stroke-width: 1; vector-effect: non-scaling-stroke; }
+  svg path.index { stroke-width: 2.5; }
+  .contour-card { padding: 8px 12px; overflow-wrap: anywhere; }
+  .contour-card h2 { font-size: 15px; margin: 8px 0 2px; }
+  .contour-card ul { margin: 0; padding-left: 18px; }
+</style>
+</head>
+<body>
+<header id="held-banner">Held, not published, not for navigation</header>
+<svg id="plot" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Held contour lines"></svg>
+<section class="contour-card"></section>
+<script>
+(async () => {
+  try {
+    const names = (new URLSearchParams(location.search).get('files') || '').split(',').filter(Boolean);
+    const docs = [];
+    for (const name of names) {
+      const response = await fetch('/held/' + encodeURIComponent(name));
+      if (!response.ok) throw new Error(name + ' HTTP ' + response.status);
+      docs.push({name, doc: await response.json()});
+    }
+    const lines = [];
+    for (const {doc} of docs) {
+      for (const f of doc.features || []) {
+        if (!f.properties || f.properties.kind !== 'contour') continue;
+        const parts = f.geometry.type === 'LineString' ? [f.geometry.coordinates] : f.geometry.coordinates;
+        for (const part of parts) lines.push({part, index: !!f.properties.index});
+      }
+    }
+    const points = lines.flatMap(l => l.part);
+    if (!points.length) throw new Error('no contour lines');
+    const lons = points.map(p => p[0]), lats = points.map(p => p[1]);
+    const [x0, x1, y0, y1] = [Math.min(...lons), Math.max(...lons), Math.min(...lats), Math.max(...lats)];
+    const k = Math.cos(((y0 + y1) / 2) * Math.PI / 180);
+    const scale = 90 / Math.max((x1 - x0) * k, y1 - y0, 1e-9);
+    const at = ([x, y]) => (5 + (x - x0) * k * scale).toFixed(2) + ' ' + (95 - (y - y0) * scale).toFixed(2);
+    const svg = document.getElementById('plot');
+    for (const {part, index} of lines) {
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', 'M' + part.map(at).join('L'));
+      if (index) path.setAttribute('class', 'index');
+      svg.appendChild(path);
+    }
+    const card = document.querySelector('.contour-card');
+    for (const {name, doc} of docs) {
+      const p = doc.provenance || {};
+      const h = document.createElement('h2');
+      h.textContent = name + ' · region_id: ' + p.region_id;
+      const ul = document.createElement('ul');
+      for (const s of p.sources || []) {
+        const li = document.createElement('li');
+        li.textContent = s.name + ' · survey_date: ' + s.survey_date + ' · vertical_datum: ' + s.vertical_datum;
+        ul.appendChild(li);
+      }
+      const held = document.createElement('li');
+      held.textContent = 'held_sources: ' + JSON.stringify(p.held_sources || []);
+      ul.appendChild(held);
+      card.append(h, ul);
+    }
+    document.body.dataset.ready = 'true';
+  } catch (error) {
+    document.body.dataset.failed = String(error && error.message || error);
+  }
+})();
+</script>
+</body>
+</html>
