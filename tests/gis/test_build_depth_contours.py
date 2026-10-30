@@ -234,6 +234,60 @@ def test_compound_bag_traces_using_its_horizontal_crs(tmp_path, monkeypatch):
     assert got['provenance']['horizontal_crs'] == want['provenance']['horizontal_crs']
 
 
+def test_receipt_shaped_bound_compound_bag_traces_using_source_crs(tmp_path, monkeypatch):
+    import rasterio
+    from pyproj import CRS
+    # NOAA's W00433 shape: the legacy TOWGS84 makes the PROJCS a bound CRS.
+    wkt = '''COMPD_CS["NAD83 / UTM zone 11N + MLLW depth",
+        PROJCS["NAD83 / UTM zone 11N",
+            GEOGCS["NAD83",DATUM["North_American_Datum_1983",
+                SPHEROID["GRS 1980",6378137,298.257222101],TOWGS84[0,0,0,0,0,0,0]],
+                PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],
+            PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",0],
+            PARAMETER["central_meridian",-117],PARAMETER["scale_factor",0.9996],
+            PARAMETER["false_easting",500000],PARAMETER["false_northing",0],
+            UNIT["metre",1],AUTHORITY["EPSG","26911"]],
+        VERT_CS["MLLW depth",VERT_DATUM["Mean Lower Low Water",2000],
+            UNIT["metre",1],AXIS["Depth",DOWN]]]'''
+    values = _slope((64, 64))
+    path = _bag(tmp_path, 'bound-compound', values, X0, Y0, crs=wkt)
+    # GDAL's BAG writer can canonicalize NAD83 and drop TOWGS84. Restore the
+    # producer's legacy datum binding in the actual BAG metadata, not a mock.
+    import h5py
+    import numpy as np
+    with h5py.File(path, 'r+') as f:
+        xml = f['BAG_root/metadata'][:].tobytes().decode('utf-8').rstrip('\0')
+        if 'TOWGS84[' not in xml:
+            xml = xml.replace('AUTHORITY["EPSG","6269"]]',
+                              'TOWGS84[0,0,0,0,0,0,0],AUTHORITY["EPSG","6269"]]')
+        del f['BAG_root/metadata']
+        f['BAG_root'].create_dataset('metadata', data=np.frombuffer(xml.encode('utf-8'), dtype='S1'))
+    with rasterio.open(path) as grid:
+        compound = CRS(grid.crs)
+        assert compound.is_compound and compound.sub_crs_list[0].is_bound
+
+    def check_horizontal(bs):
+        check = bs.preflight.check_grid
+
+        def checked(meta, **kwargs):
+            horizontal = CRS(meta['crs_wkt'])
+            assert not horizontal.is_compound and not horizontal.is_bound
+            assert horizontal.equals(CRS('EPSG:26911'))
+            assert meta['crs_projected'] and meta['crs_linear_units'] == 'metre'
+            return check(meta, **kwargs)
+        monkeypatch.setattr(bs.preflight, 'check_grid', checked)
+
+    bounds = (-116, 35, -114, 36)
+    got = _build(monkeypatch, _bag_sources(), '--grid', f'noaa-bag={path}', '--bag-survey', 'noaa-bag=H99999',
+                 bounds=bounds, setup=check_horizontal)
+    tif = _tif(tmp_path / 'nad83.tif', values, X0, Y0, crs='EPSG:26911')
+    want = _build(monkeypatch, _sources('noaa-bag'), '--grid', f'noaa-bag={tif}', bounds=bounds)
+    assert _lines(got) == _lines(want)
+    assert any(f['properties']['kind'] == 'contour' for f in got['features'])
+    assert got['provenance']['horizontal_crs'] == 'EPSG:26911'
+    assert got['provenance']['sources'][0]['vertical_datum'] == 'Mean Lower Low Water'
+
+
 def test_bag_reads_are_clipped_to_the_region_with_no_survey_edge_along_the_clip(tmp_path, monkeypatch):
     from pyproj import Transformer
     lon = lambda x: Transformer.from_crs('EPSG:32610', 'EPSG:4326', always_xy=True).transform(x, Y0 - 128)[0]  # noqa: E731

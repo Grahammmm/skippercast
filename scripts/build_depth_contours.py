@@ -127,7 +127,13 @@ def horizontal_crs(grid):
     if grid.crs is None:
         raise ValueError(f'{grid.name}: expected a projected, metre-based survey grid')
     crs = CRS.from_user_input(grid.crs.to_wkt())
-    return crs.sub_crs_list[0] if crs.is_compound else crs
+    if crs.is_compound:
+        crs = crs.sub_crs_list[0]
+    # NOAA's legacy TOWGS84 WKT wraps the projected horizontal component
+    # in a bound CRS. Grid units and coordinates belong to its source CRS.
+    if crs.is_bound:
+        crs = crs.source_crs
+    return crs.to_2d()
 
 
 def horizontal(grids):
