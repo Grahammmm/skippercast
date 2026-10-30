@@ -138,21 +138,22 @@ def check(folder, loader):
     for number, values in enumerate(table[1:], 1):
         row = dict(zip(COLUMNS, values))
         src = sources.get(row['source_id'], {})
-        problems = [
-            ('field count', len(values) != len(COLUMNS)),
-            ('source_id', not src),
-            ('use', row['use'] not in USES),
-            ('review_status/licence', row['review_status'] != src.get('review_status') or row['licence'] != (src.get('rights') or {}).get('license', '')),
-            ('sha256', row['use'] in ('publish', 'held') and not re.fullmatch(r'[0-9a-f]{64}', row['sha256'])),
-            ('bytes', row['use'] in ('publish', 'held') and not row['bytes'].isdigit()),
-            ('local_path', row['use'] in ('publish', 'held') and not (row['bytes'].isdigit() and os.path.isfile(row['local_path'])
-                                                                      and os.path.getsize(row['local_path']) == int(row['bytes']) > 0)),
-            ('use', row['use'] == 'publish' and row['review_status'] != 'approved'),
-            ('local_path/sha256', row['use'] == 'skip' and never_read(src) and bool(row['local_path'] or row['sha256'])),
-            ('held_reason', not re.fullmatch(r'none|region-draft|source-candidate:.+|missing-file:.+', row['held_reason'])),
+        data_row = row['use'] in ('publish', 'held')
+        problems = [  # lazy, in order: a never-read source is rejected before any path is touched
+            ('field count', lambda: len(values) != len(COLUMNS)),
+            ('source_id', lambda: not src),
+            ('use', lambda: row['use'] not in USES),
+            ('review_status/licence', lambda: row['review_status'] != src.get('review_status') or row['licence'] != (src.get('rights') or {}).get('license', '')),
+            ('use', lambda: data_row and never_read(src)),
+            ('local_path/sha256', lambda: row['use'] == 'skip' and never_read(src) and bool(row['local_path'] or row['sha256'])),
+            ('sha256', lambda: data_row and not re.fullmatch(r'[0-9a-f]{64}', row['sha256'])),
+            ('bytes', lambda: data_row and not row['bytes'].isdigit()),
+            ('local_path', lambda: data_row and not (os.path.isfile(row['local_path']) and os.path.getsize(row['local_path']) == int(row['bytes']) > 0)),
+            ('use', lambda: row['use'] == 'publish' and row['review_status'] != 'approved'),
+            ('held_reason', lambda: row['held_reason'] not in ('none', 'region-draft', f"source-candidate:{row['source_id']}", f"missing-file:{row['source_id']}")),
         ]
         for field, bad in problems:
-            if bad:
+            if bad():
                 raise IntakeError(f'Row {number} field {field}')
     print(f'INTAKE OK {len(table) - 1} rows')
 

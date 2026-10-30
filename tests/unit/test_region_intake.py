@@ -80,3 +80,39 @@ def test_check(world, capsys):
         assert ri.main(["--check", str(folder)], world["loader"]) == 1
     inside = ["synthetic-bay", "--run", str(ri.REPO / "var/x"), "--locations", str(world["tmp"] / "locations.json")]
     assert ri.main(inside, world["loader"]) == 1 and not (ri.REPO / "var/x").exists()
+
+
+def test_check_rejects_never_read_and_foreign_reason(world, monkeypatch, capsys):
+    _, folder = run(world, "one")
+    rows = rows_of(folder)
+    restricted = world["tmp"] / "restricted.tif"
+    restricted.write_bytes(b"x")
+
+    def rewrite(row):
+        with (folder / "INTAKE.csv").open("w", newline="") as handle:
+            writer = csv.DictWriter(handle, ri.COLUMNS, lineterminator="\n")
+            writer.writeheader()
+            writer.writerows([row])
+
+    forbidden, real_stat, real_open = str(restricted), os.stat, builtins.open
+
+    def guard(real):
+        def wrapped(path, *a, **k):
+            assert str(path) != forbidden, "never-read path touched"
+            return real(path, *a, **k)
+        return wrapped
+    monkeypatch.setattr(os, "stat", guard(real_stat))
+    monkeypatch.setattr(builtins, "open", guard(real_open))
+    base = next(r for r in rows if r["source_id"] == "syn-restricted")
+    for use in ("held", "publish"):
+        rewrite({**base, "use": use, "held_reason": "none", "local_path": forbidden, "sha256": "a" * 64, "bytes": "1"})
+        assert ri.main(["--check", str(folder)], world["loader"]) == 1
+        assert "Row 1 field use" in capsys.readouterr().err
+    monkeypatch.undo()
+    held = next(r for r in rows if r["use"] == "held")
+    for reason in ("source-candidate:WRONG-ID", "missing-file:WRONG-ID"):
+        rewrite({**held, "held_reason": reason})
+        assert ri.main(["--check", str(folder)], world["loader"]) == 1
+        assert "Row 1 field held_reason" in capsys.readouterr().err
+    rewrite(held)
+    assert ri.main(["--check", str(folder)], world["loader"]) == 0
