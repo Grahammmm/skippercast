@@ -56,6 +56,8 @@ export interface ContourSource {
   readonly survey_date: string; readonly vertical_datum: string;
 }
 export interface ContourCollection {readonly type: 'FeatureCollection'; readonly features: readonly Json[]}
+/** A bound survey the file does not draw, with its catalog review_status (provenance `sources_omitted`). */
+export interface OmittedSource {readonly source_id: string; readonly review_status: string}
 /** drawn: checked and current; none: the region publishes none; withheld: past its age limit; failed: did not load or failed its check. */
 export type ContourStatus = 'idle' | 'loading' | 'drawn' | 'none' | 'withheld' | 'failed';
 export interface ContourAssessment {
@@ -63,8 +65,11 @@ export interface ContourAssessment {
   readonly data: ContourCollection | null;
   readonly sources: readonly ContourSource[];
   readonly expires: string | null;
+  readonly omitted: readonly OmittedSource[];
 }
-export interface ContourState {readonly status: ContourStatus; readonly note: string; readonly sources: readonly ContourSource[]}
+export interface ContourState {
+  readonly status: ContourStatus; readonly note: string; readonly sources: readonly ContourSource[]; readonly omitted: readonly OmittedSource[];
+}
 
 export const NOTES = {
   none: '',
@@ -72,7 +77,19 @@ export const NOTES = {
   failed: 'Depth contours did not load, so none are drawn.',
   loading: 'Loading depth contours.',
 } as const;
-const IDLE: ContourState = Object.freeze({status: 'idle', note: '', sources: []});
+const IDLE: ContourState = Object.freeze({status: 'idle', note: '', sources: [], omitted: []});
+const FAILED: ContourAssessment = Object.freeze({status: 'failed', data: null, sources: [], expires: null, omitted: []});
+const PHRASE = new Map([['candidate', 'not yet reviewed'], ['restricted', 'restricted']]);
+
+/** What a drawn file leaves out: its bound surveys that are not approved, then any approved ones it did not trace ('' if none are unapproved). */
+export function omittedNote(omitted: readonly OmittedSource[]): string {
+  const unreviewed = omitted.filter(o => o.review_status !== 'approved'), untraced = omitted.filter(o => o.review_status === 'approved');
+  const n = unreviewed.length, m = untraced.length;
+  if (!n) return '';
+  const items = unreviewed.map(o => `${o.source_id} (${PHRASE.get(o.review_status) ?? o.review_status})`).join(', ');
+  return `${n} bound survey${n === 1 ? '' : 's'} not drawn: ${items}.`
+    + (m ? ` ${m} reviewed survey${m === 1 ? '' : 's'} not traced in this file: ${untraced.map(o => o.source_id).join(', ')}.` : '');
+}
 /** What the legend shows for the contours. */
 export const contourState = signal<ContourState>(IDLE);
 
@@ -91,7 +108,7 @@ const line = (g: Json | null): boolean => {
  * the contours are withheld; any other gap fails the whole file (nothing partial draws).
  */
 export function assessContours(data: unknown, id: string, today: string): ContourAssessment {
-  const failed: ContourAssessment = {status: 'failed', data: null, sources: [], expires: null};
+  const failed = FAILED;
   const d = obj(data), p = obj(d?.provenance), list = d?.features;
   if (d?.type !== 'FeatureCollection' || !p || p.region_id !== id || p.units !== 'ft' || p.interval_ft !== INTERVAL_FT || !Array.isArray(list)) return failed;
   const expires = text(p.review_expires);
@@ -100,6 +117,10 @@ export function assessContours(data: unknown, id: string, today: string): Contou
     source_id: text(s.source_id), name: text(s.name), url: text(s.url), attribution: text(s.attribution),
     survey_date: text(s.survey_date), vertical_datum: text(s.vertical_datum)}));
   if (!sources.length || sources.some(s => !s.source_id || !s.name || !s.survey_date || !s.vertical_datum)) return failed;
+  // The bound surveys this file leaves out: required, each named with its review status (an empty list is valid).
+  const omitted = Array.isArray(p.sources_omitted)
+    ? p.sources_omitted.map(o => ({source_id: text(obj(o)?.source_id), review_status: text(obj(o)?.review_status)})) : null;
+  if (!omitted || omitted.some(o => !o.source_id || !o.review_status)) return failed;
   const byId = new Map(sources.map(s => [s.source_id, s]));
   const valid = list.every(f => {
     const props = obj(obj(f)?.properties), s = byId.get(text(props?.source_id));
@@ -109,8 +130,8 @@ export function assessContours(data: unknown, id: string, today: string): Contou
     return line(obj(obj(f)?.geometry));
   });
   if (!valid) return failed;
-  if (today > expires) return {status: 'withheld', data: null, sources, expires};
-  return {status: 'drawn', data: {type: 'FeatureCollection', features: list as Json[]}, sources, expires};
+  if (today > expires) return {status: 'withheld', data: null, sources, expires, omitted};
+  return {status: 'drawn', data: {type: 'FeatureCollection', features: list as Json[]}, sources, expires, omitted};
 }
 
 /** Survey edge (dashed), contours (index heavier), the click target, then the labels in feet. */
@@ -135,16 +156,18 @@ export function contoursOverlay(p: Palette, data: ContourCollection): Overlay {
   };
 }
 
-/** The card for a clicked line, from its own properties and its listed survey: depth, interval, survey, date and datum. */
-export function contourMark(properties: Record<string, unknown> | null | undefined, sources: readonly ContourSource[]): ChartMark | null {
+/** The card for a clicked line, from its own properties and its listed survey: depth, interval, survey, date and datum,
+ * then any bound survey the file does not draw (`omittedNote`). */
+export function contourMark(properties: Record<string, unknown> | null | undefined, sources: readonly ContourSource[], omitted: readonly OmittedSource[] = []): ChartMark | null {
   const p = properties ?? {}, s = sources.find(x => x.source_id === p.source_id);
   if (!s || !KINDS.includes(text(p.kind))) return null;
   const source = `${s.name} · ${s.attribution || 'survey grid'} · surveyed ${s.survey_date} · ${s.vertical_datum}`;
   const basis = layerEntry(REGISTRY_ID).basis;
   const terms = /^https:\/\//.test(s.url) ? [{href: s.url, label: 'Survey data release'}] : undefined;
+  const note = omittedNote(omitted), more = note ? ` ${note}` : '';
   if (p.kind === 'survey-edge') return {
     id: `depth-contours:${s.source_id}:edge`, name: 'Survey edge', kind: 'Where the reviewed survey grid stops',
-    reading: 'No reviewed grid continues past this line, so no contours are drawn beyond it; that is missing data, not flat water.',
+    reading: `No reviewed grid continues past this line, so no contours are drawn beyond it; that is missing data, not flat water.${more}`,
     source, basis, ...(terms ? {terms} : {}),
   };
   const depth = Number(p.depth_ft);
@@ -152,7 +175,7 @@ export function contourMark(properties: Record<string, unknown> | null | undefin
   return {
     id: `depth-contours:${s.source_id}:${depth}`, name: `${depth} ft depth contour`,
     kind: depth % INDEX_FT === 0 ? `Index contour · every ${INDEX_FT} ft` : `Depth contour · every ${INTERVAL_FT} ft`,
-    reading: `${depth} ft below the survey's ${s.vertical_datum}, traced from 16 m averaged blocks of the survey grid; not a sounding or a chart depth.`,
+    reading: `${depth} ft below the survey's ${s.vertical_datum}, traced from 16 m averaged blocks of the survey grid; not a sounding or a chart depth.${more}`,
     source, basis, ...(terms ? {terms} : {}),
   };
 }
@@ -172,9 +195,9 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
     let result: Loaded['result'];
     try {
       const response = await fetchFn(new URL(path, page()).href, {signal: AbortSignal.timeout(20000)});
-      result = response.status === 404 ? 'none' : !response.ok ? {status: 'failed', data: null, sources: [], expires: null}
+      result = response.status === 404 ? 'none' : !response.ok ? FAILED
         : assessContours(await response.json(), id, new Date(now()).toISOString().slice(0, 10));
-    } catch { result = {status: 'failed', data: null, sources: [], expires: null}; }
+    } catch { result = FAILED; }
     if (alive && region.peek() === id && asked === path) loaded.value = {region: id, path, result};
   }
   const disposers = [
@@ -189,15 +212,15 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
       const l = loaded.peek();
       if (l && l.region === id && l.result === 'none') return;
       asked = path;
-      if (!l || l.region !== id) contourState.value = {status: 'loading', note: NOTES.loading, sources: []};
+      if (!l || l.region !== id) contourState.value = {status: 'loading', note: NOTES.loading, sources: [], omitted: []};
       void load(id, path);
     }),
     effect(() => {
       const l = loaded.value, id = region.value;
       if (!l || l.region !== id) return;
       const r = l.result;
-      contourState.value = r === 'none' ? {status: 'none', note: NOTES.none, sources: []}
-        : {status: r.status, note: r.status === 'drawn' ? '' : NOTES[r.status], sources: r.sources};
+      contourState.value = r === 'none' ? {status: 'none', note: NOTES.none, sources: [], omitted: []}
+        : {status: r.status, note: r.status === 'drawn' ? omittedNote(r.omitted) : NOTES[r.status], sources: r.sources, omitted: r.omitted};
     }),
     effect(() => {
       const e = engine.value, l = loaded.value, id = region.value;
@@ -214,7 +237,7 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
     destroy() { alive = false; for (const dispose of disposers) dispose(); contourState.value = IDLE; },
     pick: {layers: [DEPTH_HIT] as const, ordered: true, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => {
       const l = loaded.peek();
-      return l && l.result !== 'none' && l.result.status === 'drawn' ? contourMark(properties, l.result.sources) : null;
+      return l && l.result !== 'none' && l.result.status === 'drawn' ? contourMark(properties, l.result.sources, l.result.omitted) : null;
     }},
   };
 }

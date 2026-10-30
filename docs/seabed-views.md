@@ -12,6 +12,8 @@ The local manifest contains source paths, source IDs, survey years and datums. P
 
 Areas without supporting native data show an explicit unavailable message. In particular, San Simeon's smoothed 10 m contours and regional geology cannot generate the same detailed bottom view. There is no decorative stand-in that could be mistaken for measured terrain.
 
+A published depth-contour file (`dist/regions/<id>/depth-contours.geojson`) lists the grids it traced in `provenance.sources`. Its `provenance.sources_omitted` lists every other bathymetry survey bound to the region, each with its catalog `review_status` copied unchanged. For example, Morro Bay records `noaa-bag` as `candidate`. An omitted survey is not drawn and not converted. The Chart's contour card and the legend's contour line say so, for example "1 bound survey not drawn: noaa-bag (not yet reviewed)."
+
 ## Channel Islands context adapter
 
 `research/scripts/build_socal_habitat.py` is a separate reviewed adapter for the NOAA NCCOS/NCEI 0304093 merged grids. It preserves native 2 m and 4 m values, source WKT, file digests, blank masks and an **unspecified common hydrographic vertical reference**. It never calls those depths MLLW. The source itself includes some IDW gap interpolation and vertical shifts; source-grid coverage therefore does not mean every displayed cell was a direct sounding. The tile contains the producer, survey-date range and these limitations.
