@@ -146,3 +146,41 @@ def test_held_output_in_the_repo_or_of_a_restricted_source_is_refused_before_any
     with pytest.raises(SystemExit, match=message):
         _run_builder(monkeypatch, {'csumb-x': x}, sources, '--held-output', str(out), captured=captured)
     assert calls == [] and captured == {} and not out.exists()
+
+
+def test_output_writes_the_approved_only_collection_outside_the_tree(tmp_path, monkeypatch):
+    from skippercast.platform import depth_contours as dc
+    sources = _sources('usgs-a')
+    a = _tif(tmp_path / 'a.tif', _slope((64, 64)), X0, Y0)
+    captured = {}
+    doc = _run_builder(monkeypatch, {'usgs-a': a}, sources, '--output', str(tmp_path / 'out.geojson'), captured=captured)
+    assert captured['path'] == (tmp_path / 'out.geojson').resolve()
+    assert 'publication_held' not in doc['provenance'] and 'held_sources' not in doc['provenance']
+    assert any(f['properties']['kind'] == 'contour' for f in doc['features'])
+    dc.check_contours(doc, {'id': 'synthetic-bay', 'bounds': [-121.5, 35.0, -120.0, 36.0],
+                            'source_bindings': {'bathymetry': ['usgs-a']}}, sources)
+
+
+def test_output_in_the_repo_is_refused_before_any_read(tmp_path, monkeypatch):
+    import rasterio
+    from skippercast.platform import contracts
+    monkeypatch.setattr(contracts, 'REPO', tmp_path)
+    out = tmp_path / 'catalog/x.geojson'
+    a = _tif(tmp_path / 'a.tif', _slope((64, 64)), X0, Y0)
+    calls, captured = [], {}
+    monkeypatch.setattr(rasterio, 'open', lambda *a, **k: calls.append(a))
+    with pytest.raises(SystemExit, match='Output must be outside the work tree'):
+        _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a'), '--output', str(out), captured=captured)
+    assert calls == [] and captured == {} and not out.exists()
+
+
+def test_output_and_held_output_are_mutually_exclusive(tmp_path, monkeypatch, capsys):
+    import rasterio
+    a = _tif(tmp_path / 'a.tif', _slope((64, 64)), X0, Y0)
+    calls, captured = [], {}
+    monkeypatch.setattr(rasterio, 'open', lambda *a, **k: calls.append(a))
+    with pytest.raises(SystemExit) as info:
+        _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a'), '--output', str(tmp_path / 'o.geojson'),
+                     '--held-output', str(tmp_path / 'h.geojson'), captured=captured)
+    assert info.value.code == 2 and 'not allowed with argument' in capsys.readouterr().err
+    assert calls == [] and captured == {}
