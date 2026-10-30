@@ -32,10 +32,15 @@ async function screenFixture() {
   try { return await initProtectedAreas(null, () => {}); }
   finally { Object.assign(globalThis, saved); }
 }
+// planner.ts now imports web/map/depth-contours.ts (U4), whose graph has stylesheet `?url` imports: resolve them to file names.
+const urlImports = {name: 'url-imports', setup(b) {
+  b.onResolve({filter: /\?url$/}, args => ({path: args.path, namespace: 'url'}));
+  b.onLoad({filter: /.*/, namespace: 'url'}, args => ({contents: `export default ${JSON.stringify(args.path)};`, loader: 'js'}));
+}};
 const requestFor = screen => ({atlas, screen, ids: [target.id], region, allowResearch: true});
 
 test('rendered plan names the selected boundary and keeps only context notes enabled', async () => {
-  const bundle = await build({stdin: {contents: `export {Planner} from './web/app/Planner.tsx'; export {createPlanner} from './web/planner.ts'; export {h} from 'preact'; export {default as render} from 'preact-render-to-string';`, resolveDir: new URL('..', import.meta.url).pathname}, bundle: true, write: false, platform: 'node', format: 'esm', jsx: 'automatic', jsxImportSource: 'preact'});
+  const bundle = await build({stdin: {contents: `export {Planner} from './web/app/Planner.tsx'; export {createPlanner} from './web/planner.ts'; export {h} from 'preact'; export {default as render} from 'preact-render-to-string';`, resolveDir: new URL('..', import.meta.url).pathname}, bundle: true, write: false, platform: 'node', format: 'esm', jsx: 'automatic', jsxImportSource: 'preact', plugins: [urlImports]});
   const ui = await import(`data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString('base64')}`);
   const screen = await screenFixture();
   const p = ui.createPlanner({atlas, screen, region, map, getVisible: () => [], storage: null,
