@@ -1,0 +1,3 @@
+tif	verdict	reasons	source
+@TMP@/approved.tif	PASS		@TMP@/verdicts.jsonl
+@TMP@/restricted.tif	PASS		@TMP@/verdicts.jsonl

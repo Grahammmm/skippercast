@@ -1,0 +1,2 @@
+{"id": "synthetic-bay", "status": "preview", "bounds": [-121.0, 35.0, -120.0, 36.0],
+ "source_bindings": {"bathymetry": ["syn-approved", "syn-candidate", "syn-restricted", "syn-unlisted"]}}

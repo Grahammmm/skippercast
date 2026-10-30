@@ -1,0 +1,5 @@
+{"sources": [
+ {"id": "syn-approved", "review_status": "approved", "rights": {"license": "CC0-1.0", "commercial_use": "allowed"}, "native_resolution_m": 2, "vertical_datum": "MLLW", "documentation_url": "https://example.org/a"},
+ {"id": "syn-candidate", "review_status": "candidate", "rights": {"license": "public-domain", "commercial_use": "unknown"}, "native_resolution_m": 8, "vertical_datum": null, "documentation_url": "https://example.org/c"},
+ {"id": "syn-restricted", "review_status": "restricted", "rights": {"license": "unresolved", "commercial_use": "unknown"}, "documentation_url": "https://example.org/r"},
+ {"id": "syn-unlisted", "review_status": "approved", "rights": {"license": "public-domain", "commercial_use": "allowed"}, "documentation_url": "https://example.org/u"}]}
