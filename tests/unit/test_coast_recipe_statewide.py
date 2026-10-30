@@ -42,7 +42,7 @@ ALL_SLUGS = {
     'point-reyes-pigeon', 'bodega-point-reyes', 'point-arena-bodega', 'fort-bragg-point-arena',
     'shelter-cove-north-mendocino', 'humboldt-bay-cape-mendocino', 'trinidad-klamath', 'crescent-city',
 }
-STATUSES = {'noaa-bag': 'candidate', 'noaa-h13093': 'approved', 'noaa-h13323': 'approved',
+STATUSES = {'noaa-bag': 'approved', 'noaa-h13093': 'approved', 'noaa-h13323': 'approved',
             'noaa-cinms-bathymetry-2025': 'approved'}
 DATUMS = {'noaa-bag': 'unknown', 'noaa-h13093': 'MLLW', 'noaa-h13323': 'MLLW',
           'noaa-cinms-bathymetry-2025': 'Unspecified merged hydrographic reference'}

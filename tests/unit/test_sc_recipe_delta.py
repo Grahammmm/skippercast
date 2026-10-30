@@ -37,8 +37,8 @@ SOURCE_PINS = {
     # pin refreshed for OC-STATE slug admission
     'validate_recipe.py': '50d8f1e36e5edf9974d121d29349bd821c8bf08e2d3eaf20526b2bc7162b736f',
     SCHEMA: 'a659d136536a553043fac917473428ae0c6e51bdb179cc66bdd295e09ebf1593',
-    'regions/morro-bay/coast.json': '762144fdc5cd6cd764b3fcc2bd313041f5d7f5abb1e90afef393197b5abb7457',
-    'tests/unit/test_coast_recipe.py': '7a2036c3a1c44f8e108c3552eed70b52bd3c396b19208c94992921613d2eecdf',
+    'regions/morro-bay/coast.json': 'dbe6ffebea0e6d4321c949ae42329db487448a251af695f060c1092366b6bc47',
+    'tests/unit/test_coast_recipe.py': '4ec6bfdd50da5c04f117a7a01d957181b620132e2f21f8c00494c10157de270b',
 }
 # Exactly the metadata files the existing validator reads for one recipe.
 READ_SET = {SCHEMA, 'catalog/sources.json', 'catalog/coastal-sectors.json',
@@ -257,12 +257,12 @@ def test_a2_morro_bay_through_existing_validator_with_staged_metadata(tmp_path, 
     right_meta = stage_repository_metadata(tmp_path / 'right-meta')
     catalog = json.loads((right_meta / 'catalog/sources.json').read_text())
     index = [r['id'] for r in catalog['sources']].index('noaa-bag')
-    assert catalog['sources'][index]['review_status'] == 'candidate'
-    catalog['sources'][index]['review_status'] = 'approved'
+    assert catalog['sources'][index]['review_status'] == 'approved'
+    catalog['sources'][index]['review_status'] = 'candidate'
     (right_meta / 'catalog/sources.json').write_text(json.dumps(catalog, indent=1))
     right_recipe = tmp_path / 'right-coast.json'
     document = json.loads(committed.read_text())
-    document['source_review_status']['noaa-bag'] = 'approved'
+    document['source_review_status']['noaa-bag'] = 'candidate'
     right_recipe.write_text(json.dumps(document, indent=2))
     # Both sides independently valid through the actual existing validator.
     for path, meta in ((committed, left_meta), (right_recipe, right_meta)):
@@ -270,8 +270,8 @@ def test_a2_morro_bay_through_existing_validator_with_staged_metadata(tmp_path, 
                                       metadata_root=meta)['valid']
     report = delta.compare_recipes(committed, right_recipe, left_meta, right_meta, workspace)
     assert report['changes'] == [
-        row(f'/metadata/catalog~1sources.json/sources/{index}/review_status', 'candidate', 'approved'),
-        row('/recipe/source_review_status/noaa-bag', 'candidate', 'approved'),
+        row(f'/metadata/catalog~1sources.json/sources/{index}/review_status', 'approved', 'candidate'),
+        row('/recipe/source_review_status/noaa-bag', 'approved', 'candidate'),
     ]
     # Every metadata file read is listed, and the list equals the allowlist exactly.
     for side, meta in (('left', left_meta), ('right', right_meta)):
