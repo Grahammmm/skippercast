@@ -36,8 +36,8 @@ def world(base, source="s-a", family="openai", sha=None, stamp=False):
     ledger.write_text(ROWS)
     return repo, run, ledger
 
-def runner(drift=False):
-    """Stands in for region_review.py --check and platform.build (dist = copy of the catalog file); `drift` changes the 2nd build."""
+def runner(mode=None):
+    """Stands in for region_review.py --check and platform.build (dist = copy of the catalog file); `drift` changes the 2nd build, `touch` edits README.md."""
     builds = []
 
     def run(cmd, cwd=None, env=None):
@@ -45,12 +45,14 @@ def runner(drift=False):
             return SimpleNamespace(returncode=0, stdout="REVIEW OK syn-bay PASS\n")
         assert env["PYTHONPATH"] == str(cwd / "src") and cmd[2:] == ["skippercast.platform.build"]
         builds.append(1)
-        (cwd / "dist/regions/syn-bay/depth-contours.geojson").write_bytes((cwd / "catalog/depth-contours/syn-bay.geojson").read_bytes() + (b"x" if drift and len(builds) == 2 else b""))
+        (cwd / "dist/regions/syn-bay/depth-contours.geojson").write_bytes((cwd / "catalog/depth-contours/syn-bay.geojson").read_bytes() + (b"x" if mode == "drift" and len(builds) == 2 else b""))
+        if mode == "touch":
+            (cwd / "README.md").write_text("changed by the build\n")
         return SimpleNamespace(returncode=0, stdout="")
     return run
 
-def publish(w, status="preview", drift=False):
-    return rp.main([str(w[1]), "--repo", str(w[0]), "--ledger", str(w[2])], run=runner(drift), loader=lambda root, rid: ({"id": rid, "name": "Syn Bay", "status": status}, SRC))
+def publish(w, status="preview", mode=None):
+    return rp.main([str(w[1]), "--repo", str(w[0]), "--ledger", str(w[2])], run=runner(mode), loader=lambda root, rid: ({"id": rid, "name": "Syn Bay", "status": status}, SRC))
 
 def test_approved_cross_family_run_publishes_and_repeats_byte_for_byte(tmp_path):
     a, b = world(tmp_path / "a"), world(tmp_path / "b")
@@ -62,13 +64,14 @@ def test_approved_cross_family_run_publishes_and_repeats_byte_for_byte(tmp_path)
     assert a[2].read_text() == ROWS.replace(OLD, "syn-bay,publish,reviewed,none,run-20261105," + identity + ",PASS (visual not inspected),gpt-test,,")
     assert tree(a[0]) == tree(b[0]) and text == (b[1] / "PUBLISH.md").read_text() and a[2].read_bytes() == b[2].read_bytes()
 
-@pytest.mark.parametrize("kwargs,status,drift,reason", [({"source": "s-c"}, "preview", False, "source-candidate:s-c"), ({}, "draft", False, "region-draft"),
-                                                          ({"family": " ANTHROPIC "}, "preview", False, "review-family"), ({"sha": "c" * 64}, "preview", False, "review-sha-mismatch"),
-                                                          ({"stamp": True}, "preview", False, "publication-held"), ({}, "preview", True, "build-not-reproducible")])
-def test_each_failed_rule_holds_with_its_reason_and_leaves_the_repo_untouched(tmp_path, kwargs, status, drift, reason):
+@pytest.mark.parametrize("kwargs,status,mode,reason", [({"source": "s-c"}, "preview", None, "source-candidate:s-c"), ({}, "draft", None, "region-draft"),
+                                                       ({"family": " ANTHROPIC "}, "preview", None, "review-family"), ({"sha": "c" * 64}, "preview", None, "review-sha-mismatch"),
+                                                       ({"stamp": True}, "preview", None, "publication-held"), ({}, "preview", "drift", "build-not-reproducible"),
+                                                       ({}, "preview", "touch", "build-touched:README.md")])
+def test_each_failed_rule_holds_with_its_reason_and_leaves_the_repo_untouched(tmp_path, kwargs, status, mode, reason):
     w = world(tmp_path, **kwargs)
     before = tree(w[0])
-    assert publish(w, status, drift) == 1
+    assert publish(w, status, mode) == 1
     assert tree(w[0]) == before and f"HELD: {reason}\n" in (w[1] / "PUBLISH.md").read_text()
     identity = json.loads((w[1] / "BUILD.json").read_text())["build_sha256"]
     assert w[2].read_text() == ROWS.replace(OLD, f"syn-bay,review,held,{reason},run-20261105,{identity},PASS,gpt-test,,")

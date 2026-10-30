@@ -14,6 +14,7 @@ HEADER = ['region_id', 'stage', 'state', 'held_reason', 'last_run', 'build_sha25
 NEXT = {'source-candidate': 'noaa/source review owner', 'source-not-approved': 'source review owner', 'region-draft': 'PC-4b (t_6dd54ee3)',
         'review': 're-review by another family', 'no-publishable-output': 'see BUILD.json not_built'}
 sha = lambda data: hashlib.sha256(data).hexdigest()
+SKIP = {'.git', 'node_modules', '.venv', '__pycache__'}
 default_run = functools.partial(subprocess.run, capture_output=True, text=True)
 default_loader = lambda root, rid: (load_region(rid, root=root), load_catalogs(root)[1])
 
@@ -25,8 +26,17 @@ def need(ok, reason, detail):
     if not ok:
         raise Held(reason, detail)
 
-def snapshot(repo):
-    return {str(p.relative_to(repo)): sha(p.read_bytes()) for top in ('catalog/depth-contours', 'dist') for p in sorted((repo / top).rglob('*')) if p.is_file()}
+def snapshot(repo, keep=None):
+    """sha256 of every work-tree file (not .git, caches, top-level var/); `keep` also collects the bytes of files outside dist/."""
+    out = {}
+    for top, dirs, files in os.walk(repo):
+        dirs[:] = sorted(d for d in dirs if d not in SKIP and not (top == str(repo) and d == 'var'))
+        for p in (Path(top, f) for f in sorted(files) if Path(top, f).is_file()):
+            rel, data = str(p.relative_to(repo)), p.read_bytes()
+            out[rel] = sha(data)
+            if keep is not None and not rel.startswith('dist/'):
+                keep[rel] = data
+    return out
 
 def put(dest, source=None, data=None):
     tmp = dest.with_name(dest.name + '.tmp')
@@ -75,8 +85,8 @@ def check(folder, build, review, region, sources, python, run):
 def reproduce(repo, rid, source, python, run):
     """Copy the candidate in and build twice; returns (tree before, tree after). On any failure restore the tree, then hold."""
     rel = f'catalog/depth-contours/{rid}.geojson'
-    target, before = repo / rel, snapshot(repo)
-    prior = target.read_bytes() if target.exists() else None
+    target, saved = repo / rel, {}
+    before = snapshot(repo, saved)
 
     def build():
         done = run([python, '-m', 'skippercast.platform.build'], cwd=repo, env={**os.environ, 'PYTHONPATH': str(repo / 'src')})
@@ -90,11 +100,24 @@ def reproduce(repo, rid, source, python, run):
         touched = sorted(p for p in before.keys() | second.keys() if before.get(p) != second.get(p) and p != rel and not p.startswith('dist/'))
         need(not touched, f'build-touched:{touched[0] if touched else "-"}', 'platform.build changed a file outside the catalog file and dist')
     except BaseException:
-        target.unlink(missing_ok=True) if prior is None else put(target, data=prior)
+        def restore():
+            now = snapshot(repo)
+            for p in now.keys() - before.keys():
+                (repo / p).unlink()
+            for p, data in saved.items():
+                if now.get(p) != before[p]:
+                    (repo / p).parent.mkdir(parents=True, exist_ok=True)
+                    put(repo / p, data=data)
         try:
-            if build() != before:
+            restore()
+            try:
+                build()  # regenerate dist from the restored catalog; the builder may touch other files again, so restore once more
+            except Held:
+                pass
+            restore()
+            if snapshot(repo) != before:
                 raise NotRestored()
-        except Held:
+        except OSError:
             raise NotRestored()
         raise
     return before, second
