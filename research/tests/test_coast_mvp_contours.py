@@ -221,3 +221,184 @@ def test_fail_closed_inputs(stack, make_rasters, case):
         (directory / 'output').mkdir()
     with pytest.raises((ValueError, FileExistsError)):
         run(c2, directory, **kwargs)
+
+
+def test_nearby_depths_do_not_cross_after_simplification(stack, make_rasters, monkeypatch):
+    """Individually simple lines can still cross a different depth band."""
+    _, rio, _, shape, _, transform, Transformer, c2 = stack
+    from shapely.geometry import LineString, mapping
+
+    directory = make_rasters(hole=False, boundary=False)
+    with rio.open(directory / 'elevation.tif') as grid:
+        west, south, east, north = grid.bounds
+    mid_x, mid_y = (west + east) / 2, (south + north) / 2
+    raw = [LineString([(west, mid_y), (mid_x, mid_y + 20.5), (east, mid_y)]),
+           LineString([(west, mid_y + 1), (mid_x, mid_y + 21), (east, mid_y + 1)])]
+    assert not raw[0].intersects(raw[1])
+    # Negative control: the previous per-line algorithm creates intersections.
+    old = [line.simplify(20) for line in raw]
+    assert old[0].crosses(old[1])
+
+    def contours(self, raster, destination, depth_levels, nodata):
+        features = [dict(type='Feature', properties={'elevation_m': -depth * c2.FOOT},
+                         geometry=mapping(line)) for depth, line in zip([10, 20], raw)]
+        destination.write_text(json.dumps(dict(type='FeatureCollection', features=features)))
+    monkeypatch.setattr(c2.GDAL, 'contours', contours)
+    run(c2, directory)
+    features = json.loads((directory / 'output/contours.geojson').read_text())['features']
+    assert [f['properties']['depth_ft'] for f in features] == [10, 20]
+    project = Transformer.from_crs('EPSG:4326', 'EPSG:3310', always_xy=True).transform
+    lines = [transform(project, shape(f['geometry'])) for f in features]
+    assert all(line.is_simple for line in lines)
+    assert not lines[0].intersects(lines[1])
+    assert all(line.hausdorff_distance(original) <= 20.001 for line, original in zip(lines, raw))
+    # Negative control through the producer: per-segment simplify crosses.
+    monkeypatch.setattr(c2, 'simplify_contours', lambda lines, tolerance: [x.simplify(tolerance) for x in lines])
+    c2.build(directory / 'elevation.tif', directory / 'contributor.tif', directory / 'sources.json',
+             directory / 'output-per-segment', zoom=14)
+    features = json.loads((directory / 'output-per-segment/contours.geojson').read_text())['features']
+    old_lines = [transform(project, shape(f['geometry'])) for f in features]
+    assert old_lines[0].crosses(old_lines[1])
+
+
+def test_regional_terrain_exact_nearest_and_mask(stack, tmp_path):
+    """Small invented regional grid exposes approximate-warp cell errors."""
+    np, rio, from_origin, _, _, _, Transformer, c2 = stack
+    from rasterio.transform import from_bounds, rowcol, xy
+    from rasterio.warp import reproject, Resampling
+    directory = tmp_path / 'regional-synthetic'
+    directory.mkdir()
+    rows, cols = np.indices((512, 512))
+    values = (-rows * 5 - cols - 1).astype('float32')
+    valid = np.ones(values.shape, dtype=bool)
+    valid[100:160, 180:210] = False
+    values[~valid] = -999999
+    affine = from_origin(100000, 200000, 250, 250)
+    for name, data, nodata in [('elevation', values, -999999),
+                             ('contributor', valid.astype('uint16'), 0)]:
+        with rio.open(directory / f'{name}.tif', 'w', driver='GTiff', width=512, height=512,
+                      count=1, dtype=data.dtype, nodata=nodata, crs='EPSG:3310', transform=affine) as grid:
+            grid.write(data, 1)
+    (directory / 'sources.json').write_text(json.dumps({'sources': [{'code': 1, 'id': 'invented', 'resolution_m': 250}]}))
+    c2.build(directory / 'elevation.tif', directory / 'contributor.tif', directory / 'sources.json',
+             directory / 'output', zoom=10)
+    project = Transformer.from_crs('EPSG:3857', 'EPSG:3310', always_xy=True)
+    old_mismatches = 0
+    supported = unsupported = 0
+    for tile in (directory / 'output/terrain').rglob('*.png'):
+        z, x, y = int(tile.parts[-3]), int(tile.parts[-2]), int(tile.stem)
+        span = 2 * c2.WORLD / 2**z
+        west, north = -c2.WORLD + x * span, c2.WORLD - y * span
+        tile_affine = from_bounds(west, north - span, west + span, north, 256, 256)
+        rr, cc = np.indices((256, 256))
+        tx, ty = xy(tile_affine, rr.ravel(), cc.ravel(), offset='center')
+        sx, sy = project.transform(tx, ty)
+        r, c = [np.asarray(v).reshape(256, 256) for v in rowcol(affine, sx, sy)]
+        inside = (r >= 0) & (r < 512) & (c >= 0) & (c < 512)
+        expected = np.full((256, 256), -999999, dtype='float32')
+        expected[inside] = values[r[inside], c[inside]]
+        mask = expected != -999999
+        with rio.open(tile) as png:
+            rgba = png.read().astype('int64')
+        assert np.array_equal(rgba[3] == 255, mask)
+        decoded = -10000 + (rgba[0] * 65536 + rgba[1] * 256 + rgba[2]) * 0.1
+        assert np.allclose(decoded[mask], expected[mask], rtol=0, atol=0.051)
+        supported += int(mask.sum())
+        unsupported += int((~mask).sum())
+        # Actual old reproject call, not a fabricated failure oracle.
+        old = np.full((256, 256), -999999, dtype='float32')
+        reproject(values, old, src_transform=affine, src_crs='EPSG:3310', src_nodata=-999999,
+                  dst_transform=tile_affine, dst_crs='EPSG:3857', dst_nodata=-999999,
+                  resampling=Resampling.nearest)
+        old_mismatches += int((old != expected).sum())
+    assert supported and unsupported
+    assert old_mismatches > 0, 'Fixture must expose the old approximate-warp regression'
+
+
+def test_unsupported_pixels_encode_lowest_supported_elevation_not_curtain(stack, make_rasters):
+    """Alpha-0 pixels (hole and outside grid) never decode to RGB=0, i.e. -10000 m."""
+    np, rio, *_, c2 = stack
+    directory = make_rasters()
+    result = run(c2, directory)
+    with rio.open(directory / 'elevation.tif') as grid:
+        values = grid.read(1)
+    floor_m = float(values[values != -999999].min())
+    assert result['unsupported_fill_m'] == floor_m
+    assert json.loads((directory / 'output/manifest.json').read_text())['unsupported_fill_m'] == floor_m
+    assert 'never -10000' in result['terrain_encoding']
+    holes = 0
+    for tile in (directory / 'output/terrain').rglob('*.png'):
+        with rio.open(tile) as png:
+            rgba = png.read().astype('int64')
+        decoded = -10000 + (rgba[0] * 65536 + rgba[1] * 256 + rgba[2]) * 0.1
+        unsupported = rgba[3] == 0
+        holes += int(unsupported.sum())
+        assert np.allclose(decoded[unsupported], floor_m, rtol=0, atol=0.051)
+        assert (decoded >= floor_m - 0.051).all()
+    assert holes
+
+
+def test_simplify_contours_reverts_conflicts_to_a_crossing_free_fixpoint(stack):
+    """Many tightly spaced noisy bands: per-line simplification crosses, the fix does not."""
+    np, *_, c2 = stack
+    from shapely.geometry import LineString
+    rng = np.random.default_rng(844)
+    x = np.linspace(0, 2000, 400)
+    base = 30 * np.sin(x / 150)
+    # Twenty bands 1 m apart (conflicts) and ten bands 20 m apart (none).
+    offsets = list(range(20)) + [40 + 20 * j for j in range(10)]
+    raw = [LineString(np.column_stack([x, k + base + rng.uniform(-0.45, 0.45, x.size)]))
+           for k in offsets]
+    assert not any(a.intersects(b) for i, a in enumerate(raw) for b in raw[i + 1:])
+    # Negative control: independent topology-preserving calls cross other bands.
+    old = [line.simplify(5, preserve_topology=True) for line in raw]
+    assert any(a.intersects(b) for i, a in enumerate(old) for b in old[i + 1:])
+    result = c2.simplify_contours(raw, 5)
+    assert len(result) == len(raw)
+    assert not any(a.intersects(b) for i, a in enumerate(result) for b in result[i + 1:])
+    assert all(line.is_simple and line.is_valid for line in result)
+    assert all(r.coords[0] == o.coords[0] and r.coords[-1] == o.coords[-1] for r, o in zip(result, raw))
+    assert all(r.hausdorff_distance(o) <= 5 + 1e-9 for r, o in zip(result, raw))
+    # Not a no-op: lines without conflicts keep their simplification.
+    assert all(len(r.coords) < len(o.coords) for r, o in zip(result[20:], raw[20:]))
+    assert c2.simplify_contours([], 5) == []
+
+
+def test_simplify_contours_preserves_nesting_past_a_small_enclosed_contour(stack):
+    """A chord must not sweep a line past a contour it encloses (review 1007)."""
+    *_, c2 = stack
+    import shapely
+    from shapely.geometry import LineString, MultiLineString, Polygon
+    outer = LineString([(0, 0), (20, 0), (20, 20), (0, 20), (0, 12), (-4, 12), (-4, 8), (0, 8), (0, 0)])
+    inner = LineString([(-3, 9), (-2, 9), (-2, 11), (-3, 11), (-3, 9)])
+    assert Polygon(outer.coords).contains(inner) and not outer.intersects(inner)
+    # Negative control: per-line simplification alone loses the nesting with no crossing.
+    alone = outer.simplify(5, preserve_topology=True)
+    assert not alone.intersects(inner) and not Polygon(alone.coords).contains(inner)
+    # Positive control: the joint GEOS call keeps it.
+    joint = shapely.simplify(MultiLineString([outer, inner]), 5, preserve_topology=True)
+    assert Polygon(joint.geoms[0].coords).contains(joint.geoms[1])
+    result = c2.simplify_contours([outer, inner], 5)
+    assert Polygon(result[0].coords).contains(result[1])
+    assert not result[0].intersects(result[1])
+    # Far from any other line the same simplification is kept.
+    lone = c2.simplify_contours([outer, LineString([(100, 100), (101, 100), (101, 101), (100, 100)])], 5)
+    assert len(lone[0].coords) < len(outer.coords)
+
+
+@pytest.mark.parametrize('chain', [
+    [(0, 0), (10, 0), (10, 4), (12, 4), (12, 0), (30, 0)],  # bump: valid sweep polygon
+    [(0, 0), (4, 2), (6, -2), (10, 0)],  # chain crosses its chord: convex-hull sweep
+])
+def test_simplify_contours_open_line_does_not_jump_a_small_contour(stack, chain):
+    *_, c2 = stack
+    from shapely.geometry import LineString
+    line = LineString(chain)
+    ring = (LineString([(10.5, 1), (11.5, 1), (11.5, 2), (10.5, 2), (10.5, 1)]) if len(chain) == 6
+            else LineString([(6, -1.2), (7, -1.2), (7, -0.8), (6, -0.8), (6, -1.2)]))
+    alone = line.simplify(5, preserve_topology=True)
+    assert len(alone.coords) == 2 and not alone.intersects(ring) and not line.intersects(ring)
+    result = c2.simplify_contours([line, ring], 5)
+    assert result[0].equals_exact(line, 0) and result[1].equals_exact(ring, 0)
+    # Without the small contour the line simplifies.
+    assert len(c2.simplify_contours([line], 5)[0].coords) == 2
