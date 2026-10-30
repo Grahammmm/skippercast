@@ -147,7 +147,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
               <span><strong>{name}</strong><small>{description}</small></span></label>
           ))}
           <label class="export-check"><input type="checkbox" data-export="contours" checked={m.contourTracks.value} onChange={e => m.setContourTracks(e.currentTarget.checked)} />
-            <span><strong>Depth contour tracks</strong><small>Published index contours (every 150 ft) as tracks, with survey, date and datum. Not for navigation.</small></span></label>
+            <span><strong>Depth contour tracks</strong><small>Published index contours (every 150 ft) as tracks, with survey, date and datum; not for navigation.</small></span></label>
           <label>Protected-area coverage<select id="export-avoid-scope" value={d.avoidScope} onChange={e => m.edit({avoidScope: e.currentTarget.value === 'region' ? 'region' : 'map'})}>
             <option value="map">Current map view</option><option value="region">Whole selected region</option></select></label>
           <p class="export-note">GPX carries coordinates and text. Chart imagery, bathymetry, live forecasts and predicted drift guides remain in the app. Static outlines do not replace official charts or current rules.</p>
