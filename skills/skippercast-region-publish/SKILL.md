@@ -25,7 +25,7 @@ skill_version: 1.0
 `<run>/PUBLISH.md` (never overwritten); on a pass the copied catalog file and rebuilt `dist/`. Only the region's LEDGER row changes: pass `stage=publish, state=reviewed`
 (verdict `PASS (visual not inspected)` without a capture); held `state=held, held_reason`; `--record-pr` sets `pr`, and with a date `state=published`, `published_at`.
 Held reasons, in check order (they extend the plan's ledger enum): `no-publishable-output`, `build-output-changed`, `publication-held`, `source-candidate:<id>`,
-`source-not-approved:<id>`, `region-draft`, `region-status:<status>`, `review-missing`, `review-sha-mismatch`, `review-family`, `review-return`, `review-invalid`,
+`source-not-approved:<id>`, `region-draft`, `region-status:<status>`, `build-sha-mismatch` (canonical sorted output path/hash identity changed; rebuild and re-review), `review-missing`, `review-sha-mismatch`, `review-family`, `review-return`, `review-invalid`,
 `build-not-reproducible`, `build-touched:<path>`.
 
 ## Never

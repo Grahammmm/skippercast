@@ -60,6 +60,9 @@ def check(folder, build, review, region, sources, python, run):
         need(status == 'approved', f"{'source-candidate' if status == 'candidate' else 'source-not-approved'}:{s.get('source_id')}", f'catalog status {status}')
     status = region.get('status')
     need(status in ('active', 'preview'), 'region-draft' if status == 'draft' else f'region-status:{status}', f'region status {status}')
+    # Match region_build.py's identity over every output, not just the candidate.
+    pairs = json.dumps(sorted([o['path'], o['sha256']] for o in build['outputs']), separators=(',', ':'))
+    need(sha(pairs.encode()) == build['build_sha256'], 'build-sha-mismatch', 'BUILD.json build_sha256 differs from its canonical output identity')
     need(review is not None, 'review-missing', 'no REVIEW.md in the run folder')
     need(review.get('Build-SHA256') == build['build_sha256'], 'review-sha-mismatch', 'REVIEW.md Build-SHA256 differs from BUILD.json')
     need(review.get('Reviewer-Family', '').strip().casefold() != str(build['run']['author_family']).strip().casefold(), 'review-family',
