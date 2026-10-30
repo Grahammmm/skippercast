@@ -98,3 +98,14 @@ def test_script_is_file_only_and_record_pr_sets_three_fields(tmp_path):
     w = world(tmp_path)
     assert rp.main(["--record-pr", str(w[1]), "--pr", "1234", "--published-at", "2026-11-05", "--ledger", str(w[2])]) == 0
     assert w[2].read_text() == ROWS.replace(OLD, "syn-bay,review,published,none,r0,,,,1234,2026-11-05")
+
+
+def test_crlf_ledger_keeps_unrelated_rows_byte_identical(tmp_path):
+    w = world(tmp_path)
+    crlf = ROWS.replace("\n", "\r\n").encode()
+    w[2].write_bytes(crlf)
+    assert publish(w) == 0
+    new = w[2].read_bytes().split(b"\r\n")
+    assert new[:2] == crlf.split(b"\r\n")[:2] and new[2] != crlf.split(b"\r\n")[2] and b"\n" not in b"".join(new)
+    assert rp.main(["--record-pr", str(w[1]), "--pr", "7", "--ledger", str(w[2])]) == 0
+    assert w[2].read_bytes().split(b"\r\n")[:2] == new[:2] and b"\n" not in b"".join(w[2].read_bytes().split(b"\r\n"))

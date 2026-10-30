@@ -124,7 +124,7 @@ def reproduce(repo, rid, source, python, run):
 
 def update_ledger(ledger, rid, changes):
     """Check the plan header and the region's row; with `changes` rewrite only that row (atomic), other lines byte-identical."""
-    lines = ledger.read_text().splitlines(keepends=True) if ledger.is_file() else []
+    lines = ledger.read_bytes().decode().splitlines(keepends=True) if ledger.is_file() else []
     if not lines or next(csv.reader([lines[0]])) != HEADER:
         raise ValueError(f'LEDGER.csv missing or its header differs from the plan: {ledger.name}')
     n = next((i for i, line in enumerate(lines) if i and next(csv.reader([line]), [''])[0] == rid), None)
