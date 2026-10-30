@@ -44,6 +44,12 @@ test('pure helpers: request plan, repo containment, inspection state', () => {
   assert.deepEqual(inspectionState(receipt, review), {'held-390x844.png': 'cited-in-review', 'held-360x800.png': 'not-visually-inspected'});
 });
 
+test('repo-contained dot-dot-prefixed output directories are refused', () => {
+  const out = join(REPO, '..phone');
+  assert.equal(outsideRepo(out), false);
+  assert.throws(() => parseArgs(['--mode', 'held', '--run', '/run', '--out', out]), /outside the repo/);
+});
+
 test('live capture of a fixture page records sizes, url, requests and card text', {skip: !hasChromium && 'chromium not installed'}, async () => {
   const out = scratch();
   const page = '<title>Fixture</title><div class="app-mark"><h2>Fixture contour</h2></div><div class="app-legend"><span class="app-swatch" data-layer="depth-contours">Contours</span></div>';

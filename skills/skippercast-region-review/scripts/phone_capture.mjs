@@ -2,7 +2,7 @@
 import {createHash} from 'node:crypto';
 import {existsSync, readdirSync, readFileSync} from 'node:fs';
 import {mkdir, writeFile} from 'node:fs/promises';
-import {dirname, join, relative, resolve, isAbsolute} from 'node:path';
+import {dirname, join, relative, resolve, isAbsolute, sep} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -14,7 +14,7 @@ export const VIEWPORTS = [{name: '390x844', width: 390, height: 844}, {name: '36
 
 export function outsideRepo(path) {
   const rel = relative(REPO, resolve(path));
-  return rel !== '' && (rel.startsWith('..') || isAbsolute(rel));
+  return rel === '..' || rel.startsWith('..' + sep) || isAbsolute(rel);
 }
 
 export function parseArgs(argv) {
