@@ -33,7 +33,7 @@ REPO = Path(__file__).resolve().parents[3]
 DEFAULT_ADMITTED = REPO.parent / 'out'
 STAGE_HASHES = {
     'coast_mosaic': 'f3f600a77722a076811d1ca8ae1723de0bcd2bfc33a2f5f8a99a8a9f3de8f6b4',
-    'coast_contours': '46fde1940dcae4ccc649731a1bf9c5850e5f79aa72f13ebe0c8918bad48119d5',
+    'coast_contours': 'da1b5c919ceedecbdaf430cf1b50e18dd20494ae27fa95dcf0c3d4402b02f74f',
     'coast_qa': '0c5816fbe3b0f5fe2ca4010bdfcf632d665cec28185a4bfa07b06946cee57235',
     'coast_rights': '76c1e470d2ceeb37b963cb4e738bc12f7c7a50789f10bee20426c7d701954702',
 }

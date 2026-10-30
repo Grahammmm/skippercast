@@ -41,6 +41,8 @@ sampling to avoid inventing interpolation across contributor boundaries;
 RGB precision is 0.1 metre, not a statement of source accuracy. Transparent
 pixels must not be interpreted as measured elevation. PNG georeferencing is
 provided by XYZ placement, not an embedded GeoTIFF transform.
+Alpha-0 pixels encode manifest unsupported_fill_m (the lowest supported C1
+elevation), never RGB=0 (-10000 m); a viewer must still treat them as absent.
 
 Synthetic fixtures are analytical descriptions at
 research/tests/fixtures/coast_mvp/contours/synthetic.json. Tests generate tiny
@@ -59,4 +61,34 @@ analytical gradient displacement is checked within the half-cell bound, not
 claimed exact there. Regional hillshade/seam assessment and viewer inspection
 are deliberately not performed by this synthetic-only card.
 
-Hold merge for the one batched C1-C5 independent review. No publication.
+Real-data correction (2026-10-22, t_ac49d46e)
+
+The first full cached-C1 run exposed two defects that tiny fixtures missed:
+individually simplified depth bands could intersect one another, and GDAL's
+approximate warp selected some adjacent pixels instead of the exact nearest
+source cell. The corrected producer simplifies each contour with topology
+preservation, then keeps a line's simplification only if no other line in the
+contributor (original or simplified) touches or lies inside any area its
+simplification chords sweep across; otherwise the line reverts to its
+unsimplified geometry. Each chord replaces a run of the line's own vertices,
+so the run closed by the chord (or its convex hull if that ring
+self-intersects) is the swept area, tested with an exact edge-level STRtree.
+This keeps crossings out and also keeps nesting: a chord cannot jump a line
+past a small enclosed contour. A final edge-contact pass remains as a guard,
+before the final mask clip.
+(One GEOS call over a contributor's whole MultiLineString gave the same
+guarantee but did not finish on Cal DIG I's ~250k components within the run
+cap.)
+It also inverse-projects every XYZ pixel centre and samples the containing
+source pixel exactly, preserving unsupported-cell transparency. Neither change
+alters the half-cell bound, contour intervals, source masks or depth labels.
+The tests include negative controls exercising both previous algorithms.
+
+The explicitly admitted real run overrides only the cell cap to 130452268;
+the default remains 4000000 and the 64-tile cap is unchanged. Outputs and the
+full comparison/checksum report remain private under the task's data directory.
+Zoom 10 is a preview: MVT quantization and GDAL tiling/generalization are not
+full-resolution contour equivalence, and tile readability is not visual or
+navigation acceptance. All C1 datum/rights caveats still apply.
+
+Hold merge for independent review. No publication.
