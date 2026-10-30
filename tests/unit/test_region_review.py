@@ -54,6 +54,33 @@ def test_clean_run_passes_and_planted_faults_fail(tmp_path, region):
     assert code == 1 and datum["verdict"] == "FAIL" and "source s-b" in datum["detail"] and "s-a" not in datum["detail"]
 
 
+@pytest.mark.parametrize("source_id", ["unlisted-source", None])
+@pytest.mark.parametrize("datum", ["MLLW", "arbitrary datum"])
+def test_feature_requires_a_listed_source(tmp_path, region, source_id, datum):
+    make_run(tmp_path, region, CLEAN)
+    build_path = tmp_path / "BUILD.json"
+    build = json.loads(build_path.read_text())
+    output = build["outputs"][0]
+    path = tmp_path / output["path"]
+    collection = json.loads(path.read_text())
+    feature = collection["features"][1]
+    feature["properties"].update(source_id=source_id, vertical_datum=datum)
+    path.write_text(json.dumps(collection))
+    output["sha256"] = rr.hashlib.sha256(path.read_bytes()).hexdigest()
+    build_path.write_text(json.dumps(build))
+    packet_path = tmp_path / "REVIEW-PACKET/review.json"
+    packet_path.unlink()
+
+    assert rr.main([str(tmp_path)]) == 1
+    packet = json.loads(packet_path.read_text())
+    checks = {c["id"]: c for c in packet["checks"]}
+    for ident in ("provenance-complete", "datum-verbatim"):
+        assert checks[ident]["verdict"] == "FAIL"
+        assert "#b60" in checks[ident]["detail"]
+    assert checks["outputs-intact"]["verdict"] == "PASS"
+    assert packet["publishable"] is False
+
+
 def test_check_requires_a_different_family_and_the_build_sha(tmp_path, region, capsys):
     make_run(tmp_path, region, CLEAN)
     rows = "".join(f"| {c['id']} | PASS | confirmed |\n" for c in json.loads((tmp_path / "REVIEW-PACKET/review.json").read_text())["checks"])

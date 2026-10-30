@@ -101,7 +101,10 @@ def check_output(folder, out, build, region, sources, bad):
             bad['datum'].append(f'{rel}: source {sid} datum {s.get("vertical_datum")!r} is not the catalog {want!r}')
     for i, f in enumerate(collection.get('features') or []):
         fp = f.get('properties') or {}
-        mine = (entries.get(fp.get('source_id')) or {}).get('vertical_datum') or fp.get('vertical_datum')
+        source = entries.get(fp.get('source_id'))
+        if source is None:
+            bad['prov'].append(f"{rel}#{f.get('id', i)}: feature source {fp.get('source_id')!r} not listed in provenance.sources")
+        mine = source.get('vertical_datum') if source is not None else None
         if not fp.get('vertical_datum') or fp['vertical_datum'] != mine:
             bad['datum'].append(f"{rel}#{f.get('id', i)}: feature datum missing or not its source entry's")
     try:
