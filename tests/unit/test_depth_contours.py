@@ -153,3 +153,36 @@ def test_the_committed_morro_bay_publication_is_within_budget_and_says_its_datum
         assert data['provenance']['units'] == 'ft' and data['provenance']['interval_ft'] == dc.INTERVAL_FT
         assert {f['properties']['vertical_datum'] for f in data['features']} == {dc.UNVERIFIED_DATUM}
         assert 'Not for navigation' in data['provenance']['limitations']
+
+
+def test_omitted_sources_names_morro_bays_unreviewed_bag_survey():
+    from skippercast.platform.contracts import load_catalogs, load_region
+    traced = ['usgs-point-buchon', 'usgs-morro-bay', 'usgs-point-estero']
+    assert dc.omitted_sources(load_region('morro-bay'), load_catalogs()[1], traced) == \
+        [{'source_id': 'noaa-bag', 'review_status': 'candidate'}]
+    with pytest.raises(ValueError, match='not in the source catalog'):
+        dc.omitted_sources(REGION, {'survey-a': SOURCES['survey-a']}, ['survey-a'])
+
+
+@pytest.mark.parametrize('omitted', [[], [{'source_id': 'survey-b', 'review_status': 'candidate'}]])
+def test_check_rejects_a_misstated_omitted_list_and_accepts_none(omitted):
+    c = collection()
+    dc.check_contours(c, REGION, SOURCES)
+    c['provenance']['sources_omitted'] = omitted
+    with pytest.raises(ValueError, match='misstate the omitted bound surveys'):
+        dc.check_contours(c, REGION, SOURCES)
+
+
+def test_publish_records_the_omitted_bound_surveys_in_both_forms(tmp_path):
+    (tmp_path / 'catalog/depth-contours').mkdir(parents=True)
+    (tmp_path / 'catalog/depth-contours/test-bay.geojson').write_text(json.dumps(collection()))
+    dc.publish_depth_contours(tmp_path, REGION, tmp_path, SOURCES)
+    for name in ('depth-contours.geojson', 'depth-contours-overview.geojson'):
+        provenance = json.loads((tmp_path / name).read_text())['provenance']
+        assert provenance['sources_omitted'] == [{'source_id': 'survey-b', 'review_status': 'approved'}], name
+
+
+def test_the_committed_morro_bay_publication_names_its_omitted_survey():
+    for name in ('depth-contours.geojson', 'depth-contours-overview.geojson'):
+        provenance = json.loads((ROOT / 'dist/regions/morro-bay' / name).read_text())['provenance']
+        assert provenance['sources_omitted'] == [{'source_id': 'noaa-bag', 'review_status': 'candidate'}], name

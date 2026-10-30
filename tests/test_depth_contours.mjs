@@ -8,7 +8,7 @@ import test from 'node:test';
 import {signal} from '@preact/signals';
 import {
   DEPTH_EDGE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LABEL_MINOR, DEPTH_LINE, DETAIL_ZOOM, INDEX_FT, INTERVAL_FT, NOTES,
-  assessContours, contourMark, contourState, contoursFor, contoursOverlay, createDepthContours, depthContoursOverviewURL, depthContoursURL,
+  assessContours, contourMark, contourState, contoursFor, contoursOverlay, createDepthContours, depthContoursOverviewURL, depthContoursURL, omittedNote,
 } from '../web/map/depth-contours.ts';
 import {ZOOM_OFFSET} from '../web/map/engine.ts';
 import {DEPTH_CONTOURS_SOURCE, layerEntry, sourceLayer} from '../web/map/layers.ts';
@@ -208,4 +208,42 @@ test('a region without contours draws none and shows no row; expired contours ar
   assert.equal(contourState.value.status, 'withheld');
   assert.equal(contourState.value.note, NOTES.withheld);
   assert.equal(old.layer.pick.mark(DEPTH_HIT, OVERVIEW.features[0].properties), null);
+});
+
+const NOAA_BAG = [{source_id: 'noaa-bag', review_status: 'candidate'}];
+const BAG_NOTE = '1 bound survey not drawn: noaa-bag (not yet reviewed).';
+
+test('the file names the bound surveys it does not draw; the card and the drawn note say so in plain words', async t => {
+  const r = assessContours(FULL, 'morro-bay', TODAY);
+  assert.deepEqual(r.omitted, NOAA_BAG);
+  const f150 = FULL.features.find(f => f.properties.kind === 'contour' && f.properties.depth_ft === 150);
+  const m = contourMark(f150.properties, r.sources, r.omitted);
+  assert.match(m.reading, /1 bound survey not drawn: noaa-bag \(not yet reviewed\)\./);
+  assert.match(m.reading, /150 ft below the survey's unverified source datum/);
+  assert.equal(m.name, '150 ft depth contour');
+  const edge = contourMark(FULL.features.find(f => f.properties.kind === 'survey-edge').properties, r.sources, r.omitted);
+  assert.match(edge.reading, /No reviewed grid continues past this line/);
+  assert.ok(edge.reading.endsWith(BAG_NOTE));
+  const {layer} = setup(t, {files: FILES});
+  await flush(); await flush();
+  assert.equal(contourState.value.status, 'drawn');
+  assert.equal(contourState.value.note, BAG_NOTE);
+  assert.match(layer.pick.mark(DEPTH_HIT, f150.properties).reading, /not yet reviewed/);
+});
+
+test('a file without a well-formed omitted list fails; the note counts only unapproved surveys', () => {
+  for (const omitted of [undefined, [{source_id: ''}], [{source_id: 'noaa-bag'}], 'noaa-bag']) {
+    const d = clone(FULL);
+    if (omitted === undefined) delete d.provenance.sources_omitted; else d.provenance.sources_omitted = omitted;
+    assert.equal(assessContours(d, 'morro-bay', TODAY).status, 'failed', JSON.stringify(omitted));
+  }
+  const none = clone(FULL);
+  none.provenance.sources_omitted = [];
+  assert.deepEqual(assessContours(none, 'morro-bay', TODAY).omitted, []);
+  assert.equal(omittedNote([]), '');
+  assert.equal(omittedNote([{source_id: 'usgs-x', review_status: 'approved'}]), '');
+  assert.equal(omittedNote([{source_id: 'nos-r', review_status: 'restricted'}]), '1 bound survey not drawn: nos-r (restricted).');
+  assert.equal(omittedNote([...NOAA_BAG, {source_id: 'nos-r', review_status: 'restricted'}, {source_id: 'usgs-x', review_status: 'approved'}]),
+    '2 bound surveys not drawn: noaa-bag (not yet reviewed), nos-r (restricted). 1 reviewed survey not traced in this file: usgs-x.');
+  assert.equal(contourMark(FULL.features[0].properties, assessContours(FULL, 'morro-bay', TODAY).sources).reading.includes('not drawn'), false);
 });

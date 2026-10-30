@@ -169,6 +169,19 @@ def feature_lines(geometry):
     return [geometry['coordinates']] if geometry['type'] == 'LineString' else geometry['coordinates']
 
 
+def omitted_sources(region, sources, listed_ids):
+    """The region's bound bathymetry surveys not in `listed_ids`, in binding order, each with its catalog review_status
+    copied verbatim. A bound id missing from the catalog raises ValueError."""
+    listed, omitted = set(listed_ids), []
+    for ident in region['source_bindings']['bathymetry']:
+        if ident in listed:
+            continue
+        if ident not in sources:
+            raise ValueError(f"Bathymetry binding {ident} of {region['id']} is not in the source catalog")
+        omitted.append({'source_id': ident, 'review_status': sources[ident]['review_status']})
+    return omitted
+
+
 def check_contours(collection, region, sources):
     """Raise ValueError unless `collection` is an in-region contour set from approved, bound survey grids.
 
@@ -192,6 +205,8 @@ def check_contours(collection, region, sources):
         if not SHA256.fullmatch(str(entry.get('sha256'))) or not YEAR.fullmatch(str(entry.get('survey_date'))) \
                 or not entry.get('vertical_datum'):
             raise ValueError(f"Depth contour source {ident} lacks its grid hash, survey date or datum")
+    if 'sources_omitted' in provenance and provenance['sources_omitted'] != omitted_sources(region, sources, listed):
+        raise ValueError(f"Depth contours for {region['id']} misstate the omitted bound surveys")
     west, south, east, north = region['bounds']
     for feature in collection['features']:
         p, geometry = feature.get('properties') or {}, feature.get('geometry') or {}
@@ -249,7 +264,8 @@ def review_expires(collection, sources):
 def publish_depth_contours(root, region, output, sources):
     """Write the checked import and its overview form to `output`; remove stale copies when there is none.
 
-    Both forms carry `review_expires`, the date the Chart withholds them from (the layer's age limit).
+    Both forms carry `review_expires`, the date the Chart withholds them from (the layer's age limit), and
+    `sources_omitted`, the region's bound surveys the file does not draw, with their catalog review_status.
     Returns the published paths (full, overview) or None. Raises ValueError when a form is over its byte budget.
     """
     source = Path(root) / 'catalog/depth-contours' / f"{region['id']}.geojson"
@@ -261,7 +277,8 @@ def publish_depth_contours(root, region, output, sources):
     collection = read_json(source)
     check_contours(collection, region, sources)
     collection = {**collection, 'provenance': {**collection['provenance'], 'review_expires': review_expires(collection, sources),
-                                               'review_days': SOURCE_REVIEW_DAYS}}
+                                               'review_days': SOURCE_REVIEW_DAYS, 'sources_omitted': omitted_sources(
+                                                   region, sources, [s['source_id'] for s in collection['provenance']['sources']])}}
     light = overview_contours(collection)
     check_contours(light, region, sources)
     for path, value, budget in ((full, collection, MAX_BYTES), (overview, light, OVERVIEW_MAX_BYTES)):

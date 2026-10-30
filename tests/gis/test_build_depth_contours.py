@@ -86,3 +86,22 @@ def test_grid_cell_must_match_reviewed_native_resolution(tmp_path, monkeypatch, 
     a = _tif(tmp_path / 'a.tif', _slope((32, 32)), X0, Y0, cell=cell)
     with pytest.raises(SystemExit, match='differs from reviewed native_resolution_m'):
         _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a', native=native))
+
+
+def test_omitted_binding_is_recorded_and_an_unapproved_grid_is_refused_before_any_read(tmp_path, monkeypatch):
+    import hashlib
+    import numpy as np
+    import rasterio
+    sources = _sources('usgs-a', 'noaa-x')
+    sources['noaa-x']['review_status'] = 'candidate'
+    a = _tif(tmp_path / 'a.tif', _slope((64, 64)), X0, Y0)
+    doc = _run_builder(monkeypatch, {'usgs-a': a}, sources)
+    assert doc['provenance']['sources_omitted'] == [{'source_id': 'noaa-x', 'review_status': 'candidate'}]
+    x = _tif(tmp_path / 'x.tif', np.full((8, 8), -20.0), X0, Y0)
+    # The builder's sha256 is hashlib.file_digest; both spies are on the modules the builder imports.
+    calls = []
+    monkeypatch.setattr(rasterio, 'open', lambda *a, **k: calls.append(('open', a)))
+    monkeypatch.setattr(hashlib, 'file_digest', lambda *a, **k: calls.append(('sha256', a)))
+    with pytest.raises(SystemExit, match='not an approved bathymetry source'):
+        _run_builder(monkeypatch, {'usgs-a': a, 'noaa-x': x}, sources)
+    assert calls == []

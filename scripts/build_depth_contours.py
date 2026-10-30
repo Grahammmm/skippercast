@@ -140,9 +140,11 @@ def main():
     order = [ident for ident in bound if ident in grids]
     if set(grids) - set(order):
         raise SystemExit(f'Not bathymetry bindings of {region["id"]}: {sorted(set(grids) - set(order))}')
+    # Every grid's approval is checked before any grid is opened or hashed.
     for ident in order:
         if sources[ident]['review_status'] != 'approved' or 'bathymetry' not in sources[ident]['needs']:
             raise SystemExit(f'{ident} is not an approved bathymetry source')
+    for ident in order:
         native = sources[ident].get('native_resolution_m')
         with rasterio.open(grids[ident]) as grid:
             res = grid.res
@@ -202,6 +204,8 @@ def main():
         'region_id': region['id'], 'units': 'ft', 'interval_ft': dc.INTERVAL_FT, 'index_ft': dc.INDEX_FT,
         'shelf_limit_ft': dc.SHELF_LIMIT_FT, 'cell_m': dc.CELL_M, 'horizontal_crs': crs,
         'bounds': [min(xs), min(ys), max(xs), max(ys)], 'features': len(features), 'sources': listed,
+        # The region's bound surveys not drawn here, with their catalog review_status (checked by dc.check_contours).
+        'sources_omitted': dc.omitted_sources(region, sources, order),
         'coordinate_decimals': dc.DECIMALS, 'simplify_tolerance_m': CONTOUR_TOLERANCE_M,
         'edge': {'tolerance_m': EDGE_TOLERANCE_M, 'min_length_m': EDGE_MIN_LENGTH_M,
                  'note': 'The outline of all the surveys\' supported blocks together; seams between surveys are not edges.'},
