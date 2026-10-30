@@ -149,14 +149,14 @@ def test_held_output_in_the_repo_or_of_a_restricted_source_is_refused_before_any
 
 
 # P5: regular NOAA BAG grids (synthetic, made with the tests/gis/test_seafloor_adapters.py make_bag pattern).
-def _bag(tmp_path, name, values, x0, y0, survey='H99999', start='2019-07-14', vertical=None):
+def _bag(tmp_path, name, values, x0, y0, survey='H99999', start='2019-07-14', vertical=None, crs='EPSG:32610'):
     """A regular BAG of `values`; its metadata gains a survey start and, if given, a replacement VERT_CS (h5py)."""
     pytest.importorskip('h5py')
     import h5py
     import numpy as np
     from rasterio.shutil import copy as raster_copy
     path = tmp_path / f'{survey}_{name}_2m.bag'
-    raster_copy(_tif(tmp_path / f'{name}.tif', values, x0, y0), path, driver='BAG', VAR_ABSTRACT=f'{survey} synthetic')
+    raster_copy(_tif(tmp_path / f'{name}.tif', values, x0, y0, crs=crs), path, driver='BAG', VAR_ABSTRACT=f'{survey} synthetic')
     with h5py.File(path, 'r+') as f:
         xml = f['BAG_root/metadata'][:].tobytes().decode('utf-8').rstrip('\0')
         xml = xml.replace('</gmi:MI_Metadata>', f'<gml:beginPosition>{start}</gml:beginPosition></gmi:MI_Metadata>')
@@ -205,6 +205,33 @@ def test_bag_traces_like_its_geotiff_and_carries_its_own_date_survey_and_declare
     assert want['provenance']['datum_note'] == (
         "Depths are below each survey's own vertical datum. The original GeoTIFFs declare none; "
         'the companion USGS report (Open-File Report 2023-1064) names MLLW. Not converted or certified.')
+
+
+def test_compound_bag_traces_using_its_horizontal_crs(tmp_path, monkeypatch):
+    import rasterio
+    from pyproj import CRS
+    from pyproj.crs import CompoundCRS
+    crs = CompoundCRS('UTM + MLLW', [CRS('EPSG:32610'), CRS('EPSG:5866')])
+    values = _slope((64, 64))
+    path = _bag(tmp_path, 'compound', values, X0, Y0, crs=crs.to_wkt())
+    with rasterio.open(path) as grid:
+        assert CRS(grid.crs).is_compound
+    def check_horizontal(bs):
+        check = bs.preflight.check_grid
+
+        def checked(meta, **kwargs):
+            assert not CRS(meta['crs_wkt']).is_compound
+            assert meta['crs_projected'] and meta['crs_linear_units'] == 'metre'
+            return check(meta, **kwargs)
+        monkeypatch.setattr(bs.preflight, 'check_grid', checked)
+
+    got = _build(monkeypatch, _bag_sources(), '--grid', f'noaa-bag={path}', '--bag-survey', 'noaa-bag=H99999',
+                 setup=check_horizontal)
+    tif = _tif(tmp_path / 'projected.tif', values, X0, Y0)
+    want = _build(monkeypatch, _sources('noaa-bag'), '--grid', f'noaa-bag={tif}')
+    assert _lines(got) == _lines(want)
+    assert any(f['properties']['kind'] == 'contour' for f in got['features'])
+    assert got['provenance']['horizontal_crs'] == want['provenance']['horizontal_crs']
 
 
 def test_bag_reads_are_clipped_to_the_region_with_no_survey_edge_along_the_clip(tmp_path, monkeypatch):
@@ -265,3 +292,27 @@ def test_grids_of_two_declared_datums_meeting_at_a_seam_leave_the_straddling_blo
         supported[datum] = [s['supported_blocks'] for s in doc['provenance']['sources']]
     # One datum: the 8 seam blocks merge native cells and count. Two datums: they are a gap, never a mean.
     assert supported == {'MLLW': [64, 56], 'NAVD88': [56, 56]}
+
+
+@pytest.mark.parametrize('complete_middle', [True, False])
+def test_cross_datum_block_prefers_a_complete_grid_over_early_partial_cells(tmp_path, complete_middle):
+    from contextlib import ExitStack
+    import numpy as np
+    import rasterio
+    bs = _load_builder()
+    early = np.full((8, 8), -9999.0)
+    early[0, 0] = -10
+    middle = np.full((8, 8), -20.0)
+    if not complete_middle:
+        middle[0, 0] = -9999
+    late = np.full((8, 8), -30.0)
+    late[0, 0] = -9999  # The first datum's group completes only by merging partial grids.
+    paths = [_tif(tmp_path / f'{i}.tif', a, X0, Y0) for i, a in enumerate((early, middle, late))]
+    lattice = (X0, Y0, 1, 1)
+    with ExitStack() as stack:
+        grids = [stack.enter_context(rasterio.open(p)) for p in paths]
+        depth, owner = bs.merged_blocks(grids, lattice, [bs.native_offsets(g, lattice) for g in grids],
+                                        [(8, 'MLLW'), (8, 'NAVD88'), (8, 'MLLW')])
+    assert owner[0, 0] == (1 if complete_middle else 2)
+    metres = 20 if complete_middle else (10 + 63 * 30) / 64
+    assert depth[0, 0] == pytest.approx(metres * bs.dc.FEET_PER_M)

@@ -60,7 +60,8 @@ def sha256(path):
 def native_offsets(grid, lattice):
     """The grid's native column and row at the lattice's top-left corner, and cells per block; refuses misaligned grids."""
     x0, y0, _, _ = lattice
-    if grid.crs is None or not grid.crs.is_projected or grid.crs.linear_units != 'metre':
+    crs = horizontal_crs(grid)
+    if not crs.is_projected or any(axis.unit_name != 'metre' for axis in crs.axis_info[:2]):
         raise ValueError(f'{grid.name}: expected a projected, metre-based survey grid')
     cell = grid.res[0]
     if abs(grid.res[0] - grid.res[1]) > 1e-9 or (dc.CELL_M / cell) % 1:
@@ -75,10 +76,11 @@ def merged_blocks(grids, lattice, offsets, keys):
     """The grids merged cell by cell (the first grid with valid water wins each native cell) and averaged into CELL_M blocks.
 
     Returns (depth_ft, owner): depth is NaN for a block with any missing, land or nodata native cell; owner is
-    the index of the grid supplying most of a valid block's cells (-1 elsewhere). Merging native cells first means a
-    block straddling a seam between two surveys still counts, so a seam is never a gap. Cells merge only inside a group
-    of one cell size and declared datum (`keys`); across groups a block goes whole to the group whose lowest-ordered
-    contributing grid comes first, so a block complete in no one group is a gap and nothing is averaged across datums.
+    the index of the grid supplying most of a valid block's cells (-1 elsewhere) within one group. Merging native cells
+    first means a block straddling a seam between two surveys still counts, so a seam is never a gap. Cells merge only
+    inside a group of one cell size and declared datum (`keys`). Across groups the first grid whose own block is fully
+    valid wins and owns the block. Only if no grid is complete alone does the earliest contributing group win, credited
+    to its majority supplier. A block complete in no one group is a gap; nothing is averaged across datums.
     """
     _, _, width, height = lattice
     groups = {}
@@ -88,37 +90,51 @@ def merged_blocks(grids, lattice, offsets, keys):
     owner = np.full((height, width), -1, dtype='int8')
     for by in range(0, height, STRIP_BLOCKS):
         rows = min(STRIP_BLOCKS, height - by)
-        rank = np.full((rows, width), len(grids))
+        rank = np.full((rows, width), 2 * len(grids))
         for members in groups.values():
             n = offsets[members[0]][2]
             merged = np.full((rows * n, width * n), np.nan, dtype='float64')
             source = np.full(merged.shape, -1, dtype='int8')
+            complete = np.full((rows, width), len(grids))
             for i in members:
                 col0, row0, _ = offsets[i]
                 window = Window(col0, row0 + by * n, width * n, rows * n)
                 values = grids[i].read(1, window=window, boundless=True, masked=True).filled(np.nan).astype('float64')
                 water = np.isfinite(values) & (values < 0) & (values >= -3000)
+                own_valid = water.reshape(rows, n, width, n).all(axis=(1, 3))
+                complete[(complete == len(grids)) & own_valid] = i
                 fill = water & (source < 0)
                 merged[fill], source[fill] = values[fill], i
             blocks = merged.reshape(rows, n, width, n)
             valid = np.isfinite(blocks).all(axis=(1, 3))
             counts = np.stack([(source == i).reshape(rows, n, width, n).sum(axis=(1, 3)) for i in members])
             first = np.array(members)[(counts > 0).argmax(axis=0)]
-            take = valid & (first < rank)
+            # A complete individual grid outranks any group completed only by merging partial grids.
+            priority = np.where(complete < len(grids), complete, len(grids) + first)
+            take = valid & (priority < rank)
             depth[by:by + rows][take] = (-blocks.sum(axis=(1, 3)) / (n * n) * dc.FEET_PER_M)[take]
-            owner[by:by + rows][take] = np.array(members)[counts.argmax(axis=0)][take]
-            rank[take] = first[take]
+            credited = np.array(members)[counts.argmax(axis=0)]
+            if len(groups) > 1:
+                credited = np.where(complete < len(grids), complete, credited)
+            owner[by:by + rows][take] = credited[take]
+            rank[take] = priority[take]
     return depth, owner
+
+
+def horizontal_crs(grid):
+    """Use only the horizontal part for CRS comparisons and metre/projected gates."""
+    if grid.crs is None:
+        raise ValueError(f'{grid.name}: expected a projected, metre-based survey grid')
+    crs = CRS.from_user_input(grid.crs.to_wkt())
+    return crs.sub_crs_list[0] if crs.is_compound else crs
 
 
 def horizontal(grids):
     """The grids' one horizontal CRS label: today's str(crs), or the projected part of a compound (BAG) CRS."""
     found = []
     for g in grids:
-        if g.crs is None:
-            raise ValueError(f'{g.name}: expected a projected, metre-based survey grid')
-        crs = CRS.from_user_input(g.crs.to_wkt())
-        found.append((crs.sub_crs_list[0], crs.sub_crs_list[0].to_string()) if crs.is_compound else (crs, str(g.crs)))
+        crs = horizontal_crs(g)
+        found.append((crs, crs.to_string() if CRS(g.crs).is_compound else str(g.crs)))
     if any(h != found[0][0] for h, _ in found):
         raise ValueError('Every grid must share one projected CRS')
     return found[0][1]
@@ -194,8 +210,10 @@ def check_first_strip(ident, grid, lattice, offsets, datum, is_bag):
     window = [col, row, min(col0 + width * n, grid.width) - col,
               min(row0 + (by + min(STRIP_BLOCKS, height - by)) * n, grid.height) - row]
     # A BAG's one band read here is elevation; the adapter has already checked its two-band layout.
-    meta = {'driver': grid.driver, 'count': 1 if is_bag else grid.count, 'crs_wkt': grid.crs.to_wkt(),
-            'crs_projected': grid.crs.is_projected, 'crs_linear_units': grid.crs.linear_units,
+    crs = horizontal_crs(grid)
+    meta = {'driver': grid.driver, 'count': 1 if is_bag else grid.count, 'crs_wkt': crs.to_wkt(),
+            'crs_projected': crs.is_projected,
+            'crs_linear_units': crs.axis_info[0].unit_name if crs.axis_info else '',
             'transform': list(grid.transform)[:6], 'width': grid.width, 'height': grid.height,
             'band_unit': (grid.units[0] if grid.units else None) or ''}
     try:
