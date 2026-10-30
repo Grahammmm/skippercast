@@ -10,7 +10,8 @@ Run on the processing host, with the survey stack (requirements-survey.txt):
 Each grid must be the original producer GeoTIFF of an approved bathymetry
 source bound to the region (catalog/sources.json, regions/<id>/region.json).
 Its SHA-256 is recorded in the output's provenance; local paths never reach
-the output. The output is catalog/depth-contours/<id>.geojson; then rebuild the
+the output. The output is catalog/depth-contours/<id>.geojson (or --output PATH, outside the
+work tree, for the same approved-only collection); then rebuild the
 platform (PYTHONPATH=src python -m skippercast.platform.build), which checks it
 and publishes dist/regions/<id>/depth-contours*.geojson. The method is
 described in src/skippercast/platform/depth_contours.py.
@@ -132,13 +133,19 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--region', required=True)
     p.add_argument('--grid', action='append', required=True, metavar='SOURCE_ID=PATH')
-    p.add_argument('--held-output', metavar='PATH', help='Trace candidate grids too, into this private file outside the '
-                   'work tree, stamped publication_held (the platform build refuses it). Nothing is written to catalog/.')
+    group = p.add_mutually_exclusive_group()
+    group.add_argument('--output', metavar='PATH', help='Write the approved-only collection to this file outside the work tree '
+                       'instead of catalog/depth-contours/<id>.geojson. Cannot be combined with --held-output.')
+    group.add_argument('--held-output', metavar='PATH', help='Trace candidate grids too, into this private file outside the '
+                       'work tree, stamped publication_held (the platform build refuses it). Nothing is written to catalog/.')
     args = p.parse_args()
     held = args.held_output and Path(args.held_output).expanduser().resolve()
+    output = args.output and Path(args.output).expanduser().resolve()
     repo = Path(REPO).resolve()
     if held and (held == repo or repo in held.parents):
         raise SystemExit(f'Held output must be outside the work tree: {held}')
+    if output and (output == repo or repo in output.parents):
+        raise SystemExit(f'Output must be outside the work tree: {output}')
     region = load_region(args.region)
     _, sources = load_catalogs()
     bound = region['source_bindings']['bathymetry']
@@ -233,7 +240,7 @@ def main():
                        'not soundings or chart depths.'},
         'features': features}
     (dc.check_held_contours if held else dc.check_contours)(collection, region, sources)
-    receipt = atomic_json(held or REPO / 'catalog/depth-contours' / f'{region["id"]}.geojson', collection)
+    receipt = atomic_json(held or output or REPO / 'catalog/depth-contours' / f'{region["id"]}.geojson', collection)
     print({'features': len(features), **receipt, **({'held': True} if held else {}), 'sources': [(s['source_id'], s['sha256'][:12], s['supported_blocks']) for s in listed]})
 
 
