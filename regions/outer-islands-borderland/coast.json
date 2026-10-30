@@ -14,7 +14,7 @@
   ],
   "source_review_status": {
     "noaa-cinms-bathymetry-2025": "approved",
-    "noaa-bag": "candidate"
+    "noaa-bag": "approved"
   },
   "datum_policy": {
     "mode": "preserve-source-datum",

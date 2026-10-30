@@ -15,7 +15,7 @@
   ],
   "source_review_status": {
     "usgs-san-simeon": "approved",
-    "noaa-bag": "candidate",
+    "noaa-bag": "approved",
     "csumb-cambria": "restricted"
   },
   "datum_policy": {

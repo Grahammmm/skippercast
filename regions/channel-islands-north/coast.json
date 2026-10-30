@@ -18,7 +18,7 @@
     "noaa-h13093": "approved",
     "noaa-h13323": "approved",
     "noaa-cinms-bathymetry-2025": "approved",
-    "noaa-bag": "candidate"
+    "noaa-bag": "approved"
   },
   "datum_policy": {
     "mode": "preserve-source-datum",

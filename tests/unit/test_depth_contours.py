@@ -155,11 +155,11 @@ def test_the_committed_morro_bay_publication_is_within_budget_and_says_its_datum
         assert 'Not for navigation' in data['provenance']['limitations']
 
 
-def test_omitted_sources_names_morro_bays_unreviewed_bag_survey():
+def test_omitted_sources_names_morro_bays_approved_but_untraced_bag_survey():
     from skippercast.platform.contracts import load_catalogs, load_region
     traced = ['usgs-point-buchon', 'usgs-morro-bay', 'usgs-point-estero']
     assert dc.omitted_sources(load_region('morro-bay'), load_catalogs()[1], traced) == \
-        [{'source_id': 'noaa-bag', 'review_status': 'candidate'}]
+        [{'source_id': 'noaa-bag', 'review_status': 'approved'}]
     with pytest.raises(ValueError, match='not in the source catalog'):
         dc.omitted_sources(REGION, {'survey-a': SOURCES['survey-a']}, ['survey-a'])
 
@@ -185,4 +185,4 @@ def test_publish_records_the_omitted_bound_surveys_in_both_forms(tmp_path):
 def test_the_committed_morro_bay_publication_names_its_omitted_survey():
     for name in ('depth-contours.geojson', 'depth-contours-overview.geojson'):
         provenance = json.loads((ROOT / 'dist/regions/morro-bay' / name).read_text())['provenance']
-        assert provenance['sources_omitted'] == [{'source_id': 'noaa-bag', 'review_status': 'candidate'}], name
+        assert provenance['sources_omitted'] == [{'source_id': 'noaa-bag', 'review_status': 'approved'}], name
