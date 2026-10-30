@@ -1,4 +1,5 @@
 import test from 'node:test';
+import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {buildExport, DEFAULT_LAYERS, draftKey, offlineNotes, readDraft,exportTargets,exportEvidenceLabel,exportPresetTargets} from '../dist/trip-export.js';
 import {geometryTrack} from '../dist/gpx.js';
@@ -259,4 +260,75 @@ test('MLLW research waypoints retain explicit research class in GPX as well as n
  const result=buildExport(request({atlas,allowResearch:true}));
  assert.match(result.gpx,/Research coordinate.*not chart-depth qualified/);
  assert.match(offlineNotes(result,REGION,{name:'test',date:'2026-09-22'}),/Research coordinate.*not chart-depth qualified/);
+});
+
+// U4: opt-in published depth-contour tracks (docs/chartplotter-export.md).
+const {loadContourFile} = await import('../web/planner.ts');
+const MORRO = JSON.parse(fs.readFileSync(new URL('../dist/regions/morro-bay/depth-contours.geojson', import.meta.url), 'utf8'));
+const MORRO_REGION = {...REGION, id: 'morro-bay', name: 'Morro Bay'};
+const contourRequest = overrides => request({
+  region: MORRO_REGION, bounds: [-121.2, 35.1, -120.7, 35.6], layers: {...DEFAULT_LAYERS, outlines: true, alignments: true, exclusions: true},
+  screen: screenFixture([exclusion('Morro', polygon(-121, 35.3, 0.1))]), ...overrides,
+});
+const count = (xml, re) => (xml.match(re) || []).length;
+const indexFeatures = MORRO.features.filter(f => f.properties.kind === 'contour' && f.properties.index === true);
+
+test('contour tracks are opt-in GPX tracks with provenance; off stays byte-identical', () => {
+  const off = buildExport(contourRequest());
+  assert.equal(off.gpx, buildExport(contourRequest({contours: undefined})).gpx);
+  assert.equal(offlineNotes(off, MORRO_REGION, {name: 'n', date: '2026-09-22'}), offlineNotes(buildExport(contourRequest({contours: undefined})), MORRO_REGION, {name: 'n', date: '2026-09-22'}));
+  assert.ok(!('contours' in off.counts) && !('contours' in off));
+  const on = buildExport(contourRequest({contours: {collection: MORRO}}));
+  assert.equal(indexFeatures.length, 6);
+  assert.equal(on.counts.contours, 6);
+  assert.equal(count(on.gpx, /<trk>/g), count(off.gpx, /<trk>/g) + 6);
+  assert.equal(count(on.gpx, /<trk>/g), count(on.gpx, /<\/trk>/g));
+  assert.equal(count(on.gpx, /<trkseg>/g), count(on.gpx, /<\/trkseg>/g));
+  assert.ok(on.gpx.startsWith('<?xml version="1.0"') && on.gpx.includes('<gpx version="1.1"'));
+  assert.doesNotMatch(on.gpx, /<rte/);
+  const points = indexFeatures.reduce((n, f) => n + f.geometry.coordinates.flat().length, 0);
+  assert.equal(on.counts.trackPoints, off.counts.trackPoints + points);
+  assert.equal(on.counts.tracks, off.counts.tracks + 6);
+  const descs = [...on.gpx.matchAll(/<name>\d+ ft contour · [^<]*<\/name><desc>([^<]*)<\/desc>/g)].map(m => m[1]);
+  assert.equal(descs.length, 6);
+  const names = MORRO.provenance.sources.map(s => s.name);
+  for (const d of descs) assert.ok(names.some(n => d.startsWith(n)) && /Surveyed 2008\..*unverified source datum.*NOT FOR NAVIGATION\.$/.test(d), d);
+  assert.doesNotMatch(descs.join(''), /Bound surveys not drawn/);
+  const held = structuredClone(MORRO);
+  held.provenance.sources_omitted = [{source_id: 'noaa-bag', review_status: 'candidate'}, {source_id: 'ok', review_status: 'approved'}];
+  const withOmitted = buildExport(contourRequest({contours: {collection: held}}));
+  assert.equal(count(withOmitted.gpx, /Bound surveys not drawn: noaa-bag \(candidate\) NOT FOR NAVIGATION/g), 6);
+  const notes = offlineNotes(withOmitted, MORRO_REGION, {name: 'n', date: '2026-09-22'});
+  assert.match(notes, /<h2>Depth contour tracks<\/h2>[\s\S]*noaa-bag \(candidate\)[\s\S]*not for navigation/);
+});
+
+test('no published contour file means no tracks and no error', async () => {
+  const off = buildExport(contourRequest());
+  const none = buildExport(contourRequest({contours: {collection: null}}));
+  assert.equal(none.gpx, off.gpx);
+  assert.equal(none.counts.contours, 0);
+  assert.deepEqual(none.contours, []);
+  const reply = (status, body) => async () => ({status, ok: status >= 200 && status < 300, json: async () => body});
+  const page = () => 'https://skippercast.test/app/';
+  assert.deepEqual(await loadContourFile('santa-cruz-monterey-bay', '2026-09-22', reply(404), page), {collection: null});
+  assert.match((await loadContourFile('morro-bay', '2026-09-22', reply(500), page)).refused, /did not load/);
+  assert.match((await loadContourFile('morro-bay', '2027-09-27', reply(200, MORRO), page)).refused, /withheld/);
+  const urls = [];
+  const drawn = await loadContourFile('morro-bay', '2026-09-22', async url => (urls.push(url), reply(200, MORRO)()), page);
+  assert.deepEqual(urls, ['https://skippercast.test/app/regions/morro-bay/depth-contours.geojson']);
+  assert.deepEqual(drawn, {collection: MORRO});
+});
+
+test('held or incomplete contour provenance is refused for the whole export', () => {
+  const change = edit => { const c = structuredClone(MORRO); edit(c); return c; };
+  const cases = [
+    change(c => { c.publicationHeld = true; }),
+    change(c => { c.features[3].properties.publicationHeld = false; }),
+    change(c => { delete c.provenance.sources_omitted; }),
+    change(c => { delete c.provenance; }),
+    change(c => { c.provenance.sources[0].vertical_datum = ''; }),
+    change(c => { c.provenance.region_id = 'cambria-san-simeon'; }),
+  ];
+  for (const collection of cases) assert.throws(() => buildExport(contourRequest({contours: {collection}})), /Depth contours cannot be exported/);
+  assert.throws(() => buildExport(contourRequest({contours: {collection: MORRO}, now: new Date('2027-09-27T00:00:00Z')})), /Depth contours cannot be exported/);
 });

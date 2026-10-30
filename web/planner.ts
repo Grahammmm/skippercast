@@ -22,6 +22,7 @@ import {HOME_PORT_KEY} from '../dist/home-port.js';
 import {track} from './telemetry.ts';
 import {ensureLandWater, withheldNote, type Place} from './land-water.ts';
 import {coordinates} from './state.ts';
+import {assessContours, depthContoursURL, NOTES} from './map/depth-contours.ts';
 
 export type Layers = {waypoints: boolean; outlines: boolean; alignments: boolean; exclusions: boolean};
 export type LayerKey = keyof Layers;
@@ -49,7 +50,7 @@ export type Filters = {species: TripSpecies; limit: number; depth: number; scope
 export type Preset = 'map' | 'filtered' | 'region' | 'none';
 export type RankedDetail = {targets: Target[]; areas: Area[]; publication?: Publication; fit?: boolean};
 export type Summary =
-  | {ok: true; counts: {waypoints: number; tracks: number; outlines: number; alignments: number; exclusions: number; trackPoints: number; largestTrack: number}}
+  | {ok: true; counts: {waypoints: number; tracks: number; outlines: number; alignments: number; exclusions: number; trackPoints: number; largestTrack: number; contours?: number}}
   | {ok: false; message: string};
 type Region = {id: string; timezone: string; mpa: {bounds: number[]}};
 
@@ -67,12 +68,27 @@ export interface PlannerDeps {
   now?: () => Date;
   loadReefs?: (region: string) => Promise<Reefs>;
   loadPorts?: () => Promise<{ports?: Port[]} | null>;
+  /** The region's published depth-contour file, checked (U4); `loadContourFile` by default. */
+  loadContours?: (region: string, today: string) => Promise<ContourFile>;
   /** The Boat range to consider saved on this device (web/reach.ts, #644): the distance filter starts from it; 20 nm without one. */
   reachNm?: number | null;
   /** The ranked set the Chart draws (web/trip.ts listens for `skippercast:trip-ranked`). */
   emit?: (detail: RankedDetail) => void;
   /** The region's land/water check for these spots (web/land-water.ts `ensureLandWater`). */
   landWater?: (region: string, spots: readonly Target[]) => Promise<Place>;
+}
+
+/** The one published file the opt-in depth contour tracks read: `{collection: null}` when the region publishes none. */
+export type ContourFile = {collection: unknown} | {refused: string};
+export async function loadContourFile(id: string, today: string, fetchFn: typeof fetch = (...a) => fetch(...a), page: () => string = () => location.href): Promise<ContourFile> {
+  const refused = (note: string): ContourFile => ({refused: `${note} Turn off depth contour tracks to export.`});
+  try {
+    const response = await fetchFn(new URL(depthContoursURL(id), page()).href);
+    if (response.status === 404) return {collection: null};
+    if (!response.ok) return refused(NOTES.failed);
+    const json: unknown = await response.json(), status = assessContours(json, id, today).status;
+    return status === 'drawn' ? {collection: json} : refused(NOTES[status]);
+  } catch { return refused(NOTES.failed); }
 }
 
 const LOADING = 'Loading current screened reefs…';
@@ -122,6 +138,8 @@ export function createPlanner(deps: PlannerDeps) {
   const draft = signal<Draft>(initial);
   const tripAtlas = signal<Atlas>({...atlas, targets: [...atlas.targets], areas: [...atlas.areas]});
   const ranked = signal(false), filtersDirty = signal(false), restorePending = signal(!!initial.rankedPlan);
+  const contourTracks = signal(false), contourFile = signal<ContourFile | null>(null);
+  let contourLoad: Promise<void> | null = null;
   const allowResearch = signal(false), search = signal(''), loading = signal(false), portsReady = signal(false);
   const filters = signal<Filters>({species: 'reef', limit: 20, depth: 300, scope: 'region', port: '', distance: deps.reachNm ?? 20});
   const ports = signal<Port[]>([]);
@@ -146,8 +164,10 @@ export function createPlanner(deps: PlannerDeps) {
     if (restorePending.value) throw Error('Saved ranked plan needs current reef data. Restore it or select Best available again.');
     if (filtersDirty.value) throw Error('Trip filters changed. Select Best available again before exporting.');
     if (d.layers.exclusions && d.avoidScope === 'map' && !map.getSize().x) throw Error('Open the map to choose its coverage first, or choose Whole selected region for protected-area outlines.');
-    const b = map.getBounds();
-    return {allowResearch: allowResearch.value, atlas: tripAtlas.value, userWaypoints: d.userWaypoints ?? [], screen, ids: d.ids, layers: d.layers, region, title: `${d.name || 'My fishing day'} · ${d.date || today}`,
+    const b = map.getBounds(), on = contourTracks.value, file = contourFile.value;
+    if (on && !file) throw Error('Loading depth contours…');
+    if (on && file && 'refused' in file) throw Error(file.refused);
+    return {...(on && file && 'collection' in file ? {contours: file} : {}), allowResearch: allowResearch.value, atlas: tripAtlas.value, userWaypoints: d.userWaypoints ?? [], screen, ids: d.ids, layers: d.layers, region, title: `${d.name || 'My fishing day'} · ${d.date || today}`,
       bounds: d.avoidScope === 'region' ? region.mpa.bounds : [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]};
   }
 
@@ -190,6 +210,11 @@ export function createPlanner(deps: PlannerDeps) {
     revision++;
     const ids = draft.value.ids;
     persist({...draft.value, ids: on ? [...new Set([...ids, id])] : ids.filter(x => x !== id)});
+  }
+  function setContourTracks(on: boolean): void {
+    contourTracks.value = on;
+    contourLoad ??= Promise.resolve().then(() => (deps.loadContours ?? loadContourFile)(region.id, now().toISOString().slice(0, 10)))
+      .catch((): ContourFile => ({refused: `${NOTES.failed} Turn off depth contour tracks to export.`})).then(file => { contourFile.value = file; });
   }
   function setResearch(on: boolean): void {
     revision++;
@@ -368,7 +393,7 @@ export function createPlanner(deps: PlannerDeps) {
     today, region, draft, tripAtlas, ranked, filtersDirty, restorePending, allowResearch, search, loading, portsReady, filters, ports,
     scopeStatus, actionStatus, storageNote, tick, summary, spots, protectedHits, notesReady, waypointPosition,
     chooseWaypoint, saveWaypoint, removeWaypoint,
-    setFilter, edit, setLayer, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
+    setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, restore, exportFile, deliver, showOnMap, checkConditions,
     /** For tests and a region change: stop drawing the ranked set. */
     dispose: stopRanked,

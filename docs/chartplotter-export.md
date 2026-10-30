@@ -27,10 +27,13 @@ The day plan's local date and the file's generation time are different facts. Us
 | Outlines — optional | `trk` / `trkseg` / `trkpt` | Selected habitat footprints drawn as lines. GPX does not carry a filled polygon or legal polygon semantics. |
 | Fixed alignment tracks — optional | `trk` lines | Survey-based structure axes. They are not a forecast of boat drift, a setup position, or a passage route. |
 | AVOID protected-area outlines — optional | Clearly named `AVOID …` tracks | Dated references for areas to avoid. They are not destinations, plotter boundary alarms or a complete closure service. |
+| Depth contour tracks — optional, this session only | One `trk` per survey and depth, named `150 ft contour · <source>` | The region's published index contours (every 150 ft), with survey, date and datum in the description. Display contours, not soundings or chart depths. |
 
 Keep separate polygon rings, interior holes and disconnected components in separate track segments. A receiving device may render segments, symbols, descriptions and names differently, so inspect the result. A gap must not acquire an invented connecting line. An `AVOID` label should appear at the start of its name so that truncation is less likely to hide its purpose; retain the full area name and official source in the offline notes.
 
 The offline notes should preserve the selected spot IDs, coordinates, source identities and dates, depth datum where known, evidence limits, chosen components, counts and omitted items. They provide the readable reference when a plotter omits or truncates GPX descriptions. Save the notes locally and confirm they open without a network connection; linked source pages still require connectivity.
+
+Depth contour tracks are off by default and are not saved in the draft. Only the published index contours (every 150 ft) are exported, never the 30 ft minor lines or the survey edge, and only lines that overlap the chosen coverage, whole and unclipped. Each description copies the survey name, survey date and vertical datum from the published source entry and lists any bound survey the file leaves out; depths are never written as elevation and no datum is converted. A region with no published file exports no contour tracks. A held, expired or incomplete file stops the whole export until the option is turned off. The tracks do not install bathymetry or a chart; they are lines for comparison with your official chart and sounder.
 
 ### What the file cannot carry
 

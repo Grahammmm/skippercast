@@ -54,7 +54,32 @@ function extent(geometry){
 }
 const overlap=(a,b)=>a[0]<=b[2]&&a[2]>=b[0]&&a[1]<=b[3]&&a[3]>=b[1];
 const validPoint=t=>Number.isFinite(t.latitude)&&Math.abs(t.latitude)<=90&&Number.isFinite(t.longitude)&&Math.abs(t.longitude)<=180;
-export function buildExport({atlas,screen,ids,layers=DEFAULT_LAYERS,region,title='SkipperCast fishing day',bounds,now=new Date(),allowResearch=false,userWaypoints:rawWaypoints=/** @type {unknown[]} */ ([])}) {
+// Published index depth contours (U4): one track per (source, depth). Fails closed for the whole export.
+const omittedText=list=>list.filter(o=>o.review_status!=='approved').map(o=>`${o.source_id} (${o.review_status})`).join(', ');
+function contourTracks(c,region,bounds,now) {
+  const bad=r=>Error(`Depth contours cannot be exported: ${r}. Turn off depth contour tracks or reload the region.`);
+  const p=c?.provenance,fs=c?.features,str=v=>typeof v==='string'&&v.trim()!=='',expires=p?.review_expires;
+  if(c?.type!=='FeatureCollection'||!Array.isArray(fs))throw bad('not a published contour file');
+  if(!p||p.region_id!==region.id||p.units!=='ft'||p.interval_ft!==30)throw bad('wrong region, units or interval');
+  if([c,p,...fs,...fs.map(f=>f?.properties)].some(o=>o&&typeof o==='object'&&Object.hasOwn(o,'publicationHeld')))throw bad('held or research material');
+  if(typeof expires!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(expires)||now.toISOString().slice(0,10)>expires)throw bad('source review expired or undated');
+  const sources=p.sources,omitted=p.sources_omitted;
+  if(!Array.isArray(sources)||!sources.length||sources.some(s=>!str(s?.source_id)||!str(s.name)||!str(s.survey_date)||!str(s.vertical_datum)))throw bad('sources incomplete');
+  if(!Array.isArray(omitted)||omitted.some(o=>!str(o?.source_id)||!str(o.review_status)))throw bad('omitted surveys not listed');
+  const tracks=[],unlisted=omittedText(omitted);
+  for(const f of fs.filter(f=>f?.properties?.kind==='contour'&&f.properties.index===true)){
+    const {source_id,survey_date,vertical_datum,depth_ft}=f.properties,s=sources.find(s=>s.source_id===source_id);
+    if(!s||s.survey_date!==survey_date||s.vertical_datum!==vertical_datum)throw bad('a contour does not match its listed source');
+    if(!Number.isInteger(depth_ft)||depth_ft<=0||depth_ft%30)throw bad('a contour depth is not a multiple of 30 ft');
+    const g=f.geometry,lines=g?.type==='LineString'?[g.coordinates]:g?.type==='MultiLineString'?g.coordinates:null;
+    if(!Array.isArray(lines))throw Error('Invalid export geometry');
+    const kept=lines.filter(l=>{const e=extent({coordinates:l});if(e.some(Number.isNaN))throw Error('Invalid export geometry');return overlap(e,bounds);});
+    if(kept.length)tracks.push({name:`${depth_ft} ft contour · ${source_id}`,source:s.name,survey_date,vertical_datum,geometry:{type:'MultiLineString',coordinates:kept},
+      desc:`${s.name}. Surveyed ${survey_date}. Depth below the survey's ${vertical_datum}; a display contour from averaged survey blocks, not a sounding or chart depth. Lines stop where the reviewed survey grid stops.${unlisted?` Bound surveys not drawn: ${unlisted}`:''} NOT FOR NAVIGATION.`});
+  }
+  return {tracks,omitted};
+}
+export function buildExport({atlas,screen,ids,layers=DEFAULT_LAYERS,region,title='SkipperCast fishing day',bounds,now=new Date(),allowResearch=false,userWaypoints:rawWaypoints=/** @type {unknown[]} */ ([]),contours=/** @type {{collection:any}|undefined} */ (undefined)}) {
   if(!screen?.ready())throw Error('Protected-area checks are unavailable or older than 36 hours. Return to the map and refresh before exporting.');
   const waypoints=userWaypoints(rawWaypoints);
   if(!Array.isArray(rawWaypoints)||waypoints.length!==rawWaypoints.length||waypoints.some(t=>atlas.targets.some(a=>a.id===t.id)))throw Error('Invalid user waypoints. Review your saved points.');
@@ -77,13 +102,14 @@ export function buildExport({atlas,screen,ids,layers=DEFAULT_LAYERS,region,title
   const exclusions=layers.exclusions?(snapshot?.features||[]).filter(f=>overlap(extent(f.geometry),exportBounds)):[];
   if(layers.exclusions&&!snapshot)throw Error('Current protected-area outlines are unavailable. Refresh before exporting.');
   if(!features.waypoints.length&&!features.areas.length&&!features.drifts.length&&!exclusions.length)throw Error('Select at least one spot and an included layer, or protected-area outlines within the chosen coverage.');
-  const geometry=[...features.areas,...features.drifts,...exclusions].map(f=>f.geometry);
+  const picked=contours?.collection?contourTracks(contours.collection,region,exportBounds,now):{tracks:[],omitted:[]};
+  const geometry=[...features.areas,...features.drifts,...exclusions,...picked.tracks].map(f=>f.geometry);
   const vertices=geometry.map(g=>pairs(g).length/2);
-  const counts={waypoints:features.waypoints.length,outlines:features.areas.length,alignments:features.drifts.length,exclusions:exclusions.length,tracks:geometry.length,trackPoints:vertices.reduce((n,x)=>n+x,0),largestTrack:Math.max(0,...vertices)};
+  const counts={waypoints:features.waypoints.length,outlines:features.areas.length,alignments:features.drifts.length,exclusions:exclusions.length,tracks:geometry.length,trackPoints:vertices.reduce((n,x)=>n+x,0),largestTrack:Math.max(0,...vertices),...(contours?{contours:picked.tracks.length}:{})};
   if(features.selected.some(t=>!isMeasuredTarget(t)&&!userIds.has(t.id))&&allowResearch!==true)throw Error('Research coordinates need explicit opt-in. Enable Research-coordinate export or select measured reefs.');
   const stamp=now.toISOString();
-  const gpx=featuresGPX(atlas,features,title,{exclusions,checkedAt:snapshot?.checked_at,createdAt:stamp});
-  return {gpx,counts,features,allowResearch:allowResearch===true,exclusions,created_at:stamp,boundary_checked_at:snapshot?.checked_at||null,region_id:region.id,source_validation_date:atlas.source_validation_date||null,layers:{...layers},avoid_bounds:exportBounds};
+  const gpx=featuresGPX(atlas,features,title,{exclusions,checkedAt:snapshot?.checked_at,createdAt:stamp,contours:picked.tracks});
+  return {gpx,counts,features,allowResearch:allowResearch===true,exclusions,created_at:stamp,boundary_checked_at:snapshot?.checked_at||null,region_id:region.id,source_validation_date:atlas.source_validation_date||null,layers:{...layers},avoid_bounds:exportBounds,...(contours?{contours:picked.tracks,contours_omitted:picked.omitted}:{})};
 }
 const safeLink=value=>{try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?xml(u.href):'';}catch{return '';}};
 // A blocked plan can carry a boundary-context report, never fishing coordinates.
@@ -114,5 +140,6 @@ export function protectedPlanNotes(request,draft) {
 export function offlineNotes(result,region,draft,coordinateFormat='dd') {
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${xml(draft.name)} · SkipperCast</title><style>body{font:17px/1.55 system-ui,sans-serif;max-width:760px;margin:auto;padding:24px;color:#173d47}article{border-top:1px solid #ccd9db;padding:16px 0}h1{line-height:1.2}h2{font-size:1.2em}a{color:#006c65;overflow-wrap:anywhere}dt{font-weight:bold}dd{margin:0 0 12px}pre{white-space:pre-wrap}@media print{body{padding:0}article{break-inside:avoid}}</style><h1>${xml(draft.name)}</h1><p>${xml(region.name)} · Planned date ${xml(draft.date)}</p><p>Created ${xml(result.created_at)}. Protected-area source check ${xml(result.boundary_checked_at||'current session')}.</p><p>${result.counts.waypoints} waypoints · ${result.counts.tracks} reference tracks. WGS84 coordinates. Habitat research, not verified fish presence or navigation routes.</p><p><strong>Before departure:</strong> check current regulations, closures, marine conditions and harbor access. This file does not update offline. The planned date is a label, not a future clearance. Follow your official navigation chart and sounder.</p><p><a href="https://skippercast.com/?region=${xml(region.id)}#map">Reopen this region</a> · <a href="${safeLink(region.regulations_url)}">Official regional regulations</a></p>
   ${result.features.selected.map(t=>t.user_waypoint?`<article><h2>${xml(t.name)}</h2><p>${xml(formatCoordinates(t.latitude,t.longitude,coordinateFormat))}</p><p>User waypoint · ${xml(t.category)}. User-supplied label, not verified habitat, depth or navigation guidance.</p></article>`:`<article><h2>${xml(t.id)} · ${xml(t.label)}</h2><p>${xml(formatCoordinates(t.latitude,t.longitude,coordinateFormat))} · ${t.canonical_habitat?'Interior reef reference point':xml(t.center_depth_ft)+' ft center'} · ${xml(t.neighborhood_depth_ft.join('–'))} ft nearby (${xml(t.vertical_datum === 'MLLW' ? 'survey MLLW' : 'source raster; vertical datum unverified, research only')})</p><dl><dt>Structure</dt><dd>${xml(t.terrain_interpretation)}</dd><dt>Priority</dt><dd>${xml(t.habitat_grade)} · ${xml(t.habitat_score)}/100 terrain score, not catch probability.</dd><dt>Export class</dt><dd>${xml(exportEvidenceLabel(t))}</dd><dt>Evidence</dt><dd>${xml(t.evidence_status)} ${xml(t.ais_status)} Survey ${xml(t.survey_year)}.</dd><dt>Approach notes</dt><dd>${xml(t.special_note||'Locate structure and fish on your sounder; measure your actual drift before setting up.')} Fixed alignment tracks do not predict drift or provide a safe approach.</dd></dl><a href="${safeLink(t.source_url)}">Survey source</a></article>`).join('')}
-  ${result.exclusions.length?`<article><h2>AVOID reference outlines</h2><ul>${result.exclusions.map(f=>`<li>${xml(f.properties.FULLNAME||f.properties.NAME)}</li>`).join('')}</ul><p>Includes whole outlines intersecting the chosen coverage. Outline tracks carry no protected-area fill or enforcement behavior on a chartplotter. They are a static reference, not a complete legal clearance.</p></article>`:''}<details><summary>Export record</summary><p>Atlas validation: ${xml(result.source_validation_date||"unavailable")}. Included layers: ${xml(Object.entries(result.layers).filter(([,v])=>v).map(([k])=>k).join(", "))}. AVOID selection bounds (west, south, east, north): ${xml(result.avoid_bounds.join(", "))}.</p></details><p>Forecast imagery, bathymetry tiles, live drift predictions and unqualified habitat previews are not embedded in GPX.</p></html>`;
+  ${result.exclusions.length?`<article><h2>AVOID reference outlines</h2><ul>${result.exclusions.map(f=>`<li>${xml(f.properties.FULLNAME||f.properties.NAME)}</li>`).join('')}</ul><p>Includes whole outlines intersecting the chosen coverage. Outline tracks carry no protected-area fill or enforcement behavior on a chartplotter. They are a static reference, not a complete legal clearance.</p></article>`:''}
+  ${result.contours?.length?`<article><h2>Depth contour tracks</h2><ul>${result.contours.map(c=>`<li>${xml(c.name)} · ${xml(c.source)}. Surveyed ${xml(c.survey_date)}; datum: ${xml(c.vertical_datum)}.</li>`).join('')}</ul>${omittedText(result.contours_omitted||[])?`<p>Bound surveys not drawn: ${xml(omittedText(result.contours_omitted))}</p>`:''}<p>Display contours, not soundings or chart depths; not for navigation.</p></article>`:''}<details><summary>Export record</summary><p>Atlas validation: ${xml(result.source_validation_date||"unavailable")}. Included layers: ${xml(Object.entries(result.layers).filter(([,v])=>v).map(([k])=>k).join(", "))}. AVOID selection bounds (west, south, east, north): ${xml(result.avoid_bounds.join(", "))}.</p></details><p>Forecast imagery, bathymetry tiles, live drift predictions and unqualified habitat previews are not embedded in GPX.</p></html>`;
 }

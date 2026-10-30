@@ -140,12 +140,14 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
         </div>
       </details>
       <details class="export-card" id="export-layers">
-        <summary><span>2. What to include</span><strong id="export-layer-count">{Object.values(d.layers).filter(Boolean).length} layers</strong></summary>
+        <summary><span>2. What to include</span><strong id="export-layer-count">{Object.values(d.layers).filter(Boolean).length + (m.contourTracks.value ? 1 : 0)} layers</strong></summary>
         <div class="export-card-body export-checks">
           {LAYERS.map(([id, name, description]) => (
             <label key={id} class="export-check"><input type="checkbox" data-layer={id} checked={d.layers[id]} onChange={e => m.setLayer(id, e.currentTarget.checked)} />
               <span><strong>{name}</strong><small>{description}</small></span></label>
           ))}
+          <label class="export-check"><input type="checkbox" data-export="contours" checked={m.contourTracks.value} onChange={e => m.setContourTracks(e.currentTarget.checked)} />
+            <span><strong>Depth contour tracks</strong><small>Published index contours (every 150 ft) as tracks, with survey, date and datum; not for navigation.</small></span></label>
           <label>Protected-area coverage<select id="export-avoid-scope" value={d.avoidScope} onChange={e => m.edit({avoidScope: e.currentTarget.value === 'region' ? 'region' : 'map'})}>
             <option value="map">Current map view</option><option value="region">Whole selected region</option></select></label>
           <p class="export-note">GPX carries coordinates and text. Chart imagery, bathymetry, live forecasts and predicted drift guides remain in the app. Static outlines do not replace official charts or current rules.</p>
@@ -157,7 +159,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
           {s.ok ? <><strong>{s.counts.waypoints} <span>waypoints</span></strong><strong>{s.counts.tracks} <span>tracks</span></strong></> : `${d.ids.length} spots in your plan`}
         </div>
         <p id="export-validation" role="status">{s.ok
-          ? `${s.counts.outlines} reef outlines · ${s.counts.alignments} alignments · ${s.counts.exclusions} AVOID outlines. ${s.counts.trackPoints.toLocaleString()} track points; largest track ${s.counts.largestTrack.toLocaleString()}.${s.counts.tracks > 15 ? ' More than 15 tracks: check your device’s free track capacity or reduce outlines.' : ''} Boundaries checked again when you export.`
+          ? `${s.counts.outlines} reef outlines · ${s.counts.alignments} alignments · ${s.counts.exclusions} AVOID outlines${s.counts.contours === undefined ? '' : ` · ${s.counts.contours} depth contour tracks`}. ${s.counts.trackPoints.toLocaleString()} track points; largest track ${s.counts.largestTrack.toLocaleString()}.${s.counts.tracks > 15 ? ' More than 15 tracks: check your device’s free track capacity or reduce outlines.' : ''} Boundaries checked again when you export.`
           : s.message}</p>
         <div class="export-actions">
           <button class="primary" id="export-download" disabled={!s.ok} onClick={() => void m.deliver('gpx')}>Download GPX</button>

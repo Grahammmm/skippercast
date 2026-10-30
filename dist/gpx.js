@@ -57,6 +57,7 @@ export function featuresGPX(atlas,features,title,options={}) {
   });
   for(const drift of features.drifts)tracks.push(geometryTrack(drift.id,`${drift.basis} Not a navigation route.`,drift.geometry));
   for(const f of options.exclusions||[])tracks.push(geometryTrack(`AVOID ${f.properties.NAME}`,`Protected-area reference. ${f.properties.FULLNAME||f.properties.NAME}. ${f.properties.CCR||''} Exported ${options.checkedAt||'with snapshot'}. Static outline; not a live legal boundary service. Consult official charts and rules.`,f.geometry));
+  for(const c of options.contours||[])tracks.push(geometryTrack(c.name,c.desc,c.geometry));
   return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="SkipperCast" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>${xml(title)}</name><desc>WGS84 coordinates. Habitat research; tracks show outlines and structure alignments, not navigation routes. Check current rules and charted hazards.</desc>${options.createdAt?`<time>${xml(options.createdAt)}</time>`:""}</metadata>${points.join('')}${tracks.join("")}</gpx>\n`;
 }
 export function targetGPX(atlas,id){return tripGPX(atlas,[id],atlas.targets.find(t=>t.id===id)?.name+' habitat research');}
