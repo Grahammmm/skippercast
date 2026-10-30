@@ -67,6 +67,19 @@ was never selected does not impose a false dependency on another survey.
 Original archives remain the recovery objects; extracted class grids are
 verified, reproducible scratch.
 
+## Preflight a native grid
+
+`scripts/preflight_native_grid.py PATH --vertical-datum TEXT --vertical-unit metre
+--vertical-sign elevation-up [--window COL,ROW,WIDTH,HEIGHT]` checks one GeoTIFF
+before any builder call: a finite, integral, in-raster window under the pixel
+cap (default 25,000,000; default window is the builder's first 512-row strip),
+one band, a projected metre CRS, a north-up unrotated square-cell grid, and a
+declared vertical datum (`undeclared` is carried verbatim), unit and sign. It
+exits 2 with `preflight refused: <field>: <reason>`, or prints the identity
+(sha256, CRS, transform, window) as one JSON line, a private receipt. It sits
+outside the cache-keyed set, so no key moves, and it is not a RUNNABLE recipe
+checker.
+
 ## Validation and the initial native proof
 
 `tests/gis/test_seafloor_terrain_support.py` covers original alignment/hash
