@@ -3,12 +3,12 @@ import csv
 import importlib.util
 import json
 import os
-from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[2]
-FIXTURE = ROOT / "tests/fixtures/region_process"
+from tests._support import FIXTURES, ROOT
+
+FIXTURE = FIXTURES / "region_process"
 spec = importlib.util.spec_from_file_location("region_intake", ROOT / "skills/skippercast-region-intake/scripts/region_intake.py")
 ri = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ri)
