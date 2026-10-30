@@ -188,7 +188,36 @@ def check_contours(collection, region, sources):
     `sources` is the catalog by id. Every feature must name one of the region's approved bathymetry
     bindings with its survey date and vertical datum (the source entry also carries the grid hash);
     contours must be INTERVAL_FT multiples no deeper than SHELF_LIMIT_FT; every point must lie inside the region.
+    A held collection (a `publication_held` key anywhere: see check_held_contours) is never publishable.
     """
+    features = collection.get('features') or []
+    parts = [collection, collection.get('provenance') or {}, *features, *(f.get('properties') or {} for f in features)]
+    if any(isinstance(part, dict) and 'publication_held' in part for part in parts):
+        raise ValueError(f"Depth contours for {region['id']} are held and cannot be published")
+    _check(collection, region, sources, {'approved'})
+
+
+def held_sources(collection, sources):
+    """The listed sources whose catalog review_status is not `approved`, in listed order, with that status verbatim."""
+    statuses = [(str(s.get('source_id')), (sources.get(str(s.get('source_id'))) or {}).get('review_status'))
+                for s in (collection.get('provenance') or {}).get('sources', [])]
+    return [{'source_id': ident, 'review_status': status} for ident, status in statuses if status != 'approved']
+
+
+def check_held_contours(collection, region, sources):
+    """Raise ValueError unless `collection` is a held (private, never published) contour set.
+
+    The same checks as check_contours, except a listed source may be `approved` or `candidate`; the provenance
+    must also say `publication_held: true` and list every non-approved source in `held_sources`.
+    """
+    _check(collection, region, sources, {'approved', 'candidate'})
+    provenance = collection['provenance']
+    if provenance.get('publication_held') is not True or provenance.get('held_sources') != held_sources(collection, sources):
+        raise ValueError(f"Depth contours for {region['id']} do not state their publication hold and held sources")
+
+
+def _check(collection, region, sources, allowed):
+    """check_contours' shape checks, with `allowed` the review statuses a listed source may have."""
     provenance = collection.get('provenance') or {}
     if collection.get('type') != 'FeatureCollection' or provenance.get('region_id') != region['id']:
         raise ValueError(f"Depth contours for {region['id']} are not its FeatureCollection")
@@ -200,7 +229,7 @@ def check_contours(collection, region, sources):
     listed = {str(s.get('source_id')): s for s in provenance.get('sources', [])}
     for ident, entry in listed.items():
         reviewed = sources.get(ident) or {}
-        if ident not in bound or reviewed.get('review_status') != 'approved' or 'bathymetry' not in reviewed.get('needs', []):
+        if ident not in bound or reviewed.get('review_status') not in allowed or 'bathymetry' not in reviewed.get('needs', []):
             raise ValueError(f"Depth contour source {ident} is not an approved bathymetry binding of {region['id']}")
         if not SHA256.fullmatch(str(entry.get('sha256'))) or not YEAR.fullmatch(str(entry.get('survey_date'))) \
                 or not entry.get('vertical_datum'):
