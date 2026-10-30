@@ -132,7 +132,13 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--region', required=True)
     p.add_argument('--grid', action='append', required=True, metavar='SOURCE_ID=PATH')
+    p.add_argument('--held-output', metavar='PATH', help='Trace candidate grids too, into this private file outside the '
+                   'work tree, stamped publication_held (the platform build refuses it). Nothing is written to catalog/.')
     args = p.parse_args()
+    held = args.held_output and Path(args.held_output).expanduser().resolve()
+    repo = Path(REPO).resolve()
+    if held and (held == repo or repo in held.parents):
+        raise SystemExit(f'Held output must be outside the work tree: {held}')
     region = load_region(args.region)
     _, sources = load_catalogs()
     bound = region['source_bindings']['bathymetry']
@@ -142,7 +148,11 @@ def main():
         raise SystemExit(f'Not bathymetry bindings of {region["id"]}: {sorted(set(grids) - set(order))}')
     # Every grid's approval is checked before any grid is opened or hashed.
     for ident in order:
-        if sources[ident]['review_status'] != 'approved' or 'bathymetry' not in sources[ident]['needs']:
+        status, licence = sources[ident]['review_status'], (sources[ident].get('rights') or {}).get('license')
+        if held and (status not in ('approved', 'candidate') or licence in (None, '', 'unresolved', 'dataset-review-needed')
+                     or 'bathymetry' not in sources[ident]['needs']):
+            raise SystemExit(f'{ident} cannot be traced, even held: {status}, licence {licence}')
+        if not held and (status != 'approved' or 'bathymetry' not in sources[ident]['needs']):
             raise SystemExit(f'{ident} is not an approved bathymetry source')
     for ident in order:
         native = sources[ident].get('native_resolution_m')
@@ -206,6 +216,10 @@ def main():
         'bounds': [min(xs), min(ys), max(xs), max(ys)], 'features': len(features), 'sources': listed,
         # The region's bound surveys not drawn here, with their catalog review_status (checked by dc.check_contours).
         'sources_omitted': dc.omitted_sources(region, sources, order),
+        # Held mode (--held-output): private, never published; names the traced sources that are not approved.
+        **({'publication_held': True, 'held_sources': [{'source_id': i, 'review_status': sources[i]['review_status']}
+                                                       for i in order if sources[i]['review_status'] != 'approved']}
+           if held else {}),
         'coordinate_decimals': dc.DECIMALS, 'simplify_tolerance_m': CONTOUR_TOLERANCE_M,
         'edge': {'tolerance_m': EDGE_TOLERANCE_M, 'min_length_m': EDGE_MIN_LENGTH_M,
                  'note': 'The outline of all the surveys\' supported blocks together; seams between surveys are not edges.'},
@@ -218,9 +232,9 @@ def main():
         'limitations': 'Not for navigation. Historical survey; the bottom can have changed. Display contours from averaged blocks, '
                        'not soundings or chart depths.'},
         'features': features}
-    dc.check_contours(collection, region, sources)
-    receipt = atomic_json(REPO / 'catalog/depth-contours' / f'{region["id"]}.geojson', collection)
-    print({'features': len(features), **receipt, 'sources': [(s['source_id'], s['sha256'][:12], s['supported_blocks']) for s in listed]})
+    (dc.check_held_contours if held else dc.check_contours)(collection, region, sources)
+    receipt = atomic_json(held or REPO / 'catalog/depth-contours' / f'{region["id"]}.geojson', collection)
+    print({'features': len(features), **receipt, **({'held': True} if held else {}), 'sources': [(s['source_id'], s['sha256'][:12], s['supported_blocks']) for s in listed]})
 
 
 if __name__ == '__main__':
