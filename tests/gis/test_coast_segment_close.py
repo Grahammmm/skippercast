@@ -10,6 +10,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
@@ -66,6 +67,29 @@ class Closed:
         self.header = tmp / 'header.json'
         self.header.write_bytes(refs.canonical(HEAD))
 
+    @classmethod
+    def from_copy(cls, src_root, dst_root, template):
+        """Rebind a built template to its copytree under dst_root without rerunning the cycle."""
+        src_root, dst_root = Path(src_root), Path(dst_root)
+
+        def move(value):
+            path = Path(value)
+            if not path.is_relative_to(src_root):
+                raise AssertionError(f'{path} is outside the template root {src_root}')
+            return dst_root / path.relative_to(src_root)
+
+        f = copy.deepcopy(template)
+        for obj in (f, f.c):
+            for key, value in list(vars(obj).items()):
+                if isinstance(value, Path):
+                    setattr(obj, key, move(value))
+            obj.bindings = {k: str(move(v)) for k, v in obj.bindings.items()}
+        f.c.resolver = type(f.c.resolver)(f.c.bindings, allowed_root_ids=f.c.bindings)
+        # Cycle's roots file is its bindings (no ledger or manifest pins it): rewrite it as Cycle would.
+        f.c.roots.write_bytes(refs.canonical(f.c.bindings))
+        assert str(src_root) not in repr(vars(f)) + repr(vars(f.c))
+        return f
+
     def resolver(self):
         return refs.Resolver(self.bindings, allowed_root_ids=set(self.bindings))
 
@@ -98,9 +122,22 @@ def exclusive_synthetic_campaign(tmp_path, monkeypatch):
     monkeypatch.setenv('COAST_EXCLUSIVE_WRITER', str(tmp_path / 'queue'))
 
 
+@pytest.fixture(scope='module')
+def _closed_template(tmp_path_factory):
+    # Build the two-round campaign once per module under the same writer rule the
+    # autouse fixture applies per test; tests only ever get private copies of it.
+    template = tmp_path_factory.mktemp('closed-template')
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv('COAST_EXCLUSIVE_WRITER', str(template / 'queue'))
+        built = Closed(template)
+    return template, built
+
+
 @pytest.fixture
-def closed(tmp_path):
-    return Closed(tmp_path)
+def closed(tmp_path, _closed_template):
+    template, built = _closed_template
+    shutil.copytree(template, tmp_path, dirs_exist_ok=True, symlinks=True)
+    return Closed.from_copy(template, tmp_path, built)
 
 
 def manifest_of(f):

@@ -8,7 +8,7 @@ import stat
 import pytest
 
 from tests.gis.test_coast_segment_close import (
-    ARCHIVE, QUEUE, HEAD, Closed, archive_segment, cache_files, close_common,
+    ARCHIVE, QUEUE, HEAD, Closed, _closed_template, archive_segment, cache_files, close_common,
     closed, exclusive_synthetic_campaign, ledger_module, manifest_of, refs,
     release_args, release_hot_cache,
 )
