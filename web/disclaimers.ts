@@ -7,6 +7,7 @@
 // The legally required caveats (C1-C4) are defined in docs/legal/disclaimers.md.
 //
 // Erasable TypeScript only: the Node tests and dist/*.js modules import it.
+import {FT_PER_M} from './units.ts';
 
 /** A limitation: an optional bold lead-in, the text, and an optional link. */
 export interface Limitation {
@@ -30,7 +31,7 @@ export const RESEARCH_ONLY_LOCATION: Limitation = {
  * source states, and that the skipper still checks the sounder.
  */
 export const qualifiedDepth = (datum: string, uncertaintyM: number, marginM?: number | null): string =>
-  `Measured-depth screen on ${datum}: the survey states product uncertainty up to ${uncertaintyM} m (${(uncertaintyM * 3.28084).toFixed(1)} ft)`
+  `Measured-depth screen on ${datum}: the survey states product uncertainty up to ${uncertaintyM} m (${(uncertaintyM * FT_PER_M).toFixed(1)} ft)`
   + `${typeof marginM === 'number' && marginM > 0 ? `, and the screen adds a ${marginM} m planning allowance` : ''}.`
   + ' Not a tide forecast, navigation route or catch probability; verify on your sounder.';
 

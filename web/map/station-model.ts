@@ -4,6 +4,7 @@ import type {County, Report} from '../../packages/coast/src/types.ts';
 import type {RegionalDailyFeed, RegionalSource} from '../brief/types.ts';
 import {ndbcStationURL, sourceStation, tidePredictionURL} from '../station-label.ts';
 import type {ChartMark} from './coastline.ts';
+import {FT_PER_M, KT_PER_MS} from '../units.ts';
 
 export type Provider = 'ndbc' | 'coops';
 export interface StationConfig {
@@ -48,11 +49,11 @@ export function located(loc: Location | undefined): loc is Location {
 }
 interface Sample {at: string; value: number; retained: boolean}
 const VARIABLES = [
-  {key: 'WVHT', field: 'waveFt', label: 'Seas', unit: 'ft', raw: 'm', scale: 3.280839895, offset: 0},
+  {key: 'WVHT', field: 'waveFt', label: 'Seas', unit: 'ft', raw: 'm', scale: FT_PER_M, offset: 0},
   {key: 'DPD', field: 'wavePeriodS', label: 'Period', unit: 's', raw: 'sec', scale: 1, offset: 0},
   {key: 'WTMP', field: 'waterTempF', label: 'Water', unit: '°F', raw: 'degC', scale: 1.8, offset: 32},
-  {key: 'WSPD', field: 'windKnots', label: 'Wind', unit: 'kt', raw: 'm/s', scale: 1.943844492, offset: 0},
-  {key: 'GST', field: 'gustKnots', label: 'Gust', unit: 'kt', raw: 'm/s', scale: 1.943844492, offset: 0},
+  {key: 'WSPD', field: 'windKnots', label: 'Wind', unit: 'kt', raw: 'm/s', scale: KT_PER_MS, offset: 0},
+  {key: 'GST', field: 'gustKnots', label: 'Gust', unit: 'kt', raw: 'm/s', scale: KT_PER_MS, offset: 0},
 ] as const;
 const rows = (v: unknown): Record<string, unknown>[] => Array.isArray(v) ? v.filter(r => r && typeof r === 'object') : [];
 /** Mismatching payload identity is never relabelled with the role's station. */
