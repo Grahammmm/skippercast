@@ -1,12 +1,12 @@
 """RF0708-1: skippercast.util.units is the one ft/m source for the offline BAG code."""
 import ast
-from pathlib import Path
 import unittest.mock
 
 from skippercast.fleet.ais import match
 from skippercast.util import units
+from tests._support import ROOT
 
-SRC = Path(__file__).resolve().parents[2] / "src" / "skippercast"
+SRC = ROOT / "src" / "skippercast"
 BAG = [SRC / "coastal/authenticated_v1/adapter_bag.py", SRC / "seafloor/adapters/regular_bag_window.py"]
 LENGTHS = [float(n) for n in range(1, 1024)] + [n / 10 for n in range(10, 1201)]
 
