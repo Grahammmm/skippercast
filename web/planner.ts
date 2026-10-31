@@ -23,6 +23,7 @@ import {track} from './telemetry.ts';
 import {ensureLandWater, withheldNote, type Place} from './land-water.ts';
 import {coordinates} from './state.ts';
 import {assessContours, depthContoursURL, NOTES} from './map/depth-contours.ts';
+import {chartFileListed} from './chart-files.ts';
 
 export type Layers = {waypoints: boolean; outlines: boolean; alignments: boolean; exclusions: boolean};
 export type LayerKey = keyof Layers;
@@ -81,6 +82,7 @@ export interface PlannerDeps {
 /** The one published file the opt-in depth contour tracks read: `{collection: null}` when the region publishes none. */
 export type ContourFile = {collection: unknown} | {refused: string};
 export async function loadContourFile(id: string, today: string, fetchFn: typeof fetch = (...a) => fetch(...a), page: () => string = () => location.href): Promise<ContourFile> {
+  if (!chartFileListed(id, 'depth-contours.geojson')) return {collection: null}; // unpublished: same as a 404, no request (RF0935-1)
   const refused = (note: string): ContourFile => ({refused: `${note} Turn off depth contour tracks to export.`});
   try {
     const response = await fetchFn(new URL(depthContoursURL(id), page()).href);
