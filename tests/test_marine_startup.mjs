@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 import {resolve,dirname} from 'node:path';
-import {HOUR,directionTo} from '../dist/marine-units.js';
+import {HOUR,directionTo} from '../dist/marine-charts.js';
 const root=new URL('..',import.meta.url).pathname;
 test('eager confidence import cannot capture Morro forecast points before a different region is selected',()=>{
  const child=spawnSync(process.execPath,['--input-type=module','-e',`
