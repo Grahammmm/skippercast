@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- RF1058-2: the fleet AIS health answer and its `fleet-ais-stale` issue name the likely cause of a stale check (`processor-not-delivered` when all three clocks are equally old, else `listener-stale`, `no-messages` or `no-data`), so a dropped processor schedule no longer reads as a dead listener. Thresholds are unchanged.
 - The region-build golden case is now a checked script: `golden_compare.py` compares a run's candidate with the committed depth-contour file in features and provenance, so a provenance-only difference is caught at build instead of at publish (Morro Bay SG-1).
 - RF0850-7: the landing night map draws its basemap and currents without a coastline when a region's `region.json` lists neither shoreline file (Cambria: no shoreline 404, no torn-down map), and the full shoreline when only that is listed. Without the list it draws as before.
 

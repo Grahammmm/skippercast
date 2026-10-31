@@ -233,7 +233,7 @@ test('health reports stale beyond 3 hours on a fixture clock, with ages and bool
     clock = '2026-10-05T15:00:01.000Z';                       // one second more: stale
     body = await health();
     assert.equal(body.stale, true);
-    assert.deepEqual(Object.keys(body).sort(), ['checked_at', 'checks', 'region', 'stale', 'stale_after_s']);
+    assert.deepEqual(Object.keys(body).sort(), ['cause', 'checked_at', 'checks', 'region', 'stale', 'stale_after_s']);
     for (const name of ['heartbeat', 'last_message', 'processed']) assert.deepEqual(body.checks[name], {age_s: 3 * 3600 + 1, stale: true});
     assert.equal(JSON.stringify(body).includes('messages'), false, 'no counters or listener state in the health answer');
     assert.equal((await call(db, 'health?region=..', null, {method: 'GET'})).status, 400);
