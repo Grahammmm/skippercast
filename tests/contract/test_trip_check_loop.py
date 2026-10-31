@@ -123,6 +123,17 @@ class LiveWorkflowTests(unittest.TestCase):
         self.assertNotIn('secrets.', chain)
         self.assertNotIn('actions: write', self.jobs['refresh'] + self.jobs['notify'])
 
+    def test_loop_starts_only_from_schedule_or_dispatch_never_push(self):
+        # A push run always waited behind the running loop's concurrency group and was cancelled.
+        header = self.text.split('\njobs:\n', 1)[0]
+        self.assertIn('\n  schedule:\n', header)
+        self.assertIn('\n  workflow_dispatch:\n', header)
+        self.assertNotIn('\n  push:\n', header)
+        for name, block in self.jobs.items():
+            self.assertNotIn("github.event_name == 'push'", block, name)
+            self.assertNotIn("github.event_name != 'push'", block, name)
+        self.assertIn('live_loop.py --skip-trips --budget-minutes 330', self.jobs['refresh'])
+
     def test_scheduler_identity_still_names_this_workflow(self):
         # job-auth.js pins workflow_ref to this file, so trip checks must stay in it.
         policy = json.loads((ROOT / 'deployments' / 'production.json').read_text())
