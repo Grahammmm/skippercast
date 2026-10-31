@@ -10,6 +10,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 from skippercast.atlas.scoring import habitat_grade, habitat_score
+from skippercast.util.units import M_PER_FT
 
 GPX = "http://www.topografix.com/GPX/1/1"
 ET.register_namespace("", GPX)
@@ -114,7 +115,7 @@ def target_note(row, data):
         f"Habitat search priority {row['habitat_grade']} ({row['habitat_score']}/100); tied rank {row['rank']} of {len(data['targets'])}. Not a catch prediction.",
         row["terrain_interpretation"],
         f"Historical source raster depth: center {row['center_depth_ft']} ft; 100-m neighborhood {low}–{high} ft. Vertical datum unverified; this is not a chart-depth or <=200 ft qualification. Confirm actual depth with an official chart and sounder.",
-        f"Local relief {metrics['relief_210m_m'] / 0.3048:.0f} ft; mapped rough habitat {metrics['rugose_or_bedrock_fraction_210m']:.0%}; usable nearby rough habitat {metrics['rough_habitat_within_250m_ha'] * 2.47105:.1f} acres.",
+        f"Local relief {metrics['relief_210m_m'] / M_PER_FT:.0f} ft; mapped rough habitat {metrics['rugose_or_bedrock_fraction_210m']:.0%}; usable nearby rough habitat {metrics['rough_habitat_within_250m_ha'] * 2.47105:.1f} acres.",
     ]
     if row["area_ids"]:
         parts.append("Partial reef outlines: " + ", ".join(
