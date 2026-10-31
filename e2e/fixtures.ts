@@ -111,6 +111,19 @@ export const test = base.extend<{pageErrors: string[]; v2: V2}>({
 });
 export {expect};
 
+/**
+ * Where the Chart draws its `?view=` centre on the page. Below the 1024 px layout break MapLibre padding draws it in
+ * the open band between the top card and the sheet (RF0905-1), which the host reports as `data-pad="top,bottom"`.
+ */
+export async function chartCentre(page: Page): Promise<{x: number; y: number}> {
+  const chart = page.locator('.app-chart'), canvas = chart.locator('canvas.maplibregl-canvas');
+  await canvas.waitFor({state: 'visible'});
+  if (page.viewportSize()!.width < 1024) await expect(chart).toHaveAttribute('data-pad', /^\d+,\d+$/);
+  const [top = 0, bottom = 0] = ((await chart.getAttribute('data-pad')) ?? '0,0').split(',').map(Number);
+  const box = (await canvas.boundingBox())!;
+  return {x: box.x + box.width / 2, y: box.y + top + (box.height - top - bottom) / 2};
+}
+
 /** Run axe on the page as it is now; fail on serious or critical violations only (for now). */
 export async function checkA11y(page: Page, name: string, project: string): Promise<void> {
   const results = await new AxeBuilder({page}).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice']).analyze();
