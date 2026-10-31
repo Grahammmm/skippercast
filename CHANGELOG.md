@@ -4,6 +4,8 @@
 
 - RF0850-2: the Chart no longer requests a shoreline or depth-contour file the loaded `region.json` does not list: with neither shoreline listed the coastline draws nothing and reads unavailable, and unlisted contours settle as none (Cambria: no shoreline or contour 404s). Listed or unknown, it asks as before.
 
+- RF0850-7: the landing night map draws its basemap and currents without a coastline when a region's `region.json` lists neither shoreline file (Cambria: no shoreline 404, no torn-down map), and the full shoreline when only that is listed. Without the list it draws as before.
+
 - RF0850-1: once a region's `region.json` has loaded, the app no longer requests a land-water index, poster or shoreline form its `chart_files` lacks, and the offline pack no longer counts them as missing (Cambria: fewer 404s). Without the list it asks as before.
 
 - RF0835-2: each compiled `region.json` lists the Chart side files the build wrote for it (`chart_files`), and the landing warm-up no longer requests a shoreline overview or poster a region does not publish (Cambria: two fewer 404s). Without the list it warms as before.
