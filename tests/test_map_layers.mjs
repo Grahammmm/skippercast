@@ -12,7 +12,7 @@ import {groundsOverlay} from '../web/map/charter-grounds.ts';
 import {markScreen, markStyle} from '../web/map/marks.ts';
 import {assessScreen} from '../web/map/habitat.ts';
 import {COASTLINE_GLOW, COASTLINE_LINE, COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, SHORELINE_DETAIL_ZOOM} from '../web/map/coastline.ts';
-import {VIEW_ZOOM, ZOOM_OFFSET, createEngine, mapOptions} from '../web/map/engine.ts';
+import {VIEW_ZOOM, ZOOM_OFFSET, collapseAttribution, createEngine, mapOptions} from '../web/map/engine.ts';
 import {BASEMAP_MANIFEST, ENC_LAYER, basemapArchive, chartFailed, chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {mpaLayers, mpaMark, mpaQuery} from '../web/map/mpa.ts';
@@ -226,7 +226,44 @@ test('a still engine (the landing\'s night map, FE-25) takes no input, fades no 
   assert.equal(map.options.interactive, false);
   assert.equal(map.options.fadeDuration, 0);
   assert.deepEqual(map.controls, [], 'the page credits the basemap itself');
+  assert.equal(map.handlers.resize ?? map.handlers.styledata, undefined, 'and folds no attribution');
   assert.equal(mapOptions({}, style, camera).interactive, undefined, 'the Chart keeps its gestures');
+});
+
+/** A fake attribution <details>: its classes and whether it is `open`. */
+function attribElement(...classes) {
+  const names = new Set(classes), attributes = new Set(['open']);
+  return {names, attributes, classList: {contains: n => names.has(n), remove: n => names.delete(n)}, removeAttribute: n => attributes.delete(n)};
+}
+const state = el => [[...el.names].sort().join(' '), el.attributes.has('open')];
+
+test('BL-SC-1: collapseAttribution folds an opened compact control and leaves a folded or desktop one alone', () => {
+  const opened = attribElement('maplibregl-ctrl-attrib', 'maplibregl-compact', 'maplibregl-compact-show');
+  collapseAttribution(opened);
+  assert.deepEqual(state(opened), ['maplibregl-compact maplibregl-ctrl-attrib', false]);
+  collapseAttribution(opened);
+  assert.deepEqual(state(opened), ['maplibregl-compact maplibregl-ctrl-attrib', false], 'a second fold changes nothing');
+  const minimized = attribElement('maplibregl-ctrl-attrib', 'maplibregl-compact'), desktop = attribElement('maplibregl-ctrl-attrib');
+  for (const el of [minimized, desktop]) { const before = state(el); collapseAttribution(el); assert.deepEqual(state(el), before); }
+});
+
+test('BL-SC-1: the Chart\'s attribution uses MapLibre\'s width rule and folds each time it turns compact, not while it stays so', () => {
+  const fake = library(), style = {version: 8, sources: {}, layers: []}, camera = {latitude: 35.37, longitude: -120.86, zoom: 12};
+  createEngine(fake.module, {host: {}, style, camera, onMove() {}, onLayerError() {}});
+  createEngine(fake.module, {host: {}, style, camera, onMove() {}, onLayerError() {}, attribution: '© OSM'});
+  assert.deepEqual(fake.maps.map(m => m.controls[2][0].options), [{}, {customAttribution: '© OSM'}], 'no compact: false; the credit text is unchanged');
+  const [map] = fake.maps, el = map.controls[2][0]._container = attribElement('maplibregl-ctrl-attrib', 'maplibregl-compact', 'maplibregl-compact-show');
+  map.fire('styledata');
+  assert.deepEqual(state(el), ['maplibregl-compact maplibregl-ctrl-attrib', false], 'opened on load at phone width → folded');
+  el.names.add('maplibregl-compact-show'); el.attributes.add('open'); // one tap opens it
+  map.fire('resize'); map.fire('sourcedata');
+  assert.equal(el.names.has('maplibregl-compact-show'), true, 'a resize while compact keeps the reader\'s open panel');
+  el.names.delete('maplibregl-compact'); el.names.delete('maplibregl-compact-show'); // MapLibre: wider than 640 px
+  map.fire('resize');
+  assert.deepEqual(state(el), ['maplibregl-ctrl-attrib', true], 'the desktop width stays expanded');
+  el.names.add('maplibregl-compact').add('maplibregl-compact-show'); // MapLibre reopens it on narrowing
+  map.fire('resize');
+  assert.deepEqual(state(el), ['maplibregl-compact maplibregl-ctrl-attrib', false], 'narrow → wide → narrow ends folded');
 });
 
 test('the engine\'s style gate: calls before style.load wait, then apply once with the latest value per layer and source', () => {

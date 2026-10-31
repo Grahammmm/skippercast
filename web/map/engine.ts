@@ -128,6 +128,11 @@ export function prepareLibrary(module: MapLibraryModule): void {
   prepared.add(module.lib);
 }
 
+/** Folds a compact attribution that MapLibre opened (BL-SC-1): the credits stay in the DOM behind its toggle. A no-op when collapsed or expanded. */
+export function collapseAttribution(container: Element): void {
+  if (container.classList.contains('maplibregl-compact-show')) { container.classList.remove('maplibregl-compact-show'); container.removeAttribute('open'); }
+}
+
 /** The Map constructor's options: north up, no pitch, `?view=` zoom range, the stage's own accessible name; a still map takes no input. */
 export function mapOptions(host: HTMLElement, style: MapLibre.StyleSpecification, camera: EngineCamera, still = false): MapLibre.MapOptions {
   return {
@@ -151,7 +156,13 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   if (!options.still) {
     map.addControl(new lib.NavigationControl({showCompass: false}), 'bottom-right');
     map.addControl(new lib.ScaleControl({unit: 'nautical', maxWidth: 120}), 'bottom-right');
-    map.addControl(new lib.AttributionControl({compact: false, ...options.attribution ? {customAttribution: options.attribution} : {}}), 'bottom-right');
+    // BL-SC-1: MapLibre's own rule makes the credits compact at ≤ 640 px; it opens them whenever they turn compact, so fold them once then.
+    const attribution = new lib.AttributionControl(options.attribution ? {customAttribution: options.attribution} : {});
+    map.addControl(attribution, 'bottom-right');
+    let wasCompact = false;
+    const fold = () => { const el = attribution._container; if (el && !wasCompact) collapseAttribution(el); wasCompact = !!el?.classList.contains('maplibregl-compact'); };
+    fold();
+    for (const type of ['resize', 'styledata', 'sourcedata'] as const) map.on(type, fold);
   }
 
   // The overlays drawn now, by registry layer (FE-22), so their source errors route to that layer.
