@@ -8,7 +8,7 @@ input, no sign flip, datum conversion or interpolation. Thresholds and the schem
 skippercast.platform.seafloor_ec; seafloor/ is not imported. Checks in order: (a) fixture, (b) sign (either refusal
 skips the rest), (c) sentinels, (d) holes, (e) pits and spikes, (f) duplicate signature.
 
-A cell is valid only if finite and valid in GDAL's own mask (declared nodata incl. NaN/inf, internal per-dataset mask);
+A cell is valid only if finite, not declared nodata, and valid in GDAL's own mask (internal per-dataset mask);
 a file with any sidecar (.msk, .aux.xml, ...) is refused, since `path_sha256` (the file's bytes) would not cover it.
 Receipt: no directories, only `file_name`; `bbox` is [col0, row0, col1, row1] in native pixels, end-exclusive; metres
 rounded to 6 decimals; non-finite nodata recorded as null; `counts` are the codes EC2 would write if it applied the
@@ -94,7 +94,7 @@ def scan(path, strip_rows):
         for r0 in range(0, h, strip_rows):
             win = Window(0, r0, w, min(strip_rows, h - r0))
             raw = ds.read(1, window=win)
-            ok = np.isfinite(raw) & (ds.read_masks(1, window=win) > 0)  # GDAL mask: nodata and intrinsic validity
+            ok = np.isfinite(raw) & (raw != nd) & (ds.read_masks(1, window=win) > 0)  # explicit mask can hide nodata
             bad_value = ok & (np.isin(raw, SENTINELS) | (raw < ec.PLAUSIBLE_M[0]) | (raw > ec.PLAUSIBLE_M[1]))
             rows = slice(r0, r0 + raw.shape[0])
             v[rows], valid[rows], sent[rows] = raw, ok, bad_value

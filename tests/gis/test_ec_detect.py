@@ -78,13 +78,19 @@ def test_acceptance_grid_lists_holes_pit_spike_and_is_fix(d, capsys):
     assert doc['duplicate_signature'][:4] == [64, 64, 'EPSG:32610', 2.0] and str(d) not in (d / 'a.json').read_text()
     code, _again, _err = _run(capsys, tif, d / 'fresh' / 'b.json', '--strip-rows', '7')
     assert code == 0 and (d / 'a.json').read_bytes() == (d / 'fresh' / 'b.json').read_bytes()
-    hole, same = _acceptance_grid() == -9999.0, ('holes', 'pits', 'spikes', 'sign', 'counts', 'duplicate_signature')
+    hole, same = _acceptance_grid() == -9999.0, ('fixture', 'holes', 'pits', 'spikes', 'sign', 'counts', 'duplicate_signature')
+    stats = det.scan(tif, 7)[3]
     for name, values, kw in [('inf', np.inf, {'nodata': np.inf}), ('-inf', -np.inf, {'nodata': -np.inf}),
-                             ('mask', 50.0, {'mask': np.where(hole, 0, 255).astype(np.uint8)})]:
-        # +/-inf nodata -> null; cells invalid only in the internal mask (50 m backing) count nowhere: same findings
-        tif = _tif(d / f'{name}.tif', np.where(hole, values, _acceptance_grid()), **kw)
+                             ('mask', 50.0, {'mask': np.where(hole, 0, 255).astype(np.uint8)}),
+                             *[(f'combined{nd}', nd, {'nodata': nd, 'mask': np.full(hole.shape, 255, np.uint8)})
+                               for nd in (-30.0, -9999.0)]]:
+        v = np.where(hole, values, _acceptance_grid())
+        if name.startswith('combined'):  # nodata plus a separate mask-only exclusion must both survive
+            v[30, 10], kw['mask'][30, 10] = 50.0, 0
+        tif = _tif(d / f'{name}.tif', v, **kw)
         code, doc_i, _err = _run(capsys, tif, d / f'{name}.json')
-        assert code == 0 and doc_i['nodata'] == (-9999.0 if name == 'mask' else None)
+        assert code == 0 and doc_i['nodata'] == (None if 'inf' in name else kw.get('nodata', -9999.0))
+        assert det.scan(tif, 7)[3] == stats
         assert {k: doc_i[k] for k in same} == {k: doc[k] for k in same} and doc_i['sentinel_cells'] == 0
 
 
