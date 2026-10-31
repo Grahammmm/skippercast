@@ -230,6 +230,19 @@ def test_deepened_cells_requires_integer_zero(tmp_path, region, monkeypatch, val
     assert next(c for c in packet["checks"] if c["id"] == "ec-no-deepening")["verdict"] == "FAIL"
 
 
+@pytest.mark.parametrize("provenance, expected", [(None, 0), ("measured", 0), ("guessed", 1)])
+def test_uncorrected_contour_in_ec_run_has_optional_valid_provenance(tmp_path, region, monkeypatch, provenance, expected):
+    def plant(docs, collection):
+        props = next(f["properties"] for f in collection["features"] if f["properties"].get("source_id") == "s-b")
+        props.pop("provenance")
+        if provenance is not None:
+            props["provenance"] = provenance
+    code, packet = ec_run(tmp_path, monkeypatch, region, plant)
+    assert code == expected, packet["checks"]
+    assert packet["publishable"] is (expected == 0)
+    assert next(c for c in packet["checks"] if c["id"] == "ec-unresolved-stated")["verdict"] == ("PASS" if expected == 0 else "FAIL")
+
+
 def test_ec_contour_requires_provenance(tmp_path, region, monkeypatch):
     code, packet = ec_run(tmp_path, monkeypatch, region, lambda d, c: c["features"][0]["properties"].pop("provenance"))
     assert code == 1 and not packet["publishable"]

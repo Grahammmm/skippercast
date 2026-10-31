@@ -254,7 +254,7 @@ def ec_checks(build, loaded, sources, tree, names=None):
             if p.get('kind') == seafloor_ec.UNRESOLVED_KIND and (p.get('reason') not in seafloor_ec.UNRESOLVED_REASONS
                                                                or (seafloor_ec.SHOAL_HINT_KEY in p and p.get('reason') != 'conflict')):
                 unres.append(f"{where}: unresolved-area reason {p.get('reason')!r} or shoal_hint_ft without conflict")
-            elif p.get('kind') == 'contour' and (tree or 'provenance' in p) and p.get('provenance') not in seafloor_ec.PROVENANCE_CLASSES:
+            elif p.get('kind') == 'contour' and (p.get('source_id') in corrected or 'provenance' in p) and p.get('provenance') not in seafloor_ec.PROVENANCE_CLASSES:
                 unres.append(f"{where}: contour provenance {p.get('provenance')!r} not a provenance class")
     say = (lambda text: text) if tree else (lambda _: 'no ec/ folder')
     return [result('ec-receipts-intact', intact, say(f'{len(docs)} receipt(s), DONE files, outputs and ec_sha256 agree')),
