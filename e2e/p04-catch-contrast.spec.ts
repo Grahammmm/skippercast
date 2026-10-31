@@ -117,9 +117,13 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // and Target select fit the phone width, and hides .app-top-card .app-location-coords; Masthead.tsx wraps the coordinates in that span.
 // No colour, backing, token or catch markup changes; check_contrast.mjs rebinds only appCss.
 // Rebind those three exact hashes.
+// RF0850-2 (#1103): App.tsx's region effect marks the new region's chart_files list pending instead of
+// null, and loadRegion clears that mark with no list when region.json fails. Only publishedChartFiles
+// (web/chart-files.ts) changes; RegionInfo, the id/charters fields Reports reads, CSS, tokens, classes
+// and catch markup do not. contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
-  "web/app/App.tsx": "e2d38eda657241f7c0b994c5136c5384c70781eccd4a1c72c655317e3cabe0cc",
+  "web/app/App.tsx": "363e4631b839a398b998f99e258cb864deb28778daac497885171b54b0c24639",
   "web/app/Masthead.tsx": "d785af3dc63990d67940cb4eb451c7a39e3be4de268c67a13d1c8c05130643ca",
   "web/app/LayerRail.tsx": "248402b3100855ef1561c742ee32c3922d9b6475080cb6420957a553e5872abb",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",

@@ -11,6 +11,7 @@
 import type {Palette} from './palette.ts';
 import {COASTLINE_SOURCE, layerEntry} from './layers.ts';
 import {ZOOM_OFFSET} from './engine.ts';
+import {chartFileListed} from '../chart-files.ts';
 
 export const COASTLINE_GLOW = 'coastline-glow';
 export const COASTLINE_LINE = 'coastline';
@@ -26,18 +27,23 @@ export const shorelineURL = (region: string): string => `regions/${encodeURIComp
 export const shorelineOverviewURL = (region: string): string => `regions/${encodeURIComponent(region)}/shoreline-overview.geojson`;
 /** The MapLibre zoom the full shoreline loads from (shoreline.py OVERVIEW_MAX_ZOOM); `?view=` zooms are ZOOM_OFFSET more. */
 export const SHORELINE_DETAIL_ZOOM = 12;
-/** The shoreline file the Chart draws at a `?view=` zoom: the overview below the detail zoom, unless the full one already loaded. */
+/** The shoreline file the Chart draws at a `?view=` zoom: the overview below the detail zoom, unless the full one already loaded or is the only one listed. */
 export const shorelineFor = (region: string, viewZoom: number, detail = false): string =>
-  detail || viewZoom - ZOOM_OFFSET >= SHORELINE_DETAIL_ZOOM ? shorelineURL(region) : shorelineOverviewURL(region);
+  detail || viewZoom - ZOOM_OFFSET >= SHORELINE_DETAIL_ZOOM || !chartFileListed(region, 'shoreline-overview.geojson') && chartFileListed(region, 'shoreline.geojson') ? shorelineURL(region) : shorelineOverviewURL(region);
+/** RF0850-2: false only when the loaded region.json lists neither shoreline file (web/chart-files.ts, fail open). */
+export const shorelinePublished = (region: string): boolean => chartFileListed(region, 'shoreline.geojson') || chartFileListed(region, 'shoreline-overview.geojson');
+/** The shoreline the Chart requests at a `?view=` zoom, or null when the region publishes none (no request). */
+export const coastlineFetchPath = (region: string, viewZoom: number, detail = false): string | null =>
+  shorelinePublished(region) ? shorelineFor(region, viewZoom, detail) : null;
 
 export interface LineLayer {
   id: string; type: 'line'; source: string;
   layout: Record<string, unknown>; paint: Record<string, unknown>;
 }
 
-/** The GeoJSON source the Chart adds for the coastline. */
-export const coastlineSource = (region: string, base: string, path: string = shorelineURL(region)) =>
-  ({type: 'geojson' as const, data: new URL(path, base).href, attribution: layerEntry('coastline').attribution});
+/** The GeoJSON source the Chart adds for the coastline; an empty `path` (RF0850-2: none yet, or none published) draws nothing. */
+export const coastlineSource = (region: string, base: string, path: string = shorelineURL(region)) => ({type: 'geojson' as const,
+  data: path && shorelinePublished(region) ? new URL(path, base).href : {type: 'FeatureCollection' as const, features: []}, attribution: layerEntry('coastline').attribution});
 
 /** Glow under line, both drawn last (§ 9: the coastline glow is the top of the draw order). */
 export function coastlineLayers(p: Palette): LineLayer[] {
