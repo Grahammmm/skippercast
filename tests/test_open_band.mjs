@@ -57,6 +57,8 @@ function library(withPadding) {
     fire(type) { for (const fn of this.handlers[type] ?? []) fn({}); }
     getCenter() { return this.center; } getZoom() { return this.zoom; } addControl() {} getLayer() {} getSource() {} remove() {}
     jumpTo({center, zoom}) { this.center = {lat: center[1], lng: center[0]}; this.zoom = zoom; this.fire('moveend'); }
+    // The flyover (#646): eases are recorded, as in test_map_layers.mjs.
+    easeTo(o) { (this.eases ??= []).push(o); } stop() {} getPitch() { return 0; } getBearing() { return 0; } setMaxPitch(p) { this.maxPitch = p; }
   }
   const Control = class {};
   fake.module = {lib: {Map: FakeMap, NavigationControl: Control, ScaleControl: Control, AttributionControl: Control, setWorkerUrl() {}, addProtocol() {}},
@@ -73,7 +75,7 @@ test('the engine passes the padding to MapLibre once, and a library without setP
   assert.equal(padded.maps[0].paddings[0], p, 'the exact object');
 });
 
-function chartAt(width) {
+function chartAt(width, flyoverGate = () => ({reduced: true, saveData: false, hidden: false, linked: false, seen: true})) {
   globalThis.location = {href: `${PAGE}?region=morro-bay&presentation=chart`};
   globalThis.history = {state: null, pushState(_s, _t, url) { location.href = url; }, replaceState(_s, _t, url) { location.href = url; }};
   globalThis.dispatchEvent = () => true; configureStore({v2: true, storage: null}); syncFromURL(location.href);
@@ -85,7 +87,7 @@ function chartAt(width) {
   const stage = createStage({host: {dataset: {}, shadowRoot: {replaceChildren() {}}}, load: async () => land, center: () => [35.37, -120.86], viewDelay: 0,
     doc: {hidden: false, addEventListener() {}, removeEventListener() {}},
     renderers: [() => createChart({host, load: async () => fake.module, fetchFn, page: () => PAGE, palette: () => readPalette(n => `token(${n})`), viewDelay: 0,
-      covers: () => [TOP, sheet], flyoverGate: () => ({reduced: true, saveData: false, hidden: false, linked: false, seen: true})})]});
+      covers: () => [TOP, sheet], flyoverGate})]});
   return {fake, host, stage, sheet, view: () => new URL(location.href).searchParams.get('view')};
 }
 
@@ -115,4 +117,19 @@ test('Chart wiring: a phone pads at mount and on resize, desktop never, phone th
   map.fire('resize'); assert.deepEqual(map.paddings, [], 'desktop never pads');
   assert.equal(run.host.dataset.view, '35.37000,-120.86000,12');
   run.stage.destroy();
+});
+
+test('the mount padding is not a camera move: a phone keeps ?view= unwritten and still flies on the first idle', async t => {
+  for (const name of ['warn', 'error']) t.mock.method(console, name, () => {});
+  const open = linked => ({reduced: false, saveData: false, hidden: false, linked, seen: false});
+  for (const width of [390, 1280]) {
+    const run = chartAt(width, open);
+    await tick(); await tick(); const [map] = run.fake.maps;
+    await tick(); await tick();  // past the 0 ms ?view= delay
+    assert.equal(run.view(), null, `${width} px: no ?view= from the mount`);
+    map.fire('idle');
+    assert.equal(run.host.dataset.flyover, 'flying', `${width} px: the first idle flies`);
+    assert.equal(map.eases?.length, 1);
+    run.stage.destroy();
+  }
 });
