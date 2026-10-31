@@ -82,12 +82,14 @@ export const ES_MIN_WORDS = 3;
  * null (too short or mixed to tell; the caller keeps the stored language).
  */
 export function detectLanguage(text: string): 'en' | 'es' | null {
-  const words = String(text ?? '').toLowerCase().normalize('NFC').match(/[\p{L}']+/gu) ?? [];
+  // NFC first so a decomposed N + U+0303 composes, then lower-cases to ñ for the marker test too.
+  const value = String(text ?? '').normalize('NFC').toLowerCase();
+  const words = value.match(/[\p{L}']+/gu) ?? [];
   let es = 0, en = 0;
   for (const w of words) { if (ES.has(w)) es++; if (EN.has(w)) en++; }
   if (es >= ES_MIN_WORDS && es > en) return 'es';
   // A couple of strong Spanish markers in a short text ("¿qué pica hoy?") still count, when English has none.
-  if (/[¿¡ñ]/u.test(text) && es >= 1 && en === 0) return 'es';
+  if (/[¿¡ñ]/u.test(value) && es >= 1 && en === 0) return 'es';
   if (en >= 2 && en > es) return 'en';
   return null;
 }
