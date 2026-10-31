@@ -48,7 +48,7 @@ def _detect(grid, tmp_path, holes=None, pits=None, **over):
     doc = {'schema': 'ec-detect-v1', 'ec_version': ec.EC_VERSION, 'source_id': 'synthetic-x', 'cell_m': 2.0,
            'path_sha256': hashlib.sha256(grid.read_bytes()).hexdigest(), 'crs': 'EPSG:32610', 'width': 32,
            'height': 32, 'nodata': -9999.0, 'counts': {}, 'pits': pits, 'spikes': [], 'holes': holes,
-           'sentinel_cells': 0, 'fixture': {'refused': False, 'reasons': []}, 'sign': {'refused': False},
+           'sentinel_cells': 0, 'fixture': {'refused': False, 'reasons': []}, 'sign': {'refused': False, 'positive_fraction': 0.0, 'reason': None},
            'duplicate_signature': [32, 32, 'EPSG:32610', 2.0, -25.5, -10.0, -17.75], 'disposition': 'FIX', **over}
     path = tmp_path / 'EC-DETECT.json'
     path.write_text(json.dumps(doc))
@@ -136,6 +136,47 @@ def test_deepening_gate_exits_3_and_leaves_the_folder_empty(tmp_path, capsys, mo
     assert mod.main([str(grid), '--detect', str(_detect(grid, tmp_path)), '--out-dir', str(out)]) == 3
     assert 'apply refused: deepened 1 cells' in capsys.readouterr().err
     assert not out.exists() or list(out.iterdir()) == []
+
+
+@pytest.mark.parametrize('nodata', [0.0, 9999.0, -1.0, -9999.0, np.nan])
+def test_hole_fill_does_not_compare_nodata_as_prior_depth(tmp_path, nodata):
+    z = np.full((32, 32), -20.0)
+    z[H1] = nodata
+    grid = _tif(tmp_path / 'grid.tif', z, nodata=nodata)
+    detect = _detect(grid, tmp_path, [_hole1()], [], nodata=None if np.isnan(nodata) else nodata)
+    assert _run(grid, detect, tmp_path / 'out') == 0
+    with rasterio.open(tmp_path / 'out/corrected.tif') as ds:
+        assert ds.read(1)[H1] == -20.0
+        assert (ds.read_masks(1) == 255).all()
+    codes, _, _ = _read(tmp_path / 'out/provenance.tif')
+    assert codes[H1] == ec.CODES['filled-hole']
+    receipt = json.loads((tmp_path / 'out/EC-APPLY.json').read_text())
+    assert receipt['deepened_cells'] == 0 and ec.check_receipt('ec-apply-v1', receipt) == []
+
+
+@pytest.mark.parametrize('fill', [False, True])
+def test_source_mask_is_preserved_or_explicitly_filled(tmp_path, fill):
+    z = np.full((32, 32), -20.0)
+    z[H1] = -100.0
+    grid = _tif(tmp_path / 'grid.tif', z)
+    with rasterio.Env(GDAL_TIFF_INTERNAL_MASK=True), rasterio.open(grid, 'r+') as ds:
+        mask = np.full(z.shape, 255, dtype='uint8')
+        mask[H1] = 0
+        ds.write_mask(mask)
+    detect = _detect(grid, tmp_path, [_hole1()] if fill else [], [])
+    for name in ('a', 'b'):
+        assert _run(grid, detect, tmp_path / name) == 0
+    for name in ('corrected.tif', 'provenance.tif', 'EC-APPLY.json'):
+        assert (tmp_path / 'a' / name).read_bytes() == (tmp_path / 'b' / name).read_bytes()
+    with rasterio.open(tmp_path / 'a/corrected.tif') as ds:
+        assert ds.read(1)[H1] == (-20.0 if fill else -100.0)
+        assert ds.read_masks(1)[H1] == (255 if fill else 0)
+        assert np.all(ds.read_masks(1)[np.indices(z.shape).sum(0) == 0] == 255)
+    codes, _, _ = _read(tmp_path / 'a/provenance.tif')
+    assert codes[H1] == ec.CODES['filled-hole' if fill else 'nodata']
+    receipt = json.loads((tmp_path / 'a/EC-APPLY.json').read_text())
+    assert receipt['counts']['measured'] == z.size - 1
+    assert receipt['deepened_cells'] == 0
 
 
 def test_sentinels_become_nodata_and_join_a_hole_only_when_the_receipt_says_so(tmp_path):

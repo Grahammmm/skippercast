@@ -122,6 +122,7 @@ def apply(path, detect_path, out_dir):
     with rasterio.open(path) as ds:
         if ds.driver != 'GTiff': raise Refused(f'driver {ds.driver} (GeoTIFF only)')
         z, nodata = ds.read(1), ds.nodata
+        source_valid = ds.read_masks(1) != 0
         floating = np.issubdtype(z.dtype, np.floating)
         meta = dict(driver='GTiff', width=ds.width, height=ds.height, count=1, dtype=z.dtype.name, crs=ds.crs,
                     transform=ds.transform, nodata=nodata, compress='deflate', **({'predictor': 3} if floating else {}))
@@ -129,8 +130,8 @@ def apply(path, detect_path, out_dir):
     finite = np.isfinite(z) if floating else np.ones(z.shape, dtype=bool)
     declared = finite & (z == nodata) if nodata is not None and not np.isnan(nodata) else np.zeros(z.shape, dtype=bool)
     lo, hi = ec.PLAUSIBLE_M
-    sentinel = finite & ~declared & (np.isin(z, ec.SENTINELS) | (z < lo) | (z > hi))
-    valid = finite & ~declared & ~sentinel
+    sentinel = source_valid & finite & ~declared & (np.isin(z, ec.SENTINELS) | (z < lo) | (z > hi))
+    valid = source_valid & finite & ~declared & ~sentinel
     water = valid & (z < 0)
     masked = z.copy()
     if sentinel.any():
@@ -172,14 +173,17 @@ def apply(path, detect_path, out_dir):
 
     # No-deepening gate (not configurable): treated cells may only get shallower; nothing else may change.
     index = np.flatnonzero(treated)
-    deepened = len(ec.no_deepening(masked.ravel()[index].tolist(), after.ravel()[index].tolist(), range(len(index))))
+    # Invalid raw values are not depth evidence; retain the raw array for the unchanged-cell gate.
+    prior = np.where(valid, masked, np.nan)
+    deepened = len(ec.no_deepening(prior.ravel()[index].tolist(), after.ravel()[index].tolist(), range(len(index))))
     changed = ~_same(after, masked)
     deepened += int((changed != treated).sum())
     if deepened: raise Refused(f'deepened {deepened} cells', code=3)
 
     out.mkdir(parents=True, exist_ok=True)
-    with rasterio.open(out / 'corrected.tif', 'w', **meta) as dst:
+    with rasterio.Env(GDAL_TIFF_INTERNAL_MASK=True), rasterio.open(out / 'corrected.tif', 'w', **meta) as dst:
         dst.write(after, 1)
+        dst.write_mask((valid | treated).astype(np.uint8) * 255)
     pmeta = {**{k: v for k, v in meta.items() if k != 'predictor'}, 'dtype': 'uint8', 'nodata': 255}
     with rasterio.open(out / 'provenance.tif', 'w', **pmeta) as dst:
         dst.write(codes, 1)
