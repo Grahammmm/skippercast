@@ -7,7 +7,7 @@
 // word for the reference boat (answers/comfort.ts), and the NWS small craft /
 // gale / hazardous seas alerts the daily feed recorded for the region's zones.
 // Never a catch number, never a clearance.
-import {addDays, daysBetween, localParts, PACIFIC} from './time.ts';
+import {addDays, daysBetween, localParts, PACIFIC, realDate} from './time.ts';
 import {fold} from './resolve.ts';
 import {verdictFor, COMFORT_WORD, BOAT_PHRASE} from './comfort.ts';
 import {rateComfort, type FeedHour} from '../../../web/score.ts';
@@ -42,7 +42,7 @@ export function parseTripDate(text: string | null | undefined, now: number, tz =
     return {dates, parsed, days_ahead: daysBetween(today.date, dates[0]!), beyond_horizon: ahead > HORIZON_DAYS, ...(daysBetween(today.date, dates[0]!) < 0 ? {past: true} : {})};
   };
   const iso = /\b(\d{4}-\d{2}-\d{2})\b/.exec(raw);
-  if (iso && Number.isFinite(Date.parse(`${iso[1]}T12:00:00Z`))) return out([iso[1]!]);
+  if (iso && realDate(iso[1])) return out([iso[1]!]);
   if (/ (?:day after tomorrow|pasado manana) /.test(t)) return out([addDays(today.date, 2)]);
   if (/ (?:tomorrow|tmrw|tmr|manana) /.test(t)) return out([addDays(today.date, 1)]);
   if (/ (?:today|tonight|this morning|hoy) /.test(t)) return out([today.date]);
