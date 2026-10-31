@@ -16,6 +16,7 @@
 // Ranking keeps water only (fail-closed) and counts the rest in its basis. This is a
 // planning screen, not a navigation boundary. Erasable syntax only: Node tests import it.
 import {signal} from '@preact/signals';
+import {chartFileListed} from './chart-files.ts';
 
 export type UnknownReason = 'outside-bounds' | 'unserved-tile' | 'edge' | 'unavailable' | 'pending';
 export type Placement = {readonly state: 'water' | 'land'} | {readonly state: 'unknown'; readonly reason: UnknownReason};
@@ -238,6 +239,8 @@ export function loadLandWater(region: string, fetchFn: Fetch = (...a) => fetch(.
   if (indexJob?.region === region) return indexJob.promise;
   linesJob = null;
   indexTransientFailure = false;
+  // A region whose region.json lists Chart files without this one has no index: settle as a 404 does, unasked.
+  if (!chartFileListed(region, 'land-water.json')) { indexJob = null; landWater.value = {...IDLE, region, state: 'unavailable', model: null}; return Promise.resolve(landWater.peek()); }
   landWater.value = {...IDLE, region, state: 'loading'};
   return startJob(region, null, async current => {
     let model: LandWaterModel | null = null;

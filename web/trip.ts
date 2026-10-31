@@ -14,6 +14,7 @@ import type {Source} from 'pmtiles';
 import {loadManifest} from '../dist/seafloor-data.js';
 import {BASEMAP_MANIFEST, basemapArchive} from './map/chart.ts';
 import {shorelineOverviewURL, shorelineURL} from './map/coastline.ts';
+import {chartFileListed} from './chart-files.ts';
 import {atlasMarksURL, planIndexURL} from './startup-forms.ts';
 import {MARKS_SOURCE} from './map/layers.ts';
 import {markSources} from './map/marks.ts';
@@ -180,16 +181,23 @@ export function rangeRecorder(url: string, put: Extras['put'], signal: AbortSign
   };
 }
 
-/** savePack's `more`: this app's page and files (precache.json `v2`), the basemap manifest, both shoreline forms, the startup copies (#617) and tiles. */
+/** The pack's stored files in order: the shell, the basemap manifest, the shoreline forms the region publishes, the startup copies (#617) and `hashed`. */
+export function packFiles(id: string, page: string, hashed: readonly string[]): [string, string, RequestInit][] {
+  const origin = new URL(page).origin, listed = (name: string, url: string): string[] => chartFileListed(id, name) ? [url] : [];
+  return [[origin + V2_SHELL, origin + V2_SHELL, {}],
+    ...[BASEMAP_MANIFEST, ...listed('shoreline.geojson', shorelineURL(id)), ...listed('shoreline-overview.geojson', shorelineOverviewURL(id)), atlasMarksURL(id), planIndexURL(id)]
+      .map((p): [string, string, RequestInit] => [new URL(p, page).href, new URL(p, page).href, {}]),
+    ...hashed.map((p): [string, string, RequestInit] => [origin + p, origin + p, {cache: 'default'}])];
+}
+
+/** savePack's `more`: this app's page and files (precache.json `v2`), the basemap manifest, the published shoreline forms, the startup copies (#617) and tiles. */
 async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds: number[]) {
-  const page = location.href, origin = location.origin, misses: string[] = [];
+  const page = location.href, misses: string[] = [];
   const tideURLs = await tideSelection.packURLs(id);
   await saveTidePack(tideURLs, put, signal);
   const list = await fetch('/precache.json', {cache: 'no-cache', signal}).then(r => r.ok ? r.json() : null, () => null) as {build?: string; v2?: {assets?: unknown[]; static?: unknown[]}} | null;
   const hashed = [...list?.v2?.assets ?? [], ...list?.v2?.static ?? []].filter((p): p is string => typeof p === 'string' && /^\/(?!\/)/.test(p));
-  const files: [string, string, RequestInit][] = [[origin + V2_SHELL, origin + V2_SHELL, {}],
-    ...[BASEMAP_MANIFEST, shorelineURL(id), shorelineOverviewURL(id), atlasMarksURL(id), planIndexURL(id)].map((p): [string, string, RequestInit] => [new URL(p, page).href, new URL(p, page).href, {}]),
-    ...hashed.map((p): [string, string, RequestInit] => [origin + p, origin + p, {cache: 'default'}])];
+  const files = packFiles(id, page, hashed);
   let done = 0;
   for (const [url, key, init] of files) { await store(url, key, init, misses); progress('shell', ++done, files.length); }
   const [archive, {basemapRangeKey, planBasemap}] = await Promise.all([basemapArchive((...a) => fetch(...a), page), import('../dist/offline-core.js')]);
