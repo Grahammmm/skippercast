@@ -10,6 +10,14 @@ Machine-valid ≠ accepted. You give an agent first review; the human gates stay
 ## For each check in review.json
 - Confirm it (PASS) or RETURN it, with one line of reason. Never PASS a check review.json marks FAIL. `supported-water`
   only states a fraction; do not judge coverage from it.
+- A verified class is two surveys agreeing within the published tolerance, not an accuracy or navigation claim; an unresolved area is missing or disputed data, not flat water.
+| EC check (PASS `no ec/ folder` when EC was not run) | confirm that |
+|---|---|
+| ec-receipts-intact | every `ec/<id>/DONE`, receipt, `EC.json` output and `ec_sha256` agrees with `BUILD.json` |
+| ec-no-deepening | no cell was deepened and no fill is deeper than its deepest ring value |
+| ec-independence | every verifying pair is two independent, comparable surveys |
+| ec-unresolved-stated | unresolved blocks are drawn as `unresolved-area` with a known reason |
+| ec-thresholds-version | every receipt and corrected source carries the current `ec_version` |
 
 ## Visual row
 - Open each screenshot you actually inspect and cite its file name and sha256 (`sha256sum <file>`).
