@@ -105,10 +105,15 @@ export async function precacheManifest(dir, buildId) {
 }
 
 export async function writePrecache(dir, buildId) {
+  // Check the worker before writing anything, so a refusal leaves the folder as it was.
+  const sw = await readFile(join(dir, 'sw.js'), 'utf8');
+  if (!sw.includes(BUILD_PLACEHOLDER)) {
+    const stamped = sw.match(/^const BUILD = '([^'\n]*)';/m);
+    if (stamped) throw new Error(`sw.js is already stamped with build ${stamped[1]}; rebuild into a clean folder`);
+    throw new Error(`sw.js must declare ${BUILD_PLACEHOLDER}`);
+  }
   const manifest = await precacheManifest(dir, buildId);
   await writeFile(join(dir, 'precache.json'), JSON.stringify(manifest) + '\n');
-  const sw = await readFile(join(dir, 'sw.js'), 'utf8');
-  if (!sw.includes(BUILD_PLACEHOLDER)) throw new Error(`sw.js must declare ${BUILD_PLACEHOLDER}`);
   await writeFile(join(dir, 'sw.js'), sw.replace(BUILD_PLACEHOLDER, `const BUILD = '${buildId}';`));
   return manifest;
 }
