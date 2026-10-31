@@ -14,6 +14,7 @@ from skippercast.platform.depth_contours import CELL_M  # noqa: E402
 
 GRID_ADAPTERS = ('geotiff', 'bag')
 INTAKE = REPO / 'skills/skippercast-region-intake/scripts/region_intake.py'
+CORRECT = REPO / 'skills/skippercast-region-correct/scripts/region_correct.py'
 PREFLIGHT, BUILDER = REPO / 'scripts/preflight_native_grid.py', REPO / 'scripts/build_depth_contours.py'
 M_PER_DEG_LAT, M_PER_DEG_LON_EQ = 110_540, 111_320
 
@@ -70,14 +71,58 @@ def select(rows, sources):
     return [r for r in chosen if r['use'] == 'publish'], [r for r in chosen if r['use'] == 'held'], not_built
 
 
+def inside(folder, rel):
+    """<run>/<rel> resolved; an empty, absolute or escaping path is refused (EC files live in the run folder)."""
+    path = Path(os.path.realpath(folder / rel))
+    if not rel or Path(rel).is_absolute() or folder not in path.parents:
+        raise BuildError(f'EC path must stay inside the run folder: {rel!r}')
+    return str(path)
+
+
+def grid_paths(folder, row, ec):
+    """Set row['grid'] (preflight and --grid) and row['provenance'] (--provenance, or ''). Without EC: local_path, ''.
+
+    With INTAKE-EC.csv, a publish/held row uses <run>/<ec_path> unless its ec_status is not_corrected, plus
+    <run>/<provenance_path> when non-empty. A REFUSED row must be skip, so it never reaches a command."""
+    row['grid'], row['provenance'], row['ec_used'] = row['local_path'], '', False
+    if not ec:
+        return
+    if row['ec_status'] == 'REFUSED' and row['use'] != 'skip':
+        raise BuildError(f"INTAKE-EC.csv: REFUSED row {row['source_id']} has use {row['use']}, not skip")
+    if row['use'] in ('publish', 'held'):
+        if row['ec_status'] != 'not_corrected':
+            row['grid'], row['ec_used'] = inside(folder, row['ec_path']), True
+        if row['provenance_path']:
+            row['provenance'] = inside(folder, row['provenance_path'])
+
+
 def builder_cmd(python, region_id, flag, out, rows):
     cmd = [python, str(BUILDER), '--region', region_id, flag, str(out)]
     for row in rows:
-        cmd += ['--grid', f"{row['source_id']}={row['local_path']}"]
+        cmd += ['--grid', f"{row['source_id']}={row['grid']}"]
     for row in rows:
         if row['adapter'] == 'bag':
             cmd += ['--bag-survey', f"{row['source_id']}={survey_id(row['local_path'])}"]
+    for row in rows:
+        if row['provenance']:
+            cmd += ['--provenance', f"{row['source_id']}={row['provenance']}"]
     return cmd
+
+
+def ec_record(folder, run, python):
+    """Run region_correct.py --check (non-zero stops the build) and copy the BUILD.json `ec` block from EC.json."""
+    if not (folder / 'EC.json').is_file():
+        raise BuildError('INTAKE-EC.csv without EC.json')
+    call(run, [python, str(CORRECT), '--check', str(folder)])
+    doc = json.loads((folder / 'EC.json').read_text())
+    return {'ec_sha256': doc['ec_sha256'], 'ec_version': doc['ec_version'],
+            'corrected': [s['source_id'] for s in doc['sources'] if s['status'] != 'REFUSED'],
+            'not_corrected': [{'source_id': n['source_id'], 'reason': n['reason']} for n in doc['not_corrected']]}
+
+
+def file_sha256(path):
+    with open(path, 'rb') as handle:
+        return hashlib.file_digest(handle, 'sha256').hexdigest()
 
 
 def measure(collection, bounds):
@@ -109,15 +154,18 @@ def build(args, run=default_run, loader=default_loader):
     if not (args.author_runtime or '').strip() or not re.fullmatch(r'[a-z][a-z0-9-]*', args.author_family or ''):
         raise BuildError('--author-runtime must be non-empty and --author-family must match ^[a-z][a-z0-9-]*$')
     call(run, [args.python, str(INTAKE), '--check', str(folder)])
-    with open(folder / 'INTAKE.csv', newline='') as handle:
+    ec = ec_record(folder, run, args.python) if (folder / 'INTAKE-EC.csv').exists() else None
+    with open(folder / ('INTAKE-EC.csv' if ec else 'INTAKE.csv'), newline='') as handle:
         rows = list(csv.DictReader(handle))
+    for row in rows:
+        grid_paths(folder, row, ec)
     region, sources = loader(args.region_id)
     approved, held, not_built = select(rows, sources)
     preflight = []
     for row in approved + held:
         if row['adapter'] == 'geotiff':
             datum = row['vertical_datum'] or 'undeclared'
-            out = call(run, [args.python, str(PREFLIGHT), row['local_path'], '--vertical-datum', datum,
+            out = call(run, [args.python, str(PREFLIGHT), row['grid'], '--vertical-datum', datum,
                              '--vertical-unit', 'metre', '--vertical-sign', 'elevation-up'])
             line = json.loads(out.strip().splitlines()[-1])
             preflight.append({k: v for k, v in line.items() if k not in ('path', 'local_path')})
@@ -139,11 +187,12 @@ def build(args, run=default_run, loader=default_loader):
     record = {'schema': 'region-build-v1', 'region_id': region['id'],
               'build_sha256': hashlib.sha256(pairs.encode()).hexdigest(),
               'run': {'author_runtime': args.author_runtime, 'author_family': args.author_family, 'intake_rows': len(rows)},
-              'inputs': [{'source_id': r['source_id'], 'sha256': r['sha256']} for r in approved + held],
+              'inputs': [{'source_id': r['source_id'], 'sha256': r['sha256'],
+                          **({'ec_sha256': file_sha256(r['grid'])} if r['ec_used'] else {})} for r in approved + held],
               'outputs': outputs, 'not_built': not_built, 'preflight': preflight,
               'supported_water_fraction': round(min(sum(o['supported_water_fraction'] for o in outputs), 1.0), 6),
               'supported_water_note': 'upper bound when outputs overlap',
-              'held_reason': (reasons[0] if reasons else 'none') if outputs else 'no-buildable-input'}
+              'held_reason': (reasons[0] if reasons else 'none') if outputs else 'no-buildable-input', 'ec': ec}
     atomic_json(folder / 'BUILD.json', record)
     print(f'BUILD written {len(outputs)} outputs, {len(not_built)} not built, to {folder}')
 
