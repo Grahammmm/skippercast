@@ -14,6 +14,7 @@ import {Masthead} from './Masthead.tsx';
 import {Mobile} from './Mobile.tsx';
 import {Trip} from './Trip.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
+import {chartFilesOf, publishedChartFiles} from '../chart-files.ts';
 import {sourceFreshness, startupAdmission, startupDeadline} from '../landing/region-warm.ts';
 import type {BriefTile} from '../brief/types.ts';
 import {tideRegion, type TideRegion} from '../tide-stations.ts';
@@ -37,6 +38,8 @@ export interface RegionInfo {
   readonly tide?: TideRegion;
   /** The targets the region names as outside its researched list (region.json `map.unavailable_targets`, CI6-02): id → reason. */
   readonly unavailableTargets?: Readonly<Record<string, string>>;
+  /** The Chart side files the region publishes (region.json `chart_files`, RF0835-2); absent where it names none. */
+  readonly chartFiles?: readonly string[];
 }
 export const regionInfo = signal<RegionInfo | null>(null);
 /** The zone the dock and the command bar format times in (every active region is Pacific until the region loads). */
@@ -61,7 +64,7 @@ effect(() => {
   regionRequest?.abort();
   regionRequest = null;
   batch(() => {
-    if (regionInfo.peek()?.id !== id) regionInfo.value = null;
+    if (regionInfo.peek()?.id !== id) { regionInfo.value = null; publishedChartFiles.value = null; }
     tideSelection.configure(null);
     regionLoad.value = null;
   });
@@ -86,13 +89,13 @@ export function createRegionReader(fetchFn: typeof fetch, {limit = 4, timeoutMs 
   return (id: string, retry = false): Promise<RegionInfo | null> => admission.read(`${retry ? 'retry' : 'cached'}:${id}`, async signal => {
     const response = await fetchFn(`regions/${encodeURIComponent(id)}/region.json`, {signal, ...(retry ? {cache: 'reload' as const} : {})});
     if (!response.ok) { void response.body?.cancel().catch(() => {}); return null; }
-    const json = await response.json() as {name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}};
+    const json = await response.json() as {name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}; chart_files?: unknown};
     const center = json.map?.center;
     if (typeof json.name !== 'string' || !center || center.length !== 2 || !center.every(Number.isFinite)) return null;
     const areas = Array.isArray(json.map?.local_areas) ? json.map.local_areas as ReportLocalArea[] : [];
-    const aerial = aerialBase(json), tide = tideRegion(id, json), unavailable = unavailableTargets(json);
+    const aerial = aerialBase(json), tide = tideRegion(id, json), unavailable = unavailableTargets(json), chartFiles = chartFilesOf(json.chart_files);
     return {id, name: json.name, center: [center[0], center[1]], timezone: json.timezone ?? DEFAULT_ZONE,
-      ...tide ? {tide} : {},
+      ...tide ? {tide} : {}, ...chartFiles ? {chartFiles} : {},
       localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), ...aerial ? {aerial} : {},
       ...typeof json.assets?.charters === 'string' ? {charters: json.assets.charters} : {},
       ...Object.keys(unavailable).length ? {unavailableTargets: unavailable} : {}};
@@ -150,6 +153,7 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch
     if (retry && fetchFn === sharedFetch) recoveredRegionInfo.set(id, info);
     batch(() => {
       regionInfo.value = info;
+      publishedChartFiles.value = {region: id, files: info.chartFiles ?? null};
       tideSelection.configure(info.tide ?? null);
       regionLoad.value = {id, state: 'ready'};
       regionUnavailable.value = {region: id, targets: info.unavailableTargets ?? {}};

@@ -12,6 +12,7 @@
 // file by type stripping.
 import {signal} from '@preact/signals';
 import {ZOOM_OFFSET} from './engine.ts';
+import {chartFileListed} from '../chart-files.ts';
 
 /** The region's poster, relative to the app page. */
 export const posterURL = (region: string): string => `regions/${encodeURIComponent(region)}/poster.svg`;
@@ -57,6 +58,7 @@ export function posterPlacement(p: Poster, camera: {latitude: number; longitude:
 
 /** Load `region`'s poster unless the Chart has drawn already (`done`); a missing or malformed file shows nothing. */
 export async function loadPoster(region: string, page: string, done: () => boolean, fetchFn: typeof fetch = (...a) => fetch(...a)): Promise<void> {
+  if (!chartFileListed(region, 'poster.svg')) return;
   try {
     const response = await fetchFn(new URL(posterURL(region), page).href);
     const parsed = response.ok ? parsePoster(await response.text(), region) : null;
