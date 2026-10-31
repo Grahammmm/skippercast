@@ -644,6 +644,24 @@ def test_a3_array_order_and_missing_versus_null_are_preserved():
         row('/outputs/0/parameters/a~1b~0c', None, 1, before_present=False)]
 
 
+def ref_named_accesses(seen, names, work):
+    """Ref-named accesses: cwd-relative paths as given; absolute ones (incl. the tool's
+    '/'-rooted dir_fd walks, traced one component at a time) only when inside work."""
+    touched, walk = set(), None
+    for p in seen:
+        if os.path.isabs(p):
+            path = os.path.normpath(p)
+            walk = path if path == '/' else walk  # other absolute reads may interleave a walk
+        elif walk is not None and '/' not in p and os.path.isdir(walk):
+            path = walk = os.path.join(walk, p)  # next component of a dir_fd walk
+        else:
+            path = None
+        rel = p if path is None else os.path.relpath(path, work)
+        if rel != '..' and not rel.startswith('../') and any(rel == n or rel.startswith(n + '/') for n in names):
+            touched.add(path or p)
+    return touched
+
+
 def test_a3_referenced_files_are_never_statted_or_opened():
     work = workdir('refs')
     left_value, right_value = fixture('open-receipt.json'), fixture('closed-receipt.json')
@@ -669,7 +687,7 @@ def test_a3_referenced_files_are_never_statted_or_opened():
         with access_trace() as seen:
             code, _, _ = run_cli(['--left', a, '--right', b, '--out', work / out])
         assert code == expected, (out, code)
-        touched = {p for p in seen for n in names if p == n or p.endswith('/' + n)}
+        touched = ref_named_accesses(seen, names, work)
         assert not touched, f'Ref-named paths were accessed: {sorted(touched)}'
     after = snapshot(work)
     created = set(after) - set(before)
