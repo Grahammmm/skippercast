@@ -61,6 +61,7 @@ test('atlas picks: the top four admitted marks inside the limit, best fit first,
   for (const p of picks) {
     assert.match(p.fit, /^Fits lingcod habitat [1-3] of 3$/);
     assert.match(p.distance, /^\d+\.\d nm$/);
+    assert.equal(p.name, ATLAS.targets.find(t => t.id === p.id).label, 'atlas picks keep their own label');
     assert.equal(p.kind, 'spot');
   }
   assert.equal(harborOrigin(DATA).name, 'Morro Bay');
@@ -111,6 +112,8 @@ test('terrain picks: packages/coast order, this region, inside the limit, one so
   assert.equal(r.label, 'Reviewed terrain habitat');
   assert.deepEqual(r.picks.map(p => p.id), ['m-a', 'm-b', 'm-c', 'm-d'], 'fit, then terrain score; deep, weak, expired and other-region habitat left out');
   assert.ok(r.picks.every(p => p.kind === 'habitat'));
+  assert.ok(r.picks.every(p => p.name === 'Reef habitat'));
+  assert.ok(r.picks.every(p => !p.name.includes(p.id)), 'the internal id never appears in the visible name');
   assert.equal(r.picks[0].fit, 'Fits lingcod habitat 3 of 3');
   assert.equal(r.picks[0].depth, '~40–80 ft');
   assert.equal(r.picks[0].reason, 'Terrain score 80/100 · grade B.');
@@ -305,8 +308,8 @@ test('clicking selects the mark or the habitat (one at a time) and opens the car
   url = new URL(location.href);
   assert.equal(url.searchParams.get('habitat'), 'm-b');
   assert.ok(!url.searchParams.has('spot'));
-  const picks = [{id: 'm-a', kind: 'habitat', name: 'Reef habitat m-a', distance: '4.0 nm', depth: '~40–80 ft', fit: 'Fits lingcod habitat 3 of 3', reason: 'Terrain score 80/100.'},
-    {id: 'm-b', kind: 'habitat', name: 'Reef habitat m-b', distance: '4.1 nm', depth: '~40–80 ft', fit: 'Fits lingcod habitat 2 of 3', reason: 'Terrain score 90/100.'}];
+  const picks = [{id: 'm-a', kind: 'habitat', name: 'Reef habitat', distance: '4.0 nm', depth: '~40–80 ft', fit: 'Fits lingcod habitat 3 of 3', reason: 'Terrain score 80/100.'},
+    {id: 'm-b', kind: 'habitat', name: 'Reef habitat', distance: '4.1 nm', depth: '~40–80 ft', fit: 'Fits lingcod habitat 2 of 3', reason: 'Terrain score 90/100.'}];
   const html = render(h(WhereToLook, {ranking: {source: 'terrain', label: 'Reviewed terrain habitat', basis: 'Basis sentence.', picks, empty: ''}}));
   assert.match(html, /<li data-mark="m-a"><button type="button" class="app-pick" aria-pressed="false">/);
   assert.match(html, /<li data-mark="m-b"><button type="button" class="app-pick" aria-pressed="true">/);
