@@ -14,10 +14,11 @@ import {signal} from '@preact/signals';
 import {useEffect, useRef} from 'preact/hooks';
 import type * as MapLibre from 'maplibre-gl';
 import type {ReportLocalArea} from '../../packages/coast/src/state/report-binding.ts';
+import {chartFilesOf} from '../chart-files.ts';
 import {coastOcean} from '../coast-data.ts';
 import {DEFAULT_PROFILE} from '../profile.ts';
 import type {CurrentChoice} from '../state.ts';
-import {COASTLINE_GLOW, coastlineLayers, coastlineSource, shorelineOverviewURL} from '../map/coastline.ts';
+import {COASTLINE_GLOW, coastlineLayers, coastlineSource, shorelineOverviewURL, shorelineURL} from '../map/coastline.ts';
 import {createCurrents, currentsState, regionPlace, type Currents} from '../map/currents.ts';
 import {createEngine, type Engine, type EngineCamera, type MapLibraryModule} from '../map/engine.ts';
 import {chosenCurrent} from '../map/frames.ts';
@@ -46,6 +47,8 @@ export interface NightRegion {
   readonly bounds: readonly [number, number, number, number];
   readonly harbor: {readonly latitude: number; readonly longitude: number};
   readonly localAreas: readonly ReportLocalArea[];
+  /** region.json `chart_files`, or null when absent or malformed (draw as before). */
+  readonly chartFiles: readonly string[] | null;
 }
 
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
@@ -55,7 +58,7 @@ export async function nightRegion(id: string, fetchFn: typeof fetch, page: strin
   try {
     const response = await fetchFn(new URL(`regions/${encodeURIComponent(id)}/region.json`, page).href, {signal: AbortSignal.timeout(15000)});
     if (!response.ok) return null;
-    const r = await response.json() as {timezone?: unknown; bounds?: unknown; harbor?: {latitude?: unknown; longitude?: unknown}; map?: {center?: unknown; local_areas?: unknown}};
+    const r = await response.json() as {chart_files?: unknown; timezone?: unknown; bounds?: unknown; harbor?: {latitude?: unknown; longitude?: unknown}; map?: {center?: unknown; local_areas?: unknown}};
     const c = Array.isArray(r.map?.center) ? r.map.center : [], b = Array.isArray(r.bounds) ? r.bounds : [];
     const [lat, lon] = c, [west, south, east, north] = b;
     if (c.length !== 2 || !finite(lat) || !finite(lon) || b.length !== 4 || !finite(west) || !finite(south) || !finite(east) || !finite(north)) return null;
@@ -63,7 +66,7 @@ export async function nightRegion(id: string, fetchFn: typeof fetch, page: strin
     return {
       id, center: [lat, lon], timezone: typeof r.timezone === 'string' ? r.timezone : 'America/Los_Angeles', bounds: [west, south, east, north],
       harbor: finite(h?.latitude) && finite(h?.longitude) ? {latitude: h.latitude, longitude: h.longitude} : {latitude: lat, longitude: lon},
-      localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)),
+      localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), chartFiles: chartFilesOf(r.chart_files),
     };
   } catch { return null; }
 }
@@ -88,10 +91,12 @@ export function nightCoastline(p: Palette) {
     : {...layer, paint: {...layer.paint, 'line-color': p.flow, 'line-opacity': 0.9}});
 }
 
-/** FE-72's night variant with the coastline drawn last. */
-export function nightStyle(p: Palette, archive: string, page: string, region: string): MapLibre.StyleSpecification {
+/** FE-72's night variant with the coastline drawn last; with a known `chartFiles` list, the listed shoreline form or none (Cambria: no 404). */
+export function nightStyle(p: Palette, archive: string, page: string, region: string, chartFiles: readonly string[] | null = null): MapLibre.StyleSpecification {
   const style = basemapStyle(p, {archive, assets: new URL('basemap/', page).href, variant: 'night'});
-  return {...style, sources: {...style.sources, [COASTLINE_SOURCE]: coastlineSource(region, page, shorelineOverviewURL(region))}, layers: [...style.layers, ...nightCoastline(p)]} as unknown as MapLibre.StyleSpecification;
+  const path = !chartFiles || chartFiles.includes('shoreline-overview.geojson') ? shorelineOverviewURL(region) : chartFiles.includes('shoreline.geojson') ? shorelineURL(region) : null;
+  if (path === null) return style as unknown as MapLibre.StyleSpecification;
+  return {...style, sources: {...style.sources, [COASTLINE_SOURCE]: coastlineSource(region, page, path)}, layers: [...style.layers, ...nightCoastline(p)]} as unknown as MapLibre.StyleSpecification;
 }
 
 export type NightState = 'loading' | 'ready' | 'failed';
@@ -132,7 +137,7 @@ export function NightMap({page, region, onState, load = loadLibrary, fetchFn = (
         const palette = readPalette();
         let drawn = false;
         engine = createEngine(library, {
-          host: el, still: true, style: nightStyle(palette, archive, page, region),
+          host: el, still: true, style: nightStyle(palette, archive, page, region, info.chartFiles),
           camera: nightCamera(info, el.clientWidth || innerWidth, el.clientHeight || innerHeight),
           onMove() { /* a still map never moves */ },
           onLayerError: (layer, error) => { if (layer === 'basemap' || layer === 'coastline') fail(error); },
