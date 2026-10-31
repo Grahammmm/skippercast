@@ -1,9 +1,13 @@
-"""Read-only recipe rights coverage. Completeness is not permission to publish."""
+"""Read-only recipe rights coverage. Completeness is not permission to publish.
+
+Output folder is private (mode 0700 from mkdtemp); it holds both files or does not exist."""
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import sys
+import tempfile
 from urllib.parse import urlsplit
 
 # Direct script execution must use this checkout, never an ambient editable install.
@@ -148,10 +152,21 @@ def main(argv=None):
         if output.exists():
             raise ValueError('Output root must be new; existing output is never overwritten')
         report = check_coverage(args.repo_root, args.recipe)
-        output.mkdir(parents=True, exist_ok=False)
         text = render_table(report)
-        (output / 'coverage.json').write_text(json.dumps(report, indent=2, sort_keys=True) + '\n', encoding='utf-8')
-        (output / 'coverage.txt').write_text(text, encoding='utf-8')
+        body = json.dumps(report, indent=2, sort_keys=True) + '\n'
+        # Nothing touches the disk before here; both files land in a temp sibling renamed into place.
+        output.parent.mkdir(parents=True, exist_ok=True)
+        _safe_path(output.parent)
+        tmp = Path(tempfile.mkdtemp(prefix='.' + output.name + '.', dir=output.parent))
+        try:
+            (tmp / 'coverage.json').write_text(body, encoding='utf-8')
+            (tmp / 'coverage.txt').write_text(text, encoding='utf-8')
+            os.rename(tmp, output)
+        except BaseException:
+            for name in ('coverage.json', 'coverage.txt'):
+                (tmp / name).unlink(missing_ok=True)
+            tmp.rmdir()
+            raise
         print(text, end='')
         return 0
     except (OSError, ValueError, TypeError) as error:
