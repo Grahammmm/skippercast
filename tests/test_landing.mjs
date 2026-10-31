@@ -259,6 +259,25 @@ test('the region warm-up reads region.json, fetches only that region\'s startup 
   assert.equal(called, false, 'Save-Data fetches nothing');
 });
 
+test('the region warm-up skips startup copies a region\'s chart_files lacks, and fails open when the list is missing or malformed (RF0835-2)', async () => {
+  const info = {assets: {protected_areas: 'data/protected-areas.geojson'}};
+  const tail = ['data/protected-areas.geojson', 'regions/r/coverage.json', '/api/forecast?region=r'];
+  const head = ['regions/r/region.json', 'regions/r/atlas-marks.json', 'regions/r/search-plan-index.json'];
+  assert.deepEqual(regionWarmList('r', {...info, chart_files: []}), [...head, ...tail]);
+  assert.deepEqual(regionWarmList('r', {...info, chart_files: ['poster.svg']}), [...head, 'regions/r/poster.svg', ...tail]);
+  assert.deepEqual(regionWarmList('r', {...info, chart_files: ['shoreline-overview.geojson']}), [...head, 'regions/r/shoreline-overview.geojson', ...tail]);
+  const full = regionWarmList('r', {});
+  assert.deepEqual(full, [...head, 'regions/r/shoreline-overview.geojson', 'regions/r/poster.svg', '/api/forecast?region=r']);
+  for (const bad of [undefined, null, 'poster.svg', ['poster.svg', 1], {0: 'poster.svg'}]) assert.deepEqual(regionWarmList('r', {chart_files: bad}), full, String(bad));
+  // Cambria publishes no Chart files: the warm-up asks for neither copy.
+  const cambria = JSON.parse(readFileSync(join(ROOT, 'dist/regions/cambria-san-simeon/region.json'), 'utf8'));
+  assert.deepEqual(cambria.chart_files, []);
+  const asked = [];
+  const fetchFn = async url => { asked.push(url); return {ok: true, json: async () => cambria, blob: async () => new Blob([])}; };
+  assert.equal((await warmRegion('cambria-san-simeon', 'https://s.test/', fetchFn, {})).state, 'ready');
+  assert.ok(asked.length > 3 && !asked.some(u => /shoreline-overview\.geojson|poster\.svg/.test(u)), asked.join(' '));
+});
+
 test('every readout tile shows a source and an age, a stale one says stale, and the fleet line shows only when given', async () => {
   const {Readout, render, h} = await load();
   const readout = {readings: [...buoyReadings(FEED, {}, NOW), tideReading(TIDE, '9412110', 'Port San Luis', NOW)], feed: feedState(FEED, NOW)};

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://skippercast.com/schemas/region.schema.json",
   "title": "SkipperCast region configuration",
-  "description": "regions/<id>/region.json and its compiled copy dist/regions/<id>/region.json. Required keys are the ones the pipeline, platform build or web client index directly. Cross-references (catalog sources, needs, jurisdictions, legal notices, ecology dossiers, asset files) and bounding-box ordering stay in platform.contracts.validate_region, which remains authoritative. Additional top-level keys are allowed because regions carry optional, reviewed extensions (habitat_policy, target_labels, closure_check, preview_label, ...) and the compiled copy adds target_options and regulatory_authority_hosts.",
+  "description": "regions/<id>/region.json and its compiled copy dist/regions/<id>/region.json. Required keys are the ones the pipeline, platform build or web client index directly. Cross-references (catalog sources, needs, jurisdictions, legal notices, ecology dossiers, asset files) and bounding-box ordering stay in platform.contracts.validate_region, which remains authoritative. Additional top-level keys are allowed because regions carry optional, reviewed extensions (habitat_policy, target_labels, closure_check, preview_label, ...) and the compiled copy adds target_options, regulatory_authority_hosts and chart_files.",
   "type": "object",
   "required": [
     "schema_version", "id", "name", "status", "timezone", "bounds", "fishing_bounds",
@@ -12,6 +12,11 @@
   ],
   "properties": {
     "schema_version": {"const": 1},
+    "chart_files": {
+      "description": "Compiled copy only (the build refuses it in a source file): the Chart side files the build wrote beside the package, sorted.",
+      "type": "array", "uniqueItems": true,
+      "items": {"enum": ["depth-contours-overview.geojson", "depth-contours.geojson", "land-water-lines.json", "land-water.json", "poster.svg", "shoreline-overview.geojson", "shoreline.geojson"]}
+    },
     "id": {"$ref": "common.schema.json#/$defs/id"},
     "name": {"type": "string", "minLength": 1},
     "status": {"enum": ["active", "preview", "draft"]},

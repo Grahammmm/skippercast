@@ -86,7 +86,7 @@
     },
     {
       "path": "schemas/region.schema.json",
-      "sha256": "75e594d74ab8a3338420fda34d2b509407137bed34599a2202f48422bf7390fc"
+      "sha256": "29a9cf43d28ca4b9ee2e4402dd3f4d47e0d1e4eab78c902b15f4032502018c7d"
     },
     {
       "path": "schemas/regions-index.schema.json",
