@@ -10,7 +10,7 @@ skips the rest), (c) sentinels, (d) holes, (e) pits and spikes, (f) duplicate si
 
 Receipt conventions: `path_sha256` is the sha256 of the file's bytes (no directories are recorded, only `file_name`);
 `bbox` is [col0, row0, col1, row1] in native pixels, end-exclusive (v[row0:row1, col0:col1]); metres are rounded to
-6 decimals; a declared NaN nodata is recorded as null; `counts` are the codes EC2 would write if it applied the fills
+6 decimals; a declared NaN/inf nodata is recorded as null; `counts` are the codes EC2 would write if it applied the fills
 (a cell of a listed hole takes that hole's code before `masked-sentinel`); a refused file has empty `counts` and lists.
 Exit 0 prints one JSON line; exit 2 prints `detect refused: <field>: <reason>`. A machine-valid receipt is
 review-required, not acceptance.
@@ -202,7 +202,7 @@ def detect(path, source_id, meta, strip_rows):
         [_r(stats['min']), _r(stats['max']), _r(stats['mean'])] if stats['n_data'] else ['empty'] * 3)
     doc = {'schema': 'ec-detect-v1', 'ec_version': ec.EC_VERSION, 'source_id': source_id, 'file_name': Path(path).name,
            'path_sha256': preflight.sha256_file(path)[0], 'cell_m': _r(cell_m), 'crs': info['crs'], 'width': w,
-           'height': h, 'nodata': None if nodata is None or np.isnan(nodata) else float(nodata), 'sentinel_cells': 0,
+           'height': h, 'nodata': None if nodata is None or not np.isfinite(nodata) else float(nodata), 'sentinel_cells': 0,
            'fixture': {'refused': False, 'reasons': fixture_reasons(path, v, valid)},
            'sign': {'refused': False, 'positive_fraction': None, 'reason': None},
            'holes': [], 'pits': [], 'clusters_deep': [], 'spikes': [], 'counts': {},

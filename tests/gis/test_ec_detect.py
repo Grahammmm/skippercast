@@ -83,6 +83,10 @@ def test_acceptance_grid_lists_holes_pit_spike_and_is_fix(d, capsys):
     assert str(d) not in Path(d / 'a.json').read_text()
     code, _again, _err = _run(capsys, tif, d / 'fresh' / 'b.json', '--strip-rows', '7')
     assert code == 0 and (d / 'a.json').read_bytes() == (d / 'fresh' / 'b.json').read_bytes()
+    for inf in (np.inf, -np.inf):  # declared +/-inf nodata: recorded as null like NaN, same finding, input unchanged
+        tif = _tif(d / 'inf.tif', np.where(_acceptance_grid() == -9999.0, inf, _acceptance_grid()), nodata=inf)
+        before, (code, doc_i, _err) = tif.read_bytes(), _run(capsys, tif, d / f'i{inf}.json')
+        assert (code, doc_i['nodata'], doc_i['counts'], tif.read_bytes()) == (0, None, doc['counts'], before)
 
 
 def test_ring_range_edge_land_and_sentinel_holes(d, capsys):
