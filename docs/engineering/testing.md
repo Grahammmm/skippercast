@@ -30,6 +30,20 @@ The root `conftest.py` turns bytecode writing off (`sys.dont_write_bytecode`, an
 
 The classes still run under `unittest` (the research workflows use `python -m unittest research.tests.gis.test_<name>`).
 
+### Parallel runs
+
+CI runs pytest in 4 parallel workers ([pytest-xdist](https://pytest-xdist.readthedocs.io/), pinned in the `test` extra and `requirements-test.txt`) with `-n 4 --dist load` in the `check` job and in the pull-request GIS step of `survey-tests` (the full suite on `main` and nightly still runs in one process). Run the suite the way CI does with:
+
+```bash
+python -m pytest -m "not gis" -n 4 --dist load
+```
+
+Every test must be parallel-safe, because any two tests can run at the same time in different processes, in any order:
+
+- Write only under `tmp_path` / `tmp_path_factory` (in a `unittest.TestCase`, `tempfile.TemporaryDirectory()`); no fixed ports and no fixed temp paths.
+- No writes into the repository tree, including `dist/`; build into a temporary directory and compare.
+- No reliance on test order or on state another test left. A module-scoped fixture must hand each test its own copy.
+
 ## Layers
 
 Layers are directories. `tests/conftest.py` and `research/tests/conftest.py` add the markers from the directory, so a test never declares them; `--strict-markers` rejects any other marker.
