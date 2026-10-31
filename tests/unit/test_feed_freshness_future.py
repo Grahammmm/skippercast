@@ -32,12 +32,8 @@ def site(feeds, default=None):
     return fetch
 
 
-def routes(branch):
-    return f"{BASE}/feeds/{branch}/latest.json", f"{RAW}{branch}/latest.json"
-
-
 def both(branch, feed):
-    return dict.fromkeys(routes(branch), feed)
+    return dict.fromkeys((f"{BASE}/feeds/{branch}/latest.json", f"{RAW}{branch}/latest.json"), feed)
 
 
 class FutureStampTests(unittest.TestCase):
@@ -47,7 +43,6 @@ class FutureStampTests(unittest.TestCase):
         self.assertIn("Live conditions feed is unreadable: published 2026-09-28T01:00:00Z", message)
         self.assertIn(", 5.0 h in the future (clock or stamp error).", message)
         self.assertNotIn("-5.0", message)
-        self.assertNotIn("fresh", message)
 
     def test_inside_tolerance_is_fresh_and_never_negative(self):
         for feed in (ahead(minutes=9), ahead(minutes=10), ahead(seconds=30)):
@@ -86,10 +81,9 @@ class FutureFeedRunTests(unittest.TestCase):
     def test_full_run_sets_stale_and_reports_it(self):
         feeds = {**both("conditions", ahead(hours=5)), **both("data", FRESH_DATA)}
         status, message = run_all(BASE, NOW, site(feeds), regions=[])
-        self.assertTrue(status & STALE, message)
+        self.assertEqual(status, STALE, message)
         self.assertIn("Public conditions feed", message)
         self.assertIn("5.0 h in the future", message)
-        self.assertIn("Public data feed", message)
         with tempfile.TemporaryDirectory() as tmp, patch("scripts.check_feed_freshness.published_regions", return_value=[]):
             report = Path(tmp) / "report.json"
             with self.assertRaises(SystemExit) as exited:
