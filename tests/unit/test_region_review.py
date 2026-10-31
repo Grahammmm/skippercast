@@ -198,7 +198,7 @@ def test_ec_run_passes_thirteen_and_a_run_without_ec_is_unchanged(tmp_path, regi
     ("ec-unresolved-stated", "#a90: contour provenance 'guessed'", lambda d, c: c["features"][2]["properties"].update(provenance="guessed")),
     ("ec-thresholds-version", "s-c ec-detect-v1 ec_version '0.9'", lambda d, c: d["s-c"]["EC-DETECT.json"].update(ec_version="0.9")),
     ("ec-thresholds-version", "source s-a ec_version '0.9'", lambda d, c: c["provenance"]["sources"][0].update(ec_version="0.9")),
-    ("no-depth-crossings", "#u1 (None ft)", lambda d, c: (c["features"][-1]["properties"].update(kind="contour"), c["provenance"]["sources"][0]["provenance_counts"].update(unresolved=0)))])
+    ("no-depth-crossings", "#u1 (None ft)", lambda d, c: (c["features"][-1]["properties"].update(kind="contour", provenance="measured"), c["provenance"]["sources"][0]["provenance_counts"].update(unresolved=0)))])
 def test_each_planted_ec_fault_fails_only_its_check(tmp_path, region, monkeypatch, ident, needle, plant):
     code, packet = ec_run(tmp_path, monkeypatch, region, plant)
     failed = [c for c in packet["checks"] if c["verdict"] == "FAIL"]
@@ -220,6 +220,64 @@ def test_tampered_ec_tree_fails_receipts_intact(tmp_path, region, monkeypatch, n
     code, packet = rerun(tmp_path)
     intact = {c["id"]: c for c in packet["checks"]}["ec-receipts-intact"]
     assert code == 1 and intact["verdict"] == "FAIL" and needle in intact["detail"] and packet["held_reason"] == "check-failed:ec-receipts-intact"
+
+
+@pytest.mark.parametrize("value", [False, True, 0.0, "0", None, -1])
+def test_deepened_cells_requires_integer_zero(tmp_path, region, monkeypatch, value):
+    code, packet = ec_run(tmp_path, monkeypatch, region,
+                          lambda d, c: d["s-a"]["EC-APPLY.json"].update(deepened_cells=value))
+    assert code == 1 and not packet["publishable"]
+    assert next(c for c in packet["checks"] if c["id"] == "ec-no-deepening")["verdict"] == "FAIL"
+
+
+def test_ec_contour_requires_provenance(tmp_path, region, monkeypatch):
+    code, packet = ec_run(tmp_path, monkeypatch, region, lambda d, c: c["features"][0]["properties"].pop("provenance"))
+    assert code == 1 and not packet["publishable"]
+    assert next(c for c in packet["checks"] if c["id"] == "ec-unresolved-stated")["verdict"] == "FAIL"
+
+
+def seal_ec(tmp):
+    record = json.loads((tmp / "EC.json").read_text())
+    record["outputs"] = [{"path": p.relative_to(tmp).as_posix(), "sha256": sha(p)}
+                         for p in sorted((tmp / "ec").rglob("*")) if p.is_file()]
+    record["ec_sha256"] = rr.hashlib.sha256((json.dumps(record["outputs"], sort_keys=True, separators=(",", ":")) + "\n").encode()).hexdigest()
+    (tmp / "EC.json").write_text(json.dumps(record))
+    build = json.loads((tmp / "BUILD.json").read_text())
+    build["ec"]["ec_sha256"] = record["ec_sha256"]
+    (tmp / "BUILD.json").write_text(json.dumps(build))
+
+
+@pytest.mark.parametrize("fault", ["done", "source", "directory", "corrected", "receipt"])
+def test_rehashed_ec_omissions_fail_closed(tmp_path, region, monkeypatch, fault):
+    ec_run(tmp_path, monkeypatch, region)
+    record = json.loads((tmp_path / "EC.json").read_text())
+    if fault == "done":
+        path = tmp_path / "ec/s-a/DONE"
+        path.write_text(json.dumps([p for p in json.loads(path.read_text()) if p[0] != "EC-APPLY.json"]))
+    elif fault == "source":
+        path = tmp_path / "ec/s-a/EC-APPLY.json"
+        doc = json.loads(path.read_text())
+        doc["deepened_cells"] = 1
+        path.write_text(json.dumps(doc))
+        done = path.parent / "DONE"
+        done.write_text(json.dumps([[rel, sha(done.parent / rel)] for rel, _ in json.loads(done.read_text())]))
+        record["sources"] = record["sources"][1:]
+    elif fault == "directory":
+        (tmp_path / "ec").rename(tmp_path / "parked")
+        record.update(sources=[], inputs=[])
+    elif fault == "corrected":
+        build = json.loads((tmp_path / "BUILD.json").read_text())
+        build["ec"]["corrected"] = []
+        (tmp_path / "BUILD.json").write_text(json.dumps(build))
+    else:
+        record["sources"][0]["receipts"].pop("apply")
+    (tmp_path / "EC.json").write_text(json.dumps(record))
+    seal_ec(tmp_path)
+    code, packet = rerun(tmp_path)
+    assert code == 1 and not packet["publishable"]
+    assert next(c for c in packet["checks"] if c["id"] == "ec-receipts-intact")["verdict"] == "FAIL"
+    if fault == "source":
+        assert next(c for c in packet["checks"] if c["id"] == "ec-no-deepening")["verdict"] == "FAIL"
 
 
 def test_check_requires_the_five_ec_rows(tmp_path, region, monkeypatch, capsys):

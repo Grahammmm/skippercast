@@ -3,7 +3,7 @@
 FAIL, 2 refused); --check validates <run>/REVIEW.md and writes nothing. Stdlib plus skippercast.platform; no datum
 conversion; reviewer independence comes from BUILD.json run metadata, never profile names. Machine-valid is not acceptance.
 """
-import argparse, hashlib, json, math, os, re, sys
+import argparse, csv, hashlib, json, math, os, re, sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
@@ -152,11 +152,26 @@ def ec_tree(folder, build):
         return [f"BUILD.json ec {'null' if stated is None else 'set'}, ec/ {'present' if ec_dir.exists() else 'absent'}, EC.json "
                 f"{'readable' if isinstance(record, dict) else 'absent or unreadable'}: all three or none"], None, docs
     bad += [f'EC.json {p}' for p in seafloor_ec.check_receipt('region-correct-v1', record) if not p.startswith(OWNED)]
-    for base in sorted(p for p in ec_dir.iterdir() if p.is_dir()) if ec_dir.is_dir() else []:
+    if not ec_dir.is_dir():
+        bad.append('ec/ absent or not a directory')
+    rows = [s for s in record.get('sources') or [] if isinstance(s, dict)]
+    by_sid = {s.get('source_id'): s for s in rows}
+    bases = sorted(p for p in ec_dir.iterdir() if p.is_dir()) if ec_dir.is_dir() else []
+    if len(by_sid) != len(rows) or set(by_sid) != {p.name for p in bases}:
+        bad.append('EC.json sources differ from ec/ source directories')
+    if set(by_sid) != {i.get('source_id') for i in record.get('inputs') or []}:
+        bad.append('EC.json inputs differ from sources')
+    if set(stated.get('corrected') or []) != {s.get('source_id') for s in rows if s.get('status') != 'REFUSED'}:
+        bad.append('BUILD.json ec.corrected differs from non-refused EC.json sources')
+    for base in bases:
         pairs = load(base / 'DONE')
-        if not (isinstance(pairs, list) and pairs and all(isinstance(p, list) and len(p) == 2 for p in pairs)):
+        if not (isinstance(pairs, list) and pairs and all(isinstance(p, list) and len(p) == 2 and
+                all(isinstance(v, str) for v in p) for p in pairs)):
             bad.append(f'ec/{base.name}/DONE missing or malformed')
             continue
+        present = {p.relative_to(base).as_posix() for p in base.rglob('*') if p.is_file() and p.name != 'DONE'}
+        if len(pairs) != len({p[0] for p in pairs}) or {p[0] for p in pairs} != present:
+            bad.append(f'ec/{base.name}/DONE membership differs from source files')
         bad += [f'ec/{base.name}/{rel}: sha256 differs from DONE' for rel, digest in pairs if file_sha(base, rel) != digest]
     files = sorted(p.relative_to(ec_dir).as_posix() for p in ec_dir.rglob('*') if p.is_file()) if ec_dir.is_dir() else []
     outputs = [{'path': f'ec/{rel}', 'sha256': file_sha(ec_dir, rel)} for rel in files]
@@ -166,32 +181,58 @@ def ec_tree(folder, build):
         bad.append('EC.json ec_sha256 is not the sha256 of the ec/ outputs')
     if stated.get('ec_sha256') != record.get('ec_sha256'):
         bad.append('BUILD.json ec.ec_sha256 differs from EC.json')
-    for s in (s for s in record.get('sources') or [] if isinstance(s, dict)):
-        for step, rel in (s.get('receipts') if isinstance(s.get('receipts'), dict) else {}).items():
-            doc = load(folder / rel) if isinstance(rel, str) and rel.startswith('ec/') and file_sha(ec_dir, rel[3:]) else None
-            problems = seafloor_ec.check_receipt(RECEIPTS.get(step), doc)
-            problems += [] if isinstance(doc, dict) and doc.get('source_id') == s.get('source_id') else ['source_id differs from EC.json']
+    paths = {'detect': 'EC-DETECT.json', 'apply': 'EC-APPLY.json', 'verify': 'verify/EC-VERIFY.json'}
+    for base in bases:
+        sid, s = base.name, by_sid.get(base.name) or {}
+        expected = {'detect'} if s.get('status') == 'REFUSED' else set(paths)
+        required = {step: f'ec/{sid}/{paths[step]}' for step in expected}
+        if s.get('receipts') != required:
+            bad.append(f'ec/{sid}: receipt paths differ from required per-source receipts')
+        for step, name in paths.items():
+            rel = f'ec/{sid}/{name}'
+            if step not in expected and not (base / name).exists():
+                continue
+            doc = load(base / name)
+            problems = seafloor_ec.check_receipt(RECEIPTS[step], doc)
+            problems += [] if isinstance(doc, dict) and doc.get('source_id') == sid else ['source_id differs from source directory']
             bad += [f'{rel}: {p}' for p in problems if not p.startswith(OWNED)]
-            docs += [(s.get('source_id'), RECEIPTS.get(step), doc)] if isinstance(doc, dict) else []
+            docs += [(sid, RECEIPTS[step], doc)] if isinstance(doc, dict) else []
     return bad, record, docs
 
 
-def ec_checks(build, loaded, sources, tree):
+def intake_names(folder):
+    """Hash-bound acquisition filenames from the existing intake handoff; ambiguous/missing identities stay unknown."""
+    names = {}
+    try:
+        with (folder / 'INTAKE.csv').open(newline='') as handle:
+            for row in csv.DictReader(handle):
+                key = row.get('source_id'), row.get('sha256')
+                names.setdefault(key, set()).add(Path(row.get('local_path') or '').name)
+    except (OSError, ValueError, csv.Error):
+        return {}
+    return {key: next(iter(values)) for key, values in names.items() if len(values) == 1}
+
+
+def ec_checks(build, loaded, sources, tree, names=None):
     """The five EC checks; each PASSes with detail `no ec/ folder` when EC was not run."""
     (intact, record, docs), deep, indep, unres, version = tree or ([], None, []), [], [], [], []
     ec_set = build.get('ec') if isinstance(build.get('ec'), dict) else {}
+    inputs = {i.get('source_id'): i.get('sha256') for i in (record or {}).get('inputs') or []}
+    names = names or {}
     for where, value in (('EC.json', (record or {}).get('ec_version')), ('BUILD.json ec', ec_set.get('ec_version'))):
         version += [f'{where} ec_version {value!r}: re-run correct stage'] if tree and value != seafloor_ec.EC_VERSION else []
     for sid, kind, doc in docs:
         if doc.get('ec_version') != seafloor_ec.EC_VERSION:
             version.append(f"{sid} {kind} ec_version {doc.get('ec_version')!r}: re-run correct stage")
         if kind == 'ec-apply-v1':
-            deep += [] if doc.get('deepened_cells') == 0 else [f"{sid}: deepened_cells {doc.get('deepened_cells')!r}"]
+            deep += [] if type(doc.get('deepened_cells')) is int and doc['deepened_cells'] == 0 else [f"{sid}: deepened_cells {doc.get('deepened_cells')!r}"]
             deep += [f'{sid} fix {i}: after_m deeper than before_min_m' for i, f in enumerate(doc.get('fixes') or []) if not at_or_above(f)]
         for i, p in enumerate(doc.get('pairs') or [] if kind == 'ec-verify-v1' else []):
             p = p if isinstance(p, dict) else {}
-            again = seafloor_ec.independent(sources.get(sid) or {}, doc.get('a_file', ''), sources.get(p.get('second_source_id')) or {},
-                                            p.get('second_file', ''), p.get('reason') == 'duplicate')[0]
+            again = seafloor_ec.independent(sources.get(sid) or {}, names.get((sid, inputs.get(sid)), ''),
+                                            sources.get(p.get('second_source_id')) or {},
+                                            names.get((p.get('second_source_id'), p.get('second_file_sha256')), ''),
+                                            p.get('reason') == 'duplicate')[0]
             verifying = p.get('verified_cells') not in (0, None)
             if ((p.get('independent') is True or verifying) and not (again and p.get('independent') is True)) \
                     or (verifying and p.get('comparable') is not True):
@@ -209,8 +250,8 @@ def ec_checks(build, loaded, sources, tree):
             if p.get('kind') == seafloor_ec.UNRESOLVED_KIND and (p.get('reason') not in seafloor_ec.UNRESOLVED_REASONS
                                                                or (seafloor_ec.SHOAL_HINT_KEY in p and p.get('reason') != 'conflict')):
                 unres.append(f"{where}: unresolved-area reason {p.get('reason')!r} or shoal_hint_ft without conflict")
-            elif p.get('kind') == 'contour' and 'provenance' in p and p['provenance'] not in seafloor_ec.PROVENANCE_CLASSES:
-                unres.append(f"{where}: contour provenance {p['provenance']!r} not a provenance class")
+            elif p.get('kind') == 'contour' and (tree or 'provenance' in p) and p.get('provenance') not in seafloor_ec.PROVENANCE_CLASSES:
+                unres.append(f"{where}: contour provenance {p.get('provenance')!r} not a provenance class")
     say = (lambda text: text) if tree else (lambda _: 'no ec/ folder')
     return [result('ec-receipts-intact', intact, say(f'{len(docs)} receipt(s), DONE files, outputs and ec_sha256 agree')),
             result('ec-no-deepening', deep, say('no deepened cell; every fill at or above its deepest ring value')),
@@ -245,7 +286,7 @@ def review(folder):
               result('held-flags', bad['held'], 'held flags, held_sources and locations agree'),
               result('supported-water', [] if water_ok else [f'supported_water_fraction {water!r} not in [0, 1]'],
                      f'supported_water_fraction {water} (coverage not judged here)')]
-    checks += ec_checks(build, loaded, sources, ec_tree(folder, build))
+    checks += ec_checks(build, loaded, sources, ec_tree(folder, build), intake_names(folder))
     candidates = [h['source_id'] for _, c in loaded for h in dc.held_sources(c, sources) if h['review_status'] == 'candidate']
     failed = [c['id'] for c in checks if c['verdict'] == 'FAIL']
     held_any = any(o.get('publication_held') is True for o in build['outputs'])
