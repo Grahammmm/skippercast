@@ -52,6 +52,7 @@ export function buildReceipt(p) {
     chromium: p.chromium,
     viewports: p.viewports.map(v => ({...v, visualInspection: UNINSPECTED})),
     requests: p.requests, blockedRequests: p.blockedRequests, textChecks: p.textChecks, pageErrors: p.pageErrors,
+    failedResponses: p.failedResponses ?? [], consoleErrors: p.consoleErrors ?? [],
   };
 }
 
@@ -62,7 +63,7 @@ export function inspectionState(receipt, reviewMarkdown) {
 
 const SELECTORS = {
   held: ['#held-banner', '.contour-card'],
-  live: ['.app-mark', '.app-legend .app-swatch[data-layer="depth-contours"]'],
+  live: ['.app-top-card .app-location', '.app-sheet-head', '.maplibregl-canvas', '.maplibregl-ctrl-attrib'],
 };
 
 export async function capture(options) {
@@ -80,7 +81,7 @@ export async function capture(options) {
   await mkdir(out, {recursive: true});
   const {chromium} = await import('@playwright/test');
   const browser = await chromium.launch({headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']});
-  const requests = [], blockedRequests = [], textChecks = [], pageErrors = [], viewports = [];
+  const requests = [], blockedRequests = [], textChecks = [], pageErrors = [], failedResponses = [], consoleErrors = [], viewports = [];
   try {
     for (const vp of VIEWPORTS) {
       const context = await browser.newContext({viewport: {width: vp.width, height: vp.height}, isMobile: true, hasTouch: true, deviceScaleFactor: 2});
@@ -92,7 +93,8 @@ export async function capture(options) {
         if (outcome === 'blocked') blockedRequests.push(entry.url);
       };
       page.on('pageerror', e => pageErrors.push(e.message));
-      page.on('response', r => { const entry = entries.get(r.request()); if (entry && entry.status === null) entry.status = r.status(); });
+      page.on('console', m => { if (m.type() === 'error') consoleErrors.push({viewport: vp.name, text: m.text()}); });
+      page.on('response', r => { if (r.status() >= 400) failedResponses.push({viewport: vp.name, url: r.url(), status: r.status()}); const entry = entries.get(r.request()); if (entry && entry.status === null) entry.status = r.status(); });
       await page.route('**/*', async route => {
         const request = route.request(), target = request.url();
         const canned = fulfil[target] ?? fulfil[target.split('?')[0]];
@@ -121,7 +123,7 @@ export async function capture(options) {
       viewports.push({...vp, screenshot, screenshotSha256: createHash('sha256').update(png).digest('hex')});
       await context.close();
     }
-    const receipt = buildReceipt({mode, url, chromium: browser.version(), viewports, requests, blockedRequests, textChecks, pageErrors});
+    const receipt = buildReceipt({mode, url, chromium: browser.version(), viewports, requests, blockedRequests, textChecks, pageErrors, failedResponses, consoleErrors});
     await writeFile(receiptPath, JSON.stringify(receipt, null, 2) + '\n', {flag: 'wx'});
     return receipt;
   } finally {
