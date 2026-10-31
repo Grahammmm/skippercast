@@ -97,3 +97,56 @@ test('clean held preview has no console errors or failed responses', {skip: !has
   assert.deepEqual(receipt.consoleErrors, []);
   assert.deepEqual(receipt.failedResponses, []);
 });
+
+function candidateRun() {
+  const run = heldRun(); // keeps a planted held/a.geojson that candidate mode must never request
+  mkdirSync(join(run, 'candidate'));
+  writeFileSync(join(run, 'candidate', 'x.geojson'), readFileSync(join(run, 'held', 'a.geojson')));
+  return run;
+}
+
+test('candidate mode: arguments and request plan serve only candidate/', () => {
+  const R = '/run', u = 'http://held.localhost';
+  assert.equal(parseArgs(['--mode', 'candidate', '--run', R]).out, join(R, 'REVIEW-PACKET', 'phone-candidate'));
+  assert.equal(parseArgs(['--mode', 'held', '--run', R]).out, join(R, 'REVIEW-PACKET', 'phone'));
+  assert.throws(() => parseArgs(['--mode', 'candidate']), /^Error: candidate mode needs --run$/);
+  assert.throws(() => parseArgs(['--mode', 'candidate', '--run', R, '--out', join(REPO, 'phone')]), /outside the repo/);
+  for (const mode of ['Candidate', 'published', 'candidate ']) assert.throws(() => parseArgs(['--mode', mode, '--run', R]), /^Error: --mode must be live, held or candidate$/, mode);
+  assert.deepEqual(heldRequestPlan(`${u}/candidate/a.geojson`, R, 'candidate'), {action: 'fulfil', file: '/run/candidate/a.geojson'});
+  assert.equal(heldRequestPlan(`${u}/?dir=candidate&files=a.geojson`, R, 'candidate').action, 'fulfil');
+  for (const p of ['/held/a.geojson', '/candidate/../held/a.geojson', '/candidate/A B.geojson', '/candidate/a.geojson/../../x.geojson'])
+    assert.deepEqual(heldRequestPlan(u + p, R, 'candidate'), {action: 'block', status: 404}, p);
+  assert.deepEqual(heldRequestPlan(`${u}/candidate/a.geojson`, R), {action: 'block', status: 404});
+  assert.deepEqual(heldRequestPlan('https://example.com/x', R, 'candidate'), {action: 'block'});
+  assert.throws(() => heldRequestPlan(`${u}/x/a.geojson`, R, 'x'), /dir must be held or candidate/);
+});
+
+test('candidate capture refuses a missing, empty or non-geojson candidate/ before launching or creating --out', async () => {
+  for (const files of [null, [], ['A.GEOJSON', 'notes.txt']]) {
+    const run = heldRun();
+    if (files) { mkdirSync(join(run, 'candidate')); for (const f of files) writeFileSync(join(run, 'candidate', f), '{}'); }
+    const out = join(scratch(), 'phone-candidate');
+    await assert.rejects(capture({mode: 'candidate', run, out}), {message: `candidate mode needs ${join(run, 'candidate')} with at least one .geojson`});
+    assert.equal(existsSync(out), false);
+  }
+});
+
+test('candidate capture renders candidate/ at both sizes under the candidate banner', {skip: !hasChromium && 'chromium not installed'}, async () => {
+  const run = candidateRun(), out = join(scratch(), 'phone-candidate');
+  const receipt = await capture({mode: 'candidate', run, out});
+  assert.equal(receipt.mode, 'candidate');
+  assert.equal(receipt.schema, 'region-phone-capture-v1');
+  assert.equal(receipt.url, 'http://held.localhost/?dir=candidate&files=x.geojson');
+  assert.deepEqual(receipt.viewports.map(v => [v.screenshot, v.width, v.height]), [['candidate-390x844.png', 390, 844], ['candidate-360x800.png', 360, 800]]);
+  for (const v of receipt.viewports) assert.equal(v.screenshotSha256, sha(readFileSync(join(out, v.screenshot))));
+  for (const vp of ['390x844', '360x800']) {
+    const check = selector => receipt.textChecks.find(c => c.viewport === vp && c.selector === selector);
+    assert.equal(check('#held-banner').text, 'Candidate, not yet published, not for navigation');
+    assert.equal(check('.contour-card').count, 1);
+    assert.match(check('.contour-card').text, /x\.geojson/);
+  }
+  assert.deepEqual([receipt.pageErrors, receipt.failedResponses, receipt.consoleErrors], [[], [], []]);
+  assert.ok(receipt.requests.some(r => r.url === 'http://held.localhost/candidate/x.geojson' && r.outcome === 'fulfilled'));
+  assert.ok(!receipt.requests.some(r => new URL(r.url).pathname.startsWith('/held/')));
+  await assert.rejects(capture({mode: 'candidate', run, out}), /refusing to overwrite/);
+});
