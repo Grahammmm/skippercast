@@ -1,8 +1,8 @@
 // Phone-viewport capture for region review. Live mode is read-only; held and candidate modes serve a run's held/ or candidate/ contours from disk.
 import {createHash} from 'node:crypto';
-import {existsSync, readdirSync, readFileSync} from 'node:fs';
+import {existsSync, lstatSync, readdirSync, readFileSync, realpathSync} from 'node:fs';
 import {mkdir, writeFile} from 'node:fs/promises';
-import {dirname, join, relative, resolve, isAbsolute, sep} from 'node:path';
+import {basename, dirname, join, relative, resolve, isAbsolute, sep} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -12,8 +12,15 @@ const HELD_NAME = /^[a-z0-9][a-z0-9._-]*\.geojson$/;
 const UNINSPECTED = 'not-visually-inspected';
 export const VIEWPORTS = [{name: '390x844', width: 390, height: 844}, {name: '360x800', width: 360, height: 800}];
 
+const present = p => { try { return lstatSync(p, {throwIfNoEntry: false}) !== undefined; } catch { return true; } };
+
+// Compares real paths: the deepest existing ancestor is resolved through links, so a link cannot point --out into the work tree.
 export function outsideRepo(path) {
-  const rel = relative(REPO, resolve(path));
+  let base = resolve(path); const tail = [];
+  while (!present(base)) { tail.unshift(basename(base)); base = dirname(base); }
+  let real;
+  try { real = join(realpathSync(base), ...tail); } catch { return false; } // dangling or unreadable ancestor: refuse
+  const rel = relative(realpathSync(REPO), real);
   return rel === '..' || rel.startsWith('..' + sep) || isAbsolute(rel);
 }
 
@@ -71,8 +78,9 @@ SELECTORS.candidate = SELECTORS.held;
 export async function capture(options) {
   const {mode, out, fulfil = {}} = options;
   if (!outsideRepo(out)) throw new Error('--out must be outside the repo work tree');
+  if (lstatSync(out, {throwIfNoEntry: false})?.isSymbolicLink()) throw new Error('--out must not be a symlink');
   const receiptPath = join(out, 'capture-receipt.json');
-  if (existsSync(receiptPath)) throw new Error(`refusing to overwrite ${receiptPath}`);
+  if (lstatSync(receiptPath, {throwIfNoEntry: false}) !== undefined) throw new Error(`refusing to overwrite ${receiptPath}`);
   const dir = mode === 'candidate' ? 'candidate' : 'held';
   let url;
   if (mode === 'live') {
