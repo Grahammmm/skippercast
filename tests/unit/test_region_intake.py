@@ -180,6 +180,7 @@ def test_screened_path_joins_without_touching(world, monkeypatch):
     (["PASS", None], [], ("UNSCREENED", "", "publish")),
     (["PASS", "PASS"], [("e/approved_elevation_r0_c0.tif", "FLAG", "c")], ("FLAG", "c", "skip")),  # unlisted sibling
     (["PASS", "PASS"], [("d/approved__r0_c0.tif", "FLAG", "z")], ("FLAG", "z", "skip")),  # stale FLAG under a later PASS
+    (["PASS", "PASS"], [("d/approved__r0_c1.tif", "FLAG", "bo"), ("d/approved__r0_c0.tif", "FLAG", "ao"), ("e/approved_r9.tif", "FLAG", "cs")], ("FLAG", "ao;bo;cs", "skip")),
     (["PASS", "PASS"], [("e/notapproved_r0.tif", "FLAG", "c"), ("e/approvedx_r0.tif", "FLAG", "c")], ("PASS", "a;b", "publish")),
 ])
 def test_screened_path_verdict_precedence(world, verdicts, more, want):

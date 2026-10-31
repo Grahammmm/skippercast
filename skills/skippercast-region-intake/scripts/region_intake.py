@@ -66,8 +66,11 @@ def read_screens(path, skip_raw):
 
 def joined(stem, listed, screens, flags):
     """screened_path join (M5a), top wins: any FLAG (listed or unlisted sibling) > any listed path absent > PASS-SPARSE > PASS."""
-    hits = [screens.get(os.path.realpath(p)) for p in listed]
-    flagged = [h[1] for h in hits if h and h[0] == 'FLAG'] + [s for t, s in flags if names(stem).search(os.path.basename(t))]
+    keys = [os.path.realpath(p) for p in listed]
+    hits = [screens.get(k) for k in keys]
+    flags = [(os.path.realpath(t), s) for t, s in flags]  # every FLAG row, so a later PASS cannot hide a stale FLAG
+    flagged = [s for k in keys for t, s in flags if t == k] + [
+        s for t, s in flags if t not in keys and names(stem).search(os.path.basename(t))]
     if flagged:
         return 'FLAG', ';'.join(dict.fromkeys(flagged))
     if None in hits:
