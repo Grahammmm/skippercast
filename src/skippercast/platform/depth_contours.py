@@ -138,17 +138,18 @@ def _clean_chain(points):
     return clean if len(clean) >= 2 else []
 
 
-def trace(grid, depths):
+def trace(grid, depths, squares=False):
     """Marching squares: {depth: lines} of each depth in `depths` across `grid` (rows of numbers, None where invalid).
 
     Points are (column, row) in grid units, node (r, c) at (c, r). A square draws only when all four
     corners are valid, so a line ends at the first square that touches a gap or the grid edge. A value
     equal to the depth counts as at or past it, so a line never runs through a node. Saddles are split
     by the mean of the four corners. A closed ring repeats its first point last. The output order is
-    deterministic.
+    deterministic. With `squares` each line is (points, cells): cells[k] is the (row, column) of the square
+    that traced the segment from points[k] to points[k + 1], even where that segment lies on a shared edge.
     """
     wanted = sorted(set(depths))
-    links = {d: {} for d in wanted}
+    links, cell = {d: {} for d in wanted}, {d: {} for d in wanted}
     rows, cols = len(grid), len(grid[0]) if grid else 0
     for r in range(rows - 1):
         upper, lower = grid[r], grid[r + 1]
@@ -166,9 +167,24 @@ def trace(grid, depths):
                 for p, q in _square_links(v, nodes, d):
                     graph.setdefault(p, []).append(q)
                     graph.setdefault(q, []).append(p)
-    return {d: [points for chain in _walk(links[d])
-                if (points := _clean_chain(_cross(grid, edge, d) for edge in chain))]
-            for d in wanted}
+                    if squares:  # two edges belong to one square only, so the pair names the square that traced it
+                        cell[d][p, q] = cell[d][q, p] = (r, c)
+    if not squares:
+        return {d: [points for chain in _walk(links[d])
+                    if (points := _clean_chain(_cross(grid, edge, d) for edge in chain))]
+                for d in wanted}
+    out = {d: [] for d in wanted}
+    for d in wanted:
+        for chain in _walk(links[d]):
+            points, cells = [], []
+            for k, edge in enumerate(chain):  # as _clean_chain, keeping the square of each segment kept
+                point = _cross(grid, edge, d)
+                if not points or point != points[-1]:
+                    cells += [cell[d][chain[k - 1], edge]] if points else []
+                    points.append(point)
+            if len(points) >= 2:
+                out[d].append((points, cells))
+    return out
 
 
 def feature_lines(geometry):

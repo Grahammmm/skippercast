@@ -412,15 +412,11 @@ def test_output_and_held_output_are_mutually_exclusive(tmp_path, monkeypatch, ca
 
 def _ec(path, codes, tags=None, hint=None, x0=X0):
     """An EC provenance raster (uint8 codes, EC_VERSION tag) and, with `hint`, the shoal_hint.tif beside it."""
-    import numpy as np
     import rasterio
-    from rasterio.transform import from_origin
     for p, values, dtype in ((path, codes, 'uint8'), (path.with_name('shoal_hint.tif'), hint, 'float32')):
         if values is not None:
-            with rasterio.open(p, 'w', driver='GTiff', width=values.shape[1], height=values.shape[0], count=1,
-                               dtype=dtype, crs='EPSG:32610', transform=from_origin(x0, Y0, 2.0, 2.0)) as ds:
+            with rasterio.open(_tif(p, values, x0, Y0, dtype=dtype, nodata=None), 'r+') as ds:
                 ds.update_tags(**({'EC_VERSION': '1.0'} if tags is None else tags))
-                ds.write(np.asarray(values, dtype=dtype), 1)
     return path
 
 
@@ -433,8 +429,7 @@ def test_provenance_cuts_contours_into_class_runs_and_draws_unresolved_areas(tmp
     codes[24:32, 8:16] = 20                       # one filled block (row 3, col 1) on the 30 ft line
     codes[64:80, 8:24] = 30                       # verified 2 x 2 blocks: a square is verified only with four verified corners
     codes[0:8, 64:72], hint[0:8, 64:72] = 41, -3.0  # one unresolved-conflict block on the top edge, off every contour
-    (tmp_path / 'ec').mkdir()
-    prov = _ec(tmp_path / 'ec' / 'provenance.tif', codes, hint=hint)
+    prov = _ec(tmp_path / 'provenance.tif', codes, hint=hint)
     monkeypatch.setattr(dc, 'simplify', lambda line, tolerance, scale: [list(p) for p in line])  # compare traced points
     plain = _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a'))
     doc = _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a'), '--provenance', f'usgs-a={prov}')
@@ -444,20 +439,17 @@ def test_provenance_cuts_contours_into_class_runs_and_draws_unresolved_areas(tmp
     points = lambda fs: {tuple(p) for f in fs for line in f['geometry']['coordinates'] for p in line}  # noqa: E731
     assert points(runs) == points([f for f in plain['features'] if f['id'] == 'usgs-a-30ft'])
     assert sum(len(f['geometry']['coordinates']) for f in runs) == 5      # measured, filled, measured, verified, measured
-    area = by_id['usgs-a-unresolved-conflict']
-    assert area['geometry']['type'] == 'MultiPolygon' and area['properties'] == {
+    area, = [f for f in doc['features'] if f['properties']['kind'] == 'unresolved-area']
+    assert area['id'] == 'usgs-a-unresolved-conflict' and area['geometry']['type'] == 'MultiPolygon' and area['properties'] == {
         'kind': 'unresolved-area', 'reason': 'conflict', 'blocks': 1, 'shoal_hint_ft': 10, 'source_id': 'usgs-a',
         'survey_date': '2008', 'vertical_datum': dc.UNVERIFIED_DATUM}
-    assert [f['properties']['kind'] for f in doc['features']].count('unresolved-area') == 1
     # The survey edge runs round the unresolved block (within its 12 m simplification) exactly as round a gap.
     from shapely.geometry import MultiLineString, Point
     to_utm = Transformer.from_crs('EPSG:4326', 'EPSG:32610', always_xy=True).transform
     edge = lambda d: MultiLineString([[to_utm(*p) for p in line] for f in d['features']  # noqa: E731
                                       if f['properties']['kind'] == 'survey-edge' for line in f['geometry']['coordinates']])
-    notch = Point(X0 + 136, Y0 - 16)                  # the middle of the block's lower side, 16 m below the grid's top
-    assert edge(doc).distance(notch) <= 12.5 and edge(plain).distance(notch) >= 15
-    entry = doc['provenance']['sources'][0]
-    assert entry['ec_version'] == '1.0' and entry['supported_blocks'] == 255
+    assert edge(doc).distance(notch := Point(X0 + 136, Y0 - 16)) <= 12.5 and edge(plain).distance(notch) >= 15  # its lower side
+    assert (entry := doc['provenance']['sources'][0])['ec_version'] == '1.0' and entry['supported_blocks'] == 255
     assert entry['provenance_counts'] == {'measured': 250, 'filled': 1, 'verified': 4, 'unresolved': 1}
     assert 'never as contours' in doc['provenance']['method'] and 'never as contours' not in plain['provenance']['method']
     assert not any(f['properties']['kind'] == 'unresolved-area' for f in dc.overview_contours(doc)['features'])  # 16 m span
@@ -480,14 +472,16 @@ def test_without_provenance_the_output_matches_the_frozen_pre_change_bytes(tmp_p
 
 @pytest.mark.parametrize('case,message', [
     ('unknown id', 'only for a source given with --grid'), ('size', 'does not match the survey grid'),
-    ('transform', 'does not match the survey grid'), ('no tag', 'no EC_VERSION tag')])
+    ('transform', 'does not match the survey grid'), ('no tag', 'no EC_VERSION tag'), ('vrt', 'must be a GeoTIFF, got VRT')])
 def test_provenance_refusals_come_before_any_read(tmp_path, monkeypatch, case, message):
     import hashlib
     import numpy as np
-    import rasterio
+    import rasterio.shutil
     a = _tif(tmp_path / 'a.tif', _slope((64, 64)), X0, Y0)
     shape, x0, tags = ((32, 32) if case == 'size' else (64, 64)), (X0 + 16 if case == 'transform' else X0), None
     prov = _ec(tmp_path / 'provenance.tif', np.full(shape, 10), tags={} if case == 'no tag' else None, x0=x0)
+    if case == 'vrt':  # the matching uint8 raster with its EC_VERSION tag, but not a GeoTIFF
+        rasterio.shutil.copy(prov, prov := tmp_path / 'provenance.vrt', driver='VRT')
     reads = []
     monkeypatch.setattr(rasterio.io.DatasetReader, 'read', lambda *a, **k: reads.append(a))
     monkeypatch.setattr(hashlib, 'file_digest', lambda *a, **k: reads.append(a))
@@ -495,3 +489,32 @@ def test_provenance_refusals_come_before_any_read(tmp_path, monkeypatch, case, m
         _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a'), '--provenance',
                      f'{"usgs-x" if case == "unknown id" else "usgs-a"}={prov}')
     assert reads == []
+
+
+@pytest.mark.parametrize('flip,turn', [(0, 0), (1, 0), (0, 1), (1, 1)])
+def test_a_segment_on_an_edge_two_squares_share_keeps_the_class_of_the_square_that_traced_it(flip, turn):
+    import numpy as np
+    grid, square = np.array([[0., 30., 60.]] * 3)[:, ::-1 if flip else 1], np.array([['filled', 'measured']] * 2)
+    (line, cells), = (bs := _load_builder()).dc.trace((grid.T if turn else grid).tolist(), [30], squares=True)[30]
+    assert {p[turn] for p in line} == {1.0}  # on the edge between square columns (rows) 0 and 1, traced by the one below 30
+    assert [n for n, _ in bs.class_runs(line, cells, square.T if turn else square)] == [['filled', 'measured'][flip]]
+
+
+@pytest.mark.parametrize('case', ['nodata', 'masked', 'all unresolved', 'mixed', 'empty'])
+def test_native_nodata_and_unresolved_only_sources_become_areas_and_padding_stays_unowned(tmp_path, monkeypatch, case):
+    from contextlib import nullcontext
+    import numpy as np
+    n, why = (1, 'nodata') if case in ('nodata', 'masked') else (256, 'conflict')  # of 16 x 16 whole blocks; 132 cells leave
+    values = np.full((132, 132), -9999.0) if case == 'empty' else _slope((132, 132))  # a 17th row/column half padding
+    codes = np.full((132, 132), {'nodata': 10, 'masked': 10, 'empty': 0}.get(case, 41))
+    values[32, 32], codes[32, 32] = (-9999, 0 if case == 'nodata' else 50) if n == 1 else (values[32, 32], codes[32, 32])
+    grids = {**({'usgs-a': _tif(tmp_path / 'a.tif', _slope((128, 128)), X0 - 512, Y0)} if case == 'mixed' else {}),
+             'usgs-b': _tif(tmp_path / 'b.tif', values, X0, Y0)}  # mixed: a plain survey first, then the unresolved-only one
+    with pytest.raises(SystemExit, match='contribute no valid water block') if case == 'empty' else nullcontext():
+        doc = _run_builder(monkeypatch, grids, _sources(*grids), '--provenance', f'usgs-b={_ec(tmp_path / "p.tif", codes)}')
+    if case == 'empty':  # neither valid water nor unresolved evidence: still refused
+        return
+    areas = [(f['id'], f['properties']['reason'], f['properties']['blocks']) for f in doc['features'] if f['geometry']['type'] != 'MultiLineString']
+    assert areas == [(f'usgs-b-unresolved-{why}', why, n)] and doc['provenance']['sources'][-1]['provenance_counts'] == {
+        'measured': 256 - n, 'filled': 0, 'verified': 0, 'unresolved': n}  # the padding row/column is a gap, not nodata
+    assert case != 'mixed' or doc['provenance']['sources'][0]['supported_blocks'] == 256
