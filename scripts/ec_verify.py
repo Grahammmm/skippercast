@@ -7,6 +7,7 @@ and filled cells `verified` (30) when they agree within `tol_m` or `unresolved-c
 reading in `shoal_hint.tif`. Datum-suspect pairs mark their footprint 43 unless a comparable pair verifies the cell. Depths
 are never changed and nothing is converted: `corrected.tif` is only hashed. Writes `provenance.tif`, `shoal_hint.tif` and
 `EC-VERIFY.json` (`ec-verify-v1`) into DIR, outside the work tree. Exit 0 with one JSON line; exit 2 on refusal.
+A pair whose overlap repeats A's values (MAD of A - B <= `COPY_MAX_MAD_M`) is `copy-overlap`, never a second survey.
 A machine-valid receipt is review-required; `verified` is agreement within a published tolerance, not a navigation claim.
 """
 import argparse
@@ -20,7 +21,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / 'src'))
 
 from skippercast.platform.seafloor_ec import (  # noqa: E402
-    CODES, DATUM_SUSPECT, EC_VERSION, PLAUSIBLE_M, check_receipt, independent, tol_m)
+    CODES, DATUM_SUSPECT, EC_VERSION, PLAUSIBLE_M, check_receipt, copy_overlap, independent, tol_m)
 
 OUTPUTS = ('provenance.tif', 'shoal_hint.tif', 'EC-VERIFY.json')
 UNDECLARED = ('undeclared', 'unverified source datum')
@@ -137,6 +138,8 @@ def verify(args):
             n = int(valid.sum())
             mean = float(diff.mean()) if n else None
             mad = float(np.median(np.abs(diff - np.median(diff)))) if n else None
+            if ind and copy_overlap(mad):  # B repeats A on the overlap: a cut of one mosaic, not a second survey
+                ind, reason = False, 'copy-overlap'
             e9 = bool(n >= DATUM_SUSPECT['min_cells'] and abs(mean) > tol_m(float(np.median(np.abs(a[valid]))))
                       and mad < DATUM_SUSPECT['max_mad_m'])
             datums = [args.a_datum, b_datum]

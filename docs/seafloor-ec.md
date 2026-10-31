@@ -27,6 +27,7 @@ any is filled; else `verified` if every code is verified; else `measured`. Empty
 - `SENTINELS` = −9999, 9999, −999999, 1e6, 5000, ±32767, ±3.4028234663852886e38; `PLAUSIBLE_M = (−3000, 100)`.
 - Fixture refusal: `FIXTURE_PATH` (pytest-basetemp, `/fixture(s)/`, `/scratch/`, synthetic, invented, generated-template, `sample.tif`), `FIXTURE_MIN_PIXELS = 4096`, `FIXTURE_MAX_DISTINCT = 3`.
 - Sign refusal: `SIGN_POSITIVE_FRACTION = 0.99`. Datum suspect: `DATUM_SUSPECT = {min_cells: 1000, max_mad_m: 0.5}`.
+- Copy overlap: `COPY_MAX_MAD_M = 0.05` (see Independence).
 
 **Tolerance** `tol_m(d) = 2 × sqrt(0.5² + (0.013 × |d|)²)` m: 1.0 at 0 m, 1.64 at 50 m, 2.79 at 100 m (IHO S-44
 Order 1a TVU, doubled; an assumption). It compares two depths; it never corrects one.
@@ -40,6 +41,15 @@ lists treated indices that got deeper and untreated indices that changed at all 
   `compilation:<adapter>` (`COMPILATION_ADAPTERS`: bluetopo-geotiff-source-review, nbs-modeling-geotiff,
   gebco-grid-deep-fill, gmrt-gridserver-deep-fill, ncei-footprint-discovery), `duplicate`, `unknown-acquisition`,
   `same-acquisition:<key>`, else `(True, 'ok')`. There is no override.
+- **Copies are measured, not assumed** (`copy_overlap(mad_m)`, `COPY_MAX_MAD_M = 0.05` m). After `independent` says
+  `ok`, EC3 looks at the overlap itself: when the median absolute deviation of A − B over the jointly valid cells is at
+  most 5 cm, B repeats A's values (identical, or A plus a constant shift such as a re-referenced copy) and the pair is
+  `independent: false`, `reason: copy-overlap`: no verified, conflict or datum-suspect cells. Two independent surveys do
+  not agree to 5 cm in spread; a pair that does is under-claimed on purpose. Measured fact (EC-DEMO, 2026-10-31): the
+  three USGS CSMP Morro Bay grids are cuts of one 2008 mosaic. `usgs-morro-bay` and `usgs-point-estero` hold identical
+  values on all 5,027,167 jointly valid cells (mean and MAD 0.0 m) and `usgs-point-buchon` shares no valid cell with
+  `usgs-morro-bay`, so Morro Bay has no second survey today. A copy that covers less than about half of the overlap
+  may pass unnoticed; `region_review` also fails any verifying pair whose receipt `mad_m` is at or below the limit.
 
 ## Receipts (`SCHEMAS`, `check_receipt(kind, doc) -> list[str]`)
 Kinds `ec-detect-v1`, `ec-apply-v1`, `ec-verify-v1`, `region-correct-v1`. Each problem names its key
