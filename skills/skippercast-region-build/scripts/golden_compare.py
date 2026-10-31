@@ -26,6 +26,33 @@ def load(path, label):
     return raw, obj
 
 
+def digest(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+
+
+def by_key(features):
+    """Group features by contour key (kind, depth_ft, source_id) into sorted (geometry, properties) hash lists."""
+    groups = {}
+    for f in features:
+        props = f.get('properties') if isinstance(f, dict) else None
+        p = props if isinstance(props, dict) else {}
+        key = json.dumps([p.get('kind'), p.get('depth_ft'), p.get('source_id')], sort_keys=True)
+        geometry = f.get('geometry') if isinstance(f, dict) else f
+        groups.setdefault(key, []).append((digest(geometry), digest(props)))
+    return {k: sorted(v) for k, v in groups.items()}
+
+
+def feature_diff(candidate, catalog):
+    """Counts only: contour keys added, removed, changed (geometry and/or properties), same, duplicated."""
+    a, b = by_key(candidate), by_key(catalog)
+    changed = [k for k in set(a) & set(b) if a[k] != b[k]]
+    return {'keys_added': len(set(a) - set(b)), 'keys_removed': len(set(b) - set(a)), 'keys_changed': len(changed),
+            'keys_same': len(set(a) & set(b)) - len(changed),
+            'geometry_changed': sum({g for g, _ in a[k]} != {g for g, _ in b[k]} for k in changed),
+            'properties_changed': sum({p for _, p in a[k]} != {p for _, p in b[k]} for k in changed),
+            'duplicate_keys': sum(len(a.get(k, ())) > 1 or len(b.get(k, ())) > 1 for k in set(a) | set(b))}
+
+
 def compare(region_id, run, catalog_root):
     if not SLUG.fullmatch(region_id or ''):
         raise Refused(f'region id must match ^[a-z0-9]+(-[a-z0-9]+)*$: {region_id!r}')
@@ -53,7 +80,8 @@ def compare(region_id, run, catalog_root):
     verdict = 'features-differ' if not features_equal else 'provenance-only' if any(prov.values()) or top else 'equal'
     return {'region_id': region_id, 'verdict': verdict, 'bytes_equal': cand_raw == cat_raw,
             'features_equal': features_equal, 'feature_counts': [len(cand['features']), len(cat['features'])],
-            'features_sha256': hashes, 'provenance': prov, 'top_level_changed': top}
+            'features_sha256': hashes, 'provenance': prov, 'top_level_changed': top,
+            'feature_diff': feature_diff(cand['features'], cat['features'])}
 
 
 def main(argv=None, catalog_root=None):
