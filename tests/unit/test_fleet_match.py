@@ -242,6 +242,66 @@ class DecideTests(unittest.TestCase):
         self.assertEqual(silent.rows, [], "no statics to judge by: the stored row stands")
         self.assertEqual(silent.targets, {OTHER: VesselRef(SEA, "inspected-party", "port-a")})
 
+    # #576: the AIS name matches vessel A (SEA), the call sign a different vessel B (TWIN).
+    SPLIT = [vessel(SEA, "Sea Example"), vessel(TWIN, "Twin Example", call_sign="WDX0001", port="port-b")]
+
+    def split(self, call_sign="WDX0001", **kwargs):
+        boat = full_static(OTHER, "SEA EXAMPLE", call_sign=call_sign, ship_type=37, length_m=18.0)
+        return self.decide([boat], vessels=self.SPLIT, **kwargs)
+
+    def assert_unpromoted(self, decision, reviewed):
+        row = self.rows(decision)[OTHER]
+        self.assertEqual((row["vessel_id"], row["status"], row["confidence"]), (None, "candidate", 0.4))
+        self.assertEqual(decision.targets, {})
+        self.assertEqual([(r["subject_id"], r["proposal_json"]["reason"]) for r in decision.reviews],
+                         [(v, "several-vessels") for v in reviewed])
+
+    def test_a_name_and_a_call_sign_of_different_vessels_never_promote(self):
+        for call in ("WDX0001", "wdx-0001", "WDX 0001"):   # the call sign's spelling does not bypass the conflict
+            self.assert_unpromoted(self.split(call, presence={OTHER: {"port-a": 3}}), [SEA])   # B not seen at home
+        self.assert_unpromoted(self.split(presence={OTHER: {"port-a": 3, "port-b": 3}}), sorted([SEA, TWIN]))
+        self.assert_unpromoted(self.split(), [])   # neither seen at home: no review
+        self.assert_unpromoted(self.split(presence={OTHER: {"port-a": 30}}), [SEA])
+
+    def test_a_withdrawn_side_clears_the_name_and_call_sign_conflict(self):
+        withdrawn = [{"kind": "mmsi", "status": "decided", "subject_id": TWIN,
+                      "decision": {"action": "reject-mmsi", "vessel_id": TWIN, "mmsi": str(OTHER)}}]
+        decision = self.split(presence={OTHER: {"port-a": 3}}, reviews=withdrawn)
+        row = self.rows(decision)[OTHER]
+        self.assertEqual((row["vessel_id"], row["status"], row["match_method"]), (SEA, "watched", "geofence-presence"))
+        self.assertEqual(decision.targets, {OTHER: VesselRef(SEA, "inspected-party", "port-a")})
+        # Withdrawing the name side leaves the call-sign hit, which promotes nothing without days at B's home.
+        withdrawn = [{**withdrawn[0], "subject_id": SEA, "decision": {**withdrawn[0]["decision"], "vessel_id": SEA}}]
+        row = self.rows(self.split(presence={OTHER: {"port-a": 3}}, reviews=withdrawn))[OTHER]
+        self.assertEqual((row["vessel_id"], row["status"], row["match_method"]), (TWIN, "candidate", "call-sign"))
+
+    def test_a_watched_row_hitting_the_name_and_call_sign_conflict_is_demoted(self):
+        boat = full_static(OTHER, "SEA EXAMPLE", ship_type=37, length_m=18.0)
+        watched = self.rows(self.decide([boat], vessels=self.SPLIT, presence={OTHER: {"port-a": 3}}))[OTHER]
+        self.assertEqual((watched["vessel_id"], watched["status"]), (SEA, "watched"))
+        for presence in (None, {OTHER: {"port-a": 3}}):
+            later = self.split(prior={OTHER: watched}, presence=presence)
+            self.assertEqual([r["status"] for r in later.rows], ["candidate"])
+            self.assertNotIn(OTHER, later.targets)
+
+    def test_the_schedule_cannot_promote_the_name_and_call_sign_conflict(self):
+        def run(call_sign):
+            boat = full_static(OTHER, "SEA EXAMPLE", call_sign=call_sign, ship_type=37, length_m=18.0)
+            return decide(REGION, self.SPLIT, (), {OTHER: boat}, {OTHER: Seen(T0 - 20 * DAY, T0, "aisstream", 400)},
+                          {OTHER: {"port-a": 1}}, {}, NOW, at_sea={OTHER: set(TWO_WEEKS)}, reports={SEA: set(TWO_WEEKS)})
+        self.assertEqual(self.rows(run(None))[OTHER]["status"], "watched", "the same schedule promotes A alone")
+        self.assert_unpromoted(run("WDX0001"), [SEA])
+
+    def test_overlapping_name_and_call_sign_hits_still_promote(self):
+        same = full_static(OTHER, "SEA EXAMPLE", call_sign="WDX0001", ship_type=37, length_m=18.0)
+        both = [vessel(SEA, "Sea Example", call_sign="WDX0001")]   # name and call on one vessel
+        row = self.rows(self.decide([same], vessels=both, presence={OTHER: {"port-a": 3}}))[OTHER]
+        self.assertEqual((row["vessel_id"], row["status"]), (SEA, "watched"))
+        # Name -> {A, B}, call -> {A}: the existing several-hit tie-break by home-port days.
+        twins = [vessel(SEA, "Sea Example", call_sign="WDX0001"), vessel(TWIN, "Sea Example", port="port-b")]
+        row = self.rows(self.decide([same], vessels=twins, presence={OTHER: {"port-a": 3}}))[OTHER]
+        self.assertEqual((row["vessel_id"], row["status"]), (SEA, "watched"))
+
 
 class RunTests(unittest.TestCase):
     """The hooks inside a real processor run, against a raw store and the fake Worker."""
