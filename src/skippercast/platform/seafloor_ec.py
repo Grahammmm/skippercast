@@ -119,9 +119,14 @@ SCHEMAS = MappingProxyType({
 _num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)  # noqa: E731
 _int = lambda v: isinstance(v, int) and not isinstance(v, bool)  # noqa: E731
 _seq = lambda n, ok: lambda v: isinstance(v, list) and len(v) == n and all(ok(x) for x in v)  # noqa: E731
+
+def _bbox(v):
+    """[col0, row0, col1, row1] in native pixels, END-EXCLUSIVE (numpy slices): one cell is [c, r, c + 1, r + 1]."""
+    return _seq(4, _int)(v) and 0 <= v[0] < v[2] and 0 <= v[1] < v[3]
+
 _TYPE = {'str': lambda v: isinstance(v, str), 'num': _num, 'int': _int, 'bool': lambda v: isinstance(v, bool),
          'list': lambda v: isinstance(v, list), 'sha256': lambda v: isinstance(v, str) and bool(SHA256.fullmatch(v)),
-         'bbox': _seq(4, _num), 'sig': _seq(7, lambda x: _num(x) or isinstance(x, str)),
+         'bbox': _bbox, 'sig': _seq(7, lambda x: _num(x) or isinstance(x, str)),
          'datums': _seq(2, lambda x: isinstance(x, str)), 'disposition': lambda v: v in DISPOSITIONS,
          'counts': lambda v: isinstance(v, dict) and all(_int(n) for n in v.values())}
 

@@ -35,6 +35,29 @@ def states(results):
     return [r["state"] for r in results]
 
 
+def test_controller_identity_ignores_this_process_sys_path(tmp_path, export, monkeypatch):
+    # Other tests on the same xdist worker can leave a dependency directory on
+    # sys.path (research scripts prepend host-local ones on import). The queue's
+    # code/deps identity must still be the controller's, or every job is
+    # invalidated as stale and every run is idle.
+    leaked = tmp_path / "leaked-site"
+    dist_info = leaked / "numpy-9.9.9.dist-info"
+    dist_info.mkdir(parents=True)
+    (dist_info / "METADATA").write_text("Metadata-Version: 2.1\nName: numpy\nVersion: 9.9.9\n")
+    monkeypatch.syspath_prepend(str(leaked))
+
+    from skippercast.coastal.coordinator.loop import implementation_hashes
+    base = tmp_path / "harness"
+    base.mkdir()
+    ops = Harness(base, export)
+    try:
+        assert implementation_hashes(ops.root)[1] != ops.deps   # this process now disagrees
+        ops.job("only", "done")
+        assert states(ops.run()) == ["done", "idle"]
+    finally:
+        ops.close()
+
+
 # --- cost-bound stop ---------------------------------------------------------
 
 def test_byte_cap_stops_dispatch_before_launch_and_never_refunds(ops):
