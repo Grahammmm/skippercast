@@ -39,6 +39,17 @@ from shapely.geometry import shape
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from skippercast.platform.contracts import REPO, atomic_json, load_catalogs, load_region  # noqa: E402
 from skippercast.platform import depth_contours as dc  # noqa: E402
+from skippercast.platform import seafloor_ec as ec  # noqa: E402
+
+# EC5: a block's class index (-1 none) and, by the bitmask of the code classes (tens digits) in it, seafloor_ec.block_class.
+CLASS_INDEX = {'measured': 0, 'filled': 1, 'verified': 2, 'unresolved': 3}
+CLASS_LUT = np.array([CLASS_INDEX[ec.block_class([10 * k for k in range(6) if m >> k & 1])] if m else -1 for m in range(64)],
+                     dtype='int8')
+UNRESOLVED_CODES = [c for c in ec.CODES.values() if ec.CLASS_OF(c) == 'unresolved']
+REASON_CODES = [[ec.CODES[f'unresolved-{r}']] if r != 'nodata' else [ec.CODES['nodata'], ec.CODES['masked-sentinel']]
+                for r in ec.UNRESOLVED_REASONS]
+EC_METHOD = (' Blocks carry the error-correction class of their native cells (measured, filled, verified) when a provenance '
+             'grid was supplied; unresolved blocks are drawn as areas, never as contours.')
 
 STRIP_BLOCKS = 64
 # Survey-edge display: outline simplification, and the shortest piece kept (a smaller gap still stops the lines).
@@ -73,7 +84,7 @@ def native_offsets(grid, lattice):
     return round(col0), round(row0), int(dc.CELL_M / cell)
 
 
-def merged_blocks(grids, lattice, offsets, keys):
+def merged_blocks(grids, lattice, offsets, keys, ecs=None):
     """The grids merged cell by cell (the first grid with valid water wins each native cell) and averaged into CELL_M blocks.
 
     Returns (depth_ft, owner): depth is NaN for a block with any missing, land or nodata native cell; owner is
@@ -82,20 +93,31 @@ def merged_blocks(grids, lattice, offsets, keys):
     inside a group of one cell size and declared datum (`keys`). Across groups the first grid whose own block is fully
     valid wins and owns the block. Only if no grid is complete alone does the earliest contributing group win, credited
     to its majority supplier. A block complete in no one group is a gap; nothing is averaged across datums.
+
+    With `ecs` (per grid None, or [provenance raster, optional shoal_hint raster]) every merged cell carries its EC code
+    (measured without a raster), and an unresolved code takes its cell even where the value is not water: the code wins.
+    Returns (depth_ft, owner, cls, reason, hint) then: cls the block's CLASS_INDEX (-1 none), reason the index in
+    ec.UNRESOLVED_REASONS of an unresolved block's most frequent reason, hint its shallowest shoal hint (m, NaN elsewhere).
+    An unresolved block has an owner but NaN depth.
     """
     _, _, width, height = lattice
+    legacy, ecs = ecs is None, ecs or [None] * len(grids)
     groups = {}
     for i, key in enumerate(keys):
         groups.setdefault(key, []).append(i)
     depth = np.full((height, width), np.nan, dtype='float64')
     owner = np.full((height, width), -1, dtype='int8')
+    cls, reason = np.full((height, width), -1, dtype='int8'), np.full((height, width), -1, dtype='int8')
+    hint = np.full((height, width), np.nan)
     for by in range(0, height, STRIP_BLOCKS):
         rows = min(STRIP_BLOCKS, height - by)
         rank = np.full((rows, width), 2 * len(grids))
         for members in groups.values():
             n = offsets[members[0]][2]
+            per_block = lambda a, how: how(a.reshape(rows, n, width, n), axis=(1, 3))  # noqa: E731
             merged = np.full((rows * n, width * n), np.nan, dtype='float64')
             source = np.full(merged.shape, -1, dtype='int8')
+            code, shoal = np.zeros(merged.shape, dtype='uint8'), np.full(merged.shape, np.nan)
             complete = np.full((rows, width), len(grids))
             for i in members:
                 col0, row0, _ = offsets[i]
@@ -105,21 +127,38 @@ def merged_blocks(grids, lattice, offsets, keys):
                 own_valid = water.reshape(rows, n, width, n).all(axis=(1, 3))
                 complete[(complete == len(grids)) & own_valid] = i
                 fill = water & (source < 0)
+                codes = ecs[i] and ecs[i][0].read(1, window=window, boundless=True, fill_value=ec.CODES['nodata'])
+                if ecs[i]:
+                    fill |= np.isin(codes, UNRESOLVED_CODES) & (source < 0)
+                    if not np.isin(codes[fill], list(ec.CODES.values())).all():
+                        raise SystemExit(f'{grids[i].name}: provenance code not in seafloor_ec.CODES')
+                    if len(ecs[i]) > 1:
+                        shoal[fill] = ecs[i][1].read(1, window=window, boundless=True, fill_value=np.nan)[fill]
                 merged[fill], source[fill] = values[fill], i
+                code[fill] = codes[fill] if ecs[i] else ec.CODES['measured']
             blocks = merged.reshape(rows, n, width, n)
             valid = np.isfinite(blocks).all(axis=(1, 3))
+            covered = per_block(source >= 0, np.all)  # without ecs every merged cell is water: covered == valid
+            klass = CLASS_LUT[sum(per_block((code // 10 == k) & (source >= 0), np.any).astype('int64') << k for k in range(6))]
             counts = np.stack([(source == i).reshape(rows, n, width, n).sum(axis=(1, 3)) for i in members])
             first = np.array(members)[(counts > 0).argmax(axis=0)]
             # A complete individual grid outranks any group completed only by merging partial grids.
             priority = np.where(complete < len(grids), complete, len(grids) + first)
-            take = valid & (priority < rank)
-            depth[by:by + rows][take] = (-blocks.sum(axis=(1, 3)) / (n * n) * dc.FEET_PER_M)[take]
+            take = covered & (priority < rank)
+            good = take & valid & (klass != CLASS_INDEX['unresolved'])
+            depth[by:by + rows][good] = (-blocks.sum(axis=(1, 3)) / (n * n) * dc.FEET_PER_M)[good]
             credited = np.array(members)[counts.argmax(axis=0)]
             if len(groups) > 1:
                 credited = np.where(complete < len(grids), complete, credited)
             owner[by:by + rows][take] = credited[take]
+            cls[by:by + rows][take] = klass[take]
+            why = np.stack([per_block(np.isin(code, c) & (source >= 0), np.sum) for c in REASON_CODES]).argmax(axis=0)
+            bad = take & (klass == CLASS_INDEX['unresolved'])
+            reason[by:by + rows][bad] = why[bad]
+            hint[by:by + rows][take] = np.fmax.reduce(shoal.reshape(rows, n, width, n).swapaxes(1, 2).reshape(rows, width, -1),
+                                                      axis=2)[take]
             rank[take] = priority[take]
-    return depth, owner
+    return (depth, owner) if legacy else (depth, owner, cls, reason, hint)
 
 
 def horizontal_crs(grid):
@@ -246,6 +285,44 @@ def polygons(mask, transform):
     return unary_union([shape(g) for g, _ in rio_features.shapes(mask.astype('uint8'), mask=mask, transform=transform)])
 
 
+def ec_paths(path):
+    """A provenance raster and, when one sits beside it, its shoal_hint.tif."""
+    hint = Path(path).with_name('shoal_hint.tif')
+    return [Path(path)] + ([hint] if hint.is_file() else [])
+
+
+def check_provenance(ident, grid, path):
+    """The EC_VERSION of a grid's provenance raster, refused unless it (and any shoal hint) is on the grid's own lattice."""
+    tags = []
+    for p in ec_paths(path):
+        with rasterio.open(p) as ds:
+            if (ds.crs, ds.transform, ds.width, ds.height, ds.count) != (grid.crs, grid.transform, grid.width, grid.height, 1) \
+                    or ds.dtypes[0] != ('uint8' if p == Path(path) else 'float32'):
+                raise SystemExit(f'{ident}: provenance grid does not match the survey grid')
+            tags.append(ds.tags().get('EC_VERSION'))
+    if not tags[0]:
+        raise SystemExit(f'{ident}: provenance grid has no EC_VERSION tag')
+    return tags[0]
+
+
+def class_runs(line, square):
+    """A traced line (block units) cut into maximal runs by the class of the square each segment was traced in; runs
+    share their cut point, so together they are the line."""
+    out = []
+    for a, b in zip(line, line[1:]):
+        r, c = (min(int((a[k] + b[k]) / 2), square.shape[1 - k] - 1) for k in (1, 0))
+        if out and out[-1][0] == square[r, c]:
+            out[-1][1].append(b)
+        else:
+            out.append((square[r, c], [a, b]))
+    return out
+
+
+def geometry_points(geometry):
+    rings = geometry['coordinates'] if geometry['type'] == 'MultiLineString' else [r for p in geometry['coordinates'] for r in p]
+    return [pt for ring in rings for pt in ring]
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--region', required=True)
@@ -257,6 +334,9 @@ def main():
                        'instead of catalog/depth-contours/<id>.geojson. Cannot be combined with --held-output.')
     group.add_argument('--held-output', metavar='PATH', help='Trace candidate grids too, into this private file outside the '
                        'work tree, stamped publication_held (the platform build refuses it). Nothing is written to catalog/.')
+    p.add_argument('--provenance', action='append', default=[], metavar='SOURCE_ID=PATH',
+                   help='The EC provenance raster (uint8, EC_VERSION tag, same lattice) of a --grid GeoTIFF; a shoal_hint.tif '
+                   'beside it is read too. Its blocks then carry their class (docs/seafloor-ec.md).')
     args = p.parse_args()
     held = args.held_output and Path(args.held_output).expanduser().resolve()
     output = args.output and Path(args.output).expanduser().resolve()
@@ -268,12 +348,14 @@ def main():
     region = load_region(args.region)
     _, sources = load_catalogs()
     bound = region['source_bindings']['bathymetry']
-    grids, surveys = {}, {}
-    for pairs, items in ((grids, args.grid), (surveys, args.bag_survey)):
+    grids, surveys, provs = {}, {}, {}
+    for pairs, items in ((grids, args.grid), (surveys, args.bag_survey), (provs, args.provenance)):
         for ident, value in (item.split('=', 1) for item in items):
             if ident in pairs:
                 raise SystemExit(f'{ident} given twice; one file per source per build')
             pairs[ident] = value
+    for ident in sorted(set(provs) - set(grids)):
+        raise SystemExit(f'{ident}: --provenance is only for a source given with --grid')
     order = [ident for ident in bound if ident in grids]
     if set(grids) - set(order):
         raise SystemExit(f'Not bathymetry bindings of {region["id"]}: {sorted(set(grids) - set(order))}')
@@ -292,6 +374,8 @@ def main():
             raise SystemExit(f'{ident}: adapter {adapters[ident]} is not a grid this builder reads')
         if adapters[ident] == 'bag' and ident not in surveys:
             raise SystemExit(f'{ident}: a bag source needs --bag-survey {ident}=SURVEY_ID')
+        if adapters[ident] == 'bag' and ident in provs:
+            raise SystemExit(f'{ident}: --provenance is for a GeoTIFF grid, not a bag source')
     for ident in sorted(set(surveys) - {i for i in order if adapters[i] == 'bag'}):
         raise SystemExit(f'{ident}: --bag-survey is only for a bag source given with --grid')
     # Each grid's identity: the reviewed catalog entry for a GeoTIFF; for a BAG its own metadata, never converted.
@@ -303,12 +387,13 @@ def main():
         native = sources[ident].get('native_resolution_m')
         with rasterio.open(grids[ident]) as grid:
             res = grid.res
+            ec_version = check_provenance(ident, grid, provs[ident]) if ident in provs else None
         # The provenance labels each grid with the reviewed native cell; a resample must not carry that label.
         if not isinstance(native, (int, float)) or any(abs(r - native) > 1e-9 for r in res):
             raise SystemExit(f'{ident}: grid cell {res} differs from reviewed native_resolution_m {native}')
         identity[ident] = {'name': sources[ident]['name'], 'survey_date': str(sources[ident]['survey_year']),
                            'vertical_datum': sources[ident].get('vertical_datum') or dc.UNVERIFIED_DATUM,
-                           'native_cell_m': native, 'extra': {}}
+                           'native_cell_m': native, 'extra': {'ec_version': ec_version} if ec_version else {}}
     hashes = {ident: sha256(grids[ident]) for ident in order}
     if len(set(hashes.values())) != len(hashes):
         raise SystemExit('Two --grid sources are the same file; each binding needs its own survey grid')
@@ -324,22 +409,31 @@ def main():
                 identity[ident]['native_cell_m'] = grid.res[0]
             check_first_strip(ident, grid, lattice, offset, identity[ident]['vertical_datum'], adapters[ident] == 'bag')
         keys = [(n, identity[ident]['vertical_datum']) for ident, (_, _, n) in zip(order, offsets)]
-        depth, owner = merged_blocks(opened, lattice, offsets, keys)
+        ecs = [[stack.enter_context(rasterio.open(q)) for q in ec_paths(provs[ident])] if ident in provs else None
+               for ident in order]
+        depth, owner, cls, reason, hint = merged_blocks(opened, lattice, offsets, keys, ecs)
     x0, y0, _, _ = lattice
     block = Affine(dc.CELL_M, 0, x0, 0, -dc.CELL_M, y0)
     transformer = Transformer.from_crs(crs, 'EPSG:4326', always_xy=True)
     # Blocks outside the region are not traced but stay in the union, so no survey edge is drawn along the clip.
     inside = inside_blocks(transformer, lattice, region['bounds'])
-    union = polygons(owner >= 0, block)
+    # Unresolved blocks are left out of the union: survey edges run round them as round a gap (they are drawn as areas).
+    unresolved = cls == CLASS_INDEX['unresolved']
+    union = polygons((owner >= 0) & ~unresolved, block)
+    # A square's class: block_class of its four corner blocks' classes (as bits 1 << (index + 1), the codes' tens digits).
+    bit = np.where((cls >= 0) & ~unresolved, np.left_shift(2, cls.clip(0).astype('int64')), 0)
+    square = np.array([*CLASS_INDEX, 'none'])[CLASS_LUT[bit[:-1, :-1] | bit[:-1, 1:] | bit[1:, :-1] | bit[1:, 1:]]]
     features, listed = [], []
     for i, ident in enumerate(order):
         reviewed, known = sources[ident], identity[ident]
-        mine = (owner == i) & inside
+        mine = (owner == i) & inside & ~unresolved
         survey_date = known['survey_date']
         entry = {'source_id': ident, 'name': known['name'], 'url': reviewed['documentation_url'],
                  'attribution': reviewed['rights']['attribution'], 'sha256': hashes[ident], 'survey_date': survey_date,
                  'vertical_datum': known['vertical_datum'], 'native_cell_m': known['native_cell_m'],
                  'supported_blocks': int(mine.sum()), **known['extra']}
+        if ident in provs:
+            entry['provenance_counts'] = {name: int(((owner == i) & inside & (cls == k)).sum()) for name, k in CLASS_INDEX.items()}
         listed.append(entry)
         if not mine.any():
             continue
@@ -347,16 +441,19 @@ def main():
         own = np.where(mine, depth, np.nan)
         rows = [[None if not np.isfinite(v) else float(v) for v in row] for row in own]
         for d, lines in dc.trace(rows, dc.levels(float(np.nanmin(own)), float(np.nanmax(own)))).items():
-            out = []
+            runs = {}
             for line in lines:
-                metres = [(x0 + (c + 0.5) * dc.CELL_M, y0 - (r + 0.5) * dc.CELL_M) for c, r in line]
-                ll = dedupe(to_lonlat(transformer, dc.simplify(metres, CONTOUR_TOLERANCE_M, (1.0, 1.0))))
-                if len(ll) >= 2:
-                    out.append(ll)
-            if out:
-                features.append({'type': 'Feature', 'id': f'{ident}-{d}ft',
-                                 'geometry': {'type': 'MultiLineString', 'coordinates': out},
-                                 'properties': {'kind': 'contour', 'depth_ft': d, 'index': d % dc.INDEX_FT == 0, **common}})
+                for name, part in (class_runs(line, square) if provs else [('measured', line)]):
+                    metres = [(x0 + (c + 0.5) * dc.CELL_M, y0 - (r + 0.5) * dc.CELL_M) for c, r in part]
+                    ll = dedupe(to_lonlat(transformer, dc.simplify(metres, CONTOUR_TOLERANCE_M, (1.0, 1.0))))
+                    if len(ll) >= 2:
+                        runs.setdefault(str(name), []).append(ll)
+            # One feature per class; a measured run keeps today's id, so an input without provenance keeps today's bytes.
+            for name in (n for n in ec.PROVENANCE_CLASSES if runs.get(n)):
+                features.append({'type': 'Feature', 'id': f'{ident}-{d}ft' + ('' if name == 'measured' else f'-{name}'),
+                                 'geometry': {'type': 'MultiLineString', 'coordinates': runs[name]},
+                                 'properties': {'kind': 'contour', 'depth_ft': d, 'index': d % dc.INDEX_FT == 0, **common,
+                                                **({'provenance': name} if provs else {})}})
         # Where the contours stop: the outline of all the surveys' supported blocks together, each part credited to the
         # survey whose blocks it bounds. A seam between two surveys is not an edge: a reviewed grid continues there.
         edge = line_merge(polygons(mine, block).boundary.intersection(union.boundary))
@@ -365,12 +462,24 @@ def main():
         if lines:
             features.append({'type': 'Feature', 'id': f'{ident}-edge', 'geometry': {'type': 'MultiLineString', 'coordinates': lines},
                              'properties': {'kind': 'survey-edge', **common}})
+        # Unresolved blocks are areas, never contours: one MultiPolygon per reason, a conflict with its shallowest hint.
+        for k, why in enumerate(ec.UNRESOLVED_REASONS):
+            here = (owner == i) & inside & unresolved & (reason == k)
+            if not here.any():
+                continue
+            area = polygons(here, block)
+            props = {'kind': ec.UNRESOLVED_KIND, 'reason': why, 'blocks': int(here.sum())}
+            if why == 'conflict' and np.isfinite(hint[here]).any():
+                props[ec.SHOAL_HINT_KEY] = round(-float(np.nanmax(hint[here])) * dc.FEET_PER_M)
+            features.append({'type': 'Feature', 'id': f'{ident}-unresolved-{why}', 'geometry': {'type': 'MultiPolygon', 'coordinates': [
+                [dedupe(to_lonlat(transformer, list(ring.coords))) for ring in (g.exterior, *g.interiors)]
+                for g in getattr(area, 'geoms', [area])]}, 'properties': {**props, **common}})
     empty = [entry['source_id'] for entry in listed if not entry['supported_blocks']]
     if empty:
         # A supplied grid that adds nothing (wrong sign, no water, fully overlapped) would look like full coverage.
         raise SystemExit(f'Supplied grids contribute no valid water block: {empty}')
-    xs = [pt[0] for f in features for line in f['geometry']['coordinates'] for pt in line]
-    ys = [pt[1] for f in features for line in f['geometry']['coordinates'] for pt in line]
+    xs = [pt[0] for f in features for pt in geometry_points(f['geometry'])]
+    ys = [pt[1] for f in features for pt in geometry_points(f['geometry'])]
     collection = {'type': 'FeatureCollection', 'schema_version': dc.SCHEMA_VERSION, 'provenance': {
         'region_id': region['id'], 'units': 'ft', 'interval_ft': dc.INTERVAL_FT, 'index_ft': dc.INDEX_FT,
         'shelf_limit_ft': dc.SHELF_LIMIT_FT, 'cell_m': dc.CELL_M, 'horizontal_crs': crs,
@@ -389,7 +498,7 @@ def main():
         'method': f'Native cells are merged in the region\'s binding order (the first survey with valid water wins each cell); '
                   f'each {dc.CELL_M} m block is their mean and counts only when all of them are valid water. Marching squares '
                   f'at every {dc.INTERVAL_FT} ft to {dc.SHELF_LIMIT_FT} ft draws only between four valid blocks of one survey '
-                  '(the survey supplying most of each block), so lines stop where the reviewed grid stops.',
+                  '(the survey supplying most of each block), so lines stop where the reviewed grid stops.' + (EC_METHOD if provs else ''),
         'limitations': 'Not for navigation. Historical survey; the bottom can have changed. Display contours from averaged blocks, '
                        'not soundings or chart depths.'},
         'features': features}

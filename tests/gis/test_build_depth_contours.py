@@ -408,3 +408,90 @@ def test_output_and_held_output_are_mutually_exclusive(tmp_path, monkeypatch, ca
                      '--held-output', str(tmp_path / 'h.geojson'), captured=captured)
     assert info.value.code == 2 and 'not allowed with argument' in capsys.readouterr().err
     assert calls == [] and captured == {}
+
+
+def _ec(path, codes, tags=None, hint=None, x0=X0):
+    """An EC provenance raster (uint8 codes, EC_VERSION tag) and, with `hint`, the shoal_hint.tif beside it."""
+    import numpy as np
+    import rasterio
+    from rasterio.transform import from_origin
+    for p, values, dtype in ((path, codes, 'uint8'), (path.with_name('shoal_hint.tif'), hint, 'float32')):
+        if values is not None:
+            with rasterio.open(p, 'w', driver='GTiff', width=values.shape[1], height=values.shape[0], count=1,
+                               dtype=dtype, crs='EPSG:32610', transform=from_origin(x0, Y0, 2.0, 2.0)) as ds:
+                ds.update_tags(**({'EC_VERSION': '1.0'} if tags is None else tags))
+                ds.write(np.asarray(values, dtype=dtype), 1)
+    return path
+
+
+def test_provenance_cuts_contours_into_class_runs_and_draws_unresolved_areas(tmp_path, monkeypatch):
+    import numpy as np
+    from pyproj import Transformer
+    from skippercast.platform import depth_contours as dc
+    a = _tif(tmp_path / 'a.tif', _slope((128, 128), shallow=-2.0), X0, Y0)   # 16 x 16 blocks; 30 ft between block cols 1 and 2
+    codes, hint = np.full((128, 128), 10), np.full((128, 128), np.nan)
+    codes[24:32, 8:16] = 20                       # one filled block (row 3, col 1) on the 30 ft line
+    codes[64:80, 8:24] = 30                       # verified 2 x 2 blocks: a square is verified only with four verified corners
+    codes[0:8, 64:72], hint[0:8, 64:72] = 41, -3.0  # one unresolved-conflict block on the top edge, off every contour
+    (tmp_path / 'ec').mkdir()
+    prov = _ec(tmp_path / 'ec' / 'provenance.tif', codes, hint=hint)
+    monkeypatch.setattr(dc, 'simplify', lambda line, tolerance, scale: [list(p) for p in line])  # compare traced points
+    plain = _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a'))
+    doc = _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a'), '--provenance', f'usgs-a={prov}')
+    by_id = {f['id']: f for f in doc['features']}
+    runs = [by_id[f'usgs-a-30ft{s}'] for s in ('', '-filled', '-verified')]
+    assert [f['properties']['provenance'] for f in runs] == ['measured', 'filled', 'verified']
+    points = lambda fs: {tuple(p) for f in fs for line in f['geometry']['coordinates'] for p in line}  # noqa: E731
+    assert points(runs) == points([f for f in plain['features'] if f['id'] == 'usgs-a-30ft'])
+    assert sum(len(f['geometry']['coordinates']) for f in runs) == 5      # measured, filled, measured, verified, measured
+    area = by_id['usgs-a-unresolved-conflict']
+    assert area['geometry']['type'] == 'MultiPolygon' and area['properties'] == {
+        'kind': 'unresolved-area', 'reason': 'conflict', 'blocks': 1, 'shoal_hint_ft': 10, 'source_id': 'usgs-a',
+        'survey_date': '2008', 'vertical_datum': dc.UNVERIFIED_DATUM}
+    assert [f['properties']['kind'] for f in doc['features']].count('unresolved-area') == 1
+    # The survey edge runs round the unresolved block (within its 12 m simplification) exactly as round a gap.
+    from shapely.geometry import MultiLineString, Point
+    to_utm = Transformer.from_crs('EPSG:4326', 'EPSG:32610', always_xy=True).transform
+    edge = lambda d: MultiLineString([[to_utm(*p) for p in line] for f in d['features']  # noqa: E731
+                                      if f['properties']['kind'] == 'survey-edge' for line in f['geometry']['coordinates']])
+    notch = Point(X0 + 136, Y0 - 16)                  # the middle of the block's lower side, 16 m below the grid's top
+    assert edge(doc).distance(notch) <= 12.5 and edge(plain).distance(notch) >= 15
+    entry = doc['provenance']['sources'][0]
+    assert entry['ec_version'] == '1.0' and entry['supported_blocks'] == 255
+    assert entry['provenance_counts'] == {'measured': 250, 'filled': 1, 'verified': 4, 'unresolved': 1}
+    assert 'never as contours' in doc['provenance']['method'] and 'never as contours' not in plain['provenance']['method']
+    assert not any(f['properties']['kind'] == 'unresolved-area' for f in dc.overview_contours(doc)['features'])  # 16 m span
+
+
+# sha256 of the output JSON, written by the builder before EC5 on these fixtures; without --provenance it must not move.
+FROZEN = {'slope': '3046a67e2b992103d4bdac5c02de98419ffead5c69642469e73095494fe73697',
+          'seam': '6e1108d81aaad2d0b58d7f8ac4ad1e4ca77d01a419f5c9a4148ecbfd6a4a1476'}
+
+
+def test_without_provenance_the_output_matches_the_frozen_pre_change_bytes(tmp_path, monkeypatch):
+    import hashlib
+    import json
+    a = _tif(tmp_path / 'a.tif', _slope((128, 128), shallow=-2.0), X0, Y0)
+    b = _tif(tmp_path / 'b.tif', _slope((64, 64)), X0 + 248, Y0)
+    got = {'slope': _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a')),
+           'seam': _run_builder(monkeypatch, {'usgs-a': a, 'usgs-b': b}, _sources('usgs-a', 'usgs-b'))}
+    assert {k: hashlib.sha256(json.dumps(v).encode()).hexdigest() for k, v in got.items()} == FROZEN
+
+
+@pytest.mark.parametrize('case,message', [
+    ('unknown id', 'only for a source given with --grid'), ('size', 'does not match the survey grid'),
+    ('transform', 'does not match the survey grid'), ('no tag', 'no EC_VERSION tag')])
+def test_provenance_refusals_come_before_any_read(tmp_path, monkeypatch, case, message):
+    import hashlib
+    import numpy as np
+    import rasterio
+    a = _tif(tmp_path / 'a.tif', _slope((64, 64)), X0, Y0)
+    shape, x0, tags = ((32, 32) if case == 'size' else (64, 64)), (X0 + 16 if case == 'transform' else X0), None
+    prov = _ec(tmp_path / 'provenance.tif', np.full(shape, 10), tags={} if case == 'no tag' else None, x0=x0)
+    reads = []
+    monkeypatch.setattr(rasterio.io.DatasetReader, 'read', lambda *a, **k: reads.append(a))
+    monkeypatch.setattr(hashlib, 'file_digest', lambda *a, **k: reads.append(a))
+    with pytest.raises(SystemExit, match=message):
+        _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a'), '--provenance',
+                     f'{"usgs-x" if case == "unknown id" else "usgs-a"}={prov}')
+    assert reads == []

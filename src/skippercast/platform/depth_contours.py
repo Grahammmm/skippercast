@@ -29,6 +29,10 @@ The method, kept here so it is tested without the GIS stack:
   comes from one survey and carries that survey's source, date and datum.
 - The survey-edge lines outline each survey's supported blocks: where the
   contours stop because there is no reviewed grid beyond.
+- With an error-correction provenance grid (docs/seafloor-ec.md) a contour is
+  cut into runs by block class (`provenance`: measured, filled, verified; a
+  filled or verified run's id ends in that class). Unresolved blocks are
+  `unresolved-area` polygons, never contours, and survey edges run round them.
 
 The published form groups lines by their exact properties into one
 MultiLineString per (source, depth), so a click on any line reads its own
@@ -52,7 +56,7 @@ CELL_M = 16
 DECIMALS = 5
 FEET_PER_M = 3.28084
 UNVERIFIED_DATUM = 'unverified source datum'
-KINDS = ('contour', 'survey-edge')
+KINDS = ('contour', 'survey-edge', 'unresolved-area')
 # Size budgets (decoded bytes) for the two published forms; the build fails past them.
 MAX_BYTES = 1_000_000
 OVERVIEW_MAX_BYTES = 64_000
@@ -237,6 +241,10 @@ def _check(collection, region, sources, allowed):
         if not SHA256.fullmatch(str(entry.get('sha256'))) or not YEAR.fullmatch(str(entry.get('survey_date'))) \
                 or not entry.get('vertical_datum'):
             raise ValueError(f"Depth contour source {ident} lacks its grid hash, survey date or datum")
+        counts = entry.get('provenance_counts', {})
+        if not isinstance(entry.get('ec_version', ''), str) or not isinstance(counts, dict) \
+                or not set(counts) <= {*ec.PROVENANCE_CLASSES, 'unresolved'} or not all(_count(n, 0) for n in counts.values()):
+            raise ValueError(f"Depth contour source {ident} misstates its error-correction version or class counts")
     if 'sources_omitted' in provenance and provenance['sources_omitted'] != omitted_sources(region, sources, listed):
         raise ValueError(f"Depth contours for {region['id']} misstate the omitted bound surveys")
     west, south, east, north = region['bounds']
@@ -247,15 +255,49 @@ def _check(collection, region, sources, allowed):
         entry = listed[p['source_id']]
         if p.get('survey_date') != entry['survey_date'] or p.get('vertical_datum') != entry['vertical_datum']:
             raise ValueError(f"Depth contour {feature.get('id')} lacks its source's survey date or datum")
+        if 'provenance' in p and p['provenance'] not in ec.PROVENANCE_CLASSES:
+            raise ValueError(f"Depth contour {feature.get('id')} has an unknown provenance class")
+        if p['kind'] == ec.UNRESOLVED_KIND:
+            _check_area(feature, p, geometry, region)
+            continue
         if p['kind'] == 'contour':
             depth = p.get('depth_ft')
             if (not isinstance(depth, int) or isinstance(depth, bool) or depth <= 0 or depth % INTERVAL_FT
                     or depth > SHELF_LIMIT_FT or p.get('index') is not (depth % INDEX_FT == 0)):
                 raise ValueError(f"Depth contour {feature.get('id')} is not a {INTERVAL_FT} ft shelf contour")
+            # A filled or verified run says so in its id; a measured run (or one without provenance) never does.
+            named = next((c for c in ec.PROVENANCE_CLASSES[1:] if str(feature.get('id')).endswith(f'-{c}')), 'measured')
+            if named != p.get('provenance', 'measured'):
+                raise ValueError(f"Depth contour {feature.get('id')} id does not name its provenance class")
         lines = {'LineString': [geometry.get('coordinates')], 'MultiLineString': geometry.get('coordinates')}.get(geometry.get('type'))
         if not lines or any(len(line) < 2 or any(not (west <= x <= east and south <= y <= north) for x, y in line)
                             for line in lines):
             raise ValueError(f"Depth contour {feature.get('id')} is not a line inside {region['id']}")
+
+
+def _count(value, least):
+    return isinstance(value, int) and not isinstance(value, bool) and value >= least
+
+
+def _check_area(feature, p, geometry, region):
+    """An unresolved-area: a known reason, a block count, a shoal hint only for a conflict, polygons inside the region."""
+    west, south, east, north = region['bounds']
+    hint = p.get(ec.SHOAL_HINT_KEY)
+    if p.get('reason') not in ec.UNRESOLVED_REASONS or not _count(p.get('blocks'), 1) or (
+            ec.SHOAL_HINT_KEY in p and (p['reason'] != 'conflict' or not _count(hint, -math.inf))):
+        raise ValueError(f"Unresolved area {feature.get('id')} lacks a known reason or block count, or misplaces a shoal hint")
+    polys = {'Polygon': [geometry.get('coordinates')], 'MultiPolygon': geometry.get('coordinates')}.get(geometry.get('type'))
+    if not polys or any(not poly or any(len(ring) < 4 or any(not (west <= x <= east and south <= y <= north) for x, y in ring)
+                                        for ring in poly) for poly in polys):
+        raise ValueError(f"Unresolved area {feature.get('id')} is not a polygon inside {region['id']}")
+
+
+def _overview_line(line, tolerance_m, scale):
+    """A line simplified to `tolerance_m`, rounded to OVERVIEW_DECIMALS, deduplicated, and its larger bbox span (m)."""
+    short = [[round(x, OVERVIEW_DECIMALS), round(y, OVERVIEW_DECIMALS)] for x, y in simplify(line, tolerance_m, scale)]
+    short = [p for i, p in enumerate(short) if i == 0 or p != short[i - 1]]
+    xs, ys = [p[0] * scale[0] for p in short], [p[1] * scale[1] for p in short]
+    return short, max(max(xs) - min(xs), max(ys) - min(ys))
 
 
 def overview_contours(collection, tolerance_m=OVERVIEW_TOLERANCE_M):
@@ -266,13 +308,20 @@ def overview_contours(collection, tolerance_m=OVERVIEW_TOLERANCE_M):
     scale = (111_320 * math.cos(math.radians((south + north) / 2)), 110_540)
     features = []
     for feature in collection['features']:
+        if feature['geometry']['type'] in ('Polygon', 'MultiPolygon'):
+            # An unresolved area: rings simplified alike; a polygon spanning less than OVERVIEW_MIN_SPAN_M is left out.
+            polys = feature['geometry']['coordinates']
+            polys = [[_overview_line(ring, tolerance_m, scale) for ring in poly]
+                     for poly in ([polys] if feature['geometry']['type'] == 'Polygon' else polys)]
+            kept = [[ring for ring, _ in poly if len(ring) >= 4] for poly in polys
+                    if len(poly[0][0]) >= 4 and poly[0][1] >= OVERVIEW_MIN_SPAN_M]
+            if kept:
+                features.append({**feature, 'geometry': {'type': 'MultiPolygon', 'coordinates': kept}})
+            continue
         lines = []
         for line in feature_lines(feature['geometry']):
-            short = [[round(x, OVERVIEW_DECIMALS), round(y, OVERVIEW_DECIMALS)] for x, y in simplify(line, tolerance_m, scale)]
-            short = [p for i, p in enumerate(short) if i == 0 or p != short[i - 1]]
-            xs, ys = [p[0] * scale[0] for p in short], [p[1] * scale[1] for p in short]
-            if len(short) >= 2 and max(max(xs) - min(xs), max(ys) - min(ys)) >= OVERVIEW_MIN_SPAN_M \
-                    and not (short[0] == short[-1] and len(short) < 4):
+            short, span = _overview_line(line, tolerance_m, scale)
+            if len(short) >= 2 and span >= OVERVIEW_MIN_SPAN_M and not (short[0] == short[-1] and len(short) < 4):
                 lines.append(short)
         if lines:
             features.append({**feature, 'geometry': {'type': 'MultiLineString', 'coordinates': lines}})
@@ -319,3 +368,7 @@ def publish_depth_contours(root, region, output, sources):
             path.unlink()
             raise ValueError(f"{path.name} for {region['id']} is {receipt['bytes']} bytes, over its {budget}-byte budget")
     return f"regions/{region['id']}/depth-contours.geojson", f"regions/{region['id']}/depth-contours-overview.geojson"
+
+
+# Last: seafloor_ec imports SHA256 from this module (the EC5 GeoJSON property contract is defined there).
+from . import seafloor_ec as ec  # noqa: E402
