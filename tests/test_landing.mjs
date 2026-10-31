@@ -388,6 +388,47 @@ test('the night map draws the first listed source with a fresh frame, the night 
   } finally { nightState.value = 'loading'; }
 });
 
+test('the night map draws only the shoreline form region.json lists, and none when it lists neither (RF0850-7)', async () => {
+  const {nightRegion, nightStyle, readPalette} = await loadNight();
+  const palette = readPalette(name => `token(${name})`), archive = 'https://s.test/feeds/tiles/basemap/a.pmtiles', page = 'https://s.test/?ui=v2';
+  const base = nightStyle(palette, archive, page, 'morro-bay');
+  assert.deepEqual(nightStyle(palette, archive, page, 'morro-bay', null), base, 'null draws exactly as before');
+  assert.equal(base.sources.coastline.data, 'https://s.test/regions/morro-bay/shoreline-overview.geojson');
+  const morro = JSON.parse(readFileSync(join(ROOT, 'dist/regions/morro-bay/region.json'), 'utf8')).chart_files;
+  assert.equal(morro.length, 7);
+  assert.deepEqual(nightStyle(palette, archive, page, 'morro-bay', morro), base, 'all listed: as before');
+  const full = nightStyle(palette, archive, page, 'morro-bay', ['shoreline.geojson']);
+  assert.equal(full.sources.coastline.data, 'https://s.test/regions/morro-bay/shoreline.geojson', 'only the full shoreline listed');
+  assert.deepEqual(full.layers, base.layers);
+  assert.deepEqual(full.layers.slice(-2).map(l => l.id), ['coastline-glow', 'coastline']);
+  for (const listed of [[], ['poster.svg', 'land-water.json']]) {
+    const none = nightStyle(palette, archive, page, 'morro-bay', listed);
+    assert.equal(none.sources.coastline, undefined, `no coastline source for ${JSON.stringify(listed)}`);
+    assert.ok(none.layers.every(l => l.source !== 'coastline'));
+    assert.equal(none.layers.length, base.layers.length - 2);
+    assert.deepEqual(none.layers, base.layers.slice(0, -2), 'the basemap layers unchanged');
+    assert.deepEqual(Object.keys(none.sources), Object.keys(base.sources).filter(k => k !== 'coastline'));
+  }
+
+  const region = JSON.parse(readFileSync(join(ROOT, 'regions/morro-bay/region.json'), 'utf8'));
+  const parse = async chart => nightRegion('morro-bay', async () => ({ok: true, json: async () => ({...region, ...chart})}), page);
+  const listed = await parse({chart_files: ['poster.svg']});
+  assert.deepEqual(listed.chartFiles, ['poster.svg']);
+  assert.deepEqual([listed.bounds, listed.center, listed.harbor], [region.bounds, region.map.center, {latitude: region.harbor.latitude, longitude: region.harbor.longitude}]);
+  for (const chart of [{chart_files: undefined}, {chart_files: null}, {chart_files: 'shoreline.geojson'}, {chart_files: [1]}, {chart_files: ['poster.svg', 2]}]) {
+    const info = await parse(chart);
+    assert.equal(info.chartFiles, null, `malformed ${JSON.stringify(chart.chart_files)}: fail open`);
+    assert.deepEqual([info.bounds, info.center], [region.bounds, region.map.center]);
+  }
+
+  const cambria = readFileSync(join(ROOT, 'dist/regions/cambria-san-simeon/region.json'), 'utf8'), asked = [];
+  const info = await nightRegion('cambria-san-simeon', async url => { asked.push(url); return {ok: true, json: async () => JSON.parse(cambria)}; }, page);
+  assert.deepEqual([asked, info.chartFiles], [['https://s.test/regions/cambria-san-simeon/region.json'], []]);
+  const style = nightStyle(palette, archive, page, 'cambria-san-simeon', info.chartFiles);
+  assert.equal(style.sources.coastline, undefined);
+  assert.doesNotMatch(JSON.stringify(style), /shoreline/, 'Cambria: no shoreline request at all');
+});
+
 test('MapLibre and the night map load only by dynamic import, after first paint (FE-25, design § 13)', () => {
   const main = readFileSync(join(ROOT, 'web/landing/main.tsx'), 'utf8'), map = readFileSync(join(ROOT, 'web/landing/NightMap.tsx'), 'utf8');
   assert.match(main, /import\('\.\/NightMap\.tsx'\)/);
