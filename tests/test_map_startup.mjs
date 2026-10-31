@@ -3,47 +3,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {whenView, mapReady} from '../dist/startup.js';
 import {validDailyPart, loadDailyPart, dailyPartURL} from '../dist/daily-feed.js';
 import {legendEntries} from '../web/legend.ts';
 import {isJSON, isLive, summarise, stubForecast} from '../scripts/measure_startup.mjs';
 import {POINT_SIGNATURE} from '../dist/marine-data.js';
-
-function fakeDocument(view) {
-  const observers = [];
-  const body = {dataset: {view}};
-  globalThis.MutationObserver = class { constructor(fn) { this.fn = fn; observers.push(this); } observe() {} disconnect() { this.off = true; } };
-  return {body, set(next) { body.dataset.view = next; for (const o of observers) if (!o.off) o.fn([]); }};
-}
-
-test('whenView runs the work once, when the view first shows', t => {
-  t.after(() => { delete globalThis.MutationObserver; });
-  const doc = fakeDocument('map');
-  let runs = 0;
-  whenView('forecast', () => runs++, doc);
-  assert.equal(runs, 0, 'not while the map shows');
-  doc.set('guide');
-  assert.equal(runs, 0);
-  doc.set('forecast');
-  doc.set('map');
-  doc.set('forecast');
-  assert.equal(runs, 1, 'once only');
-  let now = 0;
-  whenView('forecast', () => now++, doc);
-  assert.equal(now, 1, 'at once when the view is already showing');
-  let early = 0;
-  const run = whenView('export', () => early++, fakeDocument('map'));
-  run(); run();
-  assert.equal(early, 1, 'the returned function runs it once, sooner');
-});
-
-test('mapReady hides the skeleton and clears aria-busy', () => {
-  const skeleton = {hidden: false}, wrap = {removed: null, removeAttribute(name) { this.removed = name; }};
-  mapReady({getElementById: id => id === 'map-loading' ? skeleton : null, querySelector: sel => sel === '.map-wrap' ? wrap : null});
-  assert.equal(skeleton.hidden, true);
-  assert.equal(wrap.removed, 'aria-busy');
-  mapReady({getElementById: () => null, querySelector: () => null});   // absent elements are fine
-});
 
 const region = {id: 'morro-bay'};
 const part = extra => ({schema_version: 1, region_id: 'morro-bay', generated_at: '2026-09-29T11:00:00Z', catch_probability: null, bite_score: null, ...extra});
