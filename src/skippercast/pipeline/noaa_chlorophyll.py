@@ -13,9 +13,16 @@ HOST = "https://coastwatch.noaa.gov"
 DIRECTORY = "chlociVIIRSnpp-n20GlobalDailyWW00"
 CATALOG = f"{HOST}/thredds/catalog/{DIRECTORY}/catalog.xml"
 FILENAME = re.compile(r"V(20\d{2})(\d{3})_D1_NPP-N20_WW00_chloci\.nc")
+MAX_AGE_HOURS = 96  # equals catalog/sources.json request.max_age_hours (pinned by a test)
+MAX_FILES = 3
 
 
 def latest_file(client):
+    return recent_files(client)[0]
+
+
+def recent_files(client, max_age_hours=MAX_AGE_HOURS):
+    """Newest file first, then older files whose 12:00Z sample is still within max_age_hours."""
     root = ElementTree.fromstring(client.get(CATALOG))
     found = []
     for entry in root.iter():
@@ -30,10 +37,11 @@ def latest_file(client):
             found.append((day, path))
     if not found:
         raise ValueError("No dated NOAA VIIRS chlorophyll file in official catalog")
-    day, path = max(found)
-    if (client.now - day).total_seconds() > 120 * 3600:
+    found = sorted(set(found), reverse=True)
+    if (client.now - found[0][0]).total_seconds() > 120 * 3600:
         raise ValueError("Latest NOAA VIIRS chlorophyll file is stale")
-    return day, path
+    window = timedelta(hours=max_age_hours)
+    return (found[:1] + [f for f in found[1:] if client.now - (f[0] + timedelta(hours=12)) <= window])[:MAX_FILES]
 
 
 def read_subset(body, bounds, path, day):
@@ -78,12 +86,17 @@ def read_subset(body, bounds, path, day):
 
 
 def fetch(client, bounds):
-    day, path = latest_file(client)
+    """Use the newest in-window file with valid cells; else the newest file's empty result."""
     west, east = bounds["longitude"]
     south, north = bounds["latitude"]
     query = urlencode({"var": "chl_oci", "north": north, "south": south,
                        "west": west, "east": east, "accept": "netcdf"})
-    url = f"{HOST}/thredds/ncss/grid/{path}?{query}"
-    result = read_subset(client.get(url, as_binary=True), bounds, path, day)
-    result.update(catalog_url=CATALOG, query_url=url, requested_bounds=bounds)
-    return result
+    newest = None
+    for day, path in recent_files(client):
+        url = f"{HOST}/thredds/ncss/grid/{path}?{query}"
+        result = read_subset(client.get(url, as_binary=True), bounds, path, day)
+        result.update(catalog_url=CATALOG, query_url=url, requested_bounds=bounds)
+        if result["valid_cells"] > 0:
+            return result
+        newest = newest or result
+    return newest

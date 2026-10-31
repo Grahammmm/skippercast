@@ -38,6 +38,8 @@
   "tests/fixtures/advisor/vision/images/fish.png": "a5e63e859e7c5a8b7359f2ffc1d2f187bcb7cb342b791406966d1bf33f3260a3",
   "tests/fixtures/basemap/tiny.pmtiles": "0c131d0e729606ac697b4ff9cc608a2c8e0da8fab7e1e0dc2d6c3e2b6f1d8274",
   "tests/fixtures/coast/segment-s020/frozen/cache/source.tif": "ea5617db706ac1fe2c00c26592017a4b1491844e9f26fe35df0a212f4261e132",
+  "tests/fixtures/noaa-chlorophyll/morro-bay-V2026300.nc": "1605fe31b5b4578c796f75dba1ee6b4d170bb3dba88216df72ff546ffc06c686",
+  "tests/fixtures/noaa-chlorophyll/morro-bay-V2026301.nc": "8a6d88097bad755b01531033681e8eb10e1e7f7d6af4d5f7f4bd7c957e54a233",
   "tests/fixtures/seafloor/chart.pmtiles": "bac60140560c5bb3e4783c6ebb6d409831eecb62fe43948a2d8603238383bae2",
   "tests/fixtures/seafloor/classified-point-contact.pmtiles": "b9c703bf0048c78d489beff5af20bafbc39f0766cebd11ae8a8ab462bdd82416",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
