@@ -33,7 +33,7 @@ import {loadPoster, poster} from './poster.ts';
 import {COASTLINE_PICK, coastlineFetchPath, coastlineLayers, coastlineMark, coastlineSource, shorelineOverviewURL, shorelinePublished, shorelineURL, type ChartMark} from './coastline.ts';
 import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
-import {openBandPadding, type Box} from './open-band.ts';
+import {openBandPadding, toEdge, type Box} from './open-band.ts';
 import {browserGate, flyoverLegs, markFlyoverSeen, mayFly, type FlyoverGate} from './flyover.ts';
 import {COASTLINE_SOURCE, DENSITY_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
 import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markData, markSources, markStyle} from './marks.ts';
@@ -138,7 +138,8 @@ const loadLibrary = (): Promise<MapLibraryModule> => import('./maplibre.js');
 export function createChart(options: ChartOptions): {destroy(): void} {
   const {host, layers = [], load = loadLibrary, palette = () => readPalette(), page = () => location.href, viewDelay = 400, flyoverGate = browserGate} = options;
   const diagnostics = options.diagnostics ?? (new URL(page()).searchParams.get('diagnostics') === '1');
-  const covers = options.covers ?? ((): Box[] => typeof document === 'undefined' ? [] : [...document.querySelectorAll('.app-top, .ui-sheet')].map(el => el.getBoundingClientRect()));
+  const covers = options.covers ?? ((): Box[] => typeof document === 'undefined' ? [] : [...document.querySelectorAll('.app-top, .ui-sheet')]
+    .map(el => el.matches('.ui-sheet') ? toEdge(el.getBoundingClientRect(), host.getBoundingClientRect?.().bottom ?? NaN) : el.getBoundingClientRect()));
   // The marks, the protected areas and the masthead read the same region files: one request each (the startup budget).
   const fetchFn = shareStatic(options.fetchFn ?? sharedFetch);
   const engine = signal<Engine | null>(null);

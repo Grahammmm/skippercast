@@ -1,8 +1,8 @@
 // RF0905-1 (phone-pass issue 5): below 1024 px the Chart pads MapLibre so the camera centre draws in the
-// open band between the top card and the sheet; desktop and `?view=` are unchanged. Fake MapLibre, no DOM.
+// open band between the top card and the sheet; desktop and `?view=` are unchanged. Fake MapLibre and DOM.
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {openBandPadding} from '../web/map/open-band.ts';
+import {openBandPadding, toEdge} from '../web/map/open-band.ts';
 import {createEngine} from '../web/map/engine.ts';
 import {chartFailed, chartMark, createChart, unavailable} from '../web/map/chart.ts';
 import {createStage, terrainFailed} from '../web/map/stage.ts';
@@ -23,6 +23,9 @@ test('phone at peek: the top card pads the top, the sheet the bottom', () => {
   const brand = {...TOP, bottom: 90};  // two top covers: the lower bottom wins, whichever comes first
   assert.deepEqual(openBandPadding(HOST, [brand, TOP]), {...ZERO, top: 130});
   assert.deepEqual(openBandPadding(HOST, [TOP, brand, SHEET, {...SHEET, top: 700}]), {...ZERO, top: 130, bottom: 233});
+  // app.css at 390×844: the 704 px sheet on the 56 px tabs, translated to peek 612..1316, half 366..1070; a hidden sheet has no box.
+  const edge = box => toEdge({...SHEET, ...box}, 844);
+  assert.deepEqual([{top: 612, bottom: 1316}, {top: 366, bottom: 1070}, {top: 0, bottom: 0}].map(b => openBandPadding(HOST, [TOP, edge(b)]).bottom), [232, 478, 0]);
 });
 
 test('no covers, narrow, non-finite, non-overlapping and full-height covers pad nothing', () => {
@@ -75,7 +78,7 @@ test('the engine passes the padding to MapLibre once, and a library without setP
   assert.equal(padded.maps[0].paddings[0], p, 'the exact object');
 });
 
-function chartAt(width, flyoverGate = () => ({reduced: true, saveData: false, hidden: false, linked: false, seen: true})) {
+function chartAt(width, dom = false, flyoverGate = () => ({reduced: true, saveData: false, hidden: false, linked: false, seen: true})) {
   globalThis.location = {href: `${PAGE}?region=morro-bay&presentation=chart`};
   globalThis.history = {state: null, pushState(_s, _t, url) { location.href = url; }, replaceState(_s, _t, url) { location.href = url; }};
   globalThis.dispatchEvent = () => true; configureStore({v2: true, storage: null}); syncFromURL(location.href);
@@ -87,7 +90,7 @@ function chartAt(width, flyoverGate = () => ({reduced: true, saveData: false, hi
   const stage = createStage({host: {dataset: {}, shadowRoot: {replaceChildren() {}}}, load: async () => land, center: () => [35.37, -120.86], viewDelay: 0,
     doc: {hidden: false, addEventListener() {}, removeEventListener() {}},
     renderers: [() => createChart({host, load: async () => fake.module, fetchFn, page: () => PAGE, palette: () => readPalette(n => `token(${n})`), viewDelay: 0,
-      covers: () => [TOP, sheet], flyoverGate})]});
+      covers: dom ? undefined : () => [TOP, sheet], flyoverGate})]});
   return {fake, host, stage, sheet, view: () => new URL(location.href).searchParams.get('view')};
 }
 
@@ -123,7 +126,7 @@ test('the mount padding is not a camera move: a phone keeps ?view= unwritten and
   for (const name of ['warn', 'error']) t.mock.method(console, name, () => {});
   const open = linked => ({reduced: false, saveData: false, hidden: false, linked, seen: false});
   for (const width of [390, 1280]) {
-    const run = chartAt(width, open);
+    const run = chartAt(width, false, open);
     await tick(); await tick(); const [map] = run.fake.maps;
     await tick(); await tick();  // past the 0 ms ?view= delay
     assert.equal(run.view(), null, `${width} px: no ?view= from the mount`);
@@ -132,4 +135,16 @@ test('the mount padding is not a camera move: a phone keeps ?view= unwritten and
     assert.equal(map.eases?.length, 1);
     run.stage.destroy();
   }
+});
+
+test('the default covers read the CSS-translated peek sheet (612..1316) down to the host bottom', async t => {
+  for (const name of ['warn', 'error']) t.mock.method(console, name, () => {});
+  const el = (box, sheet) => ({getBoundingClientRect: () => box, matches: s => sheet && s === '.ui-sheet'});
+  globalThis.document = {hidden: false, addEventListener() {}, removeEventListener() {},
+    querySelectorAll: s => s === '.app-top, .ui-sheet' ? [el(TOP, false), el({...SHEET, top: 612, bottom: 1316}, true)] : []};
+  t.after(() => { delete globalThis.document; });
+  const run = chartAt(390, true);
+  t.after(() => run.stage.destroy());
+  await tick(); await tick();
+  assert.deepEqual(run.fake.maps[0].paddings, [{...ZERO, top: 130, bottom: 232}]);
 });

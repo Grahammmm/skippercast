@@ -29,3 +29,6 @@ export function openBandPadding(host: Box, covers: readonly Box[], minBand = 160
   }
   return {top, bottom, left: 0, right: 0};
 }
+
+/** The phone sheet is translated partly below the screen and sits on the tab bar: it covers the map from its top to `bottom`. */
+export const toEdge = (r: Box, bottom: number): Box => ({top: r.top, left: r.left, right: r.right, bottom: r.bottom > r.top ? bottom : r.bottom});
