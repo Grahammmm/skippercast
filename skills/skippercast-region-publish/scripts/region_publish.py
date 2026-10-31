@@ -55,7 +55,7 @@ def put(dest, source=None, data=None):
 
 def parse_review(folder):
     info = {}
-    for line in (folder / 'REVIEW.md').read_text().splitlines() if (folder / 'REVIEW.md').is_file() else []:
+    for line in (folder / 'REVIEW.md').read_text(encoding='utf-8').splitlines() if (folder / 'REVIEW.md').is_file() else []:
         if m := re.fullmatch(r'(Build-SHA256|Reviewer-Runtime|Reviewer-Family):(.*)', line):
             info[m[1]] = m[2].strip()
         elif m := re.fullmatch(r'Overall:\s*(\S*)\s*', line):
@@ -94,7 +94,7 @@ def check(folder, build, review, region, sources, python, run):
 
 def load(path):
     try:
-        return json.loads(path.read_text())
+        return json.loads(path.read_text(encoding='utf-8'))
     except (OSError, ValueError):
         return None
 
@@ -227,9 +227,11 @@ def publish(args, run, loader):
             action = ', '.join(refused) + ' (a refused publish source is a custodian decision; see EC.md Operator asks)'
         text = f'# PUBLISH {rid} {name}\nHELD: {reason}\n{detail}\nNext: {action}\n'
         changes, code = {'state': 'held', 'held_reason': reason, 'review_verdict': (review or {}).get('overall', ''), **fields}, 1
+    if os.path.lexists(folder / 'PUBLISH.md'):  # appeared during the checks: refuse before touching the ledger
+        raise ValueError('PUBLISH.md already exists (never overwritten)')
+    update_ledger(ledger, rid, changes)  # row first: if it fails there is no PUBLISH.md, so a re-run is allowed
     with os.fdopen(os.open(folder / 'PUBLISH.md', os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644), 'w') as out:
         out.write(text)  # exclusive and never via a link, even one planted after the check above
-    update_ledger(ledger, rid, changes)
     print(f"{'PUBLISH READY' if code == 0 else 'HELD ' + changes['held_reason']} {rid}")
     return code
 
@@ -243,6 +245,8 @@ def main(argv=None, run=default_run, loader=default_loader):
         parser.add_argument(flag)
     args = parser.parse_args(argv)
     try:
+        if os.path.islink(os.path.expanduser(args.ledger)):  # the given path, before realpath; both publish and --record-pr
+            raise ValueError('--ledger must be a regular file, not a link')
         if args.record_pr and (args.pr or '').isdigit() and re.fullmatch(r'(\d{4}-\d{2}-\d{2})?', args.published_at or ''):
             rid = json.loads((Path(args.record_pr) / 'BUILD.json').read_text())['region_id']
             update_ledger(Path(os.path.expanduser(args.ledger)), rid, {'pr': args.pr, **({'state': 'published', 'published_at': args.published_at} if args.published_at else {'state': 'reviewed'})})
