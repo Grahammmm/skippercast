@@ -29,6 +29,7 @@ import type {Engine, MapView, Overlay} from './engine.ts';
 import {layerEntry} from './layers.ts';
 import {markData} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
+import {DEFAULT_ZONE} from '../zone.ts';
 
 type V1 = typeof import('../../dist/fleet-activity.js');
 const loadV1 = (): Promise<V1> => import('../../dist/fleet-activity.js');
@@ -147,7 +148,7 @@ export function activityMark(v1: V1, layer: Activity, p: Props, zone: string): C
 export interface FleetActivityOptions extends FleetLayerOptions {zone?: () => string}
 
 /** Draws the admin activity layers while the Fleet entry and an option are on; created with the Chart (web/map/chart.ts `layers`). */
-export function createFleetActivity({engine, fetchFn = (...a) => fetch(...a), palette = () => readPalette(), zone = () => 'America/Los_Angeles'}: FleetActivityOptions) {
+export function createFleetActivity({engine, fetchFn = (...a) => fetch(...a), palette = () => readPalette(), zone = () => DEFAULT_ZONE}: FleetActivityOptions) {
   const entryOn = computed(() => layers.value.includes('fleet'));
   /** The access check runs once the entry is on or the Fleet view is open (FE-53). */
   const asked = computed(() => entryOn.value || appView.value === 'fleet');
