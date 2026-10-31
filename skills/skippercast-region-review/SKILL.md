@@ -1,7 +1,7 @@
 ---
 name: skippercast-region-review
 description: Use when a region-build run folder needs its deterministic review packet and an agent first review before any human gate. Writes REVIEW-PACKET/review.json and validates REVIEW.md; never publishes.
-skill_version: 1.1
+skill_version: 1.2
 ---
 
 # Region review
@@ -12,7 +12,8 @@ Machine-valid packet: review-required, not acceptance. A reviewer of another run
 
 - `<run>`: a private run folder from `skippercast-region-build`, outside the repository, holding `BUILD.json`,
   `candidate/` and/or `held/` outputs, and no `REVIEW-PACKET/review.json` yet.
-- Optional phone captures from `scripts/phone_capture.mjs` (P8).
+- Optional phone captures from `scripts/phone_capture.mjs` (P8): `--mode held --run <run>` previews `held/`; `--mode candidate
+  --run <run>` previews `candidate/` under a "Candidate, not yet published" banner (default out `REVIEW-PACKET/phone-candidate`).
 
 ## Steps
 
@@ -46,3 +47,4 @@ Machine-valid packet: review-required, not acceptance. A reviewer of another run
 
 - 1.0: first version.
 - 1.1: EC checks (EC8).
+- 1.2: phone capture `--mode candidate` for publishable runs (BL-SC-3).

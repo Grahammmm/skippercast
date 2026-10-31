@@ -1,4 +1,4 @@
-// Phone-viewport capture for region review. Live mode is read-only; held mode serves a run's held/ contours from disk.
+// Phone-viewport capture for region review. Live mode is read-only; held and candidate modes serve a run's held/ or candidate/ contours from disk.
 import {createHash} from 'node:crypto';
 import {existsSync, readdirSync, readFileSync} from 'node:fs';
 import {mkdir, writeFile} from 'node:fs/promises';
@@ -24,25 +24,26 @@ export function parseArgs(argv) {
     if (!/^--(mode|origin|region|out|run)$/.test(key) || argv[i + 1] === undefined) throw new Error(`unknown or incomplete option: ${key}`);
     o[key.slice(2)] = argv[i + 1];
   }
-  if (!['live', 'held'].includes(o.mode)) throw new Error('--mode must be live or held');
+  if (!['live', 'held', 'candidate'].includes(o.mode)) throw new Error('--mode must be live, held or candidate');
   if (o.mode === 'live') {
     if (!o.origin || new URL(o.origin).protocol !== 'https:') throw new Error('--origin must be an https: URL');
     if (!o.region || !o.out) throw new Error('live mode needs --region and --out');
   } else {
-    if (!o.run) throw new Error('held mode needs --run');
-    o.out ??= join(o.run, 'REVIEW-PACKET', 'phone');
+    if (!o.run) throw new Error(`${o.mode} mode needs --run`);
+    o.out ??= join(o.run, 'REVIEW-PACKET', o.mode === 'held' ? 'phone' : 'phone-candidate');
   }
   if (!outsideRepo(o.out)) throw new Error('--out must be outside the repo work tree');
   return o;
 }
 
-export function heldRequestPlan(url, runDir) {
+export function heldRequestPlan(url, runDir, dir = 'held') {
+  if (!['held', 'candidate'].includes(dir)) throw new Error('dir must be held or candidate');
   const u = new URL(url);
   if (u.protocol === 'data:' || u.protocol === 'blob:') return {action: 'continue'};
   if (u.origin !== HELD_ORIGIN) return {action: 'block'};
   if (u.pathname === '/') return {action: 'fulfil', file: join(HERE, 'held-preview.html')};
-  const name = u.pathname.startsWith('/held/') ? u.pathname.slice(6) : '';
-  if (HELD_NAME.test(name)) return {action: 'fulfil', file: join(runDir, 'held', name)};
+  const name = u.pathname.startsWith(`/${dir}/`) ? u.pathname.slice(dir.length + 2) : '';
+  if (HELD_NAME.test(name)) return {action: 'fulfil', file: join(runDir, dir, name)};
   return {action: 'block', status: 404};
 }
 
@@ -65,18 +66,22 @@ const SELECTORS = {
   held: ['#held-banner', '.contour-card'],
   live: ['.app-top-card .app-location', '.app-sheet-head', '.maplibregl-canvas', '.maplibregl-ctrl-attrib'],
 };
+SELECTORS.candidate = SELECTORS.held;
 
 export async function capture(options) {
   const {mode, out, fulfil = {}} = options;
   if (!outsideRepo(out)) throw new Error('--out must be outside the repo work tree');
   const receiptPath = join(out, 'capture-receipt.json');
   if (existsSync(receiptPath)) throw new Error(`refusing to overwrite ${receiptPath}`);
+  const dir = mode === 'candidate' ? 'candidate' : 'held';
   let url;
   if (mode === 'live') {
     url = `${options.origin}/map?region=${encodeURIComponent(options.region)}&presentation=chart&ui=v2`;
   } else {
-    const names = readdirSync(join(options.run, 'held')).filter(n => HELD_NAME.test(n)).sort();
-    url = `${HELD_ORIGIN}/?files=${names.join(',')}`;
+    const folder = join(options.run, dir);
+    const names = mode === 'candidate' && !existsSync(folder) ? [] : readdirSync(folder).filter(n => HELD_NAME.test(n)).sort();
+    if (mode === 'candidate' && !names.length) throw new Error(`candidate mode needs ${folder} with at least one .geojson`);
+    url = `${HELD_ORIGIN}/?${mode === 'candidate' ? 'dir=candidate&' : ''}files=${names.join(',')}`;
   }
   await mkdir(out, {recursive: true});
   const {chromium} = await import('@playwright/test');
@@ -100,7 +105,7 @@ export async function capture(options) {
         const canned = fulfil[target] ?? fulfil[target.split('?')[0]];
         if (canned) { note(request, 'fulfilled', canned.status ?? 200); return route.fulfill(canned); }
         if (mode === 'live') { note(request, 'network', null); return route.continue(); }
-        const plan = heldRequestPlan(target, options.run);
+        const plan = heldRequestPlan(target, options.run, dir);
         if (plan.action === 'continue') return route.continue();
         if (plan.action === 'block' && plan.status) { note(request, 'blocked', plan.status); return route.fulfill({status: plan.status, body: 'not found'}); }
         if (plan.action === 'block') { note(request, 'blocked', null); return route.abort('blockedbyclient'); }
@@ -108,11 +113,11 @@ export async function capture(options) {
         return route.fulfill({status: 200, contentType: plan.file.endsWith('.html') ? 'text/html' : 'application/geo+json', body: readFileSync(plan.file)});
       });
       await page.goto(url);
-      if (mode === 'held') await page.waitForSelector('body[data-ready="true"], body[data-failed]', {timeout: 30000});
+      if (mode !== 'live') await page.waitForSelector('body[data-ready="true"], body[data-failed]', {timeout: 30000});
       else await page.waitForLoadState('networkidle', {timeout: 30000}).catch(e => pageErrors.push(`networkidle: ${e.message}`));
       const failed = await page.locator('body').getAttribute('data-failed');
       if (failed) pageErrors.push(`held preview failed: ${failed}`);
-      const checks = mode === 'live' ? [...SELECTORS.live, 'title'] : SELECTORS.held;
+      const checks = mode === 'live' ? [...SELECTORS.live, 'title'] : SELECTORS[mode];
       for (const selector of checks) {
         if (selector === 'title') { textChecks.push({viewport: vp.name, selector, count: 1, text: await page.title()}); continue; }
         const found = page.locator(selector), count = await found.count();

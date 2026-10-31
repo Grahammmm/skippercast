@@ -22,10 +22,13 @@
 <script>
 (async () => {
   try {
-    const names = (new URLSearchParams(location.search).get('files') || '').split(',').filter(Boolean);
+    const params = new URLSearchParams(location.search);
+    const dir = params.get('dir') === 'candidate' ? 'candidate' : 'held';
+    if (dir === 'candidate') document.getElementById('held-banner').textContent = 'Candidate, not yet published, not for navigation';
+    const names = (params.get('files') || '').split(',').filter(Boolean);
     const docs = [];
     for (const name of names) {
-      const response = await fetch('/held/' + encodeURIComponent(name));
+      const response = await fetch('/' + dir + '/' + encodeURIComponent(name));
       if (!response.ok) throw new Error(name + ' HTTP ' + response.status);
       docs.push({name, doc: await response.json()});
     }
