@@ -41,9 +41,9 @@ export interface LineLayer {
   layout: Record<string, unknown>; paint: Record<string, unknown>;
 }
 
-/** The GeoJSON source the Chart adds for the coastline. */
+/** The GeoJSON source the Chart adds for the coastline; an empty `path` (RF0850-2: none yet, or none published) draws nothing. */
 export const coastlineSource = (region: string, base: string, path: string = shorelineURL(region)) => ({type: 'geojson' as const,
-  data: shorelinePublished(region) ? new URL(path, base).href : {type: 'FeatureCollection' as const, features: []}, attribution: layerEntry('coastline').attribution});
+  data: path && shorelinePublished(region) ? new URL(path, base).href : {type: 'FeatureCollection' as const, features: []}, attribution: layerEntry('coastline').attribution});
 
 /** Glow under line, both drawn last (§ 9: the coastline glow is the top of the draw order). */
 export function coastlineLayers(p: Palette): LineLayer[] {

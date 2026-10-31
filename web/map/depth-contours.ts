@@ -19,7 +19,7 @@
 import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {region} from '../state.ts';
-import {chartFileListed} from '../chart-files.ts';
+import {chartFileListed, chartFilesPending} from '../chart-files.ts';
 import type {ChartMark} from './coastline.ts';
 import {ZOOM_OFFSET, type Engine, type Overlay} from './engine.ts';
 import {DEPTH_CONTOURS_SOURCE, layerEntry} from './layers.ts';
@@ -255,6 +255,8 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
     effect(() => {
       const e = engine.value, id = region.value, c = camera.value;
       if (!e || !id || !c) return;
+      // RF0850-2: nothing is asked while this region's region.json is loading; the effect runs again once its list is known.
+      if (chartFilesPending(id)) { if (loaded.peek()?.region !== id) contourState.value = {status: 'loading', note: NOTES.loading, sources: [], omitted: []}; return; }
       const path = contoursFor(id, c.zoom, detailRegion === id);
       if (path === depthContoursURL(id)) detailRegion = id;
       if (path === asked) return;

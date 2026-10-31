@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- RF0850-2: the Chart no longer requests a shoreline or depth-contour file the loaded `region.json` does not list: with neither shoreline listed the coastline draws nothing and reads unavailable, and unlisted contours settle as none (Cambria: no shoreline or contour 404s). Listed or unknown, it asks as before.
+- RF0850-2: the Chart no longer requests a shoreline or depth-contour file the loaded `region.json` does not list: with neither shoreline listed the coastline draws nothing and reads unavailable, and unlisted contours settle as none (Cambria: no shoreline or contour 404s). It waits for the region's `region.json` before asking, so switching to such a region requests neither. Listed or unknown, it asks as before.
 
 - RF0850-7: the landing night map draws its basemap and currents without a coastline when a region's `region.json` lists neither shoreline file (Cambria: no shoreline 404, no torn-down map), and the full shoreline when only that is listed. Without the list it draws as before.
 

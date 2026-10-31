@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {signal} from '@preact/signals';
-import {publishedChartFiles} from '../web/chart-files.ts';
+import {chartFilesPending, publishedChartFiles} from '../web/chart-files.ts';
 import {SHORELINE_DETAIL_ZOOM, coastlineFetchPath, coastlineSource, shorelineFor, shorelineOverviewURL, shorelinePublished, shorelineURL} from '../web/map/coastline.ts';
 import {DETAIL_ZOOM, contourState, createDepthContours, depthContoursOverviewURL, depthContoursURL} from '../web/map/depth-contours.ts';
 import {ZOOM_OFFSET} from '../web/map/engine.ts';
@@ -74,6 +74,18 @@ test('another region\'s list says nothing about this one (fail open)', () => {
   assert.equal(coastlineFetchPath('b', DETAIL - 1), shorelineOverviewURL('b'));
 });
 
+test('pending: only this region\'s loading list waits; a pending list fails open for every file, and an empty path draws nothing', () => {
+  publishedChartFiles.value = {region: 'r', files: null, pending: true};
+  assert.equal(chartFilesPending('r'), true);
+  assert.equal(chartFilesPending('b'), false, 'another region is not waiting');
+  assert.equal(shorelinePublished('r'), true, 'pending is not a list: chartFileListed still fails open');
+  assert.deepEqual(coastlineSource('r', PAGE, '').data, EMPTY, 'no shoreline yet: no request');
+  publish('r', ['shoreline.geojson']);
+  assert.equal(chartFilesPending('r'), false);
+  publish(null);
+  assert.equal(chartFilesPending('r'), false, 'nothing published: not waiting (the landing page, tests)');
+});
+
 /** The contour layer for region `r` over a fake engine; every fetch answers 404 unless the test serves it. */
 function contours(t, {serve = () => null} = {}) {
   globalThis.location = {href: 'https://s.test/map?region=r'};
@@ -114,6 +126,38 @@ test('contours: only the overview listed — it is fetched once, then the full f
   await detail();
   assert.deepEqual(asked, [depthContoursOverviewURL('r')]);
   assert.equal(contourState.value.status, 'none');
+});
+
+test('contours: the effect runs while region.json is loading, then the list arrives without them — no request ever', async t => {
+  publishedChartFiles.value = {region: 'r', files: null, pending: true};
+  const {asked, detail} = contours(t);
+  await flush(); await flush();
+  assert.deepEqual(asked, [], 'nothing is asked while the list is pending');
+  assert.equal(contourState.value.status, 'loading');
+  publish('r', []);
+  await flush(); await flush();
+  assert.deepEqual(asked, [], 'the published list lacks both forms: still no request');
+  assert.equal(contourState.value.status, 'none');
+  await detail();
+  assert.deepEqual(asked, []);
+});
+
+test('contours: pending, then listed — one overview request; pending, then a failed load — fails open as before', async t => {
+  publishedChartFiles.value = {region: 'r', files: null, pending: true};
+  const listed = contours(t);
+  await flush();
+  assert.deepEqual(listed.asked, []);
+  publish('r', ['depth-contours-overview.geojson', 'depth-contours.geojson']);
+  await flush(); await flush();
+  assert.deepEqual(listed.asked, [depthContoursOverviewURL('r')]);
+  listed.layer.destroy();
+  publishedChartFiles.value = {region: 'r', files: null, pending: true};
+  const failed = contours(t);
+  await flush();
+  assert.deepEqual(failed.asked, []);
+  publish('r', null);  // App.tsx loadRegion: a failed read leaves no list
+  await flush(); await flush();
+  assert.deepEqual(failed.asked, [depthContoursOverviewURL('r')]);
 });
 
 test('contours listed or unknown: today\'s sequence (one overview, then one full at the detail zoom)', async t => {

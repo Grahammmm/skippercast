@@ -28,6 +28,7 @@ import {appView, base, habitat, region, selection, setParams, view} from '../sta
 import {harborOrigin} from '../ranking.ts';
 import {placeWaypoint} from '../waypoint-placement.ts';
 import {shareStatic, sharedFetch} from '../shared-fetch.ts';
+import {chartFilesPending} from '../chart-files.ts';
 import {loadPoster, poster} from './poster.ts';
 import {COASTLINE_PICK, coastlineFetchPath, coastlineLayers, coastlineMark, coastlineSource, shorelineOverviewURL, shorelinePublished, shorelineURL, type ChartMark} from './coastline.ts';
 import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
@@ -141,8 +142,6 @@ export function createChart(options: ChartOptions): {destroy(): void} {
   let mounting = false, alive = true, applied = '', drawnRegion: string | null = null, seafloor: ReturnType<typeof createSeafloor> | null = null;
   // #617: the shoreline file drawn now, and the region whose full shoreline has loaded (kept on zooming out: no second request).
   let drawnShore = '', detailRegion: string | null = null;
-  // RF0850-2: a region whose region.json lists no shoreline file draws none and reads unavailable once.
-  const noShore = (id: string): void => { if (!shorelinePublished(id)) markUnavailable('coastline', new Error('no shoreline published for this region')); };
   // #617: the poster (poster.ts) is asked for once, on the first mount, and goes on the first idle or user move.
   let posterAsked = false, painted = false;
   const posterDone = (): void => { painted = true; poster.value = null; };
@@ -203,7 +202,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
         }, attribution: archive ? attributionFor(['basemap']) : undefined,
         pickLayers: [RANKED_PICK, MARK_PICK, SURVEY_PICK, GEOLOGY_PICK, SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL, ...drawn.flatMap(l => l.pick?.ordered ? l.pick.layers : [])],
         pickFirst: () => drawn.flatMap(l => l.pick && !l.pick.ordered ? l.pick.layers : []),
-        style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek(), shoreline: drawnShore = coastlineFetchPath(id, start.zoom) ?? ''}),
+        // RF0850-2: while region.json is loading the style draws no shoreline; the camera effect asks once the list is known.
+        style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek(), shoreline: drawnShore = chartFilesPending(id) ? '' : coastlineFetchPath(id, start.zoom) ?? ''}),
         onPick: (layer, properties, at) => {
           if (placeWaypoint(region.peek(), at)) return;
           // A grouped ranked pin zooms to its spots and keeps the selection, as v1's does (#495).
@@ -226,7 +226,6 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       // Before `engine` is set: its effect would otherwise send the style's own shoreline again (a second 0.6 MB request).
       drawnRegion = id;
       engine.value = e;
-      noShore(id);
       seafloor = createSeafloor({engine: e, open: url => new library.PMTiles(url), fetchFn, page,
         size: () => ({width: host.clientWidth, height: host.clientHeight}),
         onHide: () => { if (chartMark.peek()?.id.startsWith('seafloor:')) chartMark.value = null; }});
@@ -252,16 +251,21 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     effect(() => { const e = engine.value, c = camera.value; if (e && c && cameraParam(c) !== applied) { e.stopFlyover(); show(c); e.setCamera(c); } }),
     effect(() => {
       const e = engine.value, id = region.value;
-      if (!e || !id || id === drawnRegion) return;
-      drawnRegion = id;
-      chartMark.value = null;
-      unavailable.value = unavailable.peek().filter(layer => !['coastline', 'marks', 'habitat'].includes(layer));
-      noShore(id);
+      if (!e || !id) return;
+      if (id !== drawnRegion) {
+        drawnRegion = id;
+        chartMark.value = null;
+        unavailable.value = unavailable.peek().filter(layer => !['coastline', 'marks', 'habitat'].includes(layer));
+      }
+      // RF0850-2: once this region's list is known and names neither shoreline file, the coastline reads unavailable (once: markUnavailable keeps one entry).
+      if (!chartFilesPending(id) && !shorelinePublished(id)) markUnavailable('coastline', new Error('no shoreline published for this region'));
     }),
     // The overview shoreline until the camera reaches the detail zoom, then the full one for the rest of the visit.
+    // RF0850-2: nothing is asked while the region's list is pending; the effect runs again when it is published.
+    // App.tsx's module effect exists before any Chart, so on a region change it marks the list pending before this runs.
     effect(() => {
       const e = engine.value, id = region.value, c = camera.value;
-      if (!e || !id || !c) return;
+      if (!e || !id || !c || chartFilesPending(id)) return;
       const path = coastlineFetchPath(id, c.zoom, detailRegion === id);
       if (path === null) { if (drawnShore) { drawnShore = ''; e.setData(COASTLINE_SOURCE, {type: 'FeatureCollection', features: []}); } return; }
       if (path === shorelineURL(id)) detailRegion = id;
