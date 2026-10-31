@@ -38,6 +38,7 @@ import {MPA_FILL} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
 import {SWELL_LAYER} from './swell.ts';
+import {M_PER_NMI} from '../units.ts';
 
 const REGISTRY_ID = 'sst-contrast' as const;
 export const CONTRAST_LAYER = 'sst-contrast';
@@ -47,7 +48,7 @@ const HOUR = 3_600_000;
 export const MAX_AGE_MS = 72 * HOUR;
 const AHEAD_MS = 5 * 60_000;
 /** °C per km to °F per nautical mile: 1.8 °F per °C, 1.852 km per nautical mile. */
-export const F_PER_NMI = 1.8 * 1.852;
+export const F_PER_NMI = 1.8 * (M_PER_NMI / 1000);
 /** The legend's fixed scale, °F per nautical mile; stronger changes take the top colour. */
 export const CONTRAST_SCALE = [0, 0.3] as const;
 
