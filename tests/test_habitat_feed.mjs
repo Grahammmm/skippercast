@@ -295,7 +295,7 @@ test('a checked WCOFS layer becomes the packet\'s CurrentField, wet cells only, 
   assert.deepEqual(frames.map(f => f.validAt), ['2026-10-07T09:00:00.000Z', '2026-10-07T12:00:00.000Z', '2026-10-07T15:00:00.000Z']);
   assert.equal(frames[1].cells.length, 63, 'the dry cell is left out');
   const c = frames[1].cells[0];
-  assert.ok(Math.abs(c.speedKnots - 0.5 * 1.94384449) < 1e-9);
+  assert.ok(Math.abs(c.speedKnots - 0.5 * 3600 / 1852) < 1e-9);
   assert.ok(Math.abs(c.towardDeg - (Math.atan2(0.3, -0.4) * 180 / Math.PI + 360) % 360) < 1e-9, 'toward the south-south-east');
   assert.ok(validCurrentField(got.field), 'packages/coast accepts it as a current field');
 });
