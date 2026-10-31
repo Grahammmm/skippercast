@@ -35,7 +35,8 @@ function partHeaders(block: string): {filename: string | null; type: string | nu
     const name = rawName?.trim().toLowerCase(), value = rest.join(':').trim();
     if (name === 'content-disposition') {
       const f = value.match(/;\s*filename="([^"]*)"/i) ?? value.match(/;\s*filename=([^;\s]+)/i);
-      if (f) { isFile = true; filename = f[1]!.replace(/[\u0000-\u001f\u007f/\\]/g, '').slice(0, 200) || null; }
+      // An empty file input (filename="") is skipped like a plain field.
+      if (f?.[1]) { isFile = true; filename = f[1]!.replace(/[\u0000-\u001f\u007f/\\]/g, '').slice(0, 200) || null; }
     } else if (name === 'content-type') type = value.slice(0, 100) || null;
   }
   return {filename, type, isFile};
