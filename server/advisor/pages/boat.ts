@@ -14,7 +14,7 @@
 // Google rating and count only inside their 30-day window, with the Google link; links
 // out go through /go/. A registry-only page is noindex until its operator consents.
 // With FLEET_ENABLED off an advisor boat's page is byte-identical to before.
-import {addDays, localDate} from '../answers/time.ts';
+import {addDays, localDate, PACIFIC} from '../answers/time.ts';
 import {regionConfig} from '../answers/regions.ts';
 import {portName} from '../links.ts';
 import {html, raw, layout, copyFor, longDate} from './render.ts';
@@ -71,7 +71,7 @@ export async function boatPage(env: Env, slug: string, language: PageLanguage, s
     return layout({language, kind: 'boat', path: `/boats/${boat.slug}`, title: `${copy.boatTitle(boat.name)} · SkipperCast`, description: copy.boatDescription(boat.name, port),
       image: null, crumbs: [{name: copy.boats, path: null}, {name: boat.name, path: `/boats/${boat.slug}`}], region: boat.region, noindex: true, body}, settings);
   }
-  const today = localDate(now, regionConfig(boat.region)?.timezone ?? 'America/Los_Angeles');
+  const today = localDate(now, regionConfig(boat.region)?.timezone ?? PACIFIC);
   const [reports, photos] = await Promise.all([
     db.prepare(`SELECT id,report_date,trip_type,anglers,counts_json,verified,version FROM advisor_reports WHERE boat_id=? AND status='published' AND report_date>=? AND report_date<=?
         ORDER BY report_date DESC, published_at DESC, id LIMIT 60`).bind(boat.id, addDays(today, -(BOAT_REPORT_DAYS - 1)), today).all<ReportRow>().then(r => r.results),

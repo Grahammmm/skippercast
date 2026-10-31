@@ -10,6 +10,7 @@
 // Moderate needs a fresh feed (generated within 36 h), all seven recent report
 // pages checked, and at least five positive trips from two boats across three
 // dates. Fewer reports are Low; none are Insufficient. No High, no number.
+import {PACIFIC} from './time.ts';
 
 const HOUR = 3600000;
 export type Confidence = 'Insufficient' | 'Low' | 'Moderate';
@@ -43,7 +44,7 @@ export interface Evidence {
 }
 
 /** dist/bite-evidence.js reportEvidence (without the reason text), for one target over the last seven days before today. */
-export function reportEvidence(data: DailyFeed | null | undefined, target: string, now = Date.now(), groundId: string | null = null, tz = 'America/Los_Angeles'): Evidence {
+export function reportEvidence(data: DailyFeed | null | undefined, target: string, now = Date.now(), groundId: string | null = null, tz = PACIFIC): Evidence {
   const today = localDay(now, tz);
   const first = new Date(Date.parse(today + 'T12:00:00Z') - 7 * 24 * HOUR).toISOString().slice(0, 10);
   const fresh = validFeed(data) && age(data!.generated_at, now) >= -1 && age(data!.generated_at, now) <= 36;

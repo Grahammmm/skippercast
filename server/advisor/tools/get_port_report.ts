@@ -14,7 +14,7 @@ import {regionConfig} from '../answers/regions.ts';
 import {dailyFeed, feedReader} from '../answers/feeds.ts';
 import {reportEvidence, targetSpecies} from '../answers/confidence.ts';
 import type {LandingReport} from '../answers/confidence.ts';
-import {addDays, daysBetween, localDate} from '../answers/time.ts';
+import {addDays, daysBetween, localDate, PACIFIC} from '../answers/time.ts';
 // TA-I1: the verified/unverified contract (05 § Verification) is shared with get_trips.
 import {publicBoat} from '../intake/skippers.ts';
 // TA-A1: the day's answer.
@@ -49,7 +49,7 @@ export const getPortReport: AdvisorTool = {
     const resolved = resolvePort(String(input.port ?? ''), ctx.contact, ctx.settings);
     if (!resolved) return {result: {error: 'unknown port'}};
     const port = resolved.port, regionId = portRegion(port)!, region = regionConfig(regionId);
-    const tz = region?.timezone ?? 'America/Los_Angeles', today = localDate(ctx.now, tz), since = addDays(today, -MAX_REPORT_AGE_DAYS);
+    const tz = region?.timezone ?? PACIFIC, today = localDate(ctx.now, tz), since = addDays(today, -MAX_REPORT_AGE_DAYS);
 
     // Skipper reports (ours): published, newest first, at most 14 days old.
     const rows = (await ctx.db.prepare(`SELECT r.report_date,r.trip_type,r.anglers,r.counts_json,r.verified,r.notes,r.published_at,b.name AS boat_name,b.slug AS boat_slug

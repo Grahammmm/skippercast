@@ -15,7 +15,7 @@ import {strategyFor} from '../answers/advice.ts';
 import {ruleKeys, isStale} from '../answers/rules.ts';
 import type {RuleRow} from '../answers/rules.ts';
 import {jurisdictionFor, regionConfig} from '../answers/regions.ts';
-import {addDays, localDate} from '../answers/time.ts';
+import {addDays, localDate, PACIFIC} from '../answers/time.ts';
 import {portName} from '../links.ts';
 import {html, layout, copyFor, shortDate, longDate, countLines} from './render.ts';
 import type {Html, SiteSettings} from './render.ts';
@@ -141,7 +141,7 @@ export async function speciesPage(env: Env, key: string, language: PageLanguage,
   const page = PAGES[key];
   if (!page) return null;
   const db = env.DB!, copy = copyFor(language), now = (deps.clock ?? Date.now)();
-  const tz = regionConfig(settings.regionDefault)?.timezone ?? 'America/Los_Angeles', today = localDate(now, tz);
+  const tz = regionConfig(settings.regionDefault)?.timezone ?? PACIFIC, today = localDate(now, tz);
   const lang = language === 'es' ? '?lang=es' : '';
   const name = page.names[language];
   const look = lookalikeEntry(key);
