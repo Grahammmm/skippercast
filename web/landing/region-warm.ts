@@ -27,7 +27,11 @@ export const ASSET = /^(?:data|regions\/[a-z0-9-]{1,80})\/[A-Za-z0-9._-]{1,120}\
  */
 export function regionWarmList(region: string, info: unknown): string[] {
   const base = `regions/${encodeURIComponent(region)}`;
-  const list = [`${base}/region.json`, `${base}/atlas-marks.json`, `${base}/search-plan-index.json`, `${base}/shoreline-overview.geojson`, `${base}/poster.svg`];
+  // RF0835-2: a valid chart_files list (written by the build) drops startup copies the region lacks; fail open otherwise.
+  const files = (info as {chart_files?: unknown} | null)?.chart_files;
+  const known = Array.isArray(files) && files.every(f => typeof f === 'string') ? files as string[] : null;
+  const list = [`${base}/region.json`, `${base}/atlas-marks.json`, `${base}/search-plan-index.json`,
+    ...['shoreline-overview.geojson', 'poster.svg'].filter(f => !known || known.includes(f)).map(f => `${base}/${f}`)];
   const mpa = (info as {assets?: {protected_areas?: unknown} | null} | null)?.assets?.protected_areas;
   if (typeof mpa === 'string' && ASSET.test(mpa)) list.push(mpa, `${base}/coverage.json`);
   list.push(`/api/forecast?region=${encodeURIComponent(region)}`);

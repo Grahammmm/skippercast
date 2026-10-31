@@ -17,6 +17,15 @@ from .depth_contours import publish_depth_contours
 from .land_water import publish_land_water
 from .startup_forms import publish_startup_forms
 
+# RF0835-2: the Chart side files published beside a package (outside the manifest); region.json lists those written.
+CHART_FILES = ('depth-contours-overview.geojson', 'depth-contours.geojson', 'land-water-lines.json', 'land-water.json',
+               'poster.svg', 'shoreline-overview.geojson', 'shoreline.geojson')
+
+
+def chart_files(output):
+    """The sorted CHART_FILES present as files in `output` (the disk decides, not an earlier build)."""
+    return sorted(name for name in CHART_FILES if (Path(output) / name).is_file())
+
 
 def target_options(region, targets):
     labels = region.get('target_labels', {})
@@ -69,6 +78,8 @@ def build(root=REPO, now=None):
     targets = read_json(root / 'catalog/targets.json')['targets']
     for path in sorted((root / "regions").glob("*/region.json")):
         region = load_region(path.parent.name, root)
+        if 'chart_files' in region:
+            raise ValueError("chart_files is written by the build")
         if region["status"] == "draft":
             continue
         validate_regional_rules(region, root, now)
@@ -114,6 +125,7 @@ def build(root=REPO, now=None):
         publish_startup_forms(root, region, output)
         # CI6-01B: the land/water screen for ranked places, derived from that shoreline (docs/land-water-method.md).
         publish_land_water(root, region, output)
+        region['chart_files'] = chart_files(output)
         report = requirement_report(region, root)
         atlas = read_json(within(root / "dist", region["assets"]["atlas"]))
         qualified=validate_qualified_scope(region,atlas,root)

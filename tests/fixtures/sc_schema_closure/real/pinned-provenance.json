@@ -133,10 +133,10 @@
       "sha256": "24342b543d289679172d6e8ebcafd8b3165fda251067475f82b1b37ac22768c6"
     },
     {
-      "bytes": 15993,
-      "git_blob": "673cb88381cff0d0ea271041d7f09d1ea0b45b51",
+      "bytes": 16423,
+      "git_blob": "7db252ee6c2e8c022a6dee0416a6da21b5df0f84",
       "path": "schemas/region.schema.json",
-      "sha256": "75e594d74ab8a3338420fda34d2b509407137bed34599a2202f48422bf7390fc"
+      "sha256": "29a9cf43d28ca4b9ee2e4402dd3f4d47e0d1e4eab78c902b15f4032502018c7d"
     },
     {
       "bytes": 2800,

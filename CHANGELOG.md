@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF0835-2: each compiled `region.json` lists the Chart side files the build wrote for it (`chart_files`), and the landing warm-up no longer requests a shoreline overview or poster a region does not publish (Cambria: two fewer 404s). Without the list it warms as before.
+
 - The `noaa-bag` source (NOAA hydrographic survey grids) is now approved in the source catalog as a source family, on G's 2026-10-30 acceptance. Individual tiles still need their own screening and review, datums are carried as declared, and nothing is published or for navigation by this change.
 
 - The target picker says what the region has for each target beside its name: ranked by mapped habitat, search plan only, or not researched in this region. Targets the region names as unresearched are listed but cannot be selected.
