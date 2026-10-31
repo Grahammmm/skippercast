@@ -113,6 +113,20 @@ def test_ring_range_edge_land_and_sentinel_holes(d, capsys):
     assert doc4['disposition'] == 'PASS' and doc4['counts']['measured'] == 64 * 64
 
 
+@pytest.mark.parametrize('excluded', [np.nan, -9999.0, 9999.0, 0.0])
+@pytest.mark.parametrize('value, kind, deviation', [(-40.0, 'pits', -20.0), (-5.0, 'spikes', 15.0)])
+def test_outliers_beside_excluded_cells_use_water_median(d, capsys, excluded, value, kind, deviation):
+    v = _slope()
+    v[10:13, 12:15] = -20.0
+    v[10:13, 12] = excluded  # nodata, sentinel or land must not participate in the median
+    v[11, 13] = value
+    code, doc, _err = _run(capsys, _tif(d / 'edge.tif', v), d / 'edge.json')
+    assert code == 0
+    assert doc[kind] == [{'cells': 1, 'bbox': [13, 11, 14, 12],
+                          'ring_median_m': -20.0, 'deviation_m': deviation}]
+    assert doc['spikes' if kind == 'pits' else 'pits'] == []
+
+
 def test_all_positive_and_fixture_grids_are_refused(d, tmp_path, capsys):
     code, doc, _err = _run(capsys, _tif(d / 'land.tif', -_slope()), d / 'land.json')
     assert code == 0 and doc['disposition'] == 'REFUSED' and doc['sign']['reason'] == 'all-positive'

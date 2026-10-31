@@ -181,8 +181,16 @@ def outlier_components(mask, med, dev, deepest):
 
 
 def find_outliers(v, water):
-    """(e) Pits and spikes against the 3x3 median of water cells (NaN elsewhere, mode='nearest')."""
-    med = ndimage.median_filter(np.where(water, v, np.float32(np.nan)), size=3, mode='nearest')
+    """(e) Pits and spikes against the NaN-aware 3x3 water median, with nearest-edge padding."""
+    padded = np.pad(np.where(water, v, np.float32(np.nan)), 1, mode='edge')
+    windows = np.lib.stride_tricks.sliding_window_view(padded, (3, 3))
+    med = np.full(v.shape, np.nan, dtype=np.float32)
+    # Bound the temporary selected windows; only water centres are classified, so each has at least one finite value.
+    rows = max(1, min(STRIP_ROWS, 65_536 // v.shape[1]))
+    for r0 in range(0, v.shape[0], rows):
+        sl = slice(r0, r0 + rows)
+        mask = water[sl]
+        med[sl][mask] = np.nanmedian(windows[sl][mask], axis=(-2, -1))
     dev = v - med
     limit = np.maximum(3.0, 0.20 * np.abs(med))  # ec.outlier_min_m, vectorised
     ok = water & np.isfinite(med)
