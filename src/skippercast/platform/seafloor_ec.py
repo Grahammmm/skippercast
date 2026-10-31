@@ -41,8 +41,10 @@ FIXTURE_MIN_PIXELS = 4096
 FIXTURE_MAX_DISTINCT = 3
 SIGN_POSITIVE_FRACTION = 0.99
 DATUM_SUSPECT = MappingProxyType({'min_cells': 1000, 'max_mad_m': 0.5})
+COPY_MAX_MAD_M = 0.05  # an overlap whose A - B spread (MAD) is at most this is a copy of A, not a second survey
 _T = ('hole_max_cells', 'hole_ring_max_range_m', 'outlier_min_m', 'OUTLIER_MAX_CELLS', 'SENTINELS', 'PLAUSIBLE_M',
-      'FIXTURE_PATH', 'FIXTURE_MIN_PIXELS', 'FIXTURE_MAX_DISTINCT', 'SIGN_POSITIVE_FRACTION', 'DATUM_SUSPECT')
+      'FIXTURE_PATH', 'FIXTURE_MIN_PIXELS', 'FIXTURE_MAX_DISTINCT', 'SIGN_POSITIVE_FRACTION', 'DATUM_SUSPECT',
+      'COPY_MAX_MAD_M')
 THRESHOLDS = namedtuple('Thresholds', _T)(*(globals()[name] for name in _T))
 
 def tol_m(depth_m):
@@ -82,6 +84,12 @@ def independent(a_entry, a_file, b_entry, b_file, duplicate=False):
     a_key, b_key = acquisition_key(a_entry, a_file), acquisition_key(b_entry, b_file)
     if a_key is None or b_key is None: return False, 'unknown-acquisition'
     return (False, f'same-acquisition:{a_key}') if a_key == b_key else (True, 'ok')
+
+def copy_overlap(mad_m):
+    """True when the overlap's A - B spread shows B repeats A's values (identical, or A plus a constant shift).
+
+    Independence is then measured from the data: a copy is never a second survey, whatever its catalog id says."""
+    return mad_m is not None and mad_m <= COPY_MAX_MAD_M
 
 # Receipt schemas: key -> type word ('x?' present but nullable; num is finite), dict, [schema] or [item -> schema].
 DISPOSITIONS = ('PASS', 'FIX', 'VERIFY', 'UNRESOLVED', 'REFUSED')

@@ -238,8 +238,9 @@ def ec_checks(build, loaded, sources, tree, names=None):
                                             names.get((p.get('second_source_id'), p.get('second_file_sha256')), ''),
                                             p.get('reason') == 'duplicate')[0]
             verifying = p.get('verified_cells') not in (0, None)
+            mad = p.get('mad_m') if isinstance(p.get('mad_m'), (int, float)) else None
             if ((p.get('independent') is True or verifying) and not (again and p.get('independent') is True)) \
-                    or (verifying and p.get('comparable') is not True):
+                    or (verifying and (p.get('comparable') is not True or seafloor_ec.copy_overlap(mad))):
                 indep.append(f"{sid} pair {i} ({p.get('second_source_id')}): not independent or not comparable on re-evaluation")
     corrected = set(ec_set.get('corrected') or [])
     for rel, collection in loaded:

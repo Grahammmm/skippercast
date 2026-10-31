@@ -192,6 +192,7 @@ def test_ec_run_passes_thirteen_and_a_run_without_ec_is_unchanged(tmp_path, regi
     ("ec-independence", "s-a pair 0 (s-x)", lambda d, c: d["s-a"]["verify/EC-VERIFY.json"]["pairs"][0].update(second_source_id="s-x")),
     ("ec-independence", "s-a pair 0 (s-b)", lambda d, c: d["s-a"]["verify/EC-VERIFY.json"]["pairs"][0].update(comparable=False)),
     ("ec-independence", "s-a pair 0 (s-b)", lambda d, c: d["s-a"]["verify/EC-VERIFY.json"]["pairs"][0].update(independent=False)),
+    ("ec-independence", "s-a pair 0 (s-b)", lambda d, c: d["s-a"]["verify/EC-VERIFY.json"]["pairs"][0].update(mad_m=0.0)),
     ("ec-unresolved-stated", "source s-a counts 3", lambda d, c: (c["features"].pop(), c["provenance"]["sources"][0]["provenance_counts"].update(unresolved=3))),
     ("ec-unresolved-stated", "#u1: unresolved-area reason 'flat'", lambda d, c: c["features"][-1]["properties"].update(reason="flat")),
     ("ec-unresolved-stated", "#u1: unresolved-area reason 'hole'", lambda d, c: c["features"][-1]["properties"].update(reason="hole")),
@@ -261,7 +262,7 @@ def test_real_ec3_bag_acquisition_handoff(tmp_path, monkeypatch, region, b_name,
     adir = ev._a_dir(producer, values, np.full(values.shape, 10, "uint8"), source="s-a")
     entries = {**ECSRC, **{s: {**ECSRC[s], "adapter": "bag"} for s in ("s-a", "s-b")}}
     (producer / "entries.json").write_text(json.dumps(entries))
-    b = ev._tif(producer / "H54321_MB_2m.tif", values + 0.3)
+    b = ev._tif(producer / "H54321_MB_2m.tif", ev.survey(values, 0.3))
     doc, _, _ = ev._run(producer, "verified", [(b, "s-b", "MLLW")], a_source="s-a", extra=["--a-file", "BAG__H12345_MB_2m.bag"])
     assert doc["pairs"][0]["verified_cells"] == 1024 and doc["pairs"][0]["independent"]
     assert "a_file" not in doc and "second_file" not in doc["pairs"][0]
