@@ -100,7 +100,7 @@ test('live layer replaces hour, expires without interaction, hides on region/off
   const s = createWind({engine, zone: () => TZ, page: () => location.href, palette: () => palette, now: () => new Date(clock),
     fetchFn: async () => ({ok: !fail, json: async () => feed()})});
   t.after(() => s.destroy()); await flush();
-  assert.deepEqual(e.before, ['depth-contours-edge', 'mpa-fill'], 'wind inserts below depth contours, else MPAs');
+  assert.deepEqual(e.before, ['depth-contours-unresolved-fill', 'mpa-fill'], 'wind inserts below depth contours, else MPAs');
   assert.equal(e.data['wind-labels'].features[0].properties.label, '12 kt');
   engine.value = null; assert.equal(e.overlay, null);
   engine.value = e; assert.ok(e.overlay, 'same engine remount restores the frame');
