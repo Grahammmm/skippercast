@@ -170,7 +170,7 @@ def verify(args):
             dst.write(hint.astype('float32'), 1)
     codes, cells = np.unique(new, return_counts=True)
     name = {code: key for key, code in CODES.items()}
-    written = int(np.isin(new, (CODES['verified'], CODES['unresolved-conflict'])).sum())
+    written = int((np.isin(new, (CODES['verified'], CODES['unresolved-conflict'])) & (new != prov)).sum())
     doc = {'schema': 'ec-verify-v1', 'ec_version': EC_VERSION, 'source_id': args.a_source,
            'apply_sha256': sha256(apply_path), 'corrected_sha256': corrected_sha,
            'provenance_sha256': sha256(out_dir / 'provenance.tif'), 'shoal_hint_sha256': sha256(out_dir / 'shoal_hint.tif'),
