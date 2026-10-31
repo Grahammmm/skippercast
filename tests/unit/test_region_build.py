@@ -182,7 +182,8 @@ def test_no_ec_input_unchanged_and_bad_ec_input_exits_1(world, monkeypatch, caps
 
 def test_skill_md_ec_delta_keeps_sections_and_golden_case():
     text = (ROOT / "skills/skippercast-region-build/SKILL.md").read_text()
-    assert len(text.splitlines()) <= 70 and "skill_version: 1.1" in text and "- 1.1: reads INTAKE-EC.csv" in text
+    assert len(text.splitlines()) <= 70 and "skill_version: 1.2" in text and "- 1.1: reads INTAKE-EC.csv" in text
     assert [line[3:] for line in text.splitlines() if line.startswith("## ")] == ["Inputs", "Steps", "Outputs", "Never", "Terrain", "Golden case", "Changelog"]
-    assert text.split("## Golden case\n\n")[1].split("\n\n## ")[0] == "`morro-bay` (real run M2) over the three USGS GeoTIFFs: the features of " \
-        "`candidate/morro-bay.geojson` must equal the\ncommitted `catalog/depth-contours/morro-bay.geojson` features. Any difference is a spec-gap note."
+    assert text.split("## Golden case\n\n")[1].split("\n\n## ")[0] == "`morro-bay` (real run M2) over the three USGS GeoTIFFs: " \
+        "`candidate/morro-bay.geojson` must equal the committed\n`catalog/depth-contours/morro-bay.geojson` in features **and** provenance: " \
+        "run `scripts/golden_compare.py morro-bay --run <dir>`.\nAny verdict other than `equal` is a spec-gap note naming the keys it lists."

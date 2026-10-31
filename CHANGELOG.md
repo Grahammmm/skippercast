@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The region-build golden case is now a checked script: `golden_compare.py` compares a run's candidate with the committed depth-contour file in features and provenance, so a provenance-only difference is caught at build instead of at publish (Morro Bay SG-1).
+
 - The `noaa-bag` source (NOAA hydrographic survey grids) is now approved in the source catalog as a source family, on G's 2026-10-30 acceptance. Individual tiles still need their own screening and review, datums are carried as declared, and nothing is published or for navigation by this change.
 
 - The target picker says what the region has for each target beside its name: ranked by mapped habitat, search plan only, or not researched in this region. Targets the region names as unresearched are listed but cannot be selected.
