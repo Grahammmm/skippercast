@@ -36,10 +36,15 @@ export const getTrips: AdvisorTool = {
       boat_page: `{{link:boat:${b.slug}}}`, trip_types: types.filter(t => t.boat_id === b.id).map(t => t.trip_type), last_report: b.last_report,
     }));
     const few = list.length < 2;
+    // RF1300-6: a full list counts the verified boats left out, so none drop off silently.
+    const total = boats.length === MAX_BOATS ? (await ctx.db.prepare('SELECT COUNT(*) AS n FROM advisor_boats WHERE port=? AND status=?').bind(port, VERIFIED).first<{n: number}>())?.n ?? 0 : 0;
+    const more = Math.max(0, total - MAX_BOATS);
+    const listed = 'Listed by most recent report, not ranked. Never recommend one boat over another.';
     return {result: {
-      port, port_name: portName(port), boats: list, few,
+      port, port_name: portName(port), boats: list, few, ...(more > 0 ? {more} : {}),
       // TA-A6: the few-boats phrase in the reply language.
-      note: few ? `Say "${t(ctx.language, 'trips_few')}" and link the port page. Never recommend one boat over another.` : 'Listed by most recent report, not ranked. Never recommend one boat over another.',
+      note: few ? `Say "${t(ctx.language, 'trips_few')}" and link the port page. Never recommend one boat over another.`
+        : more > 0 ? `${listed} ${more} more verified boat${more === 1 ? ' is' : 's are'} on the port page; say so and link it.` : listed,
       link: `{{link:port:${port}}}`,
     }};
   },
