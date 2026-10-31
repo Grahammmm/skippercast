@@ -68,7 +68,10 @@ export function parseResponse(data: ExternalJSON): LookupResult {
   const sources: {url: string; title: string}[] = [];
   const add = (url: unknown, title: unknown) => {
     if (typeof url !== 'string' || !/^https:\/\//.test(url) || sources.some(s => s.url === url) || sources.length >= 6) return;
-    sources.push({url: url.slice(0, 500), title: String(title || new URL(url).hostname).slice(0, 140)});
+    let parsed: URL;
+    try { parsed = new URL(url); } catch { return; }  // malformed citation: skip it, keep the paid answer
+    if (parsed.protocol !== 'https:' || !parsed.hostname) return;
+    sources.push({url: url.slice(0, 500), title: String(title || parsed.hostname).slice(0, 140)});
   };
   for (const b of blocks) {
     for (const c of b.citations || []) add(c.url, c.title);

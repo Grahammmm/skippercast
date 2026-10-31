@@ -34,6 +34,7 @@ from statistics import median
 from typing import Any, Mapping, Sequence
 from zoneinfo import ZoneInfo
 
+from skippercast.util.units import M_PER_NMI as METRES_PER_NM
 from ..ops import id32
 from .classify import FISHING_KINDS, Classification, Segment
 from .segment import BASIS, ActivityThresholds, Geofence, distance_nm, port_at
@@ -44,7 +45,6 @@ __all__ = ["BASIS", "EVENT_KINDS", "Event", "TripContext", "build_events", "even
            "trip_id"]
 
 EVENT_KINDS = FISHING_KINDS
-METRES_PER_NM = 1852.0
 
 
 # ---------------------------------------------------------------- ids and times
