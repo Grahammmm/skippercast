@@ -1,0 +1,8 @@
+/* The C2 release view (M9, web/map/c2.js) in the terrain host's shadow root, after MapLibre's stylesheet:
+   the map fills the host and the viewer's notice and sources panel sit top-left over it. */
+:host { display: block; }
+.coast-c2 { position: absolute; inset: 0; }
+.coast-c2[hidden] { display: none; }
+.coast-mvp-chrome { position: absolute; top: 0; left: 0; z-index: 1; max-width: min(24rem, 100%); max-height: 100%; overflow: auto;
+  padding: 8px 12px; background: var(--panel); color: var(--text); font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans); }
+.coast-mvp-chrome a { color: var(--blue); }
