@@ -9,10 +9,8 @@ import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {terrainHour} from '../web/map/stage.ts';
 
-const ROOT = new URL('..', import.meta.url).pathname;
-const LA = 'America/Los_Angeles', HOME = 'web/zone.ts';
-// RF0850-7 owns NightMap.tsx and removes its literal there; then remove it from this list.
-const ALLOWED = ['web/landing/NightMap.tsx'];
+const ROOT = new URL('..', import.meta.url).pathname, LA = 'America/Los_Angeles', HOME = 'web/zone.ts';
+const ALLOWED = ['web/landing/NightMap.tsx']; // RF0850-7 owns NightMap.tsx; when its literal goes, remove it from this list.
 
 /** Line numbers where a quoted ('…', "…" or `…`) string names the zone, outside comments. */
 export function zoneLiterals(text) {
@@ -48,9 +46,7 @@ test('the web tree spells the zone only in web/zone.ts and the allowlist', async
 test('the scanner flags every quoted spelling and skips comments', () => {
   for (const q of ["'", '"', '`']) assert.deepEqual(zoneLiterals(`const a = 1;\nconst z = x ?? ${q}${LA}${q};`), [2], `quote ${q}`);
   assert.deepEqual(zoneLiterals(`f({timeZone: 'UTC', url: 'https://x.test'}); g(\`${LA}\`) // see web/zone.ts`), [1], 'a URL is not a comment');
-  for (const line of [`// the zone ${LA} lives in web/zone.ts`, `x(); // '${LA}': web/zone.ts`, `/** '${LA}' */`, ` * '${LA}'`, 'const z = DEFAULT_ZONE;']) {
-    assert.deepEqual(zoneLiterals(line), [], line);
-  }
+  for (const line of [`// the zone ${LA} lives in web/zone.ts`, `x(); // '${LA}': web/zone.ts`, `/** '${LA}' */`, ` * '${LA}'`, 'const z = DEFAULT_ZONE;']) assert.deepEqual(zoneLiterals(line), [], line);
 });
 
 test('a stray literal, a lost home or a stale allowlist entry fails the scan', async () => {
@@ -70,6 +66,5 @@ test('the defaults read the same zone as before', async () => {
   await build({stdin: {resolveDir: ROOT, loader: 'ts', contents: `export {DEFAULT_ZONE as viaApp} from './web/app/App.tsx';\nexport {DEFAULT_ZONE as viaZone} from './web/zone.ts';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
   const {viaApp, viaZone} = await import(pathToFileURL(out).href);
-  assert.equal(viaApp, LA);
-  assert.equal(viaZone, viaApp);
+  assert.deepEqual([viaApp, viaZone], [LA, LA], 'App.tsx re-exports the one web/zone.ts value');
 });
