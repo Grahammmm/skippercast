@@ -58,7 +58,7 @@ def signature(ds, values):
 
 
 def read_b(path, a_ds, max_pixels):
-    """B on A's grid (nearest, the coast_qa call re-implemented; research/ is not imported), its sha256 and signature."""
+    """B on A's grid (nearest, the coast_qa call re-implemented: product code never imports research), sha256, signature."""
     import numpy as np
     import rasterio
     from rasterio.warp import Resampling, reproject
