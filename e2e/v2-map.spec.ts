@@ -276,6 +276,36 @@ test('a failing coastline marks only its layer unavailable; the basemap keeps dr
   expect(asked).toEqual(['/regions/morro-bay/shoreline-overview.geojson', '/regions/morro-bay/shoreline.geojson']);
 });
 
+// BL-SC-1: at phone width the credits are MapLibre's compact toggle, folded on load whatever their length, and one tap opens them.
+test('the Chart attribution starts compact and folded on a phone and expanded on the desktop', async ({page, pageErrors, v2}) => {
+  await page.route('https://imagery.nationalmap.gov/**', route => route.fulfill({body: PIXEL, contentType: 'image/png', headers: {'Access-Control-Allow-Origin': '*'}}));
+  await holdCoastData(page);
+  const attrib = page.locator('.app-chart .maplibregl-ctrl-attrib'), inner = attrib.locator('.maplibregl-ctrl-attrib-inner');
+  const folded = async () => {
+    await expect(attrib).toContainClass('maplibregl-compact');
+    await expect(attrib).not.toContainClass('maplibregl-compact-show');
+    await expect(inner).toBeHidden();
+    expect((await attrib.boundingBox())!.height).toBeLessThanOrEqual(48);
+    await expect(attrib).toContainText('© OpenStreetMap contributors, © Protomaps');
+  };
+  // Morro Bay opens on Aerial, so its five credits include NAIP's; Cambria has two lines.
+  for (const [region, width, credit] of [['morro-bay', 390, 'NAIP'], ['cambria-san-simeon', 360, 'Protomaps']] as const) {
+    await page.setViewportSize({width, height: 844});
+    await v2.open('app', {region, presentation: 'chart'});
+    await expect(attrib).toContainText(credit);
+    await folded();
+  }
+  await page.setViewportSize({width: 1280, height: 900});
+  await expect(attrib).not.toContainClass('maplibregl-compact');
+  await expect(inner).toBeVisible();
+  await page.setViewportSize({width: 390, height: 844});
+  await folded();
+  await attrib.locator('summary').click();
+  await expect(attrib).toContainClass('maplibregl-compact-show');
+  await expect(inner).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
+
 test('Chart → 3D → Chart keeps the centre within one zoom step', async ({page, v2}) => {
   await holdCoastData(page);
   await v2.open('app', {...PLACE, presentation: 'chart'});
