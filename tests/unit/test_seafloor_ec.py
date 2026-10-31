@@ -48,6 +48,8 @@ def test_independence_and_block_class():
     others = ((bag, 'H13151_MB_4m.bag', 1), (bag, 'H13151_MB_4m.bag', 0), (bag, 'x_H13151.bag', 0), (usgs, 'c.tif', 0))
     assert [ind(usgs, 'b.tif', e, f, bool(d)) for e, f, d in others] == \
         [(False, 'duplicate'), (True, 'ok'), (False, 'unknown-acquisition'), (False, 'same-acquisition:usgs-pb')]
+    assert [ec.copy_overlap(m) for m in (None, 0.0, 0.05, 0.0501, 0.1)] == [False, True, True, False, False]
+    assert ec.THRESHOLDS.COPY_MAX_MAD_M == 0.05
     assert [ec.block_class(c) for c in ([10, 10, 40], [10, 20, 30], [30, 30], [10, 11], [30, 0], [10, 50], [30, 10])] == \
         ['unresolved', 'filled', 'verified', 'measured', 'unresolved', 'unresolved', 'measured']
     assert {ec.REASON_OF(c) for c in (40, 41, 42, 43, 0)} == set(ec.UNRESOLVED_REASONS) and ec.REASON_OF(10) == 'measured'
