@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Region publish: the five-point publish rule for a reviewed region-build run. A pass copies the candidate into a repo work tree,
+"""Region publish: the six-point publish rule for a reviewed region-build run (point 6: EC receipts valid when the run has ec/). A pass copies the candidate into a repo work tree,
 proves `platform.build` reproduces itself and drafts PUBLISH.md; a failure writes the held reason to PUBLISH.md and LEDGER.csv and leaves
 the work tree byte-unchanged. File edits only, no commits or deploys. Exit 0 ready, 1 held or refused, 2 not restored. Not acceptance.
 """
@@ -12,7 +12,9 @@ from skippercast.platform.contracts import load_catalogs, load_region  # noqa: E
 
 HEADER = ['region_id', 'stage', 'state', 'held_reason', 'last_run', 'build_sha256', 'review_verdict', 'reviewer_runtime', 'pr', 'published_at']
 NEXT = {'source-candidate': 'noaa/source review owner', 'source-not-approved': 'source review owner', 'region-draft': 'PC-4b (t_6dd54ee3)',
-        'review': 're-review by another family', 'no-publishable-output': 'see BUILD.json not_built'}
+        'review': 're-review by another family', 'no-publishable-output': 'see BUILD.json not_built',
+        'ec': 'fix the EC stage upstream (region_correct.py --check <run>), rebuild and re-review'}
+CORRECT = REPO / 'skills/skippercast-region-correct/scripts/region_correct.py'
 sha = lambda data: hashlib.sha256(data).hexdigest()
 SKIP = {'.git', 'node_modules', '.venv', '__pycache__'}
 default_run = functools.partial(subprocess.run, capture_output=True, text=True)
@@ -82,6 +84,46 @@ def check(folder, build, review, region, sources, python, run):
     need(done.returncode == 0 and done.stdout.strip() == f'REVIEW OK {rid} PASS', 'review-invalid', 'region_review.py --check did not print REVIEW OK <id> PASS')
     return candidate
 
+def load(path):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+
+def ec_check(folder, build, candidate, python, run):
+    """Rule 6, only when the run has ec/ or BUILD.json carries `ec`; returns the PR-body EC lines ([] without EC). Raises Held."""
+    ec, block = folder / 'ec', build.get('ec')
+    if not (ec.exists() or ec.is_symlink()) and block is None:
+        return []
+    need(ec.is_dir() and not ec.is_symlink() and isinstance(block, dict), 'ec-receipt-invalid', 'ec/ and BUILD.json ec must both be present')
+    done = run([python, str(CORRECT), '--check', str(folder)])
+    need(done.returncode == 0 and re.fullmatch(r'EC OK \d+ rows', done.stdout.strip()), 'ec-receipt-invalid', 'region_correct.py --check did not print EC OK <n> rows')
+    doc = load(folder / 'EC.json')
+    need(isinstance(doc, dict) and block.get('ec_sha256') == doc.get('ec_sha256'), 'ec-receipt-invalid', 'BUILD.json ec.ec_sha256 differs from EC.json ec_sha256')
+    for path in sorted(ec.glob('*/EC-APPLY.json')):
+        cells = apply.get('deepened_cells') if isinstance(apply := load(path), dict) else None
+        need(cells == 0 and not isinstance(cells, bool), f'ec-deepened:{path.parent.name}', f'ec/{path.parent.name}/EC-APPLY.json deepened_cells {cells}')
+    try:  # counts: EC.json sources not REFUSED, and the candidate's unresolved-area blocks
+        done = [s for s in doc['sources'] if s['status'] != 'REFUSED']
+        count = lambda *names: sum(s['counts'].get(n, 0) for s in done for n in names)
+        props = [f.get('properties') or {} for f in candidate.get('features') or []]
+        blocks = sum(p.get('blocks', 0) for p in props if p.get('kind') == 'unresolved-area')
+        return [f"Error correction: {len(done)} sources corrected, {count('filled-hole', 'filled-pit')} filled cells, {count('verified')} verified cells, "
+                f"{blocks} unresolved blocks (EC {doc['ec_version']})"]
+    except (KeyError, TypeError, AttributeError):
+        raise Held('ec-receipt-invalid', 'EC.json sources, counts or ec_version unreadable')
+
+def refused_publish(folder):
+    """`ec-refused:<id>:<reason>` for each EC.json refused ask whose INTAKE.csv row had use publish."""
+    doc = load(folder / 'EC.json')
+    try:
+        with open(folder / 'INTAKE.csv', newline='') as handle:
+            publish_ids = {r.get('source_id') for r in csv.DictReader(handle) if r.get('use') == 'publish'}
+    except OSError:
+        return []
+    asks = [a.split(':', 2)[1:] for a in (doc.get('operator_asks') or [] if isinstance(doc, dict) else []) if isinstance(a, str) and a.startswith('refused:')]
+    return [f'ec-refused:{sid}:{why}' for sid, why in (a for a in asks if len(a) == 2) if sid in publish_ids]
+
 def reproduce(repo, rid, source, python, run):
     """Copy the candidate in and build twice; returns (tree before, tree after). On any failure restore the tree, then hold."""
     rel = f'catalog/depth-contours/{rid}.geojson'
@@ -135,7 +177,7 @@ def update_ledger(ledger, rid, changes):
     lines[n] = out.getvalue()
     changes and put(ledger, data=''.join(lines).encode())
 
-def pass_text(rid, name, build, candidate, region, sources, review, before, after, repo):
+def pass_text(rid, name, build, candidate, region, sources, review, before, after, repo, ec=()):
     prov, family, listed = candidate['provenance'], review['Reviewer-Family'], candidate['provenance']['sources']
     label = lambda s: sources[s['source_id']].get('name', s['source_id'])
     changed = [f'- {p} {after[p]}' for p in sorted(after) if before.get(p) != after[p]] + [f'- {p} deleted' for p in sorted(before) if p not in after]
@@ -148,7 +190,7 @@ def pass_text(rid, name, build, candidate, region, sources, review, before, afte
         'Files changed:', *(changed or ['- none (no change: the candidate equals the committed file)']), '', '## PR body',
         f"Depth contours for {region['name']} ({rid}), run {name}.",
         *[f"- {label(s)} (`{s['source_id']}`): sha256 {s['sha256']}, survey_date {s['survey_date']}, vertical_datum {s['vertical_datum']}" for s in listed],
-        f"sources_omitted: {json.dumps(prov['sources_omitted'], separators=(',', ':'))}", f"build_sha256: {build['build_sha256']}",
+        f"sources_omitted: {json.dumps(prov['sources_omitted'], separators=(',', ':'))}", f"build_sha256: {build['build_sha256']}", *ec,
         f"Reviewer: {review.get('Reviewer-Runtime', '')} ({family}); {'phone capture not visually inspected' if review.get('visual') == 'not-visually-inspected' else 'visual ' + review.get('visual')}.", 'Not for navigation.', '', '## CHANGELOG line',
         f"- Depth contours for {region['name']} now come from reviewed survey data ({', '.join(map(label, listed))}); each keeps its declared datum and is not for navigation.",
         '', 'README: no change (the package row exists)' if row else f"README: draft row | {region['name']} | `{region['status']}` |"]) + '\n'
@@ -166,12 +208,15 @@ def publish(args, run, loader):
     fields = {'last_run': name, 'build_sha256': build.get('build_sha256', ''), 'reviewer_runtime': (review or {}).get('Reviewer-Runtime', '')}
     try:
         candidate = check(folder, build, review, region, sources, args.python, run)
+        ec = ec_check(folder, build, candidate, args.python, run)
         before, after = reproduce(repo, rid, folder / f'candidate/{rid}.geojson', args.python, run)
-        text = pass_text(rid, name, build, candidate, region, sources, review, before, after, repo)
+        text = pass_text(rid, name, build, candidate, region, sources, review, before, after, repo, ec)
         changes, code = {'stage': 'publish', 'state': 'reviewed', 'held_reason': 'none', 'review_verdict': 'PASS (visual not inspected)' if review.get('visual') == 'not-visually-inspected' else 'PASS', **fields}, 0
     except Held as held:
         reason, detail = held.args
         action = NEXT.get(reason.split(':')[0]) or NEXT.get(reason.split('-')[0]) or 'operator inspects the run folder'
+        if reason == 'no-publishable-output' and (refused := refused_publish(folder)):
+            action = ', '.join(refused) + ' (a refused publish source is a custodian decision; see EC.md Operator asks)'
         text = f'# PUBLISH {rid} {name}\nHELD: {reason}\n{detail}\nNext: {action}\n'
         changes, code = {'state': 'held', 'held_reason': reason, 'review_verdict': (review or {}).get('overall', ''), **fields}, 1
     (folder / 'PUBLISH.md').write_text(text)

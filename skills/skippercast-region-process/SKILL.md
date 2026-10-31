@@ -1,13 +1,12 @@
 ---
 name: skippercast-region-process
-description: Use when taking a SkipperCast region from bathymetry bindings to a published depth-contour file. Orders the four stage skills, names the human gates and the ledger; a new region is a run, not code.
-skill_version: 1.0
+description: Use when taking a SkipperCast region from bathymetry bindings to a published depth-contour file. Orders the five stage skills, names the human gates and the ledger; a new region is a run, not code.
+skill_version: 1.1
 ---
 
 # Region process
 
-Takes a region id through intake → build → review → publish with the four stage skills and one ledger. A new region is a
-run, not code. Machine-valid output is review-required, not accepted.
+Takes a region id through intake → correct → build → review → publish with the five stage skills and one ledger. A new region is a run, not code. Machine-valid output is review-required, not accepted. Open data PRs one at a time. Never judge reviewer independence from profile names.
 
 ## Inputs
 
@@ -20,6 +19,7 @@ run, not code. Machine-valid output is review-required, not accepted.
 
 1. Intake: `python3 skills/skippercast-region-intake/scripts/region_intake.py <id> --run <run> --locations <json>` ([`region_intake.py`](../skippercast-region-intake/scripts/region_intake.py)).
 2. Check intake: `python3 skills/skippercast-region-intake/scripts/region_intake.py --check <run>` ([`region_intake.py`](../skippercast-region-intake/scripts/region_intake.py)); it prints `INTAKE OK <n> rows`.
+2a. Correct: `python3 skills/skippercast-region-correct/scripts/region_correct.py <id> --run <run> --author-runtime <runtime> --author-family <family> --python <exe>` until `EC ALL-DONE`, then `region_correct.py --check <run>` prints `EC OK` ([`region_correct.py`](../skippercast-region-correct/scripts/region_correct.py)). Local Qwen or Terra runs it; see [`skippercast-region-correct`](../skippercast-region-correct/SKILL.md). No tool writes `stage=correct`: the operator sets it by hand only if they already maintain the row.
 3. Build: `python3 skills/skippercast-region-build/scripts/region_build.py <id> --run <run> --author-runtime <runtime> --author-family <family>` ([`region_build.py`](../skippercast-region-build/scripts/region_build.py)); runtime and family are the actual model, never a profile name.
 4. Deterministic review: `python3 skills/skippercast-region-review/scripts/region_review.py <run>` ([`region_review.py`](../skippercast-region-review/scripts/region_review.py)).
 5. Phone capture: `node skills/skippercast-region-review/scripts/phone_capture.mjs --mode held --run <run>` ([`phone_capture.mjs`](../skippercast-region-review/scripts/phone_capture.mjs)).
@@ -30,45 +30,41 @@ run, not code. Machine-valid output is review-required, not accepted.
 
 ## Outputs
 
-- Run folder: `INTAKE.csv`, `INTAKE.md`, `BUILD.json`, `candidate/`, `held/`, `REVIEW-PACKET/`, `REVIEW.md`, `PUBLISH.md`.
-- Ledger row columns: `region_id, stage, state, held_reason, last_run, build_sha256, review_verdict, reviewer_runtime, pr, published_at`.
-- `state` is one of `not-started, intake, built, reviewed, held, published, blocked`.
+- Run folder: `INTAKE.csv`, `INTAKE.md`, `ec/`, `EC.json`, `EC.md`, `INTAKE-EC.csv`, `BUILD.json`, `candidate/`, `held/`, `REVIEW-PACKET/`, `REVIEW.md`, `PUBLISH.md`.
+- Ledger row columns: `region_id, stage, state, held_reason, last_run, build_sha256, review_verdict, reviewer_runtime, pr, published_at`; `stage` includes `correct`.
+- `state` is one of `not-started, intake, built, reviewed, held, published, blocked`. A held region is parked, not failed. Re-run publish after the blocker clears.
 - `held_reason` is one of `none, source-candidate:<id>, source-not-approved:<id>, region-draft, region-status:<s>,
   missing-file:<id>, 3d-rights, no-buildable-input, no-publishable-output, publication-held, review-missing,
   review-sha-mismatch, review-family, review-return, review-invalid, build-output-changed, build-not-reproducible,
-  build-sha-mismatch, build-touched:<path>`.
-- A held region is parked, not failed. Re-run publish after the blocker clears.
+  build-sha-mismatch, build-touched:<path>, ec-refused:<id>, ec-receipt-invalid, ec-deepened:<id>`.
 
 ## Gates
 
 | Gate | Who clears it |
 | --- | --- |
 | Deterministic checks (steps 2, 4) | Model: Terra (`luna-worker`) or the card's assignee |
+| EC receipts (`--check`) and the five review EC checks | Model: local-worker or Terra |
 | Agent first review (step 6) | Model of the other family, read from run metadata |
 | Source acceptance (catalog `review_status`) | Human only |
-| Draft-region promotion (PC-4b, t_6dd54ee3) | Human only |
-| 3D rights | Human only |
-| G's phone pass | Human only |
+| Second-survey intake, datum question, refused `publish` source | Human (custodian) |
+| Draft-region promotion (PC-4b, t_6dd54ee3); 3D rights; G's phone pass | Human only |
 | Merge of the data PR | Standing approval: required CI green on the exact head plus an independent review |
-
-Machine-valid is not accepted. Open data PRs one at a time. Never judge reviewer independence from profile names.
 
 ## Never
 
 - Download. A missing file is one ask to G with the full list.
 - Open `restricted` or unresolved-licence files.
-- Convert a datum.
-- Edit `review_status`.
-- Hand-edit `catalog/depth-contours/*` or `dist/`.
-- Re-run the screening queue.
+- Convert a datum, or edit `review_status`.
+- Hand-edit `catalog/depth-contours/*` or `dist/`, or re-run the screening queue.
+- Fill, smooth or flip a grid by hand; count a compilation or the same survey as a second survey.
 - Run terrain without S-030 admission.
 - Write region-specific code. A needed change is a **spec-gap**: log it in that stage skill's Changelog and give it its own unit.
 
 ## Golden case
 
-`morro-bay` (unit M2). The intake → build → review run must reproduce the committed contour features, and publish must
-report no change.
+`morro-bay` (unit M2). The intake → build → review run must reproduce the committed contour features, and publish must report no change.
 
 ## Changelog
 
 - 1.0 — 2026-xx-xx: first version (P10). The PR fills in the merge date.
+- 1.1 — correct stage (EC9).
