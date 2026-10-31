@@ -1,7 +1,7 @@
 ---
 name: skippercast-region-review
 description: Use when a region-build run folder needs its deterministic review packet and an agent first review before any human gate. Writes REVIEW-PACKET/review.json and validates REVIEW.md; never publishes.
-skill_version: 1.0
+skill_version: 1.1
 ---
 
 # Region review
@@ -26,9 +26,11 @@ Machine-valid packet: review-required, not acceptance. A reviewer of another run
 
 ## Outputs
 
-- `REVIEW-PACKET/review.json` (`region-review-v1`): banner, region, build sha256, author runtime and family, eight
+- `REVIEW-PACKET/review.json` (`region-review-v1`): banner, region, build sha256, author runtime and family, thirteen
   checks (`outputs-intact`, `provenance-complete`, `datum-verbatim`, `omitted-stated`, `no-depth-crossings`,
-  `size-budget`, `held-flags`, `supported-water`), `publishable` and `held_reason`. `REVIEW.md` is the agent's.
+  `size-budget`, `held-flags`, `supported-water`, `ec-receipts-intact`, `ec-no-deepening`, `ec-independence`,
+  `ec-unresolved-stated`, `ec-thresholds-version` (PASS trivially with detail `no ec/ folder` when EC was not run)),
+  `publishable` and `held_reason`. `REVIEW.md` is the agent's.
 
 ## Never
 
@@ -43,3 +45,4 @@ Machine-valid packet: review-required, not acceptance. A reviewer of another run
 ## Changelog
 
 - 1.0: first version.
+- 1.1: EC checks (EC8).
