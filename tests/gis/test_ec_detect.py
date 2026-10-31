@@ -9,7 +9,6 @@ import numpy as np
 import pytest
 
 from tests._support import ROOT
-
 pytestmark = pytest.mark.gis
 _spec = importlib.util.spec_from_file_location('ec_detect', ROOT / 'scripts' / 'ec_detect.py')
 det = importlib.util.module_from_spec(_spec)
@@ -17,8 +16,7 @@ _spec.loader.exec_module(det)
 SLOPE = np.tile(-10.0 - 50.0 * np.arange(64) / 63.0, (64, 1))  # -10 m at column 0 to -60 m at column 63
 
 
-def _tif(path, values, x0=7e5, y0=3.9e6, cell=2.0, crs='EPSG:32610', dtype='float32', nodata=-9999.0, driver='GTiff',
-         mask=None, internal_mask=True):
+def _tif(path, values, x0=7e5, y0=3.9e6, cell=2.0, crs='EPSG:32610', dtype='float32', nodata=-9999.0, driver='GTiff', mask=None, internal_mask=True):
     import rasterio
     from rasterio.transform import from_origin
     values = np.asarray(values, dtype=dtype)
@@ -96,8 +94,7 @@ def test_acceptance_grid_lists_holes_pit_spike_and_is_fix(d, capsys):
 
 def test_ring_range_edge_land_and_sentinel_holes(d, capsys):
     v = SLOPE.copy()
-    v[30:34, 4:8] = -14.0
-    v[30, 4], v[33, 7] = -10.0, -18.0  # ring spans -10..-18: range 8 m > max(2, 0.1 * 10) = 2 m
+    v[30:34, 4:8], v[30, 4], v[33, 7] = -14.0, -10.0, -18.0  # ring spans -10..-18: range 8 m > max(2, 0.1 * 10) = 2 m
     v[31:33, 5:7] = v[0, 30] = np.nan  # the ring-range hole; [0, 30] touches the raster edge
     v[50, 50], v[50, 51] = np.nan, 0.0  # a 0 m neighbour
     v[45, 45], v[45, 46] = 9999.0, np.nan  # sentinel joins a NaN cell into one 2-cell hole
@@ -124,9 +121,8 @@ def test_ring_range_edge_land_and_sentinel_holes(d, capsys):
 @pytest.mark.parametrize('value, kind, deviation', [(-40.0, 'pits', -20.0), (-5.0, 'spikes', 15.0)])
 def test_outliers_beside_excluded_cells_use_water_median(d, capsys, excluded, value, kind, deviation):
     v = SLOPE.copy()
-    v[10:13, 12:15] = -20.0
-    v[10:13, 12] = excluded  # nodata, sentinel or land must not participate in the median
-    v[11, 13] = value
+    v[10:13, 12:15], v[10:13, 12], v[11, 13] = -20.0, excluded, value
+    # nodata, sentinel or land must not participate in the median
     code, doc, _err = _run(capsys, _tif(d / 'edge.tif', v), d / 'edge.json')
     assert code == 0 and doc['spikes' if kind == 'pits' else 'pits'] == []
     assert doc[kind] == [{'cells': 1, 'bbox': [13, 11, 14, 12], 'ring_median_m': -20.0, 'deviation_m': deviation}]
@@ -156,11 +152,9 @@ def test_refusals_name_the_field_before_any_stats(d, capsys, monkeypatch, case, 
     s, receipt = SLOPE, d / 'out.json'
     tif = {'bands': lambda: _tif(d / 'two.tif', [s, s]), 'driver': lambda: _tif(d / 'g.bil', s, driver='ENVI'),
            'crs': lambda: _tif(d / 'geo.tif', s, x0=-121.0, y0=35.5, cell=0.0001, crs='EPSG:4326'),
-           'sidecar': lambda: _tif(d / 'g.tif', s, mask=np.full(s.shape, 255, np.uint8), internal_mask=False),
-           }.get(case, lambda: _tif(d / 'g.tif', s))()
+           'sidecar': lambda: _tif(d / 'g.tif', s, mask=np.full(s.shape, 255, np.uint8), internal_mask=False)}.get(case, lambda: _tif(d / 'g.tif', s))()
     extra = {'adapter': ['--adapter', 'bag'], 'pixels': ['--max-pixels', '1000'], 'strip': ['--strip-rows', '0']}
-    if case == 'receipt':
-        receipt.write_text('{}')
+    if case == 'receipt': receipt.write_text('{}')
     code, _doc, err = _run(capsys, tif, receipt, *extra.get(case, []), source=' ' if case == 'source' else 'usgs-test')
     assert code == 2 and err.startswith(f'detect refused: {field}')
     assert receipt.read_text() == '{}' if case == 'receipt' else not receipt.exists()
