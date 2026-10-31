@@ -19,6 +19,7 @@
 import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {region} from '../state.ts';
+import {chartFileListed} from '../chart-files.ts';
 import type {ChartMark} from './coastline.ts';
 import {ZOOM_OFFSET, type Engine, type Overlay} from './engine.ts';
 import {DEPTH_CONTOURS_SOURCE, layerEntry} from './layers.ts';
@@ -260,6 +261,8 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
       // A region that publishes none is not asked again for its full form.
       const l = loaded.peek();
       if (l && l.region === id && l.result === 'none') return;
+      // RF0850-2: a file the loaded region.json does not list settles as none, as its 404 would, with no request.
+      if (!chartFileListed(id, path.slice(path.lastIndexOf('/') + 1))) { asked = path; loaded.value = {region: id, path, result: 'none'}; return; }
       asked = path;
       if (!l || l.region !== id) contourState.value = {status: 'loading', note: NOTES.loading, sources: [], omitted: []};
       void load(id, path);
