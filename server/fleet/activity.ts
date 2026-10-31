@@ -29,8 +29,8 @@
 //     ('2026-10-05T09:00:00.000Z'). Writes an Analytics Engine `fleet_ais` point.
 //   GET /api/fleet/jobs/health?region=<id>
 //     Staleness booleans and ages only: {region, checked_at, stale_after_s, stale,
-//     checks: {heartbeat, last_message, processed: {age_s, stale}}}. A check is stale
-//     when its time is unknown or more than STALE_HOURS (3) old.
+//     checks: {heartbeat, last_message, processed: {age_s, stale}}, cause}. A check is stale
+//     when its time is unknown or more than STALE_HOURS (3) old; cause is staleCause() below.
 import {body} from '../http.ts';
 import {ClientError} from '../errors.ts';
 import {recordFleetAis} from '../analytics.ts';
@@ -295,5 +295,22 @@ export async function health(db: D1Database, region: string | undefined): Promis
     return {age_s: ageS, stale: ageS === null || ageS > limit};
   };
   const checks = {heartbeat: check(beat.written_at), last_message: check(beat.last_message_at), processed: check(done.at)};
-  return {status: 200, body: {region, checked_at: now.toISOString(), stale_after_s: limit, stale: Object.values(checks).some(c => c.stale), checks}};
+  return {status: 200, body: {region, checked_at: now.toISOString(), stale_after_s: limit, stale: Object.values(checks).some(c => c.stale), checks, cause: staleCause(checks, beat)}};
+}
+
+/** How much older than the last processor push the heartbeat may be and still count as current at that push. */
+export const CAUSE_TOLERANCE_S = 600;
+type Check = {age_s: number | null; stale: boolean};
+export type StaleCause = 'none' | 'no-data' | 'processor-not-delivered' | 'listener-stale' | 'no-messages';
+
+/** The likely reason a health answer is stale (`beat`, the stored heartbeat, is read through `checks`). The heartbeat is stored only when the
+ *  processor pushes it, so ages growing together mean the run was not delivered; a heartbeat already old at the push means the listener went quiet. */
+export function staleCause(checks: {heartbeat: Check; last_message: Check; processed: Check}, _beat?: Record<string, unknown>): StaleCause {
+  const {heartbeat, last_message: message, processed} = checks;
+  if (!heartbeat.stale && !message.stale && !processed.stale) return 'none';
+  if (processed.age_s === null || heartbeat.age_s === null) return 'no-data';
+  const lag = heartbeat.age_s - processed.age_s;
+  if (processed.stale && lag <= CAUSE_TOLERANCE_S && message.age_s !== null && message.age_s - processed.age_s <= CAUSE_TOLERANCE_S) return 'processor-not-delivered';
+  if (lag > CAUSE_TOLERANCE_S) return 'listener-stale';
+  return 'no-messages';
 }

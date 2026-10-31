@@ -2,8 +2,8 @@ import { getRegion, localContext } from "./region.js";
 // UTC, unit-checked hourly samples. No gap filling, zero substitution, or extrapolation.
 import { fetchJSON, WIND_MODELS, WAVE_MODELS } from "./forecast.js";
 
-import {HOUR} from "./marine-units.js";
-export {HOUR,directionTo} from "./marine-units.js";
+import {HOUR} from "./marine-charts.js";
+export {HOUR,directionTo} from "./marine-charts.js";
 export const POINTS = getRegion().forecast_points;
 export const POINT_SIGNATURE=JSON.stringify(POINTS.map(p=>[p.id,p.latitude,p.longitude]));
 export const MODELS = [

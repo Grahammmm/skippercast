@@ -64,7 +64,8 @@ effect(() => {
   regionRequest?.abort();
   regionRequest = null;
   batch(() => {
-    if (regionInfo.peek()?.id !== id) { regionInfo.value = null; publishedChartFiles.value = null; }
+    // RF0850-2: pending until loadRegion publishes the list (or fails open), so the Chart waits instead of guessing.
+    if (regionInfo.peek()?.id !== id) { regionInfo.value = null; publishedChartFiles.value = id ? {region: id, files: null, pending: true} : null; }
     tideSelection.configure(null);
     regionLoad.value = null;
   });
@@ -143,13 +144,18 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch
   const controller = regionRequest = new AbortController();
   const current = (): boolean => generation === regionGeneration && id === region.peek();
   batch(() => { regionInfo.value = null; regionLoad.value = {id, state: 'loading'}; });
+  // RF0850-2: a failed read ends the wait with no list, so every chart file fails open as before.
+  const failed = (): void => batch(() => {
+    regionLoad.value = {id, state: 'error'};
+    if (publishedChartFiles.peek()?.region === id && publishedChartFiles.peek()?.pending) publishedChartFiles.value = {region: id, files: null};
+  });
   try {
     const info = await startupDeadline(() =>
       !retry && fetchFn === sharedFetch && recoveredRegionInfo.has(id)
         ? Promise.resolve(recoveredRegionInfo.get(id)!) : regionReader(fetchFn)(id, retry),
     REGION_READ_TIMEOUT_MS, controller.signal);
     if (!current()) return null;
-    if (!info) { regionLoad.value = {id, state: 'error'}; return null; }
+    if (!info) { failed(); return null; }
     if (retry && fetchFn === sharedFetch) recoveredRegionInfo.set(id, info);
     batch(() => {
       regionInfo.value = info;
@@ -161,7 +167,7 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch
     });
     return info;
   } catch {
-    if (current()) regionLoad.value = {id, state: 'error'};
+    if (current()) failed();
     return null;
   } finally {
     if (regionRequest === controller) regionRequest = null;

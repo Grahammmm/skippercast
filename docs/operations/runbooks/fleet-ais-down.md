@@ -75,6 +75,17 @@ A manual normal run proves processing; a historical backfill proves its window.
 Neither proves scheduled delivery. The three-hour Worker health threshold is a
 staleness alert, not a half-hour cadence check.
 
+The health answer and the `fleet-ais-stale` issue name a likely `cause`
+(derived from the three ages; the heartbeat is stored only when the processor
+pushes it). Check first:
+
+| `cause` | Meaning | Check first |
+| --- | --- | --- |
+| `processor-not-delivered` | all three clocks are equally old: no processor run arrived | the `fleet-ais.yml` schedule run list (above), not the listener; never restart the listener for it |
+| `listener-stale` | the processor ran but carried a heartbeat more than 10 min old | the listener service and its log ("Diagnose", above) |
+| `no-messages` | the listener is alive but heard no AIS message for 3 h | the AIS feed and geofence before the listener |
+| `no-data` | no processor push or heartbeat is stored, or a time is unreadable | first install and the processor's heartbeat step |
+
 Local `state.sqlite` logs historical and normal runs. Backfill/window runs
 leave the Worker's ordinary heartbeat and processed clocks alone, so a newer
 local finished timestamp is not evidence that ordinary publication advanced.

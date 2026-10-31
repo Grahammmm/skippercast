@@ -143,13 +143,20 @@ def measure(collection, bounds):
             round(min(blocks * CELL_M ** 2 / area, 1.0), 6))
 
 
+def planted(folder, names):
+    """The first managed output name that is a symlink in the run folder (atomic_json and the builder follow links)."""
+    return next((name for name in names if (folder / name).is_symlink()), None)
+
+
 def build(args, run=default_run, loader=default_loader):
     folder, repo = Path(os.path.realpath(args.run)), Path(os.path.realpath(REPO))
     if folder == repo or repo in folder.parents:
         raise BuildError(f'--run must be outside the repository: {folder}')
+    if name := planted(folder, ('BUILD.json', 'BUILD.json.tmp', 'candidate', 'held')):
+        raise BuildError(f'refusing a symlinked {name} in the run folder')
     if not (folder / 'INTAKE.csv').is_file():
         raise BuildError(f'No INTAKE.csv in {folder}')
-    if (folder / 'BUILD.json').exists():
+    if os.path.lexists(folder / 'BUILD.json'):
         raise BuildError(f'Refusing to overwrite {folder / "BUILD.json"}')
     if not (args.author_runtime or '').strip() or not re.fullmatch(r'[a-z][a-z0-9-]*', args.author_family or ''):
         raise BuildError('--author-runtime must be non-empty and --author-family must match ^[a-z][a-z0-9-]*$')

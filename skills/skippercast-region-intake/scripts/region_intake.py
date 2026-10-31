@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Region intake: bindings + catalog + private file list + existing screens -> INTAKE.csv/.md.
 Stdlib only. Never downloads, re-screens, reads a raster or opens a restricted/unresolved-licence file."""
-import argparse, csv, hashlib, json, os, re, sys
+import argparse, contextlib, csv, hashlib, io, json, os, re, sys, tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
@@ -142,29 +142,48 @@ def summary(region, rows, outside, sources, joins=None):
     return '\n'.join(lines + ['', '## Gaps and next action', ''] +
                      [f'- {sid}: {GAPS[k]}' for sid, k in gaps]) + '\n'
 
+def write_pair(run, texts):
+    temps, placed = [], []  # both files or neither: UTF-8 temps in run, os.replace in order; a failure removes what was placed
+    try:
+        for text in texts.values():
+            fd, tmp = tempfile.mkstemp(dir=run, prefix='.INTAKE.', suffix='.tmp')
+            temps.append(tmp)
+            with open(fd, 'w', encoding='utf-8', newline='') as handle:
+                handle.write(text)
+        for name, tmp in zip(texts, temps):
+            os.replace(tmp, run / name)
+            placed.append(run / name)
+    except BaseException:
+        for path in temps + placed:
+            with contextlib.suppress(OSError):
+                os.unlink(path)
+        raise
+
 def intake(args, loader):
     region, sources = loader(args.region_id)
+    if os.path.islink(given := os.path.normpath(args.run)) or (os.path.lexists(given) and not os.path.isdir(given)):
+        raise IntakeError('--run must be a real folder')  # the given path, before realpath
     run, repo = Path(os.path.realpath(args.run)), Path(os.path.realpath(REPO))
     if run == repo or repo in run.parents:
         raise IntakeError(f'--run must be outside the repository: {run}')
-    if (run / 'INTAKE.csv').exists():
-        raise IntakeError(f'Refusing to overwrite {run / "INTAKE.csv"}')
+    if found := [n for n in ('INTAKE.csv', 'INTAKE.md') if os.path.lexists(run / n)]:  # also a dangling link or half pair
+        raise IntakeError(f'Refusing to overwrite {found[0]} in {run}')
     locations = read_locations(args.locations)
     skip_raw = {p for e in locations if e['source_id'] in sources and never_read(sources[e['source_id']]) for p in [e['path']] + (screened(e) or [])}
     rows, outside, joins = build(region, sources, locations, *read_screens(os.path.expanduser(args.screens), skip_raw))
+    writer = csv.DictWriter(table := io.StringIO(), COLUMNS, lineterminator='\n')  # render both in memory first
+    writer.writeheader()
+    writer.writerows(rows)
+    texts = {'INTAKE.csv': table.getvalue(), 'INTAKE.md': summary(region, rows, outside, sources, joins if any(screened(e) for e in locations) else None)}
     run.mkdir(parents=True, exist_ok=True)
-    with open(run / 'INTAKE.csv', 'w', newline='') as handle:
-        writer = csv.DictWriter(handle, COLUMNS, lineterminator='\n')
-        writer.writeheader()
-        writer.writerows(rows)
-    (run / 'INTAKE.md').write_text(summary(region, rows, outside, sources, joins if any(screened(e) for e in locations) else None))
+    write_pair(run, texts)
     print(f'INTAKE written {len(rows)} rows to {run}')
 
 def check(folder, loader):
     try:
-        title = (Path(folder) / 'INTAKE.md').read_text().splitlines()[0]
-        table = list(csv.reader(open(Path(folder) / 'INTAKE.csv', newline='')))
-    except (OSError, IndexError) as err:
+        title = (Path(folder) / 'INTAKE.md').read_text(encoding='utf-8').splitlines()[0]
+        table = list(csv.reader(open(Path(folder) / 'INTAKE.csv', newline='', encoding='utf-8')))
+    except (OSError, IndexError, UnicodeDecodeError) as err:
         raise IntakeError(f'Run folder unreadable: {err}')
     sources = loader(title.removeprefix('# INTAKE '))[1]
     if not table or table[0] != COLUMNS:

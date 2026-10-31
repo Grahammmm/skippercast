@@ -119,9 +119,14 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // Rebind those three exact hashes.
 // RF0935-2 (one web default zone): App.tsx imports DEFAULT_ZONE from web/zone.ts and re-exports it; Reports.tsx's
 // non-date day() branch reads that same 'America/Los_Angeles' constant. Same value, no CSS/markup change. Rebind those two.
+// RF0850-2 (#1103): App.tsx's region effect marks the new region's chart_files list pending instead of
+// null, and loadRegion clears that mark with no list when region.json fails. Only publishedChartFiles
+// (web/chart-files.ts) changes; RegionInfo, the id/charters fields Reports reads, CSS, tokens, classes
+// and catch markup do not. contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
+// Merge of RF0935-2 with RF0850-2: App.tsx carries both changes; rebind its merged hash.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
-  "web/app/App.tsx": "43e8a75b9e8585a30373bd14ffd3db72ffcde23c097a1596d3bdd0a380d56227",
+  "web/app/App.tsx": "d9a7b2a48ac5147a6db2263da0815744fff45739ae9de85fa2d1d4f0801604c5",
   "web/app/Masthead.tsx": "d785af3dc63990d67940cb4eb451c7a39e3be4de268c67a13d1c8c05130643ca",
   "web/app/LayerRail.tsx": "248402b3100855ef1561c742ee32c3922d9b6475080cb6420957a553e5872abb",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
