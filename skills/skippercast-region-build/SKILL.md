@@ -1,7 +1,7 @@
 ---
 name: skippercast-region-build
 description: Use when a region's checked INTAKE.csv must be turned into private depth-contour candidates and a BUILD.json in its run folder. Runs the preflight and the builder; never publishes or writes in the repository.
-skill_version: 1.1
+skill_version: 1.2
 ---
 
 # Region build
@@ -57,10 +57,12 @@ Terrain is not built by this skill. See `docs/operations/coast-statewide-runshee
 
 ## Golden case
 
-`morro-bay` (real run M2) over the three USGS GeoTIFFs: the features of `candidate/morro-bay.geojson` must equal the
-committed `catalog/depth-contours/morro-bay.geojson` features. Any difference is a spec-gap note.
+`morro-bay` (real run M2) over the three USGS GeoTIFFs: `candidate/morro-bay.geojson` must equal the committed
+`catalog/depth-contours/morro-bay.geojson` in features **and** provenance: run `scripts/golden_compare.py morro-bay --run <dir>`.
+Any verdict other than `equal` is a spec-gap note naming the keys it lists.
 
 ## Changelog
 
 - 1.0: first version.
 - 1.1: reads INTAKE-EC.csv and passes provenance grids (EC7).
+- 1.2: golden_compare.py checks provenance too (Morro Bay SG-1).
