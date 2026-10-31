@@ -24,7 +24,10 @@ The processor (``process.py``) calls two hooks each scheduled run:
    vessel's name or alias (``ais-static-name``, 0.7) or its call sign (``call-sign``,
    0.8), with a ship type of 30, 37, 60 or 69 (another known type is no match) ->
    ``candidate``. An unknown type or length costs 0.1 and blocks promotion; a
-   length more than 20% off the registry's is a contradiction (0.4).
+   length more than 20% off the registry's is a contradiction (0.4). A name that
+   matches one vessel and a call sign that matches a different one (no vessel in
+   both) is the several-vessels case: no vessel, no promotion, until an admin
+   pins one or withdraws a hit.
 3. *Home port.* A stage-2 candidate seen inside its vessel's own port geofence on
    at least 3 distinct region-local days of the last 30 -> ``watched`` at
    ``thresholds.match.mmsi_auto`` or more (``geofence-presence``); once watched it
@@ -344,9 +347,13 @@ the days it was inside a port geofence (contradictions, schedule.py).
         if static.ship_type is not None and static.ship_type not in SHIP_TYPES:
             continue
         hits: dict[str, str] = {}
+        name_ids: set[str] = set()
+        call_ids: set[str] = set()
         if static.name and (norm := name_norm(static.name)):
+            name_ids = {vid for vid in by_name.get(norm, ()) if (vid, mmsi) not in rejected}
             hits.update({vid: "ais-static-name" for vid in by_name.get(norm, ())})
         if static.call_sign:
+            call_ids = {vid for vid in by_call.get(_call(static.call_sign), ()) if (vid, mmsi) not in rejected}
             hits.update({vid: "call-sign" for vid in by_call.get(_call(static.call_sign), ())})
         if not hits:
             continue
@@ -355,7 +362,9 @@ the days it was inside a port geofence (contradictions, schedule.py).
             row(mmsi, sorted(hits)[0], hits[sorted(hits)[0]], 0.0, "rejected", static, sight)
             continue
         days = {vid: presence.get(mmsi, {}).get(by_id[vid].port_id, 0) if by_id[vid].port_id else 0 for vid in open_hits}
-        if len(open_hits) == 1:
+        if name_ids and call_ids and not name_ids & call_ids:
+            chosen = None   # the name names one boat, the call sign another (#576): never promoted
+        elif len(open_hits) == 1:
             chosen = next(iter(open_hits))
         else:
             present = [vid for vid in sorted(open_hits) if days[vid] > 0]
