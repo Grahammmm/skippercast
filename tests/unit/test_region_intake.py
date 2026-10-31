@@ -148,3 +148,52 @@ def test_check_rejects_never_read_and_foreign_reason(world, monkeypatch, capsys)
         assert "Row 1 field held_reason" in capsys.readouterr().err
     rewrite(held)
     assert ri.main(["--check", str(folder)], world["loader"]) == 0
+
+
+def joined_run(w, listed, extra):
+    tmp, loc = w["tmp"], json.loads((w["tmp"] / "locations.json").read_text())
+    loc["files"][0]["screened_path"] = listed
+    (tmp / "locations.json").write_text(json.dumps(loc))
+    with (tmp / "screens.tsv").open("a") as handle:
+        handle.writelines(f"{tmp / t}\t{v}\t\t{s}\n" for t, v, s in extra)
+    code, folder = run(w, "joined")
+    return code, folder, rows_of(folder)[0] if code == 0 else None
+
+
+def test_screened_path_joins_without_touching(world, monkeypatch):
+    derived, calls = str(world["tmp"] / "d/approved__r000000_c000000.tif"), []
+    real_identity, real_stat, real_open = ri.file_identity, os.stat, builtins.open
+    def guard(real):
+        return lambda path, *a, **k: (str(path) != derived or pytest.fail("screened path touched"), real(path, *a, **k))[1]
+    monkeypatch.setattr(ri, "file_identity", lambda p: (calls.append(str(p)), real_identity(p))[1])
+    monkeypatch.setattr(os, "stat", guard(real_stat))
+    monkeypatch.setattr(builtins, "open", guard(real_open))
+    code, folder, row = joined_run(world, derived, [("d/approved__r000000_c000000.tif", "PASS-SPARSE", "rx")])
+    monkeypatch.undo()
+    assert code == 0 and (row["screen"], row["screen_receipt"], row["use"]) == ("PASS-SPARSE", "rx", "publish")
+    assert calls and derived not in calls and "- screens joined via screened_path: 1 entries" in (folder / "INTAKE.md").read_text()
+
+
+@pytest.mark.parametrize("verdicts,more,want", [
+    (["PASS", "PASS-SPARSE"], [], ("PASS-SPARSE", "a;b", "publish")),
+    (["PASS", "FLAG"], [], ("FLAG", "b", "skip")),
+    (["PASS", None], [], ("UNSCREENED", "", "publish")),
+    (["PASS", "PASS"], [("e/approved_elevation_r0_c0.tif", "FLAG", "c")], ("FLAG", "c", "skip")),  # unlisted sibling
+    (["PASS", "PASS"], [("d/approved__r0_c0.tif", "FLAG", "z")], ("FLAG", "z", "skip")),  # stale FLAG under a later PASS
+    (["PASS", "PASS"], [("d/approved__r0_c1.tif", "FLAG", "bo"), ("d/approved__r0_c0.tif", "FLAG", "ao"), ("e/approved_r9.tif", "FLAG", "cs")], ("FLAG", "ao;bo;cs", "skip")),
+    (["PASS", "PASS"], [("e/notapproved_r0.tif", "FLAG", "c"), ("e/approvedx_r0.tif", "FLAG", "c")], ("PASS", "a;b", "publish")),
+])
+def test_screened_path_verdict_precedence(world, verdicts, more, want):
+    names = ["d/approved__r0_c0.tif", "d/approved__r0_c1.tif"]
+    extra = more + [(n, v, s) for n, v, s in zip(names, verdicts, "ab") if v]
+    code, _, row = joined_run(world, [str(world["tmp"] / n) for n in names], extra)
+    assert code == 0 and (row["screen"], row["screen_receipt"], row["use"]) == want
+
+
+@pytest.mark.parametrize("listed", ["d/approved__r0_c0.tif", [], "@/d/other__r0_c0.tif", ["@/d/approved__r0_c0.tif"] * 2, [7]])
+def test_bad_screened_path_writes_nothing(world, capsys, listed):
+    fix = lambda p: p.replace("@", str(world["tmp"])) if isinstance(p, str) else p  # noqa: E731
+    listed = [fix(p) for p in listed] if isinstance(listed, list) else fix(listed)
+    code, folder, _ = joined_run(world, listed, [])
+    want = listed if "other" in str(listed) else str(world["tmp"] / "approved.tif")
+    assert code == 1 and want in capsys.readouterr().err and not folder.exists()
