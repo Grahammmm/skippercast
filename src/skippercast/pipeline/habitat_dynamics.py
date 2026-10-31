@@ -21,6 +21,8 @@ from ..platform.contracts import REPO, atomic_json, load_region, load_catalogs, 
 METHOD = "pelagic-context-v1"
 TILE_DEGREES = .5
 MAX_NATIVE_CELLS = 150_000
+# Optional layers that have never produced a populated scene are listed, not degrading.
+OPTIONAL_LAYERS = frozenset({"chlorophyll-observation"})
 WCOFS_URL = "https://opendap.co-ops.nos.noaa.gov/thredds/"
 WCOFS_DOC = "https://tidesandcurrents.noaa.gov/ofs/wcofs/wcofs_info.html"
 HMS_DOC = "https://www.fisheries.noaa.gov/s3/2024-10/Amend8-HMS-FMP-AppendixF-June28-Att-2.pdf"
@@ -395,15 +397,21 @@ def run(region_id, output, previous_root=None, now=None):
                 sources[ident].update(status="retained", data_retrieved_at=old_source.get("data_retrieved_at"), last_success_at=old_source.get("last_success_at"))
             except (OSError, ValueError) as error:
                 sources[ident]["retention_issue"] = str(error)
+    for key, row in sources.items():
+        layer = layers.get(key, {})
+        fresh = layer and not row.get("reused") and layer.get("status") != "retained" and layer.get("valid_cells", 0) > 0
+        row["last_populated_at"] = (layer.get("issued_at") or layer.get("sample_at")) if fresh else (previous.get("sources", {}).get(key) or {}).get("last_populated_at")
     # A cloud-masked but successfully decoded scene is an ecological coverage
     # gap, not a broken acquisition job. Stale source clocks remain failures.
     issues = [key for key, s in sources.items() if s["status"] not in ("ok", "missing")]
-    coverage_gaps = []
+    coverage_gaps, inactive_optional = [], []
     for key, layer in layers.items():
         fraction = layer.get("valid_cells", 0)/layer["total_cells"] if layer.get("total_cells") else 0
         layer["coverage_fraction"] = round(fraction, 5)
         layer["coverage_denominator"] = "All requested source grid cells, including land and masked cells; repeated for each forecast frame"
-        if fraction < .1: coverage_gaps.append(key)
+        if fraction < .1:
+            never = key in OPTIONAL_LAYERS and sources.get(key, {}).get("last_populated_at") is None
+            (inactive_optional if never else coverage_gaps).append(key)
         try:
             age = (epoch(now)-epoch(layer.get("issued_at") or layer.get("sample_at")))/3600
             if age < -1 or age > layer["max_age_hours"]:
@@ -414,7 +422,8 @@ def run(region_id, output, previous_root=None, now=None):
                "generated_at": stamp(now), "completed_at": stamp(), "layers": layers, "sources": sources,
                "species_methods": {k: v for k, v in SPECIES_METHODS.items() if k in region["species"]},
                "interpretation": "Dated physical habitat context. Species thermal references and gradients are transparent search clues, not calibrated catch scores, legal permission or comfort ratings.",
-               "health": {"status": "degraded" if issues or coverage_gaps else "ok", "issues": issues, "coverage_gaps": coverage_gaps}}
+               "health": {"status": "degraded" if issues or coverage_gaps else "ok", "issues": issues, "coverage_gaps": coverage_gaps,
+                          "inactive_optional": inactive_optional}}
     atomic_json(target/"habitat-dynamics.json", product)
     atomic_json(target/"habitat-health.json", {"schema_version": 1, "region_id": region_id, "generated_at": stamp(now), **product["health"]})
     _cleanup_tiles(target, layers)

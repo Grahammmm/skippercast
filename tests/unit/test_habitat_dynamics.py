@@ -194,7 +194,8 @@ class HabitatDynamicsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root, patch("skippercast.pipeline.habitat_dynamics.load_region", return_value=region), patch("skippercast.pipeline.habitat_dynamics.load_catalogs", return_value=({}, catalogs)), patch("skippercast.pipeline.habitat_dynamics.source", side_effect=response) as acquire:
             first = run("test-region", Path(root), now=now)
             self.assertEqual(first["health"]["issues"], [])
-            self.assertEqual(len(first["health"]["coverage_gaps"]), 2)
+            self.assertEqual(first["health"]["coverage_gaps"], ["sst-analysis"])
+            self.assertEqual(first["health"]["inactive_optional"], ["chlorophyll-observation"])
             self.assertEqual(first["health"]["status"], "degraded")
             second = run("test-region", Path(root), Path(root), now+timedelta(hours=1))
             self.assertEqual(acquire.call_count, 2)
@@ -205,6 +206,66 @@ class HabitatDynamicsTests(unittest.TestCase):
             (Path(root)/"regions/test-region/habitat-dynamics.json").write_text(json.dumps(second))
             third = run("test-region", Path(root), Path(root), now+timedelta(hours=2))
             self.assertIn("sst-analysis", third["health"]["issues"])
+
+    def run_layers(self, root, now, cells, previous=None, sample_at=None, failed=()):
+        """Run with N valid of 100 cells per ident; idents in `failed` return no data."""
+        region = {"id": "test-region", "bounds": [-121, 34, -120, 35], "species": ["bluefin"],
+                  "pipeline_sources": {"sst": "mur-sst", "chlorophyll": "viirs-chl"},
+                  "source_bindings": {"sea-temperature": ["mur-sst"], "chlorophyll": ["viirs-chl"]}}
+        cfg = {"review_status": "approved", "adapter": "erddap-grid", "allowed_hosts": ["example.test"], "name": "test",
+               "request": {"base_url": "https://example.test", "max_age_hours": 72}, "documentation_url": "https://example.test", "rights": {}}
+        chl = {**cfg, "request": {**cfg["request"], "max_age_hours": 96}}
+        clocks = sample_at or {}
+        def response(ident, name, kind, url, max_age, loader, clock):
+            n = cells[ident]; at = clocks.get(ident, now).isoformat()
+            rows = [[34.5+i*.001, -120.5, 18] for i in range(n)]
+            return {"id": ident, "status": "failed" if ident in failed else "ok" if n else "missing", "checked_at": clock.isoformat(),
+                    "data_retrieved_at": at, "last_success_at": at, "requests": [],
+                    "data": None if ident in failed else {"kind": kind, "sample_at": at, "resolution_degrees": [.01, .01], "fields": ["latitude", "longitude", "value"],
+                                                          "valid_cells": n, "total_cells": 100, "frames": [{"time": int(now.timestamp()), "cells": rows, "valid_cells": n, "total_cells": 100}]}}
+        with patch("skippercast.pipeline.habitat_dynamics.load_region", return_value=region), patch("skippercast.pipeline.habitat_dynamics.load_catalogs", return_value=({}, {"mur-sst": cfg, "viirs-chl": chl, "noaa-wcofs": {}})), patch("skippercast.pipeline.habitat_dynamics.source", side_effect=response):
+            return run("test-region", Path(root), previous, now)
+
+    def test_optional_layer_that_never_produced_does_not_degrade(self):
+        now = datetime(2026, 9, 22, 12, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as root:
+            product = self.run_layers(root, now, {"sst-analysis": 50, "chlorophyll-observation": 0})
+            health = product["health"]
+            self.assertEqual((health["status"], health["coverage_gaps"], health["issues"]), ("ok", [], []))
+            self.assertEqual(health["inactive_optional"], ["chlorophyll-observation"])
+            self.assertIsNone(product["sources"]["chlorophyll-observation"]["last_populated_at"])
+            self.assertEqual(product["sources"]["sst-analysis"]["last_populated_at"], now.isoformat())
+            written = json.loads((Path(root)/"regions/test-region/habitat-health.json").read_text())
+            self.assertEqual((written["status"], written["inactive_optional"]), ("ok", ["chlorophyll-observation"]))
+
+    def test_optional_layer_that_once_produced_still_degrades(self):
+        now = datetime(2026, 9, 22, 12, tzinfo=timezone.utc); populated = now.isoformat(); chl = "chlorophyll-observation"
+        with tempfile.TemporaryDirectory() as one, tempfile.TemporaryDirectory() as two, tempfile.TemporaryDirectory() as three:
+            first = self.run_layers(one, now, {"sst-analysis": 50, chl: 40})
+            self.assertEqual((first["health"]["status"], first["sources"][chl]["last_populated_at"]), ("ok", populated))
+            reused = self.run_layers(two, now+timedelta(hours=1), {"sst-analysis": 50, chl: 0}, previous=one)
+            self.assertTrue(reused["sources"][chl]["reused"]); self.assertEqual(reused["sources"][chl]["last_populated_at"], populated)
+            gap = self.run_layers(two, now+timedelta(hours=7), {"sst-analysis": 50, chl: 0}, previous=one)
+            self.assertEqual((gap["health"]["status"], gap["health"]["coverage_gaps"], gap["health"]["inactive_optional"]), ("degraded", [chl], []))
+            self.assertEqual(gap["sources"][chl]["last_populated_at"], populated)
+            # A failed fetch retains the previous empty layer; the populated clock carries over unchanged.
+            kept = self.run_layers(three, now+timedelta(hours=14), {"sst-analysis": 50, chl: 0}, previous=two, failed={chl})
+            self.assertEqual(kept["layers"][chl]["status"], "retained")
+            self.assertEqual(kept["sources"][chl]["last_populated_at"], populated)
+            self.assertIn(chl, kept["health"]["coverage_gaps"]); self.assertIn(chl, kept["health"]["issues"])
+
+    def test_required_layer_never_populated_is_still_a_coverage_gap(self):
+        now = datetime(2026, 9, 22, 12, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as root:
+            health = self.run_layers(root, now, {"sst-analysis": 0, "chlorophyll-observation": 40})["health"]
+            self.assertEqual((health["status"], health["coverage_gaps"], health["inactive_optional"]), ("degraded", ["sst-analysis"], []))
+
+    def test_stale_optional_layer_is_an_issue_whether_or_not_it_had_data(self):
+        now = datetime(2026, 9, 22, 12, tzinfo=timezone.utc); chl = "chlorophyll-observation"
+        for valid in (0, 40):
+            with self.subTest(valid=valid), tempfile.TemporaryDirectory() as root:
+                health = self.run_layers(root, now, {"sst-analysis": 50, chl: valid}, sample_at={chl: now-timedelta(hours=97)})["health"]
+                self.assertEqual((health["status"], health["issues"]), ("degraded", [chl]))
 
 
 if __name__ == "__main__": unittest.main()
