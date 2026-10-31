@@ -50,6 +50,7 @@ Run what CI runs (Python 3.13 with the survey stack for the full suite; see
 ```bash
 python -m pip install -e ".[test]"                         # once; add [survey,ocean,publish] for the full suite
 python -m pytest -m "not gis"                              # without GIS packages (CI check job)
+python -m pytest -m "not gis" -n 4 --dist load             # the same, in 4 parallel workers as CI runs it
 SKIPPERCAST_REQUIRE_GIS=1 python -m pytest                 # full suite (CI survey-science job)
 PYTHONPATH=src python -m skippercast.platform.build && git diff --exit-code
 python scripts/check_repository.py
@@ -65,6 +66,9 @@ pnpm build
   committed output so CI still covers it. The full run fails on any skip whose
   reason is not allow-listed in `scripts/pytest_report.py`.
 - Never mark a failing check as expected or delete a test to get green.
+- CI runs pytest in parallel workers (`-n 4 --dist load`, pytest-xdist). Every test must be parallel-safe: write only under `tmp_path` /
+  `tmp_path_factory`, no fixed ports or fixed temp paths, no writes into the repository tree (including `dist/`), no reliance on test order
+  or on state another test left. A module-scoped fixture must hand each test its own copy.
 - On a small machine (2 CPUs), run the tests that cover your change, not the
   whole suite at once; CI runs the full suites.
 

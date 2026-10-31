@@ -12,10 +12,12 @@ export type CoastPalette={
  sun:string;
  /** Base colour of terrain, water and imagery materials (vertex colours and shaders tint it). */
  surface:string;
- /** Habitat fill by terrain grade (A, B, other) and the reef outline (grade A). */
+ /** Habitat outline and fill by terrain grade (A, B, other). */
  gradeA:string;gradeB:string;gradeOther:string;
  /** Blend colour of habitat areas at broad zoom. */
  habitatArea:string;
+ /** Sandy-shore context lines (drawn when a region has no ranked offshore habitat). */
+ shoreLine:string;
  /** Surface-current arrows. */
  current:string;
  /** 3D sky gradient top; it fades to `ground` (the fog colour) at the horizon. */
@@ -31,7 +33,7 @@ export type CoastPalette={
 };
 export const DEFAULT_COAST_PALETTE:Readonly<CoastPalette>=Object.freeze({
  ground:'#dce8e7',sky:'#effbff',groundLight:'#4b655d',sun:'#fff2d4',surface:'#ffffff',
- gradeA:'#f8d69a',gradeB:'#afd7ba',gradeOther:'#abcad8',habitatArea:'#69e6c3',current:'#fcfaf0',
+ gradeA:'#f8d69a',gradeB:'#afd7ba',gradeOther:'#abcad8',habitatArea:'#69e6c3',shoreLine:'#f8d69a',current:'#fcfaf0',
  skyTop:'#8fb3bd',depthShallow:'#99d8d0',depthMid:'#4b9baf',depthChannel:'#3590a8',depthDeep:'#215779',
  landLow:'#bdc5a6',landHigh:'#dddbc0',waterTint:'#73c7d4',contour:'#3f8190',
 });
