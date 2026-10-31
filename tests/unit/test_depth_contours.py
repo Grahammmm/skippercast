@@ -212,3 +212,63 @@ def test_held_check_accepts_a_held_candidate_set_that_publication_refuses():
     restricted = {**SOURCES, 'survey-c': {**SOURCES['survey-c'], 'review_status': 'restricted'}}
     with pytest.raises(ValueError, match='approved bathymetry binding'):
         dc.check_held_contours(c, region, restricted)
+
+
+def _square(x, y, side):
+    return [[[x, y], [x + side, y], [x + side, y + side], [x, y + side], [x, y]]]
+
+
+def ec_collection(*areas):
+    """The default set plus a filled run and EC5 unresolved areas (side in degrees, about 90 km per degree here)."""
+    c = collection()
+    run = {**c['features'][0], 'id': 'survey-a-30ft-filled', 'properties': {**c['features'][0]['properties'], 'provenance': 'filled'}}
+    common = {k: c['features'][0]['properties'][k] for k in ('source_id', 'survey_date', 'vertical_datum')}
+    c['features'] += [run] + [{'type': 'Feature', 'id': f'survey-a-unresolved-{i}', 'geometry': {
+        'type': 'MultiPolygon', 'coordinates': [_square(-121.0, 35.3, side)]}, 'properties': {
+        'kind': 'unresolved-area', 'reason': 'conflict', 'blocks': 1, 'shoal_hint_ft': 10, **common}} for i, side in enumerate(areas)]
+    c['provenance']['features'] = len(c['features'])
+    c['provenance']['sources'][0].update(ec_version='1.0', provenance_counts={'measured': 9, 'filled': 1, 'verified': 0, 'unresolved': 2})
+    return c
+
+
+def test_check_accepts_provenance_runs_and_unresolved_areas_and_the_overview_keeps_only_wide_areas():
+    c = ec_collection(0.01, 0.001)                  # about 900 m and 90 m across
+    dc.check_contours(c, REGION, SOURCES)
+    light = dc.overview_contours(c)
+    areas = [f for f in light['features'] if f['properties']['kind'] == 'unresolved-area']
+    assert [f['id'] for f in areas] == ['survey-a-unresolved-0'] and areas[0]['geometry']['type'] == 'MultiPolygon'
+    dc.check_contours(light, REGION, SOURCES)
+
+
+@pytest.mark.parametrize('edit, message', [
+    (lambda f: f.update(geometry={'type': 'LineString', 'coordinates': [[-121.0, 35.3], [-120.9, 35.3]]}), 'not a polygon'),
+    (lambda f: f['geometry'].update(coordinates=[_square(-122.0, 35.3, 0.01)]), 'not a polygon inside'),
+    (lambda f: f['geometry'].update(coordinates=[[[[-121.0, 35.3], [-120.9, 35.3], [-121.0, 35.3]]]]), 'not a polygon'),
+    (lambda f: f['properties'].update(reason='foo'), 'known reason'),
+    (lambda f: f['properties'].update(reason='hole'), 'shoal hint'),
+    (lambda f: f['properties'].update(shoal_hint_ft=9.8), 'shoal hint'),
+    (lambda f: f['properties'].update(blocks=0), 'block count'),
+    (lambda f: f['properties'].update(blocks=True), 'block count'),
+    (lambda f: f['properties'].update(provenance='guessed'), 'unknown provenance class'),
+])
+def test_check_refuses_a_malformed_unresolved_area(edit, message):
+    c = ec_collection(0.01)
+    edit(c['features'][-1])
+    with pytest.raises(ValueError, match=message):
+        dc.check_contours(c, REGION, SOURCES)
+
+
+@pytest.mark.parametrize('index, edit, message', [
+    (0, lambda f: f.update(geometry={'type': 'MultiPolygon', 'coordinates': [_square(-121.0, 35.3, 0.01)]}), 'not a line'),
+    (3, lambda f: f['properties'].update(provenance='guessed'), 'unknown provenance class'),
+    (3, lambda f: f['properties'].update(provenance='measured'), 'does not name its provenance'),   # id says filled
+    (3, lambda f: f['properties'].pop('provenance'), 'does not name its provenance'),
+    (0, lambda f: f['properties'].update(provenance='verified'), 'does not name its provenance'),   # id says measured
+    (None, lambda c: c['provenance']['sources'][0].update(provenance_counts={'guessed': 1}), 'class counts'),
+    (None, lambda c: c['provenance']['sources'][0].update(ec_version=1.0), 'error-correction version'),
+])
+def test_check_refuses_a_contour_whose_geometry_or_provenance_misstates_it(index, edit, message):
+    c = ec_collection()
+    edit(c if index is None else c['features'][index])
+    with pytest.raises(ValueError, match=message):
+        dc.check_contours(c, REGION, SOURCES)
