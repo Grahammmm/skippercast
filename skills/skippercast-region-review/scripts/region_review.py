@@ -186,7 +186,9 @@ def ec_tree(folder, build):
         sid, s = base.name, by_sid.get(base.name) or {}
         expected = {'detect'} if s.get('status') == 'REFUSED' else set(paths)
         required = {step: f'ec/{sid}/{paths[step]}' for step in expected}
-        if s.get('receipts') != required:
+        present = {p.relative_to(folder).as_posix() for p in base.rglob('*')
+                   if p.is_file() and p.name in {Path(n).name for n in paths.values()}}
+        if s.get('receipts') != required or present != set(required.values()):
             bad.append(f'ec/{sid}: receipt paths differ from required per-source receipts')
         for step, name in paths.items():
             rel = f'ec/{sid}/{name}'

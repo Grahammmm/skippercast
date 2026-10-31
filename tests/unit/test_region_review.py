@@ -247,7 +247,7 @@ def seal_ec(tmp):
     (tmp / "BUILD.json").write_text(json.dumps(build))
 
 
-@pytest.mark.parametrize("fault", ["done", "source", "directory", "corrected", "receipt"])
+@pytest.mark.parametrize("fault", ["done", "source", "directory", "corrected", "receipt", "extra-receipt"])
 def test_rehashed_ec_omissions_fail_closed(tmp_path, region, monkeypatch, fault):
     ec_run(tmp_path, monkeypatch, region)
     record = json.loads((tmp_path / "EC.json").read_text())
@@ -269,6 +269,12 @@ def test_rehashed_ec_omissions_fail_closed(tmp_path, region, monkeypatch, fault)
         build = json.loads((tmp_path / "BUILD.json").read_text())
         build["ec"]["corrected"] = []
         (tmp_path / "BUILD.json").write_text(json.dumps(build))
+    elif fault == "extra-receipt":
+        path = tmp_path / "ec/s-c/EC-APPLY.json"
+        path.write_text(json.dumps(receipts("s-c")["EC-APPLY.json"]))
+        done = path.parent / "DONE"
+        pairs = json.loads(done.read_text())
+        done.write_text(json.dumps(pairs + [[path.name, sha(path)]]))
     else:
         record["sources"][0]["receipts"].pop("apply")
     (tmp_path / "EC.json").write_text(json.dumps(record))
