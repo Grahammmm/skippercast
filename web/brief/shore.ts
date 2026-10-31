@@ -13,6 +13,8 @@
 //
 // Erasable syntax only: tests/test_shore.mjs imports it by type stripping.
 
+import {DEFAULT_ZONE} from '../zone.ts';
+
 /** The official CDFW regional rules map (the link packages/coast's methods page gives). */
 export const CDFW_RULES_URL = 'https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map';
 
@@ -52,7 +54,7 @@ export interface ShoreStatus {
 
 const time = (s: string): number => { const t = Date.parse(s); return Number.isFinite(t) ? t : -Infinity; };
 const day = (s: string): string => Number.isFinite(Date.parse(s))
-  ? new Date(s).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Los_Angeles'}) : 'date unknown';
+  ? new Date(s).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: DEFAULT_ZONE}) : 'date unknown';
 
 /** Whether the run may be shown at all: its source review has not expired (the terrain's own rule). */
 export const shoreShown = (run: Pick<ShoreRunClocks, 'reviewExpiresAt'>, now: number): boolean => time(run.reviewExpiresAt) > now;

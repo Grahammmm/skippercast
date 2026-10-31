@@ -34,6 +34,7 @@ import type {Palette} from './palette.ts';
 import {coastTarget, hasCoastTerrain, type CurrentLayer, type Presentation} from '../coast-context.ts';
 import {dockTime} from '../hour.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt, type Profile} from '../profile.ts';
+import {DEFAULT_ZONE} from '../zone.ts';
 import {
   appView, current, day, habitat, hour, layers, navigate, parseHour, presentation, profile, region, selection, setParams, species,
   stagePresentation, UNSUPPORTED, view, withParams, type AppView, type CurrentChoice,
@@ -85,10 +86,8 @@ export function coastSpecies(target: string | null, p: Profile): string {
   const id = target || PROFILE_TABLE[p].defaultTarget;
   return coastTarget(id) ?? id;
 }
-/** The zone the dock reads days in until the region's own arrives (web/app/App.tsx DEFAULT_ZONE). */
-const DOCK_ZONE = 'America/Los_Angeles';
-/** The time dock's hour (FE-12): `?hour=`; else the same hour on a later `?day=`; else the current whole UTC hour. */
-export function terrainHour(value: string | null, now: Date, dayValue: string | null = null, tz: string = DOCK_ZONE): Date {
+/** The time dock's hour (FE-12): `?hour=`; else the same hour on a later `?day=`; else the current whole UTC hour. Days read in `tz` (web/zone.ts until the region's own arrives). */
+export function terrainHour(value: string | null, now: Date, dayValue: string | null = null, tz: string = DEFAULT_ZONE): Date {
   // A parsed `?hour=` is the hour itself (dockTime's `at`), so it skips building the 169-hour horizon on every camera move.
   const seconds = parseHour(value);
   if (seconds !== null) return new Date(seconds * 1000);

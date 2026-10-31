@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF0935-2: the web client's fallback time zone (`America/Los_Angeles`) is defined once in `web/zone.ts` and imported wherever a default is needed; nothing renders differently.
+
 - RF0850-1: once a region's `region.json` has loaded, the app no longer requests a land-water index, poster or shoreline form its `chart_files` lacks, and the offline pack no longer counts them as missing (Cambria: fewer 404s). Without the list it asks as before.
 
 - RF0835-2: each compiled `region.json` lists the Chart side files the build wrote for it (`chart_files`), and the landing warm-up no longer requests a shoreline overview or poster a region does not publish (Cambria: two fewer 404s). Without the list it warms as before.

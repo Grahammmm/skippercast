@@ -34,6 +34,7 @@ import {tideSelection} from '../tide-selection.ts';
 import {withTideSelection} from '../tide-stations.ts';
 import {briefVerdict, VERDICT_WORD, type BriefVerdict} from './verdict.ts';
 import type {Brief as BriefModel, RegionalDailyFeed} from './types.ts';
+import {DEFAULT_ZONE} from '../zone.ts';
 
 export type {BriefModel};
 
@@ -188,7 +189,7 @@ export const Deck = ({brief}: {brief: BriefModel | null}) => brief?.deck ? <p cl
 /** The day verdict for the brief shown now: the regional forecast only when it is this region's. */
 export function currentVerdict(brief: BriefModel | null, now: Date): BriefVerdict | null {
   const info = regionInfo.value, forecast = regionalForecast.value;
-  return briefVerdict(brief, info && forecast?.region === info.id ? forecast : null, now, info?.timezone ?? 'America/Los_Angeles');
+  return briefVerdict(brief, info && forecast?.region === info.id ? forecast : null, now, info?.timezone ?? DEFAULT_ZONE);
 }
 
 const VERDICT_BASIS = {
@@ -243,7 +244,7 @@ const clock = (iso: string, tz: string) => new Intl.DateTimeFormat('en-US', {hou
 /** The quietest window the model screened, labelled lower exposure; none is said plainly. */
 export function LowerExposure({brief}: {brief: BriefModel | null}) {
   if (!brief) return null;
-  const tz = regionInfo.value?.timezone ?? 'America/Los_Angeles', w = brief.windows[0];
+  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, w = brief.windows[0];
   // The safety caveat stays visible; a window the user's looser limits decided adds that note after it.
   const own = w?.reasons.find(reason => reason.startsWith('Using your limits')), caveat = w?.reasons.find(reason => reason !== own);
   return (

@@ -21,6 +21,7 @@ import {tideRegion, type TideRegion} from '../tide-stations.ts';
 import {tideSelection} from '../tide-selection.ts';
 import {loadPlans, regionUnavailable, unavailableTargets} from '../species.ts';
 import {region, setRegionDefaultBase} from '../state.ts';
+import {DEFAULT_ZONE} from '../zone.ts';
 
 /** The mobile layout's media query (§ 6: under 1,024 px); main.tsx keeps `narrow` in step with it. */
 export const NARROW_QUERY = '(max-width: 1023px)';
@@ -42,8 +43,7 @@ export interface RegionInfo {
   readonly chartFiles?: readonly string[];
 }
 export const regionInfo = signal<RegionInfo | null>(null);
-/** The zone the dock and the command bar format times in (every active region is Pacific until the region loads). */
-export const DEFAULT_ZONE = 'America/Los_Angeles';
+export {DEFAULT_ZONE};
 export const currentRegionInfo = (): RegionInfo | null => {
   const info = regionInfo.value;
   return info?.id === region.value ? info : null;
