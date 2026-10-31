@@ -116,6 +116,8 @@ export interface Engine {
    */
   flyover(legs: readonly FlyLeg[], done?: (finished: boolean) => void): void;
   stopFlyover(): void;
+  /** MapLibre's padding (RF0905-1: the phone's open band); the centre stays put. A library without setPadding ignores it. */
+  setPadding(p: {top: number; bottom: number; left: number; right: number}): void;
   destroy(): void;
 }
 
@@ -279,6 +281,7 @@ export function createEngine(module: MapLibraryModule, options: EngineOptions): 
   return {
     flyover,
     stopFlyover() { flight?.(); },
+    setPadding(p) { if (typeof map.setPadding === 'function') map.setPadding(p); },
     setCamera(c) { flight?.(); map.jumpTo({center: [c.longitude, c.latitude], zoom: c.zoom - ZOOM_OFFSET}); },
     setVisible(layerId, visible) {
       if (early && !map.getLayer(layerId)) early.visible.set(layerId, visible);

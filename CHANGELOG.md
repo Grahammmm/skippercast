@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF0905-1: on a phone (below 1024 px) the Chart opens with the region centre (the Morro Bay harbor) in the open band between the top card and the sheet, not under the top card; the padding follows a resize, not a sheet drag. `?view=` and desktop are unchanged.
+
 - RF0935-1: Spear's distance from shore and the trip export's depth contour tracks no longer request a shoreline overview or contour file the loaded region's `chart_files` lacks; no distance is claimed and no contour tracks are added, as for a missing file (Cambria: fewer 404s). Without the list they ask as before.
 
 - RF0935-2: the web client's fallback time zone (`America/Los_Angeles`) is defined once in `web/zone.ts` and imported wherever a default is needed; nothing renders differently.
