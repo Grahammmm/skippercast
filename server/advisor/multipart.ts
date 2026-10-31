@@ -27,6 +27,15 @@ function indexOf(haystack: Uint8Array, needle: Uint8Array, from = 0): number {
 }
 const join = (a: Uint8Array, b: Uint8Array): Uint8Array => { const out = new Uint8Array(a.length + b.length); out.set(a); out.set(b, a.length); return out; };
 
+const cleanName = (s: string): string | null => s.replace(/[\u0000-\u001f\u007f/\\]/g, '').slice(0, 200) || null;
+
+/** The name in an RFC 5987 `filename*=UTF-8''<pct-encoded>` value; null for another charset or bad encoding. */
+function extendedName(value: string): string | null {
+  const m = value.match(/^utf-8'[^']*'(.*)$/i);
+  if (!m) return null;
+  try { return decodeURIComponent(m[1]!); } catch { return null; }
+}
+
 /** Parse a part's header block into the field filename and content type. */
 function partHeaders(block: string): {filename: string | null; type: string | null; isFile: boolean} {
   let filename: string | null = null, type: string | null = null, isFile = false;
@@ -35,8 +44,10 @@ function partHeaders(block: string): {filename: string | null; type: string | nu
     const name = rawName?.trim().toLowerCase(), value = rest.join(':').trim();
     if (name === 'content-disposition') {
       const f = value.match(/;\s*filename="([^"]*)"/i) ?? value.match(/;\s*filename=([^;\s]+)/i);
-      // An empty file input (filename="") is skipped like a plain field.
-      if (f?.[1]) { isFile = true; filename = f[1]!.replace(/[\u0000-\u001f\u007f/\\]/g, '').slice(0, 200) || null; }
+      const x = value.match(/;\s*filename\*\s*=\s*([^;\s]+)/i)?.[1];
+      // An empty file input (filename="") is skipped like a plain field. A
+      // decodable filename*= wins; a bad one falls back to filename= or null.
+      if (f?.[1] || x) { isFile = true; filename = cleanName((x && extendedName(x)) || f?.[1] || ''); }
     } else if (name === 'content-type') type = value.slice(0, 100) || null;
   }
   return {filename, type, isFile};
