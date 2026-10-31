@@ -13,6 +13,8 @@
 //  - precipitation as the amount in the preceding hour
 //  - units, time zones, multi-point and multi-model responses, derived WMO weather codes
 
+import {FT_PER_M, KMH_PER_MS, KN_PER_MS, MPH_PER_MS} from './units.js';
+
 export const MODELS = {
   gfs_global: {kind: 'forecast', precipitation: 'rate'},
   ecmwf_ifs025: {kind: 'forecast', precipitation: 'backward'},
@@ -195,7 +197,7 @@ function validZone(zone) {
   try { new Intl.DateTimeFormat('en-US', {timeZone: zone}); return true; } catch { return false; }
 }
 
-const SPEED = {kmh: [3.6, 'km/h'], ms: [1, 'm/s'], mph: [2.2369362921, 'mp/h'], kn: [1.9438444924, 'kn']};
+const SPEED = {kmh: [KMH_PER_MS, 'km/h'], ms: [1, 'm/s'], mph: [MPH_PER_MS, 'mp/h'], kn: [KN_PER_MS, 'kn']};
 const round = (v, d = 2) => (v == null || !Number.isFinite(v) ? null : Math.round(v * 10 ** d) / 10 ** d);
 
 export function weatherCode(precipitation, cloud, visibility, temperature) {
@@ -290,13 +292,13 @@ function modelSeries(model, tile, q, lat, lon, targets) {
 
 function convertValue(q, v, x) {
   if (x == null) return null;
-  if (v.endsWith('_height')) return round(q.imperial ? x * 3.28084 : x, 2);
+  if (v.endsWith('_height')) return round(q.imperial ? x * FT_PER_M : x, 2);
   if (v.endsWith('_period')) return round(x, 2);
   if (v.endsWith('_direction') || v === 'wind_direction_10m') return Math.round(x) % 360;
   if (v === 'wind_speed_10m' || v === 'wind_gusts_10m') return round(x * SPEED[q.speed][0], 1);
   if (v === 'temperature_2m') return round(q.fahrenheit ? x * 9 / 5 + 32 : x, 1);
   if (v === 'precipitation') return round(q.inch ? x / 25.4 : x, q.inch ? 3 : 2);
-  if (v === 'visibility') return round(q.imperial ? x * 3.28084 : x, 0);
+  if (v === 'visibility') return round(q.imperial ? x * FT_PER_M : x, 0);
   if (v === 'cloud_cover') return Math.round(x);
   return x;
 }
