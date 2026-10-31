@@ -7,6 +7,7 @@
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import {signal} from '@preact/signals';
+import {chartFileListed} from './chart-files.ts';
 import {sharedFetch} from './shared-fetch.ts';
 
 /** The loaded lines ([lon, lat] each) for a region; null before or without them. */
@@ -51,6 +52,11 @@ let latest: string | null = null;
 /** Load `region`'s overview shoreline once and publish it on every visit; a failure leaves `lines` null, so no distance is claimed. */
 export async function loadShoreLines(region: string, page: string = location.href, fetchFn: typeof fetch = sharedFetch): Promise<void> {
   latest = region;
+  // A region whose region.json omits the overview gets no request and no distance (RF0935-1); no memo, so a later list can load it.
+  if (!chartFileListed(region, 'shoreline-overview.geojson')) {
+    if (shoreLines.peek()?.region !== region || shoreLines.peek()?.lines !== null) shoreLines.value = {region, lines: null};
+    return;
+  }
   let read = asked.get(region);
   if (!read) {
     read = (async (): Promise<Lines> => {
