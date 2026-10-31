@@ -119,17 +119,17 @@ export function parseDateWords(text: string, today: string, maxDays = CORRECTION
   else if (/^(?:yesterday|ayer)$/.test(v)) date = addDays(today, -1);
   else if (Object.hasOwn(WEEKDAY_NAMES, v)) { const want = WEEKDAY_NAMES[v]!; const back = (weekdayOf(today) - want + 7) % 7; date = addDays(today, -back); }
   else {
-    let m: RegExpExecArray | null, month = 0, day = 0, year = Number(today.slice(0, 4));
-    if ((m = /^(\d{4}) (\d{1,2}) (\d{1,2})$/.exec(v))) { year = Number(m[1]); month = Number(m[2]); day = Number(m[3]); }
-    else if ((m = /^(\d{1,2}) (\d{1,2})(?: (\d{2,4}))?$/.exec(String(text).trim().replace(/[/-]/g, ' ').replace(/\s+/g, ' ')))) { month = Number(m[1]); day = Number(m[2]); if (m[3]) year = Number(m[3].length === 2 ? `20${m[3]}` : m[3]); }
+    let m: RegExpExecArray | null, month = 0, day = 0, year = Number(today.slice(0, 4)), explicitYear = false;
+    if ((m = /^(\d{4}) (\d{1,2}) (\d{1,2})$/.exec(v))) { year = Number(m[1]); month = Number(m[2]); day = Number(m[3]); explicitYear = true; }
+    else if ((m = /^(\d{1,2}) (\d{1,2})(?: (\d{2,4}))?$/.exec(String(text).trim().replace(/[/-]/g, ' ').replace(/\s+/g, ' ')))) { month = Number(m[1]); day = Number(m[2]); if (m[3]) { year = Number(m[3].length === 2 ? `20${m[3]}` : m[3]); explicitYear = true; } }
     else if ((m = /^([a-z]+) (\d{1,2})$/.exec(v)) && MONTHS[m[1]!]) { month = MONTHS[m[1]!]!; day = Number(m[2]); }
     else if ((m = /^(\d{1,2}) (?:de )?([a-z]+)$/.exec(v)) && MONTHS[m[2]!]) { month = MONTHS[m[2]!]!; day = Number(m[1]); }
     if (month) {
       const iso = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const parsed = new Date(`${iso}T12:00:00Z`);
       if (!Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === iso) {
-        // "Dec 30" read on Jan 2 is last year's.
-        date = daysBetween(iso, today) < 0 && !/^\d{4}/.test(v) ? `${year - 1}${iso.slice(4)}` : iso;
+        // "Dec 30" read on Jan 2 is last year's; a date typed with a year is taken as typed.
+        date = daysBetween(iso, today) < 0 && !explicitYear ? `${year - 1}${iso.slice(4)}` : iso;
       }
     }
   }
