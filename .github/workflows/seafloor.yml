@@ -221,14 +221,20 @@ jobs:
           import json, os
           from pathlib import Path
           d = json.loads(Path('var/seafloor/published.json').read_text())
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as f: f.write('title='+d['title']+'\n')
+          changed = 'true' if d.get('data_changed', True) else 'false'
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f: f.write('title='+d['title']+'\ndata_changed='+changed+'\n')
           with Path('var/seafloor/ledger-pr.md').open('a') as f:
               f.write('\nRegional publication job result: '+os.environ['PUBLICATION_RESULT']+'; see independent regional jobs.\n')
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
               f.write(Path('var/seafloor/ledger-pr.md').read_text())
+              if changed == 'false':
+                  f.write('\nNo ledger data changed (only re-check provenance); no pull request opened.\n')
           PY
+      # A provenance-only refresh (same areas, statuses and screen outcome) holds a
+      # PR slot and CI for nothing, so only a real data change is proposed.
       - name: Propose the small ledger change (never push main)
         id: ledger-pr
+        if: steps.reconcile.outputs.data_changed == 'true'
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           branch: codex/seafloor-ledger-refresh

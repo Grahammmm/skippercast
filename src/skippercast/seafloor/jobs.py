@@ -24,6 +24,39 @@ REACH_TIMEOUT_SECONDS = 60 * 60
 CLASSIFIED_POLICY_PATH = 'catalog/classified-habitat-policy.json'
 CLASSIFIED_POLICY_PROFILE = 'original-rugose-classified-area-v1'
 CLASSIFIED_POLICY_CHANGELOG = 'CHANGELOG.md'
+# Per-run provenance that changes on every re-check of the same screen. Publication
+# re-reads the private snapshot itself, so the committed copies are only a record.
+REACH_RUN_KEYS = frozenset({'last_survey_run', 'survey_run_hash'})
+SCREEN_RUN_KEYS = frozenset({'snapshot', 'snapshot_sha256'})
+LAYER_RUN_KEYS = frozenset({'checked_at', 'file', 'sha256', 'source_url', 'source_urls'})
+EVIDENCE_RUN_KEYS = frozenset({'titles_sha256', 'up_to_date_as_of'})
+SECTION_RUN_KEYS = frozenset({'url', 'up_to_date_as_of'})
+
+
+def ledger_data(ledger):
+    """The ledger without per-run provenance; any other difference is a data change."""
+    def drop(value, keys):
+        return {k: v for k, v in value.items() if k not in keys} if isinstance(value, dict) else value
+
+    def layer(row):
+        row = drop(row, LAYER_RUN_KEYS)
+        if isinstance(row, dict) and isinstance(row.get('evidence'), dict):
+            evidence = drop(row['evidence'], EVIDENCE_RUN_KEYS)
+            if isinstance(evidence.get('sections'), list):
+                evidence['sections'] = [drop(s, SECTION_RUN_KEYS) for s in evidence['sections']]
+            row['evidence'] = evidence
+        return row
+
+    reaches = []
+    for row in ledger.get('reaches', []):
+        row = drop(row, REACH_RUN_KEYS)
+        if isinstance(row, dict) and isinstance(row.get('screen'), dict):
+            screen = drop(row['screen'], SCREEN_RUN_KEYS)
+            if isinstance(screen.get('layers'), list):
+                screen['layers'] = [layer(r) for r in screen['layers']]
+            row['screen'] = screen
+        reaches.append(row)
+    return {**ledger, 'reaches': reaches}
 
 
 def publication_origin(error):
@@ -555,7 +588,8 @@ def finish(root, matrix, batch, *, region=None, ledger_only=False):
     delta = after['totals']['tier2_km2']-before['totals']['tier2_km2']
     return {'published': published, 'failures': failures,
             'ready_regions': sorted(set(ready)), 'held_regions': sorted(set(held)),
-            'title': f'Refresh seafloor ledger ({delta:+.3f} km² tier 2)'}
+            'title': f'Refresh seafloor ledger ({delta:+.3f} km² tier 2)',
+            'data_changed': ledger_data(before) != ledger_data(after)}
 
 
 def main():
