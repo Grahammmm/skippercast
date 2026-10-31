@@ -1,5 +1,8 @@
 import { getRegion } from "./region.js";
-import { directionTo, HOUR } from "./marine-units.js";
+export const HOUR = 3600;
+export function directionTo(from) {
+  return Number.isFinite(from) ? (from + 180) % 360 : null;
+}
 import { compass } from "./forecast.js";
 export const esc = (v) =>
   String(v ?? "").replace(
