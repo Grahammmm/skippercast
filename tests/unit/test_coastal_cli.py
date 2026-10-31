@@ -16,6 +16,7 @@ from skippercast.coastal import cli
 from skippercast.coastal.coordinator.store import Store
 from skippercast.coastal.coordinator.segments import segment
 from skippercast.coastal.coordinator.stages import digest
+from tests._support import ROOT
 
 
 class CoastalInspectionTests(unittest.TestCase):
@@ -149,8 +150,7 @@ class CoastalInspectionTests(unittest.TestCase):
 
     def test_module_entrypoint_from_an_artifact_directory(self):
         env = dict(os.environ)  # import this checkout's src, not another installed skippercast
-        src = str(Path(__file__).resolve().parents[2] / "src")
-        env["PYTHONPATH"] = os.pathsep.join(p for p in (src, env.get("PYTHONPATH")) if p)
+        env["PYTHONPATH"] = os.pathsep.join(p for p in (str(ROOT / "src"), env.get("PYTHONPATH")) if p)
         result = subprocess.run([sys.executable, "-m", "skippercast.coastal.cli",
                                  "--root", str(self.root), "status"],
                                 cwd=self.root, env=env, capture_output=True,
