@@ -16,6 +16,7 @@ import {habitat, profile, selection} from '../state.ts';
 import {barNote, durationText, planRun, ROUND_MIN, type RunPlace, type RunState} from './run.ts';
 import {currentRanking} from './WhereToLook.tsx';
 import type {Brief} from './types.ts';
+import {DEFAULT_ZONE} from '../zone.ts';
 
 /**
  * The run's place: the selected pick, else the top pick; null without a distance. `unranked` says a
@@ -66,7 +67,7 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   if (!brief || profile.value !== 'boat' || brief.profile !== 'boat') return null;
   const r = ranking ?? currentRanking(now.getTime());
   const place = runPlace(r, selection.value, habitat.value);
-  const state = planRun(brief, place, cruiseSpeed.value, now), tz = regionInfo.value?.timezone ?? 'America/Los_Angeles';
+  const state = planRun(brief, place, cruiseSpeed.value, now), tz = regionInfo.value?.timezone ?? DEFAULT_ZONE;
   const text = runText(state, tz, place?.unranked), harbor = r.harbor ?? 'the harbor';
   // Places listed with no distance: the region gives no harbor position to measure from.
   if (state.kind === 'no-place' && r.picks.length) text.lead = 'No harbor position to measure from, so no run time.';

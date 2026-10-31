@@ -49,3 +49,4 @@ test('renderer admission rejects empty and unsupported explicit geography while 
 });
 import './coast/coast-palette.test.ts';
 import './coast/coast-overlays.test.ts';
+import './coast/units.test.ts';

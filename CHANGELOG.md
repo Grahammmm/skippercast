@@ -4,10 +4,13 @@
 
 - RF0935-1: Spear's distance from shore and the trip export's depth contour tracks no longer request a shoreline overview or contour file the loaded region's `chart_files` lacks; no distance is claimed and no contour tracks are added, as for a missing file (Cambria: fewer 404s). Without the list they ask as before.
 
+- RF0935-2: the web client's fallback time zone (`America/Los_Angeles`) is defined once in `web/zone.ts` and imported wherever a default is needed; nothing renders differently.
+
 - RF0850-2: the Chart no longer requests a shoreline or depth-contour file the loaded `region.json` does not list: with neither shoreline listed the coastline draws nothing and reads unavailable, and unlisted contours settle as none (Cambria: no shoreline or contour 404s). It waits for the region's `region.json` before asking, so switching to such a region requests neither. Listed or unknown, it asks as before.
 
 - RF1058-2: the fleet AIS health answer and its `fleet-ais-stale` issue name the likely cause of a stale check (`processor-not-delivered` when all three clocks are equally old, else `listener-stale`, `no-messages` or `no-data`), so a dropped processor schedule no longer reads as a dead listener. Thresholds are unchanged.
 - The region-build golden case is now a checked script: `golden_compare.py` compares a run's candidate with the committed depth-contour file in features and provenance, so a provenance-only difference is caught at build instead of at publish (Morro Bay SG-1).
+
 - RF0850-7: the landing night map draws its basemap and currents without a coastline when a region's `region.json` lists neither shoreline file (Cambria: no shoreline 404, no torn-down map), and the full shoreline when only that is listed. Without the list it draws as before.
 
 - RF0850-1: once a region's `region.json` has loaded, the app no longer requests a land-water index, poster or shoreline form its `chart_files` lacks, and the offline pack no longer counts them as missing (Cambria: fewer 404s). Without the list it asks as before.

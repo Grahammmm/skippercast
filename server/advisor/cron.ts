@@ -28,6 +28,7 @@
 // TA-S7: post insights at 03:00 (a slot), and Stories' insights hourly while they are up (every tick, throttled).
 import {advisorSettings} from './settings.ts';
 import {advisorLog} from './log.ts';
+import {PACIFIC} from './answers/time.ts';
 import {RELAY_KEY, relayState} from './relay.ts';
 import type {RelayState} from './relay.ts';
 import {releaseHeld} from './consumer.ts';
@@ -61,7 +62,7 @@ export {RELAY_KEY, relayState} from './relay.ts';
 export type {RelayState} from './relay.ts';
 export const RELAY_DOWN_AFTER = 3;          // consecutive failed pings
 export const RELAY_TIMEOUT_MS = 10000;
-export const DEFAULT_TZ = 'America/Los_Angeles';
+export const DEFAULT_TZ = PACIFIC;
 
 export type Weekday = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun';
 export interface SlotTime {local: string; tz?: string; weekday?: Weekday}

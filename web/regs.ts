@@ -17,6 +17,7 @@
 import {signal} from '@preact/signals';
 import {dailyPartPath} from '../dist/offline-core.js';
 import {validDailyPart} from './map/habitat.ts';
+import {DEFAULT_ZONE} from './zone.ts';
 
 /** The registry is v1's JSON, read field by field as v1 reads it. */
 type Data = any;
@@ -36,7 +37,7 @@ export interface RuleSummary {
 export const CDFW_OCEAN = 'https://wildlife.ca.gov/Fishing/Ocean';
 const HOUR = 3600000;
 const HOSTS = ['wildlife.ca.gov', 'nrm.dfg.ca.gov', 'www.fisheries.noaa.gov', 'www.ecfr.gov'];
-const zoneOf = (r: RulesRegion): string => r.timezone ?? 'America/Los_Angeles';
+const zoneOf = (r: RulesRegion): string => r.timezone ?? DEFAULT_ZONE;
 const dayIn = (tz: string, at: number): string => new Intl.DateTimeFormat('en-CA', {timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
 /** #396: only the table's own key, never an inherited one. */
 const own = (table: Data, id: string): Data => table && typeof table === 'object' && Object.hasOwn(table, id) ? table[id] : null;
