@@ -63,9 +63,12 @@ function position(value: unknown): number {
 export const PATH_QUERY = /((?:[a-z][a-z0-9+.-]*:)?[\w.~%-]*\/[^\s?#'"()<>]*)[?#]\S*/gi;
 // Decimal degrees and similar (35.3658, -120.851): a position is never sent.
 export const COORDINATE = /(?<![\w.])-?\d{1,3}\.\d{3,}(?![\d.])/g;
+// North American numbers with separators ((805) 555-0100, +1 805.555.0100): a phone number is never sent.
+export const PHONE = /(?<![\w.+])(?:\+?1[\s.-]?)?(?:\([2-9]\d{2}\)|[2-9]\d{2})[\s.-]?[2-9]\d{2}[\s.-]\d{4}(?!\w)/g;
 export function scrub(message: string): string {
   return message
     .replace(PATH_QUERY, '$1')
+    .replace(PHONE, '[phone]')
     .replace(/[^\s@'"()<>]+@[^\s@'"()<>]+\.[a-z]{2,}/gi, '[email]')
     .replace(COORDINATE, '[coord]')
     .replace(/\d{6,}/g, '#')
