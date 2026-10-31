@@ -48,7 +48,7 @@ def _detect(grid, tmp_path, holes=None, pits=None, **over):
     doc = {'schema': 'ec-detect-v1', 'ec_version': ec.EC_VERSION, 'source_id': 'synthetic-x', 'cell_m': 2.0,
            'path_sha256': hashlib.sha256(grid.read_bytes()).hexdigest(), 'crs': 'EPSG:32610', 'width': 32,
            'height': 32, 'nodata': -9999.0, 'counts': {}, 'pits': pits, 'spikes': [], 'holes': holes,
-           'sentinel_cells': 0, 'fixture': {'refused': False, 'reasons': []}, 'sign': {'refused': False},
+           'sentinel_cells': 0, 'fixture': {'refused': False, 'reasons': []}, 'sign': {'refused': False, 'positive_fraction': 0.0, 'reason': None},
            'duplicate_signature': [32, 32, 'EPSG:32610', 2.0, -25.5, -10.0, -17.75], 'disposition': 'FIX', **over}
     path = tmp_path / 'EC-DETECT.json'
     path.write_text(json.dumps(doc))

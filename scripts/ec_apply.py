@@ -48,7 +48,7 @@ def _sha256(path):
 
 
 def _canonical(doc):
-    return (json.dumps(doc, sort_keys=True, separators=(',', ':'), ensure_ascii=False) + '\n').encode()
+    return (json.dumps(doc, sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False) + '\n').encode()
 
 
 def _same(a, b):
