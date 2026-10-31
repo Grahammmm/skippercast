@@ -16,6 +16,7 @@ async function chromiumPresent() {
   try { return existsSync((await import('@playwright/test')).chromium.executablePath()); } catch { return false; }
 }
 const hasChromium = await chromiumPresent();
+const LIVE = ['.app-top-card .app-location', '.app-sheet-head', '.maplibregl-canvas', '.maplibregl-ctrl-attrib'];
 
 function heldRun() {
   const run = scratch();
@@ -52,16 +53,29 @@ test('repo-contained dot-dot-prefixed output directories are refused', () => {
 
 test('live capture of a fixture page records sizes, url, requests and card text', {skip: !hasChromium && 'chromium not installed'}, async () => {
   const out = scratch();
-  const page = '<title>Fixture</title><div class="app-mark"><h2>Fixture contour</h2></div><div class="app-legend"><span class="app-swatch" data-layer="depth-contours">Contours</span></div>';
+  const page = '<title>Fixture</title><div class="app-top-card"><span class="app-location">MORRO BAY 35.34N 120.97W</span></div><div class="app-sheet-head">Today</div><canvas class="maplibregl-canvas"></canvas><div class="maplibregl-ctrl-attrib">© OSM</div>';
   const receipt = await capture({mode: 'live', origin: 'https://fixture.invalid', region: 'r1', out,
     fulfil: {'https://fixture.invalid/map?region=r1&presentation=chart&ui=v2': {status: 200, contentType: 'text/html', body: page}}});
   assert.equal(receipt.url, 'https://fixture.invalid/map?region=r1&presentation=chart&ui=v2');
   assert.deepEqual(receipt.viewports.map(v => [v.width, v.height, v.visualInspection]), [[390, 844, 'not-visually-inspected'], [360, 800, 'not-visually-inspected']]);
   for (const v of receipt.viewports) assert.equal(v.screenshotSha256, sha(readFileSync(join(out, v.screenshot))));
   assert.ok(receipt.requests.some(r => r.url === receipt.url && r.outcome === 'fulfilled'));
-  assert.equal(receipt.textChecks.find(c => c.selector === '.app-mark').text, 'Fixture contour');
+  for (const sel of LIVE) assert.equal(receipt.textChecks.find(c => c.viewport === '390x844' && c.selector === sel).count, 1, sel);
+  assert.equal(receipt.textChecks.find(c => c.viewport === '390x844' && c.selector === '.app-top-card .app-location').text, 'MORRO BAY 35.34N 120.97W');
+  assert.deepEqual(receipt.failedResponses, []);
+  assert.deepEqual(receipt.consoleErrors, []);
   assert.equal(JSON.parse(readFileSync(join(out, 'capture-receipt.json'), 'utf8')).schema, 'region-phone-capture-v1');
   await assert.rejects(capture({mode: 'live', origin: 'https://fixture.invalid', region: 'r1', out, fulfil: {}}), /overwrite/);
+});
+
+test('live capture of a broken page finds no live selectors and lists the console error and 404', {skip: !hasChromium && 'chromium not installed'}, async () => {
+  const body = '<title>Broken</title><script>console.error(\'boom\')</script><img src="https://fixture.invalid/missing.png">';
+  const receipt = await capture({mode: 'live', origin: 'https://fixture.invalid', region: 'r2', out: scratch(), fulfil: {
+    'https://fixture.invalid/map?region=r2&presentation=chart&ui=v2': {status: 200, contentType: 'text/html', body},
+    'https://fixture.invalid/missing.png': {status: 404, body: 'nf'}}});
+  for (const sel of LIVE) assert.equal(receipt.textChecks.find(c => c.viewport === '390x844' && c.selector === sel).count, 0, sel);
+  assert.ok(receipt.consoleErrors.some(e => e.viewport === '390x844' && e.text === 'boom'));
+  assert.ok(receipt.failedResponses.some(r => r.viewport === '390x844' && r.url === 'https://fixture.invalid/missing.png' && r.status === 404));
 });
 
 test('held capture shows banner and datum, and blocks a non-local image', {skip: !hasChromium && 'chromium not installed'}, async () => {
@@ -72,5 +86,14 @@ test('held capture shows banner and datum, and blocks a non-local image', {skip:
   assert.equal(text('#held-banner'), 'Held, not published, not for navigation');
   assert.match(text('.contour-card'), /vertical_datum: unverified source datum/);
   assert.deepEqual(receipt.pageErrors, []);
+  assert.ok(Array.isArray(receipt.failedResponses));
+  // The deliberately blocked image is the only console error (Chromium logs the aborted load).
+  assert.ok(receipt.consoleErrors.length > 0 && receipt.consoleErrors.every(e => /ERR_BLOCKED_BY_CLIENT/.test(e.text)));
   assert.ok(receipt.blockedRequests.includes('https://tiles.example.invalid/x.png'));
+});
+
+test('clean held preview has no console errors or failed responses', {skip: !hasChromium && 'chromium not installed'}, async () => {
+  const receipt = await capture({mode: 'held', run: heldRun(), out: join(scratch(), 'phone')});
+  assert.deepEqual(receipt.consoleErrors, []);
+  assert.deepEqual(receipt.failedResponses, []);
 });
