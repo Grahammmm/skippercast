@@ -5,6 +5,8 @@
 jsonschema==4.26.0
 # Test runner (docs/engineering/testing.md). Tests stay unittest.TestCase classes.
 pytest==9.1.1
+# parallel pytest workers in CI (CIS-SC-1)
+pytest-xdist==3.8.0
 # In-memory S3 for the R2 publisher sync test (tests/integration/test_publish_r2.py).
 moto==5.2.4
 # Zstandard files for the MarineCadastre backfill tests (tests/unit/test_fleet_backfill.py).
