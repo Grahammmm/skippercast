@@ -7,7 +7,7 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {signal} from '@preact/signals';
 import {
-  DEPTH_EDGE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LABEL_MINOR, DEPTH_LINE, DETAIL_ZOOM, INDEX_FT, INTERVAL_FT, NOTES,
+  DEPTH_BOTTOM, DEPTH_EDGE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LABEL_MINOR, DEPTH_LINE, DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DETAIL_ZOOM, INDEX_FT, INTERVAL_FT, NOTES,
   assessContours, contourMark, contourState, contoursFor, contoursOverlay, createDepthContours, depthContoursOverviewURL, depthContoursURL, omittedNote,
 } from '../web/map/depth-contours.ts';
 import {ZOOM_OFFSET} from '../web/map/engine.ts';
@@ -91,7 +91,7 @@ test('the overlay: a dashed survey edge, contours heavier at the index, a click 
   const o = contoursOverlay(sentinel, OVERVIEW);
   assert.deepEqual(Object.keys(o.sources), [DEPTH_CONTOURS_SOURCE]);
   assert.equal(sourceLayer(DEPTH_CONTOURS_SOURCE), 'depth-contours');
-  assert.deepEqual(o.layers.map(l => l.id), [DEPTH_EDGE, DEPTH_LINE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LABEL_MINOR]);
+  assert.deepEqual(o.layers.map(l => l.id), [DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DEPTH_EDGE, DEPTH_LINE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LABEL_MINOR]);
   const by = id => o.layers.find(l => l.id === id);
   assert.deepEqual(by(DEPTH_EDGE).filter, ['==', ['get', 'kind'], 'survey-edge']);
   assert.deepEqual(by(DEPTH_EDGE).paint['line-dasharray'], [2, 2]);
@@ -174,7 +174,7 @@ test('the Chart layer draws the overview under the protected areas, swaps in the
   await flush(); await flush();
   assert.deepEqual(asked, [depthContoursOverviewURL('morro-bay')]);
   const drawnAt = calls.findIndex(c => c[0] === 'overlay' && c[2]);
-  assert.deepEqual(calls[drawnAt], ['overlay', 'depth-contours', [DEPTH_EDGE, DEPTH_LINE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LABEL_MINOR], MPA_FILL]);
+  assert.deepEqual(calls[drawnAt], ['overlay', 'depth-contours', [DEPTH_UNRESOLVED_FILL, DEPTH_UNRESOLVED_LINE, DEPTH_EDGE, DEPTH_LINE, DEPTH_HIT, DEPTH_LABEL, DEPTH_LABEL_MINOR], MPA_FILL]);
   assert.deepEqual(calls[drawnAt + 1], ['data', DEPTH_CONTOURS_SOURCE, OVERVIEW.features.length]);
   assert.equal(contourState.value.status, 'drawn');
   assert.equal(contourState.value.sources.length, 3);
@@ -257,4 +257,102 @@ test('a file without a well-formed omitted list fails; the note counts only unap
   assert.equal(omittedNote([...NOAA_BAG, {source_id: 'nos-r', review_status: 'restricted'}, {source_id: 'usgs-x', review_status: 'approved'}]),
     '2 bound surveys not drawn: noaa-bag (not yet reviewed), nos-r (restricted). 1 reviewed survey not traced in this file: usgs-x.');
   assert.equal(contourMark(FULL.features[0].properties, assessContours(FULL, 'morro-bay', TODAY).sources).reading.includes('not drawn'), false);
+});
+
+// EC6: provenance runs and unresolved areas (docs/seafloor-ec.md), on a copy of the committed full file.
+const F60 = FULL.features.find(f => f.properties.kind === 'contour' && f.properties.depth_ft === 60);
+const RUN = provenance => ({...clone(F60), id: `run-60ft-${provenance}`, properties: {...clone(F60.properties), provenance}});
+const [X, Y] = F60.geometry.type === 'LineString' ? F60.geometry.coordinates[0] : F60.geometry.coordinates[0][0];
+const SQUARE = [[X, Y], [X + 0.01, Y], [X + 0.01, Y + 0.01], [X, Y + 0.01], [X, Y]];
+const AREA = (props = {reason: 'conflict', shoal_hint_ft: 12}, geometry = {type: 'Polygon', coordinates: [SQUARE]}) => ({type: 'Feature', id: 'area', geometry,
+  properties: {kind: 'unresolved-area', source_id: F60.properties.source_id, survey_date: F60.properties.survey_date, vertical_datum: F60.properties.vertical_datum, blocks: 3, ...props}});
+const EC = (...extra) => { const d = clone(FULL); d.features.push(RUN('filled'), RUN('verified'), AREA(), ...extra); return d; };
+const card = (props, r = assessContours(EC(), 'morro-bay', TODAY)) => contourMark(props, r.sources, r.omitted);
+
+test('EC6: filled and verified runs and a conflict area draw; their cards say how each was made, keeping the basis', () => {
+  const r = assessContours(EC(), 'morro-bay', TODAY);
+  assert.equal(r.status, 'drawn');
+  assert.equal(r.data.features.length, FULL.features.length + 3);
+  const filled = card(RUN('filled').properties), verified = card(RUN('verified').properties), area = card(AREA().properties);
+  assert.match(filled.reading, /shallowest neighbouring depth; not measured at this spot\.$/);
+  assert.match(verified.reading, /Two independent surveys agree here within the published tolerance\.$/);
+  for (const m of [filled, verified]) assert.equal(m.name, '60 ft depth contour');
+  assert.equal(card(RUN('measured').properties).reading, card(F60.properties).reading, 'measured reads as an unmarked line');
+  assert.equal(area.name, 'Unverified / no data');
+  assert.equal(area.kind, 'Where the survey could not be verified');
+  assert.equal(area.reading, 'Two surveys disagree here; the shallower reading is 12 ft. Treat as a possible shoal.');
+  for (const m of [filled, verified, area]) { assert.equal(m.basis, layerEntry('depth-contours').basis); assert.match(m.basis, /not for navigation/); }
+  assert.match(area.source, /unverified source datum$/);
+  const readings = {hole: /no usable measurement here; the gap is too large to fill safely\.$/, 'ring-range': /^A small gap on a steep or rough bottom; not filled\.$/,
+    'datum-suspect': /may use different vertical datums; not compared\.$/, nodata: /^No data\.$/};
+  for (const [reason, re] of Object.entries(readings)) assert.match(card(AREA({reason}).properties).reading, re, reason);
+  const bag = withBagCandidate(EC()), rb = assessContours(bag, 'morro-bay', TODAY);
+  assert.ok(contourMark(AREA({reason: 'hole'}).properties, rb.sources, rb.omitted).reading.endsWith(BAG_NOTE), 'then the omitted note');
+  for (const props of [{reason: 'foo'}, {reason: ' conflict', shoal_hint_ft: 12}, {reason: 'conflict'}, {reason: 'conflict', shoal_hint_ft: 0}])
+    assert.equal(card(AREA(props).properties), null, JSON.stringify(props));
+  assert.equal(card({...F60.properties, kind: ' contour'}), null, 'a padded kind opens no card');
+});
+
+test('EC6: any unknown kind, geometry, reason, hint or provenance still fails the whole file', () => {
+  const line = {type: 'LineString', coordinates: SQUARE.slice(0, 2)}, open = [...SQUARE.slice(0, 4), [X + 0.02, Y]];
+  const broken = [
+    ['an area drawn as a line', AREA(undefined, line)],
+    ['an unknown reason', AREA({reason: 'foo'})],
+    ['a padded reason', AREA({reason: 'hole '})],
+    ['no reason', AREA({reason: undefined})],
+    ['a shoal hint on a hole', AREA({reason: 'hole', shoal_hint_ft: 12})],
+    ['a conflict without its hint', AREA({reason: 'conflict'})],
+    ['a fractional hint', AREA({reason: 'conflict', shoal_hint_ft: 12.5})],
+    ['a hint as text', AREA({reason: 'conflict', shoal_hint_ft: '12'})],
+    ['a zero hint', AREA({reason: 'conflict', shoal_hint_ft: 0})],
+    ['an open ring', AREA(undefined, {type: 'Polygon', coordinates: [open]})],
+    ['a three-point ring', AREA(undefined, {type: 'Polygon', coordinates: [[SQUARE[0], SQUARE[1], SQUARE[0]]]})],
+    ['a ring with a NaN', AREA(undefined, {type: 'Polygon', coordinates: [[...SQUARE.slice(0, 2), [NaN, Y], ...SQUARE.slice(3)]]})],
+    ['an empty polygon', AREA(undefined, {type: 'Polygon', coordinates: []})],
+    ['a padded area kind', {...AREA(), properties: {...AREA().properties, kind: ' unresolved-area'}}],
+    ['a guessed contour', RUN('guessed')],
+    ['an empty provenance', RUN('')],
+    ['a contour drawn as a polygon', {...RUN('filled'), geometry: {type: 'Polygon', coordinates: [SQUARE]}}],
+    ['a survey edge drawn as a polygon', {...AREA(), properties: {...FULL.features.find(f => f.properties.kind === 'survey-edge').properties}}],
+  ];
+  for (const [what, feature] of broken) assert.equal(assessContours(EC(feature), 'morro-bay', TODAY).status, 'failed', what);
+  const multi = AREA({reason: 'nodata'}, {type: 'MultiPolygon', coordinates: [[SQUARE], [SQUARE]]});
+  assert.equal(assessContours(EC(multi), 'morro-bay', TODAY).status, 'drawn', 'a MultiPolygon area draws');
+});
+
+for (const type of ['Polygon', 'MultiPolygon']) {
+  test(`EC6: ${type} requires an exact geometry type or the whole file fails`, () => {
+    const coordinates = type === 'Polygon' ? [SQUARE] : [[SQUARE]];
+    const canonical = EC(AREA(undefined, {type, coordinates}));
+    const drawn = assessContours(canonical, 'morro-bay', TODAY);
+    assert.equal(drawn.status, 'drawn', 'canonical geometry still draws');
+    assert.deepEqual(drawn.data.features, canonical.features, 'accepted geometry is passed through unchanged');
+    for (const padded of [` ${type}`, `${type} `]) {
+      const file = EC(AREA(undefined, {type: padded, coordinates}));
+      const result = assessContours(file, 'morro-bay', TODAY);
+      assert.equal(result.status, 'failed', JSON.stringify(padded));
+      assert.equal(result.data, null, 'no partial collection escapes to the renderer');
+    }
+  });
+}
+
+test('EC6: the area draws muted and dashed at the bottom; filled runs dash and verified runs draw heavier; the area is clickable', async t => {
+  const o = contoursOverlay(sentinel, EC()), by = id => o.layers.find(l => l.id === id), ids = o.layers.map(l => l.id);
+  assert.equal(DEPTH_BOTTOM, DEPTH_UNRESOLVED_FILL);
+  assert.ok(ids.indexOf(DEPTH_UNRESOLVED_FILL) < ids.indexOf(DEPTH_UNRESOLVED_LINE) && ids.indexOf(DEPTH_UNRESOLVED_LINE) < ids.indexOf(DEPTH_EDGE));
+  const unresolved = ['==', ['get', 'kind'], 'unresolved-area'];
+  assert.deepEqual(by(DEPTH_UNRESOLVED_FILL), {id: DEPTH_UNRESOLVED_FILL, type: 'fill', source: DEPTH_CONTOURS_SOURCE, filter: unresolved,
+    paint: {'fill-color': 'token(muted)', 'fill-opacity': 0.18}});
+  assert.deepEqual(by(DEPTH_UNRESOLVED_LINE).filter, unresolved);
+  assert.deepEqual(by(DEPTH_UNRESOLVED_LINE).paint, {'line-color': 'token(muted)', 'line-width': 1, 'line-dasharray': [1, 2]});
+  const line = by(DEPTH_LINE).paint, verified = ['case', ['==', ['get', 'provenance'], 'verified'], 1.25, 1], index = ['==', ['get', 'index'], true];
+  assert.deepEqual(line['line-dasharray'], ['case', ['==', ['get', 'provenance'], 'filled'], ['literal', [4, 3]], ['literal', [1, 0]]]);
+  assert.deepEqual(line['line-width'], ['interpolate', ['linear'], ['zoom'],
+    8, ['*', ['case', index, 0.9, 0.4], verified], 14, ['*', ['case', index, 1.6, 0.8], verified]]);
+  assert.deepEqual(by(DEPTH_LABEL).filter, ['all', ['==', ['get', 'kind'], 'contour'], index], 'labels still follow every contour');
+  const {layer} = setup(t, {files: {[depthContoursOverviewURL('morro-bay')]: EC()}});
+  await flush(); await flush();
+  assert.equal(contourState.value.status, 'drawn');
+  assert.deepEqual(layer.pick.layers, [DEPTH_HIT, DEPTH_UNRESOLVED_FILL]);
+  assert.match(layer.pick.mark(DEPTH_UNRESOLVED_FILL, AREA().properties).reading, /shallower reading is 12 ft/);
 });
