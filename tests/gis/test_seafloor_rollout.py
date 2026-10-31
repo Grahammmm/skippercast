@@ -219,6 +219,43 @@ class RolloutTests(unittest.TestCase):
                 upload.assert_not_called()
                 self.assertEqual(result['ready_regions'], ['south'])
 
+    def test_provenance_only_refresh_is_not_a_ledger_data_change(self):
+        section = {'url': 'https://www.ecfr.gov/x/2026-10-27/s', 'sha256': 'a'*64,
+                   'up_to_date_as_of': '2026-10-27', 'classification': 'outside-reviewed-scope'}
+        layer = {'id': 'security', 'status': 'ok', 'feature_count': 3, 'checked_at': '2026-10-29T06:00:00+00:00',
+                 'file': 'security-1.json', 'sha256': 'b'*64, 'source_url': 'https://www.ecfr.gov/x/2026-10-27/s',
+                 'source_urls': ['https://www.ecfr.gov/x/2026-10-27/s'],
+                 'evidence': {'titles_sha256': 'c'*64, 'up_to_date_as_of': '2026-10-27', 'sections': [section]}}
+        row = {'id': 'r01', 'status': 'habitat-screened', 'tier1_km2': 1.0, 'tier2_km2': .1,
+               'last_survey_run': '2026-10-29T06:44:39+00:00', 'survey_run_hash': 'd'*64,
+               'screen': {'status': 'ready', 'reasons': [], 'snapshot': '2026-10-29T06:26:13+00:00',
+                          'snapshot_sha256': 'e'*64, 'layers': [layer]}}
+        before = {'reaches': [row], 'totals': {'tier2_km2': .1}}
+        # The next day's re-check of the same screen (PR #1061 shape): every field
+        # differs except the data, so no pull request should be proposed.
+        new_section = dict(section, url='https://www.ecfr.gov/x/2026-10-28/s', up_to_date_as_of='2026-10-28')
+        new_layer = dict(layer, checked_at='2026-10-30T16:45:30+00:00', file='security-2.json', sha256='f'*64,
+                         source_url=new_section['url'], source_urls=[new_section['url']],
+                         evidence={'titles_sha256': '0'*64, 'up_to_date_as_of': '2026-10-28',
+                                   'sections': [new_section]})
+        refreshed = dict(row, last_survey_run='2026-10-30T16:47:23+00:00', survey_run_hash='1'*64,
+                         screen=dict(row['screen'], snapshot='2026-10-30T16:45:54+00:00',
+                                     snapshot_sha256='2'*64, layers=[new_layer]))
+        after = {'reaches': [refreshed], 'totals': {'tier2_km2': .1}}
+        self.assertEqual(jobs.ledger_data(before), jobs.ledger_data(after))
+        self.assertEqual(before['reaches'][0]['survey_run_hash'], 'd'*64)  # input is not mutated
+
+        def edited(change):
+            ledger = deepcopy(after)
+            change(ledger['reaches'][0])
+            return ledger
+        for change in (lambda r: r.update(tier2_km2=.2),
+                       lambda r: r['screen'].update(status='held', reasons=['screen-stale']),
+                       lambda r: r['screen']['layers'][0].update(feature_count=4),
+                       lambda r: r['screen']['layers'][0]['evidence']['sections'][0].update(sha256='3'*64)):
+            self.assertNotEqual(jobs.ledger_data(before), jobs.ledger_data(edited(change)))
+        self.assertNotEqual(jobs.ledger_data(before), jobs.ledger_data(dict(after, reaches=[refreshed, row])))
+
     def test_ledger_only_reports_failed_or_missing_current_publication(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); s3 = Bucket()
@@ -243,6 +280,7 @@ class RolloutTests(unittest.TestCase):
                 self.assertTrue(any(f.get('region') == 'south' for f in result['failures']))
                 self.assertEqual(result['ready_regions'], [])
                 upload.assert_not_called()
+                self.assertFalse(result['data_changed'])
                 body = (root/'var/seafloor/ledger-pr.md').read_text()
                 self.assertIn('south', body)
                 self.assertIn('not proof of live publication', body)
