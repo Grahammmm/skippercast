@@ -110,7 +110,8 @@ const line = (g: Json | null): boolean => {
 };
 /** A (Multi)Polygon whose every ring has at least 4 finite points and ends where it starts. */
 const area = (g: Json | null): boolean => {
-  const type = text(g?.type), c = g?.coordinates;
+  // The renderer receives the original geometry and requires canonical GeoJSON type names.
+  const type = g?.type, c = g?.coordinates;
   const ring = (r: unknown): boolean => points(r, 4) && JSON.stringify(r[0]) === JSON.stringify(r.at(-1));
   const rings = (p: unknown): boolean => Array.isArray(p) && p.length > 0 && p.every(ring);
   return type === 'Polygon' ? rings(c) : type === 'MultiPolygon' && Array.isArray(c) && c.length > 0 && c.every(rings);

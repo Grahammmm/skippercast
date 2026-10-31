@@ -320,6 +320,22 @@ test('EC6: any unknown kind, geometry, reason, hint or provenance still fails th
   assert.equal(assessContours(EC(multi), 'morro-bay', TODAY).status, 'drawn', 'a MultiPolygon area draws');
 });
 
+for (const type of ['Polygon', 'MultiPolygon']) {
+  test(`EC6: ${type} requires an exact geometry type or the whole file fails`, () => {
+    const coordinates = type === 'Polygon' ? [SQUARE] : [[SQUARE]];
+    const canonical = EC(AREA(undefined, {type, coordinates}));
+    const drawn = assessContours(canonical, 'morro-bay', TODAY);
+    assert.equal(drawn.status, 'drawn', 'canonical geometry still draws');
+    assert.deepEqual(drawn.data.features, canonical.features, 'accepted geometry is passed through unchanged');
+    for (const padded of [` ${type}`, `${type} `]) {
+      const file = EC(AREA(undefined, {type: padded, coordinates}));
+      const result = assessContours(file, 'morro-bay', TODAY);
+      assert.equal(result.status, 'failed', JSON.stringify(padded));
+      assert.equal(result.data, null, 'no partial collection escapes to the renderer');
+    }
+  });
+}
+
 test('EC6: the area draws muted and dashed at the bottom; filled runs dash and verified runs draw heavier; the area is clickable', async t => {
   const o = contoursOverlay(sentinel, EC()), by = id => o.layers.find(l => l.id === id), ids = o.layers.map(l => l.id);
   assert.equal(DEPTH_BOTTOM, DEPTH_UNRESOLVED_FILL);
