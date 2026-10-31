@@ -117,9 +117,11 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // and Target select fit the phone width, and hides .app-top-card .app-location-coords; Masthead.tsx wraps the coordinates in that span.
 // No colour, backing, token or catch markup changes; check_contrast.mjs rebinds only appCss.
 // Rebind those three exact hashes.
+// RF0935-2 (one web default zone): App.tsx imports DEFAULT_ZONE from web/zone.ts and re-exports it; Reports.tsx's
+// non-date day() branch reads that same 'America/Los_Angeles' constant. Same value, no CSS/markup change. Rebind those two.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
-  "web/app/App.tsx": "e2d38eda657241f7c0b994c5136c5384c70781eccd4a1c72c655317e3cabe0cc",
+  "web/app/App.tsx": "43e8a75b9e8585a30373bd14ffd3db72ffcde23c097a1596d3bdd0a380d56227",
   "web/app/Masthead.tsx": "d785af3dc63990d67940cb4eb451c7a39e3be4de268c67a13d1c8c05130643ca",
   "web/app/LayerRail.tsx": "248402b3100855ef1561c742ee32c3922d9b6475080cb6420957a553e5872abb",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
@@ -130,7 +132,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
-  "web/app/views/Reports.tsx": "add6e0d2b1697c4d097d1e4a286f7377fe27372cb5a2b9033fb8dcb0181089c9",
+  "web/app/views/Reports.tsx": "907ead4671944801d9b9e24b0d9eef22bf4465722e69ab398b76781ddb9b5a93",
   "web/app/CoastMarkup.tsx": "3d318379ff1194b26f68adadb523db08c21829ff71cf5e7cfe2ac903821f0efc",
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
