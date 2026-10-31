@@ -7,8 +7,8 @@ import tempfile
 import unittest
 
 from scripts.report_regulations import _region_lines, report
+from tests._support import ROOT as REPO
 
-REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / 'scripts' / 'report_regulations.py'
 
 
