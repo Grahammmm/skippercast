@@ -433,8 +433,7 @@ def test_provenance_cuts_contours_into_class_runs_and_draws_unresolved_areas(tmp
     monkeypatch.setattr(dc, 'simplify', lambda line, tolerance, scale: [list(p) for p in line])  # compare traced points
     plain = _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a'))
     doc = _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a'), '--provenance', f'usgs-a={prov}')
-    by_id = {f['id']: f for f in doc['features']}
-    runs = [by_id[f'usgs-a-30ft{s}'] for s in ('', '-filled', '-verified')]
+    runs = [f for s in ('', '-filled', '-verified') for f in doc['features'] if f['id'] == f'usgs-a-30ft{s}']
     assert [f['properties']['provenance'] for f in runs] == ['measured', 'filled', 'verified']
     points = lambda fs: {tuple(p) for f in fs for line in f['geometry']['coordinates'] for p in line}  # noqa: E731
     assert points(runs) == points([f for f in plain['features'] if f['id'] == 'usgs-a-30ft'])
@@ -480,8 +479,7 @@ def test_provenance_refusals_come_before_any_read(tmp_path, monkeypatch, case, m
     a = _tif(tmp_path / 'a.tif', _slope((64, 64)), X0, Y0)
     shape, x0, tags = ((32, 32) if case == 'size' else (64, 64)), (X0 + 16 if case == 'transform' else X0), None
     prov = _ec(tmp_path / 'provenance.tif', np.full(shape, 10), tags={} if case == 'no tag' else None, x0=x0)
-    if case == 'vrt':  # the matching uint8 raster with its EC_VERSION tag, but not a GeoTIFF
-        rasterio.shutil.copy(prov, prov := tmp_path / 'provenance.vrt', driver='VRT')
+    if case == 'vrt': rasterio.shutil.copy(prov, prov := tmp_path / 'provenance.vrt', driver='VRT')  # matching, not GTiff
     reads = []
     monkeypatch.setattr(rasterio.io.DatasetReader, 'read', lambda *a, **k: reads.append(a))
     monkeypatch.setattr(hashlib, 'file_digest', lambda *a, **k: reads.append(a))
@@ -500,21 +498,23 @@ def test_a_segment_on_an_edge_two_squares_share_keeps_the_class_of_the_square_th
     assert [n for n, _ in bs.class_runs(line, cells, square.T if turn else square)] == [['filled', 'measured'][flip]]
 
 
-@pytest.mark.parametrize('case', ['nodata', 'masked', 'all unresolved', 'mixed', 'empty'])
-def test_native_nodata_and_unresolved_only_sources_become_areas_and_padding_stays_unowned(tmp_path, monkeypatch, case):
+@pytest.mark.parametrize('case,measured,areas', [
+    ('nodata', 255, [('nodata', 1)]), ('masked', 255, [('nodata', 1)]), ('all unresolved', 0, [('conflict', 256)]),
+    ('mixed', 0, [('conflict', 256)]), ('hole another survey measures', 256, []), ('half raster', 128, []), ('empty', 0, None)])
+def test_native_nodata_and_unresolved_only_sources_become_areas_and_padding_stays_unowned(tmp_path, monkeypatch, case, measured, areas):
     from contextlib import nullcontext
     import numpy as np
-    n, why = (1, 'nodata') if case in ('nodata', 'masked') else (256, 'conflict')  # of 16 x 16 whole blocks; 132 cells leave
-    values = np.full((132, 132), -9999.0) if case == 'empty' else _slope((132, 132))  # a 17th row/column half padding
-    codes = np.full((132, 132), {'nodata': 10, 'masked': 10, 'empty': 0}.get(case, 41))
-    values[32, 32], codes[32, 32] = (-9999, 0 if case == 'nodata' else 50) if n == 1 else (values[32, 32], codes[32, 32])
-    grids = {**({'usgs-a': _tif(tmp_path / 'a.tif', _slope((128, 128)), X0 - 512, Y0)} if case == 'mixed' else {}),
-             'usgs-b': _tif(tmp_path / 'b.tif', values, X0, Y0)}  # mixed: a plain survey first, then the unresolved-only one
-    with pytest.raises(SystemExit, match='contribute no valid water block') if case == 'empty' else nullcontext():
+    values = np.full((132, 132), -9999.0) if case == 'empty' else _slope((132, 132))  # 16 x 16 whole blocks, then a 17th
+    codes = np.full((132, 132), {'all unresolved': 41, 'mixed': 41, 'empty': 0}.get(case, 10))  # row/column half padding
+    named = {'half raster': np.s_[:, :64], 'hole another survey measures': np.s_[32:36, 32:36]}.get(case, np.s_[32, 32])
+    values[named], codes[named] = (-9999, 50 if case == 'masked' else 0) if measured else (values[named], codes[named])  # named nodata
+    plain = {'usgs-a': _tif(tmp_path / 'a.tif', _slope((128, 192)), X0 - (512 if case == 'mixed' else 256), Y0)}
+    grids = {**(plain if case == 'mixed' else {}), 'usgs-b': _tif(tmp_path / 'b.tif', values, X0, Y0),
+             **({'usgs-c': plain['usgs-a']} if case.startswith('hole') else {})}  # a later survey measuring b's nodata hole
+    with pytest.raises(SystemExit, match='contribute no valid water block') if areas is None else nullcontext():
         doc = _run_builder(monkeypatch, grids, _sources(*grids), '--provenance', f'usgs-b={_ec(tmp_path / "p.tif", codes)}')
-    if case == 'empty':  # neither valid water nor unresolved evidence: still refused
-        return
-    areas = [(f['id'], f['properties']['reason'], f['properties']['blocks']) for f in doc['features'] if f['geometry']['type'] != 'MultiLineString']
-    assert areas == [(f'usgs-b-unresolved-{why}', why, n)] and doc['provenance']['sources'][-1]['provenance_counts'] == {
-        'measured': 256 - n, 'filled': 0, 'verified': 0, 'unresolved': n}  # the padding row/column is a gap, not nodata
-    assert case != 'mixed' or doc['provenance']['sources'][0]['supported_blocks'] == 256
+    if areas is None: return  # neither valid water nor unresolved evidence: still refused
+    found = [(f['id'], f['properties']['reason'], f['properties']['blocks']) for f in doc['features'] if 'reason' in f['properties']]
+    assert found == [(f'usgs-b-unresolved-{reason}', reason, n) for reason, n in areas]
+    assert doc['provenance']['sources'][list(grids).index('usgs-b')]['provenance_counts'] == {
+        'measured': measured, 'filled': 0, 'verified': 0, 'unresolved': sum(n for _, n in areas)}
