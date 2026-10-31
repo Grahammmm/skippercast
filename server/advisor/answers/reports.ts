@@ -28,7 +28,7 @@ import type {Confidence, LandingReport} from './confidence.ts';
 import {advisoriesFrom, regionZones, windowConditions, windowEpochs, WINDOW} from './conditions.ts';
 import type {DayConditions} from './conditions.ts';
 import {lookupRules} from './rules.ts';
-import {addDays, daysBetween, localDate} from './time.ts';
+import {addDays, daysBetween, localDate, PACIFIC} from './time.ts';
 import {sha256} from '../ids.ts';
 import {t} from '../strings.ts';
 import type {StringKey} from '../strings.ts';
@@ -340,7 +340,7 @@ export async function pregenerateDaily(env: Env, now: number, deps: DailyDeps = 
   let failed = 0;
   const list = activePorts();
   for (const port of list) {
-    const tz = regionConfig(portRegion(port))?.timezone ?? 'America/Los_Angeles';
+    const tz = regionConfig(portRegion(port))?.timezone ?? PACIFIC;
     try { await dailyAnswer(env, port, localDate(now, tz), 'en', {...deps, clock: deps.clock ?? (() => now)}); }
     catch (error) { failed++; advisorLog('warn', 'advisor_daily_slot_port_failed', {port, reason: String((error as Error)?.message).slice(0, 120)}); }
   }
@@ -406,6 +406,6 @@ export const DAILY_FLOWS: readonly Flow[] = [{name: 'daily', run: dailyFlow}];
 
 /** The day's stored answer for a port, if one exists (the situation brief; no regeneration). */
 export async function storedDaily(db: D1Database, port: string, now: number): Promise<{text_en: string; text_es: string} | null> {
-  const tz = regionConfig(portRegion(port))?.timezone ?? 'America/Los_Angeles';
+  const tz = regionConfig(portRegion(port))?.timezone ?? PACIFIC;
   return db.prepare('SELECT text_en,text_es FROM advisor_daily_answers WHERE key=?').bind(`${port}:${localDate(now, tz)}`).first<{text_en: string; text_es: string}>();
 }
