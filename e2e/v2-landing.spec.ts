@@ -283,6 +283,48 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) {
   });
 }
 
+// BL-SC-2: at peek the four choices are one row above the tab bar; from half up the whole card is back.
+for (const [width, height] of [[390, 844], [360, 800]] as const) {
+  test(`at peek the first-run choices are tappable above the tab bar on the ${width}px phone`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(!isMobile, 'phone layout only');
+    await page.setViewportSize({width, height});
+    await v2.open('app', {region: 'morro-bay'});
+    const sheet = page.locator('.ui-sheet'), handle = page.locator('.ui-sheet-handle'), tabs = page.locator('.app-tabs');
+    const card = sheet.locator('.ui-sheet-body > .app-firstrun'), choices = card.locator('button[data-profile]');
+    const above = () => expect.poll(async () => {
+      const bar = (await tabs.boundingBox())!, whole = (await card.boundingBox())!, boxes = await Promise.all((await choices.all()).map(c => c.boundingBox()));
+      return whole.y + whole.height <= bar.y && boxes.length === 4 && boxes.every(b => !!b && b.y >= 0 && b.y + b.height <= bar.y && b.width >= 44 && b.height >= 44 && b.x + b.width <= width);
+    }, {message: 'the card and every choice are whole, ≥ 44 px and above the tab bar'}).toBe(true);
+    await expect(sheet).toHaveAttribute('data-detent', 'peek');
+    await above();
+    await expect(card.locator('#first-run-title')).toBeVisible();
+    for (const hidden of [card.locator('p'), card.locator('.ui-eyebrow')]) await expect(hidden).toBeHidden();
+    for (const clipped of [card.getByRole('button', {name: 'Keep Boat for now'}), card.locator('small').first()]) expect((await clipped.boundingBox())!.height).toBeLessThanOrEqual(1);
+    await page.screenshot({path: test.info().outputPath(`bl-sc-2-peek-${width}x${height}.png`)});
+    // Dragged (stepped) to half: the whole card as before.
+    await handle.click();
+    await expect(sheet).toHaveAttribute('data-detent', 'half');
+    for (const shown of [card.locator('p'), card.locator('.ui-eyebrow'), card.getByRole('button', {name: 'Keep Boat for now'}), card.locator('small').first()]) await expect(shown).toBeVisible();
+    // SC-N4: Layers takes the sheet; back at peek the compact row returns.
+    await page.locator('button[aria-label="Layers"]').click();
+    await expect(page.locator('.app-sheet-layers')).toBeVisible();
+    await expect(page.locator('.app-firstrun')).toHaveCount(0);
+    await handle.focus();
+    await page.keyboard.press('Home');
+    await expect(sheet).toHaveAttribute('data-detent', 'peek');
+    await above();
+    // A tap from peek chooses without dragging the sheet; a returning visitor's peek shows the brief again.
+    await card.locator('button[data-profile="spear"]').tap();
+    await expect(card).toHaveCount(0);
+    await expect(page).toHaveURL(/[?&]profile=spear/);
+    await expect(sheet).toHaveAttribute('data-detent', 'peek');
+    await page.goto(page.url());
+    await expect(page.locator('.app-firstrun')).toHaveCount(0);
+    await expect(page.locator('.app-sheet-brief .app-sheet-head')).toBeInViewport();
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 // FE-07: synthetic feeds at a fixed clock (no test reads the real time or a live service).
 const NOW = Date.parse('2026-10-07T20:00:00Z');
 const ago = (min: number) => new Date(NOW - min * 60000).toISOString();

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdtemp} from 'node:fs/promises';
+import {readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -53,4 +54,18 @@ test('the desktop keeps its standalone first-run prompt', async () => {
   const html = await shell(false);
   assert.equal((html.match(/class="app-firstrun"/g) || []).length, 1);
   assert.doesNotMatch(html, /class="ui-sheet-body"><section class="app-firstrun"/);
+});
+
+// BL-SC-2: the peek row is CSS only. The sheet renders at peek with the whole card's markup,
+// and every sheet rule for the card is scoped to peek, so half, full, desktop and Reports are unchanged.
+test('the compact peek row keeps the card markup and only peek-scoped rules', async () => {
+  const html = await shell(true);
+  assert.match(html, /class="ui-sheet[^"]*" data-detent="peek"/);
+  const card = html.slice(html.indexOf('<section class="app-firstrun"'));
+  for (const part of [/class="ui-eyebrow"/, /<h2 id="first-run-title">/, /<p>The profile sets/, /Keep Boat for now/]) assert.match(card, part);
+  assert.equal((card.match(/<small>/g) || []).length, 4);
+  const css = readFileSync(join(root, 'web/landing/port-input.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = [...css.matchAll(/([^{}]+)\{/g)].map(m => m[1].trim()).filter(sel => /\.ui-sheet/.test(sel));
+  assert.ok(rules.length >= 5, 'the peek rules exist');
+  for (const sel of rules) for (const part of sel.split(',')) assert.match(part.trim(), /^\.ui-sheet\[data-detent="peek"\] \.app-firstrun/, part);
 });
