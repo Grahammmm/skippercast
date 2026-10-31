@@ -113,15 +113,19 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // shape and the id/charters fields Reports reads are unchanged; the new imports add no
 // top-level side effects, and no CSS, token, class or catch markup changes. contrast(),
 // assertions and thresholds are untouched. Rebind only App.tsx's exact hash.
+// SC-N3 (phone sheet/top card): app.css adds overflow/min-width rules so the sheet Day row
+// and Target select fit the phone width, and hides .app-top-card .app-location-coords; Masthead.tsx wraps the coordinates in that span.
+// No colour, backing, token or catch markup changes; check_contrast.mjs rebinds only appCss.
+// Rebind those three exact hashes.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
   "web/app/App.tsx": "8086311c36c000119bc48cc769ed69acefbfc4565840eb21a4318be6cdfe62ae",
-  "web/app/Masthead.tsx": "191309f6c9a54ee6bd24608a1983c6bf07141538267f87bef163f8ad4ccbea00",
+  "web/app/Masthead.tsx": "d785af3dc63990d67940cb4eb451c7a39e3be4de268c67a13d1c8c05130643ca",
   "web/app/LayerRail.tsx": "248402b3100855ef1561c742ee32c3922d9b6475080cb6420957a553e5872abb",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
-  "web/app/app.css": "4a3867af18c9eba3eb01391e84380a8052177bb8b841b4928f72287b2ef4dbd5",
+  "web/app/app.css": "c5b14f6eedcb57b4628ddc8edc2adfe6305b2ac515f1702e6a24a638539eb64a",
   "packages/coast/panel.css": "fda5b83480f2c32243d5ff90b99e2581d459a46f88543d6a264705bdc8e821fb",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
@@ -131,7 +135,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "1701f0ae0b6283f517c97b5fd5582c25400705b3f0101a0f24e79173a3af0c83",
+  "scripts/check_contrast.mjs": "92a15809e8895d2b66beecfda4e1c49a297edc7e2e27bdd1f21845b355502e11",
   "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
   "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"

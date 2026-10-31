@@ -37,7 +37,7 @@ async function load() {
       export {Planner} from './web/app/Planner.tsx';
       export {createPlanner} from './web/planner.ts';
       export {AccountMenu} from './web/app/AccountMenu.tsx';
-      export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, TAB_VIEWS, advisorOn, checkAdvisor, ChatEntry} from './web/app/Masthead.tsx';
+      export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, TAB_VIEWS, advisorOn, checkAdvisor, ChatEntry, Location} from './web/app/Masthead.tsx';
       export {targetOptions, windowText} from './web/app/CommandBar.tsx';
       export {Brief, emptyTiles, DISCLAIMER} from './web/app/Desktop.tsx';
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
@@ -472,6 +472,23 @@ test('the helpers behind the controls round-trip through the store keys', async 
   assert.equal(clearSelection(`${ORIGIN}?region=morro-bay&spot=r12&focus=r13&view=fleet`), `${ORIGIN}?region=morro-bay&view=fleet`);
 });
 
+test('SC-N3: the location keeps the region name whole and puts the coordinates in their own span', async () => {
+  const {Location, regionInfo, render, h, state} = await load();
+  state.syncFromURL(`${ORIGIN}?region=morro-bay`);
+  try {
+    regionInfo.value = {id: 'morro-bay', name: 'Morro Bay & Avila', center: [35.34, -120.965], timezone: 'America/Los_Angeles'};
+    assert.ok(render(h(Location)).includes('Morro Bay &amp; Avila <span class="app-location-coords">35.34N 120.97W</span>'));
+    regionInfo.value = {id: 'avila', name: 'Stale', center: [35.18, -120.73], timezone: 'America/Los_Angeles'};
+    assert.match(render(h(Location)), />Morro Bay —</, 'metadata for another region is not shown');
+    regionInfo.value = null;
+    const pending = render(h(Location));
+    assert.match(pending, />Morro Bay —</);
+    assert.doesNotMatch(pending, /app-location-coords/);
+    state.syncFromURL(ORIGIN);
+    assert.match(render(h(Location)), />No port chosen</);
+  } finally { regionInfo.value = null; }
+});
+
 /** Render the shell for `href` as the mobile layout (what main.tsx does under 1,024 px). */
 async function renderMobile(href) {
   const {narrow} = await load();
@@ -563,7 +580,7 @@ test('loadRegion fills the masthead from regions/<id>/region.json and leaves pla
   assert.deepEqual(regionUnavailable.value, {region: 'morro-bay', targets: {lobster: 'Not in this region\u2019s researched list.'}});
   state.configureStore({storage: memory()});
   state.syncFromURL(`${ORIGIN}?region=morro-bay`);
-  assert.match(render(h(App, {})), /data-region="morro-bay">Morro Bay &amp; Avila 35.34N 120.97W</);
+  assert.match(render(h(App, {})), /data-region="morro-bay">Morro Bay &amp; Avila <span class="app-location-coords">35.34N 120.97W<\/span></);
   regionInfo.value = null;
   assert.equal(await loadRegion('x', async () => ({ok: false})), null);
   assert.equal(await loadRegion('x', async () => { throw new Error('offline'); }), null);

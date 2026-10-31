@@ -376,7 +376,8 @@ export const SURFACE_SOURCE_SHA256 = {
   "bridgeCss": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "tokensCss": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
-  "appCss": "4a3867af18c9eba3eb01391e84380a8052177bb8b841b4928f72287b2ef4dbd5",
+  // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
+  "appCss": "c5b14f6eedcb57b4628ddc8edc2adfe6305b2ac515f1702e6a24a638539eb64a",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.

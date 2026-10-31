@@ -296,6 +296,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-top-card { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 0 var(--space-3) var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); backdrop-filter: blur(6px); }
 .app-top-card .app-brand { min-height: var(--touch-min); font-size: var(--text-15); }
 .app-top-card .app-location { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.app-top-card .app-location-coords { display: none; }
 .app-top .ui-icon-button { flex: none; box-shadow: var(--elev-2); }
 .app-profile { display: flex; box-shadow: var(--elev-2); }
 .app-profile .ui-chip { flex: 1; min-width: 0; padding: var(--space-1) var(--space-2); }
@@ -325,6 +326,10 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-sheet .app-mark p { margin: 0; }
 .app-sheet .app-rail { padding: 0; border: 0; background: transparent; backdrop-filter: none; }
 .app-sheet-menus { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.app-sheet-menus > .ui-segmented { max-width: 100%; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
+.app-sheet-menus > .ui-segmented .ui-chip { flex: none; }
+.app-sheet-menus > .app-target, .app-sheet-menus .app-target label { min-width: 0; max-width: 100%; }
+.app-sheet-menus .app-target select { min-width: 0; }
 .app-sheet-menus label { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-13); }
 .app-sheet .app-brief-footer { margin-top: 0; }
 .app-sheet .app-brief-footer a { display: inline-block; min-height: var(--touch-min); box-sizing: border-box; margin-right: var(--space-2); padding: var(--space-3) var(--space-2); }
