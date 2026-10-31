@@ -21,6 +21,7 @@ import {beachNotices} from './shore.ts';
 import {TIDE_UNAVAILABLE, tideTrend} from '../tides.ts';
 import {ndbcStationURL, sourceStation, stationText, tidePredictionURL} from '../station-label.ts';
 import {ageText} from '../confidence.ts';
+import {FT_PER_M as M_TO_FT, KT_PER_MS as MS_TO_KT} from '../units.ts';
 import type {Brief, BriefBasis, BriefFleet, BriefNotice, BriefTile, LandingReport, SourceGap, RegionalDailyFeed, RegionalForecast, RegionalSource, TileId} from './types.ts';
 
 const HOUR = 3_600_000;
@@ -214,7 +215,6 @@ export function buildCoastBrief(input: CoastBriefInput): Brief {
 
 export type RegionalPlace = {id: string; name: string; lat: number; lon: number; timezone: string; port?: string};
 
-const M_TO_FT = 3.280839895, MS_TO_KT = 1.943844492;
 const num = (value: unknown, scale = 1): number | null => finite(value) ? value * scale : null;
 // Only ok is ok: a retained source is last good data after a failed check, so it reads as an error
 // whose clock is that last good fetch.

@@ -10,6 +10,7 @@
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import {sharedStation, sourceStation, stationText} from '../station-label.ts';
+import {FT_PER_M, KT_PER_MS} from '../units.ts';
 
 export const DEFAULT_REGION = 'morro-bay';
 /** The default region's name (its region.json `name`, equal by test), shown until that loads: the readout names the place it reads (#422). */
@@ -118,18 +119,18 @@ export function buoyReadings(feed: unknown, region: RegionStations = {}, now = D
     sharedStation(actual(key, buoy), actual(other, otherBuoy)) ? ` Same station as the ${otherLabel}, not a separate measurement.` : '';
 
   const wind = newest(src('offshore'), 'WSPD', 'm/s');
-  const gust = wind && finite(wind.row.GST) ? Math.round((wind.row.GST as number) * 1.943844) : null;
+  const gust = wind && finite(wind.row.GST) ? Math.round((wind.row.GST as number) * KT_PER_MS) : null;
   const windFrom = wind && finite(wind.row.WDIR) ? compass(wind.row.WDIR as number) : null;
   const swell = newest(src('diablo-spectrum'), 'SwH', 'm');
   const period = swell && finite(swell.row.SwP) ? `${Math.round(swell.row.SwP as number)} s` : null;
   const water = newest(src('diablo'), 'WTMP', 'degC');
   const rule = (key: string) => { const h = limit(key); return h === null ? 'the feed gives no age limit, so only the age is shown' : `stale after ${h} h`; };
   return [
-    {id: 'wind', label: 'Wind', ...(wind ? {reading: String(Math.round((wind.row.WSPD as number) * 1.943844)), unit: 'kt'} : {reading: 'No reading'}),
+    {id: 'wind', label: 'Wind', ...(wind ? {reading: String(Math.round((wind.row.WSPD as number) * KT_PER_MS)), unit: 'kt'} : {reading: 'No reading'}),
       detail: [windFrom, gust !== null ? `gusts ${gust}` : null].filter(Boolean).join(' · ') || undefined,
       ...judged(station('offshore', stations.offshore_buoy), wind?.at ?? null, ok('offshore'), limit('offshore'), now),
       basis: `Observed wind at ${name('offshore', 'offshore', stations.offshore_buoy)}, out at sea: not a harbor or launch reading. Averaged over 8 minutes, with the peak gust; ${rule('offshore')}.${same('offshore', 'diablo', 'water reading', stations.offshore_buoy, stations.nearshore_buoy)}`},
-    {id: 'swell', label: 'Swell', ...(swell ? {reading: ((swell.row.SwH as number) * 3.28084).toFixed(1), unit: 'ft'} : {reading: 'No reading'}),
+    {id: 'swell', label: 'Swell', ...(swell ? {reading: ((swell.row.SwH as number) * FT_PER_M).toFixed(1), unit: 'ft'} : {reading: 'No reading'}),
       detail: [period, swell && typeof swell.row.SwD === 'string' && /^[NSEW]{1,3}$/.test(swell.row.SwD) ? swell.row.SwD : null].filter(Boolean).join(' · ') || undefined,
       ...judged(station('diablo-spectrum', stations.nearshore_buoy), swell?.at ?? null, ok('diablo-spectrum'), limit('diablo-spectrum'), now),
       basis: `Swell height, period and direction from the wave spectrum at ${name('diablo-spectrum', 'nearshore', stations.nearshore_buoy, 'diablo')}; wind waves are left out; ${rule('diablo-spectrum')}.${same('diablo-spectrum', 'offshore', 'wind reading', stations.nearshore_buoy, stations.offshore_buoy)}`},
