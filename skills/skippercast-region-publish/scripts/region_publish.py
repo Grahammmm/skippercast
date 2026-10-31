@@ -3,7 +3,7 @@
 proves `platform.build` reproduces itself and drafts PUBLISH.md; a failure writes the held reason to PUBLISH.md and LEDGER.csv and leaves
 the work tree byte-unchanged. File edits only, no commits or deploys. Exit 0 ready, 1 held or refused, 2 not restored. Not acceptance.
 """
-import argparse, csv, functools, hashlib, io, json, os, re, shutil, subprocess, sys
+import argparse, contextlib, csv, functools, hashlib, io, json, os, re, shutil, subprocess, sys, tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
@@ -41,9 +41,17 @@ def snapshot(repo, keep=None):
     return out
 
 def put(dest, source=None, data=None):
-    tmp = dest.with_name(dest.name + '.tmp')
-    shutil.copyfile(source, tmp) if source else tmp.write_bytes(data)
-    os.replace(tmp, dest)
+    """Write via a fresh temp in dest's folder (a planted link is never followed), then replace; data stays 0600, a copy takes the source mode."""
+    fd, tmp = tempfile.mkstemp(dir=dest.parent, prefix='.' + dest.name + '.', suffix='.tmp')
+    try:
+        with os.fdopen(fd, 'wb') as out:
+            out.write(Path(source).read_bytes() if source else data)
+        source and shutil.copymode(source, tmp)
+        os.replace(tmp, dest)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
 
 def parse_review(folder):
     info = {}
@@ -199,7 +207,7 @@ def publish(args, run, loader):
     folder, repo, ledger = (Path(os.path.realpath(os.path.expanduser(p))) for p in (args.run, args.repo, args.ledger))
     if any(repo == p or repo in p.parents for p in (folder, ledger)):
         raise ValueError('the run folder and the ledger must be outside --repo')
-    if not (repo / '.git').exists() or not (repo / 'src/skippercast/platform/build.py').is_file() or (folder / 'PUBLISH.md').exists():
+    if not (repo / '.git').exists() or not (repo / 'src/skippercast/platform/build.py').is_file() or os.path.lexists(folder / 'PUBLISH.md'):
         raise ValueError('--repo is not a SkipperCast work tree, or PUBLISH.md already exists (never overwritten)')
     build = json.loads((folder / 'BUILD.json').read_text())
     rid, name, review = build['region_id'], folder.name, parse_review(folder)
@@ -219,7 +227,8 @@ def publish(args, run, loader):
             action = ', '.join(refused) + ' (a refused publish source is a custodian decision; see EC.md Operator asks)'
         text = f'# PUBLISH {rid} {name}\nHELD: {reason}\n{detail}\nNext: {action}\n'
         changes, code = {'state': 'held', 'held_reason': reason, 'review_verdict': (review or {}).get('overall', ''), **fields}, 1
-    (folder / 'PUBLISH.md').write_text(text)
+    with os.fdopen(os.open(folder / 'PUBLISH.md', os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644), 'w') as out:
+        out.write(text)  # exclusive and never via a link, even one planted after the check above
     update_ledger(ledger, rid, changes)
     print(f"{'PUBLISH READY' if code == 0 else 'HELD ' + changes['held_reason']} {rid}")
     return code
