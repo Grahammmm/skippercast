@@ -39,21 +39,43 @@ def read_locations(path):
     if not isinstance(data, dict) or set(data) != {'schema_version', 'files'} or data['schema_version'] != 1:
         raise IntakeError('Locations file needs exactly schema_version 1 and files')
     for entry in data['files']:
-        bad = set(entry) - {'source_id', 'path', 'bbox', 'crs'}
-        if bad or not {'source_id', 'path'} <= set(entry) or not os.path.isabs(entry['path']):
-            raise IntakeError(f'Locations entry invalid ({sorted(bad) or entry.get("path")}): keys source_id, path, bbox, crs; absolute path')
+        bad = set(entry) - {'source_id', 'path', 'bbox', 'crs', 'screened_path'}
+        listed = screened(entry)
+        if bad or not {'source_id', 'path'} <= set(entry) or not os.path.isabs(entry['path']) or ('screened_path' in entry and not (
+                isinstance(listed, list) and listed and all(isinstance(p, str) and os.path.isabs(p) for p in listed) and len(set(listed)) == len(listed))):
+            raise IntakeError(f'Locations entry invalid ({sorted(bad) or entry.get("path")}): keys source_id, path, bbox, crs, screened_path; absolute path')
     return data['files']
 
+def screened(entry):
+    """The derived tile path(s) a verdict is keyed by: lookup keys only, never opened, stat-ed or hashed."""
+    value = entry.get('screened_path')
+    return [value] if isinstance(value, str) else value
+
+def names(stem):
+    return re.compile(f'(^|_){re.escape(stem)}(_|\\.)')
+
 def read_screens(path, skip_raw):
-    """Resolved tif -> (verdict, source); last row wins; never-read paths are not resolved."""
+    """Resolved tif -> (verdict, source); last row wins; never-read paths are not resolved.
+    Also every FLAG row (tif, source) in TSV order, for the screened_path sibling-FLAG guard."""
     if not Path(path).is_file():
         raise IntakeError(f'Screens file not found: {path}')
     with open(path, newline='') as handle:
-        return {os.path.realpath(r['tif']): (r['verdict'], r['source'])
-                for r in csv.DictReader(handle, delimiter='\t') if r['tif'] not in skip_raw}
+        table = [r for r in csv.DictReader(handle, delimiter='\t') if r['tif'] not in skip_raw]
+    return ({os.path.realpath(r['tif']): (r['verdict'], r['source']) for r in table},
+            [(r['tif'], r['source']) for r in table if r['verdict'] == 'FLAG'])
 
-def build(region, sources, locations, screens):
-    rows, outside = [], 0
+def joined(stem, listed, screens, flags):
+    """screened_path join (M5a), top wins: any FLAG (listed or unlisted sibling) > any listed path absent > PASS-SPARSE > PASS."""
+    hits = [screens.get(os.path.realpath(p)) for p in listed]
+    flagged = [h[1] for h in hits if h and h[0] == 'FLAG'] + [s for t, s in flags if names(stem).search(os.path.basename(t))]
+    if flagged:
+        return 'FLAG', ';'.join(dict.fromkeys(flagged))
+    if None in hits:
+        return 'UNSCREENED', ''
+    return 'PASS-SPARSE' if any(h[0] == 'PASS-SPARSE' for h in hits) else 'PASS', ';'.join(dict.fromkeys(h[1] for h in hits))
+
+def build(region, sources, locations, screens, flags=()):
+    rows, outside, joins = [], 0, 0
     for sid in region['source_bindings']['bathymetry']:
         if sid not in sources:
             raise IntakeError(f"Unknown source {sid} bound to {region['id']}")
@@ -74,6 +96,10 @@ def build(region, sources, locations, screens):
             if e.get('bbox') and (e['bbox'][2] < w or ee < e['bbox'][0] or e['bbox'][3] < s or n < e['bbox'][1]):
                 outside += 1
                 continue
+            stem = Path(os.path.realpath(e['path'])).stem
+            for p in screened(e) or []:
+                if not names(stem).search(os.path.basename(p)):
+                    raise IntakeError(f'screened_path {p} does not name {stem}')
             try:
                 sha, size = file_identity(e['path'])
             except FileNotFoundError:
@@ -84,7 +110,8 @@ def build(region, sources, locations, screens):
             if size == 0:
                 raise IntakeError(f"Empty data file: {e['path']}")
             path = os.path.realpath(e['path'])
-            verdict, receipt = screens.get(path, ('UNSCREENED', ''))
+            verdict, receipt = screens.get(path, ('UNSCREENED', '')) if not screened(e) else joined(stem, screened(e), screens, flags)
+            joins += bool(screened(e))
             row = {**base, 'local_path': path, 'sha256': sha, 'bytes': size, 'crs': e.get('crs') or 'undeclared',
                    'screen': verdict, 'screen_receipt': receipt, 'use': 'publish', 'held_reason': 'none'}
             if verdict == 'FLAG':
@@ -97,9 +124,9 @@ def build(region, sources, locations, screens):
         rows += sorted(found, key=lambda r: r['local_path'])
         if missing:
             rows.append({**base, 'use': 'missing-file', 'held_reason': f'missing-file:{sid}'})
-    return rows, outside
+    return rows, outside, joins
 
-def summary(region, rows, outside, sources):
+def summary(region, rows, outside, sources, joins=None):
     def key(r):
         if r['use'] == 'skip':
             return 'never-read' if never_read(sources[r['source_id']]) else 'flag'
@@ -108,7 +135,8 @@ def summary(region, rows, outside, sources):
     lines = [f"# INTAKE {region['id']}", '', 'Machine-valid output is review-required, not acceptance.', '',
              f"Region status: {region['status']}", '', 'Rows per use:']
     lines += [f"- {u}: {sum(r['use'] == u for r in rows)}" for u in USES]
-    return '\n'.join(lines + [f'- out-of-bounds entries not listed: {outside}', '', '## Gaps and next action', ''] +
+    lines += [f'- out-of-bounds entries not listed: {outside}'] + ([] if joins is None else [f'- screens joined via screened_path: {joins} entries'])
+    return '\n'.join(lines + ['', '## Gaps and next action', ''] +
                      [f'- {sid}: {GAPS[k]}' for sid, k in gaps]) + '\n'
 
 def intake(args, loader):
@@ -119,14 +147,14 @@ def intake(args, loader):
     if (run / 'INTAKE.csv').exists():
         raise IntakeError(f'Refusing to overwrite {run / "INTAKE.csv"}')
     locations = read_locations(args.locations)
-    skip_raw = {e['path'] for e in locations if e['source_id'] in sources and never_read(sources[e['source_id']])}
-    rows, outside = build(region, sources, locations, read_screens(os.path.expanduser(args.screens), skip_raw))
+    skip_raw = {p for e in locations if e['source_id'] in sources and never_read(sources[e['source_id']]) for p in [e['path']] + (screened(e) or [])}
+    rows, outside, joins = build(region, sources, locations, *read_screens(os.path.expanduser(args.screens), skip_raw))
     run.mkdir(parents=True, exist_ok=True)
     with open(run / 'INTAKE.csv', 'w', newline='') as handle:
         writer = csv.DictWriter(handle, COLUMNS, lineterminator='\n')
         writer.writeheader()
         writer.writerows(rows)
-    (run / 'INTAKE.md').write_text(summary(region, rows, outside, sources))
+    (run / 'INTAKE.md').write_text(summary(region, rows, outside, sources, joins if any(screened(e) for e in locations) else None))
     print(f'INTAKE written {len(rows)} rows to {run}')
 
 def check(folder, loader):

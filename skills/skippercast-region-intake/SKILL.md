@@ -1,7 +1,7 @@
 ---
 name: skippercast-region-intake
 description: Use when a region's bathymetry bindings need a private, per-file intake table (licence, status, hash, screening verdict) before any build. Stdlib only; never downloads or opens restricted files.
-skill_version: 1.0
+skill_version: 1.1
 ---
 
 # Region intake
@@ -13,8 +13,9 @@ verdicts into `INTAKE.csv` + `INTAKE.md` in a private run folder. Machine-valid 
 
 - `<region_id>`: a region under `regions/` with `source_bindings.bathymetry`.
 - `--locations <json>`: private, never committed:
-  `{"schema_version": 1, "files": [{"source_id": "...", "path": "/abs/file", "bbox": [w, s, e, n], "crs": "..."}]}`
-  (`bbox` and `crs` optional; several entries may share a source id).
+  `{"schema_version": 1, "files": [{"source_id": "...", "path": "/abs/file", "bbox": [w, s, e, n], "crs": "...", "screened_path": "/abs/derived.tif" | [...]}]}`
+  (`bbox`, `crs` and `screened_path` optional; several entries may share a source id). `screened_path` names the derived
+  tile(s) whose verdicts stand for the file (basename must contain the file's stem; never opened); any FLAG row for that stem, listed or not, makes it FLAG.
 - `--screens <tsv>`: existing verdicts, default `~/agent-work/reports/MAP-VERDICTS.tsv`. Read only, never re-run.
 - `--run <dir>`: private folder outside the repository, e.g. `~/agent-work/skippercast/regions/<id>/runs/<YYYYMMDD>/`.
 
@@ -46,3 +47,4 @@ verdicts into `INTAKE.csv` + `INTAKE.md` in a private run folder. Machine-valid 
 ## Changelog
 
 - 1.0: first version.
+- 1.1: screened_path join (M5a).
