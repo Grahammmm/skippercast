@@ -9,41 +9,6 @@ on:
         description: "Also run the saved-trip check job (always on unless the ENABLE_QUEUES variable is true)"
         type: boolean
         default: false
-  push:
-    branches: [main]
-    paths:
-      - "src/skippercast/pipeline/live.py"
-      - "src/skippercast/pipeline/parsers.py"
-      - "src/skippercast/pipeline/collect.py"
-      - "src/skippercast/pipeline/cdip_nearshore.py"
-      - "src/skippercast/pipeline/beach_health.py"
-      - "src/skippercast/pipeline/goes_frames.py"
-      - ".github/workflows/live-conditions.yml"
-      - "regions/**"
-      - "catalog/**"
-      - "jurisdictions/**"
-      - "src/skippercast/pipeline/settings.py"
-      - "src/skippercast/platform/**"
-      - "scripts/refresh_regions.py"
-      - "scripts/prune_habitat_tiles.py"
-      - "src/skippercast/pipeline/intelligence.py"
-      - "src/skippercast/pipeline/ocean.py"
-      - "src/skippercast/pipeline/verification.py"
-      - "src/skippercast/pipeline/verification_archive.py"
-      - "src/skippercast/pipeline/habitat_dynamics.py"
-      - "src/skippercast/pipeline/wave_ensemble.py"
-      - "scripts/check_saved_trips.py"
-      - "scripts/trip_check_loop.py"
-      - "scripts/run_core_tests.py"
-      - "scripts/live_loop.py"
-      - "scripts/live_cycle.sh"
-      - "scripts/report_conditions.py"
-      - "scripts/publish_forecasts.sh"
-      - "scripts/model_api.mjs"
-      - "server/model-api.js"
-      - "src/skippercast/forecast/**"
-      - "requirements-ocean.txt"
-      - "deployments/**"
 
 # Each job gets only what it needs. The OIDC token for private trip checks is
 # issued to the notify job only; server/job-auth.ts pins this workflow file
@@ -85,7 +50,7 @@ jobs:
       - name: Record loop start
         id: start
         run: echo "started=$(date +%s)" >> "$GITHUB_OUTPUT"
-      # One job refreshes every 30 minutes for about 5.5 hours; pushes run one cycle.
+      # One job refreshes every 30 minutes for about 5.5 hours, then `next` re-dispatches it.
       # Degraded individual sources are warnings; a failed cycle means no publication.
       # Trip checks run in the notify job, so a delivery failure cannot fail a cycle.
       - name: Refresh and publish every 30 minutes
@@ -95,7 +60,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.R2_PUBLISH_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           FEEDS_PUBLIC_BASE: ${{ vars.FEEDS_PUBLIC_BASE }}
-        run: python scripts/live_loop.py --skip-trips ${{ github.event_name == 'push' && '--once' || '--budget-minutes 330' }}
+        run: python scripts/live_loop.py --skip-trips --budget-minutes 330
 
   # Private saved-trip checks after each publication, beside the refresh job.
   # With the ENABLE_QUEUES repository variable set to "true", the Worker's cron
@@ -117,13 +82,13 @@ jobs:
       - name: Check saved trips after each publication
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python scripts/trip_check_loop.py ${{ github.event_name == 'push' && '--once --budget-minutes 60' || '--budget-minutes 345' }}
+        run: python scripts/trip_check_loop.py --budget-minutes 345
 
   # Scheduled runs are throttled by GitHub (they started only every 3-5 hours);
   # dispatched runs are not, so each loop starts its successor.
   next:
     needs: refresh
-    if: always() && !cancelled() && github.event_name != 'push' && github.ref == 'refs/heads/main'
+    if: always() && !cancelled() && github.ref == 'refs/heads/main'
     runs-on: ${{ vars.DATA_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     permissions:
