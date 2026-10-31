@@ -8,7 +8,8 @@ Run with the survey stack (requirements-survey.txt):
 DIR must be outside the work tree and hold none of the three outputs. Fills use the shallowest 8-neighbour water cell of
 the ring (never a mean, median or interpolation); no sign flip, no datum change. The no-deepening gate is not
 configurable: if a treated cell got deeper or any untreated cell changed, nothing is written (exit 3). Refusals exit 2.
-A receipt `bbox` is inclusive pixel indices `[col0, row0, col1, row1]`; a hole is the 4-connected invalid (masked,
+A receipt `bbox` is end-exclusive pixel indices `[col0, row0, col1, row1]` (numpy slices, as ec_detect writes it:
+one cell at row r, col c is `[c, r, c + 1, r + 1]`; see docs/seafloor-ec.md); a hole is the 4-connected invalid (masked,
 nodata, NaN or sentinel) component with exactly that bbox and `cells`, a pit the `cells` deepest water cells in it.
 An input validity mask is kept in corrected.tif. A machine-valid receipt is review-required, not acceptance.
 """
@@ -57,13 +58,13 @@ def _same(a, b):
 
 
 def _window(bbox, shape):
-    """(window slices around the bbox grown by one cell, bbox slices relative to that window)."""
+    """(window slices around the end-exclusive bbox grown by one cell, bbox slices relative to that window)."""
     if any(v != int(v) for v in bbox): raise Refused(f'bbox not integral: {bbox}')
     c0, r0, c1, r1 = (int(v) for v in bbox)
-    if not (0 <= r0 <= r1 < shape[0] and 0 <= c0 <= c1 < shape[1]): raise Refused(f'bbox outside grid: {bbox}')
+    if not (0 <= r0 < r1 <= shape[0] and 0 <= c0 < c1 <= shape[1]): raise Refused(f'bbox outside grid: {bbox}')
     wr, wc = max(r0 - 1, 0), max(c0 - 1, 0)
-    window = (slice(wr, min(r1 + 2, shape[0])), slice(wc, min(c1 + 2, shape[1])))
-    return window, (slice(r0 - wr, r1 - wr + 1), slice(c0 - wc, c1 - wc + 1))
+    window = (slice(wr, min(r1 + 1, shape[0])), slice(wc, min(c1 + 1, shape[1])))
+    return window, (slice(r0 - wr, r1 - wr), slice(c0 - wc, c1 - wc))
 
 
 def _hole(entry, invalid):

@@ -10,7 +10,8 @@ skips the rest), (c) sentinels, (d) holes, (e) pits and spikes, (f) duplicate si
 
 A cell is valid only if finite, not declared nodata, and valid in GDAL's own mask (internal per-dataset mask);
 a file with any sidecar (.msk, .aux.xml, ...) is refused, since `path_sha256` (the file's bytes) would not cover it.
-Receipt: no directories, only `file_name`; `bbox` is [col0, row0, col1, row1] in native pixels, end-exclusive; metres
+Receipt: no directories, only `file_name`; `bbox` is [col0, row0, col1, row1] in native pixels, end-exclusive (one cell
+is [c, r, c + 1, r + 1]; the shared convention in docs/seafloor-ec.md, which ec_apply reads); metres
 rounded to 6 decimals; non-finite nodata recorded as null; `counts` are the codes EC2 would write if it applied the
 fills (a listed hole's code wins over `masked-sentinel`); a refused file has empty `counts` and lists. Exit 0 prints one
 JSON line; exit 2 prints `detect refused: <field>: <reason>`. A machine-valid receipt is review-required, not acceptance.

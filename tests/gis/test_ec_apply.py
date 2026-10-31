@@ -12,7 +12,7 @@ from skippercast.platform import seafloor_ec as ec
 from tests._support import ROOT
 
 pytestmark = pytest.mark.gis
-H1, PIT = (5, 5), (22, 20)  # (row, col); the 2x2 hole is rows/cols 12-13. Receipt bboxes are [col0, row0, col1, row1].
+H1, PIT = (5, 5), (22, 20)  # (row, col); the 2x2 hole is rows/cols 12-13. Receipt bboxes are end-exclusive [col0, row0, col1, row1].
 
 
 def _load():
@@ -42,8 +42,8 @@ def _grid(ring1=np.linspace(-20.0, -21.5, 8), hole=-9999.0):
 
 def _detect(grid, tmp_path, holes=None, pits=None, **over):
     holes = holes if holes is not None else [
-        _hole1(), _hole1(cells=4, bbox=[12, 12, 13, 13], ring_shallowest_m=-30.0, ring_range_m=1.0)]
-    pits = pits if pits is not None else [{'cells': 1, 'bbox': [20, 22, 20, 22], 'ring_median_m': -25.0,
+        _hole1(), _hole1(cells=4, bbox=[12, 12, 14, 14], ring_shallowest_m=-30.0, ring_range_m=1.0)]
+    pits = pits if pits is not None else [{'cells': 1, 'bbox': [20, 22, 21, 23], 'ring_median_m': -25.0,
                                            'deviation_m': -20.0}]
     doc = {'schema': 'ec-detect-v1', 'ec_version': ec.EC_VERSION, 'source_id': 'synthetic-x', 'cell_m': 2.0,
            'path_sha256': hashlib.sha256(grid.read_bytes()).hexdigest(), 'crs': 'EPSG:32610', 'width': 32,
@@ -92,7 +92,7 @@ def test_fills_with_the_ring_shallowest_and_reruns_byte_identical(tmp_path, noda
 
 
 def _hole1(**over):
-    return dict({'cells': 1, 'bbox': [5, 5, 5, 5], 'ring_shallowest_m': -20.0, 'ring_range_m': 1.5,
+    return dict({'cells': 1, 'bbox': [5, 5, 6, 6], 'ring_shallowest_m': -20.0, 'ring_range_m': 1.5,
                  'disposition': 'fill'}, **over)
 
 
@@ -106,7 +106,7 @@ def test_refusals_write_nothing(tmp_path, capsys, case, message):
     grid = _tif(tmp_path / 'grid.tif', z)
     holes = {'tampered-ring': [_hole1(ring_shallowest_m=-14.0, ring_range_m=4.0)], 'duplicate': [_hole1(), _hole1()],
              'wrong-cells': [_hole1(cells=2)]}.get(case, [])
-    pits = [{'cells': 1, 'bbox': [22, 20, 22, 20], 'ring_median_m': -25.0, 'deviation_m': -20.0}] if case == 'swapped-bbox' else []
+    pits = [{'cells': 1, 'bbox': [22, 20, 23, 21], 'ring_median_m': -25.0, 'deviation_m': -20.0}] if case == 'swapped-bbox' else []
     over = {'refused': {'disposition': 'REFUSED'}, 'wrong-sha': {'path_sha256': '0' * 64},
             'ec-version': {'ec_version': '0.9'}}.get(case, {})
     detect = _detect(grid, tmp_path, holes, pits, **over)
@@ -160,7 +160,7 @@ def test_sentinels_and_masked_cells_stay_invalid_unless_the_receipt_fills_their_
     z[H1], z[28, 3], z[28, 4], z[28, 10] = 9999.0, 9999.0, np.nan, masked_fill
     valid[28, 5] = valid[28, 10] = False  # finite cells masked invalid by the input's own validity mask
     grid = _tif(tmp_path / 'grid.tif', z, mask=valid)
-    holes = [_hole1(), _hole1(bbox=[10, 28, 10, 28], ring_shallowest_m=-19.0, ring_range_m=1.0)]
+    holes = [_hole1(), _hole1(bbox=[10, 28, 11, 29], ring_shallowest_m=-19.0, ring_range_m=1.0)]
     assert _run(grid, _detect(grid, tmp_path, holes, []), tmp_path / 'out') == 0
     with rasterio.open(tmp_path / 'out/corrected.tif') as ds:
         out, mask, codes = ds.read(1), ds.read_masks(1), _read(tmp_path / 'out/provenance.tif')[0]
