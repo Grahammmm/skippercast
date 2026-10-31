@@ -83,15 +83,19 @@ def independent(a_entry, a_file, b_entry, b_file, duplicate=False):
     if a_key is None or b_key is None: return False, 'unknown-acquisition'
     return (False, f'same-acquisition:{a_key}') if a_key == b_key else (True, 'ok')
 
-# Receipt schemas: required keys -> type word ('x?' may be null or absent), nested dict, or [item schema].
+# Receipt schemas: key -> type word ('x?' present but nullable; num is finite), dict, [schema] or [item -> schema].
 DISPOSITIONS = ('PASS', 'FIX', 'VERIFY', 'UNRESOLVED', 'REFUSED')
 _OUTLIER = {'cells': 'int', 'bbox': 'bbox', 'ring_median_m': 'num', 'deviation_m': 'num'}
 _HEAD = {'schema': 'str', 'ec_version': 'str', 'source_id': 'str'}
+_BIG = {'cells': 'int', 'bbox': 'bbox', 'disposition': 'str'}  # only omissions: EC1 over-size hole, EC4 REFUSED source
+_HOLE = {**_BIG, 'ring_shallowest_m': 'num', 'ring_range_m': 'num'}
+def _when(key, value, hit, miss): return lambda d: hit if isinstance(d, dict) and d.get(key) == value else miss
+_SOURCE = {'source_id': 'str', 'status': 'disposition', 'counts': 'counts', 'second_surveys': 'list',
+           'second_survey_needed_cells': 'int', 'receipts': {'detect': 'str', 'apply': 'str', 'verify': 'str'}}
 SCHEMAS = MappingProxyType({
     'ec-detect-v1': {**_HEAD, 'path_sha256': 'sha256', 'cell_m': 'num', 'crs': 'str', 'width': 'int', 'height': 'int',
                      'nodata': 'num?', 'counts': 'counts', 'pits': [_OUTLIER], 'spikes': [_OUTLIER],
-                     'holes': [{'cells': 'int', 'bbox': 'bbox', 'ring_shallowest_m': 'num?', 'ring_range_m': 'num?',
-                                'disposition': 'str'}],
+                     'holes': [_when('disposition', 'hole', _BIG, _HOLE)],
                      'sentinel_cells': 'int', 'fixture': {'refused': 'bool', 'reasons': 'list'},
                      'sign': {'refused': 'bool', 'positive_fraction': 'num?', 'reason': 'str?'},
                      'duplicate_signature': 'sig', 'disposition': 'disposition'},
@@ -107,13 +111,12 @@ SCHEMAS = MappingProxyType({
                      'disposition': 'disposition'},
     'region-correct-v1': {
         'schema': 'str', 'ec_version': 'str', 'region_id': 'str', 'run': {'author_runtime': 'str', 'author_family': 'str'},
-        'sources': [{'source_id': 'str', 'status': 'disposition', 'counts': 'counts', 'second_surveys': 'list',
-                     'second_survey_needed_cells': 'int', 'receipts': {'detect': 'str', 'apply': 'str?', 'verify': 'str?'}}],
+        'sources': [_when('status', 'REFUSED', {**_SOURCE, 'receipts': {'detect': 'str'}}, _SOURCE)],
         'not_corrected': [{'source_id': 'str', 'reason': 'str'}], 'operator_asks': 'list',
         'inputs': [{'source_id': 'str', 'sha256': 'sha256'}], 'outputs': [{'path': 'str', 'sha256': 'sha256'}],
         'ec_sha256': 'sha256'},
 })
-_num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool)  # noqa: E731
+_num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)  # noqa: E731
 _int = lambda v: isinstance(v, int) and not isinstance(v, bool)  # noqa: E731
 _seq = lambda n, ok: lambda v: isinstance(v, list) and len(v) == n and all(ok(x) for x in v)  # noqa: E731
 _TYPE = {'str': lambda v: isinstance(v, str), 'num': _num, 'int': _int, 'bool': lambda v: isinstance(v, bool),
@@ -131,11 +134,11 @@ def _check(spec, doc, where, out):
         elif isinstance(want, list):
             items = value if isinstance(value, list) else out.append(f'{path}: missing or not a list') or ()
             for i, item in enumerate(items):
-                _check(want[0], item, f'{path}[{i}].', out)
-        elif want.endswith('?') and value is None:
-            continue
+                _check(want[0](item) if callable(want[0]) else want[0], item, f'{path}[{i}].', out)
         elif key not in doc:
             out.append(f'{path}: missing')
+        elif want.endswith('?') and value is None:
+            continue
         elif not _TYPE[want.rstrip('?')](value):
             out.append(f'{path}: not {want.rstrip("?")}')
         elif want == 'counts':

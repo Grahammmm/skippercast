@@ -23,18 +23,15 @@ any is filled; else `verified` if every code is verified; else `measured`. Empty
 
 ## Thresholds (`THRESHOLDS`; each also a module name)
 - `hole_max_cells(cell_m) = min(9, int(64 // cell_m²))`: 9 at 2 m, 4 at 4 m, 1 at 8 m, 0 at 16 m.
-- `hole_ring_max_range_m(d) = max(2.0, 0.10 × |d|)` (ring shallowest); `outlier_min_m(d) = max(3.0, 0.20 × |d|)`
-  (ring median); `OUTLIER_MAX_CELLS = 2`.
+- `hole_ring_max_range_m(d) = max(2.0, 0.10 × |d|)` (ring shallowest); `outlier_min_m(d) = max(3.0, 0.20 × |d|)` (ring median); `OUTLIER_MAX_CELLS = 2`.
 - `SENTINELS` = −9999, 9999, −999999, 1e6, 5000, ±32767, ±3.4028234663852886e38; `PLAUSIBLE_M = (−3000, 100)`.
-- Fixture refusal: `FIXTURE_PATH` (pytest-basetemp, `/fixture(s)/`, `/scratch/`, synthetic, invented,
-  generated-template, `sample.tif`), `FIXTURE_MIN_PIXELS = 4096`, `FIXTURE_MAX_DISTINCT = 3`.
+- Fixture refusal: `FIXTURE_PATH` (pytest-basetemp, `/fixture(s)/`, `/scratch/`, synthetic, invented, generated-template, `sample.tif`), `FIXTURE_MIN_PIXELS = 4096`, `FIXTURE_MAX_DISTINCT = 3`.
 - Sign refusal: `SIGN_POSITIVE_FRACTION = 0.99`. Datum suspect: `DATUM_SUSPECT = {min_cells: 1000, max_mad_m: 0.5}`.
 
 **Tolerance** `tol_m(d) = 2 × sqrt(0.5² + (0.013 × |d|)²)` m: 1.0 at 0 m, 1.64 at 50 m, 2.79 at 100 m (IHO S-44
 Order 1a TVU, doubled; an assumption). It compares two depths; it never corrects one.
-**Shoal rule** `shoal_pick(values)` = the shallowest (largest elevation-up) value. **No-deepening**
-`no_deepening(before, after, treated)` lists treated indices that got deeper and untreated indices that changed at
-all (NaN to NaN is unchanged); `[]` is PASS.
+**Shoal rule** `shoal_pick(values)` = the shallowest (largest elevation-up) value. **No-deepening** `no_deepening(before, after, treated)`
+lists treated indices that got deeper and untreated indices that changed at all (NaN to NaN is unchanged); `[]` is PASS.
 
 ## Independence (`acquisition_key`, `independent`)
 - Key: `bag` / `noaa-native-vr-bag` → survey id from the file name (prefix before the first `_` after an optional
@@ -46,11 +43,12 @@ all (NaN to NaN is unchanged); `[]` is PASS.
 
 ## Receipts (`SCHEMAS`, `check_receipt(kind, doc) -> list[str]`)
 Kinds `ec-detect-v1`, `ec-apply-v1`, `ec-verify-v1`, `region-correct-v1`. Each problem names its key
-(`provenance_sha256: missing`, `counts.bogus: unknown code`). Enforced: required keys and types, `schema == kind`,
-`ec_version == EC_VERSION`, `counts` keys are `CODES` names, sha256 fields are 64 lowercase hex, `disposition` (and
-a source `status`) in `PASS|FIX|VERIFY|UNRESOLVED|REFUSED`, and `deepened_cells == 0` for apply. A type word ending
-in `?` may be null or absent (a hole above `hole_max_cells` carries only `cells`, `bbox`, `disposition: 'hole'`).
-Extra keys are allowed.
+(`provenance_sha256: missing`, `counts.bogus: unknown code`). Enforced: every listed key is present (a type word
+ending in `?` may be null when the value is unavailable, never absent), numbers are finite (the canonical writer uses
+`allow_nan=False`), `schema == kind`, `ec_version == EC_VERSION`, `counts` keys are `CODES` names, sha256 fields are
+64 lowercase hex, `disposition` (and a source `status`) in `PASS|FIX|VERIFY|UNRESOLVED|REFUSED`, `deepened_cells == 0`
+for apply. Only two records may omit keys: a hole above `hole_max_cells` (`disposition: 'hole'`) carries only `cells`,
+`bbox`, `disposition`, and a `REFUSED` source carries only `receipts.detect`. Extra keys are allowed.
 
 ## Run folder (private, outside the repository)
 `ec/<source_id>/{EC-DETECT.json, EC-APPLY.json, EC-VERIFY.json, corrected.tif, provenance.tif, ENTRIES.json, DONE}`,
