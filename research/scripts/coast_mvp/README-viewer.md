@@ -90,3 +90,11 @@ CSUMB-involved contributors remain `needs_permission`; unknown terms remain
 held. Hashes pin supplied bytes, not scientific or legal acceptance. C6 region
 look + redaction/rights/review gates still precede publication. No source
 download, live cache, R2 upload or production route change is part of this path.
+
+## Production release manifests (M9, off by default)
+
+Production loads only a release manifest (`admitRelease` in `mvp.ts`): reviewed,
+no `publicationHeld` key, a navigation notice, limitations, provenance and every
+source cleared with a `catalog/sources.json` `catalogId`, else it is refused with
+its reason before any tile request; regions are listed in `web/map/c2-releases.ts`
+(off, empty). The preview loads held manifests only; no producer writes `reviewed`.

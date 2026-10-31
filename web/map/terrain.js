@@ -17,3 +17,5 @@ export {mountCoast} from '../../packages/coast/src/embed.ts';
  * web/tokens.css, § 3A.4), then the panels' placement around the v2 stage chrome.
  */
 export const styles = Object.freeze([coastStyles, bridgeStyles, placement]);
+// The C2 release view (M9), a further dynamic import so MapLibre and the coast-MVP viewer load only when flagged on.
+export const loadC2 = () => import('./c2.js');
