@@ -15,6 +15,14 @@ also what a test kills to simulate a controller crash.
 
 Every store, ledger and marker lives under the test's own ``tmp_path``; nothing
 is shared between tests except the read-only package export.
+
+The queue's code/dependency identity (``implementation_hashes``) is computed by
+a child process started exactly like a controller, never in the pytest process:
+that function hashes whatever ``sys.path`` and the installed distributions
+expose, and other tests on the same xdist worker legitimately change both (some
+research scripts prepend host-local dependency directories to ``sys.path`` on
+import). An in-process identity then differs from the controller's, every job
+is invalidated as stale, and every controller run returns ``idle``.
 """
 import copy
 import json
@@ -109,6 +117,19 @@ raise SystemExit("unknown fault mode " + mode)
 
 SLEEPER = "import time\ntime.sleep(120)\n"
 
+IDENTITY = r'''
+"""Prints the (code, deps) identity exactly as a controller process computes it."""
+import json, sys
+from pathlib import Path
+
+import skippercast
+if not Path(skippercast.__file__).resolve().is_relative_to(Path(sys.argv[1]).resolve()):
+    raise SystemExit("identity probe did not import the clean package export")
+import skippercast.coastal.coordinator.loop as loop
+
+print(json.dumps(loop.implementation_hashes(sys.argv[2])), flush=True)
+'''
+
 CONTROLLER = r'''
 """Out-of-process controller (clean package export) that a test may SIGKILL."""
 import json, sys, time
@@ -161,7 +182,6 @@ class Harness:
     """
 
     def __init__(self, tmp_path, export, *, policy_value=None, offset=None, real_stages=False):
-        import skippercast.coastal.coordinator.loop as loop
         from skippercast.coastal.coordinator.store import Store
         self.real_stages = real_stages
         self.base = Path(tmp_path)
@@ -181,9 +201,18 @@ class Harness:
         self.offset = offset
         self.Store = Store
         self.store = self.open()
-        self.code, self.deps = loop.implementation_hashes(self.root)
+        self.identity = self.base / "identity.py"
+        self.identity.write_text(IDENTITY)
+        self.code, self.deps = self._implementation_identity()
         self._segments = 0
         self._runs = 0
+
+    def _implementation_identity(self):
+        done = subprocess.run([sys.executable, "-B", str(self.identity), str(self.export), str(self.root)],
+                              env=self.environment(), capture_output=True, text=True, timeout=60)
+        assert done.returncode == 0, done.stderr[-4000:]
+        code, deps = json.loads(done.stdout.strip().splitlines()[-1])
+        return code, deps
 
     def open(self):
         kwargs = {} if self.offset is None else {"clock": lambda: time.time() + self.offset}
