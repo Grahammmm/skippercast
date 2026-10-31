@@ -143,7 +143,7 @@ function habitatScreened(ranked: readonly HabitatFeature[], screen: MarkScreen, 
   return {withheld: held, pending, picks: onWater.slice(0, TOP).map(({f}) => {
     const p = f.properties, id = String(f.id ?? p.id), n = field ? Number(p[field]) : NaN;
     const at = {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}, nm = miles(origin, at), yd = swim(keep, at);
-    return {id, kind: 'habitat', name: `Reef habitat ${id}`, distance: yd === null ? distance(nm) : swimText(yd), nm,
+    return {id, kind: 'habitat', name: 'Reef habitat', distance: yd === null ? distance(nm) : swimText(yd), nm,
       depth: band(p.depth_min_ft, p.depth_max_ft), fit: label && n >= 1 && n <= 3 ? fitLine(label, n) : 'Screened reef habitat',
       reason: `Terrain score ${p.terrain_score}/100${p.terrain_grade ? ` · grade ${p.terrain_grade}` : ''}.`};
   })};
