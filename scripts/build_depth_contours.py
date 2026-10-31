@@ -129,7 +129,13 @@ def merged_blocks(grids, lattice, offsets, keys, ecs=None):
                 fill = water & (source < 0)
                 codes = ecs[i] and ecs[i][0].read(1, window=window, boundless=True, fill_value=ec.CODES['nodata'])
                 if ecs[i]:
-                    fill |= np.isin(codes, UNRESOLVED_CODES) & (source < 0)
+                    # Explicit invalid codes own native cells, never boundless padding.
+                    native = ((np.arange(window.height)[:, None] + window.row_off >= 0)
+                              & (np.arange(window.height)[:, None] + window.row_off < grids[i].height)
+                              & (np.arange(window.width)[None, :] + window.col_off >= 0)
+                              & (np.arange(window.width)[None, :] + window.col_off < grids[i].width))
+                    invalid_codes = [*UNRESOLVED_CODES, ec.CODES['nodata'], ec.CODES['masked-sentinel']]
+                    fill |= native & np.isin(codes, invalid_codes) & (source < 0)
                     if not np.isin(codes[fill], list(ec.CODES.values())).all():
                         raise SystemExit(f'{grids[i].name}: provenance code not in seafloor_ec.CODES')
                     if len(ecs[i]) > 1:
@@ -296,6 +302,8 @@ def check_provenance(ident, grid, path):
     tags = []
     for p in ec_paths(path):
         with rasterio.open(p) as ds:
+            if ds.driver != 'GTiff':
+                raise SystemExit(f'{ident}: provenance grid must be a GeoTIFF')
             if (ds.crs, ds.transform, ds.width, ds.height, ds.count) != (grid.crs, grid.transform, grid.width, grid.height, 1) \
                     or ds.dtypes[0] != ('uint8' if p == Path(path) else 'float32'):
                 raise SystemExit(f'{ident}: provenance grid does not match the survey grid')
@@ -305,12 +313,11 @@ def check_provenance(ident, grid, path):
     return tags[0]
 
 
-def class_runs(line, square):
+def class_runs(line, square, cells):
     """A traced line (block units) cut into maximal runs by the class of the square each segment was traced in; runs
     share their cut point, so together they are the line."""
     out = []
-    for a, b in zip(line, line[1:]):
-        r, c = (min(int((a[k] + b[k]) / 2), square.shape[1 - k] - 1) for k in (1, 0))
+    for a, b, (r, c) in zip(line, line[1:], cells):
         if out and out[-1][0] == square[r, c]:
             out[-1][1].append(b)
         else:
@@ -435,15 +442,15 @@ def main():
         if ident in provs:
             entry['provenance_counts'] = {name: int(((owner == i) & inside & (cls == k)).sum()) for name, k in CLASS_INDEX.items()}
         listed.append(entry)
-        if not mine.any():
-            continue
         common = {'source_id': ident, 'survey_date': survey_date, 'vertical_datum': entry['vertical_datum']}
         own = np.where(mine, depth, np.nan)
         rows = [[None if not np.isfinite(v) else float(v) for v in row] for row in own]
-        for d, lines in dc.trace(rows, dc.levels(float(np.nanmin(own)), float(np.nanmax(own)))).items():
+        levels = dc.levels(float(np.nanmin(own)), float(np.nanmax(own))) if mine.any() else []
+        for d, lines in dc.trace(rows, levels, with_squares=bool(provs)).items():
             runs = {}
-            for line in lines:
-                for name, part in (class_runs(line, square) if provs else [('measured', line)]):
+            for traced in lines:
+                line, cells = traced if provs else (traced, None)
+                for name, part in (class_runs(line, square, cells) if provs else [('measured', line)]):
                     metres = [(x0 + (c + 0.5) * dc.CELL_M, y0 - (r + 0.5) * dc.CELL_M) for c, r in part]
                     ll = dedupe(to_lonlat(transformer, dc.simplify(metres, CONTOUR_TOLERANCE_M, (1.0, 1.0))))
                     if len(ll) >= 2:
@@ -456,7 +463,7 @@ def main():
                                                 **({'provenance': name} if provs else {})}})
         # Where the contours stop: the outline of all the surveys' supported blocks together, each part credited to the
         # survey whose blocks it bounds. A seam between two surveys is not an edge: a reviewed grid continues there.
-        edge = line_merge(polygons(mine, block).boundary.intersection(union.boundary))
+        edge = line_merge(polygons(mine, block).boundary.intersection(union.boundary)) if mine.any() else unary_union([])
         pieces = [g for g in getattr(edge, 'geoms', [edge]) if g.geom_type == 'LineString' and g.length >= EDGE_MIN_LENGTH_M]
         lines = sorted(ll for ll in (dedupe(to_lonlat(transformer, list(g.simplify(EDGE_TOLERANCE_M).coords))) for g in pieces) if len(ll) >= 2)
         if lines:
@@ -474,7 +481,8 @@ def main():
             features.append({'type': 'Feature', 'id': f'{ident}-unresolved-{why}', 'geometry': {'type': 'MultiPolygon', 'coordinates': [
                 [dedupe(to_lonlat(transformer, list(ring.coords))) for ring in (g.exterior, *g.interiors)]
                 for g in getattr(area, 'geoms', [area])]}, 'properties': {**props, **common}})
-    empty = [entry['source_id'] for entry in listed if not entry['supported_blocks']]
+    empty = [entry['source_id'] for entry in listed if not entry['supported_blocks']
+             and not entry.get('provenance_counts', {}).get('unresolved')]
     if empty:
         # A supplied grid that adds nothing (wrong sign, no water, fully overlapped) would look like full coverage.
         raise SystemExit(f'Supplied grids contribute no valid water block: {empty}')

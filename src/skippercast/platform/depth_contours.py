@@ -138,17 +138,19 @@ def _clean_chain(points):
     return clean if len(clean) >= 2 else []
 
 
-def trace(grid, depths):
+def trace(grid, depths, *, with_squares=False):
     """Marching squares: {depth: lines} of each depth in `depths` across `grid` (rows of numbers, None where invalid).
 
     Points are (column, row) in grid units, node (r, c) at (c, r). A square draws only when all four
     corners are valid, so a line ends at the first square that touches a gap or the grid edge. A value
     equal to the depth counts as at or past it, so a line never runs through a node. Saddles are split
     by the mean of the four corners. A closed ring repeats its first point last. The output order is
-    deterministic.
+    deterministic. With `with_squares`, each line is (points, emitting_squares),
+    with one (row, column) square per nonzero segment, including exact-level edges.
     """
     wanted = sorted(set(depths))
     links = {d: {} for d in wanted}
+    squares = {d: {} for d in wanted} if with_squares else None
     rows, cols = len(grid), len(grid[0]) if grid else 0
     for r in range(rows - 1):
         upper, lower = grid[r], grid[r + 1]
@@ -166,6 +168,21 @@ def trace(grid, depths):
                 for p, q in _square_links(v, nodes, d):
                     graph.setdefault(p, []).append(q)
                     graph.setdefault(q, []).append(p)
+                    if with_squares:
+                        squares[d][frozenset((p, q))] = (r, c)
+    if with_squares:
+        result = {d: [] for d in wanted}
+        for d in wanted:
+            for chain in _walk(links[d]):
+                points, cells = [_cross(grid, chain[0], d)], []
+                for p, q in zip(chain, chain[1:]):
+                    point = _cross(grid, q, d)
+                    if point != points[-1]:
+                        points.append(point)
+                        cells.append(squares[d][frozenset((p, q))])
+                if cells:
+                    result[d].append((points, cells))
+        return result
     return {d: [points for chain in _walk(links[d])
                 if (points := _clean_chain(_cross(grid, edge, d) for edge in chain))]
             for d in wanted}

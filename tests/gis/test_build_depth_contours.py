@@ -463,6 +463,57 @@ def test_provenance_cuts_contours_into_class_runs_and_draws_unresolved_areas(tmp
     assert not any(f['properties']['kind'] == 'unresolved-area' for f in dc.overview_contours(doc)['features'])  # 16 m span
 
 
+@pytest.mark.parametrize('transpose', [False, True])
+@pytest.mark.parametrize('reverse', [False, True])
+def test_exact_level_runs_use_the_emitting_square(transpose, reverse):
+    import numpy as np
+    bs = _load_builder()
+    grid = np.tile([60., 30., 0.] if reverse else [0., 30., 60.], (3, 1))
+    square = np.array([['filled', 'measured'], ['filled', 'measured']])
+    if transpose:
+        grid, square = grid.T, square.T
+    traced = bs.dc.trace(grid.tolist(), [30], with_squares=True)[30]
+    assert len(traced) == 1
+    line, cells = traced[0]
+    assert len(cells) == len(line) - 1
+    runs = bs.class_runs(line, square, cells)
+    assert [name for name, _ in runs] == ['measured' if reverse else 'filled']
+
+
+@pytest.mark.parametrize('code', [0, 50])
+def test_invalid_native_provenance_is_an_unresolved_nodata_block(tmp_path, monkeypatch, code):
+    import numpy as np
+    values = _slope((128, 128))
+    values[0, 0] = -9999
+    a = _tif(tmp_path / 'a.tif', values, X0, Y0)
+    codes = np.full(values.shape, 10)
+    codes[0, 0] = code
+    prov = _ec(tmp_path / 'provenance.tif', codes)
+    doc = _run_builder(monkeypatch, {'usgs-a': a}, _sources('usgs-a'), '--provenance', f'usgs-a={prov}')
+    assert doc['provenance']['sources'][0]['provenance_counts'] == {
+        'measured': 255, 'filled': 0, 'verified': 0, 'unresolved': 1}
+    areas = [f for f in doc['features'] if f['properties']['kind'] == 'unresolved-area']
+    assert len(areas) == 1
+    assert areas[0]['properties']['reason'] == 'nodata' and areas[0]['properties']['blocks'] == 1
+
+
+@pytest.mark.parametrize('mixed', [False, True])
+def test_unresolved_only_source_contributes_areas(tmp_path, monkeypatch, mixed):
+    import numpy as np
+    a = _tif(tmp_path / 'a.tif', _slope((128, 128)), X0, Y0)
+    prov = _ec(tmp_path / 'provenance.tif', np.full((128, 128), 41))
+    grids = {'usgs-a': a}
+    if mixed:
+        grids['usgs-b'] = _tif(tmp_path / 'b.tif', _slope((128, 128)), X0 + 256, Y0)
+    doc = _run_builder(monkeypatch, grids, _sources(*grids), '--provenance', f'usgs-a={prov}')
+    entry = doc['provenance']['sources'][0]
+    assert entry['supported_blocks'] == 0 and entry['provenance_counts']['unresolved'] == 256
+    own = [f for f in doc['features'] if f['properties']['source_id'] == 'usgs-a']
+    assert len(own) == 1 and own[0]['properties']['reason'] == 'conflict'
+    assert own[0]['properties']['blocks'] == 256
+    assert any(f['properties']['kind'] == 'contour' for f in doc['features']) == mixed
+
+
 # sha256 of the output JSON, written by the builder before EC5 on these fixtures; without --provenance it must not move.
 FROZEN = {'slope': '3046a67e2b992103d4bdac5c02de98419ffead5c69642469e73095494fe73697',
           'seam': '6e1108d81aaad2d0b58d7f8ac4ad1e4ca77d01a419f5c9a4148ecbfd6a4a1476'}
@@ -480,7 +531,7 @@ def test_without_provenance_the_output_matches_the_frozen_pre_change_bytes(tmp_p
 
 @pytest.mark.parametrize('case,message', [
     ('unknown id', 'only for a source given with --grid'), ('size', 'does not match the survey grid'),
-    ('transform', 'does not match the survey grid'), ('no tag', 'no EC_VERSION tag')])
+    ('transform', 'does not match the survey grid'), ('no tag', 'no EC_VERSION tag'), ('vrt', 'must be a GeoTIFF')])
 def test_provenance_refusals_come_before_any_read(tmp_path, monkeypatch, case, message):
     import hashlib
     import numpy as np
@@ -488,6 +539,13 @@ def test_provenance_refusals_come_before_any_read(tmp_path, monkeypatch, case, m
     a = _tif(tmp_path / 'a.tif', _slope((64, 64)), X0, Y0)
     shape, x0, tags = ((32, 32) if case == 'size' else (64, 64)), (X0 + 16 if case == 'transform' else X0), None
     prov = _ec(tmp_path / 'provenance.tif', np.full(shape, 10), tags={} if case == 'no tag' else None, x0=x0)
+    if case == 'vrt':
+        from rasterio.shutil import copy as raster_copy
+        vrt = tmp_path / 'provenance.vrt'
+        raster_copy(prov, vrt, driver='VRT')
+        prov = vrt
+        with rasterio.open(prov) as ds:
+            assert ds.driver == 'VRT' and ds.tags()['EC_VERSION'] == '1.0'
     reads = []
     monkeypatch.setattr(rasterio.io.DatasetReader, 'read', lambda *a, **k: reads.append(a))
     monkeypatch.setattr(hashlib, 'file_digest', lambda *a, **k: reads.append(a))
