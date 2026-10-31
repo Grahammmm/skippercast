@@ -261,6 +261,26 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) {
     await expect(page.locator('.app-firstrun')).toHaveCount(0);
     expect(pageErrors).toEqual([]);
   });
+
+  test(`Layers on a first visit shows the layers, not the first-run card, on the ${width}px phone`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(!isMobile, 'phone layout only');
+    await page.setViewportSize({width, height});
+    await v2.open('app', {region: 'morro-bay'});
+    const card = page.locator('.ui-sheet-body > .app-firstrun'), layers = page.locator('.app-sheet-layers');
+    await expect(card).toBeVisible();
+    await page.locator('button[aria-label="Layers"]').click();
+    await expect(layers).toBeVisible();
+    await expect(layers.locator('.app-sheet-head', {hasText: 'Layers'})).toBeInViewport();
+    await expect(page.locator('.app-firstrun')).toHaveCount(0);
+    expect(page.url()).not.toMatch(/[?&]profile=/);
+    await page.locator('button[aria-label="Layers"]').click();
+    await expect(layers).toHaveCount(0);
+    await expect(card).toBeVisible();
+    await card.locator('button[data-profile="boat"]').click();
+    await expect(card).toHaveCount(0);
+    await expect(page).toHaveURL(/[?&]profile=boat/);
+    expect(pageErrors).toEqual([]);
+  });
 }
 
 // FE-07: synthetic feeds at a fixed clock (no test reads the real time or a live service).

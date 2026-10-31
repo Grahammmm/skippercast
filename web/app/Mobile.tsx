@@ -57,6 +57,9 @@ export function toggleLayers(panel: Panel, detent: Detent): {panel: Panel; deten
   return panel === 'layers' ? {panel: 'brief', detent} : {panel: 'layers', detent: detent === 'peek' ? 'half' : detent};
 }
 
+/** The first-run prompt yields the sheet to the layers panel; it is still due and returns when Layers closes. */
+export const showsFirstRun = (panel: Panel): boolean => panel !== 'layers';
+
 /** The hour slider and its readout, pinned at the sheet's top edge. */
 export function HourEdge({now}: {now: Date}) {
   const tz = zone(), state = dockState(now, tz), outside = state.index < 0;
@@ -149,7 +152,7 @@ export function Mobile({now = new Date(), firstRun}: {now?: Date; firstRun?: Com
           // Pointer focus must not move a pressed choice before its click is delivered.
           if (target?.closest('.app-firstrun') && target.matches(':focus-visible') && detent !== 'full') setDetent('full');
         }}>
-        {firstRun}
+        {showsFirstRun(panel) ? firstRun : null}
         {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : appView.value === 'conditions' ? <Conditions now={now} /> : appView.value === 'fleet' ? <Fleet onShowMap={() => setDetent('peek')} /> : appView.value === 'history' ? <History now={now} /> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
       </Sheet>}
       <ViewNav icons class="app-tabs" />

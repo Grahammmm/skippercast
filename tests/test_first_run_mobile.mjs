@@ -14,6 +14,7 @@ async function load() {
   const outfile = join(await mkdtemp(join(tmpdir(), 'first-run-mobile-')), 'app.mjs');
   await build({stdin: {resolveDir: root, loader: 'ts', contents: `
     export {App, narrow} from './web/app/App.tsx';
+    export {showsFirstRun} from './web/app/Mobile.tsx';
     export * as state from './web/state.ts';
     export {h} from 'preact';
     export {render} from 'preact-render-to-string';`},
@@ -36,6 +37,12 @@ test('the mobile prompt is inside the sheet scroll body in every sheet view', as
     assert.match(html, /class="ui-sheet-body"><section class="app-firstrun"/);
     assert.equal((html.match(/class="app-firstrun"/g) || []).length, 1);
   }
+});
+
+test('the layers panel takes the sheet from the first-run prompt, which returns with the brief', async () => {
+  const {showsFirstRun} = await load();
+  assert.equal(showsFirstRun('brief'), true);
+  assert.equal(showsFirstRun('layers'), false);
 });
 
 test('mobile Reports keeps the first-run prompt inside its scrollable page', async () => {
