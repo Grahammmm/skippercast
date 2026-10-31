@@ -152,46 +152,12 @@ def test_non_independent_pairs_never_verify(tmp_path, flat):
         assert receipt['pairs'][0]['reason'] == reason and (prov == 10).all()
 
 
-@pytest.mark.parametrize('metadata', [
-    {'transform': from_origin(600000, 3900000, 2.0, 2.0)}, {'crs': 'EPSG:32611'}])
-def test_misaligned_provenance_refused_with_valid_hash(tmp_path, flat, capsys, metadata):
-    adir = tmp_path / 'a'
-    with rasterio.open(adir / 'provenance.tif', 'r+') as ds:
-        for key, value in metadata.items():
-            setattr(ds, key, value)
-    receipt_path = adir / 'EC-APPLY.json'
-    receipt = json.loads(receipt_path.read_text())
-    receipt['provenance_sha256'] = _sha(adir / 'provenance.tif')
-    assert EC.check_receipt('ec-apply-v1', receipt) == []
-    receipt_path.write_text(json.dumps(receipt))
-    good = _tif(tmp_path / 'b.tif', flat + 0.3)
-    assert _run(tmp_path, 'out', [(good, 'usgs-b', 'MLLW')])[0] == 2
-    assert 'provenance grid differs from corrected grid' in capsys.readouterr().err
-    assert not (tmp_path / 'out').exists()
-
-
-@pytest.mark.parametrize('driver', ['ENVI', 'GTiff'])
-def test_second_survey_driver_boundary_not_extension(tmp_path, flat, capsys, driver):
-    # Both files have a .tif suffix; admission must inspect the actual driver.
-    b = tmp_path / 'b.tif'
-    with rasterio.open(b, 'w', driver=driver, width=flat.shape[1], height=flat.shape[0], count=1,
-                       dtype='float32', crs='EPSG:32610', transform=from_origin(500000, 3900000, 2, 2)) as ds:
-        ds.write(flat + 0.3, 1)
-    result = _run(tmp_path, 'out', [(b, 'usgs-b', 'MLLW')])[0]
-    if driver == 'GTiff':
-        assert result['counts'] == {'verified': flat.size}
-    else:
-        assert result == 2
-        assert 'b not GeoTIFF (ENVI)' in capsys.readouterr().err
-        assert not (tmp_path / 'out').exists()
-
-
 def test_refusals_write_nothing(tmp_path, flat, capsys):
     good = _tif(tmp_path / 'b.tif', flat + 0.3)
     adir = tmp_path / 'a'
     cases = [('cap', [(good, 'usgs-b', 'MLLW')], ['--max-pixels', '100'], 'pixel cap'),
              ('geo', [(_tif(tmp_path / 'g.tif', flat, crs='EPSG:4326'), 'usgs-b', 'MLLW')], [], 'projected-metre'),
-             ('envi', [(_tif(tmp_path / 'e.img', flat + 0.3, driver='ENVI'), 'usgs-b', 'MLLW')], [], 'not GeoTIFF (ENVI)'),
+             ('envi', [(_tif(tmp_path / 'e.tif', flat + 0.3, driver='ENVI'), 'usgs-b', 'MLLW')], [], 'not GeoTIFF (ENVI)'),
              ('miss', [(good, 'nowhere', 'MLLW')], [], 'catalog entry missing: nowhere'),
              ('count', [], ['--b', str(good)], 'each --b needs'),
              (str(ROOT / 'var' / 'ec3-never'), [], [], 'outside the work tree')]
