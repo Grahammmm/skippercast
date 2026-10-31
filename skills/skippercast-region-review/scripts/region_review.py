@@ -357,7 +357,10 @@ def main(argv=None):
                 print(f'REVIEW OK {region_id} {overall}')
             return 1 if errors else 0
         target = folder / 'REVIEW-PACKET/review.json'
-        if target.exists():
+        names = ('REVIEW-PACKET', 'REVIEW-PACKET/review.json', 'REVIEW-PACKET/review.json.tmp')
+        if name := next((n for n in names if (folder / n).is_symlink()), None):
+            raise ValueError(f'refusing a symlinked {name} in the run folder')
+        if os.path.lexists(target):
             raise ValueError(f'refusing to overwrite {target}')
         packet = review(folder)
         atomic_json(target, packet)

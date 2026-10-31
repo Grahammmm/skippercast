@@ -77,6 +77,15 @@ jobs:
     # Self-hosted CI is opt-in only after its complete setup is verified. Fork PRs
     # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
+    # Pull requests keep one `pr` leg. The full tier runs as parallel parts: the two
+    # slowest coast modules alone, everything else in `rest` (AUD-SC7). The gate
+    # reads the aggregate result, which is success only when every leg passes.
+    strategy:
+      fail-fast: false
+      matrix:
+        part: ${{ github.event_name == 'pull_request' && fromJSON('["pr"]') || fromJSON('["close-safety", "segment-close", "rest"]') }}
+    env:
+      REPORT: ${{ matrix.part == 'pr' && 'pytest-survey' || format('pytest-survey-{0}', matrix.part) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -93,20 +102,31 @@ jobs:
         run: python -m pip install -e . -r requirements-survey.txt -r requirements-ocean.txt -r requirements-publish.txt -r requirements-test.txt
       - name: Rebuild and validate species search footprints
         # Geometry tests already belong to the selected GIS suite below.
+        if: matrix.part == 'pr' || matrix.part == 'rest'
         run: python scripts/build_search_plans.py
       - name: Committed search plans match their sources
+        if: matrix.part == 'pr' || matrix.part == 'rest'
         run: |
           if ! git diff --quiet; then
             echo "::error::Rebuilt search plans differ from the commit. Run 'python scripts/build_search_plans.py' and commit the result; do not edit dist/ by hand."
             git diff --stat
             exit 1
           fi
-      - name: Full Python suite (every layer, GIS required)
+      - name: Full Python suite, part ${{ matrix.part }} (every layer, GIS required)
         if: github.event_name != 'pull_request'
         env:
           SKIPPERCAST_REQUIRE_GIS: "1"
+          PART: ${{ matrix.part }}
         # JUnit goes outside the checkout, so no report file can end up in a repository scan.
-        run: python -m pytest --durations=15 --junitxml="$RUNNER_TEMP/pytest-survey.xml"
+        # `rest` ignores exactly the files the other parts run, so a new test file lands in it.
+        run: |
+          case "$PART" in
+            close-safety) args="tests/gis/test_coast_close_safety.py" ;;
+            segment-close) args="tests/gis/test_coast_segment_close.py" ;;
+            rest) args="--ignore=tests/gis/test_coast_close_safety.py --ignore=tests/gis/test_coast_segment_close.py" ;;
+            *) echo "::error::Unknown full-suite part '$PART'"; exit 1 ;;
+          esac
+          python -m pytest --durations=15 --junitxml="$RUNNER_TEMP/$REPORT.xml" $args
       # PR tier: the core layers already run in `check`, and three coast modules take
       # about 30 of the full suite's 40 minutes; they run on main and nightly.
       - name: GIS layer, slow coast modules excluded (pull request tier)
@@ -114,24 +134,24 @@ jobs:
         env:
           SKIPPERCAST_REQUIRE_GIS: "1"
         run: >-
-          python -m pytest -m gis --durations=15 --junitxml="$RUNNER_TEMP/pytest-survey.xml"
+          python -m pytest -m gis --durations=15 --junitxml="$RUNNER_TEMP/$REPORT.xml"
           --ignore=tests/gis/test_coast_close_safety.py
           --ignore=tests/gis/test_coast_segment_close.py
           --ignore=tests/gis/test_coast_sign_off_graph.py
       - name: Test summary; fail on any skip outside the private-cache allowlist
         if: always()
         env:
-          TITLE: ${{ github.event_name == 'pull_request' && 'Python, GIS layer, PR tier (survey-science)' || 'Python, full suite (survey-science)' }}
+          TITLE: ${{ github.event_name == 'pull_request' && 'Python, GIS layer, PR tier (survey-science)' || format('Python, full suite part {0} (survey-science)', matrix.part) }}
         run: |
-          junit="$RUNNER_TEMP/pytest-survey.xml"
+          junit="$RUNNER_TEMP/$REPORT.xml"
           if [ ! -f "$junit" ]; then echo "::error::pytest wrote no JUnit report"; exit 1; fi
           python scripts/pytest_report.py "$junit" --title "$TITLE" --strict-skips >> "$GITHUB_STEP_SUMMARY"
       - name: Upload JUnit results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: pytest-survey
-          path: ${{ runner.temp }}/pytest-survey.xml
+          name: ${{ env.REPORT }}
+          path: ${{ runner.temp }}/${{ env.REPORT }}.xml
           if-no-files-found: ignore
           retention-days: 14
   e2e:

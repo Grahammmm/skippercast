@@ -46,6 +46,7 @@ async function load() {
       export {Legend, RankedRow} from './web/app/Legend.tsx';
       export {rankedSpots} from './web/map/ranked.ts';
       export {landWater} from './web/land-water.ts';
+      export {publishedChartFiles} from './web/chart-files.ts';
       export {markScreen} from './web/map/marks.ts';
       export {regionUnavailable} from './web/species.ts';
       export {CHECKING, assessScreen} from './web/map/habitat.ts';
@@ -121,6 +122,23 @@ test('startup region reader bounds body work and holds non-cooperative slots', a
   await new Promise(resolve => setImmediate(resolve));
   assert.equal((await reader('b')).name, 'Late A');
   assert.equal(reads, 2);
+});
+
+test('RF0850-2: a region change marks its chart file list pending until loadRegion publishes it or fails open', async () => {
+  const {loadRegion, publishedChartFiles, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  state.syncFromURL(`${ORIGIN}?region=rf0850-a`);
+  assert.deepEqual(publishedChartFiles.peek(), {region: 'rf0850-a', files: null, pending: true}, 'pending, not null: the Chart waits');
+  const json = body => async () => new Response(JSON.stringify(body));
+  await loadRegion('rf0850-a', json({name: 'A', map: {center: [1, 2]}, chart_files: []}));
+  assert.deepEqual(publishedChartFiles.peek(), {region: 'rf0850-a', files: []});
+  state.syncFromURL(`${ORIGIN}?region=rf0850-b`);
+  assert.deepEqual(publishedChartFiles.peek(), {region: 'rf0850-b', files: null, pending: true});
+  assert.equal(await loadRegion('rf0850-b', async () => ({ok: false})), null);
+  assert.deepEqual(publishedChartFiles.peek(), {region: 'rf0850-b', files: null}, 'a failed read: no list, every file fails open');
+  state.syncFromURL(`${ORIGIN}?region=rf0850-c`);
+  assert.equal(await loadRegion('rf0850-c', async () => { throw new Error('offline'); }), null);
+  assert.deepEqual(publishedChartFiles.peek(), {region: 'rf0850-c', files: null});
 });
 
 test('app region publication shares a cold read but only the latest selection publishes', async () => {

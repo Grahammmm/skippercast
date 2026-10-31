@@ -18,7 +18,9 @@ import {readPalette} from '../web/map/palette.ts';
 import {mpaLayers, mpaMark, mpaQuery} from '../web/map/mpa.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from '../web/map/style.ts';
 import {camera, cameraParam, choosePresentation, createStage, drape, terrainFailed, terrainPick, zoomForSpan} from '../web/map/stage.ts';
-import {configureStore, setParams, syncFromURL} from '../web/state.ts';
+import {configureStore, region, setParams, syncFromURL} from '../web/state.ts';
+import {effect} from '@preact/signals';
+import {publishedChartFiles} from '../web/chart-files.ts';
 
 const PAGE = 'https://s.test/map';
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -478,6 +480,39 @@ test('a failing source marks its layer unavailable and the rest of the Chart kee
   assert.equal(map.data[COASTLINE_SOURCE], 'https://s.test/regions/cambria-san-simeon/shoreline-overview.geojson');
   stage.destroy();
   assert.deepEqual(unavailable.value, []);
+});
+
+test('RF0850-2: the Chart asks for no shoreline while region.json loads, and none once the loaded list lacks it (mount and region change)', async t => {
+  t.mock.method(console, 'warn', () => {});
+  browser(`${PAGE}?region=morro-bay&presentation=chart`);
+  // As App.tsx's module effect, which exists before any Chart: a region change marks its list pending first.
+  const app = effect(() => { const id = region.value; publishedChartFiles.value = id ? {region: id, files: null, pending: true} : null; });
+  t.after(() => { app(); publishedChartFiles.value = null; });
+  const {fake, stage} = chartStage();
+  await tick(); await tick();
+  const [map] = fake.maps;
+  const shore = () => (map.dataCalls ?? []).filter(([id]) => id === COASTLINE_SOURCE).map(([, data]) => data);
+  const EMPTY = {type: 'FeatureCollection', features: []};
+  assert.deepEqual(map.options.style.sources[COASTLINE_SOURCE].data, EMPTY, 'mounted while pending: the style asks for no shoreline');
+  assert.deepEqual(shore(), []);
+  assert.equal(unavailable.value.includes('coastline'), false, 'not judged before the list is known');
+  publishedChartFiles.value = {region: 'morro-bay', files: ['shoreline.geojson', 'shoreline-overview.geojson']};
+  await tick();
+  assert.deepEqual(shore(), ['https://s.test/regions/morro-bay/shoreline-overview.geojson'], 'listed: asked once the list is known');
+
+  setParams({region: 'cambria-san-simeon'});
+  await tick();
+  assert.deepEqual(shore(), ['https://s.test/regions/morro-bay/shoreline-overview.geojson'], 'pending for the new region: nothing asked');
+  assert.equal(unavailable.value.includes('coastline'), false);
+  publishedChartFiles.value = {region: 'cambria-san-simeon', files: []};
+  await tick();
+  assert.deepEqual(shore(), ['https://s.test/regions/morro-bay/shoreline-overview.geojson', EMPTY], 'no shoreline URL: the old one is cleared');
+  assert.deepEqual(unavailable.value.filter(layer => layer === 'coastline'), ['coastline'], 'marked unavailable');
+  publishedChartFiles.value = {region: 'cambria-san-simeon', files: []};  // republished, as by a retry
+  await tick();
+  assert.deepEqual(unavailable.value.filter(layer => layer === 'coastline'), ['coastline'], 'once');
+  assert.equal(shore().filter(data => typeof data === 'string' && data.includes('cambria')).length, 0, 'Cambria\'s shoreline is never requested');
+  stage.destroy();
 });
 
 test('ENC recovers only from a loaded tile of the current source and region generation', async t => {

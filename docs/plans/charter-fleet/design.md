@@ -1271,6 +1271,8 @@ install → `FLEET_MAP_ENABLED`.
 | Uptime and gaps | `fleet_ais_hours` | AIS health page; fleet report |
 | Daily summary | `scripts/ops_report.py` | one line: heartbeat age, 24 h messages, open fleet issue |
 
+The health answer also carries a derived `cause` (`processor-not-delivered`, `listener-stale`, `no-messages`, `no-data` or `none`), which the issue text names.
+
 ## 19. Monthly cost estimate
 
 Target: $0 beyond the existing Cloudflare plan and Hermes (D16).
