@@ -153,6 +153,34 @@ test('a mounted release follows Chart, gives way to a new region and is destroye
   assert.equal(kept.destroyed, 1, 'destroy() destroys the view');
 });
 
+test('region round trips replace legacy terrain with the listed C2 release without remounting the stage', async () => {
+  for (const initial of ['cambria-san-simeon', 'morro-bay']) {
+    browser(`${ORIGIN}?region=${initial}&presentation=3d`);
+    const views = [], fake = terrain(() => { const v = view(); views.push(v); return v; }), s = stage(fake, ON);
+    try {
+      await settle();
+      if (initial === 'morro-bay') {
+        navigate(`${ORIGIN}?region=cambria-san-simeon&presentation=3d`); await settle();
+        assert.equal(views[0].destroyed, 1);
+      }
+      assert.equal(fake.mounts, 1);
+      for (let trip = 0; trip < 2; trip++) {
+        navigate(`${ORIGIN}?region=morro-bay&presentation=3d`); await settle();
+        assert.equal(fake.destroyed, trip + 1, 'the legacy renderer gives way to C2');
+        assert.equal(fake.releases.length, (initial === 'morro-bay' ? 1 : 0) + trip + 1);
+        assert.equal(views.at(-1).visible.at(-1), true);
+        assert.equal(terrainFailed.value, false);
+        navigate(`${ORIGIN}?region=cambria-san-simeon&presentation=3d`); await settle();
+        assert.equal(views.at(-1).destroyed, 1);
+        assert.equal(fake.mounts, trip + 2, 'the unlisted region gets legacy terrain again');
+      }
+      assert.deepEqual(fake.releases, Array(views.length).fill(MORRO));
+    } finally { s.stage.destroy(); }
+    assert.equal(fake.destroyed, fake.mounts);
+    assert.ok(views.every(v => v.destroyed === 1));
+  }
+});
+
 test('a release answering after the region changed, or after destroy, is dropped', async () => {
   for (const late of ['region', 'destroy']) {
     browser(`${ORIGIN}?region=morro-bay&presentation=3d`);

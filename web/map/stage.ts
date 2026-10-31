@@ -263,9 +263,9 @@ export function drape(h: Pick<CoastHandle, 'setOverlay' | 'removeOverlay'>, feed
 export function createStage(options: StageOptions): Stage {
   const {host, load = loadTerrain, now = () => new Date(), doc = document, viewDelay = 400} = options;
   const handle = signal<CoastHandle | null>(null);
-  // A mounted C2 release view (M9) and the region it shows; it stands in for the handle.
+  // A mounted C2 release view (M9); either renderer records the region it mounted for.
   const c2View = signal<C2View | null>(null);
-  let c2Region: string | null = null, again = false;
+  let mountedRegion: string | null = null, again = false;
   let applied: Partial<Record<keyof TerrainState, string>> = {};
   let draped = new Map<string, TerrainLayer>(), overlayPalette: Palette | undefined;
   // The native controls start at TERRAIN_DEFAULTS, so a fresh mount needs only the differences.
@@ -343,7 +343,7 @@ export function createStage(options: StageOptions): Stage {
         // A view for a region already left goes; the finally mounts for the region shown now.
         const stale = !alive || region.peek() !== at;
         if (stale) { if (!('refused' in result)) result.destroy(); again = alive; return; }
-        if (!('refused' in result)) { delete host.dataset.c2; c2Region = at; c2View.value = result; return; }
+        if (!('refused' in result)) { delete host.dataset.c2; mountedRegion = at; c2View.value = result; return; }
         // A refused release is not a graphics failure: the reviewed coast mounts as before.
         host.dataset.c2 = 'refused: ' + result.refused;
       }
@@ -398,10 +398,11 @@ export function createStage(options: StageOptions): Stage {
       });
       for (const name of ORDER) applied[name] = key(state[name]);
       markHour(state.hour);
+      mountedRegion = at;
       handle.value = h;
       terrainActions.value = {zoom: direction => h.zoom(direction), reset, top: () => h.topView(), sources: () => h.openSources()};
       const ready = await h.load();
-      if (alive && !ready) fail(new Error('Coastal terrain did not load'));
+      if (alive && handle.peek() === h && !ready) fail(new Error('Coastal terrain did not load'));
     } catch (error) {
       if (alive) fail(error);
     } finally {
@@ -425,12 +426,17 @@ export function createStage(options: StageOptions): Stage {
     // A link selection (a mark, a terrain habitat, Back) or a new region replaces a picked overlay's card.
     effect(() => { selection.value; habitat.value; region.value; terrainPick.value = null; terrainReading.value = null; }),
     effect(() => { if (current.value === UNSUPPORTED) currentStatus.value = UNSUPPORTED_CURRENT; else if (current.value === 'off') currentStatus.value = ''; }),
-    // The C2 view hides with Chart as the terrain does; a new region replaces it with that region's terrain.
+    // The C2 view hides with Chart as the terrain does.
     effect(() => { const v = c2View.value; if (v) v.setVisible(wanted.value.visible); }),
+    // Reconcile both renderer kinds: legacy terrain must give way to a listed release,
+    // but a refusal's legacy fallback stays mounted for that same region.
     effect(() => {
-      const v = c2View.value, id = region.value;
-      if (!v || id === c2Region) return;
-      c2View.value = null; v.destroy();
+      const v = c2View.value, h = handle.value, id = region.value;
+      if (id === mountedRegion || (!v && !(h && c2Release(id, options.c2)))) return;
+      if (v) { c2View.value = null; v.destroy(); }
+      if (h) release();
+      // A legacy handle may still be loading; retry after its mount finishes.
+      again = mounting;
       if (shownPresentation.peek() !== 'chart') void mount();
     }),
   ];
