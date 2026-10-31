@@ -22,7 +22,9 @@ that function hashes whatever ``sys.path`` and the installed distributions
 expose, and other tests on the same xdist worker legitimately change both (some
 research scripts prepend host-local dependency directories to ``sys.path`` on
 import). An in-process identity then differs from the controller's, every job
-is invalidated as stale, and every controller run returns ``idle``.
+is invalidated as stale, and every controller run returns ``idle``. (A harness
+built without a package export never starts a controller child, so it keeps
+the in-process identity.)
 """
 import copy
 import json
@@ -201,13 +203,18 @@ class Harness:
         self.offset = offset
         self.Store = Store
         self.store = self.open()
-        self.identity = self.base / "identity.py"
-        self.identity.write_text(IDENTITY)
         self.code, self.deps = self._implementation_identity()
         self._segments = 0
         self._runs = 0
 
     def _implementation_identity(self):
+        if not (self.export / "skippercast").is_dir():
+            # In-process harness (no package export, no controller child): the
+            # test process is the only executor, so its own identity is the one.
+            import skippercast.coastal.coordinator.loop as loop
+            return loop.implementation_hashes(self.root)
+        self.identity = self.base / "identity.py"
+        self.identity.write_text(IDENTITY)
         done = subprocess.run([sys.executable, "-B", str(self.identity), str(self.export), str(self.root)],
                               env=self.environment(), capture_output=True, text=True, timeout=60)
         assert done.returncode == 0, done.stderr[-4000:]
