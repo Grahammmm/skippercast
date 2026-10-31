@@ -28,21 +28,27 @@ import {camera} from './stage.ts';
 import {LABEL_FONT} from './style.ts';
 
 const REGISTRY_ID = 'depth-contours';
+/** EC6 (docs/seafloor-ec.md): where the survey could not be verified, a muted area under a dashed outline. */
+export const DEPTH_UNRESOLVED_FILL = 'depth-contours-unresolved-fill';
+export const DEPTH_UNRESOLVED_LINE = 'depth-contours-unresolved-line';
 export const DEPTH_EDGE = 'depth-contours-edge';
 export const DEPTH_LINE = 'depth-contours-line';
-/** A transparent wide line over every contour and edge: the click target. */
+/** A transparent wide line over every contour, edge and unresolved outline: the click target (the area's fill is one too). */
 export const DEPTH_HIT = 'depth-contours-hit';
 /** Labels on the index contours at every zoom, and on the others from DETAIL_ZOOM. */
 export const DEPTH_LABEL = 'depth-contours-label';
 export const DEPTH_LABEL_MINOR = 'depth-contours-label-minor';
 /** The overlay's bottom layer: the fields below it (water temperature, swell) draw under it (§ 9 order). */
-export const DEPTH_BOTTOM = DEPTH_EDGE;
+export const DEPTH_BOTTOM = DEPTH_UNRESOLVED_FILL;
 /** The MapLibre zoom the full contours load from (depth_contours.py OVERVIEW_MAX_ZOOM); `?view=` zooms are ZOOM_OFFSET more. */
 export const DETAIL_ZOOM = 12;
 /** depth_contours.py INTERVAL_FT and INDEX_FT. */
 export const INTERVAL_FT = 30;
 export const INDEX_FT = 150;
-const KINDS = ['contour', 'survey-edge'];
+const KINDS = ['contour', 'survey-edge', 'unresolved-area'];
+/** seafloor_ec.py PROVENANCE_CLASSES and UNRESOLVED_REASONS. */
+const PROVENANCE = ['measured', 'filled', 'verified'];
+const REASONS = ['hole', 'conflict', 'ring-range', 'datum-suspect', 'nodata'];
 
 export const depthContoursURL = (id: string): string => `regions/${encodeURIComponent(id)}/depth-contours.geojson`;
 export const depthContoursOverviewURL = (id: string): string => `regions/${encodeURIComponent(id)}/depth-contours-overview.geojson`;
@@ -96,10 +102,18 @@ export const contourState = signal<ContourState>(IDLE);
 const obj = (v: unknown): Json | null => v && typeof v === 'object' && !Array.isArray(v) ? v as Json : null;
 const text = (v: unknown): string => typeof v === 'string' ? v.trim() : '';
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const points = (l: unknown, min: number): l is unknown[][] =>
+  Array.isArray(l) && l.length >= min && l.every(p => Array.isArray(p) && p.length >= 2 && p.every(n => Number.isFinite(n)));
 const line = (g: Json | null): boolean => {
-  const type = text(g?.type), c = g?.coordinates;
-  const ok = (l: unknown): boolean => Array.isArray(l) && l.length >= 2 && l.every(p => Array.isArray(p) && p.length >= 2 && p.every(n => Number.isFinite(n)));
+  const type = text(g?.type), c = g?.coordinates, ok = (l: unknown): boolean => points(l, 2);
   return type === 'LineString' ? ok(c) : type === 'MultiLineString' && Array.isArray(c) && c.length > 0 && c.every(ok);
+};
+/** A (Multi)Polygon whose every ring has at least 4 finite points and ends where it starts. */
+const area = (g: Json | null): boolean => {
+  const type = text(g?.type), c = g?.coordinates;
+  const ring = (r: unknown): boolean => points(r, 4) && JSON.stringify(r[0]) === JSON.stringify(r.at(-1));
+  const rings = (p: unknown): boolean => Array.isArray(p) && p.length > 0 && p.every(ring);
+  return type === 'Polygon' ? rings(c) : type === 'MultiPolygon' && Array.isArray(c) && c.length > 0 && c.every(rings);
 };
 
 /**
@@ -124,30 +138,45 @@ export function assessContours(data: unknown, id: string, today: string): Contou
   const byId = new Map(sources.map(s => [s.source_id, s]));
   const valid = list.every(f => {
     const props = obj(obj(f)?.properties), s = byId.get(text(props?.source_id));
-    if (!props || !s || !KINDS.includes(text(props.kind)) || props.survey_date !== s.survey_date || props.vertical_datum !== s.vertical_datum) return false;
+    // The kind is matched exactly, as the layer filters match it: a padded kind would pass here and draw nowhere.
+    if (!props || !s || !KINDS.includes(props.kind as string) || props.survey_date !== s.survey_date || props.vertical_datum !== s.vertical_datum) return false;
     const depth = props.depth_ft;
     if (props.kind === 'contour' && !(Number.isInteger(depth) && (depth as number) > 0 && (depth as number) % INTERVAL_FT === 0)) return false;
-    return line(obj(obj(f)?.geometry));
+    if (props.provenance !== undefined && !PROVENANCE.includes(props.provenance as string)) return false;
+    // An unresolved area is a polygon with a known reason; only a conflict carries the shallower reading.
+    if (props.kind !== 'unresolved-area') return line(obj(obj(f)?.geometry));
+    const hint = props.shoal_hint_ft, conflict = props.reason === 'conflict';
+    if (!REASONS.includes(props.reason as string)) return false;
+    if (conflict ? !(Number.isInteger(hint) && (hint as number) > 0) : hint !== undefined) return false;
+    return area(obj(obj(f)?.geometry));
   });
   if (!valid) return failed;
   if (today > expires) return {status: 'withheld', data: null, sources, expires, omitted};
   return {status: 'drawn', data: {type: 'FeatureCollection', features: list as Json[]}, sources, expires, omitted};
 }
 
-/** Survey edge (dashed), contours (index heavier), the click target, then the labels in feet. */
+/** Unresolved areas (muted, dashed outline), survey edge (dashed), contours (index heavier, verified heavier still,
+ * filled dashed), the click target, then the labels in feet. */
 export function contoursOverlay(p: Palette, data: ContourCollection): Overlay {
   const contour = ['==', ['get', 'kind'], 'contour'], index = ['==', ['get', 'index'], true];
+  const unresolved = ['==', ['get', 'kind'], 'unresolved-area'];
+  const heavier = (w: unknown) => ['*', w, ['case', ['==', ['get', 'provenance'], 'verified'], 1.25, 1]];
   const label = {'symbol-placement': 'line', 'text-field': ['concat', ['to-string', ['get', 'depth_ft']], ' ft'], 'text-font': [LABEL_FONT],
     'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10, 14, 12], 'symbol-spacing': 320, 'text-max-angle': 30};
   const labelPaint = {'text-color': p.depth1, 'text-halo-color': p.bg, 'text-halo-width': 1.2};
   return {
     sources: {[DEPTH_CONTOURS_SOURCE]: {type: 'geojson', data, attribution: layerEntry(REGISTRY_ID).attribution} as MapLibre.SourceSpecification},
     layers: [
+      {id: DEPTH_UNRESOLVED_FILL, type: 'fill', source: DEPTH_CONTOURS_SOURCE, filter: unresolved, paint: {'fill-color': p.muted, 'fill-opacity': 0.18}},
+      {id: DEPTH_UNRESOLVED_LINE, type: 'line', source: DEPTH_CONTOURS_SOURCE, filter: unresolved, layout: {'line-join': 'round'},
+        paint: {'line-color': p.muted, 'line-width': 1, 'line-dasharray': [1, 2]}},
       {id: DEPTH_EDGE, type: 'line', source: DEPTH_CONTOURS_SOURCE, filter: ['==', ['get', 'kind'], 'survey-edge'], layout: {'line-join': 'round'},
         paint: {'line-color': p.muted, 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.8, 14, 1.4], 'line-dasharray': [2, 2], 'line-opacity': 0.8}},
       {id: DEPTH_LINE, type: 'line', source: DEPTH_CONTOURS_SOURCE, filter: contour, layout: {'line-join': 'round', 'line-cap': 'round'},
         paint: {'line-color': p.depth1,
-          'line-width': ['interpolate', ['linear'], ['zoom'], 8, ['case', index, 0.9, 0.4], 14, ['case', index, 1.6, 0.8]],
+          // A zoom curve must stay the outermost expression, so the verified factor multiplies each stop.
+          'line-width': ['interpolate', ['linear'], ['zoom'], 8, heavier(['case', index, 0.9, 0.4]), 14, heavier(['case', index, 1.6, 0.8])],
+          'line-dasharray': ['case', ['==', ['get', 'provenance'], 'filled'], ['literal', [4, 3]], ['literal', [1, 0]]],
           'line-opacity': ['case', index, 0.85, 0.55]}},
       {id: DEPTH_HIT, type: 'line', source: DEPTH_CONTOURS_SOURCE, paint: {'line-color': p.depth1, 'line-width': 12, 'line-opacity': 0}},
       {id: DEPTH_LABEL, type: 'symbol', source: DEPTH_CONTOURS_SOURCE, filter: ['all', contour, index], layout: label, paint: labelPaint},
@@ -156,15 +185,34 @@ export function contoursOverlay(p: Palette, data: ContourCollection): Overlay {
   };
 }
 
+/** What a contour run's provenance adds to its card, and the card's reading for each unresolved reason (EC6). */
+const PROVENANCE_READING = new Map([
+  ['filled', ' Dashed: a small gap here was filled with the shallowest neighbouring depth; not measured at this spot.'],
+  ['verified', ' Two independent surveys agree here within the published tolerance.']]);
+const UNRESOLVED_READING = new Map([
+  ['hole', 'The survey has no usable measurement here; the gap is too large to fill safely.'],
+  ['conflict', 'Two surveys disagree here; the shallower reading is <shoal_hint_ft> ft. Treat as a possible shoal.'],
+  ['ring-range', 'A small gap on a steep or rough bottom; not filled.'],
+  ['datum-suspect', 'The two surveys may use different vertical datums; not compared.'],
+  ['nodata', 'No data.']]);
+
 /** The card for a clicked line, from its own properties and its listed survey: depth, interval, survey, date and datum,
  * then any bound survey the file does not draw (`omittedNote`). */
 export function contourMark(properties: Record<string, unknown> | null | undefined, sources: readonly ContourSource[], omitted: readonly OmittedSource[] = []): ChartMark | null {
   const p = properties ?? {}, s = sources.find(x => x.source_id === p.source_id);
-  if (!s || !KINDS.includes(text(p.kind))) return null;
+  if (!s || !KINDS.includes(p.kind as string)) return null;
   const source = `${s.name} · ${s.attribution || 'survey grid'} · surveyed ${s.survey_date} · ${s.vertical_datum}`;
   const basis = layerEntry(REGISTRY_ID).basis;
   const terms = /^https:\/\//.test(s.url) ? [{href: s.url, label: 'Survey data release'}] : undefined;
   const note = omittedNote(omitted), more = note ? ` ${note}` : '';
+  if (p.kind === 'unresolved-area') {
+    const hint = Number(p.shoal_hint_ft), reason = String(p.reason), reading = UNRESOLVED_READING.get(reason);
+    if (!reading || (reason === 'conflict' && !(Number.isInteger(hint) && hint > 0))) return null;
+    return {
+      id: `depth-contours:${s.source_id}:unresolved:${reason}`, name: 'Unverified / no data', kind: 'Where the survey could not be verified',
+      reading: `${reading.replace('<shoal_hint_ft>', String(hint))}${more}`, source, basis, ...(terms ? {terms} : {}),
+    };
+  }
   if (p.kind === 'survey-edge') return {
     id: `depth-contours:${s.source_id}:edge`, name: 'Survey edge', kind: 'Where the reviewed survey grid stops',
     reading: `No reviewed grid continues past this line, so no contours are drawn beyond it; that is missing data, not flat water.${more}`,
@@ -175,7 +223,7 @@ export function contourMark(properties: Record<string, unknown> | null | undefin
   return {
     id: `depth-contours:${s.source_id}:${depth}`, name: `${depth} ft depth contour`,
     kind: depth % INDEX_FT === 0 ? `Index contour · every ${INDEX_FT} ft` : `Depth contour · every ${INTERVAL_FT} ft`,
-    reading: `${depth} ft below the survey's ${s.vertical_datum}, traced from 16 m averaged blocks of the survey grid; not a sounding or a chart depth.${more}`,
+    reading: `${depth} ft below the survey's ${s.vertical_datum}, traced from 16 m averaged blocks of the survey grid; not a sounding or a chart depth.${PROVENANCE_READING.get(p.provenance as string) ?? ''}${more}`,
     source, basis, ...(terms ? {terms} : {}),
   };
 }
@@ -235,7 +283,7 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
   ];
   return {
     destroy() { alive = false; for (const dispose of disposers) dispose(); contourState.value = IDLE; },
-    pick: {layers: [DEPTH_HIT] as const, ordered: true, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => {
+    pick: {layers: [DEPTH_HIT, DEPTH_UNRESOLVED_FILL] as const, ordered: true, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => {
       const l = loaded.peek();
       return l && l.result !== 'none' && l.result.status === 'drawn' ? contourMark(properties, l.result.sources, l.result.omitted) : null;
     }},
