@@ -38,6 +38,17 @@ import {
   appView, current, day, habitat, hour, layers, navigate, parseHour, presentation, profile, region, selection, setParams, species,
   stagePresentation, UNSUPPORTED, view, withParams, type AppView, type CurrentChoice,
 } from '../state.ts';
+import {C2_ENABLED, C2_RELEASES} from './c2-releases.ts';
+import type {C2View} from './terrain.js';
+
+/** The C2 flag (M9, web/map/c2-releases.ts): whether release views mount, and each listed region's manifest. */
+export interface C2Flag {readonly enabled: boolean; readonly releases: Readonly<Record<string, string>>}
+/** A region's C2 release manifest: only with the flag on and the region listed at its own path; else null. */
+export function c2Release(regionId: string | null, c2: C2Flag = {enabled: C2_ENABLED, releases: C2_RELEASES}): string | null {
+  if (!c2.enabled || !regionId || !Object.hasOwn(c2.releases, regionId)) return null;
+  const path = `/data/coast-c2/${regionId}/release-manifest.json`;
+  return c2.releases[regionId] === path ? path : null;
+}
 
 /** The shared camera as `?view=` writes it: centre in degrees and a web-map zoom. */
 export interface Camera {readonly latitude: number; readonly longitude: number; readonly zoom: number}
@@ -112,6 +123,8 @@ export function terrainState(i: TerrainInput): TerrainState {
 export interface TerrainModule {
   mountCoast(host: HTMLElement, options: CoastMountOptions): CoastHandle;
   readonly styles: readonly string[];
+  /** The C2 release view (M9); optional so a terrain module without it mounts the coast as before. */
+  loadC2?(): Promise<{mountRelease(host: HTMLElement, url: string): Promise<C2View | {refused: string}>}>;
 }
 export type TerrainLoader = () => Promise<TerrainModule>;
 const loadTerrain: TerrainLoader = () => import('./terrain.js');
@@ -134,6 +147,8 @@ export interface StageOptions {
   viewDelay?: number;
   /** Other presentations' renderers, created with the stage and destroyed with it: MapStage registers the Chart (FE-11, web/map/chart.ts). */
   renderers?: ReadonlyArray<() => Renderer>;
+  /** Test seam for the C2 flag; hosts never pass it, so web/map/c2-releases.ts decides. */
+  c2?: C2Flag;
 }
 
 /** A renderer the stage owns beside the terrain; it reads the stage's camera and presentation signals. */
@@ -248,6 +263,9 @@ export function drape(h: Pick<CoastHandle, 'setOverlay' | 'removeOverlay'>, feed
 export function createStage(options: StageOptions): Stage {
   const {host, load = loadTerrain, now = () => new Date(), doc = document, viewDelay = 400} = options;
   const handle = signal<CoastHandle | null>(null);
+  // A mounted C2 release view (M9); either renderer records the region it mounted for.
+  const c2View = signal<C2View | null>(null);
+  let mountedRegion: string | null = null, again = false;
   let applied: Partial<Record<keyof TerrainState, string>> = {};
   let draped = new Map<string, TerrainLayer>(), overlayPalette: Palette | undefined;
   // The native controls start at TERRAIN_DEFAULTS, so a fresh mount needs only the differences.
@@ -313,11 +331,22 @@ export function createStage(options: StageOptions): Stage {
   };
 
   async function mount(): Promise<void> {
-    if (mounting || handle.peek() || terrainFailed.peek()) return;
+    if (mounting || handle.peek() || c2View.peek() || terrainFailed.peek()) return;
     mounting = true;
     try {
       const terrain = await load();
       if (!alive) return;
+      const at = region.peek(), url = c2Release(at, options.c2);
+      if (url && terrain.loadC2) {
+        let result: C2View | {refused: string};
+        try { result = await (await terrain.loadC2()).mountRelease(host, url); } catch { result = {refused: 'unavailable'}; }
+        // A view for a region already left goes; the finally mounts for the region shown now.
+        const stale = !alive || region.peek() !== at;
+        if (stale) { if (!('refused' in result)) result.destroy(); again = alive; return; }
+        if (!('refused' in result)) { delete host.dataset.c2; mountedRegion = at; c2View.value = result; return; }
+        // A refused release is not a graphics failure: the reviewed coast mounts as before.
+        host.dataset.c2 = 'refused: ' + result.refused;
+      }
       const state = wanted.peek();
       overlayPalette = options.overlayPalette?.();
       const h = terrain.mountCoast(host, {
@@ -369,14 +398,16 @@ export function createStage(options: StageOptions): Stage {
       });
       for (const name of ORDER) applied[name] = key(state[name]);
       markHour(state.hour);
+      mountedRegion = at;
       handle.value = h;
       terrainActions.value = {zoom: direction => h.zoom(direction), reset, top: () => h.topView(), sources: () => h.openSources()};
       const ready = await h.load();
-      if (alive && !ready) fail(new Error('Coastal terrain did not load'));
+      if (alive && handle.peek() === h && !ready) fail(new Error('Coastal terrain did not load'));
     } catch (error) {
       if (alive) fail(error);
     } finally {
       mounting = false;
+      if (again) { again = false; if (shownPresentation.peek() !== 'chart') void mount(); }
     }
   }
 
@@ -395,6 +426,19 @@ export function createStage(options: StageOptions): Stage {
     // A link selection (a mark, a terrain habitat, Back) or a new region replaces a picked overlay's card.
     effect(() => { selection.value; habitat.value; region.value; terrainPick.value = null; terrainReading.value = null; }),
     effect(() => { if (current.value === UNSUPPORTED) currentStatus.value = UNSUPPORTED_CURRENT; else if (current.value === 'off') currentStatus.value = ''; }),
+    // The C2 view hides with Chart as the terrain does.
+    effect(() => { const v = c2View.value; if (v) v.setVisible(wanted.value.visible); }),
+    // Reconcile both renderer kinds: legacy terrain must give way to a listed release,
+    // but a refusal's legacy fallback stays mounted for that same region.
+    effect(() => {
+      const v = c2View.value, h = handle.value, id = region.value;
+      if (id === mountedRegion || (!v && !(h && c2Release(id, options.c2)))) return;
+      if (v) { c2View.value = null; v.destroy(); }
+      if (h) release();
+      // A legacy handle may still be loading; retry after its mount finishes.
+      again = mounting;
+      if (shownPresentation.peek() !== 'chart') void mount();
+    }),
   ];
   const renderers = (options.renderers ?? []).map(create => create());
   return {
@@ -405,6 +449,7 @@ export function createStage(options: StageOptions): Stage {
       for (const dispose of disposers) dispose();
       for (const renderer of renderers) renderer.destroy();
       doc.removeEventListener('visibilitychange', visibility);
+      c2View.peek()?.destroy(); c2View.value = null;
       release();
     },
   };
