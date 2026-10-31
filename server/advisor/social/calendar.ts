@@ -19,7 +19,7 @@
 // region's time zone (regions/<id>/region.json), so DST moves nothing.
 import calendar from '../../../catalog/advisor/calendar.json' with {type: 'json'};
 import {regionConfig} from '../answers/regions.ts';
-import {addDays, localDate, PACIFIC} from '../answers/time.ts';
+import {addDays, localDate, PACIFIC, realDate} from '../answers/time.ts';
 import {advisorLog} from '../log.ts';
 import {sha256} from '../ids.ts';
 import type {Env} from '../../env.ts';
@@ -173,7 +173,6 @@ export interface WeekSlot {slot: string; kind: string; region: string; time: str
 export interface WeekDay {date: string; weekday: Weekday; slots: WeekSlot[]; others: WeekPost[]}
 export interface CalendarWeek {tz: string; start: string; end: string; days: WeekDay[]}
 
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** The Monday on or before `date`. */
 export const mondayOf = (date: string): string => addDays(date, -((new Date(`${date}T12:00:00Z`).getUTCDay() + 6) % 7));
 
@@ -185,7 +184,7 @@ export const mondayOf = (date: string): string => addDays(date, -((new Date(`${d
  */
 export async function calendarWeek(db: D1Database, start: string | null, now: number, cal: Calendar = CALENDAR): Promise<CalendarWeek | {error: string}> {
   const tz = cal.slots[0] ? tzOf(cal.slots[0].region) : PACIFIC;
-  if (start && (!DATE.test(start) || !Number.isFinite(Date.parse(`${start}T12:00:00Z`)))) return {error: 'start must be YYYY-MM-DD'};
+  if (start && !realDate(start)) return {error: 'start must be YYYY-MM-DD'};
   const first = mondayOf(start ?? localDate(now, tz)), last = addDays(first, 6);
   const fromIso = zonedInstant(first, '00:00', tz), toIso = zonedInstant(addDays(first, 7), '00:00', tz);
   const rows = (await db.prepare(`SELECT p.id,p.kind,p.region,p.status,p.scheduled_for,p.posted_at,p.caption,b.name AS boat FROM advisor_posts p LEFT JOIN advisor_boats b ON b.id=p.boat_id
