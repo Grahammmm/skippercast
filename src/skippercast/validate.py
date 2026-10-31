@@ -207,7 +207,9 @@ def errors(kind, document, directory=SCHEMA_DIR):
         kind = detect_feed(document)
     found = validator(kind, directory).iter_errors(document)
     rows = []
-    for error in sorted(found, key=lambda e: [str(p) for p in e.absolute_path]):
+    def order(e):  # array positions compare as numbers (2 before 10), before keys; message breaks ties
+        return [(0, p) if isinstance(p, int) and not isinstance(p, bool) else (1, str(p)) for p in e.absolute_path], e.message
+    for error in sorted(found, key=order):
         where = "/".join(str(p) for p in error.absolute_path) or "(root)"
         rows.append(f"{where}: {error.message[:300]}")
     return rows
@@ -235,6 +237,8 @@ def main(argv=None):
             print(f"{path}: {len(problems)} schema error(s)", file=sys.stderr)
             for problem in problems[:50]:
                 print(f"  {problem}", file=sys.stderr)
+            if len(problems) > 50:
+                print(f"  ... {len(problems) - 50} more", file=sys.stderr)
         else:
             print(f"{path}: valid {detect_feed(document) if args.kind == 'feed' else args.kind}")
     return status
