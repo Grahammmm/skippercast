@@ -22,27 +22,27 @@ def _load():
     return mod
 
 
-def _tif(path, values, nodata=-9999.0):
+def _tif(path, values, nodata=-9999.0, mask=None):
     with rasterio.open(path, 'w', driver='GTiff', width=values.shape[1], height=values.shape[0], count=1,
                        dtype='float32', crs='EPSG:32610', transform=from_origin(700000, 3900000, 2, 2),
                        nodata=nodata) as ds:
         ds.write(values.astype('float32'), 1)
+        if mask is not None: ds.write_mask(mask)
     return path
 
 
-def _grid(ring1=np.linspace(-20.0, -21.5, 8)):
+def _grid(ring1=np.linspace(-20.0, -21.5, 8), hole=-9999.0):
     z = -10.0 - np.add.outer(np.arange(32.0), np.arange(32.0)) * 0.25
-    z[4:7, 4:7] = np.insert(ring1, 4, -9999.0).reshape(3, 3)
+    z[4:7, 4:7] = np.insert(ring1, 4, hole).reshape(3, 3)
     z[11:15, 11:15] = np.where(np.indices((4, 4)).sum(0) % 2, -31.0, -30.0)
-    z[12:14, 12:14] = -9999.0
+    z[12:14, 12:14] = hole
     z[21:24, 19:22], z[PIT] = -25.0, -45.0
     return z
 
 
 def _detect(grid, tmp_path, holes=None, pits=None, **over):
     holes = holes if holes is not None else [
-        {'cells': 1, 'bbox': [5, 5, 5, 5], 'ring_shallowest_m': -20.0, 'ring_range_m': 1.5, 'disposition': 'fill'},
-        {'cells': 4, 'bbox': [12, 12, 13, 13], 'ring_shallowest_m': -30.0, 'ring_range_m': 1.0, 'disposition': 'fill'}]
+        _hole1(), _hole1(cells=4, bbox=[12, 12, 13, 13], ring_shallowest_m=-30.0, ring_range_m=1.0)]
     pits = pits if pits is not None else [{'cells': 1, 'bbox': [20, 22, 20, 22], 'ring_median_m': -25.0,
                                            'deviation_m': -20.0}]
     doc = {'schema': 'ec-detect-v1', 'ec_version': ec.EC_VERSION, 'source_id': 'synthetic-x', 'cell_m': 2.0,
@@ -64,9 +64,10 @@ def _read(path):
         return ds.read(1), ds.profile, ds.tags()
 
 
-def test_fills_with_the_ring_shallowest_and_reruns_byte_identical(tmp_path):
-    z = _grid()
-    grid = _tif(tmp_path / 'grid.tif', z)
+@pytest.mark.parametrize('nodata', [-9999.0, 9999.0, np.nan])  # the fill never depends on the nodata encoding
+def test_fills_with_the_ring_shallowest_and_reruns_byte_identical(tmp_path, nodata):
+    z = _grid(hole=nodata)
+    grid = _tif(tmp_path / 'grid.tif', z, nodata)
     detect = _detect(grid, tmp_path)
     assert _run(grid, detect, tmp_path / 'a') == 0 and _run(grid, detect, tmp_path / 'b') == 0
     for name in ('corrected.tif', 'provenance.tif', 'EC-APPLY.json'):
@@ -78,7 +79,7 @@ def test_fills_with_the_ring_shallowest_and_reruns_byte_identical(tmp_path):
     treated = codes != 10
     assert treated.sum() == 6 and np.array_equal(out[~treated], z.astype('float32')[~treated])
     with rasterio.open(grid) as src:
-        assert (prof['crs'], prof['transform'], prof['nodata'], prof['dtype']) == (src.crs, src.transform, -9999.0, 'float32')
+        assert (prof['crs'], prof['transform'], str(prof['nodata']), prof['dtype']) == (src.crs, src.transform, str(nodata), 'float32')
     assert (prof['compress'], pprof['dtype'], pprof['nodata']) == ('deflate', 'uint8', 255)
     assert tags['EC_VERSION'] == ec.EC_VERSION and json.loads(tags['SKIPPERCAST_EC_CODES']) == dict(ec.CODES)
     receipt = json.loads((tmp_path / 'a/EC-APPLY.json').read_text())
@@ -122,33 +123,38 @@ def test_refusals_write_nothing(tmp_path, capsys, case, message):
     assert not out.exists() or [p.name for p in out.iterdir()] == (['provenance.tif'] if case == 'existing-output' else [])
 
 
-@pytest.mark.parametrize('target, value', [((4, 5), -22.0), (PIT, -50.0)])
-def test_deepening_gate_exits_3_and_leaves_the_folder_empty(tmp_path, capsys, monkeypatch, target, value):
+@pytest.mark.parametrize('target, value, nodata', [((4, 5), -22.0, -9999.0), (H1, -22.0, -9999.0), (H1, -22.0, 9999.0),
+                                                   (H1, -22.0, np.nan), (PIT, -50.0, -9999.0)])
+def test_deepening_gate_exits_3_and_leaves_the_folder_empty(tmp_path, capsys, monkeypatch, target, value, nodata):
     mod = _load()
     original = mod._fill
 
     def bad_fill(after, window, comp, fill):
         original(after, window, comp, fill)
-        after[target] = value  # -22 into the -20 ring (untreated), or the -45 pit made deeper (treated)
+        after[target] = value  # -22 into the -20 ring (untreated) or the treated hole, or the -45 pit made deeper
     monkeypatch.setattr(mod, '_fill', bad_fill)
-    grid = _tif(tmp_path / 'grid.tif', _grid())
+    grid = _tif(tmp_path / 'grid.tif', _grid(hole=nodata), nodata)
     out = tmp_path / 'out'
     assert mod.main([str(grid), '--detect', str(_detect(grid, tmp_path)), '--out-dir', str(out)]) == 3
     assert 'apply refused: deepened 1 cells' in capsys.readouterr().err
     assert not out.exists() or list(out.iterdir()) == []
 
 
-def test_sentinels_become_nodata_and_join_a_hole_only_when_the_receipt_says_so(tmp_path):
-    z = _grid()
+def test_sentinels_and_masked_cells_stay_invalid_unless_the_receipt_fills_their_hole(tmp_path):
+    z, valid = _grid(), np.ones((32, 32), dtype=bool)
     z[H1], z[28, 3], z[28, 4] = 9999.0, 9999.0, np.nan
-    grid = _tif(tmp_path / 'grid.tif', z)
-    assert _run(grid, _detect(grid, tmp_path, [_hole1()], []), tmp_path / 'out') == 0
-    out, _, _ = _read(tmp_path / 'out/corrected.tif')
-    codes, _, _ = _read(tmp_path / 'out/provenance.tif')
-    assert (out[H1], codes[H1]) == (-20.0, 20) and (out[28, 3], codes[28, 3]) == (-9999.0, 50)
-    assert np.isnan(out[28, 4]) and codes[28, 4] == 0 and (codes[12:14, 12:14] == 0).all()
+    valid[28, 5] = valid[28, 10] = False  # finite cells masked invalid by the input's own validity mask
+    grid = _tif(tmp_path / 'grid.tif', z, mask=valid)
+    holes = [_hole1(), _hole1(bbox=[10, 28, 10, 28], ring_shallowest_m=-19.0, ring_range_m=1.0)]
+    assert _run(grid, _detect(grid, tmp_path, holes, []), tmp_path / 'out') == 0
+    with rasterio.open(tmp_path / 'out/corrected.tif') as ds:
+        out, mask, codes = ds.read(1), ds.read_masks(1), _read(tmp_path / 'out/provenance.tif')[0]
+    assert (out[H1], codes[H1], mask[H1]) == (-20.0, 20, 255) and (out[28, 3], codes[28, 3]) == (-9999.0, 50)
+    assert (out[28, 10], codes[28, 10], mask[28, 10]) == (-19.0, 20, 255)  # an authorized fill promotes a masked cell
+    assert (out[28, 5], codes[28, 5], mask[28, 5]) == (np.float32(z[28, 5]), 0, 0) and mask[28, 3] == mask[28, 4] == 0
+    assert np.isnan(out[28, 4]) and codes[28, 4] == 0 and (codes[12:14, 12:14] == 0).all() and mask[0, 0] == 255
     unchanged = codes == 10
-    assert np.array_equal(out[unchanged], z.astype('float32')[unchanged])
+    assert np.array_equal(out[unchanged], z.astype('float32')[unchanged]) and (mask[unchanged] == 255).all()
+    assert sorted(p.name for p in (tmp_path / 'out').iterdir()) == ['EC-APPLY.json', 'corrected.tif', 'provenance.tif']
     receipt = json.loads((tmp_path / 'out/EC-APPLY.json').read_text())
-    assert ec.check_receipt('ec-apply-v1', receipt) == []
-    assert receipt['counts']['masked-sentinel'] == 1 and receipt['counts']['nodata'] == 5
+    assert ec.check_receipt('ec-apply-v1', receipt) == [] and (receipt['counts']['masked-sentinel'], receipt['counts']['nodata']) == (1, 6)

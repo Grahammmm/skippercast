@@ -8,9 +8,9 @@ Run with the survey stack (requirements-survey.txt):
 DIR must be outside the work tree and hold none of the three outputs. Fills use the shallowest 8-neighbour water cell of
 the ring (never a mean, median or interpolation); no sign flip, no datum change. The no-deepening gate is not
 configurable: if a treated cell got deeper or any untreated cell changed, nothing is written (exit 3). Refusals exit 2.
-A receipt `bbox` is inclusive pixel indices `[col0, row0, col1, row1]`; a hole is the 4-connected nodata/sentinel
-component with exactly that bbox and `cells`, a pit the `cells` deepest water cells in it. A machine-valid receipt is
-review-required, not acceptance. See docs/seafloor-ec.md.
+A receipt `bbox` is inclusive pixel indices `[col0, row0, col1, row1]`; a hole is the 4-connected invalid (masked,
+nodata, NaN or sentinel) component with exactly that bbox and `cells`, a pit the `cells` deepest water cells in it.
+An input validity mask is kept in corrected.tif. A machine-valid receipt is review-required, not acceptance.
 """
 import argparse
 import hashlib
@@ -20,6 +20,7 @@ import sys
 
 import numpy as np
 import rasterio
+from rasterio.enums import MaskFlags
 from scipy import ndimage
 
 REPO = Path(__file__).resolve().parents[1]
@@ -121,13 +122,16 @@ def apply(path, detect_path, out_dir):
 
     with rasterio.open(path) as ds:
         if ds.driver != 'GTiff': raise Refused(f'driver {ds.driver} (GeoTIFF only)')
-        z, nodata = ds.read(1), ds.nodata
+        band, nodata = ds.read(1, masked=True), ds.nodata
+        own_mask = MaskFlags.per_dataset in ds.mask_flag_enums[0]  # an explicit validity mask: kept in the output
+        z = band.data
         floating = np.issubdtype(z.dtype, np.floating)
         meta = dict(driver='GTiff', width=ds.width, height=ds.height, count=1, dtype=z.dtype.name, crs=ds.crs,
                     transform=ds.transform, nodata=nodata, compress='deflate', **({'predictor': 3} if floating else {}))
         cell_m = float(abs(ds.transform.a))
     finite = np.isfinite(z) if floating else np.ones(z.shape, dtype=bool)
-    declared = finite & (z == nodata) if nodata is not None and not np.isnan(nodata) else np.zeros(z.shape, dtype=bool)
+    declared = np.ma.getmaskarray(band).copy()  # masked band 1: the validity mask plus the declared nodata
+    if nodata is not None and not np.isnan(nodata): declared |= finite & (z == nodata)
     lo, hi = ec.PLAUSIBLE_M
     sentinel = finite & ~declared & (np.isin(z, ec.SENTINELS) | (z < lo) | (z > hi))
     valid = finite & ~declared & ~sentinel
@@ -142,7 +146,7 @@ def apply(path, detect_path, out_dir):
     for spike in det['spikes']:
         window, inner = _window(spike['bbox'], z.shape)
         codes[window][inner][water[window][inner]] = ec.CODES['measured-suspect-shoal']
-    after, treated, fixes = masked.copy(), np.zeros(z.shape, dtype=bool), []
+    after, reference, treated, fixes = masked.copy(), masked.copy(), np.zeros(z.shape, dtype=bool), []
     invalid = ~valid
 
     def treat(kind, window, comp, code, value=None, deepest=None):
@@ -150,6 +154,7 @@ def apply(path, detect_path, out_dir):
         codes[window][comp] = code
         if value is None: return
         treated[window] |= comp
+        if kind == 'hole': reference[window][comp] = value  # a hole has no depth: its baseline is the recomputed ring
         _fill(after, window, comp, value)
         fixes.append({'kind': kind, 'cells': int(comp.sum()), 'bbox': entry['bbox'], 'before_min_m': deepest,
                       'after_m': value})
@@ -172,14 +177,14 @@ def apply(path, detect_path, out_dir):
 
     # No-deepening gate (not configurable): treated cells may only get shallower; nothing else may change.
     index = np.flatnonzero(treated)
-    deepened = len(ec.no_deepening(masked.ravel()[index].tolist(), after.ravel()[index].tolist(), range(len(index))))
-    changed = ~_same(after, masked)
-    deepened += int((changed != treated).sum())
+    deepened = len(ec.no_deepening(reference.ravel()[index].tolist(), after.ravel()[index].tolist(), range(len(index))))
+    deepened += int((~_same(after, masked) != treated).sum())
     if deepened: raise Refused(f'deepened {deepened} cells', code=3)
 
     out.mkdir(parents=True, exist_ok=True)
     with rasterio.open(out / 'corrected.tif', 'w', **meta) as dst:
         dst.write(after, 1)
+        if own_mask: dst.write_mask(valid | treated)  # untreated invalid cells stay invalid; only fills promote
     pmeta = {**{k: v for k, v in meta.items() if k != 'predictor'}, 'dtype': 'uint8', 'nodata': 255}
     with rasterio.open(out / 'provenance.tif', 'w', **pmeta) as dst:
         dst.write(codes, 1)
