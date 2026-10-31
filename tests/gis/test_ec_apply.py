@@ -139,6 +139,21 @@ def test_deepening_gate_exits_3_and_leaves_the_folder_empty(tmp_path, capsys, mo
     assert 'apply refused: deepened 1 cells' in capsys.readouterr().err
     assert not out.exists() or list(out.iterdir()) == []
 
+@pytest.mark.parametrize('kind, nodata', [('pit', -9999.0), ('hole', -9999.0), ('hole', 9999.0), ('hole', np.nan)])
+def test_no_op_fill_exits_3_without_outputs(tmp_path, capsys, monkeypatch, kind, nodata):
+    mod = _load()
+    monkeypatch.setattr(mod, '_fill', lambda after, window, comp, value: None)
+    grid = _tif(tmp_path / 'grid.tif', _grid(hole=nodata), nodata)
+    original = grid.read_bytes()
+    detect = _detect(grid, tmp_path, holes=[_hole1()] if kind == 'hole' else [],
+                     pits=[] if kind == 'hole' else None)
+    out = tmp_path / 'out'
+    assert mod.main([str(grid), '--detect', str(detect), '--out-dir', str(out)]) == 3
+    assert 'apply refused:' in capsys.readouterr().err
+    assert not out.exists() or list(out.iterdir()) == []
+    assert grid.read_bytes() == original
+
+
 @pytest.mark.parametrize('masked_fill', [-19.5, -19.0])  # includes a mask-only fill: stored depth already equals target
 def test_sentinels_and_masked_cells_stay_invalid_unless_the_receipt_fills_their_hole(tmp_path, masked_fill):
     z, valid = _grid(), np.ones((32, 32), dtype=bool)

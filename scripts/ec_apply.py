@@ -178,8 +178,14 @@ def apply(path, detect_path, out_dir):
     # No-deepening gate (not configurable): treated cells may only get shallower; nothing else may change.
     index = np.flatnonzero(treated)
     deepened = len(ec.no_deepening(reference.ravel()[index].tolist(), after.ravel()[index].tolist(), range(len(index))))
-    deepened += int((~_same(after, masked) & ~treated).sum())  # a valid fill may change only the validity mask
+    deepened += int((~_same(after, masked) & ~treated).sum())
     if deepened: raise Refused(f'deepened {deepened} cells', code=3)
+    # A numeric change alone is not a correction if the result is still invalid. Conversely, promoting an
+    # intrinsically masked, already-correct depth is a real change even when its stored value is unchanged.
+    after_valid = np.isfinite(after) & (after >= lo) & (after <= hi) & ~np.isin(after, ec.SENTINELS)
+    if nodata is not None: after_valid &= ~_same(after, np.full_like(after, nodata))
+    missing = treated & (~after_valid | (valid & _same(after, masked)))
+    if missing.any(): raise Refused(f'uncorrected {int(missing.sum())} cells', code=3)
 
     out.mkdir(parents=True, exist_ok=True)
     with rasterio.open(out / 'corrected.tif', 'w', **meta) as dst:
