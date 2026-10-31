@@ -46,7 +46,7 @@ flowchart LR
     subgraph jobs["GitHub Actions jobs (Python)"]
       live["live-conditions.yml<br/>every 30 min"]
       daily["daily-data.yml<br/>04:17 Pacific"]
-      seafloorjob["seafloor.yml<br/>weekly"]
+      seafloorjob["seafloor.yml<br/>daily"]
       fresh["feed-freshness.yml<br/>hourly"]
     end
     subgraph stores["Published feeds"]
@@ -119,7 +119,7 @@ flowchart LR
 | `daily-data.yml` | 04:17 America/Los_Angeles | `data` branch + R2: dated reports, regulations and their review state, recent discussions, survey discovery |
 | `research-daily.yml` | After each `daily-data.yml` run, or manually | Research inventories (NOAA BAG checks, ENC hazard reviews, USGS map-block and DOI audits) as workflow artifacts, with a read-only token; not product feeds |
 | `feed-freshness.yml` | Hourly at :52 | Opens or closes the `feed-stale` issue; restarts the live loop after 75 minutes |
-| `seafloor.yml` | Mondays 10:23 UTC, on seafloor source changes, or manually | R2 `tiles/seafloor/`; proposes a ledger PR |
+| `seafloor.yml` | Daily 10:23 UTC, on seafloor source changes, or manually | R2 `tiles/seafloor/`; proposes a ledger PR |
 | `forecast-tiles.yml` | Manual | Forces a forecast tile rebuild |
 | `regional-legal-review.yml` | Mondays (Pacific), or on rule-source changes | Legal review packets for the Northern, Mendocino and San Francisco rules, as workflow artifacts |
 | `research-fish-survey.yml`, `research-substrate.yml`, `draft-region-rehearsal.yml` | Monthly, manual or on draft-region changes | Research evidence reviews as workflow artifacts; not product feeds |
