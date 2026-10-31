@@ -25,7 +25,7 @@ from skippercast.coastal.native_guard_v2 import check as guard_native
 
 
 MAX_NATIVE_WINDOW_SLOTS = 262_144
-METERS_PER_FOOT = 0.3048
+from skippercast.util.units import M_PER_FT as METERS_PER_FOOT
 MINIMUM_DEPTH_FT = 25
 MAXIMUM_DEPTH_FT = 300
 MAX_PRODUCT_UNCERTAINTY_M = 1
