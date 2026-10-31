@@ -9,7 +9,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / 'src'))
 from skippercast.platform.contracts import load_catalogs, load_region  # noqa: E402
-from skippercast.platform.seafloor_ec import DISPOSITIONS, EC_VERSION, check_receipt  # noqa: E402
+from skippercast.platform.seafloor_ec import EC_VERSION, check_receipt  # noqa: E402
 
 INTAKE = REPO / 'skills/skippercast-region-intake/scripts/region_intake.py'
 TOOLS = {name: REPO / f'scripts/{name}.py' for name in ('ec_detect', 'ec_apply', 'ec_verify')}
@@ -86,6 +86,28 @@ def words(counts):
     return (f"filled={c('filled-hole')} pit={c('filled-pit')} verified={c('verified')} conflict={c('unresolved-conflict')} "
             f"unresolved={c('unresolved-hole', 'unresolved-ring-range', 'unresolved-datum-suspect')}")
 
+def managed_paths(folder):
+    """Refuse linked managed paths before any cleanup or write, including dangling links."""
+    for name in ('ec', 'EC.json', 'EC.json.tmp', 'EC.md', 'INTAKE-EC.csv'):
+        root = folder / name
+        for path in [root, *root.rglob('*')] if root.is_dir() and not root.is_symlink() else [root]:
+            if path.is_symlink() or not path.resolve().is_relative_to(folder):
+                raise CorrectError(f'{path}: managed path must be an unlinked descendant of run')
+
+
+def input_identity(row, receipt=None, field=None):
+    if sha256(row['local_path']) != row['sha256'] or (receipt is not None and receipt[field] != row['sha256']):
+        raise CorrectError(f"{row['source_id']}: input/receipt sha256 differs from INTAKE.csv")
+
+
+def completed_identity(folder, row):
+    base, sid = folder / 'ec' / row['source_id'], row['source_id']
+    detect = read_receipt(base, 'EC-DETECT.json', sid)
+    input_identity(row, detect, 'path_sha256')
+    if detect['disposition'] != 'REFUSED':
+        input_identity(row, read_receipt(base, 'EC-APPLY.json', sid), 'input_sha256')
+
+
 def treat(args, run, folder, row, others, sources):
     """detect -> apply -> verify for one row in a fresh ec/<id>/; DONE only after every step succeeded."""
     sid, path, py, base = row['source_id'], row['local_path'], args.python, folder / 'ec' / row['source_id']
@@ -94,17 +116,20 @@ def treat(args, run, folder, row, others, sources):
     base.mkdir(parents=True)
     call(run, [py, TOOLS['ec_detect'], path, '--source-id', sid, '--receipt', base / 'EC-DETECT.json'], sid, 'ec_detect')
     detect = read_receipt(base, 'EC-DETECT.json', sid, f'EC STOP {sid} ec_detect ')
+    input_identity(row, detect, 'path_sha256')
     if detect['disposition'] == 'REFUSED':
         write_done(base)
         return print(f'EC {sid} REFUSED {refusal(detect)}')
     call(run, [py, TOOLS['ec_apply'], path, '--detect', base / 'EC-DETECT.json', '--out-dir', base], sid, 'ec_apply')
-    read_receipt(base, 'EC-APPLY.json', sid, f'EC STOP {sid} ec_apply ')
+    input_identity(row, read_receipt(base, 'EC-APPLY.json', sid, f'EC STOP {sid} ec_apply '), 'input_sha256')
     (base / 'ENTRIES.json').write_bytes(canonical({r['source_id']: sources[r['source_id']] for r in [row] + others}))
     cmd = [py, TOOLS['ec_verify'], '--a', base, '--a-source', sid, '--a-datum', row['vertical_datum']]
     for other in (o for o in others if overlaps(row, o)):
         cmd += ['--b', other['local_path'], '--b-source', other['source_id'], '--b-datum', other['vertical_datum']]
     call(run, cmd + ['--catalog-entries', base / 'ENTRIES.json', '--out-dir', base / 'verify'], sid, 'ec_verify')
     verify = read_receipt(base, 'verify/EC-VERIFY.json', sid, f'EC STOP {sid} ec_verify ')
+    for candidate in [row] + others:
+        input_identity(candidate)
     write_done(base)
     print(f"EC {sid} {verify['disposition']} {words(verify['counts'])}")
 
@@ -124,7 +149,20 @@ def source_record(folder, sid):
              'second_surveys': [{k: p[k] for k in ('second_source_id', 'independent', 'reason', 'comparable')} for p in pairs],
              'receipts': receipts}, asks)
 
+def handoff(row, entry):
+    extra = {'ec_status': 'not_corrected', 'ec_path': row['local_path'], 'provenance_path': ''}
+    if entry and entry['status'] == 'REFUSED':
+        extra.update(ec_status='REFUSED', use='skip', held_reason=f"ec-refused:{entry['reason']}")
+    elif entry:
+        sid = row['source_id']
+        extra.update(ec_status=entry['status'], ec_path=f'ec/{sid}/corrected.tif', provenance_path=f'ec/{sid}/verify/provenance.tif')
+    return {**row, **extra}
+
+
 def finish(args, folder, header, rows, candidates, not_corrected, region):
+    managed_paths(folder)
+    for row in candidates:
+        completed_identity(folder, row)
     done = [source_record(folder, row['source_id']) for row in candidates]
     entries, asks = [e for e, _ in done], [a for _, more in done for a in more]
     outputs = [{'path': f'ec/{rel}', 'sha256': sha256(folder / 'ec' / rel)} for rel in files(folder / 'ec')]
@@ -140,13 +178,7 @@ def finish(args, folder, header, rows, candidates, not_corrected, region):
         writer = csv.DictWriter(handle, header + EXTRA, lineterminator='\n')
         writer.writeheader()
         for row in rows:
-            entry, sid = by_row.get(id(row)), row['source_id']
-            extra = {'ec_status': 'not_corrected', 'ec_path': row['local_path'], 'provenance_path': ''}
-            if entry and entry['status'] == 'REFUSED':
-                extra.update(ec_status='REFUSED', use='skip', held_reason=f"ec-refused:{entry['reason']}")
-            elif entry:
-                extra.update(ec_status=entry['status'], ec_path=f'ec/{sid}/corrected.tif', provenance_path=f'ec/{sid}/verify/provenance.tif')
-            writer.writerow({**row, **extra})
+            writer.writerow(handoff(row, by_row.get(id(row))))
     lines = [f"# EC {region['id']}", '', 'Machine-valid output is review-required, not acceptance.', '', '## Sources', '']
     lines += [f"- {e['source_id']}: {e['status']} {e.get('reason') or words(e['counts'])}" for e in entries]
     lines += [f"- {n['source_id']}: not_corrected {n['reason']}" for n in not_corrected]
@@ -164,12 +196,17 @@ def correct(args, run, loader):
         raise CorrectError(f'Need INTAKE.csv and no EC.json (never overwritten) in {folder}')
     if not (args.author_runtime or '').strip() or not re.fullmatch(r'[a-z][a-z0-9-]*', args.author_family or ''):
         raise CorrectError('--author-runtime must be non-empty and --author-family must match ^[a-z][a-z0-9-]*$')
+    managed_paths(folder)
     call(run, [args.python, INTAKE, '--check', folder], '-', 'region_intake')
     with open(folder / 'INTAKE.csv', newline='') as handle:
         reader = csv.DictReader(handle)
         rows, header = list(reader), list(reader.fieldnames or [])
     region, sources = loader(args.region_id)
     candidates, not_corrected = select(rows, sources)
+    for row in candidates:
+        input_identity(row)
+        if not done_problem(folder / 'ec' / row['source_id']):
+            completed_identity(folder, row)
     batch, todo = max(1, min(3, args.batch)), [r for r in candidates if done_problem(folder / 'ec' / r['source_id'])]
     for row in todo[:batch]:
         treat(args, run, folder, row, [r for r in candidates if r is not row], sources)
@@ -177,9 +214,10 @@ def correct(args, run, loader):
         return print(f'EC BATCH-DONE {len(candidates) - len(todo[batch:])}/{len(candidates)}')
     finish(args, folder, header, rows, candidates, not_corrected, region)
 
-def check(args, run):
+def check(args, run, loader):
     """Validate a finished run folder; writes nothing."""
     folder = Path(os.path.realpath(args.check))
+    managed_paths(folder)
     call(run, [args.python, INTAKE, '--check', folder], '-', 'region_intake')
     try:
         record = json.loads((folder / 'EC.json').read_text())
@@ -204,10 +242,22 @@ def check(args, run):
         old_rows, new_rows = list(old_reader), list(new_reader)
     if new_reader.fieldnames != list(old_reader.fieldnames or []) + EXTRA or len(old_rows) != len(new_rows):
         raise CorrectError('INTAKE-EC.csv: header or row count differs from INTAKE.csv')
+    region, sources = loader(record['region_id'])
+    candidates, not_corrected = select(old_rows, sources)
+    for row in candidates:
+        completed_identity(folder, row)
+    expected = [source_record(folder, r['source_id']) for r in candidates]
+    entries, asks = [e for e, _ in expected], [a for _, more in expected for a in more]
+    inputs = [{'source_id': r['source_id'], 'sha256': r['sha256']} for r in candidates]
+    if (record['sources'] != entries or record['inputs'] != inputs or record['not_corrected'] != not_corrected
+            or record['operator_asks'] != asks or region['id'] != record['region_id']):
+        raise CorrectError('EC.json: source/input coverage or receipt summary differs')
+    if ({p.name for p in ec.iterdir()} if ec.is_dir() else set()) != {r['source_id'] for r in candidates}:
+        raise CorrectError('EC.json: receipt directories differ from candidate coverage')
+    by_row = {id(r): e for r, e in zip(candidates, entries)}
     for number, (old, new) in enumerate(zip(old_rows, new_rows), 1):
-        allowed = {'use', 'held_reason'} if new['ec_status'] == 'REFUSED' else set()
-        if new['ec_status'] not in (*DISPOSITIONS, 'not_corrected') or {k for k in old if old[k] != new[k]} - allowed:
-            raise CorrectError(f'INTAKE-EC.csv: row {number} differs from INTAKE.csv')
+        if new != handoff(old, by_row.get(id(old))):
+            raise CorrectError(f'INTAKE-EC.csv: row {number} differs from receipts or INTAKE.csv')
     print(f"EC OK {len(record['sources'])} rows")
 
 def main(argv=None, run=default_run, loader=default_loader):
@@ -220,7 +270,7 @@ def main(argv=None, run=default_run, loader=default_loader):
     try:
         if not args.check and not (args.region_id and args.run):
             raise CorrectError('need <region_id> --run <dir> --author-runtime <id> --author-family <f>, or --check <dir>')
-        check(args, run) if args.check else correct(args, run, loader)
+        check(args, run, loader) if args.check else correct(args, run, loader)
     except (CorrectError, ValueError, KeyError, TypeError, OSError) as err:
         print(err if str(err).startswith('EC STOP') else f'region_correct: {err}', file=sys.stderr)
         return 1
