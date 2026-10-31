@@ -66,41 +66,6 @@ def _run(tmp_path, out, bs=(), a_source='usgs-a', a_datum='MLLW', extra=()):
         return receipt, p.read(1), h.read(1)
 
 
-@pytest.mark.parametrize('b_name, verdict', [('H54321_MB_2m.tif', 'PASS'), ('H12345_MB_2m.tif', 'FAIL'), ('unknown.tif', 'FAIL')])
-def test_region_review_real_bag_receipt_uses_intake_acquisition(tmp_path, monkeypatch, b_name, verdict):
-    from tests.unit import test_region_review as review
-    import csv
-
-    producer = tmp_path / 'producer'
-    producer.mkdir()
-    values = np.tile(-20.0 - 0.5 * np.arange(32), (32, 1)).astype('float32')
-    adir = _a_dir(producer, values, np.full(values.shape, 10, 'uint8'), source='s-a')
-    entries = {**review.ECSRC, 's-a': {**review.ECSRC['s-a'], 'adapter': 'bag'},
-               's-b': {**review.ECSRC['s-b'], 'adapter': 'bag'}}
-    (producer / 'entries.json').write_text(json.dumps(entries))
-    b = _tif(producer / 'H54321_MB_2m.tif', values + 0.3)
-    doc, _, _ = _run(producer, 'verified', [(b, 's-b', 'MLLW')], a_source='s-a', extra=['--a-file', 'BAG__H12345_MB_2m.bag'])
-    assert doc['pairs'][0]['verified_cells'] == 1024 and doc['pairs'][0]['independent']
-    assert 'a_file' not in doc and 'second_file' not in doc['pairs'][0]
-    run = tmp_path / 'run'
-    region = {'id': 'syn-bay', 'status': 'active', 'source_bindings': {'bathymetry': list(review.SRC)}}
-    review.ec_run(run, monkeypatch, region, lambda d, c: d['s-a'].update({'verify/EC-VERIFY.json': doc}))
-    monkeypatch.setattr(review.rr, 'loader', lambda _: (region, entries))
-    record = json.loads((run / 'EC.json').read_text())
-    record['inputs'][0]['sha256'] = _sha(adir / 'input.tif')
-    (run / 'EC.json').write_text(json.dumps(record))
-    with (run / 'INTAKE.csv').open('w', newline='') as handle:
-        writer = csv.DictWriter(handle, ['source_id', 'sha256', 'local_path'])
-        writer.writeheader()
-        writer.writerows([{'source_id': 's-a', 'sha256': _sha(adir / 'input.tif'), 'local_path': '/private/BAG__H12345_MB_2m.bag'},
-                          {'source_id': 's-b', 'sha256': _sha(b), 'local_path': f'/private/{b_name}'}])
-    review.seal_ec(run)
-    code, packet = review.rerun(run)
-    check = next(c for c in packet['checks'] if c['id'] == 'ec-independence')
-    assert check['verdict'] == verdict
-    assert code == (0 if verdict == 'PASS' else 1)
-
-
 def test_slope_verifies_patch_and_spike_conflict_with_shoal_hint_and_reruns_identically(tmp_path):
     a = np.tile(-20.0 - 0.5 * np.arange(32), (32, 1)).astype('float32')
     codes = np.full((32, 32), 10, 'uint8')

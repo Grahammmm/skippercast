@@ -236,6 +236,35 @@ def test_ec_contour_requires_provenance(tmp_path, region, monkeypatch):
     assert next(c for c in packet["checks"] if c["id"] == "ec-unresolved-stated")["verdict"] == "FAIL"
 
 
+@pytest.mark.gis
+@pytest.mark.parametrize("b_name, verdict", [("H54321_MB_2m.tif", "PASS"), ("H12345_MB_2m.tif", "FAIL"), ("unknown.tif", "FAIL")])
+def test_real_ec3_bag_acquisition_handoff(tmp_path, monkeypatch, region, b_name, verdict):
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("rasterio")
+    from tests.gis import test_ec_verify as ev
+    producer = tmp_path / "producer"
+    producer.mkdir()
+    values = np.tile(-20.0 - 0.5 * np.arange(32), (32, 1)).astype("float32")
+    adir = ev._a_dir(producer, values, np.full(values.shape, 10, "uint8"), source="s-a")
+    entries = {**ECSRC, **{s: {**ECSRC[s], "adapter": "bag"} for s in ("s-a", "s-b")}}
+    (producer / "entries.json").write_text(json.dumps(entries))
+    b = ev._tif(producer / "H54321_MB_2m.tif", values + 0.3)
+    doc, _, _ = ev._run(producer, "verified", [(b, "s-b", "MLLW")], a_source="s-a", extra=["--a-file", "BAG__H12345_MB_2m.bag"])
+    assert doc["pairs"][0]["verified_cells"] == 1024 and doc["pairs"][0]["independent"]
+    assert "a_file" not in doc and "second_file" not in doc["pairs"][0]
+    run = tmp_path / "run"
+    ec_run(run, monkeypatch, region, lambda d, c: d["s-a"].update({"verify/EC-VERIFY.json": doc,
+           "EC-APPLY.json": json.loads((adir / "EC-APPLY.json").read_text())}))
+    monkeypatch.setattr(rr, "loader", lambda _: (region, entries))
+    (run / "INTAKE.csv").write_text("source_id,sha256,local_path\n"
+        f"s-a,{sha(adir / 'input.tif')},/private/BAG__H12345_MB_2m.bag\n"
+        f"s-b,{sha(b)},/private/{b_name}\n")
+    seal_ec(run)
+    code, packet = rerun(run)
+    assert next(c for c in packet["checks"] if c["id"] == "ec-independence")["verdict"] == verdict
+    assert code == (0 if verdict == "PASS" else 1)
+
+
 def seal_ec(tmp):
     record = json.loads((tmp / "EC.json").read_text())
     record["outputs"] = [{"path": p.relative_to(tmp).as_posix(), "sha256": sha(p)}
@@ -247,7 +276,7 @@ def seal_ec(tmp):
     (tmp / "BUILD.json").write_text(json.dumps(build))
 
 
-@pytest.mark.parametrize("fault", ["done", "source", "directory", "corrected", "receipt", "extra-receipt"])
+@pytest.mark.parametrize("fault", ["done", "source", "directory", "corrected", "receipt", "extra-receipt", "root-file"])
 def test_rehashed_ec_omissions_fail_closed(tmp_path, region, monkeypatch, fault):
     ec_run(tmp_path, monkeypatch, region)
     record = json.loads((tmp_path / "EC.json").read_text())
@@ -269,6 +298,8 @@ def test_rehashed_ec_omissions_fail_closed(tmp_path, region, monkeypatch, fault)
         build = json.loads((tmp_path / "BUILD.json").read_text())
         build["ec"]["corrected"] = []
         (tmp_path / "BUILD.json").write_text(json.dumps(build))
+    elif fault == "root-file":
+        (tmp_path / "ec/stray").write_text("unowned")
     elif fault == "extra-receipt":
         path = tmp_path / "ec/s-c/EC-APPLY.json"
         path.write_text(json.dumps(receipts("s-c")["EC-APPLY.json"]))

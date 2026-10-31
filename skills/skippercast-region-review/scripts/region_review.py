@@ -174,6 +174,8 @@ def ec_tree(folder, build):
             bad.append(f'ec/{base.name}/DONE membership differs from source files')
         bad += [f'ec/{base.name}/{rel}: sha256 differs from DONE' for rel, digest in pairs if file_sha(base, rel) != digest]
     files = sorted(p.relative_to(ec_dir).as_posix() for p in ec_dir.rglob('*') if p.is_file()) if ec_dir.is_dir() else []
+    if any('/' not in rel for rel in files):
+        bad.append('ec/ root contains files without a source DONE')
     outputs = [{'path': f'ec/{rel}', 'sha256': file_sha(ec_dir, rel)} for rel in files]
     mine, listed = {o['path']: o['sha256'] for o in outputs}, {o.get('path'): o.get('sha256') for o in record.get('outputs') or [] if isinstance(o, dict)}
     bad += [f'{p}: differs from EC.json outputs' for p in sorted(set(mine) | set(listed), key=str) if mine.get(p) != listed.get(p)]
@@ -219,7 +221,7 @@ def ec_checks(build, loaded, sources, tree, names=None):
     """The five EC checks; each PASSes with detail `no ec/ folder` when EC was not run."""
     (intact, record, docs), deep, indep, unres, version = tree or ([], None, []), [], [], [], []
     ec_set = build.get('ec') if isinstance(build.get('ec'), dict) else {}
-    inputs = {i.get('source_id'): i.get('sha256') for i in (record or {}).get('inputs') or []}
+    inputs = {sid: doc.get('input_sha256') for sid, kind, doc in docs if kind == 'ec-apply-v1'}
     names = names or {}
     for where, value in (('EC.json', (record or {}).get('ec_version')), ('BUILD.json ec', ec_set.get('ec_version'))):
         version += [f'{where} ec_version {value!r}: re-run correct stage'] if tree and value != seafloor_ec.EC_VERSION else []
