@@ -24,6 +24,12 @@ def _sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def survey(values, offset):
+    """A second survey of the same seabed: offset plus ±0.1 m checkerboard noise (MAD 0.1 m, above COPY_MAX_MAD_M)."""
+    noise = 0.1 * (-1.0) ** np.add.outer(np.arange(values.shape[0]), np.arange(values.shape[1]))
+    return values + offset + noise
+
+
 def _tif(path, values, crs='EPSG:32610', dtype='float32', nodata=-9999.0, driver='GTiff', x0=500000, **extra):
     with rasterio.open(path, 'w', driver=driver, width=values.shape[1], height=values.shape[0], count=1, dtype=dtype,
                        crs=crs, transform=from_origin(x0, 3900000, 2.0, 2.0), nodata=nodata, **extra) as ds:
@@ -71,7 +77,7 @@ def test_slope_verifies_patch_and_spike_conflict_with_shoal_hint_and_reruns_iden
     codes = np.full((32, 32), 10, 'uint8')
     codes[5, 5], codes[20, 5] = 20, 11
     a[20, 5] += 6.0
-    b = a + 0.3
+    b = survey(a, 0.3)
     b[10:14, 20:24] = -5.0
     b[20, 5] = a[20, 4]
     adir = _a_dir(tmp_path, a, codes)
@@ -97,29 +103,29 @@ def flat(tmp_path):
 
 
 @pytest.mark.parametrize('offset, a_datum, b_datum, code, comparable, reason', [
-    (1.2, 'undeclared', 'MLLW', 43, False, 'datum-suspect'), (1.2, 'MLLW', 'MLLW', 41, True, 'ok'),
+    (1.4, 'undeclared', 'MLLW', 43, False, 'datum-suspect'), (1.4, 'MLLW', 'MLLW', 41, True, 'ok'),
     (0.8, 'MLLW', 'MLLW', 30, True, 'ok'), (0.8, 'unverified source datum', 'MLLW', 30, True, 'ok'),
-    (1.2, 'MLLW', 'NAVD88', 10, False, 'datum-differs')])
+    (1.4, 'MLLW', 'NAVD88', 10, False, 'datum-differs')])
 def test_datum_comparability(tmp_path, flat, offset, a_datum, b_datum, code, comparable, reason):
-    b = _tif(tmp_path / 'b.tif', flat[:, :100] + offset)  # B covers the first 100 columns only
+    b = _tif(tmp_path / 'b.tif', survey(flat[:, :100], offset))  # B covers the first 100 columns only
     receipt, prov, _ = _run(tmp_path, 'out', [(b, 'usgs-b', b_datum)], a_datum=a_datum)
     pair = receipt['pairs'][0]
     assert (pair['jointly_valid_cells'], pair['comparable'], pair['reason']) == (10_000, comparable, reason)
-    assert pair['datum_suspect'] is (offset == 1.2) and pair['mad_m'] < 1e-4
+    assert pair['datum_suspect'] is (offset == 1.4) and pair['mad_m'] == pytest.approx(0.1, abs=1e-4)
     assert (prov[:, :100] == code).all() and (prov[:, 100:] == 10).all()
 
 
 def test_datum_suspect_never_overrides_verified_and_e9_sees_every_jointly_valid_depth(tmp_path, flat):
-    suspect, agree = _tif(tmp_path / 'b.tif', flat + 1.2), _tif(tmp_path / 'c.tif', flat + 0.3)
+    suspect, agree = _tif(tmp_path / 'b.tif', survey(flat, 1.4)), _tif(tmp_path / 'c.tif', survey(flat, 0.3))
     receipt, prov, _ = _run(tmp_path, 'out', [(suspect, 'usgs-b', 'undeclared'), (agree, 'usgs-c', 'MLLW')])
     assert [p['reason'] for p in receipt['pairs']] == ['datum-suspect', 'ok'] and (prov == 30).all()
-    small = _tif(tmp_path / 'd.tif', np.where(np.arange(110) < 5, flat + 0.3, -9999.0))  # 500 joint cells
+    small = _tif(tmp_path / 'd.tif', np.where(np.arange(110) < 5, survey(flat, 0.3), -9999.0))  # 500 joint cells
     receipt, prov, _ = _run(tmp_path, 'out2', [(small, 'usgs-c', 'undeclared')])
     assert receipt['pairs'][0]['reason'] == 'datum-unchecked' and (prov == 10).all()
     top = np.arange(100)[:, None] < 10  # 1,100 measured cells over 9,900 finite unresolved (42) ones
     _prov(tmp_path / 'a', np.where(top, 10, 42).repeat(110, 1).astype('uint8'))
     for far, code in ((2.0, 43), (0.3, 30)):  # the 42 depths count in E9 but never change
-        b = _tif(tmp_path / f'm{far}.tif', np.where(top, flat + 0.3, flat + far))
+        b = _tif(tmp_path / f'm{far}.tif', survey(np.where(top, flat + 0.3, flat + far), 0.0))
         receipt, prov, _ = _run(tmp_path, f'm{far}', [(b, 'usgs-b', 'MLLW')], a_datum='undeclared')
         assert (receipt['pairs'][0]['jointly_valid_cells'], receipt['pairs'][0]['datum_suspect']) == (11_000, far > 1)
         assert (prov[:10] == code).all() and (prov[10:] == 42).all()
@@ -150,6 +156,30 @@ def test_non_independent_pairs_never_verify(tmp_path, flat):
                                ('bagx', [], 'unknown-acquisition')):
         receipt, prov, _ = _run(tmp_path, out, [(bag_b, 'bag-b', 'MLLW')], a_source='bag-a', extra=extra)
         assert receipt['pairs'][0]['reason'] == reason and (prov == 10).all()
+
+
+def test_overlapping_cuts_of_one_mosaic_never_verify_and_an_independent_survey_does(tmp_path):
+    rows, cols = np.mgrid[0:100, 0:160]
+    mosaic = (-19.5 - 0.01 * cols - 0.02 * rows + 0.3 * np.sin(cols / 7.0)).astype('float32')  # one acquisition
+    adir = _a_dir(tmp_path, mosaic[:, :110], np.full((100, 110), 10, 'uint8'))  # block A: columns 0-109
+    cut = mosaic[:, 50:]  # block B: columns 50-159, other file and signature, 6,000 identical overlap cells
+    cases = [('identical', cut, 'MLLW', 'copy-overlap', 10), ('datum-shifted', cut + 1.4, 'undeclared', 'copy-overlap', 10),
+             ('independent', survey(cut, 0.3), 'MLLW', 'ok', 30)]
+    for name, values, b_datum, reason, code in cases:
+        b = _tif(tmp_path / f'{name}.tif', values, x0=500000 + 50 * 2)
+        assert _sha(b) != _sha(adir / 'input.tif')
+        receipt, prov, _ = _run(tmp_path, name, [(b, 'usgs-b', b_datum)])
+        pair = receipt['pairs'][0]
+        assert (pair['reason'], pair['independent'], pair['comparable']) == (reason, reason == 'ok', reason == 'ok'), name
+        assert pair['jointly_valid_cells'] == 6000 and pair['conflict_cells'] == 0, name
+        assert pair['verified_cells'] == (6000 if reason == 'ok' else 0), name
+        assert (prov[:, 50:] == code).all() and (prov[:, :50] == 10).all(), name
+    assert not EC.copy_overlap(receipt['pairs'][0]['mad_m'])  # the independent survey's spread is what verifies it
+    for name in ('identical', 'datum-shifted'):
+        receipt = json.loads((tmp_path / name / 'EC-VERIFY.json').read_text())
+        assert receipt['pairs'][0]['mad_m'] < 1e-5 and receipt['disposition'] == 'PASS' and 'verified' not in receipt['counts']
+        assert (tmp_path / name / 'provenance.tif').read_bytes() == (adir / 'provenance.tif').read_bytes()
+    assert receipt['pairs'][0]['datum_suspect'] is True  # the shifted copy still raises its datum question
 
 
 def test_refusals_write_nothing(tmp_path, flat, capsys):

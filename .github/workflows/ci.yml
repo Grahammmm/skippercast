@@ -112,6 +112,8 @@ jobs:
             git diff --stat
             exit 1
           fi
+      - name: Runner CPU (CI-speed measurement)
+        run: nproc && lscpu | grep -E '^(Model name|CPU\(s\))'
       - name: Full Python suite, part ${{ matrix.part }} (every layer, GIS required)
         if: github.event_name != 'pull_request'
         env:
@@ -126,7 +128,7 @@ jobs:
             rest) args="--ignore=tests/gis/test_coast_close_safety.py --ignore=tests/gis/test_coast_segment_close.py" ;;
             *) echo "::error::Unknown full-suite part '$PART'"; exit 1 ;;
           esac
-          python -m pytest --durations=15 --junitxml="$RUNNER_TEMP/$REPORT.xml" $args
+          python -m pytest -n 4 --dist load --durations=15 --junitxml="$RUNNER_TEMP/$REPORT.xml" $args
       # PR tier: the core layers already run in `check`, and three coast modules take
       # about 30 of the full suite's 40 minutes; they run on main and nightly.
       - name: GIS layer, slow coast modules excluded (pull request tier)

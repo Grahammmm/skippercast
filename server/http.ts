@@ -10,13 +10,15 @@ export const db = (env: Env): D1Database => { if (!env.DB) throw Error('storage 
 
 /** A JSON object body, read as a stream and capped at `max` bytes (default 8 KiB). */
 export type Body = Record<string, ExternalJSON>;
+// Fatal: invalid UTF-8 is refused as 'invalid JSON body' instead of becoming U+FFFD; a leading BOM is still stripped.
+const strictUtf8 = new TextDecoder('utf-8', {fatal: true, ignoreBOM: false});
 export async function body(request: Request, max = 8192): Promise<Body> {
   if (Number(request.headers.get('content-length')) > max) throw new ClientError('body too large');
   const reader = request.body?.getReader(); if (!reader) throw new ClientError('invalid empty body');
   const chunks: Uint8Array[] = []; let size = 0;
   for (;;) { const {done, value} = await reader.read(); if (done) break; size += value.length; if (size > max) { await reader.cancel(); throw new ClientError('body too large'); } chunks.push(value); }
   const bytes = new Uint8Array(size); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
-  try { const value = JSON.parse(new TextDecoder().decode(bytes)); if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error(); return value; } catch { throw new ClientError('invalid JSON body'); }
+  try { const value = JSON.parse(strictUtf8.decode(bytes)); if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error(); return value; } catch { throw new ClientError('invalid JSON body'); }
 }
 
 export function requireOrigin(request: Request, extraOrigins: Set<string>): void {
