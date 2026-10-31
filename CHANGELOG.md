@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF0905-1: on a phone (below 1024 px) the Chart opens with the region centre (the Morro Bay harbor) in the open band between the top card and the sheet, not under the top card; the padding follows a resize, not a sheet drag. `?view=` and desktop are unchanged.
+
 - RF0850-2: the Chart no longer requests a shoreline or depth-contour file the loaded `region.json` does not list: with neither shoreline listed the coastline draws nothing and reads unavailable, and unlisted contours settle as none (Cambria: no shoreline or contour 404s). It waits for the region's `region.json` before asking, so switching to such a region requests neither. Listed or unknown, it asks as before.
 
 - RF1058-2: the fleet AIS health answer and its `fleet-ais-stale` issue name the likely cause of a stale check (`processor-not-delivered` when all three clocks are equally old, else `listener-stale`, `no-messages` or `no-data`), so a dropped processor schedule no longer reads as a dead listener. Thresholds are unchanged.

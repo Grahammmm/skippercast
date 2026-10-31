@@ -33,6 +33,7 @@ import {loadPoster, poster} from './poster.ts';
 import {COASTLINE_PICK, coastlineFetchPath, coastlineLayers, coastlineMark, coastlineSource, shorelineOverviewURL, shorelinePublished, shorelineURL, type ChartMark} from './coastline.ts';
 import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
+import {openBandPadding, type Box} from './open-band.ts';
 import {browserGate, flyoverLegs, markFlyoverSeen, mayFly, type FlyoverGate} from './flyover.ts';
 import {COASTLINE_SOURCE, DENSITY_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
 import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markData, markSources, markStyle} from './marks.ts';
@@ -128,6 +129,8 @@ export interface ChartOptions {
   place?: CurrentsOptions['place'];
   /** The flyover's browser gates (#646), given whether the link names a place; flyover.ts `browserGate` by default. */
   flyoverGate?: (linked: boolean) => FlyoverGate;
+  /** RF0905-1: what covers the map on a phone; by default the top card and the sheet. */
+  covers?: () => readonly Box[];
 }
 
 const loadLibrary = (): Promise<MapLibraryModule> => import('./maplibre.js');
@@ -135,6 +138,7 @@ const loadLibrary = (): Promise<MapLibraryModule> => import('./maplibre.js');
 export function createChart(options: ChartOptions): {destroy(): void} {
   const {host, layers = [], load = loadLibrary, palette = () => readPalette(), page = () => location.href, viewDelay = 400, flyoverGate = browserGate} = options;
   const diagnostics = options.diagnostics ?? (new URL(page()).searchParams.get('diagnostics') === '1');
+  const covers = options.covers ?? ((): Box[] => typeof document === 'undefined' ? [] : [...document.querySelectorAll('.app-top, .ui-sheet')].map(el => el.getBoundingClientRect()));
   // The marks, the protected areas and the masthead read the same region files: one request each (the startup budget).
   const fetchFn = shareStatic(options.fetchFn ?? sharedFetch);
   const engine = signal<Engine | null>(null);
@@ -226,6 +230,15 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       // Before `engine` is set: its effect would otherwise send the style's own shoreline again (a second 0.6 MB request).
       drawnRegion = id;
       engine.value = e;
+      // RF0905-1: below the 1024 px layout break the centre draws in the open band, at mount and on resize only (never on a detent change).
+      let padded = false;
+      const pad = (): void => {
+        const rect = host.getBoundingClientRect?.();
+        if (!rect || !alive) return;
+        if (host.clientWidth < 1024) { const p = openBandPadding(rect, covers()); e.setPadding(p); padded = p.top + p.bottom > 0; }
+        else if (padded) { e.setPadding({top: 0, bottom: 0, left: 0, right: 0}); padded = false; }
+      };
+      pad(); e.view.on('resize', pad);
       seafloor = createSeafloor({engine: e, open: url => new library.PMTiles(url), fetchFn, page,
         size: () => ({width: host.clientWidth, height: host.clientHeight}),
         onHide: () => { if (chartMark.peek()?.id.startsWith('seafloor:')) chartMark.value = null; }});
