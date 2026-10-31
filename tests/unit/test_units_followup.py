@@ -45,13 +45,14 @@ class UnitsFollowupTests(unittest.TestCase):
             self.assertEqual(events.p90_radius_m([point], centre).hex(), expected.hex(), (centre, point))
         self.assertEqual(events.p90_radius_m([(37.0, -122.0)], (37.0, -122.0)), 0.0)
 
-    def test_events_import_in_fresh_interpreter(self):
-        code = (f"import sys; sys.path.insert(0, {str(ROOT / 'src')!r}); import skippercast.fleet.ais.events as e; "
-                "from skippercast.util import units; assert e.METRES_PER_NM is units.M_PER_NMI; "
+    def test_events_import_in_fresh_interpreter(self):  # cwd is this checkout's src, first on sys.path; -E ignores env
+        code = ("import sys; import skippercast.fleet.ais.events as e; from skippercast.util import units; "
+                "assert e.METRES_PER_NM is units.M_PER_NMI; print(e.__file__); "
                 "print(sorted(m for m in ('numpy', 'pandas', 'rasterio', 'shapely') if m in sys.modules))")
-        done = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True, timeout=60)
+        done = subprocess.run([sys.executable, "-E", "-s", "-c", code], cwd=ROOT / "src", capture_output=True,
+                              text=True, timeout=60)
         self.assertEqual(done.returncode, 0, done.stderr)
-        self.assertEqual(done.stdout.strip(), "[]")
+        self.assertEqual(done.stdout.split("\n")[:2], [str(SRC / "fleet/ais/events.py"), "[]"])
 
 
 if __name__ == "__main__":
