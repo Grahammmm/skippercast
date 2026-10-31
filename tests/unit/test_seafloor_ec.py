@@ -78,3 +78,6 @@ def test_nullable_keys_are_still_required_and_numbers_finite():
         assert edit(doc, path, None) == [] and edit(doc, path, -1.5) == []  # null (unavailable) and finite controls
         assert [edit(doc, path, bad) for bad in (math.nan, math.inf, -math.inf)] == [[f'{path}: not num']] * 3, path
     assert edit(APPLY, 'fixes[0].bbox', [1, 1, math.nan, 2]) == ['fixes[0].bbox: not bbox']
+    for bad in ([5, 5, 5, 5], [1, 1, 2.0, 2], [-1, 0, 1, 1], [2, 1, 1, 2]):  # bbox is end-exclusive ints: col0 < col1
+        assert edit(APPLY, 'fixes[0].bbox', bad) == ['fixes[0].bbox: not bbox'], bad
+    assert edit(APPLY, 'fixes[0].bbox', [5, 5, 6, 6]) == []  # one cell at row 5, col 5

@@ -50,6 +50,12 @@ ending in `?` may be null when the value is unavailable, never absent), numbers 
 for apply. Only two records may omit keys: a hole above `hole_max_cells` (`disposition: 'hole'`) carries only `cells`,
 `bbox`, `disposition`, and a `REFUSED` source carries only `receipts.detect`. Extra keys are allowed.
 
+**`bbox` convention (every receipt, every EC tool):** `[col0, row0, col1, row1]` in native pixel indices,
+**end-exclusive** like numpy slices: the box covers rows `row0 … row1 − 1` and columns `col0 … col1 − 1`, so one
+cell at row `r`, column `c` is `[c, r, c + 1, r + 1]`. `check_receipt` accepts only four non-negative integers with
+`col0 < col1` and `row0 < row1`, so an inclusive one-cell box such as `[5, 5, 5, 5]` is refused. ec_detect writes
+this form, ec_apply reads it, and `tests/gis/test_ec_bbox_contract.py` feeds one tool's receipt to the other.
+
 ## Run folder (private, outside the repository)
 `ec/<source_id>/{EC-DETECT.json, EC-APPLY.json, EC-VERIFY.json, corrected.tif, provenance.tif, ENTRIES.json, DONE}`,
 then `EC.json` (`region-correct-v1`), `EC.md` (one line per source plus `Operator asks`) and `INTAKE-EC.csv`: all
