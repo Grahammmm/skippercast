@@ -13,47 +13,42 @@ pytestmark = pytest.mark.gis
 rasterio = pytest.importorskip('rasterio')
 from rasterio.transform import from_origin  # noqa: E402
 
-ENTRIES = {'usgs-a': {'id': 'usgs-a', 'adapter': 'geotiff'}, 'usgs-b': {'id': 'usgs-b', 'adapter': 'geotiff'},
-           'usgs-c': {'id': 'usgs-c', 'adapter': 'geotiff'},
-           'bluetopo': {'id': 'bluetopo', 'adapter': 'bluetopo-geotiff-source-review'},
-           'bag-a': {'id': 'bag-a', 'adapter': 'bag'}, 'bag-b': {'id': 'bag-b', 'adapter': 'bag'}}
-
-
-def _mod():
-    spec = importlib.util.spec_from_file_location('ec_verify', ROOT / 'scripts/ec_verify.py')
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-EC = _mod()  # seafloor_ec (CODES, check_receipt) through the script's own src path
+ENTRIES = {k: {'id': k, 'adapter': v} for k, v in (('usgs-a', 'geotiff'), ('usgs-b', 'geotiff'), ('usgs-c', 'geotiff'),
+           ('bluetopo', 'bluetopo-geotiff-source-review'), ('bag-a', 'bag'), ('bag-b', 'bag'))}
+_SPEC = importlib.util.spec_from_file_location('ec_verify', ROOT / 'scripts/ec_verify.py')
+EC = importlib.util.module_from_spec(_SPEC)  # seafloor_ec (CODES, check_receipt) through the script's own src path
+_SPEC.loader.exec_module(EC)
 
 
 def _sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _tif(path, values, crs='EPSG:32610', dtype='float32', nodata=-9999.0, **extra):
-    with rasterio.open(path, 'w', driver='GTiff', width=values.shape[1], height=values.shape[0], count=1, dtype=dtype,
-                       crs=crs, transform=from_origin(500000, 3900000, 2.0, 2.0), nodata=nodata, **extra) as ds:
+def _tif(path, values, crs='EPSG:32610', dtype='float32', nodata=-9999.0, driver='GTiff', x0=500000, **extra):
+    with rasterio.open(path, 'w', driver=driver, width=values.shape[1], height=values.shape[0], count=1, dtype=dtype,
+                       crs=crs, transform=from_origin(x0, 3900000, 2.0, 2.0), nodata=nodata, **extra) as ds:
         ds.write(np.asarray(values, dtype=dtype), 1)
         if dtype == 'uint8':
             ds.update_tags(EC_VERSION='1.0', SKIPPERCAST_EC_CODES=json.dumps(dict(EC.CODES)))
     return path
 
 
+def _prov(a, codes, **kw):  # (re)write A's provenance.tif and point EC-APPLY.json at it
+    _tif(a / 'provenance.tif', codes, dtype='uint8', nodata=255, compress='deflate', **kw)
+    receipt = json.loads((a / 'EC-APPLY.json').read_text())
+    (a / 'EC-APPLY.json').write_text(json.dumps({**receipt, 'provenance_sha256': _sha(a / 'provenance.tif')}))
+
+
 def _a_dir(tmp_path, values, codes, source='usgs-a', signature=None):
-    a = tmp_path / 'a'
-    a.mkdir()
+    (a := tmp_path / 'a').mkdir()
     _tif(a / 'input.tif', values)
     _tif(a / 'corrected.tif', values)
-    _tif(a / 'provenance.tif', codes, dtype='uint8', nodata=255, compress='deflate')
     receipt = {'schema': 'ec-apply-v1', 'ec_version': '1.0', 'source_id': source, 'detect_sha256': '0' * 64,
                'input_sha256': _sha(a / 'input.tif'), 'corrected_sha256': _sha(a / 'corrected.tif'),
-               'provenance_sha256': _sha(a / 'provenance.tif'), 'cell_m': 2.0, 'counts': {'measured': codes.size},
-               'duplicate_signature': signature or [1, 1, 'EPSG:32610', 2.0, -1.0, -1.0, -1.0], 'fixes': [],
-               'deepened_cells': 0, 'disposition': 'PASS'}
+               'cell_m': 2.0, 'counts': {'measured': codes.size}, 'fixes': [], 'deepened_cells': 0, 'disposition': 'PASS',
+               'duplicate_signature': signature or [1, 1, 'EPSG:32610', 2.0, -1.0, -1.0, -1.0]}
     (a / 'EC-APPLY.json').write_text(json.dumps(receipt))
+    _prov(a, codes)
     (tmp_path / 'entries.json').write_text(json.dumps(ENTRIES))
     return a
 
@@ -63,8 +58,7 @@ def _run(tmp_path, out, bs=(), a_source='usgs-a', a_datum='MLLW', extra=()):
             '--catalog-entries', str(tmp_path / 'entries.json'), '--out-dir', str(tmp_path / out), *extra]
     for path, source, datum in bs:
         argv += ['--b', str(path), '--b-source', source, '--b-datum', datum]
-    code = EC.main(argv)
-    if code:
+    if code := EC.main(argv):
         return code, None, None
     receipt = json.loads((tmp_path / out / 'EC-VERIFY.json').read_text())
     assert EC.check_receipt('ec-verify-v1', receipt) == []
@@ -115,13 +109,20 @@ def test_datum_comparability(tmp_path, flat, offset, a_datum, b_datum, code, com
     assert (prov[:, :100] == code).all() and (prov[:, 100:] == 10).all()
 
 
-def test_datum_suspect_never_overrides_verified_and_small_overlap_stays_unchecked(tmp_path, flat):
+def test_datum_suspect_never_overrides_verified_and_e9_sees_every_jointly_valid_depth(tmp_path, flat):
     suspect, agree = _tif(tmp_path / 'b.tif', flat + 1.2), _tif(tmp_path / 'c.tif', flat + 0.3)
     receipt, prov, _ = _run(tmp_path, 'out', [(suspect, 'usgs-b', 'undeclared'), (agree, 'usgs-c', 'MLLW')])
     assert [p['reason'] for p in receipt['pairs']] == ['datum-suspect', 'ok'] and (prov == 30).all()
     small = _tif(tmp_path / 'd.tif', np.where(np.arange(110) < 5, flat + 0.3, -9999.0))  # 500 joint cells
     receipt, prov, _ = _run(tmp_path, 'out2', [(small, 'usgs-c', 'undeclared')])
     assert receipt['pairs'][0]['reason'] == 'datum-unchecked' and (prov == 10).all()
+    top = np.arange(100)[:, None] < 10  # 1,100 measured cells over 9,900 finite unresolved (42) ones
+    _prov(tmp_path / 'a', np.where(top, 10, 42).repeat(110, 1).astype('uint8'))
+    for far, code in ((2.0, 43), (0.3, 30)):  # the 42 depths count in E9 but never change
+        b = _tif(tmp_path / f'm{far}.tif', np.where(top, flat + 0.3, flat + far))
+        receipt, prov, _ = _run(tmp_path, f'm{far}', [(b, 'usgs-b', 'MLLW')], a_datum='undeclared')
+        assert (receipt['pairs'][0]['jointly_valid_cells'], receipt['pairs'][0]['datum_suspect']) == (11_000, far > 1)
+        assert (prov[:10] == code).all() and (prov[10:] == 42).all()
 
 
 def test_non_independent_pairs_never_verify(tmp_path, flat):
@@ -181,7 +182,7 @@ def test_second_survey_driver_boundary_not_extension(tmp_path, flat, capsys, dri
         assert result['counts'] == {'verified': flat.size}
     else:
         assert result == 2
-        assert 'b must be GeoTIFF' in capsys.readouterr().err
+        assert 'b not GeoTIFF (ENVI)' in capsys.readouterr().err
         assert not (tmp_path / 'out').exists()
 
 
@@ -190,6 +191,7 @@ def test_refusals_write_nothing(tmp_path, flat, capsys):
     adir = tmp_path / 'a'
     cases = [('cap', [(good, 'usgs-b', 'MLLW')], ['--max-pixels', '100'], 'pixel cap'),
              ('geo', [(_tif(tmp_path / 'g.tif', flat, crs='EPSG:4326'), 'usgs-b', 'MLLW')], [], 'projected-metre'),
+             ('envi', [(_tif(tmp_path / 'e.img', flat + 0.3, driver='ENVI'), 'usgs-b', 'MLLW')], [], 'not GeoTIFF (ENVI)'),
              ('miss', [(good, 'nowhere', 'MLLW')], [], 'catalog entry missing: nowhere'),
              ('count', [], ['--b', str(good)], 'each --b needs'),
              (str(ROOT / 'var' / 'ec3-never'), [], [], 'outside the work tree')]
@@ -198,6 +200,10 @@ def test_refusals_write_nothing(tmp_path, flat, capsys):
         assert not (tmp_path / out).exists() and not (ROOT / 'var' / 'ec3-never').exists()
     _run(tmp_path, 'done')
     assert _run(tmp_path, 'done')[0] == 2 and 'outputs exist' in capsys.readouterr().err
+    for kw in ({'x0': 600000}, {'crs': 'EPSG:32611'}):  # same shape, other lattice: refused before any write
+        _prov(adir, np.full(flat.shape, 10, 'uint8'), **kw)
+        assert _run(tmp_path, 'shifted', [(good, 'usgs-b', 'MLLW')])[0] == 2 and 'provenance grid' in capsys.readouterr().err
+        assert not (tmp_path / 'shifted').exists()
     receipt = json.loads((adir / 'EC-APPLY.json').read_text())
     for tamper, message in (({'deepened_cells': 1}, 'apply receipt'), ({'provenance_sha256': 'f' * 64}, 'provenance_sha256'),
                             ({'corrected_sha256': 'f' * 64}, 'corrected_sha256'), ({'source_id': 'usgs-b'}, 'source_id')):

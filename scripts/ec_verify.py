@@ -63,8 +63,8 @@ def read_b(path, a_ds, max_pixels):
     import rasterio
     from rasterio.warp import Resampling, reproject
     with rasterio.open(path) as src:
-        if src.driver != 'GTiff':
-            raise Refused(f'b must be GeoTIFF: {Path(path).name}')
+        if src.driver != 'GTiff':  # GeoTIFF B only; BAG and other formats are wave 2
+            raise Refused(f'b not GeoTIFF ({src.driver}): {Path(path).name}')
         crs = src.crs
         if not (crs and crs.is_projected and str(crs.linear_units).lower() in ('metre', 'meter')):
             raise Refused(f'b crs not projected-metre: {Path(path).name}')
@@ -122,7 +122,8 @@ def verify(args):
             raise Refused('provenance grid differs from corrected grid')
         a = a_ds.read(1, masked=True).astype('float64').filled(np.nan)
         prov, profile, tags = p_ds.read(1), p_ds.profile, p_ds.tags()
-        a_ok = np.isin(prov, TREATABLE) & np.isfinite(a)
+        a_depth = np.isfinite(a) & ~np.isin(prov, (CODES['nodata'], CODES['masked-sentinel']))
+        a_ok = np.isin(prov, TREATABLE) & a_depth
         verified, conflict, suspect = (np.zeros(a.shape, bool) for _ in range(3))
         hint = np.full(a.shape, np.nan)
         pairs = []
@@ -130,12 +131,13 @@ def verify(args):
             b, b_sha, b_sig = read_b(path, a_ds, args.max_pixels)
             duplicate = b_sha == receipt['input_sha256'] or b_sig == receipt['duplicate_signature']
             ind, reason = independent(entries[args.a_source], args.a_file, entries[b_source], Path(path).name, duplicate)
-            joint = a_ok & np.isfinite(b) & (b < 0) & (b >= PLAUSIBLE_M[0])
-            diff = (a - b)[joint]
-            n = int(joint.sum())
+            valid = a_depth & np.isfinite(b) & (b < 0) & (b >= PLAUSIBLE_M[0])  # E9 sees every jointly valid depth
+            joint = valid & a_ok  # ...but only measured/filled cells of A may change
+            diff = (a - b)[valid]
+            n = int(valid.sum())
             mean = float(diff.mean()) if n else None
             mad = float(np.median(np.abs(diff - np.median(diff)))) if n else None
-            e9 = bool(n >= DATUM_SUSPECT['min_cells'] and abs(mean) > tol_m(float(np.median(np.abs(a[joint]))))
+            e9 = bool(n >= DATUM_SUSPECT['min_cells'] and abs(mean) > tol_m(float(np.median(np.abs(a[valid]))))
                       and mad < DATUM_SUSPECT['max_mad_m'])
             datums = [args.a_datum, b_datum]
             comparable, why = comparability(datums, n, e9) if ind else (False, reason)
