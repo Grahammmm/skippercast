@@ -63,6 +63,8 @@ def read_b(path, a_ds, max_pixels):
     import rasterio
     from rasterio.warp import Resampling, reproject
     with rasterio.open(path) as src:
+        if src.driver != 'GTiff':
+            raise Refused(f'b must be GeoTIFF: {Path(path).name}')
         crs = src.crs
         if not (crs and crs.is_projected and str(crs.linear_units).lower() in ('metre', 'meter')):
             raise Refused(f'b crs not projected-metre: {Path(path).name}')
@@ -116,10 +118,10 @@ def verify(args):
     with rasterio.open(corrected_path) as a_ds, rasterio.open(prov_path) as p_ds:
         if a_ds.width * a_ds.height > args.max_pixels:
             raise Refused('pixel cap: A')
+        if (p_ds.shape != a_ds.shape or p_ds.crs != a_ds.crs or p_ds.transform != a_ds.transform):
+            raise Refused('provenance grid differs from corrected grid')
         a = a_ds.read(1, masked=True).astype('float64').filled(np.nan)
         prov, profile, tags = p_ds.read(1), p_ds.profile, p_ds.tags()
-        if prov.shape != a.shape:
-            raise Refused('provenance grid differs from corrected grid')
         a_ok = np.isin(prov, TREATABLE) & np.isfinite(a)
         verified, conflict, suspect = (np.zeros(a.shape, bool) for _ in range(3))
         hint = np.full(a.shape, np.nan)
