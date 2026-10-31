@@ -49,3 +49,17 @@
 /* On the phone the first-run choice belongs to the sheet/page's scroll area,
    leaving its handle, time controls and navigation reachable. */
 .app-mobile .app-firstrun { position: static; width: auto; max-width: 100%; box-sizing: border-box; transform: none; margin-bottom: var(--space-3); }
+
+/* BL-SC-2: at the sheet's peek the question and one row of the four choices
+   sit above the tab bar; from half up the whole card shows as above. The notes
+   and the Keep button stay in the accessibility tree and the Tab order. */
+.ui-sheet[data-detent="peek"] .app-firstrun { gap: var(--space-1); padding: var(--space-1) var(--space-3); }
+.ui-sheet[data-detent="peek"] .app-firstrun > .ui-eyebrow, .ui-sheet[data-detent="peek"] .app-firstrun > p { display: none; }
+.ui-sheet[data-detent="peek"] .app-firstrun > .ui-button, .ui-sheet[data-detent="peek"] .app-firstrun-options small {
+  position: absolute; width: 1px; height: 1px; min-width: 0; min-height: 0; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.ui-sheet[data-detent="peek"] .app-firstrun h2 { font-size: var(--text-15); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ui-sheet[data-detent="peek"] .app-firstrun-options { flex-direction: row; flex-wrap: nowrap; }
+.ui-sheet[data-detent="peek"] .app-firstrun-options .ui-button {
+  flex: 1 1 0; flex-direction: column; gap: 0; min-width: var(--touch-min); min-height: var(--touch-min); padding: var(--space-1); justify-content: center; text-align: center;
+}
