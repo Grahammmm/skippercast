@@ -49,7 +49,7 @@ export function Location() {
   return (
     <>
       <span class="app-location ui-mono" data-region={region.value ?? ''}>
-        {info ? `${info.name} ${coordinates(info.center)}` : region.value ? `${titleCase(region.value)} —` : 'No port chosen'}
+        {info ? <>{info.name} <span class="app-location-coords">{coordinates(info.center)}</span></> : region.value ? `${titleCase(region.value)} —` : 'No port chosen'}
       </span>
       {state === 'loading' ? <span role="status">Loading region…</span> : null}
       {state === 'error' ? <span role="status">Region details unavailable. <button type="button" onClick={retryRegion}>Retry region details</button></span> : null}

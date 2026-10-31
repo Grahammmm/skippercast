@@ -293,6 +293,37 @@ test.describe('phone', () => {
     await expect(sheet.locator('h1')).toBeInViewport();
     expect(pageErrors).toEqual([]);
   });
+
+  // SC-N3: the Day chips scroll inside their own row, never the sheet body; the top card keeps the whole region name.
+  for (const size of [{width: 390, height: 844}, {width: 360, height: 800}]) {
+    test(`at ${size.width} px the full sheet never scrolls sideways and the top card names the whole region`, async ({page, pageErrors, v2}) => {
+      await page.setViewportSize(size);
+      await v2.open('app', {...AREA, profile: 'boat'});
+      const keep = page.getByRole('button', {name: 'Keep Boat for now'});
+      if (await keep.isVisible()) await keep.tap();
+      const sheet = page.locator('.ui-sheet'), body = sheet.locator('.ui-sheet-body');
+      await page.locator('.ui-sheet-handle').focus();
+      await page.keyboard.press('End');
+      await expect(sheet).toHaveAttribute('data-detent', 'full');
+      const day = sheet.locator('[role="group"][aria-label="Day"]');
+      await expect(day.getByRole('button').last()).toBeAttached();
+      const overflow = () => body.evaluate(el => [el.scrollWidth, el.clientWidth, el.scrollLeft]);
+      const [scrollWidth, clientWidth] = await overflow();
+      expect(scrollWidth, 'the sheet body has no sideways overflow').toBeLessThanOrEqual(clientWidth);
+      const row = (await day.boundingBox())!;
+      expect(row.x + row.width, 'the Day row ends inside the screen').toBeLessThanOrEqual(size.width);
+      await day.getByRole('button').last().click();
+      expect((await overflow())[2], 'reaching the last Day chip scrolls its row, not the sheet').toBe(0);
+      expect((await sheet.locator('.app-sheet-brief').boundingBox())!.x, 'the brief keeps its inset').toBeGreaterThanOrEqual(15);
+      const location = page.locator('.app-top-card .app-location');
+      await expect(location).toContainText('Morro Bay');
+      await expect(location.locator('.app-location-coords')).toBeAttached();
+      await expect(location.locator('.app-location-coords'), 'the coordinates leave the clipped line').toBeHidden();
+      const [locWidth, locClient] = await location.evaluate(el => [el.scrollWidth, el.clientWidth]);
+      expect(locWidth, 'the region name is not clipped').toBeLessThanOrEqual(locClient);
+      expect(pageErrors).toEqual([]);
+    });
+  }
 });
 
 // FE-60 acceptance 3: with v2 the default, one context draws one map, one of each picker and one timeline. The
