@@ -59,6 +59,11 @@ def test_missing_field_refuses():
     line(url='https://records.example/b.bag') + line(), line() + line(),
     line() + line(url='https://records.example/b.bag', fetched_at='2026-10-21T00:00:00Z'),
     b'[' + line()[:-1] + b']\n', b'"text"\n', line().replace(b'3,', b'NaN,'),
+], ids=[  # explicit ids: the bytes carry prefetch.stamp(), so byte-derived ids differ per process (xdist)
+    'empty', 'no-final-newline', 'crlf', 'trailing-blank-line', 'leading-blank-line',
+    'indented', 'unsorted-keys-or-trailing-space', 'duplicate-key',
+    'rows-unsorted', 'rows-duplicate', 'second-row-bad-stamp',
+    'json-array', 'json-string', 'nan',
 ])
 def test_snapshot_bytes_refuse(bytes_):
     with pytest.raises(ValueError):
