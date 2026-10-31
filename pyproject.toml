@@ -41,7 +41,7 @@ survey = [
 publish = ["boto3==1.43.118", "jsonschema==4.26.0"]
 # Test runner, JSON Schema validation for seafloor manifests and schemas/, and the
 # in-memory S3 used by the R2 publisher test (requirements-test.txt).
-test = ["jsonschema==4.26.0", "pytest==9.1.1", "moto==5.2.4", "zstandard==0.25.0"]
+test = ["jsonschema==4.26.0", "pytest==9.1.1", "pytest-xdist==3.8.0", "moto==5.2.4", "zstandard==0.25.0"]
 # Scheduled seafloor ingestion and publication (requirements-seafloor.txt).
 seafloor = ["skippercast[survey,publish,test]"]
 # Operating-system trust store for skippercast.http (optional; stdlib TLS otherwise).
