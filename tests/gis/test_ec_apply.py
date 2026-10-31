@@ -139,10 +139,10 @@ def test_deepening_gate_exits_3_and_leaves_the_folder_empty(tmp_path, capsys, mo
     assert 'apply refused: deepened 1 cells' in capsys.readouterr().err
     assert not out.exists() or list(out.iterdir()) == []
 
-
-def test_sentinels_and_masked_cells_stay_invalid_unless_the_receipt_fills_their_hole(tmp_path):
+@pytest.mark.parametrize('masked_fill', [-19.5, -19.0])  # includes a mask-only fill: stored depth already equals target
+def test_sentinels_and_masked_cells_stay_invalid_unless_the_receipt_fills_their_hole(tmp_path, masked_fill):
     z, valid = _grid(), np.ones((32, 32), dtype=bool)
-    z[H1], z[28, 3], z[28, 4] = 9999.0, 9999.0, np.nan
+    z[H1], z[28, 3], z[28, 4], z[28, 10] = 9999.0, 9999.0, np.nan, masked_fill
     valid[28, 5] = valid[28, 10] = False  # finite cells masked invalid by the input's own validity mask
     grid = _tif(tmp_path / 'grid.tif', z, mask=valid)
     holes = [_hole1(), _hole1(bbox=[10, 28, 10, 28], ring_shallowest_m=-19.0, ring_range_m=1.0)]

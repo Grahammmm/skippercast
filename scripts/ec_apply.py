@@ -178,7 +178,7 @@ def apply(path, detect_path, out_dir):
     # No-deepening gate (not configurable): treated cells may only get shallower; nothing else may change.
     index = np.flatnonzero(treated)
     deepened = len(ec.no_deepening(reference.ravel()[index].tolist(), after.ravel()[index].tolist(), range(len(index))))
-    deepened += int((~_same(after, masked) != treated).sum())
+    deepened += int((~_same(after, masked) & ~treated).sum())  # a valid fill may change only the validity mask
     if deepened: raise Refused(f'deepened {deepened} cells', code=3)
 
     out.mkdir(parents=True, exist_ok=True)
