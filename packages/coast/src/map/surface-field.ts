@@ -2,6 +2,7 @@
  * No nearest-neighbor filling, offshore extrapolation, or bridging missing cells.
  * Components are blended before deriving current speed/direction.
  */
+import {KNOTS_PER_MS} from '../units.ts';
 export type FieldPoint = {lon:number;lat:number;values:number[]};
 export type FieldQuad = {west:number;south:number;east:number;north:number;corners:FieldPoint[]};
 export type SurfaceField = {
@@ -42,7 +43,7 @@ export function fieldColor(value:number,low:number,high:number,palette:string[])
  const a=parseInt(palette[i].slice(1),16),b=parseInt(palette[i+1].slice(1),16);
  return [16,8,0].map(shift=>Math.round(((a>>shift)&255)*(1-t)+((b>>shift)&255)*t)) as [number,number,number];
 }
-export function vectorReading(values:number[]){const [u,v]=values;return {speedKnots:Math.hypot(u,v)*1.943844492,towardDeg:(Math.atan2(u,v)*180/Math.PI+360)%360};}
+export function vectorReading(values:number[]){const [u,v]=values;return {speedKnots:Math.hypot(u,v)*KNOTS_PER_MS,towardDeg:(Math.atan2(u,v)*180/Math.PI+360)%360};}
 export function temperatureRange(values:number[]):[number,number]{const low=Math.floor(Math.min(...values)),high=Math.ceil(Math.max(...values));return [low,Math.max(low+1,high)];}
 /** Contours use only complete quads. Center fan resolves saddle cells consistently. */
 export function fieldContours(field:SurfaceField,levels:number[]){

@@ -5,6 +5,7 @@
 // Blank survey cells stay null. Schema 2 keeps authoritative positive-down depths separate
 // from display elevations and is a held private diagnostic, never a publishable product.
 
+import {FEET_PER_M} from '../units.ts';
 // Survey JSON is validated field by field below before any value is trusted.
 export type BottomWindowData = Record<string, any>;
 
@@ -49,8 +50,6 @@ export interface BottomView {
   /** True for a schema 2 private diagnostic window (publication held). */
   diagnostic: boolean;
 }
-
-const FEET_PER_M = 3.28084;
 
 /** Schema 1 (int16 decimetre elevations, 129×129) or schema 2 display elevations, positive up. */
 export function decodeBottom(data: BottomWindowData): (number | null)[] {

@@ -39,6 +39,7 @@ import {COAST_NOT_SAVED, NOT_SAVED, TILES_NOT_SAVED, watchOffline} from './offli
 import type {Palette} from './palette.ts';
 import {shownPresentation, terrainHour, UNSUPPORTED_CURRENT} from './stage.ts';
 import {vectorReading, type SurfaceField} from './surface-field.js';
+import {DEFAULT_ZONE} from '../zone.ts';
 
 type Drawn = {field: CurrentField; frame: CurrentFrame; expiresAt: number};
 export interface CurrentsStatus {
@@ -194,7 +195,7 @@ function landMask(view: MapView, width: number, height: number, doc: Doc): (x: n
 }
 
 export function createCurrents(o: CurrentsOptions): Currents {
-  const {view, data = coastData, now = () => new Date(), zone = () => 'America/Los_Angeles'} = o;
+  const {view, data = coastData, now = () => new Date(), zone = () => DEFAULT_ZONE} = o;
   const doc = o.doc ?? (typeof document === 'undefined' ? null : document);
   const motion = o.motion !== undefined ? o.motion : typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
   const frames = o.frames ?? {request: step => requestAnimationFrame(step), cancel: id => cancelAnimationFrame(id)};

@@ -18,6 +18,7 @@ import {profile, region, species} from '../../state.ts';
 import type {Charters, Evidence, ReportsData, Watch} from '../../reports.ts';
 import {regionInfo} from '../App.tsx';
 import {CoastMarkup, isSafeCatchState} from '../CoastMarkup.tsx';
+import {DEFAULT_ZONE} from '../../zone.ts';
 
 /** The loaded sections and the complete inputs they were loaded for. */
 export const reportsData = signal<{key: string; data: ReportsData} | null>(null);
@@ -46,7 +47,7 @@ export async function openReports(id: string, target: string, charters: string |
 
 const day = (iso: string | null | undefined): string => {
   const at = iso ? Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00Z` : iso) : NaN;
-  return Number.isFinite(at) ? new Intl.DateTimeFormat('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: /^\d{4}-\d{2}-\d{2}$/.test(iso ?? '') ? 'UTC' : 'America/Los_Angeles'}).format(at) : 'date unavailable';
+  return Number.isFinite(at) ? new Intl.DateTimeFormat('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: /^\d{4}-\d{2}-\d{2}$/.test(iso ?? '') ? 'UTC' : DEFAULT_ZONE}).format(at) : 'date unavailable';
 };
 const Out = ({href, children}: {href: string; children: ComponentChildren}) => <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
 
