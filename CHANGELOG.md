@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- RF0850-1: once a region's `region.json` has loaded, the app no longer requests a land-water index, poster or shoreline form its `chart_files` lacks, and the offline pack no longer counts them as missing (Cambria: fewer 404s). Without the list it asks as before.
+
 - RF0835-2: each compiled `region.json` lists the Chart side files the build wrote for it (`chart_files`), and the landing warm-up no longer requests a shoreline overview or poster a region does not publish (Cambria: two fewer 404s). Without the list it warms as before.
 
 - The `noaa-bag` source (NOAA hydrographic survey grids) is now approved in the source catalog as a source family, on G's 2026-10-30 acceptance. Individual tiles still need their own screening and review, datums are carried as declared, and nothing is published or for navigation by this change.

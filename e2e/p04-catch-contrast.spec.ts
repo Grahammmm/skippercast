@@ -119,7 +119,7 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // Rebind those three exact hashes.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
-  "web/app/App.tsx": "8086311c36c000119bc48cc769ed69acefbfc4565840eb21a4318be6cdfe62ae",
+  "web/app/App.tsx": "e2d38eda657241f7c0b994c5136c5384c70781eccd4a1c72c655317e3cabe0cc",
   "web/app/Masthead.tsx": "d785af3dc63990d67940cb4eb451c7a39e3be4de268c67a13d1c8c05130643ca",
   "web/app/LayerRail.tsx": "248402b3100855ef1561c742ee32c3922d9b6475080cb6420957a553e5872abb",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",

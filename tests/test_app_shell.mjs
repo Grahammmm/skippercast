@@ -249,6 +249,16 @@ test('startup region reader rejects invalid metadata and allows a later same-key
   assert.equal((await reader('fixture')).name, 'Valid');
 });
 
+test('startup region reader keeps region.json chart_files only when it is a list of names (RF0850-1)', async () => {
+  const {createRegionReader} = await load();
+  const base = {name: 'R', map: {center: [1, 2]}};
+  const bodies = [{...base, chart_files: ['poster.svg']}, {...base, chart_files: []}, base, {...base, chart_files: 'poster.svg'}, {...base, chart_files: ['a', 2]}];
+  const reader = createRegionReader(async () => new Response(JSON.stringify(bodies.shift())), {limit: 1});
+  assert.deepEqual((await reader('r1')).chartFiles, ['poster.svg']);
+  assert.deepEqual((await reader('r2')).chartFiles, [], 'an empty list is a list');
+  for (const id of ['r3', 'r4', 'r5']) assert.equal('chartFiles' in await reader(id), false, id);
+});
+
 test('freshness uses source timestamps and injected clock on the existing masthead', async () => {
   const {startupFreshness, freshness, render, h, App, state} = await load();
   state.configureStore({v2: true, storage: memory()});
