@@ -12,26 +12,57 @@ and cutoff 0.25 (the values node-fontnik and TinySDF use); `top` is the
 bitmap top minus the ascender, as fontnik writes it. The distance field is
 computed on a 4x supersampled rendering and averaged down.
 
-    python scripts/basemap/build_glyphs.py      # needs fonttools, brotli, Pillow, numpy, scipy
+    python scripts/basemap/build_glyphs.py          # needs fonttools, brotli, Pillow, numpy, scipy
+    python scripts/basemap/build_glyphs.py --check  # rebuild in memory, compare with the pins, write nothing
 
 Output: dist/basemap/glyphs/dm-sans-medium/{0-255,8192-8447}.pbf; update their
-hashes in scripts/web-vendor-sha256.json after a rebuild.
+hashes in scripts/web-vendor-sha256.json after a rebuild. Paste the printed
+`versions:` line into the commit that changes the glyph files.
 """
+import argparse
+import hashlib
+import importlib.util
+import json
+import platform
+import sys
+from importlib import metadata
 from io import BytesIO
 from pathlib import Path
-
-import numpy as np
-from fontTools.ttLib import TTFont
-from fontTools.varLib.instancer import instantiateVariableFont
-from PIL import ImageFont
-from scipy.ndimage import distance_transform_edt
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "web/fonts/dm-sans-latin.woff2"
 STACK = "dm-sans-medium"
 OUT = ROOT / "dist/basemap/glyphs" / STACK
+PINS = ROOT / "scripts/web-vendor-sha256.json"
+PREFIX = f"dist/basemap/glyphs/{STACK}/"
 WEIGHT, SIZE, BORDER, RADIUS, CUTOFF, SCALE = 500, 24, 3, 8, 0.25, 4
 RANGES = (0, 8192)
+MODULES = {"fonttools": "fontTools", "brotli": "brotli", "Pillow": "PIL", "numpy": "numpy", "scipy": "scipy"}
+np = distance_transform_edt = None  # set by build() from _libs(); glyph() uses them
+
+
+def _libs():
+    """The font stack, imported only to build so importing this module needs none of it."""
+    missing = [package for package, module in MODULES.items() if importlib.util.find_spec(module) is None]
+    if missing:
+        print(f"build_glyphs: needs fonttools, brotli, Pillow, numpy, scipy (missing: {', '.join(missing)})", file=sys.stderr)
+        raise SystemExit(2)
+    import numpy
+    from fontTools.ttLib import TTFont
+    from fontTools.varLib.instancer import instantiateVariableFont
+    from PIL import ImageFont
+    from scipy.ndimage import distance_transform_edt
+    return numpy, TTFont, instantiateVariableFont, ImageFont, distance_transform_edt
+
+
+def versions():
+    found = {"python": platform.python_version()}
+    for package in MODULES:
+        try:
+            found[package.lower()] = metadata.version(package)
+        except metadata.PackageNotFoundError:
+            found[package.lower()] = "absent"
+    return found
 
 
 def varint(n):
@@ -81,7 +112,10 @@ def glyph(font, ascender, code):
             + field(5, zigzag(left)) + field(6, zigzag(-top - ascender)) + field(7, advance))
 
 
-def main():
+def build():
+    """Each range's repo path and the exact bytes `write` puts there, built in memory."""
+    global np, distance_transform_edt
+    np, TTFont, instantiateVariableFont, ImageFont, distance_transform_edt = _libs()
     source = TTFont(SOURCE)
     source.flavor = None
     instance = instantiateVariableFont(source, {"wght": WEIGHT})
@@ -90,15 +124,49 @@ def main():
     instance.save(data)
     font = ImageFont.truetype(BytesIO(data.getvalue()), SIZE * SCALE, layout_engine=ImageFont.Layout.BASIC)
     codes = set(instance.getBestCmap())
-    OUT.mkdir(parents=True, exist_ok=True)
+    built = {}
     for start in RANGES:
         name = f"{start}-{start + 255}"
         glyphs = b"".join(field(3, glyph(font, ascender, c)) for c in range(start, start + 256) if c in codes)
         stack = field(1, STACK.encode()) + field(2, name.encode()) + glyphs
-        path = OUT / f"{name}.pbf"
-        path.write_bytes(field(1, stack))
-        print(f"{path.relative_to(ROOT)}: {path.stat().st_size} bytes")
+        built[f"{PREFIX}{name}.pbf"] = field(1, stack)
+    return built
+
+
+def write(built):
+    OUT.mkdir(parents=True, exist_ok=True)
+    for rel, data in built.items():
+        (OUT / Path(rel).name).write_bytes(data)
+        print(f"{rel}: {len(data)} bytes")
+
+
+def check(built):
+    """One line per range against scripts/web-vendor-sha256.json; 0 only when every line is `match`."""
+    try:
+        pins = json.loads(PINS.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pins = None
+    if not isinstance(pins, dict):
+        print("build_glyphs: pin file unreadable", file=sys.stderr)
+        return 2
+    lines = [(f"match {rel}" if hashlib.sha256(data).hexdigest() == pins[rel] else f"differs {rel}")
+             if rel in pins else f"unpinned {rel}" for rel, data in built.items()]
+    lines += [f"not built {rel}" for rel in pins if rel.startswith(PREFIX) and rel.endswith(".pbf") and rel not in built]
+    for line in lines:
+        print(line)
+    return 0 if lines and all(line.startswith("match ") for line in lines) else 1
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Build the basemap label glyphs.")
+    parser.add_argument("--check", action="store_true", help="rebuild in memory and compare with the pins; write nothing")
+    args = parser.parse_args(argv)
+    print("versions: " + " ".join(f"{name}={version}" for name, version in versions().items()), flush=True)
+    if args.check:
+        return check(build())
+    write(build())
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
