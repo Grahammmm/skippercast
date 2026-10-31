@@ -439,7 +439,7 @@ M1 regions: `santa-cruz-monterey-bay`, `monterey-point-sur`, `big-sur-coast`,
 `point-arguello-conception`. The shared package is `src/skippercast/seafloor/`. `reaches`, `ledger`, `add-survey` and `run` are
 implemented, including held habitat extraction. `publish` arrives in M4; the legal screen is part of M3.
 
-The later workflow runs weekly, on dispatch, and relevant main input changes.
+The later workflow runs daily, on dispatch, and on relevant main input changes.
 It restores cached files, processes changed reaches in a matrix with a 60-minute
 limit per reach, refreshes screens, publishes tiles privately reviewed by the
 pipeline, and proposes changed ledger totals through a PR. A timeout is a
@@ -638,7 +638,7 @@ PYTHONPATH=src:. TIPPECANOE=/path/to/tippecanoe python -m skippercast.seafloor p
 PYTHONPATH=src:. TIPPECANOE=/path/to/tippecanoe python -m skippercast.seafloor publish --region morro-bay --upload
 ```
 
-`.github/workflows/seafloor.yml` runs Mondays at 10:23 UTC, on relevant main
+`.github/workflows/seafloor.yml` runs daily at 10:23 UTC, on relevant main
 changes, or by manual dispatch. Dispatch `region=morro-bay` for the pilot;
 blank means all processed regions. Optional `reach` reprocesses that reach and
 its region's assessed peers. Fresh restriction inventories change the screening
