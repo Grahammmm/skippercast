@@ -134,3 +134,58 @@ def test_candidate_symlink_out_of_run_refused(world, capsys, tmp_path):
     (tmp_path / "outside.geojson").write_text(json.dumps(DOC))
     (world[0] / "candidate" / "morro-bay.geojson").symlink_to(tmp_path / "outside.geojson")
     assert "outside the run folder" in refused(world, capsys)
+
+
+FIELDS = ("keys_added", "keys_removed", "keys_changed", "keys_same", "geometry_changed", "properties_changed", "duplicate_keys")
+RICH = edited(lambda d: [f["properties"].update(kind="isobath", index=i, source_id="usgs-sentinel-a", survey_date="2019-07-04",
+                                                 vertical_datum="MLLW") for i, f in enumerate(d["features"])])
+
+
+def diff(world, capsys, change, catalog=RICH):
+    (world[1] / "morro-bay.geojson").write_text(json.dumps(catalog))
+    cand = copy.deepcopy(RICH)
+    change(cand)
+    code, r = report(world, capsys, cand)
+    assert sorted(r["feature_diff"]) == sorted(FIELDS) and all(type(v) is int for v in r["feature_diff"].values())
+    return code, r["verdict"], r["feature_diff"]
+
+
+def counts(**nonzero):
+    return {k: nonzero.get(k, 0) for k in FIELDS}
+
+
+def test_feature_diff_equal_docs(world, capsys):
+    assert diff(world, capsys, lambda d: None) == (0, "equal", counts(keys_same=2))
+
+
+@pytest.mark.parametrize("change,expected", [
+    (lambda d: d["features"][0]["geometry"]["coordinates"][0].__setitem__(0, -120.91), counts(keys_changed=1, geometry_changed=1, keys_same=1)),
+    (lambda d: d["features"][0]["properties"].update(survey_date="2020-01-01"), counts(keys_changed=1, properties_changed=1, keys_same=1)),
+    (lambda d: d["features"][0]["properties"].update(depth_ft=90), counts(keys_added=1, keys_removed=1, keys_same=1)),
+    (lambda d: d["features"].reverse(), counts(keys_same=2)),
+], ids=["moved-line", "property-edit", "band-60-dropped-90-added", "order-only"])
+def test_feature_diff_counts_by_contour_key_verdict_unchanged(world, capsys, change, expected):
+    assert diff(world, capsys, change) == (1, "features-differ", expected)
+
+
+def test_feature_diff_duplicates_and_odd_features(world, capsys):
+    odd = ["not a feature", {"type": "Feature", "geometry": LINE}, {"type": "Feature", "properties": "x", "geometry": LINE}]
+    code, verdict, d = diff(world, capsys, lambda c: c["features"].extend([copy.deepcopy(c["features"][0])] + odd))
+    # (isobath, 60, usgs) twice in the candidate: changed and duplicated; the three odd features share one all-None key
+    assert (code, verdict, d) == (1, "features-differ", counts(keys_added=1, keys_changed=1, keys_same=1, duplicate_keys=2))
+    two = copy.deepcopy(RICH)
+    two["features"].append(copy.deepcopy(two["features"][0]))  # duplicate on the catalog side only
+    assert diff(world, capsys, lambda c: None, catalog=two) == (1, "features-differ", counts(keys_same=1, keys_changed=1, duplicate_keys=1))
+    assert diff(world, capsys, lambda c: c.update(features=odd[:1]))[2] == counts(keys_added=1, keys_removed=2)
+
+
+def test_feature_diff_prints_no_values(world, capsys):
+    (world[1] / "morro-bay.geojson").write_text(json.dumps(RICH))
+    cand = copy.deepcopy(RICH)
+    for f in cand["features"]:
+        f["properties"]["depth_ft"] += 30
+    code, out, _ = go(world, capsys, cand)
+    fd = json.loads(out)["feature_diff"]
+    assert code == 1 and fd == counts(keys_added=2, keys_removed=2) and list(fd) == sorted(FIELDS)
+    assert not any(s in out for s in ("usgs-sentinel-a", "2019-07-04", "isobath", "MLLW"))
+    assert not any(s in json.dumps(fd) for s in ("60", "90", "120", "150"))
