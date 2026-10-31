@@ -20,6 +20,7 @@
 // Erasable syntax only: tests/test_habitat_feed.mjs imports it by type stripping.
 import type {CurrentCell, CurrentField} from '../../packages/coast/src/ocean-types.ts';
 import type {SSTPoint, SurfaceTemperature} from '../../packages/coast/src/spatial-types.ts';
+import {KT_PER_MS as KNOTS_PER_MS} from '../units.ts';
 
 export const SST_LAYER_ID = 'sst-analysis';
 export const CHLOROPHYLL_LAYER_ID = 'chlorophyll-observation';
@@ -31,7 +32,6 @@ const TILE_PATH = /^habitat-tiles\/[a-z0-9-]+-[a-f0-9]{16}\.json$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const REGION_ID = /^[a-z0-9-]+$/;
 const HOUR = 3_600_000;
-const KNOTS_PER_MS = 1.94384449;
 
 /** What the region's feed offers Water temp. */
 export type RegionalSST =
