@@ -8,12 +8,12 @@ input, no sign flip, datum conversion or interpolation. Thresholds and the schem
 skippercast.platform.seafloor_ec; seafloor/ is not imported. Checks in order: (a) fixture, (b) sign (either refusal
 skips the rest), (c) sentinels, (d) holes, (e) pits and spikes, (f) duplicate signature.
 
-Receipt conventions: `path_sha256` is the sha256 of the file's bytes (no directories are recorded, only `file_name`);
-`bbox` is [col0, row0, col1, row1] in native pixels, end-exclusive (v[row0:row1, col0:col1]); metres are rounded to
-6 decimals; a declared NaN/inf nodata is recorded as null; `counts` are the codes EC2 would write if it applied the fills
-(a cell of a listed hole takes that hole's code before `masked-sentinel`); a refused file has empty `counts` and lists.
-Exit 0 prints one JSON line; exit 2 prints `detect refused: <field>: <reason>`. A machine-valid receipt is
-review-required, not acceptance.
+A cell is valid only if finite, not declared nodata, and valid in GDAL's own mask (internal per-dataset mask);
+a file with any sidecar (.msk, .aux.xml, ...) is refused, since `path_sha256` (the file's bytes) would not cover it.
+Receipt: no directories, only `file_name`; `bbox` is [col0, row0, col1, row1] in native pixels, end-exclusive; metres
+rounded to 6 decimals; non-finite nodata recorded as null; `counts` are the codes EC2 would write if it applied the
+fills (a listed hole's code wins over `masked-sentinel`); a refused file has empty `counts` and lists. Exit 0 prints one
+JSON line; exit 2 prints `detect refused: <field>: <reason>`. A machine-valid receipt is review-required, not acceptance.
 """
 import argparse
 import importlib.util
@@ -46,8 +46,6 @@ SQUARE = np.ones((3, 3), bool)  # 8-neighbour ring
 SENTINELS = np.array(T.SENTINELS, np.float64)
 COMPOUND = re.compile(r'^\s*(COMPD_CS|COMPOUNDCRS)\[')
 DEPTH_DOWN = re.compile(r'AXIS\["[^"]*depth[^"]*",\s*DOWN', re.IGNORECASE)
-COUNT_NAMES = ('measured', 'measured-suspect-shoal', 'filled-hole', 'filled-pit', 'unresolved-hole',
-               'unresolved-ring-range', 'masked-sentinel', 'nodata')
 
 
 def _r(value):
@@ -63,10 +61,9 @@ def gate(args):
     if args.adapter != 'geotiff':
         raise Refused('adapter', 'bag is wave 2' if 'bag' in str(args.adapter).lower() else
                       f'only geotiff is supported, not {args.adapter!r}')
-    if not str(args.source_id or '').strip():
-        raise Refused('source_id', 'required')
-    if not str(args.receipt or '').strip():
-        raise Refused('receipt', 'required')
+    for name in ('source_id', 'receipt'):
+        if not str(getattr(args, name) or '').strip():
+            raise Refused(name, 'required')
     if Path(args.receipt).exists():
         raise Refused('receipt', f'{args.receipt} already exists')
     max_pixels = preflight._int_in(args.max_pixels, 'max_pixels', 1)
@@ -75,6 +72,9 @@ def gate(args):
         meta = preflight.raster_meta(args.path)
     except rasterio.errors.RasterioIOError as err:
         raise Refused('path', str(err)) from None
+    with rasterio.open(args.path) as ds:
+        if len(ds.files) > 1:
+            raise Refused('sidecar', ', '.join(Path(f).name for f in ds.files[1:]) + ' not covered by path_sha256')
     # Bands, projected metre CRS, north-up square cells, metre band unit; the pixel cap is ours (whole-grid passes).
     preflight.check_grid(meta, window=[0, 0, 1, 1], vertical_datum='undeclared', vertical_unit='metre',
                          vertical_sign='elevation-up', max_pixels=1)
@@ -85,17 +85,16 @@ def gate(args):
 
 
 def scan(path, strip_rows):
-    """Strip-read the band into float32 and classify each cell (declared nodata / sentinel / data) with strip stats."""
+    """Strip-read the band into float32 and classify each cell (invalid / sentinel / data) with strip stats."""
     with rasterio.open(path) as ds:
         h, w, nd, crs = ds.height, ds.width, ds.nodata, ds.crs
         v, valid, sent = np.empty((h, w), np.float32), np.empty((h, w), bool), np.empty((h, w), bool)
         n_valid = n_pos = n_data = 0
         total, lo, hi = 0.0, np.inf, -np.inf
         for r0 in range(0, h, strip_rows):
-            raw = ds.read(1, window=Window(0, r0, w, min(strip_rows, h - r0)))
-            ok = np.isfinite(raw)
-            if nd is not None and not np.isnan(nd):
-                ok &= raw != nd
+            win = Window(0, r0, w, min(strip_rows, h - r0))
+            raw = ds.read(1, window=win)
+            ok = np.isfinite(raw) & (raw != nd) & (ds.read_masks(1, window=win) > 0)  # explicit mask can hide nodata
             bad_value = ok & (np.isin(raw, SENTINELS) | (raw < ec.PLAUSIBLE_M[0]) | (raw > ec.PLAUSIBLE_M[1]))
             rows = slice(r0, r0 + raw.shape[0])
             v[rows], valid[rows], sent[rows] = raw, ok, bad_value
@@ -105,8 +104,7 @@ def scan(path, strip_rows):
             if good.size:
                 n_data, total = n_data + good.size, total + float(good.sum())
                 lo, hi = min(lo, float(good.min())), max(hi, float(good.max()))
-    stats = {'n_valid': n_valid, 'n_pos': n_pos, 'n_data': n_data, 'mean': total / n_data if n_data else None,
-             'min': lo, 'max': hi}
+    stats = dict(n_valid=n_valid, n_pos=n_pos, n_data=n_data, mean=total / n_data if n_data else None, min=lo, max=hi)
     return v, valid, sent, stats, {'nodata': nd, 'crs': crs.to_string(), 'wkt': crs.to_wkt()}
 
 
@@ -140,8 +138,7 @@ def find_holes(v, data, water, cell_m):
     """(d) Interior nodata/sentinel components with no land neighbour; returns (holes, per-cell predicted code)."""
     bad = ~data
     lab, n = ndimage.label(bad, CROSS)
-    drop = np.zeros(n + 1, bool)
-    drop[0] = True
+    drop = np.arange(n + 1) == 0  # label 0 is the data background
     drop[np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]])] = True
     drop[lab[ndimage.binary_dilation(data & (v >= 0), CROSS) & bad]] = True
     size = np.bincount(lab.ravel(), minlength=n + 1)
@@ -185,12 +182,10 @@ def find_outliers(v, water):
     padded = np.pad(np.where(water, v, np.float32(np.nan)), 1, mode='edge')
     windows = np.lib.stride_tricks.sliding_window_view(padded, (3, 3))
     med = np.full(v.shape, np.nan, dtype=np.float32)
-    # Bound the temporary selected windows; only water centres are classified, so each has at least one finite value.
-    rows = max(1, min(STRIP_ROWS, 65_536 // v.shape[1]))
+    rows = max(1, 65_536 // v.shape[1])  # bound the window copies; every water centre has at least one finite value
     for r0 in range(0, v.shape[0], rows):
         sl = slice(r0, r0 + rows)
-        mask = water[sl]
-        med[sl][mask] = np.nanmedian(windows[sl][mask], axis=(-2, -1))
+        med[sl][water[sl]] = np.nanmedian(windows[sl][water[sl]], axis=(-2, -1))
     dev = v - med
     limit = np.maximum(3.0, 0.20 * np.abs(med))  # ec.outlier_min_m, vectorised
     ok = water & np.isfinite(med)
@@ -237,18 +232,16 @@ def detect(path, source_id, meta, strip_rows):
     disposition = 'FIX' if counts['filled-hole'] or counts['filled-pit'] else 'VERIFY' if (
         spikes or counts['unresolved-hole'] or counts['unresolved-ring-range']) else 'PASS'
     doc.update(sentinel_cells=int(sent.sum()), holes=holes, pits=pits, clusters_deep=clusters, spikes=spikes,
-               counts={name: counts[name] for name in COUNT_NAMES}, disposition=disposition)
+               counts=counts, disposition=disposition)
     return doc
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     ap.add_argument('path')
-    ap.add_argument('--source-id')
-    ap.add_argument('--receipt')
-    ap.add_argument('--adapter', default='geotiff')
-    ap.add_argument('--max-pixels', default=str(MAX_PIXELS))
-    ap.add_argument('--strip-rows', default=str(STRIP_ROWS))
+    for flag, default in (('--source-id', None), ('--receipt', None), ('--adapter', 'geotiff'),
+                          ('--max-pixels', str(MAX_PIXELS)), ('--strip-rows', str(STRIP_ROWS))):
+        ap.add_argument(flag, default=default)
     args = ap.parse_args(argv)
     try:
         meta, strip_rows = gate(args)
@@ -256,8 +249,7 @@ def main(argv=None):
     except Refused as err:
         print(f'detect refused: {err}', file=sys.stderr)
         return 2
-    problems = ec.check_receipt('ec-detect-v1', doc)
-    if problems:  # a bug here, never a property of the input
+    if problems := ec.check_receipt('ec-detect-v1', doc):  # a bug here, never a property of the input
         raise RuntimeError(f'ec-detect-v1 receipt invalid: {problems}')
     atomic_json(args.receipt, doc)
     print(json.dumps({'disposition': doc['disposition'], 'receipt': args.receipt}))
