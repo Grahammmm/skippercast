@@ -97,3 +97,31 @@ def test_check_names_tampered_file_and_refusals_before_any_tool(world, capsys):
     (fresh / "INTAKE.csv").write_text((fresh / "INTAKE.csv").read_text().replace(",publish,", ",bogus,", 1))
     assert correct(world, fresh) == 1 and "EC STOP - region_intake" in capsys.readouterr().err and not (fresh / "ec").exists() and tools(world, since) == ["region_intake.py"]
     assert len(skill := (ROOT / "skills/skippercast-region-correct/SKILL.md").read_text().splitlines()) <= 70 and [h[3:].split(" (")[0] for h in skill if h.startswith("## ")] == ["Inputs", "Steps", "Outputs", "Never", "Golden case", "Changelog"]
+
+def bag_only(w):  # every catalog source a BAG: no GeoTIFF candidate, region_intake still checks the real catalog
+    region, sources = w["loader"]("synthetic-bay")
+    return lambda _id: (region, {s: {**v, "adapter": "bag"} for s, v in sources.items()})
+def test_zero_candidate_run_writes_empty_ec_and_passes_check_and_review_shape(world, capsys):
+    folder, bag = intake(world, "z"), bag_only(world)
+    assert rc.main(["synthetic-bay", "--run", str(folder), "--author-runtime", "claude-opus-5-5", "--author-family", "anthropic"], world["run"], bag) == 0
+    assert ec_lines(capsys) == ["EC ALL-DONE 0 rows"] and (folder / "ec").is_dir() and not (folder / "ec").is_symlink() and list((folder / "ec").iterdir()) == []
+    record = json.loads((folder / "EC.json").read_text())
+    assert (record["sources"], record["inputs"], record["outputs"]) == ([], [], []) and {n["reason"] for n in record["not_corrected"]} >= {"unsupported-adapter:bag"}
+    assert not any(Path(c[1]).name.startswith("ec_") for c in world["log"])
+    assert rc.main(["--check", str(folder)], world["run"], bag) == 0 and ec_lines(capsys) == ["EC OK 0 rows"]
+    rr = load("region_review", "skills/skippercast-region-review/scripts/region_review.py")
+    assert rr.ec_tree(folder, {"ec": {"corrected": [], "ec_sha256": record["ec_sha256"]}}) == ([], record, [])
+    (folder / "ec").rmdir()  # today's shape (no ec/) is exactly what review FAILs
+    assert "ec/ absent or not a directory" in rr.ec_tree(folder, {"ec": {"corrected": [], "ec_sha256": record["ec_sha256"]}})[0]
+def test_zero_candidate_resume_file_and_symlink_ec(world, capsys):
+    bag, run = bag_only(world), lambda folder: rc.main(["synthetic-bay", "--run", str(folder), "--author-runtime", "r", "--author-family", "anthropic"], world["run"], bag)  # noqa: E731
+    assert run(folder := intake(world, "a")) == 0 and (folder / "EC.json").replace(folder / "EC.json.tmp")
+    want = (folder / "EC.json.tmp").read_bytes()
+    assert run(folder) == 0 and (folder / "EC.json").read_bytes() == want and not (folder / "EC.json.tmp").exists() and (folder / "ec").is_dir()
+    (bare := intake(world, "b")).joinpath("EC.json.tmp").write_bytes(want)  # interrupted before ec/ existed
+    assert run(bare) == 0 and (bare / "EC.json").read_bytes() == want and (bare / "ec").is_dir() and capsys.readouterr()
+    (filed := intake(world, "f")).joinpath("ec").write_text("not a directory")
+    assert run(filed) == 1 and (err := capsys.readouterr().err).startswith("region_correct: ") and "File exists" in err and "Traceback" not in err
+    assert not any((filed / n).exists() for n in ("EC.json", "EC.json.tmp", "EC.md", "INTAKE-EC.csv")) and (filed / "ec").read_text() == "not a directory"
+    (linked := intake(world, "l")).joinpath("ec").symlink_to(outside := world["tmp"] / "outside")
+    assert run(linked) == 1 and "ec: symlink refused" in capsys.readouterr().err and not outside.exists() and not (linked / "EC.json").exists()
