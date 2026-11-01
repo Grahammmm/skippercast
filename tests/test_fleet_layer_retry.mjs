@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
+import {isDeepStrictEqual} from 'node:util';
 import {signal} from '@preact/signals';
 import {NOTES, assetLoader, createCharterGrounds, groundsState} from '../web/map/charter-grounds.ts';
 import {AIS_NOTES, aisOn, aisState, createCommercialAis} from '../web/map/commercial-ais.ts';
@@ -42,38 +43,21 @@ const deferred = () => { let resolve; const promise = new Promise(r => { resolve
 const loader = f => assetLoader(f.fetchFn, () => 'https://s.test/map', d => d?.ok === true);
 const okBody = f => ({...f, fetchFn: async (url, init) => { const r = await f.fetchFn(url, init); return r.ok ? {...r, json: async () => ({ok: true})} : r; }});
 
-test('assetLoader: a rejected or timed-out read is asked again and then gives the data', async () => {
-  for (const drop of ['throw', 'timeout']) {
-    const f = okBody(scripted(drop)), load = loader(f);
-    assert.equal(await load('a.json'), null, `${drop}: null`);
-    assert.deepEqual(await load('a.json'), {ok: true}, `${drop}: asked again`);
-    assert.deepEqual(await load('a.json'), {ok: true}, `${drop}: the data is now remembered`);
-    assert.equal(f.asked.length, 2);
+/** Three reads of one path: what each gave and how many requests were made. */
+const thrice = async f => { const load = loader(f), got = []; for (let i = 0; i < 3; i++) got.push(await load('a.json')); return [...got, f.asked.length]; };
+
+test('assetLoader: a rejected or timed-out read, a 429 or a 5xx is asked again once, then remembered', async () => {
+  for (const drop of ['throw', 'timeout', 429, 500, 503, 599]) {
+    assert.ok(isDeepStrictEqual(await thrice(okBody(scripted(drop))), [null, {ok: true}, {ok: true}, 2]), `${drop}: one retry, then the data is kept`);
   }
 });
 
-test('assetLoader: 429 and 5xx are retried; 404, other refusals and an invalid file are not', async () => {
-  for (const status of [429, 500, 503, 599]) {
-    const f = okBody(scripted(status)), load = loader(f);
-    assert.equal(await load('a.json'), null);
-    assert.deepEqual(await load('a.json'), {ok: true}, `${status} is asked again`);
-    assert.equal(f.asked.length, 2, `${status}: one retry`);
+test('assetLoader: a 404, other refusals, a file failing `valid` and invalid JSON are never re-requested', async () => {
+  for (const answer of [404, 403, 410, 400, 600, 'invalid']) {
+    assert.ok(isDeepStrictEqual(await thrice(scripted(answer)), [null, null, null, 1]), `${answer}: remembered`);
   }
-  for (const status of [404, 403, 410, 400, 600]) {
-    const f = okBody(scripted(status)), load = loader(f);
-    assert.equal(await load('a.json'), null);
-    assert.equal(await load('a.json'), null, `${status} stays remembered`);
-    assert.equal(f.asked.length, 1, `${status}: no second request`);
-  }
-  const bad = scripted('invalid'), load = loader(bad);
-  assert.equal(await load('a.json'), null);
-  assert.equal(await load('a.json'), null);
-  assert.equal(bad.asked.length, 1, 'a file that fails `valid` is not re-requested');
   const unparsable = {asked: [], fetchFn: async () => { unparsable.asked.push(1); return {ok: true, status: 200, json: async () => { throw new SyntaxError('bad JSON'); }}; }};
-  const loadU = loader(unparsable);
-  assert.equal(await loadU('a.json'), null);
-  assert.equal(await loadU('a.json'), null);
-  assert.equal(unparsable.asked.length, 1, 'invalid JSON is not re-requested');
+  assert.ok(isDeepStrictEqual(await thrice(unparsable), [null, null, null, 1]), 'invalid JSON: remembered');
 });
 
 test('assetLoader: concurrent calls share one read; a retry that succeeds is kept; paths are separate', async () => {
@@ -82,20 +66,16 @@ test('assetLoader: concurrent calls share one read; a retry that succeeds is kep
   assert.equal(a, b, 'one in-flight promise');
   gate.resolve();
   assert.equal(await a, null);
-  assert.equal(f.asked.length, 1);
   const c = load('a.json'), d = load('a.json'), other = load('b.json');
   assert.equal(c, d, 'the retry is shared too');
-  assert.deepEqual(await c, {ok: true});
-  assert.deepEqual(await other, {ok: true});
-  assert.deepEqual(await load('a.json'), {ok: true});
+  assert.ok(isDeepStrictEqual([await c, await other, await load('a.json')], [{ok: true}, {ok: true}, {ok: true}]));
   assert.deepEqual(f.asked, ['a.json', 'a.json', 'b.json'], 'the newer entry is kept: no third read of a.json');
 });
 
 /** Morro Bay with the Fleet entry on. */
 function fleetPage(t) {
   globalThis.location = {href: 'https://s.test/map?region=morro-bay&layers=fleet'};
-  configureStore({v2: true, storage: null});
-  syncFromURL(location.href);
+  configureStore({v2: true, storage: null}); syncFromURL(location.href);
   markScreen.value = READY;
   markData.value = {region: {...REGION, id: 'morro-bay'}, atlas: null, survey: null, geology: null};
   t.after(() => { markData.value = null; markScreen.value = CHECKING; aisOn.value = false; });
@@ -178,8 +158,7 @@ test('commercial AIS: a 429 says failed; option off then on asks once more and d
 test('shore: a 503 draws nothing; leaving Shore and coming back asks once more and draws the runs; a 404 is not re-asked', async t => {
   const page = p => syncFromURL(`https://s.test/map?region=morro-bay&profile=${p}`);
   globalThis.location = {href: 'https://s.test/map?region=morro-bay&profile=shore'};
-  configureStore({v2: true, storage: null});
-  syncFromURL(location.href);
+  configureStore({v2: true, storage: null}); syncFromURL(location.href);
   markScreen.value = READY;
   t.after(() => { markScreen.value = CHECKING; });
   const make = f => createShore({engine: engine(), fetchFn: f.fetchFn, page: () => location.href, palette: () => sentinel, now: () => NOW, report: signal(null)});
