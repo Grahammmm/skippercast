@@ -18,7 +18,7 @@
 // Reports view (FE-52) opens from the sheet's footer and replaces the sheet
 // with its page over the map.
 import type {ComponentChildren} from 'preact';
-import {useState} from 'preact/hooks';
+import {useEffect, useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
 import {Range} from '../ui/Dock.tsx';
@@ -40,7 +40,7 @@ import {Conditions} from './views/Conditions.tsx';
 import {Fleet} from './views/Fleet.tsx';
 import {History} from './views/History.tsx';
 import {Reports} from './views/Reports.tsx';
-import {appView, setParams, withParams} from '../state.ts';
+import {appView, setParams, withParams, type AppView} from '../state.ts';
 import {waypointPlacement} from '../waypoint-placement.ts';
 import {dayOptions, dockState, hourText, localParts, readout, selectDay, selectHour} from './TimeDock.tsx';
 
@@ -56,6 +56,9 @@ export function afterDetent(panel: Panel, next: Detent): {panel: Panel; detent: 
 export function toggleLayers(panel: Panel, detent: Detent): {panel: Panel; detent: Detent} {
   return panel === 'layers' ? {panel: 'brief', detent} : {panel: 'layers', detent: detent === 'peek' ? 'half' : detent};
 }
+
+/** History's series sits below the peek detent's clipped body, so entering History opens a peeked sheet to full. */
+export const viewDetent = (view: AppView, detent: Detent): Detent => view === 'history' && detent === 'peek' ? 'full' : detent;
 
 /** The first-run prompt yields the sheet to the layers panel; it is still due and returns when Layers closes. */
 export const showsFirstRun = (panel: Panel): boolean => panel !== 'layers';
@@ -136,6 +139,7 @@ export function Mobile({now = new Date(), firstRun}: {now?: Date; firstRun?: Com
   const [detent, setDetent] = useState<Detent>('peek');
   const [panel, setPanel] = useState<Panel>('brief');
   const apply = ({panel: p, detent: d}: {panel: Panel; detent: Detent}) => { setPanel(p); setDetent(d); };
+  useEffect(() => setDetent(d => viewDetent(appView.value, d)), [appView.value]);
   const layersOpen = panel === 'layers', conditions = appView.value === 'conditions', fleet = appView.value === 'fleet';
   return (
     <div class="app-mobile">

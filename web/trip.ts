@@ -32,7 +32,7 @@ export const TRIP_HASH = '#export';
 const sessionStart = Date.now();
 
 /** The planner's actions the app calls (web/planner.ts `createPlanner`). */
-export interface Planner {open(): void; add(id: string): void; review(id: string): void}
+export interface Planner {open(): void; add(id: string): void; review(id: string): void; addPlace(p: {id: string; name: string; latitude: number; longitude: number; shore?: boolean}): string | null}
 type PlannerModel = import('./planner.ts').Planner;
 type PlannerView = typeof import('./app/Planner.tsx').Planner;
 /** The started planner and its view, which the trip dialog renders; null until first use. */
@@ -136,6 +136,10 @@ async function startPlanner(id: string): Promise<Planner> {
 
 export async function addToTrip(id: string): Promise<void> { (await loadPlanner())?.add(id); refreshIds(); }
 export async function reviewTrip(id: string): Promise<void> { (await loadPlanner())?.review(id); refreshIds(); }
+/** SCJ-1: a recommended habitat place joins the trip, or opens it for export, as a user waypoint whose id is planner.ts `addPlace`'s (`habitat:reef:r1` → `user:habitat-reef-r1`). */
+export const placeTripId = (id: string): string => `user:habitat-${id.replace(/^habitat:/, '').replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}`;
+export async function addPlaceToTrip(p: Parameters<Planner['addPlace']>[0]): Promise<void> { (await loadPlanner())?.addPlace(p); refreshIds(); }
+export async function reviewPlace(p: Parameters<Planner['addPlace']>[0]): Promise<void> { const m = await loadPlanner(), id = m?.addPlace(p); if (id) m!.review(id); refreshIds(); }
 
 /** "Show ranked spots on map" moves the Chart to the ranked set's extent (web/map/ranked.ts draws their pins). */
 export {fitCamera};
