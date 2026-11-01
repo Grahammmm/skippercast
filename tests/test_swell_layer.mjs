@@ -17,7 +17,7 @@ import {signal} from '@preact/signals';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {sample as v1Sample} from '../dist/marine-data.js';
-import {fieldColor} from '../packages/coast/src/map/surface-field.ts';
+import {fieldColor, surfaceField} from '../packages/coast/src/map/surface-field.ts';
 import {FILES, luminance, themes} from '../scripts/check_contrast.mjs';
 import {chartMark} from '../web/map/chart.ts';
 import {CONTRAST_LAYER} from '../web/map/contrast.ts';
@@ -103,6 +103,38 @@ test('the grid is the points sharing a latitude and a longitude: Morro Bay\'s 3 
   assert.equal(santaCruz.step, null);
   assert.equal(parsed({model: {data: []}}).model, null, 'series that do not match the points');
   assert.equal(parsed({model: {meta: {}}}).model, null, 'a run without its time');
+});
+
+test('Morro Bay\'s shoreward column (#501): 11 lattice points 0.25° apart, one more complete cell, exact coordinates only', async () => {
+  const grid = latticePoints((await region('morro-bay')).forecast_points.map(p => ({id: p.id, lat: p.latitude, lon: p.longitude})));
+  assert.equal(grid.length, 11);
+  assert.deepEqual(grid.slice(-2).map(p => p.id), ['offshore-0-s', 'offshore-1-s']);
+  const unit = points => points.map(p => ({lon: p.lon, lat: p.lat, values: [1]}));
+  const field = surfaceField(unit(grid));
+  assert.deepEqual(field.step, [0.25, 0.25]);
+  assert.equal(surfaceField(unit(grid.slice(0, 9))).quads.length, 4, 'the 3 × 3 alone');
+  assert.equal(field.quads.length, 5, 'one complete cell between −121.25 and −121.00; the land corner at 35.55 stays out');
+  const shoreward = field.quads.filter(q => q.east === -121);
+  assert.equal(shoreward.length, 1);
+  assert.ok(Math.abs(shoreward[0].south - 35.05) < 1e-9 && Math.abs(shoreward[0].north - 35.3) < 1e-9 && shoreward[0].west === -121.25);
+  const moved = d => unit(grid.map(p => p.id === 'offshore-1-s' ? {...p, lon: p.lon + d} : p));
+  assert.equal(surfaceField(moved(0.005), {step: [0.25, 0.25]}), null, 'off the common step (> 1.5 % of 0.25°): no field at all');
+  assert.equal(surfaceField(moved(-0.005)), null, 'west of it too, with the step inferred');
+  assert.equal(surfaceField(moved(0.0025), {step: [0.25, 0.25]}).quads.length, 5, '0.0025° is 1 %, inside the tolerance');
+  // Through the feed and the Chart's frame: a null swell sample at offshore-1-s drops only its cell.
+  const withColumn = (blank = false) => {
+    const fd = feed(), data = fd.models[WAVE_MODEL.id].data, near = data[4];
+    const nulled = {...near, hourly: {...near.hourly, swell_wave_height: near.hourly.swell_wave_height.map(() => null)}};
+    return {...fd, requested_points: [...fd.requested_points, ['offshore-0-s', 35.05, -121.0], ['offshore-1-s', 35.3, -121.0]],
+      models: {...fd.models, [WAVE_MODEL.id]: {...fd.models[WAVE_MODEL.id], data: [...data, data[4], blank ? nulled : data[7]]}}};
+  };
+  const full = parseForecast(withColumn(), 'morro-bay'), gap = parseForecast(withColumn(true), 'morro-bay');
+  assert.equal(full.lattice.length, 11);
+  assert.equal(swellFrame(full, AT.getTime(), NOW, TZ).field.quads.length, 5);
+  const frame = swellFrame(gap, AT.getTime(), NOW, TZ);
+  assert.equal(frame.field.quads.length, 4, 'the other four cells still draw');
+  assert.ok(!frame.field.quads.some(q => q.east === -121), 'the shoreward cell is dropped, not filled');
+  assert.equal(swellPoints(gap, AT.getTime() / 1000).length, 10);
 });
 
 test('forecastTime is the currents\' forecast gate over a model\'s listed hours', () => {
