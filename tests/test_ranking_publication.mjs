@@ -12,7 +12,7 @@ import {build} from 'esbuild';
 import {bestSpots} from '../dist/spot-ranking.js';
 import {geometryIntersects, pointInGeometry} from '../dist/geo-screen.js';
 import {CHECKING} from '../web/map/habitat.ts';
-import {TOP, loadReefPublication, ranking, reefPublication} from '../web/ranking.ts';
+import {TOP, loadReefPublication, ranking, recheckReefPublication, reefPublication} from '../web/ranking.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname, NOW = Date.now();
 const read = path => JSON.parse(readFileSync(new URL(`../dist/${path}`, import.meta.url), 'utf8'));
@@ -126,6 +126,63 @@ test('the publication loads once per region; a failure or malformed answer is un
   await loadReefPublication('morro-bay', async () => LOADED);
   release(LOADED); await slow;
   assert.equal(reefPublication.value.region, 'morro-bay', 'the late answer never replaces the current region');
+});
+
+/** A promise and its settle functions, so a test decides when a load answers. */
+const deferred = () => { let ok, no; const p = new Promise((a, b) => { ok = a; no = b; }); return {p, ok, no}; };
+const ready = hash => async () => ({state: 'ready', manifest: {export_sha256: hash}});
+const B = 'b'.repeat(64), C = 'c'.repeat(64);
+const NEWER = {...LOADED, targets: LOADED.targets.slice(1), publication: {...manifest(), export_sha256: C}};
+const brief = () => ranking(inputs({publication: reefPublication.value}));
+
+test('the planner\'s gate again: a held, unavailable or superseded publication stops ranking at once; a rejected one returns only by a fresh load', async () => {
+  reefPublication.value = {state: 'idle'}; let calls = 0;
+  const loader = data => async () => { calls++; return data; };
+  await loadReefPublication('morro-bay', loader(LOADED));
+  const loaded = reefPublication.value;
+  await recheckReefPublication('morro-bay', ready(B), loader(LOADED));
+  assert.equal(reefPublication.value, loaded, 'the same live hash keeps the publication'); assert.equal(calls, 1);
+  assert.equal(brief().source, 'publication');
+  for (const gate of [async () => ({state: 'held', reason: 'held'}), async () => ({state: 'unavailable'}), async () => { throw Error('offline'); }, ready(undefined)]) {
+    reefPublication.value = loaded;
+    await recheckReefPublication('morro-bay', gate, loader(LOADED));
+    assert.deepEqual(reefPublication.value, {state: 'unavailable', region: 'morro-bay', rejected: B});
+    const r = brief(); assert.equal(r.source, 'atlas'); assert.ok(!r.picks.some(p => p.kind === 'reef'), 'no publication place once rejected');
+  }
+  await recheckReefPublication('morro-bay', async () => ({state: 'held'}), loader(LOADED));
+  assert.equal(reefPublication.value.state, 'unavailable', 'still held: still withheld'); assert.equal(calls, 1, 'no reload while the manifest is not ready');
+  await loadReefPublication('morro-bay', loader(LOADED)); assert.equal(calls, 1, 'a plain load never lifts a rejection');
+  await recheckReefPublication('morro-bay', ready(B), loader(LOADED));
+  assert.equal(calls, 2, 'ready again: a fresh verification'); assert.equal(reefPublication.value.state, 'ready');
+  // Superseded: withheld at once, the old places never shown while the new publication loads, then the new one ranks.
+  const next = deferred();
+  const check = recheckReefPublication('morro-bay', ready(C), () => next.p);
+  await new Promise(go => setImmediate(go));
+  assert.deepEqual(reefPublication.value, {state: 'loading', region: 'morro-bay'});
+  assert.deepEqual(brief().picks, []); assert.equal(brief().empty, 'Loading ranked reef places…');
+  next.ok(NEWER); await check;
+  assert.equal(reefPublication.value.loaded, NEWER); assert.ok(brief().source === 'publication' && !ids(brief()).includes('r-target'), 'the new publication\'s places');
+  // A check of another region, or one overtaken by a load, changes nothing.
+  const current = reefPublication.value;
+  await recheckReefPublication('cambria-san-simeon', async () => ({state: 'held'}), loader(LOADED));
+  assert.equal(reefPublication.value, current);
+  const slow = deferred(), late = recheckReefPublication('morro-bay', () => slow.p, loader(LOADED));
+  await loadReefPublication('cambria-san-simeon', async () => ({...LOADED, publication: {...manifest(), region: 'cambria-san-simeon'}}));
+  const there = reefPublication.value; slow.ok({state: 'held'}); await late;
+  assert.equal(reefPublication.value, there, 'a late check never rejects a later load');
+});
+
+test('A→B→A: the first A load\'s late failure or late older data never replaces the second A load\'s answer', async () => {
+  for (const settle of [d => d.no(Error('Seafloor layer unavailable')), d => d.ok(LOADED)]) {
+    reefPublication.value = {state: 'idle'};
+    const first = deferred(), other = deferred();
+    const a1 = loadReefPublication('morro-bay', () => first.p), b = loadReefPublication('cambria-san-simeon', () => other.p);
+    await loadReefPublication('morro-bay', async () => NEWER);
+    assert.equal(reefPublication.value.state, 'ready'); assert.equal(reefPublication.value.loaded, NEWER);
+    const answer = reefPublication.value;
+    settle(first); other.ok(LOADED); await a1; await b;
+    assert.equal(reefPublication.value, answer, 'the second A load\'s answer stands');
+  }
 });
 
 test('a reef pick moves the Chart to the place (view only) and is never pressed', async () => {

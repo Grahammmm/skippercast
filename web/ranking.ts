@@ -31,7 +31,7 @@
 import {signal} from '@preact/signals';
 import {bestSpots, distanceNm} from '../dist/spot-ranking.js';
 import {loadReefTrip} from '../dist/reef-trip-data.js';
-import {manifestState} from '../dist/seafloor-data.js';
+import {loadManifest, manifestState} from '../dist/seafloor-data.js';
 import {geometryIntersects} from '../dist/geo-screen.js';
 import {speciesFit} from '../dist/species-fit.js';
 import {speciesOptions} from '../packages/coast/src/habitat-types.ts';
@@ -179,14 +179,19 @@ export async function loadTerrainHabitat(loader: Loader = () => import('./map/co
 export interface PublishedReef {readonly id: string; readonly latitude: number; readonly longitude: number; readonly neighborhood_depth_ft: readonly number[]; readonly terrain_interpretation?: string}
 type Ranked = PublishedReef & {readonly name: string; readonly trip_fit: number};
 /** The planner's seafloor habitat-export publication as the brief holds it, for one region. */
-export type ReefPublication = {readonly state: 'idle' | 'loading' | 'unavailable'; readonly region?: string}
+export type ReefPublication = {readonly state: 'idle' | 'loading' | 'unavailable'; readonly region?: string;
+    /** The export hash the planner's gate rejected (held, unavailable or superseded); set only by `recheckReefPublication`. */
+    readonly rejected?: string}
   | {readonly state: 'ready'; readonly region: string; readonly loaded: {readonly targets: readonly PublishedReef[]; readonly areas: readonly {id: string; geometry: unknown}[]; readonly publication: {export_sha256?: string} & Record<string, unknown>}};
 export const reefPublication = signal<ReefPublication>({state: 'idle'});
+type ReefLoader = (region: string) => Promise<unknown>;
+/** The manifest gate as dist/seafloor-data.js `loadManifest` returns it (the fields read here). */
+type ReefGate = (region: string) => Promise<{readonly state: string; readonly manifest?: {readonly export_sha256?: string} | null}>;
 
-/** Load the region's publication once (another region starts again); a failure leaves the list above in place. */
-export async function loadReefPublication(region: string, loader: (region: string) => Promise<unknown> = loadReefTrip): Promise<void> {
-  const was = reefPublication.peek();
-  if (was.state !== 'idle' && was.region === region) return;
+/** Each load's number: only the latest load may write its answer, so A→B→A never lets the first A's late answer land. */
+let generation = 0;
+async function startLoad(region: string, loader: ReefLoader): Promise<void> {
+  const mine = ++generation;
   reefPublication.value = {state: 'loading', region};
   let next: ReefPublication;
   try {
@@ -194,8 +199,37 @@ export async function loadReefPublication(region: string, loader: (region: strin
     next = l && Array.isArray(l.targets) && Array.isArray(l.areas) && l.publication && typeof l.publication === 'object'
       ? {state: 'ready', region, loaded: l as Extract<ReefPublication, {state: 'ready'}>['loaded']} : {state: 'unavailable', region};
   } catch { next = {state: 'unavailable', region}; }
-  // A region chosen while this one loaded keeps its own load.
-  if (reefPublication.peek().region === region) reefPublication.value = next;
+  // A load started after this one (another region, or the same region again) keeps its own answer.
+  if (mine === generation) reefPublication.value = next;
+}
+
+/** Load the region's publication once (another region starts again); a failure leaves the list above in place. */
+export async function loadReefPublication(region: string, loader: ReefLoader = loadReefTrip): Promise<void> {
+  const was = reefPublication.peek();
+  if (was.state !== 'idle' && was.region === region) return;
+  await startLoad(region, loader);
+}
+
+/**
+ * The planner's every-minute re-check (web/map/ranked.ts `recheckPlan`, web/trip.ts): a ready publication stays only while
+ * the live manifest is ready with the same export hash; otherwise it is withheld (unavailable, its hash rejected) at once,
+ * so a held, unavailable or superseded publication ranks nothing. As the planner lifts a rejection only on a later
+ * verification, a rejected publication returns only through a fresh `loadReefTrip` once the manifest is ready again
+ * (a superseded one reloads at once). A load or another check started meanwhile wins.
+ */
+export async function recheckReefPublication(region: string, gate: ReefGate = r => loadManifest(r), loader: ReefLoader = loadReefTrip): Promise<void> {
+  const was = reefPublication.peek();
+  const held = was.state === 'ready' ? was.loaded.publication.export_sha256 : was.state === 'unavailable' ? was.rejected : undefined;
+  if (was.region !== region || !held) return;
+  let live: string | undefined;
+  try { const g = await gate(region); live = g.state === 'ready' ? g.manifest?.export_sha256 : undefined; } catch { live = undefined; }
+  if (reefPublication.peek() !== was) return;
+  if (was.state === 'ready') {
+    if (live === held) return;
+    reefPublication.value = {state: 'unavailable', region, rejected: held};
+    if (!live) return;
+  } else if (!live) return;
+  await startLoad(region, loader);
 }
 
 const rankSpots = bestSpots as unknown as (atlas: unknown, screen: unknown, o: Record<string, unknown>) => Ranked[];

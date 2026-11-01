@@ -25,7 +25,7 @@ import {depthLimitFt, PROFILE_TABLE} from '../profile.ts';
 import {isReachProfile, nmText, reachFor, shoreSwimLimit, spearPlan} from '../reach.ts';
 import {loadShoreLines, shoreLines} from '../shore-distance.ts';
 import {landWater, loadLandWater, loadLandWaterLines, placeFor} from '../land-water.ts';
-import {loadReefPublication, ranking, reefPublication, type Pick, type Ranking} from '../ranking.ts';
+import {loadReefPublication, ranking, recheckReefPublication, reefPublication, type Pick, type Ranking} from '../ranking.ts';
 import {fitCamera} from '../map/ranked.ts';
 import {cameraParam} from '../map/stage.ts';
 import {habitat, navigate, profile, region, selection, setParams, species} from '../state.ts';
@@ -113,7 +113,15 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   // The lines file is asked for once the region's index is ready and a candidate still waits on it (a mixed cell),
   // so a list that was pending on the index itself asks as soon as the index lands; clean cells never load it.
   const lw = landWater.value, wantLines = !!id && !!r.pending && lw.region === id && lw.state === 'ready' && lw.lines === null;
-  useEffect(() => { if (id) void loadReefPublication(id); }, [id]);
+  // SCJ-2a: the publication loads once per region, and its live manifest is checked again now (a cached one) and each
+  // minute, as the planner checks its plan, so a held, unavailable or superseded publication stops ranking.
+  useEffect(() => {
+    if (!id) return;
+    const was = reefPublication.peek();
+    void (was.state !== 'idle' && was.region === id ? recheckReefPublication(id) : loadReefPublication(id));
+    const timer = setInterval(() => { void recheckReefPublication(id); }, 60000);
+    return () => clearInterval(timer);
+  }, [id]);
   // #644: Kayak's launch list and, for Spear from shore, the shoreline, each loaded once per region when needed.
   const p = profile.value, swimming = p === 'spear' && shoreSwimLimit() !== null;
   useEffect(() => { if (id && p === 'kayak') void loadLaunchPoints(id); }, [id, p]);
