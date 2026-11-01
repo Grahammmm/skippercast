@@ -207,7 +207,8 @@ export async function loadRegs(region: RulesRegion, fetchFn: typeof fetch = fetc
   const get = async (url: string): Promise<Data> => {
     const r = await fetchFn(url, {cache: 'no-cache'}).catch((e: unknown) => { transient = true; throw e; });
     if (!r.ok) { transient ||= r.status === 429 || (r.status >= 500 && r.status <= 599); throw new Error(String(r.status)); }
-    return r.json();
+    // A body that dies in transit is transient; a body that is not JSON (SyntaxError) is the file's answer.
+    return r.json().catch((e: unknown) => { if (!(e instanceof SyntaxError)) transient = true; throw e; });
   };
   const asset = region.assets?.regulations;
   return ours.promise = (async () => {

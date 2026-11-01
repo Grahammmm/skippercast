@@ -75,7 +75,8 @@ const RULED = /^(?:spot|survey|geology|habitat|charter):/;
 /** The target's rules at a glance for the dock's hour, or nothing while the region loads. */
 export function RulesLine({mark}: {mark: Mark}) {
   const region = markData.value?.region as RulesRegion | undefined, loaded = regsData.value;
-  useEffect(() => { if (region) void loadRegs(region); }, [region?.id]);
+  // Each selected card asks again (loadRegs reads once unless the last read failed), so the retained line retries on A→B.
+  useEffect(() => { if (region) void loadRegs(region); }, [region?.id, mark.id]);
   if (!region || !RULED.test(mark.id) || mark.withheld) return null;
   const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget, data = loaded?.region === region.id ? loaded.data : null;
   const at = dockState(new Date(), zone()).at, day = new Intl.DateTimeFormat('en-CA', {timeZone: zone(), year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
