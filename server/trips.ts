@@ -90,20 +90,29 @@ export function validateTripPlan(input:ExternalJSON,region:Region,species:string
   return {launch_point:launch??null,targets,plan:validatePlanBody(input.plan),status};
 }
 export function pushConfigured(env:Env):boolean{return Boolean(env.VAPID_PUBLIC_KEY&&env.VAPID_PRIVATE_KEY);}
+/** A receipt is sent again only when push failed with 429 or 5xx and fewer than 3 attempts were used. */
+export function retryable(status:string,httpStatus:number|null,attempt:number):boolean{
+  return status==='failed'&&(httpStatus===429||httpStatus!==null&&httpStatus>=500&&httpStatus<=599)&&attempt<3;
+}
 async function deliver(env:Env,event:AlertEventRow):Promise<boolean>{
   const subscriptions=(await db(env).prepare('SELECT * FROM subscriptions WHERE owner=?').bind(event.owner).all<SubscriptionRow>()).results;
   if(subscriptions.length&&!pushConfigured(env)){
     // No VAPID pair on this deployment: claim no receipts and leave the event 'pending'.
     // checkTrip only calls deliver() for pending events, so the first check after the
-    // keys are set sends it (a 'held' event would never be retried).
+    // keys are set sends it. A 429/5xx receipt also leaves it pending (one retry per check,
+    // at most 3 attempts); a 'held' event is final and never retried.
     console.error(JSON.stringify({event:'push_unconfigured',alert:event.id}));
     return false;
   }
-  let delivered=false;
+  let delivered=false,retry=false;
   for(const s of subscriptions){
-    const id=await hash(event.id+':'+s.id);
-    const prior=await db(env).prepare('SELECT status FROM delivery_receipts WHERE id=?').bind(id).first<{status:string}>();
-    if(prior){if(prior.status==='accepted')delivered=true;continue;}
+    // Attempt 1 keeps the original receipt id; attempts 2 and 3 add ':n'.
+    const ids=await Promise.all([1,2,3].map(n=>hash(event.id+':'+s.id+(n>1?':'+n:''))));
+    const rows=(await db(env).prepare('SELECT id,status,http_status FROM delivery_receipts WHERE id IN (?,?,?)').bind(...ids).all<{id:string;status:string;http_status:number|null}>()).results;
+    if(rows.some(r=>r.status==='accepted')){delivered=true;continue;}
+    const last=Math.max(0,...rows.map(r=>ids.indexOf(r.id)+1)),prior=rows.find(r=>r.id===ids[last-1]);
+    if(prior&&!retryable(prior.status,prior.http_status,last))continue;
+    const id=ids[last];
     const claim=await db(env).prepare('INSERT OR IGNORE INTO delivery_receipts(id,event_id,subscription_id,status,attempt_at) VALUES(?,?,?,?,?)').bind(id,event.id,s.id,'sending',new Date().toISOString()).run();
     if(!claim.meta.changes)continue;
     let status='uncertain',httpStatus:number|null=null;
@@ -115,10 +124,10 @@ async function deliver(env:Env,event:AlertEventRow):Promise<boolean>{
       if(status==='expired')await db(env).prepare('DELETE FROM subscriptions WHERE id=?').bind(s.id).run();
     }catch{status='uncertain';}
     await db(env).prepare('UPDATE delivery_receipts SET status=?,http_status=? WHERE id=?').bind(status,httpStatus,id).run();
-    if(status==='accepted')delivered=true;
+    if(status==='accepted')delivered=true;else if(retryable(status,httpStatus,last+1))retry=true;
   }
   if(delivered)await db(env).prepare('UPDATE alert_events SET status=?,delivered_at=? WHERE id=?').bind('delivered',new Date().toISOString(),event.id).run();
-  else await db(env).prepare('UPDATE alert_events SET status=? WHERE id=?').bind(subscriptions.length?'held':'in-app',event.id).run();
+  else if(!retry)await db(env).prepare('UPDATE alert_events SET status=? WHERE id=?').bind(subscriptions.length?'held':'in-app',event.id).run();
   return delivered;
 }
 // Retention: expired rate-limit rows, sessions and sign-in challenges, 90-day
