@@ -561,7 +561,10 @@ stable keys, pinned fields, decided reviews).
    vessel only on a stable key (doc number, MMSI or call sign). Name and port
    alone never give a boat an MMSI: a fuzzy score at `auto_merge` or above
    opens a `merge` review for the owner, and anything weaker is skipped (no
-   new vessel, no review). Without this the first FCC run would add about
+   new vessel, no review). A doc-number or call-sign hit must also carry an
+   exact licensee city equal to the vessel's home port, else it opens a `merge`
+   review (basis `uncorroborated-key`) and writes nothing; a hit on the MMSI
+   itself adds none. Without this the first FCC run would add about
    24,500 vessels and 9,900 reviews to a 351-boat registry.
 5. Same name and port but different stable keys → two vessels (California has
    five FCC licences named Endeavor).

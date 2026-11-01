@@ -28,6 +28,8 @@ import {nearshoreAt} from './nearshore.ts';
 
 const HOUR = 3_600_000;
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+/** A usable wave/swell period: finite and above 0 s; anything else is missing. */
+const period = (value: unknown): value is number => finite(value) && value > 0;
 const round = (value: number, digits = 1) => Number(value.toFixed(digits));
 
 export type Entrance = {
@@ -145,16 +147,16 @@ export function barTide(at: number, events: readonly TideEvent[]): BarTide {
 export function barSwell(hour: ForecastHour | undefined, near?: NearshoreHour): BarSwell {
   const {minFt} = BAR.longPeriod;
   const longest = (pairs: [number | null | undefined, number | null | undefined][]) => {
-    const periods = pairs.filter(([h, p]) => finite(h) && h >= minFt && finite(p)).map(([, p]) => p as number);
+    const periods = pairs.filter(([h, p]) => finite(h) && h >= minFt && period(p)).map(([, p]) => p as number);
     return periods.length ? Math.max(...periods) : null;
   };
   if (near && finite(near.waveFt) && near.waveFt >= 0) {
-    return {heightFt: near.waveFt, periodS: finite(near.periodS) ? near.periodS : null, basis: 'nearshore', longPeriodS: longest([[near.waveFt, near.periodS], [hour?.swellFt, hour?.swellPeriodS]])};
+    return {heightFt: near.waveFt, periodS: period(near.periodS) ? near.periodS : null, basis: 'nearshore', longPeriodS: longest([[near.waveFt, near.periodS], [hour?.swellFt, hour?.swellPeriodS]])};
   }
   const height = finite(hour?.waveFt) && hour.waveFt >= 0 ? hour.waveFt : null;
   const longPeriodS = longest([[hour?.waveFt, hour?.wavePeriodS], [hour?.swellFt, hour?.swellPeriodS]]);
   if (height === null) return {heightFt: null, periodS: null, basis: null, longPeriodS};
-  return {heightFt: height, periodS: finite(hour?.wavePeriodS) ? hour.wavePeriodS : null, basis: 'offshore', longPeriodS};
+  return {heightFt: height, periodS: period(hour?.wavePeriodS) ? hour.wavePeriodS : null, basis: 'offshore', longPeriodS};
 }
 
 const angle = (a: number, b: number) => Math.abs((((a - b) % 360) + 540) % 360 - 180);
@@ -236,8 +238,24 @@ export function barDay(entrance: Entrance, hours: BarHour[]): BarDay {
  * departure hour [start, start + 1 h) and the return hour [end - 1 h, end].
  */
 export function crossingHours(day: BarDay, start: string, end: string): BarHour[] {
+  return crossingCheck(day, start, end).hours;
+}
+
+export type CrossingCheck = {hours: BarHour[]; departure: BarHour | null; return: BarHour | null; known: boolean};
+
+/**
+ * The crossing hours with the readings at each end: `departure` is the earliest reading in [start, start + 1 h),
+ * `return` the latest in [end - 1 h, end]. `known` is false when either end has no reading, either time is not a
+ * date, or the window does not end after it starts: such a window is never read as a clear bar.
+ */
+export function crossingCheck(day: BarDay, start: string, end: string): CrossingCheck {
   const from = Date.parse(start), to = Date.parse(end);
-  return day.hours.filter(h => {const t = Date.parse(h.at); return (t >= from && t < from + HOUR) || (t >= to - HOUR && t <= to);});
+  const at = (h: BarHour) => Date.parse(h.at);
+  const hours = day.hours.filter(h => {const t = at(h); return (t >= from && t < from + HOUR) || (t >= to - HOUR && t <= to);});
+  const leaving = hours.filter(h => at(h) >= from && at(h) < from + HOUR).sort((a, b) => at(a) - at(b));
+  const back = hours.filter(h => at(h) >= to - HOUR && at(h) <= to).sort((a, b) => at(b) - at(a));
+  const departure = leaving[0] ?? null, ret = back[0] ?? null;
+  return {hours, departure, return: ret, known: Number.isFinite(from) && Number.isFinite(to) && to > from && departure !== null && ret !== null};
 }
 
 /** The standing line every bar reading carries. */

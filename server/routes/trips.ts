@@ -6,9 +6,10 @@ import {regions, regionById} from '../config.ts';
 import {json, body, db} from '../http.ts';
 import {ClientError} from '../errors.ts';
 import type {AppEnv} from '../env.ts';
-import type {AlertEventRow, CountRow, TripRow} from '../types.ts';
+import type {AlertEventRow, TripRow} from '../types.ts';
 
 export const trips = new Hono<AppEnv>();
+const ACTIVE_TRIP_LIMIT = 20;
 // Rows store the planner fields as JSON text; clients get them parsed.
 const parse = (text: string | null): unknown => { if (!text) return null; try { return JSON.parse(text); } catch { return null; } };
 export const publicTrip = (row: TripRow) => ({...row, targets: parse(row.targets) ?? [row.species], plan: parse(row.plan)});
@@ -18,9 +19,10 @@ trips.get('/api/trips', async c => {
 });
 trips.post('/api/trips', async c => {
   const owner = c.var.owner, env = c.env;
-  const t = validateTrip(await body(c.req.raw, PLAN_LIMITS.body)); const count = (await db(env).prepare('SELECT COUNT(*) AS n FROM trips WHERE owner=? AND enabled=1 AND final_delivered_at IS NULL AND date>=?').bind(owner, dateInZone(Date.now(), regions[t.region]!.timezone)).first<CountRow>())!; if (count.n >= 20) return json({error: 'Limit of 20 active trips'}, 409);
+  const t = validateTrip(await body(c.req.raw, PLAN_LIMITS.body));
   const id = crypto.randomUUID(), at = new Date().toISOString();
-  await db(env).prepare('INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,enabled,created_at,boat_name,boat_sea,boat_wind,boat_chop_period,launch_point,targets,plan,status,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?,?)').bind(id, owner, t.region, t.point, t.species, t.date, t.start_hour, t.end_hour, t.wind_limit, t.gust_limit, t.sea_limit, at, t.boat?.name ?? null, t.boat?.sea ?? null, t.boat?.wind ?? null, t.boat?.chop_period ?? null, t.launch_point, JSON.stringify(t.targets), t.plan ? JSON.stringify(t.plan) : null, t.status, at).run(); return json({id}, 201);
+  const saved = await db(env).prepare('INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,enabled,created_at,boat_name,boat_sea,boat_wind,boat_chop_period,launch_point,targets,plan,status,updated_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM trips WHERE owner=? AND enabled=1 AND final_delivered_at IS NULL AND date>=?) < ?').bind(id, owner, t.region, t.point, t.species, t.date, t.start_hour, t.end_hour, t.wind_limit, t.gust_limit, t.sea_limit, at, t.boat?.name ?? null, t.boat?.sea ?? null, t.boat?.wind ?? null, t.boat?.chop_period ?? null, t.launch_point, JSON.stringify(t.targets), t.plan ? JSON.stringify(t.plan) : null, t.status, at, owner, dateInZone(Date.now(), regions[t.region]!.timezone), ACTIVE_TRIP_LIMIT).run();
+  return saved.meta.changes ? json({id}, 201) : json({error: `Limit of ${ACTIVE_TRIP_LIMIT} active trips`}, 409);
 });
 // PATCH changes the plan of a saved trip (launch point, targets, spots, legs, window,
 // exports, status). The alert fields are fixed at save time: change them by saving

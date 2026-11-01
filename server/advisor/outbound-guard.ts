@@ -15,7 +15,11 @@
 // Counts live in request_limits (the routes/boat.ts idiom) as one row per key
 // and UTC day; the 7-day count sums the last seven. checkOutbound reads only;
 // the caller commits the counts right before it sends, so a refusal later in
-// its own checks spends nothing. Callers never tell the requester why a text
+// its own checks spends nothing. commit() counts and re-reads in one batch (one
+// transaction) and, if requests raced past the check and ours went over a cap,
+// takes its counts back and returns false (no text). A request that reads while
+// a loser has not yet taken its counts back is refused too: it fails closed.
+// Callers never tell the requester why a text
 // did not go out, so the answer never says whether a number is known to us.
 import type {AdvisorSettings} from './types.ts';
 
@@ -34,8 +38,8 @@ export interface OutboundRequest {
   ipHash?: string | null;           // the web visitor's hashed address (web only)
   now: number;
 }
-export type OutboundRefusal = 'stopped' | 'recipient' | 'origin' | 'ip' | 'global';
-export type OutboundVerdict = {ok: false; reason: OutboundRefusal} | {ok: true; cold: boolean; commit: () => Promise<void>};
+export type OutboundRefusal = 'stopped' | 'recipient' | 'origin' | 'ip' | 'global' | 'race';
+export type OutboundVerdict = {ok: false; reason: OutboundRefusal} | {ok: true; cold: boolean; commit: () => Promise<boolean>};
 
 const day = (now: number): number => Math.floor(now / DAY);
 export const recipientKey = (hash: string, d: number): string => `advisor-out:to:${hash}:${d}`;
@@ -56,16 +60,28 @@ export async function checkOutbound(db: D1Database, settings: Pick<AdvisorSettin
   const today = day(request.now);
   const week = Array.from({length: 7}, (_, i) => recipientKey(request.recipientHash, today - i));
   const origin = originKey(request.kind, request.origin, today), ip = request.ipHash ? ipKey(request.ipHash, today) : null, global = coldKey(today);
-  const seen = await counts(db, [...week, origin, ...(ip ? [ip] : []), global]);
-  const n = (id: string | null): number => id ? seen.get(id) ?? 0 : 0;
-  if (n(week[0]!) >= RECIPIENT_PER_DAY || week.reduce((sum, id) => sum + n(id), 0) >= RECIPIENT_PER_WEEK) return {ok: false, reason: 'recipient'};
-  if (n(origin) >= ORIGIN_PER_DAY[request.kind]) return {ok: false, reason: 'origin'};
-  if (ip && n(ip) >= IP_PER_DAY) return {ok: false, reason: 'ip'};
-  if (cold && n(global) >= settings.globalDailyCold) return {ok: false, reason: 'global'};
+  // `extra` 1: would one more text pass (the check)? 0: did ours, already counted, stay within every cap (the commit)?
+  const refusal = (seen: Map<string, number>, extra: number): OutboundRefusal | null => {
+    const n = (id: string | null): number => id ? seen.get(id) ?? 0 : 0;
+    const over = (count: number, cap: number): boolean => count + extra > cap;
+    if (over(n(week[0]!), RECIPIENT_PER_DAY) || over(week.reduce((sum, id) => sum + n(id), 0), RECIPIENT_PER_WEEK)) return 'recipient';
+    if (over(n(origin), ORIGIN_PER_DAY[request.kind])) return 'origin';
+    if (ip && over(n(ip), IP_PER_DAY)) return 'ip';
+    if (cold && over(n(global), settings.globalDailyCold)) return 'global';
+    return null;
+  };
+  const read = [...week, origin, ...(ip ? [ip] : []), global];
+  const reason = refusal(await counts(db, read), 1);
+  if (reason) return {ok: false, reason};
   const expires = (today + KEEP_DAYS) * 86400;
-  const commit = async (): Promise<void> => {
+  const commit = async (): Promise<boolean> => {
     const ids = [week[0]!, origin, ...(ip ? [ip] : []), ...(cold ? [global] : [])];
-    await db.batch(ids.map(id => db.prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET count=count+1').bind(id, expires)));
+    const results = await db.batch([...ids.map(id => db.prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,1,?) ON CONFLICT(id) DO UPDATE SET count=count+1').bind(id, expires)),
+      db.prepare(`SELECT id,count FROM request_limits WHERE id IN (${read.map(() => '?').join(',')})`).bind(...read)]);
+    const rows = (results.at(-1)?.results ?? []) as {id: string; count: number}[];   // D1 returns the rows; an adapter without them reads as none
+    if (!refusal(new Map(rows.map(r => [r.id, r.count])), 0)) return true;
+    await db.batch(ids.map(id => db.prepare('UPDATE request_limits SET count=count-1 WHERE id=? AND count>0').bind(id)));
+    return false;
   };
   return {ok: true, cold, commit};
 }

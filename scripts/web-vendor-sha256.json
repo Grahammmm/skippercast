@@ -39,8 +39,9 @@
   "docs/showcase/2026-10-31/first-run-phone-before.png": "27fa438a5689806befdad9cf50538cda7cf23490d0cc5998a7a2c6b8b1531680",
   "docs/showcase/2026-10-31/history-laptop.png": "cf20dafc3fd88ea5b34939475b561fa996191b012f42860ada5d51d6a5c4c37f",
   "docs/showcase/2026-10-31/landing-laptop-after.png": "ed338413dbf70cc76c610b245914ee69079001df0f62560bf91ebfa322e287f7",
-  "docs/showcase/2026-10-31/landing-laptop-before.png": "04943312d93ce8217a00ea504a2efb4c4b9af0e2feffe2f721ba043e70c0fe46",
-  "docs/showcase/2026-10-31/landing-phone.png": "7bc71838e3e62d870858f839d9280ff30361ceac9e6697a003dbba13dfb76ad4",
+  "docs/showcase/2026-10-31/landing-laptop-before.png": "cc7b3d779733cc9d2f5d45d3f36a024f742b184bd2eca138560fd39a77cdd0d0",
+  "docs/showcase/2026-10-31/landing-phone-after.png": "7bc71838e3e62d870858f839d9280ff30361ceac9e6697a003dbba13dfb76ad4",
+  "docs/showcase/2026-10-31/landing-phone-before.png": "72105f48045e1e5025ae75a334d460563c57778c0c078f98f9ed14ab30912568",
   "docs/showcase/2026-10-31/port-page.png": "4d627d951e215a83f1ef22b6301029d181dccc5eb99670ad32f94ab5fb44431b",
   "docs/showcase/2026-10-31/spear-phone-after.png": "b3f5037e5ba704458cdd7c2baf918480ab4e64141ff0240b20cec112227b9de7",
   "docs/showcase/2026-10-31/spear-phone-before.png": "f8f493d7d8919058de60e3743624b8ed4db00b8defb8e92290b6108d5e57ec28",
@@ -60,6 +61,8 @@
   "tests/fixtures/noaa-chlorophyll/morro-bay-V2026301.nc": "8a6d88097bad755b01531033681e8eb10e1e7f7d6af4d5f7f4bd7c957e54a233",
   "tests/fixtures/seafloor/chart.pmtiles": "bac60140560c5bb3e4783c6ebb6d409831eecb62fe43948a2d8603238383bae2",
   "tests/fixtures/seafloor/classified-point-contact.pmtiles": "b9c703bf0048c78d489beff5af20bafbc39f0766cebd11ae8a8ab462bdd82416",
+  "tests/fixtures/showcase/cambria-c69a97e48-capture-1.png": "c74d61524c92c9a059bf15ac8682dd9d290f9aa2e6134c3922cc353d80f76330",
+  "tests/fixtures/showcase/cambria-c69a97e48-capture-2.png": "c4dd4cdff750ef5fd41d8041b4290178ae63e5ecb99ca8ca7420459efb0a1302",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be"
 }

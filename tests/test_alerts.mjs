@@ -37,6 +37,21 @@ test('the trip date is tomorrow in the region\'s zone', () => {
   assert.equal(alerts.alertDate('UTC', Date.parse('2026-10-12T06:30:00Z')), '2026-10-13');
 });
 
+test('the trip date is the next calendar day on DST nights and year ends, inside the accepted range (RF1650-10)', () => {
+  const cases = [
+    ['America/Los_Angeles', '2026-11-01T07:30:00Z', '2026-11-02'], // 00:30 PDT on fall-back day: not today
+    ['America/Los_Angeles', '2027-03-14T07:30:00Z', '2027-03-14'], // 23:30 PST on 03-13 before spring-forward: not two days ahead
+    ['America/Los_Angeles', '2026-10-15T19:00:00Z', '2026-10-16'], // ordinary day
+    ['America/Los_Angeles', '2027-01-01T07:30:00Z', '2027-01-01'], // 23:30 PST on 2026-12-31: year roll-over
+    ['Pacific/Honolulu', '2026-11-02T09:30:00Z', '2026-11-02'], // 23:30 HST on 11-01, no DST
+  ];
+  for (const [zone, at, want] of cases) {
+    const now = Date.parse(at), got = alerts.alertDate(zone, now), {min, max} = alerts.dateRange(zone, now);
+    assert.equal(got, want, `${zone} ${at}`);
+    assert.ok(min <= got && got <= max, `${zone} ${at}: ${got} outside ${min}..${max}`);
+  }
+});
+
 test('a saved trip and its feedback read as before', () => {
   assert.equal(alerts.tripLine({id: 't', date: '2026-10-13', point: 'central', species: 'reef', start_hour: 7, end_hour: 13}), '2026-10-13 · central · reef · 7:00–13:00');
   assert.equal(alerts.tripLine({id: 't', date: '2026-10-13', point: 'central', species: 'reef', start_hour: 7, end_hour: 13, boat_sea: 0.7, boat_name: ''}), '2026-10-13 · central · reef · 7:00–13:00 · saved boat');
