@@ -275,6 +275,24 @@ export function createPlanner(deps: PlannerDeps) {
       actionStatus.value = 'User waypoint saved on this browser. Category is your label, not verified habitat or navigation guidance.';
     });
   }
+  /**
+   * SCJ-1: a recommended habitat place joins the trip as a user waypoint with a stable id (`user:habitat-<id>`, the id's
+   * characters outside the user-waypoint id rule as `-`), through saveWaypoint's validation. Again for the same place adds nothing.
+   */
+  function addPlace(p: {id: string; name: string; latitude: number; longitude: number; shore?: boolean}): string | null {
+    const id = `user:habitat-${p.id.replace(/^habitat:/, '').replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}`;
+    const saved: UserWaypoint[] = draft.value.userWaypoints ?? [], known = saved.some((t: UserWaypoint) => t.id === id);
+    const points: UserWaypoint[] = known ? saved : userWaypoints([...saved, {id, name: p.name, category: p.shore ? 'other' : 'reef', latitude: p.latitude, longitude: p.longitude}]) as UserWaypoint[];
+    if (!points.some((t: UserWaypoint) => t.id === id)) { actionStatus.value = 'Choose a name (up to 80 characters), a listed category and a valid map position. Limit: 100 waypoints.'; return null; }
+    if (known && draft.value.ids.includes(id)) return id;
+    revision++;
+    batch(() => {
+      if (ranked.value) unrank();
+      persist({...draft.value, userWaypoints: points, ids: [...draft.value.ids, id]});
+      actionStatus.value = 'User waypoint saved on this browser. Category is your label, not verified habitat or navigation guidance.';
+    });
+    return id;
+  }
   function removeWaypoint(id: string): void {
     revision++;
     persist({...draft.value, userWaypoints: (draft.value.userWaypoints ?? []).filter(t => t.id !== id), ids: draft.value.ids.filter(x => x !== id)});
@@ -404,7 +422,7 @@ export function createPlanner(deps: PlannerDeps) {
   return {
     today, region, draft, tripAtlas, ranked, filtersDirty, restorePending, allowResearch, search, loading, portsReady, portsFailed, filters, ports,
     scopeStatus, actionStatus, storageNote, tick, summary, spots, protectedHits, notesReady, waypointPosition,
-    chooseWaypoint, saveWaypoint, removeWaypoint,
+    chooseWaypoint, saveWaypoint, removeWaypoint, addPlace,
     setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, restore, exportFile, deliver, showOnMap, checkConditions,
     /** For tests and a region change: stop drawing the ranked set. */
