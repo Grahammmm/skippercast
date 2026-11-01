@@ -301,13 +301,13 @@ class RunAllTests(unittest.TestCase):
             with self.assertRaises(SystemExit) as exited:
                 main(["--public-base", self.BASE, "--report", str(report)], site, NOW)
             self.assertEqual(exited.exception.code, 0)
-            self.assertEqual(json.loads(report.read_text()), {"stale": False, "degraded": False, "partial": True})
+            self.assertEqual(json.loads(report.read_text()), {"stale": False, "degraded": False, "partial": True, "stale_feeds": []})
             # Both buoys out fails the run, and the report says why.
             live["sources"]["offshore"] = source("offshore", "observation", "stale", OLD)
             with self.assertRaises(SystemExit) as exited:
                 main(["--public-base", self.BASE, "--report", str(report)], site, NOW)
             self.assertEqual(exited.exception.code, DEGRADED)
-            self.assertEqual(json.loads(report.read_text()), {"stale": False, "degraded": True, "partial": False})
+            self.assertEqual(json.loads(report.read_text()), {"stale": False, "degraded": True, "partial": False, "stale_feeds": []})
 
 
 if __name__ == "__main__":
