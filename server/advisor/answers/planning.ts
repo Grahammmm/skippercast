@@ -126,10 +126,10 @@ export async function tripConditions(input: ConditionsInput, opts: PlanningOptio
   const [intel, daily] = await Promise.all([intelligenceFeed(region, read), dailyFeed(region, read)]);
   const pointId = FORECAST_POINT.get(port) ?? region.forecast_points[0]?.id ?? '';
   const clock = forecastClock(intel, opts.now), boat = requestBoat(input.boat);
-  const days: DayConditions[] = when.dates.map(date => withForecastClock(windowConditions(intel, region, pointId, date, window, boat), clock));
   const zones = regionZones(region);
   const advisoriesAsOf = advisoryCheckTime(daily?.sources, zones);
   const byDay = when.dates.map(date => { const [from, to] = windowEpochs(date, tz, window); return {date, advisories: daily ? advisoriesFrom(daily, zones, from, to) : []}; });
+  const days: DayConditions[] = byDay.map(d => withForecastClock(windowConditions(intel, region, pointId, d.date, window, boat, d.advisories), clock));
   const [from] = windowEpochs(when.dates[0]!, tz, window), [, to] = windowEpochs(when.dates.at(-1)!, tz, window);
   const alerts = daily ? advisoriesFrom(daily, zones, from, to) : null;
   const line = alerts?.length ? advisoryLine(byDay, today, language) : null;

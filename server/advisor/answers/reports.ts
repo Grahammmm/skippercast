@@ -129,8 +129,9 @@ export async function dailyInputs(env: Env, port: string, date: string, deps: Da
   let conditions: DailyInputs['conditions'] = {available: false, advisories: [], day: null};
   if (region) {
     const [from, to] = windowEpochs(date, region.timezone, WINDOW);
-    const advisories = daily ? advisoriesFrom(daily, regionZones(region), from, to).map(a => a.event) : [];
-    const day = intel ? withForecastClock(windowConditions(intel, region, FORECAST_POINT.get(port) ?? region.forecast_points[0]?.id ?? '', date, WINDOW), forecastClock(intel, now)) : null;
+    const found = daily ? advisoriesFrom(daily, regionZones(region), from, to) : [];
+    const advisories = found.map(a => a.event);
+    const day = intel ? withForecastClock(windowConditions(intel, region, FORECAST_POINT.get(port) ?? region.forecast_points[0]?.id ?? '', date, WINDOW, null, found), forecastClock(intel, now)) : null;
     conditions = {available: Boolean(day?.available), advisories: [...new Set(advisories)],
       day: day?.available ? {wind_kt: day.wind_kt, wind_from: day.wind_from, seas_ft: day.seas_ft, sea_period_s: day.sea_period_s, comfort: day.comfort, ...(day.comfort_held ? {comfort_held: day.comfort_held} : {})} : null};
   }

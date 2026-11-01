@@ -135,7 +135,7 @@ export interface DayConditions {
   wind_kt: [number, number] | null; wind_from: string | null; gusts_kt: number | null;
   seas_ft: [number, number] | null; sea_period_s: number | null;
   swell_ft: [number, number] | null; swell_period_s: number | null; swell_from: string | null;
-  comfort: string; comfort_for: string; models_agree: boolean | null;
+  comfort: string; comfort_for: string; models_agree: boolean | null; advisory?: string;
   /** Why a comfort word was held at unknown (an old model run); absent when nothing holds it. */
   comfort_held?: string;
 }
@@ -148,8 +148,8 @@ export function withForecastClock(day: DayConditions, clock: ForecastClock): Day
     wind_kt: null, wind_from: null, gusts_kt: null, seas_ft: null, sea_period_s: null, swell_ft: null, swell_period_s: null, swell_from: null, comfort: COMFORT_WORD.unknown, models_agree: null};
 }
 
-/** The fishing window at a forecast point on one local date; `boat` (requestBoat) rates it for the caller's boat, else the reference boat. */
-export function windowConditions(feed: Feed, region: Region, pointId: string, date: string, window: Window = WINDOW, boat: BoatFactors | null = null): DayConditions {
+/** The fishing window at a forecast point on one local date; `boat` (requestBoat) rates it for the caller's boat, else the reference boat; a boating advisory overlapping the window (`advisories`) makes an available day 'rough', as the brief does. */
+export function windowConditions(feed: Feed, region: Region, pointId: string, date: string, window: Window = WINDOW, boat: BoatFactors | null = null, advisories: readonly {event: string}[] = []): DayConditions {
   const base = {date, window: `${String(window.start).padStart(2, '0')}:00-${String(window.end).padStart(2, '0')}:00`, comfort_for: boat ? OWN_BOAT_PHRASE : BOAT_PHRASE};
   const empty = (reason: string): DayConditions => ({...base, available: false, reason, wind_kt: null, wind_from: null, gusts_kt: null, seas_ft: null, sea_period_s: null,
     swell_ft: null, swell_period_s: null, swell_from: null, comfort: COMFORT_WORD.unknown, models_agree: null});
@@ -177,8 +177,9 @@ export function windowConditions(feed: Feed, region: Region, pointId: string, da
     seas_ft: range(hours.map(h => Math.max(h.sea ?? -Infinity, h.other_sea ?? -Infinity)).map(v => v === -Infinity ? null : v), 1, 'up'),
     sea_period_s: round(median(hours.map(h => h.sea_period))),
     swell_ft: range(hours.map(h => h.swell)), swell_period_s: round(median(hours.map(h => h.swell_period))), swell_from: compass(meanBearing(hours.map(h => h.swell_from))),
-    comfort: COMFORT_WORD[verdict],
+    comfort: COMFORT_WORD[advisories.length ? 'no-go' : verdict],
     models_agree: agree.length ? agree.every(h => Math.abs(h.wind! - h.other_wind!) <= MODEL_GAP.wind && Math.abs(h.sea! - h.other_sea!) <= MODEL_GAP.sea) : null,
+    ...(advisories.length ? {advisory: advisories[0]!.event} : {}),
   };
 }
 function median(values: (number | null)[]): number | null {
