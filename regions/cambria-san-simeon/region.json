@@ -117,6 +117,34 @@
       "latitude": 35.65,
       "longitude": -121.75,
       "offshore": true
+    },
+    {
+      "id": "offshore-s-0",
+      "name": "Offshore far south \u00b7 inner",
+      "latitude": 35.45,
+      "longitude": -121.5,
+      "offshore": true
+    },
+    {
+      "id": "offshore-s-1",
+      "name": "Offshore far south \u00b7 outer",
+      "latitude": 35.45,
+      "longitude": -121.75,
+      "offshore": true
+    },
+    {
+      "id": "offshore-s-2",
+      "name": "Offshore far south \u00b7 shoreward",
+      "latitude": 35.45,
+      "longitude": -121.25,
+      "offshore": true
+    },
+    {
+      "id": "offshore-0-2",
+      "name": "Offshore south \u00b7 shoreward",
+      "latitude": 35.55,
+      "longitude": -121.25,
+      "offshore": true
     }
   ],
   "marine_zones": {
