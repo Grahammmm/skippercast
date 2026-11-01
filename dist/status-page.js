@@ -10,6 +10,7 @@ import health from '../catalog/feed-health.json' with {type: 'json'};
 import {SOURCE_NAMES} from './status-names.js';
 
 const HOUR = 3_600_000;
+const FUTURE_TOLERANCE = 10 * 60_000;   // scripts/check_feed_freshness.py FUTURE_TOLERANCE
 export const STATES = Object.freeze({
   ok: 'Inside its interval',
   late: 'Overdue',
@@ -22,12 +23,16 @@ const iso = ms => (Number.isFinite(ms) ? new Date(ms).toISOString() : null);
 
 /** One row: a published thing, when it last succeeded, how often it may lag, and whether it is inside that. */
 function row(group, name, lastMs, expectedHours, now, {degraded = '', note = ''} = {}) {
+  if (Number.isFinite(lastMs) && lastMs - now > FUTURE_TOLERANCE) {
+    // The checker rejects a stamp more than 10 minutes ahead as unreadable (clock or stamp error).
+    return {group, name, lastSuccess: iso(lastMs), expectedHours, ageHours: null, state: 'unavailable', note: 'time is in the future (clock or stamp error)'};
+  }
   const age = Number.isFinite(lastMs) ? Math.max(0, (now - lastMs) / HOUR) : null;
   const state = degraded ? 'degraded' : age === null ? 'unavailable' : age > expectedHours ? 'late' : 'ok';
   return {group, name, lastSuccess: iso(lastMs), expectedHours, ageHours: age, state, note: degraded || note};
 }
 
-const unreadable = (group, name, expectedHours) => ({group, name, lastSuccess: null, expectedHours, ageHours: null, state: 'unavailable', note: ''});
+const unreadable = (group, name, expectedHours, note = '') => ({group, name, lastSuccess: null, expectedHours, ageHours: null, state: 'unavailable', note});
 
 /** Whole-feed row from its own publication stamp. */
 function feedRow(group, name, feed, expectedHours, now) {
@@ -36,18 +41,33 @@ function feedRow(group, name, feed, expectedHours, now) {
   return row(group, name, clock(feed.published_at ?? feed.completed_at ?? feed.generated_at), limit, now);
 }
 
+/** Not current service, as degraded_sources() in scripts/check_feed_freshness.py: any status but ok, or a backup
+ * station standing in for its primary (fallback_for), which the checker reports as degraded service. */
+const notCurrent = s => s.status !== 'ok' || Boolean(s.fallback_for);
+const notCurrentLabel = s => (s.status !== 'ok' ? s.status || 'unknown' : 'backup station');
+
 const sourcesOf = feed => Object.values(feed?.sources && typeof feed.sources === 'object' ? feed.sources : {}).filter(s => s && typeof s === 'object');
 
-/** Roll several source objects into one row: newest success, worst state, how many are not current. */
+const RANK = Object.freeze({unavailable: 3, late: 2, ok: 0});
+
+/** Roll several source objects into one row, judged by its worst member: each source against its own
+ * max_age_hours, the row showing the worst (then oldest) one. A reused source (an older landing day kept
+ * from an earlier run on purpose) is not judged by its age, only by its status. */
 function rollup(group, name, sources, now, expectedFallback) {
   if (!sources.length) return unreadable(group, name, expectedFallback);
   const current = sources.filter(s => !s.reused);
-  const bad = sources.filter(s => s.status !== 'ok');
-  const times = current.map(s => clock(s.last_success_at)).filter(Number.isFinite);
-  const expected = Math.max(...sources.map(s => Number(s.max_age_hours) || expectedFallback));
-  const last = times.length ? Math.max(...times) : NaN;
-  const out = row(group, name, last, expected, now, bad.length ? {degraded: `${bad.length} of ${sources.length} not current (${[...new Set(bad.map(s => s.status || 'unknown'))].join(', ')})`} : {});
-  if (!bad.length && sources.length > 1) out.note = `${sources.length} sources`;
+  const bad = sources.filter(notCurrent);
+  const each = current.map(s => row(group, name, clock(s.last_success_at), Number(s.max_age_hours) || expectedFallback, now));
+  if (!each.length) each.push(unreadable(group, name, expectedFallback));
+  each.sort((a, b) => RANK[b.state] - RANK[a.state] || (b.ageHours ?? Infinity) - (a.ageHours ?? Infinity));
+  const out = {...each[0]};
+  const off = each.filter(r => r.state !== 'ok');
+  if (bad.length) {
+    out.state = 'degraded';
+    out.note = `${bad.length} of ${sources.length} not current (${[...new Set(bad.map(notCurrentLabel))].join(', ')})`;
+  } else if (off.length && sources.length > 1) {
+    out.note = `${off.length} of ${sources.length} ${off.every(r => r.state === 'late') ? 'overdue' : 'not readable or overdue'}`;
+  } else if (!off.length && sources.length > 1) out.note = `${sources.length} sources`;
   return out;
 }
 
@@ -61,7 +81,7 @@ const KIND_LABELS = Object.freeze({
   advisory: 'Marine advisories',
   boundaries: 'Protected-area boundaries',
   forecast: 'Forecast models',
-  'page-watch': 'Fishing-rule pages',
+  'page-watch': 'Fishing-rule and protected-area pages',
   'charter-reports': 'Landing reports',
 });
 
@@ -74,18 +94,24 @@ export function statusRows(feeds, now = Date.now()) {
   const live = health.feeds.conditions, daily = health.feeds.data, regional = health.regions;
   rows.push(feedRow('Live conditions', 'Live conditions feed', feeds.conditions, live.max_age_hours, now));
   const entries = Array.isArray(feeds.index?.regions) ? feeds.index.regions : [];
+  if (!entries.length) rows.push(unreadable('Live conditions', 'Regional buoy feeds', regional.max_age_hours, 'the region list could not be read, so no region is shown'));
   for (const entry of entries) {
     const feed = feeds.regions?.[entry.id];
     if (!feed) { rows.push(unreadable('Live conditions', `Buoys: ${entry.name || entry.id}`, regional.max_age_hours)); continue; }
     const base = feedRow('Live conditions', `Buoys: ${entry.name || entry.id}`, feed, regional.max_age_hours, now);
-    const bad = sourcesOf(feed).filter(s => s.status !== 'ok');
-    if (bad.length && base.state !== 'unavailable') { base.state = 'degraded'; base.note = `${bad.length} of ${sourcesOf(feed).length} buoy readings not current`; }
+    const bad = sourcesOf(feed).filter(notCurrent);
+    if (bad.length && base.state !== 'unavailable') {
+      base.state = 'degraded';
+      base.note = `${bad.length} of ${sourcesOf(feed).length} buoy readings not current (${[...new Set(bad.map(notCurrentLabel))].join(', ')})`;
+    }
     rows.push(base);
   }
   rows.push(feedRow('Daily evidence', 'Daily evidence feed', feeds.data, daily.max_age_hours, now));
   const sources = sourcesOf(feeds.data);
   const byKind = new Map();
-  for (const source of sources) byKind.set(source.kind || 'other', [...(byKind.get(source.kind || 'other') || []), source]);
+  // The harbor page (catalog harbor-authority) is a page-watch source too, but not a fishing rule: own row.
+  const groupOf = source => (source.kind === 'page-watch' && source.id === 'harbor' ? 'harbor' : source.kind || 'other');
+  for (const source of sources) byKind.set(groupOf(source), [...(byKind.get(groupOf(source)) || []), source]);
   for (const [kind, list] of byKind) {
     if (kind === 'page-watch' || kind === 'charter-reports') { rows.push(rollup('Daily evidence', KIND_LABELS[kind], list, now, daily.max_age_hours)); continue; }
     for (const source of list) rows.push(rollup('Daily evidence', kind === 'forecast' ? FORECAST_NAMES[source.id] || 'Forecast model tiles' : String(source.name || source.id), [source], now, daily.max_age_hours));
@@ -105,17 +131,23 @@ export const NOT_SHOWN = Object.freeze({
 /** catalog/sources.json id -> category. A test keeps this complete against the catalog. */
 export const SOURCE_COVERAGE = Object.freeze({
   ...Object.fromEntries(['ndbc-buoys', 'nws-weather', 'noaa-tides', 'cdfw-mpas', 'cdfw-rules', 'noaa-gfs', 'ecmwf-ifs', 'noaa-gfs-wave', 'ecmwf-wam',
-    'noaa-blended-sst', 'noaa-viirs-merged-chlorophyll', 'noaa-ndbc-hfr-uswc-6km', 'landing-reports'].map(id => [id, 'watched'])),
+    'noaa-blended-sst', 'noaa-viirs-merged-chlorophyll', 'noaa-ndbc-hfr-uswc-6km', 'landing-reports', 'harbor-authority'].map(id => [id, 'watched'])),
   ...Object.fromEntries(['ndbc-history', 'noaa-goes-nowcoast', 'cdip-mop', 'slo-beach-water-quality', 'noaa-wcofs', 'noaa-gefs-members', 'noaa-gefs-wave-prob']
     .map(id => [id, 'scheduled-unwatched'])),
   ...Object.fromEntries(['usgs-naip'].map(id => [id, 'browser-direct'])),
 });
 export const coverageOf = id => SOURCE_COVERAGE[id] || 'fixed';
 
+/** Services docs/data-sources.md documents that have no catalog/sources.json entry: name and category. */
+export const DOCUMENTED_EXTRA = Object.freeze({
+  'noaa-enc-display': {name: "NOAA ENC display service (chart images on the map)", coverage: 'browser-direct'},
+});
+
 /** The sources of each category, by name. */
-export function coverageGroups(names = SOURCE_NAMES) {
+export function coverageGroups(names = SOURCE_NAMES, extra = DOCUMENTED_EXTRA) {
   const groups = {};
   for (const [id, name] of Object.entries(names)) (groups[coverageOf(id)] ||= []).push(name);
+  for (const {name, coverage} of Object.values(extra)) (groups[coverage] ||= []).push(name);
   return groups;
 }
 
@@ -127,7 +159,7 @@ export function renderRows(rows) {
   const groups = [...new Set(rows.map(r => r.group))];
   return groups.map(group => `<h2>${text(group)}</h2>
 <table class="evidence-table status-table"><thead><tr><th scope="col">Data</th><th scope="col">Last successful publish (UTC)</th><th scope="col">Expected within</th><th scope="col">Status</th></tr></thead><tbody>
-${rows.filter(r => r.group === group).map(r => `<tr class="status-${r.state}"><th scope="row">${text(r.name)}</th><td>${r.lastSuccess ? `<time datetime="${text(r.lastSuccess)}">${text(r.lastSuccess.slice(0, 16).replace('T', ' '))}</time> (${hours(r.ageHours)} ago)` : 'none'}</td><td>${hours(r.expectedHours)}</td><td>${text(STATES[r.state])}${r.note ? ` · ${text(r.note)}` : ''}</td></tr>`).join('\n')}
+${rows.filter(r => r.group === group).map(r => `<tr class="status-${r.state}"><th scope="row">${text(r.name)}</th><td>${r.lastSuccess ? `<time datetime="${text(r.lastSuccess)}">${text(r.lastSuccess.slice(0, 16).replace('T', ' '))}</time>${r.ageHours === null ? '' : ` (${hours(r.ageHours)} ago)`}` : 'none'}</td><td>${hours(r.expectedHours)}</td><td>${text(STATES[r.state])}${r.note ? ` · ${text(r.note)}` : ''}</td></tr>`).join('\n')}
 </tbody></table>`).join('\n');
 }
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {shellFor} from '../server/routes/assets.ts';
-import {coverageGroups, coverageOf, renderCoverage, renderRows, statusRows, SOURCE_COVERAGE} from '../dist/status-page.js';
+import {coverageGroups, coverageOf, DOCUMENTED_EXTRA, renderCoverage, renderRows, statusRows, SOURCE_COVERAGE} from '../dist/status-page.js';
 import {SOURCE_NAMES} from '../dist/status-names.js';
 
 const NOW = Date.parse('2026-11-01T20:30:00Z');
@@ -46,8 +46,8 @@ test('a constructed stale feed renders as stale, and so does a source the provid
   assert.equal(rows['Buoys: Morro Bay'].state, 'late');
   assert.equal(rows['NOAA SST'].state, 'degraded');
   assert.equal(rows['NOAA tide predictions'].state, 'late');
-  assert.equal(rows['Fishing-rule pages'].state, 'degraded');
-  assert.match(rows['Fishing-rule pages'].note, /1 of 2 not current \(failed\)/);
+  assert.equal(rows['Fishing-rule and protected-area pages'].state, 'degraded');
+  assert.match(rows['Fishing-rule and protected-area pages'].note, /1 of 2 not current \(failed\)/);
   const html = renderRows(Object.values(rows));
   assert.match(html, /class="status-late"[^>]*><th scope="row">Live conditions feed/);
   assert.match(html, /Overdue/);
@@ -84,7 +84,7 @@ test('every source in catalog/sources.json is either shown, or named on the page
   for (const s of catalog.sources) assert.equal(SOURCE_NAMES[s.id], renamed[s.id] || s.name, s.id); // model codes are method names, not page copy
   for (const id of Object.keys(SOURCE_COVERAGE)) assert.ok(SOURCE_NAMES[id], `${id} is not in the catalog`);
   const groups = coverageGroups();
-  assert.equal(Object.values(groups).flat().length, catalog.sources.length);
+  assert.equal(Object.values(groups).flat().length, catalog.sources.length + Object.keys(DOCUMENTED_EXTRA).length);
   assert.equal(coverageOf('cdip-mop'), 'scheduled-unwatched');
   const html = renderCoverage();
   assert.match(html, /freshness check does not watch it yet/);
@@ -96,4 +96,75 @@ test('/status serves the status page', () => {
   assert.equal(shellFor('/status', new URLSearchParams()), '/status.html');
   const page = readFileSync(new URL('../dist/status.html', import.meta.url), 'utf8');
   for (const id of ['status-rows', 'status-coverage', 'status-checked']) assert.ok(page.includes(`id="${id}"`), id);
+});
+
+test('a backup station standing in for its primary is degraded service, not healthy (as degraded_sources())', () => {
+  const feeds = fresh();
+  feeds.regions['morro-bay'] = regionFeed(0.3, {a: src('a', 'observation', {max_age_hours: 2, fallback_for: 'primary', station: '46028'})});
+  feeds.data.sources['buoy-b'] = src('buoy-b', 'observation', {name: 'Backup buoy', fallback_for: 'buoy-a'});
+  const rows = byName(statusRows(feeds, NOW));
+  assert.equal(rows['Buoys: Morro Bay'].state, 'degraded');
+  assert.match(rows['Buoys: Morro Bay'].note, /1 of 1 buoy readings not current \(backup station\)/);
+  assert.equal(rows['Backup buoy'].state, 'degraded');
+  assert.match(rows['Backup buoy'].note, /backup station/);
+  assert.match(renderRows(Object.values(rows)), /class="status-degraded"[^>]*><th scope="row">Buoys: Morro Bay/);
+});
+
+test('a rollup shows its worst member: one overdue page beside a fresh one is overdue', () => {
+  const feeds = fresh();
+  feeds.data.sources['mpa-a'] = src('mpa-a', 'page-watch', {last_success_at: hoursAgo(50)}); // status ok, past its 36 h
+  const rows = byName(statusRows(feeds, NOW));
+  const pages = rows['Fishing-rule and protected-area pages'];
+  assert.equal(pages.state, 'late');
+  assert.equal(pages.note, '1 of 2 overdue');
+  assert.equal(Date.parse(pages.lastSuccess), Date.parse(hoursAgo(50)));
+  assert.equal(rows['Landing reports'].state, 'ok', 'a reused older landing day is still exempt from its age');
+  assert.match(renderRows(Object.values(rows)), /class="status-late"[^>]*><th scope="row">Fishing-rule and protected-area pages<\/th><td>.*Overdue · 1 of 2 overdue/);
+});
+
+test('a publication or success time more than 10 minutes ahead is unreadable, as the checker says', () => {
+  const feeds = fresh();
+  feeds.conditions = {published_at: hoursAgo(-48)};
+  feeds.regions['morro-bay'] = regionFeed(-48);
+  feeds.data.sources.tides = src('tides', 'prediction', {name: 'NOAA tide predictions', last_success_at: hoursAgo(-48)});
+  let rows = byName(statusRows(feeds, NOW));
+  for (const name of ['Live conditions feed', 'Buoys: Morro Bay', 'NOAA tide predictions']) {
+    assert.equal(rows[name].state, 'unavailable', name);
+    assert.match(rows[name].note, /in the future/, name);
+  }
+  const html = renderRows(Object.values(rows));
+  assert.match(html, /class="status-unavailable"[^>]*><th scope="row">Live conditions feed<\/th><td><time[^>]*>[^<]*<\/time><\/td>.*Cannot be read · time is in the future/);
+  feeds.conditions = {published_at: hoursAgo(-5 / 60)};   // 5 min ahead: inside the tolerance
+  rows = byName(statusRows(feeds, NOW));
+  assert.equal(rows['Live conditions feed'].state, 'ok');
+  assert.equal(rows['Live conditions feed'].ageHours, 0);
+});
+
+test('the harbor page is shown on its own row and counted as watched', () => {
+  const feeds = fresh();
+  feeds.data.sources.harbor = src('harbor', 'page-watch', {name: 'Morro Bay harbor information', last_success_at: hoursAgo(50)});
+  const rows = byName(statusRows(feeds, NOW));
+  assert.equal(rows['Morro Bay harbor information'].state, 'late');
+  assert.equal(rows['Fishing-rule and protected-area pages'].state, 'ok', 'the harbor page is not a fishing-rule page');
+  assert.equal(rows['Fishing-rule and protected-area pages'].note, '2 sources');
+  assert.equal(coverageOf('harbor-authority'), 'watched');
+  assert.ok(!renderCoverage().includes(SOURCE_NAMES['harbor-authority']), 'a watched source is not listed as not shown');
+});
+
+test('a documented service without a catalog entry (NOAA ENC charts) is named on the page', () => {
+  const docs = readFileSync(new URL('../docs/data-sources.md', import.meta.url), 'utf8');
+  assert.match(docs, /NOAA's ENC display service/);
+  assert.equal(DOCUMENTED_EXTRA['noaa-enc-display'].coverage, 'browser-direct');
+  assert.match(renderCoverage(), /Fetched by your browser from the provider; SkipperCast publishes nothing<\/h3>\n<ul>.*NOAA ENC display service/);
+});
+
+test('when the region list cannot be read, the page says regional coverage is missing', () => {
+  const feeds = fresh();
+  feeds.index = null; feeds.regions = {};
+  const rows = statusRows(feeds, NOW);
+  const regional = byName(rows)['Regional buoy feeds'];
+  assert.equal(regional.state, 'unavailable');
+  assert.match(regional.note, /region list could not be read/);
+  assert.ok(!rows.some(r => r.name.startsWith('Buoys:')));
+  assert.match(renderRows(rows), /Regional buoy feeds<\/th><td>none<\/td><td>3\.0 h<\/td><td>Cannot be read · the region list could not be read/);
 });
