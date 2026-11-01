@@ -54,6 +54,22 @@ export type AlertForm = {date: string; point: string; start_hour: number; end_ho
 /** POST /api/trips's body: the form, the region, the species and the saved boat when there is one. */
 export const tripBody = (form: AlertForm, region: string, species: string, boat: TripBoat | null) => ({...form, region, species, ...(boat ? {boat} : {})});
 
+/** The trip dates the server accepts: today to seven calendar days ahead in the region's zone (server/trips.ts plusDays). */
+export const dateRange = (timeZone: string, now: number = Date.now()): {min: string; max: string} => {
+  const min = new Intl.DateTimeFormat('en-CA', {timeZone}).format(new Date(now));
+  return {min, max: new Date(Date.parse(min + 'T12:00:00Z') + 7 * 86400000).toISOString().slice(0, 10)};
+};
+
+/** What the server would refuse first, in plain words, or null; checked before the form is sent. */
+export function formProblem(form: AlertForm, range: {min: string; max: string}): string | null {
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(form.date) ? Date.parse(form.date + 'T12:00:00Z') : NaN;
+  if (!Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== form.date || form.date < range.min || form.date > range.max)
+    return 'Choose a date from today to seven days ahead.';
+  if (!(form.end_hour > form.start_hour)) return 'The window must end after it starts.';
+  if (!(form.gust_limit >= form.wind_limit)) return 'The gust limit cannot be lower than the wind limit.';
+  return null;
+}
+
 /** v2 has no forecast hour beside the dialog, so feedback carries no forecast context, as before. */
 export const comfortBody = (region: string, rating: number, phase: string) =>
   ({region, rating, phase, wind: null, sea: null, period: null, heading: null, point: null});
