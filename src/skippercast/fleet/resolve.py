@@ -27,7 +27,7 @@ sink. Steps, in order, per candidate:
 5. A vessel holding a different value of a stable key the candidate has is never
    a fuzzy match: same name and port with different keys are two vessels.
    A candidate of a ``join_only`` binding (``params.join_only``, the FCC ship
-   file: every licence in the state, most of them yachts) that neither matched
+   file: every licence in the state, most of them pleasure craft) that neither matched
    a key nor reached ``auto_merge`` is skipped: it never creates a vessel or
    opens a fuzzy ``merge`` review.
 6. ``vessel_class`` facts from different sources at confidence >= 0.7 that
