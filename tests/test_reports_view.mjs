@@ -26,7 +26,7 @@ async function load() {
       export * from './web/app/views/Reports.tsx';
       export * from './web/reports.ts';
       export {coastMarkup, isSafeCatchState} from './web/app/CoastMarkup.tsx';
-      export {Masthead, MASTHEAD_VIEWS, TAB_VIEWS} from './web/app/Masthead.tsx';
+      export {Masthead, MASTHEAD_VIEWS, TAB_VIEWS, ViewNav} from './web/app/Masthead.tsx';
       export {ReportsLink} from './web/app/Mobile.tsx';
       export {NAV} from './web/landing/Landing.tsx';
       export {slo} from './packages/coast/src/counties.ts';
@@ -129,10 +129,14 @@ test('acceptance 2: the page shows no publisher prose or photos', async () => {
 });
 
 test('acceptance 3: reachable from the landing nav, the masthead and the mobile sheet', async () => {
-  const {NAV, MASTHEAD_VIEWS, TAB_VIEWS, Masthead, ReportsLink, render, h} = await load();
+  const {NAV, MASTHEAD_VIEWS, TAB_VIEWS, ViewNav, Masthead, ReportsLink, render, h} = await load();
   assert.equal(NAV.find(n => n.label === 'Reports').href, '/map?region=morro-bay&view=reports');
   assert.ok(MASTHEAD_VIEWS.includes('reports'));
-  assert.ok(!TAB_VIEWS.includes('reports'), 'the mobile nav keeps four tabs');
+  assert.ok(TAB_VIEWS.includes('reports') && !TAB_VIEWS.includes('fleet') && TAB_VIEWS.length === 4, 'Reports is a tab; Fleet is not');
+  const tabs = render(h(ViewNav, {icons: true, href: 'https://s.test/map?region=morro-bay'}));
+  assert.match(tabs, /data-view="reports"><svg[^>]*data-icon="chart"/);
+  assert.doesNotMatch(tabs, /data-view="fleet"/);
+  assert.match(render(h(Masthead, {href: 'https://s.test/map?region=morro-bay'})), /data-view="fleet">Fleet</);
   assert.match(render(h(Masthead, {href: 'https://s.test/map?region=morro-bay'})), /href="https:\/\/s\.test\/map\?region=morro-bay&amp;view=reports" data-view="reports">Reports</);
   assert.match(render(h(ReportsLink, {})), /view=reports" class="app-reports-link">Reports</);
 });

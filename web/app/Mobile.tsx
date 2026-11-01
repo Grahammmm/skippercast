@@ -11,12 +11,12 @@
 // the rail and the legend; a selected mark replaces the peek content with
 // its card. In the Conditions view (FE-32) and the Fleet view (FE-53) the
 // sheet holds that view instead of the brief. Every piece is the desktop's,
-// composed in this order. The Reports view (FE-52) opens from the sheet's
-// footer and replaces the sheet with its page over the map.
+// composed in this order. The Reports view (FE-52) opens from its tab (SCJ-9)
+// or the sheet's footer and replaces the sheet with its page over the map.
 // its card. In the Conditions (FE-32) and History (FE-35) views the sheet holds that view instead
 // of the brief. Every piece is the desktop's, composed in this order. The
-// Reports view (FE-52) opens from the sheet's footer and replaces the sheet
-// with its page over the map.
+// Reports view (FE-52) opens from its tab or the sheet's footer and replaces
+// the sheet with its page over the map.
 import type {ComponentChildren} from 'preact';
 import {useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
@@ -113,7 +113,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
   );
 }
 
-/** The sheet footer's way into the Reports view (the four tabs leave it out). */
+/** The sheet footer's second way into the Reports view (the Reports tab is the first). */
 export const ReportsLink = () =>
   <a href={withParams(typeof location === 'undefined' ? 'https://skippercast.com/map' : location.href, {view: 'reports'})} class="app-reports-link"
     onClick={event => { event.preventDefault(); setParams({view: 'reports'}); }}>Reports</a>;
