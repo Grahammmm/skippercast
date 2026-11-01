@@ -8,7 +8,7 @@ import {createHash} from 'node:crypto';
 import {gzipSync} from 'node:zlib';
 import {readFile} from 'node:fs/promises';
 import type {Page} from '@playwright/test';
-import {test, expect} from './fixtures.ts';
+import {chartCentre, test, expect} from './fixtures.ts';
 import {stubLiveFeeds} from '../scripts/measure_startup.mjs';
 
 const AREA = {region: 'morro-bay', presentation: 'chart'};
@@ -56,13 +56,13 @@ async function rankedReefs(page: Page) {
   return {gate, change() { features[0]!.properties.terrain.score = 89; bytes = JSON.stringify({type: 'FeatureCollection', region: 'morro-bay', expires_at, features}); }};
 }
 
-/** Click where a point draws on the Chart, from `?view=` (Web Mercator, 256 px tiles at that zoom, the map centred in its canvas). */
+/** Click where a point draws on the Chart, from `?view=` (Web Mercator, 256 px tiles at that zoom, offset from where the Chart draws its centre: fixtures.ts `chartCentre`). */
 async function clickChart(page: Page, at: {latitude: number; longitude: number}) {
   const [lat, lon, zoom] = new URL(page.url()).searchParams.get('view')!.split(',').map(Number) as [number, number, number];
   const world = 256 * 2 ** zoom, x = (l: number) => (l + 180) / 360 * world;
   const y = (l: number) => { const s = Math.sin(l * Math.PI / 180); return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * world; };
-  const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!;
-  await page.mouse.click(box.x + box.width / 2 + x(at.longitude) - x(lon), box.y + box.height / 2 + y(at.latitude) - y(lat));
+  const centre = await chartCentre(page);
+  await page.mouse.click(centre.x + x(at.longitude) - x(lon), centre.y + y(at.latitude) - y(lat));
 }
 
 /** The account button: in the masthead, or (phone) in the sheet's footer with the sheet lifted to full (e2e/v2-account.spec.ts). */

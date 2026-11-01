@@ -11,7 +11,7 @@ import {syntheticTerrain} from './terrain-keyboard-fixture.ts';
 import {readFileSync} from 'node:fs';
 import {inflateSync} from 'node:zlib';
 import type {Page, Route} from '@playwright/test';
-import {expect, PIXEL, test} from './fixtures.ts';
+import {chartCentre, expect, PIXEL, test} from './fixtures.ts';
 
 const UNAVAILABLE = 'Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable.';
 const PLACE = {region: 'morro-bay', profile: 'spear', target: 'rockfish', hour: '2030-01-02T03:00Z', habitat: 'reef:r1', view: '35.38000,-120.88000,12'};
@@ -365,8 +365,8 @@ const collapseSheet = async (page: Page) => {
 // moves to half and every later click hits the hour slider. Let the slide finish first.
 const clickCentre = async (page: Page) => {
   await page.locator('.ui-sheet').evaluateAll(sheets => Promise.all(sheets.flatMap(sheet => sheet.getAnimations().map(slide => slide.finished.catch(() => undefined)))));
-  const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!;
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  const at = await chartCentre(page);
+  await page.mouse.click(at.x, at.y);
 };
 
 test('Seafloor draws screened candidates and cells in Chart, names its surveys, and toggling removes its layers', async ({page, pageErrors, v2}) => {
@@ -445,7 +445,7 @@ test('A seafloor publication that expires while drawn hides its candidates with 
 });
 
 // Protected areas (FE-19): the committed region files, always drawn on the Chart. BUCHON is a
-// point well inside Point Buchon SMR (about 1 km from its edges), so a click at the canvas centre lands in it.
+// point well inside Point Buchon SMR (about 1 km from its edges), so a click where the Chart draws its centre lands in it.
 const BUCHON = '35.24178,-120.91053';
 const mapAttr = async (page: Page, name: string) => Number(await page.locator('.app-chart').getAttribute(name));
 
@@ -460,8 +460,8 @@ test('protected areas draw with the ds582 credit, are named from zoom 11 and ope
 
   await page.goto(v2.url('app', {region: 'morro-bay', presentation: 'chart', layers: 'none', diagnostics: '1', view: `${BUCHON},11`}));
   await expect.poll(() => mapAttr(page, 'data-mpa-labels'), {message: 'names placed at zoom 11'}).toBeGreaterThan(0);
-  const box = (await chart.locator('canvas.maplibregl-canvas').boundingBox())!;
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  const centre = await chartCentre(page);
+  await page.mouse.click(centre.x, centre.y);
   const card = page.locator('.app-mark');
   await expect(card.locator('h2')).toHaveText('Point Buchon State Marine Reserve');
   await expect(card.locator('.app-mark-kind')).toHaveText('State Marine Reserve');
@@ -493,7 +493,7 @@ test('a region its snapshot does not cover, or boundaries that fail to load, say
 });
 
 // FE-18: atlas reef marks on the Chart and the one mark card. SC26-001 sits alone (the next mark is
-// 750 m away), so a click at the chart's centre, with the view on it, picks it.
+// 750 m away), so a click where the Chart draws its centre, with the view on it, picks it.
 const MARK = {id: 'SC26-001', name: 'Southern rocky rise', view: '35.164314,-120.843179,14'};
 
 test('clicking a reef mark sets ?spot=, drops ?habitat= and opens its card; closing returns focus to the chart', async ({page, pageErrors, v2}) => {
@@ -502,9 +502,9 @@ test('clicking a reef mark sets ?spot=, drops ?habitat= and opens its card; clos
   const chart = page.locator('.app-chart');
   await expect(chart.locator('canvas.maplibregl-canvas')).toBeVisible();
   await expect(chart).toHaveAttribute('data-marks', /^[1-9]\d*$/);
-  const box = (await chart.boundingBox())!;
+  const centre = await chartCentre(page);
   await expect(async () => {
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.click(centre.x, centre.y);
     expect(params(page).spot).toBe(MARK.id);
   }).toPass({timeout: 20_000, intervals: [1000]});  // a second apart, never a double-click zoom
   expect(params(page).habitat, 'one selection at a time').toBeUndefined();
@@ -606,15 +606,14 @@ const flowOnLand = (page: Page, view: string) => page.evaluate(view => {
 }, view);
 const openLayers = async (page: Page) => { if (page.viewportSize()!.width < 1024) await page.getByRole('button', {name: 'Layers'}).click(); };
 const baseSelect = (page: Page) => page.locator('.app-rail-base').getByRole('combobox', {name: 'Base'});
-/** The page coordinates of a lon/lat in a `?view=` (lat,lon,zoom): Web Mercator, 256 px tiles at that zoom, the map centred in its canvas (as e2e/v2-trip.spec.ts `clickChart`). */
+/** The page coordinates of a lon/lat in a `?view=` (lat,lon,zoom): Web Mercator, 256 px tiles at that zoom, offset from where the Chart draws its centre (fixtures.ts `chartCentre`; as e2e/v2-trip.spec.ts `clickChart`). */
 const chartPoint = async (page: Page, view: string, lon: number, lat: number) => {
   const [lat0, lon0, zoom] = view.split(',').map(Number) as [number, number, number];
   const world = 256 * 2 ** zoom;
   const x = (l: number) => (l + 180) / 360 * world;
   const y = (l: number) => { const s = Math.sin(l * Math.PI / 180); return (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * world; };
-  await page.locator('.app-chart canvas.maplibregl-canvas').waitFor({state: 'visible'});
-  const box = (await page.locator('.app-chart canvas.maplibregl-canvas').boundingBox())!;
-  return {x: box.x + box.width / 2 + x(lon) - x(lon0), y: box.y + box.height / 2 + y(lat) - y(lat0)};
+  const centre = await chartCentre(page);
+  return {x: centre.x + x(lon) - x(lon0), y: centre.y + y(lat) - y(lat0)};
 };
 /** Never mistake a sheet/legend click for a map pick. Use the real canvas with actionability checks. */
 const clickChartPoint = async (page: Page, point: {x: number; y: number}) => {

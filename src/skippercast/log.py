@@ -16,6 +16,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import json
 import logging
+import math
 import os
 import sys
 
@@ -62,7 +63,18 @@ class JsonFormatter(logging.Formatter):
         if record.exc_info and record.exc_info[0] is not None:
             entry.setdefault("error_class", record.exc_info[0].__name__)
             entry["exc"] = self.formatException(record.exc_info)
-        return json.dumps(entry, ensure_ascii=False, default=str, allow_nan=False)
+        try:
+            return json.dumps(entry, ensure_ascii=False, default=str, allow_nan=False)
+        except ValueError:  # a NaN/inf float: write it as text rather than lose the record
+            return json.dumps(_finite(entry), ensure_ascii=False, default=str, allow_nan=False)
+
+
+def _finite(value):  # NaN/±inf floats as "NaN"/"Infinity"/"-Infinity", inside dicts, lists and tuples too
+    if isinstance(value, float) and not math.isfinite(value):
+        return "NaN" if math.isnan(value) else ("Infinity" if value > 0 else "-Infinity")
+    if isinstance(value, dict):
+        return {key: _finite(item) for key, item in value.items()}
+    return [_finite(item) for item in value] if isinstance(value, (list, tuple)) else value
 
 
 class TextFormatter(logging.Formatter):
