@@ -22,6 +22,7 @@ import {tideSelection} from '../tide-selection.ts';
 import {loadPlans, regionUnavailable, unavailableTargets} from '../species.ts';
 import {region, setRegionDefaultBase} from '../state.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
+import type {RulesRegion} from '../regs.ts';
 
 /** The mobile layout's media query (§ 6: under 1,024 px); main.tsx keeps `narrow` in step with it. */
 export const NARROW_QUERY = '(max-width: 1023px)';
@@ -41,6 +42,8 @@ export interface RegionInfo {
   readonly unavailableTargets?: Readonly<Record<string, string>>;
   /** The Chart side files the region publishes (region.json `chart_files`, RF0835-2); absent where it names none. */
   readonly chartFiles?: readonly string[];
+  /** The region.json fields web/regs.ts reads (SC-LAUNCH-3: the brief's lead states the target's legality). */
+  readonly rules?: RulesRegion;
 }
 export const regionInfo = signal<RegionInfo | null>(null);
 export {DEFAULT_ZONE};
@@ -90,7 +93,8 @@ export function createRegionReader(fetchFn: typeof fetch, {limit = 4, timeoutMs 
   return (id: string, retry = false): Promise<RegionInfo | null> => admission.read(`${retry ? 'retry' : 'cached'}:${id}`, async signal => {
     const response = await fetchFn(`regions/${encodeURIComponent(id)}/region.json`, {signal, ...(retry ? {cache: 'reload' as const} : {})});
     if (!response.ok) { void response.body?.cancel().catch(() => {}); return null; }
-    const json = await response.json() as {name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}; chart_files?: unknown};
+    const json = await response.json() as {name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}; chart_files?: unknown}
+      & Omit<RulesRegion, 'id' | 'assets'>;
     const center = json.map?.center;
     if (typeof json.name !== 'string' || !center || center.length !== 2 || !center.every(Number.isFinite)) return null;
     const areas = Array.isArray(json.map?.local_areas) ? json.map.local_areas as ReportLocalArea[] : [];
@@ -99,7 +103,9 @@ export function createRegionReader(fetchFn: typeof fetch, {limit = 4, timeoutMs 
       ...tide ? {tide} : {}, ...chartFiles ? {chartFiles} : {},
       localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), ...aerial ? {aerial} : {},
       ...typeof json.assets?.charters === 'string' ? {charters: json.assets.charters} : {},
-      ...Object.keys(unavailable).length ? {unavailableTargets: unavailable} : {}};
+      ...Object.keys(unavailable).length ? {unavailableTargets: unavailable} : {},
+      ...typeof json.jurisdiction_id === 'string' ? {rules: {id, timezone: json.timezone, species: json.species, jurisdiction_id: json.jurisdiction_id,
+        regulatory_authority_hosts: json.regulatory_authority_hosts, assets: json.assets as RulesRegion['assets']}} : {}};
   });
 }
 const regionReaders = new WeakMap<typeof fetch, ReturnType<typeof createRegionReader>>();

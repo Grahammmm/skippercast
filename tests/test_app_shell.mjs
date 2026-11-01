@@ -544,11 +544,12 @@ test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a 
   assert.match(html, /<section class="ui-sheet app-sheet" data-detent="peek" aria-label="Brief"><div class="ui-sheet-edge"><button type="button" class="ui-sheet-handle" aria-label="Expand Brief" aria-expanded="false"/);
   assert.match(html, /<\/button><div class="app-sheet-hour" role="group" aria-label="Time"><input type="range" class="ui-range ui-dock-range" aria-label="Hour" aria-valuetext="1 pm"[^>]*><output class="ui-dock-readout ui-mono" aria-live="off">1 pm<\/output><\/div><\/div>/);
   const body = html.slice(html.indexOf('<div class="ui-sheet-body">'), html.indexOf('<nav aria-label="Views"'));
-  const order = ['class="ui-eyebrow">Today · 1 pm</span>','class="app-fresh" role="status"', '<h1>Waiting for readings.</h1>', '<div class="app-tiles">', 'class="ui-eyebrow">Where to look', '<details class="app-details">', '<p class="app-caveat">', '<figure class="app-spark"',
+  // SC-LAUNCH-3: the head names the lead's day (tomorrow, no time chosen); the dock's day heads the evidence below the lead.
+  const order = ['class="ui-eyebrow">Tomorrow</span>', 'class="app-fresh" role="status"', '<h1>Waiting for readings.</h1>', 'class="ui-eyebrow">Today · 1 pm</span>', '<div class="app-tiles">', 'class="ui-eyebrow">Where to look', '<details class="app-details">', '<p class="app-caveat">', '<figure class="app-spark"',
     '<div class="app-sheet-menus"><div role="group" aria-label="Day"', '<label>Target<select', '<label>Area<select', '<footer class="app-brief-footer">', '<div class="app-account" data-inline="true">'];
   const at = order.map(s => body.indexOf(s));
   assert.ok(at.every(i => i >= 0), `every piece renders: ${JSON.stringify(order.filter((_, i) => at[i] < 0))}`);
-  assert.deepEqual(at, [...at].sort((a, b) => a - b), 'in sheet order: eyebrow, freshness, headline, tiles, picks, Details with the caveat (#616), tide, menus, footer');
+  assert.deepEqual(at, [...at].sort((a, b) => a - b), 'in sheet order: lead-day eyebrow, freshness, headline, dock-day eyebrow, tiles, picks, Details with the caveat (#616), tide, menus, footer');
   assert.equal(count(body, /class="ui-tile"/g), 4);
   assert.equal(count(html, /<h1>/g), 1);
   assert.equal(count(html, /separate clocks/g), 1, 'one disclaimer line per page');
@@ -606,6 +607,9 @@ test('loadRegion fills the masthead from regions/<id>/region.json and leaves pla
   const named = async () => ({ok: true, json: async () => ({name: 'Morro Bay & Avila', timezone: TZ, map: {center: [35.34, -120.965], unavailable_targets: {lobster: 'Not in this region\u2019s researched list.', bad: 3}}})});
   assert.deepEqual((await loadRegion('morro-bay', named)).unavailableTargets, {lobster: 'Not in this region\u2019s researched list.'});
   assert.deepEqual(regionUnavailable.value, {region: 'morro-bay', targets: {lobster: 'Not in this region\u2019s researched list.'}});
+  // SC-LAUNCH-3: a region that names its jurisdiction carries the fields web/regs.ts reads, for the brief's legality line.
+  const ruled = async () => ({ok: true, json: async () => ({name: 'Morro Bay & Avila', timezone: TZ, map: {center: [35.34, -120.965]}, jurisdiction_id: 'california-central', species: ['reef', 'salmon'], assets: {regulations: 'data/regulations.json'}})});
+  assert.deepEqual((await loadRegion('morro-bay', ruled)).rules, {id: 'morro-bay', timezone: TZ, species: ['reef', 'salmon'], jurisdiction_id: 'california-central', regulatory_authority_hosts: undefined, assets: {regulations: 'data/regulations.json'}});
   state.configureStore({storage: memory()});
   state.syncFromURL(`${ORIGIN}?region=morro-bay`);
   assert.match(render(h(App, {})), /data-region="morro-bay">Morro Bay &amp; Avila <span class="app-location-coords">35.34N 120.97W<\/span></);
