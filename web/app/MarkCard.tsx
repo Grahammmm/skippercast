@@ -35,7 +35,7 @@ import {shownPresentation, terrainActions, terrainDetail, terrainMark, terrainPi
 import {coordinates, navigate, profile, selection, setParams, species} from '../state.ts';
 import {formatCoordinates} from '../../dist/coordinates.js';
 import {PROFILE_TABLE} from '../profile.ts';
-import {loadRegs, regsData, regulationState, ruleSummary, speciesPage, verifiedText, type RulesRegion} from '../regs.ts';
+import {areaPageOnly, loadRegs, regsData, regulationState, ruleSummary, speciesPage, verifiedText, type RulesRegion} from '../regs.ts';
 import {zone} from './App.tsx';
 import {dockState} from './TimeDock.tsx';
 import {addToTrip, reviewTrip, tripIds} from '../trip.ts';
@@ -89,6 +89,7 @@ export function RulesLine({mark}: {mark: Mark}) {
       <dl>{cell('Bag', s.bag)}{cell('Size', s.size)}{cell('Depth', s.depth ? [s.depth] : [])}</dl>
       {page && <a href={page.href} target="_blank" rel="noopener" aria-label={`${page.label} (official page, opens in a new tab)`}>{page.label}</a>}
       <a href={s.link} target="_blank" rel="noopener" aria-label={`${s.linkLabel} for ${name} (official page, opens in a new tab)`}>{s.linkLabel}</a>
+      {areaPageOnly(s, page) && <p class="app-mark-regs-note">Area regulations page, not specific to {name}.</p>}
     </div>
   );
 }

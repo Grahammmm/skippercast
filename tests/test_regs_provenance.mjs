@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 
-const {regulationState, ruleSummary, speciesPage, verifiedText} = await import('../web/regs.ts');
+const {areaPageOnly, regulationState, ruleSummary, speciesPage, verifiedText} = await import('../web/regs.ts');
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/regulations/fe61-v1.json', import.meta.url)));
 const REGION = fixture.region, HOUR = 3600000;
 const NOW = Date.parse('2026-09-21T18:00:00Z');
@@ -82,4 +82,13 @@ test('every card links the place page; species pages exist exactly where the reg
   const d = data(), got = {};
   for (const id of REGION.species) { const s = row(d, id).summary; assert.ok(s.link.startsWith('https://'), id); got[id] = speciesPage(d, id, REGION)?.href ?? null; }
   assert.deepEqual(Object.keys(got).filter(id => got[id] === null).sort(), ['halibut', 'reef'].filter(id => REGION.species.includes(id)).sort());
+});
+
+test('a species with only the area page says so; species pages and the groundfish page do not', () => {
+  const d = data();
+  const only = id => areaPageOnly(row(d, id).summary, speciesPage(d, id, REGION));
+  assert.equal(only('halibut'), true, 'halibut has only the area page');
+  assert.equal(only('salmon'), false);
+  assert.equal(only('lingcod'), false);
+  if (REGION.species.includes('reef')) assert.equal(only('reef'), false, 'reef links the groundfish page');
 });

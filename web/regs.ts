@@ -199,6 +199,8 @@ export function speciesPage(data: Data, species: string, region: RulesRegion): {
   const url = id && p?.source_ids.includes(id) ? data.sources?.[id]?.url : null;
   return url && officialURL(url, region) === url ? {href: url, label: `Official ${p.name} rules`} : null;
 }
+/** True when the card's only official link is the place's area regulations page (no species page in the reviewed registry). */
+export const areaPageOnly = (s: RuleSummary, page: unknown): boolean => !page && s.linkLabel === 'Official rules';
 /** dist/regulations.js `ruleSummaryHTML`'s verified wording. */
 export const verifiedText = (s: RuleSummary): string => s.verified ? `Verified ${s.verified}` : s.checked ? `Needs recheck · last check ${s.checked}` : 'Not verified';
 
