@@ -19,6 +19,15 @@ export function tripChopLimit(trip:Partial<AlertTrip>|null|undefined):number{
   const s=trip?.boat_sea,sea=finite(s)&&s>=.45&&s<=2.6?s:1;
   return Math.round(REFERENCE_CHOP_FT*sea*10)/10;
 }
+// Advisory time: undefined when absent, null when present but unreadable, else epoch ms.
+const advisoryTime=(v:unknown):number|null|undefined=>v===undefined||v===null||v===''?undefined:typeof v==='string'&&finite(Date.parse(v))?Date.parse(v):null;
+/** Fail closed: a non-object advisory, or one with a present but unreadable onset/ends/expires, applies. */
+export function advisoryApplies(a:unknown,startMs:number|null,endMs:number|null):boolean{
+  if(typeof a!=='object'||a===null||Array.isArray(a)||startMs===null||endMs===null)return true;
+  const r=a as Record<string,unknown>,onset=advisoryTime(r.onset),ends=advisoryTime(r.ends),end=ends===undefined?advisoryTime(r.expires):ends;
+  if(onset===null||end===null)return true;
+  return (onset===undefined||onset<=endMs)&&(end===undefined||end>=startMs);
+}
 export function assessTrip(trip:AlertTrip,region:Region,intelligence:ExternalJSON,rules:ExternalJSON,advisories:ExternalJSON[]|null|undefined,now=Date.now()):Assessment{
   const point=region.forecast_points.findIndex(p=>p.id===trip.point);
   const issues:string[]=[],values:Values={wind:null,gust:null,sea:null,chop:null};
@@ -66,7 +75,7 @@ export function assessTrip(trip:AlertTrip,region:Region,intelligence:ExternalJSO
     }
   }
   if(!Array.isArray(advisories))issues.push('Marine advisories unavailable');
-  else if(advisories.some((a:ExternalJSON)=>!times.length||(!a.onset||Date.parse(a.onset)<=times.at(-1)!*1000)&&(!a.ends&&!a.expires||Date.parse(a.ends||a.expires)>=times[0]!*1000)))issues.push('Applicable marine advisory');
+  else if(advisories.some((a:unknown)=>advisoryApplies(a,times.length?times[0]!*1000:null,times.length?times.at(-1)!*1000:null)))issues.push('Applicable marine advisory');
   const chopLimit=tripChopLimit(trip);
   const within=finite(values.wind)&&finite(values.gust)&&finite(values.sea)&&values.wind<=trip.wind_limit&&values.gust<=trip.gust_limit&&values.sea<=trip.sea_limit&&(values.chop as number)<=chopLimit;
   const status=issues.length?'unverified':within?'within limits':'above limits';
