@@ -59,14 +59,18 @@ export async function loadShoreLines(region: string, page: string = location.hre
   }
   let read = asked.get(region);
   if (!read) {
-    read = (async (): Promise<Lines> => {
-      try {
-        const r = await fetchFn(new URL(`regions/${encodeURIComponent(region)}/shoreline-overview.geojson`, page).href);
-        if (r.ok) { const l = linesOf(await r.json()); return l.length ? l : null; }
-      } catch { /* none */ }
+    // A thrown fetch, 429 or 5xx is not remembered, so the next visit asks again; a 404 or invalid file is.
+    let transient = false;
+    const mine = read = (async (): Promise<Lines> => {
+      let r: Response;
+      try { r = await fetchFn(new URL(`regions/${encodeURIComponent(region)}/shoreline-overview.geojson`, page).href); } catch { transient = true; return null; }
+      transient = r.status === 429 || (r.status >= 500 && r.status <= 599);
+      if (r.ok) try { const l = linesOf(await r.json()); return l.length ? l : null; } catch { /* invalid: none */ }
       return null;
     })();
-    asked.set(region, read);
+    asked.set(region, mine);
+    // Forget only this read: a newer one (after a reset) stays.
+    void mine.then(() => { if (transient && asked.get(region) === mine) asked.delete(region); });
   }
   const lines = await read;
   if (latest === region && (shoreLines.peek()?.region !== region || shoreLines.peek()?.lines !== lines)) shoreLines.value = {region, lines};

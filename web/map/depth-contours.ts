@@ -235,20 +235,23 @@ export interface DepthContourOptions {
   fetchFn?: typeof fetch; page?: () => string; palette?: () => Palette; now?: () => number;
 }
 
-type Loaded = {region: string; path: string; result: ContourAssessment | 'none'};
+/** SC1737-04: a dropped read (no answer, 429 or 5xx) is asked again on the first camera move this long after it. */
+export const CONTOUR_RETRY_MS = 60_000;
+type Loaded = {region: string; path: string; result: ContourAssessment | 'none'; retryAt?: number};
 
 /** Loads, checks and draws the region's contours; created with the Chart (web/app/MapStage.tsx `layers`). */
 export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), page = () => location.href, palette = () => readPalette(), now = () => Date.now()}: DepthContourOptions) {
   const loaded = signal<Loaded | null>(null);
   let asked = '', detailRegion: string | null = null, drawn = false, drawnOn: Engine | null = null, alive = true;
   async function load(id: string, path: string): Promise<void> {
-    let result: Loaded['result'];
+    let result: Loaded['result'], retryAt: number | undefined;
     try {
       const response = await fetchFn(new URL(path, page()).href, {signal: AbortSignal.timeout(20000)});
+      if (response.status === 429 || (response.status >= 500 && response.status <= 599)) retryAt = now() + CONTOUR_RETRY_MS;
       result = response.status === 404 ? 'none' : !response.ok ? FAILED
         : assessContours(await response.json(), id, new Date(now()).toISOString().slice(0, 10));
-    } catch { result = FAILED; }
-    if (alive && region.peek() === id && asked === path) loaded.value = {region: id, path, result};
+    } catch { result = FAILED; retryAt = now() + CONTOUR_RETRY_MS; }
+    if (alive && region.peek() === id && asked === path) loaded.value = {region: id, path, result, retryAt};
   }
   const disposers = [
     // The overview until the camera reaches the detail zoom, then the full contours for the rest of the visit.
@@ -259,7 +262,12 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
       if (chartFilesPending(id)) { if (loaded.peek()?.region !== id) contourState.value = {status: 'loading', note: NOTES.loading, sources: [], omitted: []}; return; }
       const path = contoursFor(id, c.zoom, detailRegion === id);
       if (path === depthContoursURL(id)) detailRegion = id;
-      if (path === asked) return;
+      // SC1737-04: a dropped read is asked again once its back-off has passed; the failed note stays until the answer replaces it.
+      if (path === asked) {
+        const f = loaded.peek();
+        if (!f || f.region !== id || f.path !== path || f.retryAt === undefined || now() < f.retryAt) return;
+        loaded.value = {region: id, path, result: f.result}; return void load(id, path);
+      }
       // A region that publishes none is not asked again for its full form.
       const l = loaded.peek();
       if (l && l.region === id && l.result === 'none') return;

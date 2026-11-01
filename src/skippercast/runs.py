@@ -34,6 +34,8 @@ from .platform.contracts import REPO, atomic_json
 SCHEMA_VERSION = 1
 OK_SOURCE_STATES = frozenset({"ok"})
 ERROR_CHARS = 300
+SHA_RE = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")  # SHA-1 or SHA-256 commit id
+NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,99}")  # one safe path segment
 
 
 def stamp(moment):
@@ -41,17 +43,22 @@ def stamp(moment):
 
 
 def git_sha(environ=None, root=REPO):
-    """The commit being run: GITHUB_SHA in Actions, else `git rev-parse HEAD`, else None."""
+    """The commit being run: GITHUB_SHA in Actions, else `git rev-parse HEAD`, else None; only a commit id counts."""
     environ = os.environ if environ is None else environ
-    sha = (environ.get("GITHUB_SHA") or "").strip()
-    if sha:
+    sha = (environ.get("GITHUB_SHA") or "").strip().lower()
+    if SHA_RE.fullmatch(sha):
         return sha
     try:
         result = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, timeout=10)
     except (OSError, subprocess.SubprocessError):
         return None
-    sha = result.stdout.strip()
-    return sha if result.returncode == 0 and len(sha) == 40 else None
+    sha = result.stdout.strip().lower()
+    return sha if result.returncode == 0 and SHA_RE.fullmatch(sha) else None
+
+
+def safe_name(value):
+    """True if value is one path segment that cannot leave its directory."""
+    return isinstance(value, str) and NAME_RE.fullmatch(value) is not None and ".." not in value
 
 
 def file_digest(path):
@@ -232,7 +239,13 @@ class RunManifest:
         return atomic_json(path, self.to_dict(), indent=1)
 
     def r2_key(self):
-        """Where the manifest belongs in R2 (runs/<job>/<run_id>.json); uploading is the workflow's job."""
+        """Where the manifest belongs in R2 (runs/<job>/<run_id>.json); uploading is the workflow's job.
+
+        Raises ValueError (without echoing the value) if the job or run id is not one safe path segment."""
+        if not safe_name(self.job):
+            raise ValueError("unsafe run manifest job name")
+        if not safe_name(str(self.run_id)):
+            raise ValueError("unsafe run manifest run id")
         suffix = f"-{self.run_attempt}" if self.run_attempt and self.run_attempt > 1 else ""
         return f"runs/{self.job}/{self.run_id}{suffix}.json"
 

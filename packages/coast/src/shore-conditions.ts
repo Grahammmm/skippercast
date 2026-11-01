@@ -16,6 +16,8 @@ import {nearshoreAt} from './nearshore.ts';
 const HOUR = 3_600_000;
 const MINUTE = 60_000;
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+/** A usable wave/swell period: finite and above 0 s; anything else is missing. */
+const period = (value: unknown): value is number => finite(value) && value > 0;
 const round = (value: number, digits = 1) => Number(value.toFixed(digits));
 
 /**
@@ -147,7 +149,7 @@ export function sneakerScore(periodS: number | null): number {
 export function surf(hour: ForecastHour | undefined, near?: NearshoreHour): Surf {
   const {minFt} = SHORE.sneaker;
   const longest = (pairs: [number | null | undefined, number | null | undefined][]) => {
-    const periods = pairs.filter(([h, p]) => finite(h) && h >= minFt && finite(p)).map(([, p]) => p as number);
+    const periods = pairs.filter(([h, p]) => finite(h) && h >= minFt && period(p)).map(([, p]) => p as number);
     return periods.length ? Math.max(...periods) : null;
   };
   const done = (b: SurfBand, heightFt: number | null, periodS: number | null, basis: Surf['basis'], longPeriodS: number | null): Surf => {
@@ -157,12 +159,11 @@ export function surf(hour: ForecastHour | undefined, near?: NearshoreHour): Surf
   if (near && finite(near.waveFt) && near.waveFt >= 0) {
     // The nearshore peak period can be a short local sea while a long-period
     // swell runs underneath; the offshore swell partition still raises the caution.
-    return done(band(near.waveFt, 'nearshore'), near.waveFt, finite(near.periodS) ? near.periodS : null, 'nearshore', longest([[near.waveFt, near.periodS], [hour?.swellFt, hour?.swellPeriodS]]));
+    return done(band(near.waveFt, 'nearshore'), near.waveFt, period(near.periodS) ? near.periodS : null, 'nearshore', longest([[near.waveFt, near.periodS], [hour?.swellFt, hour?.swellPeriodS]]));
   }
   const height = finite(hour?.waveFt) && hour.waveFt >= 0 ? hour.waveFt : null;
   if (height === null) return done('Unknown', null, null, null, longest([[hour?.swellFt, hour?.swellPeriodS]]));
-  const period = finite(hour?.wavePeriodS) ? hour.wavePeriodS : null;
-  return done(band(height, 'offshore'), height, period, 'offshore', longest([[hour?.waveFt, hour?.wavePeriodS], [hour?.swellFt, hour?.swellPeriodS]]));
+  return done(band(height, 'offshore'), height, period(hour?.wavePeriodS) ? hour.wavePeriodS : null, 'offshore', longest([[hour?.waveFt, hour?.wavePeriodS], [hour?.swellFt, hour?.swellPeriodS]]));
 }
 
 /** The vetted seaward bearing for a county's area (SHORE.wind.seawardDeg), or null when that stretch has none. */

@@ -165,7 +165,7 @@ class ResolveCases(unittest.TestCase):
         star = stored("Example Star", n=1, uscg_doc="1234567")
         sea = stored("Sea Example", n=4)
         mmsi = (fact("mmsi", "366000001", "fcc-uls", "a", confidence=0.95),)
-        by_key = cand("Example Star", "fcc-uls", "a", port=None, keys={"uscg_doc": "1234567", "mmsi": "366000001"},
+        by_key = cand("Example Star", "fcc-uls", "a", keys={"uscg_doc": "1234567", "mmsi": "366000001"},   # exact city
                       facts=mmsi)
         by_name_and_port = cand("Sea Example", "fcc-uls", "b", keys={"mmsi": "366000004"},       # fuzzy 0.9
                                 facts=(fact("mmsi", "366000004", "fcc-uls", "b", confidence=0.95),))
@@ -186,6 +186,44 @@ class ResolveCases(unittest.TestCase):
         plain = resolve(Snapshot([star, sea]), batch, CONFIG, NOW)   # the same file without the flag
         self.assertEqual(plain.assignments[fingerprint(by_name_and_port)], sea["id"])
         self.assertEqual((len(plain.created), len(of(plain, "review.open"))), (1, 1))
+
+    def test_a_join_only_official_number_hit_needs_an_exact_licensee_city_to_write(self):
+        """AISFIX-1: a shared official number or call sign alone is no identity; no exact home-port city, no write."""
+        config = replace(CONFIG, join_only=frozenset({"fcc-uls"}))
+        star = stored("Example Star", n=1, uscg_doc="1234567", call_sign="WDX1001")
+
+        def fcc(ident, port, keys):
+            mmsi = fact("mmsi", "366000001", "fcc-uls", ident, confidence=0.95)
+            return cand("Example Star", "fcc-uls", ident, port=port, keys=dict(keys, mmsi="366000001"), facts=(mmsi,))
+
+        for label, port, keys in [("no city hint", None, {"uscg_doc": "1234567"}),
+                                  ("licensee in another port", "port-san-luis", {"uscg_doc": "1234567"}),
+                                  ("call sign, no city hint", None, {"call_sign": "WDX1001"})]:
+            with self.subTest(label):
+                c = fcc("a", port, keys)
+                result = resolve(Snapshot([star]), [c], config, NOW)
+                self.assertIsNone(result.assignments[fingerprint(c)])
+                self.assertEqual(of(result, "vessel.upsert"), [])
+                self.assertEqual([f for f in of(result, "fact.upsert") if f["field"] == "mmsi"], [])
+                review, = of(result, "review.open")
+                self.assertEqual((review["proposal_json"]["basis"], review["proposal_json"]["vessel_id"]), ("uncorroborated-key", star["id"]))
+                self.assertEqual(ops.validate_ops(result.ops, "CA")[1], [])
+        c = fcc("a", "morro-bay", {"uscg_doc": "1234567"})   # the licensee city is the vessel's home port
+        joined = resolve(Snapshot([star]), [c], config, NOW)
+        self.assertEqual((joined.assignments[fingerprint(c)], vessel_op(joined, star["id"])["mmsi"], of(joined, "review.open")),
+                         (star["id"], "366000001", []))
+        # The same hit from an ordinary source is unchanged, and so is a hit on the MMSI itself.
+        plain = resolve(Snapshot([star]), [fcc("a", None, {"uscg_doc": "1234567"})], CONFIG, NOW)
+        self.assertEqual(vessel_op(plain, star["id"])["mmsi"], "366000001")
+        held = stored("Example Star", n=1, mmsi="366000001")
+        c = fcc("a", None, {})
+        self.assertEqual(resolve(Snapshot([held]), [c], config, NOW).assignments[fingerprint(c)], held["id"])
+        # A document key learned in the same run from a fuzzy ordinary-source match does not open the door either.
+        web = cand("Example Star", "landing-pages", "seed", keys={"uscg_doc": "1234567"})
+        c = fcc("a", None, {"uscg_doc": "1234567"})
+        learned = resolve(Snapshot([stored("Example Star", n=2)]), [web, c], replace(config, adapters={"landing-pages": "landing-pages"}), NOW)
+        self.assertIsNone(learned.assignments[fingerprint(c)])
+        self.assertTrue(all("mmsi" not in op for op in of(learned, "vessel.upsert")))
 
     def test_the_fcc_bindings_are_join_only(self):
         from skippercast.fleet.config import load_region

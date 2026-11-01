@@ -10,6 +10,7 @@ import {formatCoordinates} from '../../dist/coordinates.js';
 import {exportEvidenceLabel, USER_WAYPOINT_CATEGORIES} from '../../dist/trip-export.js';
 import {fitLabel} from '../../dist/spot-ranking.js';
 import type {Filters, LayerKey, Planner as Model, Preset, ProtectedHit, Target, TripSpecies} from '../planner.ts';
+import {PORTS_FAILED_NOTE} from '../planner.ts';
 
 const DEVICE_HELP: Readonly<Record<string, readonly [string, string, string]>> = {
   generic: ['Chartplotter model not selected', 'Download GPX, copy it to storage supported by your model, then use its Import menu. Most reviewed plotters use SD/microSD; USB support varies. Inserting media alone does not import a plan.', 'https://www8.garmin.com/manuals/webhelp/GUID-3E67C80C-0812-4EEC-BC60-699751B9CF6F/EN-US/GPSMAP_x3_OM_EN-US.pdf'],
@@ -101,6 +102,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
         <summary><span>1. Choose your spots</span><strong id="export-selection-count">{d.ids.length} selected</strong></summary>
         <div class="export-card-body">
           <button class="primary export-best" id="export-best" disabled={!m.portsReady.value || m.loading.value} onClick={() => void m.selectBest()}>Best available · up to {f.limit} reef spots</button>
+          {m.portsFailed.value && <p class="export-note" id="export-ports-note">{PORTS_FAILED_NOTE}</p>}
           <p class="export-note">Ranked reef habitat. Confidence % describes habitat evidence.</p>
           <details class="export-trip-filters">
             <summary>Trip filters</summary>
