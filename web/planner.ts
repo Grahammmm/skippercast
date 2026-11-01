@@ -24,6 +24,7 @@ import {ensureLandWater, withheldNote, type Place} from './land-water.ts';
 import {coordinates} from './state.ts';
 import {assessContours, depthContoursURL, NOTES} from './map/depth-contours.ts';
 import {chartFileListed} from './chart-files.ts';
+import {loadPorts} from './ports.ts';
 
 export type Layers = {waypoints: boolean; outlines: boolean; alignments: boolean; exclusions: boolean};
 export type LayerKey = keyof Layers;
@@ -79,19 +80,21 @@ export interface PlannerDeps {
   landWater?: (region: string, spots: readonly Target[]) => Promise<Place>;
 }
 
-/** The one published file the opt-in depth contour tracks read: `{collection: null}` when the region publishes none. */
-export type ContourFile = {collection: unknown} | {refused: string};
+/** The one published file the opt-in depth contour tracks read: `{collection: null}` when the region publishes none; `retry` when the read dropped (asked again on the next toggle). */
+export type ContourFile = {collection: unknown} | {refused: string; retry?: true};
 export async function loadContourFile(id: string, today: string, fetchFn: typeof fetch = (...a) => fetch(...a), page: () => string = () => location.href): Promise<ContourFile> {
   if (!chartFileListed(id, 'depth-contours.geojson')) return {collection: null}; // unpublished: same as a 404, no request (RF0935-1)
-  const refused = (note: string): ContourFile => ({refused: `${note} Turn off depth contour tracks to export.`});
+  const refused = (note: string, retry = false): ContourFile => ({refused: `${note} Turn off depth contour tracks to export.`, ...(retry ? {retry: true as const} : {})});
   try {
     const response = await fetchFn(new URL(depthContoursURL(id), page()).href);
     if (response.status === 404) return {collection: null};
-    if (!response.ok) return refused(NOTES.failed);
+    if (!response.ok) return refused(NOTES.failed, response.status === 429 || (response.status >= 500 && response.status < 600));
     const json: unknown = await response.json(), status = assessContours(json, id, today).status;
     return status === 'drawn' ? {collection: json} : refused(NOTES[status]);
-  } catch { return refused(NOTES.failed); }
+  } catch { return refused(NOTES.failed, true); }
 }
+/** Shown under Best available while the port list is unavailable (SC1737-05). */
+export const PORTS_FAILED_NOTE = 'Port list unavailable, so Best available has no distance limit. It is asked again when you select Best available.';
 
 const LOADING = 'Loading current screened reefs…';
 const STORAGE_OK = 'Saved on this browser for each region. Separate from your account’s trip alerts.';
@@ -118,7 +121,6 @@ const rankBest = bestSpots as unknown as Loose<Target[]>;
 const reefTrip = loadReefTrip as unknown as (region: string) => Promise<Reefs>;
 
 const dispatch = (detail: RankedDetail): void => { document.dispatchEvent(new CustomEvent('skippercast:trip-ranked', {detail})); };
-const fetchPorts = async (): Promise<{ports?: Port[]} | null> => { const r = await fetch('data/home-ports.json'); return r.ok ? r.json() as Promise<{ports?: Port[]}> : null; };
 
 export type Planner = ReturnType<typeof createPlanner>;
 
@@ -142,7 +144,7 @@ export function createPlanner(deps: PlannerDeps) {
   const ranked = signal(false), filtersDirty = signal(false), restorePending = signal(!!initial.rankedPlan);
   const contourTracks = signal(false), contourFile = signal<ContourFile | null>(null);
   let contourLoad: Promise<void> | null = null;
-  const allowResearch = signal(false), search = signal(''), loading = signal(false), portsReady = signal(false);
+  const allowResearch = signal(false), search = signal(''), loading = signal(false), portsReady = signal(false), portsFailed = signal(false);
   const filters = signal<Filters>({species: 'reef', limit: 20, depth: 300, scope: 'region', port: '', distance: deps.reachNm ?? 20});
   const ports = signal<Port[]>([]);
   const scopeStatus = signal(''), actionStatus = signal(''), storageNote = signal(STORAGE_OK);
@@ -196,10 +198,14 @@ export function createPlanner(deps: PlannerDeps) {
   /** While ranked, every valid change redraws the ranked set on the Chart. */
   const stopRanked = effect(() => { if (ranked.value && summary.value.ok) emit(untracked(rankedDetail)); });
 
-  const portsLoaded = (deps.loadPorts ?? fetchPorts)().then(d => {
-    const list = (d?.ports ?? []).filter(p => p.region === region.id);
-    batch(() => { ports.value = list; filters.value = {...filters.value, port: list.some(p => p.id === savedPort) ? savedPort! : list[0]?.id ?? ''}; });
-  }).catch(() => {}).finally(() => { portsReady.value = true; });
+  // web/ports.ts `loadPorts` by default (10 s timeout, schema check, cleared on failure); a failed or missing list sets `portsFailed`.
+  const portSource: () => Promise<{ports?: Port[]} | null> = deps.loadPorts ?? (() => loadPorts().then(list => ({ports: list.map(p => ({...p, match: [p.match[0], p.match[1]]}))})));
+  const loadPortList = (): Promise<void> => Promise.resolve().then(portSource).then(d => {
+    if (!Array.isArray(d?.ports)) throw Error('Port list unavailable');
+    const list = d.ports.filter(p => p.region === region.id), chosen = filters.value.port;
+    batch(() => { ports.value = list; portsFailed.value = false; filters.value = {...filters.value, port: list.some(p => p.id === chosen) ? chosen : list.some(p => p.id === savedPort) ? savedPort! : list[0]?.id ?? ''}; });
+  }).catch(() => { portsFailed.value = true; }).finally(() => { portsReady.value = true; });
+  const portsLoaded = loadPortList();
 
   function setFilter<K extends keyof Filters>(key: K, value: Filters[K]): void {
     revision++;
@@ -215,8 +221,11 @@ export function createPlanner(deps: PlannerDeps) {
   }
   function setContourTracks(on: boolean): void {
     contourTracks.value = on;
-    contourLoad ??= Promise.resolve().then(() => (deps.loadContours ?? loadContourFile)(region.id, now().toISOString().slice(0, 10)))
-      .catch((): ContourFile => ({refused: `${NOTES.failed} Turn off depth contour tracks to export.`})).then(file => { contourFile.value = file; });
+    if (contourLoad || (!on && contourFile.value)) return;
+    contourFile.value = null; // "Loading depth contours…" until it settles
+    contourLoad = Promise.resolve().then(() => (deps.loadContours ?? loadContourFile)(region.id, now().toISOString().slice(0, 10)))
+      .catch((): ContourFile => ({refused: `${NOTES.failed} Turn off depth contour tracks to export.`, retry: true}))
+      .then(file => { contourFile.value = file; if ('retry' in file && file.retry) contourLoad = null; });
   }
   function setResearch(on: boolean): void {
     revision++;
@@ -277,10 +286,11 @@ export function createPlanner(deps: PlannerDeps) {
     scopeStatus.value = LOADING;
     try {
       await portsLoaded;
+      if (portsFailed.value) await loadPortList(); // one retry per click; still failed: no distance limit
       const loaded = await loadReefs(region.id);
       if (mine !== revision) return;
       // Distances run from the chosen listed port (web/ranking.ts `Origin`), never the device position; no port, no distance.
-      const port = ports.value.find(p => p.id === f.port);
+      const port = ports.value.find(p => p.id === filters.value.port);
       if (f.scope === 'map' && !map.getSize().x) throw Error('Open the map first to choose its area.');
       if (f.depth > 300 || f.depth < 25 || !Number.isFinite(f.distance) || f.distance <= 0) throw Error('Choose a depth from 25–300 ft and a positive distance.');
       const place = await landWater(region.id, loaded.targets), stats = {withheld: 0};
@@ -392,7 +402,7 @@ export function createPlanner(deps: PlannerDeps) {
   const checkConditions = (): void => { deps.nav.conditions(draft.value.date); };
 
   return {
-    today, region, draft, tripAtlas, ranked, filtersDirty, restorePending, allowResearch, search, loading, portsReady, filters, ports,
+    today, region, draft, tripAtlas, ranked, filtersDirty, restorePending, allowResearch, search, loading, portsReady, portsFailed, filters, ports,
     scopeStatus, actionStatus, storageNote, tick, summary, spots, protectedHits, notesReady, waypointPosition,
     chooseWaypoint, saveWaypoint, removeWaypoint,
     setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
