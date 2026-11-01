@@ -18,11 +18,13 @@ export function validateSubscription(s:ExternalJSON):PushSubscriptionInput{
   if(u.protocol!=='https:'||u.port||u.username||u.password||!allowed||u.href.length>2000)throw new ClientError('push endpoint rejected');
   if(!/^[\w-]{87}$/.test(s.keys.p256dh)||!/^[\w-]{22}$/.test(s.keys.auth))throw new ClientError('push keys invalid');return s;
 }
+// Calendar days (not 24-hour steps, which skip or repeat a day in DST weeks).
+const plusDays=(date:string,n:number):string=>new Date(Date.parse(date+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);
 export interface TripBoat {sea:number;wind:number;chop_period:number;name:string}
 export interface TripInput extends TripPlan {region:string;point:string;species:string;date:string;start_hour:number;end_hour:number;wind_limit:number;gust_limit:number;sea_limit:number;boat:TripBoat|null}
 export function validateTrip(input:ExternalJSON,now=Date.now()):TripInput{
   const r=regionById(input.region);if(!r||!r.forecast_points.some(p=>p.id===input.point)||!r.species.includes(input.species))throw new ClientError('unknown area or species');
-  const today=dateInZone(now,r.timezone),last=dateInZone(now+7*86400000,r.timezone);
+  const today=dateInZone(now,r.timezone),last=plusDays(today,7);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(input.date)||!Number.isFinite(Date.parse(input.date))||new Date(input.date).toISOString().slice(0,10)!==input.date||input.date<today||input.date>last)throw new ClientError('date must be within the next seven days');
   for(const [key,min,max] of [['start_hour',0,22],['end_hour',1,23],['wind_limit',1,30],['gust_limit',1,40],['sea_limit',.5,10]] as const)if(typeof input[key]!=='number'||!Number.isFinite(input[key])||input[key]<min||input[key]>max)throw new ClientError('invalid '+key);
   if(!Number.isInteger(input.start_hour)||!Number.isInteger(input.end_hour)||input.end_hour<=input.start_hour||input.gust_limit<input.wind_limit)throw new ClientError('invalid window or thresholds');
@@ -172,7 +174,7 @@ async function tripInputs(feeds:FeedCache,feedKey:string,region:Region,zones:Mar
  */
 export async function checkTrip(env:Env,trip:TripRow,now:number,feeds:FeedCache):Promise<{outcome:TripOutcome;created:boolean}>{
   const region=regions[trip.region];if(!region)return {outcome:'skipped',created:false};
-  const today=dateInZone(now,region.timezone),tomorrow=dateInZone(now+86400000,region.timezone);
+  const today=dateInZone(now,region.timezone),tomorrow=plusDays(today,1);
   const hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:region.timezone,hour:'2-digit',hourCycle:'h23'}).format(new Date(now)));
   let missed=false;
   if(trip.date<=today&&!trip.final_delivered_at){
