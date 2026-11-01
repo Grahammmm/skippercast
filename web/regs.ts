@@ -184,24 +184,34 @@ export const verifiedText = (s: RuleSummary): string => s.verified ? `Verified $
 
 /** The region's reviewed registry, keyed by region so another region's never shows. */
 export const regsData = signal<{region: string; data: Data} | null>(null);
-let loading: string | null = null;
+let reading: {region: string; promise: Promise<void> | null; retry: boolean} | null = null;
+/** Forgets every read (tests only). */
+export const resetRegs = (): void => { reading = null; };
 /**
  * v1's load: the region's committed registry, then the daily feed's regulation checks when they are
  * at least as recent; each must name the region's jurisdiction and pass the checks above. A failure
- * keeps what loaded; with nothing, the line reads "Check rules" with CDFW's page.
+ * keeps what loaded; with nothing, the line reads "Check rules" with CDFW's page. A read that showed
+ * nothing for the region, or met a transport, 429 or 5xx failure, is asked again by the next card.
  */
 export async function loadRegs(region: RulesRegion, fetchFn: typeof fetch = fetch): Promise<void> {
-  if (loading === region.id) return;
-  loading = region.id;
+  if (reading?.region === region.id && (reading.promise || !reading.retry)) return reading.promise ?? undefined;
+  const ours = reading = {region: region.id, promise: null as Promise<void> | null, retry: false as boolean};
+  let transient = false;
   const accept = (candidate: Data): boolean => {
     const current = regsData.peek(), mine = current?.region === region.id ? current.data : null;
-    if (loading !== region.id || candidate?.jurisdiction_id !== region.jurisdiction_id || !validRegulations(candidate, region)) return false;
+    if (reading?.region !== region.id || candidate?.jurisdiction_id !== region.jurisdiction_id || !validRegulations(candidate, region)) return false;
     if (mine && Date.parse(candidate.reviewed_at) < Date.parse(mine.reviewed_at)) return false;
     regsData.value = {region: region.id, data: candidate};
     return true;
   };
-  const get = async (url: string): Promise<Data> => { const r = await fetchFn(url, {cache: 'no-cache'}); if (!r.ok) throw new Error(String(r.status)); return r.json(); };
+  const get = async (url: string): Promise<Data> => {
+    const r = await fetchFn(url, {cache: 'no-cache'}).catch((e: unknown) => { transient = true; throw e; });
+    if (!r.ok) { transient ||= r.status === 429 || (r.status >= 500 && r.status <= 599); throw new Error(String(r.status)); }
+    return r.json();
+  };
   const asset = region.assets?.regulations;
-  if (asset) await get(asset).then(accept, () => false);
-  await get(dailyPartPath(region.id, 'regulations')).then(d => validDailyPart(d, 'regulations', region.id) && accept(d.regulations), () => false);
+  return ours.promise = (async () => {
+    if (asset) await get(asset).then(accept, () => false);
+    await get(dailyPartPath(region.id, 'regulations')).then(d => validDailyPart(d, 'regulations', region.id) && accept(d.regulations), () => false);
+  })().finally(() => { ours.retry = transient || regsData.peek()?.region !== region.id; ours.promise = null; });
 }
