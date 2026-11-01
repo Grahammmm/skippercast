@@ -50,6 +50,10 @@ const validGeography = (g: Data, sources: Data): boolean => g === undefined || (
 const validWindows = (p: Data, data: Data, tz: string): boolean => Array.isArray(p.windows) && p.windows.every((w: Data) => w && dateOnly(w.start) && dateOnly(w.end)
   && w.start <= w.end && validOpening(w, tz) && validGeography(w.geography, data.sources) && (!w.geography || p.source_ids.includes(w.geography.source_id)));
 const age = (s: unknown, now: number): number => (now - Date.parse(String(s))) / HOUR;
+/** The registry's own `max_age_hours`, never looser than the 36 h the daily gate (regulations.py) enforces. */
+export const maxAgeHours = (data: Data): number => Number.isFinite(data?.max_age_hours) && data.max_age_hours > 0 ? Math.min(36, data.max_age_hours) : 36;
+/** Reviewed source that is a species' own CDFW page, when its registry lists one (a page about the species, not the area). */
+const SPECIES_PAGE: Readonly<Record<string, string>> = {salmon: 'rules-salmon', dungeness: 'rules-crab', 'pacific-halibut': 'rules-pacific-halibut', lobster: 'rules-lobster', lingcod: 'rules-groundfish', rockfish: 'rules-groundfish'};
 
 /** dist/regulations.js `ruleProfile`: a target's own complete registry record, else null. */
 export function ruleProfile(data: Data, id: string, region: RulesRegion): Data {
@@ -64,13 +68,13 @@ export function officialURL(value: unknown, region: RulesRegion): string {
     return u.protocol === 'https:' && !u.username && !u.password && (region.regulatory_authority_hosts ?? HOSTS).includes(u.hostname) ? u.href : CDFW_OCEAN;
   } catch { return CDFW_OCEAN; }
 }
-/** dist/regulations.js `sourceIssues`: sources whose daily check is missing, changed, unapproved or over 36 h old. */
+/** dist/regulations.js `sourceIssues`: sources whose daily check is missing, changed, unapproved or older than the registry's max age (36 h at most). */
 export function sourceIssues(data: Data, ids: unknown, now: number): string[] {
   if (!Array.isArray(ids)) return ['rule-profile'];
   return ids.filter((id: string) => {
     const s = data.checks?.[id], d = data.sources?.[id], approved = d?.approved_content_sha256, a = age(s?.data_retrieved_at, now);
     return !s || s.status !== 'unchanged' || s.source_status !== 'ok' || s.url !== d?.url || s.normalization !== d?.normalization
-      || !/^[a-f0-9]{64}$/.test(approved || '') || s.content_sha256 !== approved || !Number.isFinite(a) || a < -1 || a > 36;
+      || !/^[a-f0-9]{64}$/.test(approved || '') || s.content_sha256 !== approved || !Number.isFinite(a) || a < -1 || a > maxAgeHours(data);
   });
 }
 const required = (r: RulesRegion): string[] => [...new Set((r.species ?? []).flatMap(id => id === 'reef' ? ['lingcod', 'rockfish'] : [id]))];
@@ -123,7 +127,7 @@ export function regulationState(data: Data, species: string, region: RulesRegion
   else if (issues.length) {
     status = 'unknown';
     reason = issues.some(id => data.checks[id]?.status === 'changed') ? 'An official source changed after review. The saved limits below may have changed; check CDFW.'
-      : 'The daily source check is incomplete or over 36 hours old. Check CDFW; saved rules are shown below.';
+      : `The daily source check is incomplete or over ${maxAgeHours(data)} hours old. Check CDFW; saved rules are shown below.`;
   }
   const state: RuleState = {status, label: timedRestriction && status === 'restricted' ? 'Opening time applies' : LABELS[status]!, today, reason, issues, profile: p, timingNote};
   // v1's geographicSeasonState with no location chosen.
@@ -178,6 +182,15 @@ export function ruleSummary(data: Data, species: string, state: RuleState, regio
   const primary = species === 'reef' ? 'rules-groundfish' : profiles[0].primary_source_id || profiles[0].source_ids[0];
   if (data.sources?.[primary]?.url) { summary.link = officialURL(data.sources[primary].url, region); summary.linkLabel = species === 'reef' ? 'Official groundfish rules' : 'Official rules'; }
   return summary;
+}
+/**
+ * The species' own CDFW page when the reviewed registry lists one (salmon, crab, lingcod and rockfish, Pacific halibut,
+ * lobster), else null: `ruleSummary().link` stays the place's page, so the card can offer both. Link only; no rule text.
+ */
+export function speciesPage(data: Data, species: string, region: RulesRegion): {href: string; label: string} | null {
+  const id = species === 'reef' ? null : SPECIES_PAGE[species], p = validRegulations(data, region) ? ruleProfile(data, species, region) : null;
+  const url = id && p?.source_ids.includes(id) ? data.sources?.[id]?.url : null;
+  return url && officialURL(url, region) === url ? {href: url, label: `Official ${p.name} rules`} : null;
 }
 /** dist/regulations.js `ruleSummaryHTML`'s verified wording. */
 export const verifiedText = (s: RuleSummary): string => s.verified ? `Verified ${s.verified}` : s.checked ? `Needs recheck · last check ${s.checked}` : 'Not verified';
