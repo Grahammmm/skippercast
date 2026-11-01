@@ -5,6 +5,7 @@ import type {AdvisorTool} from './tool.ts';
 import {PORT_IDS} from '../links.ts';
 import {ALL_SPECIES_KEYS, canonicalSpecies} from '../vision/species.ts';
 import type {ContactFields} from '../types.ts';
+import {cleanDisplayName} from '../display-name.ts';
 
 export const updateProfile: AdvisorTool = {
   name: 'update_profile',
@@ -20,7 +21,7 @@ export const updateProfile: AdvisorTool = {
   async run(input) {
     const fields: ContactFields = {}, rejected: string[] = [];
     if (typeof input.display_name === 'string') {
-      const name = input.display_name.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 60);
+      const name = cleanDisplayName(input.display_name);
       if (name) fields.display_name = name; else rejected.push('display_name');
     }
     if (input.home_port !== undefined) {

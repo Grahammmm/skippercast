@@ -91,6 +91,7 @@ import {exportKey, exportLink, mintExportToken} from './exports.ts';
 import {channelFor as defaultChannelFor} from './channels/index.ts';
 import {linkKey} from './tools/offer_text_link.ts';
 import {t} from './strings.ts';
+import {cleanDisplayName} from './display-name.ts';
 import {localClock} from './cron.ts';
 import {outboundId, randomId} from './ids.ts';
 import {advisorLog, redact} from './log.ts';
@@ -263,7 +264,7 @@ function contactPatch(fields: ContactFields): [string, string | null][] {
     let v = value === null ? null : value.trim();
     if (key === 'role' && (v === null || !ROLES.includes(v))) continue;
     if (key === 'language' && v !== 'en' && v !== 'es') continue;
-    if (key === 'display_name' && v !== null) { v = v.replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 60); if (!v) v = null; }
+    if (key === 'display_name' && v !== null) v = cleanDisplayName(v);
     if (v !== null && v.length > 2000) continue;
     out.push([key, v]);
   }
