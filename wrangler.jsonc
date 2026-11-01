@@ -31,10 +31,14 @@
   // BOAT_LOOKUP_ENABLED "false" is the AI boat-lookup kill switch;
   // BOAT_LOOKUP_GLOBAL_DAILY_LIMIT caps lookups across all owners per UTC day.
   // Optional: BOAT_AI_MODEL overrides the model id (default in server/boat-lookup.ts).
+  // COST_CEILING_R2_READS_PER_DAY: R2 reads in a UTC day before the Worker
+  // degrades to last-known copies and free fallbacks instead of reading R2
+  // (server/cost-ceiling.ts, docs/operations/cost-ceiling.md); "off" disables.
   "vars": {
     "IDENTITY_PROVIDER": "skippercast",
     "BOAT_LOOKUP_ENABLED": "true",
-    "BOAT_LOOKUP_GLOBAL_DAILY_LIMIT": "500"
+    "BOAT_LOOKUP_GLOBAL_DAILY_LIMIT": "500",
+    "COST_CEILING_R2_READS_PER_DAY": "300000"
   },
   // Per-IP limits for the anonymous read endpoints (server/edge-cache.ts):
   // /api/om 60 a minute, /feeds/ 300 a minute. namespace_id is any integer

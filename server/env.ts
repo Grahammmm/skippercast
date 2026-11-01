@@ -25,6 +25,7 @@ export interface Env {
   BOAT_LOOKUP_ENABLED?: string;      // "false" is the kill switch
   BOAT_LOOKUP_GLOBAL_DAILY_LIMIT?: string;
   BOAT_AI_MODEL?: string;
+  COST_CEILING_R2_READS_PER_DAY?: string; // R2 reads a UTC day before the Worker degrades (server/cost-ceiling.ts); "off" disables
   EXTRA_ORIGINS?: string;            // comma-separated extra allowed origins (staging, wrangler dev)
   // Text Advisor vars (repository variables copied by scripts/wrangler_config.mjs);
   // read only through advisorSettings() in server/advisor/settings.ts, which holds the defaults.
@@ -96,6 +97,8 @@ export interface Variables {
   identify: () => Promise<SessionUser | null>;
   user: SessionUser | null | undefined; // set once identify() has run
   owner: string;                      // the signed-in user id on private routes
+  feeds: R2Bucket | null;             // FEEDS, metered, or null when unbound or degraded (server/cost-ceiling.ts)
+  degraded: boolean;                  // past today's cost ceiling: no R2 reads, last-known copies
   fleetJob: JobClaims;                // the verified job identity on /api/fleet/jobs/* (routes/fleet.ts requireFleetJob)
 }
 
