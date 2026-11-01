@@ -26,7 +26,7 @@
 // safety clearance.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
-import {rateComfort, verdictFor, type ComfortRating, type FeedHour, type Verdict} from '../score.ts';
+import {chargedCosts, rateComfort, verdictFor, type ComfortRating, type FeedHour, type Verdict} from '../score.ts';
 import {sample} from '../map/forecast-grid.ts';
 import type {ConditionsForecast, ModelRun} from '../conditions.ts';
 import type {Profile} from '../profile.ts';
@@ -134,11 +134,16 @@ export function feedReader(f: ConditionsForecast, now: Date): {times: number[]; 
 
 type Charge = 'wind' | 'seas' | 'chop' | 'cross';
 
-/** The charges one rated hour carries, largest first; ties keep wind, seas, chop, cross order. */
+/**
+ * What the score took off one rated hour, by charge, largest first (score.ts chargedCosts: the
+ * smaller of the wind and wave burdens at its overlap share, the unpicked one of seas and chop at
+ * nothing); wind chop carries the short-chop penalty too. Ties keep wind, seas, chop, cross order.
+ */
 export function charges(r: ComfortRating): {kind: Charge; cost: number}[] {
+  const taken = chargedCosts(r.costs);
   const list: {kind: Charge; cost: number}[] = [
-    {kind: 'wind', cost: r.costs.wind}, {kind: 'seas', cost: r.costs.seas},
-    {kind: 'chop', cost: Math.max(r.costs.chop, r.costs.short)}, {kind: 'cross', cost: r.costs.crossing},
+    {kind: 'wind', cost: taken.wind}, {kind: 'seas', cost: taken.seas},
+    {kind: 'chop', cost: taken.chop + taken.short}, {kind: 'cross', cost: taken.crossing},
   ];
   return list.filter(c => c.cost > 0).sort((a, b) => b.cost - a.cost);
 }
