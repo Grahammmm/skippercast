@@ -36,7 +36,7 @@ test('a check older than the registry\'s own max_age_hours renders stale, not Ve
   assert.equal(r.state.status, 'unknown');
   assert.match(r.state.reason, /over 24 hours old/);
   assert.equal(r.summary.verified, null);
-  assert.equal(verifiedText(r.summary), 'Needs recheck · last check Sep 20');
+  assert.equal(verifiedText(r.summary), 'Not confirmed for your fishing date - open the official rules before you go.');
 });
 
 test('a registry cannot loosen the 36 h gate', () => {
@@ -66,7 +66,7 @@ test('the committed registry: 24 h interval, 36 h ceiling - a 30 h check is over
   const r = row(d, 'salmon');
   assert.notEqual(r.state.status, 'unknown', 'inside the 36 h ceiling the rule itself is not withheld');
   assert.equal(r.summary.verified, null, 'overdue is not Verified');
-  assert.equal(verifiedText(r.summary), 'Needs recheck · last check Sep 20');
+  assert.equal(verifiedText(r.summary), 'Not confirmed for your fishing date - open the official rules before you go.');
   const reef = row(d, 'reef'); assert.equal(reef.summary.verified, null);
 });
 
