@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 
@@ -11,8 +10,7 @@ import pytest
 
 from skippercast import report, runs
 from skippercast.platform.contracts import read_json
-
-ROOT = Path(__file__).resolve().parents[2]
+from tests._support import ROOT
 
 
 def manifest(**fields):
