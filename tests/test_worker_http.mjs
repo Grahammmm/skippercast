@@ -274,6 +274,49 @@ test('a repeated ack keeps the first read time; a trip final_delivered_at is set
   } finally { sql.close(); }
 });
 
+test('the 20-active-trips limit is carried by the insert: parallel saves never exceed it, only active rows of this owner count', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter};
+  const day = ms => new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Los_Angeles'}).format(new Date(ms)), today = day(Date.now()), yesterday = day(Date.now() - 86400000);
+  const seed = (owner, n, {date = today, enabled = 1, final = null} = {}) => { for (let i = 0; i < n; i++) sql.prepare('INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,enabled,created_at,final_delivered_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(`${owner}-${date}-${enabled}-${final}-${i}`, owner, 'morro-bay', 'north', 'reef', date, 7, 13, 8, 12, 3, enabled, new Date().toISOString(), final); };
+  const trip = (over = {}) => ({region: 'morro-bay', point: 'north', species: 'reef', date: today, start_hour: 7, end_hour: 13, wind_limit: 8, gust_limit: 12, sea_limit: 3, ...over});
+  const save = (owner, over) => worker.fetch(request('/api/trips', {owner, method: 'POST', body: trip(over)}), env);
+  const count = owner => sql.prepare('SELECT COUNT(*) AS n FROM trips WHERE owner=?').get(owner).n;
+  const active = owner => sql.prepare('SELECT COUNT(*) AS n FROM trips WHERE owner=? AND enabled=1 AND final_delivered_at IS NULL AND date>=?').get(owner, today).n;
+  try {
+    // 19 active, then five saves at once over a DB whose every call yields (as D1 does): exactly one fits.
+    seed('alice', 19);
+    const later = f => async () => { await new Promise(r => setTimeout(r, 30)); return f(); };
+    const slow = {DB: {prepare(q) { const s = adapter.prepare(q); return {bind(...a) { s.bind(...a); return this; }, first: later(() => s.first()), all: later(() => s.all()), run: later(() => s.run())}; }}};
+    const parallel = await Promise.all(Array.from({length: 5}, () => worker.fetch(request('/api/trips', {owner: 'alice', method: 'POST', body: trip()}), slow)));
+    assert.deepEqual(parallel.map(r => r.status).sort(), [201, 409, 409, 409, 409]);
+    for (const r of parallel.filter(r => r.status === 409)) assert.deepEqual(await errorBody(r), {error: 'Limit of 20 active trips'});
+    assert.equal(active('alice'), 20); assert.equal(count('alice'), 20);
+    // At the limit: 409 with today's text, nothing written.
+    const full = await save('alice');
+    assert.equal(full.status, 409); assert.deepEqual(await errorBody(full), {error: 'Limit of 20 active trips'}); assert.equal(count('alice'), 20);
+    // Another owner at the limit does not block this owner; rows that do not count do not block.
+    seed('carol', 7, {enabled: 0}); seed('carol', 7, {final: new Date().toISOString()}); seed('carol', 6, {date: yesterday});
+    const first = await save('carol');
+    assert.equal(first.status, 201); assert.equal(count('carol'), 21); assert.equal(active('carol'), 1);
+    // An invalid body is a 400 before any SQL.
+    const bad = await save('dave', {sea_limit: 99});
+    assert.equal(bad.status, 400); assert.deepEqual(await errorBody(bad), {error: 'invalid sea_limit'}); assert.equal(count('dave'), 0);
+    // A saved row carries every posted field, as the old INSERT bound them.
+    const boat = {name: 'Skiff', sea: 1.2, wind: 0.9, chop_period: 6}, plan = {spots: [], legs: [], window: {depart: '06:00', return_by: '15:00', hours: [6, 7]}, exports: []};
+    const withBoat = await (await save('dave', {boat, plan, launch_point: 'harbor', targets: ['reef', 'halibut'], status: 'draft'})).json();
+    const plain = await (await save('dave', {point: 'central', start_hour: 6, end_hour: 9, wind_limit: 10, gust_limit: 15, sea_limit: 4})).json();
+    const rows = (await (await worker.fetch(request('/api/trips', {owner: 'dave'}), env)).json()).trips, byId = id => rows.find(r => r.id === id);
+    const a = byId(withBoat.id), b = byId(plain.id);
+    assert.equal(rows.length, 2);
+    assert.deepEqual([a.owner, a.region, a.point, a.species, a.date, a.start_hour, a.end_hour, a.wind_limit, a.gust_limit, a.sea_limit, a.enabled], ['dave', 'morro-bay', 'north', 'reef', today, 7, 13, 8, 12, 3, 1]);
+    assert.deepEqual([a.boat_name, a.boat_sea, a.boat_wind, a.boat_chop_period, a.launch_point, a.status], ['Skiff', 1.2, 0.9, 6, 'harbor', 'draft']);
+    assert.deepEqual(a.targets, ['reef', 'halibut']); assert.deepEqual(a.plan, plan); assert.equal(a.created_at, a.updated_at); assert.ok(a.created_at);
+    assert.deepEqual([b.point, b.start_hour, b.end_hour, b.wind_limit, b.gust_limit, b.sea_limit, b.enabled, b.status], ['central', 6, 9, 10, 15, 4, 1, 'planned']);
+    assert.deepEqual([b.boat_name, b.boat_sea, b.boat_wind, b.boat_chop_period, b.launch_point, b.plan], [null, null, null, null, null, null]);
+    assert.deepEqual(b.targets, ['reef']); assert.equal(b.created_at, b.updated_at);
+  } finally { sql.close(); }
+});
+
 test('public health is minimal: no binding or secret presence is disclosed', async () => {
   const response = await worker.fetch(request('/api/health'), {DB: {}, FEEDS: {}, VAPID_PUBLIC_KEY: 'k', VAPID_PRIVATE_KEY: 'k', ANTHROPIC_API_KEY: 'k'});
   assert.equal(response.status, 200);
