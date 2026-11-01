@@ -23,7 +23,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import hashlib
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
+import re
 import subprocess
 import time
 
@@ -64,10 +65,13 @@ def file_digest(path):
 
 
 def public_path(path, roots=None):
-    """A path relative to the repository or working directory; never an absolute machine path."""
+    """A path relative to the repository or working directory; never an absolute machine path or a `..` escape."""
     path = Path(path)
     if not path.is_absolute():
-        return path.as_posix()
+        normal = os.path.normpath(path.as_posix())
+        if normal == ".." or normal.startswith("../"):
+            return path.name if path.name not in ("", "..") else "(path)"
+        return normal
     resolved = path.resolve()
     for root in roots or (Path.cwd(), REPO):
         try:
@@ -75,6 +79,18 @@ def public_path(path, roots=None):
         except ValueError:
             continue
     return path.name
+
+
+# An absolute POSIX path or a `..`-escaping relative path (not after a URL scheme or inside a word), or a Windows drive path.
+POSIX_PATH = re.compile(r"""(?<![\w.~:/-])(?:/|(?:\.\./)+)[^\s'"():,;]+""")
+WINDOWS_PATH = re.compile(r"""(?<!\w)[A-Za-z]:\\[^\s'"]+""")
+
+
+def public_text(text, roots=None):
+    """Free text with every machine path replaced by public_path(), then cut to ERROR_CHARS (mask first, cut after)."""
+    text = POSIX_PATH.sub(lambda m: public_path(m.group(0), roots), str(text))
+    text = WINDOWS_PATH.sub(lambda m: PureWindowsPath(m.group(0)).name or "(path)", text)
+    return text[:ERROR_CHARS]
 
 
 class RunManifest:
@@ -140,7 +156,7 @@ class RunManifest:
             raise ValueError("A source outcome needs an id and a status")
         row = {"status": status, **{k: v for k, v in fields.items() if v is not None}}
         if isinstance(row.get("detail"), str):
-            row["detail"] = row["detail"][:ERROR_CHARS]
+            row["detail"] = public_text(row["detail"])
         self.sources[str(ident)] = row
         return row
 
@@ -150,7 +166,7 @@ class RunManifest:
             raise ValueError("A region outcome needs an id and a status")
         row = {"status": status, **{k: v for k, v in fields.items() if v is not None}}
         if isinstance(row.get("error"), str):
-            row["error"] = row["error"][:ERROR_CHARS]
+            row["error"] = public_text(row["error"])
         self.regions[str(ident)] = row
         return row
 
@@ -160,7 +176,7 @@ class RunManifest:
         self.duration_ms = max(0, round((self._clock() - self._started) * 1000))
         self.exit_code = int(exit_code)
         if error is not None:
-            self.error = {"class": type(error).__name__, "message": str(error)[:ERROR_CHARS]}
+            self.error = {"class": type(error).__name__, "message": public_text(error)}
         if status is None:
             if self.exit_code != 0 or self.error:
                 status = "failed"
