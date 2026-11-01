@@ -38,7 +38,7 @@ SOURCE_PINS = {
     'validate_recipe.py': '50d8f1e36e5edf9974d121d29349bd821c8bf08e2d3eaf20526b2bc7162b736f',
     SCHEMA: 'a659d136536a553043fac917473428ae0c6e51bdb179cc66bdd295e09ebf1593',
     'regions/morro-bay/coast.json': 'dbe6ffebea0e6d4321c949ae42329db487448a251af695f060c1092366b6bc47',
-    'tests/unit/test_coast_recipe.py': '4ec6bfdd50da5c04f117a7a01d957181b620132e2f21f8c00494c10157de270b',
+    'tests/unit/test_coast_recipe.py': 'a416538b8a197228870bb2809f48dc185bffc7f79fb8ebe120c7f98c4d2ad566',
 }
 # Exactly the metadata files the existing validator reads for one recipe.
 READ_SET = {SCHEMA, 'catalog/sources.json', 'catalog/coastal-sectors.json',
