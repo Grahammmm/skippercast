@@ -112,7 +112,7 @@ export interface ComfortCosts {wind: number; seas: number; chop: number; crossin
 
 /**
  * The comfort score's charges for one full-detail hour, each input on its own:
- * hourScores sums them, and the brief names the largest as the day's limit.
+ * hourScores combines them; chargedCosts says what each actually took off.
  */
 export function comfortCosts(
   c: HourConditions,
@@ -135,6 +135,24 @@ export function comfortCosts(
     chop: Math.max(0, chop - T.comfortChopStart * S) * T.comfortChopSlope / S,
     crossing, short,
   }};
+}
+
+/**
+ * What each input actually took off the comfort score, as hourScores and
+ * limitedScores combine the costs: the larger of the wind and wave burdens in
+ * full and THRESHOLDS.overlap of the smaller, where the wave burden is the
+ * larger of seas and chop (ties to seas), so the other costs nothing; the
+ * crossing and short-chop penalties are flat. They sum to 10 minus the
+ * unclamped score. The brief names the largest as the day's limit.
+ */
+export function chargedCosts(costs: ComfortCosts): ComfortCosts {
+  const wave = Math.max(costs.seas, costs.chop), windFull = costs.wind >= wave;
+  const waveTaken = windFull ? THRESHOLDS.overlap * wave : wave, seasPicked = costs.seas >= costs.chop;
+  return {
+    wind: windFull ? costs.wind : THRESHOLDS.overlap * costs.wind,
+    seas: seasPicked ? waveTaken : 0, chop: seasPicked ? 0 : waveTaken,
+    crossing: costs.crossing, short: costs.short,
+  };
 }
 
 /**

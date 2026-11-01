@@ -94,6 +94,47 @@ test('the limit sentence names the worst input at its hour', () => {
   assert.deepEqual([cross.verdict, cross.limit], ['comfortable', 'Wind to 6 kt and seas to 3.5 ft through noon.']);
 });
 
+// SC-LAUNCH-3b: the limit shown is the charge the model actually took. The score charges the larger
+// of the wind and wave burdens in full and THRESHOLDS.overlap of the smaller; the wave burden is the
+// larger of seas and wind chop, so the other one costs nothing; the crossing-swell and short-chop
+// penalties are flat. Derived here from the rubric, reconciled against the model's own score, and
+// never read from verdict.ts.
+const KIND = {wind: /\d kt wind/, seas: /\d ft seas/, chop: /ft of (?:short, steep )?wind chop/, cross: /ft cross swell/};
+function modelCharges(costs) {
+  const wave = Math.max(costs.seas, costs.chop), windFull = costs.wind >= wave, share = THRESHOLDS.overlap;
+  const waveTaken = windFull ? share * wave : wave, seasPicked = costs.seas >= costs.chop;
+  return {wind: windFull ? costs.wind : share * costs.wind, seas: seasPicked ? waveTaken : 0,
+    chop: (seasPicked ? 0 : waveTaken) + costs.short, cross: costs.crossing};
+}
+
+test('the limit names the charges the model took off the worst hour, largest first, a second only when it took a point', () => {
+  let rated = 0, seconds = 0, dropped = 0;
+  for (const wind of [6, 10, 14, 18, 24]) for (const sea of [2.5, 3.5, 5, 7]) for (const chop of [0.3, 1.2, 2.2]) for (const secondary of [0.5, 3]) {
+    const f = forecast({over: {wind_speed_10m: wind, ecmwf_wind: wind, wind_gusts_10m: wind + 4, ecmwf_gust: wind + 4,
+      wave_height: sea, wam: sea, swell_wave_height: sea - 0.5, wind_wave_height: chop, wind_wave_period: 3, secondary_swell_wave_height: secondary}});
+    const v = boatVerdict(brief(), f, NOW, TZ);
+    const {read, times} = feedReader(f, NOW);
+    const hours = windowHours(times, DATE, TZ, SUNRISE, SUNSET, NOW).hours.map(ms => rateComfort(read(ms)));
+    const worst = hours.reduce((a, b) => b.uncapped < a.uncapped ? b : a);
+    const taken = modelCharges(worst.costs);
+    const label = `wind ${wind}, seas ${sea}, chop ${chop}, secondary ${secondary}`;
+    // The derivation is the model's: what it took off adds up to the score it gave.
+    if (worst.uncapped > 0) assert.ok(Math.abs(10 - Object.values(taken).reduce((a, b) => a + b, 0) - worst.uncapped) <= 0.05 + 1e-9, `${label}: charges reconcile with ${worst.uncapped}`);
+    if (v.verdict === 'comfortable') continue;
+    const ranked = Object.entries(taken).filter(([, cost]) => cost > 0).sort((a, b) => b[1] - a[1]);
+    const named = Object.entries(KIND).filter(([, re]) => re.test(v.limit)).sort((a, b) => v.limit.search(a[1]) - v.limit.search(b[1])).map(([kind]) => kind);
+    const expected = [ranked[0][0], ...(ranked[1] && ranked[1][1] >= 1 ? [ranked[1][0]] : [])];
+    assert.deepEqual(named, expected, `${label}: "${v.limit}" against the model's charges ${JSON.stringify(taken)}`);
+    rated++;
+    if (expected.length === 2) seconds++;
+    if (ranked[1] && ranked[1][1] < 1 && worst.costs[ranked[1][0] === 'cross' ? 'crossing' : ranked[1][0]] >= 1) dropped++;
+  }
+  assert.ok(rated >= 40 && seconds >= 5 && dropped >= 5, `the grid reaches named, second and overlap-share charges (${rated}, ${seconds}, ${dropped})`);
+  // The case that drifted: 14 kt gusting 18 took 3.3 points; 3.5 ft seas cost 1.4 on their own but the model took 0.45 of that.
+  const windy = boatVerdict(brief(), forecast({over: {wind_speed_10m: 14, ecmwf_wind: 14, wind_gusts_10m: 18, ecmwf_gust: 18, wave_height: 3.5, wam: 3.5}}), NOW, TZ);
+  assert.deepEqual([windy.verdict, windy.limit], ['marginal', '14 kt wind gusting 18 at 8 am.']);
+});
+
 test('the limited cap: partial detail, missing hours, an old run or no alert check hold Comfortable at Marginal and say why', () => {
   const noEcmwf = boatVerdict(brief(), forecast({drop: ['ecmwf_ifs025', 'ecmwf_wam']}), NOW, TZ);
   assert.equal(noEcmwf.verdict, 'marginal');

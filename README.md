@@ -10,7 +10,7 @@
 
 - **A fishing map on a nautical chart.** NOAA chart base, species selectors, reef and soft-bottom habitat candidates with their terrain evidence, marine protected areas, charter-reported grounds and a seafloor habitat layer built from original surveys.
 - **A 7-day forecast chart.** One meteogram of wind and gusts, seas and period, tide and an hourly conditions score for your boat, built from SkipperCast's own NOAA and ECMWF forecast tiles, next to live buoy and weather-station readings.
-- **A Tomorrow card.** For the next three days, go, marginal or no-go for each two-hour window, the one factor that limits the day, how well the models agree, and the latest comfortable time to be back at the dock.
+- **A day verdict.** For the day you pick, one word for the morning window (Comfortable, Marginal, Rough or Unknown), the window it covers and the one thing that limits it at its hour: wind, seas, wind chop or a crossing swell, as the conditions score charged it. Partial or old forecasts hold it at Marginal, a marine alert makes it Rough, and from the day after tomorrow it is marked provisional. It is a comfort rating, not a bite forecast or a safety clearance.
 - **The rules at a glance.** A regulations summary for the selected species, place and date: season status, bag and size limits, gear rules and links to the official CDFW pages, checked against the official sources every day.
 - **Plans that go with you.** GPX export for chartplotters and iNavX, an offline trip pack for when the signal drops, and saved-trip alerts on a SkipperCast account you sign in to with a passkey.
 

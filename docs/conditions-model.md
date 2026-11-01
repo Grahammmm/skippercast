@@ -66,9 +66,13 @@ forecast and not a safety clearance.
   feed (NOAA GFS and GFS-Wave, ECMWF IFS and WAM) at the forecast point the
   Conditions view reads, the same function the text advisor uses. The worst
   hour sets the day through `verdictFor`: 7 and above is Comfortable, under 4
-  is Rough, Marginal between. The sentence names the largest charge in that
-  hour from `comfortCosts` (wind with its gust, combined seas with period, wind
-  chop, or a crossing swell) and a second charge when it costs a point or more.
+  is Rough, Marginal between. The sentence names the charge the score took
+  most for in that hour (`chargedCosts` over `comfortCosts`: wind with its
+  gust, combined seas with period, wind chop, or a crossing swell; the smaller
+  of the wind and wave burdens counts at its overlap share, and whichever of
+  seas and chop the wave burden did not use counts nothing) and a second
+  charge when the score took a point or more for it. From the day after
+  tomorrow the verdict line is marked Provisional.
 - **Shore, Spear and Kayak.** Their own hourly grades (`shore-conditions.ts`,
   `spear.ts`, `kayak.ts` in `packages/coast`), the roughest hour in the same
   window; Calmer reads Comfortable. The sentence names the hour's reasons that
