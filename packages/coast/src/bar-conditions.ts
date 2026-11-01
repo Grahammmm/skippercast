@@ -28,6 +28,8 @@ import {nearshoreAt} from './nearshore.ts';
 
 const HOUR = 3_600_000;
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+/** A usable wave/swell period: finite and above 0 s; anything else is missing. */
+const period = (value: unknown): value is number => finite(value) && value > 0;
 const round = (value: number, digits = 1) => Number(value.toFixed(digits));
 
 export type Entrance = {
@@ -145,16 +147,16 @@ export function barTide(at: number, events: readonly TideEvent[]): BarTide {
 export function barSwell(hour: ForecastHour | undefined, near?: NearshoreHour): BarSwell {
   const {minFt} = BAR.longPeriod;
   const longest = (pairs: [number | null | undefined, number | null | undefined][]) => {
-    const periods = pairs.filter(([h, p]) => finite(h) && h >= minFt && finite(p)).map(([, p]) => p as number);
+    const periods = pairs.filter(([h, p]) => finite(h) && h >= minFt && period(p)).map(([, p]) => p as number);
     return periods.length ? Math.max(...periods) : null;
   };
   if (near && finite(near.waveFt) && near.waveFt >= 0) {
-    return {heightFt: near.waveFt, periodS: finite(near.periodS) ? near.periodS : null, basis: 'nearshore', longPeriodS: longest([[near.waveFt, near.periodS], [hour?.swellFt, hour?.swellPeriodS]])};
+    return {heightFt: near.waveFt, periodS: period(near.periodS) ? near.periodS : null, basis: 'nearshore', longPeriodS: longest([[near.waveFt, near.periodS], [hour?.swellFt, hour?.swellPeriodS]])};
   }
   const height = finite(hour?.waveFt) && hour.waveFt >= 0 ? hour.waveFt : null;
   const longPeriodS = longest([[hour?.waveFt, hour?.wavePeriodS], [hour?.swellFt, hour?.swellPeriodS]]);
   if (height === null) return {heightFt: null, periodS: null, basis: null, longPeriodS};
-  return {heightFt: height, periodS: finite(hour?.wavePeriodS) ? hour.wavePeriodS : null, basis: 'offshore', longPeriodS};
+  return {heightFt: height, periodS: period(hour?.wavePeriodS) ? hour.wavePeriodS : null, basis: 'offshore', longPeriodS};
 }
 
 const angle = (a: number, b: number) => Math.abs((((a - b) % 360) + 540) % 360 - 180);
