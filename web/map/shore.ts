@@ -164,7 +164,7 @@ export function createShore({engine, fetchFn = (...a) => fetch(...a), page = () 
     }),
     effect(() => {
       const id = region.value;
-      if (!on.value || !id || pkg.peek()?.region === id) return;
+      if (!on.value || !id || pkg.peek()?.region === id && pkg.peek()?.data) return;
       void load(shoreURL(id)).then(data => { if (region.peek() === id) pkg.value = {region: id, data: data && validPackage(data, id) ? data : null}; });
     }),
     effect(() => {

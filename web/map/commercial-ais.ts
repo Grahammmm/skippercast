@@ -99,7 +99,7 @@ export function createCommercialAis({engine, fetchFn = (...a) => fetch(...a), pa
   const disposers = [
     effect(() => {
       const p = path.value;
-      if (!on.value || !p || loaded.peek()?.path === p) return;
+      if (!on.value || !p || loaded.peek()?.path === p && loaded.peek()?.data) return;
       void load(p).then(data => { if (path.peek() === p) loaded.value = {path: p, data}; });
     }),
     effect(() => {
