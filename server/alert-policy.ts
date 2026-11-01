@@ -7,6 +7,14 @@ export type Values = {wind: number | null; gust: number | null; sea: number | nu
 export interface Assessment {status: string; legal: string; values: Values; chop_limit?: number; issues: string[]; checked_at: string; runs: Record<string, number | null>}
 export const finite=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n);
 export function dateInZone(epoch:number,zone:string):string{return new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(epoch));}
+const localHour=(t:number,zone:string)=>Number(new Intl.DateTimeFormat('en-US',{timeZone:zone,hour:'2-digit',hourCycle:'h23'}).format(new Date(t*1000)));
+/** Unix seconds of every real whole UTC hour on `date` (local) with local hour in [start,end]: 01:00 twice on fall-back day, no 02:00 on spring-forward day. */
+export function windowInstants(date:string,zone:string,start:number,end:number):number[]{
+  const out:number[]=[],day=Date.parse(date+'T00:00Z')/1000;
+  if(!finite(day))return out;
+  for(let t=day-14*3600;t<=day+(24+14)*3600;t+=3600)if(dateInZone(t*1000,zone)===date&&localHour(t,zone)>=start&&localHour(t,zone)<=end)out.push(t);
+  return out;
+}
 export function samplePoint(data:ExternalJSON,key:string,time:number,unit:string):number|null{
   const h=data?.hourly, i=h?.time?.indexOf(time);
   if(data?.hourly_units?.[key]!==unit||data?.hourly_units?.time!=='unixtime'||i<0||!finite(h?.[key]?.[i]))return null;
@@ -37,9 +45,9 @@ export function assessTrip(trip:AlertTrip,region:Region,intelligence:ExternalJSO
   if(!finite(Date.parse(intelligence.completed_at))||now-Date.parse(intelligence.completed_at)>3*3600000||Date.parse(intelligence.completed_at)>now+3600000)issues.push('Forecast feed time is missing, stale or invalid');
   const models=intelligence.forecast?.models||{};
   const base=models.gfs_global?.data?.[point];
-  const hour=(t:number)=>Number(new Intl.DateTimeFormat('en-US',{timeZone:region.timezone,hour:'2-digit',hourCycle:'h23'}).format(new Date(t*1000)));
-  const times:number[]=(base?.hourly?.time||[]).filter((t:number)=>dateInZone(t*1000,region.timezone)===trip.date&&hour(t)>=trip.start_hour&&hour(t)<=trip.end_hour);
-  if(times.length!==trip.end_hour-trip.start_hour+1)issues.push('The complete saved window is not populated');
+  const want=windowInstants(trip.date,region.timezone,trip.start_hour,trip.end_hour),have=new Set(base?.hourly?.time||[]);
+  const times:number[]=want.filter(t=>have.has(t));
+  if(times.length!==want.length||!want.length)issues.push('The complete saved window is not populated');
   const max=(key:keyof Values,value:number|null)=>{if(finite(value)){const v=values[key];values[key]=v===null?value:Math.max(v,value);}else issues.push('Required '+key+' sample missing');};
   for(const model of ['gfs_global','ecmwf_ifs025','ncep_gfswave016','ecmwf_wam']){
     const m=models[model],source=intelligence.sources?.['model-'+model];
