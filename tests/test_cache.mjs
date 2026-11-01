@@ -192,19 +192,43 @@ test('R2 feeds larger than the cache limit, 404s and seafloor archives are not c
   assert.equal(cache.puts, 0);
 }));
 
-test('per-IP rate limits: /api/om 60/min and feeds 300/min return 429 with Retry-After', () => withEdge(async () => {
+test('per-IP rate limits: /api/om 60/min and feeds 300/min return 429 with Retry-After', () => withEdge(async cache => {
   globalThis.fetch = async () => Response.json({meta: {}, provider: 'NOAA'});
   const env = {PUBLIC_LIMITER: fakeLimiter(60), FEED_LIMITER: fakeLimiter(300), FEEDS: bucket({'data/x.json': '{}'}, [])};
+  // /api/om counts misses only: with the edge cache empty every request is a miss.
+  const {match} = cache; cache.match = async () => undefined;
   for (let i = 0; i < 60; i++) assert.equal((await worker.fetch(get('/api/om/data/gfs_global/static/meta.json'), env, ctx())).status, 200);
   const limited = await worker.fetch(get('/api/om/data/gfs_global/static/meta.json'), env, ctx());
   assert.equal(limited.status, 429);assert.equal(limited.headers.get('Retry-After'), '60');
   assert.ok(limited.headers.get('Strict-Transport-Security'));
   assert.equal((await worker.fetch(get('/api/om/data/gfs_global/static/meta.json', {'cf-connecting-ip': '198.51.100.1'}), env, ctx())).status, 200, 'another IP is unaffected');
   assert.deepEqual([...env.PUBLIC_LIMITER.counts.keys()], ['om:203.0.113.9', 'om:198.51.100.1']);
+  cache.match = match;
   for (let i = 0; i < 300; i++) await worker.fetch(get('/feeds/data/x.json'), env, ctx());
   const feed = await worker.fetch(get('/feeds/data/x.json'), env, ctx());
   assert.equal(feed.status, 429);assert.equal(feed.headers.get('Retry-After'), '60');
   assert.equal((await worker.fetch(get('/api/forecast?region=nowhere'), env, ctx())).status, 404, 'other routes are not limited');
+}));
+
+test('/api/om limits only cache misses per IP: hits are free even over the limit; no or a failing binding fails open', () => withEdge(async cache => {
+  let reads = 0;
+  globalThis.fetch = async () => { reads++; return Response.json({meta: {}, provider: 'NOAA'}); };
+  const env = {PUBLIC_LIMITER: fakeLimiter(60)}, path = '/api/om/data/gfs_global/static/meta.json';
+  const c = ctx(); assert.equal((await worker.fetch(get(path), env, c)).status, 200); await c.settle();
+  for (let i = 0; i < 100; i++) assert.equal((await worker.fetch(get(path), env, ctx())).status, 200);
+  assert.equal(reads, 1);assert.equal(env.PUBLIC_LIMITER.counts.get('om:203.0.113.9'), 1, 'one miss then 100 hits spend one unit');
+  const over = {PUBLIC_LIMITER: fakeLimiter(0)};
+  assert.equal((await worker.fetch(get(path), over, ctx())).status, 200, 'a hit is served to an address over its limit');
+  assert.equal(over.PUBLIC_LIMITER.counts.size, 0, 'a hit never consults the limiter');
+  const {match} = cache; cache.match = async () => undefined;
+  assert.equal((await worker.fetch(get(path), over, ctx())).status, 429, 'the same address is refused on a miss');
+  for (const e of [{}, {PUBLIC_LIMITER: {limit: async () => { throw Error('limiter down'); }}}]) {
+    for (let i = 0; i < 61; i++) assert.equal((await worker.fetch(get(path), e, ctx())).status, 200, 'fails open');
+  }
+  const kinds = {PUBLIC_LIMITER: fakeLimiter(60)};
+  for (const kind of ['forecast', 'marine']) assert.notEqual((await worker.fetch(get(`/api/om/v1/${kind}?latitude=35.4&longitude=-120.9`), kinds, ctx())).status, 429);
+  assert.deepEqual([...kinds.PUBLIC_LIMITER.counts], [['om:203.0.113.9', 2]], '/v1/forecast and /v1/marine use the same gate');
+  cache.match = match;
 }));
 
 test('/api/daily limits only cache misses per IP on PUBLIC_LIMITER (429 with Retry-After), separately from /api/om', () => withEdge(async cache => {
