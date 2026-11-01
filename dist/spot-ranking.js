@@ -27,6 +27,11 @@ export function waypointTitle(t,rank=t.trip_rank) {
   const depth=t.neighborhood_depth_ft.map(n=>Math.round(n)).join('-');
   return `${String(rank).padStart(2,'0')} ${t.trip_species==='lingcod'?'LC':t.trip_species==='rockfish'?'RF':'LR'} H${t.trip_fit} C${t.evidence_confidence.percent}% ${depth}ft`;
 }
+// SCJ-4: plotter-readable GPX name, e.g. `01 Reef 200-278ft`; `waypointTitle` stays the Chart/planner name.
+export const plotterWord=s=>({lingcod:'Lingcod',rockfish:'Rockfish',reef:'Reef'})[s];
+export function plotterName(t,rank=t.trip_rank) {
+  return `${String(rank).padStart(2,'0')} ${plotterWord(t.trip_species)} ${t.neighborhood_depth_ft.map(n=>Math.round(n)).join('-')}ft`;
+}
 // CI6-01B: `place` is the region's land/water check (web/land-water.ts): only a spot it confirms as
 // water is ranked. Without one every spot is unconfirmed and withheld (fail-closed). `stats.withheld`
 // counts the spots that passed every other filter but were withheld by it.
