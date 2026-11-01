@@ -5,9 +5,11 @@ Decision document for SC-LAUNCH-7 (`second-region`, BUILD in the 2026-11-01 buil
 ## Summary
 
 1. **The repository has no written criteria for `active`.** Neither cited document defines what `active` requires (section 1). In practice the bar is "what Morro Bay has": 10 of 26 coverage needs `ready`, plus home ports and a harbor.
-2. **Morro Bay is not refined.** The roadmap's step 1 ("finish and check the Morro Bay data, brief and trip tools before anything else") still has open items that can be closed without any held right: two expired shore reviews, a stale committed evidence snapshot, and no contour receipt. These come first (section 2).
+2. **Morro Bay is not refined.** The roadmap's step 1 ("finish and check the Morro Bay data, brief and trip tools before anything else") still has open items that need no held right: two expired shore reviews, a stale committed evidence snapshot, and no contour receipt. These come first (section 2). The expired reviews are dated **human** reviews awaiting owner confirmation. An agent can prepare the evidence, but only the owner can renew them.
 3. **Roadmap step 2, Cambria–San Simeon, cannot reach Morro Bay's bar without the held CSUMB rights that G chose not to resolve.** Without those rights it would become `active` only by relabelling data it already shows as a preview (section 4).
-4. **Recommendation: Southern California** (`southern-california`) as the second active region, after the Morro Bay items. It is the only package with depth-qualified targets (11), its seabed sources are public-domain or CC0 NOAA data with no held right, and it adds 8 home ports. Three needs separate it from Morro Bay's bar, and all three can be closed with review work alone.
+4. **Recommendation: Southern California** (`southern-california`) as the second active region, after the Morro Bay items. It is the only package with depth-qualified targets (11), its seabed sources are public-domain or CC0 NOAA data with no held right, and it adds 8 home ports. Three needs separate it from Morro Bay's bar:
+   - Two (`wave-observations`, `substrate`) close with bounded engineering and review work.
+   - The third, `dynamic-closures`, does **not** close through review alone. Its gap is operational Navy range status around the islands, and the static legal text is already watched. The plan adds a fail-closed reader for the official USCG notices. Even then, live clearance stays a trip-time check, so `ready` needs an owner-approved scope (S1 and decision 2 in section 6).
    - **This reorders the roadmap.** The owner sets the order, and the roadmap lists Southern California at no step. G has to accept the reorder before the build card starts (section 6).
 
 ## 1. What `active` requires versus `preview`
@@ -71,7 +73,7 @@ G should adopt this bar, or a stricter one, in writing. The build card then adds
 
 | # | Outstanding item | Evidence at 94d73d10f | Closeable without a held right? |
 | --- | --- | --- | --- |
-| M1 | Shore-habitat legal and access reviews have expired | `dist/regions/morro-bay/shore-habitat.geojson`: `legalReviewExpiresAt` 2026-10-04 and `accessReviewExpiresAt` 2026-10-10 (5 features each); the remaining review expires 2026-11-02. Issue #610 part 3 is open and says the cards now read "expired". | Yes: rerun the reviews. |
+| M1 | Shore-habitat legal and access reviews have expired | `dist/regions/morro-bay/shore-habitat.geojson`: `legalReviewExpiresAt` 2026-10-04 and `accessReviewExpiresAt` 2026-10-10 (5 features each); the remaining source review expires 2026-11-02. Issue #610 part 3 is open and says the cards now read "expired". The dates come from `REVIEWS` in `scripts/collect_shore_habitat.py` (lines 48–57): "Dated human reviews, carried from fish's shore source review of 2026-10-03 … pending owner confirmation. Renew only after re-reading the sources by hand." The importer "copies them verbatim … a fresh download cannot renew a source, access or legal review" (lines 12–14), and `docs/data-sources.md` says the same. The register rows `noaa-esi-2006` and `ccc-access-points` also await owner confirmation. | Yes, but **not by an agent alone.** An agent can prepare a re-read dossier. Renewal is a substantive human review by the owner, and the review windows are 24 h (legal), 7 days (access) and 30 days (source). |
 | M2 | Estero Bluffs shore access is missing | #610 part 3: `schemas/shore-habitat.schema.json` fixes `substrate` to `"sand"`, so rocky bluff cannot be added. This needs a format decision in the Codex lane. | Yes: schema change plus data. |
 | M3 | The committed daily-evidence snapshot is stale and blocked | `dist/data/daily-evidence.json` `generated_at` is 2026-09-21T16:49:19Z and still holds Open-Meteo responses. The register's B1 action ("regenerate `daily-evidence.json` … then remove `open-meteo-api` from `KNOWN_BLOCKERS`") is still open. | Yes: engineering only. |
 | M4 | No receipt for the Morro Bay contours | `docs/coast-capabilities-status.md` row "Contours: Morro Bay shelf": PREVIEW, next item "run `node --test tests/test_depth_contours.mjs` on the shipping head and record the result as a dated receipt". | Yes. |
@@ -79,7 +81,9 @@ G should adopt this bar, or a stricter one, in writing. The build card then adds
 | M6 | Bottom targets are not qualified | `bathymetry` is `partial`: "original output vertical datum and product uncertainty are unresolved; no chart-depth-qualified spot". `surveyed-bottom-targets`, `surveyed-bottom-images` and `fishing-exports` are not ready. The MLLW qualification was withdrawn on 2026-09-27. | Partly. Asking USGS or CSUMB for the datum is outbound and needs G. An original NOAA MLLW BAG over these reefs is the non-outbound route. Long pole, not a launch gate. |
 | M7 | Commercial-use rights on Morro Bay's own habitat product | Data-rights register B3: `usgs-point-buchon`, `usgs-morro-bay` and `usgs-point-estero` are "needs permission" for a paid product. B2: the GFW layer is CC BY-NC. Both are in `KNOWN_BLOCKERS`. | **No.** G skipped `data-rights`. This does not affect the free edition, but it blocks charging money for Morro Bay. |
 
-M1–M5 are the step 1 work. Each is one small card. M6 does not have to block a second region: Morro Bay is active with it open. M7 is a held right and is listed in section 4.
+M1–M5 are the step 1 work. M2–M4 are each one small agent card, and M5 is the existing `tide-bar-timing` BUILD card. M1 has a human gate (see the Phase 0 plan below). All of M1–M5 must be done before the second region's status flag changes (B6). M6 does not have to block a second region: Morro Bay is active with it open. M7 is a held right and is listed in section 4.
+
+A structural note on M1: a 24-hour legal review and a 7-day access review cannot be kept current by occasional hand review. Readers drop a run only when its 30-day source review expires, so the shorter reviews will show "expired" again soon after any renewal. Whether those windows are right is the owner's call. This plan does not change them.
 
 ## 3. Gap table: every package against the bar
 
@@ -141,39 +145,42 @@ So the step 2 package would become `active` only by changing its label. Its evid
 - **Qualified targets.** It is the only package with a `qualified_subset` that is `ready: true`: 11 targets on native 1–4 m MLLW NOAA BAG depth with product uncertainty. That is stronger seabed evidence than Morro Bay's 132 research-only targets.
 - **Clean rights.** Its seabed sources are NOAA public-domain or CC0. A paid product would not have to unwind them.
 - **Audience.** It has 8 reviewed home ports: Santa Barbara, Ventura/Channel Islands, Marina del Rey, Long Beach/San Pedro, Newport Beach, Dana Point, Oceanside and San Diego. Activating it turns on the active-only advisor paths (port pages, daily answers) for anglers outside San Luis Obispo County. This is the card's own reason for a second region: "one region is too narrow for anyone outside it to bother finding us."
-- **Small gap.** Only three of Morro Bay's ten ready needs are not yet ready here.
+- **Small gap.** Only three of Morro Bay's ten ready needs are not yet ready here. Two of them close with bounded work. The third (`dynamic-closures`) is the hard one; see S1.
 
 **Risk:** the package spans Point Conception to the border. Its qualified seabed covers only Anacapa and eastern Santa Cruz Island. Mainland ports get rules, forecasts, tides, MPAs and the historical artificial-reef context, but no native mainland habitat. That still exceeds what Morro Bay's research-only targets support. It does mean "Mapped area" is island-heavy, and the build card must say so in the region's `coverage_note`, not in a banner.
 
 ### Costed plan
 
-Units: one card is one PR or receipt. Lanes and models follow `WORKER-GUIDE.md`: routine is Sol Medium, substantial is Sol High. Times are agent wall-clock estimates, not commitments. There is no spending, no outbound message and no new host.
+Units: one card is one PR or receipt. Lanes and models follow `WORKER-GUIDE.md`: routine is Sol Medium, substantial is Sol High. Times are agent wall-clock estimates, not commitments. **Owner time is not estimated**: rows marked *owner gate* wait on G for an unknown time, and that wait is the critical path. There is no spending, no outbound message and no new host.
 
 | # | Work | Closes | Lane / effort | Estimate |
 | --- | --- | --- | --- | --- |
 | **Phase 0: Morro Bay, refined (roadmap step 1, first)** | | | | |
-| M1 | Rerun the shore-habitat legal and access reviews; the existing importer refreshes the expiry stamps | M1 | Sol Medium | 1 card, about 2 h |
-| M2 | Allow a rocky substrate in `shore-habitat.schema.json`, then add Estero Bluffs (CCC 792–795) | M2 | Codex lane (schema owner), Sol Medium | 1 card, about 3 h |
+| M1a | Prepare a shore re-read dossier: fetch the NOAA ESI layer, the CCC access inventory and item terms, and the CDFW Central Coast rules page, saving responses under `var/` with `--save-sources`. Diff each against the 2026-10-03 hashes and list anything changed (closures, archived points, rule text) for each of the 5 runs and 8 access points. It must **not** edit `REVIEWS` or the register. | evidence only | Sol Medium | 1 card, about 2 h |
+| M1b | **Owner gate.** G (or a human G names) re-reads the sources against the dossier and records a dated decision for each review: renew, or drop the run or access point. Only a human can supply this; an agent rerun cannot. The register rows `noaa-esi-2006` and `ccc-access-points` are confirmed at the same time. | M1 acceptance | Owner (G) | owner time, unknown wait |
+| M1c | After M1b, copy the owner's dated decisions into `REVIEWS` and rebuild offline with `--sources`. The PR cites the M1b decision record and must change no date the owner did not give. | M1 | Sol Medium | 1 card, about 1 h |
+| M2 | Allow a rocky substrate in `shore-habitat.schema.json`, then add Estero Bluffs (CCC 792–795). The new run carries no review date until it passes the same owner gate as M1b. | M2 | Codex lane (schema owner), Sol Medium; owner gate for its review dates | 1 card, about 3 h, plus owner review |
 | M3 | Regenerate the committed `daily-evidence.json` from the current pipeline and remove `open-meteo-api` from `KNOWN_BLOCKERS` (register B1) | M3 | Sol Medium | 1 card, about 2 h |
 | M4 | Contour and charter test receipts on the shipping head | M4 | Sol Medium | 1 card, about 1 h |
 | M5 | `tide-bar-timing` | M5 | Existing BUILD card (not new work) | n/a |
 | **Phase 1: close Southern California's three gaps** | | | | |
-| S1 | **dynamic-closures → ready.** Bind and hash-review the official military and security sources for the package's waters through the approved `ecfr-security` source. That means the 33 CFR 334 danger zones and restricted areas and the 33 CFR 165 security zones that intersect the package, for example around Point Mugu, San Nicolas and San Clemente. The card lists the exact sections. Add each to the Southern legal watch. The reason must name what is bound, replacing "requires direct local clearance". This also makes `season-status` ready. | 1 need, 1 capability | Sol High (legal review content) | 1 card, about 6 h |
+| S1a | **Discovery receipt for operational range status.** The static legal text is already watched: `jurisdictions/california-southern.json` binds San Clemente (33 CFR 165.1141), San Nicolas (334.980), Point Mugu (334.1126) and other 334 sections. Binding more sections would not change the gap reason ("Navy/security access around islands requires direct local clearance"). The repo already treats operational state as a USCG notice matter: `research/catalog/san-miguel-naval-danger-zone.json` says "current operation status requires Local Notice to Mariners or radio confirmation", and `research/receipts/point-conception-launch-hazard-review.json` uses a USCG Broadcast Notice to Mariners. Make a bounded read of the official USCG District 11 Local Notices to Mariners and Broadcast Notices on `www.navcen.uscg.gov`. That host is already in the approved `harbor-authority` source, so no host is added. Record, with hashes, whether the notices name the scheduled operations, areas and times for each 33 CFR area in the package, and how often they are issued. **This is unverified today.** The receipt decides whether S1b is possible. | evidence only | Sol High | 1 card, about 3 h |
+| S1b | **Only if S1a finds usable notices:** add a reviewed candidate source and a fail-closed adapter. Each run binds the current LNM issue and the active BNMs to the 33 CFR areas. An area with a listed operation, an unreadable or out-of-period notice, or an unmatched area is shown as **held: check before entering**, never as clear. Runtime failure publishes no clearance. Tests: a failing-first test that a stale or missing notice yields `held` for every Navy area; a notice naming an area and time window yields `held` inside the window. Source review goes through the normal approval. | operational schedule | Sol High | 1–2 cards, about 8–10 h |
+| S1c | **Owner scope gate.** Even with S1b, a weekly notice and its broadcasts are not live clearance. San Clemente operations, for example, are also announced by radio. `dynamic-closures` can say `ready` only if G accepts this scope: "scheduled Navy operations from official USCG notices, fail-closed; live clearance remains a trip-time check". That matches the trip-time limit `docs/regulations.md` already states ("live Navy clearance is not [checked]"). If G does not accept it, or S1a finds nothing usable, the need **stays `partial`**, and `season-status` stays not ready. Southern California then becomes active only if G explicitly approves an active bar that admits that one `partial` need with the island Navy areas held (section 6, decision 2). The reason text is never edited to close the gap. | `dynamic-closures`, `season-status` | Owner (G) | owner time, unknown wait |
 | S2 | **wave-observations → ready.** For each of the 8 forecast contexts, record a reviewed nearshore and offshore buoy pair with a failover chain in `catalog/station-failover.json`, following the Morro Bay #611 pattern. Use `ndbc-buoys` (approved; CDIP stations are served through NDBC). Add a contract test that every configured backup has a reviewed choice. | 1 need | Sol Medium | 1 card, about 4 h |
 | S3 | **substrate → ready, scoped like Morro Bay's** ("published targets have reviewed … classification"). Write a receipt showing each of the 11 qualified targets has reviewed `noaa-cinms-substrate-2006` hard-bottom classification on its exact footprint. The reviewer decides from the receipt; if it does not prove this, the need stays `partial`. | 1 need | Sol High | 1 card, about 4 h |
 | **Phase 2: flip and verify** | | | | |
-| B6 | Write the `active` bar into `contracts.py`: an `active` region must have every Morro Bay bar need `ready` and at least one home port. Add a failing-first regression test that a region missing one of these is rejected. Flip `southern-california` to `active` and rebuild `dist/regions/index.json`. | the flag | Sol High | 1 card, about 4 h |
+| B6 | Write the `active` bar G approves into `contracts.py`: an `active` region must have every bar need `ready` (or the exact exception G approved in S1c) and at least one home port. Add a failing-first regression test that a region missing one of these is rejected. Flip `southern-california` to `active` and rebuild `dist/regions/index.json`. | the flag | Sol High | 1 card, about 4 h |
 | B7 | Exercise the active-only paths for the 8 ports (port pages, `pregenerateDaily`, rules admin) on the region's feed, then record a feed receipt (regions.md step 6) | verification | Sol Medium | 1 card, about 3 h |
 | B8 | US-L2: region-aware landing readings once a second region is active | front-end backlog | FE lane | existing backlog item |
 
-**Total:** Phase 0 is 4 cards (about 8 h). Phase 1 is 3 cards (about 14 h). Phase 2 is 2 cards (about 7 h) plus US-L2.
+**Agent total:** Phase 0 is 5 agent cards (about 9 h) plus the existing `tide-bar-timing` card. Phase 1 is 4–5 agent cards (about 19–21 h, or about 11 h if S1a finds nothing usable). Phase 2 is 2 cards (about 7 h) plus US-L2. **Owner gates:** M1b, M2's review dates, and S1c, plus G's roadmap decision. Their waits are not estimated and set the real calendar.
 
 **Dependency order:**
 
-- M1–M4 run first and in parallel.
-- S1–S3 run in parallel with each other. Each is independent of Phase 0 but should merge after it, so the roadmap order is kept.
-- B6 depends on S1–S3. B7 depends on B6.
-
+- M1a, M2, M3 and M4 run first and in parallel. M1b waits on M1a; M1c waits on M1b. M5 runs on its own card.
+- S1a, S2 and S3 run in parallel with each other and with Phase 0. S1b waits on S1a. S1c waits on S1b, or on S1a if it finds nothing usable. Phase 1 merges after Phase 0, so the roadmap order is kept.
+- B6 depends on M1c, M2–M5, S1c, S2 and S3. B7 depends on B6.
 Each card is reviewed by a different model from its author, under the standing exact-head merge rule. Nothing here touches secrets, outbound messages or publication beyond the normal on-merge deploy.
 
 ### Why the alternatives are worse
@@ -186,13 +193,15 @@ Each card is reviewed by a different model from its author, under the standing e
 | Northern packages (Bodega to Crescent City) | 0/26 ready; each needs the full regulation, forecast, tide and closure review. |
 | Flip Cambria anyway and call it done | That is a disclaimer by another name. The flag would claim a reviewed coverage the evidence does not have. |
 
-## 6. G decision needed before the build card starts
+## 6. G decisions needed
 
-The roadmap's order is the owner's ("The owner sets the order"). Recommending Southern California moves it ahead of steps 2 and 3. That is a product decision for G, not for a builder:
+The roadmap's order is the owner's ("The owner sets the order"). Recommending Southern California moves it ahead of steps 2 and 3. These are decisions for G, not for a builder. The roadmap choice is not the only human gate: M1b (the shore re-read) and M2's review dates also need the owner, under every option.
+
+**Decision 1: roadmap order (before Phase 1 starts).**
 
 1. **SOCAL (recommended).** Do Phase 0, then Southern California as the second active region.
-   - Pros: the only package with qualified targets; clean rights; 8 ports of new audience; three reviewable gaps.
-   - Cons: departs from the north-then-south order; island-heavy seabed.
+   - Pros: the only package with qualified targets; clean rights; 8 ports of new audience; two gaps close with bounded work.
+   - Cons: departs from the north-then-south order; island-heavy seabed; `dynamic-closures` depends on S1a's unverified finding and on decision 2.
 2. **NORTH.** Keep the roadmap and make Cambria–San Simeon active on conditions, rules and tides only.
    - Pros: follows the written order; cheapest (about 1 card for wave-observations).
    - Cons: no habitat north of 35.56° N while the CSUMB rights stay skipped; no new port or audience; substrate cannot honestly reach `ready`.
@@ -200,4 +209,10 @@ The roadmap's order is the owner's ("The owner sets the order"). Recommending So
    - Pros: no reorder.
    - Cons: "live" stays a one-region demo.
 
-Phase 0 (M1–M4) is needed under every option and can start now.
+**Decision 2: `dynamic-closures` scope for Southern California (after S1a/S1b, before B6).**
+
+1. **Accept the notice scope (recommended if S1b ships):** `ready` means scheduled Navy operations from official USCG notices, fail-closed, with live clearance a trip-time check, the limit `docs/regulations.md` already states.
+2. **Approve an active bar with one held exception:** the need stays `partial`, the island Navy areas show as held, and B6 encodes that exact exception.
+3. **Decline both:** Southern California stays `preview` until a live operational source exists. Phase 0 and S2/S3 still stand.
+
+Agent-only work that can start now under every option: M1a, M2's schema change, M3 and M4. M1b waits on the owner; M1c waits on M1b.
