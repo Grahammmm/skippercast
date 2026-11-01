@@ -189,25 +189,45 @@ export function shoreWind(hour: Pick<ForecastHour, 'windKnots' | 'gustKnots' | '
   return {band: b, side, windKnots: wind, gustKnots: gust, directionDeg};
 }
 
-/** Predicted tide height at `at` from the curve (nearest point within an hour), or null. */
+/** A plain object, not null or an array, so its fields can be read. */
+const plain = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
+
+/** Predicted tide height at `at` from the curve (nearest well-formed point within an hour), or null. */
 function heightAt(at: number, curve: readonly TidePoint[]): number | null {
   let best: TidePoint | undefined, gap = Infinity;
-  for (const point of curve) {const d = Math.abs(Date.parse(point.at) - at); if (Number.isFinite(d) && d < gap) {best = point; gap = d;}}
-  return best && gap <= HOUR && finite(best.heightFt) ? best.heightFt : null;
+  for (const point of curve as readonly unknown[]) {
+    const d = plain(point) && typeof point.at === 'string' && finite(point.heightFt) ? Math.abs(Date.parse(point.at) - at) : NaN;
+    if (Number.isFinite(d) && d < gap) {best = point as TidePoint; gap = d;}
+  }
+  return best && gap <= HOUR ? best.heightFt : null;
+}
+
+/** Well-formed high/low events sorted by time; a time listed as both a high and a low becomes one null-type (unknown) boundary. */
+function cleanEvents(events: readonly TideEvent[]) {
+  const groups = new Map<number, {at: string; heightFt: unknown; type: 'H' | 'L' | null}>();
+  for (const e of events as readonly unknown[]) {
+    const time = plain(e) && typeof e.at === 'string' && (e.type === 'H' || e.type === 'L') ? Date.parse(e.at) : NaN;
+    if (!Number.isFinite(time)) continue;
+    const seen = groups.get(time), event = e as TideEvent;
+    if (!seen) groups.set(time, {at: event.at, heightFt: event.heightFt, type: event.type});
+    else if (seen.type !== event.type) seen.type = null;
+  }
+  return [...groups].sort(([a], [b]) => a - b).map(([, e]) => e);
 }
 
 /**
  * Tide phase from the high and low events around `at`: high within
  * SHORE.tide.highMinutes of a high; otherwise rising before a high and falling
- * before a low; low within the same span of a low. Null without events on both sides.
+ * before a low; low within the same span of a low. Null without events on both sides,
+ * or when a time listed as both a high and a low is within that span or either side.
  */
 export function tidePhase(at: number, events: readonly TideEvent[], curve: readonly TidePoint[] = []): Tide {
-  const sorted = events.filter(e => Number.isFinite(Date.parse(e.at))).sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  const sorted = cleanEvents(events);
   const span = SHORE.tide.highMinutes * MINUTE;
-  const near = (type: 'H' | 'L') => sorted.find(e => e.type === type && Math.abs(Date.parse(e.at) - at) <= span);
+  const near = (type: 'H' | 'L' | null) => sorted.find(e => e.type === type && Math.abs(Date.parse(e.at) - at) <= span);
   const nextEvent = sorted.find(e => Date.parse(e.at) > at), previous = [...sorted].reverse().find(e => Date.parse(e.at) <= at);
-  const high = near('H'), low = near('L');
-  const phase: TidePhase = high ? 'high' : low ? 'low' : nextEvent && previous ? (nextEvent.type === 'H' ? 'rising' : 'falling') : null;
+  const high = near('H'), low = near('L'), conflict = near(null) || nextEvent?.type === null || previous?.type === null;
+  const phase: TidePhase = conflict ? null : high ? 'high' : low ? 'low' : nextEvent && previous ? (nextEvent.type === 'H' ? 'rising' : 'falling') : null;
   const lowEvent = low && finite(low.heightFt) ? low.heightFt : null;
   const heightFt = heightAt(at, curve) ?? (phase === 'low' ? lowEvent : null);
   return {phase, heightFt, veryLow: heightFt !== null && heightFt <= SHORE.tide.veryLowFt, bonus: phase === 'rising' || phase === 'high'};
