@@ -19,7 +19,7 @@
 import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import type {ComponentChildren} from 'preact';
 import {Button, IconButton} from '../ui/Button.tsx';
-import {defaultLimits, LIMIT_BOUNDS, LIMIT_FIELDS, LIMIT_SURGE_BANDS, type ComfortLimits, type LimitField, type LimitSurge} from '../../packages/coast/src/limits.ts';
+import {defaultLimits, gustBelowWind, LIMIT_BOUNDS, LIMIT_FIELDS, LIMIT_SURGE_BANDS, type ComfortLimits, type LimitField, type LimitSurge} from '../../packages/coast/src/limits.ts';
 import {depthLimitFt, PROFILE_TABLE, type Profile} from '../profile.ts';
 import {CRUISE_BOUNDS, cruiseSpeed, hasOwnLimits, limitsFor, resetLimits, saveCruise, saveLimits} from '../limits.ts';
 import {isReachProfile, launchChoice, REACH_BOUNDS, reachFor, saveLaunch, saveReach, saveSpear, SHORE_SWIM_BOUNDS, SPEAR_DEPTH_BOUNDS, spearPlan} from '../reach.ts';
@@ -54,7 +54,7 @@ export function LimitsForm({profile: p, onDone, focusCruise = false, focusReach 
   const area = region.value, launches = launchPoints.value && launchPoints.value.region === area ? launchPoints.value.points : [];
   const [launch, setLaunch] = useState(() => (area && launchChoice.peek()[area]) || '');
   useEffect(() => setDraft(draftOf(limitsFor(p))), [p]);
-  const base = defaultLimits(p), bounds = LIMIT_BOUNDS[p], own = hasOwnLimits(p);
+  const base = defaultLimits(p), bounds = LIMIT_BOUNDS[p], own = hasOwnLimits(p), gustNote = gustBelowWind(draft);
   const set = (field: keyof Draft, value: string) => setDraft(prev => ({...prev, [field]: value}));
   const submit = (event: Event) => {
     event.preventDefault();
@@ -75,11 +75,12 @@ export function LimitsForm({profile: p, onDone, focusCruise = false, focusReach 
           <div class="app-limits-field" key={field}>
             <label for={`${id}-${field}`}>{label} <span class="ui-mono">({unit})</span></label>
             <input id={`${id}-${field}`} name={field} type="number" inputMode="decimal" min={b.min} max={b.max} step={b.step} required
-              value={draft[field]} onInput={event => set(field, (event.currentTarget as HTMLInputElement).value)} aria-describedby={`${id}-${field}-hint`} />
+              value={draft[field]} onInput={event => set(field, (event.currentTarget as HTMLInputElement).value)} aria-describedby={`${id}-${field}-hint${field === 'gust' && gustNote ? ` ${id}-gust-note` : ''}`} />
             <span id={`${id}-${field}-hint`} class="app-limits-hint ui-mono">Default {fmt(base[field])} · {fmt(b.min)}–{fmt(b.max)}</span>
           </div>
         );
       })}
+      {gustNote ? <p class="app-limits-hint" role="note" id={`${id}-gust-note`}>Your gust limit is below your wind limit, so gusts decide every window.</p> : null}
       {p === 'spear' ? (
         <div class="app-limits-field">
           <label for={`${id}-surge`}>Highest surge</label>
