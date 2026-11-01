@@ -3,7 +3,7 @@
  "timezone": "America/Los_Angeles",
  "now": "2026-10-31T19:00:00Z",
  "seed": 20261031,
- "tolerance": 2,
+ "tolerance": 8,
  "color_scheme": "light",
  "frozen_note": "The local server uses the same fixed clock: the Worker's own Date, and the dates of the test database's sample boats, reports and rules, are set to it, so the pages the server renders show the same dates whatever day they are captured.",
  "pr_url": "https://github.com/Grahammmm/skippercast/pull/{n}",

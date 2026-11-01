@@ -78,6 +78,6 @@ def test_classify_names_each_outcome():
 def test_a_same_pair_says_whether_it_is_exact_or_within_the_noise_tolerance():
     page = {"path": "/"}
     exact = showcase.summary_for("same", page, None, None, {"exact": 0, "changed": 0}, "a" * 40, 2)
-    noisy = showcase.summary_for("same", page, None, None, {"exact": 29, "changed": 0}, "a" * 40, 2)
+    noisy = showcase.summary_for("same", page, None, None, {"exact": 29, "changed": 0}, "a" * 40, 8)
     assert "identical, pixel for pixel" in exact
-    assert "29 pixels differ by at most 2 colour levels" in noisy
+    assert "29 pixels differ, each by at most 8 colour levels out of 255 or on an anti-aliased edge" in noisy

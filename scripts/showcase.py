@@ -8,9 +8,12 @@ with the repository's own local server, and captures every page of the pages fil
 Playwright Chromium (scripts/showcase_capture.mjs) at a fixed viewport, clock, seed and set of synthetic
 inputs. It then writes one self-contained HTML page (no scripts, no external styles) with a row per page:
 before on the left, after on the right, the route as the heading and the merged pull requests whose files the
-page loads underneath. Pixel-identical pairs (or pairs whose only differences stay within `tolerance` colour
-levels, which the page then says) read "no visible change" and sort to the bottom. Only a page the old
-revision answers with HTTP 404 or 410 is shown as a new page; any other error, an uncaught page error, a
+page loads underneath. Pixel-identical pairs, and pairs whose only differences are rendering noise, read "no
+visible change" (with the noise stated on the page) and sort to the bottom. Rendering noise is a colour move
+of at most `tolerance` levels out of 255, or an anti-aliased edge pixel that moved by at most 48 levels
+(pixelmatch's edge rule, the comparator behind Playwright's toHaveScreenshot; see showcase_capture.mjs): two
+independent builds and captures of one revision differ in exactly these pixels and nowhere else. Only a page
+the old revision answers with HTTP 404 or 410 is shown as a new page; any other error, an uncaught page error, a
 readiness selector that never appears or a blank page is shown as "did not render" (showcase_capture.mjs). A
 page that never gives the same picture on two fresh loads is shown as unsteady; neither kind is counted as a
 change or as no change. Output: <out>/showcase-<date>.html and its PNGs in <out>/<date>/.
@@ -323,8 +326,8 @@ def summary_for(kind: str, page: dict, before: dict | None, after: dict | None, 
         return f"{diff['changed']:,} pixels differ ({pct:.1%} of the screenshot), {where(diff['box'], diff['width'], diff['height'])}."
     if kind == "same":
         if diff and diff.get("exact"):
-            return (f"No visible change: {diff['exact']:,} pixels differ by at most {tolerance} colour levels out of 255 "
-                    "(anti-aliasing noise at edges, invisible to the eye).")
+            return (f"No visible change: {diff['exact']:,} pixels differ, each by at most {tolerance} colour levels out of 255 "
+                    "or on an anti-aliased edge (rendering noise, invisible to the eye).")
         return "No visible change: the two screenshots are identical, pixel for pixel."
     if kind == "new":
         status = before.get("http_status") if before else None
@@ -446,8 +449,13 @@ def main(argv: list[str] | None = None) -> int:
             "before_date": local(stamp(before)), "after_date": local(stamp(after)), "prs": prs, "pr_url": config.get("pr_url"),
             "now_text": local(config["now"]) if config.get("now") else "the capture time", "frozen_text": config.get("frozen_note", ""),
             "stable_text": ", and each page was loaded afresh until two loads in a row gave the same picture",
-            "tolerance_text": (f"A pixel counts as changed when a colour channel moves by more than {tolerance} levels out of 255; smaller moves are "
-                               "anti-aliasing noise that can differ even between two captures of one revision. " if tolerance else ""),
+            "tolerance_text": ("A pixel counts as changed when a colour channel moves by more than "
+                               f"{tolerance} levels out of 255, unless it is an anti-aliased edge (the blended rim of a curve, "
+                               "slanted line or letter, judged by pixelmatch's rule, the comparator behind Playwright's screenshot "
+                               "tests) that moved by at most 48 levels. Those small moves and edge blends are rendering noise: in "
+                               "two independent builds and captures of one revision, every pixel that differed was of this kind. "
+                               "A changed letter, line, colour or block moves pixels further, and away from edges too, so it is "
+                               "still counted. "),
             "pages_file": args.pages.resolve().relative_to(ROOT).as_posix() if args.pages.resolve().is_relative_to(ROOT) else args.pages.name}
     page_path = out_dir / f"showcase-{date}.html"
     page_path.write_text(render(rows, meta, unshown, others))
