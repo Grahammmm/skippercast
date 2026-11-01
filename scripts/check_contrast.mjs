@@ -381,7 +381,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
-  "legendTsx": "f9ab1a5b85c186af00e673738c2da2b56c97b9329aa5696fdbd5e6d55c9c751e"
+  // SC2007-02 adds the shared quiet Button (Try again) to the Protected areas row; no text paint changed.
+  "legendTsx": "634655f873d7c44a813347bc7742f6950def803c379f6abd54e42ddeed4aaf71"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];

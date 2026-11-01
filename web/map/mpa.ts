@@ -196,6 +196,8 @@ export function assessMpas({region, config, snapshot, coverage, closures}: MpaIn
   return {state: state('partial', NOTES.partial, partialDetail(out.length, checked, status !== ''), checked, out.length), data, screen};
 }
 
+/** The read failures a retry can clear (SC2007-02); a region that names no snapshot is a package fact, not one of them. */
+export const TRANSIENT_DETAILS = {region: 'The region package did not load.', snapshot: 'The boundary snapshot did not load.'} as const;
 /** A region asset path (relative to the site root) that may be fetched: `data/…` or `regions/<id>/…` GeoJSON. */
 const ASSET = /^(?:data|regions\/[a-z0-9-]{1,80})\/[A-Za-z0-9._-]{1,120}\.geojson$/;
 async function json(fetchFn: typeof fetch, url: string): Promise<unknown> {
@@ -211,7 +213,7 @@ export async function loadMpas(region: string, fetchFn: typeof fetch, page: stri
   const failed = (detail: string, closures?: null): MpaResult => ({state: state('unavailable', NOTES.unavailable, detail), data: EMPTY(), screen: {areas: null, checkedAt: null, closures}});
   const base = `regions/${encodeURIComponent(region)}/`;
   let config: RegionMpaConfig;
-  try { config = (obj(await json(fetchFn, at(`${base}region.json`))) ?? {}) as RegionMpaConfig; } catch { return failed('The region package did not load.'); }
+  try { config = (obj(await json(fetchFn, at(`${base}region.json`))) ?? {}) as RegionMpaConfig; } catch { return failed(TRANSIENT_DETAILS.region); }
   const asset = text(config.assets?.protected_areas), closuresAsset = text(config.assets?.closures), named = closuresAsset ? null : undefined;
   if (!ASSET.test(asset)) return failed('This region names no boundary snapshot.', named);
   const [snapshot, coverage, closures] = await Promise.all([
@@ -219,7 +221,7 @@ export async function loadMpas(region: string, fetchFn: typeof fetch, page: stri
     json(fetchFn, at(`${base}coverage.json`)).catch(() => null),
     closuresAsset ? (ASSET.test(closuresAsset) ? json(fetchFn, at(closuresAsset)).catch(() => null) : Promise.resolve(null)) : Promise.resolve(undefined),
   ]);
-  if (snapshot === null) return failed('The boundary snapshot did not load.', named);
+  if (snapshot === null) return failed(TRANSIENT_DETAILS.snapshot, named);
   return assessMpas({region, config, snapshot, coverage, closures});
 }
 
