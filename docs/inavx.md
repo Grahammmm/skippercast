@@ -5,7 +5,7 @@ Use the app’s **Export** tab to choose your region and spots. Start with a few
 1. Back up your existing iNavX waypoints and tracks.
 2. Choose **Share / Save file**, then iNavX. If the browser cannot share directly, it downloads the GPX instead.
 3. Open the downloaded GPX in **Files → Downloads**, choose **Share → iNavX**, and follow the import prompt. An AirDrop transfer may use a different Files location.
-4. Display imported waypoints and tracks. Check a stable `SC26-` spot ID, its latitude/longitude and its outline against SkipperCast. Track display may differ by app version. Ranked waypoint names read like `01 Reef 200-278ft` (priority, target, depth in feet); the stable `SC26-` ID is in each waypoint's comment, and the full method notes are in the offline notes file.
+4. Display imported waypoints and tracks. Check a stable `SC26-` spot ID, its latitude/longitude and its outline against SkipperCast. Track display may differ by app version. Ranked waypoint names read like `01 Reef 200-278ft` (priority, target, depth in feet); the stable `SC26-` ID is in each waypoint's comment, producer credits and use terms are in its source (`src`) field, and the full method notes are in the offline notes file.
 5. Download the separate offline notes HTML if you want readable source, depth and terrain notes on your iPad. It is not a chartplotter import file and does not update offline.
 
 [Official waypoint help](https://inavx.com/h/inavx/waypoints.htm) documents GPX import. [Official track help](https://inavx.com/h/inavx/track.htm) describes tracks and their display. This release has not been imported on a physical iNavX device; browser sharing does not confirm a successful import.

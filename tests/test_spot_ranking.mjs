@@ -72,6 +72,21 @@ test('producer credits and use restrictions survive canonical loading, GPX and o
  }
  assert.match(atlas.areas[0].extent_note,/for-profit permission required/);
 });
+test('SCJ-4 ranked waypoint-only GPX (outlines off) keeps producer credits, use terms and policy URL',async()=>{
+ const rights=[{source_id:'survey',attribution:'Original producer <credit>',notice:'Public noncommercial use only; for-profit permission required. Not for navigation.',policy_url:'https://example.org/terms'}];
+ const f=await fixture(d=>d.features[0].properties.source_rights=rights);
+ f.manifest.source_use_notice='Retain producer terms';
+ const atlas=await loadReefTrip('morro-bay',f),region={id:'morro-bay',mpa:{bounds:[-122,34,-120,36]}};
+ atlas.targets=bestSpots(atlas,screen);assert.equal(atlas.targets[0].trip_rank,1);
+ const r=buildExport({atlas,screen,ids:['reef-a'],layers:{waypoints:true,outlines:false,alignments:false,exclusions:false},region});
+ assert.equal(r.counts.outlines,0);assert.doesNotMatch(r.gpx,/<trk>/);
+ const wpt=r.gpx.match(/<wpt [^>]*>.*?<\/wpt>/)[0];
+ assert.match(wpt,/<name>01 Reef 90-120ft<\/name>/);
+ assert.match(wpt,/<src>Original producer &lt;credit&gt; Public noncommercial use only; for-profit permission required\. Not for navigation\. https:\/\/example\.org\/terms<\/src>/);
+ assert.doesNotMatch(r.gpx,/<credit>/);
+ const desc=wpt.match(/<desc>([^<]*)<\/desc>/)[1];
+ assert.ok(!desc.includes('\n')&&desc.length<=160&&!desc.includes('producer'),'the waypoint description stays one short line');
+});
 test('new credited publication rejects absent or partially malformed contributor notices',async()=>{
  for(const value of [undefined,[],[{source_id:'survey',attribution:'Producer'}],
   [{source_id:'survey',attribution:'Producer',notice:'Terms'},{source_id:'other',notice:'Terms'}]]){

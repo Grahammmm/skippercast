@@ -38,10 +38,12 @@ export function featuresGPX(atlas,features,title,options={}) {
   const points=selected.map(t=>{
   if(t.user_waypoint)return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(t.name)}</name><cmt>${xml(t.id)}</cmt><desc>User waypoint. User-supplied label; not verified habitat, depth or navigation guidance. Check current regulations, closures, conditions and official charts.</desc><type>${xml(t.category)}</type></wpt>`;
   // SCJ-4: a ranked spot gets a short plotter name and a one-line description; the method notes stay in the offline notes.
+  // Producer credits, use terms and policy URLs travel with the waypoint in <src>, so a waypoint-only GPX keeps them.
   if(t.trip_rank&&plotterWord(t.trip_species)){
     const [lo,hi]=t.neighborhood_depth_ft.map(n=>Math.round(n));
     const desc=`${plotterWord(t.trip_species)} habitat, about ${lo}–${hi} ft. Habitat estimate, not a sounding or catch forecast. Check current rules, closures and your chart.`;
-    return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(plotterName(t))}</name><cmt>${xml(t.id)}</cmt><desc>${xml(desc)}</desc><link href="${xml(t.source_url)}"/><sym>Fishing Area</sym></wpt>`;
+    const rights=(t.source_rights||[]).map(r=>`${r.credit} ${r.notice}${r.policyURL?' '+r.policyURL:''}`).join(' ');
+    return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(plotterName(t))}</name><cmt>${xml(t.id)}</cmt><desc>${xml(desc)}</desc>${rights?`<src>${xml(rights)}</src>`:''}<link href="${xml(t.source_url)}"/><sym>Fishing Area</sym></wpt>`;
   }
   const notes = [
     t.label,
