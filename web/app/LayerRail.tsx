@@ -38,7 +38,10 @@ import {aisOn, aisState} from '../map/commercial-ais.ts';
 import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, toggleActivity} from '../map/fleet.ts';
 import {CHART_ONLY, drawsIn, layerEntry, railNotes} from '../map/layers.ts';
-import {currentStatus, setTerrainOption, shownPresentation, terrainOptions, terrainShading} from '../map/stage.ts';
+import type {CoastHabitat} from '../../packages/coast/src/embed-types.ts';
+import {
+  currentStatus, exploreRankedReef, selectRankedReef, setTerrainOption, shownPresentation, terrainHabitat, terrainOptions, terrainShading,
+} from '../map/stage.ts';
 import {base, current, DEFAULT_CURRENT, grade, isBase, layers, layersParam, profile, region, setParams, species, UNSUPPORTED, type Base} from '../state.ts';
 import {RAIL_ENTRIES, railOn, toggled} from './rail.ts';
 
@@ -124,9 +127,34 @@ function Range({id, label, value, text, min, max, step, ends, onInput}: {
   );
 }
 
+/**
+ * The renderer's habitat rail (#519): its status sentence (why there are no reefs: withheld, unavailable for this target), its
+ * ranked reefs, at most 12, each selecting that reef, and v1's "Explore a ranked reef". Every string but that label is the renderer's.
+ */
+function HabitatRanks({habitat}: {habitat: CoastHabitat}) {
+  const ranks = habitat.ranks.slice(0, 12);
+  return (
+    <>
+      <p class="app-rail-hint" role="status" data-reason="habitat">{habitat.status}</p>
+      {ranks.length ? (
+        <ol>
+          {ranks.map(r => (
+            <li key={r.id}>
+              <button type="button" class="ui-button ui-button--quiet ui-button--sm" onClick={() => selectRankedReef(r.id)}>
+                <b>{r.title}</b> <small>{r.detail}</small>
+              </button>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+      <button type="button" class="ui-button ui-button--sm" disabled={!habitat.canExplore} onClick={() => { exploreRankedReef(); }}>Explore a ranked reef</button>
+    </>
+  );
+}
+
 /** The terrain's options under the Seafloor entry (FE-80), with the native panel's labels and notes, in a disclosure so the rail stays short. */
 export function TerrainOptions({on}: {on: boolean}) {
-  const o = terrainOptions.value;
+  const o = terrainOptions.value, habitat = terrainHabitat.value;
   return (
     <details class="app-rail-options app-rail-terrain">
       <summary class="app-rail-option">Terrain options</summary>
@@ -146,6 +174,7 @@ export function TerrainOptions({on}: {on: boolean}) {
         ends={['Shaded relief', 'Photo']} onInput={v => setTerrainOption('photoMix', v)} />
       <Option label="Source coverage" checked={o.sourceCoverage} onChange={v => setTerrainOption('sourceCoverage', v)} />
       <Option label="Reefs & species pins" checked={o.habitat && on} disabled={!on} onChange={v => setTerrainOption('habitat', v)} />
+      {habitat ? <HabitatRanks habitat={habitat} /> : null}
       </div>
     </details>
   );
