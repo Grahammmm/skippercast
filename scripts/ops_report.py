@@ -104,7 +104,6 @@ def query(sql, *, account, token, opener=urlopen):
     with opener(request, timeout=30) as response:
         answer = json.load(response)
     rows = answer.get('data', []) if isinstance(answer, dict) else None
-    # Our own words only: the body never reaches the ::error:: line.
     if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
         raise ValueError('unexpected answer shape')
     return rows
