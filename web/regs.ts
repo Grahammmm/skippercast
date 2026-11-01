@@ -28,6 +28,8 @@ export interface RulesRegion {
 }
 export interface RuleState {
   status: string; label: string; today: string; reason: string; issues: string[]; profile?: Data; timingNote?: string | null; members?: RuleState[];
+  /** A source check is older than the registry's own `check_interval_hours` (still inside the `maxAgeHours` ceiling). */
+  overdue?: boolean;
 }
 export interface RuleSummary {
   status: string; label: string; bag: string[]; size: string[]; depth: string | null; verified: string | null; checked: string | null; link: string; linkLabel: string;
@@ -52,8 +54,8 @@ const validWindows = (p: Data, data: Data, tz: string): boolean => Array.isArray
 const age = (s: unknown, now: number): number => (now - Date.parse(String(s))) / HOUR;
 /** The registry's own `max_age_hours`, never looser than the 36 h the daily gate (regulations.py) enforces. */
 export const maxAgeHours = (data: Data): number => Number.isFinite(data?.max_age_hours) && data.max_age_hours > 0 ? Math.min(36, data.max_age_hours) : 36;
-/** Reviewed source that is a species' own CDFW page, when its registry lists one (a page about the species, not the area). */
-const SPECIES_PAGE: Readonly<Record<string, string>> = {salmon: 'rules-salmon', dungeness: 'rules-crab', 'pacific-halibut': 'rules-pacific-halibut', lobster: 'rules-lobster', lingcod: 'rules-groundfish', rockfish: 'rules-groundfish'};
+/** Reviewed source that is a species' own official page, when its registry lists one (a page about the species, not the area; the tunas' is the federal HMS rule, not CDFW's). */
+const SPECIES_PAGE: Readonly<Record<string, string>> = {salmon: 'rules-salmon', dungeness: 'rules-crab', 'pacific-halibut': 'rules-pacific-halibut', lobster: 'rules-lobster', albacore: 'rules-tuna-federal', bluefin: 'rules-tuna-federal', lingcod: 'rules-groundfish', rockfish: 'rules-groundfish'};
 
 /** dist/regulations.js `ruleProfile`: a target's own complete registry record, else null. */
 export function ruleProfile(data: Data, id: string, region: RulesRegion): Data {
@@ -101,7 +103,7 @@ export function regulationState(data: Data, species: string, region: RulesRegion
     const members = ['lingcod', 'rockfish'].map(id => regulationState(data, id, region, now, tripDate, tripInstant));
     const status = ['excluded', 'unknown', 'closed', 'scheduled', 'restricted', 'open'].find(s => members.some(m => m.status === s))!;
     const first = members.find(m => m.status === status)!;
-    return {...first, members, issues: [...new Set(members.flatMap(m => m.issues))],
+    return {...first, members, overdue: members.some(m => m.overdue), issues: [...new Set(members.flatMap(m => m.issues))],
       label: status === 'closed' && members.some(m => m.status !== 'closed') ? 'Check both seasons' : first.label};
   }
   const today = dateOnly(tripDate) ? tripDate! : dayIn(tz, now);
@@ -129,7 +131,8 @@ export function regulationState(data: Data, species: string, region: RulesRegion
     reason = issues.some(id => data.checks[id]?.status === 'changed') ? 'An official source changed after review. The saved limits below may have changed; check CDFW.'
       : `The daily source check is incomplete or over ${maxAgeHours(data)} hours old. Check CDFW; saved rules are shown below.`;
   }
-  const state: RuleState = {status, label: timedRestriction && status === 'restricted' ? 'Opening time applies' : LABELS[status]!, today, reason, issues, profile: p, timingNote};
+  const interval = checkIntervalHours(data), overdue = interval !== null && p.source_ids.some((id: string) => age(data.checks?.[id]?.data_retrieved_at, now) > interval);
+  const state: RuleState = {status, label: timedRestriction && status === 'restricted' ? 'Opening time applies' : LABELS[status]!, today, reason, issues, profile: p, timingNote, overdue};
   // v1's geographicSeasonState with no location chosen.
   const area = window?.geography;
   return area && ['open', 'restricted'].includes(status) ? {...state, status: 'unknown', label: 'Choose fishing location', reason: `This season applies only within a geographic area. ${area.note}`} : state;
@@ -153,6 +156,8 @@ export function depthLimit(profile: Data, today: string): string | null {
   if (w.access || w.restriction) return null;
   return /\ball depths\b/i.test(profile.season || '') ? 'All depths' : null;
 }
+/** The registry's own scheduled-check interval (`check_interval_hours`), or null when it names none. A check older than this is overdue, though still inside the hard `maxAgeHours` ceiling. */
+export const checkIntervalHours = (data: Data): number | null => Number.isFinite(data?.check_interval_hours) && data.check_interval_hours > 0 ? data.check_interval_hours : null;
 /** dist/regulations.js `ruleSummary`: status, bag, size, depth, the verified date and one official link. */
 export function ruleSummary(data: Data, species: string, state: RuleState, region: RulesRegion): RuleSummary {
   const tz = zoneOf(region), ids = species === 'reef' ? ['lingcod', 'rockfish'] : [species];
@@ -177,7 +182,9 @@ export function ruleSummary(data: Data, species: string, state: RuleState, regio
   // SP-RULES-STATUS: "Verified" is a source-check statement for a known state only. An unknown state (outside the
   // reviewed rule period, a review time beyond the tolerance, a season that needs a fishing location) can have no
   // source issues, so the state itself gates the badge; its last parseable check still reads as `checked`.
-  if (oldest && status !== 'unknown' && !state.issues?.length && data.rules_review_status === 'reviewed') summary.verified = short(oldest);
+  // A check older than the registry's own interval is overdue: it reads as needing a recheck, never as Verified, even while
+  // inside the hard max-age ceiling that still gates the rule itself (sourceIssues).
+  if (oldest && !state.overdue && status !== 'unknown' && !state.issues?.length && data.rules_review_status === 'reviewed') summary.verified = short(oldest);
   else summary.checked = short(oldest);
   const primary = species === 'reef' ? 'rules-groundfish' : profiles[0].primary_source_id || profiles[0].source_ids[0];
   if (data.sources?.[primary]?.url) { summary.link = officialURL(data.sources[primary].url, region); summary.linkLabel = species === 'reef' ? 'Official groundfish rules' : 'Official rules'; }

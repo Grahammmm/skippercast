@@ -53,6 +53,33 @@ test('a species with its own reviewed CDFW page links it beside the place page',
   assert.equal(row(d, 'salmon').summary.link, d.sources['rules-central'].url, 'the place page is kept');
   assert.equal(speciesPage(d, 'dungeness', REGION).href, d.sources['rules-crab'].url);
   assert.equal(speciesPage(d, 'lingcod', REGION).href, d.sources['rules-groundfish'].url);
-  assert.equal(speciesPage(d, 'albacore', REGION), null, 'no species page in the registry: no invented link');
+  assert.equal(speciesPage(d, 'albacore', REGION).href, d.sources['rules-tuna-federal'].url, 'the tunas link the reviewed federal rule');
+  assert.equal(speciesPage(d, 'bluefin', REGION).href, d.sources['rules-tuna-federal'].url);
+  assert.equal(speciesPage(d, 'halibut', REGION), null, 'California halibut has no dedicated reviewed page: no invented link');
   assert.equal(speciesPage(null, 'salmon', REGION), null);
+});
+
+test('the committed registry: 24 h interval, 36 h ceiling - a 30 h check is overdue, still gated open, and says so', () => {
+  const d = data();
+  assert.equal(d.check_interval_hours, 24); assert.equal(d.max_age_hours, 36);
+  for (const check of Object.values(d.checks)) check.data_retrieved_at = new Date(NOW - 30 * HOUR).toISOString();
+  const r = row(d, 'salmon');
+  assert.notEqual(r.state.status, 'unknown', 'inside the 36 h ceiling the rule itself is not withheld');
+  assert.equal(r.summary.verified, null, 'overdue is not Verified');
+  assert.equal(verifiedText(r.summary), 'Needs recheck · last check Sep 20');
+  const reef = row(d, 'reef'); assert.equal(reef.summary.verified, null);
+});
+
+test('a 1 h check is Verified; a 40 h check is withheld by the 36 h ceiling', () => {
+  const d = data();
+  for (const check of Object.values(d.checks)) check.data_retrieved_at = new Date(NOW - HOUR).toISOString();
+  assert.equal(verifiedText(row(d, 'salmon').summary), 'Verified Sep 21');
+  for (const check of Object.values(d.checks)) check.data_retrieved_at = new Date(NOW - 40 * HOUR).toISOString();
+  assert.equal(row(d, 'salmon').state.status, 'unknown');
+});
+
+test('every card links the place page; species pages exist exactly where the registry lists one', () => {
+  const d = data(), got = {};
+  for (const id of REGION.species) { const s = row(d, id).summary; assert.ok(s.link.startsWith('https://'), id); got[id] = speciesPage(d, id, REGION)?.href ?? null; }
+  assert.deepEqual(Object.keys(got).filter(id => got[id] === null).sort(), ['halibut', 'reef'].filter(id => REGION.species.includes(id)).sort());
 });
