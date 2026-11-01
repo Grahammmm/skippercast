@@ -8,9 +8,33 @@ counted as a source fetch failure: the 5-of-7-day coverage gate
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 
 PAST_DAY_REPORT = 'catches-'
+# Exception type name (the part of a collector issue before the first ': ') -> class. The rest can
+# hold provider page text: only the class is printed, plus the status of http.HTTPStatusError ('HTTP 503 from host').
+ERROR_CLASSES = {name: cls for cls, names in (
+    ('http', 'HTTPStatusError'), ('transport', 'TransportError TLSVerificationError TimeoutError ConnectionError'),
+    ('contract', 'ContractError BodyTooLarge DisallowedHost'),
+    ('parse', 'ValueError KeyError IndexError TypeError JSONDecodeError UnicodeDecodeError'),
+) for name in names.split()}
+_HTTP_STATUS = re.compile(r'(?:HTTP )?(\d{3})(?!\d)')
+
+
+def error_class(issue):
+    """The error class of one collector issue, from its exception type name only."""
+    if not isinstance(issue, str) or not issue.strip():
+        return 'other'
+    name, _, rest = issue.partition(': ')
+    cls = ERROR_CLASSES.get(name, 'other')
+    if name == 'ValueError' and rest == 'Empty response':
+        return 'empty'
+    if cls == 'http':
+        status = _HTTP_STATUS.match(rest)
+        if status:
+            return f'http {status.group(1)}'
+    return cls
 
 
 def main(argv=None):
@@ -35,6 +59,9 @@ def main(argv=None):
                     if evidence['sources'][ident]['status'] in ('failed', 'retained')]
     past_day = [ident for ident in fetch_failed if ident.startswith(PAST_DAY_REPORT)]
     source_failures = [ident for ident in fetch_failed if ident not in past_day]
+    classes = {ident: error_class(evidence['sources'][ident].get('issue')) for ident in fetch_failed}
+    for ident in fetch_failed:
+        print(f"{region} {ident}: {classes[ident]}")
     with open(args.summary, 'a') as out:
         out.write(f"## {region} draft rehearsal\n")
         out.write(f"{health['sources_ok']}/{health['sources_total']} sources healthy; legal source changes or failures: {len(rules['review_required'])}; source fetch failures: {len(source_failures)}.\n")
@@ -42,7 +69,7 @@ def main(argv=None):
             out.write(f'Past-day landing reports that failed: {len(past_day)} (left to the 5-of-7 coverage gate).\n')
         out.write('This is unpublished source evidence, not fishing permission or site clearance.\n')
         for issue in health['issues']:
-            out.write(f'- {issue}\n')
+            out.write(f'- {issue}: {classes[issue]}\n' if issue in classes else f'- {issue}\n')
     if rules['review_required'] or source_failures or not health['critical_available']:
         raise SystemExit('Draft evidence needs review before regional promotion')
     return 0
