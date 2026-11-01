@@ -116,6 +116,37 @@ class Corroboration(unittest.TestCase):
         self.assertEqual(rep["pairs"][0]["status"], "corroborated")
 
 
+class RivalCost(unittest.TestCase):
+    def test_a_rule_that_adds_a_rival_to_an_already_matched_vessel_is_charged(self):
+        rep = run([vessel("v1", "Capt Kirk Star")],
+                  [static(999000001, "CAPT KIRK STAR"), static(999000002, "CAPTAIN KIRK STAR")])
+        c = rep["counts"]
+        self.assertEqual((c["matched_aisbulk1_rule"], c["newly_matched_vessels"], c["matched_after"]), (1, 0, 1))
+        self.assertEqual([(p["role"], p["rule"]) for p in rep["pairs"]], [("existing-base-rival", "R5-abbreviations")])
+        self.assertEqual(c["rival_pairs_on_existing_vessels"], 1)
+        self.assertEqual(c["existing_vessels_newly_ambiguous"], 1)
+        r5 = c["per_rule"]["R5-abbreviations"]
+        self.assertEqual((r5["clean"], r5["rival_pairs_on_existing_vessels"], r5["ambiguity_cost_pairs"],
+                          r5["ambiguity_cost_vessels"]), (0, 1, 1, 1))
+        self.assertEqual(rep["pairs"][0]["status"], "ambiguous")
+
+    def test_a_later_rules_rival_is_not_hidden_under_the_earlier_rule_that_reached_the_vessel(self):
+        rep = run([vessel("v1", "Capt Dave Jr")],
+                  [static(999000001, "CAPT DAVE"), static(999000002, "CAPTAIN DAVE")])
+        roles = {p["rule"]: p["role"] for p in rep["pairs"]}
+        self.assertEqual(roles, {"R2-generational-jr-sr": "primary", "R7-combined-folds": "secondary-rival"})
+        per = rep["counts"]["per_rule"]
+        self.assertEqual((per["R2-generational-jr-sr"]["clean"], per["R2-generational-jr-sr"]["ambiguous"]), (0, 1))
+        self.assertEqual(per["R7-combined-folds"]["secondary_rival_pairs_on_new_vessels"], 1)
+        self.assertEqual(per["R7-combined-folds"]["ambiguity_cost_pairs"], 1)
+        self.assertEqual(rep["counts"]["new_pairs"], 2)
+
+    def test_a_clean_existing_match_with_no_rival_costs_nothing(self):
+        rep = run([vessel("v1", "Capt Kirk Star")], [static(999000001, "CAPT KIRK STAR")])
+        self.assertEqual(rep["counts"]["rival_pairs_on_existing_vessels"], 0)
+        self.assertEqual(rep["existing_vessels_with_rivals"], [])
+
+
 class Unmatched(unittest.TestCase):
     def test_causes(self):
         rep = run([vessel("v1", "Zephyrine Quest"), vessel("v2", "Zephyrine Star Quest"), vessel("v3", "Boat name not stated")],

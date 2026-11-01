@@ -255,33 +255,48 @@ def rematch(registry: list[dict], statics: Mapping[str, J.Static], presence: Map
     legacy = sum(1 for r in registry if J.legacy_norm(r["name"]) and legacy_index.get(J.legacy_norm(r["name"])))
     matched_base = {v for v, m in base.items() if m}
     # claims: how many registry vessels each MMSI is matched to under any rule (the PATRIOT trap)
-    claims: dict[str, set] = defaultdict(set)
+    base_claims: dict[str, set] = defaultdict(set)
     for v, m in base.items():
         for x in m:
-            claims[x].add(v)
+            base_claims[x].add(v)
+    claims: dict[str, set] = defaultdict(set, {k: set(s) for k, s in base_claims.items()})
     for v, found in hits.items():
         for x in found:
             claims[x].add(v)
     name_share = Counter(rule_keys(r["name"])["base"] for r in registry)
-    base_ambiguous = sum(1 for v in matched_base if len(base[v]) > 1 or any(len(claims[m]) > 1 for m in base[v])
-                         or name_share[rule_keys(by_id[v]["name"])["base"]] > 1)
-    pairs, vessels = [], {}
+
+    def base_is_ambiguous(v):
+        return (len(base[v]) > 1 or any(len(base_claims[m]) > 1 for m in base[v])
+                or name_share[rule_keys(by_id[v]["name"])["base"]] > 1)
+    base_ambiguous = sum(1 for v in matched_base if base_is_ambiguous(v))
+    pairs, vessels, existing = [], {}, {}
+    # Every registry row is audited, not only the newly reached ones: a rule can also add a second MMSI to a
+    # vessel the AISBULK-1 rule already matched, and that rival is a cost of the rule.
     for vid, found in hits.items():
-        if vid in matched_base or not found:
+        if not found:
             continue
         r = by_id[vid]
+        is_base = vid in matched_base
         ranked = sorted(found.items(), key=lambda kv: RULE_ORDER.index(kv[1]))
         rule = ranked[0][1]
         why = []
-        if len(found) > 1:
+        if is_base:
+            why.append(f"adds {len(found)} MMSI(s) to a vessel the AISBULK-1 rule already matched")
+        elif len(found) > 1:
             why.append(f"{len(found)} MMSIs match")
         if any(len(claims[m]) > 1 for m in found):
             why.append("an MMSI is also matched to another registry vessel")
         if name_share[rule_keys(r["name"])["base"]] > 1:
             why.append("the registry has this name at more than one port")
-        vessels[vid] = {"vessel_id": vid, "name": r["name"], "port_id": r["port_id"], "rule": rule,
-                        "ambiguous": bool(why), "ambiguity": why, "mmsis": sorted(found)}
-        for m, prule in ranked:
+        entry = {"vessel_id": vid, "name": r["name"], "port_id": r["port_id"], "rule": rule,
+                 "ambiguous": bool(why), "ambiguity": why, "mmsis": sorted(found)}
+        if is_base:
+            entry["base_ambiguous_before"] = base_is_ambiguous(vid)
+            existing[vid] = entry
+        else:
+            vessels[vid] = entry
+        for i, (m, prule) in enumerate(ranked):
+            role = "existing-base-rival" if is_base else "primary" if i == 0 else "secondary-rival"
             s = statics[m]
             days = presence.get(m, Counter())
             home = days.get(r["port_id"], 0)
@@ -297,7 +312,7 @@ def rematch(registry: list[dict], statics: Mapping[str, J.Static], presence: Map
             lic_ok = bool(lic and lic.get("status") == "active"
                           and rule_keys(lic["name"])["R7-combined-folds"] == rule_keys(r["name"])["R7-combined-folds"])
             need = 1 if STRENGTH[prule] == "exact" else 3
-            if vessels[vid]["ambiguous"]:
+            if entry["ambiguous"]:
                 status = "ambiguous"
             elif conflicts:
                 status = "contradicted"
@@ -309,19 +324,30 @@ def rematch(registry: list[dict], statics: Mapping[str, J.Static], presence: Map
                 + ([f"home-port presence {home}d"] if home else [])
             pairs.append({"vessel_id": vid, "our_name": r["name"], "port_id": r["port_id"], "ais_name": s.name,
                           "mmsi": m, "call_sign": s.call_sign, "ship_type": s.ship_type, "length_m": s.length_m,
-                          "rule": prule, "status": status, "ambiguity": why, "conflicts": conflicts,
+                          "rule": prule, "role": role, "status": status, "ambiguity": why, "conflicts": conflicts,
+                          "collides_with_other_vessel": len(claims[m]) > 1,
                           "home_port_days": home, "other_ports": {p: d for p, d in days.items() if p != r["port_id"]},
                           "support": support})
     per_rule = {}
     for rid in RULE_ORDER:
         vs = [v for v in vessels.values() if v["rule"] == rid]
         ps = [p for p in pairs if p["rule"] == rid]
+        by_role = Counter(p["role"] for p in ps)
+        # cost = every pair this rule contributed to an ambiguous vessel, whichever rule reached it first
+        cost = [p for p in ps if p["ambiguity"]]
         per_rule[rid] = {"vessels_newly_matched": len(vs), "clean": sum(1 for v in vs if not v["ambiguous"]),
                          "ambiguous": sum(1 for v in vs if v["ambiguous"]),
                          "candidate": sum(1 for p in ps if p["status"] == "candidate"),
                          "corroborated": sum(1 for p in ps if p["status"] == "corroborated"),
                          "contradicted": sum(1 for p in ps if p["status"] == "contradicted"),
-                         "pairs": len(ps)}
+                         "pairs": len(ps),
+                         "rival_pairs_on_existing_vessels": by_role["existing-base-rival"],
+                         "existing_vessels_given_a_rival": len({p["vessel_id"] for p in ps
+                                                                if p["role"] == "existing-base-rival"}),
+                         "secondary_rival_pairs_on_new_vessels": by_role["secondary-rival"],
+                         "pairs_colliding_with_another_vessel": sum(1 for p in ps if p["collides_with_other_vessel"]),
+                         "ambiguity_cost_pairs": len(cost),
+                         "ambiguity_cost_vessels": len({p["vessel_id"] for p in cost})}
     # a vessel is corroborated when exactly one pair is and the vessel is not ambiguous
     vstatus = {}
     for vid, v in vessels.items():
@@ -338,12 +364,17 @@ def rematch(registry: list[dict], statics: Mapping[str, J.Static], presence: Map
         "newly_matched_vessels": len(vessels), "matched_after": len(matched_base) + len(vessels),
         "newly_matched_clean": sum(1 for v in vessels.values() if not v["ambiguous"]),
         "newly_matched_ambiguous": sum(1 for v in vessels.values() if v["ambiguous"]),
-        "new_pairs": len(pairs),
+        "new_pairs": sum(1 for p in pairs if p["role"] != "existing-base-rival"),
+        "rival_pairs_on_existing_vessels": sum(1 for p in pairs if p["role"] == "existing-base-rival"),
+        "existing_vessels_given_a_rival": len(existing),
+        "existing_vessels_newly_ambiguous": sum(1 for e in existing.values() if not e["base_ambiguous_before"]),
+        "all_pairs_added": len(pairs),
         "vessels_by_final_status": dict(sorted(Counter(vstatus.values()).items())),
         "resolved_by_this_tool": 0, "per_rule": per_rule,
         "unmatched_after": len(unmatched), "unmatched_by_cause": dict(sorted(Counter(u["cause"] for u in unmatched).items())),
     }
-    return {"counts": counts, "pairs": pairs, "vessels": list(vessels.values()), "vessel_status": vstatus,
+    return {"counts": counts, "pairs": pairs, "vessels": list(vessels.values()),
+            "existing_vessels_with_rivals": list(existing.values()), "vessel_status": vstatus,
             "unmatched": unmatched}
 
 
@@ -416,25 +447,37 @@ def _cell(v) -> str:
 
 def pr_table(rep: dict) -> str:
     """The new-pair table for a PR body: no MMSIs and no call signs (only whether one is broadcast)."""
-    lines = ["| Our name | Port | AIS name | Call sign broadcast | Type | Length m | Rule | Home-port days | Status |",
-             "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+    lines = ["| Our name | Port | AIS name | Call sign broadcast | Type | Length m | Rule | Role | Home-port days | Status |",
+             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     for p in sorted(rep["pairs"], key=lambda p: (RULE_ORDER.index(p["rule"]), p["port_id"], p["our_name"])):
         lines.append("| " + " | ".join(_cell(x) for x in (
             p["our_name"], p["port_id"], p["ais_name"], "yes" if p["call_sign"] else "no", p["ship_type"],
-            p["length_m"], p["rule"], p["home_port_days"],
+            p["length_m"], p["rule"], p["role"], p["home_port_days"],
             p["status"] + (f" ({'; '.join(p['ambiguity'])})" if p["ambiguity"] else "")
             + (f" [{'; '.join(p['conflicts'])}]" if p["conflicts"] else ""))) + " |")
     return "\n".join(lines) + "\n"
 
 
 def private_table(rep: dict) -> str:
-    lines = ["| Our name | Port | AIS name | MMSI | Call sign | Type | Length m | Rule | Status | Support | Other ports |",
-             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
+    lines = ["| Our name | Port | AIS name | MMSI | Call sign | Type | Length m | Rule | Role | Status | Support | Other ports |",
+             "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     for p in sorted(rep["pairs"], key=lambda p: (RULE_ORDER.index(p["rule"]), p["port_id"], p["our_name"])):
         lines.append("| " + " | ".join(_cell(x) for x in (
             p["our_name"], p["port_id"], p["ais_name"], p["mmsi"], p["call_sign"], p["ship_type"], p["length_m"],
-            p["rule"], p["status"] + (f" ({'; '.join(p['ambiguity'])})" if p["ambiguity"] else ""),
+            p["rule"], p["role"], p["status"] + (f" ({'; '.join(p['ambiguity'])})" if p["ambiguity"] else ""),
             "; ".join(p["support"]), ", ".join(f"{k} {v}d" for k, v in p["other_ports"].items()))) + " |")
+    return "\n".join(lines) + "\n"
+
+
+def rule_table(rep: dict) -> str:
+    """Per-rule gains and ambiguity cost across the whole registry (counts only)."""
+    cols = ["vessels_newly_matched", "clean", "ambiguous", "rival_pairs_on_existing_vessels",
+            "existing_vessels_given_a_rival", "secondary_rival_pairs_on_new_vessels",
+            "pairs_colliding_with_another_vessel", "ambiguity_cost_pairs", "ambiguity_cost_vessels"]
+    lines = ["| Rule | " + " | ".join(cols) + " |", "| --- | " + " | ".join("---" for _ in cols) + " |"]
+    for rid in RULE_ORDER:
+        pr = rep["counts"]["per_rule"][rid]
+        lines.append(f"| {rid} | " + " | ".join(str(pr[c]) for c in cols) + " |")
     return "\n".join(lines) + "\n"
 
 
@@ -468,6 +511,7 @@ def main(argv: list[str] | None = None) -> int:
     (args.out / "pairs.json").write_text(json.dumps(rep, indent=1, default=str))
     (args.out / "pairs.md").write_text(private_table(rep))
     (args.out / "pr-table.md").write_text(pr_table(rep))
+    (args.out / "rule-table.md").write_text(rule_table(rep))
     (args.out / "ports.json").write_text(json.dumps(rep["ports"], indent=1))
     head = list(rep["ports"][0])
     (args.out / "ports.md").write_text("| " + " | ".join(head) + " |\n| " + " | ".join("---" for _ in head) + " |\n"
