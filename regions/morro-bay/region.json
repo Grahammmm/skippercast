@@ -221,6 +221,20 @@
       "latitude": 35.55,
       "longitude": -121.75,
       "offshore": true
+    },
+    {
+      "id": "offshore-0-s",
+      "name": "Offshore south \u00b7 shoreward",
+      "latitude": 35.05,
+      "longitude": -121.0,
+      "offshore": true
+    },
+    {
+      "id": "offshore-1-s",
+      "name": "Offshore middle row \u00b7 shoreward",
+      "latitude": 35.3,
+      "longitude": -121.0,
+      "offshore": true
     }
   ],
   "marine_zones": {
