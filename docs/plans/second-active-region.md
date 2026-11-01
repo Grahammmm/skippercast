@@ -49,8 +49,12 @@ Morro Bay itself does not meet the "published fishing targets" clause. Its `bath
 | --- | --- |
 | `schemas/region.schema.json`, `platform/contracts.py` `_region_shape` | `status` is one of `active`, `preview` or `draft`. Nothing checks how ready the needs are. |
 | `platform/build.py` | Only a `preview` package may publish empty atlas, habitat and bottom-index placeholders. An `active` package must ship real files. |
-| `server/advisor/pages/port.ts` `activePortIds`, `server/advisor/answers/reports.ts` | Port pages and the 05:30 "what's biting" daily answers exist only for ports in `catalog/home-ports.json` whose region is `active`. |
-| `server/advisor/admin/rules.ts` | The rules editor lists only active regions. |
+| `server/advisor/pages/port.ts` `portExists`, `server/routes/advisor.ts` `/ports/:id` | **Not gated on `active`.** A port page exists for every `catalog/home-ports.json` port whose region is built and not `draft`, so preview-region ports (including Southern California's 8) already have pages. The route calls `portPage` with no status check. |
+| `server/advisor/tools/get_port_report.ts` | **Not gated on `active`.** The model's `get_port_report` answers for any catalog port, so a preview port's "what's biting" question is already answered on demand. |
+| `server/advisor/pages/port.ts` `activePortIds`, `server/advisor/pages/sitemap.ts` | Only active-region ports are listed in the sitemap. |
+| `server/advisor/answers/reports.ts` `activePorts`, `pregenerateDaily`, `dailyFlow` | Only active-region ports get the 05:30 pre-generated daily answer, and only they are answered by the daily pre-router without a model call. A preview port's plain question goes to the model and `get_port_report`. |
+| `server/advisor/admin/rules.ts` `activeRegions`, `watchRuleSources` | The daily rules-watch slot reads only active regions' feeds for regulation changes. |
+| `server/advisor/gate.ts`, `server/routes/advisor.ts` `ADVISOR_PATHS`, `TEXT_ADVISOR_ENABLED` | Independent of region status. Port pages (`/ports/*`), advisor answers and the other gated advisor paths 404 until `TEXT_ADVISOR_ENABLED=true` is deployed. Activating a region does not lift this. |
 | `web/ports.ts` | The port chooser labels a port "Mapped area" (active) or "Regional preview". |
 | `docs/plans/front-end/dev-plan.md` backlog US-L2 | "Second active region on the landing: region-aware readings once another region leaves preview" is waiting on this card. |
 
@@ -60,7 +64,7 @@ No document defines it, so this plan measures candidates against what Morro Bay 
 
 - **Needs (the 10 `ready` in Morro Bay):** substrate, protected-areas, regulations, dynamic-closures, wind-forecast, wave-forecast, wave-observations, tides, wind-ensemble, wave-ensemble.
 - **Capabilities:** season-status, conditions-outlook and tide-chart are ready.
-- **Ports:** at least one reviewed home port and harbor, so the active-only advisor paths have something to serve.
+- **Ports:** at least one reviewed home port and harbor, so the active-only advisor paths (sitemap, daily pre-generation, the daily pre-router, rules watch) have something to serve.
 - **Status flag:** it is changed only after the needs are reviewed `ready`. Flipping it first would be a relabel, not a fix.
 
 G should adopt this bar, or a stricter one, in writing. The build card then adds it as a validation rule (see B6 in section 5) so the flag cannot drift from the evidence again.
@@ -140,7 +144,7 @@ So the step 2 package would become `active` only by changing its label. Its evid
 
 - **Qualified targets.** It is the only package with a `qualified_subset` that is `ready: true`: 11 targets on native 1–4 m MLLW NOAA BAG depth with product uncertainty. That is stronger seabed evidence than Morro Bay's 132 research-only targets.
 - **Clean rights.** Its seabed sources are NOAA public-domain or CC0. A paid product would not have to unwind them.
-- **Audience.** It has 8 reviewed home ports: Santa Barbara, Ventura/Channel Islands, Marina del Rey, Long Beach/San Pedro, Newport Beach, Dana Point, Oceanside and San Diego. Activating it turns on the active-only advisor paths (port pages, daily answers) for anglers outside San Luis Obispo County. This is the card's own reason for a second region: "one region is too narrow for anyone outside it to bother finding us."
+- **Audience.** It has 8 reviewed home ports: Santa Barbara, Ventura/Channel Islands, Marina del Rey, Long Beach/San Pedro, Newport Beach, Dana Point, Oceanside and San Diego. Their port pages and on-demand `get_port_report` answers already exist while the region is a preview. Activating it adds the active-only paths for these ports: sitemap listing, the 05:30 pre-generated daily answer, the no-model daily pre-router and the rules watch, plus the "Mapped area" label. All advisor paths stay dark until `TEXT_ADVISOR_ENABLED=true` is deployed, which activation does not change. This is the card's own reason for a second region: "one region is too narrow for anyone outside it to bother finding us."
 - **Small gap.** Only three of Morro Bay's ten ready needs are not yet ready here.
 
 **Risk:** the package spans Point Conception to the border. Its qualified seabed covers only Anacapa and eastern Santa Cruz Island. Mainland ports get rules, forecasts, tides, MPAs and the historical artificial-reef context, but no native mainland habitat. That still exceeds what Morro Bay's research-only targets support. It does mean "Mapped area" is island-heavy, and the build card must say so in the region's `coverage_note`, not in a banner.
@@ -163,7 +167,7 @@ Units: one card is one PR or receipt. Lanes and models follow `WORKER-GUIDE.md`:
 | S3 | **substrate → ready, scoped like Morro Bay's** ("published targets have reviewed … classification"). Write a receipt showing each of the 11 qualified targets has reviewed `noaa-cinms-substrate-2006` hard-bottom classification on its exact footprint. The reviewer decides from the receipt; if it does not prove this, the need stays `partial`. | 1 need | Sol High | 1 card, about 4 h |
 | **Phase 2: flip and verify** | | | | |
 | B6 | Write the `active` bar into `contracts.py`: an `active` region must have every Morro Bay bar need `ready` and at least one home port. Add a failing-first regression test that a region missing one of these is rejected. Flip `southern-california` to `active` and rebuild `dist/regions/index.json`. | the flag | Sol High | 1 card, about 4 h |
-| B7 | Exercise the active-only paths for the 8 ports (port pages, `pregenerateDaily`, rules admin) on the region's feed, then record a feed receipt (regions.md step 6) | verification | Sol Medium | 1 card, about 3 h |
+| B7 | Exercise the active-only paths for the 8 ports (sitemap listing, `pregenerateDaily`, the `dailyFlow` pre-router, `watchRuleSources`) on the region's feed in tests with the advisor enabled, confirm their port pages still render, then record a feed receipt (regions.md step 6). This does not set `TEXT_ADVISOR_ENABLED` in production. | verification | Sol Medium | 1 card, about 3 h |
 | B8 | US-L2: region-aware landing readings once a second region is active | front-end backlog | FE lane | existing backlog item |
 
 **Total:** Phase 0 is 4 cards (about 8 h). Phase 1 is 3 cards (about 14 h). Phase 2 is 2 cards (about 7 h) plus US-L2.
