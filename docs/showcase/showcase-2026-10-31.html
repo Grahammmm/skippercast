@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkipperCast: before and after, 2026-10-31</title>
+<style>
+:root{color-scheme:light dark;--bg:#0d1620;--card:#152230;--text:#e8eef4;--muted:#9fb0c0;--line:#2a3a4c;--change:#ffb02e;--same:#6fcf97;--new:#62b6ff;--bad:#ff7b7b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1180px;margin:0 auto;padding:16px}h1{font-size:1.6rem;line-height:1.2;margin:.4em 0}h2{font-size:1.15rem;margin:0;word-break:break-all}
+a{color:#8cc8ff}code{font-size:.9em}.lede,.muted{color:var(--muted)}
+.summary{display:flex;flex-wrap:wrap;gap:8px;padding:0;list-style:none}.summary li{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+.pair{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:18px 0}
+.head{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}
+.badge{font-size:.8rem;font-weight:700;border-radius:99px;padding:2px 10px;border:1px solid currentColor}
+.changed .badge{color:var(--change)}.same .badge{color:var(--same)}.new .badge{color:var(--new)}.failed .badge,.failed-before .badge,.unstable .badge{color:var(--bad)}
+.why{margin:6px 0}.prs{margin:6px 0 10px;padding-left:1.2em;font-size:.92rem}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+.landscape .cols{grid-template-columns:1fr}@media(min-width:900px){.landscape .cols{grid-template-columns:1fr 1fr}}
+figure{margin:0}figcaption{font-size:.85rem;color:var(--muted);margin-bottom:4px}
+.shot{position:relative;background:#22313f;border-radius:6px;overflow:hidden}
+.shot img{display:block;width:100%;height:auto;color:var(--muted);font-size:.85rem}
+.box{position:absolute;outline:3px solid var(--change);outline-offset:1px;border-radius:3px;pointer-events:none}
+.empty{display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;color:var(--muted);border:2px dashed var(--line);border-radius:6px;min-height:160px}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:18px 0}summary{cursor:pointer;font-weight:600}
+</style></head><body><main>
+<h1>SkipperCast: what changed on screen, 2026-10-31</h1>
+<p class="lede">Left: <b>before</b>, <code>c69a97e48</code> (2026-10-31 07:30 PDT). Right: <b>after</b>, <code>71c1759a1</code> (2026-10-31 21:51 PDT).
+91 pull requests were merged between them. Pages with a visible change come first; pages that look exactly the same are at the bottom.
+Orange outlines mark the areas that changed.</p>
+<ul class="summary"><li><b>5</b> pages changed</li><li><b>0</b> new pages</li><li><b>7</b> no visible change</li>
+</ul>
+<details><summary>How these screenshots were taken</summary><p>Both revisions were built from a clean checkout and served locally, then opened in the same Chromium at the same
+viewport, theme, time zone and random seed, with the clock fixed at 2026-10-31 12:00 PDT. Forecasts, buoys, tides and map imagery are synthetic stand-ins and every
+outside service is blocked, so the only difference between the columns is the code. Each screenshot was kept only once two frames in a row matched, and each page was loaded afresh until two loads in a row gave the same picture.
+A pixel counts as changed when a colour channel moves by more than 2 levels out of 255; smaller moves are anti-aliasing noise that can differ even between two captures of one revision. </p></details>
+<details><summary>How these pages were chosen</summary><p>The 92 pull requests merged to main on 2026-10-31 were read from the first-parent merge log (git log --first-parent). Each page below is a screen whose source files one or more of those merges changed: the Chart on the phone and laptop (attribution, open band, unpublished Chart files, Morro Bay lattice), the first-run choices at the sheet&#x27;s peek, the landing (night map, readings, region warm-up), the Cambria region (new CUSP shoreline and land-water), the Conditions and History tabs and the brief (time-zone and unit refactors), the Spear profile (shore distance), and the port, species and boat pages the Worker renders (advisor time-zone constant). Screens that need a signed-in account (trip alerts) or the live 3D coastal terrain cannot be captured offline; they are listed at the end of the page instead of being guessed at.</p></details>
+<section class="pair changed" id="first-run-phone"><div class="head"><h2>/map?region=morro-bay (first visit)</h2><span class="badge">Visible change</span><span class="muted">Phone 390×844</span></div>
+<p class="why">A first visit on a phone, before choosing how you fish: the choice card in the sheet at its lowest (peek) height.</p>
+<p class="why">79,716 pixels differ (24.2% of the screenshot), across most of the screen.</p>
+<ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1090">#1090</a> [BL-SC-2] Phone peek: first-run choices above the tab bar</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1089">#1089</a> [BL-SC-1] Phone Chart: attribution starts compact</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1103">#1103</a> [RF0850-2] Chart coastline and contours skip unpublished files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1118">#1118</a> [RF0905-1] Phone Chart opens with the harbor in the open band</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1148">#1148</a> [MAINRED-1] e2e: click where the phone Chart draws its centre (main red since #1118)</li></ul>
+<div class="cols">
+<figure><figcaption>Before · <code>c69a97e48</code></figcaption>
+<div class="shot"><img src="2026-10-31/first-run-phone-before.png" width="390" height="844" loading="lazy" decoding="async" alt="Before: /map?region=morro-bay (first visit) at 390×844"><span class="box" style="left:0.00%;top:83.41%;width:98.46%;height:11.37%"></span></div>
+</figure>
+<figure><figcaption>After · <code>71c1759a1</code></figcaption>
+<div class="shot"><img src="2026-10-31/first-run-phone-after.png" width="390" height="844" loading="lazy" decoding="async" alt="After: /map?region=morro-bay (first visit) at 390×844"><span class="box" style="left:0.00%;top:83.41%;width:98.46%;height:11.37%"></span></div>
+</figure>
+</div></section>
+<section class="pair changed" id="chart-phone"><div class="head"><h2>/map?region=morro-bay</h2><span class="badge">Visible change</span><span class="muted">Phone 390×844</span></div>
+<p class="why">The app&#x27;s main screen on a phone: the Morro Bay Chart with the forecast sheet.</p>
+<p class="why">63,704 pixels differ (19.4% of the screenshot), across most of the screen.</p>
+<ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1089">#1089</a> [BL-SC-1] Phone Chart: attribution starts compact</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1098">#1098</a> [RF0835-2] region.json lists its Chart files; warm-up skips missing ones</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1101">#1101</a> [RF0850-1] land-water, poster and offline pack skip unpublished Chart files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1108">#1108</a> [RF1058-3] fold dist/marine-units.js into marine-charts.js</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1103">#1103</a> [RF0850-2] Chart coastline and contours skip unpublished files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1113">#1113</a> [RF1140-5] coast package: one units module</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1105">#1105</a> [RF0935-2] web: one default time-zone constant</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1116">#1116</a> [RF0708-2] web/units.ts: one kt/ft source for the landing readout and habitat feed</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1123">#1123</a> [RF1105-21] web: station model and depth disclaimer use web/units.ts</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1118">#1118</a> [RF0905-1] Phone Chart opens with the harbor in the open band</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1128">#1128</a> [RF1130-8] web: contrast reads units.ts; no conversion literal outside it</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1148">#1148</a> [MAINRED-1] e2e: click where the phone Chart draws its centre (main red since #1118)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1158">#1158</a> [NB-SC-06] Morro Bay forecast lattice: shoreward column toward Estero Bay (#501)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1165">#1165</a> [NB-SC-03] v2 Terrain rail: habitat status line and ranked reefs (#519)</li></ul>
+<div class="cols">
+<figure><figcaption>Before · <code>c69a97e48</code></figcaption>
+<div class="shot"><img src="2026-10-31/chart-phone-before.png" width="390" height="844" loading="lazy" decoding="async" alt="Before: /map?region=morro-bay at 390×844"></div>
+</figure>
+<figure><figcaption>After · <code>71c1759a1</code></figcaption>
+<div class="shot"><img src="2026-10-31/chart-phone-after.png" width="390" height="844" loading="lazy" decoding="async" alt="After: /map?region=morro-bay at 390×844"></div>
+</figure>
+</div></section>
+<section class="pair changed" id="cambria-phone"><div class="head"><h2>/map?region=cambria-san-simeon</h2><span class="badge">Visible change</span><span class="muted">Phone 390×844</span></div>
+<p class="why">The Cambria and San Simeon region&#x27;s Chart, which gained a NOAA shoreline and land-water today.</p>
+<p class="why">62,868 pixels differ (19.1% of the screenshot), in the middle of the screen.</p>
+<ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1098">#1098</a> [RF0835-2] region.json lists its Chart files; warm-up skips missing ones</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1101">#1101</a> [RF0850-1] land-water, poster and offline pack skip unpublished Chart files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1103">#1103</a> [RF0850-2] Chart coastline and contours skip unpublished files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1158">#1158</a> [NB-SC-06] Morro Bay forecast lattice: shoreward column toward Estero Bay (#501)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1162">#1162</a> [NB-SC-08] Cambria: NOAA CUSP shoreline and land-water</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1172">#1172</a> [NB-SC-07] Cambria forecast lattice: 3 × 3 offshore points (#501)</li></ul>
+<div class="cols">
+<figure><figcaption>Before · <code>c69a97e48</code></figcaption>
+<div class="shot"><img src="2026-10-31/cambria-phone-before.png" width="390" height="844" loading="lazy" decoding="async" alt="Before: /map?region=cambria-san-simeon at 390×844"><span class="box" style="left:0.00%;top:24.64%;width:100.00%;height:51.18%"></span></div>
+</figure>
+<figure><figcaption>After · <code>71c1759a1</code></figcaption>
+<div class="shot"><img src="2026-10-31/cambria-phone-after.png" width="390" height="844" loading="lazy" decoding="async" alt="After: /map?region=cambria-san-simeon at 390×844"><span class="box" style="left:0.00%;top:24.64%;width:100.00%;height:51.18%"></span></div>
+</figure>
+</div></section>
+<section class="pair changed" id="conditions-phone"><div class="head"><h2>/map?region=morro-bay&amp;view=conditions</h2><span class="badge">Visible change</span><span class="muted">Phone 390×844</span></div>
+<p class="why">The Conditions tab: stations, readings and the depth disclaimer.</p>
+<p class="why">54,310 pixels differ (16.5% of the screenshot), across most of the screen.</p>
+<ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1105">#1105</a> [RF0935-2] web: one default time-zone constant</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1116">#1116</a> [RF0708-2] web/units.ts: one kt/ft source for the landing readout and habitat feed</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1123">#1123</a> [RF1105-21] web: station model and depth disclaimer use web/units.ts</li></ul>
+<div class="cols">
+<figure><figcaption>Before · <code>c69a97e48</code></figcaption>
+<div class="shot"><img src="2026-10-31/conditions-phone-before.png" width="390" height="844" loading="lazy" decoding="async" alt="Before: /map?region=morro-bay&amp;view=conditions at 390×844"></div>
+</figure>
+<figure><figcaption>After · <code>71c1759a1</code></figcaption>
+<div class="shot"><img src="2026-10-31/conditions-phone-after.png" width="390" height="844" loading="lazy" decoding="async" alt="After: /map?region=morro-bay&amp;view=conditions at 390×844"></div>
+</figure>
+</div></section>
+<section class="pair changed" id="spear-phone"><div class="head"><h2>/map?region=morro-bay&amp;profile=spear</h2><span class="badge">Visible change</span><span class="muted">Phone 390×844</span></div>
+<p class="why">The Spear profile, which measures distance from shore.</p>
+<p class="why">41,559 pixels differ (12.6% of the screenshot), across most of the screen.</p>
+<ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1089">#1089</a> [BL-SC-1] Phone Chart: attribution starts compact</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1101">#1101</a> [RF0850-1] land-water, poster and offline pack skip unpublished Chart files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1103">#1103</a> [RF0850-2] Chart coastline and contours skip unpublished files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1105">#1105</a> [RF0935-2] web: one default time-zone constant</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1104">#1104</a> [RF0935-1] Spear shore distance and contour export skip unpublished files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1118">#1118</a> [RF0905-1] Phone Chart opens with the harbor in the open band</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1148">#1148</a> [MAINRED-1] e2e: click where the phone Chart draws its centre (main red since #1118)</li></ul>
+<div class="cols">
+<figure><figcaption>Before · <code>c69a97e48</code></figcaption>
+<div class="shot"><img src="2026-10-31/spear-phone-before.png" width="390" height="844" loading="lazy" decoding="async" alt="Before: /map?region=morro-bay&amp;profile=spear at 390×844"></div>
+</figure>
+<figure><figcaption>After · <code>71c1759a1</code></figcaption>
+<div class="shot"><img src="2026-10-31/spear-phone-after.png" width="390" height="844" loading="lazy" decoding="async" alt="After: /map?region=morro-bay&amp;profile=spear at 390×844"></div>
+</figure>
+</div></section>
+<section class="pair same landscape" id="chart-laptop"><div class="head"><h2>/map?region=morro-bay</h2><span class="badge">No visible change</span><span class="muted">Laptop 1280×800</span></div>
+<p class="why">The same screen on a laptop: the brief column beside the Chart.</p>
+<p class="why">No visible change: the two screenshots are identical, pixel for pixel.</p>
+<ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1089">#1089</a> [BL-SC-1] Phone Chart: attribution starts compact</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1098">#1098</a> [RF0835-2] region.json lists its Chart files; warm-up skips missing ones</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1101">#1101</a> [RF0850-1] land-water, poster and offline pack skip unpublished Chart files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1108">#1108</a> [RF1058-3] fold dist/marine-units.js into marine-charts.js</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1103">#1103</a> [RF0850-2] Chart coastline and contours skip unpublished files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1113">#1113</a> [RF1140-5] coast package: one units module</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1105">#1105</a> [RF0935-2] web: one default time-zone constant</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1116">#1116</a> [RF0708-2] web/units.ts: one kt/ft source for the landing readout and habitat feed</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1123">#1123</a> [RF1105-21] web: station model and depth disclaimer use web/units.ts</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1118">#1118</a> [RF0905-1] Phone Chart opens with the harbor in the open band</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1128">#1128</a> [RF1130-8] web: contrast reads units.ts; no conversion literal outside it</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1148">#1148</a> [MAINRED-1] e2e: click where the phone Chart draws its centre (main red since #1118)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1158">#1158</a> [NB-SC-06] Morro Bay forecast lattice: shoreward column toward Estero Bay (#501)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1165">#1165</a> [NB-SC-03] v2 Terrain rail: habitat status line and ranked reefs (#519)</li></ul>
+<div class="cols">
+<figure><figcaption>Before · <code>c69a97e48</code></figcaption>
+<div class="shot"><img src="2026-10-31/chart-laptop.png" width="1280" height="800" loading="lazy" decoding="async" alt="Before: /map?region=morro-bay at 1280×800"></div>
+</figure>
+<figure><figcaption>After · <code>71c1759a1</code></figcaption>
+<div class="shot"><img src="2026-10-31/chart-laptop.png" width="1280" height="800" loading="lazy" decoding="async" alt="After: /map?region=morro-bay at 1280×800"></div>
+</figure>
+</div></section>
+<section class="pair same" id="landing-phone"><div class="head"><h2>/</h2><span class="badge">No visible change</span><span class="muted">Phone, whole page 390×1965</span></div>
+<p class="why">The home page on a phone, top to bottom: live readings and the night map.</p>
+<p class="why">No visible change: 29 pixels differ by at most 2 colour levels out of 255 (anti-aliasing noise at edges, invisible to the eye).</p>
+<ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1090">#1090</a> [BL-SC-2] Phone peek: first-run choices above the tab bar</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1098">#1098</a> [RF0835-2] region.json lists its Chart files; warm-up skips missing ones</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1102">#1102</a> [RF0850-7] Night map draws without a published shoreline</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1116">#1116</a> [RF0708-2] web/units.ts: one kt/ft source for the landing readout and habitat feed</li></ul>
+<div class="cols">
+<figure><figcaption>Before · <code>c69a97e48</code></figcaption>
+<div class="shot"><img src="2026-10-31/landing-phone-before.png" width="390" height="1965" loading="lazy" decoding="async" alt="Before: / at 390×1965"></div>
+</figure>
+<figure><figcaption>After · <code>71c1759a1</code></figcaption>
+<div class="shot"><img src="2026-10-31/landing-phone-after.png" width="390" height="1965" loading="lazy" decoding="async" alt="After: / at 390×1965"></div>
+</figure>
+</div></section>
+<section class="pair same landscape" id="landing-laptop"><div class="head"><h2>/</h2><span class="badge">No visible change</span><span class="muted">Laptop 1280×800</span></div>
+<p class="why">The home page on a laptop, first screen.</p>
+<p class="why">No visible change: the two screenshots are identical, pixel for pixel.</p>
+<ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1090">#1090</a> [BL-SC-2] Phone peek: first-run choices above the tab bar</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1098">#1098</a> [RF0835-2] region.json lists its Chart files; warm-up skips missing ones</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1102">#1102</a> [RF0850-7] Night map draws without a published shoreline</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1116">#1116</a> [RF0708-2] web/units.ts: one kt/ft source for the landing readout and habitat feed</li></ul>
+<div class="cols">
+<figure><figcaption>Before · <code>c69a97e48</code></figcaption>
+<div class="shot"><img src="2026-10-31/landing-laptop.png" width="1280" height="800" loading="lazy" decoding="async" alt="Before: / at 1280×800"></div>
+</figure>
+<figure><figcaption>After · <code>71c1759a1</code></figcaption>
+<div class="shot"><img src="2026-10-31/landing-laptop.png" width="1280" height="800" loading="lazy" decoding="async" alt="After: / at 1280×800"></div>
+</figure>
+</div></section>
+<section class="pair same landscape" id="history-laptop"><div class="head"><h2>/map?region=morro-bay&amp;view=history</h2><span class="badge">No visible change</span><span class="muted">Laptop 1280×800</span></div>
+<p class="why">The History tab: past days and charter reports.</p>
+<p class="why">No visible change: the two screenshots are identical, pixel for pixel.</p>
+<ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1105">#1105</a> [RF0935-2] web: one default time-zone constant</li></ul>
+<div class="cols">
+<figure><figcaption>Before · <code>c69a97e48</code></figcaption>
+<div class="shot"><img src="2026-10-31/history-laptop.png" width="1280" height="800" loading="lazy" decoding="async" alt="Before: /map?region=morro-bay&amp;view=history at 1280×800"></div>
+</figure>
+<figure><figcaption>After · <code>71c1759a1</code></figcaption>
+<div class="shot"><img src="2026-10-31/history-laptop.png" width="1280" height="800" loading="lazy" decoding="async" alt="After: /map?region=morro-bay&amp;view=history at 1280×800"></div>
+</figure>
+</div></section>
+<section class="pair same" id="port-page"><div class="head"><h2>/ports/morro-bay</h2><span class="badge">No visible change</span><span class="muted">Phone, whole page 390×1787</span></div>
+<p class="why">The Morro Bay port report page the Worker renders.</p>
+<p class="why">No visible change: the two screenshots are identical, pixel for pixel.</p>
+<ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1114">#1114</a> [RF1140-6] advisor: one default time-zone constant</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1144">#1144</a> [RF1230-12] advisor dates: impossible ISO days refused (round trip, as fleet calendarDate)</li></ul>
+<div class="cols">
+<figure><figcaption>Before · <code>c69a97e48</code></figcaption>
+<div class="shot"><img src="2026-10-31/port-page.png" width="390" height="1787" loading="lazy" decoding="async" alt="Before: /ports/morro-bay at 390×1787"></div>
+</figure>
+<figure><figcaption>After · <code>71c1759a1</code></figcaption>
+<div class="shot"><img src="2026-10-31/port-page.png" width="390" height="1787" loading="lazy" decoding="async" alt="After: /ports/morro-bay at 390×1787"></div>
+</figure>
+</div></section>
+<section class="pair same" id="species-page"><div class="head"><h2>/species/lingcod</h2><span class="badge">No visible change</span><span class="muted">Phone, whole page 390×2730</span></div>
+<p class="why">A species page the Worker renders.</p>
+<p class="why">No visible change: the two screenshots are identical, pixel for pixel.</p>
+<ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1114">#1114</a> [RF1140-6] advisor: one default time-zone constant</li></ul>
+<div class="cols">
+<figure><figcaption>Before · <code>c69a97e48</code></figcaption>
+<div class="shot"><img src="2026-10-31/species-page.png" width="390" height="2730" loading="lazy" decoding="async" alt="Before: /species/lingcod at 390×2730"></div>
+</figure>
+<figure><figcaption>After · <code>71c1759a1</code></figcaption>
+<div class="shot"><img src="2026-10-31/species-page.png" width="390" height="2730" loading="lazy" decoding="async" alt="After: /species/lingcod at 390×2730"></div>
+</figure>
+</div></section>
+<section class="pair same" id="boat-page"><div class="head"><h2>/boats/e2e-rita-g</h2><span class="badge">No visible change</span><span class="muted">Phone, whole page 390×1076</span></div>
+<p class="why">A charter boat page the Worker renders (the boat is a browser-test fixture, not a real listing).</p>
+<p class="why">No visible change: the two screenshots are identical, pixel for pixel.</p>
+<ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1114">#1114</a> [RF1140-6] advisor: one default time-zone constant</li></ul>
+<div class="cols">
+<figure><figcaption>Before · <code>c69a97e48</code></figcaption>
+<div class="shot"><img src="2026-10-31/boat-page.png" width="390" height="1076" loading="lazy" decoding="async" alt="Before: /boats/e2e-rita-g at 390×1076"></div>
+</figure>
+<figure><figcaption>After · <code>71c1759a1</code></figcaption>
+<div class="shot"><img src="2026-10-31/boat-page.png" width="390" height="1076" loading="lazy" decoding="async" alt="After: /boats/e2e-rita-g at 390×1076"></div>
+</figure>
+</div></section>
+<details open><summary>Changes this gallery cannot show (4 pull requests)</summary>
+<p>Trip alerts: the alerts dialog and the notification tap that opens it belong to a signed-in account with saved trips. The gallery captures signed-out pages only, so these changes are not pictured.</p><ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1170">#1170</a> [SC1537-06] trip alerts dialog: plain area, species, kind and status names</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1169">#1169</a> [SC1537-05] trip alerts: notification tap opens the saved-trip alerts dialog</li></ul>
+<p>3D coastal terrain: the Terrain rail&#x27;s habitat line and ranked reefs, the renderer&#x27;s habitat event, its shore palette and units draw only once the 3D terrain loads from the coastal data service. Offline (as here) the app says &quot;Coast graphics are unavailable&quot;, so these changes are not pictured.</p><ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1132">#1132</a> [RF1150-7] coast package: shore outline reads its own palette role</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1156">#1156</a> [NB-SC-02] coast embed: onHabitat event and exploreNext()</li></ul>
+</details>
+<details><summary>Merged pull requests with nothing on screen to show (66)</summary><p class="muted">None of the files these changed is loaded by a page above: tests, CI, data pipelines, server-only code and documents.</p><ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1087">#1087</a> [CHL1] Chlorophyll adapter uses the newest file with data for the region</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1086">#1086</a> [AUD-SC5] Drop the always-cancelled push trigger on live-conditions.yml; re-verify ledger guard</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1093">#1093</a> [CHL2] Habitat health ignores an optional layer that has never produced data</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1091">#1091</a> [BL-SC-4] Offline tests: no dependence on TMPDIR names or another installed skippercast</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1094">#1094</a> [RF0805-3] Docs: seafloor job is daily; UTC rule for date-only values</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1096">#1096</a> [RF0805-1] Fleet matcher: name and call sign on different boats never promote (#576)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1095">#1095</a> [RF0805-2] Fleet: pin Python activity kinds to the Worker enums (#608)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1097">#1097</a> [RF0835-1] server: one units module for the forecast sampler</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1100">#1100</a> [CIS-SC-4] coast-close tests: build the closed campaign once per module</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1099">#1099</a> [RF0905-2] region-build: golden_compare checks features and provenance</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1107">#1107</a> [RF1058-2] fleet health: name the likely stale cause</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1106">#1106</a> [RF1058-1] remove dead initBiteEvidence and dist/startup.js</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1110">#1110</a> [RF1105-24] region-build/review: planted links refused before writing</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1109">#1109</a> [RF1105-23] region-intake: no half INTAKE pair; links refused</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1092">#1092</a> [AUD-SC7] Split the full-tier survey-tests job into parallel parts, same coverage</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1112">#1112</a> [RF1120-5] region_publish: fresh temps; PUBLISH.md never follows a link</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1111">#1111</a> [RF1120-6] phone capture: --out resolved through links before the repo check</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1115">#1115</a> [RF0708-1] skippercast.units: one ft/m source for offline code</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1117">#1117</a> [RF1105-4] region-publish: ledger row before PUBLISH.md; linked --ledger refused</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1119">#1119</a> [CIS-SC-1-FIX1] deterministic test ids in test_coast_raw_grammar</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1120">#1120</a> [RF1105-22] atlas export and AIS events use util.units (same values)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1122">#1122</a> [RF1200-9] telemetry: client error messages mask separated phone numbers</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1121">#1121</a> [RF1200-6] boat lookup: a malformed source URL is skipped, not fatal</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1124">#1124</a> [RF1210-3] DCO check: empty or mis-shaped input fails with a named error</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1125">#1125</a> [RF1210-4] changelog_section: missing file and doubled heading named</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1126">#1126</a> [RF1220-3] precache: sw.js checked before precache.json is written</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1127">#1127</a> [CIS-SC-1] pytest-xdist 4 workers on the PR GIS leg and check pytest</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1131">#1131</a> [RF1130-9] units: guard test keeps ft/kt/nmi literals in util/units.py</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1130">#1130</a> [RF1220-4] rights coverage: both files or no output folder</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1129">#1129</a> [RF1150-5] golden_compare: feature differences counted by contour key</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1133">#1133</a> [RF1150-6] build_glyphs: print tool versions; --check compares a rebuild with the pins</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1135">#1135</a> [CIS-SC-6] test rules: parallel-safe tests under xdist</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1139">#1139</a> [RF1239-5] advisor upload: an empty file input is skipped, not uploaded</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1138">#1138</a> [RF1239-4] advisor: upper-case and decomposed Ñ count as the Spanish marker</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1137">#1137</a> [CIS-SC-6-F1] tests: coastal ops harness identity no longer depends on sys.path state</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1136">#1136</a> EC: one bbox convention (end-exclusive) for ec_detect and ec_apply</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1140">#1140</a> [EC-FIX-2] ec_verify: an overlap that repeats A&#x27;s values is a copy, not a second survey</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1143">#1143</a> [RF1230-7] http body: invalid UTF-8 refused as invalid JSON body</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1134">#1134</a> [CIS-SC-2] Full-tier survey-tests parts run pytest -n 4 --dist load; runner CPU line</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1142">#1142</a> [RF1230-10] report dates: an explicit year is never rolled back</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1141">#1141</a> [RF1230-5] report_regulations: unreadable region health named; other regions still reported</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1147">#1147</a> [RF1240-3] feed freshness: a future-dated feed is unreadable, not fresh</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1146">#1146</a> [RF1230-6] multipart: filename*= (UTF-8) recognised; a bad one falls back, never throws</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1145">#1145</a> [RF1240-7] run report: truncated cells and issue lists are marked</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1150">#1150</a> [RF1240-10] validate: numeric error order and a &quot;more&quot; line</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1154">#1154</a> [RF1300-8] advisor link codes: uniform draw, broken random source refused</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1149">#1149</a> [RF1240-8] log: non-finite numbers are written as text, record kept</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1153">#1153</a> [RF1300-7] legal-review verifier: missing/unreadable members named; receipt written whole</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1152">#1152</a> [RF1300-6] advisor get_trips: say how many more verified boats the port page has</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1151">#1151</a> [RF1300-4] advisor: one display-name cleaner (no invisible or direction controls, whole-character cut)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1155">#1155</a> [NB-SC-01] region-review: datum-verbatim accepts a BAG&#x27;s declared metadata datum (M5d)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1159">#1159</a> [CIS-SC-3] One PR Python 3.13 so PR survey-tests reuse main&#x27;s pip cache</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1157">#1157</a> [NB-SC-04] draft-region-health: past-day catches failures left to the coverage gate</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1160">#1160</a> Wait for every owned process group before coastal recovery test</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1161">#1161</a> [FLAKE-1] Give the coastal byte-cap tests the production lease</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1163">#1163</a> [PY311-PR] PR tier tests the same Pythons as main (3.11 and 3.13)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1166">#1166</a> [SC1537-01] trip alerts: NWS alerts read sends a User-Agent and Accept geo+json</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1164">#1164</a> [RF1300-5] advisor update_profile: unknown targets named, known ones saved</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1167">#1167</a> [NB-SC-09] catalog: morro-bay depth contours carry sources_omitted (M2 SG-1)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1168">#1168</a> [CIS-SC-5] e2e: 4 Playwright workers on CI</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1174">#1174</a> [SC1537-03] trip alerts: missed-final only when the day-before slot really passed unassessed</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1173">#1173</a> [SC1537-02] trip alerts: an advisory with an unreadable time counts as applicable</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1171">#1171</a> [NB-SC-05] draft-region-health: one error class per failed source</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1175">#1175</a> [SC1537-04] push delivery: retry 429/5xx receipts on later checks, at most 3 tries</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1176">#1176</a> [SC1537-09] /api/om: per-IP limit on edge-cache misses only</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1177">#1177</a> [SC1537-08] privacy export: list notification devices (host and date only)</li></ul></details>
+<p class="muted">Made by <code>scripts/showcase.py</code> from <code>docs/showcase/pages-2026-10-31.json</code>. To redo it: <code>python scripts/showcase.py --before c69a97e48 --after 71c1759a1 --pages docs/showcase/pages-2026-10-31.json</code>.</p>
+</main></body></html>
