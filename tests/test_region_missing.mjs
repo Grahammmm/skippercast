@@ -19,7 +19,7 @@ async function load() {
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {createRegionReader, loadRegion, regionLoad, REGION_MISSING} from './web/app/App.tsx';
       export {Location} from './web/app/Masthead.tsx';
-      export {currentRanking} from './web/brief/WhereToLook.tsx';
+      export {currentRanking, WhereToLook} from './web/brief/WhereToLook.tsx';
       export {ranking} from './web/ranking.ts';
       export {CHECKING} from './web/map/habitat.ts';
       export * as state from './web/state.ts';
@@ -87,6 +87,25 @@ test('ranking says the region does not exist only when told so; otherwise the lo
   assert.equal(`${m.empty} ${m.picks.length}`, `${NOT_EXIST} 0`);
   assert.equal(ranking({...base, missing: false}).empty, 'Ranked places load with the map.');
   assert.equal(ranking(base).empty, 'Ranked places load with the map.');
+});
+
+test('Shore: a missing region says it does not exist, ahead of the Shore runs line; otherwise the Shore runs line stays', async () => {
+  const {ranking, CHECKING} = await load();
+  const base = {region: 'nowhere', profile: 'shore', target: 'surfperch', coast: 'surfperch', data: null, screen: CHECKING, terrain: {state: 'loading'}, now: Date.now()};
+  const m = ranking({...base, missing: true});
+  assert.equal(`${m.empty} ${m.picks.length}`, `${NOT_EXIST} 0`);
+  assert.equal(ranking(base).empty, 'Shore runs and their review status show on the Chart.');
+});
+
+test('Where to look for Shore on a 404 region shows the not-exist sentence, not the Shore runs line', async () => {
+  const {loadRegion, currentRanking, WhereToLook, state, render, h} = await at('nowhere');
+  state.syncFromURL(`${ORIGIN}?region=nowhere&profile=shore`);
+  assert.equal(state.profile.value, 'shore');
+  await loadRegion('nowhere', status(404));
+  assert.equal(currentRanking().empty, NOT_EXIST);
+  const html = render(h(WhereToLook, {}));
+  assert.match(html, /<p class="app-empty">No ranked places: this region does not exist\.<\/p>/);
+  assert.doesNotMatch(html, /Shore runs and their review status/);
 });
 
 test('Where to look reads missing only for the current region, never from a stale entry for another id', async () => {

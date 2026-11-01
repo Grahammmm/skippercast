@@ -215,6 +215,8 @@ export function ranking(i: RankingInputs): Ranking {
   });
   const within = `within ${limit} ft${reach === null ? '' : ` and ${Number(reach.toFixed(1))} nm of ${harbor}`}${shore ? ` and ${shore.maxYd} yd of shore` : ''}`;
   const extra = {...(origin ? {harbor: origin.name} : {}), ...(reach === null ? {} : {reach})};
+  // A region that does not exist has nothing to rank for any profile, Shore included.
+  if (i.missing) return {source: null, label: '', basis: '', picks: [], empty: 'No ranked places: this region does not exist.'};
   if (PROFILE_TABLE[i.profile].whereToLook === 'shore-runs')
     return {source: null, label: '', basis: '', picks: [], empty: 'Shore runs and their review status show on the Chart.'};
   const t = i.terrain, field = speciesOptions.find(s => s.id === i.coast);
@@ -225,7 +227,6 @@ export function ranking(i: RankingInputs): Ranking {
       : `No reviewed terrain habitat passes the current protected-area and closure check ${within} for this target.`;
     return {source: 'terrain', label: 'Reviewed terrain habitat', ...checked(s, TERRAIN_BASIS + from, empty), ...extra};
   }
-  if (i.missing) return {source: null, label: '', basis: '', picks: [], empty: 'No ranked places: this region does not exist.'};
   if (!i.data) return {source: null, label: '', basis: '', picks: [], empty: 'Ranked places load with the map.'};
   const s = atlasScreened(i.data, i.screen, i.target, limit, origin, keep, place);
   const empty = i.screen.status !== 'ready' ? i.screen.note : s.withheld ? `No other surveyed reef marks ${within} for this target.`
