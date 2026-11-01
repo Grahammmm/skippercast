@@ -320,3 +320,25 @@ test('committed data (acceptance item 5): every Morro Bay atlas mark is water ex
   assert.equal(r.picks.length, 4);
   assert.match(distText('regions/morro-bay/land-water.json'), /"status":"available"/);
 });
+
+test('committed data: Cambria (NB-SC-08) harbour mouth is land, inshore forecast points are water, open sea NOAA did not serve stays unknown', () => {
+  const index = dist('regions/cambria-san-simeon/land-water.json');
+  assert.equal(index.status, 'available');
+  assert.deepEqual(index.land_corners, ['SE', 'NE']);
+  assert.equal(landWaterModel(index, 'morro-bay'), null, 'the Cambria product is refused for another region');
+  const cb = landWaterModel(index, 'cambria-san-simeon');
+  const cbLines = landWaterLines(dist('regions/cambria-san-simeon/land-water-lines.json'), cb);
+  assert.ok(cb && cbLines, 'the committed product loads');
+  const at2 = (latitude, longitude) => placeOf(cb, cbLines, {latitude, longitude});
+  assert.deepEqual(at2(35.56, -121.09), {state: 'land'}, 'inshore of the Cambria harbour mouth');
+  // 35.55 N 121.50 W is open sea in tile 12/665/1614, which NOAA answered 403/404 (no shoreline):
+  // unserved tiles are unknown, never certified water (method step 9) and never land.
+  assert.deepEqual(at2(35.55, -121.50), {state: 'unknown', reason: 'unserved-tile'});
+  const points = dist('regions/cambria-san-simeon/region.json').forecast_points;
+  const inshore = points.filter(p => !p.offshore);
+  assert.deepEqual(inshore.map(p => p.id), ['cambria', 'san-simeon', 'north-coast']);
+  for (const p of inshore) assert.deepEqual(at2(p.latitude, p.longitude), {state: 'water'}, p.id);
+  for (const p of points.filter(q => q.offshore)) assert.notEqual(at2(p.latitude, p.longitude).state, 'land', p.id);
+  const outside = at2(35.70, -121.09);
+  assert.deepEqual(outside, {state: 'unknown', reason: 'outside-bounds'}, 'north of the bounds');
+});
