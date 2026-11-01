@@ -117,6 +117,46 @@ class StaleAlertTests(unittest.TestCase):
         self.assertIn("freshness-check", acts[0][1])
         self.assertEqual(alert.load_events(report, "false"), [])
 
+    def test_skipped_interval_then_repeat_posts_once(self):
+        now = [T0]
+        gh = FakeGitHub(lambda: now[0])
+
+        def pass_(published, at):
+            now[0] = at
+            return alert.main(["--report", str(self.report(published))], runner=gh, now=at)
+
+        pass_(STALE_STAMP, T0)
+        pass_(STALE_STAMP, T0 + timedelta(hours=12))  # the 6 h pass never ran: one 12 h line
+        pass_(STALE_STAMP, T0 + timedelta(hours=12, minutes=1))  # the same interval again: nothing new
+        pass_(STALE_STAMP, T0 + timedelta(hours=17))
+        self.assertEqual([c["body"][:11] for c in gh.issues[0]["comments"]], ["still: 12 h"])
+        pass_(STALE_STAMP, T0 + timedelta(hours=18))
+        pass_(STALE_STAMP, T0 + timedelta(hours=18, minutes=1))
+        self.assertEqual([c["body"][:11] for c in gh.issues[0]["comments"]], ["still: 12 h", "still: 18 h"])
+
+    def test_crashed_check_is_not_a_recovery(self):
+        now = [T0]
+        gh = FakeGitHub(lambda: now[0])
+        missing = str(Path(self.tmp.name) / "missing.json")
+
+        def pass_(argv, at):
+            now[0] = at
+            return alert.main(argv, runner=gh, now=at)
+
+        pass_(["--report", str(self.report(STALE_STAMP))], T0)  # stale: conditions issue opens
+        pass_(["--report", missing, "--stale", "true"], T0 + timedelta(hours=1))  # crash: freshness unknown
+        conditions, check = gh.issues
+        self.assertEqual((conditions["title"], conditions["state"], conditions["comments"]),
+                         ("Published feed is stale: conditions", "open", []))
+        self.assertEqual((check["title"], check["state"]), ("Published feed is stale: freshness-check", "open"))
+        pass_(["--report", str(self.report(STALE_STAMP))], T0 + timedelta(hours=2))  # still stale: same incident
+        self.assertEqual(len([c for c in gh.calls if c[:2] == ("issue", "create")]), 2)
+        self.assertEqual((conditions["state"], conditions["comments"]), ("open", []))
+        self.assertEqual(check["state"], "closed")
+        self.assertFalse(check["comments"][-1]["body"].startswith("Recovered: published again"))
+        pass_(["--report", str(self.report(STALE_STAMP))], T0 + timedelta(hours=6))  # ages from its first alert
+        self.assertTrue(conditions["comments"][0]["body"].startswith("still: 6 h"))
+
     def test_unreadable_feed_is_not_per_record(self):
         events = []
         status, _ = run_all(BASE, T0, lambda url: (_ for _ in ()).throw(OSError("down")), regions=[], events=events)

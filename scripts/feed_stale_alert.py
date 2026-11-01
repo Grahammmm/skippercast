@@ -8,6 +8,8 @@ per missing record) and keeps one GitHub issue per feed per staleness event, lab
   * still stale -> one comment `still: N h ...` per STILL_HOURS since the issue opened, never one per hourly check.
                    A second pass inside the same interval changes nothing (the comments are the state).
   * recovered   -> the issue is closed with a comment saying how long the feed was stale.
+  * unknown     -> a crashed check (or a stale report naming no feed) opens one `freshness-check` issue and leaves
+                   every per-feed issue open: not knowing is not a recovery.
 
 Same shape as AgentOrange's bin/unitfeed.py + bin/alertowner.py (modes/ALERTS.log: one line when first seen, a
 `still: N h` line on a fixed interval, a closed line). Runs from the hourly Live feed freshness workflow
@@ -21,6 +23,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 import math
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -29,6 +32,8 @@ LABEL = "feed-stale"
 TITLE = "Published feed is stale: "
 STILL_HOURS = 6
 RUNBOOK = "docs/operations/runbooks/feed-stale.md"
+CHECK_FEED = "freshness-check"  # sentinel feed: the check crashed or named no feed, so per-feed freshness is unknown
+STILL_RE = re.compile(r"still: (\d+) h\b")
 
 
 def parse(stamp):
@@ -49,9 +54,24 @@ def still_line(event, opened_hours):
     return f"still: {opened_hours:d} h - {describe(event)}"
 
 
+def last_still_hours(issue):
+    """The latest interval already reported on the issue (the largest N among its `still: N h` comments), or 0.
+    Tracking the interval, not the comment count, keeps a pass idempotent after a skipped interval."""
+    sent = [0]
+    for comment in issue.get("comments", []):
+        match = STILL_RE.match(comment.get("body", ""))
+        if match:
+            sent.append(int(match.group(1)))
+    return max(sent)
+
+
 def plan(events, issues, now, still_hours=STILL_HOURS):
     """Decide the actions for one pass. events: stale_feeds list; issues: open feed-stale issues
-    [{number, title, createdAt, comments: [{body}]}]. Returns [("create"|"comment"|"close", payload...)]."""
+    [{number, title, createdAt, comments: [{body}]}]. Returns [("create"|"comment"|"close", payload...)].
+
+    When the only event is the CHECK_FEED sentinel the check did not say which feeds are fresh, so freshness is
+    unknown: existing per-feed issues stay open (an unknown is not a recovery)."""
+    unknown = any(e["feed"] == CHECK_FEED for e in events)
     by_title = {i["title"]: i for i in issues}
     actions, wanted = [], set()
     for event in events:
@@ -62,15 +82,21 @@ def plan(events, issues, now, still_hours=STILL_HOURS):
             actions.append(("create", title, describe(event)))
             continue
         opened = (now - parse(issue["createdAt"])).total_seconds() / 3600
-        due = math.floor(opened / still_hours)
-        done = sum(1 for c in issue.get("comments", []) if c.get("body", "").startswith("still: "))
-        if due > done:
-            actions.append(("comment", issue["number"], still_line(event, due * still_hours)))
+        due_hours = math.floor(opened / still_hours) * still_hours
+        if due_hours > last_still_hours(issue):
+            actions.append(("comment", issue["number"], still_line(event, due_hours)))
     for issue in issues:
-        if issue["title"] not in wanted:
+        if issue["title"] in wanted:
+            continue
+        if not issue["title"].startswith(TITLE):
+            actions.append(("close", issue["number"], "Replaced by one issue per stale feed (SC-LAUNCH-6)."))
+        elif unknown:
+            continue
+        elif issue["title"] == TITLE + CHECK_FEED:
+            actions.append(("close", issue["number"], "Recovered: the freshness check ran and named every stale feed."))
+        else:
             hours = (now - parse(issue["createdAt"])).total_seconds() / 3600
-            actions.append(("close", issue["number"], f"Recovered: published again after about {hours:.0f} h of alerts."
-                            if issue["title"].startswith(TITLE) else "Replaced by one issue per stale feed (SC-LAUNCH-6)."))
+            actions.append(("close", issue["number"], f"Recovered: published again after about {hours:.0f} h of alerts."))
     return actions
 
 
@@ -106,7 +132,7 @@ def load_events(path, stale_flag):
     except (OSError, ValueError):
         events, stale = [], stale_flag == "true"
     if stale and not events:
-        events = [{"feed": "freshness-check", "last_published": None,
+        events = [{"feed": CHECK_FEED, "last_published": None,
                    "reason": "the freshness check crashed or reported stale without naming a feed"}]
     return events
 
