@@ -202,6 +202,12 @@ export function leadBrief(now: Date): BriefModel | null {
   return currentBrief(now, leadHour(hour.value, day.value, now, regionInfo.value?.timezone ?? DEFAULT_ZONE));
 }
 
+/** The day ("YYYY-MM-DD") the lead answers for: its brief's date, else the day of its hour. */
+export function leadDate(now: Date, brief: BriefModel | null = leadBrief(now)): string {
+  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, at = leadHour(hour.value, day.value, now, tz);
+  return brief?.date ?? dateKey(at ? new Date(at) : now, tz);
+}
+
 /** "today", "tomorrow", else "Sat Oct 10", for the lead's day `date` ("YYYY-MM-DD"). */
 export function leadDayText(date: string, now: Date, tz: string): string {
   const today = dateKey(now, tz), next = dateKey(new Date(Date.parse(`${today}T12:00:00Z`) + 86_400_000), 'UTC');
@@ -254,8 +260,7 @@ export function LeadRules({date, now}: {date: string; now: Date}) {
  * popover, and whether the target is legal that day. Before there is a brief, the waiting headline.
  */
 export function Verdict({now}: {now: Date}) {
-  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, at = leadHour(hour.value, day.value, now, tz);
-  const brief = leadBrief(now), date = brief?.date ?? dateKey(at ? new Date(at) : now, tz);
+  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, brief = leadBrief(now), date = leadDate(now, brief);
   const v = currentVerdict(brief, now), rulesLine = <LeadRules date={date} now={now} />;
   if (!v) return <><Headline brief={brief} />{rulesLine}</>;
   const when = leadDayText(date, now, tz);

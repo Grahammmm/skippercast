@@ -27,7 +27,7 @@ import {zone} from './App.tsx';
 import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
 import {LimitsControl} from './LimitsPanel.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
-import {BriefFooter, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief} from '../brief/Brief.tsx';
+import {BriefFooter, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief, leadDate, leadDayText} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {RunLine} from '../brief/Run.tsx';
@@ -76,15 +76,21 @@ export function HourEdge({now}: {now: Date}) {
 /** The brief in sheet order; a selected mark's card stands in for the eyebrow and headline. Below full the tiles are compact (detail and basis at full). */
 export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date; ranking?: Ranking; onFocus?: () => void; detent?: Detent}) {
   const tz = zone(), state = dockState(now, tz), brief = currentBrief(now);
+  // SC-LAUNCH-3: the head introduces the lead, so it names the lead's day. When the lead answers
+  // for another day than the dock's (tomorrow, until a time is chosen) the dock's heading moves
+  // below the lead to head the dock-day evidence, as the desktop column does.
+  const lead = leadDate(now), apart = lead !== state.day, dockHead = <span class="ui-eyebrow">{windowText(now, tz)}</span>;
+  const leadText = leadDayText(lead, now, tz);
   return (
     <div class="app-sheet-brief" onFocusIn={onFocus} data-basis={brief?.basis}>
       {currentMark.value ? <MarkCard /> : (
         <>
           <div class="app-sheet-head">
-            <span class="ui-eyebrow">{windowText(now, tz)}</span>
+            {apart ? <span class="ui-eyebrow">{leadText.charAt(0).toUpperCase() + leadText.slice(1)}</span> : dockHead}
             <FreshnessDot />
           </div>
           <Verdict now={now} />
+          {apart ? dockHead : null}
         </>
       )}
       <BriefTiles brief={brief} compact={detent !== 'full'} />

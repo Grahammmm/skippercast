@@ -28,6 +28,7 @@ async function load() {
       export {briefVerdict, VERDICT_WORD} from './web/brief/verdict.ts';
       export {parseConditionsForecast} from './web/conditions.ts';
       export {Brief} from './web/app/Desktop.tsx';
+      export {SheetBrief} from './web/app/Mobile.tsx';
       export {regionInfo} from './web/app/App.tsx';
       export {regsData} from './web/regs.ts';
       export {hour, day, species, profile} from './web/state.ts';
@@ -84,6 +85,36 @@ test('SC-LAUNCH-3: with no time chosen the lead answers for tomorrow, from the e
     assert.match(chosen[2], /^today/);
     m.hour.value = null; m.day.value = '2026-10-11';
     assert.equal(windowSpan(m.render(m.h(m.Brief, {now})))[1], '2026-10-11', 'a link\'s ?day= names the lead\'s day');
+  } finally { m.regionInfo.value = null; m.dailyFeed.value = null; m.regionalForecast.value = null; m.hour.value = null; m.day.value = null; }
+});
+
+test('SC-LAUNCH-3: the mobile sheet heads its lead with the lead\'s own day, at peek and full', async () => {
+  const m = await load();
+  const now = new Date('2026-10-08T21:00:00Z'); // 2 pm PDT Thursday 8 October
+  m.regionInfo.value = INFO; m.dailyFeed.value = montereyDaily; m.hour.value = null; m.day.value = null;
+  m.regionalForecast.value = m.parseConditionsForecast(forecastFeed(now), INFO.id, INFO.center);
+  const eyebrows = html => [...html.matchAll(/<span class="ui-eyebrow">([^<]*)<\/span>/g)].map(x => [x[1], x.index]);
+  try {
+    for (const detent of ['peek', 'full']) {
+      const html = m.render(m.h(m.SheetBrief, {now, detent}));
+      const lead = html.indexOf('class="app-verdict"'), heads = eyebrows(html);
+      assert.ok(lead > 0, `${detent}: the lead renders`);
+      assert.match(windowSpan(html)[2], /^tomorrow, /, `${detent}: the lead answers for tomorrow`);
+      const before = heads.filter(([, i]) => i < lead).map(([t]) => t);
+      assert.deepEqual(before, ['Tomorrow'], `${detent}: the only heading above the lead names its day`);
+      // The dock's day still heads the evidence, below the lead and before the tiles.
+      const dock = heads.find(([t]) => t === 'Today · 2 pm');
+      assert.ok(dock && dock[1] > lead && dock[1] < html.indexOf('class="ui-tile"'), `${detent}: the dock heading introduces the dock-day evidence`);
+    }
+    // An explicit hour today: one heading, the dock's, and the lead agrees with it.
+    m.hour.value = '2026-10-08T22:00Z';
+    for (const detent of ['peek', 'full']) {
+      const html = m.render(m.h(m.SheetBrief, {now, detent}));
+      const lead = html.indexOf('class="app-verdict"');
+      assert.deepEqual(eyebrows(html).filter(([, i]) => i < lead).map(([t]) => t), ['Today · 3 pm'], `${detent}: the chosen hour heads the lead`);
+      assert.match(windowSpan(html)[2], /^today/);
+      assert.equal(eyebrows(html).filter(([t]) => t.startsWith('Today')).length, 1, `${detent}: no second dock heading`);
+    }
   } finally { m.regionInfo.value = null; m.dailyFeed.value = null; m.regionalForecast.value = null; m.hour.value = null; m.day.value = null; }
 });
 
