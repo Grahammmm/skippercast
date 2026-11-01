@@ -46,7 +46,9 @@ trips.post('/api/events/ack', async c => {
   const {id} = await body(c.req.raw); if (typeof id !== 'string' || !/^[0-9a-f]{64}$/.test(id)) throw new ClientError('event id required');
   const event = await d.prepare('SELECT * FROM alert_events WHERE id=? AND owner=?').bind(id, owner).first<AlertEventRow>();
   if (!event) return json({error: 'Not found'}, 404);
-  await d.prepare('UPDATE alert_events SET status=?,delivered_at=? WHERE id=? AND owner=?').bind('read', new Date().toISOString(), id, owner).run();
-  if (['final', 'missed-final'].includes(event.kind)) await d.prepare('UPDATE trips SET final_delivered_at=? WHERE id=? AND owner=?').bind(new Date().toISOString(), event.trip_id, owner).run();
+  // A repeated ack writes nothing; a first ack keeps any earlier delivery time.
+  if (event.status === 'read') return json({read: true});
+  await d.prepare('UPDATE alert_events SET status=?,delivered_at=COALESCE(delivered_at,?) WHERE id=? AND owner=?').bind('read', new Date().toISOString(), id, owner).run();
+  if (['final', 'missed-final'].includes(event.kind)) await d.prepare('UPDATE trips SET final_delivered_at=COALESCE(final_delivered_at,?) WHERE id=? AND owner=?').bind(new Date().toISOString(), event.trip_id, owner).run();
   return json({read: true});
 });

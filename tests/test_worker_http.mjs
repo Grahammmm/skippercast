@@ -223,6 +223,57 @@ test('alert acknowledgement binds only a well-formed event id and only the calle
   } finally { sql.close(); }
 });
 
+test('a repeated ack keeps the first read time; a trip final_delivered_at is set once, never moved', async t => {
+  const {sql, adapter} = database(), env = {DB: adapter}, start = Date.parse('2026-11-01T12:00:00.000Z');
+  t.mock.timers.enable({apis: ['Date'], now: start});
+  const iso = ms => new Date(ms).toISOString(), push = iso(start - 60_000), hex = c => c.repeat(64);
+  const tick = () => { t.mock.timers.setTime(Date.now() + 3_600_000); return iso(Date.now()); };
+  const trip = (id, final = null) => sql.prepare('INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,created_at,final_delivered_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)').run(id, 'alice', 'morro-bay', 'north', 'reef', '2026-11-02', 7, 13, 8, 12, 3, push, final);
+  const event = (id, tripId, kind, status = 'pending', delivered = null) => sql.prepare('INSERT INTO alert_events(id,trip_id,owner,kind,message,created_at,status,delivered_at) VALUES(?,?,?,?,?,?,?,?)').run(id, tripId, 'alice', kind, 'm', push, status, delivered);
+  const ack = async (id, owner = 'alice') => { const r = await worker.fetch(request('/api/events/ack', {owner, method: 'POST', body: {id}}), env); return [r.status, await r.json()]; };
+  const ev = id => sql.prepare('SELECT status,delivered_at FROM alert_events WHERE id=?').get(id);
+  const fin = id => sql.prepare('SELECT final_delivered_at FROM trips WHERE id=?').get(id).final_delivered_at;
+  const snap = () => JSON.stringify([sql.prepare('SELECT * FROM alert_events ORDER BY id').all(), sql.prepare('SELECT * FROM trips ORDER BY id').all()]);
+  for (const id of ['t1', 't2', 't3', 't4']) trip(id);
+  trip('t5', push);
+  event(hex('b'), 't1', 'update'); event(hex('c'), 't1', 'update', 'delivered', push);
+  event(hex('d'), 't2', 'final'); event(hex('e'), 't2', 'missed-final');
+  event(hex('f'), 't3', 'missed-final'); event(hex('1'), 't4', 'final', 'delivered', push); event(hex('2'), 't5', 'final');
+  try {
+    // Another owner's id and a malformed id change nothing.
+    let before = snap();
+    assert.equal((await ack(hex('d'), 'bob'))[0], 404);
+    assert.equal((await ack(hex('A')))[0], 400);
+    assert.equal(snap(), before);
+    // Pending non-final event: first ack sets the read time; a later ack keeps it; the trip row is untouched.
+    const t1 = sql.prepare('SELECT * FROM trips WHERE id=?').get('t1'), first = tick();
+    assert.deepEqual(await ack(hex('b')), [200, {read: true}]);
+    assert.equal(ev(hex('b')).status, 'read'); assert.equal(ev(hex('b')).delivered_at, first);
+    tick(); before = snap();
+    assert.deepEqual(await ack(hex('b')), [200, {read: true}]);
+    assert.equal(ev(hex('b')).delivered_at, first); assert.equal(snap(), before, 'a repeated ack writes nothing');
+    // Delivered event keeps the push delivery time.
+    assert.deepEqual(await ack(hex('c')), [200, {read: true}]);
+    assert.equal(ev(hex('c')).status, 'read'); assert.equal(ev(hex('c')).delivered_at, push);
+    assert.equal(JSON.stringify(sql.prepare('SELECT * FROM trips WHERE id=?').get('t1')), JSON.stringify(t1), 'non-final events leave the trip alone');
+    // Final event acked twice: the trip keeps the first ack time; a later missed-final ack on the same trip does not move it.
+    const closed = tick();
+    assert.deepEqual(await ack(hex('d')), [200, {read: true}]);
+    assert.equal(fin('t2'), closed);
+    tick(); assert.deepEqual(await ack(hex('d')), [200, {read: true}]); assert.equal(fin('t2'), closed);
+    tick(); assert.deepEqual(await ack(hex('e')), [200, {read: true}]); assert.equal(fin('t2'), closed);
+    // Missed-final acked twice keeps the first time too.
+    const missed = tick();
+    assert.deepEqual(await ack(hex('f')), [200, {read: true}]); assert.equal(fin('t3'), missed);
+    tick(); assert.deepEqual(await ack(hex('f')), [200, {read: true}]); assert.equal(fin('t3'), missed);
+    // A trip closed by push delivery keeps that time when its final event is acked.
+    tick(); assert.deepEqual(await ack(hex('2')), [200, {read: true}]); assert.equal(fin('t5'), push);
+    // A delivered final event on an open trip: the event keeps its push time, the trip gets the ack time.
+    const late = tick(); assert.deepEqual(await ack(hex('1')), [200, {read: true}]);
+    assert.equal(ev(hex('1')).delivered_at, push); assert.equal(fin('t4'), late);
+  } finally { sql.close(); }
+});
+
 test('public health is minimal: no binding or secret presence is disclosed', async () => {
   const response = await worker.fetch(request('/api/health'), {DB: {}, FEEDS: {}, VAPID_PUBLIC_KEY: 'k', VAPID_PRIVATE_KEY: 'k', ANTHROPIC_API_KEY: 'k'});
   assert.equal(response.status, 200);
