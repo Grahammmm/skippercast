@@ -572,7 +572,9 @@ def join(registry: list[dict], statics: dict[str, Static], presence: Mapping[str
                 reason = ("no vessel name: the registry row names an operator or says the boat is unnamed"
                           if r["name_kind"] != "vessel" else "no candidate in AIS statics, FCC licences or PSIX")
             elif any(not c["conflicts"] for c in r["candidates"]):
-                reason = "uncorroborated: name match only"
+                against = sum(1 for c in r["candidates"] if c["conflicts"])
+                reason = "uncorroborated: name match only" + (f" ({against} other candidate(s) contradicted)"
+                                                               if against else "")
             else:
                 reason = "contradicted: " + "; ".join(sorted({x for c in r["candidates"] for x in c["conflicts"]}))
             chosen = None
@@ -667,7 +669,7 @@ def _cell(value) -> str:
     return str(value if value not in (None, "", []) else "-").replace("|", "/").replace("\n", " ")
 
 
-def markdown(rows: list[dict], calls: list[dict], counts: dict, meta: dict, norm_changes: list[dict] = ()) -> str:
+def markdown(rows: list[dict], calls: list[dict], counts: dict, meta: dict, norm_changes: Iterable[dict] = ()) -> str:
     lines = [f"# Charter registry MMSI bulk join (private) - {meta['generated_at']}", "",
              f"Resolved with corroboration: **{counts['resolved']} of {counts['vessels']}**; remaining "
              f"**{counts['remaining']}** ({counts['remaining_leads']} of them AIS leads: name, charter type and "
