@@ -127,22 +127,18 @@ def cell(value):
 
 def finite(value):
     """A finite float for an int, float or numeric string; None for anything else (bool, NaN, ±inf, text)."""
-    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
-        return None
     try:
-        value = float(value)
+        value = float(value) if isinstance(value, (int, float, str)) and not isinstance(value, bool) else math.nan
     except (ValueError, OverflowError):
         return None
     return value if math.isfinite(value) else None
 
 
-def number(value):
-    return finite(value)
+number = finite
 
 
 def line_number(value):
-    value = finite(value)
-    return '—' if value is None else str(int(value))
+    return '—' if (parsed := finite(value)) is None else str(int(parsed))
 
 
 def funnel_rows(rows):
@@ -188,7 +184,7 @@ def fleet_line(rows, issue, now):
             since = max(0.0, (now - (pushed if pushed.tzinfo else pushed.replace(tzinfo=timezone.utc))).total_seconds())
         except ValueError:
             since = None
-        beat, messages = finite(row.get('heartbeat_age_s')), finite(row.get('messages_24h'))
+        beat, messages = number(row.get('heartbeat_age_s')), number(row.get('messages_24h'))
         if since is not None and beat is not None and beat >= 0:
             parts.append(f'listener heartbeat {(since + beat) / 3600:.1f} h old')
         else:
@@ -207,13 +203,11 @@ def fleet_line(rows, issue, now):
 def report(results, fleet_issue='', now=None):
     out = ['# SkipperCast operations report', '']
     routes = results.get('routes') or []
-    cells = [(r.get(c), finite(r.get(c))) for r in routes for c in ('requests', 's5xx')]
     total = sum(finite(r.get('requests')) or 0 for r in routes)
     errors = sum(finite(r.get('s5xx')) or 0 for r in routes)
-    skipped = sum(1 for raw, value in cells if raw is not None and value is None)
+    skipped = sum(r.get(c) is not None and finite(r.get(c)) is None for r in routes for c in ('requests', 's5xx'))
     if routes:
-        note = f' ({skipped} unreadable value(s) skipped)' if skipped else ''
-        out += [f'Requests: {total:,.0f}; 5xx: {errors:,.0f} ({(errors / total * 100 if total > 0 else 0):.2f} %){note}.', '']
+        out += [f'Requests: {total:,.0f}; 5xx: {errors:,.0f} ({(errors / total * 100 if total > 0 else 0):.2f} %){f" ({skipped} unreadable value(s) skipped)" if skipped else ""}.', '']
     fleet = fleet_line(results.get('fleet_ais') or [], fleet_issue, now or datetime.now(timezone.utc))
     if fleet:
         out += [fleet, '']
