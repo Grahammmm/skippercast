@@ -73,7 +73,7 @@ test('outbox produces one in-app event for repeated checks and does not silently
   try{
     const first=await checkTrips(env);assert.equal(first.changes,1);assert.equal(first.in_app,1);
     const second=await checkTrips(env);assert.equal(second.changes,0);assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM alert_events').get().n,1);
-    sql.prepare('UPDATE trips SET date=?').run('2026-01-01');const missed=await checkTrips(env);assert.equal(missed.changes,1);
+    sql.prepare('UPDATE trips SET date=?,created_at=?').run('2026-01-01','2025-12-30T12:00:00.000Z');const missed=await checkTrips(env);assert.equal(missed.changes,1);
     assert.equal(sql.prepare("SELECT kind FROM alert_events WHERE kind='missed-final'").get().kind,'missed-final');
   }finally{globalThis.fetch=originalFetch;sql.close();}
 });

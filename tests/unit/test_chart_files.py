@@ -22,7 +22,7 @@ class ChartFilesTest(unittest.TestCase):
     def test_committed_copies_follow_their_files(self):
         self.assertEqual(compiled('morro-bay')['chart_files'], sorted(build.CHART_FILES))
         self.assertEqual(len(build.CHART_FILES), 7)
-        self.assertEqual(compiled('cambria-san-simeon')['chart_files'], [])  # present, not omitted
+        self.assertEqual(compiled('monterey-point-sur')['chart_files'], [])  # present, not omitted
         for package in sorted(p for p in (ROOT / 'dist/regions').iterdir() if (p / 'region.json').is_file()):
             self.assertEqual(compiled(package.name)['chart_files'], build.chart_files(package), package.name)
 

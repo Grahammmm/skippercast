@@ -269,12 +269,12 @@ test('the region warm-up skips startup copies a region\'s chart_files lacks, and
   const full = regionWarmList('r', {});
   assert.deepEqual(full, [...head, 'regions/r/shoreline-overview.geojson', 'regions/r/poster.svg', '/api/forecast?region=r']);
   for (const bad of [undefined, null, 'poster.svg', ['poster.svg', 1], {0: 'poster.svg'}]) assert.deepEqual(regionWarmList('r', {chart_files: bad}), full, String(bad));
-  // Cambria publishes no Chart files: the warm-up asks for neither copy.
-  const cambria = JSON.parse(readFileSync(join(ROOT, 'dist/regions/cambria-san-simeon/region.json'), 'utf8'));
-  assert.deepEqual(cambria.chart_files, []);
+  // A region that publishes no Chart files (monterey-point-sur): the warm-up asks for neither copy.
+  const bare = JSON.parse(readFileSync(join(ROOT, 'dist/regions/monterey-point-sur/region.json'), 'utf8'));
+  assert.deepEqual(bare.chart_files, []);
   const asked = [];
-  const fetchFn = async url => { asked.push(url); return {ok: true, json: async () => cambria, blob: async () => new Blob([])}; };
-  assert.equal((await warmRegion('cambria-san-simeon', 'https://s.test/', fetchFn, {})).state, 'ready');
+  const fetchFn = async url => { asked.push(url); return {ok: true, json: async () => bare, blob: async () => new Blob([])}; };
+  assert.equal((await warmRegion('monterey-point-sur', 'https://s.test/', fetchFn, {})).state, 'ready');
   assert.ok(asked.length > 3 && !asked.some(u => /shoreline-overview\.geojson|poster\.svg/.test(u)), asked.join(' '));
 });
 
@@ -421,12 +421,12 @@ test('the night map draws only the shoreline form region.json lists, and none wh
     assert.deepEqual([info.bounds, info.center], [region.bounds, region.map.center]);
   }
 
-  const cambria = readFileSync(join(ROOT, 'dist/regions/cambria-san-simeon/region.json'), 'utf8'), asked = [];
-  const info = await nightRegion('cambria-san-simeon', async url => { asked.push(url); return {ok: true, json: async () => JSON.parse(cambria)}; }, page);
-  assert.deepEqual([asked, info.chartFiles], [['https://s.test/regions/cambria-san-simeon/region.json'], []]);
-  const style = nightStyle(palette, archive, page, 'cambria-san-simeon', info.chartFiles);
+  const bare = readFileSync(join(ROOT, 'dist/regions/monterey-point-sur/region.json'), 'utf8'), asked = [];
+  const info = await nightRegion('monterey-point-sur', async url => { asked.push(url); return {ok: true, json: async () => JSON.parse(bare)}; }, page);
+  assert.deepEqual([asked, info.chartFiles], [['https://s.test/regions/monterey-point-sur/region.json'], []]);
+  const style = nightStyle(palette, archive, page, 'monterey-point-sur', info.chartFiles);
   assert.equal(style.sources.coastline, undefined);
-  assert.doesNotMatch(JSON.stringify(style), /shoreline/, 'Cambria: no shoreline request at all');
+  assert.doesNotMatch(JSON.stringify(style), /shoreline/, 'a region with no Chart files: no shoreline request at all');
 });
 
 test('MapLibre and the night map load only by dynamic import, after first paint (FE-25, design § 13)', () => {
