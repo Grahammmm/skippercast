@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Region intake: bindings + catalog + private file list + existing screens -> INTAKE.csv/.md.
 Stdlib only. Never downloads, re-screens, reads a raster or opens a restricted/unresolved-licence file."""
-import argparse, contextlib, csv, hashlib, io, json, os, re, sys, tempfile
+import argparse, contextlib, csv, hashlib, io, json, math, os, re, sys, tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
@@ -44,6 +44,10 @@ def read_locations(path):
         if bad or not {'source_id', 'path'} <= set(entry) or not os.path.isabs(entry['path']) or ('screened_path' in entry and not (
                 isinstance(listed, list) and listed and all(isinstance(p, str) and os.path.isabs(p) for p in listed) and len(set(listed)) == len(listed))):
             raise IntakeError(f'Locations entry invalid ({sorted(bad) or entry.get("path")}): keys source_id, path, bbox, crs, screened_path; absolute path')
+        box = entry.get('bbox')  # null/absent = not known; else four finite numbers, south <= north (west > east allowed)
+        if box is not None and not (isinstance(box, list) and len(box) == 4 and all(
+                isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in box) and box[1] <= box[3]):
+            raise IntakeError(f'Locations entry bbox invalid ({entry.get("path")}): need [west, south, east, north] finite numbers')
     return data['files']
 
 def screened(entry):
@@ -87,7 +91,7 @@ def build(region, sources, locations, screens, flags=()):
         base = dict.fromkeys(COLUMNS, '')
         base.update(source_id=sid, review_status=src.get('review_status', ''), licence=rights.get('license', ''),
                     commercial_use=rights.get('commercial_use', ''), crs='undeclared', screen='UNSCREENED',
-                    native_cell_m=src.get('native_resolution_m', 'undeclared'), official_url=src.get('documentation_url', ''),
+                    native_cell_m='undeclared' if src.get('native_resolution_m') is None else src['native_resolution_m'], official_url=src.get('documentation_url', ''),
                     vertical_datum=src.get('vertical_datum') or 'undeclared')
         if never_read(src):
             rows.append({**base, 'use': 'skip', 'held_reason': 'none'})
