@@ -1,6 +1,6 @@
 # Runbook: live conditions feed is stale
 
-**Symptom:** the app's Live and forecast cards show old times or "stale" labels; a GitHub issue labelled `feed-stale` titled "Live conditions feed is stale" is open; the *Live feed freshness* workflow is red.
+**Symptom:** the app's Live and forecast cards show old times or "stale" labels; a GitHub issue labelled `feed-stale` titled "Published feed is stale: <feed>" is open (one issue per stale feed, opened once with the last successful publish and how late it is; a `still: N h` comment follows every 6 h, and it closes itself on recovery; `scripts/feed_stale_alert.py`, run by the hourly freshness workflow); the *Live feed freshness* workflow is red.
 **Severity:** SEV2 when the feed is more than 3 hours old (the issue threshold); SEV3 between 75 minutes and 3 hours (the automatic-restart threshold). See [incident response](../incident-response.md) for levels.
 **Owner:** repository owner. An agent may diagnose and open fix PRs; only the owner merges or changes secrets.
 

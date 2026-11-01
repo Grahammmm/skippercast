@@ -29,6 +29,7 @@ async function load() {
       export {Tiles, tileProps, ageText, sourceLine} from './web/brief/Tiles.tsx';
       export {Brief} from './web/app/Desktop.tsx';
       export {regionInfo} from './web/app/App.tsx';
+      export {hour} from './web/state.ts';
       export {createCoastData} from './web/coast-data.ts';
       export {regionPlace} from './web/map/currents.ts';
       export {render} from 'preact-render-to-string';
@@ -140,6 +141,28 @@ test('#616: with this region\'s forecast the verdict word and its limit lead the
     assert.match(html, /reference 23 ft boat, not a bite forecast or a safety clearance/);
     assert.doesNotMatch(html, /best bite|hotspot|safe passage/i);
   } finally { regionInfo.value = null; dailyFeed.value = null; regionalForecast.value = null; }
+});
+
+test('SC-LAUNCH-3b: a provisional day says so beside the verdict and on the forecast tiles; tomorrow reads firm', async () => {
+  const {Brief, dailyFeed, regionInfo, regionalForecast, hour, parseConditionsForecast, render, h} = await load();
+  regionInfo.value = INFO;
+  dailyFeed.value = montereyDaily;
+  regionalForecast.value = parseConditionsForecast(forecastFeed(), INFO.id, INFO.center);
+  const head = html => /<div class="app-verdict-head">.*?<\/h1>/.exec(html)?.[0] ?? '';
+  const tile = (html, label) => (html.split('<div class="ui-tile"').find(chunk => chunk.includes(`<span>${label}</span>`)) ?? '').split('<details class="ui-popover"')[0];
+  try {
+    // NOW is 2 pm PDT on 8 October; 12 October is the fifth day of the seven.
+    hour.value = '2026-10-12T16:00:00Z';
+    const late = render(h(Brief, {now: NOW}));
+    assert.match(head(late), /<span class="app-verdict-word">(Comfortable|Marginal|Rough)<\/span>.*<span class="app-verdict-window app-verdict-provisional ui-mono">Provisional<\/span><\/h1>/, 'the marker sits in the verdict line, beside the word');
+    assert.match(late, /Provisional outlook: forecasts this far ahead change\. Worst hour: [\d.]+\/10\./, 'the basis says so where the score is read');
+    for (const label of ['Wind', 'Swell']) assert.match(tile(late, label), /· provisional/, `${label} tile`);
+    for (const label of ['Water', 'Tide']) assert.doesNotMatch(tile(late, label), /provisional/, `${label} is a reading or a tide prediction, not a forecast outlook`);
+    hour.value = '2026-10-09T16:00:00Z';
+    const tomorrow = render(h(Brief, {now: NOW}));
+    assert.ok(head(tomorrow), 'a verdict renders for tomorrow');
+    assert.doesNotMatch(tomorrow, /provisional/i, 'tomorrow is not marked provisional');
+  } finally { regionInfo.value = null; dailyFeed.value = null; regionalForecast.value = null; hour.value = null; }
 });
 
 test('a feed for another region, or no region, leaves the brief empty', async () => {

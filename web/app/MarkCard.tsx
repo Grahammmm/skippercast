@@ -35,7 +35,7 @@ import {shownPresentation, terrainActions, terrainDetail, terrainMark, terrainPi
 import {coordinates, navigate, profile, selection, setParams, species} from '../state.ts';
 import {formatCoordinates} from '../../dist/coordinates.js';
 import {PROFILE_TABLE} from '../profile.ts';
-import {loadRegs, regsData, regulationState, ruleSummary, verifiedText, type RulesRegion} from '../regs.ts';
+import {areaPageOnly, loadRegs, regsData, regulationState, ruleSummary, speciesPage, verifiedText, type RulesRegion} from '../regs.ts';
 import {zone} from './App.tsx';
 import {dockState} from './TimeDock.tsx';
 import {addToTrip, reviewTrip, tripIds} from '../trip.ts';
@@ -80,14 +80,16 @@ export function RulesLine({mark}: {mark: Mark}) {
   if (!region || !RULED.test(mark.id) || mark.withheld) return null;
   const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget, data = loaded?.region === region.id ? loaded.data : null;
   const at = dockState(new Date(), zone()).at, day = new Intl.DateTimeFormat('en-CA', {timeZone: zone(), year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
-  const state = regulationState(data, target, region, Date.now(), day, at), s = ruleSummary(data, target, state, region);
+  const state = regulationState(data, target, region, Date.now(), day, at), s = ruleSummary(data, target, state, region), page = speciesPage(data, target, region);
   const name = target === 'reef' ? 'Lingcod & rockfish' : state.profile?.name ?? target;
   const cell = (label: string, values: readonly string[]) => values.length ? <div><dt>{label}</dt>{values.map(v => <dd key={v} class="ui-mono">{v}</dd>)}</div> : null;
   return (
     <div class="app-mark-regs" role="group" aria-label={`Rules at a glance: ${name}`}>
       <p><span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> <span class="ui-mono">{verifiedText(s)}</span></p>
       <dl>{cell('Bag', s.bag)}{cell('Size', s.size)}{cell('Depth', s.depth ? [s.depth] : [])}</dl>
+      {page && <a href={page.href} target="_blank" rel="noopener" aria-label={`${page.label} (official page, opens in a new tab)`}>{page.label}</a>}
       <a href={s.link} target="_blank" rel="noopener" aria-label={`${s.linkLabel} for ${name} (official page, opens in a new tab)`}>{s.linkLabel}</a>
+      {areaPageOnly(s, page) && <p class="app-mark-regs-note">Area regulations page, not specific to {name}.</p>}
     </div>
   );
 }

@@ -232,6 +232,9 @@ const VERDICT_BASIS = {
   profile: 'Comfort rating from this profile’s hourly grade (surf or surge, wind, seas and launch where it applies), not a bite forecast or a safety clearance. The roughest hour of the window (sunrise to noon, or the rest of the daylight once noon has passed) sets the day; Calmer reads Comfortable. A marine alert makes the day Rough.',
 } as const;
 
+/** The basis line on a provisional day. */
+export const PROVISIONAL_BASIS = 'Provisional outlook: forecasts this far ahead change.';
+
 /**
  * The lead's legality line (SC-LAUNCH-3): whether the selected target (the profile's default before
  * one is chosen) is open on the lead's day, as web/regs.ts regulationState and ruleSummary read the
@@ -257,18 +260,20 @@ export function LeadRules({date, now}: {date: string; now: Date}) {
 /**
  * The brief's first lines: the verdict word for the morning window of the lead's day (tomorrow until
  * a time is chosen), the day and window, one sentence naming what limits it with the basis behind a
- * popover, and whether the target is legal that day. Before there is a brief, the waiting headline.
+ * popover, and whether the target is legal that day. A provisional day (packages/coast daily.ts, from
+ * the day after tomorrow) says so in the verdict line itself. Before there is a brief, the waiting headline.
  */
 export function Verdict({now}: {now: Date}) {
   const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, brief = leadBrief(now), date = leadDate(now, brief);
   const v = currentVerdict(brief, now), rulesLine = <LeadRules date={date} now={now} />;
   if (!v) return <><Headline brief={brief} />{rulesLine}</>;
   const when = leadDayText(date, now, tz);
+  const provisional = !!brief?.provisional;
   return (
-    <div class="app-verdict" data-verdict={v.verdict}>
+    <div class="app-verdict" data-verdict={v.verdict} data-provisional={provisional ? 'true' : undefined}>
       <div class="app-verdict-head">
-        <h1><span class="app-verdict-word">{VERDICT_WORD[v.verdict]}</span>{' '}<span class="app-verdict-window ui-mono" data-day={date}>{v.window ? `${when}, ${v.window}` : when}</span></h1>
-        <Popover align="end">{v.basis === 'comfort-score' ? VERDICT_BASIS['comfort-score'] : VERDICT_BASIS.profile}{v.score !== null ? ` Worst hour: ${v.score}/10.` : ''}</Popover>
+        <h1><span class="app-verdict-word">{VERDICT_WORD[v.verdict]}</span>{' '}<span class="app-verdict-window ui-mono" data-day={date}>{v.window ? `${when}, ${v.window}` : when}</span>{provisional ? ' ' : null}{provisional ? <span class="app-verdict-window app-verdict-provisional ui-mono">Provisional</span> : null}</h1>
+        <Popover align="end">{v.basis === 'comfort-score' ? VERDICT_BASIS['comfort-score'] : VERDICT_BASIS.profile}{provisional ? ` ${PROVISIONAL_BASIS}` : ''}{v.score !== null ? ` Worst hour: ${v.score}/10.` : ''}</Popover>
       </div>
       <p class="app-verdict-limit">{v.limit}{v.held ? ` ${v.held}` : ''}</p>
       {rulesLine}
@@ -298,7 +303,7 @@ export function Details({brief}: {brief: BriefModel | null}) {
 
 /** The four tiles: compact in the sheet below full, dense (short source, one row) in the desktop column. */
 export const BriefTiles = ({brief, compact = false, dense = false}: {brief: BriefModel | null; compact?: boolean; dense?: boolean}) =>
-  <><Tiles tiles={brief?.tiles ?? null} compact={compact} dense={dense} nearshore={PROFILE_TABLE[profile.value].swellTile === 'nearshore'} />{compact ? null : <TideStationControl />}</>;
+  <><Tiles tiles={brief?.tiles ?? null} compact={compact} dense={dense} provisional={!!brief?.provisional} nearshore={PROFILE_TABLE[profile.value].swellTile === 'nearshore'} />{compact ? null : <TideStationControl />}</>;
 
 const clock = (iso: string, tz: string) => new Intl.DateTimeFormat('en-US', {hour: 'numeric', minute: '2-digit', timeZone: tz}).format(new Date(iso)).replace(':00', '').toLowerCase();
 
