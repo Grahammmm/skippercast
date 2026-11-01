@@ -338,12 +338,19 @@ self.addEventListener('message', event => {
   }
 });
 
-// Notification delivery for trip alerts.
+// Notification delivery for trip alerts. A tap opens the v2 map's saved-trip
+// alerts dialog (web/account.ts followAlertsHash); the payload's url is ignored.
+const ALERTS_URL = '/map#alerts';
+/** Where a tap sends a window: an open map keeps its ?region=… and gets #alerts; anything else opens /map#alerts. */
+function alertsTarget(windowUrl, origin) {
+  let url; try { url = new URL(windowUrl); } catch { return ALERTS_URL; }
+  return url.origin === origin && url.pathname === V2_SHELL ? url.pathname + url.search + '#alerts' : ALERTS_URL;
+}
 self.addEventListener('push',event=>{
   let data;try{data=event.data?.json();}catch{return;}
   if(!data?.eventId||!data.body)return;
-  event.waitUntil(self.registration.showNotification(data.title||'SkipperCast',{body:data.body,tag:data.eventId,renotify:false,data:{url:'/#forecast'},icon:'/app-icon.svg'}));
+  event.waitUntil(self.registration.showNotification(data.title||'SkipperCast',{body:data.body,tag:data.eventId,renotify:false,data:{url:ALERTS_URL},icon:'/app-icon.svg'}));
 });
 self.addEventListener('notificationclick',event=>{
-  event.notification.close();event.waitUntil((async()=>{const windows=await clients.matchAll({type:'window',includeUncontrolled:true});const target=windows.find(w=>new URL(w.url).origin===self.location.origin);if(target){await target.navigate('/#forecast');return target.focus();}return clients.openWindow('/#forecast');})());
+  event.notification.close();event.waitUntil((async()=>{const origin=self.location.origin,windows=await clients.matchAll({type:'window',includeUncontrolled:true});const target=windows.find(w=>new URL(w.url).origin===origin);if(target){await target.navigate(alertsTarget(target.url,origin));return target.focus();}return clients.openWindow(ALERTS_URL);})());
 });
