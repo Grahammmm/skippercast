@@ -15,8 +15,9 @@ The processor (``process.py``) calls two hooks each scheduled run:
 **Stages** (``decide``, pure):
 
 1. *Registry.* A vessel's own ``mmsi`` (FCC ULS, PSIX, an admin decision) with an
-   AIS name (the vessel's name or an alias) or call sign that agrees -> ``watched``
-   at 0.9 (``fcc-uls``); an admin-set MMSI (``mmsi`` pinned, as a ``set-mmsi``
+   AIS name (the vessel's name or an alias) or call sign that agrees, heard inside the vessel's own home
+   port on at least one day of the last 30 -> ``watched`` at 0.9 (``fcc-uls``); agreeing but never heard
+   in that port (or no home port) -> ``candidate`` at 0.5, no review; an admin-set MMSI (``mmsi`` pinned, as a ``set-mmsi``
    decision or an admin edit leaves it) -> ``watched`` at 1.0 (``admin``) whatever AIS says. Statics that
    agree on neither -> ``candidate`` at 0.5 and an ``mmsi`` review. An MMSI never
    heard on AIS gets no row, and one with no statics left keeps its stored row; one held by two vessels is left to the resolver.
@@ -328,8 +329,10 @@ the days it was inside a port geofence (contradictions, schedule.py).
             continue   # nothing to judge by (statics expired, or a lost state): the stored row stands
         elif static is None:
             method, confidence, status = "fcc-uls", CONFIDENCE["registry-disagrees"], "candidate"   # positions, no static yet
-        elif name_ok or call_ok:
+        elif (name_ok or call_ok) and v.port_id and presence.get(mmsi, {}).get(v.port_id, 0) > 0:
             method, confidence, status = "fcc-uls", CONFIDENCE["registry"], "watched"
+        elif name_ok or call_ok:   # statics agree but the MMSI was never heard in the vessel's home port: not watched
+            method, confidence, status = "fcc-uls", CONFIDENCE["registry-disagrees"], "candidate"
         else:
             method, confidence, status = "fcc-uls", CONFIDENCE["registry-disagrees"], "candidate"
             review(v, mmsi, static, method, confidence, "registry-statics-disagree", presence.get(mmsi, {}).get(v.port_id, 0))

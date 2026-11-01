@@ -195,7 +195,7 @@ class DecideTests(unittest.TestCase):
         """Acceptance 3 (pure part): the registry's MMSI holds its vessel; disagreeing statics become ais facts."""
         stale = full_static(HELD_MMSI, "HELD EXAMPLE", call_sign="WDX9999", ship_type=60, length_m=40.0)
         rival = full_static(OTHER, "Held Example", ship_type=60, length_m=18.0)
-        decision = self.decide([stale, rival], presence={OTHER: {"port-b": 5}})
+        decision = self.decide([stale, rival], presence={OTHER: {"port-b": 5}, HELD_MMSI: {"port-b": 1}})
         rows = self.rows(decision)
         self.assertEqual((rows[HELD_MMSI]["status"], rows[HELD_MMSI]["match_method"], rows[HELD_MMSI]["confidence"]),
                          ("watched", "fcc-uls", 0.9), "the name agrees, so the registry MMSI is confirmed")
@@ -208,6 +208,25 @@ class DecideTests(unittest.TestCase):
             self.assertEqual((f["method"], f["source_id"], f["rights"], f["vessel_id"]), ("ais", "ais-static", "internal-only", HELD))
             self.assertEqual(f["value_json"]["mmsi"], str(HELD_MMSI))
         self.assertTrue(all(op["op"] in ("fact.upsert", "review.open") for op in decision.facts + decision.reviews))
+
+    def test_an_agreeing_registry_mmsi_is_watched_only_after_it_was_heard_in_the_home_port(self):
+        """AISFIX-1: a name that agrees is not enough; watching a boat never heard at home claims coverage we lack."""
+        heard = full_static(HELD_MMSI, "HELD EXAMPLE", ship_type=60, length_m=18.0)
+        for label, presence in [("never heard in any port", {}), ("heard only in another port", {HELD_MMSI: {"port-a": 9}}),
+                                ("heard in the home port", {HELD_MMSI: {"port-b": 1}})]:
+            with self.subTest(label):
+                decision = self.decide([heard], presence=presence)
+                row = self.rows(decision)[HELD_MMSI]
+                if presence.get(HELD_MMSI, {}).get("port-b"):
+                    self.assertEqual((row["status"], row["confidence"]), ("watched", 0.9))
+                    self.assertEqual(decision.targets, {HELD_MMSI: VesselRef(HELD, "inspected-party", "port-b")})
+                else:
+                    self.assertEqual((row["status"], row["match_method"], row["confidence"]), ("candidate", "fcc-uls", 0.5))
+                    self.assertEqual((decision.targets, decision.reviews), ({}, []))
+        by_call = full_static(HELD_MMSI, "SOMETHING ELSE", call_sign="WDX0002", ship_type=60, length_m=18.0)
+        self.assertEqual(self.rows(self.decide([by_call]))[HELD_MMSI]["status"], "candidate")
+        admin = [vessel(HELD, "Held Example", mmsi=HELD_MMSI, port="port-b", pinned=("mmsi",))]
+        self.assertEqual(self.rows(self.decide([heard], vessels=admin))[HELD_MMSI]["status"], "watched")
 
     def test_registry_statics_that_disagree_on_everything_are_a_review(self):
         wrong = full_static(HELD_MMSI, "SOMETHING ELSE", call_sign="WDX9999", ship_type=37, length_m=18.0)
@@ -352,7 +371,7 @@ class RunTests(unittest.TestCase):
         """Acceptance 3 through a run: no vessel write, and the processor keeps the registry attribution."""
         self.store.write(statics=[static(HELD_MMSI, T0 - DAY, "HELD EXAMPLE", call_sign="WDX9999", ship_type=60, bow=10, stern=8),
                                   static(OTHER, T0 - DAY, "HELD EXAMPLE", ship_type=60, bow=10, stern=8)],
-                         discovery=moored(OTHER, [1, 2, 3], port=PORT_B))
+                         discovery=moored(OTHER, [1, 2, 3], port=PORT_B) + moored(HELD_MMSI, [1], port=PORT_B))
         worker = FakeWorker()
         self.run_once(worker)
         self.assertEqual(worker.watch[str(HELD_MMSI)]["status"], "watched")
@@ -519,7 +538,7 @@ class ScheduleTests(unittest.TestCase):
         rival = full_static(OTHER, "HELD EXAMPLE", ship_type=60, length_m=18.0)
         held = full_static(HELD_MMSI, "HELD EXAMPLE", ship_type=60, length_m=18.0)
         decision = self.decide([held, rival], at_sea={OTHER: set(TWO_WEEKS)}, reports={HELD: set(TWO_WEEKS)},
-                               presence={OTHER: {"port-b": 2}})
+                               presence={OTHER: {"port-b": 2}, HELD_MMSI: {"port-b": 1}})
         rows = self.rows(decision)
         self.assertEqual((rows[HELD_MMSI]["status"], rows[HELD_MMSI]["match_method"]), ("watched", "fcc-uls"))
         self.assertEqual((rows[OTHER]["status"], rows[OTHER]["vessel_id"]), ("candidate", HELD))
