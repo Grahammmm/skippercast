@@ -25,7 +25,7 @@ globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.SHELLS = {};
 globalThis.BUILD_ID = 'b1';
 const {default: worker} = await import('../server/index.ts');
-const {resetMeter, readsToday, recordReads, flush, ceilingOf, DEFAULT_R2_READS_PER_DAY, FLUSH_READS, DEGRADED_RETRY_SECONDS} = await import('../server/cost-ceiling.ts');
+const {resetMeter, readsToday, recordReads, flush, ceilingOf, DEFAULT_R2_READS_PER_DAY, FLUSH_READS, DEGRADED_RETRY_SECONDS, LAST_KNOWN_CACHE} = await import('../server/cost-ceiling.ts');
 const {useBucket} = await import('../server/feeds.ts');
 
 /** caches.default with the semantics the Worker relies on (as tests/test_cache.mjs): no 206 or no-store puts; Range from a cached 200. */
@@ -89,8 +89,9 @@ const get = (path, headers = {}) => new Request('https://skippercast.com' + path
 async function fetchSettled(request, env) { const c = ctx(), r = await worker.fetch(request, env, c); await c.settle(); return r; }
 
 async function withWorld(fn) {
-  const cache = new FakeCache(), originalCaches = globalThis.caches, originalFetch = globalThis.fetch;
-  globalThis.caches = {default: cache, async open() { throw Error('named caches unavailable'); }};
+  const cache = new FakeCache(), lastKnownCopies = new FakeCache(), originalCaches = globalThis.caches, originalFetch = globalThis.fetch;
+  // Last-known copies have their own named cache (server/cost-ceiling.ts); every other named cache is unavailable.
+  globalThis.caches = {default: cache, async open(name) { if (name === LAST_KNOWN_CACHE) return lastKnownCopies; throw Error('named caches unavailable'); }};
   const upstream = [];
   globalThis.fetch = async url => { upstream.push(String(url)); return new Response('missing', {status: 404}); };
   resetMeter();
@@ -149,11 +150,12 @@ test('past the ceiling a feed with no copy takes the free GitHub fallback, and o
   assert.equal(upstream.length, 2);
 }));
 
-test('a PMTiles byte range of an object too large for the edge cache is answered from its last-known copy as the same 206', () => withWorld(async () => {
+test('a PMTiles byte range of an object too large for the edge cache is answered from its last-known copy as the same 206', () => withWorld(async ({cache}) => {
   const FEEDS = snapshotBucket(), env = {FEEDS, COST_CEILING_R2_READS_PER_DAY: '2'};
   const range = {Range: 'bytes=1000-17383'};
   const live = await fetchSettled(get('/feeds/tiles/basemap/big.pmtiles', range), env);
   assert.equal(live.status, 206); assert.equal(live.headers.get('X-SC-Cache'), 'miss');
+  assert.equal(cache.entries.size, 0, 'the copy is kept in its own named cache, never the feed edge cache');
   const bytes = new Uint8Array(await live.arrayBuffer());
   assert.equal(bytes.length, 16384); assert.equal(bytes[0], bigByte(1000));
   recordReads(5);

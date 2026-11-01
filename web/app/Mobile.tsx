@@ -35,7 +35,7 @@ import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
 import {MarkCard, currentMark} from './MarkCard.tsx';
-import {Brand, FreshnessDot, Location, ViewNav} from './Masthead.tsx';
+import {Brand, DegradedNotice, FreshnessDot, Location, ViewNav} from './Masthead.tsx';
 import {Conditions} from './views/Conditions.tsx';
 import {Fleet} from './views/Fleet.tsx';
 import {History} from './views/History.tsx';
@@ -84,6 +84,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
             <span class="ui-eyebrow">{windowText(now, tz)}</span>
             <FreshnessDot />
           </div>
+          <DegradedNotice />
           <Verdict brief={brief} now={now} />
         </>
       )}

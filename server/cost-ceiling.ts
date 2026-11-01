@@ -26,7 +26,7 @@
 //   - a public read with neither a copy nor a free fallback answers 503 with
 //     {degraded: true} and Retry-After, never an R2 read.
 import type {MiddlewareHandler} from 'hono';
-import {edgeCache, type WaitUntil} from './edge-cache.ts';
+import type {WaitUntil} from './edge-cache.ts';
 import {useBucket} from './feeds.ts';
 import type {AppEnv, Env} from './env.ts';
 
@@ -119,10 +119,22 @@ export function lastKnownKey(request: Request): Request {
 
 const INTERNAL = ['X-SC-LK-Status', 'X-SC-Last-Known-At'];
 
+/**
+ * Last-known copies live in their own named cache, never caches.default: the
+ * feed edge cache keeps its own rules (no objects over EDGE_CACHE_MAX_BYTES,
+ * no 404s, no seafloor archives) and its entries are never displaced by
+ * copies that exist only for degraded mode. A copy may be a single byte range
+ * of an object too large for the feed cache, which is how the basemap PMTiles
+ * stays usable when degraded. Unavailable (tests, bare dev) means no copies.
+ */
+export const LAST_KNOWN_CACHE = 'skippercast-last-known-v1';
+async function lastKnownCache(): Promise<Cache | null> {
+  try { return (await (globalThis as {caches?: CacheStorage}).caches?.open(LAST_KNOWN_CACHE)) ?? null; } catch { return null; }
+}
+
 /** Keep `response` (a 200 or 206 served normally) as the last-known copy of `request`. */
 export async function keepLastKnown(request: Request, response: Response, ctx: WaitUntil, now = Date.now()): Promise<void> {
-  const cache = edgeCache();
-  if (!cache || (response.status !== 200 && response.status !== 206) || !response.body) return;
+  if ((response.status !== 200 && response.status !== 206) || !response.body) return;
   if (/no-store|private/.test(response.headers.get('Cache-Control') || '') || response.headers.has('Set-Cookie')) return;
   const length = Number(response.headers.get('Content-Length'));
   if (!(length > 0) || length > LAST_KNOWN_MAX_BYTES) return;
@@ -131,13 +143,16 @@ export async function keepLastKnown(request: Request, response: Response, ctx: W
   headers.set('X-SC-Last-Known-At', new Date(now).toISOString());
   headers.set('Cache-Control', `public, max-age=${LAST_KNOWN_SECONDS}`);
   headers.delete('X-SC-Cache');
+  // Opened before cloning, so an unavailable cache never leaves a teed body unread.
+  const cache = await lastKnownCache();
+  if (!cache) return;
   const write = cache.put(lastKnownKey(request), new Response(response.clone().body, {status: 200, headers})).catch(() => console.warn('Last-known copy write unavailable'));
   if (ctx?.waitUntil) ctx.waitUntil(write); else await write;
 }
 
 /** The last-known copy of `request` as it was served, marked degraded, or null. */
 export async function lastKnown(request: Request): Promise<Response | null> {
-  const cache = edgeCache();
+  const cache = await lastKnownCache();
   if (!cache) return null;
   let hit: Response | undefined;
   try { hit = await cache.match(lastKnownKey(request)); } catch { return null; }
