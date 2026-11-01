@@ -465,7 +465,7 @@ async function applyLinkStart(env: Env, deps: ConsumerDeps, web: AdvisorContactR
     .bind(linkKey(web.id), JSON.stringify({code_hash: action.codeHash, expires_at: action.expiresAt, phone_contact_hash: action.phoneHash, phone_contact_id: phone.id}), at).run();
   const adapter = (deps.channelFor ?? defaultChannelFor)(env, phone);
   if (await relayHold(env, adapter)) return sendText(env, deps, web, inId, `${index}.failed`, t(web.language, 'link_failed'));
-  await verdict.commit();
+  if (!await verdict.commit()) { advisorLog('warn', 'advisor_outbound_refused', {kind: 'link_code', reason: 'race'}); return 0; }
   const inserted = await db.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,body,status,in_reply_to,created_at) VALUES(?,?,'out',?,?,'sending',?,?) ON CONFLICT(id) DO NOTHING`)
     .bind(id, phone.id, phone.channel, t(phone.language, 'link_code_text', {code: '······'}), inId, at).run();
   if (!inserted.meta.changes) return 0;
@@ -621,7 +621,7 @@ async function applyCrewAdd(env: Env, deps: ConsumerDeps, skipper: AdvisorContac
     .bind(randomId(), action.phoneHash, action.phoneEnc, lang(skipper.language), at, at, at).first<AdvisorContactRow>();
   if (!crew || crew.id === skipper.id || crew.status !== 'active') return 0;
   if (verdict?.ok) {
-    await verdict.commit();
+    if (!await verdict.commit()) { advisorLog('warn', 'advisor_outbound_refused', {kind: 'crew_invite', reason: 'race'}); return 0; }
     const pending: CrewInvite = {boat_id: action.boatId, added_by: skipper.id, invited_at: at, expires_at: now + CREW_INVITE_TTL_MS};
     await db.prepare('INSERT INTO job_state(key,value,updated_at) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at')
       .bind(crewInviteKey(crew.id), JSON.stringify(pending), at).run();
