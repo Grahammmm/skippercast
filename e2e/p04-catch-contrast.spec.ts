@@ -124,11 +124,13 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // (web/chart-files.ts) changes; RegionInfo, the id/charters fields Reports reads, CSS, tokens, classes
 // and catch markup do not. contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
 // Merge of RF0935-2 with RF0850-2: App.tsx carries both changes; rebind its merged hash.
+// NB-SC-03 (#519): LayerRail.tsx's Terrain options add the renderer's habitat status line, ranked-reef buttons and
+// "Explore a ranked reef" (existing rail/ui-button classes; no CSS, token or catch markup change). Rebind only LayerRail.tsx.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
   "web/app/App.tsx": "d9a7b2a48ac5147a6db2263da0815744fff45739ae9de85fa2d1d4f0801604c5",
   "web/app/Masthead.tsx": "d785af3dc63990d67940cb4eb451c7a39e3be4de268c67a13d1c8c05130643ca",
-  "web/app/LayerRail.tsx": "248402b3100855ef1561c742ee32c3922d9b6475080cb6420957a553e5872abb",
+  "web/app/LayerRail.tsx": "bdae57c4c4dca33b5fb83a413b7d5c6f525221a4fb6b78037a1ad99102635ccd",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button

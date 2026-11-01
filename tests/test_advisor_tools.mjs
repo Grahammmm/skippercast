@@ -95,9 +95,9 @@ test('dispatchTool: unknown or disallowed tools and throwing executors are error
 test('update_profile: known ports and species only; name cleaned; language en/es', async () => {
   const run = input => TOOL_BY_NAME.get('update_profile').run(input, ctx());
   assert.deepEqual(await run({home_port: 'morro-bay', targets: ['Lingcod', 'california-halibut', 'unicorn'], display_name: ' Capt.\u0007 Ray ', language: 'es'}), {
-    result: {saved: ['display_name', 'home_port', 'targets', 'language'], rejected: []},
+    result: {saved: ['display_name', 'home_port', 'targets', 'language'], rejected: [], unknown_targets: ['unicorn']},
     actions: [{type: 'contact_update', fields: {display_name: 'Capt. Ray', home_port: 'morro-bay', targets_json: '["lingcod","halibut"]', language: 'es'}}]});
-  assert.deepEqual(await run({home_port: 'atlantis', targets: ['unicorn'], language: 'fr'}), {result: {saved: [], rejected: ['home_port', 'targets', 'language']}, actions: []});
+  assert.deepEqual(await run({home_port: 'atlantis', targets: ['unicorn'], language: 'fr'}), {result: {saved: [], rejected: ['home_port', 'targets', 'language'], unknown_targets: ['unicorn']}, actions: []});
 });
 
 test('escalate: a conversation review on this message; unknown reasons become needs_human', async () => {

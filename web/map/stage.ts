@@ -25,7 +25,7 @@
 // stripping and passes a fake terrain module, so no GPU or three is needed.
 import {computed, effect, signal} from '@preact/signals';
 import type {
-  CoastHandle, CoastLocation, CoastMountOptions, CoastPerspective, CoastReading, CoastSelection, CoastShading, CoastSourceCoverage, CoastTargetDetail,
+  CoastHabitat, CoastHandle, CoastLocation, CoastMountOptions, CoastPerspective, CoastReading, CoastSelection, CoastShading, CoastSourceCoverage, CoastTargetDetail,
 } from '../../packages/coast/src/embed-types.ts';
 import type {CoastPalette} from '../../packages/coast/src/palette.ts';
 import type {ChartMark} from './coastline.ts';
@@ -208,6 +208,14 @@ export const terrainShading = signal<CoastShading | null>(null);
 /** The mounted renderer's view buttons and sources sheet; null while no terrain is mounted. */
 export interface TerrainActions {zoom(direction: 'in' | 'out'): void; reset(): void; top(): void; sources(): void}
 export const terrainActions = signal<TerrainActions | null>(null);
+/** The renderer's habitat status line and ranked reefs (onHabitat, #519) for the rail; null while no terrain is mounted. */
+export const terrainHabitat = signal<CoastHabitat | null>(null);
+// The mounted terrain's ranked-reef actions (one stage exists at a time); null while none is mounted.
+let rankedReefs: {explore(): boolean; select(id: string): void} | null = null;
+/** The renderer's "Explore a ranked reef"; false when no terrain is mounted or it has no reef to show. */
+export function exploreRankedReef(): boolean { return rankedReefs?.explore() ?? false; }
+/** Select a ranked reef by id, as a pick on the terrain does (`?habitat=`); nothing while no terrain is mounted. */
+export function selectRankedReef(id: string): void { rankedReefs?.select(id); }
 
 const SETTERS: {[K in keyof TerrainOptions]: (h: CoastHandle, value: TerrainOptions[K]) => void} = {
   relief: (h, v) => h.setRelief(v), water: (h, v) => h.setWaterVisible(v), waterOpacity: (h, v) => h.setWaterOpacity(v),
@@ -310,6 +318,7 @@ export function createStage(options: StageOptions): Stage {
     const h = handle.peek();
     handle.value = null; applied = {}; draped = new Map(); terrainMark.value = null; terrainDetail.value = null; terrainPick.value = null;
     shownOptions = {...TERRAIN_DEFAULTS}; terrainReading.value = null; terrainActions.value = null; terrainShading.value = null;
+    terrainHabitat.value = null; rankedReefs = null;
     h?.destroy();
   };
   const fail = (error: unknown): void => {
@@ -378,6 +387,7 @@ export function createStage(options: StageOptions): Stage {
         },
         onReset: reset,
         onCurrentStatus: text => { if (current.peek() !== UNSUPPORTED) currentStatus.value = text; },
+        onHabitat: seen => { if (alive) terrainHabitat.value = seen; },
         onView: seen => {
           if (appView.peek() !== 'coast') return;
           const next = parseCamera(cameraParam({latitude: seen.latitude, longitude: seen.longitude, zoom: zoomForSpan(seen.span)}));
@@ -400,6 +410,15 @@ export function createStage(options: StageOptions): Stage {
       mountedRegion = at;
       handle.value = h;
       terrainActions.value = {zoom: direction => h.zoom(direction), reset, top: () => h.topView(), sources: () => h.openSources()};
+      rankedReefs = {
+        explore: () => h.exploreNext(),
+        // As onSelection: the renderer is told once, and the link names the reef.
+        select: id => {
+          applied.habitat = key(id);
+          h.selectHabitat(id);
+          if (id !== habitat.peek()) navigate(habitatHref(location.href, id));
+        },
+      };
       const ready = await h.load();
       if (alive && handle.peek() === h && !ready) fail(new Error('Coastal terrain did not load'));
     } catch (error) {
