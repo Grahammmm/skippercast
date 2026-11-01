@@ -33,8 +33,8 @@ export async function api<T = Record<string, unknown>>(path: string, options: Re
   return data as T;
 }
 
-/** Tomorrow in the region's zone, as the date input's value. */
-export const alertDate = (timeZone: string, now: number = Date.now()): string => new Intl.DateTimeFormat('en-CA', {timeZone}).format(new Date(now + 86400000));
+/** Tomorrow in the region's zone, as the date input's value: today's zone date (dateRange's min) plus one calendar day, so DST nights do not skip or repeat a day. */
+export const alertDate = (timeZone: string, now: number = Date.now()): string => new Date(Date.parse(dateRange(timeZone, now).min + 'T12:00:00Z') + 86400000).toISOString().slice(0, 10);
 
 export type RegionAlerts = {
   id: string; timezone: string; species: string[];
