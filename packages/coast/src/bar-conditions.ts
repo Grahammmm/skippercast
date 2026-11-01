@@ -236,8 +236,24 @@ export function barDay(entrance: Entrance, hours: BarHour[]): BarDay {
  * departure hour [start, start + 1 h) and the return hour [end - 1 h, end].
  */
 export function crossingHours(day: BarDay, start: string, end: string): BarHour[] {
+  return crossingCheck(day, start, end).hours;
+}
+
+export type CrossingCheck = {hours: BarHour[]; departure: BarHour | null; return: BarHour | null; known: boolean};
+
+/**
+ * The crossing hours with the readings at each end: `departure` is the earliest reading in [start, start + 1 h),
+ * `return` the latest in [end - 1 h, end]. `known` is false when either end has no reading, either time is not a
+ * date, or the window does not end after it starts: such a window is never read as a clear bar.
+ */
+export function crossingCheck(day: BarDay, start: string, end: string): CrossingCheck {
   const from = Date.parse(start), to = Date.parse(end);
-  return day.hours.filter(h => {const t = Date.parse(h.at); return (t >= from && t < from + HOUR) || (t >= to - HOUR && t <= to);});
+  const at = (h: BarHour) => Date.parse(h.at);
+  const hours = day.hours.filter(h => {const t = at(h); return (t >= from && t < from + HOUR) || (t >= to - HOUR && t <= to);});
+  const leaving = hours.filter(h => at(h) >= from && at(h) < from + HOUR).sort((a, b) => at(a) - at(b));
+  const back = hours.filter(h => at(h) >= to - HOUR && at(h) <= to).sort((a, b) => at(b) - at(a));
+  const departure = leaving[0] ?? null, ret = back[0] ?? null;
+  return {hours, departure, return: ret, known: Number.isFinite(from) && Number.isFinite(to) && to > from && departure !== null && ret !== null};
 }
 
 /** The standing line every bar reading carries. */
