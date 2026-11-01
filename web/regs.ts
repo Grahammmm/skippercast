@@ -210,7 +210,7 @@ export function speciesPage(data: Data, species: string, region: RulesRegion): {
 /** True when the card's only official link is the place's area regulations page (no species page in the reviewed registry). */
 export const areaPageOnly = (s: RuleSummary, page: unknown): boolean => !page && s.linkLabel === 'Official rules' && isAreaPage(s.link);
 /** dist/regulations.js `ruleSummaryHTML`'s verified wording. */
-export const verifiedText = (s: RuleSummary): string => s.verified ? `Verified ${s.verified}` : s.checked ? `Needs recheck · last check ${s.checked}` : 'Not verified';
+export const verifiedText = (s: RuleSummary): string => s.verified ? `Verified ${s.verified}` : s.checked ? 'Not confirmed for your fishing date - open the official rules before you go.' : 'Not verified';
 
 /** The region's reviewed registry, keyed by region so another region's never shows. */
 export const regsData = signal<{region: string; data: Data} | null>(null);
