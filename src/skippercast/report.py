@@ -21,14 +21,17 @@ from .runs import validate
 MARK = {"ok": "✅ ok", "degraded": "⚠️ degraded", "failed": "❌ failed"}
 DETAIL_KEYS = ("detail", "error_class", "http_status", "region", "issue")
 REGION_ORDER = {"failed": 0, "degraded": 1}
+MAX_CELL = 300
 
 
 def cell(value):
-    """A single-line, pipe-safe Markdown table cell."""
+    """A single-line, pipe-safe Markdown table cell; a cut ends with "…" and never splits an escape."""
     if value is None or value == "":
         return "–"
     text = " ".join(str(value).split())
-    return text.replace("\\", "\\\\").replace("|", "\\|")[:300]
+    if len(text) > MAX_CELL:
+        text = text[:MAX_CELL - 1] + "…"
+    return text.replace("\\", "\\\\").replace("|", "\\|")
 
 
 def seconds(ms):
@@ -79,7 +82,8 @@ def regions_table(regions):
         if row.get("error_class"):
             detail = f"{row['error_class']}: {row.get('error', '')}"
         else:
-            detail = ", ".join(str(i) for i in (row.get("issues") or [])[:8])
+            issues = list(row.get("issues") or [])
+            detail = ", ".join(str(i) for i in issues[:8]) + (f", +{len(issues) - 8} more" if len(issues) > 8 else "")
         lines.append(f"| {cell(ident)} | {MARK.get(row['status'], cell(row['status']))} | {ok} | "
                      f"{seconds(row.get('duration_ms'))} | {cell(detail)} |")
     counts = {}
