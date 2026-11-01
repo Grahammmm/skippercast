@@ -102,7 +102,8 @@ export const spotCard = computed<ChartMark | null | undefined>(() => {
 /** The terrain's habitat selection as a card on the Chart: the renderer's evidence once it speaks, else its position, else the receipt. */
 export const habitatCard = computed<ChartMark | null>(() => {
   const s = linked.value, detail = terrainDetail.value, receipt = habitatReceipt.value;
-  if (s) return detail && detail.id === s.id ? terrainDetailCard(detail, coastSpecies(species.value, profile.value)) : terrainCard(s);
+  // SCJ-1: the evidence card keeps the selection's position, so the place joins a trip as a user waypoint.
+  if (s) return detail && detail.id === s.id ? {...terrainDetailCard(detail, coastSpecies(species.value, profile.value)), position: {latitude: s.latitude, longitude: s.longitude}} : terrainCard(s);
   return receipt && receipt.id === habitat.value ? receiptCard(receipt) : null;
 });
 

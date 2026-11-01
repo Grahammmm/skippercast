@@ -126,9 +126,13 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // Merge of RF0935-2 with RF0850-2: App.tsx carries both changes; rebind its merged hash.
 // NB-SC-03 (#519): LayerRail.tsx's Terrain options add the renderer's habitat status line, ranked-reef buttons and
 // "Explore a ranked reef" (existing rail/ui-button classes; no CSS, token or catch markup change). Rebind only LayerRail.tsx.
+// SC-LAUNCH-3: App.tsx's region reader adds an optional RegionInfo `rules` (region.json's jurisdiction, species,
+// authority hosts and assets, read by web/regs.ts for the brief's legality line) when region.json names a
+// jurisdiction. The id/charters fields Reports reads, CSS, tokens, classes and catch markup are unchanged;
+// contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
-  "web/app/App.tsx": "d9a7b2a48ac5147a6db2263da0815744fff45739ae9de85fa2d1d4f0801604c5",
+  "web/app/App.tsx": "6a77aa09c77ed2a281979d6413dcbaaa7b530ce79ba5926e59d8485e7c4cbe74",
   "web/app/Masthead.tsx": "d785af3dc63990d67940cb4eb451c7a39e3be4de268c67a13d1c8c05130643ca",
   "web/app/LayerRail.tsx": "bdae57c4c4dca33b5fb83a413b7d5c6f525221a4fb6b78037a1ad99102635ccd",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
