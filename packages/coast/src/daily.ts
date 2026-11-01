@@ -6,7 +6,7 @@ import {freshNearshore, nearshoreAt} from './nearshore.ts';
 import {SPEAR, SURGE_RANK, clarityText, spearDay, spearHours, surge, surgeText, type SpearDay, type SpearHour, type SurgeBand} from './spear.ts';
 import {KAYAK_WIND_RANK, kayakDay, kayakHours, kayakWindText, kayakWindowOk, type KayakDay, type KayakHour} from './kayak.ts';
 import {seaward, shoreDay, shoreHours, surf, surfText, surfWindowOk, type ShoreDay, type ShoreHour} from './shore-conditions.ts';
-import {BAR_CHECK, barDay, barHours, crossingHours, entranceFor, type BarDay, type BarHour} from './bar-conditions.ts';
+import {BAR_CHECK, barDay, barHours, crossingCheck, crossingHours, entranceFor, type BarDay, type BarHour} from './bar-conditions.ts';
 import {clampLimits, defaultLimits, limitsText, looserFields, sameLimits, stricterFields, type ComfortLimits} from './limits.ts';
 
 export type DailyDay = {date:string;label:string;weekday:string;dayNumber:number;provisional:boolean};
@@ -259,8 +259,8 @@ export function buildDaily(report:Report,county:County,area:Area,mode:BriefMode,
   return from>=start&&to<=end&&!hours.some(hour=>Date.parse(hour.at)>=from&&Date.parse(hour.at)<to&&blocked(hour))
    &&!(bar&&crossingHours(bar,window.start,window.end).some(hour=>hour.band==='Hazardous'));
  }).map(window=>{
-  const crossing=bar?crossingHours(bar,window.start,window.end):[];
-  return bar&&crossing.some(hour=>hour.band!=='No bar flag')?{...window,reasons:[...window.reasons,`${bar.entrance.name}: bar caution or unknown at departure or return (estimate); check the bar status`]}:window;
+  const crossing=bar?crossingCheck(bar,window.start,window.end):null;
+  return bar&&crossing&&(!crossing.known||crossing.hours.some(hour=>hour.band!=='No bar flag'))?{...window,reasons:[...window.reasons,`${bar.entrance.name}: bar caution or unknown at departure or return (estimate); check the bar status`]}:window;
  });
  // With the user's limits, screen once more with the defaults: a window the defaults would not suggest in full
  // says the user's looser limit decided it, and hours the defaults would suggest but the user's limits leave out are counted.
