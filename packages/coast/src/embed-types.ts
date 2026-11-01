@@ -40,6 +40,10 @@ export type CoastSourceCoverage={sources:readonly Readonly<CoastTerrainSource>[]
 export type CoastShading={readout:string;rampMinM:number|null;rampMaxM:number|null;contourMinorM:number;contourIndexM:number;fixedRamp:boolean;relief:number};
 /** An admitted habitat selection in WGS84 degrees, with its public id. */
 export type CoastSelection={latitude:number;longitude:number;region?:string;id?:string};
+/** One ranked reef as its native rail button reads; `id` is the habitat the button selects. */
+export type CoastHabitatRank={id:string;title:string;detail:string};
+/** The native habitat rail: its status line, why it reads so, and up to 12 ranked reefs (none unless `ok`). */
+export type CoastHabitat={status:string;state:'ok'|'withheld'|'unavailable'|'shore';ranks:readonly CoastHabitatRank[];canExplore:boolean};
 /** The renderer camera: centre in WGS84 degrees and visible span in metres. */
 export type CoastView={latitude:number;longitude:number;span:number};
 /** A host camera request; without `span` the renderer keeps its scale. */
@@ -82,6 +86,8 @@ export type CoastMountOptions={
  onRestoredSelection?:(selection:CoastSelection)=>void;
  onSelectionInvalidated?:()=>void;
  onCurrentStatus?:(text:string)=>void;
+ /** What the native habitat rail shows: its status line and up to 12 ranked reefs; fires once per change. */
+ onHabitat?:(habitat:CoastHabitat)=>void;
  onView?:(view:CoastView)=>void;
  onPerspective?:(mode:CoastPerspective)=>void;
  /** A terrain inspection with its measured or modelled label and source date; `null` when it clears. */
@@ -151,6 +157,8 @@ export interface CoastHandle{
  topView():void;
  /** Shows the renderer's sources and assumptions sheet. */
  openSources():void;
+ /** Runs the native "Explore a ranked reef" button; false, with no camera move, when there is nothing to explore. */
+ exploreNext():boolean;
  destroy():void;
 }
 

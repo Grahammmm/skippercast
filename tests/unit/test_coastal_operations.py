@@ -14,6 +14,7 @@ import time
 
 import pytest
 
+from skippercast.coastal.runner import _group_state
 from tests._coastal_operations import Harness, alive, export_package, policy, wait_for
 
 pytestmark = pytest.mark.skipif(sys.platform != "linux", reason="coastal supervisor requires Linux /proc")
@@ -60,13 +61,31 @@ def test_controller_identity_ignores_this_process_sys_path(tmp_path, export, mon
 
 # --- cost-bound stop ---------------------------------------------------------
 
-def test_byte_cap_stops_dispatch_before_launch_and_never_refunds(ops):
+# The harness default 2 s lease (heartbeat every 2/3 s) is what the killed-
+# controller test needs to watch a lease lapse. A dispatch whose heartbeat or
+# commit is starved for more than ~1.3 s by a loaded host (the parallel gate)
+# then fails as `failed_uncertain: expired or superseded lease`, which is the
+# correct fencing outcome but not what a byte-cap test is about. These tests
+# use the production lease (30 s), so only the byte cap decides what runs.
+COST_LEASE_S = 30
+
+
+@pytest.fixture
+def cost_ops(tmp_path, export):
+    harness = Harness(tmp_path, export, policy_value=policy(lease_s=COST_LEASE_S))
+    yield harness
+    harness.close()
+
+
+def test_byte_cap_stops_dispatch_before_launch_and_never_refunds(cost_ops):
+    ops = cost_ops
     # Cap 250 B, 100 B per job: two fit, the third would overshoot the cap.
     first = ops.job("first", "underreport")    # claims it read nothing
     second = ops.job("second", "overreport")   # claims it read 1 GB
     third = ops.job("third", "done")
 
-    assert states(ops.run()) == ["done", "done", "idle"]
+    results = ops.run()
+    assert states(results) == ["done", "done", "idle"], results
 
     jobs = ops.jobs()
     assert jobs[first]["state"] == jobs[second]["state"] == "done"
@@ -83,10 +102,12 @@ def test_byte_cap_stops_dispatch_before_launch_and_never_refunds(ops):
     assert [d["reason"] for _, d in ops.events("budget_exhausted")] == [None]
 
 
-def test_exhausted_byte_cap_stops_every_later_job(ops):
+def test_exhausted_byte_cap_stops_every_later_job(cost_ops):
+    ops = cost_ops
     jobs = [ops.job(f"j{i}", "done", budget={"bytes": 125}) for i in range(4)]
 
-    assert states(ops.run()) == ["done", "done", "idle"]
+    results = ops.run()
+    assert states(results) == ["done", "done", "idle"], results
 
     current = ops.jobs()
     assert [current[j]["state"] for j in jobs] == ["done", "done", "held", "held"]
@@ -233,7 +254,20 @@ def test_killed_controller_resumes_without_duplicate_or_unfenced_work(ops):
     wait_for(lambda: ops.intent(slow, token).get("state") == "finished", message="supervisor finish")
     assert (ops.job_dir(slow, token) / "output/result.json").exists()
     assert ops.jobs()[slow]["result_sha"] is None
-    wait_for(lambda: not alive(worker), timeout=5, message="worker exit")
+    # Publishing "finished" precedes the supervisor's own exit. Recovery checks
+    # every recorded owned group, not just the worker PID.
+    intent = ops.intent(slow, token)
+    identities = [intent["supervisor"], intent["child"], *intent["owned_descendants"]]
+    group_states = []
+
+    def owned_groups_stopped():
+        group_states[:] = [_group_state(identity) for identity in identities]
+        return all(state == "stopped" for state in group_states)
+
+    try:
+        wait_for(owned_groups_stopped, timeout=5, message="owned process groups stopped")
+    except AssertionError as exc:
+        raise AssertionError(f"owned groups did not stop: {list(zip(identities, group_states))}") from exc
 
     assert ops.store.recover(slow, ops.recovery_receipts(slow)) is True
     assert ops.ledger()["reservations"][token]["state"] == "settled"

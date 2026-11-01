@@ -99,9 +99,15 @@ def check_output(folder, out, build, region, sources, bad):
         if not dc.SHA256.fullmatch(str(s.get('sha256'))) or not dc.YEAR.fullmatch(str(s.get('survey_date'))) \
                 or not s.get('vertical_datum') or s.get('sha256') != inputs.get(sid):
             bad['prov'].append(f'{rel}: source {sid} sha256, survey_date, datum or BUILD input sha')
-        want = (sources.get(sid) or {}).get('vertical_datum') or dc.UNVERIFIED_DATUM
-        if s.get('vertical_datum') != want:
-            bad['datum'].append(f'{rel}: source {sid} datum {s.get("vertical_datum")!r} is not the catalog {want!r}')
+        reviewed, value = sources.get(sid) or {}, s.get('vertical_datum')
+        if s.get('vertical_datum_source') == 'bag-metadata':  # M5d: a BAG source keeps the datum its own metadata declares
+            if reviewed.get('adapter') != 'bag':
+                bad['datum'].append(f'{rel}: source {sid} claims a BAG datum but the catalog adapter is {reviewed.get("adapter")!r}')
+            elif not (isinstance(value, str) and value.strip() and 'ellipsoid' not in value.casefold()
+                      and dc.SHA256.fullmatch(str(s.get('bag_metadata_sha256'))) and re.fullmatch(r'[A-Z]\d{5}', str(s.get('survey_id')))):
+                bad['datum'].append(f'{rel}: source {sid} datum {value!r} is not a declared BAG datum')
+        elif value != (want := reviewed.get('vertical_datum') or dc.UNVERIFIED_DATUM):
+            bad['datum'].append(f'{rel}: source {sid} datum {value!r} is not the catalog {want!r}')
     for i, f in enumerate(collection.get('features') or []):
         fp = f.get('properties') or {}
         source = entries.get(fp.get('source_id'))

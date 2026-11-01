@@ -56,28 +56,7 @@ jobs:
         if: always()
         env:
           REGION_ID: ${{ matrix.region_id }}
-        run: |
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          region = os.environ['REGION_ID']
-          root = Path('var/draft-rehearsal') / region / 'regions' / region
-          if not (root / 'latest.json').is_file():
-              raise SystemExit('Draft collector produced no regional receipt')
-          evidence = json.loads((root / 'latest.json').read_text())
-          rules = json.loads((root / 'regulations-health.json').read_text())
-          health = evidence['health']
-          source_failures = [ident for ident in health['issues']
-                             if evidence['sources'][ident]['status'] in ('failed', 'retained')]
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
-              out.write(f"## {region} draft rehearsal\n")
-              out.write(f"{health['sources_ok']}/{health['sources_total']} sources healthy; legal source changes or failures: {len(rules['review_required'])}; source fetch failures: {len(source_failures)}.\n")
-              out.write('This is unpublished source evidence, not fishing permission or site clearance.\n')
-              for issue in health['issues']:
-                  out.write(f'- {issue}\n')
-          if rules['review_required'] or source_failures or not health['critical_available']:
-              raise SystemExit('Draft evidence needs review before regional promotion')
-          PY
+        run: python scripts/draft_region_health_report.py --region "${REGION_ID}"
       - name: Upload unpublished evidence and health
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
