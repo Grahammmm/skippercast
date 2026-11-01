@@ -183,7 +183,7 @@ def _prefix_match(a: str, b: str) -> bool:
     short, long = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
     if short == long or long[:len(short)] != short or len(_key(short)) < (6 if len(short) > 1 else 8):
         return False
-    return not any(x.isdigit() or x in GENERATIONAL or ROMAN_TOKEN.fullmatch(x) for x in long[len(short):])
+    return not any(x.isdigit() or x in NUMBER_WORDS or x in NUMBER_MARKERS or x in GENERATIONAL or ROMAN_TOKEN.fullmatch(x) for x in long[len(short):])
 
 
 def _one_letter(a: str, b: str) -> bool:

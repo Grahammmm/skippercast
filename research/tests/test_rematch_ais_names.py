@@ -60,6 +60,17 @@ class FoldingRules(unittest.TestCase):
         rep = run([vessel("v1", "Sea Hunter Fleet")], [static(999000001, "SEA HUNTER FLEET 2")])
         self.assertEqual(rep["pairs"], [])
 
+    def test_a_spelled_out_numbered_boat_is_not_a_prefix_match_but_word_to_digit_still_folds(self):
+        for theirs in ("SILVER MARLIN TWO", "SILVER MARLIN NUMBER TWO", "SILVER MARLIN NO 3"):
+            with self.subTest(theirs=theirs), US:
+                rep = run([vessel("v1", "Silver Marlin")], [static(999000001, theirs)],
+                          {"999000001": {"san-diego": 3}})
+                self.assertEqual(rep["pairs"], [])
+        with US:
+            rep = run([vessel("v1", "Silver Marlin Two")], [static(999000001, "SILVER MARLIN 2")],
+                      {"999000001": {"san-diego": 3}})
+        self.assertEqual([(p["rule"], p["status"]) for p in rep["pairs"]], [("R3-numerals-words-roman", "corroborated")])
+
     def test_one_generic_word_is_not_an_identity(self):
         rep = run([vessel("v1", "Spirit of Adventure")], [static(999000001, "SPIRIT")])
         self.assertEqual(rep["pairs"], [])
