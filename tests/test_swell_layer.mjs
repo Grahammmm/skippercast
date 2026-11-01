@@ -87,10 +87,10 @@ test('the sample reader is v1\'s: unit-checked, the exact hour, never past the r
   assert.equal(sample(series([0, 2, 3]), 'swell_wave_height', 100, 'ft'), 0, 'zero stays zero');
 });
 
-test('the grid is the points sharing a latitude and a longitude: Morro Bay\'s 3 × 3, Cambria\'s 2 × 2, none in Santa Cruz', async () => {
+test('the grid is the points sharing a latitude and a longitude: Morro Bay\'s 3 × 3, Cambria\'s 3 × 3 less one corner, none in Santa Cruz', async () => {
   const grid = async name => latticePoints((await region(name)).forecast_points.map(p => ({id: p.id, lat: p.latitude, lon: p.longitude}))).map(p => p.id);
   assert.deepEqual(await grid('morro-bay'), (await region('morro-bay')).forecast_points.filter(p => p.offshore).map(p => p.id));
-  assert.deepEqual(await grid('cambria-san-simeon'), ['offshore-0-0', 'offshore-0-1', 'offshore-1-0', 'offshore-1-1']);
+  assert.deepEqual(await grid('cambria-san-simeon'), ['offshore-0-0', 'offshore-0-1', 'offshore-1-0', 'offshore-1-1', 'offshore-s-0', 'offshore-s-1', 'offshore-s-2', 'offshore-0-2']);
   assert.deepEqual(await grid('santa-cruz-monterey-bay'), []);
   const f = parsed();
   assert.deepEqual(f.lattice.map(p => p.index), [2, 3, 4, 5, 6, 7, 8, 9, 10], 'each point keeps its series index');
@@ -135,6 +135,35 @@ test('Morro Bay\'s shoreward column (#501): 11 lattice points 0.25° apart, one 
   assert.equal(frame.field.quads.length, 4, 'the other four cells still draw');
   assert.ok(!frame.field.quads.some(q => q.east === -121), 'the shoreward cell is dropped, not filled');
   assert.equal(swellPoints(gap, AT.getTime() / 1000).length, 10);
+});
+
+test('Cambria\'s lattice (#501): 3 × 3 less the Piedras Blancas corner, 0.25° × 0.1°, three cells; a null corner drops only its cell', async () => {
+  const points = (await region('cambria-san-simeon')).forecast_points;
+  const grid = latticePoints(points.map(p => ({id: p.id, lat: p.latitude, lon: p.longitude})));
+  assert.deepEqual(grid.map(p => p.id), points.filter(p => p.offshore).map(p => p.id), 'exactly the kept offshore points, in file order');
+  assert.ok(!grid.some(p => ['cambria', 'san-simeon', 'north-coast'].includes(p.id)), 'inshore points stay off the lattice');
+  const unit = ps => ps.map(p => ({lon: p.lon, lat: p.lat, values: [1]}));
+  const field = surfaceField(unit(grid));
+  assert.ok(Math.abs(field.step[0] - 0.25) < 1e-9 && Math.abs(field.step[1] - 0.1) < 1e-9, String(field.step));
+  assert.equal(field.quads.length, 3, 'the north-east cell lacks its land corner');
+  assert.ok(!field.quads.some(q => Math.abs(q.north - 35.65) < 1e-9 && q.east === -121.25));
+  assert.equal(surfaceField(unit([...grid, {lon: -121.25, lat: 35.65}])).quads.length, 4, 'all five candidates would make four');
+  // Through the feed and the Chart's frame: a null swell sample at the far-south outer corner drops only its cell.
+  const cambria = (blank = null) => {
+    const fd = feed({region: 'cambria-san-simeon'}), data = fd.models[WAVE_MODEL.id].data;
+    const series = points.map((_, n) => data[2 + (n % 9)]);
+    const at = points.findIndex(p => p.id === blank);
+    if (at >= 0) series[at] = {...series[at], hourly: {...series[at].hourly, swell_wave_height: series[at].hourly.swell_wave_height.map(() => null)}};
+    return {...fd, requested_points: points.map(p => [p.id, p.latitude, p.longitude]), models: {...fd.models, [WAVE_MODEL.id]: {...fd.models[WAVE_MODEL.id], data: series}}};
+  };
+  const full = parseForecast(cambria(), 'cambria-san-simeon');
+  assert.equal(full.lattice.length, 8);
+  assert.ok(Math.abs(full.step[0] - 0.25) < 1e-9 && Math.abs(full.step[1] - 0.1) < 1e-9);
+  assert.equal(swellFrame(full, AT.getTime(), NOW, TZ).field.quads.length, 3);
+  const frame = swellFrame(parseForecast(cambria('offshore-s-1'), 'cambria-san-simeon'), AT.getTime(), NOW, TZ);
+  assert.equal(frame.field.quads.length, 2, 'the other two cells still draw');
+  assert.ok(!frame.field.quads.some(q => q.west === -121.75 && Math.abs(q.south - 35.45) < 1e-9), 'the far-south outer cell is dropped, not filled');
+  assert.equal(swellFrame(parseForecast(cambria('offshore-0-0'), 'cambria-san-simeon'), AT.getTime(), NOW, TZ), null, 'a corner of all three cells leaves no field');
 });
 
 test('forecastTime is the currents\' forecast gate over a model\'s listed hours', () => {

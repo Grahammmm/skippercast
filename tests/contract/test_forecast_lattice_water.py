@@ -51,12 +51,29 @@ def _region(name):
     return json.loads((ROOT / 'regions' / name / 'region.json').read_text())
 
 
-def test_every_morro_bay_lattice_point_is_water():
-    points = [p for p in _region('morro-bay')['forecast_points'] if p.get('offshore')]
-    assert len(points) == 11
-    assert {p['id'] for p in points} >= {'offshore-0-s', 'offshore-1-s'}
+CAMBRIA_LATTICE = ['offshore-0-0', 'offshore-0-1', 'offshore-1-0', 'offshore-1-1',
+                   'offshore-s-0', 'offshore-s-1', 'offshore-s-2', 'offshore-0-2']
+
+
+@pytest.mark.parametrize('name,count,added', [
+    ('morro-bay', 11, {'offshore-0-s', 'offshore-1-s'}),
+    ('cambria-san-simeon', 8, set(CAMBRIA_LATTICE[4:])),
+])
+def test_every_lattice_point_is_water(name, count, added):
+    points = [p for p in _region(name)['forecast_points'] if p.get('offshore')]
+    assert len(points) == count
+    assert {p['id'] for p in points} >= added
     for p in points:
         assert on_water(p['latitude'], p['longitude']), p['id']
+
+
+def test_cambria_keeps_the_four_water_candidates_in_order_and_leaves_inshore_points_off_the_lattice():
+    points = _region('cambria-san-simeon')['forecast_points']
+    assert [p['id'] for p in points if p.get('offshore')] == CAMBRIA_LATTICE
+    inshore = [p['id'] for p in points if not p.get('offshore')]
+    assert inshore == ['cambria', 'san-simeon', 'north-coast']
+    assert len({p['id'] for p in points}) == len(points), 'no duplicate ids'
+    assert len({(p['latitude'], p['longitude']) for p in points}) == len(points), 'no duplicate coordinates'
 
 
 @pytest.mark.parametrize('lat,lon,why', [
@@ -69,13 +86,32 @@ def test_a_planted_point_off_the_water_rule_fails(lat, lon, why):
     assert not on_water(lat, lon), why
 
 
-def test_the_left_out_cambria_column_point_is_not_in_the_region():
-    coords = {(p['latitude'], p['longitude']) for p in _region('morro-bay')['forecast_points']}
-    assert (35.55, -121.0) not in coords
+@pytest.mark.parametrize('name,lat,lon', [
+    ('morro-bay', 35.55, -121.0),
+    ('cambria-san-simeon', 35.65, -121.25),  # Piedras Blancas: under 8 km from the shore
+])
+def test_a_left_out_candidate_fails_the_water_rule_and_is_not_in_the_region(name, lat, lon):
+    assert not on_water(lat, lon)
+    coords = {(p['latitude'], p['longitude']) for p in _region(name)['forecast_points']}
+    assert (lat, lon) not in coords
+
+
+@pytest.mark.parametrize('lat,ok', [(35.45, True), (35.449, False)])
+def test_the_cambria_south_row_sits_on_the_inclusive_bound_and_a_point_south_of_it_is_refused(lat, ok):
+    from skippercast.platform.contracts import REPO, load_catalogs, validate_region
+    region = _region('cambria-san-simeon')
+    assert region['bounds'][1] == 35.45
+    planted = next(p for p in region['forecast_points'] if p['id'] == 'offshore-s-0')
+    planted['latitude'] = lat
+    if ok:
+        validate_region(region, *load_catalogs(REPO), root=REPO)
+    else:
+        with pytest.raises(ValueError, match='outside its region bounds'):
+            validate_region(region, *load_catalogs(REPO), root=REPO)
 
 
 def test_every_region_requests_at_most_50_forecast_points():
     counts = {path.parent.name: len(json.loads(path.read_text()).get('forecast_points', []))
               for path in sorted((ROOT / 'regions').glob('*/region.json'))}
-    assert counts and counts['morro-bay'] == 15
+    assert counts and counts['morro-bay'] == 15 and counts['cambria-san-simeon'] == 11
     assert max(counts.values()) <= MAX_POINTS, counts
