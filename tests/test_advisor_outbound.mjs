@@ -181,3 +181,104 @@ dbTest('crew invitations: one number gets at most 2 a day from all boats; a skip
   for (let n = 800; n < 812; n++) sent += (await apply(env, sql, 'o1', [await crewAdd(n)])).length;
   assert.equal(sent, guard.ORIGIN_PER_DAY.crew_invite - 1, 'ten a day per skipper (one went to the first number)');
 });
+
+// ---- racing requests: commit() counts and re-reads in one transaction --------------------------
+
+/** The D1 batch as Cloudflare runs it: one transaction that returns every statement's rows; `before(sqls)` runs first. */
+function d1(sql, db, before = () => {}) {
+  const prepare = query => { const s = db.prepare(query); const q = {query, bind(...a) { s.bind(...a); return q; }, first: () => s.first(), all: () => s.all(), run: () => s.run()}; return q; };
+  return {prepare, async batch(qs) {
+    before(qs.map(q => q.query));
+    sql.exec('BEGIN');
+    try { const out = []; for (const q of qs) out.push(/^\s*SELECT/i.test(q.query) ? {...await q.all(), meta: {changes: 0}} : {results: [], ...await q.run()}); sql.exec('COMMIT'); return out; }
+    catch (e) { sql.exec('ROLLBACK'); throw e; }
+  }};
+}
+const TODAY = Math.floor(T0 / DAY);
+const rows = sql => Object.fromEntries(sql.prepare('SELECT id,count FROM request_limits ORDER BY id').all().map(r => [r.id, r.count]));
+const countOf = (sql, id) => rows(sql)[id] ?? 0;
+/** Every verdict first (all pass: nobody has counted yet), then every commit; the commits' answers. */
+async function race(asks) {
+  const verdicts = [];
+  for (const ask of asks) verdicts.push(await ask());
+  assert.ok(verdicts.every(v => v.ok), 'each check alone passes');
+  const out = [];
+  for (const v of verdicts) out.push(await v.commit());
+  return out;
+}
+
+dbTest('race: five verdicts for one number before any commit start 2 texts; the day row ends at 2; losers change nothing', async () => {
+  const {sql, db: raw} = setup(), db = d1(sql, raw);
+  const h = await hashOf(900);
+  const ask = i => () => guard.checkOutbound(db, settings, {kind: 'link_code', recipientHash: h, origin: `v${i}`, ipHash: `ip${i}`, now: T0});
+  const verdicts = [];
+  for (let i = 0; i < 5; i++) verdicts.push(await ask(i)());
+  const answers = [];
+  for (const v of verdicts.slice(0, 2)) answers.push(await v.commit());
+  const before = rows(sql);
+  for (const v of verdicts.slice(2)) answers.push(await v.commit());
+  assert.deepEqual(answers, [true, true, false, false, false]);
+  assert.equal(countOf(sql, guard.recipientKey(h, TODAY)), guard.RECIPIENT_PER_DAY);
+  assert.deepEqual(rows(sql), {...before, ...Object.fromEntries([2, 3, 4].flatMap(i => [[`advisor-out:from:link_code:v${i}:${TODAY}`, 0], [`advisor-out:ip:ip${i}:${TODAY}`, 0]]))}, 'a loser takes back exactly its own counts');
+  assert.ok(Object.values(rows(sql)).every(c => c >= 0), 'no count below zero');
+});
+
+dbTest('race: the 7-day cap holds (4 earlier days sum to 4: of 3 raced, 1 starts; the week ends at 5)', async () => {
+  const {sql, db: raw} = setup(), db = d1(sql, raw);
+  const h = await hashOf(901);
+  for (const d of [1, 2, 3, 4]) sql.prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,1,0)').run(guard.recipientKey(h, TODAY - d));
+  const out = await race([0, 1, 2].map(i => () => guard.checkOutbound(db, settings, {kind: 'crew_invite', recipientHash: h, origin: `s${i}`, now: T0})));
+  assert.deepEqual(out, [true, false, false]);
+  assert.equal([0, 1, 2, 3, 4, 5, 6].reduce((sum, d) => sum + countOf(sql, guard.recipientKey(h, TODAY - d)), 0), guard.RECIPIENT_PER_WEEK);
+});
+
+dbTest('race: the per-visitor (link codes 3) and per-address (5) caps hold; counts end at the cap', async () => {
+  const {sql, db: raw} = setup(), db = d1(sql, raw);
+  const byVisitor = await race(await Promise.all([0, 1, 2, 3, 4].map(async i => { const h = await hashOf(910 + i); return () => guard.checkOutbound(db, settings, {kind: 'link_code', recipientHash: h, origin: 'one-visitor', ipHash: `addr${i}`, now: T0}); })));
+  assert.deepEqual(byVisitor, [true, true, true, false, false]);
+  assert.equal(countOf(sql, `advisor-out:from:link_code:one-visitor:${TODAY}`), guard.ORIGIN_PER_DAY.link_code);
+  assert.equal(countOf(sql, guard.recipientKey(await hashOf(914), TODAY)), 0, "a loser's number keeps no count");
+  const byAddress = await race(await Promise.all([0, 1, 2, 3, 4, 5, 6].map(async i => { const h = await hashOf(920 + i); return () => guard.checkOutbound(db, settings, {kind: 'link_code', recipientHash: h, origin: `w${i}`, ipHash: 'one-address', now: T0}); })));
+  assert.deepEqual(byAddress, [true, true, true, true, true, false, false]);
+  assert.equal(countOf(sql, `advisor-out:ip:one-address:${TODAY}`), guard.IP_PER_DAY);
+});
+
+dbTest('race: the cold cap (1) starts one text to new numbers; a warm number never touches the global row', async () => {
+  const {sql, db: raw} = setup(), db = d1(sql, raw);
+  const tight = {globalDailyCold: 1};
+  addContact(sql, {id: 'warm', phone_hash: await hashOf(939)});
+  inbound(sql, 'warm', T0 - DAY);
+  const asks = await Promise.all([930, 931, 932].map(async n => { const h = await hashOf(n); return () => guard.checkOutbound(db, tight, {kind: 'admin_invite', recipientHash: h, origin: `a${n}`, now: T0}); }));
+  assert.deepEqual(await race(asks), [true, false, false]);
+  assert.equal(countOf(sql, guard.coldKey(TODAY)), 1);
+  const warm = await guard.checkOutbound(db, tight, {kind: 'admin_invite', recipientHash: await hashOf(939), origin: 'a-warm', now: T0});
+  assert.equal(warm.cold, false);
+  assert.equal(await warm.commit(), true, 'the cold cap is full; a warm number still goes');
+  assert.equal(countOf(sql, guard.coldKey(TODAY)), 1, 'and leaves the global row alone');
+});
+
+dbTest('race: a single request under every cap commits true and counts +1 on each of its keys only', async () => {
+  const {sql, db: raw} = setup(), db = d1(sql, raw);
+  const h = await hashOf(940);
+  const v = await guard.checkOutbound(db, settings, {kind: 'link_code', recipientHash: h, origin: 'solo', ipHash: 'ip-solo', now: T0});
+  assert.equal(await v.commit(), true);
+  assert.deepEqual(rows(sql), {[guard.recipientKey(h, TODAY)]: 1, [`advisor-out:from:link_code:solo:${TODAY}`]: 1, [`advisor-out:ip:ip-solo:${TODAY}`]: 1, [guard.coldKey(TODAY)]: 1});
+});
+
+dbTest('race: a web link code whose commit loses sends nothing, stores no outbound message and logs reason race', async () => {
+  const {sql, db: raw, env} = setup();
+  const h = await hashOf(950), dayRow = guard.recipientKey(h, TODAY);
+  // Two other requests for the same number commit between this one's check and its commit.
+  let raced = false;
+  env.DB = d1(sql, raw, queries => { if (!raced && queries.some(q => /INSERT INTO request_limits/.test(q))) { raced = true; sql.prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,2,0)').run(dayRow); } });
+  addContact(sql, {id: 'web-r', web_session: 's-web-r', channel: 'web'});
+  const contact = sql.prepare('SELECT * FROM advisor_contacts WHERE id=?').get('web-r');
+  const out = await TOOL_BY_NAME.get('offer_text_link').run({phone: number(950)}, {env, contact, message: {id: 'tool'}, deps: {random: () => 0.5}, db: env.DB, language: 'en', settings: advisorSettings(env), now: T0});
+  const ch = recorder(), id = inbound(sql, 'web-r');
+  const {lines} = await quiet(() => consumeAdvisor(batchOf(id), env, {channelFor: () => ch, channel: undefined, handler: async () => ({actions: out.actions, intent: 'test'}), now: () => T0, ipHash: 'ip-r'}));
+  assert.ok(raced, 'the commit ran');
+  assert.deepEqual(ch.sent, [], 'nothing to the number and nothing to the visitor');
+  assert.ok(lines.some(l => { try { const j = JSON.parse(l); return j.event === 'advisor_outbound_refused' && j.reason === 'race' && j.kind === 'link_code'; } catch { return false; } }));
+  assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM advisor_messages WHERE direction='out'").get().n, 0);
+  assert.equal(countOf(sql, dayRow), 2, 'the loser took its count back');
+});

@@ -49,6 +49,7 @@ export const OUTBOUND_REFUSED: Readonly<Record<OutboundRefusal, string>> = Objec
   origin: `at most ${ORIGIN_PER_DAY.admin_invite} invites a day per admin`,
   ip: 'too many requests from this address today',
   global: 'the daily limit for texts to new numbers (ADVISOR_GLOBAL_DAILY_COLD) is reached',
+  race: 'another request took the last text a limit allows; nothing was sent',
 });
 export const NOTE_PREFIX = 'advisor.boat-note.';      // job_state: the admin's consent note per boat
 export const BLOCK_PREFIX = 'advisor.block.';         // job_state: the status a blocked contact had
@@ -289,7 +290,7 @@ export async function inviteSkipper(env: Env, input: InviteInput, deps: {send: T
     .bind(flowKey(contact.id), JSON.stringify(flow.state), at).run();
   const intro = boatName ? t(l, 'skipper_invite_boat', {boat: boatName}) : t(l, 'skipper_invite');
   const text = ask?.type === 'send_text' ? `${intro} ${ask.text}` : intro;
-  if (outbound?.ok) await outbound.commit();
+  if (outbound?.ok && !await outbound.commit()) { advisorLog('warn', 'advisor_outbound_refused', {kind: 'admin_invite', reason: 'race'}); return {status: 'conflict', error: OUTBOUND_REFUSED.race}; }
   const sends = await deps.send(contact, inId, 'admin.invite', text, input.by);
   advisorLog('info', 'advisor_admin_invite', {created: !existed, sends});
   return {status: 'ok', value: {contact_id: contact.id, sends, created: !existed}};
