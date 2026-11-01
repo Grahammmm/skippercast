@@ -183,7 +183,7 @@ export function createPlanner(deps: PlannerDeps) {
   });
   const protectedHits = computed<ProtectedHit[]>(() => {
     void tick.value;
-    return protectedPlanHits(screen, selected()) as ProtectedHit[];
+    return protectedPlanHits(screen, selected(), tripAtlas.value.areas) as ProtectedHit[];
   });
   const notesReady = computed(() => {
     if (summary.value.ok) return true;

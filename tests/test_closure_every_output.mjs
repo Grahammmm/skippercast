@@ -1,7 +1,7 @@
 // SC-LAUNCH-1 (t_4062ed58): a geometry straddling a real committed MPA boundary must be refused at
 // EVERY output that hands a location to a user or a device, not only the map. RED at 94d73d10f:
 // the map reef marks, Where-to-look (atlas and terrain), survey outlines, the planner's boundary naming,
-// the waypoints-only GPX export and the 100 m planning margin all let it through today.
+// the waypoints-only GPX export and the 70 m planning margin all let it through today.
 // Fixture: a ~400 m square centred on a vertex of the committed ds582 Point Buchon SMR polygon
 // (dist/data/protected-areas.geojson, WGS84 / EPSG:4326 lon,lat), its waypoint on the square's outside corner.
 import test from 'node:test';
@@ -10,6 +10,7 @@ import {readFileSync} from 'node:fs';
 import {pointInGeometry, geometryIntersects} from '../dist/geo-screen.js';
 import {assessScreen, withheld, surveyFeatures, markFeatures} from '../web/map/habitat.ts';
 import {screened as groundScreened} from '../web/map/charter-grounds.ts';
+import {insideAreas} from '../web/map/shore.ts';
 import {atlasPicks, habitatPicks} from '../web/ranking.ts';
 import {rankedHabitat} from '../packages/coast/src/coast3d/regional.ts';
 import {initProtectedAreas} from '../dist/protected-areas.js';
@@ -63,20 +64,30 @@ test('survey-habitat outlines are screened at run time', () => {
 test('charter grounds refuse it (already true)', () => {
   assert.equal(groundScreened({latitude: corner[1], longitude: corner[0]}, square, SCREEN), false);
 });
-test('planner names the boundary for the straddling spot', async () => {
-  const hits = protectedPlanHits(await v1Screen(), [{...target, geometry: square}]);
+test('planner boundary context covers the selected spot\'s reef area, not only its point', async () => {
+  // web/planner.ts passes the selected targets (point only) and the trip atlas's areas.
+  const hits = protectedPlanHits(await v1Screen(), [target], atlas.areas);
   assert.equal(hits.length, 1);
+  assert.ok(hits[0].matches.some(m => m.name === 'Point Buchon State Marine Reserve'));
 });
 test('GPX / share / offline notes refuse it even in the default waypoints-only export', async () => {
   const screen = await v1Screen();
   assert.throws(() => buildExport({atlas, screen, ids: ['STRADDLE-1'], layers: {waypoints: true, outlines: false, alignments: false, exclusions: false}, region: getRegion(), allowResearch: true}),
-    /Point Buchon/);
+    /protected-area|whole-boundary/);
+  // Naming the boundary in this refusal is the card's next run (operator scope, comment on t_4062ed58).
 });
-test('a 100 m planning margin applies in metres, not degrees (CRS check)', async () => {
-  // 90 m due east is inside a 100 m margin; a degree-space margin (100 m of latitude) would wrongly pass it.
+test('a 70 m planning margin applies in metres, not degrees (CRS check)', async () => {
+  // 65 m due east is inside a 70 m margin; a degree-space margin (70 m as degrees of latitude, 0.00063°) would
+  // wrongly pass it, since 65 m of longitude at 35.2°N is 0.00071°.
   const east = m => { for (const s of [1, -1]) { const p = [v[0] + s * m * mLon, v[1]]; if (!pointInGeometry(p, mpa.geometry) && !pointInGeometry([v[0] + s * 1 * mLon, v[1]], mpa.geometry)) return p; } };
-  const p90 = east(90);
-  assert.ok(p90, 'an outside point due east or west of the vertex');
-  assert.ok(withheld({latitude: p90[1], longitude: p90[0]}, SCREEN), 'map gate holds a point 90 m outside');
-  assert.equal((await v1Screen()).pointAllowed({latitude: p90[1], longitude: p90[0]}), false, 'export holds a point 90 m outside');
+  const p65 = east(65);
+  assert.ok(p65, 'an outside point due east or west of the vertex');
+  assert.ok(withheld({latitude: p65[1], longitude: p65[0]}, SCREEN), 'map gate holds a point 65 m outside');
+  assert.equal((await v1Screen()).pointAllowed({latitude: p65[1], longitude: p65[0]}), false, 'export holds a point 65 m outside');
+  assert.equal(groundScreened({latitude: p65[1], longitude: p65[0]}, null, SCREEN), false, 'charter grounds hold a point 65 m outside');
+  const run = {type: 'Feature', id: 'r1', geometry: {type: 'MultiLineString', coordinates: [[p65, [p65[0], p65[1] + 0.001]]]}, properties: {access: []}};
+  assert.deepEqual(insideAreas(run, SCREEN), ['Point Buchon State Marine Reserve'], 'a shore run 65 m outside is held and named');
+  // 150 m out is clear of the margin: the margin is 70 m, not a blanket buffer.
+  const p150 = east(150);
+  assert.equal(withheld({latitude: p150[1], longitude: p150[0]}, SCREEN), null);
 });

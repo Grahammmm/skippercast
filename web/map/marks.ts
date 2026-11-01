@@ -18,7 +18,7 @@ import {grade, habitat, navigate, profile, region, selection, species, withParam
 import type {ChartMark} from './coastline.ts';
 import {
   CHECKING, EMPTY, acceptsFeed, assessScreen, atlasCard, closureCheckedAt, geologyCard, geologyFeatures, markFeatures, markShown, receiptCard, surveyCard,
-  surveyFeatures, terrainCard, terrainDetailCard, validDailyPart, withheld, withheldCard,
+  markAreas, surveyFeatures, terrainCard, terrainDetailCard, validDailyPart, withheld, withheldCard,
   type Atlas, type Collection, type DailyRecord, type Geology, type HabitatReceipt, type MarkData, type MarkScreen, type RegionData, type ScreenInputs, type Survey,
 } from './habitat.ts';
 import {DENSITY_SOURCE, GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE, SURVEY_SOURCE, overlayFeatures, setTerrainLayer} from './layers.ts';
@@ -53,7 +53,7 @@ const linked = computed(() => { const id = habitat.value, s = terrainMark.value;
 /** The link's atlas mark while the screen shows it. */
 const shownSpot = (id: string | null) => {
   const t = id ? markData.value?.atlas?.targets.find(x => x.id === id) : undefined;
-  return t && !withheld(t, markScreen.value) ? t : null;
+  return t && !withheld(t, markScreen.value, markAreas(t, markData.value?.atlas)) ? t : null;
 };
 /** The legend's line for the screen where the region has reef marks for the target; empty elsewhere. */
 export const markNote = computed(() => markData.value?.atlas?.targets.some(t => markShown(t, target.value)) ? markScreen.value.note : '');
@@ -70,7 +70,7 @@ const densityMarks = computed(() => profile.value === 'shore' ? EMPTY : shownMar
 
 /** Each FE-18 source's GeoJSON for the Chart. */
 export const markSources: Readonly<Record<string, {readonly value: Collection}>> = {
-  [SURVEY_SOURCE]: computed(() => surveyFeatures(markData.value, target.value)),
+  [SURVEY_SOURCE]: computed(() => surveyFeatures(markData.value, target.value, markScreen.value)),
   [GEOLOGY_SOURCE]: computed(() => geologyFeatures(markData.value, target.value)),
   [DENSITY_SOURCE]: densityMarks,
   [MARKS_SOURCE]: shownMarks,
@@ -95,7 +95,7 @@ export const densityShown = computed<number | null>(() => {
 export const spotCard = computed<ChartMark | null | undefined>(() => {
   const id = selection.value, data = markData.value, screen = markScreen.value;
   if (!id) return null;
-  const t = data?.atlas?.targets.find(x => x.id === id), w = t && withheld(t, screen);
+  const t = data?.atlas?.targets.find(x => x.id === id), w = t && withheld(t, screen, markAreas(t, data?.atlas));
   return !data ? undefined : !t ? null : w ? withheldCard(t, w, screen) : atlasCard(t, data, target.value);
 });
 

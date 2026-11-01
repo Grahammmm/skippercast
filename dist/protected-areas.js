@@ -1,6 +1,6 @@
 import { getRegion, assetURL, acceptsFeed } from "./region.js";
 import { fetchJSON } from "./forecast.js";
-import { pointInGeometry, geometryIntersects } from "./geo-screen.js";
+import { closureHits, pointGeometry } from "./geo-screen.js";
 import { esc } from "./marine-charts.js";
 import {revisionCache} from './map-response.js';
 import {loadDailyPart} from './daily-feed.js';
@@ -46,18 +46,21 @@ export async function initProtectedAreas(map, onChange) {
   draw();
   // The map reprojects existing paths itself. Rebuild only when the boundary data changes.
   const revision=()=>`${checked}|${extraChecked}|${freshEnough()}`;
-  const allowedGeometry=revisionCache(revision,g=>![...data.features,...(extra?.features||[])].some(f=>geometryIntersects(g,f.geometry)));
+  // SC-LAUNCH-1: whole geometries, boundary-inclusive, with the 70 m planning margin in metres (geo-screen.js).
+  const allowedGeometry=revisionCache(revision,g=>!closureHits([g],[...data.features,...(extra?.features||[])]).length);
   const screen={
     ready:()=>freshEnough(),
     revision:()=>`${checked}|${extraChecked}|${freshEnough()}`,
     exportExclusions:()=>freshEnough()?{checked_at:extra?new Date(Math.min(Date.parse(checked),Date.parse(extraChecked))).toISOString():checked,features:[...data.features,...(extra?.features||[])]}:null,
     inspect(p){
-      const matches=[...(data?.features||[]),...(extra?.features||[])].filter(f=>p.geometry?geometryIntersects(p.geometry,f.geometry):pointInGeometry([p.longitude,p.latitude],f.geometry));
+      const shapes=p.geometry||p.geometries?.length?[p.geometry,...(p.geometries||[])]:[pointGeometry(p.longitude,p.latitude)];
+      const near=closureHits(shapes,[...(data?.features||[]),...(extra?.features||[])]), within=new Set(closureHits(shapes,near,0));
+      const matches=[...near.filter(f=>within.has(f)),...near.filter(f=>!within.has(f))];
       return {status:matches.length?'excluded':freshEnough()?'clear':'unavailable',fresh:freshEnough(),names:matches.map(f=>f.properties.FULLNAME||f.properties.NAME),
         matches:matches.map(({properties:p})=>({name:p.FULLNAME||p.NAME,url:p.Type==='GEA'?'https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas':sourceFor(p.NAME),agency:p.Type==='GEA'?'NOAA':'CDFW'}))};
     },
     snapshot:()=>freshEnough()?{revision:`${checked}|${extraChecked}|true`,geometries:[...data.features,...(extra?.features||[])].map(f=>f.geometry)}:null,
-    pointAllowed:p=>freshEnough() && ![...data.features,...(extra?.features||[])].some(f=>pointInGeometry([p.longitude,p.latitude],f.geometry)),
+    pointAllowed:p=>freshEnough() && !closureHits([pointGeometry(p.longitude,p.latitude)],[...data.features,...(extra?.features||[])]).length,
     geometryAllowed:g=>freshEnough() && allowedGeometry(g),
     async refresh() {
       if(assetURL('closures')) {

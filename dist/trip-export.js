@@ -91,8 +91,9 @@ export function buildExport({atlas,screen,ids,layers=DEFAULT_LAYERS,region,title
       || !Number.isFinite(Date.parse(atlas.publication.expires_at)) || Date.parse(atlas.publication.expires_at)<=now.getTime()))
     throw Error('Ranked reef screening expired. Reload Best available before exporting.');
   if(features.selected.some(t=>!validPoint(t)||!screen.pointAllowed(t)))throw Error('A selected spot fails the current protected-area check. Review your selection on the map.');
-  if(features.selected.filter(t=>t.canonical_habitat).some(t=>!t.area_ids?.length||t.area_ids.some(id=>{
-    const a=atlas.areas.find(a=>a.id===id);return !a||!screen.geometryAllowed(a.geometry);
+  // SC-LAUNCH-1: every selected reef's areas are screened whole, whichever layers are on; a measured reef also needs them.
+  if(features.selected.some(t=>(t.canonical_habitat&&!t.area_ids?.length)||(t.area_ids||[]).some(id=>{
+    const a=atlas.areas?.find(a=>a.id===id);return !a||!screen.geometryAllowed(a.geometry);
   })))throw Error('A selected reef fails the current whole-boundary check. Choose a different spot.');
   if([...features.areas,...features.drifts].some(f=>!screen.geometryAllowed(f.geometry)))throw Error('A selected outline or alignment intersects a protected area, or cannot be checked. Turn off that layer or choose a different spot.');
   const snapshot=screen.exportExclusions?.();
@@ -114,10 +115,11 @@ export function buildExport({atlas,screen,ids,layers=DEFAULT_LAYERS,region,title
 const safeLink=value=>{try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?xml(u.href):'';}catch{return '';}};
 // A blocked plan can carry a boundary-context report, never fishing coordinates.
 // Run the authoritative export first: only a named point hit gets this fallback.
-export function protectedPlanHits(screen,targets) {
+export function protectedPlanHits(screen,targets,areas=[]) {
   if(!screen?.ready())return [];
   return targets.flatMap(t=>{
-    const inspection=screen.inspect?.(t);
+    const reef=(t.area_ids||[]).flatMap(id=>areas.filter(a=>a.id===id).map(a=>a.geometry));
+    const inspection=screen.inspect?.(reef.length?{...t,geometries:[{type:'Point',coordinates:[t.longitude,t.latitude]},...reef]}:t);
     return inspection?.fresh && inspection.status==='excluded' && inspection.matches?.length
       ? [{id:t.id,label:t.label,matches:inspection.matches}]:[];
   });

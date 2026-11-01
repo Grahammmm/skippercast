@@ -174,7 +174,12 @@ test('a protected access point blocks a run even with an expired rules review', 
   const box = {type: 'Feature', properties: {NAME: 'Synthetic access restriction'}, geometry: {type: 'Polygon',
     coordinates: [[[lon - d, lat - d], [lon + d, lat - d], [lon + d, lat + d], [lon - d, lat + d], [lon - d, lat - d]]]}};
   const screen = screenAt([box], NOW);
-  assert.deepEqual(insideAreas({...target, properties: {...target.properties, access: []}}, screen), [], 'line is outside');
+  // The run line passes 2.5 m from this access point, inside the 70 m planning margin (SC-LAUNCH-1), so it holds the
+  // run by itself; moved 0.0025° (about 280 m) north, the line is clear and only the access point holds the run.
+  const away = {...target, geometry: {...target.geometry, coordinates: target.geometry.coordinates.map(l => l.map(([x, y]) => [x, y + 0.0025]))}};
+  assert.deepEqual(insideAreas({...target, properties: {...target.properties, access: []}}, screen), ['Synthetic access restriction'], 'line within the margin');
+  assert.deepEqual(insideAreas({...away, properties: {...target.properties, access: []}}, screen), [], 'moved line is outside');
+  assert.deepEqual(insideAreas(away, screen), ['Synthetic access restriction'], 'the access point alone holds it');
   assert.deepEqual(insideAreas(target, screen), ['Synthetic access restriction']);
   const runs = shownRuns(PACKAGE, screen, checked(NOW), NOW);
   const blocked = runs.find(r => r.run.id === target.id);

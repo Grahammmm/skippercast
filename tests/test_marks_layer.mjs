@@ -112,10 +112,11 @@ test('a mark\'s card: fit, grade and depth range; source and age; the regulation
 
 test('survey habitat fills and geology outlines carry their class; their cards name source, age and the build\'s MPA screen', () => {
   const data = {region: CAMBRIA, atlas: null, survey: SURVEY, geology: GEOLOGY};
-  const fills = surveyFeatures(data, 'lingcod');
+  const fills = surveyFeatures(data, 'lingcod', CHECKED);
   assert.equal(fills.features.length, SURVEY.features.length);
   assert.deepEqual(fills.features[0].properties, {id: SURVEY.features[0].properties.id, kind: 'rock'});
-  assert.deepEqual(surveyFeatures(data, 'halibut').features, [], 'rocky outlines are reef habitat');
+  assert.deepEqual(surveyFeatures(data, 'halibut', CHECKED).features, [], 'rocky outlines are reef habitat');
+  assert.deepEqual(surveyFeatures(data, 'lingcod', assessScreen(null, Date.now())).features, [], 'no outlines until the screen is ready (SC-LAUNCH-1)');
   assert.ok(geologyFeatures(data, 'reef').features.every(f => f.properties.kind !== 'sediment'));
   assert.ok(geologyFeatures(data, 'halibut').features.every(f => f.properties.kind === 'sediment'));
   assert.deepEqual(geologyFeatures(data, 'salmon'), {type: 'FeatureCollection', features: []});
