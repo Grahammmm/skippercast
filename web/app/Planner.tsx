@@ -51,11 +51,12 @@ function BoundaryNote({hit}: {hit?: ProtectedHit}) {
 }
 
 export function Planner({model: m, open}: {model: Model; open: boolean}) {
-  // While the dialog shows: the screen's age each minute and new boundaries refresh the counts; opening restores a saved ranked plan.
+  // While the dialog shows: the screen's age each minute and new boundaries refresh the counts; opening restores a saved ranked plan, else ranks an empty one (SCJ-8).
   useEffect(() => {
     if (!open) return;
     m.tick.value++;
     void m.restore();
+    m.openReady();
     const bump = () => { m.tick.value++; };
     document.addEventListener('skippercast:boundaries', bump);
     const timer = setInterval(bump, 60000);
