@@ -160,14 +160,14 @@ export const groundsState = signal<GroundsState>({drawn: 0, note: '', audit: nul
 
 export interface FleetLayerOptions {engine: ReadonlySignal<Engine | null>; fetchFn?: typeof fetch; page?: () => string; palette?: () => Palette}
 
-/** Load a region asset once per path; null when it fails. A dropped read (throw or timeout, 429, 5xx) is asked
- *  again on the next call; a 404, other refusal or invalid file stays remembered. */
+/** Load a region asset once per path; null when it fails. A dropped read (throw or timeout, before or after the headers; 429, 5xx) is asked
+ *  again on the next call; a 404, other refusal, malformed JSON or invalid file stays remembered. */
 export function assetLoader<T>(fetchFn: typeof fetch, page: () => string, valid: (d: unknown) => boolean) {
   const cache = new Map<string, Promise<T | null>>();
   return (path: string): Promise<T | null> => {
     let p = cache.get(path), retry = false;
     if (!p) cache.set(path, p = fetchFn(new URL(path, page()).href, {signal: AbortSignal.timeout(15000)})
-      .then(r => r.ok ? r.json() : (retry = r.status === 429 || (r.status >= 500 && r.status < 600), null), () => (retry = true, null))
+      .then(r => r.ok ? r.json().catch((e: unknown) => (retry = !(e instanceof SyntaxError), null)) : (retry = r.status === 429 || (r.status >= 500 && r.status < 600), null), () => (retry = true, null))
       .then(d => valid(d) ? d as T : null, () => null)
       .then(d => { if (retry && cache.get(path) === p) cache.delete(path); return d; }));
     return p;

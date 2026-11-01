@@ -60,6 +60,16 @@ test('assetLoader: a 404, other refusals, a file failing `valid` and invalid JSO
   assert.ok(isDeepStrictEqual(await thrice(unparsable), [null, null, null, 1]), 'invalid JSON: remembered');
 });
 
+test('assetLoader: a body read dropped or timed out after 200 headers is asked again once; malformed JSON is not', async () => {
+  const body = fail => { const f = {asked: [], n: 0}; f.fetchFn = async url => { f.asked.push(url); return {ok: true, status: 200, json: async () => { if (f.n++ === 0) throw fail(); return {ok: true}; }}; }; return f; };
+  for (const fail of [() => new TypeError('network error'), () => new DOMException('The operation timed out.', 'TimeoutError'), () => new DOMException('aborted', 'AbortError')]) {
+    const f = body(fail);
+    assert.ok(isDeepStrictEqual(await thrice(f), [null, {ok: true}, {ok: true}, 2]), `${fail().name}: one retry, then the data is kept`);
+  }
+  const bad = {asked: [], fetchFn: async () => { bad.asked.push(1); return {ok: true, status: 200, json: async () => { throw new SyntaxError('Unexpected token'); }}; }};
+  assert.ok(isDeepStrictEqual(await thrice(bad), [null, null, null, 1]), 'malformed JSON: remembered');
+});
+
 test('assetLoader: concurrent calls share one read; a retry that succeeds is kept; paths are separate', async () => {
   const gate = deferred(), f = okBody(scripted(gate.promise.then(() => 503))), load = loader(f);
   const a = load('a.json'), b = load('a.json');
