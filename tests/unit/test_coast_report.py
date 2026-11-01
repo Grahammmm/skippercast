@@ -265,6 +265,59 @@ class Sources(TestCase):
         self.assertEqual(built["catchStatus"], "Dated local catch facts unavailable for this edition. Published reports remain linked.")
 
 
+class UnnamedAlerts(TestCase):  # SC2007-03: no readable event name is kept under a generic name (fail closed)
+    ZONES = {a[0]: [a[6]] for a in cr.AREAS}
+    URN = "https://api.weather.gov/alerts/urn:fixture:unnamed"
+
+    def feature(self, zone="PZZ645", ident=URN, **p):
+        props = {"@id": ident, "headline": None, "affectedZones": [f"https://api.weather.gov/zones/forecast/{zone}"], **p}
+        return {k: v for k, v in (("id", ident), ("geometry", None), ("properties", props)) if v is not None}
+
+    def run_alerts(self, *features):
+        return cr.alerts({"type": "FeatureCollection", "features": list(features)}, self.ZONES)
+
+    def test_null_missing_non_string_or_blank_event_is_kept_as_unnamed(self):
+        (row,) = self.run_alerts(self.feature(event=None, headline="Small Craft Advisory until 3 AM"))
+        self.assertEqual((row["event"], row["headline"], row["areaIds"]), (cr.UNNAMED_ALERT, "Small Craft Advisory until 3 AM",
+                                                                           ["north", "central", "south"]))
+        missing = self.feature()
+        del missing["properties"]["headline"]
+        (row,) = self.run_alerts(missing)
+        self.assertEqual((row["event"], row["headline"]), (cr.UNNAMED_ALERT, cr.UNNAMED_ALERT))  # never "None"
+        for event in (42, "   ", "", ["Small Craft Advisory"]):
+            (row,) = self.run_alerts(self.feature(event=event, headline=None))
+            self.assertEqual((row["event"], row["headline"]), (cr.UNNAMED_ALERT, cr.UNNAMED_ALERT), event)
+        (row,) = self.run_alerts(self.feature(event=None, headline="  "))  # a blank headline falls back too
+        self.assertEqual(row["headline"], cr.UNNAMED_ALERT)
+
+    def test_unnamed_alert_reaching_no_area_or_without_id_is_still_dropped(self):
+        self.assertEqual(self.run_alerts(self.feature(zone="PZZ999", event=None)), [])
+        nameless = self.feature(ident=None, event=None)
+        self.assertNotIn("id", nameless)
+        self.assertEqual(self.run_alerts(nameless), [])
+
+    def test_duplicate_ids_with_one_unnamed_stay_one_row(self):
+        rows = self.run_alerts(self.feature(event="Small Craft Advisory"), self.feature(event=None))
+        self.assertEqual([(r["id"], r["event"]) for r in rows], [(self.URN, cr.UNNAMED_ALERT)])  # last wins, as before
+        rows = self.run_alerts(self.feature(event=None), self.feature(event="Small Craft Advisory"))
+        self.assertEqual([(r["id"], r["event"]) for r in rows], [(self.URN, "Small Craft Advisory")])
+
+    def test_named_fixture_rows_are_unchanged(self):
+        zones = {"north": ["PZZ645", "CAZ340"], "central": ["PZZ645", "CAZ087"], "south": ["PZZ645", "CAZ087"]}
+        rows = cr.alerts(alerts(), zones)
+        self.assertEqual([(r["event"], r["headline"], r["areaIds"]) for r in rows], [
+            ("Small Craft Advisory", "Fixture marine advisory", ["north", "central", "south"]),
+            ("Beach Hazards Statement", "Beach Hazards Statement", ["north"]), ("Dense Fog Advisory", "Dense Fog Advisory", ["south"])])
+        self.assertEqual(report()["alerts"], json.loads(FIXTURE.read_text())["alerts"])
+
+    def test_end_to_end_an_unnamed_alert_on_the_marine_zone_is_published(self):
+        bad = routes()
+        bad[cr.ALERTS_URL] = body({"type": "FeatureCollection", "features": [self.feature(event=None)]})
+        built = report(http.FakeSession(bad))
+        self.assertEqual([(a["event"], a["areaIds"]) for a in built["alerts"]], [(cr.UNNAMED_ALERT, ["north", "central", "south"])])
+        self.assertEqual({s["id"]: s["outcome"] for s in built["sources"]}["nws-alerts"], "ok")
+
+
 class Catches(TestCase):
     def test_trips_are_checked_against_their_day_receipt_and_window(self):
         now = cr._ms("2026-10-08T21:00:00Z")
