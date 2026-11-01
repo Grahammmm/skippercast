@@ -14,9 +14,10 @@ on:
   workflow_dispatch:
 
 # CI policy R12 (fast PR tier). Pull requests run lint/type checks, the core
-# affected core/web areas on 3.13 and affected GIS without three slow coast modules.
+# affected core/web areas on 3.11 and 3.13 (main's Pythons) and affected GIS without
+# three slow coast modules.
 # Push to main, the merge queue, the nightly schedule and dispatches run the
-# full tier: the full GIS-required suite, the Python matrix and e2e.
+# full tier: the full GIS-required suite and e2e.
 # Obsolete PR revisions are cancelled; main, scheduled and dispatched runs never are.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
@@ -203,9 +204,12 @@ jobs:
     # and Dependabot PRs always stay on GitHub-hosted runners (docs/operations/runners.md).
     runs-on: ${{ vars.CI_SELF_HOSTED_READY == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') && vars.CI_RUNNER || 'ubuntu-latest' }}
     strategy:
+      # Every leg reports: a 3.11 failure must not cancel 3.13 and hide its result.
+      fail-fast: false
       matrix:
-        # One Python on pull requests (R12); the matrix runs in the full tier.
-        python: ${{ fromJSON(github.event_name == 'pull_request' && '["3.13"]' || '["3.11", "3.13"]') }}
+        # Pull requests test the same Pythons as main, so a version-specific break
+        # cannot first appear after merge (G decision 2026-10-31 18:20).
+        python: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
