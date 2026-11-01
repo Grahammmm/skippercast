@@ -158,6 +158,8 @@ export function depthLimit(profile: Data, today: string): string | null {
 }
 /** The registry's own scheduled-check interval (`check_interval_hours`), or null when it names none. A check older than this is overdue, though still inside the hard `maxAgeHours` ceiling. */
 export const checkIntervalHours = (data: Data): number | null => Number.isFinite(data?.check_interval_hours) && data.check_interval_hours > 0 ? data.check_interval_hours : null;
+/** A CDFW per-place fishing-map page (the area regulations page). */
+const isAreaPage = (u: unknown): boolean => typeof u === 'string' && /^https:\/\/[^/]+\/Fishing\/Ocean\/Regulations\/Fishing-Map\//.test(u);
 /** dist/regulations.js `ruleSummary`: status, bag, size, depth, the verified date and one official link. */
 export function ruleSummary(data: Data, species: string, state: RuleState, region: RulesRegion): RuleSummary {
   const tz = zoneOf(region), ids = species === 'reef' ? ['lingcod', 'rockfish'] : [species];
@@ -188,6 +190,12 @@ export function ruleSummary(data: Data, species: string, state: RuleState, regio
   else summary.checked = short(oldest);
   const primary = species === 'reef' ? 'rules-groundfish' : profiles[0].primary_source_id || profiles[0].source_ids[0];
   if (data.sources?.[primary]?.url) { summary.link = officialURL(data.sources[primary].url, region); summary.linkLabel = species === 'reef' ? 'Official groundfish rules' : 'Official rules'; }
+  // No species page: the card's one official link is the place's own area page when the profile cites one, never another
+  // page (a committed San Francisco halibut profile's first source is the coast-wide groundfish summary).
+  if (species !== 'reef' && !speciesPage(data, species, region) && !isAreaPage(summary.link)) {
+    const area = profiles[0].source_ids.map((id: string) => data.sources?.[id]?.url).map((u: unknown) => officialURL(u, region)).find(isAreaPage);
+    if (area) summary.link = area;
+  }
   return summary;
 }
 /**
@@ -200,7 +208,7 @@ export function speciesPage(data: Data, species: string, region: RulesRegion): {
   return url && officialURL(url, region) === url ? {href: url, label: `Official ${p.name} rules`} : null;
 }
 /** True when the card's only official link is the place's area regulations page (no species page in the reviewed registry). */
-export const areaPageOnly = (s: RuleSummary, page: unknown): boolean => !page && s.linkLabel === 'Official rules';
+export const areaPageOnly = (s: RuleSummary, page: unknown): boolean => !page && s.linkLabel === 'Official rules' && isAreaPage(s.link);
 /** dist/regulations.js `ruleSummaryHTML`'s verified wording. */
 export const verifiedText = (s: RuleSummary): string => s.verified ? `Verified ${s.verified}` : s.checked ? `Needs recheck · last check ${s.checked}` : 'Not verified';
 

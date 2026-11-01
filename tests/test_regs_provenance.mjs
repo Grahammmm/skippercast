@@ -92,3 +92,14 @@ test('a species with only the area page says so; species pages and the groundfis
   assert.equal(only('lingcod'), false);
   if (REGION.species.includes('reef')) assert.equal(only('reef'), false, 'reef links the groundfish page');
 });
+
+test('committed San Francisco halibut: the area-page note names the area page, never the groundfish summary', () => {
+  const sf = JSON.parse(readFileSync(new URL('../regions/bodega-point-reyes/region.json', import.meta.url)));
+  const d = JSON.parse(readFileSync(new URL('../dist/' + sf.assets.regulations.replace(/^\//, ''), import.meta.url)));
+  const state = regulationState(d, 'halibut', sf), s = ruleSummary(d, 'halibut', state, sf);
+  assert.match(s.link, /\/Fishing-Map\/San-Francisco$/);
+  assert.equal(areaPageOnly(s, speciesPage(d, 'halibut', sf)), true);
+  const reef = ruleSummary(d, 'reef', regulationState(d, 'reef', sf), sf);
+  assert.match(reef.link, /Groundfish-Summary$/);
+  assert.equal(areaPageOnly(reef, null), false, 'a non-area link never claims to be the area page');
+});
