@@ -130,6 +130,9 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // authority hosts and assets, read by web/regs.ts for the brief's legality line) when region.json names a
 // jurisdiction. The id/charters fields Reports reads, CSS, tokens, classes and catch markup are unchanged;
 // contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
+// SC2007-02 (Protected areas Try again): check_contrast.mjs changes only the legendTsx surface hash and its
+// comment; Legend.tsx is not a BODY09 input and Reports never mounts the legend. contrast(), the one export this
+// spec reads, assertions and thresholds are untouched. Rebind only check_contrast.mjs.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
   "web/app/App.tsx": "6a77aa09c77ed2a281979d6413dcbaaa7b530ce79ba5926e59d8485e7c4cbe74",
@@ -148,7 +151,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "92a15809e8895d2b66beecfda4e1c49a297edc7e2e27bdd1f21845b355502e11",
+  "scripts/check_contrast.mjs": "9a032cc458741a9d2b1a8ffd77a86513c63c92091e4456e6781ad8c48ae63f93",
   "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
   "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
