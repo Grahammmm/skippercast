@@ -8,7 +8,7 @@ import type {TargetedSubmitEvent} from 'preact';
 import {Button} from '../ui/Button.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
 import {
-  alertDate, alertNames, alertSpecies, api, comfortBody, disablePush, enablePush, eventLine, feedbackPhase, tripBody, tripBoat, tripDefaults, tripLine,
+  alertDate, alertNames, alertSpecies, api, comfortBody, dateRange, disablePush, enablePush, eventLine, feedbackPhase, formProblem, tripBody, tripBoat, tripDefaults, tripLine,
   type AlertEvent, type AlertForm, type BoatFactors, type Feedback, type RegionAlerts, type SavedTrip,
 } from '../alerts.ts';
 
@@ -68,7 +68,7 @@ function ConfirmDelete({onConfirm, onCancel}: {onConfirm: () => void; onCancel: 
 
 function SignedIn({session, region, boat, target}: {session: SessionAnswer; region: RegionAlerts; boat: Boat; target: string | null}) {
   const saved = tripBoat(boat.factors, boat.saved?.boat), limits = tripDefaults(boat.factors);
-  const choice = alertSpecies(region, target), names = useMemo(() => alertNames(region), [region]);
+  const choice = alertSpecies(region, target), names = useMemo(() => alertNames(region), [region]), range = dateRange(region.timezone);
   const [species, setSpecies] = useState(choice.value);
   const [status, setStatus] = useState('');
   const [trips, setTrips] = useState<{trips: SavedTrip[]; events: AlertEvent[]} | null>(null);
@@ -88,6 +88,8 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
     const f = new FormData(event.currentTarget);
     const form: AlertForm = {date: String(f.get('date')), point: String(f.get('point')), start_hour: hours(f.get('start_hour')), end_hour: hours(f.get('end_hour')),
       wind_limit: hours(f.get('wind_limit')), gust_limit: hours(f.get('gust_limit')), sea_limit: hours(f.get('sea_limit'))};
+    const problem = formProblem(form, dateRange(region.timezone));
+    if (problem) { setStatus(problem); return; }
     try {
       await api('trips', {method: 'POST', body: JSON.stringify(tripBody(form, region.id, species, saved))});
       setStatus('Trip saved. Scheduled checks run about every 30 minutes; notifications require device permission.');
@@ -131,7 +133,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
       <details class="insight-card" open>
         <summary>My trip alerts</summary>
         <form id="save-alert" class="insight-form" onSubmit={e => void save(e)}>
-          <label>Trip date<input name="date" type="date" defaultValue={alertDate(region.timezone)} required /></label>
+          <label>Trip date<input name="date" type="date" defaultValue={alertDate(region.timezone)} min={range.min} max={range.max} required /></label>
           <label>Area<select name="point">{region.forecast_points.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
           <label>From · local hour<input name="start_hour" type="number" min="0" max="22" defaultValue="7" required /></label>
           <label>Until · local hour<input name="end_hour" type="number" min="1" max="23" defaultValue="13" required /></label>
