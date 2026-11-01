@@ -14,6 +14,7 @@ import time
 
 import pytest
 
+from skippercast.coastal.runner import _group_state
 from tests._coastal_operations import Harness, alive, export_package, policy, wait_for
 
 pytestmark = pytest.mark.skipif(sys.platform != "linux", reason="coastal supervisor requires Linux /proc")
@@ -233,7 +234,20 @@ def test_killed_controller_resumes_without_duplicate_or_unfenced_work(ops):
     wait_for(lambda: ops.intent(slow, token).get("state") == "finished", message="supervisor finish")
     assert (ops.job_dir(slow, token) / "output/result.json").exists()
     assert ops.jobs()[slow]["result_sha"] is None
-    wait_for(lambda: not alive(worker), timeout=5, message="worker exit")
+    # Publishing "finished" precedes the supervisor's own exit. Recovery checks
+    # every recorded owned group, not just the worker PID.
+    intent = ops.intent(slow, token)
+    identities = [intent["supervisor"], intent["child"], *intent["owned_descendants"]]
+    group_states = []
+
+    def owned_groups_stopped():
+        group_states[:] = [_group_state(identity) for identity in identities]
+        return all(state == "stopped" for state in group_states)
+
+    try:
+        wait_for(owned_groups_stopped, timeout=5, message="owned process groups stopped")
+    except AssertionError as exc:
+        raise AssertionError(f"owned groups did not stop: {list(zip(identities, group_states))}") from exc
 
     assert ops.store.recover(slow, ops.recovery_receipts(slow)) is True
     assert ops.ledger()["reservations"][token]["state"] == "settled"
