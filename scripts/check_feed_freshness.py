@@ -52,6 +52,8 @@ HEALTH_FILE = ROOT / "catalog" / "feed-health.json"
 # PARTIAL never reaches the exit status: it marks a reported outage that does not fail the run.
 STALE, DEGRADED, PARTIAL = 1, 2, 4
 FAILING = STALE | DEGRADED
+# A stamp further ahead of now than this is a clock or stamp error, not a fresh feed.
+FUTURE_TOLERANCE = timedelta(minutes=10)
 
 
 def load_health(path=HEALTH_FILE):
@@ -100,6 +102,9 @@ def verdict(feed, now, max_age, label="Live conditions feed"):
     except (ValueError, TypeError, AttributeError) as error:
         return False, f"{label} is unreadable: {error}"
     hours = age.total_seconds() / 3600
+    if age < -FUTURE_TOLERANCE:
+        return False, f"{label} is unreadable: published {feed_time(feed)}, {-hours:.1f} h in the future (clock or stamp error)."
+    hours = max(0.0, hours)
     run = f", run {feed['run_id']}" if feed.get("run_id") else ""
     if age > max_age:
         return False, (f"{label} is stale: last published {feed_time(feed)} "
