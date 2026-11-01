@@ -235,6 +235,9 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
  */
 export async function readFeed(url: string): Promise<ExternalJSON> { return createFeedReader()(url); }
 
+// api.weather.gov requires an identifying User-Agent; sent to that exact https host only.
+export const NWS_HEADERS = Object.freeze({'User-Agent': 'SkipperCast-worker (+https://skippercast.com)', Accept: 'application/geo+json'});
+
 async function readUpstreamFeed(url: string): Promise<ExternalJSON> {
   let stage='r2';
   try{
@@ -245,7 +248,8 @@ async function readUpstreamFeed(url: string): Promise<ExternalJSON> {
     try{cache=await (globalThis as {caches?:CacheStorage}).caches?.open('skippercast-public-feeds-v1');cached=await cache?.match(key);}catch{cache=null;}
     if(cached)return cached.json();
     // Workers supports manual redirects; response.ok rejects every 3xx below.
-    stage='fetch';const response=await fetch(url,{signal:AbortSignal.timeout(18000),redirect:'manual'});
+    const target=new URL(url),nws=target.protocol==='https:'&&target.hostname==='api.weather.gov';
+    stage='fetch';const response=await fetch(url,{signal:AbortSignal.timeout(18000),redirect:'manual',...(nws?{headers:NWS_HEADERS}:{})});
     if(!response.ok)throw Error('feed HTTP '+response.status);stage='decode';const text=await response.text();if(text.length>15000000)throw Error('feed too large');const value=JSON.parse(text);
     stage='cache-write';if(cache)try{await cache.put(key,new Response(text,{headers:{'Content-Type':'application/json','Cache-Control':'public,max-age=300'}}));}catch{console.warn('Public feed cache write unavailable');}return value;
   }catch(error){
