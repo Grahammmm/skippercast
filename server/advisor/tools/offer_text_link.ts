@@ -23,10 +23,17 @@ export const linkKey = (webContactId: string): string => LINK_KEY_PREFIX + webCo
 /** What job_state stores for a pending link (never the code or the number). */
 export interface PendingLink {code_hash: string; expires_at: number; phone_contact_hash: string}
 
+/** The largest multiple of 10^6 below 2^32; 32-bit words at or above it are redrawn, so every code is equally likely. */
+export const LINK_CODE_LIMIT = 4_294_000_000;
 /** A six-digit code from `random` (tests) or the platform CSPRNG. */
-export function linkCode(random?: () => number): string {
-  const n = random ? Math.floor(random() * 1e6) : crypto.getRandomValues(new Uint32Array(1))[0]! % 1e6;
-  return String(Math.min(999999, Math.max(0, n))).padStart(6, '0');
+export function linkCode(random?: () => number, word: () => number = () => crypto.getRandomValues(new Uint32Array(1))[0]!): string {
+  if (random) {
+    const r = random();
+    if (!Number.isFinite(r) || r < 0 || r >= 1) throw new RangeError('link code random source out of range');
+    return String(Math.floor(r * 1e6)).padStart(6, '0');
+  }
+  for (let draw = 0; draw < 16; draw++) { const w = word(); if (w < LINK_CODE_LIMIT) return String(w % 1e6).padStart(6, '0'); }
+  throw new Error('link code source failed');
 }
 
 /** Count one use of a daily counter (the routes/boat.ts request_limits idiom); true while within `limit`. */
