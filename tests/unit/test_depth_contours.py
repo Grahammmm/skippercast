@@ -144,6 +144,29 @@ def test_publish_writes_both_forms_with_the_age_limit_and_enforces_the_budget(tm
     assert not (out / 'depth-contours.geojson').exists() and not (out / 'depth-contours-overview.geojson').exists(), 'stale copies removed'
 
 
+def test_publish_bytes_do_not_depend_on_where_the_catalog_puts_the_stamped_keys(tmp_path):
+    # NB-SC-09: the builder writes sources_omitted right after `sources`; older catalog files have none. Both, and a
+    # catalog carrying stale stamped keys first, publish the same bytes, with the three stamped keys last in fixed order.
+    base = collection()
+    prov = base['provenance']
+    omitted = dc.omitted_sources(REGION, SOURCES, ['survey-a'])
+    after_sources = {**prov, 'sources_omitted': omitted}
+    stale_first = {'review_days': 1, 'sources_omitted': omitted, 'review_expires': '1999-01-01', **prov}
+    published = []
+    for provenance in (prov, after_sources, stale_first):
+        root, out = tmp_path / str(len(published)) / 'root', tmp_path / str(len(published)) / 'out'
+        (root / 'catalog/depth-contours').mkdir(parents=True)
+        out.mkdir()
+        (root / 'catalog/depth-contours/test-bay.geojson').write_text(json.dumps({**base, 'provenance': provenance}))
+        dc.publish_depth_contours(root, REGION, out, SOURCES)
+        published.append(((out / 'depth-contours.geojson').read_bytes(), (out / 'depth-contours-overview.geojson').read_bytes()))
+    assert published[1] == published[0] and published[2] == published[0], 'published bytes follow the catalog key order'
+    full = json.loads(published[0][0])['provenance']
+    assert list(full)[-3:] == ['review_expires', 'review_days', 'sources_omitted']
+    assert full['sources_omitted'] == [{'source_id': 'survey-b', 'review_status': 'approved'}]
+    assert (full['review_expires'], full['review_days']) == ('2027-09-26', 365), 'stale stamped values are replaced'
+
+
 def test_the_committed_morro_bay_publication_is_within_budget_and_says_its_datum():
     root = ROOT
     for name, budget in (('depth-contours.geojson', dc.MAX_BYTES), ('depth-contours-overview.geojson', dc.OVERVIEW_MAX_BYTES)):

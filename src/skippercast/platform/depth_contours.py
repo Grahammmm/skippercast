@@ -373,7 +373,11 @@ def publish_depth_contours(root, region, output, sources):
         return None
     collection = read_json(source)
     check_contours(collection, region, sources)
-    collection = {**collection, 'provenance': {**collection['provenance'], 'review_expires': review_expires(collection, sources),
+    # The three stamped keys are dropped from the catalog provenance first, so they always land last, in this order:
+    # the published bytes then do not depend on where (or whether) the catalog file carries them.
+    stamped = ('review_expires', 'review_days', 'sources_omitted')
+    collection = {**collection, 'provenance': {**{k: v for k, v in collection['provenance'].items() if k not in stamped},
+                                               'review_expires': review_expires(collection, sources),
                                                'review_days': SOURCE_REVIEW_DAYS, 'sources_omitted': omitted_sources(
                                                    region, sources, [s['source_id'] for s in collection['provenance']['sources']])}}
     light = overview_contours(collection)
