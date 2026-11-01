@@ -98,6 +98,22 @@ export function followAccountHash(before: () => void): () => void {
   return () => removeEventListener('hashchange', fromHash);
 }
 
+/**
+ * A trip-alert notification tap lands on "#alerts" (dist/sw.js): open the alerts
+ * dialog (`open(true)`) or, with no port in view, the account panel (`open(false)`).
+ * The hash is dropped at once so closing the dialog or reloading never reopens it.
+ */
+export function followAlertsHash(open: (hasRegion: boolean) => void, hasRegion: () => boolean): () => void {
+  const fromHash = () => {
+    if (location.hash !== '#alerts') return;
+    open(hasRegion());
+    history.replaceState(history.state, '', location.pathname + location.search);
+  };
+  addEventListener('hashchange', fromHash);
+  fromHash();
+  return () => removeEventListener('hashchange', fromHash);
+}
+
 export type BoatPreset = {readonly id: string; readonly label: string; readonly detail: string};
 export type BoatState = {readonly presets: readonly BoatPreset[]; /** The saved boat's name, or null for the reference boat. */ readonly name: string | null; readonly preset: string | null};
 export const boat = signal<BoatState | null>(null);
