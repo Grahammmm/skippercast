@@ -61,13 +61,31 @@ def test_controller_identity_ignores_this_process_sys_path(tmp_path, export, mon
 
 # --- cost-bound stop ---------------------------------------------------------
 
-def test_byte_cap_stops_dispatch_before_launch_and_never_refunds(ops):
+# The harness default 2 s lease (heartbeat every 2/3 s) is what the killed-
+# controller test needs to watch a lease lapse. A dispatch whose heartbeat or
+# commit is starved for more than ~1.3 s by a loaded host (the parallel gate)
+# then fails as `failed_uncertain: expired or superseded lease`, which is the
+# correct fencing outcome but not what a byte-cap test is about. These tests
+# use the production lease (30 s), so only the byte cap decides what runs.
+COST_LEASE_S = 30
+
+
+@pytest.fixture
+def cost_ops(tmp_path, export):
+    harness = Harness(tmp_path, export, policy_value=policy(lease_s=COST_LEASE_S))
+    yield harness
+    harness.close()
+
+
+def test_byte_cap_stops_dispatch_before_launch_and_never_refunds(cost_ops):
+    ops = cost_ops
     # Cap 250 B, 100 B per job: two fit, the third would overshoot the cap.
     first = ops.job("first", "underreport")    # claims it read nothing
     second = ops.job("second", "overreport")   # claims it read 1 GB
     third = ops.job("third", "done")
 
-    assert states(ops.run()) == ["done", "done", "idle"]
+    results = ops.run()
+    assert states(results) == ["done", "done", "idle"], results
 
     jobs = ops.jobs()
     assert jobs[first]["state"] == jobs[second]["state"] == "done"
@@ -84,10 +102,12 @@ def test_byte_cap_stops_dispatch_before_launch_and_never_refunds(ops):
     assert [d["reason"] for _, d in ops.events("budget_exhausted")] == [None]
 
 
-def test_exhausted_byte_cap_stops_every_later_job(ops):
+def test_exhausted_byte_cap_stops_every_later_job(cost_ops):
+    ops = cost_ops
     jobs = [ops.job(f"j{i}", "done", budget={"bytes": 125}) for i in range(4)]
 
-    assert states(ops.run()) == ["done", "done", "idle"]
+    results = ops.run()
+    assert states(results) == ["done", "done", "idle"], results
 
     current = ops.jobs()
     assert [current[j]["state"] for j in jobs] == ["done", "done", "held", "held"]
