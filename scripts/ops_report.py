@@ -102,7 +102,11 @@ def query(sql, *, account, token, opener=urlopen):
                       headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'text/plain',
                                'User-Agent': 'SkipperCast-ops-report/1'})
     with opener(request, timeout=30) as response:
-        return json.load(response).get('data', [])
+        answer = json.load(response)
+    rows = answer.get('data', []) if isinstance(answer, dict) else None
+    if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
+        raise ValueError('unexpected answer shape')
+    return rows
 
 
 # Columns whose text a browser supplied (client error message and file name):
@@ -167,9 +171,15 @@ def open_fleet_issue(repo, token=None, opener=urlopen):
     try:
         with opener(request, timeout=20) as response:
             issues = json.load(response)
-    except (HTTPError, URLError, TimeoutError, ValueError):
+        if isinstance(issues, list) and not issues:
+            return ''
+        number = issues[0]['number']
+        if isinstance(number, str) and number.strip().isdecimal():
+            number = int(number)
+        # Any other shape (an error object, an item without an int number) means GitHub cannot say.
+        return f'#{number}' if isinstance(number, int) and not isinstance(number, bool) else None
+    except (HTTPError, URLError, TimeoutError, ValueError, KeyError, TypeError, IndexError):
         return None
-    return f"#{int(issues[0]['number'])}" if isinstance(issues, list) and issues else ''
 
 
 def fleet_line(rows, issue, now):
