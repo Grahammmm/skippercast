@@ -55,8 +55,8 @@ PINS = {
     'validate_recipe.py': '50d8f1e36e5edf9974d121d29349bd821c8bf08e2d3eaf20526b2bc7162b736f',
     'schemas/coast-recipe-v1.schema.json': 'a659d136536a553043fac917473428ae0c6e51bdb179cc66bdd295e09ebf1593',
     'regions/morro-bay/coast.json': 'dbe6ffebea0e6d4321c949ae42329db487448a251af695f060c1092366b6bc47',
-    # repinned for NB-SC-06: test_coast_recipe.py carries the new morro-bay region.json pin
-    'tests/unit/test_coast_recipe.py': 'e8463b8d792854005ba87d1b85b0fd72595ce5fe33a2935643389b58c96a084f',
+    # repinned for NB-SC-06 and NB-SC-08: test_coast_recipe.py carries the new morro-bay and cambria region.json pins
+    'tests/unit/test_coast_recipe.py': 'ef8da71a02e7f15aba877a104cffdb38c09002049fb112eccecfe0600c38d564',
 }
 EXPECTED = {
     'focused': [

@@ -17,6 +17,13 @@
     -121.06,
     35.66
   ],
+  "land_water": {
+    "land_corners": [
+      "SE",
+      "NE"
+    ],
+    "note": "The bounds corners on the land side of the mainland shoreline, in order from the mainland path's end back to its start (docs/land-water-method.md step 4). The CUSP lines carry no orientation, so the land side is declared here."
+  },
   "map": {
     "center": [
       35.612,
