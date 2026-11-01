@@ -1,7 +1,7 @@
 ---
 name: skippercast-region-review
 description: Use when a region-build run folder needs its deterministic review packet and an agent first review before any human gate. Writes REVIEW-PACKET/review.json and validates REVIEW.md; never publishes.
-skill_version: 1.2
+skill_version: 1.3
 ---
 
 # Region review
@@ -32,6 +32,7 @@ Machine-valid packet: review-required, not acceptance. A reviewer of another run
   `size-budget`, `held-flags`, `supported-water`, `ec-receipts-intact`, `ec-no-deepening`, `ec-independence`,
   `ec-unresolved-stated`, `ec-thresholds-version` (PASS trivially with detail `no ec/ folder` when EC was not run)),
   `publishable` and `held_reason`. `REVIEW.md` is the agent's.
+- `datum-verbatim`: a catalog `adapter: bag` source passes with the datum its BAG metadata declares (`vertical_datum_source: bag-metadata`, never ellipsoid); every other source must equal the catalog.
 
 ## Never
 
@@ -48,3 +49,4 @@ Machine-valid packet: review-required, not acceptance. A reviewer of another run
 - 1.0: first version.
 - 1.1: EC checks (EC8).
 - 1.2: phone capture `--mode candidate` for publishable runs (BL-SC-3).
+- 1.3: datum-verbatim accepts a BAG's declared metadata datum (M5d).

@@ -340,3 +340,46 @@ def test_check_requires_the_five_ec_rows(tmp_path, region, monkeypatch, capsys):
         assert rr.main(["--check", str(tmp_path)]) == (0 if drop is None else 1)
         assert (f"check {drop} missing" in capsys.readouterr().err) is (drop is not None)
     assert len(rows) == 13
+
+
+BAGSRC = {**SRC, "s-a": {**SRC["s-a"], "adapter": "bag"}, "s-b": {**SRC["s-b"], "adapter": "geotiff"}}
+BAG = {"vertical_datum": "Mean Lower Low Water", "vertical_datum_source": "bag-metadata", "survey_id": "H11953", "bag_metadata_sha256": "9" * 64}
+
+
+def bag_run(tmp, monkeypatch, region, sid="s-a", **entry):
+    """CLEAN under the BAGSRC catalog with BAG | entry (None drops a key) on `sid`'s source entry and features; returns (code, datum check, packet)."""
+    make_run(tmp, region, CLEAN)
+    monkeypatch.setattr(rr, "loader", lambda _id: (region, BAGSRC))
+    build = json.loads((tmp / "BUILD.json").read_text())
+    out, fields = tmp / build["outputs"][0]["path"], {k: v for k, v in (BAG | entry).items() if v is not None}
+    coll = json.loads(out.read_text())
+    for item in coll["provenance"]["sources"] + [f["properties"] for f in coll["features"]]:
+        if item["source_id"] == sid:
+            item |= fields if "sha256" in item else {"vertical_datum": fields["vertical_datum"]}
+    out.write_text(json.dumps(coll))
+    build["outputs"][0]["sha256"] = sha(out)
+    (tmp / "BUILD.json").write_text(json.dumps(build))
+    code, packet = rerun(tmp)
+    return code, {c["id"]: c for c in packet["checks"]}["datum-verbatim"], packet
+
+
+@pytest.mark.parametrize("datum", ["MLLW", "Mean Lower Low Water"])
+def test_bag_source_passes_with_its_declared_metadata_datum(tmp_path, region, monkeypatch, datum):
+    code, check, packet = bag_run(tmp_path / "bag", monkeypatch, region, vertical_datum=datum)
+    assert code == 0 and check == FROZEN["checks"][2] and packet["publishable"] is True, packet["checks"]
+    code, packet = make_run(tmp_path / "plain", region, CLEAN)  # a bag source without the marker keeps today's comparison
+    assert code == 0 and packet["checks"][2] == FROZEN["checks"][2]
+
+
+@pytest.mark.parametrize("sid, needle, entry", [
+    ("s-a", "source s-a datum 'Mean Lower Low Water' is not the catalog 'unverified source datum'", {"vertical_datum_source": None}),
+    *[("s-a", f"source s-a datum {d!r} is not a declared BAG datum", {"vertical_datum": d}) for d in ("WGS 84 Ellipsoid", "Ellipsoid (GRS80)", "NAD83 ELLIPSOIDAL height", " ")],
+    *[("s-a", "source s-a datum 'Mean Lower Low Water' is not a declared BAG datum", {k: v}) for k, v in (
+        ("bag_metadata_sha256", None), ("bag_metadata_sha256", "9" * 63), ("bag_metadata_sha256", "A" * 64),
+        ("survey_id", None), ("survey_id", "h1"), ("survey_id", "h11953"), ("survey_id", "H119530"))],
+    ("s-b", "source s-b claims a BAG datum but the catalog adapter is 'geotiff'", {})])
+def test_bag_datum_faults_fail_only_datum_verbatim(tmp_path, region, monkeypatch, sid, needle, entry):
+    code, check, packet = bag_run(tmp_path, monkeypatch, region, sid, **entry)
+    assert code == 1 and check["verdict"] == "FAIL" and needle in check["detail"], check
+    assert [c["id"] for c in packet["checks"] if c["verdict"] == "FAIL"] == ["datum-verbatim"]
+    assert packet["publishable"] is False and packet["held_reason"] == "check-failed:datum-verbatim"
