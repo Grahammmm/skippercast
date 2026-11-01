@@ -99,31 +99,17 @@ jobs:
           for number in $(gh issue list --label feed-source-degraded --state open --json number --jq '.[].number'); do
             gh issue close "$number" --comment "Recovered. $MESSAGE"
           done
-      - name: Open or update the stale-feed issue
-        if: always() && steps.age.outputs.stale == 'true'
+      # One issue per stale feed per staleness event (scripts/feed_stale_alert.py): opened once with the feed name,
+      # its last successful publish and how late it is, then one `still: N h` comment every 6 h while it stays
+      # stale (not a comment every hour), closed when the feed publishes again. Lands in the repo's GitHub
+      # notifications (owner and watchers). Replaces the old comment-every-hour and close-all steps.
+      - name: Alert once per stale feed, age it, close on recovery
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-          MESSAGE: ${{ steps.age.outputs.message }}
         run: |
           gh label create feed-stale --color B60205 --description "A published feed stopped refreshing" 2>/dev/null || true
-          existing="$(gh issue list --label feed-stale --state open --json number --jq '.[0].number')"
-          runs="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/live-conditions.yml"
-          runbook="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/main/docs/operations/runbooks/feed-stale.md"
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body "$MESSAGE"
-          else
-            gh issue create --label feed-stale --title "Published feed is stale" \
-              --body "$MESSAGE"$'\n\n'"Check the latest runs of the live-conditions workflow: $runs"$'\n\n'"Runbook: $runbook"
-          fi
-      - name: Close the stale-feed issue after recovery
-        if: always() && steps.age.outputs.stale == 'false'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          MESSAGE: ${{ steps.age.outputs.message }}
-        run: |
-          for number in $(gh issue list --label feed-stale --state open --json number --jq '.[].number'); do
-            gh issue close "$number" --comment "Recovered. $MESSAGE"
-          done
+          python scripts/feed_stale_alert.py --report "$RUNNER_TEMP/feed-health.json" --stale "${{ steps.age.outputs.stale || 'true' }}"
       # Red only for a stale feed or a whole critical kind out; a partial outage stays green.
       - name: Fail when a feed is stale or a critical kind is out
         if: always() && (steps.age.outputs.stale == 'true' || steps.age.outputs.degraded == 'true')
