@@ -12,7 +12,7 @@ import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {Icon} from '../ui/icons.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
-import {accountLabel, boat, choosePreset, ensureSession, followAccountHash, loadBoat, openAccountDialog, openBoatSheet, session, type Session} from '../account.ts';
+import {accountLabel, boat, choosePreset, ensureSession, followAccountHash, followAlertsHash, loadBoat, openAccountDialog, openBoatSheet, session, type Session} from '../account.ts';
 import {coordinates, region, setCoordinateFormat, species} from '../state.ts';
 import {offlineOpen, openTrip, tripIds} from '../trip.ts';
 import {tourTransition, type TourAction, type TourState} from '../tour.ts';
@@ -47,7 +47,9 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
 
   useEffect(() => {
     void ensureSession();
-    return followAccountHash(() => { setOpen(false); setAlerts(false); });
+    const stopAccount = followAccountHash(() => { setOpen(false); setAlerts(false); });
+    const stopAlerts = followAlertsHash(has => has ? setAlerts(true) : setOpen(true), () => region.peek() !== null);
+    return () => { stopAccount(); stopAlerts(); };
   }, []);
   useEffect(() => {
     if (!open) return;

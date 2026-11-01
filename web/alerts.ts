@@ -62,9 +62,27 @@ export type SavedTrip = {id: string; date: string; point: string; species: strin
 export type AlertEvent = {id: string | number; kind: string; status: string; message: string};
 export type Feedback = {observed_at: string; rating: number; context: string};
 
-/** The saved trip's line: "2026-10-12 · central · reef · 7:00–13:00", with the saved boat when it has one. */
-export const tripLine = (t: SavedTrip): string =>
-  `${t.date} · ${t.point} · ${t.species} · ${t.start_hour}:00–${t.end_hour}:00${t.boat_sea ? ` · ${t.boat_name || 'saved boat'}` : ''}`;
+export type AlertNames = {point: Map<string, string>; species: Map<string, string>};
+/** The region's area and species names by id (species named as in the alert species list). */
+export const alertNames = (region: RegionAlerts): AlertNames => ({
+  point: new Map(region.forecast_points.map(p => [p.id, p.name])),
+  species: new Map(alertSpecies(region, null).options.map(o => [o.id, o.name])),
+});
+
+/** The saved trip's line: "2026-11-02 · Point Sur · Rockfish · 7:00–13:00" with names (raw ids without them or when unknown), with the saved boat when it has one. */
+export const tripLine = (t: SavedTrip, names?: AlertNames): string =>
+  `${t.date} · ${names?.point.get(t.point) ?? t.point} · ${names?.species.get(t.species) ?? t.species} · ${t.start_hour}:00–${t.end_hour}:00${t.boat_sea ? ` · ${t.boat_name || 'saved boat'}` : ''}`;
+
+/** The assessment kinds and delivery statuses server/trips.ts writes, in plain words. */
+export const KIND_LABEL: Readonly<Record<string, string>> = {
+  initial: 'First assessment', update: 'Material change', retraction: 'Earlier alert withdrawn', final: 'Day-before assessment', 'missed-final': 'Day-before assessment missed',
+};
+export const STATUS_LABEL: Readonly<Record<string, string>> = {
+  pending: 'sending', accepted: 'sent to your device', uncertain: 'delivery not confirmed', held: 'not delivered — read it here', 'in-app': 'shown here', delivered: 'delivered', read: 'read',
+};
+const label = (labels: Readonly<Record<string, string>>, key: string): string => (Object.hasOwn(labels, key) ? labels[key] : undefined) ?? key;
+/** The assessment's heading: "Day-before assessment · shown here"; an unknown kind or status prints as written. */
+export const eventLine = (e: AlertEvent): string => `${label(KIND_LABEL, e.kind)} · ${label(STATUS_LABEL, e.status)}`;
 
 /** The feedback's phase, or '' when its stored context does not parse. */
 export function feedbackPhase(f: Feedback): string {

@@ -3,12 +3,12 @@
 // dist/trip-alerts.js. Same /api/ calls, the same saved records, the same
 // limits from the saved boat and the same copy; the delete confirmation is in
 // the page, never window.confirm. Styles: web/app/account.css (.app-alerts).
-import {useEffect, useId, useRef, useState} from 'preact/hooks';
+import {useEffect, useId, useMemo, useRef, useState} from 'preact/hooks';
 import type {TargetedSubmitEvent} from 'preact';
 import {Button} from '../ui/Button.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
 import {
-  alertDate, alertSpecies, api, comfortBody, disablePush, enablePush, feedbackPhase, tripBody, tripBoat, tripDefaults, tripLine,
+  alertDate, alertNames, alertSpecies, api, comfortBody, disablePush, enablePush, eventLine, feedbackPhase, tripBody, tripBoat, tripDefaults, tripLine,
   type AlertEvent, type AlertForm, type BoatFactors, type Feedback, type RegionAlerts, type SavedTrip,
 } from '../alerts.ts';
 
@@ -68,7 +68,7 @@ function ConfirmDelete({onConfirm, onCancel}: {onConfirm: () => void; onCancel: 
 
 function SignedIn({session, region, boat, target}: {session: SessionAnswer; region: RegionAlerts; boat: Boat; target: string | null}) {
   const saved = tripBoat(boat.factors, boat.saved?.boat), limits = tripDefaults(boat.factors);
-  const choice = alertSpecies(region, target);
+  const choice = alertSpecies(region, target), names = useMemo(() => alertNames(region), [region]);
   const [species, setSpecies] = useState(choice.value);
   const [status, setStatus] = useState('');
   const [trips, setTrips] = useState<{trips: SavedTrip[]; events: AlertEvent[]} | null>(null);
@@ -151,7 +151,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
         <p id="alert-status" role="status">{status}</p>
         <div id="saved-trips">
           {trips ? trips.trips.length ? trips.trips.map(t => (
-            <p key={t.id}><strong>{tripLine(t)}</strong> <Button size="sm" variant="quiet" onClick={remove(t.id)} aria-label={`Delete the trip on ${t.date}`}>Delete</Button></p>
+            <p key={t.id}><strong>{tripLine(t, names)}</strong> <Button size="sm" variant="quiet" onClick={remove(t.id)} aria-label={`Delete the trip on ${t.date} at ${names.point.get(t.point) ?? t.point}`}>Delete</Button></p>
           )) : <p>No saved trips.</p> : null}
         </div>
         {trips?.events.length ? (
@@ -159,7 +159,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
             <summary>Recent assessments ({trips.events.length})</summary>
             {trips.events.map(e => (
               <article key={e.id}>
-                <strong>{e.kind} · {e.status}</strong>
+                <strong>{eventLine(e)}</strong>
                 <p style={{whiteSpace: 'pre-line'}}>{e.message}</p>
                 {!['read', 'delivered'].includes(e.status) ? <Button size="sm" variant="quiet" onClick={ack(e.id)}>Mark read</Button> : null}
               </article>
