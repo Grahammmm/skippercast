@@ -271,6 +271,7 @@ def wcofs_surface(client, region, now):
     lat = axes["Latitude"][y0:y1+1]; lon = axes["Longitude"][x0:x1+1]
     n = len(lat)*len(lon)
     if n > 15_000: raise ValueError("WCOFS regional subset exceeds grid budget")
+    if len(lat) < 2 or len(lon) < 2: raise ValueError("WCOFS regional subset needs at least 2 x 2 cells")
     dy, dx = abs(lat[1]-lat[0]), abs(lon[1]-lon[0])
     if not .039 <= dy <= .041 or not .039 <= dx <= .041: raise ValueError("WCOFS regular-grid spacing changed")
     cut = f"[{y0}:1:{y1}][{x0}:1:{x1}]"
