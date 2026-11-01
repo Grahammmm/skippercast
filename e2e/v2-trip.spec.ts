@@ -118,7 +118,7 @@ test('the ranked export runs in v2: best reefs, complete outlines, a restored pl
   const gpx = await download(page);
   expect(gpx.match(/<wpt /g)).toHaveLength(20);
   expect(gpx.match(/<trk>/g)).toHaveLength(20);
-  expect(gpx).toContain('<name>01 LR H3 C90% 90-120ft</name>');
+  expect(gpx).toContain('<name>01 Reef 90-120ft</name>');
   expect(gpx).toContain('lat="35.43" lon="-121.17"');
   expect(gpx).not.toContain('<rte>');
   await page.locator('#export-spot-list [data-spot]').first().uncheck();

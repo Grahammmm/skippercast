@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {bestSpots as checkedBestSpots,evidenceConfidence,waypointTitle} from '../dist/spot-ranking.js';
+import {bestSpots as checkedBestSpots,evidenceConfidence,waypointTitle,plotterName} from '../dist/spot-ranking.js';
+import {tripGPX} from '../dist/gpx.js';
 // These tests cover the other filters: every spot is water here (the land/water check: test_land_water.mjs).
 const bestSpots=(atlas,screen,options={})=>checkedBestSpots(atlas,screen,{place:()=>({state:'water'}),...options});
 import {loadReefTrip} from '../dist/reef-trip-data.js';
@@ -50,8 +51,8 @@ test('canonical outlines and interior points load by verified hash; all are re-s
  atlas.targets=selected;
  const r=buildExport({atlas,screen,ids:selected.map(t=>t.id),layers:{waypoints:true,outlines:true,alignments:false,exclusions:false},region:{id:'morro-bay',mpa:{bounds:[-122,34,-120,36]}}});
  assert.equal(r.counts.waypoints,1);assert.equal(r.counts.outlines,1);
- assert.match(r.gpx,/<name>01 LR H3 C90% 90-120ft<\/name>/);
- assert.match(r.gpx,/not catch odds/);assert.doesNotMatch(r.gpx,/<rte>|<name>AVOID|alignment track/);
+ assert.match(r.gpx,/<name>01 Reef 90-120ft<\/name>/);
+ assert.match(r.gpx,/not a sounding or catch forecast/);assert.doesNotMatch(r.gpx,/<rte>|<name>AVOID|alignment track/);
  assert.deepEqual(r.features.areas[0].geometry,f.data.features[0].geometry);
  assert.throws(()=>buildExport({atlas,screen:{...screen,geometryAllowed:()=>false},ids:['reef-a'],region:{mpa:{bounds:[]}}}),/whole-boundary/);
  atlas.publication.expires_at='2000-01-01';assert.throws(()=>buildExport({atlas,screen,ids:['reef-a'],region:{mpa:{bounds:[]}}}),/expired/);
@@ -70,6 +71,21 @@ test('producer credits and use restrictions survive canonical loading, GPX and o
   assert.doesNotMatch(document,/<credit>/);
  }
  assert.match(atlas.areas[0].extent_note,/for-profit permission required/);
+});
+test('SCJ-4 ranked waypoint-only GPX (outlines off) keeps producer credits, use terms and policy URL',async()=>{
+ const rights=[{source_id:'survey',attribution:'Original producer <credit>',notice:'Public noncommercial use only; for-profit permission required. Not for navigation.',policy_url:'https://example.org/terms'}];
+ const f=await fixture(d=>d.features[0].properties.source_rights=rights);
+ f.manifest.source_use_notice='Retain producer terms';
+ const atlas=await loadReefTrip('morro-bay',f),region={id:'morro-bay',mpa:{bounds:[-122,34,-120,36]}};
+ atlas.targets=bestSpots(atlas,screen);assert.equal(atlas.targets[0].trip_rank,1);
+ const r=buildExport({atlas,screen,ids:['reef-a'],layers:{waypoints:true,outlines:false,alignments:false,exclusions:false},region});
+ assert.equal(r.counts.outlines,0);assert.doesNotMatch(r.gpx,/<trk>/);
+ const wpt=r.gpx.match(/<wpt [^>]*>.*?<\/wpt>/)[0];
+ assert.match(wpt,/<name>01 Reef 90-120ft<\/name>/);
+ assert.match(wpt,/<src>Original producer &lt;credit&gt; Public noncommercial use only; for-profit permission required\. Not for navigation\. https:\/\/example\.org\/terms<\/src>/);
+ assert.doesNotMatch(r.gpx,/<credit>/);
+ const desc=wpt.match(/<desc>([^<]*)<\/desc>/)[1];
+ assert.ok(!desc.includes('\n')&&desc.length<=160&&!desc.includes('producer'),'the waypoint description stays one short line');
 });
 test('new credited publication rejects absent or partially malformed contributor notices',async()=>{
  for(const value of [undefined,[],[{source_id:'survey',attribution:'Producer'}],
@@ -109,4 +125,29 @@ test('top set enforces depth, whole boundaries, distinct reefs, count and combin
 });
 test('titles retain leading priority and confidence for plotters with shorter labels',()=>{
  assert.equal(waypointTitle({trip_fit:3,trip_species:'lingcod',neighborhood_depth_ft:[100.1,199.9],evidence_confidence:{percent:85}},2),'02 LC H3 C85% 100-200ft');
+});
+test('SCJ-4 plotter names: target word per species, whole feet, two-digit priority',()=>{
+ const t={trip_species:'reef',trip_rank:1,neighborhood_depth_ft:[199.6,278.4]};
+ assert.equal(plotterName(t),'01 Reef 200-278ft');
+ assert.equal(plotterName({...t,trip_species:'lingcod'},12),'12 Lingcod 200-278ft');
+ assert.equal(plotterName({...t,trip_species:'rockfish',neighborhood_depth_ft:[90.49,120.5]}),'01 Rockfish 90-121ft');
+ assert.ok(plotterName({...t,trip_species:'reef'},12).length<=20);
+});
+test('SCJ-4 ranked GPX waypoint: short name, one-line desc, SC26 id kept; other waypoints export as before',async()=>{
+ const f=await fixture(d=>d.features[0].properties.id='SC26-test-0001'),atlas=await loadReefTrip('morro-bay',f);
+ for(const species of ['reef','lingcod','rockfish']){
+  const [t]=bestSpots(atlas,screen,{species});t.neighborhood_depth_ft=[89.62345678901234,120.4999999999999];
+  const gpx=tripGPX({...atlas,targets:[t]},[t.id],'x',{outlines:false,alignments:false});
+  const name=gpx.match(/<wpt [^>]*><name>([^<]*)<\/name>/)[1],desc=gpx.match(/<wpt [^>]*>.*?<desc>([^<]*)<\/desc>/)[1];
+  assert.match(name,/^\d{2} (Lingcod|Rockfish|Reef) \d+-\d+ft$/);assert.equal(name,plotterName(t));
+  assert.match(desc,/habitat, about 90–120 ft\./);assert.ok(!desc.includes('\n')&&desc.length<=160,desc);
+  assert.doesNotMatch(desc,/\d\.\d{2}|C90%|habitat-evidence|nominal/);
+  assert.match(gpx,/<cmt>SC26-test-0001<\/cmt>/);assert.equal(t.name,waypointTitle(t),'the Chart keeps its heading');
+ }
+ const plain=atlas.targets[0],gpx=tripGPX(atlas,[plain.id],'x',{outlines:false,alignments:false});
+ assert.ok(gpx.includes(`<name>${plain.name}</name>`)&&gpx.includes('Trip priority unassigned')&&gpx.includes('nominal'),'a non-ranked target keeps its full notes');
+ const user={id:'u1',name:'My spot',latitude:35,longitude:-121,category:'user',user_waypoint:true,trip_rank:1,trip_species:'reef'};
+ assert.ok(tripGPX({...atlas,targets:[user]},['u1'],'x',{outlines:false,alignments:false}).includes('<name>My spot</name><cmt>u1</cmt><desc>User waypoint. User-supplied label;'),'a user waypoint is unchanged');
+ const odd={...bestSpots(atlas,screen)[0],trip_species:'tuna'};
+ assert.ok(tripGPX({...atlas,targets:[odd]},[odd.id],'x',{outlines:false,alignments:false}).includes(`<name>${odd.name}</name>`),'an unknown target word falls back to the full name');
 });
