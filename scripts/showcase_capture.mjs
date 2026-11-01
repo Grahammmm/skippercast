@@ -44,34 +44,74 @@ const browser = await chromium.launch(process.env.PW_CHROMIUM ? {executablePath:
 const differ = await browser.newPage();
 
 /**
- * Pixel difference of two PNGs, decoded in a canvas (no image library needed). A pixel has changed when any
- * channel differs by more than `tolerance` levels out of 255; `exact` counts every pixel that differs at all; a
- * size difference counts the uncovered area as changed. Width, height and box are in the after image's pixels.
+ * Pixel difference of two PNGs, decoded in a canvas (no image library needed). `exact` counts every pixel that
+ * differs at all. A pixel has changed when a channel differs by more than `tolerance` levels out of 255 and it
+ * is not an anti-aliased edge pixel; a size difference counts the uncovered area as changed. Width, height and
+ * box are in the after image's pixels.
+ *
+ * Anti-aliased edges: the rasteriser blends the rim of a curve, a slanted line or a glyph with the background,
+ * and that blend can come out a little different between two captures of the same revision (two captures of
+ * one commit differed by up to 35 levels on the rim of the time slider's thumb and 10 on the end of a map dash,
+ * and nowhere else). Such a pixel is counted in `aa`, not `changed`, when it moved by at most EDGE_NOISE levels
+ * and is an edge by the rule of pixelmatch, the comparator behind Playwright's own toHaveScreenshot: it sits
+ * between a darker and a brighter neighbour, has at most two neighbours of its own brightness, and that darkest
+ * or brightest neighbour lies in a flat area (three or more identical neighbours) in both images. A changed
+ * letter, line or block moves its pixels by far more than a blend does, and moves pixels away from edges too,
+ * so it is still counted: a one-digit change in 16 px text, a line moved by one pixel and a slightly darker
+ * button all are (e2e/showcase-capture.spec.ts).
  */
+const EDGE_NOISE = 48;
 async function diff(before, after) {
   const url = png => `data:image/png;base64,${png.toString('base64')}`;
-  return differ.evaluate(async ([a, b, tolerance]) => {
+  return differ.evaluate(async ([a, b, tolerance, edgeNoise]) => {
     const load = src => new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = src; });
     const [p0, q0] = await Promise.all([load(a), load(b)]);
     const width = Math.max(p0.width, q0.width), height = Math.max(p0.height, q0.height);
     const pixels = image => { const c = new OffscreenCanvas(width, height), g = c.getContext('2d'); g.drawImage(image, 0, 0); return g.getImageData(0, 0, width, height).data; };
     const p = pixels(p0), q = pixels(q0);
+    // pixelmatch (ISC, Mapbox) anti-aliasing test, on brightness (YIQ luma).
+    const luma = (img, k) => img[k] * 0.29889531 + img[k + 1] * 0.58662247 + img[k + 2] * 0.11448223;
+    const around = (x, y) => [Math.max(x - 1, 0), Math.max(y - 1, 0), Math.min(x + 1, width - 1), Math.min(y + 1, height - 1)];
+    const flat = (img, x, y) => {
+      const [xa, ya, xb, yb] = around(x, y), k = (y * width + x) * 4;
+      let same = x === xa || x === xb || y === ya || y === yb ? 1 : 0;
+      for (let u = xa; u <= xb; u++) for (let v = ya; v <= yb; v++) {
+        if (u === x && v === y) continue;
+        const m = (v * width + u) * 4;
+        if (img[k] === img[m] && img[k + 1] === img[m + 1] && img[k + 2] === img[m + 2] && img[k + 3] === img[m + 3] && ++same > 2) return true;
+      }
+      return false;
+    };
+    const edge = (img, other, x, y) => {
+      const [xa, ya, xb, yb] = around(x, y), k = (y * width + x) * 4;
+      let same = x === xa || x === xb || y === ya || y === yb ? 1 : 0, min = 0, max = 0, minX, minY, maxX, maxY;
+      for (let u = xa; u <= xb; u++) for (let v = ya; v <= yb; v++) {
+        if (u === x && v === y) continue;
+        const delta = luma(img, k) - luma(img, (v * width + u) * 4);
+        if (delta === 0) { if (++same > 2) return false; }
+        else if (delta < min) { min = delta; minX = u; minY = v; }
+        else if (delta > max) { max = delta; maxX = u; maxY = v; }
+      }
+      if (min === 0 || max === 0) return false;
+      return (flat(img, minX, minY) && flat(other, minX, minY)) || (flat(img, maxX, maxY) && flat(other, maxX, maxY));
+    };
     const CELL = 16, cols = Math.ceil(width / CELL), cells = new Set();
-    let changed = 0, exact = 0, x0 = width, y0 = height, x1 = -1, y1 = -1;
+    let changed = 0, exact = 0, aa = 0, x0 = width, y0 = height, x1 = -1, y1 = -1;
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
       const outside = x >= p0.width || y >= p0.height || x >= q0.width || y >= q0.height;
       const i = (y * width + x) * 4;
       const most = Math.max(Math.abs(p[i] - q[i]), Math.abs(p[i + 1] - q[i + 1]), Math.abs(p[i + 2] - q[i + 2]), Math.abs(p[i + 3] - q[i + 3]));
       if (outside || most) exact++;
+      if (!outside && most > tolerance && most <= edgeNoise && (edge(p, q, x, y) || edge(q, p, x, y))) { aa++; continue; }
       if (outside || most > tolerance) {
         changed++; cells.add(Math.floor(y / CELL) * cols + Math.floor(x / CELL));
         if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
       }
     }
     // `cells`: the changed 16 px cells (row * cols + column), so the caller can outline separate areas.
-    return {changed, exact, total: width * height, width: q0.width, height: q0.height, cell: CELL, cols, cells: [...cells].sort((a, b) => a - b),
+    return {changed, exact, aa, total: width * height, width: q0.width, height: q0.height, cell: CELL, cols, cells: [...cells].sort((a, b) => a - b),
       box: changed ? {x: x0, y: y0, w: Math.min(x1, q0.width - 1) - x0 + 1, h: Math.min(y1, q0.height - 1) - y0 + 1} : null};
-  }, [url(before), url(after), tolerance]);
+  }, [url(before), url(after), tolerance, EDGE_NOISE]);
 }
 
 if (job.compare) {
