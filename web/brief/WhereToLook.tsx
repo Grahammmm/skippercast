@@ -25,7 +25,7 @@ import {depthLimitFt, PROFILE_TABLE} from '../profile.ts';
 import {isReachProfile, nmText, reachFor, shoreSwimLimit, spearPlan} from '../reach.ts';
 import {loadShoreLines, shoreLines} from '../shore-distance.ts';
 import {landWater, loadLandWater, loadLandWaterLines, placeFor} from '../land-water.ts';
-import {loadTerrainHabitat, ranking, terrainHabitat, type Pick, type Ranking} from '../ranking.ts';
+import {loadTerrainHabitat, ranking, regionLoad, terrainHabitat, type Pick, type Ranking} from '../ranking.ts';
 import {habitat, navigate, profile, region, selection, species} from '../state.ts';
 import {durationText, runMinutes} from './run.ts';
 
@@ -39,7 +39,7 @@ export function currentRanking(now = Date.now()): Ranking {
   return ranking({region: id, profile: p, target, coast: coastSpecies(species.value, p), data: markData.value, screen: markScreen.value, terrain: terrainHabitat.value, now, reachNm: reachFor(p),
     origin: p === 'kayak' ? launchOrigin(id) : null,
     shore: maxYd === null ? null : {maxYd, lines: lines && lines.region === id ? lines.lines : null},
-    place: placeFor(landWater.value, id)});
+    place: placeFor(landWater.value, id), missing: regionLoad.value?.id === id && regionLoad.value.state === 'missing'});
 }
 
 /** Select a pick's mark or habitat (a history entry), as a click on the map would. */

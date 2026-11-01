@@ -180,7 +180,11 @@ export interface RankingInputs {
   readonly shore?: {readonly maxYd: number; readonly lines: readonly (readonly number[])[][] | null} | null;
   /** The region's land/water check (web/land-water.ts `placeFor`); absent, every place is unknown and withheld. */
   readonly place?: Place;
+  /** SCJ-7: the region's region.json is a 404, so there is nothing to rank and the empty line says so. */
+  readonly missing?: boolean;
 }
+/** Where the current region's region.json read stands (web/app/App.tsx loadRegion writes it); here so the brief reads it without the shell. */
+export const regionLoad = signal<{id: string; state: 'loading' | 'ready' | 'error' | 'missing'} | null>(null);
 
 const ATLAS_BASIS = 'Survey reef atlas marks that pass the current protected-area check, ordered by habitat fit, then the atlas habitat score. '
   + 'Depths are the nominal range near each mark in the survey\'s own vertical reference; distances are straight-line from';
@@ -221,6 +225,7 @@ export function ranking(i: RankingInputs): Ranking {
       : `No reviewed terrain habitat passes the current protected-area and closure check ${within} for this target.`;
     return {source: 'terrain', label: 'Reviewed terrain habitat', ...checked(s, TERRAIN_BASIS + from, empty), ...extra};
   }
+  if (i.missing) return {source: null, label: '', basis: '', picks: [], empty: 'No ranked places: this region does not exist.'};
   if (!i.data) return {source: null, label: '', basis: '', picks: [], empty: 'Ranked places load with the map.'};
   const s = atlasScreened(i.data, i.screen, i.target, limit, origin, keep, place);
   const empty = i.screen.status !== 'ready' ? i.screen.note : s.withheld ? `No other surveyed reef marks ${within} for this target.`

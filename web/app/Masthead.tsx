@@ -46,13 +46,15 @@ export function Location() {
   const info = currentRegionInfo();
   const load = regionLoad.value;
   const state = load?.id === region.value ? load.state : null;
+  const missing = state === 'missing';
   return (
     <>
       <span class="app-location ui-mono" data-region={region.value ?? ''}>
-        {info ? <>{info.name} <span class="app-location-coords">{coordinates(info.center)}</span></> : region.value ? `${titleCase(region.value)} —` : 'No port chosen'}
+        {info ? <>{info.name} <span class="app-location-coords">{coordinates(info.center)}</span></> : missing ? `"${region.value}"` : region.value ? `${titleCase(region.value)} —` : 'No port chosen'}
       </span>
       {state === 'loading' ? <span role="status">Loading region…</span> : null}
       {state === 'error' ? <span role="status">Region details unavailable. <button type="button" onClick={retryRegion}>Retry region details</button></span> : null}
+      {missing ? <span role="status">There is no region called "{region.value}". <a href="/">Choose a port</a></span> : null}
     </>
   );
 }
