@@ -31,7 +31,9 @@ sink. Steps, in order, per candidate:
    only on a stable key. A fuzzy score of at least ``auto_merge`` opens a
    ``merge`` review instead of assigning (name and port alone never give a boat
    an MMSI); anything weaker is skipped: it never creates a vessel or opens a
-   review-tier fuzzy ``merge`` review.
+   review-tier fuzzy ``merge`` review. A key hit of such a binding on a doc number or call sign
+   writes only when the candidate's exact licensee city is the vessel's home port; otherwise it
+   opens a ``merge`` review (basis ``uncorroborated-key``) and nothing is written.
 6. ``vessel_class`` facts from different sources at confidence >= 0.7 that
    disagree open a ``class`` review (unless the column is pinned).
 7. A winning ``scope`` fact ``{"in_scope": false, ...}`` sets ``status`` to
@@ -467,6 +469,8 @@ class _Resolver:
         if hits:
             (vid, kinds), = hits.items()
             score = 0.9 if set(kinds) == {"call_sign"} else 1.0
+            if self.uncorroborated_key_hit(cand, self.vessels[vid], kinds):
+                return self.review(cand, [(vid, score)], score, "uncorroborated-key")
             if score >= self.config.auto_merge:
                 return self.assign(cand, self.vessels[vid], score)
             return self.review(cand, [(vid, score)], score, "call-sign")
@@ -483,6 +487,15 @@ class _Resolver:
         if top and top[0][1] >= self.config.review_min:
             return self.review(cand, top, top[0][1], "fuzzy")
         self.create(cand)
+
+    def uncorroborated_key_hit(self, cand: _Cand, vessel: _Vessel, kinds: list[str]) -> bool:
+        """A bulk-file official-number/call-sign hit with no exact licensee city/port match to the vessel's home port.
+
+        A key shared with a bulk registry file is not identity on its own (the binding corroboration rule): the
+        candidate's port hint is set only when the licensee city is exactly one of the region's ports, so it must
+        equal the vessel's home port. A match on the MMSI itself adds no MMSI the vessel does not already hold."""
+        return (cand.raw.source_id in self.config.join_only and "mmsi" not in kinds
+                and (cand.port is None or cand.port != vessel.port))
 
     def follow(self, cand: _Cand, review: Mapping[str, Any]) -> None:
         decision = review.get("decision") or {}
