@@ -31,6 +31,9 @@ const finite = (value: unknown): value is number => typeof value === 'number' &&
 /** A usable wave/swell period: finite and above 0 s; anything else is missing. */
 const period = (value: unknown): value is number => finite(value) && value > 0;
 const round = (value: number, digits = 1) => Number(value.toFixed(digits));
+/** A tide-event time as epoch ms; NaN (unknown) without a `Z` or `±HH:MM` offset, which Date.parse would read as device-local time. */
+const instant = (s: unknown): number =>
+  typeof s === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/.test(s) ? Date.parse(s) : NaN;
 
 export type Entrance = {
   /** Display name, e.g. "Morro Bay entrance". */
@@ -130,7 +133,7 @@ export function barTide(at: number, events: readonly TideEvent[]): BarTide {
   for (const event of events) {
     if (!event || typeof event !== 'object' || Array.isArray(event) || typeof event.at !== 'string'
       || (event.type !== 'H' && event.type !== 'L')) continue;
-    const time = Date.parse(event.at);
+    const time = instant(event.at);
     if (!Number.isFinite(time)) continue;
     if (!groups.has(time)) groups.set(time, event.type);
     else if (groups.get(time) !== event.type) groups.set(time, null);
