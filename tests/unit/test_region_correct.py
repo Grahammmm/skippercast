@@ -97,3 +97,23 @@ def test_check_names_tampered_file_and_refusals_before_any_tool(world, capsys):
     (fresh / "INTAKE.csv").write_text((fresh / "INTAKE.csv").read_text().replace(",publish,", ",bogus,", 1))
     assert correct(world, fresh) == 1 and "EC STOP - region_intake" in capsys.readouterr().err and not (fresh / "ec").exists() and tools(world, since) == ["region_intake.py"]
     assert len(skill := (ROOT / "skills/skippercast-region-correct/SKILL.md").read_text().splitlines()) <= 70 and [h[3:].split(" (")[0] for h in skill if h.startswith("## ")] == ["Inputs", "Steps", "Outputs", "Never", "Golden case", "Changelog"]
+def zero(world, name):
+    """A run folder whose INTAKE has no GeoTIFF candidate: every catalog source is BAG, so select returns none."""
+    [s.update(adapter="bag") for s in world["loader"](None)[1].values()]
+    return intake(world, name)
+def test_zero_candidate_run_writes_an_empty_ec_dir_that_review_accepts(world, capsys):
+    rr = load("region_review", "skills/skippercast-region-review/scripts/region_review.py")
+    assert correct(world, folder := zero(world, "z")) == 0 and ec_lines(capsys) == ["EC ALL-DONE 0 rows"] and tools(world, 0) == ["region_intake.py"]
+    assert (folder / "ec").is_dir() and not any((folder / "ec").iterdir()) and (record := json.loads((folder / "EC.json").read_text()))["outputs"] == []
+    assert record["sources"] == record["inputs"] == [] and {n["reason"] for n in record["not_corrected"]} >= {"unsupported-adapter:bag"}
+    assert chk(world, folder) == 0 and ec_lines(capsys) == ["EC OK 0 rows"]
+    stated = {"ec_sha256": record["ec_sha256"], "ec_version": EC_VERSION, "corrected": [], "not_corrected": record["not_corrected"]}
+    assert rr.ec_tree(folder, {"ec": stated})[0] == []
+def test_zero_candidate_file_or_symlink_ec_refused_and_interrupted_finish_resumes(world, capsys):
+    for i, plant in enumerate([lambda ec: ec.write_text("not a dir"), lambda ec: ec.symlink_to(world["tmp"])]):
+        plant(folder := zero(world, f"bad{i}") / "ec")
+        assert correct(world, folder.parent) == 1 and ("File exists" if i == 0 else "ec: symlink refused") in (err := capsys.readouterr().err) and err.startswith("region_correct: ")
+        assert not any((folder.parent / n).exists() for n in ("EC.json", "EC.json.tmp", "EC.md", "INTAKE-EC.csv")) and chk(world, folder.parent) == 1
+    assert correct(world, folder := zero(world, "again")) == 0 and (folder / "EC.json").rename(folder / "EC.json.tmp") and not (folder / "EC.json").exists()
+    assert correct(world, folder) == 0 and ec_lines(capsys) == ["EC ALL-DONE 0 rows", "EC ALL-DONE 0 rows"] and (folder / "ec").is_dir() and not (folder / "EC.json.tmp").exists()
+    assert chk(world, folder) == 0 and ec_lines(capsys) == ["EC OK 0 rows"]

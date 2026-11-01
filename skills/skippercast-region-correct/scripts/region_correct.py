@@ -170,6 +170,7 @@ def build(folder, header, rows, candidates, not_corrected, region, run_fields):
 def finish(args, folder, header, rows, candidates, not_corrected, region):
     record, md, table = build(folder, header, rows, candidates, not_corrected, region, {'author_runtime': args.author_runtime, 'author_family': args.author_family})
     guard(folder)  # again right before the handoff writes
+    (folder / 'ec').mkdir(exist_ok=True)  # a zero-candidate run still leaves ec/ beside EC.json; a file named ec: OSError, nothing written
     for name, data in (('INTAKE-EC.csv', table), ('EC.md', md), ('EC.json.tmp', canonical(record))): (folder / name).write_bytes(data)
     (folder / 'EC.json.tmp').replace(folder / 'EC.json')  # last, so an interrupted finish is simply re-run
     print(f"EC ALL-DONE {len(record['sources'])} rows")
