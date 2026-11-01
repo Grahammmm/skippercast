@@ -84,7 +84,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
             <span class="ui-eyebrow">{windowText(now, tz)}</span>
             <FreshnessDot />
           </div>
-          <Verdict brief={brief} now={now} />
+          <Verdict now={now} />
         </>
       )}
       <BriefTiles brief={brief} compact={detent !== 'full'} />

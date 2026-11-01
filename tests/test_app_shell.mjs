@@ -606,6 +606,9 @@ test('loadRegion fills the masthead from regions/<id>/region.json and leaves pla
   const named = async () => ({ok: true, json: async () => ({name: 'Morro Bay & Avila', timezone: TZ, map: {center: [35.34, -120.965], unavailable_targets: {lobster: 'Not in this region\u2019s researched list.', bad: 3}}})});
   assert.deepEqual((await loadRegion('morro-bay', named)).unavailableTargets, {lobster: 'Not in this region\u2019s researched list.'});
   assert.deepEqual(regionUnavailable.value, {region: 'morro-bay', targets: {lobster: 'Not in this region\u2019s researched list.'}});
+  // SC-LAUNCH-3: a region that names its jurisdiction carries the fields web/regs.ts reads, for the brief's legality line.
+  const ruled = async () => ({ok: true, json: async () => ({name: 'Morro Bay & Avila', timezone: TZ, map: {center: [35.34, -120.965]}, jurisdiction_id: 'california-central', species: ['reef', 'salmon'], assets: {regulations: 'data/regulations.json'}})});
+  assert.deepEqual((await loadRegion('morro-bay', ruled)).rules, {id: 'morro-bay', timezone: TZ, species: ['reef', 'salmon'], jurisdiction_id: 'california-central', regulatory_authority_hosts: undefined, assets: {regulations: 'data/regulations.json'}});
   state.configureStore({storage: memory()});
   state.syncFromURL(`${ORIGIN}?region=morro-bay`);
   assert.match(render(h(App, {})), /data-region="morro-bay">Morro Bay &amp; Avila <span class="app-location-coords">35.34N 120.97W<\/span></);

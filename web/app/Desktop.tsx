@@ -41,8 +41,9 @@ export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Dat
   const brief = currentBrief(now);
   return (
     <aside class="app-brief" aria-label="Brief" data-basis={brief?.basis}>
+      {/* SC-LAUNCH-3: the lead names its own day (tomorrow until a time is chosen); the eyebrow heads the evidence for the dock's day. */}
+      <Verdict now={now} />
       <span class="ui-eyebrow">{brief ? brief.label : 'Today\'s brief'}</span>
-      <Verdict brief={brief} now={now} />
       <BriefTiles brief={brief} dense />
       <Details brief={brief} />
       <TideSpark brief={brief} now={now} />

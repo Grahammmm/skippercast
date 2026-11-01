@@ -23,7 +23,10 @@ import type {CoastReportContext} from '../../packages/coast/src/state/report-bin
 import {briefForecast, loadConditionsForecast, type ConditionsForecast} from '../conditions.ts';
 import {feedPath} from '../landing/readings.ts';
 import {PROFILE_TABLE, type Profile} from '../profile.ts';
-import {hour, profile} from '../state.ts';
+import {day, hour, hourParam, parseHour, profile, species} from '../state.ts';
+import {dockTime, horizonDays} from '../hour.ts';
+import {loadRegs, regsData, regulationState, ruleSummary} from '../regs.ts';
+import {useEffect} from 'preact/hooks';
 import {hasOwnLimits, limitsFor, type ComfortLimits} from '../limits.ts';
 import {regionInfo, type RegionInfo} from '../app/App.tsx';
 import {Popover} from '../ui/Popover.tsx';
@@ -170,15 +173,41 @@ export function briefFrom({info, feed, forecast = null, coast, profile: p, hour:
   } catch { return null; }
 }
 
-/** The brief the shell shows now, read from the signals so a component re-renders when they change. */
-export function currentBrief(now: Date): BriefModel | null {
+/** The brief the shell shows now, read from the signals so a component re-renders when they change. `at` defaults to the dock's hour. */
+export function currentBrief(now: Date, at: string | null = hour.value): BriefModel | null {
   const report = coastReport.value, binding = coastBinding.value;
-  const brief = briefFrom({info: regionInfo.value, feed: dailyFeed.value, forecast: regionalForecast.value, coast: report && binding ? {report: report.data, areaId: binding.areaId} : null, profile: profile.value, hour: hour.value,
+  const brief = briefFrom({info: regionInfo.value, feed: dailyFeed.value, forecast: regionalForecast.value, coast: report && binding ? {report: report.data, areaId: binding.areaId} : null, profile: profile.value, hour: at,
     limits: hasOwnLimits(profile.value) ? limitsFor(profile.value) : null}, now);
   const chosen = tideSelection.choice.value, config = tideSelection.region.value;
   if (!brief || !chosen || !config || config.id !== regionInfo.value?.id || chosen === config.station) return brief;
   const station = tideSelection.stations.value.find(s => s.id === chosen) ?? {id: chosen, name: chosen};
-  return withTideSelection(brief, station, tideSelection.reading.value, regionInfo.value.timezone, now, hour.value);
+  return withTideSelection(brief, station, tideSelection.reading.value, regionInfo.value.timezone, now, at);
+}
+
+/**
+ * The hour the lead answers for (SC-LAUNCH-3): the hour chosen in the dock; else the later day a
+ * link's ?day= names; else tomorrow. A day is read at the dock's hour on it (web/hour.ts dockTime),
+ * so the lead is the brief the dock shows once that day is picked. Null (now) only for ?day= today.
+ */
+export function leadHour(hourValue: string | null, dayValue: string | null, now: Date, tz: string): string | null {
+  if (parseHour(hourValue) !== null) return hourValue;
+  const days = horizonDays(now, tz);
+  if (dayValue && dayValue === days[0]?.day) return null;
+  const named = days.slice(1).find(d => d.day === dayValue) ?? days[1];
+  return named ? hourParam(dockTime(named.day, null, now, tz, days).at / 1000) : null;
+}
+
+/** The brief the lead answers from: the dock's brief once a time is chosen, else tomorrow's. */
+export function leadBrief(now: Date): BriefModel | null {
+  return currentBrief(now, leadHour(hour.value, day.value, now, regionInfo.value?.timezone ?? DEFAULT_ZONE));
+}
+
+/** "today", "tomorrow", else "Sat Oct 10", for the lead's day `date` ("YYYY-MM-DD"). */
+export function leadDayText(date: string, now: Date, tz: string): string {
+  const today = dateKey(now, tz), next = dateKey(new Date(Date.parse(`${today}T12:00:00Z`) + 86_400_000), 'UTC');
+  if (date === today) return 'today';
+  if (date === next) return 'tomorrow';
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric'}).replace(',', '');
 }
 
 export const Headline = ({brief}: {brief: BriefModel | null}) =>
@@ -198,19 +227,46 @@ const VERDICT_BASIS = {
 } as const;
 
 /**
- * The brief's first two lines: the verdict word for the morning window and one sentence naming what
- * limits it, with the basis behind a popover. Before there is a brief, the waiting headline.
+ * The lead's legality line (SC-LAUNCH-3): whether the selected target (the profile's default before
+ * one is chosen) is open on the lead's day, as web/regs.ts regulationState and ruleSummary read the
+ * region's reviewed registry, with the state's own reason and the official link. Nothing is computed
+ * here; before the registry loads the state reads "Check rules", never open.
  */
-export function Verdict({brief, now}: {brief: BriefModel | null; now: Date}) {
-  const v = currentVerdict(brief, now);
-  if (!v) return <Headline brief={brief} />;
+export function LeadRules({date, now}: {date: string; now: Date}) {
+  const rules = regionInfo.value?.rules;
+  useEffect(() => { if (rules) void loadRegs(rules); }, [rules?.id]);
+  if (!rules) return null;
+  const loaded = regsData.value, data = loaded?.region === rules.id ? loaded.data : null;
+  const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget;
+  const state = regulationState(data, target, rules, now.getTime(), date, null), s = ruleSummary(data, target, state, rules);
+  const name = target === 'reef' ? 'Lingcod & rockfish' : state.profile?.name ?? target;
+  return (
+    <p class="app-verdict-rules" data-status={s.status}>
+      <span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> {name} {leadDayText(date, now, rules.timezone ?? DEFAULT_ZONE)}. {state.reason}{' '}
+      <a href={s.link} target="_blank" rel="noopener" aria-label={`${s.linkLabel} for ${name} (official page, opens in a new tab)`}>{s.linkLabel}</a>
+    </p>
+  );
+}
+
+/**
+ * The brief's first lines: the verdict word for the morning window of the lead's day (tomorrow until
+ * a time is chosen), the day and window, one sentence naming what limits it with the basis behind a
+ * popover, and whether the target is legal that day. Before there is a brief, the waiting headline.
+ */
+export function Verdict({now}: {now: Date}) {
+  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, at = leadHour(hour.value, day.value, now, tz);
+  const brief = leadBrief(now), date = brief?.date ?? dateKey(at ? new Date(at) : now, tz);
+  const v = currentVerdict(brief, now), rulesLine = <LeadRules date={date} now={now} />;
+  if (!v) return <><Headline brief={brief} />{rulesLine}</>;
+  const when = leadDayText(date, now, tz);
   return (
     <div class="app-verdict" data-verdict={v.verdict}>
       <div class="app-verdict-head">
-        <h1><span class="app-verdict-word">{VERDICT_WORD[v.verdict]}</span>{v.window ? ' ' : null}{v.window ? <span class="app-verdict-window ui-mono">{v.window}</span> : null}</h1>
+        <h1><span class="app-verdict-word">{VERDICT_WORD[v.verdict]}</span>{' '}<span class="app-verdict-window ui-mono" data-day={date}>{v.window ? `${when}, ${v.window}` : when}</span></h1>
         <Popover align="end">{v.basis === 'comfort-score' ? VERDICT_BASIS['comfort-score'] : VERDICT_BASIS.profile}{v.score !== null ? ` Worst hour: ${v.score}/10.` : ''}</Popover>
       </div>
       <p class="app-verdict-limit">{v.limit}{v.held ? ` ${v.held}` : ''}</p>
+      {rulesLine}
     </div>
   );
 }
