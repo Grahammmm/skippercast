@@ -730,6 +730,7 @@
       "params": {
         "state": "CA",
         "all_statuses": true,
+        "join_only": true,
         "url": "https://data.fcc.gov/download/pub/uls/complete/l_ship.zip"
       }
     },
