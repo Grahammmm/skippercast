@@ -31,23 +31,23 @@ Orange outlines mark the areas that changed.</p>
 viewport, theme, time zone and random seed, with the clock fixed at 2026-10-31 12:00 PDT. The local server uses the same fixed clock: the Worker&#x27;s own Date, and the dates of the test database&#x27;s sample boats, reports and rules, are set to it, so the pages the server renders show the same dates whatever day they are captured. Forecasts, buoys, tides and map imagery are synthetic stand-ins and every
 outside service is blocked, so the only difference between the columns is the code. A page counts as rendered only when it answered without an error,
 threw no error, drew something and showed the element that proves it loaded. Each screenshot was kept only once two frames in a row matched, and each page was loaded afresh until two loads in a row gave the same picture.
-A pixel counts as changed when a colour channel moves by more than 2 levels out of 255; smaller moves are anti-aliasing noise that can differ even between two captures of one revision. </p></details>
+A pixel counts as changed when a colour channel moves by more than 8 levels out of 255, unless it is an anti-aliased edge (the blended rim of a curve, slanted line or letter, judged by pixelmatch&#x27;s rule, the comparator behind Playwright&#x27;s screenshot tests) that moved by at most 48 levels. Those small moves and edge blends are rendering noise: in two independent builds and captures of one revision, every pixel that differed was of this kind. A changed letter, line, colour or block moves pixels further, and away from edges too, so it is still counted. </p></details>
 <details><summary>How these pages were chosen</summary><p>The 92 pull requests merged to main on 2026-10-31 were read from the first-parent merge log (git log --first-parent). Each page below is a screen whose source files one or more of those merges changed: the Chart on the phone and laptop (attribution, open band, unpublished Chart files, Morro Bay lattice), the first-run choices at the sheet&#x27;s peek, the landing (night map, readings, region warm-up), the Cambria region (new CUSP shoreline and land-water), the Conditions and History tabs and the brief (time-zone and unit refactors), the Spear profile (shore distance), and the port, species and boat pages the Worker renders (advisor time-zone constant). Screens that need a signed-in account (trip alerts) or the live 3D coastal terrain cannot be captured offline; they are listed at the end of the page instead of being guessed at.</p></details>
 <section class="pair changed" id="first-run-phone"><div class="head"><h2>/map?region=morro-bay (first visit)</h2><span class="badge">Visible change</span><span class="muted">Phone 390×844</span></div>
 <p class="why">A first visit on a phone, before choosing how you fish: the choice card in the sheet at its lowest (peek) height.</p>
-<p class="why">79,716 pixels differ (24.2% of the screenshot), across most of the screen.</p>
+<p class="why">62,333 pixels differ (18.9% of the screenshot), across most of the screen.</p>
 <ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1090">#1090</a> [BL-SC-2] Phone peek: first-run choices above the tab bar</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1089">#1089</a> [BL-SC-1] Phone Chart: attribution starts compact</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1103">#1103</a> [RF0850-2] Chart coastline and contours skip unpublished files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1118">#1118</a> [RF0905-1] Phone Chart opens with the harbor in the open band</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1148">#1148</a> [MAINRED-1] e2e: click where the phone Chart draws its centre (main red since #1118)</li></ul>
 <div class="cols">
 <figure><figcaption>Before · <code>c69a97e48</code></figcaption>
-<div class="shot"><img src="2026-10-31/first-run-phone-before.png" width="390" height="844" loading="lazy" decoding="async" alt="Before: /map?region=morro-bay (first visit) at 390×844"><span class="box" style="left:0.00%;top:83.41%;width:98.46%;height:11.37%"></span></div>
+<div class="shot"><img src="2026-10-31/first-run-phone-before.png" width="390" height="844" loading="lazy" decoding="async" alt="Before: /map?region=morro-bay (first visit) at 390×844"><span class="box" style="left:4.10%;top:83.41%;width:94.36%;height:11.37%"></span></div>
 </figure>
 <figure><figcaption>After · <code>7e2275e1c</code></figcaption>
-<div class="shot"><img src="2026-10-31/first-run-phone-after.png" width="390" height="844" loading="lazy" decoding="async" alt="After: /map?region=morro-bay (first visit) at 390×844"><span class="box" style="left:0.00%;top:83.41%;width:98.46%;height:11.37%"></span></div>
+<div class="shot"><img src="2026-10-31/first-run-phone-after.png" width="390" height="844" loading="lazy" decoding="async" alt="After: /map?region=morro-bay (first visit) at 390×844"><span class="box" style="left:4.10%;top:83.41%;width:94.36%;height:11.37%"></span></div>
 </figure>
 </div></section>
 <section class="pair changed" id="chart-phone"><div class="head"><h2>/map?region=morro-bay</h2><span class="badge">Visible change</span><span class="muted">Phone 390×844</span></div>
 <p class="why">The app&#x27;s main screen on a phone: the Morro Bay Chart with the forecast sheet.</p>
-<p class="why">63,704 pixels differ (19.4% of the screenshot), across most of the screen.</p>
+<p class="why">47,595 pixels differ (14.5% of the screenshot), across most of the screen.</p>
 <ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1089">#1089</a> [BL-SC-1] Phone Chart: attribution starts compact</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1098">#1098</a> [RF0835-2] region.json lists its Chart files; warm-up skips missing ones</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1101">#1101</a> [RF0850-1] land-water, poster and offline pack skip unpublished Chart files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1108">#1108</a> [RF1058-3] fold dist/marine-units.js into marine-charts.js</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1103">#1103</a> [RF0850-2] Chart coastline and contours skip unpublished files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1113">#1113</a> [RF1140-5] coast package: one units module</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1105">#1105</a> [RF0935-2] web: one default time-zone constant</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1116">#1116</a> [RF0708-2] web/units.ts: one kt/ft source for the landing readout and habitat feed</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1123">#1123</a> [RF1105-21] web: station model and depth disclaimer use web/units.ts</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1118">#1118</a> [RF0905-1] Phone Chart opens with the harbor in the open band</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1128">#1128</a> [RF1130-8] web: contrast reads units.ts; no conversion literal outside it</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1148">#1148</a> [MAINRED-1] e2e: click where the phone Chart draws its centre (main red since #1118)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1158">#1158</a> [NB-SC-06] Morro Bay forecast lattice: shoreward column toward Estero Bay (#501)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1165">#1165</a> [NB-SC-03] v2 Terrain rail: habitat status line and ranked reefs (#519)</li></ul>
 <div class="cols">
 <figure><figcaption>Before · <code>c69a97e48</code></figcaption>
@@ -57,21 +57,9 @@ A pixel counts as changed when a colour channel moves by more than 2 levels out 
 <div class="shot"><img src="2026-10-31/chart-phone-after.png" width="390" height="844" loading="lazy" decoding="async" alt="After: /map?region=morro-bay at 390×844"></div>
 </figure>
 </div></section>
-<section class="pair changed" id="cambria-phone"><div class="head"><h2>/map?region=cambria-san-simeon</h2><span class="badge">Visible change</span><span class="muted">Phone 390×844</span></div>
-<p class="why">The Cambria and San Simeon region&#x27;s Chart, which gained a NOAA shoreline and land-water today.</p>
-<p class="why">62,868 pixels differ (19.1% of the screenshot), in the middle of the screen.</p>
-<ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1098">#1098</a> [RF0835-2] region.json lists its Chart files; warm-up skips missing ones</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1101">#1101</a> [RF0850-1] land-water, poster and offline pack skip unpublished Chart files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1103">#1103</a> [RF0850-2] Chart coastline and contours skip unpublished files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1158">#1158</a> [NB-SC-06] Morro Bay forecast lattice: shoreward column toward Estero Bay (#501)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1162">#1162</a> [NB-SC-08] Cambria: NOAA CUSP shoreline and land-water</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1172">#1172</a> [NB-SC-07] Cambria forecast lattice: 3 × 3 offshore points (#501)</li></ul>
-<div class="cols">
-<figure><figcaption>Before · <code>c69a97e48</code></figcaption>
-<div class="shot"><img src="2026-10-31/cambria-phone-before.png" width="390" height="844" loading="lazy" decoding="async" alt="Before: /map?region=cambria-san-simeon at 390×844"><span class="box" style="left:0.00%;top:24.64%;width:100.00%;height:51.18%"></span></div>
-</figure>
-<figure><figcaption>After · <code>7e2275e1c</code></figcaption>
-<div class="shot"><img src="2026-10-31/cambria-phone-after.png" width="390" height="844" loading="lazy" decoding="async" alt="After: /map?region=cambria-san-simeon at 390×844"><span class="box" style="left:0.00%;top:24.64%;width:100.00%;height:51.18%"></span></div>
-</figure>
-</div></section>
 <section class="pair changed" id="conditions-phone"><div class="head"><h2>/map?region=morro-bay&amp;view=conditions</h2><span class="badge">Visible change</span><span class="muted">Phone 390×844</span></div>
 <p class="why">The Conditions tab: stations, readings and the depth disclaimer.</p>
-<p class="why">54,310 pixels differ (16.5% of the screenshot), across most of the screen.</p>
+<p class="why">43,075 pixels differ (13.1% of the screenshot), across most of the screen.</p>
 <ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1105">#1105</a> [RF0935-2] web: one default time-zone constant</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1116">#1116</a> [RF0708-2] web/units.ts: one kt/ft source for the landing readout and habitat feed</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1123">#1123</a> [RF1105-21] web: station model and depth disclaimer use web/units.ts</li></ul>
 <div class="cols">
 <figure><figcaption>Before · <code>c69a97e48</code></figcaption>
@@ -81,9 +69,21 @@ A pixel counts as changed when a colour channel moves by more than 2 levels out 
 <div class="shot"><img src="2026-10-31/conditions-phone-after.png" width="390" height="844" loading="lazy" decoding="async" alt="After: /map?region=morro-bay&amp;view=conditions at 390×844"></div>
 </figure>
 </div></section>
+<section class="pair changed" id="cambria-phone"><div class="head"><h2>/map?region=cambria-san-simeon</h2><span class="badge">Visible change</span><span class="muted">Phone 390×844</span></div>
+<p class="why">The Cambria and San Simeon region&#x27;s Chart, which gained a NOAA shoreline and land-water today.</p>
+<p class="why">42,647 pixels differ (13.0% of the screenshot), in the middle of the screen.</p>
+<ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1098">#1098</a> [RF0835-2] region.json lists its Chart files; warm-up skips missing ones</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1101">#1101</a> [RF0850-1] land-water, poster and offline pack skip unpublished Chart files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1103">#1103</a> [RF0850-2] Chart coastline and contours skip unpublished files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1158">#1158</a> [NB-SC-06] Morro Bay forecast lattice: shoreward column toward Estero Bay (#501)</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1162">#1162</a> [NB-SC-08] Cambria: NOAA CUSP shoreline and land-water</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1172">#1172</a> [NB-SC-07] Cambria forecast lattice: 3 × 3 offshore points (#501)</li></ul>
+<div class="cols">
+<figure><figcaption>Before · <code>c69a97e48</code></figcaption>
+<div class="shot"><img src="2026-10-31/cambria-phone-before.png" width="390" height="844" loading="lazy" decoding="async" alt="Before: /map?region=cambria-san-simeon at 390×844"><span class="box" style="left:0.00%;top:24.64%;width:100.00%;height:49.29%"></span></div>
+</figure>
+<figure><figcaption>After · <code>7e2275e1c</code></figcaption>
+<div class="shot"><img src="2026-10-31/cambria-phone-after.png" width="390" height="844" loading="lazy" decoding="async" alt="After: /map?region=cambria-san-simeon at 390×844"><span class="box" style="left:0.00%;top:24.64%;width:100.00%;height:49.29%"></span></div>
+</figure>
+</div></section>
 <section class="pair changed" id="spear-phone"><div class="head"><h2>/map?region=morro-bay&amp;profile=spear</h2><span class="badge">Visible change</span><span class="muted">Phone 390×844</span></div>
 <p class="why">The Spear profile, which measures distance from shore.</p>
-<p class="why">41,559 pixels differ (12.6% of the screenshot), across most of the screen.</p>
+<p class="why">33,401 pixels differ (10.1% of the screenshot), across most of the screen.</p>
 <ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1089">#1089</a> [BL-SC-1] Phone Chart: attribution starts compact</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1101">#1101</a> [RF0850-1] land-water, poster and offline pack skip unpublished Chart files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1103">#1103</a> [RF0850-2] Chart coastline and contours skip unpublished files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1105">#1105</a> [RF0935-2] web: one default time-zone constant</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1104">#1104</a> [RF0935-1] Spear shore distance and contour export skip unpublished files</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1118">#1118</a> [RF0905-1] Phone Chart opens with the harbor in the open band</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1148">#1148</a> [MAINRED-1] e2e: click where the phone Chart draws its centre (main red since #1118)</li></ul>
 <div class="cols">
 <figure><figcaption>Before · <code>c69a97e48</code></figcaption>
@@ -107,19 +107,19 @@ A pixel counts as changed when a colour channel moves by more than 2 levels out 
 </div></section>
 <section class="pair same" id="landing-phone"><div class="head"><h2>/</h2><span class="badge">No visible change</span><span class="muted">Phone, whole page 390×1965</span></div>
 <p class="why">The home page on a phone, top to bottom: live readings and the night map.</p>
-<p class="why">No visible change: the two screenshots are identical, pixel for pixel.</p>
+<p class="why">No visible change: 34 pixels differ, each by at most 8 colour levels out of 255 or on an anti-aliased edge (rendering noise, invisible to the eye).</p>
 <ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1090">#1090</a> [BL-SC-2] Phone peek: first-run choices above the tab bar</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1098">#1098</a> [RF0835-2] region.json lists its Chart files; warm-up skips missing ones</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1102">#1102</a> [RF0850-7] Night map draws without a published shoreline</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1116">#1116</a> [RF0708-2] web/units.ts: one kt/ft source for the landing readout and habitat feed</li></ul>
 <div class="cols">
 <figure><figcaption>Before · <code>c69a97e48</code></figcaption>
-<div class="shot"><img src="2026-10-31/landing-phone.png" width="390" height="1965" loading="lazy" decoding="async" alt="Before: / at 390×1965"></div>
+<div class="shot"><img src="2026-10-31/landing-phone-before.png" width="390" height="1965" loading="lazy" decoding="async" alt="Before: / at 390×1965"></div>
 </figure>
 <figure><figcaption>After · <code>7e2275e1c</code></figcaption>
-<div class="shot"><img src="2026-10-31/landing-phone.png" width="390" height="1965" loading="lazy" decoding="async" alt="After: / at 390×1965"></div>
+<div class="shot"><img src="2026-10-31/landing-phone-after.png" width="390" height="1965" loading="lazy" decoding="async" alt="After: / at 390×1965"></div>
 </figure>
 </div></section>
 <section class="pair same landscape" id="landing-laptop"><div class="head"><h2>/</h2><span class="badge">No visible change</span><span class="muted">Laptop 1280×800</span></div>
 <p class="why">The home page on a laptop, first screen.</p>
-<p class="why">No visible change: 54 pixels differ by at most 2 colour levels out of 255 (anti-aliasing noise at edges, invisible to the eye).</p>
+<p class="why">No visible change: 57 pixels differ, each by at most 8 colour levels out of 255 or on an anti-aliased edge (rendering noise, invisible to the eye).</p>
 <ul class="prs"><li><a href="https://github.com/Grahammmm/skippercast/pull/1090">#1090</a> [BL-SC-2] Phone peek: first-run choices above the tab bar</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1098">#1098</a> [RF0835-2] region.json lists its Chart files; warm-up skips missing ones</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1102">#1102</a> [RF0850-7] Night map draws without a published shoreline</li><li><a href="https://github.com/Grahammmm/skippercast/pull/1116">#1116</a> [RF0708-2] web/units.ts: one kt/ft source for the landing readout and habitat feed</li></ul>
 <div class="cols">
 <figure><figcaption>Before · <code>c69a97e48</code></figcaption>
