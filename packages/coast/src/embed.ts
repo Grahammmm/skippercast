@@ -8,7 +8,7 @@ import {DEFAULT_COAST_PALETTE,type CoastPalette} from './palette.ts';
 import type {CoastHandle,CoastMountOptions} from './embed-types.ts';
 import {coastPath} from './transport.ts';
 import {coastEmbedTemplate} from './embed-template.ts';
-export type {CoastChrome,CoastHandle,CoastInitialState,CoastLocation,CoastMountOptions,CoastPerspective,CoastReading,CoastSelection,CoastShading,CoastSourceCoverage,CoastTargetDetail,CoastTerrainSource,CoastView} from './embed-types.ts';
+export type {CoastChrome,CoastHabitat,CoastHabitatRank,CoastHandle,CoastInitialState,CoastLocation,CoastMountOptions,CoastPerspective,CoastReading,CoastSelection,CoastShading,CoastSourceCoverage,CoastTargetDetail,CoastTerrainSource,CoastView} from './embed-types.ts';
 export type {CoastOverlay,CoastOverlayColor,CoastOverlayFeature,CoastOverlayGeometry,CoastOverlayKind,CoastOverlayPalette,CoastOverlayPick,CoastOverlayStyle} from './embed-types.ts';
 
 type Viewer=Pick<CoastViewer,keyof CoastHandle>;
@@ -55,8 +55,8 @@ export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory
  if(detached)detached.append(root.querySelector('.intro')!,root.querySelector('.layers')!,$('target-detail'),$('reading'),controls);
  for(const link of root.querySelectorAll<HTMLAnchorElement>('[data-coast-receipt]'))link.href=coastPath(link.dataset.coastReceipt!);
  if(options.forecastHref!==undefined)for(const link of root.querySelectorAll<HTMLAnchorElement>('a[href="index.html#forecast"]'))link.href=options.forecastHref;
- const {onSelection,onRestoredSelection,onSelectionInvalidated,onCurrentStatus,onView,onPerspective,overlayPalette,onOverlayPick,onReading,onTargetDetail,onSourceCoverage,onShading}=options;
- const viewer=factory(scene,{root,managed:true,...(options.palette?{palette:embedPalette(options.palette)}:{}),...(detached?{controls:detached}:{}),onCurrentStatus,onView,onSelectionInvalidated,onRestoredSelection,onSelection,onPerspective,overlayPalette,onOverlayPick,onReading,onTargetDetail,onSourceCoverage,onShading});
+ const {onSelection,onRestoredSelection,onSelectionInvalidated,onCurrentStatus,onHabitat,onView,onPerspective,overlayPalette,onOverlayPick,onReading,onTargetDetail,onSourceCoverage,onShading}=options;
+ const viewer=factory(scene,{root,managed:true,...(options.palette?{palette:embedPalette(options.palette)}:{}),...(detached?{controls:detached}:{}),onCurrentStatus,onHabitat,onView,onSelectionInvalidated,onRestoredSelection,onSelection,onPerspective,overlayPalette,onOverlayPick,onReading,onTargetDetail,onSourceCoverage,onShading});
  if(options.onTop)$('top').onclick=options.onTop;
  if(options.onCloseSelection)$('target-close').onclick=options.onCloseSelection;
  if(options.onReset){$('reset').setAttribute('aria-label','Reset map view');$('reset').onclick=options.onReset;}
@@ -87,6 +87,7 @@ export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory
   resetView:live(()=>viewer.resetView(),undefined),
   topView:live(()=>viewer.topView(),undefined),
   openSources:live(()=>viewer.openSources(),undefined),
+  exploreNext:live(()=>viewer.exploreNext(),false),
   destroy:live(()=>{alive=false;try{viewer.destroy();}finally{for(const node of inserted)node.remove();}},undefined),
  };
  const initial=options.initial??{};
