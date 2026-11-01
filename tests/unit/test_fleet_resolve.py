@@ -161,6 +161,32 @@ class ResolveCases(unittest.TestCase):
         strict = replace(CONFIG, auto_merge=0.95)
         self.assertEqual(of(resolve(Snapshot([cs]), [cases[5][2]], strict, NOW), "review.open")[0]["score"], 0.9)
 
+    def test_a_join_only_source_adds_keys_to_known_vessels_and_never_creates_or_reviews(self):
+        star = stored("Example Star", n=1, uscg_doc="1234567")
+        sea = stored("Sea Example", n=4)
+        mmsi = (fact("mmsi", "366000001", "fcc-uls", "a", confidence=0.95),)
+        by_key = cand("Example Star", "fcc-uls", "a", port=None, keys={"uscg_doc": "1234567", "mmsi": "366000001"},
+                      facts=mmsi)
+        by_name_and_port = cand("Sea Example", "fcc-uls", "b", keys={"mmsi": "366000004"})   # fuzzy 0.9
+        near = cand("Sea Exampel", "fcc-uls", "c", port=None, keys={"call_sign": "WDX5005"})   # a review otherwise
+        stranger = cand("Test Wanderer", "fcc-uls", "d", keys={"mmsi": "366000006"})         # a new vessel otherwise
+        batch = [by_key, by_name_and_port, near, stranger]
+        joined = resolve(Snapshot([star, sea]), batch, replace(CONFIG, join_only=frozenset({"fcc-uls"})), NOW)
+        self.assertEqual([joined.assignments[fingerprint(c)] for c in batch], [star["id"], sea["id"], None, None])
+        self.assertEqual((joined.created, of(joined, "review.open")), ([], []))
+        self.assertEqual(sorted(s["fingerprint"] for s in joined.skipped if s["reason"].startswith("join-only")),
+                         sorted([fingerprint(near), fingerprint(stranger)]))
+        self.assertEqual(vessel_op(joined, star["id"])["mmsi"], "366000001")
+        self.assertEqual(ops.validate_ops(joined.ops, "CA")[1], [])
+        plain = resolve(Snapshot([star, sea]), batch, CONFIG, NOW)   # the same file without the flag
+        self.assertEqual((len(plain.created), len(of(plain, "review.open"))), (1, 1))
+
+    def test_the_fcc_bindings_are_join_only(self):
+        from skippercast.fleet.config import load_region
+        for region in ("CA", "OR"):
+            with self.subTest(region):
+                self.assertIn("fcc-uls", ResolverConfig.from_region(load_region(region, ROOT)).join_only)
+
     def test_two_new_vessels_same_name_same_port_get_distinct_ids_and_slugs(self):
         a = cand("Example Star", "fcc-uls", "a", keys={"mmsi": "366000001"})
         b = cand("Example Star", "fcc-uls", "b", keys={"mmsi": "366000002"})

@@ -26,6 +26,10 @@ sink. Steps, in order, per candidate:
    review with the top two; else a new vessel.
 5. A vessel holding a different value of a stable key the candidate has is never
    a fuzzy match: same name and port with different keys are two vessels.
+   A candidate of a ``join_only`` binding (``params.join_only``, the FCC ship
+   file: every licence in the state, most of them pleasure craft) that neither matched
+   a key nor reached ``auto_merge`` is skipped: it never creates a vessel or
+   opens a fuzzy ``merge`` review.
 6. ``vessel_class`` facts from different sources at confidence >= 0.7 that
    disagree open a ``class`` review (unless the column is pinned).
 7. A winning ``scope`` fact ``{"in_scope": false, ...}`` sets ``status`` to
@@ -116,13 +120,15 @@ class ResolverConfig:
     ports: Mapping[str, str]                         # port id -> name
     landings: Mapping[str, tuple[str, str]]          # landing id -> (name, port id)
     adapters: Mapping[str, str] = field(default_factory=dict)  # binding id -> adapter kind (#340)
+    join_only: frozenset = frozenset()               # binding ids (params.join_only) that never create or fuzzy-review
 
     @classmethod
     def from_region(cls, region) -> "ResolverConfig":
         match = region.thresholds["match"]
         return cls(region.id, region.resolver, float(match["auto_merge"]), float(match["review_min"]),
                    {p.id: p.name for p in region.ports}, {x.id: (x.name, x.port) for x in region.landings},
-                   {b.id: b.adapter for b in region.sources})
+                   {b.id: b.adapter for b in region.sources},
+                   frozenset(b.id for b in region.sources if b.params.get("join_only") is True))
 
     def kind(self, source_id: str) -> str:
         """The source kind resolver priorities name: a binding's adapter (``socalfishreports`` -> ``teck-reports``),
@@ -466,6 +472,10 @@ class _Resolver:
         top = [(v, round(-s, 4)) for s, v in scored[:2]]
         if top and top[0][1] >= self.config.auto_merge:
             return self.assign(cand, self.vessels[top[0][0]], top[0][1])
+        if cand.raw.source_id in self.config.join_only:  # a bulk registry file: it only adds keys to known boats
+            self.assignments[cand.fp] = None
+            self.skipped.append({"fingerprint": cand.fp, "reason": "join-only source: no registry vessel matched"})
+            return None
         if top and top[0][1] >= self.config.review_min:
             return self.review(cand, top, top[0][1], "fuzzy")
         self.create(cand)

@@ -555,7 +555,12 @@ stable keys, pinned fields, decided reviews).
    port would otherwise all be reviews), and a pair where exactly one name
    starts with `NEW` scores 0.
    ≥ `auto_merge` → assign; ≥ `review_min` → `merge` review with the top two;
-   else new vessel.
+   else new vessel. A candidate from a binding with `params.join_only` (the
+   FCC ship file, which lists every licence in the state: 37,327 for CA in
+   October 2026, 81% expired or cancelled, mostly pleasure craft) that matched no key
+   and stayed under `auto_merge` is skipped instead: no new vessel, no fuzzy
+   review. Without it the first FCC run would add about 24,500 vessels and
+   9,900 reviews to a 351-boat registry.
 5. Same name and port but different stable keys → two vessels (California has
    five FCC licences named Endeavor).
 6. Class disagreement between two sources at confidence ≥ 0.7 → `class` review.

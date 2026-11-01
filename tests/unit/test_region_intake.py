@@ -197,3 +197,65 @@ def test_bad_screened_path_writes_nothing(world, capsys, listed):
     code, folder, _ = joined_run(world, listed, [])
     want = listed if "other" in str(listed) else str(world["tmp"] / "approved.tif")
     assert code == 1 and want in capsys.readouterr().err and not folder.exists()
+
+
+def bbox_run(w, bbox, name="bbox"):
+    loc = json.loads((w["tmp"] / "locations.json").read_text())
+    if bbox != "absent":
+        loc["files"][0]["bbox"] = bbox
+    (w["tmp"] / "locations.json").write_text(json.dumps(loc))  # NaN/Infinity written as JSON NaN/Infinity
+    return run(w, name)
+
+
+@pytest.mark.parametrize("bbox", [
+    "-122,36,-121,37", [-122, 36, -121], [-122, 36, -121, 37, 0], [], {"w": -122}, 5,
+    [-122, "36", -121, 37], [True, 36, -121, 37], [-122, 36, -121, False], [None, 36, -121, 37],
+    [float("nan"), 36, -121, 37], [-122, 36, float("inf"), 37], [-122, float("-inf"), -121, 37],
+    [-122, 37, -121, 36],  # south > north
+])
+def test_malformed_bbox_is_named_error_and_writes_nothing(world, capsys, bbox):
+    code, folder = bbox_run(world, bbox)
+    err = capsys.readouterr().err
+    want = f"region_intake: Locations entry bbox invalid ({world['tmp'] / 'approved.tif'}): need [west, south, east, north] finite numbers"
+    assert code == 1 and err.strip() == want and "Traceback" not in err
+    assert not folder.exists() and not (folder / "INTAKE.csv").exists()
+
+
+@pytest.mark.parametrize("bbox,use,outside", [
+    ("absent", "publish", 0), (None, "publish", 0), ([-120.8, 35.2, -120.2, 35.8], "publish", 0),
+    ([-121, 35, -120, 36], "publish", 0), ([-120.5, 35.5, -120.5, 35.5], "publish", 0),  # edges and a point
+    ([-123, 36.5, -122, 37], None, 1), ([0.5, 0, 1.5, 1], None, 1),  # valid but outside: counted, not refused
+    ([-120.2, 35.2, -120.8, 35.8], "publish", 0),  # west > east is not refused
+])
+def test_valid_or_unknown_bbox_behaves_as_before(world, bbox, use, outside):
+    code, folder = bbox_run(world, bbox)
+    assert code == 0
+    first = [r["use"] for r in rows_of(folder) if r["source_id"] == "syn-approved"]
+    assert first == ([use] if use else []), first
+    assert f"out-of-bounds entries not listed: {outside}" in (folder / "INTAKE.md").read_text()
+
+
+@pytest.mark.parametrize("value,want", [(None, "undeclared"), ("absent", "undeclared"), (2, "2"), (0, "0"), (0.5, "0.5")])
+def test_native_resolution_null_or_absent_reads_undeclared(world, value, want):
+    for sid in ("syn-approved", "syn-restricted"):  # a data row and a never-read skip row
+        world["sources"][sid].pop("native_resolution_m", None)
+        if value != "absent":
+            world["sources"][sid]["native_resolution_m"] = value
+    code, folder = run(world, "res")
+    cells = {r["source_id"]: r["native_cell_m"] for r in rows_of(folder)}
+    assert code == 0 and (cells["syn-approved"], cells["syn-restricted"]) == (want, want)
+    assert cells["syn-candidate"] == "8"
+
+
+def test_check_accepts_folder_written_with_empty_native_cell(world, capsys):
+    world["sources"]["syn-approved"]["native_resolution_m"] = None
+    _, folder = run(world, "old")
+    rows = rows_of(folder)
+    assert rows[0]["native_cell_m"] == "undeclared"
+    with (folder / "INTAKE.csv").open("w", newline="") as handle:  # as the old code wrote a null resolution
+        writer = csv.DictWriter(handle, ri.COLUMNS, lineterminator="\n")
+        writer.writeheader()
+        writer.writerows({**r, "native_cell_m": ""} for r in rows)
+    capsys.readouterr()
+    assert ri.main(["--check", str(folder)], world["loader"]) == 0
+    assert "INTAKE OK 4 rows" in capsys.readouterr().out
