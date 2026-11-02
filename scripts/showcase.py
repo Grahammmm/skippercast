@@ -349,6 +349,42 @@ def pin_binaries(manifest: Path, files: list[Path], out_dir: Path) -> None:
     manifest.write_text(json.dumps(dict(sorted(pins.items())), indent=2) + "\n")
 
 
+PAGE_ID = re.compile(r"[a-z0-9][a-z0-9-]{0,47}")
+
+
+def _check_date(text: str) -> str | None:
+    """None when `text` is a real calendar date written YYYY-MM-DD, else the problem."""
+    try:
+        return None if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text, re.ASCII) and dt.date.fromisoformat(text) else "--date must be YYYY-MM-DD"
+    except ValueError:
+        return "--date must be YYYY-MM-DD"
+
+
+def _check_pages(config) -> str | None:
+    """None when the pages file has the shape main relies on, else the problem (key and page index, never values)."""
+    if not isinstance(config, dict):
+        return "the pages file must be a JSON object"
+    if not isinstance(config.get("pages"), list) or not config["pages"]:
+        return "pages must be a non-empty list"
+    for i, page in enumerate(config["pages"]):
+        if not isinstance(page, dict):
+            return f"pages[{i}] must be an object"
+        if not isinstance(page.get("id"), str) or not PAGE_ID.fullmatch(page["id"]) or page["id"] in [p["id"] for p in config["pages"][:i]]:
+            return f"pages[{i}].id must be a unique name of 1-48 lowercase letters, digits or hyphens"
+        if not isinstance(page.get("route"), str) or not page["route"].startswith("/"):
+            return f"pages[{i}].route must be a string starting with /"
+    if "serve" not in config:
+        return "serve is missing"
+    if "tolerance" in config and (type(config["tolerance"]) is not int or not 0 <= config["tolerance"] <= 255):
+        return "tolerance must be an integer 0..255"
+    try:
+        if "timezone" in config and not (isinstance(config["timezone"], str) and ZoneInfo(config["timezone"])):
+            raise ValueError
+    except (ValueError, KeyError, OSError):   # ZoneInfoNotFoundError is a KeyError
+        return "timezone must be an IANA time zone name"
+    return None
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--before", required=True, help="git ref of the left column")
@@ -361,7 +397,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--reuse", action="store_true", help="with --work: reuse captures already in it (re-render the page only)")
     args = parser.parse_args(argv)
 
-    config = json.loads(args.pages.read_text())
+    try:
+        config = json.loads(args.pages.read_text())
+        problem = (args.date is not None and _check_date(args.date)) or _check_pages(config)
+    except (OSError, ValueError):   # UnicodeDecodeError and JSONDecodeError are ValueErrors
+        problem = "cannot read the pages file"
+    if problem:   # before git, node or any file write
+        print(f"showcase: {problem}", file=sys.stderr)
+        return 2
     if not (ROOT / "node_modules/@playwright/test").exists():
         print("Install the repository's dev dependencies first (pnpm install): scripts/showcase_capture.mjs uses @playwright/test.", file=sys.stderr)
         return 2
@@ -372,6 +415,9 @@ def main(argv: list[str] | None = None) -> int:
     date = args.date or local(stamp(after))[:10]
     out_dir = args.out.resolve()
     shots_dir = out_dir / date
+    if shots_dir.resolve().parent != out_dir:   # defence in depth: the PNG clean-up below never leaves --out
+        print("showcase: --date must be YYYY-MM-DD", file=sys.stderr)
+        return 2
     prs = merged_prs(before, after)
 
     work = (args.work or Path(tempfile.mkdtemp(prefix="showcase-"))).resolve()

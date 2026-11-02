@@ -37,7 +37,8 @@ async function load() {
       export {Planner} from './web/app/Planner.tsx';
       export {createPlanner} from './web/planner.ts';
       export {AccountMenu} from './web/app/AccountMenu.tsx';
-      export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, TAB_VIEWS, advisorOn, checkAdvisor, ChatEntry, Location} from './web/app/Masthead.tsx';
+      export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, TAB_VIEWS, advisorOn, checkAdvisor, ChatEntry, Location, DegradedNotice} from './web/app/Masthead.tsx';
+      export {degraded, watchDegraded, installDegradedWatch} from './web/degraded.ts';
       export {targetOptions, windowText} from './web/app/CommandBar.tsx';
       export {Brief, emptyTiles, DISCLAIMER} from './web/app/Desktop.tsx';
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
@@ -277,6 +278,35 @@ test('startup region reader keeps region.json chart_files only when it is a list
   for (const id of ['r3', 'r4', 'r5']) assert.equal('chartFiles' in await reader(id), false, id);
 });
 
+test('SC-LAUNCH-4: a cost-ceiling response from any reader puts the saved-data notice on the masthead and the mobile sheet', async () => {
+  const {degraded, watchDegraded, installDegradedWatch, render, h, App, Mobile, narrow, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  state.syncFromURL(`${ORIGIN}?region=morro-bay`);
+  const mark = (headers = {}) => new Response('{}', {headers: {'X-SC-Degraded': 'cost-ceiling', ...headers}});
+  try {
+    // Live responses leave the shell as it was.
+    const live = watchDegraded(async () => new Response('{}'));
+    await live('/feeds/data/regions/morro-bay/latest.json');
+    assert.equal(degraded.peek(), null);
+    assert.doesNotMatch(render(h(App)), /data-degraded/);
+    // A free fallback (no saved copy) is marked without a time; the response reaches the caller untouched.
+    const fallback = await watchDegraded(async () => mark())('/feeds/data/regions/morro-bay/latest.json');
+    assert.equal(await fallback.text(), '{}');
+    assert.deepEqual(degraded.peek(), {since: null});
+    assert.match(render(h(App)), /<p class="app-limits-note app-degraded" role="status" data-degraded="cost-ceiling">Live data is paused for today to keep SkipperCast free; some readings are saved copies\.<\/p>/);
+    // The page's own fetch, wrapped once at start-up, covers readers that never import the watcher; the oldest saved copy is shown.
+    const scope = {fetch: async url => mark({'X-SC-Last-Known-At': String(url).includes('old') ? '2026-10-04T15:30:00Z' : '2026-10-05T18:00:00Z'})};
+    installDegradedWatch(scope);
+    await scope.fetch('/feeds/tiles/basemap/new.pmtiles');
+    await scope.fetch('/feeds/data/old.json');
+    await scope.fetch('/feeds/data/new.json');
+    assert.deepEqual(degraded.peek(), {since: '2026-10-04T15:30:00.000Z'});
+    assert.match(render(h(App)), /data-degraded="cost-ceiling">Live data is paused for today to keep SkipperCast free; some readings are saved copies from [^<]+\.<\/p>/);
+    narrow.value = true;
+    assert.match(render(h(Mobile, {now: NOW})), /data-degraded="cost-ceiling"/);
+  } finally { degraded.value = null; narrow.value = false; }
+});
+
 test('freshness uses source timestamps and injected clock on the existing masthead', async () => {
   const {startupFreshness, freshness, render, h, App, state} = await load();
   state.configureStore({v2: true, storage: memory()});
@@ -392,7 +422,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.match(html, /class="ui-eyebrow">Where to look</);
   assert.match(html, /<p class="app-caveat">Habitat describes a place to look; fish presence is unverified.<\/p>/);
   assert.equal(count(html, /separate clocks/g), 1, 'one disclaimer line per page');
-  assert.match(html, /<section class="app-stage" aria-label="Map">/);
+  assert.match(html, /<section class="app-stage" tabindex="-1" aria-label="Map">/);
   assert.match(html, /<section class="app-legend" aria-label="Legend">/);
   assert.match(html, /role="group" aria-label="Layers"/);
   assert.equal(count(html, /class="ui-rail-item"/g), 9);
@@ -533,7 +563,7 @@ async function renderMobile(href) {
 
 test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a four-tab nav', async () => {
   const html = await renderMobile(`${ORIGIN}?region=morro-bay`);
-  assert.match(html, /^<div class="app-mobile"><section class="app-stage" aria-label="Map">/, 'the map stage comes first and fills the viewport');
+  assert.match(html, /^<div class="app-mobile"><section class="app-stage" tabindex="-1" aria-label="Map">/, 'the map stage comes first and fills the viewport');
   assert.doesNotMatch(html, /app-masthead|app-command|app-main|app-brief"|app-dock/, 'no desktop chrome');
   // Top strip: the brand and location card, the layers button, then the full-width profile switch.
   assert.match(html, /<header class="app-top"><div class="app-top-row"><div class="app-top-card"><a class="app-brand" href="\/">.*?<span class="app-location ui-mono" data-region="morro-bay">Morro Bay —<\/span><\/div><button[^>]*aria-label="Layers"[^>]*aria-pressed="false"/s);
@@ -649,7 +679,7 @@ test('the map chrome offers Chart, 2D and 3D; without terrain the terrain choice
     try {
       const terrain = await renderShell(`${ORIGIN}?region=morro-bay&presentation=3d`);
       assert.deepEqual(toggle(terrain), [['Chart', false, false, false], ['2D', false, false, false], ['3D', true, false, false]]);
-      assert.match(terrain, /<div class="app-map" hidden><div class="app-chart"><\/div><\/div><div class="app-terrain" data-coast-theme="tokens"><\/div>/, 'the terrain host is shown with the token opt-in; the Chart host (FE-11) waits hidden');
+      assert.match(terrain, /<div class="app-map" hidden><div class="app-chart"><\/div><\/div><div class="app-terrain" tabindex="-1" data-coast-theme="tokens"><\/div>/, 'the terrain host is shown with the token opt-in; the Chart host (FE-11) waits hidden');
       const none = await renderShell(`${ORIGIN}?region=channel-islands&presentation=3d`);
       assert.deepEqual(toggle(none), [['Chart', true, false, false], ['2D', false, true, true], ['3D', false, true, true]]);
       assert.match(none, /<p id="app-stage-note" class="app-stage-note" role="status">No reviewed coastal terrain covers this region yet.<\/p>/);

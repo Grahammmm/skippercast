@@ -142,20 +142,29 @@ def spectral_rows(text):
     return result
 
 
+def pair_bins(density, directions, tolerance=0.001):
+    """Pair each density bin, ascending, with the nearest unused direction bin within tolerance Hz (tie: lower label)."""
+    free=sorted(directions);pairs=[]
+    for f,e in sorted(density.items()):
+        near=min(((round(abs(f-g),9),g) for g in free if abs(f-g)<=tolerance+1e-9),default=None)
+        if near:free.remove(near[1])
+        pairs.append((f,e,directions[near[1]] if near else None))
+    return pairs
+
+
 def spectra(client, station):
     base=f'https://www.ndbc.noaa.gov/data/realtime2/{station}'
     densities=spectral_rows(client.get(base+'.data_spec'));directions=spectral_rows(client.get(base+'.swdir'))
     frames=[]
     for epoch,density in sorted(densities.items()):
         if epoch not in directions:continue
-        bins=[]
-        for f,e in sorted(density.items()):
-            d=directions[epoch].get(f)
-            if 0<=e<999 and d is not None and 0<=d<=360:bins.append([f,e,d])
-        if bins:frames.append({'time':epoch,'bins':bins})
+        pairs=pair_bins(density,directions[epoch])
+        bins=[[f,e,d] for f,e,d in pairs if 0<=e<999 and d is not None and 0<=d<=360]
+        if bins:frames.append({'time':epoch,'bins':bins,'paired_bins':sum(d is not None for *_,d in pairs),'total_bins':len(pairs)})
     if not frames:raise ValueError('No time-aligned density/direction spectra')
     return {'station':station,'provider':'NOAA NDBC','sample_at':stamp(datetime.fromtimestamp(frames[-1]['time'],timezone.utc)),
             'fields':['frequency_hz','density_m2_per_hz','mean_direction_from_degrees'],'frames':frames,
+            'paired_bins':sum(f['paired_bins'] for f in frames),'total_bins':sum(f['total_bins'] for f in frames),
             'source_url':f'https://www.ndbc.noaa.gov/station_page.php?station={station}',
             'limitations':'Observed energy density and mean direction per frequency, not a full directional distribution or forecast.'}
 

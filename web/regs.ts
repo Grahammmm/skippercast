@@ -138,6 +138,18 @@ export function regulationState(data: Data, species: string, region: RulesRegion
   return area && ['open', 'restricted'].includes(status) ? {...state, status: 'unknown', label: 'Choose fishing location', reason: `This season applies only within a geographic area. ${area.note}`} : state;
 }
 
+/** The opening on this local date, guarded like the regulations reader. */
+export function openingAt(data: Data, species: string, region: RulesRegion, date: string): number | null {
+  if (!validRegulations(data, region)) return null;
+  if (species === 'reef') {
+    const times = ['lingcod', 'rockfish'].map(id => openingAt(data, id, region, date)).filter((t): t is number => t !== null);
+    return times.length ? Math.max(...times) : null;
+  }
+  const p = ruleProfile(data, species, region);
+  const times = p?.windows.filter((w: Data) => w.start === date && w.start_at).map((w: Data) => Date.parse(w.start_at)) ?? [];
+  return times.length ? Math.max(...times) : null;
+}
+
 const SUMMARY_STATUS: Readonly<Record<string, string>> = {open: 'Open', restricted: 'Open · limits', closed: 'Closed', scheduled: 'Opener unconfirmed', excluded: 'Protected area', unknown: 'Check rules'};
 /** dist/regulations.js `firstClause`: the rule's own first clause, cut, never rewritten. */
 export function firstClause(text: unknown, max = 48): string | null {
