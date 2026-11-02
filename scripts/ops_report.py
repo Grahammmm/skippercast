@@ -21,9 +21,11 @@ import argparse
 import json
 import math
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 DATASET = 'skippercast_events'
@@ -112,6 +114,24 @@ def query(sql, *, account, token, opener=urlopen):
 # Columns whose text a browser supplied (client error message and file name):
 # printed as code spans so no link, image or HTML in them renders.
 BROWSER_TEXT = frozenset({'message', 'source'})
+URL = re.compile(r'https?://\S+')
+EMAIL = re.compile(r'[^\s@]+@[^\s@]+\.[A-Za-z]{2,}')
+# NANP 3-3-4 with space/dot/dash separators or (805) 555-0100, optional +1/1, not touching another digit.
+PHONE = re.compile(r'(?<!\d)(?:\+?1[ .-]?)?(?:\(\d{3}\) ?|\d{3}[ .-])\d{3}[ .-]\d{4}(?!\d)')
+
+
+def bare_url(match):
+    try:
+        parts = urlsplit(match.group())
+        return f'{parts.scheme}://{parts.netloc.rpartition("@")[2]}{parts.path}'
+    except ValueError:
+        return '[url]'
+
+
+def mask(text):
+    """URL queries/fragments/userinfo dropped, e-mails and phones masked. The client scrubs too (web/telemetry.ts):
+    this is a second line for old rows and old cached builds."""
+    return PHONE.sub('[phone]', EMAIL.sub('[email]', URL.sub(bare_url, str(text if text is not None else ''))))
 
 
 def code_cell(value):
@@ -158,7 +178,7 @@ def table(rows):
     columns = list(rows[0])
     lines = ['| ' + ' | '.join(columns) + ' |', '| ' + ' | '.join('---' for _ in columns) + ' |']
     for row in rows:
-        lines.append('| ' + ' | '.join(code_cell(row.get(c)) if c in BROWSER_TEXT else cell(row.get(c) if c in LABELS else number(row.get(c)))
+        lines.append('| ' + ' | '.join(code_cell(mask(row.get(c))) if c in BROWSER_TEXT else cell(row.get(c) if c in LABELS else number(row.get(c)))
                                       for c in columns) + ' |')
     return '\n'.join(lines) + '\n'
 

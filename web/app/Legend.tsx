@@ -46,7 +46,7 @@ import {Button, IconButton} from '../ui/Button.tsx';
 import {current, grade, layers, profile, region, species} from '../state.ts';
 import {GRADE_LABELS, GRADE_MEANING} from '../grade.ts';
 import {targetLabel} from '../species.ts';
-import {chartFailed, chartMark, unavailable} from '../map/chart.ts';
+import {chartFailed, chartMark, retryMpas, unavailable} from '../map/chart.ts';
 import {NOTES, groundsState} from '../map/charter-grounds.ts';
 import {cloudHeld, cloudStamp} from '../map/clouds.ts';
 import {AIS_CREDIT, aisOn, aisState} from '../map/commercial-ais.ts';
@@ -55,7 +55,7 @@ import {currentsState} from '../map/currents.ts';
 import {contourState} from '../map/depth-contours.ts';
 import {CHART_ONLY, drawsIn, layerEntry} from '../map/layers.ts';
 import {densityShown, markNote, markScreen} from '../map/marks.ts';
-import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, mpaState, shownMpaState} from '../map/mpa.ts';
+import {CC_BY_4, CDFW_MPA_PAGE, DS582_METADATA, TRANSIENT_DETAILS, mpaState, shownMpaState} from '../map/mpa.ts';
 import {legendKey, seafloorState, seafloorView, surveyList, surveySummary} from '../map/seafloor.ts';
 import {waterTempState} from '../map/sst.ts';
 import {chlorophyllState} from '../map/chlorophyll.ts';
@@ -111,10 +111,11 @@ function TerrainSeafloorRow() {
   );
 }
 
+const retryable: readonly string[] = Object.values(TRANSIENT_DETAILS);
 /**
  * The protected areas' row: the check date, or what the drawing lacks, so a missing outline never reads as
  * open water. "Loading boundaries." until they load, "Map unavailable." without a map, and unavailable when
- * MapLibre failed to draw the checked data.
+ * MapLibre failed to draw the checked data. A failed read offers Try again (SC2007-02).
  */
 export function MpaRow() {
   // The Chart's own failures say nothing about the terrain's drape (FE-82).
@@ -133,6 +134,7 @@ export function MpaRow() {
         </Popover>
       </span>
       {s.note ? <p class="app-mpa-note">{s.note}</p> : null}
+      {s.status === 'unavailable' && retryable.includes(s.detail) ? <Button variant="quiet" onClick={() => { retryMpas.value++; }}>Try again</Button> : null}
       {withheld ? <p class="app-mpa-marks" data-reason="marks">{marks}</p> : null}
       <a class="app-mpa-rules" href={CDFW_MPA_PAGE} target="_blank" rel="noopener">Official rules and boundaries (CDFW)</a>
     </li>

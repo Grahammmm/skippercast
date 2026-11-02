@@ -24,7 +24,7 @@ import {ensureLandWater, withheldNote, type Place} from './land-water.ts';
 import {coordinates} from './state.ts';
 import {assessContours, depthContoursURL, NOTES} from './map/depth-contours.ts';
 import {chartFileListed} from './chart-files.ts';
-import {loadPorts} from './ports.ts';
+import {loadPorts, plannerPort, portChoice} from './ports.ts';
 
 export type Layers = {waypoints: boolean; outlines: boolean; alignments: boolean; exclusions: boolean};
 export type LayerKey = keyof Layers;
@@ -78,6 +78,8 @@ export interface PlannerDeps {
   emit?: (detail: RankedDetail) => void;
   /** The region's land/water check for these spots (web/land-water.ts `ensureLandWater`). */
   landWater?: (region: string, spots: readonly Target[]) => Promise<Place>;
+  /** The day the app shows (web/state.ts `day`, "YYYY-MM-DD", null = today): an empty planner opens dated to it (SCJ-8). */
+  viewDay?: () => string | null;
 }
 
 /** The one published file the opt-in depth contour tracks read: `{collection: null}` when the region publishes none; `retry` when the read dropped (asked again on the next toggle). */
@@ -101,7 +103,7 @@ const STORAGE_OK = 'Saved on this browser for each region. Separate from your ac
 const STORAGE_OFF = 'Browser storage is unavailable. Keep this page open until you download your plan.';
 const RANKED_LAYERS: Layers = {waypoints: true, outlines: true, alignments: false, exclusions: false};
 
-/** The next Friday on or after `today` (YYYY-MM-DD), where Best available moves an undecided date. */
+/** The next Friday on or after `today` (YYYY-MM-DD). Best available no longer moves the date there (SCJ-8). */
 export function nextFriday(today: string): string {
   const d = new Date(today + 'T12:00:00Z');
   d.setUTCDate(d.getUTCDate() + (5 - d.getUTCDay() + 7) % 7);
@@ -197,13 +199,15 @@ export function createPlanner(deps: PlannerDeps) {
   });
   /** While ranked, every valid change redraws the ranked set on the Chart. */
   const stopRanked = effect(() => { if (ranked.value && summary.value.ok) emit(untracked(rankedDetail)); });
+  // SCJ-2c: the brief measures from this same port (web/ports.ts `plannerPort`).
+  const stopPort = effect(() => { plannerPort.value = {region: region.id, id: filters.value.port}; });
 
   // web/ports.ts `loadPorts` by default (10 s timeout, schema check, cleared on failure); a failed or missing list sets `portsFailed`.
   const portSource: () => Promise<{ports?: Port[]} | null> = deps.loadPorts ?? (() => loadPorts().then(list => ({ports: list.map(p => ({...p, match: [p.match[0], p.match[1]]}))})));
   const loadPortList = (): Promise<void> => Promise.resolve().then(portSource).then(d => {
     if (!Array.isArray(d?.ports)) throw Error('Port list unavailable');
     const list = d.ports.filter(p => p.region === region.id), chosen = filters.value.port;
-    batch(() => { ports.value = list; portsFailed.value = false; filters.value = {...filters.value, port: list.some(p => p.id === chosen) ? chosen : list.some(p => p.id === savedPort) ? savedPort! : list[0]?.id ?? ''}; });
+    batch(() => { ports.value = list; portsFailed.value = false; filters.value = {...filters.value, port: portChoice(list, chosen, savedPort)}; });
   }).catch(() => { portsFailed.value = true; }).finally(() => { portsReady.value = true; });
   const portsLoaded = loadPortList();
 
@@ -275,6 +279,24 @@ export function createPlanner(deps: PlannerDeps) {
       actionStatus.value = 'User waypoint saved on this browser. Category is your label, not verified habitat or navigation guidance.';
     });
   }
+  /**
+   * SCJ-1: a recommended habitat place joins the trip as a user waypoint with a stable id (`user:habitat-<id>`, the id's
+   * characters outside the user-waypoint id rule as `-`), through saveWaypoint's validation. Again for the same place adds nothing.
+   */
+  function addPlace(p: {id: string; name: string; latitude: number; longitude: number; shore?: boolean}): string | null {
+    const id = `user:habitat-${p.id.replace(/^habitat:/, '').replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}`;
+    const saved: UserWaypoint[] = draft.value.userWaypoints ?? [], known = saved.some((t: UserWaypoint) => t.id === id);
+    const points: UserWaypoint[] = known ? saved : userWaypoints([...saved, {id, name: p.name, category: p.shore ? 'other' : 'reef', latitude: p.latitude, longitude: p.longitude}]) as UserWaypoint[];
+    if (!points.some((t: UserWaypoint) => t.id === id)) { actionStatus.value = 'Choose a name (up to 80 characters), a listed category and a valid map position. Limit: 100 waypoints.'; return null; }
+    if (known && draft.value.ids.includes(id)) return id;
+    revision++;
+    batch(() => {
+      if (ranked.value) unrank();
+      persist({...draft.value, userWaypoints: points, ids: [...draft.value.ids, id]});
+      actionStatus.value = 'User waypoint saved on this browser. Category is your label, not verified habitat or navigation guidance.';
+    });
+    return id;
+  }
   function removeWaypoint(id: string): void {
     revision++;
     persist({...draft.value, userWaypoints: (draft.value.userWaypoints ?? []).filter(t => t.id !== id), ids: draft.value.ids.filter(x => x !== id)});
@@ -302,7 +324,7 @@ export function createPlanner(deps: PlannerDeps) {
       if (!best.length) throw Error(`No ranked reefs meet these filters and current checks.${held ? ` ${held}` : ''} Widen the area or distance; no weaker spots were added.`);
       canonical = loaded;
       const d = draft.value, ids = best.map(t => t.id);
-      const name = d.name === 'My fishing day' ? 'Lingcod + rockfish' : d.name, date = d.date === today ? nextFriday(today) : d.date;
+      const name = d.name === 'My fishing day' ? 'Lingcod + rockfish' : d.name, date = d.date;
       batch(() => {
         tripAtlas.value = {...tripAtlas.value, publication: loaded.publication, source_validation_date: loaded.source_validation_date,
           targets: [...atlas.targets, ...loaded.targets.map(t => best.find(s => s.id === t.id) ?? t)], areas: [...atlas.areas, ...loaded.areas]};
@@ -318,6 +340,15 @@ export function createPlanner(deps: PlannerDeps) {
       loading.value = false;
       if (mine !== revision && scopeStatus.value === LOADING) scopeStatus.value = 'Selection changed while loading. Select Best available again to apply it.';
     }
+  }
+
+  /** SCJ-8: an empty planner opens ranked, dated the viewed day when it is a real day from today on, else today. Places or a saved ranked plan stay as they are. */
+  function openReady(): void {
+    if (ranked.value || restorePending.value || loading.value || draft.value.ids.length) return;
+    const v = deps.viewDay?.() ?? null, at = new Date(`${v}T12:00:00Z`);
+    const ok = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(at.getTime()) && at.toISOString().slice(0, 10) === v && v >= today;
+    draft.value = {...draft.value, date: ok ? v : today}; // in the page only: selectBest saves it with the ranked places
+    void selectBest();
   }
 
   /** A saved ranked plan, re-applied from the current publication only when it is the one the plan ranked. */
@@ -404,10 +435,10 @@ export function createPlanner(deps: PlannerDeps) {
   return {
     today, region, draft, tripAtlas, ranked, filtersDirty, restorePending, allowResearch, search, loading, portsReady, portsFailed, filters, ports,
     scopeStatus, actionStatus, storageNote, tick, summary, spots, protectedHits, notesReady, waypointPosition,
-    chooseWaypoint, saveWaypoint, removeWaypoint,
+    chooseWaypoint, saveWaypoint, removeWaypoint, addPlace,
     setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
-    selectBest, restore, exportFile, deliver, showOnMap, checkConditions,
+    selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     /** For tests and a region change: stop drawing the ranked set. */
-    dispose: stopRanked,
+    dispose: () => { stopRanked(); stopPort(); },
   };
 }

@@ -35,10 +35,11 @@ import {shownPresentation, terrainActions, terrainDetail, terrainMark, terrainPi
 import {coordinates, navigate, profile, selection, setParams, species} from '../state.ts';
 import {formatCoordinates} from '../../dist/coordinates.js';
 import {PROFILE_TABLE} from '../profile.ts';
-import {loadRegs, regsData, regulationState, ruleSummary, verifiedText, type RulesRegion} from '../regs.ts';
+import {areaPageOnly, loadRegs, regsData, regulationState, ruleSummary, speciesPage, verifiedText, type RulesRegion} from '../regs.ts';
 import {zone} from './App.tsx';
 import {dockState} from './TimeDock.tsx';
-import {addToTrip, reviewTrip, tripIds} from '../trip.ts';
+import {addPlaceToTrip, addToTrip, placeTripId, reviewPlace, reviewTrip, tripIds} from '../trip.ts';
+import {regulationsLink} from '../map/habitat.ts';
 import {drawnSpots} from '../map/ranked.ts';
 import {MarkForecast} from '../brief/MarkForecast.tsx';
 import type {LatLon} from '../brief/mark-forecast.ts';
@@ -80,14 +81,16 @@ export function RulesLine({mark}: {mark: Mark}) {
   if (!region || !RULED.test(mark.id) || mark.withheld) return null;
   const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget, data = loaded?.region === region.id ? loaded.data : null;
   const at = dockState(new Date(), zone()).at, day = new Intl.DateTimeFormat('en-CA', {timeZone: zone(), year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
-  const state = regulationState(data, target, region, Date.now(), day, at), s = ruleSummary(data, target, state, region);
+  const state = regulationState(data, target, region, Date.now(), day, at), s = ruleSummary(data, target, state, region), page = speciesPage(data, target, region);
   const name = target === 'reef' ? 'Lingcod & rockfish' : state.profile?.name ?? target;
   const cell = (label: string, values: readonly string[]) => values.length ? <div><dt>{label}</dt>{values.map(v => <dd key={v} class="ui-mono">{v}</dd>)}</div> : null;
   return (
     <div class="app-mark-regs" role="group" aria-label={`Rules at a glance: ${name}`}>
       <p><span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> <span class="ui-mono">{verifiedText(s)}</span></p>
       <dl>{cell('Bag', s.bag)}{cell('Size', s.size)}{cell('Depth', s.depth ? [s.depth] : [])}</dl>
+      {page && <a href={page.href} target="_blank" rel="noopener" aria-label={`${page.label} (official page, opens in a new tab)`}>{page.label}</a>}
       <a href={s.link} target="_blank" rel="noopener" aria-label={`${s.linkLabel} for ${name} (official page, opens in a new tab)`}>{s.linkLabel}</a>
+      {areaPageOnly(s, page) && <p class="app-mark-regs-note">Area regulations page, not specific to {name}.</p>}
     </div>
   );
 }
@@ -147,6 +150,12 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
   const spot = selected === spotCard.value && !selected.withheld ? selection.value : selected.trip ?? null;
   const target = spot ? markData.value?.atlas?.targets.find(t => t.id === spot) as {canonical_habitat?: boolean} | undefined : undefined;
   const place = markPlace(selected);
+  // SCJ-1: a habitat card (the brief's recommended places) joins a trip, or opens it for GPX, as a user waypoint, and links its region's rules page.
+  const habitat = selected.id.startsWith('habitat:'), at = selected.position;
+  const where = habitat && at && Number.isFinite(at.latitude) && Number.isFinite(at.longitude)
+    ? {id: selected.id, name: selected.name, latitude: at.latitude, longitude: at.longitude, shore: /\bshore\b/i.test(`${selected.name} ${selected.kind}`)} : null;
+  const added = spot ? tripIds.value.includes(spot) : !!where && tripIds.value.includes(placeTripId(where.id));
+  const regulations = selected.regulations ?? (habitat && markData.value?.region ? regulationsLink(markData.value.region) : undefined);
   const close = () => {
     const back = returnTo?.isConnected ? returnTo : document.querySelector<HTMLElement>('.app-chart canvas');
     returnTo = null;
@@ -173,16 +182,17 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
       <RulesLine mark={selected} />
       {place ? <MarkForecast place={place} /> : null}
       <div class="app-mark-actions">
-        <Button size="sm" icon={spot && tripIds.value.includes(spot) ? 'check' : 'plus'} disabled={!spot} onClick={() => { if (spot) void addToTrip(spot); }}>
-          {spot && tripIds.value.includes(spot) ? 'Added to trip' : target && target.canonical_habitat !== true ? 'Save research reference' : 'Add to trip'}</Button>
-        <Button size="sm" icon="download" disabled={!spot} onClick={() => { if (spot) void reviewTrip(spot); }}>{selected.trip ? 'Review & export' : 'GPX'}</Button>
-        {selected.regulations ? (
-          <a class="ui-button ui-button--ghost ui-button--sm" href={selected.regulations.href} target="_blank" rel="noopener"
-            aria-label={`Regulations: ${selected.regulations.label} (official page, opens in a new tab)`}>
+        <Button size="sm" icon={added ? 'check' : 'plus'} disabled={!spot && !where} onClick={() => { if (spot) void addToTrip(spot); else if (where) void addPlaceToTrip(where); }}>
+          {added ? 'Added to trip' : target && target.canonical_habitat !== true ? 'Save research reference' : 'Add to trip'}</Button>
+        <Button size="sm" icon="download" disabled={!spot && !where} onClick={() => { if (spot) void reviewTrip(spot); else if (where) void reviewPlace(where); }}>{selected.trip ? 'Review & export' : 'GPX'}</Button>
+        {regulations ? (
+          <a class="ui-button ui-button--ghost ui-button--sm" href={regulations.href} target="_blank" rel="noopener"
+            aria-label={`Regulations: ${regulations.label} (official page, opens in a new tab)`}>
             <Icon name="shield" size={16} />Regulations
           </a>
         ) : <Button size="sm" icon="shield" disabled>Regulations</Button>}
       </div>
+      {habitat && !where ? <p class="app-mark-why">This place has no saved position yet, so it cannot be added to a trip or exported.</p> : null}
       <div class="app-mark-basis">
         <Popover>{selected.basis}{selected.terms?.map(t => (
           <p key={t.href}><a href={t.href} target="_blank" rel="noopener" aria-label={`${t.label} (publisher's page, opens in a new tab)`}>{t.label}</a></p>

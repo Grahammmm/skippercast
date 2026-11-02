@@ -123,6 +123,27 @@ def convert(model, name, cube, times):
     return cube
 
 
+# Physical range of each field in canonical (post-convert) units, inclusive; a decoded value outside it
+# (e.g. a missing-value sentinel in a GRIB without a bitmap) is stored as missing. Unlisted fields are unbounded.
+RANGES = {'u10': (-100, 100), 'v10': (-100, 100), 'gust': (0, 150), 'visibility': (0, 100000),
+          't2m': (-90, 60), 'precipitation': (0, 500), 'cloud_cover': (0, 100), 'wave_peak_period': (0, 40)}
+RANGES.update({f'{kind}_{part}': limits for kind in ('wave', 'wind_wave', 'swell_wave', 'secondary_swell_wave')
+               for part, limits in (('height', (0, 30)), ('period', (0, 40)), ('direction', (0, 360)))})
+RAW_ACCUMULATED_M = (0, 10)  # bound on each raw accumulated step, before differencing
+
+
+def outside(cube, limits):
+    return np.isfinite(cube) & ((cube < limits[0]) | (cube > limits[1]))
+
+
+def bound(model, name, cube, log, dropped=0):
+    """Finite values outside the field's range -> NaN; logs how many (plus `dropped` set missing before convert)."""
+    out = outside(cube, RANGES.get(name, (-np.inf, np.inf)))
+    if count := int(out.sum()) + dropped:
+        log(f'{model.id} {name}: {count} values out of range set missing')
+    return np.where(out, np.nan, cube)
+
+
 def fetch_model(model, cycle, workers=16, log=log_err):
     """Download and decode every step -> (times, lats, lons, {field: cube}, sea mask)."""
     want = [(f.name, f.select) for f in model.fields]
@@ -140,6 +161,12 @@ def fetch_model(model, cycle, workers=16, log=log_err):
     with ThreadPoolExecutor(max_workers=max(1, workers // 4)) as pool:
         results = dict(pool.map(step_job, model.steps))
     log(f'{model.id}: {len(results)} steps downloaded and decoded in {time.time() - started:.0f}s')
+    for f in model.fields:  # a field the index offers at no step fails the model, never publishes all-missing
+        have = [s for s in model.steps if f.name in results[s]]
+        if not have:
+            raise ValueError(f'{model.id} {f.name}: not offered at any step (index selector {f.select})')
+        if len(have) < len(model.steps):
+            log(f'{model.id} {f.name}: missing at {len(model.steps) - len(have)} of {len(model.steps)} steps')
     first = results[model.steps[0]]
     native = [f.name for f in model.fields if len(f.select) > 2 and f.select[2] == 'native']
     reference = first[native[0]] if native else first[model.fields[0].name]
@@ -159,7 +186,9 @@ def fetch_model(model, cycle, workers=16, log=log_err):
                 if got[0].shape != shape or not np.allclose(got[1], lats) or not np.allclose(got[2], lons):
                     raise ValueError(f'{model.id} {f.name} grid changed at step {step}')
                 cube[t] = got[0]
-        cubes[f.name] = convert(model, f.name, cube, times)
+        raw = outside(cube, RAW_ACCUMULATED_M) if f.convert == 'accumulated_m' else np.zeros(cube.shape, bool)
+        cube[raw] = np.nan  # a raw sentinel must not poison the neighbouring differences
+        cubes[f.name] = bound(model, f.name, convert(model, f.name, cube, times), log, int(raw.sum()))
     if model.mask:
         mask_grid = results[model.steps[0]].get(mask_key)
         if mask_grid is None:

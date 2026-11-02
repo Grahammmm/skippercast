@@ -19,6 +19,9 @@ const finite = (value: unknown): value is number => typeof value === 'number' &&
 /** A usable wave/swell period: finite and above 0 s; anything else is missing. */
 const period = (value: unknown): value is number => finite(value) && value > 0;
 const round = (value: number, digits = 1) => Number(value.toFixed(digits));
+/** A tide, sunrise or sunset time as epoch ms; NaN (unknown) without a `Z` or `±HH:MM` offset, which Date.parse would read as device-local time. */
+const instant = (s: unknown): number =>
+  typeof s === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/.test(s) ? Date.parse(s) : NaN;
 
 /**
  * The shore thresholds. Units: feet, seconds, knots, degrees, minutes, feet
@@ -197,7 +200,7 @@ const plain = (value: unknown): value is Record<string, unknown> => !!value && t
 function heightAt(at: number, curve: readonly TidePoint[]): number | null {
   let best: TidePoint | undefined, gap = Infinity;
   for (const point of curve as readonly unknown[]) {
-    const d = plain(point) && typeof point.at === 'string' && finite(point.heightFt) ? Math.abs(Date.parse(point.at) - at) : NaN;
+    const d = plain(point) && finite(point.heightFt) ? Math.abs(instant(point.at) - at) : NaN;
     if (Number.isFinite(d) && d < gap) {best = point as TidePoint; gap = d;}
   }
   return best && gap <= HOUR ? best.heightFt : null;
@@ -207,7 +210,7 @@ function heightAt(at: number, curve: readonly TidePoint[]): number | null {
 function cleanEvents(events: readonly TideEvent[]) {
   const groups = new Map<number, {at: string; heightFt: unknown; type: 'H' | 'L' | null}>();
   for (const e of events as readonly unknown[]) {
-    const time = plain(e) && typeof e.at === 'string' && (e.type === 'H' || e.type === 'L') ? Date.parse(e.at) : NaN;
+    const time = plain(e) && (e.type === 'H' || e.type === 'L') ? instant(e.at) : NaN;
     if (!Number.isFinite(time)) continue;
     const seen = groups.get(time), event = e as TideEvent;
     if (!seen) groups.set(time, {at: event.at, heightFt: event.heightFt, type: event.type});
@@ -225,8 +228,8 @@ function cleanEvents(events: readonly TideEvent[]) {
 export function tidePhase(at: number, events: readonly TideEvent[], curve: readonly TidePoint[] = []): Tide {
   const sorted = cleanEvents(events);
   const span = SHORE.tide.highMinutes * MINUTE;
-  const near = (type: 'H' | 'L' | null) => sorted.find(e => e.type === type && Math.abs(Date.parse(e.at) - at) <= span);
-  const nextEvent = sorted.find(e => Date.parse(e.at) > at), previous = [...sorted].reverse().find(e => Date.parse(e.at) <= at);
+  const near = (type: 'H' | 'L' | null) => sorted.find(e => e.type === type && Math.abs(instant(e.at) - at) <= span);
+  const nextEvent = sorted.find(e => instant(e.at) > at), previous = [...sorted].reverse().find(e => instant(e.at) <= at);
   const high = near('H'), low = near('L'), conflict = near(null) || nextEvent?.type === null || previous?.type === null;
   const phase: TidePhase = conflict ? null : high ? 'high' : low ? 'low' : nextEvent && previous ? (nextEvent.type === 'H' ? 'rising' : 'falling') : null;
   const lowEvent = low && finite(low.heightFt) ? low.heightFt : null;
@@ -236,7 +239,7 @@ export function tidePhase(at: number, events: readonly TideEvent[], curve: reado
 
 export function isTwilight(at: number, sunrise: string | null, sunset: string | null): boolean {
   const span = SHORE.twilightMinutes * MINUTE;
-  return [sunrise, sunset].some(edge => {const t = edge ? Date.parse(edge) : NaN; return Number.isFinite(t) && Math.abs(at - t) <= span;});
+  return [sunrise, sunset].some(edge => {const t = instant(edge); return Number.isFinite(t) && Math.abs(at - t) <= span;});
 }
 
 const ft = (value: number) => `${round(value)} ft`;
@@ -316,7 +319,7 @@ export type ShoreDay = {
 
 /** Roll the hours up for the day, over daylight when sunrise and sunset are known. */
 export function shoreDay(hours: ShoreHour[], sunrise: string | null, sunset: string | null, seawardDeg: number | null): ShoreDay {
-  const rise = sunrise ? Date.parse(sunrise) : NaN, set = sunset ? Date.parse(sunset) : NaN;
+  const rise = instant(sunrise), set = instant(sunset);
   const lit = Number.isFinite(rise) && Number.isFinite(set) ? hours.filter(h => {const t = Date.parse(h.at); return t >= rise && t + HOUR <= set;}) : hours;
   const scope = lit.length ? lit : hours;
   const known = scope.filter(h => h.surf.band !== 'Unknown');

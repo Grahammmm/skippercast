@@ -265,6 +265,59 @@ class Sources(TestCase):
         self.assertEqual(built["catchStatus"], "Dated local catch facts unavailable for this edition. Published reports remain linked.")
 
 
+class UnnamedAlerts(TestCase):  # SC2007-03: no readable event name is kept under a generic name (fail closed)
+    ZONES = {a[0]: [a[6]] for a in cr.AREAS}
+    URN = "https://api.weather.gov/alerts/urn:fixture:unnamed"
+
+    def feature(self, zone="PZZ645", ident=URN, **p):
+        props = {"@id": ident, "headline": None, "affectedZones": [f"https://api.weather.gov/zones/forecast/{zone}"], **p}
+        return {k: v for k, v in (("id", ident), ("geometry", None), ("properties", props)) if v is not None}
+
+    def run_alerts(self, *features):
+        return cr.alerts({"type": "FeatureCollection", "features": list(features)}, self.ZONES)
+
+    def test_null_missing_non_string_or_blank_event_is_kept_as_unnamed(self):
+        (row,) = self.run_alerts(self.feature(event=None, headline="Small Craft Advisory until 3 AM"))
+        self.assertEqual((row["event"], row["headline"], row["areaIds"]), (cr.UNNAMED_ALERT, "Small Craft Advisory until 3 AM",
+                                                                           ["north", "central", "south"]))
+        missing = self.feature()
+        del missing["properties"]["headline"]
+        (row,) = self.run_alerts(missing)
+        self.assertEqual((row["event"], row["headline"]), (cr.UNNAMED_ALERT, cr.UNNAMED_ALERT))  # never "None"
+        for event in (42, "   ", "", ["Small Craft Advisory"]):
+            (row,) = self.run_alerts(self.feature(event=event, headline=None))
+            self.assertEqual((row["event"], row["headline"]), (cr.UNNAMED_ALERT, cr.UNNAMED_ALERT), event)
+        (row,) = self.run_alerts(self.feature(event=None, headline="  "))  # a blank headline falls back too
+        self.assertEqual(row["headline"], cr.UNNAMED_ALERT)
+
+    def test_unnamed_alert_reaching_no_area_or_without_id_is_still_dropped(self):
+        self.assertEqual(self.run_alerts(self.feature(zone="PZZ999", event=None)), [])
+        nameless = self.feature(ident=None, event=None)
+        self.assertNotIn("id", nameless)
+        self.assertEqual(self.run_alerts(nameless), [])
+
+    def test_duplicate_ids_with_one_unnamed_stay_one_row(self):
+        rows = self.run_alerts(self.feature(event="Small Craft Advisory"), self.feature(event=None))
+        self.assertEqual([(r["id"], r["event"]) for r in rows], [(self.URN, cr.UNNAMED_ALERT)])  # last wins, as before
+        rows = self.run_alerts(self.feature(event=None), self.feature(event="Small Craft Advisory"))
+        self.assertEqual([(r["id"], r["event"]) for r in rows], [(self.URN, "Small Craft Advisory")])
+
+    def test_named_fixture_rows_are_unchanged(self):
+        zones = {"north": ["PZZ645", "CAZ340"], "central": ["PZZ645", "CAZ087"], "south": ["PZZ645", "CAZ087"]}
+        rows = cr.alerts(alerts(), zones)
+        self.assertEqual([(r["event"], r["headline"], r["areaIds"]) for r in rows], [
+            ("Small Craft Advisory", "Fixture marine advisory", ["north", "central", "south"]),
+            ("Beach Hazards Statement", "Beach Hazards Statement", ["north"]), ("Dense Fog Advisory", "Dense Fog Advisory", ["south"])])
+        self.assertEqual(report()["alerts"], json.loads(FIXTURE.read_text())["alerts"])
+
+    def test_end_to_end_an_unnamed_alert_on_the_marine_zone_is_published(self):
+        bad = routes()
+        bad[cr.ALERTS_URL] = body({"type": "FeatureCollection", "features": [self.feature(event=None)]})
+        built = report(http.FakeSession(bad))
+        self.assertEqual([(a["event"], a["areaIds"]) for a in built["alerts"]], [(cr.UNNAMED_ALERT, ["north", "central", "south"])])
+        self.assertEqual({s["id"]: s["outcome"] for s in built["sources"]}["nws-alerts"], "ok")
+
+
 class Catches(TestCase):
     def test_trips_are_checked_against_their_day_receipt_and_window(self):
         now = cr._ms("2026-10-08T21:00:00Z")
@@ -356,3 +409,74 @@ class Publication(TestCase):
         before = copy.deepcopy(feed)
         report(feed=feed)
         self.assertEqual(feed, before)
+
+
+class UnknownUnits(TestCase):  # SC2007-04: a unit convert() does not know is named in that area's status, never silent blanks
+    def central(self, **fields):
+        """Report with the central area's grid fields replaced; returns (central forecast, its status, all statuses)."""
+        out, props = routes(), grid()["properties"]
+        for key, value in fields.items():
+            props[key] = {**props[key], **value}
+        out[f"{cr.NWS}gridpoints/{GRIDS['central']}"] = body({"properties": props})
+        built = report(http.FakeSession(out))
+        status = {s["id"]: s for s in built["sources"]}
+        return built["forecasts"][1], status["nws-central"], status
+
+    def test_critical_unknown_unit_fails_the_area_by_name_and_the_rest_stand(self):
+        forecast, status, all_ = self.central(windGust={"uom": "wmoUnit:furlong_per_fortnight"})
+        self.assertEqual((status["outcome"], status["error"], forecast["hours"]),
+                         ("error", "NWS unit not understood: gustKnots (wmoUnit:furlong_per_fortnight)", []))
+        self.assertEqual((all_["nws-north"]["outcome"], "error" in all_["nws-north"]), ("ok", False))
+        for key in ("windSpeed", "waveHeight", "wavePeriod"):  # each critical field fails the area on its own
+            self.assertEqual(self.central(**{key: {"uom": "wmoUnit:okta"}})[1]["outcome"], "error", key)
+
+    def test_missing_or_blank_uom_with_number_values_is_named_none(self):
+        for uom in (None, ""):
+            forecast, status, _ = self.central(waveHeight={"uom": uom})
+            self.assertEqual((status["outcome"], status["error"], forecast["hours"]),
+                             ("error", "NWS unit not understood: waveFt (none)", []))
+        props = grid()["properties"]
+        del props["waveHeight"]["uom"]
+        self.assertEqual(cr.unknown_units(props), [("waveFt", "none")])
+
+    def test_critical_and_non_critical_unknowns_fail_naming_both_in_fields_order(self):
+        _, status, _ = self.central(skyCover={"uom": "wmoUnit:okta"}, wavePeriod={"uom": "wmoUnit:min"})
+        self.assertEqual(status["error"], "NWS unit not understood: wavePeriodS (wmoUnit:min), cloudCoverPct (wmoUnit:okta)")
+
+    def test_non_critical_unknown_keeps_hours_and_names_the_field(self):
+        forecast, status, _ = self.central(skyCover={"uom": "wmoUnit:okta"})
+        baseline = report()["forecasts"][1]["hours"]
+        self.assertEqual((status["outcome"], status["error"]), ("ok", "Unconverted NWS fields: cloudCoverPct (wmoUnit:okta)"))
+        self.assertEqual(len(forecast["hours"]), len(baseline))
+        self.assertTrue(all(h["cloudCoverPct"] is None for h in forecast["hours"]))
+        self.assertEqual([{**h, "cloudCoverPct": None} for h in baseline], forecast["hours"])
+        self.assertEqual(status["issuedAt"], "2026-10-08T18:26:38.000Z")  # the ok clocks stay
+
+    def test_two_non_critical_unknowns_are_both_named_in_fields_order(self):
+        _, status, _ = self.central(relativeHumidity={"uom": "wmoUnit:g_kg-1"}, temperature={"uom": "wmoUnit:K"})
+        self.assertEqual((status["outcome"], status["error"]),
+                         ("ok", "Unconverted NWS fields: airTempF (wmoUnit:K), relativeHumidityPct (wmoUnit:g_kg-1)"))
+
+    def test_known_alternate_units_stay_clean(self):
+        _, status, _ = self.central(windGust={"uom": "wmoUnit:km_h-1"}, temperature={"uom": "wmoUnit:degF"},
+                                    windSpeed={"uom": "wmoUnit:kt"}, waveHeight={"uom": "ft"})
+        self.assertEqual((status["outcome"], "error" in status), ("ok", False))
+
+    def test_unknown_unit_with_no_number_value_is_not_reported(self):
+        nulls = {"uom": "wmoUnit:okta", "values": [{"validTime": "2026-10-08T18:00:00+00:00/PT27H", "value": v}
+                                                   for v in (None, "12", True, float("nan"))]}
+        _, status, _ = self.central(windGust=nulls, skyCover={"uom": "wmoUnit:okta", "values": []})
+        self.assertEqual((status["outcome"], "error" in status), ("ok", False))
+
+    def test_out_of_range_percent_is_a_value_not_a_unit_problem(self):
+        props = grid()["properties"]  # skyCover already holds 140 with wmoUnit:percent
+        self.assertEqual(cr.unknown_units(props), [])
+        self.assertIsNone(cr.convert(140, "wmoUnit:percent", "percent"))
+        forecast, status, _ = self.central(probabilityOfPrecipitation={"uom": "wmoUnit:percent", "values": [
+            {"validTime": "2026-10-08T18:00:00+00:00/PT27H", "value": 140}]})
+        self.assertEqual((status["outcome"], "error" in status, forecast["hours"][0]["precipPct"]), ("ok", False, None))
+
+    def test_fixture_grid_statuses_have_no_error_key(self):
+        built = report()
+        self.assertEqual([s["id"] for s in built["sources"] if "error" in s], [])
+        self.assertEqual(built, json.loads(FIXTURE.read_text()))

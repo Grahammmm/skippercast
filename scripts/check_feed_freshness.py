@@ -241,8 +241,27 @@ def age_limit_hours(feed, config, override=None):
     return config["max_age_hours"]
 
 
-def check_feed(name, public, github, now, fetch=fetch_json, max_age_hours=None, health=None):
-    """One feed's age (public route decides) and source health. Return (status bits, message)."""
+def stale_event(feed_id, feed, error, now, limit_hours):
+    """One staleness event for the alert: which feed, when it last published, how far past its limit it is.
+
+    last_published is None when the feed is unreadable or unfetchable (nothing to quote); late_hours is then None too.
+    """
+    stamp = feed_time(feed) if isinstance(feed, dict) else None
+    try:
+        age = feed_age(feed, now).total_seconds() / 3600 if isinstance(feed, dict) else None
+    except (ValueError, TypeError, AttributeError):
+        age = None
+    return {"feed": feed_id, "last_published": stamp if age is not None else None,
+            "age_hours": None if age is None else round(max(0.0, age), 2), "limit_hours": limit_hours,
+            "late_hours": None if age is None else round(max(0.0, age - limit_hours), 2),
+            "reason": str(error) if error is not None else None}
+
+
+def check_feed(name, public, github, now, fetch=fetch_json, max_age_hours=None, health=None, events=None):
+    """One feed's age (public route decides) and source health. Return (status bits, message).
+
+    When `events` is a list, a stale or unreadable feed appends one stale_event (per feed, never per record).
+    """
     health = health or HEALTH
     config = health["feeds"][name]
     public_feed, public_error = fetched(public, fetch)
@@ -257,6 +276,8 @@ def check_feed(name, public, github, now, fetch=fetch_json, max_age_hours=None, 
     github_ok, github_line = (False, f"{github_label} could not be fetched: {github_error}") if github_error is not None \
         else verdict(github_feed, now, max_age, github_label)
     lines = [public_line, github_line + ("" if github_ok else " (secondary signal)")]
+    if not ok and events is not None:
+        events.append(stale_event(name, public_feed, public_error, now, max_age.total_seconds() / 3600))
     source_bits = 0
     if feed is not None:
         label = config["label"] + ("" if feed is public_feed else " (GitHub copy)")
@@ -277,8 +298,11 @@ def published_regions(health=None, root=ROOT):
             if isinstance(row, dict) and row.get("id") and row["id"] != default]
 
 
-def check_region(region, critical, base, now, fetch=fetch_json, health=None):
-    """One region's live feed: its age (public route decides) and its sources (GitHub copy when the route fails)."""
+def check_region(region, critical, base, now, fetch=fetch_json, health=None, events=None):
+    """One region's live feed: its age (public route decides) and its sources (GitHub copy when the route fails).
+
+    A critical (active) region's stale feed appends one stale_event; a preview region's is only a partial outage.
+    """
     health = health or HEALTH
     config = health["regions"]
     path = config["path"].format(region=region)
@@ -290,6 +314,9 @@ def check_region(region, critical, base, now, fetch=fetch_json, health=None):
         ok, line = False, f"Public {label} could not be fetched: {error}"
         feed, _ = fetched(RAW + path, fetch)
         label += " (GitHub copy)"
+    if not ok and critical and events is not None:
+        events.append(stale_event("region:" + region, feed if error is None else None, error, now,
+                                  age_limit_hours(feed, config) if isinstance(feed, dict) else config["max_age_hours"]))
     if not ok and not critical:
         line += " (not an active region; reported, does not fail)"
     bits, lines = 0 if ok else STALE if critical else PARTIAL, [line]
@@ -302,19 +329,19 @@ def check_region(region, critical, base, now, fetch=fetch_json, health=None):
 
 
 def run_all(base, now, fetch=fetch_json, live_max_age_hours=None, data_max_age_hours=None, live_github=FEED,
-            health=None, regions=None):
+            health=None, regions=None, events=None):
     """Check the live and daily feeds, then each region's live feed. Return (status bits, message)."""
     health = health or HEALTH
     status, messages = 0, []
     for name, max_age, github in (("conditions", live_max_age_hours, live_github), ("data", data_max_age_hours, None)):
         path = health["feeds"][name]["path"]
-        bits, message = check_feed(name, public_url(base, "/feeds/" + path), github or RAW + path, now, fetch, max_age, health)
+        bits, message = check_feed(name, public_url(base, "/feeds/" + path), github or RAW + path, now, fetch, max_age, health, events)
         status |= bits
         messages.append(message)
     region_lines = []
     rows = published_regions(health) if regions is None else regions
     with ThreadPoolExecutor(max_workers=8) as pool:  # about 15 regions; keep the run well inside its timeout
-        for bits, message in pool.map(lambda row: check_region(row[0], row[1], base, now, fetch, health), rows):
+        for bits, message in pool.map(lambda row: check_region(row[0], row[1], base, now, fetch, health, events), rows):
             status |= bits
             region_lines.append(message)
     if region_lines:
@@ -322,10 +349,11 @@ def run_all(base, now, fetch=fetch_json, live_max_age_hours=None, data_max_age_h
     return status, "\n\n".join(messages)
 
 
-def write_report(path, status):
-    """The workflow's view of one run: what failed (stale, degraded) and what was only reported (partial)."""
+def write_report(path, status, events=()):
+    """The workflow's view of one run: what failed (stale, degraded), what was only reported (partial), and
+    one stale_event per stale feed (read by scripts/feed_stale_alert.py)."""
     Path(path).write_text(json.dumps({"stale": bool(status & STALE), "degraded": bool(status & DEGRADED),
-                                      "partial": bool(status & PARTIAL)}) + "\n")
+                                      "partial": bool(status & PARTIAL), "stale_feeds": list(events)}) + "\n")
 
 
 def main(argv=None, fetch=fetch_json, now=None):
@@ -344,11 +372,12 @@ def main(argv=None, fetch=fetch_json, now=None):
         ok, message = run(public_url(args.public_base), args.github_url, now, timedelta(hours=hours), fetch)
         print(message)
         raise SystemExit(0 if ok else STALE)
+    events = []
     status, message = run_all(args.public_base, now, fetch, live_max_age_hours=args.max_age_hours,
-                              data_max_age_hours=args.data_max_age_hours, live_github=args.github_url)
+                              data_max_age_hours=args.data_max_age_hours, live_github=args.github_url, events=events)
     print(message)
     if args.report:
-        write_report(args.report, status)
+        write_report(args.report, status, sorted(events, key=lambda e: e["feed"]))
     raise SystemExit(status & FAILING)
 
 

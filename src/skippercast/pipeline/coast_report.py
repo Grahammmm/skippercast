@@ -57,6 +57,7 @@ TIDE_TIME, DATE = re.compile(r"\d{4}-\d\d-\d\d \d\d:\d\d"), re.compile(r"\d{4}-\
 INSTANT = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|\+00:00)")
 TRIP_ID, LABEL = re.compile(r"[a-f0-9]{16}"), re.compile(r"[<>\x00-\x1f]")
 HABITAT = "Reviewed SkipperCast habitat is served separately through the current release gate; partial coverage, physical fit only."
+UNNAMED_ALERT = "NWS alert (type not given)"  # an alert reaching an area with no readable event is kept, not dropped
 FAILURES = (OSError, ValueError, TypeError, KeyError, AttributeError, IndexError)
 
 
@@ -98,6 +99,19 @@ def convert(value, uom, target):
     return None if scale is None or (target == "percent" and not 0 <= value <= 100) else value * scale
 
 
+CRITICAL = ("windKnots", "gustKnots", "waveFt", "wavePeriodS")  # an unknown unit here fails the area
+
+
+def unknown_units(grid):
+    """(out, uom or "none") for each `FIELDS` field with a number value whose WMO unit `convert()` does not know."""
+    bad = []
+    for out, key, target in FIELDS:
+        field = _obj(grid.get(key))
+        if any(_number(_obj(row).get("value")) for row in _list(field.get("values"))) and convert(0, field.get("uom"), target) is None:
+            bad.append((out, field.get("uom") if isinstance(field.get("uom"), str) and field.get("uom") else "none"))
+    return bad  # convert(0, ...) asks about the unit only: a percent outside 0-100 is a value problem, not a unit one
+
+
 def expand(grid, now):
     """`expandGrid`: 168 hourly rows from this hour; an hour is kept only with a wind, wave or air value."""
     series = {}
@@ -131,6 +145,10 @@ def forecast(session, area, now, fetched):
         land = _obj(_get(session, f"{NWS}points/{land_lat},{land_lon}").get("properties"))
         if not isinstance(grid, dict) or not isinstance(_obj(grid.get("windSpeed")).get("values"), list):
             raise ValueError("Incomplete NWS grid")
+        bad = unknown_units(grid)
+        named = ", ".join(f"{out} ({uom})" for out, uom in bad)
+        if any(out in CRITICAL for out, _ in bad):
+            raise ValueError("NWS unit not understood: " + named)
         hours = expand(grid, now)
         if not hours:
             raise ValueError("No populated forecast hours")
@@ -142,6 +160,7 @@ def forecast(session, area, now, fetched):
         zones = [zone, *(z.split("/")[-1] for z in (point.get("forecastZone"), point.get("county"),
                                                     land.get("forecastZone"), land.get("county")) if isinstance(z, str))]
         clocks = {k: v for k, v in (("issuedAt", issued), ("validThrough", through)) if v}
+        clocks.update({"error": "Unconverted NWS fields: " + named} if bad else {})
         return {**row, "hours": hours, **({"issuedAt": issued} if issued else {})}, {**status, "outcome": "ok", **clocks}, zones
     except FAILURES as error:
         return row, _error(status, error), [zone]
@@ -172,14 +191,14 @@ def alerts(payload, zones):
     unique = {}
     for feature in payload["features"]:
         p = _obj(_obj(feature).get("properties"))
-        if not isinstance(p.get("event"), str):
-            continue
+        event = p["event"] if isinstance(p.get("event"), str) and p["event"].strip() else UNNAMED_ALERT  # fail closed
+        headline = p["headline"] if isinstance(p.get("headline"), str) and p["headline"].strip() else event
         affected = {z.split("/")[-1] for z in _list(p.get("affectedZones")) if isinstance(z, str)}
         affected |= {z for z in _list(_obj(p.get("geocode")).get("UGC")) if isinstance(z, str)}
         areas = [a[0] for a in AREAS if affected.intersection(zones.get(a[0], ())) or _inside(a, feature.get("geometry"))]
         ident = next((str(v) for v in (feature.get("id"), p.get("id"), p.get("@id")) if v is not None), "")
         if areas and ident:
-            unique[ident] = {"id": ident, "event": p["event"], "headline": str(p["event"] if p.get("headline") is None else p["headline"]),
+            unique[ident] = {"id": ident, "event": event, "headline": headline,
                              "description": str(p.get("description") or ""), "effective": _iso(p.get("effective")),
                              "expires": _iso(p.get("expires")), "url": p["@id"] if isinstance(p.get("@id"), str) else ident,
                              "areaIds": areas}
