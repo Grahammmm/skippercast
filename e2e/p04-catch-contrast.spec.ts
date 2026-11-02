@@ -133,12 +133,15 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // SCJ-9 (#1225, phone bottom bar): Masthead.tsx's TAB_VIEWS becomes the explicit list coast/conditions/history/reports
 // (Reports in, Fleet out; still four tabs). Same tab markup, classes and count; MASTHEAD_VIEWS, CSS, tokens and catch
 // markup are unchanged; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
+// SC2222-04 (#1238, mark card focus return): MapStage.tsx adds only tabIndex={-1} to the stage section and the
+// terrain host so MarkCard can return focus to the shown map. No class, colour, token or paint change; BODY09
+// mounts Reports/CatchCards, never MapStage. contrast(), assertions and thresholds are untouched. Rebind only MapStage.tsx.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
   "web/app/App.tsx": "6a77aa09c77ed2a281979d6413dcbaaa7b530ce79ba5926e59d8485e7c4cbe74",
   "web/app/Masthead.tsx": "6428592ea5b06822b5215636b746fca35a1b0608aafbe86e56b12236e3131d55",
   "web/app/LayerRail.tsx": "bdae57c4c4dca33b5fb83a413b7d5c6f525221a4fb6b78037a1ad99102635ccd",
-  "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
+  "web/app/MapStage.tsx": "11bfed22183687b9bdfa6c4a348688b633dd4eaab5607aeeb5718fb104c41466",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
   "web/app/app.css": "c5b14f6eedcb57b4628ddc8edc2adfe6305b2ac515f1702e6a24a638539eb64a",
