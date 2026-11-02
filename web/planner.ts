@@ -24,7 +24,7 @@ import {ensureLandWater, withheldNote, type Place} from './land-water.ts';
 import {coordinates} from './state.ts';
 import {assessContours, depthContoursURL, NOTES} from './map/depth-contours.ts';
 import {chartFileListed} from './chart-files.ts';
-import {loadPorts} from './ports.ts';
+import {loadPorts, plannerPort, portChoice} from './ports.ts';
 
 export type Layers = {waypoints: boolean; outlines: boolean; alignments: boolean; exclusions: boolean};
 export type LayerKey = keyof Layers;
@@ -199,13 +199,15 @@ export function createPlanner(deps: PlannerDeps) {
   });
   /** While ranked, every valid change redraws the ranked set on the Chart. */
   const stopRanked = effect(() => { if (ranked.value && summary.value.ok) emit(untracked(rankedDetail)); });
+  // SCJ-2c: the brief measures from this same port (web/ports.ts `plannerPort`).
+  const stopPort = effect(() => { plannerPort.value = {region: region.id, id: filters.value.port}; });
 
   // web/ports.ts `loadPorts` by default (10 s timeout, schema check, cleared on failure); a failed or missing list sets `portsFailed`.
   const portSource: () => Promise<{ports?: Port[]} | null> = deps.loadPorts ?? (() => loadPorts().then(list => ({ports: list.map(p => ({...p, match: [p.match[0], p.match[1]]}))})));
   const loadPortList = (): Promise<void> => Promise.resolve().then(portSource).then(d => {
     if (!Array.isArray(d?.ports)) throw Error('Port list unavailable');
     const list = d.ports.filter(p => p.region === region.id), chosen = filters.value.port;
-    batch(() => { ports.value = list; portsFailed.value = false; filters.value = {...filters.value, port: list.some(p => p.id === chosen) ? chosen : list.some(p => p.id === savedPort) ? savedPort! : list[0]?.id ?? ''}; });
+    batch(() => { ports.value = list; portsFailed.value = false; filters.value = {...filters.value, port: portChoice(list, chosen, savedPort)}; });
   }).catch(() => { portsFailed.value = true; }).finally(() => { portsReady.value = true; });
   const portsLoaded = loadPortList();
 
@@ -437,6 +439,6 @@ export function createPlanner(deps: PlannerDeps) {
     setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     /** For tests and a region change: stop drawing the ranked set. */
-    dispose: stopRanked,
+    dispose: () => { stopRanked(); stopPort(); },
   };
 }
