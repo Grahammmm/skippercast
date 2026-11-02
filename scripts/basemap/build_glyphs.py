@@ -20,11 +20,15 @@ hashes in scripts/web-vendor-sha256.json after a rebuild. Paste the printed
 `versions:` line into the commit that changes the glyph files.
 """
 import argparse
+import contextlib
 import hashlib
 import importlib.util
 import json
+import os
 import platform
+import stat
 import sys
+import tempfile
 from importlib import metadata
 from io import BytesIO
 from pathlib import Path
@@ -134,9 +138,29 @@ def build():
 
 
 def write(built):
+    if os.path.islink(OUT) or (OUT.exists() and not OUT.is_dir()):
+        raise SystemExit(f"build_glyphs: {PREFIX.rstrip('/')}: not a regular file or folder")
     OUT.mkdir(parents=True, exist_ok=True)
+    targets = [(rel, OUT / Path(rel).name) for rel in built]
+    for rel, target in targets:
+        if os.path.lexists(target) and not stat.S_ISREG(os.lstat(target).st_mode):
+            raise SystemExit(f"build_glyphs: {rel}: not a regular file or folder")
+    temps = []
+    try:
+        for rel, target in targets:
+            fd, temp = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=OUT)
+            temps.append(temp)
+            with os.fdopen(fd, "wb") as handle:
+                handle.write(built[rel]), handle.flush(), os.fsync(handle.fileno())
+            os.chmod(temp, 0o644)
+        for (rel, target), temp in zip(targets, temps):
+            os.replace(temp, target)
+    except OSError as exc:
+        for temp in temps:
+            with contextlib.suppress(OSError):
+                os.unlink(temp)
+        raise SystemExit(f"build_glyphs: {rel}: write failed ({type(exc).__name__})") from None
     for rel, data in built.items():
-        (OUT / Path(rel).name).write_bytes(data)
         print(f"{rel}: {len(data)} bytes")
 
 
