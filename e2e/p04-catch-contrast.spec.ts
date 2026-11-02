@@ -144,6 +144,10 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // SC2222-04 (#1238, mark card focus return): MapStage.tsx adds only tabIndex={-1} to the stage section and the
 // terrain host so MarkCard can return focus to the shown map. No class, colour, token or paint change; BODY09
 // mounts Reports/CatchCards, never MapStage. contrast(), assertions and thresholds are untouched. Rebind only MapStage.tsx.
+// SC2222-07 (#1247, desktop mark card): app.css adds only rules scoped to `.app-chrome-left > .app-mark` (scroll padding,
+// and a sticky .app-mark-actions row on the existing opaque --panel with the existing --line border), which the Reports
+// catch flow never renders; check_contrast.mjs changes only the appCss surface hash and its comment, with contrast(),
+// assertions and thresholds untouched. Rebind those two exact hashes.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
   "web/app/App.tsx": "f63bf478bdb77f4564495a454865a9999bf767ba1fe4953c8192777d69094fb0",
@@ -152,7 +156,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/app/MapStage.tsx": "11bfed22183687b9bdfa6c4a348688b633dd4eaab5607aeeb5718fb104c41466",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
-  "web/app/app.css": "c5b14f6eedcb57b4628ddc8edc2adfe6305b2ac515f1702e6a24a638539eb64a",
+  "web/app/app.css": "ae6b03d506037f735baaf561b08fb15cad815133dc973c7bd4052d4df932cbac",
   "packages/coast/panel.css": "fda5b83480f2c32243d5ff90b99e2581d459a46f88543d6a264705bdc8e821fb",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
@@ -166,7 +170,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // comment; Legend.tsx is not a BODY09 input and Reports never mounts the legend. contrast(), the one export this
   // spec reads, assertions and thresholds are untouched. Rebind only check_contrast.mjs. (Kept beside its pin, not in
   // the notes above, so it does not collide with SCJ-7 #1224's notes there.)
-  "scripts/check_contrast.mjs": "9a032cc458741a9d2b1a8ffd77a86513c63c92091e4456e6781ad8c48ae63f93",
+  "scripts/check_contrast.mjs": "5edb323e5f8845ef3269752ea5820d8db84f4760b0c43b0578ff411b0cf3c0a8",
   "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
   "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
