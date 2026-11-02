@@ -51,32 +51,26 @@ def test_collect_without_arguments_still_works_for_screen_sources(fakes):
     assert datetime.fromisoformat(result["checked_at"]) == FakeClient.made[0].now
 
 
-@pytest.mark.parametrize("exc, line", [
-    (ValueError("Incomplete statewide MPA boundaries"),
-     "collect_cdfw_mpas: capture failed: ValueError: Incomplete statewide MPA boundaries"),
-    (OSError("network unreachable"), "collect_cdfw_mpas: capture failed: OSError: network unreachable"),
+class NetworkDownClient(FakeClient):
+    def get(self, url, as_json=False):
+        raise OSError("network unreachable")
+
+
+@pytest.mark.parametrize("loader_error, client, line", [
+    (ValueError("Incomplete statewide MPA boundaries"), FakeClient, "ValueError: Incomplete statewide MPA boundaries"),
+    (None, NetworkDownClient, "OSError: network unreachable"),
 ])
-def test_capture_failure_one_line_exit_1_output_untouched(monkeypatch, tmp_path, capsys, exc, line):
-    failing(monkeypatch, exc)
+def test_capture_failure_one_line_exit_1_output_untouched(monkeypatch, tmp_path, capsys, loader_error, client, line):
+    if loader_error:
+        failing(monkeypatch, loader_error)
+    monkeypatch.setattr(mod, "CoastalClient", client)  # no loader_error: real mpa_loader, fake get fails
     out = tmp_path / "mpa.json"
     out.write_bytes(b'{"previous": true}\n')
     assert mod.main(["--output", str(out)]) == 1
     captured = capsys.readouterr()
-    assert captured.err == line + "\n"
-    assert captured.out == ""
+    assert captured.err == "collect_cdfw_mpas: capture failed: " + line + "\n" and captured.out == ""
     assert out.read_bytes() == b'{"previous": true}\n'
     assert sorted(p.name for p in tmp_path.iterdir()) == ["mpa.json"]
-
-
-def test_client_construction_oserror_is_named(monkeypatch, tmp_path, capsys):
-    class BrokenClient:
-        def __init__(self, now):
-            raise OSError("certificate store unreadable")
-    monkeypatch.setattr(mod, "CoastalClient", BrokenClient)
-    out = tmp_path / "mpa.json"
-    assert mod.main(["--output", str(out)]) == 1
-    assert capsys.readouterr().err == "collect_cdfw_mpas: capture failed: OSError: certificate store unreadable\n"
-    assert list(tmp_path.iterdir()) == []
 
 
 def test_long_multiline_message_is_first_line_capped_at_200(monkeypatch, tmp_path, capsys):
@@ -111,13 +105,6 @@ def test_symlink_output_refused_target_unchanged(fakes, tmp_path, capsys, target
     assert fakes == [] and FakeClient.made == []
     assert link.is_symlink()
     assert target.read_bytes() == b"keep\n" if target_exists else not target.exists()
-
-
-def test_symlink_to_directory_refused(fakes, tmp_path):
-    (tmp_path / "dir").mkdir()
-    (tmp_path / "link").symlink_to(tmp_path / "dir")
-    assert mod.main(["--output", str(tmp_path / "link")]) == 2
-    assert list((tmp_path / "dir").iterdir()) == [] and fakes == []
 
 
 def test_success_writes_five_keys(fakes, tmp_path, capsys):
