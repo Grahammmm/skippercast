@@ -11,6 +11,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
+import sys
 from zoneinfo import ZoneInfo
 
 from ..platform.contracts import REPO, ID, atomic_json, read_json, within
@@ -33,9 +34,11 @@ def collect_packet(ident, output, root=REPO, now=None):
     now = now or datetime.now(timezone.utc)
     jurisdiction, registry, _ = jurisdiction_files(ident, root)
     output = Path(output)
-    output.mkdir(parents=True, exist_ok=True)
-    if (output / 'packet.json').exists():
+    if output.exists() and not output.is_dir():
+        raise ValueError('Packet output is not a folder')
+    if output.exists() and any(output.iterdir()):
         raise ValueError('Use a new packet directory; preserve previous evidence')
+    output.mkdir(parents=True, exist_ok=True)
 
     def fetch(job):
         source_id = job[0]
@@ -96,9 +99,35 @@ def coverage(registry, sources, now, source_scope_ids=None):
     return report
 
 
+def _check_shapes(packet, decision):
+    """Name a malformed field (never its value) before any review rule runs."""
+    def _iso(value):
+        try:
+            return isinstance(value, str) and bool(datetime.fromisoformat(value.replace('Z', '+00:00')))
+        except ValueError:
+            return False
+    if not isinstance(packet, dict) or not isinstance(decision, dict):
+        raise ValueError('packet and decision must be objects')
+    if not _iso(decision.get('reviewed_at')):
+        raise ValueError('decision.reviewed_at must be an ISO time string')
+    if not isinstance(decision.get('sources', {}), dict):
+        raise ValueError('decision.sources must be an object')
+    for ident, choice in decision.get('sources', {}).items():
+        if not isinstance(choice, dict) or not isinstance(choice.get('note', ''), str):
+            raise ValueError(f'decision.sources.{ident} must be an object')
+    if not isinstance(packet.get('sources'), dict):
+        raise ValueError('packet.sources must be an object')
+    for ident, record in packet['sources'].items():
+        if not isinstance(record, dict) or not isinstance(record.get('data') or {}, dict):
+            raise ValueError(f'packet.sources.{ident} must be an object')
+        if record.get('data_retrieved_at') not in (None, '') and not _iso(record['data_retrieved_at']):
+            raise ValueError(f'packet.sources.{ident}.data_retrieved_at must be an ISO time string')
+
+
 def approved_registry(registry, jurisdiction, packet, decision, now=None):
     """Pure review gate: fail on stale, changed, cross-jurisdiction or incomplete evidence."""
     now = now or datetime.now(timezone.utc)
+    _check_shapes(packet, decision)
     validate_bindings(jurisdiction, registry)
     if packet.get('jurisdiction_id') != jurisdiction['id'] or decision.get('jurisdiction_id') != jurisdiction['id']:
         raise ValueError('Review belongs to another jurisdiction')
@@ -157,6 +186,17 @@ def main():
     fingerprint = commands.add_parser('fingerprint')
     fingerprint.add_argument('--jurisdiction', required=True)
     args = parser.parse_args()
+    try:
+        _run(args)
+    except (ValueError, OSError) as e:
+        if args.command == 'fingerprint':
+            raise
+        print(f'regulation review refused: {e}', file=sys.stderr)
+        return 1
+    return 0
+
+
+def _run(args):
     if args.command == 'collect':
         result = collect_packet(args.jurisdiction, args.output)
         print(json.dumps({'jurisdiction_id': args.jurisdiction, 'sources': {k: v['status'] for k,v in result['sources'].items()}}))
@@ -171,4 +211,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())
