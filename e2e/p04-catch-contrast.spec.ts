@@ -163,7 +163,12 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // comment; Legend.tsx is not a BODY09 input and Reports never mounts the legend. contrast(), the one export this
   // spec reads, assertions and thresholds are untouched. Rebind only check_contrast.mjs. (Kept beside its pin, not in
   // the notes above, so it does not collide with SCJ-7 #1224's notes there.)
-  "scripts/check_contrast.mjs": "9a032cc458741a9d2b1a8ffd77a86513c63c92091e4456e6781ad8c48ae63f93",
+  // BF-species-plans-page #1276 (target plan page): Legend.tsx adds only a PlanLink to the density row, so
+  // check_contrast.mjs changes only the legendTsx surface hash; Reports never mounts the legend. species.ts adds only
+  // optional Plan fields and the plans' reviewedAt date; Masthead.tsx adds a Plan label and icon but lists the same
+  // five masthead views, so the Reports masthead is unchanged. contrast(), assertions and thresholds are untouched.
+  // All three rebound.
+  "scripts/check_contrast.mjs": "1070e74998e89dc22f24e72359c99fd5f3e35b30309f66dc8834f43ef5892c3c",
   "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
   "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
