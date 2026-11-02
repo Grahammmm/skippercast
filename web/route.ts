@@ -16,6 +16,7 @@
 // below the straight line. Erasable syntax only (Node tests import it); no DOM, no fetch, no signals.
 import {distanceNm} from '../dist/spot-ranking.js';
 import {linesPlace, placeOf, type LandWaterLines, type LandWaterModel} from './land-water.ts';
+import {M_PER_NMI} from './units.ts';
 
 /** Most sub-cells one search expands before it gives up (`too-far`). */
 export const MAX_NODES = 400_000;
@@ -96,7 +97,7 @@ export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines |
     for (let gy = Math.floor(fy) - r; gy <= Math.floor(fy) + r; gy++) {
       for (let gx = Math.floor(fx) - r; gx <= Math.floor(fx) + r; gx++) {
         if (gx < 0 || gy < 0 || gx >= size || gy >= size) continue;
-        const m = distanceNm(p, centre(gy * size + gx)) * 1852;
+        const m = distanceNm(p, centre(gy * size + gx)) * M_PER_NMI;
         if (m <= SNAP_M && m < bestM && cellWater(gx, gy)) { best = gy * size + gx; bestM = m; }
       }
     }
@@ -108,7 +109,6 @@ export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines |
   const end = snap(to);
   if (end < 0) return fail(sawMixed ? 'lines-needed' : 'end-not-water');
   sawMixed = false;
-
   // A* over sub-cell ids (gy·size + gx); a binary heap ordered by f, then push order (deterministic ties).
   const goal = centre(end), g = new Map<number, number>([[start, 0]]), parent = new Map<number, number>(), closed = new Set<number>();
   const heap: Item[] = [];
