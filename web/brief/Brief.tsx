@@ -4,7 +4,7 @@
 // full: everything).
 //
 // Data: the region's daily feed (/feeds/data/regions/<id>/latest.json) with
-// the conditions feed's newer buoys first, both loaded by loadDailyFeed; the
+// the conditions feed's newer buoys first, both loaded by loadDailyFeed (read again like the forecast); the
 // regional forecast (/api/forecast?region=<id>, edge-cached, loaded once per
 // region by ensureRegionalForecast and shared with the Conditions view; web/conditions.ts briefForecast samples it at the
 // forecast point nearest the region centre) and, where web/coast-data.ts
@@ -28,14 +28,14 @@ import {dockTime, horizonDays} from '../hour.ts';
 import {loadRegs, regsData, regulationState, ruleSummary} from '../regs.ts';
 import {useEffect} from 'preact/hooks';
 import {hasOwnLimits, limitsFor, type ComfortLimits} from '../limits.ts';
-import {regionInfo, type RegionInfo} from '../app/App.tsx';
+import {regionInfo, type RegionInfo} from '../app/region-info.ts';
 import {Popover} from '../ui/Popover.tsx';
 import {buildCoastBrief, buildRegionalBrief} from './model.ts';
 import {Tiles} from './Tiles.tsx';
 import {TideStationControl} from './TideStationControl.tsx';
 import {tideSelection} from '../tide-selection.ts';
 import {withTideSelection} from '../tide-stations.ts';
-import {briefVerdict, VERDICT_WORD, type BriefVerdict} from './verdict.ts';
+import {briefVerdict, clockText, feedReader, VERDICT_WORD, type BriefVerdict} from './verdict.ts';
 import type {Brief as BriefModel, RegionalDailyFeed} from './types.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 
@@ -89,12 +89,27 @@ function dailyGap(conditions: RegionalDailyFeed): string {
 }
 
 /** Load the daily and conditions feeds for region `id`; failed fetches or feeds for another region leave the brief empty. */
-export async function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): Promise<RegionalDailyFeed | null> {
+export function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): Promise<RegionalDailyFeed | null> {
+  return readFeeds(id, fetchFn, false);
+}
+
+let dailyRequest: {id: string; fetchFn: typeof fetch} | null = null;
+let dailyLoadedAt = 0, dailyPending = false;
+
+async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean): Promise<RegionalDailyFeed | null> {
   const load = ++feedLoad;
-  feedGaps.value = [];
+  dailyRequest = {id, fetchFn};
+  dailyPending = true;
+  bindVisibility();
+  if (!refresh) feedGaps.value = [];
   const [daily, conditions] = await Promise.all([readFeed(dailyFeedPath(id), id, fetchFn), readFeed(feedPath(undefined, id), id, fetchFn)]);
   // A later load (another region) owns the feed and its gap lines; this one only returns what it read.
   if (load !== feedLoad) return mergeFeeds(daily, conditions);
+  dailyPending = false;
+  // A refresh that read neither keeps the feed and gap lines shown (readings carry their own times) and its old
+  // read time, so the next visible page tries again.
+  if (refresh && !daily && !conditions) return dailyFeed.peek();
+  dailyLoadedAt = Date.now();
   feedGaps.value = !daily && !conditions ? [FEED_GAP.both] : !daily ? [dailyGap(conditions!)] : !conditions ? [FEED_GAP.conditions] : [];
   dailyFeed.value = mergeFeeds(daily, conditions);
   return dailyFeed.peek();
@@ -149,11 +164,22 @@ export function refreshForecastIfStale(now = Date.now()): Promise<ConditionsFore
   return ensureRegionalForecast(req.id, req.near, req.fetchFn, req.page);
 }
 
+/** The brief's daily and conditions feeds follow the forecast's 30-minute rule. */
+export const DAILY_MAX_AGE_MS = FORECAST_MAX_AGE_MS;
+
+/** Read both feeds again for the last loaded region when the last read got neither or was over 30 minutes before `now`; no timer, only called as the page becomes visible. */
+export function refreshDailyIfStale(now = Date.now()): Promise<RegionalDailyFeed | null> | null {
+  const req = dailyRequest;
+  if (!req || dailyPending) return null;
+  if (dailyFeed.peek() && now - dailyLoadedAt <= DAILY_MAX_AGE_MS) return null;
+  return readFeeds(req.id, req.fetchFn, true);
+}
+
 // One listener for the page's life, bound on the first load.
 function bindVisibility() {
   if (visibilityBound || typeof document === 'undefined') return;
   visibilityBound = true;
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void refreshForecastIfStale(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { void refreshForecastIfStale(); void refreshDailyIfStale(); } });
 }
 
 export type BriefSources = {info: RegionInfo | null; feed: RegionalDailyFeed | null; forecast?: ConditionsForecast | null; coast: {report: Report; areaId: string} | null; profile: Profile; hour: string | null;
@@ -269,6 +295,11 @@ export function Verdict({now}: {now: Date}) {
   if (!v) return <><Headline brief={brief} />{rulesLine}</>;
   const when = leadDayText(date, now, tz);
   const provisional = !!brief?.provisional;
+  const a = v.agreement, gapText = (n: number) => String(Number(n.toFixed(1)));
+  const models = !a || a.state === 'none' ? null : a.state === 'agree' ? `Models agree through ${v.window?.split('–')[1]}: wind within ${gapText(a.gap!.wind)} kn, seas within ${gapText(a.gap!.sea)} ft.`
+    : a.state === 'differ' ? `Models differ at ${clockText(a.worst!.ms, tz)}: wind ${gapText(a.worst!.wind)} kn apart, seas ${gapText(a.worst!.sea)} ft apart.${a.differing > 1 ? ` (${a.differing} of ${a.hours} hours)` : ''}`
+    : a.state === 'partial' ? `Models compared for ${a.compared} of ${a.hours} hours; they agree on those.` : 'One model only for this window.';
+  const modelHour = a?.state === 'differ' && regionalForecast.value ? feedReader(regionalForecast.value, now).read(a.worst!.ms) : null;
   return (
     <div class="app-verdict" data-verdict={v.verdict} data-provisional={provisional ? 'true' : undefined}>
       <div class="app-verdict-head">
@@ -276,6 +307,8 @@ export function Verdict({now}: {now: Date}) {
         <Popover align="end">{v.basis === 'comfort-score' ? VERDICT_BASIS['comfort-score'] : VERDICT_BASIS.profile}{provisional ? ` ${PROVISIONAL_BASIS}` : ''}{v.score !== null ? ` Worst hour: ${v.score}/10.` : ''}</Popover>
       </div>
       <p class="app-verdict-limit">{v.limit}{v.held ? ` ${v.held}` : ''}</p>
+      {models ? <p class="app-verdict-models ui-mono" data-agreement={a!.state}>{models}</p> : null}
+      {modelHour ? <details class="app-verdict-models-detail"><summary>Model readings</summary>NOAA {gapText(modelHour.wind!)} kn, ECMWF {gapText(modelHour.other_wind!)} kn; NOAA {gapText(modelHour.sea!)} ft, ECMWF {gapText(modelHour.other_sea!)} ft.</details> : null}
       {rulesLine}
     </div>
   );

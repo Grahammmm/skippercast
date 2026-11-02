@@ -7,8 +7,11 @@ import {useEffect, useId, useMemo, useRef, useState} from 'preact/hooks';
 import type {TargetedSubmitEvent} from 'preact';
 import {Button} from '../ui/Button.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
+import {profile} from '../state.ts';
+import {PROFILE_TABLE} from '../profile.ts';
+import {limitsFor} from '../limits.ts';
 import {
-  alertDate, alertNames, alertSpecies, api, comfortBody, dateRange, disablePush, enablePush, eventLine, feedbackPhase, formProblem, tripBody, tripBoat, tripDefaults, tripLine,
+  alertDate, alertNames, alertSpecies, api, comfortBody, dateRange, disablePush, enablePush, eventLine, feedbackPhase, formProblem, profileTripDefaults, tripBody, tripBoat, tripDefaults, tripLine,
   type AlertEvent, type AlertForm, type BoatFactors, type Feedback, type RegionAlerts, type SavedTrip,
 } from '../alerts.ts';
 
@@ -67,7 +70,9 @@ function ConfirmDelete({onConfirm, onCancel}: {onConfirm: () => void; onCancel: 
 }
 
 function SignedIn({session, region, boat, target}: {session: SessionAnswer; region: RegionAlerts; boat: Boat; target: string | null}) {
-  const saved = tripBoat(boat.factors, boat.saved?.boat), limits = tripDefaults(boat.factors);
+  const [p] = useState(() => profile.peek());
+  const saved = p === 'boat' ? tripBoat(boat.factors, boat.saved?.boat) : null;
+  const limits = p === 'boat' ? tripDefaults(boat.factors) : profileTripDefaults(limitsFor(p));
   const choice = alertSpecies(region, target), names = useMemo(() => alertNames(region), [region]), range = dateRange(region.timezone);
   const [species, setSpecies] = useState(choice.value);
   const [status, setStatus] = useState('');
@@ -142,7 +147,9 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           <label>Sea limit · ft<input name="sea_limit" type="number" min="0.5" max="10" step="0.5" defaultValue={limits.sea} required /></label>
           <Button type="submit" variant="primary">Save this fishing window</Button>
         </form>
-        <p class="small" id="trip-boat-note">{saved
+        <p class="small" id="trip-boat-note">{p !== 'boat'
+          ? `Limits start from your ${PROFILE_TABLE[p].label} limits; alerts still judge wind, gusts and offshore seas only, not surf at your launch or beach.`
+          : saved
           ? `Limits start from your saved boat${saved.name ? ` (${saved.name})` : ''}; alerts judge wind chop for it too.`
           : 'Limits start from the reference 23 ft boat. Set your boat to tailor them.'}</p>
         <p class="small">Uses the selected target species. These alerts assess the saved area's weather window and reviewed rules; they do not plan navigation or predict catches.</p>
