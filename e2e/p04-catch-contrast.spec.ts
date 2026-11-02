@@ -130,9 +130,17 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // authority hosts and assets, read by web/regs.ts for the brief's legality line) when region.json names a
 // jurisdiction. The id/charters fields Reports reads, CSS, tokens, classes and catch markup are unchanged;
 // contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
+// SCJ-7: App.tsx's region reader answers 'missing' for a 404 region.json and loadRegion records it (regionLoad now
+// lives in web/ranking.ts, re-exported); Masthead.tsx's Location says the region does not exist with a link to "/".
+// No CSS, token, class or catch markup change; contrast(), assertions and thresholds are untouched. Rebind those two.
 // SCJ-9 (#1225, phone bottom bar): Masthead.tsx's TAB_VIEWS becomes the explicit list coast/conditions/history/reports
 // (Reports in, Fleet out; still four tabs). Same tab markup, classes and count; MASTHEAD_VIEWS, CSS, tokens and catch
 // markup are unchanged; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
+// Merge of SCJ-7 with SCJ-9: Masthead.tsx carries both changes (disjoint hunks); rebind its merged hash.
+// BF-landing-live (#1252): App.tsx's RegionInfo, regionInfo signal, currentRegionInfo, zone and createRegionReader
+// move unchanged to web/app/region-info.ts, which App.tsx imports and re-exports (one signal instance), so the
+// landing's verdict reaches them without the app shell. Reports' id/charters reads, CSS, tokens, classes and catch
+// markup are unchanged; contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
 // SC2222-06 (#1245, rail Chart-only entries): ui.css gives `.ui-button[aria-disabled="true"]` the existing
 // `:disabled` look and adds `:not([aria-disabled="true"])` to the three variant hover rules. Only Rail.tsx's RailItem
 // sets aria-disabled; BODY09 mounts Reports/CatchCards, which import no Rail or Button and carry no aria-disabled, so
@@ -140,8 +148,8 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // thresholds are untouched. Rebind only ui.css.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
-  "web/app/App.tsx": "6a77aa09c77ed2a281979d6413dcbaaa7b530ce79ba5926e59d8485e7c4cbe74",
-  "web/app/Masthead.tsx": "6428592ea5b06822b5215636b746fca35a1b0608aafbe86e56b12236e3131d55",
+  "web/app/App.tsx": "f63bf478bdb77f4564495a454865a9999bf767ba1fe4953c8192777d69094fb0",
+  "web/app/Masthead.tsx": "e6e634b4a6283f72255ce7a1fb3ef78e8d78be5f847d5d99c7655b7de94e2877",
   "web/app/LayerRail.tsx": "bdae57c4c4dca33b5fb83a413b7d5c6f525221a4fb6b78037a1ad99102635ccd",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
@@ -156,7 +164,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "92a15809e8895d2b66beecfda4e1c49a297edc7e2e27bdd1f21845b355502e11",
+  // SC2007-02 (Protected areas Try again): check_contrast.mjs changes only the legendTsx surface hash and its
+  // comment; Legend.tsx is not a BODY09 input and Reports never mounts the legend. contrast(), the one export this
+  // spec reads, assertions and thresholds are untouched. Rebind only check_contrast.mjs. (Kept beside its pin, not in
+  // the notes above, so it does not collide with SCJ-7 #1224's notes there.)
+  "scripts/check_contrast.mjs": "9a032cc458741a9d2b1a8ffd77a86513c63c92091e4456e6781ad8c48ae63f93",
   "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
   "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"

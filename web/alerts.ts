@@ -18,6 +18,15 @@ export function tripDefaults(factors: BoatFactors = {sea: 1, wind: 1, custom: fa
   return {wind, gust, sea: clamp(3 * factors.sea, .5, 10, .5)};
 }
 
+/** Profile comfort limits mapped to the trip form's accepted ranges and steps. */
+export function profileTripDefaults(limits: {wind: number; gust: number; seas: number}): Limits {
+  const reference = tripDefaults();
+  const clamp = (v: number, fallback: number, lo: number, hi: number, step: number) =>
+    Math.min(hi, Math.max(lo, Math.round((Number.isFinite(v) ? v : fallback) / step) * step));
+  const wind = clamp(limits.wind, reference.wind, 1, 30, 1);
+  return {wind, gust: Math.max(wind, clamp(limits.gust, reference.gust, 1, 40, 1)), sea: clamp(limits.seas, reference.sea, .5, 10, .5)};
+}
+
 /** The boat saved with the trip, or null for the reference boat. */
 export function tripBoat(factors: BoatFactors | null | undefined, boat: {name?: unknown} | null | undefined): TripBoat | null {
   if (!factors?.custom) return null;
