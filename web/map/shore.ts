@@ -20,7 +20,7 @@
 import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import type {Report} from '../../packages/coast/src/types.ts';
-import {geometryIntersects, pointInGeometry} from '../../dist/geo-screen.js';
+import {closureHits} from '../../dist/geo-screen.js';
 import {activeAlerts, alertCheckCurrent, beachNotices, nextShoreChange, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus, rankRuns, type ShoreRunClocks, type ShoreStatus} from '../brief/shore.ts';
 import {coastData} from '../coast-data.ts';
 import {PROFILE_TABLE} from '../profile.ts';
@@ -69,8 +69,7 @@ export const validPackage = (d: unknown, id: string): boolean => {
 /** Protected areas the run's line or access points lie in; null while the check is not current. */
 export function insideAreas(run: Run, screen: MarkScreen): string[] | null {
   if (screen.status !== 'ready') return null;
-  return screen.boundaries.filter(b => geometryIntersects(run.geometry, b.geometry)
-    || run.properties.access.some(a => pointInGeometry(a.coordinates, b.geometry))).map(b => b.name);
+  return closureHits([run.geometry, ...run.properties.access.map(a => ({type: 'Point', coordinates: a.coordinates}))], screen.boundaries).map(b => b.name);
 }
 
 /** The runs that draw at `now`, ranked, each with its status. */

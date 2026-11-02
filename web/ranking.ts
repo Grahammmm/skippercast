@@ -41,7 +41,7 @@ import {yardsFromShore} from './shore-distance.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt, type Profile} from './profile.ts';
 import {LAND_WATER_BASIS, NO_LAND_WATER, keepWater, withheldNote, type Place} from './land-water.ts';
 import type {HabitatFeature} from './map/coast-ranking.js';
-import {CHECKING, SCREEN_NOTES, fitLine, markFit, markShown, withheld, type AtlasTarget, type MarkData, type MarkScreen} from './map/habitat.ts';
+import {CHECKING, SCREEN_NOTES, fitLine, markAreas, markFit, markShown, withheld, type AtlasTarget, type MarkData, type MarkScreen} from './map/habitat.ts';
 
 /** How many places the brief lists (§ 10). */
 export const TOP = 4;
@@ -111,7 +111,7 @@ export function atlasPicks(data: MarkData | null, screen: MarkScreen, target: st
 function atlasScreened(data: MarkData | null, screen: MarkScreen, target: string, limitFt: number, origin: Origin | null, keep: Keep, place: Place): Screened {
   const rated = (data?.atlas?.targets ?? []).filter(t => {
     const [lo, hi] = t.neighborhood_depth_ft ?? [];
-    return markShown(t, target) && known(lo) && known(hi) && hi <= limitFt && !withheld(t, screen) && kept(keep, miles(origin, t), swim(keep, t));
+    return markShown(t, target) && known(lo) && known(hi) && hi <= limitFt && !withheld(t, screen, markAreas(t, data?.atlas)) && kept(keep, miles(origin, t), swim(keep, t));
   }).map(t => ({t, fit: markFit(t, target), score: (t as AtlasTarget & {habitat_score?: number}).habitat_score ?? 0}));
   rated.sort((a, b) => (b.fit?.n ?? 0) - (a.fit?.n ?? 0) || b.score - a.score || a.t.id.localeCompare(b.t.id));
   const {kept: onWater, withheld: held, pending} = keepWater(rated.map(r => ({...r, latitude: r.t.latitude, longitude: r.t.longitude})), place);
@@ -146,7 +146,7 @@ function habitatScreened(ranked: readonly HabitatFeature[], screen: MarkScreen, 
   const admitted = ranked.filter(f => {
     const p = f.properties;
     return p.region === region && known(p.depth_min_ft) && known(p.depth_max_ft) && p.depth_max_ft <= limitFt && known(p.waypoint_latitude) && known(p.waypoint_longitude)
-      && !withheld({latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}, screen)
+      && !withheld({latitude: p.waypoint_latitude, longitude: p.waypoint_longitude, geometry: f.geometry}, screen)
       && kept(keep, miles(origin, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}), swim(keep, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}));
   });
   const {kept: onWater, withheld: held, pending} = keepWater(admitted.map(f => ({f, latitude: f.properties.waypoint_latitude, longitude: f.properties.waypoint_longitude})), place);

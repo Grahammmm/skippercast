@@ -150,19 +150,37 @@ def gather(config, engine, output, now, previous=None, runner=subprocess.run):
             checks[key] = {"status": "failed", "issue": str(exc)[:160], "retrieved_at": now.isoformat(), "result_count": 0}
     raw_handle.cleanup()
     # Retained leads keep their original publication and collection dates, never a fresh status.
-    for old in (previous or {}).get("candidates", []):
+    olds = previous.get("candidates") if isinstance(previous, dict) else None
+    olds = olds if isinstance(olds, list) else []
+    valid = [o for o in olds if isinstance(o, dict) and isinstance(o.get("id"), str) and o["id"]]
+    for old in valid:
         published = iso(old.get("published_at"))
         if old.get("id") not in results and published and now - timedelta(days=config["lookback_days"]) <= published <= now:
             results[old["id"]] = {**old, "retained": True}
     candidates = sorted(results.values(), key=lambda x: (x["published_at"], x["id"]), reverse=True)
     usable = sum(c["status"] in ("ok", "partial") for c in checks.values())
+    skipped = {"previous_skipped": len(olds) - len(valid)} if len(olds) > len(valid) else {}
     return {"schema_version": 1, "generated_at": now.isoformat(), "upstream": config["upstream"],
             "lookback_days": config["lookback_days"], "checks": checks, "candidates": candidates,
             "health": {"status": "ok" if all(c["status"] == "ok" for c in checks.values()) else "degraded",
-                       "jobs_usable": usable, "jobs_total": len(checks), "watchlist_queries": len(jobs)},
+                       "jobs_usable": usable, "jobs_total": len(checks), "watchlist_queries": len(jobs), **skipped},
             "limitations": ["Candidates are search leads, not verified fishing trips or catch locations.",
                             "Publish date may differ from fishing date. No exact GPS, catch likelihood, or bite score is inferred.",
                             "Source failures and no-results have different meanings; coverage is source-specific."]}
+
+
+def _previous(path):
+    if not path or not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text())
+        reason = None if isinstance(data, dict) else "not an object"
+    except (OSError, UnicodeDecodeError, ValueError, RecursionError):
+        reason = "unreadable JSON"
+    if reason:
+        print("recent-intel: previous snapshot ignored: " + reason, file=sys.stderr)
+        return None
+    return data
 
 
 def main():
@@ -172,7 +190,7 @@ def main():
     p.add_argument("--previous", type=Path)
     p.add_argument("--config", type=Path, default=CONFIG)
     args = p.parse_args()
-    previous = json.loads(args.previous.read_text()) if args.previous and args.previous.is_file() else None
+    previous = _previous(args.previous)
     now = datetime.now(timezone.utc)
     data = gather(json.loads(args.config.read_text()), args.engine, args.output, now, previous)
     target = args.output / "recent-intel.json"

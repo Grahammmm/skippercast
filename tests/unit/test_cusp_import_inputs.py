@@ -15,9 +15,10 @@ MORRO = [-121.95, 34.95, -120.55, 35.85]
 
 
 def collection(region_id):
-    return {'type': 'FeatureCollection', 'features': [], 'provenance': {
-        'region_id': region_id, 'features': 0, 'tile_receipts': [], 'requested_tiles': 0,
-        'source_dates': [], 'held_creators': {}}}
+    """A run NOAA served one tile and one feature for (RF2320-3: a run with no tile served is never written)."""
+    return {'type': 'FeatureCollection', 'features': [{'type': 'Feature', 'properties': {}, 'geometry': None}],
+            'provenance': {'region_id': region_id, 'features': 1, 'tile_receipts': [{'tile': [12, 0, 0]}],
+                           'requested_tiles': 1, 'source_dates': [], 'held_creators': {}}}
 
 
 def box_of(cols, rows, x=1000, y=1600):
@@ -94,7 +95,7 @@ class CheckedBounds(unittest.TestCase):
 class Main(unittest.TestCase):
     def setUp(self):
         self.out = Path(self.enterContext(tempfile.TemporaryDirectory()))
-        self.extract = self.enterContext(patch.object(cusp, 'extract', side_effect=lambda rid, box: collection(rid)))
+        self.extract = self.enterContext(patch.object(cusp, 'extract', side_effect=lambda rid, box, get=None: collection(rid)))
 
     def run_main(self, *argv):
         stdout, stderr = io.StringIO(), io.StringIO()
