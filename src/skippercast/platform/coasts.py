@@ -49,5 +49,6 @@ def compile_coasts(root=REPO):
         region['watch_options'] = [t for t in options if t['id'] in region['watch']]
     directory['target_names'] = {k: v['name'] for k, v in targets.items()}
     directory.pop('extra_targets')
-    atomic_json(root / 'dist/data/coasts.json', directory)
+    # The build and the coastal watch (and parallel test workers) may compile at once.
+    atomic_json(root / 'dist/data/coasts.json', directory, unique_tmp=True)
     return directory
