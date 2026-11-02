@@ -41,6 +41,7 @@ import {dockState} from './TimeDock.tsx';
 import {addPlaceToTrip, addToTrip, placeTripId, reviewPlace, reviewTrip, tripIds} from '../trip.ts';
 import {regulationsLink} from '../map/habitat.ts';
 import {drawnSpots} from '../map/ranked.ts';
+import {mapFocusTarget} from './map-focus.ts';
 import {MarkForecast} from '../brief/MarkForecast.tsx';
 import type {LatLon} from '../brief/mark-forecast.ts';
 
@@ -157,7 +158,7 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
   const added = spot ? tripIds.value.includes(spot) : !!where && tripIds.value.includes(placeTripId(where.id));
   const regulations = selected.regulations ?? (habitat && markData.value?.region ? regulationsLink(markData.value.region) : undefined);
   const close = () => {
-    const back = returnTo?.isConnected ? returnTo : document.querySelector<HTMLElement>('.app-chart canvas');
+    const back = returnTo?.isConnected ? returnTo : mapFocusTarget(document);
     returnTo = null;
     clearMark(selected);
     back?.focus();
