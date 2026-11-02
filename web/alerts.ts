@@ -6,6 +6,8 @@
 //
 // Erasable syntax only: the node tests import this file by type stripping.
 
+import {DEFAULT_ZONE} from './zone.ts';
+
 /** A boat's comfort factors (dist/boat-handling.js `boatFactors`). */
 export type BoatFactors = {sea: number; wind: number; chopPeriod?: number; custom?: boolean};
 export type TripBoat = {name: string; sea: number; wind: number; chop_period: number | undefined};
@@ -84,8 +86,34 @@ export const comfortBody = (region: string, rating: number, phase: string) =>
   ({region, rating, phase, wind: null, sea: null, period: null, heading: null, point: null});
 
 export type SavedTrip = {id: string; date: string; point: string; species: string; start_hour: number; end_hour: number; boat_name?: string | null; boat_sea?: number | null};
-export type AlertEvent = {id: string | number; kind: string; status: string; message: string};
+export type AlertEvent = {id: string | number; trip_id?: string; kind: string; status: string; message: string};
 export type Feedback = {observed_at: string; rating: number; context: string};
+
+/** Group private records by Pacific trip date; later array entries win within each assessment kind. */
+export function tripRecaps(trips: SavedTrip[], events: AlertEvent[], feedback: Feedback[], today: string): {
+  upcoming: SavedTrip[]; past: {trip: SavedTrip; final: AlertEvent | null; reports: Feedback[]}[];
+} {
+  const days = new Intl.DateTimeFormat('en-CA', {timeZone: DEFAULT_ZONE});
+  const reports = new Map<string, Feedback[]>();
+  for (const report of feedback) {
+    const at = new Date(report.observed_at);
+    if (!Number.isFinite(at.getTime())) continue;
+    const day = days.format(at);
+    reports.set(day, [...(reports.get(day) ?? []), report]);
+  }
+  const finals = new Map<string, AlertEvent>(), missed = new Map<string, AlertEvent>();
+  for (const event of events) {
+    if (!event.trip_id) continue;
+    if (event.kind === 'final') finals.set(event.trip_id, event);
+    else if (event.kind === 'missed-final') missed.set(event.trip_id, event);
+  }
+  return {
+    upcoming: trips.filter(t => t.date >= today).sort((a, b) => a.date.localeCompare(b.date)),
+    past: trips.filter(t => t.date < today).sort((a, b) => b.date.localeCompare(a.date)).map(trip => ({
+      trip, final: finals.get(trip.id) ?? missed.get(trip.id) ?? null, reports: reports.get(trip.date) ?? [],
+    })),
+  };
+}
 
 export type AlertNames = {point: Map<string, string>; species: Map<string, string>};
 /** The region's area and species names by id (species named as in the alert species list). */
