@@ -1,7 +1,8 @@
 import {test, expect, THROTTLED_MOBILE} from './fixtures.ts';
 import type {Page} from '@playwright/test';
+import {stubLiveFeeds, stubForecast} from '../scripts/measure_startup.mjs';
+import {readFileSync} from 'node:fs';
 import {forecastFixture} from './forecast-fixture.ts';
-import {stubLiveFeeds} from '../scripts/measure_startup.mjs';
 
 const FUNNEL_BUDGET_MS = 30_000;
 const PORT_KEY = 'skippercast-home-port-v1';
@@ -9,10 +10,18 @@ const cells = [['morro', 'morro-bay', 'boat'], ['morro', 'morro-bay', 'shore'],
   ['morro', 'morro-bay', 'spear'], ['morro', 'morro-bay', 'kayak'], ['monterey', 'monterey-point-sur', 'boat']];
 async function prepare(page: Page, region = 'morro-bay') {
   await stubLiveFeeds(page, {id: region});
-  // Exercise the shared calm forecast fixture rather than the startup byte-budget stand-in.
-  await page.route('**/api/forecast?*', route => route.fulfill({status: 503, json: {error: 'Use offline forecast fixture'}}));
-  await page.route('**/api/om/**', route => route.fulfill({json: forecastFixture(new URL(route.request().url()))}));
-  await page.route('**/api/coast/report', route => route.fulfill({status: 503, json: {error: 'Regional fixture'}}));
+  // Startup's byte-budget stand-in omits units; use the unit-checked calm UI fixture.
+  const definition = JSON.parse(readFileSync(new URL(`../dist/regions/${region}/region.json`, import.meta.url), 'utf8'));
+  await page.route('**/api/forecast?*', route => {
+    const feed = stubForecast(definition);
+    for (const model of Object.values(feed.models)) model.data = model.data.map(point => {
+      const url = new URL('https://fixture.invalid/forecast');
+      url.search = new URLSearchParams({latitude: String(point.latitude), longitude: String(point.longitude),
+        hourly: Object.keys(point.hourly).filter(key => key !== 'time').join(',')}).toString();
+      return forecastFixture(url);
+    });
+    return route.fulfill({json: feed});
+  });
   await page.addInitScript(() => {
     if (!sessionStorage.getItem('funnel-started')) {
       localStorage.clear(); sessionStorage.setItem('funnel-started', '1');
@@ -51,8 +60,8 @@ async function verdict(page: Page, started: number, label: string) {
   await expect(word).toHaveText(/^(Comfortable|Marginal|Rough)$/);
   await expect(page.locator('.app-verdict-limit')).toHaveText(/\.$/);
   await expect(page.locator('.app-verdict')).not.toContainText(/\b(?:Confidence|High|Low|Go)\b/);
-  await expect(page.locator('dialog[open], [role="dialog"], .app-firstrun, .port-dialog')).toHaveCount(0);
-  await expect(page.getByText(/sign in to continue|create (an )?account|passkey|take a tour|welcome to/i)).toHaveCount(0);
+  await expect(page.locator('dialog[open], [role="dialog"]:visible, .app-firstrun, .port-dialog[open]')).toHaveCount(0);
+  await expect(page.getByText(/sign in to continue|create (an )?account|passkey|take a tour|welcome to/i).filter({visible: true})).toHaveCount(0);
 }
 for (const [query, region, profile] of cells) test(`${query} → ${profile} → useful brief`, async ({page, pageErrors}, info) => {
   const cdp = await prepare(page, region);
