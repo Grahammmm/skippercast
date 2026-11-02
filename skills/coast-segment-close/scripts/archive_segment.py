@@ -6,6 +6,7 @@ index, via coast_ledger.append_index; this script is the ONLY archived writer)
 -> ledger snapshots into the archive. Never deletes, never writes raw, never
 overwrites: the close-id directory must be new and empty.
 """
+import argparse
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,18 @@ from close_common import (CAMPAIGN_SNAPSHOT, HEADER, MANIFEST, SEGMENT_SNAPSHOT,
 from close_common import archive_metrics, quiescent
 
 DEFAULT_RESERVE = 200 * 10**9
+MAX_RESERVE = 10**15
+RESERVE_REFUSAL = 'reserve_bytes must be a whole number of bytes from 0 to 10**15'
+
+
+def _reserve(text):
+    try:
+        value = int(text)
+    except ValueError:
+        value = -1
+    if not 0 <= value <= MAX_RESERVE:
+        raise argparse.ArgumentTypeError(RESERVE_REFUSAL)
+    return value
 
 
 def tip(raw):
@@ -33,6 +46,7 @@ def archive(resolver, *, campaign_path, ledger, campaign_ledger, head, reserve_b
     repo roots). ``extra_documents`` lets offline tests add explicitly enumerated
     producer receipts as roots; the CLI never discovers any.
     """
+    require(type(reserve_bytes) is int and 0 <= reserve_bytes <= MAX_RESERVE, RESERVE_REFUSAL)
     bindings = resolver.bindings
     queue_id = find_root(bindings, 'queue:')
     archive_id = find_root(bindings, 'archive:')
@@ -194,7 +208,7 @@ def main():
     cli.add_argument('--ledger', required=True, type=absolute)
     cli.add_argument('--campaign-ledger', required=True, type=absolute)
     cli.add_argument('--header', required=True, type=absolute, help='Card-authenticated runtime header JSON: ' + ','.join(HEADER))
-    cli.add_argument('--reserve-bytes', type=int, default=DEFAULT_RESERVE)
+    cli.add_argument('--reserve-bytes', type=_reserve, default=DEFAULT_RESERVE)
     args = cli.parse_args()
     bindings = load_json(args.roots)
     resolver = Resolver(bindings, allowed_root_ids=args.allowed_root_id)
