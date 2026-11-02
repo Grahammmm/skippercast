@@ -417,14 +417,32 @@ def markdown(r: Mapping) -> str:
 
 # ---------------------------------------------------------------- command line
 
+def _check_override(base: dict, override: dict, where: str = "") -> None:
+    """Every key path of ``override`` exists in ``base``, sections stay sections and numbers are finite."""
+    for key, value in override.items():
+        if key not in base and where != "max_open_trip_hours.":   # new vessel classes are allowed there
+            raise ValueError(f"--thresholds: unknown key {where}{key}")
+        if isinstance(base.get(key), dict):
+            if not isinstance(value, dict):
+                raise ValueError(f"--thresholds: {where}{key} must be an object of thresholds")
+            _check_override(base[key], value, f"{where}{key}.")
+        # abs() <= max float is math.isfinite without the OverflowError a huge JSON integer would raise.
+        elif isinstance(value, bool) or not isinstance(value, (int, float)) or not abs(value) <= sys.float_info.max:
+            raise ValueError(f"--thresholds: {where}{key} must be a finite number")
+
+
 def _thresholds(region, path: str | None) -> ActivityThresholds | None:
     """The region's activity thresholds with ``path``'s JSON object merged over them (nested one level)."""
     if not path:
         return None
-    override = json.loads(Path(path).read_text(encoding="utf-8"))
+    try:
+        override = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (ValueError, RecursionError) as error:   # UnicodeDecodeError and JSONDecodeError are ValueErrors
+        raise ValueError("--thresholds: not readable JSON") from error
     if not isinstance(override, dict):
         raise ValueError("--thresholds takes a JSON object of activity thresholds")
     base = json.loads(json.dumps(ActivityThresholds.from_region(region).raw))
+    _check_override(base, override)
     for key, value in override.items():
         base[key] = {**base[key], **value} if isinstance(value, dict) and isinstance(base.get(key), dict) else value
     return ActivityThresholds.from_mapping(base)
@@ -442,13 +460,14 @@ def main(argv=None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     try:
         region = load_region(args.region)
+        thresholds = None if args.sync_only else _thresholds(region, args.thresholds)   # checked before any sync
         root = ais_root(region.id)
         if not args.offline:
             counts = sync(region, job_worker("use --offline to score the last sync"), root)
             print(json.dumps({"sync": counts}, sort_keys=True))
             if args.sync_only:
                 return 0
-        result = report(region, root, thresholds=_thresholds(region, args.thresholds), labeller=args.labeller)
+        result = report(region, root, thresholds=thresholds, labeller=args.labeller)
     except (FleetConfigError, WorkerError, ValueError, OSError) as error:
         print(f"fleet ais validate: {error}", file=sys.stderr)
         return 2
