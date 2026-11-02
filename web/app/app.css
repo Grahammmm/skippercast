@@ -19,7 +19,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 
 /* Masthead */
 .app-masthead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); background: var(--panel); }
-.app-brand { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text); font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); text-decoration: none; }
+.app-brand { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--space-5); color: var(--text); font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); text-decoration: none; }
 .app-brand .icon { color: var(--mint); }
 .app-location { color: var(--muted); text-transform: uppercase; letter-spacing: var(--tracking-eyebrow); }
 .app-views { display: flex; gap: var(--space-1); margin: 0 auto; padding: 0; list-style: none; }
@@ -111,6 +111,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-brief-links a { display: inline-flex; align-items: center; min-height: var(--touch-min); }
 .app-local { color: var(--muted); }
 .app-brief-footer { margin-top: auto; padding-top: var(--space-3); border-top: 1px solid var(--line); color: var(--muted); font-size: var(--text-11); }
+.app-brief-footer a { display: inline-flex; align-items: center; min-height: var(--space-5); }
 
 /* Map stage and its chrome */
 .app-stage { --app-terrain-controls-bottom: calc(2 * var(--touch-min) + var(--space-7) + var(--space-3)); --app-terrain-controls-height: calc(4 * var(--touch-min) + 2px); position: relative; min-height: 480px; background: var(--bg-deep); overflow: hidden; }
