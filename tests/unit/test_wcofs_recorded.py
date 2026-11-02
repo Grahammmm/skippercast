@@ -1,14 +1,8 @@
-"""NB-SC-12: ocean.wcofs() run on one recorded, unedited WCOFS provider response.
-
-Only the frame reply is recorded: tests/fixtures/recorded/wcofs/20261101.ascii, with its URL, retrieval
-time and sha256 in the sibling .json. The catalog, .dds, .das and axis replies below are minimal
-scaffolding whose only job is to place that recorded window at the indices the recorded URL names.
-"""
+"""NB-SC-12: ocean.wcofs() on one recorded, unedited WCOFS reply (tests/fixtures/recorded/wcofs, sidecar
+has URL, time, sha256). Catalog/.dds/.das/axis replies are scaffolding that only place the recorded window
+at the indices its URL names."""
 from datetime import datetime, timezone
-import hashlib
-import json
-import re
-import unittest
+import hashlib, json, re, unittest
 from urllib.parse import urlsplit
 from skippercast.pipeline.ocean import dap_arrays, wcofs
 from tests._support import ROOT
@@ -121,7 +115,3 @@ class RecordedWcofsTests(unittest.TestCase):
             run(TEXT[:len(TEXT) // 2])
         with self.assertRaises(ValueError):
             run(TEXT[:int(len(TEXT) * 0.9)])
-
-
-if __name__ == '__main__':
-    unittest.main()
