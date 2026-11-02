@@ -8,6 +8,7 @@
 // control is reachable by keyboard; no horizontal page scroll at any
 // viewport preset; axe is clean; the page paints within the LCP budget on
 // the throttled mobile profile (FE-09, design § 13).
+import {build} from 'esbuild';
 import type {Page} from '@playwright/test';
 import {test, expect, VIEWPORTS, LCP_BUDGET_MS, AERIAL_LCP_BUDGET_MS} from './fixtures.ts';
 
@@ -366,4 +367,43 @@ test('FE-60: no duplicate map, picker or timeline for one context (/map and /coa
     }
   }
   expect(pageErrors).toEqual([]);
+});
+test('BF-graceful-gaps: render failures stay local, retry recovers or fails once, and fallback is accessible', async ({page, pageErrors, v2}) => {
+  const bundle = await build({stdin: {resolveDir: process.cwd(), loader: 'tsx', contents: `
+    import {render} from 'preact'; import {useState} from 'preact/hooks'; import {Guard} from './web/ui/Guard.tsx'; import './web/tokens.css';
+    let attempts = 0; function Once() { if (!attempts++) throw Error('once'); return <p id="recovered">Recovered</p>; }
+    function Broken() { throw Error('persistent'); } function Slot() { /* One position switching guarded views, as the shell's view ternaries do. */ const [v, set] = useState('fails'); return <><button type="button" id="switch" onClick={() => set('healthy')}>Switch view</button>{v === 'fails' ? <Guard name="fails"><Broken /></Guard> : <Guard name="healthy"><p id="healthy">Healthy</p></Guard>}</>; }
+    render(<main><h1>Fixture</h1><Guard name="once"><Once /></Guard><Guard name="broken"><Broken /></Guard><Slot /><p id="sibling">Still here</p></main>, document.body);
+  `}, bundle: true, format: 'iife', outfile: 'fixture.js', write: false, jsx: 'automatic', jsxImportSource: 'preact', loader: {'.woff2': 'dataurl'}});
+  const logs: string[] = []; page.on('console', m => { if (m.type() === 'error' && m.text().startsWith('[guard]')) logs.push(m.text()); });
+  await page.route('**/guard-fixture', route => route.fulfill({contentType: 'text/html', body: '<!doctype html><html lang="en"><title>Guard fixture</title><body></body></html>'}));
+  await page.goto('/guard-fixture');
+  await page.addStyleTag({content: bundle.outputFiles.find(f => f.path.endsWith('.css'))!.text});
+  await page.addScriptTag({content: bundle.outputFiles.find(f => f.path.endsWith('.js'))!.text});
+  await expect(page.locator('[data-guard]')).toHaveCount(3);
+  await expect(page.locator('[data-guard="once"]')).toHaveAttribute('role', 'status');
+  await expect(page.locator('[data-guard="once"] p')).toHaveText('This part could not load. The rest of the page still works.');
+  await expect(page.locator('#sibling')).toHaveText('Still here'); expect(logs).toHaveLength(3);
+  await v2.a11y('v2-guard');
+  await page.locator('[data-guard="once"] button').focus(); await page.keyboard.press('Enter');
+  await expect(page.locator('#recovered')).toHaveText('Recovered'); await expect(page.locator('[data-guard="once"]')).toHaveCount(0); expect(logs).toHaveLength(3);
+  for (let i = 0; i < 2; i++) {
+    await page.locator('[data-guard="broken"] button').click(); await expect(page.locator('[data-guard="broken"]')).toHaveCount(1);
+    await expect.poll(() => logs.length).toBe(4 + i); await expect(page.locator('#recovered')).toBeVisible(); await expect(page.locator('#sibling')).toBeVisible();
+  }
+  await page.locator('#switch').click(); await expect(page.locator('#healthy')).toHaveText('Healthy'); await expect(page.locator('[data-guard="fails"], [data-guard="healthy"]')).toHaveCount(0); expect(logs).toHaveLength(5); expect(pageErrors).toEqual([]);
+});
+test('BF-graceful-gaps: missing conditions and malformed fleet leave the shell usable', async ({page, pageErrors, v2, isMobile}) => {
+  await page.route('**/feeds/conditions/regions/morro-bay/latest.json', r => r.fulfill({status: 500, body: 'failed'}));
+  await page.route('**/api/forecast?*', r => r.fulfill({status: 500, body: 'failed'}));
+  await page.route('**/api/om/**', r => r.fulfill({status: 500, body: 'failed'}));
+  let fleetReads = 0; await page.route('**/api/session', r => r.fulfill({json: {is_admin: true}})); await page.route('**/api/fleet/**', r => { fleetReads++; return r.fulfill({contentType: 'application/json', body: '{broken'}); });
+  await v2.open('app', {...AREA, layers: 'fleet'});
+  await expect(page.locator(isMobile ? '.app-top' : '.app-masthead')).toBeVisible();
+  await expect(page.locator('h1')).toHaveText(/Readings unavailable|Unknown|Waiting for readings/);
+  await expect(page.locator('canvas.maplibregl-canvas')).toBeVisible(); await expect(page.locator('input[aria-label="Hour"]')).toBeVisible();
+  if (isMobile) { await page.locator('.ui-sheet-handle').focus(); await page.keyboard.press('End'); }
+  await page.locator('.app-details summary').click();
+  await expect(page.locator('.app-details')).toContainText('Conditions feeds could not be read: no buoy, tide or marine alert readings. The map, rules and trip tools still work.');
+  await expect.poll(() => fleetReads).toBeGreaterThan(0); expect(pageErrors).toEqual([]);
 });
