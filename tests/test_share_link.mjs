@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {dockTime} from '../web/hour.ts';
-import {HOME_PORT_KEY, currentPort, linkedPort, portURL} from '../web/ports.ts';
+import {HOME_PORT_KEY, currentPort, exploreURL, linkedPort, portURL} from '../web/ports.ts';
 import {PROFILES, PROFILE_TABLE} from '../web/profile.ts';
 import {SHARED_VIEW_KEYS, shareLink, shareOrCopy} from '../web/share-link.ts';
 import {configureStore, parsePort, port, readURL, syncFromURL, withParams} from '../web/state.ts';
@@ -87,6 +87,21 @@ test('a directory that failed to load still builds a link, without a port', () =
     assert.equal(params(made.url).region, SOCAL);
     assert.equal(made.title, 'Wed Nov 4 · Boat');
   }
+});
+
+test('Explore the coast round-trips: a region-less link names its coast, so the recipient is not sent to their saved home', () => {
+  const explore = new URL(exploreURL(`${ORIGIN}/map?region=${SOCAL}&port=san-diego`)).search.slice(1);
+  const made = link(explore, {savedId: 'santa-barbara'});
+  assert.deepEqual([...new URL(made.url).searchParams.keys()], ['coast', 'profile', 'day']);
+  assert.equal(params(made.url).coast, 'central');
+  const opened = readURL(made.url);
+  assert.equal(opened.region, null);
+  assert.equal(opened.coast, 'central', 'web/app/main.tsx redirects only when region and coast are both missing');
+  assert.equal(made.title, 'Wed Nov 4 · Boat');
+  for (const query of ['', 'coast=a&coast=b', `coast=${encodeURIComponent('<x>')}`]) {
+    assert.equal(params(link(query).url).coast, 'central', `never locationless: ${query}`);
+  }
+  assert.equal('coast' in params(link(`region=${SOCAL}&coast=central`).url), false, 'a region is the geography when there is one');
 });
 
 test('whitelist, not echo: only documented keys, in order, re-encoded', () => {

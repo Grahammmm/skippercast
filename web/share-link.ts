@@ -36,6 +36,12 @@ export interface ShareLink {readonly url: string; readonly title: string}
 export const shareDayText = (date: string): string =>
   new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric'}).replace(',', '');
 
+/** The coast a region-less link names: the address's own single, well-formed ?coast=, else `central` (exploreURL's). */
+export function shareCoast(values: readonly string[]): string {
+  const [only] = values;
+  return values.length === 1 && only !== undefined && /^[a-z0-9-]{1,40}$/.test(only) ? only : 'central';
+}
+
 /** The canonical link to what the page shows now, and its share-sheet title. */
 export function shareLink({href, origin, ports, region, savedId, profile, now, tz, dockDay}: ShareInput): ShareLink {
   const from = fishLink(href).searchParams;
@@ -47,7 +53,10 @@ export function shareLink({href, origin, ports, region, savedId, profile, now, t
   // The dock's own rule: an hour wins; a later horizon day keeps its date; a past or far day reads as today.
   const shown = dockTime(dockDay === undefined ? from.get('day') : dockDay, hour, now, tz, days);
   const day = days.some(d => d.day === shown.day) ? shown.day : null;
+  // Geography is always named, so the recipient never falls through to their own saved home (web/app/main.tsx):
+  // the region, else the coast view the address shows ("Explore the coast", exploreURL), else that same coast view.
   if (region) p.set('region', region);
+  else p.set('coast', shareCoast(from.getAll('coast')));
   if (port) p.set('port', port.id);
   if (isProfile(profile)) p.set('profile', profile);
   if (day) p.set('day', day);
