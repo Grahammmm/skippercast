@@ -120,24 +120,14 @@ def restore(s3, bucket, root, name, *, include_cache=True):
     return True
 
 
-def _read(path, base, label, walk):
-    try:  # Any damage (incl. bad UTF-8/JSON) in a receipt object is named by its relative path.
-        data = json.loads(path.read_bytes().decode('utf-8'))
-        if isinstance(data, dict):
-            return walk(data)
-    except (ValueError, LookupError, TypeError):
+def _read(path, base, walk, label='Damaged private reach state', name='(?s:.*)'):
+    try:  # A damaged receipt is named by its path, not left as a KeyError/TypeError.
+        found = walk(json.loads(path.read_bytes().decode('utf-8')))
+        if isinstance(found, list) and all(re.fullmatch(name, item) for item in found):
+            return found
+    except (ValueError, LookupError, TypeError, AttributeError):
         pass
     raise ValueError(f'{label}: {path.relative_to(base).as_posix()}')
-
-
-def _get(value, keys, kind: type = str, default=None):
-    for key in keys:  # Only a missing object key with a default set is not damage.
-        if isinstance(value, dict) and key not in value and default is not None:
-            return default
-        value = value[key]
-    if not isinstance(value, kind):
-        raise LookupError(keys)
-    return value
 
 
 def reach_paths(root, reach):
@@ -147,18 +137,20 @@ def reach_paths(root, reach):
     # matrix worker restore unrelated coastal archives as the catalog grew.
     folders = [base/'reaches'/reach, base/'private-reaches'/reach]
     hashes = set()
-    walks = (('coverage-checkpoint.json', lambda d: _get(d, ['source_hashes'], list, [])),
-             ('run.json', lambda d: [_get(r, ['sha256']) for r in _get(d, ['inputs', 'sources'], list, [])]
-              + [_get(b, ['row', 'sha256']) for b in _get(d, ['inputs', 'substrate_bindings'], dict, {}).values()]),
+    for folder in folders:
+        checkpoint = folder/'coverage-checkpoint.json'
+        if checkpoint.exists():
+            hashes.update(_read(checkpoint, base, lambda d: d.get('source_hashes', [])))
+        receipt = folder/'run.json'
+        if receipt.exists():  # `[] +` rejects a source list that is not a list.
+            hashes.update(_read(receipt, base, lambda d: [r['sha256'] for r in [] + d.get('inputs', {}).get('sources', [])]
+                                + [b['row']['sha256'] for b in d.get('inputs', {}).get('substrate_bindings', {}).values()]))
+        classified = folder/'classified-run.json'
+        if classified.exists():
             # Original interpretation files may not contribute to the graded
             # bathymetry run. A clean publisher must still authenticate them.
-             ('classified-run.json', lambda d: [_get(s, k) for s in _get(d, ['inputs', 'physical', 'sources'], list)
-              for k in (['depth_source', 'sha256'], ['classification_binding', 'row', 'sha256'])]))
-    for folder in folders:
-        for name, walk in walks:
-            if (folder/name).exists():
-                hashes.update(_read(folder/name, base, 'Damaged private reach state',
-                                    lambda d: [_get(h, []) for h in walk(d)]))
+            hashes.update(_read(classified, base, lambda d: [h for s in [] + d['inputs']['physical']['sources'] for h in (
+                s['depth_source']['sha256'], s['classification_binding']['row']['sha256'])]))
     if any(not re.fullmatch('[a-f0-9]{64}', h) for h in hashes):
         raise ValueError('Invalid source hash in private reach state')
     directories = folders + [base/'cache'/h for h in sorted(hashes)]
@@ -171,10 +163,8 @@ def shared_paths(root):
     paths = [base/'reference/cells.json', base/'reference/run.json']
     snapshot = base/'screen/snapshot.json'
     if snapshot.exists():
-        files = _read(snapshot, base, 'Damaged screen snapshot',
-                      lambda d: [_get(r, ['file']) for r in _get(d, ['layers'], dict).values()])
-        if any(not re.fullmatch('[A-Za-z0-9._-]+', f) or f in ('.', '..') for f in files):
-            raise ValueError('Damaged screen snapshot: screen/snapshot.json')
+        files = _read(snapshot, base, lambda d: [r['file'] for r in d['layers'].values()],
+                      'Damaged screen snapshot', r'(?!\.\.?$)[A-Za-z0-9._-]+')  # a plain name, not . or ..
         paths += [snapshot] + [base/'screen'/f for f in files]
     paths += [base/'screen'/n for n in ('source-receipts.json', 'refresh-failure.json')
               if (base/'screen'/n).exists()]
