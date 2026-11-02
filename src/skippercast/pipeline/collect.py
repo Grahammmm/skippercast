@@ -220,6 +220,15 @@ def grid_loader(kind, bounds=None, config=None):
     return load
 
 
+def expected_units(wave):
+    """One unit per requested hourly variable, as the sampler reports it for model_loader's params."""
+    if wave:
+        return {f"{p}_{q}": u for p in ("wave", "wind_wave", "swell_wave", "secondary_swell_wave")
+                for q, u in (("height", "ft"), ("period", "s"), ("direction", "°"))}
+    return {"wind_speed_10m": "kn", "wind_gusts_10m": "kn", "wind_direction_10m": "°", "visibility": "m",
+            "precipitation": "mm", "temperature_2m": "°F", "cloud_cover": "%", "weather_code": "wmo code"}
+
+
 def model_loader(model, points=None):
     points = POINTS if points is None else points
     wave = model in ("ecmwf_wam", "ncep_gfswave016")
@@ -250,9 +259,9 @@ def model_loader(model, points=None):
                 raise ValueError("Forecast time axis invalid")
             if any(len(hourly.get(v, [])) != len(times) for v in variables):
                 raise ValueError("Forecast variable coverage mismatch")
-            expected = {"wave_height": "ft", "wave_period": "s"} if wave else {"wind_speed_10m": "kn", "wind_gusts_10m": "kn"}
-            if any(units.get(k) != v for k, v in expected.items()):
-                raise ValueError("Forecast units changed")
+            for var, unit in expected_units(wave).items():
+                if units.get(var) != unit:
+                    raise ValueError(f"Forecast units changed: {var} {units.get(var)!r}")
         return {"model": model, "sample_at": stamp(datetime.fromtimestamp(initialized, timezone.utc)),
                 "meta": meta, "requested_points": [{"name": p[0], "latitude": p[1], "longitude": p[2]} for p in points],
                 "points": data, "note": "SkipperCast forecast tiles built from NOAA and ECMWF open data; the app samples the same tiles."}

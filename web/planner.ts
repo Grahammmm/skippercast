@@ -78,6 +78,8 @@ export interface PlannerDeps {
   emit?: (detail: RankedDetail) => void;
   /** The region's land/water check for these spots (web/land-water.ts `ensureLandWater`). */
   landWater?: (region: string, spots: readonly Target[]) => Promise<Place>;
+  /** The day the app shows (web/state.ts `day`, "YYYY-MM-DD", null = today): an empty planner opens dated to it (SCJ-8). */
+  viewDay?: () => string | null;
 }
 
 /** The one published file the opt-in depth contour tracks read: `{collection: null}` when the region publishes none; `retry` when the read dropped (asked again on the next toggle). */
@@ -101,7 +103,7 @@ const STORAGE_OK = 'Saved on this browser for each region. Separate from your ac
 const STORAGE_OFF = 'Browser storage is unavailable. Keep this page open until you download your plan.';
 const RANKED_LAYERS: Layers = {waypoints: true, outlines: true, alignments: false, exclusions: false};
 
-/** The next Friday on or after `today` (YYYY-MM-DD), where Best available moves an undecided date. */
+/** The next Friday on or after `today` (YYYY-MM-DD). Best available no longer moves the date there (SCJ-8). */
 export function nextFriday(today: string): string {
   const d = new Date(today + 'T12:00:00Z');
   d.setUTCDate(d.getUTCDate() + (5 - d.getUTCDay() + 7) % 7);
@@ -320,7 +322,7 @@ export function createPlanner(deps: PlannerDeps) {
       if (!best.length) throw Error(`No ranked reefs meet these filters and current checks.${held ? ` ${held}` : ''} Widen the area or distance; no weaker spots were added.`);
       canonical = loaded;
       const d = draft.value, ids = best.map(t => t.id);
-      const name = d.name === 'My fishing day' ? 'Lingcod + rockfish' : d.name, date = d.date === today ? nextFriday(today) : d.date;
+      const name = d.name === 'My fishing day' ? 'Lingcod + rockfish' : d.name, date = d.date;
       batch(() => {
         tripAtlas.value = {...tripAtlas.value, publication: loaded.publication, source_validation_date: loaded.source_validation_date,
           targets: [...atlas.targets, ...loaded.targets.map(t => best.find(s => s.id === t.id) ?? t)], areas: [...atlas.areas, ...loaded.areas]};
@@ -336,6 +338,15 @@ export function createPlanner(deps: PlannerDeps) {
       loading.value = false;
       if (mine !== revision && scopeStatus.value === LOADING) scopeStatus.value = 'Selection changed while loading. Select Best available again to apply it.';
     }
+  }
+
+  /** SCJ-8: an empty planner opens ranked, dated the viewed day when it is a real day from today on, else today. Places or a saved ranked plan stay as they are. */
+  function openReady(): void {
+    if (ranked.value || restorePending.value || loading.value || draft.value.ids.length) return;
+    const v = deps.viewDay?.() ?? null, at = new Date(`${v}T12:00:00Z`);
+    const ok = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(at.getTime()) && at.toISOString().slice(0, 10) === v && v >= today;
+    draft.value = {...draft.value, date: ok ? v : today}; // in the page only: selectBest saves it with the ranked places
+    void selectBest();
   }
 
   /** A saved ranked plan, re-applied from the current publication only when it is the one the plan ranked. */
@@ -424,7 +435,7 @@ export function createPlanner(deps: PlannerDeps) {
     scopeStatus, actionStatus, storageNote, tick, summary, spots, protectedHits, notesReady, waypointPosition,
     chooseWaypoint, saveWaypoint, removeWaypoint, addPlace,
     setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
-    selectBest, restore, exportFile, deliver, showOnMap, checkConditions,
+    selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     /** For tests and a region change: stop drawing the ranked set. */
     dispose: stopRanked,
   };

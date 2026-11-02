@@ -34,12 +34,12 @@ const ATLAS = {targets: [{id: 'old-1', label: 'Old 1', latitude: 0.5, longitude:
 // The land/water check (web/land-water.ts) for these synthetic reefs: water unless a test says otherwise.
 let place = () => ({state: 'water'});
 
-function harness({stored = null, loadReefs, ports = [{id: 'p1', name: 'Port 1', region: 'test-coast', match: [0, 0]}]} = {}) {
+function harness({stored = null, loadReefs, ports = [{id: 'p1', name: 'Port 1', region: 'test-coast', match: [0, 0]}], loadPorts, screen = SCREEN, viewDay} = {}) {
   const store = new Map(stored ? [[draftKey(REGION.id), stored]] : []);
   const storage = {getItem: k => store.get(k) ?? null, setItem: (k, v) => { store.set(k, v); }};
   const emitted = [], nav = [];
-  const planner = createPlanner({atlas: ATLAS, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], storage, now: () => NOW, landWater: async () => place,
-    loadReefs: loadReefs ?? (async () => reefs()), loadPorts: async () => ({ports}), emit: d => emitted.push(d),
+  const planner = createPlanner({atlas: ATLAS, screen, region: REGION, map: MAP, getVisible: () => [], storage, now: () => NOW, landWater: async () => place, viewDay,
+    loadReefs: loadReefs ?? (async () => reefs()), loadPorts: loadPorts ?? (async () => ({ports})), emit: d => emitted.push(d),
     nav: {open: () => nav.push('open'), showMap: () => nav.push('map'), conditions: date => nav.push(`conditions ${date}`)}});
   return {planner, store, emitted, nav, saved: () => JSON.parse(store.get(draftKey(REGION.id)))};
 }
@@ -92,24 +92,116 @@ test('the distance filter starts from the saved Boat range (#644), else 20 nm', 
   }
 });
 
-test('Best available ranks distinct reefs, sets the ranked layers, names the plan, moves today to Friday, and draws the set', async () => {
+test('Best available ranks distinct reefs, sets the ranked layers, names the plan, keeps today\'s date (SCJ-8), and draws the set', async () => {
   const {planner: p, emitted, saved} = harness();
   await settle();
   assert.equal(p.portsReady.value, true);
   assert.equal(p.filters.value.port, 'p1');
+  assert.equal(p.draft.value.date, '2026-10-12');
   await p.selectBest();
   assert.equal(p.ranked.value, true);
-  assert.match(p.scopeStatus.value, /^5 distinct reef spots ranked\. Waypoints \+ reef outlines only\. Fewer than your requested limit qualified\. Check conditions for 2026-10-16/);
+  assert.match(p.scopeStatus.value, /^5 distinct reef spots ranked\. Waypoints \+ reef outlines only\. Fewer than your requested limit qualified\. Check conditions for 2026-10-12 before/);
   const d = saved();
   assert.deepEqual(d.ids, ['reef-0', 'reef-1', 'reef-2', 'reef-3', 'reef-4']);
   assert.equal(d.name, 'Lingcod + rockfish');
-  assert.equal(d.date, nextFriday('2026-10-12'));
+  assert.equal(d.date, '2026-10-12', 'today stays today, not the next Friday');
+  assert.notEqual(d.date, nextFriday('2026-10-12'));
   assert.deepEqual(d.layers, {waypoints: true, outlines: true, alignments: false, exclusions: false});
   assert.deepEqual(d.rankedPlan, {sha256: 'a'.repeat(64), species: 'reef', priorities: d.ids.map((id, i) => ({id, rank: i + 1}))});
   assert.equal(p.summary.value.ok, true, p.summary.value.message);
   assert.equal(p.summary.value.counts.waypoints, 5);
   assert.deepEqual(emitted.at(-1).targets.map(t => t.id), d.ids);
   assert.deepEqual(p.spots.value.map(t => t.trip_rank), [1, 2, 3, 4, 5], 'the list shows only ranked reefs, in rank order');
+  p.dispose();
+});
+
+// SCJ-8: the planner opens ready. An empty draft is ranked on open and dated the viewed day (from today on), else today.
+const idle = async p => { for (let i = 0; i < 50 && p.loading.value; i++) await settle(); assert.equal(p.loading.value, false, 'the ranking settled'); };
+const counted = () => { const calls = {n: 0}; return {calls, loadReefs: async () => { calls.n++; return reefs(); }}; };
+
+test('openReady ranks an empty draft on open, dated the viewed day from today on, else today', async () => {
+  for (const [view, date] of [[null, '2026-10-12'], ['2026-10-12', '2026-10-12'], ['2026-10-15', '2026-10-15'], ['2026-10-11', '2026-10-12'],
+    ['2026-02-30', '2026-10-12'], ['2026-13-01', '2026-10-12'], ['tomorrow', '2026-10-12'], ['2026-10-15T00:00', '2026-10-12'], ['', '2026-10-12']]) {
+    const {planner: p, saved} = harness({viewDay: () => view});
+    p.openReady();
+    await idle(p);
+    assert.equal(p.ranked.value, true, String(view));
+    assert.equal(saved().date, date, String(view));
+    assert.deepEqual(saved().ids, ['reef-0', 'reef-1', 'reef-2', 'reef-3', 'reef-4'], String(view));
+    assert.match(p.scopeStatus.value, new RegExp(`Check conditions for ${date} before`), String(view));
+    p.dispose();
+  }
+  const {planner: p, saved} = harness();  // no viewDay dependency at all
+  p.openReady();
+  await idle(p);
+  assert.equal(saved().date, '2026-10-12');
+  p.dispose();
+});
+
+test('openReady leaves a saved ranked plan or a draft with places exactly as it is', async () => {
+  const plan = JSON.stringify({ids: ['reef-0'], rankedPlan: {sha256: 'a'.repeat(64), species: 'reef', priorities: [{id: 'reef-0', rank: 1}]}, name: 'Kept', date: '2026-10-20',
+    avoidScope: 'region', layers: {waypoints: true, outlines: true, alignments: false, exclusions: false}});
+  const places = JSON.stringify({ids: ['old-1'], rankedPlan: null, name: 'Mine', date: '2026-10-20', avoidScope: 'region', layers: {waypoints: true, outlines: false, alignments: false, exclusions: false}});
+  for (const stored of [plan, places]) {
+    const {calls, loadReefs} = counted(), {planner: p, store} = harness({stored, loadReefs, viewDay: () => '2026-10-15'});
+    const before = JSON.stringify(p.draft.value);
+    p.openReady();
+    await settle(); await settle();
+    assert.equal(calls.n, 0, 'no ranking run');
+    assert.equal(p.loading.value, false);
+    assert.equal(JSON.stringify(p.draft.value), before, 'the draft is unchanged, its date included');
+    assert.equal(store.get(draftKey(REGION.id)), stored, 'nothing saved over it');
+    p.dispose();
+  }
+});
+
+test('openReady twice, or again once ranked, runs one ranking', async () => {
+  const {calls, loadReefs} = counted(), {planner: p} = harness({loadReefs});
+  p.openReady(); p.openReady();
+  await idle(p);
+  assert.equal(calls.n, 1);
+  p.openReady();
+  await idle(p);
+  assert.equal(calls.n, 1, 'an open planner already ranked is not re-ranked');
+  p.dispose();
+});
+
+test('openReady while ports or the protected-area screen are not ready: no throw, today\'s status message, nothing persisted', async () => {
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  const slow = harness({loadPorts: () => held});
+  assert.doesNotThrow(() => slow.planner.openReady());
+  await settle();
+  assert.equal(slow.planner.scopeStatus.value, 'Loading current screened reefs…');
+  assert.equal(slow.store.has(draftKey(REGION.id)), false, 'nothing persisted while ports load');
+  release({ports: [{id: 'p1', name: 'Port 1', region: 'test-coast', match: [0, 0]}]});
+  await idle(slow.planner);
+  assert.equal(slow.planner.ranked.value, true, 'ranked once the ports arrive');
+  slow.planner.dispose();
+
+  const notReady = {...SCREEN, ready: () => false};
+  const clicked = harness({screen: notReady});
+  await clicked.planner.selectBest();
+  const opened = harness({screen: notReady});
+  assert.doesNotThrow(() => opened.planner.openReady());
+  await idle(opened.planner);
+  assert.equal(opened.planner.scopeStatus.value, clicked.planner.scopeStatus.value, 'the same message as pressing Best available');
+  assert.match(opened.planner.scopeStatus.value, /Refresh protected-area checks/);
+  assert.equal(opened.planner.ranked.value, false);
+  assert.equal(opened.store.has(draftKey(REGION.id)), false, 'nothing persisted');
+  clicked.planner.dispose(); opened.planner.dispose();
+});
+
+test('a place chosen while the open ranking loads wins over it', async () => {
+  let release;
+  const {planner: p, saved} = harness({loadReefs: () => new Promise(resolve => { release = () => resolve(reefs()); })});
+  p.openReady();
+  await settle();
+  p.toggleSpot('old-1', true);
+  release();
+  await idle(p);
+  assert.deepEqual(saved().ids, ['old-1']);
+  assert.equal(p.ranked.value, false);
   p.dispose();
 });
 
@@ -205,10 +297,10 @@ test('the export re-checks the publication: changed reef data blocks the file', 
   await settle();
   await p.selectBest();
   const file = await p.exportFile('gpx');
-  assert.equal(file.name, 'SkipperCast-test-coast-2026-10-16-5wp.gpx');
+  assert.equal(file.name, 'SkipperCast-test-coast-2026-10-12-5wp.gpx');
   assert.match(await file.text(), /<wpt /);
   const notes = await p.exportFile('notes');
-  assert.equal(notes.name, 'SkipperCast-test-coast-2026-10-16-5wp.html');
+  assert.equal(notes.name, 'SkipperCast-test-coast-2026-10-12-5wp.html');
   assert.equal(notes.type, 'text/html');
   assert.match(await notes.text(), /^<!doctype html>/);
   sha = 'c'.repeat(64);
@@ -259,7 +351,7 @@ test('the map and conditions hand-offs', async () => {
   assert.equal(nav.at(-1), 'map');
   assert.equal(emitted.at(-1).fit, true);
   p.checkConditions();
-  assert.equal(nav.at(-1), 'conditions 2026-10-16');
+  assert.equal(nav.at(-1), 'conditions 2026-10-12', 'the plan keeps today (SCJ-8), not next Friday');
   p.review('reef-0');
   assert.equal(nav.at(-1), 'open');
   p.dispose();
