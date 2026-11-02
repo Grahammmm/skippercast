@@ -37,3 +37,17 @@ test('healthy App is byte-identical to the existing unguarded shell fixture', as
     }
   } finally { await rm(dir, {recursive: true, force: true}); }
 });
+
+test('a Guard reused by the next view in the same slot starts clean; the same view keeps its fallback', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'guard-state-'));
+  try {
+    const outfile = join(dir, 'guard.mjs');
+    await build({entryPoints: [join(ROOT, 'web/ui/Guard.tsx')], bundle: true, format: 'esm', platform: 'node', outfile,
+      logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact'});
+    const {Guard} = await import(pathToFileURL(outfile).href);
+    const failed = {...Guard.getDerivedStateFromProps({name: 'conditions'}, {failed: false}), ...Guard.getDerivedStateFromError()};
+    assert.deepEqual(failed, {failed: true, name: 'conditions'});
+    assert.equal(Guard.getDerivedStateFromProps({name: 'conditions'}, failed), null);
+    assert.deepEqual(Guard.getDerivedStateFromProps({name: 'history'}, failed), {failed: false, name: 'history'});
+  } finally { await rm(dir, {recursive: true, force: true}); }
+});

@@ -370,28 +370,29 @@ test('FE-60: no duplicate map, picker or timeline for one context (/map and /coa
 });
 test('BF-graceful-gaps: render failures stay local, retry recovers or fails once, and fallback is accessible', async ({page, pageErrors, v2}) => {
   const bundle = await build({stdin: {resolveDir: process.cwd(), loader: 'tsx', contents: `
-    import {render} from 'preact'; import {Guard} from './web/ui/Guard.tsx'; import './web/tokens.css';
+    import {render} from 'preact'; import {useState} from 'preact/hooks'; import {Guard} from './web/ui/Guard.tsx'; import './web/tokens.css';
     let attempts = 0; function Once() { if (!attempts++) throw Error('once'); return <p id="recovered">Recovered</p>; }
-    function Broken() { throw Error('persistent'); }
-    render(<main><h1>Fixture</h1><Guard name="once"><Once /></Guard><Guard name="broken"><Broken /></Guard><p id="sibling">Still here</p></main>, document.body);
+    function Broken() { throw Error('persistent'); } function Slot() { /* One position switching guarded views, as the shell's view ternaries do. */ const [v, set] = useState('fails'); return <><button type="button" id="switch" onClick={() => set('healthy')}>Switch view</button>{v === 'fails' ? <Guard name="fails"><Broken /></Guard> : <Guard name="healthy"><p id="healthy">Healthy</p></Guard>}</>; }
+    render(<main><h1>Fixture</h1><Guard name="once"><Once /></Guard><Guard name="broken"><Broken /></Guard><Slot /><p id="sibling">Still here</p></main>, document.body);
   `}, bundle: true, format: 'iife', outfile: 'fixture.js', write: false, jsx: 'automatic', jsxImportSource: 'preact', loader: {'.woff2': 'dataurl'}});
   const logs: string[] = []; page.on('console', m => { if (m.type() === 'error' && m.text().startsWith('[guard]')) logs.push(m.text()); });
   await page.route('**/guard-fixture', route => route.fulfill({contentType: 'text/html', body: '<!doctype html><html lang="en"><title>Guard fixture</title><body></body></html>'}));
   await page.goto('/guard-fixture');
   await page.addStyleTag({content: bundle.outputFiles.find(f => f.path.endsWith('.css'))!.text});
   await page.addScriptTag({content: bundle.outputFiles.find(f => f.path.endsWith('.js'))!.text});
-  await expect(page.locator('[data-guard]')).toHaveCount(2);
+  await expect(page.locator('[data-guard]')).toHaveCount(3);
   await expect(page.locator('[data-guard="once"]')).toHaveAttribute('role', 'status');
   await expect(page.locator('[data-guard="once"] p')).toHaveText('This part could not load. The rest of the page still works.');
-  await expect(page.locator('#sibling')).toHaveText('Still here'); expect(logs).toHaveLength(2);
+  await expect(page.locator('#sibling')).toHaveText('Still here'); expect(logs).toHaveLength(3);
   await v2.a11y('v2-guard');
   await page.locator('[data-guard="once"] button').focus(); await page.keyboard.press('Enter');
-  await expect(page.locator('#recovered')).toHaveText('Recovered'); await expect(page.locator('[data-guard="once"]')).toHaveCount(0); expect(logs).toHaveLength(2);
+  await expect(page.locator('#recovered')).toHaveText('Recovered'); await expect(page.locator('[data-guard="once"]')).toHaveCount(0); expect(logs).toHaveLength(3);
   for (let i = 0; i < 2; i++) {
     await page.locator('[data-guard="broken"] button').click(); await expect(page.locator('[data-guard="broken"]')).toHaveCount(1);
-    await expect.poll(() => logs.length).toBe(3 + i); await expect(page.locator('#recovered')).toBeVisible(); await expect(page.locator('#sibling')).toBeVisible();
+    await expect.poll(() => logs.length).toBe(4 + i); await expect(page.locator('#recovered')).toBeVisible(); await expect(page.locator('#sibling')).toBeVisible();
   }
-  expect(pageErrors).toEqual([]);
+  await page.locator('#switch').click(); await expect(page.locator('#healthy')).toHaveText('Healthy'); /* A failed view must not stick to the next one. */ await expect(page.locator('[data-guard="fails"], [data-guard="healthy"]')).toHaveCount(0);
+  expect(logs).toHaveLength(5); expect(pageErrors).toEqual([]);
 });
 test('BF-graceful-gaps: missing conditions and malformed fleet leave the shell usable', async ({page, pageErrors, v2, isMobile}) => {
   await page.route('**/feeds/conditions/regions/morro-bay/latest.json', r => r.fulfill({status: 500, body: 'failed'}));
