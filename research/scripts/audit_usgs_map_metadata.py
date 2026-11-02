@@ -164,8 +164,9 @@ def main():
             temp.replace(args.output)
             print('Retained complete USGS metadata audit from '+previous['last_complete_scan_at'])
             return
-    if reason:
+    if reason:  # an unusable previous is dropped: its rows and scan time must not reach the new audit
         print(f'previous scan ignored: {reason}',file=sys.stderr)
+        previous=None
     result=audit(blocks,previous,now=now)
     args.output.parent.mkdir(parents=True,exist_ok=True)
     temp=args.output.with_suffix(args.output.suffix+'.tmp')

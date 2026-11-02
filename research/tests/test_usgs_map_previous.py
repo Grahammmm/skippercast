@@ -93,14 +93,18 @@ class PreviousScanTests(unittest.TestCase):
             with self.subTest(kind=kind, raw='absent'):
                 self.assert_rescanned(self.run_main(kind), None, None)
 
-    def test_bad_scan_time_is_named_and_rescanned(self):
+    def test_bad_scan_time_is_named_and_rescanned_without_previous(self):
         cases = [('2026-10-01T00:00:00', 'scan time has no UTC offset'), ('soon', 'bad scan time'), (5, 'bad scan time'),
                  (..., 'no scan time'), (None, 'no scan time'), (ago(days=-1), 'scan time is in the future')]
         for kind in SCRIPTS:
             for when, reason in cases:
                 with self.subTest(kind=kind, when=when):
-                    previous = fresh(kind, last_complete_scan_at=when)
-                    self.assert_rescanned(self.run_main(kind, previous), reason, previous)
+                    # the leaf fetch fails, so any row or scan time that survives could only come from the previous
+                    result = self.run_main(kind, fresh(kind, last_complete_scan_at=when), fail=True)
+                    self.assert_rescanned(result, reason, None)
+                    data = json.loads(result[4].read_text())
+                    self.assertEqual([row['status'] for row in data[kind]], ['failed'])
+                    self.assertIsNone(data['last_complete_scan_at'])
 
     def test_stale_degraded_or_misshaped_health_rescans_quietly(self):
         for kind in SCRIPTS:

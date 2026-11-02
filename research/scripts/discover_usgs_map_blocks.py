@@ -219,8 +219,9 @@ def main():
             temp.replace(args.output)
             print('Retained complete USGS map-block catalog inventory from ' + previous['last_complete_scan_at'])
             return
-    if reason:
+    if reason:  # an unusable previous is dropped: its rows and scan time must not reach the new inventory
         print(f'previous scan ignored: {reason}', file=sys.stderr)
+        previous = None
     result = discover(previous, now=now, family=args.catalog_family)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temp = args.output.with_suffix(args.output.suffix + '.tmp')
