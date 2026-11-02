@@ -54,9 +54,29 @@ export function simplify(points, tolerance = TOLERANCE) {
 }
 
 const fixed = n => String(Math.round(n * 10) / 10);
+// Provenance text lands raw in a `//` comment of the generated TypeScript.
+const UNSAFE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/;
+const finitePosition = q => Array.isArray(q) && Number.isFinite(q[0]) && Number.isFinite(q[1]);
+
+/** Throws a named Error for unsafe provenance text or a drawn feature that is not a finite line. */
+function checkInput(geojson) {
+  for (const field of ['source', 'license', 'attribution']) {
+    const value = geojson.provenance?.[field];
+    if (typeof value !== 'string' || UNSAFE.test(value) || value.length > 300) throw new Error(`shoreline provenance ${field} has a line break or control character`);
+  }
+  geojson.features.forEach((feature, i) => {
+    if (!DRAWN.test(feature?.properties?.ATTRIBUTE ?? '')) return;
+    const g = feature.geometry;
+    const multi = g?.type === 'MultiLineString';
+    if (!g || typeof g !== 'object' || !(multi || g.type === 'LineString') || !Array.isArray(g.coordinates)
+      || (multi && !g.coordinates.every(Array.isArray))) throw new Error(`shoreline feature ${i}: geometry is not a line`);
+    if (!(multi ? g.coordinates : [g.coordinates]).every(line => line.every(finitePosition))) throw new Error(`shoreline feature ${i}: coordinate is not a finite number`);
+  });
+}
 
 /** The module text for `geojson`: viewBox, one path, the attribution and the source dates. */
 export function shorelineModule(geojson) {
+  checkInput(geojson);
   const {height, project} = projector();
   const parts = [];
   const dates = new Set();
