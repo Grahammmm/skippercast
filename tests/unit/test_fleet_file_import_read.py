@@ -62,6 +62,18 @@ class SafeReadTests(_Base):
         self.inputs.symlink_to(real, target_is_directory=True)
         self.assertEqual(self.refused(), "cpra-cpfv: input path goes through a link")
 
+    def test_symlinked_region_folder_is_refused_before_anything_is_opened(self):
+        region = self.tmp / "CA"
+        external = self.tmp / "external-region"
+        region.rename(external)
+        (external / "inputs" / "cpfv.csv").write_bytes(VALID)
+        region.symlink_to(external, target_is_directory=True)
+        self.assertTrue(self.path.is_file(), "the external file is reachable through the region link")
+        with mock.patch.object(file_import.os, "open", wraps=os.open) as opened:
+            message = self.refused()
+        self.assertEqual(message, "cpra-cpfv: input path goes through a link")
+        self.assertEqual(opened.call_count, 0, "nothing is opened once a link is seen")
+
     def test_dangling_link_is_a_link_not_a_missing_file(self):
         self.path.symlink_to(self.tmp / "gone.csv")
         adapter = FileImport()

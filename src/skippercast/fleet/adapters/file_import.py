@@ -120,9 +120,10 @@ def input_path(binding, ctx: RunContext) -> Path:
 
 
 def _read_input(path: Path, base: Path, binding_id: str) -> bytes:
-    """The file's bytes: no link below ``base``, a regular file, at most MAX_INPUT_BYTES, never blocking."""
+    """The file's bytes: no link from ``base`` (the region folder) down, a regular file, at most MAX_INPUT_BYTES,
+    never blocking."""
     parts = Path(path).relative_to(base).parts
-    if any(os.path.islink(Path(base).joinpath(*parts[:n])) for n in range(1, len(parts) + 1)):
+    if any(os.path.islink(Path(base).joinpath(*parts[:n])) for n in range(len(parts) + 1)):
         raise FileImportError(f"{binding_id}: input path goes through a link")
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
