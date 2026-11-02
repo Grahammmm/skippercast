@@ -117,23 +117,55 @@ def audit(blocks, previous=None, *, now=None, fetcher=fetch):
             'health':{'status':'ok' if not issues else 'degraded','issues':issues},'records':rows}
 
 
+def _days(text):
+    days=int(text) if re.fullmatch(r'[+-]?[0-9]+',text.strip()) else 0
+    if not 1<=days<=365:
+        raise argparse.ArgumentTypeError('must be a whole number of days from 1 to 365')
+    return days
+
+
+def _previous(path):
+    try:  # the is_file() stat can raise too, e.g. PermissionError under an unreadable directory
+        if not path or not path.is_file():
+            return None,None
+        previous=json.loads(path.read_text(encoding='utf-8'))
+    except (OSError,ValueError):  # covers UnicodeDecodeError and JSONDecodeError
+        previous=None
+    rows=previous.get('records') if isinstance(previous,dict) else None
+    usable=isinstance(rows,list) and all(isinstance(row,dict) and isinstance(row.get('metadata_url'),str) for row in rows)
+    return (previous,None) if usable else (None,'records not a usable list' if isinstance(previous,dict) else 'unreadable')
+
+
+def _scan_time(value,now):
+    try:
+        when=None if value is None else datetime.fromisoformat(value)
+    except (TypeError,ValueError):
+        return None,'bad scan time'
+    if when is None or when.utcoffset() is None:
+        return None,'scan time has no UTC offset' if when else 'no scan time'
+    return (when,None) if when<=now else (None,'scan time is in the future')
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--blocks',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--previous',type=Path)
-    parser.add_argument('--max-age-days',type=int,default=30)
+    parser.add_argument('--max-age-days',type=_days,default=30)
     args=parser.parse_args()
     blocks=json.loads(args.blocks.read_text())
-    previous=json.loads(args.previous.read_text()) if args.previous and args.previous.is_file() else None
+    previous,reason=_previous(args.previous)
     now=datetime.now(timezone.utc)
-    if previous and previous.get('health',{}).get('status')=='ok' and previous.get('last_complete_scan_at'):
-        age=now-datetime.fromisoformat(previous['last_complete_scan_at'])
-        if timedelta(0)<=age<timedelta(days=args.max_age_days):
+    if previous and isinstance(previous.get('health'),dict) and previous['health'].get('status')=='ok':
+        when,reason=_scan_time(previous.get('last_complete_scan_at'),now)
+        if when and now-when<timedelta(days=args.max_age_days):
             args.output.parent.mkdir(parents=True,exist_ok=True)
-            args.output.write_bytes(args.previous.read_bytes())
+            (temp:=args.output.with_suffix(args.output.suffix+'.tmp')).write_bytes(args.previous.read_bytes())
+            temp.replace(args.output)
             print('Retained complete USGS metadata audit from '+previous['last_complete_scan_at'])
             return
+    if reason:
+        print(f'previous scan ignored: {reason}',file=sys.stderr)
     result=audit(blocks,previous,now=now)
     args.output.parent.mkdir(parents=True,exist_ok=True)
     temp=args.output.with_suffix(args.output.suffix+'.tmp')
