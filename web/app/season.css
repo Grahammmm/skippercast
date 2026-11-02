@@ -1,0 +1,6 @@
+.app-season { margin-block: 1rem; color: var(--text); }
+.app-season ol { display: grid; grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr)); gap: .5rem; padding: 0; list-style: none; }
+.app-season li { display: flex; flex-direction: column; padding: .5rem; border: 1px solid var(--line); border-radius: .25rem; background: var(--panel); }
+.app-season li[data-state="open"] { border-color: var(--mint); }
+.app-season li[data-state="limits"], .app-season li[data-state="scheduled"] { border-color: var(--amber); }
+.app-season p { font-size: var(--text-13); color: var(--muted); }

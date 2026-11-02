@@ -37,7 +37,8 @@ async function load() {
       export {Planner} from './web/app/Planner.tsx';
       export {createPlanner} from './web/planner.ts';
       export {AccountMenu} from './web/app/AccountMenu.tsx';
-      export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, TAB_VIEWS, advisorOn, checkAdvisor, ChatEntry, Location} from './web/app/Masthead.tsx';
+      export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, TAB_VIEWS, advisorOn, checkAdvisor, ChatEntry, Location, DegradedNotice} from './web/app/Masthead.tsx';
+      export {degraded, watchDegraded, installDegradedWatch} from './web/degraded.ts';
       export {targetOptions, windowText} from './web/app/CommandBar.tsx';
       export {Brief, emptyTiles, DISCLAIMER} from './web/app/Desktop.tsx';
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
@@ -275,6 +276,35 @@ test('startup region reader keeps region.json chart_files only when it is a list
   assert.deepEqual((await reader('r1')).chartFiles, ['poster.svg']);
   assert.deepEqual((await reader('r2')).chartFiles, [], 'an empty list is a list');
   for (const id of ['r3', 'r4', 'r5']) assert.equal('chartFiles' in await reader(id), false, id);
+});
+
+test('SC-LAUNCH-4: a cost-ceiling response from any reader puts the saved-data notice on the masthead and the mobile sheet', async () => {
+  const {degraded, watchDegraded, installDegradedWatch, render, h, App, Mobile, narrow, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  state.syncFromURL(`${ORIGIN}?region=morro-bay`);
+  const mark = (headers = {}) => new Response('{}', {headers: {'X-SC-Degraded': 'cost-ceiling', ...headers}});
+  try {
+    // Live responses leave the shell as it was.
+    const live = watchDegraded(async () => new Response('{}'));
+    await live('/feeds/data/regions/morro-bay/latest.json');
+    assert.equal(degraded.peek(), null);
+    assert.doesNotMatch(render(h(App)), /data-degraded/);
+    // A free fallback (no saved copy) is marked without a time; the response reaches the caller untouched.
+    const fallback = await watchDegraded(async () => mark())('/feeds/data/regions/morro-bay/latest.json');
+    assert.equal(await fallback.text(), '{}');
+    assert.deepEqual(degraded.peek(), {since: null});
+    assert.match(render(h(App)), /<p class="app-limits-note app-degraded" role="status" data-degraded="cost-ceiling">Live data is paused for today to keep SkipperCast free; some readings are saved copies\.<\/p>/);
+    // The page's own fetch, wrapped once at start-up, covers readers that never import the watcher; the oldest saved copy is shown.
+    const scope = {fetch: async url => mark({'X-SC-Last-Known-At': String(url).includes('old') ? '2026-10-04T15:30:00Z' : '2026-10-05T18:00:00Z'})};
+    installDegradedWatch(scope);
+    await scope.fetch('/feeds/tiles/basemap/new.pmtiles');
+    await scope.fetch('/feeds/data/old.json');
+    await scope.fetch('/feeds/data/new.json');
+    assert.deepEqual(degraded.peek(), {since: '2026-10-04T15:30:00.000Z'});
+    assert.match(render(h(App)), /data-degraded="cost-ceiling">Live data is paused for today to keep SkipperCast free; some readings are saved copies from [^<]+\.<\/p>/);
+    narrow.value = true;
+    assert.match(render(h(Mobile, {now: NOW})), /data-degraded="cost-ceiling"/);
+  } finally { degraded.value = null; narrow.value = false; }
 });
 
 test('freshness uses source timestamps and injected clock on the existing masthead', async () => {
