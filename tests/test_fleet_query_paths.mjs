@@ -11,7 +11,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readdirSync, readFileSync} from 'node:fs';
 import {join} from 'node:path';
-
 const ROOT = new URL('..', import.meta.url).pathname;
 const FLEET = /\bfleet_(vessels|operators)\b/;
 const CONTACT = /\b(email_business|phone_business)\b/;
@@ -44,7 +43,6 @@ const CONTACT_READS = Object.freeze({
   'server/fleet/jobs.ts SELECT ${VESSEL_COLUMNS} FROM fleet_vessels':
     'KNOWN GAP (follow-up): vessel snapshot page (phone_business,email_business) has no do-not-contact exclusion',
 });
-
 // One pass: group 1 is a string or template literal; a comment matches without a group.
 const LITERAL = /(`(?:\\[\s\S]|\$\{[^}]*\}|[^\\`])*`|'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g;
 
@@ -61,7 +59,6 @@ export function statements(text) {
   }
   return out;
 }
-
 const contactKey = (file, raw) => `${file} ${(raw.match(/^.*?\bFROM fleet_(vessels|operators)\b/) ?? [raw])[0]}`;
 
 /** Errors for one file's fleet statements under `cls`; `used` collects the CONTACT_READS keys it relied on. */
