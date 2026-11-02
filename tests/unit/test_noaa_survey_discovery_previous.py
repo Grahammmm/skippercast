@@ -1,5 +1,5 @@
 from contextlib import redirect_stderr, redirect_stdout
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 import io
 import json
 from pathlib import Path
@@ -7,6 +7,13 @@ import tempfile
 from unittest import TestCase, mock
 
 from scripts import discover_noaa_surveys as discovery
+from tests._support import NOW
+
+
+class FixedDatetime(datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return NOW
 
 
 class PreviousScanTests(TestCase):
@@ -27,12 +34,12 @@ class PreviousScanTests(TestCase):
     def run_main(self, *extra):
         stderr = io.StringIO()
         with mock.patch.object(discovery, 'ROOT', self.root), mock.patch.object(discovery, 'scan', self.fake_scan), \
-                redirect_stdout(io.StringIO()), redirect_stderr(stderr):
+                mock.patch.object(discovery, 'datetime', FixedDatetime), redirect_stdout(io.StringIO()), redirect_stderr(stderr):
             discovery.main(['--output', str(self.output), *extra])
         return stderr.getvalue()
 
     def doc(self, age_days=2, **fields):
-        stamp = (datetime.now(timezone.utc) - timedelta(days=age_days)).isoformat()
+        stamp = (NOW - timedelta(days=age_days)).isoformat()
         return {'health': {'status': 'ok'}, 'last_complete_scan_at': stamp, 'sectors': [{'sector_id': 'a', 'surveys': []}], **fields}
 
     def test_max_age_days_outside_1_to_365_is_usage_before_any_scan(self):
@@ -58,7 +65,7 @@ class PreviousScanTests(TestCase):
                 self.assertTrue(self.output.exists())
 
     def test_unusable_scan_time_rescans_and_keeps_rows_for_scan(self):
-        future = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+        future = (NOW + timedelta(days=1)).isoformat()
         cases = [({'last_complete_scan_at': '2026-10-30T12:00:00'}, 'scan time has no UTC offset'),
                  ({'last_complete_scan_at': 'yesterday'}, 'bad scan time'),
                  ({'last_complete_scan_at': 20261030}, 'bad scan time'),
