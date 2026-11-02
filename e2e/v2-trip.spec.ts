@@ -87,18 +87,27 @@ async function download(page: Page): Promise<string> {
   const [file] = await Promise.all([page.waitForEvent('download'), page.locator('#export-download').click()]);
   return readFile(await file.path(), 'utf8');
 }
-/** Best available, as ranked-export.spec.ts runs it: a cleared selection while loading wins, then the ranked set. */
+/**
+ * The planner opens ready (SCJ-8): the 20 best reefs already chosen and today's date. Then Best available, as
+ * ranked-export.spec.ts runs it: a cleared selection while loading wins, then the ranked set.
+ */
 async function rankBest(page: Page, gate: {hold: boolean; release: () => void; started: () => void}) {
-  await expect(page.locator('#export-map')).toBeDisabled();
+  await expect(page.locator('#export-selection-count')).toHaveText('20 selected');
+  await expect(page.locator('#export-scope-status')).toContainText('20 distinct reef spots');
+  const today = await page.evaluate(() => new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date()));
+  await expect(page.locator('#export-date')).toHaveValue(today);
+  await expect(page.locator('#export-map')).toBeEnabled();
   gate.hold = true;
   const pending = new Promise<void>(resolve => { gate.started = resolve; });
   await page.locator('#export-best').click(); await pending;
   await page.locator('[data-scope="none"]').click(); gate.release();
   await expect(page.locator('#export-best')).toBeEnabled();
   await expect(page.locator('#export-selection-count')).toHaveText('0 selected');
+  await expect(page.locator('#export-map')).toBeDisabled();
   await page.locator('#export-best').click();
   await expect(page.locator('#export-scope-status')).toContainText('20 distinct reef spots');
   await expect(page.locator('#export-selection-count')).toHaveText('20 selected');
+  await expect(page.locator('#export-date')).toHaveValue(today);
 }
 
 test('the ranked export runs in v2: best reefs, complete outlines, a restored plan, and changed data require reranking', async ({page, pageErrors, v2, isMobile}, info) => {
