@@ -2,10 +2,12 @@ from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
+import socket
 import tempfile
 import threading
 import time
 import unittest
+from unittest import mock
 
 from scripts import site_uptime_alert as uptime
 
@@ -167,6 +169,39 @@ class SiteUptimeTest(unittest.TestCase):
         for leak in ("other.invalid", "hunter2", "token", "?"):
             self.assertNotIn(leak, text)
         self.assertIn("- / redirect 301", self.gh.issues[0]["body"])
+
+    def test_dropped_or_malformed_response_is_down_not_a_crash(self):
+        for reply, name in ((b"", "RemoteDisconnected"), (b"garbage\r\n\r\n", "BadStatusLine")):
+            with self.subTest(name=name):
+                listener = socket.create_server(("127.0.0.1", 0))
+                self.addCleanup(listener.close)
+
+                def serve(sock=listener, reply=reply):
+                    while True:
+                        try:
+                            conn, _ = sock.accept()
+                        except OSError:
+                            return
+                        with conn:
+                            conn.recv(4096)
+                            conn.sendall(reply)
+
+                threading.Thread(target=serve, daemon=True).start()
+                base = f"http://127.0.0.1:{listener.getsockname()[1]}"
+                code = uptime.main(["--base", base, "--report", str(self.report), "--dry-run"], runner=self.gh,
+                                   retry_delay=0, sleep=lambda s: None, timeout=2.0)
+                report = json.loads(self.report.read_text())
+                self.assertEqual((code, report["down"]), (0, True))
+                self.assertEqual({f["error"] for f in report["failures"]}, {name})
+
+    def test_internal_probe_error_propagates_without_report_or_issue(self):
+        site = self.site()
+        with mock.patch.object(uptime.request, "build_opener", side_effect=RuntimeError("bug")):
+            with self.assertRaises(RuntimeError):
+                uptime.main(["--base", site.base, "--report", str(self.report)], runner=self.gh,
+                            retry_delay=0, sleep=lambda s: None, timeout=2.0)
+        self.assertFalse(self.report.exists())
+        self.assertEqual((self.gh.calls, self.gh.issues), ([], []))
 
     def test_redirect_within_the_same_host_is_followed(self):
         self.assertFalse(self.run_once(self.site(root=(302, "", "/map")), "--dry-run")["down"])

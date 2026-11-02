@@ -17,6 +17,7 @@ Usage: site_uptime_alert.py --base URL --report FILE [--dry-run]
 """
 import argparse
 from datetime import datetime, timezone
+import http.client
 import json
 import math
 from pathlib import Path
@@ -66,7 +67,9 @@ def probe(base, path, timeout=TIMEOUT):
         if 300 <= exc.code < 400:
             return {"path": path, "status": exc.code, "error": "redirect"}
         return {"path": path, "status": exc.code}
-    except Exception as exc:  # a probe failure is a down site, not a crash
+    except (OSError, http.client.HTTPException) as exc:
+        # Transport failures only (URLError, timeouts, resets, TLS, a dropped or malformed response): the site is down.
+        # Anything else is a bug in this script and propagates, so the step fails without opening `site-down`.
         reason = exc.reason if isinstance(exc, error.URLError) else exc
         if isinstance(reason, socket.gaierror):
             return {"path": path, "error": "dns error"}
