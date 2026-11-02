@@ -113,6 +113,16 @@ def test_outside_california_message_unchanged(root):
         mod.build(root)
 
 
+@pytest.mark.parametrize('match', [[10**400, -121], [35, -10**400]])
+def test_huge_json_integer_is_outside_california_not_overflow(root, match):
+    rows = ports()
+    rows[0]['match'] = match
+    write_ports(root, rows)
+    assert str(10**400) in (root / 'catalog/home-ports.json').read_text()
+    with pytest.raises(ValueError, match=r'^Port match location outside California: ' + rows[0]['id'] + '$'):
+        mod.build(root)
+
+
 def test_valid_temp_catalog_written_and_equal_to_return(root, monkeypatch):
     rows = ports()[:3]
     rows.append(dict(rows[0], id='second-in-region', match=[41.0, -124.0]))

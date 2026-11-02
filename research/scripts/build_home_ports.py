@@ -24,7 +24,7 @@ def build(root=ROOT):
         seen.add(item['id'])
         match = item.get('match')
         if not (isinstance(match, list) and len(match) == 2
-                and all(type(v) in (int, float) and math.isfinite(v) for v in match)):
+                and all(type(v) is int or (type(v) is float and math.isfinite(v)) for v in match)):
             raise ValueError('Port match must be two numbers: ' + item['id'])
         lat, lon = match
         if not (32 <= lat <= 42.1 and -125.5 <= lon <= -116.5):
