@@ -14,10 +14,12 @@ export type ResultMeta = {provider: 'hermes' | 'claude'; model: string; ms: numb
 
 export const clamp01 = (v: unknown): number => typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0;
 const bool = (v: unknown): boolean => v === true;
+// Controls (not tab/LF/CR), zero-width, bidi overrides/isolates and BOM never reach the advisor (RF1100-3).
+const HIDDEN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g;
 function str(v: unknown, max: number): string | null {
   if (typeof v !== 'string') return null;
-  const s = v.replace(/\s+/g, ' ').trim();
-  return s ? s.slice(0, max) : null;
+  const s = v.replace(HIDDEN, '').replace(/\s+/g, ' ').trim();
+  return s ? Array.from(s).slice(0, max).join('').trimEnd() : null;
 }
 function int(v: unknown, max: number): number | null {
   const n = typeof v === 'string' && /^\d+$/.test(v.trim()) ? Number(v) : v;
