@@ -119,6 +119,9 @@ async function load() {
       export {RunLine, runPlace, runText, runBasis} from './web/brief/Run.tsx';
       export {LimitsForm} from './web/app/LimitsPanel.tsx';
       export {cruiseSpeed} from './web/limits.ts';
+      export {wantedHours} from './web/limits.ts';
+      export {regsData} from './web/regs.ts';
+      export {species} from './web/state.ts';
       export {regionInfo} from './web/app/App.tsx';
       export {profile, selection, habitat} from './web/state.ts';
       export {render} from 'preact-render-to-string';
@@ -201,4 +204,40 @@ test('the Boat limits form carries the cruise speed field, blank with no default
   assert.match(render(h(LimitsForm, {profile: 'boat'})), /name="cruise"[^>]*value="21"/);
   for (const p of ['shore', 'spear', 'kayak']) assert.doesNotMatch(render(h(LimitsForm, {profile: p})), /name="cruise"/);
   cruiseSpeed.value = null;
+});
+
+
+test('fishing-hours sentence: daylight, selected-target closure, unknown rules and bar wording', async () => {
+  const m = await load();
+  const fixture = JSON.parse(await (await import('node:fs/promises')).readFile(new URL('./fixtures/regulations/fe61-v1.json', import.meta.url)));
+  const rules = fixture.region, d = structuredClone(fixture.regulations), now = at('2026-10-12T12:00:00Z');
+  d.reviewed_at = now.toISOString(); d.rules_review_status = 'reviewed';
+  for (const [id, source] of Object.entries(d.sources)) {
+    source.approved_content_sha256 = 'a'.repeat(64);
+    d.checks[id] = {url: source.url, normalization: source.normalization, status: 'unchanged', source_status: 'ok', content_sha256: source.approved_content_sha256, data_retrieved_at: d.reviewed_at};
+  }
+  d.species.lingcod.windows = [{start: '2026-10-12', end: '2026-10-31', start_at: '2026-10-12T08:00:00-07:00'}];
+  d.species.salmon.windows = [];
+  m.regionInfo.value = {id: rules.id, timezone: TZ, rules}; m.regsData.value = {region: rules.id, data: d};
+  m.profile.value = 'boat'; m.species.value = 'lingcod'; m.cruiseSpeed.value = 20; m.wantedHours.value = 4;
+  const line = over => m.render(m.h(m.RunLine, {brief: brief({sunrise: '2026-10-12T06:52:00-07:00', sunset: '2026-10-12T17:21:00-07:00', ...over}), ranking: RANKING, now}));
+  assert.match(line(), /4 h wanted · 3 h 35 min available, 25 min short — ended by the legal opening at 8 am/);
+  assert.match(line(), /Daylight 6:52 am–5:21 pm/);
+  assert.doesNotMatch(line({sunrise: null}), /Daylight/);
+  m.species.value = 'salmon';
+  const closed = line();
+  assert.match(closed, /is closed that day: Outside the reviewed local season/);
+  assert.match(closed, /href="https:\/\/wildlife.ca.gov/);
+  assert.doesNotMatch(closed, /Up to|\d+ (?:h|min) available/);
+  m.species.value = 'lingcod'; d.species.lingcod.windows[0].start_at = '2026-10-12T06:00:00-07:00';
+  assert.match(line(), /data-kind="enough"/);
+  const bar = 'Morro Bay: bar caution or unknown at departure or return (estimate); check the bar status';
+  assert.match(line({windows: [{...WINDOW, reasons: [bar]}]}), /data-kind="enough">Morro Bay:.*check the bar.*4 h wanted/);
+  d.rules_review_status = 'pending'; assert.match(line(), /Rules not confirmed/); assert.doesNotMatch(line(), /data-kind="enough"/);
+  m.wantedHours.value = null; assert.match(line(), /Set hours I want/);
+  const form = m.render(m.h(m.LimitsForm, {profile: 'boat', focusWanted: true}));
+  assert.match(form, /name="wanted"/); assert.match(form, /No default · 1–12 hours/);
+  for (const p of ['shore', 'spear', 'kayak']) assert.doesNotMatch(m.render(m.h(m.LimitsForm, {profile: p})), /name="wanted"/);
+  assert.doesNotMatch(line(), /\b(?:Go|Confidence|best|bite|chance|guarantee)\b|%/);
+  m.species.value = null; m.cruiseSpeed.value = null; m.regsData.value = null;
 });
