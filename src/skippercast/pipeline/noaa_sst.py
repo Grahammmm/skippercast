@@ -2,7 +2,6 @@
 
 from datetime import datetime, timezone
 from io import BytesIO
-import math
 import re
 from urllib.parse import urlencode
 from xml.etree import ElementTree
@@ -18,14 +17,16 @@ CATALOG = f"{HOST}/thredds/catalog/{PATH}"
 
 
 def _bounds(bounds):
-    def pair(key):
+    def pair(key, limit):
+        # Range is compared before any float conversion: int comparisons are exact
+        # (10**400 is simply out of range, no OverflowError) and NaN/inf fail it.
         value = bounds.get(key) if isinstance(bounds, dict) else None
         if not isinstance(value, (list, tuple)) or len(value) != 2 or not all(
-                isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in value):
+                isinstance(v, (int, float)) and not isinstance(v, bool) and -limit <= v <= limit for v in value):
             raise ValueError("Invalid NOAA SST regional bounds")
         return value
-    (west, east), (south, north) = pair("longitude"), pair("latitude")
-    if not (-180 <= west < east <= 180 and -80 <= south < north <= 80):
+    (west, east), (south, north) = pair("longitude", 180), pair("latitude", 80)
+    if not (west < east and south < north):
         raise ValueError("Invalid NOAA SST regional bounds")
     return west, south, east, north
 

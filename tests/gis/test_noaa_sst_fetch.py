@@ -54,6 +54,12 @@ class BoundsTests(unittest.TestCase):
             with self.subTest(bounds=bounds):
                 self.assert_refused(bounds)
 
+    def test_oversized_integer_bounds_refused_not_overflow(self):
+        for bounds in ({"latitude": [34, 35], "longitude": [-121, 10**400]},
+                       {"latitude": [-10**400, 35], "longitude": [-121, -120]}):
+            with self.subTest(bounds=bounds):
+                self.assert_refused(bounds)
+
     def test_valid_bounds_go_to_the_catalog_first(self):
         client = FakeClient(http.SourceError("down"), http.SourceError("down"))
         with self.assertRaisesRegex(ValueError, "No readable NOAA blended SST catalog"):
