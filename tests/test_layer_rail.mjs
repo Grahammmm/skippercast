@@ -47,10 +47,13 @@ async function load() {
   return bundle;
 }
 
-/** The rail's toggles by label: pressed, disabled and the note under the name. */
+/** The rail's toggles by label: pressed, disabled (SC2222-06: aria-disabled, never native) and the note under the name. */
 const railItems = html => Object.fromEntries([...html.matchAll(
-  /<li class="ui-rail-item" data-on="(true|false)"><button([^>]*)>.*?<span class="ui-rail-label">([^<]+)<\/span>(?:<span class="ui-rail-note ui-mono">([^<]*)<\/span>)?/gs,
-)].map(m => [m[3], {on: m[1] === 'true', disabled: /\sdisabled(?:[\s>=]|$)/.test(m[2]), note: m[4] ?? ''}]));
+  /<li class="ui-rail-item" data-on="(true|false)"><button([^>]*)>.*?<span class="ui-rail-label">([^<]+)<\/span>(?:<span(?: id="([^"]+)")? class="ui-rail-note ui-mono">([^<]*)<\/span>)?/gs,
+)].map(m => {
+  assert.doesNotMatch(m[2], /\sdisabled(?:[\s>=]|$)/, `${m[3]}: no native disabled, so the toggle stays in the tab order`);
+  return [m[3], {on: m[1] === 'true', disabled: /\saria-disabled="true"/.test(m[2]), describedBy: m[2].match(/aria-describedby="([^"]+)"/)?.[1], noteId: m[4], note: m[5] ?? ''}];
+}));
 const pressed = items => Object.keys(items).filter(label => items[label].on);
 /** The colour keys the legend shows, in order. */
 const swatches = html => [...html.matchAll(/class="app-swatch" data-layer="([a-z-]+)"/g)].map(m => m[1]);
@@ -235,6 +238,33 @@ test('in Terrain, chart-only entries and the base read "Chart only" and cannot b
     assert.deepEqual(Object.values(railItems(html)).filter(item => item.disabled), [], href);
     assert.doesNotMatch(html, /Chart only|<select disabled/, href);
   }
+});
+
+test('SC2222-06: a "Chart only" toggle stays focusable, names its note and ignores presses; on the Chart it toggles', async t => {
+  const m = await load(), s = m.state, saved = [globalThis.location, globalThis.history], chartOnly = ['Water temp', 'Swell + wind', 'Clouds'];
+  t.after(() => { [globalThis.location, globalThis.history] = saved; });
+  s.configureStore({v2: true, storage: null});
+  globalThis.history = {state: null, replaceState(_s, _t, url) { location.href = url; }};
+  const go = shown => { globalThis.location = {href: `${ORIGIN}?region=morro-bay&presentation=${shown}&layers=seafloor,water-temp&current=wcofs`}; s.syncFromURL(location.href); return railItems(m.render(m.h(m.LayerRail))); };
+  /** Press an entry (click, Enter and Space all fire a <button>'s onClick); `spy` replaces its onToggle when given. */
+  const press = (label, spy) => {
+    const item = m.LayerRail().props.children.find(v => v.props.label === label);
+    item.type(spy ? {...item.props, onToggle: spy} : item.props).props.children[0].props.onClick();
+  };
+  for (const shown of ['3d', '2d']) {
+    const items = go(shown);
+    for (const label of chartOnly) assert.deepEqual([items[label].disabled, items[label].note, items[label].describedBy], [true, m.CHART_ONLY, items[label].noteId ?? 'no note id'], `${shown} ${label}`);
+    for (const label of ['Seafloor', 'Currents', 'Charter fleet']) assert.equal(items[label].describedBy, undefined, `${shown} ${label}`);
+    for (const label of chartOnly) press(label, () => assert.fail(`${shown} ${label}: onToggle called`));
+    for (const label of chartOnly) press(label);
+    assert.deepEqual([s.layers.value, s.current.value], [['seafloor', 'water-temp'], 'wcofs'], `${shown}: presses change nothing`);
+  }
+  const Item = m.LayerRail().props.children[0].type;
+  assert.doesNotMatch(m.render(m.h(Item, {id: 'x', label: 'X', icon: 'current', on: false, onToggle() {}, disabled: true})), /aria-describedby|\sdisabled/, 'no note, nothing named');
+  const items = go('chart');
+  for (const label of chartOnly) assert.deepEqual([items[label].disabled, items[label].describedBy, items[label].noteId], [false, undefined, undefined], label);
+  for (const label of ['Water temp', 'Swell + wind', 'Currents']) press(label);
+  assert.deepEqual([s.layers.value, s.current.value], [['seafloor', 'swell'], 'off'], 'on the Chart a press toggles as before');
 });
 
 test('the base choice: Night and Chart detail everywhere, Aerial where offered, the drawn base selected', async () => {

@@ -24,12 +24,15 @@ export type RailItemProps = {
 };
 
 export function RailItem({id, label, icon, on, onToggle, note, basis, disabled, children}: RailItemProps) {
+  // SC2222-06: an entry the view cannot draw stays in the tab order (aria-disabled, not native disabled), names its note, and ignores presses.
+  const noteId = disabled && note ? `${id}-note` : undefined;
   return (
     <li class="ui-rail-item" data-on={on ? 'true' : 'false'}>
-      <Button icon={icon} pressed={on} disabled={disabled} class="ui-rail-toggle" onClick={() => onToggle(id, !on)}>
+      <Button icon={icon} pressed={on} aria-disabled={disabled ? 'true' : undefined} aria-describedby={noteId}
+        class="ui-rail-toggle" onClick={() => { if (!disabled) onToggle(id, !on); }}>
         <span class="ui-rail-text">
           <span class="ui-rail-label">{label}</span>
-          {note ? <span class="ui-rail-note ui-mono">{note}</span> : null}
+          {note ? <span id={noteId} class="ui-rail-note ui-mono">{note}</span> : null}
         </span>
       </Button>
       {basis ? <Popover iconOnly align="end" summary={`${label} basis`}>{basis}</Popover> : null}
