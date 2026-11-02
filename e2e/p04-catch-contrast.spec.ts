@@ -137,9 +137,13 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // (Reports in, Fleet out; still four tabs). Same tab markup, classes and count; MASTHEAD_VIEWS, CSS, tokens and catch
 // markup are unchanged; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
 // Merge of SCJ-7 with SCJ-9: Masthead.tsx carries both changes (disjoint hunks); rebind its merged hash.
+// BF-landing-live (#1252): App.tsx's RegionInfo, regionInfo signal, currentRegionInfo, zone and createRegionReader
+// move unchanged to web/app/region-info.ts, which App.tsx imports and re-exports (one signal instance), so the
+// landing's verdict reaches them without the app shell. Reports' id/charters reads, CSS, tokens, classes and catch
+// markup are unchanged; contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
-  "web/app/App.tsx": "c3babf97f3e23eee5c1678ed9c531fb0df6bd584c6934d60cfb047fe5af84ae2",
+  "web/app/App.tsx": "f63bf478bdb77f4564495a454865a9999bf767ba1fe4953c8192777d69094fb0",
   "web/app/Masthead.tsx": "e6e634b4a6283f72255ce7a1fb3ef78e8d78be5f847d5d99c7655b7de94e2877",
   "web/app/LayerRail.tsx": "bdae57c4c4dca33b5fb83a413b7d5c6f525221a4fb6b78037a1ad99102635ccd",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
