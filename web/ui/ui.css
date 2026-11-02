@@ -19,13 +19,13 @@
   transition: background var(--motion-state), border-color var(--motion-state), color var(--motion-state);
 }
 .ui-button:focus-visible, .ui-range:focus-visible, .ui-popover-summary:focus-visible, .ui-sheet-handle:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.ui-button:disabled { color: var(--muted); cursor: not-allowed; opacity: 0.6; }
+.ui-button:disabled, .ui-button[aria-disabled="true"] { color: var(--muted); cursor: not-allowed; opacity: 0.6; }
 .ui-button--primary { background: var(--mint); border-color: var(--mint); color: var(--bg); }
-.ui-button--primary:not(:disabled):hover { background: color-mix(in srgb, var(--mint) 88%, var(--text)); }
+.ui-button--primary:not(:disabled):not([aria-disabled="true"]):hover { background: color-mix(in srgb, var(--mint) 88%, var(--text)); }
 .ui-button--ghost { border-color: var(--line); background: var(--panel-2); }
-.ui-button--ghost:not(:disabled):hover { border-color: var(--muted); }
+.ui-button--ghost:not(:disabled):not([aria-disabled="true"]):hover { border-color: var(--muted); }
 .ui-button--quiet { color: var(--muted); }
-.ui-button--quiet:not(:disabled):hover { color: var(--text); background: var(--panel-2); }
+.ui-button--quiet:not(:disabled):not([aria-disabled="true"]):hover { color: var(--text); background: var(--panel-2); }
 .ui-button[aria-pressed="true"] { border-color: var(--mint); background: color-mix(in srgb, var(--mint) 14%, var(--panel-2)); color: var(--text); }
 .ui-button--sm { padding: var(--space-1) var(--space-3); }
 /* Half a pixel over the touch minimum: in a sheet placed by a fractional translate, a measured box can come out a

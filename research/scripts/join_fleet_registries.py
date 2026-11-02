@@ -47,10 +47,12 @@ from datetime import datetime, timezone
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
 import re
 import sqlite3
 import sys
+import tempfile
 from typing import Iterable, Iterator, Mapping
 import zipfile
 
@@ -730,6 +732,21 @@ def _inside_repository(path: Path) -> bool:
         return False
 
 
+def _write_private(path: Path, text: str) -> None:
+    # mkstemp creates a new file exclusively (O_EXCL, mode 0600), so a stale or planted temporary file of
+    # any mode, or a symlink, is never reused and never decides the output's mode.
+    fd, name = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
+    tmp = Path(name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            print(text, end="", file=fh, flush=True)
+            os.fsync(fh.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--resolved", type=Path, required=True)
@@ -738,9 +755,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--psix", type=Path, nargs="*", default=[])
     parser.add_argument("--out", type=Path, required=True, help="private directory outside the repository")
     args = parser.parse_args(argv)
+    if args.out.is_symlink() or (args.out.exists() and not args.out.is_dir()):
+        parser.error("--out must not be a symlink" if args.out.is_symlink() else "--out must be a folder")
     if _inside_repository(args.out):
         parser.error("--out must be outside the repository: the join table is private registry data")
-    registry = [json.loads(line) for line in args.resolved.read_text().splitlines() if line.strip()]
+    registry = []
+    for n, line in enumerate(args.resolved.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            entry = json.loads(line)
+        except ValueError:
+            entry = None
+        if not (isinstance(entry, dict) and isinstance(entry.get("name"), str) and entry["name"]):
+            parser.error(f"--resolved line {n}: not a JSON object with a name")
+        registry.append(entry)
+    if args.out.is_dir() and args.out.stat().st_mode & 0o077:
+        print(f"note: --out is readable by others (mode {args.out.stat().st_mode & 0o777:04o})", file=sys.stderr)
     statics, presence, window = load_ais(args.state)
     psix, psix_rows = load_psix(args.psix)
     names = {norm(v["name"]) for v in registry}
@@ -759,11 +790,11 @@ def main(argv: list[str] | None = None) -> int:
     meta = {"generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "inputs": {str(p): _sha256(p) for p in [args.resolved, args.fcc, *args.psix]},
             "ais_state": str(args.state), "ais_presence_window": window}
-    args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / "join.json").write_text(json.dumps({"meta": meta, "counts": counts, "rows": rows,
-                                                    "call_signs": calls, "normalisation_changes": norm_changes},
-                                                   indent=1))
-    (args.out / "join.md").write_text(markdown(rows, calls, counts, meta, norm_changes))
+    args.out.mkdir(mode=0o700, parents=True, exist_ok=True)
+    _write_private(args.out / "join.json", json.dumps({"meta": meta, "counts": counts, "rows": rows,
+                                                       "call_signs": calls, "normalisation_changes": norm_changes},
+                                                      indent=1))
+    _write_private(args.out / "join.md", markdown(rows, calls, counts, meta, norm_changes))
     print(json.dumps(counts, indent=1, sort_keys=True))
     return 0
 

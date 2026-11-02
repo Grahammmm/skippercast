@@ -141,6 +141,11 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // move unchanged to web/app/region-info.ts, which App.tsx imports and re-exports (one signal instance), so the
 // landing's verdict reaches them without the app shell. Reports' id/charters reads, CSS, tokens, classes and catch
 // markup are unchanged; contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
+// SC2222-06 (#1245, rail Chart-only entries): ui.css gives `.ui-button[aria-disabled="true"]` the existing
+// `:disabled` look and adds `:not([aria-disabled="true"])` to the three variant hover rules. Only Rail.tsx's RailItem
+// sets aria-disabled; BODY09 mounts Reports/CatchCards, which import no Rail or Button and carry no aria-disabled, so
+// every rule matches the catch flow exactly as before. No token or colour value changes; contrast(), assertions and
+// thresholds are untouched. Rebind only ui.css.
 // SC2222-04 (#1238, mark card focus return): MapStage.tsx adds only tabIndex={-1} to the stage section and the
 // terrain host so MarkCard can return focus to the shown map. No class, colour, token or paint change; BODY09
 // mounts Reports/CatchCards, never MapStage. contrast(), assertions and thresholds are untouched. Rebind only MapStage.tsx.
@@ -162,7 +167,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/app/LayerRail.tsx": "bdae57c4c4dca33b5fb83a413b7d5c6f525221a4fb6b78037a1ad99102635ccd",
   "web/app/MapStage.tsx": "11bfed22183687b9bdfa6c4a348688b633dd4eaab5607aeeb5718fb104c41466",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
-  "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
+  "web/ui/ui.css": "0a636f225f5b51d1e34f2de059c826e4a0f2af876fcf20f827f2ccb5ef705008",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   "web/app/app.css": "ae6b03d506037f735baaf561b08fb15cad815133dc973c7bd4052d4df932cbac",
   "packages/coast/panel.css": "fda5b83480f2c32243d5ff90b99e2581d459a46f88543d6a264705bdc8e821fb",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
