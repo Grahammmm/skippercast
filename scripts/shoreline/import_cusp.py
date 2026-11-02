@@ -26,9 +26,11 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
 import struct
+import sys
 from urllib.error import HTTPError
 from urllib.parse import urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
@@ -39,6 +41,7 @@ TILES = 'https://nsde.ngs.noaa.gov/cusp/tiles/{z}/{x}/{y}.pbf'
 ZOOM = 12
 HOST = 'nsde.ngs.noaa.gov'  # catalog/sources.json noaa-cusp-shoreline allowed_hosts
 MAX_TILE_BYTES = 4 << 20  # largest Morro Bay tile is 11 KB gzipped
+ID = re.compile(r'^[a-z][a-z0-9-]{1,63}$')  # skippercast.platform.contracts.ID, copied: this script runs without src
 KEEP = ('SOURCE_ID', 'SRC_DATE', 'HOR_ACC', 'ATTRIBUTE', 'DATA_SOURC', 'EXT_METH', 'DAT_SET_CR', 'SRC_CITA')
 AGENT = {'User-Agent': 'SkipperCast shoreline import (https://skippercast.com)'}
 LIMITATIONS = [
@@ -229,8 +232,17 @@ def fetch(tile):
 
 
 def region_bounds(region_id, root=ROOT):
-    region = json.loads((root / 'regions' / region_id / 'region.json').read_text())
-    return [float(v) for v in region['bounds']]
+    path = root / 'regions' / region_id / 'region.json'
+    if not ID.fullmatch(region_id) or not path.is_file():
+        raise ValueError(f'{path} is not a file' if ID.fullmatch(region_id) else 'not a region id')
+    try:
+        box = json.loads(path.read_text())['bounds']
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise ValueError(f'region.json unreadable or without bounds ({error!r})') from None
+    if not (isinstance(box, list) and len(box) == 4 and all(type(v) is int or type(v) is float and math.isfinite(v) for v in box)
+            and -180 <= box[0] < box[2] <= 180 and -90 <= box[1] < box[3] <= 90):
+        raise ValueError(f'bounds {box!r} are not 4 finite numbers -180 <= w < e <= 180, -90 <= s < n <= 90')
+    return [float(v) for v in box]
 
 
 def extract(region_id, box, get=fetch, now=None):
@@ -282,20 +294,46 @@ def extract(region_id, box, get=fetch, now=None):
         'tile_receipts': receipts, 'limitations': LIMITATIONS}, 'features': features}
 
 
-def main(argv=None):
+def main(argv=None, *, root=ROOT, get=fetch):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('regions', nargs='+')
-    parser.add_argument('--out', type=Path, default=ROOT / 'catalog/shoreline')
+    parser.add_argument('--out', type=Path, default=None, help='default: catalog/shoreline')
+    parser.add_argument('--allow-empty', action='store_true', help='write 0 features over a file that has some')
     args = parser.parse_args(argv)
+    out, skipped, boxes = args.out or root / 'catalog/shoreline', False, {}
+    for region_id in args.regions:  # every region is checked before any tile is fetched
+        try:
+            boxes[region_id] = region_bounds(region_id, root)
+        except ValueError as error:
+            print(f'import_cusp: {region_id}: {error}', file=sys.stderr)
+    if len(boxes) < len(set(args.regions)):
+        return 2
     for region_id in args.regions:
-        collection = extract(region_id, region_bounds(region_id))
-        args.out.mkdir(parents=True, exist_ok=True)
-        path = args.out / f'{region_id}.geojson'
-        path.write_text(json.dumps(collection, separators=(',', ':'), ensure_ascii=False) + '\n')
-        p = collection['provenance']
-        print(f"{path}: {p['features']} features, {len(p['tile_receipts'])}/{p['requested_tiles']} tiles served, "
-              f"source dates {p['source_dates']}, held {p['held_creators']}, {path.stat().st_size:,} bytes")
+        collection = extract(region_id, boxes[region_id], get=get)
+        path, p = out / f'{region_id}.geojson', collection['provenance']
+        try:  # features in the current file: 0 when there is none; unreadable counts as some
+            have = len(json.loads(path.read_text())['features']) if path.exists() else 0
+        except (OSError, ValueError, KeyError, TypeError):
+            have = 'unreadable content'
+        if not p['tile_receipts']:
+            reason = f"NOAA served none of {p['requested_tiles']} tiles"
+        elif p['features'] == 0 and have != 0 and not args.allow_empty:
+            reason = f'0 features where the current file has {have}'
+        else:
+            out.mkdir(parents=True, exist_ok=True)
+            tmp = path.with_name(f'.{path.name}.{os.getpid()}.tmp')
+            try:  # same-directory temp + replace: a failed write never leaves a partial file
+                tmp.write_text(json.dumps(collection, separators=(',', ':'), ensure_ascii=False) + '\n')
+                os.replace(tmp, path)
+            finally:
+                tmp.unlink(missing_ok=True)
+            print(f"{path}: {p['features']} features, {len(p['tile_receipts'])}/{p['requested_tiles']} tiles served, "
+                  f"source dates {p['source_dates']}, held {p['held_creators']}, {path.stat().st_size:,} bytes")
+            continue
+        print(f'import_cusp: {region_id}: {reason}; {path} left unchanged', file=sys.stderr)
+        skipped = True
+    return 1 if skipped else 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
