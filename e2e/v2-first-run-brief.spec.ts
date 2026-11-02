@@ -36,6 +36,9 @@ async function prepare(page: Page, region = 'morro-bay') {
     };
     for (const type of ['input', 'keydown', 'click']) document.addEventListener(type, event => {
       const actions = JSON.parse(sessionStorage.getItem('funnel-actions') || '[]');
+      // Enter dispatches a native submit-button click, not another user action.
+      if (type === 'click' && (event as MouseEvent).detail === 0 && actions.at(-1) === 'Enter'
+        && (event.target as HTMLElement).matches('button[type="submit"]')) return;
       actions.push(type === 'keydown' ? (event as KeyboardEvent).key : type);
       sessionStorage.setItem('funnel-actions', JSON.stringify(actions));
     }, true);
