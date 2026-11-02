@@ -8,10 +8,17 @@
 // imports this file by type stripping.
 import {saveData} from './save-data.ts';
 
-/** The hashed same-origin paths in a precache.json's `warm` list; anything else is ignored. */
+/** At most this many files are warmed, so a damaged precache.json cannot flood the landing with requests. */
+export const WARM_MAX = 64;
+const ASSET = /^\/assets\/[\w-]+(?:\.[\w-]+)+$/; // a real file name: no empty, `.` or `..` part, and an extension
+
+/** The distinct hashed same-origin paths in a precache.json's `warm` list, first seen first, at most WARM_MAX; anything else is ignored. */
 export function warmList(precache: unknown): string[] {
   const list = (precache as {warm?: unknown} | null)?.warm;
-  return Array.isArray(list) ? list.filter((p): p is string => typeof p === 'string' && /^\/assets\/[\w.-]+$/.test(p)) : [];
+  if (!Array.isArray(list)) return [];
+  const taken = new Set<string>();
+  for (const p of list) if (taken.size < WARM_MAX && typeof p === 'string' && ASSET.test(p)) taken.add(p);
+  return [...taken];
 }
 
 /** Fetch the app's first-paint files once; resolves with the paths requested (none under Save-Data or on any failure). */
