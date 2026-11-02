@@ -7,7 +7,9 @@
 // share one request; each caller gets its own clone of the response. Live
 // feeds (/api/, /feeds/), other origins and reads asking for a fresh copy
 // (`cache: 'no-store' | 'no-cache' | 'reload'`) pass straight through. A
-// failed or non-OK read is forgotten, so the next caller asks again.
+// failed or non-OK read is forgotten, so the next caller asks again. An OK
+// body is read whole before the share is kept: a body that breaks mid-transfer
+// fails that read like a transport failure and is forgotten too.
 //
 // Erasable syntax only: the node tests import it by type stripping.
 
@@ -49,7 +51,11 @@ export function shareStatic(fetchFn: typeof fetch): typeof fetch {
     let read = reads.get(key);
     if (!read) {
       const {signal: _signal, ...rest} = init;
-      read = fetchFn(input, rest);
+      read = fetchFn(input, rest).then(async response => {
+        // Read an OK body whole (from a clone) before sharing; a double with no body or clone is shared as is.
+        if (response.ok && response.body != null && typeof response.clone === 'function') await response.clone().arrayBuffer();
+        return response;
+      });
       reads.set(key, read);
       read.then(response => { if (!response.ok) reads.delete(key); }, () => reads.delete(key));
     }
