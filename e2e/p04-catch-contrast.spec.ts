@@ -133,6 +133,11 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // SCJ-9 (#1225, phone bottom bar): Masthead.tsx's TAB_VIEWS becomes the explicit list coast/conditions/history/reports
 // (Reports in, Fleet out; still four tabs). Same tab markup, classes and count; MASTHEAD_VIEWS, CSS, tokens and catch
 // markup are unchanged; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
+// SC2222-06 (#1245, rail Chart-only entries): ui.css gives `.ui-button[aria-disabled="true"]` the existing
+// `:disabled` look and adds `:not([aria-disabled="true"])` to the three variant hover rules. Only Rail.tsx's RailItem
+// sets aria-disabled; BODY09 mounts Reports/CatchCards, which import no Rail or Button and carry no aria-disabled, so
+// every rule matches the catch flow exactly as before. No token or colour value changes; contrast(), assertions and
+// thresholds are untouched. Rebind only ui.css.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
   "web/app/App.tsx": "6a77aa09c77ed2a281979d6413dcbaaa7b530ce79ba5926e59d8485e7c4cbe74",
@@ -140,7 +145,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/app/LayerRail.tsx": "bdae57c4c4dca33b5fb83a413b7d5c6f525221a4fb6b78037a1ad99102635ccd",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
-  "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
+  "web/ui/ui.css": "0a636f225f5b51d1e34f2de059c826e4a0f2af876fcf20f827f2ccb5ef705008",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   "web/app/app.css": "c5b14f6eedcb57b4628ddc8edc2adfe6305b2ac515f1702e6a24a638539eb64a",
   "packages/coast/panel.css": "fda5b83480f2c32243d5ff90b99e2581d459a46f88543d6a264705bdc8e821fb",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
