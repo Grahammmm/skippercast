@@ -32,6 +32,7 @@ import {Conditions} from './views/Conditions.tsx';
 import {Fleet} from './views/Fleet.tsx';
 import {History} from './views/History.tsx';
 import {Reports} from './views/Reports.tsx';
+import {PlanView} from './PlanView.tsx';
 import {appView} from '../state.ts';
 
 export {emptyTiles} from '../brief/Tiles.tsx';
@@ -64,6 +65,7 @@ export function Desktop({now = new Date()}: {now?: Date} = {}) {
         {appView.value === 'conditions' ? <Conditions now={now} /> : appView.value === 'history' ? <History now={now} /> : <><div class="app-chrome-left"><MarkCard /><Legend /></div><LayerRail /></>}
         <TimeDock now={now} />
       </MapStage>
+      {appView.value === 'plan' ? <div class="app-page"><PlanView now={now} /></div> : null}
       {appView.value === 'reports' ? <div class="app-page"><Reports now={now} /></div> : null}
     </main>
   );

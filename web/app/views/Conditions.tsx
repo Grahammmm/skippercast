@@ -17,6 +17,7 @@ import {regionInfo, zone} from '../App.tsx';
 import {CoastMarkup} from '../CoastMarkup.tsx';
 import {CurrentSource} from '../LayerRail.tsx';
 import {dockState, localParts, selectHour} from '../TimeDock.tsx';
+import {PlanLink, TargetRules, targetRules} from '../PlanView.tsx';
 
 /** Load the forecast for the region shown (shared with the brief, once per region). */
 function useForecast(): void {
@@ -72,7 +73,8 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
         <li>{notes.caveat}</li>
         {brief?.alerts.map(a => <li key={a.id}><a href={a.url} target="_blank" rel="noopener">{a.event}</a></li>)}
         {brief?.notice ? <li><a href={brief.notice.url} target="_blank" rel="noopener">Beach notice: {brief.notice.name}</a></li> : null}
-        <li><a href={CDFW_REGULATIONS} target="_blank" rel="noopener">Current CDFW ocean fishing rules</a></li>
+        <li>{targetRules(now).available ? <TargetRules now={now} /> : <><TargetRules now={now} /><a href={CDFW_REGULATIONS} target="_blank" rel="noopener">Current CDFW ocean fishing rules</a></>}</li>
+        <li><PlanLink /></li>
       </ul>
       <h3 class="ui-eyebrow">Surface current</h3>
       <div class="app-conditions-current"><CurrentSource /><p class="app-empty">The map draws the source chosen here or in the Currents layer.</p></div>

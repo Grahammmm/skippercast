@@ -48,7 +48,7 @@ export type Units = 'nautical';
 export type CoordinateFormat = 'dd' | 'ddm' | 'dms';
 
 /** Masthead views (v2). `?view=` is shared with v1's map position "lat,lng,zoom". */
-export const APP_VIEWS = ['coast', 'conditions', 'history', 'fleet', 'reports'] as const;
+export const APP_VIEWS = ['coast', 'conditions', 'history', 'fleet', 'reports', 'plan'] as const;
 export type AppView = typeof APP_VIEWS[number];
 export const BASES = ['night', 'chart', 'aerial'] as const;
 export type Base = typeof BASES[number];
