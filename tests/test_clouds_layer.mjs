@@ -18,7 +18,8 @@ import {
   CLOUD_INDEX, CLOUD_OPACITY, FRAME_MS, HOLD_MS, INDEX_REFRESH_MS, MAX_FRAMES, NO_FRAMES, OTHER_DAY,
   cloudHeld, cloudIndex, cloudOverlay, cloudStamp, cloudStatus, createClouds, frameId, frameLabel,
 } from '../web/map/clouds.ts';
-import {createEngine, mapOptions} from '../web/map/engine.ts';
+import {createEngine, mapOptions, prepareLibrary} from '../web/map/engine.ts';
+import {FRAME_PROTOCOL, cloudTiles, frameProtocol, pinnedTileUrl} from '../web/map/frames.ts';
 import {COASTLINE_GLOW} from '../web/map/coastline.ts';
 import {MARK_PICK} from '../web/map/marks.ts';
 import {railNotes} from '../web/map/layers.ts';
@@ -48,7 +49,9 @@ test('a frame is a raster source pinned to its listed acquisition time, drawn tr
   const source = sources[frameId(at)];
   assert.equal(source.type, 'raster');
   assert.equal(source.tileSize, 512);
-  assert.equal(new URL(source.tiles[0].replace('{bbox-epsg-3857}', '0,0,1,1')).origin, 'https://nowcoast.noaa.gov');
+  // SC2222-08: on the frame protocol, byte-identical to cloudSource's https URL after the scheme (time, bbox template).
+  assert.deepEqual(source.tiles, [`nowcoast-frame://${cloudTiles(cloud, at, new Date(NOW)).tiles[0].slice('https://'.length)}`]);
+  assert.ok(source.tiles[0].startsWith('nowcoast-frame://nowcoast.noaa.gov/geoserver/'));
   assert.equal(timeOf(source.tiles[0]), at);
   assert.doesNotMatch(source.tiles[0], /current|latest/);
   assert.deepEqual(layers.map(l => [l.id, l.source, l.type]), [[frameId(at), frameId(at), 'raster']]);
@@ -303,6 +306,46 @@ test('the engine adds an overlay once the style loads, keeps drawn frames, and r
   assert.deepEqual(Object.keys(map.sources), []);
   // MapLibre fetches raster tiles while refreshExpiredTiles is on (its default), so server/security-headers.ts lists nowCOAST under connect-src.
   assert.equal(mapOptions({}, {version: 8, sources: {}, layers: []}, {latitude: 0, longitude: 0, zoom: 8}).refreshExpiredTiles, undefined);
+});
+
+test('SC2222-08: frames load through nowcoast-frame://, whose handler returns only bytes, so no frame is refetched on cache expiry', async () => {
+  const cloud = index(), now = new Date(NOW), frames = cloud.availableTimes.slice(-MAX_FRAMES);
+  const {sources} = cloudOverlay(cloud, frames, now);
+  assert.equal(Object.keys(sources).length, frames.length);
+  for (const at of frames) {
+    const https = cloudTiles(cloud, at, now).tiles[0];
+    assert.ok(https.startsWith('https://nowcoast.noaa.gov/'));
+    assert.deepEqual(sources[frameId(at)].tiles, [`nowcoast-frame://${https.slice('https://'.length)}`], 'only frame-protocol tiles, query unchanged');
+  }
+  for (const url of ['https://imagery.nationalmap.gov/x', 'http://nowcoast.noaa.gov/x', 'https://nowcoast.noaa.gov.evil.example/x']) assert.equal(pinnedTileUrl(url), url);
+  const calls = [], png = [137, 80, 78, 71];
+  const fake = (status = 200) => async (url, init) => {
+    calls.push([url, init]);
+    return new Response(status === 200 ? new Uint8Array(png) : 'busy', {status, headers: {'Cache-Control': 'max-age=240', Expires: new Date(NOW + 4 * MIN).toUTCString()}});
+  };
+  const tile = sources[frameId(frames.at(-1))].tiles[0].replace('{bbox-epsg-3857}', '0,0,1,1'), ctrl = new AbortController();
+  const got = await frameProtocol(fake())({url: tile, type: 'image'}, ctrl);
+  assert.deepEqual(Object.keys(got), ['data'], 'no cacheControl or expires, though the response carried max-age=240');
+  assert.deepEqual([...new Uint8Array(got.data)], png);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], `https://${tile.slice('nowcoast-frame://'.length)}`);
+  assert.equal(calls[0][1].credentials, 'omit');
+  assert.equal(calls[0][1].signal, ctrl.signal);
+  calls.length = 0;
+  for (const url of ['nowcoast-frame://evil.example/x', 'nowcoast-frame://nowcoast.noaa.gov@evil.example/x', 'nowcoast-frame://nowcoast.noaa.gov:8443/x',
+    'nowcoast-frame://nowcoast.noaa.gov.evil.example/x', 'https://nowcoast.noaa.gov/x', 'pmtiles://nowcoast.noaa.gov/x', 'nowcoast-frame://']) {
+    await assert.rejects(frameProtocol(fake())({url}, new AbortController()), {message: 'frame host'}, url);
+  }
+  const aborted = new AbortController();
+  aborted.abort();
+  await assert.rejects(frameProtocol(fake())({url: tile}, aborted), {name: 'AbortError'});
+  assert.equal(calls.length, 0, 'another host or an aborted load fetches nothing');
+  await assert.rejects(frameProtocol(fake(503))({url: tile}, new AbortController()), {message: '503'}, 'the status, so the per-source error still names Clouds');
+  const protocols = [], lib = {setWorkerUrl() {}, addProtocol: (name, fn) => protocols.push([name, typeof fn])};
+  const module = {lib, workerUrl: 'w.js', Protocol: class { tile() {} }};
+  prepareLibrary(module);
+  prepareLibrary(module);
+  assert.deepEqual(protocols, [['pmtiles', 'function'], [FRAME_PROTOCOL, 'function']], 'each protocol once per library');
 });
 
 test('the legend labels the frame on screen with a loop toggle; the rail names the newest frame', async () => {

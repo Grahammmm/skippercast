@@ -58,6 +58,8 @@ export const ENC_MIN_ZOOM = 10;
 export const chartMark = signal<ChartMark | null>(null);
 /** Registry layers whose source failed; the legend says so and the rest of the chart keeps drawing. */
 export const unavailable = signal<readonly string[]>([]);
+/** Bumped by the legend's Try again: the Chart reloads the region's protected areas (SC2007-02). */
+export const retryMpas = signal(0);
 /** True when MapLibre could not start (no WebGL); the stage then shows its "Map unavailable." panel. */
 export const chartFailed = signal(false);
 
@@ -292,7 +294,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
     effect(() => { if (shownPresentation.value !== 'chart' || appView.value !== 'coast' || selection.value || habitat.value) engine.peek()?.stopFlyover(); }),
     // The region's protected areas, checked before they draw; a region change replaces them. They load with the
     // region, whatever the presentation, because the terrain drapes the same areas (FE-82).
-    effect(() => { const id = region.value; if (id) void loadRegionMpas(id); }),
+    // The legend's Try again (retryMpas) reloads them for the same region after a failed read (SC2007-02).
+    effect(() => { const id = region.value; retryMpas.value; if (id) void loadRegionMpas(id); }),
     effect(() => { const e = engine.value, m = mpas.value; if (e && m && m.region === region.value) e.setData(MPA_SOURCE, m.data); }),
     effect(() => { host.dataset.mpa = mpaState.value.status; }),
     // A new link selection (a mark, a terrain pick, Back) replaces the Chart's own: one selection at a time.

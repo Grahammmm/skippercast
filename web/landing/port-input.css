@@ -74,3 +74,8 @@
   width: min(320px, 80vw); min-height: var(--touch-min); padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md);
   background: var(--panel-2); color: var(--text); font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans);
 }
+/* Measured model gaps beside the verdict. */
+.app-verdict-models { margin: var(--space-2) 0; color: var(--text); font-size: var(--text-13); }
+.app-verdict-models-detail { color: var(--muted); font-size: var(--text-13); }
+.app-verdict-models-detail summary { cursor: pointer; min-height: var(--touch-min); }
+.app-verdict-models-detail summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

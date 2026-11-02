@@ -1,0 +1,13 @@
+/* Hour by hour table (BF-hourly-table), web/app/views/HourlyTable.tsx. */
+.app-hourly { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.app-hourly-box { flex: none; max-height: 20rem; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--bg-deep); }
+.app-hourly-box:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-hourly table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+.app-hourly caption { padding: var(--space-2); text-align: left; font-weight: var(--weight-semibold); }
+.app-hourly thead th { position: sticky; top: 0; z-index: 1; background: var(--panel); color: var(--muted); font-weight: var(--weight-semibold); text-align: left; }
+.app-hourly th, .app-hourly td { padding: var(--space-1) var(--space-2); border-top: 1px solid var(--line); }
+.app-hourly tbody th button { min-height: var(--touch-min); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-md); background: none; color: var(--blue); font: inherit; cursor: pointer; }
+.app-hourly tbody th button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.app-hourly tr.is-current { background: var(--panel); box-shadow: inset 3px 0 0 var(--blue); }
+.app-hourly tr.is-current th button { font-weight: var(--weight-semibold); }
+.app-hourly-note { margin: 0; color: var(--muted); }
