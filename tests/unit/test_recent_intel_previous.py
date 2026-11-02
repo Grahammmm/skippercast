@@ -19,6 +19,12 @@ NOW = datetime(2026, 9, 22, 20, tzinfo=timezone.utc)
 LEAD = {"id": "old", "url": "https://example.org/old", "published_at": "2026-09-15T00:00:00+00:00", "review_status": "candidate"}
 
 
+class Frozen(datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return NOW
+
+
 def config():
     data = json.loads((ROOT / "catalog/recent-intel-watchlist.json").read_text())
     data["regions"] = [{"id": "morro-bay", "queries": [{"id": "reef", "text": "Morro Bay lingcod"}]}]
@@ -47,7 +53,7 @@ class PreviousSnapshotTests(unittest.TestCase):
             err = io.StringIO()
             gather = functools.partial(module.gather, runner=runner)
             with patch.object(sys, "argv", argv), patch.object(module, "gather", gather), \
-                    redirect_stderr(err), patch("sys.stdout", io.StringIO()):
+                    patch.object(module, "datetime", Frozen), redirect_stderr(err), patch("sys.stdout", io.StringIO()):
                 module.main()
             return json.loads((tmp / "out/recent-intel.json").read_text()), err.getvalue()
 
@@ -74,8 +80,7 @@ class PreviousSnapshotTests(unittest.TestCase):
                 self.assertEqual(data["candidates"], [])
 
     def test_valid_previous_file_through_main_keeps_lead_without_line(self):
-        lead = dict(LEAD, published_at=datetime.now(timezone.utc).isoformat())
-        data, err = self.run_main(json.dumps({"candidates": [lead]}).encode())
+        data, err = self.run_main(json.dumps({"candidates": [LEAD]}).encode())
         self.assertEqual(err, "")
         self.assertEqual([c["id"] for c in data["candidates"]], ["old"])
 
