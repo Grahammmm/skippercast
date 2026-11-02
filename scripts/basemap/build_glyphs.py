@@ -145,17 +145,26 @@ def write(built):
     for rel, target in targets:
         if os.path.lexists(target) and not stat.S_ISREG(os.lstat(target).st_mode):
             raise SystemExit(f"build_glyphs: {rel}: not a regular file or folder")
-    temps = []
+    temps, old, done = [], {}, []
+
+    def temp_of(target, data):
+        fd, temp = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=OUT)
+        temps.append(temp)
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(data), handle.flush(), os.fsync(handle.fileno())
+        os.chmod(temp, 0o644)
+        return temp
     try:
         for rel, target in targets:
-            fd, temp = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=OUT)
-            temps.append(temp)
-            with os.fdopen(fd, "wb") as handle:
-                handle.write(built[rel]), handle.flush(), os.fsync(handle.fileno())
-            os.chmod(temp, 0o644)
-        for (rel, target), temp in zip(targets, temps):
+            old[target] = target.read_bytes() if os.path.lexists(target) else None
+            temp_of(target, built[rel])
+        for (rel, target), temp in zip(targets, list(temps)):
             os.replace(temp, target)
+            done.append(target)
     except OSError as exc:
+        for target in reversed(done):  # put the previous range set back: all ranges or none
+            with contextlib.suppress(OSError):
+                os.unlink(target) if old[target] is None else os.replace(temp_of(target, old[target]), target)
         for temp in temps:
             with contextlib.suppress(OSError):
                 os.unlink(temp)

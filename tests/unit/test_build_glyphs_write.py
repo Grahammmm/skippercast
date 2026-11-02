@@ -56,8 +56,9 @@ def test_phase1_failure_on_second_range_leaves_old_files(tmp_path, monkeypatch, 
     assert capsys.readouterr().out == ""
 
 
-def test_phase2_failure_names_range_and_leaves_no_temp(tmp_path, monkeypatch):
-    out = out_at(tmp_path, monkeypatch, (b"old-a", b"old-b"))
+@pytest.mark.parametrize("old", [(b"old-a", b"old-b"), None])
+def test_phase2_failure_restores_previous_ranges_and_leaves_no_temp(tmp_path, monkeypatch, capsys, old):
+    out = out_at(tmp_path, monkeypatch, old)
     real = os.replace
 
     def replace(src, dst):
@@ -68,7 +69,8 @@ def test_phase2_failure_names_range_and_leaves_no_temp(tmp_path, monkeypatch):
     with pytest.raises(SystemExit) as stop:
         bg.write(dict(BUILT))
     assert stop.value.code == f"build_glyphs: {B}: write failed (PermissionError)"
-    assert sorted(files(out)) == ["0-255.pbf", "8192-8447.pbf"]
+    assert files(out) == ({"0-255.pbf": b"old-a", "8192-8447.pbf": b"old-b"} if old else {})
+    assert capsys.readouterr().out == ""
 
 
 def test_out_symlink_refused_other_folder_untouched(tmp_path, monkeypatch):
