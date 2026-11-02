@@ -11,6 +11,8 @@ PROFILE = 'measured-rough-search-v1'
 
 
 def assessment(properties, rules=None):
+    if not isinstance(properties, dict):
+        return None
     rules = rules or read_json(REPO/'catalog/habitat-rules.json')
     p = properties
     support = p.get('metric_support_fraction')
@@ -41,12 +43,15 @@ def assessment(properties, rules=None):
 
 
 def published_contract(properties):
-    """Search-area admission cannot substitute for rights or spatial screening."""
+    """Search-area admission cannot substitute for rights or spatial screening;
+    misshaped properties are never admitted."""
     p = properties
-    expected = assessment(p)
+    if not isinstance(p, dict):
+        return False
+    expected, screen, tier = assessment(p), p.get('screen'), p.get('tier')
     return bool(expected and p.get('search_area') == expected
         and p.get('detail_level') == 'search-area'
-        and p.get('tier') == 1 and p.get('status') == 'search-area'
+        and type(tier) is int and tier == 1 and p.get('status') == 'search-area'
         and p.get('exportable') is False
-        and p.get('screen', {}).get('status') == 'pass'
+        and isinstance(screen, dict) and screen.get('status') == 'pass'
         and not p.get('hold_reasons'))

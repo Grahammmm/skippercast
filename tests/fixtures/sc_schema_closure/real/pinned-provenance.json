@@ -151,10 +151,10 @@
       "sha256": "2ede561460cc8c2870d77b2b111bb61de76ac6ce74642c00890ef9b41a4af4a1"
     },
     {
-      "bytes": 6919,
-      "git_blob": "6ed079e5b25dd62a43ea5a8f90e067a7481cee98",
+      "bytes": 6929,
+      "git_blob": "e3e62089a5a4c5922aa579a7c24e4d9b5364877c",
       "path": "schemas/shore-habitat.schema.json",
-      "sha256": "8052e171505636a4472549811df18368bba9569efc51418f6073a0517e782fa2"
+      "sha256": "4587bfe7bd07bbfa6da56069fb7dbeb4041d413fc635af8fc2c58e294e9572d5"
     },
     {
       "bytes": 3813,

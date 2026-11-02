@@ -208,7 +208,7 @@ def test_archive_refuses_insufficient_capacity(closed):
     f = closed
     with pytest.raises(close_common.Refused, match='insufficient archive capacity'):
         archive_segment.archive(f.resolver(), campaign_path=f.campaign_path, ledger=f.ledger, campaign_ledger=f.campaign_ledger,
-                                head=HEAD, reserve_bytes=10**18, close_id='close01')
+                                head=HEAD, reserve_bytes=10**15, close_id='close01')
     assert ledger_module.verify(f.ledger)[-1]['kind'] == 'verdict'
 
 

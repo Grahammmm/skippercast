@@ -38,8 +38,10 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import os
 from pathlib import Path, PurePosixPath
 import re
+import stat
 from typing import Any, Iterable, Mapping
 
 from .base import Candidate, Fact, RunContext
@@ -48,6 +50,7 @@ from ..ops import https_url
 
 ID = "file-import"
 CONFIDENCE = 0.9
+MAX_INPUT_BYTES = 16 * 1024 * 1024
 
 COLUMN_SETS: Mapping[str, Mapping[str, tuple[str, ...]]] = {
     "scout-candidates-v1": {
@@ -116,6 +119,28 @@ def input_path(binding, ctx: RunContext) -> Path:
     return ctx.run_dir.parents[1].joinpath(*relative.parts)
 
 
+def _read_input(path: Path, base: Path, binding_id: str) -> bytes:
+    """The file's bytes: no link from ``base`` (the region folder) down, a regular file, at most MAX_INPUT_BYTES,
+    never blocking."""
+    parts = Path(path).relative_to(base).parts
+    if any(os.path.islink(Path(base).joinpath(*parts[:n])) for n in range(len(parts) + 1)):
+        raise FileImportError(f"{binding_id}: input path goes through a link")
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode):
+                raise FileImportError(f"{binding_id}: input is not a regular file")
+            with open(fd, "rb", closefd=False) as handle:
+                if info.st_size > MAX_INPUT_BYTES or len(data := handle.read(MAX_INPUT_BYTES + 1)) > MAX_INPUT_BYTES:
+                    raise FileImportError(f"{binding_id}: input is larger than 16 MiB")
+        finally:
+            os.close(fd)
+    except OSError as exc:
+        raise FileImportError(f"{binding_id}: input file unreadable ({type(exc).__name__})") from None
+    return data
+
+
 def read_rows(data: bytes, column_set: str) -> list[dict[str, str]]:
     """Rows as {canonical column: value}, or FileImportError when a required column is missing."""
     if column_set not in COLUMN_SETS:
@@ -124,10 +149,17 @@ def read_rows(data: bytes, column_set: str) -> list[dict[str, str]]:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError:
         text = data.decode("cp1252", "replace")
+    if "\x00" in text:  # the csv module accepts NUL since Python 3.11; a licence list never has one
+        line = text.count("\n", 0, text.index("\x00")) + 1
+        raise FileImportError(f"{column_set}: CSV unreadable near line {line}")
     reader = csv.DictReader(io.StringIO(text))
     aliases = {alias: canonical for canonical, names in COLUMN_SETS[column_set].items() for alias in names}
     mapping = {}
-    for header in reader.fieldnames or []:
+    try:
+        fieldnames, rows = reader.fieldnames or [], list(reader)
+    except csv.Error:
+        raise FileImportError(f"{column_set}: CSV unreadable near line {reader.reader.line_num}") from None
+    for header in fieldnames:
         canonical = aliases.get(_key(header))
         if canonical and canonical not in mapping.values():
             mapping[header] = canonical
@@ -136,7 +168,7 @@ def read_rows(data: bytes, column_set: str) -> list[dict[str, str]]:
     if missing or (ONE_OF[column_set] and not present & set(ONE_OF[column_set])):
         need = missing or [" or ".join(ONE_OF[column_set])]
         raise FileImportError(f"{column_set}: missing column(s) {', '.join(need)}")
-    return [{canonical: (row.get(header) or "").strip() for header, canonical in mapping.items()} for row in reader]
+    return [{canonical: (row.get(header) or "").strip() for header, canonical in mapping.items()} for row in rows]
 
 
 class FileImport:
@@ -173,11 +205,11 @@ class FileImport:
         report = self.report.setdefault(binding.id, {"rows": 0, "candidates": 0, "individual_licensees_dropped": 0,
                                                      "rows_without_name": 0})
         path = input_path(binding, ctx)
-        if not path.is_file():
+        if not os.path.lexists(path):  # a dangling link is a link, refused below, not a missing file
             report["status"] = "skipped"
             report["reason"] = f"input file not found: {binding.params.get('path')}"
             return []
-        data = path.read_bytes()
+        data = _read_input(path, ctx.run_dir.parents[1], binding.id)
         rows = read_rows(data, str(binding.params.get("columns", "")))
         if binding.params.get("columns") == "scout-candidates-v1":
             return self._scout(rows, binding, ctx, report)

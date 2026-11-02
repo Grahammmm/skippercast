@@ -4,15 +4,29 @@ from collections import defaultdict
 import json
 import math
 from pathlib import Path
+import sys
 
 
 def render(ledger):
-    reaches = ledger["reaches"]
+    if not isinstance(ledger, dict):
+        raise ValueError("Ledger is not an object")
+    if not isinstance(ledger.get("input_hash"), str) or not ledger["input_hash"]:
+        raise ValueError("Ledger input_hash missing or not text")
+    reaches = ledger.get("reaches")
     if not isinstance(reaches, list) or not reaches:
         raise ValueError("Missing reach coverage")
     grouped = defaultdict(list)
     seen = set()
-    for reach in reaches:
+    for i, reach in enumerate(reaches):
+        if not isinstance(reach, dict):
+            raise ValueError(f"Reach {i} is not an object")
+        for key in ("id", "region"):
+            if not isinstance(reach.get(key), str) or not reach[key]:
+                raise ValueError(f"Reach {i} missing {key}")
+        if "status" in reach and not isinstance(reach["status"], str):
+            raise ValueError(f"Reach {i} status not text")
+        if "screen" in reach and not isinstance(reach["screen"], dict):
+            raise ValueError(f"Reach {i} screen not an object")
         if reach["id"] in seen:
             raise ValueError("Duplicate reach")
         seen.add(reach["id"])
@@ -48,4 +62,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ledger", type=Path, default=Path("dist/data/seafloor-ledger.json"))
     args = parser.parse_args()
-    print(render(json.loads(args.ledger.read_text())), end="")
+    try:
+        report = render(json.loads(args.ledger.read_text()))
+    except OSError as error:
+        sys.exit(f"seafloor_status: {type(error).__name__}: {error.strerror or 'read failed'}")
+    except ValueError as error:
+        sys.exit(f"seafloor_status: {error}")
+    print(report, end="")

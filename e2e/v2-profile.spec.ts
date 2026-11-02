@@ -39,6 +39,37 @@ const unavailable = (select: Locator) => select.locator('option[disabled]').eval
 const optionTexts = (select: Locator) => select.locator('option').evaluateAll(options => Object.fromEntries(options.map(o => [(o as HTMLOptionElement).value, o.textContent])));
 const marks = async (page: Page) => Number(await page.locator('.app-chart').getAttribute('data-marks'));
 
+test('target plan follows the selector from Conditions and keeps its source text', async ({page, v2}) => {
+  await v2.open('app', {region: 'morro-bay', profile: 'boat', target: 'halibut', view: 'conditions'});
+  if (page.viewportSize()!.width < 1024) await page.locator('.ui-sheet-handle').press('End');
+  const link = page.locator('.app-conditions-notes').getByRole('link', {name: /Plan for .*halibut/i});
+  await expect(link).toHaveAttribute('href', /view=plan/);
+  await link.click();
+  const plan = page.locator('.app-plan');
+  await expect(plan.getByRole('heading', {level: 2})).toHaveText('California halibut');
+  await expect(plan.getByRole('heading', {name: 'What to search for'})).toBeVisible();
+  const index = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/search-plan-index.json', import.meta.url), 'utf8'));
+  await expect(plan).toContainText(index.profiles.halibut.search_for);
+  await expect(plan.getByRole('heading', {level: 2})).toBeFocused();
+  await page.locator('label:has-text("Target") select').first().selectOption('reef');
+  await expect(plan.getByRole('heading', {level: 2})).toHaveText('Lingcod & rockfish');
+  await expect(plan.locator('.app-plan-rules')).toContainText('Lingcod & rockfish');
+  await v2.a11y('target-plan');
+  await page.locator('[data-view="conditions"]').filter({visible: true}).first().click();
+  await expect(page.locator('.app-conditions-notes').getByRole('link', {name: 'Plan for Lingcod & rockfish'})).toBeVisible();
+});
+
+test('linked unresearched target shows the region reason and rules without a search plan', async ({page, v2}) => {
+  await v2.open('app', {region: 'morro-bay', profile: 'boat', target: 'lobster', view: 'plan'});
+  const plan = page.locator('.app-plan');
+  const data = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/region.json', import.meta.url), 'utf8'));
+  await expect(plan).toContainText(data.map.unavailable_targets.lobster);
+  await expect(plan.getByRole('heading', {name: 'Rules', exact: true})).toBeVisible();
+  await expect(plan.getByRole('heading', {name: 'What to search for'})).toHaveCount(0);
+  await expect(plan).not.toContainText(/\b(?:prohibit|illegal|not allowed)\b/i);
+  await v2.a11y('unresearched-target-plan');
+});
+
 test('Shore hides reef marks and lists surfperch first on the Chart and in the terrain; Spear keeps marks within 60 ft', async ({page, pageErrors, v2}) => {
   await v2.open('app', {region: 'morro-bay', presentation: 'chart', target: 'lingcod', view: VIEW});
   const chart = page.locator('.app-chart');

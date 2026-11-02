@@ -87,13 +87,18 @@ def _days(text):
 
 
 def _previous(path):
+    return _previous_bytes(path)[:2]
+
+
+def _previous_bytes(path):  # (previous, reason, raw): raw is the one read that was parsed and checked
     try:  # the is_file() stat can raise too, e.g. PermissionError under an unreadable directory
         if not path or not path.is_file():
-            return None, None
-        previous = json.loads(path.read_text(encoding='utf-8'))
+            return None, None, None
+        raw = path.read_bytes()
+        previous = json.loads(raw.decode('utf-8'))
     except (OSError, ValueError):  # covers UnicodeDecodeError and JSONDecodeError
         previous = None
-    return (previous, None) if isinstance(previous, dict) else (None, 'unreadable')
+    return (previous, None, raw) if isinstance(previous, dict) else (None, 'unreadable', None)
 
 
 def _scan_time(value, now):
@@ -113,12 +118,14 @@ def main(argv=None):
     parser.add_argument('--max-age-days', type=_days, default=30)
     args = parser.parse_args(argv)
     now = datetime.now(timezone.utc)
-    previous, reason = _previous(args.previous)
+    previous, reason, raw = _previous_bytes(args.previous)
     if previous and isinstance(previous.get('health'), dict) and previous['health'].get('status') == 'ok':
         when, reason = _scan_time(previous.get('last_complete_scan_at'), now)
         if when and now - when < timedelta(days=args.max_age_days):
             args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_bytes(args.previous.read_bytes())
+            temporary = args.output.with_suffix(args.output.suffix + '.tmp')
+            temporary.write_bytes(raw)
+            temporary.replace(args.output)
             print('Retained complete NOAA discovery from ' + previous['last_complete_scan_at'])
             return
     if reason:

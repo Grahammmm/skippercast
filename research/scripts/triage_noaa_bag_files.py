@@ -8,6 +8,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
+import re
+import sys
 import time
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -64,7 +66,7 @@ def inventory(discovery, products, previous=None, *, now=None, fetcher=head):
             if not source_url_allowed(url) or f"/{survey['id']}/" not in url or not url.lower().endswith('.bag'):
                 raise ValueError('Untrusted or mismatched NOAA BAG URL')
             urls[url]=survey['id']
-    prior={row['url']:row for row in (previous or {}).get('files',[])}
+    prior={row['url']:row for row in (previous or {}).get('files',[]) if isinstance(row,dict) and isinstance(row.get('url'),str)}
     rows=[]
     def inspect(url):
         size,modified=fetcher(url)
@@ -102,27 +104,51 @@ def inventory(discovery, products, previous=None, *, now=None, fetcher=head):
             'health':{'status':'ok' if not issues else 'degraded','issues':issues},'sectors':sectors,'files':rows}
 
 
-def main():
+def _days(text):
+    days=int(text) if re.fullmatch(r'[+-]?[0-9]+',text.strip()) else 0
+    if not 1<=days<=365:raise argparse.ArgumentTypeError('must be a whole number of days from 1 to 365')
+    return days
+
+
+def _previous(path):
+    try:previous=json.loads(path.read_text(encoding='utf-8')) if path and path.is_file() else {}  # is_file() can raise too
+    except (OSError,ValueError):previous=None  # ValueError covers UnicodeDecodeError and JSONDecodeError
+    return (previous or None,None) if isinstance(previous,dict) else (None,'unreadable')
+
+
+def _scan_time(value, now):
+    try:when=None if value is None else datetime.fromisoformat(value)
+    except (TypeError,ValueError):return None,'bad scan time'
+    if when is None or when.utcoffset() is None:return None,'scan time has no UTC offset' if when else 'no scan time'
+    return (when,None) if when<=now else (None,'scan time is in the future')
+
+
+def main(argv=None, *, fetcher=head):
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--discovery',type=Path,required=True)
     parser.add_argument('--products',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--previous',type=Path)
-    parser.add_argument('--max-age-days',type=int,default=30)
-    args=parser.parse_args()
+    parser.add_argument('--max-age-days',type=_days,default=30)
+    args=parser.parse_args(argv)
     discovery=json.loads(args.discovery.read_text())
     products=json.loads(args.products.read_text())
-    previous=json.loads(args.previous.read_text()) if args.previous and args.previous.is_file() else None
+    previous,reason=_previous(args.previous)
     now=datetime.now(timezone.utc)
     urls={url for row in products.get('surveys',[]) for url in row.get('products',{}).get('bag',[])}
-    if previous and previous.get('health',{}).get('status')=='ok' and previous.get('last_complete_scan_at'):
-        age=now-datetime.fromisoformat(previous['last_complete_scan_at'])
-        if timedelta(0)<=age<timedelta(days=args.max_age_days) and urls=={row['url'] for row in previous.get('files',[])}:
+    if previous and isinstance(previous.get('health'),dict) and previous['health'].get('status')=='ok':
+        when,reason=_scan_time(previous.get('last_complete_scan_at'),now)
+        if when and not (isinstance(files:=previous.get('files'),list) and all(isinstance(row,dict) and isinstance(row.get('url'),str) for row in files)):
+            reason='files not a url list'
+        elif when and now-when<timedelta(days=args.max_age_days) and urls=={row['url'] for row in files}:
             args.output.parent.mkdir(parents=True,exist_ok=True)
-            args.output.write_bytes(args.previous.read_bytes())
+            (tmp:=args.output.with_suffix(args.output.suffix+'.tmp')).write_bytes(args.previous.read_bytes())
+            tmp.replace(args.output)
             print('Retained complete BAG HEAD inventory from '+previous['last_complete_scan_at'])
             return
-    result=inventory(discovery,products,previous,now=now)
+    if reason:print(f'previous scan ignored: {reason}',file=sys.stderr)
+    previous=previous if previous and isinstance(previous.get('files'),list) else None
+    result=inventory(discovery,products,previous,now=now,fetcher=fetcher)
     args.output.parent.mkdir(parents=True,exist_ok=True)
     tmp=args.output.with_suffix(args.output.suffix+'.tmp')
     tmp.write_text(json.dumps(result,separators=(',',':'),ensure_ascii=False)+'\n')

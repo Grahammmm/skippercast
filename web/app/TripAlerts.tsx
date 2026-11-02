@@ -8,12 +8,13 @@ import type {TargetedSubmitEvent} from 'preact';
 import {Button} from '../ui/Button.tsx';
 import {sharedFetch} from '../shared-fetch.ts';
 import {profile} from '../state.ts';
+import {DEFAULT_ZONE} from '../zone.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {
-  alertDate, alertNames, alertSpecies, api, comfortBody, dateRange, disablePush, enablePush, eventLine, feedbackPhase, formProblem, profileTripDefaults, tripBody, tripBoat, tripDefaults, tripLine,
-  type AlertEvent, type AlertForm, type BoatFactors, type Feedback, type RegionAlerts, type SavedTrip,
+  alertDate, alertNames, alertSpecies, api, comfortBody, dateRange, disablePush, enablePush, eventLine, feedbackPhase, formProblem, profileTripDefaults, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
+  type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type Feedback, type RegionAlerts, type SavedTrip,
 } from '../alerts.ts';
 
 type SessionAnswer = {signedIn?: boolean; signIn?: unknown; publicKey?: string | null};
@@ -68,6 +69,23 @@ function ConfirmDelete({onConfirm, onCancel}: {onConfirm: () => void; onCancel: 
       </div>
     </div>
   );
+}
+
+export function SavedTrips({recaps, names, remove}: {recaps: ReturnType<typeof tripRecaps>; names: AlertNames; remove: (id: string) => () => void}) {
+  const deletion = (t: SavedTrip) => <Button size="sm" variant="quiet" onClick={remove(t.id)} aria-label={`Delete the trip on ${t.date} at ${names.point.get(t.point) ?? t.point}`}>Delete</Button>;
+  return <div id="saved-trips">
+    {!recaps.upcoming.length && !recaps.past.length ? <p>No saved trips.</p> : null}
+    {recaps.upcoming.length ? <><h3>Upcoming</h3>{recaps.upcoming.map(t => <p key={t.id}><strong>{tripLine(t, names)}</strong> {deletion(t)}</p>)}</> : null}
+    {recaps.past.length ? <><h3>Past</h3>
+      <p class="small">Your own record of each trip. Forecast assessments are what we sent before the day, not what the sea did.</p>
+      {recaps.past.map(({trip, final, reports}) => <article key={trip.id}>
+        <details><summary>{tripLine(trip, names)}</summary>
+          {final ? <><strong>{eventLine(final)}</strong><p style={{whiteSpace: 'pre-line'}}>{final.message}</p></> : <p>No day-before assessment was delivered</p>}
+          {reports.length ? <><h4>Your comfort reports</h4>{reports.map((f, i) => <p key={i}>{f.rating}/10 · {feedbackPhase(f)}</p>)}</> : null}
+        </details>{deletion(trip)}
+      </article>)}
+    </> : null}
+  </div>;
 }
 
 function SignedIn({session, region, boat, target}: {session: SessionAnswer; region: RegionAlerts; boat: Boat; target: string | null}) {
@@ -165,11 +183,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           <p style={{whiteSpace: 'pre-line'}}>{toText(digest)}</p>
           <p class="small">Shown here only; SkipperCast does not email this yet.</p>
         </section> : null}
-        <div id="saved-trips">
-          {trips ? trips.trips.length ? trips.trips.map(t => (
-            <p key={t.id}><strong>{tripLine(t, names)}</strong> <Button size="sm" variant="quiet" onClick={remove(t.id)} aria-label={`Delete the trip on ${t.date} at ${names.point.get(t.point) ?? t.point}`}>Delete</Button></p>
-          )) : <p>No saved trips.</p> : null}
-        </div>
+        {trips ? <SavedTrips recaps={tripRecaps(trips.trips, trips.events, feedback ?? [], dateRange(DEFAULT_ZONE).min)} names={names} remove={remove} /> : <div id="saved-trips" />}
         {trips?.events.length ? (
           <details id="alert-history">
             <summary>Recent assessments ({trips.events.length})</summary>

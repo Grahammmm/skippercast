@@ -57,6 +57,8 @@ function intelInWindow() {
     for (const [k, v] of Object.entries(o)) if (k === 'time' && Array.isArray(v) && v.every(Number.isFinite)) o[k] = v.map(x => x + delta); else walk(v);
   };
   walk(intel.forecast);
+  // Runs from before MON: a run dated ahead of now is unusable (server/advisor/answers/forecast-clock.ts).
+  for (const m of Object.values(intel.forecast.models)) m.meta.last_run_initialisation_time = Date.parse('2026-09-28T12:00:00Z') / 1000;
   return intel;
 }
 function feeds({fail = false} = {}) {

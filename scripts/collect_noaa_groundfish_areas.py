@@ -56,11 +56,15 @@ def polygon_valid(geometry):
 
 def selected_layers(layers):
     wanted = []
-    for row in layers:
-        name = row.get('name', '')
+    for n, row in enumerate(layers):
+        name = row.get('name') if isinstance(row, dict) else None
+        if not isinstance(name, str):
+            raise ValueError(f'NOAA federal area layer row {n} misshaped')
         category = ('GEA' if name.startswith('GEA_') and not name.startswith('GEA_ALL_') else
                     'CCA' if name.startswith('CCA_') and 'Transit_Corridor' not in name else
                     'YRCA' if name.startswith('YRCA_') and name != 'YRCA_All_20231201' else None)
+        if category and (type(row.get('id')) is not int or not 0 <= row['id'] <= 10000):
+            raise ValueError(f'NOAA federal area layer row {n} misshaped')
         if category:
             wanted.append((row['id'], name, category))
     if (len({name for _, name, _ in wanted}) != len(wanted)
@@ -76,7 +80,7 @@ def collect(getter=fetch_json, now=None):
     now = now or datetime.now(timezone.utc)
     service_url = SERVICE + '?f=pjson'
     service, service_hash = getter(service_url)
-    if service.get('error') or not isinstance(service.get('layers'), list):
+    if not isinstance(service, dict) or service.get('error') or not isinstance(service.get('layers'), list):
         raise ValueError('Invalid NOAA federal groundfish service')
     chosen = selected_layers(service['layers'])
     sources = []
@@ -85,25 +89,29 @@ def collect(getter=fetch_json, now=None):
         base = f'{SERVICE}/{ident}/query?'
         count_url = base + urlencode({'where': '1=1', 'returnCountOnly': 'true', 'f': 'json'})
         count_data, count_hash = getter(count_url)
-        count = count_data.get('count')
+        count = count_data.get('count') if isinstance(count_data, dict) else None
         if not isinstance(count, int) or not 1 <= count <= 100:
             raise ValueError(f'Unexpected NOAA feature count for {name}')
         geo_url = base + urlencode({'where': '1=1', 'outFields': '*', 'outSR': 4326,
                                    'returnGeometry': 'true', 'f': 'geojson', 'resultRecordCount': 100})
         geo, geo_hash = getter(geo_url)
-        if geo.get('type') != 'FeatureCollection' or geo.get('exceededTransferLimit') or len(geo.get('features', [])) != count:
+        if (not isinstance(geo, dict) or not isinstance(geo.get('features'), list) or geo.get('type') != 'FeatureCollection'
+                or geo.get('exceededTransferLimit') or len(geo['features']) != count):
             raise ValueError(f'Incomplete NOAA geometry for {name}')
+        seen = set()
         for feature in geo['features']:
-            props = feature.get('properties') or {}
-            group = props.get('AREA_GROUP')
-            if (not polygon_valid(feature.get('geometry') or {}) or
-                    group not in ({'GEA', 'Groundfish Exclusion Area'} if category == 'GEA' else {category})):
+            props = (feature.get('properties') or {}) if isinstance(feature, dict) else None
+            oid = props.get('OBJECTID') if isinstance(props, dict) else None
+            if (type(oid) is not int or oid < 0 or oid in seen or
+                    not polygon_valid(feature['geometry'] if isinstance(feature.get('geometry'), dict) else {}) or
+                    props.get('AREA_GROUP') not in ({'GEA', 'Groundfish Exclusion Area'} if category == 'GEA' else {category})):
                 raise ValueError(f'Invalid NOAA polygon or classification for {name}')
+            seen.add(oid)
             citation = props.get('CFR_BOUNDARY_URL') or props.get('CFR_AREA_URL')
             if not isinstance(citation, str) or not citation.startswith('https://www.ecfr.gov/current/title-50/'):
                 raise ValueError(f'Missing NOAA legal boundary citation for {name}')
             features.append({'type': 'Feature', 'geometry': feature['geometry'], 'properties': {
-                'id': f'noaa-gca-{ident}-{props.get("OBJECTID")}', 'name': props.get('SITE_NAME') or name,
+                'id': f'noaa-gca-{ident}-{oid}', 'name': props.get('SITE_NAME') or name,
                 'area_type': category, 'source_layer': name, 'source_layer_id': ident,
                 'cfr_boundary_url': citation, 'fr_citation': props.get('FR_CITATION'),
                 'groundfish_candidate_exclusion': category == 'GEA',
@@ -123,6 +131,25 @@ def collect(getter=fetch_json, now=None):
             'features': features}
 
 
+def _usable_previous(path):
+    try:
+        data = json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, UnicodeDecodeError, ValueError, RecursionError):
+        return None, 'unreadable JSON'
+    if not isinstance(data, dict):
+        return None, 'not an object'
+    count, features = data.get('feature_count'), data.get('features')
+    for bad, reason in ((data.get('scope') != 'noaa-west-coast-groundfish-conservation-areas', 'wrong scope'),
+                        (data.get('type') != 'FeatureCollection', 'not a FeatureCollection'),
+                        (not isinstance(features, list), 'features is not a list'),
+                        (type(count) is not int, 'feature_count is not an int'),
+                        (isinstance(features, list) and count != len(features), 'feature_count does not match features'),
+                        (not isinstance(data.get('source_layers'), list), 'source_layers is not a list')):
+        if bad:
+            return None, reason
+    return data, ''
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', required=True, type=Path)
@@ -133,9 +160,10 @@ def main():
     except (OSError, TimeoutError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
         if not args.previous or not args.previous.is_file():
             raise
-        data = json.loads(args.previous.read_text())
-        if data.get('scope') != 'noaa-west-coast-groundfish-conservation-areas':
-            raise ValueError('Previous NOAA federal area snapshot has wrong scope') from error
+        data, reason = _usable_previous(args.previous)
+        if data is None:
+            raise SystemExit(f'NOAA refresh failed ({type(error).__name__}) and '
+                             f'previous snapshot unusable: {reason}') from error
         data['status'] = 'retained'
         data['refresh_attempted_at'] = datetime.now(timezone.utc).isoformat()
         data['refresh_issue'] = str(error)[:250]

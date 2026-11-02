@@ -22,6 +22,7 @@ __all__ = ["clean_url", "is_new_variant", "jaro_winkler", "name_norm", "name_sim
 PREFIXES = ("THE", "M/V", "F/V", "M.V.", "F.V.")
 ROMAN = re.compile(r"^(?=[IVX]+$)X{0,3}(IX|IV|V?I{0,3})$")
 ROMAN_VALUES = {"I": 1, "V": 5, "X": 10}
+NANP = re.compile(r"\+1[2-9]\d{2}[2-9]\d{6}")
 TRACKING = re.compile(r"^(utm_[a-z0-9_]+|gclid|gbraid|wbraid|dclid|fbclid|msclkid|mc_cid|mc_eid|_ga|_gl|igshid|yclid|ref_src)$",
                       re.IGNORECASE)
 
@@ -105,6 +106,7 @@ def phone_e164(text: str | None, country: str = "1") -> str | None:
 
     Ten digits are taken as a North American number (``country``); a leading
     ``+`` keeps its own country code. Extensions (``x123``, ``ext. 4``) are dropped.
+    A +1 number must be a possible NANP number (area code and exchange start 2-9).
     """
     if not isinstance(text, str):
         return None
@@ -117,6 +119,8 @@ def phone_e164(text: str | None, country: str = "1") -> str | None:
     elif len(digits) == 11 and digits.startswith(country):
         number = "+" + digits
     else:
+        return None
+    if number.startswith("+1") and not NANP.fullmatch(number):
         return None
     return number if re.fullmatch(r"\+[1-9]\d{6,14}", number) else None
 

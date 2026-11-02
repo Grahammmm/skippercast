@@ -11,8 +11,10 @@
 // v1's run-time screen (dist/protected-areas.js `pointAllowed`, #489) is kept too: a mark
 // shows only while the region's protected areas and closures were checked within 36 hours
 // and the mark lies outside all of them (dist/geo-screen.js, boundary contact counts as
-// inside). Otherwise it is withheld, and the card and legend say why.
-import {pointInGeometry} from '../../dist/geo-screen.js';
+// inside). Otherwise it is withheld, and the card and legend say why. SC-LAUNCH-1: the point,
+// the mark's reef areas and any outline are screened whole, with a 70 m planning margin in metres
+// (dist/geo-screen.js `closureHits`).
+import {closureHits, pointGeometry, pointInGeometry, PLANNING_MARGIN_M} from '../../dist/geo-screen.js';
 import {speciesFit} from '../../dist/species-fit.js';
 import type {CoastSelection, CoastTargetDetail} from '../../packages/coast/src/embed-types.ts';
 import {speciesOptions} from '../../packages/coast/src/habitat-types.ts';
@@ -30,9 +32,9 @@ export const EMPTY: Collection = Object.freeze({type: 'FeatureCollection', featu
 export interface AtlasTarget {
   id: string; label: string; latitude: number; longitude: number; source_id?: string; source_name?: string; survey_year?: number;
   habitat_grade?: string; neighborhood_depth_ft?: number[]; metrics?: Record<string, number | null>; terrain_interpretation?: string;
-  evidence_status?: string; recorded_validation?: {closed_or_screened_area_clearance_m?: number}; qualification?: {closure_clearance_m?: number};
+  area_ids?: string[]; evidence_status?: string; recorded_validation?: {closed_or_screened_area_clearance_m?: number}; qualification?: {closure_clearance_m?: number};
 }
-export interface Atlas {source_validation_date?: string; targets: AtlasTarget[]; sources?: {id: string; name?: string; credit?: string; rights?: string}[]}
+export interface Atlas {source_validation_date?: string; targets: AtlasTarget[]; areas?: {id: string; geometry: unknown}[]; sources?: {id: string; name?: string; credit?: string; rights?: string}[]}
 export interface RegionData {
   id: string; assets?: Record<string, string | null>; source_names?: Record<string, string>; target_options?: {id: string; habitat_kinds?: string[]}[];
   regulations_url?: string; mpa?: {bounds?: number[]; minimum_features?: number}; daily_feed?: string;
@@ -147,10 +149,18 @@ export function closureCheckedAt(c: {readonly checkedAt: string | null; readonly
 
 /** Why a mark is withheld: the screen's own line, or the areas it lies in; null when it shows (v1's `pointAllowed`). */
 export interface Withheld {readonly reading: string; readonly inside: readonly Boundary[]}
-export function withheld(t: {latitude: number; longitude: number}, screen: MarkScreen): Withheld | null {
+/** What the screen checks for one place: its point, its own outline and any reef areas (EPSG:4326 lon/lat). */
+export interface Screened {readonly latitude?: number; readonly longitude?: number; readonly geometry?: unknown}
+/** The geometries of a mark's reef areas in its atlas (dist/gpx.js `tripFeatures` exports the same areas). */
+export const markAreas = (t: {area_ids?: readonly string[]}, atlas: Atlas | null | undefined): unknown[] =>
+  (t.area_ids ?? []).flatMap(id => atlas?.areas?.filter(a => a.id === id).map(a => a.geometry) ?? []);
+export function withheld(t: Screened, screen: MarkScreen, areas: readonly unknown[] = []): Withheld | null {
   if (screen.status !== 'ready') return {reading: screen.note, inside: []};
-  const inside = screen.boundaries.filter(b => pointInGeometry([t.longitude, t.latitude], b.geometry));
-  return inside.length ? {reading: `Inside ${inside.map(b => b.name).join('; ')}`, inside} : null;
+  const at = Number.isFinite(t.latitude) && Number.isFinite(t.longitude) ? pointGeometry(t.longitude, t.latitude) : null;
+  const inside = closureHits([at, t.geometry, ...areas], screen.boundaries, PLANNING_MARGIN_M);
+  if (!inside.length) return null;
+  const contains = at && inside.every(b => pointInGeometry([t.longitude!, t.latitude!], b.geometry));
+  return {reading: `${contains ? 'Inside' : `Inside or within ${PLANNING_MARGIN_M} m of`} ${inside.map(b => b.name).join('; ')}`, inside};
 }
 
 /** How much a terrain grade adds to the wide view's density (#620): A strongest; an ungraded mark counts as C. */
@@ -176,13 +186,15 @@ export function depthBand(d: readonly number[] | undefined): string | null {
  */
 export function markFeatures(atlas: Atlas | null | undefined, target: string, profile: Profile, screen: MarkScreen, grades: GradeFilter = 'all'): Collection {
   return collection((atlas?.targets ?? []).filter(t => markShown(t, target) && withinDepth(profile, t.neighborhood_depth_ft?.[1]) && gradeAllows(grades, t.habitat_grade)
-    && !withheld(t, screen)).map(t => {
+    && !withheld(t, screen, markAreas(t, atlas))).map(t => {
     const fit = markFit(t, target), depth = depthBand(t.neighborhood_depth_ft);
     return {type: 'Feature', geometry: point(t), properties: {id: t.id, ...fit ? {fit: String(fit.n)} : {}, weight: markWeight(t, target), ...depth ? {depth} : {}}};
   }));
 }
-export const surveyFeatures = (data: MarkData | null, target: string): Collection => !data?.survey ? EMPTY
-  : collection(data.survey.features.filter(f => surveyMatches(f.properties, habitatFamily(target), data.region)).map(f => keep(f, {kind: f.properties.habitat_kind})));
+/** Survey habitat outlines: none while the screen is not ready, and never one that touches or nears a closure. */
+export const surveyFeatures = (data: MarkData | null, target: string, screen: MarkScreen): Collection => !data?.survey || screen.status !== 'ready' ? EMPTY
+  : collection(data.survey.features.filter(f => surveyMatches(f.properties, habitatFamily(target), data.region) && !withheld({geometry: f.geometry}, screen))
+    .map(f => keep(f, {kind: f.properties.habitat_kind})));
 export const geologyFeatures = (data: MarkData | null, target: string): Collection => !data?.geology ? EMPTY
   : collection(data.geology.features.filter(f => geologyShown(f.properties.kind, habitatFamily(target))).map(f => keep(f, {kind: f.properties.kind})));
 
