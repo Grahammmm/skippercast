@@ -141,12 +141,15 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // move unchanged to web/app/region-info.ts, which App.tsx imports and re-exports (one signal instance), so the
 // landing's verdict reaches them without the app shell. Reports' id/charters reads, CSS, tokens, classes and catch
 // markup are unchanged; contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
+// SC2222-04 (#1238, mark card focus return): MapStage.tsx adds only tabIndex={-1} to the stage section and the
+// terrain host so MarkCard can return focus to the shown map. No class, colour, token or paint change; BODY09
+// mounts Reports/CatchCards, never MapStage. contrast(), assertions and thresholds are untouched. Rebind only MapStage.tsx.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
   "web/app/App.tsx": "f63bf478bdb77f4564495a454865a9999bf767ba1fe4953c8192777d69094fb0",
   "web/app/Masthead.tsx": "e6e634b4a6283f72255ce7a1fb3ef78e8d78be5f847d5d99c7655b7de94e2877",
   "web/app/LayerRail.tsx": "bdae57c4c4dca33b5fb83a413b7d5c6f525221a4fb6b78037a1ad99102635ccd",
-  "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
+  "web/app/MapStage.tsx": "11bfed22183687b9bdfa6c4a348688b633dd4eaab5607aeeb5718fb104c41466",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "44666b0864845a575b3baf6ecdbcccf7340fe9d2df1d54c01e21f593095dfd2e",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button
   "web/app/app.css": "c5b14f6eedcb57b4628ddc8edc2adfe6305b2ac515f1702e6a24a638539eb64a",
