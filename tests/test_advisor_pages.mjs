@@ -150,7 +150,7 @@ dbTest('the port page: today, reports (verified linked, the <script> boat inert,
   assert.equal(response.headers.get('Content-Language'), 'en');
   const page = await response.text(), text = visible(page);
   assert.match(page, /^<!doctype html>\n<html lang="en"/);
-  assert.match(page, /<title>Morro Bay fishing report · SkipperCast<\/title>/);
+  assert.match(page, /<title>Morro Bay fishing conditions · SkipperCast<\/title>/);
   assert.match(page, /<link rel="canonical" href="https:\/\/skippercast.com\/ports\/morro-bay">/);
   assert.match(page, /<link rel="stylesheet" href="\/assets\/tokens.fedcba9876.css">\n<link rel="stylesheet" href="\/assets\/chat.abcdef0123.css">/, 'the v2 tokens first (FE-55)');
   assert.match(page, /<meta name="color-scheme" content="dark">/);
@@ -295,7 +295,7 @@ dbTest('Spanish by ?lang=es or Accept-Language, with its own cache entry', async
     const page = await es.text(), text = visible(page);
     assert.match(page, /<html lang="es"/);
     assert.match(page, /<link rel="canonical" href="https:\/\/skippercast.com\/ports\/morro-bay\?lang=es">/);
-    assert.match(text, /Reporte de pesca de Morro Bay/);
+    assert.match(text, /Condiciones de pesca en Morro Bay/);
     assert.match(text, /Otro barco/);
     assert.match(text, /Ayuda para planear · no es una carta náutica\./);
     assert.match(page, /body=%C2%BFQu%C3%A9%20est%C3%A1%20picando%20en%20Morro%20Bay%3F%20%5Bvia%20web%5D/);

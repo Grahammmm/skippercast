@@ -451,7 +451,7 @@ export interface PageCopy {
   anotherBoat: string; edited: string; released: (n: number) => string; releasedOnly: (n: number, label: string) => string;
   trips: Record<string, string>;
   portTitle: (port: string) => string; portDescription: (port: string) => string; portRegion: (region: string) => string;
-  portCtaMessage: (port: string) => string;
+  portCtaMessage: (port: string) => string; openPortMap: (port: string) => string;
   todayHeading: string;
   reportsHeading: string; reportsNone: string; reportsUnverifiedNote: string;
   conditionsHeading: string; conditionsNone: string; seas: string; wind: string; ride: string;
@@ -518,8 +518,9 @@ const PAGES_EN: PageCopy = {
   released: n => `${n} released`,
   releasedOnly: (n, label) => `${n} ${label} released`,
   trips: {'half-day': 'Half day', '3/4 day': 'Three-quarter day', 'full-day': 'Full day', overnight: 'Overnight'},
-  portTitle: port => `${port} fishing report`,
-  portDescription: port => `What's biting out of ${port}: skipper reports, today's conditions and seasons, updated through the day.`,
+  portTitle: port => `${port} fishing conditions`,
+  portDescription: port => `Today's wind and sea conditions, advisories and fishing seasons for ${port}, from the same sources as the SkipperCast map. Updated through the day.`,
+  openPortMap: port => `Open the ${port} map`,
   portRegion: region => `Region: ${region}`,
   portCtaMessage: port => `What's biting out of ${port}?`,
   todayHeading: "Today's report",
@@ -653,8 +654,9 @@ const PAGES_ES: PageCopy = {
   released: n => `${n} liberados`,
   releasedOnly: (n, label) => `${n} ${label} liberados`,
   trips: {'half-day': 'Medio día', '3/4 day': 'Tres cuartos de día', 'full-day': 'Día completo', overnight: 'Toda la noche'},
-  portTitle: port => `Reporte de pesca de ${port}`,
-  portDescription: port => `Qué está picando en ${port}: reportes de capitanes, las condiciones de hoy y las temporadas, al día.`,
+  portTitle: port => `Condiciones de pesca en ${port}`,
+  portDescription: port => `Condiciones de viento y mar de hoy, avisos y temporadas de pesca para ${port}, de las mismas fuentes que el mapa de SkipperCast. Se actualiza durante el día.`,
+  openPortMap: port => `Abrir el mapa de ${port}`,
   portRegion: region => `Región: ${region}`,
   portCtaMessage: port => `¿Qué está picando en ${port}?`,
   todayHeading: 'El reporte de hoy',

@@ -193,5 +193,5 @@ ${sources.length ? html`<section class="adv-card" aria-labelledby="sources-title
 <ul class="adv-list adv-sources">${sources.map(u => html`<li><a href="${u}" rel="noopener">${u.replace(/^https:\/\//, '')}</a></li>`)}</ul>
 </section>` : ''}`;
   return layout({language, kind: 'species', path: `/species/${key}`, title: `${copy.speciesTitle(name)} · SkipperCast`, description: copy.speciesDescription(name),
-    crumbs: [{name: copy.species, path: null}, {name, path: `/species/${key}`}], body}, settings);
+    crumbs: [{name: copy.species, path: null}, {name, path: `/species/${key}`}], advisor: 'enabled' in settings && settings.enabled === true, body}, settings);
 }

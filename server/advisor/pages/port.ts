@@ -9,6 +9,8 @@
 import ports from '../../../catalog/home-ports.json' with {type: 'json'};
 import coasts from '../../../catalog/coasts.json' with {type: 'json'};
 import speciesPages from '../../../catalog/advisor/species-pages.json' with {type: 'json'};
+import aliases from '../../../catalog/advisor/port-aliases.json' with {type: 'json'};
+
 import {dailyInputs, hashInputs, composeDaily, seasonOpen} from '../answers/reports.ts';
 import type {DailyInputs} from '../answers/reports.ts';
 import {targetSpecies} from '../answers/confidence.ts';
@@ -32,6 +34,15 @@ const COASTS = coasts.regions as {id: string; name: string; packages: string[]; 
 export const portExists = (id: string): boolean => PORT_IDS.has(id) && Boolean(regionConfig(portRegion(id)));
 /** Ports of active regions (the sitemap's list). */
 export const activePortIds = (): string[] => ports.ports.filter(p => regionConfig(p.region)?.status === 'active').map(p => p.id);
+
+/** Only whole aliases identifying exactly one existing port are redirectable. */
+export function portPageKey(segment: string): string | null {
+  const name = segment.trim().toLowerCase();
+  if (!name || name.length > 200) return null;
+  const matches = ports.ports.filter(p => [p.id, ...(aliases.ports as Record<string, {aliases: string[]; landing_names: string[]}>)[p.id]?.aliases ?? [],
+    ...(aliases.ports as Record<string, {aliases: string[]; landing_names: string[]}>)[p.id]?.landing_names ?? []].some(v => v.toLowerCase() === name));
+  return matches.length === 1 && portExists(matches[0]!.id) ? matches[0]!.id : null;
+}
 
 /** The coastal-directory targets for a region (catalog/coasts.json), else the region's own species list. */
 export function regionTargets(regionId: string): string[] {
@@ -93,7 +104,7 @@ function conditionsSection(inputs: DailyInputs, language: PageLanguage): Html {
   if (wind) rows.push([copy.wind, copy.windValue(wind, d?.wind_from ?? null)]);
   if (comfort) rows.push([copy.ride, copy.rideValue(comfort)]);
   return html`<section class="adv-card" aria-labelledby="conditions-title">
-<h2 id="conditions-title">${copy.conditionsHeading}</h2>
+<h2 id="conditions-title">${copy.conditionsHeading}${d ? html` <time datetime="${inputs.date}">${inputs.date}</time>` : ''}</h2>
 ${inputs.conditions.advisories.length ? html`<div class="adv-advisories" role="note"><h3>${copy.advisoriesHeading}</h3><ul>${inputs.conditions.advisories.map(a => html`<li>${a}</li>`)}</ul></div>` : ''}
 ${rows.length ? html`<dl class="adv-facts">${rows.map(([k, v]) => html`<div><dt>${k}</dt><dd>${v}</dd></div>`)}</dl>` : html`<p>${copy.conditionsNone}</p>`}
 <p class="adv-note">${copy.forecastNote}</p>
@@ -101,7 +112,7 @@ ${rows.length ? html`<dl class="adv-facts">${rows.map(([k, v]) => html`<div><dt>
 }
 
 /** The page, or null for an unknown port. */
-export async function portPage(env: Env, id: string, language: PageLanguage, settings: SiteSettings, deps: PageDeps = {}): Promise<string | null> {
+export async function portPage(env: Env, id: string, language: PageLanguage, settings: SiteSettings, deps: PageDeps = {}): Promise<{body: string; noStore: boolean} | null> {
   if (!portExists(id)) return null;
   const db = env.DB!, copy = copyFor(language), now = (deps.clock ?? Date.now)();
   const regionId = portRegion(id)!, region = regionConfig(regionId)!;
@@ -120,6 +131,8 @@ export async function portPage(env: Env, id: string, language: PageLanguage, set
   const states = await Promise.all(keys.map(key => ruleState(db, regionId, key, date, now)));
   const lang = language === 'es' ? '?lang=es' : '';
   const regionName = (region as {name?: string}).name ?? regionId;
+  const port = ports.ports.find(p => p.id === id && p.region === regionId);
+  const map = port && /^[a-z0-9-]+$/.test(regionId) ? `/map?${new URLSearchParams({region: regionId, port: id})}` : null;
   const anonymous = reports.some(r => !(r.verified === 1 && r.boat_status === 'verified'));
 
   const body = html`<header class="adv-title">
@@ -136,6 +149,7 @@ ${reports.length ? reportsTable(reports, language, {boats: true, label: copy.rep
 ${anonymous ? html`<p class="adv-note">${copy.reportsUnverifiedNote}</p>` : ''}
 </section>
 ${conditionsSection(inputs, language)}
+${map ? html`<section class="adv-card"><a href="${map}">${copy.openPortMap(name)}</a></section>` : ''}
 <section class="adv-card" aria-labelledby="boats-title">
 <h2 id="boats-title">${copy.boatsHeading(name)}</h2>
 ${boats.length ? html`<ul class="adv-list">${boats.map(b => html`<li><a href="/boats/${b.slug}${lang}">${b.name}</a>${b.landing ? html` <span class="adv-muted">${b.landing}</span>` : ''}</li>`)}</ul>` : html`<p>${copy.boatsNone}</p>`}
@@ -145,7 +159,7 @@ ${boats.length ? html`<ul class="adv-list">${boats.map(b => html`<li><a href="/b
 <ul class="adv-seasons">${keys.map((key, i) => html`<li><a href="/species/${key}${lang}#rules">${PAGES[key]!.names[language]}</a> <span class="adv-state adv-state-${states[i]!}">${copy.ruleState[states[i]!]}</span></li>`)}</ul>
 <p class="adv-note">${copy.seasonsNote}</p>
 </section>`;
-  return layout({language, kind: 'port', path: `/ports/${id}`, title: `${copy.portTitle(name)} · SkipperCast`, description: copy.portDescription(name),
+  return {body: layout({language, kind: 'port', path: `/ports/${id}`, title: `${copy.portTitle(name)} · SkipperCast`, description: copy.portDescription(name),
     image: photo[0]?.url ?? null, crumbs: [{name: copy.ports, path: null}, {name, path: `/ports/${id}`}], region: regionId,
-    ctaMessage: copy.portCtaMessage(name), body}, settings);
+    ctaMessage: copy.portCtaMessage(name), noindex: !inputs.conditions.day, advisor: 'enabled' in settings && settings.enabled === true, body}, settings), noStore: !inputs.conditions.day};
 }
