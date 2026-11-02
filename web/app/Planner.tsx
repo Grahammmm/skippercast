@@ -26,6 +26,8 @@ const LAYERS: readonly (readonly [LayerKey, string, string])[] = [
   ['alignments', 'Structure alignment lines', 'Fixed survey alignments as tracks. Not forecast drifts or routes.'],
   ['exclusions', 'Protected-area outlines', 'AVOID tracks for MPAs and mapped groundfish exclusions; whole outlines that intersect your chosen coverage.'],
 ];
+/** C1 and C4 short forms, verbatim from docs/legal/disclaimers.md (placement item 4: before a chartplotter file is downloaded). */
+export const EXPORT_CAVEATS = ['Planning aid · not a navigation chart.', 'You are responsible for your boat, crew and decisions at sea.'] as const;
 const PRESETS: readonly (readonly [Preset, string])[] = [['map', 'Current map'], ['filtered', 'Filtered research references'], ['region', 'Whole region'], ['none', 'Clear selection']];
 
 /** The spot's checkbox title and lines, as v1 listed them. */
@@ -164,6 +166,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
         <p id="export-validation" role="status">{s.ok
           ? `${s.counts.outlines} reef outlines · ${s.counts.alignments} alignments · ${s.counts.exclusions} AVOID outlines${s.counts.contours === undefined ? '' : ` · ${s.counts.contours} depth contour tracks`}. ${s.counts.trackPoints.toLocaleString()} track points; largest track ${s.counts.largestTrack.toLocaleString()}.${s.counts.tracks > 15 ? ' More than 15 tracks: check your device’s free track capacity or reduce outlines.' : ''} Boundaries checked again when you export.`
           : s.message}</p>
+        <p id="export-caveats" class="export-note">{EXPORT_CAVEATS[0]} {EXPORT_CAVEATS[1]}</p>
         <div class="export-actions">
           <button class="primary" id="export-download" disabled={!s.ok} onClick={() => void m.deliver('gpx')}>Download GPX</button>
           <button id="export-share" disabled={!s.ok} onClick={() => void m.deliver('share')}>Share / Save file</button>
