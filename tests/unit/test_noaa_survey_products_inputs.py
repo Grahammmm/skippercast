@@ -9,9 +9,8 @@ import tempfile
 from unittest import TestCase, mock
 
 from scripts import audit_noaa_survey_products as products
-from tests._support import NOW
+from tests._support import NOW, ROOT
 
-ROOT = Path(__file__).resolve().parents[2]
 SCOPE = 'noaa-bag-survey-discovery'
 
 
