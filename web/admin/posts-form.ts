@@ -16,11 +16,14 @@ export function localInput(iso: string | null): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? '' : `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-/** A datetime-local value (the browser's zone) as ISO, or null when empty or unreadable. */
-export function fromLocalInput(value: string): string | null {
+const LOCAL = /^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?$/;
+/** A datetime-local value (the browser's zone) as ISO; null when empty (clear the schedule); undefined when
+ *  unreadable (not YYYY-MM-DDTHH:MM[:SS[.sss]], or no such day): leave the schedule as it is. */
+export function fromLocalInput(value: string): string | null | undefined {
   if (!value) return null;
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  const m = LOCAL.exec(value), d = new Date(value);
+  if (!m || Number.isNaN(d.getTime()) || d.getFullYear() !== Number(m[1]) || d.getMonth() + 1 !== Number(m[2]) || d.getDate() !== Number(m[3])) return undefined;
+  return d.toISOString();
 }
 
 const same = (a: readonly string[], b: readonly string[]): boolean => a.length === b.length && a.every((x, i) => x === b[i]);
@@ -41,7 +44,8 @@ export function postEdits(post: Pick<Post, 'caption' | 'targets' | 'collaborator
   }
   const scheduled = fromLocalInput(form.schedule);
   const before = post.scheduled_for ? new Date(post.scheduled_for).toISOString() : null;
-  if (scheduled !== before && !(scheduled && before && localInput(scheduled) === localInput(before))) patch.scheduled_for = scheduled;
+  if (scheduled === undefined) { /* unreadable: leave the schedule as it is */ }
+  else if (scheduled !== before && !(scheduled && before && localInput(scheduled) === localInput(before))) patch.scheduled_for = scheduled;
   return patch;
 }
 
