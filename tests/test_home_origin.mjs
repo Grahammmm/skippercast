@@ -26,8 +26,10 @@ const REEFS = [reef('near-harbor', 35.39, -120.94), reef('near-port', 35.16, -12
 const LOADED = {targets: REEFS.map(r => r.target), areas: REEFS.map(r => r.area),
   publication: {status: 'ready', region: 'morro-bay', archive_sha256: 'a'.repeat(64), export_sha256: 'b'.repeat(64), expires_at: new Date(NOW + 3600000).toISOString()}};
 const SCREEN = {status: 'ready', note: '', source: 'test', boundaries: [], until: Infinity}, WATER = () => ({state: 'water'});
+// SCJ-2b: the publication's places pass the planner's screen; here one that allows every place, as `bestSpots` gets below.
+const OPEN = {ready: () => true, pointAllowed: () => true, geometryAllowed: () => true};
 const inputs = patch => ({region: 'morro-bay', profile: 'boat', target: 'lingcod', coast: 'lingcod', data: DATA, screen: SCREEN, terrain: {state: 'idle'}, now: NOW, place: WATER,
-  publication: {state: 'ready', region: 'morro-bay', loaded: LOADED}, ...patch});
+  publication: {state: 'ready', region: 'morro-bay', loaded: LOADED}, plannerScreen: {state: 'loaded', region: 'morro-bay', screen: OPEN}, ...patch});
 const at = id => REEFS.find(r => r.target.id === id).target;
 
 test('portChoice is the planner\'s old inline rule: chosen, else saved, else first, else empty', () => {
