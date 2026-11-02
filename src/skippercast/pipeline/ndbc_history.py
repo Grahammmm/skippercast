@@ -261,6 +261,17 @@ def limitations(ident):
             "Offshore Cape San Martin exposure differs from SLO nearshore water; wind is measured at buoy height, not standardized here to 10 m."]
 
 
+def _read_object(path, label):
+    """A UTF-8 JSON object, or one line naming the unreadable file (no traceback)."""
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError, RecursionError):
+        value = None
+    if not isinstance(value, dict):
+        raise SystemExit(f"{label}: not a readable JSON object; fix or remove it")
+    return value
+
+
 def collect(region_id, mode, session, cache, previous=None, now=None, revalidate=False, max_files=MAX_FILES):
     now = now or datetime.now(timezone.utc)
     county, stations = STATIONS[region_id]
@@ -268,7 +279,8 @@ def collect(region_id, mode, session, cache, previous=None, now=None, revalidate
     if mode == "recent" and set(prior) != {s[0] for s in stations}:
         raise SystemExit("Recent refresh needs a matching published history; run the full backfill first")
     checkpoint_path = cache / f"{region_id}-checkpoint.json"
-    checkpoint = json.loads(checkpoint_path.read_text()) if checkpoint_path.exists() else {"schemaVersion": 1, "regionId": region_id, "records": {}}
+    checkpoint = (_read_object(checkpoint_path, f"checkpoint {checkpoint_path.name}") if checkpoint_path.exists()
+                  else {"schemaVersion": 1, "regionId": region_id, "records": {}})
     out, ok, budget = [], False, max_files
     for ident, name, lat, lon in stations:
         old, sources, annual = prior.get(ident), [], {}
@@ -335,7 +347,9 @@ def main():
     parser.add_argument("--revalidate", action="store_true", help="refetch annual archives even when the checkpoint verifies")
     parser.add_argument("--max-files", type=int, default=MAX_FILES)
     args = parser.parse_args()
-    previous = json.loads(args.previous.read_text()) if args.previous and args.previous.exists() else None
+    if not 1 <= args.max_files <= 1000:
+        parser.error("--max-files must be between 1 and 1000")
+    previous = _read_object(args.previous, "--previous") if args.previous and args.previous.exists() else None
     args.cache.mkdir(parents=True, exist_ok=True)
     session = http.Session(allowed_hosts=[HOST], min_interval={HOST: 1.0})
     bundle = collect(args.region, args.mode, session, args.cache, previous, revalidate=args.revalidate, max_files=args.max_files)

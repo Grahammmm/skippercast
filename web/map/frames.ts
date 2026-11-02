@@ -74,3 +74,23 @@ export function cloudFrames(cloud: CloudImage | null, selected: Date, now: Date,
 
 /** The WMS raster source pinned to acquisition time `at`, or null outside the gate (packages/coast `cloudSource`). */
 export const cloudTiles = (cloud: CloudImage, at: string, now: Date): ReturnType<typeof cloudSource> => cloudSource({...cloud, observedAt: at}, now);
+
+// A frame's bytes never change (it is pinned to one acquisition time), so its tiles load through this
+// MapLibre protocol (SC2222-08): the handler returns only the bytes, MapLibre records no expiry and never
+// refetches a frame when nowCOAST's short max-age lapses. Still fetch (connect-src), never img-src.
+export const FRAME_PROTOCOL = 'nowcoast-frame';
+const NOWCOAST = 'https://nowcoast.noaa.gov/', SCHEME = `${FRAME_PROTOCOL}://`;
+/** A nowCOAST tile URL on FRAME_PROTOCOL, byte-identical after the scheme; any other origin unchanged. */
+export const pinnedTileUrl = (url: string): string => url.startsWith(NOWCOAST) ? SCHEME + url.slice('https://'.length) : url;
+const hostOf = (url: string): string => { try { return new URL(url).host; } catch { return ''; } };
+/** The FRAME_PROTOCOL handler: only host nowcoast.noaa.gov, no credentials; a non-2xx rejects with its status. */
+export function frameProtocol(fetchFn: typeof fetch = (...a) => fetch(...a)) {
+  return async (params: {url: string}, abort: AbortController): Promise<{data: ArrayBuffer}> => {
+    const url = `https://${params.url.slice(SCHEME.length)}`;
+    if (!params.url.startsWith(SCHEME) || hostOf(url) !== 'nowcoast.noaa.gov') throw new Error('frame host');
+    abort.signal.throwIfAborted();
+    const response = await fetchFn(url, {signal: abort.signal, credentials: 'omit'});
+    if (!response.ok) throw new Error(String(response.status));
+    return {data: await response.arrayBuffer()};
+  };
+}

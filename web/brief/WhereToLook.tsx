@@ -22,11 +22,12 @@ import {markData, markScreen, picked, spotHref} from '../map/marks.ts';
 import {coastSpecies, habitatHref} from '../map/stage.ts';
 import {cruiseSpeed} from '../limits.ts';
 import {launchOrigin, loadLaunchPoints} from '../launches.ts';
+import {homePortOrigin, loadRegionPorts, plannerPort, regionPorts, savedPortId} from '../ports.ts';
 import {depthLimitFt, PROFILE_TABLE} from '../profile.ts';
 import {isReachProfile, nmText, reachFor, shoreSwimLimit, spearPlan} from '../reach.ts';
 import {loadShoreLines, shoreLines} from '../shore-distance.ts';
 import {landWater, loadLandWater, loadLandWaterLines, placeFor} from '../land-water.ts';
-import {loadReefPublication, ranking, recheckReefPublication, reefPublication, type Pick, type Ranking} from '../ranking.ts';
+import {loadReefPublication, ranking, recheckReefPublication, reefPublication, regionLoad, type Pick, type Ranking} from '../ranking.ts';
 import {fitCamera} from '../map/ranked.ts';
 import {cameraParam} from '../map/stage.ts';
 import {habitat, navigate, profile, region, selection, setParams, species} from '../state.ts';
@@ -43,11 +44,17 @@ export function currentRanking(now = Date.now()): Ranking {
   const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget, id = region.value;
   void screenTick.value;
   // #644: Kayak measures from its chosen launch; Spear from shore keeps to the swim limit once the shoreline loads.
+  // SCJ-2c: otherwise every profile measures from the planner's port (its choice this session, else the saved home,
+  // else the region's first port); only when the region's ports fail or are none does the region's harbor remain.
   const maxYd = p === 'spear' ? shoreSwimLimit() : null, lines = shoreLines.value;
+  const launch = p === 'kayak' ? launchOrigin(id) : null, ports = regionPorts.value, planned = plannerPort.value;
+  const home = launch || !id ? null : homePortOrigin(id, ports, planned?.region === id ? planned.id : null, savedPortId());
+  const originPending = !launch && !!id && (ports?.region !== id || ports.state === 'loading');
   return ranking({region: id, profile: p, target, coast: coastSpecies(species.value, p), data: markData.value, screen: markScreen.value, terrain: {state: 'idle'}, now, reachNm: reachFor(p),
-    origin: p === 'kayak' ? launchOrigin(id) : null,
+    origin: launch ?? home, originPending,
     shore: maxYd === null ? null : {maxYd, lines: lines && lines.region === id ? lines.lines : null},
-    place: placeFor(landWater.value, id), publication: reefPublication.value, plannerScreen: protectedScreen.value});
+    place: placeFor(landWater.value, id), missing: regionLoad.value?.id === id && regionLoad.value.state === 'missing',
+    publication: reefPublication.value, plannerScreen: protectedScreen.value});
 }
 
 /** Select a pick's mark or habitat (a history entry), as a click on the map would; a publication place moves the Chart to it. */
@@ -140,6 +147,7 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   useEffect(() => { if (id && p === 'kayak') void loadLaunchPoints(id); }, [id, p]);
   useEffect(() => { if (id && swimming) void loadShoreLines(id); }, [id, swimming]);
   useEffect(() => { if (id) void loadLandWater(id); }, [id]);
+  useEffect(() => { if (id) void loadRegionPorts(id); }, [id]);
   useEffect(() => { if (id && wantLines) void loadLandWaterLines(id); }, [id, wantLines, lw.model]);
   return (
     <section class="app-where" data-source={r.source ?? undefined}>
