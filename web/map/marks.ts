@@ -266,7 +266,8 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
     effect(() => {
       const id = region.value, current = ++run;
       markData.value = null; markScreen.value = CHECKING; clearTimeout(recheck);
-      if (id) read(id, current).catch(error => { if (current === run) onError('marks', error); });
+      // SC2007-01: a failed region.json read ends the check as unavailable (marks withheld), never "Checking…" for the visit.
+      if (id) read(id, current).catch(error => { if (current === run) { setScreen({areas: null, checkedAt: null, live: false}); onError('marks', error); } });
     }),
     effect(() => {
       const id = habitat.value, r = region.value, s = coastSpecies(species.value, profile.value), depthLimitFt = terrainDepthLimitFt(profile.value);

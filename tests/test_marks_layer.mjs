@@ -9,12 +9,12 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {speciesFit} from '../dist/species-fit.js';
 import {
-  CDFW_REGULATIONS, EMPTY, assessScreen, atlasCard, fitLine, geologyCard, geologyFeatures, geologyShown, habitatFamily, markFeatures, markFit, markShown,
+  CDFW_REGULATIONS, EMPTY, SCREEN_NOTES, assessScreen, atlasCard, fitLine, geologyCard, geologyFeatures, geologyShown, habitatFamily, markFeatures, markFit, markShown,
   receiptCard, regulationsLink, surveyCard, surveyFeatures, surveyMatches, terrainCard, terrainDetailCard,
 } from '../web/map/habitat.ts';
 import {MPA_SERVICE} from '../web/map/mpa.ts';
 import {
-  GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, habitatCard, habitatReceipt, markData, markSources, markStyle, picked, spotCard, spotHref,
+  GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, habitatCard, habitatReceipt, markData, markScreen, markSources, markStyle, picked, spotCard, spotHref,
 } from '../web/map/marks.ts';
 import {GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE, SURVEY_SOURCE} from '../web/map/layers.ts';
 import {ENC_LAYER, chartFailed, chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
@@ -412,5 +412,72 @@ test('on the Chart a ?habitat= the terrain has not restored resolves without gra
   setParams({region: 'santa-cruz-monterey-bay', presentation: 'chart'});
   await settle();
   assert.equal(asked.length, 2, 'no terrain, no habitat to restore');
+  marks.destroy();
+});
+
+// SC2007-01: a failed region.json read ends the protected-area check as unavailable, never "Checking…" for the visit.
+/** files(), except morro-bay's region.json answers `bad()` for its first `times` reads. */
+const failingRegion = (bad, times = 1) => { const serve = files(); let left = times;
+  return async url => new URL(url).pathname === '/regions/morro-bay/region.json' && left-- > 0 ? bad() : serve(url); };
+const BAD_REGION = {
+  network: () => Promise.reject(new TypeError('fetch failed')),
+  503: async () => ({ok: false, status: 503, json: async () => ({})}),
+  'invalid JSON': async () => ({ok: true, json: async () => { throw new SyntaxError('Unexpected token < in JSON'); }}),
+};
+
+test('a failed region.json read shows the unavailable screen with its reason, withholds every spot and reports once', async () => {
+  for (const [why, bad] of Object.entries(BAD_REGION)) {
+    browser(`${PAGE}?region=morro-bay&presentation=chart&target=lingcod`);
+    const errors = [], marks = createMarks({fetchFn: failingRegion(bad), page: () => PAGE, onError: layer => errors.push(layer)});
+    assert.equal(markScreen.value.status, 'checking', `${why}: checking while region.json loads`);
+    await settle();
+    assert.equal(markScreen.value.status, 'unavailable', `${why}: never checking forever`);
+    assert.equal(markScreen.value.note, SCREEN_NOTES.unavailable, `${why}: the legend says why`);
+    assert.deepEqual(errors, ['marks'], `${why}: one error, for the marks layer`);
+    assert.equal(markSources[MARKS_SOURCE].value.features.length, 0, `${why}: no ranked spot is drawn`);
+    assert.equal(spotCard.value, null, `${why}: no spot card`);
+    marks.destroy();
+  }
+});
+
+test('a good region.json still goes from checking to its real screen, and a failure is not sticky', async () => {
+  browser(`${PAGE}?region=morro-bay&presentation=chart&target=lingcod`);
+  const good = createMarks({fetchFn: files(), page: () => PAGE});
+  assert.equal(markScreen.value.status, 'checking');
+  await settle();
+  assert.equal(markScreen.value.status, 'ready', 'the live check answers as before');
+  assert.ok(markSources[MARKS_SOURCE].value.features.length > 0, 'the screened spots draw');
+  good.destroy();
+
+  browser(`${PAGE}?region=morro-bay&presentation=chart&target=lingcod`);
+  const errors = [], marks = createMarks({fetchFn: failingRegion(BAD_REGION[503]), page: () => PAGE, onError: layer => errors.push(layer)});
+  await settle();
+  assert.equal(markScreen.value.status, 'unavailable');
+  setParams({region: 'cambria-san-simeon'});
+  await settle();
+  setParams({region: 'morro-bay'});
+  assert.equal(markScreen.value.status, 'checking', 'changing region back starts a new check');
+  await settle();
+  assert.equal(markScreen.value.status, 'ready', 'the new check can become ready');
+  assert.ok(markSources[MARKS_SOURCE].value.features.length > 0);
+  assert.deepEqual(errors, ['marks'], 'only the failed read reported');
+  marks.destroy();
+});
+
+test('a region.json read that fails after the region changed leaves the new region\'s screen alone', async () => {
+  browser(`${PAGE}?region=morro-bay&presentation=chart&target=lingcod`);
+  let fail;
+  const pending = new Promise((_resolve, reject) => { fail = reject; });
+  const errors = [], marks = createMarks({fetchFn: failingRegion(() => pending), page: () => PAGE, onError: layer => errors.push(layer)});
+  await settle();
+  assert.equal(markScreen.value.status, 'checking', 'morro-bay\'s read is still pending');
+  setParams({region: 'cambria-san-simeon'});
+  await settle();
+  const cambria = markScreen.value;
+  assert.notEqual(cambria.status, 'checking', 'cambria\'s check has answered');
+  fail(new TypeError('fetch failed'));
+  await settle();
+  assert.equal(markScreen.value, cambria, 'the stale run writes nothing');
+  assert.deepEqual(errors, [], 'and reports nothing');
   marks.destroy();
 });
