@@ -11,6 +11,8 @@ import {currentBrief, ensureRegionalForecast, regionalForecast} from '../../brie
 import {coastBinding, coastReport} from '../../coast-data.ts';
 import {coastRows, conditionsRows, conditionsSpan, FAMILIES, forecastRows, readingsAt, sourceClocks, type Family} from '../../conditions.ts';
 import {CDFW_REGULATIONS} from '../../map/habitat.ts';
+import {disagreements, sentence} from '../../model-disagreement.ts';
+import disagreeStyles from './model-disagreement.css?url';
 import {PROFILE_TABLE} from '../../profile.ts';
 import {profile, region} from '../../state.ts';
 import {regionInfo, zone} from '../App.tsx';
@@ -39,13 +41,15 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
   const rows = conditionsRows(forecastRows(forecast, family, span.start), local.rows);
   const brief = currentBrief(now);
   const clocks = sourceClocks(forecast, family, report && binding ? report : null, local.site);
-  const notes = PROFILE_TABLE[profile.value];
+  const notes = PROFILE_TABLE[profile.value], disagree = forecast ? disagreements(forecast, now, tz) : [];
   return (
     <section class="app-conditions" aria-labelledby="app-conditions-title">
       <header class="app-conditions-head">
         <h2 id="app-conditions-title">Conditions</h2>
         <Segmented label="Forecast model" options={FAMILY_OPTIONS} value={family} onChange={setFamily} />
       </header>
+      {disagree.length ? <><link rel="stylesheet" href={disagreeStyles} />
+        <ul class="app-conditions-disagree" aria-label="Model disagreement">{disagree.map(d => <li key={d.date}>{sentence(d, now, tz)}</li>)}</ul></> : null}
       <dl class="app-conditions-now" aria-label={`Selected hour, ${timeText(selected, tz, true)}`}>
         {readingsAt(rows, selected).map(r => <div key={r.label}><dt class="ui-eyebrow">{r.label}</dt><dd class="ui-mono">{value(r.value, r.unit)}</dd></div>)}
       </dl>
