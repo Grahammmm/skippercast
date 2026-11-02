@@ -272,5 +272,33 @@ class BuildCopy(unittest.TestCase):
                 compile_shore_habitat(Path(tmp), [load_region('morro-bay')])
 
 
+class Substrate(unittest.TestCase):
+    """FSC-03: a run may be sand or rocky; the committed sand runs keep their bytes."""
+    ASSET_SHA256 = '09a91f7616b761236a9065d0529e3065d5b9b4a2f94b5bb985ca1a3ba090c4b6'
+
+    def test_both_schema_copies_are_byte_identical(self):
+        self.assertEqual((ROOT / 'schemas/shore-habitat.schema.json').read_bytes(),
+                         (ROOT / 'src/skippercast/coastal/resources/shore-habitat.schema.json').read_bytes())
+
+    @unittest.skipUnless(validate.available(), NEEDS_JSONSCHEMA)
+    def test_rocky_validates_and_other_substrates_are_refused(self):
+        asset = json.loads(ASSET.read_text())
+        for value, ok in (('sand', True), ('rocky', True), ('Rock', False), ('gravel', False), ('', False), ('ROCKY', False),
+                          (None, False), ('missing', False)):
+            with self.subTest(substrate=value):
+                doc = copy.deepcopy(asset)
+                p = doc['features'][0]['properties']
+                if value == 'missing':
+                    del p['substrate']
+                else:
+                    p['substrate'] = value
+                self.assertEqual(validate.errors('shore-habitat', doc) == [], ok)
+
+    def test_committed_sand_runs_and_published_copy_are_unchanged(self):
+        self.assertTrue(all(f['properties']['substrate'] == 'sand' for f in json.loads(ASSET.read_text())['features']))
+        for path in (ASSET, PUBLISHED):
+            self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(), self.ASSET_SHA256, path.name)
+
+
 if __name__ == '__main__':
     unittest.main()
