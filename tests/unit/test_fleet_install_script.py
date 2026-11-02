@@ -58,6 +58,13 @@ class InstallScriptStaticTests(unittest.TestCase):
         self.assertIn('os.environ.get("AISSTREAM_API_KEY"', self.text)
         self.assertIn('0o600', self.text)
 
+    def test_never_pipes_into_an_early_exit(self):
+        # Under pipefail, `cmd | grep -q` fails at random: grep exits on its first match and
+        # cmd takes SIGPIPE (CI failure: "revision <sha> has no pyproject.toml").
+        self.assertIn('set -euo pipefail', self.text)
+        for line in code_lines(self.text):
+            self.assertNotRegex(line, r'\|\s*grep\s+-[a-zA-Z]*[qm]', line)
+
     def test_unit_template(self):
         unit = UNIT.read_text(encoding='utf-8')
         for line in ('EnvironmentFile=%h/.config/skippercast/fleet-ais.env',
