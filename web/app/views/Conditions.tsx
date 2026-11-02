@@ -22,6 +22,7 @@ import {CoastMarkup} from '../CoastMarkup.tsx';
 import {HourlyTable} from './HourlyTable.tsx';
 import {CurrentSource} from '../LayerRail.tsx';
 import {dockState, localParts, selectHour} from '../TimeDock.tsx';
+import {PlanLink, TargetRules, targetRules} from '../PlanView.tsx';
 
 /** Load the forecast for the region shown (shared with the brief, once per region). */
 function useForecast(): void {
@@ -83,7 +84,8 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
         <li>{notes.caveat}</li>
         {brief?.alerts.map(a => <li key={a.id}><a href={a.url} target="_blank" rel="noopener">{a.event}</a></li>)}
         {brief?.notice ? <li><a href={brief.notice.url} target="_blank" rel="noopener">Beach notice: {brief.notice.name}</a></li> : null}
-        <li><a href={CDFW_REGULATIONS} target="_blank" rel="noopener">Current CDFW ocean fishing rules</a></li>
+        <li>{targetRules(now).available ? <TargetRules now={now} /> : <><TargetRules now={now} /><a href={CDFW_REGULATIONS} target="_blank" rel="noopener">Current CDFW ocean fishing rules</a></>}</li>
+        <li><PlanLink /></li>
       </ul>
       {rulesRegion ? <SeasonStrip data={rules} species={species.value ?? notes.defaultTarget} region={rulesRegion} year={Number(new Intl.DateTimeFormat('en-US', {timeZone: tz, year: 'numeric'}).format(now))} /> : null}
       <h3 class="ui-eyebrow">Surface current</h3>

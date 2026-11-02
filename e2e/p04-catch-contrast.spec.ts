@@ -149,14 +149,16 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // catch flow never renders; check_contrast.mjs changes only the appCss surface hash and its comment, with contrast(),
 // assertions and thresholds untouched. Rebind those two exact hashes.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
-  "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
+  "web/species.ts": "26717bd67e349d67a6483bb27d0f67afb172847647b1251addfdd5b2f69970df",
   "web/app/App.tsx": "f63bf478bdb77f4564495a454865a9999bf767ba1fe4953c8192777d69094fb0",
   // SC-LAUNCH-4 (#1267, cost ceiling): Masthead.tsx imports web/degraded.ts (a signal and pure helpers, no top-level
   // side effect) and adds DegradedNotice after FreshnessDot. It renders nothing unless a response carries
   // X-SC-Degraded: cost-ceiling, which no BODY09 fixture does; when shown it reuses the existing .app-limits-note
   // paint. No CSS, token or catch markup change; contrast(), assertions and thresholds are untouched. Rebind only
   // Masthead.tsx. (Kept beside its pin, not in the notes above, so it does not collide with other PRs' notes.)
-  "web/app/Masthead.tsx": "5dc93d7eb3a5826571b76dd7224a7b01036253f19a2a099f5728710a7a687ddd",
+  // Merged with BF-species-plans-page #1276 (Plan label and icon, see the check_contrast.mjs note below): rebound to
+  // the merged file, which carries both changes and nothing else.
+  "web/app/Masthead.tsx": "c8c12a37a7020359c86513ddaf250aa81a333a736f3b5bbd405cf3aa809ca15d",
   "web/app/LayerRail.tsx": "bdae57c4c4dca33b5fb83a413b7d5c6f525221a4fb6b78037a1ad99102635ccd",
   "web/app/MapStage.tsx": "11bfed22183687b9bdfa6c4a348688b633dd4eaab5607aeeb5718fb104c41466",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
@@ -175,7 +177,12 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // comment; Legend.tsx is not a BODY09 input and Reports never mounts the legend. contrast(), the one export this
   // spec reads, assertions and thresholds are untouched. Rebind only check_contrast.mjs. (Kept beside its pin, not in
   // the notes above, so it does not collide with SCJ-7 #1224's notes there.)
-  "scripts/check_contrast.mjs": "5edb323e5f8845ef3269752ea5820d8db84f4760b0c43b0578ff411b0cf3c0a8",
+  // BF-species-plans-page #1276 (target plan page): Legend.tsx adds only a PlanLink to the density row, so
+  // check_contrast.mjs changes only the legendTsx surface hash; Reports never mounts the legend. species.ts adds only
+  // optional Plan fields and the plans' reviewedAt date; Masthead.tsx adds a Plan label and icon but lists the same
+  // five masthead views, so the Reports masthead is unchanged. contrast(), assertions and thresholds are untouched.
+  // All three rebound. Merged with main's SC2222-07 appCss surface hash: rebound to the merged file.
+  "scripts/check_contrast.mjs": "7ce26d19777ba3c048577fbdb4679580f5a0c0b7c48077af890114d260402210",
   "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
   "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"

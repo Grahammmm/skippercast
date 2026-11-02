@@ -100,7 +100,7 @@ test('parsers accept the documented values only', () => {
   assert.deepEqual(parseLayers('none'), []);
   assert.equal(parseLayers(''), null);
   assert.equal(layersParam([]), 'none');
-  assert.deepEqual(APP_VIEWS, ['coast', 'conditions', 'history', 'fleet', 'reports']);
+  assert.deepEqual(APP_VIEWS, ['coast', 'conditions', 'history', 'fleet', 'reports', 'plan']);
   assert.deepEqual(BASES, ['night', 'chart', 'aerial']);
 });
 
