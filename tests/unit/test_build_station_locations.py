@@ -51,8 +51,11 @@ class Opener:
 
 
 def run(root, opener, capsys):
-    code = bsl.main(root=root, opener=opener)
-    return code, capsys.readouterr().err
+    try:
+        return bsl.main(root=root, opener=opener) or 0, capsys.readouterr().err
+    except SystemExit as refused:  # a str code is printed by Python as one stderr line with exit status 1
+        assert isinstance(refused.code, str) and capsys.readouterr().err == ""
+        return 1, refused.code + "\n"
 
 
 def files(root):
@@ -138,6 +141,9 @@ def test_coops_fetch_failure_after_ndbc_success_writes_nothing(root, capsys):
     ('{"stations": {"tide": 9412110}}', "regions/x/region.json: tide station id is not a string"),
     ('{"stations": {"roles": {"offshore_buoy": {"stations": [46011]}}}}',
      "regions/x/region.json: offshore_buoy station id is not a string"),
+    ('{"stations": {"tide": 0}}', "regions/x/region.json: tide station id is not a string"),
+    ('{"stations": {"nearshore_buoy": false}}', "regions/x/region.json: nearshore_buoy station id is not a string"),
+    ('{"stations": {"roles": {"offshore_buoy": {"stations": [[]]}}}}', "regions/x/region.json: offshore_buoy station id is not a string"),
 ])
 def test_broken_region_is_named_before_any_fetch(root, capsys, text, named):
     (root / "regions/x").mkdir()
