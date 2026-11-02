@@ -66,7 +66,7 @@ from zoneinfo import ZoneInfo
 from ..config import FleetConfigError, load_region
 from ..sinks import worker_base
 from . import process
-from .sources.base import AisPosition, AisStatic, Bbox, bbox_of
+from .sources.base import AisPosition, AisStatic, Bbox, bbox_of, mmsi_arg
 from .sources.marinecadastre import RIGHTS, SOURCE_ID, CorruptDay, DayNotPublished, MalformedFile, \
     MarineCadastreSource
 from .events import iso_utc
@@ -284,7 +284,7 @@ def main(argv=None) -> int:
     parser.add_argument("--month", type=_month, help="a whole region-local month, YYYY-MM")
     parser.add_argument("--from", dest="start", type=date.fromisoformat, help="first region-local day")
     parser.add_argument("--to", dest="end", type=date.fromisoformat, help="last region-local day (inclusive)")
-    parser.add_argument("--mmsi", type=int, action="append", help="only this MMSI (repeatable)")
+    parser.add_argument("--mmsi", type=mmsi_arg, action="append", help="only this MMSI (repeatable)")
     parser.add_argument("--force", action="store_true", help="download and ingest days already in the store again")
     parser.add_argument("--allow-prune", action="store_true",
                         help="let a season new to the processor state replace the Worker's cells for it")

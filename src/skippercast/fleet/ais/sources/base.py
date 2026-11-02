@@ -9,12 +9,13 @@ decision or a key before it can run raises ``NotConfigured``.
 """
 from __future__ import annotations
 
+import argparse
 from dataclasses import dataclass
 from datetime import date
 from typing import AsyncIterator, Iterator, Protocol, Union, runtime_checkable
 
 __all__ = ["Bbox", "AisPosition", "AisStatic", "AisMessage", "AisSource", "NotConfigured", "Unsupported",
-           "MMSI_MIN", "MMSI_MAX", "valid_mmsi", "bbox_of", "bbox_contains"]
+           "MMSI_MIN", "MMSI_MAX", "valid_mmsi", "mmsi_arg", "bbox_of", "bbox_contains"]
 
 # [[lat_south, lon_west], [lat_north, lon_east]], the region file's ``ais.bbox`` order.
 Bbox = tuple[tuple[float, float], tuple[float, float]]
@@ -78,6 +79,17 @@ AisMessage = Union[AisPosition, AisStatic]
 def valid_mmsi(value) -> bool:
     """True for an integer MMSI in 1..999,999,999 (booleans are not MMSIs)."""
     return isinstance(value, int) and not isinstance(value, bool) and MMSI_MIN <= value <= MMSI_MAX
+
+
+def mmsi_arg(text: str) -> int:
+    """argparse ``type`` for ``--mmsi``: a base-10 whole number that passes ``valid_mmsi``."""
+    try:
+        value = int(text, 10)
+        if valid_mmsi(value):
+            return value
+    except (TypeError, ValueError):
+        pass
+    raise argparse.ArgumentTypeError(f"{text}: an MMSI is a whole number from {MMSI_MIN} to {MMSI_MAX}")
 
 
 def bbox_of(ais) -> Bbox:

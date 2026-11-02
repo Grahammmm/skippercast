@@ -84,6 +84,7 @@ from .classify import classify_trip
 from .events import Event, TripContext, build_events, iso_utc, season_of, segment_geometry, segment_id, \
     simplify_tolerance_m, trip_id
 from .segment import ActivityThresholds, prepare, split_trips
+from .sources.base import mmsi_arg
 from .store import AisStore, ais_root, retention_limits
 
 __all__ = ["SOURCE_RIGHTS", "Context", "Derived", "State", "VesselRef", "Worker", "WorkerError", "derive",
@@ -699,7 +700,7 @@ def main(argv=None) -> int:
     parser.add_argument("--from", dest="start", type=_day, help="first region-local day of a re-run window")
     parser.add_argument("--to", dest="end", type=_day, help="last region-local day of a re-run window (inclusive)")
     parser.add_argument("--source", choices=sorted(STORES), default="aisstream")
-    parser.add_argument("--mmsi", type=int, action="append", help="only this MMSI (repeatable)")
+    parser.add_argument("--mmsi", type=mmsi_arg, action="append", help="only this MMSI (repeatable)")
     parser.add_argument("--allow-prune", action="store_true",
                         help="let a season new to the state replace the Worker's cells for it (a full rebuild)")
     args = parser.parse_args(argv)
