@@ -9,7 +9,7 @@ import {useEffect, useState} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {LimitsDialog, LimitsForm} from '../app/LimitsPanel.tsx';
-import {regionInfo} from '../app/App.tsx';
+import {regionInfo} from '../app/region-info.ts';
 import {cruiseSpeed, wantedHours} from '../limits.ts';
 import type {Ranking} from '../ranking.ts';
 import {habitat, profile, selection, species} from '../state.ts';

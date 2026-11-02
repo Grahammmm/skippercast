@@ -1,0 +1,3 @@
+/* BF-model-disagreement-plain: one sentence per day the forecast models disagree, under the Conditions heading. */
+.app-conditions .app-conditions-disagree { margin: 0; padding: var(--space-2) var(--space-3); list-style: none; color: var(--text); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.app-conditions-disagree li + li { margin-top: var(--space-1); }
