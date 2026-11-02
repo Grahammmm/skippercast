@@ -64,7 +64,8 @@ def test_coast_listed_twice_is_refused():
 
 
 @pytest.mark.parametrize('band', [[36, 35], [36, 36], [math.nan, 40], [34, math.inf], [34], [34, 40, 42],
-                                  None, '34,40', [True, 40], ['34', 40]])
+                                  None, '34,40', [True, 40], ['34', 40], [10**400, 10**401], [34, 10**400],
+                                  [-10**400, 40], [-91, 40], [34, 90.5]])
 def test_invalid_latitude_band_is_refused(band):
     assert error(context(), coasts(('central', band))) == 'Coast central latitude band invalid'
 

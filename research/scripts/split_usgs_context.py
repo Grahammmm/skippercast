@@ -10,6 +10,13 @@ from shapely.geometry import shape
 PLAIN_ID=re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*')
 
 
+def latitude(v):
+    # Integers are compared exactly (no float conversion, so a huge JSON integer cannot overflow).
+    if isinstance(v,bool) or not isinstance(v,(int,float)):return False
+    if isinstance(v,float) and not math.isfinite(v):return False
+    return -90<=v<=90
+
+
 def split(data,coasts):
     if data.get('scope')!='generalized-statewide-usgs-hard-bottom-context':raise ValueError('Wrong USGS context scope')
     bands={}
@@ -18,7 +25,7 @@ def split(data,coasts):
         if not isinstance(ident,str) or not PLAIN_ID.fullmatch(ident):raise ValueError(f'Coast {i} id is not a plain id')
         if ident in bands:raise ValueError(f'Coast id listed twice: {ident}')
         band=r.get('latitude')
-        if not (isinstance(band,(list,tuple)) and len(band)==2 and all(isinstance(v,(int,float)) and not isinstance(v,bool) and math.isfinite(v) for v in band) and band[0]<band[1]):raise ValueError(f'Coast {ident} latitude band invalid')
+        if not (isinstance(band,(list,tuple)) and len(band)==2 and all(latitude(v) for v in band) and band[0]<band[1]):raise ValueError(f'Coast {ident} latitude band invalid')
         bands[ident]=band
     rows={ident:[] for ident in bands}
     for i,feature in enumerate(data['features']):
