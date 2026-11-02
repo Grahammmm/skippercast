@@ -7,7 +7,7 @@ import {useEffect} from 'preact/hooks';
 import {signal} from '@preact/signals';
 import {coordinates} from '../state.ts';
 import {formatCoordinates} from '../../dist/coordinates.js';
-import {exportEvidenceLabel, USER_WAYPOINT_CATEGORIES} from '../../dist/trip-export.js';
+import {exportEvidenceLabel, protectedHitReading, USER_WAYPOINT_CATEGORIES} from '../../dist/trip-export.js';
 import {fitLabel} from '../../dist/spot-ranking.js';
 import type {Filters, LayerKey, Planner as Model, Preset, ProtectedHit, Target, TripSpecies} from '../planner.ts';
 import {PORTS_FAILED_NOTE} from '../planner.ts';
@@ -42,14 +42,14 @@ function SpotRow({t, checked, hit, onToggle}: {t: Target; checked: boolean; hit?
         <small>{formatCoordinates(t.latitude, t.longitude, coordinates.value)}</small>
         <small>{t.trip_rank ? t.name : t.id} · grade {t.habitat_grade} · {depth} ft</small>
         {t.trip_rank ? <small>{t.terrain_interpretation}</small> : null}
-        {hit ? <small>Inside a protected-area boundary; excluded as a fishing target by SkipperCast. Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</small> : null}
+        {hit ? <small>{protectedHitReading(hit)} Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</small> : null}
       </span>
     </label>
   );
 }
 
 function BoundaryNote({hit}: {hit?: ProtectedHit}) {
-  return hit ? <p>Inside a protected-area boundary; excluded as a fishing target by SkipperCast. Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</p> : null;
+  return hit ? <p>{protectedHitReading(hit)} Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</p> : null;
 }
 
 export function Planner({model: m, open}: {model: Model; open: boolean}) {

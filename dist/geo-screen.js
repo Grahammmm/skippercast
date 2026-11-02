@@ -60,6 +60,48 @@ export function geometryIntersects(a,b) {
   const eb=edges(b);
   return edges(a).some(([p,q])=>eb.some(([r,s])=>intersects(p,q,r,s)));
 }
+// SC-LAUNCH-1: the one run-time closure check every output uses. Inputs are EPSG:4326 lon/lat; the margin is
+// measured in metres in a local equirectangular frame at the screened geometry's latitude (the standard series
+// for metres per degree), never in degrees. A geometry touching, inside, or within `marginM` of a closure is hit.
+// The smallest MPA/GEA clearance a reviewed atlas or survey build here applies is 75 m (southern-california; central
+// 102 m), cut from buffer polygons in a projected CRS: in this frame those outlines measure 74.89 m at the closest.
+// 70 m keeps a 5 m allowance for that so the run-time screen agrees with every reviewed build.
+export const PLANNING_MARGIN_M = 70;
+const mPerDeg = lat => {
+  const r = lat * Math.PI / 180;
+  return [111412.84 * Math.cos(r) - 93.5 * Math.cos(3 * r), 111132.92 - 559.82 * Math.cos(2 * r) + 1.175 * Math.cos(4 * r)];
+};
+function segDist2(p, a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy;
+  const t = l ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l)) : 0;
+  const x = a[0] + t * dx - p[0], y = a[1] + t * dy - p[1];
+  return x * x + y * y;
+}
+export function withinMargin(a, b, marginM = PLANNING_MARGIN_M) {
+  if (!a || !b) return false;
+  const x = bbox(a), y = bbox(b);
+  if (!x.every(Number.isFinite) || !y.every(Number.isFinite)) return false;
+  const [kx, ky] = mPerDeg((x[1] + x[3]) / 2), m = Math.max(0, marginM), dx = m / kx, dy = m / ky;
+  const near = (p, q) => p[0] - dx <= q[2] && q[0] <= p[2] + dx && p[1] - dy <= q[3] && q[1] <= p[3] + dy;
+  if (!near(x, y)) return false;
+  if (geometryIntersects(a, b)) return true;
+  if (m === 0) return false;
+  const proj = p => [p[0] * kx, p[1] * ky];
+  const parts = (g, box) => {
+    const e = edges(g).filter(([p, q]) => near([Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1])], box));
+    const segs = e.length || edges(g).length ? e : positions(g).map(p => [p, p]);
+    return {segs: segs.map(([p, q]) => [proj(p), proj(q)]), pts: positions(g).filter(p => near([p[0], p[1], p[0], p[1]], box)).map(proj)};
+  };
+  const A = parts(a, y), B = parts(b, x), m2 = m * m;
+  return A.pts.some(p => B.segs.some(([s, t]) => segDist2(p, s, t) <= m2)) || B.pts.some(p => A.segs.some(([s, t]) => segDist2(p, s, t) <= m2));
+}
+export const pointGeometry = (longitude, latitude) => ({type: 'Point', coordinates: [longitude, latitude]});
+// The closures (anything with a `geometry`) that any of `geometries` touches or comes within `marginM` of.
+/** @template {{geometry: unknown}} T @param {readonly unknown[]} geometries @param {readonly T[]} closures @param {number} [marginM] @returns {T[]} */
+export function closureHits(geometries, closures, marginM = PLANNING_MARGIN_M) {
+  const gs = geometries.filter(Boolean);
+  return closures.filter(c => gs.some(g => withinMargin(g, c.geometry, marginM)));
+}
 export function circleGeometry(latitude, longitude, radiusM, steps=64) {
   const ring=Array.from({length:steps},(_,i)=>{
     const a=i/steps*2*Math.PI;
