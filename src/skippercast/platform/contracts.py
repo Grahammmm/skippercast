@@ -10,9 +10,11 @@ import hashlib
 import ipaddress
 import json
 import math
+import os
 from pathlib import Path
 import re
 from urllib.parse import urlsplit
+import uuid
 from zoneinfo import ZoneInfo
 
 from ..paths import repo_root
@@ -66,9 +68,14 @@ def atomic_json(path, value, *, indent=None, kind=None):
     path.parent.mkdir(parents=True, exist_ok=True)
     encoded = (json.dumps(value, ensure_ascii=False, allow_nan=False, indent=indent,
                           separators=(",", ":") if indent is None else None) + "\n").encode()
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_bytes(encoded)
-    tmp.replace(path)
+    # A temporary name unique to this writer: two processes (pytest-xdist workers,
+    # overlapping jobs) writing the same target must not rename each other's file.
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
+    try:
+        tmp.write_bytes(encoded)
+        tmp.replace(path)
+    finally:
+        tmp.unlink(missing_ok=True)
     return {"sha256": hashlib.sha256(encoded).hexdigest(), "bytes": len(encoded)}
 
 
