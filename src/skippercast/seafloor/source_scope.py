@@ -18,14 +18,24 @@ LICENSE = 'public-domain-us-gov'
 def processing_scope(root):
     root = Path(root)
     path = root/'deployments/production.json'
-    configured = read_json(path).get('source_scope', 'all') if path.exists() else 'all'
+    try:
+        data = read_json(path) if path.exists() else {}
+    except ValueError as error:  # bad JSON, duplicate keys, non-finite numbers, non-UTF-8
+        raise ValueError('Invalid deployment config: deployments/production.json') from error
+    if not isinstance(data, dict):
+        raise ValueError('Invalid deployment config: deployments/production.json')
+    configured = data.get('source_scope', 'all')
     scope = os.environ.get('SKIPPERCAST_SOURCE_SCOPE', configured)
-    if configured not in {'all', GOVERNMENT} or scope not in {'all', GOVERNMENT}:
+    if (not isinstance(configured, str) or configured not in {'all', GOVERNMENT}
+            or scope not in {'all', GOVERNMENT}):
         raise ValueError('Unknown seafloor input source scope')
     if configured == GOVERNMENT and scope != GOVERNMENT:
         raise ValueError('Environment cannot weaken configured government input scope')
     marker_path = root/'var/seafloor/input-scope.json'
-    marker = read_json(marker_path) if marker_path.exists() else None
+    try:
+        marker = read_json(marker_path) if marker_path.exists() else None
+    except ValueError as error:
+        raise ValueError('Invalid input scope marker') from error
     if scope == GOVERNMENT:
         from .rights import deployment_use
         if deployment_use(root) != 'for-profit':
