@@ -17,7 +17,8 @@
 //   darkness before light wind; bonuses such as dawn or tide never named).
 // - Never reassuring on thin evidence: an active marine alert makes the day
 //   Rough; partial forecast detail, unrated hours, a run older than its tile
-//   limit, a missing alert check or a hazardous bar estimate hold a
+//   limit, a missing alert check, a hazardous bar estimate or an hour in the
+//   long-period swell rule (score.ts LONG_PERIOD_SWELL) hold a
 //   Comfortable window at Marginal and say why; on a Marginal or Rough day a
 //   missing alert check is still named. No forecast reads Unknown.
 //   Buoy readings never enter the verdict, so a stale buoy cannot raise it.
@@ -26,7 +27,7 @@
 // safety clearance.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
-import {chargedCosts, rateComfort, verdictFor, type ComfortRating, type FeedHour, type Verdict} from '../score.ts';
+import {chargedCosts, LONG_PERIOD_SWELL, rateComfort, verdictFor, type ComfortRating, type FeedHour, type Verdict} from '../score.ts';
 import {sample} from '../map/forecast-grid.ts';
 import type {ConditionsForecast, ModelRun} from '../conditions.ts';
 import type {Profile} from '../profile.ts';
@@ -170,6 +171,16 @@ function barHazard(brief: Brief, hours: readonly number[], tz: string): string |
   return hit === undefined ? null : `the bar estimate reads hazardous at ${clockText(hit, tz)}`;
 }
 
+/** The first rated hour in the long-period swell rule (score.ts LONG_PERIOD_SWELL, which keeps it out of every window), named; the rougher model's seas count. */
+export function longPeriodHour(rows: readonly {ms: number; hour: FeedHour}[], tz: string): string | null {
+  for (const {ms, hour} of [...rows].sort((a, b) => a.ms - b.ms)) {
+    const heights = [hour.sea, hour.other_sea].filter(finite), periods = [hour.sea_period, hour.swell_period].filter(finite).filter(p => p >= LONG_PERIOD_SWELL.period);
+    const h = heights.length ? Math.max(...heights) : NaN;
+    if (h >= LONG_PERIOD_SWELL.height && periods.length) return `long-period swell (${r1(h)} ft at ${r0(Math.max(...periods))} s) at ${clockText(ms, tz)}`;
+  }
+  return null;
+}
+
 /** The boat verdict from the comfort score over the regional forecast. */
 export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, now: Date, tz: string): BriefVerdict {
   const unknown = (limit: string, window: string | null = null): BriefVerdict => ({verdict: 'unknown', limit, held: null, window, score: null, basis: 'comfort-score'});
@@ -203,6 +214,8 @@ export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, n
   if (brief.missing.includes(ALERT_CHECK_MISSING)) reasons.push('the marine alert check is unavailable');
   const bar = barHazard(brief, hours, tz);
   if (bar) reasons.push(bar);
+  const swell = longPeriodHour(rated, tz);
+  if (swell) reasons.push(swell);
   const held = verdict === 'comfortable' && reasons.length ? heldSentence(reasons) : null;
   if (held) verdict = 'marginal';
   else if (!alert && brief.missing.includes(ALERT_CHECK_MISSING)) limit = `${limit} ${NO_ALERT_CHECK}`;

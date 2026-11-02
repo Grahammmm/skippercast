@@ -140,6 +140,12 @@ def fetch_model(model, cycle, workers=16, log=log_err):
     with ThreadPoolExecutor(max_workers=max(1, workers // 4)) as pool:
         results = dict(pool.map(step_job, model.steps))
     log(f'{model.id}: {len(results)} steps downloaded and decoded in {time.time() - started:.0f}s')
+    for f in model.fields:  # a field the index offers at no step fails the model, never publishes all-missing
+        have = [s for s in model.steps if f.name in results[s]]
+        if not have:
+            raise ValueError(f'{model.id} {f.name}: not offered at any step (index selector {f.select})')
+        if len(have) < len(model.steps):
+            log(f'{model.id} {f.name}: missing at {len(model.steps) - len(have)} of {len(model.steps)} steps')
     first = results[model.steps[0]]
     native = [f.name for f in model.fields if len(f.select) > 2 and f.select[2] == 'native']
     reference = first[native[0]] if native else first[model.fields[0].name]

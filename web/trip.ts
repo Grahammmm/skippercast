@@ -21,7 +21,7 @@ import {markSources} from './map/marks.ts';
 import {NO_PLAN, fitCamera, rankedSpots, recheckPlan, screenRanked, type RankedPlan, type RankedScreen} from './map/ranked.ts';
 import {camera, cameraParam, choosePresentation, type Camera} from './map/stage.ts';
 import {beginWaypointPlacement, cancelWaypointPlacement} from './waypoint-placement.ts';
-import {appView, navigate, region, withParams, type UrlKey} from './state.ts';
+import {appView, day, navigate, region, withParams, type UrlKey} from './state.ts';
 import {reachFor} from './reach.ts';
 import {tideSelection} from './tide-selection.ts';
 import {saveTidePack} from './tide-stations.ts';
@@ -116,7 +116,7 @@ async function startPlanner(id: string): Promise<Planner> {
   const model = createPlanner({atlas, screen, region: regions.getRegion() as import('./planner.ts').PlannerDeps['region'],
     map: {getSize: () => mapView(camera.peek(), chartSize()).getSize(), getBounds: () => mapView(camera.peek(), chartSize()).getBounds()},
     // Read when the planner starts for the region; a range changed later applies to the next region's planner, and the planner measures from its chosen port.
-    reachNm: reachFor('boat'),
+    reachNm: reachFor('boat'), viewDay: () => day.peek(),
     getVisible: () => { const ids = new Set((markSources[MARKS_SOURCE]?.value.features ?? []).map(f => f.properties.id)); return atlas.targets.filter(t => ids.has(t.id)); },
     nav: {
       open: openTrip,
