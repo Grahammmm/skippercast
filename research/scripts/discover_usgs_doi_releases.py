@@ -198,7 +198,8 @@ def main():
             (temp:=args.output.with_suffix(args.output.suffix+'.tmp')).write_bytes(args.previous.read_bytes())
             temp.replace(args.output)
             print('Retained complete USGS DOI inventory from '+old['last_complete_scan_at']);return
-    if reason:print(f'previous scan ignored: {reason}',file=sys.stderr)
+    if reason:  # an ignored previous is never handed on: a failed fetch must not keep its rows or scan time
+        print(f'previous scan ignored: {reason}',file=sys.stderr);old=None
     result=discover(old,now=now,additions=additions)
     args.output.parent.mkdir(parents=True,exist_ok=True)
     temp=args.output.with_suffix(args.output.suffix+'.tmp')

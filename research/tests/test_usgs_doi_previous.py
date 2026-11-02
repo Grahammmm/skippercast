@@ -108,7 +108,13 @@ class PreviousScanTests(unittest.TestCase):
             for when, reason in cases:
                 with self.subTest(kind=kind, when=when):
                     previous = fresh(kind, last_complete_scan_at=when)
-                    self.assert_rescanned(self.run_main(kind, previous), reason, previous)
+                    self.assert_rescanned(self.run_main(kind, previous), reason, None)
+                with self.subTest(kind=kind, when=when, fetch='failed'):
+                    result = self.run_main(kind, previous, fail=True)
+                    self.assert_rescanned(result, reason, None)
+                    written = json.loads(result[4].read_text())
+                    self.assertIsNone(written['last_complete_scan_at'])
+                    self.assertNotIn(previous[kind][0], written[kind])
 
     def test_stale_degraded_or_misshaped_health_rescans_quietly(self):
         for kind in SCRIPTS:
