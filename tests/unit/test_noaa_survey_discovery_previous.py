@@ -64,6 +64,14 @@ class PreviousScanTests(TestCase):
                 self.assertEqual(self.calls, [None])
                 self.assertTrue(self.output.exists())
 
+    def test_previous_stat_permission_error_is_unreadable_and_full_scan(self):
+        self.previous.write_text(json.dumps(self.doc()))
+        with mock.patch.object(Path, 'is_file', side_effect=PermissionError(13, 'Permission denied')):
+            stderr = self.run_main('--previous', str(self.previous))
+        self.assertEqual(stderr, 'previous scan ignored: unreadable\n')
+        self.assertEqual(self.calls, [None])
+        self.assertTrue(self.output.exists())
+
     def test_unusable_scan_time_rescans_and_keeps_rows_for_scan(self):
         future = (NOW + timedelta(days=1)).isoformat()
         cases = [({'last_complete_scan_at': '2026-10-30T12:00:00'}, 'scan time has no UTC offset'),

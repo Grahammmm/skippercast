@@ -87,24 +87,23 @@ def _days(text):
 
 
 def _previous(path):
-    if not path or not path.is_file():
-        return None, None
-    try:
+    try:  # the is_file() stat can raise too, e.g. PermissionError under an unreadable directory
+        if not path or not path.is_file():
+            return None, None
         previous = json.loads(path.read_text(encoding='utf-8'))
     except (OSError, ValueError):  # covers UnicodeDecodeError and JSONDecodeError
         previous = None
     return (previous, None) if isinstance(previous, dict) else (None, 'unreadable')
 
 
-def _scan_time(previous):
-    value = previous.get('last_complete_scan_at')
-    if value is None:
-        return None, 'no scan time'
+def _scan_time(value, now):
     try:
-        when = datetime.fromisoformat(value)
+        when = None if value is None else datetime.fromisoformat(value)
     except (TypeError, ValueError):
         return None, 'bad scan time'
-    return (when, None) if when.utcoffset() is not None else (None, 'scan time has no UTC offset')
+    if when is None or when.utcoffset() is None:
+        return None, 'scan time has no UTC offset' if when else 'no scan time'
+    return (when, None) if when <= now else (None, 'scan time is in the future')
 
 
 def main(argv=None):
@@ -116,18 +115,15 @@ def main(argv=None):
     now = datetime.now(timezone.utc)
     previous, reason = _previous(args.previous)
     if previous and isinstance(previous.get('health'), dict) and previous['health'].get('status') == 'ok':
-        when, reason = _scan_time(previous)
-        if when and when > now:
-            reason = 'scan time is in the future'
-        elif when and now - when < timedelta(days=args.max_age_days):
+        when, reason = _scan_time(previous.get('last_complete_scan_at'), now)
+        if when and now - when < timedelta(days=args.max_age_days):
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_bytes(args.previous.read_bytes())
             print('Retained complete NOAA discovery from ' + previous['last_complete_scan_at'])
             return
     if reason:
         print(f'previous scan ignored: {reason}', file=sys.stderr)
-    if previous and not isinstance(previous.get('sectors'), list):
-        previous = None
+    previous = previous if previous and isinstance(previous.get('sectors'), list) else None
     sectors = json.loads((ROOT / 'dist/data/coastal-sectors.json').read_text())['sectors']
     result = scan(sectors, previous, now=now)
     args.output.parent.mkdir(parents=True, exist_ok=True)
