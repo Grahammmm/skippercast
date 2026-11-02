@@ -164,6 +164,12 @@ export function markWeight(t: AtlasTarget, target: string): number {
   return Math.round(g * (fit ? fit.n / 3 : 2 / 3) * 1000) / 1000;
 }
 
+/** A valid nearby depth band for a map label, or no label for malformed values. */
+export function depthBand(d: readonly number[] | undefined): string | null {
+  if (!Array.isArray(d) || d.length !== 2 || !Number.isFinite(d[0]) || !Number.isFinite(d[1]) || d[0]! < 0 || d[0]! > d[1]! || d[1]! > 1000) return null;
+  return `${Math.round(d[0]!)}–${Math.round(d[1]!)} ft`;
+}
+
 /**
  * The marks the target, profile, grade filter and run-time screen admit (the profile's depth limit on the deepest
  * nearby depth), with their fit badge and their density weight.
@@ -171,8 +177,8 @@ export function markWeight(t: AtlasTarget, target: string): number {
 export function markFeatures(atlas: Atlas | null | undefined, target: string, profile: Profile, screen: MarkScreen, grades: GradeFilter = 'all'): Collection {
   return collection((atlas?.targets ?? []).filter(t => markShown(t, target) && withinDepth(profile, t.neighborhood_depth_ft?.[1]) && gradeAllows(grades, t.habitat_grade)
     && !withheld(t, screen)).map(t => {
-    const fit = markFit(t, target);
-    return {type: 'Feature', geometry: point(t), properties: {id: t.id, ...fit ? {fit: String(fit.n)} : {}, weight: markWeight(t, target)}};
+    const fit = markFit(t, target), depth = depthBand(t.neighborhood_depth_ft);
+    return {type: 'Feature', geometry: point(t), properties: {id: t.id, ...fit ? {fit: String(fit.n)} : {}, weight: markWeight(t, target), ...depth ? {depth} : {}}};
   }));
 }
 export const surveyFeatures = (data: MarkData | null, target: string): Collection => !data?.survey ? EMPTY
