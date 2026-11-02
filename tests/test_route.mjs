@@ -115,6 +115,17 @@ test('a start or end only mixed cells reach needs the lines', () => {
   allWater(model, coastLines, r.points);
 });
 
+test('a mixed cell the start snap already looked at still makes a blocked search lines-needed', () => {
+  // A one-cell water berth under a row of mixed cells, then open water: the snap caches the mixed cells first.
+  const model = product({[COAST]: paint([['w', 13, 0, 15, 14], ['m', 13, 15, 15, 15], ['w', 14, 16, 14, 16]], 'l'.repeat(G * G))});
+  const from = cell(14, 16), to = cell(14, 4);
+  assert.equal(why(waterRoute(model, null, from, to)), 'lines-needed');
+  assert.equal(why(waterRoute(model, false, from, to)), 'no-route');
+  const r = waterRoute(model, coastLines, from, to);
+  assert.ok(r.ok, JSON.stringify(r));
+  allWater(model, coastLines, r.points);
+});
+
 test('a breakwater line between two water sub-cell centres is never crossed', () => {
   const model = coastGrid([['l', 0, 22, 31, 22], ['m', 17, 22, 18, 22]]);
   // An edge-only line across the gap, half way between two sub-cell centre rows (~31 m from each, outside the

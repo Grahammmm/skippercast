@@ -70,21 +70,25 @@ export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines |
   };
   const at = (qx: number, qy: number): RoutePoint => ({latitude: toLat(qy / Q * n, n), longitude: qx / Q * 360 - 180});
   // Whether a point in quarter-sub-cell units classifies water: 0 no, 1 in a clean water cell, 2 in a mixed one.
+  // The memo keeps -1 for a mixed cell blocked because lines are null, so every lookup (cached too) flags it.
   const memo = new Map<number, number>();
   const water = (qx: number, qy: number): number => {
-    const id = qy * Q + qx, seen = memo.get(id);
-    if (seen !== undefined) return seen;
-    let v = 0;
-    if (qx >= 0 && qy >= 0 && qx < Q && qy < Q) {
-      const p = at(qx, qy), cell = placeOf(model, null, p);
-      if (cell.state === 'water') v = 1;
-      else if (cell.state === 'unknown' && cell.reason === 'pending') {
-        if (lines === null) sawMixed = true;
-        else if (lines && linesPlace(model, subset(lines, Math.floor(qx / Q * n), Math.floor(qy / Q * n)), p).state === 'water') v = 2;
+    const id = qy * Q + qx;
+    let v = memo.get(id);
+    if (v === undefined) {
+      v = 0;
+      if (qx >= 0 && qy >= 0 && qx < Q && qy < Q) {
+        const p = at(qx, qy), cell = placeOf(model, null, p);
+        if (cell.state === 'water') v = 1;
+        else if (cell.state === 'unknown' && cell.reason === 'pending') {
+          if (lines === null) v = -1;
+          else if (lines && linesPlace(model, subset(lines, Math.floor(qx / Q * n), Math.floor(qy / Q * n)), p).state === 'water') v = 2;
+        }
       }
+      memo.set(id, v);
     }
-    memo.set(id, v);
-    return v;
+    if (v < 0) sawMixed = true;
+    return Math.max(v, 0);
   };
   const cellWater = (gx: number, gy: number): number => water(4 * gx + 2, 4 * gy + 2);
   const centre = (id: number): RoutePoint => at(4 * (id % size) + 2, 4 * Math.floor(id / size) + 2);
