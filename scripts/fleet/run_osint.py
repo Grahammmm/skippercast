@@ -525,17 +525,33 @@ def cancel_on_signals(live: Live):
             signal.signal(sig, old)
 
 
+def _minutes(text: str) -> float:
+    """argparse type: minutes in (0, 360], fleet-osint.yml's job timeout (nan and inf fail the test)."""
+    if not 0 < (value := float(text)) <= 360:
+        raise argparse.ArgumentTypeError("must be minutes above 0 and at most 360")
+    return value
+
+
+def _count(lo: int, hi: int) -> Callable[[str], int]:
+    def parse(text: str) -> int:
+        if not lo <= (value := int(text)) <= hi:
+            raise argparse.ArgumentTypeError(f"must be a whole number from {lo} to {hi}")
+        return value
+    return parse
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="run_osint.py", description=__doc__.splitlines()[0])
     parser.add_argument("--region", help="fleet region id, e.g. CA")
     parser.add_argument("--run-id", help="the plan-agent run whose manifests to research")
     parser.add_argument("--claude", default="claude", help="the Claude Code CLI (default: claude on PATH)")
-    parser.add_argument("--parallel", type=int, default=None,
+    parser.add_argument("--parallel", type=_count(1, 8), default=None,
                         help=f"batches at once (default FLEET_OSINT_PARALLEL or {DEFAULT_PARALLEL})")
     parser.add_argument("--max-batches", type=int, default=None, help="research at most this many pending batches")
-    parser.add_argument("--timeout-min", type=float, default=DEFAULT_TIMEOUT_MIN, help="minutes per batch (60)")
-    parser.add_argument("--max-turns", type=int, default=DEFAULT_MAX_TURNS, help="agentic turns per batch (200)")
-    parser.add_argument("--deadline-min", type=float, default=DEFAULT_DEADLINE_MIN,
+    parser.add_argument("--timeout-min", type=_minutes, default=DEFAULT_TIMEOUT_MIN, help="minutes per batch (60)")
+    parser.add_argument("--max-turns", type=_count(1, 1000), default=DEFAULT_MAX_TURNS,
+                        help="agentic turns per batch (200)")
+    parser.add_argument("--deadline-min", type=_minutes, default=DEFAULT_DEADLINE_MIN,
                         help=f"minutes for the whole run ({DEFAULT_DEADLINE_MIN}); later batches stay pending")
     parser.add_argument("--auth-file", type=Path, default=DEFAULT_AUTH_FILE,
                         help="0600 env file with CLAUDE_CODE_OAUTH_TOKEN (default ~/.config/skippercast/claude.env)")
@@ -548,8 +564,12 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--region and --run-id are required")
     if args.max_batches is not None and args.max_batches < 1:
         parser.error("--max-batches takes a positive number")
+    env_parallel = os.environ.get("FLEET_OSINT_PARALLEL") or str(DEFAULT_PARALLEL)
     try:
-        parallel = args.parallel or int(os.environ.get("FLEET_OSINT_PARALLEL") or DEFAULT_PARALLEL)
+        parallel = args.parallel if args.parallel is not None else _count(1, 8)(env_parallel)
+    except (argparse.ArgumentTypeError, ValueError):
+        parser.error("FLEET_OSINT_PARALLEL must be a whole number from 1 to 8")
+    try:
         code, counts = run(args.region, args.run_id, claude=args.claude, parallel=parallel,
                            max_batches=args.max_batches, timeout_min=args.timeout_min, max_turns=args.max_turns,
                            deadline_min=args.deadline_min, auth_file=args.auth_file)
