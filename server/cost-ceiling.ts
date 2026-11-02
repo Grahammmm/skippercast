@@ -48,24 +48,30 @@ export function ceilingOf(env: Pick<Env, 'COST_CEILING_R2_READS_PER_DAY'> | unde
 
 const utcDay = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
 
-/** The isolate's view of today's count: `known` from the last D1 write, plus reads not yet written. */
-const state = {day: '', known: 0, pending: 0, lastFlush: 0, flushing: null as Promise<void> | null};
+/**
+ * The isolate's view of today's count: `known` from the last D1 write, plus
+ * reads not yet written: `pending`, and `inflight`, the batch a D1 write is
+ * carrying. A batch stays counted while its write is unanswered, so the
+ * ceiling never reopens mid-write; it moves into `known` when D1 answers, or
+ * back to `pending` when the write fails.
+ */
+const state = {day: '', known: 0, pending: 0, inflight: 0, lastFlush: 0, flushing: null as Promise<void> | null};
 
 function roll(now: number): void {
   const day = utcDay(now);
-  if (day !== state.day) { state.day = day; state.known = 0; state.pending = 0; state.lastFlush = now; }
+  if (day !== state.day) { state.day = day; state.known = 0; state.pending = 0; state.inflight = 0; state.lastFlush = now; }
 }
 
 /** Count `n` R2 Class B reads now. */
 export function recordReads(n = 1, now = Date.now()): void { roll(now); state.pending += n; }
 
-/** Today's reads as this isolate knows them. */
-export function readsToday(now = Date.now()): number { roll(now); return state.known + state.pending; }
+/** Today's reads as this isolate knows them, a batch still being written included. */
+export function readsToday(now = Date.now()): number { roll(now); return state.known + state.pending + state.inflight; }
 
 export function overCeiling(env: Env | undefined, now = Date.now()): boolean { return readsToday(now) >= ceilingOf(env); }
 
 /** Tests only: forget the isolate's count. */
-export function resetMeter(): void { state.day = ''; state.known = 0; state.pending = 0; state.lastFlush = 0; state.flushing = null; }
+export function resetMeter(): void { state.day = ''; state.known = 0; state.pending = 0; state.inflight = 0; state.lastFlush = 0; state.flushing = null; }
 
 const rowId = (day: string): string => 'cost-ceiling:r2-reads:' + day;
 
@@ -76,11 +82,13 @@ export function flush(env: Env | undefined, now = Date.now()): Promise<void> {
   const n = state.pending, day = state.day;
   state.pending = 0; state.lastFlush = now;
   if (!env?.DB) { state.known += n; return Promise.resolve(); }
+  state.inflight += n;
   const expires = Math.floor(Date.parse(day + 'T00:00:00Z') / 1000) + 3 * 86400;
+  // A new UTC day (roll) has already zeroed inflight, so a late answer only touches its own day.
   state.flushing = env.DB.prepare('INSERT INTO request_limits(id,count,expires_at) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET count=count+excluded.count RETURNING count')
     .bind(rowId(day), n, expires).first<{count: number}>()
-    .then(row => { if (state.day !== day) return; state.known = Math.max(state.known + n, Number(row?.count) || 0); })
-    .catch(() => { if (state.day === day) state.pending += n; console.warn('Cost meter write unavailable'); })
+    .then(row => { if (state.day !== day) return; state.inflight -= n; state.known = Math.max(state.known + n, Number(row?.count) || 0); })
+    .catch(() => { if (state.day === day) { state.inflight -= n; state.pending += n; } console.warn('Cost meter write unavailable'); })
     .finally(() => { state.flushing = null; });
   return state.flushing;
 }
@@ -132,12 +140,34 @@ async function lastKnownCache(): Promise<Cache | null> {
   try { return (await (globalThis as {caches?: CacheStorage}).caches?.open(LAST_KNOWN_CACHE)) ?? null; } catch { return null; }
 }
 
+/**
+ * `body` read whole, or null once it passes `max` bytes (the rest is
+ * cancelled, never buffered). For a response that names no Content-Length,
+ * such as the JSON APIs' json() bodies.
+ */
+async function boundedBytes(body: ReadableStream<Uint8Array>, max: number): Promise<Uint8Array | null> {
+  const reader = body.getReader(), parts: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) { await reader.cancel().catch(() => {}); return null; }
+    parts.push(value);
+  }
+  const out = new Uint8Array(size);
+  let at = 0;
+  for (const part of parts) { out.set(part, at); at += part.byteLength; }
+  return out;
+}
+
 /** Keep `response` (a 200 or 206 served normally) as the last-known copy of `request`. */
 export async function keepLastKnown(request: Request, response: Response, ctx: WaitUntil, now = Date.now()): Promise<void> {
   if ((response.status !== 200 && response.status !== 206) || !response.body) return;
   if (/no-store|private/.test(response.headers.get('Cache-Control') || '') || response.headers.has('Set-Cookie')) return;
-  const length = Number(response.headers.get('Content-Length'));
-  if (!(length > 0) || length > LAST_KNOWN_MAX_BYTES) return;
+  // A stated length is checked up front; with none (the JSON APIs) the copy is read with the same bound.
+  const stated = response.headers.get('Content-Length'), length = Number(stated);
+  if (stated !== null && (!(length > 0) || length > LAST_KNOWN_MAX_BYTES)) return;
   const headers = new Headers(response.headers);
   headers.set('X-SC-LK-Status', String(response.status));
   headers.set('X-SC-Last-Known-At', new Date(now).toISOString());
@@ -146,7 +176,18 @@ export async function keepLastKnown(request: Request, response: Response, ctx: W
   // Opened before cloning, so an unavailable cache never leaves a teed body unread.
   const cache = await lastKnownCache();
   if (!cache) return;
-  const write = cache.put(lastKnownKey(request), new Response(response.clone().body, {status: 200, headers})).catch(() => console.warn('Last-known copy write unavailable'));
+  const body = response.clone().body!;
+  const save = async (): Promise<void> => {
+    let copy: ReadableStream<Uint8Array> | Uint8Array = body;
+    if (stated === null) {
+      const bytes = await boundedBytes(body, LAST_KNOWN_MAX_BYTES);
+      if (!bytes || bytes.byteLength === 0) return;
+      copy = bytes;
+      headers.set('Content-Length', String(bytes.byteLength));
+    }
+    await cache.put(lastKnownKey(request), new Response(copy, {status: 200, headers}));
+  };
+  const write = save().catch(() => console.warn('Last-known copy write unavailable'));
   if (ctx?.waitUntil) ctx.waitUntil(write); else await write;
 }
 

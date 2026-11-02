@@ -11,9 +11,12 @@
 //    cache) is answered from its last-known copy as the same 206.
 // 4. The count is global: a D1 total from other isolates past the ceiling
 //    degrades this one; a failed D1 write keeps the reads pending and
-//    blocks nothing.
+//    blocks nothing; a batch whose D1 write is unanswered stays counted.
 // 5. Private routes: per-IP before the session lookup and per account on
 //    reads answer the documented 429 with Retry-After: 60.
+// 6. A JSON API response (json(), no Content-Length) keeps a bounded
+//    last-known copy, which answers past the ceiling when the edge entry is
+//    gone and upstream fails.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -25,7 +28,7 @@ globalThis.DEPLOYMENT = read('../deployments/production.json');
 globalThis.SHELLS = {};
 globalThis.BUILD_ID = 'b1';
 const {default: worker} = await import('../server/index.ts');
-const {resetMeter, readsToday, recordReads, flush, ceilingOf, DEFAULT_R2_READS_PER_DAY, FLUSH_READS, DEGRADED_RETRY_SECONDS, LAST_KNOWN_CACHE} = await import('../server/cost-ceiling.ts');
+const {resetMeter, readsToday, recordReads, flush, ceilingOf, keepLastKnown, lastKnown, DEFAULT_R2_READS_PER_DAY, FLUSH_READS, DEGRADED_RETRY_SECONDS, LAST_KNOWN_CACHE, LAST_KNOWN_MAX_BYTES} = await import('../server/cost-ceiling.ts');
 const {useBucket} = await import('../server/feeds.ts');
 
 /** caches.default with the semantics the Worker relies on (as tests/test_cache.mjs): no 206 or no-store puts; Range from a cached 200. */
@@ -53,14 +56,15 @@ const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const BIG = 40 * 1024 * 1024;   // larger than the whole-object edge cache (EDGE_CACHE_MAX_BYTES, 32 MiB), like the basemap
 const bigByte = i => (i * 7 + 3) % 251;
 
-/** An R2 bucket in the published snapshot layout (scripts/publish_r2.py) that logs every read. */
-function snapshotBucket() {
+/** An R2 bucket in the published snapshot layout (scripts/publish_r2.py) that logs every read; `extra` adds {prefix: {path: body}} objects. */
+function snapshotBucket(extra = {}) {
   const objects = new Map(), reads = [];
   const files = {'regions/morro-bay/latest.json': JSON.stringify({region_id: 'morro-bay', cycle: 'live'}), 'regions/morro-bay/other.json': JSON.stringify({x: 1})};
   for (const prefix of ['data', 'conditions']) {
     const listed = {};
     for (const [path, body] of Object.entries(files)) { const h = sha(prefix + body); objects.set(`${prefix}/.r2-objects/${h}`, prefix === 'data' ? body : JSON.stringify({prefix, path})); listed[path] = h; }
     delete listed['regions/morro-bay/other.json'];   // published on GitHub only
+    for (const [path, body] of Object.entries(extra[prefix] || {})) { const h = sha(prefix + body); objects.set(`${prefix}/.r2-objects/${h}`, body); listed[path] = h; }
     const release = JSON.stringify({schema_version: 1, files: listed}), generation = sha(release);
     objects.set(`${prefix}/.r2-releases/${generation}.json`, release);
     objects.set(`${prefix}/.r2-current.json`, JSON.stringify({schema_version: 1, generation}));
@@ -197,6 +201,60 @@ test('the count is global through D1: other isolates\' reads degrade this one, a
   assert.ok(readsToday() >= FLUSH_READS, 'the unwritten reads stay pending');
   failing = false; await flush(env);
   assert.equal(writes.length, 2);
+}));
+
+test('a batch whose D1 write is unanswered stays counted, so the ceiling never reopens mid-write', () => withWorld(async () => {
+  const answers = [];
+  const DB = {prepare() { return {bind() { return {first: () => new Promise((resolve, reject) => answers.push({resolve, reject}))}; }}; }};
+  const FEEDS = snapshotBucket(), env = {FEEDS, DB, COST_CEILING_R2_READS_PER_DAY: String(FLUSH_READS)};
+  recordReads(FLUSH_READS);
+  const write = flush(env);
+  assert.equal(answers.length, 1, 'the batch is on its way to D1');
+  assert.equal(readsToday(), FLUSH_READS, 'and still counted while D1 has not answered');
+  const during = await fetchSettled(get('/feeds/data/regions/morro-bay/latest.json'), env);
+  assert.equal(during.headers.get('X-SC-Degraded'), 'cost-ceiling', 'at the ceiling mid-write: degraded');
+  assert.deepEqual(FEEDS.reads, [], 'no R2 read while the write is pending');
+  answers[0].resolve({count: FLUSH_READS}); await write;
+  assert.equal(readsToday(), FLUSH_READS, 'counted once, not twice, once D1 answers');
+
+  resetMeter(); recordReads(FLUSH_READS);
+  const failed = flush(env);
+  assert.equal(readsToday(), FLUSH_READS);
+  answers[1].reject(Error('D1 down')); await failed;
+  assert.equal(readsToday(), FLUSH_READS, 'a failed write puts the batch back in pending: never lost, never doubled');
+}));
+
+test('a JSON API response with no Content-Length keeps a last-known copy, which answers past the ceiling when the edge entry is gone and upstream fails', () => withWorld(async ({cache, upstream}) => {
+  const feed = {region_id: 'morro-bay', forecast: {hours: [{t: '2026-11-01T00:00:00Z', wind_kt: 9}]}, sources: {}};
+  const FEEDS = snapshotBucket({conditions: {'regions/morro-bay/intelligence.json': JSON.stringify(feed)}}), env = {FEEDS, COST_CEILING_R2_READS_PER_DAY: '100'};
+  const live = await fetchSettled(get('/api/forecast?region=morro-bay'), env);
+  assert.equal(live.status, 200); assert.equal(live.headers.get('X-SC-Cache'), 'miss');
+  assert.equal(live.headers.get('Content-Length'), null, 'json() names no length');
+  const body = await live.text();
+  assert.deepEqual(JSON.parse(body), feed.forecast);
+
+  recordReads(100);
+  cache.entries.clear();   // the edge entry is gone (evicted, or another colo)
+  globalThis.fetch = async url => { upstream.push(String(url)); return new Response('down', {status: 503}); };
+  const before = FEEDS.reads.length;
+  const copy = await fetchSettled(get('/api/forecast?region=morro-bay'), env);
+  assert.equal(copy.status, 200);
+  assert.equal(copy.headers.get('X-SC-Degraded'), 'cost-ceiling');
+  assert.match(copy.headers.get('X-SC-Last-Known-At'), /^\d{4}-\d\d-\d\dT/);
+  assert.equal(copy.headers.get('Content-Length'), String(new TextEncoder().encode(body).length));
+  assert.equal(await copy.text(), body, 'the last-known bytes, unchanged');
+  assert.equal(FEEDS.reads.length, before, 'no R2 read');
+  assert.deepEqual(upstream, [], 'and no upstream fetch');
+}));
+
+test('a copy with no Content-Length is read only up to LAST_KNOWN_MAX_BYTES; a larger body is never kept', () => withWorld(async () => {
+  const MiB = 1024 * 1024, chunks = n => new ReadableStream({start(c) { for (let i = 0; i < n; i++) c.enqueue(new Uint8Array(MiB)); c.close(); }});
+  const at = path => new Request('https://skippercast.com' + path);
+  await keepLastKnown(at('/api/daily?part=a'), new Response(chunks(LAST_KNOWN_MAX_BYTES / MiB + 1), {status: 200}), undefined);
+  assert.equal(await lastKnown(at('/api/daily?part=a')), null, 'over the bound: no copy');
+  await keepLastKnown(at('/api/daily?part=b'), new Response(chunks(2), {status: 200}), undefined);
+  const kept = await lastKnown(at('/api/daily?part=b'));
+  assert.equal((await kept.arrayBuffer()).byteLength, 2 * MiB, 'within the bound: kept whole');
 }));
 
 // ---- the documented 429 on private routes ---------------------------------
