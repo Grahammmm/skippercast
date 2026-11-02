@@ -2,11 +2,16 @@
 
 import argparse
 from collections import Counter
+import ctypes
+import errno
 import hashlib
 import html
 import json
 import math
+import os
 from pathlib import Path
+import shutil
+import tempfile
 from xml.etree import ElementTree as ET
 
 from skippercast.atlas.scoring import habitat_grade, habitat_score
@@ -221,21 +226,69 @@ def notes_document(data):
 <script>const search=document.getElementById('search');const articles=[...document.querySelectorAll('article')];search.addEventListener('input',()=>{{const q=search.value.trim().toLowerCase();let n=0;for(const a of articles){{a.hidden=!a.textContent.toLowerCase().includes(q);if(!a.hidden)n++;}}document.getElementById('count').textContent=n+' targets';}});</script></html>'''
 
 
+def _load_renameat2():
+    """Linux renameat2(RENAME_NOREPLACE) as rename(src, dst), or None where libc lacks it."""
+    try:
+        func = ctypes.CDLL(None, use_errno=True).renameat2
+    except (AttributeError, OSError, TypeError):
+        return None
+    func.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    func.restype = ctypes.c_int
+    at_fdcwd, rename_noreplace = -100, 1
+
+    def rename(src, dst):
+        if func(at_fdcwd, os.fsencode(src), at_fdcwd, os.fsencode(dst), rename_noreplace) != 0:
+            err = ctypes.get_errno()
+            raise OSError(err, os.strerror(err), str(dst))
+    return rename
+
+
+_renameat2 = _load_renameat2()
+
+
+def _publish(temp, output):
+    """Rename temp to output in one step; never replace anything already at output.
+
+    Without an atomic no-replace rename (no renameat2, or ENOSYS/EINVAL from
+    the kernel or filesystem) the export fails closed: output is never created.
+    """
+    unsupported = OSError(errno.ENOTSUP, "atomic no-replace rename is not available here", str(output))
+    if _renameat2 is None:
+        raise unsupported
+    try:
+        _renameat2(temp, output)
+    except OSError as exc:
+        if exc.errno in (errno.ENOSYS, errno.EINVAL):
+            raise unsupported from exc
+        raise
+
+
 def write_exports(data, output):
     summary = validate(data)
-    output.mkdir(parents=True, exist_ok=False)
-    variants = {"complete.gpx": ("targets", "drifts", "areas"),
-                "waypoints.gpx": ("targets",), "drift-lines.gpx": ("drifts",),
-                "reef-outlines.gpx": ("areas",)}
-    for filename, components in variants.items():
-        (output / filename).write_bytes(gpx_document(data, components))
-    (output / "atlas.geojson").write_text(json.dumps(geojson_document(data), ensure_ascii=False) + "\n", encoding="utf-8")
-    (output / "spot-notes.html").write_text(notes_document(data), encoding="utf-8")
-    summary["edition"] = data["edition"]
-    summary["files"] = [{"name": p.name, "bytes": p.stat().st_size,
-                          "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
-                         for p in sorted(output.iterdir())]
-    (output / "manifest.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    if os.path.lexists(output):
+        raise FileExistsError(errno.EEXIST, "export folder already exists", str(output))
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temp = Path(tempfile.mkdtemp(dir=output.parent, prefix="." + output.name + ".partial-"))
+    try:
+        variants = {"complete.gpx": ("targets", "drifts", "areas"),
+                    "waypoints.gpx": ("targets",), "drift-lines.gpx": ("drifts",),
+                    "reef-outlines.gpx": ("areas",)}
+        for filename, components in variants.items():
+            (temp / filename).write_bytes(gpx_document(data, components))
+        (temp / "atlas.geojson").write_text(json.dumps(geojson_document(data), ensure_ascii=False) + "\n", encoding="utf-8")
+        (temp / "spot-notes.html").write_text(notes_document(data), encoding="utf-8")
+        summary["edition"] = data["edition"]
+        summary["files"] = [{"name": p.name, "bytes": p.stat().st_size,
+                              "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
+                             for p in sorted(temp.iterdir())]
+        (temp / "manifest.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        umask = os.umask(0o022)
+        os.umask(umask)
+        os.chmod(temp, 0o755 & ~umask)
+        _publish(temp, output)
+    except BaseException:
+        shutil.rmtree(temp, ignore_errors=True)
+        raise
     return summary
 
 

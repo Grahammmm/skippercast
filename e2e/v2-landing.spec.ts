@@ -425,7 +425,7 @@ test('a saved port and no parameters open the app there with the stored profile;
   await expect(page.getByLabel('Where are you launching?')).toBeVisible();   // #622: the first run starts at the port
   await page.goto('/?ui=v2');
   await expect(page).toHaveURL(/\/map\?/);
-  expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ui: 'v2', region: 'morro-bay', profile: 'spear'});
+  expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ui: 'v2', region: 'morro-bay', port: 'morro-bay', profile: 'spear'});
   expect(pageErrors).toEqual([]);
 });
 
@@ -460,7 +460,7 @@ test('the first run asks for the port, warms that region, then asks the profile 
   await input.press('Enter');
   await step.locator('[data-profile="shore"]').click();
   await expect(page).toHaveURL(/\/map\?/);
-  expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ui: 'v2', region: 'morro-bay', profile: 'shore'});
+  expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ui: 'v2', region: 'morro-bay', port: 'morro-bay', profile: 'shore'});
   expect(await page.evaluate(key => localStorage.getItem(key), PORT_KEY)).toBe('morro-bay');
   await expect(page.locator('.app-firstrun')).toHaveCount(0);
   expect(pageErrors).toEqual([]);

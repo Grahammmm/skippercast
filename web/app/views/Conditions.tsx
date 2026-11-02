@@ -14,12 +14,15 @@ import {CDFW_REGULATIONS} from '../../map/habitat.ts';
 import {disagreements, sentence} from '../../model-disagreement.ts';
 import disagreeStyles from './model-disagreement.css?url';
 import {PROFILE_TABLE} from '../../profile.ts';
-import {profile, region} from '../../state.ts';
+import {profile, region, species} from '../../state.ts';
+import {loadRegs, regsData} from '../../regs.ts';
+import {SeasonStrip} from '../SeasonStrip.tsx';
 import {regionInfo, zone} from '../App.tsx';
 import {CoastMarkup} from '../CoastMarkup.tsx';
 import {HourlyTable} from './HourlyTable.tsx';
 import {CurrentSource} from '../LayerRail.tsx';
 import {dockState, localParts, selectHour} from '../TimeDock.tsx';
+import {PlanLink, TargetRules, targetRules} from '../PlanView.tsx';
 
 /** Load the forecast for the region shown (shared with the brief, once per region). */
 function useForecast(): void {
@@ -33,6 +36,9 @@ const value = (v: number | null, unit: string) => v === null ? '—' : `${Number
 
 export function Conditions({now = new Date()}: {now?: Date} = {}) {
   useForecast();
+  const rulesRegion = regionInfo.value?.id === region.value ? regionInfo.value.rules ?? null : null;
+  useEffect(() => { if (rulesRegion && regsData.peek()?.region !== rulesRegion.id) void loadRegs(rulesRegion); }, [rulesRegion]);
+  const rules = regsData.value?.region === rulesRegion?.id ? regsData.value?.data : null;
   const [family, setFamily] = useState<Family>('gfs');
   const tz = zone(), state = dockState(now, tz), selected = new Date(state.at).toISOString();
   const forecast = regionalForecast.value?.region === region.value ? regionalForecast.value : null;
@@ -78,8 +84,10 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
         <li>{notes.caveat}</li>
         {brief?.alerts.map(a => <li key={a.id}><a href={a.url} target="_blank" rel="noopener">{a.event}</a></li>)}
         {brief?.notice ? <li><a href={brief.notice.url} target="_blank" rel="noopener">Beach notice: {brief.notice.name}</a></li> : null}
-        <li><a href={CDFW_REGULATIONS} target="_blank" rel="noopener">Current CDFW ocean fishing rules</a></li>
+        <li>{targetRules(now).available ? <TargetRules now={now} /> : <><TargetRules now={now} /><a href={CDFW_REGULATIONS} target="_blank" rel="noopener">Current CDFW ocean fishing rules</a></>}</li>
+        <li><PlanLink /></li>
       </ul>
+      {rulesRegion ? <SeasonStrip data={rules} species={species.value ?? notes.defaultTarget} region={rulesRegion} year={Number(new Intl.DateTimeFormat('en-US', {timeZone: tz, year: 'numeric'}).format(now))} /> : null}
       <h3 class="ui-eyebrow">Surface current</h3>
       <div class="app-conditions-current"><CurrentSource /><p class="app-empty">The map draws the source chosen here or in the Currents layer.</p></div>
     </section>

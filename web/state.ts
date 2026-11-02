@@ -41,14 +41,14 @@ export type CoastKey = typeof COAST_KEYS[number];
 /** The History view's pickers (FE-35): station id, measurement and day range, kept as written; packages/coast historyView falls back on anything it does not list. */
 export const HISTORY_KEYS = ['station', 'metric', 'range'] as const;
 /** URL parameters the store owns. `target` is the species/target id. */
-export const URL_KEYS = ['region', 'coast', 'view', 'target', 'grade', 'hour', 'profile', 'day', 'layers', 'area', 'base', ...HISTORY_KEYS, ...COAST_KEYS] as const;
+export const URL_KEYS = ['region', 'coast', 'view', 'target', 'grade', 'hour', 'profile', 'day', 'layers', 'area', 'base', 'port', ...HISTORY_KEYS, ...COAST_KEYS] as const;
 export type UrlKey = typeof URL_KEYS[number];
 export type UrlState = Record<Exclude<UrlKey, CoastKey>, string | null> & Partial<Record<CoastKey, string>> & {selection: string | null};
 export type Units = 'nautical';
 export type CoordinateFormat = 'dd' | 'ddm' | 'dms';
 
 /** Masthead views (v2). `?view=` is shared with v1's map position "lat,lng,zoom". */
-export const APP_VIEWS = ['coast', 'conditions', 'history', 'fleet', 'reports'] as const;
+export const APP_VIEWS = ['coast', 'conditions', 'history', 'fleet', 'reports', 'plan'] as const;
 export type AppView = typeof APP_VIEWS[number];
 export const BASES = ['night', 'chart', 'aerial'] as const;
 export type Base = typeof BASES[number];
@@ -62,6 +62,7 @@ export const STORAGE_KEYS = {
   limits: 'skippercast-limits-v1',
   /** Your cruise speed for the Boat brief's run times (web/limits.ts); device only, never sent, no default. */
   cruise: 'skippercast-cruise-v1',
+  wanted: 'skippercast-fishhours-v1',
   /** The range to consider per profile, one way from the harbor (web/reach.ts, #644); device only, never sent, no default. */
   reach: 'skippercast-reach-v1',
   /** Spear's own deepest dive, where they dive from and the swim limit (web/reach.ts, #644); device only. */
@@ -101,6 +102,8 @@ export const profile = signal<Profile>(DEFAULT_PROFILE);
 export const appView = signal<AppView>('coast');
 /** Time dock day "YYYY-MM-DD"; null means today. */
 export const day = signal<string | null>(null);
+/** Home-port id a shared link names (?port=, web/ports.ts linkedPort); null when absent, repeated or malformed. Never saved. */
+export const port = signal<string | null>(null);
 /** Rail ids switched on; resolved from the URL, then storage, then the profile. */
 export const layers = signal<readonly string[]>(PROFILE_TABLE[DEFAULT_PROFILE].defaultLayers);
 /** Coast or focus id for the command bar (?area=, else ?focus=). */
@@ -155,6 +158,7 @@ export function readURL(href: string): UrlState {
     target: params.get('target'), grade: params.get('grade'), hour: params.get('hour'),
     profile: params.get('profile'), day: params.get('day'), layers: params.get('layers'),
     area: params.get('area') || params.get('focus'), base: params.get('base'),
+    port: params.getAll('port').length > 1 ? '' : params.get('port'),
     station: params.get('station'), metric: params.get('metric'), range: params.get('range'),
     selection: params.get('spot') || params.get('focus'),
   };
@@ -190,6 +194,9 @@ export function parseDay(value: string | null): string | null {
   const ms = Date.parse(value + 'T00:00:00Z');
   return Number.isFinite(ms) && new Date(ms).toISOString().startsWith(value) ? value : null;
 }
+
+/** A ?port= id (`[a-z0-9-]{1,40}`); null otherwise. Whether it is listed is web/ports.ts linkedPort's question. */
+export const parsePort = (value: string | null): string | null => value && /^[a-z0-9-]{1,40}$/.test(value) ? value : null;
 
 /** Rail ids in a ?layers= value ("none" is an empty rail); null when the value names no id. */
 export function parseLayers(value: string | null): string[] | null {
@@ -292,7 +299,7 @@ export function syncFromURL(href: string = location.href): UrlState {
     species.value = state.target; grade.value = parseGrade(state.grade); hour.value = state.hour; selection.value = state.selection;
     profile.value = kept.profile; layers.value = kept.layers; base.value = kept.base;
     appView.value = isAppView(state.view) ? state.view : 'coast';
-    day.value = parseDay(state.day); area.value = state.area;
+    day.value = parseDay(state.day); area.value = state.area; port.value = parsePort(state.port);
     presentation.value = shown; current.value = resolveCurrent(state, kept.layers); habitat.value = parseHabitat(state.habitat);
     historyStation.value = state.station; historyMetric.value = state.metric; historyRange.value = state.range;
   });

@@ -71,6 +71,9 @@ test('manually added Morro Bay MPA point is named in plan and context notes; GPX
     assert.match(file.name, /boundary-context.html$/);
     assert.match(html, /Morro Bay State Marine Reserve/);
     assert.match(html, /https:\/\/wildlife.ca.gov\/Conservation\/Marine\/MPAs\/Morro-Bay/);
+    // The point lies in the SMR and within 70 m of the adjacent SMRMA, so the report says 'Inside or within 70 m of'.
+    assert.equal(p.protectedHits.value[0].matches[0].inside, true, 'the point lies in the SMR');
+    assert.match(html, /Inside or within 70 m of a protected-area boundary; excluded/);
     assert.match(html, /Boundaries are context; current rules are on the agency page/);
     assert.match(html, /GPX withheld/);
     assert.doesNotMatch(html, /<wpt|Approach notes|terrain score/);

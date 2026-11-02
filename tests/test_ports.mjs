@@ -82,10 +82,10 @@ test('a choice opens /map at the port with the profile, dropping area keys and k
   const url = new URL(portURL(HREF, sanDiego, 'shore'));
   assert.equal(url.pathname, '/map');
   assert.equal(url.hash, '');
-  assert.deepEqual([...url.searchParams.keys()].sort(), ['profile', 'region', 'ui', 'utm_source']);
+  assert.deepEqual([...url.searchParams.keys()].sort(), ['port', 'profile', 'region', 'ui', 'utm_source']);
   assert.equal(url.searchParams.get('region'), 'southern-california');
   assert.equal(url.searchParams.get('profile'), 'shore');
-  assert.equal(new URL(portURL('https://skippercast.com/', morro)).search, '?region=morro-bay', 'no profile parameter without a profile');
+  assert.equal(new URL(portURL('https://skippercast.com/', morro)).search, '?region=morro-bay&port=morro-bay', 'no profile parameter without a profile');
   assert.equal(new URL(portURL('https://skippercast.com/', morro, 'skiff')).searchParams.get('profile'), null, 'an unknown profile is not written');
   assert.equal(exploreURL(HREF), 'https://skippercast.com/map?profile=shore&ui=v2&utm_source=friend&coast=central', 'the coast keeps the profile');
   assert.equal(landingURL(HREF), 'https://skippercast.com/?ui=v2');
@@ -114,7 +114,7 @@ test('choosing a different port clears stale place and habitat while keeping unr
   assert.equal(url.searchParams.has('place'), false);
   assert.equal(url.searchParams.has('habitat'), false);
   assert.deepEqual([...url.searchParams.entries()].sort(), [
-    ['profile', 'shore'], ['region', 'southern-california'], ['ui', 'v2'], ['utm_source', 'friend'],
+    ['port', 'san-diego'], ['profile', 'shore'], ['region', 'southern-california'], ['ui', 'v2'], ['utm_source', 'friend'],
   ]);
   assert.equal(currentPort(PORTS, url.searchParams.get('region'), sanDiego.id), sanDiego);
 });
@@ -221,7 +221,7 @@ test('SC-B05: regionless home resolution preserves explicit account intent acros
     ['fresh', () => memory(), () => jar(), PORTS, '/', 0],
     ['unavailable', () => null, () => null, PORTS, '/', 0],
     ['blocked', () => denied, () => deniedJar, PORTS, '/', 0],
-    ['saved port', () => { const s = memory(); s.setItem(HOME_PORT_KEY, 'san-diego'); return s; }, () => deniedJar, PORTS, '/map?region=southern-california', 1],
+    ['saved port', () => { const s = memory(); s.setItem(HOME_PORT_KEY, 'san-diego'); return s; }, () => deniedJar, PORTS, '/map?region=southern-california&port=san-diego', 1],
     ['saved place', () => { const s = memory(); s.setItem(HOME_PLACE_KEY, JSON.stringify({v: 1, place: 'cambria', mode: 'spear'})); return s; }, () => jar(), PORTS, '/map?place=cambria&profile=spear', 0],
     ['legacy cookie', () => memory(), () => jar(legacyCookie('avila', 'shore')), PORTS, '/map?place=avila&profile=shore', 0],
     ['missing saved port', () => { const s = memory(); s.setItem(HOME_PORT_KEY, 'missing'); return s; }, () => jar(), PORTS, '/', 1],
@@ -272,7 +272,7 @@ test('with storage and cookies denied nothing throws: the choice reports unsaved
   assert.equal(resolveHome(PORTS, denied, ''), null);
   assert.deepEqual(resolveHome(PORTS, denied, legacyCookie('avila', 'shore')), {native: {v: 1, place: 'avila', mode: 'shore'}}, 'the cookie still opens the home without storage');
   assert.equal(await savedHomeURL(BARE, denied, deniedJar), 'https://skippercast.com/?ui=v2');
-  assert.equal(portURL(BARE, morro), 'https://skippercast.com/map?ui=v2&region=morro-bay', 'the address a choice navigates to needs no storage');
+  assert.equal(portURL(BARE, morro), 'https://skippercast.com/map?ui=v2&region=morro-bay&port=morro-bay', 'the address a choice navigates to needs no storage');
 });
 
 test('the current port is the saved one in the region, else the first listed there', () => {

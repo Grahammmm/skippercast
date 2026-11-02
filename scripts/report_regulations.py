@@ -3,6 +3,9 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
+
+REGION_ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}')
 
 
 def _region_lines(ident, data):
@@ -30,11 +33,17 @@ def report(root):
     lines = ['## Regulation coverage', '']
     needs_attention = False
     unreadable = []
+    seen = set()
     for position, region in enumerate(regions):
         ident = region.get('region_id') if isinstance(region, dict) else None
-        if not isinstance(ident, str):
+        if not isinstance(ident, str) or not REGION_ID.fullmatch(ident):
             unreadable.append(str(position))
             continue
+        if ident in seen:
+            lines.extend([f'### {ident}', f'regions/index.json lists {ident} more than once; reported once.', ''])
+            unreadable.append(f'{ident} (listed twice)')
+            continue
+        seen.add(ident)
         try:
             section, attention = _region_lines(ident, json.loads((root / 'regions' / ident / 'regulations-health.json').read_text()))
         except FileNotFoundError:

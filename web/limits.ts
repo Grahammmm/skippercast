@@ -91,6 +91,7 @@ export function parseCruise(value: unknown): number | null {
 
 /** Load the stored cruise speed into the signal. */
 export function loadCruise(): number | null {
+  loadWanted();
   let raw: unknown = null;
   try { raw = (JSON.parse(readStored(STORAGE_KEYS.cruise) ?? 'null') as {knots?: unknown} | null)?.knots; } catch { /* unreadable: no speed */ }
   cruiseSpeed.value = parseCruise(raw);
@@ -108,6 +109,7 @@ export function followStoredLimits(target: Pick<Window, 'addEventListener' | 're
   const onStorage = (event: StorageEvent): void => {
     if (event.key === null || event.key === STORAGE_KEYS.limits) loadLimits();
     if (event.key === null || event.key === STORAGE_KEYS.cruise) loadCruise();
+    if (event.key === null || event.key === STORAGE_KEYS.wanted) loadWanted();
   };
   target.addEventListener('storage', onStorage);
   return () => target.removeEventListener('storage', onStorage);
@@ -119,4 +121,24 @@ export function saveCruise(value: unknown): number | null {
   cruiseSpeed.value = knots;
   writeStored(STORAGE_KEYS.cruise, JSON.stringify({knots}));
   return knots;
+}
+
+/** Fishing hours wanted, device-only and without a default. */
+export const WANTED_BOUNDS = Object.freeze({min: 1, max: 12, step: 0.5});
+export const wantedHours = signal<number | null>(null);
+export function parseWanted(value: unknown): number | null {
+  const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : NaN;
+  return Number.isFinite(n) && n >= WANTED_BOUNDS.min && n <= WANTED_BOUNDS.max ? Math.round(n / WANTED_BOUNDS.step) * WANTED_BOUNDS.step : null;
+}
+export function loadWanted(): number | null {
+  let raw: unknown = null;
+  try { raw = JSON.parse(readStored(STORAGE_KEYS.wanted) ?? 'null')?.hours; } catch { /* no hours */ }
+  wantedHours.value = parseWanted(raw);
+  return wantedHours.peek();
+}
+export function saveWanted(value: unknown): number | null {
+  const hours = parseWanted(value);
+  wantedHours.value = hours;
+  writeStored(STORAGE_KEYS.wanted, JSON.stringify({hours}));
+  return hours;
 }
