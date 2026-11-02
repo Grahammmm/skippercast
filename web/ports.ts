@@ -10,7 +10,9 @@
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import {forgetPreferenceHeader, HOME_PLACE_KEY, readPreferences, validPreferences, type HomePreferences} from '../packages/coast/src/coast3d/preferences.ts';
+import {signal} from '@preact/signals';
 import {isProfile, type Profile} from './profile.ts';
+import type {Origin} from './ranking.ts';
 import {STORAGE_KEYS, type StoreStorage} from './state.ts';
 
 /** Must equal HOME_PORT_KEY in dist/home-port.js: v1 reads the port v2 saved. */
@@ -236,4 +238,31 @@ export function locatePort(ports: readonly Port[], geolocation: Geolocation | nu
   return new Promise(resolve => geolocation.getCurrentPosition(
     position => { const port = closestPort(ports, position.coords.latitude, position.coords.longitude); resolve(port ? {ok: true, port} : {ok: false, reason: 'none'}); },
     () => resolve({ok: false, reason: 'unavailable'}), GEO_OPTIONS));
+}
+
+// SCJ-2c: one distance origin. The brief measures from the port the trip planner measures from (web/planner.ts).
+/** The planner's port rule: the chosen port if listed, else the saved one if listed, else the first listed, else ''. */
+export function portChoice(list: readonly Pick<Port, 'id'>[], chosen: string | null, saved: string | null): string {
+  return list.some(p => p.id === chosen) ? chosen! : list.some(p => p.id === saved) ? saved! : list[0]?.id ?? '';
+}
+/** The planner's current port for its region; written only by web/planner.ts. */
+export const plannerPort = signal<{region: string; id: string} | null>(null);
+export type RegionPorts = {readonly region: string; readonly state: 'loading' | 'ready' | 'failed'; readonly list: readonly Port[]};
+/** The brief's copy of one region's listed ports. */
+export const regionPorts = signal<RegionPorts | null>(null);
+/** Load `region`'s ports once (a failed load may retry); a failure sets `failed`, never throws; a later load wins. */
+export async function loadRegionPorts(region: string, load: () => Promise<readonly Port[]> = loadPorts): Promise<void> {
+  const was = regionPorts.peek();
+  if (was && was.region === region && was.state !== 'failed') return;
+  const mine: RegionPorts = {region, state: 'loading', list: []};
+  regionPorts.value = mine;
+  let next: RegionPorts;
+  try { next = {region, state: 'ready', list: (await load()).filter(p => p.region === region)}; } catch { next = {region, state: 'failed', list: []}; }
+  if (regionPorts.peek() === mine) regionPorts.value = next;
+}
+/** Where the brief's distances run from: the planner's port rule over `state`'s list; null until it loads, or with no port. */
+export function homePortOrigin(region: string, state: RegionPorts | null, chosen: string | null, saved: string | null): Origin | null {
+  if (!state || state.region !== region || state.state !== 'ready') return null;
+  const id = portChoice(state.list, chosen, saved), port = state.list.find(p => p.id === id);
+  return port ? {latitude: port.match[0], longitude: port.match[1], name: port.name} : null;
 }
