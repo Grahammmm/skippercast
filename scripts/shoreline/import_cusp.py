@@ -41,7 +41,7 @@ TILES = 'https://nsde.ngs.noaa.gov/cusp/tiles/{z}/{x}/{y}.pbf'
 ZOOM = 12
 HOST = 'nsde.ngs.noaa.gov'  # catalog/sources.json noaa-cusp-shoreline allowed_hosts
 MAX_TILE_BYTES = 4 << 20  # largest Morro Bay tile is 11 KB gzipped
-ID = re.compile(r'^[a-z][a-z0-9-]{1,63}$')  # skippercast.platform.contracts.ID, copied: this script runs without src
+MAX_TILES = 2048  # z12 tiles per import; Morro Bay needs 238
 KEEP = ('SOURCE_ID', 'SRC_DATE', 'HOR_ACC', 'ATTRIBUTE', 'DATA_SOURC', 'EXT_METH', 'DAT_SET_CR', 'SRC_CITA')
 AGENT = {'User-Agent': 'SkipperCast shoreline import (https://skippercast.com)'}
 LIMITATIONS = [
@@ -231,18 +231,30 @@ def fetch(tile):
     return body
 
 
-def region_bounds(region_id, root=ROOT):
-    path = root / 'regions' / region_id / 'region.json'
-    if not ID.fullmatch(region_id) or not path.is_file():
-        raise ValueError(f'{path} is not a file' if ID.fullmatch(region_id) else 'not a region id')
+def checked_bounds(region_id, root=ROOT):
+    """The region's [W, S, E, N], or ValueError('<id>: <reason>'), checked before anything is fetched."""
+    if not isinstance(region_id, str) or not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,63}', region_id):
+        raise ValueError(f'{region_id}: region id must match [a-z0-9][a-z0-9-]{{0,63}}')
     try:
-        box = json.loads(path.read_text())['bounds']
-    except (OSError, ValueError, KeyError, TypeError) as error:
-        raise ValueError(f'region.json unreadable or without bounds ({error!r})') from None
-    if not (isinstance(box, list) and len(box) == 4 and all(type(v) is int or type(v) is float and math.isfinite(v) for v in box)
-            and -180 <= box[0] < box[2] <= 180 and -90 <= box[1] < box[3] <= 90):
-        raise ValueError(f'bounds {box!r} are not 4 finite numbers -180 <= w < e <= 180, -90 <= s < n <= 90')
-    return [float(v) for v in box]
+        region = json.loads((root / 'regions' / region_id / 'region.json').read_text(encoding='utf-8'))
+    except (OSError, UnicodeDecodeError, ValueError, RecursionError):
+        raise ValueError(f'{region_id}: region.json unreadable') from None
+    box = region.get('bounds') if isinstance(region, dict) else None
+    if not isinstance(box, list) or len(box) != 4 or any(type(v) not in (int, float) for v in box):
+        raise ValueError(f'{region_id}: bounds must be [W, S, E, N]')
+    west, south, east, north = box  # NaN and infinities fail every comparison below
+    if not -180 <= west < east <= 180:
+        raise ValueError(f'{region_id}: bounds need finite -180 <= W < E <= 180')
+    if not -85 <= south < north <= 85:
+        raise ValueError(f'{region_id}: bounds need finite -85 <= S < N <= 85')
+    box = [float(v) for v in box]
+    if (n := len(tiles_for(box))) > MAX_TILES:
+        raise ValueError(f'{region_id}: bounds need {n} tiles (max {MAX_TILES})')
+    return box
+
+
+def region_bounds(region_id, root=ROOT):
+    return checked_bounds(region_id, root)
 
 
 def extract(region_id, box, get=fetch, now=None):
@@ -303,13 +315,13 @@ def main(argv=None, *, root=ROOT, get=fetch):
     out, skipped, boxes = args.out or root / 'catalog/shoreline', False, {}
     for region_id in args.regions:  # every region is checked before any tile is fetched
         try:
-            boxes[region_id] = region_bounds(region_id, root)
-        except ValueError as error:
-            print(f'import_cusp: {region_id}: {error}', file=sys.stderr)
+            boxes[region_id] = checked_bounds(region_id, root)
+        except ValueError as error:  # the message starts with the region id
+            print(f'import_cusp: {error}', file=sys.stderr)
     if len(boxes) < len(set(args.regions)):
         return 2
-    for region_id in args.regions:
-        collection = extract(region_id, boxes[region_id], get=get)
+    for region_id, box in boxes.items():  # a repeated id is one region
+        collection = extract(region_id, box, get=get)
         path, p = out / f'{region_id}.geojson', collection['provenance']
         try:  # features in the current file: 0 when there is none; unreadable counts as some
             have = len(json.loads(path.read_text())['features']) if path.exists() else 0
@@ -323,7 +335,7 @@ def main(argv=None, *, root=ROOT, get=fetch):
             out.mkdir(parents=True, exist_ok=True)
             tmp = path.with_name(f'.{path.name}.{os.getpid()}.tmp')
             try:  # same-directory temp + replace: a failed write never leaves a partial file
-                tmp.write_text(json.dumps(collection, separators=(',', ':'), ensure_ascii=False) + '\n')
+                tmp.write_text(json.dumps(collection, separators=(',', ':'), ensure_ascii=False) + '\n', encoding='utf-8')
                 os.replace(tmp, path)
             finally:
                 tmp.unlink(missing_ok=True)
