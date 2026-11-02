@@ -108,3 +108,14 @@
   .landing-dots a:hover .landing-dot-name, .landing-dots a:focus-visible .landing-dot-name { clip-path: none; color: var(--text); }
   .landing-dots a { position: relative; justify-content: center; min-width: var(--touch-min); }
 }
+
+/* BF-landing-live: tomorrow's verdict for the reference boat, below the funnel; the word takes the app lead's colours. */
+.landing-verdict { display: flex; flex-direction: column; gap: var(--space-1); }
+.landing-verdict p { margin: 0; }
+.landing-verdict-word { font-weight: var(--weight-semibold); color: var(--text); }
+.landing-verdict-word[data-verdict="comfortable"] { color: var(--mint); }
+.landing-verdict-word[data-verdict="marginal"] { color: var(--amber); }
+.landing-verdict-word[data-verdict="rough"] { color: var(--coral); }
+.landing-verdict-word[data-verdict="unknown"] { color: var(--muted); }
+.landing-verdict-limit { color: var(--muted); }
+.landing-verdict-link { align-self: flex-start; min-height: var(--touch-min); display: inline-flex; align-items: center; }
