@@ -103,6 +103,38 @@ class AtomicAtlasExport(unittest.TestCase):
         self.assertEqual(names(self.output), ["other.txt"])
         self.assertEqual(names(self.parent), ["out"])
 
+    def test_empty_folder_created_just_before_rename_is_not_replaced(self):
+        if export._renameat2 is None:
+            self.skipTest("renameat2 not available here")
+        real = export._renameat2
+
+        def racer(src, dst):
+            os.mkdir(dst)
+            return real(src, dst)
+        with mock.patch.object(export, "_renameat2", racer), \
+                self.assertRaises(FileExistsError):
+            write_exports(self.data, self.output)
+        self.assertEqual(names(self.output), [])
+        self.assertEqual(names(self.parent), ["out"])
+
+    def test_without_renameat2_mkdir_claim_publishes_or_refuses(self):
+        write_exports(self.data, self.parent / "ref")
+        expected = state(self.parent / "ref")
+        real_mkdir = os.mkdir
+
+        def racer(path, *args, **kwargs):
+            if Path(path) == self.output:
+                real_mkdir(path)
+            return real_mkdir(path, *args, **kwargs)
+        with mock.patch.object(export, "_renameat2", None):
+            write_exports(self.data, self.parent / "fallback")
+            self.assertEqual(state(self.parent / "fallback"), expected)
+            with mock.patch.object(export.os, "mkdir", racer), \
+                    self.assertRaises(FileExistsError):
+                write_exports(self.data, self.output)
+        self.assertEqual(names(self.output), [])
+        self.assertEqual(names(self.parent), ["fallback", "out", "ref"])
+
     def test_missing_parents_are_created(self):
         self.output = self.parent / "a" / "b" / "out"
         write_exports(self.data, self.output)

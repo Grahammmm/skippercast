@@ -2,6 +2,8 @@
 
 import argparse
 from collections import Counter
+import contextlib
+import ctypes
 import errno
 import hashlib
 import html
@@ -225,6 +227,45 @@ def notes_document(data):
 <script>const search=document.getElementById('search');const articles=[...document.querySelectorAll('article')];search.addEventListener('input',()=>{{const q=search.value.trim().toLowerCase();let n=0;for(const a of articles){{a.hidden=!a.textContent.toLowerCase().includes(q);if(!a.hidden)n++;}}document.getElementById('count').textContent=n+' targets';}});</script></html>'''
 
 
+def _load_renameat2():
+    """Linux renameat2(RENAME_NOREPLACE) as rename(src, dst), or None where libc lacks it."""
+    try:
+        func = ctypes.CDLL(None, use_errno=True).renameat2
+    except (AttributeError, OSError, TypeError):
+        return None
+    func.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    func.restype = ctypes.c_int
+    at_fdcwd, rename_noreplace = -100, 1
+
+    def rename(src, dst):
+        if func(at_fdcwd, os.fsencode(src), at_fdcwd, os.fsencode(dst), rename_noreplace) != 0:
+            err = ctypes.get_errno()
+            raise OSError(err, os.strerror(err), str(dst))
+    return rename
+
+
+_renameat2 = _load_renameat2()
+
+
+def _publish(temp, output):
+    """Rename temp to output in one step; never replace anything already at output."""
+    if _renameat2 is not None:
+        try:
+            return _renameat2(temp, output)
+        except OSError as exc:
+            if exc.errno not in (errno.ENOSYS, errno.EINVAL):
+                raise
+    # No renameat2 (or the filesystem refuses it): claim the name with an
+    # atomic mkdir, then rename onto that empty folder, which is our own.
+    os.mkdir(output)
+    try:
+        os.rename(temp, output)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.rmdir(output)
+        raise
+
+
 def write_exports(data, output):
     summary = validate(data)
     if os.path.lexists(output):
@@ -247,9 +288,7 @@ def write_exports(data, output):
         umask = os.umask(0o022)
         os.umask(umask)
         os.chmod(temp, 0o755 & ~umask)
-        if os.path.lexists(output):
-            raise FileExistsError(errno.EEXIST, "export folder already exists", str(output))
-        os.rename(temp, output)
+        _publish(temp, output)
     except BaseException:
         shutil.rmtree(temp, ignore_errors=True)
         raise
