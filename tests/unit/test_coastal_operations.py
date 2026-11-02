@@ -190,7 +190,8 @@ def test_worker_crash_stops_mission_until_recovered_then_resumes(ops):
 
 
 def test_retryable_failure_backs_off_then_exhausts_attempt_cap(tmp_path, export):
-    ops = Harness(tmp_path, export, offset=0.0)
+    # Exercise retries/backoff, not short-lease expiry under parallel host load.
+    ops = Harness(tmp_path, export, offset=0.0, policy_value=policy(lease_s=COST_LEASE_S))
     try:
         recovers = ops.job("recovers", "retryable", "done", budget={"bytes": 50})
         exhausts = ops.job("exhausts", "retryable", "retryable", budget={"bytes": 50})
