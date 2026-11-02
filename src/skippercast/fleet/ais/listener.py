@@ -404,17 +404,28 @@ class Listener:
             if not rows:
                 continue
             handed += rows
+            write = asyncio.ensure_future(asyncio.to_thread(self.store.write, batch["positions"],
+                                                            batch["discovery"], batch["statics"]))
             try:
-                counts = await asyncio.to_thread(self.store.write, batch["positions"], batch["discovery"],
-                                                 batch["statics"])
-            except Exception as error:   # disk full, a locked or corrupt day file
-                self.counters.drops["write_error"] += rows
-                self.last_error = f"write failed: {type(error).__name__}: {str(error)[:200]}"
-                log.error("AIS batch of %d rows not written: %s", rows, error, extra={"region": self.region})
-                continue
-            for table in TABLES:
-                self.counters.written[table] += getattr(counts, table)
+                await asyncio.wait([write])
+            except asyncio.CancelledError:
+                # A stop cancelled the writer mid-batch; the thread still writes these rows, so wait and count them.
+                await asyncio.wait([write])
+                self._record_write(write, rows)
+                raise
+            self._record_write(write, rows)
         return handed
+
+    def _record_write(self, write: asyncio.Future, rows: int) -> None:
+        try:
+            counts = write.result()
+        except Exception as error:   # disk full, a locked or corrupt day file
+            self.counters.drops["write_error"] += rows
+            self.last_error = f"write failed: {type(error).__name__}: {str(error)[:200]}"
+            log.error("AIS batch of %d rows not written: %s", rows, error, extra={"region": self.region})
+            return
+        for table in TABLES:
+            self.counters.written[table] += getattr(counts, table)
 
     async def retain(self) -> None:
         now = self.clock()

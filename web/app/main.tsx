@@ -17,7 +17,10 @@ import {loadPlans, regionPlans} from '../species.ts';
 import {bindBriefReport, currentBrief, dailyFeed, ensureRegionalForecast, loadDailyFeed} from '../brief/Brief.tsx';
 import {regionPlace} from '../map/currents.ts';
 import {initTelemetry} from '../telemetry.ts';
+import {installDegradedWatch} from '../degraded.ts';
 
+// SC-LAUNCH-4: before any read, so every response's cost-ceiling mark reaches the notice.
+installDegradedWatch();
 configureStore({v2: true});
 loadCoordinateFormat();
 startURLSync();

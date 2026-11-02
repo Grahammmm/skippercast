@@ -110,6 +110,15 @@ jobs:
         run: |
           gh label create feed-stale --color B60205 --description "A published feed stopped refreshing" 2>/dev/null || true
           python scripts/feed_stale_alert.py --report "$RUNNER_TEMP/feed-health.json" --stale "${{ steps.age.outputs.stale || 'true' }}"
+      # Does the site itself answer? One `site-down` issue per outage (scripts/site_uptime_alert.py); a down site never
+      # fails the job (the issue is the signal), only a crash of the probe does.
+      - name: Probe the site and alert once when it is down
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create site-down --color B60205 --description "The site or /api/health stopped answering" 2>/dev/null || true
+          python scripts/site_uptime_alert.py --base "${FEEDS_PUBLIC_BASE:-https://skippercast.g4651.workers.dev}" --report "$RUNNER_TEMP/site-uptime.json"
       # Red only for a stale feed or a whole critical kind out; a partial outage stays green.
       - name: Fail when a feed is stale or a critical kind is out
         if: always() && (steps.age.outputs.stale == 'true' || steps.age.outputs.degraded == 'true')
