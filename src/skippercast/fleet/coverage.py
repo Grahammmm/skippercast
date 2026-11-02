@@ -58,10 +58,7 @@ def coverage_status(region: FleetRegion, snapshot: Snapshot) -> dict[str, dict]:
 
 
 def apply(statuses: Mapping[str, Mapping[str, str]], root: Path | None = None) -> list[str]:
-    """Write each status into its region.json; the regions whose file changed.
-
-    Every region is checked before any file is written (``ValueError('<id>: <reason>')``), and each write is a
-    same-directory temp file moved into place with ``os.replace``."""
+    """Check every region (else ``ValueError('<id>: ...')``), then write each via temp + ``os.replace``; the ids changed."""
     pending = []
     for ident, status in sorted(statuses.items()):
         path = Path(root or repo_root()) / "regions" / ident / "region.json"
