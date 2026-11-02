@@ -26,7 +26,7 @@ import {depthLimitFt, PROFILE_TABLE} from '../profile.ts';
 import {isReachProfile, nmText, reachFor, shoreSwimLimit, spearPlan} from '../reach.ts';
 import {loadShoreLines, shoreLines} from '../shore-distance.ts';
 import {landWater, loadLandWater, loadLandWaterLines, placeFor} from '../land-water.ts';
-import {loadReefPublication, ranking, recheckReefPublication, reefPublication, type Pick, type Ranking} from '../ranking.ts';
+import {loadReefPublication, ranking, recheckReefPublication, reefPublication, regionLoad, type Pick, type Ranking} from '../ranking.ts';
 import {fitCamera} from '../map/ranked.ts';
 import {cameraParam} from '../map/stage.ts';
 import {habitat, navigate, profile, region, selection, setParams, species} from '../state.ts';
@@ -47,7 +47,8 @@ export function currentRanking(now = Date.now()): Ranking {
   return ranking({region: id, profile: p, target, coast: coastSpecies(species.value, p), data: markData.value, screen: markScreen.value, terrain: {state: 'idle'}, now, reachNm: reachFor(p),
     origin: p === 'kayak' ? launchOrigin(id) : null,
     shore: maxYd === null ? null : {maxYd, lines: lines && lines.region === id ? lines.lines : null},
-    place: placeFor(landWater.value, id), publication: reefPublication.value, plannerScreen: protectedScreen.value});
+    place: placeFor(landWater.value, id), missing: regionLoad.value?.id === id && regionLoad.value.state === 'missing',
+    publication: reefPublication.value, plannerScreen: protectedScreen.value});
 }
 
 /** Select a pick's mark or habitat (a history entry), as a click on the map would; a publication place moves the Chart to it. */

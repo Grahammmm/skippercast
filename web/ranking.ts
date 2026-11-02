@@ -272,11 +272,15 @@ export interface RankingInputs {
   readonly shore?: {readonly maxYd: number; readonly lines: readonly (readonly number[])[][] | null} | null;
   /** The region's land/water check (web/land-water.ts `placeFor`); absent, every place is unknown and withheld. */
   readonly place?: Place;
+  /** SCJ-7: the region's region.json is a 404, so there is nothing to rank and the empty line says so. */
+  readonly missing?: boolean;
   /** SCJ-2a: the planner's seafloor publication; absent, the list is the terrain or atlas one. */
   readonly publication?: ReefPublication;
   /** SCJ-2b: the planner's protected-area screen, which admits the publication's places; absent, idle or loading, the list is still checking. */
   readonly plannerScreen?: PlannerScreenState;
 }
+/** Where the current region's region.json read stands (web/app/App.tsx loadRegion writes it); here so the brief reads it without the shell. */
+export const regionLoad = signal<{id: string; state: 'loading' | 'ready' | 'error' | 'missing'} | null>(null);
 
 const ATLAS_BASIS = 'Survey reef atlas marks that pass the current protected-area check, ordered by habitat fit, then the atlas habitat score. '
   + 'Depths are the nominal range near each mark in the survey\'s own vertical reference; distances are straight-line from';
@@ -309,6 +313,8 @@ export function ranking(i: RankingInputs): Ranking {
   });
   const within = `within ${limit} ft${reach === null ? '' : ` and ${Number(reach.toFixed(1))} nm of ${harbor}`}${shore ? ` and ${shore.maxYd} yd of shore` : ''}`;
   const extra = {...(origin ? {harbor: origin.name} : {}), ...(reach === null ? {} : {reach})};
+  // A region that does not exist has nothing to rank for any profile, Shore included.
+  if (i.missing) return {source: null, label: '', basis: '', picks: [], empty: 'No ranked places: this region does not exist.'};
   if (PROFILE_TABLE[i.profile].whereToLook === 'shore-runs')
     return {source: null, label: '', basis: '', picks: [], empty: 'Shore runs and their review status show on the Chart.'};
   const pub = i.publication, plannerSpecies = Object.hasOwn(PLANNER_SPECIES, i.coast) ? PLANNER_SPECIES[i.coast] : undefined;

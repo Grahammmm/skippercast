@@ -130,13 +130,17 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // authority hosts and assets, read by web/regs.ts for the brief's legality line) when region.json names a
 // jurisdiction. The id/charters fields Reports reads, CSS, tokens, classes and catch markup are unchanged;
 // contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
+// SCJ-7: App.tsx's region reader answers 'missing' for a 404 region.json and loadRegion records it (regionLoad now
+// lives in web/ranking.ts, re-exported); Masthead.tsx's Location says the region does not exist with a link to "/".
+// No CSS, token, class or catch markup change; contrast(), assertions and thresholds are untouched. Rebind those two.
 // SCJ-9 (#1225, phone bottom bar): Masthead.tsx's TAB_VIEWS becomes the explicit list coast/conditions/history/reports
 // (Reports in, Fleet out; still four tabs). Same tab markup, classes and count; MASTHEAD_VIEWS, CSS, tokens and catch
 // markup are unchanged; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
+// Merge of SCJ-7 with SCJ-9: Masthead.tsx carries both changes (disjoint hunks); rebind its merged hash.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
-  "web/app/App.tsx": "6a77aa09c77ed2a281979d6413dcbaaa7b530ce79ba5926e59d8485e7c4cbe74",
-  "web/app/Masthead.tsx": "6428592ea5b06822b5215636b746fca35a1b0608aafbe86e56b12236e3131d55",
+  "web/app/App.tsx": "c3babf97f3e23eee5c1678ed9c531fb0df6bd584c6934d60cfb047fe5af84ae2",
+  "web/app/Masthead.tsx": "e6e634b4a6283f72255ce7a1fb3ef78e8d78be5f847d5d99c7655b7de94e2877",
   "web/app/LayerRail.tsx": "bdae57c4c4dca33b5fb83a413b7d5c6f525221a4fb6b78037a1ad99102635ccd",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
