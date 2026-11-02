@@ -28,7 +28,7 @@ import {dockTime, horizonDays} from '../hour.ts';
 import {loadRegs, regsData, regulationState, ruleSummary} from '../regs.ts';
 import {useEffect} from 'preact/hooks';
 import {hasOwnLimits, limitsFor, type ComfortLimits} from '../limits.ts';
-import {regionInfo, type RegionInfo} from '../app/App.tsx';
+import {regionInfo, type RegionInfo} from '../app/region-info.ts';
 import {Popover} from '../ui/Popover.tsx';
 import {buildCoastBrief, buildRegionalBrief} from './model.ts';
 import {Tiles} from './Tiles.tsx';

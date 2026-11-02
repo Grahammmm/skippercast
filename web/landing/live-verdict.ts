@@ -7,7 +7,7 @@
 // stored. Landing.tsx imports this module dynamically after the readout resolves, so none of it is
 // in the landing's entry chunk.
 import {dateKey} from '../../packages/coast/src/daily.ts';
-import {createRegionReader} from '../app/App.tsx';
+import {createRegionReader, REGION_MISSING} from '../app/region-info.ts';
 import {briefFrom, leadDayText, leadHour, loadDailyFeed} from '../brief/Brief.tsx';
 import {briefVerdict, VERDICT_WORD, type DayVerdict} from '../brief/verdict.ts';
 import {createCoastData} from '../coast-data.ts';
@@ -38,7 +38,7 @@ async function boundReport(info: Parameters<typeof regionPlace>[0]) {
  */
 export async function loadLandingVerdict(fetchFn: typeof fetch = fetch, now: Date = new Date(), page: string = location.href): Promise<LandingVerdict | null> {
   const info = await createRegionReader(fetchFn)(DEFAULT_REGION).catch(() => null);
-  if (!info) return null;
+  if (!info || info === REGION_MISSING) return null;
   const [feed, forecast, coast] = await Promise.all([loadDailyFeed(info.id, fetchFn), loadConditionsForecast(info.id, info.center, fetchFn, page), boundReport(info).catch(() => null)]);
   const tz = info.timezone, hour = leadHour(null, null, now, tz);
   const brief = briefFrom({info, feed, forecast, coast, profile: 'boat', hour, limits: null}, now);
