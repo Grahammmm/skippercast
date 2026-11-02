@@ -15,6 +15,7 @@ import {PROFILE_TABLE} from '../../profile.ts';
 import {profile, region} from '../../state.ts';
 import {regionInfo, zone} from '../App.tsx';
 import {CoastMarkup} from '../CoastMarkup.tsx';
+import {HourlyTable} from './HourlyTable.tsx';
 import {CurrentSource} from '../LayerRail.tsx';
 import {dockState, localParts, selectHour} from '../TimeDock.tsx';
 
@@ -57,6 +58,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
         Drag the chart to move the hour. Wind, gusts, offshore seas, air and cloud: {FAMILIES[family].label} models at forecast point {forecast?.point.id ?? '—'}
         {local.rows.length ? '; nearshore and tide: the local coast report' : '; the local coast report is unavailable here'}. Independent row scales; gaps stay blank; shaded hours are lower exposure.
       </p>
+      <HourlyTable forecast={forecast} tide={local.rows.find(r => r.label === 'Tide') ?? null} at={state.at} tz={tz} now={now} />
       <h3 class="ui-eyebrow">Source clocks</h3>
       <ul class="app-conditions-clocks">
         {clocks.map(c => <li key={c.label}>{c.label} <span class="ui-mono">{c.at ? `${c.kind} ${timeText(c.at, tz, true)}` : 'unavailable'}</span></li>)}
