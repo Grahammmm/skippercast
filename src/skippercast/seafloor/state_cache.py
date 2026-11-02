@@ -120,6 +120,26 @@ def restore(s3, bucket, root, name, *, include_cache=True):
     return True
 
 
+def _read(path, base, label, walk):
+    try:  # Any damage (incl. bad UTF-8/JSON) in a receipt object is named by its relative path.
+        data = json.loads(path.read_bytes().decode('utf-8'))
+        if isinstance(data, dict):
+            return walk(data)
+    except (ValueError, LookupError, TypeError):
+        pass
+    raise ValueError(f'{label}: {path.relative_to(base).as_posix()}')
+
+
+def _get(value, keys, kind: type = str, default=None):
+    for key in keys:  # Only a missing object key with a default set is not damage.
+        if isinstance(value, dict) and key not in value and default is not None:
+            return default
+        value = value[key]
+    if not isinstance(value, kind):
+        raise LookupError(keys)
+    return value
+
+
 def reach_paths(root, reach):
     base = Path(root)/'var/seafloor'
     scope_name(reach)
@@ -127,23 +147,18 @@ def reach_paths(root, reach):
     # matrix worker restore unrelated coastal archives as the catalog grew.
     folders = [base/'reaches'/reach, base/'private-reaches'/reach]
     hashes = set()
-    for folder in folders:
-        checkpoint = folder/'coverage-checkpoint.json'
-        if checkpoint.exists():
-            hashes.update(json.loads(checkpoint.read_text()).get('source_hashes', []))
-        receipt = folder/'run.json'
-        if receipt.exists():
-            inputs = json.loads(receipt.read_text()).get('inputs', {})
-            hashes.update(r['sha256'] for r in inputs.get('sources', []))
-            hashes.update(b['row']['sha256'] for b in inputs.get('substrate_bindings', {}).values())
-        classified = folder/'classified-run.json'
-        if classified.exists():
+    walks = (('coverage-checkpoint.json', lambda d: _get(d, ['source_hashes'], list, [])),
+             ('run.json', lambda d: [_get(r, ['sha256']) for r in _get(d, ['inputs', 'sources'], list, [])]
+              + [_get(b, ['row', 'sha256']) for b in _get(d, ['inputs', 'substrate_bindings'], dict, {}).values()]),
             # Original interpretation files may not contribute to the graded
             # bathymetry run. A clean publisher must still authenticate them.
-            sources = json.loads(classified.read_text())['inputs']['physical']['sources']
-            for source in sources:
-                hashes.add(source['depth_source']['sha256'])
-                hashes.add(source['classification_binding']['row']['sha256'])
+             ('classified-run.json', lambda d: [_get(s, k) for s in _get(d, ['inputs', 'physical', 'sources'], list)
+              for k in (['depth_source', 'sha256'], ['classification_binding', 'row', 'sha256'])]))
+    for folder in folders:
+        for name, walk in walks:
+            if (folder/name).exists():
+                hashes.update(_read(folder/name, base, 'Damaged private reach state',
+                                    lambda d: [_get(h, []) for h in walk(d)]))
     if any(not re.fullmatch('[a-f0-9]{64}', h) for h in hashes):
         raise ValueError('Invalid source hash in private reach state')
     directories = folders + [base/'cache'/h for h in sorted(hashes)]
@@ -156,8 +171,11 @@ def shared_paths(root):
     paths = [base/'reference/cells.json', base/'reference/run.json']
     snapshot = base/'screen/snapshot.json'
     if snapshot.exists():
-        data = json.loads(snapshot.read_text())
-        paths += [snapshot] + [base/'screen'/r['file'] for r in data['layers'].values()]
+        files = _read(snapshot, base, 'Damaged screen snapshot',
+                      lambda d: [_get(r, ['file']) for r in _get(d, ['layers'], dict).values()])
+        if any(not re.fullmatch('[A-Za-z0-9._-]+', f) or f in ('.', '..') for f in files):
+            raise ValueError('Damaged screen snapshot: screen/snapshot.json')
+        paths += [snapshot] + [base/'screen'/f for f in files]
     paths += [base/'screen'/n for n in ('source-receipts.json', 'refresh-failure.json')
               if (base/'screen'/n).exists()]
     return paths
