@@ -11,12 +11,22 @@
 //
 // Erasable TypeScript only, so the Node tests import it by type stripping.
 import {region as currentRegion} from './state.ts';
+import {effect} from '@preact/signals';
 
 export const ENDPOINT = '/api/telemetry';
 export const FUNNEL = ['port_selected', 'map_viewed', 'forecast_viewed', 'spot_saved', 'offline_saved', 'install',
   // TA-W1: the Text Advisor's public pages (docs/plans/text-advisor/08-website.md § Telemetry): a view of each page family and the "Text SkipperCast" click.
   'advisor_port_view', 'advisor_species_view', 'advisor_boat_view', 'advisor_cta'] as const;
 export type FunnelEvent = typeof FUNNEL[number];
+/** Count each valid region once, capped per page load without an identifier. */
+export function viewSteps(send: (name: FunnelEvent, region: string) => void): (region: unknown) => void {
+  const seen = new Set<string>();
+  return region => {
+    if (typeof region !== 'string' || !/^[a-z0-9-]{1,40}$/.test(region) || seen.has(region) || seen.size >= 10) return;
+    seen.add(region);
+    send('map_viewed', region);
+  };
+}
 /**
  * TA-W1: where a visit came from, the page URL's `s` parameter: links in the
  * advisor's texts (`txt`), Instagram and Facebook posts (`ig`, `fb`) and the
@@ -174,7 +184,7 @@ export function track(name: FunnelEvent, options?: {region?: string; flush?: boo
  * last X-Request-Id seen on a same-origin fetch. Returns null when the
  * browser opted out or cannot send beacons.
  */
-export function initTelemetry(): Telemetry | null {
+export function initTelemetry(options?: {views?: boolean}): Telemetry | null {
   if (active || typeof window === 'undefined' || typeof navigator === 'undefined') return active;
   if (optedOut(navigator as PrivacySignals, window as {doNotTrack?: string | null})) return null;
   if (typeof navigator.sendBeacon !== 'function') return null;
@@ -186,6 +196,10 @@ export function initTelemetry(): Telemetry | null {
     source: () => sourceFrom(location.href),
   });
   active = telemetry;
+  if (options?.views) {
+    const view = viewSteps((name, region) => telemetry.track(name, {region}));
+    effect(() => view(currentRegion.value));
+  }
   addEventListener('error', event => {
     // Resource load failures reach window only in the capture phase; this listener sees script errors.
     if (!(event instanceof ErrorEvent)) return;
