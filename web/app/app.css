@@ -173,6 +173,10 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-chrome-left > .app-mark, .app-chrome-left > .app-legend { position: static; pointer-events: auto; }
 .app-chrome-left > .app-mark { flex: 0 1 auto; min-height: 0; width: auto; overflow-y: auto; }
 .app-chrome-left > .app-legend { flex: none; align-self: flex-start; margin-top: auto; }
+/* SC2222-07: while that card scrolls, its action row sticks to the card's foot (into its bottom padding), so the actions stay on
+   screen; the scroll padding (two wrapped button rows) keeps a link focused by Tab from scrolling in under that row. */
+.app-chrome-left > .app-mark { scroll-padding-bottom: calc(2 * var(--touch-min) + 3 * var(--space-3)); }
+.app-chrome-left > .app-mark .app-mark-actions { position: sticky; bottom: calc(-1 * var(--space-3)); z-index: 1; padding-block: var(--space-2); border-top: 1px solid var(--line); background: var(--panel); }
 .app-legend { position: absolute; left: var(--space-4); bottom: calc(var(--touch-min) + var(--space-7)); z-index: var(--z-map-chrome); min-width: 160px; max-width: 280px; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: var(--elev-2); }
 .app-legend ul { margin: var(--space-1) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--text-13); }
 .app-legend li { display: flex; align-items: center; gap: var(--space-2); }
