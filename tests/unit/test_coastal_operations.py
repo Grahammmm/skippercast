@@ -121,7 +121,9 @@ def test_exhausted_byte_cap_stops_every_later_job(cost_ops):
 
 
 def test_wall_clock_cap_stops_dispatch(tmp_path, export):
-    ops = Harness(tmp_path, export, offset=0.0, policy_value=policy(budgets={"wall_s": 100, "bytes": 1000}))
+    # Production lease, as for the byte-cap tests above: only the wall cap decides what runs.
+    ops = Harness(tmp_path, export, offset=0.0,
+                  policy_value=policy(lease_s=COST_LEASE_S, budgets={"wall_s": 100, "bytes": 1000}))
     try:
         early = ops.job("early", "done")
         assert states(ops.run(max_jobs=1)) == ["done"]
