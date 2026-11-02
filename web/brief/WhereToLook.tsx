@@ -13,6 +13,7 @@
 // CI6-01B: the list ranks only places its land/water check confirms as water
 // (web/land-water.ts); the region's index loads with the brief, and the lines file
 // only when a place falls in a cell the index leaves mixed.
+import {signal} from '@preact/signals';
 import {useEffect, useState} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {Popover} from '../ui/Popover.tsx';
@@ -21,27 +22,39 @@ import {markData, markScreen, picked, spotHref} from '../map/marks.ts';
 import {coastSpecies, habitatHref} from '../map/stage.ts';
 import {cruiseSpeed} from '../limits.ts';
 import {launchOrigin, loadLaunchPoints} from '../launches.ts';
+import {homePortOrigin, loadRegionPorts, plannerPort, regionPorts, savedPortId} from '../ports.ts';
 import {depthLimitFt, PROFILE_TABLE} from '../profile.ts';
 import {isReachProfile, nmText, reachFor, shoreSwimLimit, spearPlan} from '../reach.ts';
 import {loadShoreLines, shoreLines} from '../shore-distance.ts';
 import {landWater, loadLandWater, loadLandWaterLines, placeFor} from '../land-water.ts';
-import {loadReefPublication, ranking, recheckReefPublication, reefPublication, type Pick, type Ranking} from '../ranking.ts';
+import {loadReefPublication, ranking, recheckReefPublication, reefPublication, regionLoad, type Pick, type Ranking} from '../ranking.ts';
 import {fitCamera} from '../map/ranked.ts';
 import {cameraParam} from '../map/stage.ts';
 import {habitat, navigate, profile, region, selection, setParams, species} from '../state.ts';
+import {loadProtectedScreen, protectedScreen} from '../trip.ts';
 import {durationText, runMinutes} from './run.ts';
 
 export type {Pick, Ranking};
 
+/** SCJ-2b: bumped on each `skippercast:boundaries` (the planner's screen redrew or refreshed), so the list is computed again. */
+const screenTick = signal(0);
+
 /** The list for the address and loaded data now, read from the signals so the brief re-renders when they change. */
 export function currentRanking(now = Date.now()): Ranking {
   const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget, id = region.value;
+  void screenTick.value;
   // #644: Kayak measures from its chosen launch; Spear from shore keeps to the swim limit once the shoreline loads.
+  // SCJ-2c: otherwise every profile measures from the planner's port (its choice this session, else the saved home,
+  // else the region's first port); only when the region's ports fail or are none does the region's harbor remain.
   const maxYd = p === 'spear' ? shoreSwimLimit() : null, lines = shoreLines.value;
+  const launch = p === 'kayak' ? launchOrigin(id) : null, ports = regionPorts.value, planned = plannerPort.value;
+  const home = launch || !id ? null : homePortOrigin(id, ports, planned?.region === id ? planned.id : null, savedPortId());
+  const originPending = !launch && !!id && (ports?.region !== id || ports.state === 'loading');
   return ranking({region: id, profile: p, target, coast: coastSpecies(species.value, p), data: markData.value, screen: markScreen.value, terrain: {state: 'idle'}, now, reachNm: reachFor(p),
-    origin: p === 'kayak' ? launchOrigin(id) : null,
+    origin: launch ?? home, originPending,
     shore: maxYd === null ? null : {maxYd, lines: lines && lines.region === id ? lines.lines : null},
-    place: placeFor(landWater.value, id), publication: reefPublication.value});
+    place: placeFor(landWater.value, id), missing: regionLoad.value?.id === id && regionLoad.value.state === 'missing',
+    publication: reefPublication.value, plannerScreen: protectedScreen.value});
 }
 
 /** Select a pick's mark or habitat (a history entry), as a click on the map would; a publication place moves the Chart to it. */
@@ -122,11 +135,19 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
     const timer = setInterval(() => { void recheckReefPublication(id); }, 60000);
     return () => clearInterval(timer);
   }, [id]);
+  // SCJ-2b: the planner's protected-area screen, which admits the publication's places, loads with the brief.
+  useEffect(() => { if (id) void loadProtectedScreen(id); }, [id]);
+  useEffect(() => {
+    const bump = () => { screenTick.value++; };
+    document.addEventListener('skippercast:boundaries', bump);
+    return () => document.removeEventListener('skippercast:boundaries', bump);
+  }, []);
   // #644: Kayak's launch list and, for Spear from shore, the shoreline, each loaded once per region when needed.
   const p = profile.value, swimming = p === 'spear' && shoreSwimLimit() !== null;
   useEffect(() => { if (id && p === 'kayak') void loadLaunchPoints(id); }, [id, p]);
   useEffect(() => { if (id && swimming) void loadShoreLines(id); }, [id, swimming]);
   useEffect(() => { if (id) void loadLandWater(id); }, [id]);
+  useEffect(() => { if (id) void loadRegionPorts(id); }, [id]);
   useEffect(() => { if (id && wantLines) void loadLandWaterLines(id); }, [id, wantLines, lw.model]);
   return (
     <section class="app-where" data-source={r.source ?? undefined}>

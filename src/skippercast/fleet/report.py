@@ -323,6 +323,8 @@ def main(argv=None, now_ms: int | None = None) -> int:
     if args.d1 is not None and not d1_figures(args.d1):
         parser.error("--d1 takes usage figures only (numbers, units and the words "
                      f"{', '.join(sorted(D1_WORDS))}): no link, address, phone number or other text")
+    if args.open_reviews is not None and not 0 <= args.open_reviews <= 100000:
+        parser.error("--open-reviews must be a count from 0 to 100000")
     var = fleet_var()
     try:
         region = load_region(args.region)

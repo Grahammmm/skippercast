@@ -79,3 +79,43 @@ test('acceptance 1, 3 and 4: the chart breaks at the hole, its cursor moves the 
   await v2.a11y(isMobile ? 'v2-conditions-sheet' : 'v2-conditions');
   expect(pageErrors).toEqual([]);
 });
+
+test('BF-hourly-table: the hour-by-hour row follows the chart and the dock; a row (click or Enter) moves both', async ({page, pageErrors, v2, isMobile}) => {
+  await v2.open('app', {region: 'morro-bay', view: 'conditions'});
+  if (isMobile) { await page.locator('.ui-sheet-handle').press('End'); await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full'); }
+  const view = page.locator('section.app-conditions'), table = view.locator('.app-hourly table'), chart = view.locator('svg.series-chart');
+  await expect(table.locator('caption')).toContainText('Hour by hour, ');
+  await expect(table.locator('thead')).toContainText('Tide (where a local report exists)');
+  const current = table.locator('tbody tr[aria-current="true"]'), cursor = chart.locator('line[stroke-dasharray]');
+  await expect(current).toHaveCount(1);
+  const hourMs = () => { const h = new URL(page.url()).searchParams.get('hour'); return h ? Date.parse(h.replace('Z', ':00Z')) : null; };
+  const follows = async () => Date.parse((await current.getAttribute('data-at')) ?? '') === hourMs();
+  // Drag the chart: the current row is the dragged hour (on that day).
+  const box = (await chart.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.3, box.y + box.height * 0.3);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.3, {steps: 4});
+  await page.mouse.up();
+  await expect.poll(follows).toBe(true);
+  // Step the dock an hour: the row follows.
+  const slider = page.getByRole('slider', {name: 'Hour', exact: true}), dragged = hourMs();
+  await slider.focus();
+  await slider.press((await slider.inputValue()) === (await slider.getAttribute('max')) ? 'ArrowLeft' : 'ArrowRight');
+  await expect.poll(hourMs).not.toBe(dragged);
+  await expect.poll(follows).toBe(true);
+  // Click another row: the dock, the URL hour and the chart cursor move to it.
+  const before = await cursor.getAttribute('x1'), row = (iso: string | null) => table.locator(`tbody tr[data-at="${iso}"]`);
+  const target = row(await table.locator('tbody tr:not([aria-current])').first().getAttribute('data-at'));
+  const at = Date.parse((await target.getAttribute('data-at'))!), label = (await target.getByRole('button').textContent())!;
+  await target.getByRole('button').click();
+  await expect.poll(hourMs).toBe(at);
+  await expect(target).toHaveAttribute('aria-current', 'true');
+  await expect(slider).toHaveAttribute('aria-valuetext', label);
+  expect(await cursor.getAttribute('x1')).not.toBe(before);
+  // Enter on a focused row does the same.
+  const last = row(await table.locator('tbody tr:not([aria-current])').last().getAttribute('data-at')), lastAt = Date.parse((await last.getAttribute('data-at'))!);
+  await last.getByRole('button').focus(); await page.keyboard.press('Enter');
+  await expect.poll(hourMs).toBe(lastAt);
+  await expect(last).toHaveAttribute('aria-current', 'true');
+  expect(pageErrors).toEqual([]);
+});
