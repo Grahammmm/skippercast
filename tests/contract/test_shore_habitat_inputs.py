@@ -119,7 +119,7 @@ class SavedSourceRefusals(unittest.TestCase):
         self.assertEqual((result, err), (0, ''))
         self.assertEqual(json.loads(out)['bytes'], self.output.stat().st_size)
         self.assertEqual(written, [*importer.SOURCE_FILES.values(), 'receipts.json', 'morro-bay.geojson'])
-        self.assertEqual(importer.load_saved(self.dir / 'saved', 'morro-bay', datetime.now(timezone.utc)), (self.bodies, self.receipts))
+        self.assertEqual(importer.load_saved(self.dir / 'saved', 'morro-bay', datetime(2026, 10, 7, tzinfo=timezone.utc)), (self.bodies, self.receipts))
         self.assertEqual(self.leftovers(), [])
 
 
