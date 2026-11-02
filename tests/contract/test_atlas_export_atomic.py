@@ -117,23 +117,26 @@ class AtomicAtlasExport(unittest.TestCase):
         self.assertEqual(names(self.output), [])
         self.assertEqual(names(self.parent), ["out"])
 
-    def test_without_renameat2_mkdir_claim_publishes_or_refuses(self):
-        write_exports(self.data, self.parent / "ref")
-        expected = state(self.parent / "ref")
-        real_mkdir = os.mkdir
-
-        def racer(path, *args, **kwargs):
-            if Path(path) == self.output:
-                real_mkdir(path)
-            return real_mkdir(path, *args, **kwargs)
-        with mock.patch.object(export, "_renameat2", None):
-            write_exports(self.data, self.parent / "fallback")
-            self.assertEqual(state(self.parent / "fallback"), expected)
-            with mock.patch.object(export.os, "mkdir", racer), \
-                    self.assertRaises(FileExistsError):
-                write_exports(self.data, self.output)
-        self.assertEqual(names(self.output), [])
-        self.assertEqual(names(self.parent), ["fallback", "out", "ref"])
+    def test_no_renameat2_or_enosys_einval_fails_closed_without_output(self):
+        def failing(code):
+            def rename(src, dst):
+                raise OSError(code, os.strerror(code), str(dst))
+            return rename
+        cases = {"missing": None, "ENOSYS": failing(errno.ENOSYS), "EINVAL": failing(errno.EINVAL)}
+        for label, primitive in cases.items():
+            with self.subTest(primitive=label):
+                with mock.patch.object(export, "_renameat2", primitive), \
+                        mock.patch.object(export.os, "rename", side_effect=AssertionError("os.rename used")):
+                    with self.assertRaises(OSError) as caught:
+                        write_exports(self.data, self.output)
+                    self.assertEqual(caught.exception.errno, errno.ENOTSUP)
+                    stderr = io.StringIO()
+                    with redirect_stderr(stderr), self.assertRaises(SystemExit) as exit_:
+                        main(["export", "--data", str(DATA), "--output", str(self.output)])
+                self.assertEqual(exit_.exception.code, 1)
+                self.assertIn("atomic no-replace rename is not available", stderr.getvalue())
+                self.assertFalse(os.path.lexists(self.output))
+                self.assertEqual(names(self.parent), [])
 
     def test_missing_parents_are_created(self):
         self.output = self.parent / "a" / "b" / "out"

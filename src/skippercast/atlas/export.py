@@ -2,7 +2,6 @@
 
 import argparse
 from collections import Counter
-import contextlib
 import ctypes
 import errno
 import hashlib
@@ -248,21 +247,19 @@ _renameat2 = _load_renameat2()
 
 
 def _publish(temp, output):
-    """Rename temp to output in one step; never replace anything already at output."""
-    if _renameat2 is not None:
-        try:
-            return _renameat2(temp, output)
-        except OSError as exc:
-            if exc.errno not in (errno.ENOSYS, errno.EINVAL):
-                raise
-    # No renameat2 (or the filesystem refuses it): claim the name with an
-    # atomic mkdir, then rename onto that empty folder, which is our own.
-    os.mkdir(output)
+    """Rename temp to output in one step; never replace anything already at output.
+
+    Without an atomic no-replace rename (no renameat2, or ENOSYS/EINVAL from
+    the kernel or filesystem) the export fails closed: output is never created.
+    """
+    unsupported = OSError(errno.ENOTSUP, "atomic no-replace rename is not available here", str(output))
+    if _renameat2 is None:
+        raise unsupported
     try:
-        os.rename(temp, output)
-    except BaseException:
-        with contextlib.suppress(OSError):
-            os.rmdir(output)
+        _renameat2(temp, output)
+    except OSError as exc:
+        if exc.errno in (errno.ENOSYS, errno.EINVAL):
+            raise unsupported from exc
         raise
 
 
