@@ -33,7 +33,10 @@ def _shape(point):
             if key not in owner:
                 raise ValueError(f"Launch point {pid} {prefix}{key} is missing")
             value = owner[key]
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            # Integers are always finite; only floats go through isfinite, so a huge
+            # JSON integer reaches the bounds check instead of overflowing float().
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or (
+                    isinstance(value, float) and not math.isfinite(value)):
                 raise ValueError(f"Launch point {pid} {prefix}{key} must be a finite number")
 
 

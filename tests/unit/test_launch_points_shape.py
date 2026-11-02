@@ -64,6 +64,22 @@ class ShapeErrors(TestCase):
             with self.subTest(field=field, value=value):
                 self.refused(point, f"Launch point morro-bay-public-launch {field} must be a finite number")
 
+    def test_a_huge_integer_position_is_a_named_bounds_error(self):
+        cases = [
+            ("latitude", "lies outside the morro-bay bounds"),
+            ("longitude", "lies outside the morro-bay bounds"),
+            ("departure.latitude", "departure lies outside the morro-bay bounds"),
+            ("departure.longitude", "departure lies outside the morro-bay bounds"),
+        ]
+        for path, tail in cases:
+            point = good_point()
+            if path.startswith("departure."):
+                point["departure"][path.split(".")[1]] = 10**400
+            else:
+                point[path] = 10**400
+            with self.subTest(field=path):
+                self.refused(point, f"Launch point morro-bay-public-launch {tail}")
+
     def test_an_entry_without_an_id_is_refused(self):
         no_id = good_point()
         del no_id["id"]
