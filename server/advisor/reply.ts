@@ -19,7 +19,8 @@ export function capReply(text: string, links: readonly string[], max = REPLY_MAX
   const sentences = body.split(/(?<=[.!?])\s+/);
   let out = '';
   for (const s of sentences) { if ((out ? out.length + 1 : 0) + s.length > room) break; out = out ? `${out} ${s}` : s; }
-  if (!out) out = body.slice(0, Math.max(0, room - 1)).replace(/\s+\S*$/, '') + '…';
+  if (!out) { let cut = body.slice(0, Math.max(0, room - 1)); if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1);
+    out = cut.replace(/\s+\S*$/, '') + '…'; }
   return link ? `${out} ${link}` : out;
 }
 
