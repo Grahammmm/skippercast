@@ -356,12 +356,20 @@ def write_report(path, status, events=()):
                                       "partial": bool(status & PARTIAL), "stale_feeds": list(events)}) + "\n")
 
 
+def _hours(text):
+    """An age-limit flag: a finite number of hours above 0 and at most a year (nan, inf, 0 or a typo like 1e9 is bad usage)."""
+    hours = float(text)
+    if not 0 < hours <= 8760:  # False for nan and -inf; inf is above 8760
+        raise argparse.ArgumentTypeError("must be a number of hours above 0 and at most 8760")
+    return hours
+
+
 def main(argv=None, fetch=fetch_json, now=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--public-base", help=f"site serving /feeds/ (default: $FEEDS_PUBLIC_BASE or {DEFAULT_PUBLIC_BASE})")
     parser.add_argument("--url", "--github-url", dest="github_url", default=FEED, help="GitHub conditions branch copy (secondary)")
-    parser.add_argument("--max-age-hours", type=float, help="live feed age limit (default: catalog/feed-health.json)")
-    parser.add_argument("--data-max-age-hours", type=float,
+    parser.add_argument("--max-age-hours", type=_hours, help="live feed age limit (default: catalog/feed-health.json)")
+    parser.add_argument("--data-max-age-hours", type=_hours,
                         help="daily data feed age limit (default: its schedule.max_delay_hours, else catalog/feed-health.json)")
     parser.add_argument("--live-only", action="store_true", help="check only the live feed's age (exit 1 when stale)")
     parser.add_argument("--report", type=Path, help="write {stale, degraded, partial} as JSON to this file")
