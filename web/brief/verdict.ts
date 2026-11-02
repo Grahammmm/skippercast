@@ -47,9 +47,9 @@ const FROM_SCORE: Readonly<Record<Verdict, DayVerdict>> = Object.freeze({go: 'co
 export const WINDOW_END_HOUR = 12;
 /** Without a sunrise time the window starts at this local hour. */
 export const DEFAULT_START_HOUR = 6;
-/** A model run older than this holds the verdict at Marginal (the Wind and Swell tiles' stale limit; score.ts FORECAST_AGE). */
+/** A model run older than this holds the verdict at Marginal (the Wind and Swell tiles' stale limit). */
 export const RUN_STALE_MS = FORECAST_AGE.holdHours * HOUR;
-/** A model run older than this is not used at all (v1's usable rule, dist/morning-outlook.js; score.ts FORECAST_AGE). */
+/** A model run older than this is not used at all (v1's usable rule, dist/morning-outlook.js). */
 export const RUN_MAX_MS = FORECAST_AGE.dropHours * HOUR;
 /** The line packages/coast daily.ts adds to `missing` when the marine alert check is not fresh. */
 export const ALERT_CHECK_MISSING = 'Current marine alert check unavailable';
@@ -109,10 +109,9 @@ export function windowHours(candidates: readonly number[], date: string, tz: str
   return {hours: on, label: on.length ? label(on, clockText(on.at(-1)! + HOUR, tz)) : null, covered: onDate.length > 0};
 }
 
-// A run dated more than an hour ahead of now is a bad clock, not the freshest data (as assessment.ts and alert-policy.ts).
 const usable = (run: ModelRun | undefined, now: Date): run is ModelRun => !!run && finite(run.issued) && now.getTime() - run.issued * 1000 <= RUN_MAX_MS && run.issued * 1000 - now.getTime() <= HOUR;
 
-/** The feed's hourly epochs (ms) and one FeedHour reader over its usable runs; runs with no issue time, over 36 h old or over 1 h ahead read as missing. */
+/** The feed's hourly epochs (ms) and one FeedHour reader over its usable runs; runs with no issue time or over 36 h old read as missing. */
 export function feedReader(f: ConditionsForecast, now: Date): {times: number[]; read: (ms: number) => FeedHour; oldestMs: number | null} {
   const runs = Object.fromEntries(['gfs_global', 'ncep_gfswave016', 'ecmwf_ifs025', 'ecmwf_wam'].map(id => [id, f.models[id]]).filter(([, run]) => usable(run as ModelRun | undefined, now)) as [string, ModelRun][]);
   const clock = (runs.gfs_global ?? runs.ecmwf_ifs025)?.data as {hourly?: {time?: unknown}} | undefined;
