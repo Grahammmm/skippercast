@@ -108,16 +108,20 @@ export function parseTidePredictions(body: unknown): {points: TidePoint[]; event
 }
 /** Save validated, live answers. NOAA can return an error body with HTTP 200. */
 export async function saveTidePack(urls: readonly string[], put: (key: string, body: ArrayBuffer, headers: Headers) => Promise<void>, signal: AbortSignal, fetcher: typeof fetch = fetch): Promise<void> {
+  const unavailable = 'Chosen tide predictions are unavailable. Saved regions are unchanged.', kept: [string, ArrayBuffer, Headers][] = [];
   for (const url of urls) {
     const response = await fetcher(url, {credentials: 'omit', cache: 'no-cache', signal});
     if (!response.ok || response.headers.has('X-SC-Offline')) throw new Error('Chosen tide station could not be saved from a live response. Saved regions are unchanged.');
-    const body = await response.arrayBuffer(), json: unknown = JSON.parse(new TextDecoder().decode(body));
+    const body = await response.arrayBuffer();
+    let json: unknown;
+    try { json = JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(body)); } catch { throw new Error(unavailable); }
     const interval = new URL(url).searchParams.get('interval');
     const parsed = parseTidePredictions(json);
     if (url === TIDE_DIRECTORY_URL ? !record(json) || !Array.isArray(json.stations) : !(interval === 'hilo' ? parsed.events.length : parsed.points.length))
-      throw new Error('Chosen tide predictions are unavailable. Saved regions are unchanged.');
-    await put(url, body, response.headers);
+      throw new Error(unavailable);
+    kept.push([url, body, response.headers]);
   }
+  for (const [url, body, headers] of kept) await put(url, body, headers);
 }
 export async function loadTideReading(station: TideStation, fetcher: typeof fetch = fetch, now = Date.now()): Promise<TideReading> {
   const intervals: ('6' | 'hilo')[] = station.type === 'R' ? ['hilo', '6'] : ['hilo'];
