@@ -10,6 +10,7 @@
 // this file never imports MapLibre at run time and tests/test_map_layers.mjs
 // drives it with a fake map. Erasable syntax only.
 import type * as MapLibre from 'maplibre-gl';
+import {FRAME_PROTOCOL, frameProtocol} from './frames.ts';
 import {sourceLayer} from './layers.ts';
 import type {FieldTexture} from './field.ts';
 import type {ArchiveReader} from './seafloor.ts';
@@ -122,11 +123,12 @@ export interface Engine {
 }
 
 const prepared = new WeakSet<object>();
-/** Registers the worker URL and the pmtiles:// protocol once per library instance. */
+/** Registers the worker URL, the pmtiles:// and the Clouds frame protocols once per library instance. */
 export function prepareLibrary(module: MapLibraryModule): void {
   if (prepared.has(module.lib)) return;
   module.lib.setWorkerUrl(module.workerUrl);
   module.lib.addProtocol('pmtiles', new module.Protocol().tile);
+  module.lib.addProtocol(FRAME_PROTOCOL, frameProtocol());
   prepared.add(module.lib);
 }
 

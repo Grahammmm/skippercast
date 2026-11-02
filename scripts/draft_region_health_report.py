@@ -1,7 +1,7 @@
 """Report one draft region's legal and source health (draft-region-health.yml).
 
-Exit 0 when healthy, 1 when the evidence needs review or no receipt exists,
-2 on a usage error. A failed past-day landing report (`catches-*`) is not
+Exit 0 when healthy, 1 when the evidence needs review, is unreadable or misshaped
+(named by file and key) or no receipt exists, 2 on a usage error. A failed past-day landing report (`catches-*`) is not
 counted as a source fetch failure: the 5-of-7-day coverage gate
 (`critical_available`) decides whether missing reports matter.
 """
@@ -37,6 +37,37 @@ def error_class(issue):
     return cls
 
 
+class Unreadable(Exception):
+    """An input that cannot be read or has the wrong shape; the message holds file and key only."""
+
+
+def _read(path):
+    try:
+        return json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, UnicodeDecodeError, ValueError, RecursionError):
+        raise Unreadable(f'{path.name}: unreadable JSON') from None
+
+
+def _shape(evidence, rules):
+    """Raise Unreadable naming the first missing or wrongly typed key, never the file content."""
+    def get(obj, key):
+        return obj.get(key) if isinstance(obj, dict) else None
+    health, sources, issues = get(evidence, 'health'), get(evidence, 'sources'), get(get(evidence, 'health'), 'issues')
+    checks = [('health', isinstance(health, dict)),
+              ('health.issues', isinstance(issues, list) and all(isinstance(i, str) for i in issues))]
+    checks += [(f'health.{key}', type(get(health, key)) is int) for key in ('sources_ok', 'sources_total')]
+    checks += [('health.critical_available', isinstance(get(health, 'critical_available'), bool)),
+               ('sources', isinstance(sources, dict))]
+    for ident, source in (sources.items() if isinstance(sources, dict) else ()):
+        checks += [(f'sources.{ident}', isinstance(source, dict)),
+                   (f'sources.{ident}.status', isinstance(get(source, 'status'), str))]
+    checks = [('latest.json', key, ok) for key, ok in checks]
+    checks.append(('regulations-health.json', 'review_required', isinstance(get(rules, 'review_required'), list)))
+    for name, key, ok in checks:
+        if not ok:
+            raise Unreadable(f'{name}: {key} missing or wrong type')
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Report draft region legal and source health.')
     parser.add_argument('--region', required=True)
@@ -49,8 +80,13 @@ def main(argv=None):
     root = Path(args.root) / region / 'regions' / region
     if not (root / 'latest.json').is_file():
         raise SystemExit('Draft collector produced no regional receipt')
-    evidence = json.loads((root / 'latest.json').read_text())
-    rules = json.loads((root / 'regulations-health.json').read_text())
+    try:
+        evidence, rules = _read(root / 'latest.json'), _read(root / 'regulations-health.json')
+        _shape(evidence, rules)
+    except Unreadable as bad:
+        with open(args.summary, 'a') as out:
+            out.write(f'## {region} draft rehearsal\nDraft evidence unreadable: {bad}\n')
+        raise SystemExit(f'Draft evidence unreadable: {bad}') from None
     health = evidence['health']
     unknown = [ident for ident in health['issues'] if ident not in evidence['sources']]
     if unknown:

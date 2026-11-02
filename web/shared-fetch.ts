@@ -7,7 +7,11 @@
 // share one request; each caller gets its own clone of the response. Live
 // feeds (/api/, /feeds/), other origins and reads asking for a fresh copy
 // (`cache: 'no-store' | 'no-cache' | 'reload'`) pass straight through. A
-// failed or non-OK read is forgotten, so the next caller asks again.
+// failed or non-OK read is forgotten, so the next caller asks again. An OK
+// body is read whole before the share is kept: a body that breaks mid-transfer
+// fails that read like a transport failure and is forgotten too. A body that
+// arrives whole but fails a caller's read (malformed JSON) is forgotten when
+// that read rejects, so a retry fetches the file again (SC2007-02).
 //
 // Erasable syntax only: the node tests import it by type stripping.
 
@@ -38,23 +42,44 @@ function untilAborted<T>(promise: Promise<T>, signal: AbortSignal | null | undef
   });
 }
 
+const BODY_READS = ['json', 'text', 'arrayBuffer', 'blob'] as const;
+
+/** `response` with each body read calling `forget` when it rejects (a malformed body that arrived whole). */
+function watchBody(response: Response, forget: () => void): Response {
+  for (const name of BODY_READS) {
+    const read = response[name] as ((...args: unknown[]) => Promise<unknown>) | undefined;
+    if (typeof read !== 'function') continue;
+    Object.defineProperty(response, name, {configurable: true, value: (...args: unknown[]) => read.apply(response, args).catch((error: unknown) => { forget(); throw error; })});
+  }
+  return response;
+}
+
 /** `fetchFn`, sharing one request per committed static JSON file; the same wrapper for the same `fetchFn`. */
 export function shareStatic(fetchFn: typeof fetch): typeof fetch {
   const existing = wrapped.get(fetchFn);
   if (existing) return existing;
   const reads = new Map<string, Promise<Response>>();
+  /** Drop `key` if it still holds `read`, so the next caller asks the network again. */
+  const forget = (key: string, read: Promise<Response>): void => { if (reads.get(key) === read) reads.delete(key); };
   const shared = ((input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> => {
     const key = sharedKey(input, init);
     if (!key) return fetchFn(input, init);
     let read = reads.get(key);
     if (!read) {
       const {signal: _signal, ...rest} = init;
-      read = fetchFn(input, rest);
-      reads.set(key, read);
-      read.then(response => { if (!response.ok) reads.delete(key); }, () => reads.delete(key));
+      const own = fetchFn(input, rest).then(async response => {
+        // Read an OK body whole (from a clone) before sharing; a double with no body or clone is shared as is.
+        if (response.ok && response.body != null && typeof response.clone === 'function') await response.clone().arrayBuffer();
+        return response;
+      });
+      reads.set(key, own);
+      own.then(response => { if (!response.ok) forget(key, own); }, () => forget(key, own));
+      read = own;
     }
+    const kept = read;
     // A real Response is cloned for every caller (the stored one is never read); a test double without clone is shared as is.
-    return untilAborted(read, init.signal).then(response => typeof response.clone === 'function' ? response.clone() : response);
+    // A caller's body read that rejects forgets the share too (SC2007-02): a malformed file is not replayed to the next caller.
+    return untilAborted(kept, init.signal).then(response => typeof response.clone === 'function' ? watchBody(response.clone(), () => forget(key, kept)) : response);
   }) as typeof fetch;
   wrapped.set(fetchFn, shared);
   wrapped.set(shared, shared);

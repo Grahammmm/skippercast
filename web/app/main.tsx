@@ -9,7 +9,7 @@ import {render} from 'preact';
 import {effect} from '@preact/signals';
 import {configureStore, coast, loadCoordinateFormat, profile, region, species, startURLSync} from '../state.ts';
 import {savedHomeURL} from '../ports.ts';
-import {loadCruise, loadLimits} from '../limits.ts';
+import {followStoredLimits, loadCruise, loadLimits} from '../limits.ts';
 import {loadLaunch, loadReach, loadSpear} from '../reach.ts';
 import {startTrip} from '../trip.ts';
 import {App, bindStartupFreshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
@@ -17,15 +17,19 @@ import {loadPlans, regionPlans} from '../species.ts';
 import {bindBriefReport, currentBrief, dailyFeed, ensureRegionalForecast, loadDailyFeed} from '../brief/Brief.tsx';
 import {regionPlace} from '../map/currents.ts';
 import {initTelemetry} from '../telemetry.ts';
+import {installDegradedWatch} from '../degraded.ts';
 
+// SC-LAUNCH-4: before any read, so every response's cost-ceiling mark reaches the notice.
+installDegradedWatch();
 configureStore({v2: true});
 loadCoordinateFormat();
 startURLSync();
 // Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
-initTelemetry();
+initTelemetry({views: true});
 // #542: the user's own comfort limits, and the cruise speed for run times, kept on this device.
 loadLimits();
 loadCruise();
+followStoredLimits();
 // #644: the range to consider for Boat and Kayak, Spear's dive limits and Kayak's launch, kept on this device.
 loadReach();
 loadSpear();

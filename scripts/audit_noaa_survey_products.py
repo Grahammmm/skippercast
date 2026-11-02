@@ -11,6 +11,8 @@ from html.parser import HTMLParser
 import hashlib
 import json
 from pathlib import Path
+import re
+import sys
 from urllib.parse import urljoin, urlsplit
 from urllib.request import Request, urlopen
 
@@ -90,20 +92,69 @@ def audit(discovery, previous=None, *, now=None, inspector=inspect):
             'health': {'status': 'ok' if not issues else 'degraded', 'issues': issues}, 'surveys': rows}
 
 
-def main():
+def _days(text):
+    if not re.fullmatch(r'\s*[+-]?[0-9]+\s*', text) or not 1 <= int(text) <= 365:
+        raise argparse.ArgumentTypeError('must be a whole number of days from 1 to 365')
+    return int(text)
+
+
+def _discovery(path):
+    try:
+        doc = json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, ValueError):  # covers UnicodeDecodeError and JSONDecodeError
+        return None, 'discovery file is unreadable'
+    if not isinstance(doc, dict) or doc.get('scope') != 'noaa-bag-survey-discovery':
+        return None, 'discovery file is not a NOAA survey discovery object'
+    if not isinstance(doc.get('sectors'), list) or not doc['sectors']:
+        return None, 'discovery file has no sector list'
+    for s, sector in enumerate(doc['sectors']):
+        surveys = sector.get('surveys') if isinstance(sector, dict) else None
+        if not isinstance(surveys, list):
+            return None, f'sector {s} has no survey list'
+        for n, lead in enumerate(surveys):
+            if not isinstance(lead, dict) or not isinstance(lead.get('id'), str):
+                return None, f'sector {s} lead {n} has no string id'
+    return doc, None
+
+
+def _previous(path):
+    if not path:
+        return None, None
+    try:  # every filesystem touch is inside the handler: a stat/open error is 'unreadable', not a crash
+        previous = json.loads(path.read_text(encoding='utf-8'))
+        value = previous.get('last_complete_scan_at')
+    except FileNotFoundError:  # no previous inventory yet: a plain first audit
+        return None, None
+    except (OSError, ValueError, AttributeError):  # not readable JSON, or not an object
+        return None, 'unreadable'
+    try:
+        offset = datetime.fromisoformat(value).utcoffset()
+    except (TypeError, ValueError):
+        return None, 'no scan time' if value is None else 'bad scan time'
+    if offset is None:
+        return None, 'scan time has no UTC offset'
+    if not isinstance(rows := previous.get('surveys'), list) or not all(isinstance(r, dict) and isinstance(r.get('id'), str) for r in rows):
+        return None, 'no survey list'
+    return previous, None
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--discovery', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--previous', type=Path)
-    parser.add_argument('--max-age-days', type=int, default=30)
-    args = parser.parse_args()
+    parser.add_argument('--max-age-days', type=_days, default=30)
+    args = parser.parse_args(argv)
     now = datetime.now(timezone.utc)
-    discovery = json.loads(args.discovery.read_text())
-    if discovery.get('scope') != 'noaa-bag-survey-discovery' or not discovery.get('sectors'):
-        raise ValueError('Invalid NOAA survey discovery input')
-    previous = json.loads(args.previous.read_text()) if args.previous and args.previous.is_file() else None
+    discovery, reason = _discovery(args.discovery)
+    if reason:
+        print(f'audit refused: {reason}', file=sys.stderr)
+        return 1
+    previous, reason = _previous(args.previous)
+    if reason:
+        print(f'previous inventory ignored: {reason}', file=sys.stderr)
     ids = {lead['id'] for sector in discovery['sectors'] for lead in sector['surveys']}
-    if previous and previous.get('health', {}).get('status') == 'ok' and previous.get('last_complete_scan_at'):
+    if previous and isinstance(previous.get('health'), dict) and previous['health'].get('status') == 'ok':
         age = now - datetime.fromisoformat(previous['last_complete_scan_at'])
         if timedelta(0) <= age < timedelta(days=args.max_age_days) and ids == {row['id'] for row in previous['surveys']}:
             args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -119,4 +170,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

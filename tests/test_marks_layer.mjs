@@ -9,12 +9,12 @@ import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import {speciesFit} from '../dist/species-fit.js';
 import {
-  CDFW_REGULATIONS, EMPTY, assessScreen, atlasCard, fitLine, geologyCard, geologyFeatures, geologyShown, habitatFamily, markFeatures, markFit, markShown,
+  CDFW_REGULATIONS, EMPTY, SCREEN_NOTES, assessScreen, atlasCard, fitLine, geologyCard, geologyFeatures, geologyShown, habitatFamily, markFeatures, markFit, markShown,
   receiptCard, regulationsLink, surveyCard, surveyFeatures, surveyMatches, terrainCard, terrainDetailCard,
 } from '../web/map/habitat.ts';
 import {MPA_SERVICE} from '../web/map/mpa.ts';
 import {
-  GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, habitatCard, habitatReceipt, markData, markSources, markStyle, picked, spotCard, spotHref,
+  GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, habitatCard, habitatReceipt, markData, markScreen, markSources, markStyle, picked, spotCard, spotHref,
 } from '../web/map/marks.ts';
 import {GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE, SURVEY_SOURCE} from '../web/map/layers.ts';
 import {ENC_LAYER, chartFailed, chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
@@ -76,7 +76,7 @@ test('marks are points with their fit badge, inside the profile\'s depth limit',
   const boat = markFeatures(ATLAS, 'lingcod', 'boat', CHECKED);
   assert.equal(boat.features.length, ATLAS.targets.filter(t => markShown(t, 'lingcod')).length);
   const first = boat.features.find(f => f.properties.id === 'SC26-001');
-  assert.deepEqual(first, {type: 'Feature', geometry: {type: 'Point', coordinates: [-120.843179, 35.164314]}, properties: {id: 'SC26-001', fit: '3', weight: 1}});
+  assert.deepEqual(first, {type: 'Feature', geometry: {type: 'Point', coordinates: [-120.843179, 35.164314]}, properties: {id: 'SC26-001', fit: '3', weight: 1, depth: '135–184 ft'}});
   const spear = markFeatures(ATLAS, 'reef', 'spear', CHECKED);
   assert.ok(spear.features.length > 0 && spear.features.every(f => ATLAS.targets.find(t => t.id === f.properties.id).neighborhood_depth_ft[1] <= 60), 'Spear: 60 ft');
   assert.ok(markFeatures(ATLAS, 'cabezon-shallow-reef', 'spear', CHECKED).features.every(f => !('fit' in f.properties)), 'no badge without a fit');
@@ -171,11 +171,11 @@ test('the Chart style draws habitat in its § 9 slot and marks under the coastli
   for (const source of [SURVEY_SOURCE, GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE]) assert.deepEqual(style.sources[source], {type: 'geojson', data: EMPTY}, source);
   // § 9: MPAs (FE-19), then habitat, the seafloor (FE-14), marks and the selection, the coastline on top.
   const at = id => ids.indexOf(id);
-  assert.deepEqual(ids.slice(at(SURVEY_PICK), at(SURVEY_PICK) + 3), [SURVEY_PICK, GEOLOGY_PICK, 'geology-line']);
+  assert.deepEqual(ids.slice(at(SURVEY_PICK), at(SURVEY_PICK) + 4), [SURVEY_PICK, 'survey-habitat-line', GEOLOGY_PICK, 'geology-line']);
   assert.ok(at(ENC_LAYER) < at('mpa-line') && at('mpa-label') < at(SURVEY_PICK) && at('geology-line') < at('seafloor-fill') && at('seafloor-unranked') < at(MARK_PICK), ids.join(' '));
-  assert.deepEqual(ids.slice(at(MARK_PICK)), [MARK_PICK, 'marks-ring', 'marks-fit', 'selection-ring', 'ranked-target', 'ranked-pin', 'ranked-number', 'ranked-more', COASTLINE_GLOW, 'coastline']);
+  assert.deepEqual(ids.slice(at(MARK_PICK)), [MARK_PICK, 'marks-ring', 'marks-fit', 'marks-depth', 'selection-ring', 'ranked-target', 'ranked-pin', 'ranked-number', 'ranked-more', COASTLINE_GLOW, 'coastline']);
   const layer = id => style.layers.find(l => l.id === id);
-  assert.equal(layer(SURVEY_PICK).paint['fill-opacity'], 0.25, 'habitat fills at 0.25');
+  assert.deepEqual(layer(SURVEY_PICK).paint['fill-opacity'], ['interpolate', ['linear'], ['zoom'], 9, 0.12, 12, 0.22, 15, 0.3]);
   assert.deepEqual(layer('geology-line').paint['line-dasharray'], [3, 2], 'geology as a dashed outline');
   assert.equal(layer(MARK_PICK).paint['circle-radius'] * 2, 44, 'a 44 px target under each ring');
   assert.equal(layer(MARK_PICK).paint['circle-opacity'], 0);
@@ -412,5 +412,72 @@ test('on the Chart a ?habitat= the terrain has not restored resolves without gra
   setParams({region: 'santa-cruz-monterey-bay', presentation: 'chart'});
   await settle();
   assert.equal(asked.length, 2, 'no terrain, no habitat to restore');
+  marks.destroy();
+});
+
+// SC2007-01: a failed region.json read ends the protected-area check as unavailable, never "Checking…" for the visit.
+/** files(), except morro-bay's region.json answers `bad()` for its first `times` reads. */
+const failingRegion = (bad, times = 1) => { const serve = files(); let left = times;
+  return async url => new URL(url).pathname === '/regions/morro-bay/region.json' && left-- > 0 ? bad() : serve(url); };
+const BAD_REGION = {
+  network: () => Promise.reject(new TypeError('fetch failed')),
+  503: async () => ({ok: false, status: 503, json: async () => ({})}),
+  'invalid JSON': async () => ({ok: true, json: async () => { throw new SyntaxError('Unexpected token < in JSON'); }}),
+};
+
+test('a failed region.json read shows the unavailable screen with its reason, withholds every spot and reports once', async () => {
+  for (const [why, bad] of Object.entries(BAD_REGION)) {
+    browser(`${PAGE}?region=morro-bay&presentation=chart&target=lingcod`);
+    const errors = [], marks = createMarks({fetchFn: failingRegion(bad), page: () => PAGE, onError: layer => errors.push(layer)});
+    assert.equal(markScreen.value.status, 'checking', `${why}: checking while region.json loads`);
+    await settle();
+    assert.equal(markScreen.value.status, 'unavailable', `${why}: never checking forever`);
+    assert.equal(markScreen.value.note, SCREEN_NOTES.unavailable, `${why}: the legend says why`);
+    assert.deepEqual(errors, ['marks'], `${why}: one error, for the marks layer`);
+    assert.equal(markSources[MARKS_SOURCE].value.features.length, 0, `${why}: no ranked spot is drawn`);
+    assert.equal(spotCard.value, null, `${why}: no spot card`);
+    marks.destroy();
+  }
+});
+
+test('a good region.json still goes from checking to its real screen, and a failure is not sticky', async () => {
+  browser(`${PAGE}?region=morro-bay&presentation=chart&target=lingcod`);
+  const good = createMarks({fetchFn: files(), page: () => PAGE});
+  assert.equal(markScreen.value.status, 'checking');
+  await settle();
+  assert.equal(markScreen.value.status, 'ready', 'the live check answers as before');
+  assert.ok(markSources[MARKS_SOURCE].value.features.length > 0, 'the screened spots draw');
+  good.destroy();
+
+  browser(`${PAGE}?region=morro-bay&presentation=chart&target=lingcod`);
+  const errors = [], marks = createMarks({fetchFn: failingRegion(BAD_REGION[503]), page: () => PAGE, onError: layer => errors.push(layer)});
+  await settle();
+  assert.equal(markScreen.value.status, 'unavailable');
+  setParams({region: 'cambria-san-simeon'});
+  await settle();
+  setParams({region: 'morro-bay'});
+  assert.equal(markScreen.value.status, 'checking', 'changing region back starts a new check');
+  await settle();
+  assert.equal(markScreen.value.status, 'ready', 'the new check can become ready');
+  assert.ok(markSources[MARKS_SOURCE].value.features.length > 0);
+  assert.deepEqual(errors, ['marks'], 'only the failed read reported');
+  marks.destroy();
+});
+
+test('a region.json read that fails after the region changed leaves the new region\'s screen alone', async () => {
+  browser(`${PAGE}?region=morro-bay&presentation=chart&target=lingcod`);
+  let fail;
+  const pending = new Promise((_resolve, reject) => { fail = reject; });
+  const errors = [], marks = createMarks({fetchFn: failingRegion(() => pending), page: () => PAGE, onError: layer => errors.push(layer)});
+  await settle();
+  assert.equal(markScreen.value.status, 'checking', 'morro-bay\'s read is still pending');
+  setParams({region: 'cambria-san-simeon'});
+  await settle();
+  const cambria = markScreen.value;
+  assert.notEqual(cambria.status, 'checking', 'cambria\'s check has answered');
+  fail(new TypeError('fetch failed'));
+  await settle();
+  assert.equal(markScreen.value, cambria, 'the stale run writes nothing');
+  assert.deepEqual(errors, [], 'and reports nothing');
   marks.destroy();
 });

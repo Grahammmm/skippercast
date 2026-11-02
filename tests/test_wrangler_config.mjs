@@ -172,7 +172,7 @@ test('advisor on: the private media bucket, the advisor queue pair and the advis
     {queue: 'skippercast-advisor-dlq', max_batch_size: 25, max_batch_timeout: 30, max_retries: 0, max_concurrency: 1},
   ]);
   // Existing vars stay; advisor vars are trimmed, empty ones left out, unrelated keys ignored.
-  assert.deepEqual(config.vars, {IDENTITY_PROVIDER: 'skippercast', BOAT_LOOKUP_ENABLED: 'true', BOAT_LOOKUP_GLOBAL_DAILY_LIMIT: '500',
+  assert.deepEqual(config.vars, {IDENTITY_PROVIDER: 'skippercast', BOAT_LOOKUP_ENABLED: 'true', BOAT_LOOKUP_GLOBAL_DAILY_LIMIT: '500', COST_CEILING_R2_READS_PER_DAY: '300000',
     ADVISOR_CHANNEL: 'twilio', ADVISOR_MODEL: 'claude-opus-5-5', BLUEBUBBLES_PRIVATE_API: 'true', TEXT_ADVISOR_ENABLED: 'true'});
   // Without advisor vars in the environment only the bindings change.
   assert.deepEqual(deployConfig(committed(), ID, 'skippercast-feeds', '', {advisor: true}).vars, JSON.parse(stripJsonComments(committed())).vars);

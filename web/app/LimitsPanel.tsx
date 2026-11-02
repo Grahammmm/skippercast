@@ -19,9 +19,9 @@
 import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import type {ComponentChildren} from 'preact';
 import {Button, IconButton} from '../ui/Button.tsx';
-import {defaultLimits, LIMIT_BOUNDS, LIMIT_FIELDS, LIMIT_SURGE_BANDS, type ComfortLimits, type LimitField, type LimitSurge} from '../../packages/coast/src/limits.ts';
+import {defaultLimits, gustBelowWind, LIMIT_BOUNDS, LIMIT_FIELDS, LIMIT_SURGE_BANDS, type ComfortLimits, type LimitField, type LimitSurge} from '../../packages/coast/src/limits.ts';
 import {depthLimitFt, PROFILE_TABLE, type Profile} from '../profile.ts';
-import {CRUISE_BOUNDS, cruiseSpeed, hasOwnLimits, limitsFor, resetLimits, saveCruise, saveLimits} from '../limits.ts';
+import {WANTED_BOUNDS, wantedHours, saveWanted, CRUISE_BOUNDS, cruiseSpeed, hasOwnLimits, limitsFor, resetLimits, saveCruise, saveLimits} from '../limits.ts';
 import {isReachProfile, launchChoice, REACH_BOUNDS, reachFor, saveLaunch, saveReach, saveSpear, SHORE_SWIM_BOUNDS, SPEAR_DEPTH_BOUNDS, spearPlan} from '../reach.ts';
 import {launchPoints} from '../launches.ts';
 import {profile, region} from '../state.ts';
@@ -43,9 +43,10 @@ const draftOf = (limits: ComfortLimits): Draft => ({wind: fmt(limits.wind), gust
  * consider for boat and kayak, the launch for kayak, the dive limits for spear), Save and Reset to defaults.
  * `focusCruise`, `focusReach` or `focusDepth` marks that field autofocus, so the modal opens on it.
  */
-export function LimitsForm({profile: p, onDone, focusCruise = false, focusReach = false, focusDepth = false}: {profile: Profile; onDone?: () => void; focusCruise?: boolean; focusReach?: boolean; focusDepth?: boolean}) {
+export function LimitsForm({profile: p, onDone, focusCruise = false, focusWanted = false, focusReach = false, focusDepth = false}: {profile: Profile; onDone?: () => void; focusCruise?: boolean; focusWanted?: boolean; focusReach?: boolean; focusDepth?: boolean}) {
   const id = useId();
   const [draft, setDraft] = useState<Draft>(() => draftOf(limitsFor(p)));
+  const [wanted, setWanted] = useState(() => wantedHours.peek() === null ? '' : fmt(wantedHours.peek()!));
   const [cruise, setCruise] = useState(() => cruiseSpeed.peek() === null ? '' : fmt(cruiseSpeed.peek()!));
   const [reach, setReach] = useState(() => { const nm = reachFor(p); return nm === null ? '' : fmt(nm); });
   const [depth, setDepth] = useState(() => String(depthLimitFt('spear') ?? PROFILE_TABLE.spear.maxDepthFt));
@@ -54,12 +55,12 @@ export function LimitsForm({profile: p, onDone, focusCruise = false, focusReach 
   const area = region.value, launches = launchPoints.value && launchPoints.value.region === area ? launchPoints.value.points : [];
   const [launch, setLaunch] = useState(() => (area && launchChoice.peek()[area]) || '');
   useEffect(() => setDraft(draftOf(limitsFor(p))), [p]);
-  const base = defaultLimits(p), bounds = LIMIT_BOUNDS[p], own = hasOwnLimits(p);
+  const base = defaultLimits(p), bounds = LIMIT_BOUNDS[p], own = hasOwnLimits(p), gustNote = gustBelowWind(draft);
   const set = (field: keyof Draft, value: string) => setDraft(prev => ({...prev, [field]: value}));
   const submit = (event: Event) => {
     event.preventDefault();
     saveLimits(p, draft);
-    if (p === 'boat') saveCruise(cruise);
+    if (p === 'boat') { saveCruise(cruise); saveWanted(wanted); }
     if (isReachProfile(p)) saveReach(p, reach);
     if (p === 'spear') saveSpear({depthFt: depth, from, shoreYd: from === 'shore' ? swim : ''});
     if (p === 'kayak' && area && launches.length) saveLaunch(area, launches.some(l => l.id === launch) ? launch : '');
@@ -75,11 +76,12 @@ export function LimitsForm({profile: p, onDone, focusCruise = false, focusReach 
           <div class="app-limits-field" key={field}>
             <label for={`${id}-${field}`}>{label} <span class="ui-mono">({unit})</span></label>
             <input id={`${id}-${field}`} name={field} type="number" inputMode="decimal" min={b.min} max={b.max} step={b.step} required
-              value={draft[field]} onInput={event => set(field, (event.currentTarget as HTMLInputElement).value)} aria-describedby={`${id}-${field}-hint`} />
+              value={draft[field]} onInput={event => set(field, (event.currentTarget as HTMLInputElement).value)} aria-describedby={`${id}-${field}-hint${field === 'gust' && gustNote ? ` ${id}-gust-note` : ''}`} />
             <span id={`${id}-${field}-hint`} class="app-limits-hint ui-mono">Default {fmt(base[field])} · {fmt(b.min)}–{fmt(b.max)}</span>
           </div>
         );
       })}
+      {gustNote ? <p class="app-limits-hint" role="note" id={`${id}-gust-note`}>Your gust limit is below your wind limit, so gusts decide every window.</p> : null}
       {p === 'spear' ? (
         <div class="app-limits-field">
           <label for={`${id}-surge`}>Highest surge</label>
@@ -97,6 +99,12 @@ export function LimitsForm({profile: p, onDone, focusCruise = false, focusReach 
           <span id={`${id}-cruise-hint`} class="app-limits-hint ui-mono">No default · {fmt(CRUISE_BOUNDS.min)}–{fmt(CRUISE_BOUNDS.max)} · run times only · blank clears it</span>
         </div>
       ) : null}
+      {p === 'boat' ? <div class="app-limits-field">
+        <label for={`${id}-wanted`}>Hours I want to fish</label>
+        <input id={`${id}-wanted`} name="wanted" autoFocus={focusWanted} type="number" inputMode="decimal" min={WANTED_BOUNDS.min} max={WANTED_BOUNDS.max} step={WANTED_BOUNDS.step}
+          value={wanted} onInput={event => setWanted(event.currentTarget.value)} aria-describedby={`${id}-wanted-hint`} />
+        <span id={`${id}-wanted-hint`} class="app-limits-hint">No default · 1–12 hours · for example 4 · blank clears it</span>
+      </div> : null}
       {isReachProfile(p) ? (
         <div class="app-limits-field">
           <label for={`${id}-reach`}>Range to consider <span class="ui-mono">(nm, one way)</span></label>

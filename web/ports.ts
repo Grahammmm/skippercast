@@ -10,7 +10,9 @@
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import {forgetPreferenceHeader, HOME_PLACE_KEY, readPreferences, validPreferences, type HomePreferences} from '../packages/coast/src/coast3d/preferences.ts';
+import {signal} from '@preact/signals';
 import {isProfile, type Profile} from './profile.ts';
+import type {Origin} from './ranking.ts';
 import {STORAGE_KEYS, type StoreStorage} from './state.ts';
 
 /** Must equal HOME_PORT_KEY in dist/home-port.js: v1 reads the port v2 saved. */
@@ -24,7 +26,7 @@ export const FEATURED: readonly string[] = ['morro-bay', 'san-diego', 'monterey'
 /** The 75 nm rule: a position farther than this from every port matches none. */
 export const MAX_MATCH_NM = 75;
 /** Parameters a port choice replaces; everything else in the address (ui, utm) stays. */
-const AREA_KEYS = ['region', 'coast', 'view', 'focus', 'spot', 'habitat', 'place', 'target', 'area'] as const;
+const AREA_KEYS = ['region', 'port', 'coast', 'view', 'focus', 'spot', 'habitat', 'place', 'target', 'area'] as const;
 
 export interface Port {
   readonly id: string;
@@ -91,11 +93,15 @@ export function closestPort(ports: readonly Port[], latitude: number, longitude:
   return best && best.nm <= maxNm ? best.port : null;
 }
 
-/** The port the app shows for `region`: the saved one when it is in that region, else the first listed there. */
-export function currentPort(ports: readonly Port[], region: string | null, savedId: string | null): Port | null {
+/** The port a link's `?port=` names when it is listed in `region`; null for anything else (never throws). */
+export function linkedPort(ports: readonly Port[] | null, region: string | null, id: string | null): Port | null {
+  return id && region ? ports?.find(port => port.id === id && port.region === region) ?? null : null;
+}
+/** The port the app shows for `region`: the linked one, else the saved one when it is in that region, else the first listed there. */
+export function currentPort(ports: readonly Port[], region: string | null, savedId: string | null, linkedId: string | null = null): Port | null {
   if (!region) return null;
   const inRegion = ports.filter(port => port.region === region);
-  return inRegion.find(port => port.id === savedId) ?? inRegion[0] ?? null;
+  return linkedPort(ports, region, linkedId) ?? inRegion.find(port => port.id === savedId) ?? inRegion[0] ?? null;
 }
 
 /** The app with `params` replacing the area keys; unrelated parameters and exact #account intent stay. */
@@ -106,9 +112,9 @@ function appURL(href: string, params: Record<string, string | undefined>): strin
   for (const [key, value] of Object.entries(params)) if (value) url.searchParams.set(key, value);
   return url.href;
 }
-/** The app at `port`: /map?region=…(&profile=…). */
+/** The app at `port`: /map?region=…&port=…(&profile=…). */
 export const portURL = (href: string, port: Port, profile?: Profile | null): string =>
-  appURL(href, {region: port.region, profile: isProfile(profile) ? profile : undefined});
+  appURL(href, {region: port.region, port: port.id, profile: isProfile(profile) ? profile : undefined});
 /** "Explore the coast": the app over the central coast with no port. */
 export const exploreURL = (href: string): string => appURL(href, {coast: 'central'});
 
@@ -236,4 +242,31 @@ export function locatePort(ports: readonly Port[], geolocation: Geolocation | nu
   return new Promise(resolve => geolocation.getCurrentPosition(
     position => { const port = closestPort(ports, position.coords.latitude, position.coords.longitude); resolve(port ? {ok: true, port} : {ok: false, reason: 'none'}); },
     () => resolve({ok: false, reason: 'unavailable'}), GEO_OPTIONS));
+}
+
+// SCJ-2c: one distance origin. The brief measures from the port the trip planner measures from (web/planner.ts).
+/** The planner's port rule: the chosen port if listed, else the saved one if listed, else the first listed, else ''. */
+export function portChoice(list: readonly Pick<Port, 'id'>[], chosen: string | null, saved: string | null): string {
+  return list.some(p => p.id === chosen) ? chosen! : list.some(p => p.id === saved) ? saved! : list[0]?.id ?? '';
+}
+/** The planner's current port for its region; written only by web/planner.ts. */
+export const plannerPort = signal<{region: string; id: string} | null>(null);
+export type RegionPorts = {readonly region: string; readonly state: 'loading' | 'ready' | 'failed'; readonly list: readonly Port[]};
+/** The brief's copy of one region's listed ports. */
+export const regionPorts = signal<RegionPorts | null>(null);
+/** Load `region`'s ports once (a failed load may retry); a failure sets `failed`, never throws; a later load wins. */
+export async function loadRegionPorts(region: string, load: () => Promise<readonly Port[]> = loadPorts): Promise<void> {
+  const was = regionPorts.peek();
+  if (was && was.region === region && was.state !== 'failed') return;
+  const mine: RegionPorts = {region, state: 'loading', list: []};
+  regionPorts.value = mine;
+  let next: RegionPorts;
+  try { next = {region, state: 'ready', list: (await load()).filter(p => p.region === region)}; } catch { next = {region, state: 'failed', list: []}; }
+  if (regionPorts.peek() === mine) regionPorts.value = next;
+}
+/** Where the brief's distances run from: the planner's port rule over `state`'s list; null until it loads, or with no port. */
+export function homePortOrigin(region: string, state: RegionPorts | null, chosen: string | null, saved: string | null): Origin | null {
+  if (!state || state.region !== region || state.state !== 'ready') return null;
+  const id = portChoice(state.list, chosen, saved), port = state.list.find(p => p.id === id);
+  return port ? {latitude: port.match[0], longitude: port.match[1], name: port.name} : null;
 }

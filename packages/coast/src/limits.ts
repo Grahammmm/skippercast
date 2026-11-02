@@ -49,13 +49,21 @@ export const LIMIT_BOUNDS: Readonly<Record<BriefMode, Readonly<Record<LimitField
 
 const isSurge = (value: unknown): value is LimitSurge => typeof value === 'string' && (LIMIT_SURGE_BANDS as readonly string[]).includes(value);
 
+const limitNumber = (value: unknown): number => typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN;
+
+/** Whether the gust limit is below the wind limit (both readable), so gusts decide every window. Equal is fine. */
+export function gustBelowWind(limits: {wind: unknown; gust: unknown}): boolean {
+  const wind = limitNumber(limits.wind), gust = limitNumber(limits.gust);
+  return Number.isFinite(wind) && Number.isFinite(gust) && gust < wind;
+}
+
 /** Limits inside the bounds: a missing or unreadable value takes the default; numbers round to the step and clamp. */
 export function clampLimits(mode: BriefMode, raw: Partial<Record<string, unknown>> | null | undefined): ComfortLimits {
   const base = defaultLimits(mode), bounds = LIMIT_BOUNDS[mode];
   const out: ComfortLimits = {...base};
   for (const field of LIMIT_FIELDS) {
     const value = raw?.[field];
-    const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN;
+    const n = limitNumber(value);
     if (!Number.isFinite(n)) continue;
     const {min, max, step} = bounds[field];
     out[field] = Math.min(max, Math.max(min, Math.round(n / step) * step));

@@ -31,11 +31,12 @@ import {BriefFooter, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, cu
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {RunLine} from '../brief/Run.tsx';
+import {Guard} from '../ui/Guard.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
 import {MarkCard, currentMark} from './MarkCard.tsx';
-import {Brand, FreshnessDot, Location, ViewNav} from './Masthead.tsx';
+import {Brand, DegradedNotice, FreshnessDot, Location, ViewNav} from './Masthead.tsx';
 import {Conditions} from './views/Conditions.tsx';
 import {Fleet} from './views/Fleet.tsx';
 import {History} from './views/History.tsx';
@@ -86,22 +87,23 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
   const leadText = leadDayText(lead, now, tz);
   return (
     <div class="app-sheet-brief" onFocusIn={onFocus} data-basis={brief?.basis}>
-      {currentMark.value ? <MarkCard /> : (
+      {currentMark.value ? <Guard name="mark-card"><MarkCard /></Guard> : (
         <>
           <div class="app-sheet-head">
             {apart ? <span class="ui-eyebrow">{leadText.charAt(0).toUpperCase() + leadText.slice(1)}</span> : dockHead}
             <FreshnessDot />
           </div>
-          <Verdict now={now} />
+          <DegradedNotice />
+          <Guard name="verdict"><Verdict now={now} /></Guard>
           {apart ? dockHead : null}
         </>
       )}
-      <BriefTiles brief={brief} compact={detent !== 'full'} />
-      <WhereToLook ranking={ranking} />
-      <Details brief={brief} />
-      <LowerExposure brief={brief} />
-      <RunLine brief={brief} ranking={ranking} now={now} />
-      <TideSpark brief={brief} now={now} />
+      <Guard name="tiles"><BriefTiles brief={brief} compact={detent !== 'full'} /></Guard>
+      <Guard name="where-to-look"><WhereToLook ranking={ranking} /></Guard>
+      <Guard name="details"><Details brief={brief} /></Guard>
+      <Guard name="lower-exposure"><LowerExposure brief={brief} /></Guard>
+      <Guard name="run"><RunLine brief={brief} ranking={ranking} now={now} /></Guard>
+      <Guard name="tide"><TideSpark brief={brief} now={now} /></Guard>
       <div class="app-sheet-menus">
         <Segmented label="Day" options={dayOptions(now, tz, state.day)} value={state.day} onChange={d => selectDay(now, tz, d, state)} />
         <TargetSelect />
@@ -110,7 +112,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
           <PortControl />
         </div>
       </div>
-      <BriefLinks brief={brief} />
+      <Guard name="brief-links"><BriefLinks brief={brief} /></Guard>
       <BriefFooter><ReportsLink /><AccountMenu inline /></BriefFooter>
     </div>
   );
@@ -129,8 +131,8 @@ export function LayersPanel({onClose}: {onClose: () => void}) {
         <span class="ui-eyebrow">Layers</span>
         <Button size="sm" icon="close" onClick={onClose}>Done</Button>
       </div>
-      <LayerRail />
-      <Legend />
+      <Guard name="layer-rail"><LayerRail /></Guard>
+      <Guard name="legend"><Legend /></Guard>
     </div>
   );
 }
@@ -155,15 +157,15 @@ export function Mobile({now = new Date(), firstRun}: {now?: Date; firstRun?: Com
         </div>
         <ProfileSwitch class="app-profile" />
       </header>
-      {appView.value === 'reports' ? <main class="app-mobile-page">{firstRun}<Reports now={now} /></main> : <Sheet label={layersOpen ? 'Layers' : appView.value === 'conditions' ? 'Conditions' : appView.value === 'fleet' ? 'Fleet' : appView.value === 'history' ? 'History' : 'Brief'} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => apply(afterDetent(panel, next))}
-        class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<HourEdge now={now} />}
+      {appView.value === 'reports' ? <main class="app-mobile-page">{firstRun}<Guard name="reports"><Reports now={now} /></Guard></main> : <Sheet label={layersOpen ? 'Layers' : appView.value === 'conditions' ? 'Conditions' : appView.value === 'fleet' ? 'Fleet' : appView.value === 'history' ? 'History' : 'Brief'} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => apply(afterDetent(panel, next))}
+        class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<Guard name="time-dock"><HourEdge now={now} /></Guard>}
         onBodyFocus={event => {
           const target = event.target as Element | null;
           // Pointer focus must not move a pressed choice before its click is delivered.
           if (target?.closest('.app-firstrun') && target.matches(':focus-visible') && detent !== 'full') setDetent('full');
         }}>
         {showsFirstRun(panel) ? firstRun : null}
-        {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : appView.value === 'conditions' ? <Conditions now={now} /> : appView.value === 'fleet' ? <Fleet onShowMap={() => setDetent('peek')} /> : appView.value === 'history' ? <History now={now} /> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
+        {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : appView.value === 'conditions' ? <Guard name="conditions"><Conditions now={now} /></Guard> : appView.value === 'fleet' ? <Guard name="fleet"><Fleet onShowMap={() => setDetent('peek')} /></Guard> : appView.value === 'history' ? <Guard name="history"><History now={now} /></Guard> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
       </Sheet>}
       <ViewNav icons class="app-tabs" />
     </div>
