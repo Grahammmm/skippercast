@@ -1,4 +1,5 @@
 """Forecast tiles: a field the index offers at no step fails that model by name; partial gaps are logged."""
+import base64
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -105,6 +106,106 @@ class FieldCoverageTests(unittest.TestCase):
         row = index['models'][model.id]
         self.assertEqual((row['status'], row['kept_previous']), ('failed', False))
         self.assertIn("fake_model b: not offered at any step (index selector ('B', 'surface'))", row['issue'])
+
+
+@contextmanager
+def serving(grids):
+    """grids: {name: [2x2 grid per step]}; every field is offered at every step. No network."""
+    with mock.patch.object(build, 'plan_step', lambda m, c, step, wanted: [(n, (step, n), None) for n, _ in wanted]), \
+            mock.patch.object(build, 'download_all', lambda plan, workers: {n: url for n, url, _ in plan}), \
+            mock.patch.object(build, 'decode', lambda blob: (np.array(grids[blob[1]][blob[0]], float), LATS, LONS)), \
+            mock.patch.object(build, 'subset', lambda grid, lats, lons: (grid, lats, lons)):
+        yield
+
+
+def ranged_model(fields, steps=(0, 1, 2, 3)):
+    return Model(id='fake_model', name='Fake', provider='Test', kind='wave', family='gfs', cycles=(0, 12),
+                 steps=steps, fields=fields, resolution_km=1, documentation='https://example.invalid')
+
+
+def bounded(model_id, name, cube):
+    logs = []
+    return build.bound(build.MODELS[model_id], name, np.array(cube, float), logs.append), logs
+
+
+class RangeTests(unittest.TestCase):
+    def fetch(self, fields, grids):
+        logs = []
+        with serving(grids):
+            _, _, _, cubes, _ = build.fetch_model(ranged_model(fields), CYCLE, workers=4, log=logs.append)
+        return cubes, [line for line in logs if 'downloaded and decoded' not in line]
+
+    def test_sentinel_without_bitmap_becomes_missing_and_is_counted_in_the_build_log(self):
+        grid = [[1.5, 9999.0], [2.0, 0.5]]
+        cubes, logs = self.fetch((Field('swell_wave_height', ('SWELL', '1 in sequence'), 0.01),),
+                                 {'swell_wave_height': [grid] * 4})
+        self.assertEqual(logs, ['fake_model swell_wave_height: 4 values out of range set missing'])
+        self.assertTrue(np.isnan(cubes['swell_wave_height'][:, 0, 1]).all())
+        self.assertEqual(cubes['swell_wave_height'][0].ravel()[[0, 2, 3]].tolist(), [1.5, 2.0, 0.5])
+        q = np.frombuffer(base64.b64decode(build.quantize(cubes['swell_wave_height'], 0.01)), '<i2').reshape(4, 2, 2)
+        self.assertEqual(q[:, 0, 1].tolist(), [build.MISSING] * 4)
+        self.assertEqual(q[0, 0, 0], 150)
+
+    def test_one_sentinel_cell_logs_one(self):
+        cube, logs = bounded('ncep_gfswave016', 'swell_wave_height', [[[1.0, 9999.0]]])
+        self.assertTrue(np.isnan(cube[0, 0, 1]))
+        self.assertEqual(logs, ['ncep_gfswave016 swell_wave_height: 1 values out of range set missing'])
+
+    def test_boundary_values_are_kept(self):
+        for name, edges in (('wave_height', [0, 30]), ('wave_direction', [0, 360]), ('wave_period', [0, 40])):
+            cube, logs = bounded('ncep_gfswave016', name, edges)
+            self.assertEqual((cube.tolist(), logs), (edges, []), name)
+        cube, logs = bounded('gfs_global', 'cloud_cover', [0, 100])
+        self.assertEqual((cube.tolist(), logs), ([0, 100], []))
+        gfs = build.MODELS['gfs_global']
+        celsius = build.convert(gfs, 't2m', np.array([183.15, 333.15]), [0, 3600])
+        self.assertEqual(np.round(build.bound(gfs, 't2m', celsius, self.fail), 6).tolist(), [-90.0, 60.0])
+
+    def test_just_outside_the_bounds_is_dropped(self):
+        cube, logs = bounded('ncep_gfswave016', 'wave_direction', [-0.1, 360.1, 180])
+        self.assertTrue(np.isnan(cube[:2]).all())
+        self.assertEqual(logs, ['ncep_gfswave016 wave_direction: 2 values out of range set missing'])
+
+    def test_t2m_sentinel_kelvin_is_missing_after_conversion(self):
+        gfs, logs = build.MODELS['gfs_global'], []
+        celsius = build.convert(gfs, 't2m', np.array([9999.0, 288.15]), [0, 3600])
+        cube = build.bound(gfs, 't2m', celsius, logs.append)
+        self.assertTrue(np.isnan(cube[0]))
+        self.assertAlmostEqual(cube[1], 15.0)
+        self.assertEqual(logs, ['gfs_global t2m: 1 values out of range set missing'])
+
+    def test_accumulated_sentinel_never_becomes_a_huge_rate(self):
+        steps = [[[0.0, 0.0], [0.0, 0.0]], [[0.002, 0.0], [0.0, 0.0]], [[9999.0, 0.0], [0.0, 0.0]],
+                 [[0.005, 0.0], [0.0, 0.0]]]
+        cubes, logs = self.fetch((Field('precipitation', ('tp',), 0.01, 'accumulated_m'),), {'precipitation': steps})
+        rate = cubes['precipitation'][:, 0, 0]
+        self.assertAlmostEqual(rate[1], 2.0)
+        self.assertTrue(np.isnan(rate[2:]).all())
+        self.assertLess(np.nanmax(cubes['precipitation']), 500)
+        self.assertEqual(cubes['precipitation'][:, 1, 1].tolist(), [0.0] * 4)
+        self.assertEqual(logs, ['fake_model precipitation: 1 values out of range set missing'])
+
+    def test_negative_gust_and_period_dropped_negative_wind_component_kept(self):
+        for model_id, name in (('gfs_global', 'gust'), ('ncep_gfswave016', 'wave_period')):
+            cube, logs = bounded(model_id, name, [-1.0, 5.0])
+            self.assertTrue(np.isnan(cube[0]), name)
+            self.assertEqual(logs, [f'{model_id} {name}: 1 values out of range set missing'])
+        cube, logs = bounded('gfs_global', 'u10', [-20.0, 101.0])
+        self.assertEqual(cube[0], -20.0)
+        self.assertTrue(np.isnan(cube[1]))
+
+    def test_nan_cells_are_not_counted_and_in_range_logs_nothing(self):
+        cube, logs = bounded('ncep_gfswave016', 'wave_height', [np.nan, 2.0, np.nan])
+        self.assertEqual((np.isnan(cube).tolist(), logs), ([True, False, True], []))
+        cube, logs = bounded('ncep_gfswave016', 'wave_height', [np.nan, 99.0])
+        self.assertEqual(logs, ['ncep_gfswave016 wave_height: 1 values out of range set missing'])
+        cubes, logs = self.fetch((Field('wave_height', ('HTSGW', 'surface'), 0.01),),
+                                 {'wave_height': [[[np.nan, 1.0], [2.0, 3.0]]] * 4})
+        self.assertEqual(logs, [])
+
+    def test_every_model_field_has_a_range(self):
+        missing = [(m.id, f.name) for m in build.MODELS.values() for f in m.fields if f.name not in build.RANGES]
+        self.assertEqual(missing, [])
 
 
 if __name__ == '__main__':
