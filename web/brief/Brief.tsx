@@ -396,6 +396,9 @@ export function BriefLinks({brief}: {brief: BriefModel | null}) {
 
 export const DISCLAIMER = 'Forecasts, observations and habitat carry separate clocks; check the rules before you fish.';
 
-/** The one disclaimer line per page with the sources link; `children` adds links after it. */
+/** The C1 short form of docs/legal/disclaimers.md (item 3, the persistent footer line). */
+export const PLANNING_AID = 'Planning aid · not a navigation chart.';
+
+/** The one disclaimer line per page with the planning-aid line, Terms and Sources links; `children` adds links after them. */
 export const BriefFooter = ({children}: {children?: ComponentChildren} = {}) =>
-  <footer class="app-brief-footer">{DISCLAIMER} <a href="/sources">Sources</a>{children}</footer>;
+  <footer class="app-brief-footer">{DISCLAIMER} {PLANNING_AID} <a href="/terms.html">Terms</a> · <a href="/sources">Sources</a>{children}</footer>;
