@@ -1,6 +1,6 @@
 import { getRegion, assetURL, acceptsFeed } from "./region.js";
 import { fetchJSON } from "./forecast.js";
-import { closureHits, pointGeometry } from "./geo-screen.js";
+import { closureHits, pointGeometry, pointInGeometry } from "./geo-screen.js";
 import { esc } from "./marine-charts.js";
 import {revisionCache} from './map-response.js';
 import {loadDailyPart} from './daily-feed.js';
@@ -56,8 +56,12 @@ export async function initProtectedAreas(map, onChange) {
       const shapes=p.geometry||p.geometries?.length?[p.geometry,...(p.geometries||[])]:[pointGeometry(p.longitude,p.latitude)];
       const near=closureHits(shapes,[...(data?.features||[]),...(extra?.features||[])]), within=new Set(closureHits(shapes,near,0));
       const matches=[...near.filter(f=>within.has(f)),...near.filter(f=>!within.has(f))];
+      // `inside`: the place's own point lies in the closure (boundary inclusive); without a point, its geometry touches it.
+      // A margin-only or reef-area hit is not `inside`, so no output claims the spot is inside a boundary.
+      const point=Number.isFinite(p.longitude)&&Number.isFinite(p.latitude)?[p.longitude,p.latitude]:null;
+      const inside=f=>within.has(f)&&(!point||pointInGeometry(point,f.geometry));
       return {status:matches.length?'excluded':freshEnough()?'clear':'unavailable',fresh:freshEnough(),names:matches.map(f=>f.properties.FULLNAME||f.properties.NAME),
-        matches:matches.map(({properties:p})=>({name:p.FULLNAME||p.NAME,url:p.Type==='GEA'?'https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas':sourceFor(p.NAME),agency:p.Type==='GEA'?'NOAA':'CDFW'}))};
+        matches:matches.map(f=>{const p=f.properties;return {name:p.FULLNAME||p.NAME,url:p.Type==='GEA'?'https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas':sourceFor(p.NAME),agency:p.Type==='GEA'?'NOAA':'CDFW',inside:inside(f)};})};
     },
     snapshot:()=>freshEnough()?{revision:`${checked}|${extraChecked}|true`,geometries:[...data.features,...(extra?.features||[])].map(f=>f.geometry)}:null,
     pointAllowed:p=>freshEnough() && !closureHits([pointGeometry(p.longitude,p.latitude)],[...data.features,...(extra?.features||[])]).length,

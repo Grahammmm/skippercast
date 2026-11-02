@@ -14,7 +14,7 @@ import {insideAreas} from '../web/map/shore.ts';
 import {atlasPicks, habitatPicks} from '../web/ranking.ts';
 import {rankedHabitat} from '../packages/coast/src/coast3d/regional.ts';
 import {initProtectedAreas} from '../dist/protected-areas.js';
-import {buildExport, protectedPlanHits} from '../dist/trip-export.js';
+import {buildExport, protectedPlanHits, protectedPlanNotes, protectedHitReading} from '../dist/trip-export.js';
 import {getRegion} from '../dist/region.js';
 
 const read = p => JSON.parse(readFileSync(new URL(`../dist/${p}`, import.meta.url), 'utf8'));
@@ -32,6 +32,8 @@ const target = {...ATLAS.targets[0], id: 'STRADDLE-1', latitude: corner[1], long
 const atlas = {...ATLAS, targets: [target], areas: [{id: 'STRADDLE-AREA', geometry: square, extent_note: 'fixture'}], drifts: []};
 const DATA = {region: {...read('regions/morro-bay/region.json'), id: 'morro-bay'}, atlas, survey: null, geology: null};
 const WATER = () => ({state: 'water'});
+// A point `m` metres due east or west of the vertex, on the side outside the reserve.
+const east = m => { for (const s of [1, -1]) { const p = [v[0] + s * m * mLon, v[1]]; if (!pointInGeometry(p, mpa.geometry) && !pointInGeometry([v[0] + s * 1 * mLon, v[1]], mpa.geometry)) return p; } };
 async function v1Screen() {
   const saved = {fetch: globalThis.fetch, document: globalThis.document};
   globalThis.fetch = async () => ({ok: true, json: async () => ({...mpas, checked_at: new Date().toISOString()})});
@@ -69,6 +71,20 @@ test('planner boundary context covers the selected spot\'s reef area, not only i
   const hits = protectedPlanHits(await v1Screen(), [target], atlas.areas);
   assert.equal(hits.length, 1);
   assert.ok(hits[0].matches.some(m => m.name === 'Point Buchon State Marine Reserve'));
+  // Its waypoint is outside the reserve: the planner must not say the spot is inside it.
+  assert.equal(hits[0].inside, false);
+  assert.match(protectedHitReading(hits[0]), /^This spot or its reef area is inside or within 70 m of a protected-area boundary/);
+});
+test('a margin-only hit is reported as within 70 m, never as inside the boundary', async () => {
+  const p50 = east(50), screen = await v1Screen();
+  assert.ok(p50 && !pointInGeometry(p50, mpa.geometry), 'a point 50 m outside the reserve');
+  const t = {...ATLAS.targets[0], id: 'MARGIN-1', latitude: p50[1], longitude: p50[0], area_ids: [], canonical_habitat: false};
+  const html = protectedPlanNotes({atlas: {...ATLAS, targets: [t], areas: [], drifts: []}, screen, ids: ['MARGIN-1'], region: getRegion(), allowResearch: true}, {name: 'Margin', date: '2026-11-01'});
+  assert.match(html, /Point Buchon State Marine Reserve/);
+  assert.match(html, /Inside or within 70 m of a protected-area boundary; excluded/);
+  assert.doesNotMatch(html, /Inside a protected-area boundary/);
+  // Only a point contained in every named boundary is said to be inside.
+  assert.match(protectedHitReading({inside: true, reef: true}), /^Inside a protected-area boundary; excluded/);
 });
 test('GPX / share / offline notes refuse it even in the default waypoints-only export', async () => {
   const screen = await v1Screen();
@@ -79,7 +95,6 @@ test('GPX / share / offline notes refuse it even in the default waypoints-only e
 test('a 70 m planning margin applies in metres, not degrees (CRS check)', async () => {
   // 65 m due east is inside a 70 m margin; a degree-space margin (70 m as degrees of latitude, 0.00063°) would
   // wrongly pass it, since 65 m of longitude at 35.2°N is 0.00071°.
-  const east = m => { for (const s of [1, -1]) { const p = [v[0] + s * m * mLon, v[1]]; if (!pointInGeometry(p, mpa.geometry) && !pointInGeometry([v[0] + s * 1 * mLon, v[1]], mpa.geometry)) return p; } };
   const p65 = east(65);
   assert.ok(p65, 'an outside point due east or west of the vertex');
   assert.ok(withheld({latitude: p65[1], longitude: p65[0]}, SCREEN), 'map gate holds a point 65 m outside');

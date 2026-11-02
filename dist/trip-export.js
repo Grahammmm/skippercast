@@ -1,6 +1,7 @@
 // Shared export contract. Rendering and hardware instructions do not decide what is safe to serialize.
 import {tripFeatures, featuresGPX, geometryTrack, xml, exportEvidenceLabel} from './gpx.js';
 import {formatCoordinates} from './coordinates.js';
+import {PLANNING_MARGIN_M} from './geo-screen.js';
 
 export const DEFAULT_LAYERS={waypoints:true,outlines:false,alignments:false,exclusions:false};
 // Research coordinates require deliberate consent for this export session.
@@ -121,9 +122,12 @@ export function protectedPlanHits(screen,targets,areas=[]) {
     const reef=(t.area_ids||[]).flatMap(id=>areas.filter(a=>a.id===id).map(a=>a.geometry));
     const inspection=screen.inspect?.(reef.length?{...t,geometries:[{type:'Point',coordinates:[t.longitude,t.latitude]},...reef]}:t);
     return inspection?.fresh && inspection.status==='excluded' && inspection.matches?.length
-      ? [{id:t.id,label:t.label,matches:inspection.matches}]:[];
+      ? [{id:t.id,label:t.label,inside:inspection.matches.every(m=>m.inside===true),reef:reef.length>0,matches:inspection.matches}]:[];
   });
 }
+// The planner and the boundary-context report say 'Inside' only when the spot's point lies in every named boundary.
+export const protectedHitReading=h=>`${h.inside?'Inside a protected-area boundary':
+  `${h.reef?'This spot or its reef area is inside':'Inside'} or within ${PLANNING_MARGIN_M} m of a protected-area boundary`}; excluded as a fishing target by SkipperCast.`;
 export function protectedPlanNotes(request,draft) {
   try { buildExport(request); return null; }
   catch(error) {
@@ -136,7 +140,7 @@ export function protectedPlanNotes(request,draft) {
     const hits=protectedPlanHits(request.screen,targets);
     if(!hits.length || targets.some(t=>!request.screen.pointAllowed(t)&&!hits.some(h=>h.id===t.id)))throw error;
     const checked=request.screen.exportExclusions?.()?.checked_at;
-    return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${xml(draft.name)} · Boundary context</title><h1>${xml(draft.name)}</h1><p>Planned date ${xml(draft.date)}. Boundary source check ${xml(checked||'current session')}.</p><p>GPX withheld. This report contains boundary context only, not fishing waypoints or a legal clearance. Other selected items are omitted from this report. Boundaries are context; current rules are on the agency page. Recheck before departure; this file does not update offline.</p>${hits.map(h=>`<article><h2>${xml(h.id)} · ${xml(h.label)}</h2><p>Inside a protected-area boundary; excluded as a fishing target by SkipperCast.</p><ul>${h.matches.map(m=>`<li>${xml(m.name)} · <a href="${safeLink(m.url)}">${xml(m.agency)} boundary and rules</a></li>`).join('')}</ul></article>`).join('')}</html>`;
+    return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${xml(draft.name)} · Boundary context</title><h1>${xml(draft.name)}</h1><p>Planned date ${xml(draft.date)}. Boundary source check ${xml(checked||'current session')}.</p><p>GPX withheld. This report contains boundary context only, not fishing waypoints or a legal clearance. Other selected items are omitted from this report. Boundaries are context; current rules are on the agency page. Recheck before departure; this file does not update offline.</p>${hits.map(h=>`<article><h2>${xml(h.id)} · ${xml(h.label)}</h2><p>${xml(protectedHitReading(h))}</p><ul>${h.matches.map(m=>`<li>${xml(m.name)} · <a href="${safeLink(m.url)}">${xml(m.agency)} boundary and rules</a></li>`).join('')}</ul></article>`).join('')}</html>`;
   }
 }
 export function offlineNotes(result,region,draft,coordinateFormat='dd') {
