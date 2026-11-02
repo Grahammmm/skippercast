@@ -17,6 +17,8 @@ const KINDS: readonly string[] = ['axe', 'focus', 'target'];
 const MIN = 24, MAX_STOPS = 40;
 /** A heading each view shows once rendered (also in its 503 forecast state); a view not listed waits for any h1/h2. */
 const HEADINGS: Record<string, string> = {coast: 'Where to look', conditions: 'Conditions', history: 'Recorded history', fleet: 'Fleet', reports: 'Reports'};
+/** Views whose heading text is the selected target (PlanView.tsx), so they wait for the heading's id instead. */
+const HEADING_IDS: Record<string, string> = {plan: '#app-plan-title'};
 
 /** Problems with the known list itself: every field present, a known kind, and `ref` an open PR or issue as `#<n>`. */
 export function knownProblems(list: unknown): string[] {
@@ -103,7 +105,7 @@ for (const view of APP_VIEWS) {
     void pageErrors;
     await v2.open('app', {view, region: 'morro-bay'});
     const heading = HEADINGS[view];
-    await expect(heading ? page.getByRole('heading', {name: heading, exact: true}) : page.locator('h1, h2').first()).toBeVisible();
+    await expect(heading ? page.getByRole('heading', {name: heading, exact: true}) : page.locator(HEADING_IDS[view] ?? 'h1, h2').first()).toBeVisible();
     const axe = await new AxeBuilder({page}).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).exclude('canvas').analyze();
     const found: Finding[] = axe.violations.flatMap(v => v.nodes.map(n => ({kind: 'axe' as const, rule: v.id, selector: n.target.join(' ')})));
     found.push(...await smallTargets(page), ...await focusWalk(page));

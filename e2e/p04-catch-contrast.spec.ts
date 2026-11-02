@@ -188,7 +188,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // optional Plan fields and the plans' reviewedAt date; Masthead.tsx adds a Plan label and icon but lists the same
   // five masthead views, so the Reports masthead is unchanged. contrast(), assertions and thresholds are untouched.
   // All three rebound. Merged with main's SC2222-07 appCss surface hash: rebound to the merged file.
-  "scripts/check_contrast.mjs": "7ce26d19777ba3c048577fbdb4679580f5a0c0b7c48077af890114d260402210",
+  // BF-wcag: check_contrast.mjs changes only the panelCss/appCss surface hashes and their comments; rebound.
+  "scripts/check_contrast.mjs": "e0e489214bf94e3a7e47ba7f38f5520de139c2c2f3d08b4b61b95c16925d7ed6",
   "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
   "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
