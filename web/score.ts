@@ -17,6 +17,8 @@
 // Erasable TypeScript only: legacy dist/*.js modules and Node tests import it.
 
 export type ControlMode = 'bottom' | 'water-column' | 'boat-comfort';
+// Existing model-gap tolerances, in kn and ft; independent of the comfort score.
+export const MODEL_GAP = Object.freeze({wind: 4, sea: 1});
 export type Verdict = 'go' | 'marginal' | 'no-go' | 'unknown';
 
 /** Multipliers on the tuned thresholds for a boat (boat-handling.js boatFactors). */
