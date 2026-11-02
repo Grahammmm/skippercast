@@ -86,6 +86,28 @@ for (const [name, path, detail] of [['snapshot', SNAPSHOT, 'snapshot'], ['region
   });
 }
 
+for (const [name, path, detail] of [['snapshot', SNAPSHOT, 'snapshot'], ['region package', PACKAGE, 'region']]) {
+  test(`an HTTP-OK ${name} with a truncated body shows Try again; pressing it reads the file again and draws the boundaries`, async t => {
+    t.mock.method(console, 'warn', () => {});
+    // A real Response: the Chart's shared fetch clones it, so a kept copy would replay the same broken body.
+    const truncated = new Response('{"type": "FeatureCollection", "feat', {status: 200, headers: {'content-type': 'application/json'}});
+    const {m, chart, reads, row, retry} = await openChart('morro-bay', {hold: {[path]: truncated}});
+    try {
+      await settle();
+      assert.equal(m.mpaState.value.status, 'unavailable');
+      assert.equal(m.mpaState.value.detail, m.TRANSIENT_DETAILS[detail]);
+      assert.match(row(), TRY);
+      const before = reads(path);
+      retry().props.onClick();
+      await settle();
+      assert.equal(reads(path), before + 1, 'the retry asked the network again, not the kept broken body');
+      assert.equal(m.mpaState.value.status, 'complete');
+      assert.ok(!m.unavailable.value.includes('mpas'));
+      assert.doesNotMatch(row(), TRY);
+    } finally { chart.destroy(); }
+  });
+}
+
 test('a region that names no boundary snapshot gets no Try again', async t => {
   t.mock.method(console, 'warn', () => {});
   const config = JSON.parse(readFileSync(new URL(`../dist${PACKAGE}`, import.meta.url), 'utf8'));
