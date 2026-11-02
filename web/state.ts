@@ -62,6 +62,7 @@ export const STORAGE_KEYS = {
   limits: 'skippercast-limits-v1',
   /** Your cruise speed for the Boat brief's run times (web/limits.ts); device only, never sent, no default. */
   cruise: 'skippercast-cruise-v1',
+  wanted: 'skippercast-fishhours-v1',
   /** The range to consider per profile, one way from the harbor (web/reach.ts, #644); device only, never sent, no default. */
   reach: 'skippercast-reach-v1',
   /** Spear's own deepest dive, where they dive from and the swim limit (web/reach.ts, #644); device only. */
