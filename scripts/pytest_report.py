@@ -14,7 +14,6 @@ from datetime import datetime
 from pathlib import Path
 import argparse
 import json
-import math
 import sys
 import xml.etree.ElementTree as ET
 
@@ -55,25 +54,17 @@ def layer(classname):
     return next((name for prefix, name in LAYERS if classname.startswith(prefix)), 'other')
 
 
-class Unreadable(Exception):
-    """An input file that cannot be read; main prints `pytest_report: <path>: <reason>` and exits 2."""
-
-
 def _time(value):
     try:
         number = float(value)
     except (TypeError, ValueError):
         return None
-    return number if math.isfinite(number) and number >= 0 else None
+    return number if 0 <= number < float('inf') else None
 
 
 def cases(paths):
     for path in paths:
-        try:
-            root = ET.parse(path).getroot()
-        except (OSError, ET.ParseError):
-            raise Unreadable(f'{path}: unreadable JUnit XML') from None
-        for case in root.iter('testcase'):
+        for case in ET.parse(path).getroot().iter('testcase'):
             outcome = 'passed'
             reason = None
             for child in case:
@@ -201,11 +192,13 @@ def main(argv=None):
         return 0 if ok else 1
     if not args.junit:
         parser.error('provide JUnit paths or --ci-runs')
-    try:
-        rows = list(cases(args.junit))
-    except Unreadable as error:
-        print(f'pytest_report: {error}', file=sys.stderr)
-        return 2
+    rows = []
+    for path in args.junit:
+        try:
+            rows += cases([path])
+        except (OSError, ET.ParseError):
+            print(f'pytest_report: {path}: unreadable JUnit XML', file=sys.stderr)
+            return 2
     sys.stdout.write(report(rows, args.title))
     if args.strict_skips:
         bad = unexpected_skips(rows)
