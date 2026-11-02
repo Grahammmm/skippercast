@@ -118,24 +118,29 @@ def _discovery(path):
 
 
 def _previous(path):
+    return _previous_bytes(path)[:2]
+
+
+def _previous_bytes(path):  # (previous, reason, raw): raw is the one read that was parsed and checked
     if not path:
-        return None, None
+        return None, None, None
     try:  # every filesystem touch is inside the handler: a stat/open error is 'unreadable', not a crash
-        previous = json.loads(path.read_text(encoding='utf-8'))
+        raw = path.read_bytes()
+        previous = json.loads(raw.decode('utf-8'))
         value = previous.get('last_complete_scan_at')
     except FileNotFoundError:  # no previous inventory yet: a plain first audit
-        return None, None
+        return None, None, None
     except (OSError, ValueError, AttributeError):  # not readable JSON, or not an object
-        return None, 'unreadable'
+        return None, 'unreadable', None
     try:
         offset = datetime.fromisoformat(value).utcoffset()
     except (TypeError, ValueError):
-        return None, 'no scan time' if value is None else 'bad scan time'
+        return None, 'no scan time' if value is None else 'bad scan time', None
     if offset is None:
-        return None, 'scan time has no UTC offset'
+        return None, 'scan time has no UTC offset', None
     if not isinstance(rows := previous.get('surveys'), list) or not all(isinstance(r, dict) and isinstance(r.get('id'), str) for r in rows):
-        return None, 'no survey list'
-    return previous, None
+        return None, 'no survey list', None
+    return previous, None, raw
 
 
 def main(argv=None):
@@ -150,7 +155,9 @@ def main(argv=None):
     if reason:
         print(f'audit refused: {reason}', file=sys.stderr)
         return 1
-    previous, reason = _previous(args.previous)
+    previous, reason, raw = _previous_bytes(args.previous)
+    if previous and datetime.fromisoformat(previous['last_complete_scan_at']) > now:
+        reason = 'scan time is in the future'  # same wording as discovery; rows still go to the re-audit
     if reason:
         print(f'previous inventory ignored: {reason}', file=sys.stderr)
     ids = {lead['id'] for sector in discovery['sectors'] for lead in sector['surveys']}
@@ -158,7 +165,9 @@ def main(argv=None):
         age = now - datetime.fromisoformat(previous['last_complete_scan_at'])
         if timedelta(0) <= age < timedelta(days=args.max_age_days) and ids == {row['id'] for row in previous['surveys']}:
             args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_bytes(args.previous.read_bytes())
+            temporary = args.output.with_suffix(args.output.suffix + '.tmp')
+            temporary.write_bytes(raw)
+            temporary.replace(args.output)
             print('Retained complete NOAA product inventory from ' + previous['last_complete_scan_at'])
             return
     result = audit(discovery, previous, now=now)

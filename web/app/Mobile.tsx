@@ -41,6 +41,7 @@ import {Conditions} from './views/Conditions.tsx';
 import {Fleet} from './views/Fleet.tsx';
 import {History} from './views/History.tsx';
 import {Reports} from './views/Reports.tsx';
+import {PlanView} from './PlanView.tsx';
 import {appView, setParams, withParams, type AppView} from '../state.ts';
 import {waypointPlacement} from '../waypoint-placement.ts';
 import {dayOptions, dockState, hourText, localParts, readout, selectDay, selectHour} from './TimeDock.tsx';
@@ -157,7 +158,7 @@ export function Mobile({now = new Date(), firstRun}: {now?: Date; firstRun?: Com
         </div>
         <ProfileSwitch class="app-profile" />
       </header>
-      {appView.value === 'reports' ? <main class="app-mobile-page">{firstRun}<Guard name="reports"><Reports now={now} /></Guard></main> : <Sheet label={layersOpen ? 'Layers' : appView.value === 'conditions' ? 'Conditions' : appView.value === 'fleet' ? 'Fleet' : appView.value === 'history' ? 'History' : 'Brief'} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => apply(afterDetent(panel, next))}
+      {appView.value === 'reports' || appView.value === 'plan' ? <main class="app-mobile-page">{firstRun}{appView.value === 'plan' ? <Guard name="plan"><TargetSelect /><PlanView now={now} /></Guard> : <Guard name="reports"><Reports now={now} /></Guard>}</main> : <Sheet label={layersOpen ? 'Layers' : appView.value === 'conditions' ? 'Conditions' : appView.value === 'fleet' ? 'Fleet' : appView.value === 'history' ? 'History' : 'Brief'} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => apply(afterDetent(panel, next))}
         class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<Guard name="time-dock"><HourEdge now={now} /></Guard>}
         onBodyFocus={event => {
           const target = event.target as Element | null;

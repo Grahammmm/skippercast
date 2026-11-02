@@ -81,7 +81,20 @@ def load_commits(path):
         if not (isinstance(inner, dict) and isinstance(entry.get('sha'), str)
                 and isinstance(inner.get('author'), dict) and isinstance(inner.get('message'), str)):
             raise InputError(f'entry {number} is not a commit object')
+        user = entry.get('author')
+        if not (all(_text(inner['author'].get(key)) for key in ('name', 'email'))
+                and (user is None or isinstance(user, dict) and _text(user.get('login')))):
+            raise InputError(f'entry {number} is not a commit object')
     return commits
+
+
+def _text(value):
+    return value is None or isinstance(value, str)
+
+
+def annotation_text(s):
+    """``s`` escaped as workflow-command data, so it cannot end the line or start a new command."""
+    return s.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
 
 
 def main(argv):
@@ -94,12 +107,12 @@ def main(argv):
     try:
         commits = load_commits(args[0])
     except InputError as exc:
-        print(f'::error::{exc}', file=sys.stderr)
+        print(f'::error::{annotation_text(str(exc))}', file=sys.stderr)
         return 2
     missing = offenders(commits, fork)
     if missing:
         for sha, author in missing:
-            print(f'::error::Commit {sha} by {author} has no matching "Signed-off-by:" line. '
+            print(f'::error::Commit {sha} by {annotation_text(author)} has no matching "Signed-off-by:" line. '
                   'Add one with `git commit -s` (see CONTRIBUTING.md, "Developer Certificate of Origin").')
         return 1
     print(f'DCO check passed for {len(commits)} commit(s).')

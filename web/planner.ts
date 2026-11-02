@@ -38,7 +38,7 @@ export type Target = {
   neighborhood_depth_ft?: number[]; center_depth_ft?: number | null; terrain_interpretation?: string; species_fit?: Record<string, number>;
 };
 export type Area = {id: string};
-export type ProtectedHit = {id: string; label: string; matches: {name: string; url: string; agency: string}[]};
+export type ProtectedHit = {id: string; label: string; inside: boolean; reef: boolean; matches: {name: string; url: string; agency: string; inside: boolean}[]};
 export type Publication = {export_sha256?: string} & Record<string, unknown>;
 export type Atlas = {targets: Target[]; areas: Area[]; drifts?: unknown[]; publication?: Publication; source_validation_date?: string};
 export type Reefs = {targets: Target[]; areas: Area[]; publication: Publication & {export_sha256: string}; source_validation_date?: string};
@@ -185,7 +185,7 @@ export function createPlanner(deps: PlannerDeps) {
   });
   const protectedHits = computed<ProtectedHit[]>(() => {
     void tick.value;
-    return protectedPlanHits(screen, selected()) as ProtectedHit[];
+    return protectedPlanHits(screen, selected(), tripAtlas.value.areas) as ProtectedHit[];
   });
   const notesReady = computed(() => {
     if (summary.value.ok) return true;
