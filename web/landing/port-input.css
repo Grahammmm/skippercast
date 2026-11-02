@@ -64,6 +64,16 @@
   flex: 1 1 0; flex-direction: column; gap: 0; min-width: var(--touch-min); min-height: var(--touch-min); padding: var(--space-1); justify-content: center; text-align: center;
 }
 
+/* BF-deep-links: Share beside the port. The status is announced and shows briefly; the
+   copy field opens under the button when the clipboard is unavailable. */
+.app-share { position: relative; display: inline-flex; align-items: center; }
+.app-share-status:empty { display: none; }
+.app-share-status { margin-left: var(--space-1); color: var(--muted); font-size: var(--text-13); white-space: nowrap; }
+.app-share-popover { position: absolute; top: 100%; left: 0; z-index: 5; }
+.app-share-popover input {
+  width: min(320px, 80vw); min-height: var(--touch-min); padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-md);
+  background: var(--panel-2); color: var(--text); font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans);
+}
 /* Measured model gaps beside the verdict. */
 .app-verdict-models { margin: var(--space-2) 0; color: var(--text); font-size: var(--text-13); }
 .app-verdict-models-detail { color: var(--muted); font-size: var(--text-13); }
