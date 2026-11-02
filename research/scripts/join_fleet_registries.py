@@ -52,6 +52,7 @@ from pathlib import Path
 import re
 import sqlite3
 import sys
+import tempfile
 from typing import Iterable, Iterator, Mapping
 import zipfile
 
@@ -732,9 +733,11 @@ def _inside_repository(path: Path) -> bool:
 
 
 def _write_private(path: Path, text: str) -> None:
-    tmp = path.with_name(path.name + ".tmp")
+    # mkstemp creates a new file exclusively (O_EXCL, mode 0600), so a stale or planted temporary file of
+    # any mode, or a symlink, is never reused and never decides the output's mode.
+    fd, name = tempfile.mkstemp(dir=path.parent, prefix=path.name + ".", suffix=".tmp")
+    tmp = Path(name)
     try:
-        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             print(text, end="", file=fh, flush=True)
             os.fsync(fh.fileno())

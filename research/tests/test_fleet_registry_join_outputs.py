@@ -94,6 +94,39 @@ class OutputTests(unittest.TestCase):
         self.assertEqual(mode(out), 0o755)
         self.assert_private(out)
 
+    def loose_out(self) -> Path:
+        out = self.tmp / "loose"
+        out.mkdir()
+        out.chmod(0o755)
+        return out
+
+    def test_stale_0644_tmp_is_never_reused_and_outputs_stay_0600(self):
+        out = self.loose_out()
+        for name in ("join.json.tmp", "join.md.tmp"):
+            (out / name).write_text("stale")
+            (out / name).chmod(0o644)
+        code, _, _ = self.run_main(out)
+        self.assertEqual(code, 0)
+        for name in ("join.json", "join.md"):
+            self.assertEqual(mode(out / name), 0o600, name)
+            self.assertNotEqual((out / name).read_text(), "stale")
+            self.assertEqual(((out / f"{name}.tmp").read_text(), mode(out / f"{name}.tmp")), ("stale", 0o644))
+        self.assertEqual(sorted(p.name for p in out.iterdir()), ["join.json", "join.json.tmp", "join.md", "join.md.tmp"])
+
+    def test_symlinked_tmp_is_never_followed(self):
+        out = self.loose_out()
+        outside = self.tmp / "outside.txt"
+        outside.write_text("keep")
+        outside.chmod(0o644)
+        for name in ("join.json.tmp", "join.md.tmp"):
+            (out / name).symlink_to(outside)
+        code, _, _ = self.run_main(out)
+        self.assertEqual(code, 0)
+        for name in ("join.json", "join.md"):
+            self.assertEqual(mode(out / name), 0o600, name)
+            self.assertTrue((out / f"{name}.tmp").is_symlink())
+        self.assertEqual((outside.read_text(), mode(outside)), ("keep", 0o644))
+
     def test_bad_resolved_line_is_refused_by_number_before_any_other_input(self):
         good = json.dumps(vessel("Test Wave", "morro-bay"))
         for bad in ('{"name": "Test Wa', "[1, 2]", '{"id": 5}', '{"name": ""}', '{"name": 7}', "null"):
