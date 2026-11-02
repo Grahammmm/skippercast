@@ -14,6 +14,24 @@ from pathlib import Path
 PRODUCTS = ('latest.json', 'regions/index.json', 'intelligence-health.json', 'habitat-health.json')
 
 
+def _bad_key(name, data):
+    """Return the first missing or wrongly typed key path of one product, or None."""
+    data, latest = (data if isinstance(data, dict) else {}), name == 'latest.json'
+    for key, kind in (('completed_at', str), ('sources', dict), ('health', dict)) if latest else (('regions', list),):
+        if not isinstance(data.get(key), kind):
+            return key
+    # Rows are named by position, never by the file's own key text.
+    rows = list(data['sources'].values()) if latest else data['regions']
+    fields = (('name', str), ('status', str)) if latest else (('region_id', str), ('status', str), ('issues', list))
+    for i, row in enumerate(rows):
+        for key, kind in fields:
+            if not isinstance(row, dict) or not isinstance(row.get(key), kind):
+                return f"{'sources' if latest else 'regions'}[{i}].{key}"
+    if latest and not isinstance(data['health'].get('issues'), list):
+        return 'health.issues'
+    return None
+
+
 def summarize(output, outcome):
     """Return (markdown lines, failures, warnings) for one cycle."""
     lines, failures, warnings = ['## Regional evidence publication', 'Publication: ' + outcome], [], []
@@ -25,26 +43,33 @@ def summarize(output, outcome):
         if not path.is_file():
             failures.append(name + ' was not produced')
             continue
-        data = json.loads(path.read_text())
+        try:
+            data = json.loads(path.read_text(encoding='utf-8'))
+        except (OSError, UnicodeDecodeError, ValueError, RecursionError):
+            failures.append(name + ' is unreadable')
+            continue
+        if bad := _bad_key(name, data):
+            failures.append(f'{name}: {bad} missing or wrong type')
+            continue
         if name == 'latest.json':
             lines.append('Buoy feed collected ' + data['completed_at'])
             for source in data['sources'].values():
-                sample = (source.get('data') or {}).get('sample_at', 'unavailable')
+                sample = (source['data'] if isinstance(source.get('data'), dict) else {}).get('sample_at', 'unavailable')
                 lines.append(f"- {source['name']}: {source['status']}; observed {sample}")
             warnings.extend(data['health']['issues'])
         else:
             lines.append('\n### ' + name)
             for region in data['regions']:
                 lines.append('- ' + region['region_id'] + ': ' + region['status'])
-                if region.get('error_class'):
-                    lines.append(f"  - Refresh failed ({region['error_class']}): {region.get('error', '')}; "
+                if isinstance(region.get('error_class'), str) and region['error_class']:
+                    lines.append(f"  - Refresh failed ({region['error_class']}): {region['error'] if isinstance(region.get('error'), str) else ''}; "
                                  'its last publication stays in place')
                 coverage = region.get('forecast_coverage')
-                if coverage:
+                if isinstance(coverage, dict) and all(key in coverage for key in ('rated_point_days', 'point_days', 'two_model_point_days')):
                     lines.append(f"  - Seven-day wind + seas: {coverage['rated_point_days']}/{coverage['point_days']} point-days; "
                                  f"two-model comparison: {coverage['two_model_point_days']}/{coverage['point_days']}")
                 lines.extend('  - Source issue: ' + str(issue) for issue in region['issues'])
-                lines.extend('  - Coverage gap: ' + str(gap) for gap in region.get('coverage_gaps', []))
+                lines.extend('  - Coverage gap: ' + str(gap) for gap in (region['coverage_gaps'] if isinstance(region.get('coverage_gaps'), list) else []))
                 warnings.extend(region['issues'])
     if warnings:
         lines.append(f'\n{len(warnings)} source(s) degraded this cycle; the feed was still published with their last good values or gaps.')
