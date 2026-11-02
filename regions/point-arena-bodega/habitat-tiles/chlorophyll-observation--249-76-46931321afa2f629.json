@@ -1,0 +1,1 @@
+{"schema_version":1,"region_id":"point-arena-bodega","layer_id":"chlorophyll-observation","bounds":[-124.5,38.0,-124.0,38.5],"resolution_degrees":[0.0375,0.0375],"fields":["latitude","longitude","chlorophyll_mg_m3"],"frames":[{"time":1793361600,"cells":[[38.38125,-124.21875,0.68106]],"valid_cells":1}]}
