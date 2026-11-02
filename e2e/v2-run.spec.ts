@@ -92,3 +92,35 @@ test('acceptance 3: Shore has no run line', async ({page, pageErrors, v2}) => {
   await expect(page.locator('.app-run')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
 });
+
+
+test('wanted hours focus, shortfall, cross-tab reload and selected-target closure', async ({page, v2, isMobile}, info) => {
+  const {readFileSync} = await import('node:fs');
+  const fixture = JSON.parse(readFileSync('tests/fixtures/regulations/fe61-v1.json', 'utf8'));
+  const d = fixture.regulations;
+  d.reviewed_at = new Date(BASE).toISOString(); d.rules_review_status = 'reviewed';
+  d.valid_from = '2026-01-01'; d.valid_through = '2030-12-31';
+  for (const [id, source] of Object.entries(d.sources) as [string, any][]) {
+    source.approved_content_sha256 = 'a'.repeat(64);
+    d.checks[id] = {url: source.url, normalization: source.normalization, status: 'unchanged', source_status: 'ok', content_sha256: source.approved_content_sha256, data_retrieved_at: d.reviewed_at};
+  }
+  for (const id of ['lingcod', 'rockfish']) d.species[id].windows = [{start: '2026-01-01', end: '2030-12-31'}];
+  d.species.rockfish.windows = [];
+  await page.route('**/regulations.json', route => route.fulfill({json: d}));
+  await page.addInitScript(() => localStorage.setItem('skippercast-cruise-v1', '{"knots":20}'));
+  await v2.open('app', {region: 'morro-bay', target: 'lingcod'});
+  if (isMobile) await page.locator('.ui-sheet-handle').press('End');
+  const run = page.locator(isMobile ? '.app-sheet-brief .app-run' : 'aside.app-brief .app-run');
+  await run.getByRole('button', {name: 'Set hours I want'}).click();
+  const dialog = page.locator('dialog.app-limits-dialog[open]'), wanted = dialog.getByLabel('Hours I want to fish');
+  await expect(wanted).toBeFocused(); await expect(wanted).toHaveValue('');
+  await wanted.fill('4'); await dialog.getByRole('button', {name: 'Save'}).click();
+  await expect(run.locator('.app-run-hours')).toContainText('4 h wanted');
+  await page.evaluate(() => { localStorage.setItem('skippercast-fishhours-v1', '{"hours":10}'); window.dispatchEvent(new StorageEvent('storage', {key: 'skippercast-fishhours-v1'})); });
+  await expect(run.locator('.app-run-hours')).toContainText(/short/);
+  await checkA11y(page, 'v2-fishing-hours', info.project.name);
+  await v2.open('app', {region: 'morro-bay', target: 'rockfish'});
+  if (isMobile) await page.locator('.ui-sheet-handle').press('End');
+  await expect(run.locator('.app-run-hours')).toContainText('is closed that day');
+  await expect(run.locator('.app-run-hours')).not.toContainText('available');
+});

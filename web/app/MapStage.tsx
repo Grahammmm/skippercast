@@ -117,13 +117,13 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
   }, []);
   const shown = shownPresentation.value;
   return (
-    <section class="app-stage" aria-label="Map">
+    <section class="app-stage" tabIndex={-1} aria-label="Map">
       <div class="app-map" hidden={shown !== 'chart'}>
         <div class="app-chart" ref={chartHost} hidden={chartFailed.value} />
         <ChartPoster />
         {chartFailed.value ? <span>Map unavailable.</span> : null}
       </div>
-      <div class="app-terrain" ref={terrainHost} hidden={shown === 'chart'} data-coast-theme="tokens" />
+      <div class="app-terrain" ref={terrainHost} tabIndex={-1} hidden={shown === 'chart'} data-coast-theme="tokens" />
       <TerrainControls />
       <PresentationToggle />
       {children}

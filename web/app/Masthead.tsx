@@ -13,6 +13,7 @@ import {Icon, type IconName} from '../ui/icons.tsx';
 import {appView, region, setParams, withParams, type AppView} from '../state.ts';
 import {currentRegionInfo, freshness, regionLoad, retryRegion} from './App.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
+import {degraded, degradedText} from '../degraded.ts';
 
 export const VIEW_LABELS: Readonly<Record<AppView, string>> = {coast: 'Coast', conditions: 'Conditions', history: 'History', fleet: 'Fleet', reports: 'Reports', plan: 'Plan'};
 /** The tab icons of the mobile nav (§ 6 mobile). */
@@ -90,6 +91,13 @@ export function FreshnessDot() {
   );
 }
 
+/** SC-LAUNCH-4: says so while the Worker is past its daily cost ceiling and answering with saved copies (web/degraded.ts). */
+export function DegradedNotice() {
+  const text = degradedText(degraded.value);
+  // Existing note paint (app.css .app-limits-note), so the pinned contrast proof of app.css is untouched.
+  return text ? <p class="app-limits-note app-degraded" role="status" data-degraded="cost-ceiling">{text}</p> : null;
+}
+
 /** Whether the Text Advisor answers: false until a probe finds the chat page. */
 export const advisorOn = signal(false);
 let probe: Promise<boolean> | null = null;
@@ -119,6 +127,7 @@ export function Masthead({href}: {href?: string} = {}) {
       <Location />
       <ViewNav href={href} />
       <FreshnessDot />
+      <DegradedNotice />
       <ChatEntry />
       <AccountMenu />
     </header>
