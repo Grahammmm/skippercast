@@ -9,6 +9,7 @@
 // loader reads the boundary snapshot and closures, the live ds582 query (else the daily
 // feed's boundary record) replaces the snapshot, and the daily feed's check of NOAA's
 // closure file renews the closures; habitat.ts decides what shows. Erasable syntax only.
+// Survey fill ramps from zoom 9, its outline starts at 11, and depth labels at 12.
 import {computed, effect, signal} from '@preact/signals';
 import {feedURL} from '../../dist/feeds.js';
 import {dailyPartPath} from '../../dist/offline-core.js';
@@ -157,7 +158,9 @@ export function markStyle(p: Palette) {
   return {
     sources: {[SURVEY_SOURCE]: source(), [GEOLOGY_SOURCE]: source(), [DENSITY_SOURCE]: source(), [MARKS_SOURCE]: source(), [SELECTION_SOURCE]: source()},
     habitat: [
-      {id: SURVEY_PICK, type: 'fill', source: SURVEY_SOURCE, minzoom: MIN_ZOOM, paint: {'fill-color': kind, 'fill-opacity': 0.25}},
+      {id: SURVEY_PICK, type: 'fill', source: SURVEY_SOURCE, minzoom: MIN_ZOOM, paint: {'fill-color': kind, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0.12, 12, 0.22, 15, 0.3]}},
+      {id: 'survey-habitat-line', type: 'line', source: SURVEY_SOURCE, minzoom: 11,
+        paint: {'line-color': kind, 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.6, 15, 1.6], 'line-opacity': 0.8}},
       {id: GEOLOGY_PICK, type: 'fill', source: GEOLOGY_SOURCE, minzoom: MIN_ZOOM, paint: {'fill-color': kind, 'fill-opacity': 0.06}},
       {id: 'geology-line', type: 'line', source: GEOLOGY_SOURCE, minzoom: MIN_ZOOM, paint: {'line-color': kind, 'line-width': 1.2, 'line-dasharray': [3, 2]}},
     ],
@@ -169,6 +172,10 @@ export function markStyle(p: Palette) {
       {id: 'marks-fit', type: 'symbol', source: MARKS_SOURCE, minzoom: MIN_ZOOM, filter: ['has', 'fit'],
         layout: {'text-field': ['get', 'fit'], 'text-font': [LABEL_FONT], 'text-size': 11, 'text-allow-overlap': true, 'text-ignore-placement': true},
         paint: {'text-color': p.text}},
+      {id: 'marks-depth', type: 'symbol', source: MARKS_SOURCE, minzoom: 12, filter: ['has', 'depth'],
+        layout: {'text-field': ['get', 'depth'], 'text-font': [LABEL_FONT], 'text-size': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 12],
+          'text-offset': [0, 1.6], 'text-anchor': 'top', 'text-optional': true},
+        paint: {'text-color': p.text, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
       {id: 'selection-ring', type: 'circle', source: SELECTION_SOURCE, paint: {'circle-radius': 15, 'circle-opacity': 0, 'circle-stroke-color': p.text, 'circle-stroke-width': 2.5}},
     ],
   };

@@ -6,9 +6,29 @@
 // 3. Dragging the chart's cursor moves the store's hour, which the map reads.
 // 4. At 390 px the chart scrolls sideways.
 // (2, the seven-day horizon against a shorter coast report, is unit-tested.)
+import {readFileSync} from 'node:fs';
 import {test, expect} from './fixtures.ts';
 
 const HOUR = 3600;
+
+test('BF-season-calendar: reviewed strip or failed registry keeps Conditions and official link', async ({page, pageErrors, v2}) => {
+  const registry = JSON.parse(readFileSync(new URL('../dist/data/regulations.json', import.meta.url), 'utf8'));
+  let failed = false;
+  await page.route(/(?:\/data\/regulations\.json|\/api\/daily\?.*part=regulations)/, route => route.fulfill(failed
+    ? {status: 500, json: {error: 'Synthetic unavailable registry'}} : {json: registry}));
+  await v2.open('app', {region: 'morro-bay', view: 'conditions', target: 'lingcod'});
+  const view = page.locator('section.app-conditions'), strip = view.locator('.app-season');
+  await expect(strip).toHaveAttribute('aria-label', /Lingcod season \d{4}/);
+  await expect(strip.locator('li')).toHaveCount(12);
+  await expect(strip).toContainText('From the reviewed rules');
+  failed = true;
+  const failure = page.waitForResponse(r => r.status() === 500 && r.url().includes('part=regulations'));
+  await page.reload(); await failure;
+  await expect(view.getByRole('heading', {name: 'Conditions', exact: true})).toBeVisible();
+  await expect(strip).toHaveCount(0);
+  await expect(view.getByRole('link', {name: 'Current CDFW ocean fishing rules'})).toHaveAttribute('href', 'https://wildlife.ca.gov/Fishing/Ocean/Regulations');
+  expect(pageErrors).toEqual([]);
+});
 
 /** A synthetic Morro Bay /api/forecast answer: hourly series from the current hour for eight days at three points. */
 function forecast() {
