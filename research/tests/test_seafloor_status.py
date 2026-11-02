@@ -3,11 +3,12 @@ import importlib.util
 import json
 import subprocess
 import sys
-from pathlib import Path
 
 import pytest
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "seafloor_status.py"
+from tests._support import ROOT
+
+SCRIPT = ROOT / "research" / "scripts" / "seafloor_status.py"
 _spec = importlib.util.spec_from_file_location("seafloor_status_rf0450_3", SCRIPT)
 status = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(status)
