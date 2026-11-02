@@ -123,6 +123,25 @@ def collect(getter=fetch_json, now=None):
             'features': features}
 
 
+def _usable_previous(path):
+    try:
+        data = json.loads(path.read_text(encoding='utf-8'))
+    except (OSError, UnicodeDecodeError, ValueError, RecursionError):
+        return None, 'unreadable JSON'
+    if not isinstance(data, dict):
+        return None, 'not an object'
+    count, features = data.get('feature_count'), data.get('features')
+    for bad, reason in ((data.get('scope') != 'noaa-west-coast-groundfish-conservation-areas', 'wrong scope'),
+                        (data.get('type') != 'FeatureCollection', 'not a FeatureCollection'),
+                        (not isinstance(features, list), 'features is not a list'),
+                        (type(count) is not int, 'feature_count is not an int'),
+                        (isinstance(features, list) and count != len(features), 'feature_count does not match features'),
+                        (not isinstance(data.get('source_layers'), list), 'source_layers is not a list')):
+        if bad:
+            return None, reason
+    return data, ''
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', required=True, type=Path)
@@ -133,9 +152,10 @@ def main():
     except (OSError, TimeoutError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
         if not args.previous or not args.previous.is_file():
             raise
-        data = json.loads(args.previous.read_text())
-        if data.get('scope') != 'noaa-west-coast-groundfish-conservation-areas':
-            raise ValueError('Previous NOAA federal area snapshot has wrong scope') from error
+        data, reason = _usable_previous(args.previous)
+        if data is None:
+            raise SystemExit(f'NOAA refresh failed ({type(error).__name__}) and '
+                             f'previous snapshot unusable: {reason}') from error
         data['status'] = 'retained'
         data['refresh_attempted_at'] = datetime.now(timezone.utc).isoformat()
         data['refresh_issue'] = str(error)[:250]
