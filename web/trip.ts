@@ -88,6 +88,31 @@ async function v1Region(id: string) {
   return regions;
 }
 
+/** SCJ-2b: the one protected-area screen the planner and the brief share, for one region, loaded on first use: dist/protected-areas.js `initProtectedAreas`, web/map/ranked.ts `RankedScreen` plus `refresh`. */
+export type PlannerScreen = RankedScreen & {refresh(): Promise<unknown>};
+export type ProtectedScreen = {state: 'idle' | 'loading'} | {state: 'failed'} | {state: 'loaded'; region: string; screen: PlannerScreen};
+export const protectedScreen = signal<ProtectedScreen>({state: 'idle'});
+let screenInits: Promise<unknown> = Promise.resolve(), screenElsewhere = false, screenLoad: {region: string; done: Promise<ProtectedScreen>} | null = null;
+/** Today's screen for `id`, one region-store change at a time. protected-areas.js builds its live ds582 query from the region it first loads for, so another region's (other bounds) fails closed. */
+function defaultInit(id: string): Promise<PlannerScreen> {
+  const next = screenInits.then(async () => {
+    const regions = await v1Region(id), {initProtectedAreas, MPA_QUERY} = await import('../dist/protected-areas.js'), r = regions.getRegion() as {id?: string; mpa?: {bounds?: number[]}};
+    if (r.id !== id || new URL(MPA_QUERY).searchParams.get('geometry') !== r.mpa?.bounds?.join(',')) { screenElsewhere = true; throw new Error('protected-area check bound to another region'); }
+    return await initProtectedAreas(null, () => {}) as PlannerScreen;
+  });
+  screenInits = next.catch(() => {}); return next;
+}
+/** The region's screen, loaded once (a different region starts again at `loading`); a failure is `failed`, never a throw, and a later call tries again. */
+export function loadProtectedScreen(id: string | null = region.peek(), init: (id: string) => Promise<PlannerScreen> = defaultInit): Promise<ProtectedScreen> {
+  if (!id) return Promise.resolve({state: 'idle'});
+  if (screenLoad?.region === id) return screenLoad.done;
+  protectedScreen.value = {state: 'loading'};
+  const mine: {region: string; done: Promise<ProtectedScreen>} = {region: id, done: Promise.resolve(id).then(init).then(screen => { void screen.refresh(); return {state: 'loaded', region: id, screen} as const; }, () => ({state: 'failed'} as const))
+    .then((next: ProtectedScreen) => { if (screenLoad === mine) { protectedScreen.value = next; if (next.state === 'failed') screenLoad = null; } return next; })};
+  screenLoad = mine;
+  return mine.done;
+}
+
 let planner: {region: string; ready: Promise<Planner | null>} | null = null;
 /** The planner for the current region, started on first use; null without a region, after a failure, or while a region change reloads. */
 export async function loadPlanner(): Promise<Planner | null> {
@@ -104,12 +129,13 @@ export async function loadPlanner(): Promise<Planner | null> {
 }
 
 async function startPlanner(id: string): Promise<Planner> {
-  const regions = await v1Region(id);
-  // protected-areas.js builds its live query from the region store when it loads, so it loads after setRegion.
-  const [{initProtectedAreas}, {createPlanner}, {Planner: View}] = await Promise.all([import('../dist/protected-areas.js'), import('./planner.ts'), import('./app/Planner.tsx')]);
+  // SCJ-2b: the brief's screen (one live ds582 query, one freshness clock), started here if the brief has not.
+  const loaded = await loadProtectedScreen(id);
+  if (loaded.state !== 'loaded') { if (screenElsewhere) location.reload(); throw new Error('protected-area check unavailable'); }
+  const screen = loaded.screen, regions = await v1Region(id);
+  const [{createPlanner}, {Planner: View}] = await Promise.all([import('./planner.ts'), import('./app/Planner.tsx')]);
   const path = regions.assetURL('atlas');
   const atlas = (path ? await json(path) : {targets: [], areas: [], drifts: []}) as import('./planner.ts').Atlas;
-  const screen = await initProtectedAreas(null, () => {});
   // The ranked pins are screened by the planner's own screen, as v1's are (#495).
   rankedScreen = screen as RankedScreen;
   drawRanked();
@@ -130,7 +156,6 @@ async function startPlanner(id: string): Promise<Planner> {
       },
     }});
   plannerView.value = {model, View};
-  void screen.refresh();
   return model;
 }
 

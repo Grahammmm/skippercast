@@ -28,11 +28,12 @@
 // SCJ-2a: for a species the trip planner ranks, the reef list is the planner's answer (dist/spot-ranking.js `bestSpots`
 // over the seafloor publication `loadReefTrip` reads): same places, same depths for equal filters; a pick moves the Chart.
 // While it is expired or unavailable, or for another coast species, the lists above apply.
+// SCJ-2b: its places pass the planner's own protected-area screen (web/trip.ts `protectedScreen`, the one export screens
+// through); until that screen has loaded the list shows the checking line, and a screen not current withholds every place.
 import {signal} from '@preact/signals';
 import {bestSpots, distanceNm} from '../dist/spot-ranking.js';
 import {loadReefTrip} from '../dist/reef-trip-data.js';
 import {loadManifest, manifestState} from '../dist/seafloor-data.js';
-import {geometryIntersects} from '../dist/geo-screen.js';
 import {speciesFit} from '../dist/species-fit.js';
 import {speciesOptions} from '../packages/coast/src/habitat-types.ts';
 import {hasCoastTerrain} from './coast-context.ts';
@@ -40,7 +41,7 @@ import {yardsFromShore} from './shore-distance.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt, type Profile} from './profile.ts';
 import {LAND_WATER_BASIS, NO_LAND_WATER, keepWater, withheldNote, type Place} from './land-water.ts';
 import type {HabitatFeature} from './map/coast-ranking.js';
-import {CHECKING, fitLine, markFit, markShown, withheld, type AtlasTarget, type MarkData, type MarkScreen} from './map/habitat.ts';
+import {CHECKING, SCREEN_NOTES, fitLine, markFit, markShown, withheld, type AtlasTarget, type MarkData, type MarkScreen} from './map/habitat.ts';
 
 /** How many places the brief lists (§ 10). */
 export const TOP = 4;
@@ -233,18 +234,21 @@ export async function recheckReefPublication(region: string, gate: ReefGate = r 
 }
 
 const rankSpots = bestSpots as unknown as (atlas: unknown, screen: unknown, o: Record<string, unknown>) => Ranked[];
-/** The screen `bestSpots` asks for, from the brief's. SCJ-2b replaces this with the planner's screen. */
-const bridge = (screen: MarkScreen) => ({ready: () => screen.status === 'ready', pointAllowed: (p: PublishedReef) => withheld(p, screen) === null,
-  geometryAllowed: (g: unknown) => screen.status === 'ready' && !screen.boundaries.some(b => geometryIntersects(g, b.geometry))});
+/** SCJ-2b: the trip planner's protected-area screen (web/trip.ts `protectedScreen`), declared here so this file does not import trip.ts. */
+export type PlannerScreenState = {readonly state: 'idle' | 'loading' | 'failed'} | {readonly state: 'loaded'; readonly region?: string;
+  readonly screen: {ready(): boolean; pointAllowed(p: {latitude: number; longitude: number}): boolean; geometryAllowed(g: unknown): boolean}};
+type ReadyScreen = Extract<PlannerScreenState, {state: 'loaded'}>['screen'];
+/** The publication list's line while the planner's screen has loaded but is not current (failed, never checked, or past 36 h). */
+export const SCREEN_NOT_CURRENT = 'Protected-area check not current · fishing places withheld';
 
-/** The planner's ranking of the publication (`bestSpots`, same filters), then Spear's swim, as picks. */
-function publicationScreened(loaded: Extract<ReefPublication, {state: 'ready'}>['loaded'], screen: MarkScreen, species: string, label: string | null,
+/** The planner's ranking of the publication (`bestSpots`, same filters, the planner's screen), then Spear's swim, as picks. */
+function publicationScreened(loaded: Extract<ReefPublication, {state: 'ready'}>['loaded'], screen: ReadyScreen, species: string, label: string | null,
   limitFt: number, origin: Origin | null, keep: Keep, place: Place): Screened {
-  if (screen.status !== 'ready' || !(limitFt > 0)) return {picks: [], withheld: 0, pending: false};
+  if (!screen.ready() || !(limitFt > 0)) return {picks: [], withheld: 0, pending: false};
   let pending = false;
   const watched: Place = p => { const at = place(p); pending ||= at.state === 'unknown' && at.reason === 'pending'; return at; };
   const stats = {withheld: 0};
-  const ranked = rankSpots(loaded, bridge(screen), {species, count: 50, maxDepth: Math.min(limitFt, 300), origin, maxDistanceNm: keep.maxNm ?? Infinity, place: watched, stats});
+  const ranked = rankSpots(loaded, screen, {species, count: 50, maxDepth: Math.min(limitFt, 300), origin, maxDistanceNm: keep.maxNm ?? Infinity, place: watched, stats});
   return {withheld: stats.withheld, pending, picks: ranked.filter(t => kept(keep, miles(origin, t), swim(keep, t))).slice(0, TOP).map(t => {
     const [lo, hi] = t.neighborhood_depth_ft as [number, number], nm = miles(origin, t), yd = swim(keep, t);
     return {id: t.id, kind: 'reef', name: t.name, distance: yd === null ? distance(nm) : swimText(yd), nm, depth: band(lo, hi),
@@ -270,6 +274,8 @@ export interface RankingInputs {
   readonly place?: Place;
   /** SCJ-2a: the planner's seafloor publication; absent, the list is the terrain or atlas one. */
   readonly publication?: ReefPublication;
+  /** SCJ-2b: the planner's protected-area screen, which admits the publication's places; absent, idle or loading, the list is still checking. */
+  readonly plannerScreen?: PlannerScreenState;
 }
 
 const ATLAS_BASIS = 'Survey reef atlas marks that pass the current protected-area check, ordered by habitat fit, then the atlas habitat score. '
@@ -277,7 +283,7 @@ const ATLAS_BASIS = 'Survey reef atlas marks that pass the current protected-are
 const TERRAIN_BASIS = 'Reviewed coastal terrain habitat that passes the current protected-area and closure check, ordered by species fit, then the physical terrain score. '
   + 'Depths are nominal; distances are straight-line from';
 const PUBLICATION_BASIS = 'Places from the seafloor reef publication the trip planner uses, ranked as the planner ranks them: species fit, then habitat evidence confidence, then the terrain score, '
-  + 'after the current protected-area check. Depths are the nominal range near each place; distances are straight-line from';
+  + 'kept only where they pass the planner\'s current protected-area check. Depths are the nominal range near each place; distances are straight-line from';
 
 /** The list the brief shows for these inputs: terrain habitat where it binds and loads, else the atlas; one source, never both. */
 export function ranking(i: RankingInputs): Ranking {
@@ -310,8 +316,13 @@ export function ranking(i: RankingInputs): Ranking {
     if (pub.region !== i.region || pub.state === 'idle' || pub.state === 'loading')
       return {source: null, label: '', basis: '', picks: [], empty: 'Loading ranked reef places…'};
     if (pub.state === 'ready' && manifestState(pub.loaded.publication, i.region, i.now).state === 'ready') {
-      const s = publicationScreened(pub.loaded, i.screen, plannerSpecies, speciesLabel(i.coast), limit, origin, keep, place);
-      const empty = i.screen.status !== 'ready' ? i.screen.note : s.withheld ? `No other ranked reef places ${within} for this target.`
+      const ps = i.plannerScreen, head = {source: 'publication' as const, label: 'Seafloor reef publication', basis: PUBLICATION_BASIS + from, picks: [], ...extra};
+      // Until the planner's screen has loaded for this region nothing is shown; one that is not current withholds every place.
+      if (ps?.state !== 'loaded' || ps.region !== undefined && ps.region !== i.region)
+        return {...head, empty: ps?.state === 'failed' ? SCREEN_NOT_CURRENT : SCREEN_NOTES.checking};
+      if (!ps.screen.ready()) return {...head, empty: SCREEN_NOT_CURRENT};
+      const s = publicationScreened(pub.loaded, ps.screen, plannerSpecies, speciesLabel(i.coast), limit, origin, keep, place);
+      const empty = s.withheld ? `No other ranked reef places ${within} for this target.`
         : `No ranked reef places pass the current protected-area check ${within} for this target.`;
       return {source: 'publication', label: 'Seafloor reef publication', ...checked(s, PUBLICATION_BASIS + from, empty), ...extra};
     }
