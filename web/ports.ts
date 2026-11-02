@@ -24,7 +24,7 @@ export const FEATURED: readonly string[] = ['morro-bay', 'san-diego', 'monterey'
 /** The 75 nm rule: a position farther than this from every port matches none. */
 export const MAX_MATCH_NM = 75;
 /** Parameters a port choice replaces; everything else in the address (ui, utm) stays. */
-const AREA_KEYS = ['region', 'coast', 'view', 'focus', 'spot', 'habitat', 'place', 'target', 'area'] as const;
+const AREA_KEYS = ['region', 'port', 'coast', 'view', 'focus', 'spot', 'habitat', 'place', 'target', 'area'] as const;
 
 export interface Port {
   readonly id: string;
@@ -91,11 +91,15 @@ export function closestPort(ports: readonly Port[], latitude: number, longitude:
   return best && best.nm <= maxNm ? best.port : null;
 }
 
-/** The port the app shows for `region`: the saved one when it is in that region, else the first listed there. */
-export function currentPort(ports: readonly Port[], region: string | null, savedId: string | null): Port | null {
+/** The port a link's `?port=` names when it is listed in `region`; null for anything else (never throws). */
+export function linkedPort(ports: readonly Port[] | null, region: string | null, id: string | null): Port | null {
+  return id && region ? ports?.find(port => port.id === id && port.region === region) ?? null : null;
+}
+/** The port the app shows for `region`: the linked one, else the saved one when it is in that region, else the first listed there. */
+export function currentPort(ports: readonly Port[], region: string | null, savedId: string | null, linkedId: string | null = null): Port | null {
   if (!region) return null;
   const inRegion = ports.filter(port => port.region === region);
-  return inRegion.find(port => port.id === savedId) ?? inRegion[0] ?? null;
+  return linkedPort(ports, region, linkedId) ?? inRegion.find(port => port.id === savedId) ?? inRegion[0] ?? null;
 }
 
 /** The app with `params` replacing the area keys; unrelated parameters and exact #account intent stay. */
@@ -106,9 +110,9 @@ function appURL(href: string, params: Record<string, string | undefined>): strin
   for (const [key, value] of Object.entries(params)) if (value) url.searchParams.set(key, value);
   return url.href;
 }
-/** The app at `port`: /map?region=…(&profile=…). */
+/** The app at `port`: /map?region=…&port=…(&profile=…). */
 export const portURL = (href: string, port: Port, profile?: Profile | null): string =>
-  appURL(href, {region: port.region, profile: isProfile(profile) ? profile : undefined});
+  appURL(href, {region: port.region, port: port.id, profile: isProfile(profile) ? profile : undefined});
 /** "Explore the coast": the app over the central coast with no port. */
 export const exploreURL = (href: string): string => appURL(href, {coast: 'central'});
 
