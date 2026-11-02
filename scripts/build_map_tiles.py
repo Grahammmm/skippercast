@@ -12,6 +12,7 @@ Layers (each written to `dist/tiles/<name>.pmtiles`, one `reefs` layer, zooms 8-
 The GeoJSON stays the source of truth; tiles are a delivery format.
 Requires tippecanoe 2.82+ (https://github.com/felt/tippecanoe).
 """
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -95,17 +96,33 @@ def build(tool, name):
                         '--no-tile-size-limit', '--no-feature-limit', '--detect-shared-borders',
                         '--name', title, '--attribution', attribution, '--description', description,
                         'layer.geojson'], check=True, cwd=tmp, env=env)
-        shutil.copyfile(Path(tmp) / out.name, out)
+        built = Path(tmp) / out.name
+        with built.open('rb') as stream:
+            if stream.read(8) != b'PMTiles\x03':
+                raise ValueError('Builder did not produce PMTiles v3')
+        part = out.with_suffix('.part')
+        try:
+            shutil.copyfile(built, part)
+            part.replace(out)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                part.unlink()
+            raise
     print(f'{out.relative_to(ROOT)}: {out.stat().st_size / 1000:.0f} KB from {len(features)} features')
 
 
-def main():
+def main(argv=None):
+    names = argv if argv is not None else sys.argv[1:]
+    unknown = [n for n in names if n not in LAYERS]
+    if unknown:
+        print(f"build_map_tiles: unknown layer {unknown[0]}; known: {', '.join(sorted(LAYERS))}", file=sys.stderr)
+        return 2
     tool = os.environ.get('TIPPECANOE') or shutil.which('tippecanoe')
     if not tool:
         raise SystemExit('tippecanoe not found; set TIPPECANOE or install https://github.com/felt/tippecanoe')
-    for name in sys.argv[1:] or LAYERS:
+    for name in names or LAYERS:
         build(tool, name)
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
