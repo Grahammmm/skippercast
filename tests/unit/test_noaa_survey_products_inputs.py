@@ -128,7 +128,7 @@ class AuditInputTests(TestCase):
         locked.chmod(0)
         self.addCleanup(locked.chmod, 0o700)
         self.previous.write_text(json.dumps(self.inventory()))
-        real_read = Path.read_text
+        real_read = Path.read_bytes
 
         def denied(path, *args, **kwargs):  # the stat/open of --previous fails as it does under a 0700 parent
             if path == self.previous:
@@ -136,7 +136,7 @@ class AuditInputTests(TestCase):
             return real_read(path, *args, **kwargs)
 
         cases = {'directory': (self.root, nullcontext()),
-                 'open error': (self.previous, mock.patch.object(Path, 'read_text', denied)),
+                 'open error': (self.previous, mock.patch.object(Path, 'read_bytes', denied)),
                  'inaccessible parent': (locked / 'previous.json', nullcontext())}
         for name, (path, patch) in cases.items():
             with self.subTest(name):
@@ -171,7 +171,7 @@ class AuditInputTests(TestCase):
                 self.calls.clear()
                 self.previous.write_text(json.dumps(document))
                 code, stdout, stderr = self.run_main('--previous', str(self.previous), '--max-age-days', days)
-                self.assertEqual((code, stderr), (None, ''))
+                self.assertEqual((code, stderr), (None, 'previous inventory ignored: scan time is in the future\n' if name == 'future' else ''))
                 self.assertEqual(self.calls, [document])
                 self.assertEqual(json.loads(self.output.read_text())['health']['status'], 'ok')
 
