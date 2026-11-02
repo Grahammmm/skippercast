@@ -2,7 +2,8 @@
 // one source at a time, its label shown and its basis in a popover. Each row is a
 // button: an atlas mark selects `?spot=`, a terrain habitat `?habitat=` (each
 // dropping the other), counted as a pick so the mark card opens and takes focus,
-// in every presentation. The row matching the address's selection is pressed, so
+// in every presentation. A seafloor publication place (SCJ-2a) moves the Chart to it
+// instead. The row matching the address's selection is pressed, so
 // a pick on the map shows here too.
 // #644: Boat and Kayak show the range to consider under the list (Set range
 // until one is saved, then "Range 12 nm"; under it, so the phone's half sheet
@@ -12,43 +13,62 @@
 // CI6-01B: the list ranks only places its land/water check confirms as water
 // (web/land-water.ts); the region's index loads with the brief, and the lines file
 // only when a place falls in a cell the index leaves mixed.
+import {signal} from '@preact/signals';
 import {useEffect, useState} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {LimitsDialog, LimitsForm} from '../app/LimitsPanel.tsx';
-import {hasCoastTerrain} from '../coast-context.ts';
 import {markData, markScreen, picked, spotHref} from '../map/marks.ts';
 import {coastSpecies, habitatHref} from '../map/stage.ts';
 import {cruiseSpeed} from '../limits.ts';
 import {launchOrigin, loadLaunchPoints} from '../launches.ts';
+import {homePortOrigin, loadRegionPorts, plannerPort, regionPorts, savedPortId} from '../ports.ts';
 import {depthLimitFt, PROFILE_TABLE} from '../profile.ts';
 import {isReachProfile, nmText, reachFor, shoreSwimLimit, spearPlan} from '../reach.ts';
 import {loadShoreLines, shoreLines} from '../shore-distance.ts';
 import {landWater, loadLandWater, loadLandWaterLines, placeFor} from '../land-water.ts';
-import {loadTerrainHabitat, ranking, terrainHabitat, type Pick, type Ranking} from '../ranking.ts';
-import {habitat, navigate, profile, region, selection, species} from '../state.ts';
+import {loadReefPublication, ranking, recheckReefPublication, reefPublication, regionLoad, type Pick, type Ranking} from '../ranking.ts';
+import {fitCamera} from '../map/ranked.ts';
+import {cameraParam} from '../map/stage.ts';
+import {habitat, navigate, profile, region, selection, setParams, species} from '../state.ts';
+import {loadProtectedScreen, protectedScreen} from '../trip.ts';
 import {durationText, runMinutes} from './run.ts';
 
 export type {Pick, Ranking};
 
+/** SCJ-2b: bumped on each `skippercast:boundaries` (the planner's screen redrew or refreshed), so the list is computed again. */
+const screenTick = signal(0);
+
 /** The list for the address and loaded data now, read from the signals so the brief re-renders when they change. */
 export function currentRanking(now = Date.now()): Ranking {
   const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget, id = region.value;
+  void screenTick.value;
   // #644: Kayak measures from its chosen launch; Spear from shore keeps to the swim limit once the shoreline loads.
+  // SCJ-2c: otherwise every profile measures from the planner's port (its choice this session, else the saved home,
+  // else the region's first port); only when the region's ports fail or are none does the region's harbor remain.
   const maxYd = p === 'spear' ? shoreSwimLimit() : null, lines = shoreLines.value;
-  return ranking({region: id, profile: p, target, coast: coastSpecies(species.value, p), data: markData.value, screen: markScreen.value, terrain: terrainHabitat.value, now, reachNm: reachFor(p),
-    origin: p === 'kayak' ? launchOrigin(id) : null,
+  const launch = p === 'kayak' ? launchOrigin(id) : null, ports = regionPorts.value, planned = plannerPort.value;
+  const home = launch || !id ? null : homePortOrigin(id, ports, planned?.region === id ? planned.id : null, savedPortId());
+  const originPending = !launch && !!id && (ports?.region !== id || ports.state === 'loading');
+  return ranking({region: id, profile: p, target, coast: coastSpecies(species.value, p), data: markData.value, screen: markScreen.value, terrain: {state: 'idle'}, now, reachNm: reachFor(p),
+    origin: launch ?? home, originPending,
     shore: maxYd === null ? null : {maxYd, lines: lines && lines.region === id ? lines.lines : null},
-    place: placeFor(landWater.value, id)});
+    place: placeFor(landWater.value, id), missing: regionLoad.value?.id === id && regionLoad.value.state === 'missing',
+    publication: reefPublication.value, plannerScreen: protectedScreen.value});
 }
 
-/** Select a pick's mark or habitat (a history entry), as a click on the map would. */
+/** Select a pick's mark or habitat (a history entry), as a click on the map would; a publication place moves the Chart to it. */
 export function choosePick(pick: Pick, href: string = location.href): void {
+  if (pick.kind === 'reef') {
+    const at = pick.at && fitCamera([pick.at]);
+    if (at) setParams({view: cameraParam(at)});
+    return;
+  }
   picked.value++;
   navigate(pick.kind === 'spot' ? spotHref(href, pick.id) : habitatHref(href, pick.id));
 }
 
-const selected = (pick: Pick): boolean => pick.kind === 'spot' ? selection.value === pick.id : habitat.value === pick.id;
+const selected = (pick: Pick): boolean => pick.kind === 'spot' ? selection.value === pick.id : pick.kind === 'habitat' && habitat.value === pick.id;
 
 /** A Boat pick's one-way run at the saved cruise speed ("run ≥ 25 min"): straight line, so the real run is longer. Empty without a speed or a distance. */
 export function pickRun(nm: number | null, speedKn: number | null): string {
@@ -106,12 +126,28 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   // The lines file is asked for once the region's index is ready and a candidate still waits on it (a mixed cell),
   // so a list that was pending on the index itself asks as soon as the index lands; clean cells never load it.
   const lw = landWater.value, wantLines = !!id && !!r.pending && lw.region === id && lw.state === 'ready' && lw.lines === null;
-  useEffect(() => { if (id && hasCoastTerrain(id)) void loadTerrainHabitat(); }, [id]);
+  // SCJ-2a: the publication loads once per region, and its live manifest is checked again now (a cached one) and each
+  // minute, as the planner checks its plan, so a held, unavailable or superseded publication stops ranking.
+  useEffect(() => {
+    if (!id) return;
+    const was = reefPublication.peek();
+    void (was.state !== 'idle' && was.region === id ? recheckReefPublication(id) : loadReefPublication(id));
+    const timer = setInterval(() => { void recheckReefPublication(id); }, 60000);
+    return () => clearInterval(timer);
+  }, [id]);
+  // SCJ-2b: the planner's protected-area screen, which admits the publication's places, loads with the brief.
+  useEffect(() => { if (id) void loadProtectedScreen(id); }, [id]);
+  useEffect(() => {
+    const bump = () => { screenTick.value++; };
+    document.addEventListener('skippercast:boundaries', bump);
+    return () => document.removeEventListener('skippercast:boundaries', bump);
+  }, []);
   // #644: Kayak's launch list and, for Spear from shore, the shoreline, each loaded once per region when needed.
   const p = profile.value, swimming = p === 'spear' && shoreSwimLimit() !== null;
   useEffect(() => { if (id && p === 'kayak') void loadLaunchPoints(id); }, [id, p]);
   useEffect(() => { if (id && swimming) void loadShoreLines(id); }, [id, swimming]);
   useEffect(() => { if (id) void loadLandWater(id); }, [id]);
+  useEffect(() => { if (id) void loadRegionPorts(id); }, [id]);
   useEffect(() => { if (id && wantLines) void loadLandWaterLines(id); }, [id, wantLines, lw.model]);
   return (
     <section class="app-where" data-source={r.source ?? undefined}>

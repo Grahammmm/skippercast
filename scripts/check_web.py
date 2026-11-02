@@ -67,6 +67,11 @@ def check_page_references(path):
                 assert "if(path === '/sources') return '/sources.html';" in assets, (path, ref)
                 assert (WEB / "sources.html").exists(), (path, ref)
                 continue
+            if navigation and url.path == "/status":
+                assets = (ROOT / "server/routes/assets.ts").read_text()
+                assert "if(path === '/status') return '/status.html';" in assets, (path, ref)
+                assert (WEB / "status.html").exists(), (path, ref)
+                continue
             target = ((WEB / unquote(url.path).lstrip("/")) if url.path.startswith("/")
                       else (path.parent / unquote(url.path))).resolve()
             assert (target.is_relative_to(WEB) or target.is_relative_to(ROOT / "web")) and target.exists(), (path, ref)

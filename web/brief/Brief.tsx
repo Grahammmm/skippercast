@@ -4,7 +4,7 @@
 // full: everything).
 //
 // Data: the region's daily feed (/feeds/data/regions/<id>/latest.json) with
-// the conditions feed's newer buoys first, both loaded by loadDailyFeed; the
+// the conditions feed's newer buoys first, both loaded by loadDailyFeed (read again like the forecast); the
 // regional forecast (/api/forecast?region=<id>, edge-cached, loaded once per
 // region by ensureRegionalForecast and shared with the Conditions view; web/conditions.ts briefForecast samples it at the
 // forecast point nearest the region centre) and, where web/coast-data.ts
@@ -23,7 +23,10 @@ import type {CoastReportContext} from '../../packages/coast/src/state/report-bin
 import {briefForecast, loadConditionsForecast, type ConditionsForecast} from '../conditions.ts';
 import {feedPath} from '../landing/readings.ts';
 import {PROFILE_TABLE, type Profile} from '../profile.ts';
-import {hour, profile} from '../state.ts';
+import {day, hour, hourParam, parseHour, profile, species} from '../state.ts';
+import {dockTime, horizonDays} from '../hour.ts';
+import {loadRegs, regsData, regulationState, ruleSummary} from '../regs.ts';
+import {useEffect} from 'preact/hooks';
 import {hasOwnLimits, limitsFor, type ComfortLimits} from '../limits.ts';
 import {regionInfo, type RegionInfo} from '../app/App.tsx';
 import {Popover} from '../ui/Popover.tsx';
@@ -32,7 +35,7 @@ import {Tiles} from './Tiles.tsx';
 import {TideStationControl} from './TideStationControl.tsx';
 import {tideSelection} from '../tide-selection.ts';
 import {withTideSelection} from '../tide-stations.ts';
-import {briefVerdict, VERDICT_WORD, type BriefVerdict} from './verdict.ts';
+import {briefVerdict, clockText, feedReader, VERDICT_WORD, type BriefVerdict} from './verdict.ts';
 import type {Brief as BriefModel, RegionalDailyFeed} from './types.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 
@@ -86,12 +89,27 @@ function dailyGap(conditions: RegionalDailyFeed): string {
 }
 
 /** Load the daily and conditions feeds for region `id`; failed fetches or feeds for another region leave the brief empty. */
-export async function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): Promise<RegionalDailyFeed | null> {
+export function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): Promise<RegionalDailyFeed | null> {
+  return readFeeds(id, fetchFn, false);
+}
+
+let dailyRequest: {id: string; fetchFn: typeof fetch} | null = null;
+let dailyLoadedAt = 0, dailyPending = false;
+
+async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean): Promise<RegionalDailyFeed | null> {
   const load = ++feedLoad;
-  feedGaps.value = [];
+  dailyRequest = {id, fetchFn};
+  dailyPending = true;
+  bindVisibility();
+  if (!refresh) feedGaps.value = [];
   const [daily, conditions] = await Promise.all([readFeed(dailyFeedPath(id), id, fetchFn), readFeed(feedPath(undefined, id), id, fetchFn)]);
   // A later load (another region) owns the feed and its gap lines; this one only returns what it read.
   if (load !== feedLoad) return mergeFeeds(daily, conditions);
+  dailyPending = false;
+  // A refresh that read neither keeps the feed and gap lines shown (readings carry their own times) and its old
+  // read time, so the next visible page tries again.
+  if (refresh && !daily && !conditions) return dailyFeed.peek();
+  dailyLoadedAt = Date.now();
   feedGaps.value = !daily && !conditions ? [FEED_GAP.both] : !daily ? [dailyGap(conditions!)] : !conditions ? [FEED_GAP.conditions] : [];
   dailyFeed.value = mergeFeeds(daily, conditions);
   return dailyFeed.peek();
@@ -146,11 +164,22 @@ export function refreshForecastIfStale(now = Date.now()): Promise<ConditionsFore
   return ensureRegionalForecast(req.id, req.near, req.fetchFn, req.page);
 }
 
+/** The brief's daily and conditions feeds follow the forecast's 30-minute rule. */
+export const DAILY_MAX_AGE_MS = FORECAST_MAX_AGE_MS;
+
+/** Read both feeds again for the last loaded region when the last read got neither or was over 30 minutes before `now`; no timer, only called as the page becomes visible. */
+export function refreshDailyIfStale(now = Date.now()): Promise<RegionalDailyFeed | null> | null {
+  const req = dailyRequest;
+  if (!req || dailyPending) return null;
+  if (dailyFeed.peek() && now - dailyLoadedAt <= DAILY_MAX_AGE_MS) return null;
+  return readFeeds(req.id, req.fetchFn, true);
+}
+
 // One listener for the page's life, bound on the first load.
 function bindVisibility() {
   if (visibilityBound || typeof document === 'undefined') return;
   visibilityBound = true;
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void refreshForecastIfStale(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { void refreshForecastIfStale(); void refreshDailyIfStale(); } });
 }
 
 export type BriefSources = {info: RegionInfo | null; feed: RegionalDailyFeed | null; forecast?: ConditionsForecast | null; coast: {report: Report; areaId: string} | null; profile: Profile; hour: string | null;
@@ -170,15 +199,47 @@ export function briefFrom({info, feed, forecast = null, coast, profile: p, hour:
   } catch { return null; }
 }
 
-/** The brief the shell shows now, read from the signals so a component re-renders when they change. */
-export function currentBrief(now: Date): BriefModel | null {
+/** The brief the shell shows now, read from the signals so a component re-renders when they change. `at` defaults to the dock's hour. */
+export function currentBrief(now: Date, at: string | null = hour.value): BriefModel | null {
   const report = coastReport.value, binding = coastBinding.value;
-  const brief = briefFrom({info: regionInfo.value, feed: dailyFeed.value, forecast: regionalForecast.value, coast: report && binding ? {report: report.data, areaId: binding.areaId} : null, profile: profile.value, hour: hour.value,
+  const brief = briefFrom({info: regionInfo.value, feed: dailyFeed.value, forecast: regionalForecast.value, coast: report && binding ? {report: report.data, areaId: binding.areaId} : null, profile: profile.value, hour: at,
     limits: hasOwnLimits(profile.value) ? limitsFor(profile.value) : null}, now);
   const chosen = tideSelection.choice.value, config = tideSelection.region.value;
   if (!brief || !chosen || !config || config.id !== regionInfo.value?.id || chosen === config.station) return brief;
   const station = tideSelection.stations.value.find(s => s.id === chosen) ?? {id: chosen, name: chosen};
-  return withTideSelection(brief, station, tideSelection.reading.value, regionInfo.value.timezone, now, hour.value);
+  return withTideSelection(brief, station, tideSelection.reading.value, regionInfo.value.timezone, now, at);
+}
+
+/**
+ * The hour the lead answers for (SC-LAUNCH-3): the hour chosen in the dock; else the later day a
+ * link's ?day= names; else tomorrow. A day is read at the dock's hour on it (web/hour.ts dockTime),
+ * so the lead is the brief the dock shows once that day is picked. Null (now) only for ?day= today.
+ */
+export function leadHour(hourValue: string | null, dayValue: string | null, now: Date, tz: string): string | null {
+  if (parseHour(hourValue) !== null) return hourValue;
+  const days = horizonDays(now, tz);
+  if (dayValue && dayValue === days[0]?.day) return null;
+  const named = days.slice(1).find(d => d.day === dayValue) ?? days[1];
+  return named ? hourParam(dockTime(named.day, null, now, tz, days).at / 1000) : null;
+}
+
+/** The brief the lead answers from: the dock's brief once a time is chosen, else tomorrow's. */
+export function leadBrief(now: Date): BriefModel | null {
+  return currentBrief(now, leadHour(hour.value, day.value, now, regionInfo.value?.timezone ?? DEFAULT_ZONE));
+}
+
+/** The day ("YYYY-MM-DD") the lead answers for: its brief's date, else the day of its hour. */
+export function leadDate(now: Date, brief: BriefModel | null = leadBrief(now)): string {
+  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, at = leadHour(hour.value, day.value, now, tz);
+  return brief?.date ?? dateKey(at ? new Date(at) : now, tz);
+}
+
+/** "today", "tomorrow", else "Sat Oct 10", for the lead's day `date` ("YYYY-MM-DD"). */
+export function leadDayText(date: string, now: Date, tz: string): string {
+  const today = dateKey(now, tz), next = dateKey(new Date(Date.parse(`${today}T12:00:00Z`) + 86_400_000), 'UTC');
+  if (date === today) return 'today';
+  if (date === next) return 'tomorrow';
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric'}).replace(',', '');
 }
 
 export const Headline = ({brief}: {brief: BriefModel | null}) =>
@@ -197,20 +258,58 @@ const VERDICT_BASIS = {
   profile: 'Comfort rating from this profile’s hourly grade (surf or surge, wind, seas and launch where it applies), not a bite forecast or a safety clearance. The roughest hour of the window (sunrise to noon, or the rest of the daylight once noon has passed) sets the day; Calmer reads Comfortable. A marine alert makes the day Rough.',
 } as const;
 
+/** The basis line on a provisional day. */
+export const PROVISIONAL_BASIS = 'Provisional outlook: forecasts this far ahead change.';
+
 /**
- * The brief's first two lines: the verdict word for the morning window and one sentence naming what
- * limits it, with the basis behind a popover. Before there is a brief, the waiting headline.
+ * The lead's legality line (SC-LAUNCH-3): whether the selected target (the profile's default before
+ * one is chosen) is open on the lead's day, as web/regs.ts regulationState and ruleSummary read the
+ * region's reviewed registry, with the state's own reason and the official link. Nothing is computed
+ * here; before the registry loads the state reads "Check rules", never open.
  */
-export function Verdict({brief, now}: {brief: BriefModel | null; now: Date}) {
-  const v = currentVerdict(brief, now);
-  if (!v) return <Headline brief={brief} />;
+export function LeadRules({date, now}: {date: string; now: Date}) {
+  const rules = regionInfo.value?.rules;
+  useEffect(() => { if (rules) void loadRegs(rules); }, [rules?.id]);
+  if (!rules) return null;
+  const loaded = regsData.value, data = loaded?.region === rules.id ? loaded.data : null;
+  const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget;
+  const state = regulationState(data, target, rules, now.getTime(), date, null), s = ruleSummary(data, target, state, rules);
+  const name = target === 'reef' ? 'Lingcod & rockfish' : state.profile?.name ?? target;
   return (
-    <div class="app-verdict" data-verdict={v.verdict}>
+    <p class="app-verdict-rules" data-status={s.status}>
+      <span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> {name} {leadDayText(date, now, rules.timezone ?? DEFAULT_ZONE)}. {state.reason}{' '}
+      <a href={s.link} target="_blank" rel="noopener" aria-label={`${s.linkLabel} for ${name} (official page, opens in a new tab)`}>{s.linkLabel}</a>
+    </p>
+  );
+}
+
+/**
+ * The brief's first lines: the verdict word for the morning window of the lead's day (tomorrow until
+ * a time is chosen), the day and window, one sentence naming what limits it with the basis behind a
+ * popover, and whether the target is legal that day. A provisional day (packages/coast daily.ts, from
+ * the day after tomorrow) says so in the verdict line itself. Before there is a brief, the waiting headline.
+ */
+export function Verdict({now}: {now: Date}) {
+  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, brief = leadBrief(now), date = leadDate(now, brief);
+  const v = currentVerdict(brief, now), rulesLine = <LeadRules date={date} now={now} />;
+  if (!v) return <><Headline brief={brief} />{rulesLine}</>;
+  const when = leadDayText(date, now, tz);
+  const provisional = !!brief?.provisional;
+  const a = v.agreement, gapText = (n: number) => String(Number(n.toFixed(1)));
+  const models = !a || a.state === 'none' ? null : a.state === 'agree' ? `Models agree through ${v.window?.split('–')[1]}: wind within ${gapText(a.gap!.wind)} kn, seas within ${gapText(a.gap!.sea)} ft.`
+    : a.state === 'differ' ? `Models differ at ${clockText(a.worst!.ms, tz)}: wind ${gapText(a.worst!.wind)} kn apart, seas ${gapText(a.worst!.sea)} ft apart.${a.differing > 1 ? ` (${a.differing} of ${a.hours} hours)` : ''}`
+    : a.state === 'partial' ? `Models compared for ${a.compared} of ${a.hours} hours; they agree on those.` : 'One model only for this window.';
+  const modelHour = a?.state === 'differ' && regionalForecast.value ? feedReader(regionalForecast.value, now).read(a.worst!.ms) : null;
+  return (
+    <div class="app-verdict" data-verdict={v.verdict} data-provisional={provisional ? 'true' : undefined}>
       <div class="app-verdict-head">
-        <h1><span class="app-verdict-word">{VERDICT_WORD[v.verdict]}</span>{v.window ? ' ' : null}{v.window ? <span class="app-verdict-window ui-mono">{v.window}</span> : null}</h1>
-        <Popover align="end">{v.basis === 'comfort-score' ? VERDICT_BASIS['comfort-score'] : VERDICT_BASIS.profile}{v.score !== null ? ` Worst hour: ${v.score}/10.` : ''}</Popover>
+        <h1><span class="app-verdict-word">{VERDICT_WORD[v.verdict]}</span>{' '}<span class="app-verdict-window ui-mono" data-day={date}>{v.window ? `${when}, ${v.window}` : when}</span>{provisional ? ' ' : null}{provisional ? <span class="app-verdict-window app-verdict-provisional ui-mono">Provisional</span> : null}</h1>
+        <Popover align="end">{v.basis === 'comfort-score' ? VERDICT_BASIS['comfort-score'] : VERDICT_BASIS.profile}{provisional ? ` ${PROVISIONAL_BASIS}` : ''}{v.score !== null ? ` Worst hour: ${v.score}/10.` : ''}</Popover>
       </div>
       <p class="app-verdict-limit">{v.limit}{v.held ? ` ${v.held}` : ''}</p>
+      {models ? <p class="app-verdict-models ui-mono" data-agreement={a!.state}>{models}</p> : null}
+      {modelHour ? <details class="app-verdict-models-detail"><summary>Model readings</summary>NOAA {gapText(modelHour.wind!)} kn, ECMWF {gapText(modelHour.other_wind!)} kn; NOAA {gapText(modelHour.sea!)} ft, ECMWF {gapText(modelHour.other_sea!)} ft.</details> : null}
+      {rulesLine}
     </div>
   );
 }
@@ -237,7 +336,7 @@ export function Details({brief}: {brief: BriefModel | null}) {
 
 /** The four tiles: compact in the sheet below full, dense (short source, one row) in the desktop column. */
 export const BriefTiles = ({brief, compact = false, dense = false}: {brief: BriefModel | null; compact?: boolean; dense?: boolean}) =>
-  <><Tiles tiles={brief?.tiles ?? null} compact={compact} dense={dense} nearshore={PROFILE_TABLE[profile.value].swellTile === 'nearshore'} />{compact ? null : <TideStationControl />}</>;
+  <><Tiles tiles={brief?.tiles ?? null} compact={compact} dense={dense} provisional={!!brief?.provisional} nearshore={PROFILE_TABLE[profile.value].swellTile === 'nearshore'} />{compact ? null : <TideStationControl />}</>;
 
 const clock = (iso: string, tz: string) => new Intl.DateTimeFormat('en-US', {hour: 'numeric', minute: '2-digit', timeZone: tz}).format(new Date(iso)).replace(':00', '').toLowerCase();
 

@@ -17,7 +17,8 @@
 //   darkness before light wind; bonuses such as dawn or tide never named).
 // - Never reassuring on thin evidence: an active marine alert makes the day
 //   Rough; partial forecast detail, unrated hours, a run older than its tile
-//   limit, a missing alert check or a hazardous bar estimate hold a
+//   limit, a missing alert check, a hazardous bar estimate or an hour in the
+//   long-period swell rule (score.ts LONG_PERIOD_SWELL) hold a
 //   Comfortable window at Marginal and say why; on a Marginal or Rough day a
 //   missing alert check is still named. No forecast reads Unknown.
 //   Buoy readings never enter the verdict, so a stale buoy cannot raise it.
@@ -26,7 +27,7 @@
 // safety clearance.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
-import {rateComfort, verdictFor, type ComfortRating, type FeedHour, type Verdict} from '../score.ts';
+import {chargedCosts, LONG_PERIOD_SWELL, rateComfort, verdictFor, type ComfortRating, type FeedHour, type Verdict} from '../score.ts';
 import {sample} from '../map/forecast-grid.ts';
 import type {ConditionsForecast, ModelRun} from '../conditions.ts';
 import type {Profile} from '../profile.ts';
@@ -34,6 +35,7 @@ import {KAYAK} from '../../packages/coast/src/kayak.ts';
 import {SHORE} from '../../packages/coast/src/shore-conditions.ts';
 import {SPEAR} from '../../packages/coast/src/spear.ts';
 import type {Brief} from './types.ts';
+import {modelAgreement, type Agreement} from './agreement.ts';
 
 const HOUR = 3_600_000;
 
@@ -55,6 +57,7 @@ export const ALERT_CHECK_MISSING = 'Current marine alert check unavailable';
 const SECOND_COST = 1;
 
 export interface BriefVerdict {
+  readonly agreement: Agreement | null;
   readonly verdict: DayVerdict;
   /** One sentence: what limits the window, at which hour. */
   readonly limit: string;
@@ -134,11 +137,16 @@ export function feedReader(f: ConditionsForecast, now: Date): {times: number[]; 
 
 type Charge = 'wind' | 'seas' | 'chop' | 'cross';
 
-/** The charges one rated hour carries, largest first; ties keep wind, seas, chop, cross order. */
+/**
+ * What the score took off one rated hour, by charge, largest first (score.ts chargedCosts: the
+ * smaller of the wind and wave burdens at its overlap share, the unpicked one of seas and chop at
+ * nothing); wind chop carries the short-chop penalty too. Ties keep wind, seas, chop, cross order.
+ */
 export function charges(r: ComfortRating): {kind: Charge; cost: number}[] {
+  const taken = chargedCosts(r.costs);
   const list: {kind: Charge; cost: number}[] = [
-    {kind: 'wind', cost: r.costs.wind}, {kind: 'seas', cost: r.costs.seas},
-    {kind: 'chop', cost: Math.max(r.costs.chop, r.costs.short)}, {kind: 'cross', cost: r.costs.crossing},
+    {kind: 'wind', cost: taken.wind}, {kind: 'seas', cost: taken.seas},
+    {kind: 'chop', cost: taken.chop + taken.short}, {kind: 'cross', cost: taken.crossing},
   ];
   return list.filter(c => c.cost > 0).sort((a, b) => b.cost - a.cost);
 }
@@ -165,9 +173,19 @@ function barHazard(brief: Brief, hours: readonly number[], tz: string): string |
   return hit === undefined ? null : `the bar estimate reads hazardous at ${clockText(hit, tz)}`;
 }
 
+/** The first rated hour in the long-period swell rule (score.ts LONG_PERIOD_SWELL, which keeps it out of every window), named; the rougher model's seas count. */
+export function longPeriodHour(rows: readonly {ms: number; hour: FeedHour}[], tz: string): string | null {
+  for (const {ms, hour} of [...rows].sort((a, b) => a.ms - b.ms)) {
+    const heights = [hour.sea, hour.other_sea].filter(finite), periods = [hour.sea_period, hour.swell_period].filter(finite).filter(p => p >= LONG_PERIOD_SWELL.period);
+    const h = heights.length ? Math.max(...heights) : NaN;
+    if (h >= LONG_PERIOD_SWELL.height && periods.length) return `long-period swell (${r1(h)} ft at ${r0(Math.max(...periods))} s) at ${clockText(ms, tz)}`;
+  }
+  return null;
+}
+
 /** The boat verdict from the comfort score over the regional forecast. */
 export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, now: Date, tz: string): BriefVerdict {
-  const unknown = (limit: string, window: string | null = null): BriefVerdict => ({verdict: 'unknown', limit, held: null, window, score: null, basis: 'comfort-score'});
+  const unknown = (limit: string, window: string | null = null): BriefVerdict => ({verdict: 'unknown', limit, held: null, window, score: null, basis: 'comfort-score', agreement: null});
   if (!forecast) return unknown('No forecast for this day yet.');
   const feed = feedReader(forecast, now);
   const {hours, label, covered} = windowHours(feed.times, brief.date, tz, brief.sunrise, brief.sunset, now);
@@ -198,11 +216,15 @@ export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, n
   if (brief.missing.includes(ALERT_CHECK_MISSING)) reasons.push('the marine alert check is unavailable');
   const bar = barHazard(brief, hours, tz);
   if (bar) reasons.push(bar);
+  const swell = longPeriodHour(rated, tz);
+  if (swell) reasons.push(swell);
   const held = verdict === 'comfortable' && reasons.length ? heldSentence(reasons) : null;
   if (held) verdict = 'marginal';
   else if (!alert && brief.missing.includes(ALERT_CHECK_MISSING)) limit = `${limit} ${NO_ALERT_CHECK}`;
   // Under an alert the day is Rough whatever the hours score, so no score is shown.
-  return {verdict, limit, held, window: label, score: alert ? null : score, basis: 'comfort-score'};
+  const agreement = modelAgreement(rows);
+  const staleAgreement = feed.oldestMs !== null && feed.oldestMs > RUN_STALE_MS && (agreement.state === 'agree' || agreement.state === 'partial');
+  return {verdict, limit, held, window: label, score: alert ? null : score, basis: 'comfort-score', agreement: staleAgreement ? null : agreement};
 }
 
 type GradedHour = {at: string; verdict: string; reasons: readonly string[]; surf?: {sneakerScore?: number}};
@@ -263,7 +285,7 @@ export function profileVerdict(brief: Brief, now: Date, tz: string): BriefVerdic
   const {hours, label, covered} = windowHours([...byMs.keys()].filter(Number.isFinite), brief.date, tz, brief.sunrise, brief.sunset, now);
   const rows = hours.map(ms => ({ms, hour: byMs.get(ms)!, grade: GRADE[byMs.get(ms)!.verdict] ?? 'unknown' as DayVerdict}));
   const rated = rows.filter(row => row.grade !== 'unknown');
-  if (!rated.length) return {verdict: 'unknown', limit: rows.length ? 'Wind or seas unknown for this window.' : covered ? NO_DAYLIGHT : 'No forecast for this day yet.', held: null, window: label, score: null, basis: p};
+  if (!rated.length) return {verdict: 'unknown', limit: rows.length ? 'Wind or seas unknown for this window.' : covered ? NO_DAYLIGHT : 'No forecast for this day yet.', held: null, window: label, score: null, basis: p, agreement: null};
   const worst = rated.reduce((a, b) => RANK[b.grade] > RANK[a.grade] ? b : a);
   const alert = brief.alerts[0];
   let verdict: DayVerdict = alert ? 'rough' : worst.grade;
@@ -276,7 +298,7 @@ export function profileVerdict(brief: Brief, now: Date, tz: string): BriefVerdic
   const held = verdict === 'comfortable' && reasons.length ? heldSentence(reasons) : null;
   if (held) verdict = 'marginal';
   else if (!alert && brief.missing.includes(ALERT_CHECK_MISSING)) limit = `${limit} ${NO_ALERT_CHECK}`;
-  return {verdict, limit, held, window: label, score: null, basis: p};
+  return {verdict, limit, held, window: label, score: null, basis: p, agreement: null};
 }
 
 /** The brief's verdict for its profile; null before there is a brief. */

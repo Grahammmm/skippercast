@@ -126,10 +126,21 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // Merge of RF0935-2 with RF0850-2: App.tsx carries both changes; rebind its merged hash.
 // NB-SC-03 (#519): LayerRail.tsx's Terrain options add the renderer's habitat status line, ranked-reef buttons and
 // "Explore a ranked reef" (existing rail/ui-button classes; no CSS, token or catch markup change). Rebind only LayerRail.tsx.
+// SC-LAUNCH-3: App.tsx's region reader adds an optional RegionInfo `rules` (region.json's jurisdiction, species,
+// authority hosts and assets, read by web/regs.ts for the brief's legality line) when region.json names a
+// jurisdiction. The id/charters fields Reports reads, CSS, tokens, classes and catch markup are unchanged;
+// contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
+// SCJ-7: App.tsx's region reader answers 'missing' for a 404 region.json and loadRegion records it (regionLoad now
+// lives in web/ranking.ts, re-exported); Masthead.tsx's Location says the region does not exist with a link to "/".
+// No CSS, token, class or catch markup change; contrast(), assertions and thresholds are untouched. Rebind those two.
+// SCJ-9 (#1225, phone bottom bar): Masthead.tsx's TAB_VIEWS becomes the explicit list coast/conditions/history/reports
+// (Reports in, Fleet out; still four tabs). Same tab markup, classes and count; MASTHEAD_VIEWS, CSS, tokens and catch
+// markup are unchanged; contrast(), assertions and thresholds are untouched. Rebind only Masthead.tsx.
+// Merge of SCJ-7 with SCJ-9: Masthead.tsx carries both changes (disjoint hunks); rebind its merged hash.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
-  "web/app/App.tsx": "d9a7b2a48ac5147a6db2263da0815744fff45739ae9de85fa2d1d4f0801604c5",
-  "web/app/Masthead.tsx": "d785af3dc63990d67940cb4eb451c7a39e3be4de268c67a13d1c8c05130643ca",
+  "web/app/App.tsx": "c3babf97f3e23eee5c1678ed9c531fb0df6bd584c6934d60cfb047fe5af84ae2",
+  "web/app/Masthead.tsx": "e6e634b4a6283f72255ce7a1fb3ef78e8d78be5f847d5d99c7655b7de94e2877",
   "web/app/LayerRail.tsx": "bdae57c4c4dca33b5fb83a413b7d5c6f525221a4fb6b78037a1ad99102635ccd",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
@@ -144,7 +155,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "92a15809e8895d2b66beecfda4e1c49a297edc7e2e27bdd1f21845b355502e11",
+  // SC2007-02 (Protected areas Try again): check_contrast.mjs changes only the legendTsx surface hash and its
+  // comment; Legend.tsx is not a BODY09 input and Reports never mounts the legend. contrast(), the one export this
+  // spec reads, assertions and thresholds are untouched. Rebind only check_contrast.mjs. (Kept beside its pin, not in
+  // the notes above, so it does not collide with SCJ-7 #1224's notes there.)
+  "scripts/check_contrast.mjs": "9a032cc458741a9d2b1a8ffd77a86513c63c92091e4456e6781ad8c48ae63f93",
   "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
   "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"

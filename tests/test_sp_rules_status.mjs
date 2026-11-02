@@ -69,7 +69,7 @@ function assertUnknownUnverified(d, species, {state, summary}, checked, message)
   assert.equal(summary.verified, null, `${message}: verified`);
   assert.equal(summary.checked, checked, `${message}: checked`);
   assert.doesNotMatch(verifiedText(summary), /^Verified/, `${message}: wording`);
-  assert.equal(verifiedText(summary), checked ? `Needs recheck · last check ${checked}` : 'Not verified', `${message}: wording`);
+  assert.equal(verifiedText(summary), checked ? 'Not confirmed for your fishing date - open the official rules before you go.' : 'Not verified', `${message}: wording`);
   assert.equal(summary.depth, null, `${message}: depth withheld`);
   if (d && ruleProfile(d, species === 'reef' ? 'lingcod' : species, MORRO)) {
     assert.deepEqual({bag: summary.bag, size: summary.size}, limits(d, species), `${message}: registry limits`);
@@ -199,7 +199,7 @@ test('A4 a future trip outside valid_through with fresh reviewed checks has empt
   assert.deepEqual(r.state.issues, []);
   assert.equal(r.state.status, 'unknown');
   assert.equal(r.summary.verified, null);
-  assert.equal(verifiedText(r.summary), 'Needs recheck · last check Sep 21');
+  assert.equal(verifiedText(r.summary), 'Not confirmed for your fishing date - open the official rules before you go.');
 });
 
 test('A4 the same record inside its valid period still shows Verified', () => {

@@ -19,6 +19,9 @@ const BASIS: Readonly<Record<TileId, string>> = {
   tide: 'Tide prediction nearest the selected time, in feet; the trend (Rising, Falling or Turning) compares it with the next prediction when that follows within 15 minutes.',
 };
 
+/** The tiles that read a forecast for the day; water is a buoy reading and tide an astronomical prediction. */
+const FORECAST_TILES: ReadonlySet<TileId> = new Set(['wind', 'swell']);
+
 /** "45 min", "2 h", "3 d": how old a reading is; a clock ahead of this device says so. */
 export function ageText(ms: number): string {
   if (ms < 0) return 'clock ahead';
@@ -66,9 +69,13 @@ export function emptyTiles(nearshore: boolean): TileProps[] {
 
 /**
  * The model's tiles (compact in the sheet below full; dense in the desktop column: the short source
- * line on one row of four, detail and basis kept), or the empty state before there is a brief.
+ * line on one row of four, detail and basis kept), or the empty state before there is a brief. On a
+ * provisional day the forecast tiles (wind, swell) say so on their source line, beside the reading.
  */
-export function Tiles({tiles, nearshore = false, compact = false, dense = false}: {tiles: readonly BriefTile[] | null; nearshore?: boolean; compact?: boolean; dense?: boolean}) {
-  const props = tiles ? tiles.map(tile => tileProps(tile, compact, dense)) : emptyTiles(nearshore);
+export function Tiles({tiles, nearshore = false, compact = false, dense = false, provisional = false}: {tiles: readonly BriefTile[] | null; nearshore?: boolean; compact?: boolean; dense?: boolean; provisional?: boolean}) {
+  const props = tiles ? tiles.map(tile => {
+    const p = tileProps(tile, compact, dense);
+    return provisional && FORECAST_TILES.has(tile.id) ? {...p, source: `${p.source} · provisional`} : p;
+  }) : emptyTiles(nearshore);
   return <div class={dense ? 'app-tiles app-tiles--dense' : 'app-tiles'}>{props.map(tile => <Tile key={tile.label} {...tile} />)}</div>;
 }

@@ -67,7 +67,7 @@ test('robots.txt allows crawling and names the sitemap; the sitemap lists only i
   assert.ok(locs.includes(`${ORIGIN}/`));
   assert.ok(!locs.includes(`${ORIGIN}/map`), 'the map redirects without an area');
   // Every entry is a page in dist (by its served path) or a server-rendered public page, and none is noindex.
-  const served = {'/': 'landing.html', '/sources': 'sources.html', '/privacy': 'privacy.html'};
+  const served = {'/': 'landing.html', '/sources': 'sources.html', '/status': 'status.html', '/privacy': 'privacy.html'};
   const serverPages = new Set(['/report', '/about', '/methodology']);
   for (const loc of locs) {
     assert.ok(loc.startsWith(`${ORIGIN}/`), loc);

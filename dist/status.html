@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Data status · SkipperCast</title>
+    <link rel="canonical" href="https://skippercast.com/status" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="app-icon.svg" />
+    <link rel="stylesheet" href="../web/tokens.css" />
+    <link rel="stylesheet" href="coast-readable.css" />
+  </head>
+  <body class="coast-readable">
+    <a class="skip-link" href="#status-content">Skip to data status</a>
+    <header>
+      <a class="brand" href="./">SkipperCast</a>
+      <nav aria-label="Public information"><a href="./">Back to the map</a><a href="/sources">Sources</a><a href="/methodology">Methods</a><a href="/about">About</a></nav>
+    </header>
+    <main id="status-content">
+      <h1>Data status</h1>
+      <p>
+        When a layer is missing or looks old, this page shows whether the data
+        behind it was published on time. Each row is the last successful publish
+        of a data source, how long it may go without one, and whether it is inside
+        that time. Checked in your browser at <span id="status-checked">…</span>.
+      </p>
+      <div id="status-rows"><p>Loading the published feeds…</p></div>
+      <noscript><p>This page reads the published feeds in your browser and needs JavaScript.</p></noscript>
+      <h2>What this page does not show</h2>
+      <p>
+        These sources have no freshness row. The freshness check does not watch
+        the first group yet; the others are not published on a schedule.
+      </p>
+      <div id="status-coverage"></div>
+    </main>
+    <script type="module" src="status-page.js"></script>
+  </body>
+</html>

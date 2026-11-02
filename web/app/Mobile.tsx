@@ -11,14 +11,14 @@
 // the rail and the legend; a selected mark replaces the peek content with
 // its card. In the Conditions view (FE-32) and the Fleet view (FE-53) the
 // sheet holds that view instead of the brief. Every piece is the desktop's,
-// composed in this order. The Reports view (FE-52) opens from the sheet's
-// footer and replaces the sheet with its page over the map.
+// composed in this order. The Reports view (FE-52) opens from its tab (SCJ-9)
+// or the sheet's footer and replaces the sheet with its page over the map.
 // its card. In the Conditions (FE-32) and History (FE-35) views the sheet holds that view instead
 // of the brief. Every piece is the desktop's, composed in this order. The
-// Reports view (FE-52) opens from the sheet's footer and replaces the sheet
-// with its page over the map.
+// Reports view (FE-52) opens from its tab or the sheet's footer and replaces
+// the sheet with its page over the map.
 import type {ComponentChildren} from 'preact';
-import {useState} from 'preact/hooks';
+import {useEffect, useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
 import {Range} from '../ui/Dock.tsx';
@@ -27,7 +27,7 @@ import {zone} from './App.tsx';
 import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
 import {LimitsControl} from './LimitsPanel.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
-import {BriefFooter, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief} from '../brief/Brief.tsx';
+import {BriefFooter, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief, leadDate, leadDayText} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {RunLine} from '../brief/Run.tsx';
@@ -40,7 +40,7 @@ import {Conditions} from './views/Conditions.tsx';
 import {Fleet} from './views/Fleet.tsx';
 import {History} from './views/History.tsx';
 import {Reports} from './views/Reports.tsx';
-import {appView, setParams, withParams} from '../state.ts';
+import {appView, setParams, withParams, type AppView} from '../state.ts';
 import {waypointPlacement} from '../waypoint-placement.ts';
 import {dayOptions, dockState, hourText, localParts, readout, selectDay, selectHour} from './TimeDock.tsx';
 
@@ -56,6 +56,9 @@ export function afterDetent(panel: Panel, next: Detent): {panel: Panel; detent: 
 export function toggleLayers(panel: Panel, detent: Detent): {panel: Panel; detent: Detent} {
   return panel === 'layers' ? {panel: 'brief', detent} : {panel: 'layers', detent: detent === 'peek' ? 'half' : detent};
 }
+
+/** History's series sits below the peek detent's clipped body, so entering History opens a peeked sheet to full. */
+export const viewDetent = (view: AppView, detent: Detent): Detent => view === 'history' && detent === 'peek' ? 'full' : detent;
 
 /** The first-run prompt yields the sheet to the layers panel; it is still due and returns when Layers closes. */
 export const showsFirstRun = (panel: Panel): boolean => panel !== 'layers';
@@ -76,16 +79,22 @@ export function HourEdge({now}: {now: Date}) {
 /** The brief in sheet order; a selected mark's card stands in for the eyebrow and headline. Below full the tiles are compact (detail and basis at full). */
 export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date; ranking?: Ranking; onFocus?: () => void; detent?: Detent}) {
   const tz = zone(), state = dockState(now, tz), brief = currentBrief(now);
+  // SC-LAUNCH-3: the head introduces the lead, so it names the lead's day. When the lead answers
+  // for another day than the dock's (tomorrow, until a time is chosen) the dock's heading moves
+  // below the lead to head the dock-day evidence, as the desktop column does.
+  const lead = leadDate(now), apart = lead !== state.day, dockHead = <span class="ui-eyebrow">{windowText(now, tz)}</span>;
+  const leadText = leadDayText(lead, now, tz);
   return (
     <div class="app-sheet-brief" onFocusIn={onFocus} data-basis={brief?.basis}>
       {currentMark.value ? <MarkCard /> : (
         <>
           <div class="app-sheet-head">
-            <span class="ui-eyebrow">{windowText(now, tz)}</span>
+            {apart ? <span class="ui-eyebrow">{leadText.charAt(0).toUpperCase() + leadText.slice(1)}</span> : dockHead}
             <FreshnessDot />
           </div>
           <DegradedNotice />
-          <Verdict brief={brief} now={now} />
+          <Verdict now={now} />
+          {apart ? dockHead : null}
         </>
       )}
       <BriefTiles brief={brief} compact={detent !== 'full'} />
@@ -108,7 +117,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
   );
 }
 
-/** The sheet footer's way into the Reports view (the four tabs leave it out). */
+/** The sheet footer's second way into the Reports view (the Reports tab is the first). */
 export const ReportsLink = () =>
   <a href={withParams(typeof location === 'undefined' ? 'https://skippercast.com/map' : location.href, {view: 'reports'})} class="app-reports-link"
     onClick={event => { event.preventDefault(); setParams({view: 'reports'}); }}>Reports</a>;
@@ -131,6 +140,7 @@ export function Mobile({now = new Date(), firstRun}: {now?: Date; firstRun?: Com
   const [detent, setDetent] = useState<Detent>('peek');
   const [panel, setPanel] = useState<Panel>('brief');
   const apply = ({panel: p, detent: d}: {panel: Panel; detent: Detent}) => { setPanel(p); setDetent(d); };
+  useEffect(() => setDetent(d => viewDetent(appView.value, d)), [appView.value]);
   const layersOpen = panel === 'layers', conditions = appView.value === 'conditions', fleet = appView.value === 'fleet';
   return (
     <div class="app-mobile">

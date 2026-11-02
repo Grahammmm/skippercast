@@ -265,4 +265,18 @@ def validate(document):
     regions = document.get("regions", {})  # optional: added for the regional refresh jobs
     if not isinstance(regions, dict) or not all(isinstance(r, dict) and "status" in r for r in regions.values()):
         raise ValueError("Run manifest regions must map ids to status rows")
+    # Every shape report.render() reads; messages name the field and never echo the value.
+    for key in ("inputs", "outputs"):
+        if not isinstance(document[key], list) or not all(isinstance(row, dict) for row in document[key]):
+            raise ValueError(f"Run manifest {key} must be a list of file rows")
+    if document.get("error") is not None and not isinstance(document["error"], dict):
+        raise ValueError("Run manifest error must be an object or null")
+    if not isinstance(document["started_at"], str):
+        raise ValueError("Run manifest started_at must be text")
+    if document.get("git_sha") is not None and not isinstance(document["git_sha"], str):
+        raise ValueError("Run manifest git_sha must be text or null")
+    for key in ("duration_ms", "exit_code"):
+        value = document.get(key)
+        if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float))):
+            raise ValueError(f"Run manifest {key} must be a number or null")
     return document
