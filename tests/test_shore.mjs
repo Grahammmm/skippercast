@@ -311,3 +311,30 @@ test('a threshold exactly one routine interval ahead, or at a report\'s arrival,
   assert.equal(shoreState.value.held, unblocked, 'held as soon as the check passes 2 h');
 });
 
+
+const shownWith = (priority, label, access) => {
+  const base = PACKAGE.features[0], id = `synthetic-${label}-${priority}`;
+  return {run: {...base, id, properties: {...base.properties, id, access}}, name: id, status: {priority, label, reasons: ['synthetic']}};
+};
+const pin = n => ({id: `pin-${n}`, name: `Pin ${n}`, coordinates: [-120.8 + n / 100, 35.3]});
+
+test('SC2222-05: the access pins of a Hold run carry held 1, other runs held 0, Blocked runs and runs without access add none', () => {
+  const runs = [shownWith(0, 'Hold', [pin(1), pin(2)]), shownWith(2, 'No surf model', [pin(3)]), shownWith(0, 'Blocked', [pin(4)]), shownWith(3, 'Current', [])];
+  const {access, runs: lines} = shoreCollections(runs);
+  assert.deepEqual(access.features.map(f => [f.properties.id, f.properties.access, f.properties.held]),
+    [['synthetic-Hold-0', 'pin-1', 1], ['synthetic-Hold-0', 'pin-2', 1], ['synthetic-No surf model-2', 'pin-3', 0]]);
+  assert.deepEqual(lines.features.map(f => f.properties.held), [1, 0, 1, 0], 'the run line keeps the same held value');
+});
+
+test('SC2222-05: the pin stroke uses the run line colour rule and takes both colours from the palette', () => {
+  const o = shoreOverlay(sentinel, shoreCollections([shownWith(0, 'Hold', [pin(1)])]));
+  const paint = id => o.layers.find(l => l.id === id).paint;
+  assert.deepEqual(paint(ACCESS_PIN)['circle-stroke-color'], paint(RUNS_LINE)['line-color']);
+  assert.deepEqual(paint(ACCESS_PIN)['circle-stroke-color'], ['case', ['==', ['get', 'held'], 1], 'token(muted)', 'token(amber)']);
+  assert.equal(paint(ACCESS_PIN)['circle-color'], 'token(bg)');
+  assert.equal(paint(ACCESS_HIT)['circle-color'], 'token(amber)');
+  assert.equal(paint(ACCESS_HIT)['circle-opacity'], 0);
+  const swapped = shoreOverlay(readPalette(name => `dark(${name})`), shoreCollections([]));
+  assert.deepEqual(swapped.layers.find(l => l.id === ACCESS_PIN).paint['circle-stroke-color'], ['case', ['==', ['get', 'held'], 1], 'dark(muted)', 'dark(amber)']);
+  assert.deepEqual(shoreCollections([]).access.features, [], 'no runs: no features, no error');
+});
