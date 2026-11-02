@@ -65,9 +65,19 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
   /** The region being warmed, so an answer for an earlier choice is ignored; and whether the visitor came back from step 2. */
   const warming = useRef<string | null>(null);
   const [back, setBack] = useState(false);
+  /** Whether the last port list failed (step 1 then offers "Try again"), and the newest attempt, so an earlier answer is ignored. */
+  const [failed, setFailed] = useState(false);
+  const attempt = useRef(0);
+  // A retry shows "Loading ports…" again; loadPorts forgets a failure, so it fetches again.
+  const loadList = () => {
+    const mine = ++attempt.current;
+    setPorts(null);
+    loadPorts().then(list => { if (attempt.current === mine) { setFailed(false); setPorts(list); } },
+      () => { if (attempt.current === mine) { setFailed(true); setPorts([]); } });
+  };
   useEffect(() => {
     if (!load) return;
-    loadPorts().then(setPorts, () => setPorts([]));
+    loadList();
     void loadReadout().then(setReadout);
   }, [load]);
   // Step 1 → 2: remember the choice and warm its region while they pick a profile; a later choice ignores an earlier warm-up's answer.
@@ -94,7 +104,7 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
       <Readout data={readout} fleet={fleet} conditions={`/map?region=${DEFAULT_REGION}&view=conditions`} />
       {choice
         ? <ProfileStep place={choice.place} warm={choice.port ? warmth : null} current={initialProfile} onChoose={finish} onBack={restart} />
-        : <PortInput ports={ports} onChoose={choose} onExplore={explore} autoFocus={back} />}
+        : <PortInput ports={ports} onChoose={choose} onExplore={explore} onRetry={failed ? loadList : undefined} autoFocus={back} />}
     </>
   );
 }
