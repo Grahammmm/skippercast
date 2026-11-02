@@ -11,8 +11,8 @@ import {isDeepStrictEqual} from 'node:util';
 import {build} from 'esbuild';
 import {bestSpots} from '../dist/spot-ranking.js';
 import {geometryIntersects, pointInGeometry} from '../dist/geo-screen.js';
-import {CHECKING} from '../web/map/habitat.ts';
-import {TOP, loadReefPublication, ranking, recheckReefPublication, reefPublication} from '../web/ranking.ts';
+import {CHECKING, SCREEN_NOTES} from '../web/map/habitat.ts';
+import {SCREEN_NOT_CURRENT, TOP, loadReefPublication, ranking, recheckReefPublication, reefPublication} from '../web/ranking.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname, NOW = Date.now();
 const read = path => JSON.parse(readFileSync(new URL(`../dist/${path}`, import.meta.url), 'utf8'));
@@ -31,10 +31,12 @@ const REEFS = [reef('r-target', 35.20, -121.00, [200, 278], 3, 3, 90), reef('r-a
 const manifest = (expires = NOW + 3600000) => ({status: 'ready', region: 'morro-bay', archive_sha256: 'a'.repeat(64), export_sha256: 'b'.repeat(64), expires_at: new Date(expires).toISOString()});
 const LOADED = {targets: REEFS.map(r => r.target), areas: REEFS.map(r => r.area), publication: manifest()};
 const READY = {state: 'ready', region: 'morro-bay', loaded: LOADED}, WATER = () => ({state: 'water'});
-const inputs = patch => ({region: 'morro-bay', profile: 'boat', target: 'lingcod', coast: 'lingcod', data: DATA, screen: SCREEN, terrain: {state: 'idle'}, now: NOW, place: WATER, publication: READY, ...patch});
-const ids = r => r.picks.map(p => p.id);
-/** The planner's kind of screen (dist/protected-areas.js), over the same boundary. */
+/** The planner's kind of screen (dist/protected-areas.js), over the same boundary; SCJ-2b: it admits the publication's places. */
 const PLANNER_SCREEN = {ready: () => true, pointAllowed: p => !pointInGeometry([p.longitude, p.latitude], BOUNDARY), geometryAllowed: g => !geometryIntersects(g, BOUNDARY)};
+const LOADED_SCREEN = {state: 'loaded', region: 'morro-bay', screen: PLANNER_SCREEN};
+const inputs = patch => ({region: 'morro-bay', profile: 'boat', target: 'lingcod', coast: 'lingcod', data: DATA, screen: SCREEN, terrain: {state: 'idle'}, now: NOW, place: WATER, publication: READY,
+  plannerScreen: LOADED_SCREEN, ...patch});
+const ids = r => r.picks.map(p => p.id);
 
 test('equal filters, equal answer: ids, order, names and depth bands are the planner bestSpots answer', () => {
   for (const [coast, species] of [['lingcod', 'lingcod'], ['rockfish-reef', 'rockfish'], ['all', 'reef']]) {
@@ -87,12 +89,14 @@ test('land/water: land and unknown places are withheld and counted; a pending pl
   assert.deepEqual(ranking(inputs({place: undefined})).picks, [], 'no land/water check: nothing ranked');
 });
 
-test('screen bridge: a point inside a boundary, or an area touching one, is withheld; an unready screen ranks nothing', () => {
-  assert.deepEqual(ids(ranking(inputs({screen: {...SCREEN, boundaries: []}}))).slice(0, 2), ['r-inside', 'r-touch'], 'they lead without the boundary');
-  const r = ranking(inputs({})); assert.ok(!ids(r).includes('r-inside') && !ids(r).includes('r-touch'));
-  for (const screen of [CHECKING, {...SCREEN, status: 'stale', note: 'Boundary check stale; fishing targets withheld'}]) {
-    const held = ranking(inputs({screen}));
-    assert.equal(held.source, 'publication'); assert.deepEqual(held.picks, []); assert.equal(held.empty, screen.note);
+test('planner screen: a point inside a boundary, or an area touching one, is withheld; an unready screen ranks nothing', () => {
+  const open = {...LOADED_SCREEN, screen: {ready: () => true, pointAllowed: () => true, geometryAllowed: () => true}};
+  assert.deepEqual(ids(ranking(inputs({plannerScreen: open}))).slice(0, 2), ['r-inside', 'r-touch'], 'they lead without the boundary');
+  const r = ranking(inputs({screen: CHECKING})); assert.ok(!ids(r).includes('r-inside') && !ids(r).includes('r-touch'));
+  assert.ok(r.picks.length, 'the marks\' own screen no longer admits publication places');
+  for (const [plannerScreen, line] of [[{state: 'loading'}, SCREEN_NOTES.checking], [{...LOADED_SCREEN, screen: {...PLANNER_SCREEN, ready: () => false}}, SCREEN_NOT_CURRENT]]) {
+    const held = ranking(inputs({plannerScreen}));
+    assert.equal(held.source, 'publication'); assert.deepEqual(held.picks, []); assert.equal(held.empty, line);
   }
 });
 

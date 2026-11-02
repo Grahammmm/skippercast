@@ -10,7 +10,7 @@
 import {addDays, daysBetween, localParts, PACIFIC, realDate} from './time.ts';
 import {fold} from './resolve.ts';
 import {verdictFor, COMFORT_WORD, BOAT_PHRASE} from './comfort.ts';
-import {rateComfort, type FeedHour} from '../../../web/score.ts';
+import {MODEL_GAP, rateComfort, type FeedHour} from '../../../web/score.ts';
 import type {Verdict} from './comfort.ts';
 import type {ForecastClock} from './forecast-clock.ts';
 import type {Region} from '../../types.ts';
@@ -160,7 +160,7 @@ export function windowConditions(feed: Feed, region: Region, pointId: string, da
     sea_period_s: round(median(hours.map(h => h.sea_period))),
     swell_ft: range(hours.map(h => h.swell)), swell_period_s: round(median(hours.map(h => h.swell_period))), swell_from: compass(meanBearing(hours.map(h => h.swell_from))),
     comfort: COMFORT_WORD[verdict],
-    models_agree: agree.length ? agree.every(h => Math.abs(h.wind! - h.other_wind!) <= 4 && Math.abs(h.sea! - h.other_sea!) <= 1) : null,
+    models_agree: agree.length ? agree.every(h => Math.abs(h.wind! - h.other_wind!) <= MODEL_GAP.wind && Math.abs(h.sea! - h.other_sea!) <= MODEL_GAP.sea) : null,
   };
 }
 function median(values: (number | null)[]): number | null {

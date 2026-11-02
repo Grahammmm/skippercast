@@ -2,9 +2,9 @@
 import type {Region, ExternalJSON} from './types.ts';
 
 /** The trip fields an assessment reads (a TripRow, or a trip under test). */
-export interface AlertTrip {point: string; date: string; species: string; start_hour: number; end_hour: number; wind_limit: number; gust_limit: number; sea_limit: number; boat_sea?: number | null; boat_name?: string | null}
+export interface AlertTrip {point: string; date: string; species: string; start_hour: number; end_hour: number; wind_limit: number; gust_limit: number; sea_limit: number; boat_sea?: number | null; boat_name?: string | null; plan?: string | null}
 export type Values = {wind: number | null; gust: number | null; sea: number | null; chop: number | null};
-export interface Assessment {status: string; legal: string; values: Values; chop_limit?: number; issues: string[]; checked_at: string; runs: Record<string, number | null>}
+export interface Assessment {status: string; legal: string; values: Values; chop_limit?: number; issues: string[]; checked_at: string; runs: Record<string, number | null>; legs?: {depart: boolean; return: boolean}}
 export const finite=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n);
 export function dateInZone(epoch:number,zone:string):string{return new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(epoch));}
 const localHour=(t:number,zone:string)=>Number(new Intl.DateTimeFormat('en-US',{timeZone:zone,hour:'2-digit',hourCycle:'h23'}).format(new Date(t*1000)));
@@ -36,6 +36,17 @@ export function advisoryApplies(a:unknown,startMs:number|null,endMs:number|null)
   if(onset===null||end===null)return true;
   return (onset===undefined||onset<=endMs)&&(end===undefined||end>=startMs);
 }
+const planWindow=(trip:AlertTrip):{depart?:string;return_by?:string}=>{
+  try{
+    const w=JSON.parse(trip.plan||'null')?.window;
+    if(!w||[w.depart,w.return_by].some(v=>v!=null&&(typeof v!=='string'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(v)))||w.depart&&w.return_by&&w.return_by<w.depart)return {};
+    return w;
+  }catch{return {};}
+};
+export function tripHours(trip:AlertTrip):{start:number;end:number;depart:number|null;ret:number|null}{
+  const w=planWindow(trip),depart=w.depart==null?null:Number(w.depart.slice(0,2)),ret=w.return_by==null?null:Number(w.return_by.slice(0,2));
+  return {start:Math.min(trip.start_hour,depart??trip.start_hour),end:Math.max(trip.end_hour,ret??trip.end_hour),depart,ret};
+}
 export function assessTrip(trip:AlertTrip,region:Region,intelligence:ExternalJSON,rules:ExternalJSON,advisories:ExternalJSON[]|null|undefined,now=Date.now()):Assessment{
   const point=region.forecast_points.findIndex(p=>p.id===trip.point);
   const issues:string[]=[],values:Values={wind:null,gust:null,sea:null,chop:null};
@@ -45,14 +56,18 @@ export function assessTrip(trip:AlertTrip,region:Region,intelligence:ExternalJSO
   if(!finite(Date.parse(intelligence.completed_at))||now-Date.parse(intelligence.completed_at)>3*3600000||Date.parse(intelligence.completed_at)>now+3600000)issues.push('Forecast feed time is missing, stale or invalid');
   const models=intelligence.forecast?.models||{};
   const base=models.gfs_global?.data?.[point];
-  const want=windowInstants(trip.date,region.timezone,trip.start_hour,trip.end_hour),have=new Set(base?.hourly?.time||[]);
+  const hours=tripHours(trip),want=windowInstants(trip.date,region.timezone,hours.start,hours.end),have=new Set(base?.hourly?.time||[]);
   const times:number[]=want.filter(t=>have.has(t));
   if(times.length!==want.length||!want.length)issues.push('The complete saved window is not populated');
-  const max=(key:keyof Values,value:number|null)=>{if(finite(value)){const v=values[key];values[key]=v===null?value:Math.max(v,value);}else issues.push('Required '+key+' sample missing');};
+  const legs=hours.start<trip.start_hour||hours.end>trip.end_hour?{depart:false,return:false}:undefined;
+  let leg:'depart'|'return'|null=null;
+  const limits:Values={wind:trip.wind_limit,gust:trip.gust_limit,sea:trip.sea_limit,chop:tripChopLimit(trip)};
+  const max=(key:keyof Values,value:number|null)=>{if(finite(value)){const v=values[key];values[key]=v===null?value:Math.max(v,value);if(legs&&leg&&value>limits[key]!)legs[leg]=true;}else issues.push('Required '+key+' sample missing');};
   for(const model of ['gfs_global','ecmwf_ifs025','ncep_gfswave016','ecmwf_wam']){
     const m=models[model],source=intelligence.sources?.['model-'+model];
     if(source?.status!=='ok'||m?.error||!finite(m?.meta?.last_run_initialisation_time)||now/1000-m.meta.last_run_initialisation_time>36*3600||m.meta.last_run_initialisation_time>now/1000+3600)issues.push(model+' is unavailable or stale');
     for(const t of times){
+      const h=localHour(t,region.timezone);leg=h<trip.start_hour?'depart':h>trip.end_hour?'return':null;
       const d=m?.data?.[point];
       if(!finite(m?.meta?.data_end_time)||t>m.meta.data_end_time)issues.push(model+' published horizon does not cover the full window');
       if(model==='gfs_global'||model==='ecmwf_ifs025'){
@@ -87,7 +102,7 @@ export function assessTrip(trip:AlertTrip,region:Region,intelligence:ExternalJSO
   const chopLimit=tripChopLimit(trip);
   const within=finite(values.wind)&&finite(values.gust)&&finite(values.sea)&&values.wind<=trip.wind_limit&&values.gust<=trip.gust_limit&&values.sea<=trip.sea_limit&&(values.chop as number)<=chopLimit;
   const status=issues.length?'unverified':within?'within limits':'above limits';
-  return {status,legal,values,chop_limit:chopLimit,issues:[...new Set(issues)],checked_at:new Date(now).toISOString(),
+  return {status,legal,values,chop_limit:chopLimit,...(legs?{legs}:{}),issues:[...new Set(issues)],checked_at:new Date(now).toISOString(),
     runs:Object.fromEntries(Object.entries(models).map(([id,m]:[string,ExternalJSON])=>[id,m.meta?.last_run_initialisation_time??null]))};
 }
 
@@ -104,5 +119,6 @@ export function alertDecision(previous:Assessment|null,current:Assessment,{final
 export function alertMessage(trip:AlertTrip,region:Region,assessment:Assessment,kind:string):string{
   const value=(v:number|null,u:string)=>finite(v)?v.toFixed(1)+' '+u:'unavailable';
   const name=region.forecast_points.find(p=>p.id===trip.point)?.name||trip.point;
-  return `${kind==='retraction'?'No longer within saved limits':kind==='final'?'Day-before assessment':kind==='missed-final'?'Missed day-before assessment':kind==='initial'?'Saved-trip assessment':'Trip update'} · ${trip.date} · ${name}\n${assessment.status}. Window ${trip.start_hour}:00–${trip.end_hour}:00 ${region.timezone}.\nWind ${value(assessment.values.wind,'kt')}; gust ${value(assessment.values.gust,'kt')}; seas ${value(assessment.values.sea,'ft')}; chop ${value(assessment.values.chop,'ft')}.\n${finite(trip.boat_sea)?`Boat: ${trip.boat_name||'saved boat'} · chop limit ${(assessment.chop_limit??tripChopLimit(trip)).toFixed(1)} ft for this boat.\n`:''}${assessment.issues.join('; ')||'Within your numerical preferences; this does not evaluate route, entrance or catch success.'}\nRules: ${assessment.legal}. Recheck current marine, species and entrance conditions before departure.\nChecked ${assessment.checked_at}. NOAA/ECMWF run times: ${Object.entries(assessment.runs||{}).map(([k,v])=>k+' '+(v?new Date(v*1000).toISOString():'unavailable')).join('; ')}\nhttps://forecast.weather.gov/MapClick.php?TextType=2&zoneid=${(region.contexts?.[region.forecast_points.find(p=>p.id===trip.point)?.context??'']?.marine_zones||region.marine_zones)[region.forecast_points.find(p=>p.id===trip.point)?.offshore?'offshore':'coastal']}\n${region.harbor.information_url}`;
+  const w=planWindow(trip),legText=(assessment.legs?.depart&&w.depart?`\nDeparture at ${w.depart}: above saved limits`:'')+(assessment.legs?.return&&w.return_by?`\nReturn by ${w.return_by}: above saved limits`:'');
+  return `${kind==='retraction'?'No longer within saved limits':kind==='final'?'Day-before assessment':kind==='missed-final'?'Missed day-before assessment':kind==='initial'?'Saved-trip assessment':'Trip update'} · ${trip.date} · ${name}\n${assessment.status}. Window ${trip.start_hour}:00–${trip.end_hour}:00 ${region.timezone}.\nWind ${value(assessment.values.wind,'kt')}; gust ${value(assessment.values.gust,'kt')}; seas ${value(assessment.values.sea,'ft')}; chop ${value(assessment.values.chop,'ft')}.\n${finite(trip.boat_sea)?`Boat: ${trip.boat_name||'saved boat'} · chop limit ${(assessment.chop_limit??tripChopLimit(trip)).toFixed(1)} ft for this boat.\n`:''}${assessment.issues.join('; ')||'Within your numerical preferences; this does not evaluate route, entrance or catch success.'}\nRules: ${assessment.legal}. Recheck current marine, species and entrance conditions before departure.\nChecked ${assessment.checked_at}. NOAA/ECMWF run times: ${Object.entries(assessment.runs||{}).map(([k,v])=>k+' '+(v?new Date(v*1000).toISOString():'unavailable')).join('; ')}\nhttps://forecast.weather.gov/MapClick.php?TextType=2&zoneid=${(region.contexts?.[region.forecast_points.find(p=>p.id===trip.point)?.context??'']?.marine_zones||region.marine_zones)[region.forecast_points.find(p=>p.id===trip.point)?.offshore?'offshore':'coastal']}\n${region.harbor.information_url}${legText}`;
 }

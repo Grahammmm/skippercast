@@ -114,3 +114,11 @@ every limit; the limits differ because each surface reads a different input):
 Saved-trip alerts (`server/alert-policy.ts`) still compare a trip's window
 maxima (wind, gusts, seas and chop) with the limits saved on the trip. It reads
 no wave period, so it has no long-period rule. That screen is unchanged here.
+
+## Model agreement
+
+The Boat brief shows two separate outputs: the worst-hour comfort score and
+measured wind/seas gaps between the two models over the same window.
+`MODEL_GAP` uses the existing rule: more than 4 kn wind or 1 ft seas differs.
+Missing readings never count as agreement; old runs suppress agreeing readouts.
+Agreement never moves the score, verdict, limit sentence or held rules.
