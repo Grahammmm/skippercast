@@ -17,12 +17,15 @@ import {loadPlans, regionPlans} from '../species.ts';
 import {bindBriefReport, currentBrief, dailyFeed, ensureRegionalForecast, loadDailyFeed} from '../brief/Brief.tsx';
 import {regionPlace} from '../map/currents.ts';
 import {initTelemetry} from '../telemetry.ts';
+import {installDegradedWatch} from '../degraded.ts';
 
+// SC-LAUNCH-4: before any read, so every response's cost-ceiling mark reaches the notice.
+installDegradedWatch();
 configureStore({v2: true});
 loadCoordinateFormat();
 startURLSync();
 // Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
-initTelemetry();
+initTelemetry({views: true});
 // #542: the user's own comfort limits, and the cruise speed for run times, kept on this device.
 loadLimits();
 loadCruise();

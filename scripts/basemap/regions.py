@@ -33,6 +33,7 @@ OVERVIEW_MAXZOOM, DETAIL_MAXZOOM, PAD = 10, 14, 0.5
 BUILDS = 'https://build-metadata.protomaps.dev/builds.json'
 SOURCE = 'https://build.protomaps.com/{build}.pmtiles'
 PREFIX = 'tiles/basemap'
+BUILD_PATTERN = r'\d{8}'  # a Protomaps daily build, YYYYMMDD
 ATTRIBUTION = '© OpenStreetMap contributors, © Protomaps'
 MAX_LISTING_BYTES = 1 << 20  # 12 KB today
 AGENT = {'User-Agent': 'SkipperCast basemap build (https://skippercast.com)'}
@@ -97,7 +98,7 @@ def latest(listing):
 
 
 def archive_key(build):
-    if not re.fullmatch(r'\d{8}', str(build)):
+    if not re.fullmatch(BUILD_PATTERN, str(build)):
         raise ValueError(f'A Protomaps build is YYYYMMDD, not {build!r}')
     return f'{PREFIX}/ca-coast-{build}.pmtiles'
 
@@ -160,13 +161,34 @@ def listing():
     return json.loads(body)
 
 
+def _seconds(text):
+    try:
+        if 0 <= float(text) <= 86400:  # nan and ±inf fail one side
+            return float(text)
+    except ValueError:
+        pass
+    raise argparse.ArgumentTypeError('must be a number of seconds from 0 to 86400')
+
+
+def _read_object(path, step):
+    try:
+        document = json.loads(path.read_text())
+    except (OSError, UnicodeDecodeError, ValueError, RecursionError):
+        document = None
+    if not isinstance(document, dict):
+        raise SystemExit(f'{path.name} unreadable; run {step} first')
+    return document
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('command', choices=['latest', 'plan', 'manifest', 'publish'])
     parser.add_argument('--build')
     parser.add_argument('--dir', type=Path, default=ROOT / 'var/basemap')
-    parser.add_argument('--seconds', type=float, default=0)
+    parser.add_argument('--seconds', type=_seconds, default=0)
     args = parser.parse_args(argv)
+    if args.command == 'plan' and not re.fullmatch(BUILD_PATTERN, args.build or ''):
+        parser.error('plan needs --build YYYYMMDD')
     if args.command == 'latest':
         print(latest(listing()))
         return
@@ -179,7 +201,7 @@ def main(argv=None):
         print(planned['source']['url'], ','.join(map(str, o['bbox'])), o['maxzoom'], d['minzoom'], d['maxzoom'],
               planned['key'].rsplit('/', 1)[1])
         return
-    planned = json.loads((args.dir / 'plan.json').read_text())
+    planned = _read_object(args.dir / 'plan.json', 'plan')
     archive = args.dir / planned['key'].rsplit('/', 1)[1]
     if args.command == 'manifest':
         m = manifest(planned, archive, args.seconds)
@@ -187,7 +209,7 @@ def main(argv=None):
         print(f"{m['key']}: {m['bytes']:,} bytes ({m['bytes'] / 2**20:.1f} MiB) in {m['build_seconds']} s "
               f"from Protomaps {m['source']['build']}")
         return
-    document = json.loads((args.dir / 'manifest.json').read_text())
+    document = _read_object(args.dir / 'manifest.json', 'manifest')
     token, account = os.environ.get('CLOUDFLARE_API_TOKEN'), os.environ.get('CLOUDFLARE_ACCOUNT_ID')
     if not token or not account:
         raise SystemExit('R2 not configured (CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID); nothing published.')
