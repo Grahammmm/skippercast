@@ -25,7 +25,7 @@ configureStore({v2: true});
 loadCoordinateFormat();
 startURLSync();
 // Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
-initTelemetry();
+initTelemetry({views: true});
 // #542: the user's own comfort limits, and the cruise speed for run times, kept on this device.
 loadLimits();
 loadCruise();
