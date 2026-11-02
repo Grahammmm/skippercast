@@ -18,6 +18,13 @@ URLS = {
     "ndbc": "https://www.ndbc.noaa.gov/activestations.xml",
     "coops": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions",
 }
+SAFE_KEY = re.compile(r"[A-Za-z0-9_-]{1,40}")  # other context keys are shown as "contexts.?"
+
+
+def _shaped(value, kind, rel, field):
+    if not isinstance(value, kind):  # a misshaped block is named, never iterated or split into characters
+        raise SystemExit(f"build_station_locations: {rel}: {field} is not {'an object' if kind is dict else 'a list'}")
+    return value
 
 
 def configured(root=ROOT):
@@ -29,17 +36,26 @@ def configured(root=ROOT):
             raise SystemExit(f"build_station_locations: {path.relative_to(root)}: unreadable JSON") from None
         if not isinstance(region, dict):
             raise SystemExit(f"build_station_locations: {path.relative_to(root)}: not a JSON object")
-        for context in [region, *region.get("contexts", {}).values()]:
-            stations = context.get("stations", {})
+        rel = path.relative_to(root)
+        contexts = _shaped(region.get("contexts", {}), dict, rel, "contexts")
+        for prefix, context in [("", region), *((f"contexts.{k if SAFE_KEY.fullmatch(k) else '?'}.", c) for k, c in contexts.items())]:
+            _shaped(context, dict, rel, prefix[:-1])  # the region itself is already an object
+            stations = context.get("stations")
+            stations = {} if stations is None else _shaped(stations, dict, rel, f"{prefix}stations")
+            roles = _shaped(stations.get("roles", {}), dict, rel, f"{prefix}stations.roles")
             for role in ("tide", "nearshore_buoy", "offshore_buoy"):
                 provider = "coops" if role == "tide" else "ndbc"
-                ids = [stations.get(role), *stations.get("roles", {}).get(role, {}).get("stations", [])]
+                entry = _shaped(roles.get(role, {}), dict, rel, f"{prefix}stations.roles.{role}")
+                ids = [stations.get(role), *_shaped(entry.get("stations", []), list, rel, f"{prefix}stations.roles.{role}.stations")]
                 if any(x is not None and not isinstance(x, str) for x in ids):  # 0, false and [] are refused too
                     raise SystemExit(f"build_station_locations: {path.relative_to(root)}: {role} station id is not a string")
                 wanted[provider].update(x for x in ids if x)
     # The already-bound SLO county is the only coast county today. Verify this
     # extraction against the typed county module in the offline acceptance test.
-    county = (root / "packages/coast/src/counties.ts").read_text()
+    try:
+        county = (root / "packages/coast/src/counties.ts").read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        raise SystemExit("build_station_locations: packages/coast/src/counties.ts: unreadable") from None
     wanted["coops"].update(re.findall(r"tideStation:\{id:'([^']+)'", county))
     wanted["ndbc"].update(re.findall(r"temperatureStationId:'([^']+)'", county))
     for block in re.findall(r"buoys:\[(.*?)\]", county, re.S):
