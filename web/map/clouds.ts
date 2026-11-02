@@ -26,7 +26,7 @@ import {appView, day, hour, layers} from '../state.ts';
 import {unavailable} from './chart.ts';
 import {setRailNote} from './layers.ts';
 import type {Engine, Overlay} from './engine.ts';
-import {cloudFrames, cloudImage, cloudTiles, type CloudImage} from './frames.ts';
+import {cloudFrames, cloudImage, cloudTiles, pinnedTileUrl, type CloudImage} from './frames.ts';
 import {MARK_PICK} from './marks.ts';
 import {shownPresentation} from './stage.ts';
 
@@ -99,7 +99,7 @@ export function cloudOverlay(cloud: CloudImage, frames: readonly string[], now: 
   for (const at of frames) {
     const source = cloudTiles(cloud, at, now);
     if (!source) continue;
-    sources[frameId(at)] = source;
+    sources[frameId(at)] = {...source, tiles: source.tiles.map(pinnedTileUrl)};
     drawn.push({id: frameId(at), type: 'raster', source: frameId(at), paint: {
       'raster-opacity': 0, 'raster-opacity-transition': {duration: 0}, 'raster-fade-duration': 0, 'raster-saturation': -1, 'raster-contrast': 0.2,
     }});

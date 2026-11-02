@@ -195,7 +195,7 @@ test('MapLibre init: north up, nautical scale, worker and protocol once, and err
   createEngine(fake.module, options);
   const second = createEngine(fake.module, options);
   assert.deepEqual(fake.workerUrls, [fake.module.workerUrl], 'the worker URL is set once');
-  assert.deepEqual(fake.protocols.map(([name]) => name), ['pmtiles'], 'the pmtiles protocol is registered once');
+  assert.deepEqual(fake.protocols.map(([name]) => name), ['pmtiles', 'nowcoast-frame'], 'the pmtiles and Clouds frame protocols are registered once each');
   const [map] = fake.maps;
   assert.equal(map.options.container, host);
   assert.deepEqual(map.options.center, [-120.86, 35.37]);

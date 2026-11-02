@@ -6,7 +6,7 @@
 // sampled ocean cell nearest the mark, with its distance, when one is in
 // reach. NOAA and ECMWF keep their own rows. A gap reads "—" with its reason.
 import {useEffect} from 'preact/hooks';
-import {regionInfo, zone} from '../app/App.tsx';
+import {regionInfo, zone} from '../app/region-info.ts';
 import {dockState} from '../app/TimeDock.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {ensureRegionalForecast, regionalForecast} from './Brief.tsx';
