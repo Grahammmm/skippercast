@@ -110,7 +110,8 @@
     ],
     "meta": {
      "provider": "Synthetic GFS",
-     "temporal_resolution_seconds": 3600
+     "temporal_resolution_seconds": 3600,
+     "last_run_initialisation_time": 1790596800
     },
     "error": null
    },
@@ -193,7 +194,8 @@
     ],
     "meta": {
      "provider": "Synthetic IFS",
-     "temporal_resolution_seconds": 3600
+     "temporal_resolution_seconds": 3600,
+     "last_run_initialisation_time": 1790596800
     },
     "error": null
    },
@@ -312,7 +314,8 @@
     ],
     "meta": {
      "provider": "Synthetic GFS-Wave",
-     "temporal_resolution_seconds": 3600
+     "temporal_resolution_seconds": 3600,
+     "last_run_initialisation_time": 1790596800
     },
     "error": null
    },
@@ -431,7 +434,8 @@
     ],
     "meta": {
      "provider": "Synthetic WAM",
-     "temporal_resolution_seconds": 3600
+     "temporal_resolution_seconds": 3600,
+     "last_run_initialisation_time": 1790596800
     },
     "error": null
    }

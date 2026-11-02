@@ -25,7 +25,8 @@ import {dailyFeed, intelligenceFeed, feedReader} from './feeds.ts';
 import type {FeedReader} from './feeds.ts';
 import {reportEvidence, targetSpecies} from './confidence.ts';
 import type {Confidence, LandingReport} from './confidence.ts';
-import {advisoriesFrom, regionZones, windowConditions, windowEpochs, WINDOW} from './conditions.ts';
+import {advisoriesFrom, regionZones, windowConditions, windowEpochs, withForecastClock, WINDOW} from './conditions.ts';
+import {forecastClock} from './forecast-clock.ts';
 import type {DayConditions} from './conditions.ts';
 import {lookupRules} from './rules.ts';
 import {addDays, daysBetween, localDate, PACIFIC} from './time.ts';
@@ -66,7 +67,7 @@ export interface DailyInputs {
   feeds: {daily: boolean; intelligence: boolean};
   skipper_reports: DailySkipperReport[];
   landing: {available: boolean; reports: {id: string; date: string; boat: string; catches: {label: string; count: number}[]}[]; activity: DailyLanding[]};
-  conditions: {available: boolean; advisories: string[]; day: Pick<DayConditions, 'wind_kt' | 'wind_from' | 'seas_ft' | 'sea_period_s' | 'comfort'> | null};
+  conditions: {available: boolean; advisories: string[]; day: Pick<DayConditions, 'wind_kt' | 'wind_from' | 'seas_ft' | 'sea_period_s' | 'comfort' | 'comfort_held'> | null};
   rules: DailyRule[];
 }
 
@@ -129,9 +130,9 @@ export async function dailyInputs(env: Env, port: string, date: string, deps: Da
   if (region) {
     const [from, to] = windowEpochs(date, region.timezone, WINDOW);
     const advisories = daily ? advisoriesFrom(daily, regionZones(region), from, to).map(a => a.event) : [];
-    const day = intel ? windowConditions(intel, region, FORECAST_POINT.get(port) ?? region.forecast_points[0]?.id ?? '', date, WINDOW) : null;
+    const day = intel ? withForecastClock(windowConditions(intel, region, FORECAST_POINT.get(port) ?? region.forecast_points[0]?.id ?? '', date, WINDOW), forecastClock(intel, now)) : null;
     conditions = {available: Boolean(day?.available), advisories: [...new Set(advisories)],
-      day: day?.available ? {wind_kt: day.wind_kt, wind_from: day.wind_from, seas_ft: day.seas_ft, sea_period_s: day.sea_period_s, comfort: day.comfort} : null};
+      day: day?.available ? {wind_kt: day.wind_kt, wind_from: day.wind_from, seas_ft: day.seas_ft, sea_period_s: day.sea_period_s, comfort: day.comfort, ...(day.comfort_held ? {comfort_held: day.comfort_held} : {})} : null};
   }
 
   const rules: DailyRule[] = [];

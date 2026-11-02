@@ -33,7 +33,7 @@ const REGION = globalThis.REGIONS['morro-bay'];
 const OTHER_REGION = globalThis.REGIONS['southern-california'];
 const POINT = 'central';                                   // catalog/home-ports.json: morro-bay -> central
 const DATE = '2026-09-28';
-const NOW = Date.parse('2026-09-28T13:00:00Z');            // 06:00 in Morro Bay, the fixtures' day
+const NOW = Date.parse('2026-09-28T19:00:00Z');            // 12:00 in Morro Bay, the fixtures' day, after their 18:00Z run (a run dated ahead is unusable)
 const CASES = fixture('contract.json').cases;
 const BASELINE = process.env.SP1410_SUITE === 'baseline';
 
