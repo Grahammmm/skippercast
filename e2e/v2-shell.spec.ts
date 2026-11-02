@@ -125,7 +125,7 @@ test('view links, the profile switch, the rail and the hour slider update the ad
 test('keyboard reaches every control', async ({page, pageErrors, v2, isMobile}) => {
   await v2.open('app', AREA);
   const wanted = isMobile
-    ? ['button[aria-label="Layers"]', '[aria-label="Profile"] button:last-child', '.ui-sheet-handle', 'input[aria-label="Hour"]', '.ui-tile:last-child summary', 'label:has-text("Target") select', 'label:has-text("Area") select', '.app-tabs a[data-view="fleet"]']
+    ? ['button[aria-label="Layers"]', '[aria-label="Profile"] button:last-child', '.ui-sheet-handle', 'input[aria-label="Hour"]', '.ui-tile:last-child summary', 'label:has-text("Target") select', 'label:has-text("Area") select', '.app-tabs a[data-view="reports"]']
     : ['nav[aria-label="Views"] a[data-view="fleet"]', '[aria-label="Profile"] button:last-child', 'label:has-text("Target") select', 'label:has-text("Area") select',
       '.ui-rail-item:last-child .ui-rail-toggle', 'input[aria-label="Hour"]', 'button[aria-label="Play"]'];
   const reached = new Set<string>();

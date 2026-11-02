@@ -493,7 +493,7 @@ test('the helpers behind the controls round-trip through the store keys', async 
   assert.deepEqual(targetOptions('shore', null), ['surfperch', 'halibut']);
   assert.deepEqual(targetOptions('boat', 'vermilion'), ['vermilion', 'lingcod']);
   assert.deepEqual(MASTHEAD_VIEWS, ['coast', 'conditions', 'history', 'fleet', 'reports']);
-  assert.deepEqual(TAB_VIEWS, ['coast', 'conditions', 'history', 'fleet']);
+  assert.deepEqual(TAB_VIEWS, ['coast', 'conditions', 'history', 'reports']);
   assert.deepEqual([viewParam('coast'), viewParam('fleet')], [null, 'fleet']);
   assert.equal(coordinates([35.34, -120.965]), '35.34N 120.97W');
   assert.equal(titleCase('cabezon-shallow-reef'), 'Cabezon Shallow Reef');
@@ -556,7 +556,7 @@ test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a 
   assert.doesNotMatch(html, /ui-rail-item|app-legend/, 'the rail and legend wait for the layers button');
   // Tabs: the four views with icons, after the sheet.
   assert.match(html, /<nav aria-label="Views" class="app-tabs"><ul class="app-views">/);
-  assert.deepEqual(attrs(html, /data-view="([a-z]+)"/g), ['coast', 'conditions', 'history', 'fleet']);
+  assert.deepEqual(attrs(html, /data-view="([a-z]+)"/g), ['coast', 'conditions', 'history', 'reports']);
   assert.equal(count(html, /data-view="[a-z]+"><svg/g), 4, 'each tab has its icon');
   assert.match(html, /aria-current="page" data-view="coast"/);
 });
