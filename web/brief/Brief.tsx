@@ -35,7 +35,7 @@ import {Tiles} from './Tiles.tsx';
 import {TideStationControl} from './TideStationControl.tsx';
 import {tideSelection} from '../tide-selection.ts';
 import {withTideSelection} from '../tide-stations.ts';
-import {briefVerdict, VERDICT_WORD, type BriefVerdict} from './verdict.ts';
+import {briefVerdict, clockText, feedReader, VERDICT_WORD, type BriefVerdict} from './verdict.ts';
 import type {Brief as BriefModel, RegionalDailyFeed} from './types.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 
@@ -269,6 +269,11 @@ export function Verdict({now}: {now: Date}) {
   if (!v) return <><Headline brief={brief} />{rulesLine}</>;
   const when = leadDayText(date, now, tz);
   const provisional = !!brief?.provisional;
+  const a = v.agreement, gapText = (n: number) => String(Number(n.toFixed(1)));
+  const models = !a || a.state === 'none' ? null : a.state === 'agree' ? `Models agree through ${v.window?.split('–')[1]}: wind within ${gapText(a.gap!.wind)} kn, seas within ${gapText(a.gap!.sea)} ft.`
+    : a.state === 'differ' ? `Models differ at ${clockText(a.worst!.ms, tz)}: wind ${gapText(a.worst!.wind)} kn apart, seas ${gapText(a.worst!.sea)} ft apart.${a.differing > 1 ? ` (${a.differing} of ${a.hours} hours)` : ''}`
+    : a.state === 'partial' ? `Models compared for ${a.compared} of ${a.hours} hours; they agree on those.` : 'One model only for this window.';
+  const modelHour = a?.state === 'differ' && regionalForecast.value ? feedReader(regionalForecast.value, now).read(a.worst!.ms) : null;
   return (
     <div class="app-verdict" data-verdict={v.verdict} data-provisional={provisional ? 'true' : undefined}>
       <div class="app-verdict-head">
@@ -276,6 +281,8 @@ export function Verdict({now}: {now: Date}) {
         <Popover align="end">{v.basis === 'comfort-score' ? VERDICT_BASIS['comfort-score'] : VERDICT_BASIS.profile}{provisional ? ` ${PROVISIONAL_BASIS}` : ''}{v.score !== null ? ` Worst hour: ${v.score}/10.` : ''}</Popover>
       </div>
       <p class="app-verdict-limit">{v.limit}{v.held ? ` ${v.held}` : ''}</p>
+      {models ? <p class="app-verdict-models ui-mono" data-agreement={a!.state}>{models}</p> : null}
+      {modelHour ? <details class="app-verdict-models-detail"><summary>Model readings</summary>NOAA {gapText(modelHour.wind!)} kn, ECMWF {gapText(modelHour.other_wind!)} kn; NOAA {gapText(modelHour.sea!)} ft, ECMWF {gapText(modelHour.other_sea!)} ft.</details> : null}
       {rulesLine}
     </div>
   );
