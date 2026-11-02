@@ -97,6 +97,22 @@ export function loadCruise(): number | null {
   return cruiseSpeed.peek();
 }
 
+/**
+ * Follow a change another tab of this browser made: a `storage` event for the
+ * limits or cruise key reloads that signal through readStored (never the
+ * event's value), so the same parse rules apply and a later save here writes
+ * the newer map. A null key (another tab cleared storage) reloads both.
+ * Returns a function that stops following.
+ */
+export function followStoredLimits(target: Pick<Window, 'addEventListener' | 'removeEventListener'> = window): () => void {
+  const onStorage = (event: StorageEvent): void => {
+    if (event.key === null || event.key === STORAGE_KEYS.limits) loadLimits();
+    if (event.key === null || event.key === STORAGE_KEYS.cruise) loadCruise();
+  };
+  target.addEventListener('storage', onStorage);
+  return () => target.removeEventListener('storage', onStorage);
+}
+
 /** Save a cruise speed; a blank or out-of-range value clears it. Returns what was saved. */
 export function saveCruise(value: unknown): number | null {
   const knots = parseCruise(value);

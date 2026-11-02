@@ -9,7 +9,7 @@ import {render} from 'preact';
 import {effect} from '@preact/signals';
 import {configureStore, coast, loadCoordinateFormat, profile, region, species, startURLSync} from '../state.ts';
 import {savedHomeURL} from '../ports.ts';
-import {loadCruise, loadLimits} from '../limits.ts';
+import {followStoredLimits, loadCruise, loadLimits} from '../limits.ts';
 import {loadLaunch, loadReach, loadSpear} from '../reach.ts';
 import {startTrip} from '../trip.ts';
 import {App, bindStartupFreshness, loadRegion, narrow, NARROW_QUERY, regionInfo} from './App.tsx';
@@ -26,6 +26,7 @@ initTelemetry();
 // #542: the user's own comfort limits, and the cruise speed for run times, kept on this device.
 loadLimits();
 loadCruise();
+followStoredLimits();
 // #644: the range to consider for Boat and Kayak, Spear's dive limits and Kayak's launch, kept on this device.
 loadReach();
 loadSpear();
