@@ -88,11 +88,12 @@ export function shownRuns(pkg: ShorePackage | null, screen: MarkScreen, report: 
 
 /** The two GeoJSON sources: runs with their priority, and the access points of runs that are not blocked. */
 export function shoreCollections(runs: readonly ShownRun[]) {
+  const held = (r: ShownRun) => r.status.priority === 0 ? 1 : 0;
   return {
     runs: {type: 'FeatureCollection' as const, features: runs.map(r => ({type: 'Feature' as const, geometry: r.run.geometry,
-      properties: {id: r.run.id, priority: r.status.priority, held: r.status.priority === 0 ? 1 : 0}}))},
+      properties: {id: r.run.id, priority: r.status.priority, held: held(r)}}))},
     access: {type: 'FeatureCollection' as const, features: runs.filter(r => r.status.label !== 'Blocked').flatMap(r => r.run.properties.access.map(a => ({
-      type: 'Feature' as const, geometry: {type: 'Point' as const, coordinates: a.coordinates}, properties: {id: r.run.id, access: a.id}})))},
+      type: 'Feature' as const, geometry: {type: 'Point' as const, coordinates: a.coordinates}, properties: {id: r.run.id, access: a.id, held: held(r)}})))},
   };
 }
 
@@ -108,7 +109,7 @@ export function shoreOverlay(p: Palette, data: ReturnType<typeof shoreCollection
         'line-width': ['interpolate', ['linear'], ['zoom'], 8, 4, 13, 12],
         'line-opacity': ['match', ['get', 'priority'], 3, PRIORITY_OPACITY[3], 2, PRIORITY_OPACITY[2], PRIORITY_OPACITY[0]]}},
       {id: ACCESS_HIT, type: 'circle', source: ACCESS_SOURCE, paint: {'circle-radius': 22, 'circle-color': p.amber, 'circle-opacity': 0}},
-      {id: ACCESS_PIN, type: 'circle', source: ACCESS_SOURCE, paint: {'circle-radius': 5, 'circle-color': p.bg, 'circle-stroke-color': p.amber, 'circle-stroke-width': 2}},
+      {id: ACCESS_PIN, type: 'circle', source: ACCESS_SOURCE, paint: {'circle-radius': 5, 'circle-color': p.bg, 'circle-stroke-color': ['case', held, p.muted, p.amber], 'circle-stroke-width': 2}},
     ] as MapLibre.LayerSpecification[],
   };
 }
