@@ -35,6 +35,7 @@ import {KAYAK} from '../../packages/coast/src/kayak.ts';
 import {SHORE} from '../../packages/coast/src/shore-conditions.ts';
 import {SPEAR} from '../../packages/coast/src/spear.ts';
 import type {Brief} from './types.ts';
+import {modelAgreement, type Agreement} from './agreement.ts';
 
 const HOUR = 3_600_000;
 
@@ -56,6 +57,7 @@ export const ALERT_CHECK_MISSING = 'Current marine alert check unavailable';
 const SECOND_COST = 1;
 
 export interface BriefVerdict {
+  readonly agreement: Agreement | null;
   readonly verdict: DayVerdict;
   /** One sentence: what limits the window, at which hour. */
   readonly limit: string;
@@ -184,7 +186,7 @@ export function longPeriodHour(rows: readonly {ms: number; hour: FeedHour}[], tz
 
 /** The boat verdict from the comfort score over the regional forecast. */
 export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, now: Date, tz: string): BriefVerdict {
-  const unknown = (limit: string, window: string | null = null): BriefVerdict => ({verdict: 'unknown', limit, held: null, window, score: null, basis: 'comfort-score'});
+  const unknown = (limit: string, window: string | null = null): BriefVerdict => ({verdict: 'unknown', limit, held: null, window, score: null, basis: 'comfort-score', agreement: null});
   if (!forecast) return unknown('No forecast for this day yet.');
   const feed = feedReader(forecast, now);
   const {hours, label, covered} = windowHours(feed.times, brief.date, tz, brief.sunrise, brief.sunset, now);
@@ -221,7 +223,9 @@ export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, n
   if (held) verdict = 'marginal';
   else if (!alert && brief.missing.includes(ALERT_CHECK_MISSING)) limit = `${limit} ${NO_ALERT_CHECK}`;
   // Under an alert the day is Rough whatever the hours score, so no score is shown.
-  return {verdict, limit, held, window: label, score: alert ? null : score, basis: 'comfort-score'};
+  const agreement = modelAgreement(rows);
+  const staleAgreement = feed.oldestMs !== null && feed.oldestMs > RUN_STALE_MS && (agreement.state === 'agree' || agreement.state === 'partial');
+  return {verdict, limit, held, window: label, score: alert ? null : score, basis: 'comfort-score', agreement: staleAgreement ? null : agreement};
 }
 
 type GradedHour = {at: string; verdict: string; reasons: readonly string[]; surf?: {sneakerScore?: number}};
@@ -282,7 +286,7 @@ export function profileVerdict(brief: Brief, now: Date, tz: string): BriefVerdic
   const {hours, label, covered} = windowHours([...byMs.keys()].filter(Number.isFinite), brief.date, tz, brief.sunrise, brief.sunset, now);
   const rows = hours.map(ms => ({ms, hour: byMs.get(ms)!, grade: GRADE[byMs.get(ms)!.verdict] ?? 'unknown' as DayVerdict}));
   const rated = rows.filter(row => row.grade !== 'unknown');
-  if (!rated.length) return {verdict: 'unknown', limit: rows.length ? 'Wind or seas unknown for this window.' : covered ? NO_DAYLIGHT : 'No forecast for this day yet.', held: null, window: label, score: null, basis: p};
+  if (!rated.length) return {verdict: 'unknown', limit: rows.length ? 'Wind or seas unknown for this window.' : covered ? NO_DAYLIGHT : 'No forecast for this day yet.', held: null, window: label, score: null, basis: p, agreement: null};
   const worst = rated.reduce((a, b) => RANK[b.grade] > RANK[a.grade] ? b : a);
   const alert = brief.alerts[0];
   let verdict: DayVerdict = alert ? 'rough' : worst.grade;
@@ -295,7 +299,7 @@ export function profileVerdict(brief: Brief, now: Date, tz: string): BriefVerdic
   const held = verdict === 'comfortable' && reasons.length ? heldSentence(reasons) : null;
   if (held) verdict = 'marginal';
   else if (!alert && brief.missing.includes(ALERT_CHECK_MISSING)) limit = `${limit} ${NO_ALERT_CHECK}`;
-  return {verdict, limit, held, window: label, score: null, basis: p};
+  return {verdict, limit, held, window: label, score: null, basis: p, agreement: null};
 }
 
 /** The brief's verdict for its profile; null before there is a brief. */
