@@ -56,11 +56,15 @@ def polygon_valid(geometry):
 
 def selected_layers(layers):
     wanted = []
-    for row in layers:
-        name = row.get('name', '')
+    for n, row in enumerate(layers):
+        name = row.get('name') if isinstance(row, dict) else None
+        if not isinstance(name, str):
+            raise ValueError(f'NOAA federal area layer row {n} misshaped')
         category = ('GEA' if name.startswith('GEA_') and not name.startswith('GEA_ALL_') else
                     'CCA' if name.startswith('CCA_') and 'Transit_Corridor' not in name else
                     'YRCA' if name.startswith('YRCA_') and name != 'YRCA_All_20231201' else None)
+        if category and (type(row.get('id')) is not int or not 0 <= row['id'] <= 10000):
+            raise ValueError(f'NOAA federal area layer row {n} misshaped')
         if category:
             wanted.append((row['id'], name, category))
     if (len({name for _, name, _ in wanted}) != len(wanted)
@@ -76,7 +80,7 @@ def collect(getter=fetch_json, now=None):
     now = now or datetime.now(timezone.utc)
     service_url = SERVICE + '?f=pjson'
     service, service_hash = getter(service_url)
-    if service.get('error') or not isinstance(service.get('layers'), list):
+    if not isinstance(service, dict) or service.get('error') or not isinstance(service.get('layers'), list):
         raise ValueError('Invalid NOAA federal groundfish service')
     chosen = selected_layers(service['layers'])
     sources = []
@@ -85,25 +89,29 @@ def collect(getter=fetch_json, now=None):
         base = f'{SERVICE}/{ident}/query?'
         count_url = base + urlencode({'where': '1=1', 'returnCountOnly': 'true', 'f': 'json'})
         count_data, count_hash = getter(count_url)
-        count = count_data.get('count')
+        count = count_data.get('count') if isinstance(count_data, dict) else None
         if not isinstance(count, int) or not 1 <= count <= 100:
             raise ValueError(f'Unexpected NOAA feature count for {name}')
         geo_url = base + urlencode({'where': '1=1', 'outFields': '*', 'outSR': 4326,
                                    'returnGeometry': 'true', 'f': 'geojson', 'resultRecordCount': 100})
         geo, geo_hash = getter(geo_url)
-        if geo.get('type') != 'FeatureCollection' or geo.get('exceededTransferLimit') or len(geo.get('features', [])) != count:
+        if (not isinstance(geo, dict) or not isinstance(geo.get('features'), list) or geo.get('type') != 'FeatureCollection'
+                or geo.get('exceededTransferLimit') or len(geo['features']) != count):
             raise ValueError(f'Incomplete NOAA geometry for {name}')
+        seen = set()
         for feature in geo['features']:
-            props = feature.get('properties') or {}
-            group = props.get('AREA_GROUP')
-            if (not polygon_valid(feature.get('geometry') or {}) or
-                    group not in ({'GEA', 'Groundfish Exclusion Area'} if category == 'GEA' else {category})):
+            props = (feature.get('properties') or {}) if isinstance(feature, dict) else None
+            oid = props.get('OBJECTID') if isinstance(props, dict) else None
+            if (type(oid) is not int or oid < 0 or oid in seen or
+                    not polygon_valid(feature['geometry'] if isinstance(feature.get('geometry'), dict) else {}) or
+                    props.get('AREA_GROUP') not in ({'GEA', 'Groundfish Exclusion Area'} if category == 'GEA' else {category})):
                 raise ValueError(f'Invalid NOAA polygon or classification for {name}')
+            seen.add(oid)
             citation = props.get('CFR_BOUNDARY_URL') or props.get('CFR_AREA_URL')
             if not isinstance(citation, str) or not citation.startswith('https://www.ecfr.gov/current/title-50/'):
                 raise ValueError(f'Missing NOAA legal boundary citation for {name}')
             features.append({'type': 'Feature', 'geometry': feature['geometry'], 'properties': {
-                'id': f'noaa-gca-{ident}-{props.get("OBJECTID")}', 'name': props.get('SITE_NAME') or name,
+                'id': f'noaa-gca-{ident}-{oid}', 'name': props.get('SITE_NAME') or name,
                 'area_type': category, 'source_layer': name, 'source_layer_id': ident,
                 'cfr_boundary_url': citation, 'fr_citation': props.get('FR_CITATION'),
                 'groundfish_candidate_exclusion': category == 'GEA',
