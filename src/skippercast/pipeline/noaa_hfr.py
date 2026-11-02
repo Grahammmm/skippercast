@@ -13,12 +13,28 @@ DATASET = "hfradar_uswc_6km"
 METADATA = f"{HOST}/thredds/ncss/grid/{DATASET}/dataset.xml"
 
 
+def _bounds(bounds):
+    pairs = [bounds.get(k) if isinstance(bounds, dict) else None for k in ("longitude", "latitude")]
+    if not all(isinstance(p, (list, tuple)) and len(p) == 2 and all(
+            isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x) for x in p) for p in pairs):
+        raise ValueError("Invalid NOAA HFRNet regional bounds")
+    (west, east), (south, north) = pairs
+    if not (-180 <= west < east <= 180 and -80 <= south < north <= 80):
+        raise ValueError("Invalid NOAA HFRNet regional bounds")
+
+
 def latest_time(client):
-    root = ElementTree.fromstring(client.get(METADATA))
+    try:
+        root = ElementTree.fromstring(client.get(METADATA))
+    except ElementTree.ParseError:
+        raise ValueError("NOAA HFRNet metadata is not XML") from None
     span = root.find("TimeSpan")
     if span is None or span.findtext("end") is None:
         raise ValueError("NOAA HFRNet advertised time span missing")
-    when = datetime.fromisoformat(span.findtext("end").replace("Z", "+00:00"))
+    try:
+        when = datetime.fromisoformat(span.findtext("end").replace("Z", "+00:00"))
+    except ValueError:
+        raise ValueError("NOAA HFRNet advertised time unreadable") from None
     if when.tzinfo is None or when > client.now or (client.now - when).total_seconds() > 18 * 3600:
         raise ValueError("NOAA HFRNet advertised time is stale or future")
     axes = {a.attrib.get("name"): a for a in root.findall("axis")}
@@ -72,6 +88,9 @@ def read_subset(body, bounds, expected_time, resolution):
                              "number_of_sites": sites, "hdop": dilution})
         if not rows:
             raise ValueError("Empty NOAA HFRNet subset")
+        depth = nc.variables["depth"].data
+        if depth.size != 1 or not math.isfinite(float(depth.flat[0])):
+            raise ValueError("NOAA HFRNet depth changed")
         valid_count = sum(r["water_u"] is not None and r["water_v"] is not None for r in rows)
         return {"sample_at": sample.isoformat(timespec="seconds").replace("+00:00", "Z"),
                 "units": {"water_u": "m s-1", "water_v": "m s-1", "number_of_sites": "count", "hdop": "dimensionless"},
@@ -79,10 +98,11 @@ def read_subset(body, bounds, expected_time, resolution):
                 "title": "NOAA HFRNet US West Coast hourly 6 km surface vectors",
                 "license": "NOAA public data; attribute NOAA IOOS Surface Currents Program", "kind": "currents",
                 "native_resolution_degrees": resolution, "dataset": DATASET,
-                "nominal_depth_m": float(nc.variables["depth"].data.item())}
+                "nominal_depth_m": float(depth.flat[0])}
 
 
 def fetch(client, bounds):
+    _bounds(bounds)
     when, resolution = latest_time(client)
     west, east = bounds["longitude"]
     south, north = bounds["latitude"]
