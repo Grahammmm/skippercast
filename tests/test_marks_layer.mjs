@@ -76,7 +76,7 @@ test('marks are points with their fit badge, inside the profile\'s depth limit',
   const boat = markFeatures(ATLAS, 'lingcod', 'boat', CHECKED);
   assert.equal(boat.features.length, ATLAS.targets.filter(t => markShown(t, 'lingcod')).length);
   const first = boat.features.find(f => f.properties.id === 'SC26-001');
-  assert.deepEqual(first, {type: 'Feature', geometry: {type: 'Point', coordinates: [-120.843179, 35.164314]}, properties: {id: 'SC26-001', fit: '3', weight: 1}});
+  assert.deepEqual(first, {type: 'Feature', geometry: {type: 'Point', coordinates: [-120.843179, 35.164314]}, properties: {id: 'SC26-001', fit: '3', weight: 1, depth: '135–184 ft'}});
   const spear = markFeatures(ATLAS, 'reef', 'spear', CHECKED);
   assert.ok(spear.features.length > 0 && spear.features.every(f => ATLAS.targets.find(t => t.id === f.properties.id).neighborhood_depth_ft[1] <= 60), 'Spear: 60 ft');
   assert.ok(markFeatures(ATLAS, 'cabezon-shallow-reef', 'spear', CHECKED).features.every(f => !('fit' in f.properties)), 'no badge without a fit');
@@ -171,11 +171,11 @@ test('the Chart style draws habitat in its § 9 slot and marks under the coastli
   for (const source of [SURVEY_SOURCE, GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE]) assert.deepEqual(style.sources[source], {type: 'geojson', data: EMPTY}, source);
   // § 9: MPAs (FE-19), then habitat, the seafloor (FE-14), marks and the selection, the coastline on top.
   const at = id => ids.indexOf(id);
-  assert.deepEqual(ids.slice(at(SURVEY_PICK), at(SURVEY_PICK) + 3), [SURVEY_PICK, GEOLOGY_PICK, 'geology-line']);
+  assert.deepEqual(ids.slice(at(SURVEY_PICK), at(SURVEY_PICK) + 4), [SURVEY_PICK, 'survey-habitat-line', GEOLOGY_PICK, 'geology-line']);
   assert.ok(at(ENC_LAYER) < at('mpa-line') && at('mpa-label') < at(SURVEY_PICK) && at('geology-line') < at('seafloor-fill') && at('seafloor-unranked') < at(MARK_PICK), ids.join(' '));
-  assert.deepEqual(ids.slice(at(MARK_PICK)), [MARK_PICK, 'marks-ring', 'marks-fit', 'selection-ring', 'ranked-target', 'ranked-pin', 'ranked-number', 'ranked-more', COASTLINE_GLOW, 'coastline']);
+  assert.deepEqual(ids.slice(at(MARK_PICK)), [MARK_PICK, 'marks-ring', 'marks-fit', 'marks-depth', 'selection-ring', 'ranked-target', 'ranked-pin', 'ranked-number', 'ranked-more', COASTLINE_GLOW, 'coastline']);
   const layer = id => style.layers.find(l => l.id === id);
-  assert.equal(layer(SURVEY_PICK).paint['fill-opacity'], 0.25, 'habitat fills at 0.25');
+  assert.deepEqual(layer(SURVEY_PICK).paint['fill-opacity'], ['interpolate', ['linear'], ['zoom'], 9, 0.12, 12, 0.22, 15, 0.3]);
   assert.deepEqual(layer('geology-line').paint['line-dasharray'], [3, 2], 'geology as a dashed outline');
   assert.equal(layer(MARK_PICK).paint['circle-radius'] * 2, 44, 'a 44 px target under each ring');
   assert.equal(layer(MARK_PICK).paint['circle-opacity'], 0);
