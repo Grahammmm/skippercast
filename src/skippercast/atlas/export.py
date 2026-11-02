@@ -2,11 +2,15 @@
 
 import argparse
 from collections import Counter
+import errno
 import hashlib
 import html
 import json
 import math
+import os
 from pathlib import Path
+import shutil
+import tempfile
 from xml.etree import ElementTree as ET
 
 from skippercast.atlas.scoring import habitat_grade, habitat_score
@@ -223,19 +227,32 @@ def notes_document(data):
 
 def write_exports(data, output):
     summary = validate(data)
-    output.mkdir(parents=True, exist_ok=False)
-    variants = {"complete.gpx": ("targets", "drifts", "areas"),
-                "waypoints.gpx": ("targets",), "drift-lines.gpx": ("drifts",),
-                "reef-outlines.gpx": ("areas",)}
-    for filename, components in variants.items():
-        (output / filename).write_bytes(gpx_document(data, components))
-    (output / "atlas.geojson").write_text(json.dumps(geojson_document(data), ensure_ascii=False) + "\n", encoding="utf-8")
-    (output / "spot-notes.html").write_text(notes_document(data), encoding="utf-8")
-    summary["edition"] = data["edition"]
-    summary["files"] = [{"name": p.name, "bytes": p.stat().st_size,
-                          "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
-                         for p in sorted(output.iterdir())]
-    (output / "manifest.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    if os.path.lexists(output):
+        raise FileExistsError(errno.EEXIST, "export folder already exists", str(output))
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temp = Path(tempfile.mkdtemp(dir=output.parent, prefix="." + output.name + ".partial-"))
+    try:
+        variants = {"complete.gpx": ("targets", "drifts", "areas"),
+                    "waypoints.gpx": ("targets",), "drift-lines.gpx": ("drifts",),
+                    "reef-outlines.gpx": ("areas",)}
+        for filename, components in variants.items():
+            (temp / filename).write_bytes(gpx_document(data, components))
+        (temp / "atlas.geojson").write_text(json.dumps(geojson_document(data), ensure_ascii=False) + "\n", encoding="utf-8")
+        (temp / "spot-notes.html").write_text(notes_document(data), encoding="utf-8")
+        summary["edition"] = data["edition"]
+        summary["files"] = [{"name": p.name, "bytes": p.stat().st_size,
+                              "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
+                             for p in sorted(temp.iterdir())]
+        (temp / "manifest.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        umask = os.umask(0o022)
+        os.umask(umask)
+        os.chmod(temp, 0o755 & ~umask)
+        if os.path.lexists(output):
+            raise FileExistsError(errno.EEXIST, "export folder already exists", str(output))
+        os.rename(temp, output)
+    except BaseException:
+        shutil.rmtree(temp, ignore_errors=True)
+        raise
     return summary
 
 
