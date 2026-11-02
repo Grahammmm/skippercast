@@ -3,7 +3,7 @@
 // so the per-session cost (docs/operations/cost-ceiling.md) comes from a real
 // browser on the real site, not from an estimate.
 //
-//   node scripts/measure_session_cost.mjs capture <base-url> <out.json>
+//   node research/scripts/measure_session_cost.mjs capture <base-url> <out.json>
 //
 // Three sessions, each in a fresh browser profile (empty HTTP cache, no
 // service worker), phone viewport, Pacific time:
@@ -17,12 +17,13 @@
 // routing answers for free without invoking the Worker. Other hosts are
 // "third-party" (their quota, not this account's).
 //
-// The R2 and D1 operations each Worker request causes are measured by
-// tests/test_session_cost.mjs, which replays this capture through the Worker.
+// The R2 and D1 operations each Worker request causes are read from the
+// Worker's code path per request and checked by the counting fakes in
+// tests/test_cost_ceiling.mjs; this capture does not replay them.
 import {existsSync, readdirSync, statSync, writeFileSync} from 'node:fs';
 import {join, resolve} from 'node:path';
 
-const ROOT = resolve(import.meta.dirname, '..');
+const ROOT = resolve(import.meta.dirname, '../..');
 const CLIENT = join(ROOT, 'dist/client');
 
 /** Every file path the static-asset router can answer (with and without .html). */
