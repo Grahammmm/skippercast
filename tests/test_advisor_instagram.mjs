@@ -345,7 +345,7 @@ dbTest('a keyword comment gets exactly one private reply (recipient.comment_id),
     'only keyword comments are stored: not the plain one, not the question (public replies off), not our own');
   const contacts = s.sql.prepare('SELECT ig_sid,channel,source FROM advisor_contacts ORDER BY ig_sid').all().map(r => ({...r}));
   assert.deepEqual(contacts, [{ig_sid: '5550000000000011', channel: 'instagram_comment', source: 'igcomment'}, {ig_sid: '5550000000000012', channel: 'instagram_comment', source: 'igcomment'}]);
-  for (const row of rows) await consume(s.env, row.id, {graph});
+  for (const row of rows) await consume(s.env, row.id, {graph, now: Date.parse(row.created_at)});
   assert.deepEqual(graph.sends().map(c => [c.path, JSON.parse(c.params.recipient)]),
     [[`/${IG}/messages`, {comment_id: '17900000000000001'}], [`/${IG}/messages`, {comment_id: '17900000000000002'}]]);
   assert.match(sent(graph.sends()[0]).message.text, /^Thanks for asking! .*species\/lingcod\?s=ig .*text\?s=ig$/);
@@ -353,14 +353,14 @@ dbTest('a keyword comment gets exactly one private reply (recipient.comment_id),
   assert.deepEqual(inboundRows(s.sql).map(r => r.intent), ['comment.keyword.rig', 'comment.keyword.rig']);
   // The queue redelivers the first comment, and Meta redelivers the webhook: nothing more goes out.
   s.sql.prepare("UPDATE advisor_messages SET status='queued' WHERE id=?").run(rows[0].id);
-  await consume(s.env, rows[0].id, {graph});
+  await consume(s.env, rows[0].id, {graph, now: Date.parse(rows[0].created_at)});
   await post(s.env, fixture('webhook-comments'));
   assert.equal(graph.sends().length, 2, 'one private reply per comment');
   assert.equal(outboundRows(s.sql).length, 2);
   // A failed row is retried (it never reached Meta), still as the one reply.
   s.sql.prepare("UPDATE advisor_messages SET status='failed' WHERE direction='out' AND in_reply_to=?").run(rows[0].id);
   s.sql.prepare("UPDATE advisor_messages SET status='queued' WHERE id=?").run(rows[0].id);
-  await consume(s.env, rows[0].id, {graph});
+  await consume(s.env, rows[0].id, {graph, now: Date.parse(rows[0].created_at)});
   assert.equal(graph.sends().length, 3); assert.equal(outboundRows(s.sql).length, 2);
 });
 
