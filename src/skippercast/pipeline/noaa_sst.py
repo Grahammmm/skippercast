@@ -9,17 +9,36 @@ from xml.etree import ElementTree
 
 from scipy.io import netcdf_file
 
+from .. import http
+
 HOST = "https://coastwatch.noaa.gov"
 PATH = "Blended/SST5km/Night/GHRSSTOSPO"
 FILE = re.compile(r"(20\d{12})-OSPO-L4_GHRSST-SSTfnd-Geo_Polar_Blended_Night-GLOB-v02\.0-fv01\.0\.nc$")
 CATALOG = f"{HOST}/thredds/catalog/{PATH}"
 
 
+def _bounds(bounds):
+    def pair(key):
+        value = bounds.get(key) if isinstance(bounds, dict) else None
+        if not isinstance(value, (list, tuple)) or len(value) != 2 or not all(
+                isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in value):
+            raise ValueError("Invalid NOAA SST regional bounds")
+        return value
+    (west, east), (south, north) = pair("longitude"), pair("latitude")
+    if not (-180 <= west < east <= 180 and -80 <= south < north <= 80):
+        raise ValueError("Invalid NOAA SST regional bounds")
+    return west, south, east, north
+
+
 def latest_file(client, now):
-    found = []
+    found, notes = [], []
     for year in (now.year, now.year - 1):
         url = f"{CATALOG}/{year}/catalog.xml"
-        root = ElementTree.fromstring(client.get(url))
+        try:
+            root = ElementTree.fromstring(client.get(url))
+        except (http.SourceError, ElementTree.ParseError, ValueError) as exc:
+            notes.append(f"{year}: {type(exc).__name__}")
+            continue
         for entry in root.iter():
             path = entry.attrib.get("urlPath", "")
             match = FILE.fullmatch(path.rsplit("/", 1)[-1])
@@ -29,6 +48,8 @@ def latest_file(client, now):
                     found.append((date, path, url))
         if found:
             break
+    if not found and notes:
+        raise ValueError("No readable NOAA blended SST catalog (" + "; ".join(notes) + ")")
     if not found:
         raise ValueError("No dated NOAA blended SST file in official catalog")
     date, path, url = max(found)
@@ -80,11 +101,8 @@ def read_subset(body, bounds, path):
 
 
 def fetch(client, bounds):
+    west, south, east, north = _bounds(bounds)
     path, catalog_url = latest_file(client, client.now)
-    west, east = bounds["longitude"]
-    south, north = bounds["latitude"]
-    if not (-180 <= west < east <= 180 and -80 <= south < north <= 80):
-        raise ValueError("Invalid NOAA SST regional bounds")
     query = urlencode({"var": ["analysed_sst", "analysis_error", "mask"], "north": north,
                        "south": south, "west": west, "east": east, "accept": "netcdf"}, doseq=True)
     url = f"{HOST}/thredds/ncss/grid/{path}?{query}"
