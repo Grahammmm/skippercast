@@ -4,7 +4,7 @@
 // full: everything).
 //
 // Data: the region's daily feed (/feeds/data/regions/<id>/latest.json) with
-// the conditions feed's newer buoys first, both loaded by loadDailyFeed; the
+// the conditions feed's newer buoys first, both loaded by loadDailyFeed (read again like the forecast); the
 // regional forecast (/api/forecast?region=<id>, edge-cached, loaded once per
 // region by ensureRegionalForecast and shared with the Conditions view; web/conditions.ts briefForecast samples it at the
 // forecast point nearest the region centre) and, where web/coast-data.ts
@@ -89,12 +89,27 @@ function dailyGap(conditions: RegionalDailyFeed): string {
 }
 
 /** Load the daily and conditions feeds for region `id`; failed fetches or feeds for another region leave the brief empty. */
-export async function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): Promise<RegionalDailyFeed | null> {
+export function loadDailyFeed(id: string, fetchFn: typeof fetch = fetch): Promise<RegionalDailyFeed | null> {
+  return readFeeds(id, fetchFn, false);
+}
+
+let dailyRequest: {id: string; fetchFn: typeof fetch} | null = null;
+let dailyLoadedAt = 0, dailyPending = false;
+
+async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean): Promise<RegionalDailyFeed | null> {
   const load = ++feedLoad;
-  feedGaps.value = [];
+  dailyRequest = {id, fetchFn};
+  dailyPending = true;
+  bindVisibility();
+  if (!refresh) feedGaps.value = [];
   const [daily, conditions] = await Promise.all([readFeed(dailyFeedPath(id), id, fetchFn), readFeed(feedPath(undefined, id), id, fetchFn)]);
   // A later load (another region) owns the feed and its gap lines; this one only returns what it read.
   if (load !== feedLoad) return mergeFeeds(daily, conditions);
+  dailyPending = false;
+  // A refresh that read neither keeps the feed and gap lines shown (readings carry their own times) and its old
+  // read time, so the next visible page tries again.
+  if (refresh && !daily && !conditions) return dailyFeed.peek();
+  dailyLoadedAt = Date.now();
   feedGaps.value = !daily && !conditions ? [FEED_GAP.both] : !daily ? [dailyGap(conditions!)] : !conditions ? [FEED_GAP.conditions] : [];
   dailyFeed.value = mergeFeeds(daily, conditions);
   return dailyFeed.peek();
@@ -149,11 +164,22 @@ export function refreshForecastIfStale(now = Date.now()): Promise<ConditionsFore
   return ensureRegionalForecast(req.id, req.near, req.fetchFn, req.page);
 }
 
+/** The brief's daily and conditions feeds follow the forecast's 30-minute rule. */
+export const DAILY_MAX_AGE_MS = FORECAST_MAX_AGE_MS;
+
+/** Read both feeds again for the last loaded region when the last read got neither or was over 30 minutes before `now`; no timer, only called as the page becomes visible. */
+export function refreshDailyIfStale(now = Date.now()): Promise<RegionalDailyFeed | null> | null {
+  const req = dailyRequest;
+  if (!req || dailyPending) return null;
+  if (dailyFeed.peek() && now - dailyLoadedAt <= DAILY_MAX_AGE_MS) return null;
+  return readFeeds(req.id, req.fetchFn, true);
+}
+
 // One listener for the page's life, bound on the first load.
 function bindVisibility() {
   if (visibilityBound || typeof document === 'undefined') return;
   visibilityBound = true;
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void refreshForecastIfStale(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { void refreshForecastIfStale(); void refreshDailyIfStale(); } });
 }
 
 export type BriefSources = {info: RegionInfo | null; feed: RegionalDailyFeed | null; forecast?: ConditionsForecast | null; coast: {report: Report; areaId: string} | null; profile: Profile; hour: string | null;
