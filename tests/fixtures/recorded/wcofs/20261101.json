@@ -1,0 +1,7 @@
+{
+  "url": "https://opendap.co-ops.nos.noaa.gov/thredds/dodsC/NOAA/WCOFS/MODELS/2026/11/01/wcofs.t03z.20261101.regulargrid.f018.nc.ascii?Latitude%5B417%3A1%3A430%5D%5B605%3A1%3A618%5D,Longitude%5B417%3A1%3A430%5D%5B605%3A1%3A618%5D,mask%5B417%3A1%3A430%5D%5B605%3A1%3A618%5D,u_eastward%5B0%5D%5B0%5D%5B417%3A1%3A430%5D%5B605%3A1%3A618%5D,v_northward%5B0%5D%5B0%5D%5B417%3A1%3A430%5D%5B605%3A1%3A618%5D,time",
+  "retrieved_at": "2026-11-02T05:51:18Z",
+  "sha256": "99eccdd5668348c084305c7fa6bc6df445c82fca0a504fe3673533dc4e4ee06b",
+  "bytes": 11180,
+  "license": "U.S. government work, public domain (catalog/sources.json source noaa-wcofs; credit NOAA West Coast Operational Forecast System)"
+}

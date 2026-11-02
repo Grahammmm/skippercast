@@ -276,8 +276,8 @@ test('a repeated ack keeps the first read time; a trip final_delivered_at is set
 
 test('the 20-active-trips limit is carried by the insert: parallel saves never exceed it, only active rows of this owner count', async () => {
   const {sql, adapter} = database(), env = {DB: adapter};
-  // Yesterday is the calendar day before today in Los Angeles; now minus 24 h is still today in the last hour of a 25-hour DST day.
-  const today = new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Los_Angeles'}).format(new Date()), yesterday = new Date(Date.parse(`${today}T12:00:00Z`) - 86400000).toISOString().slice(0, 10);
+  // Yesterday by calendar day, not now minus 24 h: on the 25-hour DST-end day that is still today.
+  const day = ms => new Intl.DateTimeFormat('en-CA', {timeZone: 'America/Los_Angeles'}).format(new Date(ms)), today = day(Date.now()), yesterday = new Date(Date.parse(`${today}T12:00:00Z`) - 86400000).toISOString().slice(0, 10);
   const seed = (owner, n, {date = today, enabled = 1, final = null} = {}) => { for (let i = 0; i < n; i++) sql.prepare('INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,enabled,created_at,final_delivered_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run(`${owner}-${date}-${enabled}-${final}-${i}`, owner, 'morro-bay', 'north', 'reef', date, 7, 13, 8, 12, 3, enabled, new Date().toISOString(), final); };
   const trip = (over = {}) => ({region: 'morro-bay', point: 'north', species: 'reef', date: today, start_hour: 7, end_hour: 13, wind_limit: 8, gust_limit: 12, sea_limit: 3, ...over});
   const save = (owner, over) => worker.fetch(request('/api/trips', {owner, method: 'POST', body: trip(over)}), env);
