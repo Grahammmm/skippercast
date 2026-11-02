@@ -278,6 +278,8 @@ export interface RankingInputs {
   readonly publication?: ReefPublication;
   /** SCJ-2b: the planner's protected-area screen, which admits the publication's places; absent, idle or loading, the list is still checking. */
   readonly plannerScreen?: PlannerScreenState;
+  /** SCJ-2c: the home port the distances run from is still loading; nothing is measured until it lands. */
+  readonly originPending?: boolean;
 }
 /** Where the current region's region.json read stands (web/app/App.tsx loadRegion writes it); here so the brief reads it without the shell. */
 export const regionLoad = signal<{id: string; state: 'loading' | 'ready' | 'error' | 'missing'} | null>(null);
@@ -317,6 +319,10 @@ export function ranking(i: RankingInputs): Ranking {
   if (i.missing) return {source: null, label: '', basis: '', picks: [], empty: 'No ranked places: this region does not exist.'};
   if (PROFILE_TABLE[i.profile].whereToLook === 'shore-runs')
     return {source: null, label: '', basis: '', picks: [], empty: 'Shore runs and their review status show on the Chart.'};
+  if (i.originPending) { // SCJ-2c: no harbour-based numbers that change under the user once the port lands.
+    const r = ranking({...i, originPending: false, reachNm: null}); // only its source and label are kept
+    return {source: r.source, label: r.label, basis: r.source ? 'Distances run from your home port, which is still loading.' : '', picks: [], empty: 'Finding your home port…'};
+  }
   const pub = i.publication, plannerSpecies = Object.hasOwn(PLANNER_SPECIES, i.coast) ? PLANNER_SPECIES[i.coast] : undefined;
   if (pub && i.region && plannerSpecies) {
     if (pub.region !== i.region || pub.state === 'idle' || pub.state === 'loading')
