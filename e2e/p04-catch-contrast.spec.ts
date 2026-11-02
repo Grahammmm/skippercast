@@ -155,7 +155,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
-  "scripts/check_contrast.mjs": "92a15809e8895d2b66beecfda4e1c49a297edc7e2e27bdd1f21845b355502e11",
+  // SC2007-02 (Protected areas Try again): check_contrast.mjs changes only the legendTsx surface hash and its
+  // comment; Legend.tsx is not a BODY09 input and Reports never mounts the legend. contrast(), the one export this
+  // spec reads, assertions and thresholds are untouched. Rebind only check_contrast.mjs. (Kept beside its pin, not in
+  // the notes above, so it does not collide with SCJ-7 #1224's notes there.)
+  "scripts/check_contrast.mjs": "9a032cc458741a9d2b1a8ffd77a86513c63c92091e4456e6781ad8c48ae63f93",
   "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
   "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
