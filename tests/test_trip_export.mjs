@@ -102,17 +102,21 @@ test('full linked geometry is screened even when reverse target references are m
   const atlas = atlasFixture();
   atlas.areas[0].target_ids = [];
   const screen = screenFixture([exclusion('MPA', polygon(0.4, -0.1, 0.2))]);
-  assert.equal(buildExport(request({atlas, screen})).counts.waypoints, 1);
+  // SC-LAUNCH-1: the reef area is screened whole even for a waypoints-only export.
+  assert.throws(() => buildExport(request({atlas, screen})), /whole-boundary/);
   for (const layer of ['outlines', 'alignments']) {
-    assert.throws(() => buildExport(request({atlas, screen, layers: {...DEFAULT_LAYERS, [layer]: true}})), /outline or alignment intersects/);
+    assert.throws(() => buildExport(request({atlas, screen, layers: {...DEFAULT_LAYERS, [layer]: true}})), /whole-boundary|outline or alignment intersects/);
   }
 });
 
-test('missing linked data blocks only the layer that would use it', () => {
+test('missing linked data blocks the layer that would use it, and a waypoint whose reef area cannot be screened', () => {
   const atlas = atlasFixture();
-  atlas.areas = [];
   atlas.drifts = [];
   assert.equal(buildExport(request({atlas})).counts.waypoints, 1);
+  assert.throws(() => buildExport(request({atlas, layers: {...DEFAULT_LAYERS, alignments: true}})), /missing linked geometry/);
+  atlas.areas = [];
+  // SC-LAUNCH-1: without its reef area the whole reef cannot be screened, so the waypoint fails closed.
+  assert.throws(() => buildExport(request({atlas})), /whole-boundary/);
   for (const layer of ['outlines', 'alignments']) {
     assert.throws(() => buildExport(request({atlas, layers: {...DEFAULT_LAYERS, [layer]: true}})), /missing linked geometry/);
   }

@@ -32,6 +32,22 @@ class Refused(Exception):
     pass
 
 
+def _json_object(path, what):
+    try:
+        doc = json.loads(Path(path).read_text(encoding='utf-8'))
+    except (OSError, UnicodeDecodeError, ValueError, RecursionError):
+        doc = None
+    if not isinstance(doc, dict):
+        raise Refused(f'{what}: unreadable JSON object')
+    return doc
+
+
+def _pixels(text):
+    if not text.strip().isdigit() or not 1 <= int(text) <= 1_000_000_000:
+        raise argparse.ArgumentTypeError('must be a whole number from 1 to 1000000000')
+    return int(text)
+
+
 def sha256(path):
     digest = hashlib.sha256()
     with open(path, 'rb') as fh:
@@ -102,7 +118,7 @@ def verify(args):
     if any((out_dir / name).exists() for name in OUTPUTS):
         raise Refused('outputs exist')
     apply_path, corrected_path, prov_path = (a_dir / n for n in ('EC-APPLY.json', 'corrected.tif', 'provenance.tif'))
-    receipt = json.loads(apply_path.read_text(encoding='utf-8'))
+    receipt = _json_object(apply_path, 'apply receipt')
     if check_receipt('ec-apply-v1', receipt):
         raise Refused('apply receipt: ' + '; '.join(check_receipt('ec-apply-v1', receipt)))
     if receipt['source_id'] != args.a_source:
@@ -112,7 +128,9 @@ def verify(args):
     corrected_sha = sha256(corrected_path)
     if receipt['corrected_sha256'] != corrected_sha:
         raise Refused('corrected_sha256')
-    entries = json.loads(Path(args.catalog_entries).read_text(encoding='utf-8'))
+    entries = _json_object(args.catalog_entries, 'catalog entries')
+    if not all(isinstance(k, str) and isinstance(v, dict) for k, v in entries.items()):
+        raise Refused('catalog entries must map source ids to objects')
     missing = sorted({args.a_source, *args.b_source} - set(entries))
     if missing:
         raise Refused('catalog entry missing: ' + ', '.join(missing))
@@ -202,7 +220,7 @@ def main(argv=None):
     parser.add_argument('--b-datum', action='append', default=[])
     parser.add_argument('--catalog-entries', required=True, help='JSON {source_id: catalog entry}')
     parser.add_argument('--out-dir', required=True)
-    parser.add_argument('--max-pixels', type=int, default=120_000_000)
+    parser.add_argument('--max-pixels', type=_pixels, default=120_000_000)
     args = parser.parse_args(argv)
     try:
         doc = verify(args)

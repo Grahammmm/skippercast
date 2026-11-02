@@ -2,7 +2,7 @@
 // order registered, and the first route that answers ends the request.
 //
 //   metrics -> request-id -> security headers (+ renewed session cookie) -> context
-//   -> www redirect -> /feeds/ -> public /api/ (+ /api/telemetry) -> advisor (gated) -> fleet (gated) -> /api/auth/ -> /api/session
+//   -> cost ceiling (metered R2, last-known copies when degraded) -> www redirect -> /feeds/ -> public /api/ (+ /api/telemetry) -> advisor (gated) -> fleet (gated) -> /api/auth/ -> /api/session
 //   -> private gate (signed in, Origin, budget) -> private /api/ -> admin (role-gated) -> /api/ 404
 //   -> static assets and page shells
 //
@@ -13,6 +13,7 @@ import {requestId} from './middleware/request-id.ts';
 import {securityHeaders} from './middleware/security-headers.ts';
 import {context} from './middleware/context.ts';
 import {canonical} from './middleware/canonical.ts';
+import {costCeiling} from './cost-ceiling.ts';
 import {requireUser} from './middleware/auth.ts';
 import {onError} from './middleware/error.ts';
 import {feeds} from './routes/feeds.ts';
@@ -40,7 +41,7 @@ import type {AppEnv} from './env.ts';
 // so a route sees the same path the feed-key and origin checks see.
 export const app = new Hono<AppEnv>({getPath: request => new URL(request.url).pathname});
 
-app.use('*', metrics, requestId, securityHeaders, context, canonical);
+app.use('*', metrics, requestId, securityHeaders, context, costCeiling, canonical);
 // '/feeds' and '/api' without a trailing slash are ordinary site paths.
 app.all('/feeds', serveAsset);
 app.all('/api', serveAsset);

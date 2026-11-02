@@ -7,7 +7,7 @@
 // is outside the curve) it says "Tide series unavailable" and still lists
 // the events. The trend is the tide tile's (web/tides.ts).
 import {CoastMarkup} from '../app/CoastMarkup.tsx';
-import {zone} from '../app/App.tsx';
+import {zone} from '../app/region-info.ts';
 import {selectHour} from '../app/TimeDock.tsx';
 import {hour} from '../state.ts';
 import {sparkArgs, TIDE_UNAVAILABLE} from '../tides.ts';

@@ -100,6 +100,17 @@ collector serves the newest data by its own clock, so an older retained reading
 never replaces a newer stale one
 ([station priorities](operations/station-failover.md)).
 
+Stale data never wears a calmer label. Each surface that can say calm holds or
+drops its word when its inputs age (`tests/test_stale_never_calmer.mjs` pins
+every limit; the limits differ because each surface reads a different input):
+
+| Surface | Calm label | Aged input and limit | Past the limit |
+| --- | --- | --- | --- |
+| Brief verdict (`web/brief/verdict.ts`) | Comfortable | model run older than 18 h (`FORECAST_AGE.holdHours`); older than 36 h (`dropHours`) or more than 1 h ahead is read as missing; alert check missing | held at Marginal with the run's age; no usable run reads Unknown |
+| Coast assessment (`packages/coast/src/assessment.ts`) | a status with a window | forecast issued over 18 h ago or over 1 h ahead; fetched over 2 h ago; `nws-alerts` over 2 h old | Unknown |
+| Trip alert policy (`server/alert-policy.ts`) | within limits | feed `completed_at` over 3 h old or ahead; any model run over 36 h old or over 1 h ahead, or its source not `ok` | unverified |
+| Text advisor comfort word (`server/advisor/answers/forecast-clock.ts`) | comfortable | oldest model run over 18 h; over 36 h, over 1 h ahead or with no run time; `completed_at` is not read | a calmer word held at unknown with `comfort_held` (rough stays rough); past 36 h the forecast reads as unavailable |
+
 Saved-trip alerts (`server/alert-policy.ts`) still compare a trip's window
 maxima (wind, gusts, seas and chop) with the limits saved on the trip. It reads
 no wave period, so it has no long-period rule. That screen is unchanged here.

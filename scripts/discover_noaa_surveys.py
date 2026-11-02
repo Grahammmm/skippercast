@@ -10,6 +10,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import sys
 from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 
@@ -78,21 +79,58 @@ def scan(sectors, previous=None, *, now=None, fetcher=fetch):
             'health': {'status': 'ok' if complete else 'degraded', 'issues': failures}, 'sectors': rows}
 
 
-def main():
+def _days(text):
+    days = int(text) if re.fullmatch(r'[+-]?[0-9]+', text.strip()) else 0
+    if not 1 <= days <= 365:
+        raise argparse.ArgumentTypeError('must be a whole number of days from 1 to 365')
+    return days
+
+
+def _previous(path):
+    return _previous_bytes(path)[:2]
+
+
+def _previous_bytes(path):  # (previous, reason, raw): raw is the one read that was parsed and checked
+    try:  # the is_file() stat can raise too, e.g. PermissionError under an unreadable directory
+        if not path or not path.is_file():
+            return None, None, None
+        raw = path.read_bytes()
+        previous = json.loads(raw.decode('utf-8'))
+    except (OSError, ValueError):  # covers UnicodeDecodeError and JSONDecodeError
+        previous = None
+    return (previous, None, raw) if isinstance(previous, dict) else (None, 'unreadable', None)
+
+
+def _scan_time(value, now):
+    try:
+        when = None if value is None else datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None, 'bad scan time'
+    if when is None or when.utcoffset() is None:
+        return None, 'scan time has no UTC offset' if when else 'no scan time'
+    return (when, None) if when <= now else (None, 'scan time is in the future')
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--previous', type=Path)
-    parser.add_argument('--max-age-days', type=int, default=30)
-    args = parser.parse_args()
+    parser.add_argument('--max-age-days', type=_days, default=30)
+    args = parser.parse_args(argv)
     now = datetime.now(timezone.utc)
-    previous = json.loads(args.previous.read_text()) if args.previous and args.previous.is_file() else None
-    if previous and previous.get('health', {}).get('status') == 'ok' and previous.get('last_complete_scan_at'):
-        age = now - datetime.fromisoformat(previous['last_complete_scan_at'])
-        if timedelta(0) <= age < timedelta(days=args.max_age_days):
+    previous, reason, raw = _previous_bytes(args.previous)
+    if previous and isinstance(previous.get('health'), dict) and previous['health'].get('status') == 'ok':
+        when, reason = _scan_time(previous.get('last_complete_scan_at'), now)
+        if when and now - when < timedelta(days=args.max_age_days):
             args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_bytes(args.previous.read_bytes())
+            temporary = args.output.with_suffix(args.output.suffix + '.tmp')
+            temporary.write_bytes(raw)
+            temporary.replace(args.output)
             print('Retained complete NOAA discovery from ' + previous['last_complete_scan_at'])
             return
+    if reason:
+        print(f'previous scan ignored: {reason}', file=sys.stderr)
+    previous = previous if previous and isinstance(previous.get('sectors'), list) else None
     sectors = json.loads((ROOT / 'dist/data/coastal-sectors.json').read_text())['sectors']
     result = scan(sectors, previous, now=now)
     args.output.parent.mkdir(parents=True, exist_ok=True)

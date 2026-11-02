@@ -8,6 +8,9 @@ the reference algorithm): values are rounded half up like JavaScript's
 ``Math.round``, deltas are taken between the rounded integers so error never
 accumulates, and points are encoded latitude first.
 
+Both ``simplify`` and ``encode_polyline`` refuse, naming the point index, any position that is not a real (lat, lon)
+pair: bools or non-numbers, NaN/inf, or a value outside -90..90 / -180..180 (such as the AIS 91/181 "not available").
+
 Standard library only; pure functions.
 """
 from __future__ import annotations
@@ -21,6 +24,22 @@ PRECISION = 5
 METRES_PER_DEG = 111_320.0  # metres per degree of latitude (and of longitude at the equator)
 
 Point = tuple[float, float]  # (lat, lon)
+
+
+def _check_point(i: int, point, nonfinite: str | None = None) -> Point:
+    """``point`` as (lat, lon) floats, or ``ValueError("point <i>: ...")`` when it is not a real position."""
+    if not isinstance(point, (tuple, list)) or len(point) != 2:
+        raise ValueError(f"point {i}: not a (lat, lon) pair")
+    for name, value in zip(("latitude", "longitude"), point):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"point {i}: {name} is not a number")
+    if any(isinstance(value, float) and not math.isfinite(value) for value in point):
+        raise ValueError(nonfinite or f"point {i}: not finite")
+    if not -90 <= point[0] <= 90:
+        raise ValueError(f"point {i}: latitude outside -90..90")
+    if not -180 <= point[1] <= 180:
+        raise ValueError(f"point {i}: longitude outside -180..180")
+    return float(point[0]), float(point[1])
 
 
 def _project(points: Sequence[Point]) -> list[tuple[float, float]]:
@@ -48,8 +67,11 @@ def simplify(points: Sequence[Point], tolerance_m: float) -> list[Point]:
     (on the local projection). Iterative, so long tracks cannot hit the recursion limit.
     """
     pts = list(points)
-    if tolerance_m < 0 or not math.isfinite(tolerance_m):
+    if isinstance(tolerance_m, bool) or not isinstance(tolerance_m, (int, float)) or tolerance_m < 0 or (
+            isinstance(tolerance_m, float) and not math.isfinite(tolerance_m)):
         raise ValueError("tolerance_m must be a finite number >= 0")
+    for i, point in enumerate(pts):
+        _check_point(i, point)
     if len(pts) <= 2:
         return pts
     xy = _project(pts)
@@ -91,9 +113,8 @@ def encode_polyline(points: Iterable[Point], precision: int = PRECISION) -> str:
     """Google encoded polyline of (lat, lon) points."""
     factor = 10 ** precision
     out, prev_lat, prev_lon = [], 0, 0
-    for lat, lon in points:
-        if not (math.isfinite(lat) and math.isfinite(lon)):
-            raise ValueError("polyline points must be finite")
+    for i, point in enumerate(points):
+        lat, lon = _check_point(i, point, nonfinite="polyline points must be finite")
         ilat, ilon = _round_half_up(lat * factor), _round_half_up(lon * factor)
         out.append(_encode_value(ilat - prev_lat))
         out.append(_encode_value(ilon - prev_lon))

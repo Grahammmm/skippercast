@@ -54,7 +54,7 @@ W="npx --yes wrangler@4.142.0"
    ```bash
    gh run view "$(gh run list --workflow live-conditions.yml --limit 1 --json databaseId --jq '.[0].databaseId')" --log | grep -iE 'R2|r2 publish' | tail -20
    ```
-5. **Seafloor only?** `curl -fsS "$SITE/feeds/tiles/seafloor/manifest-morro-bay.json"` and check `status` (`ready`), `expires_at` (in the future) and `archive_sha256`. An expired manifest is correct fail-closed behaviour until the weekly seafloor workflow republishes.
+5. **Seafloor only?** `curl -fsS "$SITE/feeds/tiles/seafloor/manifest-morro-bay.json"` and check `status` (`ready`), `expires_at` (in the future) and `archive_sha256`. An expired manifest is correct fail-closed behaviour until the daily seafloor workflow (`seafloor.yml`, 10:23 UTC) republishes; to republish now, run `gh workflow run seafloor.yml --ref main -f region=<region>` (see Fix C below).
 
 ## Fix
 

@@ -2,7 +2,7 @@
 // § 8, § 9 Shore runs). The region's reviewed shore-habitat package
 // (catalog/shore-habitat/<id>.geojson, published by the platform build as
 // dist/regions/<id>/shore-habitat.geojson, FE-43) draws only with
-// `profile=shore`: each ESI 2006 sandy-shore run as a wide soft --amber line
+// `profile=shore`: each ESI 2006 shore run (sandy, or rocky where reviewed) as a wide soft --amber line
 // tinted by its priority (web/brief/shore.ts), its public access points as
 // pins with a 44 px target, and one mark card per run with its review dates,
 // the method guidance and the official rules link.
@@ -20,7 +20,7 @@
 import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import type {Report} from '../../packages/coast/src/types.ts';
-import {geometryIntersects, pointInGeometry} from '../../dist/geo-screen.js';
+import {closureHits} from '../../dist/geo-screen.js';
 import {activeAlerts, alertCheckCurrent, beachNotices, nextShoreChange, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus, rankRuns, type ShoreRunClocks, type ShoreStatus} from '../brief/shore.ts';
 import {coastData} from '../coast-data.ts';
 import {PROFILE_TABLE} from '../profile.ts';
@@ -54,7 +54,7 @@ export const shoreURL = (id: string): string => `regions/${id}/shore-habitat.geo
 type Position = [number, number];
 export interface AccessPoint {readonly id: string; readonly name: string; readonly coordinates: Position; readonly sourceUrl: string; readonly checkedAt: string}
 export interface RunProps extends ShoreRunClocks {
-  readonly id: string; readonly name: string; readonly areaId: string; readonly region: string; readonly shoreClass: string;
+  readonly id: string; readonly name: string; readonly areaId: string; readonly region: string; readonly substrate?: string; readonly shoreClass: string;
   readonly sourceYear: number; readonly sourceUrl: string; readonly access: readonly AccessPoint[]; readonly accessUrl: string; readonly attribution: string;
 }
 export interface Run {readonly type: 'Feature'; readonly id: string; readonly geometry: {readonly type: 'MultiLineString'; readonly coordinates: Position[][]}; readonly properties: RunProps}
@@ -69,8 +69,7 @@ export const validPackage = (d: unknown, id: string): boolean => {
 /** Protected areas the run's line or access points lie in; null while the check is not current. */
 export function insideAreas(run: Run, screen: MarkScreen): string[] | null {
   if (screen.status !== 'ready') return null;
-  return screen.boundaries.filter(b => geometryIntersects(run.geometry, b.geometry)
-    || run.properties.access.some(a => pointInGeometry(a.coordinates, b.geometry))).map(b => b.name);
+  return closureHits([run.geometry, ...run.properties.access.map(a => ({type: 'Point', coordinates: a.coordinates}))], screen.boundaries).map(b => b.name);
 }
 
 /** The runs that draw at `now`, ranked, each with its status. */
@@ -116,7 +115,7 @@ export function shoreOverlay(p: Palette, data: ReturnType<typeof shoreCollection
 
 /** The card for a run: its status and reasons, review dates, access points, method guidance and the rules link. */
 export function runMark(r: ShownRun, target: string, now = Date.now()): ChartMark {
-  const p = r.run.properties, guide = shoreGuidance(target);
+  const p = r.run.properties, guide = shoreGuidance(target, p.substrate);
   const access = r.status.label === 'Blocked' ? '' : ` Public access: ${p.access.map(a => a.name).join('; ')}.`;
   return {
     id: `shore:${p.id}`, name: p.name, kind: `Shore run · ${r.status.label}`,

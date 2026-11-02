@@ -13,6 +13,7 @@ from pathlib import Path
 import sqlite3
 import struct
 import tempfile
+import threading
 import unittest
 from unittest import mock
 
@@ -524,6 +525,36 @@ class RunTest(unittest.TestCase):
             self.assertEqual({m for m, _ in rows(listener.store, 'discovery')}, {OTHER})
             self.assertEqual(len(rows(listener.store, 'statics')), 1)
             self.assertEqual(listener.counters.malformed, 1)
+            beat = json.loads(listener.heartbeat_path.read_text())
+            self.assertEqual(beat['queue_depth'], 0)
+            self.assertEqual(beat['written']['positions'], 1)
+
+    def test_a_stop_during_a_write_still_counts_the_batch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            listener = make_listener(tmp, Connector([envelope(), 'hang']), settings=Settings(batch_seconds=0.01),
+                                     clock=FakeClock(NOW + 180))
+            real_write = listener.store.write
+            started, release = threading.Event(), threading.Event()
+
+            def held_write(*args):
+                started.set()
+                release.wait(5)
+                return real_write(*args)
+            listener.store.write = held_write
+
+            async def scenario():
+                stop = asyncio.Event()
+                runner = asyncio.ensure_future(listener.run(stop))
+                self.assertTrue(await asyncio.to_thread(started.wait, 5))
+                writer = next(t for t in asyncio.all_tasks() if t.get_name() == 'ais-writer')
+                stop.set()
+                while not writer.cancelling():   # the stop lands while the batch is still in the store
+                    await asyncio.sleep(0.001)
+                release.set()
+                await runner
+
+            asyncio.run(scenario())
+            self.assertEqual({m for m, _ in rows(listener.store, 'positions')}, {WATCHED})
             beat = json.loads(listener.heartbeat_path.read_text())
             self.assertEqual(beat['queue_depth'], 0)
             self.assertEqual(beat['written']['positions'], 1)

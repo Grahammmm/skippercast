@@ -18,7 +18,7 @@
 // Erasable syntax only: tests/test_fleet_public_layers.mjs imports it by type stripping.
 import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
-import {geometryIntersects, pointInGeometry} from '../../dist/geo-screen.js';
+import {closureHits, pointGeometry} from '../../dist/geo-screen.js';
 import {matchesTargetSpecies} from '../../dist/target-groups.js';
 import {PROFILE_TABLE, withinDepth, type Profile} from '../profile.ts';
 import {layers, profile, region, species} from '../state.ts';
@@ -78,7 +78,7 @@ export type Collection = {type: 'FeatureCollection'; features: Feature[]};
 
 /** v1's run-time screen for a feature: ready, its anchor outside every area and its outline clear of them (`pointAllowed && geometryAllowed`). */
 export function screened(at: {latitude: number; longitude: number}, geometry: unknown, screen: MarkScreen): boolean {
-  return screen.status === 'ready' && !screen.boundaries.some(b => pointInGeometry([at.longitude, at.latitude], b.geometry) || geometryIntersects(geometry, b.geometry));
+  return screen.status === 'ready' && !closureHits([pointGeometry(at.longitude, at.latitude), geometry], screen.boundaries).length;
 }
 
 /** The grounds that draw for `target` and `profile` under `screen` (v1's `matchingGrounds` with its area and search filters left to the Fleet view). */

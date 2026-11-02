@@ -10,8 +10,8 @@ import {createHash} from 'node:crypto';
 import {syntheticTerrain} from './terrain-keyboard-fixture.ts';
 import {readFileSync} from 'node:fs';
 import {inflateSync} from 'node:zlib';
-import type {Page, Route} from '@playwright/test';
-import {chartCentre, expect, PIXEL, test} from './fixtures.ts';
+import type {Locator, Page, Route} from '@playwright/test';
+import {chartCentre, expect, PIXEL, test, type V2} from './fixtures.ts';
 
 const UNAVAILABLE = 'Coastal graphics are unavailable. The chart, forecasts and trip tools remain usable.';
 const PLACE = {region: 'morro-bay', profile: 'spear', target: 'rockfish', hour: '2030-01-02T03:00Z', habitat: 'reef:r1', view: '35.38000,-120.88000,12'};
@@ -1195,19 +1195,27 @@ test('Swell draws nothing for a stale run or points that form no grid, and says 
 });
 
 // FE-80: the renderer mounts with host chrome; its options live in the Seafloor entry and its view buttons in the stage.
-test('in 3D the terrain options sit in the Seafloor entry and the view buttons in the stage; keyboard reaches each and axe is clean', async ({page, pageErrors, v2}) => {
+// SC2222-09: one case did options, keyboard, axe and the view buttons in one 60 s budget; CI's laptop used 49-54 s of it
+// when green and timed out at the last click (run 41285087793), so the sequence is split at the axe scan.
+// The held dataset fetch aborts after the renderer's real 20 s timeout; the keyboard and axe sequence outlasts it on
+// CI (#422 trace: Chart fallback at 20.9 s). A synthetic terrain loads once the held mount is checked (`held`).
+async function terrain3d(page: Page, v2: V2, held?: (host: Locator) => Promise<void>) {
   await holdCoastData(page);
-  // The held dataset fetch aborts after the renderer's real 20 s timeout; the keyboard and axe sequence outlasts it on
-  // CI (#422 trace: Chart fallback at 20.9 s). A synthetic terrain loads once the held mount is checked.
   const terrain = await syntheticTerrain(page);
   await v2.open('app', {region: 'morro-bay', presentation: '3d', layers: 'seafloor', view: PLACE.view});
   const host = page.locator('.app-terrain');
   await expect.poll(() => host.evaluate(el => !!el.shadowRoot?.getElementById('scene'))).toBe(true);
-  expect(await host.evaluate(el => ['.layers', '.view-controls', '#reading', '#target-detail'].filter(q => el.shadowRoot!.querySelector(q))),
-    'no native panel in the root').toEqual([]);
-  expect(await host.evaluate(el => !!el.shadowRoot!.getElementById('loading')), 'still loading while the terrain is held').toBe(true);
+  await held?.(host);
   terrain.release();
   await expect.poll(() => host.evaluate(el => !el.shadowRoot!.getElementById('loading')), {message: 'the synthetic terrain loads'}).toBe(true);
+}
+
+test('in 3D the terrain options sit in the Seafloor entry; keyboard reaches each and axe is clean', async ({page, pageErrors, v2}) => {
+  await terrain3d(page, v2, async host => {
+    expect(await host.evaluate(el => ['.layers', '.view-controls', '#reading', '#target-detail'].filter(q => el.shadowRoot!.querySelector(q))),
+      'no native panel in the root').toEqual([]);
+    expect(await host.evaluate(el => !!el.shadowRoot!.getElementById('loading')), 'still loading while the terrain is held').toBe(true);
+  });
   await showLayers(page);
   const options = page.locator('.app-rail-terrain');
   const summary = options.locator('summary');
@@ -1228,7 +1236,12 @@ test('in 3D the terrain options sit in the Seafloor entry and the view buttons i
   await expect(options.getByRole('checkbox', {name: 'Source coverage'})).toBeChecked();
   await expect(options.getByRole('slider', {name: /Water opacity/})).toBeVisible();
   await v2.a11y('v2-map-terrain-options');
-  await hideLayers(page);
+  expect(pageErrors).toEqual([]);
+});
+
+// FE-80, SC2222-09: the second half of the terrain options case, with its own setup (no Layers panel to close).
+test('in 3D the view buttons sit in the stage beside the terrain options; keyboard reaches each and Chart takes over', async ({page, pageErrors, v2}) => {
+  await terrain3d(page, v2);
   const view = page.getByRole('group', {name: 'Terrain view'});
   for (const name of ['Zoom in', 'Zoom out', 'Reset map view', 'View from above']) {
     await view.getByRole('button', {name}).focus();

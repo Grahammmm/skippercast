@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -57,21 +58,35 @@ def coverage_status(region: FleetRegion, snapshot: Snapshot) -> dict[str, dict]:
 
 
 def apply(statuses: Mapping[str, Mapping[str, str]], root: Path | None = None) -> list[str]:
-    """Write each status into its region.json; the regions whose file changed."""
-    changed = []
+    """Check every region (else ``ValueError('<id>: ...')``), then write each via temp + ``os.replace``; the ids changed."""
+    pending = []
     for ident, status in sorted(statuses.items()):
         path = Path(root or repo_root()) / "regions" / ident / "region.json"
-        text = path.read_text(encoding="utf-8")
-        if SOURCE not in json.loads(text)["source_bindings"].get(NEED, []):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            raise ValueError(f"{ident}: region.json unreadable") from None
+        try:
+            bound = json.loads(text)["source_bindings"].get(NEED, [])
+        except json.JSONDecodeError:
+            raise ValueError(f"{ident}: region.json is not valid JSON") from None
+        if SOURCE not in bound:
             raise ValueError(f"{ident}: {NEED} is not bound to {SOURCE}")
         new, count = ENTRY.subn(lambda m: m[1] + json.dumps(status["status"]) + m[2] + json.dumps(status["reason"]) + m[3],
                                 text)
         if count != 1 or json.loads(new)["coverage"][NEED] != dict(status):
             raise ValueError(f"{ident}: no single coverage.{NEED} entry to update")
         if new != text:
-            path.write_text(new, encoding="utf-8")
-            changed.append(ident)
-    return changed
+            pending.append((ident, path, new))
+    for _, path, new in pending:
+        tmp = path.with_name(f".region.json.{os.getpid()}.tmp")
+        try:
+            tmp.write_text(new, encoding="utf-8")
+            os.replace(tmp, path)
+        except BaseException:
+            tmp.unlink(missing_ok=True)
+            raise
+    return [ident for ident, _, _ in pending]
 
 
 def main(argv=None) -> int:
@@ -94,5 +109,10 @@ def main(argv=None) -> int:
         sink.close()
     print(json.dumps(statuses, indent=2, sort_keys=True))
     if args.apply:
-        print("updated: " + (", ".join(apply(statuses)) or "nothing"), file=sys.stderr)
+        try:
+            changed = apply(statuses)
+        except ValueError as error:
+            print(f"coverage-status: {error}", file=sys.stderr)
+            return 1
+        print("updated: " + (", ".join(changed) or "nothing"), file=sys.stderr)
     return 0
