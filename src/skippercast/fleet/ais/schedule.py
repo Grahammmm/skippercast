@@ -274,6 +274,20 @@ def _read_reports(path: Path) -> list[Mapping]:
     return [r for r in rows if isinstance(r, Mapping)]
 
 
+def _read_vessels(path: Path) -> list[Mapping]:
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (ValueError, RecursionError):   # UnicodeDecodeError and JSONDecodeError are ValueErrors
+        raise ValueError(f"{path}: not readable JSON") from None
+    vessels = doc.get("vessels") if isinstance(doc, dict) else doc
+    if not isinstance(vessels, list):
+        raise ValueError(f"{path}: expected a list of vessels or an object with vessels[]")
+    for i, v in enumerate(vessels):
+        if not (isinstance(v, dict) and isinstance(v.get("id"), str) and v["id"]):
+            raise ValueError(f"{path}: vessel {i} needs an object with a string id")
+    return vessels
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="python -m skippercast.fleet.ais schedule-precision",
                                      description="Precision of schedule-correlation on a history window (counts only).")
@@ -295,11 +309,12 @@ def main(argv=None) -> int:
     from .store import ais_root
     from ..sinks import worker_base
     try:
+        given = _read_vessels(args.vessels) if args.vessels else None
         region = load_region(args.region)
         if args.source not in STORES:
             raise ValueError(f"no raw store for source {args.source!r}")
-        if args.vessels:
-            vessels, reviews = json.loads(args.vessels.read_text()), []
+        if given is not None:
+            vessels, reviews = given, []
         else:
             vessels, reviews = read_snapshot(Worker(worker_base()), region.id)
         first, last = args.start.isoformat(), args.end.isoformat()
