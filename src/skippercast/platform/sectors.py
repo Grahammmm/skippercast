@@ -1,6 +1,26 @@
 """Compile coastwide discovery sectors without promoting them to fishing grounds."""
+import math
 from pathlib import Path
 from .contracts import REPO, atomic_json, bbox, public_url, read_json
+
+
+def _check_source(source):
+    """Name a misshaped sector catalog before any atlas is read."""
+    sectors, leads = source.get('sectors'), source.get('survey_discovery')
+    if not isinstance(sectors, list) or not all(isinstance(s, dict) for s in sectors):
+        raise ValueError('coastal-sectors: sectors must be a list of objects')
+    if not isinstance(leads, list) or not all(isinstance(x, dict) and isinstance(x.get('url'), str) for x in leads):
+        raise ValueError('coastal-sectors: survey_discovery must be a list of objects with a text url')
+    for index, sector in enumerate(sectors):
+        name = sector['id'] if isinstance(sector.get('id'), str) else f'#{index}'
+        for field in ('id', 'name', 'coast'):
+            if not isinstance(sector.get(field), str):
+                raise ValueError(f'coastal-sectors: {name}: {field} must be text')
+        lat = sector.get('latitude')
+        if not (isinstance(lat, list) and len(lat) == 2 and all(
+                isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in lat)
+                and lat[0] < lat[1]):
+            raise ValueError(f'coastal-sectors: {name}: latitude must be two finite numbers, south < north')
 
 
 def compile_sectors(root=REPO):
@@ -10,6 +30,11 @@ def compile_sectors(root=REPO):
     packages = {p['id']: p for p in read_json(root / 'dist/regions/index.json')['regions']}
     if source.get('schema_version') != 1 or not source.get('reviewed_at'):
         raise ValueError('Invalid coastal sector catalog')
+    _check_source(source)
+    for coast in coasts:
+        for package_id in coast['packages']:
+            if package_id not in packages:
+                raise ValueError(f"coastal-sectors: coast {coast['id']} package {package_id} is not in dist/regions/index.json")
     public_url(source['survey_feed_url'])
     public_url(source['survey_product_feed_url'])
     for lead in source['survey_discovery']:
