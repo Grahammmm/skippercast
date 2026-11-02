@@ -32,6 +32,13 @@ def _bad_key(name, data):
     return None
 
 
+def annotation(text):
+    """Return issue text as a safe workflow-command message: cut to 300 chars, then %, CR and LF encoded."""
+    text = str(text)
+    text = text[:300] + '…' if len(text) > 300 else text
+    return text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+
+
 def summarize(output, outcome):
     """Return (markdown lines, failures, warnings) for one cycle."""
     lines, failures, warnings = ['## Regional evidence publication', 'Publication: ' + outcome], [], []
@@ -68,8 +75,9 @@ def summarize(output, outcome):
                 if isinstance(coverage, dict) and all(key in coverage for key in ('rated_point_days', 'point_days', 'two_model_point_days')):
                     lines.append(f"  - Seven-day wind + seas: {coverage['rated_point_days']}/{coverage['point_days']} point-days; "
                                  f"two-model comparison: {coverage['two_model_point_days']}/{coverage['point_days']}")
-                lines.extend('  - Source issue: ' + str(issue) for issue in region['issues'])
-                lines.extend('  - Coverage gap: ' + str(gap) for gap in (region['coverage_gaps'] if isinstance(region.get('coverage_gaps'), list) else []))
+                # Line breaks inside one issue or gap become spaces so it stays one Markdown list line.
+                lines.extend('  - Source issue: ' + ' '.join(str(issue).split()) for issue in region['issues'])
+                lines.extend('  - Coverage gap: ' + ' '.join(str(gap).split()) for gap in (region['coverage_gaps'] if isinstance(region.get('coverage_gaps'), list) else []))
                 warnings.extend(region['issues'])
     if warnings:
         lines.append(f'\n{len(warnings)} source(s) degraded this cycle; the feed was still published with their last good values or gaps.')
@@ -87,7 +95,7 @@ def main():
         with open(summary, 'a') as handle:
             handle.write('\n'.join(lines) + '\n')
     for warning in warnings:
-        print(f'::warning title=Degraded source::{warning}')
+        print('::warning title=Degraded source::' + annotation(warning))
     if failures:
         raise SystemExit('Publication failed or products missing: ' + '; '.join(failures))
     print(f'Published; {len(warnings)} degraded source(s).')
