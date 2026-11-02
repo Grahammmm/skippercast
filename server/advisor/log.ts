@@ -7,14 +7,17 @@
 
 export type AdvisorLogLevel = 'info' | 'warn' | 'error';
 
-// A US number written as digits (optionally +1/1 first), or any E.164 number.
+// NANP first: a US number as people type it, (805) 555-0100 / 805-555-0100 / 805.555.0100 / +1 805 555 0100
+// (area code and exchange 2-9, one space/dot/hyphen per gap, never across a line break); then PHONE: a US
+// number written as digits (optionally +1/1 first), or any E.164 number.
 // Deliberately broad: a false positive costs a redacted id, a miss leaks a number.
+const NANP = /(?<![\w+])(?:\+?1[ .-]?)?(?:\( *[2-9]\d{2} *\)|[2-9]\d{2})[ .-]?[2-9]\d{2}[ .-]?\d{4}(?!\w)/g;
 const PHONE = /\+\d{10,15}|\+?1?\d{10}/g;
 const MAX_DEPTH = 8;
 
 /** `value` with every phone-like run in every string replaced by [redacted]; keys are scrubbed too. */
 export function redact(value: unknown, depth = 0): unknown {
-  if (typeof value === 'string') return value.replace(PHONE, '[redacted]');
+  if (typeof value === 'string') return value.replace(NANP, '[redacted]').replace(PHONE, '[redacted]');
   if (value === null || typeof value !== 'object') return typeof value === 'bigint' ? redact(String(value), depth) : value;
   if (depth >= MAX_DEPTH) return '[truncated]';
   if (value instanceof Error) return {name: value.name, message: redact(value.message, depth + 1)};
