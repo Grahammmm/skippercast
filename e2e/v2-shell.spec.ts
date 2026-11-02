@@ -391,8 +391,7 @@ test('BF-graceful-gaps: render failures stay local, retry recovers or fails once
     await page.locator('[data-guard="broken"] button').click(); await expect(page.locator('[data-guard="broken"]')).toHaveCount(1);
     await expect.poll(() => logs.length).toBe(4 + i); await expect(page.locator('#recovered')).toBeVisible(); await expect(page.locator('#sibling')).toBeVisible();
   }
-  await page.locator('#switch').click(); await expect(page.locator('#healthy')).toHaveText('Healthy'); /* A failed view must not stick to the next one. */ await expect(page.locator('[data-guard="fails"], [data-guard="healthy"]')).toHaveCount(0);
-  expect(logs).toHaveLength(5); expect(pageErrors).toEqual([]);
+  await page.locator('#switch').click(); await expect(page.locator('#healthy')).toHaveText('Healthy'); await expect(page.locator('[data-guard="fails"], [data-guard="healthy"]')).toHaveCount(0); expect(logs).toHaveLength(5); expect(pageErrors).toEqual([]);
 });
 test('BF-graceful-gaps: missing conditions and malformed fleet leave the shell usable', async ({page, pageErrors, v2, isMobile}) => {
   await page.route('**/feeds/conditions/regions/morro-bay/latest.json', r => r.fulfill({status: 500, body: 'failed'}));
