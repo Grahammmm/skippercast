@@ -6,12 +6,15 @@ extracted until every expected source, identity and content hash passes.
 
 import argparse
 import hashlib
+import io
 import json
 import os
 from pathlib import Path, PurePosixPath
+import stat
 import sys
 import tempfile
 import zipfile
+import zlib
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -24,9 +27,19 @@ MAX_ARCHIVE_BYTES = 100_000_000
 MAX_MEMBER_BYTES = 40_000_000
 
 
-def _json_member(zipped, name):
+def _read(zipped, name):
     try:
-        value = json.loads(zipped.read(name))
+        return zipped.read(name)
+    except KeyError:
+        raise ValueError(f"Missing source file: {name}") from None
+    except (zipfile.BadZipFile, zlib.error, NotImplementedError, RuntimeError, EOFError):
+        raise ValueError(f"unreadable archive member {name}") from None
+
+
+def _json_member(zipped, name):
+    body = _read(zipped, name)
+    try:
+        value = json.loads(body)
     except ValueError:
         raise ValueError(f"{name} is not valid JSON") from None
     if not isinstance(value, dict):
@@ -35,19 +48,26 @@ def _json_member(zipped, name):
 
 
 def _member(zipped, filename, text=False):
+    body = _read(zipped, filename)
     try:
-        body = zipped.read(filename)
         return body.decode("utf-8") if text else body
-    except KeyError:
-        raise ValueError(f"Missing source file: {filename}") from None
     except UnicodeDecodeError:
         raise ValueError(f"Unreadable text (not UTF-8): {filename}") from None
 
 
 def verify(archive, jurisdiction_id):
     jurisdiction, registry, _ = jurisdiction_files(jurisdiction_id)
+    info = os.stat(archive)
+    if not stat.S_ISREG(info.st_mode):
+        raise ValueError("Not a regular file")
+    if info.st_size > MAX_ARCHIVE_BYTES:
+        raise ValueError("Archive exceeds the bounded review size")
+    with open(archive, "rb") as handle:
+        raw = handle.read(MAX_ARCHIVE_BYTES + 1)
+    if len(raw) > MAX_ARCHIVE_BYTES:
+        raise ValueError("Archive exceeds the bounded review size")
     try:
-        zipped = zipfile.ZipFile(archive)
+        zipped = zipfile.ZipFile(io.BytesIO(raw))
     except zipfile.BadZipFile:
         raise ValueError("Not a ZIP archive") from None
     with zipped:
@@ -61,6 +81,9 @@ def verify(archive, jurisdiction_id):
             for item in infos
         ):
             raise ValueError("Unsafe or duplicate archive member")
+        for item in infos:
+            if item.flag_bits & 0x1:
+                raise ValueError(f"encrypted archive member {item.filename}")
         if sum(item.file_size for item in infos) > MAX_ARCHIVE_BYTES:
             raise ValueError("Archive exceeds the bounded review size")
         if "packet.json" not in names or "coverage.json" not in names:
@@ -105,7 +128,7 @@ def verify(archive, jurisdiction_id):
         if not isinstance(packet.get("collected_at"), str) or not packet["collected_at"]:
             raise ValueError("packet.json collected_at is missing")
         return {"jurisdiction_id": jurisdiction_id, "collected_at": packet["collected_at"],
-                "archive_sha256": hashlib.sha256(Path(archive).read_bytes()).hexdigest(),
+                "archive_sha256": hashlib.sha256(raw).hexdigest(),
                 "verified_source_count": len(verified), "source_ids": verified}
 
 
