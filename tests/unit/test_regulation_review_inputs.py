@@ -118,6 +118,11 @@ class Inputs(TestCase):
             (lambda d: d.update(reviewed_at='yesterday'), 'decision.reviewed_at must be an ISO time string'),
             (lambda d: d.update(sources=[]), 'decision.sources must be an object'),
             (lambda d: d['sources'].update({ident: 'approve'}), f'decision.sources.{ident} must be an object'),
+            (lambda d: d.update(reviewed_species=None), 'decision.reviewed_species must be a list of species ids'),
+            (lambda d: d.update(reviewed_species=3), 'decision.reviewed_species must be a list of species ids'),
+            (lambda d: d.update(reviewed_species='calico-bass'), 'decision.reviewed_species must be a list of species ids'),
+            (lambda d: d['reviewed_species'].append({'id': 'x'}), 'decision.reviewed_species must be a list of species ids'),
+            (lambda d: d['sources'][ident].update(content_sha256=5), f'decision.sources.{ident}.content_sha256 must be a string'),
         ):
             decision = json.loads(json.dumps(self.decision)); change(decision)
             self.refused(self.apply(decision=decision), message)

@@ -110,11 +110,16 @@ def _check_shapes(packet, decision):
         raise ValueError('packet and decision must be objects')
     if not _iso(decision.get('reviewed_at')):
         raise ValueError('decision.reviewed_at must be an ISO time string')
+    species = decision.get('reviewed_species', [])
+    if not isinstance(species, list) or not all(isinstance(s, str) for s in species):
+        raise ValueError('decision.reviewed_species must be a list of species ids')
     if not isinstance(decision.get('sources', {}), dict):
         raise ValueError('decision.sources must be an object')
     for ident, choice in decision.get('sources', {}).items():
         if not isinstance(choice, dict) or not isinstance(choice.get('note', ''), str):
             raise ValueError(f'decision.sources.{ident} must be an object')
+        if not isinstance(choice.get('content_sha256'), (str, type(None))):
+            raise ValueError(f'decision.sources.{ident}.content_sha256 must be a string')
     if not isinstance(packet.get('sources'), dict):
         raise ValueError('packet.sources must be an object')
     for ident, record in packet['sources'].items():
