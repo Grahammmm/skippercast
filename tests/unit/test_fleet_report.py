@@ -290,5 +290,41 @@ class ReportCommandTests(unittest.TestCase):
         self.assertEqual(inputs["open_reviews"], 0)
 
 
+class OpenReviewsBoundsTests(unittest.TestCase):
+    """RF1500-7: --open-reviews is a count from 0 to 100000, refused before any registry read or report write."""
+    setUp, run_report = ReportCommandTests.setUp, ReportCommandTests.run_report
+
+    def test_out_of_range_or_non_numeric_count_is_a_usage_error_with_nothing_read_or_written(self):
+        for value, message in (("-1", "--open-reviews must be a count from 0 to 100000"), ("-3", "must be a count from 0"),
+                               ("100001", "--open-reviews must be a count from 0 to 100000"), ("abc", "invalid int value")):
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as tmp:
+                err, out = io.StringIO(), io.StringIO()
+                with mock.patch.dict(os.environ, {"SKIPPERCAST_FLEET_VAR": tmp}), redirect_stdout(out), \
+                        mock.patch("sys.stderr", err), self.assertRaises(SystemExit) as stop, \
+                        mock.patch.object(report, "collect", side_effect=AssertionError("collect called")) as collect, \
+                        mock.patch.object(report, "write", side_effect=AssertionError("write called")) as write:
+                    cli.main(["report", "--region", "CA", "--status-line", "--open-reviews", value])
+                self.assertEqual(stop.exception.code, 2)
+                self.assertIn("--open-reviews", err.getvalue())
+                self.assertIn(message, err.getvalue())
+                self.assertEqual(out.getvalue(), "")   # no status line such as "-3 open reviews"
+                collect.assert_not_called()
+                write.assert_not_called()
+                self.assertEqual(list(Path(tmp).rglob("*")), [])
+
+    def test_bounds_are_accepted_and_reported(self):
+        for value in ("0", "100000"):
+            with self.subTest(value=value):
+                code, printed, written = self.run_report("--status-line", "--open-reviews", value)
+                self.assertEqual(code, 0)
+                self.assertEqual(printed, STATUS.replace("3 open reviews", f"{value} open reviews") + "\n")
+                self.assertEqual(json.loads(written[".json"])["open_reviews"], int(value))
+
+    def test_flag_absent_uses_the_staging_count(self):
+        code, printed, written = self.run_report("--status-line")
+        self.assertEqual((code, printed), (0, STATUS + "\n"))
+        self.assertEqual(json.loads(written[".json"])["open_reviews"], 3)
+
+
 if __name__ == "__main__":
     unittest.main()

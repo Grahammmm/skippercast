@@ -425,7 +425,7 @@ test('a saved port and no parameters open the app there with the stored profile;
   await expect(page.getByLabel('Where are you launching?')).toBeVisible();   // #622: the first run starts at the port
   await page.goto('/?ui=v2');
   await expect(page).toHaveURL(/\/map\?/);
-  expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ui: 'v2', region: 'morro-bay', profile: 'spear'});
+  expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ui: 'v2', region: 'morro-bay', port: 'morro-bay', profile: 'spear'});
   expect(pageErrors).toEqual([]);
 });
 
@@ -460,7 +460,7 @@ test('the first run asks for the port, warms that region, then asks the profile 
   await input.press('Enter');
   await step.locator('[data-profile="shore"]').click();
   await expect(page).toHaveURL(/\/map\?/);
-  expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ui: 'v2', region: 'morro-bay', profile: 'shore'});
+  expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ui: 'v2', region: 'morro-bay', port: 'morro-bay', profile: 'shore'});
   expect(await page.evaluate(key => localStorage.getItem(key), PORT_KEY)).toBe('morro-bay');
   await expect(page.locator('.app-firstrun')).toHaveCount(0);
   expect(pageErrors).toEqual([]);
@@ -651,4 +651,42 @@ test('the landing warms the app\'s first-paint files, and none under Save-Data',
   await quiet.waitForTimeout(1500);
   expect(asked.filter(p => p === '/precache.json' || precache.warm.includes(p)), 'Save-Data: no warm-up').toEqual([]);
   await saving.close();
+});
+
+// BF-landing-live: tomorrow's verdict for the reference boat, from the app's own brief code, below the funnel.
+test('the landing shows the app lead\'s verdict for tomorrow without moving the port input, ignores saved limits, and survives leaving first', async ({page, pageErrors, v2}) => {
+  await page.addInitScript(() => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('skippercast-profile-v1', 'kayak'); localStorage.setItem('skippercast-limits-v1', JSON.stringify({boat: {wind_knots: 1, gust_knots: 1, sea_feet: 0.5}})); } } catch { /* storage blocked */ } });
+  await stubLiveFeeds(page);
+  let release = () => {};
+  const held = new Promise<void>(resolve => { release = resolve; });
+  await page.route('**/api/forecast?*', async route => { await held; await route.fallback(); });
+  await v2.open('landing');
+  const input = page.getByLabel('Where are you launching?');
+  await expect(page.locator('.landing-tiles li[data-reading]')).toHaveCount(4);
+  const before = await input.boundingBox(), stored = await page.evaluate(() => JSON.stringify(Object.entries(localStorage).sort()));
+  await expect(page.locator('.landing-verdict')).toHaveCount(0);   // still waiting on the forecast: nothing drawn, the funnel works
+  release();
+  const section = page.locator('.landing-verdict');
+  await expect(section.locator('.landing-verdict-word')).toHaveText(/^(Comfortable|Marginal|Rough|Unknown)$/);
+  expect(await input.boundingBox(), 'the port input does not move').toEqual(before);
+  await expect(section.locator('.landing-verdict-head')).toContainText(/^Tomorrow near Morro Bay & Avila, reference 23 ft boat: /);
+  expect(await page.evaluate(() => JSON.stringify(Object.entries(localStorage).sort())), 'storage unchanged').toBe(stored);
+  const word = await section.locator('.landing-verdict-word').textContent(), sentence = await section.locator('.landing-verdict-limit').textContent();
+  const href = await section.getByRole('link', {name: 'Open the full brief'}).getAttribute('href');
+  const date = /[?&]day=(\d{4}-\d{2}-\d{2})$/.exec(href ?? '')?.[1];
+  expect(date, 'the link names the verdict\'s day').toBe(await section.getAttribute('data-day'));
+  // The app opened from the link, with no saved limits, leads with the same word and sentence for that day.
+  await page.evaluate(() => localStorage.clear());
+  await page.goto(`${href}&ui=v2`);
+  await expect(page.locator('.app-verdict-word').first()).toHaveText(word!);
+  await expect(page.locator('.app-verdict-window').first()).toHaveAttribute('data-day', date!);
+  await expect(page.locator('.app-verdict-limit').first()).toHaveText(sentence!);
+  // Out of order: a port and a profile chosen before the verdict resolves navigate with no error.
+  await page.route('**/api/forecast?*', () => { /* never answers */ });
+  await v2.open('landing');
+  await input.fill('morro');
+  await input.press('Enter');
+  await page.locator('.landing-step [data-profile="boat"]').click();
+  await expect(page).toHaveURL(/\/map\?/);
+  expect(pageErrors).toEqual([]);
 });
