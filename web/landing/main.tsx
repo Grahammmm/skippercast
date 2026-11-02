@@ -73,5 +73,6 @@ void savedPortTarget(location.href, savedPortId(), profile).then(next => { if (n
 mount('landing-shore', <Shoreline />);
 mount('landing-credit', <ShorelineCredit />);
 mount('landing-head', <LandingHead href={location.href} />);
-mount('landing-app', <LandingApp href={location.href} initialProfile={profile} />);
+// BF-landing-live: tomorrow's verdict loads by dynamic import once the readout is in; nothing more under Save-Data.
+mount('landing-app', <LandingApp href={location.href} initialProfile={profile} verdict={() => saveData(navigator) ? Promise.resolve(null) : import('./live-verdict.ts').then(m => m.loadLandingVerdict())} />);
 mount('landing-dots', <LayerDots href={location.href} region={DEFAULT_REGION} onPreview={layer => mark('preview', layer)} />);

@@ -15,14 +15,16 @@
 // The switch and the menus are exported for the mobile shell (FE-06).
 // #542: "Your limits" beside the switch opens the active profile's own comfort
 // limits (web/app/LimitsPanel.tsx).
-import {useState} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
+import {Popover} from '../ui/Popover.tsx';
 import {PortDialog, PortInput} from '../landing/PortInput.tsx';
 import {PROFILES, PROFILE_TABLE, type Profile} from '../profile.ts';
 import {optionText, regionMenu, regionTargets, type TargetOption} from '../species.ts';
-import {currentPort, exploreURL, loadPorts, portURL, savedPortId, savePort, type Port} from '../ports.ts';
-import {area, navigate, profile, profilePatch, region, setParams, species} from '../state.ts';
+import {currentPort, exploreURL, linkedPort, loadPorts, portURL, savedPortId, savePort, type Port} from '../ports.ts';
+import {shareLink, shareOrCopy} from '../share-link.ts';
+import {area, navigate, port, profile, profilePatch, region, setParams, species} from '../state.ts';
 import {track} from '../telemetry.ts';
 import {zone} from './App.tsx';
 import {dayOptions, dockState, readout} from './TimeDock.tsx';
@@ -88,17 +90,52 @@ export function choosePort(port: Port, href: string = location.href): void {
   navigate(portURL(href, port, profile.peek()));
 }
 
-/** The port control and its dialog; the directory loads on the first open and a failed load still offers "Explore the coast". */
+/** BF-deep-links: Share hands the canonical link (web/share-link.ts) to the share sheet, else copies it, else shows it to copy. */
+export function ShareControl() {
+  const [status, setStatus] = useState('');
+  const [manual, setManual] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined), wrap = useRef<HTMLSpanElement>(null);
+  const press = async () => {
+    const ports = await loadPorts().catch(() => null);
+    const link = shareLink({href: location.href, origin: location.origin, ports, region: region.peek(), savedId: savedPortId(), profile: profile.peek(), now: new Date(), tz: zone()});
+    const outcome = await shareOrCopy(link);
+    if (outcome === 'copied') { clearTimeout(timer.current); setStatus('Link copied'); timer.current = setTimeout(() => setStatus(''), 3000); }
+    if (outcome === 'manual') setManual(link.url);
+  };
+  useEffect(() => {
+    const input = wrap.current?.querySelector('input'), details = wrap.current?.querySelector('details');
+    if (details) details.open = true; input?.focus(); input?.select();
+  }, [manual]);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const dismiss = (event: KeyboardEvent) => { if (event.key === 'Escape') { setManual(null); wrap.current?.querySelector('button')?.focus(); } };
+  return (
+    <span class="app-share" ref={wrap}>
+      <IconButton icon="arrow" label="Share this view" onClick={() => void press()} />
+      <span class="app-share-status" role="status">{status}</span>
+      {manual ? <Popover summary="Link" sources={false} class="app-share-popover"><input readOnly value={manual} aria-label="Link to copy" onKeyDown={dismiss} /></Popover> : null}
+    </span>
+  );
+}
+
+/** The port control and its dialog; the directory loads on the first open (or at once for a linked ?port=) and a failed load still offers "Explore the coast". */
 export function PortControl() {
   const [open, setOpen] = useState<'closed' | 'search' | 'locate'>('closed');
   const [ports, setPorts] = useState<readonly Port[] | null>(null);
-  const current = ports ? currentPort(ports, region.value, savedPortId()) : null;
+  const current = ports ? currentPort(ports, region.value, savedPortId(), port.value) : null;
   const show = (how: 'search' | 'locate') => { setOpen(how); if (!ports) loadPorts().then(setPorts, () => setPorts([])); };
+  useEffect(() => {
+    // A failed load cannot judge the link, so its port stays; a listed one is read at arrival, after any choice since.
+    if (new URL(location.href).searchParams.has('port')) loadPorts().then(list => {
+      setPorts(list);
+      if (new URL(location.href).searchParams.has('port') && !linkedPort(list, region.peek(), port.peek())) setParams({port: null});
+    }, () => setPorts([]));
+  }, []);
   const close = () => setOpen('closed');
   return (
     <>
       <Button icon="pin" class="app-port" aria-label={current ? `Change port (${current.name})` : 'Choose port'} onClick={() => show('search')}>{current?.name ?? 'Port'}</Button>
       <IconButton icon="target" label="Use my location" onClick={() => show('locate')} />
+      <ShareControl />
       <PortDialog open={open !== 'closed'} onClose={close}>
         <PortInput ports={ports} autoFocus locate={open === 'locate'} onChoose={port => { close(); choosePort(port); }} onExplore={() => { close(); navigate(exploreURL(location.href)); }} />
       </PortDialog>
