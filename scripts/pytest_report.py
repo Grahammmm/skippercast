@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 import argparse
 import json
+import math
 import sys
 import xml.etree.ElementTree as ET
 
@@ -54,11 +55,25 @@ def layer(classname):
     return next((name for prefix, name in LAYERS if classname.startswith(prefix)), 'other')
 
 
+class Unreadable(Exception):
+    """An input file that cannot be read; main prints `pytest_report: <path>: <reason>` and exits 2."""
+
+
+def _time(value):
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) and number >= 0 else None
 
 
 def cases(paths):
     for path in paths:
-        for case in ET.parse(path).getroot().iter('testcase'):
+        try:
+            root = ET.parse(path).getroot()
+        except (OSError, ET.ParseError):
+            raise Unreadable(f'{path}: unreadable JUnit XML') from None
+        for case in root.iter('testcase'):
             outcome = 'passed'
             reason = None
             for child in case:
@@ -66,8 +81,9 @@ def cases(paths):
                     outcome = 'failed' if child.tag == 'failure' else 'error'
                 elif child.tag == 'skipped':
                     outcome, reason = 'skipped', (child.get('message') or '').strip()
+            time = _time(case.get('time') or 0)
             yield {'id': f"{case.get('classname')}::{case.get('name')}", 'layer': layer(case.get('classname', '')),
-                   'outcome': outcome, 'reason': reason, 'time': float(case.get('time') or 0)}
+                   'outcome': outcome, 'reason': reason, 'time': time or 0.0, 'time_unreadable': time is None}
 
 
 def report(rows, title, slowest=10):
@@ -83,6 +99,8 @@ def report(rows, title, slowest=10):
             layer_rows = [row for row in rows if row['layer'] == name]
             lines.append(f"| {name} | {len(layer_rows)} | {sum(r['outcome'] == 'skipped' for r in layer_rows)} "
                          f"| {sum(r['time'] for r in layer_rows):.1f} |")
+    unreadable = sum(bool(row.get('time_unreadable')) for row in rows)
+    lines += ['', f'{unreadable} test time(s) unreadable; counted as 0 s'] if unreadable else []
     lines += ['', f'Slowest {slowest}:', '']
     lines += [f"- {row['time']:.2f} s `{row['id']}`" for row in sorted(rows, key=lambda r: -r['time'])[:slowest]]
     return '\n'.join(lines) + '\n'
@@ -90,6 +108,17 @@ def report(rows, title, slowest=10):
 
 def unexpected_skips(rows, allowed=ALLOWED_SKIPS):
     return [row for row in rows if row['outcome'] == 'skipped' and row['reason'] not in allowed]
+
+
+def _receipt_ok(run):
+    """A run ci_budget can read: every key it uses and timezone-aware ISO dates; otherwise it is a HOLD row."""
+    try:
+        hash(run['databaseId']), run['status'], run['conclusion'], [job['name'] for job in run['jobs']]
+        [job['status'] for job in run['jobs'] if job.get('conclusion') != 'skipped']
+        dates = [run['createdAt'], run['updatedAt'], *(j[k] for j in run['jobs'] for k in ('startedAt', 'completedAt') if j.get(k))]
+        return all(datetime.fromisoformat(d.replace('Z', '+00:00')).tzinfo is not None for d in dates)
+    except (AttributeError, KeyError, TypeError, ValueError):
+        return False
 
 
 def ci_budget(runs):
@@ -107,6 +136,10 @@ def ci_budget(runs):
     complete = bool(runs)
     seen = set()
     for run in runs:
+        if not _receipt_ok(run):
+            complete = False
+            lines.append(f"| {run.get('databaseId', '?')} | — | unknown | incomplete receipt |")
+            continue
         if run['databaseId'] in seen:
             raise ValueError('duplicate run receipt')
         seen.add(run['databaseId'])
@@ -155,12 +188,24 @@ def main(argv=None):
     if args.ci_runs:
         if args.junit:
             parser.error('--ci-runs cannot be combined with JUnit paths')
-        text, ok = ci_budget(json.loads(args.ci_runs.read_text()))
+        try:
+            runs = json.loads(args.ci_runs.read_text())
+        except (OSError, UnicodeDecodeError, ValueError, RecursionError):
+            print(f'pytest_report: {args.ci_runs}: unreadable JSON', file=sys.stderr)
+            return 2
+        if not isinstance(runs, list) or not all(isinstance(run, dict) for run in runs):
+            print(f'pytest_report: {args.ci_runs}: expected a JSON list of run objects', file=sys.stderr)
+            return 2
+        text, ok = ci_budget(runs)
         sys.stdout.write(text)
         return 0 if ok else 1
     if not args.junit:
         parser.error('provide JUnit paths or --ci-runs')
-    rows = list(cases(args.junit))
+    try:
+        rows = list(cases(args.junit))
+    except Unreadable as error:
+        print(f'pytest_report: {error}', file=sys.stderr)
+        return 2
     sys.stdout.write(report(rows, args.title))
     if args.strict_skips:
         bad = unexpected_skips(rows)
