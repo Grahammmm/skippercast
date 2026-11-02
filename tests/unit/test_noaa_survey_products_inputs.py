@@ -1,7 +1,8 @@
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import nullcontext, redirect_stderr, redirect_stdout
 from datetime import datetime, timedelta
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -116,6 +117,36 @@ class AuditInputTests(TestCase):
                 self.previous.write_bytes(raw)
                 code, stdout, stderr = self.run_main('--previous', str(self.previous))
                 self.assertEqual((code, stderr), (None, f'previous inventory ignored: {reason}\n'))
+                self.assertEqual(stdout, 'ok: 1 BAG links, 2 report links among 3 surveys\n')
+                self.assertEqual(self.calls, [None])
+                self.assertTrue(self.output.exists())
+
+    def test_previous_that_cannot_be_stat_or_opened_is_ignored_not_a_crash(self):
+        locked = self.root / 'locked'
+        locked.mkdir()
+        (locked / 'previous.json').write_text(json.dumps(self.inventory()))
+        locked.chmod(0)
+        self.addCleanup(locked.chmod, 0o700)
+        self.previous.write_text(json.dumps(self.inventory()))
+        real_read = Path.read_text
+
+        def denied(path, *args, **kwargs):  # the stat/open of --previous fails as it does under a 0700 parent
+            if path == self.previous:
+                raise PermissionError(13, 'Permission denied', str(path))
+            return real_read(path, *args, **kwargs)
+
+        cases = {'directory': (self.root, nullcontext()),
+                 'open error': (self.previous, mock.patch.object(Path, 'read_text', denied)),
+                 'inaccessible parent': (locked / 'previous.json', nullcontext())}
+        for name, (path, patch) in cases.items():
+            with self.subTest(name):
+                if name == 'inaccessible parent' and os.access(locked, os.X_OK):
+                    self.skipTest('running as a user that bypasses directory permissions')
+                self.calls.clear()
+                self.output.unlink(missing_ok=True)
+                with patch:
+                    code, stdout, stderr = self.run_main('--previous', str(path))
+                self.assertEqual((code, stderr), (None, 'previous inventory ignored: unreadable\n'))
                 self.assertEqual(stdout, 'ok: 1 BAG links, 2 report links among 3 surveys\n')
                 self.assertEqual(self.calls, [None])
                 self.assertTrue(self.output.exists())

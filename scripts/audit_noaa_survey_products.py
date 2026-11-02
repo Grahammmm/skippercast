@@ -118,11 +118,13 @@ def _discovery(path):
 
 
 def _previous(path):
-    if not path or not path.is_file():
+    if not path:
         return None, None
-    try:
+    try:  # every filesystem touch is inside the handler: a stat/open error is 'unreadable', not a crash
         previous = json.loads(path.read_text(encoding='utf-8'))
         value = previous.get('last_complete_scan_at')
+    except FileNotFoundError:  # no previous inventory yet: a plain first audit
+        return None, None
     except (OSError, ValueError, AttributeError):  # not readable JSON, or not an object
         return None, 'unreadable'
     try:
