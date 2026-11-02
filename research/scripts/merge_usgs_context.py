@@ -52,15 +52,19 @@ def main():
     parser.add_argument('--output',type=Path,required=True)
     args=parser.parse_args()
     temp=args.output.with_suffix(args.output.suffix+'.tmp')
+    staged=False
     try:
         layers=[json.loads(path.read_text(encoding='utf-8')) for path in (args.legacy,args.doi)]
         if not all(isinstance(layer,dict) for layer in layers):raise ValueError('USGS source layer is not a JSON object')
         result=merge(*layers)
         args.output.parent.mkdir(parents=True,exist_ok=True)
+        staged=True
         temp.write_text(json.dumps(result,separators=(',',':'))+'\n')
         temp.replace(args.output)
     except (OSError,ValueError) as error:
-        temp.unlink(missing_ok=True)
+        if staged:
+            try:temp.unlink(missing_ok=True)
+            except OSError:pass
         print(f'merge_usgs_context: {type(error).__name__ if isinstance(error,OSError) else error}',file=sys.stderr)
         sys.exit(1)
     print(f"{len(result['features'])} context polygons across {result['legacy_block_count']} legacy blocks and {result['doi_release_count']} DOI releases")

@@ -108,6 +108,21 @@ def test_cli_missing_legacy_file_exits_1(monkeypatch, capsys, tmp_path):
     assert not out.exists() and str(tmp_path) not in captured.err
 
 
+def test_cli_input_error_skips_temp_cleanup(monkeypatch, capsys, tmp_path):
+    # The output directory cannot exist; cleanup of an unstaged temp must not mask the input error.
+    (tmp_path / 'doi.json').write_text(json.dumps(_layers()[1]), encoding='utf-8')
+    (tmp_path / 'block').write_text('', encoding='utf-8')
+    stale = tmp_path / 'context.geojson.tmp'
+    stale.write_text('other run', encoding='utf-8')
+    for out in (tmp_path / 'block' / 'out.json', tmp_path / 'context.geojson'):
+        monkeypatch.setattr(sys, 'argv', ['merge_usgs_context', '--legacy', str(tmp_path / 'legacy.json'),
+                                          '--doi', str(tmp_path / 'doi.json'), '--output', str(out)])
+        with pytest.raises(SystemExit) as stop:
+            mod.main()
+        assert (stop.value.code, capsys.readouterr().err) == (1, 'merge_usgs_context: FileNotFoundError\n')
+    assert stale.read_text(encoding='utf-8') == 'other run'
+
+
 @pytest.mark.parametrize('text', ['{not json', '[]', '\xff'])
 def test_cli_unreadable_json_is_one_line(monkeypatch, capsys, tmp_path, text):
     code, captured, out = _cli(monkeypatch, capsys, tmp_path, json.dumps(_layers()[0]), text)
