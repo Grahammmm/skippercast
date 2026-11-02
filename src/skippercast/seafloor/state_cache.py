@@ -62,6 +62,9 @@ def _preflight_restore(base, name, entries):
     for entry in entries:
         if not isinstance(entry, dict):
             raise ValueError('Invalid private restore entry')
+        size = entry.get('bytes')
+        if type(size) is not int or size < 0:
+            raise ValueError('Invalid private restore entry')
         relative, digest = entry.get('path'), entry.get('sha256')
         if (not isinstance(relative, str) or relative in seen
                 or not allowed(name, relative) or not isinstance(digest, str)
@@ -86,8 +89,14 @@ def restore(s3, bucket, root, name, *, include_cache=True):
         raise
     if len(raw) > 5_000_000:
         raise ValueError('Oversized state inventory')
-    data = json.loads(raw)
-    if data['scope'] != name or data['version'] != 1:
+    try:
+        data = json.loads(raw)
+    except ValueError:  # JSONDecodeError and UnicodeDecodeError are both ValueError
+        raise ValueError('Invalid private state inventory') from None
+    if not isinstance(data, dict):
+        raise ValueError('Invalid private state inventory')
+    version = data.get('version')
+    if data.get('scope') != name or type(version) is not int or version != 1:
         raise ValueError('Private state scope mismatch')
     base = Path(root)/'var/seafloor'
     _preflight_restore(base, name, data.get('files'))
