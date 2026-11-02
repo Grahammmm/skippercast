@@ -142,9 +142,9 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // landing's verdict reaches them without the app shell. Reports' id/charters reads, CSS, tokens, classes and catch
 // markup are unchanged; contrast(), assertions and thresholds are untouched. Rebind only App.tsx.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
-  "web/species.ts": "f9fe1ea696c61a891c992cc5799140c3889451d0d0869cca48bff59e90bb5cd5",
+  "web/species.ts": "26717bd67e349d67a6483bb27d0f67afb172847647b1251addfdd5b2f69970df",
   "web/app/App.tsx": "f63bf478bdb77f4564495a454865a9999bf767ba1fe4953c8192777d69094fb0",
-  "web/app/Masthead.tsx": "e6e634b4a6283f72255ce7a1fb3ef78e8d78be5f847d5d99c7655b7de94e2877",
+  "web/app/Masthead.tsx": "f22108651fe9e4963ed57c53ffae0d021076ad164d80d83f37f649c107716d42",
   "web/app/LayerRail.tsx": "bdae57c4c4dca33b5fb83a413b7d5c6f525221a4fb6b78037a1ad99102635ccd",
   "web/app/MapStage.tsx": "b33b7cb5c6e8abb5c1050acd694073c26b705259ffdc1ce0034db9cb87470fe6",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
