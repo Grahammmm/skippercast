@@ -1,7 +1,8 @@
 """Report one draft region's legal and source health (draft-region-health.yml).
 
 Exit 0 when healthy, 1 when the evidence needs review, is unreadable or misshaped
-(named by file and key) or no receipt exists, 2 on a usage error. A failed past-day landing report (`catches-*`) is not
+(named by file and key) or no receipt exists, 2 on a usage error (incl. a --region that is not a plain region id). A failed
+past-day landing report (`catches-*`) is not
 counted as a source fetch failure: the 5-of-7-day coverage gate
 (`critical_available`) decides whether missing reports matter.
 """
@@ -20,6 +21,7 @@ ERROR_CLASSES = {name: cls for cls, names in (
     ('parse', 'ValueError KeyError IndexError TypeError JSONDecodeError UnicodeDecodeError'),
 ) for name in names.split()}
 _HTTP_STATUS = re.compile(r'(?:HTTP )?(\d{3})(?!\d)')
+REGION_ID = re.compile(r'[a-z0-9][a-z0-9_-]{0,63}')
 
 
 def error_class(issue):
@@ -76,6 +78,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if not args.summary:
         parser.error('--summary or GITHUB_STEP_SUMMARY is required')
+    if not REGION_ID.fullmatch(args.region):
+        parser.error('--region must be a plain region id')
     region = args.region
     root = Path(args.root) / region / 'regions' / region
     if not (root / 'latest.json').is_file():
