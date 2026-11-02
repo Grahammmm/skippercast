@@ -120,6 +120,16 @@ def restore(s3, bucket, root, name, *, include_cache=True):
     return True
 
 
+def _read(path, base, walk, label='Damaged private reach state', name='(?s:.*)'):
+    try:  # A damaged receipt is named by its path, not left as a KeyError/TypeError.
+        found = walk(json.loads(path.read_bytes().decode('utf-8')))
+        if isinstance(found, list) and all(re.fullmatch(name, item) for item in found):
+            return found
+    except (ValueError, LookupError, TypeError, AttributeError):
+        pass
+    raise ValueError(f'{label}: {path.relative_to(base).as_posix()}')
+
+
 def reach_paths(root, reach):
     base = Path(root)/'var/seafloor'
     scope_name(reach)
@@ -130,20 +140,17 @@ def reach_paths(root, reach):
     for folder in folders:
         checkpoint = folder/'coverage-checkpoint.json'
         if checkpoint.exists():
-            hashes.update(json.loads(checkpoint.read_text()).get('source_hashes', []))
+            hashes.update(_read(checkpoint, base, lambda d: d.get('source_hashes', [])))
         receipt = folder/'run.json'
-        if receipt.exists():
-            inputs = json.loads(receipt.read_text()).get('inputs', {})
-            hashes.update(r['sha256'] for r in inputs.get('sources', []))
-            hashes.update(b['row']['sha256'] for b in inputs.get('substrate_bindings', {}).values())
+        if receipt.exists():  # `[] +` rejects a source list that is not a list.
+            hashes.update(_read(receipt, base, lambda d: [r['sha256'] for r in [] + d.get('inputs', {}).get('sources', [])]
+                                + [b['row']['sha256'] for b in d.get('inputs', {}).get('substrate_bindings', {}).values()]))
         classified = folder/'classified-run.json'
         if classified.exists():
             # Original interpretation files may not contribute to the graded
             # bathymetry run. A clean publisher must still authenticate them.
-            sources = json.loads(classified.read_text())['inputs']['physical']['sources']
-            for source in sources:
-                hashes.add(source['depth_source']['sha256'])
-                hashes.add(source['classification_binding']['row']['sha256'])
+            hashes.update(_read(classified, base, lambda d: [h for s in [] + d['inputs']['physical']['sources'] for h in (
+                s['depth_source']['sha256'], s['classification_binding']['row']['sha256'])]))
     if any(not re.fullmatch('[a-f0-9]{64}', h) for h in hashes):
         raise ValueError('Invalid source hash in private reach state')
     directories = folders + [base/'cache'/h for h in sorted(hashes)]
@@ -156,8 +163,9 @@ def shared_paths(root):
     paths = [base/'reference/cells.json', base/'reference/run.json']
     snapshot = base/'screen/snapshot.json'
     if snapshot.exists():
-        data = json.loads(snapshot.read_text())
-        paths += [snapshot] + [base/'screen'/r['file'] for r in data['layers'].values()]
+        files = _read(snapshot, base, lambda d: [r['file'] for r in d['layers'].values()],
+                      'Damaged screen snapshot', r'(?!\.\.?$)[A-Za-z0-9._-]+')  # a plain name, not . or ..
+        paths += [snapshot] + [base/'screen'/f for f in files]
     paths += [base/'screen'/n for n in ('source-receipts.json', 'refresh-failure.json')
               if (base/'screen'/n).exists()]
     return paths
