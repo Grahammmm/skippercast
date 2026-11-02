@@ -392,7 +392,7 @@ test('the shell has the masthead, the command bar, the brief column and the map 
   assert.match(html, /class="ui-eyebrow">Where to look</);
   assert.match(html, /<p class="app-caveat">Habitat describes a place to look; fish presence is unverified.<\/p>/);
   assert.equal(count(html, /separate clocks/g), 1, 'one disclaimer line per page');
-  assert.match(html, /<section class="app-stage" aria-label="Map">/);
+  assert.match(html, /<section class="app-stage" tabindex="-1" aria-label="Map">/);
   assert.match(html, /<section class="app-legend" aria-label="Legend">/);
   assert.match(html, /role="group" aria-label="Layers"/);
   assert.equal(count(html, /class="ui-rail-item"/g), 9);
@@ -533,7 +533,7 @@ async function renderMobile(href) {
 
 test('under 1,024 px the shell is the map, a top strip, one sheet at peek and a four-tab nav', async () => {
   const html = await renderMobile(`${ORIGIN}?region=morro-bay`);
-  assert.match(html, /^<div class="app-mobile"><section class="app-stage" aria-label="Map">/, 'the map stage comes first and fills the viewport');
+  assert.match(html, /^<div class="app-mobile"><section class="app-stage" tabindex="-1" aria-label="Map">/, 'the map stage comes first and fills the viewport');
   assert.doesNotMatch(html, /app-masthead|app-command|app-main|app-brief"|app-dock/, 'no desktop chrome');
   // Top strip: the brand and location card, the layers button, then the full-width profile switch.
   assert.match(html, /<header class="app-top"><div class="app-top-row"><div class="app-top-card"><a class="app-brand" href="\/">.*?<span class="app-location ui-mono" data-region="morro-bay">Morro Bay —<\/span><\/div><button[^>]*aria-label="Layers"[^>]*aria-pressed="false"/s);
@@ -649,7 +649,7 @@ test('the map chrome offers Chart, 2D and 3D; without terrain the terrain choice
     try {
       const terrain = await renderShell(`${ORIGIN}?region=morro-bay&presentation=3d`);
       assert.deepEqual(toggle(terrain), [['Chart', false, false, false], ['2D', false, false, false], ['3D', true, false, false]]);
-      assert.match(terrain, /<div class="app-map" hidden><div class="app-chart"><\/div><\/div><div class="app-terrain" data-coast-theme="tokens"><\/div>/, 'the terrain host is shown with the token opt-in; the Chart host (FE-11) waits hidden');
+      assert.match(terrain, /<div class="app-map" hidden><div class="app-chart"><\/div><\/div><div class="app-terrain" tabindex="-1" data-coast-theme="tokens"><\/div>/, 'the terrain host is shown with the token opt-in; the Chart host (FE-11) waits hidden');
       const none = await renderShell(`${ORIGIN}?region=channel-islands&presentation=3d`);
       assert.deepEqual(toggle(none), [['Chart', true, false, false], ['2D', false, true, true], ['3D', false, true, true]]);
       assert.match(none, /<p id="app-stage-note" class="app-stage-note" role="status">No reviewed coastal terrain covers this region yet.<\/p>/);
