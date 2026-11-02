@@ -1,0 +1,6 @@
+.app-plan { padding: var(--space-5); color: var(--text); background: var(--panel); }
+.app-plan p, .app-plan li { max-width: 70ch; overflow-wrap: anywhere; white-space: pre-wrap; }
+.app-plan h3 { margin-top: var(--space-5); }
+.app-plan a { color: var(--blue); }
+.app-plan a:focus-visible, .app-plan h2:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.app-plan-rules { border-top: 1px solid var(--line); padding-top: var(--space-3); }
