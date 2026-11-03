@@ -17,7 +17,7 @@
     {"id": "empty_object", "family": "control", "value": {}},
     {"id": "exponent", "family": "exponent_parity", "value": 0.00001},
     {"id": "exponent_nested", "family": "exponent_parity", "value": {"value_json": [0.00001, {"n": 0.00001}]}},
-    {"id": "astral_keys", "family": "astral_key_parity", "value": {"": 1, "𐀀": 2}},
-    {"id": "astral_keys_nested", "family": "astral_key_parity", "value": [{"value_json": {"": 1, "𐀀": 2}}]}
+    {"id": "astral_keys", "family": "control", "value": {"": 1, "𐀀": 2}},
+    {"id": "astral_keys_nested", "family": "control", "value": [{"value_json": {"": 1, "𐀀": 2}}]}
   ]
 }
