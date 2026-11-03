@@ -84,6 +84,17 @@ export const test = base.extend<{pageErrors: string[]; v2: V2}>({
     // local Worker from fetching remote models. Exercise the direct fallback
     // with synthetic, unit-checked hourly responses instead of live services.
     await context.route('**/api/forecast?*', route => route.fulfill({status: 503, json: {error: 'Offline UI test'}}));
+    // SC2222-03 made the brief read /api/daily?part=brief before the whole feed (web/brief/Brief.tsx
+    // readDaily). That endpoint is answered by the local Worker from upstream, which browser-origin
+    // blocking cannot stop either, so the brief read live data instead of the feed the test stubbed and
+    // every brief assertion measured upstream readings. Failing the part here takes the brief down its
+    // own documented fallback to the stubbed whole feed; the part itself is covered by
+    // tests/test_daily_brief_part.mjs and tests/test_brief_daily_part.mjs. Other parts fall through:
+    // e2e/boundary-fixture.ts answers the boundary parts and the regulations part is read live today.
+    await context.route('**/api/daily?*', async route => {
+      if (new URL(route.request().url()).searchParams.get('part') !== 'brief') { await route.fallback(); return; }
+      await route.fulfill({status: 503, json: {error: 'Offline UI test'}});
+    });
     const fixtureNow = Date.now();
     await context.route('**/api/om/**', route => route.fulfill({json: forecastFixture(new URL(route.request().url()), fixtureNow)}));
     // A stale committed snapshot must not make UI checks depend on today's
