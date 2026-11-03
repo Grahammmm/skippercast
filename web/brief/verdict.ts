@@ -6,7 +6,8 @@
 // - Boat: the one conditions model (web/score.ts). Every hour from sunrise to
 //   noon on the brief's date is rated by rateComfort over the regional
 //   dual-model feed (the same feed and point as the Conditions view), for the
-//   reference 23 ft boat, and the window takes its worst hour: 7 and above is
+//   saved boat's factors (MYB-2; the reference 23 ft boat when none is
+//   passed), and the window takes its worst hour: 7 and above is
 //   Comfortable, under 4 Rough, between Marginal (verdictFor). The sentence
 //   names the largest charge in that hour (wind, seas, wind chop or a
 //   crossing swell). The advisor's comfort word reads the same function.
@@ -27,7 +28,7 @@
 // safety clearance.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
-import {chargedCosts, FORECAST_AGE, LONG_PERIOD_SWELL, rateComfort, verdictFor, type ComfortRating, type FeedHour, type Verdict} from '../score.ts';
+import {chargedCosts, FORECAST_AGE, LONG_PERIOD_SWELL, rateComfort, REFERENCE_BOAT, verdictFor, type BoatFactors, type ComfortRating, type FeedHour, type Verdict} from '../score.ts';
 import {sample} from '../map/forecast-grid.ts';
 import type {ConditionsForecast, ModelRun} from '../conditions.ts';
 import type {Profile} from '../profile.ts';
@@ -183,14 +184,14 @@ export function longPeriodHour(rows: readonly {ms: number; hour: FeedHour}[], tz
   return null;
 }
 
-/** The boat verdict from the comfort score over the regional forecast. */
-export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, now: Date, tz: string): BriefVerdict {
+/** The boat verdict from the comfort score over the regional forecast, for `boat`'s factors (the reference boat by default). */
+export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, now: Date, tz: string, boat: BoatFactors = REFERENCE_BOAT): BriefVerdict {
   const unknown = (limit: string, window: string | null = null): BriefVerdict => ({verdict: 'unknown', limit, held: null, window, score: null, basis: 'comfort-score', agreement: null});
   if (!forecast) return unknown('No forecast for this day yet.');
   const feed = feedReader(forecast, now);
   const {hours, label, covered} = windowHours(feed.times, brief.date, tz, brief.sunrise, brief.sunset, now);
   if (!hours.length) return unknown(covered ? NO_DAYLIGHT : feed.times.length ? 'The forecast does not reach this day yet.' : 'No forecast for this day yet.');
-  const rows = hours.map(ms => ({ms, hour: feed.read(ms)})).map(row => ({...row, rating: rateComfort(row.hour)}));
+  const rows = hours.map(ms => ({ms, hour: feed.read(ms)})).map(row => ({...row, rating: rateComfort(row.hour, boat)}));
   const rated = rows.filter((row): row is typeof row & {rating: ComfortRating} => row.rating !== null);
   if (!rated.length) return unknown('No wind and seas forecast for this window.', label);
   // The limit comes from the hour that rates worst before any cap, so a capped hour never names a charge it does not carry.
@@ -301,8 +302,8 @@ export function profileVerdict(brief: Brief, now: Date, tz: string): BriefVerdic
   return {verdict, limit, held, window: label, score: null, basis: p, agreement: null};
 }
 
-/** The brief's verdict for its profile; null before there is a brief. */
-export function briefVerdict(brief: Brief | null, forecast: ConditionsForecast | null, now: Date, tz: string): BriefVerdict | null {
+/** The brief's verdict for its profile; null before there is a brief. `boat` rates the Boat profile (the reference boat by default). */
+export function briefVerdict(brief: Brief | null, forecast: ConditionsForecast | null, now: Date, tz: string, boat: BoatFactors = REFERENCE_BOAT): BriefVerdict | null {
   if (!brief) return null;
-  return brief.profile === 'boat' ? boatVerdict(brief, forecast, now, tz) : profileVerdict(brief, now, tz);
+  return brief.profile === 'boat' ? boatVerdict(brief, forecast, now, tz, boat) : profileVerdict(brief, now, tz);
 }

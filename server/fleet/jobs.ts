@@ -48,9 +48,12 @@ export function pinnedNames(text: string): string[] {
 interface VesselRow { id: string; pinned_json: string; waters_json: string | null; removal_requested: number; [k: string]: unknown }
 interface OfferingRow { vessel_id: string; days_json: string | null; target_species_json: string | null; source_fact_ids_json: string | null; [k: string]: unknown }
 
+// Vessel columns before and after phone_business,email_business. The two contact columns sit in the query itself
+// (null when the vessel's operator is do-not-contact, SC1322-01) so tests/test_fleet_query_paths.mjs reads the exclusion.
 const VESSEL_COLUMNS = 'id,slug,name,name_norm,operator_id,port_id,landing_id,vessel_class,waters_json,uscg_doc,state_reg,hull_id,call_sign,mmsi,' +
-  'year_built,passengers_max,bunks,length_ft,beam_ft,cruise_kn,website,booking_url,booking_platform,phone_business,email_business,' +
-  'status,profile_status,pinned_json,completeness,first_seen_at,last_seen_at,last_profiled_at,removal_requested_at IS NOT NULL AS removal_requested';
+  'year_built,passengers_max,bunks,length_ft,beam_ft,cruise_kn,website,booking_url,booking_platform';
+const VESSEL_STATE_COLUMNS = 'status,profile_status,pinned_json,completeness,first_seen_at,last_seen_at,last_profiled_at,' +
+  'removal_requested_at IS NOT NULL AS removal_requested';
 const OFFERING_COLUMNS = 'id,vessel_id,name,trip_type,duration_h,price_cents,price_basis,capacity,currency,departs_local,days_json,season_from,season_to,' +
   'target_species_json,booking_url,status,source_fact_ids_json,valid_from,valid_to,updated_at';
 
@@ -66,11 +69,15 @@ export async function snapshot(db: D1Database, region: string | undefined, curso
   }
   let rows: {id: string}[];
   if (section === 'o') {
-    rows = (await db.prepare(`SELECT id,slug,name,website,phone_business,email_business,booking_platform FROM fleet_operators
+    rows = (await db.prepare(`SELECT id,slug,name,website,CASE WHEN outreach_status<>'do-not-contact' THEN phone_business END AS phone_business,
+      CASE WHEN outreach_status<>'do-not-contact' THEN email_business END AS email_business,booking_platform FROM fleet_operators
       WHERE region=? AND id>? ORDER BY id LIMIT ?`).bind(region, after, PAGE.operators + 1).all<{id: string}>()).results;
     out.operators = rows.slice(0, PAGE.operators);
   } else if (section === 'v') {
-    const vessels = (await db.prepare(`SELECT ${VESSEL_COLUMNS} FROM fleet_vessels WHERE region=? AND id>? ORDER BY id LIMIT ?`)
+    const vessels = (await db.prepare(`SELECT ${VESSEL_COLUMNS},
+      CASE WHEN NOT EXISTS (SELECT 1 FROM fleet_operators o WHERE o.id=fleet_vessels.operator_id AND o.outreach_status='do-not-contact') THEN phone_business END AS phone_business,
+      CASE WHEN NOT EXISTS (SELECT 1 FROM fleet_operators o WHERE o.id=fleet_vessels.operator_id AND o.outreach_status='do-not-contact') THEN email_business END AS email_business,
+      ${VESSEL_STATE_COLUMNS} FROM fleet_vessels WHERE region=? AND id>? ORDER BY id LIMIT ?`)
       .bind(region, after, PAGE.vessels + 1).all<VesselRow>()).results;
     rows = vessels;
     const page = vessels.slice(0, PAGE.vessels);

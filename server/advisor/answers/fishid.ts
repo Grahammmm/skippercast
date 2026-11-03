@@ -138,6 +138,8 @@ export function ruleParts(r: RuleSummary, language: Language): string[] {
   else if (r.bag_limit !== null) parts.push(t(language, 'rule_bag', {n: r.bag_limit}));
   if (r.season_open && r.season_close) parts.push(t(language, 'rule_season', {open: monthDay(r.season_open, language)!, close: monthDay(r.season_close, language)!}));
   else if (!r.season_open && !r.season_close && r.bag_limit !== 0) parts.push(t(language, 'rule_year_round'));
+  else if (r.season_open) parts.push(t(language, 'rule_season_opens', {open: monthDay(r.season_open, language)!}));
+  else if (r.season_close) parts.push(t(language, 'rule_season_closes', {close: monthDay(r.season_close, language)!}));
   if (r.depth_limit_ft !== null) parts.push(t(language, 'rule_depth', {n: r.depth_limit_ft}));
   return parts;
 }

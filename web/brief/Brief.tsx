@@ -36,6 +36,9 @@ import {TideStationControl} from './TideStationControl.tsx';
 import {tideSelection} from '../tide-selection.ts';
 import {withTideSelection} from '../tide-stations.ts';
 import {briefVerdict, clockText, feedReader, VERDICT_WORD, type BriefVerdict} from './verdict.ts';
+import {activeBoatFactors, savedBoat} from '../../dist/boat-handling.js';
+import {boatBasisName, boatRangeNote, type SavedBoatLike} from '../boat-range.ts';
+import type {BoatFactors} from '../score.ts';
 import type {Brief as BriefModel, RegionalDailyFeed} from './types.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 import {dailyPartPath} from '../../dist/offline-core.js';
@@ -259,14 +262,20 @@ export const Headline = ({brief}: {brief: BriefModel | null}) =>
 
 export const Deck = ({brief}: {brief: BriefModel | null}) => brief?.deck ? <p class="app-deck">{brief.deck}</p> : null;
 
-/** The day verdict for the brief shown now: the regional forecast only when it is this region's. */
+/** The boat saved in this browser (dist/boat-handling.js), or null. */
+const storedBoat = (): SavedBoatLike => (savedBoat() as {boat?: SavedBoatLike} | null)?.boat ?? null;
+
+/** The day verdict for the brief shown now: the regional forecast only when it is this region's, rated for the saved boat (MYB-2). */
 export function currentVerdict(brief: BriefModel | null, now: Date): BriefVerdict | null {
   const info = regionInfo.value, forecast = regionalForecast.value;
-  return briefVerdict(brief, info && forecast?.region === info.id ? forecast : null, now, info?.timezone ?? DEFAULT_ZONE);
+  return briefVerdict(brief, info && forecast?.region === info.id ? forecast : null, now, info?.timezone ?? DEFAULT_ZONE, activeBoatFactors() as BoatFactors);
 }
 
+/** The comfort-score basis naming the boat rated: the saved boat's name, "your <n> ft boat", or the reference 23 ft boat. */
+export const comfortBasis = (boat: SavedBoatLike): string => `Comfort rating for ${boatBasisName(boat)}${VERDICT_BASIS['comfort-score']}`;
+
 const VERDICT_BASIS = {
-  'comfort-score': 'Comfort rating for the reference 23 ft boat, not a bite forecast or a safety clearance. Each hour of the window (sunrise to noon, or the rest of the daylight once noon has passed) is scored 0 to 10 from both forecast models’ wind, gusts, combined seas and wind chop at the forecast point, less a penalty for a crossing swell or short, steep chop. The worst hour sets the day: 7 and above is Comfortable, under 4 is Rough, Marginal between. An estimate missing wave detail or the second model is capped at 6.9; a marine alert makes the day Rough.',
+  'comfort-score': ', not a bite forecast or a safety clearance. Each hour of the window (sunrise to noon, or the rest of the daylight once noon has passed) is scored 0 to 10 from both forecast models’ wind, gusts, combined seas and wind chop at the forecast point, less a penalty for a crossing swell or short, steep chop. The worst hour sets the day: 7 and above is Comfortable, under 4 is Rough, Marginal between. An estimate missing wave detail or the second model is capped at 6.9; a marine alert makes the day Rough.',
   profile: 'Comfort rating from this profile’s hourly grade (surf or surge, wind, seas and launch where it applies), not a bite forecast or a safety clearance. The roughest hour of the window (sunrise to noon, or the rest of the daylight once noon has passed) sets the day; Calmer reads Comfortable. A marine alert makes the day Rough.',
 } as const;
 
@@ -312,13 +321,15 @@ export function Verdict({now}: {now: Date}) {
     : a.state === 'differ' ? `Models differ at ${clockText(a.worst!.ms, tz)}: wind ${gapText(a.worst!.wind)} kn apart, seas ${gapText(a.worst!.sea)} ft apart.${a.differing > 1 ? ` (${a.differing} of ${a.hours} hours)` : ''}`
     : a.state === 'partial' ? `Models compared for ${a.compared} of ${a.hours} hours; they agree on those.` : 'One model only for this window.';
   const modelHour = a?.state === 'differ' && regionalForecast.value ? feedReader(regionalForecast.value, now).read(a.worst!.ms) : null;
+  const boat = v.basis === 'comfort-score' ? storedBoat() : null, rangeNote = boat ? boatRangeNote(boat.loa_ft) : null;
   return (
     <div class="app-verdict" data-verdict={v.verdict} data-provisional={provisional ? 'true' : undefined}>
       <div class="app-verdict-head">
         <h1><span class="app-verdict-word">{VERDICT_WORD[v.verdict]}</span>{' '}<span class="app-verdict-window ui-mono" data-day={date}>{v.window ? `${when}, ${v.window}` : when}</span>{provisional ? ' ' : null}{provisional ? <span class="app-verdict-window app-verdict-provisional ui-mono">Provisional</span> : null}</h1>
-        <Popover align="end">{v.basis === 'comfort-score' ? VERDICT_BASIS['comfort-score'] : VERDICT_BASIS.profile}{provisional ? ` ${PROVISIONAL_BASIS}` : ''}{v.score !== null ? ` Worst hour: ${v.score}/10.` : ''}</Popover>
+        <Popover align="end">{v.basis === 'comfort-score' ? comfortBasis(boat) : VERDICT_BASIS.profile}{rangeNote ? ` ${rangeNote}` : ''}{provisional ? ` ${PROVISIONAL_BASIS}` : ''}{v.score !== null ? ` Worst hour: ${v.score}/10.` : ''}</Popover>
       </div>
       <p class="app-verdict-limit">{v.limit}{v.held ? ` ${v.held}` : ''}</p>
+      {rangeNote ? <p class="app-verdict-boat-note">{rangeNote}</p> : null}
       {models ? <p class="app-verdict-models ui-mono" data-agreement={a!.state}>{models}</p> : null}
       {modelHour ? <details class="app-verdict-models-detail"><summary>Model readings</summary>NOAA {gapText(modelHour.wind!)} kn, ECMWF {gapText(modelHour.other_wind!)} kn; NOAA {gapText(modelHour.sea!)} ft, ECMWF {gapText(modelHour.other_sea!)} ft.</details> : null}
       {rulesLine}
