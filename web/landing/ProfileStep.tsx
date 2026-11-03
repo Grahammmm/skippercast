@@ -5,7 +5,8 @@
 // failed or skipped warm-up says nothing, because the map loads as it would
 // have. "Change port" goes back to the port step. Focus moves to the heading
 // when the step appears, so keyboard and screen-reader users land on it.
-import {useEffect, useRef} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
+import {ENTRY_COPY, ENTRY_FIELDS, saveFirstUse} from '../boat-entry.ts';
 import {Button} from '../ui/Button.tsx';
 import {PROFILE_NOTES, PROFILE_TABLE, PROFILES, type Profile} from '../profile.ts';
 import type {WarmState} from './region-warm.ts';
@@ -32,15 +33,32 @@ export type ProfileStepProps = {
 export function ProfileStep({place, warm, current = null, onChoose, onBack}: ProfileStepProps) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus(); }, []);
+  const [boat, setBoat] = useState({lengthFt: '', wind: '', seas: ''});
+  const [notices, setNotices] = useState<string[]>([]);
+  // MYB-1: save what the boat fields hold, then the choice finishes the step as before.
+  const pick = (p: Profile) => { const saved = saveFirstUse({...boat, profile: p}); if (saved.notices.length) setNotices(saved.notices); onChoose(p); };
   const status = warm === 'loading' ? STEP_COPY.loading(place) : warm === 'ready' ? STEP_COPY.ready(place) : '';
   return (
     <section class="landing-step" aria-labelledby="landing-step-title" data-step="profile">
       <p class="ui-eyebrow landing-step-place">{place}</p>
       <h2 id="landing-step-title" ref={heading} tabIndex={-1}>{STEP_COPY.title}</h2>
       <p class="landing-step-intro">{STEP_COPY.intro}</p>
+      <fieldset class="app-limits" aria-describedby="landing-boat-hint">
+        <legend>{ENTRY_COPY.legend}</legend>
+        <p class="app-limits-hint">{ENTRY_COPY.line}</p>
+        {ENTRY_FIELDS.map(([name, label]) => (
+          <div class="app-limits-field" key={name}>
+            <label for={`landing-boat-${name}`}>{label}</label>
+            <input id={`landing-boat-${name}`} name={name} type="number" inputMode="decimal" value={boat[name]}
+              onInput={event => setBoat({...boat, [name]: (event.currentTarget as HTMLInputElement).value})} />
+          </div>
+        ))}
+        <span id="landing-boat-hint" class="app-limits-hint ui-mono">{ENTRY_COPY.lengthHint} · {ENTRY_COPY.limitsHint}</span>
+        {notices.length ? <p class="app-limits-hint" role="status">{notices.join(' ')}</p> : null}
+      </fieldset>
       <div class="landing-step-options">
         {PROFILES.map(p => (
-          <Button key={p} icon={p} data-profile={p} pressed={current === null ? undefined : p === current} onClick={() => onChoose(p)}>
+          <Button key={p} icon={p} data-profile={p} pressed={current === null ? undefined : p === current} onClick={() => pick(p)}>
             <span><strong>{PROFILE_TABLE[p].label}</strong><small>{PROFILE_NOTES[p]}</small></span>
           </Button>
         ))}
