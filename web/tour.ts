@@ -9,10 +9,11 @@ export const TOUR_STEPS = [
 
 export type TourState = number | null;
 export type TourAction = 'replay' | 'next' | 'back' | 'close';
-/** Replay always starts at the beginning, including after skip or completion. */
+/** Replay always starts at the beginning, including after skip or completion; an impossible step closes the tour. */
 export function tourTransition(step: TourState, action: TourAction): TourState {
   if (action === 'replay') return 0;
-  if (action === 'close' || step === null) return null;
+  if (action === 'close' || step === null || !Number.isInteger(step) || step < 0 || step >= TOUR_STEPS.length) return null;
+  if (action !== 'back' && action !== 'next') return null;
   if (action === 'back') return Math.max(0, step - 1);
   return step + 1 < TOUR_STEPS.length ? step + 1 : null;
 }
