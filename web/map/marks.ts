@@ -121,7 +121,7 @@ export function spotHref(href: string, spot: string | null): string {
  * a survey or geology outline, or `other` (the coastline's card), is the Chart's own
  * selection and drops the link's; empty water changes nothing in the link.
  */
-export function chartPick(layer: string | null, properties: Record<string, unknown> | null, other: ChartMark | null = null): ChartMark | null {
+export function chartPick(layer: string | null, properties: Record<string, unknown> | null, other: ChartMark | null = null, at?: {lat: number; lon: number} | null): ChartMark | null {
   const id = properties?.id, data = markData.peek();
   const find = <T extends Collection>(c: T | null | undefined) => c?.features.find(f => f.properties.id === id)?.properties;
   if (layer === MARK_PICK && typeof id === 'string') {
@@ -130,7 +130,7 @@ export function chartPick(layer: string | null, properties: Record<string, unkno
     return null;
   }
   const survey = layer === SURVEY_PICK ? find(data?.survey) : undefined, geology = layer === GEOLOGY_PICK ? find(data?.geology) : undefined;
-  const mark = survey ? surveyCard(survey, data!.survey!, data!.region) : geology ? geologyCard(geology, data!.geology!, data!.region) : other;
+  const mark = survey ? surveyCard(survey, data!.survey!, data!.region, at ? {latitude: at.lat, longitude: at.lon} : undefined) : geology ? geologyCard(geology, data!.geology!, data!.region) : other;
   if (!mark) return null;
   if (selection.peek() || habitat.peek()) navigate(spotHref(location.href, null));
   picked.value++;

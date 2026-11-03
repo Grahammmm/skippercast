@@ -152,10 +152,10 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
   const target = spot ? markData.value?.atlas?.targets.find(t => t.id === spot) as {canonical_habitat?: boolean} | undefined : undefined;
   const place = markPlace(selected);
   // SCJ-1: a habitat card (the brief's recommended places) joins a trip, or opens it for GPX, as a user waypoint, and links its region's rules page.
-  const habitat = selected.id.startsWith('habitat:'), at = selected.position;
-  const where = habitat && at && Number.isFinite(at.latitude) && Number.isFinite(at.longitude)
-    ? {id: selected.id, name: selected.name, latitude: at.latitude, longitude: at.longitude, shore: /\bshore\b/i.test(`${selected.name} ${selected.kind}`)} : null;
-  const added = spot ? tripIds.value.includes(spot) : !!where && tripIds.value.includes(placeTripId(where.id));
+  const habitat = selected.id.startsWith('habitat:'), survey = selected.id.startsWith('survey:'), at = selected.withheld ? undefined : selected.position;
+  const where = (habitat || survey) && at && Number.isFinite(at.latitude) && Number.isFinite(at.longitude)
+    ? {id: selected.id, name: (survey && selected.kind === 'Historical kelp detections' ? `Historical kelp detections · ${selected.name}` : selected.name).slice(0, 80), latitude: at.latitude, longitude: at.longitude, shore: survey ? !['Mapped hard bottom', 'Mapped mixed bottom'].includes(selected.kind) : /\bshore\b/i.test(`${selected.name} ${selected.kind}`)} : null;
+  const added = spot ? tripIds.value.includes(spot) : !!where && tripIds.value.includes(survey ? `user:survey-${where.id.slice(7).replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}` : placeTripId(where.id));
   const regulations = selected.regulations ?? (habitat && markData.value?.region ? regulationsLink(markData.value.region) : undefined);
   const close = () => {
     const back = returnTo?.isConnected ? returnTo : mapFocusTarget(document);
@@ -193,7 +193,8 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
           </a>
         ) : <Button size="sm" icon="shield" disabled>Regulations</Button>}
       </div>
-      {habitat && !where ? <p class="app-mark-why">This place has no saved position yet, so it cannot be added to a trip or exported.</p> : null}
+      {!selected.withheld && (survey && !where || /^(geology|charter|fleet):/.test(selected.id)) ? <p class="app-mark-why">{survey ? 'Pick this place on the map to export its position' : selected.id.startsWith('geology:') ? 'Geology unit: context for reading the map, not a place to fish' : 'Charter-reported grounds and AIS activity are not exported: they show apparent activity, not a verified place.'}</p> : null}
+      {habitat && !selected.withheld && !where ? <p class="app-mark-why">This place has no saved position yet, so it cannot be added to a trip or exported.</p> : null}
       <div class="app-mark-basis">
         <Popover>{selected.basis}{selected.terms?.map(t => (
           <p key={t.href}><a href={t.href} target="_blank" rel="noopener" aria-label={`${t.label} (publisher's page, opens in a new tab)`}>{t.label}</a></p>

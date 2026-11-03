@@ -160,7 +160,7 @@ test('the ranked export runs in v2: best reefs, complete outlines, a restored pl
   await expect(page.locator('#export-heading')).toBeFocused();
   expect(new URL(page.url()).hash).toBe('#export');
   reefs.change();
-  await page.locator('#export-download').click();
+  await page.locator('#export-name').fill('Fresh snapshot check');
   await expect(page.locator('#export-action-status')).toHaveText('Reef data changed. Select Best available again before exporting.');
   // Escape closes the plan and drops #export.
   await page.keyboard.press('Escape');
@@ -298,4 +298,38 @@ test.describe('offline', () => {
     });
     expect([...new Set(tidePackStations)].sort()).toEqual(['9412110']);
   });
+});
+
+// BF-gpx-handoff: the actual map pick, not an inferred survey centroid, reaches GPX.
+test('survey outline joins the trip and downloads checked GPX; charter ground explains refusal', async ({page, pageErrors, v2}) => {
+  await stubLiveFeeds(page);
+  const meta = JSON.parse(await readFile('dist/regions/morro-bay/region.json', 'utf8'));
+  const survey = {type: 'FeatureCollection', features: [{type: 'Feature', properties: {id: 'handoff', name: 'Synthetic soft bottom', habitat_kind: 'sediment', species_ids: ['reef']}, geometry: {type: 'Polygon', coordinates: [[[-121.172,35.428],[-121.168,35.428],[-121.168,35.432],[-121.172,35.432],[-121.172,35.428]]]}}]};
+  meta.assets.survey_habitat = 'regions/morro-bay/handoff-survey.geojson';
+  await page.route('**/regions/morro-bay/region.json', r => r.fulfill({json: meta}));
+  await page.route('**/' + meta.assets.survey_habitat, r => r.fulfill({json: survey}));
+  await v2.open('app', {...AREA, target: 'lingcod', view: '35.43,-121.17,14'});
+  const card = page.getByRole('region', {name: 'Selected mark'});
+  await expect(async () => {
+    await clickChart(page, {latitude: 35.43, longitude: -121.17});
+    await expect(card.getByRole('heading')).toHaveText('Synthetic soft bottom', {timeout: 1000});
+  }).toPass({timeout: 20000, intervals: [1000]});
+  await card.getByRole('button', {name: 'Add to trip', exact: true}).click();
+  await expect(card.getByRole('button', {name: 'Added to trip'})).toBeVisible();
+  await card.getByRole('button', {name: 'GPX', exact: true}).click();
+  await expect(page.locator('#export-content')).toContainText('Synthetic soft bottom · other');
+  await expect(page.locator('#export-share')).toHaveText('Share / Save file');
+  const xml = await download(page), {checkGpx} = await import('../web/gpx-check.ts');
+  expect(checkGpx(xml, {waypoints: 1})).toEqual({ok: true});
+  expect(xml).toContain('<cmt>user:survey-handoff</cmt>');
+  expect(xml).toContain('lat="35.43" lon="-121.17"');
+  await page.getByRole('button', {name: 'Close the trip plan'}).click();
+  await v2.open('app', {...AREA, target: 'lingcod', view: '35.17586,-120.82186,14', layers: 'fleet'});
+  await expect(async () => {
+    await clickChart(page, {latitude: 35.17586, longitude: -120.82186});
+    await expect(card.getByRole('heading', {name: 'Pecho Rock'})).toBeVisible({timeout: 1000});
+  }).toPass({timeout: 20000, intervals: [1000]});
+  await expect(card).toContainText('Charter-reported grounds and AIS activity are not exported: they show apparent activity, not a verified place.');
+  await expect(card.getByRole('button', {name: 'GPX', exact: true})).toBeDisabled();
+  expect(pageErrors).toEqual([]);
 });

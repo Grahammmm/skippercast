@@ -219,7 +219,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
             : layer === MPA_FILL ? mpaMark(properties) : layer === RANKED_PICK ? rankedMark(properties)
             : drawn.find(l => layer !== null && l.pick?.layers.includes(layer))?.pick?.mark(layer!, properties) ?? null;
           // A mark selects its spot; any other pick is the Chart's own selection (one at a time, FE-18).
-          chartMark.value = chartPick(layer, properties, clickMark(other, at, [p => seafloor?.cellAt(p) ?? null, fieldReading]));
+          chartMark.value = chartPick(layer, properties, clickMark(other, at, [p => seafloor?.cellAt(p) ?? null, fieldReading]), at);
         },
         onIdle: () => {
           if (!painted) { posterDone(); flyIfFirst(e); try { performance.mark('skippercast-chart-idle'); } catch { /* no timing API */ } }
