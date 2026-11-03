@@ -13,7 +13,8 @@ export function validMPAs(data) {
 }
 const sourceFor = (name) => !["Buchon","Morro","Piedras","Cambria"].some(x=>name.includes(x)) ? "https://wildlife.ca.gov/Conservation/Marine/MPAs" : "https://wildlife.ca.gov/Conservation/Marine/MPAs/" + (name.includes("Buchon") ? "Point-Buchon" : name.includes("Morro") ? "Morro-Bay" : name.includes("Piedras") ? "Piedras-Blancas" : "Cambria");
 // FE-51: `map` null is the screen alone (the v2 trip planner, web/trip.ts): nothing is drawn and the Chart draws the outlines itself.
-export async function initProtectedAreas(map, onChange) {
+// `readJSON` reads the committed snapshot and closures (web/trip.ts passes its shared read, so a file the v2 startup already read is not fetched again); the live check stays on fetchJSON.
+export async function initProtectedAreas(map, onChange, readJSON=fetchJSON) {
   const layer=map?L.layerGroup().addTo(map):null;
   const status=document.getElementById("mpa-status")||document.createElement("p");
   let data=null, checked=null, live=false, extra=null, extraChecked=null;
@@ -34,11 +35,11 @@ export async function initProtectedAreas(map, onChange) {
     document.dispatchEvent(new CustomEvent("skippercast:boundaries"));
   }
   try {
-    const saved=await fetchJSON(assetURL("protected_areas"));
+    const saved=await readJSON(assetURL("protected_areas"));
     if (!validMPAs(saved)) throw Error("Invalid MPA snapshot");
     data=saved; checked=saved.checked_at;
     if(assetURL("closures")) {
-      const candidate=await fetchJSON(assetURL("closures"));
+      const candidate=await readJSON(assetURL("closures"));
       if(candidate.region_id!==getRegion().id || candidate.type!=="FeatureCollection" || !candidate.features?.length || !candidate.features.every(f=>["Polygon","MultiPolygon"].includes(f.geometry?.type)))throw Error("Invalid additional closures");
       extra=candidate;extraChecked=candidate.checked_at;
     }

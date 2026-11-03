@@ -353,6 +353,33 @@ const narrow = (page: Page) => page.viewportSize()!.width < 1024;
 /** The rail and legend: on a phone they are the sheet's Layers panel. */
 const showLayers = async (page: Page) => { if (narrow(page)) await page.getByRole('button', {name: 'Layers', exact: true}).click(); };
 const hideLayers = async (page: Page) => { if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click(); };
+
+test('layer presets preserve Back and helm view makes controls larger', async ({page, v2}) => {
+  await v2.open('app', {...PLACE, presentation: 'chart', layers: 'seafloor', current: 'off'});
+  await showLayers(page);
+  const presets = page.getByRole('group', {name: 'Layer presets'});
+  await presets.getByRole('button', {name: 'Offshore'}).click();
+  expect(params(page).layers).toBe('water-temp,sst-contrast,chlorophyll,swell');
+  expect(params(page).current).toBe('off');
+  await expect(presets.getByRole('button', {name: 'Offshore'})).toHaveAttribute('aria-pressed', 'true');
+  await page.goBack();
+  expect(params(page).layers).toBe('seafloor');
+  const bodyText = () => page.locator('body').evaluate(body => parseFloat(getComputedStyle(body).fontSize));
+  const baseText = await bodyText();
+  await page.getByRole('switch', {name: 'Helm view'}).click();
+  await expect(page.locator('html')).toHaveClass(/helm/);
+  expect(await bodyText(), 'Helm view raises the body text one token step').toBeGreaterThan(baseText);
+  if (narrow(page)) {
+    const small = await page.locator('button:visible, select:visible, input:visible, [role="switch"]:visible').evaluateAll(buttons => buttons.filter(button => {
+      const rect = button.getBoundingClientRect();
+      return rect.width < 48 || rect.height < 48;
+    }).map(button => button.outerHTML.slice(0, 200)));
+    expect(small).toEqual([]);
+  }
+  await v2.a11y('v2-map-helm');
+  await page.reload();
+  await expect(page.locator('html')).toHaveClass(/helm/);
+});
 /** Phone only: after the Layers panel, the sheet rests at half and covers the chart's centre (where the contours and fields draw). Drop it back to peek so the map is visible again. */
 const collapseSheet = async (page: Page) => {
   if (!narrow(page)) return;
@@ -1070,11 +1097,13 @@ test('Water temp draws nothing for a stale analysis or a region no report covers
 test('the always-on depth contours read on click: a contour names its depth, the survey edge its limit, and off-contour water still reads the field', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
   await serveReport(page);
-  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'water-temp'});
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'water-temp', diagnostics: '1'});
   // The always-on contours draw and key themselves while the water-temp field is on (the phone's legend lives in the Layers sheet).
   await showLayers(page);
   await expect(page.locator('.app-legend .app-swatch[data-layer="depth-contours"]')).toHaveCount(1);
   await hideLayers(page);
+  // The key shows once the file is checked; MapLibre draws it later. A click picks only what is drawn, so wait for its click targets in view.
+  await expect.poll(() => mapAttr(page, 'data-contours-drawn'), {message: 'contours drawn in view'}).toBeGreaterThan(0);
 
   // A click on a deep (270 ft) contour reads it first (contour-first pick over the field underneath).
   const contour = await chartPoint(page, CURRENT_VIEW, CONTOUR_POINT.lon, CONTOUR_POINT.lat);

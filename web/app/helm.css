@@ -1,0 +1,5 @@
+html.helm, html.helm body { font-size: var(--text-18); }
+html.helm button, html.helm select, html.helm input, html.helm [role="switch"] { min-width: 48px; min-height: 48px; }
+html.helm .app-presentation .ui-chip { min-width: 48px; min-height: 48px; }
+html.helm .app-rail .ui-rail-note, html.helm .app-legend-detail { display: none; }
+html.helm .app-rail [aria-label="Layer presets"] { display: flex; flex-wrap: wrap; }

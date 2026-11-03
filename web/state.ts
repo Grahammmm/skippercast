@@ -55,6 +55,7 @@ export type Base = typeof BASES[number];
 /** `?layers=none` writes an empty rail; an absent key means stored or profile defaults. */
 export const NO_LAYERS = 'none';
 export const STORAGE_KEYS = {
+  helm: 'skippercast-helm-v1',
   coordinates: 'skippercast-coordinates-v1',
   current: 'skippercast-current-v1',
   profile: 'skippercast-profile-v1', layers: 'skippercast-layers-v1', base: 'skippercast-base-v1', presentation: 'skippercast-presentation-v1',
