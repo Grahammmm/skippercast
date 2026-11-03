@@ -103,8 +103,10 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   useEffect(() => { if (rules) void loadRegs(rules); }, [rules?.id]);
   const boat = !!brief && profile.value === 'boat' && brief.profile === 'boat', id = region.value;
   const r = boat ? ranking ?? currentRanking(now.getTime()) : null, place = r ? runPlace(r, selection.value, habitat.value) : null;
-  // The shoreline lines are asked for once when the route waits on them; the line re-renders with the route when they land.
-  useEffect(() => { if (id && place?.why === 'lines-needed') void loadLandWaterLines(id); }, [id, place?.why]);
+  // The shoreline lines are asked for once the route waits on them and a cruise speed shows the run; the line re-renders
+  // with the route when they land. The harbor sits in a mixed cell, so without a speed (nothing shows a distance) they never load.
+  const wantLines = !!id && place?.why === 'lines-needed' && cruiseSpeed.value !== null;
+  useEffect(() => { if (id && wantLines) void loadLandWaterLines(id); }, [id, wantLines]);
   if (!brief || !r) return null;
   const state = planRun(brief, place, cruiseSpeed.value, now), tz = regionInfo.value?.timezone ?? DEFAULT_ZONE;
   const text = runText(state, tz, place?.unranked), harbor = r.harbor ?? 'the harbor';
