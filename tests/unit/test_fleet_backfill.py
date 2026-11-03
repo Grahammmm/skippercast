@@ -13,6 +13,8 @@ import io
 import json
 from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import tracemalloc
 import unittest
@@ -418,10 +420,14 @@ class SourcePrecedenceTests(BackfillTestCase):
         self.assertGreater(sum(c.events_n for c in doubled), sum(c.events_n for c in cells), "without it: twice")
 
 
-class StreamingTests(BackfillTestCase):
-    def peak(self, rows):
-        compressed, size = big_day(rows)
-        store = AisStore(Path(self.tmp.name) / f"memory-{rows}")
+def ingest_peak(rows, root):
+    """Peak traced Python memory while ``ingest_day`` streams a ``rows``-row day into ``root``, with its counts.
+
+    A 400-row day is ingested first, untraced, so one-time costs (lazy imports, caches) stay out of the peak.
+    """
+    for n, where in ((400, root / "warm-up"), (rows, root / "measured")):
+        compressed, size = big_day(n)
+        store = AisStore(where)
         source = MarineCadastreSource(session=FakeSession({day_url(DAY): compressed}), workdir=store.root / "staging")
         tracemalloc.start()
         try:
@@ -429,9 +435,30 @@ class StreamingTests(BackfillTestCase):
             _, peak = tracemalloc.get_traced_memory()
         finally:
             tracemalloc.stop()
-        self.assertEqual((result["positions"], result["outside"]), (rows // 4, rows - rows // 4))
-        self.assertEqual(len(dump(store, DAY)["positions"]), rows // 4)
-        return peak, size
+    return {"peak": peak, "size": size, "positions": result["positions"], "outside": result["outside"],
+            "stored": len(dump(store, DAY)["positions"])}
+
+
+class StreamingTests(BackfillTestCase):
+    def peak(self, rows):
+        """``ingest_peak`` in a fresh interpreter.
+
+        tracemalloc counts every allocation in the process. The ingest interns a few strings per batch, and when
+        the interpreter's interned-string table is due to grow, its new table (about 3.8 MB in a test worker that
+        has imported the whole suite) lands in the peak. Whether that happens depended on what else had run in
+        the same worker, so the test failed on some CI runs only. A fresh interpreter has the same state each run.
+        """
+        child = subprocess.run(
+            [sys.executable, "-c", "import json, sys; from pathlib import Path; "
+             "from tests.unit.test_fleet_backfill import ingest_peak; "
+             "print(json.dumps(ingest_peak(int(sys.argv[1]), Path(sys.argv[2]))))",
+             str(rows), str(Path(self.tmp.name) / f"memory-{rows}")],
+            cwd=ROOT, capture_output=True, text=True, timeout=300)
+        self.assertEqual(child.returncode, 0, child.stderr)
+        measured = json.loads(child.stdout.splitlines()[-1])
+        self.assertEqual((measured["positions"], measured["outside"]), (rows // 4, rows - rows // 4))
+        self.assertEqual(measured["stored"], rows // 4)
+        return measured["peak"], measured["size"]
 
     def test_memory_stays_bounded_on_a_multi_megabyte_day(self):
         """Five times the rows (over 12 MB of CSV) barely move peak Python memory: the file is streamed, never held."""

@@ -383,7 +383,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC-E2E-GREEN only lets the left-column legend shrink and scroll (flex/min-height/overflow) beside a mark-card min height,
   // wraps the phone sheet's .app-area row, and gives the brief's .app-verdict-rules line margins, size and the existing
   // .app-mark-regs a link rule; legend text paint and backing are unchanged.
-  "appCss": "4f344ed4cba0faf3937427b70eeb059502be5d49d02f537599b50f82fc1e946e",
+  // SC-POPOVER only places the desktop legend's basis popovers against their own button (position: fixed + anchor positioning) so the
+  // scrolling legend does not clip them; the popover keeps its existing ui.css paint, and legend text paint and backing are unchanged.
+  "appCss": "ec7a13668e7be9850c8d17fbcaef993aa50c376f764f5eeace229caf2cd96ad3",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.

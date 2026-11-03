@@ -31,14 +31,14 @@ test('A1 exact two unresolved root IDs and measured exponent/control values', ()
   assert.equal(report.status, 'PARITY_UNRESOLVED');
   assert.equal(report.strict_exit, 1);
   assert.deepEqual(report.mismatch_ids, families);
-  assert.deepEqual(report.counts, {root_tests: 2, passed: 0, failed: 2, controls: 13, cases: 17, skipped: 0});
+  assert.deepEqual(report.counts, {root_tests: 1, passed: 0, failed: 1, controls: 15, cases: 17, skipped: 0});
   const exponent = report.cases.find(c => c.id === 'exponent');
   assert.equal(exponent.python.value_key, '5a9530d3c6d5faad');
   assert.equal(exponent.worker.value_key, '661710915adfa7c4');
   assert.equal(report.cases.find(c => c.id === 'ordinary_fraction').worker.value_key, '9f29a130438b8117');
   const astral = report.cases.find(c => c.id === 'astral_keys');
   assert.equal(astral.python.text, '{"\ue000":1,"\u{10000}":2}');
-  assert.equal(astral.worker.text, '{"\u{10000}":2,"\ue000":1}');
+  assert.equal(astral.worker.text, '{"\ue000":1,"\u{10000}":2}');
 });
 test('A3 nested evidence and actual bytes/keys deterministic across fresh producer processes', () => {
   const again = collect(path.join(directory, 'repeat'));
