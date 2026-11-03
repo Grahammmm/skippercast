@@ -5,8 +5,6 @@
 // so a figure shown to an operator must say so.
 import type {Target, Placement} from '../go.ts';
 import {TARGETS, PLACEMENTS, utcDay} from '../go.ts';
-// The registry's pattern is the source of truth: a regions/<id> directory name, upper case
-// allowed ('CA', 'OR'), which is what fleet_vessels.region holds.
 import {REGION} from '../registry.ts';
 
 export const CLICK_DAYS = [7, 30, 90] as const;
