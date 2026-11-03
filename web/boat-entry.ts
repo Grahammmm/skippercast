@@ -86,3 +86,54 @@ export function saveFirstUse(entry: FirstUseEntry, storage: StoreStorage | null 
   if (failed) notices.push(ENTRY_COPY.failed);
   return {boat, notices};
 }
+
+// The step closes (map) or the page navigates (landing) as soon as a profile
+// is chosen, so the notices are shown after it, by the map's FirstRun: the
+// landing carries them to /map in session storage, or — when storage is
+// refused there too — as ?boat-notice=failed, which names only the fixed
+// failure line (an address never supplies notice text).
+export const NOTICE_KEY = 'skippercast-first-use-notice';
+export const NOTICE_PARAM = 'boat-notice';
+export type NoticeStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+
+export function browserSession(): NoticeStorage | null {
+  try { return typeof sessionStorage === 'undefined' ? null : sessionStorage; } catch { return null; }
+}
+
+/** `url` carrying `notices` to the page it opens. Never throws. */
+export function carryNotices(url: string, notices: readonly string[], session: NoticeStorage | null = browserSession()): string {
+  if (!notices.length) return url;
+  try {
+    if (!session) throw new Error('no session storage');
+    session.setItem(NOTICE_KEY, JSON.stringify(notices));
+    return url;
+  } catch {
+    const next = new URL(url);
+    next.searchParams.set(NOTICE_PARAM, 'failed');
+    return next.href;
+  }
+}
+
+/** The notices carried to `href`, read once (the stored copy is removed). Never throws. */
+export function takeNotices(href: string, session: NoticeStorage | null = browserSession()): string[] {
+  const held: string[] = [];
+  try {
+    const raw = session?.getItem(NOTICE_KEY);
+    if (raw) {
+      session!.removeItem(NOTICE_KEY);
+      const list: unknown = JSON.parse(raw);
+      if (Array.isArray(list)) for (const item of list.slice(0, 4)) if (typeof item === 'string') held.push(item);
+    }
+  } catch { /* nothing carried */ }
+  try {
+    if (new URL(href).searchParams.get(NOTICE_PARAM) === 'failed' && !held.includes(ENTRY_COPY.failed)) held.push(ENTRY_COPY.failed);
+  } catch { /* not a URL */ }
+  return held;
+}
+
+/** `href` without the carried-notice parameter, so a reload or a shared link does not repeat it. */
+export function withoutNotice(href: string): string {
+  const url = new URL(href);
+  url.searchParams.delete(NOTICE_PARAM);
+  return url.href;
+}

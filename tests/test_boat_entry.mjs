@@ -19,7 +19,7 @@ async function load() {
   const out = join(await mkdtemp(join(tmpdir(), 'boat-entry-')), 'boat-entry.mjs');
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
-      export {saveFirstUse, ENTRY_COPY, ENTRY_FIELDS} from './web/boat-entry.ts';
+      export {saveFirstUse, ENTRY_COPY, ENTRY_FIELDS, carryNotices, takeNotices, withoutNotice} from './web/boat-entry.ts';
       export {ProfileStep} from './web/landing/ProfileStep.tsx';
       export {FirstRun} from './web/app/FirstRun.tsx';
       export {configureStore, STORAGE_KEYS} from './web/state.ts';
@@ -228,4 +228,91 @@ test('map first run: a profile click saves the typed boat and still finishes the
     if (oldLocation === undefined) delete globalThis.location; else globalThis.location = oldLocation;
     if (oldHistory === undefined) delete globalThis.history; else globalThis.history = oldHistory;
   }
+});
+
+// RETURN 1 (t_65797c35): the notices must outlive the card closing (map) and the page navigating (landing).
+function session(initial = {}) {
+  const s = memory(initial);
+  s.removeItem = k => { s.map.delete(k); };
+  return s;
+}
+const refused = () => ({getItem() { throw new Error('denied'); }, setItem() { throw new Error('denied'); }, removeItem() { throw new Error('denied'); }});
+
+test('the landing carries notices to the map in session storage, or as ?boat-notice=failed when that is refused too', async () => {
+  const m = await load();
+  const url = 'https://s.test/map?region=morro-bay&port=morro-bay&profile=boat';
+  const s = session();
+  assert.equal(m.carryNotices(url, [], s), url, 'no notices: the address is unchanged');
+  assert.equal(s.map.size, 0, 'no notices: nothing stored');
+  assert.equal(m.carryNotices(url, ['Wind limit saved as 20 kt.'], s), url);
+  assert.ok(util.isDeepStrictEqual(m.takeNotices(url, s), ['Wind limit saved as 20 kt.']));
+  assert.ok(util.isDeepStrictEqual(m.takeNotices(url, s), []), 'read once');
+  for (const none of [refused(), null]) {
+    const next = m.carryNotices(url, ['Wind limit saved as 20 kt.', m.ENTRY_COPY.failed], none);
+    assert.equal(new URL(next).searchParams.get('boat-notice'), 'failed');
+    assert.equal(new URL(next).searchParams.get('port'), 'morro-bay', 'the rest of the address is kept');
+    assert.ok(util.isDeepStrictEqual(m.takeNotices(next, none), [m.ENTRY_COPY.failed]));
+    assert.equal(new URL(m.withoutNotice(next)).searchParams.has('boat-notice'), false);
+  }
+  // The address names only the fixed line; it never supplies notice text.
+  assert.ok(util.isDeepStrictEqual(m.takeNotices(`${url}&boat-notice=${encodeURIComponent('<b>hi</b>')}`, session()), []));
+});
+
+test('landing step: the save notices go to onChoose, which navigates at once', async () => {
+  const {m} = await fresh();
+  m.configureStore({storage: broken()});
+  const calls = [];
+  await typeAndClick(m, m.h(m.ProfileStep, {place: 'Morro Bay', warm: null, onChoose: (p, notices) => calls.push([p, notices]), onBack: () => {}}), {lengthFt: '19'}, 'boat', broken());
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], 'boat');
+  assert.ok(calls[0][1].includes(m.ENTRY_COPY.failed), JSON.stringify(calls));
+});
+
+async function withMap(href, s, run) {
+  const oldLocation = globalThis.location, oldHistory = globalThis.history, oldSession = globalThis.sessionStorage;
+  globalThis.location = {href};
+  globalThis.history = {state: null, replaceState: (_s, _t, url) => { globalThis.location.href = new URL(url, href).href; }, pushState() {}};
+  globalThis.sessionStorage = s;
+  try { return await run(); } finally {
+    if (oldLocation === undefined) delete globalThis.location; else globalThis.location = oldLocation;
+    if (oldHistory === undefined) delete globalThis.history; else globalThis.history = oldHistory;
+    if (oldSession === undefined) delete globalThis.sessionStorage; else globalThis.sessionStorage = oldSession;
+  }
+}
+
+test('map first run: a failed save or an adjusted limit is still said after the card closes', async () => {
+  let {m, storage} = await fresh();
+  let html = await withMap('https://s.test/map', session(), async () =>
+    (await typeAndClick(m, m.h(m.FirstRun, {href: 'https://s.test/map', storage, cookies: null}), {wind: '99'}, 'boat', storage)).html);
+  assert.ok(html.includes('Wind limit saved as 20 kt.'), html);
+  assert.doesNotMatch(html, /How do you fish\?/, 'the card itself closed');
+  ({m} = await fresh());
+  m.configureStore({storage: broken()});
+  html = await withMap('https://s.test/map', session(), async () =>
+    (await typeAndClick(m, m.h(m.FirstRun, {href: 'https://s.test/map', storage: broken(), cookies: null}), {lengthFt: '19'}, 'kayak', broken())).html);
+  assert.ok(html.includes(m.ENTRY_COPY.failed), html);
+  assert.doesNotMatch(html, /How do you fish\?/);
+});
+
+test('map first run: notices carried from the landing show on arrival, once, and the address loses the marker', async () => {
+  const {m, storage} = await fresh({'skippercast-profile': 'boat'});
+  const s = session({'skippercast-first-use-notice': JSON.stringify(['Seas limit saved as 1 ft.'])});
+  const href = 'https://s.test/map?region=morro-bay&profile=boat&boat-notice=failed';
+  const result = await withMap(href, s, async () => {
+    const oldDocument = globalThis.document;
+    const root = new El('div');
+    globalThis.document = {createElement: n => new El(n), createElementNS: (_, n) => new El(n), createTextNode: t => Object.assign(new El('text'), {nodeType: 3, data: String(t)})};
+    try {
+      m.renderDOM(m.h(m.FirstRun, {href, storage, cookies: null}), root);
+      await new Promise(resolve => setTimeout(resolve, 20));
+      return {html: text(root), at: globalThis.location.href, left: s.map.size};
+    } finally {
+      m.renderDOM(null, root);
+      if (oldDocument === undefined) delete globalThis.document; else globalThis.document = oldDocument;
+    }
+  });
+  assert.ok(result.html.includes('Seas limit saved as 1 ft.') && result.html.includes(m.ENTRY_COPY.failed), result.html);
+  assert.equal(result.left, 0, 'read once');
+  assert.equal(new URL(result.at).searchParams.has('boat-notice'), false);
+  assert.equal(new URL(result.at).searchParams.get('region'), 'morro-bay');
 });

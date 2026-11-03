@@ -26,7 +26,8 @@ export type ProfileStepProps = {
   warm: WarmState | null;
   /** The stored profile, shown pressed. */
   current?: Profile | null;
-  onChoose: (profile: Profile) => void;
+  /** `notices`: what saving the boat fields reported (MYB-1), for the page the choice opens to show. */
+  onChoose: (profile: Profile, notices?: readonly string[]) => void;
   onBack: () => void;
 };
 
@@ -36,7 +37,8 @@ export function ProfileStep({place, warm, current = null, onChoose, onBack}: Pro
   const [boat, setBoat] = useState({lengthFt: '', wind: '', seas: ''});
   const [notices, setNotices] = useState<string[]>([]);
   // MYB-1: save what the boat fields hold, then the choice finishes the step as before.
-  const pick = (p: Profile) => { const saved = saveFirstUse({...boat, profile: p}); if (saved.notices.length) setNotices(saved.notices); onChoose(p); };
+  // The notices go to onChoose too: the landing navigates at once and carries them to the map (boat-entry.ts carryNotices).
+  const pick = (p: Profile) => { const saved = saveFirstUse({...boat, profile: p}); if (saved.notices.length) setNotices(saved.notices); onChoose(p, saved.notices); };
   const status = warm === 'loading' ? STEP_COPY.loading(place) : warm === 'ready' ? STEP_COPY.ready(place) : '';
   return (
     <section class="landing-step" aria-labelledby="landing-step-title" data-step="profile">

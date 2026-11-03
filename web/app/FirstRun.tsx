@@ -7,7 +7,7 @@
 // #622: the landing's guided first run asks before the map opens, so this
 // card is left for links into the map that name no profile.
 import {useEffect, useState} from 'preact/hooks';
-import {ENTRY_COPY, ENTRY_FIELDS, saveFirstUse} from '../boat-entry.ts';
+import {ENTRY_COPY, ENTRY_FIELDS, NOTICE_PARAM, saveFirstUse, takeNotices, withoutNotice} from '../boat-entry.ts';
 import {Button} from '../ui/Button.tsx';
 import {DEFAULT_PROFILE, PROFILE_NOTES, PROFILE_TABLE, PROFILES, isProfile, type Profile} from '../profile.ts';
 import {savedHomeMode, type CookieJar} from '../ports.ts';
@@ -48,11 +48,25 @@ export function FirstRun({href, storage, cookies}: {href?: string; storage?: Sto
   // A home saved on /coast already chose the mode: apply it (the address names none) rather than ask again.
   useEffect(() => { const saved = savedFirstRun(at, storage, cookies); if (saved) setParams({profile: saved}); }, []);
   const [boat, setBoat] = useState({lengthFt: '', wind: '', seas: ''});
-  if (!due) return null;
+  // MYB-1: what saving the boat reported (here, or carried from the landing's step), shown after the card closes.
+  const [notices, setNotices] = useState<string[]>([]);
+  useEffect(() => {
+    const held = takeNotices(at);
+    if (held.length) setNotices(held);
+    try { if (new URL(at).searchParams.has(NOTICE_PARAM)) history.replaceState(history.state, '', withoutNotice(location.href)); } catch { /* keep the address */ }
+  }, []);
+  const notice = notices.length ? (
+    <div class="app-firstrun-notice" role="status" data-first-use-notice="">
+      <span>{notices.join(' ')}</span>
+      <Button variant="quiet" size="sm" onClick={() => setNotices([])}>Dismiss</Button>
+    </div>
+  ) : null;
+  if (!due) return notice ? <section class="app-firstrun" aria-label="Your boat">{notice}</section> : null;
   // MYB-1: save what the boat fields hold first; the choice then finishes the step as before.
-  const choose = (p: Profile) => { saveFirstUse({...boat, profile: p}, storage); setDue(false); setParams(p === DEFAULT_PROFILE ? {profile: p} : {profile: p, target: null}); };
+  const choose = (p: Profile) => { setNotices(saveFirstUse({...boat, profile: p}, storage).notices); setDue(false); setParams(p === DEFAULT_PROFILE ? {profile: p} : {profile: p, target: null}); };
   return (
     <section class="app-firstrun" role="dialog" aria-labelledby="first-run-title" data-first-run="">
+      {notice}
       <span class="ui-eyebrow">First time here</span>
       <h2 id="first-run-title">How do you fish?</h2>
       <p>The profile sets the depth limit, the species list and the map's default layers. Change it any time in the command bar.</p>
