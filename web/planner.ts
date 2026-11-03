@@ -21,7 +21,10 @@ import {bestSpots, waypointTitle} from '../dist/spot-ranking.js';
 import {HOME_PORT_KEY} from '../dist/home-port.js';
 import {track} from './telemetry.ts';
 import {ensureLandWater, withheldNote, type Place} from './land-water.ts';
-import {coordinates} from './state.ts';
+import {coordinates, region as activeRegion} from './state.ts';
+import {checkGpx} from './gpx-check.ts';
+import {launchPoints, loadLaunchPoints} from './launches.ts';
+import {launchChoice} from './reach.ts';
 import {assessContours, depthContoursURL, NOTES} from './map/depth-contours.ts';
 import {chartFileListed} from './chart-files.ts';
 import {loadPorts, plannerPort, portChoice} from './ports.ts';
@@ -31,7 +34,7 @@ export type LayerKey = keyof Layers;
 export type TripSpecies = 'reef' | 'lingcod' | 'rockfish';
 export type RankedDraft = {sha256: string; species: TripSpecies; priorities: {id: string; rank: number}[]};
 export type UserWaypoint = {id: string; name: string; category: string; latitude: number; longitude: number};
-export type Draft = {ids: string[]; userWaypoints?: UserWaypoint[]; rankedPlan: RankedDraft | null; name: string; date: string; avoidScope: 'map' | 'region'; layers: Layers};
+export type Draft = {launchId?: string; ids: string[]; userWaypoints?: UserWaypoint[]; rankedPlan: RankedDraft | null; name: string; date: string; avoidScope: 'map' | 'region'; layers: Layers};
 export type Target = {
   id: string; label: string; name?: string; latitude: number; longitude: number; habitat_grade?: string; canonical_habitat?: boolean;
   trip_rank?: number; trip_fit?: number; trip_species?: string; evidence_confidence?: {percent: number};
@@ -140,6 +143,7 @@ export function createPlanner(deps: PlannerDeps) {
   try { savedPort = storage?.getItem(HOME_PORT_KEY) ?? null; } catch { /* storage blocked */ }
 
   const initial = readDraft(raw, atlas, today) as Draft;
+  try { const id = JSON.parse(raw ?? 'null')?.launchId; if (typeof id === 'string') initial.launchId = id; } catch { /* invalid draft */ }
   const waypointPosition = signal<{latitude: number; longitude: number} | null>(null);
   const draft = signal<Draft>(initial);
   const tripAtlas = signal<Atlas>({...atlas, targets: [...atlas.targets], areas: [...atlas.areas]});
@@ -158,15 +162,21 @@ export function createPlanner(deps: PlannerDeps) {
     draft.value = next;
     try { storage?.setItem(draftKey(region.id), JSON.stringify(next)); storageNote.value = STORAGE_OK; } catch { storageNote.value = STORAGE_OFF; }
   };
+  const launch = computed(() => launchPoints.value?.region === region.id ? launchPoints.value.points.find(p => p.id === (launchChoice.value[region.id] ?? draft.value.launchId)) ?? launchPoints.value.points[0] : undefined);
+  const launchPoint = (): UserWaypoint[] => draft.value.launchId && launch.value ? userWaypoints([{...launch.value, id: `user:launch-${launch.value.id.replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}`, name: `Launch · ${launch.value.name}`.slice(0, 80), category: 'other'}]) as UserWaypoint[] : [];
+  const exportDraft = (): Draft => { const d = draft.value, l = launchPoint(); return {...d, ids: [...d.ids, ...l.map(p => p.id)], userWaypoints: [...(d.userWaypoints ?? []), ...l]}; };
+  function setLaunch(on: boolean): void { revision++; persist({...draft.value, launchId: on ? launch.value?.id : undefined}); }
+  if (typeof location !== 'undefined') void loadLaunchPoints(region.id);
   const selected = (): Target[] => {
-    const targets = [...tripAtlas.value.targets, ...(draft.value.userWaypoints ?? []).map(userWaypointTarget)];
-    return draft.value.ids.map(id => targets.find(t => t.id === id)).filter((t): t is Target => !!t);
+    const d = exportDraft(), targets = [...tripAtlas.value.targets, ...(d.userWaypoints ?? []).map(userWaypointTarget)];
+    return d.ids.map(id => targets.find(t => t.id === id)).filter((t): t is Target => !!t);
   };
   const rankedDetail = (): RankedDetail => ({targets: selected(), areas: tripAtlas.value.areas.filter(a => draft.value.ids.includes(a.id)), publication: tripAtlas.value.publication});
   const unrank = (): void => { ranked.value = false; emit({targets: [], areas: []}); };
 
   /** The export contract's request for the draft; throws what blocks an export. */
-  function request(d: Draft = draft.value) {
+  function request(d: Draft = exportDraft()) {
+    if (activeRegion.value && activeRegion.value !== region.id) throw Error('Region changed. Open the planner again before exporting.');
     if (restorePending.value) throw Error('Saved ranked plan needs current reef data. Restore it or select Best available again.');
     if (filtersDirty.value) throw Error('Trip filters changed. Select Best available again before exporting.');
     if (d.layers.exclusions && d.avoidScope === 'map' && !map.getSize().x) throw Error('Open the map to choose its coverage first, or choose Whole selected region for protected-area outlines.');
@@ -178,10 +188,10 @@ export function createPlanner(deps: PlannerDeps) {
   }
 
   /** What the counts depend on: a plan name or date keystroke never re-runs the screen or redraws the Chart. */
-  const exportKey = computed(() => { const d = draft.value; return JSON.stringify([d.ids, d.layers, d.avoidScope, d.userWaypoints]); });
+  const exportKey = computed(() => { const d = draft.value; return JSON.stringify([d.ids, d.layers, d.avoidScope, d.userWaypoints, d.launchId, launch.value]); });
   const summary = computed<Summary>(() => {
-    void tick.value; void exportKey.value;
-    try { return {ok: true, counts: (buildExport(request(draft.peek())) as {counts: Extract<Summary, {ok: true}>['counts']}).counts}; } catch (error) { return {ok: false, message: (error as Error).message}; }
+    void tick.value; void exportKey.value; void activeRegion.value;
+    try { return {ok: true, counts: (buildExport(request(untracked(exportDraft))) as {counts: Extract<Summary, {ok: true}>['counts']}).counts}; } catch (error) { return {ok: false, message: (error as Error).message}; }
   });
   const protectedHits = computed<ProtectedHit[]>(() => {
     void tick.value;
@@ -284,9 +294,9 @@ export function createPlanner(deps: PlannerDeps) {
    * characters outside the user-waypoint id rule as `-`), through saveWaypoint's validation. Again for the same place adds nothing.
    */
   function addPlace(p: {id: string; name: string; latitude: number; longitude: number; shore?: boolean}): string | null {
-    const id = `user:habitat-${p.id.replace(/^habitat:/, '').replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}`;
+    const id = `user:${p.id.startsWith('survey:') ? 'survey' : 'habitat'}-${p.id.replace(/^(habitat|survey):/, '').replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}`;
     const saved: UserWaypoint[] = draft.value.userWaypoints ?? [], known = saved.some((t: UserWaypoint) => t.id === id);
-    const points: UserWaypoint[] = known ? saved : userWaypoints([...saved, {id, name: p.name, category: p.shore ? 'other' : 'reef', latitude: p.latitude, longitude: p.longitude}]) as UserWaypoint[];
+    const points: UserWaypoint[] = known ? saved : userWaypoints([...saved, {id, name: p.name.slice(0, 80), category: p.shore ? 'other' : 'reef', latitude: p.latitude, longitude: p.longitude}]) as UserWaypoint[];
     if (!points.some((t: UserWaypoint) => t.id === id)) { actionStatus.value = 'Choose a name (up to 80 characters), a listed category and a valid map position. Limit: 100 waypoints.'; return null; }
     if (known && draft.value.ids.includes(id)) return id;
     revision++;
@@ -298,6 +308,7 @@ export function createPlanner(deps: PlannerDeps) {
     return id;
   }
   function removeWaypoint(id: string): void {
+    if (launchPoint().some(p => p.id === id)) { setLaunch(false); return; }
     revision++;
     persist({...draft.value, userWaypoints: (draft.value.userWaypoints ?? []).filter(t => t.id !== id), ids: draft.value.ids.filter(x => x !== id)});
   }
@@ -389,7 +400,7 @@ export function createPlanner(deps: PlannerDeps) {
     if (draft.value.ids.some(id => tripAtlas.value.targets.find(t => t.id === id)?.canonical_habitat)) {
       const latest = await loadReefs(region.id);
       if (latest.publication.export_sha256 !== canonical?.publication.export_sha256) throw Error('Reef data changed. Select Best available again before exporting.');
-      tripAtlas.value = {...tripAtlas.value, publication: latest.publication};
+
     }
     // Repeat the authoritative screen here, even if the preview count was valid moments ago.
     const d = draft.value;
@@ -398,6 +409,7 @@ export function createPlanner(deps: PlannerDeps) {
       if (context) return new File([context], `SkipperCast-${region.id}-${d.date || today}-boundary-context.html`, {type: 'text/html'});
     }
     const result = buildExport(request()) as {gpx: string; counts: {waypoints: number}};
+    if (kind === 'gpx') { const c = checkGpx(result.gpx, {waypoints: result.counts.waypoints}); if (!c.ok) throw Error(`The GPX file failed its own check: ${c.problems[0]}. Nothing was handed over.`); }
     const base = `SkipperCast-${region.id}-${d.date || today}-${result.counts.waypoints}wp`;
     return kind === 'notes'
       ? new File([offlineNotes(result, region, {...d, date: d.date || today}, coordinates.value) as string], `${base}.html`, {type: 'text/html'})
@@ -409,20 +421,43 @@ export function createPlanner(deps: PlannerDeps) {
     document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
-  async function deliver(kind: 'gpx' | 'share' | 'notes'): Promise<void> {
-    try {
-      const file = await exportFile(kind === 'notes' ? 'notes' : 'gpx');
-      if (kind === 'share' && navigator.canShare?.({files: [file]})) {
-        await navigator.share({files: [file], title: draft.value.name});
-        actionStatus.value = 'File handed to the share sheet. Confirm the import inside your chartplotter app.';
-      } else {
-        save(file);
-        actionStatus.value = `Download requested: ${file.name}. Find it in Downloads or your chosen save location.${kind === 'share' ? ' This browser cannot share this file directly.' : ''}`;
-      }
-    } catch (error) {
-      actionStatus.value = (error as Error).name === 'AbortError' ? 'Share cancelled. Your plan is retained.' : (error as Error).message;
-      tick.value++;
+  const preparing = signal(false);
+  let prepared: {file: File; key: string; at: number; hash?: string} | null = null, pending: Promise<void> | null = null, disposed = false, attempted = '';
+  const fileKey = (): string => JSON.stringify([draft.value, tick.value, allowResearch.value, contourTracks.value, contourFile.value, filtersDirty.value, restorePending.value, launch.value, activeRegion.value]);
+  function prepare(): Promise<void> {
+    if (pending) return pending;
+    const key = fileKey(); attempted = key; preparing.value = true; prepared = null;
+    // A result for a key that has since changed is dropped and its key forgotten, so a plan that returns to it is prepared again.
+    const stale = (): boolean => { if (disposed || key === fileKey()) return disposed; if (attempted === key) attempted = ''; return true; };
+    pending = exportFile('gpx').then(file => { if (!stale()) prepared = {file, key, at: now().getTime(), hash: canonical?.publication.export_sha256}; })
+      .catch(error => { if (!stale()) actionStatus.value = (error as Error).message; })
+      .finally(() => { pending = null; preparing.value = false; });
+    return pending;
+  }
+  const stopPrepare = effect(() => { const key = fileKey(), ok = summary.value.ok; void preparing.value;
+    if (prepared?.key !== key) prepared = null;
+    if (!disposed && ok && !prepared && !pending && attempted !== key) untracked(() => { void prepare(); });
+  });
+  function deliver(kind: 'gpx' | 'share' | 'notes'): Promise<void> {
+    if (disposed) return Promise.resolve();
+    if (kind === 'notes') return exportFile('notes').then(file => { if (!disposed) { save(file); actionStatus.value = `Download requested: ${file.name}. Find it in Downloads or your chosen save location.`; } }).catch(error => { actionStatus.value = (error as Error).message; });
+    if (!summary.value.ok) { actionStatus.value = (summary.value as {message: string}).message; return Promise.resolve(); }
+    if (!prepared || prepared.key !== fileKey() || now().getTime() - prepared.at >= 60000) {
+      prepared = null;
+      return prepare().then(() => { if (prepared) actionStatus.value = 'File ready — tap Share again'; });
     }
+    const file = prepared.file;
+    const fallback = (error: unknown): void => {
+      if ((error as Error).name === 'AbortError') { actionStatus.value = 'Share cancelled. Your plan is retained.'; return; }
+      save(file); actionStatus.value = `This browser could not open the share sheet, so the file was downloaded: ${file.name}.`;
+    };
+    try {
+      if (kind === 'share' && navigator.canShare?.({files: [file]})) return navigator.share({files: [file], title: draft.value.name}).then(() => {
+        actionStatus.value = 'File handed to the share sheet. Confirm the import inside your chartplotter app.';
+      }, fallback);
+      save(file); actionStatus.value = `Download requested: ${file.name}. Find it in Downloads or your chosen save location.${kind === 'share' ? ' This browser cannot share this file directly.' : ''}`;
+    } catch (error) { fallback(error); }
+    return Promise.resolve();
   }
 
   function showOnMap(): void {
@@ -433,12 +468,12 @@ export function createPlanner(deps: PlannerDeps) {
   const checkConditions = (): void => { deps.nav.conditions(draft.value.date); };
 
   return {
-    today, region, draft, tripAtlas, ranked, filtersDirty, restorePending, allowResearch, search, loading, portsReady, portsFailed, filters, ports,
+    today, region, draft, launch, setLaunch, preparing, tripAtlas, ranked, filtersDirty, restorePending, allowResearch, search, loading, portsReady, portsFailed, filters, ports,
     scopeStatus, actionStatus, storageNote, tick, summary, spots, protectedHits, notesReady, waypointPosition,
     chooseWaypoint, saveWaypoint, removeWaypoint, addPlace,
     setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     /** For tests and a region change: stop drawing the ranked set. */
-    dispose: () => { stopRanked(); stopPort(); },
+    dispose: () => { disposed = true; prepared = null; stopPrepare(); stopRanked(); stopPort(); },
   };
 }

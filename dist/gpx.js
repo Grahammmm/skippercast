@@ -35,15 +35,17 @@ export function tripGPX(atlas, ids, title='SkipperCast fishing set', options={})
 }
 export function featuresGPX(atlas,features,title,options={}) {
   const selected=features.waypoints;
+  const names=new Set(), unique=name=>{const base=String(name??'');let next=base,n=2;while(names.has(next.toLowerCase()))next=`${base} (${n++})`;names.add(next.toLowerCase());return next;};
   const points=selected.map(t=>{
-  if(t.user_waypoint)return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(t.name)}</name><cmt>${xml(t.id)}</cmt><desc>User waypoint. User-supplied label; not verified habitat, depth or navigation guidance. Check current regulations, closures, conditions and official charts.</desc><type>${xml(t.category)}</type></wpt>`;
+  const name=unique(!t.user_waypoint&&t.trip_rank&&plotterWord(t.trip_species)?plotterName(t):t.name);
+  if(t.user_waypoint)return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(name)}</name><cmt>${xml(t.id)}</cmt><desc>User waypoint. User-supplied label; not verified habitat, depth or navigation guidance. Check current regulations, closures, conditions and official charts.</desc><type>${xml(t.category)}</type></wpt>`;
   // SCJ-4: a ranked spot gets a short plotter name and a one-line description; the method notes stay in the offline notes.
   // Producer credits, use terms and policy URLs travel with the waypoint in <src>, so a waypoint-only GPX keeps them.
   if(t.trip_rank&&plotterWord(t.trip_species)){
     const [lo,hi]=t.neighborhood_depth_ft.map(n=>Math.round(n));
     const desc=`${plotterWord(t.trip_species)} habitat, about ${lo}–${hi} ft. Habitat estimate, not a sounding or catch forecast. Check current rules, closures and your chart.`;
     const rights=(t.source_rights||[]).map(r=>`${r.credit} ${r.notice}${r.policyURL?' '+r.policyURL:''}`).join(' ');
-    return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(plotterName(t))}</name><cmt>${xml(t.id)}</cmt><desc>${xml(desc)}</desc>${rights?`<src>${xml(rights)}</src>`:''}<link href="${xml(t.source_url)}"/><sym>Fishing Area</sym></wpt>`;
+    return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(name)}</name><cmt>${xml(t.id)}</cmt><desc>${xml(desc)}</desc>${rights?`<src>${xml(rights)}</src>`:''}<link href="${xml(t.source_url)}"/><sym>Fishing Area</sym></wpt>`;
   }
   const notes = [
     t.label,
@@ -58,7 +60,7 @@ export function featuresGPX(atlas,features,title,options={}) {
     t.special_note,
     "Check current regulations, closures, conditions and sounder depths.",
   ].join(" ");
-  return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(t.name)}</name><cmt>${xml(t.id)}</cmt><desc>${xml(notes)}</desc><link href="${xml(t.source_url)}"/><sym>Fishing Area</sym></wpt>`;
+  return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(name)}</name><cmt>${xml(t.id)}</cmt><desc>${xml(notes)}</desc><link href="${xml(t.source_url)}"/><sym>Fishing Area</sym></wpt>`;
   });
   const tracks=features.areas.map(a=>{
     const t=features.selected.find(t=>t.canonical_habitat&&t.area_ids.includes(a.id));
