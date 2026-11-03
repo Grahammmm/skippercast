@@ -41,6 +41,8 @@ import {boatBasisName, boatRangeNote, type SavedBoatLike} from '../boat-range.ts
 import type {BoatFactors} from '../score.ts';
 import type {Brief as BriefModel, RegionalDailyFeed} from './types.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
+import {dailyPartPath} from '../../dist/offline-core.js';
+import {validDailyPart} from '../map/habitat.ts';
 
 export type {BriefModel};
 
@@ -70,6 +72,16 @@ async function readFeed(path: string, id: string, fetchFn: typeof fetch): Promis
     const json = response.ok ? await response.json() as Partial<RegionalDailyFeed> & {schema_version?: number} : null;
     return json?.schema_version === 1 && json.region_id === id && !!json.sources && typeof json.sources === 'object' ? json as RegionalDailyFeed : null;
   } catch { return null; }
+}
+
+/**
+ * SC2222-03: the daily feed's 'brief' part from /api/daily (about a sixth of the whole feed), with the same
+ * identity checks; the whole feed is read once only when the part fails and load `load` is still the latest.
+ */
+async function readDaily(id: string, fetchFn: typeof fetch, load: number): Promise<RegionalDailyFeed | null> {
+  const part = await readFeed(dailyPartPath(id, 'brief'), id, fetchFn);
+  if (part && validDailyPart(part as unknown as Record<string, unknown>, 'brief', id)) return part;
+  return load === feedLoad ? readFeed(dailyFeedPath(id), id, fetchFn) : null;
 }
 
 /**
@@ -105,7 +117,7 @@ async function readFeeds(id: string, fetchFn: typeof fetch, refresh: boolean): P
   dailyPending = true;
   bindVisibility();
   if (!refresh) feedGaps.value = [];
-  const [daily, conditions] = await Promise.all([readFeed(dailyFeedPath(id), id, fetchFn), readFeed(feedPath(undefined, id), id, fetchFn)]);
+  const [daily, conditions] = await Promise.all([readDaily(id, fetchFn, load), readFeed(feedPath(undefined, id), id, fetchFn)]);
   // A later load (another region) owns the feed and its gap lines; this one only returns what it read.
   if (load !== feedLoad) return mergeFeeds(daily, conditions);
   dailyPending = false;

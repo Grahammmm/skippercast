@@ -268,11 +268,12 @@ test('#473: the brief reads the daily data feed (reports, tides) with the condit
   const paths = [];
   const fetchFn = async path => {
     paths.push(String(path));
+    if (String(path).startsWith('/api/daily')) return new Response('', {status: 404}); // SC2222-03: the brief part refused, so the whole feed is read
     return new Response(JSON.stringify(String(path).startsWith('/feeds/data/') ? montereyDaily : conditions), {status: 200});
   };
   try {
     const feed = await loadDailyFeed('monterey-point-sur', fetchFn);
-    assert.deepEqual(paths.sort(), ['/feeds/conditions/regions/monterey-point-sur/latest.json', '/feeds/data/regions/monterey-point-sur/latest.json']);
+    assert.deepEqual(paths.sort(), ['/api/daily?region=monterey-point-sur&part=brief', '/feeds/conditions/regions/monterey-point-sur/latest.json', '/feeds/data/regions/monterey-point-sur/latest.json']);
     assert.deepEqual(feed.reports, montereyDaily.reports, 'the landing reports come from the daily feed');
     assert.equal(Object.keys(feed.sources)[0], 'diablo', 'the 30-minute buoy comes first');
     assert.ok(feed.sources.tides, 'the daily feed keeps its tides');
