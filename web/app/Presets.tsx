@@ -3,7 +3,6 @@ import {PROFILE_TABLE} from '../profile.ts';
 import {current, layers, profile, readStored, species, STORAGE_KEYS, writeStored} from '../state.ts';
 import {Chip} from '../ui/Chip.tsx';
 import {activePreset, applyPreset, presetsFor} from './presets.ts';
-import './helm.css';
 
 export const helm = signal(readStored(STORAGE_KEYS.helm) === '1');
 function syncClass(on: boolean): void {
