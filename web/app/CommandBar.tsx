@@ -94,7 +94,7 @@ export function choosePort(port: Port, href: string = location.href): void {
 export function ShareControl() {
   const [status, setStatus] = useState('');
   const [manual, setManual] = useState<string | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined), wrap = useRef<HTMLSpanElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined), wrap = useRef<HTMLSpanElement>(null);
   const press = async () => {
     const ports = await loadPorts().catch(() => null);
     const link = shareLink({href: location.href, origin: location.origin, ports, region: region.peek(), savedId: savedPortId(), profile: profile.peek(), now: new Date(), tz: zone()});

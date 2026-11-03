@@ -4,3 +4,4 @@
 .app-plan a { color: var(--blue); }
 .app-plan a:focus-visible, .app-plan h2:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .app-plan-rules { border-top: 1px solid var(--line); padding-top: var(--space-3); }
+.app-plan-rules > a { display: inline-flex; align-items: center; min-height: var(--space-5); }
