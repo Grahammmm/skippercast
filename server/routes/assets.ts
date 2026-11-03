@@ -35,6 +35,7 @@ export function shellFor(path: string, search: URLSearchParams): string | undefi
   if(path === '/privacy') return '/privacy.html'; // Fish compatibility uses the complete existing notice.
   if(path === '/sources') return '/sources.html'; // #475: the canonical sources page (open-questions Q16).
   if(path === '/status') return '/status.html'; // SC-LAUNCH-5: per-source data freshness.
+  if(path === '/coverage') return '/coverage.html'; // ROUTE-1: the whole-coast coverage map.
   if (path === '/' || path === '/index.html') return AREA_PARAMS.some(name => search.has(name)) ? V2_SHELLS.app : V2_SHELLS.landing;
   if (path === '/map') return V2_SHELLS.app;
   return path === V2_SHELLS.landing || path === V2_SHELLS.app ? path : undefined;
