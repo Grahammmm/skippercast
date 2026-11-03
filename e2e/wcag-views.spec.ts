@@ -1,8 +1,9 @@
 // BF-wcag: a WCAG 2.1 AA gate over every app view (web/state.ts APP_VIEWS, so a new view is covered without editing this
 // file) at the phone and laptop projects. Each view fails on any WCAG 2.1 A/AA axe violation of any impact, any keyboard
 // focus stop without a visible indicator, and any control smaller than 24×24 CSS px (WCAG 2.5.8; inline links inside a
-// paragraph are exempt). The only waivers are e2e/wcag-known.json entries, each with a reason and an open `#<n>` ref;
-// an entry that no longer matches anything fails as stale. Results land in AXE_DIR beside checkA11y's (axe-summary.ts).
+// paragraph and controls hidden until focus reveals them are exempt). The only waivers are e2e/wcag-known.json entries, each
+// for a view and project this run executes, with a reason and an open `#<n>` ref; an entry that matches nothing fails as stale.
+// Results land in AXE_DIR beside checkA11y's (axe-summary.ts).
 import {mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
@@ -19,13 +20,18 @@ const MIN = 24, MAX_STOPS = 40;
 const HEADINGS: Record<string, string> = {coast: 'Where to look', conditions: 'Conditions', history: 'Recorded history', fleet: 'Fleet', reports: 'Reports'};
 /** Views whose heading text is the selected target (PlanView.tsx), so they wait for the heading's id instead. */
 const HEADING_IDS: Record<string, string> = {plan: '#app-plan-title'};
+/** Views whose content arrives after the heading (History's record mounts in CoastMarkup's shadow root once loaded). */
+const READY: Record<string, string> = {history: '#history-station'};
 
-/** Problems with the known list itself: every field present, a known kind, and `ref` an open PR or issue as `#<n>`. */
-export function knownProblems(list: unknown): string[] {
+/** Problems with the known list itself: every field present, a known kind, `view` and `project` cases this run executes (so
+ *  a waiver for a removed view or project fails instead of never being checked), and `ref` an open PR or issue as `#<n>`. */
+export function knownProblems(list: unknown, views: readonly string[], projects: readonly string[]): string[] {
   if (!Array.isArray(list)) return ['wcag-known.json is not an array'];
   return list.flatMap((e: Partial<Known>, i) => {
     const bad: string[] = (['view', 'project', 'kind', 'rule', 'selector', 'reason'] as const).filter(k => typeof e?.[k] !== 'string' || !e[k]!.trim());
     if (!KINDS.includes(String(e?.kind))) bad.push('kind');
+    if (!views.includes(String(e?.view))) bad.push('view');
+    if (!projects.includes(String(e?.project))) bad.push('project');
     if (typeof e?.ref !== 'string' || !/^#\d+$/.test(e.ref)) bad.push('ref');
     return bad.length ? [`entry ${i}: bad ${[...new Set(bad)].join(', ')}`] : [];
   });
@@ -51,16 +57,28 @@ window.__wcagShown = el => !el.closest('[aria-hidden="true"], [inert]') && el.ch
 window.__wcagAll = (sel, root = document) => [...root.querySelectorAll(sel), ...[...root.querySelectorAll('*')].flatMap(e => e.shadowRoot ? window.__wcagAll(sel, e.shadowRoot) : [])];
 window.__wcagActive = () => { let el = document.activeElement; while (el && el.shadowRoot && el.shadowRoot.activeElement) el = el.shadowRoot.activeElement; return el; };`;
 
-/** Every visible control under 24×24 px, except inline links inside a paragraph and visually hidden (≤1 px) skip links. */
+/** Every visible control under 24×24 px. Only two exemptions: a link laid out inline (display: inline) inside a paragraph
+ *  (WCAG 2.5.8's inline exception), and a control hidden until focused (the skip-link pattern): clipped to ≤1×1 px, and
+ *  measured ≥24×24 px while it has focus. A tiny control that focus does not reveal, or a block link in a paragraph, is a finding. */
 export async function smallTargets(page: Page): Promise<Finding[]> {
   await page.evaluate(HELPERS);
   return page.evaluate(({min}) => {
     const w = window as unknown as {__wcagDescribe: (e: Element) => string; __wcagShown: (e: Element) => boolean; __wcagAll: (s: string) => Element[]};
     const out = new Map<string, {kind: 'target'; rule: string; selector: string}>();
     for (const el of w.__wcagAll('button, a[href], input:not([type=hidden]), select, [role=button], [role=switch], [role=tab]')) {
-      if (!w.__wcagShown(el) || (el.matches('a') && el.closest('p'))) continue;
+      if (!w.__wcagShown(el)) continue;
       const r = el.getBoundingClientRect();
-      if (r.width <= 1 || r.height <= 1 || (r.width >= min && r.height >= min)) continue;
+      if (r.width >= min && r.height >= min) continue;
+      const cs = getComputedStyle(el);
+      if (el.matches('a') && el.closest('p') && cs.display === 'inline') continue;
+      const clipped = cs.overflow === 'hidden' || cs.clip !== 'auto' || cs.clipPath !== 'none';
+      if (r.width <= 1 && r.height <= 1 && clipped) {
+        const before = document.activeElement as HTMLElement | null;
+        (el as HTMLElement).focus({preventScroll: true});
+        const f = el.getBoundingClientRect(), revealed = el.matches(':focus') && f.width >= min && f.height >= min;
+        if (before && before !== document.body) before.focus({preventScroll: true}); else (el as HTMLElement).blur();
+        if (revealed) continue;
+      }
       const selector = w.__wcagDescribe(el);
       out.set(selector, {kind: 'target', rule: 'target-size', selector});
     }
@@ -96,8 +114,11 @@ export async function focusWalk(page: Page): Promise<Finding[]> {
 
 const known: Known[] = JSON.parse(readFileSync(join(import.meta.dirname, 'wcag-known.json'), 'utf8'));
 
-test('the known list is well-formed: every entry has a kind, a reason and an open #<n> ref', () => {
-  expect(knownProblems(known)).toEqual([]);
+/** Every configured project, not only the ones selected with --project, so a filtered run does not reject a valid entry. */
+const projectNames = () => test.info().config.projects.map(p => p.name);
+
+test('the known list is well-formed: every entry has a kind, a reason, an executed view and project, and an open #<n> ref', () => {
+  expect(knownProblems(known, APP_VIEWS, projectNames())).toEqual([]);
 });
 
 for (const view of APP_VIEWS) {
@@ -106,6 +127,12 @@ for (const view of APP_VIEWS) {
     await v2.open('app', {view, region: 'morro-bay'});
     const heading = HEADINGS[view];
     await expect(heading ? page.getByRole('heading', {name: heading, exact: true}) : page.locator(HEADING_IDS[view] ?? 'h1, h2').first()).toBeVisible();
+    // Measure the loaded, styled view only: History's record mounts after its data loads, and CoastMarkup's shadow root
+    // links panel.css asynchronously (CoastMarkup.tsx), so wait for that content and for every stylesheet, in the document
+    // and in open shadow roots, to have loaded.
+    if (READY[view]) await expect(page.locator(READY[view]).first()).toBeVisible();
+    await page.evaluate(HELPERS);
+    await page.waitForFunction(() => (window as unknown as {__wcagAll: (s: string) => HTMLLinkElement[]}).__wcagAll('link[rel=stylesheet]').every(l => l.sheet));
     const axe = await new AxeBuilder({page}).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).exclude('canvas').analyze();
     const found: Finding[] = axe.violations.flatMap(v => v.nodes.map(n => ({kind: 'axe' as const, rule: v.id, selector: n.target.join(' ')})));
     found.push(...await smallTargets(page), ...await focusWalk(page));
@@ -130,17 +157,34 @@ test.describe('the gate itself', () => {
     expect(compare([], [entry], 'coast', 'phone').stale).toEqual([entry]);
   });
   test('an entry without a reason or with a ref other than #<n> fails', () => {
-    expect(knownProblems([entry])).toEqual([]);
-    for (const ref of [undefined, '', '12', '#', '#12a', 'https://github.com/x/y/pull/12']) expect(knownProblems([{...entry, ref}])).toHaveLength(1);
-    expect(knownProblems([{...entry, reason: ' '}, {...entry, kind: 'contrast'}])).toEqual(['entry 0: bad reason', 'entry 1: bad kind']);
-    expect(knownProblems({})).toEqual(['wcag-known.json is not an array']);
+    const ok = (list: unknown) => knownProblems(list, ['coast', 'fleet'], ['phone', 'laptop']);
+    expect(ok([entry])).toEqual([]);
+    for (const ref of [undefined, '', '12', '#', '#12a', 'https://github.com/x/y/pull/12']) expect(ok([{...entry, ref}])).toHaveLength(1);
+    expect(ok([{...entry, reason: ' '}, {...entry, kind: 'contrast'}])).toEqual(['entry 0: bad reason', 'entry 1: bad kind']);
+    expect(ok({})).toEqual(['wcag-known.json is not an array']);
+  });
+  test('an entry for a view or project the run does not execute fails, so a removed case cannot keep its waiver', () => {
+    const ok = (list: unknown) => knownProblems(list, ['coast', 'fleet'], ['phone', 'laptop']);
+    expect(ok([{...entry, view: 'removed-view'}, {...entry, project: 'removed-project'}, {...entry, view: 'removed-view', project: 'removed-project'}]))
+      .toEqual(['entry 0: bad view', 'entry 1: bad project', 'entry 2: bad view, project']);
+    expect(knownProblems([entry], APP_VIEWS, projectNames())).toEqual([]);
   });
   test('inline paragraph links are exempt from 24 px; icon-only buttons and small inputs are not; a hidden skip link is not a target', async ({page}) => {
-    await page.setContent(`<style>*{margin:0} .s{width:16px;height:16px;padding:0;border:0} .sr{position:absolute;width:1px;height:1px;overflow:hidden}</style>
+    await page.setContent(`<style>*{margin:0} .s{width:16px;height:16px;padding:0;border:0} .sr{position:absolute;width:1px;height:1px;overflow:hidden} .sr:focus{position:static;width:auto;height:auto;min-width:24px;min-height:24px;display:inline-block}</style>
       <a class="sr" href="#m">Skip</a><p>See <a href="#a" style="font-size:10px">a</a>.</p><button class="s" aria-label="Close"></button>
       <label class="c"><input type="checkbox" style="width:16px;height:16px"></label><button style="width:30px;height:30px">ok</button><div hidden><button class="s">x</button></div>
       <div id="h"></div><script>document.getElementById('h').attachShadow({mode: 'open'}).innerHTML = '<button class="in" style="width:10px;height:10px"></button>';</script>`);
     expect((await smallTargets(page)).map(f => f.selector)).toEqual(['button.s[aria-label="Close"]', 'label.c > input[type=checkbox]', 'button.in']);
+  });
+  test('only a control that focus reveals at ≥24 px and an inline sentence link are exempt: a 1 px button and a block link in a paragraph are not', async ({page}) => {
+    await page.setContent(`<!doctype html><style>*{margin:0} .sr{position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%)}
+      .sr:focus{position:static;width:auto;height:auto;min-width:24px;min-height:24px;clip-path:none;display:inline-block}</style>
+      <a class="sr" href="#m">Skip</a><button class="sr" id="keep">Keep</button><button id="tiny" style="width:1px;height:1px;padding:0;border:0;overflow:hidden" aria-label="Tiny"></button>
+      <a id="far" href="/x" style="position:absolute;width:1px;height:1px;overflow:hidden">Away</a>
+      <p>Read <a href="#a" style="font-size:10px">this</a>.</p><p><a id="block" href="#b" style="display:block;width:16px;height:16px">x</a></p>
+      <p><a id="ib" href="#c" style="display:inline-block;width:16px;height:16px">y</a></p>`);
+    expect((await smallTargets(page)).map(f => f.selector)).toEqual(['button#tiny', 'a#far', 'a#block', 'a#ib']);
+    expect(await page.evaluate(() => document.activeElement === document.body), 'probing focus leaves focus where it was').toBe(true);
   });
   test('the focus walk ends on a cycle, flags missing rings and hidden stops, and fails a trap with its selector', async ({page}) => {
     await page.setContent(`<style>.sr{position:absolute;width:1px;height:1px;overflow:hidden} .sr:focus{position:static;width:auto;height:auto;outline:2px solid}
