@@ -4,7 +4,7 @@ import type {Decision, ReviewKind} from './api.ts';
 
 const KEYS: Readonly<Record<string, Decision>> = {a: 'approve', r: 'reject', e: 'edit'};
 
-export interface KeyLike {key: string; altKey?: boolean; ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean; isComposing?: boolean; target?: unknown}
+export interface KeyLike {key: string; altKey?: boolean; ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean; isComposing?: boolean; repeat?: boolean; target?: unknown}
 
 /** True when the key press belongs to a text field (typing there never triggers a shortcut). */
 export function typingIn(target: unknown): boolean {
@@ -13,9 +13,9 @@ export function typingIn(target: unknown): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el?.isContentEditable === true;
 }
 
-/** The decision a key press asks for on a focused item, or null (modifiers, text fields, other keys). */
+/** The decision a key press asks for on a focused item, or null (auto-repeat, keyless events, modifiers, text fields, other keys). */
 export function shortcutFor(event: KeyLike): Decision | null {
-  if (event.altKey || event.ctrlKey || event.metaKey || event.isComposing || typingIn(event.target)) return null;
+  if (event.repeat === true || typeof event.key !== 'string' || event.altKey || event.ctrlKey || event.metaKey || event.isComposing || typingIn(event.target)) return null;
   return KEYS[event.key.length === 1 ? event.key.toLowerCase() : ''] ?? null;
 }
 
