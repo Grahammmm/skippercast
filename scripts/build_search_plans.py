@@ -2,25 +2,31 @@
 Run in the existing GIS environment after a survey release, before platform.build.
 Runtime conditions and ocean frames remain dated and are evaluated in the browser.
 """
-import hashlib,json
+import hashlib,json,os,sys
 from pathlib import Path
 from shapely.geometry import shape,mapping,box
 from shapely.ops import unary_union
 ROOT=Path(__file__).resolve().parents[1]
+class PlanInputError(Exception):pass
 def read(p):return json.loads(p.read_text())
-def build(root=ROOT):
- methods=read(root/'catalog/search-methods.json')
- for path in sorted((root/'regions').glob('*/region.json')):
-  r=read(path)
-  if r['status']=='draft':continue
+def plan(root=ROOT):
+ """Compute every published region's output in memory; any input problem raises one PlanInputError, nothing written."""
+ def rd(p):
+  try:return read(p)
+  except FileNotFoundError:raise PlanInputError(f'{p.relative_to(root)} missing') from None
+  except (OSError,ValueError) as e:raise PlanInputError(f'{p.relative_to(root)} unreadable ({type(e).__name__})') from None
+ methods=rd(root/'catalog/search-methods.json');seen={}
+ def one(path):
+  r=rd(path);seen['id']=r.get('id') if isinstance(r,dict) else None
+  if r['status']=='draft':return None
   features=[];receipts=[];closure=[];rejected=[]
   for key in ('protected_areas','closures'):
-   if r['assets'].get(key):closure += [shape(f['geometry']) for f in read(root/'dist'/r['assets'][key])['features']]
+   if r['assets'].get(key):closure += [shape(f['geometry']) for f in rd(root/'dist'/r['assets'][key])['features']]
   excluded=unary_union(closure).buffer(.00002)
   extent=box(*r['fishing_bounds'])
   for key in ('survey_habitat','habitats','atlas'):
    if not r['assets'].get(key):continue
-   src=root/'dist'/r['assets'][key];d=read(src)
+   src=root/'dist'/r['assets'][key];d=rd(src)
    receipts.append({'path':r['assets'][key],'sha256':hashlib.sha256(src.read_bytes()).hexdigest()})
    rows=d.get('features',d.get('areas',[]))
    for row in rows:
@@ -44,7 +50,7 @@ def build(root=ROOT):
      'source_id':p.get('source_id'),'fish_confirmed':False,'exportable':False}})
   ecology_id=r.get('ecology_profile') or r.get('intelligence',{}).get('ecology_profile')
   if not ecology_id:raise ValueError('Published regional search plans need a reviewed ecology profile')
-  local=read(root/'catalog/ecology'/(ecology_id+'.json'))['profiles']
+  local=rd(root/'catalog/ecology'/(ecology_id+'.json'))['profiles']
   profiles={}
   for k in r['species']:
    if k not in local:raise ValueError('Missing regional ecological profile '+k)
@@ -53,11 +59,28 @@ def build(root=ROOT):
        'profiles':profiles,'features':features,'input_receipts':receipts,'rejected':rejected,
        'coverage_note':'Source footprints, not complete species distribution. No habitat is invented where a regional dataset is absent.'}
   if r.get('search_plans_note'):out['datum_correction_note']=r['search_plans_note']
-  target=root/'dist/regions'/r['id']/'search-plans.json';temp=target.with_suffix('.json.tmp');temp.write_text(json.dumps(out,separators=(',',':'))+'\n');temp.replace(target)
+  target=root/'dist/regions'/r['id']/'search-plans.json'
   plans='regions/'+r['id']+'/search-plans.json'
   # Rewrite the hand-maintained region file only when its content changes, so
   # its bytes (and the hashes other reviews pin) stay stable across rebuilds.
-  if r['assets'].get('search_plans')!=plans:
-   r['assets']['search_plans']=plans;path.write_text(json.dumps(r,indent=2,ensure_ascii=False)+'\n')
-  print(r['id'],len(features),'footprints;',len(out['profiles']),'species methods')
-if __name__=='__main__':build()
+  changed=r['assets'].get('search_plans')!=plans
+  if changed:r['assets']['search_plans']=plans
+  return path,r,target,out,changed
+ done=[]
+ for path in sorted((root/'regions').glob('*/region.json')):
+  seen['id']=None
+  try:item=one(path)
+  except (PlanInputError,ValueError) as e:raise PlanInputError(f"{seen['id'] or path.parent.name}: {e}") from None
+  except (OSError,KeyError,TypeError) as e:raise PlanInputError(f"{seen['id'] or path.parent.name}: {path.relative_to(root)} unreadable ({type(e).__name__})") from None
+  if item:done.append(item)
+ return done
+def put(target,text):temp=target.with_name(target.name+'.tmp');temp.write_text(text);os.replace(temp,target)
+def build(root=ROOT):
+ done=plan(root)
+ for path,r,target,out,changed in done:put(target,json.dumps(out,separators=(',',':'))+'\n')
+ for path,r,target,out,changed in done:
+  if changed:put(path,json.dumps(r,indent=2,ensure_ascii=False)+'\n')
+ for path,r,target,out,changed in done:print(r['id'],len(out['features']),'footprints;',len(out['profiles']),'species methods')
+if __name__=='__main__':
+ try:build()
+ except PlanInputError as e:print(f'search plans not built: {e}',file=sys.stderr);sys.exit(1)

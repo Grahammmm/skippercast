@@ -3,6 +3,17 @@ import argparse
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import sys
+
+
+def _check_layer(layer,name,key):
+    features=layer.get('features')
+    if not isinstance(features,list):raise ValueError(f'{name} features is not a list')
+    for i,f in enumerate(features):
+        p=f.get('properties') if isinstance(f,dict) else None
+        if not isinstance(p,dict):raise ValueError(f'{name} feature {i}: not a feature')
+        bad=next((k for k in ('id','mpa_screened_at',key) if not isinstance(p.get(k),str) or not p[k]),None)
+        if bad:raise ValueError(f'{name} feature {i}: '+{'id':'id missing or not text','mpa_screened_at':'MPA snapshot missing'}.get(bad,f'{bad} missing'))
 
 
 def merge(legacy,doi):
@@ -10,6 +21,8 @@ def merge(legacy,doi):
         raise ValueError('Unexpected USGS source layer scope')
     if legacy.get('failed_blocks') or doi.get('failed_releases'):
         raise ValueError('USGS source review has unresolved failures')
+    _check_layer(legacy,'legacy','block_id')
+    _check_layer(doi,'doi','release_id')
     features=[*legacy['features'],*doi['features']]
     if len(features)<1000:raise ValueError('Combined USGS context unexpectedly incomplete')
     ids=[f['properties']['id'] for f in features]
@@ -38,11 +51,22 @@ def main():
     parser.add_argument('--doi',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     args=parser.parse_args()
-    result=merge(json.loads(args.legacy.read_text()),json.loads(args.doi.read_text()))
-    args.output.parent.mkdir(parents=True,exist_ok=True)
     temp=args.output.with_suffix(args.output.suffix+'.tmp')
-    temp.write_text(json.dumps(result,separators=(',',':'))+'\n')
-    temp.replace(args.output)
+    staged=False
+    try:
+        layers=[json.loads(path.read_text(encoding='utf-8')) for path in (args.legacy,args.doi)]
+        if not all(isinstance(layer,dict) for layer in layers):raise ValueError('USGS source layer is not a JSON object')
+        result=merge(*layers)
+        args.output.parent.mkdir(parents=True,exist_ok=True)
+        staged=True
+        temp.write_text(json.dumps(result,separators=(',',':'))+'\n')
+        temp.replace(args.output)
+    except (OSError,ValueError) as error:
+        if staged:
+            try:temp.unlink(missing_ok=True)
+            except OSError:pass
+        print(f'merge_usgs_context: {type(error).__name__ if isinstance(error,OSError) else error}',file=sys.stderr)
+        sys.exit(1)
     print(f"{len(result['features'])} context polygons across {result['legacy_block_count']} legacy blocks and {result['doi_release_count']} DOI releases")
 
 

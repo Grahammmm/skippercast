@@ -8,24 +8,27 @@
 // page's own fetch once, so every reader is covered without each one knowing
 // about the ceiling: the feeds, the brief, the Chart and the PMTiles ranges
 // the map reads on the main thread. The state lasts for the page: the
-// ceiling holds until the UTC day ends.
+// ceiling holds until the UTC day ends. A Last-Known-At before 2020 or more
+// than SKEW_MS past the page's clock is no time, so it cannot date the notice.
 //
 // Erasable syntax only: the node tests import it by type stripping.
 import {signal} from '@preact/signals';
 
 export const DEGRADED_HEADER = 'X-SC-Degraded';
 export const LAST_KNOWN_HEADER = 'X-SC-Last-Known-At';
+/** The earliest believable saved-copy time, and how far past the page's clock one may be (clock skew). */
+export const EARLIEST = Date.UTC(2020, 0, 1), SKEW_MS = 5 * 60_000;
 
 /** Null while every response is live; else the oldest saved copy's time (ISO), or null when none was a saved copy. */
 export type Degraded = {since: string | null} | null;
 export const degraded = signal<Degraded>(null);
 
 /** Publish the cost-ceiling mark of `response`, if it has one; the oldest saved copy wins. */
-export function noteResponse(response: Pick<Response, 'headers'> | null | undefined): void {
+export function noteResponse(response: Pick<Response, 'headers'> | null | undefined, now: number = Date.now()): void {
   const headers = response?.headers;
   if (!headers || typeof headers.get !== 'function' || headers.get(DEGRADED_HEADER) !== 'cost-ceiling') return;
   const at = headers.get(LAST_KNOWN_HEADER), time = at ? Date.parse(at) : NaN;
-  const since = Number.isFinite(time) ? new Date(time).toISOString() : null;
+  const since = Number.isFinite(time) && time >= EARLIEST && time <= now + SKEW_MS ? new Date(time).toISOString() : null;
   const current = degraded.peek();
   if (current && (!since || (current.since && current.since <= since))) return;
   degraded.value = {since: since ?? current?.since ?? null};

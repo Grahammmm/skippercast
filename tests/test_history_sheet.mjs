@@ -36,7 +36,7 @@ test('entering History opens a peeked sheet to full and keeps half or full as ch
 test('every other view keeps its detent at all three detents', async () => {
   const {viewDetent, APP_VIEWS} = await load();
   const others = APP_VIEWS.filter(view => view !== 'history');
-  assert.deepEqual([...others].sort(), ['coast', 'conditions', 'fleet', 'reports']);
+  assert.deepEqual([...others].sort(), ['coast', 'conditions', 'fleet', 'plan', 'reports']);
   for (const view of others) for (const detent of DETENTS) assert.equal(viewDetent(view, detent), detent, `${view} at ${detent}`);
 });
 

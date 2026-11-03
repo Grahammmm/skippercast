@@ -12,6 +12,7 @@ import {fold} from './resolve.ts';
 import {verdictFor, COMFORT_WORD, BOAT_PHRASE} from './comfort.ts';
 import {MODEL_GAP, rateComfort, type FeedHour} from '../../../web/score.ts';
 import type {Verdict} from './comfort.ts';
+import type {ForecastClock} from './forecast-clock.ts';
 import type {Region} from '../../types.ts';
 
 export const HORIZON_DAYS = 7;
@@ -117,6 +118,16 @@ export interface DayConditions {
   seas_ft: [number, number] | null; sea_period_s: number | null;
   swell_ft: [number, number] | null; swell_period_s: number | null; swell_from: string | null;
   comfort: string; comfort_for: string; models_agree: boolean | null;
+  /** Why a comfort word was held at unknown (an old model run); absent when nothing holds it. */
+  comfort_held?: string;
+}
+
+/** The day as the model run's age allows (forecast-clock.ts): fresh unchanged; held keeps the readings and a rough word but holds any calmer word at unknown; unusable reads as no forecast. */
+export function withForecastClock(day: DayConditions, clock: ForecastClock): DayConditions {
+  if (clock.state === 'fresh' || !day.available) return day;
+  if (clock.state === 'held') return day.comfort === COMFORT_WORD['no-go'] ? day : {...day, comfort: COMFORT_WORD.unknown, comfort_held: `forecast run is ${clock.ageHours} h old`};
+  return {date: day.date, window: day.window, comfort_for: day.comfort_for, available: false, reason: 'forecast run is more than 36 hours old or has no run time',
+    wind_kt: null, wind_from: null, gusts_kt: null, seas_ft: null, sea_period_s: null, swell_ft: null, swell_period_s: null, swell_from: null, comfort: COMFORT_WORD.unknown, models_agree: null};
 }
 
 /** The fishing window at a forecast point on one local date. */

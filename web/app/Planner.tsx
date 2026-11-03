@@ -7,10 +7,12 @@ import {useEffect} from 'preact/hooks';
 import {signal} from '@preact/signals';
 import {coordinates} from '../state.ts';
 import {formatCoordinates} from '../../dist/coordinates.js';
-import {exportEvidenceLabel, USER_WAYPOINT_CATEGORIES} from '../../dist/trip-export.js';
+import {exportEvidenceLabel, protectedHitReading, USER_WAYPOINT_CATEGORIES} from '../../dist/trip-export.js';
 import {fitLabel} from '../../dist/spot-ranking.js';
 import type {Filters, LayerKey, Planner as Model, Preset, ProtectedHit, Target, TripSpecies} from '../planner.ts';
 import {PORTS_FAILED_NOTE} from '../planner.ts';
+import {tripLegs} from '../trip-legs.ts';
+import {cruiseSpeed} from '../limits.ts';
 
 const DEVICE_HELP: Readonly<Record<string, readonly [string, string, string]>> = {
   generic: ['Chartplotter model not selected', 'Download GPX, copy it to storage supported by your model, then use its Import menu. Most reviewed plotters use SD/microSD; USB support varies. Inserting media alone does not import a plan.', 'https://www8.garmin.com/manuals/webhelp/GUID-3E67C80C-0812-4EEC-BC60-699751B9CF6F/EN-US/GPSMAP_x3_OM_EN-US.pdf'],
@@ -42,14 +44,14 @@ function SpotRow({t, checked, hit, onToggle}: {t: Target; checked: boolean; hit?
         <small>{formatCoordinates(t.latitude, t.longitude, coordinates.value)}</small>
         <small>{t.trip_rank ? t.name : t.id} · grade {t.habitat_grade} · {depth} ft</small>
         {t.trip_rank ? <small>{t.terrain_interpretation}</small> : null}
-        {hit ? <small>Inside a protected-area boundary; excluded as a fishing target by SkipperCast. Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</small> : null}
+        {hit ? <small>{protectedHitReading(hit)} Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</small> : null}
       </span>
     </label>
   );
 }
 
 function BoundaryNote({hit}: {hit?: ProtectedHit}) {
-  return hit ? <p>Inside a protected-area boundary; excluded as a fishing target by SkipperCast. Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</p> : null;
+  return hit ? <p>{protectedHitReading(hit)} Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</p> : null;
 }
 
 export function Planner({model: m, open}: {model: Model; open: boolean}) {
@@ -70,6 +72,11 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
   const filter = <K extends keyof Filters>(key: K, parse: (v: string) => Filters[K]) => (e: Event) => m.setFilter(key, parse((e.currentTarget as HTMLInputElement).value));
   const device = DEVICE_HELP[deviceChoice.value] ?? DEVICE_HELP.generic!;
   const spots = m.spots.value;
+  const port = !m.portsFailed.value && m.ports.value.find(p => p.id === f.port);
+  const selected = d.ids.map(id => m.tripAtlas.value.targets.find(t => t.id === id)).filter((t): t is Target => !!t);
+  const waypoints = (d.userWaypoints ?? []).filter(t => d.ids.includes(t.id));
+  const route = tripLegs(port ? {name: port.name, lat: port.match[0], lon: port.match[1]} : null,
+    [...selected, ...waypoints].map(t => ({id: t.id, name: t.name || ('label' in t ? t.label : t.id), lat: t.latitude, lon: t.longitude})), cruiseSpeed.value);
 
   return (
     <div id="export-content">
@@ -104,6 +111,14 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
       <details class="export-card" id="export-spots" open>
         <summary><span>1. Choose your spots</span><strong id="export-selection-count">{d.ids.length} selected</strong></summary>
         <div class="export-card-body">
+          {route.legs.length > 0 && <section aria-label="Your stops in order">
+            <h3>Your stops in order</h3>
+            {!port && <p>No home port chosen, so the run from port is not counted.</p>}
+            <ol aria-label="Stops in order">{route.legs.map((leg, i) => <li key={i}>{leg.from} → {leg.to} · {leg.nm.toFixed(1)} nm{leg.runMin === null ? '' : ` · at least ${leg.runMin} min`}</li>)}</ol>
+            <p>Total: {route.totalNm.toFixed(1)} nm{route.totalRunMin === null ? '' : ` · at least ${route.totalRunMin} min`}</p>
+            <p class="export-note">Straight-line legs between stops; the real route is longer. Sea state, the bar, fuel and conditions at each stop are not included.</p>
+          </section>}
+          {route.skipped.length > 0 && <p>Stops skipped because coordinates are unavailable: {route.skipped.join(', ')}.</p>}
           <button class="primary export-best" id="export-best" disabled={!m.portsReady.value || m.loading.value} onClick={() => void m.selectBest()}>Best available · up to {f.limit} reef spots</button>
           {m.portsFailed.value && <p class="export-note" id="export-ports-note">{PORTS_FAILED_NOTE}</p>}
           <p class="export-note">Ranked reef habitat. Confidence % describes habitat evidence.</p>

@@ -1,5 +1,30 @@
 """A coastal browse directory, separate from qualified regional data packages."""
+import math, re
+from datetime import date
 from .contracts import REPO, read_json, atomic_json, public_url, load_catalogs, bbox
+
+
+def _day(text):
+    try:
+        return date.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def _check_advisories(region):
+    advisories, seen, (lo, hi) = region.get('local_target_advisories', []), set(), region['latitude']
+    if not isinstance(advisories, list):
+        raise ValueError(f"Invalid local coastal target advisory: {region['id']} local_target_advisories")
+    for i, item in enumerate(advisories):  # first bad field per advisory, in this order; public_url keeps its message
+        a = item if isinstance(item, dict) else {}
+        checks = [('advisory', lambda: a is item), ('target', lambda: a.get('target') in region['targets']),
+                  ('north_of_latitude', lambda: type(n := a.get('north_of_latitude')) in (int, float) and lo < n < hi and math.isfinite(n)),
+                  ('through', lambda: isinstance(d := a.get('through'), str) and re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', d) and _day(d)),
+                  *((k, lambda k=k: isinstance(a.get(k), str) and a[k].strip()) for k in ('north_note', 'south_note', 'expired_note')),
+                  ('source_url', lambda: isinstance(u := a.get('source_url'), str) and public_url(u)), ('target (repeated)', lambda: a['target'] not in seen)]
+        if field := next((f for f, ok in checks if not ok()), None):
+            raise ValueError(f"Invalid local coastal target advisory: {region['id']} #{i} {field}")
+        seen.add(a['target'])
 
 
 def compile_coasts(root=REPO):
@@ -28,12 +53,7 @@ def compile_coasts(root=REPO):
         for ident in region['targets'] + region['watch']:
             if ident not in targets:
                 raise ValueError('Unknown biological target')
-        for advisory in region.get('local_target_advisories', []):
-            if (advisory.get('target') not in region['targets']
-                    or not region['latitude'][0] < advisory.get('north_of_latitude', 0) < region['latitude'][1]
-                    or not all(advisory.get(key) for key in ('north_note', 'south_note', 'expired_note', 'through'))):
-                raise ValueError('Invalid local coastal target advisory')
-            public_url(advisory['source_url'])
+        _check_advisories(region)
         for ident in region['packages']:
             if not (root / f'regions/{ident}/region.json').is_file():
                 raise ValueError('Unknown mapped package')
@@ -49,5 +69,6 @@ def compile_coasts(root=REPO):
         region['watch_options'] = [t for t in options if t['id'] in region['watch']]
     directory['target_names'] = {k: v['name'] for k, v in targets.items()}
     directory.pop('extra_targets')
-    atomic_json(root / 'dist/data/coasts.json', directory)
+    # The build and the coastal watch (and parallel test workers) may compile at once.
+    atomic_json(root / 'dist/data/coasts.json', directory, unique_tmp=True)
     return directory

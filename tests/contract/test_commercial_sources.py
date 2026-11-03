@@ -73,7 +73,7 @@ ASSET_SOURCES = {
     'data/ais-evidence.json': ['noaa-ais', 'operator-identities'],
     'data/commercial-ais-effort.geojson': ['gfw-effort'],
     'data/daily-evidence.json': ['mur-sst', 'modis-chlorophyll', 'ioos-hfr', 'ndbc-buoys', 'noaa-tides', 'nws-weather',
-                                 'cdfw-rules', 'cdfw-mpas', 'harbor-authority', 'landing-reports', 'open-meteo-api'],
+                                 'cdfw-rules', 'cdfw-mpas', 'harbor-authority', 'landing-reports'],
     'data/protected-areas.geojson': ['cdfw-mpas'],
     'data/regulations.json': ['cdfw-rules', 'ecfr-security', 'noaa-groundfish-areas'],
     'data/regulations-mendocino.json': ['cdfw-rules', 'ecfr-security', 'noaa-groundfish-areas'],
@@ -116,10 +116,6 @@ REGISTER_ROW = 'docs/legal/data-rights-register.md#'
 STARTUP_COPIES = ('atlas-marks.json', 'search-plan-index.json', 'shoreline-overview.geojson', 'poster.svg')
 
 KNOWN_BLOCKERS = {
-    'open-meteo-api': (REGISTER_ROW + 'b1--open-meteo-free-api-mostly-resolved', '2026-09-28', {
-        # Runtime calls were removed in #51/#54; only the committed daily snapshot still carries Open-Meteo data.
-        'data/daily-evidence.json',
-    }),
     'gfw-effort': (REGISTER_ROW + 'b2--global-fishing-watch-cc-by-nc', '2026-09-28', {
         'data/commercial-ais-effort.geojson',
     }),
