@@ -3349,12 +3349,12 @@
         "csumb-scc-block13-2m-native",
         "csumb-scc-block14-2m-native"
       ],
-      "last_survey_run": "2026-11-02T21:27:37.583698+00:00",
+      "last_survey_run": "2026-11-03T02:06:01.032748+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 11.854559458,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "c762080d747894343be4ae1123a7990b8edbb2402b20a23010108f0458cac9ee",
+      "survey_run_hash": "034637beb159359db50dff29367c617eb27b78ebae8dbadf345a26d2965ce3c2",
       "held_candidate_count": 0,
       "roughness_thresholds": {
         "vrm_samples": 143926,
@@ -3380,7 +3380,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "939bcb2b74cf259e45b7522c175241fff0d8f0354143a1a59c0e8a425658eb83",
+        "snapshot_sha256": "a9f36a36fb4006c8ca9fd37e307b4379e6cc486059d15e22a9bd2893dd0a9ef4",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -3408,11 +3408,11 @@
             ]
           ]
         },
-        "snapshot": "2026-11-02T21:26:20.497690+00:00",
+        "snapshot": "2026-11-03T02:03:09.603061+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:04.382650+00:00",
+            "checked_at": "2026-11-03T02:02:58.087902+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -3422,9 +3422,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:05.388298+00:00",
-            "file": "noaa-federal-1401067982d24118a410240177e54fb62eba5886ae2c12b9d36fba221562ee69.json",
-            "sha256": "6bcfb7674740c2259bb1339c50588db286b651025a7e1087f505673c40244411",
+            "checked_at": "2026-11-03T02:02:59.165768+00:00",
+            "file": "noaa-federal-17806735061c7ee25b4e0f2bda716d81411fa6c00589d57767f89ff41b277c08.json",
+            "sha256": "ef09d549945be3066e8569fc87bf70565b90ec4e4aafe583fe78d98d66164a49",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -3432,51 +3432,51 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:20.497690+00:00",
-            "file": "security-5b5a2f0ac6b595d0f23a59221348ed806a1b37448858d762fa98e458bfe3233a.json",
-            "sha256": "bd32d1ce9b05623e4e081d26cf1ae436aad22147030640fb3d4a4fe12f8520b1",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+            "checked_at": "2026-11-03T02:03:09.603061+00:00",
+            "file": "security-d4adbbbca4a9fd390f8558b48f545d21be03a1b483940b17647fb337e8578720.json",
+            "sha256": "c800a0d2125302573268d758662e634e506923d029840577796008d9a4550f72",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
             "feature_count": 3,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "b649b378dff74577911237700b50483520f42255e48769ec91ec6871de4d4618",
+              "titles_sha256": "9743cbedbc9a90c69c34aee5b56b4c837cbd5465843c9d3245af0fdf405c946b",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
                   "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
                   "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
                   "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "outside-reviewed-scope"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183",
                   "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "trip-time-vessel-restriction"
                 }
               ],
-              "up_to_date_as_of": "2026-10-29"
+              "up_to_date_as_of": "2026-10-30"
             },
             "source_urls": [
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183"
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183"
             ],
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
@@ -3516,12 +3516,12 @@
         "csumb-scc-block12-2m-native",
         "csumb-scc-block13-2m-native"
       ],
-      "last_survey_run": "2026-11-02T21:28:06.323277+00:00",
+      "last_survey_run": "2026-11-03T02:07:08.484837+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 30.351221842,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "c3811d044ee67891173e7e3e33513cad41ebb1aeb0a64b7e2cc16ea6d24e4ea5",
+      "survey_run_hash": "190f98f3d83a86d613c2bf093c9bb8b72438f032847c9781aaa03630ca10bbb9",
       "held_candidate_count": 0,
       "roughness_thresholds": {
         "vrm_samples": 553405,
@@ -3547,7 +3547,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "939bcb2b74cf259e45b7522c175241fff0d8f0354143a1a59c0e8a425658eb83",
+        "snapshot_sha256": "a9f36a36fb4006c8ca9fd37e307b4379e6cc486059d15e22a9bd2893dd0a9ef4",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -3575,11 +3575,11 @@
             ]
           ]
         },
-        "snapshot": "2026-11-02T21:26:20.497690+00:00",
+        "snapshot": "2026-11-03T02:03:09.603061+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:04.382650+00:00",
+            "checked_at": "2026-11-03T02:02:58.087902+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -3589,9 +3589,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:05.388298+00:00",
-            "file": "noaa-federal-1401067982d24118a410240177e54fb62eba5886ae2c12b9d36fba221562ee69.json",
-            "sha256": "6bcfb7674740c2259bb1339c50588db286b651025a7e1087f505673c40244411",
+            "checked_at": "2026-11-03T02:02:59.165768+00:00",
+            "file": "noaa-federal-17806735061c7ee25b4e0f2bda716d81411fa6c00589d57767f89ff41b277c08.json",
+            "sha256": "ef09d549945be3066e8569fc87bf70565b90ec4e4aafe583fe78d98d66164a49",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -3599,51 +3599,51 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:20.497690+00:00",
-            "file": "security-5b5a2f0ac6b595d0f23a59221348ed806a1b37448858d762fa98e458bfe3233a.json",
-            "sha256": "bd32d1ce9b05623e4e081d26cf1ae436aad22147030640fb3d4a4fe12f8520b1",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+            "checked_at": "2026-11-03T02:03:09.603061+00:00",
+            "file": "security-d4adbbbca4a9fd390f8558b48f545d21be03a1b483940b17647fb337e8578720.json",
+            "sha256": "c800a0d2125302573268d758662e634e506923d029840577796008d9a4550f72",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
             "feature_count": 3,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "b649b378dff74577911237700b50483520f42255e48769ec91ec6871de4d4618",
+              "titles_sha256": "9743cbedbc9a90c69c34aee5b56b4c837cbd5465843c9d3245af0fdf405c946b",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
                   "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
                   "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
                   "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "outside-reviewed-scope"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183",
                   "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "trip-time-vessel-restriction"
                 }
               ],
-              "up_to_date_as_of": "2026-10-29"
+              "up_to_date_as_of": "2026-10-30"
             },
             "source_urls": [
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183"
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183"
             ],
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
@@ -3683,12 +3683,12 @@
         "csumb-scc-block14-2m-native",
         "csumb-scc-block15-2m-native"
       ],
-      "last_survey_run": "2026-11-02T21:28:25.808099+00:00",
+      "last_survey_run": "2026-11-03T02:07:42.763833+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 19.302560467,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "535d352eb0921d2f576c9bd6bdd1ceaa5be01023947106647d41e76f645395f7",
+      "survey_run_hash": "4e522b661d92258b5fe203dfa6986f5223c0e36bfa55e11f420ea3ca63be540a",
       "habitat_count": 14,
       "held_candidate_count": 0,
       "habitat_by_grade": {
@@ -3698,7 +3698,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "939bcb2b74cf259e45b7522c175241fff0d8f0354143a1a59c0e8a425658eb83",
+        "snapshot_sha256": "a9f36a36fb4006c8ca9fd37e307b4379e6cc486059d15e22a9bd2893dd0a9ef4",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -3726,11 +3726,11 @@
             ]
           ]
         },
-        "snapshot": "2026-11-02T21:26:20.497690+00:00",
+        "snapshot": "2026-11-03T02:03:09.603061+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:04.382650+00:00",
+            "checked_at": "2026-11-03T02:02:58.087902+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -3740,9 +3740,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:05.388298+00:00",
-            "file": "noaa-federal-1401067982d24118a410240177e54fb62eba5886ae2c12b9d36fba221562ee69.json",
-            "sha256": "6bcfb7674740c2259bb1339c50588db286b651025a7e1087f505673c40244411",
+            "checked_at": "2026-11-03T02:02:59.165768+00:00",
+            "file": "noaa-federal-17806735061c7ee25b4e0f2bda716d81411fa6c00589d57767f89ff41b277c08.json",
+            "sha256": "ef09d549945be3066e8569fc87bf70565b90ec4e4aafe583fe78d98d66164a49",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -3750,51 +3750,51 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:20.497690+00:00",
-            "file": "security-5b5a2f0ac6b595d0f23a59221348ed806a1b37448858d762fa98e458bfe3233a.json",
-            "sha256": "bd32d1ce9b05623e4e081d26cf1ae436aad22147030640fb3d4a4fe12f8520b1",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+            "checked_at": "2026-11-03T02:03:09.603061+00:00",
+            "file": "security-d4adbbbca4a9fd390f8558b48f545d21be03a1b483940b17647fb337e8578720.json",
+            "sha256": "c800a0d2125302573268d758662e634e506923d029840577796008d9a4550f72",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
             "feature_count": 3,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "b649b378dff74577911237700b50483520f42255e48769ec91ec6871de4d4618",
+              "titles_sha256": "9743cbedbc9a90c69c34aee5b56b4c837cbd5465843c9d3245af0fdf405c946b",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
                   "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
                   "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
                   "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "outside-reviewed-scope"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183",
                   "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "trip-time-vessel-restriction"
                 }
               ],
-              "up_to_date_as_of": "2026-10-29"
+              "up_to_date_as_of": "2026-10-30"
             },
             "source_urls": [
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183"
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183"
             ],
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
@@ -3853,12 +3853,12 @@
         "csumb-scc-block11-5m-native",
         "csumb-scc-block12-2m-native"
       ],
-      "last_survey_run": "2026-11-02T21:28:10.244151+00:00",
+      "last_survey_run": "2026-11-03T02:06:21.614901+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 54.170951596,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "db3a619f5c98ac5c6072b58e30775eb7f424ee3d8c57a0c37e92baf82a74b949",
+      "survey_run_hash": "535e37a52e22719e9d09e362d92e33ccfb251789cd6885daaa800f6423a42094",
       "held_candidate_count": 2,
       "roughness_thresholds": {
         "vrm_samples": 3365780,
@@ -3884,7 +3884,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "939bcb2b74cf259e45b7522c175241fff0d8f0354143a1a59c0e8a425658eb83",
+        "snapshot_sha256": "a9f36a36fb4006c8ca9fd37e307b4379e6cc486059d15e22a9bd2893dd0a9ef4",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -3912,11 +3912,11 @@
             ]
           ]
         },
-        "snapshot": "2026-11-02T21:26:20.497690+00:00",
+        "snapshot": "2026-11-03T02:03:09.603061+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:04.382650+00:00",
+            "checked_at": "2026-11-03T02:02:58.087902+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -3926,9 +3926,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:05.388298+00:00",
-            "file": "noaa-federal-1401067982d24118a410240177e54fb62eba5886ae2c12b9d36fba221562ee69.json",
-            "sha256": "6bcfb7674740c2259bb1339c50588db286b651025a7e1087f505673c40244411",
+            "checked_at": "2026-11-03T02:02:59.165768+00:00",
+            "file": "noaa-federal-17806735061c7ee25b4e0f2bda716d81411fa6c00589d57767f89ff41b277c08.json",
+            "sha256": "ef09d549945be3066e8569fc87bf70565b90ec4e4aafe583fe78d98d66164a49",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -3936,51 +3936,51 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:20.497690+00:00",
-            "file": "security-5b5a2f0ac6b595d0f23a59221348ed806a1b37448858d762fa98e458bfe3233a.json",
-            "sha256": "bd32d1ce9b05623e4e081d26cf1ae436aad22147030640fb3d4a4fe12f8520b1",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+            "checked_at": "2026-11-03T02:03:09.603061+00:00",
+            "file": "security-d4adbbbca4a9fd390f8558b48f545d21be03a1b483940b17647fb337e8578720.json",
+            "sha256": "c800a0d2125302573268d758662e634e506923d029840577796008d9a4550f72",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
             "feature_count": 3,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "b649b378dff74577911237700b50483520f42255e48769ec91ec6871de4d4618",
+              "titles_sha256": "9743cbedbc9a90c69c34aee5b56b4c837cbd5465843c9d3245af0fdf405c946b",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
                   "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
                   "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
                   "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "outside-reviewed-scope"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183",
                   "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "trip-time-vessel-restriction"
                 }
               ],
-              "up_to_date_as_of": "2026-10-29"
+              "up_to_date_as_of": "2026-10-30"
             },
             "source_urls": [
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183"
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183"
             ],
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
@@ -4022,12 +4022,12 @@
         "csumb-scc-block14-2m-native",
         "csumb-scc-block15-2m-native"
       ],
-      "last_survey_run": "2026-11-02T21:28:53.692450+00:00",
+      "last_survey_run": "2026-11-03T02:07:55.313943+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 59.525159317,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "bb93c974aae739988d720c5107a5f0e84f01bb407428de78a0ecf1c5a7403357",
+      "survey_run_hash": "e2e1ac21268478df55e1fae0e4d335f8e64a9e23fe427b15e2e5305cb02d3cef",
       "habitat_count": 376,
       "held_candidate_count": 20,
       "habitat_by_grade": {
@@ -4039,7 +4039,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "939bcb2b74cf259e45b7522c175241fff0d8f0354143a1a59c0e8a425658eb83",
+        "snapshot_sha256": "a9f36a36fb4006c8ca9fd37e307b4379e6cc486059d15e22a9bd2893dd0a9ef4",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -4067,11 +4067,11 @@
             ]
           ]
         },
-        "snapshot": "2026-11-02T21:26:20.497690+00:00",
+        "snapshot": "2026-11-03T02:03:09.603061+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:04.382650+00:00",
+            "checked_at": "2026-11-03T02:02:58.087902+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -4081,9 +4081,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:05.388298+00:00",
-            "file": "noaa-federal-1401067982d24118a410240177e54fb62eba5886ae2c12b9d36fba221562ee69.json",
-            "sha256": "6bcfb7674740c2259bb1339c50588db286b651025a7e1087f505673c40244411",
+            "checked_at": "2026-11-03T02:02:59.165768+00:00",
+            "file": "noaa-federal-17806735061c7ee25b4e0f2bda716d81411fa6c00589d57767f89ff41b277c08.json",
+            "sha256": "ef09d549945be3066e8569fc87bf70565b90ec4e4aafe583fe78d98d66164a49",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -4091,51 +4091,51 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:20.497690+00:00",
-            "file": "security-5b5a2f0ac6b595d0f23a59221348ed806a1b37448858d762fa98e458bfe3233a.json",
-            "sha256": "bd32d1ce9b05623e4e081d26cf1ae436aad22147030640fb3d4a4fe12f8520b1",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+            "checked_at": "2026-11-03T02:03:09.603061+00:00",
+            "file": "security-d4adbbbca4a9fd390f8558b48f545d21be03a1b483940b17647fb337e8578720.json",
+            "sha256": "c800a0d2125302573268d758662e634e506923d029840577796008d9a4550f72",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
             "feature_count": 3,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "b649b378dff74577911237700b50483520f42255e48769ec91ec6871de4d4618",
+              "titles_sha256": "9743cbedbc9a90c69c34aee5b56b4c837cbd5465843c9d3245af0fdf405c946b",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
                   "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
                   "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
                   "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "outside-reviewed-scope"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183",
                   "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "trip-time-vessel-restriction"
                 }
               ],
-              "up_to_date_as_of": "2026-10-29"
+              "up_to_date_as_of": "2026-10-30"
             },
             "source_urls": [
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183"
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183"
             ],
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
@@ -4371,12 +4371,12 @@
         "csumb-pge-mid-blocke-2m-native",
         "csumb-pge-mid-blocke-5m-native"
       ],
-      "last_survey_run": "2026-11-02T21:28:56.314547+00:00",
+      "last_survey_run": "2026-11-03T02:08:12.797898+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 55.921421631,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "57d343dcd0cdb150541e77c5aaa9b7a84f85b8d1e09e1a1fdd2d931abb1b4421",
+      "survey_run_hash": "0713f8e3abf48752d893b8e3949c05166c4db5e95170a184f80c7ee1d0f293c8",
       "habitat_count": 314,
       "held_candidate_count": 229,
       "habitat_by_grade": {
@@ -4388,7 +4388,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "939bcb2b74cf259e45b7522c175241fff0d8f0354143a1a59c0e8a425658eb83",
+        "snapshot_sha256": "a9f36a36fb4006c8ca9fd37e307b4379e6cc486059d15e22a9bd2893dd0a9ef4",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -4416,11 +4416,11 @@
             ]
           ]
         },
-        "snapshot": "2026-11-02T21:26:20.497690+00:00",
+        "snapshot": "2026-11-03T02:03:09.603061+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:04.382650+00:00",
+            "checked_at": "2026-11-03T02:02:58.087902+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -4430,9 +4430,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:05.388298+00:00",
-            "file": "noaa-federal-1401067982d24118a410240177e54fb62eba5886ae2c12b9d36fba221562ee69.json",
-            "sha256": "6bcfb7674740c2259bb1339c50588db286b651025a7e1087f505673c40244411",
+            "checked_at": "2026-11-03T02:02:59.165768+00:00",
+            "file": "noaa-federal-17806735061c7ee25b4e0f2bda716d81411fa6c00589d57767f89ff41b277c08.json",
+            "sha256": "ef09d549945be3066e8569fc87bf70565b90ec4e4aafe583fe78d98d66164a49",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -4440,51 +4440,51 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:20.497690+00:00",
-            "file": "security-5b5a2f0ac6b595d0f23a59221348ed806a1b37448858d762fa98e458bfe3233a.json",
-            "sha256": "bd32d1ce9b05623e4e081d26cf1ae436aad22147030640fb3d4a4fe12f8520b1",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+            "checked_at": "2026-11-03T02:03:09.603061+00:00",
+            "file": "security-d4adbbbca4a9fd390f8558b48f545d21be03a1b483940b17647fb337e8578720.json",
+            "sha256": "c800a0d2125302573268d758662e634e506923d029840577796008d9a4550f72",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
             "feature_count": 3,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "b649b378dff74577911237700b50483520f42255e48769ec91ec6871de4d4618",
+              "titles_sha256": "9743cbedbc9a90c69c34aee5b56b4c837cbd5465843c9d3245af0fdf405c946b",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
                   "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
                   "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
                   "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "outside-reviewed-scope"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183",
                   "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "trip-time-vessel-restriction"
                 }
               ],
-              "up_to_date_as_of": "2026-10-29"
+              "up_to_date_as_of": "2026-10-30"
             },
             "source_urls": [
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183"
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183"
             ],
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
@@ -4545,12 +4545,12 @@
         "csumb-scc-block08-2m-native",
         "csumb-scc-block08-5m-native"
       ],
-      "last_survey_run": "2026-10-29T06:58:17.181477+00:00",
+      "last_survey_run": "2026-11-03T02:11:32.355809+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 62.784835494,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "d481b7d720ef0d17dc2aafbaedc406ac269ae4ed4052a641aa5cab2871773203",
+      "survey_run_hash": "ac628143c04eaa73cb4fb2b7726dc34ddc3927f76b25a13fd975d0666b06ff85",
       "habitat_count": 65,
       "held_candidate_count": 216,
       "habitat_by_grade": {
@@ -4562,7 +4562,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "f973dc3a810aab53e1205c75d0e4f5b24ca8866cb7ead5e6ee3fa6cd61f5f8c9",
+        "snapshot_sha256": "a9f36a36fb4006c8ca9fd37e307b4379e6cc486059d15e22a9bd2893dd0a9ef4",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -4590,11 +4590,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-29T06:26:13.271789+00:00",
+        "snapshot": "2026-11-03T02:03:09.603061+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-29T06:24:50.732539+00:00",
+            "checked_at": "2026-11-03T02:02:58.087902+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -4604,9 +4604,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-29T06:24:50.732571+00:00",
-            "file": "noaa-federal-ae442db589b0c698e715d9a7094a2c2c6b53ee0bcc8ad6d4db6619e8e4286a0b.json",
-            "sha256": "e70626f1e8dd61ad1a494136fd3c62b5f859898bf96b2fd6339773808aab7788",
+            "checked_at": "2026-11-03T02:02:59.165768+00:00",
+            "file": "noaa-federal-17806735061c7ee25b4e0f2bda716d81411fa6c00589d57767f89ff41b277c08.json",
+            "sha256": "ef09d549945be3066e8569fc87bf70565b90ec4e4aafe583fe78d98d66164a49",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -4614,61 +4614,61 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-29T06:26:13.271789+00:00",
-            "file": "security-4f3abfb4a037433f9b3a7f31b9c730d0a220e92ef3f74ca9c60c010acf1fdbb7.json",
-            "sha256": "4768e81f04f64c9111b0810bbbb885152037780644e03687fb64e21ab903600c",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=165.1155",
+            "checked_at": "2026-11-03T02:03:09.603061+00:00",
+            "file": "security-d4adbbbca4a9fd390f8558b48f545d21be03a1b483940b17647fb337e8578720.json",
+            "sha256": "c800a0d2125302573268d758662e634e506923d029840577796008d9a4550f72",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
             "feature_count": 3,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "d45911815822507719b72369be5b0f43f19379f5cd504d3508d8497dd1e40eff",
+              "titles_sha256": "9743cbedbc9a90c69c34aee5b56b4c837cbd5465843c9d3245af0fdf405c946b",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-10-27"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=334.1130",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
                   "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
-                  "up_to_date_as_of": "2026-10-27"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=165.1196",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
                   "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
-                  "up_to_date_as_of": "2026-10-27"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=334.1150",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
                   "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
-                  "up_to_date_as_of": "2026-10-27",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "outside-reviewed-scope"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=165.1183",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183",
                   "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
-                  "up_to_date_as_of": "2026-10-27",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "trip-time-vessel-restriction"
                 }
               ],
-              "up_to_date_as_of": "2026-10-27"
+              "up_to_date_as_of": "2026-10-30"
             },
             "source_urls": [
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=165.1155",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=334.1130",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=165.1196",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=334.1150",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=165.1183"
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183"
             ],
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
           }
         ],
-        "search_area_implementation_sha256": "22005cd6e465fae4e257f5b35547d5d7a45907df0da49f87b3892091565ebf70"
+        "search_area_implementation_sha256": "a114a048bf8fc6677d876cfd8a5f05817d9b718988acb807eb41dce8a518ccaa"
       },
       "physical_candidate_count": 281,
       "processing_incomplete": false,
-      "physical_input_hash": "8c98bf4d540a23a2db6569a6493fd0bc5428f35fa73e14ee47fd444d15a57901",
+      "physical_input_hash": "ffafa44eb27f6e8b72d7e64de6c6cd74f291db8a9df40a307273092c30a81364",
       "roughness_thresholds": {
         "vrm_samples": 1690877,
         "vrm": 0.009960928931832314,
@@ -4717,12 +4717,12 @@
         "csumb-pge-mid-blocke-2m-native",
         "csumb-pge-mid-blocke-5m-native"
       ],
-      "last_survey_run": "2026-11-02T21:30:18.596422+00:00",
+      "last_survey_run": "2026-11-03T02:10:36.651842+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 60.95992344,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "2c54ae3995f63f2400cc8a3b6e3a28075567b48342e201d264fa9d75e1ca3263",
+      "survey_run_hash": "f4d2f4880d53663a49f2fb74829cff57d303185c3ba3f58e20f5db00427910cd",
       "habitat_count": 967,
       "held_candidate_count": 8,
       "habitat_by_grade": {
@@ -4734,7 +4734,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "939bcb2b74cf259e45b7522c175241fff0d8f0354143a1a59c0e8a425658eb83",
+        "snapshot_sha256": "a9f36a36fb4006c8ca9fd37e307b4379e6cc486059d15e22a9bd2893dd0a9ef4",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -4762,11 +4762,11 @@
             ]
           ]
         },
-        "snapshot": "2026-11-02T21:26:20.497690+00:00",
+        "snapshot": "2026-11-03T02:03:09.603061+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:04.382650+00:00",
+            "checked_at": "2026-11-03T02:02:58.087902+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -4776,9 +4776,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:05.388298+00:00",
-            "file": "noaa-federal-1401067982d24118a410240177e54fb62eba5886ae2c12b9d36fba221562ee69.json",
-            "sha256": "6bcfb7674740c2259bb1339c50588db286b651025a7e1087f505673c40244411",
+            "checked_at": "2026-11-03T02:02:59.165768+00:00",
+            "file": "noaa-federal-17806735061c7ee25b4e0f2bda716d81411fa6c00589d57767f89ff41b277c08.json",
+            "sha256": "ef09d549945be3066e8569fc87bf70565b90ec4e4aafe583fe78d98d66164a49",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -4786,51 +4786,51 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:20.497690+00:00",
-            "file": "security-5b5a2f0ac6b595d0f23a59221348ed806a1b37448858d762fa98e458bfe3233a.json",
-            "sha256": "bd32d1ce9b05623e4e081d26cf1ae436aad22147030640fb3d4a4fe12f8520b1",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+            "checked_at": "2026-11-03T02:03:09.603061+00:00",
+            "file": "security-d4adbbbca4a9fd390f8558b48f545d21be03a1b483940b17647fb337e8578720.json",
+            "sha256": "c800a0d2125302573268d758662e634e506923d029840577796008d9a4550f72",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
             "feature_count": 3,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "b649b378dff74577911237700b50483520f42255e48769ec91ec6871de4d4618",
+              "titles_sha256": "9743cbedbc9a90c69c34aee5b56b4c837cbd5465843c9d3245af0fdf405c946b",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
                   "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
                   "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
                   "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "outside-reviewed-scope"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183",
                   "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "trip-time-vessel-restriction"
                 }
               ],
-              "up_to_date_as_of": "2026-10-29"
+              "up_to_date_as_of": "2026-10-30"
             },
             "source_urls": [
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183"
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183"
             ],
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
@@ -4889,12 +4889,12 @@
         "csumb-scc-block05-2m-native",
         "csumb-scc-block05-5m-native"
       ],
-      "last_survey_run": "2026-10-29T07:00:14.880650+00:00",
+      "last_survey_run": "2026-11-03T02:13:50.161265+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 49.586900426,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "26bf4461cc68b69bacd2d62cb2fe864ab8d0480201dddbb771e2721248ab4aa2",
+      "survey_run_hash": "d0fbb624993ff3eec4a8c28fc55443fcf1138f0f005b04302cf015e5498ad2d2",
       "habitat_count": 310,
       "held_candidate_count": 21,
       "habitat_by_grade": {
@@ -4905,7 +4905,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "f973dc3a810aab53e1205c75d0e4f5b24ca8866cb7ead5e6ee3fa6cd61f5f8c9",
+        "snapshot_sha256": "a9f36a36fb4006c8ca9fd37e307b4379e6cc486059d15e22a9bd2893dd0a9ef4",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -4933,11 +4933,11 @@
             ]
           ]
         },
-        "snapshot": "2026-10-29T06:26:13.271789+00:00",
+        "snapshot": "2026-11-03T02:03:09.603061+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-10-29T06:24:50.732539+00:00",
+            "checked_at": "2026-11-03T02:02:58.087902+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -4947,9 +4947,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-29T06:24:50.732571+00:00",
-            "file": "noaa-federal-ae442db589b0c698e715d9a7094a2c2c6b53ee0bcc8ad6d4db6619e8e4286a0b.json",
-            "sha256": "e70626f1e8dd61ad1a494136fd3c62b5f859898bf96b2fd6339773808aab7788",
+            "checked_at": "2026-11-03T02:02:59.165768+00:00",
+            "file": "noaa-federal-17806735061c7ee25b4e0f2bda716d81411fa6c00589d57767f89ff41b277c08.json",
+            "sha256": "ef09d549945be3066e8569fc87bf70565b90ec4e4aafe583fe78d98d66164a49",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -4957,61 +4957,61 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-10-29T06:26:13.271789+00:00",
-            "file": "security-4f3abfb4a037433f9b3a7f31b9c730d0a220e92ef3f74ca9c60c010acf1fdbb7.json",
-            "sha256": "4768e81f04f64c9111b0810bbbb885152037780644e03687fb64e21ab903600c",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=165.1155",
+            "checked_at": "2026-11-03T02:03:09.603061+00:00",
+            "file": "security-d4adbbbca4a9fd390f8558b48f545d21be03a1b483940b17647fb337e8578720.json",
+            "sha256": "c800a0d2125302573268d758662e634e506923d029840577796008d9a4550f72",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
             "feature_count": 3,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "d45911815822507719b72369be5b0f43f19379f5cd504d3508d8497dd1e40eff",
+              "titles_sha256": "9743cbedbc9a90c69c34aee5b56b4c837cbd5465843c9d3245af0fdf405c946b",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-10-27"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=334.1130",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
                   "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
-                  "up_to_date_as_of": "2026-10-27"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=165.1196",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
                   "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
-                  "up_to_date_as_of": "2026-10-27"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=334.1150",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
                   "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
-                  "up_to_date_as_of": "2026-10-27",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "outside-reviewed-scope"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=165.1183",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183",
                   "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
-                  "up_to_date_as_of": "2026-10-27",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "trip-time-vessel-restriction"
                 }
               ],
-              "up_to_date_as_of": "2026-10-27"
+              "up_to_date_as_of": "2026-10-30"
             },
             "source_urls": [
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=165.1155",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=334.1130",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=165.1196",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=334.1150",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-27/title-33.xml?section=165.1183"
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183"
             ],
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
           }
         ],
-        "search_area_implementation_sha256": "22005cd6e465fae4e257f5b35547d5d7a45907df0da49f87b3892091565ebf70"
+        "search_area_implementation_sha256": "a114a048bf8fc6677d876cfd8a5f05817d9b718988acb807eb41dce8a518ccaa"
       },
       "physical_candidate_count": 340,
       "processing_incomplete": false,
-      "physical_input_hash": "fb4a390eb89aed4480703e320d1cf77950d36a7ba3747fde2c716f963cd7e3b6",
+      "physical_input_hash": "dac556d5a61d2f2e6de8917ec6fcdc909f0b5dc976a49c73ed730ead775c8726",
       "roughness_thresholds": {
         "vrm_samples": 1937091,
         "vrm": 0.007717143278568983,
@@ -5052,12 +5052,12 @@
       "surveys_used": [
         "csumb-pge-avila-blocki-2m-native"
       ],
-      "last_survey_run": "2026-11-02T21:30:44.252478+00:00",
+      "last_survey_run": "2026-11-03T02:11:17.296879+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 29.619600545,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "bf97c6b8a0855897041a59ea1f76efcb360ae20c84498dcd9a3a76bdcd8cc0fe",
+      "survey_run_hash": "a38e93bc4e1a69a08e8116f72851f7132857126217c235bacb2bf78813b3ae40",
       "habitat_count": 144,
       "held_candidate_count": 0,
       "habitat_by_grade": {
@@ -5068,7 +5068,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "939bcb2b74cf259e45b7522c175241fff0d8f0354143a1a59c0e8a425658eb83",
+        "snapshot_sha256": "a9f36a36fb4006c8ca9fd37e307b4379e6cc486059d15e22a9bd2893dd0a9ef4",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -5096,11 +5096,11 @@
             ]
           ]
         },
-        "snapshot": "2026-11-02T21:26:20.497690+00:00",
+        "snapshot": "2026-11-03T02:03:09.603061+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:04.382650+00:00",
+            "checked_at": "2026-11-03T02:02:58.087902+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -5110,9 +5110,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:05.388298+00:00",
-            "file": "noaa-federal-1401067982d24118a410240177e54fb62eba5886ae2c12b9d36fba221562ee69.json",
-            "sha256": "6bcfb7674740c2259bb1339c50588db286b651025a7e1087f505673c40244411",
+            "checked_at": "2026-11-03T02:02:59.165768+00:00",
+            "file": "noaa-federal-17806735061c7ee25b4e0f2bda716d81411fa6c00589d57767f89ff41b277c08.json",
+            "sha256": "ef09d549945be3066e8569fc87bf70565b90ec4e4aafe583fe78d98d66164a49",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -5120,51 +5120,51 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:20.497690+00:00",
-            "file": "security-5b5a2f0ac6b595d0f23a59221348ed806a1b37448858d762fa98e458bfe3233a.json",
-            "sha256": "bd32d1ce9b05623e4e081d26cf1ae436aad22147030640fb3d4a4fe12f8520b1",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+            "checked_at": "2026-11-03T02:03:09.603061+00:00",
+            "file": "security-d4adbbbca4a9fd390f8558b48f545d21be03a1b483940b17647fb337e8578720.json",
+            "sha256": "c800a0d2125302573268d758662e634e506923d029840577796008d9a4550f72",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
             "feature_count": 3,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "b649b378dff74577911237700b50483520f42255e48769ec91ec6871de4d4618",
+              "titles_sha256": "9743cbedbc9a90c69c34aee5b56b4c837cbd5465843c9d3245af0fdf405c946b",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
                   "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
                   "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
                   "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "outside-reviewed-scope"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183",
                   "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "trip-time-vessel-restriction"
                 }
               ],
-              "up_to_date_as_of": "2026-10-29"
+              "up_to_date_as_of": "2026-10-30"
             },
             "source_urls": [
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183"
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183"
             ],
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
@@ -5215,12 +5215,12 @@
       "surveys_used": [
         "csumb-pge-avila-blocki-2m-native"
       ],
-      "last_survey_run": "2026-11-02T21:30:00.839582+00:00",
+      "last_survey_run": "2026-11-03T02:09:25.159067+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 6.040838581,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "65a0a055c4324c19a5d599080f5f9321a76609eebacd0a2af59f47ac50f8add0",
+      "survey_run_hash": "b5a6867758e5397dc2642d4ea2e841620afa89607e902e7739c09a4de86ca125",
       "habitat_count": 0,
       "held_candidate_count": 0,
       "habitat_by_grade": {},
@@ -5228,7 +5228,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "939bcb2b74cf259e45b7522c175241fff0d8f0354143a1a59c0e8a425658eb83",
+        "snapshot_sha256": "a9f36a36fb4006c8ca9fd37e307b4379e6cc486059d15e22a9bd2893dd0a9ef4",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -5256,11 +5256,11 @@
             ]
           ]
         },
-        "snapshot": "2026-11-02T21:26:20.497690+00:00",
+        "snapshot": "2026-11-03T02:03:09.603061+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:04.382650+00:00",
+            "checked_at": "2026-11-03T02:02:58.087902+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -5270,9 +5270,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:05.388298+00:00",
-            "file": "noaa-federal-1401067982d24118a410240177e54fb62eba5886ae2c12b9d36fba221562ee69.json",
-            "sha256": "6bcfb7674740c2259bb1339c50588db286b651025a7e1087f505673c40244411",
+            "checked_at": "2026-11-03T02:02:59.165768+00:00",
+            "file": "noaa-federal-17806735061c7ee25b4e0f2bda716d81411fa6c00589d57767f89ff41b277c08.json",
+            "sha256": "ef09d549945be3066e8569fc87bf70565b90ec4e4aafe583fe78d98d66164a49",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -5280,51 +5280,51 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:20.497690+00:00",
-            "file": "security-5b5a2f0ac6b595d0f23a59221348ed806a1b37448858d762fa98e458bfe3233a.json",
-            "sha256": "bd32d1ce9b05623e4e081d26cf1ae436aad22147030640fb3d4a4fe12f8520b1",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+            "checked_at": "2026-11-03T02:03:09.603061+00:00",
+            "file": "security-d4adbbbca4a9fd390f8558b48f545d21be03a1b483940b17647fb337e8578720.json",
+            "sha256": "c800a0d2125302573268d758662e634e506923d029840577796008d9a4550f72",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
             "feature_count": 3,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "b649b378dff74577911237700b50483520f42255e48769ec91ec6871de4d4618",
+              "titles_sha256": "9743cbedbc9a90c69c34aee5b56b4c837cbd5465843c9d3245af0fdf405c946b",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
                   "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
                   "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
                   "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "outside-reviewed-scope"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183",
                   "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "trip-time-vessel-restriction"
                 }
               ],
-              "up_to_date_as_of": "2026-10-29"
+              "up_to_date_as_of": "2026-10-30"
             },
             "source_urls": [
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183"
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183"
             ],
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
@@ -5385,12 +5385,12 @@
         "csumb-scc-block04-2m-native",
         "csumb-scc-block04-5m-native"
       ],
-      "last_survey_run": "2026-11-02T21:32:00.284869+00:00",
+      "last_survey_run": "2026-11-03T02:12:52.426122+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 70.103262405,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "c322c350772c2b1c9b3b4ef96be34b1a1ddb3d43c21245401057084c49b0919b",
+      "survey_run_hash": "9a0800bbb6148b1382adb2d35142d27bb02414fe73516fe0c794863a62a649f5",
       "habitat_count": 49,
       "held_candidate_count": 657,
       "habitat_by_grade": {
@@ -5402,7 +5402,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "939bcb2b74cf259e45b7522c175241fff0d8f0354143a1a59c0e8a425658eb83",
+        "snapshot_sha256": "a9f36a36fb4006c8ca9fd37e307b4379e6cc486059d15e22a9bd2893dd0a9ef4",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -5430,11 +5430,11 @@
             ]
           ]
         },
-        "snapshot": "2026-11-02T21:26:20.497690+00:00",
+        "snapshot": "2026-11-03T02:03:09.603061+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:04.382650+00:00",
+            "checked_at": "2026-11-03T02:02:58.087902+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -5444,9 +5444,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:05.388298+00:00",
-            "file": "noaa-federal-1401067982d24118a410240177e54fb62eba5886ae2c12b9d36fba221562ee69.json",
-            "sha256": "6bcfb7674740c2259bb1339c50588db286b651025a7e1087f505673c40244411",
+            "checked_at": "2026-11-03T02:02:59.165768+00:00",
+            "file": "noaa-federal-17806735061c7ee25b4e0f2bda716d81411fa6c00589d57767f89ff41b277c08.json",
+            "sha256": "ef09d549945be3066e8569fc87bf70565b90ec4e4aafe583fe78d98d66164a49",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -5454,51 +5454,51 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:20.497690+00:00",
-            "file": "security-5b5a2f0ac6b595d0f23a59221348ed806a1b37448858d762fa98e458bfe3233a.json",
-            "sha256": "bd32d1ce9b05623e4e081d26cf1ae436aad22147030640fb3d4a4fe12f8520b1",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+            "checked_at": "2026-11-03T02:03:09.603061+00:00",
+            "file": "security-d4adbbbca4a9fd390f8558b48f545d21be03a1b483940b17647fb337e8578720.json",
+            "sha256": "c800a0d2125302573268d758662e634e506923d029840577796008d9a4550f72",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
             "feature_count": 3,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "b649b378dff74577911237700b50483520f42255e48769ec91ec6871de4d4618",
+              "titles_sha256": "9743cbedbc9a90c69c34aee5b56b4c837cbd5465843c9d3245af0fdf405c946b",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
                   "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
                   "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
                   "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "outside-reviewed-scope"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183",
                   "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "trip-time-vessel-restriction"
                 }
               ],
-              "up_to_date_as_of": "2026-10-29"
+              "up_to_date_as_of": "2026-10-30"
             },
             "source_urls": [
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183"
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183"
             ],
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
@@ -5550,12 +5550,12 @@
         "csumb-scc-block16-2m-native",
         "csumb-scc-block17-2m-native"
       ],
-      "last_survey_run": "2026-11-02T21:33:19.528864+00:00",
+      "last_survey_run": "2026-11-03T02:15:24.643347+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 37.988569789,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "317919e19b0f6d148a38ae049e48d6c766acf7598dcabe544d5f395a613248b3",
+      "survey_run_hash": "ca06f9096e6d9f1ec80008416dcfcaed021ba064de8131cd4530533df52278bd",
       "habitat_count": 0,
       "held_candidate_count": 0,
       "habitat_by_grade": {},
@@ -5563,7 +5563,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "939bcb2b74cf259e45b7522c175241fff0d8f0354143a1a59c0e8a425658eb83",
+        "snapshot_sha256": "a9f36a36fb4006c8ca9fd37e307b4379e6cc486059d15e22a9bd2893dd0a9ef4",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -5591,11 +5591,11 @@
             ]
           ]
         },
-        "snapshot": "2026-11-02T21:26:20.497690+00:00",
+        "snapshot": "2026-11-03T02:03:09.603061+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:04.382650+00:00",
+            "checked_at": "2026-11-03T02:02:58.087902+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -5605,9 +5605,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:05.388298+00:00",
-            "file": "noaa-federal-1401067982d24118a410240177e54fb62eba5886ae2c12b9d36fba221562ee69.json",
-            "sha256": "6bcfb7674740c2259bb1339c50588db286b651025a7e1087f505673c40244411",
+            "checked_at": "2026-11-03T02:02:59.165768+00:00",
+            "file": "noaa-federal-17806735061c7ee25b4e0f2bda716d81411fa6c00589d57767f89ff41b277c08.json",
+            "sha256": "ef09d549945be3066e8569fc87bf70565b90ec4e4aafe583fe78d98d66164a49",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -5615,51 +5615,51 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:20.497690+00:00",
-            "file": "security-5b5a2f0ac6b595d0f23a59221348ed806a1b37448858d762fa98e458bfe3233a.json",
-            "sha256": "bd32d1ce9b05623e4e081d26cf1ae436aad22147030640fb3d4a4fe12f8520b1",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+            "checked_at": "2026-11-03T02:03:09.603061+00:00",
+            "file": "security-d4adbbbca4a9fd390f8558b48f545d21be03a1b483940b17647fb337e8578720.json",
+            "sha256": "c800a0d2125302573268d758662e634e506923d029840577796008d9a4550f72",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
             "feature_count": 3,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "b649b378dff74577911237700b50483520f42255e48769ec91ec6871de4d4618",
+              "titles_sha256": "9743cbedbc9a90c69c34aee5b56b4c837cbd5465843c9d3245af0fdf405c946b",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
                   "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
                   "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
                   "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "outside-reviewed-scope"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183",
                   "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "trip-time-vessel-restriction"
                 }
               ],
-              "up_to_date_as_of": "2026-10-29"
+              "up_to_date_as_of": "2026-10-30"
             },
             "source_urls": [
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183"
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183"
             ],
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
@@ -5713,12 +5713,12 @@
         "bss-block03-additional-products-tar-gz-ad317d80e0",
         "csumb-bss-block03-5m-native"
       ],
-      "last_survey_run": "2026-11-02T21:32:44.633244+00:00",
+      "last_survey_run": "2026-11-03T02:14:19.921889+00:00",
       "habitat_rule_version": "seafloor-habitat-v1",
       "note": "Original survey coverage and ranked physical habitat candidates. Spatial screening status and holds are reported separately; only passed polygons can be published. Season, gear and current notices still apply. Unknown interpolation masks remain unknown.",
       "selected_valid_km2": 55.452019066,
       "coverage_rule_version": "native-coverage-habitat-v2",
-      "survey_run_hash": "914b090b51065650d5b51871f33a892ebcc320053f292141f252d6de971f0900",
+      "survey_run_hash": "de5af19afdae3fbe39e92055773c6adcc0acf9de43ea81dbcdfe6e56a8322b1f",
       "habitat_count": 55,
       "held_candidate_count": 0,
       "habitat_by_grade": {
@@ -5729,7 +5729,7 @@
         "version": "whole-polygon-screen-v1",
         "status": "ready",
         "reasons": [],
-        "snapshot_sha256": "939bcb2b74cf259e45b7522c175241fff0d8f0354143a1a59c0e8a425658eb83",
+        "snapshot_sha256": "a9f36a36fb4006c8ca9fd37e307b4379e6cc486059d15e22a9bd2893dd0a9ef4",
         "scope": {
           "type": "Polygon",
           "coordinates": [
@@ -5757,11 +5757,11 @@
             ]
           ]
         },
-        "snapshot": "2026-11-02T21:26:20.497690+00:00",
+        "snapshot": "2026-11-03T02:03:09.603061+00:00",
         "layers": [
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:04.382650+00:00",
+            "checked_at": "2026-11-03T02:02:58.087902+00:00",
             "file": "cdfw-mpa-e470c41f16331e0262bf005f7634b4823885ded6ba39a0410e072dc24ac76b12.json",
             "sha256": "14487293226530005f64f0a628c4872382c291e1df36ea492cb0223e6b696b41",
             "source_url": "https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query?where=1%3D1&outFields=NAME%2CFULLNAME%2CType%2CCCR&returnGeometry=true&outSR=4326&f=geojson&resultRecordCount=1000",
@@ -5771,9 +5771,9 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:05.388298+00:00",
-            "file": "noaa-federal-1401067982d24118a410240177e54fb62eba5886ae2c12b9d36fba221562ee69.json",
-            "sha256": "6bcfb7674740c2259bb1339c50588db286b651025a7e1087f505673c40244411",
+            "checked_at": "2026-11-03T02:02:59.165768+00:00",
+            "file": "noaa-federal-17806735061c7ee25b4e0f2bda716d81411fa6c00589d57767f89ff41b277c08.json",
+            "sha256": "ef09d549945be3066e8569fc87bf70565b90ec4e4aafe583fe78d98d66164a49",
             "source_url": "https://maps.fisheries.noaa.gov/server/rest/services/WCR_SFD_GCA/NOAA_Fisheries_West_Coast_Region_Groundfish_Conservation_Area_service/MapServer",
             "feature_count": 29,
             "id": "noaa-federal",
@@ -5781,51 +5781,51 @@
           },
           {
             "status": "ok",
-            "checked_at": "2026-11-02T21:26:20.497690+00:00",
-            "file": "security-5b5a2f0ac6b595d0f23a59221348ed806a1b37448858d762fa98e458bfe3233a.json",
-            "sha256": "bd32d1ce9b05623e4e081d26cf1ae436aad22147030640fb3d4a4fe12f8520b1",
-            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+            "checked_at": "2026-11-03T02:03:09.603061+00:00",
+            "file": "security-d4adbbbca4a9fd390f8558b48f545d21be03a1b483940b17647fb337e8578720.json",
+            "sha256": "c800a0d2125302573268d758662e634e506923d029840577796008d9a4550f72",
+            "source_url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
             "feature_count": 3,
             "evidence": {
               "titles_url": "https://www.ecfr.gov/api/versioner/v1/titles",
-              "titles_sha256": "b649b378dff74577911237700b50483520f42255e48769ec91ec6871de4d4618",
+              "titles_sha256": "9743cbedbc9a90c69c34aee5b56b4c837cbd5465843c9d3245af0fdf405c946b",
               "sections": [
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
                   "sha256": "5b95cac2ee51b8343f8dda71d9159db1430cb2c4fbd82cc6e36ce775e7f8cb18",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
                   "sha256": "637990c375cd4b039cf03f97d38d98a1773a331a8c961ca61a5dcdf29987c541",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
                   "sha256": "c92807fb35bb435c33f02309ed9e821bd963cb9da6da12dcef68b81165c8121f",
-                  "up_to_date_as_of": "2026-10-29"
+                  "up_to_date_as_of": "2026-10-30"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
                   "sha256": "0e49862e6dd76e8c7e52bbddb84b09878d5a0851a389d329dedeea6dfb69ef9d",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "outside-reviewed-scope"
                 },
                 {
-                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183",
+                  "url": "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183",
                   "sha256": "0a7a7bd6183ba6ed075c121cb712329bb7842ef741af4ee3cc0dd4bdd8e0cfe5",
-                  "up_to_date_as_of": "2026-10-29",
+                  "up_to_date_as_of": "2026-10-30",
                   "classification": "trip-time-vessel-restriction"
                 }
               ],
-              "up_to_date_as_of": "2026-10-29"
+              "up_to_date_as_of": "2026-10-30"
             },
             "source_urls": [
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1155",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1130",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1196",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=334.1150",
-              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-29/title-33.xml?section=165.1183"
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1155",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1130",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1196",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=334.1150",
+              "https://www.ecfr.gov/api/versioner/v1/full/2026-10-30/title-33.xml?section=165.1183"
             ],
             "id": "security",
             "nested_or_overlapping_components_unioned": 0
