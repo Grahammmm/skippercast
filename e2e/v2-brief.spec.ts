@@ -125,6 +125,11 @@ test('FE-33: where a coast report binds, the sparkline draws its tide curve in t
   const spark = root.locator('figure.app-spark');
   const chart = spark.locator('svg.series-chart');
   await expect(chart).toHaveAttribute('aria-label', /^Tide in ft MLLW\./);
+  // The stroke comes from panel.css and the token bridge, linked in the chart's shadow root (web/app/CoastMarkup.tsx): read it once both have loaded.
+  await expect.poll(() => chart.evaluate(el => {
+    const links = [...(el.getRootNode() as ShadowRoot).querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')];
+    return links.length === 2 && links.every(link => link.sheet !== null);
+  }), {message: 'the shadow root stylesheets loaded'}).toBe(true);
   expect(await chart.locator('path').evaluate(el => getComputedStyle(el).stroke)).toBe(await page.evaluate(() => {
     const probe = Object.assign(document.createElement('i'), {style: 'color: var(--amber)'});
     document.body.append(probe);
