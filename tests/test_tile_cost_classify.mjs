@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-const {classify, aggregate, sumBytes, KINDS} = await import('../e2e/tile-cost.ts');
+const {classify, aggregate, sumBytes, reusedAcrossPasses, KINDS} = await import('../e2e/tile-cost.ts');
 
 const ORIGIN = 'http://localhost:8787';
 const kind = url => classify(url, ORIGIN)?.kind ?? null;
@@ -56,6 +56,39 @@ test('aggregate: an all-remote row has null transfer bytes', () => {
   assert.equal(row.settled, false);
 });
 
+test('aggregate: cache_reused counts same-origin cache hits and 304s, never network fetches or remotes', () => {
+  const entries = [
+    {url: ORIGIN + '/assets/app.js', transfer_bytes: null, body_bytes: 5000},     // fresh cache hit: 0 bytes over the wire
+    {url: ORIGIN + '/assets/site.css', transfer_bytes: 300, body_bytes: 4000},    // 304: headers only
+    {url: ORIGIN + '/api/tides', transfer_bytes: 1300, body_bytes: 1000},         // network fetch: headers + body
+    {url: ORIGIN + '/api/blocked', transfer_bytes: null, body_bytes: null},       // failed: no body at all
+    {url: 'https://x.test/a.js', transfer_bytes: null, body_bytes: 5000},         // remote: never counted as a hit
+  ];
+  assert.equal(aggregate(ORIGIN, 'coast', 'phone', 'warm', entries, true).cache_reused, 2);
+  assert.equal(aggregate(ORIGIN, 'coast', 'phone', 'cold', entries.slice(2), true).cache_reused, 0);
+});
+
+test('reusedAcrossPasses: only what the cold pass fetched and the warm pass got from cache', () => {
+  const cold = [
+    {url: ORIGIN + '/assets/map.js', transfer_bytes: 30300, body_bytes: 30000},    // fetched
+    {url: ORIGIN + '/assets/map.js', transfer_bytes: null, body_bytes: 30000},     // same load reuses it: no proof of a warm cache
+    {url: ORIGIN + '/assets/pre.js', transfer_bytes: null, body_bytes: 900},       // preloaded: never seen fetched in full
+    {url: ORIGIN + '/api/report', transfer_bytes: 1300, body_bytes: 1000},         // fetched
+    {url: 'https://x.test/r.js', transfer_bytes: 600, body_bytes: 500},            // remote
+  ];
+  const warm = [
+    {url: ORIGIN + '/assets/map.js', transfer_bytes: null, body_bytes: 30000},     // cache hit
+    {url: ORIGIN + '/assets/map.js', transfer_bytes: null, body_bytes: 30000},     // counted once
+    {url: ORIGIN + '/assets/pre.js', transfer_bytes: null, body_bytes: 900},
+    {url: ORIGIN + '/api/report', transfer_bytes: 1300, body_bytes: 1000},         // fetched again
+    {url: 'https://x.test/r.js', transfer_bytes: null, body_bytes: 500},
+  ];
+  assert.deepEqual(reusedAcrossPasses(ORIGIN, cold, warm), [ORIGIN + '/assets/map.js']);
+  assert.deepEqual(reusedAcrossPasses(ORIGIN, cold, cold.slice(0, 1).concat(cold.slice(3))), []);   // a second cold pass: cache off
+  assert.equal(aggregate(ORIGIN, 'coast', 'phone', 'warm', warm, true, cold).reused_from_cold, 1);
+  assert.equal(aggregate(ORIGIN, 'coast', 'phone', 'cold', cold, true).reused_from_cold, null);
+});
+
 test('sumBytes: null is not 0', () => {
   assert.deepEqual(sumBytes([{transfer_bytes: null, body_bytes: null}, {transfer_bytes: 5, body_bytes: 7}]), {transfer_bytes: 5, body_bytes: 7});
   assert.deepEqual(sumBytes([{transfer_bytes: null, body_bytes: null}]), {transfer_bytes: null, body_bytes: 0});
@@ -64,7 +97,7 @@ test('sumBytes: null is not 0', () => {
 test('the tile-cost-v1 document validates its own small schema', () => {
   const rows = [
     aggregate(ORIGIN, 'coast', 'phone', 'cold', [{url: ORIGIN + '/a.js', transfer_bytes: 1, body_bytes: 2}], true),
-    aggregate(ORIGIN, 'coast', 'phone', 'warm', [], false),
+    aggregate(ORIGIN, 'coast', 'phone', 'warm', [], false, []),
     aggregate(ORIGIN, 'fleet', 'laptop', 'cold', [{url: 'https://x.test/t?request=GetMap', transfer_bytes: null, body_bytes: null}], true),
   ];
   const doc = {schema: 'tile-cost-v1', commit: 'local', rows};
@@ -84,6 +117,8 @@ test('the tile-cost-v1 document validates its own small schema', () => {
       assert.ok(bucket.transfer_bytes === null || (row.transfer_bytes !== null && bucket.transfer_bytes <= row.transfer_bytes));
     }
     for (const count of Object.values(row.remote)) assert.ok(Number.isInteger(count) && count >= 0);
+    assert.ok(Number.isInteger(row.cache_reused) && row.cache_reused >= 0 && row.cache_reused <= row.requests);
+    assert.ok(row.pass === 'warm' ? Number.isInteger(row.reused_from_cold) : row.reused_from_cold === null);
     assert.equal(typeof row.settled, 'boolean');
   }
 });
