@@ -104,7 +104,9 @@ test('acceptance 2: at the half detent the sheet shows the headline, tiles and h
   // Expanded, the sheet holds Where to look and its top pick, scrolled to in the sheet body.
   await page.locator('.ui-sheet-handle').press('End');
   await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full');
-  for (const part of [sheet.getByRole('heading', {name: 'Where to look'}), sheet.locator('.app-pick, .app-empty').first()]) { await part.scrollIntoViewIfNeeded(); await expect(part).toBeInViewport({ratio: 1}); }
+  // Each part is scrolled to the middle of the sheet body: scrollIntoViewIfNeeded aligns a part already partly in view to
+  // the body's edge, and the scroll offset snaps to device pixels, leaving a quarter pixel of a 16.5 px heading clipped.
+  for (const part of [sheet.getByRole('heading', {name: 'Where to look'}), sheet.locator('.app-pick, .app-empty').first()]) { await part.evaluate(el => el.scrollIntoView({block: 'center'})); await expect(part).toBeInViewport({ratio: 1}); }
   expect(pageErrors).toEqual([]);
 });
 
