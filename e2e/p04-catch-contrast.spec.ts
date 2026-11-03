@@ -168,8 +168,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/app/MapStage.tsx": "11bfed22183687b9bdfa6c4a348688b633dd4eaab5607aeeb5718fb104c41466",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "0a636f225f5b51d1e34f2de059c826e4a0f2af876fcf20f827f2ccb5ef705008",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
-  "web/app/app.css": "ae6b03d506037f735baaf561b08fb15cad815133dc973c7bd4052d4df932cbac",
-  "packages/coast/panel.css": "fda5b83480f2c32243d5ff90b99e2581d459a46f88543d6a264705bdc8e821fb",
+  // BF-wcag: app.css and panel.css add only 24 px min-height target floors (no paint); app.css merged with SC2222-07.
+  "web/app/app.css": "56bb9e803ba45f777aebdded64013889b34d16ee8bd6a3c1b17528a03615d32c",
+  "packages/coast/panel.css": "ca0495fc90db3cf3f140d520c8231751660268af72bc7b9a4a3ac4dc1679314e",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
@@ -187,7 +188,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // optional Plan fields and the plans' reviewedAt date; Masthead.tsx adds a Plan label and icon but lists the same
   // five masthead views, so the Reports masthead is unchanged. contrast(), assertions and thresholds are untouched.
   // All three rebound. Merged with main's SC2222-07 appCss surface hash: rebound to the merged file.
-  "scripts/check_contrast.mjs": "7ce26d19777ba3c048577fbdb4679580f5a0c0b7c48077af890114d260402210",
+  // BF-wcag: check_contrast.mjs changes only the panelCss/appCss surface hashes and their comments; rebound.
+  "scripts/check_contrast.mjs": "e0e489214bf94e3a7e47ba7f38f5520de139c2c2f3d08b4b61b95c16925d7ed6",
   "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
   "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
