@@ -152,7 +152,7 @@ export function PostActions({post, onChanged}: {post: Post; onChanged: (post: Po
   return (
     <div class="admin-post-actions">
       {approved ? (
-        <form class="admin-editor" onSubmit={e => { e.preventDefault(); void run(() => schedulePost(post.id, fromLocalInput(schedule)), () => COPY.scheduleSaved); }}>
+        <form class="admin-editor" onSubmit={e => { e.preventDefault(); const at = fromLocalInput(schedule); if (at !== undefined) void run(() => schedulePost(post.id, at), () => COPY.scheduleSaved); }}>
           <label for={`${idBase}-at`}>{COPY.scheduleAt}
             <input id={`${idBase}-at`} type="datetime-local" value={schedule} onInput={e => setSchedule((e.currentTarget as HTMLInputElement).value)} />
           </label>

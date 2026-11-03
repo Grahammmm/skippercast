@@ -27,13 +27,12 @@ Adding a new source to `catalog/sources.json` now requires `commercial_use` and 
 
 Every item here must be closed, licensed or removed before SkipperCast charges money.
 
-### B1 — Open-Meteo free API (mostly resolved)
+### B1 — Open-Meteo free API (resolved)
 
 - **Sources:** `open-meteo-api`. (`noaa-gefs-members` is resolved: members now come directly from NOAA's AWS Open Data bucket, public domain.)
 - **Terms:** Open-Meteo API data are CC BY 4.0, but the [free API terms](https://open-meteo.com/en/terms) restrict access to non-commercial use.
 - **Resolved:** the GEFS ensemble is built from NOAA directly (`src/skippercast/forecast/ensemble.py`, #51); the browser ocean-current request was replaced by NOAA WCOFS, and the legacy monitor now calls SkipperCast's own `/api/om` (#54); the Content-Security-Policy no longer allows `marine-api.open-meteo.com`.
-- **Remaining:** the committed Morro Bay `data/daily-evidence.json` snapshot still contains Open-Meteo model responses from before the switch.
-- **Action:** regenerate `daily-evidence.json` from the current pipeline, then remove `open-meteo-api` from `KNOWN_BLOCKERS`.
+- **Snapshot (2026-11-02, FSC-01):** `data/daily-evidence.json` is now the byte copy of `data` branch commit `f5b48ca15d6f3ec0244ff6f2328cee9f27a78912` `latest.json` (run `41496758540`, sha256 `b0f5de04fc8182ff9c05933ca86fec8645a6fc6948cd017d220549590696dbf4`), with no Open-Meteo response in it; `open-meteo-api` is out of `KNOWN_BLOCKERS`.
 - **Owner:** Engineering.
 
 ### B2 — Global Fishing Watch CC BY-NC
@@ -195,7 +194,7 @@ One row per entry in `catalog/sources.json`. "Where used" lists usages found by 
 | Offshore Cape Mendocino bathymetry and seafloor character | `usgs-cape-mendocino` | US public domain | no (credit requested) | yes | `regions/humboldt-bay-cape-mendocino/search-plans.json`<br>`regions/humboldt-bay-cape-mendocino/survey-habitat.geojson` | None | Engineering |
 | California State Waters Map Series seafloor character (DS 781) | `usgs-csmp-seafloor-character` | US public domain | yes | **needs permission** | `regions/bodega-point-reyes/search-plans.json`<br>`regions/bodega-point-reyes/survey-habitat.geojson`<br>`regions/monterey-point-sur/search-plans.json`<br>`regions/monterey-point-sur/survey-habitat.geojson`<br>`regions/point-arena-bodega/search-plans.json`<br>`regions/point-arena-bodega/survey-habitat.geojson`<br>`regions/point-arguello-conception/search-plans.json`<br>`regions/point-arguello-conception/survey-habitat.geojson`<br>`regions/santa-cruz-monterey-bay/search-plans.json`<br>`regions/santa-cruz-monterey-bay/survey-habitat.geojson` | [Blocker B3](#b3--csumb-co-produced-seafloor-data) | Owner |
 | PMEP West Coast nearshore rocky-reef HAPC compilation | `pmep-hapc` | unreviewed | yes | **unknown** | `regions/big-sur-coast/search-plans.json`<br>`regions/big-sur-coast/survey-habitat.geojson`<br>`regions/south-big-sur-san-simeon/search-plans.json`<br>`regions/south-big-sur-san-simeon/survey-habitat.geojson` | [Blocker B4](#b4--pmep-habitat-compilation-terms-unreviewed) | Owner |
-| Open-Meteo forecast, marine and ensemble APIs (free tier) | `open-meteo-api` | CC BY 4.0 | yes | **no** | `data/daily-evidence.json` | [Blocker B1](#b1--open-meteo-free-api-mostly-resolved) | Owner |
+| Open-Meteo forecast, marine and ensemble APIs (free tier) | `open-meteo-api` | CC BY 4.0 | yes | **no** | none (snapshot replaced FSC-01) | [Blocker B1](#b1--open-meteo-free-api-resolved) | Owner |
 | Protomaps basemap (OpenStreetMap vector tiles), self-hosted coastal extract | `protomaps-basemap` | ODbL-1.0 | yes | **unknown** | Not shipped yet: `tiles/basemap/ca-coast-<build>.pmtiles` on R2 (FE-10), read by the v2 Chart from FE-11 | Drafted by FE-10, **owner to confirm**: ODbL allows commercial use with attribution, but the whole archive is publicly downloadable from `/feeds/tiles/basemap/`, so it is redistributed as an ODbL derivative database (attribution and ODbL notice kept with it; the extract itself offered under ODbL, share-alike). Self-hosting removes the [B6](#b6--openstreetmap-tile-service) tile-service question, not this one | Owner |
 | NOAA NGS Continually Updated Shoreline Product (CUSP) | `noaa-cusp-shoreline` | US public domain (NOAA-created features only) | yes | yes | `regions/morro-bay/shoreline.geojson` (beside the region package, not in `region.json` assets; read by the v2 Chart from FE-11) | Drafted by FE-10, **owner to confirm**: the importer keeps only features whose creator is NOAA; review each new region's held creators before importing it | Owner |
 

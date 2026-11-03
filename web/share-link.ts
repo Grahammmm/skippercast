@@ -1,9 +1,10 @@
 // Shareable links (BF-deep-links): the one canonical address Share copies. It names the region, the port the control
 // shows, the dock's absolute day (today included, so Wednesday's link still means Wednesday) and the profile, then the
-// hour, target and listed view keys the address has. A whitelist: nothing else (ui, utm, a token, the hash) is carried,
+// hour, target, listed view keys and the grade filter the address has. A whitelist: nothing else (ui, utm, a token, the hash) is carried,
 // values are re-encoded, and the title names place, day and profile only, never a condition.
 // Pure and DOM-free; erasable syntax only: Node tests import this file by type stripping.
 import {canonicalHour, fishLink} from './fish-links.ts';
+import {gradeParam, parseGrade} from './grade.ts';
 import {dockTime, horizonDays, localParts} from './hour.ts';
 import {currentPort, type Port} from './ports.ts';
 import {isProfile, PROFILE_TABLE, type Profile} from './profile.ts';
@@ -67,6 +68,8 @@ export function shareLink({href, origin, ports, region, savedId, profile, now, t
     const value = from.get(key);
     if (value) p.set(key, value);
   }
+  const grade = gradeParam(parseGrade(from.get('grade')));
+  if (grade) p.set('grade', grade);
   const title = [port?.name, shareDayText(day ?? localParts(new Date(shown.at), tz).day), isProfile(profile) ? PROFILE_TABLE[profile].label : null]
     .filter(Boolean).join(' · ');
   return {url: out.href, title};

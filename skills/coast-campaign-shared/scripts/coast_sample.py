@@ -2,12 +2,17 @@
 import hashlib
 import json
 import argparse
+import sys
+
+
+def _hex64(value):
+    return isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value)
 
 
 def window_key(source_id, grid_sha256, idx):
     if not isinstance(source_id, str) or not source_id or type(idx) is not int or idx < 0:
         raise ValueError("invalid source/index")
-    if len(grid_sha256) != 64 or any(c not in "0123456789abcdef" for c in grid_sha256):
+    if not _hex64(grid_sha256):
         raise ValueError("invalid grid SHA256")
     return f"{source_id}#{grid_sha256}#{idx}"
 
@@ -22,13 +27,15 @@ def sample(map_done, eligible, *, plan_sha256, bridge_sha256):
     Both populations are explicit unique window keys. Missing/held/unavailable
     evidence cannot be declared eligible by this deterministic selection function.
     """
+    if any(not isinstance(p, (list, tuple)) or any(not isinstance(k, str) or not k for k in p) for p in (map_done, eligible)):
+        raise ValueError("sample populations must be lists of window keys")
     done, clean = list(map_done), list(eligible)
     if len(set(done)) != len(done) or len(set(clean)) != len(clean):
         raise ValueError("duplicate sample population")
     if not set(clean) <= set(done) or any(not isinstance(k, str) or not k for k in done):
         raise ValueError("eligible must be a subset of map_done window keys")
     for digest in (plan_sha256, bridge_sha256):
-        if len(digest) != 64 or any(c not in "0123456789abcdef" for c in digest):
+        if not _hex64(digest):
             raise ValueError("invalid sample binding SHA256")
     seed = hashlib.sha256(f"{plan_sha256}:{bridge_sha256}".encode()).hexdigest()
     target = max(8, (len(done) + 7) // 8)
@@ -38,14 +45,23 @@ def sample(map_done, eligible, *, plan_sha256, bridge_sha256):
                 map_done=sorted(done), eligible=sorted(clean), selected=sorted(ranked[:size]))
 
 
-def main():
+def main(argv=None):
+    def _refuse_constant(name):
+        raise ValueError(f"non-finite number {name} refused")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", help="JSON containing map_done/eligible/plan_sha256/bridge_sha256")
-    args = parser.parse_args()
-    with open(args.input, encoding="utf-8") as stream:
-        values = json.load(stream)
-    print(json.dumps(sample(**values), sort_keys=True, separators=(",", ":"), allow_nan=False))
+    args = parser.parse_args(argv)
+    try:
+        with open(args.input, encoding="utf-8") as stream:
+            values = json.load(stream, parse_constant=_refuse_constant)
+        if not isinstance(values, dict) or set(values) != {"map_done", "eligible", "plan_sha256", "bridge_sha256"}:
+            raise ValueError("input must be one object with the four sample keys")
+        print(json.dumps(sample(**values), sort_keys=True, separators=(",", ":"), allow_nan=False))
+    except (OSError, ValueError) as error:
+        print(f"coast-sample: {error}", file=sys.stderr)
+        return 2
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

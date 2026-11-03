@@ -236,6 +236,9 @@ export const WINDOW_LIMITS: Readonly<Record<'boat' | 'other', Readonly<WindowLim
 /** Seas at least this high (ft) at least this period (s) keep an hour out of a window whatever the limits. */
 export const LONG_PERIOD_SWELL = Object.freeze({height: 2.5, period: 15});
 
+/** The one definition of when a model run is old: older than holdHours holds a calm word, older than dropHours is not used. */
+export const FORECAST_AGE = Object.freeze({holdHours: 18, dropHours: 36});
+
 /** One hour's window inputs; nulls are unknown, and an unknown never fits a window. */
 export interface WindowHour {wind: number | null; gust: number | null; wave: number | null; period: number | null}
 

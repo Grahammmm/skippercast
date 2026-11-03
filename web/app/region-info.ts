@@ -44,6 +44,15 @@ export const REGION_READ_TIMEOUT_MS = 10_000;
 /** SCJ-7: the reader's answer when regions/<id>/region.json is a 404, so the region does not exist (not a failed read). */
 export const REGION_MISSING = 'missing' as const;
 
+const zones = new Map<string, boolean>();
+/** RF0510-2: a region's zone is a 1..64-char string Intl knows; answers are cached (few region ids, at most 64 kept). */
+function validZone(value: unknown): value is string {
+  if (typeof value !== 'string' || !value || value.length > 64) return false;
+  let ok = zones.get(value);
+  if (ok === undefined) { try { new Intl.DateTimeFormat('en-US', {timeZone: value}); ok = true; } catch { ok = false; } if (zones.size < 64) zones.set(value, ok); }
+  return ok;
+}
+
 /** Share parsed cold reads, not just headers: each admitted slot includes JSON consumption.
  * Caller cancellation withdraws publication without freeing an abort-ignoring task's slot. */
 export function createRegionReader(fetchFn: typeof fetch, {limit = 4, timeoutMs = REGION_READ_TIMEOUT_MS} = {}) {
@@ -53,11 +62,14 @@ export function createRegionReader(fetchFn: typeof fetch, {limit = 4, timeoutMs 
     if (!response.ok) { void response.body?.cancel().catch(() => {}); return response.status === 404 ? REGION_MISSING : null; }
     const json = await response.json() as {name?: string; map?: {center?: [number, number]; local_areas?: unknown}; timezone?: string; assets?: {charters?: unknown}; chart_files?: unknown}
       & Omit<RulesRegion, 'id' | 'assets'>;
+    if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
     const center = json.map?.center;
     if (typeof json.name !== 'string' || !center || center.length !== 2 || !center.every(Number.isFinite)) return null;
+    const timezone = json.timezone === undefined ? DEFAULT_ZONE : validZone(json.timezone) ? json.timezone : null;
+    if (!timezone) return null;
     const areas = Array.isArray(json.map?.local_areas) ? json.map.local_areas as ReportLocalArea[] : [];
     const aerial = aerialBase(json), tide = tideRegion(id, json), unavailable = unavailableTargets(json), chartFiles = chartFilesOf(json.chart_files);
-    return {id, name: json.name, center: [center[0], center[1]], timezone: json.timezone ?? DEFAULT_ZONE,
+    return {id, name: json.name, center: [center[0], center[1]], timezone,
       ...tide ? {tide} : {}, ...chartFiles ? {chartFiles} : {},
       localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), ...aerial ? {aerial} : {},
       ...typeof json.assets?.charters === 'string' ? {charters: json.assets.charters} : {},

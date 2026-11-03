@@ -10,9 +10,11 @@ import hashlib
 import ipaddress
 import json
 import math
+import os
 from pathlib import Path
 import re
 from urllib.parse import urlsplit
+import uuid
 from zoneinfo import ZoneInfo
 
 from ..paths import repo_root
@@ -55,10 +57,14 @@ def ecology_profile_id(region):
     return standalone or legacy
 
 
-def atomic_json(path, value, *, indent=None, kind=None):
+def atomic_json(path, value, *, indent=None, kind=None, unique_tmp=False):
     """Write JSON via a temporary file and rename. With kind (a schemas/ kind such as
     'daily-feed'), the value is validated first and a mismatch raises ContractError
-    before anything is written; see skippercast.validate.check."""
+    before anything is written; see skippercast.validate.check.
+
+    The temporary file is '<name>.tmp' (callers rely on that name to refuse a planted
+    link). With unique_tmp, it is a name private to this writer, removed on failure, so
+    two processes writing the same shared target never rename each other's file."""
     if kind is not None:
         from .. import validate
         validate.check(kind, value)
@@ -66,9 +72,17 @@ def atomic_json(path, value, *, indent=None, kind=None):
     path.parent.mkdir(parents=True, exist_ok=True)
     encoded = (json.dumps(value, ensure_ascii=False, allow_nan=False, indent=indent,
                           separators=(",", ":") if indent is None else None) + "\n").encode()
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_bytes(encoded)
-    tmp.replace(path)
+    if not unique_tmp:
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_bytes(encoded)
+        tmp.replace(path)
+        return {"sha256": hashlib.sha256(encoded).hexdigest(), "bytes": len(encoded)}
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
+    try:
+        tmp.write_bytes(encoded)
+        tmp.replace(path)
+    finally:
+        tmp.unlink(missing_ok=True)
     return {"sha256": hashlib.sha256(encoded).hexdigest(), "bytes": len(encoded)}
 
 
