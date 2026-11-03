@@ -442,6 +442,14 @@
       "en": "open all year",
       "es": "abierta todo el año"
     },
+    "rule_season_opens": {
+      "en": "opens {open}; closing date not listed",
+      "es": "abre el {open}; fecha de cierre no indicada"
+    },
+    "rule_season_closes": {
+      "en": "closes {close}; opening date not listed",
+      "es": "cierra el {close}; fecha de apertura no indicada"
+    },
     "rule_depth": {
       "en": "{n} ft depth limit",
       "es": "límite de profundidad {n} pies"
