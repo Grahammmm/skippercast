@@ -125,6 +125,14 @@ test('FE-33: where a coast report binds, the sparkline draws its tide curve in t
   const spark = root.locator('figure.app-spark');
   const chart = spark.locator('svg.series-chart');
   await expect(chart).toHaveAttribute('aria-label', /^Tide in ft MLLW\./);
+  // CoastMarkup links panel.css and the token bridge into its shadow root asynchronously (CoastMarkup.tsx), and the
+  // bridge is what defines --coast-amber: until both sheets have loaded the curve's style="stroke:var(--coast-amber)"
+  // is invalid at computed-value time and reads "none". Wait for them, as e2e/coast-markup.spec.ts mount() does, so
+  // the stroke below is the colour the browser actually paints.
+  await expect.poll(() => spark.locator('.app-coast-markup').evaluate(el => {
+    const links = [...(el.shadowRoot?.querySelectorAll('link') ?? [])] as HTMLLinkElement[];
+    return links.length === 2 && links.every(link => !!link.sheet);
+  })).toBe(true);
   expect(await chart.locator('path').evaluate(el => getComputedStyle(el).stroke)).toBe(await page.evaluate(() => {
     const probe = Object.assign(document.createElement('i'), {style: 'color: var(--amber)'});
     document.body.append(probe);
