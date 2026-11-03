@@ -427,8 +427,10 @@ export function createPlanner(deps: PlannerDeps) {
   function prepare(): Promise<void> {
     if (pending) return pending;
     const key = fileKey(); attempted = key; preparing.value = true; prepared = null;
-    pending = exportFile('gpx').then(file => { if (!disposed && key === fileKey()) prepared = {file, key, at: now().getTime(), hash: canonical?.publication.export_sha256}; })
-      .catch(error => { if (!disposed && key === fileKey()) actionStatus.value = (error as Error).message; })
+    // A result for a key that has since changed is dropped and its key forgotten, so a plan that returns to it is prepared again.
+    const stale = (): boolean => { if (disposed || key === fileKey()) return disposed; if (attempted === key) attempted = ''; return true; };
+    pending = exportFile('gpx').then(file => { if (!stale()) prepared = {file, key, at: now().getTime(), hash: canonical?.publication.export_sha256}; })
+      .catch(error => { if (!stale()) actionStatus.value = (error as Error).message; })
       .finally(() => { pending = null; preparing.value = false; });
     return pending;
   }
