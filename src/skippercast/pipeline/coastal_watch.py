@@ -5,10 +5,11 @@ from datetime import datetime, timezone, timedelta
 from html.parser import HTMLParser
 import hashlib
 import re
+import sys
 from urllib.parse import urlencode, urlsplit
 from pathlib import Path
 from .collect import Client, publication, source, stamp, age_hours
-from ..platform.contracts import read_json, atomic_json
+from ..platform.contracts import ID, read_json, atomic_json
 from ..platform.coasts import compile_coasts
 
 MPA = 'https://services2.arcgis.com/Uq9r85Potqm3MfRV/arcgis/rest/services/biosds582_fpu/FeatureServer/0/query'
@@ -133,15 +134,30 @@ def collect(now=None, previous=None, reports=None, client_factory=CoastalClient)
             'health':{'status':'degraded' if issues else 'ok','issues':issues},'policy':directory['policy']}
 
 
+def _load(path):
+    """(object, None) or (None, fixed reason). Never echoes file contents or paths."""
+    try: value=read_json(path)
+    except (OSError, ValueError, RecursionError): return None, 'unreadable JSON'
+    return (value, None) if isinstance(value, dict) else (None, 'not an object')
+
+
 def run(output, previous_root=None, report_root=None):
     old=previous_root/'coastal/latest.json' if previous_root else None
-    previous=read_json(old) if old and old.is_file() else None
-    reports=[]
+    previous=None
+    if old and old.is_file():
+        previous,reason=_load(old)
+        if reason: print(f'coastal-watch: previous snapshot ignored: {reason}', file=sys.stderr)
+    reports=[]; skipped=0
     if report_root:
         for p in report_root.glob('regions/*/latest.json'):
-            feed=read_json(p)
-            if feed.get('region_id')==p.parent.name: reports.extend(feed.get('reports',[]))
+            feed,reason=_load(p)
+            if feed is not None and 'reports' in feed and not isinstance(feed['reports'], list): reason='not an object'
+            if reason:
+                name=p.parent.name if ID.fullmatch(p.parent.name) else '?'
+                print(f'coastal-watch: region feed skipped: {name}: {reason}', file=sys.stderr); skipped+=1
+            elif feed.get('region_id')==p.parent.name: reports.extend(feed.get('reports',[]))
     data=collect(previous=previous,reports=reports)
+    if skipped: data['health']['skipped_report_feeds']=skipped
     atomic_json(output/'coastal/latest.json',data)
     # Separate geometry keeps routine species/status downloads small.
     public={**data,'sources':{k:{**v,'data':{kk:vv for kk,vv in (v.get('data') or {}).items() if kk!='geojson'}} for k,v in data['sources'].items()}}

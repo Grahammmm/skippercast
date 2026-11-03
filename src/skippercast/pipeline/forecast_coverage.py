@@ -13,17 +13,27 @@ WIND_MODELS = ('gfs_global', 'ecmwf_ifs025')
 WAVE_MODELS = ('ncep_gfswave016', 'ecmwf_wam')
 
 
+def _number(value):
+    return type(value) in (int, float) and math.isfinite(value)
+
+
 def _sample(model, point_index, epoch, field, unit, now):
-    data = model.get('data') or []
-    meta = model.get('meta') or {}
-    if point_index >= len(data) or not isinstance(meta.get('last_run_initialisation_time'), (int, float)):
+    if not isinstance(model, dict):
         return None
-    if now.timestamp() - meta['last_run_initialisation_time'] > 36 * 3600:
+    data, meta = model.get('data') or [], model.get('meta') or {}
+    if not isinstance(data, list) or not isinstance(meta, dict) or point_index >= len(data):
         return None
-    if isinstance(meta.get('data_end_time'), (int, float)) and epoch > meta['data_end_time']:
+    run, end = meta.get('last_run_initialisation_time'), meta.get('data_end_time')
+    if not _number(run) or run > now.timestamp() + 3600 or now.timestamp() - run > 36 * 3600:
+        return None
+    if end is not None and (not _number(end) or epoch > end):
         return None
     row = data[point_index]
+    if not isinstance(row, dict):
+        return None
     hourly, units = row.get('hourly') or {}, row.get('hourly_units') or {}
+    if not isinstance(hourly, dict) or not isinstance(units, dict):
+        return None
     times, values = hourly.get('time'), hourly.get(field)
     if (units.get('time') != 'unixtime' or row.get('utc_offset_seconds') != 0 or
             units.get(field) != unit or not isinstance(times, list) or
@@ -39,17 +49,17 @@ def _sample(model, point_index, epoch, field, unit, now):
     if field == 'wave_height':
         periods = hourly.get('wave_period')
         if (units.get('wave_period') != 's' or not isinstance(periods, list) or
-                len(periods) != len(times) or not isinstance(periods[index], (int, float)) or
-                not math.isfinite(periods[index]) or periods[index] <= 0):
+                len(periods) != len(times) or not _number(periods[index]) or periods[index] <= 0):
             return None
-    return value if isinstance(value, (int, float)) and math.isfinite(value) and value >= 0 else None
+    return value if _number(value) and value >= 0 else None
 
 
 def audit_forecast_coverage(forecast, region, now):
     """Return per-point, per-date rated-hour and independent-model coverage."""
     zone = ZoneInfo(region['timezone'])
     today = now.astimezone(zone).date()
-    models = forecast.get('models') or {}
+    models = forecast.get('models') if isinstance(forecast, dict) else None
+    models = models if isinstance(models, dict) else {}
     points = []
     for index, point in enumerate(region['forecast_points']):
         days = []

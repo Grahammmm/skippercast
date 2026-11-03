@@ -9,6 +9,7 @@
 // loader reads the boundary snapshot and closures, the live ds582 query (else the daily
 // feed's boundary record) replaces the snapshot, and the daily feed's check of NOAA's
 // closure file renews the closures; habitat.ts decides what shows. Erasable syntax only.
+// Survey fill ramps from zoom 9, its outline starts at 11, and depth labels at 12.
 import {computed, effect, signal} from '@preact/signals';
 import {feedURL} from '../../dist/feeds.js';
 import {dailyPartPath} from '../../dist/offline-core.js';
@@ -18,7 +19,7 @@ import {grade, habitat, navigate, profile, region, selection, species, withParam
 import type {ChartMark} from './coastline.ts';
 import {
   CHECKING, EMPTY, acceptsFeed, assessScreen, atlasCard, closureCheckedAt, geologyCard, geologyFeatures, markFeatures, markShown, receiptCard, surveyCard,
-  surveyFeatures, terrainCard, terrainDetailCard, validDailyPart, withheld, withheldCard,
+  markAreas, surveyFeatures, terrainCard, terrainDetailCard, validDailyPart, withheld, withheldCard,
   type Atlas, type Collection, type DailyRecord, type Geology, type HabitatReceipt, type MarkData, type MarkScreen, type RegionData, type ScreenInputs, type Survey,
 } from './habitat.ts';
 import {DENSITY_SOURCE, GEOLOGY_SOURCE, MARKS_SOURCE, SELECTION_SOURCE, SURVEY_SOURCE, overlayFeatures, setTerrainLayer} from './layers.ts';
@@ -53,7 +54,7 @@ const linked = computed(() => { const id = habitat.value, s = terrainMark.value;
 /** The link's atlas mark while the screen shows it. */
 const shownSpot = (id: string | null) => {
   const t = id ? markData.value?.atlas?.targets.find(x => x.id === id) : undefined;
-  return t && !withheld(t, markScreen.value) ? t : null;
+  return t && !withheld(t, markScreen.value, markAreas(t, markData.value?.atlas)) ? t : null;
 };
 /** The legend's line for the screen where the region has reef marks for the target; empty elsewhere. */
 export const markNote = computed(() => markData.value?.atlas?.targets.some(t => markShown(t, target.value)) ? markScreen.value.note : '');
@@ -70,7 +71,7 @@ const densityMarks = computed(() => profile.value === 'shore' ? EMPTY : shownMar
 
 /** Each FE-18 source's GeoJSON for the Chart. */
 export const markSources: Readonly<Record<string, {readonly value: Collection}>> = {
-  [SURVEY_SOURCE]: computed(() => surveyFeatures(markData.value, target.value)),
+  [SURVEY_SOURCE]: computed(() => surveyFeatures(markData.value, target.value, markScreen.value)),
   [GEOLOGY_SOURCE]: computed(() => geologyFeatures(markData.value, target.value)),
   [DENSITY_SOURCE]: densityMarks,
   [MARKS_SOURCE]: shownMarks,
@@ -95,7 +96,7 @@ export const densityShown = computed<number | null>(() => {
 export const spotCard = computed<ChartMark | null | undefined>(() => {
   const id = selection.value, data = markData.value, screen = markScreen.value;
   if (!id) return null;
-  const t = data?.atlas?.targets.find(x => x.id === id), w = t && withheld(t, screen);
+  const t = data?.atlas?.targets.find(x => x.id === id), w = t && withheld(t, screen, markAreas(t, data?.atlas));
   return !data ? undefined : !t ? null : w ? withheldCard(t, w, screen) : atlasCard(t, data, target.value);
 });
 
@@ -157,7 +158,9 @@ export function markStyle(p: Palette) {
   return {
     sources: {[SURVEY_SOURCE]: source(), [GEOLOGY_SOURCE]: source(), [DENSITY_SOURCE]: source(), [MARKS_SOURCE]: source(), [SELECTION_SOURCE]: source()},
     habitat: [
-      {id: SURVEY_PICK, type: 'fill', source: SURVEY_SOURCE, minzoom: MIN_ZOOM, paint: {'fill-color': kind, 'fill-opacity': 0.25}},
+      {id: SURVEY_PICK, type: 'fill', source: SURVEY_SOURCE, minzoom: MIN_ZOOM, paint: {'fill-color': kind, 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0.12, 12, 0.22, 15, 0.3]}},
+      {id: 'survey-habitat-line', type: 'line', source: SURVEY_SOURCE, minzoom: 11,
+        paint: {'line-color': kind, 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.6, 15, 1.6], 'line-opacity': 0.8}},
       {id: GEOLOGY_PICK, type: 'fill', source: GEOLOGY_SOURCE, minzoom: MIN_ZOOM, paint: {'fill-color': kind, 'fill-opacity': 0.06}},
       {id: 'geology-line', type: 'line', source: GEOLOGY_SOURCE, minzoom: MIN_ZOOM, paint: {'line-color': kind, 'line-width': 1.2, 'line-dasharray': [3, 2]}},
     ],
@@ -169,6 +172,10 @@ export function markStyle(p: Palette) {
       {id: 'marks-fit', type: 'symbol', source: MARKS_SOURCE, minzoom: MIN_ZOOM, filter: ['has', 'fit'],
         layout: {'text-field': ['get', 'fit'], 'text-font': [LABEL_FONT], 'text-size': 11, 'text-allow-overlap': true, 'text-ignore-placement': true},
         paint: {'text-color': p.text}},
+      {id: 'marks-depth', type: 'symbol', source: MARKS_SOURCE, minzoom: 12, filter: ['has', 'depth'],
+        layout: {'text-field': ['get', 'depth'], 'text-font': [LABEL_FONT], 'text-size': ['interpolate', ['linear'], ['zoom'], 12, 10, 15, 12],
+          'text-offset': [0, 1.6], 'text-anchor': 'top', 'text-optional': true},
+        paint: {'text-color': p.text, 'text-halo-color': p.bg, 'text-halo-width': 1.2}},
       {id: 'selection-ring', type: 'circle', source: SELECTION_SOURCE, paint: {'circle-radius': 15, 'circle-opacity': 0, 'circle-stroke-color': p.text, 'circle-stroke-width': 2.5}},
     ],
   };
@@ -266,7 +273,8 @@ export function createMarks(options: MarksOptions = {}): {destroy(): void} {
     effect(() => {
       const id = region.value, current = ++run;
       markData.value = null; markScreen.value = CHECKING; clearTimeout(recheck);
-      if (id) read(id, current).catch(error => { if (current === run) onError('marks', error); });
+      // SC2007-01: a failed region.json read ends the check as unavailable (marks withheld), never "Checking…" for the visit.
+      if (id) read(id, current).catch(error => { if (current === run) { setScreen({areas: null, checkedAt: null, live: false}); onError('marks', error); } });
     }),
     effect(() => {
       const id = habitat.value, r = region.value, s = coastSpecies(species.value, profile.value), depthLimitFt = terrainDepthLimitFt(profile.value);

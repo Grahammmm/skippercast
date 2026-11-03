@@ -98,7 +98,7 @@
     },
     {
       "path": "schemas/shore-habitat.schema.json",
-      "sha256": "8052e171505636a4472549811df18368bba9569efc51418f6073a0517e782fa2"
+      "sha256": "4587bfe7bd07bbfa6da56069fb7dbeb4041d413fc635af8fc2c58e294e9572d5"
     },
     {
       "path": "schemas/source.schema.json",

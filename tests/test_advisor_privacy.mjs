@@ -49,7 +49,7 @@ test('advisorLog redacts phone numbers in every string, at any depth, keys inclu
 
 test('redact covers the patterns in 02: \\+?1?\\d{10} and \\+\\d{10,15}', () => {
   for (const s of ['8055550100', '18055550100', '+18055550100', '+447700900123', '+861012345678901']) assert.equal(redact(s), '[redacted]', s);
-  assert.equal(redact('805-555-0100'), '805-555-0100', 'separated digits are not a 10-digit run (the engine never logs bodies)');
+  assert.equal(redact('805-555-0100'), '[redacted]', 'a formatted NANP number is redacted too (RF1050-3)');
   assert.equal(redact(42), 42); assert.equal(redact(null), null); assert.equal(redact(true), true);
   const deep = {}; let at = deep; for (let i = 0; i < 20; i++) at = at.next = {};
   assert.doesNotThrow(() => JSON.stringify(redact(deep)));

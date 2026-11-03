@@ -261,9 +261,9 @@ class ScopeCompatibility(ScopeCase):
 
     def test_json_contract(self):
         _, config = self.config('noncentral')
-        for text, reason in (('{"id":"offline-demo","id":"other"}', 'Duplicate JSON key'),
-                             ('{"id":"offline-demo","value":NaN}', 'Non-finite JSON number'),
-                             ('{', 'Expecting property name')):
+        for text, reason in (('{"id":"offline-demo","id":"other"}', 'is not valid JSON: catalog/demo-scope.json'),
+                             ('{"id":"offline-demo","value":NaN}', 'is not valid JSON: catalog/demo-scope.json'),
+                             ('{', 'is not valid JSON: catalog/demo-scope.json')):
             with self.subTest(text=text):
                 config.write_text(text)
                 with self.assertRaisesRegex(ValueError, reason):

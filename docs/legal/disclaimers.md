@@ -8,7 +8,7 @@ Where these appear (guide §10.6):
 
 1. the [terms of use](../../dist/terms.html) (full text, sections 2–5 and 9–10);
 2. one first-launch acknowledgement (short form of all four; not yet built);
-3. one persistent footer line: **“Planning aid · not a navigation chart”** (not yet built);
+3. one persistent footer line: **“Planning aid · not a navigation chart”** (brief footer `BriefFooter` and the landing footer);
 4. the Export sheet, before a chartplotter file is downloaded (C1 and C4 short forms).
 
 When copy changes here, update the terms page and the in-app strings in the same PR. Do not weaken the *information* in a caveat when shortening it; only its presentation may change.

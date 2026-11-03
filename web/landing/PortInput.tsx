@@ -15,6 +15,8 @@ export type PortInputProps = {
   ports: readonly Port[] | null;
   onChoose: (port: Port) => void;
   onExplore: () => void;
+  /** Ask for the list again after it failed (the landing's step 1); shown as "Try again" only for an empty list. */
+  onRetry?: () => void;
   /** The input's label; the landing's question by default. */
   label?: string;
   autoFocus?: boolean;
@@ -26,7 +28,7 @@ export type PortInputProps = {
   cookies?: CookieJar | null;
 };
 
-export function PortInput({ports, onChoose, onExplore, label = COPY.question, autoFocus = false, locate = false, geolocation, storage, cookies}: PortInputProps) {
+export function PortInput({ports, onChoose, onExplore, onRetry, label = COPY.question, autoFocus = false, locate = false, geolocation, storage, cookies}: PortInputProps) {
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
@@ -59,6 +61,7 @@ export function PortInput({ports, onChoose, onExplore, label = COPY.question, au
       <div class="port-input-results" aria-live="polite">
         {ports === null ? <p class="port-input-empty">Loading ports…</p> : null}
         {ports && !matches.length ? <p class="port-input-empty">{ports.length ? COPY.empty : 'Port choices are unavailable. Explore the coast instead.'}</p> : null}
+        {ports && !ports.length && onRetry ? <Button size="sm" onClick={onRetry}>Try again</Button> : null}
         <ul class="port-input-list">
           {matches.map(port => (
             <li key={port.id}>

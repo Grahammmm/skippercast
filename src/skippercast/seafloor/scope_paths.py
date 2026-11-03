@@ -44,7 +44,15 @@ def resolve_scope(root, *, scope_config=None, scope_id=None):
             raise ValueError('Scope config must be inside the repository root')
     if not config_path.is_file():
         raise FileNotFoundError(f'Seafloor scope config is missing: {config_path}')
-    config = read_json(config_path)
+    rel = config_path.relative_to(root)
+    try:
+        config = read_json(config_path)
+    except UnicodeDecodeError as exc:
+        raise ValueError(f'Scope config is not UTF-8 text: {rel}') from exc
+    except ValueError as exc:
+        raise ValueError(f'Scope config is not valid JSON: {rel}') from exc
+    if not isinstance(config, dict):
+        raise ValueError(f'Scope config must be a JSON object: {rel}')
     ident = config.get('id')
     if not isinstance(ident, str) or not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', ident):
         raise ValueError('Scope config needs a stable lowercase ID')

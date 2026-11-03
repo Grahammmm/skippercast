@@ -50,7 +50,7 @@ for (const entry of Object.keys(V2_EVENTS)) {
   test(`${entry} starts telemetry once, before it renders`, () => {
     const code = source(entry);
     assert.match(code, IMPORT, 'imports initTelemetry from web/telemetry.ts');
-    const calls = [...code.matchAll(CALL)];
+    const calls = [...code.matchAll(entry === 'web/app/main.tsx' ? /^initTelemetry\(\{views: true\}\);$/gm : CALL)];
     assert.equal(calls.length, 1, 'one top-level initTelemetry() call');
     // Before the first render, so an error while the page builds is reported too.
     const render = code.search(/^(?:mount\(|if \(host\))/m);
@@ -79,5 +79,5 @@ test('the privacy notice, telemetry doc and CHANGELOG name every v2 event', () =
   }
   assert.match(notice, /The home page\s+sends error reports only/);
   // FE-61: v1's map was the only sender of these; the notice no longer lists them.
-  for (const gone of ['map_viewed', 'forecast_viewed', 'install']) assert.doesNotMatch(notice, new RegExp(`<code>${gone}</code>`), gone);
+  for (const gone of ['forecast_viewed', 'install']) assert.doesNotMatch(notice, new RegExp(`<code>${gone}</code>`), gone);
 });

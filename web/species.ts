@@ -18,7 +18,7 @@ import {METHOD_RULES, PROFILE_TABLE, speciesForProfile, type PlanLike, type Prof
 import {planIndexURL} from './startup-forms.ts';
 
 /** One search plan as the target list reads it (`search-plans.json` `profiles[id]`). */
-export interface Plan extends PlanLike {readonly name?: string}
+export interface Plan extends PlanLike {readonly name?: string; readonly life_stage?: string; readonly search_for?: string; readonly habitat?: string; readonly presentation?: string; readonly method?: string; readonly timing?: string; readonly condition_response?: string; readonly caution?: string; readonly tactics_basis?: string; readonly required_to_confirm?: readonly string[]; readonly source_links?: readonly {readonly title: string; readonly href: string}[]; readonly numeric_bite_model?: boolean}
 /**
  * Where a target comes from (FE-54): a SkipperCast search plan, the profile's own species with no
  * plan here, a coast habitat target the terrain scores, or the link's own target. The menu groups
@@ -48,7 +48,7 @@ export interface TargetOption {
 }
 
 /** The region's search plans, keyed by region so another region's never lists. */
-export const regionPlans = signal<{region: string; plans: Readonly<Record<string, Plan>>} | null>(null);
+export const regionPlans = signal<{region: string; plans: Readonly<Record<string, Plan>>; reviewedAt: string | null} | null>(null);
 /** The region's `map.unavailable_targets` (target id → reason), published by the region read (web/app/App.tsx loadRegion). */
 export const regionUnavailable = signal<{region: string; targets: Readonly<Record<string, string>>} | null>(null);
 /** How many survey atlas marks the region's Chart loaded (web/map/marks.ts); null until they load. */
@@ -64,6 +64,7 @@ export function unavailableTargets(json: unknown): Record<string, string> {
 }
 
 export const PLAN_READ_TIMEOUT_MS = 10_000;
+const planDates = new WeakMap<object, string | null>();
 let planGeneration = 0;
 let planRequest: AbortController | null = null;
 effect(() => {
@@ -81,8 +82,9 @@ async function readPlans(url: string, id: string, fetchFn: typeof fetch, signal:
   try {
     const response = await fetchFn(url, {signal});
     if (!response.ok) return null;
-    const json = await response.json() as {region_id?: unknown; profiles?: unknown};
+    const json = await response.json() as {region_id?: unknown; profiles?: unknown; reviewed_at?: unknown};
     const plans = json.profiles && typeof json.profiles === 'object' && !Array.isArray(json.profiles) ? json.profiles as Record<string, Plan> : null;
+    if (plans) planDates.set(plans, typeof json.reviewed_at === 'string' ? json.reviewed_at : null);
     return plans && json.region_id === id ? plans : null;
   } catch { return null; }
 }
@@ -109,7 +111,7 @@ export async function loadPlans(id: string, fetchFn: typeof fetch = fetch): Prom
       return index ?? (controller.signal.aborted ? null : await readPlans(`regions/${encodeURIComponent(id)}/search-plans.json`, id, fetchFn, controller.signal));
     };
     const plans = await Promise.race([read(), aborted]);
-    if (plans && generation === planGeneration && selectedRegion === region.peek()) regionPlans.value = {region: id, plans};
+    if (plans && generation === planGeneration && selectedRegion === region.peek()) regionPlans.value = {region: id, plans, reviewedAt: planDates.get(plans) ?? null};
   } catch { /* The profile's own targets remain available on failure or timeout. */ }
   finally {
     clearTimeout(timer);

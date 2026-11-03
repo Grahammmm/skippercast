@@ -13,5 +13,5 @@ for(const path of ['/report','/feed.xml','/methodology','/about'])coastPages.all
  if(!['GET','HEAD'].includes(c.req.method))return new Response('Method not allowed',{status:405,headers:{Allow:'GET, HEAD'}});
  let template:string|undefined;
  if(path!=='/feed.xml'){const shell=await shellResponse(c,'/coast-readable.html');if(shell.ok)template=await shell.text();}
- return serveCoastPage(c.req.raw,{template,store:c.env.FEEDS??null,feeds:coastFeeds(c.env.COAST_FEEDS),regions:regions as unknown as Readonly<Record<string,CoastPageRegion>>,publicOrigin:deployment.public_origin});
+ return serveCoastPage(c.req.raw,{template,store:c.var.feeds??null,feeds:coastFeeds(c.env.COAST_FEEDS),regions:regions as unknown as Readonly<Record<string,CoastPageRegion>>,publicOrigin:deployment.public_origin});
 });
