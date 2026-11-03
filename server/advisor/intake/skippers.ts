@@ -205,10 +205,7 @@ export async function readFlow(db: D1Database, contactId: string): Promise<FlowS
   } catch { return null; }
 }
 /** Milliseconds since a stored time, or null when it is unreadable or in the future (clock skew, a hand-edited row). */
-const elapsed = (raw: string | undefined, now: number): number | null => {
-  const e = now - Date.parse(raw ?? '');
-  return Number.isFinite(e) && e >= 0 ? e : null;
-};
+const elapsed = (raw: string | undefined, now: number): number | null => { const e = now - Date.parse(raw ?? ''); return Number.isFinite(e) && e >= 0 ? e : null; };
 
 /** The next register step without an answer (a skipped field counts as answered), or null when complete. */
 export function nextStep(draft: FlowState['draft']): RegisterStep | null {
