@@ -1,14 +1,15 @@
-// GET /api/admin/fleet/clicks?days=7|30|90&region= — /go/ redirect counts for the
+// GET /api/admin/fleet/clicks?days=7|30|90&region= — days exactly '7', '30' or '90' (absent/empty: 30), region a regions/<id> name (registry.ts REGION) — /go/ redirect counts for the
 // admin (docs/plans/charter-fleet/design.md § 12, D15; CF-34). Read from the daily
 // fleet_link_clicks counters only; there is nothing per visitor to read. Counts
 // are raw redirects, not visitors: they are not deduplicated (threat model § 10.1),
 // so a figure shown to an operator must say so.
 import type {Target, Placement} from '../go.ts';
 import {TARGETS, PLACEMENTS, utcDay} from '../go.ts';
+import {REGION} from '../registry.ts';
 
 export const CLICK_DAYS = [7, 30, 90] as const;
 export type ClickDays = typeof CLICK_DAYS[number];
-const REGION = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$/;
+const DAYS: Record<string, ClickDays> = {'7': 7, '30': 30, '90': 90};
 const MAX_VESSELS = 200;
 
 type Counts = Record<Target, number> & {total: number};
@@ -26,10 +27,10 @@ const counts = (): Counts => ({...zero(TARGETS), total: 0});
 
 /** Parse ?days= (default 30) and ?region=; an error string for anything else. */
 export function clickQuery(days: string | undefined, region: string | undefined): {days: ClickDays; region: string | null} | {error: string} {
-  const d = Number(days || 30);
-  if (!(CLICK_DAYS as readonly number[]).includes(d)) return {error: 'days must be 7, 30 or 90'};
+  const d = !days ? 30 : Object.hasOwn(DAYS, days) ? DAYS[days] : undefined;
+  if (d === undefined) return {error: 'days must be 7, 30 or 90'};
   if (region && !REGION.test(region)) return {error: 'invalid region'};
-  return {days: d as ClickDays, region: region || null};
+  return {days: d, region: region || null};
 }
 
 /** Counts for the `days` UTC days ending today, by vessel, target and placement, most clicked first. */

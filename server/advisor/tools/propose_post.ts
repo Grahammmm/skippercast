@@ -14,6 +14,12 @@ import {postIdForMedia} from '../social/drafts.ts';
 import {decideHold} from '../vision/index.ts';
 import type {Action} from '../types.ts';
 
+/** The hint as caption text: whitespace folds to one space, control/format characters (zero-width, bidi) go, cut at 200 units on a whole code point. */
+export function cleanHint(raw: string): string {
+  const s = raw.replace(/\s+/g, ' ').replace(/[\p{Cc}\p{Cf}]/gu, '').replace(/ {2,}/g, ' ').trim();
+  return s.length > 200 ? s.slice(0, 200).replace(/[\uD800-\uDBFF]$/, '') : s;
+}
+
 export const proposePost: AdvisorTool = {
   name: 'propose_post',
   description: "Draft a social post from a skipper's catch or action photo (or video) for the team to review. Only for a photo they sent and asked to post. The team approves every post; after calling it say in one short line that it is queued for review.",
@@ -34,7 +40,7 @@ export const proposePost: AdvisorTool = {
       : 'no photo consent: the boat owner can text "post my photos" to allow it'}};
     const post = await ctx.db.prepare('SELECT status FROM advisor_posts WHERE id=?').bind(await postIdForMedia(row.id)).first<{status: string}>();
     if (post) return {result: {drafted: false, already: post.status, note: post.status === 'draft' ? 'It is already waiting for the team. Say so in one line.' : `This photo's post is ${post.status}.`}};
-    const hint = typeof input.hint === 'string' ? input.hint.replace(/\s+/g, ' ').trim().slice(0, 200) : '';
+    const hint = typeof input.hint === 'string' ? cleanHint(input.hint) : '';
     const actions: Action[] = [];
     if (row.publish_state === 'private') {
       actions.push({type: 'media_queue', mediaId: row.id, ...(hint ? {hint} : {})});
