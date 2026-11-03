@@ -380,7 +380,12 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
   // SC2222-07 only adds a sticky .app-mark-actions row (opaque --panel) and scroll padding inside the left-column mark card; legend paint is unaffected.
   // BF-wcag only adds a 24 px min-height to .app-brand and .app-brief-footer a; no paint changed.
-  "appCss": "56bb9e803ba45f777aebdded64013889b34d16ee8bd6a3c1b17528a03615d32c",
+  // SC-E2E-GREEN only lets the left-column legend shrink and scroll (flex/min-height/overflow) beside a mark-card min height,
+  // wraps the phone sheet's .app-area row, and gives the brief's .app-verdict-rules line margins, size and the existing
+  // .app-mark-regs a link rule; legend text paint and backing are unchanged.
+  // SC-POPOVER only places the desktop legend's basis popovers against their own button (position: fixed + anchor positioning) so the
+  // scrolling legend does not clip them; the popover keeps its existing ui.css paint, and legend text paint and backing are unchanged.
+  "appCss": "ec7a13668e7be9850c8d17fbcaef993aa50c376f764f5eeace229caf2cd96ad3",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.

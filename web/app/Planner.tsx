@@ -162,6 +162,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
       <details class="export-card" id="export-layers">
         <summary><span>2. What to include</span><strong id="export-layer-count">{Object.values(d.layers).filter(Boolean).length + (m.contourTracks.value ? 1 : 0)} layers</strong></summary>
         <div class="export-card-body export-checks">
+          {m.launch.value ? <label class="export-check"><input type="checkbox" checked={!!d.launchId} onChange={e => m.setLaunch(e.currentTarget.checked)} /><span>Include launch ramp: {m.launch.value.name}</span></label> : null}
           {LAYERS.map(([id, name, description]) => (
             <label key={id} class="export-check"><input type="checkbox" data-layer={id} checked={d.layers[id]} onChange={e => m.setLayer(id, e.currentTarget.checked)} />
               <span><strong>{name}</strong><small>{description}</small></span></label>
@@ -181,10 +182,12 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
         <p id="export-validation" role="status">{s.ok
           ? `${s.counts.outlines} reef outlines · ${s.counts.alignments} alignments · ${s.counts.exclusions} AVOID outlines${s.counts.contours === undefined ? '' : ` · ${s.counts.contours} depth contour tracks`}. ${s.counts.trackPoints.toLocaleString()} track points; largest track ${s.counts.largestTrack.toLocaleString()}.${s.counts.tracks > 15 ? ' More than 15 tracks: check your device’s free track capacity or reduce outlines.' : ''} Boundaries checked again when you export.`
           : s.message}</p>
+        {!s.ok && m.protectedHits.value.slice(0, 3).map(h => <p key={h.id}>Not exported: {h.label} is inside {h.matches.map(a => a.name).join(', ')} <button onClick={() => m.removeWaypoint(h.id)}>Remove {h.label}</button></p>)}
+        <p class="export-note">Snapshot prepared moments ago; valid for 60 seconds. Recheck rules before departure.</p>
         <p id="export-caveats" class="export-note">{EXPORT_CAVEATS[0]} {EXPORT_CAVEATS[1]}</p>
         <div class="export-actions">
           <button class="primary" id="export-download" disabled={!s.ok} onClick={() => void m.deliver('gpx')}>Download GPX</button>
-          <button id="export-share" disabled={!s.ok} onClick={() => void m.deliver('share')}>Share / Save file</button>
+          <button id="export-share" disabled={!s.ok} onClick={() => void m.deliver('share')}>{m.preparing.value ? 'Preparing…' : 'Share / Save file'}</button>
           <button id="export-notes" disabled={!m.notesReady.value} onClick={() => void m.deliver('notes')}>Download offline notes</button>
         </div>
         <p id="export-action-status" role="status">{m.actionStatus.value}</p>

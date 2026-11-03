@@ -18,6 +18,7 @@ import {chartFileListed} from './chart-files.ts';
 import {atlasMarksURL, planIndexURL} from './startup-forms.ts';
 import {MARKS_SOURCE} from './map/layers.ts';
 import {markSources} from './map/marks.ts';
+import {sharedFetch} from './shared-fetch.ts';
 import {NO_PLAN, fitCamera, rankedSpots, recheckPlan, screenRanked, type RankedPlan, type RankedScreen} from './map/ranked.ts';
 import {camera, cameraParam, choosePresentation, type Camera} from './map/stage.ts';
 import {beginWaypointPlacement, cancelWaypointPlacement} from './waypoint-placement.ts';
@@ -76,10 +77,18 @@ const go = (patch: Partial<Record<UrlKey, string | null>>): void => { navigate(w
 export const openTrip = (): void => { cancelWaypointPlacement(); if (location.hash !== TRIP_HASH) navigate(plain() + TRIP_HASH); else tripOpen.value = true; };
 export const closeTrip = (): void => { if (location.hash === TRIP_HASH) navigate(plain(), {replace: true}); tripOpen.value = false; refreshIds(); };
 
+// Committed files are read through web/shared-fetch.ts, so a file the startup already read (the
+// region, the protected-area snapshot) is not requested twice.
 const json = async (path: string): Promise<unknown> => {
-  const response = await fetch(path, {signal: AbortSignal.timeout(20000)});
+  const response = await sharedFetch(path, {signal: AbortSignal.timeout(20000)});
   if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
   return response.json();
+};
+/** dist/forecast.js `fetchJSON`'s contract (a body's `error` is a failure) over the shared read. */
+const screenJSON = async (path: string): Promise<unknown> => {
+  const body = await json(path) as {error?: unknown; reason?: unknown} | null;
+  if (body?.error) throw new Error(String(body.reason || 'Provider error'));
+  return body;
 };
 /** v1's region store set to `id` (the planner, the screen and the pack read it). */
 async function v1Region(id: string) {
@@ -98,7 +107,7 @@ function defaultInit(id: string): Promise<PlannerScreen> {
   const next = screenInits.then(async () => {
     const regions = await v1Region(id), {initProtectedAreas, MPA_QUERY} = await import('../dist/protected-areas.js'), r = regions.getRegion() as {id?: string; mpa?: {bounds?: number[]}};
     if (r.id !== id || new URL(MPA_QUERY).searchParams.get('geometry') !== r.mpa?.bounds?.join(',')) { screenElsewhere = true; throw new Error('protected-area check bound to another region'); }
-    return await initProtectedAreas(null, () => {}) as PlannerScreen;
+    return await initProtectedAreas(null, () => {}, screenJSON) as PlannerScreen;
   });
   screenInits = next.catch(() => {}); return next;
 }

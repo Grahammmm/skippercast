@@ -229,11 +229,16 @@ Public pages in `server/advisor/pages/`, routes in `server/routes/advisor.ts`
   pre-fills "What's biting out of <port>?", which the daily pre-router answers
   without a model call), with "Save the number" and the QR image; without a
   number it links `/chat.html`.
-- **Sitemap and robots.** `GET /sitemap-advisor.xml` (gated, 1 h) lists the
-  ports of active regions, every species page and verified boats, each with
-  its `?lang=es` alternate. There is no `dist/robots.txt`; `GET /robots.txt`
-  answers from the Worker only while the advisor is on (allow all, plus the
-  sitemap line) and otherwise falls through to the static site as before.
+- **Sitemap and robots.** `GET /sitemap-advisor.xml` (1 h) answers while
+  `TEXT_ADVISOR_ENABLED` or `PUBLIC_PAGES_ENABLED` is on (`pagesGate`) and lists only
+  pages that answer 200: ports of active regions and every species page always, verified
+  boats only while the advisor is on, consenting fleet vessels only while the fleet is on;
+  each has its `?lang=es` alternate, ports and species have no `<lastmod>`. `dist/robots.txt`
+  exists, is not edited and is served before the Worker (assets, no `run_worker_first`), so the
+  Worker's `GET /robots.txt` (both sitemap lines, while either flag is on) is not reached yet.
+- **Structured data.** Each indexable port and species page adds one `WebPage` node (url,
+  title, description, language, and the `Place` or `Thing` it is about) to the
+  `Organization` and `BreadcrumbList`; `noindex` pages add none. Strings are the page's own.
 - **Telemetry.** New funnel events `advisor_port_view`,
   `advisor_species_view`, `advisor_boat_view` and `advisor_cta`; funnel events
   may carry `source` (`txt`, `ig`, `fb`, `qr` from the page URL's `s`), which

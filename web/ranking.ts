@@ -53,14 +53,16 @@ export interface Pick {
   readonly distance: string; readonly depth: string; readonly fit: string; readonly reason: string;
   /** Straight-line nautical miles from the harbor (the Boat brief's run time); null without a harbor. */
   readonly nm: number | null;
-  /** Where a 'reef' pick is: its row moves the Chart there. */
-  readonly at?: {readonly latitude: number; readonly longitude: number};
+  /** Where the pick is: a 'reef' row moves the Chart there, and it is the Boat run's destination (web/brief/Run.tsx). */
+  readonly at: {readonly latitude: number; readonly longitude: number};
 }
 export type RankingSource = 'terrain' | 'atlas' | 'publication';
 /** One source's list: its label and basis sentence (§ 12), its picks, and what to say when it has none. */
 export interface Ranking {readonly source: RankingSource | null; readonly label: string; readonly basis: string; readonly picks: readonly Pick[]; readonly empty: string;
   /** The harbor the picks' distances run from; absent before the region's marks load. */
   readonly harbor?: string;
+  /** The position the picks' distances run from (the Boat run's start); absent with `harbor`. */
+  readonly origin?: {readonly latitude: number; readonly longitude: number};
   /** The range to consider the picks were kept inside (nm, one way); absent when none applied. */
   readonly reach?: number;
   /** Places that passed every other filter but are not confirmed water (web/land-water.ts), withheld. */
@@ -122,7 +124,7 @@ function atlasScreened(data: MarkData | null, screen: MarkScreen, target: string
       : target === 'rockfish' || target === 'rockfish-reef' || target === 'gopher-rockfish' ? 'rockfish' : null;
     const reason = species ? speciesFit(t, species)?.reason : null;
     const nm = miles(origin, t), yd = swim(keep, t);
-    return {id: t.id, kind: 'spot', name: t.label, distance: yd === null ? distance(nm) : swimText(yd), nm, depth: band(lo, hi),
+    return {id: t.id, kind: 'spot', name: t.label, distance: yd === null ? distance(nm) : swimText(yd), nm, at: {latitude: t.latitude, longitude: t.longitude}, depth: band(lo, hi),
       fit: fit?.line ?? 'Habitat fit unrated for this target', reason: reason ?? t.terrain_interpretation ?? 'Surveyed reef terrain.'};
   })};
 }
@@ -153,7 +155,7 @@ function habitatScreened(ranked: readonly HabitatFeature[], screen: MarkScreen, 
   return {withheld: held, pending, picks: onWater.slice(0, TOP).map(({f}) => {
     const p = f.properties, id = String(f.id ?? p.id), n = field ? Number(p[field]) : NaN;
     const at = {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}, nm = miles(origin, at), yd = swim(keep, at);
-    return {id, kind: 'habitat', name: 'Reef habitat', distance: yd === null ? distance(nm) : swimText(yd), nm,
+    return {id, kind: 'habitat', name: 'Reef habitat', distance: yd === null ? distance(nm) : swimText(yd), nm, at,
       depth: band(p.depth_min_ft, p.depth_max_ft), fit: label && n >= 1 && n <= 3 ? fitLine(label, n) : 'Screened reef habitat',
       reason: `Terrain score ${p.terrain_score}/100${p.terrain_grade ? ` · grade ${p.terrain_grade}` : ''}.`};
   })};
@@ -314,7 +316,7 @@ export function ranking(i: RankingInputs): Ranking {
     ...(s.withheld ? {withheld: s.withheld} : {}), ...(s.pending ? {pending: true} : {}),
   });
   const within = `within ${limit} ft${reach === null ? '' : ` and ${Number(reach.toFixed(1))} nm of ${harbor}`}${shore ? ` and ${shore.maxYd} yd of shore` : ''}`;
-  const extra = {...(origin ? {harbor: origin.name} : {}), ...(reach === null ? {} : {reach})};
+  const extra = {...(origin ? {harbor: origin.name, origin: {latitude: origin.latitude, longitude: origin.longitude}} : {}), ...(reach === null ? {} : {reach})};
   // A region that does not exist has nothing to rank for any profile, Shore included.
   if (i.missing) return {source: null, label: '', basis: '', picks: [], empty: 'No ranked places: this region does not exist.'};
   if (PROFILE_TABLE[i.profile].whereToLook === 'shore-runs')

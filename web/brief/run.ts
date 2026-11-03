@@ -9,8 +9,9 @@
 //   the window's first and last hour); no window means no return time, and
 //   the reason names the input that is missing; a window whose bar reads
 //   caution or unknown keeps that note beside the run time;
-// - the distance is straight-line from the region's harbor (web/ranking.ts),
-//   so the real run is at least this long and the fishing time at most this;
+// - the distance is the water route from the harbor (web/route.ts) when one is
+//   computed, else the straight line from it (web/ranking.ts), labelled as such;
+//   the real run is at least the straight line, so the fishing time is at most this;
 // - the speed is the one the user typed on this device (web/limits.ts
 //   cruiseSpeed); there is no default, and without it the brief says so.
 // Sea state, the bar crossing itself and fuel are left to the skipper; this
@@ -18,14 +19,15 @@
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import type {Window} from '../../packages/coast/src/types.ts';
+import type {RouteFailure} from '../route.ts';
 import type {Brief} from './types.ts';
 
 const MINUTE = 60_000;
 /** Times round to this many minutes: the run up, the turn-back time down, so fishing time is never overstated. */
 export const ROUND_MIN = 5;
 
-/** The chosen place the run goes to. */
-export interface RunPlace {readonly name: string; readonly nm: number}
+/** The chosen place the run goes to: `nm` is the water route's length ('water'), or the straight line with `why` no route was computed ('straight'). */
+export interface RunPlace {readonly name: string; readonly nm: number; readonly basis: 'water' | 'straight'; readonly why?: RouteFailure}
 
 export type RunState =
   | {readonly kind: 'no-speed'}
