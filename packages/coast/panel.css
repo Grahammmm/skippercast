@@ -1354,6 +1354,7 @@ input[type=range]::-webkit-slider-thumb {
   align-items: center;
   gap: 5px;
   margin-top: 15px;
+  min-height: 24px;
 }
 .text-link .icon {
   width: 14px;
@@ -1449,6 +1450,15 @@ input[type=range]::-webkit-slider-thumb {
   display: flex;
   align-items: center;
   gap: 5px;
+}
+/* WCAG 2.5.8: links standing alone (not inside a sentence) are at least 24 px tall. */
+.history-provenance a,
+.sheet-links a {
+  min-height: 24px;
+}
+.sheet-links a {
+  display: inline-flex;
+  align-items: center;
 }
 .history-provenance .icon {
   width: 13px;

@@ -58,6 +58,10 @@
 .ui-sheet[data-detent="peek"] .app-firstrun > .ui-button, .ui-sheet[data-detent="peek"] .app-firstrun-options small {
   position: absolute; width: 1px; height: 1px; min-width: 0; min-height: 0; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }
+/* BF-wcag: the clipped Keep button is still a Tab stop, so focus shows it at full touch size (skip-link pattern, WCAG 2.4.7). */
+.ui-sheet[data-detent="peek"] .app-firstrun > .ui-button:focus {
+  position: static; width: auto; height: auto; min-width: var(--touch-min); min-height: var(--touch-min); padding: var(--space-1) var(--space-3); overflow: visible; clip-path: none;
+}
 .ui-sheet[data-detent="peek"] .app-firstrun h2 { font-size: var(--text-15); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ui-sheet[data-detent="peek"] .app-firstrun-options { flex-direction: row; flex-wrap: nowrap; }
 .ui-sheet[data-detent="peek"] .app-firstrun-options .ui-button {
