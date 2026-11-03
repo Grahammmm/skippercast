@@ -114,8 +114,8 @@ test('whitelist, not echo: only documented keys, in order, re-encoded', () => {
   for (const key of ['utm_source', 'ui', 'diagnostics', 'access_token', 'place']) assert.equal(url.searchParams.has(key), false, key);
   assert.equal(url.searchParams.get('profile'), 'kayak', 'the profile shown, not the address\'s');
   assert.equal(url.searchParams.get('layers'), 'swell,sst');
-  const hostile = shareLink({href: `${ORIGIN}/map?region=${SOCAL}&target=${encodeURIComponent('a&ui=v2')}`, origin: ORIGIN, ports: PORTS, region: SOCAL, savedId: null, profile: 'boat', now: WED, tz: TZ});
-  assert.equal(new URL(hostile.url).searchParams.get('target'), 'a&ui=v2');
+  const hostile = shareLink({href: `${ORIGIN}/map?region=${SOCAL}&spot=${encodeURIComponent('a&ui=v2')}`, origin: ORIGIN, ports: PORTS, region: SOCAL, savedId: null, profile: 'boat', now: WED, tz: TZ});
+  assert.equal(new URL(hostile.url).searchParams.get('spot'), 'a&ui=v2');
   assert.equal(new URL(hostile.url).searchParams.has('ui'), false, 'values are encoded, never concatenated');
 });
 
