@@ -48,7 +48,7 @@ seafloor = ["skippercast[survey,publish,test]"]
 tls = ["truststore==0.10.5"]
 # Text Advisor media runner job (scripts/advisor/media_job.py, .github/workflows/advisor-media.yml):
 # image decoding and drawing, HEIC through pillow-heif. No requirements file: the workflow installs the extra.
-advisor = ["Pillow==12.3.0", "pillow-heif==1.8.1"]
+advisor = ["Pillow==13.0.0", "pillow-heif==1.8.1"]
 # Charter fleet pipeline (python -m skippercast.fleet): region and profile validation, and the
 # Zstandard decoder for the MarineCadastre AIS backfill. No requirements file: the fleet workflows install the extra.
 fleet = ["jsonschema==4.26.0", "zstandard==0.25.0"]
