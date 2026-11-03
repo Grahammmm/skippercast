@@ -8,6 +8,7 @@ import type {AdvisorTool} from './tool.ts';
 import {lookupRules} from '../answers/rules.ts';
 import {contactRegion, resolveSpecies} from '../answers/resolve.ts';
 import {regionConfig} from '../answers/regions.ts';
+import {ALL_SPECIES_KEYS, canonicalSpecies} from '../vision/species.ts';
 
 const MAX_RULES = 6, NOTE = 280;
 const clip = (s: string | null): string | null => s && s.length > NOTE ? `${s.slice(0, NOTE - 1).replace(/\s+\S*$/, '')}…` : s;
@@ -22,6 +23,7 @@ export const getRules: AdvisorTool = {
     const asked = String(input.species_key ?? '');
     const species = resolveSpecies(asked)?.key ?? asked.trim().toLowerCase();
     const wanted = typeof input.region === 'string' && regionConfig(input.region) ? input.region : contactRegion(ctx.contact, ctx.settings);
+    const known = ALL_SPECIES_KEYS.has(canonicalSpecies(species));   // as links.ts linkPath('rules:<key>'): only a link that resolves
     const rules = (await lookupRules(ctx.db, {region: wanted, speciesKey: species, now: ctx.now})).slice(0, MAX_RULES);
     return {result: {
       species_key: species, region: wanted,
@@ -33,7 +35,7 @@ export const getRules: AdvisorTool = {
         source_name: r.source_name, source_url: r.source_url, checked: r.reviewed_at.slice(0, 10), review_due: r.review_due, stale: r.stale,
       })),
       any_stale: rules.some(r => r.stale),
-      link: `{{link:rules:${species}}}`,
+      link: known ? `{{link:rules:${species}}}` : '{{link:rules}}',
       note: rules.length ? 'Quote only these rows, with the source and checked date. A stale row: say "double-check" and give the link.' : 'No reviewed rule for this species here: say to check the current CDFW rules and give the link. Do not state a number.',
     }};
   },
