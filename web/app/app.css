@@ -175,6 +175,14 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 /* The legend shrinks and scrolls before the card does, and the card keeps a usable height, so a longer legend cannot squeeze the card under its sticky actions. */
 .app-chrome-left > .app-mark { flex: 0 1 auto; min-height: min(100%, 16rem); width: auto; overflow-y: auto; }
 .app-chrome-left > .app-legend { flex: 0 1 auto; min-height: min(6rem, 25%); overflow-y: auto; align-self: flex-start; margin-top: auto; }
+/* The scrolling legend would clip an absolutely positioned basis popover to its own box (and the map stage clips it at the stage edge), so
+   the popover takes the viewport as its containing block and is placed against its own button by anchor positioning; it still opens
+   below the button and flips above when there is no room. A browser without anchor positioning keeps the in-flow absolute popover. */
+@supports (anchor-name: --a) and (position-anchor: --a) {
+  .app-chrome-left > .app-legend .ui-popover { anchor-name: --legend-basis; anchor-scope: --legend-basis; }
+  .app-chrome-left > .app-legend .ui-popover-body { position: fixed; position-anchor: --legend-basis; top: anchor(bottom); left: anchor(left); right: auto; position-try-fallbacks: flip-block; }
+  .app-chrome-left > .app-legend .ui-popover[data-align="end"] .ui-popover-body { left: auto; right: anchor(right); }
+}
 /* SC2222-07: while that card scrolls, its action row sticks to the card's foot (into its bottom padding), so the actions stay on
    screen; the scroll padding (two wrapped button rows) keeps a link focused by Tab from scrolling in under that row. */
 .app-chrome-left > .app-mark { scroll-padding-bottom: calc(2 * var(--touch-min) + 3 * var(--space-3)); }

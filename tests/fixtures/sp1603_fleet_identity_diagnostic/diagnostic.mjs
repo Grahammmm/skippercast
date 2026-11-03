@@ -13,7 +13,7 @@ export const pins = JSON.parse(readFileSync(path.join(HERE, 'pins.json'), 'utf8'
 export const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 export const load = name => JSON.parse(readFileSync(name, 'utf8'));
 export const save = (name, value) => writeFileSync(name, JSON.stringify(value, null, 2) + '\n');
-export const families = ['exponent_parity', 'astral_key_parity'];
+export const families = ['exponent_parity'];
 
 export function child(argv, directory, label) {
   mkdirSync(directory, {recursive: true});
@@ -55,7 +55,7 @@ export function evaluate(corpus, python, worker) {
   const cases = corpus.cases.map((c, i) => ({id: c.id, family: c.family, python: python.rows[i], worker: worker.rows[i],
     equal: python.rows[i].utf8_hex === worker.rows[i].utf8_hex && python.rows[i].value_key === worker.rows[i].value_key}));
   const controls = cases.filter(c => c.family === 'control');
-  if (controls.length !== 13 || controls.some(c => !c.equal)) throw Error('ORDINARY_CONTROL_FAILURE');
+  if (controls.length !== 15 || controls.some(c => !c.equal)) throw Error('ORDINARY_CONTROL_FAILURE');
   for (const family of families) {
     const group = cases.filter(c => c.family === family);
     if (group.length !== 2 || group.some(c => c.equal)) throw Error(`UNEXPECTED_AGREEMENT_OR_MISSING_SUBCASE:${family}`);
@@ -79,7 +79,7 @@ export function evaluate(corpus, python, worker) {
   });
   return {schema: 'skippercast.fleet-identity-diagnostic/v1', spec_version: pins.spec_version, id: pins.id,
     status: 'PARITY_UNRESOLVED', strict_exit: 1, mismatch_ids: assertions.filter(t => !t.passed).map(t => t.id),
-    counts: {root_tests: 2, passed: 0, failed: 2, controls: controls.length, cases: cases.length, skipped: 0},
+    counts: {root_tests: 1, passed: 0, failed: 1, controls: controls.length, cases: cases.length, skipped: 0},
     assertions, source_hashes: pins.sources, corpus_sha256: pins.corpus_sha256,
     runtimes: {python: python.runtime, worker: worker.runtime}, cases};
 }
