@@ -109,11 +109,18 @@ test('canonical aliases redirect safely, unknowns do not echo, duplicates are re
     }
     const blank = await get('/ports/', {...pub, DB: db});
     assert.equal(blank.status, 404); assert.match(await blank.text(), /name="robots" content="noindex"/);
-    for (const id of ['%2e%2e', 'atlantis', '__proto__', 'constructor', 'x'.repeat(300), '%3Cscript%3E', 'san-diego']) {
+    for (const id of ['..%2f', '%2e%2e%2f', 'atlantis', '__proto__', 'constructor', 'x'.repeat(300), '%3Cscript%3E', 'san-diego']) {
       const r = await get('/ports/' + id, {...pub, DB: db});
       assert.equal(r.status, 404, id); const body = await r.text();
       assert.ok(!body.includes(id)); assert.match(body, /name="robots" content="noindex"/);
     }
+    // Spec amendment (operator, 2026-11-02): a bare `..` segment, encoded or not, is collapsed to `/` by URL
+    // parsing before the Worker runs, so it is the root site; a traversal that reaches the router 404s above.
+    for (const path of ['/ports/..', '/ports/%2e%2e', '/ports/.%2E/']) {
+      assert.equal(new URL(new Request(origin + path).url).pathname, '/', path);
+      assert.equal((await get(path, {...pub, DB: db})).status, 299, path);
+    }
+    for (const id of ['..', '%2e%2e', '../', '.']) assert.equal(portPageKey(id), null, id);
     aliases.ports['port-san-luis'].aliases.push('MB');
     try { assert.equal(portPageKey('MB'), null); assert.equal((await get('/ports/MB', {...pub, DB: db})).status, 404); }
     finally { aliases.ports['port-san-luis'].aliases.pop(); }
