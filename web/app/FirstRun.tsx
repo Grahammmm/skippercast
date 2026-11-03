@@ -9,6 +9,7 @@
 // MYB-1 / SC-LANDING-ORDER: the optional boat length and comfort limits are
 // asked after the choice, and only for Boat (BoatEntry): here when Boat is
 // chosen, or on arrival from the landing's Boat choice (boat-entry.ts carryAsk).
+import {signal} from '@preact/signals';
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {ASK_PARAM, ENTRY_COPY, ENTRY_FIELDS, saveFirstUse, takeAsk, withoutAsk} from '../boat-entry.ts';
 import {Button} from '../ui/Button.tsx';
@@ -20,6 +21,9 @@ import {readURL, setParams, STORAGE_KEYS, type StoreStorage} from '../state.ts';
 export {PROFILE_NOTES};
 
 export const BOAT_ENTRY_COPY = {save: 'Save boat', skip: 'Not now'} as const;
+
+/** True while BoatEntry is on screen. */
+export const boatEntryOpen = signal(false);
 
 function browserStorage(): StoreStorage | null {
   try { return typeof localStorage === 'undefined' ? null : localStorage; } catch { return null; }
@@ -55,7 +59,8 @@ export function firstRunDue(href: string, storage: StoreStorage | null = browser
 export function BoatEntry({storage, focus = false, onDone}: {storage?: StoreStorage | null; focus?: boolean; onDone: (notices: string[]) => void}) {
   const [boat, setBoat] = useState({lengthFt: '', wind: '', seas: ''});
   const form = useRef<HTMLFormElement>(null);
-  useEffect(() => { if (focus) form.current?.focus(); }, []);
+  // boatEntryOpen tells the phone's sheet to leave peek, whose clipped body hides the fields (Mobile.tsx boatEntryDetent).
+  useEffect(() => { boatEntryOpen.value = true; if (focus) form.current?.focus(); return () => { boatEntryOpen.value = false; }; }, []);
   const save = (event: Event) => { event.preventDefault(); onDone(saveFirstUse({...boat, profile: 'boat'}, storage).notices); };
   return (
     <form ref={form} class="app-boat-entry" aria-labelledby="first-use-boat-legend" tabIndex={-1} onSubmit={save} data-first-use-boat="">

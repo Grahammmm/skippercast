@@ -23,7 +23,7 @@ async function load() {
       export {saveFirstUse, ENTRY_COPY, ENTRY_FIELDS, carryAsk, takeAsk, withoutAsk, boatSaved, ASK_KEY} from './web/boat-entry.ts';
       export {ProfileStep} from './web/landing/ProfileStep.tsx';
       export {LandingApp} from './web/landing/Landing.tsx';
-      export {FirstRun, BoatEntry, BOAT_ENTRY_COPY} from './web/app/FirstRun.tsx';
+      export {FirstRun, BoatEntry, BOAT_ENTRY_COPY, boatEntryOpen} from './web/app/FirstRun.tsx';
       export {configureStore, STORAGE_KEYS} from './web/state.ts';
       export {loadLimits, savedLimits} from './web/limits.ts';
       export {defaultLimits} from './packages/coast/src/limits.ts';
@@ -243,6 +243,8 @@ test('map first run: Boat closes the card and asks for the boat; Save writes it 
     assert.equal(new URL(globalThis.location.href).searchParams.get('profile'), 'boat', 'the choice is made at once');
     assert.doesNotMatch(view().html, /How do you fish\?/, 'the card closed');
     assert.match(view().html, /Your boat \(optional\)/);
+    await tick(50);   // BoatEntry's mount effect
+    assert.equal(m.boatEntryOpen.value, true, 'the phone sheet is told the boat step is showing (Mobile boatEntryDetent)');
     assert.equal(storage.getItem(m.BOAT_KEY), null, 'nothing saved before Save');
     await type({lengthFt: '21', wind: '14'});
     const before = m.boatSaved.value;
@@ -251,6 +253,8 @@ test('map first run: Boat closes the card and asks for the boat; Save writes it 
     assert.equal(JSON.parse(storage.getItem(m.STORAGE_KEYS.limits)).boat.wind, 14, 'the limits for Boat, through web/limits.ts');
     assert.equal(m.boatSaved.value, before + 1, 'the verdict on screen is told');
     assert.equal(view().html, '', 'the boat step closed');
+    await tick(50);   // its unmount cleanup, after paint
+    assert.equal(m.boatEntryOpen.value, false);
   }));
 });
 
@@ -309,6 +313,7 @@ test('map first run: arriving from the landing\'s Boat choice asks for the boat 
   const href = `${MAP}&profile=boat&boat-entry=ask`;
   await withMap(href, s, () => mounted(m, firstRun(m, storage, href), storage, async ({view, type, submit}) => {
     assert.match(view().html, /Your boat \(optional\)/);
+    assert.equal(m.boatEntryOpen.value, true, 'arrival opens the phone sheet too');
     assert.doesNotMatch(view().html, /How do you fish\?/, 'the profile was answered on the landing');
     assert.equal(s.map.size, 0, 'read once');
     assert.equal(new URL(globalThis.location.href).searchParams.has('boat-entry'), false);
