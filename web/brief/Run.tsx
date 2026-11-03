@@ -104,7 +104,10 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   const boat = !!brief && profile.value === 'boat' && brief.profile === 'boat', id = region.value;
   const r = boat ? ranking ?? currentRanking(now.getTime()) : null, place = r ? runPlace(r, selection.value, habitat.value) : null;
   // The shoreline lines are asked for once when the route waits on them; the line re-renders with the route when they land.
-  useEffect(() => { if (id && place?.why === 'lines-needed') void loadLandWaterLines(id); }, [id, place?.why]);
+  // Only when the line can show a distance (a window and a cruise speed, as planRun needs): otherwise the lines file
+  // (about 270 KB for Morro Bay) would load at every Boat startup for a distance nobody sees (scripts/startup-budget.json).
+  const speed = cruiseSpeed.value, shows = !!brief?.windows.length && speed !== null && speed > 0;
+  useEffect(() => { if (id && shows && place?.why === 'lines-needed') void loadLandWaterLines(id); }, [id, shows, place?.why]);
   if (!brief || !r) return null;
   const state = planRun(brief, place, cruiseSpeed.value, now), tz = regionInfo.value?.timezone ?? DEFAULT_ZONE;
   const text = runText(state, tz, place?.unranked), harbor = r.harbor ?? 'the harbor';
