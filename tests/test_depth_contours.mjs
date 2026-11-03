@@ -169,6 +169,28 @@ function setup(t, {files, today = Date.parse(`${TODAY}T18:00:00Z`)} = {}) {
 }
 const FILES = {[depthContoursOverviewURL('morro-bay')]: OVERVIEW, [depthContoursURL('morro-bay')]: FULL};
 
+test('with diagnostics on, the host reports the contour click targets MapLibre drew at each idle; off, nothing is counted', async t => {
+  globalThis.location = {href: 'https://s.test/map?region=morro-bay'};
+  configureStore({v2: true, storage: null});
+  syncFromURL(location.href);
+  camera.value = {latitude: 35.35, longitude: -120.95, zoom: 11};
+  t.after(() => { camera.value = null; });
+  const fetchFn = async url => ({ok: true, status: 200, json: async () => clone(FILES[new URL(url).pathname.slice(1)])});
+  for (const [name, href, diagnostics, enabled] of [['URL opt-in', '?diagnostics=1', undefined, true], ['default off', '', undefined, false], ['explicit false', '?diagnostics=1', false, false]]) {
+    const idle = [], queries = [], host = {dataset: {}};
+    const engine = signal({setOverlay() {}, setData() {}, rendered: id => { queries.push(id); return 5; },
+      view: {on: (type, listener) => { idle.push(listener); return () => idle.splice(idle.indexOf(listener), 1); }}});
+    const layer = createDepthContours({engine, fetchFn, host, diagnostics, page: () => `https://s.test/map${href}`, palette: () => sentinel, now: () => Date.parse(`${TODAY}T18:00:00Z`)});
+    await flush(); await flush();
+    for (const listener of [...idle]) listener();
+    assert.equal(host.dataset.contoursDrawn, enabled ? '5' : undefined, name);
+    assert.deepEqual(queries, enabled ? [DEPTH_HIT] : [], name);
+    layer.destroy();
+    assert.equal(idle.length, 0, `${name}: the idle listener goes with the layer`);
+    assert.equal(host.dataset.contoursDrawn, undefined, name);
+  }
+});
+
 test('the Chart layer draws the overview under the protected areas, swaps in the full contours at the detail zoom and keeps them', async t => {
   const {asked, calls, layer} = setup(t, {files: FILES});
   await flush(); await flush();

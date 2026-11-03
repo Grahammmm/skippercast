@@ -3,6 +3,7 @@ import type {Page} from '@playwright/test';
 import {stubLiveFeeds, stubForecast} from '../scripts/measure_startup.mjs';
 import {readFileSync} from 'node:fs';
 import {forecastFixture} from './forecast-fixture.ts';
+import {regionWarmList} from '../web/landing/region-warm.ts';
 
 const FUNNEL_BUDGET_MS = 30_000;
 const PORT_KEY = 'skippercast-home-port-v1';
@@ -97,7 +98,21 @@ test('cancelled port and late warm-up cannot replace the second choice', async (
     expect(await page.evaluate(key => localStorage.getItem(key), PORT_KEY)).toBeNull();
     await port(page, 'monterey');
     await expect(page.locator('.landing-step [role="status"]')).toHaveText('Monterey map files ready.');
-    const late: string[] = []; page.on('request', r => { if (r.url().includes('/regions/morro-bay/')) late.push(r.url()); });
+    // What the cancelled port's warm-up (web/landing/region-warm.ts) reads after its region.json: the
+    // files that must not be fetched once that port is left. Its own regions/morro-bay/region.json is
+    // the request the route above holds, and the regional forecast is what the landing's own verdict
+    // reads for the default region -- which is morro-bay as well -- so neither path names the warm-up
+    // alone; the warm-up asks for them in the same batch as the files below, so leaving them out of the
+    // watch costs no coverage. The landing's hero readout and verdict go on reading the default region
+    // whatever port is chosen, and that traffic is not what this guarantee is about.
+    const morro = JSON.parse(readFileSync(new URL('../dist/regions/morro-bay/region.json', import.meta.url), 'utf8'));
+    const cancelledWarmUp = new Set(regionWarmList('morro-bay', morro)
+      .filter(path => !path.endsWith('/region.json') && !path.startsWith('/api/'))
+      .map(path => new URL(path, page.url()).href));
+    expect([...cancelledWarmUp].map(href => new URL(href).pathname).sort()).toEqual([
+      '/data/protected-areas.geojson', '/regions/morro-bay/atlas-marks.json', '/regions/morro-bay/coverage.json',
+      '/regions/morro-bay/poster.svg', '/regions/morro-bay/search-plan-index.json', '/regions/morro-bay/shoreline-overview.geojson']);
+    const late: string[] = []; page.on('request', r => { if (cancelledWarmUp.has(r.url())) late.push(r.url()); });
     release();
     await expect(page.locator('.landing-step [role="status"]')).toHaveText('Monterey map files ready.');
     await page.locator('[data-profile="boat"]').click();

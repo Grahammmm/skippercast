@@ -15,7 +15,15 @@ const ORIGIN = 'http://p04-body09.test';
 const NOW = new Date('2026-10-08T19:00:00Z');
 const hash = (b: string | Buffer) => createHash('sha256').update(b).digest('hex');
 const read = (p: string) => readFileSync(resolve(ROOT, p));
-const STYLES = ['web/tokens.css', 'web/ui/ui.css', 'web/app/app.css', 'packages/coast/panel.css', 'packages/coast/tokens-bridge.css'];
+// SC-E2E-GREEN: Reports now bundles five more production style imports (PlanView plan.css, SeasonStrip season.css,
+// HourlyTable hourly-table.css, Guard guard.css as plain imports; Conditions model-disagreement.css?url). Vite links
+// plain imports in the document head, so HEAD_STYLES are the shell's three sheets plus those four, linked in order; the
+// ?url sheets stay URL assets. All are qualified, hash-pinned below and, where the page requests them, served exact;
+// model-disagreement.css is only a URL string in the bundle (Reports never mounts Conditions) and must not be requested.
+const HEAD_STYLES = ['web/tokens.css', 'web/ui/ui.css', 'web/app/app.css', 'web/app/plan.css', 'web/app/season.css', 'web/app/views/hourly-table.css', 'web/ui/guard.css'];
+const URL_STYLES = ['packages/coast/panel.css', 'packages/coast/tokens-bridge.css', 'web/app/views/model-disagreement.css'];
+const UNREQUESTED_STYLES = ['web/app/views/model-disagreement.css'];
+const STYLES = [...HEAD_STYLES, ...URL_STYLES];
 const FONTS = ['web/fonts/dm-sans-latin.woff2', 'web/fonts/jetbrains-mono-latin.woff2'];
 const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/app/Masthead.tsx', 'web/app/LayerRail.tsx', 'web/app/MapStage.tsx', 'web/app/views/Reports.tsx', 'web/app/CoastMarkup.tsx',
   'packages/coast/src/ui/catches.ts', 'packages/coast/src/counties.ts', 'web/coast-data.ts',
@@ -164,12 +172,28 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // Merged with BF-species-plans-page #1276 (Plan label and icon, see the check_contrast.mjs note below): rebound to
   // the merged file, which carries both changes and nothing else.
   "web/app/Masthead.tsx": "c8c12a37a7020359c86513ddaf250aa81a333a736f3b5bbd405cf3aa809ca15d",
-  "web/app/LayerRail.tsx": "bdae57c4c4dca33b5fb83a413b7d5c6f525221a4fb6b78037a1ad99102635ccd",
-  "web/app/MapStage.tsx": "11bfed22183687b9bdfa6c4a348688b633dd4eaab5607aeeb5718fb104c41466",
+  // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
+  // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
+  // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
+  "web/app/LayerRail.tsx": "5d3189de050676a45d6b35ff06470f89b3d9e788cdab4a9ae79267859cb6f6b1",
+  // SC-MAIN-FLAKE (#1400, contours drawn signal): MapStage.tsx only passes host: chartHost.current! to
+  // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
+  // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),
+  // assertions and thresholds are untouched. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "a938155ba181e87dfb4fbcd20b0f9e281ea05940f8bb0f04b418eb38fe6658a5",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "0a636f225f5b51d1e34f2de059c826e4a0f2af876fcf20f827f2ccb5ef705008",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   // BF-wcag: app.css and panel.css add only 24 px min-height target floors (no paint); app.css merged with SC2222-07.
-  "web/app/app.css": "56bb9e803ba45f777aebdded64013889b34d16ee8bd6a3c1b17528a03615d32c",
+  // SC-E2E-GREEN: the legend shrinks and scrolls beside a mark-card min height, the phone .app-area row wraps, and the
+  // brief's .app-verdict-rules line gets margins, size and the existing .app-mark-regs a link rule; Reports' catch sheet
+  // renders none of them. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
+  "web/app/app.css": "4f344ed4cba0faf3937427b70eeb059502be5d49d02f537599b50f82fc1e946e",
+  // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
+  "web/app/plan.css": "56215598e33a416cb6c877a0661ce3923035f3266872faae9b7eb89db02eb4a2",
+  "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
+  "web/app/views/hourly-table.css": "f18fec199fc5e0ef63ebafef5d16af17a4fb4343765641543ccc9494b0da8552",
+  "web/ui/guard.css": "8e53f065f8f7af23121f7eb346ebeefe571baa21eebf1b6179e27a8b86b74d11",
+  "web/app/views/model-disagreement.css": "c6edfd6e81395b8d5e9fe67e982e399989172765490456f6a28ec036c115b72c",
   "packages/coast/panel.css": "ca0495fc90db3cf3f140d520c8231751660268af72bc7b9a4a3ac4dc1679314e",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
@@ -189,7 +213,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // five masthead views, so the Reports masthead is unchanged. contrast(), assertions and thresholds are untouched.
   // All three rebound. Merged with main's SC2222-07 appCss surface hash: rebound to the merged file.
   // BF-wcag: check_contrast.mjs changes only the panelCss/appCss surface hashes and their comments; rebound.
-  "scripts/check_contrast.mjs": "e0e489214bf94e3a7e47ba7f38f5520de139c2c2f3d08b4b61b95c16925d7ed6",
+  "scripts/check_contrast.mjs": "3d4ed49b7b178b0c9e31e6b202a0147512b76f8c750c545d00b681dca2cbecfa",
   "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
   "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
@@ -212,6 +236,12 @@ const urlImports: Plugin = {name: 'p04-production-url-assets', setup(b) {
     const p = relative(ROOT, args.path).replaceAll('\\', '/');
     if (!STYLES.includes(p)) throw Error('Unqualified production URL asset ' + p);
     return {contents: `export default ${JSON.stringify('/' + p)};`, loader: 'js'};
+  });
+  // A plain production style import (Vite links it in the head): only qualified HEAD_STYLES, which the host page links.
+  b.onLoad({filter: /\.css$/}, args => {
+    const p = relative(ROOT, args.path).replaceAll('\\', '/');
+    if (!HEAD_STYLES.includes(p)) throw Error('Unqualified production style import ' + p);
+    return {contents: '', loader: 'js'};
   });
   // Same deferred renderer seam as existing Reports/coast-markup fixtures.
   // Reports never mounts either GPU factory. Fail if either is actually requested.
@@ -382,7 +412,7 @@ test('BODY09 real Reports counts: light/dark paint, overlap, backing and fail-cl
   await page.route('**/*',route=>{
     const url=new URL(route.request().url()),path=url.pathname.slice(1);
     if(url.origin!==ORIGIN){unexpected.push(url.href);return route.abort('blockedbyclient');}
-    if(path==='__p04/')return route.fulfill({contentType:'text/html',body:`<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>BODY09 production Reports</title>${STYLES.slice(0,3).map(p=>`<link rel="stylesheet" href="/${p}">`).join('')}<style>#mount{padding:16px;max-width:760px;margin:0 auto;}</style></head><body><main id="mount"></main><script src="/__p04/host.js"></script></body></html>`});
+    if(path==='__p04/')return route.fulfill({contentType:'text/html',body:`<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>BODY09 production Reports</title>${HEAD_STYLES.map(p=>`<link rel="stylesheet" href="/${p}">`).join('')}<style>#mount{padding:16px;max-width:760px;margin:0 auto;}</style></head><body><main id="mount"></main><script src="/__p04/host.js"></script></body></html>`});
     if(path==='__p04/host.js'){served[path]=hash(script);return route.fulfill({contentType:'text/javascript',body:script});}
     if(path==='api/coast/report'){served[path]=hash(JSON.stringify(report));return route.fulfill({json:report});}
     if([...STYLES,...FONTS].includes(path)){const body=read(path);served[path]=hash(body);return route.fulfill({body,contentType:path.endsWith('.css')?'text/css':'font/woff2'});}
@@ -431,7 +461,8 @@ test('BODY09 real Reports counts: light/dark paint, overlap, backing and fail-cl
   expect((await audit(rows.first())).issues).toEqual([]);
   expect(errors,'uncaught errors').toEqual([]);
   expect(unexpected,'no unstubbed/server/provider/GPU requests').toEqual([]);
-  for(const p of [...STYLES,...FONTS])expect(served[p],p+' actually served exact bytes').toBe(bindings.inputs[p]);
+  for(const p of [...STYLES,...FONTS].filter(p=>!UNREQUESTED_STYLES.includes(p)))expect(served[p],p+' actually served exact bytes').toBe(bindings.inputs[p]);
+  for(const p of UNREQUESTED_STYLES)expect(served[p],p+' is bundled as a URL only and never requested by Reports').toBeUndefined();
   await info.attach('provenance-and-controls',{body:JSON.stringify({bindings,moduleInputs,bundleSha256:hash(script),served,
     gitHead:execFileSync('git',['rev-parse','HEAD'],{cwd:ROOT,encoding:'utf8'}).trim(),
     gitTree:execFileSync('git',['rev-parse','HEAD^{tree}'],{cwd:ROOT,encoding:'utf8'}).trim(),
