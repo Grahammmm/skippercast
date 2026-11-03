@@ -7,7 +7,7 @@
 // a search-plan name that is not a public ground never comes out. Never a
 // coordinate. `first_time` is true when this contact has not asked a strategy
 // question before; the prompt then ends the reply with the AD-2 line.
-import type {AdvisorTool, ToolContext} from './tool.ts';
+import {echoText, type AdvisorTool, type ToolContext} from './tool.ts';
 import {strategyFor} from '../answers/advice.ts';
 import {contactRegion, resolveSpecies} from '../answers/resolve.ts';
 import {regionConfig} from '../answers/regions.ts';
@@ -40,7 +40,7 @@ export const getStrategy: AdvisorTool = {
     const region = typeof input.region === 'string' && regionConfig(input.region) ? input.region : contactRegion(ctx.contact, ctx.settings);
     const names = await searchPlanNames(ctx, region, key);
     const strategy = strategyFor(key, region, names);
-    if (!strategy) return {result: {error: 'no method notes for this species', species_key: key.slice(0, 40)}};
+    if (!strategy) return {result: {error: 'no method notes for this species', species_key: echoText(key)}};
     const earlier = await ctx.db.prepare("SELECT 1 AS x FROM advisor_messages WHERE contact_id=? AND direction='in' AND intent='strategy' AND id<>? LIMIT 1")
       .bind(ctx.contact.id, ctx.message.id).first();
     return {result: {
