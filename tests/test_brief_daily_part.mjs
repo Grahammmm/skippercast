@@ -17,7 +17,6 @@ const ID = 'monterey-point-sur', MIN = 60_000;
 const INFO = {id: ID, name: 'Monterey', center: [36.62, -121.9], timezone: 'America/Los_Angeles'};
 const NOW = new Date('2026-10-08T21:00:00Z');
 const PART = id => `/api/daily?region=${id}&part=brief`, WHOLE = id => `/feeds/data/regions/${id}/latest.json`;
-const LIVE = id => `/feeds/conditions/regions/${id}/latest.json`;
 
 let mod;
 async function load() {
