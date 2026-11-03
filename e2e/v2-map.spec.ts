@@ -1097,11 +1097,14 @@ test('Water temp draws nothing for a stale analysis or a region no report covers
 test('the always-on depth contours read on click: a contour names its depth, the survey edge its limit, and off-contour water still reads the field', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
   await serveReport(page);
-  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'water-temp'});
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'water-temp', diagnostics: '1'});
   // The always-on contours draw and key themselves while the water-temp field is on (the phone's legend lives in the Layers sheet).
   await showLayers(page);
   await expect(page.locator('.app-legend .app-swatch[data-layer="depth-contours"]')).toHaveCount(1);
   await hideLayers(page);
+  // The key appears when the contour file checks, before MapLibre has tiled and drawn it: a click in that window
+  // finds no contour and reads the field underneath. Wait until the pick's own hit layer has rendered features in view.
+  await expect.poll(() => mapAttr(page, 'data-contours-drawn'), {message: 'depth contours drawn in view'}).toBeGreaterThan(0);
 
   // A click on a deep (270 ft) contour reads it first (contour-first pick over the field underneath).
   const contour = await chartPoint(page, CURRENT_VIEW, CONTOUR_POINT.lon, CONTOUR_POINT.lat);

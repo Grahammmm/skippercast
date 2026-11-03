@@ -24,6 +24,7 @@ import {
 } from '../web/map/mpa.ts';
 import {chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
 import {RANKED_PIN} from '../web/map/ranked.ts';
+import {DEPTH_HIT} from '../web/map/depth-contours.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {createStage} from '../web/map/stage.ts';
 import {configureStore, setParams, syncFromURL} from '../web/state.ts';
@@ -337,9 +338,11 @@ test('Chart idle counts require diagnostics; ordinary state and picking work in 
       assert.equal(map.data[MPA_SOURCE].features.length, 8, name);
       fake.rendered[MPA_FILL] = 5; fake.rendered[MPA_LABEL] = 3; fake.rendered[RANKED_PIN] = 2;
       map.fire('idle'); map.fire('idle');
+      // The contours' hit layer is not in this style (no createDepthContours here), so its count is 0 with no query.
+      assert.equal(map.getLayer(DEPTH_HIT), undefined, name);
       assert.deepEqual(fake.countQueries, enabled ? [MPA_FILL, MPA_LABEL, RANKED_PIN, MPA_FILL, MPA_LABEL, RANKED_PIN] : [], name);
-      assert.deepEqual([host.dataset.mpaDrawn, host.dataset.mpaLabels, host.dataset.rankedDrawn],
-        enabled ? ['5', '3', '2'] : [undefined, undefined, undefined], name);
+      assert.deepEqual([host.dataset.mpaDrawn, host.dataset.mpaLabels, host.dataset.rankedDrawn, host.dataset.contoursDrawn],
+        enabled ? ['5', '3', '2', '0'] : [undefined, undefined, undefined, undefined], name);
       fake.features = [{layer: {id: MPA_FILL}, properties: map.data[MPA_SOURCE].features.find(f => f.properties.NAME === 'Cambria SMCA').properties}];
       map.fire('click', {point: {x: 1, y: 1}});
       assert.equal(chartMark.value.name, 'Cambria State Marine Conservation Area', name);

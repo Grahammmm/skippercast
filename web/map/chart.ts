@@ -33,6 +33,7 @@ import {loadPoster, poster} from './poster.ts';
 import {COASTLINE_PICK, coastlineFetchPath, coastlineLayers, coastlineMark, coastlineSource, shorelineOverviewURL, shorelinePublished, shorelineURL, type ChartMark} from './coastline.ts';
 import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts';
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
+import {DEPTH_HIT} from './depth-contours.ts';
 import {openBandPadding, toEdge, type Box} from './open-band.ts';
 import {browserGate, flyoverLegs, markFlyoverSeen, mayFly, type FlyoverGate} from './flyover.ts';
 import {COASTLINE_SOURCE, DENSITY_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
@@ -227,6 +228,9 @@ export function createChart(options: ChartOptions): {destroy(): void} {
           if (diagnostics) {
             host.dataset.mpaDrawn = String(e.rendered(MPA_FILL)); host.dataset.mpaLabels = String(e.rendered(MPA_LABEL));
             host.dataset.rankedDrawn = String(e.rendered(RANKED_PIN));
+            // The depth contours' click target as the pick query sees it: the legend keys them as soon as their file
+            // checks, but MapLibre tiles the GeoJSON in a worker and draws it one or more frames later.
+            host.dataset.contoursDrawn = String(e.rendered(DEPTH_HIT));
           }
         },
       });
