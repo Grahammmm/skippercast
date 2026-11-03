@@ -1320,3 +1320,33 @@ test('Stations legend stays bounded on phone and laptop and opens a station card
   await expect(page.locator('.app-mark')).toBeVisible();
   expect(pageErrors).toEqual([]);
 });
+
+// The desktop legend scrolls (overflow-y:auto) so a long legend shrinks instead of squeezing the mark card; its basis popovers must still escape that box.
+test('the scrolling legend does not clip its basis popovers', async ({page, pageErrors, v2, isMobile}) => {
+  test.skip(isMobile, 'the legend scrolls only in the desktop left column; on a phone it sits in the sheet');
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'seafloor,currents'});
+  const legend = page.locator('.app-legend');
+  await expect(legend.locator('.app-legend-seafloor, .app-legend-currents, .app-legend-depth-contours, .app-legend-mpa')).toHaveCount(4);
+  await expect(legend).toHaveCSS('overflow-y', 'auto');
+  const popovers = legend.locator('.ui-popover');
+  expect(await popovers.count()).toBeGreaterThanOrEqual(4);   // seafloor, currents, depth contours, protected areas
+  for (let i = 0; i < await popovers.count(); i++) {
+    const popover = popovers.nth(i), summary = popover.locator('> summary');
+    const name = await summary.getAttribute('aria-label');
+    await summary.scrollIntoViewIfNeeded();
+    await summary.click();
+    const body = popover.locator('.ui-popover-body');
+    await expect(body, name!).toBeVisible();
+    // A point just inside the body's right edge and top edge is beyond the legend's box (the body is wider than the legend); the body, not the map, must answer there.
+    const hit = await body.evaluate(el => {
+      const box = el.getBoundingClientRect(), legendBox = el.closest('.app-legend')!.getBoundingClientRect();
+      const x = box.right - 8, y = box.top + 8, answer = document.elementFromPoint(x, y);
+      return {beyondLegend: x > legendBox.right, inside: !!answer && el.contains(answer)};
+    });
+    expect(hit.beyondLegend, `${name}: the body reaches past the legend's right edge`).toBe(true);
+    expect(hit.inside, `${name}: the part beyond the legend's box is not clipped`).toBe(true);
+    await summary.click();
+  }
+  expect(pageErrors).toEqual([]);
+});
