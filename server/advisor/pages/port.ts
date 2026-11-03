@@ -112,7 +112,7 @@ ${rows.length ? html`<dl class="adv-facts">${rows.map(([k, v]) => html`<div><dt>
 }
 
 /** The page, or null for an unknown port. */
-export async function portPage(env: Env, id: string, language: PageLanguage, settings: SiteSettings, deps: PageDeps = {}): Promise<{body: string; noStore: boolean} | null> {
+export async function portPage(env: Env, id: string, language: PageLanguage, settings: SiteSettings, deps: PageDeps = {}): Promise<string | null> {
   if (!portExists(id)) return null;
   const db = env.DB!, copy = copyFor(language), now = (deps.clock ?? Date.now)();
   const regionId = portRegion(id)!, region = regionConfig(regionId)!;
@@ -159,7 +159,7 @@ ${boats.length ? html`<ul class="adv-list">${boats.map(b => html`<li><a href="/b
 <ul class="adv-seasons">${keys.map((key, i) => html`<li><a href="/species/${key}${lang}#rules">${PAGES[key]!.names[language]}</a> <span class="adv-state adv-state-${states[i]!}">${copy.ruleState[states[i]!]}</span></li>`)}</ul>
 <p class="adv-note">${copy.seasonsNote}</p>
 </section>`;
-  return {body: layout({language, kind: 'port', path: `/ports/${id}`, title: `${copy.portTitle(name)} · SkipperCast`, description: copy.portDescription(name),
+  return layout({language, kind: 'port', path: `/ports/${id}`, title: `${copy.portTitle(name)} · SkipperCast`, description: copy.portDescription(name),
     image: photo[0]?.url ?? null, crumbs: [{name: copy.ports, path: null}, {name, path: `/ports/${id}`}], region: regionId,
-    ctaMessage: copy.portCtaMessage(name), noindex: !inputs.conditions.day, advisor: 'enabled' in settings && settings.enabled === true, body}, settings), noStore: !inputs.conditions.day};
+    ctaMessage: copy.portCtaMessage(name), noindex: !inputs.conditions.day, advisor: 'enabled' in settings && settings.enabled === true, body}, settings);
 }

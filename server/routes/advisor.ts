@@ -663,7 +663,7 @@ async function servePage(c: Context<AppEnv>, maxAge: number, render: Render): Pr
 const portRoute = (c: Context<AppEnv>): Promise<Response> => {
   const segment = c.req.param('id') ?? '', key = portPageKey(segment);
   if (key && (key !== segment || new URL(c.req.url).pathname.endsWith('/'))) return Promise.resolve(new Response(null, {status: 301, headers: {Location: `/ports/${key}${new URL(c.req.url).search}`, 'Cache-Control': 'public, max-age=86400'}}));
-  return servePage(c, PORT_MAX_AGE, (env, language, settings) => key ? portPage(env, key, language, settings, pagesDeps) : Promise.resolve(null));
+  return servePage(c, PORT_MAX_AGE, (env, language, settings) => key ? portPage(env, key, language, settings, pagesDeps).then(body => body && {body, noStore: body.includes('<meta name="robots" content="noindex">')}) : Promise.resolve(null)); // noindex only when the day has no conditions
 };
 advisorPublic.get('/ports/:id', portRoute); advisorPublic.get('/ports/:id/', portRoute); advisorPublic.get('/ports/', c => servePage(c, PORT_MAX_AGE, () => Promise.resolve(null)));
 
