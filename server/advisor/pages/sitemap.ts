@@ -1,7 +1,8 @@
 // GET /sitemap-advisor.xml (08 § Public pages; TA-W1): the port pages of the
 // active regions, every species page and the verified boats' pages, each in
 // English with its Spanish alternate, generated from D1 on request (the route
-// caches it for an hour). robots.txt names it while the advisor is on.
+// caches it for an hour). Served while the advisor or PUBLIC_PAGES_ENABLED is on (pagesGate);
+// robots.txt names it under the same switch. Only pages that answer 200 are listed.
 import {SPECIES_PAGE_KEYS} from './species.ts';
 import {activePortIds} from './port.ts';
 import {escapeHtml} from './render.ts';
@@ -12,12 +13,12 @@ export const SITEMAP_PATH = '/sitemap-advisor.xml';
 
 /**
  * The sitemap's page paths: active ports, species, verified boats (newest report date as
- * lastmod) and, with `fleet` (FLEET_ENABLED, CF-33), the registry profiles that may be
+ * lastmod; only with `advisor`, because /boats/* answers 404 for advisor boats while the advisor is off) and, with `fleet` (FLEET_ENABLED, CF-33), the registry profiles that may be
  * indexed: public vessels whose operator consented (content-sharing or partner, not
  * revoked) and that no verified advisor boat links to (that boat's page is the main one).
  */
-export async function sitemapEntries(db: D1Database, {fleet = false}: {fleet?: boolean} = {}): Promise<{path: string; lastmod: string | null}[]> {
-  const boats = (await db.prepare(`SELECT b.slug, (SELECT MAX(r.report_date) FROM advisor_reports r WHERE r.boat_id=b.id AND r.status='published') AS lastmod
+export async function sitemapEntries(db: D1Database, {fleet = false, advisor = true}: {fleet?: boolean; advisor?: boolean} = {}): Promise<{path: string; lastmod: string | null}[]> {
+  const boats = !advisor ? [] : (await db.prepare(`SELECT b.slug, (SELECT MAX(r.report_date) FROM advisor_reports r WHERE r.boat_id=b.id AND r.status='published') AS lastmod
       FROM advisor_boats b WHERE b.status='verified' ORDER BY b.slug LIMIT 5000`).all<{slug: string; lastmod: string | null}>()).results;
   const vessels = fleet ? (await db.prepare(`SELECT v.slug, substr(v.updated_at,1,10) AS lastmod FROM fleet_vessels v JOIN fleet_operators o ON o.id=v.operator_id
       WHERE ${publicVesselSql('v')} AND o.consent_status IN ('content-sharing','partner') AND o.consent_revoked_at IS NULL
@@ -32,7 +33,7 @@ export async function sitemapEntries(db: D1Database, {fleet = false}: {fleet?: b
 }
 
 /** The sitemap XML (sitemaps.org 0.9 with xhtml:link alternates for ?lang=es). */
-export async function sitemapXml(db: D1Database, base: string, options: {fleet?: boolean} = {}): Promise<string> {
+export async function sitemapXml(db: D1Database, base: string, options: {fleet?: boolean; advisor?: boolean} = {}): Promise<string> {
   const entries = await sitemapEntries(db, options);
   const url = (path: string, es = false) => escapeHtml(`${base}${path}${es ? '?lang=es' : ''}`);
   const items = entries.map(e => `  <url>\n    <loc>${url(e.path)}</loc>\n${e.lastmod && /^\d{4}-\d{2}-\d{2}$/.test(e.lastmod) ? `    <lastmod>${e.lastmod}</lastmod>\n` : ''}`
@@ -43,5 +44,5 @@ export async function sitemapXml(db: D1Database, base: string, options: {fleet?:
 /** The static site's sitemap (dist/sitemap.xml), named alongside the advisor's. */
 export const SITE_SITEMAP_PATH = '/sitemap.xml';
 
-/** robots.txt while the advisor is on: everything allowed (as dist/robots.txt) and both sitemaps. */
+/** robots.txt while the advisor or the public pages are on: everything allowed (as dist/robots.txt) and both sitemaps. */
 export const robotsTxt = (base: string): string => `User-agent: *\nAllow: /\n\nSitemap: ${base}${SITE_SITEMAP_PATH}\nSitemap: ${base}${SITEMAP_PATH}\n`;

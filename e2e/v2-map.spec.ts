@@ -1097,11 +1097,13 @@ test('Water temp draws nothing for a stale analysis or a region no report covers
 test('the always-on depth contours read on click: a contour names its depth, the survey edge its limit, and off-contour water still reads the field', async ({page, pageErrors, v2}) => {
   await holdCoastData(page);
   await serveReport(page);
-  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'water-temp'});
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', view: CURRENT_VIEW, layers: 'water-temp', diagnostics: '1'});
   // The always-on contours draw and key themselves while the water-temp field is on (the phone's legend lives in the Layers sheet).
   await showLayers(page);
   await expect(page.locator('.app-legend .app-swatch[data-layer="depth-contours"]')).toHaveCount(1);
   await hideLayers(page);
+  // The key shows once the file is checked; MapLibre draws it later. A click picks only what is drawn, so wait for its click targets in view.
+  await expect.poll(() => mapAttr(page, 'data-contours-drawn'), {message: 'contours drawn in view'}).toBeGreaterThan(0);
 
   // A click on a deep (270 ft) contour reads it first (contour-first pick over the field underneath).
   const contour = await chartPoint(page, CURRENT_VIEW, CONTOUR_POINT.lon, CONTOUR_POINT.lat);
@@ -1318,5 +1320,35 @@ test('Stations legend stays bounded on phone and laptop and opens a station card
   await expect(stationButton).toBeVisible();
   await stationButton.click();
   await expect(page.locator('.app-mark')).toBeVisible();
+  expect(pageErrors).toEqual([]);
+});
+
+// The desktop legend scrolls (overflow-y:auto) so a long legend shrinks instead of squeezing the mark card; its basis popovers must still escape that box.
+test('the scrolling legend does not clip its basis popovers', async ({page, pageErrors, v2, isMobile}) => {
+  test.skip(isMobile, 'the legend scrolls only in the desktop left column; on a phone it sits in the sheet');
+  await holdCoastData(page);
+  await v2.open('app', {region: 'morro-bay', presentation: 'chart', layers: 'seafloor,currents'});
+  const legend = page.locator('.app-legend');
+  await expect(legend.locator('.app-legend-seafloor, .app-legend-currents, .app-legend-depth-contours, .app-legend-mpa')).toHaveCount(4);
+  await expect(legend).toHaveCSS('overflow-y', 'auto');
+  const popovers = legend.locator('.ui-popover');
+  expect(await popovers.count()).toBeGreaterThanOrEqual(4);   // seafloor, currents, depth contours, protected areas
+  for (let i = 0; i < await popovers.count(); i++) {
+    const popover = popovers.nth(i), summary = popover.locator('> summary');
+    const name = await summary.getAttribute('aria-label');
+    await summary.scrollIntoViewIfNeeded();
+    await summary.click();
+    const body = popover.locator('.ui-popover-body');
+    await expect(body, name!).toBeVisible();
+    // A point just inside the body's right edge and top edge is beyond the legend's box (the body is wider than the legend); the body, not the map, must answer there.
+    const hit = await body.evaluate(el => {
+      const box = el.getBoundingClientRect(), legendBox = el.closest('.app-legend')!.getBoundingClientRect();
+      const x = box.right - 8, y = box.top + 8, answer = document.elementFromPoint(x, y);
+      return {beyondLegend: x > legendBox.right, inside: !!answer && el.contains(answer)};
+    });
+    expect(hit.beyondLegend, `${name}: the body reaches past the legend's right edge`).toBe(true);
+    expect(hit.inside, `${name}: the part beyond the legend's box is not clipped`).toBe(true);
+    await summary.click();
+  }
   expect(pageErrors).toEqual([]);
 });

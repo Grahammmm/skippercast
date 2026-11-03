@@ -110,7 +110,7 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
       renderers: [() => createChart({host: chartHost.current!, zone, place,
         layers: [engine => createChlorophyll({engine}), engine => createSwell({engine, zone, place}), engine => createContrast({engine, zone, place}), engine => createWind({engine, zone}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
           engine => createStations({engine, zone, feed: () => dailyFeed.value}),
-          engine => createAerial({engine, offer: () => currentRegionInfo()?.aerial ?? null}), engine => createDepthContours({engine}),
+          engine => createAerial({engine, offer: () => currentRegionInfo()?.aerial ?? null}), engine => createDepthContours({engine, host: chartHost.current!}),
           engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
           engine => createReach({engine, host: chartHost.current!})]})]});
     return () => stage.destroy();

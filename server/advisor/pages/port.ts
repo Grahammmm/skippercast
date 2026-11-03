@@ -161,5 +161,6 @@ ${boats.length ? html`<ul class="adv-list">${boats.map(b => html`<li><a href="/b
 </section>`;
   return layout({language, kind: 'port', path: `/ports/${id}`, title: `${copy.portTitle(name)} · SkipperCast`, description: copy.portDescription(name),
     image: photo[0]?.url ?? null, crumbs: [{name: copy.ports, path: null}, {name, path: `/ports/${id}`}], region: regionId,
+    about: {type: 'Place', name, region: regionName, ...(port?.match ? {geo: port.match as [number, number]} : {})},
     ctaMessage: copy.portCtaMessage(name), noindex: !inputs.conditions.day, advisor: 'enabled' in settings && settings.enabled === true, body}, settings);
 }
