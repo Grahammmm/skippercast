@@ -25,7 +25,7 @@ appended to `GITHUB_STEP_SUMMARY` in CI). Each view runs a cold pass (fresh cont
 - Not measured: 3D terrain rendering cost, live forecast model bytes beyond the stubs,
   service-worker cache hits (service workers are blocked in these tests).
 
-## First local run (commit 5722771b, 2026-11-02, AgentOrange)
+## First local run (commit 5722771b, 2026-11-02, AgentOrange; re-verified identical at cfd50d73)
 
 | View | Project | Pass | Requests | Transfer B | Tiles | Feeds | API | Settled |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
