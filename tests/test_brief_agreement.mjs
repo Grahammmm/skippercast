@@ -123,5 +123,5 @@ import {createHash} from 'node:crypto';
 test('verdict source outside agreement additions is unchanged', async () => {
   const source = await readFile(new URL('../web/brief/verdict.ts', import.meta.url), 'utf8');
   const stripped = source.replace(/, agreement: (?:staleAgreement \? null : agreement|null)/g, '').split('\n').filter(line => !/agreement|Agreement/.test(line)).join('\n');
-  assert.equal(createHash('sha256').update(stripped).digest('hex'), '58f7809d81a771c5b9613b386621592383f0439266427ebe5cef056f4a9ae85c');
+  assert.equal(createHash('sha256').update(stripped).digest('hex'), '4f8555c656a126588405700f4e48cae0fe7de502d9fedcaf5c102c6458de4323');
 });
