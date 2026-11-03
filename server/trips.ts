@@ -155,9 +155,13 @@ const DUE='enabled=1 AND final_delivered_at IS NULL';
 type SlotTrip=Pick<TripRow,'date'|'created_at'|'final_delivered_at'>;
 /** Saved before its date in the region zone, so a day-before final slot existed. An unparsable created_at counts as saved before. */
 export function hadFinalSlot(trip:SlotTrip,zone:string):boolean{const saved=Date.parse(trip.created_at);return !Number.isFinite(saved)||dateInZone(saved,zone)<trip.date;}
-/** Missed day-before assessment: the slot existed and its final event does not exist (null) or push failed ('held'). */
-export function missedFinal(trip:SlotTrip,today:string,zone:string,finalStatus:string|null):boolean{
-  return trip.date<=today&&!trip.final_delivered_at&&hadFinalSlot(trip,zone)&&(finalStatus===null||finalStatus==='held');
+/**
+ * Missed day-before assessment: the slot existed and its final event does not exist (null) or push failed ('held').
+ * `retryFailed` is true only when the caller re-sent a 'pending' final on or after the trip date and it was not
+ * accepted; then 'pending' counts as missed too. Without it a 'pending' final is never missed.
+ */
+export function missedFinal(trip:SlotTrip,today:string,zone:string,finalStatus:string|null,retryFailed=false):boolean{
+  return trip.date<=today&&!trip.final_delivered_at&&hadFinalSlot(trip,zone)&&(finalStatus===null||finalStatus==='held'||finalStatus==='pending'&&retryFailed);
 }
 
 async function tripInputs(feeds:FeedCache,feedKey:string,region:Region,zones:MarineZones):Promise<ExternalJSON[]>{
@@ -178,15 +182,19 @@ export async function checkTrip(env:Env,trip:TripRow,now:number,feeds:FeedCache)
   const hour=Number(new Intl.DateTimeFormat('en-US',{timeZone:region.timezone,hour:'2-digit',hourCycle:'h23'}).format(new Date(now)));
   let missed=false;
   if(trip.date<=today&&!trip.final_delivered_at){
-    const prior=await db(env).prepare('SELECT status FROM alert_events WHERE id=?').bind(await hash(trip.id+':final')).first<{status:string}>();
-    missed=missedFinal(trip,today,region.timezone,prior?.status??null);
     // A trip saved on its own date never had a day-before slot; once that date has passed there is nothing left to assess.
     if(trip.date<today&&!hadFinalSlot(trip,region.timezone))return {outcome:'skipped',created:false};
+    const prior=await db(env).prepare('SELECT * FROM alert_events WHERE id=?').bind(await hash(trip.id+':final')).first<AlertEventRow>();
+    // A final still 'pending' (push retrying, or no VAPID pair) gets one more send within its 3 tries;
+    // accepted ends the trip's alerts, anything else is reported as a missed day-before assessment.
+    const pending=prior?.status==='pending';
+    if(pending&&await deliver(env,prior)){await db(env).prepare('UPDATE trips SET final_delivered_at=? WHERE id=?').bind(new Date(now).toISOString(),trip.id).run();return {outcome:'delivered',created:false};}
+    missed=missedFinal(trip,today,region.timezone,prior?.status??null,pending);
   }
   const pointConfig=region.forecast_points.find(p=>p.id===trip.point), zones=region.contexts?.[pointConfig?.context??'']?.marine_zones||region.marine_zones;
   const inputs=await tripInputs(feeds,trip.region+':'+(pointConfig?.context||'default'),region,zones);
   const intel=inputs[0],rules=inputs[1]?.regulations;
-  const offshore=pointConfig?.offshore,alerts=inputs[offshore?3:2]?.features?.map((f:ExternalJSON)=>f.properties);
+  const offshore=pointConfig?.offshore,features=inputs[offshore?3:2]?.features,alerts=Array.isArray(features)?features.map((f:ExternalJSON)=>f&&typeof f==='object'&&!Array.isArray(f)?f.properties??null:null):undefined;
   const assessment=assessTrip(trip,region,intel,rules,alerts,now);let previous:Assessment|null=null;try{previous=JSON.parse(trip.last_assessment as string);}catch{}
   const final=trip.date===tomorrow&&hour>=18;
   const kind=alertDecision(previous,assessment,{final,missed});if(!kind)return {outcome:'unchanged',created:false};
