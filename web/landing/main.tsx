@@ -18,6 +18,7 @@ import {saveData} from './save-data.ts';
 import {warmApp} from './warm.ts';
 import {Shoreline, ShorelineCredit} from './Shoreline.tsx';
 import {initTelemetry} from '../telemetry.ts';
+import {installDegradedWatch} from '../degraded.ts';
 
 /** web/state.ts STORAGE_KEYS.profile (equal by test); the store itself is the app's and loads there. */
 export const PROFILE_KEY = 'skippercast-profile-v1';
@@ -64,6 +65,7 @@ function nightMap(): void {
   }, error => console.warn('Night map unavailable; the static shoreline stays.', error));
 }
 
+installDegradedWatch(); // SC1322-06: before any read, as web/app/main.tsx, so the cost-ceiling mark reaches the landing's notice.
 // Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
 initTelemetry();
 const profile = storedProfile();

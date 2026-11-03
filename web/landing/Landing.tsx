@@ -20,6 +20,8 @@ import {warmRegion, type WarmState} from './region-warm.ts';
 import {DEFAULT_REGION, loadReadout, type Readout as Data} from './readings.ts';
 import {Readout} from './Readout.tsx';
 import type {LandingVerdict} from './live-verdict.ts';
+import {degraded} from '../degraded.ts';
+import {DegradedNotice} from '../degraded-notice.tsx';
 
 /** The nav (§ 7): Fleet and Reports open the app's views (Reports, FE-52), How it's built the sources page (Q16). */
 export const NAV = [
@@ -57,10 +59,13 @@ export type LandingAppProps = {
   verdict?: () => Promise<LandingVerdict | null>;
 };
 
-/** Tomorrow's answer for the reference boat, as the app's lead gives it; below the funnel, so nothing above the port input moves. */
-export const LiveVerdict = ({v}: {v: LandingVerdict}) => (
-  <section class="landing-verdict" aria-live="polite" aria-label="Tomorrow’s brief" data-day={v.date}>
-    <p class="landing-verdict-head">{v.day} near {v.place}, reference 23 ft boat: <strong class="landing-verdict-word" data-verdict={v.verdict}>{v.word}</strong></p>
+/**
+ * Tomorrow's answer for the reference boat, as the app's lead gives it; below the funnel, so nothing above the port input moves.
+ * SC1322-06: `saved` (the Worker is past its cost ceiling, web/degraded.ts) labels it as from saved copies, not current.
+ */
+export const LiveVerdict = ({v, saved = false}: {v: LandingVerdict; saved?: boolean}) => (
+  <section class="landing-verdict" aria-live="polite" aria-label={saved ? 'Tomorrow’s brief, from saved copies' : 'Tomorrow’s brief'} data-day={v.date} data-degraded={saved ? 'cost-ceiling' : undefined}>
+    <p class="landing-verdict-head">{saved ? 'From saved copies, not live: ' : null}{v.day} near {v.place}, reference 23 ft boat: <strong class="landing-verdict-word" data-verdict={v.verdict}>{v.word}</strong></p>
     <p class="landing-verdict-limit">{v.sentence}</p>
     <a class="landing-verdict-link" href={v.href}>Open the full brief</a>
   </section>
@@ -136,7 +141,9 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
       {choice
         ? <ProfileStep place={choice.place} warm={choice.port ? warmth : null} current={initialProfile} onChoose={finish} onBack={restart} />
         : <PortInput ports={ports} onChoose={choose} onExplore={explore} onRetry={failed ? loadList : undefined} autoFocus={back} />}
-      {answer ? <LiveVerdict v={answer} /> : null}
+      {/* SC1322-06: /map's cost-ceiling notice, above the verdict, which then reads as saved copies; nothing while live. */}
+      <DegradedNotice />
+      {answer ? <LiveVerdict v={answer} saved={degraded.value !== null} /> : null}
     </>
   );
 }
