@@ -32,6 +32,7 @@ import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {RunLine} from '../brief/Run.tsx';
 import {Guard} from '../ui/Guard.tsx';
+import {boatEntryOpen} from './FirstRun.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
@@ -61,6 +62,9 @@ export function toggleLayers(panel: Panel, detent: Detent): {panel: Panel; deten
 
 /** History's series sits below the peek detent's clipped body, so entering History opens a peeked sheet to full. */
 export const viewDetent = (view: AppView, detent: Detent): Detent => view === 'history' && detent === 'peek' ? 'full' : detent;
+
+/** The boat step's fields and Save / Not now sit below the peek detent's clipped body, so showing it opens a peeked sheet to full. */
+export const boatEntryDetent = (open: boolean, detent: Detent): Detent => open && detent === 'peek' ? 'full' : detent;
 
 /** The first-run prompt yields the sheet to the layers panel; it is still due and returns when Layers closes. */
 export const showsFirstRun = (panel: Panel): boolean => panel !== 'layers';
@@ -143,6 +147,7 @@ export function Mobile({now = new Date(), firstRun}: {now?: Date; firstRun?: Com
   const [panel, setPanel] = useState<Panel>('brief');
   const apply = ({panel: p, detent: d}: {panel: Panel; detent: Detent}) => { setPanel(p); setDetent(d); };
   useEffect(() => setDetent(d => viewDetent(appView.value, d)), [appView.value]);
+  useEffect(() => setDetent(d => boatEntryDetent(boatEntryOpen.value, d)), [boatEntryOpen.value]);
   const layersOpen = panel === 'layers', conditions = appView.value === 'conditions', fleet = appView.value === 'fleet';
   return (
     <div class="app-mobile">
@@ -165,7 +170,7 @@ export function Mobile({now = new Date(), firstRun}: {now?: Date; firstRun?: Com
           // Pointer focus must not move a pressed choice before its click is delivered.
           if (target?.closest('.app-firstrun') && target.matches(':focus-visible') && detent !== 'full') {
             setDetent('full');
-            // Full shows the card's boat fields above the choices (MYB-1), which moves the focused choice: bring it back.
+            // Full lays the card out again (the peek row becomes the whole card), which moves the focused choice: bring it back.
             requestAnimationFrame(() => target.scrollIntoView({block: 'nearest'}));
           }
         }}>

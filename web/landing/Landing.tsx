@@ -11,7 +11,7 @@
 // "Explore the coast" takes the same second step with nothing to warm. No map
 // engine loads here (FE-25 adds the live map after first paint).
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {carryNotices} from '../boat-entry.ts';
+import {carryAsk} from '../boat-entry.ts';
 import {exploreURL, loadPorts, portURL, savePort, type Port} from '../ports.ts';
 import type {Profile} from '../profile.ts';
 import {PortInput} from './PortInput.tsx';
@@ -121,14 +121,15 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
   const restart = () => { leaveWarm(); setChoice(null); setWarmth(null); setBack(true); };
   // Step 2: accept once, synchronously, even before navigation unmounts us.
   const finished = useRef(false);
-  // MYB-1: the boat step's notices ride along to the map, which shows them (boat-entry.ts carryNotices).
-  const finish = (profile: Profile, notices: readonly string[] = []) => {
+  // SC-LANDING-ORDER: a Boat choice opens the map asking for the boat (MYB-1's fields, after the choice; boat-entry.ts carryAsk).
+  const finish = (profile: Profile) => {
     if (!choice || finished.current) return;
     finished.current = true;
-    if (choice.port) { savePort(choice.port.id); navigate(carryNotices(portURL(href, choice.port, profile), notices)); return; }
+    const open = (url: string) => navigate(profile === 'boat' ? carryAsk(url) : url);
+    if (choice.port) { savePort(choice.port.id); open(portURL(href, choice.port, profile)); return; }
     const url = new URL(exploreURL(href));
     url.searchParams.set('profile', profile);
-    navigate(carryNotices(url.href, notices));
+    open(url.href);
   };
   return (
     <>
