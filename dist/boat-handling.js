@@ -93,9 +93,15 @@ export function savedBoat() {
   } catch { return null; }
 }
 
-let active;
-/** Factors for the saved boat, or the reference when none is saved. */
+let active, activeRaw;
+/**
+ * Factors for the saved boat, or the reference when none is saved. Cached
+ * against the stored text, so a boat saved without a reload (the first-use
+ * step, web/boat-entry.ts) is rated from the next call on.
+ */
 export function activeBoatFactors() {
-  if (active === undefined) active = boatFactors(savedBoat()?.boat || null);
+  let raw = null;
+  try { raw = globalThis.localStorage?.getItem(BOAT_KEY) ?? null; } catch { raw = null; }
+  if (active === undefined || raw !== activeRaw) { activeRaw = raw; active = boatFactors(savedBoat()?.boat || null); }
   return active;
 }
