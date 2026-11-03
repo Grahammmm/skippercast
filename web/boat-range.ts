@@ -29,10 +29,10 @@ export function boatRangeNote(loaFt: unknown): string | null {
   return loaFt >= BOAT_NOTE_RANGE_FT.min && loaFt <= BOAT_NOTE_RANGE_FT.max ? null : BOAT_MODEL_NOTE;
 }
 
-/** The saved boat's name, else "your <n> ft boat", else the reference boat. */
+/** The saved boat's name, else "your <n> ft boat", else the reference boat. The first-use step's automatic "<n> ft boat" name counts as no name. */
 export function boatBasisName(boat: SavedBoatLike): string {
   if (!boat) return REFERENCE_BOAT_NAME;
   const name = typeof boat.name === 'string' ? boat.name.trim() : '';
-  if (name) return name;
+  if (name && !/^\d+(\.\d+)? ft boat$/.test(name)) return name;
   return finite(boat.loa_ft) ? `your ${Number(boat.loa_ft.toFixed(1))} ft boat` : 'your boat';
 }

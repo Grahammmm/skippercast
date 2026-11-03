@@ -64,6 +64,7 @@ test('the boat named: the saved name, else "your <n> ft boat", else the referenc
   assert.equal(boatBasisName({name: '  ', loa_ft: 18.35}), 'your 18.4 ft boat');
   assert.equal(boatBasisName({name: 'Skiff', loa_ft: null}), 'Skiff');
   assert.equal(boatBasisName({name: '', loa_ft: null}), 'your boat');
+  assert.equal(boatBasisName({name: '17 ft boat', loa_ft: 17}), 'your 17 ft boat', 'the first-use automatic name');
   assert.equal(boatRangeNote({name: 'Skiff', loa_ft: null}.loa_ft), null);
 });
 
@@ -119,6 +120,44 @@ test('the brief names the saved boat in its basis, rates for it and shows the se
     assert.ok(named.includes('Comfort rating for Sea Biscuit, not a bite forecast'));
     assert.ok(!named.includes(BOAT_MODEL_NOTE), 'inside the range only the existing text shows');
     assert.equal(m.comfortBasis(null).slice(0, 72), 'Comfort rating for the reference 23 ft boat, not a bite forecast or a sa');
+  } finally { m.regionInfo.value = null; m.dailyFeed.value = null; m.regionalForecast.value = null; delete globalThis.localStorage; }
+});
+
+test('no saved boat, then a 17 ft boat saved through the first-use step: the next verdict in the same session rates and names it', async () => {
+  const store = new Map();
+  globalThis.localStorage = {getItem: k => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k)};
+  const out = join(await mkdtemp(join(tmpdir(), 'boat-first-use-')), 'brief.mjs'), root = new URL('..', import.meta.url).pathname;
+  await build({stdin: {resolveDir: root, loader: 'ts', contents: `
+      export * from './web/brief/Brief.tsx';
+      export {regionInfo} from './web/app/App.tsx';
+      export {saveFirstUse} from './web/boat-entry.ts';
+      export {activeBoatFactors} from './dist/boat-handling.js';
+      export {render} from 'preact-render-to-string';
+      export {h} from 'preact';`},
+  bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+  const m = await import(pathToFileURL(out).href);
+  m.regionInfo.value = {id: 'monterey-point-sur', name: 'Monterey', center: [36.62, -121.9], timezone: TZ};
+  m.dailyFeed.value = montereyDaily;
+  const now = new Date('2026-10-09T12:00:00Z');
+  m.regionalForecast.value = {...forecast(now), region: 'monterey-point-sur'};
+  try {
+    const lead = m.leadBrief(now), ref = briefVerdict(lead, m.regionalForecast.value, now, TZ);
+    assert.deepEqual(pick(m.currentVerdict(lead, now)), pick(ref), 'nothing saved: the reference boat');
+    const before = m.render(m.h(m.Verdict, {now}));
+    assert.ok(before.includes('Comfort rating for the reference 23 ft boat'));
+    assert.ok(before.includes(` Worst hour: ${ref.score}/10.`));
+    assert.deepEqual(m.activeBoatFactors(), boatFactors(null));
+    assert.equal(m.saveFirstUse({lengthFt: '17', profile: 'boat'}, globalThis.localStorage).boat, true);
+    const want = briefVerdict(lead, m.regionalForecast.value, now, TZ, boatFactors({loa_ft: 17})), after = m.currentVerdict(lead, now);
+    assert.ok(want.score < ref.score, `${want.score} < ${ref.score}`);
+    assert.deepEqual(pick(after), pick(want), 'the saved 17 ft boat is rated, not the cached reference');
+    assert.deepEqual(m.activeBoatFactors(), boatFactors({loa_ft: 17}), 'every activeBoatFactors caller sees the new boat');
+    const html = m.render(m.h(m.Verdict, {now}));
+    assert.ok(html.includes('Comfort rating for your 17 ft boat, not a bite forecast'), 'the basis names the saved boat');
+    assert.ok(html.includes(` Worst hour: ${want.score}/10.`), 'and the score shown is the 17 ft one');
+    assert.ok(html.includes(`<p class="app-verdict-limit">${want.limit}`));
+    store.delete(BOAT_KEY);
+    assert.deepEqual(pick(m.currentVerdict(lead, now)), pick(ref), 'cleared: back to the reference');
   } finally { m.regionInfo.value = null; m.dailyFeed.value = null; m.regionalForecast.value = null; delete globalThis.localStorage; }
 });
 
