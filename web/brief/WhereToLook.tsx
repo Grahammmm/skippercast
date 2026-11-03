@@ -9,7 +9,8 @@
 // until one is saved, then "Range 12 nm"; under it, so the phone's half sheet
 // still shows the top pick), which opens Your limits at that
 // field; the list keeps only places inside it. With a cruise speed, a Boat
-// pick shows its one-way straight-line run time, a lower bound.
+// pick shows its one-way run time. SC1322-10: a Boat pick's distance, run time and range use the water
+// route (web/ranking.ts `routedPicks`) where one is computed, else the straight line, labelled.
 // CI6-01B: the list ranks only places its land/water check confirms as water
 // (web/land-water.ts); the region's index loads with the brief, and the lines file
 // only when a place falls in a cell the index leaves mixed.
@@ -26,8 +27,9 @@ import {homePortOrigin, loadRegionPorts, plannerPort, regionPorts, savedPortId} 
 import {depthLimitFt, PROFILE_TABLE} from '../profile.ts';
 import {isReachProfile, nmText, reachFor, shoreSwimLimit, spearPlan} from '../reach.ts';
 import {loadShoreLines, shoreLines} from '../shore-distance.ts';
-import {landWater, loadLandWater, loadLandWaterLines, placeFor} from '../land-water.ts';
-import {loadReefPublication, ranking, recheckReefPublication, reefPublication, regionLoad, type Pick, type Ranking} from '../ranking.ts';
+import {landWater, loadLandWater, loadLandWaterLines, placeFor, type LandWaterState} from '../land-water.ts';
+import {loadReefPublication, ranking, recheckReefPublication, reefPublication, regionLoad, routedPicks, ROUTE_BUDGET, TOP, type Pick, type Ranking, type RoutedPick, type RouteFn} from '../ranking.ts';
+import {waterRoute, type Route} from '../route.ts';
 import {fitCamera} from '../map/ranked.ts';
 import {cameraParam} from '../map/stage.ts';
 import {habitat, navigate, profile, region, selection, setParams, species} from '../state.ts';
@@ -43,7 +45,7 @@ export type {Pick, Ranking};
 const screenTick = signal(0);
 
 /** The list for the address and loaded data now, read from the signals so the brief re-renders when they change. */
-export function currentRanking(now = Date.now()): Ranking {
+export function currentRanking(now = Date.now(), top?: number): Ranking {
   const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget, id = region.value;
   void screenTick.value;
   // #644: Kayak measures from its chosen launch; Spear from shore keeps to the swim limit once the shoreline loads.
@@ -57,7 +59,21 @@ export function currentRanking(now = Date.now()): Ranking {
     origin: launch ?? home, originPending,
     shore: maxYd === null ? null : {maxYd, lines: lines && lines.region === id ? lines.lines : null},
     place: placeFor(landWater.value, id), missing: regionLoad.value?.id === id && regionLoad.value.state === 'missing',
-    publication: reefPublication.value, plannerScreen: protectedScreen.value});
+    publication: reefPublication.value, plannerScreen: protectedScreen.value, ...(top ? {top} : {})});
+}
+
+// SC1322-10: routes by region, origin and place; a new product, lines file or region starts afresh, so a re-render routes nothing again.
+let routes: {id: string | null; model: unknown; lines: unknown; route: RouteFn; memo: Map<string, Route>} | null = null;
+/** The Boat list by water: only this region's land/water product is used, and each route is computed once. */
+export function boatPicks(r: Ranking, lw: LandWaterState = landWater.value, id: string | null = region.value, route: RouteFn = waterRoute): RoutedPick[] {
+  const model = lw.state === 'ready' && lw.region === id ? lw.model : null, lines = model ? lw.lines : null;
+  if (!(routes && routes.id === id && routes.model === model && routes.lines === lines && routes.route === route)) routes = {id, model, lines, route, memo: new Map()};
+  const memo = routes.memo, once: RouteFn = (m, l, from, to) => {
+    const key = `${id}|${from.latitude},${from.longitude}>${to.latitude},${to.longitude}`, got = memo.get(key) ?? route(m, l, from, to);
+    memo.set(key, got);
+    return got;
+  };
+  return routedPicks(r.picks, r.origin, model, lines, r.reach ?? null, TOP, once);
 }
 
 /** Select a pick's mark or habitat (a history entry), as a click on the map would; a publication place moves the Chart to it. */
@@ -73,10 +89,10 @@ export function choosePick(pick: Pick, href: string = location.href): void {
 
 const selected = (pick: Pick): boolean => pick.kind === 'spot' ? selection.value === pick.id : pick.kind === 'habitat' && habitat.value === pick.id;
 
-/** A Boat pick's one-way run at the saved cruise speed ("run ≥ 25 min"): straight line, so the real run is longer. Empty without a speed or a distance. */
-export function pickRun(nm: number | null, speedKn: number | null): string {
+/** A Boat pick's one-way run at the saved cruise speed: "run 30 min" by water; "run ≥ 25 min" on the straight line, a lower bound. Empty without a speed or a distance. */
+export function pickRun(nm: number | null, speedKn: number | null, basis: 'water' | 'straight' = 'straight'): string {
   const min = nm === null || speedKn === null ? null : runMinutes(nm, speedKn);
-  return min === null ? '' : ` · run ≥ ${durationText(min)}`;
+  return min === null ? '' : ` · run ${basis === 'water' ? '' : '≥ '}${durationText(min)}`;
 }
 
 /**
@@ -92,7 +108,7 @@ function RangeControl({measured}: {measured: string | undefined}) {
   return (
     <>
       <Button variant="ghost" size="sm" class="app-where-range" aria-haspopup="dialog" data-reach={nm ?? undefined} onClick={() => setOpen(true)}
-        title={nm === null ? 'Set how far out to look' : `Range to consider: ${nmText(nm)} straight line from ${from}`}>
+        title={nm === null ? 'Set how far out to look' : `Range to consider: ${nmText(nm)} ${p === 'boat' ? 'by water where routed, else straight line,' : 'straight line'} from ${from}`}>
         {nm === null ? 'Set range' : `Range ${nmText(nm)}`}
       </Button>
       <LimitsDialog open={open} onClose={() => setOpen(false)} title={`Your limits · ${label}`}>
@@ -146,10 +162,14 @@ function EmptyOrPlan({empty}: {empty: string}) {
 }
 
 export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
-  const r = given ?? currentRanking(), id = region.value, boat = profile.value === 'boat', speed = cruiseSpeed.value;
+  const boat = profile.value === 'boat', r = given ?? currentRanking(Date.now(), boat ? ROUTE_BUDGET : undefined), id = region.value, speed = cruiseSpeed.value;
+  // SC1322-10: Boat lists by water where routed; other profiles keep the ranking's picks as they are.
+  const picks: readonly (Pick & {basis?: 'water' | 'straight'; why?: string})[] = boat ? boatPicks(r) : r.picks;
   // The lines file is asked for once the region's index is ready and a candidate still waits on it (a mixed cell),
   // so a list that was pending on the index itself asks as soon as the index lands; clean cells never load it.
-  const lw = landWater.value, wantLines = !!id && !!r.pending && lw.region === id && lw.state === 'ready' && lw.lines === null;
+  // A Boat route waiting on it (lines-needed) asks the same one request.
+  const lw = landWater.value, waits = !!r.pending || picks.some(pk => pk.why === 'lines-needed');
+  const wantLines = !!id && waits && lw.region === id && lw.state === 'ready' && lw.lines === null;
   // SCJ-2a: the publication loads once per region, and its live manifest is checked again now (a cached one) and each
   // minute, as the planner checks its plan, so a held, unavailable or superseded publication stops ranking.
   useEffect(() => {
@@ -180,13 +200,13 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
         {r.source ? <span class="app-where-source ui-mono">{r.label}</span> : null}
         {r.source ? <Popover iconOnly summary={`About the ${r.label.toLowerCase()} ranking`} align="end">{r.basis}</Popover> : null}
       </div>
-      {r.picks.length ? (
+      {picks.length ? (
         <ol class="app-picks">
-          {r.picks.map((pick, i) => (
+          {picks.map((pick, i) => (
             <li key={pick.id} data-mark={pick.id}>
               <button type="button" class="app-pick" aria-pressed={selected(pick)} onClick={() => choosePick(pick)}>
                 <span class="app-pick-rank ui-mono">{i + 1}</span>
-                <span>{pick.name} <span class="ui-mono">{pick.distance} · {pick.depth}{boat ? pickRun(pick.nm, speed) : ''}</span></span>
+                <span>{pick.name} <span class="ui-mono">{pick.distance} · {pick.depth}{boat ? pickRun(pick.nm, speed, pick.basis) : ''}</span></span>
                 <span class="app-fit ui-eyebrow">{pick.fit}</span>
                 <span class="app-pick-reason">{pick.reason}</span>
               </button>
