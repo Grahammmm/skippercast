@@ -157,7 +157,7 @@ async function load() {
       export {RAIL_ENTRIES} from './web/app/rail.ts';
       export {DEFAULT_CURRENT, STORAGE_KEYS} from './web/state.ts';
       export {render} from 'preact-render-to-string';
-      export {h} from 'preact';`},
+      export {h, render as renderDOM, options} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
   });
   components = await import(pathToFileURL(out).href);
@@ -209,6 +209,39 @@ test('landing navigation ignores retired ui values and preserves destination que
     const href = `https://s.test/${query}#saved`;
     assert.deepEqual(links(render(h(LandingHead, {href}))), headLinks, query);
     assert.deepEqual(links(render(h(LandingApp, {...props, href}))), appLinks, query);
+  }
+});
+
+test('double profile onChoose saves and navigates once before unmount', async () => {
+  const {LandingApp, h, renderDOM, options} = await load();
+  class El {
+    constructor(name) { Object.assign(this, {nodeType: 1, nodeName: name.toUpperCase(), localName: name, childNodes: [], parentNode: null, style: {}}); }
+    get firstChild() { return this.childNodes[0] ?? null; }
+    get nextSibling() { return this.parentNode?.childNodes[this.parentNode.childNodes.indexOf(this) + 1] ?? null; }
+    remove() { this.parentNode?.removeChild(this); }
+    removeChild(c) { this.childNodes.splice(this.childNodes.indexOf(c), 1); c.parentNode = null; return c; }
+    insertBefore(c, ref) { c.parentNode?.removeChild(c); const i = ref ? this.childNodes.indexOf(ref) : -1; this.childNodes.splice(i < 0 ? this.childNodes.length : i, 0, c); c.parentNode = this; return c; }
+    appendChild(c) { return this.insertBefore(c, null); }
+    setAttribute() {} removeAttribute() {} addEventListener() {} removeEventListener() {} focus() {}
+  }
+  const oldDocument = globalThis.document, oldStorage = globalThis.localStorage, oldHook = options.vnode;
+  let portStep, profileStep, writes = 0; const navigations = [], root = new El('div');
+  globalThis.document = {createElement: n => new El(n), createElementNS: (_, n) => new El(n),
+    createTextNode: t => Object.assign(new El('text'), {nodeType: 3, data: String(t)})};
+  globalThis.localStorage = {setItem: () => { writes++; }};
+  options.vnode = v => { oldHook?.(v); if (v.type?.name === 'PortInput') portStep = v.props; if (v.type?.name === 'ProfileStep') profileStep = v.props; };
+  try {
+    renderDOM(h(LandingApp, {href: 'https://s.test/', load: false, navigate: url => navigations.push(url)}), root);
+    portStep.onChoose({id: 'morro-bay', name: 'Morro Bay', region: 'morro-bay'});
+    await new Promise(resolve => setTimeout(resolve, 0));
+    profileStep.onChoose('boat'); profileStep.onChoose('boat');
+    assert.equal(navigations.length, 1); assert.equal(writes, 1);
+    assert.equal(new URL(navigations[0]).searchParams.get('region'), 'morro-bay');
+    assert.equal(new URL(navigations[0]).searchParams.get('profile'), 'boat');
+  } finally {
+    renderDOM(null, root); options.vnode = oldHook;
+    if (oldDocument === undefined) delete globalThis.document; else globalThis.document = oldDocument;
+    if (oldStorage === undefined) delete globalThis.localStorage; else globalThis.localStorage = oldStorage;
   }
 });
 

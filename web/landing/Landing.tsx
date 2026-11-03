@@ -107,9 +107,11 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
   };
   const explore = () => { warming.current = null; setChoice({place: EXPLORE_PLACE, port: null}); setWarmth(null); };
   const restart = () => { warming.current = null; setChoice(null); setWarmth(null); setBack(true); };
-  // Step 2: the profile opens the app; only now is the port saved as home.
+  // Step 2: accept once, synchronously, even before navigation unmounts us.
+  const finished = useRef(false);
   const finish = (profile: Profile) => {
-    if (!choice) return;
+    if (!choice || finished.current) return;
+    finished.current = true;
     if (choice.port) { savePort(choice.port.id); navigate(portURL(href, choice.port, profile)); return; }
     const url = new URL(exploreURL(href));
     url.searchParams.set('profile', profile);

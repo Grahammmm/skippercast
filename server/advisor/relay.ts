@@ -12,5 +12,11 @@ export interface RelayState {state: 'up' | 'down'; failures: number; checked_at:
 export async function relayState(env: Pick<Env, 'DB'>): Promise<RelayState | null> {
   if (!env.DB) return null;
   const raw = (await env.DB.prepare('SELECT value FROM job_state WHERE key=?').bind(RELAY_KEY).first<{value: string}>())?.value;
-  try { const v = raw ? JSON.parse(raw) : null; return v && (v.state === 'up' || v.state === 'down') ? v : null; } catch { return null; }
+  let v;
+  try { v = raw ? JSON.parse(raw) : null; } catch { return null; }
+  if (!v || typeof v !== 'object' || (v.state !== 'up' && v.state !== 'down')) return null;
+  // RF1100-6: only the four known fields; a damaged count restarts at 0 so the watchdog still reaches down.
+  return {state: v.state, failures: Number.isSafeInteger(v.failures) && v.failures >= 0 ? v.failures : 0,
+    checked_at: typeof v.checked_at === 'string' ? v.checked_at : '',
+    last_ok_at: typeof v.last_ok_at === 'string' && Number.isFinite(Date.parse(v.last_ok_at)) ? v.last_ok_at : null};
 }

@@ -164,7 +164,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // Merged with BF-species-plans-page #1276 (Plan label and icon, see the check_contrast.mjs note below): rebound to
   // the merged file, which carries both changes and nothing else.
   "web/app/Masthead.tsx": "c8c12a37a7020359c86513ddaf250aa81a333a736f3b5bbd405cf3aa809ca15d",
-  "web/app/LayerRail.tsx": "bdae57c4c4dca33b5fb83a413b7d5c6f525221a4fb6b78037a1ad99102635ccd",
+  // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
+  // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
+  // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
+  "web/app/LayerRail.tsx": "5d3189de050676a45d6b35ff06470f89b3d9e788cdab4a9ae79267859cb6f6b1",
   "web/app/MapStage.tsx": "11bfed22183687b9bdfa6c4a348688b633dd4eaab5607aeeb5718fb104c41466",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "0a636f225f5b51d1e34f2de059c826e4a0f2af876fcf20f827f2ccb5ef705008",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
