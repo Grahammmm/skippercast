@@ -13,6 +13,16 @@ import type {Filters, LayerKey, Planner as Model, Preset, ProtectedHit, Target, 
 import {PORTS_FAILED_NOTE} from '../planner.ts';
 import {tripLegs} from '../trip-legs.ts';
 import {cruiseSpeed} from '../limits.ts';
+import {landWater, loadLandWaterLines, type LandWaterState} from '../land-water.ts';
+import {waterRoute, type Route, type RoutePoint} from '../route.ts';
+// Leg routes over the land/water product and lines the Boat brief reads (FSC-05), kept until either changes so a re-render does not search again.
+let legRoutes: {model: unknown; lines: unknown; byKey: Map<string, Route>} | null = null;
+function legRoute(lw: LandWaterState, id: string): (a: RoutePoint, b: RoutePoint) => Route {
+  const model = lw.state === 'ready' && lw.region === id ? lw.model : null;
+  if (!(legRoutes && legRoutes.model === model && legRoutes.lines === lw.lines)) legRoutes = {model, lines: lw.lines, byKey: new Map()};
+  const byKey = legRoutes.byKey;
+  return (a, b) => { const key = `${a.latitude},${a.longitude}>${b.latitude},${b.longitude}`; if (!byKey.has(key)) byKey.set(key, waterRoute(model, lw.lines, a, b)); return byKey.get(key)!; };
+}
 
 const DEVICE_HELP: Readonly<Record<string, readonly [string, string, string]>> = {
   generic: ['Chartplotter model not selected', 'Download GPX, copy it to storage supported by your model, then use its Import menu. Most reviewed plotters use SD/microSD; USB support varies. Inserting media alone does not import a plan.', 'https://www8.garmin.com/manuals/webhelp/GUID-3E67C80C-0812-4EEC-BC60-699751B9CF6F/EN-US/GPSMAP_x3_OM_EN-US.pdf'],
@@ -76,7 +86,11 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
   const selected = d.ids.map(id => m.tripAtlas.value.targets.find(t => t.id === id)).filter((t): t is Target => !!t);
   const waypoints = (d.userWaypoints ?? []).filter(t => d.ids.includes(t.id));
   const route = tripLegs(port ? {name: port.name, lat: port.match[0], lon: port.match[1]} : null,
-    [...selected, ...waypoints].map(t => ({id: t.id, name: t.name || ('label' in t ? t.label : t.id), lat: t.latitude, lon: t.longitude})), cruiseSpeed.value);
+    [...selected, ...waypoints].map(t => ({id: t.id, name: t.name || ('label' in t ? t.label : t.id), lat: t.latitude, lon: t.longitude})), cruiseSpeed.value,
+    legRoute(landWater.value, m.region.id));
+  // The shoreline lines are asked for once when a leg waits on them (shared with the brief's request); the legs re-render when they land.
+  const waits = route.legs.some(leg => leg.why === 'lines-needed');
+  useEffect(() => { if (waits) void loadLandWaterLines(m.region.id); }, [waits, m]);
 
   return (
     <div id="export-content">
@@ -114,9 +128,9 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
           {route.legs.length > 0 && <section aria-label="Your stops in order">
             <h3>Your stops in order</h3>
             {!port && <p>No home port chosen, so the run from port is not counted.</p>}
-            <ol aria-label="Stops in order">{route.legs.map((leg, i) => <li key={i}>{leg.from} → {leg.to} · {leg.nm.toFixed(1)} nm{leg.runMin === null ? '' : ` · at least ${leg.runMin} min`}</li>)}</ol>
+            <ol aria-label="Stops in order">{route.legs.map((leg, i) => <li key={i}>{leg.from} → {leg.to} · {leg.nm.toFixed(1)} nm{leg.basis === 'straight' ? ' straight line' : ''}{leg.runMin === null ? '' : ` · at least ${leg.runMin} min`}</li>)}</ol>
             <p>Total: {route.totalNm.toFixed(1)} nm{route.totalRunMin === null ? '' : ` · at least ${route.totalRunMin} min`}</p>
-            <p class="export-note">Straight-line legs between stops; the real route is longer. Sea state, the bar, fuel and conditions at each stop are not included.</p>
+            <p class="export-note">{route.legs.some(leg => leg.basis === 'straight') ? 'Straight-line legs between stops; the real route is longer. ' : ''}Sea state, the bar, fuel and conditions at each stop are not included.</p>
           </section>}
           {route.skipped.length > 0 && <p>Stops skipped because coordinates are unavailable: {route.skipped.join(', ')}.</p>}
           <button class="primary export-best" id="export-best" disabled={!m.portsReady.value || m.loading.value} onClick={() => void m.selectBest()}>Best available · up to {f.limit} reef spots</button>

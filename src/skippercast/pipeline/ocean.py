@@ -79,6 +79,15 @@ def hfr(client, region, resolution=6):
             'limitations':'Observed near-surface flow; local gaps retained. Not boat drift or bottom current. HDOP <=2 and at least two contributing radars.'}
 
 
+WCOFS_SPEED_UNITS={'m s-1','meters second-1'}  # both mean metres per second
+
+
+def _block(das, name):
+    match=re.search(r'\b'+re.escape(name)+r'\s*\{(.*?)\}',das,re.S)
+    if not match:raise ValueError('Missing WCOFS variable metadata: '+name)
+    return match[1]
+
+
 def wcofs(client, region, now):
     # Use public daily catalogs and actual files. Never infer an available run from the clock alone.
     base=None;files=[];cycle=None
@@ -97,6 +106,9 @@ def wcofs(client, region, now):
     if 'hours since 2016-01-01' not in das and 'seconds since' not in das and 'days since' not in das:
         # Parse rather than assume NOAA's time origin.
         if not re.search(r'(?:hours|seconds|days) since \d{4}-\d{2}-\d{2}',das):raise ValueError('Unknown WCOFS time unit')
+    for variable in ('u_eastward','v_northward'):
+        units=re.search(r'String units "([^"]*)";',_block(das,variable))
+        if not units or units[1] not in WCOFS_SPEED_UNITS:raise ValueError('WCOFS units changed: '+variable)
     dims={k:int(v) for k,v in re.findall(r'\[(ny|nx) = (\d+)\]',dds)}
     axes=dap(client,first,f'Latitude[0:1:{dims["ny"]-1}][0],Longitude[0][0:1:{dims["nx"]-1}],Depth')
     if axes['Depth'][0]!=0:raise ValueError('First WCOFS layer is not surface')
@@ -106,7 +118,7 @@ def wcofs(client, region, now):
     if not unit:raise ValueError('WCOFS time metadata unavailable')
     origin=datetime.fromisoformat(unit[2].strip().replace('UTC','').strip().replace('Z','+00:00')).replace(tzinfo=timezone.utc)
     factor={'seconds':1,'hours':3600,'days':86400}[unit[1]]
-    cut=f'[{y0}:1:{y1}][{x0}:1:{x1}]';query=f'Latitude{cut},Longitude{cut},mask{cut},u_eastward[0][0]{cut},v_northward[0][0]{cut},time'
+    n=(y1-y0+1)*(x1-x0+1);cut=f'[{y0}:1:{y1}][{x0}:1:{x1}]';query=f'Latitude{cut},Longitude{cut},mask{cut},u_eastward[0][0]{cut},v_northward[0][0]{cut},time'
     frames=[]
     # DAP clients share no mutable library state. Bounded HTTP reads retain hashes.
     for filename in files:
@@ -118,9 +130,10 @@ def wcofs(client, region, now):
             if mask==1 and vec:cells.append([round(lat,6),round(lon,6),*vec])
         epoch=origin.timestamp()+a['time'][0]*factor
         if abs(epoch-(cycle.timestamp()+fh*3600))>60:raise ValueError('WCOFS valid time conflicts with cycle')
-        frames.append({'time':int(epoch),'cells':cells,'source_file':filename})
+        frames.append({'time':int(epoch),'cells':cells,'source_file':filename,'valid_cells':len(cells),'total_cells':n})
     if not frames:raise ValueError('No populated WCOFS forecast hours')
-    return {'provider':'NOAA WCOFS','kind':'forecast','issued_at':stamp(cycle),'resolution_km':4,'horizontal_datum':'NAD83','vertical_layer':'surface (0 m)','surface_only':True,
+    populated=[f for f in frames if f['cells']]
+    return {'total_cells':n,'valid_cells':len(populated[-1]['cells']) if populated else 0,'provider':'NOAA WCOFS','kind':'forecast','issued_at':stamp(cycle),'resolution_km':4,'horizontal_datum':'NAD83','vertical_layer':'surface (0 m)','surface_only':True,
             'fields':['latitude','longitude','speed_knots','toward_degrees'],'frames':frames,'valid_from':frames[0]['time'],'valid_through':frames[-1]['time'],
             'source_url':'https://tidesandcurrents.noaa.gov/ofs/wcofs/wcofs_info.html',
             'limitations':'Regional surface model, 3-hour output; no extrapolation. Assimilates HF radar, so agreement is not independent validation. Does not resolve a reef, bottom current or harbor bar.'}
