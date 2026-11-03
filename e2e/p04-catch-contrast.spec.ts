@@ -176,7 +176,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
   "web/app/LayerRail.tsx": "5d3189de050676a45d6b35ff06470f89b3d9e788cdab4a9ae79267859cb6f6b1",
-  "web/app/MapStage.tsx": "11bfed22183687b9bdfa6c4a348688b633dd4eaab5607aeeb5718fb104c41466",
+  // SC-MAIN-FLAKE (#1400, contours drawn signal): MapStage.tsx only passes host: chartHost.current! to
+  // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
+  // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),
+  // assertions and thresholds are untouched. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "a938155ba181e87dfb4fbcd20b0f9e281ea05940f8bb0f04b418eb38fe6658a5",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "0a636f225f5b51d1e34f2de059c826e4a0f2af876fcf20f827f2ccb5ef705008",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   // BF-wcag: app.css and panel.css add only 24 px min-height target floors (no paint); app.css merged with SC2222-07.
