@@ -21,7 +21,7 @@ import {appendFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {APP_VIEWS} from '../web/state.ts';
 import {test, expect, type Page} from '@playwright/test';
-import {aggregate, type ResourceEntry, type Row} from './tile-cost.ts';
+import {aggregate, withFailed, type ResourceEntry, type Row} from './tile-cost.ts';
 import {saveAndPublish} from './tile-cost-publish.ts';
 import config from '../playwright.config.ts';
 
@@ -79,7 +79,7 @@ for (const view of APP_VIEWS) {
       await expect(page).toHaveTitle(/SkipperCast/);
       const settled = await settle(page);
       page.off('requestfailed', onFailed);
-      return {entries: [...await readEntries(page), ...failed.map(url => ({url, transfer_bytes: null, body_bytes: null}))], settled};
+      return {entries: withFailed(await readEntries(page), failed), settled};
     };
     const cold = await load();   // fresh context: the view's cold cost
     const warm = await load();   // same context and cache: the repeat cost

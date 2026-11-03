@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-const {classify, aggregate, sumBytes, reusedAcrossPasses, KINDS} = await import('../e2e/tile-cost.ts');
+const {classify, aggregate, sumBytes, reusedAcrossPasses, withFailed, KINDS} = await import('../e2e/tile-cost.ts');
 
 const ORIGIN = 'http://localhost:8787';
 const kind = url => classify(url, ORIGIN)?.kind ?? null;
@@ -87,6 +87,24 @@ test('reusedAcrossPasses: only what the cold pass fetched and the warm pass got 
   assert.deepEqual(reusedAcrossPasses(ORIGIN, cold, cold.slice(0, 1).concat(cold.slice(3))), []);   // a second cold pass: cache off
   assert.equal(aggregate(ORIGIN, 'coast', 'phone', 'warm', warm, true, cold).reused_from_cold, 1);
   assert.equal(aggregate(ORIGIN, 'coast', 'phone', 'cold', cold, true).reused_from_cold, null);
+});
+
+test('withFailed: a failure the Performance API also timed counts once; real duplicates still count twice', () => {
+  const tides = 'https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=9412110';
+  const feed = ORIGIN + '/feeds/data/regions/morro-bay/latest.json';
+  const js = {url: ORIGIN + '/assets/app.js', transfer_bytes: 100, body_bytes: 200};
+  const entries = [js, js, {url: tides, transfer_bytes: null, body_bytes: null}, {url: feed, transfer_bytes: null, body_bytes: null}];
+  const failed = [tides, feed, ORIGIN + '/api/forecast?x=1'];      // the last one has no resource entry
+  const merged = withFailed(entries, failed);
+  assert.equal(merged.length, 5);
+  const row = aggregate(ORIGIN, 'coast', 'laptop', 'cold', merged, true);
+  assert.equal(row.requests, 5);
+  assert.deepEqual(row.remote, {'api.tidesandcurrents.noaa.gov': 1});
+  assert.equal(row.by_kind.script.requests, 2);                  // a real duplicate still counts twice
+  assert.equal(row.by_kind.feed.requests, 1);
+  assert.equal(row.by_kind.api.requests, 2);                     // the tides call (path /api/) and the untimed forecast
+  // Two failures of one URL with one resource entry: the second one is added.
+  assert.equal(withFailed([{url: feed, transfer_bytes: null, body_bytes: null}], [feed, feed]).length, 2);
 });
 
 test('sumBytes: null is not 0', () => {

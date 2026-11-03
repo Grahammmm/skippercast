@@ -79,6 +79,23 @@ export function reusedAcrossPasses(origin: string, cold: ResourceEntry[], warm: 
   return [...new Set(warm.filter(e => { const c = classify(e.url, origin); return c !== null && network.has(e.url) && cacheReused(e, c); }).map(e => e.url))];
 }
 /**
+ * The page's entries plus each requestfailed URL that no entry already covers.
+ * The Performance API also times most blocked or unresolved requests, so a
+ * failed URL is added only past the count of entries with that URL (multiset
+ * subtraction): one failure is never counted twice, real duplicates still are.
+ */
+export function withFailed(entries: ResourceEntry[], failed: string[]): ResourceEntry[] {
+  const seen = new Map<string, number>();
+  for (const e of entries) seen.set(e.url, (seen.get(e.url) ?? 0) + 1);
+  const extra: ResourceEntry[] = [];
+  for (const url of failed) {
+    const n = seen.get(url) ?? 0;
+    if (n > 0) seen.set(url, n - 1);
+    else extra.push({url, transfer_bytes: null, body_bytes: null});
+  }
+  return [...entries, ...extra];
+}
+/**
  * One (view, project, pass) row from raw entries; duplicate URLs count twice.
  * Pass the cold pass's entries with a warm pass to fill reused_from_cold.
  */
