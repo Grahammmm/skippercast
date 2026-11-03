@@ -18,6 +18,7 @@ import {ProfileStep} from './ProfileStep.tsx';
 import {warmRegion, type WarmState} from './region-warm.ts';
 import {DEFAULT_REGION, loadReadout, type Readout as Data} from './readings.ts';
 import {Readout} from './Readout.tsx';
+import type {LandingVerdict} from './live-verdict.ts';
 
 /** The nav (§ 7): Fleet and Reports open the app's views (Reports, FE-52), How it's built the sources page (Q16). */
 export const NAV = [
@@ -51,13 +52,24 @@ export type LandingAppProps = {
   load?: boolean;
   /** The region warm-up (region-warm.ts by default; tests pass stand-ins). */
   warm?: (region: string) => Promise<{state: WarmState}>;
+  /** BF-landing-live: tomorrow's verdict, loaded after the readout (main.tsx passes live-verdict.ts by dynamic import, as it does the night map; none by default). */
+  verdict?: () => Promise<LandingVerdict | null>;
 };
+
+/** Tomorrow's answer for the reference boat, as the app's lead gives it; below the funnel, so nothing above the port input moves. */
+export const LiveVerdict = ({v}: {v: LandingVerdict}) => (
+  <section class="landing-verdict" aria-live="polite" aria-label="Tomorrow’s brief" data-day={v.date}>
+    <p class="landing-verdict-head">{v.day} near {v.place}, reference 23 ft boat: <strong class="landing-verdict-word" data-verdict={v.verdict}>{v.word}</strong></p>
+    <p class="landing-verdict-limit">{v.sentence}</p>
+    <a class="landing-verdict-link" href={v.href}>Open the full brief</a>
+  </section>
+);
 
 /** Where the profile step leads: a port (warmed) or the central coast (nothing to warm). */
 type Choice = {place: string; port: Port | null};
 const EXPLORE_PLACE = 'Central coast';
 
-export function LandingApp({href, initialProfile = null, fleet = null, navigate = url => location.assign(url), load = true, warm = region => warmRegion(region, href)}: LandingAppProps) {
+export function LandingApp({href, initialProfile = null, fleet = null, navigate = url => location.assign(url), load = true, warm = region => warmRegion(region, href), verdict = () => Promise.resolve(null)}: LandingAppProps) {
   const [ports, setPorts] = useState<Port[] | null>(null);
   const [readout, setReadout] = useState<Data | null>(null);
   const [choice, setChoice] = useState<Choice | null>(null);
@@ -65,10 +77,24 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
   /** The region being warmed, so an answer for an earlier choice is ignored; and whether the visitor came back from step 2. */
   const warming = useRef<string | null>(null);
   const [back, setBack] = useState(false);
+  /** Whether the last port list failed (step 1 then offers "Try again"), and the newest attempt, so an earlier answer is ignored. */
+  const [failed, setFailed] = useState(false);
+  const attempt = useRef(0);
+  // A retry shows "Loading ports…" again; loadPorts forgets a failure, so it fetches again.
+  const loadList = () => {
+    const mine = ++attempt.current;
+    setPorts(null);
+    loadPorts().then(list => { if (attempt.current === mine) { setFailed(false); setPorts(list); } },
+      () => { if (attempt.current === mine) { setFailed(true); setPorts([]); } });
+  };
+  const [answer, setAnswer] = useState<LandingVerdict | null>(null);
   useEffect(() => {
     if (!load) return;
-    loadPorts().then(setPorts, () => setPorts([]));
-    void loadReadout().then(setReadout);
+    let alive = true;
+    loadList();
+    // The verdict's modules load only once the readout is in, and nothing is set after unmount.
+    void loadReadout().then(r => { setReadout(r); return alive ? verdict() : null; }).then(v => { if (alive) setAnswer(v); }, () => {});
+    return () => { alive = false; };
   }, [load]);
   // Step 1 → 2: remember the choice and warm its region while they pick a profile; a later choice ignores an earlier warm-up's answer.
   const choose = (port: Port) => {
@@ -94,7 +120,8 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
       <Readout data={readout} fleet={fleet} conditions={`/map?region=${DEFAULT_REGION}&view=conditions`} />
       {choice
         ? <ProfileStep place={choice.place} warm={choice.port ? warmth : null} current={initialProfile} onChoose={finish} onBack={restart} />
-        : <PortInput ports={ports} onChoose={choose} onExplore={explore} autoFocus={back} />}
+        : <PortInput ports={ports} onChoose={choose} onExplore={explore} onRetry={failed ? loadList : undefined} autoFocus={back} />}
+      {answer ? <LiveVerdict v={answer} /> : null}
     </>
   );
 }

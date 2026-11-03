@@ -377,12 +377,13 @@ export const SURFACE_SOURCE_SHA256 = {
   "tokensCss": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   // CI6-18 only adds layout declarations scoped to .app-legend-stations; sampled Reports paint is unaffected.
   // SC-N3 only adds overflow/min-width rules for the phone sheet Day row and Target select and hides .app-top-card .app-location-coords.
-  "appCss": "c5b14f6eedcb57b4628ddc8edc2adfe6305b2ac515f1702e6a24a638539eb64a",
+  // SC2222-07 only adds a sticky .app-mark-actions row (opaque --panel) and scroll padding inside the left-column mark card; legend paint is unaffected.
+  "appCss": "ae6b03d506037f735baaf561b08fb15cad815133dc973c7bd4052d4df932cbac",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
   // SC2007-02 adds the shared quiet Button (Try again) to the Protected areas row; no text paint changed.
-  "legendTsx": "634655f873d7c44a813347bc7742f6950def803c379f6abd54e42ddeed4aaf71"
+  "legendTsx": "09d316ca34b38413e8766aa61a324b88abb9fb77ac0880b727feaf4efa0fb76f"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];

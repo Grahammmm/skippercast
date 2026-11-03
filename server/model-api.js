@@ -221,6 +221,8 @@ function parseQuery(kind, params) {
   const lats = list(params, 'latitude').map(Number), lons = list(params, 'longitude').map(Number);
   if (!lats.length || lats.length !== lons.length || lats.length > 50 || [...lats, ...lons].some(v => !Number.isFinite(v)))
     throw new QueryError('latitude and longitude must be matching lists of up to 50 numbers');
+  if (lats.some(v => v < -90 || v > 90)) throw new QueryError('Latitude must be in range of -90 to 90°');
+  if (lons.some(v => v < -180 || v > 180)) throw new QueryError('Longitude must be in range of -180 to 180°');
   const requestedModels = list(params, 'models');
   const models = requestedModels.length ? requestedModels : DEFAULT_MODELS[kind];
   for (const m of models) if (MODELS[m]?.kind !== kind) throw new QueryError(`Model ${m} is not available for ${kind}`);
@@ -235,6 +237,7 @@ function parseQuery(kind, params) {
   const speed = params.get('wind_speed_unit') || 'kmh';
   if (!SPEED[speed]) throw new QueryError('Invalid wind_speed_unit');
   const cell = params.get('cell_selection') || (kind === 'marine' ? 'sea' : 'land');
+  if (!['land', 'sea', 'nearest'].includes(cell)) throw new QueryError('Invalid cell_selection');
   // Repeated names already overwrite the same output fields. Preserve their
   // suffix contract while executing each validated model/variable only once.
   return {lats, lons, models: [...new Set(models)], modelSuffix: models.length > 1,

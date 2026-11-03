@@ -18,6 +18,7 @@ export const MAX_SAVED_TIDE_STATIONS = 3;
 export interface SavedTideStations {saved: string[]; active: string | null}
 type TideStorage = Pick<Storage, 'getItem'> & Partial<Pick<Storage, 'setItem' | 'removeItem'>>;
 const validId = (id: unknown): id is string => typeof id === 'string' && /^\d{7}$/.test(id);
+const label = (v: unknown): string | null => typeof v === 'string' && /^[^\p{Cc}\u2028\u2029]{1,80}$/u.test(v.trim()) ? v.trim() : null;
 function validSaved(value: unknown): value is SavedTideStations {
   return record(value) && Array.isArray(value.saved) && value.saved.length <= MAX_SAVED_TIDE_STATIONS
     && value.saved.every(validId) && new Set(value.saved).size === value.saved.length
@@ -60,18 +61,19 @@ export function tideRegion(id: string, value: unknown): TideRegion | null {
   if (!record(value) || !record(value.stations) || !Array.isArray(value.bounds) || value.bounds.length !== 4 || !value.bounds.every(Number.isFinite)) return null;
   const station = value.stations.tide;
   return typeof station === 'string' && /^\d{7}$/.test(station)
-    ? {id, bounds: value.bounds as number[], station, name: String(value.stations.tide_name ?? station)} : null;
+    ? {id, bounds: value.bounds as number[], station, name: label(value.stations.tide_name) ?? station} : null;
 }
 export function stationsInRegion(body: unknown, bounds: readonly number[]): TideStation[] {
   if (!record(body) || !Array.isArray(body.stations) || bounds.length !== 4 || !bounds.every(Number.isFinite)) return [];
   const [west, south, east, north] = bounds as [number, number, number, number];
   const stations = new Map<string, TideStation>();
   for (const row of body.stations) {
-    if (!record(row) || typeof row.id !== 'string' || !/^\d{7}$/.test(row.id) || typeof row.name !== 'string'
+    const name = record(row) ? label(row.name) : null;
+    if (!record(row) || typeof row.id !== 'string' || !/^\d{7}$/.test(row.id) || name === null
       || typeof row.lat !== 'number' || typeof row.lng !== 'number' || !Number.isFinite(row.lat) || !Number.isFinite(row.lng)
       || (row.type !== 'R' && row.type !== 'S')) continue;
     if (row.lat < south || row.lat > north || row.lng < west || row.lng > east) continue;
-    stations.set(row.id, {id: row.id, name: row.name, lat: row.lat, lng: row.lng, type: row.type});
+    stations.set(row.id, {id: row.id, name, lat: row.lat, lng: row.lng, type: row.type});
   }
   return [...stations.values()].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
 }
@@ -92,15 +94,15 @@ export function tidePackURLs(station: TideStation, now = Date.now()): string[] {
   return [TIDE_DIRECTORY_URL, tidePredictionsURL(station.id, 'hilo', now), ...(station.type === 'R' ? [tidePredictionsURL(station.id, '6', now)] : [])];
 }
 export function parseTidePredictions(body: unknown): {points: TidePoint[]; events: TideEvent[]} {
-  const points: TidePoint[] = [], events: TideEvent[] = [];
+  const points: TidePoint[] = [], events: TideEvent[] = [], seenPoints = new Set<string>(), seenEvents = new Set<string>();
   if (!record(body) || !Array.isArray(body.predictions) || body.error) return {points, events};
   for (const row of body.predictions) {
     if (!record(row) || typeof row.t !== 'string' || !/^\d{4}-\d\d-\d\d \d\d:\d\d$/.test(row.t) || typeof row.v !== 'string' || !row.v.trim()) continue;
     const time = Date.parse(row.t.replace(' ', 'T') + ':00Z'), heightFt = Number(row.v);
     if (!Number.isFinite(time) || !Number.isFinite(heightFt)) continue;
     const point = {at: new Date(time).toISOString(), heightFt};
-    if (row.type === 'H' || row.type === 'L') events.push({...point, type: row.type});
-    else if (row.type === undefined) points.push(point);
+    if (row.type === 'H' || row.type === 'L') { if (!seenEvents.has(point.at)) { seenEvents.add(point.at); events.push({...point, type: row.type}); } }
+    else if (row.type === undefined && !seenPoints.has(point.at)) { seenPoints.add(point.at); points.push(point); }
   }
   points.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
   events.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
@@ -108,16 +110,20 @@ export function parseTidePredictions(body: unknown): {points: TidePoint[]; event
 }
 /** Save validated, live answers. NOAA can return an error body with HTTP 200. */
 export async function saveTidePack(urls: readonly string[], put: (key: string, body: ArrayBuffer, headers: Headers) => Promise<void>, signal: AbortSignal, fetcher: typeof fetch = fetch): Promise<void> {
+  const unavailable = 'Chosen tide predictions are unavailable. Saved regions are unchanged.', kept: [string, ArrayBuffer, Headers][] = [];
   for (const url of urls) {
     const response = await fetcher(url, {credentials: 'omit', cache: 'no-cache', signal});
     if (!response.ok || response.headers.has('X-SC-Offline')) throw new Error('Chosen tide station could not be saved from a live response. Saved regions are unchanged.');
-    const body = await response.arrayBuffer(), json: unknown = JSON.parse(new TextDecoder().decode(body));
+    const body = await response.arrayBuffer();
+    let json: unknown;
+    try { json = JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(body)); } catch { throw new Error(unavailable); }
     const interval = new URL(url).searchParams.get('interval');
     const parsed = parseTidePredictions(json);
     if (url === TIDE_DIRECTORY_URL ? !record(json) || !Array.isArray(json.stations) : !(interval === 'hilo' ? parsed.events.length : parsed.points.length))
-      throw new Error('Chosen tide predictions are unavailable. Saved regions are unchanged.');
-    await put(url, body, response.headers);
+      throw new Error(unavailable);
+    kept.push([url, body, response.headers]);
   }
+  for (const [url, body, headers] of kept) await put(url, body, headers);
 }
 export async function loadTideReading(station: TideStation, fetcher: typeof fetch = fetch, now = Date.now()): Promise<TideReading> {
   const intervals: ('6' | 'hilo')[] = station.type === 'R' ? ['hilo', '6'] : ['hilo'];

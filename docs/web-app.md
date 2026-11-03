@@ -22,7 +22,13 @@ Open `http://localhost:8787/`. `pnpm build` (`scripts/build-worker.mjs`, `vite.c
 
 ## State and the URL
 
-`region`, `coast`, `view`, `target`, `hour`, `profile`, `day`, `layers`, `area` and `base` in the address are the source of truth (`URL_KEYS` in `web/state.ts`, which also lists the History and coast keys). Choosing a port, changing a view, picking a target or moving the time dock updates the address without a reload, and a shared link opens the same state. Region changes never reload the page in the map app (`configureStore({v2: true})` in `web/app/main.tsx`); `navigate()` in `web/state.ts` is the one place that decides. `?view=` names a masthead view (`coast`, `conditions`, `history`, `fleet`, `reports`); any other value is read as a map position `lat,lng,zoom`.
+`region`, `coast`, `view`, `target`, `hour`, `profile`, `day`, `layers`, `area`, `base` and `port` in the address are the source of truth (`URL_KEYS` in `web/state.ts`, which also lists the History and coast keys). Choosing a port, changing a view, picking a target or moving the time dock updates the address without a reload, and a shared link opens the same state. Region changes never reload the page in the map app (`configureStore({v2: true})` in `web/app/main.tsx`); `navigate()` in `web/state.ts` is the one place that decides. `?view=` names a masthead view (`coast`, `conditions`, `history`, `fleet`, `reports`); any other value is read as a map position `lat,lng,zoom`.
+
+### Shared links
+
+Share, beside the port control (`ShareControl` in `web/app/CommandBar.tsx`), builds one canonical link with `shareLink` in `web/share-link.ts` and hands it to the share sheet, else copies it, else shows it in a field to copy. The link is `/map?` with, in this order, `region` (or, over the coast with no region, `coast`: the address's own, else `central`, so a link always names its geography), `port`, `profile`, `day`, `hour` (when the address has one), `target` (when set), then whichever of `view`, `layers`, `base`, `presentation`, `current`, `habitat` and `spot` the address has. Nothing else is carried. `day` is the dock's local date, always written (today included), so the link means the same day later; a day past the forecast horizon is left out. Its title is `<Port> · <Sat Nov 7> · <Profile>`; neither the link nor the title carries a condition.
+
+Opening a link shows its `port` when that port is listed in its `region` (`linkedPort` in `web/ports.ts`), else the saved home port, else the region's first port. Reading a link never saves a home port. Once the port directory loads, an unlisted, foreign or malformed `port` is removed from the address; a directory that fails to load leaves it in place.
 
 ## Code layout
 

@@ -23,6 +23,7 @@ import {BriefFooter, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, cu
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {RunLine} from '../brief/Run.tsx';
+import {Guard} from '../ui/Guard.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
@@ -32,6 +33,7 @@ import {Conditions} from './views/Conditions.tsx';
 import {Fleet} from './views/Fleet.tsx';
 import {History} from './views/History.tsx';
 import {Reports} from './views/Reports.tsx';
+import {PlanView} from './PlanView.tsx';
 import {appView} from '../state.ts';
 
 export {emptyTiles} from '../brief/Tiles.tsx';
@@ -42,15 +44,15 @@ export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Dat
   return (
     <aside class="app-brief" aria-label="Brief" data-basis={brief?.basis}>
       {/* SC-LAUNCH-3: the lead names its own day (tomorrow until a time is chosen); the eyebrow heads the evidence for the dock's day. */}
-      <Verdict now={now} />
+      <Guard name="verdict"><Verdict now={now} /></Guard>
       <span class="ui-eyebrow">{brief ? brief.label : 'Today\'s brief'}</span>
-      <BriefTiles brief={brief} dense />
-      <Details brief={brief} />
-      <TideSpark brief={brief} now={now} />
-      <WhereToLook ranking={ranking} />
-      <LowerExposure brief={brief} />
-      <RunLine brief={brief} ranking={ranking} now={now} />
-      <BriefLinks brief={brief} />
+      <Guard name="tiles"><BriefTiles brief={brief} dense /></Guard>
+      <Guard name="details"><Details brief={brief} /></Guard>
+      <Guard name="tide"><TideSpark brief={brief} now={now} /></Guard>
+      <Guard name="where-to-look"><WhereToLook ranking={ranking} /></Guard>
+      <Guard name="lower-exposure"><LowerExposure brief={brief} /></Guard>
+      <Guard name="run"><RunLine brief={brief} ranking={ranking} now={now} /></Guard>
+      <Guard name="brief-links"><BriefLinks brief={brief} /></Guard>
       <BriefFooter />
     </aside>
   );
@@ -59,12 +61,13 @@ export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Dat
 export function Desktop({now = new Date()}: {now?: Date} = {}) {
   return (
     <main class="app-main">
-      {appView.value === 'fleet' ? <aside class="app-brief" aria-label="Fleet"><Fleet /></aside> : <Brief now={now} />}
+      {appView.value === 'fleet' ? <aside class="app-brief" aria-label="Fleet"><Guard name="fleet"><Fleet /></Guard></aside> : <Brief now={now} />}
       <MapStage>
-        {appView.value === 'conditions' ? <Conditions now={now} /> : appView.value === 'history' ? <History now={now} /> : <><div class="app-chrome-left"><MarkCard /><Legend /></div><LayerRail /></>}
-        <TimeDock now={now} />
+        {appView.value === 'conditions' ? <Guard name="conditions"><Conditions now={now} /></Guard> : appView.value === 'history' ? <Guard name="history"><History now={now} /></Guard> : <><div class="app-chrome-left"><Guard name="mark-card"><MarkCard /></Guard><Guard name="legend"><Legend /></Guard></div><Guard name="layer-rail"><LayerRail /></Guard></>}
+        <Guard name="time-dock"><TimeDock now={now} /></Guard>
       </MapStage>
-      {appView.value === 'reports' ? <div class="app-page"><Reports now={now} /></div> : null}
+      {appView.value === 'plan' ? <div class="app-page"><Guard name="plan"><PlanView now={now} /></Guard></div> : null}
+      {appView.value === 'reports' ? <div class="app-page"><Guard name="reports"><Reports now={now} /></Guard></div> : null}
     </main>
   );
 }

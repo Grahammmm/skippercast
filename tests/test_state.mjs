@@ -16,7 +16,7 @@ test('every v2 key round-trips through withParams, readURL and syncFromURL', () 
   const store = memory();
   configureStore({storage: store});
   const patch = {region: 'morro-bay', coast: null, view: 'conditions', target: 'halibut', grade: 'ab', hour: '2026-09-30T15:00Z',
-    profile: 'shore', day: '2026-10-06', layers: 'swell,water-temp', area: 'estero', base: 'chart',
+    profile: 'shore', day: '2026-10-06', layers: 'swell,water-temp', area: 'estero', base: 'chart', port: 'morro-bay',
     presentation: '3d', current: 'hfr-1', habitat: 'reef:r12', station: '46215', metric: 'waveFt', range: '14'};
   assert.deepEqual(Object.keys(patch).sort(), [...URL_KEYS].sort(), 'the test covers every store key');
   const href = withParams(ORIGIN + '?focus=r12', patch);
@@ -100,7 +100,7 @@ test('parsers accept the documented values only', () => {
   assert.deepEqual(parseLayers('none'), []);
   assert.equal(parseLayers(''), null);
   assert.equal(layersParam([]), 'none');
-  assert.deepEqual(APP_VIEWS, ['coast', 'conditions', 'history', 'fleet', 'reports']);
+  assert.deepEqual(APP_VIEWS, ['coast', 'conditions', 'history', 'fleet', 'reports', 'plan']);
   assert.deepEqual(BASES, ['night', 'chart', 'aerial']);
 });
 

@@ -26,6 +26,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -129,10 +130,18 @@ def load_saved(directory, region, now):
     """Saved responses and their receipts; the receipt clock is kept, never advanced."""
     directory = Path(directory)
     urls = source_urls(region)
-    receipts = json.loads((directory / 'receipts.json').read_text())
+    try:
+        receipts = json.loads((directory / 'receipts.json').read_text(encoding='utf-8'))
+    except (OSError, UnicodeDecodeError, ValueError, RecursionError):
+        raise ValueError('Unreadable saved receipts: receipts.json') from None
+    if not isinstance(receipts, dict):
+        raise ValueError('Saved receipts must be a JSON object')
     bodies = {}
     for key, name in SOURCE_FILES.items():
-        r, body = receipts.get(key), (directory / name).read_bytes()
+        try:
+            r, body = receipts.get(key), (directory / name).read_bytes()
+        except OSError:
+            raise ValueError('Missing or invalid saved source receipt: ' + key) from None
         at = parse_time(r.get('fetchedAt') if isinstance(r, dict) else None)
         if (at is None or at > now.timestamp() + 3600 or r.get('url') != urls[key]
                 or r.get('responseSha256') != hashlib.sha256(body).hexdigest()):
@@ -240,6 +249,19 @@ def build_asset(region, bodies, receipts):
             'reviews': REVIEWS[region], 'limitations': LIMITATIONS, 'features': features}
 
 
+def _write_atomic(path, data):
+    tmp = path.with_name('.' + path.name + f'.{os.getpid()}.tmp')
+    try:
+        with open(tmp, 'wb') as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument('--region', default='morro-bay', choices=sorted(SITES))
@@ -247,6 +269,14 @@ def main(argv=None):
     p.add_argument('--save-sources', type=Path, help='keep the raw responses and receipts here (use var/)')
     p.add_argument('--output', type=Path)
     args = p.parse_args(argv)
+    try:
+        return run(args)
+    except (validate.MissingDependency, ValueError, OSError, validate.ContractError) as error:
+        print('collect_shore_habitat: ' + str(error).replace('\n', ' '), file=sys.stderr)
+        return 2 if isinstance(error, validate.MissingDependency) else 1
+
+
+def run(args):
     if args.sources:
         bodies, receipts = load_saved(args.sources, args.region, datetime.now(timezone.utc))
     else:
@@ -256,13 +286,14 @@ def main(argv=None):
     if args.save_sources:
         args.save_sources.mkdir(parents=True, exist_ok=True)
         for key, name in SOURCE_FILES.items():
-            (args.save_sources / name).write_bytes(bodies[key])
-        (args.save_sources / 'receipts.json').write_text(json.dumps(receipts, indent=1) + '\n')
+            _write_atomic(args.save_sources / name, bodies[key])
+        _write_atomic(args.save_sources / 'receipts.json', (json.dumps(receipts, indent=1) + '\n').encode())
     output = args.output or ROOT / 'catalog/shore-habitat' / f'{args.region}.geojson'
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(asset, ensure_ascii=False, separators=(',', ':')) + '\n')
+    _write_atomic(output, (json.dumps(asset, ensure_ascii=False, separators=(',', ':')) + '\n').encode('utf-8'))
     vertices = sum(len(line) for f in asset['features'] for line in f['geometry']['coordinates'])
     print(json.dumps({'region': args.region, 'runs': len(asset['features']), 'vertices': vertices, 'bytes': output.stat().st_size}))
+    return 0
 
 
 if __name__ == '__main__':
