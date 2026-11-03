@@ -39,9 +39,14 @@ def target_prefix(config: dict) -> str:
 
 def bag_metadata(xml: str, survey_id: str, *, strict=True) -> dict:
     """Read the embedded datum and native uncertainty meaning; fail closed."""
+    if not isinstance(survey_id, str) or not survey_id.strip():
+        raise ValueError("A survey id is required")
     if len(xml.encode()) > 1_000_000 or "<!DOCTYPE" in xml.upper():
         raise ValueError("Unsupported BAG metadata")
-    root = ET.fromstring(xml)
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError:
+        raise ValueError("Unsupported BAG metadata") from None
     leaves = [(e.tag.rsplit("}", 1)[-1], (e.text or "").strip()) for e in root.iter()]
     codes = [text for name, text in leaves if name == "CharacterString"]
     horizontal = next((v for v in codes if v.startswith("PROJCS[")), None)
@@ -114,6 +119,9 @@ HDF5 rows run south to north; callers flip arrays before this north-up affine.
 def fresh_closures(data: dict, *, minimum_features: int, region_id="southern-california", now=None) -> None:
     if data.get("region_id") != region_id or len(data.get("features", [])) < minimum_features:
         raise ValueError("Incomplete or wrong-region closure geometry")
+    features = data.get("features")
+    if not isinstance(features, list):
+        raise ValueError("Incomplete or wrong-region closure geometry")
     now = now or datetime.now(timezone.utc)
     try:
         checked = datetime.fromisoformat(data["checked_at"].replace("Z", "+00:00"))
@@ -122,8 +130,10 @@ def fresh_closures(data: dict, *, minimum_features: int, region_id="southern-cal
         raise ValueError("Closure acquisition timestamp is missing or invalid") from exc
     if not 0 <= age <= 36 * 3600:
         raise ValueError("Closure snapshot is stale or future-dated")
-    for feature in data["features"]:
-        geometry=feature.get("geometry",{})
+    for feature in features:
+        geometry=feature.get("geometry",{}) if isinstance(feature,dict) else None
+        if not isinstance(geometry,dict):
+            raise ValueError("Closure geometry must contain full polygons")
         kind=geometry.get("type")
         coordinates=geometry.get("coordinates")
         if kind not in ("Polygon","MultiPolygon") or not isinstance(coordinates,list) or not coordinates:
