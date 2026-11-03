@@ -2,18 +2,18 @@
 // Kept apart from CF-31's fleet-copy.ts so no two tasks share a copy file. AIS presence is
 // "seen" or "not seen" and nothing stronger: many small boats carry no transponder.
 
-/** A duration in seconds as "45 s", "12 min", "3 h 5 min" or "2 d 4 h". */
+/** A duration in seconds as "45 s", "12 min", "3 h 5 min" or "2 d 4 h"; a dash when negative or not finite. */
 export function duration(s: number | null | undefined): string {
-  if (s === null || s === undefined || !Number.isFinite(s)) return '—';
-  if (s < 60) return `${Math.round(s)} s`;
-  const m = Math.floor(s / 60);
+  if (s === null || s === undefined || !Number.isFinite(s) || s < 0) return '—';
+  if (s < 59.5) return `${Math.round(s)} s`;
+  const m = Math.max(1, Math.floor(s / 60));
   if (m < 60) return `${m} min`;
   const h = Math.floor(m / 60);
   if (h < 48) return m % 60 ? `${h} h ${m % 60} min` : `${h} h`;
   return h % 24 ? `${Math.floor(h / 24)} d ${h % 24} h` : `${Math.floor(h / 24)} d`;
 }
-/** A percentage, or a dash when there was nothing to count. */
-export const percent = (p: number | null | undefined): string => p === null || p === undefined ? '—' : `${p}%`;
+/** A percentage, or a dash when there was nothing to count or the share is not finite. */
+export const percent = (p: number | null | undefined): string => p === null || p === undefined || !Number.isFinite(p) ? '—' : `${p}%`;
 
 export const FLEET_COVERAGE_COPY = {
   views: {'fleet-coverage': 'Coverage', 'fleet-ais': 'AIS health'},
