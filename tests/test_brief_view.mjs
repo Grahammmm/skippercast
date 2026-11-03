@@ -138,7 +138,8 @@ test('#616: with this region\'s forecast the verdict word and its limit lead the
     const verdict = /<span class="app-verdict-word">(Comfortable|Marginal|Rough)<\/span>/.exec(html);
     assert.ok(verdict, 'a rated word, not Unknown');
     assert.match(html, /<p class="app-verdict-limit">[^<]+\.(?: Held at Marginal: [^<]+\.)?<\/p>/);
-    assert.match(html, /reference 23 ft boat, not a bite forecast or a safety clearance/);
+    assert.match(html, /Comfort rating for the reference 23 ft boat, not a bite forecast or a safety clearance/);
+    assert.doesNotMatch(html, /app-verdict-boat-note|rule-of-thumb model/, 'no saved boat: no model-limits sentence');
     assert.doesNotMatch(html, /best bite|hotspot|safe passage/i);
   } finally { regionInfo.value = null; dailyFeed.value = null; regionalForecast.value = null; }
 });
