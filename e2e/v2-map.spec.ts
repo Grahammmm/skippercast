@@ -353,6 +353,30 @@ const narrow = (page: Page) => page.viewportSize()!.width < 1024;
 /** The rail and legend: on a phone they are the sheet's Layers panel. */
 const showLayers = async (page: Page) => { if (narrow(page)) await page.getByRole('button', {name: 'Layers', exact: true}).click(); };
 const hideLayers = async (page: Page) => { if (narrow(page)) await page.getByRole('button', {name: 'Done'}).click(); };
+
+test('layer presets preserve Back and helm view makes controls larger', async ({page, v2}) => {
+  await v2.open('app', {...PLACE, presentation: 'chart', layers: 'seafloor', current: 'off'});
+  await showLayers(page);
+  const presets = page.getByRole('group', {name: 'Layer presets'});
+  await presets.getByRole('button', {name: 'Offshore'}).click();
+  expect(params(page).layers).toBe('water-temp,sst-contrast,chlorophyll,swell');
+  expect(params(page).current).toBe('off');
+  await expect(presets.getByRole('button', {name: 'Offshore'})).toHaveAttribute('aria-pressed', 'true');
+  await page.goBack();
+  expect(params(page).layers).toBe('seafloor');
+  await page.getByRole('switch', {name: 'Helm view'}).click();
+  await expect(page.locator('html')).toHaveClass(/helm/);
+  if (narrow(page)) {
+    const small = await page.locator('button:visible, select:visible, input:visible, [role="switch"]:visible').evaluateAll(buttons => buttons.filter(button => {
+      const rect = button.getBoundingClientRect();
+      return rect.width < 48 || rect.height < 48;
+    }).map(button => button.outerHTML.slice(0, 200)));
+    expect(small).toEqual([]);
+  }
+  await v2.a11y('v2-map-helm');
+  await page.reload();
+  await expect(page.locator('html')).toHaveClass(/helm/);
+});
 /** Phone only: after the Layers panel, the sheet rests at half and covers the chart's centre (where the contours and fields draw). Drop it back to peek so the map is visible again. */
 const collapseSheet = async (page: Page) => {
   if (!narrow(page)) return;
