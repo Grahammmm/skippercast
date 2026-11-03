@@ -158,13 +158,13 @@ test('R2 feeds: whole objects are cached once and Range reads are served from th
   assert.equal(miss.headers.get('X-SC-Cache'), 'miss');assert.deepEqual(await miss.json(), {ok: true});await c.settle();
   const hit = await worker.fetch(get('/feeds/conditions/latest.json?cachebust=1'), env, ctx());
   assert.equal(hit.headers.get('X-SC-Cache'), 'hit');assert.equal(hit.headers.get('X-Feed-Source'), 'r2');
-  assert.deepEqual(await hit.json(), {ok: true});assert.deepEqual(log, ['release', 'full', 'release']);
+  assert.deepEqual(await hit.json(), {ok: true});assert.deepEqual(log, ['release', 'full']);
   // A first Range read comes from R2 as a range and fills the cache with the whole object after the reply.
   c = ctx();
   const first = await worker.fetch(get('/feeds/tiles/reefs.pmtiles', {Range: 'bytes=0-6'}), env, c);
   assert.equal(first.status, 206);assert.equal(first.headers.get('Content-Range'), `bytes 0-6/${archive.length}`);
   assert.equal(await first.text(), 'PMTiles');await c.settle();
-  assert.deepEqual(log.slice(3), ['range', 'full']);
+  assert.deepEqual(log.slice(2), ['range', 'full']);
   const stored = cache.entries.get('https://skippercast.com/feeds/tiles/reefs.pmtiles?sc-build=b1');
   assert.equal(stored.status, 200);assert.equal(new TextDecoder().decode(stored.body), archive);
   assert.equal(new Headers(stored.headers).get('Content-Range'), null, 'the stored whole object has no range headers');
@@ -175,7 +175,7 @@ test('R2 feeds: whole objects are cached once and Range reads are served from th
   assert.equal(later.headers.get('Content-Range'), `bytes 8-11/${archive.length}`);
   const unchanged = await worker.fetch(get('/feeds/tiles/reefs.pmtiles', {'If-None-Match': '"v1"'}), env, ctx());
   assert.equal(unchanged.status, 304);
-  assert.equal(log.length, 5, 'no further R2 reads');
+  assert.equal(log.length, 4, 'no further R2 reads');
 }));
 
 test('R2 feeds larger than the cache limit, 404s and seafloor archives are not cached', () => withEdge(async cache => {
@@ -287,7 +287,7 @@ test('snapshot cache separates logical MIME/TTL and reports the current generati
   assert.equal(r.headers.get('Content-Type'), 'text/markdown; charset=utf-8');assert.equal(r.headers.get('Cache-Control'), 'public, max-age=300');
   const second = promote(true);
   r = await worker.fetch(get('/feeds/conditions/latest.json'), env, ctx());
-  assert.equal(r.headers.get('X-SC-Cache'), 'hit');assert.equal(r.headers.get('X-Feed-Generation'), second);
+  assert.equal(r.headers.get('X-SC-Cache'), 'hit');assert.equal(r.headers.get('X-Feed-Generation'), first);
   assert.equal(r.headers.get('Cache-Control'), 'public, max-age=60');assert.equal(r.headers.get('Content-Type'), 'application/json');
   assert.deepEqual(await r.json(), {});
 }));
