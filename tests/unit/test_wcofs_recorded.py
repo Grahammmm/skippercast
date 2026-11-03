@@ -2,7 +2,7 @@
 has URL, time, sha256). Catalog/.dds/.das/axis replies are scaffolding that only place the recorded window
 at the indices its URL names."""
 from datetime import datetime, timezone
-import hashlib, json, re, unittest
+import hashlib, json, unittest
 from urllib.parse import urlsplit
 from skippercast.pipeline.ocean import dap_arrays, wcofs
 from tests._support import ROOT
@@ -21,9 +21,14 @@ def axis(name, at_index, value, n):
     return f'{name}[{n}][1]\n' + ', '.join(str(round(value + (i - at_index) * 0.04, 6)) for i in range(n)) + '\n'
 
 
+def units_line(units):
+    return '' if units is None else f'String units "{units}";'
+
+
 class Client:
-    def __init__(self, frame, uv_units='m s-1'):
-        self.frame, self.uv_units, self.urls = frame, uv_units, []
+    def __init__(self, frame, uv_units='m s-1', v_units=...):
+        self.frame, self.urls, self.requests = frame, [], []
+        self.u_units, self.v_units = uv_units, uv_units if v_units is ... else v_units
 
     def get(self, url):
         self.urls.append(url)
@@ -33,7 +38,7 @@ class Client:
             return 'Dataset { Float64 Latitude[ny = 440][nx = 640]; } x;'
         if url.endswith('.das'):
             return ('time { String units "seconds since 2016-01-01 00:00:00"; }\n'
-                    f'u_eastward {{ String units "{self.uv_units}"; }}\nv_northward {{ String units "{self.uv_units}"; }}')
+                    f'u_eastward {{ {units_line(self.u_units)} }}\nv_northward {{ {units_line(self.v_units)} }}')
         if 'Depth' in url:
             return ('Dataset { } x;\n' + '-' * 45 + '\n' + axis('Latitude', 417, 35.1, 440)
                     + axis('Longitude', 605, -121.18, 640) + 'Depth[1]\n0.0\n')
@@ -94,21 +99,39 @@ class RecordedWcofsTests(unittest.TestCase):
         self.assertNotIn([35.18, -120.74], [c[:2] for c in frame['cells']])  # a recorded fill cell
         self.assertTrue(all(c[2] > 0 for c in frame['cells']))
 
-    def test_unit_change_is_neither_refused_nor_flagged_known_gap(self):
-        # Pinned current behaviour (NB-SC-11 row 1): wcofs() reads no u/v unit string and reports no cell counts.
+    def test_uv_units_other_than_metres_per_second_raise_naming_the_variable(self):
+        # NB-SC-11 row 1 (was pinned as a known gap): a unit change is refused, never published.
         baseline = run()[0]
-        self.assertEqual(run(uv_units='cm s-1')[0]['frames'], baseline['frames'])
-        times100 = lambda block: re.sub(r'-?\d+\.\d+(?:E-?\d+)?', lambda m: repr(float(m[0]) * 100), block)
-        cm = section(section(TEXT, 'u_eastward', times100), 'v_northward', times100)
-        out = run(cm)[0]
+        self.assertEqual(run(uv_units='meters second-1')[0]['frames'], baseline['frames'])  # same m/s, other spelling
+        for units in ('cm s-1', 'knots', '', None, 'M S-1', ' m s-1'):
+            with self.subTest(units=units), self.assertRaisesRegex(ValueError, r'^WCOFS units changed: u_eastward$'):
+                run(uv_units=units)
+        for units in ('cm s-1', None):
+            with self.subTest(v_only=units), self.assertRaisesRegex(ValueError, r'^WCOFS units changed: v_northward$'):
+                run(v_units=units)
+        client = Client(TEXT, uv_units='cm s-1')
+        with self.assertRaises(ValueError):
+            wcofs(client, REGION, NOW)
+        self.assertFalse(any(SIDECAR['url'] == u for u in client.urls))  # refused before any data read
+
+    def test_cell_counts_report_valid_of_total_and_an_all_dry_cut_is_missing(self):
+        from skippercast.pipeline.collect import source
+        out = run()[0]
+        self.assertEqual((out['valid_cells'], out['total_cells']), (112, 196))
         [frame] = out['frames']
-        before = {tuple(c[:2]): c for c in baseline['frames'][0]['cells']}
-        self.assertEqual(len(frame['cells']), 30)  # 82 of 112 wet cells vanish, no error
-        for c in frame['cells']:  # survivors are published 100x too fast, same direction
-            self.assertAlmostEqual(c[2], before[tuple(c[:2])][2] * 100, delta=0.06)
-            self.assertAlmostEqual(c[3], before[tuple(c[:2])][3], delta=0.1)
-        self.assertNotIn('valid_cells', out)
-        self.assertNotIn('total_cells', out)
+        self.assertEqual((frame['valid_cells'], frame['total_cells']), (112, 196))
+        self.assertEqual(set(frame), {'time', 'cells', 'source_file', 'valid_cells', 'total_cells'})
+        all_dry = section(TEXT, 'mask', lambda block: block.replace('1.0', '0.0'))
+        self.assertEqual(sum(dap_arrays(all_dry)['mask']), 0)
+        dry = run(all_dry)[0]
+        self.assertEqual((dry['valid_cells'], dry['total_cells'], dry['frames'][0]['cells']), (0, 196, []))
+        def via_collect(frame):
+            return source('wcofs', 'NOAA WCOFS surface currents', 'forecast', 'https://tidesandcurrents.noaa.gov/',
+                          36, lambda c: wcofs(c, REGION, NOW), NOW, client_factory=lambda now: Client(frame))
+        self.assertEqual(via_collect(TEXT)['status'], 'ok')
+        missing = via_collect(all_dry)
+        self.assertEqual((missing['status'], missing['issue']),
+                         ('missing', 'No usable cells in this regional grid; no gap filling applied'))
 
     def test_truncated_body_raises_instead_of_a_partial_frame(self):
         with self.assertRaises(KeyError):
