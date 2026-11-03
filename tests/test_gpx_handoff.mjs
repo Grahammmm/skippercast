@@ -4,7 +4,6 @@ import {readFileSync, mkdtempSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {execFileSync} from 'node:child_process';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {checkGpx} from '../web/gpx-check.ts';
@@ -53,7 +52,8 @@ test('only colliding waypoint names change; cmt ids remain original, including s
   assert.deepEqual([...xml.matchAll(/<wpt[^>]*><name>(.*?)<\/name>/g)].map(m => m[1]), ['A', 'a (2)', 'A (2) (2)']);
   assert.match(xml, /<cmt>u2<\/cmt>/); assert.equal(checkGpx(xml, {waypoints: 3}).ok, true);
   const dir = mkdtempSync(join(tmpdir(), 'gpx-before-')), old = join(dir, 'gpx.mjs');
-  const source = execFileSync('git', ['show', 'origin/main:dist/gpx.js'], {cwd: root, encoding: 'utf8'}).replace("'./spot-ranking.js'", JSON.stringify(pathToFileURL(join(root, 'dist/spot-ranking.js')).href));
+  // Checked-in copy of dist/gpx.js before this change (main at 20e58f5b), so CI needs no remote ref.
+  const source = readFileSync(new URL('./fixtures/gpx/gpx-baseline-20e58f5b.js.txt', import.meta.url), 'utf8').replace("'./spot-ranking.js'", JSON.stringify(pathToFileURL(join(root, 'dist/spot-ranking.js')).href));
   writeFileSync(old, source);
   return import(pathToFileURL(old).href).then(before => {
     for (const atlas of [JSON.parse(readFileSync(join(root, 'dist/data/atlas.json')))]) {
