@@ -624,7 +624,7 @@ advisorPublic.post('/api/advisor/jobs/media-done', async c => {
 
 /** Test seam: the feed reader and clock the page reads use (the engine's EngineDeps shape). */
 export const pagesDeps: PageDeps = {};
-advisorPublic.use(SITEMAP_PATH, gate);
+advisorPublic.use(SITEMAP_PATH, pagesGate);
 
 type Render = (env: Env, language: PageLanguage, settings: ReturnType<typeof advisorSettings>) => Promise<string | {body: string; noStore: boolean} | null>;
 
@@ -680,15 +680,15 @@ advisorPublic.get(SITEMAP_PATH, async c => {
   const env = c.env;
   if (!env.DB) return json({error: 'This service is temporarily unavailable.'}, 503);
   const key = cacheKey(new URL(SITEMAP_PATH, c.req.url), {params: [], build: `${build()}:${flagsVersion(env, await pagesVersion(env.DB))}`});
-  return cached(key, waitUntil(c), async () => ({response: new Response(await sitemapXml(env.DB!, advisorSettings(env).publicBase, {fleet: fleetSettings(env).enabled}), {status: 200, headers: {
+  return cached(key, waitUntil(c), async () => ({response: new Response(await sitemapXml(env.DB!, advisorSettings(env).publicBase, {fleet: fleetSettings(env).enabled, advisor: advisorSettings(env).enabled}), {status: 200, headers: {
     'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': `public, max-age=${SITEMAP_MAX_AGE}`, 'X-Content-Type-Options': 'nosniff'}})}));
 });
 
-// No robots.txt is published: while the advisor is dark the request falls through to the
-// static site exactly as before; when it is on, the Worker answers with the sitemap line.
+// While the advisor and the public pages are both dark the request falls through to the
+// static site exactly as before; when either is on, the Worker answers with the sitemap line.
 advisorPublic.get('/robots.txt', async (c, next) => {
   const settings = advisorSettings(c.env);
-  if (!settings.enabled) { await next(); return; }
+  if (!settings.enabled && !publicPagesSettings(c.env).enabled) { await next(); return; }
   return new Response(robotsTxt(settings.publicBase), {status: 200, headers: {'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600'}});
 });
 // TA-W1 end.
