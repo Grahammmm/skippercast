@@ -117,17 +117,19 @@ test('duplicate profile activation saves and navigates once without waiting for 
     expect(await page.evaluate(() => Number(sessionStorage.getItem('funnel-writes')))).toBe(1); expect(pageErrors).toEqual([]);
   } finally { await cdp.detach(); }
 });
-for (const explore of [false, true]) test(explore ? 'explore reaches a brief' : 'Save-Data skips warm-up and reaches a brief', async ({page, pageErrors}) => {
+// Spec edge 8 (Explore → default-region verdict) is voided by the t_d0a5b151 disposition of 2026-11-02:
+// Explore deliberately opens coast=central with no region (e2e/v2-landing.spec.ts), so it has no brief.
+test('Save-Data skips warm-up and reaches a brief', async ({page, pageErrors}) => {
   const cdp = await prepare(page);
-  if (!explore) await page.addInitScript(() => Object.defineProperty(navigator, 'connection', {value: {saveData: true}}));
+  await page.addInitScript(() => Object.defineProperty(navigator, 'connection', {value: {saveData: true}}));
   const requests: string[] = []; page.on('request', r => requests.push(r.url()));
   try {
     const started = Date.now(); await page.goto('/?ui=v2');
-    if (explore) await page.getByRole('button', {name: 'Explore the coast'}).click(); else await port(page, 'morro');
+    await port(page, 'morro');
     await expect(page.locator('.landing-step [role="status"]')).toHaveText('');
     expect(requests.filter(p => /atlas-marks|search-plan-index|poster\.svg|\/api\/forecast/.test(p))).toEqual([]);
     await page.locator('[data-profile="boat"]').click(); await expect(page).toHaveURL(/profile=boat/);
-    await verdict(page, started, explore ? 'explore' : 'Save-Data'); expect(pageErrors).toEqual([]);
+    await verdict(page, started, 'Save-Data'); expect(pageErrors).toEqual([]);
   } finally { await cdp.detach(); }
 });
 test('failed feeds give an honest unavailable lead instead of waiting forever', async ({page, pageErrors}) => {
