@@ -204,7 +204,11 @@ export async function readFlow(db: D1Database, contactId: string): Promise<FlowS
     return v && (v.flow === 'register' || v.flow === 'consent') && typeof v.step === 'string' && typeof v.asked_at === 'string' && v.draft && typeof v.draft === 'object' ? v as FlowState : null;
   } catch { return null; }
 }
-const age = (state: FlowState, now: number): number => now - Date.parse(state.asked_at);
+/** Milliseconds since a stored time, or null when it is unreadable or in the future (clock skew, a hand-edited row). */
+const elapsed = (raw: string | undefined, now: number): number | null => {
+  const e = now - Date.parse(raw ?? '');
+  return Number.isFinite(e) && e >= 0 ? e : null;
+};
 
 /** The next register step without an answer (a skipped field counts as answered), or null when complete. */
 export function nextStep(draft: FlowState['draft']): RegisterStep | null {
@@ -327,7 +331,7 @@ export async function skipperFlow(f: FlowContext): Promise<EngineResult | null> 
   const web = !f.contact.phone_enc && Boolean(f.contact.web_session);
   if (web) return null;
   let state = await readFlow(f.db, f.contact.id);
-  const fresh = state ? age(state, f.now) <= FLOW_MAX_AGE_MS : false;
+  const fresh = state ? (e => e !== null && e <= FLOW_MAX_AGE_MS)(elapsed(state.asked_at, f.now)) : false;
   if (state?.flow === 'register' && !fresh) { f.carry.push({type: 'flow_set', state: null}); state = null; }
 
   // A start phrase restarts registration, even mid-flow.
@@ -373,8 +377,8 @@ export async function skipperFlow(f: FlowContext): Promise<EngineResult | null> 
   }
   // The 7-day re-ask: a photo from the owner while consent is not active.
   if (f.media.length && !consentActive(boat)) {
-    const last = state?.flow === 'consent' ? Date.parse(state.asked_at) : Date.parse(boat.created_at);
-    if (!(f.now - last < CONSENT_REASK_MS)) {
+    const since = elapsed(state?.flow === 'consent' ? state.asked_at : boat.created_at, f.now);
+    if (since === null || since >= CONSENT_REASK_MS) {
       f.carry.push(say(f.settings, f.language, 'consent_ask', {name: boat.name}),
         {type: 'flow_set', state: {flow: 'consent', step: 'asked', draft: {boat_id: boat.id, lang: f.language}, asked_at: new Date(f.now).toISOString()}});
     }
@@ -421,7 +425,9 @@ export async function readCrewInvite(db: D1Database, contactId: string): Promise
 /** True while a NO from this contact to this boat is less than 30 days old. */
 export async function crewDeclined(db: D1Database, boatId: string, contactId: string, now: number): Promise<boolean> {
   const row = await db.prepare('SELECT updated_at FROM job_state WHERE key=?').bind(crewDeclineKey(boatId, contactId)).first<{updated_at: string}>();
-  return Boolean(row) && now - Date.parse(row!.updated_at) < CREW_DECLINE_MS;
+  const e = row ? elapsed(row.updated_at, now) : null;
+  // A NO that cannot be dated (unreadable or future time) stays a NO; the operator clears it through the admin path.
+  return Boolean(row) && (e === null || e < CREW_DECLINE_MS);
 }
 
 /**
