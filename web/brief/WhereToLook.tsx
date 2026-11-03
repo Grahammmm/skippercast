@@ -64,16 +64,42 @@ export function currentRanking(now = Date.now(), top?: number): Ranking {
 
 // SC1322-10: routes by region, origin and place; a new product, lines file or region starts afresh, so a re-render routes nothing again.
 let routes: {id: string | null; model: unknown; lines: unknown; route: RouteFn; memo: Map<string, Route>} | null = null;
-/** The Boat list by water: only this region's land/water product is used, and each route is computed once. */
-export function boatPicks(r: Ranking, lw: LandWaterState = landWater.value, id: string | null = region.value, route: RouteFn = waterRoute): RoutedPick[] {
+/**
+ * The Boat list by water: only this region's land/water product is used, and each route is computed once. At most `fresh`
+ * routes not already memoised are computed; a pick past that keeps its labelled straight line for now, and `left` counts them.
+ */
+export function boatPicks(r: Ranking, lw: LandWaterState = landWater.value, id: string | null = region.value, route: RouteFn = waterRoute,
+  fresh = Infinity, left: {n: number} = {n: 0}): RoutedPick[] {
   const model = lw.state === 'ready' && lw.region === id ? lw.model : null, lines = model ? lw.lines : null;
   if (!(routes && routes.id === id && routes.model === model && routes.lines === lines && routes.route === route)) routes = {id, model, lines, route, memo: new Map()};
   const memo = routes.memo, once: RouteFn = (m, l, from, to) => {
-    const key = `${id}|${from.latitude},${from.longitude}>${to.latitude},${to.longitude}`, got = memo.get(key) ?? route(m, l, from, to);
-    memo.set(key, got);
+    const key = `${id}|${from.latitude},${from.longitude}>${to.latitude},${to.longitude}`, hit = memo.get(key);
+    if (hit) return hit;
+    if (fresh <= 0) { left.n++; return null; }
+    const got = route(m, l, from, to);
+    if (got) { fresh--; memo.set(key, got); }
     return got;
   };
   return routedPicks(r.picks, r.origin, model, lines, r.reach ?? null, TOP, once);
+}
+
+/** Bumped once the routes the painted Boat list still lacks are all computed, so it renders again by water. */
+const routeTick = signal(0);
+/**
+ * SC1322-10: the brief paints the Boat list from memoised routes only (the rest on their straight line), then computes the
+ * missing routes one per task after the paint, so a slow route (an all-mixed index, many lines to scan) never holds the
+ * list back. Returns the cancel for the effect cleanup.
+ */
+export function routeAfterPaint(r: Ranking, lw: LandWaterState, id: string | null, route: RouteFn = waterRoute, done: () => void = () => { routeTick.value++; }): () => void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const step = () => {
+    const left = {n: 0};
+    boatPicks(r, lw, id, route, 1, left);
+    timer = left.n ? setTimeout(step, 0) : undefined;
+    if (!left.n) done();
+  };
+  timer = setTimeout(step, 0);
+  return () => clearTimeout(timer);
 }
 
 /** Select a pick's mark or habitat (a history entry), as a click on the map would; a publication place moves the Chart to it. */
@@ -163,13 +189,16 @@ function EmptyOrPlan({empty}: {empty: string}) {
 
 export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   const boat = profile.value === 'boat', r = given ?? currentRanking(Date.now(), boat ? ROUTE_BUDGET : undefined), id = region.value, speed = cruiseSpeed.value;
-  // SC1322-10: Boat lists by water where routed; other profiles keep the ranking's picks as they are.
-  const picks: readonly (Pick & {basis?: 'water' | 'straight'; why?: string})[] = boat ? boatPicks(r) : r.picks;
+  // SC1322-10: Boat lists by water where routed; other profiles keep the ranking's picks as they are. The render uses
+  // memoised routes only and routes the rest after the paint (routeAfterPaint), so the list never waits on a route.
+  const lw = landWater.value, unrouted = {n: 0};
+  void routeTick.value;
+  const picks: readonly (Pick & {basis?: 'water' | 'straight'})[] = boat ? boatPicks(r, lw, id, waterRoute, 0, unrouted) : r.picks;
+  useEffect(() => unrouted.n ? routeAfterPaint(r, lw, id) : undefined);
   // The lines file is asked for once the region's index is ready and a candidate still waits on it (a mixed cell),
   // so a list that was pending on the index itself asks as soon as the index lands; clean cells never load it.
-  // A Boat route waiting on it (lines-needed) asks the same one request.
-  const lw = landWater.value, waits = !!r.pending || picks.some(pk => pk.why === 'lines-needed');
-  const wantLines = !!id && waits && lw.region === id && lw.state === 'ready' && lw.lines === null;
+  // A Boat route that needs the lines (lines-needed) does not ask for them: that pick keeps its labelled straight line.
+  const wantLines = !!id && !!r.pending && lw.region === id && lw.state === 'ready' && lw.lines === null;
   // SCJ-2a: the publication loads once per region, and its live manifest is checked again now (a cached one) and each
   // minute, as the planner checks its plan, so a held, unavailable or superseded publication stops ranking.
   useEffect(() => {

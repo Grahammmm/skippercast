@@ -363,7 +363,8 @@ export function ranking(i: RankingInputs): Ranking {
 export const ROUTE_BUDGET = 24;
 /** A Boat pick whose `nm` is the water route where one was computed, else the straight line (and why no route, when one was tried). */
 export type RoutedPick = Pick & {readonly basis: 'water' | 'straight'; readonly why?: RouteFailure};
-export type RouteFn = (model: LandWaterModel | null, lines: LandWaterLines | null | false, from: RoutePoint, to: RoutePoint) => Route;
+/** A route, or null when it is not computed yet (the brief paints the list first): that pick keeps its labelled straight line. */
+export type RouteFn = (model: LandWaterModel | null, lines: LandWaterLines | null | false, from: RoutePoint, to: RoutePoint) => Route | null;
 /**
  * SC1322-10: the Boat list by water (web/route.ts, FSC-04). `picks` come in rank order, already inside the range by straight
  * line, a lower bound on any water route, so a place outside it is never routed and the ranking stays straight-line cheap.

@@ -40,7 +40,7 @@ async function load() {
   if (mod) return mod;
   const out = join(await mkdtemp(join(tmpdir(), 'ranking-route-')), 'where.mjs');
   await build({stdin: {resolveDir: ROOT, loader: 'ts', contents: `
-      export {WhereToLook, boatPicks, pickRun} from './web/brief/WhereToLook.tsx';
+      export {WhereToLook, boatPicks, pickRun, routeAfterPaint} from './web/brief/WhereToLook.tsx';
       export {cruiseSpeed} from './web/limits.ts';
       export {reachRange} from './web/reach.ts';
       export {landWater} from './web/land-water.ts';
@@ -122,6 +122,28 @@ test('the brief memoises each route and never uses another region\'s product', a
   const other = times(1.2), got = boatPicks(r, {...lw, region: 'elsewhere'}, 'fixture', other.route);
   assert.ok(other.calls.length === 2 && other.calls.every(c => c.model === null), 'another region\'s model is never used');
   assert.ok(got.every(p => p.basis === 'straight' || p.basis === 'water'));
+});
+
+test('the brief paints from memoised routes only, then routes the rest after the paint', async () => {
+  const {boatPicks, routeAfterPaint} = await load();
+  const r = {source: 'atlas', label: 'Survey reef atlas', basis: '', empty: '', harbor: 'Fixture Harbor', origin: ORIGIN, picks: [pick('a', 3), pick('b', 4), pick('c', 5)]};
+  const lw = {region: 'paint', state: 'ready', model: {id: 'paint-model'}, lines: null, linesLoading: false}, f = times(1.3);
+  const left = {n: 0}, painted = boatPicks(r, lw, 'paint', f.route, 0, left);
+  assert.equal(f.calls.length, 0, 'the paint computes no route');
+  assert.equal(left.n, 3);
+  assert.ok(painted.every(p => p.basis === 'straight' && p.why === undefined && p.distance.endsWith('straight line')), JSON.stringify(painted));
+  let done = 0;
+  routeAfterPaint(r, lw, 'paint', f.route, () => { done++; });
+  assert.equal(f.calls.length, 0, 'routing waits for a later task');
+  for (let i = 0; i < 20 && !done; i++) await new Promise(res => setTimeout(res, 0));
+  assert.equal(done, 1);
+  assert.equal(f.calls.length, 3, 'one route per pick, each once');
+  const after = {n: 0}, routed = boatPicks(r, lw, 'paint', f.route, 0, after);
+  assert.ok(after.n === 0 && routed.every(p => p.basis === 'water'), JSON.stringify(routed));
+  const cancel = routeAfterPaint({...r, picks: [pick('d', 6)]}, lw, 'paint', f.route, () => { done++; });
+  cancel();
+  await new Promise(res => setTimeout(res, 5));
+  assert.ok(done === 1 && f.calls.length === 3, 'a cancelled run routes nothing');
 });
 
 test('the Boat list renders by water on an open-water product; the range title says so; Shore and Kayak are unchanged', async () => {
