@@ -364,8 +364,11 @@ test('layer presets preserve Back and helm view makes controls larger', async ({
   await expect(presets.getByRole('button', {name: 'Offshore'})).toHaveAttribute('aria-pressed', 'true');
   await page.goBack();
   expect(params(page).layers).toBe('seafloor');
+  const bodyText = () => page.locator('body').evaluate(body => parseFloat(getComputedStyle(body).fontSize));
+  const baseText = await bodyText();
   await page.getByRole('switch', {name: 'Helm view'}).click();
   await expect(page.locator('html')).toHaveClass(/helm/);
+  expect(await bodyText(), 'Helm view raises the body text one token step').toBeGreaterThan(baseText);
   if (narrow(page)) {
     const small = await page.locator('button:visible, select:visible, input:visible, [role="switch"]:visible').evaluateAll(buttons => buttons.filter(button => {
       const rect = button.getBoundingClientRect();
