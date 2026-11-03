@@ -48,7 +48,7 @@ static-asset routing (which does not run the Worker).
 | Limit | Value | Where it is set |
 | --- | --- | --- |
 | R2 reads a UTC day before the Worker degrades (deployed) | `"300000"` | `wrangler.jsonc:41` (`COST_CEILING_R2_READS_PER_DAY`) |
-| Default ceiling when the variable is missing or not a positive integer | `300_000` (R2's free Class B allowance of 10 million a month over a 31-day month, rounded down) | `server/cost-ceiling.ts:33-34` (`DEFAULT_R2_READS_PER_DAY`) |
+| Default ceiling when the variable is missing or not a positive integer | `300_000` (below R2's free Class B allowance of 10 million a month: 300,000 × 31 days is 9,300,000) | `server/cost-ceiling.ts:33-34` (`DEFAULT_R2_READS_PER_DAY`) |
 | How the variable is read: a positive integer of at most 12 digits is used; `"off"` disables the ceiling; anything else gives the default | `/^[1-9]\d{0,11}$/`, `"off"` | `server/cost-ceiling.ts:42-47` (`ceilingOf`) |
 | Reads per batch written to D1 | `50` | `server/cost-ceiling.ts:35` (`FLUSH_READS`) |
 | Longest wait before pending reads are written | `30_000` ms | `server/cost-ceiling.ts:36` (`FLUSH_MS`) |
@@ -168,8 +168,14 @@ first from their last-known copy, the response saved the last time they were
 served normally. Every degraded response carries `X-SC-Degraded:
 cost-ceiling`, and a saved copy also carries `X-SC-Last-Known-At`. A public
 read with neither a copy nor a free fallback answers `503` with
-`{"degraded": true}`, `Cache-Control: no-store` and `Retry-After: 600`
-(`server/cost-ceiling.ts:211-215`). The app sees the header and shows "Live
+`Cache-Control: no-store`, `Retry-After: 600` and this JSON body
+(`server/cost-ceiling.ts:211-215`):
+
+```json
+{"error":"Live data is paused for today to stay inside SkipperCast's free running budget, and no saved copy of this is held yet.","degraded":true}
+```
+
+The app sees the header and shows "Live
 data is paused for today to keep SkipperCast free; some readings are saved
 copies.", with the saved copy's time when it has one (`web/degraded.ts:55-58`),
 on the desktop masthead and the mobile sheet (`web/app/Masthead.tsx:98`).
