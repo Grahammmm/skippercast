@@ -25,7 +25,7 @@ import {landingNames, resolvePort, resolveSpecies} from './resolve.ts';
 import {regionConfig} from './regions.ts';
 import {dailyFeed, intelligenceFeed, feedReader} from './feeds.ts';
 import type {FeedReader} from './feeds.ts';
-import {advisoriesFrom, parseTripDate, regionZones, windowConditions, windowEpochs, withForecastClock, WINDOW, HORIZON_DAYS} from './conditions.ts';
+import {advisoriesFrom, parseTripDate, regionZones, requestBoat, windowConditions, windowEpochs, withForecastClock, WINDOW, HORIZON_DAYS} from './conditions.ts';
 import {forecastClock} from './forecast-clock.ts';
 import type {Advisory, DayConditions, Window} from './conditions.ts';
 import {reportEvidence, CONFIDENCE_WORDS} from './confidence.ts';
@@ -88,7 +88,8 @@ export function leadsWithAdvisory(reply: string, events: readonly string[]): boo
   return events.some(e => first.includes(e.toUpperCase()));
 }
 
-export interface ConditionsInput {port: string; date?: string | null; start_hour?: unknown; end_hour?: unknown}
+/** `boat`: optional comfort factors ({sea, wind, chopPeriod}, conditions.ts requestBoat); absent or invalid rates the reference boat. */
+export interface ConditionsInput {port: string; date?: string | null; start_hour?: unknown; end_hour?: unknown; boat?: unknown}
 
 /** Oldest required-zone check, or null unless every configured zone has complete evidence. */
 function advisoryCheckTime(sources: Record<string, unknown> | undefined, zones: readonly string[]): string | null {
@@ -124,8 +125,8 @@ export async function tripConditions(input: ConditionsInput, opts: PlanningOptio
   const read = opts.read ?? once(feedReader(opts.deps));
   const [intel, daily] = await Promise.all([intelligenceFeed(region, read), dailyFeed(region, read)]);
   const pointId = FORECAST_POINT.get(port) ?? region.forecast_points[0]?.id ?? '';
-  const clock = forecastClock(intel, opts.now);
-  const days: DayConditions[] = when.dates.map(date => withForecastClock(windowConditions(intel, region, pointId, date, window), clock));
+  const clock = forecastClock(intel, opts.now), boat = requestBoat(input.boat);
+  const days: DayConditions[] = when.dates.map(date => withForecastClock(windowConditions(intel, region, pointId, date, window, boat), clock));
   const zones = regionZones(region);
   const advisoriesAsOf = advisoryCheckTime(daily?.sources, zones);
   const byDay = when.dates.map(date => { const [from, to] = windowEpochs(date, tz, window); return {date, advisories: daily ? advisoriesFrom(daily, zones, from, to) : []}; });

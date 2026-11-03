@@ -33,6 +33,9 @@ import {cameraParam} from '../map/stage.ts';
 import {habitat, navigate, profile, region, selection, setParams, species} from '../state.ts';
 import {loadProtectedScreen, protectedScreen} from '../trip.ts';
 import {durationText, runMinutes} from './run.ts';
+import {regionCoverage, regionPlans, targetState} from '../species.ts';
+import {planFor, noPlanText} from '../search-plan.ts';
+import {regionInfo} from '../app/region-info.ts';
 
 export type {Pick, Ranking};
 
@@ -121,6 +124,27 @@ function DiveControl() {
   );
 }
 
+/**
+ * MYB-3: with no picks, a target the picker labels "search plan only" shows the region's search plan for it in place
+ * of the empty list; with none to show, the empty text says so. Every other target keeps the empty text as it was.
+ */
+function EmptyOrPlan({empty}: {empty: string}) {
+  const p = profile.value, id = region.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget, loaded = regionPlans.value;
+  const plans = loaded && loaded.region === id ? loaded.plans : null;
+  if (!plans || targetState(target, p, plans, regionCoverage(id)) !== 'plan') return <p class="app-empty">{empty}</p>;
+  const plan = planFor(target, loaded, id), info = regionInfo.value;
+  if (!plan) return <p class="app-empty">{empty} {noPlanText(info?.id === id ? info.name : null)}</p>;
+  return (
+    <div data-plan={plan.id}>
+      <h3 class="ui-eyebrow">Search plan</h3>
+      <ul class="app-picks">
+        {plan.items.map((item, i) => <li key={i} data-field={item.field}>{item.label}: {item.text}</li>)}
+      </ul>
+      {plan.basis ? <p data-field="tactics_basis">{plan.basis}</p> : null}
+    </div>
+  );
+}
+
 export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   const r = given ?? currentRanking(), id = region.value, boat = profile.value === 'boat', speed = cruiseSpeed.value;
   // The lines file is asked for once the region's index is ready and a candidate still waits on it (a mixed cell),
@@ -169,7 +193,7 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
             </li>
           ))}
         </ol>
-      ) : <p class="app-empty">{r.empty}</p>}
+      ) : <EmptyOrPlan empty={r.empty} />}
       <RangeControl measured={r.harbor} />
     </section>
   );
