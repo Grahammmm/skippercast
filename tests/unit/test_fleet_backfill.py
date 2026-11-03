@@ -6,11 +6,13 @@ nothing is downloaded. Vessels are made-up MMSIs (999xxxxxx) with made-up names
 and call signs, sailing the CF-45 test track out of a square harbor in open
 ocean; the region is the committed CA config with that port and a bbox around it.
 """
+from concurrent.futures import ProcessPoolExecutor
 from contextlib import closing
 from dataclasses import replace
 from datetime import date, datetime, timezone
 import io
 import json
+import multiprocessing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -418,19 +420,28 @@ class SourcePrecedenceTests(BackfillTestCase):
         self.assertGreater(sum(c.events_n for c in doubled), sum(c.events_n for c in cells), "without it: twice")
 
 
+def ingest_peak(rows, root):
+    """Ingest a ``big_day(rows)`` into a store under ``root``; returns (peak traced bytes, CSV size, result, stored rows)."""
+    compressed, size = big_day(rows)
+    store = AisStore(Path(root) / f"memory-{rows}")
+    source = MarineCadastreSource(session=FakeSession({day_url(DAY): compressed}), workdir=store.root / "staging")
+    tracemalloc.start()
+    try:
+        result = bf.ingest_day(source, store, DAY, BBOX, set(WATCHED), batch=2_000)
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    return peak, size, result, len(dump(store, DAY)["positions"])
+
+
 class StreamingTests(BackfillTestCase):
     def peak(self, rows):
-        compressed, size = big_day(rows)
-        store = AisStore(Path(self.tmp.name) / f"memory-{rows}")
-        source = MarineCadastreSource(session=FakeSession({day_url(DAY): compressed}), workdir=store.root / "staging")
-        tracemalloc.start()
-        try:
-            result = bf.ingest_day(source, store, DAY, BBOX, set(WATCHED), batch=2_000)
-            _, peak = tracemalloc.get_traced_memory()
-        finally:
-            tracemalloc.stop()
+        # tracemalloc counts every thread's allocations, so in a shared pytest(-xdist) worker a background thread
+        # another test left running inflates the peak. Each measurement runs in its own fresh interpreter instead.
+        with ProcessPoolExecutor(max_workers=1, mp_context=multiprocessing.get_context("spawn")) as pool:
+            peak, size, result, stored = pool.submit(ingest_peak, rows, self.tmp.name).result()
         self.assertEqual((result["positions"], result["outside"]), (rows // 4, rows - rows // 4))
-        self.assertEqual(len(dump(store, DAY)["positions"]), rows // 4)
+        self.assertEqual(stored, rows // 4)
         return peak, size
 
     def test_memory_stays_bounded_on_a_multi_megabyte_day(self):
