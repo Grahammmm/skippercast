@@ -246,7 +246,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) {
       }, {message: 'focused choice is above the fixed navigation'}).toBe(true);
     }
     // Return to Kayak and choose using only the keyboard.
-    await expect(card.locator('fieldset'), 'at full the MYB-1 boat fields are back above the choices').toBeVisible();
+    await expect(card.locator('fieldset'), 'profile first: the card itself asks no boat fields; they follow a Boat choice (SC-LANDING-ORDER)').toHaveCount(0);
     await page.keyboard.press('Shift+Tab');
     await expect(card.locator('button[data-profile="kayak"]')).toBeFocused();
     await page.keyboard.press('Enter');

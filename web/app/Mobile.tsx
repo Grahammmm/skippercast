@@ -170,7 +170,7 @@ export function Mobile({now = new Date(), firstRun}: {now?: Date; firstRun?: Com
           // Pointer focus must not move a pressed choice before its click is delivered.
           if (target?.closest('.app-firstrun') && target.matches(':focus-visible') && detent !== 'full') {
             setDetent('full');
-            // Full shows the card's boat fields above the choices (MYB-1), which moves the focused choice: bring it back.
+            // Full lays the card out again (the peek row becomes the whole card), which moves the focused choice: bring it back.
             requestAnimationFrame(() => target.scrollIntoView({block: 'nearest'}));
           }
         }}>
