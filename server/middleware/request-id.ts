@@ -2,6 +2,7 @@
 // `request_id` in every JSON error body, and logged with request failures, so a
 // person's report can be matched to the Worker's logs. A well-formed incoming
 // X-Request-Id (e.g. from a proxy) is kept; anything else is replaced.
+// A JSON error is one whose media type (before any `;`, any case) is application/json.
 import type {MiddlewareHandler} from 'hono';
 import type {AppEnv} from '../env.ts';
 
@@ -13,7 +14,8 @@ export const requestId: MiddlewareHandler<AppEnv> = async (c, next) => {
   c.set('requestId', id);
   await next();
   let response = c.res;
-  if (response.status >= 400 && response.headers.get('Content-Type') === 'application/json') response = await withRequestId(response, id);
+  const type = (response.headers.get('Content-Type') ?? '').split(';', 1)[0]!.trim().toLowerCase();
+  if (response.status >= 400 && type === 'application/json') response = await withRequestId(response, id);
   try { response.headers.set('X-Request-Id', id); }
   catch { response = new Response(response.body, response); response.headers.set('X-Request-Id', id); }
   if (response !== c.res) c.res = response;
