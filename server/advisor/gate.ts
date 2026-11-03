@@ -6,6 +6,7 @@ import type {MiddlewareHandler} from 'hono';
 import {json} from '../http.ts';
 import {advisorSettings} from './settings.ts';
 import {fleetSettings} from '../fleet/settings.ts';
+import {publicPagesSettings} from '../pages-settings.ts';
 import type {AppEnv} from '../env.ts';
 
 export const gate: MiddlewareHandler<AppEnv> = async (c, next) => {
@@ -20,5 +21,11 @@ export const gate: MiddlewareHandler<AppEnv> = async (c, next) => {
  */
 export const boatsGate: MiddlewareHandler<AppEnv> = async (c, next) => {
   if (!advisorSettings(c.env).enabled && !fleetSettings(c.env).enabled) return json({error: 'Not found'}, 404);
+  await next();
+};
+
+/** Port and species pages can be enabled independently of the text advisor. */
+export const pagesGate: MiddlewareHandler<AppEnv> = async (c, next) => {
+  if (!advisorSettings(c.env).enabled && !publicPagesSettings(c.env).enabled) return json({error: 'Not found'}, 404);
   await next();
 };

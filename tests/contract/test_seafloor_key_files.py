@@ -23,7 +23,7 @@ from tests._support import ROOT
 
 PINNED = {
     # seafloor/ingest.py: metadata_parser and implementation
-    'src/skippercast/platform/bottom_targets.py': 'feece80a42529aeab5850bc4b775835ffdcafdbb779ac38d6e3cc7c33c7d192f',
+    'src/skippercast/platform/bottom_targets.py': '96c2812bef0a29bf67abed07b8d6dab670896beb587e650b9cc1da2b9a123c6b',
     'src/skippercast/seafloor/ingest.py': 'b3427fc82f962a41d0e36a9962eee13354c06f40e0aac21255f6eb7738aec358',
     'src/skippercast/seafloor/raster.py': 'efa6606e5205670186ec16f0625bd2077bc7b0ff574266f07d6f01ec91902da8',
     'src/skippercast/seafloor/adapters/arcgrid.py': 'a850c5f405a55abe348cce9911dc6df72d2126a2ade1f4a2475e3f6bd29b2bc2',

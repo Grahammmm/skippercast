@@ -7,7 +7,8 @@ import {test, expect, checkA11y} from './fixtures.ts';
 
 test('the port page shows the reports, the boats and the seasons, with the chat closed', async ({page, pageErrors}, info) => {
   expect((await page.goto('/ports/morro-bay'))?.status()).toBe(200);
-  await expect(page.locator('h1')).toHaveText('Morro Bay fishing report');
+  await expect(page.locator('h1')).toHaveText('Morro Bay fishing conditions');
+  await expect(page).toHaveTitle('Morro Bay fishing conditions · SkipperCast');
   const reports = page.getByRole('region', {name: 'Skipper reports, last 14 days'});
   await expect(reports.getByRole('link', {name: 'Rita G'})).toHaveAttribute('href', '/boats/e2e-rita-g');
   await expect(reports).toContainText('45 vermilion, 12 lingcod (2 released)');
@@ -20,6 +21,8 @@ test('the port page shows the reports, the boats and the seasons, with the chat 
   await expect(page.getByRole('button', {name: 'Text SkipperCast'})).toBeVisible();   // the chat island, closed
   await checkA11y(page, 'advisor-port', info.project.name);
   expect(pageErrors).toEqual([]);
+  await page.getByRole('link', {name: 'Open the Morro Bay map'}).click();
+  await expect(page).toHaveURL(/\/map\?region=morro-bay&port=morro-bay/);
 });
 
 test('the species page shows the cues, the rules card and recent catches', async ({page, pageErrors}, info) => {

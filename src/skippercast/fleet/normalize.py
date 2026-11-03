@@ -126,7 +126,8 @@ def phone_e164(text: str | None, country: str = "1") -> str | None:
 
 
 def clean_url(url: str | None) -> str | None:
-    """An https URL with a lower-case host, without tracking parameters or fragment; None if not https."""
+    """An https URL with a lower-case host, without tracking parameters or fragment; None if not https.
+    A trailing root dot on the host is dropped (``boat.example.com.`` -> ``boat.example.com``)."""
     if not isinstance(url, str):
         return None
     url = url.strip()
@@ -141,6 +142,10 @@ def clean_url(url: str | None) -> str | None:
         port = parts.port
     except ValueError:
         return None
+    if ":" not in host and host.endswith("."):
+        host = host[:-1]
+        if not host or host.endswith("."):
+            return None
     authority_host = f"[{host.lower()}]" if ":" in host else host.lower()
     netloc = authority_host + (f":{port}" if port is not None else "")
     query = urlencode([(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True) if not TRACKING.match(k)])
