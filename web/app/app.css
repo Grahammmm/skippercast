@@ -172,8 +172,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
    other's controls; on a short map the card scrolls. */
 .app-chrome-left { position: absolute; left: var(--space-4); top: var(--space-4); bottom: calc(var(--touch-min) + var(--space-7)); z-index: var(--z-map-chrome); display: flex; flex-direction: column; gap: var(--space-3); width: min(320px, calc(100% - var(--space-6))); pointer-events: none; }
 .app-chrome-left > .app-mark, .app-chrome-left > .app-legend { position: static; pointer-events: auto; }
-.app-chrome-left > .app-mark { flex: 0 1 auto; min-height: 0; width: auto; overflow-y: auto; }
-.app-chrome-left > .app-legend { flex: none; align-self: flex-start; margin-top: auto; }
+/* The legend shrinks and scrolls before the card does, and the card keeps a usable height, so a longer legend cannot squeeze the card under its sticky actions. */
+.app-chrome-left > .app-mark { flex: 0 1 auto; min-height: min(100%, 16rem); width: auto; overflow-y: auto; }
+.app-chrome-left > .app-legend { flex: 0 1 auto; min-height: min(6rem, 25%); overflow-y: auto; align-self: flex-start; margin-top: auto; }
 /* SC2222-07: while that card scrolls, its action row sticks to the card's foot (into its bottom padding), so the actions stay on
    screen; the scroll padding (two wrapped button rows) keeps a link focused by Tab from scrolling in under that row. */
 .app-chrome-left > .app-mark { scroll-padding-bottom: calc(2 * var(--touch-min) + 3 * var(--space-3)); }
@@ -333,6 +334,7 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-sheet-menus { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
 .app-sheet-menus > .ui-segmented { max-width: 100%; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
 .app-sheet-menus > .ui-segmented .ui-chip { flex: none; }
+.app-sheet-menus > .app-area { flex-wrap: wrap; max-width: 100%; min-width: 0; }
 .app-sheet-menus > .app-target, .app-sheet-menus .app-target label { min-width: 0; max-width: 100%; }
 .app-sheet-menus .app-target select { min-width: 0; }
 .app-sheet-menus label { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-13); }
@@ -392,6 +394,9 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-mark-regs dt { color: var(--muted); }
 .app-mark-regs dd { margin: 0; }
 .app-mark-regs a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); }
+/* SC-LAUNCH-3's legality line under the verdict: no default <p> margins, and its official link a full touch target as on the mark card. */
+.app-verdict-rules { margin: 0; font-size: var(--text-13); }
+.app-verdict-rules a { display: inline-flex; align-items: center; min-height: var(--touch-min); color: var(--blue); }
 
 /* Reports view (FE-52): a page over the map stage, which stays mounted beneath it. */
 .app-main { position: relative; }
