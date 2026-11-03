@@ -13,10 +13,22 @@ FILES = ('dist/regions/morro-bay/depth-contours.geojson',
          'dist/regions/morro-bay/depth-contours-overview.geojson')
 
 
-def create_receipt(root, tap, commit, node_version, ran_at):
+EXPECTED_TESTS = 16
+
+
+def passed(counts, exit_code):
+    """Pass only when every expected test ran and passed and Node exited 0."""
+    return (exit_code == 0 and counts['tests'] == EXPECTED_TESTS
+            and counts['pass'] == EXPECTED_TESTS
+            and counts['fail'] == counts['skipped'] == counts['cancelled'] == counts['todo'] == 0)
+
+
+def create_receipt(root, tap, commit, node_version, ran_at, exit_code):
     root = Path(root)
+    if type(exit_code) is not int:
+        raise ValueError('invalid exit code')
     counts = {}
-    for key in ('tests', 'pass', 'fail', 'skipped'):
+    for key in ('tests', 'pass', 'fail', 'cancelled', 'skipped', 'todo'):
         values = re.findall(rf'^# {key} (\S+)\s*$', tap, re.MULTILINE)
         if len(values) != 1 or not values[0].isascii() or not values[0].isdigit():
             raise ValueError(f'invalid TAP {key} summary')
@@ -40,10 +52,10 @@ def create_receipt(root, tap, commit, node_version, ran_at):
             raise ValueError('contour review expiry mismatch')
         expiry = value
         files.append({'path': name, 'sha256': hashlib.sha256(data).hexdigest()})
-    receipt = {'schema_version': 1, 'scope': 'morro-bay-depth-contours-test',
+    receipt = {'schema_version': 2, 'scope': 'morro-bay-depth-contours-test',
                'ran_at': ran_at, 'commit': commit, 'command': COMMAND,
-               'node_version': node_version, **counts,
-               'result': 'pass' if counts['fail'] == 0 and counts['tests'] == 16 else 'fail',
+               'node_version': node_version, 'exit_code': exit_code, **counts,
+               'result': 'pass' if passed(counts, exit_code) else 'fail',
                'files': files, 'review_expires': expiry}
     output = root / 'research' / 'receipts' / f'morro-bay-depth-contours-test-{timestamp.date()}.json'
     with output.open('x', encoding='utf-8') as stream:
@@ -60,7 +72,11 @@ def main():
         if run.returncode not in (0, 1):
             raise ValueError(f'node test exited unexpectedly: {run.returncode}')
         now = dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
-        print(create_receipt(ROOT, run.stdout, commit, node_version, now).relative_to(ROOT))
+        output = create_receipt(ROOT, run.stdout, commit, node_version, now, run.returncode)
+        print(output.relative_to(ROOT))
+        if json.loads(output.read_text(encoding='utf-8'))['result'] != 'pass':
+            print('contour receipt: recorded result=fail', file=sys.stderr)
+            return 1
     except (ValueError, OSError, KeyError, subprocess.SubprocessError) as exc:
         print(f'contour receipt: {exc}', file=sys.stderr)
         return 1
