@@ -216,8 +216,14 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // All three rebound. Merged with main's SC2222-07 appCss surface hash: rebound to the merged file.
   // BF-wcag: check_contrast.mjs changes only the panelCss/appCss surface hashes and their comments; rebound.
   "scripts/check_contrast.mjs": "1d41eb1a7b8705c8a3b7a955f18be25e81a21cb618862f341d6ffc69b2d84c29",
-  "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
-  "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
+  // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
+  // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
+  // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
+  // renders Reports with preact from these pins, but no CSS, token, font or catch markup source changes; the
+  // measured colours come from the pinned styles above. Reports never mounts MapStage, so maplibre-gl and three
+  // are not loaded. contrast(), assertions and thresholds are untouched. Rebind only these two.
+  "package.json": "b9fe30cef565b90f8995e9956cfc43f99bcbe103e72387bd73d215f8247a4774",
+  "pnpm-lock.yaml": "1b0d51c0eecc804cf6687293d7a92763057574fbb63686e43f2c5d86b7f65223",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {
