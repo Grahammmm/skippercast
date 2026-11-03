@@ -125,6 +125,14 @@ test('FE-33: where a coast report binds, the sparkline draws its tide curve in t
   const spark = root.locator('figure.app-spark');
   const chart = spark.locator('svg.series-chart');
   await expect(chart).toHaveAttribute('aria-label', /^Tide in ft MLLW\./);
+  // The curve's stroke is var(--coast-amber), which only the shadow root's linked token bridge (beside panel.css)
+  // defines: until those sheets load the stroke computes to "none". Wait for every linked sheet's load (a failed
+  // load rejects), then read the painted stroke once.
+  await chart.evaluate(el => Promise.all([...(el.getRootNode() as ShadowRoot).querySelectorAll('link[rel="stylesheet"]')]
+    .map(link => (link as HTMLLinkElement).sheet ? null : new Promise((resolve, reject) => {
+      link.addEventListener('load', resolve, {once: true});
+      link.addEventListener('error', () => reject(new Error(`stylesheet failed: ${(link as HTMLLinkElement).href}`)), {once: true});
+    }))));
   expect(await chart.locator('path').evaluate(el => getComputedStyle(el).stroke)).toBe(await page.evaluate(() => {
     const probe = Object.assign(document.createElement('i'), {style: 'color: var(--amber)'});
     document.body.append(probe);
