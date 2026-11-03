@@ -233,6 +233,10 @@ export function contourMark(properties: Record<string, unknown> | null | undefin
 export interface DepthContourOptions {
   engine: ReadonlySignal<Engine | null>;
   fetchFn?: typeof fetch; page?: () => string; palette?: () => Palette; now?: () => number;
+  /** The Chart's host: with diagnostics on, its `data-contours-drawn` reports the click targets MapLibre drew in view at the last idle. */
+  host?: HTMLElement;
+  /** Report that count; defaults to the page URL's exact `diagnostics=1` opt-in, as web/map/chart.ts. */
+  diagnostics?: boolean;
 }
 
 /** SC1737-04: a dropped read (no answer, 429 or 5xx) is asked again on the first camera move this long after it. */
@@ -240,9 +244,10 @@ export const CONTOUR_RETRY_MS = 60_000;
 type Loaded = {region: string; path: string; result: ContourAssessment | 'none'; retryAt?: number};
 
 /** Loads, checks and draws the region's contours; created with the Chart (web/app/MapStage.tsx `layers`). */
-export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), page = () => location.href, palette = () => readPalette(), now = () => Date.now()}: DepthContourOptions) {
+export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), page = () => location.href, palette = () => readPalette(), now = () => Date.now(), host, diagnostics}: DepthContourOptions) {
   const loaded = signal<Loaded | null>(null);
-  let asked = '', detailRegion: string | null = null, drawn = false, drawnOn: Engine | null = null, alive = true;
+  const counting = !!host && (diagnostics ?? new URL(page()).searchParams.get('diagnostics') === '1');
+  let asked = '', detailRegion: string | null = null, drawn = false, drawnOn: Engine | null = null, alive = true, stopIdle: (() => void) | null = null;
   async function load(id: string, path: string): Promise<void> {
     let result: Loaded['result'], retryAt: number | undefined;
     try {
@@ -294,9 +299,15 @@ export function createDepthContours({engine, fetchFn = (...a) => fetch(...a), pa
       e.setData(DEPTH_CONTOURS_SOURCE, data as never);
       drawn = true; drawnOn = e;
     }),
+    // Diagnostics only (the count is a rendered-feature query): what a click can pick, as MapLibre last drew it.
+    effect(() => {
+      const e = engine.value;
+      stopIdle?.(); stopIdle = null;
+      if (e && host && counting) stopIdle = e.view.on('idle', () => { host.dataset.contoursDrawn = String(drawn ? e.rendered(DEPTH_HIT) : 0); });
+    }),
   ];
   return {
-    destroy() { alive = false; for (const dispose of disposers) dispose(); contourState.value = IDLE; },
+    destroy() { alive = false; for (const dispose of disposers) dispose(); stopIdle?.(); if (host) delete host.dataset.contoursDrawn; contourState.value = IDLE; },
     pick: {layers: [DEPTH_HIT, DEPTH_UNRESOLVED_FILL] as const, ordered: true, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => {
       const l = loaded.peek();
       return l && l.result !== 'none' && l.result.status === 'drawn' ? contourMark(properties, l.result.sources, l.result.omitted) : null;
