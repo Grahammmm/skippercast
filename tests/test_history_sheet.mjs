@@ -19,7 +19,7 @@ async function load() {
   if (mod) return mod;
   const outfile = join(await mkdtemp(join(tmpdir(), 'history-sheet-')), 'mobile.mjs');
   await build({stdin: {resolveDir: ROOT, loader: 'ts', contents: `
-    export {viewDetent} from './web/app/Mobile.tsx';
+    export {viewDetent, boatEntryDetent} from './web/app/Mobile.tsx';
     export {APP_VIEWS} from './web/state.ts';`},
   outfile, bundle: true, format: 'esm', platform: 'node', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins, logLevel: 'silent'});
   mod = await import(pathToFileURL(outfile).href);
@@ -33,6 +33,14 @@ test('entering History opens a peeked sheet to full and keeps half or full as ch
   assert.equal(viewDetent('history', 'full'), 'full');
 });
 
+test('SC-LANDING-ORDER: showing the boat step opens a peeked sheet to full; half, full and a closed step are left alone', async () => {
+  const {boatEntryDetent} = await load();
+  assert.equal(boatEntryDetent(true, 'peek'), 'full');
+  assert.equal(boatEntryDetent(true, 'half'), 'half');
+  assert.equal(boatEntryDetent(true, 'full'), 'full');
+  for (const detent of DETENTS) assert.equal(boatEntryDetent(false, detent), detent, detent);
+});
+
 test('every other view keeps its detent at all three detents', async () => {
   const {viewDetent, APP_VIEWS} = await load();
   const others = APP_VIEWS.filter(view => view !== 'history');
@@ -43,6 +51,8 @@ test('every other view keeps its detent at all three detents', async () => {
 test('the sheet applies viewDetent only when the view changes, so a later drag down is not forced back up', async () => {
   const source = await readFile(join(ROOT, 'web/app/Mobile.tsx'), 'utf8');
   const effects = source.match(/useEffect\([^\n]*\);/g) ?? [];
-  assert.equal(effects.length, 1);
+  assert.equal(effects.length, 2);
   assert.match(effects[0], /setDetent\(d => viewDetent\(appView\.value, d\)\), \[appView\.value\]\)/);
+  // SC-LANDING-ORDER: the boat step opens a peeked sheet the same way, only when it is shown or closed.
+  assert.match(effects[1], /setDetent\(d => boatEntryDetent\(boatEntryOpen\.value, d\)\), \[boatEntryOpen\.value\]\)/);
 });
