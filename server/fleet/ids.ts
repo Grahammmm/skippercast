@@ -6,19 +6,28 @@
 // 'region:creation_key'); value keys are the first 16 of SHA-256 over the canonical
 // JSON of the value.
 //
-// Canonical JSON (shared with Python): object keys sorted by code unit, no
+// Canonical JSON (shared with Python): object keys sorted by code point, no
 // whitespace, non-ASCII left as is, numbers as JavaScript prints them (an integral
 // float is written without '.0': Python must pass int(x) for those). Python:
-// json.dumps(v, sort_keys=True, separators=(',', ':'), ensure_ascii=False).
+// json.dumps(v, sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False).
+// Key order is by code point (as sort_keys); NaN/Infinity/undefined throw, as Python refuses them.
 import {sha256} from '../advisor/ids.ts';
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | {[key: string]: JsonValue};
 
+const byCodePoint = (a: string, b: string): number => {
+  for (let i = 0, x = 0, y = 0; i < a.length && i < b.length; i += x > 0xffff ? 2 : 1) if ((x = a.codePointAt(i)!) !== (y = b.codePointAt(i)!)) return x - y;
+  return a.length - b.length;
+};
+
 /** The canonical JSON text of a value (sorted keys, no whitespace). */
 export function canonicalJson(value: JsonValue): string {
+  const v: unknown = value;
+  if (typeof v === 'number' && !Number.isFinite(v)) throw new TypeError('canonicalJson: number is not finite');
+  if (v === undefined || typeof v === 'function' || typeof v === 'symbol' || typeof v === 'bigint') throw new TypeError('canonicalJson: not a JSON value');
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  if (Array.isArray(value)) return '[' + value.map(canonicalJson).join(',') + ']';
-  return '{' + Object.keys(value).sort().map(k => JSON.stringify(k) + ':' + canonicalJson(value[k]!)).join(',') + '}';
+  if (Array.isArray(value)) return '[' + Array.from(value, item => canonicalJson(item)).join(',') + ']';
+  return '{' + Object.keys(value).sort(byCodePoint).map(k => JSON.stringify(k) + ':' + canonicalJson(value[k]!)).join(',') + '}';
 }
 
 const id32 = async (...parts: string[]): Promise<string> => (await sha256(parts.join('|'))).slice(0, 32);
