@@ -77,6 +77,7 @@ const assetPath = (name: string): string | null => {
 
 export type PageKind = 'port' | 'species' | 'boat' | 'missing';
 export interface Crumb {name: string; path: string | null}
+export type PageAbout = {type: 'Place'; name: string; region?: string; geo?: [number, number]} | {type: 'Thing'; name: string; alternateName?: string};
 export interface PageOptions {
   language: PageLanguage;
   kind: PageKind;
@@ -93,6 +94,8 @@ export interface PageOptions {
   noindex?: boolean;
   /** The prefilled text of the call to action (the default greeting when omitted). */
   ctaMessage?: string;
+  /** What an indexable port or species page is about (the WebPage JSON-LD node); omitted: no node. */
+  about?: PageAbout;
   /** false: the Text Advisor is off (a charter fleet page, CF-33), so no call to action and no chat island. Default true. */
   advisor?: boolean;
   body: Html;
@@ -134,12 +137,20 @@ export function layout(page: PageOptions, settings: SiteSettings): string {
   const image = absolute(base, page.image || PREVIEW_IMAGE);
   const tokens = assetPath('advisor/tokens.css'), css = assetPath('advisor/pages.css'), js = assetPath('advisor/chat.js'), advisor = page.advisor !== false;
   const crumbs: Crumb[] = [{name: copy.home, path: '/'}, ...page.crumbs];
-  const ld = [
+  const ld: Record<string, unknown>[] = [
     {'@context': 'https://schema.org', '@type': 'Organization', name: 'SkipperCast', url: `${base}/`, logo: `${base}/app-icon-512.png`},
     // Only crumbs with a page of their own (there is no index of ports, species or boats).
     {'@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: crumbs.filter(c => c.path).map((c, i) => ({'@type': 'ListItem', position: i + 1, name: c.name,
       item: c.path === '/' ? `${base}/` : canonicalUrl(base, c.path!, page.language)}))},
   ];
+  // Only what the page shows (title, description, name, language, canonical); never for noindex pages, ratings, dates or counts.
+  const a = page.about, geo = a?.type === 'Place' ? a.geo : undefined;
+  if (a && !page.noindex && (page.kind === 'port' || page.kind === 'species')) ld.push({'@context': 'https://schema.org', '@type': 'WebPage', '@id': `${canonical}#webpage`, url: canonical,
+    name: page.title, description: page.description, inLanguage: page.language, isPartOf: {'@type': 'WebSite', name: 'SkipperCast', url: `${base}/`},
+    about: a.type === 'Place' ? {'@type': 'Place', name: a.name, ...(geo && geo.length === 2 && geo.every(Number.isFinite) && Math.abs(geo[0]) <= 90 && Math.abs(geo[1]) <= 180
+        ? {geo: {'@type': 'GeoCoordinates', latitude: +geo[0].toFixed(3), longitude: +geo[1].toFixed(3)}} : {}),
+      ...(a.region ? {containedInPlace: {'@type': 'AdministrativeArea', name: a.region}} : {})}
+      : {'@type': 'Thing', name: a.name, ...(a.alternateName ? {alternateName: a.alternateName} : {})}});
   const doc = html`<!doctype html>
 <html lang="${page.language}" prefix="og: https://ogp.me/ns#">
 <head>
