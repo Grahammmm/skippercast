@@ -45,6 +45,8 @@
 .app-firstrun-options .ui-button { justify-content: flex-start; text-align: left; }
 .app-firstrun-options .ui-button span { display: flex; flex-direction: column; gap: var(--space-1); }
 .app-firstrun-options .ui-button small { color: var(--muted); font-size: var(--text-13); }
+/* MYB-1: a boat save that failed or a limit that was adjusted, said after the choice closes the card. */
+.app-firstrun-notice { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: var(--text-13); }
 
 /* On the phone the first-run choice belongs to the sheet/page's scroll area,
    leaving its handle, time controls and navigation reachable. */
