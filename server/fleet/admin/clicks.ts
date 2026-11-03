@@ -1,15 +1,17 @@
-// GET /api/admin/fleet/clicks?days=7|30|90&region= — days exactly '7', '30' or '90' (absent/empty: 30), region a lowercase slug — /go/ redirect counts for the
+// GET /api/admin/fleet/clicks?days=7|30|90&region= — days exactly '7', '30' or '90' (absent/empty: 30), region a regions/<id> name (registry.ts REGION) — /go/ redirect counts for the
 // admin (docs/plans/charter-fleet/design.md § 12, D15; CF-34). Read from the daily
 // fleet_link_clicks counters only; there is nothing per visitor to read. Counts
 // are raw redirects, not visitors: they are not deduplicated (threat model § 10.1),
 // so a figure shown to an operator must say so.
 import type {Target, Placement} from '../go.ts';
 import {TARGETS, PLACEMENTS, utcDay} from '../go.ts';
+// The registry's pattern is the source of truth: a regions/<id> directory name, upper case
+// allowed ('CA', 'OR'), which is what fleet_vessels.region holds.
+import {REGION} from '../registry.ts';
 
 export const CLICK_DAYS = [7, 30, 90] as const;
 export type ClickDays = typeof CLICK_DAYS[number];
 const DAYS: Record<string, ClickDays> = {'7': 7, '30': 30, '90': 90};
-const REGION = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 const MAX_VESSELS = 200;
 
 type Counts = Record<Target, number> & {total: number};
