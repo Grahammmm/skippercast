@@ -304,7 +304,10 @@ test('map first run: notices carried from the landing show on arrival, once, and
     globalThis.document = {createElement: n => new El(n), createElementNS: (_, n) => new El(n), createTextNode: t => Object.assign(new El('text'), {nodeType: 3, data: String(t)})};
     try {
       m.renderDOM(m.h(m.FirstRun, {href, storage, cookies: null}), root);
-      await new Promise(resolve => setTimeout(resolve, 20));
+      // Wait for the arrival render instead of a fixed 20 ms, which a cold CI runner can miss.
+      for (let waited = 0; waited < 2000 && !text(root).includes(m.ENTRY_COPY.failed); waited += 10) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
       return {html: text(root), at: globalThis.location.href, left: s.map.size};
     } finally {
       m.renderDOM(null, root);
