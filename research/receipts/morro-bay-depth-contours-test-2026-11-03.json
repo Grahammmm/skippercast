@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "scope": "morro-bay-depth-contours-test",
+  "ran_at": "2026-11-03T00:32:29Z",
+  "commit": "a855173c72801d6906733debc9e674fca35ed287",
+  "command": "node --test --test-reporter=tap tests/test_depth_contours.mjs",
+  "node_version": "v22.23.2",
+  "tests": 16,
+  "pass": 16,
+  "fail": 0,
+  "skipped": 0,
+  "result": "pass",
+  "files": [
+    {
+      "path": "dist/regions/morro-bay/depth-contours.geojson",
+      "sha256": "594a213c27c84385145765faa4b8df99feef154615af362a3d3f99a27ea47876"
+    },
+    {
+      "path": "dist/regions/morro-bay/depth-contours-overview.geojson",
+      "sha256": "187561c00c777a769212de2da231756f82c442c6fa8514e62541364207e7ac0b"
+    }
+  ],
+  "review_expires": "2027-09-26"
+}
