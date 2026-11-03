@@ -246,6 +246,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) {
       }, {message: 'focused choice is above the fixed navigation'}).toBe(true);
     }
     // Return to Kayak and choose using only the keyboard.
+    await expect(card.locator('fieldset'), 'at full the MYB-1 boat fields are back above the choices').toBeVisible();
     await page.keyboard.press('Shift+Tab');
     await expect(card.locator('button[data-profile="kayak"]')).toBeFocused();
     await page.keyboard.press('Enter');
@@ -329,13 +330,15 @@ for (const [width, height] of [[390, 844], [360, 800]] as const) {
     await expect(sheet).toHaveAttribute('data-detent', 'peek');
     await above();
     await expect(card.locator('#first-run-title')).toBeVisible();
-    for (const hidden of [card.locator('p'), card.locator('.ui-eyebrow')]) await expect(hidden).toBeHidden();
+    // The intro (the card's own p) and the MYB-1 boat fields (whose hint is a p too) are both out of the peek row.
+    for (const hidden of [card.locator(':scope > p'), card.locator('.ui-eyebrow'), card.locator('fieldset')]) await expect(hidden).toBeHidden();
     for (const clipped of [card.getByRole('button', {name: 'Keep Boat for now'}), card.locator('small').first()]) expect((await clipped.boundingBox())!.height).toBeLessThanOrEqual(1);
     await page.screenshot({path: test.info().outputPath(`bl-sc-2-peek-${width}x${height}.png`)});
     // Dragged (stepped) to half: the whole card as before.
     await handle.click();
     await expect(sheet).toHaveAttribute('data-detent', 'half');
-    for (const shown of [card.locator('p'), card.locator('.ui-eyebrow'), card.getByRole('button', {name: 'Keep Boat for now'}), card.locator('small').first()]) await expect(shown).toBeVisible();
+    for (const shown of [card.locator(':scope > p'), card.locator('.ui-eyebrow'), card.getByRole('button', {name: 'Keep Boat for now'}), card.locator('small').first()]) await expect(shown).toBeVisible();
+    await expect(card.locator('fieldset'), 'the MYB-1 boat fields wait for full, keeping the choices on screen at half').toBeHidden();
     // SC-N4: Layers takes the sheet; back at peek the compact row returns.
     await page.locator('button[aria-label="Layers"]').click();
     await expect(page.locator('.app-sheet-layers')).toBeVisible();

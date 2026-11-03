@@ -168,7 +168,11 @@ export function Mobile({now = new Date(), firstRun}: {now?: Date; firstRun?: Com
         onBodyFocus={event => {
           const target = event.target as Element | null;
           // Pointer focus must not move a pressed choice before its click is delivered.
-          if (target?.closest('.app-firstrun') && target.matches(':focus-visible') && detent !== 'full') setDetent('full');
+          if (target?.closest('.app-firstrun') && target.matches(':focus-visible') && detent !== 'full') {
+            setDetent('full');
+            // Full shows the card's boat fields above the choices (MYB-1), which moves the focused choice: bring it back.
+            requestAnimationFrame(() => target.scrollIntoView({block: 'nearest'}));
+          }
         }}>
         {showsFirstRun(panel) ? firstRun : null}
         {layersOpen ? <LayersPanel onClose={() => apply(toggleLayers(panel, detent))} /> : appView.value === 'conditions' ? <Guard name="conditions"><Conditions now={now} /></Guard> : appView.value === 'fleet' ? <Guard name="fleet"><Fleet onShowMap={() => setDetent('peek')} /></Guard> : appView.value === 'history' ? <Guard name="history"><History now={now} /></Guard> : <SheetBrief now={now} detent={detent} onFocus={() => { if (detent === 'peek') setDetent('half'); }} />}
