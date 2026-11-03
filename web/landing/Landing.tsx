@@ -50,8 +50,8 @@ export type LandingAppProps = {
   navigate?: (url: string) => void;
   /** Start loading the ports and readings, and warm a chosen region (off for string rendering in tests). */
   load?: boolean;
-  /** The region warm-up (region-warm.ts by default; tests pass stand-ins). */
-  warm?: (region: string) => Promise<{state: WarmState}>;
+  /** The region warm-up (region-warm.ts by default; tests pass stand-ins). `signal` aborts a warm-up the visitor has left. */
+  warm?: (region: string, signal?: AbortSignal) => Promise<{state: WarmState}>;
   /** BF-landing-live: tomorrow's verdict, loaded after the readout (main.tsx passes live-verdict.ts by dynamic import, as it does the night map; none by default). */
   verdict?: () => Promise<LandingVerdict | null>;
 };
@@ -69,13 +69,22 @@ export const LiveVerdict = ({v}: {v: LandingVerdict}) => (
 type Choice = {place: string; port: Port | null};
 const EXPLORE_PLACE = 'Central coast';
 
-export function LandingApp({href, initialProfile = null, fleet = null, navigate = url => location.assign(url), load = true, warm = region => warmRegion(region, href), verdict = () => Promise.resolve(null)}: LandingAppProps) {
+export function LandingApp({href, initialProfile = null, fleet = null, navigate = url => location.assign(url), load = true,
+  warm = (region, signal) => warmRegion(region, href, undefined, undefined, {signal}), verdict = () => Promise.resolve(null)}: LandingAppProps) {
   const [ports, setPorts] = useState<Port[] | null>(null);
   const [readout, setReadout] = useState<Data | null>(null);
   const [choice, setChoice] = useState<Choice | null>(null);
   const [warmth, setWarmth] = useState<WarmState | null>(null);
-  /** The region being warmed, so an answer for an earlier choice is ignored; and whether the visitor came back from step 2. */
-  const warming = useRef<string | null>(null);
+  /**
+   * The warm-up of the port on screen. Leaving that port — Change port, Explore the coast, or another
+   * port — aborts it, so a port the visitor cancelled stops fetching its region's startup files, and its
+   * answer, early or late, never replaces the state of the choice that is live. The check is on the
+   * selection, not the region id, so a port chosen, left and chosen again is not answered by the run it
+   * abandoned (region-warm.ts createRegionWarmup states the same boundary for the coast startup).
+   */
+  const warming = useRef<AbortController | null>(null);
+  const leaveWarm = (): void => { warming.current?.abort(); warming.current = null; };
+  /** Whether the visitor came back from step 2. */
   const [back, setBack] = useState(false);
   /** Whether the last port list failed (step 1 then offers "Try again"), and the newest attempt, so an earlier answer is ignored. */
   const [failed, setFailed] = useState(false);
@@ -94,19 +103,21 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
     loadList();
     // The verdict's modules load only once the readout is in, and nothing is set after unmount.
     void loadReadout().then(r => { setReadout(r); return alive ? verdict() : null; }).then(v => { if (alive) setAnswer(v); }, () => {});
-    return () => { alive = false; };
+    return () => { alive = false; leaveWarm(); };
   }, [load]);
   // Step 1 → 2: remember the choice and warm its region while they pick a profile; a later choice ignores an earlier warm-up's answer.
   const choose = (port: Port) => {
     setChoice({place: port.name, port});
     if (!load) return;
-    const region = port.region;
-    warming.current = region;
+    leaveWarm();
+    const selection = new AbortController();
+    warming.current = selection;
     setWarmth('loading');
-    void warm(region).then(r => { if (warming.current === region) setWarmth(r.state); }, () => { if (warming.current === region) setWarmth('failed'); });
+    void warm(port.region, selection.signal).then(r => { if (warming.current === selection) setWarmth(r.state); },
+      () => { if (warming.current === selection) setWarmth('failed'); });
   };
-  const explore = () => { warming.current = null; setChoice({place: EXPLORE_PLACE, port: null}); setWarmth(null); };
-  const restart = () => { warming.current = null; setChoice(null); setWarmth(null); setBack(true); };
+  const explore = () => { leaveWarm(); setChoice({place: EXPLORE_PLACE, port: null}); setWarmth(null); };
+  const restart = () => { leaveWarm(); setChoice(null); setWarmth(null); setBack(true); };
   // Step 2: accept once, synchronously, even before navigation unmounts us.
   const finished = useRef(false);
   const finish = (profile: Profile) => {
