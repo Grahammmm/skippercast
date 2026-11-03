@@ -25,9 +25,16 @@ function fromB64url(text: string): Uint8Array | null {
 export const EXPORT_PAGE = '/my-data';
 export const exportLink = (publicBase: string, token: string): string => `${publicBase}${EXPORT_PAGE}#${token}`;
 
-/** The R2 key of a contact's export for a local date. */
+/** True for a real calendar day YYYY-MM-DD in years 2000-2999 (round-trips through Date.UTC). */
+function realDay(date: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  const [y, m, d] = date.split('-').map(Number) as [number, number, number], t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d && y >= 2000 && y <= 2999;
+}
+
+/** The R2 key of a contact's export for a local date (a real calendar day, else 'invalid export key'). */
 export function exportKey(contactId: string, date: string): string {
-  if (!ID.test(contactId) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw Error('invalid export key');
+  if (!ID.test(contactId) || !realDay(date)) throw Error('invalid export key');
   return `advisor/exports/${contactId}/${date}.json`;
 }
 

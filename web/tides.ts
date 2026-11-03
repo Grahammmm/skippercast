@@ -9,6 +9,7 @@
 // - the trend (`tideAt`): the curve point within 4 minutes of the selected
 //   time and the next point, if it follows within 15 minutes, decide Rising,
 //   Falling or Turning (a change under 0.005 ft); otherwise there is no trend;
+//   here a non-finite height or an unreadable or out-of-order next point reads no trend too;
 // - the sparkline (`tideChart`): `chart()` in mini mode over the day's curve
 //   with night shading, a 15-minute gap rule and the curve's range; fewer
 //   than two points draw nothing and read "Tide series unavailable".
@@ -35,7 +36,9 @@ export function tideTrend(points: readonly TidePoint[], at: string | number): Ti
   if (!Number.isFinite(t)) return null;
   const i = points.findIndex(p => Math.abs(Date.parse(p.at) - t) <= TREND_MATCH_MS);
   const point = points[i], next = points[i + 1];
-  if (!point || !next || Date.parse(next.at) - Date.parse(point.at) > TREND_STEP_MS) return null;
+  if (!point || !next) return null;
+  const step = Date.parse(next.at) - Date.parse(point.at);
+  if (!(step > 0 && step <= TREND_STEP_MS) || !Number.isFinite(point.heightFt) || !Number.isFinite(next.heightFt)) return null;
   const change = next.heightFt - point.heightFt;
   return Math.abs(change) < TURNING_FT ? 'Turning' : change > 0 ? 'Rising' : 'Falling';
 }

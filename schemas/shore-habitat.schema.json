@@ -114,7 +114,7 @@
             "name": {"type": "string", "minLength": 1, "maxLength": 80},
             "areaId": {"enum": ["north", "central", "south"]},
             "region": {"$ref": "common.schema.json#/$defs/id"},
-            "substrate": {"const": "sand"},
+            "substrate": {"enum": ["sand", "rocky"]},
             "shoreClass": {"type": "string", "minLength": 1},
             "sourceYear": {"const": 2006},
             "sourceUrl": {"$ref": "common.schema.json#/$defs/https_url"},

@@ -59,9 +59,9 @@ class Refused(unittest.TestCase):
 
 class Accepted(unittest.TestCase):
     def test_inclusive_bounds_as_on_main(self):
-        for lat, lon in ((90.0, 0.0), (-90.0, 0.0), (0.0, 180.0), (0.0, -180.0)):
+        for lat, lon, ref_lon in ((90.0, 0.0, 0.0), (-90.0, 0.0, 0.0), (0.0, 180.0, -180.0), (0.0, -180.0, -180.0)):
             with self.subTest(lat=lat, lon=lon):
-                self.assertEqual(grid_cell(lat, lon, 1000.0), main_formula(lat, lon, 1000.0))
+                self.assertEqual(grid_cell(lat, lon, 1000.0), main_formula(lat, ref_lon, 1000.0))
 
     def test_small_and_integer_resolution(self):
         self.assertEqual(grid_cell(34.0, -119.5, 1), main_formula(34.0, -119.5, 1))
