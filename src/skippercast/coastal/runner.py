@@ -65,7 +65,9 @@ def process_identity(pid):
         return {"host": socket.gethostname(), "boot_id": boot_id(), "pid": int(pid),
                 "start_ticks": int(fields[19]), "pgid": int(fields[2]),
                 "sid": int(fields[3]), "ppid": int(fields[1]), "state": fields[0]}
-    except FileNotFoundError:
+    except (FileNotFoundError, ProcessLookupError):
+        # /proc can open successfully, then report ESRCH on read after exit.
+        # Both errors prove this process disappeared, not uncertain ownership.
         return None
 
 
