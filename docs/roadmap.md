@@ -27,7 +27,7 @@ The owner sets the order. Morro Bay is the only active region until it is refine
 1. **Morro Bay, refined.** Finish and check the Morro Bay data, brief and trip tools before anything else.
 2. **About ten miles north of Morro Bay.** Extend along the central coast once Morro Bay is refined.
 3. **South along the central coast.** After the northern step.
-4. **Trip planning depth.** Shipped: planning routes over the land-water screen for the Boat run (a labelled straight line when none is computed), and the daylight and legal-opening fishing-time comparison (#1260). Still to do: avoiding protected areas on the route and smoothing its stair-step path.
+4. **Trip planning depth.** Shipped: planning routes over the land-water screen for the Boat run (a labelled straight line when none is computed), the line-of-sight smoothing of its stair-step path, and the daylight and legal-opening fishing-time comparison (#1260). Still to do: avoiding protected areas on the route.
 5. **Better fishing evidence.** Verified charter identities and defensible AIS stop and effort analysis, with coverage limits kept apart from habitat priority. Do not label sites as charter hotspots without evidence.
 
 Held data rights must be resolved before adding the excluded Cambria and charter layers. Any later commercial offering would need separate rights for the original project material and compliance with each provider's data and service terms.

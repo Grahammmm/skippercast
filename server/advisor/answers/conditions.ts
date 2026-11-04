@@ -122,9 +122,12 @@ function meanBearing(values: (number | null)[]): number | null {
   return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
 }
 const round = (n: number | null, step = 1): number | null => finite(n) ? Math.round(n / step) * step : null;
-const range = (values: (number | null)[], step = 1): [number, number] | null => {
+/** `upper: 'up'` rounds the maximum up to a whole foot (1e-9 absorbs float noise), so a printed maximum is never below the value the window rule used; the minimum still rounds to nearest and never exceeds it. */
+const range = (values: (number | null)[], step = 1, upper: 'nearest' | 'up' = 'nearest'): [number, number] | null => {
   const v = values.filter(finite);
-  return v.length ? [round(Math.min(...v), step)!, round(Math.max(...v), step)!] : null;
+  if (!v.length) return null;
+  const high = upper === 'up' ? Math.ceil(Math.max(...v) - 1e-9) : round(Math.max(...v), step)!;
+  return [Math.min(round(Math.min(...v), step)!, high), high];
 };
 
 export interface DayConditions {
@@ -171,7 +174,7 @@ export function windowConditions(feed: Feed, region: Region, pointId: string, da
   return {...base, available: true,
     wind_kt: range(hours.map(h => h.wind)), wind_from: compass(meanBearing(hours.map(h => h.wind_from))),
     gusts_kt: round(Math.max(...hours.map(h => h.gust).filter(finite), -Infinity)) ?? null,
-    seas_ft: range(hours.map(h => Math.max(h.sea ?? -Infinity, h.other_sea ?? -Infinity)).map(v => v === -Infinity ? null : v)),
+    seas_ft: range(hours.map(h => Math.max(h.sea ?? -Infinity, h.other_sea ?? -Infinity)).map(v => v === -Infinity ? null : v), 1, 'up'),
     sea_period_s: round(median(hours.map(h => h.sea_period))),
     swell_ft: range(hours.map(h => h.swell)), swell_period_s: round(median(hours.map(h => h.swell_period))), swell_from: compass(meanBearing(hours.map(h => h.swell_from))),
     comfort: COMFORT_WORD[verdict],
