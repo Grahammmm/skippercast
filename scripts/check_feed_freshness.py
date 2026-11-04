@@ -231,12 +231,18 @@ def run(public, github, now, max_age, fetch=fetch_json, branch="conditions"):
 
 
 def age_limit_hours(feed, config, override=None):
-    """The feed's age limit: an explicit override, else its schedule.max_delay_hours, else the catalog default."""
+    """The feed's age limit: an explicit override, else its schedule.max_delay_hours, else the catalog default.
+
+    A declared schedule is used only when it is a number above 0 and at most 8760 hours (a year, the same bound as
+    the --max-age-hours flags). Anything else (zero, negative, nan, infinity, a typo like 1e9, a bool or a string)
+    falls back to the catalog default, so a bad declaration can neither hide a stalled feed nor overflow timedelta.
+    """
     if override is not None:
         return override
     schedule = feed.get("schedule") if isinstance(feed, dict) else None
     declared = schedule.get("max_delay_hours") if isinstance(schedule, dict) else None
-    if isinstance(declared, (int, float)) and not isinstance(declared, bool) and declared > 0:
+    # Compared as-is, never float()ed: a huge int would overflow the conversion; nan fails both comparisons.
+    if isinstance(declared, (int, float)) and not isinstance(declared, bool) and 0 < declared <= 8760:
         return declared
     return config["max_age_hours"]
 
