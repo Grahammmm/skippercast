@@ -43,13 +43,25 @@ test('the band is a width taken from the front\'s own error, drawn under the lin
   assert.ok(features[0].properties.px0 > 0, 'the band has a width');
   const wide = frontFeatures({fronts: [{...d.fronts[0], bandHalfWidthKm: 3}]}).features[0].properties.px0;
   assert.ok(Math.abs(wide / features[0].properties.px0 - 2) < 1e-4, 'twice the half-width, twice the band');
-  // Absolute width: a Web-Mercator pixel at zoom z covers 78271.517 * cos(lat) / 2^z metres, and the band is px0 * 2^z pixels there.
-  const lat = 35.1, groundMetres = features[0].properties.px0 * 78271.517 * Math.cos(lat * Math.PI / 180);
-  assert.ok(Math.abs(groundMetres - 2 * 1.5 * 1000) < 1, `the drawn band is ${groundMetres} m on the ground, not the stated 3000 m`);
   const overlay = frontsOverlay(sentinel);
   assert.ok(isDeepStrictEqual(overlay.layers.map(l => l.id), [FRONTS_BAND_LAYER, FRONTS_LAYER]), 'band under the line');
   assert.ok(overlay.layers.every(l => l.type === 'line'), 'lines only: no circle, symbol or fill');
   assert.ok(features.every(f => !/Point/.test(f.geometry.type)), 'no point geometry');
+});
+
+test('the uncertainty band preserves its ground width at non-equatorial latitudes and zooms', () => {
+  const f = readFronts(doc([front(ago(6))]), REGION).fronts[0];
+  for (const lat of [35, 60, -35]) {
+    const lines = [[[-121, lat], [-120.9, lat]]];
+    const px0 = frontFeatures({fronts: [{...f, lines}]}).features[0].properties.px0;
+    for (const zoom of [0, 8, 12]) {
+      // Web Mercator's 512-pixel world shrinks ground metres per pixel by cos(latitude).
+      const metresPerPixel = 40075016.686 * Math.cos(lat * Math.PI / 180) / (512 * 2 ** zoom);
+      const groundWidthMetres = px0 * 2 ** zoom * metresPerPixel;
+      assert.ok(Math.abs(groundWidthMetres - 3000) < 0.01,
+        `±1.5 km band spans 3000 ground metres at latitude ${lat}, zoom ${zoom}; got ${groundWidthMetres}`);
+    }
+  }
 });
 
 test('an absent, unreadable or malformed file reads "no current front data" and draws nothing', async () => {
