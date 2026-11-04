@@ -49,6 +49,8 @@ export interface Env {
   ADVISOR_GLOBAL_DAILY_COLD?: string; // texts a day we start to numbers that never texted us
   ADVISOR_PUBLIC_BASE?: string;      // https base for links in replies and Meta-fetchable media
   ADVISOR_REGION_DEFAULT?: string;   // region id for contacts with no home port
+  ADVISOR_BETA_REGIONS?: string;     // optional comma-separated pilot region ids
+  ADVISOR_BETA_LANGS?: string;       // optional comma-separated pilot languages (en, es)
   ADVISOR_AUTO_PUBLISH_AFTER?: string; // clean reports before auto-publish is offered
   ADVISOR_SOCIAL_ENABLED?: string;   // "true": publish to Meta; otherwise drafts queue only
   ADVISOR_INBOX_ENABLED?: string;    // "true": Instagram DM and comment handling

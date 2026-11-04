@@ -4,13 +4,13 @@
 // day's high and low predictions listed under it with the reference level.
 // A drag on the curve moves the hour, as on the Conditions chart. With fewer
 // than two curve points (no local coast report binds the place, or the day
-// is outside the curve) it says "Tide series unavailable" and still lists
-// the events. The trend is the tide tile's (web/tides.ts).
+// is outside the curve) it still lists the events and says there is no curve
+// for this place (TIDE_NO_CURVE), or "Tide series unavailable" with no events. The trend is the tide tile's (web/tides.ts).
 import {CoastMarkup} from '../app/CoastMarkup.tsx';
 import {zone} from '../app/region-info.ts';
 import {selectHour} from '../app/TimeDock.tsx';
 import {hour} from '../state.ts';
-import {sparkArgs, TIDE_UNAVAILABLE} from '../tides.ts';
+import {sparkArgs, TIDE_NO_CURVE, TIDE_UNAVAILABLE} from '../tides.ts';
 import type {Brief} from './types.ts';
 
 const clock = (iso: string, tz: string) => new Intl.DateTimeFormat('en-US', {hour: 'numeric', minute: '2-digit', timeZone: tz}).format(new Date(iso)).toLowerCase();
@@ -26,7 +26,7 @@ export function TideSpark({brief, now = new Date()}: {brief: Brief | null; now?:
   return (
     <figure class="app-spark" aria-label="Tide curve">
       {args ? <CoastMarkup renderer="chart" args={args} onCursor={at => selectHour(now, tz, Date.parse(at))} />
-        : <span class="app-spark-empty">{brief ? TIDE_UNAVAILABLE : '—'}</span>}
+        : <span class="app-spark-empty">{brief ? (brief.tideEvents.length ? TIDE_NO_CURVE : TIDE_UNAVAILABLE) : '—'}</span>}
       {brief?.tideEvents.length ? (
         <figcaption>
           <ul class="app-spark-events">
