@@ -14,7 +14,7 @@ const HOUR = 3600;
 test('BF-season-calendar: reviewed strip or failed registry keeps Conditions and official link', async ({page, pageErrors, v2}) => {
   const registry = JSON.parse(readFileSync(new URL('../dist/data/regulations.json', import.meta.url), 'utf8'));
   let failed = false;
-  await page.route(/(?:\/data\/regulations\.json|\/api\/daily\?.*part=regulations)/, route => route.fulfill(failed
+  await page.route(/(?:\/data\/regulations\.json|\/regions\/[\w-]+\/regulations-startup\.json|\/api\/daily\?.*part=regulations)/, route => route.fulfill(failed
     ? {status: 500, json: {error: 'Synthetic unavailable registry'}} : {json: registry}));
   await v2.open('app', {region: 'morro-bay', view: 'conditions', target: 'lingcod'});
   const view = page.locator('section.app-conditions'), strip = view.locator('.app-season');
