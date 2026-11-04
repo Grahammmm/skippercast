@@ -12,7 +12,7 @@ import {join} from 'node:path';
 import {promisify} from 'node:util';
 import {buildClient, hashName} from '../scripts/client-build.mjs';
 import {BUILD_PLACEHOLDER} from '../scripts/precache.mjs';
-import {STATIC_REF} from '../vite.config.mjs';
+import {dropMaplibreLogo, MAPLIBRE_CSS, STATIC_REF} from '../vite.config.mjs';
 
 const run = promisify(execFile);
 const CHECK = new URL('../scripts/check_client.mjs', import.meta.url).pathname;
@@ -180,6 +180,17 @@ test('the real site builds and passes the client check (static data directories 
   const {stdout} = await run(process.execPath, [CHECK, out, DIST]);
   assert.match(stdout, new RegExp(`precached for build ${buildId}`));
   await rm(out, {recursive: true, force: true});
+});
+
+test('the bundled MapLibre stylesheet drops only the logo, which no map turns on', async () => {
+  const css = '.a{x:1}a.maplibregl-ctrl-logo{b:url("data:x{}")}.b,a.maplibregl-ctrl-logo{c:2}@media(forced-colors:active){a.maplibregl-ctrl-logo{d:3}}@media(x){.c{e:4}a.maplibregl-ctrl-logo{f:5}}';
+  assert.equal(dropMaplibreLogo(css), '.a{x:1}.b,a.maplibregl-ctrl-logo{c:2}@media(x){.c{e:4}}');
+  assert.ok(MAPLIBRE_CSS.test('/r/node_modules/.pnpm/maplibre-gl@6/node_modules/maplibre-gl/dist/maplibre-gl.css?url'));
+  const real = await readFile(new URL('../node_modules/maplibre-gl/dist/maplibre-gl.css', import.meta.url), 'utf8');
+  const kept = dropMaplibreLogo(real);
+  assert.ok(!kept.includes('maplibregl-ctrl-logo') && kept.includes('.maplibregl-ctrl-attrib-button') && real.length - kept.length > 30000);
+  const {stdout} = await run('git', ['grep', '-l', 'maplibreLogo', '--', 'web', 'dist/*.js', 'packages'], {cwd: new URL('..', import.meta.url).pathname}).catch(e => e);
+  assert.equal(stdout, '', 'a map that shows the MapLibre logo needs its stylesheet rules back (vite.config.mjs)');
 });
 
 test('only vendor files, the web manifest and icons are left out of the Vite build', () => {
