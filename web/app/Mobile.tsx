@@ -45,6 +45,7 @@ import {Reports} from './views/Reports.tsx';
 import {PlanView} from './PlanView.tsx';
 import {appView, setParams, withParams, type AppView} from '../state.ts';
 import {waypointPlacement} from '../waypoint-placement.ts';
+import {language} from '../i18n.ts';
 import {dayOptions, dockState, hourText, localParts, readout, selectDay, selectHour} from './TimeDock.tsx';
 
 /** What the sheet shows: the brief, or the layer rail with the legend. */
@@ -89,7 +90,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
   // for another day than the dock's (tomorrow, until a time is chosen) the dock's heading moves
   // below the lead to head the dock-day evidence, as the desktop column does.
   const lead = leadDate(now), apart = lead !== state.day, dockHead = <span class="ui-eyebrow">{windowText(now, tz)}</span>;
-  const leadText = leadDayText(lead, now, tz);
+  const leadText = leadDayText(lead, now, tz, language.value);
   return (
     <div class="app-sheet-brief" onFocusIn={onFocus} data-basis={brief?.basis}>
       {currentMark.value ? <Guard name="mark-card"><MarkCard /></Guard> : (

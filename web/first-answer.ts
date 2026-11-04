@@ -6,6 +6,7 @@
 import type {BriefVerdict, DayVerdict} from './brief/verdict.ts';
 import {PROFILE_TABLE, type Profile} from './profile.ts';
 import {CDFW_OCEAN, regulationState, ruleSummary, type RulesRegion} from './regs.ts';
+import {t, type Language, type StringId} from './i18n.ts';
 
 export type Fishable = 'yes' | 'marginal' | 'no' | 'unknown';
 
@@ -23,6 +24,8 @@ export interface FirstAnswerState {
   profile: Profile;
   /** False when the address and storage name no profile: the line then says which one it assumed. */
   chosen: boolean;
+  /** The page's language (web/i18n.ts); English when absent. */
+  lang?: Language;
 }
 
 export interface FirstAnswer {
@@ -37,29 +40,25 @@ export interface FirstAnswer {
 
 const FISHABLE: Readonly<Record<DayVerdict, Fishable>> = {comfortable: 'yes', marginal: 'marginal', rough: 'no', unknown: 'unknown'};
 
-/** One distinct line per answer; `unknown` never reads as a yes. */
-const LINE: Readonly<Record<Fishable, (day: string) => string>> = {
-  yes: day => `Yes - ${day} looks fishable.`,
-  marginal: day => `Marginal - ${day} is a borderline day to fish.`,
-  no: day => `No - ${day} looks too rough to fish.`,
-  unknown: day => `Not known yet - no usable forecast for ${day}.`,
-};
+/** One distinct line per answer (catalogue ids); `unknown` never reads as a yes. */
+const LINE: Readonly<Record<Fishable, StringId>> = {yes: 'fa.yes', marginal: 'fa.marginal', no: 'fa.no', unknown: 'fa.unknown'};
 
 /** Reviewed, due for review, or unavailable: the rules card's own state, with no bag, size or depth numbers. */
 function legality(s: FirstAnswerState): {note: string; href: string} {
-  if (!s.rules || !s.regs) return {note: 'Rules unavailable - open the official rules before you go.', href: CDFW_OCEAN};
-  const state = regulationState(s.regs, s.target, s.rules, s.now.getTime(), s.date, null), sum = ruleSummary(s.regs, s.target, state, s.rules);
-  if (state.status === 'unknown' || state.overdue) return {note: 'Rules due for review - check the official page before you go.', href: sum.link};
-  return {note: `Rules reviewed (${sum.label}) - see the rules card for the limits.`, href: sum.link};
+  const lang = s.lang ?? 'en';
+  if (!s.rules || !s.regs) return {note: t('fa.rules.unavailable', lang), href: CDFW_OCEAN};
+  const state = regulationState(s.regs, s.target, s.rules, s.now.getTime(), s.date, null), sum = ruleSummary(s.regs, s.target, state, s.rules, lang);
+  if (state.status === 'unknown' || state.overdue) return {note: t('fa.rules.due', lang), href: sum.link};
+  return {note: t('fa.rules.reviewed', lang, {label: sum.label}), href: sum.link};
 }
 
 /** The first answer for the lead's day. Every field comes from verdict.ts, regs.ts or the profile table. */
 export function firstAnswer(s: FirstAnswerState): FirstAnswer {
-  const v = s.verdict, fishable = v ? FISHABLE[v.verdict] : 'unknown';
-  const law = legality(s), assumed = s.chosen ? '' : ` Assuming the ${PROFILE_TABLE[s.profile].label} profile - change it above.`;
+  const v = s.verdict, fishable = v ? FISHABLE[v.verdict] : 'unknown', lang = s.lang ?? 'en';
+  const law = legality(s), assumed = s.chosen ? '' : ` ${t('fa.assumed', lang, {profile: PROFILE_TABLE[s.profile].label})}`;
   return {
     fishable, legalityNote: law.note, rulesHref: law.href, asOf: s.now.toISOString(),
-    line: `${LINE[fishable](s.day)}${assumed}`,
-    reason: v ? `${v.limit}${v.held ? ` ${v.held}` : ''}` : 'Waiting for readings.',
+    line: `${t(LINE[fishable], lang, {day: s.day})}${assumed}`,
+    reason: v ? `${v.limit}${v.held ? ` ${v.held}` : ''}` : t('common.waiting', lang),
   };
 }

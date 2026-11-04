@@ -32,12 +32,9 @@ import type {ChartMark} from '../map/coastline.ts';
 import {habitatCard, markData, picked, spotCard} from '../map/marks.ts';
 import type {CoastReading} from '../../packages/coast/src/embed-types.ts';
 import {shownPresentation, terrainActions, terrainDetail, terrainMark, terrainPick, terrainReading} from '../map/stage.ts';
-import {coordinates, navigate, profile, selection, setParams, species} from '../state.ts';
+import {coordinates, navigate, selection, setParams} from '../state.ts';
 import {formatCoordinates} from '../../dist/coordinates.js';
-import {PROFILE_TABLE} from '../profile.ts';
-import {areaPageOnly, freshnessLabel, loadRegs, regsData, regulationState, ruleSummary, speciesPage, verifiedText, type RulesRegion} from '../regs.ts';
-import {zone} from './App.tsx';
-import {dockState} from './TimeDock.tsx';
+import {RulesLine} from './RulesCard.tsx';
 import {addPlaceToTrip, addToTrip, placeTripId, reviewPlace, reviewTrip, tripIds} from '../trip.ts';
 import {regulationsLink} from '../map/habitat.ts';
 import {drawnSpots} from '../map/ranked.ts';
@@ -46,6 +43,7 @@ import {MarkForecast} from '../brief/MarkForecast.tsx';
 import type {LatLon} from '../brief/mark-forecast.ts';
 
 export type Mark = ChartMark;
+export {RulesLine};
 export {terrainCard} from '../map/habitat.ts';
 
 /** The card's placeholder while the region's marks load. */
@@ -70,32 +68,6 @@ export const currentMark = computed<Mark | null>(() => {
   return (chart ? chartMark.value ?? habitatCard.value : terrainPick.value ?? (reading ? readingCard(reading) : null) ?? habitatCard.value)
     ?? (spot === undefined ? placeholderMark(selection.value!) : spot);
 });
-
-/** The cards that speak for a place to fish, so carry the target's rules. */
-const RULED = /^(?:spot|survey|geology|habitat|charter):/;
-
-/** The target's rules at a glance for the dock's hour, or nothing while the region loads. */
-export function RulesLine({mark}: {mark: Mark}) {
-  const region = markData.value?.region as RulesRegion | undefined, loaded = regsData.value;
-  // Each selected card asks again (loadRegs reads once unless the last read failed), so the retained line retries on A→B.
-  useEffect(() => { if (region) void loadRegs(region); }, [region?.id, mark.id]);
-  if (!region || !RULED.test(mark.id) || mark.withheld) return null;
-  const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget, data = loaded?.region === region.id ? loaded.data : null;
-  const at = dockState(new Date(), zone()).at, day = new Intl.DateTimeFormat('en-CA', {timeZone: zone(), year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
-  const state = regulationState(data, target, region, Date.now(), day, at), s = ruleSummary(data, target, state, region), page = speciesPage(data, target, region), fresh = freshnessLabel(data, target, state, region);
-  const name = target === 'reef' ? 'Lingcod & rockfish' : state.profile?.name ?? target;
-  const cell = (label: string, values: readonly string[]) => values.length ? <div><dt>{label}</dt>{values.map(v => <dd key={v} class="ui-mono">{v}</dd>)}</div> : null;
-  return (
-    <div class="app-mark-regs" role="group" aria-label={`Rules at a glance: ${name}`}>
-      <p><span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> <span class="ui-mono">{verifiedText(s)}</span></p>
-      <p class="app-mark-regs-fresh ui-mono" data-state={fresh.state}>{fresh.text}</p>
-      <dl>{cell('Bag', s.bag)}{cell('Size', s.size)}{cell('Depth', s.depth ? [s.depth] : [])}</dl>
-      {page && <a href={page.href} target="_blank" rel="noopener" aria-label={`${page.label} (official page, opens in a new tab)`}>{page.label}</a>}
-      <a href={s.link} target="_blank" rel="noopener" aria-label={`${s.linkLabel} for ${name} (official page, opens in a new tab)`}>{s.linkLabel}</a>
-      {areaPageOnly(s, page) && <p class="app-mark-regs-note">Area regulations page, not specific to {name}.</p>}
-    </div>
-  );
-}
 
 /** Drop the selection from the address (?spot= and ?focus= are read, never written, by the store). */
 export function clearSelection(href: string): string {

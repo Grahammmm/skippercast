@@ -35,9 +35,10 @@ import {Tiles} from './Tiles.tsx';
 import {TideStationControl} from './TideStationControl.tsx';
 import {tideSelection} from '../tide-selection.ts';
 import {withTideSelection} from '../tide-stations.ts';
-import {briefVerdict, clockText, feedReader, VERDICT_WORD, type BriefVerdict} from './verdict.ts';
+import {briefVerdict, clockText, feedReader, type BriefVerdict} from './verdict.ts';
 import {activeBoatFactors, savedBoat} from '../../dist/boat-handling.js';
-import {boatBasisName, boatRangeNote, type SavedBoatLike} from '../boat-range.ts';
+import {boatBasisName, boatRangeNote, REFERENCE_BOAT_NAME, type SavedBoatLike} from '../boat-range.ts';
+import {language, localeOf, num, shortDate, t, type Language, type StringId} from '../i18n.ts';
 import {boatSaved} from '../boat-entry.ts';
 import type {BoatFactors} from '../score.ts';
 import type {Brief as BriefModel, RegionalDailyFeed} from './types.ts';
@@ -61,11 +62,11 @@ export const feedGaps = signal<readonly string[]>([]);
 
 let feedLoad = 0;
 
-export const FEED_GAP = {
-  both: 'Conditions feeds could not be read: no buoy, tide or marine alert readings. The map, rules and trip tools still work.',
-  daily: 'Daily feed could not be read',
-  conditions: 'Live buoy feed could not be read: buoy readings come from the once-a-day run.',
-} as const;
+export const FEED_GAP = {both: t('brief.gap.both'), daily: t('brief.gap.daily').replace(/\.$/, ''), conditions: t('brief.gap.conditions')} as const;
+
+/** A feed-gap line (kept in English in feedGaps, which the tests compare) in `lang`: each is one of the catalogue's English gap sentences. */
+const GAP_IDS: readonly StringId[] = ['brief.gap.both', 'brief.gap.daily', 'brief.gap.daily.tide', 'brief.gap.daily.alerts', 'brief.gap.daily.both', 'brief.gap.conditions'];
+const gapText = (text: string, lang: Language): string => { const id = GAP_IDS.find(i => t(i) === text); return id ? t(id, lang) : text; };
 
 async function readFeed(path: string, id: string, fetchFn: typeof fetch): Promise<RegionalDailyFeed | null> {
   try {
@@ -100,8 +101,8 @@ export function mergeFeeds(daily: RegionalDailyFeed | null, conditions: Regional
 /** The daily feed's line: what the brief lost with it, judged by what the conditions feed still carries. */
 function dailyGap(conditions: RegionalDailyFeed): string {
   const kinds = new Set(Object.values(conditions.sources).map(source => source?.kind));
-  const lost = [kinds.has('prediction') ? null : 'tide predictions', kinds.has('advisory') ? null : 'marine alert checks'].filter(Boolean);
-  return `${FEED_GAP.daily}${lost.length ? `: ${lost.join(' and ')} are missing` : ''}.`;
+  const tide = !kinds.has('prediction'), alerts = !kinds.has('advisory');
+  return t(tide && alerts ? 'brief.gap.daily.both' : tide ? 'brief.gap.daily.tide' : alerts ? 'brief.gap.daily.alerts' : 'brief.gap.daily');
 }
 
 /** Load the daily and conditions feeds for region `id`; failed fetches or feeds for another region leave the brief empty. */
@@ -250,16 +251,16 @@ export function leadDate(now: Date, brief: BriefModel | null = leadBrief(now)): 
   return brief?.date ?? dateKey(at ? new Date(at) : now, tz);
 }
 
-/** "today", "tomorrow", else "Sat Oct 10", for the lead's day `date` ("YYYY-MM-DD"). */
-export function leadDayText(date: string, now: Date, tz: string): string {
+/** "today", "tomorrow", else "Sat Oct 10" ("hoy", "mañana", "el sáb 10 oct"), for the lead's day `date` ("YYYY-MM-DD"). */
+export function leadDayText(date: string, now: Date, tz: string, lang: Language = 'en'): string {
   const today = dateKey(now, tz), next = dateKey(new Date(Date.parse(`${today}T12:00:00Z`) + 86_400_000), 'UTC');
-  if (date === today) return 'today';
-  if (date === next) return 'tomorrow';
-  return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric'}).replace(',', '');
+  if (date === today) return t('brief.day.today', lang);
+  if (date === next) return t('brief.day.tomorrow', lang);
+  return t('brief.day.date', lang, {date: shortDate(`${date}T12:00:00Z`, lang)});
 }
 
 export const Headline = ({brief}: {brief: BriefModel | null}) =>
-  <h1>{brief?.headline ?? (feedGaps.value.includes(FEED_GAP.both) ? 'Readings unavailable.' : 'Waiting for readings.')}</h1>;
+  <h1>{brief?.headline ?? t(feedGaps.value.includes(FEED_GAP.both) ? 'brief.unavailable' : 'common.waiting', language.value)}</h1>;
 
 export const Deck = ({brief}: {brief: BriefModel | null}) => brief?.deck ? <p class="app-deck">{brief.deck}</p> : null;
 
@@ -273,16 +274,17 @@ export function currentVerdict(brief: BriefModel | null, now: Date): BriefVerdic
   return briefVerdict(brief, info && forecast?.region === info.id ? forecast : null, now, info?.timezone ?? DEFAULT_ZONE, activeBoatFactors() as BoatFactors);
 }
 
-/** The comfort-score basis naming the boat rated: the saved boat's name, "your <n> ft boat", or the reference 23 ft boat. */
-export const comfortBasis = (boat: SavedBoatLike): string => `Comfort rating for ${boatBasisName(boat)}${VERDICT_BASIS['comfort-score']}`;
+/** The boat the comfort rating names, in `lang`; a saved boat's own name is shown as typed. */
+function boatName(boat: SavedBoatLike, lang: Language): string {
+  const name = boatBasisName(boat), length = /^your (\d+(?:\.\d+)?) ft boat$/.exec(name);
+  return name === REFERENCE_BOAT_NAME ? t('brief.boat.reference', lang) : name === 'your boat' ? t('brief.boat.generic', lang) : length ? t('brief.boat.yours', lang, {n: length[1]!}) : name;
+}
 
-const VERDICT_BASIS = {
-  'comfort-score': ', not a bite forecast or a safety clearance. Each hour of the window (sunrise to noon, or the rest of the daylight once noon has passed) is scored 0 to 10 from both forecast models’ wind, gusts, combined seas and wind chop at the forecast point, less a penalty for a crossing swell or short, steep chop. The worst hour sets the day: 7 and above is Comfortable, under 4 is Rough, Marginal between. An estimate missing wave detail or the second model is capped at 6.9; a marine alert makes the day Rough.',
-  profile: 'Comfort rating from this profile’s hourly grade (surf or surge, wind, seas and launch where it applies), not a bite forecast or a safety clearance. The roughest hour of the window (sunrise to noon, or the rest of the daylight once noon has passed) sets the day; Calmer reads Comfortable. A marine alert makes the day Rough.',
-} as const;
+/** The comfort-score basis naming the boat rated: the saved boat's name, "your <n> ft boat", or the reference 23 ft boat. */
+export const comfortBasis = (boat: SavedBoatLike, lang: Language = 'en'): string => t('brief.basis.comfort', lang, {boat: boatName(boat, lang)});
 
 /** The basis line on a provisional day. */
-export const PROVISIONAL_BASIS = 'Provisional outlook: forecasts this far ahead change.';
+export const PROVISIONAL_BASIS = t('brief.provisional.basis');
 
 /**
  * The lead's legality line (SC-LAUNCH-3): whether the selected target (the profile's default before
@@ -291,17 +293,17 @@ export const PROVISIONAL_BASIS = 'Provisional outlook: forecasts this far ahead 
  * here; before the registry loads the state reads "Check rules", never open.
  */
 export function LeadRules({date, now}: {date: string; now: Date}) {
-  const rules = regionInfo.value?.rules;
+  const rules = regionInfo.value?.rules, lang = language.value;
   useEffect(() => { if (rules) void loadRegs(rules); }, [rules?.id]);
   if (!rules) return null;
   const loaded = regsData.value, data = loaded?.region === rules.id ? loaded.data : null;
   const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget;
-  const state = regulationState(data, target, rules, now.getTime(), date, null), s = ruleSummary(data, target, state, rules);
+  const state = regulationState(data, target, rules, now.getTime(), date, null), s = ruleSummary(data, target, state, rules, lang);
   const name = target === 'reef' ? 'Lingcod & rockfish' : state.profile?.name ?? target;
   return (
     <p class="app-verdict-rules" data-status={s.status}>
-      <span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> {name} {leadDayText(date, now, rules.timezone ?? DEFAULT_ZONE)}. {state.reason}{' '}
-      <a href={s.link} target="_blank" rel="noopener" aria-label={`${s.linkLabel} for ${name} (official page, opens in a new tab)`}>{s.linkLabel}</a>
+      <span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> {name} {leadDayText(date, now, rules.timezone ?? DEFAULT_ZONE, lang)}. {lang === 'es' ? <><span lang="en">{state.reason}</span> {t('rules.english.inline', lang)}</> : state.reason}{' '}
+      <a href={s.link} target="_blank" rel="noopener" aria-label={t('rules.link.for', lang, {label: s.linkLabel, name})}>{s.linkLabel}</a>
     </p>
   );
 }
@@ -313,27 +315,27 @@ export function LeadRules({date, now}: {date: string; now: Date}) {
  * the day after tomorrow) says so in the verdict line itself. Before there is a brief, the waiting headline.
  */
 export function Verdict({now}: {now: Date}) {
-  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, brief = leadBrief(now), date = leadDate(now, brief);
+  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, brief = leadBrief(now), date = leadDate(now, brief), lang = language.value;
   const v = currentVerdict(brief, now), rulesLine = <LeadRules date={date} now={now} />;
   if (!v) return <><Headline brief={brief} />{rulesLine}</>;
-  const when = leadDayText(date, now, tz);
+  const when = leadDayText(date, now, tz, lang);
   const provisional = !!brief?.provisional;
-  const a = v.agreement, gapText = (n: number) => String(Number(n.toFixed(1)));
-  const models = !a || a.state === 'none' ? null : a.state === 'agree' ? `Models agree through ${v.window?.split('–')[1]}: wind within ${gapText(a.gap!.wind)} kn, seas within ${gapText(a.gap!.sea)} ft.`
-    : a.state === 'differ' ? `Models differ at ${clockText(a.worst!.ms, tz)}: wind ${gapText(a.worst!.wind)} kn apart, seas ${gapText(a.worst!.sea)} ft apart.${a.differing > 1 ? ` (${a.differing} of ${a.hours} hours)` : ''}`
-    : a.state === 'partial' ? `Models compared for ${a.compared} of ${a.hours} hours; they agree on those.` : 'One model only for this window.';
+  const a = v.agreement, gap = (n: number) => num(Number(n.toFixed(1)), lang);
+  const models = !a || a.state === 'none' ? null : a.state === 'agree' ? t('brief.models.agree', lang, {until: v.window?.split('–')[1] ?? '', wind: gap(a.gap!.wind), sea: gap(a.gap!.sea)})
+    : a.state === 'differ' ? `${t('brief.models.differ', lang, {at: clockText(a.worst!.ms, tz), wind: gap(a.worst!.wind), sea: gap(a.worst!.sea)})}${a.differing > 1 ? ` ${t('brief.models.hours', lang, {n: a.differing, total: a.hours})}` : ''}`
+    : a.state === 'partial' ? t('brief.models.partial', lang, {n: a.compared, total: a.hours}) : t('brief.models.one', lang);
   const modelHour = a?.state === 'differ' && regionalForecast.value ? feedReader(regionalForecast.value, now).read(a.worst!.ms) : null;
-  const boat = v.basis === 'comfort-score' ? storedBoat() : null, rangeNote = boat ? boatRangeNote(boat.loa_ft) : null;
+  const boat = v.basis === 'comfort-score' ? storedBoat() : null, rangeNote = boat && boatRangeNote(boat.loa_ft) ? t('brief.boat.note', lang) : null;
   return (
     <div class="app-verdict" data-verdict={v.verdict} data-provisional={provisional ? 'true' : undefined}>
       <div class="app-verdict-head">
-        <h1><span class="app-verdict-word">{VERDICT_WORD[v.verdict]}</span>{' '}<span class="app-verdict-window ui-mono" data-day={date}>{v.window ? `${when}, ${v.window}` : when}</span>{provisional ? ' ' : null}{provisional ? <span class="app-verdict-window app-verdict-provisional ui-mono">Provisional</span> : null}</h1>
-        <Popover align="end">{v.basis === 'comfort-score' ? comfortBasis(boat) : VERDICT_BASIS.profile}{rangeNote ? ` ${rangeNote}` : ''}{provisional ? ` ${PROVISIONAL_BASIS}` : ''}{v.score !== null ? ` Worst hour: ${v.score}/10.` : ''}</Popover>
+        <h1><span class="app-verdict-word">{t(`brief.verdict.${v.verdict}` as StringId, lang)}</span>{' '}<span class="app-verdict-window ui-mono" data-day={date}>{v.window ? `${when}, ${v.window}` : when}</span>{provisional ? ' ' : null}{provisional ? <span class="app-verdict-window app-verdict-provisional ui-mono">{t('brief.provisional', lang)}</span> : null}</h1>
+        <Popover align="end">{v.basis === 'comfort-score' ? comfortBasis(boat, lang) : t('brief.basis.profile', lang)}{rangeNote ? ` ${rangeNote}` : ''}{provisional ? ` ${t('brief.provisional.basis', lang)}` : ''}{v.score !== null ? ` ${t('brief.worst', lang, {score: num(v.score, lang, 20)})}` : ''}</Popover>
       </div>
       <p class="app-verdict-limit">{v.limit}{v.held ? ` ${v.held}` : ''}</p>
       {rangeNote ? <p class="app-verdict-boat-note">{rangeNote}</p> : null}
       {models ? <p class="app-verdict-models ui-mono" data-agreement={a!.state}>{models}</p> : null}
-      {modelHour ? <details class="app-verdict-models-detail"><summary>Model readings</summary>NOAA {gapText(modelHour.wind!)} kn, ECMWF {gapText(modelHour.other_wind!)} kn; NOAA {gapText(modelHour.sea!)} ft, ECMWF {gapText(modelHour.other_sea!)} ft.</details> : null}
+      {modelHour ? <details class="app-verdict-models-detail"><summary>{t('brief.models.detail', lang)}</summary>{t('brief.models.readings', lang, {w1: gap(modelHour.wind!), w2: gap(modelHour.other_wind!), s1: gap(modelHour.sea!), s2: gap(modelHour.other_sea!)})}</details> : null}
       {rulesLine}
     </div>
   );
@@ -345,10 +347,10 @@ export function Verdict({now}: {now: Date}) {
  * stale sources in view.
  */
 export function Details({brief}: {brief: BriefModel | null}) {
-  const gaps = feedGaps.value.length + (brief?.gaps.length ?? 0);
+  const gaps = feedGaps.value.length + (brief?.gaps.length ?? 0), lang = language.value;
   return (
     <details class="app-details">
-      <summary>Details{gaps ? <span class="app-details-gaps"> · {gaps} missing or stale</span> : null}</summary>
+      <summary>{t('brief.details', lang)}{gaps ? <span class="app-details-gaps"> · {t('brief.details.gaps', lang, {n: gaps})}</span> : null}</summary>
       <div class="app-details-body">
         {brief ? <p class="app-readings ui-mono">{brief.headline}</p> : null}
         <Deck brief={brief} />
@@ -363,18 +365,18 @@ export function Details({brief}: {brief: BriefModel | null}) {
 export const BriefTiles = ({brief, compact = false, dense = false}: {brief: BriefModel | null; compact?: boolean; dense?: boolean}) =>
   <><Tiles tiles={brief?.tiles ?? null} compact={compact} dense={dense} provisional={!!brief?.provisional} nearshore={PROFILE_TABLE[profile.value].swellTile === 'nearshore'} />{compact ? null : <TideStationControl />}</>;
 
-const clock = (iso: string, tz: string) => new Intl.DateTimeFormat('en-US', {hour: 'numeric', minute: '2-digit', timeZone: tz}).format(new Date(iso)).replace(':00', '').toLowerCase();
+const clock = (iso: string, tz: string, lang: Language = 'en') => new Intl.DateTimeFormat(localeOf(lang), {hour: 'numeric', minute: '2-digit', timeZone: tz}).format(new Date(iso)).replace(':00', '').toLowerCase();
 
 /** The quietest window the model screened, labelled lower exposure; none is said plainly. */
 export function LowerExposure({brief}: {brief: BriefModel | null}) {
   if (!brief) return null;
-  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, w = brief.windows[0];
+  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, w = brief.windows[0], lang = language.value;
   // The safety caveat stays visible; a window the user's looser limits decided adds that note after it.
   const own = w?.reasons.find(reason => reason.startsWith('Using your limits')), caveat = w?.reasons.find(reason => reason !== own);
   return (
     <p class="app-window">
-      <span class="ui-eyebrow">Lower exposure</span>{' '}
-      {w ? <><span class="ui-mono">{clock(w.start, tz)}–{clock(w.end, tz)}</span> · {w.label}. {[caveat, own].filter(Boolean).join('. ')}</> : brief.limits?.custom ? 'No lower-exposure window within your limits for this day.' : 'No lower-exposure window screened for this day.'}
+      <span class="ui-eyebrow">{t('brief.lower', lang)}</span>{' '}
+      {w ? <><span class="ui-mono">{clock(w.start, tz, lang)}–{clock(w.end, tz, lang)}</span> · {w.label}. {[caveat, own].filter(Boolean).join('. ')}</> : t(brief.limits?.custom ? 'brief.lower.custom' : 'brief.lower.none', lang)}
     </p>
   );
 }
@@ -385,19 +387,19 @@ export function LowerExposure({brief}: {brief: BriefModel | null}) {
  * model could not check sits in a disclosure, so the list never becomes a caveat wall.
  */
 export function BriefGaps({brief}: {brief: BriefModel | null}) {
-  const feeds = feedGaps.value, sources = brief?.gaps ?? [], unchecked = brief?.missing ?? [];
+  const feeds = feedGaps.value, sources = brief?.gaps ?? [], unchecked = brief?.missing ?? [], lang = language.value;
   if (!feeds.length && !sources.length && !unchecked.length) return null;
   return (
     <div class="app-gaps">
       {feeds.length || sources.length ? (
-        <ul class="app-gaps-list" aria-label="Missing readings">
-          {feeds.map(text => <li key={text}>{text}</li>)}
+        <ul class="app-gaps-list" aria-label={t('brief.gaps.label', lang)}>
+          {feeds.map(text => <li key={text}>{gapText(text, lang)}</li>)}
           {sources.map(gap => <li key={gap.id} data-status={gap.status}>{gap.text}</li>)}
         </ul>
       ) : null}
       {unchecked.length ? (
         <details class="app-gaps-more">
-          <summary>Not checked in this brief ({unchecked.length})</summary>
+          <summary>{t('brief.gaps.unchecked', lang, {n: unchecked.length})}</summary>
           <ul>{unchecked.map(text => <li key={text}>{text}</li>)}</ul>
         </details>
       ) : null}
@@ -412,18 +414,18 @@ export function BriefLinks({brief}: {brief: BriefModel | null}) {
   if (!brief) return null;
   return (
     <ul class="app-brief-links">
-      {brief.notice ? <li><a href={brief.notice.url} target="_blank" rel="noopener">Beach notice: {brief.notice.name}</a></li> : null}
+      {brief.notice ? <li><a href={brief.notice.url} target="_blank" rel="noopener">{t('brief.notice', language.value, {name: brief.notice.name})}</a></li> : null}
       {brief.fleet ? <li><a href={brief.fleet.href}>{brief.fleet.text}</a></li> : null}
       <li class="app-local" data-available={String(brief.localReport.available)}>{brief.localReport.text}</li>
     </ul>
   );
 }
 
-export const DISCLAIMER = 'Forecasts, observations and habitat carry separate clocks; check the rules before you fish.';
+export const DISCLAIMER = t('brief.disclaimer');
 
 /** The C1 short form of docs/legal/disclaimers.md (item 3, the persistent footer line). */
-export const PLANNING_AID = 'Planning aid · not a navigation chart.';
+export const PLANNING_AID = t('brief.planning');
 
 /** The one disclaimer line per page with the planning-aid line, Terms and Sources links; `children` adds links after them. */
 export const BriefFooter = ({children}: {children?: ComponentChildren} = {}) =>
-  <footer class="app-brief-footer">{DISCLAIMER} {PLANNING_AID} <a href="/terms.html">Terms</a> · <a href="/sources">Sources</a>{children}</footer>;
+  <footer class="app-brief-footer">{t('brief.disclaimer', language.value)} {t('brief.planning', language.value)} <a href="/terms.html">{t('brief.terms', language.value)}</a> · <a href="/sources">{t('brief.sources', language.value)}</a>{children}</footer>;
