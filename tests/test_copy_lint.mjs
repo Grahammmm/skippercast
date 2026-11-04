@@ -164,3 +164,38 @@ test('the baseline only shrinks: new findings fail, fixes must be removed, --upd
     rmSync(root, {recursive: true, force: true});
   }
 });
+
+// SC0707-03: the two "not checked for this spot" lines are each ONE literal that the unchanged lint can read whole.
+// The expected lines are written here independently of the product constants.
+const UNCHECKED = [
+  {file: 'dist/account.js', line: 'Protected areas not checked for this spot: outside coverage or check unavailable; not exported.', old: 'Protected areas not checked for this spot: outside coverage or check unavailable. Not exported.'},
+  {file: 'web/saved-spots.ts', line: 'Protected areas not checked for this spot: outside coverage or check unavailable; not saved.', old: 'Protected areas not checked for this spot. Not saved.'},
+];
+
+test('unchecked_copy_is_one_complete_linted_literal', () => {
+  for (const {file, line} of UNCHECKED) {
+    const source = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
+    // Each caveat: not checked, why, and the refused action.
+    for (const part of ['not checked for this spot', 'outside coverage', 'check unavailable']) assert.ok(line.includes(part), `${file}: ${part}`);
+    assert.ok(/not (?:exported|saved)\.$/.test(line), `${file}: the refused action closes the line`);
+    // Exactly one literal holds the whole line, and no other literal carries a half of it.
+    assert.equal(literals(source).filter(l => l.value === line).length, 1, `${file}: the whole line is one literal`);
+    assert.equal(literals(source).filter(l => l.value.includes('not checked for this spot')).length, 1, `${file}: no split half`);
+    // That literal stands alone: not joined to another by + and not built at runtime.
+    const quoted = `'${line}'`;
+    const at = source.indexOf(quoted);
+    assert.ok(at >= 0 && source.indexOf(quoted, at + 1) < 0, `${file}: the quoted line occurs once`);
+    assert.match(source.slice(Math.max(0, at - 3), at), /[:=]\s*$/, `${file}: not concatenated before`);
+    assert.match(source.slice(at + quoted.length, at + quoted.length + 3), /^\s*[,;]/, `${file}: not concatenated after`);
+    assert.doesNotMatch(source, /lint[^\n]*two literals|two literals[^\n]*lint|reads each literal alone/i, `${file}: no lint-evasion comment`);
+    // The unchanged lint reads it whole and finds nothing.
+    assert.deepEqual(unitFindings(line), []);
+    assert.deepEqual(lintFile(file, source), []);
+  }
+});
+
+test('the old joined unchecked sentences still read as consecutive-not', () => {
+  for (const {old} of UNCHECKED) assert.deepEqual(rules(unitFindings(old)), ['consecutive-not'], old);
+  // A semicolon keeps one sentence only when it really is one: a stray full stop brings the finding back.
+  assert.deepEqual(rules(unitFindings('Protected areas not checked for this spot: outside coverage or check unavailable. Not saved.')), ['consecutive-not']);
+});
