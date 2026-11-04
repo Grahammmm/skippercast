@@ -27,3 +27,19 @@ test('all supplied legacy species identities survive entry including empty, inva
   input.searchParams.set('target','');assert.equal(fishEntry(input.href).searchParams.get('target'),'');input.searchParams.set('target','halibut');assert.equal(fishEntry(input.href).searchParams.get('target'),'halibut');
  }
 });
+test('area_only_entry_region_matches_native_view',()=>{
+ for(const [area,place,region] of [['north','cambria','cambria-san-simeon'],['central','morro','morro-bay'],['south','avila','morro-bay']]){
+  const url=fishEntry('https://s.test/?area='+area);
+  assert.equal(url.searchParams.get('region'),region,area);assert.equal(url.searchParams.get('view'),nativePlaceView(place),area);assert.equal(url.searchParams.get('area'),area);
+  assert.equal(fishEntry(url.href).href,url.href,'idempotent');
+  const view=fishEntry('https://s.test/?area='+area+'&view=35.1,-120.8,9');assert.equal(view.searchParams.get('view'),'35.1,-120.8,9');assert.equal(view.searchParams.get('region'),region);
+ }
+ const same='https://s.test/?area=central&region=monterey-point-sur&view=35.1,-120.8,9';assert.equal(fishEntry(same).href,same);
+});
+test('area_only_respects_explicit_geography_and_place',()=>{
+ for(const query of ['area=north&region=','area=north&coast=','area=north&place=','area=north&place=unknown','area=north&place=constructor'])assert.throws(()=>fishEntry('https://s.test/?'+query),query);
+ assert.equal(fishEntry('https://s.test/?area=north&region=unknown').searchParams.get('region'),'unknown');
+ assert.equal(fishEntry('https://s.test/?area=north&coast=south').searchParams.get('region'),null);
+ assert.equal(fishEntry('https://s.test/?area=north&place=morro').searchParams.get('region'),'morro-bay');
+ for(const area of ['unknown','constructor','__proto__'])assert.throws(()=>fishEntry('https://s.test/?area='+area),area);
+});
