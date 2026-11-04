@@ -30,6 +30,8 @@ async function vapid(){
 const ZONE=region.timezone,DAY='2026-11-12',PUSH='https://fcm.googleapis.com/fcm/send/sub-',HOUR=3600000;
 // 2026-11-11 12:00 PST: the trip is tomorrow and the day-before final (18:00) is not yet due.
 const T0=Date.parse('2026-11-11T20:00:00Z');
+// Synthetic L/H brackets around the whole 7-13 PST window, so the bar estimate is complete (calm GFS-Wave data reads no hazard).
+const TIDES=[['03','L'],['09','H'],['15','L'],['21','H']].map(([h,type])=>({time:`${DAY}T${h}:00:00-08:00`,height_ft:type==='H'?5:0.5,type}));
 const rules={valid_from:'2026-01-01',valid_through:'2026-12-31',species:Object.fromEntries(['lingcod','rockfish'].map(id=>[id,{source_ids:[],windows:[{start:'2026-01-01',end:'2026-12-31'}]}]))};
 // Feed for check time `nowMs`; `swell` maps a local hour to a long-period sample on the wave model (others stay calm).
 function intelligence(nowMs,swell={}){
@@ -38,8 +40,8 @@ function intelligence(nowMs,swell={}){
   for(const id of ['gfs_global','ecmwf_ifs025','ncep_gfswave016','ecmwf_wam']){
     const hit=e=>id==='ecmwf_wam'&&swell[local.get(e)];
     models[id]={meta:{last_run_initialisation_time:nowMs/1000,data_end_time:time.at(-1)},data:[{
-      hourly_units:{time:'unixtime',wind_speed_10m:'kn',wind_gusts_10m:'kn',visibility:'m',weather_code:'wmo code',wave_height:'ft',wave_period:'s',wind_wave_height:'ft'},
-      hourly:{time,wind_speed_10m:time.map(()=>4),wind_gusts_10m:time.map(()=>6),visibility:time.map(()=>10000),weather_code:time.map(()=>0),
+      hourly_units:{time:'unixtime',wind_speed_10m:'kn',wind_direction_10m:'°',wind_gusts_10m:'kn',visibility:'m',weather_code:'wmo code',wave_height:'ft',wave_period:'s',wind_wave_height:'ft'},
+      hourly:{time,wind_speed_10m:time.map(()=>4),wind_direction_10m:time.map(()=>90),wind_gusts_10m:time.map(()=>6),visibility:time.map(()=>10000),weather_code:time.map(()=>0),
         wave_height:time.map(e=>hit(e)?.height??2),wave_period:time.map(e=>hit(e)?.period??10),wind_wave_height:time.map(()=>.5)}}]};
     sources['model-'+id]={status:'ok'};
   }
@@ -58,7 +60,7 @@ async function scenario(run,{owners=['alice']}={}){
   globalThis.fetch=async url=>{
     const u=String(url);state.fetched.push(u);
     if(u===region.intelligence_feed)return Response.json(intelligence(state.now,state.swell));
-    if(u===region.daily_feed)return Response.json({regulations:rules});
+    if(u===region.daily_feed)return Response.json({regulations:rules,sources:{tides:{status:'ok',data:{predictions:TIDES}}}});
     if(u.startsWith('https://api.weather.gov/alerts/active?zone='))return Response.json({features:[]});
     if(u.startsWith(PUSH)){state.pushes++;return new Response(null,{status:state.push});}
     throw Error('unexpected network request '+u);

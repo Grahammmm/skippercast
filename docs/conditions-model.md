@@ -142,10 +142,34 @@ same model and hour reach `LONG_PERIOD_SWELL` (`web/score.ts`: 2.5 ft at 15 s),
 the assessment adds a hazard note naming the earliest such local hour in the
 saved window (departure and return extensions included). The note is not a
 missing-data issue, ignores the saved sea limit and boat factors, and does not
-clear the trip; an alert update is sent when it appears, changes or clears. It
-reads only the combined-wave height and period of the two wave models; the
-brief and the advisor may also read GFS swell partitions, which saved-trip
-alerts do not.
+clear the trip; an alert update is sent when it appears, changes or clears. This
+long-period note reads only the combined-wave height and period of the two wave
+models; the brief and the advisor may also read GFS swell partitions, which the
+long-period note does not (the bar note below may).
+
+For the four bars named in 33 CFR 165.1196 (Morro Bay, Humboldt Bay, Noyo River
+and Crescent City Harbor), the assessment also adds a separate bar hazard note,
+after any long-period note and never in `issues`. It uses the same shared
+`barHours` estimate as the brief and the advisor (offshore basis, no new
+fetch and no copied threshold) on the intelligence and daily feeds the checker
+already reads, and it changes neither the status nor the legal reading. A
+saved trip stores no boat profile, so every saved trip in one of those four
+regions gets it, whether it was saved for a boat, shore, spear or kayak day; a
+trip's launch point is never read as a verified crossing. Morro Bay & Avila
+trips are covered through the Morro Bay entrance, and the note says the
+estimate is regional and does not establish the trip's launch or crossing.
+It reads the saved forecast point's GFS wind and GFS-Wave seas and swell
+partitions for every hour of the saved window (departure and return
+extensions included), and the daily feed's tide highs and lows. When the
+estimate reads hazardous it names the earliest local hour. When any hour lacks
+a usable forecast or tide phase, or wind against the ebb cannot be judged
+(the other three bars have no entrance bearing), it says the bar was not
+judged for the complete saved window; a known hazard is still named beside that
+sentence. Quiet, caution and no-flag hours add no text, and no note says a bar
+is open, closed or safe. Each note carries the Coast Guard (VHF 16 or 22A) and
+harbor-patrol check line, and an alert update is sent when a note appears,
+changes or clears. This is a regional screening estimate, not a live or
+official bar report.
 
 ## Model agreement
 
