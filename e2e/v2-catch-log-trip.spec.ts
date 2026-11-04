@@ -21,7 +21,7 @@ async function stubAccount(page: Page, tripsRoute: (route: Route, call: number) 
   await page.route('**/api/spots', route => route.fulfill({json: {spots: []}}));
   await page.route('**/api/trips', route => tripsRoute(route, ++calls));
   await page.route('**/api/catch-log', async route => {
-    if (route.request().method() === 'GET') return route.fulfill({json: {entries: stub.entries}});
+    if (route.request().method() === 'GET') return route.fulfill({json: {entries: stub.entries}, headers: {'X-SC-Catch-Log-Has-More': 'false'}});
     const body = route.request().postDataJSON() as Record<string, unknown>;
     stub.posts.push(body);
     if (options.refuse && body.trip_id) return route.fulfill({status: 404, json: {error: 'Not found'}});   // the route's own answer for a deleted trip

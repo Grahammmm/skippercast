@@ -257,3 +257,67 @@ test('10: both files are asked together; a registry 503 beside a daily SyntaxErr
   await p; await loadRegs(MORRO, s.fetchFn);
   assert.equal(s.urls.length, 6, 'the 503 is transient: the next card asks again, including the startup copy');
 });
+
+// RF1050-18: a registry whose area_notices holds a non-record is an invalid candidate, never a throw out of the loader.
+const bad = (at = NOW) => ({...data(at), area_notices: [null]});
+const badPart = (id, at = NOW) => ({...part(id, at), regulations: bad(at)});
+
+test('regs_invalid_copy_falls_back_to_full', async () => {
+  fresh();
+  const s = server({[COPY]: bad(), [COMMITTED]: data(), [daily('morro-bay')]: 404});
+  await assert.doesNotReject(loadRegs(MORRO, s.fetchFn));
+  assert.deepEqual(s.urls, [COPY, daily('morro-bay'), COMMITTED], 'startup copy and daily start together; the fallback is actually requested');
+  assert.ok(shown('morro-bay'), 'the valid full registry shows');
+  await loadRegs(MORRO, s.fetchFn);
+  assert.equal(s.urls.length, 3, 'a malformed copy beside a successful read is not retried');
+});
+
+test('regs_invalid_full_can_recover_from_daily', async () => {
+  fresh();
+  const later = NOW + 3 * 3600000;
+  const s = server({[COPY]: bad(), [COMMITTED]: bad(), [daily('morro-bay')]: part('morro-bay', later)});
+  await assert.doesNotReject(loadRegs(MORRO, s.fetchFn));
+  assert.ok(shown('morro-bay'), 'the valid daily registry shows');
+  assert.equal(regsData.value.data.reviewed_at, data(later).reviewed_at, 'and it is the daily one');
+  await loadRegs(MORRO, s.fetchFn);
+  assert.equal(s.urls.length, 3, 'a clean successful load is not asked again');
+
+  fresh();
+  const t = server({[COPY]: data(), [daily('morro-bay')]: badPart('morro-bay', later)});
+  await assert.doesNotReject(loadRegs(MORRO, t.fetchFn));
+  assert.deepEqual(t.urls, [COPY, daily('morro-bay')], 'the valid startup copy needs no fallback');
+  assert.equal(regsData.value.data.reviewed_at, data().reviewed_at, 'a malformed daily registry never replaces the valid startup copy');
+  await loadRegs(MORRO, t.fetchFn);
+  assert.equal(t.urls.length, 2, 'and is not retried');
+});
+
+test('regs_all_bad_notices_retry_without_unhandled_rejection', async () => {
+  const rejections = [], onReject = e => rejections.push(e);
+  process.on('unhandledRejection', onReject);
+  try {
+    fresh();
+    const s = server({[COPY]: bad(), [COMMITTED]: bad(), [daily('morro-bay')]: badPart('morro-bay')});
+    await assert.doesNotReject(loadRegs(MORRO, s.fetchFn));
+    assert.equal(regsData.value, null, 'nothing loaded: Check rules');
+    assert.equal(s.urls.length, 3);
+    await loadRegs(MORRO, s.fetchFn);
+    assert.equal(s.urls.length, 6, 'no data for the region: the next card reads again');
+    s.set(COPY, data()); s.set(daily('morro-bay'), part('morro-bay'));
+    await loadRegs(MORRO, s.fetchFn);
+    assert.ok(shown('morro-bay'), 'a valid response recovers');
+    const clean = s.urls.length;
+    await loadRegs(MORRO, s.fetchFn);
+    assert.equal(s.urls.length, clean, 'and a clean read ends the asking');
+    // Prior same-region valid data survives a later malformed candidate.
+    const kept = regsData.value;
+    resetRegs();
+    s.set(COPY, bad()); s.set(COMMITTED, bad()); s.set(daily('morro-bay'), badPart('morro-bay', NOW + 3600000));
+    await assert.doesNotReject(loadRegs(MORRO, s.fetchFn));
+    assert.ok(regsData.value === kept, 'the valid data stays displayed');
+    await new Promise(r => setTimeout(r, 10));
+    assert.deepEqual(rejections, [], 'no unhandled rejection');
+  } finally {
+    process.off('unhandledRejection', onReject);
+    fresh();
+  }
+});

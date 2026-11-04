@@ -272,10 +272,25 @@ test('rows are routed with their verdict, and the row line is plain text (a clos
   const [routed] = ranking.routedPicks([pick], null, null, null, null, 4);
   assert.deepEqual(routed.screen, pick.screen);
   const src = readFileSync(new URL('../web/brief/WhereToLook.tsx', import.meta.url), 'utf8');
-  assert.match(src, /screenLine\(pick\.screen\)/); assert.doesNotMatch(src, /dangerouslySetInnerHTML|innerHTML/);
-  const line = /export function screenLine[\s\S]*?\n}\n/.exec(src)[0];
-  assert.match(line, /`Inside \$\{v\.name/, 'the name goes into a text line');
-  assert.match(line, /Protected areas not checked/);
+  assert.match(src, /screenLine\(pick\.screen, lang\)/); assert.doesNotMatch(src, /dangerouslySetInnerHTML|innerHTML/);
+  // SC0452-10: the lines come from the catalogue in both languages; run them, not the English source.
+  const out = join(await mkdtemp(join(tmpdir(), 'closures-line-')), 'line.mjs');
+  await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: "export {screenLine} from './web/brief/WhereToLook.tsx'; export {render} from 'preact-render-to-string'; export {h} from 'preact';"},
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+  const {screenLine, render, h} = await import(pathToFileURL(out).href);
+  const verdict = (extra) => ({inside: false, name: NAME, distanceM: null, screened: true, ...extra});
+  const lines = {
+    en: [['Protected areas not checked', verdict({screened: false})], [`Inside ${NAME}`, verdict({inside: true, distanceM: 0})], [`70 m from ${NAME}`, verdict({distanceM: 70})],
+      [`40 m from ${NAME}`, verdict({distanceM: 39.6})], ['Inside a protected area', verdict({inside: true, name: null})], ['12 m from a protected area', verdict({distanceM: 12.4, name: null})], [null, verdict({distanceM: 70.1})], [null, verdict({})]],
+    es: [['Áreas protegidas sin revisar', verdict({screened: false})], [`Dentro de ${NAME}`, verdict({inside: true, distanceM: 0})], [`A 70 m de ${NAME}`, verdict({distanceM: 70})],
+      [`A 40 m de ${NAME}`, verdict({distanceM: 39.6})], ['Dentro de un área protegida', verdict({inside: true, name: null})], ['A 12 m de un área protegida', verdict({distanceM: 12.4, name: null})], [null, verdict({distanceM: 70.1})], [null, verdict({})]],
+  };
+  for (const [lang, cases] of Object.entries(lines)) for (const [want, v] of cases) assert.equal(screenLine(v, lang), want, `${lang}: ${JSON.stringify(v)}`);
+  assert.equal(screenLine(verdict({screened: false})), 'Protected areas not checked', 'English is the default');
+  for (const lang of ['en', 'es']) {
+    const html = render(h('span', null, screenLine(verdict({inside: true}), lang)));
+    assert.ok(!html.includes('<img') && html.includes('&lt;img src=x onerror=alert(1)> Reserve'), `${lang}: the closure name is escaped text, never markup`);
+  }
 });
 
 test('the listed Boat picks (the list and the run line read them) keep each pick\'s screen verdict unchanged, routed or not', async () => {

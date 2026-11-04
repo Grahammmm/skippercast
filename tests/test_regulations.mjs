@@ -140,3 +140,43 @@ test('unsupported and inherited target identities remain unknown in state and su
   const malformed = {...d, species: {...d.species, broken: {name: 'Broken'}}};
   assert.equal(state(malformed, 'broken').status, 'unknown');
 });
+test('regs_area_notices_rejects_nonrecords', () => {
+  const base = data();
+  assert.ok(Array.isArray(base.area_notices) && base.area_notices.length > 0, 'fixture carries valid notices');
+  const valid = base.area_notices[0];
+  const variant = notices => ({...structuredClone(base), area_notices: notices});
+  for (const bad of [[null], [false], [0], ['notice'], [[]], [{}], [structuredClone(valid), null], [null, structuredClone(valid)],
+    [{...valid, source_ids: ['no-such-source']}], [{...valid, source_ids: []}], [{...valid, source_ids: 'mpa-piedras'}], [{...valid, id: 7}], [{...valid, note: null}]]) {
+    const d = variant(bad);
+    let result;
+    assert.doesNotThrow(() => { result = validRegulations(d, region); }, JSON.stringify(bad).slice(0, 40));
+    assert.equal(result, false, JSON.stringify(bad).slice(0, 40));
+  }
+  assert.equal(validRegulations(variant({}), region), false, 'a truthy non-array container is not a notice list');
+  assert.equal(validRegulations(variant('notices'), region), false);
+  assert.equal(validRegulations(variant([]), region), true, 'an empty list is accepted');
+  assert.equal(validRegulations(variant(null), region), true, 'null notices are accepted as absent');
+  const omitted = structuredClone(base); delete omitted.area_notices;
+  assert.equal(validRegulations(omitted, region), true, 'omitted notices are accepted');
+  assert.equal(validRegulations(base, region), true, 'the complete fixture stays valid');
+});
+test('regs_bad_notice_uses_unknown_summary', () => {
+  const good = data(), before = JSON.stringify(good);
+  const bad = {...structuredClone(good), area_notices: [null]};
+  const frozen = JSON.stringify(bad);
+  for (const id of ['halibut', 'lingcod', 'reef']) {
+    const s = state(bad, id);
+    assert.equal(s.status, 'unknown', id);
+    assert.equal(s.label, 'Check rules', id);
+    if (id !== 'reef') assert.equal(s.reason, 'Regulations unavailable. Open the official CDFW rules before fishing.', id);
+    const row = summary(bad, id);
+    assert.equal(row.status, 'unknown'); assert.equal(row.label, 'Check rules');
+    assert.deepEqual(row.bag, []); assert.deepEqual(row.size, []);
+    assert.equal(row.depth, null); assert.equal(row.verified, null);
+    assert.equal(row.link, 'https://wildlife.ca.gov/Fishing/Ocean');
+  }
+  assert.equal(JSON.stringify(bad), frozen, 'the malformed input is not mutated');
+  assert.equal(state(good, 'halibut').status, 'open', 'the valid fixture before is unchanged');
+  assert.equal(JSON.stringify(good), before);
+  assert.equal(state(good, 'halibut').status, 'open', 'and after');
+});

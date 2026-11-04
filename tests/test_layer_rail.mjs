@@ -35,7 +35,7 @@ async function load() {
       export {cloudStamp} from './web/map/clouds.ts';
       export {groundsState} from './web/map/charter-grounds.ts';
       export {aisOn, aisState} from './web/map/commercial-ais.ts';
-      export {currentStatus, terrainOptions, terrainShading, TERRAIN_DEFAULTS} from './web/map/stage.ts';
+      export {currentStatus, terrainCoarsened, terrainOptions, terrainShading, TERRAIN_DEFAULTS} from './web/map/stage.ts';
       export * as state from './web/state.ts';
       export {PROFILE_TABLE, RAIL_IDS} from './web/profile.ts';
       export {render} from 'preact-render-to-string';
@@ -309,4 +309,55 @@ test('FE-80: in 2D and 3D the Seafloor entry holds the terrain\'s options with l
   assert.match(html, /<input type="checkbox" disabled\/?>Reefs &amp; species pins/, 'with Seafloor off the reefs and pins are off and fixed');
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&layers=seafloor`);
   assert.doesNotMatch(m.render(m.h(m.LayerRail)), /app-rail-terrain/);
+});
+
+// SC0452-04: a fill the terrain draped with fewer samples says so in the Legend, on the terrain only.
+const DRAPE_NOTE = 'This fill was draped with fewer terrain samples. On steep relief it can sit above or below the surface. Its outline positions are unchanged.';
+const drapeNotes = html => [...html.matchAll(/<p class="app-legend-note" data-drape="([a-z-]+)">([^<]*)<\/p>/g)].map(m => [m[1], m[2]]);
+
+test('SC0452-04: a coarsened protected-area fill shows one note in 2D and 3D, never on the Chart, and none when uncapped', async t => {
+  const m = await load(), s = m.state;
+  t.after(() => { m.terrainCoarsened.value = []; });
+  s.configureStore({v2: true, storage: null});
+  for (const presentation of ['2d', '3d']) {
+    s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=${presentation}`);
+    m.terrainCoarsened.value = [];
+    assert.deepEqual(drapeNotes(m.render(m.h(m.Legend))), [], `${presentation}: uncapped shows none`);
+    m.terrainCoarsened.value = ['mpas'];
+    const html = m.render(m.h(m.Legend));
+    assert.deepEqual(drapeNotes(html), [['mpas', DRAPE_NOTE]], `${presentation}: exactly one note, with no MPA rail entry`);
+    assert.match(html, /<a class="app-mpa-rules" href="[^"]+"[^>]*>Official rules and boundaries \(CDFW\)<\/a>/, `${presentation}: the CDFW rules link stays`);
+    assert.doesNotMatch(DRAPE_NOTE, /legal|official|accurate|safe|clear/i, 'the note makes no claim about the drawn boundary');
+    m.terrainCoarsened.value = ['marks'];
+    assert.deepEqual(drapeNotes(m.render(m.h(m.Legend))), [], `${presentation}: a layer without a note row shows none`);
+  }
+  s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart`);
+  m.terrainCoarsened.value = ['mpas', 'charter-grounds'];
+  assert.deepEqual(drapeNotes(m.render(m.h(m.Legend))), [], 'the Chart never draws that fill, though the flag is retained');
+  s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d`);
+  assert.deepEqual(drapeNotes(m.render(m.h(m.Legend))), [['mpas', DRAPE_NOTE]], 'back on the terrain the retained flag speaks again (no charter fleet, so no fleet note)');
+});
+
+test('SC0452-04: a coarsened charter-grounds fill shows one note in the Charter fleet row, in 2D and 3D only', async t => {
+  const m = await load(), s = m.state;
+  t.after(() => { m.terrainCoarsened.value = []; m.groundsState.value = grounds; });
+  const grounds = m.groundsState.value;
+  s.configureStore({v2: true, storage: null});
+  m.groundsState.value = {drawn: 2, note: '', audit: '2026-09-21'};
+  for (const presentation of ['2d', '3d']) {
+    s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=${presentation}&layers=fleet`);
+    m.terrainCoarsened.value = [];
+    assert.deepEqual(drapeNotes(m.render(m.h(m.Legend))), [], `${presentation}: nominal grounds show none`);
+    m.terrainCoarsened.value = ['charter-grounds'];
+    const html = m.render(m.h(m.Legend));
+    assert.deepEqual(drapeNotes(html), [['charter-grounds', DRAPE_NOTE]], `${presentation}: one fleet note`);
+    assert.match(html.match(/<li class="app-legend-fleet">.*?<\/li>/s)[0], /data-drape="charter-grounds"/, `${presentation}: inside the fleet row`);
+    m.terrainCoarsened.value = ['mpas', 'charter-grounds'];
+    assert.deepEqual(drapeNotes(m.render(m.h(m.Legend))).map(n => n[0]), ['charter-grounds', 'mpas'], `${presentation}: each fill keeps its own note`);
+  }
+  s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&layers=fleet`);
+  assert.deepEqual(drapeNotes(m.render(m.h(m.Legend))), [], 'the Chart shows none');
+  s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d`);
+  m.terrainCoarsened.value = ['charter-grounds'];
+  assert.deepEqual(drapeNotes(m.render(m.h(m.Legend))), [], 'fleet off: no fleet row, so no note');
 });
