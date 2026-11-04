@@ -177,7 +177,7 @@ async function disclosureEvidence(page) {
   const rail = page.locator('.app-stage > .app-rail');
   const directory = resolve(EVIDENCE, 'disclosure-bounds');
   mkdirSync(directory, {recursive: true});
-  const labels = ['Seafloor basis', 'Currents basis', 'Water temp basis', 'Temp contrast basis', 'Chlorophyll basis', 'Swell + wind basis', 'Stations basis', 'Charter fleet basis', 'Clouds basis', 'Base basis'];
+  const labels = ['Seafloor basis', 'Currents basis', 'Water temp basis', 'Temp contrast basis', 'Temp fronts basis', 'Chlorophyll basis', 'Swell + wind basis', 'Stations basis', 'Charter fleet basis', 'Clouds basis', 'Base basis'];
   await expect(rail.locator('.ui-popover')).toHaveCount(labels.length);
   for (const [index, label] of labels.entries()) {
     // aria-label is on summary itself, including Base's icon-only trigger.
