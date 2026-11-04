@@ -77,7 +77,7 @@ test('a reef target, with picks or without, renders as before', async () => {
   const empty = await where({id: 'morro-bay', target: 'reef', plans: reef, name: 'Morro Bay'});
   assert.match(empty, /<p class="app-empty">No surveyed reef marks within 300 ft for this target\.<\/p>/);
   assert.doesNotMatch(empty, /data-plan=|Search plan|No search plan/);
-  const picks = [{id: 'm-a', kind: 'habitat', name: 'Reef habitat', distance: '4.0 nm', depth: '~40–80 ft', fit: 'Fits 3 of 3', reason: 'Terrain score 80/100.', nm: 4}];
+  const picks = [{id: 'm-a', kind: 'habitat', name: 'Reef habitat', distance: '4.0 nm', depth: '~40–80 ft', fit: 'Fits 3 of 3', reason: 'Terrain score 80/100.', nm: 4, screen: {inside: false, name: null, distanceM: null, screened: true}}];
   for (const target of ['reef', 'chinook']) {
     const html = await where({id: target === 'reef' ? 'morro-bay' : 'test-bay', target, plans: target === 'reef' ? reef : PLANS_A, ranking: {...NONE, source: 'terrain', label: 'Terrain', picks}});
     assert.match(html, /<ol class="app-picks"><li data-mark="m-a">/, target);

@@ -32,6 +32,7 @@
 // through); until that screen has loaded the list shows the checking line, and a screen not current withholds every place.
 import {signal} from '@preact/signals';
 import {bestSpots, distanceNm} from '../dist/spot-ranking.js';
+import {screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
 import {loadReefTrip} from '../dist/reef-trip-data.js';
 import {loadManifest, manifestState} from '../dist/seafloor-data.js';
 import {speciesFit} from '../dist/species-fit.js';
@@ -56,6 +57,8 @@ export interface Pick {
   readonly nm: number | null;
   /** Where the pick is: a 'reef' row moves the Chart there, and it is the Boat run's destination (web/brief/Run.tsx). */
   readonly at: {readonly latitude: number; readonly longitude: number};
+  /** BF-closures-everywhere: the protected-area verdict for this place (dist/geo-screen.js `screenPlace`); a pick never exists without one. */
+  readonly screen: PlaceVerdict;
 }
 export type RankingSource = 'terrain' | 'atlas' | 'publication';
 /** One source's list: its label and basis sentence (§ 12), its picks, and what to say when it has none. */
@@ -127,6 +130,7 @@ function atlasScreened(data: MarkData | null, screen: MarkScreen, target: string
     const reason = species ? speciesFit(t, species)?.reason : null;
     const nm = miles(origin, t), yd = swim(keep, t);
     return {id: t.id, kind: 'spot', name: t.label, distance: yd === null ? distance(nm) : swimText(yd), nm, at: {latitude: t.latitude, longitude: t.longitude}, depth: band(lo, hi),
+      screen: screenPlace(screen, {latitude: t.latitude, longitude: t.longitude, geometries: markAreas(t, data?.atlas)}),
       fit: fit?.line ?? 'Habitat fit unrated for this target', reason: reason ?? t.terrain_interpretation ?? 'Surveyed reef terrain.'};
   })};
 }
@@ -157,7 +161,7 @@ function habitatScreened(ranked: readonly HabitatFeature[], screen: MarkScreen, 
   return {withheld: held, pending, picks: onWater.slice(0, keep.top ?? TOP).map(({f}) => {
     const p = f.properties, id = String(f.id ?? p.id), n = field ? Number(p[field]) : NaN;
     const at = {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}, nm = miles(origin, at), yd = swim(keep, at);
-    return {id, kind: 'habitat', name: 'Reef habitat', distance: yd === null ? distance(nm) : swimText(yd), nm, at,
+    return {id, kind: 'habitat', name: 'Reef habitat', distance: yd === null ? distance(nm) : swimText(yd), nm, at, screen: screenPlace(screen, {...at, geometry: f.geometry}),
       depth: band(p.depth_min_ft, p.depth_max_ft), fit: label && n >= 1 && n <= 3 ? fitLine(label, n) : 'Screened reef habitat',
       reason: `Terrain score ${p.terrain_score}/100${p.terrain_grade ? ` · grade ${p.terrain_grade}` : ''}.`};
   })};
@@ -256,9 +260,15 @@ function publicationScreened(loaded: Extract<ReefPublication, {state: 'ready'}>[
   return {withheld: stats.withheld, pending, picks: ranked.filter(t => kept(keep, miles(origin, t), swim(keep, t))).slice(0, keep.top ?? TOP).map(t => {
     const [lo, hi] = t.neighborhood_depth_ft as [number, number], nm = miles(origin, t), yd = swim(keep, t);
     return {id: t.id, kind: 'reef', name: t.name, distance: yd === null ? distance(nm) : swimText(yd), nm, depth: band(lo, hi),
-      fit: label ? fitLine(label, t.trip_fit) : 'Screened reef habitat', reason: t.terrain_interpretation ?? 'Surveyed reef terrain.', at: {latitude: t.latitude, longitude: t.longitude}};
+      fit: label ? fitLine(label, t.trip_fit) : 'Screened reef habitat', reason: t.terrain_interpretation ?? 'Surveyed reef terrain.', at: {latitude: t.latitude, longitude: t.longitude},
+      screen: screenPlace(screen, {latitude: t.latitude, longitude: t.longitude, geometries: areasOf(loaded, t)})};
   })};
 }
+/** The reef areas a published place lies in (its `area_ids` in the publication's `areas`). */
+const areasOf = (loaded: unknown, t: unknown): unknown[] => {
+  const ids = (t as {area_ids?: string[]}).area_ids ?? [], areas = (loaded as {areas?: {id: string; geometry: unknown}[]}).areas ?? [];
+  return areas.filter(a => ids.includes(a.id)).map(a => a.geometry);
+};
 /** The coast species the planner ranks, as `bestSpots` names it. */
 const PLANNER_SPECIES: Readonly<Record<string, string>> = {lingcod: 'lingcod', 'rockfish-reef': 'rockfish', all: 'reef'};
 

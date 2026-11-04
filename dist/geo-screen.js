@@ -110,3 +110,57 @@ export function circleGeometry(latitude, longitude, radiusM, steps=64) {
   ring.push(ring[0]);
   return {type:"Polygon",coordinates:[ring]};
 }
+// BF-closures-everywhere: the ONE verdict every output that names a place carries. `s` is a screen as the app holds it: the planner's
+// (protected-areas.js `initProtectedAreas`: exportExclusions), the marks' (web/map/habitat.ts `MarkScreen`: status + boundaries), or a
+// ready/pointAllowed/geometryAllowed one. A screen that is missing, not current or not loaded is `screened: false`, never "clear".
+/** @typedef {{inside: boolean, name: string | null, distanceM: number | null, screened: boolean}} PlaceVerdict */
+/** @param {any} s @returns {{name: string | null, geometry: any}[] | null} the closures, or null when `s` cannot say. */
+function closuresOf(s) {
+  if (!s) return null;
+  if (Array.isArray(s.boundaries)) return s.status === 'ready' ? s.boundaries.map(b => ({name: b.name ?? null, geometry: b.geometry})) : null;
+  if (typeof s.exportExclusions !== 'function') return null;
+  const x = s.exportExclusions();
+  return x ? x.features.map(f => ({name: f.properties?.FULLNAME || f.properties?.NAME || null, geometry: f.geometry})) : null;
+}
+/** Metres between two geometries, 0 when they touch, overlap or one holds the other; null when either has no coordinates. */
+export function distanceM(a, b) {
+  const pa = positions(a), pb = positions(b);
+  if (!pa.length || !pb.length) return null;
+  if (geometryIntersects(a, b)) return 0;
+  const lat = (pa[0][1] + pb[0][1]) / 2, [kx, ky] = mPerDeg(lat), proj = p => [p[0] * kx, p[1] * ky];
+  const lines = g => { const e = edges(g); return e.length ? e.map(([p, q]) => [proj(p), proj(q)]) : positions(g).map(p => [proj(p), proj(p)]); };
+  const best = (pts, segs) => Math.min(...pts.map(p => Math.min(...segs.map(([s, t]) => segDist2(proj(p), s, t)))));
+  return Math.sqrt(Math.min(best(pa, lines(b)), best(pb, lines(a))));
+}
+// A closure whose box is over FAR_M from the place's box is not measured (distanceM stays null when none is nearer): keeps a 500 KB boundary file cheap.
+const FAR_M = 20000;
+function farApart(a, b) {
+  const x = bbox(a), y = bbox(b);
+  if (![...x, ...y].every(Number.isFinite)) return true;
+  const [kx, ky] = mPerDeg((x[1] + x[3]) / 2);
+  return Math.max(x[0] - y[2], y[0] - x[2], 0) * kx > FAR_M || Math.max(x[1] - y[3], y[1] - x[3], 0) * ky > FAR_M;
+}
+/**
+ * One place's verdict: `place` is {latitude, longitude} plus an optional `geometry` / `geometries` (a line, a leg, an area).
+ * `inside` is true when any of it touches or lies in a closure; `name` and `distanceM` are those of the nearest closure
+ * (distanceM 0 when inside). Outputs refuse a place whose `placeRefused(v)` is true.
+ * @returns {PlaceVerdict}
+ */
+export function screenPlace(s, place) {
+  const none = {inside: false, name: null, distanceM: null, screened: false};
+  const shapes = [...(place?.geometry ? [place.geometry] : []), ...(place?.geometries ?? [])];
+  if (Number.isFinite(place?.longitude) && Number.isFinite(place?.latitude)) shapes.push(pointGeometry(place.longitude, place.latitude));
+  if (!shapes.length) return none;
+  const closures = closuresOf(s);
+  if (!closures) {
+    // A screen that only answers allowed/not: current means it can say, and a "no" is inside.
+    if (!s || typeof s.ready !== 'function' || !s.ready() || typeof s.pointAllowed !== 'function') return none;
+    const blocked = shapes.some(g => g.type === 'Point' ? !s.pointAllowed({longitude: g.coordinates[0], latitude: g.coordinates[1]}) : !s.geometryAllowed(g));
+    return {inside: blocked, name: null, distanceM: blocked ? 0 : null, screened: true};
+  }
+  let near = null;
+  for (const c of closures) for (const g of shapes) { if (farApart(g, c.geometry)) continue; const d = distanceM(g, c.geometry); if (d !== null && (!near || d < near.d)) near = {d, name: c.name}; }
+  return {inside: near?.d === 0, name: near?.name ?? null, distanceM: near ? Math.round(near.d * 10) / 10 : null, screened: true};
+}
+/** True when an output must not hand the place over as clear: not checked, inside a closure, or within the planning margin of one. */
+export const placeRefused = v => !v.screened || v.inside || (v.distanceM !== null && v.distanceM <= PLANNING_MARGIN_M);

@@ -22,14 +22,25 @@ function show(message, kind) {
   status.hidden = !message;
 }
 
-if (!token) { button.hidden = true; show(COPY.expired, 'error'); }
+// BF-catch-log: with no token a signed-in account holder can download their own account data
+// (the catch log included) from /api/privacy with the session cookie. A token is never sent
+// there and the cookie is never sent with a token, so Advisor contacts and accounts stay apart.
+let account = false;
+if (!token) {
+  button.hidden = true; show(COPY.expired, 'error');
+  try {
+    const session = await (await fetch('/api/session', {credentials: 'same-origin', cache: 'no-store'})).json();
+    if (session.signedIn) { account = true; $('data-intro').textContent = COPY.accountIntro; button.hidden = false; show('', ''); }
+  } catch { /* not signed in: the expired message stands */ }
+}
 
 button.addEventListener('click', async () => {
   button.disabled = true;
   show(COPY.working, '');
   try {
-    const response = await fetch('/api/advisor/export', {method: 'POST', headers: {'X-Export-Token': token}, credentials: 'omit', cache: 'no-store'});
-    if (!response.ok) { show(response.status === 404 ? COPY.expired : COPY.failed, 'error'); button.disabled = false; return; }
+    const response = account ? await fetch('/api/privacy', {credentials: 'same-origin', cache: 'no-store'})
+      : await fetch('/api/advisor/export', {method: 'POST', headers: {'X-Export-Token': token}, credentials: 'omit', cache: 'no-store'});
+    if (!response.ok) { show(response.status === 404 && !account ? COPY.expired : COPY.failed, 'error'); button.disabled = false; return; }
     const url = URL.createObjectURL(await response.blob());
     const link = document.createElement('a');
     link.href = url;
