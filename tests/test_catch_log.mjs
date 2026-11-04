@@ -163,7 +163,7 @@ test('a note with markup and a 4-byte emoji round-trips as text and is rendered 
 test('an unauthenticated write is refused before any D1 call', async () => {
   const calls = [], {sql, adapter} = database(a => ({...a, prepare(q) { calls.push(q); return a.prepare(q); }, batch: a.batch}));
   const env = {DB: adapter};
-  for (const [method, path] of [['POST', '/api/catch-log'], ['DELETE', '/api/catch-log/x'], ['GET', '/api/catch-log']]) {
+  for (const [method, path] of [['POST', '/api/catch-log'], ['PATCH', '/api/catch-log/x'], ['DELETE', '/api/catch-log/x'], ['GET', '/api/catch-log']]) {
     const r = await call(env, path, {method, body: method === 'GET' ? undefined : BLANK});
     assert.equal(r.status, 401, method);
   }
@@ -643,3 +643,166 @@ test('catch_log_orders_valid_instants_after_offset_conversion', async () => with
   }
   assert.equal(logCount(sql, 'alice'), 3, 'only the accepted entries were stored');
 }));
+
+// SC1137-10: PATCH /api/catch-log/:id merges the named fields, validates the whole entry, and stays owner-only.
+const patch = async (env, owner, id, bodyOrRaw, extra = {}) => {
+  const r = await call(env, '/api/catch-log/' + id, typeof bodyOrRaw === 'string' ? {owner, method: 'PATCH', raw: bodyOrRaw, ...extra} : {owner, method: 'PATCH', body: bodyOrRaw, ...extra});
+  return {status: r.status, data: await r.json()};
+};
+const rowOf = (sql, id) => ({...sql.prepare('SELECT * FROM catch_log WHERE id=?').get(id)});
+
+test('patch_each_mutable_field_preserves_identity', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter};
+  addTrip(sql, 'trip-a', 'alice', '2026-11-05'); addTrip(sql, 'trip-b', 'alice', '2026-11-05');
+  const made = (await post(env, 'alice', {...FISH, trip_id: 'trip-a'})).data, before = rowOf(sql, made.id);
+  const changes = [{trip_id: 'trip-b'}, {ended_at: '2026-11-02T01:00:00Z'}, {started_at: '2026-11-01T15:00:00-08:00'}, {method: 'troll'}, {species: 'halibut'}, {count: 7}, {lat: 36.5, lon: -122.25}, {note: '  keep my spaces 🎣 '}, {outcome: 'blank', count: 0}];
+  for (const change of changes) {
+    const r = await patch(env, 'alice', made.id, change), now = rowOf(sql, made.id);
+    assert.equal(r.status, 200, JSON.stringify(change));
+    assert.deepEqual(r.data, now, 'the response is the stored row');
+    for (const k of ['id', 'owner', 'created_at']) assert.equal(now[k], before[k], k);
+    const expected = {...before, ...change}; for (const k of ['started_at', 'ended_at']) if (change[k]) expected[k] = new Date(change[k]).toISOString();
+    for (const k of Object.keys(change)) assert.equal(now[k], expected[k], `${k} after ${JSON.stringify(change)}`);
+    Object.assign(before, now);
+    assert.deepEqual(await (await call(env, '/api/catch-log/' + made.id, {owner: 'alice'})).json(), now, 'GET id agrees');
+  }
+  assert.equal(before.note, '  keep my spaces 🎣 ', 'nonblank text keeps its original bytes');
+  const same = await patch(env, 'alice', made.id, {});
+  assert.deepEqual([same.status, same.data], [200, rowOf(sql, made.id)], 'an empty object is a validated no-op');
+  const together = await patch(env, 'alice', made.id, {trip_id: 'trip-a', started_at: '2026-11-03T10:00:00Z', ended_at: '2026-11-03T12:00:00Z', method: 'jig', species: 'rockfish', outcome: 'fish', count: 2, lat: 35.1, lon: -120.9, note: 'all at once'});
+  assert.equal(together.status, 200);
+  assert.deepEqual((await (await call(env, '/api/privacy', {owner: 'alice'})).json()).catch_log, [rowOf(sql, made.id)], 'the export reads the updated row');
+  assert.equal(logCount(sql, 'alice'), 1, 'no replacement row');
+  sql.close();
+});
+
+test('patch_fish_blank_unknown_count_transitions', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter}, made = (await post(env, 'alice', FISH)).data;
+  const refused = async change => { const was = rowOf(sql, made.id), r = await patch(env, 'alice', made.id, change); assert.equal(r.status, 400, JSON.stringify(change)); assert.deepEqual(rowOf(sql, made.id), was, 'refusal changes nothing'); };
+  await refused({outcome: 'blank'});   // count 3 is never silently repaired
+  await refused({outcome: 'unknown'});
+  await refused({count: 0}); await refused({count: null});   // a fish keeps a count of at least 1
+  for (const count of [1.5, -1, 10000, '4', true]) await refused({count});
+  assert.equal((await patch(env, 'alice', made.id, {count: 9999})).status, 200);
+  for (const step of [{outcome: 'blank', count: 0}, {outcome: 'unknown', count: null}, {outcome: 'blank'}]) {
+    const r = await patch(env, 'alice', made.id, step); assert.equal(r.status, 200, JSON.stringify(step));
+    assert.deepEqual([r.data.outcome, r.data.count], [step.outcome, 0]);
+  }
+  await refused({count: 2}); await refused({outcome: 'fish'}); await refused({outcome: 'fish', count: 0}); await refused({outcome: 'caught'}); await refused({outcome: null});
+  const back = await patch(env, 'alice', made.id, {outcome: 'fish', count: 1});
+  assert.deepEqual([back.status, back.data.outcome, back.data.count], [200, 'fish', 1]);
+  sql.close();
+});
+
+test('patch_clear_optional_fields_and_position_pair', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter}, made = (await post(env, 'alice', FISH)).data;
+  addTrip(sql, 'trip-a', 'alice', '2026-11-05');
+  assert.equal((await patch(env, 'alice', made.id, {trip_id: 'trip-a'})).status, 200);
+  const cleared = await patch(env, 'alice', made.id, {method: null, species: '   ', note: '', trip_id: null, ended_at: null});
+  assert.deepEqual([cleared.status, cleared.data.method, cleared.data.species, cleared.data.note, cleared.data.trip_id, cleared.data.ended_at], [200, null, null, null, null, null]);
+  assert.equal(cleared.data.lat, FISH.lat, 'untouched position kept at full precision');
+  assert.equal((await patch(env, 'alice', made.id, {ended_at: ''})).status, 400, 'an empty end time is not a clear');
+  assert.equal((await patch(env, 'alice', made.id, {started_at: null})).status, 400, 'started_at cannot be cleared');
+  const limits = await patch(env, 'alice', made.id, {method: 'm'.repeat(40), species: 's'.repeat(60), note: '🎣'.repeat(1000)});
+  assert.equal(limits.status, 200, 'limits are in code points');
+  const before = rowOf(sql, made.id);
+  for (const change of [{method: 'm'.repeat(41)}, {species: 's'.repeat(61)}, {note: '🎣'.repeat(1001)}, {method: 5}, {trip_id: 't'.repeat(65)}]) assert.equal((await patch(env, 'alice', made.id, change)).status, 400, JSON.stringify(change).slice(0, 40));
+  for (const change of [{lat: 40}, {lon: -100}, {lat: 40, lon: null}, {lat: null, lon: -100}, {lat: 90, lon: 0}, {lat: 0, lon: -180}, {lat: '1', lon: 2}, {lat: null}]) {
+    const r = await patch(env, 'alice', made.id, change); assert.equal(r.status, 400, JSON.stringify(change));
+    assert.match(r.data.error, /^coordinates_/);
+  }
+  const raw = await call(env, '/api/catch-log/' + made.id, {owner: 'alice', method: 'PATCH', raw: '{"lat":1e999,"lon":1}'});
+  assert.equal(raw.status, 400);
+  assert.deepEqual(rowOf(sql, made.id), before, 'every refusal left the row byte-identical');
+  const pair = await patch(env, 'alice', made.id, {lat: 89.9999, lon: 179.9999});
+  assert.deepEqual([pair.status, pair.data.lat, pair.data.lon], [200, 89.9999, 179.9999]);
+  const none = await patch(env, 'alice', made.id, {lat: null, lon: null});
+  assert.deepEqual([none.status, none.data.lat, none.data.lon], [200, null, null]);
+  sql.close();
+});
+
+test('patch_revalidates_full_time_and_trip', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter}, made = (await post(env, 'alice', FISH)).data;   // 14:00Z to 19:30Z
+  addTrip(sql, 'trip-a', 'alice', '2026-11-05'); addTrip(sql, 'trip-bob', 'bob', '2026-11-05');
+  const was = rowOf(sql, made.id);
+  for (const change of [{started_at: '2026-11-01T19:30:01Z'}, {ended_at: '2026-11-01T13:59:59Z'}, {started_at: '2026-02-30T10:00:00Z'}, {started_at: '2026-11-01T24:00:00Z'}, {ended_at: '2026-11-01T25:00:00Z'}, {started_at: '2026-11-01 14:00'}, {started_at: '2026-11-01T14:00:00'}, {started_at: 5}])
+    assert.equal((await patch(env, 'alice', made.id, change)).status, 400, JSON.stringify(change));
+  assert.deepEqual(rowOf(sql, made.id), was);
+  assert.equal((await patch(env, 'alice', made.id, {ended_at: '2026-11-01T14:00:00Z'})).status, 200, 'equal endpoints pass');
+  const moved = await patch(env, 'alice', made.id, {started_at: '2026-11-01T06:00:00-08:00', ended_at: '2026-11-01T07:00:00-08:00'});
+  assert.deepEqual([moved.status, moved.data.started_at, moved.data.ended_at], [200, '2026-11-01T14:00:00.000Z', '2026-11-01T15:00:00.000Z'], 'offsets normalize to UTC');
+  const before = rowOf(sql, made.id);
+  for (const trip_id of ['trip-bob', 'no-such-trip']) {
+    const r = await patch(env, 'alice', made.id, {trip_id, count: 9, note: 'would be partial'});
+    assert.equal(r.status, 404, trip_id);
+    assert.deepEqual(rowOf(sql, made.id), before, 'no partial write');
+  }
+  const own = await patch(env, 'alice', made.id, {trip_id: 'trip-a'});
+  assert.deepEqual([own.status, own.data.trip_id], [200, 'trip-a']);
+  const detached = await patch(env, 'alice', made.id, {trip_id: null});
+  assert.deepEqual([detached.status, detached.data.trip_id], [200, null]);
+  sql.close();
+});
+
+test('patch_foreign_missing_and_immutable_keys', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter}, mine = (await post(env, 'alice', FISH)).data, bobs = (await post(env, 'bob', BLANK)).data;
+  const strip = async r => { const {request_id, ...rest} = r.data; return [r.status, rest]; };
+  const was = [rowOf(sql, mine.id), rowOf(sql, bobs.id)];
+  const foreign = await patch(env, 'bob', mine.id, {count: 9}), never = await patch(env, 'bob', 'no-such-id', {count: 9});
+  assert.equal(foreign.status, 404);
+  assert.deepEqual(await strip(foreign), await strip(never), 'identical to an id that never existed');
+  for (const raw of ['{not json', '[]', 'null', '"x"', '']) assert.deepEqual(await strip(await patch(env, 'bob', mine.id, raw)), await strip(never), `malformed ${raw} is still 404 on a foreign id`);
+  assert.deepEqual([rowOf(sql, mine.id), rowOf(sql, bobs.id)], was, "another owner's row never changes");
+  for (const change of [{id: 'x'}, {owner: 'bob'}, {created_at: '2020-01-01T00:00:00.000Z'}, {colour: 'red'}, {count: 4, owner: 'alice'}, JSON.parse('{"__proto__":{"count":4}}')]) {
+    const r = await patch(env, 'alice', mine.id, change); assert.equal(r.status, 400, JSON.stringify(change));
+  }
+  assert.deepEqual(rowOf(sql, mine.id), was[0], 'refused keys changed nothing');
+  sql.close();
+});
+
+test('patch_body_auth_storage_and_private_readers', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter}, made = (await post(env, 'alice', FISH)).data, was = rowOf(sql, made.id);
+  for (const raw of ['{bad', '', '[]', 'null', '7', '"s"', '{"note":' + JSON.stringify('x'.repeat(9000)) + '}']) {
+    const r = await patch(env, 'alice', made.id, raw); assert.equal(r.status, 400, raw.slice(0, 20));
+  }
+  assert.equal((await patch(env, 'alice', made.id, {count: 5})).status, 200);
+  const headers = {'Content-Type': 'application/json', 'x-test-owner': 'alice', Origin: 'https://evil.example', 'CF-Connecting-IP': '203.0.113.9'};
+  const bad = await worker.fetch(new Request(ORIGIN + '/api/catch-log/' + made.id, {method: 'PATCH', headers, body: JSON.stringify({count: 6})}), env);
+  assert.equal(bad.status, 400, 'a foreign Origin is refused');
+  assert.equal(rowOf(sql, made.id).count, 5);
+  Object.assign(was, {count: 5});
+  const calls = [], quiet = database(a => ({...a, prepare(q) { calls.push(q); return a.prepare(q); }, batch: a.batch}));
+  assert.equal((await call({DB: quiet.adapter}, '/api/catch-log/x', {method: 'PATCH', body: {count: 1}})).status, 401);
+  assert.deepEqual(calls, [], 'signed-out: no statement was prepared');
+  quiet.sql.close();
+  const degradedEnv = {DB: adapter, FEEDS: {get: async () => null, head: async () => null}, COST_CEILING_R2_READS_PER_DAY: '1'};
+  resetMeter(); recordReads(5);
+  try { const r = await patch(degradedEnv, 'alice', made.id, {count: 8}); assert.equal(r.status, 200, 'a degraded write succeeds'); assert.equal(rowOf(sql, made.id).count, 8); } finally { resetMeter(); }
+  const down = database(a => ({...a, prepare(q) { if (/UPDATE catch_log/.test(q)) throw new Error('D1 unavailable'); return a.prepare(q); }}));
+  const dm = (await post({DB: down.adapter}, 'alice', FISH)).data, dwas = rowOf(down.sql, dm.id);
+  assert.equal((await patch({DB: down.adapter}, 'alice', dm.id, {count: 9})).status, 503, 'unavailable, not success');
+  assert.deepEqual(rowOf(down.sql, dm.id), dwas);
+  down.sql.close();
+  assert.equal((await call(env, '/api/catch-log/' + made.id, {owner: 'alice', method: 'DELETE', body: {}})).status, 200);
+  assert.equal((await patch(env, 'alice', made.id, {count: 1})).status, 404, 'a deleted entry is not recreated');
+  assert.equal(logCount(sql, 'alice'), 0);
+  sql.close();
+});
+
+test('patch_reorders_without_changing_cursor_contract', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter}, ins = sql.prepare("INSERT INTO catch_log(id,owner,started_at,outcome,count,created_at) VALUES(?,?,?,'blank',0,'x')");
+  for (let i = 0; i < 201; i++) ins.run('a' + String(i).padStart(3, '0'), 'alice', new Date(Date.UTC(2026, 0, 1, 0, i)).toISOString());
+  ins.run('b000', 'bob', '2026-02-01T00:00:00.000Z');
+  const first = await call(env, '/api/catch-log', {owner: 'alice'}), page = await first.json(), cursor = first.headers.get('X-SC-Catch-Log-Next-Cursor');
+  assert.deepEqual([page.entries.length, first.headers.get('X-SC-Catch-Log-Has-More'), page.entries[0].id, page.entries[199].id], [200, 'true', 'a200', 'a001']);
+  assert.ok(cursor);
+  assert.equal((await patch(env, 'alice', 'a000', {started_at: '2026-06-01T00:00:00Z'})).status, 200);
+  const fresh = await call(env, '/api/catch-log', {owner: 'alice'}), top = await fresh.json();
+  assert.deepEqual([top.entries[0].id, top.entries.length, fresh.headers.get('X-SC-Catch-Log-Has-More')], ['a000', 200, 'true'], 'a fresh read sees the new order and the same header shape');
+  const old = await call(env, '/api/catch-log?cursor=' + encodeURIComponent(cursor), {owner: 'alice'});
+  assert.equal(old.status, 200, 'an issued cursor still decodes');
+  assert.deepEqual((await old.json()).entries.map(e => e.id), [], 'the moved row is not repeated after the old position');
+  const theirs = await call(env, '/api/catch-log?cursor=' + encodeURIComponent(cursor), {owner: 'bob'});
+  assert.deepEqual((await theirs.json()).entries.map(e => e.id), [], "alice's cursor stays owner-bound: bob's own rows sort before it and none of alice's appear");
+  sql.close();
+});
