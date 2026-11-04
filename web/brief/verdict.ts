@@ -75,6 +75,8 @@ export interface BriefVerdict {
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const r0 = (n: number) => String(Math.round(n));
 const r1 = (n: number) => String(Number(n.toFixed(1)));
+/** Seas to 0.1 ft, rounded UP: a printed maximum is never below the value the window rule used (1e-9 absorbs float noise). */
+const up1 = (n: number) => String(Math.ceil(n * 10 - 1e-9) / 10);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
 const compass = (deg: number | null) => finite(deg) ? COMPASS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16]! : null;
@@ -155,7 +157,7 @@ export function charges(r: ComfortRating): {kind: Charge; cost: number}[] {
 function phrase(kind: Charge, r: ComfortRating, h: FeedHour): string {
   if (kind === 'wind') return `${r0(r.wind)} kt wind${r.gust !== null && r.gust >= r.wind + 3 ? ` gusting ${r0(r.gust)}` : ''}`;
   // The period is GFS-Wave's; name it only when its height is the one shown (WAM's period is not in the feed).
-  if (kind === 'seas') return `${r1(r.sea)} ft seas${finite(h.sea_period) && finite(h.sea) && h.sea >= r.sea ? ` at ${r0(h.sea_period)} s` : ''}`;
+  if (kind === 'seas') return `${up1(r.sea)} ft seas${finite(h.sea_period) && finite(h.sea) && h.sea >= r.sea ? ` at ${r0(h.sea_period)} s` : ''}`;
   if (kind === 'chop') return `${r1(r.chop ?? 0)} ft of ${r.costs.short > 0 ? 'short, steep ' : ''}wind chop`;
   const from = compass(h.secondary_from);
   return `a ${r1(h.secondary ?? 0)} ft cross swell${from ? ` from the ${from}` : ''}`;
@@ -204,7 +206,7 @@ export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, n
   let limit: string;
   if (verdict === 'comfortable' || !list.length) {
     const wind = Math.max(...rated.map(row => row.rating.wind)), sea = Math.max(...rated.map(row => row.rating.sea));
-    limit = `Wind to ${r0(wind)} kt and seas to ${r1(sea)} ft through ${label!.split('–')[1]}.`;
+    limit = `Wind to ${r0(wind)} kt and seas to ${up1(sea)} ft through ${label!.split('–')[1]}.`;
   } else {
     const [first, second] = list;
     limit = `${cap(phrase(first!.kind, worst.rating, worst.hour))} at ${at}${second && second.cost >= SECOND_COST ? `, with ${phrase(second.kind, worst.rating, worst.hour)}` : ''}.`;

@@ -156,7 +156,7 @@ if (!BASELINE) {
     assert.equal(await intelligenceFeed(REGION, readerFor(feed)), feed);
     const direct = windowConditions(fixture('complete.json'), REGION, POINT, DATE);
     assert.equal(direct.available, true);
-    assert.deepEqual([direct.wind_kt, direct.gusts_kt, direct.seas_ft, direct.swell_ft, direct.wind_from], [[10, 12], 15, [4, 4], [3, 3], 'WNW']);
+    assert.deepEqual([direct.wind_kt, direct.gusts_kt, direct.seas_ft, direct.swell_ft, direct.wind_from], [[10, 12], 15, [4, 5], [3, 3], 'WNW']);
     const out = await conditionsFor(fixture('complete.json'));
     assert.deepEqual(out.days[0], direct, 'get_conditions gives the conditions the unchanged reader computes');
     assert.equal(out.forecast_issued, feed.completed_at);
