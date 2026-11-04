@@ -37,6 +37,7 @@ import {recordFleetAis} from '../analytics.ts';
 import {sha256} from '../advisor/ids.ts';
 import type {Env} from '../env.ts';
 import {FLEET_ENUMS, MAX_PARAMS, REGION, RUN_ID} from './registry.ts';
+import {aisClaim, classifiedAisClaim, reportClaim, type Claim, type LingerEvidence} from './evidence-ladder.ts';
 import {advisorPairs, advisorPrune, landingPairs, landingPrune, landingRows, SWEEP_DAYS} from './pairing.ts';
 
 export const MAX_ACTIVITY_BYTES = 1024 * 1024;
@@ -45,6 +46,18 @@ export const STALE_HOURS = 3;
 export const BASIS = 'inferred-from-movement';
 export const heartbeatKey = (region: string): string => `fleet.ais.${region}.heartbeat`;
 export const processedKey = (region: string): string => `fleet.ais.${region}.processed`;
+
+/** Evidence scoped to the displayed trip, not the vessel's unrelated history.
+ * Fishing segments have already passed classify.py's regional sustained-run thresholds. */
+export async function tripActivityClaims(db: D1Database, tripId: string, identityConfirmed: boolean): Promise<Claim[]> {
+  const reports = (await db.prepare(`SELECT rp.report_kind kind, r.source FROM fleet_trip_reports rp
+    LEFT JOIN advisor_reports r ON rp.report_kind='advisor' AND r.id=rp.report_ref WHERE rp.trip_id=?`)
+    .bind(tripId).all<{kind: string; source: string | null}>()).results;
+  const segments = await db.prepare(`SELECT COUNT(*) AS n FROM fleet_segments WHERE trip_id=?
+    AND kind IN ('drift-anchor','troll-slow','troll-pelagic')`).bind(tripId).first<{n: number}>();
+  return [reportClaim(reports.map(r => ({source: r.kind === 'advisor' ? (r.source ? `advisor:${r.source}` : '') : r.kind}))),
+    classifiedAisClaim(segments?.n ?? 0, identityConfirmed)].filter((c): c is Claim => c !== null);
+}
 
 /** Test seam: the clock for received_at, processed.at and health ages. */
 export const activityDeps: {now: () => Date} = {now: () => new Date()};
@@ -313,4 +326,28 @@ export function staleCause(checks: {heartbeat: Check; last_message: Check; proce
   if (processed.stale && lag <= CAUSE_TOLERANCE_S && message.age_s !== null && message.age_s - processed.age_s <= CAUSE_TOLERANCE_S) return 'processor-not-delivered';
   if (lag > CAUSE_TOLERANCE_S) return 'listener-stale';
   return 'no-messages';
+}
+
+/**
+ * Every activity claim for one vessel, each with its evidence rung, count and caveat (server/fleet/evidence-ladder.ts):
+ * one from its paired reports (fleet_trip_reports; advisor reports of one `source`, and the daily landing feed, are one
+ * voice each), one from its AIS lingers (fleet_events whose dwell met `thresholds[kind]`, the classifier's own minutes).
+ * No evidence, no claim. A claim holds no coordinate: events' lat/lon and cells are not read.
+ */
+export async function activityClaims(db: D1Database, region: string, vesselId: string, thresholds: Readonly<Record<string, number>>): Promise<Claim[]> {
+  const reports = (await db.prepare(`SELECT rp.report_kind kind, rp.report_ref ref, r.source source FROM fleet_trip_reports rp
+    JOIN fleet_trips t ON t.id=rp.trip_id LEFT JOIN advisor_reports r ON rp.report_kind='advisor' AND r.id=rp.report_ref
+    WHERE t.region=? AND t.vessel_id=?`).bind(region, vesselId).all<{kind: string; ref: string; source: string | null}>()).results;
+  const events = (await db.prepare(`SELECT e.kind kind, e.dwell_min dwell, t.mmsi mmsi FROM fleet_events e JOIN fleet_trips t ON t.id=e.trip_id
+    WHERE e.region=? AND e.vessel_id=?`).bind(region, vesselId).all<{kind: string; dwell: number; mmsi: string}>()).results;
+  const vessel = await db.prepare('SELECT mmsi, uscg_doc, state_reg FROM fleet_vessels WHERE region=? AND id=?').bind(region, vesselId)
+    .first<{mmsi: string | null; uscg_doc: string | null; state_reg: string | null}>();
+  const lingers: LingerEvidence[] = [];
+  for (const ev of events) if (ev.kind in thresholds) lingers.push({dwellMin: ev.dwell, thresholdMin: thresholds[ev.kind]!});
+  // Confirmed: the registry holds this MMSI plus a document or state registration, and every event's trip was under that MMSI.
+  const confirmed = !!vessel?.mmsi && !!(vessel.uscg_doc || vessel.state_reg) && events.every(ev => ev.mmsi === vessel.mmsi);
+  return [
+    reportClaim(reports.map(r => ({source: r.kind === 'advisor' ? `advisor:${r.source ?? r.ref}` : r.kind}))),
+    aisClaim(lingers, confirmed),
+  ].filter((c): c is Claim => c !== null);
 }

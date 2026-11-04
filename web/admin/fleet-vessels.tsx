@@ -17,6 +17,7 @@ import {ApiError, MAP_CONSENTS, PROFILE_STATUSES, VESSEL_CLASSES, VESSEL_STATUSE
 import type {FleetFact, FleetFieldValue, FleetPin, FleetVesselDetail, FleetVesselEdit, FleetVesselQuery, FleetVesselRow} from './api.ts';
 import {fleetHref, fleetVesselHref} from './route.ts';
 import {JsonValue, Pair, RegionFilter} from './fleet-review.tsx';
+import {claimLine} from '../fleet.ts';
 
 const errorText = (e: unknown): string => (e instanceof ApiError && e.status !== 500 ? e.message : ADMIN_COPY.decisionFailed);
 const percent = (n: number | null | undefined): string => (typeof n === 'number' ? `${Math.round(n * 100)}%` : '—');
@@ -251,8 +252,9 @@ function VesselDetail({detail, onEdit}: {detail: FleetVesselDetail; onEdit: OnEd
         rows={detail.changes.map(c => [c.kind, <JsonValue value={c.before} />, <JsonValue value={c.after} />, when(c.detected_at)])} />
       <Table id="fleet-watch" heading={COPY.watchHeading} columns={[COPY.fieldLabels.mmsi!, COPY.matchMethod, COPY.statusLabel, COPY.lastSeen, COPY.positions30]}
         rows={detail.watch.map(w => [w.mmsi, w.match_method, w.status, when(w.last_seen_at) || '—', w.positions_30d ?? '—'])} />
-      <Table id="fleet-trips" heading={COPY.tripsHeading} note={COPY.tripsInferred} columns={[COPY.date, COPY.inferredTripType, COPY.statusLabel, COPY.distance, COPY.fishingMin]}
-        rows={detail.trips.map(t => [t.local_date, t.trip_type_inferred ?? '—', t.status, t.distance_nm ?? '—', t.fishing_min ?? '—'])} />
+      <Table id="fleet-trips" heading={COPY.tripsHeading} note={COPY.tripsInferred} columns={[COPY.date, COPY.inferredTripType, COPY.statusLabel, COPY.distance, COPY.fishingMin, 'Evidence']}
+        rows={detail.trips.map(t => [t.local_date, t.trip_type_inferred ?? '—', t.status, t.distance_nm ?? '—', t.fishing_min ?? '—',
+          (t.claims ?? []).map(claimLine).filter(Boolean).join(' ') || 'No qualifying activity evidence.'])} />
       <Table id="fleet-advisor" heading={COPY.advisorBoatsHeading} columns={[ADMIN_COPY.name, COPY.port, COPY.statusLabel]}
         rows={detail.advisor_boats.map(b => [<a href={`/boats/${encodeURIComponent(b.slug)}`} target="_blank" rel="noopener noreferrer">{b.name}</a>, b.port, b.status])} />
       <Table id="fleet-open-reviews" heading={COPY.openReviewsHeading} columns={[COPY.kindLabel, COPY.score, COPY.opened]}

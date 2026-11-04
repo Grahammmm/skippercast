@@ -104,3 +104,15 @@ export async function boatDirectory(region: string | null, saved: string | null 
     return ok ? here : [];
   } catch { return []; }
 }
+
+/** The ladder's rungs as people read them (server/fleet/evidence-ladder.ts `RUNGS`; tests/test_evidence_ladder.mjs pins the names). */
+export const RUNG_LABELS: Readonly<Record<string, string>> = {'named-report': 'One named report', 'repeated-report': 'Repeated reports',
+  'ais-linger': 'AIS linger', 'ais-linger-verified': 'AIS linger, boat confirmed'};
+export interface FleetClaim {readonly rung: string; readonly count: number; readonly caveat: string}
+
+/** One claim as a sentence: rung, evidence count and the coverage caveat, always together. A claim without a known rung is not shown. */
+export function claimLine(claim: FleetClaim): string | null {
+  const name = RUNG_LABELS[claim.rung];
+  if (!name || !(claim.count > 0) || !claim.caveat) return null;
+  return `${name} (${claim.count} ${claim.count === 1 ? 'piece' : 'pieces'} of evidence). ${claim.caveat}`;
+}
