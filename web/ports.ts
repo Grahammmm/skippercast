@@ -210,12 +210,22 @@ export async function savedHomeURL(href: string, storage: HomeStorage | null = b
   return homeURL(href, resolveHome(ports, storage, ports.some(port => port.id === id) ? '' : cookieText(jar)));
 }
 
-/** Whether `data` is the directory's schema, with every port's match position. */
+const filled = (v: unknown): boolean => typeof v === 'string' && v.trim() !== '';
+const inRange = (v: unknown, limit: number): boolean => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= limit;
+/** One complete port: every shown field filled, a known status, a geographic [latitude, longitude]. */
+function isPort(p: unknown): boolean {
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return false;
+  const r = p as Record<string, unknown>;
+  return ['id', 'name', 'region', 'forecast_point', 'forecast_name'].every(k => filled(r[k])) &&
+    (r.status === 'active' || r.status === 'preview') && (!('region_name' in r) || filled(r.region_name)) &&
+    Array.isArray(r.match) && r.match.length === 2 && inRange(r.match[0], 90) && inRange(r.match[1], 180);
+}
+
+/** Whether `data` is the directory's schema: every port complete, with a geographic match position. */
 export function isDirectory(data: unknown): data is {schema_version: 1; ports: Port[]} {
   const d = data as {schema_version?: unknown; ports?: unknown};
-  return !!d && d.schema_version === 1 && Array.isArray(d.ports) && d.ports.length > 0 &&
-    d.ports.every(p => p && typeof p.id === 'string' && typeof p.name === 'string' && typeof p.region === 'string' &&
-      Array.isArray(p.match) && p.match.length === 2 && p.match.every((n: unknown) => Number.isFinite(n)));
+  return !!d && typeof d === 'object' && !Array.isArray(d) && d.schema_version === 1 && Array.isArray(d.ports) && d.ports.length > 0 &&
+    d.ports.every(isPort);
 }
 
 let directory: Promise<Port[]> | null = null;

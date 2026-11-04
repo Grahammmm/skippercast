@@ -228,7 +228,7 @@ export async function exportSpots(spots, screen, region, now = new Date()) {
 }
 
 const spotFormHTML = () => `<h2 class="account-subhead">Saved spots</h2>
-    <p class="home-port-fine">Private to this account. A spot and its note are never shared, mapped, put in a feed or shown to anyone else. Spots inside a protected area are shown with that reading and left out of the GPX file.</p>
+    <p class="home-port-fine">Private to this account. You can show your saved spots on your own Chart. Spots and notes are never shared, put in a public feed or shown to anyone else. Private notes are never drawn on the map or included in GPX. Spots inside a protected area are shown with that reading and left out of the GPX file.</p>
     <form id="spot-form" autocomplete="off">
       <label for="spot-name">Name</label><input id="spot-name" type="text" maxlength="80" />
       <label for="spot-lat">Latitude</label><input id="spot-lat" type="number" step="any" required />
@@ -439,7 +439,7 @@ export async function openAccount() {
     let screenOnce = null;
     const spotScreen = () => screenOnce ??= import('./protected-areas.js').then(m => m.initProtectedAreas(null, () => {})).catch(() => null);
     let spotRows = [];
-    const spotList = $('#spot-list'), showSpots = async () => {
+    const spotList = $('#spot-list'), spotsChanged = () => { try { globalThis.dispatchEvent?.(new Event('skippercast:saved-spots-changed')); } catch { /* the Chart layer reads again on its next turn-on */ } }, showSpots = async () => {
       try {
         spotRows = (await api('spots')).spots;
         const verdicts = await spotVerdicts(spotRows, await spotScreen());
@@ -448,14 +448,14 @@ export async function openAccount() {
     };
     spotList.addEventListener('click', async event => {
       const b = event.target.closest('[data-remove-spot]'); if (!b) return;
-      try { await api('spots/' + encodeURIComponent(b.dataset.removeSpot), {method: 'DELETE', body: {}}); await showSpots(); } catch (error) { status(passkeyMessage(error)); }
+      try { await api('spots/' + encodeURIComponent(b.dataset.removeSpot), {method: 'DELETE', body: {}}); spotsChanged(); await showSpots(); } catch (error) { status(passkeyMessage(error)); }
     });
     $('#spot-form').addEventListener('submit', async event => {
       event.preventDefault();
       const field = n => $('#spot-' + n).value;
       try {
         await api('spots', {method: 'POST', body: spotBody({name: field('name'), lat: field('lat'), lon: field('lon'), note: field('note')})});
-        $('#spot-form').reset(); await showSpots(); status('Saved to your spots.');
+        $('#spot-form').reset(); spotsChanged(); await showSpots(); status('Saved to your spots.');
       } catch (error) { status(passkeyMessage(error)); }
     });
     $('#spot-export').addEventListener('click', async () => {
