@@ -329,6 +329,74 @@ test('malformed queries answer 400', skip, async () => {
   } finally { sql.close(); }
 });
 
+const LAYERS = ['events', 'tracks', 'heat'];
+const IMPOSSIBLE = ['2026-02-30', '2026-04-31', '2026-06-31', '2026-09-31', '2026-11-31', '2025-02-29', '1900-02-29', '2100-02-29', '0100-02-29', '2026-02-32', '2026-01-00'];
+const DATE_ERROR = 'from and to must be YYYY-MM-DD';
+
+test('impossible_from_or_to_is_rejected', skip, async () => {
+  const {sql, as} = setup();
+  try {
+    for (const layer of LAYERS) for (const date of IMPOSSIBLE) {
+      assert.equal(mapQuery(layer, {region: REGION, from: date}).error, DATE_ERROR, `${layer} from=${date}`);
+      assert.equal(mapQuery(layer, {region: REGION, to: date}).error, DATE_ERROR, `${layer} to=${date}`);
+      assert.equal(mapQuery(layer, {region: REGION, from: '2026-01-01', to: date}).error, DATE_ERROR, `${layer} valid from, to=${date}`);
+      assert.equal(mapQuery(layer, {region: REGION, from: date, to: '2099-12-31'}).error, DATE_ERROR, `${layer} from=${date}, valid to`);
+      for (const param of ['from', 'to']) assert.equal((await as(`/api/fleet/map/${layer}?region=${REGION}&${param}=${date}`)).status, 400, `${layer} ${param}=${date}`);
+    }
+    // An impossible bound wins over reversed order: the message is the date one, not "from is after to".
+    assert.equal(mapQuery('events', {region: REGION, from: '2026-12-01', to: '2026-02-30'}).error, DATE_ERROR);
+    assert.equal(mapQuery('events', {region: REGION, from: '2026-02-30', to: '2026-01-01'}).error, DATE_ERROR);
+    assert.equal(mapQuery('events', {region: REGION, from: '2026-02-30', to: '2026-02-31'}).error, DATE_ERROR);
+  } finally { sql.close(); }
+});
+
+test('leap_century_and_small_year_boundaries_remain_valid', skip, async () => {
+  const {sql, as} = setup();
+  try {
+    const valid = ['2000-02-29', '2024-02-29', '0096-02-29', '0000-02-29', '2026-02-28', '2026-01-31', '2026-03-31', '2026-04-30', '2026-06-30', '2026-09-30', '2026-11-30', '2026-12-31'];
+    for (const layer of LAYERS) for (const date of valid) {
+      const q = mapQuery(layer, {region: REGION, from: date, to: '9999-12-31'});
+      assert.equal(q.error, undefined, `${layer} from=${date}`);
+      assert.equal(q.from, date, `${layer} from unchanged`);
+      const r = mapQuery(layer, {region: REGION, from: '0000-01-01', to: date});
+      assert.equal(r.error, undefined, `${layer} to=${date}`);
+      assert.equal(r.to, date, `${layer} to unchanged`);
+    }
+    for (const layer of LAYERS) for (const param of ['from', 'to'])
+      assert.equal((await as(`/api/fleet/map/${layer}?region=${REGION}&${param}=2024-02-29`)).status, 200, `${layer} ${param} leap day`);
+    const leapDay = await as(`/api/fleet/map/events?region=${REGION}&from=2024-02-29&to=2024-02-29`);
+    assert.equal(leapDay.status, 200);
+  } finally { sql.close(); }
+});
+
+test('range_and_gate_semantics_survive', skip, async () => {
+  const {sql, as, ids} = setup();
+  try {
+    for (const layer of LAYERS) {
+      assert.equal(mapQuery(layer, {region: REGION, from: '', to: ''}).from, null);
+      assert.equal(mapQuery(layer, {region: REGION, from: '', to: ''}).to, null);
+      assert.equal(mapQuery(layer, {region: REGION}).error, undefined);
+      assert.equal(mapQuery(layer, {region: REGION, from: '2026-02-28', to: '2026-02-28'}).error, undefined, 'same-day range stays legal');
+      assert.equal(mapQuery(layer, {region: REGION, from: '2026-03-01', to: '2026-02-28'}).error, 'from is after to');
+      assert.equal(mapQuery(layer, {region: REGION, from: '2025-12-31', to: '2026-01-01'}).error, undefined);
+    }
+    assert.deepEqual(await ids(`/api/fleet/map/events?region=${REGION}&from=2026-06-10&to=2026-06-10`), ['e1']);
+    assert.equal((await as(`/api/fleet/map/events?region=${REGION}&from=2026-07-02&to=2026-07-01`)).status, 400);
+    // Malformed dates never bypass the gates: they answer exactly as the same request with a valid date.
+    for (const layer of LAYERS) {
+      const path = `/api/fleet/map/${layer}?region=${REGION}&from=2026-02-30`;
+      assert.equal((await as(path, {})).status, 404, `${layer}: both flags off`);
+      assert.equal((await as(path, {FLEET_ENABLED: 'true'})).status, 404, `${layer}: map flag off`);
+      assert.equal((await as(path, ON, 'someone')).status, 404, `${layer}: non-admin`);
+      assert.equal((await as(path)).status, 400, `${layer}: admin`);
+    }
+    const {sql: sql2, db} = setup();
+    try {
+      assert.equal((await worker.fetch(new Request(`${ORIGIN}/api/fleet/map/events?region=${REGION}&from=2026-02-30`), {ASSETS, DB: db, ...ON})).status, 401, 'anonymous');
+    } finally { sql2.close(); }
+  } finally { sql.close(); }
+});
+
 test('filters lists the values present for the region', skip, async () => {
   const {sql, get} = setup();
   try {
