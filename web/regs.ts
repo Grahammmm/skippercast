@@ -17,6 +17,7 @@
 import {signal} from '@preact/signals';
 import {dailyPartPath} from '../dist/offline-core.js';
 import {validDailyPart} from './map/habitat.ts';
+import {regsStartupURL} from './startup-forms.ts';
 import {DEFAULT_ZONE} from './zone.ts';
 
 /** The registry is v1's JSON, read field by field as v1 reads it. */
@@ -250,7 +251,8 @@ let reading: {region: string; promise: Promise<void> | null; retry: boolean} | n
 /** Forgets every read (tests only). */
 export const resetRegs = (): void => { reading = null; };
 /**
- * v1's load: the region's committed registry, then the daily feed's regulation checks when they are
+ * v1's load: the region's startup copy of the committed registry (its own species and their checks; the whole registry
+ * when the copy is missing or not valid for the region), then the daily feed's regulation checks when they are
  * at least as recent; each must name the region's jurisdiction and pass the checks above. A failure
  * keeps what loaded; with nothing, the line reads "Check rules" with CDFW's page. A read that showed
  * nothing for the region, or met a transport, 429 or 5xx failure, is asked again by the next card.
@@ -274,7 +276,17 @@ export async function loadRegs(region: RulesRegion, fetchFn: typeof fetch = fetc
   };
   const asset = region.assets?.regulations;
   return ours.promise = (async () => {
-    if (asset) await get(asset).then(accept, () => false);
+    if (asset) {
+      // The region's startup copy first; the whole registry only when the copy is missing, unreadable or not valid for this region.
+      // A transport, 429 or 5xx failure of the copy alone does not ask again: it counts only if the whole registry fails to load too.
+      let loaded = await get(regsStartupURL(region.id)).then(accept, () => false);
+      const copyTransient = transient;
+      if (!loaded) {
+        transient = false;
+        loaded = await get(asset).then(accept, () => false);
+        transient ||= !loaded && copyTransient;
+      }
+    }
     await get(dailyPartPath(region.id, 'regulations')).then(d => validDailyPart(d, 'regulations', region.id) && accept(d.regulations), () => false);
   })().finally(() => { ours.retry = transient || regsData.peek()?.region !== region.id; ours.promise = null; });
 }
