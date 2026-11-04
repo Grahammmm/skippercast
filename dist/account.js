@@ -115,21 +115,21 @@ export function spotBody(f) {
   return {name: f.name ?? '', lat: num(f.lat), lon: num(f.lon), note: f.note || null};
 }
 
-/** Each spot's protected-area reading from the shared screen: excluded (with the boundary named), unavailable, or clear (no text). */
+/** Each spot's reading from the shared screen (dist/geo-screen.js `screenPlace`, BF-closures-everywhere): excluded (boundary named), unavailable (not checked), or clear (no text). */
 export async function spotVerdicts(spots, screen) {
-  const {protectedHitReading} = await import('./trip-export.js');
+  const {screenPlace, placeRefused} = await import('./geo-screen.js'), {protectedHitReading} = await import('./trip-export.js');
   return spots.map(s => {
-    const r = screen?.ready?.() ? screen.inspect({latitude: s.lat, longitude: s.lon}) : null;
-    if (!r?.fresh) return {status: 'unavailable', text: 'Protected-area check unavailable, so this spot cannot be exported yet.'};
-    if (r.status !== 'excluded') return {status: 'clear', text: ''};
-    return {status: 'excluded', text: `${protectedHitReading({inside: r.matches.every(m => m.inside === true), reef: false})} ${r.names.join(', ')}. Not exported.`};
+    const v = screenPlace(screen, {latitude: s.lat, longitude: s.lon});
+    if (!v.screened) return {status: 'unavailable', text: 'Protected-area check unavailable, so this spot cannot be exported yet.'};
+    if (!placeRefused(v)) return {status: 'clear', text: ''};
+    return {status: 'excluded', text: `${protectedHitReading({inside: v.inside, reef: false})} ${v.name ? v.name + '.' : ''} Not exported.`.replace(/\s+/g, ' ')};
   });
 }
 
 /**
  * The saved spots as one GPX file through the planner's own export path (dist/trip-export.js `buildExport`, so gpx.js
  * names are cleaned and made unique by its one serialiser). A spot inside or near a protected area is left out and named;
- * with the screen stale or missing nothing is exported. The file must pass the same GPX check the planner runs.
+ * with the screen stale or missing nothing is exported. The file must pass the same GPX check, with the screen, that the planner runs.
  */
 export async function exportSpots(spots, screen, region, now = new Date()) {
   const {buildExport} = await import('./trip-export.js'), {checkGpx} = await import('../web/gpx-check.ts');
@@ -140,7 +140,7 @@ export async function exportSpots(spots, screen, region, now = new Date()) {
   if (!clear.length) throw Error('Every saved spot is inside or near a protected area, so nothing was exported.');
   const points = clear.map(s => ({id: 'user:' + s.id, name: s.name.trim() ? s.name : 'Waypoint', category: 'other', latitude: s.lat, longitude: s.lon}));
   const out = buildExport({atlas: {targets: [], areas: [], drifts: []}, screen, ids: points.map(p => p.id), region, title: 'SkipperCast saved spots', now, userWaypoints: points});
-  const check = checkGpx(out.gpx, {waypoints: clear.length});
+  const check = checkGpx(out.gpx, {waypoints: clear.length}, screen);
   if (!check.ok) throw Error(`The GPX file failed its own check: ${check.problems[0]}. Nothing was handed over.`);
   return {gpx: out.gpx, exported: clear.length, withheld: held.length};
 }

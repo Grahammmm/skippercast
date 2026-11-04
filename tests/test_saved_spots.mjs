@@ -165,3 +165,13 @@ test('with no screen, a stale screen or no spots nothing is exported, and the li
   }
   await assert.rejects(exportSpots([], await screenAt(), region), /no saved spots/);
 });
+
+test('a spot 30 m outside a boundary is inside the planning margin: read as such and left out of the export', async () => {
+  const screen = await screenAt(), region = getRegion(), v = ring[0], mLon = 1 / (111320 * Math.cos(v[1] * Math.PI / 180));
+  const out30 = [1, -1].map(k => ({lat: v[1], lon: v[0] + k * 30 * mLon})).find(p => !pointInGeometry([p.lon, p.lat], buchon.geometry) && !pointInGeometry([v[0] + Math.sign(p.lon - v[0]) * mLon, v[1]], buchon.geometry));
+  assert.ok(out30, 'fixture: a point just outside the reserve');
+  const near = saved('Near the line', out30), [verdict] = await spotVerdicts([near], screen);
+  assert.equal(verdict.status, 'excluded'); assert.match(verdict.text, /within 70 m/);
+  await assert.rejects(exportSpots([near], screen, region), /inside or near a protected area/);
+  assert.deepEqual(names((await exportSpots([near, saved('Open water')], screen, region)).gpx), ['Open water']);
+});
