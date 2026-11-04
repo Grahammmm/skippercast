@@ -168,3 +168,35 @@ test('under the cost-ceiling degraded state a write succeeds and is stored; a fa
   assert.equal(logCount(down.sql, 'alice'), 0);
   sql.close(); down.sql.close();
 });
+
+// The real /my-data page script, run against the worker with a stub DOM: `owner` plays the session cookie.
+async function runMyData({hash = '', owner, env}) {
+  const els = new Map(), fetched = [], saved = {};
+  const el = id => els.get(id) || els.set(id, {id, textContent: '', hidden: false, disabled: false, className: '', handlers: {}, addEventListener(t, f) { this.handlers[t] = f; }}).get(id);
+  const saveGlobals = ['document', 'location', 'fetch'].map(k => [k, globalThis[k]]);
+  Object.assign(globalThis, {location: {hash}, document: {getElementById: el, body: {append() {}}, createElement: () => ({click() { saved.name = this.download; }, remove() {}})},
+    fetch: async (path, init = {}) => { fetched.push([path, init]); const headers = {...(init.headers || {})}; if (owner && init.credentials === 'same-origin') headers['x-test-owner'] = owner; return worker.fetch(new Request(ORIGIN + path, {method: init.method || 'GET', headers: {'CF-Connecting-IP': '203.0.113.9', ...headers}}), env); }});
+  const realCreate = URL.createObjectURL; URL.createObjectURL = blob => { saved.blob = blob; return 'blob:x'; };
+  try { await import('../dist/advisor/my-data.js?run=' + Math.random()); if (!el('data-download').hidden && el('data-download').handlers.click) await el('data-download').handlers.click(); }
+  finally { URL.createObjectURL = realCreate; for (const [k, v] of saveGlobals) { if (v === undefined) delete globalThis[k]; else globalThis[k] = v; } }
+  return {button: el('data-download'), status: el('data-status'), fetched, saved, body: saved.blob ? JSON.parse(await saved.blob.text()) : null};
+}
+
+test('the /my-data page downloads the signed-in account export with fish and blank rows and coordinates, and never mixes it with the Advisor token', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter};
+  await post(env, 'alice', FISH); await post(env, 'alice', BLANK); await post(env, 'bob', {...BLANK, note: 'LOGNOTE-bob'});
+  const page = await runMyData({owner: 'alice', env});
+  assert.equal(page.button.hidden, false);
+  assert.deepEqual(page.fetched.map(([p]) => p), ['/api/session', '/api/privacy'], 'no Advisor export is called');
+  assert.ok(page.fetched.every(([, i]) => i.credentials === 'same-origin' && !(i.headers && i.headers['X-Export-Token'])));
+  assert.deepEqual(page.body.catch_log.map(e => [e.outcome, e.count, e.lat, e.lon]), [['fish', 3, 35.123456789, -120.987654321], ['blank', 0, 35.5, -121.25]]);
+  assert.ok(!JSON.stringify(page.body).includes('LOGNOTE-bob'));
+  assert.equal(page.saved.name, 'skippercast-data.json');
+  const out = await runMyData({owner: undefined, env});
+  assert.deepEqual([out.button.hidden, out.body, out.fetched.map(([p]) => p)], [true, null, ['/api/session']], 'signed out: nothing to download, no export call');
+  assert.ok(out.status.textContent.length > 3 && !out.status.hidden);
+  const tok = await runMyData({hash: '#abc-DEF_1', owner: 'alice', env});
+  assert.deepEqual(tok.fetched.map(([p, i]) => [p, i.credentials, i.headers['X-Export-Token']]), [['/api/advisor/export', 'omit', 'abc-DEF_1']], 'a token page calls only the Advisor export, without the session');
+  assert.equal(tok.body, null);
+  sql.close();
+});
