@@ -202,6 +202,19 @@ def publish(region_id, tiles, health, now, product="NOAA Geo-Polar Blended night
             "refused_frames": refused, "fronts": fronts}
 
 
+def publish_region(region_dir, health_path, now):
+    """Write `sst-fronts.json` beside the region's habitat-dynamics.json from its habitat-tiles; returns the document.
+
+    This is what the regional habitat refresh (scripts/refresh_regions.py habitat) calls, so the file
+    the client requests is part of the same release as the tiles it was found in."""
+    from skippercast.platform.contracts import atomic_json
+    region_dir = Path(region_dir)
+    tiles = [(p.name, json.loads(p.read_text())) for p in sorted((region_dir / "habitat-tiles").glob("sst-analysis-*.json"))]
+    document = publish(region_dir.name, tiles, json.loads(Path(health_path).read_text()), now)
+    atomic_json(region_dir / "sst-fronts.json", document)
+    return document
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Publish a region's offshore SST fronts")
     parser.add_argument("--region", required=True)
