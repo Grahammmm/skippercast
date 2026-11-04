@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import {planTiles, tileURL, tileKey, packRequests, relativeTime, formatBytes, bannerText, installHint, isIOS, stampedHeaders,
-  SHARED_FILES, TILE_CAP, ENC_ORIGIN, planBasemap} from '../dist/offline-core.js';
+  SHARED_FILES, TILE_CAP, ENC_ORIGIN, planBasemap, isOceanKey} from '../dist/offline-core.js';
 
 const read = p => readFileSync(new URL(p, import.meta.url), 'utf8');
 const morro = JSON.parse(read('../dist/regions/morro-bay/region.json'));
@@ -137,4 +137,17 @@ test('saving a pack never re-stamps data the service worker answered from an old
   // A pack that could not fetch its region config is discarded, keeping the older pack.
   assert.match(pack, /missing\.includes\(configURL\)/);
   assert.match(pack, /await caches\.delete\(name\);\s*throw error;/);
+});
+
+test('isOceanKey: only a region\'s habitat manifest and its tiles, on the page\'s own origin', () => {
+  const origin = 'https://skippercast.test', region = `${origin}/feeds/conditions/regions/morro-bay`;
+  for (const url of [`${region}/habitat-dynamics.json`, `${region}/habitat-dynamics.json?v=1`, `${region}/habitat-tiles/sst-analysis-0-0-0123456789abcdef.json`, `${region}/habitat-tiles/a.b_c-D.json`])
+    assert.equal(isOceanKey(url, origin), true, url);
+  for (const url of [`https://other.test/feeds/conditions/regions/morro-bay/habitat-dynamics.json`, `${region}/habitat-tiles/`, `${region}/habitat-tiles/a/b.json`,
+    `${region}/habitat-tiles/${'a'.repeat(121)}`, `${origin}/feeds/conditions/regions/Morro-Bay/habitat-dynamics.json`, `${origin}/feeds/conditions/regions/${'a'.repeat(65)}/habitat-dynamics.json`,
+    `${region}/habitat-dynamics.json.bak`, `${origin}/regions/morro-bay/habitat-dynamics.json`, `${origin}/feeds/conditions/regions/morro-bay/../x/habitat-tiles/`, `${region}/habitat-tiles/../coast.json`,
+    `${origin}/feeds/tiles/seafloor/seafloor-morro-bay.pmtiles`, `${origin}/feeds/conditions/morro-bay.json`, `${origin}/api/habitat?region=morro-bay`, 'morro-bay/habitat-dynamics.json', '', null, undefined])
+    assert.equal(isOceanKey(url, origin), false, String(url));
+  assert.equal(isOceanKey(`${region}/habitat-dynamics.json`, 'https://other.test'), false);
+  assert.equal(isOceanKey(`${region}/habitat-dynamics.json`), false);
 });
