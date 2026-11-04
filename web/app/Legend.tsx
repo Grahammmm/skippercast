@@ -313,7 +313,7 @@ export function SavedSpotsRow() {
   const status = savedSpotsStatus.value, entry = layerEntry('saved-spots');
   return (
     <li class="app-legend-saved-spots">
-      <label><input type="checkbox" checked={savedSpotsOn.value} disabled={!status.canToggle} onChange={e => setSavedSpotsOn(e.currentTarget.checked)} /> {entry.label}</label>
+      <label><input type="checkbox" style={{width: '24px', height: '24px'}} checked={savedSpotsOn.value} disabled={!status.canToggle} onChange={e => setSavedSpotsOn(e.currentTarget.checked)} /> {entry.label}</label>
       <Popover iconOnly summary="Your saved spots basis"><p>{entry.basis}</p></Popover>
       <p class="app-legend-note" data-reason="saved-spots" role="status">{status.text}</p>
       {status.retry ? <Button variant="quiet" onClick={retrySavedSpots}>Try again</Button> : null}

@@ -263,7 +263,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC0922-04: check_contrast.mjs only rebinds the Legend.tsx surface hash and its comment
   // for the private saved-spots row in existing text roles. BODY09 mounts Reports/CatchCards,
   // not the legend; paint, contrast(), assertions and thresholds are unchanged.
-  "scripts/check_contrast.mjs": "4b138b6503518c0796f39bfcf6b70c780f11fe9d4095f6be9ad0fc001a4d6d48",
+  // CI checkbox target-size fix: only the Legend source hash and applicability comment changed; no contrast math or Reports paint changed.
+  "scripts/check_contrast.mjs": "6d875a64be098f51d3f40a1fe156d82bc8b8e8ec8bf2bf3baf54d7ebb18179ff",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still

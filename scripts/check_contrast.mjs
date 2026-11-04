@@ -394,7 +394,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC2007-02 adds the shared quiet Button (Try again) to the Protected areas row; no text paint changed.
   // BF-sst-fronts adds a Temp fronts row using the existing app-legend-note text role; no backing, opacity or text paint changed.
   // SC0922-04 adds the Your saved spots row (a native checkbox label and an app-legend-note status in the existing text roles, the shared quiet Button); no backing, opacity or text paint changed.
-  "legendTsx": "a1363aff437d0412a8aa38db18f12c8959648876e8d424c899f32cb8a25c1985"
+  // SC0922-04 CI fix sizes only the saved-spots checkbox to 24px; declared text and backing paints are unchanged.
+  "legendTsx": "21455287f500fcd0cffed62a81eff14dcf1db424663cb7ace9783fa91c0e43e9"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
