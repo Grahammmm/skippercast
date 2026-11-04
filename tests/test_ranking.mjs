@@ -308,8 +308,8 @@ test('clicking selects the mark or the habitat (one at a time) and opens the car
   url = new URL(location.href);
   assert.equal(url.searchParams.get('habitat'), 'm-b');
   assert.ok(!url.searchParams.has('spot'));
-  const picks = [{id: 'm-a', kind: 'habitat', name: 'Reef habitat', distance: '4.0 nm', depth: '~40–80 ft', fit: 'Fits lingcod habitat 3 of 3', reason: 'Terrain score 80/100.'},
-    {id: 'm-b', kind: 'habitat', name: 'Reef habitat', distance: '4.1 nm', depth: '~40–80 ft', fit: 'Fits lingcod habitat 2 of 3', reason: 'Terrain score 90/100.'}];
+  const picks = [{id: 'm-a', kind: 'habitat', name: 'Reef habitat', distance: '4.0 nm', depth: '~40–80 ft', fit: 'Fits lingcod habitat 3 of 3', reason: 'Terrain score 80/100.', screen: {inside: false, name: null, distanceM: null, screened: true}},
+    {id: 'm-b', kind: 'habitat', name: 'Reef habitat', distance: '4.1 nm', depth: '~40–80 ft', fit: 'Fits lingcod habitat 2 of 3', reason: 'Terrain score 90/100.', screen: {inside: false, name: null, distanceM: null, screened: true}}];
   const html = render(h(WhereToLook, {ranking: {source: 'terrain', label: 'Reviewed terrain habitat', basis: 'Basis sentence.', picks, empty: ''}}));
   assert.match(html, /<li data-mark="m-a"><button type="button" class="app-pick" aria-pressed="false">/);
   assert.match(html, /<li data-mark="m-b"><button type="button" class="app-pick" aria-pressed="true">/);

@@ -1,5 +1,8 @@
 // Delivery-time checks for our GPX 1.1 exporter; no DOM or navigation claims.
-export function checkGpx(xml: string, expected: {waypoints: number}): {ok: true} | {ok: false; problems: string[]} {
+import {placeRefused, screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
+
+/** BF-closures-everywhere: with a `screen` (null while it is not loaded), every waypoint and track point carries a verdict and one that is inside, near or not checked fails the file. Without one only the structure is checked. */
+export function checkGpx(xml: string, expected: {waypoints: number}, screen?: unknown): {ok: true; screen: PlaceVerdict[]} | {ok: false; problems: string[]; screen: PlaceVerdict[]} {
   const problems: string[] = [], fail = (s: string): void => { if (!problems.includes(s)) problems.push(s); };
   if (!/^<\?xml\s+[^?]*\?>/.test(xml)) fail('Missing XML declaration');
   if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ufffe\uffff]/u.test(xml)) fail('XML-forbidden control character');
@@ -46,5 +49,10 @@ export function checkGpx(xml: string, expected: {waypoints: number}): {ok: true}
   if (stack.length) fail(`Unbalanced ${stack.at(-1)} tag`);
   if (roots !== 1 || !/<\/gpx>\s*$/.test(xml) || xml.slice(cursor).trim()) fail('Missing or invalid GPX root close');
   if (count !== expected.waypoints) fail('Waypoint count mismatch');
-  return problems.length ? {ok: false, problems} : {ok: true};
+  const verdicts = [...xml.matchAll(/<(?:wpt|trkpt)\b[^>]*>/g)].map(m => {
+    const num = (k: string) => Number(new RegExp(`\\b${k}\\s*=\\s*(["'])(.*?)\\1`).exec(m[0])?.[2]);
+    return screenPlace(screen ?? null, {latitude: num('lat'), longitude: num('lon')});
+  });
+  if (screen !== undefined && verdicts.some(placeRefused)) fail(verdicts.some(v => !v.screened) ? 'Protected areas not checked' : `Inside or near ${verdicts.find(v => placeRefused(v) && v.screened)?.name ?? 'a protected area'}`);
+  return problems.length ? {ok: false, problems, screen: verdicts} : {ok: true, screen: verdicts};
 }
