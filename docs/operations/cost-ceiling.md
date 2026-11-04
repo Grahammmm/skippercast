@@ -201,8 +201,9 @@ named. Meanings:
 Two facts apply to every row. A degraded answer from a saved copy is a `200`
 with the mark (`server/cost-ceiling.ts:195-208`), so a reader sees normal data;
 only the `503` (no saved copy) is an error. And the `503` is sent only for
-`/feeds/*` (seafloor archives excepted), `/api/daily` and `/api/om/*`
-(`server/cost-ceiling.ts:113-117`, `:243`). `/api/coast/*` is not on that list:
+`/feeds/*` (seafloor archives excepted), `/api/daily`, `/api/forecast`,
+`/api/intelligence`, `/api/habitat` and `/api/om/*`
+(`server/cost-ceiling.ts:110-117`, `:243`). `/api/coast/*` is not on that list:
 past the ceiling it is answered, marked and without a saved-copy time
 (`server/cost-ceiling.ts:217-222`, `:243`), and its own failures reach the reader as
 non-OK answers like a 429.
