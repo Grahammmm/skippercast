@@ -97,7 +97,7 @@ const fakePage = () => {
   const writes = [], host = (attrs, first = 'English') => { const lead = {nodeType: 3, nodeValue: first + ' '}, el = {attrs: {...attrs}, firstChild: lead, _t: first,
     getAttribute: k => el.attrs[k] ?? null, setAttribute: (k, v) => { writes.push(['attr', k, v]); el.attrs[k] = v; }};
     Object.defineProperty(el, 'textContent', {get: () => el._t, set: v => { writes.push(['text', v]); el._t = v; }}); return el; };
-  const hosts = [host({'data-i18n': 'landing.hero.title'}), host({'data-i18n': 'brief.terms'}, 'Terms'), host({'data-i18n-lead': 'brief.planning'}, 'Planning aid · not a navigation chart.'), host({'data-i18n-aria': 'landing.aria.public'}), host({'data-i18n': 'landing.nope.unknown'})];
+  const hosts = [host({'data-i18n': 'landing.hero.title'}), host({'data-i18n': 'brief.terms'}, 'Terms'), host({'data-i18n-lead': 'brief.planning'}, 'Planning aid · not a navigation chart.'), host({'data-i18n-aria': 'landing.aria.public'}), host({'data-i18n': 'landing.nope.unknown'}), host({'data-i18n': 'brief.disclaimer'}, 'Forecasts, observations and habitat carry separate clocks; check the rules before you fish.')];
   const sel = {'[data-i18n]': 'data-i18n', '[data-i18n-lead]': 'data-i18n-lead', '[data-i18n-aria]': 'data-i18n-aria'};
   return {writes, hosts, doc: {querySelectorAll: s => hosts.filter(h => sel[s] in h.attrs)}};
 };
@@ -109,13 +109,14 @@ test('static_hosts_catalogue_and_budget: English is a no-op; Spanish writes only
   assert.deepEqual(page.writes, [], 'English makes no DOM write');
   page = fakePage();
   m.applyLandingCopy(page.doc, 'es');
-  const [title, terms, planning, nav, unknown] = page.hosts;
+  const [title, terms, planning, nav, unknown, disclaimer] = page.hosts;
   assert.equal(title._t, 'Conoce el agua antes de salir del muelle.');
   assert.equal(terms._t, 'Términos');
   assert.equal(planning.firstChild.nodeValue, 'Ayuda de planificación · no es una carta náutica. ', 'only the lead text node changes; the Terms link after it is kept');
   assert.equal(nav.attrs['aria-label'], 'Información pública');
   assert.equal(unknown._t, 'English', 'an unknown id leaves its host as it is');
-  assert.equal(page.writes.length, 3, 'text, text and aria-label; the lead text node is the fourth write');
+  assert.equal(disclaimer._t, 'Los pronósticos, las observaciones y el hábitat tienen relojes separados; revisa las reglas antes de pescar.', 'the actual first-paint helper translates the footer warning');
+  assert.equal(page.writes.length, 4, 'three text hosts and aria-label; the lead text node is the fifth write');
   // dist/landing.html: every marked host names a catalogue id with an es value; English text, links, metadata and scripts are untouched.
   const html = await readFile(join(ROOT, 'dist/landing.html'), 'utf8');
   const ids = [...html.matchAll(/data-i18n(?:-lead)?="([^"]+)"/g)].map(x => x[1]);
@@ -132,6 +133,10 @@ test('static_hosts_catalogue_and_budget: English is a no-op; Spanish writes only
   for (const file of ['main.tsx', 'copy.ts', 'Landing.tsx', 'PortInput.tsx', 'ProfileStep.tsx', 'Readout.tsx', 'readings.ts', 'live-verdict.ts']) assert.ok(COVERED.includes(`web/landing/${file}`), file);
   assert.deepEqual(catalogueProblems(), []);
   const slice = JSON.parse(await readFile(join(ROOT, 'web/landing/strings.generated.json'), 'utf8'));
+  for (const [, id] of html.matchAll(/data-i18n(?:-lead|-aria)?="([^"]+)"/g)) {
+    assert.ok(Object.hasOwn(slice, id), `${id}: every static translation host is in the first-paint slice`);
+    for (const lang of ['en', 'es']) assert.ok(slice[id][lang]?.trim(), `${id}: first-paint ${lang} exists`);
+  }
   for (const [id, entry] of Object.entries(slice)) assert.deepEqual(entry, m.STRINGS[id], `${id}: generated first-paint copy matches the shared catalogue`);
   assert.equal(JSON.parse(await readFile(join(ROOT, 'scripts/startup-budget.json'), 'utf8')).precache.install_raw_max, 440746, 'the install ceiling is unchanged');
   for (const file of ['Landing.tsx', 'PortInput.tsx', 'Readout.tsx', 'readings.ts']) {

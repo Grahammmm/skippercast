@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 const root = new URL('../', import.meta.url);
 const catalog = JSON.parse(readFileSync(new URL('catalog/app/strings.json', root)));
 const strings = Object.fromEntries(Object.entries(catalog.strings).filter(([id]) =>
-  (id.startsWith('landing.') && !id.startsWith('landing.basis.') && !id.startsWith('landing.reading.') && id !== 'landing.place.from') || id.startsWith('where.profile.') || ['brief.planning', 'brief.terms', 'tile.wind', 'tile.swell', 'tile.water', 'tile.tide'].includes(id)));
+  (id.startsWith('landing.') && !id.startsWith('landing.basis.') && !id.startsWith('landing.reading.') && id !== 'landing.place.from') || id.startsWith('where.profile.') || ['brief.planning', 'brief.terms', 'brief.disclaimer', 'tile.wind', 'tile.swell', 'tile.water', 'tile.tide'].includes(id)));
 const path = new URL('web/landing/strings.generated.json', root);
 const text = JSON.stringify(strings) + '\n';
 if (process.argv.includes('--check')) {
