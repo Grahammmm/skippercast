@@ -3,16 +3,15 @@ and nothing is published from a tile with no usable, current observation time.""
 
 from datetime import datetime, timedelta, timezone
 import json
-from pathlib import Path
 import unittest
 
 from skippercast.pipeline.sst_fronts import SstFrontError, publish
+from tests._support import ROOT
 
 HEALTH = {"feeds": {"sst-fronts": {"max_age_hours": 48}}}
 NOW = datetime(2026, 11, 3, 12, 0, tzinfo=timezone.utc)
 FIELDS = ["latitude", "longitude", "temperature_c", "analysis_error_c", "temperature_gradient_c_per_km", "thermal_contrast_supported"]
 ERROR = 0.4
-ROOT = Path(__file__).resolve().parents[2]
 
 
 def tile(rows, time, temp=lambda i, j: 14.0 if j < 6 else 16.0, cols=range(12)):
