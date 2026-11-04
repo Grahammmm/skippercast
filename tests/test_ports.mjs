@@ -298,6 +298,37 @@ test('the served directory passes the schema check and the chooser loads it once
   assert.equal(calls, 1, 'one fetch per page');
 });
 
+test('directory_required_fields_are_complete', () => {
+  const dir = (...ports) => ({schema_version: 1, ports});
+  for (const key of ['id', 'name', 'region', 'forecast_point', 'forecast_name', 'status']) {
+    const {[key]: _omitted, ...rest} = morro;
+    assert.equal(isDirectory(dir(rest)), false, `${key} missing`);
+  }
+  for (const key of ['id', 'name', 'region', 'forecast_point', 'forecast_name']) {
+    for (const bad of ['', '   ', null, 7, true, ['x'], {}]) assert.equal(isDirectory(dir({...morro, [key]: bad})), false, `${key}=${JSON.stringify(bad)}`);
+  }
+  for (const bad of ['', 'Active', 'closed', null, 1]) assert.equal(isDirectory(dir({...morro, status: bad})), false, `status=${JSON.stringify(bad)}`);
+  for (const bad of ['', '  ', null, 3]) assert.equal(isDirectory(dir({...morro, region_name: bad})), false, `region_name=${JSON.stringify(bad)}`);
+  for (const bad of [null, 'port', 5, [morro]]) assert.equal(isDirectory(dir(morro, bad)), false, `element ${JSON.stringify(bad)}`);
+  for (const bad of [null, [], 'x', 1, {schema_version: 1}, {schema_version: 1, ports: {}}, {schema_version: '1', ports: [morro]}]) assert.equal(isDirectory(bad), false);
+  assert.ok(isDirectory(dir(morro, sanPedro)), 'active and preview pass');
+  assert.ok(isDirectory(dir({...morro, region_name: 'Morro Bay', extra: {any: 1}})), 'region_name and unrelated fields stay allowed');
+});
+
+test('directory_coordinates_are_geographic', () => {
+  const dir = (...ports) => ({schema_version: 1, ports});
+  const at = match => dir({...morro, match});
+  for (const edge of [[90, 180], [-90, -180], [0, 0], [-90, 180]]) assert.ok(isDirectory(at(edge)), `edge ${edge}`);
+  for (const bad of [[90.0001, 0], [-90.0001, 0], [0, 180.0001], [0, -180.0001], [95, 240], [1], [1, 2, 3], [], ['35', '-120'], [null, null], [true, false],
+    [NaN, 0], [0, NaN], [Infinity, 0], [0, -Infinity], [35, undefined], 'match', null, {0: 35, 1: -120, length: 2}]) {
+    assert.equal(isDirectory(at(bad)), false, `match ${String(bad)}`);
+  }
+  assert.equal(isDirectory(dir(morro, {...sanDiego, match: [32.72, 217.22]})), false, 'one bad position rejects the whole directory');
+  const input = dir(morro, sanDiego), before = JSON.stringify(input);
+  assert.ok(isDirectory(input));
+  assert.equal(JSON.stringify(input), before, 'validation does not mutate its input');
+});
+
 test('locating resolves the nearest port, or why there is none, without throwing', async () => {
   const geo = (lat, lon) => ({getCurrentPosition: (ok) => ok({coords: {latitude: lat, longitude: lon}})});
   assert.deepEqual(await locatePort(PORTS, geo(35.36, -120.88)), {ok: true, port: morro});

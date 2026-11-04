@@ -77,6 +77,8 @@ export const DENSITY_SOURCE = 'marks-density';
 export const SELECTION_SOURCE = 'selection';
 /** The trip planner's ranked spots (web/map/ranked.ts, #495). */
 export const RANKED_SOURCE = 'trip-ranked';
+/** The signed-in owner's private saved spots (web/map/saved-spots.ts, SC0922-04); in memory only. */
+export const SAVED_SPOTS_SOURCE = 'private-saved-spots';
 /** Temp contrast's supported analysis cells (web/map/contrast.ts, CI6-03). */
 export const CONTRAST_SOURCE = 'sst-contrast';
 /** Temp fronts' observed edges (web/map/fronts.ts, BF-sst-fronts). */
@@ -187,6 +189,9 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
   entry({id: 'trip-ranked', label: 'Ranked trip spots', control: 'always', presentations: ['chart'], sources: [RANKED_SOURCE], gate: 'a ranked trip plan',
     legend: [{label: 'Ranked trip spot; number: the planner\'s order', swatch: 'mint'}],
     basis: 'The trip planner\'s ranked reefs from the current seafloor publication, numbered in its order and drawn while its protected-area check and the marks\' run-time screen are current.', task: 'FE-51'}),
+  // SC0922-04: the owner's own positions, off by default and session-only (not a rail entry, a link layer or a profile default).
+  entry({id: 'saved-spots', label: 'Your saved spots', control: 'always', presentations: ['chart'], sources: [SAVED_SPOTS_SOURCE], gate: 'signed in, turned on in the legend',
+    basis: 'Your account’s saved positions, shown only to you; protected-area readings are planning context, not permission to fish.', task: 'SC0922-04'}),
   entry({id: 'stations', label: 'Stations', control: 'stations', presentations: ['chart'], sources: ['stations'], time: ['observed', 'hour'],
     legend: [{label: 'Buoy observation', swatch: 'blue'}, {label: 'Tide prediction', swatch: 'mint'}, {label: 'Stale or unavailable', swatch: 'muted'}, {label: 'CDIP MOP model site: ring', swatch: 'blue'}],
     attribution: 'NOAA NDBC · NOAA CO-OPS · CDIP/Scripps', basis: STATION_BASIS, task: 'CI6-18'}),
