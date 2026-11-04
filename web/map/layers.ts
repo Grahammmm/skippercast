@@ -79,6 +79,8 @@ export const SELECTION_SOURCE = 'selection';
 export const RANKED_SOURCE = 'trip-ranked';
 /** Temp contrast's supported analysis cells (web/map/contrast.ts, CI6-03). */
 export const CONTRAST_SOURCE = 'sst-contrast';
+/** Temp fronts' observed edges (web/map/fronts.ts, BF-sst-fronts). */
+export const FRONTS_SOURCE = 'sst-fronts';
 export const COASTLINE_ATTRIBUTION = 'NOAA NGS · CUSP shoreline';
 export const ENC_ATTRIBUTION = 'NOAA ENC display · planning only';
 export const MPA_SOURCE = 'mpas';
@@ -117,6 +119,12 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     legend: [{label: 'Temperature change per distance, °F per nautical mile', swatch: 'contrast1'}],
     basis: 'The region\'s published daily sea-surface temperature analysis, partly interpolated, with gaps under cloud filled, drawn as the change in temperature per nautical mile only in grid cells where the change across neighbouring cells exceeds their summed analysis error; named with its product, grid and age where it draws and withheld past its 72-hour age limit. Surface water only; a contrast cell is not a fish or catch location.',
     task: 'CI6-03'}),
+  // BF-sst-fronts: observed fronts as edges with their age and an uncertainty band; its own rail entry, off by default, beside (never in place of) Temp contrast.
+  entry({id: 'sst-fronts', label: 'Temp fronts', control: 'sst-fronts', presentations: ['chart'], time: ['observed'], sources: [FRONTS_SOURCE],
+    attribution: 'NOAA CoastWatch SST analysis',
+    legend: [{label: 'Temperature front: line, with its uncertainty band', swatch: 'contrast2'}],
+    basis: 'Offshore temperature fronts found in the region\'s published daily sea-surface temperature analysis, drawn as an edge with a band whose half-width is the analysis\'s own stated error divided by the front\'s strength, named with the age of its observation and withheld past its feed age limit (never past 72 hours). Surface water only; a front is an edge to search along, not a fish or catch location.',
+    task: 'BF-sst-fronts'}),
   entry({id: 'chlorophyll', label: 'Chlorophyll', control: 'chlorophyll', presentations: ['chart'], sources: ['chlorophyll'], time: ['observed'],
     legend: [{label: '≤0.01 mg/m³', swatch: 'depth0'}, {label: '0.1 mg/m³', swatch: 'blue'}, {label: '1 mg/m³', swatch: 'mint'}, {label: '10 mg/m³', swatch: 'amber'}, {label: '100 mg/m³', swatch: 'coral'}],
     attribution: 'NOAA NESDIS STAR / CoastWatch',
