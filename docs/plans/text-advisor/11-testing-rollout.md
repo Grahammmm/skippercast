@@ -71,6 +71,8 @@ which it never prints):
 SKIPPERCAST_SESSION=<__Host-sc_session cookie value> node scripts/advisor/preflight.mjs [--stage dark] [--local]
 ```
 
+`node scripts/advisor/preflight.mjs --report` (same session, `--stage` and `--local` options) prints all 18 rows below and every § Owner to-do item as `pass`, `fail`, `blocked` (needs the admin session) or `owner-only` (a by-hand step), each with the check or step it used, from this table.
+
 | # | Item | How to verify | Reference |
 | --- | --- | --- | --- |
 | 1 | Every Text Advisor PR merged (#277, #278, #279 and TA-P1) and `main` deployed | preflight: `/api/health` answers with a build; by hand: the last **Deploy to Cloudflare** run is green on the merge commit | [AGENTS.md § Releases](../../../AGENTS.md#releases) |
