@@ -2,6 +2,7 @@
 // waits for the later of the two, not their sum) and still applies them in the old order: registry first, daily part last.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {isDeepStrictEqual} from 'node:util';
 import test from 'node:test';
 import {loadRegs, regsData, resetRegs} from '../web/regs.ts';
 
@@ -22,7 +23,8 @@ const part = (id, mark, at = NOW) => ({schema_version: 1, part: 'regulations', r
 function held(holdFallback = false) {
   const urls = [], gates = {};
   const fetchFn = url => { urls.push(url); return url === FALLBACK && !holdFallback ? Promise.resolve(new Response('', {status: 404})) : new Promise((resolve, reject) => { gates[url] = {resolve, reject}; }); };
-  return {urls, fetchFn, ok: (url, body) => gates[url].resolve(Response.json(body)), status: (url, n) => gates[url].resolve(new Response('', {status: n})), drop: url => gates[url].reject(new TypeError('Failed to fetch'))};
+  const release = () => { for (const g of Object.values(gates)) g.reject(new TypeError('released')); };
+  return {urls, fetchFn, release, ok: (url, body) => gates[url].resolve(Response.json(body)), status: (url, n) => gates[url].resolve(new Response('', {status: n})), drop: url => gates[url].reject(new TypeError('Failed to fetch'))};
 }
 const fresh = () => { resetRegs(); regsData.value = null; };
 const tick = () => new Promise(r => setTimeout(r, 0));
@@ -114,4 +116,112 @@ test('7: a successful fallback clears only the copy failure, not an early daily 
     if (dailyFails) { s.ok(COPY, regs('copy')); s.ok(daily('morro-bay'), part('morro-bay', 'daily')); }
     await again;
   }
+});
+
+// RF1050-17: after A -> B -> A only the replacement A's read may publish; the first A is obsolete whatever it carries.
+globalThis.fetch = () => { throw new Error('unexpected network: every read here is injected'); };
+const OTHER = {...MORRO, id: 'other-bay'}, DAILY_ONLY = {...MORRO, assets: {}}, OTHER_DAILY_ONLY = {...OTHER, assets: {}};
+const OTHER_COPY = 'regions/other-bay/regulations-startup.json';
+const OPTS = {timeout: 5000};
+/** The same reviewed_at as `regs(mark)` with a different check record (or, when newer, a later reviewed_at as well). */
+const obsolete = (mark, newer) => {
+  const d = regs(mark, newer ? NOW + 7200000 : NOW);
+  for (const c of Object.values(d.checks)) c.data_retrieved_at = new Date(NOW - 60000).toISOString();
+  if (!newer) d.reviewed_at = regs('current').reviewed_at;
+  return d;
+};
+const sameData = (a, b) => isDeepStrictEqual(a, b);
+/** Run `body` and always release every request the servers still hold. */
+async function guarded(servers, body) { try { await body(); } finally { for (const s of servers) s.release(); } }
+
+test('8: regs_round_trip_latest_request_wins - the first A, resolving last, never replaces the replacement A', OPTS, async () => {
+  for (const newer of [false, true]) {
+    fresh(); const a1 = held(), b = held(), a2 = held();
+    await guarded([a1, b, a2], async () => {
+      const A1 = loadRegs(DAILY_ONLY, a1.fetchFn), B = loadRegs(OTHER_DAILY_ONLY, b.fetchFn);
+      b.ok(daily('other-bay'), part('other-bay', 'B')); await B;
+      assert.equal(regsData.value.data.mark, 'B');
+      const A2 = loadRegs(DAILY_ONLY, a2.fetchFn);
+      assert.deepEqual(a2.urls, [daily('morro-bay')], 'the replacement A starts its own read');
+      a2.ok(daily('morro-bay'), part('morro-bay', 'current')); await A2;
+      const current = structuredClone(regsData.value.data);
+      assert.equal(current.mark, 'current');
+      const late = part('morro-bay', 'obsolete', NOW); late.regulations = obsolete('obsolete', newer);
+      assert.ok(!sameData(late.regulations.checks, current.checks), 'the late answer really carries different source checks');
+      a1.ok(daily('morro-bay'), late); await A1; await tick();
+      assert.equal(regsData.value.region, 'morro-bay');
+      assert.ok(sameData(regsData.value.data, current), `the replacement stays byte-for-byte current (newer reviewed_at: ${newer})`);
+    });
+  }
+});
+
+test('9: regs_obsolete_startup_fallback_and_daily_are_all_refused - each late source on its own, and the replacement still applies its daily after its registry', OPTS, async () => {
+  for (const source of ['copy', 'fallback', 'daily']) for (const newer of [false, true]) {
+    fresh(); const a1 = held(source === 'fallback'), b = held(), a2 = held();
+    await guarded([a1, b, a2], async () => {
+      const A1 = loadRegs(MORRO, a1.fetchFn);
+      if (source !== 'daily') a1.status(daily('morro-bay'), 404);
+      if (source === 'daily') a1.status(COPY, 404);
+      if (source === 'fallback') { a1.status(COPY, 503); await tick(); assert.deepEqual(a1.urls, [COPY, daily('morro-bay'), FALLBACK]); }
+      const B = loadRegs(OTHER, b.fetchFn);
+      b.ok(OTHER_COPY, regs('B')); b.ok(daily('other-bay'), part('other-bay', 'B')); await B;
+      assert.equal(regsData.value.data.mark, 'B', 'A -> B stays protected');
+      const A2 = loadRegs(MORRO, a2.fetchFn);
+      a2.ok(COPY, regs('current-registry')); await tick();
+      assert.equal(regsData.value.data.mark, 'current-registry', 'the replacement applies its registry first');
+      a2.ok(daily('morro-bay'), part('morro-bay', 'current-daily')); await A2;
+      const current = structuredClone(regsData.value.data);
+      assert.equal(current.mark, 'current-daily', 'and its own daily last');
+      const late = obsolete('obsolete', newer);
+      if (source === 'copy') a1.ok(COPY, late);
+      if (source === 'fallback') a1.ok(FALLBACK, late);
+      if (source === 'daily') { const p = part('morro-bay', 'obsolete'); p.regulations = late; a1.ok(daily('morro-bay'), p); }
+      await A1; await tick();
+      assert.ok(sameData(regsData.value.data, current), `a late ${source} answer is refused (newer reviewed_at: ${newer})`);
+    });
+  }
+});
+
+test('10: regs_obsolete_completion_does_not_unshare_current_read - finishing the first A leaves the replacement shared and pending', OPTS, async () => {
+  fresh(); const a1 = held(), b = held(), a2 = held(), extra = held();
+  await guarded([a1, b, a2, extra], async () => {
+    const A1 = loadRegs(MORRO, a1.fetchFn), B = loadRegs(OTHER, b.fetchFn);
+    b.ok(OTHER_COPY, regs('B')); b.ok(daily('other-bay'), part('other-bay', 'B')); await B;
+    const A2 = loadRegs(MORRO, a2.fetchFn);
+    a1.ok(COPY, obsolete('obsolete', false)); a1.ok(daily('morro-bay'), part('morro-bay', 'obsolete')); await A1; await tick();
+    assert.equal(regsData.value.data.mark, 'B', 'the finished first A published nothing');
+    let settled = false;
+    const sharer = loadRegs(MORRO, extra.fetchFn).then(() => { settled = true; });
+    await tick();
+    assert.deepEqual(extra.urls, [], 'another A caller issues no duplicate fetch');
+    assert.equal(settled, false, 'and waits for the replacement');
+    a2.ok(COPY, regs('current')); a2.ok(daily('morro-bay'), part('morro-bay', 'current')); await A2; await sharer;
+    assert.equal(settled, true);
+    assert.equal(regsData.value.data.mark, 'current');
+    const before = extra.urls.length; await loadRegs(MORRO, extra.fetchFn);
+    assert.equal(extra.urls.length, before, 'a clean read stays memoized');
+  });
+});
+
+test('11: regs_reset_invalidates_pending_read - a read pending across resetRegs never publishes', OPTS, async () => {
+  fresh(); const a1 = held(), a2 = held();
+  await guarded([a1, a2], async () => {
+    const A1 = loadRegs(MORRO, a1.fetchFn);
+    resetRegs();
+    const A2 = loadRegs(MORRO, a2.fetchFn);
+    assert.deepEqual(a2.urls, [COPY, daily('morro-bay')], 'the replacement reads for itself');
+    a2.ok(COPY, regs('current')); a2.ok(daily('morro-bay'), part('morro-bay', 'current')); await A2;
+    a1.ok(COPY, obsolete('obsolete', true)); a1.ok(daily('morro-bay'), part('morro-bay', 'obsolete', NOW + 7200000)); await A1; await tick();
+    assert.equal(regsData.value.data.mark, 'current');
+  });
+  fresh(); const c = held(), d = held();
+  await guarded([c, d], async () => {
+    const C = loadRegs(MORRO, c.fetchFn);
+    resetRegs();
+    c.ok(COPY, regs('obsolete')); c.ok(daily('morro-bay'), part('morro-bay', 'obsolete')); await C; await tick();
+    assert.equal(regsData.value, null, 'nothing is published after a reset with no replacement');
+    const D = loadRegs(MORRO, d.fetchFn);
+    d.ok(COPY, regs('later')); d.ok(daily('morro-bay'), part('morro-bay', 'later')); await D;
+    assert.equal(regsData.value.data.mark, 'later', 'a normal load still works');
+  });
 });
