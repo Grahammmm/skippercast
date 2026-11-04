@@ -108,7 +108,7 @@ test('wanted hours focus, shortfall, cross-tab reload and selected-target closur
   }
   for (const id of ['lingcod', 'rockfish']) d.species[id].windows = [{start: '2026-01-01', end: '2030-12-31'}];
   d.species.rockfish.windows = [];
-  await page.route('**/regulations.json', route => route.fulfill({json: d}));
+  await page.route(/\/regulations(?:-startup)?\.json$/, route => route.fulfill({json: d}));
   await page.addInitScript(() => localStorage.setItem('skippercast-cruise-v1', '{"knots":20}'));
   await v2.open('app', {region: 'morro-bay', target: 'lingcod'});
   if (isMobile) await page.locator('.ui-sheet-handle').press('End');

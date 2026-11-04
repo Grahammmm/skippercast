@@ -1,4 +1,4 @@
-"""The map's light startup copies (#617): the atlas marks, the search-plan index and the overview shoreline."""
+"""The map's light startup copies (#617): the atlas marks, the search-plan index, the overview shoreline and (SC1938-06) the regulations."""
 import hashlib
 import json
 import math
@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 from skippercast.platform.shoreline import OVERVIEW_MIN_RING_M, OVERVIEW_TOLERANCE_M, feature_lines, overview_shoreline, simplify
-from skippercast.platform.startup_forms import ATLAS_MARKS, PLAN_INDEX, POSTER, SHORELINE_OVERVIEW, poster_svg, publish_startup_forms
+from skippercast.platform.startup_forms import ATLAS_MARKS, PLAN_INDEX, POSTER, REGS_STARTUP, SHORELINE_OVERVIEW, poster_svg, publish_startup_forms, regs_startup
 from tests._support import ROOT
 
 MB = ROOT / 'dist/regions/morro-bay'
@@ -59,6 +59,92 @@ class CommittedCopies(unittest.TestCase):
         self.assertRegex(text, r'<path d="[Ml0-9 \-]+"/>')
 
 
+def committed_regions():
+    """(region.json, dist-relative registry path) of every committed region that names a registry."""
+    found = []
+    for path in sorted((ROOT / 'dist/regions').glob('*/region.json')):
+        region = read(path)
+        if region.get('jurisdiction_id') and region['assets'].get('regulations'):
+            found.append(region)
+    return found
+
+
+def registry_with(**extra):
+    """A small valid registry: two species (one cites two sources), one source nobody cites, one area notice."""
+    check = {'status': 'unchanged', 'source_status': 'ok', 'data_retrieved_at': '2026-09-25T08:00:00Z'}
+    return {'schema_version': 1, 'revision': 'r', 'reviewed_at': '2026-09-25T08:00:00Z', 'valid_from': '2026-01-01', 'valid_through': '2026-12-31',
+            'check_interval_hours': 24, 'max_age_hours': 36, 'jurisdiction_id': 'j', 'rules_review_status': 'reviewed', 'common_notes': ['n'],
+            'area': 'a', 'scope': 's', 'authority_hosts': ['h'], 'official_map_url': 'u', 'review_record': 'rr',
+            'sources': {k: {'name': k, 'url': f'https://x/{k}'} for k in ('a', 'b', 'c', 'unused')},
+            'checks': {k: dict(check) for k in ('a', 'b', 'c', 'unused')},
+            'species': {'lingcod': {'name': 'Lingcod', 'source_ids': ['a', 'b']}, 'rockfish': {'name': 'Rockfish', 'source_ids': ['a']},
+                        'salmon': {'name': 'Salmon', 'source_ids': ['c'], 'primary_source_id': 'c'}},
+            'area_notices': [{'id': 'n1', 'name': 'N', 'note': 'x', 'source_ids': ['unused']}], **extra}
+
+
+class RegulationsCopy(unittest.TestCase):
+    """The map's legality line reads regions/<id>/regulations-startup.json before the whole shared registry."""
+
+    def test_every_committed_copy_is_the_regions_cut_of_its_registry_and_names_its_checksum(self):
+        regions = committed_regions()
+        self.assertGreaterEqual(len(regions), 10)
+        for region in regions:
+            with self.subTest(region=region['id']):
+                path, copy_path = ROOT / 'dist' / region['assets']['regulations'], ROOT / f"dist/regions/{region['id']}/{REGS_STARTUP}"
+                copy = read(copy_path)
+                self.assertEqual(copy['derived_from'], {'path': region['assets']['regulations'], 'sha256': sha(path)})
+                self.assertEqual(copy, regs_startup(read(path), copy['derived_from'], region), 'the build is deterministic: the committed copy is what it writes')
+                self.assertEqual(copy['jurisdiction_id'], region['jurisdiction_id'])
+                self.assertLess(copy_path.stat().st_size, path.stat().st_size)
+                self.assertNotIn('area_notices', copy)
+
+    def test_morro_bay_copy_is_well_under_the_whole_registry(self):
+        whole, copy = (ROOT / 'dist/data/regulations.json').stat().st_size, (MB / REGS_STARTUP).stat().st_size
+        self.assertLess(copy, whole * 0.6)
+
+    def test_only_the_regions_species_and_the_sources_and_checks_they_cite_are_kept(self):
+        region = {'id': 'r', 'species': ['reef', 'salmon']}
+        copy = regs_startup(registry_with(), {'path': 'p', 'sha256': 'x'}, region)
+        self.assertEqual(sorted(copy['species']), ['lingcod', 'rockfish', 'salmon'], '`reef` stands for lingcod and rockfish')
+        self.assertEqual(sorted(copy['sources']), ['a', 'b', 'c'])
+        self.assertEqual(sorted(copy['checks']), ['a', 'b', 'c'])
+        self.assertEqual(copy['species']['lingcod'], registry_with()['species']['lingcod'], 'a species record is copied whole')
+        self.assertEqual(copy['sources']['a'], registry_with()['sources']['a'])
+        self.assertEqual(copy['derived_from'], {'path': 'p', 'sha256': 'x'})
+        for key in ('schema_version', 'reviewed_at', 'max_age_hours', 'check_interval_hours', 'jurisdiction_id', 'rules_review_status', 'valid_from', 'valid_through', 'common_notes'):
+            self.assertEqual(copy[key], registry_with()[key], key)
+        for key in ('area', 'scope', 'authority_hosts', 'official_map_url', 'review_record', 'area_notices'):
+            self.assertNotIn(key, copy)
+        narrow = regs_startup(registry_with(), {'path': 'p', 'sha256': 'x'}, {'id': 'r', 'species': ['salmon']})
+        self.assertEqual((sorted(narrow['species']), sorted(narrow['sources'])), (['salmon'], ['c']))
+
+    def test_a_registry_whose_area_notice_cites_no_reviewed_source_is_refused(self):
+        region = {'id': 'r', 'species': ['salmon']}
+        for notice in ({'id': 'n', 'name': 'N', 'note': 'x', 'source_ids': ['missing']}, {'id': 'n', 'name': 'N', 'note': 'x', 'source_ids': []},
+                       {'id': 'n', 'name': 'N', 'source_ids': ['a']}, {'id': 'n', 'name': 'N', 'note': 'x'}):
+            with self.subTest(notice=notice), self.assertRaises(ValueError):
+                regs_startup(registry_with(area_notices=[notice]), {'path': 'p', 'sha256': 'x'}, region)
+        regs_startup(registry_with(area_notices=[]), {'path': 'p', 'sha256': 'x'}, region)
+
+    def test_published_beside_the_package_from_assets_regulations_and_removed_when_there_is_none(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root, output = Path(tmp), Path(tmp) / 'dist/regions/r'
+            output.mkdir(parents=True)
+            (Path(tmp) / 'dist/data').mkdir(parents=True)
+            registry = registry_with()
+            (Path(tmp) / 'dist/data/regulations.json').write_text(json.dumps(registry))
+            region = {'id': 'r', 'species': ['salmon'], 'assets': {'regulations': 'data/regulations.json'}}
+            self.assertEqual(publish_startup_forms(root, region, output), ['regions/r/regulations-startup.json'])
+            copy = read(output / REGS_STARTUP)
+            self.assertEqual(copy['derived_from'], {'path': 'data/regulations.json', 'sha256': sha(Path(tmp) / 'dist/data/regulations.json')})
+            self.assertEqual(sorted(copy['species']), ['salmon'])
+            for assets in ({'regulations': None}, {}, {'regulations': 'data/gone.json'}):
+                with self.subTest(assets=assets):
+                    (output / REGS_STARTUP).write_text('{}')
+                    self.assertEqual(publish_startup_forms(root, {**region, 'assets': assets}, output), [])
+                    self.assertFalse((output / REGS_STARTUP).exists(), 'a stale copy is removed')
+
+
 class Overview(unittest.TestCase):
     SCALE = (111_320 * math.cos(math.radians(35.4)), 110_540)
 
@@ -97,7 +183,7 @@ class Publish(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root, output = Path(tmp), Path(tmp) / 'dist/regions/r'
             output.mkdir(parents=True)
-            for name in (ATLAS_MARKS, PLAN_INDEX, SHORELINE_OVERVIEW, POSTER):
+            for name in (ATLAS_MARKS, PLAN_INDEX, SHORELINE_OVERVIEW, POSTER, REGS_STARTUP):
                 (output / name).write_text('{}')
             region = {'id': 'r', 'assets': {'atlas': 'regions/r/atlas.json', 'search_plans': None}}
             self.assertEqual(publish_startup_forms(root, region, output), [])
