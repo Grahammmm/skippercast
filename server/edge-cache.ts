@@ -13,14 +13,16 @@ export function edgeCache(): Cache | null {
 
 /**
  * Cache key for a public GET: same origin and path, only the named query
- * parameters (all of them when `params` is omitted), sorted, plus the build id
- * so a deploy never serves output computed by older code.
+ * parameters (all of them when `params` is omitted), in stable name order, plus
+ * the build id so a deploy never serves output computed by older code. Values of
+ * a repeated name keep their request order: the producer reads the first one, so
+ * `a=1&a=3` and `a=3&a=1` are different requests.
  */
 export interface CacheKeyOptions {params?: string[]; build?: string; headers?: Headers}
 export function cacheKey(url: URL | string, {params, build = 'dev', headers}: CacheKeyOptions = {}): Request {
   const source = new URL(url), key = new URL(source.origin + source.pathname);
   const entries = [...source.searchParams].filter(([name]) => !params || params.includes(name))
-    .sort(([a, x], [b, y]) => a < b ? -1 : a > b ? 1 : x < y ? -1 : x > y ? 1 : 0);
+    .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
   for (const [name, value] of entries) key.searchParams.append(name, value);
   key.searchParams.set('sc-build', build);
   return new Request(key.href, headers ? {headers} : undefined);
