@@ -20,6 +20,10 @@
 //   - `--base <git-ref>` fails if the baseline has an entry the baseline at
 //     that ref did not (CI passes the pull request's base branch).
 //
+// A second check covers the surfaces that moved to the string catalogue (BF-spanish-app, COVERED below):
+// a catalogue id with no Spanish value, a t('id') call naming an id that is not in catalog/app/strings.json,
+// and a bare prose literal in a covered file all fail, with no baseline.
+//
 //   node scripts/check_copy.mjs                 check
 //   node scripts/check_copy.mjs --update        drop fixed entries from the baseline
 //   node scripts/check_copy.mjs --base origin/main
@@ -251,6 +255,28 @@ export function lintFile(path, source) {
   return findings;
 }
 
+/** The string catalogue (catalog/app/strings.json, en + es) and the files whose user-visible words all come from it. To cover a surface: add its ids, replace its literals with t(id, lang), list its file here. */
+export const CATALOGUE = 'catalog/app/strings.json';
+export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/FirstAnswerLine.tsx', 'web/app/RulesCard.tsx'];
+/** Prose-like literals in covered files that are data or code, not copy: a species group name (not translated) and a prefix the model writes. */
+export const LITERAL_OK = new Set(['Lingcod & rockfish', 'Using your limits']);
+
+/** Catalogue problems under `root`: ids without an es value, unknown ids in t() calls, bare prose literals in covered files. No catalogue, nothing to check. */
+export function catalogueProblems(root = ROOT) {
+  let ids;
+  try { ids = JSON.parse(readFileSync(join(root, CATALOGUE), 'utf8')).strings; } catch { return []; }
+  const out = Object.entries(ids).filter(([, e]) => !e.es?.trim()).map(([id]) => `${CATALOGUE}: ${id} has no es value (it renders English)`);
+  for (const path of COVERED) {
+    let source;
+    try { source = readFileSync(join(root, path), 'utf8'); } catch { continue; }
+    for (const m of source.matchAll(/\bt\(\s*(['"])([\w.]+)\1/g)) if (!Object.hasOwn(ids, m[2])) out.push(`${path}:${lineOf(source, m.index)} t('${m[2]}') is not in ${CATALOGUE}`);
+    const bare = source.replace(/\/\*[\s\S]*?\*\/|(?<![:'"`\w])\/\/[^\n]*/g, c => c.replace(/[^\n]/g, ' '));   // comments are not copy
+    for (const item of [...literals(source), ...(path.endsWith('.tsx') ? jsxText(bare) : [])])
+      if (isProse(item.value) && !LITERAL_OK.has(item.value.trim()) && !item.value.trim().split(/\s+/).every(w => w.includes('-'))) out.push(`${path}:${lineOf(source, item.index)} bare literal "${clip(normal(item.value))}": use a catalogue id`);
+  }
+  return out;
+}
+
 /** The files the lint reads: pages and modules shipped to the browser. */
 export function copyFiles(root = ROOT) {
   const list = [];
@@ -367,6 +393,8 @@ function main(argv) {
       for (const {key} of stale) { const f = show(key); console.error(`  ${f.file} [${f.rule}] ${f.text}`); }
     }
   }
+  const catalogue = catalogueProblems();
+  if (catalogue.length) { failed = true; console.error(`Catalogue check: ${catalogue.length} problem(s)\n  ${catalogue.join('\n  ')}`); }
   if (baseRef) {
     let previous = null;
     try { previous = execFileSync('git', ['show', `${baseRef}:${BASELINE}`], {cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}); }

@@ -7,6 +7,7 @@
 // itself never opens on its own.
 import {render} from 'preact';
 import {effect} from '@preact/signals';
+import {initLanguage} from '../i18n.ts';
 import {configureStore, coast, loadCoordinateFormat, profile, region, species, startURLSync} from '../state.ts';
 import {savedHomeURL} from '../ports.ts';
 import {followStoredLimits, loadCruise, loadLimits} from '../limits.ts';
@@ -23,6 +24,7 @@ import {installDegradedWatch} from '../degraded.ts';
 installDegradedWatch();
 configureStore({v2: true});
 loadCoordinateFormat();
+initLanguage();
 startURLSync();
 // Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
 initTelemetry({views: true});
