@@ -11,6 +11,7 @@ import {FirstRun} from './FirstRun.tsx';
 import {Masthead} from './Masthead.tsx';
 import {Mobile} from './Mobile.tsx';
 import {Trip} from './Trip.tsx';
+import {useHourNow, type HourClock} from '../clock.ts';
 import {sharedFetch} from '../shared-fetch.ts';
 import {publishedChartFiles} from '../chart-files.ts';
 import {sourceFreshness, startupDeadline} from '../landing/region-warm.ts';
@@ -134,16 +135,17 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch
   }
 }
 
-/** The shell; `now` fixes the clock the dock, the window and the day chips read (tests pass a date). The trip dialogs keep their place across layouts. */
-export function App({now = new Date()}: {now?: Date} = {}) {
+/** The shell; the dock, the window, the day chips and the map stage read one ticking hour clock (web/clock.ts); `now` fixes that clock instead (tests pass a date), `clock` swaps it. The trip dialogs keep their place across layouts. */
+export function App({now: fixedNow, clock}: {now?: Date; clock?: HourClock} = {}) {
+  const now = useHourNow(fixedNow, clock);
   return (
     <>
-      {narrow.value ? <Mobile now={now} firstRun={<FirstRun />} /> : (
+      {narrow.value ? <Mobile now={now} clock={clock} firstRun={<FirstRun />} /> : (
         <div class="app" style={{gridTemplateRows: 'auto auto auto 1fr'}}>
           <Masthead />
           <CommandBar now={now} />
           <FirstAnswerLine now={now} />
-          <Desktop now={now} />
+          <Desktop now={now} clock={clock} />
           <FirstRun />
         </div>
       )}
