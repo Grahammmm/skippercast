@@ -86,6 +86,35 @@ class ParseTests(TestCase):
         with self.assertRaisesRegex(ValueError, "reference system"):
             bh.parse({**self.payload, "spatialReference": {"wkid": 3857}}, 4, BINDING, FETCHED)
 
+    def test_spatial_reference_requires_integer_4326(self):
+        for wkid in (0, False, True, None, "", "4326", 4326.0, [], {}, 3857):
+            payload = {**self.payload, "spatialReference": {"wkid": wkid}}
+            with self.subTest(wkid=wkid), self.assertRaisesRegex(ValueError, "^Unexpected beach coordinate reference system$"):
+                bh.parse(payload, 4, BINDING, FETCHED)
+        for declaration in ({}, {"latestWkid": 4326}):  # empty object or the key missing from an object
+            with self.subTest(declaration=declaration), self.assertRaisesRegex(ValueError, "^Unexpected beach coordinate reference system$"):
+                bh.parse({**self.payload, "spatialReference": declaration}, 4, BINDING, FETCHED)
+
+    def test_latest_wkid_must_agree_with_wkid(self):
+        expected = bh.parse(self.payload, 4, BINDING, FETCHED)
+        for latest in (3857, 0, False, None, "4326", 4326.0, [], {}):
+            payload = {**self.payload, "spatialReference": {"wkid": 4326, "latestWkid": latest}}
+            with self.subTest(latest=latest), self.assertRaisesRegex(ValueError, "^Unexpected beach coordinate reference system$"):
+                bh.parse(payload, 4, BINDING, FETCHED)
+        with self.assertRaisesRegex(ValueError, "^Unexpected beach coordinate reference system$"):
+            bh.parse({**self.payload, "spatialReference": {"latestWkid": 4326}}, 4, BINDING, FETCHED)
+        for declaration in ({"wkid": 4326, "latestWkid": 4326}, {"wkid": 4326}):
+            with self.subTest(declaration=declaration):
+                self.assertEqual(bh.parse({**self.payload, "spatialReference": declaration}, 4, BINDING, FETCHED), expected)
+
+    def test_absent_spatial_reference_compatibility(self):
+        expected = bh.parse(self.payload, 4, BINDING, FETCHED)
+        absent = {k: v for k, v in self.payload.items() if k != "spatialReference"}
+        self.assertEqual(bh.parse(absent, 4, BINDING, FETCHED), expected)
+        self.assertEqual(bh.parse({**self.payload, "spatialReference": None}, 4, BINDING, FETCHED), expected)
+        with self.assertRaisesRegex(ValueError, "reference system"):  # an explicitly empty object is not an absent one
+            bh.parse({**self.payload, "spatialReference": {}}, 4, BINDING, FETCHED)
+
     def test_out_of_county_or_missing_geometry_is_rejected(self):
         for geometry in ({"x": -118.0, "y": 34.0}, {"x": -120.6, "y": 35.9}, {"x": -13_440_000.0, "y": 4_200_000.0},
                          {"x": True, "y": 35.3}, {"x": -120.8}, None):
@@ -157,6 +186,22 @@ class CollectTests(TestCase):
                 with self.assertRaisesRegex(ValueError, "reference system"):
                     bh.parse(payload, 4, BINDING, FETCHED)
                 self.assert_published_error(payload)
+
+    def test_malformed_crs_publishes_no_rows(self):
+        families = [{"wkid": w} for w in (0, False, True, None, "", "4326", 4326.0, [], {}, 3857)]
+        families += [{}, {"latestWkid": 4326}]
+        families += [{"wkid": 4326, "latestWkid": v} for v in (3857, 0, False, None, "4326", 4326.0, [], {})]
+        for declaration in families:
+            payload = {**fixture("query.json"), "spatialReference": declaration}
+            with self.subTest(spatialReference=declaration):
+                feed = bh.collect("morro-bay", FakeSession(routes(query=payload)), NOW)
+                self.assertEqual(feed["waterQuality"], [])
+                self.assertEqual(feed["sources"][0]["outcome"], "error")
+                self.assertEqual(feed["sources"][0]["error"], "Unexpected beach coordinate reference system")
+                self.assert_published_error(payload)
+        for declaration in ({"wkid": 4326, "latestWkid": 4326}, {"wkid": 4326}, None):  # valid controls stay ok
+            feed = bh.collect("morro-bay", FakeSession(routes(query={**fixture("query.json"), "spatialReference": declaration})), NOW)
+            self.assertEqual((len(feed["waterQuality"]), feed["sources"][0]["outcome"]), (4, "ok"))
 
     def test_unbound_region_and_unreviewed_host(self):
         self.assertIsNone(bh.collect("crescent-city", FakeSession({}), NOW))

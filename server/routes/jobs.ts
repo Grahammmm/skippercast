@@ -12,7 +12,7 @@ export const jobs = new Hono<AppEnv>();
 jobs.post('/api/jobs/check', async c => {
   const token = c.req.header('Authorization')?.replace(/^Bearer /, '');
   const claims = await verifyJobToken(token, deployment); if (!claims) return json({error: 'Unauthorized'}, 401);
-  const input = await body(c.req.raw), cursor = input.cursor || ''; if (typeof cursor !== 'string' || cursor.length > 50) throw new ClientError('invalid cursor');
+  const input = await body(c.req.raw), cursor = Object.hasOwn(input, 'cursor') ? input.cursor : ''; if (typeof cursor !== 'string' || cursor.length > 50) throw new ClientError('invalid cursor');
   await budget(c.env, 'job:' + claims.jti);
   return json(await checkTrips(c.env, cursor));
 });

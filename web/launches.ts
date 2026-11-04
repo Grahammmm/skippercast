@@ -34,14 +34,17 @@ export async function loadLaunchPoints(region: string, page: string = location.h
   latest = region;
   let read = asked.get(region);
   if (!read) {
-    // A thrown fetch, 429 or 5xx is not remembered, so the next visit asks again; a 404 or invalid file is.
+    // A thrown fetch, 429, 5xx or a response body that dies in transit is not remembered, so the next visit
+    // asks again; a 404, malformed JSON (SyntaxError) or an invalid file is.
     let transient = false;
     const mine = read = (async (): Promise<LaunchPoint[]> => {
       let r: Response;
       try { r = await fetchFn(new URL(`regions/${encodeURIComponent(region)}/launch-points.json`, page).href); } catch { transient = true; return []; }
       transient = r.status === 429 || (r.status >= 500 && r.status <= 599);
-      if (r.ok) try { return parseLaunchPoints(await r.json(), region); } catch { /* invalid: the harbor */ }
-      return [];
+      if (!r.ok) return [];
+      let json: unknown;
+      try { json = await r.json(); } catch (e) { transient = !(e instanceof SyntaxError); return []; }
+      try { return parseLaunchPoints(json, region); } catch { return []; /* invalid: the harbor */ }
     })();
     asked.set(region, mine);
     // Forget only this read: a newer one (after a reset) stays.

@@ -60,6 +60,10 @@ def _number(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
+def _is_wkid_4326(value):
+    return isinstance(value, int) and not isinstance(value, bool) and value == 4326
+
+
 def _text(value):
     return value.strip() if isinstance(value, str) and value.strip() else None
 
@@ -82,11 +86,11 @@ def parse(payload, expected_count, binding, fetched_at):
             or not isinstance(expected_count, int) or expected_count <= 0 or len(features) != expected_count):
         raise ValueError("Incomplete beach water-quality response")
     spatial_reference = payload.get("spatialReference")
-    if spatial_reference is not None and not isinstance(spatial_reference, dict):
-        raise ValueError("Unexpected beach coordinate reference system")
-    wkid = (spatial_reference or {}).get("wkid")
-    if wkid and wkid != 4326:
-        raise ValueError("Unexpected beach coordinate reference system")
+    if spatial_reference is not None:
+        # An explicit declaration must say integer 4326 (wkid, and latestWkid when present); nothing is coerced or guessed.
+        if (not isinstance(spatial_reference, dict) or not _is_wkid_4326(spatial_reference.get("wkid"))
+                or ("latestWkid" in spatial_reference and not _is_wkid_4326(spatial_reference["latestWkid"]))):
+            raise ValueError("Unexpected beach coordinate reference system")
     (west, south), (east, north) = binding["bounds"]
     rows, seen = [], set()
     for feature in features:
