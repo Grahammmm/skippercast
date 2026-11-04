@@ -48,8 +48,10 @@ function saveLength(value: string, storage: StoreStorage | null): boolean {
   if (!storage) throw new Error('no storage');
   const name = `${loa} ft boat`;
   let saved: {boat: Record<string, unknown>} | null = null;
+  // A failed read must not look like an empty store: let it throw, so the saved boat is never overwritten.
+  const raw = storage.getItem(BOAT_KEY);
   try {
-    const stored = JSON.parse(storage.getItem(BOAT_KEY) || 'null');
+    const stored = JSON.parse(raw || 'null');
     if (stored && stored.schema_version === 1 && stored.boat && typeof stored.boat === 'object') saved = stored;
   } catch { saved = null; }
   const next = saved
