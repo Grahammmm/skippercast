@@ -53,8 +53,8 @@ export interface ShoreStatus {
 }
 
 const time = (s: string): number => { const t = Date.parse(s); return Number.isFinite(t) ? t : -Infinity; };
-const day = (s: string): string => Number.isFinite(Date.parse(s))
-  ? new Date(s).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: DEFAULT_ZONE}) : 'date unknown';
+const day = (s: string, timeZone: string = DEFAULT_ZONE): string => Number.isFinite(Date.parse(s))
+  ? new Date(s).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone}) : 'date unknown';
 
 /** Whether the run may be shown at all: its source review has not expired (the terrain's own rule). */
 export const shoreShown = (run: Pick<ShoreRunClocks, 'reviewExpiresAt'>, now: number): boolean => time(run.reviewExpiresAt) > now;
@@ -135,13 +135,13 @@ export function nextShoreChange(report: ShoreReportPart & {readonly alerts?: rea
 }
 
 /** "review until Oct 10, 2026", or "review expired Oct 10, 2026" once that date has passed: a lapsed review is said, never shown as current. */
-const until = (expires: string, now: number): string =>
-  Number.isFinite(Date.parse(expires)) ? `review ${time(expires) > now ? 'until' : 'expired'} ${day(expires)}` : 'review date unknown';
+const until = (expires: string, now: number, tz: string): string =>
+  Number.isFinite(Date.parse(expires)) ? `review ${time(expires) > now ? 'until' : 'expired'} ${day(expires, tz)}` : 'review date unknown';
 
-/** The review dates the card shows at `now`. */
-export function shoreReviewLines(run: ShoreRunClocks, now = Date.now()): string {
-  return `Access checked ${day(run.accessReviewedAt)}, ${until(run.accessReviewExpiresAt, now)} · `
-    + `rules checked ${day(run.legalReviewedAt)}, ${until(run.legalReviewExpiresAt, now)} · source ${until(run.reviewExpiresAt, now)}`;
+/** The review dates the card shows at `now`, as calendar days in `tz` (the region's zone; Pacific by default). Expiry compares instants, never zones. */
+export function shoreReviewLines(run: ShoreRunClocks, now = Date.now(), tz: string = DEFAULT_ZONE): string {
+  return `Access checked ${day(run.accessReviewedAt, tz)}, ${until(run.accessReviewExpiresAt, now, tz)} · `
+    + `rules checked ${day(run.legalReviewedAt, tz)}, ${until(run.legalReviewExpiresAt, now, tz)} · source ${until(run.reviewExpiresAt, now, tz)}`;
 }
 
 export interface ShoreGuidance {readonly text: string; readonly href: string; readonly label: string}

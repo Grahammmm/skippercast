@@ -15,6 +15,7 @@ import {SEAFLOOR_CELLS} from '../web/map/seafloor.ts';
 import {
   ACCESS_HIT, ACCESS_PIN, ACCESS_SOURCE, RECHECK_MS, RUNS_HIT, RUNS_LINE, RUNS_SOURCE, createShore, insideAreas, runMark, shoreCollections, shoreOverlay, shoreState, shoreURL, shownRuns,
 } from '../web/map/shore.ts';
+import {DEFAULT_ZONE, regionInfo} from '../web/app/region-info.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
 
 const ROOT = new URL('..', import.meta.url);
@@ -342,4 +343,111 @@ test('SC2222-05: the pin stroke uses the run line colour rule and takes both col
   const swapped = shoreOverlay(readPalette(name => `dark(${name})`), shoreCollections([]));
   assert.deepEqual(swapped.layers.find(l => l.id === ACCESS_PIN).paint['circle-stroke-color'], ['case', ['==', ['get', 'held'], 1], 'dark(muted)', 'dark(amber)']);
   assert.deepEqual(shoreCollections([]).access.features, [], 'no runs: no features, no error');
+});
+
+// RF2219-3: the review dates are calendar days in the selected region's zone; expiry stays an instant comparison.
+const LA = DEFAULT_ZONE;
+/** Checked just after UTC midnight (still the evening before in Pacific), expiring ten days later. */
+const NEAR_MIDNIGHT = {accessReviewedAt: '2026-10-10T03:30:00Z', accessReviewExpiresAt: '2026-10-20T03:30:00Z', legalReviewedAt: '2026-10-10T03:30:00Z',
+  legalReviewExpiresAt: '2026-10-20T03:30:00Z', reviewExpiresAt: '2026-11-10T03:30:00Z'};
+
+test('review dates: omitted zone preserves the Pacific baseline', () => {
+  const r = {accessReviewedAt: '2026-10-03T02:48:10Z', accessReviewExpiresAt: '2026-10-10T02:48:10Z', legalReviewedAt: '2026-10-03T02:43:19Z',
+    legalReviewExpiresAt: '2026-10-04T02:43:19Z', reviewExpiresAt: '2026-11-02T02:48:10Z'};
+  const now = Date.parse('2026-10-12T13:00:00Z');
+  assert.equal(shoreReviewLines(r, now),
+    'Access checked Oct 2, 2026, review expired Oct 9, 2026 · rules checked Oct 2, 2026, review expired Oct 3, 2026 · source review until Nov 1, 2026');
+  assert.equal(shoreReviewLines(r, now, DEFAULT_ZONE), shoreReviewLines(r, now));
+  assert.equal(DEFAULT_ZONE, 'America/Los_Angeles');
+});
+
+test('review dates: explicit zone changes calendar labels, never expiry', () => {
+  const now = Date.parse('2026-10-12T00:00:00Z');
+  const pacific = shoreReviewLines(NEAR_MIDNIGHT, now, LA), utc = shoreReviewLines(NEAR_MIDNIGHT, now, 'UTC');
+  assert.equal(pacific, 'Access checked Oct 9, 2026, review until Oct 19, 2026 · rules checked Oct 9, 2026, review until Oct 19, 2026 · source review until Nov 9, 2026');
+  assert.equal(utc, 'Access checked Oct 10, 2026, review until Oct 20, 2026 · rules checked Oct 10, 2026, review until Oct 20, 2026 · source review until Nov 10, 2026');
+  assert.equal(shoreReviewLines(NEAR_MIDNIGHT, now), pacific, 'the default is Pacific');
+  // The same instants are expired or current identically whichever zone names the day.
+  for (const tz of [LA, 'UTC', 'Pacific/Auckland']) {
+    assert.equal(shoreReviewLines(NEAR_MIDNIGHT, Date.parse('2026-10-20T03:29:59.999Z'), tz).match(/review until/g).length, 3, tz);
+    assert.equal((shoreReviewLines(NEAR_MIDNIGHT, Date.parse('2026-10-20T03:30:00Z'), tz).match(/review expired/g) ?? []).length, 2, tz);
+  }
+  assert.equal(shoreShown(NEAR_MIDNIGHT, now), true);
+});
+
+test('review dates: DST repeats do not alter expiry', () => {
+  // Pacific falls back on 2026-11-01 at 09:00Z: 08:30Z and 09:30Z both read 1:30 a.m. on the wall clock.
+  const first = '2026-11-01T08:30:00Z', second = '2026-11-01T09:30:00Z', between = Date.parse('2026-11-01T09:00:00Z');
+  const run = {...NEAR_MIDNIGHT, accessReviewExpiresAt: first, legalReviewExpiresAt: second, reviewExpiresAt: second};
+  for (const tz of [LA, 'UTC']) {
+    const text = shoreReviewLines(run, between, tz);
+    assert.match(text, /review expired Nov 1, 2026 · rules checked .+, review until Nov 1, 2026 · source review until Nov 1, 2026$/, tz);
+  }
+  for (const tz of [LA, 'UTC']) {
+    assert.match(shoreReviewLines(run, Date.parse(first), tz), /Access checked .+, review expired Nov 1, 2026/, 'equality at expiry is expired ' + tz);
+    assert.match(shoreReviewLines(run, Date.parse(first) - 1, tz), /Access checked .+, review until Nov 1, 2026/, tz);
+  }
+});
+
+test('review dates: invalid clock remains unknown', () => {
+  const bad = {accessReviewedAt: 'nope', accessReviewExpiresAt: '', legalReviewedAt: 'also nope', legalReviewExpiresAt: 'x', reviewExpiresAt: 'y'};
+  for (const tz of [LA, 'UTC']) {
+    assert.equal(shoreReviewLines(bad, NOW, tz),
+      'Access checked date unknown, review date unknown · rules checked date unknown, review date unknown · source review date unknown', tz);
+  }
+});
+
+/** createShore on Morro Bay serving the committed package with its first run's clocks replaced; returns its pick and the fetch count. */
+async function pickedShore(t, runClocks, {now = () => NOW} = {}) {
+  globalThis.location = {href: 'https://s.test/map?region=morro-bay&profile=shore'};
+  configureStore({v2: true, storage: null});
+  syncFromURL(location.href);
+  const first = {...PACKAGE.features[0], properties: {...PACKAGE.features[0].properties, ...runClocks}};
+  const data = {...PACKAGE, features: [first, ...PACKAGE.features.slice(1)]};
+  const asked = [];
+  const fetchFn = async url => { asked.push(url); return {ok: true, json: async () => data}; };
+  const before = regionInfo.value;
+  markScreen.value = READY;
+  const shore = createShore({engine: signal(null), fetchFn, page: () => location.href, palette: () => sentinel, now, report: signal(null)});
+  t.after(() => { shore.destroy(); markScreen.value = CHECKING; regionInfo.value = before; });
+  await flush(); await flush();
+  assert.equal(asked.length, 1);
+  return {asked, id: first.id, shore, card: () => shore.pick.mark(RUNS_HIT, {id: first.id}).reading};
+}
+const meta = (id, timezone) => ({id, name: id, center: [35.3, -120.8], timezone});
+
+test('shore pick: matching region zone is read at selection time', async t => {
+  const {asked, card} = await pickedShore(t, NEAR_MIDNIGHT);
+  regionInfo.value = null;
+  assert.match(card(), /Access checked Oct 9, 2026, review until Oct 19, 2026/, 'no metadata: Pacific');
+  regionInfo.value = meta('morro-bay', 'UTC');
+  assert.match(card(), /Access checked Oct 10, 2026, review until Oct 20, 2026 · rules checked Oct 10, 2026/);
+  regionInfo.value = meta('morro-bay', LA);
+  assert.match(card(), /Access checked Oct 9, 2026, review until Oct 19, 2026/, 'the next pick follows the changed metadata');
+  assert.equal(asked.length, 1, 'without another asset fetch');
+  assert.equal(shoreReviewLines(NEAR_MIDNIGHT, NOW).includes('Oct 9, 2026'), true, 'the pure default stays Pacific');
+});
+
+test('shore pick: absent and other-region metadata use fallback', async t => {
+  const {card} = await pickedShore(t, NEAR_MIDNIGHT);
+  regionInfo.value = null;
+  const absent = card();
+  regionInfo.value = meta('monterey-bay', 'UTC');
+  assert.equal(card(), absent, 'another region carrying UTC never lends its zone');
+  assert.match(absent, /Access checked Oct 9, 2026/);
+  regionInfo.value = meta('morro-bay', 'UTC');
+  assert.notEqual(card(), absent, 'while the matching region does');
+});
+
+test('shore pick: injected clock governs expiry text', async t => {
+  let clock = NOW;
+  const near = {...NEAR_MIDNIGHT, accessReviewExpiresAt: iso(NOW + HOUR), legalReviewExpiresAt: iso(NOW + 3 * HOUR), reviewExpiresAt: iso(NOW + 30 * 24 * HOUR)};
+  const {card, shore} = await pickedShore(t, near, {now: () => clock});
+  regionInfo.value = null;
+  assert.match(card(), /Access checked .+, review until .+ · rules checked .+, review until .+ · source review until/, 'before both expiries (host clock is later)');
+  clock = NOW + 2 * HOUR;
+  assert.match(card(), /Access checked .+, review expired .+ · rules checked .+, review until/);
+  clock = NOW + 3 * HOUR;
+  assert.match(card(), /review expired .+ · rules checked .+, review expired .+ · source review until/, 'equality at expiry is expired');
+  assert.equal(shore.pick.mark(RUNS_HIT, {id: 'no-such-run'}), null, 'an unknown mark id still returns null');
 });
