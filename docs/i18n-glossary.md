@@ -42,8 +42,8 @@ app-written copy.
 | English term / context | Canonical Spanish | Catalogue IDs at the checked revision |
 | --- | --- | --- |
 | Comfortable (verdict label) | `Cómodo` | `brief.verdict.comfortable`, `brief.basis.comfort`, `brief.basis.profile` |
-| Marginal (verdict label) | `Marginal` | `brief.verdict.marginal`, `brief.basis.comfort`, `verdict.held`, `fa.marginal` (divergent, see section 2) |
-| Rough (verdict label; "too rough" in the first answer) | `Agitado` | `brief.verdict.rough`, `brief.basis.comfort`, `brief.basis.profile`, `fa.no` (divergent, see section 2) |
+| Marginal (verdict label) | `Marginal` | `brief.verdict.marginal`, `brief.basis.comfort`, `verdict.held`, `fa.marginal` (resolved by SC1352-10, see section 2) |
+| Rough (verdict label; "too rough" in the first answer) | `Agitado` | `brief.verdict.rough`, `brief.basis.comfort`, `brief.basis.profile`, `fa.no` (resolved by SC1352-10, see section 2) |
 | Unknown (verdict label; never Comfortable) | `Desconocido` | `brief.verdict.unknown` |
 | not checked | `no revisado` | `brief.gaps.unchecked` |
 | inside (protected area) | `dentro de un área protegida` | Not in the catalogue at the checked revision. `rules.depth.inside` is a different phrase, the depth line: `Dentro de la línea de 50 brazas` |
@@ -132,8 +132,15 @@ sentence mechanically.
 
 | ID | Catalogue line | English | Current Spanish (verbatim) | Preferred term |
 | --- | --- | --- | --- | --- |
-| `fa.marginal` | 8 | `Marginal - {day} is a borderline day to fish.` | `Dudoso - {day} es un día límite para pescar.` | `Marginal` |
-| `fa.no` | 9 | `No - {day} looks too rough to fish.` | `No - {day} el mar está demasiado picado para pescar.` | `agitado` (the catalogue word for the English "Choppy" is `picado`, `verdict.band.choppy`) |
+| `fa.marginal` | 8 | `Marginal - {day} is a borderline day to fish.` | Historical: `Dudoso - {day} es un día límite para pescar.` | `Marginal` |
+| `fa.no` | 9 | `No - {day} looks too rough to fish.` | Historical: `No - {day} el mar está demasiado picado para pescar.` | `agitado` (the catalogue word for the English "Choppy" is `picado`, `verdict.band.choppy`) |
+
+Resolved by `[SC1352-10]` (PR title: "Align Spanish first-answer verdict terms"):
+
+- `fa.marginal` now reads `Marginal - {day} es un día límite para pescar.`
+- `fa.no` now reads `No - {day} el mar está demasiado agitado para pescar.`
+
+The English values are unchanged. `verdict.band.choppy` stays `picado`.
 
 The verdict labels are at lines 48 to 50 (`brief.verdict.comfortable`,
 `brief.verdict.marginal`, `brief.verdict.rough`).
