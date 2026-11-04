@@ -8,3 +8,5 @@
 export const atlasMarksURL = (region: string): string => `regions/${encodeURIComponent(region)}/atlas-marks.json`;
 /** Each species plan's profile entry without the plans' feature geometry: what the target list reads. */
 export const planIndexURL = (region: string): string => `regions/${encodeURIComponent(region)}/search-plan-index.json`;
+/** The region's regulations registry cut to its own species, their sources and daily checks: what the legality line (web/regs.ts loadRegs) reads first. */
+export const regsStartupURL = (region: string): string => `regions/${encodeURIComponent(region)}/regulations-startup.json`;

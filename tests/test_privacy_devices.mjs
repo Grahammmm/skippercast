@@ -42,7 +42,7 @@ test('two devices are listed newest first as host and date only; no path, id, p2
   for (const s of [fcm, apple]) for (const secret of [s.id, s.path, s.p256dh, s.auth]) assert.ok(!text.includes(secret), `export leaks ${secret.slice(0, 12)}`);
   assert.ok(!text.includes('/fcm/send'), 'endpoint path prefix must not appear');
   assert.ok(!/"(endpoint|p256dh|auth|id)"\s*:/.test(JSON.stringify(data.devices)), 'device rows carry only push_service and created_at');
-  assert.deepEqual(Object.keys(data), ['account', 'trips', 'feedback', 'events', 'devices', 'catch_log'], 'devices follows events; catch_log is the only added key');
+  assert.deepEqual(Object.keys(data), ['account', 'trips', 'feedback', 'events', 'devices', 'catch_log', 'saved_spots'], 'devices follows events; catch_log and saved_spots are the only added keys');
   sql.close();
 });
 
