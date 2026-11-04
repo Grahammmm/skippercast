@@ -1,6 +1,6 @@
 # #422 front-end review follow-ups re-checked at main (2026-11-04)
 
-- **Checked main:** `b7756837e85506ce3a45ff7e485c238d67824167` (builder clone, 2026-11-04). At the same time `git diff --stat b7756837… origin/main` over every path cited below was empty, so the citations also hold for the newer `origin/main` (`d6a5eeabdc9b518ba5e55806039c581b5068aaee`) the PR is merged with.
+- **Checked main:** `d19caded38571feb1a941395bbc9af3493329716` (2026-11-04), merged into this PR by merge commit `d907471245991cd1945a60aa8071dea6e2f5090c` (second parent = checked main). Refreshed from the original inspection at `b7756837e85506ce3a45ff7e485c238d67824167`: compared all explicitly cited repository files and the `dist/vendor/` inventory between those main revisions; only `scripts/check_web.py` changed, and its P14.2 citation is updated below. The original PR head `837476f1…` had merged `7453a304…`, not the previously claimed `d6a5eeab…`.
 - **Issue:** https://github.com/Grahammmm/skippercast/issues/422 (OPEN, 16 unticked body bullets). Source retrieval date 2026-11-04; the issue and its comments are historical (2026-10).
 - **Read-only acquisition:** `gh issue view 422 --repo Grahammmm/skippercast` and `... --comments`. Nothing was edited or closed.
 - **Scope:** the 16 original body bullets, every nested or compound request counted as its own child clause.
@@ -23,7 +23,7 @@
 
 | Clause | Original concern | Status | Current evidence | Reason / unit title |
 | --- | --- | --- | --- | --- |
-| P02.1 (`SC-FE422-body-02-01`) | Escape on the open-menu trigger does nothing | DONE | `web/app/AccountMenu.tsx:76-78,99` (Escape handled on the root, trigger included); `e2e/v2-account.spec.ts:93-108`, `:110-125`. | — |
+| P02.1 (`SC-FE422-body-02-01`) | Escape on the open-menu trigger does nothing | DONE | `web/app/AccountMenu.tsx:76-78,89-91` (Escape handler, root `onKeyDown`, and its child trigger); `e2e/v2-account.spec.ts:93-108`, `:110-125`. | — |
 | P02.2 (`SC-FE422-body-02-02`) | Comment claims outside-click returns focus | DONE | `web/app/AccountMenu.tsx:5-7` now says outside click/focus closes "without moving focus back"; behaviour at `:53-60`. | Comment corrected. |
 | P02.3 (`SC-FE422-body-02-03`) | Load the SimpleWebAuthn UMD on demand | STILL OPEN | `dist/app.html:30` loads `vendor/simplewebauthn-browser-14.0.0/index.umd.min.js` with `defer` on every page; `dist/account.js:60` reads `globalThis.SimpleWebAuthnBrowser`; `tests/test_app_shell.mjs:761` pins it as the only vendored script. | **FE-50: load the SimpleWebAuthn UMD only when the passkey dialog opens** |
 | P02.4 (`SC-FE422-body-02-04`) | Menu remount on mobile layers toggle refetches `/api/session` | DONE | `web/account.ts:38-61` (`ensureSession` coalesces and reuses a settled session); `web/app/AccountMenu.tsx:49`; `tests/test_account_menu.mjs:25-39,105`. | — |
@@ -61,7 +61,7 @@
 | Clause | Original concern | Status | Current evidence | Reason / unit title |
 | --- | --- | --- | --- | --- |
 | P07.1 | Cookie mode re-saved when stored profile is invalid (v1 only when absent): test it | DONE | `web/ports.ts:183-195` (`resolveHome`; an invalid stored profile counts as unset); `tests/test_ports.mjs:126-137` runs invalid / missing / valid stored profile. | Behaviour is pinned by a test; whether v2 should match v1 exactly is a product choice and not reopened here. |
-| P07.2 | Choosing a port drops `place` and `habitat`: pin it | DONE | `web/ports.ts:29` (`AREA_KEYS`), `:249`; `tests/test_ports.mjs:108-115`; v1 side `tests/test_home_port.mjs:68-75`. | — |
+| P07.2 | Choosing a port drops `place` and `habitat`: pin it | DONE | `web/ports.ts:29` (`AREA_KEYS`), `:108-117` (`appURL` deletes each area key at `:111`; `portURL` calls it at `:116-117`); `tests/test_ports.mjs:108-115`; v1 side `tests/test_home_port.mjs:68-75`. | — |
 
 ### P08 FE-06 mobile (#362) — DONE (2 of 2)
 
@@ -100,7 +100,7 @@
 | P12.2 (`SC-FE422-body-12-02`) | `DOCK_ZONE` duplicated App's zone | DONE | No `DOCK_ZONE` remains under `web/`; `web/app/TimeDock.tsx:73` uses the shared `zone()`. | — |
 | P12.3 (`SC-FE422-body-12-03`) | Dock reads App's last-render `now`; stage ticks its own clock | STILL OPEN | `web/app/Desktop.tsx:61,67` passes the render-time `now` (`= new Date()`) to `TimeDock`; the stage keeps a separate hour clock `web/map/stage.ts:280-287`. Play uses a fresh clock (`TimeDock.tsx:79-83`). | **FE-12: drive the time dock and the stage from one ticking clock** |
 | P12.4a (`SC-FE422-body-12-04`, part 1) | e2e clicks the day chip through `evaluate` (skips actionability) | STILL OPEN | `e2e/v2-shell.spec.ts:107` still uses `.nth(1).evaluate(b => b.click())`. | **FE-12: click the day chip in v2-shell e2e with a real actionable click** |
-| P12.4b (`SC-FE422-body-12-04`, part 2) | `v2-shell` dropped the slider value check | STILL OPEN — not verified | `e2e/v2-shell.spec.ts:109-122` asserts URL and readout text after End/Home but never `toHaveValue` on the Hour slider after the change; part 1 and 2 are one proposed unit. | Same unit as P12.4a (add the slider value assertion). |
+| P12.4b (`SC-FE422-body-12-04`, part 2) | `v2-shell` dropped the slider value check | STILL OPEN | `e2e/v2-shell.spec.ts:109-122` asserts URL and readout text after End/Home but never `toHaveValue` on the Hour slider after the change; this missing assertion is verified by source inspection, not an unsettled runtime question. Parts 1 and 2 are one proposed unit. | Same unit as P12.4a (add the slider value assertion). |
 | P12.5 (`SC-FE422-body-12-05`) | Next hour / Play stay enabled on the last hour | DONE | `web/app/TimeDock.tsx:94` (`advanceDisabled={nextHour(...) === null}`), `web/hour.ts:111-114`, `web/ui/Dock.tsx:57-58`; `tests/test_ui_icons.mjs:154-163`. | — |
 | P12.6 (`SC-FE422-body-12-06`) | No unit render test for `stepOnly` | DONE | `tests/test_ui_icons.mjs:154-163` renders `stepOnly` true and false. | — |
 
@@ -117,7 +117,7 @@
 | Clause | Original concern | Status | Current evidence | Reason / unit title |
 | --- | --- | --- | --- | --- |
 | P14.1 (`SC-FE422-body-14-01`) | Dynamic-only guard for `maplibre-gl` and `pmtiles` | DONE | `scripts/check_client.mjs:157-184` (both packages, source and chunk names); `tests/test_check_client_graph.mjs:36-61` runs it for each package; dynamic-only subtrees allowed. | Sampled. |
-| P14.2 (`SC-FE422-body-14-02`) | `licenses.html` lists stale MapLibre; vendored copy unused | DONE | `dist/licenses.html:36` names 6.16.0 = `package.json:23`; `scripts/check_web.py:~311-326` fails when licences and `package.json` pins differ; `dist/vendor/` holds only licence texts for MapLibre/PMTiles. | — |
+| P14.2 (`SC-FE422-body-14-02`) | `licenses.html` lists stale MapLibre; vendored copy unused | DONE | `dist/licenses.html:36` names 6.16.0 = `package.json:23`; `scripts/check_web.py:317-330` (`check_bundled_licence_versions` at `:320-330`) fails when licences and `package.json` pins differ. MapLibre/PMTiles have only licence texts in `dist/vendor/`, not unused JS copies; that directory also contains `SUNCALC-LICENSE.txt`, `THREE-LICENSE.txt`, and the `simplewebauthn-browser-14.0.0/` JS bundle cited in P02.3. | — |
 | P14.3 (`SC-FE422-body-14-03`) | One failing ENC tile marks "Chart detail" unavailable until destroy | DONE | `web/map/chart.ts:198-200` (a loaded ENC tile clears the mark); `tests/test_map_layers.mjs:519-568`. | — |
 | P14.4 (`SC-FE422-body-14-04`) | Precache budget disposition | DONE | `scripts/check_client.mjs:136-153` enforces raw `install` and `pack_shell` budgets from `scripts/startup-budget.json` (`precache`). | A budget exists and is enforced; the file records `pack_shell_raw_max` was raised 10% by BF-saved-spots, so the ~1.7 MB growth is bounded, not reversed. |
 
@@ -175,14 +175,14 @@ No queue ids, owners or schedules are assigned and no cards were created.
 ## Limitations
 
 - Source and test reading only. No browser, e2e, tile, auth, feed or fleet call was run; the e2e citations (P02.1, P08, P12.4) are read, not executed.
-- Line numbers are for `b7756837…`; they were unchanged by `origin/main` at merge time for the cited paths.
+- Line numbers are for checked main `d19caded38571feb1a941395bbc9af3493329716`, the second parent of merge `d907471245991cd1945a60aa8071dea6e2f5090c`. All explicitly cited repository files and the `dist/vendor/` inventory except `scripts/check_web.py` were unchanged from `b7756837…`; that file's shifted licence-check lines were re-read and refreshed. Account-menu and port citations were also corrected against checked main. A later builder main requires another cited-path comparison and refresh; this report makes no claim about future main revisions.
 - `docs/audit/status-index.json` was read as a lead only and is untouched; its flags (e.g. stale integration-pending label for ENC) were not copied.
 - #422 comments were searched for the open items (UMD, HEAD probe, `setOverlay` spacing, day-chip e2e) and contain no owner disposition for them.
-- "Not verified" rows (P10.3, P12.4b) could not be settled offline from the inspected files; they are titles to obtain the missing evidence, not defects.
+- P10.3's coarse-fill-over-relief runtime behaviour could not be settled offline and needs rendered evidence; its missing host disclosure is visible in source. P12.4b is a confirmed missing test assertion from source inspection, not a "not verified" row; no browser run is needed to establish that absence.
 
 ## Local commands and results
 
-Recorded in the PR body (check_repository.py, the two named unit suites, `git diff --check`).
+For this correction pass, `python3 ~/agent-work/bin/sc-ci-local-check.py .` returned `PASS layout contract`, `PASS repository checks`, `ALL PASS`. The five RETURN corrections, the cited-file comparison and the inventory totals were also checked offline against the pinned main above. No browser tests were executed for this documentation-only correction. Final whitespace and pre-push results are recorded in the review handoff.
 
 ## Operator-only closing note
 
