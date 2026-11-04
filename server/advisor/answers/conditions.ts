@@ -138,7 +138,7 @@ export interface DayConditions {
   seas_ft: [number, number] | null; sea_period_s: number | null;
   swell_ft: [number, number] | null; swell_period_s: number | null; swell_from: string | null;
   comfort: string; comfort_for: string; models_agree: boolean | null; advisory?: string;
-  /** Why a comfort word was held above what the score alone says: Bumpy for a long-period swell hour, Unknown for an old model run; absent when nothing holds it. */
+  /** Why a comfort word was held above what the score alone says: Bumpy for a long-period swell hour, for listed hours with no forecast or for an alert check that is unavailable (joined with '; ' in that order), Unknown for an old model run; absent when nothing holds it. */
   comfort_held?: string;
 }
 
@@ -150,8 +150,17 @@ export function withForecastClock(day: DayConditions, clock: ForecastClock): Day
     wind_kt: null, wind_from: null, gusts_kt: null, seas_ft: null, sea_period_s: null, swell_ft: null, swell_period_s: null, swell_from: null, comfort: COMFORT_WORD.unknown, models_agree: null};
 }
 
-/** The fishing window at a forecast point on one local date; `boat` (requestBoat) rates it for the caller's boat, else the reference boat; a boating advisory overlapping the window (`advisories`) makes an available day 'rough', as the brief does. */
-export function windowConditions(feed: Feed, region: Region, pointId: string, date: string, window: Window = WINDOW, boat: BoatFactors | null = null, advisories: readonly {event: string}[] = []): DayConditions {
+/** SC0237-01: the reason a Comfortable day is held when the marine alert check is incomplete (the brief's verdict.ts hold, in the advisor's Bumpy). */
+export const ALERT_CHECK_UNAVAILABLE = 'the marine alert check is unavailable';
+/** SC0237-01: the reason prefix for listed window hours that scored nothing ("N of M hours have no forecast"). */
+export const UNRATED_HOURS = /^\d+ of \d+ hours have no forecast/;
+
+/**
+ * The fishing window at a forecast point on one local date; `boat` (requestBoat) rates it for the caller's boat, else the reference boat; a boating advisory overlapping
+ * the window (`advisories`) makes an available day 'rough', as the brief does. `advisoriesChecked` says the marine alert check was complete (advisoryCheckTime !== null):
+ * true is only the default for forecast-only callers, so production callers pass the real result. A Comfortable day with unrated hours or an incomplete alert check says Bumpy and names why.
+ */
+export function windowConditions(feed: Feed, region: Region, pointId: string, date: string, window: Window = WINDOW, boat: BoatFactors | null = null, advisories: readonly {event: string}[] = [], advisoriesChecked = true): DayConditions {
   const base = {date, window: `${String(window.start).padStart(2, '0')}:00-${String(window.end).padStart(2, '0')}:00`, comfort_for: boat ? OWN_BOAT_PHRASE : BOAT_PHRASE};
   const empty = (reason: string): DayConditions => ({...base, available: false, reason, wind_kt: null, wind_from: null, gusts_kt: null, seas_ft: null, sea_period_s: null,
     swell_ft: null, swell_period_s: null, swell_from: null, comfort: COMFORT_WORD.unknown, models_agree: null});
@@ -174,6 +183,9 @@ export function windowConditions(feed: Feed, region: Region, pointId: string, da
   const verdict: Verdict = rated.length ? verdictFor({conditions: Math.min(...rated)}) : 'unknown';
   // SC1952-05: the brief's long-period swell hold (verdict.ts longPeriodHour): a Comfortable day with a rated hour in the rule says Bumpy and names the hour.
   const swell = verdict === 'go' ? longPeriodHour(rows.filter(r => finite(r.score)).map(r => r.hour), region.timezone) : null;
+  // SC0237-01: the brief's thin-evidence holds (verdict.ts unrated hours, unavailable alert check), in a fixed order after the long-period reason; none for a raw Bumpy/Rough/Unknown word.
+  const unrated = rows.length - rated.length;
+  const holds = verdict === 'go' && !advisories.length ? [swell, unrated > 0 ? `${unrated} of ${rows.length} hours have no forecast` : null, advisoriesChecked ? null : ALERT_CHECK_UNAVAILABLE].filter((r): r is string => r !== null) : [];
   const agree = hours.filter(h => [h.wind, h.other_wind, h.sea, h.other_sea].every(finite));
   return {...base, available: true,
     wind_kt: range(hours.map(h => h.wind)), wind_from: compass(meanBearing(hours.map(h => h.wind_from))),
@@ -181,8 +193,8 @@ export function windowConditions(feed: Feed, region: Region, pointId: string, da
     seas_ft: range(hours.map(h => Math.max(h.sea ?? -Infinity, h.other_sea ?? -Infinity)).map(v => v === -Infinity ? null : v), 1, 'up'),
     sea_period_s: round(median(hours.map(h => h.sea_period))),
     swell_ft: range(hours.map(h => h.swell)), swell_period_s: round(median(hours.map(h => h.swell_period))), swell_from: compass(meanBearing(hours.map(h => h.swell_from))),
-    comfort: advisories.length ? COMFORT_WORD['no-go'] : swell ? COMFORT_WORD.marginal : COMFORT_WORD[verdict],
-    ...(!advisories.length && swell ? {comfort_held: swell} : {}),
+    comfort: advisories.length ? COMFORT_WORD['no-go'] : holds.length ? COMFORT_WORD.marginal : COMFORT_WORD[verdict],
+    ...(holds.length ? {comfort_held: holds.join('; ')} : {}),
     models_agree: agree.length ? agree.every(h => Math.abs(h.wind! - h.other_wind!) <= MODEL_GAP.wind && Math.abs(h.sea! - h.other_sea!) <= MODEL_GAP.sea) : null,
     ...(advisories.length ? {advisory: advisories[0]!.event} : {}),
   };
@@ -229,6 +241,22 @@ export function advisoriesFrom(daily: Feed, zones: readonly string[], from: numb
   }
   const rank = (e: string) => /gale|storm|hurricane/i.test(e) ? 0 : /small craft/i.test(e) ? 1 : /hazardous seas/i.test(e) ? 2 : 3;
   return out.sort((a, b) => rank(a.event) - rank(b.event));
+}
+
+/** Oldest required-zone check, or null unless every configured zone has complete evidence (status ok, an alerts array, a parseable checked_at). No age cutoff. */
+export function advisoryCheckTime(sources: Record<string, unknown> | undefined, zones: readonly string[]): string | null {
+  if (!zones.length) return null;
+  let oldest: string | null = null, oldestTime = Infinity;
+  for (const zone of zones) {
+    const value = sources?.[`alerts-${zone}`];
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+    const source = value as {status?: unknown; data?: {alerts?: unknown}; checked_at?: unknown};
+    if (source.status !== 'ok' || !Array.isArray(source.data?.alerts) || typeof source.checked_at !== 'string') return null;
+    const time = Date.parse(source.checked_at);
+    if (!Number.isFinite(time)) return null;
+    if (time < oldestTime) { oldestTime = time; oldest = source.checked_at; }
+  }
+  return oldest;
 }
 
 /** The zones whose alerts the daily feed checked, for a region (coastal first). */

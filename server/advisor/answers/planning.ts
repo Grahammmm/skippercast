@@ -25,7 +25,7 @@ import {landingNames, resolvePort, resolveSpecies} from './resolve.ts';
 import {regionConfig} from './regions.ts';
 import {dailyFeed, intelligenceFeed, feedReader} from './feeds.ts';
 import type {FeedReader} from './feeds.ts';
-import {advisoriesFrom, parseTripDate, regionZones, requestBoat, windowConditions, windowEpochs, withForecastClock, WINDOW, HORIZON_DAYS} from './conditions.ts';
+import {advisoriesFrom, advisoryCheckTime, parseTripDate, regionZones, requestBoat, windowConditions, windowEpochs, withForecastClock, WINDOW, HORIZON_DAYS} from './conditions.ts';
 import {forecastClock} from './forecast-clock.ts';
 import {advisorBarCheck, withBarHold} from './bar.ts';
 import type {Advisory, DayConditions, Window} from './conditions.ts';
@@ -92,22 +92,6 @@ export function leadsWithAdvisory(reply: string, events: readonly string[]): boo
 /** `boat`: optional comfort factors ({sea, wind, chopPeriod}, conditions.ts requestBoat); absent or invalid rates the reference boat. */
 export interface ConditionsInput {port: string; date?: string | null; start_hour?: unknown; end_hour?: unknown; boat?: unknown}
 
-/** Oldest required-zone check, or null unless every configured zone has complete evidence. */
-function advisoryCheckTime(sources: Record<string, unknown> | undefined, zones: readonly string[]): string | null {
-  if (!zones.length) return null;
-  let oldest: string | null = null, oldestTime = Infinity;
-  for (const zone of zones) {
-    const value = sources?.[`alerts-${zone}`];
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-    const source = value as {status?: unknown; data?: {alerts?: unknown}; checked_at?: unknown};
-    if (source.status !== 'ok' || !Array.isArray(source.data?.alerts) || typeof source.checked_at !== 'string') return null;
-    const time = Date.parse(source.checked_at);
-    if (!Number.isFinite(time)) return null;
-    if (time < oldestTime) { oldestTime = time; oldest = source.checked_at; }
-  }
-  return oldest;
-}
-
 /** get_conditions' result (04 § Tools, 06 § planning steps 1-3). Advisories before the numbers. */
 export async function tripConditions(input: ConditionsInput, opts: PlanningOptions & {read?: FeedReader}): Promise<Record<string, unknown>> {
   const resolved = resolvePort(String(input.port ?? ''), opts.contact ?? null, opts.settings);
@@ -132,7 +116,7 @@ export async function tripConditions(input: ConditionsInput, opts: PlanningOptio
   const byDay = when.dates.map(date => { const [from, to] = windowEpochs(date, tz, window); return {date, advisories: daily ? advisoriesFrom(daily, zones, from, to) : []}; });
   // SC0022-08: the brief's harbour-bar hold (bar.ts), once per day, before the clock; an unusable run is read as no forecast, so its bar is unjudged.
   const bars = byDay.map(d => advisorBarCheck({intel: clock.state === 'unusable' ? null : intel, daily, region, port, pointId, date: d.date, window}));
-  const days: DayConditions[] = byDay.map((d, i) => withForecastClock(withBarHold(windowConditions(intel, region, pointId, d.date, window, boat, d.advisories), bars[i], tz), clock));
+  const days: DayConditions[] = byDay.map((d, i) => withForecastClock(withBarHold(windowConditions(intel, region, pointId, d.date, window, boat, d.advisories, advisoriesAsOf !== null), bars[i], tz), clock));
   const [from] = windowEpochs(when.dates[0]!, tz, window), [, to] = windowEpochs(when.dates.at(-1)!, tz, window);
   const alerts = daily ? advisoriesFrom(daily, zones, from, to) : null;
   const line = alerts?.length ? advisoryLine(byDay, today, language) : null;
