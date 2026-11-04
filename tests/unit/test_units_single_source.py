@@ -1,12 +1,12 @@
 import re
 import unittest
-from pathlib import Path
 
 from skippercast.pipeline import cdip_nearshore, coast_report, ndbc_history, verification
 from skippercast.util import units
+from tests._support import ROOT
 
 NAMES = ("cdip_nearshore", "coast_report", "coast_snapshots", "ndbc_history", "verification")
-PIPELINE = Path(__file__).resolve().parents[2] / "src" / "skippercast" / "pipeline"
+PIPELINE = ROOT / "src" / "skippercast" / "pipeline"
 LITERAL = re.compile(r"3\.2808|1\.9438|0\.5144|(?<![\d.])0\.3048")
 
 
