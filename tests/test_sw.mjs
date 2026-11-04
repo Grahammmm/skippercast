@@ -352,3 +352,198 @@ test('without a v2 pack the v1 offline answers are unchanged: /map and unsaved f
   await v2Pack(worker);
   assert.equal(await (await dispatch(worker, nav('/?region=morro-bay'))).text(), 'v1 shell', 'a v2 pack never answers for the v1 shell');
 });
+
+// SC1938-01 (plan docs/plans/offline-ocean-coverage.md D8; tests 11, 13, 20): offline, a region's habitat manifest comes from
+// its committed pack unless a newer sc-data copy is complete for every layer the pack saved. Manifests and caches are synthetic.
+const REGION = 'test-coast', FEED = '/feeds/conditions/regions/', MANIFEST = `${FEED}${REGION}/habitat-dynamics.json`;
+const SST = 'sst-analysis', WCOFS = 'wcofs-surface-forecast';
+const T0 = '2026-10-19T10:00:00.000Z', T1 = '2026-10-20T10:00:00.000Z', T2 = '2026-10-21T10:00:00.000Z';
+const tileName = (layer, tag, k) => `habitat-tiles/${layer}-${tag}-${k}.json`;
+/** A manifest in the pipeline's shape (only what the worker reads): `layers` maps a layer id to its tile count. */
+const manifestBody = (tag, layers, {status = 'ok', pad = 0} = {}) => ({schema_version: 1, region_id: REGION, tag, pad: 'x'.repeat(pad),
+  layers: Object.fromEntries(Object.entries(layers).map(([id, n]) => [id, {id, status, tiles: Array.from({length: n}, (_, k) => ({path: tileName(id, tag, k)}))}]))});
+const keep = (worker, cache, path, at, body) => worker.storage.open(cache).then(c => c.put(ORIGIN + path, new Response(typeof body === 'string' ? body : JSON.stringify(body), {headers: {'X-SC-Saved-At': at}})));
+const commit = (worker, cache, region = REGION) => keep(worker, cache, '/__skippercast-pack.json', T1, {schema_version: 1, region_id: region});
+async function keepTiles(worker, cache, tag, layers, at, region = REGION) {
+  for (const [id, n] of Object.entries(layers)) for (let k = 0; k < n; k++) await keep(worker, cache, `${FEED}${region}/${tileName(id, tag, k)}`, at, `tile ${id} ${k}`);
+}
+/**
+ * Offline manifest request with a committed pack (manifest `pack`, its tiles `packTiles`) and sc-data (manifest `data`, its tiles
+ * `dataTiles`), each saved at the given time. Resolves to the tag of the manifest the worker answered with, or null for a failure.
+ */
+async function answer({pack, data, packTiles = pack, dataTiles = {}, packAt = T1, dataAt = T2, packBody = null, dataBody = null, packOptions, dataOptions, setup} = {}) {
+  const worker = loadWorker();
+  if (pack || packBody) { await commit(worker, 'sc-pack-test-coast-1'); await keep(worker, 'sc-pack-test-coast-1', MANIFEST, packAt, packBody ?? manifestBody('pack', pack, packOptions)); await keepTiles(worker, 'sc-pack-test-coast-1', 'pack', packTiles || {}, packAt); }
+  if (data || dataBody) { await keep(worker, 'sc-data', MANIFEST, dataAt, dataBody ?? manifestBody('data', data, dataOptions)); await keepTiles(worker, 'sc-data', 'data', dataTiles, dataAt); }
+  await setup?.(worker);
+  const response = await dispatch(worker, get(MANIFEST)).catch(() => null);
+  if (!response) return null;
+  const saved = await response.text(), tag = saved.startsWith('{') ? JSON.parse(saved).tag : saved;
+  assert.equal(response.headers.get('X-SC-Offline'), tag === 'pack' ? packAt : dataAt, 'marked with the saved time of the copy it answers with');
+  return tag;
+}
+const BOTH = {[SST]: 2, [WCOFS]: 2};
+
+test('isOceanKey: the worker\'s copy and the module\'s agree on every URL', async () => {
+  const {isOceanKey} = await import('../dist/offline-core.js');
+  const {context} = loadWorker(), region = `${ORIGIN}${FEED}a`;
+  const table = [[`${region}/habitat-dynamics.json`, true], [`${region}/habitat-dynamics.json?v=3`, true], [`${region}/habitat-tiles/sst-analysis-0-0-0123456789abcdef.json`, true],
+    [`${region}/habitat-tiles/x`, true], [`${region}/habitat-tiles/`, false], [`${region}/habitat-tiles`, false], [`${region}/habitat-tiles/a/b.json`, false],
+    [`${region}/habitat-tiles/../habitat-dynamics.json`, true], [`${region}/habitat-tiles/../../b/habitat-tiles/x`, true], [`${region}/../../../x.json`, false],
+    [`${ORIGIN}${FEED}A/habitat-dynamics.json`, false], [`${ORIGIN}${FEED}${'a'.repeat(65)}/habitat-dynamics.json`, false], [`${region}/habitat-dynamics.json.bak`, false],
+    [`${ORIGIN}/regions/x/habitat-dynamics.json`, false], [`https://other.test${FEED}a/habitat-dynamics.json`, false], [`${ORIGIN}/feeds/tiles/seafloor/x.pmtiles`, false],
+    [`${ORIGIN}/api/habitat?region=a`, false], ['not a url', false], ['', false]];
+  for (const [url, want] of table) {
+    assert.equal(isOceanKey(url, ORIGIN), want, `module: ${url}`);
+    assert.equal(context.isOceanKey(url, ORIGIN), want, `worker: ${url}`);
+  }
+  assert.equal(context.isOceanKey(`${region}/habitat-dynamics.json`, 'https://other.test'), false, 'the origin must match the one given');
+  assert.equal(isOceanKey(`${region}/habitat-dynamics.json`, undefined), false);
+  assert.equal(context.isOceanKey(`${region}/habitat-dynamics.json`, undefined), false);
+});
+
+test('D8 (a): a pack that saved both layers beats a newer sc-data manifest whose tiles were never cached', async () => {
+  assert.equal(await answer({pack: BOTH, data: BOTH}), 'pack');
+  assert.equal(await answer({pack: BOTH, data: BOTH, dataTiles: {[SST]: 2}}), 'pack', 'a layer with only some tiles cached is not complete');
+});
+
+test('D8 (b): a newer sc-data copy complete for every layer the pack saved replaces it', async () => {
+  assert.equal(await answer({pack: {[SST]: 2}, data: BOTH, dataTiles: BOTH}), 'data');
+  assert.equal(await answer({pack: BOTH, data: BOTH, packTiles: {[SST]: 2}, dataTiles: BOTH}), 'data', 'a layer the pack failed to save does not hold it back');
+  assert.equal(await answer({pack: BOTH, data: BOTH, dataTiles: BOTH}), 'data', 'equal coverage, newer copy');
+  assert.equal(await answer({pack: BOTH, data: {[SST]: 2, [WCOFS]: 2}, dataTiles: BOTH, dataOptions: {status: 'retained'}}), 'data', 'retained counts as ok');
+});
+
+test('D8 (c): when the sets do not contain each other the pack wins', async () => {
+  assert.equal(await answer({pack: {[SST]: 2, [WCOFS]: 2}, packTiles: {[SST]: 2}, data: BOTH, dataTiles: {[WCOFS]: 2}}), 'pack');
+});
+
+test('D8 (d): a pack that saved no layer gives way to any newer sc-data copy (today\'s newest-wins)', async () => {
+  assert.equal(await answer({pack: BOTH, packTiles: {}, data: BOTH}), 'data');
+  assert.equal(await answer({pack: BOTH, packTiles: {}, data: {}}), 'data');
+  assert.equal(await answer({pack: {[SST]: 0}, data: BOTH}), 'data', 'a layer that lists no tile is not saved');
+});
+
+test('D8 (e): an older or equally old sc-data copy never replaces the pack', async () => {
+  assert.equal(await answer({pack: BOTH, data: BOTH, dataTiles: BOTH, dataAt: T0}), 'pack');
+  assert.equal(await answer({pack: BOTH, data: BOTH, dataTiles: BOTH, dataAt: T1}), 'pack');
+  assert.equal(await answer({pack: BOTH, packTiles: {}, data: BOTH, dataAt: T0}), 'pack', 'even when the pack saved no layer');
+});
+
+test('D8 (f): a pack cache without PACK_META (a save in progress) is not a candidate, and its tiles count for nothing', async () => {
+  const unfinished = async worker => { await keep(worker, 'sc-pack-test-coast-2', MANIFEST, '2026-10-22T10:00:00.000Z', manifestBody('half', BOTH)); await keepTiles(worker, 'sc-pack-test-coast-2', 'half', BOTH, T2); };
+  assert.equal(await answer({pack: BOTH, setup: unfinished}), 'pack', 'the committed pack answers, not the newer unfinished one');
+  assert.equal(await answer({data: BOTH, setup: unfinished}), 'data', 'only sc-data is a candidate');
+  assert.equal(await answer({setup: unfinished}), null, 'nothing else is saved: the failure is not hidden');
+  const tilesOnlyThere = async worker => { await keepTiles(worker, 'sc-pack-test-coast-2', 'data', BOTH, T2); };
+  assert.equal(await answer({pack: BOTH, data: BOTH, setup: tilesOnlyThere}), 'pack', 'sc-data tiles held only by an unfinished pack are missing');
+  const committed = async worker => { await commit(worker, 'sc-pack-test-coast-2'); await keepTiles(worker, 'sc-pack-test-coast-2', 'data', BOTH, T2); };
+  assert.equal(await answer({pack: BOTH, data: BOTH, setup: committed}), 'data', 'the same tiles in a committed pack do count');
+  const garbage = async worker => { await keep(worker, 'sc-pack-test-coast-2', '/__skippercast-pack.json', T1, 'not json'); await keep(worker, 'sc-pack-test-coast-2', MANIFEST, T2, manifestBody('junk', BOTH)); };
+  assert.equal(await answer({pack: BOTH, setup: garbage}), 'pack', 'a meta that does not parse commits nothing');
+});
+
+test('D8 (g): an unparsable, over-1-MiB or wrongly shaped candidate counts as no layers', async () => {
+  const pad = 1024 * 1024;
+  assert.equal(await answer({pack: {[SST]: 2}, data: BOTH, dataTiles: BOTH, dataBody: 'not json'}), 'pack', 'unparsable sc-data copy');
+  assert.equal(await answer({pack: {[SST]: 2}, data: BOTH, dataTiles: BOTH, dataBody: '{"layers":null}'}), 'pack', 'no layers object');
+  assert.equal(await answer({pack: {[SST]: 2}, data: BOTH, dataTiles: BOTH, dataOptions: {pad}}), 'pack', 'over 1 MiB');
+  assert.equal(await answer({pack: BOTH, data: BOTH, dataTiles: BOTH, packOptions: {pad}}), 'data', 'an over-1-MiB pack copy saved nothing');
+  assert.equal(await answer({packBody: 'not json', data: BOTH, dataTiles: BOTH}), 'data', 'an unparsable pack copy saved nothing');
+  assert.equal(await answer({pack: BOTH, data: BOTH, dataTiles: BOTH, dataOptions: {status: 'stale'}}), 'pack', 'a layer that is not ok or retained is not complete');
+  const under = await answer({pack: {[SST]: 2}, data: BOTH, dataTiles: BOTH, dataOptions: {pad: pad - 1000}});
+  assert.equal(under, 'data', 'a manifest under the limit is read');
+});
+
+test('D8: a manifest tile path that leaves the region folder counts as missing, never present', async () => {
+  const escape = path => async worker => {
+    const copy = manifestBody('data', {[SST]: 1});
+    copy.layers[SST].tiles = [{path}];
+    await keep(worker, 'sc-data', MANIFEST, T2, copy);
+    let target = null;
+    try { target = new URL(path, ORIGIN + MANIFEST); } catch {}
+    // Whatever the path points at is stored, in sc-data and the pack, so only the folder rule can refuse it.
+    if (target && target.pathname !== MANIFEST) for (const cache of ['sc-data', 'sc-pack-test-coast-1']) await (await worker.storage.open(cache)).put(target.href, new Response('present', {headers: {'X-SC-Saved-At': T2}}));
+  };
+  for (const path of ['../other/habitat-tiles/x.json', 'habitat-tiles/../../other/habitat-tiles/x.json', '/feeds/conditions/regions/other/habitat-tiles/x.json', 'https://evil.test/feeds/conditions/regions/test-coast/habitat-tiles/x.json',
+    'habitat-tiles/x.json?v=2', '../test-coast/habitat-dynamics.json', 'habitat-tiles/sub/x.json', 'habitat-tiles/', 'http://[bad', ''])
+    assert.equal(await answer({pack: {[SST]: 2}, setup: escape(path)}), 'pack', path);
+  const sound = async worker => { const copy = manifestBody('data', {[SST]: 1}); await keep(worker, 'sc-data', MANIFEST, T2, copy); await keepTiles(worker, 'sc-data', 'data', {[SST]: 1}, T2); };
+  assert.equal(await answer({pack: {[SST]: 2}, setup: sound}), 'data', 'the same shape with a path inside the folder is complete');
+  const missingPath = async worker => { const copy = manifestBody('data', {[SST]: 1}); copy.layers[SST].tiles = [{}, null, 7]; await keep(worker, 'sc-data', MANIFEST, T2, copy); };
+  assert.equal(await answer({pack: {[SST]: 2}, setup: missingPath}), 'pack', 'tile records without a path');
+});
+
+test('D8: only the requested region\'s committed pack is a candidate', async () => {
+  const worker = loadWorker();
+  await commit(worker, 'sc-pack-test-coast-1');
+  await keep(worker, 'sc-pack-test-coast-1', MANIFEST, T0, manifestBody('mine', BOTH));
+  await commit(worker, 'sc-pack-test-coast-extra-1', 'test-coast-extra');
+  await keep(worker, 'sc-pack-test-coast-extra-1', MANIFEST, T1, manifestBody('other', BOTH));
+  const response = await dispatch(worker, get(MANIFEST));
+  assert.equal((await response.json()).tag, 'mine', 'a newer copy in another region\'s pack is ignored, though its cache name starts with this region\'s');
+  assert.equal(response.headers.get('X-SC-Offline'), T0);
+  const other = loadWorker();
+  await commit(other, 'sc-pack-test-coast-extra-1', 'test-coast-extra');
+  await keep(other, 'sc-pack-test-coast-extra-1', MANIFEST, T1, manifestBody('other', BOTH));
+  await assert.rejects(dispatch(other, get(MANIFEST)), /offline/, 'another region\'s pack alone answers nothing');
+  await keep(other, 'sc-data', MANIFEST, T0, manifestBody('data', BOTH));
+  assert.equal((await (await dispatch(other, get(MANIFEST))).json()).tag, 'data', 'an older sc-data copy is still the only candidate');
+});
+
+test('D8: of two committed packs of one region, the newer copy is the pack candidate', async () => {
+  const worker = loadWorker();
+  for (const [name, tag, at] of [['sc-pack-test-coast-1', 'old', T0], ['sc-pack-test-coast-2', 'new', T1]]) { await commit(worker, name); await keep(worker, name, MANIFEST, at, manifestBody(tag, BOTH)); }
+  assert.equal((await (await dispatch(worker, get(MANIFEST))).json()).tag, 'new');
+});
+
+test('plan test 13: with no pack, offline manifests, tiles and failures are as before', async () => {
+  let online = true;
+  const worker = loadWorker({network: request => { if (!online) throw new TypeError('Failed to fetch'); return new URL(request.url).pathname.endsWith('.json') && request.url.includes('habitat-dynamics') ? Response.json(manifestBody('live', BOTH)) : new Response('tile'); }});
+  assert.equal((await (await dispatch(worker, get(MANIFEST))).json()).tag, 'live');
+  assert.equal(await (await dispatch(worker, get(`${FEED}${REGION}/${tileName(SST, 'live', 0)}`))).text(), 'tile');
+  online = false;
+  const manifest = await dispatch(worker, get(MANIFEST));
+  assert.equal((await manifest.json()).tag, 'live', 'sc-data alone answers, with no tiles required');
+  assert.ok(manifest.headers.get('X-SC-Offline'));
+  assert.equal(await (await dispatch(worker, get(`${FEED}${REGION}/${tileName(SST, 'live', 0)}`))).text(), 'tile');
+  await assert.rejects(dispatch(worker, get(`${FEED}other/habitat-dynamics.json`)), /Failed to fetch/, 'nothing saved: the failure is not hidden');
+  await assert.rejects(dispatch(worker, get(`${FEED}${REGION}/${tileName(SST, 'live', 9)}`)), /Failed to fetch/);
+  assert.deepEqual(JSON.parse(JSON.stringify(worker.messages.at(-1))).type, 'skippercast-offline');
+});
+
+test('ocean tiles and every other route keep plain newest-wins, pack or not', async () => {
+  const worker = loadWorker(), tile = `${FEED}${REGION}/${tileName(SST, 'x', 0)}`;
+  await commit(worker, 'sc-pack-test-coast-1');
+  await keep(worker, 'sc-pack-test-coast-1', tile, T1, 'pack tile');
+  await keep(worker, 'sc-data', tile, T2, 'data tile');
+  assert.equal(await (await dispatch(worker, get(tile))).text(), 'data tile');
+  await keep(worker, 'sc-pack-test-coast-1', '/data/regulations.json', T2, 'pack rules');
+  await keep(worker, 'sc-data', '/data/regulations.json', T1, 'data rules');
+  assert.equal(await (await dispatch(worker, get('/data/regulations.json'))).text(), 'pack rules');
+  await keep(worker, 'sc-pack-test-coast-1', '/api/habitat?region=test-coast', T1, 'pack api');
+  await keep(worker, 'sc-data', '/api/habitat?region=test-coast', T2, 'data api');
+  assert.equal(await (await dispatch(worker, get('/api/habitat?region=test-coast'))).text(), 'data api', 'the Worker\'s JSON copy is not an ocean key');
+});
+
+test('plan test 20: the coastal route ignores pack contents, and a manifest read never opens coastal caches', async () => {
+  const worker = loadWorker();
+  await commit(worker, 'sc-pack-test-coast-1');
+  for (const path of coastalPaths) await keep(worker, 'sc-pack-test-coast-1', path, T2, JSON.stringify({generatedAt: '2026-01-01T00:00:00.000Z'}));
+  for (const path of coastalPaths) await assert.rejects(dispatch(worker, get(path)), /offline/, 'a pack copy never answers the coastal route');
+  const before = JSON.stringify((await worker.storage.keys()).sort());
+  const meta = await seedCoastal(worker);
+  const coastalBefore = await Promise.all([meta.cache, 'sc-coastal-index'].map(async n => JSON.stringify((await (await worker.storage.open(n)).keys()).map(r => r.url))));
+  await keep(worker, 'sc-pack-test-coast-1', MANIFEST, T1, manifestBody('pack', BOTH));
+  await keepTiles(worker, 'sc-pack-test-coast-1', 'pack', BOTH, T1);
+  await keep(worker, 'sc-data', MANIFEST, T2, manifestBody('data', BOTH));
+  const opened = [], open = worker.storage.open.bind(worker.storage);
+  worker.storage.open = async name => { opened.push(name); return open(name); };
+  assert.equal((await (await dispatch(worker, get(MANIFEST))).json()).tag, 'pack');
+  assert.deepEqual([...new Set(opened)].sort(), ['sc-data', 'sc-pack-test-coast-1'], 'only the data cache and committed packs are opened');
+  assert.ok(opened.every(n => !n.startsWith('sc-coastal-')));
+  const coastalAfter = await Promise.all([meta.cache, 'sc-coastal-index'].map(async n => JSON.stringify((await (await worker.storage.open(n)).keys()).map(r => r.url))));
+  assert.deepEqual(coastalAfter, coastalBefore, 'the coastal caches are untouched');
+  assert.ok(JSON.parse(before).includes('sc-pack-test-coast-1'));
+  for (const path of coastalPaths) assert.equal((await dispatch(worker, get(path))).headers.get('X-SC-Offline'), meta.saved_at, 'the coastal snapshot still answers from its own caches');
+});
