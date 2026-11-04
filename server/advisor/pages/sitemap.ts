@@ -11,18 +11,23 @@ import {publicVesselSql} from '../../fleet/display.ts';
 export const SITEMAP_MAX_AGE = 3600;      // 08: cached 1 h
 export const SITEMAP_PATH = '/sitemap-advisor.xml';
 
+// Fixed fragment, chosen by the boolean option only: a vessel linked to a verified advisor boat.
+const VERIFIED_LINK_EXCLUSION = "AND NOT EXISTS (SELECT 1 FROM advisor_boats b WHERE b.fleet_vessel_id=v.id AND b.status='verified')";
+
 /**
  * The sitemap's page paths: active ports, species, verified boats (newest report date as
  * lastmod; only with `advisor`, because /boats/* answers 404 for advisor boats while the advisor is off) and, with `fleet` (FLEET_ENABLED, CF-33), the registry profiles that may be
  * indexed: public vessels whose operator consented (content-sharing or partner, not
- * revoked) and that no verified advisor boat links to (that boat's page is the main one).
+ * revoked). With `advisor` on, a vessel a verified advisor boat links to is left out (that
+ * boat's page is the main one and the registry page is noindex); with it off the boat's page
+ * answers 404 and the registry page is indexable, so the linked vessel is listed.
  */
 export async function sitemapEntries(db: D1Database, {fleet = false, advisor = true}: {fleet?: boolean; advisor?: boolean} = {}): Promise<{path: string; lastmod: string | null}[]> {
   const boats = !advisor ? [] : (await db.prepare(`SELECT b.slug, (SELECT MAX(r.report_date) FROM advisor_reports r WHERE r.boat_id=b.id AND r.status='published') AS lastmod
       FROM advisor_boats b WHERE b.status='verified' ORDER BY b.slug LIMIT 5000`).all<{slug: string; lastmod: string | null}>()).results;
   const vessels = fleet ? (await db.prepare(`SELECT v.slug, substr(v.updated_at,1,10) AS lastmod FROM fleet_vessels v JOIN fleet_operators o ON o.id=v.operator_id
       WHERE ${publicVesselSql('v')} AND o.consent_status IN ('content-sharing','partner') AND o.consent_revoked_at IS NULL
-        AND NOT EXISTS (SELECT 1 FROM advisor_boats b WHERE b.fleet_vessel_id=v.id AND b.status='verified')
+        ${advisor ? VERIFIED_LINK_EXCLUSION : ''}
       ORDER BY v.slug LIMIT 5000`).all<{slug: string; lastmod: string | null}>()).results : [];
   return [
     ...activePortIds().map(id => ({path: `/ports/${id}`, lastmod: null})),
