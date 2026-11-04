@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC2207-04: the trip planner's Best available applies its maximum one-way distance from the selected port to the water route where one is computed (as Where to look does), so a reef 13 nm round a headland no longer fits a 10 nm plan; a reef without a route keeps its straight line, labelled, and each ranked spot says which. Habitat order, the 0.15 nm separation, the protected-area screen, saved plans, exports and the stops-in-order legs are unchanged.
+
 - BF-advisor-beta: the region/language pilot switches now reach the deployed Worker. Contacts outside the pilot can still opt out, confirm data deletion and request their data; only those control replies bypass the pilot scope.
 
 - SC-POPOVER: the desktop map legend's basis popovers (Seafloor, Currents, Depth contours, Protected areas) are placed against their own button by CSS anchor positioning, so the legend that now shrinks and scrolls no longer cuts off the part of a popover beyond its box; a browser without anchor positioning keeps the previous in-flow popover.

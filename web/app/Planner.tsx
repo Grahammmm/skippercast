@@ -53,6 +53,7 @@ function SpotRow({t, checked, hit, showConfidence = true, onToggle}: {t: Target;
         <small>{exportEvidenceLabel(t)}</small>
         <small>{formatCoordinates(t.latitude, t.longitude, coordinates.value)}</small>
         <small>{t.trip_rank ? t.name : t.id} · grade {t.habitat_grade} · {depth} ft</small>
+        {t.trip_rank && t.distance_basis && typeof t.distance_nm === 'number' && Number.isFinite(t.distance_nm) ? <small>{t.distance_nm.toFixed(1)} nm {t.distance_basis === 'water' ? 'by water' : 'straight line'}</small> : null}
         {t.trip_rank ? <small>{t.terrain_interpretation}</small> : null}
         {hit ? <small>{protectedHitReading(hit)} Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</small> : null}
       </span>
@@ -150,7 +151,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
                 <option value="">No distance limit</option>{m.ports.value.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
               <label>Maximum one-way distance (nm)<input id="export-distance" type="number" min="1" max="100" defaultValue={String(f.distance)} onChange={filter('distance', Number)} /></label>
             </div>
-            <p class="export-note">Distance is straight-line reference only. Habitat ranks stay fixed; check the selected day’s conditions separately.</p>
+            <p class="export-note">Distance is by water where routed, else straight line, from the selected port. Planning distance, not a navigation route. Habitat ranks stay fixed; check the selected day’s conditions separately.</p>
           </details>
           <p><button id="export-map" disabled={blocked} onClick={m.showOnMap}>Show ranked spots on map</button> <button id="export-conditions" disabled={blocked} onClick={m.checkConditions}>Check trip conditions</button></p>
           <details>
