@@ -13,7 +13,8 @@
 // a move (at most ~90 m), so one of those points falls inside it. A* with the great-circle distance
 // (dist/spot-ranking.js `distanceNm`) as segment cost and heuristic. The A* path is then smoothed by
 // line-of-sight: from each vertex the farthest later vertex whose straight segment passes only water
-// sub-cells (sampled at every 1/4 sub-cell, no corner cutting, segments up to 400 sub-cells) replaces the
+// sub-cells (sampled at every 1/4 sub-cell, every sub-cell it enters has a water centre, no corner cutting,
+// segments up to 400 sub-cells) replaces the
 // stair steps between, so the length is overstated only where land forces a bend (the raw grid path
 // overstates it by up to ~8 %, a 22.5° course on the 8-way grid). It is never below the straight line.
 // Erasable syntax only (Node tests import it); no DOM, no fetch, no signals.
@@ -130,6 +131,12 @@ export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines |
   // sub-cell along its longer axis (a move checks 1/4 steps too) must classify water, and every sub-cell the
   // segment enters must be passable, including both orthogonal neighbours where it crosses a corner (no corner
   // cutting). A mixed cell with null lines (-1) never counts as water, so it is never clear.
+  // The entered-sub-cell conjunct (`cellWater(cx, cy)`) is independent of the point samples: a sample classifies the
+  // rounded POINT, but a sub-cell is passable only if its CENTRE classifies water. In a mixed cell a point half a
+  // sub-cell from a blocked centre can read water while that centre sits in the edge band (unknown), so the samples
+  // alone would let a shortcut enter a sub-cell the search itself never uses (tests/test_route.mjs
+  // smoothing_entered_mixed_subcell_guard_is_independent). It is a conservative planning rule: not a supercover of
+  // the segment, not proof that the line never meets land, and not a navigation guarantee. Do not remove it.
   const clear = (a: number, b: number): boolean => {
     const ax = 4 * (a % size) + 2, ay = 4 * Math.floor(a / size) + 2, dx = 4 * (b % size) + 2 - ax, dy = 4 * Math.floor(b / size) + 2 - ay;
     const steps = Math.max(Math.abs(dx), Math.abs(dy));
