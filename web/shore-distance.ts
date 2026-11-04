@@ -22,7 +22,7 @@ export function linesOf(json: unknown): number[][][] {
     if (g?.type === 'LineString' && Array.isArray(g.coordinates)) return [g.coordinates as number[][]];
     if (g?.type === 'MultiLineString' && Array.isArray(g.coordinates)) return g.coordinates as number[][][];
     return [];
-  }).filter(l => l.length > 1 && l.every(p => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])));
+  }).filter(l => Array.isArray(l) && l.length > 1 && l.every(p => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])));
 }
 
 const YD_PER_DEG_LAT = 111_320 / 0.9144;

@@ -36,6 +36,7 @@ import {boatEntryOpen} from './FirstRun.tsx';
 import {LayerRail} from './LayerRail.tsx';
 import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
+import {useHourNow, type HourClock} from '../clock.ts';
 import {MarkCard, currentMark} from './MarkCard.tsx';
 import {Brand, DegradedNotice, FreshnessDot, Location, ViewNav} from './Masthead.tsx';
 import {Conditions} from './views/Conditions.tsx';
@@ -143,7 +144,8 @@ export function LayersPanel({onClose}: {onClose: () => void}) {
   );
 }
 
-export function Mobile({now = new Date(), firstRun}: {now?: Date; firstRun?: ComponentChildren} = {}) {
+export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: HourClock; firstRun?: ComponentChildren} = {}) {
+  const now = useHourNow(fixedNow, clock);
   const [detent, setDetent] = useState<Detent>('peek');
   const [panel, setPanel] = useState<Panel>('brief');
   const apply = ({panel: p, detent: d}: {panel: Panel; detent: Detent}) => { setPanel(p); setDetent(d); };
@@ -152,7 +154,7 @@ export function Mobile({now = new Date(), firstRun}: {now?: Date; firstRun?: Com
   const layersOpen = panel === 'layers', conditions = appView.value === 'conditions', fleet = appView.value === 'fleet';
   return (
     <div class="app-mobile">
-      <MapStage />
+      <MapStage clock={clock} />
       <header class="app-top">
         <div class="app-top-row">
           <div class="app-top-card">

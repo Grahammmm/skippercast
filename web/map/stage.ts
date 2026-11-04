@@ -32,6 +32,7 @@ import type {ChartMark} from './coastline.ts';
 import {LAYERS, drapeStyle, terrainLayers, type TerrainLayer} from './layers.ts';
 import type {Palette} from './palette.ts';
 import {coastTarget, hasCoastTerrain, type CurrentLayer, type Presentation} from '../coast-context.ts';
+import {appClock, createHourClock, type HourClock} from '../clock.ts';
 import {dockTime} from '../hour.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt, type Profile} from '../profile.ts';
 import {DEFAULT_ZONE} from '../zone.ts'; // the zone the dock reads days in until the region's own arrives
@@ -138,6 +139,9 @@ export interface StageOptions {
   overlayPalette?: () => Palette | undefined;
   /** The region's centre; a signal read here is followed. */
   center?: () => readonly [number, number] | null;
+  /** The hour clock the terrain follows; the app shares one with the dock (web/clock.ts). Without it, `now` or the app's clock. */
+  clock?: HourClock;
+  /** A reader for tests that fix the time; it is wrapped in an hour clock of its own unless `clock` is given. */
   now?: () => Date;
   /** The region's zone, for the dock's `?day=`; a signal read here is followed. */
   zone?: () => string;
@@ -268,7 +272,7 @@ export function drape(h: Pick<CoastHandle, 'setOverlay' | 'removeOverlay'>, feed
 }
 
 export function createStage(options: StageOptions): Stage {
-  const {host, load = loadTerrain, now = () => new Date(), doc = document, viewDelay = 400} = options;
+  const {host, load = loadTerrain, doc = document, viewDelay = 400} = options;
   const handle = signal<CoastHandle | null>(null);
   // A mounted C2 release view (M9); either renderer records the region it mounted for.
   const c2View = signal<C2View | null>(null);
@@ -277,18 +281,14 @@ export function createStage(options: StageOptions): Stage {
   let draped = new Map<string, TerrainLayer>(), overlayPalette: Palette | undefined;
   // The native controls start at TERRAIN_DEFAULTS, so a fresh mount needs only the differences.
   let shownOptions: TerrainOptions = {...TERRAIN_DEFAULTS};
-  let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined, clockTimer: ReturnType<typeof setTimeout> | undefined;
-  // Without ?hour= the terrain shows the current whole hour; this clock moves it on at each hour boundary.
-  const clock = signal(now());
-  const nextHour = (): void => {
-    clock.value = now();
-    clockTimer = setTimeout(nextHour, HOUR_MS - (clock.peek().getTime() % HOUR_MS) + 1000);
-  };
-  clockTimer = setTimeout(nextHour, HOUR_MS - (clock.peek().getTime() % HOUR_MS) + 1000);
+  let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined;
+  // Without ?hour= the terrain shows the current whole hour; the shared clock moves it on at each hour boundary, with the dock.
+  const clock = options.clock ?? (options.now ? createHourClock({read: options.now, doc}) : appClock);
+  const releaseClock = clock.retain();
 
   const wanted = computed(() => terrainState({
     profile: profile.value, target: species.value, hour: hour.value, camera: camera.value, current: current.value,
-    habitat: habitat.value, presentation: shownPresentation.value, appView: appView.value, hidden: pageHidden.value, now: clock.value,
+    habitat: habitat.value, presentation: shownPresentation.value, appView: appView.value, hidden: pageHidden.value, now: clock.now.value,
     day: day.value, zone: options.zone?.(),
   }));
 
@@ -463,7 +463,7 @@ export function createStage(options: StageOptions): Stage {
     destroy() {
       if (!alive) return;
       alive = false;
-      clearTimeout(viewTimer); clearTimeout(clockTimer);
+      clearTimeout(viewTimer); releaseClock();
       for (const dispose of disposers) dispose();
       for (const renderer of renderers) renderer.destroy();
       doc.removeEventListener('visibilitychange', visibility);
