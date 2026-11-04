@@ -102,7 +102,8 @@ export async function savePack({signal, progress = () => {}, sessionStart = 0, m
     try { await navigator.storage?.persist?.(); } catch {}
     const config = await regionConfig(region.id).catch(() => null) || `regions/${region.id}/region.json`;
     const configURL = new URL(config, origin + '/').href;
-    const urls = packRequests({origin, region, config, shared: SHARED_FILES, extra: await conditionsRequests(region)});
+    // Only the ocean phase writes ocean keys (a region's habitat manifest, routed to /feeds/ by withFeeds, is one), so the files phase skips them.
+    const urls = packRequests({origin, region, config, shared: SHARED_FILES, extra: await conditionsRequests(region)}).filter(url => !isOceanKey(url, origin));
     let done = 0;
     progress({phase: 'files', done, total: urls.length, bytes});
     await pool(urls, async url => { await store(url); progress({phase: 'files', done: ++done, total: urls.length, bytes}); }, signal);
@@ -125,14 +126,16 @@ export async function savePack({signal, progress = () => {}, sessionStart = 0, m
       progress({phase: 'tiles', done: ++tilesDone, total: plan.tiles.length, bytes});
     }, signal);
     const put = async (key, body, headers) => { bytes += body.byteLength; await cache.put(key, new Response(body, {status: 200, headers: stampedHeaders(headers)})); };
-    const v2 = more && !signal.aborted ? await more({store, put, signal, progress: (phase, done, total) => progress({phase, done, total, bytes})}) : null;
+    const answer = more && !signal.aborted ? await more({store, put, signal, progress: (phase, done, total) => progress({phase, done, total, bytes})}) : null;
     if (signal.aborted) throw new DOMException('Cancelled', 'AbortError');
+    // The ocean record (web/trip.ts) is the meta's own, beside `v2`, not inside it.
+    const {ocean, ...v2} = answer ?? {};
     const meta = {
       schema_version: 1, region_id: region.id, region_name: region.name, saved_at: started.toISOString(), bytes,
       files: {saved: urls.length - missing.length, requested: urls.length, from_session: copied},
       missing: missing.slice(0, 50),
       tiles: {saved: tilesSaved, planned: plan.tiles.length, min_zoom: plan.minZoom, max_zoom: plan.maxZoom, requested_max_zoom: plan.requestedMaxZoom, layers},
-      ...(v2 ? {v2} : {}),
+      ...(answer ? {v2} : {}), ...(ocean ? {ocean} : {}),
     };
     await cache.put(PACK_META, new Response(JSON.stringify(meta), {headers: {'Content-Type': 'application/json'}}));
     // The new pack is complete: older packs of the same region go.

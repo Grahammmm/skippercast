@@ -1,5 +1,5 @@
 // Offline ocean save (docs/plans/offline-ocean-coverage.md D1, D2, D4, D5, D5a, D7): puts a regional feed's two drawn layers,
-// `sst-analysis` and `wcofs-surface-forecast`, into a pack, a layer whole or not at all. Nothing calls it yet (the pack wires it later).
+// `sst-analysis` and `wcofs-surface-forecast`, into a pack, a layer whole or not at all. web/trip.ts runs it as the pack's last phase.
 //
 // - Every tile of a layer is fetched into memory (concurrency 4, `cache: 'no-cache'`, no `X-SC-Offline` copy) and passes the readers' own
 //   `tileRows` (length, SHA-256, region, layer, fields, grid, bounds, frames) before any of the layer is written. A layer that fails
@@ -28,7 +28,13 @@ export interface OceanLayerRecord {
   readonly why?: string;
   readonly tiles: {readonly saved: number; readonly listed: number};
   readonly bytes: number;
+  /** D9's clocks, recorded for every state of a layer the manifest lists, whenever they are valid. */
+  readonly data_at?: string;
+  readonly retrieved_at?: string;
+  readonly max_age_hours?: number;
+  readonly drawable_until?: string;
 }
+export type OceanClocks = Pick<OceanLayerRecord, 'data_at' | 'retrieved_at' | 'max_age_hours' | 'drawable_until'>;
 export type OceanManifestRecord =
   | {readonly stored: true; readonly url: string; readonly sha256: string; readonly bytes: number; readonly generated_at: string | null}
   | {readonly stored: false; readonly reason: OceanReason};
@@ -98,6 +104,43 @@ async function get(o: Required<Pick<OceanOptions, 'signal' | 'fetchFn'>>, url: s
   }
 }
 
+// D6: the readers' own clocks and limits (habitat-feed.ts regionalSST / regionalCurrents, map/sst.ts judge, packages/coast map-sources.ts).
+const HOUR = 3_600_000;
+/** A layer is saved only if the readers would still draw it this long after the save. */
+export const MIN_WINDOW = 60 * 60_000;
+const FUTURE_ALLOWANCE = 5 * 60_000, WCOFS_RETRIEVAL_LIMIT = 6 * HOUR, WCOFS_ISSUE_LIMIT = 36 * HOUR;
+const at = (v: unknown): number => typeof v === 'string' ? Date.parse(v) : NaN;
+const iso = (ms: number): string | undefined => Number.isFinite(ms) && Math.abs(ms) <= 8.64e15 ? new Date(ms).toISOString() : undefined;
+
+/** A layer's clocks as the readers take them, and the two instants after which each refuses it: `dataEnd` (age) and `gotEnd` (retrieval). */
+function clocksOf(id: string, manifest: unknown) {
+  const m = object(manifest) ? manifest : {}, layer = object(m.layers) && object(m.layers[id]) ? m.layers[id] : {}, source = object(m.sources) && object(m.sources[id]) ? m.sources[id] : {};
+  const times = (Array.isArray(layer.frames) ? layer.frames : []).filter(f => object(f) && typeof f.time === 'number' && (typeof f.valid_cells !== 'number' || f.valid_cells > 0)).map(f => (f as {time: number}).time);
+  const wcofs = id === WCOFS_LAYER_ID, data = wcofs ? at(layer.issued_at) : times.length ? Math.max(...times) * 1000 : at(layer.sample_at);
+  const got = at(source.data_retrieved_at), hours = typeof layer.max_age_hours === 'number' ? layer.max_age_hours : NaN, age = hours > 0 ? hours * HOUR : NaN;
+  return {layer, data, got, hours, age, wcofs, dataEnd: data + (wcofs ? Math.min(age, WCOFS_ISSUE_LIMIT) : age), gotEnd: got + (wcofs ? WCOFS_RETRIEVAL_LIMIT : age)};
+}
+
+/** The layer's clocks and the latest instant the readers can draw it: SST `min(analysed, retrieved) + max_age`, WCOFS `min(retrieved + 6 h, issued + 36 h, issued + max_age)`. Only valid clocks are returned. */
+export function deadline(id: string, manifest: unknown): OceanClocks {
+  const c = clocksOf(id, manifest), out: Record<string, string | number> = {};
+  for (const [key, value] of [['data_at', iso(c.data)], ['retrieved_at', iso(c.got)], ['max_age_hours', c.age > 0 ? c.hours : undefined], ['drawable_until', iso(Math.min(c.dataEnd, c.gotEnd))]] as const)
+    if (value !== undefined) out[key] = value;
+  return out;
+}
+
+/** The save-time rule: null to save, else `why` the layer is not current (status, age, retrieval, no-retrieval, not-surface, future-clock, short-window). Asked with the injected clock. */
+export function eligibility(id: string, manifest: unknown, now: Date): string | null {
+  const c = clocksOf(id, manifest), t = now.getTime();
+  if (c.layer.status !== 'ok' && c.layer.status !== 'retained') return 'status';
+  if (!(c.age > 0) || !(t < c.dataEnd) || !Number.isFinite(c.data)) return 'age';
+  if (!Number.isFinite(c.got)) return 'no-retrieval';
+  if (!(t < c.gotEnd)) return 'retrieval';
+  if (c.wcofs && c.layer.surface_only !== true) return 'not-surface';
+  if (c.data - t > FUTURE_ALLOWANCE || c.got - t > FUTURE_ALLOWANCE) return 'future-clock';
+  return Math.min(c.dataEnd, c.gotEnd) - t < MIN_WINDOW ? 'short-window' : null;
+}
+
 /** Saves the region's SST and WCOFS layers into the pack, each whole or not at all. Rejects only for a cancel or a failed write. */
 export async function saveOcean(o: OceanOptions): Promise<OceanSave> {
   const {regionId, origin, put, signal, fetchFn = fetch, eligible = () => null, progress = () => {}} = o, io = {signal, fetchFn};
@@ -163,7 +206,8 @@ export async function saveOcean(o: OceanOptions): Promise<OceanSave> {
 
   for (const id of OCEAN_LAYERS) {
     if (signal.aborted) throw cancelled();
-    layers[id] = await saveLayer(id);
+    const rec = await saveLayer(id);
+    layers[id] = rec.state === 'absent' ? rec : {...rec, ...deadline(id, data)};
     used += layers[id].bytes;
   }
   await write(manifestURL, bytes);

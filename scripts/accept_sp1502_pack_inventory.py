@@ -24,7 +24,7 @@ PRIMARY_HASH = "74a01390d124d3181a83a2f28ae908d0b5303fb6d9987600099a81ff36bd5d21
 TEST = "tests/test_sp1502_pack_inventory.mjs"
 FIXTURES = "tests/fixtures/sp1502_pack_inventory"
 REGRESSIONS = {
-    "tests/test_trip.mjs": "6b98cf0be21363f035f6cd69c98dbf6be7576d6bb6bf79facfcc378b1128bb50",
+    "tests/test_trip.mjs": "fe693ef46188e0fdc841e301a8a1878a6effca2e88c3b74b58f62aecda704a23",
     "tests/test_offline.mjs": "02cc753b017367e21ecee91e21cc4dc7e28c3facc348196e7a7fe671ded33ae0",
 }
 

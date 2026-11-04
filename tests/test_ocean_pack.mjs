@@ -4,12 +4,12 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readdirSync, readFileSync} from 'node:fs';
 import test from 'node:test';
-import {OCEAN_BYTE_CAP, OCEAN_LAYERS, MANIFEST_CAP, saveOcean} from '../web/map/ocean-pack.ts';
+import {OCEAN_BYTE_CAP, OCEAN_LAYERS, MANIFEST_CAP, MIN_WINDOW, deadline, eligibility, saveOcean} from '../web/map/ocean-pack.ts';
 import {wcofsFeed} from './helpers/wcofs-feed.mjs';
 
 const ORIGIN = 'https://s.test', REGION = 'test-coast', BASE = `${ORIGIN}/feeds/conditions/regions/${REGION}/`, MANIFEST = `${BASE}habitat-dynamics.json`;
 const SST_FIELDS = ['latitude', 'longitude', 'temperature_c', 'analysis_error_c'];
-const TIME = Date.parse('2026-10-15T12:00:00Z') / 1000, RETRIEVED = '2026-10-16T06:00:00Z';
+const TIME = Date.parse('2026-10-15T12:00:00Z') / 1000, RETRIEVED = '2026-10-16T06:00:00Z', RETRIEVED_ISO = '2026-10-16T06:00:00.000Z';
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const grids = [{bounds: [-121, 35, -120.85, 35.2], cells: [[35.05, -120.95], [35.1, -120.9]]}, {bounds: [-120.85, 35, -120.7, 35.2], cells: [[35.05, -120.8], [35.1, -120.75]]}];
 const flow = () => [0.2, -0.1];
@@ -219,7 +219,8 @@ test('eligible decides before any tile is fetched: a why string records not-curr
   const r = run(f, {eligible: (id, manifest) => { seen.push([id, manifest.region_id]); return id === 'wcofs-surface-forecast' ? 'short-window' : null; }});
   const result = await r.done();
   assert.deepEqual(seen, [['sst-analysis', REGION], ['wcofs-surface-forecast', REGION]]);
-  assert.deepEqual(result.layers['wcofs-surface-forecast'], {state: 'not-current', why: 'short-window', tiles: {saved: 0, listed: 2}, bytes: 0});
+  assert.deepEqual(result.layers['wcofs-surface-forecast'], {state: 'not-current', why: 'short-window', tiles: {saved: 0, listed: 2}, bytes: 0,
+    data_at: '2026-10-16T03:00:00.000Z', retrieved_at: RETRIEVED_ISO, max_age_hours: 36, drawable_until: '2026-10-16T12:00:00.000Z'});
   assert.equal(result.layers['sst-analysis'].state, 'saved');
   assert.ok(!r.srv.asked.some(u => u.includes('wcofs-surface-forecast')), 'no WCOFS fetch made');
   assert.deepEqual(r.st.keys(), [...sstKeys(f), MANIFEST]);
@@ -228,14 +229,121 @@ test('eligible decides before any tile is fetched: a why string records not-curr
   assert.equal(none.manifest.stored, true, 'the manifest is stored even when no layer is');
 });
 
-test('not wired: only its test imports ocean-pack, and habitat-feed exports the one layerOf', () => {
+// SC1938-04: D6's clocks. `mf(edit)` is the synthetic manifest; NOW is two hours after the SST and WCOFS retrieval (06:00Z).
+const NOW = new Date('2026-10-16T08:00:00Z'), ms = iso => Date.parse(iso), at = (base, delta) => new Date(ms(base) + delta).toISOString();
+const MIN = 60_000, H = 3_600_000, W = 'wcofs-surface-forecast', S = 'sst-analysis';
+const mf = (edit = () => {}) => { const m = feed().manifest; edit(m); return m; };
+const wcofs = (layer = {}, source = {}) => m => { Object.assign(m.layers[W], layer); Object.assign(m.sources[W], source); };
+const sst = (layer = {}, source = {}, frameTime) => m => {
+  Object.assign(m.layers[S], layer); Object.assign(m.sources[S], source);
+  if (frameTime !== undefined) m.layers[S].frames = [{time: frameTime, valid_cells: 2, total_cells: 2}];
+};
+
+test('deadline: SST is min(analysed, retrieved) + max_age; WCOFS is min(retrieved + 6 h, issued + 36 h, issued + max_age)', () => {
+  assert.deepEqual(deadline(S, mf()), {data_at: '2026-10-15T12:00:00.000Z', retrieved_at: RETRIEVED_ISO, max_age_hours: 72, drawable_until: '2026-10-18T12:00:00.000Z'});
+  // analysed earlier than retrieved: the analysis clock; retrieved earlier (synthetic): the retrieval clock.
+  assert.equal(deadline(S, mf(sst({}, {data_retrieved_at: '2026-10-14T00:00:00Z'}))).drawable_until, '2026-10-17T00:00:00.000Z');
+  assert.equal(deadline(S, mf(sst({}, {}, ms('2026-10-16T12:00:00Z') / 1000))).drawable_until, '2026-10-19T06:00:00.000Z', 'analysed later than retrieved: retrieved + 72 h');
+  // the latest POPULATED frame is the analysis time (as regionalSST picks it)
+  assert.equal(deadline(S, mf(m => { m.layers[S].frames = [{time: TIME, valid_cells: 2}, {time: TIME + 86400, valid_cells: 0}]; })).data_at, '2026-10-15T12:00:00.000Z');
+  assert.equal(deadline(W, mf()).drawable_until, '2026-10-16T12:00:00.000Z', 'retrieved 06:00 + 6 h');
+  assert.deepEqual(deadline(W, mf()), {data_at: '2026-10-16T03:00:00.000Z', retrieved_at: RETRIEVED_ISO, max_age_hours: 36, drawable_until: '2026-10-16T12:00:00.000Z'});
+  assert.equal(deadline(W, mf(wcofs({max_age_hours: 24}, {data_retrieved_at: '2026-10-17T00:00:00Z'}))).drawable_until, '2026-10-17T03:00:00.000Z', 'issued + max_age first');
+  assert.equal(deadline(W, mf(wcofs({max_age_hours: 48}, {data_retrieved_at: '2026-10-17T10:00:00Z'}))).drawable_until, '2026-10-17T15:00:00.000Z', 'issued + 36 h first');
+});
+
+test('deadline records only the clocks that are valid', () => {
+  assert.deepEqual(deadline(W, mf(wcofs({}, {data_retrieved_at: undefined}))), {data_at: '2026-10-16T03:00:00.000Z', max_age_hours: 36});
+  assert.deepEqual(deadline(W, mf(wcofs({issued_at: 'not a time'}))), {retrieved_at: RETRIEVED_ISO, max_age_hours: 36});
+  assert.deepEqual(deadline(S, mf(sst({max_age_hours: 0}))), {data_at: '2026-10-15T12:00:00.000Z', retrieved_at: RETRIEVED_ISO});
+  assert.deepEqual(deadline(S, mf(sst({max_age_hours: 1e300}))).drawable_until, undefined, 'a deadline past the date range is not recorded');
+  for (const bad of [null, 'x', [], {}, {layers: {}}]) assert.deepEqual(deadline(W, bad), {}, JSON.stringify(bad));
+});
+
+test('eligibility: the base manifest two hours after retrieval is current for both layers', () => {
+  assert.equal(eligibility(S, mf(), NOW), null);
+  assert.equal(eligibility(W, mf(), NOW), null);
+  assert.equal(MIN_WINDOW, 60 * MIN);
+});
+
+test('eligibility says why, one case each: status, age, retrieval, no-retrieval, not-surface, future-clock, short-window', () => {
+  // status: anything but ok / retained
+  assert.equal(eligibility(S, mf(sst({status: 'stale'})), NOW), 'status');
+  assert.equal(eligibility(W, mf(wcofs({status: 'missing'})), NOW), 'status');
+  assert.equal(eligibility(W, mf(wcofs({status: 'retained'})), NOW), null, 'retained still loads');
+  assert.equal(eligibility(W, null, NOW), 'status');
+  // age: SST at analysed + 72 h; WCOFS at issued + 36 h; no populated frame or no issue time
+  const sstNow = new Date('2026-10-18T12:00:00Z');
+  assert.equal(eligibility(S, mf(sst({}, {data_retrieved_at: '2026-10-18T11:00:00Z'})), sstNow), 'age');
+  assert.equal(eligibility(S, mf(sst({}, {data_retrieved_at: '2026-10-18T11:00:00Z'})), new Date(sstNow - 1)), 'short-window', 'one ms before the deadline is no longer 60 minutes');
+  assert.equal(eligibility(W, mf(wcofs({}, {data_retrieved_at: '2026-10-17T14:00:00Z'})), new Date('2026-10-17T15:00:00Z')), 'age');
+  assert.equal(eligibility(S, mf(m => { m.layers[S].frames = [{time: TIME, valid_cells: 0}]; delete m.layers[S].sample_at; }), NOW), 'age');
+  assert.equal(eligibility(W, mf(wcofs({issued_at: undefined})), NOW), 'age');
+  assert.equal(eligibility(W, mf(wcofs({max_age_hours: 2})), NOW), 'age', 'issued 5 h ago, past its own 2 h limit');
+  // retrieval: WCOFS issued 10 h before the save and retrieved 6 h 1 min before; the same manifest retrieved 4 h 30 min before saves
+  const N = new Date('2026-10-16T14:00:00Z');
+  assert.equal(eligibility(W, mf(wcofs({issued_at: '2026-10-16T04:00:00Z'}, {data_retrieved_at: at(N, -(6 * H + MIN))})), N), 'retrieval');
+  assert.equal(eligibility(W, mf(wcofs({issued_at: '2026-10-16T04:00:00Z'}, {data_retrieved_at: at(N, -6 * H)})), N), 'retrieval', 'exactly 6 h is past: the readers refuse at retrieved + 6 h');
+  assert.equal(eligibility(W, mf(wcofs({issued_at: '2026-10-16T04:00:00Z'}, {data_retrieved_at: at(N, -(4 * H + 30 * MIN))})), N), null);
+  assert.equal(eligibility(S, mf(sst({}, {data_retrieved_at: at(N, -(72 * H + MIN))}, ms('2026-10-16T12:00:00Z') / 1000)), N), 'retrieval', 'SST retrieved more than max_age ago, analysed recently');
+  // no-retrieval / not-surface
+  assert.equal(eligibility(W, mf(wcofs({}, {data_retrieved_at: undefined})), NOW), 'no-retrieval');
+  assert.equal(eligibility(S, mf(sst({}, {data_retrieved_at: 'garbage'})), NOW), 'no-retrieval');
+  assert.equal(eligibility(W, mf(wcofs({surface_only: false})), NOW), 'not-surface');
+  assert.equal(eligibility(W, mf(wcofs({surface_only: undefined})), NOW), 'not-surface');
+  assert.equal(eligibility(S, mf(m => { m.layers[S].surface_only = false; }), NOW), null, 'surface_only is a WCOFS rule');
+  // future-clock: more than 5 minutes ahead; exactly 5 is allowed
+  assert.equal(eligibility(W, mf(wcofs({}, {data_retrieved_at: at(NOW, 6 * MIN)})), NOW), 'future-clock');
+  assert.equal(eligibility(W, mf(wcofs({}, {data_retrieved_at: at(NOW, 5 * MIN)})), NOW), null);
+  assert.equal(eligibility(S, mf(sst({}, {}, (NOW.getTime() + 6 * MIN) / 1000)), NOW), 'future-clock', 'an analysis dated ahead of the clock');
+  assert.equal(eligibility(W, mf(wcofs({issued_at: at(NOW, 6 * MIN)})), NOW), 'future-clock');
+  // short-window: 59 min left does not save, 60 and 61 do
+  for (const [left, why] of [[59, 'short-window'], [60, null], [61, null], [0, 'retrieval']])
+    assert.equal(eligibility(W, mf(wcofs({}, {data_retrieved_at: at(NOW, left * MIN - 6 * H)})), NOW), why, `${left} min left`);
+  assert.equal(eligibility(S, mf(sst({}, {}, ms('2026-10-15T09:00:00Z') / 1000)), new Date('2026-10-18T08:30:00Z')), 'short-window', 'SST 30 min left');
+});
+
+test('a layer past its window, retrieved too long ago or short of one is recorded not-current and never saved; its clocks are still recorded', async () => {
+  // plan test 15: WCOFS issued 10 h before, retrieved 7 h before the save
+  const N = new Date('2026-10-16T14:00:00Z'), f = feed({wcofs: {issuedAt: '2026-10-16T04:00:00Z', retrievedAt: at(N, -7 * H)}});
+  const r = run(f, {eligible: (id, m) => eligibility(id, m, N)}), result = await r.done();
+  assert.deepEqual([result.layers[W].state, result.layers[W].why, result.layers[W].bytes], ['not-current', 'retrieval', 0]);
+  assert.equal(result.layers[W].drawable_until, at(N, -H), 'the deadline is recorded even for a layer that is not saved');
+  assert.equal(result.layers[S].state, 'saved');
+  assert.ok(!r.srv.asked.some(u => u.includes('wcofs-surface-forecast')), 'no WCOFS tile fetched');
+  assert.ok(!r.st.keys().some(k => k.includes('wcofs-surface-forecast')));
+  assert.equal(result.bytes, f.manifestBytes.length + result.layers[S].bytes);
+});
+
+test('saved layers carry data_at, retrieved_at, max_age_hours and drawable_until; failed, over-cap and absent layers follow the manifest', async () => {
+  const f = feed(), clock = id => eligibility(id, f.manifest, NOW);
+  const result = await run(f, {eligible: id => clock(id)}).done();
+  assert.deepEqual(result.layers[S], {state: 'saved', tiles: {saved: 2, listed: 2}, bytes: result.layers[S].bytes, ...deadline(S, f.manifest)});
+  assert.deepEqual(result.layers[W], {state: 'saved', tiles: {saved: 2, listed: 2}, bytes: result.layers[W].bytes, ...deadline(W, f.manifest)});
+  assert.equal(result.layers[S].drawable_until, '2026-10-18T12:00:00.000Z');
+  // a failed tile still records the clocks
+  const bad = feed({wcofs: {record: (rec, k) => k === 0 ? {...rec, bytes: rec.bytes + 1} : rec}}), failed = await run(bad).done();
+  assert.equal(failed.layers[W].state, 'failed');
+  assert.equal(failed.layers[W].drawable_until, '2026-10-16T12:00:00.000Z');
+  // over-cap by tile count: layerOf refuses it, the clocks are still read from the manifest
+  const many = feed({edit: m => { const l = m.layers[W]; l.tiles = Array.from({length: 65}, () => l.tiles[0]); return m; }}), over = await run(many).done();
+  assert.equal(over.layers[W].state, 'over-cap');
+  assert.equal(over.layers[W].max_age_hours, 36);
+  // absent and manifest failures carry none
+  const absent = feed({edit: m => { delete m.layers[S]; return m; }}), a = await run(absent).done();
+  assert.deepEqual(a.layers[S], {state: 'absent', tiles: {saved: 0, listed: 0}, bytes: 0});
+  const gone = await run(f, {}, {manifestResponse: () => new Response('no', {status: 404})}).done();
+  for (const id of OCEAN_LAYERS) assert.deepEqual(gone.layers[id], {state: 'failed', reason: 'manifest', tiles: {saved: 0, listed: 0}, bytes: 0});
+});
+
+test('only the pack\'s ocean phase (web/trip.ts) imports ocean-pack, and habitat-feed exports the one layerOf', () => {
   const importers = [];
   const walk = dir => { for (const e of readdirSync(dir, {withFileTypes: true})) {
     const path = `${dir}/${e.name}`;
     if (e.isDirectory()) { if (!['node_modules', '.git', 'dist', '.worktrees'].includes(e.name)) walk(path); } else if (/\.(ts|tsx|js|mjs)$/.test(e.name) && /ocean-pack/.test(readFileSync(path, 'utf8'))) importers.push(path);
   } };
   for (const dir of ['web', 'server', 'packages', 'tests', 'scripts']) walk(new URL(`../${dir}`, import.meta.url).pathname);
-  assert.deepEqual(importers.map(p => p.split('/').slice(-2).join('/')).sort(), ['tests/test_ocean_pack.mjs']);
+  assert.deepEqual(importers.map(p => p.split('/').slice(-2).join('/')).sort(), ['tests/test_ocean_pack.mjs', 'web/trip.ts']);
   const feedSource = readFileSync(new URL('../web/map/habitat-feed.ts', import.meta.url), 'utf8');
   assert.equal((feedSource.match(/function layerOf\(/g) ?? []).length, 1);
   assert.match(feedSource, /export function layerOf\(/);
