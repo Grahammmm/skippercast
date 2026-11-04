@@ -161,6 +161,107 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(validate.dominant_mode([Interval(0, 30 * M, "transit")]), "none")
 
 
+class ExactTargetTests(unittest.TestCase):
+    """The target is judged from whole minute counts (RF0200-7); display rounding never lifts a ratio over its boundary.
+
+    Constructed count tables only: no store, sync, Worker or network (a connection attempt fails the test).
+    """
+
+    def setUp(self):
+        for name in ("socket.socket.connect", "socket.create_connection"):
+            patcher = mock.patch(name, side_effect=AssertionError("network used by a pure scoring test"))
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    @staticmethod
+    def empty():
+        return {label: {kind: 0 for kind in validate.PREDICTIONS} for label in validate.LABELS}
+
+    def table(self, agree, predicted, labelled, mode="troll-slow"):
+        """One mode with `agree` minutes right, `predicted` minutes predicted as it (the rest labelled in-port) and
+        `labelled` minutes labelled as it (the rest predicted transit)."""
+        table = self.empty()
+        table[mode][mode] = agree
+        table[mode]["transit"] = labelled - agree
+        table["in-port"][mode] = predicted - agree
+        return table
+
+    def test_target_precision_below_boundary_does_not_round_up(self):
+        r = metrics(self.table(2399, 3000, 2399))
+        self.assertEqual((r["fishing"]["precision"], r["fishing"]["recall"]), (0.8, 1.0))
+        self.assertFalse(validate.target(r, 30)["overall_met"])
+
+    def test_target_recall_below_boundary_does_not_round_up(self):
+        r = metrics(self.table(1399, 1399, 2000))
+        self.assertEqual((r["fishing"]["precision"], r["fishing"]["recall"]), (1.0, 0.7))
+        self.assertFalse(validate.target(r, 30)["overall_met"])
+
+    def test_target_exact_boundaries_and_trip_floor(self):
+        exact = metrics(self.table(28, 35, 40))   # precision 4/5, recall 7/10 exactly
+        self.assertEqual((exact["fishing"]["precision"], exact["fishing"]["recall"]), (0.8, 0.7))
+        self.assertTrue(validate.target(exact, 30)["overall_met"])
+        above = metrics(self.table(2401, 3000, 3429))   # just above both: 2401/3000 = 0.80033, 2401/3429 = 0.70020
+        self.assertTrue(validate.target(above, 30)["overall_met"])
+        self.assertFalse(validate.target(exact, 29)["overall_met"])
+        # exact boundaries in every fishing mode meet the whole target; the three-mode requirement stands
+        every = self.empty()
+        for mode in validate.FISHING_KINDS:
+            validate.add(every, self.table(28, 35, 40, mode))
+        t = validate.target(metrics(every), 30)
+        self.assertTrue(t["met"])
+        self.assertTrue(all(v["met"] for v in t["per_mode"].values()))
+        self.assertFalse(validate.target(metrics(every), 29)["met"])
+        one_short = self.empty()
+        for mode in validate.FISHING_KINDS[:2]:
+            validate.add(one_short, self.table(28, 35, 40, mode))
+        self.assertFalse(validate.target(metrics(one_short), 30)["met"], "a mode never labelled cannot pass")
+
+    def test_target_each_mode_uses_its_own_counts(self):
+        for below in (self.table(2399, 3000, 2399, "troll-slow"), self.table(1399, 1399, 2000, "troll-slow")):
+            table = self.empty()
+            validate.add(table, below)
+            for mode in ("drift-anchor", "troll-pelagic"):
+                validate.add(table, self.table(800, 800, 800, mode))
+            t = validate.target(metrics(table), 30)
+            self.assertTrue(t["overall_met"])
+            self.assertEqual({m: v["met"] for m, v in t["per_mode"].items()},
+                             {"drift-anchor": True, "troll-slow": False, "troll-pelagic": True})
+            self.assertFalse(t["met"])
+
+    def test_target_zero_denominators_remain_unmet(self):
+        empty = validate.target(metrics(self.empty()), 99)
+        self.assertEqual((empty["overall_met"], empty["met"]), (False, False))
+        self.assertFalse(any(v["met"] for v in empty["per_mode"].values()))
+        no_predictions = self.empty()
+        no_predictions["troll-slow"]["none"] = 50   # labelled, never predicted
+        self.assertFalse(validate.target(metrics(no_predictions), 99)["overall_met"])
+        no_labels = self.empty()
+        no_labels["in-port"]["troll-slow"] = 50   # predicted, never labelled fishing
+        self.assertFalse(validate.target(metrics(no_labels), 99)["overall_met"])
+        all_gaps = self.empty()
+        all_gaps["troll-slow"]["gap"] = 50
+        t = validate.target(metrics(all_gaps), 99)
+        self.assertEqual((t["overall_met"], t["met"]), (False, False))
+
+    def test_target_rounding_does_not_change_report_presentation(self):
+        table = self.table(2399, 3000, 2399)
+        result = metrics(table)
+        report = {"region": "test", "computed_at": "2026-01-01T00:00:00Z", "classifier_version": "v", "labeller": "all",
+                  "trips": {"scored": 30, "missing": 0, "ports": 1}, "labels": {"admin": 1}, **result,
+                  "transit_lost": validate.transit_lost(table),
+                  "coverage": {"modes": {"troll-slow": 30}, "ports": {"port-a": 30}, "months": {"2026-01": 30}},
+                  "target": validate.target(result, 30)}
+        self.assertEqual(report["fishing"]["precision"], 0.8)
+        self.assertEqual((report["target"]["fishing_precision"], report["target"]["fishing_recall"]), (0.8, 0.7))
+        self.assertEqual(set(report["target"]),
+                         {"trips", "fishing_precision", "fishing_recall", "overall_met", "per_mode", "met"})
+        self.assertFalse(report["target"]["overall_met"])
+        text = validate.markdown(report)
+        self.assertIn("**Fishing precision 0.800, recall 1.000** (target 0.8 and 0.7, overall and per mode): not met", text)
+        self.assertIn("troll-slow 0.800 / 1.000 not met", text)
+        self.assertIn("| troll-slow | 0.800 | 1.000 | 2399 | 3000 |", text)
+
+
 class SyncTestCase(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
