@@ -25,6 +25,22 @@ function indexOf(haystack: Uint8Array, needle: Uint8Array, from = 0): number {
   }
   return -1;
 }
+/**
+ * The first real delimiter in `buf`: `at` is its index (-1 if none yet). A
+ * delimiter only counts once its next two bytes are known and are CRLF (another
+ * part) or `--` (closing); any other suffix is ordinary content, skipped. `hold`
+ * is the index from which bytes must be kept for the next read (a candidate whose
+ * suffix, or itself, is incomplete); bytes before it are certain content.
+ */
+function scan(buf: Uint8Array, delim: Uint8Array): {at: number; hold: number} {
+  for (let from = 0;;) {
+    const i = indexOf(buf, delim, from), tail = i + delim.length;
+    if (i < 0) return {at: -1, hold: Math.max(0, buf.length - (delim.length - 1))};
+    if (tail + 2 > buf.length) return {at: -1, hold: i};
+    if ((buf[tail] === 0x0d && buf[tail + 1] === 0x0a) || (buf[tail] === 0x2d && buf[tail + 1] === 0x2d)) return {at: i, hold: i};
+    from = i + 1;
+  }
+}
 const join = (a: Uint8Array, b: Uint8Array): Uint8Array => { const out = new Uint8Array(a.length + b.length); out.set(a); out.set(b, a.length); return out; };
 
 const cleanName = (s: string): string | null => s.replace(/[\u0000-\u001f\u007f/\\]/g, '').slice(0, 200) || null;
@@ -88,14 +104,13 @@ export async function firstFile(request: Request): Promise<MultipartFile> {
       const body = new ReadableStream<Uint8Array>({
         async pull(controller) {
           for (;;) {
-            const at = indexOf(start, delimiter);
+            const {at, hold} = scan(start, delimiter);
             if (at >= 0) {
               if (at) controller.enqueue(start.slice(0, at));
               controller.close(); await reader.cancel().catch(() => {}); return;
             }
-            // Everything but a possible partial delimiter at the end is content.
-            const safe = start.length - (delimiter.length - 1);
-            if (safe > 0) { controller.enqueue(start.slice(0, safe)); start = start.subarray(safe); return; }
+            // Everything before a possible (partial or suffix-pending) delimiter is content.
+            if (hold > 0) { controller.enqueue(start.slice(0, hold)); start = start.subarray(hold); return; }
             const {done, value} = await reader.read();
             if (done) { controller.error(new ClientError('upload ended early')); return; }
             if (value?.length) start = join(start, value);
@@ -107,7 +122,7 @@ export async function firstFile(request: Request): Promise<MultipartFile> {
     }
     // A plain field: skip to the next boundary.
     let next: number;
-    while ((next = indexOf(buffer, delimiter)) < 0) { if (buffer.length > MAX_HEADERS * 8 || !await more()) return fail('no file in the upload'); }
+    while ((next = scan(buffer, delimiter).at) < 0) { if (buffer.length > MAX_HEADERS * 8 || !await more()) return fail('no file in the upload'); }
     buffer = buffer.subarray(next + delimiter.length);
   }
   return fail('no file in the upload');
