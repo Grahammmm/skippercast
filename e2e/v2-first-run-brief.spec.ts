@@ -52,7 +52,8 @@ async function prepare(page: Page, region = 'morro-bay') {
 }
 async function port(page: Page, query: string) {
   const input = page.getByLabel('Where are you launching?');
-  await input.fill(query); await input.press('Enter');
+  // Go stays disabled until the port directory has loaded and matched the query; Enter before that does nothing.
+  await input.fill(query); await expect(page.getByRole('button', {name: 'Go'})).toBeEnabled(); await input.press('Enter');
   await expect(page.locator('.landing-step[data-step="profile"]')).toBeVisible();
 }
 async function verdict(page: Page, started: number, label: string) {
@@ -80,12 +81,23 @@ for (const [query, region, profile] of cells) test(`${query} → ${profile} → 
     if (query === 'morro' && profile === 'boat') {
       await page.evaluate(() => sessionStorage.setItem('funnel-actions', '[]'));
       const returning = Date.now(); await page.goto('/');
-      // The saved-port lookup redirects asynchronously after the landing loads.
-      // Reload the destination, not the landing while location.replace is in flight.
+      // Phase 1, the return: the landing resolves the saved port asynchronously (savedPortTarget awaits the port
+      // directory, then web/landing/main.tsx calls location.replace), so goto('/') resolving does not mean the
+      // redirect has happened. Wait for the /map document it lands on and for a useful verdict there; a reload
+      // issued earlier would race that in-flight navigation (net::ERR_ABORTED, frame detached).
       await page.waitForURL(/\/map\?/, {waitUntil: 'load'});
-      await page.reload();
-      await expect(page).toHaveURL(/\/map\?/);
+      const saved = new URL(page.url());
+      expect(saved.searchParams.get('region')).toBe(region);
+      expect(saved.searchParams.get('profile')).toBe(profile);
       await verdict(page, returning, `${info.project.name}/returning`);
+      expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('funnel-actions')!))).toEqual([]);
+      // Phase 2, persistence: reloading the settled brief is a separate check with its own timer and budget.
+      const reloading = Date.now(); await page.reload();
+      await expect(page).toHaveURL(/\/map\?/);
+      const reloaded = new URL(page.url());
+      expect(reloaded.searchParams.get('region')).toBe(region);
+      expect(reloaded.searchParams.get('profile')).toBe(profile);
+      await verdict(page, reloading, `${info.project.name}/returning-reload`);
       expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('funnel-actions')!))).toEqual([]);
     }
     expect(pageErrors).toEqual([]);
