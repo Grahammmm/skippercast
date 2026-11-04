@@ -15,6 +15,7 @@ export const RAIL_ENTRIES: readonly RailEntry[] = [
   {id: 'currents', label: 'Currents', icon: 'current', basis: layerEntry('currents').basis},
   {id: 'water-temp', label: 'Water temp', icon: 'temperature', basis: layerEntry('water-temp').basis},
   {id: 'sst-contrast', label: 'Temp contrast', icon: 'temperature', basis: layerEntry('sst-contrast').basis},
+  {id: 'sst-fronts', label: 'Temp fronts', icon: 'temperature', basis: layerEntry('sst-fronts').basis},
   {id: 'chlorophyll', label: 'Chlorophyll', icon: 'map', basis: layerEntry('chlorophyll').basis},
   {id: 'swell', label: 'Swell + wind', icon: 'wave', basis: `${layerEntry('swell').basis} ${layerEntry('wind').basis}`},
   {id: 'stations', label: 'Stations', icon: 'target', basis: layerEntry('stations').basis},

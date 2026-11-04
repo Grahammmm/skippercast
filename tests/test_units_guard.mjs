@@ -1,5 +1,7 @@
 // RF1130-8: web/units.ts is the only web file that may spell a ft/m/kt/nmi conversion
 // factor. Comments are ignored; a literal inside a longer number is not the factor.
+// RF1949-1: the same holds for the hand-written dist/*.js modules (top level only; dist/data/
+// and other sub-folders are data or vendored bundles, not code we wrote).
 import assert from 'node:assert/strict';
 import {mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -8,23 +10,38 @@ import test from 'node:test';
 import {fileURLToPath} from 'node:url';
 
 const WEB = fileURLToPath(new URL('../web', import.meta.url));
+const DIST = fileURLToPath(new URL('../dist', import.meta.url));
 const LITERAL =
   /(?<![\w.])(?:3\.2808\d*|1\.9438\d*|0?\.5144\d*|0?\.30480*|1\.8520*|1852(?:\.0*)?|6076(?:\.\d+)?)(?![\w.])/;
 
 const strip = (src) =>
   src.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' ')).replace(/\/\/.*$/gm, '');
 
-/** Every `file:line` under `root` (a web/ tree) with a conversion literal, except root/units.ts. */
-export function scan(root) {
+const hitsIn = (root, names, skip) => {
   const hits = [];
-  for (const name of readdirSync(root, {recursive: true}).map(String).sort()) {
-    if (!/\.tsx?$/.test(name) || name === 'units.ts') continue;
+  for (const name of names) {
+    if (name === skip) continue;
     const lines = strip(readFileSync(join(root, name), 'utf8')).split('\n');
     lines.forEach((line, i) => {
       if (LITERAL.test(line)) hits.push(`${relative(root, join(root, name)).split(sep).join('/')}:${i + 1}`);
     });
   }
   return hits;
+};
+
+/** Every `file:line` under `root` (a web/ tree) with a conversion literal, except root/units.ts. */
+export function scan(root) {
+  const names = readdirSync(root, {recursive: true}).map(String).sort();
+  return hitsIn(root, names.filter((n) => /\.tsx?$/.test(n)), 'units.ts');
+}
+
+/** Same for the `*.js` files directly in `root` (a dist/ folder); sub-folders are not scanned. */
+export function scanDist(root) {
+  const names = readdirSync(root, {withFileTypes: true})
+    .filter((e) => e.isFile() && e.name.endsWith('.js'))
+    .map((e) => e.name)
+    .sort();
+  return hitsIn(root, names, null);
 }
 
 test('units guard: no conversion literal in web/ outside web/units.ts', () => {
@@ -48,4 +65,21 @@ test('units guard: planted, comment, longer-number, units.ts and .tsx cases', ()
   );
   writeFileSync(join(root, 'loud.ts'), 'export const c = [3.280839895, .5144, 6076.12, 1852.0, 0.30480];\n');
   assert.deepEqual(scan(root), ['loud.ts:1', `map/contrast.ts:${line}`, 'map/units.ts:1', 'view.tsx:1']);
+});
+
+test('units guard: no conversion literal in dist/*.js', () => {
+  assert.deepEqual(scanDist(DIST), []);
+});
+
+test('units guard: dist planted, comment, longer-number and dist/data cases', () => {
+  const root = mkdtempSync(join(tmpdir(), 'units-guard-dist-'));
+  mkdirSync(join(root, 'data'));
+  writeFileSync(join(root, 'x.js'), 'export const kt = (v) => v * 1.943844;\n');
+  writeFileSync(
+    join(root, 'quiet.js'),
+    '// v * 1.943844\nexport const a = 11.943844;\n/* 3.28084 */ export const b = 1;\n',
+  );
+  writeFileSync(join(root, 'data/feed.js'), 'export const c = 3.28084;\n');
+  writeFileSync(join(root, 'notes.txt'), '1.943844\n');
+  assert.deepEqual(scanDist(root), ['x.js:1']);
 });
