@@ -5,7 +5,9 @@
 // state until FE-30 brings the readings. FirstRun (FE-08) asks for the
 // profile once, over the map, never blocking it.
 import {batch, effect, signal} from '@preact/signals';
+import {useEffect} from 'preact/hooks';
 import {CommandBar} from './CommandBar.tsx';
+import {Button} from '../ui/Button.tsx';
 import {Desktop} from './Desktop.tsx';
 import {FirstRun} from './FirstRun.tsx';
 import {Masthead} from './Masthead.tsx';
@@ -17,7 +19,11 @@ import {sourceFreshness, startupDeadline} from '../landing/region-warm.ts';
 import type {BriefTile} from '../brief/types.ts';
 import {tideSelection} from '../tide-selection.ts';
 import {loadPlans, regionUnavailable} from '../species.ts';
-import {region, setRegionDefaultBase} from '../state.ts';
+import {profile, readStored, region, setRegionDefaultBase, species, STORAGE_KEYS} from '../state.ts';
+import {currentVerdict, leadBrief, leadDate, leadDayText} from '../brief/Brief.tsx';
+import {firstAnswer} from '../first-answer.ts';
+import {isProfile, PROFILE_TABLE} from '../profile.ts';
+import {loadRegs, regsData} from '../regs.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 import {regionLoad} from '../ranking.ts';
 import {createRegionReader, currentRegionInfo, REGION_MISSING, REGION_READ_TIMEOUT_MS, regionInfo, zone, type RegionInfo} from './region-info.ts';
@@ -133,14 +139,37 @@ export async function loadRegion(id: string, fetchFn: typeof fetch = sharedFetch
   }
 }
 
+/** BF-one-answer: whether the address or storage names a profile; if neither, the line says which it assumed. */
+const profileChosen = (): boolean => {
+  try { return isProfile(new URLSearchParams(location.search).get('profile')) || isProfile(readStored(STORAGE_KEYS.profile)); } catch { return false; }
+};
+
+/** BF-one-answer: the app leads with one answer (web/first-answer.ts) above the desktop map; the detail stays below it. The mobile layout fills the viewport with the map and leads with the same verdict at the sheet's peek. */
+export function FirstAnswerLine({now = new Date()}: {now?: Date} = {}) {
+  const info = regionInfo.value, rules = info?.rules ?? null, brief = leadBrief(now), date = leadDate(now, brief);
+  useEffect(() => { if (rules) void loadRegs(rules); }, [rules?.id]);
+  const loaded = regsData.value, p = profile.value;
+  const a = firstAnswer({verdict: currentVerdict(brief, now), rules, regs: rules && loaded?.region === rules.id ? loaded.data : null,
+    target: species.value ?? PROFILE_TABLE[p].defaultTarget, date, day: leadDayText(date, now, info?.timezone ?? DEFAULT_ZONE), now, profile: p, chosen: profileChosen()});
+  return (
+    <section class="app-first-answer" aria-label="The answer" data-fishable={a.fishable} data-as-of={a.asOf}>
+      <h2 class="app-first-answer-line">{a.line}</h2>
+      <p class="app-first-answer-reason">{a.reason}</p>
+      <p class="app-first-answer-rules">{a.legalityNote} <a href={a.rulesHref} target="_blank" rel="noopener">Official rules</a></p>
+      <Button class="app-first-answer-more" onClick={() => document.querySelector('.app-main, .app-mobile')?.scrollIntoView?.()}>Show the map and detail</Button>
+    </section>
+  );
+}
+
 /** The shell; `now` fixes the clock the dock, the window and the day chips read (tests pass a date). The trip dialogs keep their place across layouts. */
 export function App({now = new Date()}: {now?: Date} = {}) {
   return (
     <>
       {narrow.value ? <Mobile now={now} firstRun={<FirstRun />} /> : (
-        <div class="app">
+        <div class="app" style={{gridTemplateRows: 'auto auto auto 1fr'}}>
           <Masthead />
           <CommandBar now={now} />
+          <FirstAnswerLine now={now} />
           <Desktop now={now} />
           <FirstRun />
         </div>
