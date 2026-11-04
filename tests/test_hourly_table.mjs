@@ -101,6 +101,20 @@ test('edge 5: tide comes from the coast series at the row hour; with no coast re
   assert.equal(rows[10].tide, null, 'no reading near the hour is blank');
 });
 
+test('hourly_tide_cell_uses_nearest_reading', () => {
+  const f = forecast(NORMAL), now = nowAt(NORMAL);
+  // Row 2 is 09:00Z. Off-hour points only: 08:36 = 1, 08:54 = 4, 09:06 = 5, so 08:54 and 09:06 tie and the earlier wins.
+  const pts = [{at: '2026-06-15T08:36:00Z', value: 1}, {at: '2026-06-15T08:54:00Z', value: 4}, {at: '2026-06-15T09:06:00Z', value: 5}];
+  const noTide = hourlyTable(f, null, '2026-06-15', TZ, now).rows;
+  for (const points of [pts, [...pts].reverse(), [pts[2], pts[0], pts[1]]]) {
+    const rows = hourlyTable(f, {label: 'Tide', unit: 'ft', color: '', points}, '2026-06-15', TZ, now).rows;
+    assert.equal(rows[2].tide, 4);
+    assert.equal(hourlyCells(rows[2])[5], '4.0 ft');
+    assert.equal(rows[8].tide, null, 'no reading within 30 minutes of the hour is blank');
+    rows.forEach((r, i) => assert.deepEqual({...r, tide: null}, {...noTide[i], tide: null}, 'only the tide cell changes; scores and other cells stay'));
+  }
+});
+
 test('edge 6: no forecast gives no rows and the note', () => {
   assert.deepEqual(hourlyTable(null, null, '2026-06-15', TZ, new Date()), {rows: [], note: 'No forecast for this day.'});
 });
