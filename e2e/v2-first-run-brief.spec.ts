@@ -69,6 +69,9 @@ async function verdict(page: Page, started: number, label: string) {
   await expect(page.getByText(/sign in to continue|create (an )?account|passkey|take a tour|welcome to/i).filter({visible: true})).toHaveCount(0);
 }
 for (const [query, region, profile] of cells) test(`${query} → ${profile} → useful brief`, async ({page, pageErrors}, info) => {
+  // This case checks three journeys, each still bounded by FUNNEL_BUDGET_MS.
+  // Allow their combined budget plus assertion/setup overhead, not just the default minute.
+  if (query === 'morro' && profile === 'boat') test.setTimeout(3 * FUNNEL_BUDGET_MS + 15_000);
   const cdp = await prepare(page, region);
   try {
     const started = Date.now(); await page.goto('/?ui=v2');
