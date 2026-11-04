@@ -32,7 +32,8 @@ export function canonicalHour(value: string | null): string | null {
  */
 export function fishLink(href: string, clearGeography = false): URL {
   const url = new URL(href), p = url.searchParams;
-  const fish = ['mode', 'species', 'layer', 'place'].some(key => p.has(key));
+  // A recognized legacy area alone is a Fish link; arbitrary area values are not.
+  const fish = ['mode', 'species', 'layer', 'place'].some(key => p.has(key)) || own(AREA_PLACES, p.get('area') ?? '') !== undefined;
   if (!fish) return url;
   const mode = p.get('mode');
   if (isProfile(mode)) {
