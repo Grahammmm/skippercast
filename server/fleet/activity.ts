@@ -37,7 +37,7 @@ import {recordFleetAis} from '../analytics.ts';
 import {sha256} from '../advisor/ids.ts';
 import type {Env} from '../env.ts';
 import {FLEET_ENUMS, MAX_PARAMS, REGION, RUN_ID} from './registry.ts';
-import {aisClaim, reportClaim, type Claim, type LingerEvidence} from './evidence-ladder.ts';
+import {aisClaim, classifiedAisClaim, reportClaim, type Claim, type LingerEvidence} from './evidence-ladder.ts';
 import {advisorPairs, advisorPrune, landingPairs, landingPrune, landingRows, SWEEP_DAYS} from './pairing.ts';
 
 export const MAX_ACTIVITY_BYTES = 1024 * 1024;
@@ -46,6 +46,18 @@ export const STALE_HOURS = 3;
 export const BASIS = 'inferred-from-movement';
 export const heartbeatKey = (region: string): string => `fleet.ais.${region}.heartbeat`;
 export const processedKey = (region: string): string => `fleet.ais.${region}.processed`;
+
+/** Evidence scoped to the displayed trip, not the vessel's unrelated history.
+ * Fishing segments have already passed classify.py's regional sustained-run thresholds. */
+export async function tripActivityClaims(db: D1Database, tripId: string, identityConfirmed: boolean): Promise<Claim[]> {
+  const reports = (await db.prepare(`SELECT rp.report_kind kind, r.source FROM fleet_trip_reports rp
+    LEFT JOIN advisor_reports r ON rp.report_kind='advisor' AND r.id=rp.report_ref WHERE rp.trip_id=?`)
+    .bind(tripId).all<{kind: string; source: string | null}>()).results;
+  const segments = await db.prepare(`SELECT COUNT(*) AS n FROM fleet_segments WHERE trip_id=?
+    AND kind IN ('drift-anchor','troll-slow','troll-pelagic')`).bind(tripId).first<{n: number}>();
+  return [reportClaim(reports.map(r => ({source: r.kind === 'advisor' ? (r.source ? `advisor:${r.source}` : '') : r.kind}))),
+    classifiedAisClaim(segments?.n ?? 0, identityConfirmed)].filter((c): c is Claim => c !== null);
+}
 
 /** Test seam: the clock for received_at, processed.at and health ages. */
 export const activityDeps: {now: () => Date} = {now: () => new Date()};

@@ -247,7 +247,7 @@ export interface FleetVesselDetail {
   changes: {id: string; kind: string; before: unknown; after: unknown; detected_at: string; run_id: string | null; review_id: string | null}[];
   watch: {region: string; mmsi: string; match_method: string; confidence: number | null; status: string; ais_name: string | null; last_seen_at: string | null; positions_30d: number | null}[];
   trips: {id: string; mmsi: string; departed_at: string; returned_at: string | null; local_date: string; status: string; trip_type_inferred: string | null;
-    distance_nm: number | null; fishing_min: number | null}[];
+    distance_nm: number | null; fishing_min: number | null; claims: {rung: string; count: number; caveat: string}[]}[];
   advisor_boats: {id: string; slug: string; name: string; port: string; status: string}[];
   open_reviews: {id: string; kind: FleetReviewKind; score: number | null; opened_at: string}[];
   operator: {id: string; slug: string; name: string; consent_status: string; outreach_status: string} | null;

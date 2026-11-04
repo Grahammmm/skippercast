@@ -64,6 +64,14 @@ export function aisClaim(lingers: readonly LingerEvidence[], identityConfirmed: 
   return make(identityConfirmed === true ? 'ais-linger-verified' : 'ais-linger', met.length, []);
 }
 
+/** Persisted classifier output has already passed the processor's regional thresholds.
+ * Count retained fishing segments/events (or aggregate events), never AIS positions,
+ * duration totals or vessel counts. Aggregates cannot confirm a named identity. */
+export function classifiedAisClaim(count: number, identityConfirmed = false): Claim | null {
+  if (!Number.isSafeInteger(count) || count < 1) return null;
+  return make(identityConfirmed ? 'ais-linger-verified' : 'ais-linger', count, []);
+}
+
 /** True only for a Claim these constructors made. */
 export const isClaim = (v: unknown): v is Claim => !!v && typeof v === 'object' && Object.isFrozen(v)
   && RUNGS.includes((v as Claim).rung) && (v as Claim).caveat === CAVEATS[(v as Claim).rung];

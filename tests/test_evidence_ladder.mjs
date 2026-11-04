@@ -134,6 +134,38 @@ async function seeded({docs = 'doc-1', mmsi = MMSI, tripMmsi = MMSI, dwell = [40
 }
 const TH = {'drift-anchor': 15};
 
+test('shipped map responses and vessel trips carry constructed evidence through presentation', {skip}, async () => {
+  const {mapQuery, mapEvents, mapTracks, mapHeat} = await import('../server/fleet/map.ts');
+  const {vesselDetail} = await import('../server/fleet/admin/vessels.ts');
+  const {eventCardHTML, trackCardHTML, heatCardHTML} = await import('../dist/fleet-activity.js');
+  const {activityMark} = await import('../web/map/fleet.ts');
+  const v1 = await import('../dist/fleet-activity.js');
+  const {sql, db} = await seeded({reports: [['advisor', 'r1', 'feed-x']]});
+  try {
+    sql.prepare('UPDATE fleet_segments SET geometry=?').run('_p~iF~ps|U_ulLnnqC');
+    sql.prepare(`INSERT INTO fleet_aggregates(id,region,module,params_json,cell_id,lat,lon,season,kind,vessels_n,events_n,dwell_min,rights,computed_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(sha('cell'), REGION, 'grid', '{}', 'g1000:1:1', 35, -121, '2026', 'drift-anchor', 1, 3, 120, 'internal-only', NOW);
+    for (const [layer, build, card, count] of [['events', mapEvents, eventCardHTML, 1], ['tracks', mapTracks, trackCardHTML, 1], ['heat', mapHeat, heatCardHTML, 3]]) {
+      const response = wire(await build(db, mapQuery(layer, {region: REGION})));
+      assert.equal(response.features.length, 1, layer);
+      const props = response.features[0].properties;
+      assert.equal(props.claim.rung, 'ais-linger');
+      assert.equal(props.claim.count, count);
+      assert.equal(props.claim.caveat, CAVEATS['ais-linger']);
+      assert.deepEqual(props.claim.areas, []);
+      assert.match(card(props), /ais-linger/);
+      assert.ok(card(props).includes(props.claim.caveat.replaceAll("'", '&#39;')) || card(props).includes('small vessels poorly'));
+      assert.ok(activityMark(v1, layer, props, 'UTC').basis.includes(claimLine(props.claim)));
+    }
+    const detail = wire(await vesselDetail(db, VESSEL));
+    assert.deepEqual(detail.trips[0].claims.map(c => c.rung), ['named-report', 'ais-linger-verified']);
+    assert.deepEqual(detail.trips[0].claims.map(c => c.count), [1, 1]);
+    sql.prepare("UPDATE fleet_segments SET kind='transit'").run();
+    sql.prepare('DELETE FROM fleet_trip_reports').run();
+    assert.deepEqual((await vesselDetail(db, VESSEL)).trips[0].claims, []);
+  } finally { sql.close(); }
+});
+
 test('activityClaims: every claim has rung, count, caveat, and the wire holds no coordinate', {skip}, async () => {
   const {activityClaims} = await import('../server/fleet/activity.ts');
   const {sql, db} = await seeded({reports: [['advisor', 'r1', 'feed-x'], ['advisor', 'r2', 'feed-x'], ['landing', 'l1', null]]});
