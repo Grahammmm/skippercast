@@ -71,6 +71,8 @@ which it never prints):
 SKIPPERCAST_SESSION=<__Host-sc_session cookie value> node scripts/advisor/preflight.mjs [--stage dark] [--local]
 ```
 
+`node scripts/advisor/preflight.mjs --report` (same session, `--stage` and `--local` options) prints all 18 rows below and every § Owner to-do item as `pass`, `fail`, `blocked` (needs the admin session) or `owner-only` (a by-hand step), each with the check or step it used, from this table.
+
 | # | Item | How to verify | Reference |
 | --- | --- | --- | --- |
 | 1 | Every Text Advisor PR merged (#277, #278, #279 and TA-P1) and `main` deployed | preflight: `/api/health` answers with a build; by hand: the last **Deploy to Cloudflare** run is green on the merge commit | [AGENTS.md § Releases](../../../AGENTS.md#releases) |
@@ -243,6 +245,7 @@ Skippers in the pilot (boat names only, never numbers), filled in at item 11:
 | Problem | Action |
 | --- | --- |
 | Bad replies | `ADVISOR_REPLIES_ENABLED=false` (soft): inbound is stored, acked and marked `held`; nothing is sent and no model is called; users get silence rather than wrong answers; the admin dashboard shows the backlog. Re-enable after the prompt fix; the backlog is *not* replayed (held inbound rows stay `held`). `TEXT_ADVISOR_ENABLED=false` (hard): every advisor route answers 404 and the relay's webhook deliveries fail; use only for a security incident. Both are repository variables plus a deploy. |
+| Pilot scope (BF-advisor-beta) | `ADVISOR_BETA_REGIONS` (region ids, e.g. `morro-bay`) and `ADVISOR_BETA_LANGS` (`en`, `es`), both optional comma lists: with the advisor on, an inbound resolving outside them gets no advisor reply; opt-out and privacy commands (STOP, FORGET ME/DELETE, data export) still run with their control replies, never a model call; unset means everyone. Roll back by removing both variables and deploying (the previous behaviour exactly). A set but all-invalid list is ignored (everyone is served) and admin health `beta.ignored` shows it. Both must be listed in the deploy workflow's env before they reach the Worker. |
 | Runaway spend | lower `ADVISOR_GLOBAL_DAILY_LLM` / `_VISION`; both are read per request. |
 | Social mistake | `ADVISOR_SOCIAL_ENABLED=false`; delete the post on Meta by hand (runbook); set the post `rejected`. |
 | Relay down | runbook advisor-relay-down; held messages release automatically on recovery. |

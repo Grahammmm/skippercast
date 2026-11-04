@@ -38,6 +38,7 @@ import {durationText, runMinutes} from './run.ts';
 import {regionCoverage, regionPlans, targetState} from '../species.ts';
 import {planFor, noPlanText} from '../search-plan.ts';
 import {regionInfo} from '../app/region-info.ts';
+import {NO_REASONS, reasonsFor, targetEvidence} from '../area-reasons.ts';
 
 export type {Pick, Ranking};
 
@@ -187,6 +188,24 @@ function EmptyOrPlan({empty}: {empty: string}) {
   );
 }
 
+/**
+ * BF-why-this-area: the selected place's dated reasons, up to three, each with its source, from the records the ranker read for it
+ * (its atlas mark or published place); a place without any shows the explicit empty line. Text is rendered as text, never markup.
+ */
+function Why({pick}: {pick: Pick}) {
+  const data = markData.value, pub = reefPublication.value;
+  const found = pick.kind === 'spot' ? data?.atlas?.targets.find(t => t.id === pick.id) : pick.kind === 'reef' && pub.state === 'ready' ? pub.loaded.targets.find(t => t.id === pick.id) : undefined;
+  const reasons = found ? reasonsFor(pick.id, targetEvidence(found, pick.kind === 'spot' ? data?.atlas : null, data?.region.source_names), Date.now()) : [];
+  if (!reasons.length) return <p class="app-empty app-pick-why" data-why="none">{NO_REASONS}</p>;
+  return (
+    <ul class="app-pick-why" data-why="reasons" aria-label="Why this area">
+      {reasons.map((x, i) => (
+        <li key={i}><span class="ui-mono">{x.date}</span> {x.text} · {x.sourceURL ? <a href={x.sourceURL} target="_blank" rel="noopener noreferrer">{x.source}</a> : x.source}</li>
+      ))}
+    </ul>
+  );
+}
+
 export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   const boat = profile.value === 'boat', r = given ?? currentRanking(Date.now(), boat ? ROUTE_BUDGET : undefined), id = region.value, speed = cruiseSpeed.value;
   // SC1322-10: Boat lists by water where routed; other profiles keep the ranking's picks as they are. The render uses
@@ -239,6 +258,7 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
                 <span class="app-fit ui-eyebrow">{pick.fit}</span>
                 <span class="app-pick-reason">{pick.reason}</span>
               </button>
+              {selected(pick) ? <Why pick={pick} /> : null}
             </li>
           ))}
         </ol>

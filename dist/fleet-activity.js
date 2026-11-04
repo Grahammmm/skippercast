@@ -103,11 +103,14 @@ const eyebrow = (what, p) => `<div class="eyebrow">${what} · ADMIN${p.planning_
 const inferred = `<p class="evidence-note fleet-inferred"><strong>${esc(INFERRED)}</strong></p>`;
 
 function rightsHTML(p) {
+  const c = p.claim;
+  const evidence = c && c.count > 0 && c.caveat
+    ? `<p class="evidence-note">${esc(c.rung)} (${esc(c.count)} pieces of evidence). ${esc(c.caveat)}</p>` : '';
   const planning = p.planning_only
     ? "<p><strong>NOAA planning-only.</strong> MarineCadastre backfill for verification and internal use; keep it off paid surfaces.</p>"
     : "";
   const version = p.classifier_version ? ` · classifier ${esc(p.classifier_version)}` : "";
-  return `<details class="detail-section"><summary>Source &amp; rights</summary><p>Source: ${esc(p.source || "—")} · rights: ${esc(p.rights || "—")}${version}</p>${planning}<p>Basis: ${esc(p.basis || "inferred-from-movement")}. AIS reception can miss boats or drop out offshore.</p></details>`;
+  return evidence + `<details class="detail-section"><summary>Source &amp; rights</summary><p>Source: ${esc(p.source || "—")} · rights: ${esc(p.rights || "—")}${version}</p>${planning}<p>Basis: ${esc(p.basis || "inferred-from-movement")}. AIS reception can miss boats or drop out offshore.</p></details>`;
 }
 
 /** The details card for one activity event. */

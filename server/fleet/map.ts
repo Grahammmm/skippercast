@@ -38,6 +38,7 @@
 import type {Context} from 'hono';
 import {json} from '../http.ts';
 import {fleetSettings} from './settings.ts';
+import {classifiedAisClaim} from './evidence-ladder.ts';
 import type {AppEnv} from '../env.ts';
 
 export const CAPS = {events: 2000, tracks: 300, heat: 5000} as const;
@@ -180,7 +181,7 @@ export async function mapEvents(db: D1Database, q: MapQuery): Promise<MapPage> {
     layer: 'event', id: r.id, trip_id: r.trip_id, vessel_id: r.vessel_id, vessel_name: r.name, vessel_slug: r.slug, port_id: r.port_id,
     vessel_class: r.vessel_class, trip_type: r.trip_type, kind: r.kind, local_date: r.local_date, started_at: r.started_at, ended_at: r.ended_at,
     dwell_min: r.dwell_min, radius_m: r.radius_m, season: r.season, season_part: r.season_part, species: parseJson(r.species_json),
-    source: r.source, classifier_version: r.classifier_version,
+    source: r.source, classifier_version: r.classifier_version, claim: classifiedAisClaim(1),
     basis: r.basis || BASIS, rights: r.rights, planning_only: planning(r.rights)}}));
   const last = shown.at(-1);
   return page('events', q, features, more && last ? encodeCursor([last.started_at, last.id]) : null);
@@ -237,7 +238,7 @@ export async function mapTracks(db: D1Database, q: MapQuery): Promise<MapPage> {
         vessel_id: t.vessel_id, vessel_name: t.name, vessel_slug: t.slug, vessel_class: t.vessel_class, depart_port_id: t.depart_port_id, return_port_id: t.return_port_id,
         trip_type: t.trip_type_inferred, trip_status: t.status, local_date: t.local_date, departed_at: t.departed_at, returned_at: t.returned_at,
         season: t.season, season_part: t.season_part, distance_nm: t.distance_nm, max_offshore_nm: t.max_offshore_nm, fishing_min: t.fishing_min,
-        source: t.source, classifier_version: t.classifier_version,
+        source: t.source, classifier_version: t.classifier_version, claim: classifiedAisClaim(1),
         basis: BASIS, rights: t.rights, planning_only: planning(t.rights)}});
     }
     features.push(...tripFeatures);
@@ -271,6 +272,7 @@ export async function mapHeat(db: D1Database, q: MapQuery): Promise<MapPage> {
   const features: Feature[] = shown.map(r => ({type: 'Feature', id: r.id, geometry: {type: 'Polygon', coordinates: [cellRing(r.lat, r.lon, cellSize(r.cell_id, r.params_json))]}, properties: {
     layer: 'heat', id: r.id, cell_id: r.cell_id, module: r.module, kind: r.kind, season: r.season, season_part: r.season_part,
     vessels_n: r.vessels_n, events_n: r.events_n, dwell_min: r.dwell_min, first_date: r.first_date, last_date: r.last_date, computed_at: r.computed_at,
+    claim: classifiedAisClaim(r.events_n),
     basis: BASIS, rights: r.rights, planning_only: planning(r.rights)}}));
   const ignored: string[] = IGNORED_BY_HEAT.filter(name => q[name].length > 0);
   if (q.from && shown.some(r => r.last_date === null)) ignored.push('from');
