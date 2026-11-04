@@ -220,3 +220,25 @@ The roadmap's order is the owner's ("The owner sets the order"). Recommending So
 3. **Decline both:** Southern California stays `preview` until a live operational source exists. Phase 0 and S2/S3 still stand.
 
 Agent-only work that can start now under every option: M1a, M2's schema change, M3 and M4. M1b waits on the owner; M1c waits on M1b.
+
+## 7. Outcome record: Cambria–San Simeon promotion check, 2026-11-03 (BF-second-region)
+
+Run at `origin/main` `eac31de` by working the checklist above in its own order. Nothing was regenerated and no data file was edited. **Result: not promoted. `cambria-san-simeon` stays `preview`, and `dist/regions/index.json` is unchanged (one `active` region, `default_region` `morro-bay`).** The status flip is the last step and was not taken because items 1, 3, 5 and 6 failed.
+
+| # | Check (source in this document) | Command or file read | Result |
+| --- | --- | --- | --- |
+| 1 | The 10 needs that are `ready` in Morro Bay are `ready` here (section 1, bar) | `dist/regions/cambria-san-simeon/coverage.json` against `dist/regions/morro-bay/coverage.json` | **FAIL, 8 of 10.** `substrate` is `partial`: "USGS geological interpretation provides regional context, not a 2 m seabed classification." `wave-observations` is `partial`: "Diablo Canyon and offshore 46028 are reference buoys, not San Simeon observations." The other eight (`protected-areas`, `regulations`, `dynamic-closures`, `wind-forecast`, `wave-forecast`, `tides`, `wind-ensemble`, `wave-ensemble`) are `ready`. |
+| 2 | `season-status`, `conditions-outlook` and `tide-chart` capabilities are ready (section 1, bar) | same `coverage.json`, `capabilities` | PASS. All three are `ready: true`. |
+| 3 | At least one reviewed home port and harbor (section 1, bar) | `catalog/home-ports.json`, ports whose `region` is `cambria-san-simeon` | **FAIL, 0 of 18 catalog ports.** The active-only paths (sitemap, daily pre-generation, daily pre-router, rules watch) would have nothing to serve. |
+| 4 | The status flag changes only after the needs are reviewed `ready` (section 1, bar) | `src/skippercast/platform/contracts.py` line 198 checks only that `status` is `active`, `preview` or `draft` | NOT MET. B6's validation rule (an `active` region must have every bar need `ready` and a home port) does not exist yet, so nothing in the repo would stop the flag drifting from the evidence. |
+| 5 | Morro Bay refined first, M1–M5 (section 2) | see sub-rows | **FAIL.** M1, M2 and M5 are still open; M3 and M4 are done. |
+| 5a | M1 shore reviews | `dist/regions/morro-bay/shore-habitat.geojson` | **OPEN.** `legalReviewExpiresAt` is `2026-10-04T02:43:19.000Z` and `accessReviewExpiresAt` is `2026-10-10T02:48:10.183Z` on 5 features each. Renewal is the owner gate M1b. |
+| 5b | M2 Estero Bluffs shore access | same file, search for "Estero Bluffs" | **OPEN.** No match. |
+| 5c | M3 daily-evidence snapshot | `dist/data/daily-evidence.json` | DONE (FSC-01). `generated_at` is `2026-11-02T18:02:41Z`. |
+| 5d | M4 contour receipt | `docs/coast-capabilities-status.md`, row "Contours: Morro Bay shelf" | DONE. Receipt `research/receipts/morro-bay-depth-contours-test-2026-11-03.json`, 16/16 passed. |
+| 5e | M5 tide timing at the bar | `dist/regions/morro-bay/coverage.json`, `tides` reason | **OPEN.** The reason still reads "Port San Luis reference water levels, not Morro Bay entrance currents." |
+| 6 | G has accepted the roadmap order and the active bar in writing (section 6, decision 1; section 1, last paragraph) | `docs/roadmap.md` "Next", this document | **NOT RECORDED.** The roadmap still reads "Morro Bay is the only active region until it is refined" and lists Cambria at step 2. This document recommends Southern California instead. A builder cannot supply G's decision. |
+| 7 | Held rights (section 4) | carried from section 4; not re-read on this run | **HELD.** `csumb-cambria` is "needs permission … Not shipped", so no habitat product north of about 35.56° N can be reviewed. Not worked around here. |
+| 8 | Index and readers after a flip (spec edge paths) | `dist/regions/index.json` read as it stands | Unchanged: 16 regions, one `active` (`morro-bay`), `default_region` `morro-bay`. Not exercised with two active regions because no flip was made. |
+
+**What would change the result.** Items 1 and 3 are evidence gaps. No reviewed home port exists for the package and the `substrate` gap needs the held CSUMB right (section 4). Items 5 and 6 are Morro Bay's own M1/M2/M5 work and G's decisions. Section 5 recommends Southern California for the reasons given there. Per the design, nothing here was relabelled or waived.
