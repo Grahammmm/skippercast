@@ -185,6 +185,10 @@ function modelRow(label: 'Wind' | 'Seas', id: string, f: Feed, points: readonly 
   return {label, model: name, grid, value, gap: '', point, cell: null, validAt: t, issuedAt: issued};
 }
 
+/** A WCOFS sample that can be real: five finite numbers, a cell on the globe, a speed of zero or more, a bearing in 0-360. Rejected whole, never repaired. */
+const possibleSample = (s: unknown): s is number[] =>
+  Array.isArray(s) && s.length >= 5 && s.slice(0, 5).every(finite) && Math.abs(s[1]) <= 90 && Math.abs(s[2]) <= 180 && s[3] >= 0 && s[4] >= 0 && s[4] <= 360;
+
 /**
  * The surface current row from the feed's WCOFS native-cell samples: the sampled cell nearest the mark within
  * 1.5 grid lengths, else the regional point's own sample (named, no distance).
@@ -198,7 +202,7 @@ function currentRow(f: Feed, points: readonly {id: string; lat: number; lon: num
   const samples = (Array.isArray(c.points) ? c.points : []).map(p => {
     const id = (p as {point_id?: unknown})?.point_id, list = (p as {samples?: unknown})?.samples;
     const index = points.findIndex(q => q.id === id);
-    return {index, samples: index < 0 || !Array.isArray(list) ? [] : list.filter((s): s is number[] => Array.isArray(s) && s.length >= 5 && s.slice(0, 5).every(finite))};
+    return {index, samples: index < 0 || !Array.isArray(list) ? [] : list.filter(possibleSample)};
   }).filter(p => p.index >= 0);
   const listed = [...new Set(samples.flatMap(p => p.samples.map(s => s[0]! * 1000)))].sort((a, b) => a - b);
   const retrieved = finite(f.retrieved) ? f.retrieved : NaN, pointId = points[regional]!.id;
