@@ -9,8 +9,9 @@ import {RAIL_IDS} from '../web/profile.ts';
 import {COASTLINE_SOURCE, ENC_SOURCE, LAYERS, attributionFor, drapeStyle, drawsIn, layerEntry, layersIn, railLayers, setTerrainLayer, sourceLayer, terrainLayers} from '../web/map/layers.ts';
 import {COAST_OVERLAY_COLORS} from '../packages/coast/src/palette.ts';
 import {groundsOverlay} from '../web/map/charter-grounds.ts';
-import {markScreen, markStyle} from '../web/map/marks.ts';
-import {assessScreen} from '../web/map/habitat.ts';
+import {markData, markScreen, markStyle} from '../web/map/marks.ts';
+import {assessScreen, CHECKING} from '../web/map/habitat.ts';
+import {beginWaypointPlacement, cancelWaypointPlacement, placementRefused, waypointPlacement} from '../web/waypoint-placement.ts';
 import {COASTLINE_GLOW, COASTLINE_LINE, COASTLINE_PICK, coastlineLayers, coastlineMark, coastlineSource, shorelineURL, SHORELINE_DETAIL_ZOOM} from '../web/map/coastline.ts';
 import {VIEW_ZOOM, ZOOM_OFFSET, collapseAttribution, createEngine, mapOptions} from '../web/map/engine.ts';
 import {BASEMAP_MANIFEST, ENC_LAYER, basemapArchive, chartFailed, chartMark, chartStyle, createChart, unavailable} from '../web/map/chart.ts';
@@ -591,6 +592,56 @@ test('a shoreline click fills the mark card; empty water clears it; no WebGL fai
   assert.equal(chartFailed.value, true, 'the stage shows "Map unavailable."');
   assert.equal(terrainFailed.value, false, 'the terrain is unaffected');
   second.stage.destroy();
+});
+
+test('SC1952-06: an armed Chart tap is screened by the current region\'s marks screen at the click; a refused tap is consumed, never selects a mark, and the placement stays armed', async t => {
+  t.mock.method(console, 'warn', () => {});
+  browser(`${PAGE}?region=morro-bay`);
+  const {fake, stage} = chartStage();
+  await tick(); await tick(); await tick();
+  const [map] = fake.maps;
+  const NAME = '<img src=x onerror=alert(1)> Reserve';
+  const BOX = {type: 'Polygon', coordinates: [[[-121.01, 34.99], [-120.99, 34.99], [-120.99, 35.01], [-121.01, 35.01], [-121.01, 34.99]]]};
+  const ready = () => assessScreen({areas: [{type: 'Feature', properties: {NAME, Type: 'SMR'}, geometry: BOX}], checkedAt: new Date().toISOString(), live: true}, Date.now());
+  const data = id => ({region: {id}, atlas: null, survey: null, geology: null});
+  const tap = (lat, lon) => map.fire('click', {point: {x: 1, y: 1}, lngLat: {lng: lon, lat}});
+  // A shoreline feature sits under every tap: a tap that is not consumed would select it.
+  fake.features = [{layer: {id: COASTLINE_PICK}, properties: {SOURCE_ID: 'S1', ATTRIBUTE: 'Natural.Mean High Water', HOR_ACC: '2', source_date: '2010-11-01'}}];
+  const got = [];
+  try {
+    chartMark.value = null;
+    beginWaypointPlacement('morro-bay', at => got.push(at));
+    // Marks not loaded / still checking: not checked, refused.
+    markData.value = null; markScreen.value = CHECKING;
+    tap(35, -121);
+    assert.equal(got.length, 0); assert.equal(chartMark.value, null, 'consumed: no mark selected'); assert.equal(placementRefused.value.screened, false);
+    markData.value = data('morro-bay'); markScreen.value = CHECKING;
+    tap(36, -121);
+    assert.equal(got.length, 0); assert.equal(placementRefused.value.screened, false, 'checking is not clear');
+    // Another region's marks and screen are never this region's verdict.
+    markData.value = data('other-region'); markScreen.value = ready();
+    tap(36, -121);
+    assert.equal(got.length, 0); assert.equal(placementRefused.value.screened, false, 'a foreign region\'s screen reads not checked');
+    // The current region's screen, read at the click: inside and within the margin are refused; the placement stays armed.
+    markData.value = data('morro-bay'); markScreen.value = ready();
+    tap(35, -121);
+    assert.equal(got.length, 0); assert.equal(placementRefused.value.inside, true); assert.equal(placementRefused.value.name, NAME);
+    tap(35, -120.99 + 30 / (111412.84 * Math.cos(35 * Math.PI / 180)));
+    assert.equal(got.length, 0); assert.equal(placementRefused.value.inside, false); assert.ok(placementRefused.value.distanceM <= 70);
+    assert.equal(chartMark.value, null, 'refused taps select nothing'); assert.equal(waypointPlacement.value, 'morro-bay', 'still armed');
+    // A clear tap completes exactly once; the next tap is the Chart's own selection again.
+    tap(36, -121);
+    assert.equal(got.length, 1); assert.deepEqual([got[0].latitude, got[0].longitude, got[0].screen.screened, got[0].screen.inside], [36, -121, true, false]);
+    assert.equal(waypointPlacement.value, null); assert.equal(placementRefused.value, null); assert.equal(chartMark.value, null, 'the completing tap selects nothing');
+    tap(36, -121);
+    assert.equal(got.length, 1); assert.equal(chartMark.value.name, 'Shoreline');
+    // The screen changing between taps is read at the next click, not at mount: unchecked -> refused, then current -> clear tap completes.
+    chartMark.value = null; beginWaypointPlacement('morro-bay', at => got.push(at));
+    markScreen.value = CHECKING; tap(36, -121);
+    assert.equal(got.length, 1);
+    markScreen.value = ready(); tap(36, -121);
+    assert.equal(got.length, 2);
+  } finally { cancelWaypointPlacement(); markData.value = null; markScreen.value = CHECKING; stage.destroy(); }
 });
 
 // FE-82: registry layers on the terrain (packages/coast setOverlay, FE-81).
