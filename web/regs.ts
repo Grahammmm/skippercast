@@ -273,8 +273,14 @@ export async function loadRegs(region: RulesRegion, fetchFn: typeof fetch = fetc
     return r.json().catch((e: unknown) => { if (!(e instanceof SyntaxError)) transient = true; throw e; });
   };
   const asset = region.assets?.regulations;
+  // Both requests start together (the phone's legality line waits for the later of the two, not their sum), each with its
+  // failure handler attached now so a rejection is never unhandled; the answers are still applied registry first, daily part last.
+  const settled = (url: string): Promise<{d: Data} | null> => get(url).then(d => ({d}), () => null);
+  const first = asset ? settled(asset) : null, second = settled(dailyPartPath(region.id, 'regulations'));
   return ours.promise = (async () => {
-    if (asset) await get(asset).then(accept, () => false);
-    await get(dailyPartPath(region.id, 'regulations')).then(d => validDailyPart(d, 'regulations', region.id) && accept(d.regulations), () => false);
+    const a = await first;
+    if (a) accept(a.d);
+    const b = await second;
+    if (b && validDailyPart(b.d, 'regulations', region.id)) accept(b.d.regulations);
   })().finally(() => { ours.retry = transient || regsData.peek()?.region !== region.id; ours.promise = null; });
 }
