@@ -49,6 +49,21 @@ test('the band is a width taken from the front\'s own error, drawn under the lin
   assert.ok(features.every(f => !/Point/.test(f.geometry.type)), 'no point geometry');
 });
 
+test('the uncertainty band preserves its ground width at non-equatorial latitudes and zooms', () => {
+  const f = readFronts(doc([front(ago(6))]), REGION).fronts[0];
+  for (const lat of [35, 60, -35]) {
+    const lines = [[[-121, lat], [-120.9, lat]]];
+    const px0 = frontFeatures({fronts: [{...f, lines}]}).features[0].properties.px0;
+    for (const zoom of [0, 8, 12]) {
+      // Web Mercator's 512-pixel world shrinks ground metres per pixel by cos(latitude).
+      const metresPerPixel = 40075016.686 * Math.cos(lat * Math.PI / 180) / (512 * 2 ** zoom);
+      const groundWidthMetres = px0 * 2 ** zoom * metresPerPixel;
+      assert.ok(Math.abs(groundWidthMetres - 3000) < 0.01,
+        `±1.5 km band spans 3000 ground metres at latitude ${lat}, zoom ${zoom}; got ${groundWidthMetres}`);
+    }
+  }
+});
+
 test('an absent, unreadable or malformed file reads "no current front data" and draws nothing', async () => {
   const opts = (status, body) => ({fetchFn: fetchOf(status, body), page: PAGE});
   assert.equal((await regionalFronts(REGION, opts(404, null))).state, 'none');

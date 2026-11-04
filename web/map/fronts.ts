@@ -120,7 +120,9 @@ export type FrontFeature = {type: 'Feature'; properties: {id: string; px0: numbe
 export function frontFeatures(d: Pick<DrawnFronts, 'fronts'>): {type: 'FeatureCollection'; features: FrontFeature[]} {
   return {type: 'FeatureCollection', features: d.fronts.map(f => {
     const points = f.lines.flat(), lat = points.reduce((s, p) => s + p[1], 0) / points.length;
-    return {type: 'Feature', properties: {id: f.id, px0: Number((2 * f.bandHalfWidthKm * 1000 * Math.cos(lat * Math.PI / 180) / METRES_PER_PIXEL_Z0).toFixed(8))}, geometry: {type: 'MultiLineString', coordinates: f.lines.map(l => l.map(p => [p[0], p[1]]))}};
+    // Ground metres per pixel shrink by cos(latitude) in Web Mercator.
+    const metresPerPixel = METRES_PER_PIXEL_Z0 * Math.max(Math.cos(lat * Math.PI / 180), 1e-6);
+    return {type: 'Feature', properties: {id: f.id, px0: Number((2 * f.bandHalfWidthKm * 1000 / metresPerPixel).toFixed(8))}, geometry: {type: 'MultiLineString', coordinates: f.lines.map(l => l.map(p => [p[0], p[1]]))}};
   })};
 }
 /** The band under the line, both lines only: no fill, no point. */
