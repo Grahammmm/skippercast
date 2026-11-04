@@ -62,6 +62,13 @@ export const serveAsset: Handler<AppEnv> = async c => {
   const response = await assets.fetch(new Request(assetUrl, request));
   const fresh = new Response(response.body, response);
   fresh.headers.set('Cache-Control', 'no-store');
+  if (page === V2_SHELLS.app && typeof HTMLRewriter !== 'undefined') {
+    const {ogFor} = await import('../og.ts'), og = ogFor(search);
+    if (og) return new HTMLRewriter()
+      .on('meta[property="og:title"]', {element: el => { el.setAttribute('content', og.title); }})
+      .on('meta[property="og:description"]', {element: el => { el.setAttribute('content', og.description); }})
+      .transform(fresh);
+  }
   return fresh;
 };
 
