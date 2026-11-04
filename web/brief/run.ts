@@ -19,7 +19,9 @@
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import type {Window} from '../../packages/coast/src/types.ts';
-import type {RouteFailure} from '../route.ts';
+import {PLANNING_MARGIN_M, screenPlace, type PlaceVerdict} from '../../dist/geo-screen.js';
+import type {RoutedPick} from '../ranking.ts';
+import type {RouteFailure, RoutePoint} from '../route.ts';
 import type {Brief} from './types.ts';
 
 const MINUTE = 60_000;
@@ -94,4 +96,38 @@ export const barNote = (window: Window): string | null => window.reasons.find(re
 export function durationText(min: number): string {
   const h = Math.floor(min / 60), m = min % 60;
   return h ? `${h} h${m ? ` ${m} min` : ''}` : `${m} min`;
+}
+
+const usable = (p: unknown): p is RoutePoint => {
+  const q = p as Partial<RoutePoint> | null | undefined;
+  return !!q && typeof q.latitude === 'number' && Number.isFinite(q.latitude) && Math.abs(q.latitude) <= 90
+    && typeof q.longitude === 'number' && Number.isFinite(q.longitude) && Math.abs(q.longitude) <= 180;
+};
+
+/**
+ * SC0452-07: the shared protected-area verdict for the line the run is timed along: the harbor, the water route's bends
+ * (`routePoints`, snapped ends included) and the place for a 'water' pick, the straight line between them for a labelled
+ * fallback. One whole-line screenPlace, as trip legs do (web/trip-legs.ts). Anything it cannot say (no pick, origin or place,
+ * a coordinate that is not a usable position, a water pick without its route points, a screen that is missing, not current,
+ * not covering the line or throwing) is `screened: false`: never a clear verdict, and a bad point never shortens the line.
+ * Reads the pick's own handoff; never searches a route or fetches.
+ */
+export function runRouteScreen(origin: RoutePoint | null | undefined, pick: RoutedPick | null, screen: unknown): PlaceVerdict {
+  const none: PlaceVerdict = {inside: false, name: null, distanceM: null, screened: false};
+  if (!pick || !usable(origin) || !usable(pick.at)) return none;
+  const bends: unknown = pick.basis === 'water' ? pick.routePoints : [];
+  if (!Array.isArray(bends) || !bends.every(usable)) return none;
+  try {
+    const line = [origin, ...bends, pick.at].map(p => [p.longitude, p.latitude]);
+    const verdict = screenPlace(screen, {geometry: {type: 'LineString', coordinates: line}});
+    return verdict && typeof verdict.screened === 'boolean' ? verdict : none;
+  } catch { return none; }
+}
+
+/** SC0452-07: the run line's words for a route verdict: what was found, or that it was not checked; nothing at all for a clear line (no reassurance, no claim about transit rules). */
+export function runRouteNote(verdict: PlaceVerdict): string | null {
+  if (!verdict.screened) return 'Route: protected areas not checked.';
+  const name = verdict.name?.trim() ? verdict.name : 'a protected area';
+  if (verdict.inside) return `Route crosses or touches ${name}.`;
+  return verdict.distanceM !== null && verdict.distanceM <= PLANNING_MARGIN_M ? `Route passes within ${PLANNING_MARGIN_M} m of ${name}.` : null;
 }
