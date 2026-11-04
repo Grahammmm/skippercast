@@ -26,7 +26,9 @@ CLASSIFIED_POLICY_PROFILE = 'original-rugose-classified-area-v1'
 CLASSIFIED_POLICY_CHANGELOG = 'CHANGELOG.md'
 # Per-run provenance that changes on every re-check of the same screen. Publication
 # re-reads the private snapshot itself, so the committed copies are only a record.
-REACH_RUN_KEYS = frozenset({'last_survey_run', 'survey_run_hash'})
+# physical_input_hash is a digest of the upstream input files (a re-issued file with the
+# same result changes it); reuse decisions read the run receipts, not the committed ledger.
+REACH_RUN_KEYS = frozenset({'last_survey_run', 'survey_run_hash', 'physical_input_hash'})
 SCREEN_RUN_KEYS = frozenset({'snapshot', 'snapshot_sha256'})
 LAYER_RUN_KEYS = frozenset({'checked_at', 'file', 'sha256', 'source_url', 'source_urls'})
 EVIDENCE_RUN_KEYS = frozenset({'titles_sha256', 'up_to_date_as_of'})
@@ -34,7 +36,9 @@ SECTION_RUN_KEYS = frozenset({'url', 'up_to_date_as_of'})
 
 
 def ledger_data(ledger):
-    """The ledger without per-run provenance; any other difference is a data change."""
+    """The ledger without per-run provenance; any other difference is a data change.
+
+    Per-reach provenance is last_survey_run, survey_run_hash and physical_input_hash."""
     def drop(value, keys):
         return {k: v for k, v in value.items() if k not in keys} if isinstance(value, dict) else value
 
