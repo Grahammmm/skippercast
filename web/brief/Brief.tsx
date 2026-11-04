@@ -267,11 +267,11 @@ export const Deck = ({brief}: {brief: BriefModel | null}) => brief?.deck ? <p cl
 /** The boat saved in this browser (dist/boat-handling.js), or null. */
 const storedBoat = (): SavedBoatLike => (savedBoat() as {boat?: SavedBoatLike} | null)?.boat ?? null;
 
-/** The day verdict for the brief shown now: the regional forecast only when it is this region's, rated for the saved boat (MYB-2). */
-export function currentVerdict(brief: BriefModel | null, now: Date): BriefVerdict | null {
+/** The day verdict for the brief shown now: the regional forecast only when it is this region's, rated for the saved boat (MYB-2); its reason sentences are in `lang` (the page's by default). */
+export function currentVerdict(brief: BriefModel | null, now: Date, lang: Language = language.value): BriefVerdict | null {
   const info = regionInfo.value, forecast = regionalForecast.value;
   void boatSaved.value;   // a boat saved on first use (boat-entry.ts) re-rates the verdict on screen
-  return briefVerdict(brief, info && forecast?.region === info.id ? forecast : null, now, info?.timezone ?? DEFAULT_ZONE, activeBoatFactors() as BoatFactors);
+  return briefVerdict(brief, info && forecast?.region === info.id ? forecast : null, now, info?.timezone ?? DEFAULT_ZONE, activeBoatFactors() as BoatFactors, lang);
 }
 
 /** The boat the comfort rating names, in `lang`; a saved boat's own name is shown as typed. */
