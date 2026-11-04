@@ -16,6 +16,7 @@ import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {validDailyPart as v1DailyPart} from '../dist/daily-feed.js';
 import {MPA_QUERY, initProtectedAreas, validMPAs} from '../dist/protected-areas.js';
+import {pointGeometry, screenPlace} from '../dist/geo-screen.js';
 import {acceptsFeed as v1Accepts, getRegion, setRegion} from '../dist/region.js';
 import {
   CHECKING, SCREEN_MAX_AGE_MS, SCREEN_NOTES, acceptsFeed, assessScreen, closureCheckedAt, freshCheck, validDailyPart, withheld, withheldCard,
@@ -73,15 +74,20 @@ const record = (hoursAgo, data, status = 'ok') => ({status, data_retrieved_at: i
 /**
  * v1's screen over the same answers: initProtectedAreas and its startup refresh, with a fake 2D map and status line.
  * v1 reads its active region on every check, so `region` stays active until the caller restores Morro Bay.
+ * protected-areas.js builds MPA_QUERY from the region active when it is first evaluated (SC0022-04: and a screen is bound to that
+ * envelope), so another region's screen comes from a fresh evaluation of the module made after that region is set; `stale: true`
+ * keeps the module evaluated for Morro Bay, the mismatch the binding must refuse.
  */
-async function v1Screen(region, fetchFn) {
+let evaluations = 0;
+async function v1Screen(region, fetchFn, {stale = false} = {}) {
   const saved = {fetch: globalThis.fetch, L: globalThis.L, document: globalThis.document};
   setRegion(region);
+  const init = stale || region.id === MORRO.id ? initProtectedAreas : (await import(`../dist/protected-areas.js?region=${region.id}-${++evaluations}`)).initProtectedAreas;
   globalThis.fetch = fetchFn;
   globalThis.L = {layerGroup: () => ({addTo() { return this; }, clearLayers() {}}), geoJSON: () => ({bindTooltip() { return this; }, bindPopup() { return this; }, addTo() { return this; }})};
   globalThis.document = {getElementById: () => ({textContent: '', classList: {toggle() {}}}), dispatchEvent() {}};
   try {
-    const screen = await initProtectedAreas({createPane: () => ({style: {}}), getZoom: () => 10}, () => {});
+    const screen = await init({createPane: () => ({style: {}}), getZoom: () => 10}, () => {});
     await screen.refresh();
     return screen;
   } finally {
@@ -289,6 +295,80 @@ test('a current screen goes stale when its check passes 36 hours, and the marks 
   assert.equal(markScreen.value.status, 'stale');
   assert.deepEqual(markSources[MARKS_SOURCE].value.features, []);
   marks.destroy();
+});
+
+test('production_screen_permissions_share_coverage', async t => {
+  const pointGeometryOf = p => pointGeometry(p.longitude, p.latitude);
+  t.mock.method(console, 'warn', () => {});
+  const E = MORRO.mpa.bounds, UNAVAILABLE = {status: 'unavailable', fresh: false, names: [], matches: []};
+  const mLon = 111412.84 * Math.cos(35.4 * Math.PI / 180), mark = ATLAS.targets.find(x => x.id === 'SC26-001');
+  const at = (longitude, latitude) => ({longitude, latitude}), box = ({longitude: x, latitude: y}, d = 0.0005) => square(at(x, y), d);
+  const far = at(-124, 40.5), edge = at(E[0] + 30 / mLon, 35.4), inner = at(E[0] + 500 / mLon, 35.4);
+  assert.deepEqual(E, [-121.9, 34.95, -120.55, 35.85], 'the envelope this test reasons about');
+  // The screen over the envelope's own answer: covered places read as before, uncovered ones every way a person could ask.
+  const answers = {live: withAreas(MPAS, reserve(square(far)))};   // a closure far outside the envelope, e.g. from a bigger file
+  const screen = await v1Screen(MORRO, site(answers));
+  const agree = (place, covered) => {
+    const point = pointGeometryOf(place);
+    assert.equal(screen.coversGeometry(point), covered, JSON.stringify(place));
+    if (!covered) {
+      assert.equal(screen.pointAllowed(place), false); assert.equal(screen.geometryAllowed(point), false);
+      assert.deepEqual(screen.inspect(place), UNAVAILABLE); assert.deepEqual(screen.inspect({geometry: point}), UNAVAILABLE);
+      assert.deepEqual(screen.inspect({geometries: [point]}), UNAVAILABLE);
+      assert.deepEqual(screenPlace(screen, place), {inside: false, name: null, distanceM: null, screened: false});
+    }
+  };
+  assert.equal(screen.ready(), true);
+  agree(mark, true); agree(inner, true); agree(edge, false); agree(far, false); agree(at(far.longitude, far.latitude + 0.5), false);
+  assert.equal(screen.pointAllowed(mark), true); assert.equal(screen.pointAllowed(inner), true);
+  assert.equal(screen.geometryAllowed(pointGeometryOf(inner)), true);
+  assert.equal(screen.inspect(inner).status, 'clear'); assert.equal(screen.inspect(inner).fresh, true);
+  assert.deepEqual(screenPlace(screen, inner), {inside: false, name: null, distanceM: null, screened: true}, 'a covered, clear place is checked');
+  // One covered and one uncovered shape: not checked, and the covered one is not reported alone.
+  assert.deepEqual(screen.inspect({geometries: [pointGeometryOf(inner), pointGeometryOf(far)]}), UNAVAILABLE);
+  assert.equal(screen.geometryAllowed({type: 'LineString', coordinates: [[inner.longitude, inner.latitude], [far.longitude, far.latitude]]}), false);
+  assert.equal(screen.coversGeometry(null), false); assert.equal(screen.coversGeometry({type: 'Point', coordinates: [NaN, 35]}), false);
+  assert.equal(screen.pointAllowed(at(NaN, 35)), false);
+  // A covered place inside a closure keeps its verdict (excluded) and is not relabelled as unchecked.
+  const hit = await v1Screen(MORRO, site({live: withAreas(MPAS, reserve(box(mark)))}));
+  assert.equal(hit.pointAllowed(mark), false); assert.equal(hit.inspect(mark).status, 'excluded'); assert.equal(screenPlace(hit, mark).inside, true);
+  assert.deepEqual(screenPlace(hit, mark).screened, true);
+  // Refreshing from the daily feed, or failing every refresh, never changes what is covered; coverage does not follow feature extents.
+  for (const answer of [{daily: {'mpa-boundaries': record(2, {geojson: withAreas(MPAS, reserve(square(far)))})}}, {}]) {
+    const refreshed = await v1Screen(MORRO, site(answer));
+    assert.equal(refreshed.coversGeometry(pointGeometryOf(far)), false, 'a closure file holding a feature near the place does not extend coverage');
+    assert.equal(refreshed.coversGeometry(pointGeometryOf(inner)), true);
+    assert.equal(refreshed.pointAllowed(inner), refreshed.ready(), 'allowed only while the check is current');
+    assert.equal(refreshed.pointAllowed(far), false); assert.deepEqual(refreshed.inspect(far), UNAVAILABLE);
+  }
+  assert.equal(screen.pointAllowed(far), false, 'a live file holding a closure at the place: still not checked, not merely excluded');
+  // The screen is bound to its region's envelope: editing the region's bounds afterwards, or changing region, widens nothing.
+  const wide = {...MORRO, mpa: {...MORRO.mpa, bounds: [-130, 30, -110, 45]}};
+  try {
+    setRegion(wide);
+    assert.equal(screen.coversGeometry(pointGeometryOf(far)), false, 'a widened region config does not widen a screen');
+    assert.equal(screen.pointAllowed(far), false); assert.equal(screen.ready(), true, 'the screen keeps the envelope it was bound to');
+    setRegion(SOCAL);
+    assert.equal(screen.coversGeometry(pointGeometryOf(inner)), false, 'another active region invalidates the old screen');
+    assert.equal(screen.ready(), false); assert.equal(screen.pointAllowed(inner), false); assert.equal(screen.exportExclusions(), null);
+  } finally { setRegion(MORRO); }
+  assert.equal(screen.coversGeometry(pointGeometryOf(inner)), true, 'the same region again, the same screen');
+  // A module evaluated for Morro Bay's query, initialized for another region: its larger coverage is not inherited; it fails closed.
+  const socalMark = SOCAL_ATLAS.targets[0], stale = await v1Screen(SOCAL, site({live: SOCAL_MPAS}), {stale: true});
+  try {
+    assert.equal(new URL(MPA_QUERY).searchParams.get('geometry'), MORRO.mpa.bounds.join(','));
+    assert.notEqual(SOCAL.mpa.bounds.join(','), MORRO.mpa.bounds.join(','));
+    assert.equal(stale.ready(), false); assert.equal(stale.coversGeometry(pointGeometryOf(socalMark)), false);
+    assert.equal(stale.pointAllowed(socalMark), false); assert.equal(stale.geometryAllowed(pointGeometryOf(socalMark)), false);
+    assert.deepEqual(stale.inspect(socalMark), UNAVAILABLE); assert.equal(screenPlace(stale, socalMark).screened, false);
+  } finally { setRegion(MORRO); }
+  // A freshly evaluated module for that region covers that region, and only that region.
+  const own = await v1Screen(SOCAL, site({live: SOCAL_MPAS, daily: {'additional-closures': record(1, {sha256: GEAS.source_sha256})}, patch: {[SOCAL.assets.closures]: GEAS}}));
+  try {
+    assert.equal(own.ready(), true); assert.equal(own.coversGeometry(pointGeometryOf(socalMark)), true);
+    assert.equal(own.coversGeometry(pointGeometryOf(inner)), false, "Morro Bay's own water is outside Southern California's envelope");
+    assert.equal(own.pointAllowed(inner), false);
+  } finally { setRegion(MORRO); }
 });
 
 let ui;

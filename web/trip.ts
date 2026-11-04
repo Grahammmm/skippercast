@@ -15,6 +15,8 @@ import {loadManifest} from '../dist/seafloor-data.js';
 import {BASEMAP_MANIFEST, basemapArchive} from './map/chart.ts';
 import {shorelineOverviewURL, shorelineURL} from './map/coastline.ts';
 import {chartFileListed} from './chart-files.ts';
+import {landWaterLinesURL, landWaterURL} from './land-water.ts';
+import {depthContoursOverviewURL, depthContoursURL} from './map/depth-contours.ts';
 import {atlasMarksURL, planIndexURL} from './startup-forms.ts';
 import {MARKS_SOURCE} from './map/layers.ts';
 import {markSources} from './map/marks.ts';
@@ -219,11 +221,18 @@ export function rangeRecorder(url: string, put: Extras['put'], signal: AbortSign
   };
 }
 
-/** The pack's stored files in order: the shell, the basemap manifest, the shoreline forms the region publishes, the startup copies (#617) and `hashed`. */
+/**
+ * The pack's stored files in order: the shell, the basemap manifest, the shoreline forms, then the land-water index and lines and the full and
+ * overview depth contours the region publishes, then the startup copies (#617) and `hashed`. A fixed allowlist, each gated on its own name in the
+ * region's published `chart_files` (an unknown list fails open, as chartFileListed decides); poster.svg and any other name are never saved.
+ */
 export function packFiles(id: string, page: string, hashed: readonly string[]): [string, string, RequestInit][] {
   const origin = new URL(page).origin, listed = (name: string, url: string): string[] => chartFileListed(id, name) ? [url] : [];
   return [[origin + V2_SHELL, origin + V2_SHELL, {}],
-    ...[BASEMAP_MANIFEST, ...listed('shoreline.geojson', shorelineURL(id)), ...listed('shoreline-overview.geojson', shorelineOverviewURL(id)), atlasMarksURL(id), planIndexURL(id)]
+    ...[BASEMAP_MANIFEST, ...listed('shoreline.geojson', shorelineURL(id)), ...listed('shoreline-overview.geojson', shorelineOverviewURL(id)),
+      ...listed('land-water.json', landWaterURL(id)), ...listed('land-water-lines.json', landWaterLinesURL(id)),
+      ...listed('depth-contours.geojson', depthContoursURL(id)), ...listed('depth-contours-overview.geojson', depthContoursOverviewURL(id)),
+      atlasMarksURL(id), planIndexURL(id)]
       .map((p): [string, string, RequestInit] => [new URL(p, page).href, new URL(p, page).href, {}]),
     ...hashed.map((p): [string, string, RequestInit] => [origin + p, origin + p, {cache: 'default'}])];
 }
@@ -249,7 +258,7 @@ export async function oceanPhase({put, signal, progress}: Pick<Extras, 'put' | '
   return manifestStatus === 404 && !saved.manifest.stored ? {schema_version: 1, path: 'none', manifest: saved.manifest, layers: {}, bytes: 0, cap_bytes: saved.cap_bytes} : {schema_version: 1, path: 'regional', ...saved};
 }
 
-/** savePack's `more`: this app's page and files (precache.json `v2`), the basemap manifest, the published shoreline forms, the startup copies (#617), tiles and, last, the ocean phase. */
+/** savePack's `more`: this app's page and files (precache.json `v2`), the basemap manifest, the published shoreline, land-water and depth-contour files, the startup copies (#617), tiles and, last, the ocean phase. */
 async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds: number[], place: Parameters<typeof oceanPhase>[1]) {
   const page = location.href, misses: string[] = [];
   const tideURLs = await tideSelection.packURLs(id);
@@ -279,7 +288,7 @@ async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds
 export interface PackMeta {
   region_id: string; region_name: string; saved_at: string; bytes: number; missing: string[];
   tiles: {saved: number; planned: number; min_zoom: number; max_zoom: number | null};
-  v2?: {basemap: {saved: number; planned: number}; shell: {saved: number; requested: number}};
+  v2?: {basemap: {saved: number; planned: number}; shell: {saved: number; requested: number}; /** URLs (and basemap tiles) the v2 phase could not save. */ missing?: string[]};
   /** The ocean phase's record (D9), additive: absent from packs saved before it. */
   ocean?: Awaited<ReturnType<typeof oceanPhase>>;
 }

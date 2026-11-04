@@ -106,7 +106,7 @@ test('context notes preserve freshness, validity, publication and consent gates'
 
 test('mixed selections and HTML text stay identification-only in a blocked report', async () => {
   const screen = await screenFixture();
-  const mixed = {...atlas, targets: [{...target, label: '<script>bad</script>'}, {id: 'outside', label: 'Outside reference', longitude: -125, latitude: 35}]};
+  const mixed = {...atlas, targets: [{...target, label: '<script>bad</script>'}, {id: 'outside', label: 'Outside reference', longitude: -121.5, latitude: 35}]};
   const html = protectedPlanNotes({...requestFor(screen), atlas: mixed, ids: mixed.targets.map(t => t.id)}, draft);
   assert.match(html, /&lt;script&gt;bad&lt;\/script&gt;/);
   assert.doesNotMatch(html, /<script>|Outside reference/);
