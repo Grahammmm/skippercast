@@ -62,6 +62,7 @@ import {waterTempState} from '../map/sst.ts';
 import {chlorophyllState} from '../map/chlorophyll.ts';
 import {PALETTE_TOKENS} from '../map/palette.ts';
 import {CONTRAST_SCALE, contrastState} from '../map/contrast.ts';
+import {frontsState} from '../map/fronts.ts';
 import {HEIGHT_SCALE, frameSummary, nearshoreState, swellPartition, swellState} from '../map/swell.ts';
 import {windState} from '../map/wind.ts';
 import {ringBasis, ringSummary} from '../map/nearshore.ts';
@@ -192,6 +193,20 @@ function ContrastRow() {
       {d ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="sst-contrast">{CONTRAST_SCALE[0]}<span class="app-swatch" data-layer="sst-contrast" aria-hidden="true"></span><span class="app-visually-hidden"> to </span>{CONTRAST_SCALE[1]}+ °F per nautical mile</p> : null}
       {d ? <p class="app-legend-note ui-mono" data-stamp="sst-contrast">{d.product} · {d.stamp}</p> : null}
       {s.reason ? <p class="app-legend-note" data-reason="sst-contrast">{s.reason}</p> : null}
+    </li>
+  );
+}
+
+/** The Temp fronts row (on the Chart): the line and its band, product and age in words, or why nothing draws. */
+function FrontsRow() {
+  const s = frontsState.value, d = s.drawn;
+  return (
+    <li class="app-legend-sst-fronts">
+      Temp fronts
+      <Popover iconOnly summary="Temp fronts basis">{s.basis}</Popover>
+      {d ? <p class="app-legend-note" data-band="sst-fronts">Line: the front. Band: how far its position may be off, from the analysis's own error.</p> : null}
+      {d ? <p class="app-legend-note ui-mono" data-stamp="sst-fronts">{d.product} · {s.note}</p> : null}
+      {s.reason ? <p class="app-legend-note" data-reason="sst-fronts">{s.reason}</p> : null}
     </li>
   );
 }
@@ -355,7 +370,7 @@ export function Legend() {
       <ul>
         {on.map(e => !drawsIn(e.id, shown) ? <PlainRow key={e.id} id={e.id} label={e.label} reason={CHART_ONLY} />
           : e.id === 'seafloor' ? shown === 'chart' ? <SeafloorRow key={e.id} /> : <TerrainSeafloorRow key={e.id} /> : e.id === 'currents' ? <CurrentsRow key={e.id} /> : e.id === 'water-temp' ? <WaterTempRow key={e.id} />
-          : e.id === 'sst-contrast' ? <ContrastRow key={e.id} /> : e.id === 'chlorophyll' ? <ChlorophyllRow key={e.id} />
+          : e.id === 'sst-contrast' ? <ContrastRow key={e.id} /> : e.id === 'sst-fronts' ? <FrontsRow key={e.id} /> : e.id === 'chlorophyll' ? <ChlorophyllRow key={e.id} />
           : e.id === 'swell' ? <><SwellRow key={e.id} /><WindRow /></> : e.id === 'clouds' ? <CloudsLegendRow key={e.id} label={e.label} />
           : e.id === 'fleet' ? <FleetRow key={e.id} />
           : e.id === 'stations' ? <StationsRow key={e.id} />
