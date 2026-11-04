@@ -352,6 +352,9 @@ function calmEvening(over = {}) {
 function quietEveningDaily() {
   const daily = DAILY();
   for (const source of Object.values(daily.sources)) if (Array.isArray(source.data?.alerts)) source.data.alerts = [];
+  // SC0237-01: a complete empty check for both configured zones (the fixture supplies only PZZ645), so no alert-check hold shows.
+  const first = daily.sources['alerts-PZZ645'];
+  daily.sources['alerts-PZZ670'] = {...first, id: 'alerts-PZZ670', name: 'NWS PZZ670 advisories', url: first.url.replace('PZZ645', 'PZZ670')};
   return daily;
 }
 
