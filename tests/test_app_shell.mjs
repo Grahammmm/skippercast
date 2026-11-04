@@ -37,6 +37,8 @@ async function load() {
       export {Planner} from './web/app/Planner.tsx';
       export {createPlanner} from './web/planner.ts';
       export {AccountMenu} from './web/app/AccountMenu.tsx';
+      export {LanguageChoice} from './web/app/LanguageChoice.tsx';
+      export {language, setLanguage} from './web/i18n.ts';
       export {session, ensureSession, refreshSession, readSession} from './web/account.ts';
       export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, TAB_VIEWS, ChatEntry, Location, DegradedNotice} from './web/app/Masthead.tsx';
       export {degraded, watchDegraded, installDegradedWatch} from './web/degraded.ts';
@@ -87,6 +89,31 @@ test('coordinate choice is exposed in settings and used by the plan rows', async
       assert.match(render(h(AccountMenu, {})), new RegExp(`aria-pressed="true"[^>]*>${label}</button>`));
     }
   } finally { state.setCoordinateFormat('dd'); model.dispose(); }
+});
+test('language_choice: the account menu offers English and Español in both languages, and the pressed one follows the language signal', async () => {
+  const {AccountMenu, LanguageChoice, language, setLanguage, session, render, h} = await load();
+  const buttons = html => [...html.matchAll(/<button\b[^>]*\blang="(en|es)"[^>]*>([^<]*)<\/button>/g)].map(m => ({lang: m[1], label: m[2], pressed: /aria-pressed="true"/.test(m[0]), tag: m[0]}));
+  const none = {getItem: () => null, setItem() {}};
+  const before = session.value;
+  try {
+    for (const lang of ['en', 'es']) {
+      setLanguage(lang, {storage: none, doc: null});
+      const html = render(h(LanguageChoice, {}));
+      assert.deepEqual(buttons(html).map(b => [b.lang, b.label, b.pressed]), [['en', 'English', lang === 'en'], ['es', 'Español', lang === 'es']], `${lang}: each language is named in itself, the current one is pressed`);
+      assert.ok(buttons(html).every(b => /type="button"/.test(b.tag)), 'plain buttons, not a form control');
+      assert.match(html, new RegExp(`<h2[^>]*>${lang === 'en' ? 'Language' : 'Idioma'}</h2>`));
+      assert.match(html, /<section aria-labelledby="([^"]+)-language">\s*<h2 id="\1-language"/, 'the group is labelled by its heading');
+    }
+    // In the menu itself, once, before the coordinate format, whatever the account state.
+    for (const state of [{state: 'loading'}, {state: 'offline'}, {state: 'disabled'}, {state: 'signed-out'}, {state: 'signed-in', name: 'Skipper'}]) {
+      session.value = state; setLanguage('en', {storage: none, doc: null});
+      const menu = render(h(AccountMenu, {})), inline = render(h(AccountMenu, {inline: true}));
+      for (const html of [menu, inline]) {
+        assert.equal(buttons(html).length, 2, `${state.state}: one chooser`);
+        assert.ok(html.indexOf('>Language</h2>') > html.indexOf('Your boat') && html.indexOf('>Language</h2>') < html.indexOf('Coordinate format'), `${state.state}: between the boat and the coordinate format`);
+      }
+    }
+  } finally { session.value = before; setLanguage('en', {storage: none, doc: null}); }
 });
 test('startup region reader shares parsed cold work and refuses distinct-key saturation', async () => {
   const {createRegionReader} = await load();
