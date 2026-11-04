@@ -39,7 +39,7 @@ test('A2: A to B to null uses only matching settled source; structured identitie
   assert.notEqual(m.reportsData.peek().key, previous);
 });
 
-test('A2: identical settled and pending inputs coalesce', async () => {
+test('A2: identical pending inputs coalesce; a settled load with failed sections is read again (SC1737-06)', async () => {
   const m = await load(), d = deferredTransport();
   const first = await start(m, A, d.fetchFn);
   await m.openReports('synthetic-region', 'reef', A, d.fetchFn);
@@ -47,8 +47,12 @@ test('A2: identical settled and pending inputs coalesce', async () => {
   finish(d.waiting[0], 'Synthetic A');
   assert.equal(await first.result, null);
   const total = d.calls.length;
-  await m.openReports('synthetic-region', 'reef', A, d.fetchFn);
-  assert.equal(d.calls.length, total);
+  // The synthetic /feeds/* sections failed (503), so reopening reads them again.
+  const again = await start(m, A, d.fetchFn);
+  assert.ok(d.calls.length > total, 'failed sections are fetched again on reopen');
+  assert.equal(d.waiting.length, 2);
+  finish(d.waiting[1], 'Synthetic A');
+  assert.equal(await again.result, null);
 });
 
 test('A3: obsolete successes in both orders, ABA and return to settled data cannot publish', async () => {
@@ -101,10 +105,15 @@ test('A3: obsolete successes in both orders, ABA and return to settled data cann
   assert.deepEqual(labels(m), ['Current A']);
   const pendingB = await start(m, B, d.fetchFn);
   const settled = m.reportsData.peek();
-  await m.openReports('synthetic-region', 'reef', A, d.fetchFn);
+  // The settled A data has failed sections, so returning to it reads it again (SC1737-06) and supersedes B.
+  const backToA = await start(m, A, d.fetchFn);
+  assert.equal(d.waiting.length, 5);
   finish(d.waiting[3], 'Obsolete B after return');
   assert.equal(await pendingB.result, null);
-  assert.strictEqual(m.reportsData.peek(), settled);
+  assert.strictEqual(m.reportsData.peek(), settled, 'obsolete B cannot publish; the shown data stays');
+  finish(d.waiting[4], 'Reloaded A');
+  assert.equal(await backToA.result, null);
+  assert.deepEqual(labels(m), ['Reloaded A']);
 });
 
 test('A3: obsolete rejection in both orders cannot clear or overwrite current-source work', async () => {
@@ -149,7 +158,7 @@ test('A3/A4: a current charter source failure stays unavailable without reviving
   assert.doesNotMatch(html, /Synthetic A/);
 });
 
-test('A4: legacy source-less preloaded data renders and its effect starts zero fetches', async () => {
+test('A4: legacy source-less preloaded data renders unchanged; its failed sections are read again on open (SC1737-06)', async () => {
   const m = await load(), calls = [], original = globalThis.fetch;
   globalThis.fetch = transport(calls);
   try {
@@ -164,9 +173,12 @@ test('A4: legacy source-less preloaded data renders and its effect starts zero f
     assert.match(html, /Recent discussion search is unavailable/);
     assert.match(html, /No geographically specific charter evidence/);
     assert.equal(m.effects.length, 1);
-    m.effects.shift()(); await flush();
-    assert.strictEqual(m.reportsData.peek(), loaded);
-    assert.deepEqual(calls, [], 'matching legacy cache prevents any Reports fetch');
+    m.effects.shift()();
+    assert.strictEqual(m.reportsData.peek(), loaded, 'old data stays on screen while the new read runs');
+    for (let i = 0; i < 100 && m.reportsData.peek() === loaded; i++) await flush();
+    assert.ok(calls.length > 0, 'a hand-set entry with failed sections is read again');
+    assert.notStrictEqual(m.reportsData.peek(), loaded);
+    assert.equal(typeof m.reportsData.peek().loadedAt, 'number');
   } finally { globalThis.fetch = original; }
 });
 

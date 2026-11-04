@@ -14,7 +14,7 @@ Valid region slugs do not start with `[`, so the two encodings are distinct.
 A per-request object prevents an obsolete
 A-B-A completion from passing a same-key check. Returning to matching settled
 data also supersedes an unrelated pending load. Identical requests remain
-coalesced. No loader policy, source availability/scoring, seasonal watch,
+coalesced. SC1737-06 later made a settled key with a failed section, or data 30 minutes old or older, load again on reopen (the shown data stays until the new read publishes); identical pending requests still coalesce. No loader policy, source availability/scoring, seasonal watch,
 catch-card policy or other product file changes.
 
 ## Test-first evidence
@@ -72,7 +72,7 @@ and checks stale evidence is withheld before effects and matching evidence
 appears afterward. Real state, loader, source mappers, ReportsBody and section
 components are not copied. A separate A4 compatibility case injects legacy
 `synthetic-region:reef` data with regionInfo null, verifies actual Reports
-renders it, and executes the captured effect with zero fetch calls. Browser/e2e
+renders it, and executes the captured effect; since SC1737-06 its failed sections are read again while the old data stays shown. Browser/e2e
 execution itself remains an operator gate. Seasonal freshness/unavailable rules are asserted.
 A malformed synthetic source deliberately triggers an old load rejection;
 this does not claim to fix malformed-source validation.
