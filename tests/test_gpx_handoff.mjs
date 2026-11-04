@@ -34,7 +34,7 @@ async function components() {
 }
 const sample = readFileSync(new URL('./fixtures/gpx/handoff-sample.gpx', import.meta.url), 'utf8');
 test('golden GPX passes and each delivery corruption fails specifically', () => {
-  assert.deepEqual(checkGpx(sample, {waypoints: 3}), {ok: true});
+  assert.deepEqual(checkGpx(sample, {waypoints: 3}), {ok: true, screen: Array(3).fill({inside: false, name: null, distanceM: null, screened: false})});
   for (const [xml, count, problem] of [
     [sample, 4, 'Waypoint count mismatch'], [sample.replace('lat="0.1"', 'lat="91"'), 3, 'Invalid wpt lat'],
     [sample.replace('lon="0.1"', 'lon="NaN"'), 3, 'Invalid wpt lon'], [sample.replace('Atlas reef', ''), 3, 'Empty or malformed name'],

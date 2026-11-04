@@ -12,6 +12,7 @@
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import {signal} from '@preact/signals';
+import {screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
 import {ownSpearDepthFt, PROFILE_TABLE, type Profile} from './profile.ts';
 import {readStored, STORAGE_KEYS, writeStored} from './state.ts';
 
@@ -80,7 +81,7 @@ const rad = (d: number) => d * Math.PI / 180, deg = (r: number) => r * 180 / Mat
  * is the same great-circle distance from the origin, so a place `distanceNm` puts inside the range
  * sits inside the ring.
  */
-export function reachRing(origin: {latitude: number; longitude: number}, nm: number, steps = 128): number[][] {
+export function reachRing(origin: {latitude: number; longitude: number}, nm: number, steps = 128, screen: unknown = null): number[][] & {screen: PlaceVerdict} {
   const d = nm / EARTH_NM, lat1 = rad(origin.latitude), lon1 = rad(origin.longitude);
   const ring: number[][] = [];
   for (let i = 0; i < steps; i++) {
@@ -90,7 +91,8 @@ export function reachRing(origin: {latitude: number; longitude: number}, nm: num
     ring.push([Number(deg(lon2).toFixed(6)), Number(deg(lat2).toFixed(6))]);
   }
   ring.push(ring[0]!);
-  return ring;
+  // BF-closures-everywhere: the ring is an area handed to the Chart; it carries the verdict (a closure it holds whole is inside).
+  return Object.assign(ring, {screen: screenPlace(screen, {geometry: {type: 'Polygon', coordinates: [ring]}})});
 }
 
 /** "12 nm", "2.5 nm". */
