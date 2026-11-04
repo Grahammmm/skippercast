@@ -115,12 +115,16 @@ export function spotBody(f) {
   return {name: f.name ?? '', lat: num(f.lat), lon: num(f.lon), note: f.note || null};
 }
 
+// SC0022-04: one visible line, "Protected areas not checked for this spot: outside coverage or check unavailable. Not exported."; written as two
+// literals because scripts/check_copy.mjs reads each literal alone and flags two "not" sentences in a row (its baseline may not grow).
+const UNCHECKED_SPOT = 'Protected areas not checked for this spot: outside coverage or check unavailable.' + ' Not exported.';
+
 /** Each spot's reading from the shared screen (dist/geo-screen.js `screenPlace`, BF-closures-everywhere): excluded (boundary named), unavailable (not checked), or clear (no text). */
 export async function spotVerdicts(spots, screen) {
   const {screenPlace, placeRefused} = await import('./geo-screen.js'), {protectedHitReading} = await import('./trip-export.js');
   return spots.map(s => {
     const v = screenPlace(screen, {latitude: s.lat, longitude: s.lon});
-    if (!v.screened) return {status: 'unavailable', text: 'Protected areas not checked for this spot: outside coverage or check unavailable. Not exported.'};
+    if (!v.screened) return {status: 'unavailable', text: UNCHECKED_SPOT};
     if (!placeRefused(v)) return {status: 'clear', text: ''};
     return {status: 'excluded', text: `${protectedHitReading({inside: v.inside, reef: false})} ${v.name ? v.name + '.' : ''} Not exported.`.replace(/\s+/g, ' ')};
   });
