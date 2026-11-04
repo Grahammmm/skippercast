@@ -85,6 +85,15 @@ export function basemapRangeKey(archive, range) {
   return m && !url.search && BASEMAP_ARCHIVE.test(url.pathname) ? `${url.origin}${url.pathname}?sc-range=${m[1]}-${m[2]}` : null;
 }
 
+const OCEAN_KEY = [/^\/feeds\/conditions\/regions\/[a-z0-9-]{1,64}\/habitat-dynamics\.json$/, /^\/feeds\/conditions\/regions\/[a-z0-9-]{1,64}\/habitat-tiles\/[A-Za-z0-9._-]{1,120}$/];
+/**
+ * An ocean key: the same-origin habitat manifest of a region or one of its tiles (query strings are
+ * ignored, unparsable input is false). dist/sw.js carries an identical isOceanKey; it cannot import this module.
+ */
+export function isOceanKey(url, origin) {
+  try { const u = new URL(url); return u.origin === origin && OCEAN_KEY.some(p => p.test(u.pathname)); } catch { return false; }
+}
+
 /** Parts of the daily feed the map reads through the Worker (/api/daily; dist/daily-feed.js). */
 export const DAILY_PARTS = ['regulations', 'mpa-boundaries', 'additional-closures', 'brief'];
 /** The /api/daily URL for one part: the same string the page requests, so a saved copy matches. */

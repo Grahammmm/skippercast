@@ -153,7 +153,7 @@ test('Your limits carries the range for Boat and Kayak, blank with no default; S
 
 test('"Where to look" asks for a range or shows it for Boat and Kayak, and a Boat pick shows its run time at the saved speed', async () => {
   const {WhereToLook, pickRun, render, h, profile, cruiseSpeed, reachRange} = await load();
-  const pick = {id: 'a', kind: 'spot', name: 'Reef a', distance: '7.4 nm', nm: 7.4, depth: '~60–90 ft', fit: 'Fits', reason: 'Hard bottom.'};
+  const pick = {id: 'a', kind: 'spot', name: 'Reef a', distance: '7.4 nm', nm: 7.4, depth: '~60–90 ft', fit: 'Fits', reason: 'Hard bottom.', screen: {inside: false, name: null, distanceM: null, screened: true}};
   const r = {source: 'atlas', label: 'Survey reef atlas', basis: 'b', picks: [pick], empty: '', harbor: 'Morro Bay'};
   profile.value = 'boat'; reachRange.value = {}; cruiseSpeed.value = null;
   let html = render(h(WhereToLook, {ranking: r}));

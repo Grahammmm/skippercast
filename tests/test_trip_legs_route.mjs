@@ -46,7 +46,7 @@ test('no route argument: the legs and totals of before, each marked straight', (
   const r = tripLegs(port, stops, 20), points = [port, ...stops, port];
   assert.deepEqual(r.legs, points.slice(1).map((b, i) => {
     const nm = straight(points[i], b);
-    return {from: points[i].name, to: b.name, nm, runMin: runMinutes(nm, 20), basis: 'straight'};
+    return {from: points[i].name, to: b.name, nm, runMin: runMinutes(nm, 20), basis: 'straight', screen: {inside: false, name: null, distanceM: null, screened: false}};
   }));
   assert.equal(r.totalNm, r.legs.reduce((n, l) => n + l.nm, 0));
   assert.equal(r.totalRunMin, r.legs.reduce((n, l) => n + l.runMin, 0));

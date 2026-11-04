@@ -137,7 +137,7 @@ test('placement is explicit, one-shot, cancellable and bound to the region', () 
   assert.equal(waypointPlacement.value, region.id);
   assert.equal(placeWaypoint(region.id, {lat: NaN, lon: 2}), false);
   assert.equal(placeWaypoint(region.id, {lat: 1, lon: 2}), true);
-  assert.deepEqual(picked, [{latitude: 1, longitude: 2}]);
+  assert.deepEqual(picked, [{latitude: 1, longitude: 2, screen: {inside: false, name: null, distanceM: null, screened: false}}]);
   assert.equal(placeWaypoint(region.id, {lat: 1, lon: 2}), false);
   beginWaypointPlacement(region.id, at => picked.push(at));
   assert.equal(placeWaypoint('another-region', {lat: 1, lon: 2}), false);
