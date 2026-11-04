@@ -27,6 +27,7 @@ import {dailyFeed, intelligenceFeed, feedReader} from './feeds.ts';
 import type {FeedReader} from './feeds.ts';
 import {advisoriesFrom, parseTripDate, regionZones, requestBoat, windowConditions, windowEpochs, withForecastClock, WINDOW, HORIZON_DAYS} from './conditions.ts';
 import {forecastClock} from './forecast-clock.ts';
+import {advisorBarCheck, withBarHold} from './bar.ts';
 import type {Advisory, DayConditions, Window} from './conditions.ts';
 import {reportEvidence, CONFIDENCE_WORDS} from './confidence.ts';
 import type {Confidence, LandingReport} from './confidence.ts';
@@ -129,7 +130,9 @@ export async function tripConditions(input: ConditionsInput, opts: PlanningOptio
   const zones = regionZones(region);
   const advisoriesAsOf = advisoryCheckTime(daily?.sources, zones);
   const byDay = when.dates.map(date => { const [from, to] = windowEpochs(date, tz, window); return {date, advisories: daily ? advisoriesFrom(daily, zones, from, to) : []}; });
-  const days: DayConditions[] = byDay.map(d => withForecastClock(windowConditions(intel, region, pointId, d.date, window, boat, d.advisories), clock));
+  // SC0022-08: the brief's harbour-bar hold (bar.ts), once per day, before the clock; an unusable run is read as no forecast, so its bar is unjudged.
+  const bars = byDay.map(d => advisorBarCheck({intel: clock.state === 'unusable' ? null : intel, daily, region, port, pointId, date: d.date, window}));
+  const days: DayConditions[] = byDay.map((d, i) => withForecastClock(withBarHold(windowConditions(intel, region, pointId, d.date, window, boat, d.advisories), bars[i], tz), clock));
   const [from] = windowEpochs(when.dates[0]!, tz, window), [, to] = windowEpochs(when.dates.at(-1)!, tz, window);
   const alerts = daily ? advisoriesFrom(daily, zones, from, to) : null;
   const line = alerts?.length ? advisoryLine(byDay, today, language) : null;
@@ -141,10 +144,12 @@ export async function tripConditions(input: ConditionsInput, opts: PlanningOptio
     lead_with_advisory: Boolean(alerts?.length),
     ...(line ? {advisory_line: line} : {}),
     days,
+    ...(bars.some(Boolean) ? {bar_checks: bars} : {}),
     forecast_issued: intel?.completed_at ?? null,
     forecast_age_hours: clock.ageHours,
     note: [alerts?.length ? `Start the reply with advisory_line (the word in capitals, SMALL CRAFT ADVISORY), and end with "${t(language, 'nws_closer')}"` : null,
       advisoriesAsOf === null ? 'NWS advisories could not be checked: say so and point to the NWS forecast.' : null,
+      bars.some(Boolean) ? 'Use bar_checks to name a hazardous hour or say the bar was not judged; it is not an official bar report.' : null,
       'Comfort is for a mid-size center console; the person\'s own boat may differ. Never say the harbor bar is open or closed. Never give a percentage or a catch number.'].filter(Boolean).join(' '),
   };
 }

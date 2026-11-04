@@ -7,6 +7,7 @@
 import {Tile, type TileHue, type TileProps} from '../ui/Tile.tsx';
 import type {IconName} from '../ui/icons.tsx';
 import type {BriefTile, TileId} from './types.ts';
+import {language, t, type StringId} from '../i18n.ts';
 
 const LOOK: Readonly<Record<TileId, {icon: IconName; hue: TileHue}>> = {
   wind: {icon: 'wind', hue: 'mint'}, swell: {icon: 'wave', hue: 'blue'}, water: {icon: 'temperature', hue: 'coral'}, tide: {icon: 'tide', hue: 'amber'},
@@ -18,6 +19,8 @@ const BASIS: Readonly<Record<TileId, string>> = {
   water: 'Latest buoy water temperature with its observation time.',
   tide: 'Tide prediction nearest the selected time, in feet; the trend (Rising, Falling or Turning) compares it with the next prediction when that follows within 15 minutes.',
 };
+
+const LABELS: ReadonlySet<string> = new Set(['Wind', 'Swell', 'Water', 'Tide']);
 
 /** The tiles that read a forecast for the day; water is a buoy reading and tide an astronomical prediction. */
 const FORECAST_TILES: ReadonlySet<TileId> = new Set(['wind', 'swell']);
@@ -77,5 +80,7 @@ export function Tiles({tiles, nearshore = false, compact = false, dense = false,
     const p = tileProps(tile, compact, dense);
     return provisional && FORECAST_TILES.has(tile.id) ? {...p, source: `${p.source} · provisional`} : p;
   }) : emptyTiles(nearshore);
-  return <div class={dense ? 'app-tiles app-tiles--dense' : 'app-tiles'}>{props.map(tile => <Tile key={tile.label} {...tile} />)}</div>;
+  // BF-spanish-app: the four labels follow the page's language; each tile's basis text joins the catalogue later.
+  const lang = language.value, label = (name: string) => LABELS.has(name) ? t(`tile.${name.toLowerCase()}` as StringId, lang) : name;
+  return <div class={dense ? 'app-tiles app-tiles--dense' : 'app-tiles'}>{props.map(tile => <Tile key={tile.label} {...tile} label={label(tile.label)} />)}</div>;
 }
