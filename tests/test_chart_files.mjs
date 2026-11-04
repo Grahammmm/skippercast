@@ -1,15 +1,17 @@
 // RF0850-1 (web/chart-files.ts): once region.json has loaded, the land-water index, the poster and the
-// offline pack's two shoreline forms are not requested when its `chart_files` lacks them; anything
+// offline pack's shoreline, land-water and depth-contour files are not requested when its `chart_files` lacks them; anything
 // unknown (nothing loaded, another region, no or a malformed list) fails open and asks as before.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {chartFileListed, chartFilesOf, publishedChartFiles} from '../web/chart-files.ts';
-import {landWater, loadLandWater, resetLandWater} from '../web/land-water.ts';
+import {landWater, landWaterLinesURL, landWaterURL, loadLandWater, resetLandWater} from '../web/land-water.ts';
+import {depthContoursOverviewURL, depthContoursURL} from '../web/map/depth-contours.ts';
 import {loadPoster, poster} from '../web/map/poster.ts';
 import {shorelineOverviewURL, shorelineURL} from '../web/map/coastline.ts';
 import {packFiles} from '../web/trip.ts';
 
 const FOUR = ['land-water.json', 'poster.svg', 'shoreline.geojson', 'shoreline-overview.geojson'];
+const ALL = ['depth-contours-overview.geojson', 'depth-contours.geojson', 'land-water-lines.json', 'land-water.json', 'poster.svg', 'shoreline-overview.geojson', 'shoreline.geojson'];
 const PAGE = 'https://s.test/map';
 const counting = (respond = () => new Response('', {status: 404})) => {
   const calls = [];
@@ -102,21 +104,24 @@ test('poster: an unlisted poster is not requested; a listed or unknown one is', 
   assert.equal(poster.value, null, 'a 404 shows nothing');
 });
 
-test('offline pack: unlisted shoreline forms are left out; everything else keeps its order', () => {
+test('offline pack: unlisted chart side files are left out; everything else keeps its order', () => {
   const urls = () => packFiles('r', PAGE, ['/assets/app.js']).map(([url]) => url);
-  const line = new URL(shorelineURL('r'), PAGE).href, overview = new URL(shorelineOverviewURL('r'), PAGE).href;
+  const abs = p => new URL(p, PAGE).href;
+  const side = [shorelineURL('r'), shorelineOverviewURL('r'), landWaterURL('r'), landWaterLinesURL('r'), depthContoursURL('r'), depthContoursOverviewURL('r')].map(abs);
   publish(null);
   const today = urls();
-  assert.equal(today.length, 7);
-  assert.deepEqual(today.slice(2, 4), [line, overview]);
+  assert.equal(today.length, 11);
+  assert.deepEqual(today.slice(2, 8), side, 'shorelines, then land-water index and lines, then full and overview contours');
   assert.equal(today.at(-1), 'https://s.test/assets/app.js');
-  publish('r', FOUR);
+  publish('r', ALL);
   assert.deepEqual(urls(), today, 'all listed: today\'s list');
   publish('other', []);
   assert.deepEqual(urls(), today, 'another region: today\'s list');
   publish('r', []);
-  assert.deepEqual(urls(), today.filter(u => u !== line && u !== overview));
+  assert.deepEqual(urls(), today.filter(u => !side.includes(u)));
   publish('r', ['shoreline.geojson']);
-  assert.deepEqual(urls(), today.filter(u => u !== overview));
+  assert.deepEqual(urls(), today.filter(u => !side.includes(u) || u === side[0]));
+  publish('r', FOUR);
+  assert.deepEqual(urls(), today.filter(u => !side.slice(3).includes(u) && u !== side[3]), 'the four names listed: shorelines and the index only; poster.svg is never a file');
   publish(null);
 });
