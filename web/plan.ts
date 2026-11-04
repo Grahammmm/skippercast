@@ -14,7 +14,8 @@ export const PLAN_COPY = {
   unknown: 'No plan is available for this target.', loading: 'Loading this region’s plans.',
 } as const;
 const text = (s: unknown): s is string => typeof s === 'string' && s.trim().length > 0;
-export const trustworthy = (p: Plan): boolean => p.numeric_bite_model === false;
+const isRecord = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);
+export const trustworthy = (p: Plan): boolean => isRecord(p) && p.numeric_bite_model === false;
 /**
  * SC2207-01: the safe source links of a plan's `source_links` as the data writes them, `{title, url}`. Each entry needs a
  * nonblank title and an https URL with no credentials; one bad entry never drops its siblings. Titles and URLs stay as given.
@@ -39,7 +40,7 @@ export function planView(plans: Readonly<Record<string, Plan>> | null, id: strin
   if (Object.hasOwn(unavailable, id)) return {kind: 'unresearched', reason: unavailable[id]!};
   if (!Object.hasOwn(plans, id)) return state === 'unresearched' ? {kind: 'unresearched', reason: PLAN_COPY.unresearched} : {kind: 'unknown', id};
   const p = plans[id]!;
-  if (!trustworthy(p)) return {kind: 'withheld', name: p.name ?? id, reason: PLAN_COPY.withheld};
+  if (!trustworthy(p)) return {kind: 'withheld', name: isRecord(p) && typeof p.name === 'string' ? p.name : id, reason: PLAN_COPY.withheld};
   const links = sourceLinks(p.source_links);
   return {kind: 'plan', name: p.name ?? id, lifeStage: p.life_stage ?? '',
     sections: fields.flatMap(([title, key]) => text(p[key]) ? [{title, text: p[key]!}] : []),
