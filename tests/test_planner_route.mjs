@@ -269,7 +269,7 @@ test('the planner shows each ranked reef\'s basis and the new help; legs, GPX an
   // The stops in order are tripLegs over the same stops, not the reef's range distance.
   const stops = got.map(t => ({id: t.id, name: t.name, lat: t.latitude, lon: t.longitude})), legs = m.tripLegs({name: PORT.name, lat: 0, lon: 0}, stops, 20, () => null);
   const shown = [...markup.matchAll(/<li>([^<]*)<\/li>/g)].map(x => x[1]).filter(t => t.includes('→'));
-  assert.deepEqual(shown, legs.legs.map(l => `${l.from} → ${l.to} · ${l.nm.toFixed(1)} nm straight line${l.runMin === null ? '' : ` · at least ${l.runMin} min`}`));
+  assert.deepEqual(shown, legs.legs.map(l => `${l.from} → ${l.to} · ${l.nm.toFixed(1)} nm straight line${l.runMin === null ? '' : ` · at least ${l.runMin} min`} · Protected areas not checked`));
   assert.ok(markup.includes(`Total: ${legs.totalNm.toFixed(1)} nm`));
   // The GPX is the same with or without route metadata.
   const plain = harness({nms: [3, 4, 5], route: () => null, routeContext: async () => none()});
