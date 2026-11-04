@@ -36,6 +36,51 @@ const output = {
 // Tags Vite must leave alone: vendor/ files, the web manifest and image icons.
 export const STATIC_REF = /<(script|link)\b(?=[^>]*\s(?:src|href)="(?:vendor\/|manifest\.webmanifest"|[\w-]+\.(?:png|svg|jpg)"))/g;
 
+// maplibre-gl.css styles the MapLibre logo with three inline SVGs (about
+// 39 KB raw of the offline pack shell). The logo appears only when a map is
+// created with `maplibreLogo: true`, which no SkipperCast map sets, so its
+// rules are dropped from the bundled stylesheet.
+export const MAPLIBRE_CSS = /[\\/]node_modules[\\/](?:.*[\\/])?maplibre-gl[\\/]dist[\\/]maplibre-gl\.css(?:\?.*)?$/;
+const LOGO = '.maplibregl-ctrl-logo';
+
+/** `css` without the rules whose every selector names the MapLibre logo (and any @media left empty). */
+export function dropMaplibreLogo(css) {
+  const blocks = text => {
+    const out = [];
+    let depth = 0, start = 0, quote = '';
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (quote) { if (c === '\\') i++; else if (c === quote) quote = ''; continue; }
+      if (c === '"' || c === '\'') quote = c;
+      else if (c === '{') depth++;
+      else if (c === '}' && --depth === 0) { out.push(text.slice(start, i + 1)); start = i + 1; }
+    }
+    if (start < text.length) out.push(text.slice(start));
+    return out;
+  };
+  const strip = text => blocks(text).map(block => {
+    const open = block.indexOf('{');
+    if (open < 0) return block;
+    const head = block.slice(0, open);
+    if (head.trim().startsWith('@media')) {
+      const inner = strip(block.slice(open + 1, -1));
+      return inner.trim() ? `${head}{${inner}}` : '';
+    }
+    return head.split(',').every(s => s.includes(LOGO)) ? '' : block;
+  }).join('');
+  return strip(css);
+}
+
+function maplibreCss() {
+  return {
+    name: 'skippercast:maplibre-css',
+    enforce: 'pre',
+    transform(code, id) {
+      return MAPLIBRE_CSS.test(id) ? {code: dropMaplibreLogo(code), map: null} : null;
+    },
+  };
+}
+
 /** Leave static-file <script>/<link> tags to the browser, SRI and all. */
 function staticRefs() {
   return {
@@ -87,7 +132,7 @@ export function clientConfig({root = resolve(import.meta.dirname, 'dist'), outDi
     base: './',
     publicDir: false,
     logLevel: 'warn',
-    plugins: [staticRefs(), pageStyles(root)],
+    plugins: [staticRefs(), pageStyles(root), maplibreCss()],
     // Preact islands in web/ (P4-01b): JSX compiles to preact/jsx-runtime.
     oxc: {jsx: {runtime: 'automatic', importSource: 'preact'}},
     build: {

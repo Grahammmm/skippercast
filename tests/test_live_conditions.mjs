@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { airportReading, buoyReading, freshness, loadObservations, observationsHTML, observedDock, parseLiveAlerts } from "../dist/live-conditions.js";
+import { FT_PER_M } from "../web/units.ts";
 
 const now = Date.parse("2026-09-21T19:00:00Z");
 function feed() {
@@ -31,7 +32,7 @@ test("old, failed, delayed and future readings never appear as fresh observation
   for (const alter of [d => { d.sources.diablo.status = "retained"; }, d => { d.generated_at = "2026-09-21T16:00:00Z"; }]) {
     const d = feed(); alter(d);
     assert.equal(observedDock({ buoys: d }, false, now), null);
-    assert.equal(buoyReading(d, "diablo", now).height, 3.28084);
+    assert.ok(Math.abs(buoyReading(d, "diablo", now).height - FT_PER_M) < 1e-9);
   }
 });
 

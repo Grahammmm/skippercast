@@ -3,6 +3,7 @@ import { esc } from "./marine-charts.js";
 import { distanceNm } from "./marine-data.js";
 import { matchesTargetSpecies } from "./target-groups.js";
 import { ndbcStationURL, sourceStation, stationText } from "../web/station-label.ts";
+import { FT_PER_M, KT_PER_MS } from "../web/units.ts";
 
 export const FEED_URL =
   getRegion().daily_feed;
@@ -199,7 +200,7 @@ function gridHTML(source, point, kind) {
       value = `${((s.analysed_sst * 9) / 5 + 32).toFixed(1)}°F`;
     if (kind === "chlorophyll") value = `${s.chlorophyll.toFixed(2)} mg/m³`;
     if (kind === "currents")
-      value = `${(Math.hypot(s.water_u, s.water_v) * 1.943844).toFixed(2)} kt toward ${Math.round(((Math.atan2(s.water_u, s.water_v) * 180) / Math.PI + 360) % 360)}°`;
+      value = `${(Math.hypot(s.water_u, s.water_v) * KT_PER_MS).toFixed(2)} kt toward ${Math.round(((Math.atan2(s.water_u, s.water_v) * 180) / Math.PI + 360) % 360)}°`;
   }
   const state = result?.usable
     ? result.fresh
@@ -245,7 +246,7 @@ function buoyHTML(data) {
         source.status === "ok" &&
         age(row.time, Date.now()) >= -1 &&
         age(row.time, Date.now()) <= 6;
-      return `<p><strong>${label}: ${(row.WVHT * 3.28084).toFixed(1)} ft at ${row.DPD.toFixed(0)} s</strong>${Number.isFinite(row.MWD) ? ` · mean direction from ${row.MWD}° true` : ""}<br><small>${fresh ? "Dated observation" : "Stale observation"} · ${when(row.time)}. Dominant wave period; this is regional buoy water, not the selected reef. <a href="${esc(safeURL(station?.backupFor ? ndbcStationURL(station.id) : source.url))}" target="_blank" rel="noopener">Source ↗</a></small></p>`;
+      return `<p><strong>${label}: ${(row.WVHT * FT_PER_M).toFixed(1)} ft at ${row.DPD.toFixed(0)} s</strong>${Number.isFinite(row.MWD) ? ` · mean direction from ${row.MWD}° true` : ""}<br><small>${fresh ? "Dated observation" : "Stale observation"} · ${when(row.time)}. Dominant wave period; this is regional buoy water, not the selected reef. <a href="${esc(safeURL(station?.backupFor ? ndbcStationURL(station.id) : source.url))}" target="_blank" rel="noopener">Source ↗</a></small></p>`;
     })
     .join("");
 }
