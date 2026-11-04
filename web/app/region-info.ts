@@ -5,7 +5,7 @@
 // (tests/test_v2_telemetry.mjs).
 import {signal} from '@preact/signals';
 import type {ReportLocalArea} from '../../packages/coast/src/state/report-binding.ts';
-import {aerialBase, type AerialBase} from '../map/aerial.ts';
+import {aerialBase, type AerialBase} from '../aerial-base.ts';
 import {chartFilesOf} from '../chart-files.ts';
 import {startupAdmission} from '../landing/region-warm.ts';
 import {tideRegion, type TideRegion} from '../tide-stations.ts';
