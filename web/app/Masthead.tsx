@@ -5,11 +5,11 @@
 // The pieces are exported so the mobile shell (FE-06) composes the same
 // brand, location, views and freshness into its top strip, sheet and tabs.
 // FE-55: the chat entry links to the Text Advisor's web chat, and only while
-// the advisor is on.
-import {signal} from '@preact/signals';
+// the advisor is on (SC0452-02: read from the shared /api/session answer).
 import {useEffect} from 'preact/hooks';
 import {CHAT_ENTRY, CHAT_PATH} from '../advisor/entry.ts';
 import {Icon, type IconName} from '../ui/icons.tsx';
+import {ensureSession, session} from '../account.ts';
 import {appView, region, setParams, withParams, type AppView} from '../state.ts';
 import {currentRegionInfo, freshness, regionLoad, retryRegion} from './App.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
@@ -94,26 +94,16 @@ export function FreshnessDot() {
 // SC1322-06: the notice lives in web/degraded-notice.tsx, shared with the landing; /map's imports are unchanged.
 export {DegradedNotice};
 
-/** Whether the Text Advisor answers: false until a probe finds the chat page. */
-export const advisorOn = signal(false);
-let probe: Promise<boolean> | null = null;
 /**
- * HEAD the chat page. The advisor gate (server/advisor/gate.ts) answers 404
- * on it while TEXT_ADVISOR_ENABLED is off, so only an ok answer means on; a
- * failure means off. No cookie is sent and nothing is stored.
+ * The chat entry: nothing until the shared session read (web/account.ts ensureSession, the one the account menu
+ * also makes) says the advisor gate is open. SC0452-02: the answer rides on GET /api/session, so there is no
+ * HEAD /chat.html probe; loading, offline and a failed refresh show nothing. The gate stays the authority.
  */
-export const checkAdvisor = (fetcher: typeof fetch = fetch): Promise<boolean> =>
-  fetcher(CHAT_PATH, {method: 'HEAD', credentials: 'omit', cache: 'no-store'}).then(response => response.ok, () => false);
-/** Check once per page load and publish the answer to `advisorOn`. */
-export function probeAdvisor(): Promise<boolean> {
-  probe ??= checkAdvisor().then(on => (advisorOn.value = on));
-  return probe;
-}
-
-/** The chat entry: nothing while the advisor is off. */
 export function ChatEntry() {
-  useEffect(() => { void probeAdvisor(); }, []);
-  return advisorOn.value ? <a class="ui-button ui-button--quiet" href={CHAT_PATH} data-advisor-entry>{CHAT_ENTRY}</a> : null;
+  useEffect(() => { void ensureSession(); }, []);
+  const current = session.value;
+  return current.state !== 'loading' && current.state !== 'offline' && current.advisor
+    ? <a class="ui-button ui-button--quiet" href={CHAT_PATH} data-advisor-entry>{CHAT_ENTRY}</a> : null;
 }
 
 export function Masthead({href}: {href?: string} = {}) {
