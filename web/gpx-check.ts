@@ -10,6 +10,12 @@ function readAttributes(attrs: string): {ok: boolean; list: [string, string][]} 
   return {ok: !attrs.slice(at).trim(), list};
 }
 
+const ENTITIES: Record<string, string> = {amp: '&', lt: '<', gt: '>', quot: '"', apos: "'"};
+/** One reference at the sticky position: a named XML entity, or decimal `#digits` / hexadecimal `#xhex`, each ending in `;`. */
+const reference = /&(?:(amp|lt|gt|quot|apos)|#([0-9]+)|#x([0-9A-Fa-f]+));/y;
+/** XML 1.0 Char production: a numeric reference must resolve to one of these code points. */
+const xmlCharacter = (n: number): boolean => n === 9 || n === 10 || n === 13 || (n >= 0x20 && n <= 0xd7ff) || (n >= 0xe000 && n <= 0xfffd) || (n >= 0x10000 && n <= 0x10ffff);
+
 /** With a `screen` (null while not loaded), fishable waypoints inside, near or unchecked fail the file.
  * Tracks remain structurally checked: fishing geometry is gated by buildExport, while AVOID outlines and depth contours are references, not fishable places.
  * Without a screen only the structure is checked. */
@@ -20,12 +26,24 @@ export function checkGpx(xml: string, expected: {waypoints: number}, screen?: un
   const stack: string[] = [], names = new Set<string>();
   const coordinates: {latitude: number; longitude: number}[] = [];
   let roots = 0, count = 0, cursor = 0, waypoint = false, waypointName = false;
-  const decode = (s: string): string => s.replace(/&(amp|lt|gt|quot|apos|#\d+|#x[\da-f]+);/gi, (all, e: string) => {
-    if (e.startsWith('#')) { const n = e[1] === 'x' ? parseInt(e.slice(2), 16) : Number(e.slice(1)); return n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : all; }
-    return ({amp: '&', lt: '<', gt: '>', quot: '"', apos: "'"} as Record<string, string>)[e] ?? all;
-  });
+  /** Decodes character data once, left to right; invalid references are reported through `fail` and decode to nothing. */
+  const decode = (s: string): string => {
+    let out = '';
+    for (let i = 0; i < s.length;) {
+      if (s[i] !== '&') { out += s[i++]; continue; }
+      reference.lastIndex = i;
+      const m = reference.exec(s);
+      if (!m) { fail('Malformed XML entity reference'); i++; continue; }
+      i += m[0].length;
+      if (m[1]) { out += ENTITIES[m[1]]; continue; }
+      const digits = (m[2] ?? m[3])!.replace(/^0+/, ''), n = digits.length > 8 ? Infinity : parseInt(digits || '0', m[2] === undefined ? 16 : 10);
+      if (xmlCharacter(n)) out += String.fromCodePoint(n); else fail('XML-forbidden character reference');
+    }
+    return out;
+  };
   for (const m of xml.matchAll(/<[^>]*>/g)) {
     const text = xml.slice(cursor, m.index), tag = m[0]; cursor = m.index + tag.length;
+    decode(text);
     if (text.includes('<') || (!stack.length && text.trim())) fail('Malformed XML structure');
     if (tag.startsWith('<?')) { if (m.index !== 0) fail('Malformed XML declaration'); continue; }
     const parsed = /^<(\/?)([a-z][\w:-]*)([^<>]*?)(\/?)>$/i.exec(tag);
@@ -40,6 +58,7 @@ export function checkGpx(xml: string, expected: {waypoints: number}, screen?: un
       roots++;
       if (name !== 'gpx' || !/\bversion\s*=\s*(["'])1\.1\1/.test(attrs) || !/\bxmlns\s*=\s*(["'])http:\/\/www\.topografix\.com\/GPX\/1\/1\1/.test(attrs)) fail('Expected GPX 1.1 root');
     }
+    for (const [, value] of readAttributes(attrs).list) decode(value);
     if (name === 'wpt' || name === 'trkpt') {
       const read = readAttributes(attrs), pair: number[] = [];
       if (!read.ok) fail(`Malformed ${name} attributes`);
