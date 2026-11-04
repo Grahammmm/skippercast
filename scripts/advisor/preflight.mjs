@@ -12,6 +12,7 @@
 //   --stage   dark: the advisor is on with ADVISOR_REPLIES_ENABLED=false (flip step 3), so replies
 //             being off passes; live (default): replies must be on
 //   --local   also run the golden conversations from this checkout (node --test)
+//   --report  launch status: every plan row and § Owner to-do item as pass, fail, blocked or owner-only
 //
 // Without SKIPPERCAST_SESSION the admin items are FAIL ("no session"). The cookie
 // comes from a signed-in browser: DevTools > Application > Cookies >
@@ -41,6 +42,7 @@ export function parseArgs(argv) {
     if (a === '--base') out.base = String(argv[++i] ?? '');
     else if (a === '--stage') out.stage = String(argv[++i] ?? '');
     else if (a === '--local') out.local = true;
+    else if (a === '--report') out.report = true;
     else if (a === '--help' || a === '-h') out.help = true;
     else throw Error(`unknown option ${a}`);
   }
@@ -84,8 +86,8 @@ export function judgeRules(rules, now = Date.now(), species = PILOT_SPECIES) {
  * Every checklist item, in the order of 11 § Launch checklist. `fetcher` is
  * fetch (tests pass a fake); `root` is the checkout for the local file checks.
  */
-export async function runPreflight({base, cookie = null, stage = 'live', local = false, fetcher = fetch, root = ROOT, now = Date.now(), runGolden = null} = {}) {
-  const out = [];
+export async function runPreflight({base, cookie = null, stage = 'live', local = false, fetcher = fetch, root = ROOT, now = Date.now(), runGolden = null, sink = []} = {}) {
+  const out = sink; // --report passes its own array so rows already checked survive a check that throws
   const add = (...a) => out.push(row(...a));
 
   // 1. Deployed.
@@ -220,12 +222,142 @@ export function formatResults(results) {
   return lines.join('\n');
 }
 
+// ---- --report: one launch-status view (plan: 11 § Launch checklist and § Owner to-do) ----
+export const PLAN_DOC = 'docs/plans/text-advisor/11-testing-rollout.md';
+/** The golden conversations the plan numbers 1-9; fewer passing tests than this cannot be "1-9 green". */
+export const MIN_GOLDEN = 9;
+/** What a passing row does NOT prove; printed beside it. */
+export const LIMITS = {
+  9: 'proves the golden-conversation tests pass in THIS checkout; not that the deployed build matches it, nor how the live model behaves',
+  11: 'proves enough boats are verified and their pages answer 200; not that invitations were sent or accepted, consent, the 3-5 upper bound, or that a boat is a real skipper',
+};
+/** Rows whose automatic check cannot complete the plan's requirement: the owner step (matched in § Owner to-do) always stays. */
+const OWNER_STEP = {11: /^Invite \d/};
+const MAX_SKIPPERS = 5;
+const RANK = {fail: 0, blocked: 1, 'owner-only': 2, pass: 3};
+const plain = s => s.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[*`]/g, '').replace(/\s+/g, ' ').trim();
+const shortName = s => { const t = plain(s).replace(/^B\d+\.\s*/, '').split(/:\s|;\s|\(| — /)[0].trim(); return t.length > 60 ? `${t.slice(0, 60).replace(/\s\S*$/, '')}…` : t; };
+
+/** Long names written in this script (variable names in the by-hand steps) may stay readable; any other long token is masked. */
+const OWN_NAMES = new Set(readFileSync(fileURLToPath(import.meta.url), 'utf8').match(/[A-Za-z0-9_-]{32,}/g) ?? []);
+const SENSITIVE = '[\\w.-]*(?:password|passwd|secret|token|api_?key|cookie|session|authorization|bearer|phone|account|_id|pageid|sid)';
+const PHONE = [/\+\d[\d\s().-]{6,}\d/g, /\(\d{3}\)\s*\d{3}[-.\s]?\d{4}/g, /\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b/g, /\b\d{9,}\b/g];
+/** Mask the session value, the cookie assignment, phone numbers and long account numbers, and long secret-shaped tokens. Names in `names` (variable names quoted from the plan) stay readable. */
+export function redact(text, cookie = null, names = new Set()) {
+  let s = String(text ?? '');
+  if (cookie) s = s.split(cookie).join('[redacted]');
+  s = s.replace(new RegExp(`${COOKIE}=[^\\s;,]+`, 'g'), `${COOKIE}=[redacted]`);
+  for (const re of PHONE) s = s.replace(re, '[redacted]');
+  return s.replace(/[A-Za-z0-9_-]{32,}/g, m => (names.has(m) ? m : '[redacted]'));
+}
+/** For error text from a check that threw or failed: also mask every NAME=value and the value of any secret-shaped name or Bearer/Basic credential, keeping the rest of the explanation. */
+export function redactError(text, cookie = null) {
+  const s = redact(text, cookie).replace(/\b(?:Bearer|Basic)\s+\S+/gi, 'credential [redacted]')
+    .replace(new RegExp(`(${SENSITIVE})\\s*[:=]\\s*("[^"]*"|'[^']*'|[^\\s,;]+)`, 'gi'), '$1=[redacted]').replace(/([\w.-]+)=(?!\[redacted\])("[^"]*"|'[^']*'|[^\s,;]+)/g, '$1=[redacted]');
+  return s.replace(/[A-Za-z0-9_-]{32,}/g, '[redacted]');
+}
+
+/** Read the readiness table and the § Owner to-do items from the plan; throws naming a row it cannot read. */
+export function parsePlan(md) {
+  const section = title => { const m = new RegExp(`^## ${title}.*$`, 'm').exec(md); return m ? md.slice(m.index + m[0].length).split(/^## /m)[0] : ''; };
+  const rows = [];
+  // Every line of the table is examined (indented rows and rows without an opening pipe included): a line that is not a row fails the run naming it.
+  let fence = false, state = 'before';
+  for (const line of section('Launch checklist').split('\n')) {
+    if (/^\s*```/.test(line)) { fence = !fence; continue; }
+    if (fence) continue;
+    if (state === 'before' && /^\s*\|?\s*#\s*\|/.test(line)) state = 'table';
+    else if (state === 'before') continue;
+    else if (!line.trim()) { state = 'after'; continue; }
+    else if (state === 'after' && !line.includes('|')) continue;
+    if (state === 'after' || !line.includes('|')) throw Error(`readiness table row could not be parsed: ${plain(line).slice(0, 90)}`);
+    const cells = line.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+    if (cells[0] === '#' || /^:?-+:?$/.test(cells[0])) continue;
+    if (cells.length !== 4 || !/^\d{1,2}$/.test(cells[0]) || !cells[1] || !cells[2]) throw Error(`readiness table row could not be parsed: ${plain(line).slice(0, 90)}`);
+    if (rows.some(r => r.id === cells[0])) throw Error(`readiness row ${cells[0]} appears twice`);
+    rows.push({id: cells[0], name: shortName(cells[1]), byHand: plain(/by hand:\s*(.*)$/.exec(cells[2])?.[1] ?? '')});
+  }
+  if (!rows.length) throw Error(`no readiness rows parsed from ${PLAN_DOC} (§ Launch checklist table)`);
+  const owner = [];
+  let sec = '', n = 0;
+  for (const line of section('Owner to-do').split('\n')) {
+    const h = /^### ([A-Z])\./.exec(line);
+    if (h) { sec = h[1]; n = 0; continue; }
+    const m = /^- \[( |x)\] (.+)$/.exec(line);
+    if (!m) continue;
+    const id = /^B\d+(?=\.)/.exec(m[2])?.[0] ?? `${sec}${++n}`;
+    owner.push({id, name: shortName(m[2]), step: `${m[1] === 'x' ? '(ticked in the plan, not verified) ' : ''}${plain(m[2])}${m[2].endsWith(':') ? ' (commands follow in the plan)' : ''}`});
+  }
+  if (!owner.length) throw Error(`no § Owner to-do items parsed from ${PLAN_DOC}`);
+  return {rows, owner, names: new Set([...OWN_NAMES, ...md.match(/[A-Za-z0-9_-]{32,}/g) ?? []])};
+}
+
+/** Fold the preflight results into one state per plan row: fail > blocked > owner-only > pass. */
+export function buildReport({rows, owner, names}, results, {thrown = null, cookie = null} = {}) {
+  const lastId = results.at(-1)?.id;
+  const why = thrown ? `a check threw: ${redactError(thrown, cookie).slice(0, 160)}` : null;
+  const done = rows.map(r => {
+    const parts = results.filter(x => x.id === r.id).map(x => {
+      let state = x.status === 'manual' ? 'owner-only' : x.status === 'fail' && /^no session/.test(x.detail) ? 'blocked' : x.status, detail = x.status === 'fail' ? redactError(x.detail, cookie) : x.detail;
+      // The check only needs one passing test; the plan needs nine conversations. Judged here so --local keeps its behaviour.
+      if (r.id === '9' && state === 'pass' && Number(/^pass (\d+)/.exec(x.detail)?.[1]) < MIN_GOLDEN) { state = 'fail'; detail += `; the plan needs at least ${MIN_GOLDEN} passing`; }
+      return {state, text: state === 'owner-only' ? `by hand: ${x.how}${detail ? ` (${detail})` : ''}` : `check ${x.title}${detail ? ` (${detail})` : ''}`};
+    });
+    if (why && r.id === lastId) parts.push({state: 'fail', text: `this row may be incomplete, ${why}`});
+    else if (why && !parts.length) parts.push({state: 'fail', text: `not checked, ${why}`});
+    else if (!parts.length && !r.byHand) parts.push({state: 'fail', text: 'no preflight check covers this row'});
+    // The plan names a by-hand step this row has not reported: the row is not done until a person does it.
+    if (r.byHand && !parts.some(p => p.state === 'owner-only')) parts.push({state: 'owner-only', text: `by hand: ${r.byHand}`});
+    // The plan's owner step this row depends on (e.g. invitations): a passing subcheck never completes it, and evidence against the 3-5 bound fails the row.
+    const verified = Number(/^(\d+) verified/.exec(results.find(x => x.id === r.id && x.status === 'pass')?.detail ?? '')?.[1]);
+    if (OWNER_STEP[r.id] && verified > MAX_SKIPPERS) parts.push({state: 'fail', text: `${verified} verified boats, the plan says ${MIN_SKIPPERS}-${MAX_SKIPPERS} invited`});
+    if (OWNER_STEP[r.id] && !parts.some(p => p.state === 'fail')) {
+      const o = owner.find(i => OWNER_STEP[r.id].test(i.name));
+      parts.push(o ? {state: 'owner-only', text: `by hand (${o.id}): ${o.step}`} : {state: 'fail', text: `the plan's owner step for this row was not found in § Owner to-do`});
+    }
+    const state = parts.reduce((w, p) => (RANK[p.state] < RANK[w] ? p.state : w), 'pass');
+    const limit = state !== 'fail' && LIMITS[r.id] && parts.some(p => p.state === 'pass') ? ` ; does not prove: ${LIMITS[r.id]}` : '';
+    return {id: r.id, name: r.name, state, text: parts.map(p => `[${p.state}] ${p.text}`).join(' ; ') + limit};
+  });
+  const items = owner.map(o => ({id: o.id, name: o.name, state: 'owner-only', text: `by hand: ${o.step}`}));
+  const ordered = [...done.filter(r => r.state !== 'owner-only'), ...done.filter(r => r.state === 'owner-only'), ...items];
+  return {names, rows: ordered, unplanned: [...new Set(results.map(x => x.id))].filter(id => !rows.some(r => r.id === id))};
+}
+
+export function formatReport({rows, unplanned, names}, cookie = null) {
+  const count = s => rows.filter(r => r.state === s).length;
+  const bad = count('fail') + count('blocked');
+  const lines = rows.map(r => `${r.state.toUpperCase().padEnd(10)} ${r.id.padStart(3)}  ${r.name} :: ${r.text}`);
+  lines.push('', `${count('pass')} pass, ${count('fail')} fail, ${count('blocked')} blocked, ${count('owner-only')} owner-only (plan rows and Owner to-do items).`);
+  if (unplanned.length) lines.push(`Checks ran for rows not in the plan table (ignored): ${unplanned.join(', ')}`);
+  lines.push(bad ? 'NOT READY: fix the fail and blocked lines first.' : count('owner-only') ? 'NOT READY: only owner-only steps remain; they are G\'s.' : 'READY');
+  return redact(lines.join('\n'), cookie, names);
+}
+
+/** The --report run: {text, exitCode}. Throws (naming the row) when the plan cannot be parsed. */
+export async function launchStatus({base, cookie = null, root = ROOT, ...rest} = {}) {
+  const plan = parsePlan(readFileSync(join(root, PLAN_DOC), 'utf8'));
+  const sink = [];
+  let thrown = null;
+  try { await runPreflight({base, cookie, root, sink, ...rest}); } catch (error) { thrown = `${error?.name ?? 'Error'}: ${error?.message ?? error}`; }
+  const report = buildReport(plan, sink, {thrown, cookie});
+  return {text: formatReport(report, cookie), exitCode: report.rows.some(r => r.state === 'fail' || r.state === 'blocked') ? 1 : 0};
+}
+
 async function main() {
   let args;
   try { args = parseArgs(process.argv.slice(2)); } catch (error) { console.error(error.message); return 2; }
-  if (args.help) { console.log('SKIPPERCAST_SESSION=... node scripts/advisor/preflight.mjs [--base <url>] [--stage dark|live] [--local]'); return 0; }
+  if (args.help) { console.log('SKIPPERCAST_SESSION=... node scripts/advisor/preflight.mjs [--base <url>] [--stage dark|live] [--local] [--report]'); return 0; }
   const cookie = (process.env.SKIPPERCAST_SESSION ?? '').trim() || null;
   if (cookie && !/^[\w-]{43}$/.test(cookie)) { console.error('SKIPPERCAST_SESSION must be the 43-character __Host-sc_session value'); return 2; }
+  if (args.report) {
+    try {
+      const {text, exitCode} = await launchStatus({base: args.base, cookie, stage: args.stage, local: args.local});
+      console.log(`Text Advisor launch status: ${args.base} (stage ${args.stage})\n`);
+      console.log(text);
+      return exitCode;
+    } catch (error) { console.error(`Text Advisor launch status: ${redact(error.message, cookie)}`); return 1; }
+  }
   const results = await runPreflight({base: args.base, cookie, stage: args.stage, local: args.local});
   console.log(`Text Advisor preflight: ${args.base} (stage ${args.stage})\n`);
   console.log(formatResults(results));
