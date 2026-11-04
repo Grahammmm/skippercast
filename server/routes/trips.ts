@@ -25,6 +25,7 @@ trips.post('/api/trips', async c => {
   const saved = await db(env).prepare('INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,enabled,created_at,boat_name,boat_sea,boat_wind,boat_chop_period,launch_point,targets,plan,status,updated_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM trips WHERE owner=? AND enabled=1 AND final_delivered_at IS NULL AND date>=?) < ?').bind(id, owner, t.region, t.point, t.species, t.date, t.start_hour, t.end_hour, t.wind_limit, t.gust_limit, t.sea_limit, at, t.boat?.name ?? null, t.boat?.sea ?? null, t.boat?.wind ?? null, t.boat?.chop_period ?? null, t.launch_point, JSON.stringify(t.targets), t.plan ? JSON.stringify(t.plan) : null, t.status, at, owner, dateInZone(Date.now(), regions[t.region]!.timezone), ACTIVE_TRIP_LIMIT).run();
   return saved.meta.changes ? json({id}, 201) : json({error: `Limit of ${ACTIVE_TRIP_LIMIT} active trips`}, 409);
 });
+const PLAN_COLUMNS = ['launch_point', 'targets', 'plan', 'status'] as const;
 // PATCH changes the plan of a saved trip (launch point, targets, spots, legs, window,
 // exports, status). The alert fields are fixed at save time: change them by saving
 // a new trip, so a running alert never silently judges a different window.
@@ -35,9 +36,15 @@ trips.patch('/api/trips', async c => {
   if (!row) return json({error: 'Not found'}, 404);
   const region = regionById(row.region); if (!region) return json({error: RETIRED_AREA}, 409);
   const current = publicTrip(row);
-  const next = validateTripPlan({launch_point: 'launch_point' in input ? input.launch_point : current.launch_point, targets: 'targets' in input ? input.targets : current.targets, plan: 'plan' in input ? input.plan : current.plan, status: 'status' in input ? input.status : row.status}, region, row.species);
-  await d.prepare('UPDATE trips SET launch_point=?,targets=?,plan=?,status=?,updated_at=? WHERE id=? AND owner=?').bind(next.launch_point, JSON.stringify(next.targets), next.plan ? JSON.stringify(next.plan) : null, next.status, new Date().toISOString(), id, owner).run();
-  return json({id, ...next});
+  const sent = PLAN_COLUMNS.filter(k => Object.hasOwn(input, k));
+  const next = validateTripPlan({launch_point: sent.includes('launch_point') ? input.launch_point : current.launch_point, targets: sent.includes('targets') ? input.targets : current.targets, plan: sent.includes('plan') ? input.plan : current.plan, status: sent.includes('status') ? input.status : row.status}, region, row.species);
+  // Only the sent columns are written (names come from PLAN_COLUMNS, never from the request), so a
+  // concurrent change to an omitted field survives; the answer is the row as stored after the write.
+  const values = {launch_point: next.launch_point, targets: JSON.stringify(next.targets), plan: next.plan ? JSON.stringify(next.plan) : null, status: next.status};
+  const saved = await d.prepare(`UPDATE trips SET ${[...sent.map(k => `${k}=?`), 'updated_at=?'].join(',')} WHERE id=? AND owner=? RETURNING *`).bind(...sent.map(k => values[k]), new Date().toISOString(), id, owner).first<TripRow>();
+  if (!saved) return json({error: 'Not found'}, 404);
+  const {launch_point, targets, plan, status} = publicTrip(saved);
+  return json({id: saved.id, launch_point, targets, plan, status});
 });
 trips.delete('/api/trips', async c => {
   const owner = c.var.owner, d = db(c.env);
