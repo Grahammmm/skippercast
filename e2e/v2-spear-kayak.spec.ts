@@ -62,7 +62,7 @@ test('acceptance 2: Kayak picks a listed launch and the range runs from it', asy
   await launch.selectOption('olde-port-beach');
   await dialog.getByRole('button', {name: 'Save'}).click();
   expect(JSON.parse(await page.evaluate(() => localStorage.getItem('skippercast-launch-v1')) ?? '{}')).toEqual({'morro-bay': 'olde-port-beach'});
-  await expect(range).toHaveAttribute('title', /straight line from Olde Port Beach/);
+  await expect(range).toHaveAttribute('title', 'Range to consider: 3 nm by water where routed, else straight line, from Olde Port Beach');
   await expect(chart).toHaveAttribute('data-reach', '3');
   expect(pageErrors).toEqual([]);
 });

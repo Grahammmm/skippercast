@@ -1,8 +1,8 @@
 // Deterministic hook scheduler: complete Trip module + installed Preact SSR.
 // This is not a DOM, browser storage, or browser lifecycle qualification.
-export const runtime = {slots: [], cursor: 0, effects: [], actions: new Map(), responses: [], calls: 0, deletes: [], saves: 0};
+export const runtime = {slots: [], cursor: 0, effects: [], actions: new Map(), responses: [], calls: 0, deletes: [], saves: 0, saveMeta: null};
 export function reset(responses) {
-  Object.assign(runtime, {slots: [], cursor: 0, effects: [], actions: new Map(), responses: [...responses], calls: 0, deletes: [], saves: 0});
+  Object.assign(runtime, {slots: [], cursor: 0, effects: [], actions: new Map(), responses: [...responses], calls: 0, deletes: [], saves: 0, saveMeta: null});
 }
 export function useState(initial) {
   const at = runtime.cursor++;
