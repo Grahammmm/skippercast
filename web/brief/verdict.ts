@@ -66,6 +66,8 @@ export interface BriefVerdict {
   readonly held: string | null;
   /** The window rated, for example "6 am–noon"; null without one. */
   readonly window: string | null;
+  /** Epoch bounds for locale-aware display; the morning ends at local noon. */
+  readonly windowBounds?: readonly [number, number];
   /** The worst hour's comfort score out of 10 (boat only); null otherwise. */
   readonly score: number | null;
   /** What graded it: the comfort score, or the profile's own hourly grader. */
@@ -99,7 +101,7 @@ export function clockText(ms: number, tz: string): string {
  * the morning has passed, the hours ending by sunset (or 6 pm). Epoch
  * ms, ascending. `covered` says whether the candidates reach the date at all.
  */
-export function windowHours(candidates: readonly number[], date: string, tz: string, sunrise: string | null, sunset: string | null, now: Date): {hours: number[]; label: string | null; covered: boolean} {
+export function windowHours(candidates: readonly number[], date: string, tz: string, sunrise: string | null, sunset: string | null, now: Date): {hours: number[]; label: string | null; covered: boolean; bounds?: readonly [number, number]} {
   const riseMs = sunrise ? Date.parse(sunrise) : NaN, setMs = sunset ? Date.parse(sunset) : NaN;
   const afterRise = (ms: number) => Number.isFinite(riseMs) ? ms >= riseMs : local(ms, tz).hour >= DEFAULT_START_HOUR;
   const beforeSet = (ms: number) => Number.isFinite(setMs) ? ms + HOUR <= setMs : local(ms, tz).hour < 18;
@@ -108,8 +110,8 @@ export function windowHours(candidates: readonly number[], date: string, tz: str
   const on = onDate.filter(ms => ms >= from && afterRise(ms) && beforeSet(ms));
   const label = (hours: number[], end: string) => `${clockText(hours[0]!, tz)}–${end}`;
   const morning = on.filter(ms => local(ms, tz).hour < WINDOW_END_HOUR);
-  if (morning.length) return {hours: morning, label: label(morning, 'noon'), covered: true};
-  return {hours: on, label: on.length ? label(on, clockText(on.at(-1)! + HOUR, tz)) : null, covered: onDate.length > 0};
+  if (morning.length) return {hours: morning, label: label(morning, 'noon'), covered: true, bounds: [morning[0]!, morning[0]! + (WINDOW_END_HOUR - local(morning[0]!, tz).hour) * HOUR]};
+  return {hours: on, label: on.length ? label(on, clockText(on.at(-1)! + HOUR, tz)) : null, covered: onDate.length > 0, ...(on.length ? {bounds: [on[0]!, on.at(-1)! + HOUR] as const} : {})};
 }
 
 const usable = (run: ModelRun | undefined, now: Date): run is ModelRun => !!run && finite(run.issued) && now.getTime() - run.issued * 1000 <= RUN_MAX_MS && run.issued * 1000 - now.getTime() <= HOUR;
@@ -191,11 +193,11 @@ export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, n
   const unknown = (limit: string, window: string | null = null): BriefVerdict => ({verdict: 'unknown', limit, held: null, window, score: null, basis: 'comfort-score', agreement: null});
   if (!forecast) return unknown('No forecast for this day yet.');
   const feed = feedReader(forecast, now);
-  const {hours, label, covered} = windowHours(feed.times, brief.date, tz, brief.sunrise, brief.sunset, now);
+  const {hours, label, covered, bounds} = windowHours(feed.times, brief.date, tz, brief.sunrise, brief.sunset, now);
   if (!hours.length) return unknown(covered ? NO_DAYLIGHT : feed.times.length ? 'The forecast does not reach this day yet.' : 'No forecast for this day yet.');
   const rows = hours.map(ms => ({ms, hour: feed.read(ms)})).map(row => ({...row, rating: rateComfort(row.hour, boat)}));
   const rated = rows.filter((row): row is typeof row & {rating: ComfortRating} => row.rating !== null);
-  if (!rated.length) return unknown('No wind and seas forecast for this window.', label);
+  if (!rated.length) return {...unknown('No wind and seas forecast for this window.', label), windowBounds: bounds};
   // The limit comes from the hour that rates worst before any cap, so a capped hour never names a charge it does not carry.
   const worst = rated.reduce((a, b) => b.rating.uncapped < a.rating.uncapped ? b : a);
   const score = Math.min(...rated.map(row => row.rating.score));
@@ -227,7 +229,7 @@ export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, n
   // Under an alert the day is Rough whatever the hours score, so no score is shown.
   const agreement = modelAgreement(rows);
   const staleAgreement = feed.oldestMs !== null && feed.oldestMs > RUN_STALE_MS && (agreement.state === 'agree' || agreement.state === 'partial');
-  return {verdict, limit, held, window: label, score: alert ? null : score, basis: 'comfort-score', agreement: staleAgreement ? null : agreement};
+  return {verdict, limit, held, window: label, windowBounds: bounds, score: alert ? null : score, basis: 'comfort-score', agreement: staleAgreement ? null : agreement};
 }
 
 type GradedHour = {at: string; verdict: string; reasons: readonly string[]; surf?: {sneakerScore?: number}};
@@ -285,10 +287,10 @@ export function profileVerdict(brief: Brief, now: Date, tz: string): BriefVerdic
   const p = brief.profile as Exclude<Profile, 'boat'>;
   const graded: readonly GradedHour[] = (p === 'shore' ? brief.shore?.hours : p === 'spear' ? brief.spear?.hours : brief.kayak?.hours) ?? [];
   const byMs = new Map(graded.map(h => [Date.parse(h.at), h]));
-  const {hours, label, covered} = windowHours([...byMs.keys()].filter(Number.isFinite), brief.date, tz, brief.sunrise, brief.sunset, now);
+  const {hours, label, covered, bounds} = windowHours([...byMs.keys()].filter(Number.isFinite), brief.date, tz, brief.sunrise, brief.sunset, now);
   const rows = hours.map(ms => ({ms, hour: byMs.get(ms)!, grade: GRADE[byMs.get(ms)!.verdict] ?? 'unknown' as DayVerdict}));
   const rated = rows.filter(row => row.grade !== 'unknown');
-  if (!rated.length) return {verdict: 'unknown', limit: rows.length ? 'Wind or seas unknown for this window.' : covered ? NO_DAYLIGHT : 'No forecast for this day yet.', held: null, window: label, score: null, basis: p, agreement: null};
+  if (!rated.length) return {verdict: 'unknown', limit: rows.length ? 'Wind or seas unknown for this window.' : covered ? NO_DAYLIGHT : 'No forecast for this day yet.', held: null, window: label, windowBounds: bounds, score: null, basis: p, agreement: null};
   const worst = rated.reduce((a, b) => RANK[b.grade] > RANK[a.grade] ? b : a);
   const alert = brief.alerts[0];
   let verdict: DayVerdict = alert ? 'rough' : worst.grade;
@@ -301,7 +303,7 @@ export function profileVerdict(brief: Brief, now: Date, tz: string): BriefVerdic
   const held = verdict === 'comfortable' && reasons.length ? heldSentence(reasons) : null;
   if (held) verdict = 'marginal';
   else if (!alert && brief.missing.includes(ALERT_CHECK_MISSING)) limit = `${limit} ${NO_ALERT_CHECK}`;
-  return {verdict, limit, held, window: label, score: null, basis: p, agreement: null};
+  return {verdict, limit, held, window: label, windowBounds: bounds, score: null, basis: p, agreement: null};
 }
 
 /** The brief's verdict for its profile; null before there is a brief. `boat` rates the Boat profile (the reference boat by default). */
