@@ -91,6 +91,10 @@ const miles = (origin: Origin | null, p: {latitude: number; longitude: number}):
 const distance = (nm: number | null): string => nm === null ? '—' : `${nm.toFixed(1)} nm`;
 const band = (lo: number, hi: number): string => `~${Math.round(lo)}–${Math.round(hi)} ft`;
 const known = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+/** RF1050-16: a depth band enters a list only if it is finite, nonnegative, ordered and wholly inside the limit; nothing is coerced, swapped or repaired. */
+const validDepthBand = (lo: unknown, hi: unknown, limitFt: number): boolean => known(lo) && known(hi) && known(limitFt) && limitFt > 0 && lo >= 0 && lo <= hi && hi <= limitFt;
+/** The same test for a published `[lo, hi]` pair: exactly two entries. */
+const validDepthPair = (pair: unknown, limitFt: number): boolean => Array.isArray(pair) && pair.length === 2 && validDepthBand(pair[0], pair[1], limitFt);
 /** Inside the range: always without one; with one, only a measured distance at or under it. */
 const inside = (nm: number | null, maxNm: number | null): boolean => maxNm === null || (nm !== null && nm <= maxNm);
 
@@ -117,8 +121,7 @@ export function atlasPicks(data: MarkData | null, screen: MarkScreen, target: st
 
 function atlasScreened(data: MarkData | null, screen: MarkScreen, target: string, limitFt: number, origin: Origin | null, keep: Keep, place: Place): Screened {
   const rated = (data?.atlas?.targets ?? []).filter(t => {
-    const [lo, hi] = t.neighborhood_depth_ft ?? [];
-    return markShown(t, target) && known(lo) && known(hi) && hi <= limitFt && !withheld(t, screen, markAreas(t, data?.atlas)) && kept(keep, miles(origin, t), swim(keep, t));
+    return markShown(t, target) && validDepthPair(t.neighborhood_depth_ft, limitFt) && !withheld(t, screen, markAreas(t, data?.atlas)) && kept(keep, miles(origin, t), swim(keep, t));
   }).map(t => ({t, fit: markFit(t, target), score: (t as AtlasTarget & {habitat_score?: number}).habitat_score ?? 0}));
   rated.sort((a, b) => (b.fit?.n ?? 0) - (a.fit?.n ?? 0) || b.score - a.score || a.t.id.localeCompare(b.t.id));
   const {kept: onWater, withheld: held, pending} = keepWater(rated.map(r => ({...r, latitude: r.t.latitude, longitude: r.t.longitude})), place);
@@ -153,7 +156,7 @@ function habitatScreened(ranked: readonly HabitatFeature[], screen: MarkScreen, 
   const field = speciesOptions.find(s => s.id === coast)?.field ?? null, label = speciesLabel(coast);
   const admitted = ranked.filter(f => {
     const p = f.properties;
-    return p.region === region && known(p.depth_min_ft) && known(p.depth_max_ft) && p.depth_max_ft <= limitFt && known(p.waypoint_latitude) && known(p.waypoint_longitude)
+    return p.region === region && validDepthBand(p.depth_min_ft, p.depth_max_ft, limitFt) && known(p.waypoint_latitude) && known(p.waypoint_longitude)
       && !withheld({latitude: p.waypoint_latitude, longitude: p.waypoint_longitude, geometry: f.geometry}, screen)
       && kept(keep, miles(origin, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}), swim(keep, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}));
   });
@@ -256,7 +259,10 @@ function publicationScreened(loaded: Extract<ReefPublication, {state: 'ready'}>[
   let pending = false;
   const watched: Place = p => { const at = place(p); pending ||= at.state === 'unknown' && at.reason === 'pending'; return at; };
   const stats = {withheld: 0};
-  const ranked = rankSpots(loaded, screen, {species, count: 50, maxDepth: Math.min(limitFt, 300), origin, maxDistanceNm: keep.maxNm ?? Infinity, place: watched, stats});
+  // RF1050-16: malformed depth bands are dropped before the 50-candidate cap so they cannot starve a valid place; the cached publication is not touched.
+  const maxDepth = Math.min(limitFt, 300);
+  const eligible = {...loaded, targets: loaded.targets.filter(t => validDepthPair(t?.neighborhood_depth_ft, maxDepth))};
+  const ranked = rankSpots(eligible, screen, {species, count: 50, maxDepth, origin, maxDistanceNm: keep.maxNm ?? Infinity, place: watched, stats});
   return {withheld: stats.withheld, pending, picks: ranked.filter(t => kept(keep, miles(origin, t), swim(keep, t))).slice(0, keep.top ?? TOP).map(t => {
     const [lo, hi] = t.neighborhood_depth_ft as [number, number], nm = miles(origin, t), yd = swim(keep, t);
     return {id: t.id, kind: 'reef', name: t.name, distance: yd === null ? distance(nm) : swimText(yd), nm, depth: band(lo, hi),
