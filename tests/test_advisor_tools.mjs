@@ -338,6 +338,37 @@ test('get_conditions: advisory first, the window and comfort word, the horizon, 
   assert.match(noFeeds.note, /could not be checked/);
 });
 
+/** The intelligence fixture's three evening hours (5, 6 and 7 pm Sep 28) made calm everywhere; `over` sets one wave series (wave_period, and so on) for the 6 pm hour only. */
+function calmEvening(over = {}) {
+  const intel = INTEL(), calm = {wind_speed_10m: 6, wind_gusts_10m: 9, wave_height: 2, wave_period: 10, wind_wave_height: 0.3, wind_wave_period: 4, swell_wave_height: 2, swell_wave_period: 10};
+  for (const m of Object.values(intel.forecast.models)) {
+    const h = m.data[1].hourly;
+    for (const k of Object.keys(calm)) if (k in h) h[k] = [calm[k], over[k] ?? calm[k], calm[k]];
+  }
+  return intel;
+}
+
+test('get_conditions: a window hour in the long-period swell rule says bumpy and names the hour (SC1952-05)', async () => {
+  const evening = {port: 'morro-bay', date: '2026-09-28', start_hour: 17, end_hour: 19};
+  const calm = (await TOOL_BY_NAME.get('get_conditions').run(evening, dataCtx({feeds: feedsFrom(DAILY(), calmEvening())}))).result;
+  assert.deepEqual([calm.days[0].comfort, calm.days[0].comfort_held], ['comfortable', undefined], 'the calm evening is comfortable');
+  const held = (await TOOL_BY_NAME.get('get_conditions').run(evening, dataCtx({feeds: feedsFrom(DAILY(), calmEvening({wave_height: 2.6, wave_period: 16}))}))).result;
+  assert.deepEqual([held.days[0].comfort, held.days[0].comfort_held], ['bumpy', 'long-period swell (2.6 ft at 16 s) at 6 pm']);
+  assert.equal(held.lead_with_advisory, true, 'the advisory still leads');
+  assert.doesNotMatch(JSON.stringify(held), /\d\s*%/);
+});
+
+dbTest('get_conditions with a species carries the same bumpy word and hour in the planning brief (SC1952-05)', async () => {
+  const {sql, db} = advisorDatabase();
+  addRule(sql, 'rockfish');
+  const input = {port: 'morro-bay', date: '2026-09-28', species: 'rockfish', start_hour: 17, end_hour: 19};
+  const calm = await plan(input, {db, feeds: feedsFrom(DAILY(), calmEvening())});
+  assert.deepEqual([calm.days[0].comfort, calm.days[0].comfort_held], ['comfortable', undefined]);
+  const held = await plan(input, {db, feeds: feedsFrom(DAILY(), calmEvening({wave_height: 2.6, wave_period: 16}))});
+  assert.deepEqual([held.days[0].comfort, held.days[0].comfort_held], ['bumpy', 'long-period swell (2.6 ft at 16 s) at 6 pm']);
+  assert.ok(held.planning, 'the planning brief is still there');
+});
+
 /** Seed a boat and its published reports. */
 function seedBoats(sql) {
   const iso = '2026-09-01T00:00:00Z';

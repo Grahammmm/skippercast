@@ -31,11 +31,14 @@ export function seasonYear(data: any, species: string, region: RulesRegion, year
     let label = LABEL[state];
     if (state === 'part') {
       const open = (s: MonthState) => s === 'open' || s === 'limits';
-      const first = days.findIndex(open);
-      if (first >= 0) {
-        const after = days.findIndex((s, i) => i > first && !open(s));
-        label = `Part open: ${first + 1}–${after < 0 ? days.length : after}`;
-      }
+      // Every maximal run of open/limits days, in order; two are spelled out, the rest are counted.
+      const runs: string[] = [];
+      days.forEach((s, i) => {
+        if (!open(s)) return;
+        if (i > 0 && open(days[i - 1]!)) runs[runs.length - 1] = runs[runs.length - 1]!.replace(/–\d+$/, `–${i + 1}`);
+        else runs.push(`${i + 1}–${i + 1}`);
+      });
+      if (runs.length) label = `Part open: ${runs.slice(0, 2).join(', ')}${runs.length > 2 ? ` and ${runs.length - 2} more` : ''}`;
     }
     return {month: m + 1, state, label};
   });
