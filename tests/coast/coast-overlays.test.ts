@@ -237,7 +237,7 @@ test('CoastViewer drapes after seams, forwards overlays and reports picks instea
  const scene=terrain(),picks:unknown[]=[],v:any=Object.create(CoastViewer.prototype);
  Object.assign(v,{alive:true,overlays:new CoastOverlays(palette),terrain:scene,seams:new T.Group(),loaded:new Map(),overview:{},manifest:{waterReferenceM:WATER,sources:[]},
   options:{onOverlayPick:(pick:unknown)=>picks.push(pick)},host:{clientHeight:600},ray:new T.Raycaster(),controls:{target:new T.Vector3()}});
- v.setOverlay('marks',marks);
+ assert.deepEqual(v.setOverlay('marks',marks),{cell:DRAPE_M,step:DRAPE_M,coarsened:false},'the viewer forwards the renderer report');
  const dot=parts(v.overlays,'marks').at(-1)!;assert.equal(positions(dot).getY(0),OVERLAY_LIFT.point,'before terrain the overlay waits at the default height');
  v.drawCoverageSeams();
  const sample=terrainSampler(scene,WATER),[x,z]=[positions(dot).getX(0),positions(dot).getZ(0)];
@@ -247,7 +247,10 @@ test('CoastViewer drapes after seams, forwards overlays and reports picks instea
  assert.equal(v.pickOverlay(),true);assert.deepEqual(picks.map((p:any)=>[p.overlay,p.feature]),[['marks','mark-a']]);
  v.options={};assert.equal(v.pickOverlay(),false,'without onOverlayPick the click stays a terrain reading');
  assert.equal(v.removeOverlay('marks'),true);assert.equal(v.removeOverlay('marks'),false);
- v.alive=false;v.setOverlay('marks',marks);assert.equal(v.overlays.group.children.length,0,'a destroyed viewer ignores overlays');
+ v.overlays=new CoastOverlays(palette,{segments:2});v.overlays.drape(terrainSampler(scene,WATER));
+ assert.deepEqual(v.setOverlay('tracks',tracks),{cell:DRAPE_M,step:800,coarsened:true},'a coarsened drape is forwarded as is');
+ v.overlays=new CoastOverlays(palette);
+ v.alive=false;assert.equal(v.setOverlay('marks',marks),null,'a destroyed viewer returns null');assert.equal(v.overlays.group.children.length,0,'a destroyed viewer ignores overlays');
 });
 
 test('the embed handle forwards overlays and the pick callback, and is inert after destroy',async()=>{
@@ -257,11 +260,48 @@ test('the embed handle forwards overlays and the pick callback, and is inert aft
  const saved={document:globalThis.document,DOMParser:globalThis.DOMParser};
  Object.assign(globalThis,{document:{createElement:()=>node(),importNode:(n:unknown)=>n},DOMParser:class{parseFromString(){return {getElementById:()=>node()};}}});
  try{
-  const calls:unknown[][]=[];let options:any;const onOverlayPick=()=>{};
-  const handle=mountCoast(host as never,{overlayPalette:palette,onOverlayPick},(_scene,o)=>{options=o;return {setOverlay:(...a:unknown[])=>calls.push(['set',...a]),removeOverlay:(id:string)=>{calls.push(['remove',id]);return true;},destroy:()=>calls.push(['destroy'])} as never;});
+  const calls:unknown[][]=[],report={cell:200,step:100,coarsened:true};let options:any;const onOverlayPick=()=>{};
+  const handle=mountCoast(host as never,{overlayPalette:palette,onOverlayPick},(_scene,o)=>{options=o;return {setOverlay:(...a:unknown[])=>{calls.push(['set',...a]);return report;},removeOverlay:(id:string)=>{calls.push(['remove',id]);return true;},destroy:()=>calls.push(['destroy'])} as never;});
   assert.equal(options.overlayPalette,palette);assert.equal(options.onOverlayPick,onOverlayPick);
-  handle.setOverlay('zones',zones);assert.equal(handle.removeOverlay('zones'),true);handle.destroy();
+  assert.equal(handle.setOverlay('zones',zones),report,'the handle returns the viewer report');assert.equal(handle.removeOverlay('zones'),true);handle.destroy();
   assert.deepEqual(calls,[['set','zones',zones],['remove','zones'],['destroy']]);
-  handle.setOverlay('zones',zones);assert.equal(handle.removeOverlay('zones'),false);assert.equal(calls.length,3);
+  assert.equal(handle.setOverlay('zones',zones),null,'a destroyed handle returns null');assert.equal(handle.removeOverlay('zones'),false);handle.destroy();assert.equal(calls.length,3);
  }finally{Object.assign(globalThis,saved);}
+});
+
+test('setOverlay reports the drape spacing and whether a cap coarsened it',()=>{
+ const {o}=overlays();
+ const nominal={cell:DRAPE_M,step:DRAPE_M,coarsened:false};
+ assert.deepEqual(o.set('zones',zones),nominal,'a fill with an outline');
+ assert.deepEqual(o.set('plain',{...zones,style:{color:'mpaFill'}}),nominal,'a fill without an outline');
+ assert.deepEqual(o.set('tracks',tracks),nominal);
+ assert.deepEqual(o.set('marks',marks),nominal);
+ assert.deepEqual(o.set('none',{...marks,features:[]}),nominal,'an empty overlay reports the nominal spacing');
+ const report=o.set('tracks',tracks)!;report.cell=1;report.step=1;report.coarsened=true;
+ assert.deepEqual(o.spacing('tracks'),{cell:DRAPE_M,step:DRAPE_M},'changing a report never changes the overlay');
+});
+
+test('a lowered triangle cap reports the doubled cell, a lowered segment cap the doubled step',()=>{
+ const fillOnly:CoastOverlay={...zones,style:{color:'mpaFill'}};
+ const triangles=new CoastOverlays(palette,{triangles:200});triangles.drape(terrainSampler(terrain(),WATER));
+ const fill=triangles.set('plain',fillOnly)!;
+ assert.deepEqual(fill,{cell:triangles.spacing('plain')!.cell,step:DRAPE_M,coarsened:true});
+ assert.ok(fill.cell>DRAPE_M&&Number.isInteger(Math.log2(fill.cell/DRAPE_M)),`a ${fill.cell} m cell is an exact doubling of ${DRAPE_M} m`);
+ const segments=new CoastOverlays(palette,{segments:10});segments.drape(terrainSampler(terrain(),WATER));
+ const line=segments.set('tracks',tracks)!;
+ assert.deepEqual(line,{cell:DRAPE_M,step:200,coarsened:true},'a 1.2 km line needs 200 m steps to fit ten segments');
+ const outline=segments.set('zones',{...zones,style:{color:'mpaFill',outline:'mpaLine'}})!;
+ assert.equal(outline.cell,DRAPE_M);assert.ok(outline.step>DRAPE_M&&outline.coarsened,'an outline alone can coarsen the step');
+ const roomy=new CoastOverlays(palette,{triangles:200,segments:10});roomy.drape(terrainSampler(terrain(),WATER));
+ assert.deepEqual(roomy.set('marks',marks),{cell:DRAPE_M,step:DRAPE_M,coarsened:false},'points are never coarsened');
+ assert.deepEqual(segments.set('tracks',{...tracks,features:[{id:7,geometry:{type:'LineString',coordinates:[lonLat([0,0]),lonLat([500,0])]}}]}),{cell:DRAPE_M,step:DRAPE_M,coarsened:false},'replacing with a short line gives a fresh nominal report');
+});
+
+test('a refused overlay still throws and a disposed set reports null',()=>{
+ const o=new CoastOverlays(palette,{triangles:4,segments:6});o.drape(terrainSampler(terrain(),WATER));
+ assert.deepEqual(o.set('tracks',tracks),{cell:DRAPE_M,step:400,coarsened:true});
+ assert.throws(()=>o.set('zones',{...zones,style:{color:'mpaFill'}}),/too detailed to drape/);
+ assert.throws(()=>o.set('tracks',{...tracks,features:[{id:1,geometry:{type:'Point',coordinates:lonLat([0,0])}}]}),/Point|LineString/);
+ assert.deepEqual(o.spacing('tracks'),{cell:DRAPE_M,step:400},'a refused replacement keeps the old spacing');
+ o.dispose();assert.equal(o.set('tracks',tracks),null);
 });
