@@ -72,6 +72,26 @@ test('disable_all_sends_explicit_scope', async () => {
   assert.equal(await alerts.disableAllPush(partial.fetchFn, partial.nav), 'partial');
 });
 
+for (const lookup of ['getRegistration', 'getSubscription']) {
+  test(`disable_all_stops_server_before_rejected_${lookup}_and_reports_partial_cleanup`, async () => {
+    const calls = [];
+    const fail = async () => { calls.push(lookup); throw Error('Local lookup failed'); };
+    const nav = {serviceWorker: {getRegistration: lookup === 'getRegistration' ? fail : async () => {
+      calls.push('getRegistration');
+      return {pushManager: {getSubscription: fail}};
+    }}};
+    const fetchFn = async (url, init) => {
+      calls.push('DELETE');
+      assert.equal(url, '/api/subscription');
+      assert.equal(init.method, 'DELETE');
+      assert.deepEqual(JSON.parse(init.body), {all: true});
+      return Response.json({enabled: false});
+    };
+    assert.equal(await alerts.stopNotifications('all', fetchFn, nav), 'The server stopped notifications, but this browser could not unsubscribe. Try again.');
+    assert.deepEqual(calls, lookup === 'getRegistration' ? ['DELETE', lookup] : ['DELETE', 'getRegistration', lookup]);
+  });
+}
+
 test('sheet_stop_actions_are_distinct', async () => {
   const device = world(), all = world(), none = world({subscribed: false}), partial = world({unsubscribe: async () => false}), failed = world({answer: refusal(503, 'Service unavailable')});
   assert.equal(await alerts.stopNotifications('device', device.fetchFn, device.nav), 'Notifications stopped on this device. Other devices were not changed. Saved assessments remain available here.');

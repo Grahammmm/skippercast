@@ -240,9 +240,11 @@ export async function disablePush(fetchFn: typeof fetch = fetch, nav: PushNaviga
 
 /** Stop notifications on every device of this account: the server removes all the caller's rows, then this browser unsubscribes if it has a subscription. */
 export async function disableAllPush(fetchFn: typeof fetch = fetch, nav: PushNavigator = navigator): Promise<StopResult> {
-  const subscription = await localSubscription(nav);
   await api('subscription', {method: 'DELETE', body: JSON.stringify({all: true})}, fetchFn);
-  return subscription ? unsubscribed(subscription) : 'stopped';
+  try {
+    const subscription = await localSubscription(nav);
+    return subscription ? await unsubscribed(subscription) : 'stopped';
+  } catch { return 'partial'; }
 }
 
 /** The status line for a finished stop, from the scope the person chose. */
