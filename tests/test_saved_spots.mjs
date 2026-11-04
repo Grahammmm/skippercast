@@ -177,7 +177,7 @@ test('a spot 30 m outside a boundary is inside the planning margin: read as such
 });
 
 // SC0022-04: the screen only speaks for the envelope its boundary file was fetched for (Morro Bay's mpa.bounds).
-const TEXT = 'Protected areas not checked for this spot: outside coverage or check unavailable. Not exported.';
+const TEXT = 'Protected areas not checked for this spot: outside coverage or check unavailable; not exported.';
 const REFUSAL = /unavailable or older than 36 hours, or a saved spot is outside coverage\. Nothing was exported\./;
 const FAR = {lat: 40.0, lon: -124.0};
 const E = getRegion().mpa.bounds, EDGE = {lat: 35.4, lon: E[0] + 30 / (111412.84 * Math.cos(35.4 * Math.PI / 180))};

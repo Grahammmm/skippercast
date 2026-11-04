@@ -21,8 +21,7 @@ export const SAVE_WORDS = {
   helper: 'Private to your account. You can keep up to 100 saved spots.',
   context: 'This is map context, not a spot to save.',
   noPosition: 'This mark has no position to save.',
-  // Two literals, as dist/account.js writes its unchecked line: scripts/check_copy.mjs reads each literal alone and flags two "not" sentences in a row.
-  notChecked: 'Protected areas not checked for this spot.' + ' Not saved.',
+  notChecked: 'Protected areas not checked for this spot: outside coverage or check unavailable; not saved.',
   inside: 'Inside a protected area. Not saved.',
   margin: 'Within 70 m of a protected area. Not saved.',
   signIn: 'Sign in again to save this spot.',
