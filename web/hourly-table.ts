@@ -1,7 +1,8 @@
 // Hour-by-hour conditions table (BF-hourly-table): one row per whole local hour
 // of the time dock's day, read through the verdict's own feed reader
 // (web/brief/verdict.ts feedReader) and rated by score.ts rateComfort for the
-// reference boat, so every row carries the score the brief rates with. Wind,
+// boat given (the saved boat's factors, as the brief verdict; the reference
+// boat when none is passed), so every row carries the score the brief rates with. Wind,
 // gusts and the wave partitions are the NOAA family's; the score uses both
 // models whatever the view's model chip shows. Visibility is the GFS run's,
 // metres to miles; tide comes from the local coast report's series where one
@@ -14,7 +15,7 @@ import {feedReader, RUN_MAX_MS} from './brief/verdict.ts';
 import {readingsAt, type ConditionsForecast} from './conditions.ts';
 import {localParts} from './hour.ts';
 import {sample} from './map/forecast-grid.ts';
-import {rateComfort} from './score.ts';
+import {rateComfort, REFERENCE_BOAT, type BoatFactors} from './score.ts';
 
 const HOUR = 3_600_000, METRES_PER_MILE = 1609.344;
 export const NO_FORECAST = 'No forecast for this day.';
@@ -31,14 +32,14 @@ export interface HourlyRow {
 
 const num = (v: unknown): number | null => typeof v === 'number' && Number.isFinite(v) ? v : null;
 
-/** The rows for local day `day` ("YYYY-MM-DD") in `tz`; with no forecast or no hour that day, no rows and a note. */
-export function hourlyTable(f: ConditionsForecast | null, tide: Series | null, day: string, tz: string, now: Date): {rows: HourlyRow[]; note: string | null} {
+/** The rows for local day `day` ("YYYY-MM-DD") in `tz`, scored for `boat`; with no forecast or no hour that day, no rows and a note. */
+export function hourlyTable(f: ConditionsForecast | null, tide: Series | null, day: string, tz: string, now: Date, boat: BoatFactors = REFERENCE_BOAT): {rows: HourlyRow[]; note: string | null} {
   if (!f) return {rows: [], note: NO_FORECAST};
   const feed = feedReader(f, now), gfs = f.models.gfs_global;
   const issued = num(gfs?.issued), visRun = gfs && issued !== null && now.getTime() - issued * 1000 <= RUN_MAX_MS ? gfs : null;
   const hours = [...new Set(feed.times)].filter(ms => ms % HOUR === 0 && localParts(new Date(ms), tz).day === day).sort((a, b) => a - b);
   const rows = hours.map((ms): HourlyRow => {
-    const h = feed.read(ms), rating = rateComfort(h), at = new Date(ms).toISOString();
+    const h = feed.read(ms), rating = rateComfort(h, boat), at = new Date(ms).toISOString();
     const wind = num(h.wind), gust = num(h.gust), period = num(h.sea_period);
     const metres = visRun ? sample(visRun.data, 'visibility', ms / 1000, 'm', visRun.end ? {data_end_time: visRun.end} : null) : null;
     return {

@@ -4,9 +4,11 @@
 // never jumps; scrolling is instant, never smooth. Each row's time is a button
 // that moves the dock (and so the chart cursor and the map) to that hour.
 import {useEffect, useRef} from 'preact/hooks';
+import {activeBoatFactors} from '../../../dist/boat-handling.js';
 import type {Series} from '../../../packages/coast/src/charts/series.ts';
 import type {ConditionsForecast} from '../../conditions.ts';
 import {hourlyCells, hourlyTable, LIMITED_NOTE} from '../../hourly-table.ts';
+import type {BoatFactors} from '../../score.ts';
 import {hourText, localParts, selectHour, zoneName} from '../TimeDock.tsx';
 import './hourly-table.css';
 
@@ -14,7 +16,7 @@ const HEADERS = ['Wind (kt)', 'Gust (kt)', 'Seas (ft)', 'Swell (ft · s · from)
 
 export function HourlyTable({forecast, tide, at, tz, now}: {forecast: ConditionsForecast | null; tide: Series | null; at: number; tz: string; now: Date}) {
   const box = useRef<HTMLDivElement>(null);
-  const local = localParts(new Date(at), tz), {rows, note} = hourlyTable(forecast, tide, local.day, tz, now);
+  const local = localParts(new Date(at), tz), {rows, note} = hourlyTable(forecast, tide, local.day, tz, now, activeBoatFactors() as BoatFactors);
   useEffect(() => {
     const el = box.current, row = el?.querySelector<HTMLElement>('tr[aria-current="true"]');
     if (!el || !row) return;
