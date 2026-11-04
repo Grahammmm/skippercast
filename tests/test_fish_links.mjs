@@ -73,3 +73,82 @@ test('shared store understands Fish only in v2; changing a choice does not resur
   assert.equal(profile.value, 'spear', 'Back/Forward can restore the original shared link');
   configureStore({v2: false, storage: null});
 });
+
+const AREAS = [['north', 'cambria-san-simeon'], ['central', 'morro-bay'], ['south', 'morro-bay']];
+
+test('area_only_aliases_select_existing_regions', () => {
+  for (const [area, region] of AREAS) {
+    const input = `https://s.test/map?area=${area}&day=2026-10-06&zoom=9#ocean-map`;
+    const u = fishLink(input);
+    assert.equal(u.searchParams.get('region'), region, area);
+    assert.equal(u.searchParams.get('area'), area, 'area is retained');
+    assert.equal(u.searchParams.get('coast'), null);
+    assert.equal(u.searchParams.get('day'), '2026-10-06');
+    assert.equal(u.searchParams.get('zoom'), '9');
+    assert.equal(u.hash, '#ocean-map');
+    assert.equal(fishLink(u.href).href, u.href, 'idempotent');
+    assert.equal(fishLink(`https://s.test/map?area=${area}&mode=boat`).searchParams.get('region'), region, 'a companion mode does not change geography');
+  }
+});
+
+test('area_only_respects_explicit_geography_and_place', () => {
+  for (const query of ['region=southern-california', 'region=', 'region=unknown']) {
+    const u = fishLink(`https://s.test/map?area=north&${query}`);
+    assert.equal(u.searchParams.get('region'), query.slice(7), query);
+    assert.equal(u.searchParams.get('coast'), null);
+  }
+  for (const query of ['coast=south', 'coast=']) {
+    const u = fishLink(`https://s.test/map?area=north&${query}`);
+    assert.equal(u.searchParams.get('coast'), query.slice(6), query);
+    assert.equal(u.searchParams.get('region'), null);
+  }
+  for (const place of ['unknown', '', 'constructor']) assert.equal(fishLink(`https://s.test/map?area=north&place=${place}`).searchParams.get('region'), null, `place=${place} is never rescued by area`);
+  assert.equal(fishLink('https://s.test/map?area=north&place=monterey').searchParams.get('region'), 'monterey-point-sur');
+  for (const area of ['unknown', '', 'constructor', '__proto__', 'toString']) {
+    const u = fishLink(`https://s.test/map?area=${area}`);
+    assert.equal(u.searchParams.get('region'), null, area);
+    assert.equal(u.searchParams.get('area'), area, 'unrecognized area is untouched');
+  }
+});
+
+test('area_only_clear_cannot_resurrect_region', () => {
+  for (const [area] of AREAS) {
+    const u = fishLink(`https://s.test/map?area=${area}&day=2026-10-06#x`, true);
+    assert.equal(u.searchParams.has('area'), false);
+    assert.equal(u.searchParams.has('region'), false);
+    assert.equal(u.searchParams.has('coast'), false);
+    assert.equal(u.searchParams.get('day'), '2026-10-06');
+    assert.equal(u.hash, '#x');
+    assert.equal(fishLink(u.href, true).href, u.href, 'idempotent');
+  }
+  for (const area of ['unknown', '', 'constructor', '__proto__']) {
+    const u = fishLink(`https://s.test/map?area=${area}`, true);
+    assert.equal(u.searchParams.get('area'), area);
+    assert.equal(u.searchParams.has('region'), false);
+  }
+});
+
+test('area_only_v2_store_preserves_v1_and_history', () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = () => { throw new Error('network is blocked'); };
+  try {
+    const input = 'https://s.test/map?area=central';
+    configureStore({v2: false, storage: null});
+    assert.equal(readURL(input).region, null, 'v1 behavior unchanged');
+    configureStore({v2: true, storage: null});
+    assert.equal(readURL(input).region, 'morro-bay');
+    syncFromURL(input);
+    assert.equal(readURL(input).coast, null);
+    for (const patch of [{region: null}, {region: ''}, {coast: null}, {coast: ''}, {region: null, coast: ''}]) {
+      const cleared = withParams(input, patch);
+      assert.equal(readURL(cleared).region, null, JSON.stringify(patch));
+      assert.equal(readURL(cleared).coast, null, JSON.stringify(patch));
+      assert.equal(new URL(cleared).searchParams.has('area'), false);
+    }
+    assert.equal(readURL(withParams(input, {region: 'monterey-point-sur'})).region, 'monterey-point-sur', 'explicit choice wins');
+    assert.equal(readURL(input).region, 'morro-bay', 'restoring the original link restores the region');
+  } finally {
+    globalThis.fetch = realFetch;
+    configureStore({v2: false, storage: null});
+  }
+});
