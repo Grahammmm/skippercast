@@ -13,6 +13,10 @@
 // (web/land-water.ts); only spots it confirms as water are ranked or restored, and
 // the status counts the ones it withheld.
 //
+// SC2207-04: with a chosen port, the maximum one-way distance applies to the water route (web/route.ts) where one is
+// computed, as Where to look's `routedPicks` does (web/ranking.ts): at most ROUTE_BUDGET routes a click, a route past the
+// range drops the reef and the next eligible one fills its place, and a reef without a route keeps its labelled straight line.
+//
 // Erasable syntax only: the node tests import this file by type stripping.
 import {batch, computed, effect, signal, untracked} from '@preact/signals';
 import {buildExport, draftKey, exportPresetTargets, isMeasuredTarget, offlineNotes, protectedPlanHits, protectedPlanNotes, readDraft, userWaypoints, userWaypointTarget} from '../dist/trip-export.js';
@@ -20,7 +24,9 @@ import {loadReefTrip} from '../dist/reef-trip-data.js';
 import {bestSpots, waypointTitle} from '../dist/spot-ranking.js';
 import {HOME_PORT_KEY} from '../dist/home-port.js';
 import {track} from './telemetry.ts';
-import {ensureLandWater, withheldNote, type Place} from './land-water.ts';
+import {ensureLandWater, landWater as landWaterState, loadLandWaterLines, withheldNote, type LandWaterLines, type LandWaterModel, type Place} from './land-water.ts';
+import {ROUTE_BUDGET, type RouteFn} from './ranking.ts';
+import {waterRoute, type RouteFailure} from './route.ts';
 import {coordinates, region as activeRegion} from './state.ts';
 import {checkGpx} from './gpx-check.ts';
 import {screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
@@ -40,6 +46,8 @@ export type Target = {
   id: string; label: string; name?: string; latitude: number; longitude: number; habitat_grade?: string; canonical_habitat?: boolean;
   trip_rank?: number; trip_fit?: number; trip_species?: string; evidence_confidence?: {percent: number};
   neighborhood_depth_ft?: number[]; center_depth_ft?: number | null; terrain_interpretation?: string; species_fit?: Record<string, number>;
+  /** SC2207-04: set on a ranked spot by Best available (in the page only, never saved): the one-way distance from the chosen port and what it is measured on. */
+  distance_nm?: number | null; distance_basis?: 'water' | 'straight'; distance_why?: RouteFailure;
   /** BF-closures-everywhere: set on every ranked place `selectBest` returns. */
   screen?: PlaceVerdict;
 };
@@ -86,6 +94,24 @@ export interface PlannerDeps {
   landWater?: (region: string, spots: readonly Target[]) => Promise<Place>;
   /** The day the app shows (web/state.ts `day`, "YYYY-MM-DD", null = today): an empty planner opens dated to it (SCJ-8). */
   viewDay?: () => string | null;
+  /** SC2207-04: the water route for a place (web/route.ts `waterRoute` by default); null = not computed, so the labelled straight line. */
+  route?: RouteFn;
+  /** SC2207-04: the land/water product and lines the routes run on for `region`; the loaded, matching state by default (loads the shared lines file once when it is not asked for yet). */
+  routeContext?: (region: string) => Promise<RouteContext>;
+}
+export type RouteContext = {model: LandWaterModel | null; lines: LandWaterLines | null | false};
+
+/** Only the ready product of `region` (and its lines); another region's, a loading or a failed one is no product. */
+async function loadedRouteContext(region: string): Promise<RouteContext> {
+  const none: RouteContext = {model: null, lines: null}, ready = (): RouteContext => {
+    const s = landWaterState.peek();
+    return s.region === region && s.state === 'ready' && s.model ? {model: s.model, lines: s.lines} : none;
+  };
+  const first = ready();
+  if (!first.model || first.lines !== null) return first;
+  await loadLandWaterLines(region);
+  const again = ready();
+  return again.model === first.model ? again : none;
 }
 
 /** The one published file the opt-in depth contour tracks read: `{collection: null}` when the region publishes none; `retry` when the read dropped (asked again on the next toggle). */
@@ -147,6 +173,7 @@ export function createPlanner(deps: PlannerDeps) {
   const loadReefs = deps.loadReefs ?? reefTrip;
   const emit = deps.emit ?? dispatch;
   const landWater = deps.landWater ?? ((id: string, spots: readonly Target[]) => ensureLandWater(id, spots));
+  const waterRouteFor = deps.route ?? waterRoute, routeContext = deps.routeContext ?? loadedRouteContext;
   const today = new Intl.DateTimeFormat('en-CA', {timeZone: region.timezone, year: 'numeric', month: '2-digit', day: '2-digit'}).format(now());
   let raw: string | null = null;
   try { raw = storage?.getItem(draftKey(region.id)) ?? null; } catch { /* storage blocked */ }
@@ -342,9 +369,18 @@ export function createPlanner(deps: PlannerDeps) {
       if (f.depth > 300 || f.depth < 25 || !Number.isFinite(f.distance) || f.distance <= 0) throw Error('Choose a depth from 25–300 ft and a positive distance.');
       const place = await landWater(region.id, loaded.targets), stats = {withheld: 0};
       if (mine !== revision) return;
+      const origin = port ? {latitude: port.match[0], longitude: port.match[1]} : null;
+      // The water routes of this click (SC2207-04): the context is read once, and no port means no routing at all.
+      const context: RouteContext = origin ? await routeContext(region.id).catch((): RouteContext => ({model: null, lines: null})) : {model: null, lines: null};
+      if (mine !== revision) return;
+      let routes = 0;
+      const distanceFor = origin ? (t: Target, straightNm: number) => {
+        const r = routes < ROUTE_BUDGET ? (routes++, waterRouteFor(context.model, context.lines, origin, t)) : null;
+        return r?.ok ? {nm: r.nm, basis: 'water' as const} : {nm: straightNm, basis: 'straight' as const, ...(r && !r.ok ? {why: r.reason} : {})};
+      } : undefined;
       const best = rankBest(loaded, screen, {species: f.species, count: f.limit, maxDepth: f.depth, maxDistanceNm: f.distance,
         bounds: f.scope === 'map' ? [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()] : null,
-        origin: port ? {latitude: port.match[0], longitude: port.match[1]} : null, place, stats});
+        origin, place, stats, distanceFor});
       for (const t of best) t.screen = screenPlace(screen, t);
       const held = withheldNote(stats.withheld);
       if (!best.length) throw Error(`No ranked reefs meet these filters and current checks.${held ? ` ${held}` : ''} Widen the area or distance; no weaker spots were added.`);

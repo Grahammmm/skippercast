@@ -42,10 +42,11 @@ async function load() {
   if (mod) return mod;
   const out = join(await mkdtemp(join(tmpdir(), 'ranking-route-')), 'where.mjs');
   await build({stdin: {resolveDir: ROOT, loader: 'ts', contents: `
-      export {WhereToLook, boatPicks, currentRanking, pickRun, routeAfterPaint, routeWhyText} from './web/brief/WhereToLook.tsx';
+      export {WhereToLook, boatPicks, listedBoatPicks, currentRanking, pickRun, routeAfterPaint, routeWhyText} from './web/brief/WhereToLook.tsx';
       export {launchPoints} from './web/launches.ts';
       export {launchChoice} from './web/reach.ts';
       export {markData, markScreen} from './web/map/marks.ts';
+      export {effect} from '@preact/signals';
       export {cruiseSpeed} from './web/limits.ts';
       export {reachRange} from './web/reach.ts';
       export {landWater} from './web/land-water.ts';
@@ -372,3 +373,35 @@ test('Kayak: the page paints with no route computed, then routes one per task af
 function ATLAS_TARGETS(ids, where) {
   return DATA.atlas.targets.filter(t => ids.includes(t.id)).map(t => ({...t, ...where[ids.indexOf(t.id)]}));
 }
+test('SC2207-02 listedBoatPicks: the painted list from memoised routes only; a completed deferred route re-reads it, dropping and refilling by range', async () => {
+  const {boatPicks, listedBoatPicks, routeAfterPaint, effect} = await load();
+  // Straight 9 nm, route 13 nm, range 12: dropped once its route is in, and the next pick fills its place.
+  const long = fake(to => ({ok: true, nm: Math.abs(to.latitude - at(9).latitude) < 1e-9 ? 13 : distanceNm(ORIGIN, to), points: []}));
+  const r = {source: 'atlas', label: 'Survey reef atlas', basis: '', empty: '', harbor: 'Fixture Harbor', origin: ORIGIN, reach: 12,
+    picks: [pick('a', 9), pick('b', 5), pick('c', 6), pick('d', 7), pick('e', 8)]};
+  const lw = {region: 'listed', state: 'ready', model: {id: 'listed-model'}, lines: null, linesLoading: false};
+  const left = {n: 0}, first = listedBoatPicks(r, lw, 'listed', long.route, left);
+  assert.equal(long.calls.length, 0, 'a read computes no route');
+  assert.equal(left.n, 4, 'the routes it still lacks are counted');
+  assert.deepEqual(first.map(p => p.id), ['a', 'b', 'c', 'd']);
+  assert.ok(first.every(p => p.basis === 'straight' && p.why === undefined));
+  assert.ok(isDeepStrictEqual(first, boatPicks(r, lw, 'listed', long.route, 0)), 'the same list boatPicks paints at fresh 0');
+  const seen = [], stop = effect(() => { seen.push(listedBoatPicks(r, lw, 'listed', long.route).map(p => p.id).join('')); });
+  assert.deepEqual(seen, ['abcd']);
+  routeAfterPaint(r, lw, 'listed', long.route);
+  for (let i = 0; i < 50 && seen.length < 2; i++) await new Promise(res => setTimeout(res, 0));
+  assert.deepEqual(seen, ['abcd', 'bcde'], 'the subscriber was told once, with the dropped pick gone and the next one in');
+  const routed = long.calls.length;
+  assert.equal(routed, 5, 'one route per candidate, each once');
+  for (let i = 0; i < 3; i++) listedBoatPicks(r, lw, 'listed', long.route);
+  assert.equal(long.calls.length, routed, 'reading again routes nothing');
+  assert.ok(listedBoatPicks(r, lw, 'listed', long.route).every(p => p.basis === 'water'));
+  // A cancelled deferred task changes nothing; another region\'s product is never used.
+  const other = fake(() => ({ok: true, nm: 1, points: []})), cancel = routeAfterPaint(r, {...lw, lines: false}, 'listed', other.route);
+  cancel();
+  await new Promise(res => setTimeout(res, 5));
+  assert.ok(other.calls.length === 0 && seen.length === 2, 'cancelled: no route, no update');
+  const elsewhere = listedBoatPicks(r, {...lw, region: 'elsewhere'}, 'listed', long.route);
+  assert.ok(elsewhere.every(p => p.basis === 'straight'), 'a product of another region routes nothing');
+  stop();
+});

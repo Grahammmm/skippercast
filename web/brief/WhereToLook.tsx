@@ -102,6 +102,15 @@ export function routeWhyText(pick: Pick & {basis?: 'water' | 'straight'; why?: R
 /** Bumped once the routes the painted Boat list still lacks are all computed, so it renders again by water. */
 const routeTick = signal(0);
 /**
+ * SC2207-02: the Boat list as painted, from memoised routes only (never computes one), re-read when a deferred route
+ * completes. The list and the Boat run line both read it, so the run names and times a place the list shows.
+ */
+export function listedBoatPicks(r: Ranking, lw: LandWaterState = landWater.value, id: string | null = region.value, route: RouteFn = waterRoute,
+  left: {n: number} = {n: 0}): RoutedPick[] {
+  void routeTick.value;
+  return boatPicks(r, lw, id, route, 0, left);
+}
+/**
  * SC1322-10: the brief paints the Boat list from memoised routes only (the rest on their straight line), then computes the
  * missing routes one per task after the paint, so a slow route (an all-mixed index, many lines to scan) never holds the
  * list back. Returns the cancel for the effect cleanup.
@@ -205,6 +214,11 @@ function EmptyOrPlan({empty}: {empty: string}) {
         {plan.items.map((item, i) => <li key={i} data-field={item.field}>{item.label}: {item.text}</li>)}
       </ul>
       {plan.basis ? <p data-field="tactics_basis">{plan.basis}</p> : null}
+      {plan.links.length ? (
+        <ul aria-label="Search plan sources">
+          {plan.links.map((l, i) => <li key={i}><a href={l.href} target="_blank" rel="noopener" aria-label={`${l.title} (opens in a new tab)`}>{l.title}</a></li>)}
+        </ul>
+      ) : null}
     </div>
   );
 }
@@ -232,13 +246,13 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   // SC1322-10: Boat (and, SC2207-05, Kayak from its launch) list by water where routed; other profiles keep the ranking's picks as they are. The render uses
   // memoised routes only and routes the rest after the paint (routeAfterPaint), so the list never waits on a route.
   const lw = landWater.value, unrouted = {n: 0};
-  void routeTick.value;
-  const picks: readonly (Pick & {basis?: 'water' | 'straight'; why?: RouteFailure})[] = water ? boatPicks(r, lw, id, waterRoute, 0, unrouted) : r.picks;
+  const picks: readonly (Pick & {basis?: 'water' | 'straight'; why?: RouteFailure})[] = water ? listedBoatPicks(r, lw, id, waterRoute, unrouted) : r.picks;
   useEffect(() => unrouted.n ? routeAfterPaint(r, lw, id) : undefined);
-  // The lines file is asked for once the region's index is ready and a candidate still waits on it (a mixed cell),
-  // so a list that was pending on the index itself asks as soon as the index lands; clean cells never load it.
-  // A Boat or Kayak route that needs the lines (lines-needed) does not ask for them: that pick keeps its labelled straight line.
-  const wantLines = !!id && !!r.pending && lw.region === id && lw.state === 'ready' && lw.lines === null;
+  // Only mixed ranking candidates need lines at list paint. A failed deferred route
+  // may have seen a mixed cell far from a pick; Run requests those lines only when showing a distance.
+  // Kayak keeps its labelled straight line and reason when a route needs lines.
+  const wantLines = !!id && !!r.pending
+    && lw.region === id && lw.state === 'ready' && lw.lines === null;
   // SCJ-2a: the publication loads once per region, and its live manifest is checked again now (a cached one) and each
   // minute, as the planner checks its plan, so a held, unavailable or superseded publication stops ranking.
   useEffect(() => {

@@ -22,8 +22,10 @@ import type * as MapLibre from 'maplibre-gl';
 import type {Report} from '../../packages/coast/src/types.ts';
 import {closureHits} from '../../dist/geo-screen.js';
 import {activeAlerts, alertCheckCurrent, beachNotices, nextShoreChange, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus, rankRuns, type ShoreRunClocks, type ShoreStatus} from '../brief/shore.ts';
+import {zone} from '../app/region-info.ts';
 import {coastData} from '../coast-data.ts';
 import {PROFILE_TABLE} from '../profile.ts';
+import {DEFAULT_ZONE} from '../zone.ts';
 import {profile, region, species} from '../state.ts';
 import {assetLoader} from './charter-grounds.ts';
 import type {ChartMark} from './coastline.ts';
@@ -114,12 +116,12 @@ export function shoreOverlay(p: Palette, data: ReturnType<typeof shoreCollection
 }
 
 /** The card for a run: its status and reasons, review dates, access points, method guidance and the rules link. */
-export function runMark(r: ShownRun, target: string, now = Date.now()): ChartMark {
+export function runMark(r: ShownRun, target: string, now = Date.now(), tz: string = DEFAULT_ZONE): ChartMark {
   const p = r.run.properties, guide = shoreGuidance(target, p.substrate);
   const access = r.status.label === 'Blocked' ? '' : ` Public access: ${p.access.map(a => a.name).join('; ')}.`;
   return {
     id: `shore:${p.id}`, name: p.name, kind: `Shore run · ${r.status.label}`,
-    reading: `${r.status.reasons.join('; ')}.${access} ${shoreReviewLines(p, now)}.`,
+    reading: `${r.status.reasons.join('; ')}.${access} ${shoreReviewLines(p, now, tz)}.`,
     source: `NOAA ESI ${p.sourceYear} · ${p.shoreClass} · access points from the California Coastal Commission inventory`,
     basis: `${layerEntry(REGISTRY_ID).basis} ${guide.text} Historical shoreline classification; access points are inventory references, not opening status or directions.`,
     regulations: {href: guide.href, label: guide.label},
@@ -184,7 +186,8 @@ export function createShore({engine, fetchFn = (...a) => fetch(...a), page = () 
   ];
   const pick = (id: unknown): ChartMark | null => {
     const r = shown.peek().find(x => x.run.id === id);
-    return r ? runMark(r, target.peek()) : null;
+    // The zone is read now, not at load: the matching region's own, else Pacific (web/app/region-info.ts `zone`).
+    return r ? runMark(r, target.peek(), now(), zone()) : null;
   };
   return {
     destroy() { clearInterval(timer); clearTimeout(soon); for (const dispose of disposers) dispose(); shoreState.value = {drawn: 0, held: 0, blocked: 0}; },

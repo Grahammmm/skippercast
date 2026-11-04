@@ -70,8 +70,10 @@ export function parseTripDate(text: string | null | undefined, now: number, tz =
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Feed = any;
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
-function sample(data: Feed, key: string, time: number, unit: string): number | null {
+/** `end` is the model's meta.data_end_time: an hour after it reads unknown, as web/map/forecast-grid.ts sample() does (the end itself is still read). */
+function sample(data: Feed, key: string, time: number, unit: string, end: number | null = null): number | null {
   const h = data?.hourly, i = Array.isArray(h?.time) ? h.time.indexOf(time) : -1;
+  if (end !== null && time > end) return null;
   if (data?.hourly_units?.[key] !== unit || data?.hourly_units?.time !== 'unixtime' || i < 0 || !finite(h?.[key]?.[i])) return null;
   return h[key][i];
 }
@@ -81,7 +83,7 @@ export interface Hour extends FeedHour {time: number}
 /** One hour at one forecast point: GFS wind and GFS-Wave partitions, with ECMWF wind and WAM seas as the second opinion. */
 export function readHour(feed: Feed, point: number, time: number): Hour {
   const m = feed?.forecast?.models ?? {};
-  const at = (id: string, key: string, unit: string) => m[id]?.error ? null : sample(m[id]?.data?.[point], key, time, unit);
+  const at = (id: string, key: string, unit: string) => m[id]?.error ? null : sample(m[id]?.data?.[point], key, time, unit, finite(m[id]?.meta?.data_end_time) ? m[id].meta.data_end_time : null);
   const period = at('ncep_gfswave016', 'wave_period', 's');
   const valid = period === null || period > 0;
   return {
@@ -135,7 +137,7 @@ export interface DayConditions {
   wind_kt: [number, number] | null; wind_from: string | null; gusts_kt: number | null;
   seas_ft: [number, number] | null; sea_period_s: number | null;
   swell_ft: [number, number] | null; swell_period_s: number | null; swell_from: string | null;
-  comfort: string; comfort_for: string; models_agree: boolean | null;
+  comfort: string; comfort_for: string; models_agree: boolean | null; advisory?: string;
   /** Why a comfort word was held above what the score alone says: Bumpy for a long-period swell hour, Unknown for an old model run; absent when nothing holds it. */
   comfort_held?: string;
 }
@@ -148,8 +150,8 @@ export function withForecastClock(day: DayConditions, clock: ForecastClock): Day
     wind_kt: null, wind_from: null, gusts_kt: null, seas_ft: null, sea_period_s: null, swell_ft: null, swell_period_s: null, swell_from: null, comfort: COMFORT_WORD.unknown, models_agree: null};
 }
 
-/** The fishing window at a forecast point on one local date; `boat` (requestBoat) rates it for the caller's boat, else the reference boat. */
-export function windowConditions(feed: Feed, region: Region, pointId: string, date: string, window: Window = WINDOW, boat: BoatFactors | null = null): DayConditions {
+/** The fishing window at a forecast point on one local date; `boat` (requestBoat) rates it for the caller's boat, else the reference boat; a boating advisory overlapping the window (`advisories`) makes an available day 'rough', as the brief does. */
+export function windowConditions(feed: Feed, region: Region, pointId: string, date: string, window: Window = WINDOW, boat: BoatFactors | null = null, advisories: readonly {event: string}[] = []): DayConditions {
   const base = {date, window: `${String(window.start).padStart(2, '0')}:00-${String(window.end).padStart(2, '0')}:00`, comfort_for: boat ? OWN_BOAT_PHRASE : BOAT_PHRASE};
   const empty = (reason: string): DayConditions => ({...base, available: false, reason, wind_kt: null, wind_from: null, gusts_kt: null, seas_ft: null, sea_period_s: null,
     swell_ft: null, swell_period_s: null, swell_from: null, comfort: COMFORT_WORD.unknown, models_agree: null});
@@ -179,8 +181,10 @@ export function windowConditions(feed: Feed, region: Region, pointId: string, da
     seas_ft: range(hours.map(h => Math.max(h.sea ?? -Infinity, h.other_sea ?? -Infinity)).map(v => v === -Infinity ? null : v), 1, 'up'),
     sea_period_s: round(median(hours.map(h => h.sea_period))),
     swell_ft: range(hours.map(h => h.swell)), swell_period_s: round(median(hours.map(h => h.swell_period))), swell_from: compass(meanBearing(hours.map(h => h.swell_from))),
-    comfort: swell ? COMFORT_WORD.marginal : COMFORT_WORD[verdict], ...(swell ? {comfort_held: swell} : {}),
+    comfort: advisories.length ? COMFORT_WORD['no-go'] : swell ? COMFORT_WORD.marginal : COMFORT_WORD[verdict],
+    ...(!advisories.length && swell ? {comfort_held: swell} : {}),
     models_agree: agree.length ? agree.every(h => Math.abs(h.wind! - h.other_wind!) <= MODEL_GAP.wind && Math.abs(h.sea! - h.other_sea!) <= MODEL_GAP.sea) : null,
+    ...(advisories.length ? {advisory: advisories[0]!.event} : {}),
   };
 }
 const clock = (ms: number, tz: string): string => { const h = localParts(ms, tz).hour; return h === 12 ? 'noon' : h === 0 ? 'midnight' : `${h % 12} ${h < 12 ? 'am' : 'pm'}`; };
