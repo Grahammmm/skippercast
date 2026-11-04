@@ -25,7 +25,6 @@ import {FT_PER_M as M_TO_FT, KT_PER_MS as MS_TO_KT} from '../units.ts';
 import type {Brief, BriefBasis, BriefFleet, BriefNotice, BriefTile, LandingReport, SourceGap, RegionalDailyFeed, RegionalForecast, RegionalSource, TileId} from './types.ts';
 
 const HOUR = 3_600_000;
-const DAY = 24 * HOUR;
 /**
  * How old each tile's clock may be before the tile reads stale. Basis:
  * forecast issue age 18 h (packages/coast freshForecast); nearshore fetch age
@@ -160,7 +159,10 @@ const atPort = (port: unknown, names: readonly string[]): port is string =>
 export function fleetLine(reports: readonly LandingReport[], ports: string | readonly string[], timezone: string, now: Date): BriefFleet | null {
   const names = (typeof ports === 'string' ? [ports] : ports).filter(Boolean);
   if (!names.length) return null;
-  const today = dateKey(now, timezone), first = dateKey(new Date(now.getTime() - (FLEET_WINDOW_DAYS - 1) * DAY), timezone);
+  // Calendar arithmetic on the region's local date: a label, not an instant, so a 23- or 25-hour day cannot shift the window.
+  const today = dateKey(now, timezone), start = new Date(`${today}T12:00:00.000Z`);
+  start.setUTCDate(start.getUTCDate() - (FLEET_WINDOW_DAYS - 1));
+  const first = start.toISOString().slice(0, 10);
   const trips = reports.filter(item => atPort(item.port, names) && item.date >= first && item.date <= today && item.boat);
   const boats = new Set(trips.map(item => item.boat));
   if (!boats.size) return null;

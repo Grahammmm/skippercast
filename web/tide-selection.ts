@@ -15,15 +15,19 @@ export function createTideSelection(fetcher: typeof fetch = (...args) => fetch(.
       return body;
     }).catch(e => { directory = null; throw e; });
   }
+  /** Publishes only while the region AND generation captured at the call are still current: a directory load that finished after the
+   * selection changed (default chosen, active station removed, region reconfigured, new refresh) keeps its returned snapshot
+   * (packURLs reads it) but cannot write stations or an error into the newer state. The shared directory promise is untouched. */
   async function list(): Promise<readonly TideStation[]> {
-    const selected = region.peek();
+    const selected = region.peek(), token = generation;
     if (!selected) return [];
+    const current = () => region.peek() === selected && token === generation;
     try {
       const rows = stationsInRegion(await catalog(), selected.bounds);
-      if (region.peek() === selected) stations.value = rows;
+      if (current()) stations.value = rows;
       return rows;
     } catch {
-      if (region.peek() === selected) error.value = 'NOAA station directory unavailable. Retry when connected.';
+      if (current()) error.value = 'NOAA station directory unavailable. Retry when connected.';
       return [];
     }
   }
@@ -48,8 +52,8 @@ export function createTideSelection(fetcher: typeof fetch = (...args) => fetch(.
     const restored = next ? readSavedTideStations(next.id, storage) : {saved: [], active: null};
     saved.value = restored.saved;
     choice.value = restored.active;
-    if (restored.saved.length && !restored.active) void list();
     void load();
+    if (restored.saved.length && !restored.active) void list();
   }
   function persist(): void {
     const selected = region.peek();
