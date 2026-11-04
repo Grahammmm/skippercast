@@ -1,13 +1,15 @@
-// MYB-1: the optional boat length and comfort limits asked once, inside the
-// first-use "How do you fish?" step (web/landing/ProfileStep.tsx and
-// web/app/FirstRun.tsx). Choosing a profile still finishes the step; this
-// only saves what was typed first, on this device (the boat under
-// dist/boat-handling.js BOAT_KEY, the limits through web/limits.ts). Blank
-// fields change nothing, and a storage failure never blocks the choice.
-// There is no account-side boat store yet, so a signed-in visitor's boat is
-// kept the same way.
+// MYB-1: the optional boat length and comfort limits asked once, on first
+// use. SC-LANDING-ORDER: they are asked after "How do you fish?", and only
+// when the answer is Boat (web/app/FirstRun.tsx BoatEntry): the map's card
+// asks it at once, and the landing's profile step (web/landing/ProfileStep.tsx)
+// opens the map asking it (carryAsk). Saving writes what was typed, on this
+// device (the boat under dist/boat-handling.js BOAT_KEY, the limits through
+// web/limits.ts). Blank fields change nothing, and a storage failure is said,
+// never thrown. There is no account-side boat store yet, so a signed-in
+// visitor's boat is kept the same way.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
+import {signal} from '@preact/signals';
 import {BOAT_KEY, normalizeBoat} from '../dist/boat-handling.js';
 import {loadLimits, limitsFor, saveLimits, savedLimits} from './limits.ts';
 import type {Profile} from './profile.ts';
@@ -57,16 +59,20 @@ function saveLength(value: string, storage: StoreStorage | null): boolean {
   return true;
 }
 
+/** Bumped when the first-use step writes a boat, so a verdict already on screen re-rates for it without a reload (web/brief/Brief.tsx currentVerdict). */
+export const boatSaved = signal(0);
+
 /**
- * Save what the first-use step's boat fields hold, before the profile choice
- * proceeds. Returns whether a boat was written and one-line notices (a limit
- * that was clamped, or a storage failure). Never throws.
+ * Save what the first-use boat fields hold, for the profile just chosen.
+ * Returns whether a boat was written and one-line notices (a limit that was
+ * clamped, or a storage failure). Never throws.
  */
 export function saveFirstUse(entry: FirstUseEntry, storage: StoreStorage | null = browserStorage()): FirstUseResult {
   const notices: string[] = [];
   let boat = false, failed = false;
   if (!blank(entry.lengthFt)) {
     try { boat = saveLength(String(entry.lengthFt), storage); } catch { failed = true; }
+    if (boat) boatSaved.value++;
   }
   if (!blank(entry.wind) || !blank(entry.seas)) {
     try {
@@ -87,53 +93,47 @@ export function saveFirstUse(entry: FirstUseEntry, storage: StoreStorage | null 
   return {boat, notices};
 }
 
-// The step closes (map) or the page navigates (landing) as soon as a profile
-// is chosen, so the notices are shown after it, by the map's FirstRun: the
-// landing carries them to /map in session storage, or — when storage is
-// refused there too — as ?boat-notice=failed, which names only the fixed
-// failure line (an address never supplies notice text).
-export const NOTICE_KEY = 'skippercast-first-use-notice';
-export const NOTICE_PARAM = 'boat-notice';
-export type NoticeStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+// The landing navigates as soon as a profile is chosen, so a Boat choice there
+// asks for the boat on the map it opens, by the map's FirstRun: the landing
+// marks it in session storage, or — when storage is refused — as
+// ?boat-entry=ask, which the map reads once and drops from the address. The
+// save's notices are then said on the map, where the boat is saved.
+export const ASK_KEY = 'skippercast-first-use-boat';
+export const ASK_PARAM = 'boat-entry';
+export type AskStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
-export function browserSession(): NoticeStorage | null {
+export function browserSession(): AskStorage | null {
   try { return typeof sessionStorage === 'undefined' ? null : sessionStorage; } catch { return null; }
 }
 
-/** `url` carrying `notices` to the page it opens. Never throws. */
-export function carryNotices(url: string, notices: readonly string[], session: NoticeStorage | null = browserSession()): string {
-  if (!notices.length) return url;
+/** `url` asking the page it opens for the boat. Never throws. */
+export function carryAsk(url: string, session: AskStorage | null = browserSession()): string {
   try {
     if (!session) throw new Error('no session storage');
-    session.setItem(NOTICE_KEY, JSON.stringify(notices));
+    session.setItem(ASK_KEY, 'ask');
     return url;
   } catch {
     const next = new URL(url);
-    next.searchParams.set(NOTICE_PARAM, 'failed');
+    next.searchParams.set(ASK_PARAM, 'ask');
     return next.href;
   }
 }
 
-/** The notices carried to `href`, read once (the stored copy is removed). Never throws. */
-export function takeNotices(href: string, session: NoticeStorage | null = browserSession()): string[] {
-  const held: string[] = [];
+/** Whether `href` was opened asking for the boat, read once (the stored mark is removed). Never throws. */
+export function takeAsk(href: string, session: AskStorage | null = browserSession()): boolean {
+  let ask = false;
   try {
-    const raw = session?.getItem(NOTICE_KEY);
-    if (raw) {
-      session!.removeItem(NOTICE_KEY);
-      const list: unknown = JSON.parse(raw);
-      if (Array.isArray(list)) for (const item of list.slice(0, 4)) if (typeof item === 'string') held.push(item);
-    }
+    if (session?.getItem(ASK_KEY)) { session.removeItem(ASK_KEY); ask = true; }
   } catch { /* nothing carried */ }
   try {
-    if (new URL(href).searchParams.get(NOTICE_PARAM) === 'failed' && !held.includes(ENTRY_COPY.failed)) held.push(ENTRY_COPY.failed);
+    if (new URL(href).searchParams.get(ASK_PARAM) === 'ask') ask = true;
   } catch { /* not a URL */ }
-  return held;
+  return ask;
 }
 
-/** `href` without the carried-notice parameter, so a reload or a shared link does not repeat it. */
-export function withoutNotice(href: string): string {
+/** `href` without the carried ask, so a reload or a shared link does not repeat it. */
+export function withoutAsk(href: string): string {
   const url = new URL(href);
-  url.searchParams.delete(NOTICE_PARAM);
+  url.searchParams.delete(ASK_PARAM);
   return url.href;
 }

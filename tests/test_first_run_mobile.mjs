@@ -58,7 +58,7 @@ test('the desktop keeps its standalone first-run prompt', async () => {
 
 // BL-SC-2: the peek row is CSS only. The sheet renders at peek with the whole card's markup,
 // and every BL-SC-2 sheet rule for the card is scoped to peek, so half, full, desktop and Reports keep their layout
-// (MYB-1's boat fields alone wait for full on the sheet).
+// (the choices' focus scroll margin alone applies at every detent; it changes no layout).
 test('the compact peek row keeps the card markup and only peek-scoped rules', async () => {
   const html = await shell(true);
   assert.match(html, /class="ui-sheet[^"]*" data-detent="peek"/);
@@ -67,13 +67,12 @@ test('the compact peek row keeps the card markup and only peek-scoped rules', as
   assert.equal((card.match(/<small>/g) || []).length, 4);
   const css = readFileSync(join(root, 'web/landing/port-input.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   const rules = [...css.matchAll(/([^{}]+)\{/g)].map(m => m[1].trim()).filter(sel => /\.ui-sheet/.test(sel));
-  // MYB-1 adds exactly two sheet rules beyond peek: its boat fields wait for full, and choices keep a
-  // focus scroll margin (no layout change). Every other sheet rule for the card stays peek-scoped.
-  const myb1 = ['.ui-sheet:not([data-detent="full"]) .app-firstrun > fieldset', '.ui-sheet .app-firstrun .ui-button, .ui-sheet .app-firstrun input'];
-  for (const sel of myb1) assert.ok(rules.includes(sel), sel);
-  assert.match(css, /\.ui-sheet:not\(\[data-detent="full"\]\) \.app-firstrun > fieldset \{ display: none; \}/);
+  // Exactly one sheet rule beyond peek: choices keep a focus scroll margin (no layout change). The card asks
+  // no boat fields (SC-LANDING-ORDER: they follow a Boat choice), so nothing waits for full.
+  const margin = ['.ui-sheet .app-firstrun .ui-button, .ui-sheet .app-firstrun input'];
+  for (const sel of margin) assert.ok(rules.includes(sel), sel);
   assert.match(css, /\.ui-sheet \.app-firstrun \.ui-button, \.ui-sheet \.app-firstrun input \{ scroll-margin-block: var\(--space-2\); \}/);
-  const peek = rules.filter(sel => !myb1.includes(sel));
+  const peek = rules.filter(sel => !margin.includes(sel));
   assert.ok(peek.length >= 5, 'the peek rules exist');
   for (const sel of peek) for (const part of sel.split(',')) assert.match(part.trim(), /^\.ui-sheet\[data-detent="peek"\] \.app-firstrun/, part);
 });

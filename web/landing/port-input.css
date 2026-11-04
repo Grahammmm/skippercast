@@ -47,20 +47,31 @@
 .app-firstrun-options .ui-button small { color: var(--muted); font-size: var(--text-13); }
 /* MYB-1: a boat save that failed or a limit that was adjusted, said after the choice closes the card. */
 .app-firstrun-notice { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: var(--text-13); }
+/* SC-LANDING-ORDER: the optional boat fields, asked after Boat is chosen, sit where the card was. */
+.app-boat-entry {
+  position: fixed; top: calc(var(--space-7) * 3 + var(--space-5)); left: 50%; z-index: var(--z-toast); width: min(420px, calc(100% - var(--space-6))); transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) var(--space-5); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  background: var(--panel); color: var(--text); box-shadow: var(--elev-3);
+}
+.app-boat-entry fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.app-boat-entry legend { padding: 0; margin-bottom: var(--space-2); font: var(--weight-semibold) var(--text-18) / var(--leading-heading) var(--font-sans); }
+.app-boat-entry:focus { outline: none; }
+.app-boat-entry-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
 /* On the phone the first-run choice belongs to the sheet/page's scroll area,
    leaving its handle, time controls and navigation reachable. */
-.app-mobile .app-firstrun { position: static; width: auto; max-width: 100%; box-sizing: border-box; transform: none; margin-bottom: var(--space-3); }
+.app-mobile .app-firstrun, .app-mobile .app-boat-entry { position: static; width: auto; max-width: 100%; box-sizing: border-box; transform: none; margin-bottom: var(--space-3); }
+/* Focus scrolling leaves a little room, so a focused boat field or button is never cut at the sheet's edge (the card's choices: below). */
+.app-mobile .app-boat-entry :is(input, .ui-button) { scroll-margin-block: var(--space-2); }
 
 /* BL-SC-2: at the sheet's peek the question and one row of the four choices
    sit above the tab bar; from half up the whole card shows as above. The notes
    and the Keep button stay in the accessibility tree and the Tab order. The
-   MYB-1 boat fields show at full only, where the card has room: at half they
-   would push every choice below the fold. Keyboard focus on a choice opens the
-   sheet to full (web/app/Mobile.tsx), and Shift+Tab reaches the fields there. */
+   card asks no boat fields (SC-LANDING-ORDER: they follow a Boat choice, in
+   .app-boat-entry). Keyboard focus on a choice opens the sheet to full
+   (web/app/Mobile.tsx). */
 .ui-sheet[data-detent="peek"] .app-firstrun { gap: var(--space-1); padding: var(--space-1) var(--space-3); }
 .ui-sheet[data-detent="peek"] .app-firstrun > .ui-eyebrow, .ui-sheet[data-detent="peek"] .app-firstrun > p { display: none; }
-.ui-sheet:not([data-detent="full"]) .app-firstrun > fieldset { display: none; }
 /* Focus scrolling leaves a little room, so a focused choice is never cut by the sheet's edge. */
 .ui-sheet .app-firstrun .ui-button, .ui-sheet .app-firstrun input { scroll-margin-block: var(--space-2); }
 .ui-sheet[data-detent="peek"] .app-firstrun > .ui-button, .ui-sheet[data-detent="peek"] .app-firstrun-options small {

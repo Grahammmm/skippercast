@@ -191,6 +191,37 @@ test('a 200ms pointer press chooses Boat without moving the half-height sheet', 
   expect(pageErrors).toEqual([]);
 });
 
+// SC-LANDING-ORDER: the boat step replaces the card inside the sheet; peek clips the sheet body,
+// so tapping Boat at peek, or arriving from the landing's Boat choice, opens the sheet to full.
+for (const arrival of ['tap', 'landing'] as const) {
+  test(`the boat step is operable on the 320px phone after ${arrival === 'tap' ? 'tapping Boat at peek' : 'the landing\'s Boat choice'}`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(!isMobile, 'phone layout only');
+    await page.setViewportSize({width: 320, height: 568});
+    const sheet = page.locator('.ui-sheet'), entry = sheet.locator('[data-first-use-boat]');
+    if (arrival === 'tap') {
+      await v2.open('app', {region: 'morro-bay'});
+      await expect(sheet).toHaveAttribute('data-detent', 'peek');
+      await sheet.locator('.app-firstrun button[data-profile="boat"]').click();
+    } else {
+      await v2.open('app', {region: 'morro-bay', profile: 'boat', 'boat-entry': 'ask'});
+    }
+    await expect(entry).toBeVisible();
+    await expect(sheet).toHaveAttribute('data-detent', 'full');
+    for (const control of [...await entry.locator('input').all(), entry.getByRole('button', {name: 'Save boat'}), entry.getByRole('button', {name: 'Not now'})]) {
+      await control.scrollIntoViewIfNeeded();
+      await expect(control).toBeInViewport({ratio: 1});
+      await expect.poll(async () => {
+        const target = (await control.boundingBox())!, tabs = (await page.locator('.app-tabs').boundingBox())!;
+        return target.y + target.height <= tabs.y;
+      }, {message: 'boat control is above the fixed navigation'}).toBe(true);
+    }
+    await entry.locator('input[name="lengthFt"]').fill('21');
+    await entry.getByRole('button', {name: 'Save boat'}).click();
+    await expect(entry).toHaveCount(0);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 for (const [width, height] of [[320, 568], [390, 844]] as const) {
   test(`Tab from peek reveals every first-run choice on the ${width}px phone`, async ({page, pageErrors, v2, isMobile}) => {
     test.skip(!isMobile, 'phone layout only');
@@ -215,7 +246,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) {
       }, {message: 'focused choice is above the fixed navigation'}).toBe(true);
     }
     // Return to Kayak and choose using only the keyboard.
-    await expect(card.locator('fieldset'), 'at full the MYB-1 boat fields are back above the choices').toBeVisible();
+    await expect(card.locator('fieldset'), 'profile first: the card itself asks no boat fields; they follow a Boat choice (SC-LANDING-ORDER)').toHaveCount(0);
     await page.keyboard.press('Shift+Tab');
     await expect(card.locator('button[data-profile="kayak"]')).toBeFocused();
     await page.keyboard.press('Enter');

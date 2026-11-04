@@ -1,8 +1,9 @@
-// MYB-1: the optional boat length and comfort limits on the first-use
-// "How do you fish?" step (web/boat-entry.ts, web/landing/ProfileStep.tsx,
-// web/app/FirstRun.tsx). Blank fields change nothing; a valid length writes
-// the local boat; limits clamp through web/limits.ts; a storage failure never
-// blocks the profile choice.
+// MYB-1: the optional boat length and comfort limits asked on first use
+// (web/boat-entry.ts, web/app/FirstRun.tsx BoatEntry). SC-LANDING-ORDER: they
+// come after "How do you fish?" and only for Boat, on the map's card and on
+// arrival from the landing's profile step (web/landing/ProfileStep.tsx).
+// Blank fields change nothing; a valid length writes the local boat; limits
+// clamp through web/limits.ts; a storage failure is said, never thrown.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import util from 'node:util';
@@ -19,9 +20,10 @@ async function load() {
   const out = join(await mkdtemp(join(tmpdir(), 'boat-entry-')), 'boat-entry.mjs');
   await build({
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
-      export {saveFirstUse, ENTRY_COPY, ENTRY_FIELDS, carryNotices, takeNotices, withoutNotice} from './web/boat-entry.ts';
+      export {saveFirstUse, ENTRY_COPY, ENTRY_FIELDS, carryAsk, takeAsk, withoutAsk, boatSaved, ASK_KEY} from './web/boat-entry.ts';
       export {ProfileStep} from './web/landing/ProfileStep.tsx';
-      export {FirstRun} from './web/app/FirstRun.tsx';
+      export {LandingApp} from './web/landing/Landing.tsx';
+      export {FirstRun, BoatEntry, BOAT_ENTRY_COPY, boatEntryOpen} from './web/app/FirstRun.tsx';
       export {configureStore, STORAGE_KEYS} from './web/state.ts';
       export {loadLimits, savedLimits} from './web/limits.ts';
       export {defaultLimits} from './packages/coast/src/limits.ts';
@@ -151,22 +153,36 @@ class El {
 }
 const text = el => el.nodeType === 3 ? el.data : el.childNodes.map(text).join('');
 
-/** Mount `vnode` on a fake DOM, type `typed` into the boat fields, click profile `p`; returns what happened. */
-async function typeAndClick(m, vnode, typed, p, storage) {
+const tick = (ms = 0) => new Promise(resolve => setTimeout(resolve, ms));
+const label = children => [].concat(children).filter(c => typeof c === 'string').join('');
+
+/**
+ * Mount `vnode` on a fake DOM with `storage` as localStorage and hand `run` a
+ * view of what is rendered now: the boat inputs, the profile buttons, the other
+ * buttons by label, the boat form and the text. Unmounts afterwards.
+ */
+async function mounted(m, vnode, storage, run) {
   const oldDocument = globalThis.document, oldStorage = globalThis.localStorage, oldHook = m.options.vnode;
-  const root = new El('div'); let inputs = {}, buttons = {};
+  const root = new El('div');
+  let seen = {inputs: {}, profiles: {}, buttons: {}, form: null};
   globalThis.document = {createElement: n => new El(n), createElementNS: (_, n) => new El(n), createTextNode: t => Object.assign(new El('text'), {nodeType: 3, data: String(t)})};
   globalThis.localStorage = storage;
-  m.options.vnode = v => { oldHook?.(v); if (v.type === 'input' && v.props.name) inputs[v.props.name] = v.props; if (v.props?.['data-profile']) buttons[v.props['data-profile']] = v.props; };
+  m.options.vnode = v => {
+    oldHook?.(v);
+    if (v.type === 'input' && v.props.name) seen.inputs[v.props.name] = v.props;
+    if (v.type === 'form') seen.form = v.props;
+    if (v.props?.['data-profile']) seen.profiles[v.props['data-profile']] = v.props;
+    else if (v.type?.name === 'Button' && label(v.props.children)) seen.buttons[label(v.props.children)] = v.props;
+  };
+  const view = () => ({...seen, html: text(root)});
+  const fresh = () => { seen = {inputs: {}, profiles: {}, buttons: {}, form: null}; };
+  const type = async typed => { for (const [name, value] of Object.entries(typed)) { seen.inputs[name].onInput({currentTarget: {value}}); await tick(); } };
+  const click = async props => { fresh(); props.onClick(); await tick(); };
+  const submit = async () => { const form = seen.form; fresh(); form.onSubmit({preventDefault() {}}); await tick(); };
   try {
     m.renderDOM(vnode, root);
-    for (const [name, value] of Object.entries(typed)) {
-      inputs[name].onInput({currentTarget: {value}});
-      await new Promise(resolve => setTimeout(resolve, 0));
-    }
-    buttons[p].onClick();
-    await new Promise(resolve => setTimeout(resolve, 0));
-    return {html: text(root)};
+    await tick(50);   // mount effects run after the next frame (Preact's 35 ms fallback without requestAnimationFrame)
+    return await run({view, type, click, submit});
   } finally {
     m.renderDOM(null, root); m.options.vnode = oldHook;
     if (oldDocument === undefined) delete globalThis.document; else globalThis.document = oldDocument;
@@ -174,63 +190,6 @@ async function typeAndClick(m, vnode, typed, p, storage) {
   }
 }
 
-test('both screens show the same optional boat fields above the profile buttons, in order', async () => {
-  const {m, storage} = await fresh();
-  const step = m.render(m.h(m.ProfileStep, {place: 'Morro Bay', warm: null, onChoose: () => {}, onBack: () => {}}));
-  const first = m.render(m.h(m.FirstRun, {href: 'https://s.test/map', storage, cookies: null}));
-  for (const html of [step, first]) {
-    assert.ok(util.isDeepStrictEqual([...html.matchAll(/<input[^>]* name="([a-zA-Z]+)"/g)].map(x => x[1]), ['lengthFt', 'wind', 'seas']), html.slice(0, 200));
-    assert.ok(util.isDeepStrictEqual([...html.matchAll(/data-profile="([a-z]+)"/g)].map(x => x[1]), ['boat', 'shore', 'spear', 'kayak']));
-    assert.ok(html.indexOf('<legend>Your boat (optional)</legend>') > 0 && html.indexOf('<legend>') < html.indexOf('data-profile='), 'fieldset above the buttons');
-    assert.ok(html.includes('Boat length makes every rating yours; the rest can wait.'));
-    assert.ok(html.includes('Boat length 8-70 ft'));
-    assert.doesNotMatch(html, /reference boat/i);
-    assert.doesNotMatch(html, /<input[^>]* required/, 'every field optional');
-  }
-});
-
-test('landing step: a profile click saves the typed boat first and calls onChoose once', async () => {
-  const {m, storage} = await fresh();
-  const chosen = [];
-  let seen = null;
-  const onChoose = p => { chosen.push(p); seen = storage.getItem(m.BOAT_KEY); };
-  await typeAndClick(m, m.h(m.ProfileStep, {place: 'Morro Bay', warm: null, onChoose, onBack: () => {}}), {lengthFt: '19', wind: '14'}, 'shore', storage);
-  assert.ok(util.isDeepStrictEqual(chosen, ['shore']));
-  assert.equal(JSON.parse(seen).boat.loa_ft, 19, 'the boat is in storage before onChoose runs');
-  assert.equal(JSON.parse(storage.getItem(m.STORAGE_KEYS.limits)).shore.wind, 14, 'limits saved for the profile chosen');
-});
-
-test('landing step: blank fields, and storage that throws, still call onChoose once', async () => {
-  let {m, storage} = await fresh();
-  const before = snapshot(storage), chosen = [];
-  await typeAndClick(m, m.h(m.ProfileStep, {place: 'Morro Bay', warm: null, onChoose: p => chosen.push(p), onBack: () => {}}), {}, 'boat', storage);
-  assert.ok(util.isDeepStrictEqual(chosen, ['boat'])); assert.equal(snapshot(storage), before);
-  ({m} = await fresh());
-  m.configureStore({storage: broken()});
-  const after = [];
-  const {html} = await typeAndClick(m, m.h(m.ProfileStep, {place: 'Morro Bay', warm: null, onChoose: p => after.push(p), onBack: () => {}}), {lengthFt: '19'}, 'kayak', broken());
-  assert.ok(util.isDeepStrictEqual(after, ['kayak']), 'the choice proceeds');
-  assert.ok(html.includes('Could not save the boat in this browser.'));
-});
-
-test('map first run: a profile click saves the typed boat and still finishes the step', async () => {
-  const {m, storage} = await fresh();
-  const oldLocation = globalThis.location, oldHistory = globalThis.history;
-  const replaced = [];
-  globalThis.location = {href: 'https://s.test/map'};
-  globalThis.history = {replaceState: (_s, _t, url) => { replaced.push(String(url)); globalThis.location.href = new URL(url, 'https://s.test/map').href; }, pushState() {}};
-  try {
-    const {html} = await typeAndClick(m, m.h(m.FirstRun, {href: 'https://s.test/map', storage, cookies: null}), {lengthFt: '21'}, 'boat', storage);
-    assert.equal(JSON.parse(storage.getItem(m.BOAT_KEY)).boat.loa_ft, 21);
-    assert.equal(new URL(globalThis.location.href).searchParams.get('profile'), 'boat');
-    assert.equal(html, '', 'the card closes');
-  } finally {
-    if (oldLocation === undefined) delete globalThis.location; else globalThis.location = oldLocation;
-    if (oldHistory === undefined) delete globalThis.history; else globalThis.history = oldHistory;
-  }
-});
-
-// RETURN 1 (t_65797c35): the notices must outlive the card closing (map) and the page navigating (landing).
 function session(initial = {}) {
   const s = memory(initial);
   s.removeItem = k => { s.map.delete(k); };
@@ -238,40 +197,10 @@ function session(initial = {}) {
 }
 const refused = () => ({getItem() { throw new Error('denied'); }, setItem() { throw new Error('denied'); }, removeItem() { throw new Error('denied'); }});
 
-test('the landing carries notices to the map in session storage, or as ?boat-notice=failed when that is refused too', async () => {
-  const m = await load();
-  const url = 'https://s.test/map?region=morro-bay&port=morro-bay&profile=boat';
-  const s = session();
-  assert.equal(m.carryNotices(url, [], s), url, 'no notices: the address is unchanged');
-  assert.equal(s.map.size, 0, 'no notices: nothing stored');
-  assert.equal(m.carryNotices(url, ['Wind limit saved as 20 kt.'], s), url);
-  assert.ok(util.isDeepStrictEqual(m.takeNotices(url, s), ['Wind limit saved as 20 kt.']));
-  assert.ok(util.isDeepStrictEqual(m.takeNotices(url, s), []), 'read once');
-  for (const none of [refused(), null]) {
-    const next = m.carryNotices(url, ['Wind limit saved as 20 kt.', m.ENTRY_COPY.failed], none);
-    assert.equal(new URL(next).searchParams.get('boat-notice'), 'failed');
-    assert.equal(new URL(next).searchParams.get('port'), 'morro-bay', 'the rest of the address is kept');
-    assert.ok(util.isDeepStrictEqual(m.takeNotices(next, none), [m.ENTRY_COPY.failed]));
-    assert.equal(new URL(m.withoutNotice(next)).searchParams.has('boat-notice'), false);
-  }
-  // The address names only the fixed line; it never supplies notice text.
-  assert.ok(util.isDeepStrictEqual(m.takeNotices(`${url}&boat-notice=${encodeURIComponent('<b>hi</b>')}`, session()), []));
-});
-
-test('landing step: the save notices go to onChoose, which navigates at once', async () => {
-  const {m} = await fresh();
-  m.configureStore({storage: broken()});
-  const calls = [];
-  await typeAndClick(m, m.h(m.ProfileStep, {place: 'Morro Bay', warm: null, onChoose: (p, notices) => calls.push([p, notices]), onBack: () => {}}), {lengthFt: '19'}, 'boat', broken());
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0][0], 'boat');
-  assert.ok(calls[0][1].includes(m.ENTRY_COPY.failed), JSON.stringify(calls));
-});
-
 async function withMap(href, s, run) {
   const oldLocation = globalThis.location, oldHistory = globalThis.history, oldSession = globalThis.sessionStorage;
   globalThis.location = {href};
-  globalThis.history = {state: null, replaceState: (_s, _t, url) => { globalThis.location.href = new URL(url, href).href; }, pushState() {}};
+  globalThis.history = {state: null, replaceState: (_s, _t, url) => { globalThis.location.href = new URL(url, globalThis.location.href).href; }, pushState() {}};
   globalThis.sessionStorage = s;
   try { return await run(); } finally {
     if (oldLocation === undefined) delete globalThis.location; else globalThis.location = oldLocation;
@@ -279,40 +208,144 @@ async function withMap(href, s, run) {
     if (oldSession === undefined) delete globalThis.sessionStorage; else globalThis.sessionStorage = oldSession;
   }
 }
+const MAP = 'https://s.test/map?region=morro-bay';
+const firstRun = (m, storage, href = MAP) => m.h(m.FirstRun, {href, storage, cookies: null});
 
-test('map first run: a failed save or an adjusted limit is still said after the card closes', async () => {
-  let {m, storage} = await fresh();
-  let html = await withMap('https://s.test/map', session(), async () =>
-    (await typeAndClick(m, m.h(m.FirstRun, {href: 'https://s.test/map', storage, cookies: null}), {wind: '99'}, 'boat', storage)).html);
-  assert.ok(html.includes('Wind limit saved as 20 kt.'), html);
-  assert.doesNotMatch(html, /How do you fish\?/, 'the card itself closed');
-  ({m} = await fresh());
-  m.configureStore({storage: broken()});
-  html = await withMap('https://s.test/map', session(), async () =>
-    (await typeAndClick(m, m.h(m.FirstRun, {href: 'https://s.test/map', storage: broken(), cookies: null}), {lengthFt: '19'}, 'kayak', broken())).html);
-  assert.ok(html.includes(m.ENTRY_COPY.failed), html);
-  assert.doesNotMatch(html, /How do you fish\?/);
+test('SC-LANDING-ORDER: the profile is asked first; neither screen shows boat fields beside the four choices', async () => {
+  const {m, storage} = await fresh();
+  const step = m.render(m.h(m.ProfileStep, {place: 'Morro Bay', warm: null, onChoose: () => {}, onBack: () => {}}));
+  const card = m.render(firstRun(m, storage));
+  for (const html of [step, card]) {
+    assert.ok(util.isDeepStrictEqual([...html.matchAll(/data-profile="([a-z]+)"/g)].map(x => x[1]), ['boat', 'shore', 'spear', 'kayak']));
+    assert.doesNotMatch(html, /<input|<fieldset|Your boat/, 'no boat fields before the choice');
+  }
 });
 
-test('map first run: notices carried from the landing show on arrival, once, and the address loses the marker', async () => {
+test('the boat step shows MYB-1\'s optional fields in order, with Save and Not now, and no profile choice', async () => {
+  const m = await load();
+  const html = m.render(m.h(m.BoatEntry, {onDone: () => {}}));
+  assert.ok(util.isDeepStrictEqual([...html.matchAll(/<input[^>]* name="([a-zA-Z]+)"/g)].map(x => x[1]), ['lengthFt', 'wind', 'seas']));
+  assert.ok(html.includes('>Your boat (optional)</legend>'));
+  assert.ok(html.includes('Boat length makes every rating yours; the rest can wait.'));
+  assert.ok(html.includes('Boat length 8-70 ft'));
+  assert.ok(html.includes(`>${m.BOAT_ENTRY_COPY.save}</button>`) && html.includes(`>${m.BOAT_ENTRY_COPY.skip}</button>`));
+  assert.match(html, /<button[^>]* type="submit"[^>]*>Save boat</);
+  assert.doesNotMatch(html, /data-profile=|role="dialog"|class="app-firstrun"/, 'not the card: the map\'s first-run checks keep meaning the card');
+  assert.doesNotMatch(html, /reference boat/i);
+  assert.doesNotMatch(html, /<input[^>]* required/, 'every field optional');
+});
+
+test('map first run: Boat closes the card and asks for the boat; Save writes it where MYB-1 did and re-rates the verdict', async () => {
+  const {m, storage} = await fresh();
+  await withMap(MAP, session(), () => mounted(m, firstRun(m, storage), storage, async ({view, type, click, submit}) => {
+    assert.match(view().html, /How do you fish\?/);
+    await click(view().profiles.boat);
+    assert.equal(new URL(globalThis.location.href).searchParams.get('profile'), 'boat', 'the choice is made at once');
+    assert.doesNotMatch(view().html, /How do you fish\?/, 'the card closed');
+    assert.match(view().html, /Your boat \(optional\)/);
+    await tick(50);   // BoatEntry's mount effect
+    assert.equal(m.boatEntryOpen.value, true, 'the phone sheet is told the boat step is showing (Mobile boatEntryDetent)');
+    assert.equal(storage.getItem(m.BOAT_KEY), null, 'nothing saved before Save');
+    await type({lengthFt: '21', wind: '14'});
+    const before = m.boatSaved.value;
+    await submit();
+    assert.equal(JSON.parse(storage.getItem(m.BOAT_KEY)).boat.loa_ft, 21, 'the boat under BOAT_KEY');
+    assert.equal(JSON.parse(storage.getItem(m.STORAGE_KEYS.limits)).boat.wind, 14, 'the limits for Boat, through web/limits.ts');
+    assert.equal(m.boatSaved.value, before + 1, 'the verdict on screen is told');
+    assert.equal(view().html, '', 'the boat step closed');
+    await tick(50);   // its unmount cleanup, after paint
+    assert.equal(m.boatEntryOpen.value, false);
+  }));
+});
+
+test('map first run: Shore, Spear, Kayak and Keep Boat for now ask nothing more; Not now writes nothing', async () => {
+  for (const p of ['shore', 'spear', 'kayak', 'keep', 'skip']) {
+    const {m, storage} = await fresh();
+    await withMap(MAP, session(), () => mounted(m, firstRun(m, storage), storage, async ({view, click}) => {
+      if (p === 'keep') await click(view().buttons['Keep Boat for now']);
+      else if (p === 'skip') { await click(view().profiles.boat); await click(view().buttons[m.BOAT_ENTRY_COPY.skip]); }
+      else await click(view().profiles[p]);
+      assert.equal(view().html, '', `${p}: nothing left on screen`);
+      assert.equal(storage.getItem(m.BOAT_KEY), null, `${p}: no boat`);
+      assert.equal(storage.getItem(m.STORAGE_KEYS.limits), null, `${p}: no limits`);
+      assert.equal(new URL(globalThis.location.href).searchParams.get('profile'), p === 'keep' || p === 'skip' ? 'boat' : p);
+    }));
+  }
+});
+
+test('map first run: a failed save or an adjusted limit is said after the boat step closes', async () => {
+  let {m, storage} = await fresh();
+  let html = await withMap(MAP, session(), () => mounted(m, firstRun(m, storage), storage, async ({view, type, click, submit}) => {
+    await click(view().profiles.boat); await type({wind: '99'}); await submit();
+    return view().html;
+  }));
+  assert.ok(html.includes('Wind limit saved as 20 kt.'), html);
+  assert.doesNotMatch(html, /How do you fish\?|Boat length \(ft\)/, 'the card and the fields closed');
+  ({m} = await fresh());
+  m.configureStore({storage: broken()});
+  html = await withMap(MAP, session(), () => mounted(m, firstRun(m, broken()), broken(), async ({view, type, click, submit}) => {
+    await click(view().profiles.boat); await type({lengthFt: '19'}); await submit();
+    return view().html;
+  }));
+  assert.ok(html.includes(m.ENTRY_COPY.failed), html);
+});
+
+test('the landing\'s Boat choice is carried to the map in session storage, or as ?boat-entry=ask when that is refused', async () => {
+  const m = await load();
+  const url = 'https://s.test/map?region=morro-bay&port=morro-bay&profile=boat';
+  const s = session();
+  assert.equal(m.carryAsk(url, s), url, 'stored: the address is unchanged');
+  assert.equal(m.takeAsk(url, s), true);
+  assert.equal(m.takeAsk(url, s), false, 'read once');
+  for (const none of [refused(), null]) {
+    const next = m.carryAsk(url, none);
+    assert.equal(new URL(next).searchParams.get('boat-entry'), 'ask');
+    assert.equal(new URL(next).searchParams.get('port'), 'morro-bay', 'the rest of the address is kept');
+    assert.equal(m.takeAsk(next, none), true);
+    assert.equal(new URL(m.withoutAsk(next)).searchParams.has('boat-entry'), false);
+  }
+  assert.equal(m.takeAsk(`${url}&boat-entry=yes`, session()), false, 'only the one value asks');
+});
+
+test('map first run: arriving from the landing\'s Boat choice asks for the boat once and drops the marker', async () => {
   const {m, storage} = await fresh({'skippercast-profile': 'boat'});
-  const s = session({'skippercast-first-use-notice': JSON.stringify(['Seas limit saved as 1 ft.'])});
-  const href = 'https://s.test/map?region=morro-bay&profile=boat&boat-notice=failed';
-  const result = await withMap(href, s, async () => {
-    const oldDocument = globalThis.document;
-    const root = new El('div');
-    globalThis.document = {createElement: n => new El(n), createElementNS: (_, n) => new El(n), createTextNode: t => Object.assign(new El('text'), {nodeType: 3, data: String(t)})};
+  const s = session({[m.ASK_KEY]: 'ask'});
+  const href = `${MAP}&profile=boat&boat-entry=ask`;
+  await withMap(href, s, () => mounted(m, firstRun(m, storage, href), storage, async ({view, type, submit}) => {
+    assert.match(view().html, /Your boat \(optional\)/);
+    assert.equal(m.boatEntryOpen.value, true, 'arrival opens the phone sheet too');
+    assert.doesNotMatch(view().html, /How do you fish\?/, 'the profile was answered on the landing');
+    assert.equal(s.map.size, 0, 'read once');
+    assert.equal(new URL(globalThis.location.href).searchParams.has('boat-entry'), false);
+    assert.equal(new URL(globalThis.location.href).searchParams.get('region'), 'morro-bay');
+    await type({lengthFt: '19'}); await submit();
+    assert.equal(JSON.parse(storage.getItem(m.BOAT_KEY)).boat.loa_ft, 19);
+  }));
+  // A carried ask with another profile in the address asks nothing.
+  const other = `${MAP}&profile=shore`;
+  await withMap(other, session({[m.ASK_KEY]: 'ask'}), () => mounted(m, firstRun(m, storage, other), storage, async ({view}) => {
+    assert.equal(view().html, '');
+  }));
+});
+
+test('landing: choosing Boat navigates at once asking the map for the boat; other choices carry nothing', async () => {
+  for (const p of ['boat', 'shore']) {
+    const {m, storage} = await fresh();
+    const s = session(), navigations = [];
+    let portStep, profileStep;
+    const oldHook = m.options.vnode;
+    m.options.vnode = v => { oldHook?.(v); if (v.type?.name === 'PortInput') portStep = v.props; if (v.type?.name === 'ProfileStep') profileStep = v.props; };
     try {
-      m.renderDOM(m.h(m.FirstRun, {href, storage, cookies: null}), root);
-      await new Promise(resolve => setTimeout(resolve, 20));
-      return {html: text(root), at: globalThis.location.href, left: s.map.size};
-    } finally {
-      m.renderDOM(null, root);
-      if (oldDocument === undefined) delete globalThis.document; else globalThis.document = oldDocument;
-    }
-  });
-  assert.ok(result.html.includes('Seas limit saved as 1 ft.') && result.html.includes(m.ENTRY_COPY.failed), result.html);
-  assert.equal(result.left, 0, 'read once');
-  assert.equal(new URL(result.at).searchParams.has('boat-notice'), false);
-  assert.equal(new URL(result.at).searchParams.get('region'), 'morro-bay');
+      await withMap('https://s.test/', s, () => mounted(m, m.h(m.LandingApp, {href: 'https://s.test/', load: false, navigate: url => navigations.push(url)}), storage, async () => {
+        portStep.onChoose({id: 'morro-bay', name: 'Morro Bay', region: 'morro-bay'});
+        await tick();
+        profileStep.onChoose(p);
+      }));
+    } finally { m.options.vnode = oldHook; }
+    assert.equal(navigations.length, 1, p);
+    assert.equal(new URL(navigations[0]).searchParams.get('profile'), p);
+    assert.equal(new URL(navigations[0]).searchParams.has('boat-entry'), false, 'session storage carried it');
+    assert.equal(s.getItem(m.ASK_KEY), p === 'boat' ? 'ask' : null, p);
+    assert.equal(storage.getItem(m.BOAT_KEY), null, `${p}: the landing saves no boat`);
+  }
 });

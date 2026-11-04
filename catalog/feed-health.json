@@ -1,9 +1,15 @@
 {
-  "description": "Freshness limits for the published feeds, shared by scripts/check_feed_freshness.py and server/watchdog.ts. A source is degraded when its status is anything but ok (stale, retained, failed, missing). Its degraded age is how old its data was when the feed was built. A critical kind fails the check only when every source of that kind in one feed (one region) is degraded past critical_degraded_hours; a critical source past the limit while others of its kind are fine is reported without failing, and other kinds only warn. max_age_hours is the fallback when a feed does not publish its own schedule.max_delay_hours. regions describes the per-region live feeds: ids come from dist/regions/index.json, and the default region is checked as the top-level conditions feed (its alias).",
+  "description": "Freshness limits for the published feeds, shared by scripts/check_feed_freshness.py and server/watchdog.ts. A source is degraded when its status is anything but ok (stale, retained, failed, missing). Its degraded age is how old its data was when the feed was built. A critical kind fails the check only when every source of that kind in one feed (one region) is degraded past critical_degraded_hours; a critical source past the limit while others of its kind are fine is reported without failing, and other kinds only warn. max_age_hours is the fallback when a feed does not publish its own schedule.max_delay_hours. regions describes the per-region live feeds: ids come from dist/regions/index.json, and the default region is checked as the top-level conditions feed (its alias). coast describes the Morro Bay coast feeds: server/coast-data.ts takes each max_age_hours as its age limit and dist/status-page.js shows one row per listed source against it.",
   "critical_kinds": ["observation", "advisory", "prediction", "forecast"],
   "feeds": {
     "conditions": {"label": "Live conditions feed", "path": "conditions/latest.json", "max_age_hours": 3, "critical_degraded_hours": 12},
     "data": {"label": "Daily data feed", "path": "data/latest.json", "max_age_hours": 36, "critical_degraded_hours": 48}
   },
-  "regions": {"label": "Live regional feed", "path": "conditions/regions/{region}/latest.json", "index": "dist/regions/index.json", "max_age_hours": 3, "critical_degraded_hours": 12}
+  "regions": {"label": "Live regional feed", "path": "conditions/regions/{region}/latest.json", "index": "dist/regions/index.json", "max_age_hours": 3, "critical_degraded_hours": 12},
+  "coast": {
+    "ocean": {"label": "Morro Bay coast ocean feed", "path": "conditions/regions/morro-bay/coast-ocean.json", "max_age_hours": 3, "sources": ["noaa-wcofs", "noaa-goes-nowcoast"]},
+    "nearshore": {"label": "Morro Bay nearshore wave feed", "path": "conditions/regions/morro-bay/nearshore.json", "max_age_hours": 3, "sources": ["cdip-mop"]},
+    "water-quality": {"label": "Morro Bay beach water-quality feed", "path": "conditions/regions/morro-bay/beach-health.json", "max_age_hours": 3, "sources": ["slo-beach-water-quality"]},
+    "history": {"label": "Morro Bay recorded history feed", "path": "data/regions/morro-bay/history.json", "max_age_hours": 192, "sources": ["ndbc-history"]}
+  }
 }
