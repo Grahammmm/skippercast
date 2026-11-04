@@ -80,6 +80,14 @@ function contourTracks(c,region,bounds,now) {
   }
   return {tracks,omitted};
 }
+// SC1322-08: a fresh named hit says which protected area; a stale or unnamed check keeps the generic refusal (null).
+function namedRefusal(screen,f,area) {
+  const inspection=screen.inspect?.({geometries:[f.geometry]});
+  const names=inspection?.fresh&&inspection.status==='excluded'?[...new Set(inspection.names||[])].filter(n=>typeof n==='string'&&n):[];
+  if(!names.length)return null;
+  const shown=names.slice(0,3).join(', ')+(names.length>3?` and ${names.length-3} more`:'');
+  return `${area?'Reef outline':'Alignment'}${typeof f.id==='string'&&f.id?` ${f.id}`:''}: Inside or within ${PLANNING_MARGIN_M} m of ${shown}. Turn off that layer or choose a different spot.`;
+}
 export function buildExport({atlas,screen,ids,layers=DEFAULT_LAYERS,region,title='SkipperCast fishing day',bounds,now=new Date(),allowResearch=false,userWaypoints:rawWaypoints=/** @type {unknown[]} */ ([]),contours=/** @type {{collection:any}|undefined} */ (undefined)}) {
   if(!screen?.ready())throw Error('Protected-area checks are unavailable or older than 36 hours. Return to the map and refresh before exporting.');
   const waypoints=userWaypoints(rawWaypoints);
@@ -96,7 +104,8 @@ export function buildExport({atlas,screen,ids,layers=DEFAULT_LAYERS,region,title
   if(features.selected.some(t=>(t.canonical_habitat&&!t.area_ids?.length)||(t.area_ids||[]).some(id=>{
     const a=atlas.areas?.find(a=>a.id===id);return !a||!screen.geometryAllowed(a.geometry);
   })))throw Error('A selected reef fails the current whole-boundary check. Choose a different spot.');
-  if([...features.areas,...features.drifts].some(f=>!screen.geometryAllowed(f.geometry)))throw Error('A selected outline or alignment intersects a protected area, or cannot be checked. Turn off that layer or choose a different spot.');
+  const refused=[...features.areas,...features.drifts].find(f=>!screen.geometryAllowed(f.geometry));
+  if(refused)throw Error(namedRefusal(screen,refused,features.areas.includes(refused))||'A selected outline or alignment intersects a protected area, or cannot be checked. Turn off that layer or choose a different spot.');
   const snapshot=screen.exportExclusions?.();
   if(layers.exclusions)for(const f of snapshot?.features||[])geometryTrack('Boundary validation','',f.geometry);
   // Avoid outlines use the current map extent, unless the user explicitly requests this whole region.
