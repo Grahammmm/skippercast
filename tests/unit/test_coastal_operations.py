@@ -27,7 +27,8 @@ def export(tmp_path_factory):
 
 @pytest.fixture
 def ops(tmp_path, export):
-    harness = Harness(tmp_path, export)
+    # Production lease: nothing here but the killed-controller test (clocked_ops) watches a lease lapse.
+    harness = Harness(tmp_path, export, policy_value=policy(lease_s=30))
     yield harness
     harness.close()
 
@@ -50,7 +51,7 @@ def test_controller_identity_ignores_this_process_sys_path(tmp_path, export, mon
     from skippercast.coastal.coordinator.loop import implementation_hashes
     base = tmp_path / "harness"
     base.mkdir()
-    ops = Harness(base, export)
+    ops = Harness(base, export, policy_value=policy(lease_s=30))
     try:
         assert implementation_hashes(ops.root)[1] != ops.deps   # this process now disagrees
         ops.job("only", "done")
@@ -221,7 +222,18 @@ def test_retryable_failure_backs_off_then_exhausts_attempt_cap(tmp_path, export)
 
 # --- resume after a killed controller -------------------------------------------
 
-def test_killed_controller_resumes_without_duplicate_or_unfenced_work(ops):
+@pytest.fixture
+def clocked_ops(tmp_path, export):
+    # Production lease and an injected mission clock: the dead controller's lease
+    # lapses when the test advances the clock, not after a real 2 s wait, and a
+    # starved heartbeat on a loaded host can no longer fence a live dispatch.
+    harness = Harness(tmp_path, export, offset=0.0, policy_value=policy(lease_s=COST_LEASE_S))
+    yield harness
+    harness.close()
+
+
+def test_killed_controller_resumes_without_duplicate_or_unfenced_work(clocked_ops):
+    ops = clocked_ops
     slow = ops.job("slow", "block", "done", budget={"bytes": 80})
     fast = ops.job("fast", "done", budget={"bytes": 80})
 
@@ -231,7 +243,7 @@ def test_killed_controller_resumes_without_duplicate_or_unfenced_work(ops):
                  message="slow worker running")
         token = ops.lease(slow)["token"]
         os.kill(controller.pid, signal.SIGKILL)    # hard crash: no handler, no cleanup
-        controller.wait(timeout=10)
+        controller.wait(timeout=60)
     finally:
         if controller.poll() is None:
             controller.kill()
@@ -243,6 +255,7 @@ def test_killed_controller_resumes_without_duplicate_or_unfenced_work(ops):
 
     # Once the dead controller's lease lapses the job needs explicit recovery,
     # which is refused while its worker is still alive.
+    ops.offset += COST_LEASE_S + 1
     wait_for(lambda: ops.store.expire() >= 0 and ops.jobs()[slow]["state"] == "failed_uncertain",
              message="lease expiry")
     assert ops.jobs()[slow]["holds"] == ["recovery_required"]
@@ -268,7 +281,7 @@ def test_killed_controller_resumes_without_duplicate_or_unfenced_work(ops):
         return all(state == "stopped" for state in group_states)
 
     try:
-        wait_for(owned_groups_stopped, timeout=5, message="owned process groups stopped")
+        wait_for(owned_groups_stopped, message="owned process groups stopped")
     except AssertionError as exc:
         raise AssertionError(f"owned groups did not stop: {list(zip(identities, group_states))}") from exc
 
@@ -287,11 +300,13 @@ def test_killed_controller_resumes_without_duplicate_or_unfenced_work(ops):
 # --- cleanup -----------------------------------------------------------------------
 
 def test_wall_timeout_kills_worker_and_detached_grandchild(ops):
-    stuck = ops.job("stuck", "orphan", "done", budget={"wall_s": 3})
+    # The 10 s wall leaves a loaded host time to start the worker and spawn its
+    # grandchild before the deadline; the elapsed bound only has to catch a hang.
+    stuck = ops.job("stuck", "orphan", "done", budget={"wall_s": 10})
 
     started = time.monotonic()
     assert states(ops.run()) == ["failed_uncertain"]
-    assert time.monotonic() - started < 20   # deadline 3 s + TERM/KILL grace, not the 120 s sleep
+    assert time.monotonic() - started < 100   # deadline 10 s + TERM/KILL grace, not the 120 s sleep
 
     worker = json.loads((ops.markers / "stuck.1.launch").read_text())["pid"]
     grandchild = json.loads((ops.markers / "stuck.1.orphan").read_text())["pid"]

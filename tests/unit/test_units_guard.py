@@ -13,9 +13,11 @@ SRC, OWNER, LIVE = ROOT / "src" / "skippercast", "util/units.py", "live loop"
 VALUES = {float(s) for s in "3.28084 3.280839895 3.2808398950131 1.94384449 1.943844492 1.9438444924406 0.3048 1.852 1852".split()}
 ALLOW = {  # path under src/skippercast -> why its literal stays; delete the entry when the module reads util.units
     **{f"pipeline/{name}.py": LIVE for name in ("coast_report", "intelligence", "ocean", "wave_ensemble")},
-    **{f"{name}.py": "offline .3048 spelling, migration not yet specced" for name in (
-        "coastal/render/terrain_only", "coastal/vertical", "platform/bottom_targets", "platform/qualified_scope",
+    "platform/bottom_targets.py": "seafloor cache-key file pinned by tests/contract/test_seafloor_key_files.py",
+    **{f"{name}.py": "seafloor/** push starts the seafloor publication workflow" for name in (
         "seafloor/habitat", "seafloor/search_areas")},
+    **{f"{name}.py": "bytes are part of the terrain-only preview binding" for name in (
+        "coastal/render/terrain_only", "coastal/vertical")},
     "monitor/collector.py": "held legacy monitor", "platform/depth_contours.py": "builder data constant mirrored by packages/coast",
     "fleet/ais/match.py": "fleet matcher kept 3.28084 by RF0708-1 (1/0.3048 flips its 20 % length verdict)",
 }

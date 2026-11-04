@@ -162,7 +162,10 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // catch flow never renders; check_contrast.mjs changes only the appCss surface hash and its comment, with contrast(),
 // assertions and thresholds untouched. Rebind those two exact hashes.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
-  "web/species.ts": "26717bd67e349d67a6483bb27d0f67afb172847647b1251addfdd5b2f69970df",
+  // SC2207-01 (#1501): species.ts changes only Plan.source_links' type member from href to url.
+  // The interface is erased at runtime; Reports/CatchCards markup, styles, paint and source data
+  // are unchanged. contrast(), assertions and thresholds are untouched. Rebind only species.ts.
+  "web/species.ts": "6c34e52ed3d9aa5e95a26646038bb7eb483e47da738e0d0f0c60ba23b6f83082",
   // BF-one-answer (#1456): App.tsx adds FirstAnswerLine and a desktop shell row. BODY09 mounts
   // Reports/CatchCards directly, never App or FirstAnswerLine; the new hook runs only when
   // FirstAnswerLine mounts. RegionInfo and Reports' id/charters reads are unchanged, with no

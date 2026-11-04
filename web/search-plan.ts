@@ -2,12 +2,12 @@
 // (web/species.ts TargetState 'plan'), read from the region's already loaded plans (regionPlans),
 // never another region's. Reviewed source text stays verbatim; Preact escapes it when rendered.
 // Erasable syntax only: tests/test_search_plan.mjs imports it by type stripping.
-import {trustworthy} from './plan.ts';
+import {sourceLinks, trustworthy, type Link} from './plan.ts';
 import type {Plan} from './species.ts';
 
 /** One line of a plan as the brief lists it: the plan file's field, the app's label for it and the file's own words. */
 export interface PlanItem {readonly field: string; readonly label: string; readonly text: string}
-export interface SearchPlan {readonly id: string; readonly name: string; readonly items: readonly PlanItem[]; readonly basis: string}
+export interface SearchPlan {readonly id: string; readonly name: string; readonly items: readonly PlanItem[]; readonly basis: string; readonly links: readonly Link[]}
 type Loaded = {readonly region: string; readonly plans: Readonly<Record<string, Plan>>} | null | undefined;
 
 const FIELDS = [['life_stage', 'Life stage'], ['search_for', 'What to search for'], ['habitat', 'Habitat'], ['presentation', 'How to fish it'],
@@ -24,7 +24,7 @@ export function planFor(target: string | null | undefined, loaded: Loaded, regio
   if (!p || typeof p !== 'object' || !trustworthy(p)) return null;
   const items: PlanItem[] = FIELDS.flatMap(([field, label]) => text(p[field]) ? [{field, label, text: p[field]}] : []);
   for (const c of Array.isArray(p.required_to_confirm) ? p.required_to_confirm : []) if (text(c)) items.push({field: 'required_to_confirm', label: 'Confirm on the day', text: c});
-  return {id: target, name: text(p.name) ? p.name : target, items, basis: text(p.tactics_basis) ? p.tactics_basis : ''};
+  return {id: target, name: text(p.name) ? p.name : target, items, basis: text(p.tactics_basis) ? p.tactics_basis : '', links: sourceLinks(p.source_links)};
 }
 
 /** The sentence added to the empty list when the target is plan-only but the region has no plan to show. */

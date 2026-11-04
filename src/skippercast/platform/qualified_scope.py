@@ -16,6 +16,7 @@ import struct
 
 from .bottom_targets import VERSION, source_url_allowed, target_prefix
 from .contracts import read_json, within, load_catalogs
+from ..util.units import M_PER_FT
 
 
 def _require(condition, message):
@@ -187,7 +188,7 @@ def _qualification(record, config):
     minimum, measured_maximum = recorded.get("minimum_ft"), recorded.get("maximum_ft")
     _require(_number(minimum, config["minimum_depth_ft"], config["depth_limit_ft"])
              and _number(measured_maximum, minimum, config["depth_limit_ft"])
-             and maximum + .001 >= measured_maximum + config["planning_margin_m"] / .3048
+             and maximum + .001 >= measured_maximum + config["planning_margin_m"] / M_PER_FT
              and _number(recorded.get("closure_clearance_m"), config["closure_clearance_m"]),
              "Native depth or closure evidence contradicts qualification")
 

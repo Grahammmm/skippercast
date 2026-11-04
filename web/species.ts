@@ -18,7 +18,7 @@ import {METHOD_RULES, PROFILE_TABLE, speciesForProfile, type PlanLike, type Prof
 import {planIndexURL} from './startup-forms.ts';
 
 /** One search plan as the target list reads it (`search-plans.json` `profiles[id]`). */
-export interface Plan extends PlanLike {readonly name?: string; readonly life_stage?: string; readonly search_for?: string; readonly habitat?: string; readonly presentation?: string; readonly method?: string; readonly timing?: string; readonly condition_response?: string; readonly caution?: string; readonly tactics_basis?: string; readonly required_to_confirm?: readonly string[]; readonly source_links?: readonly {readonly title: string; readonly href: string}[]; readonly numeric_bite_model?: boolean}
+export interface Plan extends PlanLike {readonly name?: string; readonly life_stage?: string; readonly search_for?: string; readonly habitat?: string; readonly presentation?: string; readonly method?: string; readonly timing?: string; readonly condition_response?: string; readonly caution?: string; readonly tactics_basis?: string; readonly required_to_confirm?: readonly string[]; readonly source_links?: readonly {readonly title: string; readonly url: string}[]; readonly numeric_bite_model?: boolean}
 /**
  * Where a target comes from (FE-54): a SkipperCast search plan, the profile's own species with no
  * plan here, a coast habitat target the terrain scores, or the link's own target. The menu groups
