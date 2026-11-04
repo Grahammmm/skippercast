@@ -79,7 +79,11 @@ for (const [query, region, profile] of cells) test(`${query} → ${profile} → 
     expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('funnel-actions')!))).toEqual(['input', 'Enter', 'click']);
     if (query === 'morro' && profile === 'boat') {
       await page.evaluate(() => sessionStorage.setItem('funnel-actions', '[]'));
-      const returning = Date.now(); await page.goto('/'); await page.reload();
+      const returning = Date.now(); await page.goto('/');
+      // The saved-port lookup redirects asynchronously; do not reload the
+      // landing while its replacement navigation is still in flight.
+      await page.waitForURL(/\/map\?/, {waitUntil: 'load'});
+      await page.reload();
       await expect(page).toHaveURL(/\/map\?/);
       await verdict(page, returning, `${info.project.name}/returning`);
       expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('funnel-actions')!))).toEqual([]);
