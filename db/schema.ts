@@ -15,6 +15,14 @@ export const trips=sqliteTable('trips',{
   launchPoint:text('launch_point'),targets:text('targets'),plan:text('plan'),
   status:text('status').notNull().default('planned'),updatedAt:text('updated_at'),
 },t=>[index('trip_owner').on(t.owner),index('trip_due').on(t.enabled,t.date)]);
+// BF-catch-log: the account's own private effort log (server/routes/catch-log.ts). A blank is a
+// first-class outcome. Coordinates are private and never leave the owner's own routes, export included.
+export const catchLog=sqliteTable('catch_log',{
+  id:text('id').primaryKey(),owner:text('owner').notNull(),tripId:text('trip_id'),
+  startedAt:text('started_at').notNull(),endedAt:text('ended_at'),method:text('method'),species:text('species'),
+  outcome:text('outcome').notNull(),count:integer('count').notNull().default(0),
+  lat:real('lat'),lon:real('lon'),note:text('note'),createdAt:text('created_at').notNull(),
+},t=>[index('catch_log_owner').on(t.owner,t.startedAt)]);
 export const subscriptions=sqliteTable('subscriptions',{
   id:text('id').primaryKey(),owner:text('owner').notNull(),endpoint:text('endpoint').notNull(),
   p256dh:text('p256dh').notNull(),auth:text('auth').notNull(),createdAt:text('created_at').notNull(),
