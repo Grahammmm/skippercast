@@ -125,11 +125,11 @@ test('6: two cards opened together share one read: one fetch per file, both reso
   const a = loadRegs(MORRO, s.fetchFn).then(() => done.push('a'));
   const b = loadRegs(MORRO, s.fetchFn).then(() => done.push('b'));
   await new Promise(r => setTimeout(r, 10));
-  assert.deepEqual(s.urls, [COPY, COMMITTED], 'the second card waits on the first read');
+  assert.deepEqual(s.urls, [COPY, daily('morro-bay'), COMMITTED], 'startup copy and daily start together; the second card shares the read');
   assert.equal(done.length, 0, 'neither resolves before the read');
   release();
   await Promise.all([a, b]);
-  assert.deepEqual(s.urls, [COPY, COMMITTED, daily('morro-bay')], 'one fetch per file');
+  assert.deepEqual(s.urls, [COPY, daily('morro-bay'), COMMITTED], 'one fetch per file');
   assert.ok(shown('morro-bay'), 'both resolve after the registry shows');
 });
 
@@ -247,4 +247,13 @@ test('9: the mounted card line asks again when another mark in the region is sel
     globalThis.fetch = realFetch;
     if (hadDocument) globalThis.document = realDocument; else delete globalThis.document;
   }
+});
+
+test('10: both files are asked together; a registry 503 beside a daily SyntaxError is still asked again', async () => {
+  fresh();
+  const s = server({[COMMITTED]: 503, [daily('morro-bay')]: 'bad-json'});
+  const p = loadRegs(MORRO, s.fetchFn);
+  assert.equal(s.urls.length, 2, 'both requests are made before either answer is awaited');
+  await p; await loadRegs(MORRO, s.fetchFn);
+  assert.equal(s.urls.length, 6, 'the 503 is transient: the next card asks again, including the startup copy');
 });

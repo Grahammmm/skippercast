@@ -91,10 +91,13 @@ test('planner: routed legs drop the straight-line clause; a straight leg is labe
       export {createPlanner} from './web/planner.ts';
       export {cruiseSpeed} from './web/limits.ts';
       export {landWater, loadLandWaterLines, resetLandWater} from './web/land-water.ts';
+      export {protectedScreen} from './web/trip.ts';
       export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
     const m = await import(pathToFileURL(out).href);
     const screen = {ready: () => true, pointAllowed: () => true, geometryAllowed: () => true};
+    // SC1952-06: the planner's shared screen for this region is loaded and clear, so no leg carries a protected-area line.
+    m.protectedScreen.value = {state: 'loaded', region: 'fixture', screen};
     const home = cell(4, 8), spots = [cell(10, 8), cell(16, 8)];
     const targets = spots.map((p, i) => ({id: `s${i}`, label: `Spot ${i}`, latitude: p.lat, longitude: p.lon, neighborhood_depth_ft: [90, 110]}));
     const model = m.createPlanner({atlas: {targets, areas: []}, screen,
@@ -144,6 +147,101 @@ test('planner: routed legs drop the straight-line clause; a straight leg is labe
       markup = html();
       assert.deepEqual(legs(markup).map(t => / nm straight line/.test(t)), [false, false, false], legs(markup).join(' | '));
       assert.doesNotMatch(markup, CLAUSE); assert.match(markup, SEA);
-    } finally { model.dispose(); m.resetLandWater(); }
+    } finally { model.dispose(); m.resetLandWater(); m.protectedScreen.value = {state: 'idle'}; }
+  } finally { await rm(dir, {recursive: true, force: true}); }
+});
+
+// SC1952-06: each displayed leg carries the verdict for the line it draws, from the planner's shared screen for this region.
+const NAME = '<img src=x onerror=alert(1)> Reserve';
+const box = (p, d = 0.0004) => ({type: 'Polygon', coordinates: [[[p.lon - d, p.lat - d], [p.lon + d, p.lat - d], [p.lon + d, p.lat + d], [p.lon - d, p.lat + d], [p.lon - d, p.lat - d]]]});
+/** The planner's screen shape (protected-areas.js): fresh, with a closure list a test may change. */
+const closures = list => ({ready: () => true, pointAllowed: () => true, geometryAllowed: () => true,
+  exportExclusions: () => ({checked_at: new Date().toISOString(), features: list.map(geometry => ({type: 'Feature', properties: {NAME}, geometry}))})});
+
+test('SC1952-06 planner legs: unchecked screens read not checked; crossing, detour, connector and fallback legs show their own screen line', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'trip-legs-screen-')), out = join(dir, 'ui.mjs');
+  try {
+    await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
+      export {Planner} from './web/app/Planner.tsx';
+      export {createPlanner} from './web/planner.ts';
+      export {cruiseSpeed} from './web/limits.ts';
+      export {landWater, resetLandWater} from './web/land-water.ts';
+      export {waterRoute} from './web/route.ts';
+      export {protectedScreen} from './web/trip.ts';
+      export {screenPlace} from './dist/geo-screen.js';
+      export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
+    bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+    const m = await import(pathToFileURL(out).href);
+    const clear = {ready: () => true, pointAllowed: () => true, geometryAllowed: () => true};
+    const home = cell(4, 8), spots = [cell(10, 8), cell(16, 8)];
+    const targets = spots.map((p, i) => ({id: `s${i}`, label: `Spot ${i}`, latitude: p.lat, longitude: p.lon, neighborhood_depth_ft: [90, 110]}));
+    const model = m.createPlanner({atlas: {targets, areas: []}, screen: clear,
+      region: {id: 'fixture', timezone: 'UTC', mpa: {bounds: [-180, -90, 180, 90]}}, storage: null, emit() {},
+      map: {getSize: () => ({x: 1}), getBounds: () => ({getWest: () => -180, getSouth: () => -90, getEast: () => 180, getNorth: () => 90})},
+      getVisible: () => [], nav: {open() {}, showMap() {}, conditions() {}}, loadPorts: async () => ({ports: []})});
+    const NOT_CHECKED = ' · Protected areas not checked';
+    try {
+      await new Promise(resolve => setTimeout(resolve, 0));
+      model.setResearch(true); model.toggleSpot('s0', true); model.toggleSpot('s1', true);
+      model.ports.value = [{id: 'home', name: 'Home', match: [home.lat, home.lon]}]; model.setFilter('port', 'home');
+      m.cruiseSpeed.value = 20;
+      const lines = () => [...m.render(m.h(m.Planner, {model, open: false})).matchAll(/<li>([^<]*)<\/li>/g)].map(x => x[1]).filter(t => t.includes('→'));
+      const shows = screenState => { m.protectedScreen.value = screenState; return lines(); };
+      const loaded = screen => ({state: 'loaded', region: 'fixture', screen});
+      const ESC = '&lt;img src=x onerror=alert(1)> Reserve';
+
+      // No screen for this region reads not checked on every leg, never clear.
+      m.landWater.value = {region: 'other', state: 'ready', model: null, lines: null, linesLoading: false};
+      for (const state of [{state: 'idle'}, {state: 'loading'}, {state: 'failed'}, {state: 'loaded', region: 'another-region', screen: clear}]) {
+        const text = shows(state);
+        assert.equal(text.length, 3, JSON.stringify(state));
+        assert.ok(text.every(t => t.endsWith(NOT_CHECKED)), `${JSON.stringify(state)}: ${text.join(' | ')}`);
+      }
+      // A loaded screen that cannot say (not ready) reads not checked too; a clear one adds no line and no "safe" claim.
+      assert.ok(shows(loaded({ready: () => false, pointAllowed: () => true, geometryAllowed: () => true})).every(t => t.endsWith(NOT_CHECKED)));
+      const clean = shows(loaded(closures([])));
+      assert.ok(clean.every(t => /min$/.test(t) && !/protected|safe|clear/i.test(t)), clean.join(' | '));
+
+      // Straight fallback legs (no product for this region): a closure across the middle of leg 2 screens that leg's straight line.
+      const mid = {lat: spots[0].lat, lon: (spots[0].lon + spots[1].lon) / 2};
+      const list = [box(mid)];
+      let text = shows(loaded(closures(list)));
+      assert.ok(!text[0].includes('Inside'), 'leg 1 is clear: ' + text[0]);
+      assert.ok(text[1].endsWith(` · Inside ${ESC}`), text[1]);
+      assert.ok(text[2].endsWith(` · Inside ${ESC}`), 'the way home crosses it too: ' + text[2]);
+      assert.ok(!m.render(m.h(m.Planner, {model, open: false})).includes('<img'), 'closure names are escaped');
+      // The closure list changes (new boundaries): the legs follow the shared screen's current contents.
+      list.length = 0; model.tick.value++;
+      assert.ok(lines().every(t => !t.includes('Inside')));
+      // Near but not inside: leg 1 and the way home pass 30 m from a closure at column 7.
+      const col7 = cell(7, 8); list.push(box({lat: col7.lat - 0.0003 - 0.0004, lon: col7.lon}, 0.0004));
+      text = lines();
+      const nearLine = new RegExp(`^.* · (\\d+) m from ${ESC.replace(/[()]/g, '\\$&')}$`);
+      assert.match(text[0], nearLine); assert.ok(Number(text[0].match(nearLine)[1]) <= 70);
+      assert.ok(!/ m from | Inside /.test(text[1]), 'leg 2 never reaches column 7: ' + text[1]);
+      list.length = 0;
+
+      // A land block between the spots: the routed detour clears a closure that the straight chord crosses.
+      const block = product([['l', 12, 6, 13, 11]]);
+      m.landWater.value = ready(block);
+      const route = m.waterRoute(block, null, {latitude: spots[0].lat, longitude: spots[0].lon}, {latitude: spots[1].lat, longitude: spots[1].lon});
+      assert.ok(route.ok && route.points.length > 0, 'a detour exists');
+      const chord = {type: 'LineString', coordinates: [[spots[0].lon, spots[0].lat], [spots[1].lon, spots[1].lat]]};
+      const path = [spots[0], ...route.points.map(p => ({lat: p.latitude, lon: p.longitude})), spots[1]];
+      const polyline = {type: 'LineString', coordinates: path.map(p => [p.lon, p.lat])};
+      const over = cell(12, 8); list.push(box({lat: over.lat, lon: (cell(12, 8).lon + cell(13, 8).lon) / 2}, 0.0003));
+      assert.equal(m.screenPlace(closures(list), {geometry: chord}).inside, true, 'the chord crosses the closure');
+      assert.equal(m.screenPlace(closures(list), {geometry: polyline}).inside, false, 'the routed detour does not');
+      text = shows(loaded(closures(list)));
+      assert.ok(text.slice(1).every(t => !t.includes('Inside')), 'detour legs read clear: ' + text.join(' | '));
+      // The reverse: the closure sits on the detour's far bend, away from the chord; the routed line (not the chord) is screened.
+      const far = path.reduce((best, p) => Math.abs(p.lat - spots[0].lat) > Math.abs(best.lat - spots[0].lat) ? p : best);
+      list.length = 0; list.push(box(far, 0.0002));
+      assert.equal(m.screenPlace(closures(list), {geometry: chord}).inside, false, 'the chord is clear');
+      assert.equal(m.screenPlace(closures(list), {geometry: polyline}).inside, true, 'the routed line crosses');
+      text = shows(loaded(closures(list)));
+      assert.ok(text[1].endsWith(` · Inside ${ESC}`), 'routed line screened: ' + text[1]);
+      assert.ok(!text[1].includes('straight line'), 'the leg is routed, not the straight fallback');
+    } finally { model.dispose(); m.resetLandWater(); m.protectedScreen.value = {state: 'idle'}; }
   } finally { await rm(dir, {recursive: true, force: true}); }
 });

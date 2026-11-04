@@ -60,13 +60,14 @@ export type LandingAppProps = {
 };
 
 /**
- * Tomorrow's answer for the reference boat, as the app's lead gives it; below the funnel, so nothing above the port input moves.
+ * Tomorrow's answer for the boat saved on this device (else the reference boat), named, as the app's lead gives it; below the funnel, so nothing above the port input moves.
  * SC1322-06: `saved` (the Worker is past its cost ceiling, web/degraded.ts) labels it as from saved copies, not current.
  */
 export const LiveVerdict = ({v, saved = false}: {v: LandingVerdict; saved?: boolean}) => (
   <section class="landing-verdict" aria-live="polite" aria-label={saved ? 'Tomorrow’s brief, from saved copies' : 'Tomorrow’s brief'} data-day={v.date} data-degraded={saved ? 'cost-ceiling' : undefined}>
-    <p class="landing-verdict-head">{saved ? 'From saved copies, not live: ' : null}{v.day} near {v.place}, reference 23 ft boat: <strong class="landing-verdict-word" data-verdict={v.verdict}>{v.word}</strong></p>
+    <p class="landing-verdict-head">{saved ? 'From saved copies, not live: ' : null}{v.day} near {v.place}, {v.boatName}: <strong class="landing-verdict-word" data-verdict={v.verdict}>{v.word}</strong></p>
     <p class="landing-verdict-limit">{v.sentence}</p>
+    {v.boatNote ? <p class="landing-verdict-note">{v.boatNote}</p> : null}
     <a class="landing-verdict-link" href={v.href}>Open the full brief</a>
   </section>
 );

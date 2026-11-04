@@ -25,7 +25,7 @@ California's outer coast, in regional packages. `active` is the main reviewed pa
 | Point Sal to Point Conception · Cambria–San Simeon · South Big Sur to San Simeon · Big Sur outer coast | `preview` |
 | Monterey Peninsula to Point Sur · Pigeon Point to Monterey Bay · Point Reyes to Pigeon Point | `preview` |
 | Bodega Bay to Point Reyes · Point Arena to northern Sonoma · Fort Bragg to Point Arena | `preview` |
-| Shelter Cove to Fort Bragg · Humboldt Bay to Cape Mendocino · Crescent City & Del Norte | `preview` |
+| Shelter Cove to Fort Bragg · Humboldt Bay to Cape Mendocino · Trinidad to Klamath River · Crescent City & Del Norte | `preview` |
 
 The whole coast can also be browsed by CDFW's five ocean regions, with seasonal species and protected areas ([coastal directory](docs/coastal-directory.md)). The package list is generated in [`dist/regions/index.json`](dist/regions/index.json).
 
