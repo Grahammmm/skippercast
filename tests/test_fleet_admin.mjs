@@ -370,3 +370,247 @@ test('the link statement is one-to-one by itself: a link that lost a race writes
     assert.equal(row(sql, 'SELECT fleet_vessel_id FROM advisor_boats WHERE id=?', 'boat-a1').fleet_vessel_id, null);
   } finally { sql.close(); }
 });
+
+// ---- SC0707-02: a removal request erases the operator's outreach -------------------------------------------------
+// Design § 5 Retention: removal_requested deletes every fleet_outreach row of the vessel's operator in the same D1 batch
+// as the removal date; the operator's current consent stays on fleet_operators. Offline, synthetic data, no network.
+const OTHER_OPERATOR = 'op-test-0000000000000002';
+const TABLES = ['fleet_outreach', 'fleet_operators', 'fleet_vessels', 'fleet_vessel_facts', 'fleet_changes', 'fleet_reviews', 'fleet_aliases', 'fleet_offerings'];
+const snapshot = sql => JSON.stringify(TABLES.map(t => sql.prepare(`SELECT * FROM ${t} ORDER BY 1,2`).all()));
+const outreachOf = (sql, op) => sql.prepare('SELECT * FROM fleet_outreach WHERE operator_id=? ORDER BY id').all(op).map(r => ({...r}));
+const removal = {fields: {profile_status: 'hidden'}, removal_requested: true};
+const CONSENT_COLUMNS = 'consent_status,consent_scope_json,consent_recorded_at,consent_recorded_by,consent_revoked_at,outreach_status';
+
+function addOperator(sql, id, slug) {
+  sql.prepare('INSERT INTO fleet_operators(id,region,slug,name,created_at,updated_at) VALUES(?,?,?,?,?,?)').run(id, REGION, slug, `Operator ${slug}`, T0, T0);
+}
+/** `count` synthetic outreach rows for an operator, cycling through every kind and status. */
+function seedOutreach(sql, operator, count, tag) {
+  const kinds = ['note', 'draft', 'sent-by-owner', 'reply'], statuses = ['draft', 'approved', 'discarded', 'logged'];
+  const insert = sql.prepare('INSERT INTO fleet_outreach(id,operator_id,kind,channel,body,status,created_by,created_at,approved_by,approved_at) VALUES(?,?,?,?,?,?,?,?,?,?)');
+  for (let i = 0; i < count; i++) {
+    const status = statuses[(i >> 2) % 4];
+    insert.run(`${tag}-${String(i).padStart(4, '0')}`, operator, kinds[i % 4], i % 2 ? 'email' : null, `Synthetic ${tag} ${i}.`, status, ADMIN, T0,
+      status === 'approved' ? ADMIN : null, status === 'approved' ? T0 : null);
+  }
+}
+/** Run a test body with fetch refused, restoring it afterwards. */
+async function offline(body) {
+  const saved = globalThis.fetch;
+  globalThis.fetch = async url => { throw new Error(`unexpected network call: ${url}`); };
+  try { return await body(); } finally { globalThis.fetch = saved; }
+}
+/** A database whose statements matching `pattern` throw when the real adapter's batch runs them (inside its transaction). */
+function failingDb(db, pattern) {
+  return {
+    batch: statements => db.batch(statements),
+    prepare(query) {
+      const statement = db.prepare(query);
+      if (!pattern.test(query)) return statement;
+      return {bind(...args) { statement.bind(...args); return this; }, run: async () => { throw new Error('injected statement failure'); }};
+    },
+  };
+}
+
+test('removal_erases_all_operator_outreach_including_consent_history', {skip}, () => offline(async () => {
+  const {sql, db} = setup();
+  try {
+    addOperator(sql, OTHER_OPERATOR, 'other-landing');
+    // A real consent change and a status change leave their audit notes through the operator route, plus drafts in each state.
+    assert.equal((await post(db, `/api/admin/fleet/operators/${OPERATOR}`, {consent_status: 'content-sharing', consent_scope: ['profile'], consent_note: 'Agreed by phone (synthetic).'})).status, 200);
+    assert.equal((await post(db, `/api/admin/fleet/operators/${OPERATOR}`, {outreach_status: 'contacted', outreach_note: 'Called.'})).status, 200);
+    const draft = (await post(db, `/api/admin/fleet/operators/${OPERATOR}/outreach`, {kind: 'draft', channel: 'email', body: 'Draft (synthetic).'})).body.outreach.id;
+    assert.equal((await post(db, `/api/admin/fleet/outreach/${draft}`, {action: 'approve'})).status, 200);
+    assert.equal((await post(db, `/api/admin/fleet/outreach/${draft}`, {action: 'log-sent'})).status, 200);
+    seedOutreach(sql, OPERATOR, 240, 'mine');   // more than the 200-row log page
+    seedOutreach(sql, OTHER_OPERATOR, 7, 'theirs');
+    const mine = outreachOf(sql, OPERATOR);
+    assert.equal(mine.filter(r => /^Consent |^Outreach status /.test(r.body)).length, 2, 'the consent change and the status change each left an audit note');
+    assert.ok(mine.length > 240);
+    assert.deepEqual([...new Set(mine.map(r => r.kind))].sort(), ['draft', 'note', 'reply', 'sent-by-owner']);
+    assert.deepEqual([...new Set(mine.map(r => r.status))].sort(), ['approved', 'discarded', 'draft', 'logged']);
+    const theirs = JSON.stringify(outreachOf(sql, OTHER_OPERATOR));
+    const operators = JSON.stringify(sql.prepare('SELECT * FROM fleet_operators ORDER BY id').all());
+    const consentBefore = row(sql, `SELECT ${CONSENT_COLUMNS} FROM fleet_operators WHERE id=?`, OPERATOR);
+    assert.equal(consentBefore.consent_status, 'content-sharing');
+
+    const done = await post(db, `/api/admin/fleet/vessels/${vid(1)}`, removal);
+    assert.equal(done.status, 200, JSON.stringify(done.body));
+    assert.ok(done.body.vessel.removal_requested_at);
+    assert.equal(done.body.vessel.profile_status, 'hidden');
+    assert.equal(outreachOf(sql, OPERATOR).length, 0, 'every row of the vessel operator is gone, audit notes included');
+    assert.equal(JSON.stringify(outreachOf(sql, OTHER_OPERATOR)), theirs, 'another operator outreach is untouched');
+    assert.equal(JSON.stringify(sql.prepare('SELECT * FROM fleet_operators ORDER BY id').all()), operators, 'fleet_operators is byte-for-byte unchanged');
+    assert.deepEqual(row(sql, `SELECT ${CONSENT_COLUMNS} FROM fleet_operators WHERE id=?`, OPERATOR), consentBefore);
+    assert.deepEqual(JSON.parse(consentBefore.consent_scope_json), {scope: ['profile'], note: 'Agreed by phone (synthetic).'});
+  } finally { sql.close(); }
+}));
+
+test('removal_with_listed_sibling_is_operator_wide_only_for_outreach', {skip}, () => offline(async () => {
+  const {sql, db} = setup();
+  try {
+    sql.prepare("UPDATE fleet_vessels SET profile_status='listed',map_display_consent='aggregate' WHERE id=?").run(vid(2));
+    seedOutreach(sql, OPERATOR, 12, 'shared');
+    const sibling = JSON.stringify(row(sql, 'SELECT * FROM fleet_vessels WHERE id=?', vid(2)));
+    const factsOf = id => JSON.stringify(sql.prepare('SELECT * FROM fleet_vessel_facts WHERE vessel_id=? ORDER BY id').all(id));
+    const siblingFacts = factsOf(vid(2)), targetFact = JSON.stringify(row(sql, 'SELECT * FROM fleet_vessel_facts WHERE id=?', 'f'.repeat(32)));
+
+    const done = await post(db, `/api/admin/fleet/vessels/${vid(1)}`, removal);
+    assert.equal(done.status, 200, JSON.stringify(done.body));
+    assert.equal(outreachOf(sql, OPERATOR).length, 0, 'the sibling shares the operator, so the operator outreach goes too');
+    assert.equal(done.body.vessel.profile_status, 'hidden');
+    assert.ok(done.body.vessel.removal_requested_at);
+    assert.equal(JSON.stringify(row(sql, 'SELECT * FROM fleet_vessels WHERE id=?', vid(2))), sibling, 'the listed sibling keeps its row, status and map consent');
+    assert.equal(row(sql, 'SELECT removal_requested_at FROM fleet_vessels WHERE id=?', vid(2)).removal_requested_at, null);
+    assert.equal(factsOf(vid(2)), siblingFacts);
+    // The edit adds its own admin fact for the hide; the registry fact the vessel already had is still there, unchanged.
+    assert.equal(JSON.stringify(row(sql, 'SELECT * FROM fleet_vessel_facts WHERE id=?', 'f'.repeat(32))), targetFact, 'the requested vessel registry facts are not deleted');
+    assert.equal(row(sql, 'SELECT operator_id FROM fleet_vessels WHERE id=?', vid(1)).operator_id, OPERATOR, 'the operator link stays');
+  } finally { sql.close(); }
+}));
+
+test('removal_null_operator_and_repeat_are_safe', {skip}, () => offline(async () => {
+  const {sql, db} = setup();
+  try {
+    addOperator(sql, OTHER_OPERATOR, 'other-landing');
+    seedOutreach(sql, OPERATOR, 5, 'mine');
+    seedOutreach(sql, OTHER_OPERATOR, 5, 'theirs');
+    // A vessel with no operator: the removal succeeds and deletes nothing, for anyone.
+    const before = JSON.stringify([outreachOf(sql, OPERATOR), outreachOf(sql, OTHER_OPERATOR)]);
+    const none = await post(db, `/api/admin/fleet/vessels/${vid(3)}`, removal);
+    assert.equal(none.status, 200, JSON.stringify(none.body));
+    assert.ok(none.body.vessel.removal_requested_at);
+    assert.equal(JSON.stringify([outreachOf(sql, OPERATOR), outreachOf(sql, OTHER_OPERATOR)]), before);
+    // An unchanged operator_id alongside the request is allowed.
+    const same = await post(db, `/api/admin/fleet/vessels/${vid(1)}`, {fields: {profile_status: 'hidden', operator_id: OPERATOR}, removal_requested: true});
+    assert.equal(same.status, 200, JSON.stringify(same.body));
+    assert.equal(outreachOf(sql, OPERATOR).length, 0);
+    assert.equal(outreachOf(sql, OTHER_OPERATOR).length, 5);
+    const first = same.body.vessel.removal_requested_at;
+    // A repeat is a success, keeps the first date and clears notes added since.
+    seedOutreach(sql, OPERATOR, 3, 'later');
+    const repeat = await post(db, `/api/admin/fleet/vessels/${vid(1)}`, {removal_requested: true});
+    assert.equal(repeat.status, 200, JSON.stringify(repeat.body));
+    assert.equal(repeat.body.vessel.removal_requested_at, first);
+    assert.equal(outreachOf(sql, OPERATOR).length, 0);
+    // Hiding, unhiding and ordinary edits never delete outreach, and unhiding does not bring anything back.
+    seedOutreach(sql, OPERATOR, 3, 'again');
+    for (const fields of [{profile_status: 'listed'}, {profile_status: 'hidden'}, {bunks: 2}]) {
+      assert.equal((await post(db, `/api/admin/fleet/vessels/${vid(1)}`, {fields})).status, 200, JSON.stringify(fields));
+      assert.equal(outreachOf(sql, OPERATOR).length, 3, JSON.stringify(fields));
+    }
+    // A later admin note is accepted (no permanent tombstone), and a new removal request clears it.
+    assert.equal((await post(db, `/api/admin/fleet/operators/${OPERATOR}/outreach`, {kind: 'note', body: 'Spoke to them.'})).status, 200);
+    assert.equal(outreachOf(sql, OPERATOR).length, 4);
+    assert.equal((await post(db, `/api/admin/fleet/vessels/${vid(1)}`, {removal_requested: true})).status, 200);
+    assert.equal(outreachOf(sql, OPERATOR).length, 0);
+    assert.equal(outreachOf(sql, OTHER_OPERATOR).length, 5);
+  } finally { sql.close(); }
+}));
+
+test('removal_validation_and_access_never_erase', {skip}, () => offline(async () => {
+  const {sql, db} = setup();
+  try {
+    addOperator(sql, OTHER_OPERATOR, 'other-landing');
+    seedOutreach(sql, OPERATOR, 6, 'mine');
+    seedOutreach(sql, OTHER_OPERATOR, 6, 'theirs');
+    const before = snapshot(sql);
+    const path = `/api/admin/fleet/vessels/${vid(1)}`;
+    const refused = async (payload, status, error, label) => {
+      const result = await post(db, path, payload);
+      assert.equal(result.status, status, `${label}: ${JSON.stringify(result.body)}`);
+      if (error) assert.equal(result.body.error, error, label);
+      assert.equal(snapshot(sql), before, `${label} changed a table`);
+    };
+    await refused({fields: {profile_status: 'hidden', operator_id: OTHER_OPERATOR}, removal_requested: true}, 400, 'removal_requested cannot change operator_id', 'reassign');
+    await refused({fields: {profile_status: 'hidden', operator_id: null}, removal_requested: true}, 400, 'removal_requested cannot change operator_id', 'clear operator');
+    await refused({removal_requested: true}, 400, 'removal_requested needs profile_status hidden', 'not hidden');
+    await refused({fields: {profile_status: 'listed'}, removal_requested: true}, 400, 'removal_requested needs profile_status hidden', 'listed');
+    await refused({fields: {profile_status: 'hidden'}, removal_requested: false}, 400, 'removal_requested must be true', 'false');
+    await refused({fields: {profile_status: 'hidden'}, removal_requested: 'yes'}, 400, 'removal_requested must be true', 'string');
+    await refused({fields: {profile_status: 'hidden', slug: 'new-slug'}, removal_requested: true}, 400, null, 'malformed fields');
+    await refused({fields: {profile_status: 'hidden', mmsi: '12'}, removal_requested: true}, 400, null, 'bad mmsi');
+    await refused({fields: {profile_status: 'hidden'}, unpin: ['slug'], removal_requested: true}, 400, null, 'malformed unpin');
+    await refused({fields: {profile_status: 'hidden', mmsi: '366000003'}, unpin: ['mmsi'], removal_requested: true}, 400, null, 'set and unpin');
+    await refused({fields: {profile_status: 'hidden'}, removal_requested: true, extra: 1}, 400, null, 'unknown key');
+
+    // An unreadable pinned_json refuses with 409 before any write.
+    sql.prepare("UPDATE fleet_vessels SET pinned_json='not json' WHERE id=?").run(vid(1));
+    const pinned = snapshot(sql);
+    assert.equal((await post(db, path, removal)).status, 409);
+    assert.equal(snapshot(sql), pinned);
+    sql.prepare("UPDATE fleet_vessels SET pinned_json='{}' WHERE id=?").run(vid(1));
+
+    // Missing vessels, wrong callers, the flag off and a foreign Origin all leave every table alone.
+    const unchanged = snapshot(sql);
+    assert.equal((await post(db, `/api/admin/fleet/vessels/${'0'.repeat(32)}`, removal)).status, 404);
+    assert.equal((await post(db, '/api/admin/fleet/vessels/not-an-id', removal)).status, 404);
+    assert.equal((await post(db, path, removal, {owner: 'someone-else'})).status, 404);
+    assert.equal((await post(db, path, removal, {extra: {}})).status, 404);
+    assert.ok([401, 404].includes((await post(db, path, removal, {owner: null})).status));
+    const foreign = await worker.fetch(new Request(ORIGIN + path, {method: 'POST', headers: {'Content-Type': 'application/json', Origin: 'https://evil.example.com', 'x-test-owner': ADMIN},
+      body: JSON.stringify(removal)}), env(db));
+    assert.ok(foreign.status >= 400 && foreign.status < 500, `foreign Origin: ${foreign.status}`);
+    assert.equal(snapshot(sql), unchanged);
+    assert.equal(outreachOf(sql, OPERATOR).length, 6);
+  } finally { sql.close(); }
+}));
+
+test('removal_batch_failure_rolls_back_every_write', {skip}, () => offline(async () => {
+  const {editVessel} = await import('../server/fleet/admin/vessels.ts');
+  const {sql, db} = setup();
+  try {
+    seedOutreach(sql, OPERATOR, 9, 'mine');
+    assert.equal((await post(db, `/api/admin/fleet/vessels/${vid(1)}`, {fields: {passengers_max: 24}})).status, 200);   // pins passengers_max
+    const input = {fields: {profile_status: 'hidden', bunks: 2}, unpin: ['passengers_max'], removal_requested: true};
+    const before = snapshot(sql);
+    assert.equal(pins(sql, vid(1)).passengers_max?.by, ADMIN);
+
+    // The deletion itself fails inside the real transaction: the removal date, hide, fact, pin and unpin writes around it roll back.
+    await assert.rejects(editVessel(failingDb(db, /DELETE FROM fleet_outreach/), vid(1), input, ADMIN, T1), /injected statement failure/);
+    assert.equal(snapshot(sql), before);
+    assert.equal(row(sql, 'SELECT removal_requested_at FROM fleet_vessels WHERE id=?', vid(1)).removal_requested_at, null);
+
+    // A later statement fails after the deletion has run: the deletion rolls back too.
+    const afterDelete = {prepare: q => db.prepare(q), batch: statements => db.batch([...statements, {run: async () => { throw new Error('injected later failure'); }}])};
+    await assert.rejects(editVessel(afterDelete, vid(1), input, ADMIN, T1), /injected later failure/);
+    assert.equal(snapshot(sql), before);
+    assert.equal(outreachOf(sql, OPERATOR).length, 9);
+
+    // The same request on the working adapter does all of it.
+    const ok = await editVessel(db, vid(1), input, ADMIN, T1);
+    assert.equal(ok.status, 'ok');
+    assert.notEqual(snapshot(sql), before);
+    assert.equal(outreachOf(sql, OPERATOR).length, 0);
+    assert.equal(row(sql, 'SELECT removal_requested_at FROM fleet_vessels WHERE id=?', vid(1)).removal_requested_at, T1);
+    assert.equal(pins(sql, vid(1)).passengers_max, undefined);
+  } finally { sql.close(); }
+}));
+
+test('removal_uses_batch_time_operator', {skip}, () => offline(async () => {
+  const {editVessel} = await import('../server/fleet/admin/vessels.ts');
+  const {sql, db} = setup();
+  try {
+    addOperator(sql, OTHER_OPERATOR, 'other-landing');
+    seedOutreach(sql, OPERATOR, 4, 'old');
+    seedOutreach(sql, OTHER_OPERATOR, 4, 'new');
+    // The vessel moves to another operator after the checks and before the batch runs; the deletion follows the vessel then, not a stale read.
+    const racing = {prepare: q => db.prepare(q), batch: statements => {
+      sql.prepare('UPDATE fleet_vessels SET operator_id=? WHERE id=?').run(OTHER_OPERATOR, vid(1));
+      return db.batch(statements);
+    }};
+    const result = await editVessel(racing, vid(1), removal, ADMIN, T1);
+    assert.equal(result.status, 'ok');
+    assert.equal(outreachOf(sql, OTHER_OPERATOR).length, 0, 'the operator the vessel had when the batch ran');
+    assert.equal(outreachOf(sql, OPERATOR).length, 4, 'not the operator read before the batch');
+    // Cleared to no operator before the batch: a NULL match deletes nothing.
+    seedOutreach(sql, OPERATOR, 2, 'x'); seedOutreach(sql, OTHER_OPERATOR, 2, 'y');
+    const cleared = {prepare: q => db.prepare(q), batch: statements => {
+      sql.prepare('UPDATE fleet_vessels SET operator_id=NULL WHERE id=?').run(vid(1));
+      return db.batch(statements);
+    }};
+    assert.equal((await editVessel(cleared, vid(1), {removal_requested: true}, ADMIN, T1)).status, 'ok');
+    assert.equal(outreachOf(sql, OPERATOR).length, 6);
+    assert.equal(outreachOf(sql, OTHER_OPERATOR).length, 2);
+  } finally { sql.close(); }
+}));

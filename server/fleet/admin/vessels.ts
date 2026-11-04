@@ -115,7 +115,7 @@ export async function editStatements(db: D1Database, vessel: string, cols: Recor
 export const readablePins = (text: string): boolean => { try { const v = JSON.parse(text); return !!v && typeof v === 'object' && !Array.isArray(v); } catch { return false; } };
 const parse = (text: string | null): unknown => { if (text === null) return null; try { return JSON.parse(text); } catch { return null; } };
 
-interface VesselRow {id: string; region: string; pinned_json: string; profile_status: string; removal_requested_at: string | null; [k: string]: unknown}
+interface VesselRow {id: string; region: string; operator_id: string | null; pinned_json: string; profile_status: string; removal_requested_at: string | null; [k: string]: unknown}
 
 /** A vessel row by id, or null. */
 export async function vesselRow(db: D1Database, id: string): Promise<VesselRow | null> {
@@ -258,6 +258,8 @@ export async function editVessel(db: D1Database, id: string, input: EditInput, b
   // An operator's removal request hides the boat (US-C3); its date is kept if the boat is later unhidden.
   const removal = input.removal_requested === true;
   if (removal && (edit.cols.profile_status ?? vessel.profile_status) !== 'hidden') return {status: 'invalid', error: 'removal_requested needs profile_status hidden'};
+  // The removal erases the outreach of the operator this vessel belongs to, so the request cannot also pick a different one.
+  if (removal && 'operator_id' in edit.cols && edit.cols.operator_id !== vessel.operator_id) return {status: 'invalid', error: 'removal_requested cannot change operator_id'};
   if (!Object.keys(edit.cols).length && !unpin.length && !removal) return {status: 'invalid', error: 'nothing to change'};
   if (!readablePins(vessel.pinned_json)) return {status: 'conflict', error: 'pinned_json is unreadable; repair it before editing'};
   const problem = await checkReferences(db, vessel, edit.cols);
@@ -269,7 +271,12 @@ export async function editVessel(db: D1Database, id: string, input: EditInput, b
     const paths = (unpin as string[]).map(c => `'$."${c}"'`).join(',');
     statements.push(db.prepare(`UPDATE fleet_vessels SET pinned_json=json_remove(pinned_json,${paths}),updated_at=? WHERE id=?`).bind(now, id));
   }
-  if (removal) statements.push(db.prepare('UPDATE fleet_vessels SET removal_requested_at=COALESCE(removal_requested_at,?),updated_at=? WHERE id=?').bind(now, now, id));
+  if (removal) {
+    statements.push(db.prepare('UPDATE fleet_vessels SET removal_requested_at=COALESCE(removal_requested_at,?),updated_at=? WHERE id=?').bind(now, now, id));
+    // Operator-wide and in the same batch (design § 5 Retention): every outreach row of the operator the vessel has when the batch runs, audit notes
+    // included; fleet_operators (current consent) and the operator's other vessels are untouched. A vessel with no operator matches no rows.
+    statements.push(db.prepare('DELETE FROM fleet_outreach WHERE operator_id=(SELECT operator_id FROM fleet_vessels WHERE id=?)').bind(id));
+  }
   await db.batch(statements);
   return {status: 'ok', value: (await vesselDetail(db, id))!};
 }
