@@ -309,6 +309,35 @@ def write(target, cycle, by_region, samples_by_point, upstream, started):
     return manifest
 
 
+def _number(value):
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:  # JSON integers can exceed the float range.
+        return False
+
+
+def _same_points(prior_dir, by_region):
+    """True when every region file in prior_dir sampled exactly the requested ordered points.
+
+    Any unreadable or malformed saved file is a cache miss, never an exception."""
+    for region_id, points in by_region.items():
+        try:
+            saved = json.loads(Path(prior_dir, 'regions', f'{region_id}.json').read_text())
+        except (OSError, ValueError):
+            return False
+        saved = saved.get('points') if isinstance(saved, dict) else None
+        if not isinstance(saved, list) or len(saved) != len(points):
+            return False
+        for have, want in zip(saved, points):
+            if not isinstance(have, dict) or not _number(have.get('latitude')) or not _number(have.get('longitude')):
+                return False
+            if (have['latitude'], have['longitude']) != tuple(want):
+                return False
+    return True
+
+
 def build(output, previous=None, force=False, now=None, regions=None, http=None, exists=None, log=log_err):
     """Build or reuse the ensemble. Returns a status dict; keeps the previous build on failure."""
     output.mkdir(parents=True, exist_ok=True)
@@ -322,7 +351,7 @@ def build(output, previous=None, force=False, now=None, regions=None, http=None,
             raise RuntimeError('no complete GEFS cycle published in the last 48 hours')
         prior = json.loads(prior_manifest.read_text()) if prior_manifest and prior_manifest.is_file() else None
         if (prior and prior.get('cycle') == int(cycle.timestamp()) and sorted(prior.get('regions', [])) == sorted(by_region)
-                and not force):
+                and not force and _same_points(prior_dir, by_region)):
             if target.resolve() != prior_dir.resolve():
                 shutil.rmtree(target, ignore_errors=True)
                 shutil.copytree(prior_dir, target)
