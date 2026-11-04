@@ -687,9 +687,12 @@ test('the landing warms the app\'s first-paint files, and none under Save-Data',
   await saving.close();
 });
 
-// BF-landing-live: tomorrow's verdict for the reference boat, from the app's own brief code, below the funnel.
-test('the landing shows the app lead\'s verdict for tomorrow without moving the port input, ignores saved limits, and survives leaving first', async ({page, pageErrors, v2}) => {
-  await page.addInitScript(() => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('skippercast-profile-v1', 'kayak'); localStorage.setItem('skippercast-limits-v1', JSON.stringify({boat: {wind_knots: 1, gust_knots: 1, sea_feet: 0.5}})); } } catch { /* storage blocked */ } });
+// BF-landing-live, SC1952-04: tomorrow's verdict from the app's own brief code, below the funnel, rated for the boat and
+// Boat limits saved on this device and naming that boat; /map from the link, with the same storage, leads with the same answer.
+const SAVED_BOAT = JSON.stringify({schema_version: 1, boat: {name: 'Wren', loa_ft: 17, layout: 'skiff', hull: 'flat'}});
+const SAVED_LIMITS = JSON.stringify({boat: {wind: 6, gust: 9, seas: 2}});
+test('the landing shows the app lead\'s verdict for tomorrow for the saved boat and limits without moving the port input, and survives leaving first', async ({page, pageErrors, v2}) => {
+  await page.addInitScript(([boat, limits]) => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('skippercast-profile-v1', 'kayak'); localStorage.setItem('skippercast-boat-v1', boat); localStorage.setItem('skippercast-limits-v1', limits); } } catch { /* storage blocked */ } }, [SAVED_BOAT, SAVED_LIMITS]);
   await stubLiveFeeds(page);
   let release = () => {};
   const held = new Promise<void>(resolve => { release = resolve; });
@@ -703,18 +706,20 @@ test('the landing shows the app lead\'s verdict for tomorrow without moving the 
   const section = page.locator('.landing-verdict');
   await expect(section.locator('.landing-verdict-word')).toHaveText(/^(Comfortable|Marginal|Rough|Unknown)$/);
   expect(await input.boundingBox(), 'the port input does not move').toEqual(before);
-  await expect(section.locator('.landing-verdict-head')).toContainText(/^Tomorrow near Morro Bay & Avila, reference 23 ft boat: /);
+  await expect(section.locator('.landing-verdict-head')).toContainText(/^Tomorrow near Morro Bay & Avila, Wren: /);
+  await expect(section.locator('.landing-verdict-head')).not.toContainText('reference 23 ft boat');
   expect(await page.evaluate(() => JSON.stringify(Object.entries(localStorage).sort())), 'storage unchanged').toBe(stored);
   const word = await section.locator('.landing-verdict-word').textContent(), sentence = await section.locator('.landing-verdict-limit').textContent();
+  const note = await section.locator('.landing-verdict-note').textContent();
   const href = await section.getByRole('link', {name: 'Open the full brief'}).getAttribute('href');
   const date = /[?&]day=(\d{4}-\d{2}-\d{2})$/.exec(href ?? '')?.[1];
   expect(date, 'the link names the verdict\'s day').toBe(await section.getAttribute('data-day'));
-  // The app opened from the link, with no saved limits, leads with the same word and sentence for that day.
-  await page.evaluate(() => localStorage.clear());
+  // The app opened from the link on the same device (nothing cleared) leads with the same word, sentence and boat note for that day.
   await page.goto(`${href}&ui=v2`);
   await expect(page.locator('.app-verdict-word').first()).toHaveText(word!);
   await expect(page.locator('.app-verdict-window').first()).toHaveAttribute('data-day', date!);
   await expect(page.locator('.app-verdict-limit').first()).toHaveText(sentence!);
+  await expect(page.locator('.app-verdict-boat-note').first()).toHaveText(note!);
   // Out of order: a port and a profile chosen before the verdict resolves navigate with no error.
   await page.route('**/api/forecast?*', () => { /* never answers */ });
   await v2.open('landing');
@@ -722,5 +727,22 @@ test('the landing shows the app lead\'s verdict for tomorrow without moving the 
   await input.press('Enter');
   await page.locator('.landing-step [data-profile="boat"]').click();
   await expect(page).toHaveURL(/\/map\?/);
+  expect(pageErrors).toEqual([]);
+});
+
+// SC1952-04: with no boat saved, or one that cannot be read, the landing keeps the reference 23 ft boat and the app agrees.
+test('the landing names the reference 23 ft boat when no boat is saved or the saved one is unreadable', async ({page, pageErrors, v2}) => {
+  await page.addInitScript(() => { try { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('skippercast-boat-v1', '{not json'); localStorage.setItem('skippercast-limits-v1', JSON.stringify({boat: {wind: 6, gust: 9, seas: 2}})); } } catch { /* storage blocked */ } });
+  await stubLiveFeeds(page);
+  await v2.open('landing');
+  const section = page.locator('.landing-verdict');
+  await expect(section.locator('.landing-verdict-word')).toHaveText(/^(Comfortable|Marginal|Rough|Unknown)$/);
+  await expect(section.locator('.landing-verdict-head')).toContainText(/^Tomorrow near Morro Bay & Avila, reference 23 ft boat: /);
+  await expect(section.locator('.landing-verdict-note')).toHaveCount(0);
+  const word = await section.locator('.landing-verdict-word').textContent(), sentence = await section.locator('.landing-verdict-limit').textContent();
+  const href = await section.getByRole('link', {name: 'Open the full brief'}).getAttribute('href');
+  await page.goto(`${href}&ui=v2`);
+  await expect(page.locator('.app-verdict-word').first()).toHaveText(word!);
+  await expect(page.locator('.app-verdict-limit').first()).toHaveText(sentence!);
   expect(pageErrors).toEqual([]);
 });
