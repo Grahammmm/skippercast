@@ -16,7 +16,7 @@ globalThis.BUILD_ID = 'build-test';
 globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html'};
 const {default: deployed} = await import('../server/index.ts');
 const {recordReads, resetMeter} = await import('../server/cost-ceiling.ts');
-const {logItemHTML, logBody, logTripLabel, logTripOptionsHTML} = await import('../dist/account.js');
+const {logItemHTML, logBody, logTripLabel, logTripOptionsHTML, readLogPage} = await import('../dist/account.js');
 const worker = withSessions(deployed), ORIGIN = 'https://skippercast.com';
 
 function database(wrap = a => a) {
@@ -413,6 +413,158 @@ test('deleted_trip_is_refused_without_new_log', async () => {
   sql.close();
 });
 
+// SC0922-03: every stored entry stays reachable by its owner, a page at a time.
+const HAS_MORE = 'X-SC-Catch-Log-Has-More', NEXT = 'X-SC-Catch-Log-Next-Cursor', PAGE = 200;
+const cursorOf = (started_at, id) => Buffer.from(JSON.stringify([1, started_at, id])).toString('base64url');
+const stamp = i => new Date(Date.UTC(2026, 0, 1) + i * 60000).toISOString();
+/** Insert rows straight into the table: `rows` are [id, owner, started_at]; POST is rate-limited and is not what is under test. */
+function seed(sql, rows) {
+  const insert = sql.prepare("INSERT INTO catch_log(id,owner,started_at,outcome,count,note,created_at) VALUES(?,?,?,'blank',0,?,'x')");
+  sql.exec('BEGIN'); for (const [id, owner, at] of rows) insert.run(id, owner, at, 'NOTE-' + owner); sql.exec('COMMIT');
+}
+/** Walk the pages with the headers' own cursors; returns every page as {ids, more, next}. */
+async function walk(env, owner) {
+  const pages = []; let cursor = null;
+  for (let guard = 0; guard < 20; guard++) {
+    const r = await call(env, '/api/catch-log' + (cursor ? '?cursor=' + encodeURIComponent(cursor) : ''), {owner});
+    assert.equal(r.status, 200);
+    const data = await r.json();
+    assert.deepEqual(Object.keys(data), ['entries'], 'the body shape never changes');
+    pages.push({ids: data.entries.map(e => e.id), more: r.headers.get(HAS_MORE), next: r.headers.get(NEXT), owners: new Set(data.entries.map(e => e.owner))});
+    cursor = r.headers.get(NEXT); if (!cursor) return pages;
+  }
+  throw new Error('pages never ended');
+}
+
+test('all_rows_reachable_0_200_201_450', async () => {
+  for (const [total, sizes] of [[0, [0]], [200, [200]], [201, [200, 1]], [450, [200, 200, 50]]]) {
+    const {sql, adapter} = database(), env = {DB: adapter};
+    // Alice's rows are numbered newest = highest; bob's rows are interleaved with the same timestamps and sort among hers.
+    const mine = Array.from({length: total}, (_, i) => [`a${String(i).padStart(4, '0')}`, 'alice', stamp(i)]);
+    seed(sql, [...mine, ...mine.map(([id, , at]) => ['b' + id, 'bob', at]), ['bob-newest', 'bob', stamp(9999)]]);
+    const pages = await walk(env, 'alice');
+    assert.deepEqual(pages.map(p => p.ids.length), sizes, `page sizes for ${total}`);
+    assert.deepEqual(pages.map(p => p.more), sizes.map((_, i) => String(i < sizes.length - 1)), 'has-more says false only on the last page');
+    assert.deepEqual(pages.map(p => p.next !== null), sizes.map((_, i) => i < sizes.length - 1), 'a next cursor only while more exist');
+    const all = pages.flatMap(p => p.ids);
+    assert.deepEqual(all, [...mine].sort((a, b) => (a[2] < b[2] ? 1 : a[2] > b[2] ? -1 : a[0] < b[0] ? -1 : 1)).map(r => r[0]), 'every id once, in the route order');
+    assert.equal(new Set(all).size, total);
+    assert.ok(pages.every(p => [...p.owners].every(o => o === 'alice')), "another owner's rows never appear");
+    // No cursor: exactly today's first page.
+    const first = await call(env, '/api/catch-log', {owner: 'alice'});
+    assert.deepEqual((await first.json()).entries.map(e => e.id), pages[0].ids);
+    assert.equal(first.headers.get('Cache-Control'), 'no-store');
+    assert.equal(first.headers.get('X-Content-Type-Options'), 'nosniff');
+    sql.close();
+  }
+  assert.equal(PAGE, 200);
+});
+
+test('same_timestamp_uses_ascending_id_and_deleted_anchor', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter}, at = '2026-06-01T10:00:00.000Z';
+  seed(sql, Array.from({length: 450}, (_, i) => [`t${String(449 - i).padStart(3, '0')}`, 'alice', at]));   // inserted in reverse id order
+  const ids = Array.from({length: 450}, (_, i) => `t${String(i).padStart(3, '0')}`);
+  const one = await call(env, '/api/catch-log', {owner: 'alice'}), first = (await one.json()).entries.map(e => e.id);
+  assert.deepEqual(first, ids.slice(0, 200), 'ties break by ascending id');
+  assert.equal(one.headers.get(NEXT), cursorOf(at, 't199'), 'the cursor names the last returned row, never the lookahead');
+  // The anchor row is deleted, a row dated later and a row dated earlier are added, between the two requests.
+  assert.equal((await call(env, '/api/catch-log/t199', {owner: 'alice', method: 'DELETE', body: {}})).status, 200);
+  seed(sql, [['newer', 'alice', '2026-06-02T00:00:00.000Z'], ['older', 'alice', '2026-05-01T00:00:00.000Z']]);
+  const two = await call(env, '/api/catch-log?cursor=' + one.headers.get(NEXT), {owner: 'alice'}), second = (await two.json()).entries.map(e => e.id);
+  assert.deepEqual(second.slice(0, 200), ids.slice(200, 400), 'no skip or repeat across the deleted anchor');
+  assert.ok(!second.includes('newer'), 'a newer row appears on a first-page refresh, not on an older page');
+  assert.equal(two.headers.get(HAS_MORE), 'true');
+  const third = await call(env, '/api/catch-log?cursor=' + two.headers.get(NEXT), {owner: 'alice'});
+  assert.deepEqual((await third.json()).entries.map(e => e.id), [...ids.slice(400), 'older'], 'a row dated earlier than the cursor is reached');
+  assert.equal(third.headers.get(HAS_MORE), 'false');
+  assert.equal(third.headers.get(NEXT), null);
+  sql.close();
+});
+
+test('invalid_cursor_400_before_query', async () => {
+  const listed = [], {sql, adapter} = database(a => ({...a, prepare(q) { if (/catch_log/.test(q)) listed.push(q); return a.prepare(q); }, batch: a.batch})), env = {DB: adapter};
+  const b64 = v => Buffer.from(typeof v === 'string' ? v : JSON.stringify(v)).toString('base64url');
+  const good = b64([1, '2026-06-01T10:00:00.000Z', 'row-1']);
+  const cases = {
+    empty: '?cursor=', duplicate: `?cursor=${good}&cursor=${good}`, oversize: '?cursor=' + 'A'.repeat(513), padded: '?cursor=' + good + '=',
+    alphabet: '?cursor=' + good + '!', plus: '?cursor=ab%2Bcd%2Fef',
+    truncated: '?cursor=' + good.slice(0, 7), notUtf8: '?cursor=' + Buffer.from([0xff, 0xfe, 0x5b]).toString('base64url'), notJson: '?cursor=' + b64('not json'),
+    object: '?cursor=' + b64({a: 1}), tooShort: '?cursor=' + b64([1, '2026-06-01T10:00:00.000Z']), tooLong: '?cursor=' + b64([1, '2026-06-01T10:00:00.000Z', 'x', 'y']),
+    version: '?cursor=' + b64([2, '2026-06-01T10:00:00.000Z', 'row-1']), versionText: '?cursor=' + b64(['1', '2026-06-01T10:00:00.000Z', 'row-1']),
+    numberTime: '?cursor=' + b64([1, 5, 'row-1']), numberId: '?cursor=' + b64([1, '2026-06-01T10:00:00.000Z', 7]),
+    notADate: '?cursor=' + b64([1, '2026-13-45T10:00:00.000Z', 'row-1']), noMillis: '?cursor=' + b64([1, '2026-06-01T10:00:00Z', 'row-1']),
+    zoned: '?cursor=' + b64([1, '2026-06-01T10:00:00.000+00:00', 'row-1']), emptyId: '?cursor=' + b64([1, '2026-06-01T10:00:00.000Z', '']),
+    longId: '?cursor=' + b64([1, '2026-06-01T10:00:00.000Z', 'x'.repeat(65)]), controlId: '?cursor=' + b64([1, '2026-06-01T10:00:00.000Z', 'a\nb']),
+  };
+  const bodies = new Set();
+  for (const [name, query] of Object.entries(cases)) {
+    const r = await call(env, '/api/catch-log' + query, {owner: 'alice'}), text = await r.text();
+    assert.equal(r.status, 400, name);
+    const {request_id, ...rest} = JSON.parse(text); bodies.add(JSON.stringify(rest));
+    assert.equal(r.headers.get(HAS_MORE), null, name);
+    const token = query.slice('?cursor='.length);
+    if (token.length > 8) assert.ok(!text.includes(token) && !text.includes('row-1'), `${name}: the answer never echoes the cursor`);
+  }
+  assert.deepEqual([...bodies], ['{"error":"invalid catch-log cursor"}'], 'one stable error for every refusal');
+  assert.deepEqual(listed.filter(q => /SELECT \* FROM catch_log/.test(q)), [], 'refused before the list query is prepared');
+  assert.equal((await call(env, '/api/catch-log?cursor=' + good, {owner: 'alice'})).status, 200, 'a well-formed cursor is accepted');
+  sql.close();
+});
+
+test('cursor_is_not_an_owner_capability', async () => {
+  const calls = [], {sql, adapter} = database(a => ({...a, prepare(q) { calls.push(q); return a.prepare(q); }, batch: a.batch})), env = {DB: adapter};
+  seed(sql, [...Array.from({length: 5}, (_, i) => [`a${i}`, 'alice', stamp(10 + i)]), ...Array.from({length: 5}, (_, i) => [`b${i}`, 'bob', stamp(10 + i)])]);
+  const alices = cursorOf(stamp(12), 'a2'), anyBobs = cursorOf(stamp(12), 'b2');
+  for (const cursor of [alices, cursorOf(stamp(12), 'bob-only-anchor'), cursorOf(stamp(12), 'b2')]) {
+    const r = await call(env, '/api/catch-log?cursor=' + cursor, {owner: 'bob'});
+    assert.equal(r.status, 200);
+    assert.ok((await r.json()).entries.every(e => e.owner === 'bob'), "bob never sees alice's rows through a cursor");
+  }
+  const forAlice = (await (await call(env, '/api/catch-log?cursor=' + anyBobs, {owner: 'alice'})).json()).entries;
+  assert.deepEqual(forAlice.map(e => e.id), ['a1', 'a0'], "bob's anchor only positions alice's own list");
+  const nobody = await call(env, '/api/catch-log?cursor=' + alices, {owner: 'carol'});
+  assert.deepEqual([nobody.status, (await nobody.json()).entries, nobody.headers.get(HAS_MORE)], [200, [], 'false']);
+  assert.equal((await call(env, '/api/catch-log/a1', {owner: 'bob'})).status, 404, 'a foreign id stays not found');
+  assert.equal((await call(env, '/api/catch-log/a1', {owner: 'bob', method: 'DELETE', body: {}})).status, 404);
+  assert.equal(logCount(sql, 'alice'), 5);
+  calls.length = 0;
+  const out = await call(env, '/api/catch-log?cursor=' + alices);
+  assert.equal(out.status, 401, 'signed out, with a cursor');
+  assert.deepEqual(calls, [], 'refused before any D1 call');
+  sql.close();
+});
+
+test('an_older_entry_is_deleted_like_any_other_and_pages_adjust', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter};
+  seed(sql, Array.from({length: 201}, (_, i) => [`e${String(i).padStart(3, '0')}`, 'alice', stamp(1000 - i)]));
+  const first = await call(env, '/api/catch-log', {owner: 'alice'}); await first.json();
+  const older = await (await call(env, '/api/catch-log?cursor=' + first.headers.get(NEXT), {owner: 'alice'})).json();
+  assert.deepEqual(older.entries.map(e => e.id), ['e200']);
+  assert.equal((await call(env, '/api/catch-log/e200', {owner: 'alice', method: 'DELETE', body: {}})).status, 200);
+  const after = await call(env, '/api/catch-log?cursor=' + first.headers.get(NEXT), {owner: 'alice'});
+  assert.deepEqual([after.status, (await after.json()).entries, after.headers.get(HAS_MORE)], [200, [], 'false'], 'the old cursor still works with its rows gone');
+  sql.close();
+});
+
+test('read_log_page_reads_headers_and_refuses_incomplete_answers', async () => {
+  const original = globalThis.fetch, urls = [];
+  const answer = (body, headers) => async url => { urls.push(String(url)); return new Response(JSON.stringify(body), {status: 200, headers: {'Content-Type': 'application/json', ...headers}}); };
+  try {
+    globalThis.fetch = answer({entries: [{id: 'a'}]}, {[HAS_MORE]: 'true', [NEXT]: 'tok/+='});
+    assert.deepEqual(await readLogPage(), {entries: [{id: 'a'}], nextCursor: 'tok/+=', hasMore: true});
+    assert.deepEqual(await readLogPage('tok/+='), {entries: [{id: 'a'}], nextCursor: 'tok/+=', hasMore: true});
+    assert.deepEqual(urls, ['/api/catch-log', '/api/catch-log?cursor=tok%2F%2B%3D'], 'the cursor is only a query value');
+    globalThis.fetch = answer({entries: []}, {[HAS_MORE]: 'false'});
+    assert.deepEqual(await readLogPage(), {entries: [], nextCursor: null, hasMore: false});
+    for (const [name, body, headers] of [['no headers', {entries: []}, {}], ['more without a cursor', {entries: []}, {[HAS_MORE]: 'true'}], ['cursor without more', {entries: []}, {[HAS_MORE]: 'false', [NEXT]: 'x'}],
+      ['odd flag', {entries: []}, {[HAS_MORE]: 'yes'}], ['entries not a list', {entries: {}}, {[HAS_MORE]: 'false'}], ['no entries', {}, {[HAS_MORE]: 'false'}]]) {
+      globalThis.fetch = answer(body, headers);
+      await assert.rejects(readLogPage(), /incomplete/, name);
+    }
+    globalThis.fetch = async () => new Response(JSON.stringify({error: 'Not found'}), {status: 404});
+    await assert.rejects(readLogPage(), e => e.status === 404, 'a refused read keeps its status');
+  } finally { globalThis.fetch = original; }
+});
 // RF0920-1: the written calendar day must exist and the written hour must be 00-23; nothing is rolled into another day.
 const TIME_ERROR = name => `${name} must be an ISO date and time with a zone`;
 // Runs `fn` with the network blocked and the database closed even when an assertion fails.
