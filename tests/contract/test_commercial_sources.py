@@ -113,7 +113,7 @@ REGISTER_ROW = 'docs/legal/data-rights-register.md#'
 # source id -> (register anchor, date listed, offending usages). Remove an
 # entry (and update the register) when the blocker is resolved.
 # The map's startup copies (#617, src/skippercast/platform/startup_forms.py), beside each region package.
-STARTUP_COPIES = ('atlas-marks.json', 'search-plan-index.json', 'shoreline-overview.geojson', 'poster.svg')
+STARTUP_COPIES = ('atlas-marks.json', 'search-plan-index.json', 'shoreline-overview.geojson', 'poster.svg', 'regulations-startup.json')
 
 KNOWN_BLOCKERS = {
     'gfw-effort': (REGISTER_ROW + 'b2--global-fishing-watch-cc-by-nc', '2026-09-28', {

@@ -18,6 +18,13 @@ copy at startup:
   north-west corner at the origin. The map draws it over the empty Chart,
   aligned to the opening camera, until MapLibre's first complete frame
   (web/map/poster.ts), so the coast shows before the map engine has loaded.
+- regions/<id>/regulations-startup.json: the region's regulations registry
+  (assets.regulations, shared by several regions and up to 48 KB) cut to what
+  the legality line (web/regs.ts loadRegs) reads for this region: the registry's
+  own top-level fields, the region's species and the sources and daily checks
+  those species cite. The registry's `area_notices` (no card reads them) are
+  left out; the build refuses a registry whose notices are malformed, which is
+  the one case where leaving them out would change what validRegulations says.
 
 Each copy names the file it came from and that file's SHA-256 under
 `derived_from`, so a copy can always be traced to, and checked against, its
@@ -37,10 +44,15 @@ ATLAS_MARKS = 'atlas-marks.json'
 PLAN_INDEX = 'search-plan-index.json'
 SHORELINE_OVERVIEW = 'shoreline-overview.geojson'
 POSTER = 'poster.svg'
+REGS_STARTUP = 'regulations-startup.json'
 POSTER_ZOOM = 12
 # The geometry each copy leaves out; every other field is kept, so a new field reaches the map unchanged.
 ATLAS_DROP = ('areas', 'drifts')
 PLAN_DROP = ('features',)
+# The registry fields web/regs.ts reads (validRegulations, regulationState, ruleSummary, freshnessLabel) besides
+# the per-species and per-source blocks; the copy keeps these as they are.
+REGS_KEEP = ('schema_version', 'revision', 'reviewed_at', 'valid_from', 'valid_through', 'check_interval_hours',
+             'max_age_hours', 'jurisdiction_id', 'rules_review_status', 'common_notes')
 
 
 def derived_from(path, relative):
@@ -56,6 +68,27 @@ def atlas_marks(atlas, source):
 def plan_index(plans, source):
     """The species plans as the target list reads them: each plan's profile, no feature geometry."""
     return {**{k: v for k, v in plans.items() if k not in PLAN_DROP}, 'startup_form': 'search-plan-index', 'derived_from': source}
+
+
+def regs_startup(registry, source, region):
+    """The regulations registry as the legality line reads it for `region` (see the module notes).
+
+    Species are the region's own (`reef` stands for lingcod and rockfish, as web/regs.ts reads it); sources and daily
+    checks are those the kept species cite (their `source_ids` and `primary_source_id`). Species and source records
+    are copied whole, so every rule state is the full registry's."""
+    wanted = {part for species in region['species'] for part in (('lingcod', 'rockfish') if species == 'reef' else (species,))}
+    species = {key: value for key, value in registry['species'].items() if key in wanted}
+    cited = {ident for profile in species.values() for ident in [*profile.get('source_ids', []), profile.get('primary_source_id')] if ident}
+    # validRegulations also needs every area notice to cite a source with a URL; the copy carries no notices, so the
+    # full registry must pass that check here or the copy would read valid where the registry does not.
+    for notice in registry.get('area_notices') or []:
+        if not all(isinstance(notice.get(k), str) for k in ('id', 'name', 'note')) or not notice.get('source_ids') \
+                or not all((registry['sources'].get(ident) or {}).get('url') for ident in notice['source_ids']):
+            raise ValueError(f"Area notice {notice.get('id')!r} in {source['path']} does not cite reviewed sources")
+    return {**{k: registry[k] for k in REGS_KEEP if k in registry},
+            'sources': {k: v for k, v in registry['sources'].items() if k in cited},
+            'checks': {k: v for k, v in registry['checks'].items() if k in cited},
+            'species': species, 'startup_form': 'regulations-startup', 'derived_from': source}
 
 
 def mercator(longitude, latitude, zoom=POSTER_ZOOM):
@@ -120,4 +153,6 @@ def publish_startup_forms(root, region, output):
     # After the overview: the poster is drawn from it, and names its checksum.
     written.append(_publish_text(output / POSTER, output / SHORELINE_OVERVIEW,
                                  f"regions/{region['id']}/{SHORELINE_OVERVIEW}", poster_svg))
+    written.append(_publish(output / REGS_STARTUP, asset('regulations'), assets.get('regulations'),
+                            lambda registry, source: regs_startup(registry, source, region)))
     return [f"regions/{region['id']}/{p.name}" for p in written if p is not None]
