@@ -33,6 +33,7 @@ import {createSwell} from '../map/swell.ts';
 import {createStations} from '../map/stations.ts';
 import {dailyFeed} from '../brief/Brief.tsx';
 import {createWind} from '../map/wind.ts';
+import type {HourClock} from '../clock.ts';
 import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked} from '../map/stage.ts';
 import {poster, posterPlacement} from '../map/poster.ts';
 import {profile, region, species} from '../state.ts';
@@ -104,11 +105,11 @@ const palette = () => { try { return coastPalette(readPalette()); } catch { retu
 const overlayPalette = () => { try { return readPalette(); } catch { return undefined; } };
 
 /** The map stage with whatever chrome the layout puts over it. */
-export function MapStage({children}: {children?: ComponentChildren} = {}) {
+export function MapStage({children, clock}: {children?: ComponentChildren; clock?: HourClock} = {}) {
   const terrainHost = useRef<HTMLDivElement>(null), chartHost = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const place = () => regionPlace(currentRegionInfo(), profile.value, species.value ?? '');
-    const stage = createStage({host: terrainHost.current!, palette, overlayPalette, center: () => currentRegionInfo()?.center ?? null, zone,
+    const stage = createStage({host: terrainHost.current!, palette, overlayPalette, center: () => currentRegionInfo()?.center ?? null, zone, clock,
       renderers: [() => createChart({host: chartHost.current!, zone, place,
         layers: [engine => createChlorophyll({engine}), engine => createSwell({engine, zone, place}), engine => createContrast({engine, zone, place}), engine => createFronts({engine, place}), engine => createWind({engine, zone}), engine => createWaterTemp({engine, zone, place}), engine => createClouds({engine, zone}),
           engine => createStations({engine, zone, feed: () => dailyFeed.value}),
@@ -116,7 +117,7 @@ export function MapStage({children}: {children?: ComponentChildren} = {}) {
           engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
           engine => createReach({engine, host: chartHost.current!})]})]});
     return () => stage.destroy();
-  }, []);
+  }, [clock]);
   const shown = shownPresentation.value;
   return (
     <section class="app-stage" tabIndex={-1} aria-label="Map">

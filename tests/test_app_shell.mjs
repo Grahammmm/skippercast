@@ -53,7 +53,8 @@ async function load() {
       export {markScreen} from './web/map/marks.ts';
       export {regionUnavailable} from './web/species.ts';
       export {CHECKING, assessScreen} from './web/map/habitat.ts';
-      export {terrainMark, terrainReading} from './web/map/stage.ts';
+      export {createStage, terrainMark, terrainReading} from './web/map/stage.ts';
+      export {createHourClock} from './web/clock.ts';
       export {dayOptions, dockState, hourText, localParts, readout, zoneName} from './web/app/TimeDock.tsx';
       export {Mobile, LayersPanel, afterDetent, toggleLayers} from './web/app/Mobile.tsx';
       export {dragDetent, DRAG_MIN} from './web/ui/Sheet.tsx';
@@ -393,6 +394,89 @@ async function renderShell(href, now = NOW) {
 }
 /** The day chips of the group labelled Day in `html`, as [label, on]. */
 const dayChips = html => [...html.match(/aria-label="Day"[^>]*>(.*?)<\/div>/s)[1].matchAll(/aria-pressed="(true|false)"[^>]*>(?:<svg.*?<\/svg>)?([^<]+)<\/button>/gs)].map(m => [m[2], m[1] === 'true']);
+
+/** An hour clock over a settable reader and a manual scheduler: `fire()` runs the one waiting timeout. */
+function manualClock(createHourClock, start) {
+  let at = new Date(start), next = 1;
+  const timers = new Map(), listeners = new Set();
+  const doc = {hidden: false, addEventListener: (_t, fn) => listeners.add(fn), removeEventListener: (_t, fn) => listeners.delete(fn)};
+  const clock = createHourClock({read: () => new Date(at), doc, schedule: (callback, delay) => { timers.set(next, callback); return next++; }, cancel: id => { timers.delete(id); }});
+  return {clock, timers, listeners, set(value) { at = new Date(value); }, fire() { const [[id, callback]] = [...timers]; timers.delete(id); callback(); }};
+}
+const hourControl = html => html.match(/aria-label="Hour" aria-valuetext="([^"]*)" min="0" max="(\d+)"/).slice(1);
+
+test('shared_clock_crosses_hour_without_navigation: the desktop dock, the phone hour edge and the map stage move together from one injected clock', async () => {
+  const {App, createHourClock, createStage, dockState, narrow, render, h, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d`);
+  // A browser just big enough for the stage: an address, a history that records writes, no-op events.
+  const writes = [];
+  globalThis.location = {href: `${ORIGIN}?region=morro-bay&presentation=3d`};
+  globalThis.history = {state: null, pushState: (...a) => writes.push(a), replaceState: (...a) => writes.push(a)};
+  const calls = [], handle = new Proxy({load: async () => true, destroy() {}}, {get: (target, name) => name in target ? target[name] : (...args) => { calls.push([name, ...args]); return true; }});
+  const host = {dataset: {}, shadowRoot: {children: [], replaceChildren() { this.children = []; }}};
+  const c = manualClock(createHourClock, '2026-10-05T20:59:59.999Z');
+  const released = c.clock.retain();
+  const stage = createStage({host, load: async () => ({styles: [], mountCoast: () => handle}), center: () => [35.37, -120.86], clock: c.clock, doc: {hidden: false, addEventListener() {}, removeEventListener() {}}, viewDelay: 0});
+  try {
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    const before = {desktop: hourControl(render(h(App, {clock: c.clock}))), dock: dockState(c.clock.now.value, TZ).at, dataHour: host.dataset.hour};
+    narrow.value = true;
+    const phoneBefore = hourControl(render(h(App, {clock: c.clock})));
+    narrow.value = false;
+    assert.deepEqual(before.desktop, ['1 pm', '10']);
+    assert.deepEqual(phoneBefore, ['1 pm', '10']);
+    assert.equal(before.dataHour, '2026-10-05T20:00:00.000Z');
+    assert.equal(c.timers.size, 1, 'the app, the layouts and the stage share one ticker');
+    const steps = calls.length;
+    c.set('2026-10-05T21:00:00Z');
+    c.fire();
+    const desktop = hourControl(render(h(App, {clock: c.clock})));
+    narrow.value = true;
+    const phone = hourControl(render(h(App, {clock: c.clock})));
+    narrow.value = false;
+    assert.deepEqual(desktop, ['2 pm', '9'], 'the dock default hour moved on');
+    assert.deepEqual(phone, ['2 pm', '9'], 'the phone hour edge moved on');
+    assert.equal(dockState(c.clock.now.value, TZ).at, Date.parse('2026-10-05T21:00:00Z'));
+    assert.equal(host.dataset.hour, '2026-10-05T21:00:00.000Z', 'the map draws the hour the dock shows');
+    assert.deepEqual(calls.slice(steps).filter(call => call[0] === 'setHour').map(call => call[1].toISOString()), ['2026-10-05T21:00:00.000Z']);
+    assert.deepEqual(writes, [], 'no navigation, no history write');
+    assert.equal(state.hour.value, null, 'nothing was chosen on the way');
+  } finally {
+    stage.destroy();
+    released();
+    narrow.value = false;
+    delete globalThis.location; delete globalThis.history;
+  }
+  assert.equal(c.timers.size, 0);
+  assert.equal(c.listeners.size, 0);
+});
+
+test('selected_hour_survives_clock_rollover: a chosen ?hour= is the same before and after the tick, in range or out', async () => {
+  const {App, createHourClock, render, h, state} = await load();
+  for (const chosen of ['2026-10-06T03:00Z', '2026-10-01T03:00Z']) {
+    state.configureStore({v2: true, storage: memory()});
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&hour=${chosen}`);
+    const c = manualClock(createHourClock, '2026-10-05T20:30:00Z');
+    const release = c.clock.retain();
+    const at = html => html.match(/aria-label="Hour" aria-valuetext="[^"]*"[^>]*>(<output[^>]*>[^<]*<\/output>)/)[0].replace(/ min="\d+" max="\d+" step="1" value="\d+"/, '');
+    const first = at(render(h(App, {clock: c.clock})));
+    for (const next of ['2026-10-05T21:00:00Z', '2026-10-05T22:00:00Z', '2026-10-05T23:00:00Z']) { c.set(next); c.fire(); }
+    const after = at(render(h(App, {clock: c.clock})));
+    release();
+    assert.equal(after, first, `${chosen}: the dock reads the chosen hour the same after three ticks`);
+    assert.equal(state.hour.value, chosen);
+  }
+});
+
+test('fixed_now_and_play_remain_independent: a fixed now ignores the clock and starts no ticker', async () => {
+  const {App, createHourClock, render, h, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  state.syncFromURL(`${ORIGIN}?region=morro-bay`);
+  const c = manualClock(createHourClock, '2026-10-05T22:00:00Z');
+  assert.deepEqual(hourControl(render(h(App, {now: NOW, clock: c.clock}))), ['1 pm', '10'], 'the fixed date is what the dock reads');
+  assert.equal(c.timers.size, 0, 'rendering starts no ticker');
+});
 
 test('the shell has the masthead, the command bar, the brief column and the map chrome', async () => {
   const html = await renderShell(`${ORIGIN}?region=morro-bay`);

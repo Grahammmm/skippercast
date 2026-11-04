@@ -35,6 +35,7 @@ import {History} from './views/History.tsx';
 import {Reports} from './views/Reports.tsx';
 import {PlanView} from './PlanView.tsx';
 import {appView} from '../state.ts';
+import {useHourNow, type HourClock} from '../clock.ts';
 
 export {emptyTiles} from '../brief/Tiles.tsx';
 export {DISCLAIMER} from '../brief/Brief.tsx';
@@ -58,11 +59,12 @@ export function Brief({ranking, now = new Date()}: {ranking?: Ranking; now?: Dat
   );
 }
 
-export function Desktop({now = new Date()}: {now?: Date} = {}) {
+export function Desktop({now: fixedNow, clock}: {now?: Date; clock?: HourClock} = {}) {
+  const now = useHourNow(fixedNow, clock);
   return (
     <main class="app-main">
       {appView.value === 'fleet' ? <aside class="app-brief" aria-label="Fleet"><Guard name="fleet"><Fleet /></Guard></aside> : <Brief now={now} />}
-      <MapStage>
+      <MapStage clock={clock}>
         {appView.value === 'conditions' ? <Guard name="conditions"><Conditions now={now} /></Guard> : appView.value === 'history' ? <Guard name="history"><History now={now} /></Guard> : <><div class="app-chrome-left"><Guard name="mark-card"><MarkCard /></Guard><Guard name="legend"><Legend /></Guard></div><Guard name="layer-rail"><LayerRail /></Guard></>}
         <Guard name="time-dock"><TimeDock now={now} /></Guard>
       </MapStage>
