@@ -70,7 +70,8 @@ test('3D shows the terrain; switching to 2D keeps place, target, profile, hour a
   await toggle(page, 'Chart').click();
   await expect(host).toBeHidden();
   await expect(page.locator('.app-map')).toBeVisible();
-  expect(params(page)).toMatchObject({...PLACE, presentation: 'chart'});
+  // The DOM can reflect the choice before Playwright receives the history URL update.
+  await expect.poll(() => params(page)).toMatchObject({...PLACE, presentation: 'chart'});
   await v2.a11y('v2-map-chart');
   expect(pageErrors).toEqual([]);
 });
