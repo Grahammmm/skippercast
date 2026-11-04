@@ -11,6 +11,9 @@ const fixture = JSON.parse(readFileSync(new URL('./fixtures/regulations/fe61-v1.
 const MORRO = fixture.region;
 const NOW = Date.parse('2026-09-21T18:00:00Z');
 const COMMITTED = 'data/regulations.json';
+// Every registry read asks the region's startup copy first. Here it is not served (404), so a read that reaches the whole
+// registry is one request longer: the copy, the registry, the daily part.
+const COPY = 'regions/morro-bay/regulations-startup.json';
 const daily = id => `/api/daily?region=${id}&part=regulations`;
 function data(at = NOW) {
   const d = structuredClone(fixture.regulations);
@@ -45,13 +48,13 @@ test('1: a read that throws on both files is asked again by the next card, which
   const s = server({[COMMITTED]: 'throw', [daily('morro-bay')]: 'throw'});
   await loadRegs(MORRO, s.fetchFn);
   assert.equal(regsData.value, null, 'nothing loaded: Check rules');
-  assert.equal(s.urls.length, 2);
+  assert.equal(s.urls.length, 3);
   s.set(COMMITTED, data()); s.set(daily('morro-bay'), part('morro-bay'));
   await loadRegs(MORRO, s.fetchFn);
-  assert.equal(s.urls.length, 4, 'the next card reads again');
+  assert.equal(s.urls.length, 6, 'the next card reads again');
   assert.ok(shown('morro-bay'), 'and shows the registry');
   await loadRegs(MORRO, s.fetchFn);
-  assert.equal(s.urls.length, 4, 'then it is read once');
+  assert.equal(s.urls.length, 6, 'then it is read once');
 });
 
 test('2: committed 5xx/429 with the daily feed OK shows the rules but asks again until a clean read', async () => {
@@ -61,12 +64,12 @@ test('2: committed 5xx/429 with the daily feed OK shows the rules but asks again
     await loadRegs(MORRO, s.fetchFn);
     assert.ok(shown('morro-bay'), `${status}: the daily registry shows`);
     await loadRegs(MORRO, s.fetchFn);
-    assert.equal(s.urls.length, 4, `${status}: a transient failure is asked again`);
+    assert.equal(s.urls.length, 6, `${status}: a transient failure is asked again`);
     s.set(COMMITTED, data());
     await loadRegs(MORRO, s.fetchFn);
-    assert.equal(s.urls.length, 6, `${status}: still transient on the second read`);
+    assert.equal(s.urls.length, 9, `${status}: still transient on the second read`);
     await loadRegs(MORRO, s.fetchFn);
-    assert.equal(s.urls.length, 6, `${status}: after a clean read, no further fetch`);
+    assert.equal(s.urls.length, 9, `${status}: after a clean read, no further fetch`);
     assert.ok(shown('morro-bay'));
   }
 });
@@ -77,7 +80,7 @@ test('2b: a daily feed that drops after a good committed file is asked again', a
   await loadRegs(MORRO, s.fetchFn);
   assert.ok(shown('morro-bay'));
   await loadRegs(MORRO, s.fetchFn);
-  assert.equal(s.urls.length, 4);
+  assert.equal(s.urls.length, 6);
 });
 
 test('3: both files OK: a second card makes zero fetches', async () => {
@@ -86,7 +89,7 @@ test('3: both files OK: a second card makes zero fetches', async () => {
   await loadRegs(MORRO, s.fetchFn);
   await loadRegs(MORRO, s.fetchFn);
   await loadRegs(MORRO, s.fetchFn);
-  assert.equal(s.urls.length, 2);
+  assert.equal(s.urls.length, 3);
   assert.ok(shown('morro-bay'));
 });
 
@@ -98,7 +101,7 @@ test('4: nothing accepted (both 404, invalid JSON, another jurisdiction) means t
     await loadRegs(MORRO, s.fetchFn);
     assert.equal(regsData.value, null, 'Check rules');
     await loadRegs(MORRO, s.fetchFn);
-    assert.equal(s.urls.length, 4, `${JSON.stringify(committed).slice(0, 20)}: asked again`);
+    assert.equal(s.urls.length, 6, `${JSON.stringify(committed).slice(0, 20)}: asked again`);
   }
 });
 
@@ -108,7 +111,7 @@ test('5: committed OK and the daily feed 404 or invalid is kept: no further fetc
     const s = server({[COMMITTED]: data(), [daily('morro-bay')]: day});
     await loadRegs(MORRO, s.fetchFn);
     await loadRegs(MORRO, s.fetchFn);
-    assert.equal(s.urls.length, 2, `${JSON.stringify(day).slice(0, 20)}: memoized`);
+    assert.equal(s.urls.length, 3, `${JSON.stringify(day).slice(0, 20)}: memoized`);
     assert.ok(shown('morro-bay'));
   }
 });
@@ -122,11 +125,11 @@ test('6: two cards opened together share one read: one fetch per file, both reso
   const a = loadRegs(MORRO, s.fetchFn).then(() => done.push('a'));
   const b = loadRegs(MORRO, s.fetchFn).then(() => done.push('b'));
   await new Promise(r => setTimeout(r, 10));
-  assert.deepEqual(s.urls, [COMMITTED], 'the second card waits on the first read');
+  assert.deepEqual(s.urls, [COPY, COMMITTED], 'the second card waits on the first read');
   assert.equal(done.length, 0, 'neither resolves before the read');
   release();
   await Promise.all([a, b]);
-  assert.deepEqual(s.urls, [COMMITTED, daily('morro-bay')], 'one fetch per file');
+  assert.deepEqual(s.urls, [COPY, COMMITTED, daily('morro-bay')], 'one fetch per file');
   assert.ok(shown('morro-bay'), 'both resolve after the registry shows');
 });
 
@@ -145,7 +148,7 @@ test('7: a late answer for region A never shows after region B\'s read started',
   assert.ok(regsData.value === null || shown('other-bay'));
   const before = s.urls.length;
   await loadRegs(MORRO, s.fetchFn);
-  assert.equal(s.urls.length, before + 2, 'back on region A, the card reads again');
+  assert.equal(s.urls.length, before + 3, 'back on region A, the card reads again');
   assert.ok(shown('morro-bay'));
 });
 
@@ -156,21 +159,21 @@ test('8: a body that dies in transit is transient (asked again); invalid JSON is
   await loadRegs(MORRO, s.fetchFn);
   assert.ok(shown('morro-bay'), 'the committed registry shows');
   await loadRegs(MORRO, s.fetchFn);
-  assert.equal(s.urls.length, 4, 'the daily body failed in transit: the next card asks again');
+  assert.equal(s.urls.length, 6, 'the daily body failed in transit: the next card asks again');
   s.set(daily('morro-bay'), part('morro-bay'));
   await loadRegs(MORRO, s.fetchFn);
   await loadRegs(MORRO, s.fetchFn);
-  assert.equal(s.urls.length, 6, 'a clean read ends the asking');
+  assert.equal(s.urls.length, 9, 'a clean read ends the asking');
   fresh();
   const bad = server({[COMMITTED]: dies, [daily('morro-bay')]: data() && part('morro-bay')});
   await loadRegs(MORRO, bad.fetchFn);
   await loadRegs(MORRO, bad.fetchFn);
-  assert.equal(bad.urls.length, 4, 'the committed body failed in transit: asked again');
+  assert.equal(bad.urls.length, 6, 'the committed body failed in transit: asked again');
   fresh();
   const junk = server({[COMMITTED]: data(), [daily('morro-bay')]: 'bad-json'});
   await loadRegs(MORRO, junk.fetchFn);
   await loadRegs(MORRO, junk.fetchFn);
-  assert.equal(junk.urls.length, 2, 'invalid JSON beside a good read is not retried');
+  assert.equal(junk.urls.length, 3, 'invalid JSON beside a good read is not retried');
 });
 
 // The mounted card: the line stays mounted when another mark in the region is selected, so the
@@ -229,16 +232,16 @@ test('9: the mounted card line asks again when another mark in the region is sel
     const root = fakeDom(), mark = id => ({id, name: id, kind: 'Reef mark', reading: '', source: '', basis: ''});
     await m.act(() => m.render(m.h(m.RulesLine, {mark: mark('spot:a')}), root));
     await new Promise(r => setTimeout(r, 20));
-    assert.equal(s.urls.length, 2, 'card A: both reads were made and failed');
+    assert.equal(s.urls.length, 3, 'card A: both reads were made and failed');
     assert.equal(m.regsData.value, null);
     s.set(COMMITTED, data()); s.set(daily('morro-bay'), part('morro-bay'));
     await m.act(() => m.render(m.h(m.RulesLine, {mark: mark('spot:b')}), root));
     await new Promise(r => setTimeout(r, 20));
-    assert.equal(s.urls.length, 4, 'card B, same region, same mounted line: the selection reads again');
+    assert.equal(s.urls.length, 6, 'card B, same region, same mounted line: the selection reads again');
     assert.equal(m.regsData.value?.region, 'morro-bay', 'and the registry shows');
     await m.act(() => m.render(m.h(m.RulesLine, {mark: mark('spot:c')}), root));
     await new Promise(r => setTimeout(r, 20));
-    assert.equal(s.urls.length, 4, 'a good read is not asked again by the next selection');
+    assert.equal(s.urls.length, 6, 'a good read is not asked again by the next selection');
     m.render(null, root);
   } finally {
     globalThis.fetch = realFetch;
