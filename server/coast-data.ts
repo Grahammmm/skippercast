@@ -6,6 +6,7 @@
 import {json} from './http.ts';
 import {sourceFreshness, startupAdmission, startupDeadline} from '../web/landing/region-warm.ts';
 import catalog from '../catalog/sources.json' with {type: 'json'};
+import health from '../catalog/feed-health.json' with {type: 'json'};
 
 const ORIGIN = 'https://fish-report.g4651.workers.dev';
 const MB = 1024 * 1024;
@@ -168,20 +169,21 @@ const isClock = (v: unknown) => Number.isFinite(clock(v));
 const rows = (v: unknown): v is Json[] => Array.isArray(v) && v.every(x => !!x && typeof x === 'object' && !Array.isArray(x));
 const reported = (s: Json) => typeof s.id === 'string' && ['ok', 'error', 'pending'].includes(s.outcome) && isClock(s.fetchedAt);
 // SLO's feeds are published under the Morro Bay region: FE-40, FE-41, coast_snapshots.py and coast_report.py (live cycle) and FE-42 (weekly).
-const FEEDS: Record<CoastFeed, {key: string; max: number; maxAge: number; generated: string; valid: (d: Json) => boolean}> = {
-  nearshore: {key: 'conditions/regions/morro-bay/nearshore.json', max: MB, maxAge: 3 * HOUR, generated: 'generated_at',
+// Age limits (but report's) come from catalog/feed-health.json coast, which the status page reads too.
+export const FEEDS: Record<CoastFeed, {key: string; max: number; maxAge: number; generated: string; valid: (d: Json) => boolean}> = {
+  nearshore: {key: 'conditions/regions/morro-bay/nearshore.json', max: MB, maxAge: health.coast.nearshore.max_age_hours * HOUR, generated: 'generated_at',
     valid: d => d.schema_version === 1 && d.region_id === 'morro-bay' && rows(d.nearshore) && rows(d.sources) &&
       d.nearshore.every(s => typeof s.id === 'string' && typeof s.areaId === 'string' && ['available', 'error'].includes(s.availability) &&
         ['current', 'stale', 'unknown'].includes(s.freshness) && Array.isArray(s.hours) && isClock(s.fetchedAt) && (s.issuedAt === null || isClock(s.issuedAt))) &&
       d.sources.every(s => reported(s) && s.id.startsWith('cdip-'))},
-  'water-quality': {key: 'conditions/regions/morro-bay/beach-health.json', max: MB, maxAge: 3 * HOUR, generated: 'generatedAt',
+  'water-quality': {key: 'conditions/regions/morro-bay/beach-health.json', max: MB, maxAge: health.coast['water-quality'].max_age_hours * HOUR, generated: 'generatedAt',
     valid: d => d.schemaVersion === 1 && d.countyId === 'slo' && d.regionId === 'morro-bay' && rows(d.waterQuality) && rows(d.sources) && d.sources.length > 0 &&
       d.waterQuality.every(s => typeof s.id === 'string' && typeof s.status === 'string' && isClock(s.fetchedAt)) &&
       d.sources.every(s => reported(s) && s.id === 'slo-beach-water-quality')},
-  ocean: {key: 'conditions/regions/morro-bay/coast-ocean.json', max: 8 * MB, maxAge: 3 * HOUR, generated: 'generatedAt',
+  ocean: {key: 'conditions/regions/morro-bay/coast-ocean.json', max: 8 * MB, maxAge: health.coast.ocean.max_age_hours * HOUR, generated: 'generatedAt',
     valid: d => d.schemaVersion === 1 && d.countyId === 'slo' && rows(d.currents) && (d.cloud === null || (!!d.cloud && typeof d.cloud === 'object')) &&
       rows(d.sources) && d.sources.every(s => typeof s.id === 'string' && ['ok', 'error'].includes(s.status) && isClock(s.fetchedAt))},
-  history: {key: 'data/regions/morro-bay/history.json', max: 16 * MB, maxAge: 8 * 24 * HOUR, generated: 'generatedAt',
+  history: {key: 'data/regions/morro-bay/history.json', max: 16 * MB, maxAge: health.coast.history.max_age_hours * HOUR, generated: 'generatedAt',
     valid: d => d.schemaVersion === 1 && d.countyId === 'slo' && rows(d.stations) && Number.isFinite(d.recentWindowDays) && d.recentWindowDays > 0 &&
       d.stations.every(s => typeof s.stationId === 'string' && !!s.recent && typeof s.recent === 'object' && !!s.baseline && Array.isArray(s.sources))},
   report: {key: 'conditions/regions/morro-bay/coast-report.json', max: 8 * MB, maxAge: 2 * HOUR, generated: 'generatedAt',
@@ -190,7 +192,7 @@ const FEEDS: Record<CoastFeed, {key: string; max: number; maxAge: number; genera
 };
 const SNAPSHOT_FEEDS: Record<string, CoastFeed[]> = {report: ['report', 'nearshore', 'water-quality'], ocean: ['ocean'], history: ['history']};
 // The catalog rows behind each feed. A name is honoured only while none of them is refused by the rights register.
-const FEED_SOURCES: Record<CoastFeed, string[]> = {nearshore: ['cdip-mop'], 'water-quality': ['slo-beach-water-quality'],
+export const FEED_SOURCES: Record<CoastFeed, string[]> = {nearshore: ['cdip-mop'], 'water-quality': ['slo-beach-water-quality'],
   ocean: ['noaa-wcofs', 'noaa-hfr-thredds', 'noaa-goes-nowcoast'], history: ['ndbc-history'],
   report: ['nws-weather', 'ndbc-buoys', 'noaa-tides', 'landing-reports', 'noaa-blended-sst', 'cdfw-mpas']};
 type CatalogRow = {id: string; review_status?: string; rights?: {commercial_use?: string}};
