@@ -56,6 +56,10 @@ export function shareCoast(values: readonly string[]): string {
 
 /** The canonical link to what the page shows now, and its share-sheet title. */
 export function shareLink({href, origin, ports, region, savedId, profile, now, tz, dockDay}: ShareInput): ShareLink {
+  // fishLink rewrites a first `species` into `target` and deletes every `species`, which would hide a repeated alias:
+  // read the carried target from the original query so its cardinality survives. A present `target` (even empty,
+  // bad or repeated) takes precedence and blocks the legacy `species` fallback.
+  const raw = new URL(href).searchParams;
   const from = fishLink(href).searchParams;
   const out = new URL('/map', origin), p = out.searchParams;
   const linked = parsePort(from.getAll('port').length === 1 ? from.get('port') : null);
@@ -73,7 +77,7 @@ export function shareLink({href, origin, ports, region, savedId, profile, now, t
   if (isProfile(profile)) p.set('profile', profile);
   if (day) p.set('day', day);
   if (hour) p.set('hour', hour);
-  const target = single(from, 'target', TARGET_ID);
+  const target = raw.has('target') ? single(raw, 'target', TARGET_ID) : single(raw, 'species', TARGET_ID);
   if (target) p.set('target', target);
   for (const key of SHARED_VIEW_KEYS) {
     const value = single(from, key, PLAIN);
