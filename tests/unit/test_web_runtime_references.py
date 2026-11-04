@@ -119,3 +119,135 @@ def test_skill_route_is_navigation_only_and_exact(tmp_path, monkeypatch, html):
     (tmp_path / "skill.html").write_text("Forecast skill")
     with pytest.raises(AssertionError):
         check(tmp_path, monkeypatch, html)
+
+
+# RF1020-4: SRI uses the strongest supported algorithm, as browsers do.
+import base64
+import hashlib
+import socket
+
+FIXTURE = b"synthetic vendor bytes\n"
+
+
+def sri(algorithm, data=FIXTURE):
+    return algorithm + "-" + base64.b64encode(hashlib.new(algorithm, data).digest()).decode()
+
+
+def bad(algorithm):
+    return sri(algorithm, b"different bytes")
+
+
+ALGORITHMS = ["sha256", "sha384", "sha512"]
+PAIRS = [("sha256", "sha384"), ("sha256", "sha512"), ("sha384", "sha512")]
+
+
+@pytest.mark.parametrize("weak,strong", PAIRS)
+@pytest.mark.parametrize("weak_first", [True, False])
+def test_sri_stronger_mismatch_is_not_rescued(weak, strong, weak_first):
+    tokens = [sri(weak), bad(strong)]
+    tokens = tokens if weak_first else tokens[::-1]
+    assert checker.sri_digest(" ".join(tokens), FIXTURE) is False
+
+
+def test_sri_stronger_mismatch_is_not_rescued_by_any_lower_algorithm():
+    assert checker.sri_digest(" ".join([sri("sha256"), sri("sha384"), bad("sha512")]), FIXTURE) is False
+    assert checker.sri_digest(" ".join([bad("sha512"), sri("sha384"), sri("sha256")]), FIXTURE) is False
+
+
+def test_sri_strongest_match_and_equal_strength_alternatives():
+    for algorithm in ALGORITHMS:
+        assert checker.sri_digest(sri(algorithm), FIXTURE) is True
+    for weak, strong in PAIRS:
+        assert checker.sri_digest(bad(weak) + " " + sri(strong), FIXTURE) is True
+        assert checker.sri_digest(sri(strong) + " " + bad(weak), FIXTURE) is True
+    for algorithm in ALGORITHMS:
+        other = bad(algorithm)
+        good = sri(algorithm)
+        assert checker.sri_digest(f"{other} {good}", FIXTURE) is True
+        assert checker.sri_digest(f"{good} {other}", FIXTURE) is True
+        assert checker.sri_digest(f"{good} {good} {other}", FIXTURE) is True
+        assert checker.sri_digest(f"{other} {other}", FIXTURE) is False
+
+
+@pytest.mark.parametrize("integrity,expected", [
+    ("", False),
+    (" \t\n ", False),
+    ("md5-abc sha1-abc sha999-abc", False),
+    ("nohyphen", False),
+    (bad("sha256"), False),
+    ("md5-abc " + sri("sha256"), True),
+    ("sha1-abc\t" + sri("sha384"), True),
+    (bad("sha384") + " " + sri("sha256"), False),
+    ("sha384- " + sri("sha256"), True),
+    ("sha512-\n" + sri("sha384"), True),
+    (sri("sha256") + "\n" + sri("sha384") + "\t" + bad("sha512"), False),
+    (sri("sha256") + "\t\n" + sri("sha256"), True),
+])
+def test_sri_empty_unknown_and_nonmatching_tokens(integrity, expected):
+    assert checker.sri_digest(integrity, FIXTURE) is expected
+
+
+@pytest.fixture
+def vendor_site(tmp_path, monkeypatch):
+    def refuse(*args, **kwargs):
+        raise AssertionError("network access in a unit test")
+    monkeypatch.setattr(socket.socket, "connect", refuse)
+    web = tmp_path / "dist"
+    (web / "vendor").mkdir(parents=True)
+    (web / "vendor" / "fixture.js").write_bytes(FIXTURE)
+    monkeypatch.setattr(checker, "ROOT", tmp_path)
+    monkeypatch.setattr(checker, "WEB", web)
+    pinned = {"dist/vendor/fixture.js": hashlib.sha256(FIXTURE).hexdigest()}
+
+    def page(tag_html):
+        (web / "page.html").write_text("<!doctype html><html><body>" + tag_html + "</body></html>")
+    return page, pinned
+
+
+def tags(integrity):
+    attr = f' integrity="{integrity}"' if integrity else ""
+    return {
+        "script": f'<script src="vendor/fixture.js"{attr}></script>',
+        "stylesheet": f'<link rel="stylesheet" href="vendor/fixture.js"{attr}>',
+    }
+
+
+@pytest.mark.parametrize("kind", ["script", "stylesheet"])
+@pytest.mark.parametrize("integrity", [
+    sri("sha256") + " " + bad("sha384"),
+    bad("sha512") + " " + sri("sha256"),
+    sri("sha384") + " " + bad("sha512"),
+    sri("sha256") + " " + sri("sha384") + " " + bad("sha512"),
+])
+def test_vendor_integrity_refuses_stronger_mismatch(vendor_site, kind, integrity):
+    page, pinned = vendor_site
+    page(tags(integrity)[kind])
+    with pytest.raises(AssertionError) as raised:
+        checker.check_vendor_integrity(pinned)
+    path, ref, message = raised.value.args[0]
+    assert path.name == "page.html" and ref == "vendor/fixture.js"
+    assert message == "integrity does not match the file"
+
+
+@pytest.mark.parametrize("kind", ["script", "stylesheet"])
+@pytest.mark.parametrize("integrity", [
+    sri("sha512"),
+    bad("sha512") + " " + sri("sha512") + " " + bad("sha256"),
+    bad("sha256") + " " + sri("sha384"),
+    sri("sha256") + " " + sri("sha256"),
+])
+def test_vendor_integrity_accepts_matching_strongest_alternative(vendor_site, kind, integrity):
+    page, pinned = vendor_site
+    page(tags(integrity)[kind])
+    checker.check_vendor_integrity(pinned)
+
+
+@pytest.mark.parametrize("kind", ["script", "stylesheet"])
+def test_vendor_integrity_still_needs_integrity_and_manifest_entry(vendor_site, kind):
+    page, pinned = vendor_site
+    page(tags("")[kind])
+    with pytest.raises(AssertionError, match="vendor asset needs an integrity attribute"):
+        checker.check_vendor_integrity(pinned)
+    page(tags(sri("sha256"))[kind])
+    with pytest.raises(AssertionError, match="missing from scripts/web-vendor-sha256.json"):
+        checker.check_vendor_integrity({})
