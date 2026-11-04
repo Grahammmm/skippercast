@@ -59,7 +59,7 @@ const count = (sql, table) => sql.prepare(`SELECT COUNT(*) AS n FROM ${table}`).
 
 test('register → session → private trip → sign out → 401 → sign in again', async () => {
   const {sql, adapter} = database(), c = client(adapter), auth = new SoftwareAuthenticator();
-  assert.deepEqual((await c.call('/api/session')).data, {signedIn: false, publicKey: null, signIn: '/#account', user: null, is_admin: false});
+  assert.deepEqual((await c.call('/api/session')).data, {signedIn: false, publicKey: null, signIn: '/#account', user: null, is_admin: false, advisor: false});
   assert.equal((await c.call('/api/trips')).status, 401);
 
   const {options, result} = await register(c, auth, 'Graham');
@@ -379,8 +379,34 @@ test('client: sign-in links stay in the page, and passkey errors read plainly', 
   assert.match(passkeyMessage({status: 429, message: 'please try again shortly'}), /Too many attempts/);
   assert.equal(passkeyMessage({message: 'that passkey is not recognised here'}), 'That passkey is not recognised here.');
   const html = readFileSync(new URL('../dist/app.html', import.meta.url), 'utf8');
-  assert.match(html, /<script src="vendor\/simplewebauthn-browser-14\.0\.0\/index\.umd\.min\.js" integrity="sha256-[^"]+" defer><\/script>/);
+  assert.doesNotMatch(html, /simplewebauthn/i, 'the map page does not load the passkey library; account.js adds it when a ceremony starts (SC0452-01)');
   // Destructive actions confirm in the page; window.confirm blocks the page and automation.
   for (const file of ['../dist/account.js', '../web/alerts.ts', '../web/app/TripAlerts.tsx']) assert.doesNotMatch(readFileSync(new URL(file, import.meta.url), 'utf8'), /(^|[^.\w])confirm\(/, file);
   for (const file of ['../web/app/TripAlerts.tsx', '../dist/boat-profile.js']) assert.doesNotMatch(readFileSync(new URL(file, import.meta.url), 'utf8'), /coming soon|chatgpt/i, file);
+});
+
+// SC0452-02: /api/session carries the advisor gate's own decision (server/advisor/gate.ts), so the masthead sends no HEAD /chat.html.
+test('session_advisor_matches_gate: the session flag follows the gate that answers /chat.html, whoever asks', async () => {
+  const {sql, adapter} = database();
+  globalThis.SHELLS ??= {'/': '/index.0123456789.html'};
+  const ASSETS = {fetch: async () => new Response('chat page', {status: 299})};
+  const ask = (path, env, method = 'GET', cookie) => worker.fetch(new Request(ORIGIN + path, {method, headers: {'User-Agent': 'Mozilla/5.0 (test) Safari', ...(cookie ? {Cookie: `${COOKIE}=${cookie}`} : {})}}), {DB: adapter, ASSETS, ...env});
+  const cases = [[{}, false], [{TEXT_ADVISOR_ENABLED: 'false'}, false], [{TEXT_ADVISOR_ENABLED: 'true'}, true], [{TEXT_ADVISOR_ENABLED: ' TRUE '}, true], [{TEXT_ADVISOR_ENABLED: 'yes'}, false], [{TEXT_ADVISOR_ENABLED: '1'}, false], [{TEXT_ADVISOR_ENABLED: ''}, false]];
+  const auth = new SoftwareAuthenticator(), c = client(adapter);
+  assert.equal((await register(c, auth, 'Graham')).result.status, 201);
+  const cookie = c.jar.cookie;
+  for (const provider of ['skippercast', null]) for (const [flags, expected] of cases) {
+    const env = {...(provider === null ? {} : {IDENTITY_PROVIDER: provider}), ...flags};
+    const chat = await ask('/chat.html', env, 'HEAD');
+    assert.equal(chat.status === 404, !expected, `the gate: ${JSON.stringify(env)}`);
+    for (const who of [undefined, cookie]) {
+      const answer = await ask('/api/session', env, 'GET', who);
+      assert.equal(answer.status, 200);
+      const body = await answer.json();
+      assert.equal(body.advisor, expected, `session flag ${JSON.stringify(env)} ${who ? 'signed in' : 'signed out'}`);
+      assert.equal(typeof body.advisor, 'boolean');
+      for (const key of ['signedIn', 'publicKey', 'signIn', 'user', 'is_admin']) assert.ok(key in body, key);
+    }
+  }
+  sql.close();
 });

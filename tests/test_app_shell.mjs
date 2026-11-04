@@ -37,7 +37,8 @@ async function load() {
       export {Planner} from './web/app/Planner.tsx';
       export {createPlanner} from './web/planner.ts';
       export {AccountMenu} from './web/app/AccountMenu.tsx';
-      export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, TAB_VIEWS, advisorOn, checkAdvisor, ChatEntry, Location, DegradedNotice} from './web/app/Masthead.tsx';
+      export {session, ensureSession, refreshSession, readSession} from './web/account.ts';
+      export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, TAB_VIEWS, ChatEntry, Location, DegradedNotice} from './web/app/Masthead.tsx';
       export {degraded, watchDegraded, installDegradedWatch} from './web/degraded.ts';
       export {targetOptions, windowText} from './web/app/CommandBar.tsx';
       export {Brief, emptyTiles, DISCLAIMER} from './web/app/Desktop.tsx';
@@ -651,25 +652,57 @@ test('loadRegion fills the masthead from regions/<id>/region.json and leaves pla
   assert.equal(regionInfo.value, null);
 });
 
-// FE-55: the chat entry renders only while the advisor answers (its gate 404s /chat.html while TEXT_ADVISOR_ENABLED is off).
-test('the masthead chat entry renders nothing with the advisor off and links to the web chat when on', async () => {
-  const {advisorOn, checkAdvisor, ChatEntry, render, h} = await load();
-  const asked = [];
-  const answer = status => async (url, init) => { asked.push([url, init]); return {ok: status >= 200 && status < 300, status}; };
-  assert.equal(await checkAdvisor(answer(404)), false, 'the gate answers 404 while the advisor is off');
-  assert.equal(await checkAdvisor(async () => { throw new Error('offline'); }), false);
-  assert.equal(await checkAdvisor(answer(200)), true);
-  assert.deepEqual(asked[0], ['/chat.html', {method: 'HEAD', credentials: 'omit', cache: 'no-store'}], 'one HEAD, no cookie');
-
-  advisorOn.value = false;
-  assert.equal(render(h(ChatEntry, {})), '');
-  const off = await renderShell(`${ORIGIN}?region=morro-bay`);
-  assert.doesNotMatch(off, /data-advisor-entry|chat\.html|Ask SkipperCast/);
-  advisorOn.value = true;
+// FE-55 / SC0452-02: the chat entry renders only while the shared session read says the advisor gate is open
+// (GET /api/session, which the account menu already reads), with no HEAD /chat.html probe.
+test('the masthead chat entry renders nothing with the advisor off and links to the web chat when the session says on', async () => {
+  const {session, ChatEntry, render, h} = await load();
+  const ANCHOR = '<a class="ui-button ui-button--quiet" href="/chat.html" data-advisor-entry="true">Ask SkipperCast</a>';
   try {
-    assert.equal(render(h(ChatEntry, {})), '<a class="ui-button ui-button--quiet" href="/chat.html" data-advisor-entry="true">Ask SkipperCast</a>');
+    for (const loaded of [{state: 'loading'}, {state: 'offline'}, {state: 'disabled', advisor: false}, {state: 'signed-out', advisor: false}, {state: 'signed-in', name: 'Skipper', advisor: false}]) {
+      session.value = loaded;
+      assert.equal(render(h(ChatEntry, {})), '', `no Chat entry for ${JSON.stringify(loaded)}`);
+    }
+    session.value = {state: 'signed-out', advisor: false};
+    const off = await renderShell(`${ORIGIN}?region=morro-bay`);
+    assert.doesNotMatch(off, /data-advisor-entry|chat\.html|Ask SkipperCast/);
+    // Chat is offered whether or not the site offers sign in, and whoever is signed in.
+    for (const on of [{state: 'disabled', advisor: true}, {state: 'signed-out', advisor: true}, {state: 'signed-in', name: null, advisor: true}]) {
+      session.value = on;
+      assert.equal(render(h(ChatEntry, {})), ANCHOR, `Chat entry for ${on.state}`);
+    }
     assert.match(await renderShell(`${ORIGIN}?region=morro-bay`), /class="app-fresh".*data-advisor-entry="true">Ask SkipperCast<\/a><div class="app-account">/s, 'between freshness and the account menu');
-  } finally { advisorOn.value = false; }
+  } finally { session.value = {state: 'loading'}; }
+});
+
+test('the chat entry and the account menu share one session read and no HEAD /chat.html is sent', async () => {
+  const {session, ensureSession, refreshSession, ChatEntry, render, h} = await load();
+  const asked = [];
+  const answer = (data, ok = true) => async (url, init) => { asked.push([url, init?.method ?? 'GET']); return {ok, json: async () => data}; };
+  try {
+    session.value = {state: 'loading'};
+    const fetchFn = answer({signIn: null, signedIn: false, advisor: true});
+    // The menu's and the chat entry's mount effects both call the one initializer, in either order, and remounts reuse its answer.
+    const first = ensureSession(fetchFn), second = ensureSession(fetchFn);
+    assert.equal(first, second, 'a pending read is shared');
+    await Promise.all([first, second]);
+    await ensureSession(fetchFn);
+    assert.deepEqual(asked.map(([url]) => url), ['/api/session'], 'one GET /api/session');
+    assert.ok(asked.every(([, method]) => method === 'GET'), 'no HEAD request at all');
+    assert.equal(render(h(ChatEntry, {})).includes('data-advisor-entry'), true);
+    // A failed explicit refresh withdraws the Chat entry (offline, as the account menu shows it).
+    await refreshSession(async () => { throw new Error('offline'); });
+    assert.deepEqual(session.value, {state: 'offline'});
+    assert.equal(render(h(ChatEntry, {})), '');
+    // A refresh that answers 'off' withdraws it too; an HTTP failure is offline.
+    await refreshSession(answer({signIn: null, signedIn: false, advisor: false}));
+    assert.equal(render(h(ChatEntry, {})), '');
+    await refreshSession(answer({signIn: null, signedIn: false, advisor: true}));
+    assert.equal(render(h(ChatEntry, {})).includes('data-advisor-entry'), true);
+    await refreshSession(answer({advisor: true}, false));
+    assert.equal(render(h(ChatEntry, {})), '', 'an unsuccessful answer shows no Chat entry even if its body says advisor');
+  } finally { session.value = {state: 'loading'}; }
+  const source = readFileSync(join(ROOT, 'web/app/Masthead.tsx'), 'utf8');
+  assert.doesNotMatch(source, /method: 'HEAD'|probeAdvisor|checkAdvisor|advisorOn/, 'the masthead has no probe machinery left');
 });
 
 test('the map chrome offers Chart, 2D and 3D; without terrain the terrain choices are disabled and point at the reason', async () => {
@@ -758,7 +791,7 @@ test('the shell files keep the token and copy rules, and app.html mounts the ent
   assert.deepEqual(attrs(page, /<link rel="stylesheet" href="([^"]+)"/g), ['../web/tokens.css', '../web/ui/ui.css', '../web/app/app.css', '../web/landing/port-input.css', '../web/app/account.css', '../web/app/trip.css', '../web/app/helm.css'],
     'tokens first, then the primitives, then the shell, then the entry flow (FE-08), then the account dialogs (FE-50), then the trip plan (FE-51), then the Helm view (BF-helm-mode)');
   // FE-61: tests/test_no_v1_map_library.mjs checks that no tracked file names the retired 2D map library.
-  assert.deepEqual(attrs(page, /src="(vendor\/[^"]+)"/g), ['vendor/simplewebauthn-browser-14.0.0/index.umd.min.js'], 'the only vendored script is the passkey library (FE-50)');
+  assert.deepEqual(attrs(page, /src="(vendor\/[^"]+)"/g), [], 'the map page loads no vendored script: the passkey library loads when a ceremony starts (FE-50, SC0452-01)');
 });
 
 

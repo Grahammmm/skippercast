@@ -188,7 +188,12 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // (same degraded.ts import, same <p class="app-limits-note app-degraded"> markup) and re-exports it, so /map's
   // masthead renders the identical element. No CSS, token or catch markup change; contrast(), assertions and
   // thresholds are untouched. Rebind only Masthead.tsx.
-  "web/app/Masthead.tsx": "1859c84f33775f1c6830f932566a644bdd639fd7c0804947ea38f375ad4b6aff",
+  // SC0452-02 (#1554): ChatEntry replaces its HEAD /chat.html probe and private signal with
+  // ensureSession/session from web/account.ts. BODY09 mounts Reports/CatchCards directly, never
+  // ChatEntry or Masthead, so the session-read effect does not run here. The account module has
+  // no top-level fetch; CSS, tokens, catch markup, contrast(), assertions and thresholds are
+  // unchanged. Rebind only Masthead.tsx to its exact final bytes.
+  "web/app/Masthead.tsx": "de37b5d6bd15106c3a111fae6c8e603e6afca6144a86b08f985346ba28c31659",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.

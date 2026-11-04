@@ -153,7 +153,7 @@ test('overlay styles read tokens only', () => {
   assert.match(a.sources[AIS_SOURCE].attribution, /Global Fishing Watch · CC BY-NC 4\.0/);
 });
 
-test('Accept 2: the basis sentences are v1\'s, verbatim, and the commercial AIS page is unchanged', () => {
+test('Accept 2: the basis sentences are v1\'s, verbatim, and the commercial AIS page is unchanged but for one SC0452-11 sentence', () => {
   const html = read('dist/commercial-ais.html'), chartersJs = read('dist/charter-grounds.js');
   const sentences = s => s.match(/[^.]+?(?:\.(?=\s|$))/g).map(x => x.trim());
   for (const s of sentences(layerEntry('commercial-ais').basis)) assert.ok(html.includes(s), `commercial-ais.html says: ${s}`);
@@ -170,14 +170,20 @@ test('Accept 2: the basis sentences are v1\'s, verbatim, and the commercial AIS 
   // v2 tokens and the readable pages' sheet, so the pin covers the <main> content, which is unchanged.
   assert.equal((html.match(/href="\/map"/g) || []).length, 1);
   const main = html.match(/<main id="content">([\s\S]*)<\/main>/)?.[1] ?? '';
-  assert.deepEqual({main: createHash('sha256').update(main.replace('<a href="/map">', '<a href="index.html#map">')).digest('hex')}, PINNED);
+  const linked = main.replace('<a href="/map">', '<a href="index.html#map">');
+  assert.deepEqual({main: createHash('sha256').update(linked).digest('hex')}, PINNED);
+  // SC0452-11 reworded one caveat sentence ("AIS does not cover every boat" -> "AIS coverage omits some boats"), nothing else:
+  // with that sentence put back, the <main> content is the pre-FE-21 content again.
+  assert.equal(linked.split('AIS coverage omits some boats;').length, 2, 'the reworded sentence appears once');
+  assert.deepEqual({main: createHash('sha256').update(linked.replace('AIS coverage omits some boats;', 'AIS does not cover every boat;')).digest('hex')}, BEFORE_SC0452_11);
   assert.match(html, /<link rel="stylesheet" href="\.\.\/web\/tokens\.css"><link rel="stylesheet" href="coast-readable\.css">/);
   assert.doesNotMatch(html, /href="(?:tokens|styles)\.css"/, 'no v1 sheet');
   assert.ok(groundMark(GROUNDS.grounds[0], GROUNDS).basis.startsWith(layerEntry('charter-grounds').basis));
 });
 
 /**
- * sha256 of dist/commercial-ais.html's <main> content as it was before FE-21. Until FE-61 part 2 this pinned the
- * whole page (096874dd…, before FE-21); that page's <main> content hashes to this value.
+ * sha256 of dist/commercial-ais.html's <main> content as it was before FE-21, with the one wording-only change of
+ * SC0452-11 (its coverage sentence). Until FE-61 part 2 this pinned the whole page (096874dd…, before FE-21).
  */
-const PINNED = {main: 'f8f4339ad2caf92af03d93e709d5c5760011bc9efee8a3ef28b1daa0beb455d3'};
+const BEFORE_SC0452_11 = {main: 'f8f4339ad2caf92af03d93e709d5c5760011bc9efee8a3ef28b1daa0beb455d3'};
+const PINNED = {main: '156c4d37791835d45a2d0866f8c24e448307eaec0652e0f880d8c7256a42023e'};

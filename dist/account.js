@@ -1,7 +1,8 @@
 // Account sheet: create a SkipperCast account or sign in with a passkey, add or
 // remove passkeys, sign out, delete the account. Opens from the Guide entry or
 // any #account link. Passkey ceremonies use the vendored @simplewebauthn/browser
-// (window.SimpleWebAuthnBrowser, loaded with SRI in app.html).
+// (globalThis.SimpleWebAuthnBrowser), which loadPasskeyLibrary() adds once, with SRI,
+// when a ceremony starts: app.html does not load it for map page views.
 const RETURN_KEY = 'skippercast-account-return';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[c]);
 const day = iso => iso ? new Date(iso).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'}) : '';
@@ -27,6 +28,7 @@ export function signInHref(signIn) {
 /** Plain-language message for a failed passkey ceremony. */
 export function passkeyMessage(error) {
   const name = error?.name, code = error?.code;
+  if (code === 'PASSKEY_LIBRARY_UNAVAILABLE') return PASSKEY_UNAVAILABLE;
   if (code === 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED' || name === 'InvalidStateError') return 'This device already has a passkey for this account.';
   if (name === 'NotAllowedError' || name === 'AbortError') return 'The passkey request was cancelled or timed out. Try again when ready.';
   if (name === 'SecurityError') return 'Passkeys are not available on this address.';
@@ -58,7 +60,51 @@ export function confirmInPage(anchor, message, confirmLabel) {
 }
 
 const webauthn = () => globalThis.SimpleWebAuthnBrowser;
-const supported = () => !!webauthn()?.browserSupportsWebAuthn?.();
+
+/** The vendored passkey library: same-origin absolute path (so /map and hash links resolve it alike), pinned by SRI to the bytes in scripts/web-vendor-sha256.json. */
+export const PASSKEY_LIBRARY = {src: '/vendor/simplewebauthn-browser-14.0.0/index.umd.min.js', integrity: 'sha256-KbsGmbRbw5o1DZkqE7/BpNQNiVMTkFgeH1fxFCxuIh0='};
+export const PASSKEY_UNAVAILABLE = 'Passkeys are unavailable right now. Try again when you are online.';
+const PASSKEY_LOAD_MS = 20000;
+const UNSUPPORTED = 'This browser does not support passkeys. Try an up-to-date Safari, Chrome, Edge or Firefox.';
+const isComplete = lib => ['browserSupportsWebAuthn', 'startAuthentication', 'startRegistration'].every(name => typeof lib?.[name] === 'function');
+
+let passkeyLoad = null;   // the one shared attempt: pending, or resolved once the library has loaded
+/**
+ * Resolves with the passkey library, adding its script the first time a ceremony needs it. Callers that overlap share one
+ * attempt; a loaded library is reused for the page's life. A script error (an SRI mismatch included), a missing or incomplete
+ * global, a refused insert or no answer in 20 s rejects with PASSKEY_UNAVAILABLE and clears only that attempt, so the next
+ * deliberate try loads afresh and a late event from the old attempt cannot settle it. The script has no crossorigin attribute:
+ * a same-origin request, never with credentials mode changed or another origin.
+ */
+export function loadPasskeyLibrary() {
+  if (isComplete(webauthn())) return Promise.resolve(webauthn());
+  if (passkeyLoad) return passkeyLoad.promise;
+  const attempt = {promise: null};
+  attempt.promise = new Promise((resolve, reject) => {
+    passkeyLoad = attempt;
+    let script = null, timer = null, settled = false;
+    const settle = ok => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      script?.removeEventListener('load', onLoad); script?.removeEventListener('error', onError);
+      if (ok) { resolve(webauthn()); return; }
+      try { script?.remove(); } catch { /* already gone */ }
+      if (passkeyLoad === attempt) passkeyLoad = null;
+      reject(Object.assign(Error(PASSKEY_UNAVAILABLE), {code: 'PASSKEY_LIBRARY_UNAVAILABLE'}));
+    };
+    const onLoad = () => settle(isComplete(webauthn()));
+    const onError = () => settle(false);
+    try {
+      script = document.createElement('script');
+      script.src = PASSKEY_LIBRARY.src; script.integrity = PASSKEY_LIBRARY.integrity;
+      script.addEventListener('load', onLoad); script.addEventListener('error', onError);
+      timer = setTimeout(() => settle(false), PASSKEY_LOAD_MS);
+      document.head.append(script);
+    } catch { settle(false); }
+  });
+  return attempt.promise;
+}
 
 function finish() {
   // Reload so trip alerts, feedback and AI lookup pick up the new session,
@@ -242,37 +288,59 @@ export async function openAccount() {
     body.innerHTML = signedOutHTML();
     const buttons = [$('#account-create'), $('#account-signin')];
     const busy = on => buttons.forEach(b => { b.disabled = on; });
-    if (!supported()) { busy(true); status('This browser does not support passkeys. Try an up-to-date Safari, Chrome, Edge or Firefox.'); return; }
+    // Without the native API there is nothing to load: say so now. Otherwise the library loads when a ceremony starts
+    // (a tap on Create or Sign in, or the optional autofill below), never because the dialog is merely open signed in.
+    if (typeof globalThis.PublicKeyCredential !== 'function') { busy(true); status(UNSUPPORTED); return; }
     // #597: once the person taps Create or Sign in, or this dialog is closed or replaced, a passkey-autofill request
-    // still waiting for its options must not start: its ceremony would abort theirs through the shared abort service.
+    // still waiting for the library, its support check or its options must not start: its ceremony would abort theirs
+    // through the shared abort service.
     let manual = false;
-    const signIn = async (autofill = false) => {
+    const stale = autofill => open !== self || (autofill && manual);
+    const signIn = async (lib, autofill = false) => {
       const options = await api('auth/login/options', {method: 'POST', body: {}});
-      if (autofill && (manual || open !== self)) return;
-      const response = await webauthn().startAuthentication({optionsJSON: options, useBrowserAutofill: autofill});
+      if (stale(autofill)) return;
+      const response = await lib.startAuthentication({optionsJSON: options, useBrowserAutofill: autofill});
+      if (open !== self) return;
       await api('auth/login/verify', {method: 'POST', body: {response}});
       status('Signed in.'); finish();
+    };
+    // The library, once it has loaded and this browser supports passkeys; null when the dialog was closed or replaced meanwhile
+    // (nothing is painted into it) or when the browser lacks passkeys (said, and the buttons stay off).
+    const ready = async () => {
+      const lib = await loadPasskeyLibrary();
+      if (open !== self) return null;
+      if (!lib.browserSupportsWebAuthn()) { status(UNSUPPORTED); return null; }
+      return lib;
     };
     $('#account-create').addEventListener('click', async () => {
       manual = true; busy(true); status('Follow your device to create a passkey…');
       try {
+        const lib = await ready(); if (!lib) return;
         const name = $('#account-name').value.trim();
         const options = await api('auth/register/options', {method: 'POST', body: {display_name: name}});
-        const response = await webauthn().startRegistration({optionsJSON: options});
+        if (open !== self) return;
+        const response = await lib.startRegistration({optionsJSON: options});
+        if (open !== self) return;
         await api('auth/register/verify', {method: 'POST', body: {response, display_name: name}});
         status('Account created.'); finish();
-      } catch (error) { status(passkeyMessage(error)); busy(false); }
+      } catch (error) { if (open === self) { status(passkeyMessage(error)); busy(false); } }
     });
     $('#account-signin').addEventListener('click', async () => {
       manual = true; busy(true); status('Choose your SkipperCast passkey…');
-      try { await signIn(false); } catch (error) { status(passkeyMessage(error)); busy(false); }
+      try { const lib = await ready(); if (lib) await signIn(lib, false); } catch (error) { if (open === self) { status(passkeyMessage(error)); busy(false); } }
     });
-    // Passkey autofill: suggestions appear in the name field where supported.
-    try {
-      // Only the server's answer is shown: the browser ends a pending autofill
-      // request (AbortError/NotAllowedError) whenever a button starts another.
-      if (await webauthn().browserSupportsWebAuthnAutofill()) signIn(true).catch(error => { if (open && error?.status) status(passkeyMessage(error)); });
-    } catch { /* optional */ }
+    // Passkey autofill: suggestions appear in the name field where supported. Optional, so a library that will not
+    // load stays silent here; only the server's answer is shown, because the browser ends a pending autofill request
+    // (AbortError/NotAllowedError) whenever a button starts another.
+    (async () => {
+      try {
+        const lib = await loadPasskeyLibrary();
+        if (stale(true)) return;
+        if (!await lib.browserSupportsWebAuthnAutofill()) return;
+        if (stale(true)) return;
+        await signIn(lib, true);
+      } catch (error) { if (open === self && error?.status) status(passkeyMessage(error)); }
+    })();
     $('#account-name').focus();
     return;
   }
@@ -347,14 +415,18 @@ export async function openAccount() {
     });
     showSpots();
     $('#account-add').addEventListener('click', async () => {
-      if (!supported()) { status('This browser does not support passkeys.'); return; }
       status('Follow your device to add a passkey…');
       try {
+        const lib = await loadPasskeyLibrary();
+        if (open !== self) return;
+        if (!lib.browserSupportsWebAuthn()) { status('This browser does not support passkeys.'); return; }
         const options = await api('auth/passkeys/options', {method: 'POST', body: {}});
-        const response = await webauthn().startRegistration({optionsJSON: options});
+        if (open !== self) return;
+        const response = await lib.startRegistration({optionsJSON: options});
+        if (open !== self) return;
         await api('auth/passkeys', {method: 'POST', body: {response}});
         await render(); status('Passkey added.');
-      } catch (error) { status(passkeyMessage(error)); }
+      } catch (error) { if (open === self) status(passkeyMessage(error)); }
     });
     $('#account-signout').addEventListener('click', async () => {
       try { await api('auth/logout', {method: 'POST', body: {}}); finish(); } catch (error) { status(passkeyMessage(error)); }

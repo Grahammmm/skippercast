@@ -19,12 +19,12 @@
 import * as T from 'three';
 import {coastLonLat,coastPoint,type Grid} from './grid.ts';
 import {COAST_OVERLAY_COLORS,type CoastOverlayColor,type CoastOverlayPalette} from '../palette.ts';
-import type {CoastOverlay,CoastOverlayFeature,CoastOverlayKind,CoastOverlayPick} from '../embed-types.ts';
+import type {CoastOverlay,CoastOverlayDrape,CoastOverlayFeature,CoastOverlayKind,CoastOverlayPick} from '../embed-types.ts';
 type Position=readonly number[];
 type Ring=readonly Position[];
 
 // The public overlay types live in ../embed-types.ts (no renderer imports, FE-71).
-export type {CoastOverlay,CoastOverlayFeature,CoastOverlayGeometry,CoastOverlayKind,CoastOverlayPick,CoastOverlayStyle} from '../embed-types.ts';
+export type {CoastOverlay,CoastOverlayDrape,CoastOverlayFeature,CoastOverlayGeometry,CoastOverlayKind,CoastOverlayPick,CoastOverlayStyle} from '../embed-types.ts';
 /** Displayed surface height in scene metres at scene x, z. */
 export type SurfaceSampler=(x:number,z:number)=>number;
 
@@ -156,15 +156,16 @@ export class CoastOverlays{
  /** The fill cell and line step an overlay was draped with, in metres; null when the id is unknown. */
  spacing(id:string):{cell:number;step:number}|null{const entry=this.entries.get(id);return entry?{...entry.spacing}:null;}
 
- /** Adds the overlay, or replaces one with the same id in its stacking place. Invalid input throws and changes nothing. */
- set(id:string,overlay:CoastOverlay):void{
-  if(this.disposed)return;
+ /** Adds the overlay, or replaces one with the same id in its stacking place, and returns the drape spacing it got (null once disposed). Invalid input throws and changes nothing. */
+ set(id:string,overlay:CoastOverlay):CoastOverlayDrape|null{
+  if(this.disposed)return null;
   if(typeof id!=='string'||!id)throw new TypeError('setOverlay: the overlay id must be a non-empty string');
   const entry=this.build(id,overlay),old=this.entries.get(id);
   entry.seq=old?old.seq:this.seq++;if(old)this.release(old);
   this.entries.set(id,entry);
   for(const part of entry.parts)this.group.add(part.object);
   this.drapeEntry(entry);this.restack();
+  return {...entry.spacing,coarsened:entry.spacing.cell>DRAPE_M||entry.spacing.step>DRAPE_M};
  }
  /** Removes the overlay and frees its geometry and materials; false when the id is unknown. */
  remove(id:string):boolean{const entry=this.entries.get(id);if(!entry)return false;this.release(entry);this.entries.delete(id);return true;}

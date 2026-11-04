@@ -4,6 +4,7 @@ import {Hono} from 'hono';
 import {exportAccount, deleteAccountStatements, clearCookie} from '../auth.ts';
 import {json, db} from '../http.ts';
 import {signInPath} from '../middleware/context.ts';
+import {advisorSettings} from '../advisor/settings.ts';
 // TA-W2: is_admin (02 § users: the role is never exposed beyond this boolean).
 import {isAdminUser} from '../middleware/admin.ts';
 import type {AppEnv} from '../env.ts';
@@ -12,7 +13,9 @@ export const session = new Hono<AppEnv>();
 session.get('/api/session', async c => {
   const who = await c.var.identify(), owner = who?.id || null, signIn = signInPath(c.var.identityProvider);
   const is_admin = owner ? await isAdminUser(c.env.DB, owner) : false;
-  return json({signedIn: !!owner, publicKey: c.env.VAPID_PUBLIC_KEY || null, signIn, user: owner ? {id: owner, display_name: who!.display_name ?? null} : null, is_admin});
+  // SC0452-02: the same decision server/advisor/gate.ts makes for /chat.html, so the masthead needs no HEAD probe.
+  // A visibility hint only: the gate stays the authority.
+  return json({signedIn: !!owner, publicKey: c.env.VAPID_PUBLIC_KEY || null, signIn, user: owner ? {id: owner, display_name: who!.display_name ?? null} : null, is_admin, advisor: advisorSettings(c.env).enabled});
 });
 
 // SC1537-08: a notification device is exported as its push service host and created date only;

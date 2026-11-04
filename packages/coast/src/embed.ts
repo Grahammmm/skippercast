@@ -9,7 +9,7 @@ import type {CoastHandle,CoastMountOptions} from './embed-types.ts';
 import {coastPath} from './transport.ts';
 import {coastEmbedTemplate} from './embed-template.ts';
 export type {CoastChrome,CoastHabitat,CoastHabitatRank,CoastHandle,CoastInitialState,CoastLocation,CoastMountOptions,CoastPerspective,CoastReading,CoastSelection,CoastShading,CoastSourceCoverage,CoastTargetDetail,CoastTerrainSource,CoastView} from './embed-types.ts';
-export type {CoastOverlay,CoastOverlayColor,CoastOverlayFeature,CoastOverlayGeometry,CoastOverlayKind,CoastOverlayPalette,CoastOverlayPick,CoastOverlayStyle} from './embed-types.ts';
+export type {CoastOverlay,CoastOverlayColor,CoastOverlayDrape,CoastOverlayFeature,CoastOverlayGeometry,CoastOverlayKind,CoastOverlayPalette,CoastOverlayPick,CoastOverlayStyle} from './embed-types.ts';
 
 type Viewer=Pick<CoastViewer,keyof CoastHandle>;
 /** Test seam: constructs the renderer. Hosts never pass it. */
@@ -72,7 +72,7 @@ export function mountCoast(host:HTMLElement,options:CoastMountOptions={},factory
   setCurrentLayer:live(id=>viewer.setCurrentLayer(id),undefined),
   selectHabitat:live(id=>viewer.selectHabitat(id),undefined),
   setVisible:live(visible=>viewer.setVisible(visible),undefined),
-  setOverlay:live((id,overlay)=>viewer.setOverlay(id,overlay),undefined),
+  setOverlay:live((id,overlay)=>viewer.setOverlay(id,overlay),null),
   removeOverlay:live(id=>viewer.removeOverlay(id),false),
   setRelief:live(factor=>viewer.setRelief(factor),undefined),
   setWaterOpacity:live(opacity=>viewer.setWaterOpacity(opacity),undefined),

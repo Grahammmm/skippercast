@@ -72,6 +72,14 @@ test('runbook_covers_every_schema_table', () => {
   assert.match(rule('advisor_daily_answers'), /30 days/);
   assert.match(rule('advisor_post_stats'), /730 days/);
   assert.match(rule('job_state'), /No whole-table age limit/);
+  // Outreach: the vessel removal request erases the operator's rows (audit notes too) in the removal batch; current consent stays; no age rule.
+  assert.match(rule('fleet_outreach'), /`editVessel` with `removal_requested`/);
+  assert.match(rule('fleet_outreach'), /same D1 batch as the removal date/);
+  assert.match(rule('fleet_outreach'), /including consent-change and status audit notes/);
+  assert.match(rule('fleet_outreach'), /current consent stays on `fleet_operators`/);
+  assert.match(rule('fleet_outreach'), /operator-wide even when the operator has other listed vessels/);
+  assert.ok(rule('fleet_outreach').includes(none), 'fleet_outreach has no age rule');
+  assert.doesNotMatch(rule('fleet_outreach'), /no `DELETE` for the table exists/, 'the obsolete no-delete caveat is gone');
   for (const name of ['catch_log', 'saved_spots', 'users', 'passkeys', 'advisor_rules', 'advisor_posts', 'advisor_crew', 'advisor_reports', 'advisor_report_edits']) {
     assert.ok(rule(name).includes(none), `${name} has no age rule`);
     assert.doesNotMatch(rule(name), /\b(90|365|180|30|730) days/, `${name} does not inherit another table's limit`);
