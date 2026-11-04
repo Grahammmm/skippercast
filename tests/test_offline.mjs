@@ -27,7 +27,8 @@ test('Morro Bay pack coverage: swell forecast, chart tiles and basemap; no prefe
 test('save-for-offline UI reminds users to check before leaving coverage without a full-coverage promise', () => {
   const ui = read('../web/app/Trip.tsx');
   assert.match(ui, /<p>Check the saved pack before leaving coverage\.<\/p>/);
-  assert.match(ui, /Water temp and current tiles are not prefetched/);
+  assert.match(ui, /Water temperature and currents are saved with the pack when current; each saved region below says what was saved\./);
+  assert.doesNotMatch(ui, /not prefetched/);
   assert.doesNotMatch(ui, /full functionality|\d+ miles/i);
 });
 
