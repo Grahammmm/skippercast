@@ -66,8 +66,10 @@ test('robots.txt allows crawling and names the sitemap; the sitemap lists only i
   assert.equal(new Set(locs).size, locs.length, 'no duplicates');
   assert.ok(locs.includes(`${ORIGIN}/`));
   assert.ok(!locs.includes(`${ORIGIN}/map`), 'the map redirects without an area');
+  for (const path of ['/coverage', '/skill']) assert.equal(locs.filter(loc => loc === `${ORIGIN}${path}`).length, 1, `${path} is listed once`);
+  for (const alias of ['/coverage.html', '/skill.html']) assert.ok(!locs.includes(`${ORIGIN}${alias}`), `${alias} is not listed; the page is served at its extensionless path`);
   // Every entry is a page in dist (by its served path) or a server-rendered public page, and none is noindex.
-  const served = {'/': 'landing.html', '/sources': 'sources.html', '/status': 'status.html', '/privacy': 'privacy.html'};
+  const served = {'/': 'landing.html', '/sources': 'sources.html', '/status': 'status.html', '/privacy': 'privacy.html', '/coverage': 'coverage.html', '/skill': 'skill.html'};
   const serverPages = new Set(['/report', '/about', '/methodology']);
   for (const loc of locs) {
     assert.ok(loc.startsWith(`${ORIGIN}/`), loc);
@@ -77,4 +79,18 @@ test('robots.txt allows crawling and names the sitemap; the sitemap lists only i
     assert.ok(page.endsWith('.html') && existsSync(new URL(page, dist)), `${loc} is a page in dist`);
     assert.ok(!meta(read(page), 'name', 'robots').includes('noindex'), `${loc} is indexable`);
   }
+});
+
+test('coverage_and_skill_use_their_served_canonical_paths', () => {
+  for (const [page, path] of [['coverage.html', '/coverage'], ['skill.html', '/skill']]) {
+    const html = read(page);
+    assert.deepEqual(canonical(html), [`${ORIGIN}${path}`], `${page} names its served path as its one canonical`);
+    assert.ok(!meta(html, 'name', 'robots').some(value => /noindex/i.test(value)), `${page} is indexable`);
+  }
+});
+
+test('discovery_keeps_private_and_alias_urls_out', () => {
+  const locs = [...read('sitemap.xml').matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
+  for (const path of ['/map', '/admin.html', '/chat.html', '/my-data.html', '/upload.html', '/coverage.html', '/skill.html'])
+    assert.ok(!locs.includes(`${ORIGIN}${path}`), `${path} stays out of the sitemap`);
 });

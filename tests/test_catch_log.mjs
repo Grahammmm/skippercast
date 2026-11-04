@@ -6,6 +6,7 @@ import {readFileSync, readdirSync, statSync} from 'node:fs';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {DatabaseSync} from 'node:sqlite';
+import util from 'node:util';
 import {withSessions} from './fixtures/test-sessions.mjs';
 
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
@@ -96,13 +97,13 @@ test('no log field reaches any feed or public page, and no public code reads the
       for (const s of secrets) assert.ok(!text.includes(s), `${path} (${who ?? 'anonymous'}) must not contain ${s}`);
     }
   } finally { globalThis.fetch = original; }
-  const root = fileURLToPath(new URL('..', import.meta.url)), allowed = new Set(['server/routes/catch-log.ts', 'server/routes/account.ts', 'server/app.ts', 'db/schema.ts', 'dist/account.js']);
+  const root = fileURLToPath(new URL('..', import.meta.url)), allowed = new Set(['server/routes/catch-log.ts', 'server/routes/account.ts', 'server/app.ts', 'db/schema.ts', 'dist/account.js', 'server/routes/trips.ts', 'server/trips.ts']);
   const hits = [];
   const walk = dir => { for (const name of readdirSync(dir)) { const full = join(dir, name), rel = full.slice(root.length).replaceAll('\\', '/').replace(/^\//, '');
     if (name === 'node_modules' || name.startsWith('.') || rel === 'dist/client' || rel === 'dist/server') continue;
     if (statSync(full).isDirectory()) walk(full); else if (/\.(ts|tsx|js|mjs|py)$/.test(name) && /catch_log\b|api\/catch-log|routes\/catch-log/.test(readFileSync(full, 'utf8')) && !allowed.has(rel)) hits.push(rel); } };
   for (const dir of ['server', 'web', 'dist', 'src', 'packages', 'scripts']) walk(join(root, dir));
-  assert.deepEqual(hits, [], 'only the log route, the export, the app mount, the schema and the account view mention the log');
+  assert.deepEqual(hits, [], 'only the log route, the export, the app mount, the schema, the account view and the private trip cleanup (delete route, retention prune) mention the log');
   sql.close();
 });
 
@@ -198,6 +199,138 @@ test('the /my-data page downloads the signed-in account export with fish and bla
   const tok = await runMyData({hash: '#abc-DEF_1', owner: 'alice', env});
   assert.deepEqual(tok.fetched.map(([p, i]) => [p, i.credentials, i.headers['X-Export-Token']]), [['/api/advisor/export', 'omit', 'abc-DEF_1']], 'a token page calls only the Advisor export, without the session');
   assert.equal(tok.body, null);
+  sql.close();
+});
+
+// SC0237-05: a trip that goes (delete route or 90-day retention) must not leave a dangling catch-log link.
+const {prune} = await import('../server/trips.ts');
+const TRIP = 'INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)';
+const addTrip = (sql, id, owner, date, created = '2026-11-01T00:00:00.000Z') => sql.prepare(TRIP).run(id, owner, 'morro-bay', 'north', 'reef', date, 7, 13, 8, 12, 3, created);
+const addEvent = (sql, id, trip, owner, created = '2026-11-01T00:00:00.000Z') => { sql.prepare('INSERT INTO alert_events(id,trip_id,owner,kind,message,created_at) VALUES(?,?,?,?,?,?)').run(id, trip, owner, 'change', 'm', created); sql.prepare('INSERT INTO delivery_receipts(id,event_id,subscription_id,status,attempt_at) VALUES(?,?,?,?,?)').run('r-' + id, id, 's', 'accepted', created); };
+const addSentinel = (sql, id, owner, trip) => sql.prepare('INSERT INTO catch_log(id,owner,trip_id,started_at,outcome,count,lat,lon,note,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)').run(id, owner, trip, '2026-11-03T14:00:00.000Z', 'blank', 0, 35.5, -121.25, 'LOGNOTE-sentinel', '2026-11-03T15:00:00.000Z');
+const rows = sql => sql.prepare('SELECT * FROM catch_log ORDER BY id').all().map(r => ({...r}));
+const links = sql => Object.fromEntries(sql.prepare('SELECT id,trip_id FROM catch_log ORDER BY id').all().map(r => [r.id, r.trip_id]));
+const ids = (sql, table) => sql.prepare(`SELECT id FROM ${table} ORDER BY id`).all().map(r => r.id);
+const exportRows = async (env, owner) => (await (await call(env, '/api/privacy', {owner})).json()).catch_log;
+const listRows = async (env, owner) => (await (await call(env, '/api/catch-log', {owner})).json()).entries;
+// An adapter whose batch fails on the trip deletion, after every earlier statement (the link update included) has run.
+const failingTripDelete = a => ({...a, prepare(q) { const s = a.prepare(q); const w = {bind(...x) { s.bind(...x); return w; }, first: () => s.first(), all: () => s.all(), run() { if (/^DELETE FROM trips/.test(q)) throw new Error('late failure'); return s.run(); }}; return w; }, batch: a.batch});
+const delTrip = (env, owner, id) => call(env, '/api/trips', {owner, method: 'DELETE', body: {id}});
+
+test('delete_trip_detaches_only_owners_matching_entries', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter};
+  addTrip(sql, 'trip-a', 'alice', '2026-11-05'); addTrip(sql, 'trip-b', 'alice', '2026-11-06'); addTrip(sql, 'trip-bob', 'bob', '2026-11-05');
+  const fish = await post(env, 'alice', {...FISH, trip_id: 'trip-a'}), blank = await post(env, 'alice', {...BLANK, trip_id: 'trip-a'});
+  const other = await post(env, 'alice', {...FISH, trip_id: 'trip-b'}), loose = await post(env, 'alice', BLANK);
+  assert.deepEqual([fish.status, blank.status, other.status, loose.status], [201, 201, 201, 201]);
+  addSentinel(sql, 'bob-sentinel', 'bob', 'trip-a');
+  addEvent(sql, 'ev-a', 'trip-a', 'alice');
+  const before = rows(sql);
+  const r = await delTrip(env, 'alice', 'trip-a');
+  assert.deepEqual([r.status, await r.json()], [200, {deleted: true}]);
+  assert.deepEqual(ids(sql, 'trips'), ['trip-b', 'trip-bob'], 'only the deleted trip went');
+  assert.deepEqual([ids(sql, 'alert_events'), ids(sql, 'delivery_receipts')], [[], []], 'events and receipts still go');
+  const expected = before.map(x => x.id === fish.data.id || x.id === blank.data.id ? {...x, trip_id: null} : x);
+  assert.ok(util.isDeepStrictEqual(rows(sql), expected), 'only the two matching rows lost trip_id; every other field and row is the same');
+  assert.equal(links(sql)['bob-sentinel'], 'trip-a', "another owner's row is untouched");
+  assert.equal(links(sql)[other.data.id], 'trip-b'); assert.equal(links(sql)[loose.data.id], null);
+  for (const entries of [await listRows(env, 'alice'), await exportRows(env, 'alice')]) {
+    assert.equal(entries.length, 4, 'every entry is kept');
+    assert.deepEqual(entries.map(e => [e.id, e.trip_id ?? null]).sort(), [[fish.data.id, null], [blank.data.id, null], [other.data.id, 'trip-b'], [loose.data.id, null]].sort());
+    assert.ok(entries.some(e => e.note === 'LOGNOTE-private-fish' && e.lat === 35.123456789), 'private fields kept');
+  }
+  const again = await delTrip(env, 'alice', 'trip-a');
+  assert.deepEqual([again.status, await again.json()], [200, {deleted: true}], 'a repeat delete keeps the success shape');
+  assert.ok(util.isDeepStrictEqual(rows(sql), expected), 'and changes nothing further');
+  sql.close();
+});
+
+test('delete_foreign_missing_invalid_trip_never_detaches_others', async () => {
+  const calls = [], {sql, adapter} = database(a => ({...a, prepare(q) { calls.push(q); return a.prepare(q); }, batch: a.batch})), env = {DB: adapter};
+  addTrip(sql, 'trip-a', 'alice', '2026-11-05');
+  await post(env, 'alice', {...FISH, trip_id: 'trip-a'});
+  const before = rows(sql);
+  assert.deepEqual([(await delTrip(env, 'bob', 'trip-a')).status, (await delTrip(env, 'bob', 'no-such-trip')).status], [200, 200], 'a foreign or missing id keeps the existing no-op success');
+  assert.ok(util.isDeepStrictEqual(rows(sql), before), "bob cannot detach alice's entry");
+  assert.deepEqual(ids(sql, 'trips'), ['trip-a'], "alice's trip survives");
+  for (const body of [{}, {id: ''}, {id: 'x'.repeat(65)}, {id: 7}, {id: null}, {id: ['trip-a']}]) assert.equal((await call(env, '/api/trips', {owner: 'alice', method: 'DELETE', body})).status, 400, JSON.stringify(body));
+  assert.ok(util.isDeepStrictEqual(rows(sql), before), 'invalid ids detach nothing');
+  calls.length = 0;
+  assert.equal((await call(env, '/api/trips', {method: 'DELETE', body: {id: 'trip-a'}})).status, 401, 'signed out is refused');
+  assert.deepEqual(calls, [], 'before any statement is prepared');
+  assert.ok(util.isDeepStrictEqual(rows(sql), before));
+  sql.close();
+});
+
+test('prune_detaches_only_expired_same_owner_trips', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter}, now = Date.parse('2026-11-04T12:00:00Z');
+  // cutoff is 2026-08-06T12:00Z; the trip date comparison is strict on the UTC date 2026-08-06.
+  addTrip(sql, 'before', 'alice', '2026-08-05'); addTrip(sql, 'exact', 'alice', '2026-08-06'); addTrip(sql, 'after', 'alice', '2026-08-07');
+  addTrip(sql, 'old-created-current', 'alice', '2026-11-20', '2026-01-01T00:00:00.000Z');
+  addTrip(sql, 'fresh-created-expired', 'alice', '2026-07-01', '2026-11-04T00:00:00.000Z');
+  addTrip(sql, 'bob-expired', 'bob', '2026-07-01');
+  const made = {};
+  for (const t of ['before', 'exact', 'after', 'old-created-current', 'fresh-created-expired']) made[t] = (await post(env, 'alice', {...BLANK, trip_id: t})).data.id;
+  made.none = (await post(env, 'alice', BLANK)).data.id;
+  made.bobOwn = (await post(env, 'bob', {...FISH, trip_id: 'bob-expired'})).data.id;
+  addSentinel(sql, 'bob-sentinel', 'bob', 'before'); addSentinel(sql, 'alice-sentinel', 'alice', 'bob-expired');
+  addEvent(sql, 'ev-before', 'before', 'alice', '2026-07-01T00:00:00.000Z');
+  const before = rows(sql);
+  await prune(env, now);
+  assert.deepEqual(ids(sql, 'trips'), ['after', 'exact', 'old-created-current'], 'trip retention is unchanged');
+  const detached = new Set([made.before, made['fresh-created-expired'], made.bobOwn]);
+  assert.ok(util.isDeepStrictEqual(rows(sql), before.map(x => detached.has(x.id) ? {...x, trip_id: null} : x)), 'only strictly expired same-owner links cleared; no other field or row changed');
+  assert.deepEqual([links(sql)[made.exact], links(sql)[made.after], links(sql)[made['old-created-current']], links(sql)[made.none]], ['exact', 'after', 'old-created-current', null]);
+  assert.equal(links(sql)['bob-sentinel'], 'before', "another owner's mismatched reference is left alone");
+  assert.equal(links(sql)['alice-sentinel'], 'bob-expired');
+  assert.equal(logCount(sql, 'alice'), 7); assert.equal(logCount(sql, 'bob'), 2);
+  for (const owner of ['alice', 'bob']) for (const entries of [await listRows(env, owner), await exportRows(env, owner)]) {
+    assert.ok(entries.length > 0);
+    for (const e of entries) assert.equal(e.trip_id ?? null, links(sql)[e.id], 'list and export agree with the table');
+  }
+  const settled = rows(sql);
+  await prune(env, now);
+  assert.ok(util.isDeepStrictEqual(rows(sql), settled), 'a second prune changes nothing');
+  sql.close();
+});
+
+test('cleanup_batch_failure_rolls_back_links_and_deletes', async () => {
+  const {sql, adapter} = database(failingTripDelete), env = {DB: adapter}, now = Date.parse('2026-11-04T12:00:00Z');
+  addTrip(sql, 'trip-a', 'alice', '2026-11-05'); addTrip(sql, 'old', 'alice', '2026-07-01');
+  const live = await post(env, 'alice', {...FISH, trip_id: 'trip-a'}), old = await post(env, 'alice', {...BLANK, trip_id: 'old'});
+  addEvent(sql, 'ev-a', 'trip-a', 'alice'); addEvent(sql, 'ev-old', 'old', 'alice', '2026-07-01T00:00:00.000Z');
+  const before = rows(sql), state = () => [ids(sql, 'trips'), ids(sql, 'alert_events'), ids(sql, 'delivery_receipts')];
+  const start = state();
+  const r = await delTrip(env, 'alice', 'trip-a');
+  assert.ok(r.status >= 500, 'an error status, never success: ' + r.status);
+  assert.ok(util.isDeepStrictEqual(rows(sql), before), 'the link update rolled back with the failed delete');
+  assert.deepEqual(state(), start, 'trip, event and receipt all survive together');
+  assert.equal(links(sql)[live.data.id], 'trip-a');
+  await assert.rejects(prune(env, now), /late failure/);
+  assert.ok(util.isDeepStrictEqual(rows(sql), before), 'the prune link update rolled back too');
+  assert.deepEqual(state(), start);
+  assert.equal(links(sql)[old.data.id], 'old');
+  sql.close();
+});
+
+test('private_cleanup_does_not_publish_catch_data', async () => {
+  // The allowlist test above admits exactly the two private cleanup modules; each holds one catch_log statement, the detachment.
+  for (const p of ['server/routes/trips.ts', 'server/trips.ts']) {
+    const text = readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+    assert.equal((text.match(/catch_log/g) || []).length, p === 'server/trips.ts' ? 3 : 1, p);
+    assert.ok(/UPDATE catch_log SET trip_id=NULL WHERE/.test(text), p);
+  }
+  const {sql, adapter} = database(), original = globalThis.fetch, env = {DB: adapter, FEEDS: {get: async () => null, head: async () => null, list: async () => ({objects: []})}, ASSETS: {fetch: async () => new Response('<!doctype html><title>shell</title>', {headers: {'Content-Type': 'text/html'}})}};
+  addTrip(sql, 'trip-a', 'alice', '2026-11-05');
+  await post(env, 'alice', {...FISH, trip_id: 'trip-a'});
+  await delTrip(env, 'alice', 'trip-a'); await prune(env, Date.parse('2026-11-04T12:00:00Z'));
+  globalThis.fetch = async () => { throw new Error('offline'); };
+  try {
+    for (const path of ['/', '/map', '/privacy', '/api/daily', '/feeds/daily.json', '/api/session']) {
+      const text = await (await call(env, path)).text();
+      for (const s of ['LOGNOTE-private', 'lingcod', '35.123456789', '-120.987654321', 'catch_log']) assert.ok(!text.includes(s), `${path} must not contain ${s}`);
+    }
+  } finally { globalThis.fetch = original; }
   sql.close();
 });
 

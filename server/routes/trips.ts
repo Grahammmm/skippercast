@@ -42,7 +42,7 @@ trips.patch('/api/trips', async c => {
 trips.delete('/api/trips', async c => {
   const owner = c.var.owner, d = db(c.env);
   const {id} = await body(c.req.raw); if (typeof id !== 'string' || !id || id.length > 64) throw new ClientError('trip id required');
-  await d.batch([d.prepare('DELETE FROM delivery_receipts WHERE event_id IN (SELECT id FROM alert_events WHERE trip_id=? AND owner=?)').bind(id, owner), d.prepare('DELETE FROM alert_events WHERE trip_id=? AND owner=?').bind(id, owner), d.prepare('DELETE FROM trips WHERE id=? AND owner=?').bind(id, owner)]); return json({deleted: true});
+  await d.batch([d.prepare('DELETE FROM delivery_receipts WHERE event_id IN (SELECT id FROM alert_events WHERE trip_id=? AND owner=?)').bind(id, owner), d.prepare('DELETE FROM alert_events WHERE trip_id=? AND owner=?').bind(id, owner), d.prepare('UPDATE catch_log SET trip_id=NULL WHERE trip_id=? AND owner=?').bind(id, owner), d.prepare('DELETE FROM trips WHERE id=? AND owner=?').bind(id, owner)]); return json({deleted: true});
 });
 trips.post('/api/events/ack', async c => {
   const owner = c.var.owner, d = db(c.env);
