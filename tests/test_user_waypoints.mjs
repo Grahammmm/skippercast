@@ -215,3 +215,70 @@ test('a refusal never leaks: begin, cancel, another region and completion each c
   assert.equal(placeWaypoint(region.id, {lat: 10, lon: 10}, closure()), true);
   assert.equal(placementRefused.value, null); assert.equal(got.length, 1);
 });
+
+// SC0237-04: the planner's own save refuses what the chart and the GPX check refuse (not checked, inside, within 70 m), whatever the chart said.
+/** A screen the test can swap after the planner holds it: every property is read from the current one. */
+function swappable(initial) {
+  let cur = initial;
+  return {set(next) { cur = next; }, screen: new Proxy({}, {get: (_, k) => { const v = cur?.[k]; return typeof v === 'function' ? v.bind(cur) : v; }})};
+}
+const legacy = (patch = {}) => ({ready: () => true, pointAllowed: () => true, geometryAllowed: () => true, ...patch});
+const STALE = () => closure(new Date(Date.now() - 72 * 3_600_000).toISOString(), false);
+const NOT_CHECKED = [['unloaded', () => null], ['stale', STALE], ['failed', () => assessScreen({areas: null, checkedAt: null, live: false}, Date.now())],
+  ['not ready', () => legacy({ready: () => false})], ['coverage false', () => legacy({coversGeometry: () => false})],
+  ['coverage throws', () => legacy({coversGeometry: () => { throw new Error('boom'); }})]];
+const CLEAR = east(500);
+const at = tap => ({latitude: tap.lat, longitude: tap.lon});
+/** harness with the draft's storage writes counted */
+function counted(boundary) {
+  const h = harness({boundary}), writes = [], set = h.store.set.bind(h.store);
+  h.store.set = (k, v) => { writes.push(k); return set(k, v); };
+  return {...h, writes};
+}
+function refused(label, boundary, tap, expected) {
+  const {p, writes, drop} = counted(boundary);
+  try {
+    drop(at(tap));
+    const before = p.draft.value, position = p.waypointPosition.value;
+    assert.ok(position, label);
+    p.saveWaypoint('Synthetic refusal', 'reef');
+    assert.equal(p.actionStatus.value, expected, label);
+    assert.equal(p.draft.value, before, `${label}: the same draft object`);
+    assert.equal(p.draft.value.userWaypoints, undefined, label);
+    assert.equal(writes.length, 0, `${label}: nothing stored`);
+    assert.equal(p.waypointPosition.value, position, `${label}: the position stays for a retry`);
+  } finally { p.dispose(); }
+}
+
+test('manual save refuses a place that is not checked, inside a closure, 40 m from one and exactly 70 m from one, saving nothing', () => {
+  assert.ok(threshold !== null);
+  for (const [label, make] of NOT_CHECKED) refused(label, make(), CLEAR, 'Not saved: Protected areas not checked.');
+  refused('inside', closure(), {lat: 35, lon: -121}, `Not saved: Inside ${NAME}.`);
+  refused('40 m', closure(), east(40), `Not saved: 40 m from ${NAME}.`);
+  refused('70 m', closure(), east(threshold), `Not saved: 70 m from ${NAME}.`);
+});
+
+test('manual save checks the screen as it is at Save, not as it was at placement; a retry on a clear screen saves once', () => {
+  const swap = swappable(closure()), {p, writes, drop} = counted(swap.screen);
+  try {
+    drop(at(CLEAR));
+    for (const [label, make, expected] of [['stale', STALE, 'Not saved: Protected areas not checked.'], ['inside', () => closure(), null], ['near', () => closure(), null]]) {
+      swap.set(make());
+      if (label !== 'stale') { p.waypointPosition.value = at(label === 'inside' ? {lat: 35, lon: -121} : east(40)); }
+      p.saveWaypoint('Synthetic late', 'reef');
+      assert.match(p.actionStatus.value, /^Not saved: /, label);
+      if (expected) assert.equal(p.actionStatus.value, expected, label);
+      assert.equal(p.draft.value.userWaypoints, undefined, label);
+      assert.equal(writes.length, 0, label);
+      assert.ok(p.waypointPosition.value, `${label}: position kept`);
+    }
+    p.waypointPosition.value = at(east(71));
+    p.saveWaypoint('Synthetic clear', 'reef');
+    assert.equal(p.draft.value.userWaypoints.length, 1, 'just beyond the margin is clear');
+    assert.equal(p.waypointPosition.value, null);
+    assert.equal(writes.length, 1);
+    assert.match(p.actionStatus.value, /^User waypoint saved on this browser\./);
+    p.saveWaypoint('Synthetic again', 'reef');
+    assert.equal(p.draft.value.userWaypoints.length, 1, 'no position left, so a second Save adds nothing');
+  } finally { p.dispose(); }
+});

@@ -29,7 +29,8 @@ import {ROUTE_BUDGET, type RouteFn} from './ranking.ts';
 import {waterRoute, type RouteFailure} from './route.ts';
 import {coordinates, region as activeRegion} from './state.ts';
 import {checkGpx} from './gpx-check.ts';
-import {screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
+import {placeRefused, screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
+import {verdictLine} from './waypoint-placement.ts';
 import {launchPoints, loadLaunchPoints} from './launches.ts';
 import {launchChoice} from './reach.ts';
 import {assessContours, depthContoursURL, NOTES} from './map/depth-contours.ts';
@@ -317,7 +318,7 @@ export function createPlanner(deps: PlannerDeps) {
     const at = waypointPosition.value;
     if (!at) return;
     const candidate = {id: `user:${crypto.randomUUID()}`, name, category, ...at}, verdict = screenPlace(screen, at);
-    if (verdict.inside) { actionStatus.value = `Not saved: inside ${verdict.name ?? 'a protected area'}.`; return; }
+    if (placeRefused(verdict)) { actionStatus.value = `Not saved: ${verdictLine(verdict)}.`; return; }
     const points = userWaypoints([...(draft.value.userWaypoints ?? []), candidate]) as UserWaypoint[];
     if (!points.some(t => t.id === candidate.id)) { actionStatus.value = 'Choose a name (up to 80 characters), a listed category and a valid map position. Limit: 100 waypoints.'; return; }
     revision++;
@@ -334,7 +335,7 @@ export function createPlanner(deps: PlannerDeps) {
    */
   function addPlace(p: {id: string; name: string; latitude: number; longitude: number; shore?: boolean}): string | null {
     const verdict = screenPlace(screen, p);
-    if (verdict.inside) { actionStatus.value = `Not saved: inside ${verdict.name ?? 'a protected area'}.`; return null; }
+    if (placeRefused(verdict)) { actionStatus.value = `Not saved: ${verdictLine(verdict)}.`; return null; }
     const id = `user:${p.id.startsWith('survey:') ? 'survey' : 'habitat'}-${p.id.replace(/^(habitat|survey):/, '').replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}`;
     const saved: UserWaypoint[] = draft.value.userWaypoints ?? [], known = saved.some((t: UserWaypoint) => t.id === id);
     const points: UserWaypoint[] = known ? saved : userWaypoints([...saved, {id, name: p.name.slice(0, 80), category: p.shore ? 'other' : 'reef', latitude: p.latitude, longitude: p.longitude}]) as UserWaypoint[];
