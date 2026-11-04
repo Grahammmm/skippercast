@@ -106,12 +106,53 @@ class ApplyTests(unittest.TestCase):
         err, out = io.StringIO(), io.StringIO()
         with mock.patch.multiple(coverage, load_region=lambda ident: SimpleNamespace(id=ident), fleet_var=lambda: self.root,
                                  SqliteSink=mock.MagicMock(), load_snapshot=lambda sink, ident: None,
-                                 coverage_status=lambda r, s: {"a": NEW, "b": NEW}, repo_root=lambda: self.root), \
+                                 coverage_status=lambda r, s, c: {"a": NEW, "b": NEW}, repo_root=lambda: self.root), \
                 contextlib.redirect_stderr(err), contextlib.redirect_stdout(out):
             self.assertEqual(coverage.main(["--region", "CA", "--apply"]), 1)
         self.assertEqual(err.getvalue(), "coverage-status: b: charter-identity is not bound to fleet-registry\n")
         self.assertEqual(json.loads(out.getvalue()), {"a": NEW, "b": NEW})
         self.assertEqual(self.raw("a"), before)
+
+    def run_main(self, *argv, statuses=None):
+        """coverage.main with every store mocked; (exit code, stdout, stderr, the confirmations coverage_status got)."""
+        seen, err, out = [], io.StringIO(), io.StringIO()
+
+        def status(region, snapshot, confirmations):
+            seen.append(list(confirmations))
+            return statuses or {"a": NEW, "b": NEW}
+
+        with mock.patch.multiple(coverage, load_region=lambda ident: SimpleNamespace(id=ident), fleet_var=lambda: self.root,
+                                 SqliteSink=mock.MagicMock(), load_snapshot=lambda sink, ident: None,
+                                 coverage_status=status, repo_root=lambda: self.root), \
+                contextlib.redirect_stderr(err), contextlib.redirect_stdout(out):
+            code = coverage.main(["--region", "CA", *argv])
+        return code, out.getvalue(), err.getvalue(), seen
+
+    def ledger(self, text, sink="staging"):
+        path = self.root / "CA" / "confirmations" / f"{sink}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+
+    def test_main_passes_the_selected_sinks_confirmations_and_an_absent_ledger_is_none(self):
+        self.assertEqual(self.run_main("--apply")[3], [[]])
+        row = {"vessel_id": "v1", "mmsi": "999000001", "method": "operator-statement", "confirmed_on": "2026-11-01",
+               "evidence_ref": "ref-1", "withdrawn_on": None}
+        self.ledger(json.dumps({"version": 1, "entries": [row]}))
+        self.assertEqual(self.run_main()[3], [[row]])
+
+    def test_main_with_a_corrupt_ledger_exits_1_before_any_store_or_apply(self):
+        before = self.raw("a")
+        for label, text in (("not json", "{"), ("wrong version", '{"version": 2, "entries": []}'),
+                            ("duplicate pair", json.dumps({"version": 1, "entries": [
+                                {"vessel_id": "v1", "mmsi": "999000001", "method": "operator-statement",
+                                 "confirmed_on": "2026-11-01", "evidence_ref": "r", "withdrawn_on": None}] * 2}))):
+            with self.subTest(label):
+                self.ledger(text)
+                code, out, err, seen = self.run_main("--apply")
+                self.assertEqual((code, out, seen), (1, "", []))
+                self.assertEqual(err, "coverage-status: the confirmation ledger is unreadable or invalid\n")
+                self.assertEqual(self.raw("a"), before)
+                self.assertEqual(self.leftovers(), [])
 
 
 if __name__ == "__main__":

@@ -146,6 +146,9 @@ def tides(data, station, note):
              "type": p.get("type")} for p in data["predictions"]]
     if any(r["height_ft"] is None for r in rows):
         raise ValueError("Invalid tide height")
+    instants = [datetime.fromisoformat(r["time"].replace("Z", "+00:00")) for r in rows]
+    if any(later <= earlier for earlier, later in zip(instants, instants[1:])):
+        raise ValueError("NOAA tide predictions must be strictly increasing")
     return {"station": station, "datum": "MLLW", "units": "ft", "timezone": "UTC",
             "coverage_start": rows[0]["time"], "coverage_end": rows[-1]["time"], "predictions": rows,
             "note": note}
