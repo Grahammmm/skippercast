@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import json
+import math
 import os
 from pathlib import Path
 import tempfile
@@ -8,7 +9,7 @@ from unittest.mock import patch
 
 from scripts.check_feed_freshness import (DEFAULT_PUBLIC_BASE, DEGRADED, FEED, HEALTH, PARTIAL, RAW, STALE, age_limit_hours,
                                          degraded_sources, failing_kinds, main, public_url, published_regions, run, run_all,
-                                         source_verdict, verdict)
+                                         source_verdict, verdict, write_report)
 
 NOW = datetime(2026, 9, 27, 20, 0, tzinfo=timezone.utc)
 LIMIT = timedelta(hours=3)
@@ -308,6 +309,134 @@ class RunAllTests(unittest.TestCase):
                 main(["--public-base", self.BASE, "--report", str(report)], site, NOW)
             self.assertEqual(exited.exception.code, DEGRADED)
             self.assertEqual(json.loads(report.read_text()), {"stale": False, "degraded": True, "partial": False, "stale_feeds": []})
+
+
+def declared(text):
+    """A schedule.max_delay_hours exactly as a feed's JSON would carry it (1e309 parses to infinity, NaN to nan)."""
+    return json.loads('{"max_delay_hours": %s}' % text)
+
+
+# Declarations outside (0, 8760] or not numbers, as JSON text; each must be refused in favour of the catalog default.
+BAD_DECLARATIONS = ("NaN", "Infinity", "-Infinity", "1e300", "1e309", "-1e309", "1" + "0" * 400, "1000000000", "8760.5",
+                    "8760.000001", "0", "0.0", "-1", "-0.01", "true", "false", '"36"', "null", "[]", "{}")
+
+
+class InvalidScheduleTests(unittest.TestCase):
+    """A feed-declared schedule outside (0, 8760] uses the catalog limit instead of hiding a stale feed or overflowing."""
+    BASE = "https://site.example"
+    CONFIG = {"max_age_hours": 36}
+    site, urls, region_urls, feeds, run_all = (RunAllTests.site, RunAllTests.urls, RunAllTests.region_urls,
+                                               RunAllTests.feeds, RunAllTests.run_all)
+
+    def setUp(self):
+        # Every fetch below is injected; a stray real request fails the test instead of reaching the network.
+        blocker = patch("scripts.check_feed_freshness.urlopen", side_effect=AssertionError("network used"))
+        blocker.start()
+        self.addCleanup(blocker.stop)
+
+    def test_schedule_hours_outside_supported_range_use_catalog(self):
+        for text in BAD_DECLARATIONS:
+            feed = {"schedule": declared(text)}
+            self.assertEqual(age_limit_hours(feed, self.CONFIG), 36, text)
+            self.assertEqual(age_limit_hours(feed, self.CONFIG, 12), 12, text)  # a valid explicit override still wins
+        for text, hours in (("0.01", 0.01), ("40", 40), ("8760", 8760), ("8760.0", 8760.0), ("1", 1)):
+            self.assertEqual(age_limit_hours({"schedule": declared(text)}, self.CONFIG), hours, text)
+        for feed in ({}, None, [], "x", {"schedule": None}, {"schedule": []}, {"schedule": "36"}, {"schedule": {}}):
+            self.assertEqual(age_limit_hours(feed, self.CONFIG), 36, feed)
+        feed = {"schedule": declared("1e300")}
+        age_limit_hours(feed, self.CONFIG)
+        self.assertEqual(feed, {"schedule": {"max_delay_hours": 1e300}})  # the feed is read, never rewritten
+
+    def daily(self, published, text):
+        return feed_of(published=published, schedule=declared(text))
+
+    def test_bad_daily_schedule_cannot_hide_stale_feed(self):
+        for text in BAD_DECLARATIONS:
+            events = []
+            data = self.daily("2026-09-26T07:00:00Z", text)  # 37 h old: past the 36 h catalog limit
+            status, message = self.run_all(self.feeds(feed_of(), data), events=events)
+            self.assertEqual(status, STALE, text)
+            self.assertIn("Public data feed", message)
+            self.assertIn("is stale: last published 2026-09-26T07:00:00Z (37.0 h ago; limit 36 h)", message, text)
+            self.assertEqual([(e["feed"], e["limit_hours"], e["late_hours"]) for e in events if e["feed"] == "data"],
+                             [("data", 36, 1.0)], text)
+            # 15 h old is fresh under the same fallback.
+            fresh = self.run_all(self.feeds(feed_of(), self.daily("2026-09-27T05:00:00Z", text)))
+            self.assertEqual(fresh[0], 0, text)
+
+    def test_bad_schedule_on_the_github_copy_uses_the_catalog_limit(self):
+        # Public route unreadable: the GitHub copy supplies the schedule, and an oversized one is refused there too.
+        (dp, dg) = self.urls("data")
+        feeds = self.feeds(feed_of(), feed_of())
+        feeds.update({dp: OSError("503"), dg: self.daily("2026-09-26T07:00:00Z", "1e300")})
+        status, message = self.run_all(feeds)
+        self.assertEqual(status, STALE)
+        self.assertIn("GitHub data branch is stale", message)
+        self.assertIn("limit 36 h", message)
+        # Public copy bad, GitHub copy fine: the public copy still decides.
+        feeds.update({dp: self.daily("2026-09-26T07:00:00Z", "1e309"), dg: feed_of(published="2026-09-27T19:00:00Z")})
+        self.assertEqual(self.run_all(feeds)[0], STALE)
+
+    def test_bad_region_schedule_preserves_severity(self):
+        old = "2026-09-27T12:00:00Z"  # 8 h old against the 3 h regional limit
+        for text in BAD_DECLARATIONS:
+            region = self.daily(old, text)
+            feeds = self.feeds(feed_of(), feed_of(published="2026-09-27T05:00:00Z"), big_sur_coast=region)
+            events = []
+            status, message = self.run_all(feeds, [("big-sur-coast", True)], events=events)
+            self.assertEqual(status, STALE, text)
+            self.assertIn("big-sur-coast is stale", message)
+            self.assertIn("limit 3 h", message)
+            self.assertEqual([(e["feed"], e["limit_hours"], e["late_hours"]) for e in events],
+                             [("region:big-sur-coast", 3, 5.0)], text)
+            events = []
+            status, message = self.run_all(feeds, [("big-sur-coast", False)], events=events)
+            self.assertEqual(status, PARTIAL, text)
+            self.assertIn("not an active region; reported, does not fail", message)
+            self.assertEqual(events, [], text)
+        # Valid schedules keep their existing behaviour.
+        feeds = self.feeds(feed_of(), feed_of(published="2026-09-27T05:00:00Z"),
+                           big_sur_coast=self.daily(old, "12"))
+        self.assertEqual(self.run_all(feeds, [("big-sur-coast", True)])[0], 0)
+        feeds = self.feeds(feed_of(), feed_of(published="2026-09-27T05:00:00Z"), big_sur_coast=self.daily(old, "4"))
+        events = []
+        self.assertEqual(self.run_all(feeds, [("big-sur-coast", True)], events=events)[0], STALE)
+        self.assertEqual([e["limit_hours"] for e in events], [4])
+
+    def test_bad_schedule_on_unreadable_region_route_uses_github_copy_and_catalog_limit(self):
+        feeds = self.feeds(feed_of(), feed_of(published="2026-09-27T05:00:00Z"))
+        public, github = self.region_urls("big-sur-coast")
+        feeds.update({public: OSError("503"), github: self.daily("2026-09-27T12:00:00Z", "1e300")})
+        events = []
+        status, _ = self.run_all(feeds, [("big-sur-coast", True)], events=events)
+        self.assertEqual(status, STALE)
+        self.assertEqual([e["limit_hours"] for e in events], [3])
+
+    def test_run_all_invalid_schedule_still_produces_report(self):
+        live = self.daily("2026-09-27T12:00:00Z", "1e300")   # 8 h old against 3 h
+        data = self.daily("2026-09-26T07:00:00Z", "1e309")   # 37 h old against 36 h
+        feeds = self.feeds(live, data, crescent_city=self.daily("2026-09-27T12:00:00Z", "1" + "0" * 400),
+                           big_sur_coast=self.daily("2026-09-27T12:00:00Z", "NaN"),
+                           fresh_bay=feed_of(published="2026-09-27T19:00:00Z", schedule=declared("40")),
+                           old_bay=feed_of(published="2026-09-27T12:00:00Z", schedule=declared("40")))
+        regions = [("crescent-city", True), ("big-sur-coast", False), ("fresh-bay", True), ("old-bay", True)]
+        events = []
+        status, message = self.run_all(feeds, regions, events=events)
+        self.assertEqual(status, STALE | PARTIAL, message)
+        self.assertIn("Public Live regional feed fresh-bay is fresh", message)  # a valid sibling is still checked
+        self.assertIn("Public Live regional feed old-bay is fresh", message)    # its own 40 h limit applies
+        self.assertEqual(sorted(e["feed"] for e in events), ["conditions", "data", "region:crescent-city"])
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "report.json"
+            write_report(path, status, sorted(events, key=lambda e: e["feed"]))
+
+            def refuse(constant):
+                raise ValueError(constant)  # NaN/Infinity would make the report unreadable to strict JSON parsers
+            report = json.loads(path.read_text(), parse_constant=refuse)
+        self.assertEqual((report["stale"], report["degraded"], report["partial"]), (True, False, True))
+        self.assertEqual({e["feed"]: e["limit_hours"] for e in report["stale_feeds"]},
+                         {"conditions": 3, "data": 36, "region:crescent-city": 3})
+        self.assertTrue(all(math.isfinite(e["late_hours"]) for e in report["stale_feeds"]))
 
 
 if __name__ == "__main__":
