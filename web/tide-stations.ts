@@ -148,15 +148,23 @@ export async function loadTideReading(station: TideStation, fetcher: typeof fetc
 /** Display overlay only: assessments, windows and their reference station stay intact. */
 export function withTideSelection(brief: Brief, station: {id: string; name: string}, reading: TideReading | null, timezone: string, now: Date, at?: string | null): Brief {
   const pivot = at && Number.isFinite(Date.parse(at)) ? Date.parse(at) : now.getTime();
-  const points = (reading?.points ?? []).filter(p => dateKey(p.at, timezone) === brief.date);
+  const points = (reading?.points ?? []).filter(p => Number.isFinite(Date.parse(p.at)) && dateKey(p.at, timezone) === brief.date);
   const events = (reading?.events ?? []).filter(p => dateKey(p.at, timezone) === brief.date);
-  const point = points.find(p => Math.abs(Date.parse(p.at) - pivot) <= TREND_MATCH_MS);
+  // Display policy for this overlay only: of the curve points within the match tolerance, the closest wins (a tie takes the earlier
+  // instant, equal times keep the first input), and its height and its trend, which starts at that same point, are shown together.
+  let best = -1, bestGap = Infinity;
+  points.forEach((p, i) => {
+    const gap = Math.abs(Date.parse(p.at) - pivot);
+    if (!Number.isFinite(Date.parse(p.at)) || !Number.isFinite(p.heightFt) || gap > TREND_MATCH_MS) return;
+    if (gap < bestGap || gap === bestGap && Date.parse(p.at) < Date.parse(points[best]!.at)) { best = i; bestGap = gap; }
+  });
+  const point = best < 0 ? undefined : points[best]!;
   const next = events.find(p => Date.parse(p.at) >= pivot);
   const value = point?.heightFt ?? next?.heightFt ?? null;
   const ageMs = reading ? now.getTime() - Date.parse(reading.fetchedAt) : null;
   const limitMs = 36 * 3600000;
   const tile: BriefTile = {id: 'tide', label: 'Tide', value: value === null ? null : Number(value.toFixed(1)), unit: 'ft',
-    detail: [point ? tideTrend(points, pivot) : next ? `next ${next.type === 'H' ? 'high' : 'low'}` : 'Predictions unavailable', station.name, 'MLLW'].filter(Boolean).join(' · '),
+    detail: [point ? tideTrend(points.slice(best), Date.parse(point.at)) : next ? `next ${next.type === 'H' ? 'high' : 'low'}` : 'Predictions unavailable', station.name, 'MLLW'].filter(Boolean).join(' · '),
     source: `NOAA ${station.id} ${station.name}`, sourceUrl: tidePredictionURL(station.id), at: reading?.fetchedAt ?? null, ageMs, limitMs,
     state: value === null || ageMs === null ? 'unavailable' : reading?.failed || ageMs > limitMs || ageMs < -3600000 ? 'stale' : 'fresh'};
   return {...brief, tiles: brief.tiles.map(t => t.id === 'tide' ? tile : t), tides: points, tideEvents: events, tideDatum: 'MLLW'};
