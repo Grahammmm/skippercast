@@ -110,7 +110,10 @@ async function card(d, target = 'reef') {
   return m.render(m.h(m.RulesLine, {mark: MARK}));
 }
 
-test('the mark card renders the label beside an official link in every case', async () => {
+test('the mark card renders the label beside an official link in every case', async t => {
+  await load();
+  // Keep the check and render on the same Pacific day, even near midnight.
+  t.mock.timers.enable({apis: ['Date'], now: NOW});
   const now = Date.now();
   const none = data(now - HOUR); delete none.checks['rules-groundfish'].data_retrieved_at;
   const cases = [[data(now - HOUR), 'Checked today'], [data(now - 30 * HOUR), /^Checked [A-Z][a-z]{2} \d{1,2}$/], [none, 'Check date unknown'], [data(now - 40 * HOUR), 'Check overdue - open the official page']];
