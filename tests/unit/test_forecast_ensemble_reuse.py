@@ -103,6 +103,8 @@ class ReuseTests(unittest.TestCase):
             'bool lon': {'points': [{'latitude': 35.5, 'longitude': False}]},
             'nan': {'points': [{'latitude': NAN, 'longitude': -121.0}]},
             'inf': {'points': [{'latitude': 35.5, 'longitude': INF}]},
+            'oversized int lat': {'points': [{'latitude': 10**400, 'longitude': -121.0}]},
+            'oversized int lon': {'points': [{'latitude': 35.5, 'longitude': -(10**400)}]},
             'null': {'points': [{'latitude': None, 'longitude': -121.0}]},
         }
         for name, content in cases.items():

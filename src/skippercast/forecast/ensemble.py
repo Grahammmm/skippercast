@@ -310,7 +310,12 @@ def write(target, cycle, by_region, samples_by_point, upstream, started):
 
 
 def _number(value):
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:  # JSON integers can exceed the float range.
+        return False
 
 
 def _same_points(prior_dir, by_region):
