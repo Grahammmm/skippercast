@@ -58,3 +58,11 @@ export function withinGoogleWindow(retrievedAt: string, now: number): boolean {
   const t = Date.parse(retrievedAt);
   return Number.isFinite(t) && t <= now + 5 * 60_000 && now - t <= GOOGLE_WINDOW_DAYS * 86_400_000;
 }
+
+/** A claim as the client receives it: rung, count, caveat and, for report claims, the polygons as reported. Nothing else. */
+export interface ClaimView {rung: string; count: number; caveat: string; areas: readonly unknown[]}
+
+/** The claims a public surface may carry: report rungs only (no AIS data on any public page). Admin views take every rung. */
+export const publicClaims = (claims: readonly ClaimView[]): ClaimView[] =>
+  claims.filter(c => c.rung === 'named-report' || c.rung === 'repeated-report')
+    .map(({rung, count, caveat, areas}) => ({rung, count, caveat, areas}));

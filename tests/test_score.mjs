@@ -4,7 +4,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {THRESHOLDS, hourScores, limitedScores, verdictFor, worseVerdict, controlModeFor, angleBetween, WINDOW_LIMITS, LONG_PERIOD_SWELL, withinWindowLimits} from '../web/score.ts';
+import {THRESHOLDS, hourScores, limitedScores, rateComfort, verdictFor, worseVerdict, controlModeFor, angleBetween, WINDOW_LIMITS, LONG_PERIOD_SWELL, withinWindowLimits} from '../web/score.ts';
+import {boatVerdict} from '../web/brief/verdict.ts';
 import {hourScores as legacyHourScores} from '../dist/morning-outlook.js';
 import {verdictFor as legacyVerdict, GO, NO_GO} from '../dist/tomorrow.js';
 
@@ -83,6 +84,87 @@ test('missing chop, swell or gust is never treated as zero: the limited estimate
   const noGust = limitedScores(14, 3, null, 'bottom', REFERENCE), gusty = limitedScores(14, 3, 24, 'bottom', REFERENCE);
   assert.ok(gusty.comfort < noGust.comfort, `a known gust costs points (${gusty.comfort} < ${noGust.comfort}); an unknown one costs nothing`);
   assert.ok(noGust.conditions <= THRESHOLDS.capLimited && gusty.conditions <= THRESHOLDS.capLimited);
+});
+
+// SC0122-01: a missing input may only make the estimate less certain (capped), never calmer than the full rubric.
+const feed = (over = {}) => ({wind: 10, gust: 14, wind_from: 300, sea: 2, sea_period: 8, chop: 1.5, chop_period: 5, swell: 2, swell_period: 8, swell_from: 300,
+  secondary: 0, secondary_from: 200, other_wind: 10, other_sea: 2, other_gust: 14, ...over});
+const conditionsOf = f => ({c: {wind: f.wind, gust: f.gust, sea: {height: f.sea}, chop: {height: f.chop, period: f.chop_period}, swell: {height: f.swell, from: f.swell_from},
+  secondary: {height: f.secondary, from: f.secondary_from}}, other: {wind: f.other_wind, sea: {height: f.other_sea}}});
+
+test('SC0122-01 golden #1251: 1.5 ft / 5 s chop with the second wind missing charges the chop and the short period', () => {
+  const full = rateComfort(feed()), limited = rateComfort(feed({other_wind: null}));
+  assert.deepEqual([full.limited, full.score], [false, 6.7]);
+  assert.equal(limited.limited, true);
+  assert.ok(limited.score <= full.score, `${limited.score} <= ${full.score}`);
+  assert.deepEqual([limited.score, limited.uncapped, limited.chop, limited.costs.short], [6.7, 6.7, 1.5, THRESHOLDS.shortChopPenalty]);
+  assert.equal(limited.costs.short, 0.8);
+});
+
+test('SC0122-01 invariant: deleting a model, a gust or the swell partition is never calmer than the full rubric on the values the limited path used', () => {
+  const deletions = [{}, {other_wind: null}, {other_sea: null}, {gust: null}, {other_gust: null}, {swell_from: null}, {secondary_from: null}];
+  let checked = 0;
+  for (const wind of [0, 5, 10, 15, 20, 30]) for (const sea of [0, 2, 4, 8]) for (const chop of [0, 0.6, 1.5, 3]) for (const period of [null, 4, 8]) {
+    for (const del of deletions) {
+      const f = feed({wind, other_wind: wind, gust: wind + 4, other_gust: wind + 4, sea, other_sea: sea, chop, chop_period: period, secondary: 1.5, ...del});
+      const r = rateComfort(f);
+      const {c, other} = conditionsOf(f);
+      const full = hourScores(c, other, 'boat-comfort', r.gust ?? 0, REFERENCE).comfort;
+      assert.ok(r.uncapped <= full, `${JSON.stringify(del)} wind ${wind} sea ${sea} chop ${chop}/${period}: limited ${r.uncapped} > full ${full}`);
+      if (r.limited) assert.ok(r.score <= THRESHOLDS.capLimited && r.score <= r.uncapped);
+      checked++;
+    }
+  }
+  assert.equal(checked, 6 * 4 * 4 * 3 * 7);
+});
+
+test('SC0122-01 a chop height with no usable period is charged as chop but never as short chop', () => {
+  for (const period of [null, undefined, NaN, Infinity, -Infinity]) {
+    const r = rateComfort(feed({chop: 1, chop_period: period, wind: 3, other_wind: 3, gust: 4, other_gust: 4}));
+    assert.equal(r.limited, true);
+    assert.equal(r.costs.short, 0);
+    assert.ok(Math.abs(r.costs.chop - 0.54) < 1e-12);
+    assert.equal(r.chop, 1);
+  }
+});
+
+test('SC0122-01 a limited hour charges the crossing swell only when the swell and secondary bearings are all present', () => {
+  const cross = feed({secondary: 1.5, chop: 0.1, chop_period: null});
+  assert.equal(rateComfort(cross).costs.crossing, THRESHOLDS.crossingPenalty);
+  for (const gap of [{swell_from: null}, {secondary: null}, {secondary_from: null}]) assert.equal(rateComfort({...cross, ...gap}).costs.crossing, 0, JSON.stringify(gap));
+});
+
+test('SC0122-01 an hour with no chop at all rates exactly as the limited scores did', () => {
+  for (const wind of [3, 10, 14, 20]) for (const gust of [null, wind + 8]) {
+    const f = feed({wind, other_wind: null, gust, other_gust: null, chop: null, chop_period: null, swell: null, swell_from: null, secondary: null, secondary_from: null});
+    const r = rateComfort(f);
+    const old = limitedScores(wind, 2, gust, 'boat-comfort', REFERENCE);
+    assert.deepEqual([r.limited, r.uncapped, r.score, r.chop], [true, old.comfort, old.conditions, null]);
+    assert.deepEqual([r.costs.chop, r.costs.crossing, r.costs.short], [0, 0, 0]);
+  }
+});
+
+test('SC0122-01 a limited gale still scores 0 and a limited calm hour still holds the 6.9 cap', () => {
+  assert.equal(rateComfort(feed({wind: 35, other_wind: null, gust: 45, other_gust: 45, sea: 12, other_sea: 12})).score, 0);
+  const calm = rateComfort(feed({wind: 2, other_wind: null, gust: 3, other_gust: 3, sea: 1, other_sea: 1, chop: 0.1, chop_period: 8}));
+  assert.deepEqual([calm.limited, calm.uncapped, calm.score], [true, 10, THRESHOLDS.capLimited]);
+});
+
+test('SC0122-01 the brief names a limited hour\'s chop at its real height, never "0 ft"', () => {
+  const times = Array.from({length: 48}, (_, i) => Date.parse('2026-10-13T07:00:00Z') / 1000 + i * 3600), now = new Date('2026-10-13T12:00:00Z');
+  const run = (id, fields) => ({id, issued: now.getTime() / 1000 - 4 * 3600, end: times.at(-1), data: {utc_offset_seconds: 0,
+    hourly_units: {time: 'unixtime', ...Object.fromEntries(fields.map(([k, , u]) => [k, u]))},
+    hourly: {time: times, ...Object.fromEntries(fields.map(([k, v]) => [k, times.map(() => v)]))}}});
+  const forecast = {region: 'morro-bay', retrieved: now.getTime(), point: {id: 'morro-bay', lat: 35.37, lon: -120.9}, models: {
+    gfs_global: run('gfs_global', [['wind_speed_10m', 12, 'kn'], ['wind_gusts_10m', 15, 'kn'], ['wind_direction_10m', 315, '°']]),
+    ncep_gfswave016: run('ncep_gfswave016', [['wave_height', 1, 'ft'], ['wave_period', 12, 's'], ['wind_wave_height', 2.2, 'ft'], ['wind_wave_period', 3, 's'],
+      ['swell_wave_height', 1, 'ft'], ['swell_wave_period', 12, 's'], ['swell_wave_direction', 300, '°'], ['secondary_swell_wave_height', 0, 'ft'], ['secondary_swell_wave_direction', 200, '°']]),
+    ecmwf_wam: run('ecmwf_wam', [['wave_height', 1, 'ft']]),
+  }};
+  const brief = {profile: 'boat', date: '2026-10-13', sunrise: '2026-10-13T14:10:00Z', sunset: '2026-10-14T01:30:00Z', alerts: [], missing: [], bar: null, shore: null, spear: null, kayak: null, tiles: []};
+  const v = boatVerdict(brief, forecast, now, 'America/Los_Angeles');
+  assert.match(v.limit, /with 2\.2 ft of short, steep wind chop\.$/);
+  assert.doesNotMatch(v.limit, /\b0 ft/);
 });
 
 test('verdicts: go at 7, marginal below, no-go below 4 or under any hazard; windows take the worse hour', () => {

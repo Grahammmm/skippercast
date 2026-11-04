@@ -112,6 +112,20 @@ const finite = (v: number | null | undefined): number => (Number.isFinite(v as n
 /** What each input costs an hour's comfort score, in points out of 10, before the wind and wave burdens overlap. */
 export interface ComfortCosts {wind: number; seas: number; chop: number; crossing: number; short: number}
 
+/** The chop, crossing and short-chop charges of the partitions an hour carries; an absent input charges nothing. */
+function partitionCosts(
+  chop: number, period: number | null | undefined, swellFrom: number | null | undefined,
+  secondary: {height: number | null | undefined; from: number | null | undefined}, boat: BoatFactors,
+): Pick<ComfortCosts, 'chop' | 'crossing' | 'short'> {
+  const T = THRESHOLDS, S = boat.sea;
+  return {
+    chop: Math.max(0, chop - T.comfortChopStart * S) * T.comfortChopSlope / S,
+    crossing: finite(secondary.height) >= T.crossingSecondaryHeight * S && (angleBetween(swellFrom, secondary.from) ?? -1) >= T.crossingAngle
+      ? T.crossingPenalty : 0,
+    short: chop >= T.shortChopHeight * S && Number.isFinite(period) && (period as number) <= boat.chopPeriod ? T.shortChopPenalty : 0,
+  };
+}
+
 /**
  * The comfort score's charges for one full-detail hour, each input on its own:
  * hourScores combines them; chargedCosts says what each actually took off.
@@ -127,15 +141,11 @@ export function comfortCosts(
   const gust = checkedGust;
   const sea = Math.max(finite(c.sea.height), finite(other.sea.height));
   const chop = finite(c.chop.height);
-  const crossing =
-    finite(c.secondary.height) >= T.crossingSecondaryHeight * S && (angleBetween(c.swell.from, c.secondary.from) ?? -1) >= T.crossingAngle
-      ? T.crossingPenalty : 0;
-  const short = chop >= T.shortChopHeight * S && Number.isFinite(c.chop.period) && (c.chop.period as number) <= boat.chopPeriod ? T.shortChopPenalty : 0;
+  const part = partitionCosts(chop, c.chop.period, c.swell.from, c.secondary, boat);
   return {wind, gust, sea, chop, costs: {
     wind: Math.max(0, wind - T.comfortWindStart * W) * T.comfortWindSlope / W + Math.max(0, gust - T.comfortGustStart * W) * T.comfortGustSlope / W,
     seas: Math.max(0, sea - T.comfortSeaStart * S) * T.comfortSeaSlope / S,
-    chop: Math.max(0, chop - T.comfortChopStart * S) * T.comfortChopSlope / S,
-    crossing, short,
+    ...part,
   }};
 }
 
@@ -289,7 +299,9 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 /**
  * The comfort score for one feed hour, as every surface rates it: the full
  * rubric when both models and every partition are there, otherwise the limited
- * one on the wind and seas actually forecast, capped. Null without a wind and a
+ * one on the wind and seas actually forecast, capped. A limited estimate
+ * charges every input the hour carries and caps the result; it is never calmer
+ * than the full rubric on the same values. Null without a wind and a
  * seas forecast. Gusts below their sustained wind are dropped, never raised.
  */
 export function rateComfort(h: FeedHour, boat: BoatFactors = REFERENCE_BOAT): ComfortRating | null {
@@ -306,11 +318,13 @@ export function rateComfort(h: FeedHour, boat: BoatFactors = REFERENCE_BOAT): Co
     return {score, uncapped: score, limited: false, wind: parts.wind, gust, sea: parts.sea, chop: parts.chop, costs: parts.costs};
   }
   const wind = Math.max(...winds), sea = Math.max(...seas), gust = gusts.length ? Math.max(...gusts) : null;
-  const uncapped = limitedScores(wind, sea, gust, 'boat-comfort', boat).comfort;
   const T = THRESHOLDS, S = boat.sea, W = boat.wind;
+  const part = partitionCosts(isNum(h.chop) ? h.chop : 0, h.chop_period,
+    isNum(h.swell_from) ? h.swell_from : null, isNum(h.secondary) && isNum(h.secondary_from) ? {height: h.secondary, from: h.secondary_from} : {height: null, from: null}, boat);
   const costs: ComfortCosts = {
     wind: Math.max(0, wind - T.comfortWindStart * W) * T.comfortWindSlope / W + (gust === null ? 0 : Math.max(0, gust - T.comfortGustStart * W) * T.comfortGustSlope / W),
-    seas: Math.max(0, sea - T.comfortSeaStart * S) * T.comfortSeaSlope / S, chop: 0, crossing: 0, short: 0,
+    seas: Math.max(0, sea - T.comfortSeaStart * S) * T.comfortSeaSlope / S, ...part,
   };
-  return {score: Math.min(T.capLimited, uncapped), uncapped, limited: true, wind, gust, sea, chop: null, costs};
+  const uncapped = clamp(10 - combinedBurden(costs.wind, Math.max(costs.seas, costs.chop)) - costs.crossing - costs.short);
+  return {score: Math.min(T.capLimited, uncapped), uncapped, limited: true, wind, gust, sea, chop: isNum(h.chop) ? h.chop : null, costs};
 }

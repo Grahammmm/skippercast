@@ -10,6 +10,7 @@ import type {AlertEventRow, TripRow} from '../types.ts';
 
 export const trips = new Hono<AppEnv>();
 const ACTIVE_TRIP_LIMIT = 20;
+export const RETIRED_AREA = "This trip's area is no longer offered; its plan cannot be changed. Save a new trip.";
 // Rows store the planner fields as JSON text; clients get them parsed.
 const parse = (text: string | null): unknown => { if (!text) return null; try { return JSON.parse(text); } catch { return null; } };
 export const publicTrip = (row: TripRow) => ({...row, targets: parse(row.targets) ?? [row.species], plan: parse(row.plan)});
@@ -32,7 +33,8 @@ trips.patch('/api/trips', async c => {
   const {id} = input; if (typeof id !== 'string' || !id || id.length > 64) throw new ClientError('trip id required');
   const row = await d.prepare('SELECT * FROM trips WHERE id=? AND owner=?').bind(id, owner).first<TripRow>();
   if (!row) return json({error: 'Not found'}, 404);
-  const current = publicTrip(row), region = regionById(row.region)!;
+  const region = regionById(row.region); if (!region) return json({error: RETIRED_AREA}, 409);
+  const current = publicTrip(row);
   const next = validateTripPlan({launch_point: 'launch_point' in input ? input.launch_point : current.launch_point, targets: 'targets' in input ? input.targets : current.targets, plan: 'plan' in input ? input.plan : current.plan, status: 'status' in input ? input.status : row.status}, region, row.species);
   await d.prepare('UPDATE trips SET launch_point=?,targets=?,plan=?,status=?,updated_at=? WHERE id=? AND owner=?').bind(next.launch_point, JSON.stringify(next.targets), next.plan ? JSON.stringify(next.plan) : null, next.status, new Date().toISOString(), id, owner).run();
   return json({id, ...next});
