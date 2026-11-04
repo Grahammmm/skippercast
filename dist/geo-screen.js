@@ -95,6 +95,40 @@ export function withinMargin(a, b, marginM = PLANNING_MARGIN_M) {
   const A = parts(a, y), B = parts(b, x), m2 = m * m;
   return A.pts.some(p => B.segs.some(([s, t]) => segDist2(p, s, t) <= m2)) || B.pts.some(p => A.segs.some(([s, t]) => segDist2(p, s, t) <= m2));
 }
+// SC0022-04: is the whole of `g`, plus the `marginM` search halo of the closure screen, inside the envelope a boundary file was
+// asked for? A closure that lies wholly outside that envelope is absent from the file, so it could sit within `marginM` of a
+// place near the edge: that edge strip is withheld, not cleared. Bounds are a finite, ordered, non-wrapping, non-polar WGS84
+// [west, south, east, north]. Anything missing, malformed or out of range is false; this never throws and never assumes worldwide coverage.
+const GEOMETRY_DEPTH = {Point: 0, MultiPoint: 1, LineString: 1, MultiLineString: 2, Polygon: 2, MultiPolygon: 3};
+/** Every position of `g` (each ring and part), or null when `g` is empty, unsupported or holds a bad coordinate. */
+function checkedPositions(g) {
+  const depth = GEOMETRY_DEPTH[g?.type];
+  if (depth === undefined) return null;
+  const out = [];
+  const walk = (c, d) => {
+    if (d === 0) {
+      if (!Array.isArray(c) || c.length < 2 || !Number.isFinite(c[0]) || !Number.isFinite(c[1]) || Math.abs(c[0]) > 180 || Math.abs(c[1]) > 90) return false;
+      out.push(c); return true;
+    }
+    return Array.isArray(c) && c.length > 0 && c.every(child => walk(child, d - 1));
+  };
+  return walk(g.coordinates, depth) ? out : null;
+}
+export function geometryCoveredByBounds(g, bounds, marginM = PLANNING_MARGIN_M) {
+  if (!Array.isArray(bounds) || bounds.length !== 4 || !bounds.every(v => typeof v === 'number' && Number.isFinite(v))) return false;
+  const [west, south, east, north] = bounds;
+  if (!(west < east && south < north) || west < -180 || east > 180 || south < -90 || north > 90) return false;
+  if (typeof marginM !== 'number' || !Number.isFinite(marginM) || marginM < 0) return false;
+  const ps = checkedPositions(g);
+  if (!ps) return false;
+  // Smallest metres per degree anywhere in the envelope's latitude range, so the degree padding is never too small.
+  const lats = [south, north, ...(south < 0 && north > 0 ? [0] : [])];
+  const kx = Math.min(...lats.map(l => mPerDeg(l)[0])), ky = Math.min(...lats.map(l => mPerDeg(l)[1]));
+  if (!(kx > 1) || !(ky > 1)) return false;
+  const dx = marginM / kx, dy = marginM / ky;
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return false;
+  return ps.every(p => p[0] >= west + dx && p[0] <= east - dx && p[1] >= south + dy && p[1] <= north - dy);
+}
 export const pointGeometry = (longitude, latitude) => ({type: 'Point', coordinates: [longitude, latitude]});
 // The closures (anything with a `geometry`) that any of `geometries` touches or comes within `marginM` of.
 /** @template {{geometry: unknown}} T @param {readonly unknown[]} geometries @param {readonly T[]} closures @param {number} [marginM] @returns {T[]} */
@@ -143,7 +177,7 @@ function farApart(a, b) {
 /**
  * One place's verdict: `place` is {latitude, longitude} plus an optional `geometry` / `geometries` (a line, a leg, an area).
  * `inside` is true when any of it touches or lies in a closure; `name` and `distanceM` are those of the nearest closure
- * (distanceM 0 when inside). Outputs refuse a place whose `placeRefused(v)` is true.
+ * (distanceM 0 when inside). Outputs refuse a place whose `placeRefused(v)` is true. A place outside the screen's `coversGeometry` is `screened: false`.
  * @returns {PlaceVerdict}
  */
 export function screenPlace(s, place) {
@@ -151,6 +185,11 @@ export function screenPlace(s, place) {
   const shapes = [...(place?.geometry ? [place.geometry] : []), ...(place?.geometries ?? [])];
   if (Number.isFinite(place?.longitude) && Number.isFinite(place?.latitude)) shapes.push(pointGeometry(place.longitude, place.latitude));
   if (!shapes.length) return none;
+  // SC0022-04: a screen that knows what area its boundary file covers must cover every shape (and its search halo), else the place is
+  // not checked, never clear. Screens without the method (marks, legacy fixtures) keep their own contract.
+  if (typeof s?.coversGeometry === 'function') {
+    try { if (!shapes.every(g => s.coversGeometry(g) === true)) return none; } catch { return none; }
+  }
   const closures = closuresOf(s);
   if (!closures) {
     // A screen that only answers allowed/not: current means it can say, and a "no" is inside.

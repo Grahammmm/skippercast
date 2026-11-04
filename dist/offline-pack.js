@@ -90,8 +90,10 @@ export async function savePack({signal, progress = () => {}, sessionStart = 0, m
       // storing it would give old data a new saved time.
       if (!response.ok || response.headers.has('X-SC-Offline')) { misses.push(url); return false; }
       const body = await response.blob();
-      bytes += body.size;
+      // Replacing a key already in the pack (a recent copy of the same file) must count its final body once.
+      const before = await cache.match(key), replaced = before ? (await before.blob()).size : 0;
       await cache.put(key, new Response(body, {status: 200, headers: stampedHeaders(response.headers)}));
+      bytes += body.size - replaced;
       return true;
     } catch (error) {
       if (signal.aborted) throw error;

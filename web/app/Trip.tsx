@@ -13,6 +13,7 @@ import {
   canSaveCoastal, closeTrip, deleteCoastal, listPacks, loadPlanner, offlineOpen, plannerView, readCoastal, saveCoastal, savePack, tripError, tripOpen, tripReady,
   type PackMeta, type Progress,
 } from '../trip.ts';
+import {oceanLines} from '../trip-ocean-lines.ts';
 import {regionInfo, zone} from './App.tsx';
 
 const PHASES: Readonly<Record<string, string>> = {files: 'Data and rules', tiles: 'NOAA chart tiles', shell: 'This app', basemap: 'Base map tiles'};
@@ -23,11 +24,14 @@ export const stamp = (iso: string, timeZone = zone()): string =>
   new Date(iso).toLocaleString('en-US', {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone, timeZoneName: 'short'});
 const Saved = ({iso}: {iso: string}) => <>{relativeTime(iso) ?? ''} · <time dateTime={iso}>{stamp(iso)}</time></>;
 
+/** Items the save could not store: the top-level list plus the v2 phase's own (a shoreline, land-water or contour file, a base map tile); one URL counts once. */
+export const packMissing = (m: PackMeta): number => new Set([...m.missing, ...m.v2?.missing ?? []]).size;
+
 /** A saved pack's tile line: chart tiles, and base map tiles when the v2 app saved it. */
 export function packTiles(m: PackMeta): string {
   const zoom = m.tiles.max_zoom === null ? '' : ` (zoom ${m.tiles.min_zoom}–${m.tiles.max_zoom})`;
   const base = m.v2 ? ` · ${m.v2.basemap.saved} of ${m.v2.basemap.planned} base map tiles` : '';
-  return `${m.tiles.saved} of ${m.tiles.planned} chart tiles${base}${zoom}${m.missing.length ? ` · ${m.missing.length} items missing` : ''}`;
+  return `${m.tiles.saved} of ${m.tiles.planned} chart tiles${base}${zoom}${packMissing(m) ? ` · ${packMissing(m)} items missing` : ''}`;
 }
 
 function TripDialog() {
@@ -80,7 +84,7 @@ function ChartPack() {
     setBusy(controller); setStatus('');
     try {
       const meta = await savePack(id, controller.signal, setProgress);
-      setStatus(`Saved ${meta.region_name} · ${formatBytes(meta.bytes)}.${meta.missing.length ? ` ${meta.missing.length} items could not be saved and will be missing offline.` : ''}`);
+      setStatus(`Saved ${meta.region_name} · ${formatBytes(meta.bytes)}.${packMissing(meta) ? ` ${packMissing(meta)} items could not be saved and will be missing offline.` : ''}`);
     } catch (e) {
       setStatus(controller.signal.aborted ? 'Cancelled. Nothing new was saved.' : `Could not save: ${(e as Error).message}`);
     } finally { setBusy(null); setProgress(null); void refresh(); }
@@ -89,9 +93,9 @@ function ChartPack() {
   return (
     <section class="app-offline" aria-labelledby="app-offline-pack">
       <h3 id="app-offline-pack">Chart pack</h3>
-      <p>Saves the region's data, rules, protected areas, latest forecast, NOAA chart tiles, base map at zoom 8–12 and this app on this device. The list below shows when each region was saved.</p>
+      <p>Saves the region's data, rules, protected areas, latest forecast, NOAA chart tiles, base map at zoom 8–12, the published land-water screen and depth contours (where the region publishes them) and this app on this device. The list below shows when each region was saved.</p>
       <p>Check the saved pack before leaving coverage.</p>
-      <p>Water temp and current tiles are not prefetched. Recently viewed tiles may be saved; coverage varies. For Morro Bay and Cambria, save Coastal readings below for water temperature and currents.</p>
+      <p>Water temperature and currents are saved with the pack when current; each saved region below says what was saved. For Morro Bay and Cambria, save Coastal readings below.</p>
       <div class="app-offline-actions">
         <Button variant="primary" icon="download" disabled={!id || !!busy} onClick={() => void save()}>Save {name} for offline</Button>
         {busy ? <Button onClick={() => busy.abort()}>Cancel</Button> : null}
@@ -103,12 +107,16 @@ function ChartPack() {
         {packs !== null ? ' Last checked listing; not rechecked.' : ''}
       </p> : null}
       <ul class="app-offline-list">
-        {packs?.length ? packs.map(({cache, meta}) => (
+        {packs?.length ? packs.map(({cache, meta}) => {
+          const ocean = oceanLines(meta, new Date(), zone());
+          return (
           <li key={cache}>
-            <div><strong>{meta.region_name}</strong><span class="ui-mono">Saved <Saved iso={meta.saved_at} /> · {formatBytes(meta.bytes)}</span><span>{packTiles(meta)}</span></div>
+            <div><strong>{meta.region_name}</strong><span class="ui-mono">Saved <Saved iso={meta.saved_at} /> · {formatBytes(meta.bytes)}</span><span>{packTiles(meta)}</span>
+              {ocean ? <><span>Water temp: {ocean.water}</span><span>Currents: {ocean.currents}</span></> : null}</div>
             <Button size="sm" onClick={() => void remove(cache)} aria-label={`Delete the saved ${meta.region_name}`}>Delete</Button>
           </li>
-        )) : inventoryState === 'success' ? <li>Nothing saved on this device yet.</li> : null}
+          );
+        }) : inventoryState === 'success' ? <li>Nothing saved on this device yet.</li> : null}
       </ul>
     </section>
   );

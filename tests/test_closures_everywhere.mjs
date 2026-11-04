@@ -10,7 +10,7 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
-import {screenPlace, placeRefused, distanceM} from '../dist/geo-screen.js';
+import {screenPlace, placeRefused, distanceM, geometryCoveredByBounds, PLANNING_MARGIN_M} from '../dist/geo-screen.js';
 import * as ranking from '../web/ranking.ts';
 import * as legs from '../web/trip-legs.ts';
 import * as placement from '../web/waypoint-placement.ts';
@@ -140,6 +140,118 @@ test('a waypoint click inside a closure is refused and placement stays armed; ou
   assert.equal(placement.placeWaypoint('r', {lat: 35.5, lon: -121}, planner()), true);
   assert.equal(got.length, 2); assert.equal(got[1].screen.screened, true); assert.equal(placement.placementRefused.value, null);
   assert.equal(placement.placeWaypoint('r', {lat: 35, lon: -121}, planner()), false, 'nothing armed: not a placement');
+});
+
+// SC0022-04: a boundary file only speaks for the envelope it was asked for. Morro Bay's is [-121.9, 34.95, -120.55, 35.85].
+const ENVELOPE = [-121.9, 34.95, -120.55, 35.85];
+const covers = g => geometryCoveredByBounds(g, ENVELOPE);
+const pt = (lon, lat) => ({type: 'Point', coordinates: [lon, lat]});
+const nextUp = x => x + Math.max(Math.abs(x), 1) * Number.EPSILON, nextDown = x => x - Math.max(Math.abs(x), 1) * Number.EPSILON;
+/** The smallest inset from the west edge, in degrees of longitude, at which a point is covered: the halo for `marginM`. */
+function haloDegrees(marginM) {
+  let out = 0, inn = 0.5;
+  for (let i = 0; i < 60; i++) { const mid = (out + inn) / 2; if (geometryCoveredByBounds(pt(ENVELOPE[0] + mid, 35.4), ENVELOPE, marginM)) inn = mid; else out = mid; }
+  return inn;
+}
+const NONE = {inside: false, name: null, distanceM: null, screened: false};
+/** A production-shaped planner screen over an explicit (possibly empty) boundary set that declares its coverage. */
+const bounded = (features = [feature], loaded = true) => ({...planner(loaded), exportExclusions: () => loaded ? {checked_at: iso, features} : null, coversGeometry: covers});
+
+test('coverage_bounds_validate_and_check_every_part', () => {
+  const inside = pt(-121.2, 35.4);
+  assert.equal(geometryCoveredByBounds(inside, ENVELOPE), true);
+  for (const bad of [undefined, null, 'x', {}, [], [1, 2, 3], [-121.9, 34.95, -120.55, 35.85, 0], [-121.9, 34.95, -120.55, '35.85'], [NaN, 34.95, -120.55, 35.85],
+    [-121.9, 34.95, Infinity, 35.85], [-120.55, 34.95, -121.9, 35.85], [-121.9, 35.85, -120.55, 34.95], [-121.9, 34.95, -121.9, 35.85], [-121.9, 35, -120.55, 35],
+    [-181, 34.95, -120.55, 35.85], [-121.9, 34.95, 181, 35.85], [-121.9, -91, -120.55, 35.85], [-121.9, 34.95, -120.55, 91], [170, 0, -170, 10], [-10, 89.99999, 10, 90]]) {
+    assert.equal(geometryCoveredByBounds(inside, bad), false, `bounds ${JSON.stringify(bad)}`);
+  }
+  for (const bad of [-1, NaN, Infinity, -Infinity, '70', null, {}]) assert.equal(geometryCoveredByBounds(inside, ENVELOPE, bad), false, `margin ${String(bad)}`);
+  for (const bad of [undefined, null, 'x', {}, {type: 'Point'}, {type: 'Point', coordinates: []}, {type: 'Point', coordinates: [-121]}, pt(NaN, 35.4), pt(-121.2, Infinity), pt('-121.2', 35.4),
+    pt(-181, 35.4), pt(-121.2, 95), {type: 'LineString', coordinates: []}, {type: 'MultiPoint', coordinates: []}, {type: 'Polygon', coordinates: [[]]}, {type: 'Polygon', coordinates: []},
+    {type: 'MultiPolygon', coordinates: [[]]}, {type: 'GeometryCollection', geometries: [inside]}, {type: 'Feature', geometry: inside}, {type: 'Point', coordinates: [[-121.2, 35.4]]}]) {
+    assert.doesNotThrow(() => geometryCoveredByBounds(bad, ENVELOPE)); assert.equal(geometryCoveredByBounds(bad, ENVELOPE), false, `geometry ${JSON.stringify(bad)}`);
+  }
+  // Every part and ring counts: one part that escapes makes the whole shape uncovered.
+  const out = [-124, 35.4], ok1 = [-121.3, 35.3], ok2 = [-121.1, 35.5], ok3 = [-121.2, 35.6];
+  assert.equal(covers({type: 'MultiPoint', coordinates: [ok1, ok2]}), true);
+  assert.equal(covers({type: 'MultiPoint', coordinates: [ok1, out]}), false);
+  assert.equal(covers({type: 'LineString', coordinates: [ok1, ok2]}), true);
+  assert.equal(covers({type: 'LineString', coordinates: [ok1, ok2, out]}), false, 'a line that leaves the envelope');
+  assert.equal(covers({type: 'MultiLineString', coordinates: [[ok1, ok2], [ok2, out]]}), false);
+  const ring = [ok1, ok2, ok3, ok1];
+  assert.equal(covers({type: 'Polygon', coordinates: [ring]}), true);
+  assert.equal(covers({type: 'Polygon', coordinates: [ring, [out, ok2, ok3, out]]}), false, 'a hole ring that escapes');
+  assert.equal(covers({type: 'MultiPolygon', coordinates: [[ring], [ring.map(([x, y]) => [x - 5, y])]]}), false, 'the second polygon escapes');
+  assert.equal(covers({type: 'MultiPolygon', coordinates: [[ring], [ring.map(([x, y]) => [x + 0.1, y])]]}), true);
+  // Zero margin: the raw envelope edge is covered, just beyond it is not. With the planning margin the raw edge itself is not.
+  for (const [p, q] of [[[ENVELOPE[0], 35.4], [nextDown(ENVELOPE[0]), 35.4]], [[ENVELOPE[2], 35.4], [nextUp(ENVELOPE[2]), 35.4]],
+    [[-121.2, ENVELOPE[1]], [-121.2, nextDown(ENVELOPE[1])]], [[-121.2, ENVELOPE[3]], [-121.2, nextUp(ENVELOPE[3])]]]) {
+    assert.equal(geometryCoveredByBounds(pt(...p), ENVELOPE, 0), true, `edge ${p}`);
+    assert.equal(geometryCoveredByBounds(pt(...q), ENVELOPE, 0), false, `just beyond ${q}`);
+    assert.equal(geometryCoveredByBounds(pt(...p), ENVELOPE), false, `${p} is within the halo of the edge`);
+  }
+  // An interior point is covered whatever the closure set; the helper never looks at closures, only at the declared envelope.
+  assert.equal(screenPlace(bounded([]), at(-121.2, 35.4)).screened, true);
+  assert.equal(screenPlace(bounded([]), at(-124, 35.4)).screened, false, 'a fresh empty boundary set is clear only inside its coverage');
+});
+
+test('coverage_requires_the_planning_halo', () => {
+  const mLonAt = lat => 111412.84 * Math.cos(lat * Math.PI / 180) - 93.5 * Math.cos(3 * lat * Math.PI / 180), mLatAt = 111132.92;
+  const eastEdge = lon => pt(ENVELOPE[2] - lon / mLonAt(35.4), 35.4), westEdge = m => pt(ENVELOPE[0] + m / mLonAt(35.85), 35.4);
+  assert.equal(PLANNING_MARGIN_M, 70);
+  // 30 m inside any query edge is unchecked; 100 m inside is checked.
+  for (const m of [0, 30, 60]) { assert.equal(covers(eastEdge(m)), false, `${m} m inside the east edge`); assert.equal(covers(westEdge(m)), false, `${m} m inside the west edge`); }
+  for (const m of [100, 500]) { assert.equal(covers(eastEdge(m)), true, `${m} m inside the east edge`); assert.equal(covers(westEdge(m)), true, `${m} m inside the west edge`); }
+  assert.equal(covers(pt(-121.2, ENVELOPE[1] + 30 / mLatAt)), false, '30 m inside the south edge');
+  assert.equal(covers(pt(-121.2, ENVELOPE[3] - 30 / mLatAt)), false, '30 m inside the north edge');
+  assert.equal(covers(pt(-121.2, ENVELOPE[1] + 150 / mLatAt)), true);
+  assert.equal(covers(pt(-121.2, ENVELOPE[3] - 150 / mLatAt)), true);
+  // The halo is set in metres by the margin: 70 m is about 70 m, and twice the margin is twice the padding.
+  const h70 = haloDegrees(70), h140 = haloDegrees(140);
+  assert.ok(Math.abs(h70 * mLonAt(35.85) - 70) < 1, `halo ${h70 * mLonAt(35.85)} m`);
+  assert.ok(Math.abs(h140 / h70 - 2) < 1e-6);
+  assert.equal(haloDegrees(0) < 1e-12, true, 'no margin, no padding');
+  // A whole shape must clear the halo, not only one vertex.
+  assert.equal(covers({type: 'LineString', coordinates: [[-121.2, 35.4], westEdge(30).coordinates]}), false);
+  // Premise: a closure wholly outside the query (so absent from its file) can lie within the planning margin of a place near the edge.
+  const absent = {type: 'Polygon', coordinates: [[[ENVELOPE[0] - 0.01, 35.3], [ENVELOPE[0] - 30 / mLonAt(35.3), 35.3], [ENVELOPE[0] - 30 / mLonAt(35.3), 35.5], [ENVELOPE[0] - 0.01, 35.5], [ENVELOPE[0] - 0.01, 35.3]]]};
+  const near = westEdge(30).coordinates, place = at(near[0], near[1]);
+  assert.ok(distanceM(pt(...near), absent) < PLANNING_MARGIN_M, 'the omitted closure is inside the margin');
+  const legacy = {ready: () => true, exportExclusions: () => ({checked_at: iso, features: []})};
+  assert.equal(placeRefused(screenPlace(legacy, place)), false, 'the legacy fixture seam with no coverage method keeps its contract');
+  assert.deepEqual(screenPlace(bounded([]), place), NONE, 'a declared envelope never turns the missing closure into a false clear');
+  assert.ok(placeRefused(screenPlace(bounded([]), place)));
+  assert.equal(screenPlace(bounded([]), at(near[0] + 300 / mLonAt(35.4), near[1])).screened, true, 'sufficiently inset is checked');
+});
+
+test('screen_place_uncovered_never_falls_back_to_clear', () => {
+  const inside = at(-121.2, 35.4), outside = at(-124, 35.4);
+  const boundary = cover => ({...marks, coversGeometry: cover}), allowedOnly = cover => ({ready: () => true, pointAllowed: () => true, geometryAllowed: () => true, coversGeometry: cover});
+  const shapes = [{geometry: pt(-121.2, 35.4)}, {geometry: pt(-124, 35.4)}, {geometries: [pt(-121.2, 35.4), pt(-124, 35.4)]}, {...inside, geometry: pt(-124, 35.4)}, {...inside, geometries: [pt(-124, 35.4)]}];
+  const throws = () => { throw new Error('boom'); };
+  for (const make of [boundary, allowedOnly, c => ({...planner(), coversGeometry: c})]) {
+    for (const cover of [() => false, throws, () => undefined, () => 1, () => null, g => { if (g.coordinates[0] < -123) throw new Error('only the far part'); return true; }]) {
+      for (const place of [outside, ...shapes.slice(1)]) {
+        const v = screenPlace(make(cover), place);
+        assert.deepEqual(v, NONE, `${JSON.stringify(place)}`); assert.ok(placeRefused(v));
+      }
+    }
+    // Every supplied shape is asked, not just the first: the point is covered, the geometry is not, and the reverse.
+    const asked = [], v = screenPlace(make(g => { asked.push(g.coordinates[0]); return g.coordinates[0] > -123; }), {...inside, geometry: pt(-124, 35.4)});
+    assert.deepEqual(v, NONE); assert.ok(asked.includes(-124), 'the escaping geometry was asked');
+    assert.deepEqual(screenPlace(make(g => g.coordinates[0] > -123), {...inside, geometries: [pt(-124, 35.4)]}), NONE);
+    assert.equal(screenPlace(make(covers), inside).screened, true, 'a covered place is screened');
+  }
+  // Covered places keep their exact verdicts; legacy screens without the method are untouched.
+  for (const p of [at(-121, 35), at(east + 1 * mLon, 35), at(east + 500 * mLon, 35)]) {
+    assert.deepEqual(screenPlace({...planner(), coversGeometry: covers}, p), screenPlace(planner(), p));
+    assert.deepEqual(screenPlace({...marks, coversGeometry: covers}, p), screenPlace(marks, p));
+  }
+  assert.equal(screenPlace(planner(), outside).screened, true, 'legacy planner fixture: no coverage method, old contract');
+  assert.equal(screenPlace(marks, outside).screened, true);
+  assert.equal(screenPlace(allowedOnly(undefined), outside).screened, true, 'a method that is not a function is no method');
+  // A screen that is not loaded stays unchecked whatever it covers.
+  assert.deepEqual(screenPlace(bounded([feature], false), inside), NONE);
 });
 
 const WATER = () => ({state: 'water'});

@@ -63,7 +63,7 @@ async function harness(t, responses) {
       b.onResolve({filter: /.*/}, args => {
         if (args.importer !== resolve(root, 'web/app/Trip.tsx')) return;
         if (args.path === 'preact/hooks') return {path: resolve(fixtures, 'runtime.mjs')};
-        if (['../ui/Button.tsx', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', './App.tsx'].includes(args.path))
+        if (['../ui/Button.tsx', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-ocean-lines.ts', './App.tsx'].includes(args.path))
           return {path: resolve(fixtures, 'boundary.mjs')};
         if (['../../dist/offline-core.js', 'preact/jsx-runtime'].includes(args.path)) return;
         throw new Error(`unadmitted product import: ${args.path}`);
@@ -187,4 +187,55 @@ extraTest('A4 overlapping refreshes retain rows while pending and ignore older s
   const html = await h.settle();
   assert.ok(html.includes(UNKNOWN) && html.includes(STALE) && html.includes('<strong>Fixture Harbor</strong>') && !html.includes(EMPTY));
   assert.deepEqual(h.runtime.deletes, [packs[0].cache, packs[0].cache]);
+});
+
+// SC1952-03: the coverage line names the published land-water screen and contours, and a miss in either list is visible once.
+const withMeta = (extra, tiles = {saved: 1, planned: 1, min_zoom: 8, max_zoom: null}) =>
+  [{cache: 'skippercast-pack-fixture-harbor-20261022', meta: {...structuredClone(packs[1].meta), region_id: 'fixture-harbor', region_name: 'Fixture Harbor', tiles, ...extra}}];
+
+extraTest('SC1952-03 the chart pack paragraph names the published land-water screen and depth contours, qualified, beside the older coverage', async t => {
+  const h = await harness(t, [success([])]);
+  h.render();
+  const html = await h.settle();
+  assert.ok(html.includes('the published land-water screen and depth contours (where the region publishes them)'));
+  for (const kept of ['NOAA chart tiles', 'base map at zoom 8–12', 'Water temp and current tiles are not prefetched', 'Check the saved pack before leaving coverage.'])
+    assert.ok(html.includes(kept), kept);
+});
+
+extraTest('SC1952-03 a side file missing from v2.missing is counted in the saved line, once even when the top-level list also names it', async t => {
+  const url = 'https://example.test/regions/fixture-harbor/land-water.json', other = 'https://example.test/regions/fixture-harbor/depth-contours.geojson';
+  for (const [meta, expected] of [
+    [{missing: [], v2: {basemap: {saved: 1, planned: 1}, shell: {saved: 1, requested: 2}, missing: [url]}}, '1 items missing'],
+    [{missing: ['https://example.test/other'], v2: {basemap: {saved: 1, planned: 1}, shell: {saved: 1, requested: 3}, missing: [url, other]}}, '3 items missing'],
+    [{missing: [url], v2: {basemap: {saved: 1, planned: 1}, shell: {saved: 1, requested: 2}, missing: [url]}}, '1 items missing'],
+  ]) {
+    const h = await harness(t, [success(withMeta(meta))]);
+    h.render();
+    const html = await h.settle();
+    assert.ok(html.includes(`· ${expected}`), `${expected}: ${html.match(/<span>[^<]*chart tiles[^<]*<\/span>/)?.[0]}`);
+  }
+});
+
+extraTest('SC1952-03 old metadata without v2, or with v2 but no missing list, still renders; nothing missing says nothing', async t => {
+  const legacy = withMeta({missing: []});
+  delete legacy[0].meta.v2;
+  const h = await harness(t, [success(legacy)]);
+  h.render();
+  const html = await h.settle();
+  assert.ok(html.includes('1 of 1 chart tiles') && !html.includes('items missing'));
+  const noList = await harness(t, [success(withMeta({missing: [], v2: {basemap: {saved: 1, planned: 1}, shell: {saved: 1, requested: 1}}}))]);
+  noList.render();
+  const html2 = await noList.settle();
+  assert.ok(html2.includes('1 of 1 base map tiles') && !html2.includes('items missing'));
+});
+
+extraTest('SC1952-03 the status after Save counts both lists once', async t => {
+  const h = await harness(t, [success([]), success([])]);
+  h.render(); await h.settle();
+  h.runtime.saveMeta = {region_name: 'Fixture Harbor', bytes: 128, missing: ['https://example.test/a'], v2: {missing: ['https://example.test/a', 'https://example.test/land-water.json']}};
+  const html = await h.refresh();
+  assert.ok(html.includes('2 items could not be saved and will be missing offline.'), html.match(/<p role="status"[^>]*>[^<]*/g)?.join(' | '));
+  h.runtime.saveMeta = {region_name: 'Fixture Harbor', bytes: 128, missing: []};
+  const clean = await h.refresh();
+  assert.ok(!clean.includes('could not be saved'));
 });
