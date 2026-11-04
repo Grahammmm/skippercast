@@ -70,10 +70,15 @@ function finish() {
 }
 
 const OUTCOME_WORDS = {fish: 'Fish', blank: 'Blank: no fish', unknown: 'Not sure'};
-/** One catch-log entry as list HTML. Every stored string is escaped, so markup in a note shows as plain text. */
-export function logItemHTML(row) {
+/**
+ * One catch-log entry as list HTML. Every stored string is escaped, so markup in a note shows as plain text.
+ * `trips` are the person's saved trips: an entry whose trip_id is exactly one of them also shows that trip's saved date
+ * (a stored calendar date, never parsed as an instant); a null, orphan or deleted association adds nothing.
+ */
+export function logItemHTML(row, trips = []) {
+  const trip = row.trip_id ? (Array.isArray(trips) ? trips : []).find(t => t?.id === row.trip_id) : null;
   const bits = [day(row.started_at), OUTCOME_WORDS[row.outcome] ?? row.outcome, row.outcome === 'fish' ? `${row.count} fish` : '', row.species, row.method,
-    row.lat != null && row.lon != null ? `${row.lat}, ${row.lon}` : ''].filter(Boolean);
+    row.lat != null && row.lon != null ? `${row.lat}, ${row.lon}` : '', trip?.date ? `Trip: ${trip.date}` : ''].filter(Boolean);
   return `<li><span>${bits.map(esc).join(' · ')}</span>${row.note ? `<p class="account-hint">${esc(row.note)}</p>` : ''}
     <button type="button" data-remove-log="${esc(row.id)}">Remove</button></li>`;
 }
@@ -84,8 +89,21 @@ export function logBody(f) {
   const started = f.started ? new Date(f.started) : new Date();
   const out = {started_at: started.toISOString(), outcome: f.outcome, method: f.method || null, species: f.species || null, note: f.note || null, lat: num(f.lat), lon: num(f.lon)};
   if (f.outcome === 'fish') out.count = num(f.count);
+  if (f.trip_id !== undefined && f.trip_id !== null && f.trip_id !== '') out.trip_id = f.trip_id;   // the chosen id exactly; the route checks it is the caller's own
   return out;
 }
+
+/** A saved trip's choice label: its stored date as written, then the area (the active region's point name when known, else "region / point"). */
+export function logTripLabel(trip, region) {
+  const known = region && region.id === trip?.region ? region.forecast_points?.find(p => p.id === trip.point)?.name : '';
+  return `${trip?.date} · ${known || `${trip?.region} / ${trip?.point}`}`;
+}
+
+/** The Trip choices after "No trip": one option per saved trip, in the order given, value the exact id, label escaped. */
+export function logTripOptionsHTML(trips, region) {
+  return (Array.isArray(trips) ? trips : []).map(t => `<option value="${esc(t.id)}">${esc(logTripLabel(t, region))}</option>`).join('');
+}
+const NO_TRIP = '<option value="">No trip</option>';
 
 const logFormHTML = () => `<h2 class="account-subhead">Catch log</h2>
     <p class="home-port-fine">Private to this account. Record a blank day as well as a good one. A position is never shared, mapped or put in a feed.</p>
@@ -95,6 +113,7 @@ const logFormHTML = () => `<h2 class="account-subhead">Catch log</h2>
       <label for="log-count">Fish count</label><input id="log-count" type="number" min="1" max="9999" step="1" />
       <label for="log-species">Target species</label><input id="log-species" type="text" maxlength="60" />
       <label for="log-method">Method</label><input id="log-method" type="text" maxlength="40" />
+      <label for="log-trip">Trip <span class="account-hint">(optional)</span></label><select id="log-trip">${NO_TRIP}</select>
       <label for="log-lat">Latitude <span class="account-hint">(optional, private)</span></label><input id="log-lat" type="number" step="any" />
       <label for="log-lon">Longitude <span class="account-hint">(optional, private)</span></label><input id="log-lon" type="number" step="any" />
       <label for="log-note">Note</label><input id="log-note" type="text" maxlength="1000" />
@@ -263,8 +282,23 @@ export async function openAccount() {
     let passkeys = [];
     try { passkeys = (await api('auth/passkeys')).passkeys; } catch (error) { status(passkeyMessage(error)); }
     body.innerHTML = signedInHTML(session, passkeys);
-    const list = $('#log-list'), showLog = async () => {
-      try { const {entries} = await api('catch-log'); list.innerHTML = entries.map(logItemHTML).join(''); } catch (error) { status(passkeyMessage(error)); }
+    const list = $('#log-list'), tripSelect = $('#log-trip');
+    // Saved trips (one read per render, independent of the log, passkeys and spots): they label the Trip choice and date the entries.
+    let trips = [], entries = null;
+    const live = () => open === self && list.isConnected;
+    const drawLog = () => { if (entries) list.innerHTML = entries.map(row => logItemHTML(row, trips)).join(''); };
+    const showLog = async () => {
+      try { const data = await api('catch-log'); if (!live()) return; entries = data.entries; drawLog(); } catch (error) { if (live()) status(passkeyMessage(error)); }
+    };
+    const loadTrips = async () => {
+      try {
+        const rows = (await api('trips')).trips;
+        const region = await import('./region.js').then(m => m.getRegion(), () => null);   // only names the area; without it the label reads "region / point"
+        if (!live()) return;
+        trips = rows; const chosen = tripSelect.value;
+        tripSelect.innerHTML = NO_TRIP + logTripOptionsHTML(trips, region); tripSelect.value = chosen;
+        drawLog();
+      } catch { if (live()) status('Saved trips could not be loaded. You can still save without a trip.'); }
     };
     list.addEventListener('click', async event => {
       const b = event.target.closest('[data-remove-log]'); if (!b) return;
@@ -274,11 +308,11 @@ export async function openAccount() {
       event.preventDefault();
       const field = n => $('#log-' + n).value;
       try {
-        await api('catch-log', {method: 'POST', body: logBody({started: field('started'), outcome: field('outcome'), count: field('count'), species: field('species'), method: field('method'), lat: field('lat'), lon: field('lon'), note: field('note')})});
+        await api('catch-log', {method: 'POST', body: logBody({started: field('started'), outcome: field('outcome'), count: field('count'), species: field('species'), method: field('method'), trip_id: field('trip'), lat: field('lat'), lon: field('lon'), note: field('note')})});
         $('#log-form').reset(); await showLog(); status('Saved to your log.');
       } catch (error) { status(passkeyMessage(error)); }
     });
-    showLog();
+    showLog(); loadTrips();
     // BF-saved-spots: the list reads each spot against the shared protected-area screen; a screen that cannot load reads "unavailable".
     let screenOnce = null;
     const spotScreen = () => screenOnce ??= import('./protected-areas.js').then(m => m.initProtectedAreas(null, () => {})).catch(() => null);

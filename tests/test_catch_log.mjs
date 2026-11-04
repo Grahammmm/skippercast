@@ -15,7 +15,7 @@ globalThis.BUILD_ID = 'build-test';
 globalThis.SHELLS = {'/': '/index.0123456789.html', '/index.html': '/index.0123456789.html', '/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html'};
 const {default: deployed} = await import('../server/index.ts');
 const {recordReads, resetMeter} = await import('../server/cost-ceiling.ts');
-const {logItemHTML, logBody} = await import('../dist/account.js');
+const {logItemHTML, logBody, logTripLabel, logTripOptionsHTML} = await import('../dist/account.js');
 const worker = withSessions(deployed), ORIGIN = 'https://skippercast.com';
 
 function database(wrap = a => a) {
@@ -198,5 +198,66 @@ test('the /my-data page downloads the signed-in account export with fish and bla
   const tok = await runMyData({hash: '#abc-DEF_1', owner: 'alice', env});
   assert.deepEqual(tok.fetched.map(([p, i]) => [p, i.credentials, i.headers['X-Export-Token']]), [['/api/advisor/export', 'omit', 'abc-DEF_1']], 'a token page calls only the Advisor export, without the session');
   assert.equal(tok.body, null);
+  sql.close();
+});
+
+// SC0022-06: an entry can name one of the person's saved trips (optional trip_id, checked by the route as the caller's own).
+const TRIP_ROW = (id, date, point = 'north', region = 'morro-bay') => ({id, region, point, date});
+const ACTIVE_REGION = {id: 'morro-bay', forecast_points: [{id: 'north', name: 'Point Estero'}, {id: 'south', name: 'Cayucos'}]};
+
+test('log_body_trip_is_optional_and_exact', () => {
+  for (const none of [undefined, null, '']) assert.ok(!('trip_id' in logBody({outcome: 'blank', trip_id: none})), `trip_id ${JSON.stringify(none)} is omitted`);
+  assert.ok(!('trip_id' in logBody({outcome: 'blank'})), 'no field at all is omitted');
+  for (const outcome of ['fish', 'blank', 'unknown']) assert.equal(logBody({outcome, count: '2', trip_id: 'trip-A b/1'}).trip_id, 'trip-A b/1', `${outcome}: the chosen id survives unchanged`);
+  assert.equal(logBody({outcome: 'blank', trip_id: ' padded '}).trip_id, ' padded ', 'an id is never trimmed or repaired');
+  const blank = logBody({outcome: 'blank', count: '7', lat: '', lon: '', trip_id: 't1'}), fish = logBody({outcome: 'fish', count: '4', lat: '35.5', lon: '-121', trip_id: 't1'});
+  assert.deepEqual([blank.count, blank.lat, blank.lon, fish.count, fish.lat, fish.lon], [undefined, null, null, 4, 35.5, -121], 'count and position rules are unchanged');
+});
+
+test('log_trip_options_are_own_saved_rows_and_escape_markup', () => {
+  const was = process.env.TZ; process.env.TZ = 'America/Los_Angeles';
+  try {
+    assert.equal(logTripLabel(TRIP_ROW('a', '2026-11-05'), ACTIVE_REGION), '2026-11-05 · Point Estero', 'the stored date as written, never shifted to the evening before');
+    assert.equal(logTripLabel(TRIP_ROW('a', '2026-01-01', 'gone'), ACTIVE_REGION), '2026-01-01 · morro-bay / gone', 'unknown point of the active region');
+    assert.equal(logTripLabel(TRIP_ROW('a', '2026-01-01', 'north', 'central'), ACTIVE_REGION), '2026-01-01 · central / north', "another region's point id is not renamed from this region");
+    assert.equal(logTripLabel(TRIP_ROW('a', '2026-01-01'), null), '2026-01-01 · morro-bay / north', 'no region metadata falls back to the raw names');
+    const trips = [TRIP_ROW('past', '2025-06-30'), TRIP_ROW('same-1', '2026-11-05', 'south'), TRIP_ROW('same-2', '2026-11-05', 'south'), TRIP_ROW('future', '2027-03-01')];
+    const html = logTripOptionsHTML(trips, ACTIVE_REGION);
+    assert.deepEqual([...html.matchAll(/value="([^"]*)"/g)].map(m => m[1]), ['past', 'same-1', 'same-2', 'future'], 'all rows, API order, duplicate dates stay distinct ids');
+    assert.ok(html.includes('2025-06-30 · Point Estero') && html.includes('2027-03-01 · Point Estero') && html.includes('2026-11-05 · Cayucos'), html);
+    const nasty = logTripOptionsHTML([{id: '"><script>x</script>', region: 'morro-bay', point: '<b>p</b>', date: '<i>d</i>'}], ACTIVE_REGION);
+    assert.ok(!/<script|<b>|<i>/.test(nasty) && nasty.includes('&lt;i&gt;d&lt;/i&gt; · morro-bay / &lt;b&gt;p&lt;/b&gt;') && nasty.includes('value="&quot;&gt;&lt;script&gt;'), nasty);
+    assert.equal(logTripOptionsHTML([], ACTIVE_REGION), '', 'no trips: nothing after the form\'s own No trip');
+    assert.equal(logTripOptionsHTML(undefined, ACTIVE_REGION), '');
+  } finally { if (was === undefined) delete process.env.TZ; else process.env.TZ = was; }
+});
+
+test('log_item_trip_date_requires_exact_saved_id', () => {
+  const entry = {id: 'e1', outcome: 'blank', started_at: BLANK.started_at, count: 0, note: '<b>n</b>'}, trips = [TRIP_ROW('t1', '2026-11-05'), TRIP_ROW('t2', '2026-12-25')];
+  assert.ok(logItemHTML({...entry, trip_id: 't1'}, trips).includes('Trip: 2026-11-05'), 'the matched trip date is shown');
+  assert.ok(logItemHTML({...entry, trip_id: 't1'}, trips).includes('Blank: no fish'), "the entry's own started date and outcome stay");
+  for (const [label, row, list] of [['null', {...entry, trip_id: null}, trips], ['orphan', {...entry, trip_id: 'deleted'}, trips], ['near-miss', {...entry, trip_id: 'T1'}, trips], ['no trips read', {...entry, trip_id: 't1'}, []], ['bad list', {...entry, trip_id: 't1'}, null]]) {
+    const html = logItemHTML(row, list);
+    assert.ok(!html.includes('Trip:') && html.includes('data-remove-log="e1"'), `${label}: no date, entry and Remove stay`);
+  }
+  const legacy = logItemHTML({...entry, trip_id: 't1'});
+  assert.ok(!legacy.includes('Trip:') && legacy.includes('&lt;b&gt;n&lt;/b&gt;') && !legacy.includes('<b>'), 'one argument still works, note still escaped');
+  assert.ok(logItemHTML({...entry, trip_id: 'x'}, [{id: 'x', date: '<u>9</u>'}]).includes('Trip: &lt;u&gt;9&lt;/u&gt;'), 'the added date is escaped');
+});
+
+test('deleted_trip_is_refused_without_new_log', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter};
+  const trip = (id, owner) => sql.prepare("INSERT INTO trips(id,owner,region,point,species,date,start_hour,end_hour,wind_limit,gust_limit,sea_limit,created_at) VALUES(?,?,'morro-bay','north','reef','2026-11-05',7,13,8,12,3,'x')").run(id, owner);
+  trip('mine', 'alice'); trip('theirs', 'bob');
+  assert.equal((await post(env, 'alice', {...BLANK, trip_id: 'mine'})).status, 201, 'own trip accepted');
+  assert.equal(sql.prepare('SELECT trip_id FROM catch_log WHERE owner=?').get('alice').trip_id, 'mine');
+  assert.equal((await post(env, 'alice', BLANK)).status, 201, 'no trip behaves as before');
+  sql.prepare('DELETE FROM trips WHERE id=?').run('mine');
+  const before = logCount(sql, 'alice'), stale = await post(env, 'alice', {...BLANK, trip_id: 'mine'});
+  assert.deepEqual([stale.status, stale.data.error], [404, 'Not found'], 'the route\'s own message');
+  assert.equal(logCount(sql, 'alice'), before, 'nothing was written');
+  const foreign = await post(env, 'alice', {...BLANK, trip_id: 'theirs'});
+  assert.deepEqual([foreign.status, foreign.data.error], [404, 'Not found'], 'another account\'s trip answers the same');
+  assert.equal(logCount(sql, 'alice'), before);
   sql.close();
 });
