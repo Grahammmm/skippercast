@@ -17,6 +17,7 @@
 import {signal} from '@preact/signals';
 import {dailyPartPath} from '../dist/offline-core.js';
 import {validDailyPart} from './map/habitat.ts';
+import {regsStartupURL} from './startup-forms.ts';
 import {DEFAULT_ZONE} from './zone.ts';
 
 /** The registry is v1's JSON, read field by field as v1 reads it. */
@@ -250,7 +251,8 @@ let reading: {region: string; promise: Promise<void> | null; retry: boolean} | n
 /** Forgets every read (tests only). */
 export const resetRegs = (): void => { reading = null; };
 /**
- * v1's load: the region's committed registry, then the daily feed's regulation checks when they are
+ * v1's load: the region's startup copy of the committed registry (its own species and their checks; the whole registry
+ * when the copy is missing or not valid for the region), then the daily feed's regulation checks when they are
  * at least as recent; each must name the region's jurisdiction and pass the checks above. A failure
  * keeps what loaded; with nothing, the line reads "Check rules" with CDFW's page. A read that showed
  * nothing for the region, or met a transport, 429 or 5xx failure, is asked again by the next card.
@@ -266,21 +268,33 @@ export async function loadRegs(region: RulesRegion, fetchFn: typeof fetch = fetc
     regsData.value = {region: region.id, data: candidate};
     return true;
   };
-  const get = async (url: string): Promise<Data> => {
-    const r = await fetchFn(url, {cache: 'no-cache'}).catch((e: unknown) => { transient = true; throw e; });
-    if (!r.ok) { transient ||= r.status === 429 || (r.status >= 500 && r.status <= 599); throw new Error(String(r.status)); }
-    // A body that dies in transit is transient; a body that is not JSON (SyntaxError) is the file's answer.
-    return r.json().catch((e: unknown) => { if (!(e instanceof SyntaxError)) transient = true; throw e; });
+  const settled = async (url: string): Promise<{d: Data | null; transient: boolean}> => {
+    let failed = false;
+    try {
+      const r = await fetchFn(url, {cache: 'no-cache'}).catch((e: unknown) => { failed = true; throw e; });
+      if (!r.ok) { failed = r.status === 429 || (r.status >= 500 && r.status <= 599); throw new Error(String(r.status)); }
+      // A body that dies in transit is transient; invalid JSON is the file's answer.
+      const d = await r.json().catch((e: unknown) => { if (!(e instanceof SyntaxError)) failed = true; throw e; });
+      return {d, transient: failed};
+    } catch { return {d: null, transient: failed}; }
   };
   const asset = region.assets?.regulations;
-  // Both requests start together (the phone's legality line waits for the later of the two, not their sum), each with its
-  // failure handler attached now so a rejection is never unhandled; the answers are still applied registry first, daily part last.
-  const settled = (url: string): Promise<{d: Data} | null> => get(url).then(d => ({d}), () => null);
-  const first = asset ? settled(asset) : null, second = settled(dailyPartPath(region.id, 'regulations'));
+  // Start the startup-copy/fallback chain and daily part together, with failure handlers attached immediately.
+  // Keep request failures independent: a successful fallback must not erase a daily transport failure.
+  const first = (async () => {
+    if (!asset) return;
+    const copy = await settled(regsStartupURL(region.id));
+    if (copy.d && accept(copy.d)) return;
+    const registry = await settled(asset);
+    const loaded = registry.d !== null && accept(registry.d);
+    transient ||= registry.transient || (!loaded && copy.transient);
+  })();
+  const second = settled(dailyPartPath(region.id, 'regulations'));
   return ours.promise = (async () => {
-    const a = await first;
-    if (a) accept(a.d);
+    await first;
+    // Registry first, daily last, even when the daily answer arrived first (equal review times favour daily).
     const b = await second;
-    if (b && validDailyPart(b.d, 'regulations', region.id)) accept(b.d.regulations);
+    transient ||= b.transient;
+    if (b.d && validDailyPart(b.d, 'regulations', region.id)) accept(b.d.regulations);
   })().finally(() => { ours.retry = transient || regsData.peek()?.region !== region.id; ours.promise = null; });
 }

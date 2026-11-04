@@ -5,7 +5,7 @@
 // opening time, a latitude band and a depth line), including #396's guard against inherited ids, and
 // render the card's line. web/regs.ts runs by type stripping; the card is bundled with esbuild.
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readdirSync, readFileSync} from 'node:fs';
 import {mkdtemp} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -14,7 +14,8 @@ import test from 'node:test';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {createHash} from 'node:crypto';
-import {CDFW_OCEAN, loadRegs, officialURL, regsData, regulationState, ruleProfile, ruleSummary, validRegulations, verifiedText} from '../web/regs.ts';
+import {CDFW_OCEAN, freshnessLabel, loadRegs, officialURL, openingAt, regsData, regulationState, resetRegs, ruleProfile, ruleSummary, speciesPage, validRegulations, verifiedText} from '../web/regs.ts';
+import {isDeepStrictEqual} from 'node:util';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 // Both inputs affect the historical digests: species/order, rules, source ids/URLs,
@@ -126,7 +127,7 @@ test('loads the region\'s file, then the daily checks when as recent; another ju
   const fetchFn = async url => { urls.push(url); return url in answers ? Response.json(answers[url]) : new Response('', {status: 404}); };
   regsData.value = null;
   await loadRegs(MORRO, fetchFn);
-  assert.equal(urls[0], 'data/regulations.json');
+  assert.deepEqual(urls.slice(0, 3), ['regions/morro-bay/regulations-startup.json', '/api/daily?region=morro-bay&part=regulations', 'data/regulations.json'], 'startup copy and daily start together; absent copy falls back to the whole registry');
   assert.equal(regsData.value?.region, 'morro-bay');
   assert.equal(regsData.value.data.checks['rules-groundfish'].data_retrieved_at, daily.checks['rules-groundfish'].data_retrieved_at, 'the daily checks replace the committed ones');
   regsData.value = null;
@@ -165,4 +166,130 @@ test('the card\'s line shows v1\'s row: status, bag, size, check date and the of
   assert.equal(m.render(m.h(m.RulesLine, {mark: {...mark, withheld: true}})), '', 'a withheld mark keeps its own words');
   m.state.syncFromURL('https://s.test/map?region=morro-bay&target=constructor');
   assert.match(m.render(m.h(m.RulesLine, {mark})), /Check rules.*Official CDFW rules/s, '#396 in the card');
+});
+
+// SC1938-06: the legality line reads the region's startup copy of the registry (regions/<id>/regulations-startup.json,
+// src/skippercast/platform/startup_forms.py regs_startup) and the whole registry only when the copy cannot be used.
+const COPY_URL = 'regions/morro-bay/regulations-startup.json', FULL_URL = 'data/regulations.json', DAILY_URL = '/api/daily?region=morro-bay&part=regulations';
+const speciesOf = region => [...new Set(region.species.flatMap(id => id === 'reef' ? ['lingcod', 'rockfish'] : [id]))];
+/** The registry cut as the platform build cuts a startup copy: the region's species, the sources and checks they cite, no area notices. */
+function copyOf(full, region) {
+  const wanted = new Set(speciesOf(region)), species = Object.fromEntries(Object.entries(full.species).filter(([id]) => wanted.has(id)));
+  const cited = new Set(Object.values(species).flatMap(p => [...p.source_ids, p.primary_source_id].filter(Boolean)));
+  const keep = table => Object.fromEntries(Object.entries(table).filter(([id]) => cited.has(id)));
+  const {area_notices: _notices, ...rest} = full;
+  return {...rest, species, sources: keep(full.sources), checks: keep(full.checks)};
+}
+const dailyPart = d => ({schema_version: 1, part: 'regulations', region_id: 'morro-bay', generated_at: new Date(NOW).toISOString(), catch_probability: null, bite_score: null, regulations: d});
+function serve(answers) {
+  const urls = [];
+  const fetchFn = async url => {
+    urls.push(url);
+    const a = answers[url];
+    if (a === 'throw') throw new TypeError('Failed to fetch');
+    if (a === 'bad-json') return new Response('{not json', {status: 200});
+    if (typeof a === 'number') return new Response('', {status: a});
+    return a === undefined ? new Response('', {status: 404}) : Response.json(a);
+  };
+  return {urls, fetchFn, set: (url, a) => { answers[url] = a; }};
+}
+const fresh = () => { resetRegs(); regsData.value = null; };
+const sameStates = (a, b, region, now = NOW) => IDS.every(id => isDeepStrictEqual(regulationState(a, id, region, now), regulationState(b, id, region, now)));
+
+test('a valid startup copy is the only registry read: the whole registry is not fetched', async () => {
+  fresh();
+  const s = serve({[COPY_URL]: {...copyOf(data(), MORRO), revision: 'copy'}, [FULL_URL]: {...data(), revision: 'full'}});
+  await loadRegs(MORRO, s.fetchFn);
+  assert.deepEqual(s.urls, [COPY_URL, DAILY_URL], 'the copy, then the daily part; never data/regulations.json');
+  assert.equal(regsData.value?.data.revision, 'copy');
+  assert.ok(sameStates(regsData.value.data, data(), MORRO), 'every rule state is the whole registry\'s');
+  await loadRegs(MORRO, s.fetchFn);
+  assert.equal(s.urls.length, 2, 'read once');
+});
+
+test('a copy that is missing, unreadable, for another jurisdiction or not valid for the region falls back to the whole registry', async () => {
+  const copy = copyOf(data(), MORRO), noSalmon = structuredClone(copy);
+  delete noSalmon.species.salmon;
+  const cases = {'404': 404, 'not JSON': 'bad-json', 'another jurisdiction': {...copy, jurisdiction_id: 'california-other'},
+    'a species of the region missing': noSalmon, 'unsupported schema': {...copy, schema_version: 2}, 'an unreviewed registry': {...copy, valid_through: 'soon'}};
+  for (const [name, answer] of Object.entries(cases)) {
+    fresh();
+    const s = serve({[COPY_URL]: answer, [FULL_URL]: {...data(), revision: 'full'}});
+    await loadRegs(MORRO, s.fetchFn);
+    assert.deepEqual(s.urls, [COPY_URL, DAILY_URL, FULL_URL], `${name}: copy and daily start together; the whole registry is the extra fallback request`);
+    assert.equal(regsData.value?.data.revision, 'full', `${name}: the whole registry shows`);
+  }
+});
+
+test('a daily part newer than the startup copy wins; an older one is refused', async () => {
+  for (const [name, dailyAt, wins] of [['newer', NOW, true], ['older', NOW - 96 * HOUR, false]]) {
+    fresh();
+    const copyAt = NOW - 48 * HOUR, copy = copyOf(data(copyAt), MORRO);
+    const s = serve({[COPY_URL]: copy, [DAILY_URL]: dailyPart(data(dailyAt))});
+    await loadRegs(MORRO, s.fetchFn);
+    assert.deepEqual(s.urls, [COPY_URL, DAILY_URL], name);
+    assert.equal(regsData.value.data.reviewed_at, new Date((wins ? dailyAt : copyAt) - HOUR).toISOString(), `${name}: the ${wins ? 'daily' : 'copy'} registry shows`);
+  }
+});
+
+test('a copy that fails in transit is not asked again when the whole registry loads; it is when nothing loads', async () => {
+  for (const failure of [503, 429, 'throw']) {
+    fresh();
+    const s = serve({[COPY_URL]: failure, [FULL_URL]: data()});
+    await loadRegs(MORRO, s.fetchFn);
+    await loadRegs(MORRO, s.fetchFn);
+    assert.deepEqual(s.urls, [COPY_URL, DAILY_URL, FULL_URL], `${failure}: whole registry loaded, read once`);
+    assert.ok(regsData.value);
+    fresh();
+    const none = serve({[COPY_URL]: failure});
+    await loadRegs(MORRO, none.fetchFn);
+    await loadRegs(MORRO, none.fetchFn);
+    assert.equal(none.urls.length, 6, `${failure}: nothing loaded, so the next card asks again`);
+  }
+});
+
+const DIST = new URL('../dist/', import.meta.url);
+const readDist = path => JSON.parse(readFileSync(new URL(path.replace(/^\//, ''), DIST), 'utf8'));
+const committedRegions = readdirSync(new URL('regions/', DIST), {withFileTypes: true}).filter(e => e.isDirectory())
+  .map(e => readDist(`regions/${e.name}/region.json`)).filter(r => r.jurisdiction_id && r.assets?.regulations);
+const localDay = (tz, at) => new Intl.DateTimeFormat('en-CA', {timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
+/** Three instants over one registry: now, the next opening (a minute before and after), and a date on which a species is closed. */
+function instants(full, region) {
+  const latest = Math.max(...Object.values(full.checks).map(c => Date.parse(c.data_retrieved_at)).filter(Number.isFinite)), now = latest + HOUR, tz = region.timezone;
+  const openings = Object.values(full.species).flatMap(p => p.windows.map(w => w.start_at)).filter(Boolean).map(s => Date.parse(s)).sort((a, b) => a - b);
+  const next = openings.find(t => t > now) ?? openings.at(-1) ?? now;
+  const list = [{now, date: null, at: null}, ...[next - 60000, next + 60000].map(t => ({now: t, date: localDay(tz, next), at: t}))];
+  for (let day = Date.parse(full.valid_from); day <= Date.parse(full.valid_through); day += 24 * HOUR) {
+    const date = new Date(day).toISOString().slice(0, 10);
+    if (IDS_OF(region).some(id => regulationState(full, id, region, now, date, null).status === 'closed')) { list.push({now, date, at: null}); break; }
+  }
+  return list;
+}
+const IDS_OF = region => [...new Set([...region.species, ...speciesOf(region)])];
+
+test('every committed region: the startup copy gives the whole registry\'s states, rows, check dates, pages and openings at every instant', () => {
+  assert.ok(committedRegions.length >= 10, 'the committed regions are read');
+  const seen = new Set();
+  for (const region of committedRegions) {
+    const full = readDist(region.assets.regulations), copy = readDist(`regions/${region.id}/regulations-startup.json`);
+    assert.ok(validRegulations(full, region) && validRegulations(copy, region), `${region.id}: both registries are valid for the region`);
+    assert.equal(copy.jurisdiction_id, region.jurisdiction_id, region.id);
+    assert.deepEqual(Object.keys(copy.species), Object.keys(full.species).filter(id => speciesOf(region).includes(id)), `${region.id}: the region's own species, in the registry's order`);
+    assert.ok(Object.keys(copy.sources).every(id => id in full.sources) && Object.keys(copy.checks).every(id => id in full.checks), `${region.id}: nothing the registry does not hold`);
+    const list = instants(full, region);
+    assert.ok(list.length >= 3, `${region.id}: now, the next opening and a closed date`);
+    for (const {now, date, at} of list) {
+      for (const id of IDS_OF(region)) {
+        const a = regulationState(full, id, region, now, date, at), b = regulationState(copy, id, region, now, date, at);
+        const where = `${region.id} ${id} ${date ?? 'today'} ${new Date(now).toISOString()}`;
+        assert.ok(isDeepStrictEqual(a, b), `${where}: state`);
+        assert.ok(isDeepStrictEqual(ruleSummary(full, id, a, region), ruleSummary(copy, id, b, region)), `${where}: row`);
+        assert.ok(isDeepStrictEqual(freshnessLabel(full, id, a, region, now), freshnessLabel(copy, id, b, region, now)), `${where}: check date`);
+        assert.ok(isDeepStrictEqual(speciesPage(full, id, region), speciesPage(copy, id, region)), `${where}: species page`);
+        assert.equal(openingAt(copy, id, region, localDay(region.timezone, now)), openingAt(full, id, region, localDay(region.timezone, now)), `${where}: opening`);
+        seen.add(a.status);
+      }
+    }
+  }
+  assert.ok(seen.has('closed') && (seen.has('open') || seen.has('restricted')), `the instants cover real states, not only unknown: ${[...seen]}`);
 });
