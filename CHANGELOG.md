@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC0237-03: the trip-alert form for the Boat profile starts from your own Boat limits when you have saved them in Your limits (wind, gust and sea, kept to the ranges the server accepts), and its note says so; they are your absolute settings, so the boat's wind and sea factors are not applied to them again, while alerts still judge wind chop for a saved custom boat. Without your own Boat limits the form and its notes are unchanged, still scaled by the boat; the other profiles are unchanged.
+
 - Deleting a saved trip, or the 90-day clean-up of old trips, now clears the trip from your private catch-log entries instead of leaving them (and the privacy export) naming a trip that no longer exists; the entries and their other fields are kept (#1549).
 
 - Search discovery now lists the Coverage and Forecast skill pages at the addresses the site serves (/coverage and /skill), and the Coverage page's canonical address is /coverage, not /coverage.html (#1550).
