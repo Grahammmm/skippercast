@@ -131,6 +131,7 @@ test('refused_or_unchecked_mark_never_posts: inside, boundary, within 70 m, outs
     const r = await run(m, {fetchFn: api.fetchFn, ...extra});
     assert.deepEqual(r, {state: 'refused', message: words}, label);
   };
+  assert.equal(SAVE_WORDS.notChecked, 'Protected areas not checked for this spot. Not saved.');
   await refuse(mark(CY, CX), 'Inside a protected area. Not saved.', 'inside');
   await refuse(mark(CY, CX + HALF), 'Inside a protected area. Not saved.', 'on the boundary');
   await refuse(mark(east(30).lat, east(30).lon), 'Within 70 m of a protected area. Not saved.', '30 m outside');
