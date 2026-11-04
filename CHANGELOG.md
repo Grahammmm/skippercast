@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC0237-03: the trip-alert form for the Boat profile starts from your own Boat limits when you have saved them in Your limits (wind, gust and sea, kept to the ranges the server accepts), and its note says so; they are your absolute settings, so the boat's wind and sea factors are not applied to them again, while alerts still judge wind chop for a saved custom boat. Without your own Boat limits the form and its notes are unchanged, still scaled by the boat; the other profiles are unchanged.
+
 - SC0237-04: the trip planner refuses what the Chart and the GPX check refuse. Saving a waypoint from a Chart tap and Add to trip on a habitat or survey place now decline a place that is not checked, inside a protected area or within the 70 m planning margin of one, with the same one-line reason ("Not saved: 40 m from …"), and add nothing; a place already in the plan is checked again each time it is added. A clear place is added as before, and adding it twice still adds it once.
 
 - BF-og-cards: shared map links carry the landing preview image and name a known region and its listed port in Open Graph previews; no forecast or date enters the preview, and the app remains noindex.

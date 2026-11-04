@@ -372,7 +372,9 @@ export function ranking(i: RankingInputs): Ranking {
 /** SC1322-10: the most water routes one Boat list computes; picks past it keep their straight line. */
 export const ROUTE_BUDGET = 24;
 /** A Boat pick whose `nm` is the water route where one was computed, else the straight line (and why no route, when one was tried). */
-export type RoutedPick = Pick & {readonly basis: 'water' | 'straight'; readonly why?: RouteFailure};
+export type RoutedPick = Pick & {readonly basis: 'water' | 'straight'; readonly why?: RouteFailure;
+  /** SC0452-07: a copy of a computed route's bends (snapped ends included), so the run line can screen the line it times; absent without a route. */
+  readonly routePoints?: readonly RoutePoint[]};
 /** A route, or null when it is not computed yet (the brief paints the list first): that pick keeps its labelled straight line. */
 export type RouteFn = (model: LandWaterModel | null, lines: LandWaterLines | null | false, from: RoutePoint, to: RoutePoint) => Route | null;
 /**
@@ -391,7 +393,8 @@ export function routedPicks(picks: readonly Pick[], origin: RoutePoint | null | 
     const r = origin && p.at && calls < ROUTE_BUDGET ? (calls++, route(model, lines, origin, p.at)) : null;
     if (r?.ok && !inside(r.nm, maxNm)) continue;
     const nm = r?.ok ? r.nm : p.nm;
-    out.push({...p, nm, basis: r?.ok ? 'water' : 'straight', distance: `${nm.toFixed(1)} nm ${r?.ok ? 'by water' : 'straight line'}`, ...(r && !r.ok ? {why: r.reason} : {})});
+    out.push({...p, nm, basis: r?.ok ? 'water' : 'straight', distance: `${nm.toFixed(1)} nm ${r?.ok ? 'by water' : 'straight line'}`, ...(r && !r.ok ? {why: r.reason} : {}),
+      ...(r?.ok && Array.isArray(r.points) ? {routePoints: r.points.map(q => ({latitude: q.latitude, longitude: q.longitude}))} : {})});
   }
   return out;
 }

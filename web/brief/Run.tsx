@@ -18,7 +18,8 @@ import {ROUTE_BUDGET, type Ranking, type RoutedPick} from '../ranking.ts';
 import {habitat, profile, region, selection, species} from '../state.ts';
 import {landWater, loadLandWaterLines} from '../land-water.ts';
 import type {RouteFailure} from '../route.ts';
-import {barNote, durationText, planRun, ROUND_MIN, type RunPlace, type RunState} from './run.ts';
+import {barNote, durationText, planRun, ROUND_MIN, runRouteNote, runRouteScreen, type RunPlace, type RunState} from './run.ts';
+import {loadProtectedScreen, protectedScreen, type ProtectedScreen} from '../trip.ts';
 import {currentRanking, listedBoatPicks} from './WhereToLook.tsx';
 import type {Brief} from './types.ts';
 import {PROFILE_TABLE} from '../profile.ts';
@@ -47,9 +48,28 @@ const WHY: Record<RouteFailure, string> = {'no-product': 'no land/water data', '
  * the list's own, copied, never computed again.
  */
 export function runPlace(picks: readonly RoutedPick[], spot: string | null, hab: string | null): (RunPlace & {chosen: boolean; unranked: boolean}) | null {
-  const chosen = picks.find(p => p.kind === 'spot' ? p.id === spot : p.kind === 'habitat' && p.id === hab), pick = chosen ?? picks[0];
+  const {chosen, pick} = pickForRun(picks, spot, hab);
   if (!pick || typeof pick.nm !== 'number' || !Number.isFinite(pick.nm) || pick.nm < 0) return null;
   return {name: pick.name, nm: pick.nm, basis: pick.basis, ...(pick.why ? {why: pick.why} : {}), chosen: !!chosen, unranked: !chosen && !!(spot || hab)};
+}
+
+/** The listed pick the run is timed for: the selected spot or habitat, else the first listed one. The route screen reads the same pick, so it never names another place's route. */
+function pickForRun(picks: readonly RoutedPick[], spot: string | null, hab: string | null): {chosen: RoutedPick | undefined; pick: RoutedPick | undefined} {
+  const chosen = picks.find(p => p.kind === 'spot' ? p.id === spot : p.kind === 'habitat' && p.id === hab);
+  return {chosen, pick: chosen ?? picks[0]};
+}
+
+/** The protected-area screen to read now: only a loaded one for exactly this region that says it is current; else null (the line says not checked). */
+export function runScreenFor(loaded: ProtectedScreen, id: string | null): unknown {
+  if (!id || loaded.state !== 'loaded' || loaded.region !== id) return null;
+  try { return loaded.screen.ready() ? loaded.screen : null; } catch { return null; }
+}
+
+/** Calls `onChange` on each `skippercast:boundaries` (the planner's screen redrew or refreshed) until the returned stop; nothing without a document. */
+export function watchBoundaries(onChange: () => void, doc: Pick<Document, 'addEventListener' | 'removeEventListener'> | undefined = typeof document === 'undefined' ? undefined : document): () => void {
+  if (!doc) return () => {};
+  doc.addEventListener('skippercast:boundaries', onChange);
+  return () => doc.removeEventListener('skippercast:boundaries', onChange);
 }
 
 // A straight line with no reason is a route the list has not computed yet, not a failed one.
@@ -65,7 +85,8 @@ export const runBasis = (harbor: string) =>
   `Run time is the distance from ${harbor} at the cruise speed you set, rounded up to ${ROUND_MIN} minutes. It follows water cells of the NOAA shoreline and reads "by water"; with no route computed it falls back to the straight line, labelled with why, or as waiting for the list's route. It is a planning distance, not a navigation route. `
   + 'Sea state, the bar crossing and fuel are left out. In by is the end of the lower-exposure window, which already weighs your limits, alerts, daylight and the bar at the window\'s start and end; leaving later than its start, the bar at your departure is yours to check. '
   + 'Counts from the legal opening when the target has one that day. '
-  + 'A planning sum for your own decision; it cannot clear the entrance or promise a return.';
+  + 'A planning sum for your own decision; it cannot clear the entrance or promise a return. '
+  + 'The line is screened against the loaded protected-area boundaries, including a 70 m planning margin. This does not determine whether transit or fishing is allowed; check the official rules.';
 
 /** The line's words for a run state; `tz` is the region's time zone. */
 export function runText(state: RunState, tz: string, unranked = false): {lead: string; times?: string; run?: string; note?: string} {
@@ -116,12 +137,19 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   // WhereToLook re-routes the shared list when these lines land; Run stays a memo-only route consumer.
   const speed = cruiseSpeed.value, shows = boat && !!brief?.windows.length && speed !== null && speed > 0;
   useEffect(() => { if (id && shows && place?.why === 'lines-needed') void loadLandWaterLines(id); }, [id, shows, place?.why]);
+  // SC0452-07: the run's route is screened against the shared protected-area screen Where to look loads (one loader, no new request);
+  // a boundary refresh renders the line again, so a screen that goes stale or unavailable takes its old note away.
+  const [, setRevision] = useState(0);
+  useEffect(() => { if (id && shows && place) void loadProtectedScreen(id); }, [id, shows, !!place]);
+  useEffect(() => watchBoundaries(() => setRevision(n => n + 1)), []);
   if (!brief || !r) return null;
   const state = planRun(brief, place, cruiseSpeed.value, now), tz = regionInfo.value?.timezone ?? DEFAULT_ZONE;
   const text = runText(state, tz, place?.unranked), harbor = r.harbor ?? 'the harbor';
   const target = species.value ?? PROFILE_TABLE.boat.defaultTarget;
   const loaded = regsData.value, data = loaded?.region === rules?.id ? loaded?.data : null;
   const active = state.kind === 'ok' || state.kind === 'no-time';
+  // The route of the place whose distance is timed, never the first raw pick; nothing for a state with no run to show.
+  const routeNote = active && text.run ? runRouteNote(runRouteScreen(r.origin, pickForRun(listed, selection.value, habitat.value).pick ?? null, runScreenFor(protectedScreen.value, id))) : null;
   const date = active ? new Intl.DateTimeFormat('en-CA', {timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(state.window.start)) : '';
   const opensAt = rules ? openingAt(data, target, rules, date) : null;
   // Read at the opening (not before it) so a timed opener clips rather than closing the whole day.
@@ -148,6 +176,7 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
           <Popover summary="basis" align="start">{runBasis(harbor)}</Popover>
         </p>
       ) : null}
+      {routeNote ? <p class="app-run-protected">{routeNote}</p> : null}
       {state.kind === 'no-speed' || result?.kind === 'no-wanted' ? <>
         <Button variant="ghost" size="sm" icon="settings" aria-haspopup="dialog" onClick={() => setOpen(true)}>{state.kind === 'no-speed' ? 'Set cruise speed' : 'Set hours I want'}</Button>
         <LimitsDialog open={open} onClose={() => setOpen(false)} title="Your limits · Boat">

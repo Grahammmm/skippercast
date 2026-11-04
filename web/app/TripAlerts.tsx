@@ -10,11 +10,11 @@ import {sharedFetch} from '../shared-fetch.ts';
 import {profile} from '../state.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 import {PROFILE_TABLE} from '../profile.ts';
-import {limitsFor} from '../limits.ts';
+import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {
-  alertDate, alertNames, alertSpecies, api, comfortBody, dateRange, disablePush, enablePush, eventLine, feedbackPhase, formProblem, profileTripDefaults, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
-  type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type Feedback, type RegionAlerts, type SavedTrip,
+  alertDate, alertNames, alertSpecies, api, catchLogEntries, comfortBody, dateRange, disablePush, enablePush, eventLine, feedbackPhase, formProblem, profileTripDefaults, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
+  type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RegionAlerts, type SavedTrip,
 } from '../alerts.ts';
 
 type SessionAnswer = {signedIn?: boolean; signIn?: unknown; publicKey?: string | null};
@@ -71,6 +71,9 @@ function ConfirmDelete({onConfirm, onCancel}: {onConfirm: () => void; onCancel: 
   );
 }
 
+/** What the person logged, in their own words: fish with the count, a blank, or not sure. */
+const catchLine = (c: CatchLogEntry) => c.outcome === 'fish' ? `Fish · ${c.count} fish` : c.outcome === 'blank' ? 'Blank: no fish' : 'Not sure';
+
 export function SavedTrips({recaps, names, remove}: {recaps: ReturnType<typeof tripRecaps>; names: AlertNames; remove: (id: string) => () => void}) {
   const deletion = (t: SavedTrip) => <Button size="sm" variant="quiet" onClick={remove(t.id)} aria-label={`Delete the trip on ${t.date} at ${names.point.get(t.point) ?? t.point}`}>Delete</Button>;
   return <div id="saved-trips">
@@ -78,10 +81,11 @@ export function SavedTrips({recaps, names, remove}: {recaps: ReturnType<typeof t
     {recaps.upcoming.length ? <><h3>Upcoming</h3>{recaps.upcoming.map(t => <p key={t.id}><strong>{tripLine(t, names)}</strong> {deletion(t)}</p>)}</> : null}
     {recaps.past.length ? <><h3>Past</h3>
       <p class="small">Your own record of each trip. Forecast assessments are what we sent before the day, not what the sea did.</p>
-      {recaps.past.map(({trip, final, reports}) => <article key={trip.id}>
+      {recaps.past.map(({trip, final, reports, catches}) => <article key={trip.id}>
         <details><summary>{tripLine(trip, names)}</summary>
           {final ? <><strong>{eventLine(final)}</strong><p style={{whiteSpace: 'pre-line'}}>{final.message}</p></> : <p>No day-before assessment was delivered</p>}
           {reports.length ? <><h4>Your comfort reports</h4>{reports.map((f, i) => <p key={i}>{f.rating}/10 · {feedbackPhase(f)}</p>)}</> : null}
+          {catches.length ? <><h4>Your catch log</h4><ul>{catches.map(c => <li key={c.id}>{catchLine(c)}</li>)}</ul></> : null}
         </details>{deletion(trip)}
       </article>)}
     </> : null}
@@ -91,13 +95,19 @@ export function SavedTrips({recaps, names, remove}: {recaps: ReturnType<typeof t
 function SignedIn({session, region, boat, target}: {session: SessionAnswer; region: RegionAlerts; boat: Boat; target: string | null}) {
   const [p] = useState(() => profile.peek());
   const saved = p === 'boat' ? tripBoat(boat.factors, boat.saved?.boat) : null;
-  const limits = p === 'boat' ? tripDefaults(boat.factors) : profileTripDefaults(limitsFor(p));
+  // Own Boat limits are absolute, so they start the form as saved (clamped to the server's ranges) and are never scaled by the boat's factors.
+  // Decided once at mount: a later signal change must not replace typed thresholds or make the note describe another source.
+  const [{ownBoatLimits, limits}] = useState(() => {
+    const own = p === 'boat' && hasOwnLimits('boat');
+    return {ownBoatLimits: own, limits: own || p !== 'boat' ? profileTripDefaults(limitsFor(p)) : tripDefaults(boat.factors)};
+  });
   const choice = alertSpecies(region, target), names = useMemo(() => alertNames(region), [region]), range = dateRange(region.timezone);
   const [species, setSpecies] = useState(choice.value);
   const [status, setStatus] = useState('');
   const [trips, setTrips] = useState<{trips: SavedTrip[]; events: AlertEvent[]} | null>(null);
   const digest = trips ? weekendDigest(trips.trips, names, range.min) : null;
   const [feedback, setFeedback] = useState<Feedback[] | null>(null);
+  const [catchEntries, setCatchEntries] = useState<CatchLogEntry[]>([]);
   const [comfortStatus, setComfortStatus] = useState('');
   const [confirming, setConfirming] = useState(false);
   const privacy = useRef<HTMLDetailsElement>(null);
@@ -107,6 +117,12 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const refresh = () => api<{trips: SavedTrip[]; events: AlertEvent[]}>('trips').then(setTrips, fail);
   const refreshFeedback = () => api<{feedback: Feedback[]}>('comfort').then(d => setFeedback(d.feedback), () => {});
   useEffect(() => { void refresh(); void refreshFeedback(); }, []);
+  // GET /api/catch-log: this person's own log, read once per mount for the past-trip recap. A failed or malformed answer leaves the recap as it was.
+  useEffect(() => {
+    let live = true;
+    api('catch-log').then(d => { if (live) setCatchEntries(catchLogEntries(d)); }, () => {});
+    return () => { live = false; };
+  }, []);
 
   const save = async (event: TargetedSubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -169,6 +185,8 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
         </form>
         <p class="small" id="trip-boat-note">{p !== 'boat'
           ? `Limits start from your ${PROFILE_TABLE[p].label} limits; alerts still judge wind, gusts and offshore seas only, not surf at your launch or beach.`
+          : ownBoatLimits
+          ? `Limits start from your Boat limits, without boat-factor scaling; alerts ${saved ? 'judge wind chop for your saved boat too.' : 'judge wind, gusts and offshore seas only.'}`
           : saved
           ? `Limits start from your saved boat${saved.name ? ` (${saved.name})` : ''}; alerts judge wind chop for it too.`
           : 'Limits start from the reference 23 ft boat. Set your boat to tailor them.'}</p>
@@ -183,7 +201,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           <p style={{whiteSpace: 'pre-line'}}>{toText(digest)}</p>
           <p class="small">Shown here only; SkipperCast does not email this yet.</p>
         </section> : null}
-        {trips ? <SavedTrips recaps={tripRecaps(trips.trips, trips.events, feedback ?? [], dateRange(DEFAULT_ZONE).min)} names={names} remove={remove} /> : <div id="saved-trips" />}
+        {trips ? <SavedTrips recaps={tripRecaps(trips.trips, trips.events, feedback ?? [], dateRange(DEFAULT_ZONE).min, catchEntries)} names={names} remove={remove} /> : <div id="saved-trips" />}
         {trips?.events.length ? (
           <details id="alert-history">
             <summary>Recent assessments ({trips.events.length})</summary>
