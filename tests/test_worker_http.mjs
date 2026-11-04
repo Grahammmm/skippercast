@@ -20,9 +20,11 @@ const worker = withSessions(deployed);
 function database() {
   const sql = new DatabaseSync(':memory:'), journal = read('../drizzle/meta/_journal.json');
   for (const {tag} of [...journal.entries].sort((a, b) => a.idx - b.idx)) sql.exec(readFileSync(new URL(`../drizzle/${tag}.sql`, import.meta.url), 'utf8'));
-  const adapter = {prepare(query) { let args = []; const statement = sql.prepare(query); return {bind(...a) { args = a; return this; }, async first() { return statement.get(...args) || null; }, async all() { return {results: statement.all(...args)}; }, async run() { const info = statement.run(...args); return {meta: {changes: Number(info.changes)}}; }}; },
+  // Test-only hook: awaited just before a subscriptions INSERT executes (either VALUES or SELECT form).
+  const hooks = {beforeSubscriptionWrite: null};
+  const adapter = {prepare(query) { let args = []; const statement = sql.prepare(query); return {bind(...a) { args = a; return this; }, async first() { return statement.get(...args) || null; }, async all() { return {results: statement.all(...args)}; }, async run() { if (hooks.beforeSubscriptionWrite && /^\s*INSERT INTO subscriptions\b/i.test(query)) await hooks.beforeSubscriptionWrite(args); const info = statement.run(...args); return {meta: {changes: Number(info.changes)}}; }}; },
     async batch(queries) { sql.exec('BEGIN'); try { const out = []; for (const q of queries) out.push(await q.run()); sql.exec('COMMIT'); return out; } catch (e) { sql.exec('ROLLBACK'); throw e; } }};
-  return {sql, adapter};
+  return {sql, adapter, hooks};
 }
 const origin = 'https://skippercast.com';
 function request(path, {owner, method = 'GET', body} = {}) {
@@ -323,4 +325,163 @@ test('public health is minimal: no binding or secret presence is disclosed', asy
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {service: 'SkipperCast', version: read('../package.json').version, build: 'build-test'});
   assert.equal(response.headers.get('Cache-Control'), 'no-store');
+});
+
+// --- Notification-device admission: concurrent writes must hold the five-device cap and endpoint ownership ---
+const subscriptionId = endpoint => createHash('sha256').update(endpoint).digest('hex');
+const deviceEndpoint = n => `https://fcm.googleapis.com/fcm/send/race-device-${n}`;
+const SEEDED_AT = '2026-01-01T00:00:00.000Z', LIMIT_MESSAGE = 'Limit of five notification devices', OWNER_MESSAGE = 'Subscription belongs to another signed-in user';
+function seedDevices(sql, owner, count, keys, first = 1) {
+  for (let n = first; n < first + count; n++) sql.prepare('INSERT INTO subscriptions(id,owner,endpoint,p256dh,auth,created_at) VALUES(?,?,?,?,?,?)').run(subscriptionId(deviceEndpoint(`${owner}-${n}`)), owner, deviceEndpoint(`${owner}-${n}`), keys.p256dh, keys.auth, SEEDED_AT);
+}
+const storedDevices = sql => sql.prepare('SELECT id,owner,endpoint,p256dh,auth,created_at FROM subscriptions ORDER BY endpoint').all().map(row => ({...row}));
+const post = (env, owner, body) => worker.fetch(request('/api/subscription', {owner, method: 'POST', body}), env);
+// Holds every subscriptions write at the real SQL boundary until the test lets it through, in a chosen order.
+async function raceSubscriptions({hooks}, env, calls, order) {
+  const held = [];
+  let arrived, timer;
+  const ready = new Promise((resolve, reject) => { arrived = resolve; timer = setTimeout(() => reject(new Error('subscription writes never reached the barrier')), 3000); });
+  hooks.beforeSubscriptionWrite = args => new Promise(resolve => { held.push({owner: args[1], endpoint: args[2], resolve}); if (held.length === calls.length) arrived(); });
+  try {
+    const pending = calls.map(c => post(env, c.owner, c.body));
+    await ready;
+    const responses = new Array(calls.length);
+    for (const i of order) { for (const h of held) if (h.owner === calls[i].owner && h.endpoint === calls[i].body.endpoint) h.resolve(); responses[i] = await pending[i]; }
+    return responses;
+  } finally { clearTimeout(timer); hooks.beforeSubscriptionWrite = null; for (const h of held) h.resolve(); }
+}
+
+test('subscription_last_slot_is_atomic', async () => {
+  for (const order of [[0, 1], [1, 0]]) {
+    const db = database(), env = {DB: db.adapter};
+    try {
+      const keys = await pushKeys(), a = await pushKeys(), b = await pushKeys();
+      seedDevices(db.sql, 'alice', 4, keys);
+      const calls = [{owner: 'alice', body: {endpoint: deviceEndpoint('new-a'), keys: a}}, {owner: 'alice', body: {endpoint: deviceEndpoint('new-b'), keys: b}}];
+      const responses = await raceSubscriptions(db, env, calls, order);
+      assert.deepEqual(responses.map(r => r.status).sort(), [200, 409], `order ${order}`);
+      const [winner, loser] = order;
+      assert.deepEqual(await responses[winner].json(), {enabled: true});
+      assert.deepEqual(await errorBody(responses[loser]), {error: LIMIT_MESSAGE});
+      const rows = storedDevices(db.sql);
+      assert.equal(rows.length, 5);
+      assert.equal(rows.filter(r => r.endpoint === calls[loser].body.endpoint).length, 0, 'the refused endpoint is not stored');
+      const kept = rows.find(r => r.endpoint === calls[winner].body.endpoint);
+      assert.deepEqual([kept.owner, kept.p256dh, kept.auth], ['alice', calls[winner].body.keys.p256dh, calls[winner].body.keys.auth]);
+    } finally { db.sql.close(); }
+  }
+  const db = database(), env = {DB: db.adapter};
+  try {
+    seedDevices(db.sql, 'alice', 3, await pushKeys());
+    const calls = [{owner: 'alice', body: {endpoint: deviceEndpoint('new-a'), keys: await pushKeys()}}, {owner: 'alice', body: {endpoint: deviceEndpoint('new-b'), keys: await pushKeys()}}];
+    const responses = await raceSubscriptions(db, env, calls, [0, 1]);
+    assert.deepEqual(responses.map(r => r.status), [200, 200], 'three devices leave room for both');
+    assert.equal(storedDevices(db.sql).length, 5);
+  } finally { db.sql.close(); }
+});
+
+test('subscription_concurrent_claim_preserves_winning_owner_keys', async () => {
+  for (const order of [[0, 1], [1, 0]]) {
+    const db = database(), env = {DB: db.adapter};
+    try {
+      const endpoint = deviceEndpoint('claimed'), calls = [{owner: 'alice', body: {endpoint, keys: await pushKeys()}}, {owner: 'bob', body: {endpoint, keys: await pushKeys()}}];
+      const responses = await raceSubscriptions(db, env, calls, order);
+      const [winner, loser] = order;
+      assert.deepEqual(responses.map(r => r.status).sort(), [200, 409], `order ${order}`);
+      assert.deepEqual(await responses[winner].json(), {enabled: true});
+      assert.deepEqual(await errorBody(responses[loser]), {error: OWNER_MESSAGE});
+      const rows = storedDevices(db.sql);
+      assert.equal(rows.length, 1);
+      assert.deepEqual([rows[0].owner, rows[0].p256dh, rows[0].auth], [calls[winner].owner, calls[winner].body.keys.p256dh, calls[winner].body.keys.auth], 'owner and both keys come from the same winning request');
+    } finally { db.sql.close(); }
+  }
+});
+
+test('subscription_refresh_at_cap_changes_only_owned_keys', async () => {
+  const db = database(), env = {DB: db.adapter};
+  try {
+    const old = await pushKeys(), fresh = await pushKeys();
+    seedDevices(db.sql, 'alice', 5, old);
+    const target = deviceEndpoint('alice-3'), before = storedDevices(db.sql).find(r => r.endpoint === target);
+    for (const pass of ['new keys', 'identical keys']) {
+      const response = await post(env, 'alice', {endpoint: target, keys: fresh});
+      assert.equal(response.status, 200, pass);assert.deepEqual(await response.json(), {enabled: true});
+      const rows = storedDevices(db.sql), after = rows.find(r => r.endpoint === target);
+      assert.equal(rows.length, 5, pass);
+      assert.deepEqual({...after, p256dh: before.p256dh, auth: before.auth}, before, 'id, owner, endpoint and created_at are unchanged');
+      assert.deepEqual([after.p256dh, after.auth], [fresh.p256dh, fresh.auth]);
+    }
+    assert.equal(storedDevices(db.sql).filter(r => r.p256dh === old.p256dh).length, 4, 'other devices keep their keys');
+  } finally { db.sql.close(); }
+  const racing = database();
+  try {
+    seedDevices(racing.sql, 'alice', 4, await pushKeys());
+    const keys = await pushKeys(), body = {endpoint: deviceEndpoint('same'), keys};
+    const responses = await raceSubscriptions(racing, {DB: racing.adapter}, [{owner: 'alice', body}, {owner: 'alice', body}], [0, 1]);
+    assert.deepEqual(responses.map(r => r.status), [200, 200], 'one device registered twice at once is not a second device');
+    const rows = storedDevices(racing.sql);
+    assert.equal(rows.length, 5);assert.equal(rows.filter(r => r.endpoint === body.endpoint).length, 1);
+  } finally { racing.sql.close(); }
+});
+
+test('subscription_foreign_endpoint_is_unchanged_at_any_capacity', async () => {
+  const db = database(), env = {DB: db.adapter};
+  try {
+    seedDevices(db.sql, 'bob', 1, await pushKeys());
+    seedDevices(db.sql, 'alice', 2, await pushKeys());
+    seedDevices(db.sql, 'carol', 5, await pushKeys());
+    const target = deviceEndpoint('bob-1'), before = storedDevices(db.sql);
+    for (const owner of ['alice', 'carol']) {
+      const response = await post(env, owner, {endpoint: target, keys: await pushKeys()});
+      assert.equal(response.status, 409, owner);assert.deepEqual(await errorBody(response), {error: OWNER_MESSAGE}, 'ownership wins over the capacity message');
+    }
+    assert.deepEqual(storedDevices(db.sql), before, 'every row is unchanged');
+    // Independent owners each fill their own fifth slot.
+    seedDevices(db.sql, 'dave', 4, await pushKeys());
+    seedDevices(db.sql, 'erin', 4, await pushKeys());
+    const calls = [{owner: 'dave', body: {endpoint: deviceEndpoint('dave-new'), keys: await pushKeys()}}, {owner: 'erin', body: {endpoint: deviceEndpoint('erin-new'), keys: await pushKeys()}}];
+    assert.deepEqual((await raceSubscriptions(db, env, calls, [0, 1])).map(r => r.status), [200, 200]);
+    assert.equal(db.sql.prepare("SELECT COUNT(*) AS n FROM subscriptions WHERE owner IN ('dave','erin')").get().n, 10);
+  } finally { db.sql.close(); }
+  const over = database(), overEnv = {DB: over.adapter};
+  try {
+    seedDevices(over.sql, 'frank', 6, await pushKeys());
+    const fresh = await pushKeys(), refused = await post(overEnv, 'frank', {endpoint: deviceEndpoint('frank-extra'), keys: fresh});
+    assert.equal(refused.status, 409);assert.deepEqual(await errorBody(refused), {error: LIMIT_MESSAGE});
+    assert.equal((await post(overEnv, 'frank', {endpoint: deviceEndpoint('frank-2'), keys: fresh})).status, 200, 'an over-limit owner may still refresh a device it owns');
+    assert.equal(storedDevices(over.sql).length, 6, 'no row is added or deleted');
+  } finally { over.sql.close(); }
+});
+
+test('subscription_refusals_and_storage_errors_do_not_claim_success', async () => {
+  const db = database(), env = {DB: db.adapter}, keys = await pushKeys(), realError = console.error;
+  console.error = () => {};
+  try {
+    const good = {endpoint: deviceEndpoint('plain'), keys};
+    const malformed = await post(env, 'alice', '{"endpoint":');
+    assert.equal(malformed.status, 400);assert.deepEqual(await errorBody(malformed), {error: 'invalid JSON body'});
+    const oversized = await post(env, 'alice', JSON.stringify({...good, padding: 'x'.repeat(9000)}));
+    assert.equal(oversized.status, 400);assert.deepEqual(await errorBody(oversized), {error: 'body too large'});
+    assert.equal((await worker.fetch(request('/api/subscription', {method: 'POST', body: good}), env)).status, 401, 'anonymous callers are refused');
+    const badOrigin = new Request(origin + '/api/subscription', {method: 'POST', headers: {'Content-Type': 'application/json', Origin: 'https://attacker.test', 'x-test-owner': 'alice'}, body: JSON.stringify(good)});
+    const refusedOrigin = await worker.fetch(badOrigin, env);
+    assert.notEqual(refusedOrigin.status, 200);assert.equal(storedDevices(db.sql).length, 0, 'nothing was stored by any refused request');
+    // A failing write or classification read is a generic dependency error, never a success or a capacity claim.
+    db.hooks.beforeSubscriptionWrite = () => { throw Error(`D1_ERROR: SQLITE_ERROR near subscriptions ${keys.auth}`); };
+    const failed = await post(env, 'alice', good), failedText = await failed.text();
+    db.hooks.beforeSubscriptionWrite = null;
+    assert.equal(failed.status, 503);assert.doesNotMatch(failedText, /D1|SQLITE|subscriptions|enabled|Limit/);assert.ok(!failedText.includes(keys.auth) && !failedText.includes(keys.p256dh));
+    assert.equal(storedDevices(db.sql).length, 0);
+    seedDevices(db.sql, 'alice', 5, keys);
+    const flaky = {prepare(query) { const statement = db.adapter.prepare(query); return /^SELECT owner FROM subscriptions/.test(query) ? {bind() { return this; }, async first() { throw Error('D1_ERROR: SQLITE_ERROR classification read'); }} : statement; }, batch: db.adapter.batch};
+    const classified = await post({DB: flaky}, 'alice', {endpoint: deviceEndpoint('sixth'), keys}), classifiedText = await classified.text();
+    assert.equal(classified.status, 503);assert.doesNotMatch(classifiedText, /D1|SQLITE|enabled|Limit/);
+    assert.equal(storedDevices(db.sql).length, 5);
+    // DELETE removes only the caller's devices and frees capacity for a later registration.
+    seedDevices(db.sql, 'bob', 1, keys);
+    assert.equal((await post(env, 'alice', {endpoint: deviceEndpoint('sixth'), keys})).status, 409);
+    assert.deepEqual(await (await worker.fetch(request('/api/subscription', {owner: 'alice', method: 'DELETE', body: {}}), env)).json(), {enabled: false});
+    assert.deepEqual(storedDevices(db.sql).map(r => r.owner), ['bob']);
+    assert.equal((await post(env, 'alice', {endpoint: deviceEndpoint('sixth'), keys})).status, 200, 'deleting frees the slots');
+  } finally { console.error = realError; db.sql.close(); }
 });
