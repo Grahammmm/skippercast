@@ -53,6 +53,7 @@ from collections import Counter
 from contextlib import closing
 from dataclasses import astuple, dataclass, fields
 from datetime import datetime
+from fractions import Fraction
 import json
 import logging
 import os
@@ -167,8 +168,11 @@ def score(labels: Iterable[Interval], predictions: Iterable[Interval]) -> dict[s
 
 
 def _passes(v: Mapping) -> bool:
-    return (v["precision"] is not None and v["recall"] is not None and v["precision"] >= TARGET["fishing_precision"]
-            and v["recall"] >= TARGET["fishing_recall"])
+    """Both targets met, judged from the exact minute counts: the rounded ratios are for display only."""
+    predicted, labelled = v["predicted_min"], v["labelled_min"]
+    return bool(predicted and labelled
+                and Fraction(v["agree_min"], predicted) >= Fraction(str(TARGET["fishing_precision"]))
+                and Fraction(v["agree_min"], labelled) >= Fraction(str(TARGET["fishing_recall"])))
 
 
 def target(result: Mapping, trips: int) -> dict[str, Any]:

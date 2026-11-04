@@ -2,8 +2,12 @@
 // land-water product. Synthetic products reuse the land-water fixture's constants (tests/fixtures/land-water/
 // coast.json) with painted zoom-12 grids, so every case is offline; then the committed Morro Bay product.
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import test from 'node:test';
+import {pathToFileURL} from 'node:url';
+import {build} from 'esbuild';
 import {distanceNm} from '../dist/spot-ranking.js';
 import {decodeCells, landWaterLines, landWaterModel, placeOf} from '../web/land-water.ts';
 import {MAX_NODES, SNAP_M, waterRoute} from '../web/route.ts';
@@ -248,4 +252,87 @@ test('smoothing: segments over 400 sub-cells are not tried; a long open route is
   assert.ok(r.points.slice(1).every((p, i) => cheb(r.points[i], p) <= 401), 'no segment over 400 sub-cells');
   assert.ok(r.nm >= straight && r.nm <= straight * 1.005, `${r.nm} vs ${straight}`);
   assert.equal(JSON.stringify(waterRoute(model, null, from, to)), JSON.stringify(r));
+});
+
+// The smoothing guard "every sub-cell the segment enters is passable" (web/route.ts clear()) is independent of the
+// rounded quarter-step samples: a sample can sit in a mixed cell's water part while that sub-cell's CENTRE is inside
+// the edge band (unknown). Synthetic geometry only: local sub-cell coordinates are relative to tile 12/671/1616
+// (128 sub-cells across); the mutant is route.ts with only that one conjunct removed, bundled into a temp dir.
+const subAt = (x, y) => ({latitude: latOf(1616 + y / 128), longitude: lonOf(671 + x / 128)});
+const at = ([x, y]) => subAt(x + 0.5, y + 0.5);
+const GUARD = ' || !cellWater(cx, cy)';
+/** The sub-cell quarter-step walk of clear() between the centres of local sub-cells a and b: [local quarter x, y, entered sub-cell x, y] per step. */
+function* walk(a, b) {
+  const ax = 4 * a[0] + 2, ay = 4 * a[1] + 2, dx = 4 * b[0] + 2 - ax, dy = 4 * b[1] + 2 - ay, steps = Math.max(Math.abs(dx), Math.abs(dy));
+  for (let k = 1; k <= steps; k++) {
+    const x = ax + dx * k / steps, y = ay + dy * k / steps;
+    yield [Math.round(x), Math.round(y), Math.floor(x / 4), Math.floor(y / 4)];
+  }
+}
+async function routeWithoutGuard() {
+  const web = new URL('../web/', import.meta.url), text = readFileSync(new URL('route.ts', web), 'utf8');
+  assert.equal(text.split(GUARD).length - 1, 1, 'the entered-sub-cell conjunct occurs exactly once in route.ts');
+  const out = await build({stdin: {contents: text.replace(GUARD, ''), loader: 'ts', resolveDir: web.pathname, sourcefile: 'route-without-guard.ts'}, bundle: true, format: 'esm', platform: 'node', write: false});
+  const dir = mkdtempSync(join(tmpdir(), 'route-mutant-'));
+  try {
+    const file = join(dir, 'route.mjs');
+    writeFileSync(file, out.outputFiles[0].text);
+    return (await import(pathToFileURL(file).href)).waterRoute;
+  } finally { rmSync(dir, {recursive: true, force: true}); }
+}
+// Product cell (7, 2) is mixed (sub-cells 28..31 by 8..11); the rest is water. A tiny closed ring on the centre of
+// sub-cell (31, 11) puts that centre inside the 25 m edge band while points half a sub-cell away stay water.
+const GUARD_FROM = [10, 10], GUARD_TO = [50, 11], BLOCKED = [31, 11];
+const guardModel = (mixed = true) => product({[COAST]: paint(mixed ? [['m', 7, 2, 7, 2]] : [])});
+function guardLines(model) {
+  const c = subAt(31.5, 11.5), x = Math.round(c.longitude * 1e5), y = Math.round(c.latitude * 1e5), ring = [x - 1, y - 1, 2, 0, 0, 2, -2, 0, 0, -2];
+  return landWaterLines({...fixture('coast.lines.json'), edge: [ring], parity: [ring]}, model);
+}
+
+test('smoothing_entered_mixed_subcell_guard_is_independent', async () => {
+  const model = guardModel(), lines = guardLines(model);
+  assert.ok(lines, 'the ring decodes');
+  const centre = subAt(31.5, 11.5), from = at(GUARD_FROM), to = at(GUARD_TO);
+  assert.deepEqual(placeOf(model, lines, centre), {state: 'unknown', reason: 'edge'}, 'the blocked centre is in the edge band');
+  assert.equal(placeOf(model, lines, from).state, 'water');
+  assert.equal(placeOf(model, lines, to).state, 'water');
+  // The 160 rounded quarter-step samples of the straight segment are all water, yet it enters the blocked sub-cell.
+  let samples = 0, entersBlocked = false;
+  for (const [qx, qy, sx, sy] of walk(GUARD_FROM, GUARD_TO)) {
+    samples++;
+    assert.equal(placeOf(model, lines, subAt(qx / 4, qy / 4)).state, 'water', `sample ${samples} at ${qx / 4},${qy / 4}`);
+    entersBlocked ||= sx === BLOCKED[0] && sy === BLOCKED[1];
+  }
+  assert.equal(samples, 160);
+  assert.ok(entersBlocked, 'the segment enters the sub-cell whose centre is blocked');
+  // The real route keeps a bend round it; with only the entered-sub-cell conjunct removed it takes the straight shortcut.
+  const r = waterRoute(model, lines, from, to), straight = distanceNm(from, to);
+  assert.ok(r.ok, JSON.stringify(r));
+  assert.ok(r.points.length > 2, `${r.points.length} points: the bend is kept`);
+  allWater(model, lines, r.points);
+  assert.ok(r.nm >= straight, `${r.nm} vs ${straight}`);
+  assert.equal(JSON.stringify(waterRoute(model, lines, from, to)), JSON.stringify(r), 'deterministic');
+  const shortcut = (await routeWithoutGuard())(model, lines, from, to);
+  assert.ok(shortcut.ok, JSON.stringify(shortcut));
+  assert.equal(shortcut.points.length, 2, 'without the guard the segment is taken whole');
+  assert.ok(shortcut.nm < r.nm, `${shortcut.nm} < ${r.nm}`);
+});
+
+test('smoothing_guard_witness_control_is_direct_in_open_water', () => {
+  const model = guardModel(false), from = at(GUARD_FROM), to = at(GUARD_TO), r = waterRoute(model, null, from, to), straight = distanceNm(from, to);
+  assert.ok(r.ok, JSON.stringify(r));
+  assert.equal(r.points.length, 2, 'a direct two-point route');
+  assert.ok(r.nm >= straight && r.nm <= straight * 1.005, `${r.nm} vs ${straight}`);
+  assert.equal(JSON.stringify(waterRoute(model, null, from, to)), JSON.stringify(r), 'deterministic');
+});
+
+test('smoothing_guard_witness_fails_closed_without_lines', () => {
+  const model = guardModel(), from = at(GUARD_FROM), to = at(GUARD_TO);
+  for (const lines of [null, false]) {
+    const r = waterRoute(model, lines, from, to);
+    assert.ok(r.ok, `${lines}: ${JSON.stringify(r)}`);
+    assert.ok(r.points.length > 2, `${lines}: the route bends round the unconfirmed cell`);
+    assert.ok(!passes(model, r.points, 'unknown'), `${lines}: no segment traverses the unconfirmed mixed cell`);
+    allWater(model, lines, r.points);
+  }
 });

@@ -175,3 +175,68 @@ test('a spot 30 m outside a boundary is inside the planning margin: read as such
   await assert.rejects(exportSpots([near], screen, region), /inside or near a protected area/);
   assert.deepEqual(names((await exportSpots([near, saved('Open water')], screen, region)).gpx), ['Open water']);
 });
+
+// SC0022-04: the screen only speaks for the envelope its boundary file was fetched for (Morro Bay's mpa.bounds).
+const TEXT = 'Protected areas not checked for this spot: outside coverage or check unavailable. Not exported.';
+const REFUSAL = /unavailable or older than 36 hours, or a saved spot is outside coverage\. Nothing was exported\./;
+const FAR = {lat: 40.0, lon: -124.0};
+const E = getRegion().mpa.bounds, EDGE = {lat: 35.4, lon: E[0] + 30 / (111412.84 * Math.cos(35.4 * Math.PI / 180))};
+async function refreshed(screen, answer) {
+  const was = {fetch: globalThis.fetch, document: globalThis.document};
+  globalThis.fetch = answer; globalThis.document = {getElementById: () => ({classList: {toggle() {}}, textContent: ''}), dispatchEvent() {}};
+  try { await screen.refresh(); } finally { Object.assign(globalThis, was); }
+}
+
+test('saved_spot_outside_current_screen_is_not_checked', async () => {
+  assert.deepEqual(E, [-121.9, 34.95, -120.55, 35.85], 'the envelope this test reasons about');
+  const screen = await screenAt(), region = getRegion(), far = saved('Far away', FAR, 'far'), open = saved('Open water');
+  assert.equal(screen.ready(), true, 'a fresh screen');
+  // A spot far outside the envelope is neither clear nor accused: the reading is the exact not-checked line, without a boundary.
+  const [verdict] = await spotVerdicts([far], screen);
+  assert.deepEqual(verdict, {status: 'unavailable', text: TEXT});
+  const html = spotItemHTML(far, verdict);
+  assert.ok(html.includes(`<p class="account-hint">${TEXT}</p>`), html);
+  assert.doesNotMatch(html, /excluded|Inside|within 70 m|Point Buchon/);
+  // The spot inside the envelope keeps its reading, byte for byte.
+  assert.deepEqual((await spotVerdicts([open], screen))[0], {status: 'clear', text: ''});
+  assert.equal(spotItemHTML(open, {status: 'clear', text: ''}).includes('account-hint'), false, 'no clear badge or text');
+  // The 70 m search halo inside the envelope's edge is not checked either.
+  assert.equal((await spotVerdicts([saved('Edge', EDGE, 'edge')], screen))[0].text, TEXT);
+  // One outside spot refuses the whole export, alone or in a mixed list, and nothing is handed over.
+  for (const list of [[far], [open, far], [far, open], [open, far, saved('Inside the reserve', INSIDE, 'in')], [open, saved('Edge', EDGE, 'edge2')]]) {
+    let out = null;
+    await assert.rejects((async () => { out = await exportSpots(list, screen, region); })(), REFUSAL);
+    assert.equal(out, null, 'no GPX bytes are returned');
+  }
+  assert.equal((await exportSpots([open], screen, region)).exported, 1, 'the in-envelope list still exports');
+  // Repeat after a live refresh, a daily-feed refresh and a failed refresh: coverage never changes, a stale screen stays unchecked.
+  const live = async () => ({ok: true, json: async () => ({...MPAS, checked_at: new Date().toISOString()})});
+  await refreshed(screen, live);
+  assert.equal(screen.ready(), true);
+  assert.equal((await spotVerdicts([far], screen))[0].text, TEXT); await assert.rejects(exportSpots([open, far], screen, region), REFUSAL);
+  const daily = async url => String(url).includes('/api/daily') || String(url).includes('latest.json')
+    ? {ok: true, json: async () => ({schema_version: 1, region_id: 'morro-bay', part: 'mpa-boundaries', generated_at: new Date().toISOString(), catch_probability: null, bite_score: null,
+        sources: {'mpa-boundaries': {status: 'ok', data_retrieved_at: new Date().toISOString(), data: {geojson: MPAS}}}})}
+    : {ok: false, status: 503, json: async () => ({})};
+  const viaDaily = await screenAt(new Date(Date.now() - 48 * 3600000).toISOString());
+  await refreshed(viaDaily, daily);
+  assert.equal(viaDaily.ready(), true, 'the daily feed renewed the check');
+  assert.equal((await spotVerdicts([far], viaDaily))[0].text, TEXT); await assert.rejects(exportSpots([open, far], viaDaily, region), REFUSAL);
+  const stale = await screenAt(new Date(Date.now() - 48 * 3600000).toISOString());
+  await refreshed(stale, async () => ({ok: false, status: 503, json: async () => ({})}));
+  assert.equal(stale.ready(), false);
+  for (const spot of [far, open]) assert.equal((await spotVerdicts([spot], stale))[0].text, TEXT, 'a stale screen reads every spot as not checked');
+  await assert.rejects(exportSpots([open], stale, region), REFUSAL);
+});
+
+test('a far-away spot stays stored and readable by its owner, and its list reading is not checked', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter};
+  const made = await post(env, 'alice', {name: 'FARSPOT', ...FAR});
+  assert.equal(made.status, 201, 'the server keeps its storage scope: a spot elsewhere is saved');
+  const {spots} = await (await call(env, '/api/spots', {owner: 'alice'})).json();
+  assert.deepEqual(spots.map(s => [s.name, s.lat, s.lon]), [['FARSPOT', FAR.lat, FAR.lon]]);
+  const screen = await screenAt(), [verdict] = await spotVerdicts(spots, screen);
+  assert.equal(verdict.text, TEXT); assert.ok(spotItemHTML(spots[0], verdict).includes(TEXT));
+  await assert.rejects(exportSpots(spots, screen, getRegion()), REFUSAL);
+  sql.close();
+});
