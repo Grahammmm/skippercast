@@ -18,9 +18,17 @@ function text(v: unknown, name: string, max: number): string | null {
   if (typeof v !== 'string' || [...v].length > max) throw new ClientError(`${name} must be text of at most ${max} characters`);
   return v.trim() ? v : null;
 }
+/** The written calendar day must exist and the written hour must be 00-23: Date.parse alone rolls 02-30 into March and 24:00 into the next day. */
+function realWrittenTime(v: string): boolean {
+  const year = Number(v.slice(0, 4)), month = Number(v.slice(5, 7)), day = Number(v.slice(8, 10)), hour = Number(v.slice(11, 13));
+  // setUTCFullYear, not Date.UTC, so years 0000-0099 are not mapped to 1900-1999.
+  const scratch = new Date(0);
+  scratch.setUTCFullYear(year, month - 1, day);
+  return hour <= 23 && scratch.getUTCFullYear() === year && scratch.getUTCMonth() === month - 1 && scratch.getUTCDate() === day;
+}
 function when(v: unknown, name: string): string | null {
   if (v === undefined || v === null) return null;
-  if (typeof v !== 'string' || !ISO.test(v) || Number.isNaN(Date.parse(v))) throw new ClientError(`${name} must be an ISO date and time with a zone`);
+  if (typeof v !== 'string' || !ISO.test(v) || Number.isNaN(Date.parse(v)) || !realWrittenTime(v)) throw new ClientError(`${name} must be an ISO date and time with a zone`);
   return new Date(v).toISOString();
 }
 /** Both coordinates or neither. Finite numbers strictly inside the poles and the antimeridian; stored as entered. */
