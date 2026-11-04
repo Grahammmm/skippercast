@@ -116,9 +116,9 @@ const iso = (ms: number): string | undefined => Number.isFinite(ms) && Math.abs(
 function clocksOf(id: string, manifest: unknown) {
   const m = object(manifest) ? manifest : {}, layer = object(m.layers) && object(m.layers[id]) ? m.layers[id] : {}, source = object(m.sources) && object(m.sources[id]) ? m.sources[id] : {};
   const times = (Array.isArray(layer.frames) ? layer.frames : []).filter(f => object(f) && typeof f.time === 'number' && (typeof f.valid_cells !== 'number' || f.valid_cells > 0)).map(f => (f as {time: number}).time);
-  const wcofs = id === WCOFS_LAYER_ID, data = wcofs ? at(layer.issued_at) : times.length ? Math.max(...times) * 1000 : at(layer.sample_at);
+  const wcofs = id === WCOFS_LAYER_ID, data = wcofs ? at(layer.issued_at) : times.length ? Math.max(...times) * 1000 : NaN;
   const got = at(source.data_retrieved_at), hours = typeof layer.max_age_hours === 'number' ? layer.max_age_hours : NaN, age = hours > 0 ? hours * HOUR : NaN;
-  return {layer, data, got, hours, age, wcofs, dataEnd: data + (wcofs ? Math.min(age, WCOFS_ISSUE_LIMIT) : age), gotEnd: got + (wcofs ? WCOFS_RETRIEVAL_LIMIT : age)};
+  return {layer, data, got, hours, age, wcofs, populated: times.length > 0, dataEnd: data + (wcofs ? Math.min(age, WCOFS_ISSUE_LIMIT) : age), gotEnd: got + (wcofs ? WCOFS_RETRIEVAL_LIMIT : age)};
 }
 
 /** The layer's clocks and the latest instant the readers can draw it: SST `min(analysed, retrieved) + max_age`, WCOFS `min(retrieved + 6 h, issued + 36 h, issued + max_age)`. Only valid clocks are returned. */
@@ -133,7 +133,7 @@ export function deadline(id: string, manifest: unknown): OceanClocks {
 export function eligibility(id: string, manifest: unknown, now: Date): string | null {
   const c = clocksOf(id, manifest), t = now.getTime();
   if (c.layer.status !== 'ok' && c.layer.status !== 'retained') return 'status';
-  if (!(c.age > 0) || !(t < c.dataEnd) || !Number.isFinite(c.data)) return 'age';
+  if (!c.populated || !(c.age > 0) || !(t < c.dataEnd) || !Number.isFinite(c.data)) return 'age';
   if (!Number.isFinite(c.got)) return 'no-retrieval';
   if (!(t < c.gotEnd)) return 'retrieval';
   if (c.wcofs && c.layer.surface_only !== true) return 'not-surface';

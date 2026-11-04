@@ -266,6 +266,31 @@ test('eligibility: the base manifest two hours after retrieval is current for bo
   assert.equal(MIN_WINDOW, 60 * MIN);
 });
 
+test('unpopulated layers are not current despite fresh clocks and fetch no tiles', async () => {
+  for (const id of OCEAN_LAYERS) {
+    for (const frames of [[], [{time: TIME, valid_cells: 0}]]) {
+      const f = feed({edit: m => {
+        m.layers[id].frames = frames;
+        m.layers[id].sample_at = NOW.toISOString();
+        return m;
+      }});
+      const r = run(f, {eligible: (layerId, m) => eligibility(layerId, m, NOW)}), result = await r.done();
+      assert.deepEqual([result.layers[id].state, result.layers[id].why, result.layers[id].bytes], ['not-current', 'age', 0], `${id}: ${JSON.stringify(frames)}`);
+      assert.deepEqual(result.layers[id].tiles, {saved: 0, listed: 2});
+      const keys = id === S ? sstKeys(f) : wcofsKeys(f), other = id === S ? W : S;
+      assert.ok(!r.srv.asked.some(url => keys.includes(url)), 'no unpopulated layer tile fetched');
+      assert.ok(!r.st.keys().some(url => keys.includes(url)), 'no unpopulated layer tile stored');
+      assert.equal(result.layers[other].state, 'saved');
+      assert.equal(result.bytes, f.manifestBytes.length + result.layers[other].bytes);
+      assert.equal(result.manifest.stored, true);
+      if (id === S) {
+        assert.equal(result.layers[id].data_at, undefined, 'sample_at cannot replace a populated analysis frame');
+        assert.equal(result.layers[id].drawable_until, undefined);
+      }
+    }
+  }
+});
+
 test('eligibility says why, one case each: status, age, retrieval, no-retrieval, not-surface, future-clock, short-window', () => {
   // status: anything but ok / retained
   assert.equal(eligibility(S, mf(sst({status: 'stale'})), NOW), 'status');
