@@ -101,7 +101,7 @@ function betaList(value: unknown, valid: (v: string) => boolean): {list: string[
   return {list: good.length ? good : null, dropped: entries.length - entries.filter(valid).length, ignored: entries.length > 0 && !good.length};
 }
 
-export function betaScope(env: AdvisorVars & BetaVars = {}): BetaScope {
-  const r = betaList(env.ADVISOR_BETA_REGIONS, v => SLUG.test(v)), l = betaList(env.ADVISOR_BETA_LANGS, v => BETA_LANGS.includes(v));
+export function betaScope(vars: AdvisorVars & BetaVars = {}): BetaScope {
+  const r = betaList(vars.ADVISOR_BETA_REGIONS, v => SLUG.test(v)), l = betaList(vars.ADVISOR_BETA_LANGS, v => BETA_LANGS.includes(v));
   return {regions: r.list, langs: l.list, dropped: {regions: r.dropped, langs: l.dropped}, ignored: {regions: r.ignored, langs: l.ignored}};
 }
