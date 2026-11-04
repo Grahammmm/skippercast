@@ -1,6 +1,7 @@
 // Browser tests (P4-09a): Playwright + axe against the built site served by
 // `wrangler dev` (e2e/serve.mjs). Two viewports: a phone (390×844) and a
 // laptop (1280×800). Run `pnpm build && pnpm e2e`.
+// `E2E_REUSE=1` reuses a server already on `E2E_PORT` (only when you started it from this checkout).
 //
 // Browser: CI installs Playwright's Chromium (`npx playwright install
 // chromium`). Where that download is not possible, set PW_CHROMIUM to a
@@ -50,7 +51,7 @@ export default defineConfig({
   webServer: {
     command: 'node e2e/serve.mjs',
     url: `http://localhost:${port}/api/health`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !process.env.CI && process.env.E2E_REUSE === '1',
     timeout: 120_000,
     stdout: 'ignore',
     stderr: 'pipe',

@@ -27,6 +27,7 @@ export const UPLOAD_COPY = {
 export const EXPORT_COPY = {
   heading: 'Your SkipperCast data',
   intro: 'Download everything SkipperCast keeps about your number, as one JSON file. This link works for 24 hours.',
+  accountIntro: 'Download everything SkipperCast keeps about your account, including your private catch log with its positions, as one JSON file.',
   download: 'Download my data',
   working: 'Preparing the file…',
   done: 'Downloaded. Check your downloads folder for skippercast-data.json.',

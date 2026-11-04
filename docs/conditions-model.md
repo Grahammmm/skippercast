@@ -89,6 +89,7 @@ forecast and not a safety clearance.
   no hour score is shown. Runs over 36 h old are not used; with no
   forecast the verdict is Unknown. Buoy readings never enter it, so a stale
   buoy cannot raise it.
+- **Seas read up, never down.** Printed seas maxima round up (brief to 0.1 ft, advisor to whole feet), so a printed maximum is never below the value the window rule used.
 
 `tests/test_brief_verdict.mjs` pins the bands, the caps, the limit sentence
 and the Unknown cases.

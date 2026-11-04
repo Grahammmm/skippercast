@@ -453,7 +453,7 @@ test('the brief invents no number: every tile reads "—" and keeps its source l
   assert.match(kayak, /Offshore —/, 'kayak takes the offshore swell source');
   assert.match(kayak, /a forecast cannot clear a paddle\./);
   state.syncFromURL(`${ORIGIN}?profile=spear`);
-  const picks = [{id: 'r1', kind: 'spot', name: 'North reef', distance: '3.2 nm', depth: '~60–90 ft', fit: 'Fits lingcod habitat 3 of 3', reason: 'Hard bottom inside the limit.'}];
+  const picks = [{id: 'r1', kind: 'spot', name: 'North reef', distance: '3.2 nm', depth: '~60–90 ft', fit: 'Fits lingcod habitat 3 of 3', reason: 'Hard bottom inside the limit.', screen: {inside: false, name: null, distanceM: null, screened: true}}];
   const ranked = render(h(Brief, {ranking: {source: 'atlas', label: 'Survey reef atlas', basis: 'Basis.', picks, empty: ''}}));
   assert.match(ranked, /<ol class="app-picks"><li data-mark="r1"><button type="button" class="app-pick" aria-pressed="false">/);
   assert.match(ranked, /class="app-where-source ui-mono">Survey reef atlas</, 'the ranking names its source');

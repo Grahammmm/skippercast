@@ -104,6 +104,12 @@ export function routeAfterPaint(r: Ranking, lw: LandWaterState, id: string | nul
 }
 
 /** Select a pick's mark or habitat (a history entry), as a click on the map would; a publication place moves the Chart to it. */
+/** BF-closures-everywhere: the line a pick's protected-area verdict adds, as plain text (rendered as a text child, so a closure's name is never markup); null when it is clear. */
+export function screenLine(v: Pick['screen']): string | null {
+  if (!v.screened) return 'Protected areas not checked';
+  if (v.inside) return `Inside ${v.name ?? 'a protected area'}`;
+  return v.distanceM !== null && v.distanceM <= 70 ? `${Math.round(v.distanceM)} m from ${v.name ?? 'a protected area'}` : null;
+}
 export function choosePick(pick: Pick, href: string = location.href): void {
   if (pick.kind === 'reef') {
     const at = pick.at && fitCamera([pick.at]);
@@ -257,6 +263,7 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
                 <span>{pick.name} <span class="ui-mono">{pick.distance} · {pick.depth}{boat ? pickRun(pick.nm, speed, pick.basis) : ''}</span></span>
                 <span class="app-fit ui-eyebrow">{pick.fit}</span>
                 <span class="app-pick-reason">{pick.reason}</span>
+                {screenLine(pick.screen) && <span class="app-pick-reason">{screenLine(pick.screen)}</span>}
               </button>
               {selected(pick) ? <Why pick={pick} /> : null}
             </li>

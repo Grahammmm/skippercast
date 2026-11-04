@@ -69,6 +69,39 @@ function finish() {
   location.reload();
 }
 
+const OUTCOME_WORDS = {fish: 'Fish', blank: 'Blank: no fish', unknown: 'Not sure'};
+/** One catch-log entry as list HTML. Every stored string is escaped, so markup in a note shows as plain text. */
+export function logItemHTML(row) {
+  const bits = [day(row.started_at), OUTCOME_WORDS[row.outcome] ?? row.outcome, row.outcome === 'fish' ? `${row.count} fish` : '', row.species, row.method,
+    row.lat != null && row.lon != null ? `${row.lat}, ${row.lon}` : ''].filter(Boolean);
+  return `<li><span>${bits.map(esc).join(' · ')}</span>${row.note ? `<p class="account-hint">${esc(row.note)}</p>` : ''}
+    <button type="button" data-remove-log="${esc(row.id)}">Remove</button></li>`;
+}
+
+/** The form's fields as the log route's body: a blank sends no count, a position is sent only when both boxes are filled. */
+export function logBody(f) {
+  const num = v => (String(v ?? '').trim() === '' ? null : Number(v));
+  const started = f.started ? new Date(f.started) : new Date();
+  const out = {started_at: started.toISOString(), outcome: f.outcome, method: f.method || null, species: f.species || null, note: f.note || null, lat: num(f.lat), lon: num(f.lon)};
+  if (f.outcome === 'fish') out.count = num(f.count);
+  return out;
+}
+
+const logFormHTML = () => `<h2 class="account-subhead">Catch log</h2>
+    <p class="home-port-fine">Private to this account. Record a blank day as well as a good one. A position is never shared, mapped or put in a feed.</p>
+    <form id="log-form" autocomplete="off">
+      <label for="log-started">When</label><input id="log-started" type="datetime-local" />
+      <label for="log-outcome">What happened</label><select id="log-outcome"><option value="blank">Blank: no fish</option><option value="fish">Fish</option><option value="unknown">Not sure</option></select>
+      <label for="log-count">Fish count</label><input id="log-count" type="number" min="1" max="9999" step="1" />
+      <label for="log-species">Target species</label><input id="log-species" type="text" maxlength="60" />
+      <label for="log-method">Method</label><input id="log-method" type="text" maxlength="40" />
+      <label for="log-lat">Latitude <span class="account-hint">(optional, private)</span></label><input id="log-lat" type="number" step="any" />
+      <label for="log-lon">Longitude <span class="account-hint">(optional, private)</span></label><input id="log-lon" type="number" step="any" />
+      <label for="log-note">Note</label><input id="log-note" type="text" maxlength="1000" />
+      <div class="home-port-actions"><button type="submit" id="log-save">Save to my log</button></div>
+    </form>
+    <ul class="account-passkeys" id="log-list"></ul>`;
+
 function signedOutHTML() {
   return `<h1 id="account-title">Save trips and alerts with an account</h1>
     <p class="home-port-intro">SkipperCast accounts use passkeys: Face ID, Touch ID or your device PIN. There is no password. The map and forecasts stay free without an account.</p>
@@ -88,8 +121,9 @@ function signedInHTML(session, passkeys) {
       <button type="button" data-remove-passkey="${esc(p.id)}"${passkeys.length < 2 ? ' disabled title="Add another passkey before removing this one"' : ''}>Remove</button></li>`).join('')}</ul>
     <p id="account-status" class="home-port-feedback" role="status"></p>
     <div class="home-port-actions"><button type="button" id="account-add">Add a passkey on this device</button><button type="button" id="account-signout">Sign out</button></div>
+    ${logFormHTML()}
     <details class="account-danger"><summary>Delete account</summary>
-      <p>Deletes your account, passkeys, saved trips, alerts, notification devices and comfort feedback. This cannot be undone.</p>
+      <p>Deletes your account, passkeys, saved trips, alerts, notification devices, catch log and comfort feedback. This cannot be undone.</p>
       <button type="button" id="account-delete">Delete my account and records</button></details>`;
 }
 
@@ -170,6 +204,22 @@ export async function openAccount() {
     let passkeys = [];
     try { passkeys = (await api('auth/passkeys')).passkeys; } catch (error) { status(passkeyMessage(error)); }
     body.innerHTML = signedInHTML(session, passkeys);
+    const list = $('#log-list'), showLog = async () => {
+      try { const {entries} = await api('catch-log'); list.innerHTML = entries.map(logItemHTML).join(''); } catch (error) { status(passkeyMessage(error)); }
+    };
+    list.addEventListener('click', async event => {
+      const b = event.target.closest('[data-remove-log]'); if (!b) return;
+      try { await api('catch-log/' + encodeURIComponent(b.dataset.removeLog), {method: 'DELETE', body: {}}); await showLog(); } catch (error) { status(passkeyMessage(error)); }
+    });
+    $('#log-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const field = n => $('#log-' + n).value;
+      try {
+        await api('catch-log', {method: 'POST', body: logBody({started: field('started'), outcome: field('outcome'), count: field('count'), species: field('species'), method: field('method'), lat: field('lat'), lon: field('lon'), note: field('note')})});
+        $('#log-form').reset(); await showLog(); status('Saved to your log.');
+      } catch (error) { status(passkeyMessage(error)); }
+    });
+    showLog();
     $('#account-add').addEventListener('click', async () => {
       if (!supported()) { status('This browser does not support passkeys.'); return; }
       status('Follow your device to add a passkey…');
@@ -184,7 +234,7 @@ export async function openAccount() {
       try { await api('auth/logout', {method: 'POST', body: {}}); finish(); } catch (error) { status(passkeyMessage(error)); }
     });
     $('#account-delete').addEventListener('click', async event => {
-      if (!await confirmInPage(event.currentTarget, 'Delete your SkipperCast account and all saved trips, alerts, notification devices and comfort feedback? This cannot be undone.', 'Yes, delete everything')) return;
+      if (!await confirmInPage(event.currentTarget, 'Delete your SkipperCast account and all saved trips, alerts, notification devices, catch log and comfort feedback? This cannot be undone.', 'Yes, delete everything')) return;
       try { await api('privacy', {method: 'DELETE', body: {}}); status('Your account has been deleted.'); finish(); } catch (error) { status(passkeyMessage(error)); }
     });
     for (const button of body.querySelectorAll('[data-remove-passkey]')) button.addEventListener('click', async () => {
