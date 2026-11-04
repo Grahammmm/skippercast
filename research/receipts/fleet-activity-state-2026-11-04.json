@@ -1,0 +1,124 @@
+{
+  "schema_version": 2,
+  "scope": "fleet-activity-state",
+  "captured_at": "2026-11-04T10:39:47Z",
+  "repository_commit": "f7f4c2611f69a5bc1a86c6f1b23772ffdcefab82",
+  "repository": "Grahammmm/skippercast",
+  "workflow_file": ".github/workflows/fleet-health.yml",
+  "run_query": {
+    "command": "gh run list --repo Grahammmm/skippercast --workflow fleet-health.yml --limit 1 --json databaseId,headSha,status,conclusion,createdAt,updatedAt,url,event,workflowName",
+    "exit_code": 0,
+    "clock_read_before_query_at": "2026-11-04T10:39:47Z"
+  },
+  "run": {
+    "databaseId": 41788933654,
+    "headSha": "549d66f494f9f0a07688689d17765d34f6411fa6",
+    "status": "completed",
+    "conclusion": "success",
+    "createdAt": "2026-11-04T06:57:21Z",
+    "updatedAt": "2026-11-04T07:09:37Z",
+    "url": "https://github.com/Grahammmm/skippercast/actions/runs/41788933654",
+    "event": "schedule",
+    "workflowName": "Fleet AIS health"
+  },
+  "committed_config": {
+    "path": "wrangler.jsonc",
+    "commit": "f7f4c2611f69a5bc1a86c6f1b23772ffdcefab82",
+    "sha256": "f5a97c1e849aaac6e69bc94ee97d2758ad0b3aafde2fe3029471e06b3a7fed05",
+    "text": "{\n  // SkipperCast on its own Cloudflare account: the Worker, the static site, D1,\n  // R2 feeds and a cron watchdog. Deployed by .github/workflows/deploy-cloudflare.yml,\n  // which fills in the D1 database id and, from the CUSTOM_DOMAINS repository\n  // variable, the skippercast.com custom domains; see docs/cloudflare.md.\n  \"$schema\": \"./node_modules/wrangler/config-schema.json\",\n  \"name\": \"skippercast\",\n  \"main\": \"dist/server/index.js\",\n  \"compatibility_date\": \"2026-09-01\",\n  // The workers.dev address stays on as staging, also once custom domains exist.\n  \"workers_dev\": true,\n  \"assets\": {\n    \"directory\": \"dist/client\",\n    \"binding\": \"ASSETS\"\n  },\n  \"d1_databases\": [\n    {\n      \"binding\": \"DB\",\n      \"database_name\": \"skippercast\",\n      \"database_id\": \"00000000-0000-0000-0000-000000000000\",\n      \"migrations_dir\": \"drizzle\"\n    }\n  ],\n  \"r2_buckets\": [\n    { \"binding\": \"FEEDS\", \"bucket_name\": \"skippercast-feeds\" }\n  ],\n  // IDENTITY_PROVIDER picks how requests are tied to accounts: \"skippercast\"\n  // is SkipperCast's own passkey sign-in and session cookie (server/auth.ts).\n  // \"none\" (or no value) means no identity: every private route answers 401.\n  // No request header is ever trusted as identity.\n  // BOAT_LOOKUP_ENABLED \"false\" is the AI boat-lookup kill switch;\n  // BOAT_LOOKUP_GLOBAL_DAILY_LIMIT caps lookups across all owners per UTC day.\n  // Optional: BOAT_AI_MODEL overrides the model id (default in server/boat-lookup.ts).\n  // COST_CEILING_R2_READS_PER_DAY: R2 reads in a UTC day before the Worker\n  // degrades to last-known copies and free fallbacks instead of reading R2\n  // (server/cost-ceiling.ts, docs/operations/cost-ceiling.md); \"off\" disables.\n  \"vars\": {\n    \"IDENTITY_PROVIDER\": \"skippercast\",\n    \"BOAT_LOOKUP_ENABLED\": \"true\",\n    \"BOAT_LOOKUP_GLOBAL_DAILY_LIMIT\": \"500\",\n    \"COST_CEILING_R2_READS_PER_DAY\": \"300000\"\n  },\n  // Per-IP limits for the anonymous read endpoints (server/edge-cache.ts):\n  // /api/om 60 a minute, /feeds/ 300 a minute. namespace_id is any integer\n  // string unique to this account. Without the bindings (tests) they no-op.\n  \"ratelimits\": [\n    { \"name\": \"PUBLIC_LIMITER\", \"namespace_id\": \"1001\", \"simple\": { \"limit\": 60, \"period\": 60 } },\n    { \"name\": \"FEED_LIMITER\", \"namespace_id\": \"1002\", \"simple\": { \"limit\": 300, \"period\": 60 } }\n  ],\n  \"triggers\": { \"crons\": [\"*/15 * * * *\"] },\n  // Workers Logs: every invocation's console output and outcome. head_sampling_rate\n  // is the share of invocations logged (1 = all); lower it (e.g. 0.1) if daily log\n  // volume nears the plan's allowance (docs/cloudflare.md#observability).\n  \"observability\": { \"enabled\": true, \"head_sampling_rate\": 1 }\n}\n",
+    "flags": {
+      "FLEET_ENABLED": {
+        "present": false,
+        "value": null
+      },
+      "FLEET_MAP_ENABLED": {
+        "present": false,
+        "value": null
+      }
+    }
+  },
+  "production_flags": {
+    "FLEET_ENABLED": "UNVERIFIED",
+    "FLEET_MAP_ENABLED": "UNVERIFIED"
+  },
+  "production_reason": "No deploy record was captured. The deploy workflow copies repository variables into the Worker when set, so wrangler.jsonc cannot show the served values.",
+  "sources": [
+    {
+      "id": "config-vars-object",
+      "claim": "The complete vars object of wrangler.jsonc names neither FLEET_ENABLED nor FLEET_MAP_ENABLED.",
+      "commit": "f7f4c2611f69a5bc1a86c6f1b23772ffdcefab82",
+      "path": "wrangler.jsonc",
+      "start_line": 37,
+      "end_line": 42,
+      "excerpt": "  \"vars\": {\n    \"IDENTITY_PROVIDER\": \"skippercast\",\n    \"BOAT_LOOKUP_ENABLED\": \"true\",\n    \"BOAT_LOOKUP_GLOBAL_DAILY_LIMIT\": \"500\",\n    \"COST_CEILING_R2_READS_PER_DAY\": \"300000\"\n  },"
+    },
+    {
+      "id": "workflow-identity",
+      "claim": "The workflow file is named Fleet AIS health.",
+      "commit": "f7f4c2611f69a5bc1a86c6f1b23772ffdcefab82",
+      "path": ".github/workflows/fleet-health.yml",
+      "start_line": 1,
+      "end_line": 1,
+      "excerpt": "name: Fleet AIS health"
+    },
+    {
+      "id": "workflow-triggers",
+      "claim": "It runs on a schedule and on manual dispatch.",
+      "commit": "f7f4c2611f69a5bc1a86c6f1b23772ffdcefab82",
+      "path": ".github/workflows/fleet-health.yml",
+      "start_line": 11,
+      "end_line": 14,
+      "excerpt": "on:\n  schedule:\n    - cron: \"41 * * * *\"\n  workflow_dispatch:"
+    },
+    {
+      "id": "workflow-gate",
+      "claim": "Its check job runs only when the repository variable ENABLE_FLEET is the string true.",
+      "commit": "f7f4c2611f69a5bc1a86c6f1b23772ffdcefab82",
+      "path": ".github/workflows/fleet-health.yml",
+      "start_line": 24,
+      "end_line": 26,
+      "excerpt": "jobs:\n  check:\n    if: vars.ENABLE_FLEET == 'true'"
+    },
+    {
+      "id": "flag-allowlist",
+      "claim": "The config builder allowlists the fleet variables by name.",
+      "commit": "f7f4c2611f69a5bc1a86c6f1b23772ffdcefab82",
+      "path": "scripts/wrangler_config.mjs",
+      "start_line": 107,
+      "end_line": 107,
+      "excerpt": "export const FLEET_VARS = ['FLEET_ENABLED', 'FLEET_MAP_ENABLED', 'FLEET_PUBLIC_HEAT_ENABLED'];"
+    },
+    {
+      "id": "deploy-passes-vars",
+      "claim": "The deploy workflow passes the two fleet flags from repository variables.",
+      "commit": "f7f4c2611f69a5bc1a86c6f1b23772ffdcefab82",
+      "path": ".github/workflows/deploy-cloudflare.yml",
+      "start_line": 384,
+      "end_line": 387,
+      "excerpt": "          # Charter fleet runtime switches, copied into the Worker's vars whenever set (no bindings);\n          # unset means off (server/fleet/settings.ts). docs/plans/charter-fleet/design.md § 16.\n          FLEET_ENABLED: ${{ vars.FLEET_ENABLED }}\n          FLEET_MAP_ENABLED: ${{ vars.FLEET_MAP_ENABLED }}"
+    },
+    {
+      "id": "page-status-rules",
+      "claim": "The page defines LIVE, PREVIEW, DESIGNED and UNVERIFIED.",
+      "commit": "f7f4c2611f69a5bc1a86c6f1b23772ffdcefab82",
+      "path": "docs/coast-capabilities-status.md",
+      "start_line": 11,
+      "end_line": 14,
+      "excerpt": "| LIVE | A cited deploy record proves that the served site runs a head containing the feature. **No row on this page is LIVE.** A merge to `main` does not prove what is served. A green `deploy-cloudflare.yml` run does not prove it either, because the workflow can deploy an older eligible commit or deploy nothing and still report success. |\n| PREVIEW | The code and documents are merged at the pinned commit, and a merge or commit record is cited. Whether captains can see the feature on the served site, and whether its data is current, is not proven here. |\n| DESIGNED | Documents, code or a dated snapshot exist, but no receipt at the pinned commit shows a qualified, cited data product. |\n| UNVERIFIED | The claim cannot be checked from the repository at the pinned commit. |"
+    },
+    {
+      "id": "page-evidence-rule",
+      "claim": "Qualified-data claims count as UNVERIFIED without a dated receipt.",
+      "commit": "f7f4c2611f69a5bc1a86c6f1b23772ffdcefab82",
+      "path": "docs/coast-capabilities-status.md",
+      "start_line": 16,
+      "end_line": 16,
+      "excerpt": "A claim that a feature produced qualified, cited data counts as UNVERIFIED unless the row cites a dated receipt present at the pinned commit. Dates and run links quoted *inside* a feature document are that document's own claims. This page does not re-verify them."
+    }
+  ],
+  "limits": [
+    "Repository-only observation. It does not show the served configuration or the production flag values.",
+    "The run is the latest one the query returned. Its head commit is independent of repository_commit, and a workflow conclusion does not show that the job ran, that AIS data is fresh or that the fleet is healthy.",
+    "No flag, workflow, fleet data or health endpoint was touched, and nothing here approves publication."
+  ]
+}
