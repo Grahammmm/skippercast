@@ -176,7 +176,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // catalogue) into web/app/FirstAnswerLine.tsx and re-exports it, and drops the imports that move with it. BODY09
   // mounts Reports/CatchCards, never App or FirstAnswerLine; no CSS, token or catch markup changes; contrast(),
   // assertions and thresholds are untouched. Rebind only App.tsx.
-  "web/app/App.tsx": "33042c9f580645f13ac6b0daec7e7b7ac32868470960fd0f2b9828beb3116636",
+  // SC0452-05: App resolves the shared hour clock and passes it to the layouts;
+  // BODY09 mounts Reports/CatchCards, not App. No catch markup, paint, styles,
+  // source data, contrast(), assertions or thresholds change. Rebind App.tsx.
+  "web/app/App.tsx": "ed1fc3113742c765fa104a97da743f18018026cbf453fa4c078378c4193d08f0",
   // SC-LAUNCH-4 (#1267, cost ceiling): Masthead.tsx imports web/degraded.ts (a signal and pure helpers, no top-level
   // side effect) and adds DegradedNotice after FreshnessDot. It renders nothing unless a response carries
   // X-SC-Degraded: cost-ceiling, which no BODY09 fixture does; when shown it reuses the existing .app-limits-note
@@ -203,7 +206,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // importing placementRefused/verdictLine to show the refusal while placement stays armed.
   // BODY09 mounts Reports/CatchCards, never PresentationToggle; no CSS, token, class,
   // Reports contrast/paint, backdrop, assertion or threshold changes. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "621daf68b04d037eb2553e5c8e5db968104bf216b16b1de7e7c75ae4f39f5a6d",
+  // SC0452-05: MapStage accepts the shared clock and keys its stage effect on
+  // that clock's identity. BODY09 never mounts MapStage; the Reports catch path,
+  // paint, backdrop, assertions and thresholds remain unchanged. Rebind MapStage.tsx.
+  "web/app/MapStage.tsx": "01c5547daf6d6230a6eaef1c849bbec27f3c820f53b0ccc9f800034c651cc150",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "0a636f225f5b51d1e34f2de059c826e4a0f2af876fcf20f827f2ccb5ef705008",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   // BF-wcag: app.css and panel.css add only 24 px min-height target floors (no paint); app.css merged with SC2222-07.
