@@ -228,8 +228,29 @@ export function packFiles(id: string, page: string, hashed: readonly string[]): 
     ...hashed.map((p): [string, string, RequestInit] => [origin + p, origin + p, {cache: 'default'}])];
 }
 
-/** savePack's `more`: this app's page and files (precache.json `v2`), the basemap manifest, the published shoreline forms, the startup copies (#617) and tiles. */
-async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds: number[]) {
+/**
+ * The pack's ocean phase (docs/plans/offline-ocean-coverage.md D3, D6, D9), run only inside the explicit Save action. A place with a
+ * coast report (resolveReportBinding, as the layers decide it) reads its Coastal readings pointer and fetches nothing; any other
+ * place saves its water-temperature and current layers whole or not at all (web/map/ocean-pack.ts). Fatal storage errors propagate.
+ */
+export async function oceanPhase({put, signal, progress}: Pick<Extras, 'put' | 'signal' | 'progress'>, region: {id: string; center: readonly [number, number]; localAreas?: readonly {id: string; bounds: readonly number[]}[]},
+  deps: {now?: () => Date; origin?: string; fetchFn?: typeof fetch; readCoastal?: () => Promise<{saved_at?: string} | null>} = {}) {
+  const [{regionPlace}, {resolveReportBinding}, ocean] = await Promise.all([import('./map/currents.ts'), import('../packages/coast/src/state/report-binding.ts'), import('./map/ocean-pack.ts')]);
+  const place = regionPlace(region, 'boat', '');
+  if (place && resolveReportBinding(place)) {
+    const saved = await (deps.readCoastal ?? readCoastal)().catch(() => null);
+    return {schema_version: 1, path: 'coastal-report', manifest: null, layers: {}, bytes: 0, coastal: saved?.saved_at ? {saved_at: saved.saved_at} : null};
+  }
+  const fetchFn = deps.fetchFn ?? fetch, now = deps.now ?? (() => new Date());
+  let manifestStatus: number | null = null;   // saveOcean asks for the manifest first
+  const saved = await ocean.saveOcean({regionId: region.id, origin: deps.origin ?? location.origin, put, signal, progress: (_layer, done, total) => progress('ocean', done, total),
+    fetchFn: async (...a) => { const r = await fetchFn(...a); manifestStatus ??= r.status; return r; },
+    eligible: (id, manifest) => ocean.eligibility(id, manifest, now())});
+  return manifestStatus === 404 && !saved.manifest.stored ? {schema_version: 1, path: 'none', manifest: saved.manifest, layers: {}, bytes: 0, cap_bytes: saved.cap_bytes} : {schema_version: 1, path: 'regional', ...saved};
+}
+
+/** savePack's `more`: this app's page and files (precache.json `v2`), the basemap manifest, the published shoreline forms, the startup copies (#617), tiles and, last, the ocean phase. */
+async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds: number[], place: Parameters<typeof oceanPhase>[1]) {
   const page = location.href, misses: string[] = [];
   const tideURLs = await tideSelection.packURLs(id);
   await saveTidePack(tideURLs, put, signal);
@@ -250,14 +271,17 @@ async function v2Pack({store, put, signal, progress}: Extras, id: string, bounds
       progress('basemap', ++tile, plan.tiles.length);
     }
   }
+  const ocean = await oceanPhase({put, signal, progress}, place);
   return {build: list?.build ?? null, shell: {saved: files.length - misses.filter(m => !m.startsWith('basemap')).length, requested: files.length},
-    basemap: {archive: archive ? new URL(archive).pathname : null, saved, planned: plan.tiles.length, min_zoom: plan.minZoom, max_zoom: plan.maxZoom}, missing: misses.slice(0, 50)};
+    basemap: {archive: archive ? new URL(archive).pathname : null, saved, planned: plan.tiles.length, min_zoom: plan.minZoom, max_zoom: plan.maxZoom}, missing: misses.slice(0, 50), ocean};
 }
 
 export interface PackMeta {
   region_id: string; region_name: string; saved_at: string; bytes: number; missing: string[];
   tiles: {saved: number; planned: number; min_zoom: number; max_zoom: number | null};
   v2?: {basemap: {saved: number; planned: number}; shell: {saved: number; requested: number}};
+  /** The ocean phase's record (D9), additive: absent from packs saved before it. */
+  ocean?: Awaited<ReturnType<typeof oceanPhase>>;
 }
 export type Progress = {phase: string; done: number; total: number; bytes: number};
 export async function listPacks(): Promise<{cache: string; meta: PackMeta}[]> {
@@ -267,7 +291,9 @@ export async function listPacks(): Promise<{cache: string; meta: PackMeta}[]> {
 /** Save `id` for offline: v1's pack with this app added; then the worker is registered so the pack answers offline. */
 export async function savePack(id: string, signal: AbortSignal, progress: (p: Progress) => void): Promise<PackMeta> {
   const regions = await v1Region(id), save = (await import('../dist/offline-pack.js')).savePack as unknown as Loose<Promise<PackMeta>>;
-  const meta = await save({signal, progress, sessionStart, more: (extras: Extras) => v2Pack(extras, id, regions.getRegion().bounds)});
+  const region = regions.getRegion() as {id: string; bounds: number[]; map?: {center?: [number, number]; local_areas?: {id: string; bounds: number[]}[]}};
+  const place = {id, center: region.map?.center ?? [NaN, NaN] as [number, number], localAreas: region.map?.local_areas ?? []};
+  const meta = await save({signal, progress, sessionStart, more: (extras: Extras) => v2Pack(extras, id, region.bounds, place)});
   registerOffline();
   return meta;
 }
