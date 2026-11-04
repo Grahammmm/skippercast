@@ -85,10 +85,9 @@ test('page uses the public index and handles network and HTTP failures in the co
   const status = readFileSync(new URL('../dist/status.html', import.meta.url), 'utf8');
   assert.match(page, /id="coverage-map"/);
   assert.match(page, /id="coverage-list"/);
-  // The extensionless /coverage route is not registered (follow-up t_f4e422ca); link and canonical use the .html path.
+  // The worker serves the page at /coverage (ROUTE-1, server/routes/assets.ts), so its canonical is that path; status navigation still links the .html path.
   assert.match(status, /href="\/coverage\.html">Coverage map/);
-  assert.match(page, /<link rel="canonical" href="https:\/\/skippercast\.com\/coverage\.html" \/>/);
-  assert.doesNotMatch(page + status, /href="[^"]*\/coverage"/);
+  assert.match(page, /<link rel="canonical" href="https:\/\/skippercast\.com\/coverage" \/>/);
   const originalDocument = globalThis.document, originalFetch = globalThis.fetch;
   try {
     for (const [n, fetcher] of [async () => { throw Error('offline'); }, async () => ({ok: false})].entries()) {
