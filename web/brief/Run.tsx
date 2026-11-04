@@ -189,7 +189,9 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   const rule = rules ? regulationState(data, target, rules, now.getTime(), date, opensAt) : {status: 'unknown', label: t('rules.status.unknown', lang), reason: t('run.rules.unavailable', lang), today: date, issues: []};
   const summary = rules ? ruleSummary(data, target, rule, rules, lang) : null;
   const result = active ? fishingHours(state, {wantedMin: wantedHours.value === null ? null : wantedHours.value * 60, sunrise: brief.sunrise, sunset: brief.sunset, rule: {...rule, opensAt, label: target === 'reef' ? 'Lingcod & rockfish' : rule.profile?.name ?? target}}) : null;
-  const verdict = result ? fishingWords(result, tz, brief.sunset, opensAt, lang) : '';
+  const verdict = result?.kind === 'closed' && lang === 'es'
+    ? <>{fishingWords({...result, reason: ''}, tz, brief.sunset, opensAt, lang)}<span lang="en">{result.reason}</span></>
+    : result ? fishingWords(result, tz, brief.sunset, opensAt, lang) : '';
   if (state.kind === 'ok' && result && result.kind !== 'no-wanted') text.lead = t('run.lead.wanted', lang, {name: state.place.name});
   // Nothing to time: range removed every place the ranking found; or places are listed with no distance (no harbor position).
   if (state.kind === 'no-place' && r.picks.length) text.lead = listed.length ? t('run.lead.noHarbor', lang)

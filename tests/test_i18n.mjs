@@ -257,6 +257,7 @@ async function loadWR() {
       export {WhereToLook, boatPicks, pickRun, routeWhyText, diveText, screenLine} from './web/brief/WhereToLook.tsx';
       export {EntranceLine, RunLine, runText, runBasis, fishingWords} from './web/brief/Run.tsx';
       export {regionInfo} from './web/app/region-info.ts';
+      export {regsData} from './web/regs.ts';
       export {cruiseSpeed, wantedHours} from './web/limits.ts';
       export {reachRange, spearPlan} from './web/reach.ts';
       export {landWater} from './web/land-water.ts';
@@ -406,6 +407,35 @@ test('run_es_all_states: every state of the run line, its eight prompts and seve
     const odd = line({windows: [{...WINDOW, reasons: ['Morro Bay: bar caution or unknown at a new time of day']}]});
     assert.match(odd, /<p class="app-run-note"><span lang="en">Morro Bay: bar caution or unknown at a new time of day<\/span>\.<\/p>/, 'unknown text stays English and is marked');
   } finally { m.language.value = 'en'; m.cruiseSpeed.value = null; m.selection.value = null; m.regionInfo.value = null; m.profile.value = 'boat'; }
+});
+
+test('closed run hours mark only the registry reason as English on a Spanish page', async () => {
+  const m = await loadWR(), now = new Date('2026-10-12T12:00:00Z');
+  const fixture = JSON.parse(await readFile(new URL('./fixtures/regulations/fe61-v1.json', import.meta.url), 'utf8'));
+  const rules = fixture.region, data = structuredClone(fixture.regulations);
+  data.reviewed_at = now.toISOString(); data.rules_review_status = 'reviewed';
+  for (const [id, source] of Object.entries(data.sources)) {
+    source.approved_content_sha256 = 'a'.repeat(64);
+    data.checks[id] = {url: source.url, normalization: source.normalization, status: 'unchanged', source_status: 'ok', content_sha256: source.approved_content_sha256, data_retrieved_at: data.reviewed_at};
+  }
+  data.species.salmon.windows = [];
+  const ranking = {source: 'atlas', label: 'Survey reef atlas', basis: '', picks: [spot('a', 7.4)], empty: '', harbor: 'Morro Bay'};
+  const line = () => m.render(m.h(m.RunLine, {brief: runBrief(), ranking, now}));
+  try {
+    m.regionInfo.value = {id: rules.id, timezone: TZ, rules}; m.regsData.value = {region: rules.id, data};
+    m.profile.value = 'boat'; m.species.value = 'salmon'; m.cruiseSpeed.value = 20; m.wantedHours.value = 4;
+    m.language.value = 'en'; const en = line();
+    assert.match(en, /data-kind="closed">Chinook salmon is closed that day: Outside the reviewed local season\./);
+    assert.doesNotMatch(en, /lang="en"/);
+    m.language.value = 'es'; const es = line();
+    assert.match(es, /data-kind="closed">Chinook salmon está cerrado ese día: <span lang="en">Outside the reviewed local season\.<\/span>/);
+    assert.match(es, /href="https:\/\/wildlife.ca.gov/);
+    assert.doesNotMatch(es, /\d+ (?:h|min) disponibles/);
+    m.language.value = 'en'; assert.equal(line(), en, 'English output is byte-identical after the language round trip');
+  } finally {
+    m.language.value = 'en'; m.regionInfo.value = null; m.regsData.value = null; m.species.value = null;
+    m.cruiseSpeed.value = null; m.wantedHours.value = null;
+  }
 });
 
 test('run_es_all_states: the fishing-time sentence for every branch, and the method basis, keep their limits and legal caveats', async () => {
