@@ -86,8 +86,8 @@ const required = (r: RulesRegion): string[] => [...new Set((r.species ?? []).fla
 export function validRegulations(data: Data, region: RulesRegion): boolean {
   return data?.schema_version === 1 && Number.isFinite(Date.parse(data.reviewed_at)) && dateOnly(data.valid_from) && dateOnly(data.valid_through)
     && data.valid_from <= data.valid_through && !!data.sources && !!data.checks && Array.isArray(data.common_notes)
-    && (!data.area_notices || Array.isArray(data.area_notices) && data.area_notices.every((n: Data) => str(n.id) && str(n.name) && str(n.note)
-      && Array.isArray(n.source_ids) && n.source_ids.length && n.source_ids.every((id: string) => data.sources[id]?.url)))
+    && (!data.area_notices || Array.isArray(data.area_notices) && data.area_notices.every((n: Data) => !!n && typeof n === 'object' && !Array.isArray(n)
+      && str(n.id) && str(n.name) && str(n.note) && Array.isArray(n.source_ids) && n.source_ids.length && n.source_ids.every((id: string) => data.sources[id]?.url)))
     && required(region).every(id => !!ruleProfile(data, id, region));
 }
 
