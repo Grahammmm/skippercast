@@ -274,7 +274,9 @@ test('the planner shows each ranked reef\'s basis and the new help; legs, GPX an
   // The GPX is the same with or without route metadata.
   const plain = harness({nms: [3, 4, 5], route: () => null, routeContext: async () => none()});
   await select(plain);
-  assert.equal(await (await h.planner.exportFile('gpx')).text(), await (await plain.planner.exportFile('gpx')).text(), 'the GPX carries no distance basis');
+  // Export creation timestamps use the wall clock; all waypoint and track content must still match.
+  const withoutTime = gpx => gpx.replace(/<time>[^<]*<\/time>/g, '');
+  assert.equal(withoutTime(await (await h.planner.exportFile('gpx')).text()), withoutTime(await (await plain.planner.exportFile('gpx')).text()), 'the GPX carries no distance basis');
   // An older plan restored from the saved draft shows no basis.
   const again = harness({nms: [3, 4, 5], stored: h.store.get(draftKey(REGION.id)), route: r.route, routeContext: async () => none()});
   await settle(); await again.planner.restore();
