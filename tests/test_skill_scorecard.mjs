@@ -86,7 +86,11 @@ test('the page says swell period and water temperature are not scored, and the s
   assert.match(html, /Swell period and water temperature are not scored yet/);
   assert.ok(html.includes('id="skill-rows"') && html.includes('skill-page.js'));
   const status = readFileSync(new URL('../dist/status.html', import.meta.url), 'utf8');
-  assert.equal(status.match(/href="\/skill\.html"/g).length, 1);
+  assert.equal(status.match(/href="\/skill"/g).length, 1);
+  assert.ok(!status.includes('/skill.html'), 'the status page links the stable /skill route, not /skill.html');
+  assert.equal(html.match(/<link[^>]*rel="canonical"[^>]*>/g).length, 1);
+  assert.ok(html.includes('<link rel="canonical" href="https://skippercast.com/skill" />'));
+  assert.ok(!html.includes('skippercast.com/skill.html'));
   const published = JSON.parse(readFileSync(new URL('../dist/data/forecast-skill.json', import.meta.url), 'utf8'));
   assert.deepEqual(published.minimum, {valid_times: 30, days: 7, runs: 3});
   assert.ok(published.scores.every(r => !('swell_period' === r.variable || 'water_temperature' === r.variable)));
