@@ -21,10 +21,10 @@ const {getRegion} = await import('../dist/region.js');
 const {pointInGeometry} = await import('../dist/geo-screen.js');
 const worker = withSessions(deployed), ORIGIN = 'https://skippercast.com';
 
-function database() {
+function database(beforeRun) {
   const sql = new DatabaseSync(':memory:');
   for (const {tag} of [...read('../drizzle/meta/_journal.json').entries].sort((a, b) => a.idx - b.idx)) sql.exec(readFileSync(new URL(`../drizzle/${tag}.sql`, import.meta.url), 'utf8'));
-  const adapter = {prepare(query) { let args = []; const statement = sql.prepare(query); return {bind(...a) { args = a; return this; }, async first() { return statement.get(...args) || null; }, async all() { return {results: statement.all(...args)}; }, async run() { const info = statement.run(...args); return {meta: {changes: Number(info.changes)}}; }}; },
+  const adapter = {prepare(query) { let args = []; const statement = sql.prepare(query); return {bind(...a) { args = a; return this; }, async first() { return statement.get(...args) || null; }, async all() { return {results: statement.all(...args)}; }, async run() { if (beforeRun) await beforeRun(query, args); const info = statement.run(...args); return {meta: {changes: Number(info.changes)}}; }}; },
     async batch(queries) { sql.exec('BEGIN'); try { const out = []; for (const q of queries) out.push(await q.run()); sql.exec('COMMIT'); return out; } catch (e) { sql.exec('ROLLBACK'); throw e; } }};
   return {sql, adapter};
 }
@@ -35,6 +35,14 @@ const call = (env, path, {owner, method = 'GET', body} = {}) => {
   return worker.fetch(new Request(ORIGIN + path, {method, headers, body: body === undefined ? undefined : JSON.stringify(body)}), env);
 };
 const post = async (env, owner, spot) => { const r = await call(env, '/api/spots', {owner, method: 'POST', body: spot}); return {status: r.status, data: await r.json()}; };
+const seed = (sql, owner, n, tag = owner) => { for (let i = 0; i < n; i++) sql.prepare('INSERT INTO saved_spots(id,owner,name,lat,lon,created_at) VALUES(?,?,?,?,?,?)').run(`${tag}-${i}`, owner, 'n' + i, 1, 1, 'x'); };
+const isSpotInsert = query => /^\s*INSERT\s+INTO\s+saved_spots/i.test(query);
+// Test-only write barrier: the first `parties` saved-spot INSERT statements wait here, whatever their VALUES/SELECT form, then run together.
+function barrier(parties) {
+  let arrived = 0, release; const opened = new Promise(r => { release = r; });
+  const timer = setTimeout(release, 2000);
+  return {release, hook: async query => { if (!isSpotInsert(query) || arrived >= parties) return; if (++arrived >= parties) release(); await opened; }, arrived: () => arrived, done: () => clearTimeout(timer)};
+}
 const count = (sql, owner) => sql.prepare('SELECT COUNT(*) AS n FROM saved_spots WHERE owner=?').get(owner).n;
 
 // Protected areas: the committed ds582 polygons through the real shared screen (offline fetch), as test_closure_every_output does.
@@ -177,7 +185,7 @@ test('a spot 30 m outside a boundary is inside the planning margin: read as such
 });
 
 // SC0022-04: the screen only speaks for the envelope its boundary file was fetched for (Morro Bay's mpa.bounds).
-const TEXT = 'Protected areas not checked for this spot: outside coverage or check unavailable. Not exported.';
+const TEXT = 'Protected areas not checked for this spot: outside coverage or check unavailable; not exported.';
 const REFUSAL = /unavailable or older than 36 hours, or a saved spot is outside coverage\. Nothing was exported\./;
 const FAR = {lat: 40.0, lon: -124.0};
 const E = getRegion().mpa.bounds, EDGE = {lat: 35.4, lon: E[0] + 30 / (111412.84 * Math.cos(35.4 * Math.PI / 180))};
@@ -239,4 +247,87 @@ test('a far-away spot stays stored and readable by its owner, and its list readi
   assert.equal(verdict.text, TEXT); assert.ok(spotItemHTML(spots[0], verdict).includes(TEXT));
   await assert.rejects(exportSpots(spots, screen, getRegion()), REFUSAL);
   sql.close();
+});
+
+// RF1020-1: the cap is admitted and written by one statement, so competing saves cannot pass a stale count.
+const FULL_MESSAGE = 'you can keep at most 100 saved spots; remove one first';
+const owned = (sql, owner) => sql.prepare('SELECT id,name,note FROM saved_spots WHERE owner=? AND id NOT LIKE ?').all(owner, owner + '-%');
+async function race(env, gate, jobs) {
+  try { return await Promise.all(jobs); } finally { gate.release(); gate.done(); }
+}
+
+test('saved_spots_two_saves_compete_for_last_slot', {timeout: 15000}, async () => {
+  const gate = barrier(2), {sql, adapter} = database(gate.hook), env = {DB: adapter};
+  try {
+    seed(sql, 'alice', 99);
+    const results = await race(env, gate, [post(env, 'alice', {name: 'first', lat: 1, lon: 1}), post(env, 'alice', {name: 'second', lat: 2, lon: 2})]);
+    assert.equal(gate.arrived(), 2, 'both saves reached their write together');
+    assert.deepEqual(results.map(r => r.status).sort(), [201, 400]);
+    const [won] = results.filter(r => r.status === 201), [lost] = results.filter(r => r.status === 400);
+    assert.equal(lost.data.error, FULL_MESSAGE);
+    assert.deepEqual(Object.keys(lost.data).filter(k => k !== 'request_id'), ['error'], 'no saved-row payload on a refusal');
+    assert.equal(count(sql, 'alice'), 100);
+    assert.equal((await (await call(env, '/api/spots', {owner: 'alice'})).json()).spots.length, 100);
+    const added = owned(sql, 'alice');
+    assert.equal(added.length, 1);
+    assert.equal(added[0].id, won.data.id); assert.equal(added[0].name, won.data.name);
+    assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM saved_spots WHERE owner='alice' AND name LIKE 'n%'").get().n, 99, "the owner's existing spots are unchanged");
+  } finally { gate.done(); sql.close(); }
+});
+
+test('saved_spots_two_slots_accept_both', {timeout: 15000}, async () => {
+  const gate = barrier(2), {sql, adapter} = database(gate.hook), env = {DB: adapter};
+  try {
+    seed(sql, 'alice', 98);
+    const results = await race(env, gate, [post(env, 'alice', {name: 'first', lat: 1, lon: 1}), post(env, 'alice', {name: 'second', lat: 2, lon: 2})]);
+    assert.deepEqual(results.map(r => r.status), [201, 201]);
+    assert.equal(count(sql, 'alice'), 100);
+    assert.deepEqual(owned(sql, 'alice').map(r => r.id).sort(), results.map(r => r.data.id).sort());
+  } finally { gate.done(); sql.close(); }
+});
+
+test('saved_spots_cap_is_owner_scoped_during_competing_saves', {timeout: 15000}, async () => {
+  const gate = barrier(3), {sql, adapter} = database(gate.hook), env = {DB: adapter};
+  try {
+    seed(sql, 'alice', 100); seed(sql, 'bob', 50); seed(sql, 'carol', 103);
+    const [a, b, c] = await race(env, gate, [post(env, 'alice', {lat: 1, lon: 1}), post(env, 'bob', {lat: 1, lon: 1}), post(env, 'carol', {lat: 1, lon: 1})]);
+    assert.equal(a.status, 400); assert.equal(a.data.error, FULL_MESSAGE);
+    assert.equal(b.status, 201);
+    assert.equal(c.status, 400, 'an owner already above the cap is refused too'); assert.equal(c.data.error, FULL_MESSAGE);
+    assert.deepEqual([count(sql, 'alice'), count(sql, 'bob'), count(sql, 'carol')], [100, 51, 103], 'nothing was added to the full owners and nothing was deleted');
+    assert.equal((await call(env, '/api/spots', {method: 'POST', body: {lat: 1, lon: 1}})).status, 401, 'anonymous save stays refused');
+  } finally { gate.done(); sql.close(); }
+});
+
+test('saved_spots_delete_releases_one_slot', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter};
+  try {
+    seed(sql, 'alice', 100);
+    const refused = await post(env, 'alice', {lat: 1, lon: 1});
+    assert.equal(refused.status, 400); assert.equal(refused.data.error, FULL_MESSAGE);
+    assert.equal((await call(env, '/api/spots/alice-0', {owner: 'bob', method: 'DELETE', body: {}})).status, 404);
+    assert.equal((await post(env, 'alice', {lat: 1, lon: 1})).status, 400, "another owner's delete attempt frees nothing");
+    assert.equal((await call(env, '/api/spots/alice-0', {owner: 'alice', method: 'DELETE', body: {}})).status, 200);
+    assert.equal((await post(env, 'alice', {lat: 1, lon: 1})).status, 201);
+    assert.equal((await post(env, 'alice', {lat: 1, lon: 1})).status, 400);
+    assert.equal(count(sql, 'alice'), 100);
+  } finally { sql.close(); }
+});
+
+test('saved_spots_validation_and_storage_failure_are_not_success', async () => {
+  const writes = []; let failWrite = false;
+  const {sql, adapter} = database(async query => { if (isSpotInsert(query)) { writes.push(query); if (failWrite) throw new Error('D1 down'); } }), env = {DB: adapter};
+  const quiet = console.error; console.error = () => {};
+  try {
+    for (const fields of [{lat: 35.5}, {lat: 1, lon: 1, name: 'x'.repeat(81)}, {lat: 1, lon: 1, note: 7}]) assert.equal((await post(env, 'alice', fields)).status, 400);
+    assert.equal(writes.length, 0, 'malformed input is refused before any write');
+    seed(sql, 'alice', 100);
+    const full = await post(env, 'alice', {lat: 1, lon: 1});
+    assert.equal(full.status, 400); assert.equal(full.data.error, FULL_MESSAGE);
+    assert.equal(writes.length, 1); assert.ok(!('id' in full.data) && !('created_at' in full.data), 'a zero-change write returns no saved row');
+    sql.prepare("DELETE FROM saved_spots WHERE id='alice-0'").run(); failWrite = true;
+    const down = await post(env, 'alice', {lat: 1, lon: 1});
+    assert.equal(down.status, 503); assert.doesNotMatch(down.data.error, /at most 100/);
+    assert.equal(count(sql, 'alice'), 99, 'a storage failure stores nothing and is not reported as success');
+  } finally { console.error = quiet; sql.close(); }
 });

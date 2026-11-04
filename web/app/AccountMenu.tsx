@@ -17,6 +17,7 @@ import {coordinates, region, setCoordinateFormat, species} from '../state.ts';
 import {offlineOpen, openTrip, tripIds} from '../trip.ts';
 import {tourTransition, type TourAction, type TourState} from '../tour.ts';
 import {ControlsTour} from './ControlsTour.tsx';
+import {LanguageChoice} from './LanguageChoice.tsx';
 
 const ACCOUNT_LINE: Readonly<Record<Session['state'], string>> = {
   'loading': 'Checking your account…',
@@ -110,6 +111,7 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
           </div>
           <Button size="sm" variant="quiet" onClick={run(openBoatSheet)}>Enter my exact boat</Button>
         </section>
+        <LanguageChoice />
         <section aria-labelledby={`${id}-coordinates`}>
           <h2 id={`${id}-coordinates`} class="ui-eyebrow">Coordinate format</h2>
           <p>Saved in this browser. GPX always uses decimal degrees.</p>

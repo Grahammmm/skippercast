@@ -180,9 +180,8 @@ export function spotBody(f) {
   return {name: f.name ?? '', lat: num(f.lat), lon: num(f.lon), note: f.note || null};
 }
 
-// SC0022-04: one visible line, "Protected areas not checked for this spot: outside coverage or check unavailable. Not exported."; written as two
-// literals because scripts/check_copy.mjs reads each literal alone and flags two "not" sentences in a row (its baseline may not grow).
-const UNCHECKED_SPOT = 'Protected areas not checked for this spot: outside coverage or check unavailable.' + ' Not exported.';
+// SC0022-04: the reading for a spot the protected-area screen could not check.
+const UNCHECKED_SPOT = 'Protected areas not checked for this spot: outside coverage or check unavailable; not exported.';
 
 /** Each spot's reading from the shared screen (dist/geo-screen.js `screenPlace`, BF-closures-everywhere): excluded (boundary named), unavailable (not checked), or clear (no text). */
 export async function spotVerdicts(spots, screen) {
