@@ -130,8 +130,8 @@ export interface CoastHandle{
  selectHabitat(id:string|null):void;
  /** A hidden embed stops drawing and withdraws its overlays until shown again. */
  setVisible(visible:boolean):void;
- /** Drapes GeoJSON features on the terrain under `id`, replacing an overlay with that id; kept while hidden; invalid input throws. */
- setOverlay(id:string,overlay:CoastOverlay):void;
+ /** Drapes GeoJSON features on the terrain under `id`, replacing an overlay with that id; kept while hidden. Returns the drape spacing the renderer actually used; invalid or refused input throws and keeps the old overlay; a destroyed handle returns null. */
+ setOverlay(id:string,overlay:CoastOverlay):CoastOverlayDrape|null;
  /** Removes an overlay and frees its geometry; false when the id is unknown. */
  removeOverlay(id:string):boolean;
  /** Seabed relief exaggeration, 1 (true scale) to 12 in whole steps; land stays true scale. */
@@ -187,6 +187,12 @@ export type CoastOverlayStyle={
  /** Point diameter in CSS pixels (8 by default). */
  readonly size?:number;
 };
+/**
+ * The spacing an accepted overlay was draped with, in metres. 100 m is the renderer's nominal drape spacing (fill grid cell and
+ * longest line segment), not the resolution of the source data. The renderer doubles `cell` or `step` only to keep an overlay
+ * within its triangle or segment cap; `coarsened` is true exactly when either exceeds 100 m.
+ */
+export type CoastOverlayDrape={cell:number;step:number;coarsened:boolean};
 export type CoastOverlay={
  readonly kind:CoastOverlayKind;
  /** fill: Polygon or MultiPolygon; line: LineString or MultiLineString; point: Point or MultiPoint. */

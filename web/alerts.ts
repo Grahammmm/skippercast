@@ -89,10 +89,30 @@ export type SavedTrip = {id: string; date: string; point: string; species: strin
 export type AlertEvent = {id: string | number; trip_id?: string; kind: string; status: string; message: string};
 export type Feedback = {observed_at: string; rating: number; context: string};
 
-/** Group private records by Pacific trip date; later array entries win within each assessment kind. */
-export function tripRecaps(trips: SavedTrip[], events: AlertEvent[], feedback: Feedback[], today: string): {
-  upcoming: SavedTrip[]; past: {trip: SavedTrip; final: AlertEvent | null; reports: Feedback[]}[];
+/** The recap's minimal projection of one private catch-log row (the signed-in GET /api/catch-log answer): no coordinates, note, owner, method or species. */
+export type CatchLogEntry = {id: string; trip_id: string | null; started_at: string; outcome: 'fish' | 'blank' | 'unknown'; count: number};
+
+/** The well-formed rows of a GET /api/catch-log answer, reduced to CatchLogEntry in the answer's order; anything else gives []. */
+export function catchLogEntries(answer: unknown): CatchLogEntry[] {
+  const rows = (answer as {entries?: unknown} | null)?.entries;
+  if (!Array.isArray(rows)) return [];
+  const kept: CatchLogEntry[] = [];
+  for (const row of rows as Record<string, unknown>[]) {
+    if (!row || typeof row.id !== 'string' || typeof row.started_at !== 'string') continue;
+    const {outcome, count} = row;
+    if (outcome !== 'fish' && outcome !== 'blank' && outcome !== 'unknown') continue;
+    if (typeof count !== 'number' || !Number.isInteger(count) || count < 0) continue;
+    kept.push({id: row.id, trip_id: typeof row.trip_id === 'string' && row.trip_id ? row.trip_id : null, started_at: row.started_at, outcome, count});
+  }
+  return kept;
+}
+
+/** Group private records by Pacific trip date; later array entries win within each assessment kind. Catch-log rows join only by exact trip id. */
+export function tripRecaps(trips: SavedTrip[], events: AlertEvent[], feedback: Feedback[], today: string, entries: CatchLogEntry[] = []): {
+  upcoming: SavedTrip[]; past: {trip: SavedTrip; final: AlertEvent | null; reports: Feedback[]; catches: CatchLogEntry[]}[];
 } {
+  const logged = new Map<string, CatchLogEntry[]>();
+  for (const entry of entries) if (entry.trip_id) logged.set(entry.trip_id, [...(logged.get(entry.trip_id) ?? []), entry]);
   const days = new Intl.DateTimeFormat('en-CA', {timeZone: DEFAULT_ZONE});
   const reports = new Map<string, Feedback[]>();
   for (const report of feedback) {
@@ -110,7 +130,7 @@ export function tripRecaps(trips: SavedTrip[], events: AlertEvent[], feedback: F
   return {
     upcoming: trips.filter(t => t.date >= today).sort((a, b) => a.date.localeCompare(b.date)),
     past: trips.filter(t => t.date < today).sort((a, b) => b.date.localeCompare(a.date)).map(trip => ({
-      trip, final: finals.get(trip.id) ?? missed.get(trip.id) ?? null, reports: reports.get(trip.date) ?? [],
+      trip, final: finals.get(trip.id) ?? missed.get(trip.id) ?? null, reports: reports.get(trip.date) ?? [], catches: logged.get(trip.id) ?? [],
     })),
   };
 }

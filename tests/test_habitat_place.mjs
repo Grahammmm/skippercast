@@ -13,6 +13,8 @@ import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {createPlanner} from '../web/planner.ts';
 import {draftKey} from '../dist/trip-export.js';
+import {assessScreen} from '../web/map/habitat.ts';
+import {screenPlace} from '../dist/geo-screen.js';
 
 const ROOT = new URL('..', import.meta.url).pathname, PAGE = 'https://s.test/map';
 const read = path => JSON.parse(readFileSync(new URL(`../dist/${path}`, import.meta.url), 'utf8'));
@@ -26,12 +28,12 @@ const DISABLED = label => new RegExp(`<button disabled type="button" class="ui-b
 const ENABLED = label => new RegExp(`<button type="button" class="ui-button ui-button--ghost ui-button--sm">(?:(?!</button>).)*${label}</button>`, 's');
 const regsLink = href => new RegExp(`<a class="ui-button ui-button--ghost ui-button--sm" href="${href}" target="_blank" rel="noopener" aria-label="Regulations: [^"]+">`);
 
-function planner(stored = null) {
-  const store = new Map(stored ? [[draftKey(REGION.id), stored]] : []), nav = [];
-  const p = createPlanner({atlas: {targets: [], areas: [], drifts: []}, screen: SCREEN, region: REGION, map: MAP, getVisible: () => [], now: () => new Date('2026-10-12T18:00:00Z'),
-    storage: {getItem: k => store.get(k) ?? null, setItem: (k, v) => { store.set(k, v); }}, loadPorts: async () => ({ports: []}), emit: () => {}, landWater: async () => () => ({state: 'water'}),
+function planner(stored = null, boundary = SCREEN) {
+  const store = new Map(stored ? [[draftKey(REGION.id), stored]] : []), nav = [], writes = [];
+  const p = createPlanner({atlas: {targets: [], areas: [], drifts: []}, screen: boundary, region: REGION, map: MAP, getVisible: () => [], now: () => new Date('2026-10-12T18:00:00Z'),
+    storage: {getItem: k => store.get(k) ?? null, setItem: (k, v) => { writes.push(k); store.set(k, v); }}, loadPorts: async () => ({ports: []}), emit: () => {}, landWater: async () => () => ({state: 'water'}),
     nav: {open: () => nav.push('open'), showMap() {}, conditions() {}}});
-  return {p, store, nav};
+  return {p, store, nav, writes};
 }
 
 test('a habitat place joins the trip once as a user waypoint; again adds nothing and returns the same id', () => {
@@ -73,6 +75,87 @@ test('a GPX from a trip holding a habitat place has one user waypoint for it; re
   const gpx = await (await p.exportFile('gpx')).text(), wpts = gpx.match(/<wpt [^>]*>.*?<\/wpt>/gs) ?? [];
   assert.equal(wpts.length, 1);
   assert.match(wpts[0], /^<wpt lat="0\.25" lon="0\.5"><name>Lingcod habitat · grade A<\/name><cmt>user:habitat-reef-r1<\/cmt><desc>User waypoint\. User-supplied label; not verified habitat/);
+  p.dispose();
+});
+
+// SC0237-04: Add to trip refuses a habitat or survey place the chart and the GPX check would refuse (not checked, inside, within 70 m), and says why.
+const CLOSURE_NAME = '<b onclick=x> Synthetic Reserve';
+const M_LON = 1 / 111319.49;
+/** A current closure whose east edge lies `m` metres west of PLACE (negative: PLACE is inside it), at PLACE's latitude. */
+function closureWest(m, name = CLOSURE_NAME) {
+  const east = PLACE.longitude - m * M_LON, box = [[east - 0.02, 0.24], [east, 0.24], [east, 0.26], [east - 0.02, 0.26], [east - 0.02, 0.24]];
+  return assessScreen({areas: [{type: 'Feature', properties: {NAME: name}, geometry: {type: 'Polygon', coordinates: [box]}}], checkedAt: new Date().toISOString(), live: true}, Date.now());
+}
+const threshold = (() => { for (let m = 69.5; m < 70.5; m += 0.01) if (screenPlace(closureWest(m), PLACE).distanceM === 70) return m; return null; })();
+const swappable = initial => { let cur = initial; return {set(next) { cur = next; }, screen: new Proxy({}, {get: (_, k) => { const v = cur?.[k]; return typeof v === 'function' ? v.bind(cur) : v; }})}; };
+const NOT_CHECKED = [['unloaded', null], ['stale', assessScreen({areas: [], checkedAt: new Date(Date.now() - 72 * 3_600_000).toISOString(), live: false}, Date.now())],
+  ['failed', assessScreen({areas: null, checkedAt: null, live: false}, Date.now())], ['not ready', {ready: () => false, pointAllowed: () => true, geometryAllowed: () => true}],
+  ['coverage false', {...SCREEN, coversGeometry: () => false}], ['coverage throws', {...SCREEN, coversGeometry: () => { throw new Error('boom'); }}]];
+const REFUSED = [...NOT_CHECKED.map(([label, screen]) => [label, screen, 'Not saved: Protected areas not checked.']),
+  ['inside', closureWest(-30), `Not saved: Inside ${CLOSURE_NAME}.`], ['inside, unnamed', {boundaries: [{name: null, geometry: closureWest(-30).boundaries[0].geometry}], status: 'ready'}, 'Not saved: Inside a protected area.'],
+  ['40 m', closureWest(40), `Not saved: 40 m from ${CLOSURE_NAME}.`], ['70 m', closureWest(threshold ?? 70), `Not saved: 70 m from ${CLOSURE_NAME}.`]];
+const SURVEY = {...PLACE, id: 'survey:site:s1', name: 'Survey site'};
+
+test('Add to trip refuses a habitat or survey place that is not checked, inside a closure, 40 m from one or exactly 70 m from one, saving nothing', () => {
+  assert.ok(threshold !== null, 'the fixture reaches exactly the 70 m threshold');
+  for (const [label, screen, expected] of REFUSED) for (const place of [PLACE, SURVEY]) {
+    const {p, store, writes} = planner(null, screen), before = p.draft.value;
+    assert.equal(p.addPlace(place), null, `${label} ${place.id}`);
+    assert.equal(p.actionStatus.value, expected, `${label} ${place.id}`);
+    assert.equal(p.draft.value, before, `${label}: the same draft`);
+    assert.deepEqual(p.draft.value.ids, []);
+    assert.equal(p.draft.value.userWaypoints, undefined);
+    assert.equal(writes.length + store.size, 0, `${label}: nothing stored`);
+    p.dispose();
+  }
+});
+
+test('a place just beyond the 70 m margin is added as before', () => {
+  const {p, writes} = planner(null, closureWest(71));
+  assert.equal(p.addPlace(PLACE), 'user:habitat-reef-r1');
+  assert.equal(p.addPlace(SURVEY), 'user:survey-site-s1');
+  assert.deepEqual(p.draft.value.ids, ['user:habitat-reef-r1', 'user:survey-site-s1']);
+  assert.equal(writes.length, 2);
+  p.dispose();
+});
+
+test('a clear place re-added returns the same id and writes nothing; deselected, it is selected again once', () => {
+  const {p, writes} = planner(null, closureWest(500)), shore = {...PLACE, id: 'habitat:shore:s1', name: 'Shore habitat', shore: true};
+  const ids = [PLACE, SURVEY, shore].map(place => p.addPlace(place));
+  assert.deepEqual(ids, ['user:habitat-reef-r1', 'user:survey-site-s1', 'user:habitat-shore-s1']);
+  assert.equal(p.draft.value.userWaypoints[2].category, 'other');
+  const stored = writes.length, draft = p.draft.value;
+  assert.deepEqual([PLACE, SURVEY, shore].map(place => p.addPlace(place)), ids);
+  assert.equal(writes.length, stored, 'no extra write');
+  assert.equal(p.draft.value, draft);
+  p.toggleSpot(ids[0], false);
+  assert.ok(!p.draft.value.ids.includes(ids[0]));
+  assert.equal(p.addPlace(PLACE), ids[0]);
+  assert.equal(p.draft.value.ids.filter(id => id === ids[0]).length, 1);
+  assert.equal(p.draft.value.userWaypoints.length, 3, 'one stored waypoint per place');
+  p.dispose();
+});
+
+test('a place already added is screened again on every add: refused while the screen is refusing, accepted again, never duplicated, never removed', async () => {
+  const swap = swappable(closureWest(500)), {p, writes} = planner(null, swap.screen);
+  const id = p.addPlace(PLACE);
+  assert.equal(id, 'user:habitat-reef-r1');
+  const stored = writes.length, draft = p.draft.value;
+  for (const [label, screen, expected] of REFUSED) {
+    swap.set(screen);
+    p.actionStatus.value = '';
+    assert.equal(p.addPlace(PLACE), null, label);
+    assert.equal(p.actionStatus.value, expected, label);
+    assert.equal(p.draft.value, draft, `${label}: the saved waypoint is left as it was`);
+    assert.equal(writes.length, stored, label);
+  }
+  swap.set(NOT_CHECKED[3][1]);
+  p.tick.value++;
+  await assert.rejects(p.exportFile('gpx'), /unavailable or older/, 'the export still refuses the retained plan');
+  swap.set(closureWest(500));
+  assert.equal(p.addPlace(PLACE), id);
+  assert.equal(p.draft.value, draft, 'clear again: the same id, no duplicate, no write');
+  assert.equal(writes.length, stored);
   p.dispose();
 });
 

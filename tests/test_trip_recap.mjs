@@ -7,7 +7,8 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
-import {tripRecaps, dateRange} from '../web/alerts.ts';
+import {isDeepStrictEqual} from 'node:util';
+import {tripRecaps, dateRange, catchLogEntries} from '../web/alerts.ts';
 import {DEFAULT_ZONE} from '../web/zone.ts';
 
 const trip = (id, date) => ({id, date, point: 'synthetic', species: 'reef', start_hour: 7, end_hour: 13});
@@ -94,5 +95,81 @@ test('rendered groups, disclosures, assessment fallback, comfort reports and unc
     html = draw([trip('past', '2026-11-01')], [event('missed', 'past', 'missed-final')]);
     assert.match(html, /Day-before assessment missed · shown here/);
     assert.match(html, /Synthetic missed/);
+  } finally { await rm(dir, {recursive: true, force: true}); }
+});
+
+const logged = (id, trip_id, outcome = 'blank', count = 0, started_at = '2026-11-01T15:00:00.000Z') => ({id, trip_id, started_at, outcome, count});
+
+test('recap_catches_match_exact_trip_id_not_day', () => {
+  // Same date, misleading catch dates: only the exact trip id joins.
+  const trips = [trip('a', '2026-11-01'), trip('b', '2026-11-01'), trip('c', '2026-10-30'), trip('later', '2026-11-05')];
+  const entries = [logged('e1', 'a', 'fish', 3, '2026-10-30T15:00:00.000Z'), logged('e2', 'b', 'blank', 0, '2026-11-05T15:00:00.000Z'), logged('e3', 'a', 'unknown'),
+    logged('e4', null), logged('e5', ''), logged('e6', 'deleted-trip', 'fish', 1), logged('e7', 'later', 'fish', 2), logged('e8', undefined)];
+  const originalEntries = structuredClone(entries), originalTrips = structuredClone(trips);
+  const past = tripRecaps(trips, [], [], today, entries).past;
+  const byId = Object.fromEntries(past.map(r => [r.trip.id, r.catches.map(c => c.id)]));
+  assert.deepEqual(byId, {a: ['e1', 'e3'], b: ['e2'], c: []});
+  assert.equal(past.find(r => r.trip.id === 'a').catches[0], entries[0], 'rows keep identity and the answer\'s order');
+  assert.deepEqual(tripRecaps(trips, [], [], today, entries).upcoming.map(t => t.id), ['later'], 'an upcoming trip gets no catch section');
+  assert.deepEqual(entries, originalEntries);
+  assert.deepEqual(trips, originalTrips);
+});
+
+test('recap_without_catches_keeps_existing_semantics', () => {
+  const trips = [trip('a', '2026-11-01'), trip('b', '2026-10-31')];
+  const events = [event(1, 'a', 'missed-final'), event(2, 'a', 'final')];
+  const feedback = [report('2026-11-01T07:30:00Z'), report('2026-11-01T09:30:00Z')];
+  const bare = tripRecaps(trips, events, feedback, today);
+  for (const entries of [[], undefined]) {
+    const got = tripRecaps(trips, events, feedback, today, entries);
+    assert.ok(isDeepStrictEqual(got, bare), 'an empty or omitted fifth argument changes nothing');
+  }
+  assert.deepEqual(bare.past.map(r => r.catches), [[], []]);
+  assert.equal(bare.past[0].final, events[1]);
+  assert.deepEqual(bare.past[0].reports, feedback);
+});
+
+test('catchLogEntries keeps only well-formed rows, drops private fields and tolerates any answer', () => {
+  const row = {id: 'x', owner: 'alice', trip_id: 't', started_at: '2026-11-01T15:00:00.000Z', outcome: 'fish', count: 2, lat: 35.1, lon: -120.9, note: 'LOGNOTE', method: 'jig', species: 'lingcod'};
+  assert.deepEqual(catchLogEntries({entries: [row]}), [{id: 'x', trip_id: 't', started_at: '2026-11-01T15:00:00.000Z', outcome: 'fish', count: 2}]);
+  assert.deepEqual(catchLogEntries({entries: [{...row, trip_id: undefined}, {...row, id: 'y', trip_id: ''}]}).map(e => e.trip_id), [null, null]);
+  const bad = [null, 7, 'x', {}, {...row, id: 5}, {...row, started_at: null}, {...row, outcome: 'caught'}, {...row, count: '2'}, {...row, count: 1.5}, {...row, count: -1}, {...row, count: null}];
+  assert.deepEqual(catchLogEntries({entries: bad}), []);
+  for (const answer of [undefined, null, [], 'x', 3, {}, {entries: null}, {entries: {}}, {entries: 'x'}]) assert.deepEqual(catchLogEntries(answer), []);
+  assert.deepEqual(catchLogEntries({entries: [row, null, {...row, id: 'z'}]}).map(e => e.id), ['x', 'z']);
+});
+
+test('rendered_recap_lists_fish_blank_unknown_privately', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'trip-recap-catch-'));
+  try {
+    const out = join(dir, 'view.mjs');
+    await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
+      export {SavedTrips} from './web/app/TripAlerts.tsx';
+      export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
+      bundle: true, platform: 'node', format: 'esm', outfile: out, logLevel: 'silent',
+      jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+    const {SavedTrips, render, h} = await import(pathToFileURL(out).href);
+    const names = {point: new Map([['synthetic', 'Test area']]), species: new Map([['reef', 'Test species']])};
+    const draw = (trips, entries, events = [], feedback = []) => render(h(SavedTrips, {recaps: tripRecaps(trips, events, feedback, today, entries), names, remove: () => () => {}}));
+    const none = draw([trip('past', '2026-11-01')], []);
+    assert.doesNotMatch(none, /catch log|Fish ·|Blank|Not sure/i);
+    // A trip with nothing logged, a failed read and an empty read all draw the same page.
+    assert.equal(draw([trip('past', '2026-11-01')], catchLogEntries(undefined)), none);
+    assert.equal(draw([trip('past', '2026-11-01')], [logged('other', 'elsewhere', 'fish', 4)]), none);
+    assert.equal(draw([trip('past', '2026-11-01')], [logged('f', 'past', 'fish', 3)]).replace(/<h4>Your catch log<\/h4>.*?<\/ul>/, ''), none);
+
+    const entries = catchLogEntries({entries: [
+      {...logged('f1', 'past', 'fish', 3), note: 'LOGNOTE-private', lat: 35.123456, lon: -120.654321, owner: 'OWNER-alice', species: 'lingcod', method: 'jig'},
+      logged('b1', 'past', 'blank'), logged('u1', 'past', 'unknown'), logged('f2', 'past', 'fish', 1),
+      logged('x1', 'future', 'fish', 9)]});
+    const html = draw([trip('past', '2026-11-01'), trip('future', '2026-11-03')], entries, [event('final', 'past', 'final')], [report('2026-11-02T07:30:00Z', 8)]);
+    assert.match(html, /Your comfort reports<\/h4><p>8\/10 · fishing<\/p><h4>Your catch log<\/h4><ul><li>Fish · 3 fish<\/li><li>Blank: no fish<\/li><li>Not sure<\/li><li>Fish · 1 fish<\/li><\/ul><\/details>/);
+    assert.equal((html.match(/Your catch log/g) ?? []).length, 1, 'only the past trip with entries shows the section');
+    assert.doesNotMatch(html, /LOGNOTE|35\.12|120\.65|OWNER-alice|lingcod|jig|Fish · 9|forecast the catch|predict|total|%/i);
+    assert.match(html, /<h3>Upcoming<\/h3><p><strong>2026-11-03/, 'the upcoming row is as before');
+    assert.doesNotMatch(html.slice(html.indexOf('<h3>Upcoming</h3>'), html.indexOf('<h3>Past</h3>')), /catch/i);
+    // Markup in a hostile id or count cannot reach the page: ids are keys, counts numbers.
+    const hostile = draw([trip('past', '2026-11-01')], catchLogEntries({entries: [{...logged('<script>x</script>', 'past', 'fish', 2)}]}));
+    assert.doesNotMatch(hostile, /<script>/);
   } finally { await rm(dir, {recursive: true, force: true}); }
 });

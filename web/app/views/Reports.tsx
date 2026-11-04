@@ -20,18 +20,28 @@ import {regionInfo} from '../App.tsx';
 import {CoastMarkup, isSafeCatchState} from '../CoastMarkup.tsx';
 import {DEFAULT_ZONE} from '../../zone.ts';
 
-/** The loaded sections and the complete inputs they were loaded for. */
-export const reportsData = signal<{key: string; data: ReportsData} | null>(null);
+/** The loaded sections, the complete inputs they were loaded for and when (ms; a missing time counts as old). */
+export const reportsData = signal<{key: string; data: ReportsData; loadedAt?: number} | null>(null);
 let pending: {key: string} | null = null;
+/** Settled sections older than this are read again when the view reopens. */
+export const REPORTS_MAX_AGE_MS = 30 * 60_000;
+
+/** True when settled sections are old or one of them failed (no charter source is not a failure). */
+export function needsReload(entry: {data: ReportsData; loadedAt?: number}, charters: string | null, now: number): boolean {
+  const {data, loadedAt} = entry;
+  return !(now - (loadedAt ?? NaN) < REPORTS_MAX_AGE_MS) || data.discussions.status === 'unavailable'
+    || data.evidence === null || data.watch === null || (charters !== null && data.charters === null);
+}
 // Preserve source-less keys used by existing preloaded Reports consumers.
 const reportsKey = (id: string | null, target: string, charters: string | null): string =>
   charters === null ? `${id}:${target}` : JSON.stringify([id, target, charters]);
 
-/** Load once per region, target and charter source; only the current request may publish. */
-export async function openReports(id: string, target: string, charters: string | null, fetchFn: typeof fetch = fetch): Promise<void> {
+/** Load per region, target and charter source, again when `needsReload`; only the current request may publish. */
+export async function openReports(id: string, target: string, charters: string | null, fetchFn: typeof fetch = fetch, now = Date.now()): Promise<void> {
   const key = reportsKey(id, target, charters);
   if (pending?.key === key) return;
-  if (reportsData.peek()?.key === key) {
+  const settled = reportsData.peek();
+  if (settled?.key === key && !needsReload(settled, charters, now)) {
     // Returning to settled data also supersedes a different pending load.
     pending = null;
     return;
@@ -41,7 +51,8 @@ export async function openReports(id: string, target: string, charters: string |
   try {
     const {loadReports} = await import('../../reports.ts');
     const data = await loadReports({region: id, species: target, charters}, fetchFn);
-    if (pending === request) reportsData.value = {key, data};
+    // The old value stays on screen until this read publishes.
+    if (pending === request) reportsData.value = {key, data, loadedAt: now};
   } finally { if (pending === request) pending = null; }
 }
 

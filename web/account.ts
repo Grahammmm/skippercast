@@ -16,9 +16,10 @@ const BARE = '#';
 export type Session =
   | {readonly state: 'loading'}
   | {readonly state: 'offline'}
-  | {readonly state: 'disabled'}
-  | {readonly state: 'signed-out'}
-  | {readonly state: 'signed-in'; readonly name: string | null};
+  /** `advisor`: the site's Text Advisor gate is open (SC0452-02), read with the session so the masthead sends no probe. */
+  | {readonly state: 'disabled'; readonly advisor: boolean}
+  | {readonly state: 'signed-out'; readonly advisor: boolean}
+  | {readonly state: 'signed-in'; readonly name: string | null; readonly advisor: boolean};
 
 export const session = signal<Session>({state: 'loading'});
 let sessionRequest: Promise<Session> | null = null;
@@ -27,11 +28,12 @@ let sessionGeneration = 0;
 /** The /api/session answer as the menu reads it: offline on any failure, disabled when the site offers no sign in. */
 export function readSession(data: unknown, ok = true): Session {
   if (!ok || !data || typeof data !== 'object') return {state: 'offline'};
-  const d = data as {signIn?: unknown; signedIn?: unknown; user?: {display_name?: unknown}};
-  if (!d.signIn) return {state: 'disabled'};
-  if (!d.signedIn) return {state: 'signed-out'};
+  const d = data as {signIn?: unknown; signedIn?: unknown; advisor?: unknown; user?: {display_name?: unknown}};
+  const advisor = d.advisor === true;   // strict: a missing, null, string or number flag is off, never a parse error
+  if (!d.signIn) return {state: 'disabled', advisor};
+  if (!d.signedIn) return {state: 'signed-out', advisor};
   const name = typeof d.user?.display_name === 'string' && d.user.display_name.trim() ? d.user.display_name.trim() : null;
-  return {state: 'signed-in', name};
+  return {state: 'signed-in', name, advisor};
 }
 
 /** Mount initialization: share pending reads and reuse settled sessions across layout remounts. */

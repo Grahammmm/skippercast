@@ -405,3 +405,39 @@ test('SC2207-02 listedBoatPicks: the painted list from memoised routes only; a c
   assert.ok(elsewhere.every(p => p.basis === 'straight'), 'a product of another region routes nothing');
   stop();
 });
+
+// SC0452-07: a computed route's bends reach the run line with the pick (a copy), so the line it times can be screened.
+test('route_points_handoff: a successful route hands its bends to the pick as a copy; nothing else about the list changes', () => {
+  const bends = [{latitude: 35.38, longitude: -120.87}, {latitude: 35.4, longitude: -120.85}];
+  const {route, calls} = fake(to => ({ok: true, nm: distanceNm(ORIGIN, to) * 1.4, points: bends}));
+  const picks = [pick('a', 8), pick('b', 5)], plain = routedPicks(picks, ORIGIN, MODEL, null, null, TOP, times(1.4).route);
+  const got = routedPicks(picks, ORIGIN, MODEL, null, null, TOP, route);
+  assert.equal(calls.length, 2, 'one route search per pick, none for the handoff');
+  assert.deepEqual(got.map(p => p.id), ['a', 'b']);
+  for (const [i, p] of got.entries()) {
+    assert.ok(isDeepStrictEqual(p.routePoints, bends), `${p.id}: the route's points, exactly`);
+    assert.notEqual(p.routePoints, bends, 'a copy, not the route\'s own array');
+    assert.notEqual(p.routePoints[0], bends[0], 'each point copied');
+    const {routePoints, ...rest} = p;
+    assert.ok(isDeepStrictEqual(rest, (({routePoints: _, ...r}) => r)(plain[i])), `${p.id}: nm, basis, distance and the rest are what they were`);
+    assert.equal(p.screen, picks[i].screen, `${p.id}: the destination verdict is the pick's own`);
+  }
+  bends[0].latitude = 0;
+  assert.equal(got[0].routePoints[0].latitude, 35.38, 'a later change to the route does not move the pick\'s copy');
+  assert.equal(routedPicks([pick('a', 8)], ORIGIN, MODEL, null, null, TOP, fake(() => ({ok: true, nm: 9, points: []})).route)[0].routePoints.length, 0, 'an empty bend list is still a computed route');
+});
+
+test('route_points_handoff_absent: no route, a failed route, a route over budget or without an origin carries no points', () => {
+  for (const reason of ['no-product', 'lines-needed', 'start-not-water', 'end-not-water', 'no-route', 'too-far']) {
+    const [kept] = routedPicks([pick('a', 5)], ORIGIN, MODEL, null, null, TOP, fake(() => ({ok: false, reason})).route);
+    assert.ok(kept.basis === 'straight' && kept.why === reason && !('routePoints' in kept), reason);
+  }
+  const [notYet] = routedPicks([pick('a', 5)], ORIGIN, MODEL, null, null, TOP, fake(() => null).route);
+  assert.ok(notYet.basis === 'straight' && !('routePoints' in notYet), 'a route not computed yet');
+  const none = times(1), [noOrigin] = routedPicks([pick('a', 5)], undefined, MODEL, null, null, TOP, none.route);
+  assert.ok(none.calls.length === 0 && !('routePoints' in noOrigin), 'no origin, no route, no points');
+  const many = Array.from({length: 40}, (_, i) => pick(`p${i}`, 1 + i * 0.25)), over = routedPicks(many, ORIGIN, MODEL, null, null, TOP, fake(to => ({ok: true, nm: distanceNm(ORIGIN, to), points: [{latitude: 35.4, longitude: -120.8}]})).route);
+  assert.ok(over.every(p => p.routePoints.length === 1), 'routed picks carry theirs');
+  const budget = routedPicks(many, ORIGIN, MODEL, null, 12, TOP, times(20).route);
+  assert.ok(budget.length > 0 && budget.every(p => p.basis === 'straight' && !('routePoints' in p)), 'picks past the budget keep the straight line and no points');
+});

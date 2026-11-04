@@ -188,7 +188,12 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // (same degraded.ts import, same <p class="app-limits-note app-degraded"> markup) and re-exports it, so /map's
   // masthead renders the identical element. No CSS, token or catch markup change; contrast(), assertions and
   // thresholds are untouched. Rebind only Masthead.tsx.
-  "web/app/Masthead.tsx": "1859c84f33775f1c6830f932566a644bdd639fd7c0804947ea38f375ad4b6aff",
+  // SC0452-02 (#1554): ChatEntry replaces its HEAD /chat.html probe and private signal with
+  // ensureSession/session from web/account.ts. BODY09 mounts Reports/CatchCards directly, never
+  // ChatEntry or Masthead, so the session-read effect does not run here. The account module has
+  // no top-level fetch; CSS, tokens, catch markup, contrast(), assertions and thresholds are
+  // unchanged. Rebind only Masthead.tsx to its exact final bytes.
+  "web/app/Masthead.tsx": "de37b5d6bd15106c3a111fae6c8e603e6afca6144a86b08f985346ba28c31659",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
@@ -226,7 +231,12 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
   "web/fonts/dm-sans-latin.woff2": "9fea608a947e67020c33cad9a6fe3d60c54119dfb8cff87768a8117a15ed7543",
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
-  "web/app/views/Reports.tsx": "907ead4671944801d9b9e24b0d9eef22bf4465722e69ab398b76781ddb9b5a93",
+  // SC1737-06: Reports adds reopen-only age/failure reloads and loadedAt metadata;
+  // CatchCards, ReportsBody, catch markup, styles and paint thresholds are unchanged.
+  // The legacy failed preload now triggers a reload. Serve only its three exact
+  // section URLs as 503 below, retaining unavailable sections and the strict
+  // unexpected-request guard; catch markup, paint and controls stay unchanged.
+  "web/app/views/Reports.tsx": "bcf6437dad7fa9d4e5117f0d82d0e8300e843738b3f5596b6bea8c43356875a6",
   "web/app/CoastMarkup.tsx": "3d318379ff1194b26f68adadb523db08c21829ff71cf5e7cfe2ac903821f0efc",
   "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
@@ -443,6 +453,8 @@ test('BODY09 real Reports counts: light/dark paint, overlap, backing and fail-cl
   report.catches[0]!.species=[{name:'Synthetic full bar',count:100,disposition:'reported'},
     {name:'Synthetic partial bar',count:25,disposition:'reported'},{name:'Synthetic zero bar',count:0,disposition:'reported'}];
   const unexpected: string[]=[], errors:string[]=[], served:Record<string,string>={};
+  const reloadPaths = ['feeds/data/recent-intel.json', 'feeds/data/regions/morro-bay/latest.json', '__p04/data/coasts.json'];
+  const reloadRequests: string[] = [];
   page.on('pageerror',e=>errors.push(String(e)));
   await page.clock.setFixedTime(NOW);
   // Every request is handled here before any server/provider; no Worker is started by the dedicated config.
@@ -452,6 +464,7 @@ test('BODY09 real Reports counts: light/dark paint, overlap, backing and fail-cl
     if(path==='__p04/')return route.fulfill({contentType:'text/html',body:`<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>BODY09 production Reports</title>${HEAD_STYLES.map(p=>`<link rel="stylesheet" href="/${p}">`).join('')}<style>#mount{padding:16px;max-width:760px;margin:0 auto;}</style></head><body><main id="mount"></main><script src="/__p04/host.js"></script></body></html>`});
     if(path==='__p04/host.js'){served[path]=hash(script);return route.fulfill({contentType:'text/javascript',body:script});}
     if(path==='api/coast/report'){served[path]=hash(JSON.stringify(report));return route.fulfill({json:report});}
+    if(reloadPaths.includes(path)){reloadRequests.push(path);return route.fulfill({status:503,json:{error:'Synthetic unavailable Reports section'}});}
     if([...STYLES,...FONTS].includes(path)){const body=read(path);served[path]=hash(body);return route.fulfill({body,contentType:path.endsWith('.css')?'text/css':'font/woff2'});}
     unexpected.push(url.href);return route.abort('blockedbyclient');
   });
@@ -497,6 +510,7 @@ test('BODY09 real Reports counts: light/dark paint, overlap, backing and fail-cl
   finally {await page.locator('#p04-control-overlay').evaluate(e=>e.remove());}
   expect((await audit(rows.first())).issues).toEqual([]);
   expect(errors,'uncaught errors').toEqual([]);
+  expect(reloadRequests.sort(), 'failed preloaded sections are read again exactly once').toEqual([...reloadPaths].sort());
   expect(unexpected,'no unstubbed/server/provider/GPU requests').toEqual([]);
   for(const p of [...STYLES,...FONTS].filter(p=>!UNREQUESTED_STYLES.includes(p)))expect(served[p],p+' actually served exact bytes').toBe(bindings.inputs[p]);
   for(const p of UNREQUESTED_STYLES)expect(served[p],p+' is bundled as a URL only and never requested by Reports').toBeUndefined();

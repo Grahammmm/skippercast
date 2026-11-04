@@ -22,8 +22,11 @@
 // charter ground) adds the target's rules at a glance (web/regs.ts, v1's row):
 // the reviewed registry's own bag and size clauses, its check date and the
 // official page. A protected area or withheld mark keeps its own words instead.
+// SC0022-05: a signed-in person's "Save this spot" keeps the selected mark's name and position as a private
+// account spot (web/saved-spots.ts); the shared protected-area screen says no first, in words, and nothing
+// about the spot reaches the address, a share link, a feed or usage measurement.
 import {computed} from '@preact/signals';
-import {useEffect, useRef} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {Icon} from '../ui/icons.tsx';
 import {Popover} from '../ui/Popover.tsx';
@@ -32,9 +35,11 @@ import type {ChartMark} from '../map/coastline.ts';
 import {habitatCard, markData, picked, spotCard} from '../map/marks.ts';
 import type {CoastReading} from '../../packages/coast/src/embed-types.ts';
 import {shownPresentation, terrainActions, terrainDetail, terrainMark, terrainPick, terrainReading} from '../map/stage.ts';
-import {coordinates, navigate, selection, setParams} from '../state.ts';
+import {coordinates, navigate, region as stateRegion, selection, setParams} from '../state.ts';
 import {formatCoordinates} from '../../dist/coordinates.js';
 import {RulesLine} from './RulesCard.tsx';
+import {session, type Session} from '../account.ts';
+import {SAVE_WORDS, saveMarkSpot, spotCandidate, type SpotResult} from '../saved-spots.ts';
 import {addPlaceToTrip, addToTrip, placeTripId, reviewPlace, reviewTrip, tripIds} from '../trip.ts';
 import {regulationsLink} from '../map/habitat.ts';
 import {drawnSpots} from '../map/ranked.ts';
@@ -106,6 +111,49 @@ export function markPlace(mark: Mark): LatLon | null {
   return null;
 }
 
+type SaveKey = {readonly id: string; readonly name: string; readonly lat: number | null; readonly lon: number | null; readonly region: string | null; readonly session: Session};
+type SaveStatus = {readonly key: SaveKey; readonly state: 'pending' | SpotResult['state']; readonly message: string};
+const sameSave = (a: SaveKey | null, b: SaveKey | null): boolean =>
+  !!a && !!b && a.id === b.id && a.name === b.name && a.lat === b.lat && a.lon === b.lon && a.region === b.region && a.session === b.session;
+
+/**
+ * SC0022-05: "Save this spot" for a signed-in person, with its plain-text status. A save belongs to the mark's identity, name, position,
+ * region and session: a different mark, region or account resets it, and a late answer for another one is ignored.
+ */
+export function SaveSpotAction({mark}: {mark: Mark}) {
+  const who = session.value, where = stateRegion.value, at = mark.position;
+  const key: SaveKey = {id: mark.id, name: mark.name, lat: at ? at.latitude : null, lon: at ? at.longitude : null, region: where, session: who};
+  const [status, setStatus] = useState<SaveStatus | null>(null);
+  const latest = useRef(key), inflight = useRef<SaveKey | null>(null), mounted = useRef(true);
+  latest.current = key;
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useEffect(() => { setStatus(null); }, [key.id, key.name, key.lat, key.lon, key.region, key.session]);
+  if (who.state !== 'signed-in') return null;
+  const shown = status && sameSave(status.key, key) ? status : null, candidate = spotCandidate(mark);
+  const blocked = 'state' in candidate ? candidate.message : '';
+  const save = async () => {
+    if (blocked || shown?.state === 'pending' || shown?.state === 'saved' || sameSave(inflight.current, key)) return;
+    const mine = key;
+    inflight.current = mine;
+    setStatus({key: mine, state: 'pending', message: ''});
+    const result = await saveMarkSpot(mark).catch((): SpotResult => ({state: 'failed', message: SAVE_WORDS.uncertain}));
+    if (sameSave(inflight.current, mine)) inflight.current = null;
+    if (!mounted.current || !sameSave(latest.current, mine)) return;
+    setStatus({key: mine, state: result.state, message: result.message});
+  };
+  const saved = shown?.state === 'saved';
+  return (
+    <>
+      <Button size="sm" icon={saved ? 'check' : 'plus'} disabled={!!blocked || shown?.state === 'pending' || saved} onClick={() => { void save(); }}>
+        {shown?.state === 'pending' ? 'Saving…' : saved ? SAVE_WORDS.saved : 'Save this spot'}</Button>
+      <div class="app-mark-why" style={{flexBasis: '100%'}}>
+        <p>{SAVE_WORDS.helper}</p>
+        <p role="status">{shown && shown.state !== 'pending' ? shown.message : blocked}</p>
+      </div>
+    </>
+  );
+}
+
 export function MarkCard({mark}: {mark?: Mark} = {}) {
   const selected = mark ?? currentMark.value, request = picked.value;
   const heading = useRef<HTMLHeadingElement>(null);
@@ -165,6 +213,7 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
             <Icon name="shield" size={16} />Regulations
           </a>
         ) : <Button size="sm" icon="shield" disabled>Regulations</Button>}
+        <SaveSpotAction mark={selected} />
       </div>
       {!selected.withheld && (survey && !where || /^(geology|charter|fleet):/.test(selected.id)) ? <p class="app-mark-why">{survey ? 'Pick this place on the map to export its position' : selected.id.startsWith('geology:') ? 'Geology unit: context for reading the map, not a place to fish' : 'Charter-reported grounds and AIS activity are not exported: they show apparent activity, not a verified place.'}</p> : null}
       {habitat && !selected.withheld && !where ? <p class="app-mark-why">This place has no saved position yet, so it cannot be added to a trip or exported.</p> : null}
