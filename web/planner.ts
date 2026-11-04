@@ -23,6 +23,7 @@ import {track} from './telemetry.ts';
 import {ensureLandWater, withheldNote, type Place} from './land-water.ts';
 import {coordinates, region as activeRegion} from './state.ts';
 import {checkGpx} from './gpx-check.ts';
+import {screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
 import {launchPoints, loadLaunchPoints} from './launches.ts';
 import {launchChoice} from './reach.ts';
 import {assessContours, depthContoursURL, NOTES} from './map/depth-contours.ts';
@@ -39,6 +40,8 @@ export type Target = {
   id: string; label: string; name?: string; latitude: number; longitude: number; habitat_grade?: string; canonical_habitat?: boolean;
   trip_rank?: number; trip_fit?: number; trip_species?: string; evidence_confidence?: {percent: number};
   neighborhood_depth_ft?: number[]; center_depth_ft?: number | null; terrain_interpretation?: string; species_fit?: Record<string, number>;
+  /** BF-closures-everywhere: set on every ranked place `selectBest` returns. */
+  screen?: PlaceVerdict;
 };
 export type Area = {id: string};
 export type ProtectedHit = {id: string; label: string; inside: boolean; reef: boolean; matches: {name: string; url: string; agency: string; inside: boolean}[]};
@@ -286,7 +289,8 @@ export function createPlanner(deps: PlannerDeps) {
   function saveWaypoint(name: string, category: string): void {
     const at = waypointPosition.value;
     if (!at) return;
-    const candidate = {id: `user:${crypto.randomUUID()}`, name, category, ...at};
+    const candidate = {id: `user:${crypto.randomUUID()}`, name, category, ...at}, verdict = screenPlace(screen, at);
+    if (verdict.inside) { actionStatus.value = `Not saved: inside ${verdict.name ?? 'a protected area'}.`; return; }
     const points = userWaypoints([...(draft.value.userWaypoints ?? []), candidate]) as UserWaypoint[];
     if (!points.some(t => t.id === candidate.id)) { actionStatus.value = 'Choose a name (up to 80 characters), a listed category and a valid map position. Limit: 100 waypoints.'; return; }
     revision++;
@@ -302,6 +306,8 @@ export function createPlanner(deps: PlannerDeps) {
    * characters outside the user-waypoint id rule as `-`), through saveWaypoint's validation. Again for the same place adds nothing.
    */
   function addPlace(p: {id: string; name: string; latitude: number; longitude: number; shore?: boolean}): string | null {
+    const verdict = screenPlace(screen, p);
+    if (verdict.inside) { actionStatus.value = `Not saved: inside ${verdict.name ?? 'a protected area'}.`; return null; }
     const id = `user:${p.id.startsWith('survey:') ? 'survey' : 'habitat'}-${p.id.replace(/^(habitat|survey):/, '').replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}`;
     const saved: UserWaypoint[] = draft.value.userWaypoints ?? [], known = saved.some((t: UserWaypoint) => t.id === id);
     const points: UserWaypoint[] = known ? saved : userWaypoints([...saved, {id, name: p.name.slice(0, 80), category: p.shore ? 'other' : 'reef', latitude: p.latitude, longitude: p.longitude}]) as UserWaypoint[];
@@ -339,6 +345,7 @@ export function createPlanner(deps: PlannerDeps) {
       const best = rankBest(loaded, screen, {species: f.species, count: f.limit, maxDepth: f.depth, maxDistanceNm: f.distance,
         bounds: f.scope === 'map' ? [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()] : null,
         origin: port ? {latitude: port.match[0], longitude: port.match[1]} : null, place, stats});
+      for (const t of best) t.screen = screenPlace(screen, t);
       const held = withheldNote(stats.withheld);
       if (!best.length) throw Error(`No ranked reefs meet these filters and current checks.${held ? ` ${held}` : ''} Widen the area or distance; no weaker spots were added.`);
       canonical = loaded;
@@ -417,7 +424,7 @@ export function createPlanner(deps: PlannerDeps) {
       if (context) return new File([context], `SkipperCast-${region.id}-${d.date || today}-boundary-context.html`, {type: 'text/html'});
     }
     const result = buildExport(request()) as {gpx: string; counts: {waypoints: number}};
-    if (kind === 'gpx') { const c = checkGpx(result.gpx, {waypoints: result.counts.waypoints}); if (!c.ok) throw Error(`The GPX file failed its own check: ${c.problems[0]}. Nothing was handed over.`); }
+    if (kind === 'gpx') { const c = checkGpx(result.gpx, {waypoints: result.counts.waypoints}, screen ?? null); if (!c.ok) throw Error(`The GPX file failed its own check: ${c.problems[0]}. Nothing was handed over.`); }
     const base = `SkipperCast-${region.id}-${d.date || today}-${result.counts.waypoints}wp`;
     return kind === 'notes'
       ? new File([offlineNotes(result, region, {...d, date: d.date || today}, coordinates.value) as string], `${base}.html`, {type: 'text/html'})
