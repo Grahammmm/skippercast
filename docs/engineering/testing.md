@@ -150,5 +150,5 @@ the model endpoints, so worker-side upstream requests cannot rate-limit the
 meteogram assertions. Unknown fields remain null. The outage test overrides
 these responses with 503 and requires the graph to say it is unavailable.
 
-Use a free `E2E_PORT` for local checks: Playwright can reuse a server already
-running on its default port, which may belong to a different project.
+A local run starts its own server and fails if `E2E_PORT` (8787) is taken. Set
+`E2E_PORT` to a free port, or `E2E_REUSE=1` to reuse a server you started from this checkout.

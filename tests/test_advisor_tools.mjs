@@ -282,7 +282,7 @@ test('conditions: the window parser reads wind, gusts, seas, swell and comfort f
   assert.deepEqual(day.wind_kt, [Math.round(min('gfs_global', 'wind_speed_10m', 'kn')), Math.round(max('gfs_global', 'wind_speed_10m', 'kn'))]);
   assert.equal(day.gusts_kt, Math.round(max('gfs_global', 'wind_gusts_10m', 'kn')));
   const seas = times.map(t => Math.max(samplePoint(m.ncep_gfswave016.data[point], 'wave_height', t, 'ft'), samplePoint(m.ecmwf_wam.data[point], 'wave_height', t, 'ft')));
-  assert.deepEqual(day.seas_ft, [Math.round(Math.min(...seas)), Math.round(Math.max(...seas))]);
+  assert.deepEqual(day.seas_ft, [Math.round(Math.min(...seas)), Math.ceil(Math.max(...seas) - 1e-9)]); // SC1938-12: the printed maximum rounds up
   assert.deepEqual(day.swell_ft, [Math.round(min('ncep_gfswave016', 'swell_wave_height', 'ft')), Math.round(max('ncep_gfswave016', 'swell_wave_height', 'ft'))]);
   assert.equal(day.swell_period_s, Math.round(samplePoint(m.ncep_gfswave016.data[point], 'swell_wave_period', times[1], 's')));
   assert.equal(day.wind_from, conditions.compass(samplePoint(m.gfs_global.data[point], 'wind_direction_10m', times[1], '°')));
