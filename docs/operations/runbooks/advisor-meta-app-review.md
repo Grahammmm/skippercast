@@ -8,6 +8,8 @@ Do the steps in order and tick them as you go. Meta's dashboard labels move ofte
 
 ## 0. Before you start
 
+*Re-verified 2026-11-03 against `8ce0184c2d58c94e5eb582538b945fcef7834c02`: the six secret names and switches are in the code. Secret setup, deployment and counsel approval remain owner-only.*
+
 - [ ] TA-O4 is done: `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN`, `META_PAGE_ID`, `META_PAGE_TOKEN` and `META_IG_USER_ID` are repository secrets, and the admin Health view shows the publishing quota. `META_VERIFY_TOKEN` is any long random string you choose (for example `openssl rand -hex 24`); Meta sends it back during the handshake.
 - [ ] The advisor is deployed with `TEXT_ADVISOR_ENABLED=true`. Every advisor path, the webhook included, answers `404` while it is off, and Meta cannot verify a `404`.
 - [ ] Health → **Instagram inbox** shows "Webhook verify token and app secret: Set".
@@ -15,6 +17,8 @@ Do the steps in order and tick them as you go. Meta's dashboard labels move ofte
 - [ ] The privacy notice ([`dist/privacy.html` § Text Advisor](../../../dist/privacy.html)) has been reviewed and approved by you and counsel. It is a draft until then, and App Review checks it.
 
 ## 1. Business Verification
+
+*Owner-only: the business and domain verification steps require the owner's accounts and documents.*
 
 Meta requires a verified business for Advanced Access to messaging permissions. It can take several days, so start it first.
 
@@ -30,6 +34,8 @@ Meta requires a verified business for Advanced Access to messaging permissions. 
 
 ## 2. App settings
 
+*Owner-only: these app dashboard settings require the owner's Meta account.*
+
 App Dashboard → the "SkipperCast Publisher" app → **App settings → Basic**:
 
 - [ ] **Privacy Policy URL:** `https://skippercast.com/privacy.html`
@@ -39,6 +45,8 @@ App Dashboard → the "SkipperCast Publisher" app → **App settings → Basic**
 - [ ] Save. Live mode later refuses an app without these.
 
 ## 3. The webhook
+
+*Re-verified 2026-11-03 against `8ce0184c2d58c94e5eb582538b945fcef7834c02`: the GET and POST callback path, token name, and subscription fields match the code. The handshake compares SHA-256 digests of the supplied and configured tokens and rejects a mismatch. Meta dashboard configuration remains owner-only.*
 
 App Dashboard → **Webhooks** (or Products → Webhooks; on newer dashboards, Use cases → the Instagram use case → Customize → Webhooks):
 
@@ -51,12 +59,16 @@ App Dashboard → **Webhooks** (or Products → Webhooks; on newer dashboards, U
 
 ## 4. The Instagram app toggle
 
+*Owner-only: the Instagram settings require the owner's account.*
+
 On a phone signed into the `@skippercast` Instagram account:
 
 - [ ] Settings and activity → **Messages and story replies** → **Message controls** (on some versions: Settings → Privacy → Messages) → **Connected tools** → turn on **Allow access to messages**. Without it Meta delivers no DM to any app.
 - [ ] While there, check that **message requests** from people you don't follow are allowed: most people who DM a business account for the first time arrive as a request.
 
 ## 5. Test accounts
+
+*Re-verified 2026-11-03 against `8ce0184c2d58c94e5eb582538b945fcef7834c02`: the inbox channels, statuses and 24-hour DM window match the code. Creating roles, changing the switch and deploying remain owner-only.*
 
 In Development mode only accounts with a role on the app produce webhook events. Use them for the screencast.
 
@@ -71,9 +83,11 @@ In Development mode only accounts with a role on the app produce webhook events.
   ```bash
   npx wrangler d1 execute skippercast --remote --command "SELECT channel, status, intent, error, created_at FROM advisor_messages WHERE channel IN ('instagram_dm','instagram_comment') ORDER BY created_at DESC LIMIT 10"
   ```
-  Inbound rows end `done`; outbound rows `sent`. `outside-window` on an outbound row means the person's last DM was more than 24 hours earlier.
+  Inbound rows end `done`; successful outbound rows end `sent`. `outside-window` on an outbound row can mean no valid recent DM within 24 hours, a private comment reply outside its 7-day window, or Meta rejected the send as outside its window.
 
 ## 6. Permissions and the usage text to paste
+
+*Re-verified 2026-11-03 against `8ce0184c2d58c94e5eb582538b945fcef7834c02`: the two inbox permission names are in the login script's requested scopes. App Review access and its requirements remain owner-only to check in Meta.*
 
 App Dashboard → **App Review → Permissions and features**. Request **Advanced Access** for the two inbox permissions; the form also asks about the permissions they depend on. Paste the text under each (edit "we" to your business name if Meta asks for the legal name). Publishing and insights stay on Standard Access: they act only on our own accounts, which hold roles on the app.
 
@@ -107,6 +121,8 @@ App Dashboard → **App Review → Permissions and features**. Request **Advance
 
 ## 7. The screencast
 
+*Re-verified 2026-11-03 against `8ce0184c2d58c94e5eb582538b945fcef7834c02`: the login script requests the named scopes. Recording and account interactions remain owner-only.*
+
 Meta wants one recording per permission, or one recording that shows each permission used end to end. Record the screen at a readable size, with no other accounts or notifications visible. Speak or caption each step. About 3 minutes.
 
 1. **The connection.** Show the App Dashboard briefly, then run the login the owner uses: in a terminal, `node scripts/advisor/meta-token.mjs`, open the printed Facebook Login URL, and show the permission dialog listing `instagram_manage_messages`, `instagram_manage_comments`, `instagram_basic`, `pages_show_list`, `pages_read_engagement` and `pages_manage_metadata`. Accept. Show the script printing the Page and Instagram account (cover the token on screen: blur it in the edit).
@@ -119,11 +135,15 @@ Meta wants one recording per permission, or one recording that shows each permis
 
 ## 8. Submit
 
+*Owner-only: submitting and answering Meta require the owner's account.*
+
 - [ ] In the App Review request, attach the screencast to each permission and paste the usage text.
 - [ ] **Reviewer instructions** (paste): "Our webhook answers Instagram DMs and keyword comments for @skippercast. To test: from any Instagram account, send @skippercast a direct message such as 'What's biting out of Morro Bay?' and you will receive a reply within a minute. Comment RIG under any of our posts and you will receive one private reply with a link. Send STOP to stop replies and 'forget me' then 'DELETE' to erase your data. No login to our site is needed." If Meta asks for a test user, give the tester account's username and password in the secure field only.
 - [ ] Submit. Meta reviews in days to weeks; answer its questions in the App Review inbox.
 
 ## 9. After approval: Live, then the switch
+
+*Re-verified 2026-11-03 against `8ce0184c2d58c94e5eb582538b945fcef7834c02`: both switch names are in the code. Live mode, changing switches and deployment remain owner-only.*
 
 - [ ] App Dashboard → top bar → **App Mode: Live** (or Publish). It refuses if step 2 is incomplete.
 - [ ] Check Health → Instagram inbox. Set the switch and deploy:
@@ -139,5 +159,7 @@ Meta wants one recording per permission, or one recording that shows each permis
 - [ ] Record the approval date and anything that differed from this runbook in [09 § As built (TA-S6)](../../plans/text-advisor/09-social.md) and the plan's status log.
 
 ## Turning it off
+
+*Re-verified 2026-11-03 against `8ce0184c2d58c94e5eb582538b945fcef7834c02`: a signed delivery is acknowledged without writing while the inbox is off. Changing the switch and deploying remain owner-only.*
 
 `gh variable set ADVISOR_INBOX_ENABLED --body false` and run the deploy workflow. The webhook keeps answering `200` to Meta (so Meta does not disable the subscription) and writes nothing. Nothing new is stored; messages already queued are still answered.

@@ -30,6 +30,7 @@ import {layerEntry} from './layers.ts';
 import {markData} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
+import {claimLine, type FleetClaim} from '../fleet.ts';
 
 type V1 = typeof import('../../dist/fleet-activity.js');
 const loadV1 = (): Promise<V1> => import('../../dist/fleet-activity.js');
@@ -128,7 +129,8 @@ const nm = (n: unknown): string => n !== null && n !== undefined && Number.isFin
 export function activityMark(v1: V1, layer: Activity, p: Props, zone: string): ChartMark {
   const planning = p.planning_only ? ' · NOAA planning-only' : '';
   const rights = `Source: ${p.source || '—'} · rights: ${p.rights || '—'}${p.classifier_version ? ` · classifier ${p.classifier_version}` : ''}`;
-  const basis = `${layerEntry(ACTIVITY_ENTRY[layer]).basis} Basis: ${p.basis || 'inferred-from-movement'}. AIS reception can miss boats or drop out offshore.`
+  const evidence = p.claim ? claimLine(p.claim as FleetClaim) : null;
+  const basis = `${evidence ? evidence + ' ' : ''}${layerEntry(ACTIVITY_ENTRY[layer]).basis} Basis: ${p.basis || 'inferred-from-movement'}. AIS reception can miss boats or drop out offshore.`
     + (p.planning_only ? ' NOAA planning-only: MarineCadastre backfill for verification and internal use; keep it off paid surfaces.' : '');
   const kind = (k: unknown) => v1.EVENT_STYLE[String(k) as keyof V1['EVENT_STYLE']]?.label ?? label(k);
   if (layer === 'events') return {id: `fleet:event:${p.id}`, name: boat(p), kind: `Fleet activity · admin${planning}`, source: rights, basis,

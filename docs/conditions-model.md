@@ -22,6 +22,8 @@ probability.
 bottom or the water column, for boat control. It charges wind, gusts, combined
 seas and wind chop on slopes, adds flat penalties for a crossing secondary
 swell and short steep chop, and caps any estimate built from partial fields.
+A limited estimate charges every input the hour carries and caps the result; it
+is never calmer than the full rubric on the same values.
 `verdictFor` turns it into go, marginal or no-go.
 
 **The window rule** asks whether an hour sits inside the person's own
