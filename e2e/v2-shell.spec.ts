@@ -350,6 +350,13 @@ test.describe('phone', () => {
 // inside the same stage and its in-scene place and target controls stay hidden, and no v1 map mounts.
 test('FE-60: no duplicate map, picker or timeline for one context (/map and /coast)', async ({page, pageErrors, v2, isMobile}) => {
   await page.route(/\/(?:api\/coast|coast-data)\//, () => { /* never answered: the terrain stays loading, offline */ });
+  // Silent means silent for the whole test: the renderer gives up on a dataset after its own 20 s timeout and the stage then
+  // swaps the loading scene for Chart, so on a slow runner the checks below raced that clock (main runs 41654211025,
+  // 41655615036). The give-up itself is covered by tests/test_map_stage.mjs. Long request deadlines never fire here.
+  await page.addInitScript(() => {
+    const timeout = AbortSignal.timeout.bind(AbortSignal);
+    AbortSignal.timeout = ms => (ms >= 10_000 ? new AbortController().signal : timeout(ms));
+  });
   const contexts: Array<[string, string, 'chart' | 'terrain']> = [
     ['/map', v2.url('app', {...AREA, presentation: 'chart'}), 'chart'],
     ['/coast', `/coast?${new URLSearchParams({...AREA, ui: 'v2'})}`, 'terrain'],
@@ -358,6 +365,17 @@ test('FE-60: no duplicate map, picker or timeline for one context (/map and /coa
     await page.goto(url);
     await expect(page).toHaveURL(/\/map\?/);
     await expect(page.locator('.app-location'), name).toContainText('Morro Bay');
+    // Inspect the deliberately loading embed before other controls: its real
+    // fetch deadline removes the scene, so this is not a stable end-of-test state.
+    if (surface === 'terrain') {
+      const host = page.locator('.app-terrain');
+      await expect.poll(() => host.evaluate(el => !!el.shadowRoot?.getElementById('scene')), name).toBe(true);
+      // The host owns place, target and time: the embed's own species picker is hidden and it draws no timeline.
+      expect(await host.evaluate(el => {
+        const root = el.shadowRoot!, species = root.getElementById('species') as HTMLElement | null;
+        return {species: !species || species.hidden, timeline: root.querySelectorAll('input[type="range"][aria-label="Hour"], .time-dock-center').length};
+      }), name).toEqual({species: true, timeline: 0});
+    }
     // One map: one stage, one visible surface, at most one MapLibre canvas, no v1 map.
     await expect(page.locator('section.app-stage'), name).toHaveCount(1);
     await expect(page.locator(surface === 'chart' ? '.app-map' : '.app-terrain'), name).toBeVisible();
@@ -374,15 +392,6 @@ test('FE-60: no duplicate map, picker or timeline for one context (/map and /coa
     // One timeline: one hour slider and at most one day picker.
     await expect(page.locator('input[aria-label="Hour"]'), `${name}: hour slider`).toHaveCount(1);
     expect(await page.getByRole('group', {name: 'Day', exact: true}).count(), `${name}: day picker`).toBeLessThanOrEqual(1);
-    if (surface === 'terrain') {
-      const host = page.locator('.app-terrain');
-      await expect.poll(() => host.evaluate(el => !!el.shadowRoot?.getElementById('scene')), name).toBe(true);
-      // The host owns place, target and time: the embed's own species picker is hidden and it draws no timeline.
-      expect(await host.evaluate(el => {
-        const root = el.shadowRoot!, species = root.getElementById('species') as HTMLElement | null;
-        return {species: !species || species.hidden, timeline: root.querySelectorAll('input[type="range"][aria-label="Hour"], .time-dock-center').length};
-      }), name).toEqual({species: true, timeline: 0});
-    }
   }
   expect(pageErrors).toEqual([]);
 });

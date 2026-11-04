@@ -2,6 +2,7 @@ import { getRegion, acceptsFeed, localContext, assetURL } from "./region.js";
 import { fetchJSON, compass } from "./forecast.js";
 import { esc, num, local, from } from "./marine-charts.js";
 import { sharedStation, sourceStation, stationText } from "../web/station-label.ts";
+import { FT_PER_M, KT_PER_MS, M_PER_NMI } from "../web/units.ts";
 
 export const OBSERVATION_REFRESH = 5 * 60 * 1000;
 export const FORECAST_REFRESH = 30 * 60 * 1000;
@@ -42,11 +43,11 @@ export function buoyReading(feed, id = "diablo", now = Date.now()) {
     return n !== null && n <= 360 ? n : null;
   };
   return {
-    height: value(wave, "WVHT", "m", 3.28084),
+    height: value(wave, "WVHT", "m", FT_PER_M),
     period: value(wave, "DPD", "sec"), from: direction(wave, "MWD"), waveTime,
     waveState: freshness(waveTime, now, ok),
-    wind: value(wind, "WSPD", "m/s", 1.943844),
-    gust: value(wind, "GST", "m/s", 1.943844), windFrom: direction(wind, "WDIR"), windTime,
+    wind: value(wind, "WSPD", "m/s", KT_PER_MS),
+    gust: value(wind, "GST", "m/s", KT_PER_MS), windFrom: direction(wind, "WDIR"), windTime,
     windState: freshness(windTime, now, ok),
     feedTime: time(feed?.generated_at), sourceStatus: source?.status ?? null,
     issue: source?.issue || (!ok ? "Buoy refresh is unavailable or delayed." : null),
@@ -59,8 +60,8 @@ export function airportReading(response, now = Date.now()) {
     const q = p[key];
     return q?.unitCode === unit && finite(q.value) && !["X", "Z"].includes(q.qualityControl) ? q.value * factor + offset : null;
   };
-  const wind = val("windSpeed", "wmoUnit:km_h-1", 1 / 1.852),
-    gust = val("windGust", "wmoUnit:km_h-1", 1 / 1.852),
+  const wind = val("windSpeed", "wmoUnit:km_h-1", 1000 / M_PER_NMI),
+    gust = val("windGust", "wmoUnit:km_h-1", 1000 / M_PER_NMI),
     direction = val("windDirection", "wmoUnit:degree_(angle)"),
     visibility = val("visibility", "wmoUnit:m", 1 / 1609.344);
   return { epoch, state: freshness(epoch, now), description: p.textDescription || "Weather unavailable",
@@ -142,7 +143,7 @@ function spectrumHTML(feed, now) {
   // The spectrum fails over on its own: name its station when it is a backup or differs from the card's.
   const sp = sourceStation(s), ob = sourceStation(feed?.sources?.diablo);
   const where = sp && (sp.backupFor || (ob && ob.id !== sp.id)) ? `<p class="small">Spectrum from NDBC ${esc(stationText(sp))}.</p>` : "";
-  return `<details class="observed-components" data-live-disclosure="components"><summary>Measured swell &amp; wind waves</summary><p>Swell ${field("SwH", "m", 3.28084)} ft · ${field("SwP", "sec")} s · from ${esc(r?.SwD || "—")}</p><p>Wind waves ${field("WWH", "m", 3.28084)} ft · ${field("WWP", "sec")} s · from ${esc(r?.WWD || "—")}</p>${stamp(epoch, state)}<p class="small">NOAA’s spectral separation; components do not add directly to total wave height.</p>${where}</details>`;
+  return `<details class="observed-components" data-live-disclosure="components"><summary>Measured swell &amp; wind waves</summary><p>Swell ${field("SwH", "m", FT_PER_M)} ft · ${field("SwP", "sec")} s · from ${esc(r?.SwD || "—")}</p><p>Wind waves ${field("WWH", "m", FT_PER_M)} ft · ${field("WWP", "sec")} s · from ${esc(r?.WWD || "—")}</p>${stamp(epoch, state)}<p class="small">NOAA’s spectral separation; components do not add directly to total wave height.</p>${where}</details>`;
 }
 
 export function observedDock(observations, offshore = false, now = Date.now()) {
