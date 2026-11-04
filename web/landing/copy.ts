@@ -3,7 +3,7 @@
 // rewrites those hosts' text from the catalogue (catalog/app/strings.json) and gives the port chooser its catalogue-backed
 // copy. English is the page as served: applyLandingCopy makes no DOM write for it, and portCopy('en') is web/ports.ts COPY
 // word for word (tests/test_landing_i18n.mjs). Erasable syntax only: Node tests import this file by type stripping.
-import {STRINGS, t, type Language, type StringId} from '../i18n.ts';
+import {STRINGS, t, type Language, type StringId} from './i18n.ts';
 import type {Port} from '../ports.ts';
 
 /** The hosts the static page marks: `data-i18n` (the element's text), `data-i18n-lead` (only its first text node: the planning line keeps its Terms link) and `data-i18n-aria` (its aria-label). */

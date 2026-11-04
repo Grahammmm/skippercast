@@ -13,11 +13,8 @@ import {num, t, type Language} from '../i18n.ts';
 import {sharedStation, sourceStation, stationText} from '../station-label.ts';
 import {FT_PER_M, KT_PER_MS} from '../units.ts';
 
-export const DEFAULT_REGION = 'morro-bay';
-/** The default region's name (its region.json `name`, equal by test), shown until that loads: the readout names the place it reads (#422). */
-export const DEFAULT_PLACE = t('landing.place.default', 'en');
-/** "Morro Bay & Avila area"; a name that already ends in "area" is kept as it is. */
-export const placeLabel = (name: string): string => /\barea$/i.test(name.trim()) ? name.trim() : `${name.trim()} area`;
+import {DEFAULT_REGION, DEFAULT_PLACE, placeLabel} from './place.ts';
+export {DEFAULT_REGION, DEFAULT_PLACE, placeLabel} from './place.ts';
 /** v1's rule (dist/live-conditions.js): a feed generated more than 90 minutes ago is late. */
 export const FEED_LATE_MIN = 90;
 const RAW = 'https://raw.githubusercontent.com/Grahammmm/skippercast/';

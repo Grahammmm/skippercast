@@ -131,6 +131,9 @@ test('static_hosts_catalogue_and_budget: English is a no-op; Spanish writes only
   // The files are covered, the catalogue and the files are clean, and a bare literal in any of them would fail the lint.
   for (const file of ['main.tsx', 'copy.ts', 'Landing.tsx', 'PortInput.tsx', 'ProfileStep.tsx', 'Readout.tsx', 'readings.ts', 'live-verdict.ts']) assert.ok(COVERED.includes(`web/landing/${file}`), file);
   assert.deepEqual(catalogueProblems(), []);
+  const slice = JSON.parse(await readFile(join(ROOT, 'web/landing/strings.generated.json'), 'utf8'));
+  for (const [id, entry] of Object.entries(slice)) assert.deepEqual(entry, m.STRINGS[id], `${id}: generated first-paint copy matches the shared catalogue`);
+  assert.equal(JSON.parse(await readFile(join(ROOT, 'scripts/startup-budget.json'), 'utf8')).precache.install_raw_max, 440746, 'the install ceiling is unchanged');
   for (const file of ['Landing.tsx', 'PortInput.tsx', 'Readout.tsx', 'readings.ts']) {
     const root = await mkdtemp(join(tmpdir(), 'landing-lint-')), {mkdir, writeFile} = await import('node:fs/promises');
     await mkdir(join(root, 'catalog/app'), {recursive: true}); await mkdir(join(root, 'web/landing'), {recursive: true});
@@ -142,13 +145,13 @@ test('static_hosts_catalogue_and_budget: English is a no-op; Spanish writes only
   const result = await build({entryPoints: [join(ROOT, 'web/landing/main.tsx')], bundle: true, splitting: true, format: 'esm', platform: 'browser', minify: true, outdir: join(await mkdtemp(join(tmpdir(), 'landing-budget-')), 'out'),
     write: false, metafile: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins, external: ['*.css']});
   const outputs = Object.values(result.metafile.outputs), entry = outputs.find(o => o.entryPoint?.endsWith('web/landing/main.tsx'));
-  for (const mod of ['web/landing/live-verdict.ts', 'web/brief/Brief.tsx', 'web/brief/verdict.ts', 'web/app/App.tsx']) assert.ok(!Object.keys(entry.inputs).includes(mod), `${mod} is not in the entry chunk`);
+  for (const mod of ['web/landing/readings.ts', 'catalog/app/strings.json', 'web/landing/live-verdict.ts', 'web/brief/Brief.tsx', 'web/brief/verdict.ts', 'web/app/App.tsx']) assert.ok(!Object.keys(entry.inputs).includes(mod), `${mod} is not in the entry chunk`);
   // The initial JavaScript is the entry and every chunk it imports statically (dynamic imports load after first paint); it carries the hosts' helper and the catalogue.
   const byPath = Object.fromEntries(Object.entries(result.metafile.outputs)), entryPath = Object.keys(byPath).find(k => byPath[k] === entry);
   const initial = new Set(), walk = path => { if (initial.has(path)) return; initial.add(path); for (const i of byPath[path]?.imports ?? []) if (i.kind === 'import-statement') walk(i.path); };
   walk(entryPath);
   const initialInputs = [...initial].flatMap(p => Object.keys(byPath[p].inputs));
-  assert.ok(initialInputs.includes('web/landing/copy.ts') && initialInputs.includes('catalog/app/strings.json'), 'the static hosts helper and the catalogue are in the initial JS');
+  assert.ok(initialInputs.includes('web/landing/copy.ts') && initialInputs.includes('web/landing/strings.generated.json'), 'the static hosts helper and the catalogue are in the initial JS');
   const budget = JSON.parse(await readFile(join(ROOT, 'scripts/startup-budget.json'), 'utf8')).bundles['landing.html'].js_gzip_max;
   const size = [...initial].reduce((sum, p) => sum + gzipSync(result.outputFiles.find(f => f.path.endsWith(`/${p.split('/').pop()}`)).contents).length, 0);
   assert.ok(size < budget, `the initial JS (${size} B gzipped) is inside the landing budget (${budget} B)`);
@@ -323,6 +326,11 @@ test('spanish_live_reason_parity: the verdict word, day, boat and reason in Span
   const named = await run(boatEntry({name: 'Wren <b>', loa_ft: 31}), {}, 'es');
   assert.equal(named.boatName, 'Wren <b>'); assert.equal(named.boatNote, 'Las calificaciones son un modelo empírico para casco de planeo ajustado a un barco de 23 ft, no un cálculo de navegabilidad.');
   assert.equal((await run(boatEntry({name: 'Wren', loa_ft: 31}), {})).boatNote, 'Ratings are a planing-hull rule-of-thumb model tuned on a 23 ft boat, not a sea-keeping calculation.');
+  for (const name of ['your boat', 'your 19 ft boat', 'your 19.5 ft boat']) {
+    for (const lang of ['en', 'es']) assert.equal((await run(boatEntry({name, loa_ft: 19}), {}, lang)).boatName, name, `${lang}: custom name collision stays literal`);
+  }
+  assert.equal((await run(boatEntry({}), {}, 'es')).boatName, 'tu barco');
+  assert.equal((await run(boatEntry({name: '19 ft boat', loa_ft: 19}), {}, 'es')).boatName, 'tu barco de 19 ft');
   assert.equal((await run(boatEntry({loa_ft: 19}), {}, 'es')).boatName, 'tu barco de 19 ft');
   assert.equal((await run(boatEntry({loa_ft: 19}), {})).boatName, 'your 19 ft boat');
   assert.equal((await run(boatEntry({name: 'Wren', loa_ft: 23}), {}, 'es')).boatNote, null, 'inside the reference range: no caveat');

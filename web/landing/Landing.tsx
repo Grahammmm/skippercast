@@ -17,12 +17,13 @@ import type {Profile} from '../profile.ts';
 import {PortInput} from './PortInput.tsx';
 import {ProfileStep} from './ProfileStep.tsx';
 import {warmRegion, type WarmState} from './region-warm.ts';
-import {DEFAULT_REGION, loadReadout, type Readout as Data} from './readings.ts';
+import {DEFAULT_REGION} from './place.ts';
+import type {Readout as Data} from './readings.ts';
 import {Readout} from './Readout.tsx';
 import type {LandingVerdict} from './live-verdict.ts';
 import {degraded} from '../degraded.ts';
 import {DegradedNotice} from '../degraded-notice.tsx';
-import {language, t} from '../i18n.ts';
+import {language, t} from './i18n.ts';
 
 /** The nav (§ 7): Fleet and Reports open the app's views (Reports, FE-52), How it's built the sources page (Q16). */
 export const NAV = [
@@ -115,7 +116,7 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
     let alive = true;
     loadList();
     // The verdict's modules load only once the readout is in, and nothing is set after unmount.
-    void loadReadout(undefined, undefined, undefined, language.value).then(r => { setReadout(r); return alive ? verdict() : null; }).then(v => { if (alive) setAnswer(v); }, () => {});
+    void import('./readings.ts').then(({loadReadout}) => loadReadout(undefined, undefined, undefined, language.value)).then(r => { setReadout(r); return alive ? verdict() : null; }).then(v => { if (alive) setAnswer(v); }, () => {});
     return () => { alive = false; leaveWarm(); };
   }, [load]);
   // Step 1 → 2: remember the choice and warm its region while they pick a profile; a later choice ignores an earlier warm-up's answer.

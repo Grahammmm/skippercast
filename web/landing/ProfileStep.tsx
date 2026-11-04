@@ -10,7 +10,7 @@
 import {useEffect, useRef} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {PROFILES, type Profile} from '../profile.ts';
-import {language, t} from '../i18n.ts';
+import {language, t} from './i18n.ts';
 import type {WarmState} from './region-warm.ts';
 
 /** The English step copy (the catalogue's en values, equal to the strings this file carried before SC0707-05); the rendered text follows the page language. */

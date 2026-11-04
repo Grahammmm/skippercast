@@ -14,7 +14,7 @@ import {dateKey} from '../../packages/coast/src/daily.ts';
 import {createRegionReader, REGION_MISSING} from '../app/region-info.ts';
 import {briefFrom, leadDayText, leadHour, loadDailyFeed} from '../brief/Brief.tsx';
 import {briefVerdict, type DayVerdict} from '../brief/verdict.ts';
-import {boatBasisName, boatRangeNote, type SavedBoatLike} from '../boat-range.ts';
+import {boatBasisName, customBoatName, boatRangeNote, type SavedBoatLike} from '../boat-range.ts';
 import {num, t, type Language, type StringId} from '../i18n.ts';
 import {createCoastData} from '../coast-data.ts';
 import {loadConditionsForecast} from '../conditions.ts';
@@ -51,7 +51,7 @@ function deviceBoat(): {boat: NonNullable<SavedBoatLike> | null; factors: Return
 /** The saved boat's name as the heading gives it: a saved custom name stays literal; the length and no-name forms follow `lang` (as web/brief/Brief.tsx boatName does). */
 function boatName(boat: NonNullable<SavedBoatLike>, lang: Language): string {
   const name = boatBasisName(boat);
-  if (lang === 'en') return name;
+  if (lang === 'en' || customBoatName(boat) !== null) return name;
   const length = /^your (\d+(?:\.\d+)?) ft boat$/.exec(name);
   return name === 'your boat' ? t('brief.boat.generic', lang) : length ? t('brief.boat.yours', lang, {n: num(Number(length[1]), lang)}) : name;
 }

@@ -8,9 +8,10 @@
 // region.json name), not the visitor's launch: the landing reads the default
 // region until it follows the port input.
 import {Tile, type TileHue} from '../ui/Tile.tsx';
-import {language, t} from '../i18n.ts';
+import {language, t} from './i18n.ts';
 import type {IconName} from '../ui/icons.tsx';
-import {DEFAULT_PLACE, placeLabel, type Readout as Data, type ReadingId} from './readings.ts';
+import {DEFAULT_PLACE, placeLabel} from './place.ts';
+import type {Readout as Data, ReadingId} from './readings.ts';
 
 const LOOK: Readonly<Record<ReadingId, {hue: TileHue; icon: IconName}>> = {
   wind: {hue: 'mint', icon: 'wind'}, swell: {hue: 'blue', icon: 'wave'}, water: {hue: 'coral', icon: 'temperature'}, tide: {hue: 'amber', icon: 'tide'},

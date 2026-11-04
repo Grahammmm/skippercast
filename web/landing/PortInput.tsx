@@ -9,7 +9,7 @@ import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import type {ComponentChildren} from 'preact';
 import {Button, IconButton} from '../ui/Button.tsx';
 import {forgetHome, hasSavedHome, listPorts, locatePort, type CookieJar, type HomeStorage, type Port} from '../ports.ts';
-import {language, t} from '../i18n.ts';
+import {language, t} from './i18n.ts';
 import {portCopy} from './copy.ts';
 
 export type PortInputProps = {

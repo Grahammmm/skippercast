@@ -13,13 +13,13 @@ import {isProfile, type Profile} from '../profile.ts';
 import {loadPorts, portURL, savedPortId, type Port} from '../ports.ts';
 import {LandingApp, LandingHead} from './Landing.tsx';
 import {LayerDots} from './LayerDots.tsx';
-import {DEFAULT_REGION} from './readings.ts';
+import {DEFAULT_REGION} from './place.ts';
 import {saveData} from './save-data.ts';
 import {warmApp} from './warm.ts';
 import {Shoreline, ShorelineCredit} from './Shoreline.tsx';
 import {initTelemetry} from '../telemetry.ts';
 import {installDegradedWatch} from '../degraded.ts';
-import {initLanguage, language, t} from '../i18n.ts';
+import {initLanguage, language, t} from './i18n.ts';
 import {applyLandingCopy} from './copy.ts';
 
 /** web/state.ts STORAGE_KEYS.profile (equal by test); the store itself is the app's and loads there. */
