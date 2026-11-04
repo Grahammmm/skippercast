@@ -48,9 +48,40 @@ export function validateLogEntry(input: Record<string, unknown>) {
   return {trip_id, started_at, ended_at, method: text(input.method, 'method', 40), species: text(input.species, 'species', 60), outcome, count, lat: c?.lat ?? null, lon: c?.lon ?? null, note: text(input.note, 'note', NOTE_CHARS)};
 }
 
+// SC0922-03: a list page is the LIST_LIMIT newest rows; an optional `cursor` continues after the last row returned.
+// A cursor is a position (version, started_at, id), not a capability: the list query is always bound to the caller.
+const CURSOR_VERSION = 1, CURSOR_CHARS = 512, CANONICAL_TIME = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/;
+const bad = () => new ClientError('invalid catch-log cursor');
+const b64url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+export const encodeLogCursor = (started_at: string, id: string): string => b64url(new TextEncoder().encode(JSON.stringify([CURSOR_VERSION, started_at, id])));
+export function decodeLogCursor(token: string): {started_at: string; id: string} {
+  if (!token || token.length > CURSOR_CHARS || !/^[A-Za-z0-9_-]+$/.test(token)) throw bad();
+  let parsed: unknown;
+  try {
+    const raw = atob(token.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - token.length % 4) % 4));
+    const bytes = Uint8Array.from(raw, ch => ch.charCodeAt(0));
+    if (b64url(bytes) !== token) throw bad();   // one spelling per position: no stray trailing bits
+    parsed = JSON.parse(new TextDecoder('utf-8', {fatal: true, ignoreBOM: false}).decode(bytes));
+  } catch { throw bad(); }
+  if (!Array.isArray(parsed) || parsed.length !== 3 || parsed[0] !== CURSOR_VERSION) throw bad();
+  const [, started_at, id] = parsed;
+  if (typeof started_at !== 'string' || !CANONICAL_TIME.test(started_at) || Number.isNaN(Date.parse(started_at)) || new Date(started_at).toISOString() !== started_at) throw bad();
+  if (typeof id !== 'string' || !id || id.length > 64 || /[\u0000-\u001f\u007f]/.test(id)) throw bad();
+  return {started_at, id};
+}
+
 catchLog.get('/api/catch-log', async c => {
-  const rows = (await db(c.env).prepare('SELECT * FROM catch_log WHERE owner=? ORDER BY started_at DESC, id LIMIT ?').bind(c.var.owner, LIST_LIMIT).all()).results;
-  return json({entries: rows});
+  const given = c.req.queries('cursor');
+  const after = given === undefined ? null : given.length === 1 ? decodeLogCursor(given[0]!) : (() => { throw bad(); })();
+  const where = after ? ' AND (started_at < ? OR (started_at = ? AND id > ?))' : '';
+  const args = after ? [c.var.owner, after.started_at, after.started_at, after.id, LIST_LIMIT + 1] : [c.var.owner, LIST_LIMIT + 1];
+  const found = (await db(c.env).prepare(`SELECT * FROM catch_log WHERE owner=?${where} ORDER BY started_at DESC, id ASC LIMIT ?`).bind(...args).all()).results as {started_at: string; id: string}[];
+  const rows = found.slice(0, LIST_LIMIT), more = found.length > LIST_LIMIT;
+  // The body stays {entries}; the page position travels in headers so a caller that sends no cursor sees today's JSON.
+  const res = json({entries: rows});
+  res.headers.set('X-SC-Catch-Log-Has-More', more ? 'true' : 'false');
+  if (more) { const last = rows[rows.length - 1]!; res.headers.set('X-SC-Catch-Log-Next-Cursor', encodeLogCursor(last.started_at, last.id)); }
+  return res;
 });
 // Another account's id answers exactly what an id that never existed answers.
 catchLog.get('/api/catch-log/:id', async c => {

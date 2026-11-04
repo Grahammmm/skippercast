@@ -6,12 +6,24 @@ const RETURN_KEY = 'skippercast-account-return';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[c]);
 const day = iso => iso ? new Date(iso).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'}) : '';
 
-async function api(path, {method = 'GET', body} = {}) {
+async function api(path, {method = 'GET', body, includeResponse = false} = {}) {
   const response = await fetch('/api/' + path, {method, headers: {'Content-Type': 'application/json'},
     body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(20000)});
   const data = await response.json().catch(() => ({}));
   if (!response.ok) { const error = Error(data.error || 'Could not complete this request.'); error.status = response.status; throw error; }
-  return data;
+  return includeResponse ? {data, response} : data;
+}
+
+/**
+ * One page of the owner's catch log (SC0922-03): the newest page when `cursor` is null, else the page after that cursor.
+ * The body stays {entries}; the server says whether older rows exist, and where they start, in two response headers.
+ * An answer without a usable entries list or without the has-more header is refused, never read as a finished list.
+ */
+export async function readLogPage(cursor = null) {
+  const {data, response} = await api(cursor ? 'catch-log?cursor=' + encodeURIComponent(cursor) : 'catch-log', {includeResponse: true});
+  const more = response.headers.get('X-SC-Catch-Log-Has-More'), next = response.headers.get('X-SC-Catch-Log-Next-Cursor');
+  if (!Array.isArray(data?.entries) || (more !== 'true' && more !== 'false') || (more === 'true') !== Boolean(next)) throw Error('The catch log answer was incomplete');
+  return {entries: data.entries, nextCursor: more === 'true' ? next : null, hasMore: more === 'true'};
 }
 
 /**
@@ -119,7 +131,9 @@ const logFormHTML = () => `<h2 class="account-subhead">Catch log</h2>
       <label for="log-note">Note</label><input id="log-note" type="text" maxlength="1000" />
       <div class="home-port-actions"><button type="submit" id="log-save">Save to my log</button></div>
     </form>
-    <ul class="account-passkeys" id="log-list"></ul>`;
+    <ul class="account-passkeys" id="log-list"></ul>
+    <p class="account-hint" id="log-status" role="status"></p>
+    <div class="home-port-actions"><button type="button" id="log-retry" hidden>Try again</button><button type="button" id="log-older" hidden>Show older entries</button></div>`;
 
 /** One saved spot as list HTML. Name, note and verdict are escaped, so markup in them shows as plain text. */
 export function spotItemHTML(spot, verdict) {
@@ -282,13 +296,46 @@ export async function openAccount() {
     let passkeys = [];
     try { passkeys = (await api('auth/passkeys')).passkeys; } catch (error) { status(passkeyMessage(error)); }
     body.innerHTML = signedInHTML(session, passkeys);
-    const list = $('#log-list'), tripSelect = $('#log-trip');
+    const list = $('#log-list'), tripSelect = $('#log-trip'), older = $('#log-older'), retry = $('#log-retry'), logStatus = $('#log-status');
     // Saved trips (one read per render, independent of the log, passkeys and spots): they label the Trip choice and date the entries.
-    let trips = [], entries = null;
+    // SC0922-03: the log is read a page at a time. `entries` holds every page shown so far in server order, `nextCursor` where the
+    // next older page starts (null: none), and `generation` counts first-page reads so an older-page read that a refresh or a newly
+    // saved entry has overtaken is dropped. `gone` holds ids removed here, so a page read before a removal cannot bring one back.
+    let trips = [], entries = null, nextCursor = null, busy = false, generation = 0, loadFailed = false, gone = new Set();
     const live = () => open === self && list.isConnected;
-    const drawLog = () => { if (entries) list.innerHTML = entries.map(row => logItemHTML(row, trips)).join(''); };
+    const drawLog = () => {
+      if (entries) list.innerHTML = entries.map(row => logItemHTML(row, trips)).join('');
+      const keepFocus = document.activeElement === older && !(entries && nextCursor);
+      older.hidden = !(entries && nextCursor); older.textContent = busy ? 'Loading older entries…' : 'Show older entries';
+      older.setAttribute('aria-disabled', String(busy));   // not `disabled`: a disabled button drops keyboard focus mid-load
+      retry.hidden = !loadFailed;
+      if (keepFocus) { logStatus.tabIndex = -1; logStatus.focus(); }
+    };
     const showLog = async () => {
-      try { const data = await api('catch-log'); if (!live()) return; entries = data.entries; drawLog(); } catch (error) { if (live()) status(passkeyMessage(error)); }
+      const mine = ++generation; busy = false; gone = new Set();
+      try {
+        const page = await readLogPage();
+        if (!live() || mine !== generation) return;
+        entries = page.entries; nextCursor = page.nextCursor; loadFailed = false;
+        logStatus.textContent = entries.length || nextCursor ? '' : 'No entries yet.';
+      } catch {
+        if (!live() || mine !== generation) return;
+        loadFailed = true; logStatus.textContent = 'Could not load your catch log. Try again.';
+      }
+      drawLog();
+    };
+    const showOlder = async () => {
+      if (busy || !nextCursor || !live()) return;
+      const mine = generation, cursor = nextCursor;
+      busy = true; logStatus.textContent = ''; drawLog();
+      try {
+        const page = await readLogPage(cursor);
+        if (!live() || mine !== generation) return;
+        const seen = new Set(entries.map(row => row.id));
+        for (const row of page.entries) if (!seen.has(row?.id) && !gone.has(row?.id)) { seen.add(row?.id); entries.push(row); }
+        nextCursor = page.nextCursor;
+      } catch { if (live() && mine === generation) logStatus.textContent = 'Could not load older entries. Try again.'; }
+      finally { if (live() && mine === generation) { busy = false; drawLog(); } }
     };
     const loadTrips = async () => {
       try {
@@ -302,8 +349,16 @@ export async function openAccount() {
     };
     list.addEventListener('click', async event => {
       const b = event.target.closest('[data-remove-log]'); if (!b) return;
-      try { await api('catch-log/' + encodeURIComponent(b.dataset.removeLog), {method: 'DELETE', body: {}}); await showLog(); } catch (error) { status(passkeyMessage(error)); }
+      const id = b.dataset.removeLog;
+      try {
+        await api('catch-log/' + encodeURIComponent(id), {method: 'DELETE', body: {}});
+        // Only this row goes: older pages already shown and the cursor stay, and the cursor stays valid if it pointed at this row.
+        gone.add(id);
+        if (live() && entries) { entries = entries.filter(row => row.id !== id); if (!entries.length && !nextCursor) logStatus.textContent = 'No entries yet.'; drawLog(); }
+      } catch (error) { status(passkeyMessage(error)); }
     });
+    older.addEventListener('click', showOlder);
+    retry.addEventListener('click', showLog);
     $('#log-form').addEventListener('submit', async event => {
       event.preventDefault();
       const field = n => $('#log-' + n).value;
