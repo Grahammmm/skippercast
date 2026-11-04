@@ -547,3 +547,21 @@ test('plan test 20: the coastal route ignores pack contents, and a manifest read
   assert.ok(JSON.parse(before).includes('sc-pack-test-coast-1'));
   for (const path of coastalPaths) assert.equal((await dispatch(worker, get(path))).headers.get('X-SC-Offline'), meta.saved_at, 'the coastal snapshot still answers from its own caches');
 });
+
+// SC1952-03: the land-water index and lines and both depth-contour files a pack saved answer offline, marked with the saved time.
+test('offline, a pack\'s saved land-water and depth-contour files answer, also with a ?v= tag; an unsaved one fails', async () => {
+  const worker = loadWorker(), at = '2026-10-09T01:00:00.000Z';
+  const pack = await worker.storage.open('sc-pack-morro-bay-3');
+  const files = ['land-water.json', 'land-water-lines.json', 'depth-contours.geojson', 'depth-contours-overview.geojson'];
+  for (const name of files) await pack.put(`${ORIGIN}/regions/morro-bay/${name}`, new Response(`saved ${name}`, {headers: {'X-SC-Saved-At': at}}));
+  for (const name of files) {
+    const plain = await dispatch(worker, get(`/regions/morro-bay/${name}`));
+    assert.equal(await plain.text(), `saved ${name}`);
+    assert.equal(plain.headers.get('X-SC-Offline'), at, name);
+    const tagged = await dispatch(worker, get(`/regions/morro-bay/${name}?v=3`));
+    assert.equal(await tagged.text(), `saved ${name}`, `${name} with a version tag`);
+    assert.equal(tagged.headers.get('X-SC-Offline'), at);
+  }
+  await assert.rejects(dispatch(worker, get('/regions/morro-bay/shoreline.geojson')), /offline/, 'a file the pack did not save stays unavailable');
+  await assert.rejects(dispatch(worker, get('/regions/cambria-san-simeon/land-water.json')), /offline/, 'another region\'s file is not answered from this pack');
+});
