@@ -133,7 +133,7 @@ test('with the language es the first answer, the brief and its footer render Spa
     assert.match(answer(en), /<h2 class="app-first-answer-line">(?:Yes|Marginal|No|Not known yet) - tomorrow/);
     m.language.value = 'es';
     const es = m.render(m.h(m.App, {now: NOW})), esAnswer = answer(es), esBrief = m.render(m.h(m.Verdict, {now: NOW})), footer = m.render(m.h(m.BriefFooter, {}));
-    assert.match(esAnswer, /<h2 class="app-first-answer-line">(?:Sí|Dudoso|No|Aún no se sabe) - mañana/);
+    assert.match(esAnswer, /<h2 class="app-first-answer-line">(?:Sí|Marginal|No|Aún no se sabe) - mañana/);
     assert.match(esAnswer, /aria-label="La respuesta"/); assert.match(esAnswer, />Ver el mapa y el detalle</); assert.match(esAnswer, /Reglas (?:revisadas|pendientes de revisión|no disponibles)/);
     assert.match(esAnswer, />Reglas oficiales</); assert.doesNotMatch(esAnswer, /Official rules|Show the map|Rules reviewed/);
     assert.match(esBrief, /<span class="app-verdict-word">(?:Cómodo|Marginal|Agitado|Desconocido)<\/span>/); assert.match(esBrief, /mañana/);
@@ -149,6 +149,32 @@ test('with the language es the first answer, the brief and its footer render Spa
     m.language.value = 'en'; m.feedGaps.value = [];
     assert.ok(m.render(m.h(m.App, {now: NOW})) === en, 'back to English: byte-for-byte the same page');
   } finally { m.language.value = 'en'; m.feedGaps.value = []; reset(m); }
+});
+
+test('first_answer_es_marginal_not_dudoso: the Spanish first answer uses the brief\'s word Marginal, keeps its sentence and its day', () => {
+  const es = catalogue.strings['fa.marginal'].es;
+  assert.equal(es, 'Marginal - {day} es un día límite para pescar.');
+  assert.equal(t('fa.marginal', 'es', {day: 'mañana'}), 'Marginal - mañana es un día límite para pescar.');
+  assert.ok(es.startsWith(`${catalogue.strings['brief.verdict.marginal'].es} - `), 'the same word as the brief verdict');
+  assert.doesNotMatch(es, /Dudoso/);
+  assert.equal(es.split('{day}').length, 2, 'the placeholder appears once');
+});
+
+test('first_answer_es_rough_not_choppy: the Spanish too-rough sentence uses agitado, not picado, and stays a negative; Choppy keeps picado', () => {
+  const es = catalogue.strings['fa.no'].es;
+  assert.equal(es, 'No - {day} el mar está demasiado agitado para pescar.');
+  assert.equal(t('fa.no', 'es', {day: 'mañana'}), 'No - mañana el mar está demasiado agitado para pescar.');
+  assert.ok(es.includes(catalogue.strings['brief.verdict.rough'].es.toLowerCase()), 'the brief\'s Agitado, in sentence case');
+  assert.doesNotMatch(es, /picado/);
+  assert.equal(es.split('{day}').length, 2, 'the placeholder appears once');
+  assert.equal(catalogue.strings['verdict.band.choppy'].es, 'picado', 'Choppy is still picado');
+});
+
+test('first_answer_en_templates_unchanged: the English first-answer templates are the old literals', () => {
+  assert.equal(catalogue.strings['fa.marginal'].en, 'Marginal - {day} is a borderline day to fish.');
+  assert.equal(catalogue.strings['fa.no'].en, 'No - {day} looks too rough to fish.');
+  assert.equal(t('fa.marginal', 'en', {day: 'tomorrow'}), 'Marginal - tomorrow is a borderline day to fish.');
+  assert.equal(t('fa.no', 'en', {day: 'tomorrow'}), 'No - tomorrow looks too rough to fish.');
 });
 
 test('the verdict reason (limit and hold) is Spanish and the same sentence on the Brief and the first answer; flipping back restores English', async () => {
