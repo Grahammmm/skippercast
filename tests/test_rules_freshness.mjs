@@ -111,6 +111,7 @@ async function card(d, target = 'reef') {
 }
 
 test('the mark card renders the label beside an official link in every case', async t => {
+  await load();
   // Keep the check and render on the same Pacific day, even near midnight.
   t.mock.timers.enable({apis: ['Date'], now: NOW});
   const now = Date.now();
