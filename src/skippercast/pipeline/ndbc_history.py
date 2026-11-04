@@ -282,6 +282,8 @@ def collect(region_id, mode, session, cache, previous=None, now=None, revalidate
     checkpoint_path = cache / f"{region_id}-checkpoint.json"
     checkpoint = (_read_object(checkpoint_path, f"checkpoint {checkpoint_path.name}") if checkpoint_path.exists()
                   else {"schemaVersion": 1, "regionId": region_id, "records": {}})
+    if not isinstance(checkpoint.get("records"), dict):  # refuse before any request; never repair or overwrite
+        raise SystemExit(f"checkpoint {checkpoint_path.name}: records must be a JSON object; fix or remove it")
     out, ok, budget = [], False, max_files
     for ident, name, lat, lon in stations:
         old, sources, annual = prior.get(ident), [], {}
