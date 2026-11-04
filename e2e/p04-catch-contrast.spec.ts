@@ -169,7 +169,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // CSS, token or catch markup changes. The answer action uses the existing Button component
   // for its touch target and focus ring; BODY09 never renders that action. contrast(), assertions
   // and thresholds are untouched.
-  "web/app/App.tsx": "6c4a3583a07ea7471ccd3f1342f30906f822c90cedf66aff12b8d38251ce1a20",
+  // BF-spanish-app: App.tsx moves FirstAnswerLine (unchanged markup apart from its words coming from the string
+  // catalogue) into web/app/FirstAnswerLine.tsx and re-exports it, and drops the imports that move with it. BODY09
+  // mounts Reports/CatchCards, never App or FirstAnswerLine; no CSS, token or catch markup changes; contrast(),
+  // assertions and thresholds are untouched. Rebind only App.tsx.
+  "web/app/App.tsx": "33042c9f580645f13ac6b0daec7e7b7ac32868470960fd0f2b9828beb3116636",
   // SC-LAUNCH-4 (#1267, cost ceiling): Masthead.tsx imports web/degraded.ts (a signal and pure helpers, no top-level
   // side effect) and adds DegradedNotice after FreshnessDot. It renders nothing unless a response carries
   // X-SC-Degraded: cost-ceiling, which no BODY09 fixture does; when shown it reuses the existing .app-limits-note
