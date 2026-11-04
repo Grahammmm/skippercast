@@ -4,8 +4,10 @@ In **Export**, select **Best available** to choose up to 20 distinct measured
 reef habitat candidates in the selected region. The default plan contains
 waypoints and complete reef outlines only. Change the target, limit, nominal
 depth (up to 300 ft), map extent and port distance under **Trip filters**.
-The default port radius is 20 nautical miles; this is a straight-line reference,
-not a navigable route or fuel-range calculation. A new default plan uses the
+The default port radius is 20 nautical miles one way from the selected port,
+measured by water where a route is computed and otherwise by straight line
+(each ranked spot says which); it is not a navigable route or fuel-range
+calculation. A new default plan uses the
 coming Friday. Keep or change its date before checking conditions.
 
 ## Priority, habitat fit and confidence
