@@ -125,7 +125,7 @@ function browser(state, href) {
   state.configureStore({v2: true, storage: null});
   state.syncFromURL(href);
 }
-const pick = (id, kind = 'spot') => ({id, kind, name: id, distance: '4.0 nm', depth: '~40–80 ft', fit: 'Fits lingcod habitat 3 of 3', reason: 'Terrain.', nm: 4, at: {latitude: 35.2, longitude: -120.9}});
+const pick = (id, kind = 'spot') => ({id, kind, name: id, distance: '4.0 nm', depth: '~40–80 ft', fit: 'Fits lingcod habitat 3 of 3', reason: 'Terrain.', screen: {inside: false, name: null, distanceM: null, screened: true}, nm: 4, at: {latitude: 35.2, longitude: -120.9}});
 const shown = (list, empty = '') => ({source: 'atlas', label: 'Survey reef atlas', basis: 'Basis.', picks: list, empty});
 
 test('the view shows the selected area its dated reasons with sources, the explicit empty line without any, and nothing for other rows', async () => {
