@@ -136,14 +136,27 @@ async function load() {
 const pick = (id, nm, kind = 'spot') => ({id, kind, name: `Reef ${id}`, distance: `${nm} nm`, nm, depth: '~60–90 ft', fit: 'Fits', reason: 'Hard bottom.'});
 const RANKING = {source: 'atlas', label: 'Survey reef atlas', basis: '', picks: [pick('a', 7.4), pick('b', 3.1)], empty: '', harbor: 'Morro Bay'};
 
-test('the place: the selected pick, else the top pick, said so; none without a distance', async () => {
-  const {runPlace} = await load();
-  assert.deepEqual(runPlace(RANKING, 'b', null), {name: 'Reef b', nm: 3.1, basis: 'straight', why: 'no-product', chosen: true, unranked: false});
-  assert.deepEqual(runPlace(RANKING, 'elsewhere', null), {name: 'Reef a', nm: 7.4, basis: 'straight', why: 'no-product', chosen: false, unranked: true}, 'a selection outside the screened picks falls back to the top pick, flagged');
-  assert.deepEqual(runPlace(RANKING, null, null), {name: 'Reef a', nm: 7.4, basis: 'straight', why: 'no-product', chosen: false, unranked: false});
-  assert.deepEqual(runPlace({...RANKING, picks: [pick('h1', 2, 'habitat')]}, null, 'h1'), {name: 'Reef h1', nm: 2, basis: 'straight', why: 'no-product', chosen: true, unranked: false});
-  assert.equal(runPlace({...RANKING, picks: []}, null, null), null);
-  assert.equal(runPlace({...RANKING, picks: [{...pick('a', 1), nm: null}]}, null, null), null, 'no harbor, no distance');
+// The place comes from the routed list as painted (WhereToLook listedBoatPicks); these are its picks.
+const listed = (...picks) => picks.map(p => ({...p, basis: 'straight'}));
+
+test('the place: the selected listed pick, else the first listed, said so; none without a usable distance', async () => {
+  const {runPlace} = await load(), picks = listed(pick('a', 7.4), pick('b', 3.1));
+  assert.deepEqual(runPlace(picks, 'b', null), {name: 'Reef b', nm: 3.1, basis: 'straight', chosen: true, unranked: false});
+  assert.deepEqual(runPlace(picks, 'elsewhere', null), {name: 'Reef a', nm: 7.4, basis: 'straight', chosen: false, unranked: true}, 'a selection outside the listed picks falls back to the first listed pick, flagged');
+  assert.deepEqual(runPlace(picks, null, null), {name: 'Reef a', nm: 7.4, basis: 'straight', chosen: false, unranked: false});
+  assert.deepEqual(runPlace(listed(pick('h1', 2, 'habitat')), null, 'h1'), {name: 'Reef h1', nm: 2, basis: 'straight', chosen: true, unranked: false});
+  assert.equal(runPlace([], null, null), null);
+  // The list's own distance, basis and reason are copied, not computed again.
+  assert.deepEqual(runPlace([{...pick('w', 5.5), basis: 'water'}], null, null), {name: 'Reef w', nm: 5.5, basis: 'water', chosen: false, unranked: false});
+  assert.deepEqual(runPlace([{...pick('f', 5.5), basis: 'straight', why: 'no-route'}], null, null), {name: 'Reef f', nm: 5.5, basis: 'straight', why: 'no-route', chosen: false, unranked: false});
+  // Reef places are never selected by a habitat id, and a spot never by a habitat's id.
+  assert.deepEqual(runPlace(listed(pick('r1', 2, 'reef'), pick('a', 1)), null, 'r1'), {name: 'Reef r1', nm: 2, basis: 'straight', chosen: false, unranked: true});
+  assert.equal(runPlace(listed(pick('h1', 2, 'habitat'), pick('a', 1)), 'h1', null).chosen, false);
+  // A distance that is not a usable number is no place, never a run: for the first pick and for a selected one.
+  for (const nm of [null, undefined, NaN, Infinity, -Infinity, -0.5]) {
+    assert.equal(runPlace(listed({...pick('a', 1), nm}), null, null), null, String(nm));
+    assert.equal(runPlace(listed(pick('b', 2), {...pick('a', 1), nm}), 'a', null), null, `selected ${nm}`);
+  }
 });
 
 test('the line renders each state for Boat only, with times in the region\'s zone and the method in a basis', async () => {
@@ -160,7 +173,7 @@ test('the line renders each state for Boat only, with times in the region\'s zon
   assert.match(ok, /Up to 4 h 10 min fishing at Reef a\./);
   assert.match(ok, /Leave 7 am · there 7:25 am · turn back 11:35 am · in by 12 pm · window 7 am–12 pm/);
   assert.doesNotMatch(ok, /app-run-note|outside the ranked list/);
-  assert.match(ok, /7\.4 nm straight line \(no water route: no land\/water data\) · at least 25 min each way at 20 kt · top pick/);
+  assert.match(ok, /7\.4 nm straight line \(water route not computed yet\) · at least 25 min each way at 20 kt · top pick/);
   assert.match(ok, /<details class="ui-popover"[^>]*>.*Run time is the distance from Morro Bay at the cruise speed you set/s, 'the method sits in the basis');
 
   const ask = line({}, null);
@@ -177,6 +190,12 @@ test('the line renders each state for Boat only, with times in the region\'s zon
   selection.value = 'elsewhere';
   assert.match(line(), /Your selected place is outside the ranked list, so times are for the top pick\. Up to 4 h 10 min fishing at Reef a\./);
   selection.value = null;
+  // Range removed every place the ranking found: said plainly, with no times; it is not a missing harbor.
+  const ranged = render(h(RunLine, {brief: brief(), ranking: {...RANKING, reach: 5, picks: [pick('a', 7.4), pick('b', 8)]}, now}));
+  assert.match(ranged, /data-state="no-place"/);
+  assert.match(ranged, /No listed place is within your range, so no run time\./);
+  assert.doesNotMatch(ranged, /No harbor position|Leave|turn back|each way/);
+  assert.match(render(h(RunLine, {brief: brief(), ranking: {...RANKING, reach: 5, picks: [pick('a', 7.4), pick('b', 3.1)]}, now})), /fishing at Reef b\./, 'the range keeps the place inside it, and the run names it');
   // Places with no distance (no harbor position): said plainly.
   assert.match(render(h(RunLine, {brief: brief(), ranking: {...RANKING, picks: [{...pick('a', 1), nm: null}]}, now})), /No harbor position to measure from, so no run time\./);
   assert.match(line({windows: [{...WINDOW, end: '2026-10-12T14:30:00.000Z'}]}), /The run to Reef a and back fills the 7 am–7:30 am window at 20 kt\./);

@@ -1,8 +1,11 @@
 // The Boat brief's run line (roadmap P2): fishing time at the chosen place
 // and when to turn back, from web/brief/run.ts. The place is the "Where to
-// look" pick the user selected, else the top pick, named either way: picks
-// have already passed the protected-area screen and the depth limit, so a
-// withheld mark never gets a fishing time. Without a cruise speed the line
+// look" pick the user selected, else the top pick, named either way. SC2207-02:
+// the picks are the list as painted (WhereToLook's listedBoatPicks, the same
+// memoised water routes and range), so the run never names or times a place the
+// list dropped, and it never searches a route itself. Picks have already passed
+// the protected-area screen and the depth limit, so a withheld mark never gets
+// a fishing time. Without a cruise speed the line
 // asks for one and opens the Boat limits form at that field; without a window
 // it names the input that is missing. The method sits in the basis popover.
 import {useEffect, useState} from 'preact/hooks';
@@ -11,12 +14,12 @@ import {Popover} from '../ui/Popover.tsx';
 import {LimitsDialog, LimitsForm} from '../app/LimitsPanel.tsx';
 import {regionInfo} from '../app/region-info.ts';
 import {cruiseSpeed, wantedHours} from '../limits.ts';
-import type {Ranking} from '../ranking.ts';
+import {ROUTE_BUDGET, type Ranking, type RoutedPick} from '../ranking.ts';
 import {habitat, profile, region, selection, species} from '../state.ts';
-import {landWater, loadLandWaterLines, type LandWaterState} from '../land-water.ts';
-import {waterRoute, type Route, type RouteFailure, type RoutePoint} from '../route.ts';
+import {landWater} from '../land-water.ts';
+import type {RouteFailure} from '../route.ts';
 import {barNote, durationText, planRun, ROUND_MIN, type RunPlace, type RunState} from './run.ts';
-import {currentRanking} from './WhereToLook.tsx';
+import {currentRanking, listedBoatPicks} from './WhereToLook.tsx';
 import type {Brief} from './types.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {loadRegs, regsData, regulationState, ruleSummary, openingAt} from '../regs.ts';
@@ -37,28 +40,21 @@ export function EntranceLine({brief, tz}: {brief: Brief; tz: string}) {
 const WHY: Record<RouteFailure, string> = {'no-product': 'no land/water data', 'lines-needed': 'shoreline still loading', 'start-not-water': 'the harbor or place is not on confirmed water',
   'end-not-water': 'the harbor or place is not on confirmed water', 'no-route': 'no water path found', 'too-far': 'too far to route'};
 
-// The last search, kept so a re-render with the same product, lines and ends does not search again.
-let last: {model: unknown; lines: unknown; key: string; route: Route} | null = null;
-function routeOf(lw: LandWaterState, from: RoutePoint, to: RoutePoint, id: string | null): Route {
-  const model = lw.state === 'ready' && lw.region === id ? lw.model : null, key = `${from.latitude},${from.longitude}>${to.latitude},${to.longitude}`;
-  if (!(last && last.model === model && last.lines === lw.lines && last.key === key)) last = {model, lines: lw.lines, key, route: waterRoute(model, lw.lines, from, to)};
-  return last.route;
-}
-
 /**
- * The run's place: the selected pick, else the top pick; null without a distance. `unranked` says a
- * selection was made that is not among the picks, so the line says whose times it shows. The distance is the water
- * route from the ranking's origin when one is computed, else the pick's straight line and why.
+ * The run's place, from the list as painted: the selected listed pick, else the first listed one; null when none is
+ * listed or its distance is not a usable number. `unranked` says a selection was made that is not among the listed
+ * picks (never listed, or dropped by the range), so the line says whose times it shows. The distance and its basis are
+ * the list's own, copied, never computed again.
  */
-export function runPlace(r: Ranking, spot: string | null, hab: string | null, lw: LandWaterState = landWater.value, id: string | null = region.value): (RunPlace & {chosen: boolean; unranked: boolean}) | null {
-  const chosen = r.picks.find(p => p.kind === 'spot' ? p.id === spot : p.id === hab), pick = chosen ?? r.picks[0];
-  if (!pick || pick.nm === null) return null;
-  const route = r.origin && pick.at ? routeOf(lw, r.origin, pick.at, id) : null;
-  const where = route?.ok ? {nm: route.nm, basis: 'water' as const} : {nm: pick.nm, basis: 'straight' as const, why: route ? route.reason : 'no-product' as const};
-  return {name: pick.name, ...where, chosen: !!chosen, unranked: !chosen && !!(spot || hab)};
+export function runPlace(picks: readonly RoutedPick[], spot: string | null, hab: string | null): (RunPlace & {chosen: boolean; unranked: boolean}) | null {
+  const chosen = picks.find(p => p.kind === 'spot' ? p.id === spot : p.kind === 'habitat' && p.id === hab), pick = chosen ?? picks[0];
+  if (!pick || typeof pick.nm !== 'number' || !Number.isFinite(pick.nm) || pick.nm < 0) return null;
+  return {name: pick.name, nm: pick.nm, basis: pick.basis, ...(pick.why ? {why: pick.why} : {}), chosen: !!chosen, unranked: !chosen && !!(spot || hab)};
 }
 
-const distanceText = (p: RunPlace): string => p.basis === 'water' ? `${p.nm.toFixed(1)} nm by water` : `${p.nm.toFixed(1)} nm straight line (no water route: ${WHY[p.why ?? 'no-product']})`;
+// A straight line with no reason is a route the list has not computed yet, not a failed one.
+const distanceText = (p: RunPlace): string => p.basis === 'water' ? `${p.nm.toFixed(1)} nm by water`
+  : `${p.nm.toFixed(1)} nm straight line (${p.why ? `no water route: ${WHY[p.why]}` : 'water route not computed yet'})`;
 
 /** "8 am", "8:25 am": the lower-exposure line's clock. */
 const clock = (iso: string, tz: string) => new Intl.DateTimeFormat('en-US', {hour: 'numeric', minute: '2-digit', timeZone: tz}).format(new Date(iso)).replace(':00', '').toLowerCase();
@@ -66,7 +62,7 @@ const kt = (n: number) => Number(n.toFixed(1)).toString();
 
 /** The basis: what the sum uses and what it leaves to the skipper. */
 export const runBasis = (harbor: string) =>
-  `Run time is the distance from ${harbor} at the cruise speed you set, rounded up to ${ROUND_MIN} minutes. It follows water cells of the NOAA shoreline and reads "by water"; with no route computed it falls back to the straight line, labelled with why. It is a planning distance, not a navigation route. `
+  `Run time is the distance from ${harbor} at the cruise speed you set, rounded up to ${ROUND_MIN} minutes. It follows water cells of the NOAA shoreline and reads "by water"; with no route computed it falls back to the straight line, labelled with why, or as waiting for the list's route. It is a planning distance, not a navigation route. `
   + 'Sea state, the bar crossing and fuel are left out. In by is the end of the lower-exposure window, which already weighs your limits, alerts, daylight and the bar at the window\'s start and end; leaving later than its start, the bar at your departure is yours to check. '
   + 'Counts from the legal opening when the target has one that day. '
   + 'A planning sum for your own decision; it cannot clear the entrance or promise a return.';
@@ -113,12 +109,10 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   const rules = regionInfo.value?.rules;
   useEffect(() => { if (rules) void loadRegs(rules); }, [rules?.id]);
   const boat = !!brief && profile.value === 'boat' && brief.profile === 'boat', id = region.value;
-  const r = boat ? ranking ?? currentRanking(now.getTime()) : null, place = r ? runPlace(r, selection.value, habitat.value) : null;
-  // The shoreline lines are asked for once when the route waits on them; the line re-renders with the route when they land.
-  // Only when the line can show a distance (a window and a cruise speed, as planRun needs): otherwise the lines file
-  // (about 270 KB for Morro Bay) would load at every Boat startup for a distance nobody sees (scripts/startup-budget.json).
-  const speed = cruiseSpeed.value, shows = !!brief?.windows.length && speed !== null && speed > 0;
-  useEffect(() => { if (id && shows && place?.why === 'lines-needed') void loadLandWaterLines(id); }, [id, shows, place?.why]);
+  // The list's own picks: the same ranking pool (ROUTE_BUDGET candidates) and memoised routes WhereToLook paints from; it alone
+  // computes the missing routes and loads the shoreline lines, so this line adds no search and no request.
+  const r = boat ? ranking ?? currentRanking(now.getTime(), ROUTE_BUDGET) : null, lw = landWater.value;
+  const listed = r ? listedBoatPicks(r, lw, id) : [], place = runPlace(listed, selection.value, habitat.value);
   if (!brief || !r) return null;
   const state = planRun(brief, place, cruiseSpeed.value, now), tz = regionInfo.value?.timezone ?? DEFAULT_ZONE;
   const text = runText(state, tz, place?.unranked), harbor = r.harbor ?? 'the harbor';
@@ -133,8 +127,9 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   const result = active ? fishingHours(state, {wantedMin: wantedHours.value === null ? null : wantedHours.value * 60, sunrise: brief.sunrise, sunset: brief.sunset, rule: {...rule, opensAt, label: target === 'reef' ? 'Lingcod & rockfish' : rule.profile?.name ?? target}}) : null;
   const verdict = result ? fishingWords(result, tz, brief.sunset, opensAt) : '';
   if (state.kind === 'ok' && result && result.kind !== 'no-wanted') text.lead = `Run to ${state.place.name}.`;
-  // Places listed with no distance: the region gives no harbor position to measure from.
-  if (state.kind === 'no-place' && r.picks.length) text.lead = 'No harbor position to measure from, so no run time.';
+  // Nothing to time: range removed every place the ranking found; or places are listed with no distance (no harbor position).
+  if (state.kind === 'no-place' && r.picks.length) text.lead = listed.length ? 'No harbor position to measure from, so no run time.'
+    : r.reach != null ? 'No listed place is within your range, so no run time.' : text.lead;
   return (
     <section class="app-run" aria-label="Fishing time and return" data-state={state.kind}>
       <EntranceLine brief={brief} tz={tz} />
