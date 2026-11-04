@@ -22,22 +22,26 @@ import {Readout} from './Readout.tsx';
 import type {LandingVerdict} from './live-verdict.ts';
 import {degraded} from '../degraded.ts';
 import {DegradedNotice} from '../degraded-notice.tsx';
+import {language, t} from '../i18n.ts';
 
 /** The nav (§ 7): Fleet and Reports open the app's views (Reports, FE-52), How it's built the sources page (Q16). */
 export const NAV = [
-  {label: 'Fleet', href: `/map?region=${DEFAULT_REGION}&view=fleet`},
-  {label: 'Reports', href: `/map?region=${DEFAULT_REGION}&view=reports`},
-  {label: 'How it’s built', href: '/sources'},
+  {label: t('landing.link.fleet', 'en'), href: `/map?region=${DEFAULT_REGION}&view=fleet`},
+  {label: t('landing.link.reports', 'en'), href: `/map?region=${DEFAULT_REGION}&view=reports`},
+  {label: t('landing.link.sources', 'en'), href: '/sources'},
 ] as const;
+/** NAV's labels in the page language, in NAV's order (NAV itself keeps the English metadata). */
+const NAV_IDS = ['landing.link.fleet', 'landing.link.reports', 'landing.link.sources'] as const;
 
 export function LandingHead(_props: {href: string}) {
+  const lang = language.value;
   return (
     <header class="landing-head">
       <a class="landing-brand" href="/">SkipperCast</a>
-      <nav aria-label="Site">
+      <nav aria-label={t('landing.aria.site', lang)}>
         <ul class="landing-nav">
-          {NAV.map(item => <li key={item.label}><a href={item.href}>{item.label}</a></li>)}
-          <li><a href="/map#account">Sign in</a></li>
+          {NAV.map((item, i) => <li key={item.href}><a href={item.href}>{t(NAV_IDS[i]!, lang)}</a></li>)}
+          <li><a href="/map#account">{t('landing.link.signin', lang)}</a></li>
         </ul>
       </nav>
     </header>
@@ -63,18 +67,20 @@ export type LandingAppProps = {
  * Tomorrow's answer for the boat saved on this device (else the reference boat), named, as the app's lead gives it; below the funnel, so nothing above the port input moves.
  * SC1322-06: `saved` (the Worker is past its cost ceiling, web/degraded.ts) labels it as from saved copies, not current.
  */
-export const LiveVerdict = ({v, saved = false}: {v: LandingVerdict; saved?: boolean}) => (
-  <section class="landing-verdict" aria-live="polite" aria-label={saved ? 'Tomorrow’s brief, from saved copies' : 'Tomorrow’s brief'} data-day={v.date} data-degraded={saved ? 'cost-ceiling' : undefined}>
-    <p class="landing-verdict-head">{saved ? 'From saved copies, not live: ' : null}{v.day} near {v.place}, {v.boatName}: <strong class="landing-verdict-word" data-verdict={v.verdict}>{v.word}</strong></p>
+export const LiveVerdict = ({v, saved = false}: {v: LandingVerdict; saved?: boolean}) => {
+  const lang = language.value;
+  return (
+  <section class="landing-verdict" aria-live="polite" aria-label={t(saved ? 'landing.verdict.ariaSaved' : 'landing.verdict.aria', lang)} data-day={v.date} data-degraded={saved ? 'cost-ceiling' : undefined}>
+    <p class="landing-verdict-head">{saved ? t('landing.verdict.saved', lang) : null}{t('landing.verdict.head', lang, {day: v.day, place: v.place, boat: v.boatName})}<strong class="landing-verdict-word" data-verdict={v.verdict}>{v.word}</strong></p>
     <p class="landing-verdict-limit">{v.sentence}</p>
     {v.boatNote ? <p class="landing-verdict-note">{v.boatNote}</p> : null}
-    <a class="landing-verdict-link" href={v.href}>Open the full brief</a>
+    <a class="landing-verdict-link" href={v.href}>{t('landing.verdict.link', lang)}</a>
   </section>
-);
+  );
+};
 
 /** Where the profile step leads: a port (warmed) or the central coast (nothing to warm). */
 type Choice = {place: string; port: Port | null};
-const EXPLORE_PLACE = 'Central coast';
 
 export function LandingApp({href, initialProfile = null, fleet = null, navigate = url => location.assign(url), load = true,
   warm = (region, signal) => warmRegion(region, href, undefined, undefined, {signal}), verdict = () => Promise.resolve(null)}: LandingAppProps) {
@@ -109,7 +115,7 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
     let alive = true;
     loadList();
     // The verdict's modules load only once the readout is in, and nothing is set after unmount.
-    void loadReadout().then(r => { setReadout(r); return alive ? verdict() : null; }).then(v => { if (alive) setAnswer(v); }, () => {});
+    void loadReadout(undefined, undefined, undefined, language.value).then(r => { setReadout(r); return alive ? verdict() : null; }).then(v => { if (alive) setAnswer(v); }, () => {});
     return () => { alive = false; leaveWarm(); };
   }, [load]);
   // Step 1 → 2: remember the choice and warm its region while they pick a profile; a later choice ignores an earlier warm-up's answer.
@@ -123,7 +129,7 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
     void warm(port.region, selection.signal).then(r => { if (warming.current === selection) setWarmth(r.state); },
       () => { if (warming.current === selection) setWarmth('failed'); });
   };
-  const explore = () => { leaveWarm(); setChoice({place: EXPLORE_PLACE, port: null}); setWarmth(null); };
+  const explore = () => { leaveWarm(); setChoice({place: t('landing.place.central', language.value), port: null}); setWarmth(null); };
   const restart = () => { leaveWarm(); setChoice(null); setWarmth(null); setBack(true); };
   // Step 2: accept once, synchronously, even before navigation unmounts us.
   const finished = useRef(false);

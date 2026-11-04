@@ -257,7 +257,8 @@ export function lintFile(path, source) {
 
 /** The string catalogue (catalog/app/strings.json, en + es) and the files whose user-visible words all come from it. To cover a surface: add its ids, replace its literals with t(id, lang), list its file here. */
 export const CATALOGUE = 'catalog/app/strings.json';
-export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/FirstAnswerLine.tsx', 'web/app/RulesCard.tsx', 'web/brief/verdict-copy.ts', 'web/brief/WhereToLook.tsx', 'web/brief/Run.tsx', 'web/app/LanguageChoice.tsx'];
+export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/FirstAnswerLine.tsx', 'web/app/RulesCard.tsx', 'web/brief/verdict-copy.ts', 'web/brief/WhereToLook.tsx', 'web/brief/Run.tsx', 'web/app/LanguageChoice.tsx',
+  'web/landing/main.tsx', 'web/landing/copy.ts', 'web/landing/Landing.tsx', 'web/landing/PortInput.tsx', 'web/landing/ProfileStep.tsx', 'web/landing/Readout.tsx', 'web/landing/readings.ts', 'web/landing/live-verdict.ts'];
 /** Prose-like literals in covered files that are data or code, not copy: a species group name (not translated) and a prefix the model writes. */
 export const LITERAL_OK = new Set(['Lingcod & rockfish', 'Using your limits']);
 

@@ -65,8 +65,8 @@ test('the landing has the line exactly once, inside its one footer, followed by 
   assert.equal(count(page, '<footer'), 1);
   assert.equal(count(page, LINE), 1);
   const footer = page.slice(page.indexOf('<footer'), page.indexOf('</footer>'));
-  assert.match(footer, /<p class="landing-planning">Planning aid · not a navigation chart\. <a href="\/terms\.html">Terms<\/a><\/p>/);
-  assert.match(footer, /<li><a href="\/terms\.html">Terms<\/a><\/li>/, 'the nav keeps its own Terms item');
+  assert.match(footer, /<p class="landing-planning" data-i18n-lead="brief\.planning">Planning aid · not a navigation chart\. <a href="\/terms\.html" data-i18n="brief\.terms">Terms<\/a><\/p>/);
+  assert.match(footer, /<li><a href="\/terms\.html" data-i18n="brief\.terms">Terms<\/a><\/li>/, 'the nav keeps its own Terms item');
   assert.ok(footer.indexOf('separate clocks') < footer.indexOf(LINE), 'after the clocks line');
 });
 
@@ -74,7 +74,7 @@ test('the C1 short form in disclaimers.md is the brief constant and the landing 
   const {PLANNING_AID} = await load();
   const short = c1ShortForm();
   assert.equal(short, PLANNING_AID);
-  assert.ok(read('dist/landing.html').includes(`>${short} <a href="/terms.html">`));
+  assert.ok(read('dist/landing.html').includes(`>${short} <a href="/terms.html" data-i18n="brief.terms">`));
 });
 
 test('disclaimers.md item 3 is built; item 2 still is not', () => {
