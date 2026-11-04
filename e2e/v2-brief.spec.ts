@@ -12,7 +12,7 @@
 // readings line, deck, gaps and caveat fold under Details, which expands.
 // FE-33: the tide sparkline draws the bound coast report's curve through
 // CoastMarkup in token colours; the regional brief (high and low events only)
-// says "Tide series unavailable" and still lists the events.
+// says there is no tide curve for this place and still lists the events.
 import {test, expect} from './fixtures.ts';
 import {forecastFixture} from './forecast-fixture.ts';
 
@@ -81,7 +81,7 @@ test('acceptance 1 and 3: a stale tile shows the stale state and its age; the br
   await expect(root.locator('.app-local')).toContainText('Local coast report unavailable here');
   await expect(root.locator('.app-brief-links')).toContainText('2 boats reported from Morro Bay & Avila Beach in the last 7 days');
   const spark = root.locator('figure.app-spark');
-  await expect(spark.locator('.app-spark-empty')).toHaveText('Tide series unavailable');
+  await expect(spark.locator('.app-spark-empty')).toHaveText('No tide curve for this place. The times below are the day’s predicted highs and lows.');
   // The day's events only, in time order: the high at 2:00 pm comes first.
   await expect(spark.locator('.app-spark-events li').first()).toHaveText(/^High \d{1,2}:\d\d [ap]m · 4\.1 ft MLLW$/);
   await v2.a11y(isMobile ? 'v2-brief-sheet' : 'v2-brief');

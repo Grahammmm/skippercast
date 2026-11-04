@@ -9,7 +9,8 @@
 // job_state keys); it does not ping Hermes (scripts/advisor/vision-conformance.mjs
 // does, with GET /v1/health).
 // TA-S6: the inbox switches, and subscribeWebhooks (the "Subscribe webhooks" action).
-import {advisorSettings} from '../settings.ts';
+import {advisorSettings, betaScope} from '../settings.ts';
+import type {BetaScope} from '../settings.ts';
 import {relayState} from '../relay.ts';
 import {downKey, lastOkKey} from '../vision/index.ts';
 import {hermesConfigured} from '../vision/hermes.ts';
@@ -40,6 +41,8 @@ export interface AdminHealth {
   meta: MetaHealth;
   // TA-S6: the Instagram inbox switches and whether Meta's webhook can be verified (09 § Inbox).
   inbox: {enabled: boolean; public_replies: boolean; webhook_ready: boolean};
+  // BF-advisor-beta: the pilot's scope as configured (null list = everyone), what was dropped, and a list that was set but all invalid (serving everyone).
+  beta: BetaScope;
 }
 
 const count = async (db: D1Database, sql: string, ...args: unknown[]): Promise<number> => (await db.prepare(sql).bind(...args).first<{n: number}>())?.n ?? 0;
@@ -102,6 +105,7 @@ export async function adminHealth(env: Env, now: number = Date.now(), deps: {met
     reviews: {open: await count(db, "SELECT COUNT(*) AS n FROM advisor_reviews WHERE status='open'")},
     meta: await metaHealth(env, now, deps.metaFetcher),   // TA-S0
     inbox: {enabled: settings.inboxEnabled, public_replies: settings.inboxPublicReplies, webhook_ready: Boolean(env.META_VERIFY_TOKEN && env.META_APP_SECRET)},
+    beta: betaScope(env),
   };
 }
 

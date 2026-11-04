@@ -113,6 +113,14 @@ export function nextFriday(today: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** The evidence-confidence percent every ranked spot shares, or null when they differ, one is missing or non-finite, or fewer than two are ranked (SC0122-03). */
+export function sharedConfidence(spots: readonly Target[]): number | null {
+  const ranked = spots.filter(t => t.trip_rank);
+  const first = ranked[0]?.evidence_confidence?.percent;
+  if (ranked.length < 2 || typeof first !== 'number' || !Number.isFinite(first)) return null;
+  return ranked.every(t => t.evidence_confidence?.percent === first) ? first : null;
+}
+
 /** The ranked fit for the plan's species: lingcod, reef rockfish, or the weaker of the two. */
 export function planFit(t: Target, species: TripSpecies): number | undefined {
   const fit = t.species_fit ?? {};
