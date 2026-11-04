@@ -12,8 +12,7 @@ SRC, OWNER, LIVE = ROOT / "src" / "skippercast", "util/units.py", "live loop"
 # Compared by value: .3048, 1852.0 and 1_852 match; 18520, 0.30481 and 3.280841 do not.
 VALUES = {float(s) for s in "3.28084 3.280839895 3.2808398950131 1.94384449 1.943844492 1.9438444924406 0.3048 1.852 1852".split()}
 ALLOW = {  # path under src/skippercast -> why its literal stays; delete the entry when the module reads util.units
-    **{f"pipeline/{name}.py": LIVE for name in ("cdip_nearshore", "coast_report", "coast_snapshots", "intelligence",
-                                                "ndbc_history", "ocean", "verification", "wave_ensemble")},
+    **{f"pipeline/{name}.py": LIVE for name in ("coast_report", "intelligence", "ocean", "wave_ensemble")},
     "platform/bottom_targets.py": "seafloor cache-key file pinned by tests/contract/test_seafloor_key_files.py",
     **{f"{name}.py": "seafloor/** push starts the seafloor publication workflow" for name in (
         "seafloor/habitat", "seafloor/search_areas")},

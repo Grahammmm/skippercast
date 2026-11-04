@@ -80,8 +80,8 @@ for (const [query, region, profile] of cells) test(`${query} → ${profile} → 
     if (query === 'morro' && profile === 'boat') {
       await page.evaluate(() => sessionStorage.setItem('funnel-actions', '[]'));
       const returning = Date.now(); await page.goto('/');
-      // The saved-port lookup redirects asynchronously; do not reload the
-      // landing while its replacement navigation is still in flight.
+      // The saved-port lookup redirects asynchronously after the landing loads.
+      // Reload the destination, not the landing while location.replace is in flight.
       await page.waitForURL(/\/map\?/, {waitUntil: 'load'});
       await page.reload();
       await expect(page).toHaveURL(/\/map\?/);

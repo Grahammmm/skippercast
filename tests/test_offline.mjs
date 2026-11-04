@@ -151,3 +151,81 @@ test('isOceanKey: only a region\'s habitat manifest and its tiles, on the page\'
   assert.equal(isOceanKey(`${region}/habitat-dynamics.json`, 'https://other.test'), false);
   assert.equal(isOceanKey(`${region}/habitat-dynamics.json`), false);
 });
+
+// copyRecent (SC1938-02, plan D3a): fake Cache objects, no network.
+const ORIGIN = 'https://skippercast.test', REGION_FEED = `${ORIGIN}/feeds/conditions/regions/r`;
+const savedAt = ms => ({'X-SC-Saved-At': new Date(ms).toISOString()});
+function fakeCache(entries = []) {
+  const map = new Map(entries.map(e => [e.url, e])), matched = [], stored = [];
+  return {map, matched, stored,
+    keys: async () => [...map.values()].map(e => ({url: e.url})),
+    match: async request => { matched.push(request.url); return map.get(request.url)?.response; },
+    put: async (request, response) => { stored.push(request.url ?? request); map.set(request.url ?? request, {url: request.url ?? request, response}); }};
+}
+const entry = (url, headers = savedAt(2000), blob) => {
+  const response = new Response('x'.repeat(10), {headers});
+  if (blob) response.blob = blob;
+  return {url, response};
+};
+
+test('copyRecent: forecast and tide are copied, the habitat manifest and its tiles are not', async () => {
+  const {copyRecent} = await import('../dist/offline-pack.js');
+  const recent = fakeCache([entry(`${ORIGIN}/api/forecast?region=r`), entry(`${ORIGIN}/api/tide?station=1`), entry(`${REGION_FEED}/habitat-dynamics.json`),
+    entry(`${REGION_FEED}/habitat-tiles/sst-0-0-aaaa.json`), entry(`${REGION_FEED}/habitat-tiles/wcofs-0-0-bbbb.json`)]);
+  const cache = fakeCache();
+  const result = await copyRecent({recent, cache, sessionStart: 1000, origin: ORIGIN, signal: new AbortController().signal});
+  assert.equal(result.copied, 2);
+  assert.equal(result.bytes, 20);
+  assert.deepEqual(cache.stored.sort(), [`${ORIGIN}/api/forecast?region=r`, `${ORIGIN}/api/tide?station=1`]);
+  assert.equal(recent.map.size, 5, 'the browsed ocean entries stay in sc-data');
+});
+
+test('copyRecent: an ocean entry is skipped before the pack lookup and before its body is read', async () => {
+  const {copyRecent} = await import('../dist/offline-pack.js');
+  const boom = () => { throw new Error('ocean body was read'); };
+  const manifest = `${REGION_FEED}/habitat-dynamics.json`, tile = `${REGION_FEED}/habitat-tiles/sst-0-0-aaaa.json?v=2`;
+  const recent = fakeCache([entry(manifest, savedAt(2000), boom), entry(tile, savedAt(2000), boom), entry(`${ORIGIN}/api/forecast?region=r`)]);
+  const cache = fakeCache();
+  const result = await copyRecent({recent, cache, sessionStart: 1000, origin: ORIGIN, signal: new AbortController().signal});
+  assert.equal(result.copied, 1);
+  assert.equal(cache.matched.some(u => u.includes('habitat-')), false, 'no pack lookup for an ocean key');
+});
+
+test('copyRecent: an ocean-looking URL on another origin (the cross-origin habitat feed) is still copied', async () => {
+  const {copyRecent} = await import('../dist/offline-pack.js');
+  const feed = 'https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/r/habitat-dynamics.json';
+  const cache = fakeCache();
+  const result = await copyRecent({recent: fakeCache([entry(feed)]), cache, sessionStart: 1000, origin: ORIGIN, signal: new AbortController().signal});
+  assert.equal(result.copied, 1);
+  assert.deepEqual(cache.stored, [feed]);
+});
+
+test('copyRecent: old, unstamped and already-packed entries are skipped as before', async () => {
+  const {copyRecent} = await import('../dist/offline-pack.js');
+  const [old, bare, bad, have, fresh] = ['old', 'bare', 'bad', 'have', 'fresh'].map(n => `${ORIGIN}/api/${n}`);
+  const recent = fakeCache([entry(old, savedAt(500)), entry(bare, {}), entry(bad, {'X-SC-Saved-At': 'never'}), entry(have), entry(fresh)]);
+  const cache = fakeCache([entry(have)]);
+  const result = await copyRecent({recent, cache, sessionStart: 1000, origin: ORIGIN, signal: new AbortController().signal});
+  assert.equal(result.copied, 1);
+  assert.deepEqual(cache.stored, [fresh]);
+});
+
+test('copyRecent: an aborted signal stops the copy mid-loop', async () => {
+  const {copyRecent} = await import('../dist/offline-pack.js');
+  const recent = fakeCache(['a', 'b', 'c'].map(n => entry(`${ORIGIN}/api/${n}`))), cache = fakeCache(), controller = new AbortController();
+  const put = cache.put;
+  cache.put = async (...args) => { await put(...args); controller.abort(); };
+  const result = await copyRecent({recent, cache, sessionStart: 1000, origin: ORIGIN, signal: controller.signal});
+  assert.equal(result.copied, 1);
+  assert.equal(cache.stored.length, 1, 'only the entry before the abort is stored');
+  const before = await copyRecent({recent, cache: fakeCache(), sessionStart: 1000, origin: ORIGIN, signal: AbortSignal.abort()});
+  assert.equal(before.copied, 0, 'an already aborted signal copies nothing');
+});
+
+test('the files phase stays free of ocean keys: no packRequests URL is an ocean key', () => {
+  const feeds = Object.fromEntries(['daily_feed', 'conditions_feed', 'intelligence_feed', 'habitat_feed']
+    .map(k => [k, `https://raw.githubusercontent.com/Grahammmm/skippercast/conditions/regions/r/${k}.json`]));
+  const synthetic = {id: 'r', assets: {atlas: 'data/atlas.json', habitats: 'data/habitat-regions.json'}, ...feeds};
+  for (const region of [synthetic, morro])
+    assert.deepEqual(packRequests({origin: ORIGIN, region, shared: SHARED_FILES}).filter(u => isOceanKey(u, ORIGIN)), [], region.id);
+});

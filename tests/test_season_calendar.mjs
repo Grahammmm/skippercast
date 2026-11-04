@@ -39,7 +39,7 @@ test('window edges, first open run, no open days, and all restriction states', (
   assert.equal(month(d, 1).state, 'part');
   assert.equal(month(d, 2).state, 'closed');
   p.windows.push({start: '2026-01-20', end: '2026-01-25'});
-  assert.equal(month(d, 1).label, 'Part open: 1–15', 'first run, not the last or their union');
+  assert.equal(month(d, 1).label, 'Part open: 1–15, 20–25', 'every open run, not the first alone, the last alone or their union');
   p.windows = [{start: d.valid_from, end: d.valid_through, restriction: 'Synthetic limits'}];
   assert.equal(month(d, 1).state, 'limits'); assert.equal(month(d, 1).label, 'Open · limits');
   p.windows[0].requires_opening_review = true;
@@ -50,6 +50,24 @@ test('window edges, first open run, no open days, and all restriction states', (
   assert.equal(month(d, 1).state, 'area'); assert.equal(month(d, 1).label, 'Choose fishing location');
   p.windows = [{start: d.valid_from, end: d.valid_through, start_at: '2026-01-01T08:00:00Z'}];
   assert.equal(month(d, 1).state, 'part', 'a timed opener is not all-day open');
+});
+test('a part month lists its open runs: two spelled out, the rest counted', () => {
+  const d = data(), p = d.species.lingcod, w = (a, b, extra = {}) => ({start: `2026-01-${a}`, end: `2026-01-${b}`, ...extra});
+  p.windows = [w('01', '05'), w('10', '12'), w('20', '31')];
+  assert.equal(month(d, 1).label, 'Part open: 1–5, 10–12 and 1 more');
+  p.windows = [w('01', '05'), w('10', '12'), w('15', '16'), w('20', '31')];
+  assert.equal(month(d, 1).label, 'Part open: 1–5, 10–12 and 2 more');
+  p.windows = [w('01', '03'), w('28', '31')];
+  assert.equal(month(d, 1).label, 'Part open: 1–3, 28–31', 'a run may end on the last day');
+  p.windows = [w('01', '05', {restriction: 'Synthetic limits'}), w('06', '10'), w('20', '20')];
+  assert.equal(month(d, 1).label, 'Part open: 1–10, 20–20', 'open and limits days form one run');
+  d.valid_through = '2026-01-28'; p.windows = [w('01', '05'), w('20', '28')];
+  assert.equal(month(d, 1).label, 'Part open: 1–5, 20–28', 'a not-reviewed tail ends the last run');
+  d.valid_through = '2026-12-31'; p.windows = [w('01', '05'), w('10', '12')];
+  d.species.rockfish.windows = [w('03', '11')];
+  assert.equal(month(d, 1, 'reef').label, 'Part open: 3–5, 10–11', 'reef months use the merged daily state');
+  p.windows = [w('01', '05')];
+  assert.equal(month(d, 1).label, 'Part open: 1–5', 'one run keeps its text');
 });
 test('reef uses the worse member each day, including geography and scheduled review', () => {
   const d = data(); d.species.rockfish.windows = [];

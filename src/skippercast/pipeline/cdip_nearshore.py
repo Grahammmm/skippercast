@@ -35,6 +35,7 @@ import re
 
 from .. import http
 from ..util.time import stamp
+from ..util.units import FT_PER_M
 from .collect import publication
 
 SOURCE_ID = "cdip-mop"
@@ -45,7 +46,6 @@ CREDIT = "Data from CDIP, Scripps Institution of Oceanography"
 MAX_BYTES = 750_000
 TIMEOUT_S = 12
 ATTEMPTS = 3
-FT_PER_M = 3.280839895
 MAX_SAMPLES = 256
 WINDOW_BEFORE, WINDOW_AFTER = timedelta(hours=3), timedelta(hours=72)
 STALE_AFTER = timedelta(hours=48)
