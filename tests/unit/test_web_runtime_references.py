@@ -83,3 +83,39 @@ def test_check_web_markup_sink_line_numbers_survive_block_comments(tmp_path):
 def test_check_web_only_the_markup_host_writes_markup_in_web():
     assert checker.markup_sinks() == []
     assert (ROOT / checker.MARKUP_HOST).is_file()
+
+
+# SC2207-03: /skill is registered navigation to the existing forecast skill page.
+def test_skill_anchor_passes_with_registration_and_page(tmp_path, monkeypatch):
+    (tmp_path / "skill.html").write_text("Forecast skill")
+    check(tmp_path, monkeypatch, '<a href="/skill">Skill</a><a href="/skill?ui=v1#rows">Skill</a>')
+
+
+def test_skill_anchor_fails_without_the_page(tmp_path, monkeypatch):
+    with pytest.raises(AssertionError):
+        check(tmp_path, monkeypatch, '<a href="/skill">Skill</a>')
+
+
+def test_skill_anchor_fails_without_the_route_registration(tmp_path, monkeypatch):
+    (tmp_path / "skill.html").write_text("Forecast skill")
+    routes = tmp_path / "root" / "server" / "routes"
+    routes.mkdir(parents=True)
+    (routes / "assets.ts").write_text("if(path === '/status') return '/status.html';\n")
+    monkeypatch.setattr(checker, "ROOT", tmp_path / "root")
+    with pytest.raises(AssertionError):
+        check(tmp_path, monkeypatch, '<a href="/skill">Skill</a>')
+
+
+@pytest.mark.parametrize("html", [
+    '<script src="/skill"></script>',
+    '<link rel="stylesheet" href="/skill">',
+    '<img src="/skill">',
+    '<a href="/skill/">Trailing slash</a>',
+    '<a href="/skillx">Other</a>',
+    '<a href="/Skill">Case</a>',
+    '<a href="/skill/child">Child</a>',
+])
+def test_skill_route_is_navigation_only_and_exact(tmp_path, monkeypatch, html):
+    (tmp_path / "skill.html").write_text("Forecast skill")
+    with pytest.raises(AssertionError):
+        check(tmp_path, monkeypatch, html)
