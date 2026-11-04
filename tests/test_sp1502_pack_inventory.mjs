@@ -198,7 +198,7 @@ extraTest('SC1952-03 the chart pack paragraph names the published land-water scr
   h.render();
   const html = await h.settle();
   assert.ok(html.includes('the published land-water screen and depth contours (where the region publishes them)'));
-  for (const kept of ['NOAA chart tiles', 'base map at zoom 8–12', 'Water temp and current tiles are not prefetched', 'Check the saved pack before leaving coverage.'])
+  for (const kept of ['NOAA chart tiles', 'base map at zoom 8–12', 'Water temperature and currents are saved with the pack when current; each saved region below says what was saved.', 'Check the saved pack before leaving coverage.'])
     assert.ok(html.includes(kept), kept);
 });
 
