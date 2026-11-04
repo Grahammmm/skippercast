@@ -163,7 +163,11 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // assertions and thresholds untouched. Rebind those two exact hashes.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/species.ts": "26717bd67e349d67a6483bb27d0f67afb172847647b1251addfdd5b2f69970df",
-  "web/app/App.tsx": "f63bf478bdb77f4564495a454865a9999bf767ba1fe4953c8192777d69094fb0",
+  // BF-one-answer (#1456): App.tsx adds FirstAnswerLine and a desktop shell row. BODY09 mounts
+  // Reports/CatchCards directly, never App or FirstAnswerLine; the new hook runs only when
+  // FirstAnswerLine mounts. RegionInfo and Reports' id/charters reads are unchanged, with no
+  // CSS, token or catch markup changes. contrast(), assertions and thresholds are untouched.
+  "web/app/App.tsx": "e265dec49c7f8babe537f1e7b64a68d70d43652d024284f486ffe94c80e7cf51",
   // SC-LAUNCH-4 (#1267, cost ceiling): Masthead.tsx imports web/degraded.ts (a signal and pure helpers, no top-level
   // side effect) and adds DegradedNotice after FreshnessDot. It renders nothing unless a response carries
   // X-SC-Degraded: cost-ceiling, which no BODY09 fixture does; when shown it reuses the existing .app-limits-note
