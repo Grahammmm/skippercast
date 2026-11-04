@@ -1,7 +1,9 @@
-// BF-landing-live: the landing leads with tomorrow's verdict for the reference boat, computed by the
+// BF-landing-live: the landing leads with tomorrow's verdict, computed by the
 // app's own loaders and brief code (web/landing/live-verdict.ts). Bundled with esbuild as
 // tests/test_brief_lead.mjs does; the app's lead (Brief.tsx Verdict) is rendered from the same
 // inputs, so the landing's word and sentence are compared with the app's, not with a copy.
+// SC1952-04: rated for the boat and Boat limits saved on the device (the app's own reads of them), the
+// reference boat when none is readable.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {mkdtemp, readFile} from 'node:fs/promises';
@@ -31,6 +33,8 @@ async function load() {
       export {parseConditionsForecast} from './web/conditions.ts';
       export {regionInfo, createRegionReader} from './web/app/App.tsx';
       export {hour, day, profile} from './web/state.ts';
+      export {loadLimits, savedLimits} from './web/limits.ts';
+      export {BOAT_MODEL_NOTE} from './web/boat-range.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins,
@@ -60,17 +64,37 @@ function feeds(now, {missing = [], ageH = 6, asked = []} = {}) {
   };
 }
 
-/** The app's lead (Brief.tsx Verdict) for the same feeds at `now`, as word and limit sentence. */
-async function appLead(m, now, opts) {
+const BOAT_KEY = 'skippercast-boat-v1', LIMITS_KEY = 'skippercast-limits-v1';
+
+/** A recording localStorage over `entries` (a Map, or 'throws' for a getter that throws); installed for `fn`, always removed. */
+async function onDevice(entries, fn) {
+  const reads = [], writes = [];
+  const store = {getItem: k => { reads.push(k); if (entries === 'throws') throw new Error('storage denied'); return entries.get(k) ?? null; },
+    setItem: (k, v) => writes.push(['set', k, v]), removeItem: k => writes.push(['remove', k]), clear: () => writes.push(['clear']), key: () => null, length: 0};
+  const had = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  Object.defineProperty(globalThis, 'localStorage', {value: store, configurable: true, writable: true});
+  try { return await fn({reads, writes}); } finally { if (had) Object.defineProperty(globalThis, 'localStorage', had); else delete globalThis.localStorage; }
+}
+const boatEnvelope = boat => JSON.stringify({schema_version: 1, boat});
+const device = (boat, limits) => new Map([...(boat === undefined ? [] : [[BOAT_KEY, typeof boat === 'string' ? boat : boatEnvelope(boat)]]), ...(limits === undefined ? [] : [[LIMITS_KEY, typeof limits === 'string' ? limits : JSON.stringify(limits)]])]);
+
+/** The app's lead (Brief.tsx Verdict) for the same feeds at `now`, as word and limit sentence; `entries` is the device storage the app reads its boat and limits from. */
+async function appLead(m, now, opts, entries = new Map()) {
   const fetchFn = feeds(now, opts), info = await m.createRegionReader(fetchFn)('morro-bay');
   m.regionInfo.value = info; m.dailyFeed.value = opts?.missing?.includes('latest.json') ? null : DAILY; m.hour.value = null; m.day.value = null; m.profile.value = 'boat';
   const f = await fetchFn('/api/forecast');
   m.regionalForecast.value = f.ok ? m.parseConditionsForecast(await f.json(), 'morro-bay', info.center) : null;
   try {
-    const html = m.render(m.h(m.Verdict, {now}));
-    return {word: /<span class="app-verdict-word">([^<]*)</.exec(html)?.[1] ?? null, limit: /<p class="app-verdict-limit">([^<]*)</.exec(html)?.[1] ?? null};
-  } finally { m.regionInfo.value = null; m.dailyFeed.value = null; m.regionalForecast.value = null; }
+    return await onDevice(entries, () => {
+      m.loadLimits();
+      const html = m.render(m.h(m.Verdict, {now}));
+      return {word: /<span class="app-verdict-word">([^<]*)</.exec(html)?.[1] ?? null, limit: /<p class="app-verdict-limit">([^<]*)</.exec(html)?.[1] ?? null};
+    });
+  } finally { m.regionInfo.value = null; m.dailyFeed.value = null; m.regionalForecast.value = null; m.savedLimits.value = {}; }
 }
+
+/** The landing's verdict on `entries`, with the keys it read and every write it made. */
+const landingOn = (m, entries, now = NOW, opts) => onDevice(entries, async ({reads, writes}) => ({v: await m.loadLandingVerdict(feeds(now, opts), now, PAGE), reads, writes}));
 
 const NOW = new Date('2026-10-08T21:00:00Z'); // 2 pm PDT; tomorrow is 9 October
 
@@ -133,17 +157,126 @@ test('a bound coast report enters the brief as in the app; a failed one leaves i
   } finally { globalThis.fetch = real; }
 });
 
-test('a saved profile and limits are ignored and storage is never written', async () => {
+const SKIFF = {name: 'Wren', loa_ft: 17, layout: 'skiff', hull: 'flat'};
+const CABIN = {name: 'Big Cabin', loa_ft: 32, displacement_lb: 12000, layout: 'pilothouse', hull: 'deep-v'};
+/** The boat the heading names for a visitor with nothing saved. */
+const REF_NAME = 'reference 23 ft boat';
+
+test('a saved 17 ft skiff and a 32 ft cabin boat rate the same forecast as the app does, named, with the model note outside the reference range', async () => {
   const m = await load();
-  const plain = await m.loadLandingVerdict(feeds(NOW), NOW, PAGE);
-  const store = new Map([['skippercast-profile-v1', 'kayak'], ['skippercast-limits-v1', JSON.stringify({boat: {wind_knots: 1, gust_knots: 2, sea_feet: 0.5}})]]), writes = [];
-  globalThis.localStorage = {getItem: k => store.get(k) ?? null, setItem: (k, v) => writes.push([k, v]), removeItem: k => writes.push([k]), clear: () => writes.push(['clear']), key: () => null, length: store.size};
-  try {
-    const v = await m.loadLandingVerdict(feeds(NOW), NOW, PAGE);
-    assert.deepEqual([v.word, v.sentence, v.href], [plain.word, plain.sentence, plain.href], 'the reference boat, not the saved limits');
-    assert.match(m.render(m.h(m.LiveVerdict, {v})), /reference 23 ft boat/);
-    assert.deepEqual(writes, [], 'no storage write');
-  } finally { delete globalThis.localStorage; }
+  const words = new Set();
+  for (const boat of [SKIFF, CABIN]) {
+    const entries = device(boat);
+    const {v, writes} = await landingOn(m, entries), app = await appLead(m, NOW, undefined, entries);
+    assert.ok(v && app.word, 'both answer');
+    assert.deepEqual([v.word, v.sentence], [app.word, app.limit], `${boat.name}: the app's word and sentence`);
+    assert.equal(v.boatName, boat.name);
+    assert.equal(v.boatNote, m.BOAT_MODEL_NOTE, `${boat.loa_ft} ft is outside the reference range`);
+    assert.deepEqual(writes, []);
+    const html = m.render(m.h(m.LiveVerdict, {v}));
+    assert.ok(html.includes(`near Morro Bay &amp; Avila, ${boat.name}: <strong`), 'the boat is named in the heading');
+    assert.ok(!html.includes(REF_NAME), 'no reference label beside a saved boat');
+    assert.ok(html.includes(`<p class="landing-verdict-note">${m.BOAT_MODEL_NOTE}</p>`), 'the model note is its own paragraph');
+    words.add(`${v.word}|${v.sentence}`);
+  }
+  const ref = await landingOn(m, new Map());
+  words.add(`${ref.v.word}|${ref.v.sentence}`);
+  assert.ok(words.size >= 2, 'the saved boats rate the same forecast differently from each other or from the reference');
+});
+
+test('boat names: a saved name, "your <n> ft boat" for an automatic or missing name, a name-only boat, and markup stays text', async () => {
+  const m = await load();
+  const named = async boat => (await landingOn(m, device(boat))).v;
+  assert.equal((await named({name: 'Wren', loa_ft: 23})).boatName, 'Wren');
+  assert.equal((await named({name: '19 ft boat', loa_ft: 19})).boatName, 'your 19 ft boat', 'the automatic name counts as none');
+  assert.equal((await named({loa_ft: 26.04})).boatName, 'your 26 ft boat');
+  assert.equal((await named({name: 'Just a name'})).boatName, 'Just a name', 'a name-only boat keeps its name, rated at the reference length');
+  assert.equal((await named({name: 'Just a name'})).boatNote, null, 'no length, no note');
+  assert.equal((await named({loa_ft: 23})).boatNote, null, 'inside the reference range: no note');
+  const evil = await named({name: '<script>alert(1)</script> & Co', loa_ft: 23});
+  const html = m.render(m.h(m.LiveVerdict, {v: evil}));
+  assert.ok(!html.includes('<script>'), 'the name is escaped');
+  assert.ok(html.includes('&lt;script>alert(1)&lt;/script> &amp; Co: <strong'));
+});
+
+test('no readable boat rates and names the reference boat: none, corrupt, wrong version, null/scalar/array/missing boat, unavailable or throwing storage', async () => {
+  const m = await load();
+  const plain = (await landingOn(m, new Map())).v, app = await appLead(m, NOW);
+  assert.deepEqual([plain.word, plain.sentence], [app.word, app.limit], 'nothing saved: as the app');
+  assert.equal(plain.boatName, REF_NAME);
+  assert.equal(plain.boatNote, null);
+  const bad = {
+    'corrupt JSON': device('{not json'), 'wrong schema version': device(JSON.stringify({schema_version: 2, boat: SKIFF})),
+    'null boat': device(null), 'scalar boat': device(5), 'string boat': device('"Wren"'), 'array boat': device([SKIFF]),
+    'envelope without a boat': device(JSON.stringify({schema_version: 1})), 'bare scalar value': device('7'),
+  };
+  for (const [what, entries] of Object.entries(bad)) {
+    const {v, writes} = await landingOn(m, entries);
+    assert.deepEqual([v.word, v.sentence, v.boatName, v.boatNote ?? null], [plain.word, plain.sentence, REF_NAME, null], what);
+    assert.deepEqual(writes, [], what);
+  }
+  const thrown = await landingOn(m, 'throws');
+  assert.deepEqual([thrown.v.word, thrown.v.sentence, thrown.v.boatName], [plain.word, plain.sentence, REF_NAME], 'a throwing getter');
+  const gone = await m.loadLandingVerdict(feeds(NOW), NOW, PAGE);   // no localStorage at all (this process has none)
+  assert.deepEqual([gone.word, gone.boatName], [plain.word, REF_NAME], 'storage unavailable');
+});
+
+test('the Boat comfort limits saved on the device rate as /map does; a bad limits key keeps the boat and a bad boat keeps the limits', async () => {
+  const m = await load();
+  const cases = {
+    strict: {boat: {wind: 4, gust: 6, seas: 1}}, loose: {boat: {wind: 20, gust: 25, seas: 8}}, clamped: {boat: {wind: 99, gust: 1, seas: 0}},
+    partial: {boat: {wind: 6}}, 'string numbers': {boat: {wind: '7', gust: '9', seas: '2'}},
+    malformed: '{oops', 'not an object': '[1,2]', 'default limits': {boat: {wind: 10, gust: 15, seas: 4}}, 'other profile only': {kayak: {wind: 4, gust: 6, seas: 1}, shore: {wind: 4, gust: 6, seas: 1}},
+  };
+  const seen = new Set();
+  for (const boat of [undefined, SKIFF, CABIN]) for (const [what, limits] of Object.entries(cases)) {
+    const entries = device(boat, limits);
+    const {v, writes} = await landingOn(m, entries), app = await appLead(m, NOW, undefined, entries);
+    assert.deepEqual([v.word, v.sentence], [app.word, app.limit], `${boat?.name ?? 'no boat'} with ${what} limits: same word and sentence as /map`);
+    assert.equal(v.boatName, boat?.name ?? REF_NAME);
+    assert.deepEqual(writes, []);
+    seen.add(v.sentence);
+  }
+  assert.ok(seen.size > 1, 'the saved boats change what the landing says (limits shape the brief window, not the comfort word)');
+  // Non-Boat limits never change the Boat answer.
+  const base = (await landingOn(m, device(SKIFF))).v, other = (await landingOn(m, device(SKIFF, cases['other profile only']))).v;
+  assert.deepEqual([other.word, other.sentence], [base.word, base.sentence], 'kayak and shore limits do not rate the Boat verdict');
+  // Each key is read on its own.
+  const strictOnly = (await landingOn(m, device(undefined, cases.strict))).v, both = (await landingOn(m, device(SKIFF, cases.strict))).v;
+  assert.equal(both.boatName, 'Wren');
+  assert.equal(strictOnly.boatName, REF_NAME, 'limits without a boat still apply to the reference boat');
+  const badLimits = (await landingOn(m, device(SKIFF, '{oops'))).v;
+  assert.deepEqual([badLimits.word, badLimits.sentence, badLimits.boatName], [base.word, base.sentence, 'Wren'], 'an unreadable limits key does not discard the boat');
+  const badBoat = (await landingOn(m, device('{oops', cases.strict))).v, refStrict = (await landingOn(m, device(undefined, cases.strict))).v;
+  assert.deepEqual([badBoat.word, badBoat.sentence, badBoat.boatName], [refStrict.word, refStrict.sentence, REF_NAME], 'an unreadable boat does not discard the limits');
+});
+
+test('the landing reads only the boat and Boat limits keys, writes nothing, and puts neither in a request', async () => {
+  const m = await load();
+  const entries = device(SKIFF, {boat: {wind: 5, gust: 8, seas: 1.5}});
+  entries.set('skippercast-profile-v1', 'kayak'); entries.set('skippercast-cruise-v1', '22'); entries.set('skippercast-reach-v1', '{}'); entries.set('skippercast-layers-v1', '[]');
+  const asked = [];
+  const {v, reads, writes} = await onDevice(entries, async ({reads, writes}) => ({v: await m.loadLandingVerdict(async url => { asked.push(String(url)); return feeds(NOW)(url); }, NOW, PAGE), reads, writes}));
+  assert.equal(v.boatName, 'Wren');
+  assert.deepEqual([...new Set(reads)].sort(), [BOAT_KEY, LIMITS_KEY].sort(), 'only the boat and limits keys are read');
+  assert.deepEqual(writes, [], 'no set, remove or clear');
+  assert.ok(asked.length >= 3, 'the readings were asked for');
+  for (const url of asked) assert.ok(!/Wren|wind=|gust|seas|loa/.test(decodeURIComponent(url)), `no boat detail in ${url}`);
+});
+
+test('missing forecast, stale run, missing feeds keep their behaviour with a saved boat; the name implies no fresh data', async () => {
+  const m = await load();
+  const entries = device(SKIFF, {boat: {wind: 6, gust: 9, seas: 2}});
+  const unknown = (await landingOn(m, entries, NOW, {missing: ['/api/forecast']})).v;
+  assert.equal(unknown.verdict, 'unknown');
+  assert.equal(unknown.boatName, 'Wren');
+  assert.match(m.render(m.h(m.LiveVerdict, {v: unknown})), /near Morro Bay &amp; Avila, Wren: <strong class="landing-verdict-word" data-verdict="unknown">Unknown</);
+  for (const ageH of [19, 30, 40]) {
+    const {v} = await landingOn(m, entries, NOW, {ageH}), app = await appLead(m, NOW, {ageH}, entries);
+    assert.notEqual(v.verdict, 'comfortable', `${ageH} h old run: never Comfortable`);
+    assert.deepEqual([v.word, v.sentence], [app.word, app.limit], `${ageH} h old run: the app's held word for the saved boat`);
+  }
+  for (const missing of [['/region.json'], ['latest.json']]) assert.equal((await landingOn(m, entries, NOW, {missing})).v, null, `${missing}: no verdict`);
 });
 
 test('the verdict modules are not in the landing\'s entry chunk: main.tsx imports them dynamically', async () => {
