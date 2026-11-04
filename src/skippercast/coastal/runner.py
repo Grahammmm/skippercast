@@ -93,18 +93,28 @@ def _group_state(identity):
         leader = process_identity(identity["pid"])
         if leader is not None and leader["start_ticks"] != identity["start_ticks"]:
             return "uncertain"
+        # The kernel never reuses a pid that still names a session, so a process
+        # at the recorded sid number that started after the recorded process is a
+        # NEWER session reusing the number: nothing in it is ours. Member age
+        # alone proves nothing (real descendants start later), only the leader's.
+        sid_leader = process_identity(identity["sid"])
+        if sid_leader is not None:
+            if sid_leader["sid"] != identity["sid"]:
+                return "uncertain"
+            if sid_leader["start_ticks"] > identity["start_ticks"]:
+                return "stopped"
         live = False
         for entry in Path("/proc").iterdir():
             if not entry.name.isdigit():
                 continue
             member = process_identity(int(entry.name))
-            if member is None:
+            # Dead or vanished entries and other sessions are unrelated: a matching
+            # pgid NUMBER alone is not evidence of ownership.
+            if member is None or member["state"] in {"Z", "X"} or member["sid"] != identity["sid"]:
                 continue
-            if member["pgid"] == identity["pgid"] or member["sid"] == identity["sid"]:
-                if member["sid"] != identity["sid"] or member["start_ticks"] < identity["start_ticks"]:
-                    return "uncertain"
-                if member["state"] not in {"Z", "X"}:
-                    live = True
+            if member["start_ticks"] < identity["start_ticks"]:
+                return "uncertain"
+            live = True
         return "live" if live else "stopped"
     except (OSError, ValueError, IndexError, KeyError):
         return "uncertain"
