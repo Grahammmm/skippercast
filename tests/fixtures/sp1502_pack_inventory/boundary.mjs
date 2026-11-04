@@ -18,5 +18,5 @@ export const closeTrip = () => { throw new Error('unexpected planner action'); }
 export const loadPlanner = closeTrip, deleteCoastal = closeTrip, saveCoastal = closeTrip;
 export const savePack = async () => {
   runtime.saves++;
-  return {region_name: 'Fixture Harbor', bytes: 128, missing: []};
+  return runtime.saveMeta ?? {region_name: 'Fixture Harbor', bytes: 128, missing: []};
 };
