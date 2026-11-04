@@ -72,6 +72,14 @@ test('2.5 ft at 15 s exactly, and 2.6 ft at 16 s, hold Comfortable at Bumpy and 
   assert.deepEqual([single.wind_kt, single.gusts_kt, single.sea_period_s, single.models_agree], [plain.wind_kt, plain.gusts_kt, plain.sea_period_s, plain.models_agree]);
 });
 
+test('a boating advisory overrides the long-period Bumpy hold and keeps Rough when the run is held', () => {
+  const f = feed({by: only([9], LP)}), advisory = {event: 'Small Craft Advisory'};
+  const d = windowConditions(f, REGION, POINT, DATE, WINDOW, null, [advisory]);
+  assert.deepEqual([d.comfort, d.advisory, 'comfort_held' in d], ['rough', advisory.event, false]);
+  assert.deepEqual(withForecastClock(d, {state: 'held', ageHours: 20}), d);
+  assert.equal(windowConditions(f, REGION, POINT, DATE).comfort, 'bumpy');
+});
+
 test('just below either threshold nothing is held, including an unrounded 14.9 s', () => {
   for (const [label, values] of [
     ['2.4 ft at 18 s', {wave_height: 2.4, wam: 2.4, wave_period: 18, swell_wave_period: 18}],
