@@ -448,3 +448,75 @@ test('run distance: without a harbor position every pick shows the no-distance d
     assert.deepEqual(geo.calls, [], 'no device fix fills the gap');
   } finally { geo.restore(); }
 });
+
+// docs/roadmap.md Next 5 ("coverage limits kept apart from habitat priority"): this block enforces it.
+// Charter, AIS, fleet and coverage fields on an atlas target or a reviewed habitat feature must never change
+// which places are listed, their order, or any text of the ranking: habitat priority reads terrain and fit only.
+const FLEET = {charter_trips: 12, charter_identity: 7, ais_stop_hours: 300.5, ais_effort_hours: 1e9, fleet_visits: 99, coverage_fraction: 0.25, coverage_note: 'partial coverage'};
+const FLEET_ODD = {charter_trips: -5, charter_identity: null, ais_stop_hours: NaN, ais_effort_hours: Infinity, fleet_visits: 'many', coverage_fraction: {a: 1}, coverage_note: ['x']};
+const withFleet = (t, extra = FLEET) => ({...t, ...extra});
+const sameJson = (a, b, message) => assert.ok(a === b, message);
+const fleetData = (targets, extra = FLEET) => ({...DATA, atlas: {...ATLAS, targets: targets.map(t => withFleet(t, extra))}});
+const asJson = x => JSON.stringify(x);
+
+test('habitat priority apart from fleet evidence: the committed atlas ranks identically with fleet fields on every target', () => {
+  for (const profile of ['boat', 'spear', 'kayak']) for (const target of ['lingcod', 'rockfish', 'cabezon', 'reef', 'all']) for (const extra of [FLEET, FLEET_ODD]) {
+    const limit = profile === 'boat' ? 300 : 60;
+    const bare = atlasPicks(DATA, CHECKED, target, limit), loaded = atlasPicks(fleetData(ATLAS.targets, extra), CHECKED, target, limit);
+    sameJson(asJson(loaded), asJson(bare), `${profile}/${target}: atlasPicks changed with fleet fields`);
+    const a = ranking(inputs({profile, target})), b = ranking(inputs({profile, target, data: fleetData(ATLAS.targets, extra)}));
+    sameJson(asJson(b), asJson(a), `${profile}/${target}: ranking changed with fleet fields`);
+  }
+  assert.ok(atlasPicks(DATA, CHECKED, 'lingcod', 300).length === TOP, 'the comparison is over real picks, not two empty lists');
+});
+
+test('habitat priority apart from fleet evidence: fleet fields that would reverse the order if read do not', () => {
+  const mark = (id, score, extra) => ({id, label: id, latitude: 35.3, longitude: -120.95, neighborhood_depth_ft: [40, 80], habitat_score: score,
+    metrics: {relief_210m_m: 8, rugose_or_bedrock_fraction_210m: 0.8, rough_habitat_within_250m_ha: 6, plane_residual_rms_250m_m: 1.5}, ...extra});
+  const screen = {...CHECKED, boundaries: []};
+  const bare = [mark('lo', 40), mark('mid', 60), mark('hi', 90)];
+  const order = targets => atlasPicks({...DATA, atlas: {targets}}, screen, 'lingcod', 100).map(p => p.id);
+  assert.deepEqual(order(bare), ['hi', 'mid', 'lo']);
+  // The lowest-habitat target carries the most effort, the highest the least: read, they would reverse the list.
+  const loaded = [mark('lo', 40, {ais_effort_hours: 1e9, charter_trips: 1e6, fleet_visits: 1e6, coverage_fraction: 1, ais_stop_hours: 1e9, charter_identity: 99}),
+    mark('mid', 60, {ais_effort_hours: 5, charter_trips: 5}), mark('hi', 90, {ais_effort_hours: 0, charter_trips: 0, fleet_visits: 0, coverage_fraction: 0, coverage_note: 'no coverage'})];
+  assert.deepEqual(order(loaded), ['hi', 'mid', 'lo'], 'habitat score alone sets the order');
+  const nasty = [mark('lo', 40, {ais_effort_hours: Infinity}), mark('mid', 60, {ais_effort_hours: NaN, charter_trips: 'x'}), mark('hi', 90, {ais_effort_hours: -1e9, coverage_note: null})];
+  assert.deepEqual(order(nasty), ['hi', 'mid', 'lo']);
+  // The same through ranking().
+  const r = ranking(inputs({data: {...DATA, atlas: {targets: loaded}}, screen}));
+  assert.deepEqual(pickIds(r), ['hi', 'mid', 'lo']);
+});
+
+test('habitat priority apart from fleet evidence: ties on fit and habitat score still break by id with fleet fields present', () => {
+  const mark = (id, extra) => ({id, label: id, latitude: 35.3, longitude: -120.95, neighborhood_depth_ft: [40, 80], habitat_score: 70,
+    metrics: {relief_210m_m: 8, rugose_or_bedrock_fraction_210m: 0.8, rough_habitat_within_250m_ha: 6, plane_residual_rms_250m_m: 1.5}, ...extra});
+  const screen = {...CHECKED, boundaries: []};
+  const order = targets => atlasPicks({...DATA, atlas: {targets}}, screen, 'lingcod', 100).map(p => p.id);
+  assert.deepEqual(order([mark('b'), mark('c'), mark('a')]), ['a', 'b', 'c']);
+  // Fleet fields point the opposite way to the id order; the id still decides.
+  assert.deepEqual(order([mark('a', {ais_effort_hours: 0}), mark('b', {ais_effort_hours: 50}), mark('c', {ais_effort_hours: 1e9, charter_trips: 1e6})]), ['a', 'b', 'c']);
+  assert.deepEqual(order([mark('c', {ais_effort_hours: 1e9}), mark('b', {fleet_visits: 5}), mark('a', {coverage_fraction: 0})]), ['a', 'b', 'c']);
+  // A missing habitat_score counts as 0 and is not filled in from fleet fields.
+  const noScore = id => { const {habitat_score: _s, ...m} = mark(id); return m; };
+  assert.deepEqual(order([{...noScore('z'), charter_trips: 99}, {...mark('y'), habitat_score: 1}]), ['y', 'z']);
+});
+
+test('habitat priority apart from fleet evidence: reviewed terrain habitat keeps its order with fleet fields on every feature', () => {
+  const loadedFeatures = FEATURES.map(f => ({...f, properties: {...f.properties, ...FLEET, ais_effort_hours: f.properties.terrain_score === 50 ? 1e9 : 0}}));
+  const bare = ranking(inputs({terrain: READY})), loaded = ranking(inputs({terrain: {...READY, features: loadedFeatures}}));
+  assert.deepEqual(pickIds(bare), ['m-a', 'm-b', 'm-c', 'm-d']);
+  sameJson(asJson(loaded), asJson(bare), 'terrain ranking changed with fleet fields');
+});
+
+test('habitat priority apart from fleet evidence: an empty or null atlas still lists nothing, with and without fleet fields', () => {
+  for (const data of [null, {...DATA, atlas: null}, {...DATA, atlas: {targets: []}}, {...DATA, atlas: {}}]) {
+    assert.deepEqual(atlasPicks(data, CHECKED, 'lingcod', 300), []);
+    assert.deepEqual(ranking(inputs({data})).picks, []);
+  }
+  const empty = {...DATA, atlas: {targets: [], ...FLEET}};
+  assert.deepEqual(atlasPicks(empty, CHECKED, 'lingcod', 300), []);
+  assert.deepEqual(ranking(inputs({data: empty})).picks, []);
+  assert.deepEqual(ranking(inputs({data: {...DATA, atlas: {...FLEET}}})).picks, []);
+  assert.deepEqual(atlasPicks({...DATA, ...FLEET, atlas: null}, CHECKED, 'lingcod', 300), []);
+});
