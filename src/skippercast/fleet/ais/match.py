@@ -175,13 +175,22 @@ def _iso(ms: int) -> str:
 # ---------------------------------------------------------------- the decision (pure)
 
 def gate_problem(row: Mapping) -> str | None:
-    """Why a watch row fails the watched gate (module docstring), or None."""
+    """Why a watch row fails the watched gate (module docstring), or None.
+
+    A watched row's confidence must be a real number (not a bool, no coercion) that is finite and in
+    [WATCHED_MIN_CONFIDENCE, 1], as server/fleet/watch.ts requires; NaN, either infinity and values above 1 are
+    refused without echoing the value (an int is compared as it is, never converted to float).
+    """
     if row.get("status") != "watched":
         return None
     if row.get("match_method") not in STRONG_METHODS:
         return f"method {row.get('match_method')!r} is candidate-only"
     confidence = row.get("confidence")
-    if not isinstance(confidence, (int, float)) or isinstance(confidence, bool) or confidence < WATCHED_MIN_CONFIDENCE:
+    if not isinstance(confidence, (int, float)) or isinstance(confidence, bool):
+        return f"confidence {confidence!r} is below {WATCHED_MIN_CONFIDENCE}"
+    if (isinstance(confidence, float) and not math.isfinite(confidence)) or confidence > 1:
+        return f"confidence must be a finite number between {WATCHED_MIN_CONFIDENCE} and 1"
+    if confidence < WATCHED_MIN_CONFIDENCE:
         return f"confidence {confidence!r} is below {WATCHED_MIN_CONFIDENCE}"
     return None
 
