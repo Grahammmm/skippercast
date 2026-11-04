@@ -7,6 +7,7 @@
 import {batch, effect, signal} from '@preact/signals';
 import {useEffect} from 'preact/hooks';
 import {CommandBar} from './CommandBar.tsx';
+import {Button} from '../ui/Button.tsx';
 import {Desktop} from './Desktop.tsx';
 import {FirstRun} from './FirstRun.tsx';
 import {Masthead} from './Masthead.tsx';
@@ -155,7 +156,7 @@ export function FirstAnswerLine({now = new Date()}: {now?: Date} = {}) {
       <h2 class="app-first-answer-line">{a.line}</h2>
       <p class="app-first-answer-reason">{a.reason}</p>
       <p class="app-first-answer-rules">{a.legalityNote} <a href={a.rulesHref} target="_blank" rel="noopener">Official rules</a></p>
-      <button type="button" class="app-first-answer-more" onClick={() => document.querySelector('.app-main, .app-mobile')?.scrollIntoView?.()}>Show the map and detail</button>
+      <Button class="app-first-answer-more" onClick={() => document.querySelector('.app-main, .app-mobile')?.scrollIntoView?.()}>Show the map and detail</Button>
     </section>
   );
 }

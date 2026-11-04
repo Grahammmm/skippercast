@@ -166,8 +166,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // BF-one-answer (#1456): App.tsx adds FirstAnswerLine and a desktop shell row. BODY09 mounts
   // Reports/CatchCards directly, never App or FirstAnswerLine; the new hook runs only when
   // FirstAnswerLine mounts. RegionInfo and Reports' id/charters reads are unchanged, with no
-  // CSS, token or catch markup changes. contrast(), assertions and thresholds are untouched.
-  "web/app/App.tsx": "e265dec49c7f8babe537f1e7b64a68d70d43652d024284f486ffe94c80e7cf51",
+  // CSS, token or catch markup changes. The answer action uses the existing Button component
+  // for its touch target and focus ring; BODY09 never renders that action. contrast(), assertions
+  // and thresholds are untouched.
+  "web/app/App.tsx": "6c4a3583a07ea7471ccd3f1342f30906f822c90cedf66aff12b8d38251ce1a20",
   // SC-LAUNCH-4 (#1267, cost ceiling): Masthead.tsx imports web/degraded.ts (a signal and pure helpers, no top-level
   // side effect) and adds DegradedNotice after FreshnessDot. It renders nothing unless a response carries
   // X-SC-Degraded: cost-ceiling, which no BODY09 fixture does; when shown it reuses the existing .app-limits-note
