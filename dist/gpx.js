@@ -1,7 +1,9 @@
 import {plotterName,plotterWord} from './spot-ranking.js';
 export const exportEvidenceLabel=t=>t?.canonical_habitat===true?'Measured reef · current screening required · nominal survey depth':'Research coordinate · not chart-depth qualified';
+const FORBIDDEN = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+export const xmlText = v => String(v ?? '').replace(FORBIDDEN, '');
 export const xml = (value) =>
-  String(value ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').replace(
+  xmlText(value).replace(
     /[&<>"']/g,
     (c) =>
       ({
@@ -35,7 +37,7 @@ export function tripGPX(atlas, ids, title='SkipperCast fishing set', options={})
 }
 export function featuresGPX(atlas,features,title,options={}) {
   const selected=features.waypoints;
-  const names=new Set(), unique=name=>{const base=String(name??'');let next=base,n=2;while(names.has(next.toLowerCase()))next=`${base} (${n++})`;names.add(next.toLowerCase());return next;};
+  const names=new Set(), unique=name=>{const base=xmlText(name).trim()||'Waypoint';let next=base,n=2;while(names.has(next.toLowerCase()))next=`${base} (${n++})`;names.add(next.toLowerCase());return next;};
   const points=selected.map(t=>{
   const name=unique(!t.user_waypoint&&t.trip_rank&&plotterWord(t.trip_species)?plotterName(t):t.name);
   if(t.user_waypoint)return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(name)}</name><cmt>${xml(t.id)}</cmt><desc>User waypoint. User-supplied label; not verified habitat, depth or navigation guidance. Check current regulations, closures, conditions and official charts.</desc><type>${xml(t.category)}</type></wpt>`;
