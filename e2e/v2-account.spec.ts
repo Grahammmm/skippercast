@@ -228,3 +228,148 @@ test('signed in, saved-trip alerts save, list, delete and acknowledge through th
   await expect(dialog.getByRole('button', {name: 'Delete my account and records'}), 'Cancel keeps everything and returns focus').toBeFocused();
   expect(pageErrors).toEqual([]);
 });
+
+// SC0452-01: the passkey library (vendor/simplewebauthn-browser-14.0.0) is requested when a ceremony starts, not with the map page.
+const UMD = '/vendor/simplewebauthn-browser-14.0.0/index.umd.min.js';
+const UNAVAILABLE = 'Passkeys are unavailable right now. Try again when you are online.';
+
+/** Counts the requests for the library and for the options calls that must not happen without it. */
+function watchPasskeyRequests(page: Page) {
+  const seen = {library: 0, loginOptions: 0, addOptions: 0};
+  page.on('request', request => {
+    const path = new URL(request.url()).pathname;
+    if (path === UMD) seen.library += 1;
+    if (path === '/api/auth/login/options') seen.loginOptions += 1;
+    if (path === '/api/auth/passkeys/options') seen.addOptions += 1;
+  });
+  return seen;
+}
+
+test('the map page and a signed-in account dialog request no passkey library', async ({page, pageErrors, v2}) => {
+  const state = await stubAuth(page, await passkeyFixture(page));
+  state.signedIn = true;
+  const seen = watchPasskeyRequests(page);
+  await v2.open('app', AREA);
+  await expect(page.locator('.app-account-trigger')).toHaveText('Skipper');
+  await page.evaluate(() => { location.hash = '#account'; });
+  await expect(page.locator('#account-add')).toBeVisible();
+  await expect(page.locator('#log-form')).toBeVisible();
+  await page.locator('.home-port-close').click();
+  await expect(page.locator('.account-card')).toHaveCount(0);
+  expect(seen.library, 'no passkey library for the map, the session read or a signed-in dialog').toBe(0);
+  expect(await page.evaluate(() => typeof (globalThis as {SimpleWebAuthnBrowser?: unknown}).SimpleWebAuthnBrowser)).toBe('undefined');
+  expect(pageErrors).toEqual([]);
+});
+
+test('the signed-out dialog loads the library for its sign-in and Sign in completes with it', async ({page, pageErrors, v2}) => {
+  const state = await stubAuth(page, await passkeyFixture(page));
+  const seen = watchPasskeyRequests(page);
+  await v2.open('app', AREA);
+  expect(seen.library, 'the map alone requests no library').toBe(0);
+  await page.evaluate(() => { location.hash = '#account'; });
+  await expect(page.locator('#account-signin')).toBeEnabled();
+  const reloaded = page.waitForEvent('load');
+  await page.locator('#account-signin').click();
+  await reloaded;
+  expect(state.verified).toBe(1);
+  expect(seen.library, 'one library request however many sign-in paths asked').toBe(1);
+  await expect(page.locator('.app-account-trigger')).toHaveText('Skipper');
+  expect(seen.library, 'the signed-in page asks for none').toBe(1);
+  expect(pageErrors.filter(e => !/Failed to load resource/.test(e))).toEqual([]);
+});
+
+test('a library that will not load says passkeys are unavailable, makes no auth request, and the next try loads it', async ({page, v2}) => {
+  const state = await stubAuth(page, await passkeyFixture(page));
+  const seen = watchPasskeyRequests(page);
+  await page.route('**/vendor/simplewebauthn-browser-14.0.0/**', route => route.abort('failed'));   // offline
+  await v2.open('app', AREA);
+  await page.evaluate(() => { location.hash = '#account'; });
+  await expect(page.locator('#account-signin')).toBeEnabled();
+  await page.locator('#account-signin').click();
+  await expect(page.locator('#account-status')).toHaveText(UNAVAILABLE);
+  await expect(page.locator('#account-signin')).toBeEnabled();
+  await expect(page.locator('#account-create')).toBeEnabled();
+  expect(seen.loginOptions, 'no options request without the library').toBe(0);
+
+  // The right file name with other bytes: the browser refuses it on integrity, which reads the same.
+  await page.unroute('**/vendor/simplewebauthn-browser-14.0.0/**');
+  await page.route('**/vendor/simplewebauthn-browser-14.0.0/**', route => route.fulfill({contentType: 'text/javascript',
+    body: 'globalThis.SimpleWebAuthnBrowser = {browserSupportsWebAuthn: () => true, startAuthentication: async () => ({}), startRegistration: async () => ({})};'}));
+  await page.locator('#account-create').click();
+  await expect(page.locator('#account-status')).toHaveText(UNAVAILABLE);
+  expect(await page.evaluate(() => typeof (globalThis as {SimpleWebAuthnBrowser?: unknown}).SimpleWebAuthnBrowser), 'the tampered script never ran').toBe('undefined');
+  expect(seen.loginOptions).toBe(0);
+
+  await page.unroute('**/vendor/simplewebauthn-browser-14.0.0/**');   // back online
+  const reloaded = page.waitForEvent('load');
+  await page.locator('#account-signin').click();
+  await reloaded;
+  expect(state.verified, 'the retry loaded the real library and signed in').toBe(1);
+});
+
+test('Add a passkey loads the library when tapped; a failed load says so and a retry adds the passkey', async ({page, pageErrors, v2}) => {
+  const state = await stubAuth(page, await passkeyFixture(page));
+  state.signedIn = true;
+  const seen = watchPasskeyRequests(page);
+  const added: {response?: {id?: string}}[] = [];
+  await page.route('**/api/trips', route => route.fulfill({json: {trips: [], events: []}}));   // the signed-in dialog's other reads, so none writes the status line
+  await page.route('**/api/catch-log', route => route.fulfill({json: {entries: []}}));
+  await page.route('**/api/spots', route => route.fulfill({json: {spots: []}}));
+  await page.route('**/api/auth/passkeys/options', route => route.fulfill({json: {challenge: b64url(randomBytes(32)), rp: {name: 'SkipperCast', id: 'localhost'},
+    user: {id: b64url(randomBytes(16)), name: 'Skipper', displayName: 'Skipper'}, pubKeyCredParams: [{type: 'public-key', alg: -7}], timeout: 60000,
+    authenticatorSelection: {residentKey: 'required', userVerification: 'preferred'}, attestation: 'none'}}));
+  await page.route('**/api/auth/passkeys', route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    added.push(route.request().postDataJSON() as {response?: {id?: string}});
+    return route.fulfill({json: {ok: true}});
+  });
+  await page.route('**/vendor/simplewebauthn-browser-14.0.0/**', route => route.abort('failed'));
+  await v2.open('app', AREA);
+  await page.evaluate(() => { location.hash = '#account'; });
+  await expect(page.locator('#account-add')).toBeVisible();
+  expect(seen.library, 'opening the signed-in dialog requests nothing').toBe(0);
+  await page.locator('#account-add').click();
+  await expect(page.locator('#account-status')).toHaveText(UNAVAILABLE);
+  expect(seen.addOptions, 'no options request without the library').toBe(0);
+  expect(added).toEqual([]);
+
+  await page.unroute('**/vendor/simplewebauthn-browser-14.0.0/**');
+  await page.locator('#account-add').click();
+  await expect(page.locator('#account-status')).toHaveText('Passkey added.');
+  expect(seen.library).toBe(2);
+  expect(seen.addOptions).toBe(1);
+  expect(added).toHaveLength(1);
+  expect(added[0]!.response?.id, 'the authenticator answered the registration').toBeTruthy();
+  expect(pageErrors.filter(e => !/Failed to load resource/.test(e))).toEqual([]);
+});
+
+test('a tap or a close while the library is still loading keeps the late autofill from starting a sign-in', async ({page, pageErrors, v2}) => {
+  const state = await stubAuth(page, await passkeyFixture(page));
+  const seen = watchPasskeyRequests(page);
+  let held: import('@playwright/test').Route | undefined;
+  await page.route('**/vendor/simplewebauthn-browser-14.0.0/**', route => { held = route; });   // the library is on its way, not yet here
+  await v2.open('app', AREA);
+
+  // Closed while loading: the late autofill makes no options request and paints nothing.
+  await page.evaluate(() => { location.hash = '#account'; });
+  await expect.poll(() => held).toBeDefined();
+  await page.locator('.home-port-close').click();
+  await expect(page.locator('.account-card')).toHaveCount(0);
+  await held!.continue(); held = undefined;
+  await page.evaluate(() => { location.hash = '#guide'; });
+  expect(seen.loginOptions, 'a closed dialog starts no ceremony').toBe(0);
+
+  // Tapped while loading: only the tap's own sign-in asks for options.
+  await page.unroute('**/vendor/simplewebauthn-browser-14.0.0/**');
+  await page.route('**/vendor/simplewebauthn-browser-14.0.0/**', route => { held = route; });
+  await page.reload();
+  await page.evaluate(() => { location.hash = '#account'; });
+  await expect.poll(() => held).toBeDefined();
+  await page.locator('#account-signin').click();
+  const reloaded = page.waitForEvent('load');
+  await held!.continue();
+  await reloaded;
+  expect(state.verified).toBe(1);
+  expect(seen.loginOptions, 'the tap asked once; the autofill that was waiting did not').toBe(1);
+  expect(pageErrors.filter(e => !/Failed to load resource/.test(e))).toEqual([]);
+});
