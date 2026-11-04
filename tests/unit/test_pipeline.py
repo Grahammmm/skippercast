@@ -216,6 +216,52 @@ class PipelineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             parsers.tides({"error": {"message": "outage"}}, "9413450", "Monterey reference")
 
+    def _tide_data(self, *rows):
+        return {"predictions": [{"t": t, "v": v, "type": k} for t, v, k in rows]}
+
+    def test_tides_reject_reversed_and_interior_reversal(self):
+        note = "Port San Luis reference."
+        reversed_rows = self._tide_data(("2026-09-22 07:00", "-0.3", "L"), ("2026-09-22 01:00", "4.2", "H"))
+        interior = self._tide_data(("2026-09-22 01:00", "4.2", "H"), ("2026-09-22 13:00", "4.0", "H"),
+                                   ("2026-09-22 07:00", "-0.3", "L"), ("2026-09-23 02:00", "4.4", "H"))
+        for data in (reversed_rows, interior):
+            with self.assertRaisesRegex(ValueError, "must be strictly increasing"):
+                parsers.tides(data, "9412110", note)
+
+    def test_tides_reject_duplicate_instants(self):
+        note = "Port San Luis reference."
+        cases = [
+            self._tide_data(("2026-09-22 01:00", "4.2", "H"), ("2026-09-22 01:00", "4.2", "H")),
+            self._tide_data(("2026-09-22 01:00", "4.2", "H"), ("2026-09-22 01:00", "-0.3", "L")),
+            self._tide_data(("2026-09-22 01:00:00", "4.2", "H"), ("2026-09-22 01:00:00.000", "4.2", "H")),
+            self._tide_data(("2026-09-22 01:00", "4.2", "H"), ("2026-09-22 07:00", "-0.3", "L"),
+                            ("2026-09-22 07:00", "-0.3", "L")),
+        ]
+        for data in cases:
+            before = copy.deepcopy(data)
+            with self.assertRaisesRegex(ValueError, "must be strictly increasing"):
+                parsers.tides(data, "9412110", note)
+            self.assertEqual(data, before)
+
+    def test_tides_keep_valid_rows_and_single_row_horizon(self):
+        note = "Port San Luis reference."
+        single = self._tide_data(("2026-09-22 01:00", "4.2", "H"))
+        r = parsers.tides(single, "9412110", note)
+        self.assertEqual(r["coverage_start"], "2026-09-22T01:00:00Z")
+        self.assertEqual(r["coverage_end"], "2026-09-22T01:00:00Z")
+        self.assertEqual(len(r["predictions"]), 1)
+        multi = self._tide_data(("2026-09-22 01:00", "4.2", "H"), ("2026-09-22 07:00:00.500", "-0.3", "L"),
+                                ("2026-09-23 02:10", "4.4", "H"))
+        before = copy.deepcopy(multi)
+        r = parsers.tides(multi, "9412110", note)
+        self.assertEqual(multi, before)
+        self.assertEqual([p["time"] for p in r["predictions"]],
+                         ["2026-09-22T01:00:00Z", "2026-09-22T07:00:00.500000Z", "2026-09-23T02:10:00Z"])
+        self.assertEqual([p["type"] for p in r["predictions"]], ["H", "L", "H"])
+        self.assertEqual((r["coverage_start"], r["coverage_end"]), ("2026-09-22T01:00:00Z", "2026-09-23T02:10:00Z"))
+        self.assertEqual((r["station"], r["datum"], r["units"], r["timezone"], r["note"]),
+                         ("9412110", "MLLW", "ft", "UTC", note))
+
     def test_zero_alerts_requires_recognized_response(self):
         self.assertEqual(parsers.alerts({"type": "FeatureCollection", "features": []})["alerts"], [])
         with self.assertRaises(ValueError):
