@@ -8,14 +8,16 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 import json
 import random
+import re
 
-from ..http import HTTPStatusError, default_session
+from ..http import ContractError, HTTPStatusError, default_session
 from .models import ECMWF_AWS, ECMWF_PORTAL, GFS_AWS
 
 RETRIES = 7
 # Any error status except "not there" (403/404 from S3 and ECMWF) is retried.
 RETRY_STATUSES = frozenset(range(400, 600)) - {403, 404}
 MAX_BYTES = 512 * 1024 * 1024  # one GRIB message or index; far above any real field
+INVALID_RANGE = 'Invalid forecast byte-range response'
 
 
 def backoff(retry):
@@ -45,7 +47,35 @@ def http(url, byte_range=None, method='GET', timeout=60, retries=RETRIES, sessio
         if error.status in (403, 404):
             return None
         raise
-    return b'' if method == 'HEAD' else response.body
+    if method == 'HEAD':
+        return b''
+    if byte_range:
+        _check_range(response, byte_range)
+    return response.body
+
+
+_CONTENT_RANGE = re.compile(r'\s*bytes ([0-9]+)-([0-9]+)/([0-9]+|\*)\s*')
+
+
+def _check_range(response, byte_range):
+    """Refuse a ranged GET answer that is not exactly the requested slice.
+
+    A server that ignores Range sends 200 and the whole file; a wrong slice would
+    otherwise reach the GRIB decoder under the selected field's name.
+    """
+    start, end = byte_range
+    body = response.body
+    match = _CONTENT_RANGE.fullmatch(response.headers.get('Content-Range') or '')
+    if response.status != 206 or not isinstance(body, bytes) or not body or match is None:
+        raise ContractError(INVALID_RANGE)
+    first, last = int(match.group(1)), int(match.group(2))
+    total = None if match.group(3) == '*' else int(match.group(3))
+    if first != start or last < first or len(body) != last - first + 1:
+        raise ContractError(INVALID_RANGE)
+    if end is not None and last != end:
+        raise ContractError(INVALID_RANGE)
+    if total is not None and (total <= last or (end is None and last != total - 1)):
+        raise ContractError(INVALID_RANGE)
 
 
 def exists(url):
