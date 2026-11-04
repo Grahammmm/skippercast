@@ -537,7 +537,7 @@ export function createPlanner(deps: PlannerDeps) {
   const savedRaw = signal<SavedSpot[]>(NO_SPOTS), savedSpotsState = signal<SavedSpotsState>('idle'), savedSpotsOpen = signal(false), savedSpotsStatus = signal('');
   let spotsGen = 0, spotsAbort: AbortController | null = null, spotsFor: unknown = null;
   const localBySource = new Map<string, string>();
-  const spotsActive = (): boolean => !disposed && savedSpotsOpen.value && session.value.state === 'signed-in' && !(activeRegion.value && activeRegion.value !== region.id);
+  const spotsActive = (): boolean => !disposed && savedSpotsOpen.value && session.value.state === 'signed-in' && activeRegion.value === region.id;
   const dropSpots = (): void => {
     spotsGen++; spotsAbort?.abort(); spotsAbort = null; spotsFor = null; localBySource.clear();
     batch(() => { savedRaw.value = NO_SPOTS; savedSpotsState.value = 'idle'; savedSpotsStatus.value = ''; });
@@ -577,7 +577,7 @@ export function createPlanner(deps: PlannerDeps) {
   /** A spot's own reading: only a screen that says what area it covers speaks for it, in the region the planner is open for; else not checked. */
   const spotVerdict = (p: SavedSpot): PlaceVerdict => {
     const sc = screen as {coversGeometry?: unknown} | null;
-    if ((activeRegion.value && activeRegion.value !== region.id) || typeof sc?.coversGeometry !== 'function') return {inside: false, name: null, distanceM: null, screened: false};
+    if (activeRegion.value !== region.id || typeof sc?.coversGeometry !== 'function') return {inside: false, name: null, distanceM: null, screened: false};
     return screenPlace(screen, {latitude: p.latitude, longitude: p.longitude});
   };
   const savedSpots = computed<SavedSpotRow[]>(() => {

@@ -22,7 +22,7 @@ await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader
     export {Planner} from './web/app/Planner.tsx';
     export {createPlanner} from './web/planner.ts';
     export {session} from './web/account.ts';
-    export {region as stateRegion} from './web/state.ts';
+    export {region as stateRegion} from './web/state.ts'; export {batch} from '@preact/signals';
     export {render} from 'preact-render-to-string'; export {h, options} from 'preact';`},
   bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: [rendererPlugin, hookStub]});
 const m = await import(pathToFileURL(out).href);
@@ -186,6 +186,37 @@ test('saved_spot_add_requires_current_bounded_screen', async () => {
   const h = harness(); await open(h); assert.equal(rowsOf(h)[0].refused, false);
   m.stateRegion.value = 'other-coast'; await settle();
   assert.equal(rowsOf(h).length, 0); h.planner.addSavedSpot(uuid(1)); assert.deepEqual(waypointsOf(h), []); assert.match(h.planner.savedSpotsStatus.value, /^Saved spot unavailable\./); h.planner.dispose();
+});
+
+test('saved_spot_add_requires_current_bounded_screen: missing region invalidates held rows and late responses', async () => {
+  for (const missing of [null, '']) {
+    const h = harness(); await open(h);
+    assert.equal(rowsOf(h)[0].refused, false);
+    const before = JSON.stringify(h.planner.draft.value);
+    // Hold effects until the end of the batch: the reading and direct Add must fail
+    // closed even before the lifecycle effect has discarded the loaded account rows.
+    m.batch(() => {
+      m.stateRegion.value = missing;
+      assert.deepEqual(rowsOf(h).map(r => [r.refused, r.reading]), [[true, 'Protected areas not checked']]);
+      h.planner.addSavedSpot(uuid(1));
+      assert.equal(JSON.stringify(h.planner.draft.value), before);
+      assert.equal(h.store.size, 0, 'direct Add persists nothing without a matching region');
+      assert.match(h.planner.savedSpotsStatus.value, /^Saved spot unavailable\./);
+    });
+    await settle();
+    assert.equal(rowsOf(h).length, 0); assert.equal(h.planner.savedSpotsState.value, 'idle');
+    await h.planner.refreshSavedSpots(); assert.equal(h.calls.length, 1, 'no fetch without a matching region');
+    h.planner.dispose();
+
+    const pending = gate(), late = harness({handler: () => pending.promise}); await open(late);
+    m.stateRegion.value = missing;
+    assert.equal(late.calls[0].init.signal.aborted, true);
+    pending.resolve(okList([row(1)])); await settle();
+    assert.equal(rowsOf(late).length, 0, 'late response cannot restore missing-region rows');
+    assert.equal(late.planner.savedSpotsState.value, 'idle');
+    late.planner.addSavedSpot(uuid(1)); assert.deepEqual(waypointsOf(late), []); assert.equal(late.store.size, 0);
+    late.planner.dispose();
+  }
 });
 
 test('saved_spot_add_requires_current_bounded_screen: the screen is read again at Add and at export, after the list was shown', async () => {
