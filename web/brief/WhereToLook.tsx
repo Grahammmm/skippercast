@@ -228,10 +228,10 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   const lw = landWater.value, unrouted = {n: 0};
   const picks: readonly (Pick & {basis?: 'water' | 'straight'})[] = boat ? listedBoatPicks(r, lw, id, waterRoute, unrouted) : r.picks;
   useEffect(() => unrouted.n ? routeAfterPaint(r, lw, id) : undefined);
-  // The lines file is asked for once the region's index is ready and a candidate still waits on it (a mixed cell),
-  // so a list that was pending on the index itself asks as soon as the index lands; clean cells never load it.
-  // A Boat route that needs the lines (lines-needed) does not ask for them: that pick keeps its labelled straight line.
-  const wantLines = !!id && !!r.pending && lw.region === id && lw.state === 'ready' && lw.lines === null;
+  // A candidate's mixed cell or a deferred Boat route can need shoreline lines.
+  // The list owns this request too; Run only reads the shared routed picks.
+  const wantLines = !!id && (!!r.pending || (boat && picks.some(p => 'why' in p && p.why === 'lines-needed')))
+    && lw.region === id && lw.state === 'ready' && lw.lines === null;
   // SCJ-2a: the publication loads once per region, and its live manifest is checked again now (a cached one) and each
   // minute, as the planner checks its plan, so a held, unavailable or superseded publication stops ranking.
   useEffect(() => {
