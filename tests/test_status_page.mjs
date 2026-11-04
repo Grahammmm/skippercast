@@ -85,10 +85,11 @@ test('every source in catalog/sources.json is either shown, or named on the page
   for (const id of Object.keys(SOURCE_COVERAGE)) assert.ok(SOURCE_NAMES[id], `${id} is not in the catalog`);
   const groups = coverageGroups();
   assert.equal(Object.values(groups).flat().length, catalog.sources.length + Object.keys(DOCUMENTED_EXTRA).length);
-  assert.equal(coverageOf('cdip-mop'), 'scheduled-unwatched');
+  assert.equal(coverageOf('cdip-mop'), 'watched');
+  assert.equal(coverageOf('noaa-gefs-members'), 'scheduled-unwatched');
   const html = renderCoverage();
   assert.match(html, /freshness check does not watch it yet/);
-  assert.match(html, /CDIP MOP/);
+  assert.match(html, /NOAA GEFS 0\.25° wind ensemble members/);
   assert.ok(!html.includes('NDBC station observations'), 'a watched source is not listed as unwatched');
 });
 
