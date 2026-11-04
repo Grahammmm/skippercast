@@ -16,7 +16,7 @@ import {regionInfo} from '../app/region-info.ts';
 import {cruiseSpeed, wantedHours} from '../limits.ts';
 import {ROUTE_BUDGET, type Ranking, type RoutedPick} from '../ranking.ts';
 import {habitat, profile, region, selection, species} from '../state.ts';
-import {landWater} from '../land-water.ts';
+import {landWater, loadLandWaterLines} from '../land-water.ts';
 import type {RouteFailure} from '../route.ts';
 import {barNote, durationText, planRun, ROUND_MIN, type RunPlace, type RunState} from './run.ts';
 import {currentRanking, listedBoatPicks} from './WhereToLook.tsx';
@@ -109,10 +109,13 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   const rules = regionInfo.value?.rules;
   useEffect(() => { if (rules) void loadRegs(rules); }, [rules?.id]);
   const boat = !!brief && profile.value === 'boat' && brief.profile === 'boat', id = region.value;
-  // The list's own picks: the same ranking pool (ROUTE_BUDGET candidates) and memoised routes WhereToLook paints from; it alone
-  // computes the missing routes and loads the shoreline lines, so this line adds no search and no request.
+  // The list's own picks and memoised routes: this line never starts a route search.
   const r = boat ? ranking ?? currentRanking(now.getTime(), ROUTE_BUDGET) : null, lw = landWater.value;
   const listed = r ? listedBoatPicks(r, lw, id) : [], place = runPlace(listed, selection.value, habitat.value);
+  // Request missing shoreline detail only when the run can display a distance, not at every Boat startup.
+  // WhereToLook re-routes the shared list when these lines land; Run stays a memo-only route consumer.
+  const speed = cruiseSpeed.value, shows = boat && !!brief?.windows.length && speed !== null && speed > 0;
+  useEffect(() => { if (id && shows && place?.why === 'lines-needed') void loadLandWaterLines(id); }, [id, shows, place?.why]);
   if (!brief || !r) return null;
   const state = planRun(brief, place, cruiseSpeed.value, now), tz = regionInfo.value?.timezone ?? DEFAULT_ZONE;
   const text = runText(state, tz, place?.unranked), harbor = r.harbor ?? 'the harbor';

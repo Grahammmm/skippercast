@@ -228,9 +228,9 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   const lw = landWater.value, unrouted = {n: 0};
   const picks: readonly (Pick & {basis?: 'water' | 'straight'})[] = boat ? listedBoatPicks(r, lw, id, waterRoute, unrouted) : r.picks;
   useEffect(() => unrouted.n ? routeAfterPaint(r, lw, id) : undefined);
-  // A candidate's mixed cell or a deferred Boat route can need shoreline lines.
-  // The list owns this request too; Run only reads the shared routed picks.
-  const wantLines = !!id && (!!r.pending || (boat && picks.some(p => 'why' in p && p.why === 'lines-needed')))
+  // Only mixed ranking candidates need lines at list paint. A failed deferred route
+  // may have seen a mixed cell far from a pick; Run requests those lines only when showing a distance.
+  const wantLines = !!id && !!r.pending
     && lw.region === id && lw.state === 'ready' && lw.lines === null;
   // SCJ-2a: the publication loads once per region, and its live manifest is checked again now (a cached one) and each
   // minute, as the planner checks its plan, so a held, unavailable or superseded publication stops ranking.
