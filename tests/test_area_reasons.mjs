@@ -38,6 +38,15 @@ test('the copy that stands never depends on feed order, and the copy with a link
   assert.equal(reasonsFor('A', [b, a], NOW)[0].sourceURL, 'https://example.test/r1');
 });
 
+test('otherwise identical copies choose the same canonical source link when feed order reverses', () => {
+  const a = rec({id: 'r1', sourceURL: 'https://EXAMPLE.test:443/a'});
+  const b = rec({id: 'r1', sourceURL: 'https://example.test/b'});
+  const got = reasonsFor('A', [a, b], NOW);
+  assert.deepEqual(reasonsFor('A', [b, a], NOW), got);
+  assert.equal(got.length, 1);
+  assert.equal(got[0].sourceURL, 'https://example.test/a');
+});
+
 test('four or more eligible reasons give exactly three, newest first, one per kind, the same whatever the input order', () => {
   const all = [rec({kind: 'survey', date: '2026-10-01', text: 'S', source: 'S1'}), rec({kind: 'screen', date: '2026-10-20', text: 'C', source: 'S2'}), rec({kind: 'report', date: '2026-10-30', text: 'R', source: 'S3'}),
     rec({kind: 'closure', date: '2026-10-10', text: 'L', source: 'S4'}), rec({kind: 'tide', date: '2026-10-20', text: 'T', source: 'S5'}), rec({kind: 'report', date: '2026-10-05', text: 'R older', source: 'S6'})];

@@ -49,7 +49,7 @@ const identity = (r: EvidenceRecord, source: string, date: string): string =>
 /**
  * At most MAX_REASONS dated reasons for `area`, newest first, one per distinct kind. A record with a missing, malformed or
  * future date, no text or no source is left out (an undated reason is not shown), and so is any record of another area.
- * Ties on the date fall to kind, source, then text, so the same records always give the same list.
+ * Ties fall to kind, link presence, source, text, then canonical HTTPS link (code-unit order).
  */
 export function reasonsFor(area: string, evidence: readonly EvidenceRecord[] | null | undefined, now: number): Reason[] {
   if (!Array.isArray(evidence) || !str(area)) return [];
@@ -63,7 +63,8 @@ export function reasonsFor(area: string, evidence: readonly EvidenceRecord[] | n
   }
   // Sorted before anything is dropped, so which copy of a duplicate stands never depends on the order the feeds came in.
   eligible.sort((a, b) => b.ms - a.ms || a.kind.localeCompare(b.kind) || Number(!a.reason.sourceURL) - Number(!b.reason.sourceURL)
-    || a.reason.source.localeCompare(b.reason.source) || a.reason.text.localeCompare(b.reason.text));
+    || a.reason.source.localeCompare(b.reason.source) || a.reason.text.localeCompare(b.reason.text)
+    || ((a.reason.sourceURL ?? '') < (b.reason.sourceURL ?? '') ? -1 : (a.reason.sourceURL ?? '') > (b.reason.sourceURL ?? '') ? 1 : 0));
   const keys = new Set<string>(), kinds = new Set<string>();
   const fresh = (seen: Set<string>, k: string): boolean => !seen.has(k) && (seen.add(k), true);
   return eligible.filter(e => fresh(keys, e.key) && fresh(kinds, e.kind)).slice(0, MAX_REASONS).map(e => e.reason);
