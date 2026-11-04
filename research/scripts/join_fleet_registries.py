@@ -59,6 +59,7 @@ import zipfile
 from skippercast.fleet.adapters.fcc_uls import STATUSES, WIDTH, is_entity
 from skippercast.fleet.adapters.uscg_psix import Vessel, parse_inspections
 from skippercast.fleet.normalize import name_norm
+from skippercast.util.units import M_PER_FT as FT
 
 from research.lib.paths import ROOT
 
@@ -157,7 +158,6 @@ US_CALL = re.compile(r"(?:[KNW]|A[A-L])[A-Z0-9]{2,6}")
 CHARTER_TYPES = frozenset({0, 30, 37} | set(range(60, 70)))
 UNSPECIFIC_TYPES = frozenset({90, 99})   # "other type": no contradiction, but no support either
 LENGTH_TOLERANCE = 0.2
-FT = 0.3048
 
 
 def _alnum(text: str | None) -> str:

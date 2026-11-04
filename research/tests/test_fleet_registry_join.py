@@ -4,11 +4,13 @@ Offline and private-data free: invented boats, ``999xxxxxx`` MMSIs (the module's
 999 for the test), ``ZZZ`` call signs, invented licensees and ZIP codes. Every file is written under a
 temporary directory.
 """
+import ast
 from collections import Counter
 import contextlib
 import hashlib
 import io
 import json
+import math
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -289,6 +291,64 @@ class CommandTests(unittest.TestCase):
         self.assertIn("| Test Wave | morro-bay | resolved | 999000001 | ZZZ9001 |", table)
         self.assertEqual(data["rows"][0]["best"]["licence"]["licensee"], "Example Fishing LLC")
         self.assertNotIn("93499", json.dumps(data))
+
+
+class LengthUnitTests(unittest.TestCase):
+    def test_research_join_foot_binding_uses_shared_constant(self):
+        tree = ast.parse(Path(J.__file__).read_text())
+        aliases = [(n.module, a.name, a.asname) for n in tree.body if isinstance(n, ast.ImportFrom)
+                   for a in n.names if a.asname == "FT" or a.name == "FT"]
+        self.assertEqual(aliases, [("skippercast.util.units", "M_PER_FT", "FT")])
+        local = [n for n in tree.body if isinstance(n, (ast.Assign, ast.AnnAssign))
+                 and "FT" in {t.id for t in (n.targets if isinstance(n, ast.Assign) else [n.target])
+                              if isinstance(t, ast.Name)}]
+        self.assertEqual(local, [])
+        self.assertEqual(J.FT, 0.3048)
+
+    def test_length_verdict_matches_legacy_at_tolerance_neighbors(self):
+        def oracle(static_m, licences):   # the legacy formula with an independent literal, never J.FT
+            if not static_m or not licences:
+                return "unknown"
+            for v in licences:
+                for metres, unit in ((v * 0.3048, "ft"), (float(v), "m")):
+                    if abs(static_m - metres) <= 0.2 * metres:
+                        return f"agrees ({v} {unit})"
+            return "contradicts"
+
+        checked = 0
+        for n in range(1, 201):
+            edges = {n * 0.3048 * 0.8, n * 0.3048 * 1.2, n * 0.8, n * 1.2, n * 0.3048, float(n)}
+            probes = set()
+            for edge in edges:
+                probes |= {math.nextafter(edge, 0.0), edge, math.nextafter(edge, math.inf)}
+            for length_m in sorted(probes):
+                got = J._length_check(static(1, "X", length=length_m), [lic("A", "ZZZ1", "999", length=n)])
+                self.assertEqual(got, oracle(length_m, [n]), (n, length_m))
+                checked += 1
+        self.assertGreater(checked, 3000)
+        self.assertEqual(J._length_check(static(1, "X", length=12.0), [lic("A", "ZZZ1", "999", length=39)]),
+                         "agrees (39 ft)")
+
+    def test_length_verdict_preserves_unknown_and_metre_fallback(self):
+        one = [lic("A", "ZZZ1", "999", length=39)]
+        self.assertEqual(J._length_check(None, one), "unknown")
+        self.assertEqual(J._length_check(static(1, "X", length=None), one), "unknown")
+        self.assertEqual(J._length_check(static(1, "X", length=0.0), one), "unknown")
+        self.assertEqual(J._length_check(static(1, "X", length=12.0), []), "unknown")
+        self.assertEqual(J._length_check(static(1, "X", length=12.0), [lic("A", "ZZZ1", "999", length=0)]), "unknown")
+        self.assertEqual(J._length_check(static(1, "X", length=12.0), [lic("A", "ZZZ1", "999")]), "unknown")
+        # metre-only agreement keeps its metre label; feet are tried first for the same value
+        self.assertEqual(J._length_check(static(1, "X", length=40.0), [lic("A", "ZZZ1", "999", length=40)]),
+                         "agrees (40 m)")
+        # several licences keep their order: the first agreeing one wins
+        both = [lic("A", "ZZZ1", "999", length=100), lic("B", "ZZZ2", "999", length=39)]
+        self.assertEqual(J._length_check(static(1, "X", length=12.0), both), "agrees (39 ft)")
+        near = [lic("A", "ZZZ1", "999", length=39), lic("B", "ZZZ2", "999", length=40)]
+        self.assertEqual(J._length_check(static(1, "X", length=12.0), near), "agrees (39 ft)")
+        self.assertEqual(J._length_check(static(1, "X", length=12.0), near[::-1]), "agrees (40 ft)")
+        self.assertEqual(J._length_check(static(1, "X", length=100.0), both), "agrees (100 m)")
+        # a clear outlier contradicts
+        self.assertEqual(J._length_check(static(1, "X", length=500.0), one), "contradicts")
 
 
 if __name__ == "__main__":
