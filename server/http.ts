@@ -16,7 +16,7 @@ export async function body(request: Request, max = 8192): Promise<Body> {
   if (Number(request.headers.get('content-length')) > max) throw new ClientError('body too large');
   const reader = request.body?.getReader(); if (!reader) throw new ClientError('invalid empty body');
   const chunks: Uint8Array[] = []; let size = 0;
-  for (;;) { const {done, value} = await reader.read(); if (done) break; size += value.length; if (size > max) { await reader.cancel(); throw new ClientError('body too large'); } chunks.push(value); }
+  for (;;) { const {done, value} = await reader.read(); if (done) break; size += value.length; if (size > max) { try { await reader.cancel(); } catch { /* best-effort: the refusal below stands */ } throw new ClientError('body too large'); } chunks.push(value); }
   const bytes = new Uint8Array(size); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
   try { const value = JSON.parse(strictUtf8.decode(bytes)); if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error(); return value; } catch { throw new ClientError('invalid JSON body'); }
 }
