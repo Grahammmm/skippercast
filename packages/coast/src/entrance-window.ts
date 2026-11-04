@@ -2,7 +2,7 @@ import type {BarHour, Entrance} from './bar-conditions.ts';
 
 const HOUR = 3_600_000;
 export type EntranceWindow = {departBy: number | null; returnBy: number | null; best: number | null; reason: string; judged: boolean};
-export type EntranceWindowOptions = {entrance: Entrance; sunrise?: number | null; sunset?: number | null};
+export type EntranceWindowOptions = {entrance: Entrance; sunrise?: number | null; sunset?: number | null; formatHour?: (at: string) => string};
 
 /** Longest contiguous non-hazardous run; ties go to the earlier run.
  * Each verdict covers [at, at + 1 hour); a single hour is enough.
@@ -41,5 +41,5 @@ export function entranceWindow(hours: readonly BarHour[], opts: EntranceWindowOp
   if (missing) return empty('Entrance not judged: tide or swell driver missing in the window.', false);
   const cautions = longest.hours.filter(h => h.band === 'Caution');
   return {departBy: longest.start, returnBy: longest.end, best: longest.start, judged: true,
-    reason: cautions.length ? `Caution hours: ${cautions.map(h => h.at).join(', ')}.` : 'No bar flag in this window.'};
+    reason: cautions.length ? `Caution hours: ${cautions.map(h => opts.formatHour ? opts.formatHour(h.at) : h.at).join(', ')}.` : 'No bar flag in this window.'};
 }

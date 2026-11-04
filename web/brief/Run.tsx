@@ -27,7 +27,8 @@ import {entranceWindow} from '../../packages/coast/src/entrance-window.ts';
 export function EntranceLine({brief, tz}: {brief: Brief; tz: string}) {
   if (!brief.bar) return null;
   const result = entranceWindow(brief.bar.hours, {entrance: brief.bar.entrance,
-    sunrise: brief.sunrise ? Date.parse(brief.sunrise) : null, sunset: brief.sunset ? Date.parse(brief.sunset) : null});
+    sunrise: brief.sunrise ? Date.parse(brief.sunrise) : null, sunset: brief.sunset ? Date.parse(brief.sunset) : null,
+    formatHour: at => clock(at, tz)});
   const times = result.judged && result.departBy !== null && result.returnBy !== null
     ? `Leave by ${clock(new Date(result.departBy).toISOString(), tz)} · be back by ${clock(new Date(result.returnBy).toISOString(), tz)}. ` : '';
   return <p class="app-run-entrance">{brief.bar.entrance.name}: {times}{result.reason}</p>;

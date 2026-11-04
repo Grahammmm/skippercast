@@ -94,6 +94,9 @@ test('boat entrance line renders timing, no-window and not-judged distinctly', a
     const brief = hs => ({profile: 'boat', bar: {entrance, hours: hs}, sunrise: null, sunset: null, windows: [], alerts: [], tiles: [], missing: []});
     const line = hs => m.render(m.h(m.EntranceLine, {brief: brief(hs), tz: 'America/Los_Angeles'}));
     assert.match(line(hours([clear, clear])), /Morro Bay entrance: Leave by 7 am · be back by 9 am/);
+    const caution = line(hours([clear, 'Caution', clear]));
+    assert.match(caution, /Leave by 7 am · be back by 10 am\. Caution hours: 8 am\./);
+    assert.doesNotMatch(caution, /\d{4}-\d{2}-\d{2}T/);
     assert.match(line(hours([bad])), /No window today/);
     const unknown = hours([clear]); unknown[0].tide.stage = null;
     assert.match(line(unknown), /Entrance not judged/);
