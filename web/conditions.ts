@@ -156,11 +156,24 @@ export function conditionsRows(forecast: readonly Series[], local: readonly Seri
   return [wind, gust, offshore, ...local, air, cloud].filter((row): row is Series => !!row);
 }
 
-/** Each row's value at the whole hour `at` (ISO), null where the row has none. */
+/**
+ * Each row's value at the whole hour `at` (ISO), null where the row has none.
+ * An exact timestamp wins, even when its own value is missing (null, never a
+ * neighbour's). Otherwise the nearest finite point strictly within 30 minutes
+ * is read, the earlier one on a tie, whatever order the points arrive in.
+ */
 export function readingsAt(rows: readonly Series[], at: string): {label: string; unit: string; value: number | null}[] {
   const t = Date.parse(at);
   return rows.map(row => {
-    const point = row.points.find(p => Date.parse(p.at) === t) ?? row.points.find(p => Math.abs(Date.parse(p.at) - t) < 30 * 60000 && finite(p.value));
+    let point = row.points.find(p => Date.parse(p.at) === t);
+    if (!point) {
+      let best = Infinity, bestAt = Infinity;
+      for (const p of row.points) {
+        const pt = Date.parse(p.at), gap = Math.abs(pt - t);
+        if (!finite(p.value) || !(gap < 30 * 60000)) continue;
+        if (gap < best || (gap === best && pt < bestAt)) { best = gap; bestAt = pt; point = p; }
+      }
+    }
     return {label: row.label, unit: row.unit, value: finite(point?.value) ? point.value : null};
   });
 }

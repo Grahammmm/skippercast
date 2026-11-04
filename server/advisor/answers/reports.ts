@@ -25,7 +25,7 @@ import {dailyFeed, intelligenceFeed, feedReader} from './feeds.ts';
 import type {FeedReader} from './feeds.ts';
 import {reportEvidence, targetSpecies} from './confidence.ts';
 import type {Confidence, LandingReport} from './confidence.ts';
-import {advisoriesFrom, regionZones, windowConditions, windowEpochs, withForecastClock, WINDOW} from './conditions.ts';
+import {advisoriesFrom, advisoryCheckTime, regionZones, windowConditions, windowEpochs, withForecastClock, WINDOW} from './conditions.ts';
 import {forecastClock} from './forecast-clock.ts';
 import type {DayConditions} from './conditions.ts';
 import {lookupRules} from './rules.ts';
@@ -129,9 +129,9 @@ export async function dailyInputs(env: Env, port: string, date: string, deps: Da
   let conditions: DailyInputs['conditions'] = {available: false, advisories: [], day: null};
   if (region) {
     const [from, to] = windowEpochs(date, region.timezone, WINDOW);
-    const found = daily ? advisoriesFrom(daily, regionZones(region), from, to) : [];
+    const zones = regionZones(region), found = daily ? advisoriesFrom(daily, zones, from, to) : [];
     const advisories = found.map(a => a.event);
-    const day = intel ? withForecastClock(windowConditions(intel, region, FORECAST_POINT.get(port) ?? region.forecast_points[0]?.id ?? '', date, WINDOW, null, found), forecastClock(intel, now)) : null;
+    const day = intel ? withForecastClock(windowConditions(intel, region, FORECAST_POINT.get(port) ?? region.forecast_points[0]?.id ?? '', date, WINDOW, null, found, advisoryCheckTime(daily?.sources, zones) !== null), forecastClock(intel, now)) : null;
     conditions = {available: Boolean(day?.available), advisories: [...new Set(advisories)],
       day: day?.available ? {wind_kt: day.wind_kt, wind_from: day.wind_from, seas_ft: day.seas_ft, sea_period_s: day.sea_period_s, comfort: day.comfort, ...(day.comfort_held ? {comfort_held: day.comfort_held} : {})} : null};
   }

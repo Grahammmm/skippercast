@@ -95,3 +95,21 @@ test('a put rejection on the 2nd item propagates unchanged and the 3rd put is no
   await assert.rejects(saveTidePack(urls, put, signal, fetcher), /^Error: quota exceeded on put$/);
   assert.deepEqual(calls.map(c => c.key), urls.slice(0, 2));
 });
+
+test('invalid_calendar_interval_refuses_pack_before_put', async () => {
+  const hiloBad = enc({predictions: [{t: '2026-02-30 12:00', v: '9.9', type: 'H'}, {t: '2026-03-01 24:00', v: '9.9', type: 'L'}]});
+  const curveBad = enc({predictions: [{t: '2026-02-30 12:00', v: '9.9'}, {t: '2026-04-31 17:06', v: '9.9'}]});
+  await failCase({[urls[1]]: {bytes: hiloBad}}, UNAVAILABLE);
+  const seen = await failCase({[urls[2]]: {bytes: curveBad}}, UNAVAILABLE);
+  assert.equal(seen.length, 3, 'earlier good answers were fetched, none stored');
+});
+
+test('mixed valid and invalid rows still save the original response bytes', async () => {
+  const mixedHilo = enc({predictions: [{t: '2026-02-30 12:00', v: '9.9', type: 'H'}, {t: '2026-10-08 18:00', v: '3.2', type: 'H'}]});
+  const mixedCurve = enc({predictions: [{t: '2026-03-01 24:00', v: '9.9'}, {t: '2026-10-08 17:00', v: '1.2'}]});
+  const {fetcher} = fakeFetcher({[urls[1]]: {bytes: mixedHilo}, [urls[2]]: {bytes: mixedCurve}});
+  const {put, calls} = recordingPut();
+  await saveTidePack(urls, put, signal, fetcher);
+  assert.deepEqual(calls.map(c => c.key), urls);
+  assert.deepEqual(calls[1].bytes, mixedHilo); assert.deepEqual(calls[2].bytes, mixedCurve);
+});

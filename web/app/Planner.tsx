@@ -6,6 +6,7 @@
 import {useEffect} from 'preact/hooks';
 import {signal} from '@preact/signals';
 import {coordinates} from '../state.ts';
+import {session} from '../account.ts';
 import {formatCoordinates} from '../../dist/coordinates.js';
 import {exportEvidenceLabel, protectedHitReading, USER_WAYPOINT_CATEGORIES} from '../../dist/trip-export.js';
 import {fitLabel} from '../../dist/spot-ranking.js';
@@ -70,6 +71,25 @@ function BoundaryNote({hit}: {hit?: ProtectedHit}) {
   return hit ? <p>{protectedHitReading(hit)} Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</p> : null;
 }
 
+/** SC0022-11: the signed-in person's own spots as stops (plain text throughout). Add copies a name and a position into this browser's plan; the model reads the screen again on every Add. */
+function SavedSpots({m}: {m: Model}) {
+  const state = m.savedSpotsState.value, rows = m.savedSpots.value, status = m.savedSpotsStatus.value;
+  return (
+    <section class="export-card" id="export-saved-spots" aria-label="Your saved spots">
+      <h3>Your saved spots</h3>
+      <p class="export-note">Add copies the name and position to this browser’s plan. Notes stay private. Exporting the plan includes its selected positions.</p>
+      {state === 'loading' ? <p role="status">Loading your saved spots…</p> : null}
+      {state === 'failed' ? <p role="status">Saved spots could not be loaded. Try again. <button type="button" onClick={() => void m.refreshSavedSpots()}>Retry</button></p> : null}
+      {state === 'ready' && !rows.length ? <p role="status">No saved spots yet.</p> : null}
+      {rows.length ? <ul aria-label="Saved spots">{rows.map(r => <li key={r.id}>
+        <strong>{r.name}</strong> <small>{formatCoordinates(r.latitude, r.longitude, coordinates.value)}</small> <small>{r.reading}</small>{' '}
+        <button type="button" disabled={r.refused} aria-label={`Add ${r.name} to plan`} onClick={() => m.addSavedSpot(r.id)}>Add to plan</button>
+      </li>)}</ul> : null}
+      <p role="status" id="export-saved-spots-status">{status}</p>
+    </section>
+  );
+}
+
 export function Planner({model: m, open}: {model: Model; open: boolean}) {
   // While the dialog shows: the screen's age each minute and new boundaries refresh the counts; opening restores a saved ranked plan, else ranks an empty one (SCJ-8).
   useEffect(() => {
@@ -82,6 +102,8 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
     const timer = setInterval(bump, 60000);
     return () => { document.removeEventListener('skippercast:boundaries', bump); clearInterval(timer); };
   }, [open, m]);
+
+  useEffect(() => { if (!open) return; m.setSavedSpotsOpen(true); return () => m.setSavedSpotsOpen(false); }, [open, m]);
 
   const d = m.draft.value, f = m.filters.value, s = m.summary.value, ranked = m.ranked.value, research = m.allowResearch.value;
   const blocked = !ranked || m.filtersDirty.value || !d.ids.length;
@@ -181,6 +203,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
             {spots.length ? spots.map(t => <SpotRow key={t.id} t={t} showConfidence={shared === null} checked={d.ids.includes(t.id)} hit={m.protectedHits.value.find(h => h.id === t.id)} onToggle={on => m.toggleSpot(t.id, on)} />)
               : <p>No matching measured reefs loaded. Select Best available to load the current screened publication, or deliberately opt in to research references. Your existing selection is retained.</p>}
           </div>
+          {session.value.state === 'signed-in' ? <SavedSpots m={m} /> : null}
         </div>
       </details>
       <details class="export-card" id="export-layers">
