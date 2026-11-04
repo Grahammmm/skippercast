@@ -68,6 +68,23 @@ test('the boat named: the saved name, else "your <n> ft boat", else the referenc
   assert.equal(boatRangeNote({name: 'Skiff', loa_ft: null}.loa_ft), null);
 });
 
+test('the boat name is shown cleaned: Cc/Cf/bidi dropped, spacing collapsed, cut at 40 code points at a whole code point; automatic name and empty name still fall through', () => {
+  const shown = name => boatBasisName({name, loa_ft: 17});
+  assert.equal(shown('Sea\u202EBiscuit'), 'SeaBiscuit');
+  assert.equal(shown('Sea\u0000 Biscuit'), 'Sea Biscuit');
+  assert.equal(shown('Sea\n\tBiscuit'), 'Sea Biscuit');
+  assert.equal(shown('Sea\u2028 \u2029 Biscuit'), 'Sea Biscuit');
+  assert.equal(shown('a'.repeat(40)), 'a'.repeat(40), 'exactly 40 is unchanged');
+  assert.equal(shown('a'.repeat(41)), `${'a'.repeat(39)}…`);
+  const emoji = shown('a'.repeat(39) + '\u{1F41F}' + 'b'.repeat(5)), emoji40 = shown('a'.repeat(38) + '\u{1F41F}\u{1F41F}\u{1F41F}');
+  assert.equal(emoji, `${'a'.repeat(39)}…`, 'the astral 40th code point is dropped whole, with the 41st+');
+  assert.equal(shown('a'.repeat(39) + '\u{1F41F}'), 'a'.repeat(39) + '\u{1F41F}', '40 code points with an astral last one are kept');
+  assert.ok(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(emoji + emoji40), 'no lone surrogate');
+  assert.equal(shown('\u200B\u202E'), 'your 17 ft boat');
+  assert.equal(boatBasisName({name: '\u200B\u202E', loa_ft: null}), 'your boat');
+  assert.equal(shown('17 ft boat\u200B'), 'your 17 ft boat');
+});
+
 test('no saved boat: verdict, window, limit and score are the same strings and numbers as before', () => {
   const f = forecast(), before = boatVerdict(brief(), f, NOW, TZ);
   assert.deepEqual(pick(boatVerdict(brief(), f, NOW, TZ, REFERENCE_BOAT)), pick(before));
