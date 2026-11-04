@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {bestSpots as checkedBestSpots,evidenceConfidence,waypointTitle,plotterName} from '../dist/spot-ranking.js';
+import {bestSpots as checkedBestSpots,distanceNm,evidenceConfidence,waypointTitle,plotterName} from '../dist/spot-ranking.js';
 import {tripGPX} from '../dist/gpx.js';
 // These tests cover the other filters: every spot is water here (the land/water check: test_land_water.mjs).
 const bestSpots=(atlas,screen,options={})=>checkedBestSpots(atlas,screen,{place:()=>({state:'water'}),...options});
@@ -150,4 +150,52 @@ test('SCJ-4 ranked GPX waypoint: short name, one-line desc, SC26 id kept; other 
  assert.ok(tripGPX({...atlas,targets:[user]},['u1'],'x',{outlines:false,alignments:false}).includes('<name>My spot</name><cmt>u1</cmt><desc>User waypoint. User-supplied label;'),'a user waypoint is unchanged');
  const odd={...bestSpots(atlas,screen)[0],trip_species:'tuna'};
  assert.ok(tripGPX({...atlas,targets:[odd]},[odd.id],'x',{outlines:false,alignments:false}).includes(`<name>${odd.name}</name>`),'an unknown target word falls back to the full name');
+});
+// SC2207-04: the optional `distanceFor` decides the range by the caller's own (water) distance. Synthetic reefs due north of ORIGIN.
+const ORIGIN={latitude:35,longitude:-121}, north=nm=>ORIGIN.latitude+nm/60;
+const reef=(id,nm,area,score,extra={})=>({id,canonical_habitat:true,latitude:north(nm),longitude:-121,habitat_score:score,neighborhood_depth_ft:[90,120],resolution_m:2,
+  evidence_confidence:{percent:90},species_fit:{lingcod:3,'rockfish-reef':3},area_ids:[area],...extra});
+const synth=(...targets)=>({targets,areas:[...new Set(targets.flatMap(t=>t.area_ids))].map(id=>({id,geometry:{}}))});
+const viaTable=(table,calls=[])=>(t,straight)=>{calls.push(t.id);const v=table[t.id];return typeof v==='function'?v(straight):v;};
+test('SC2207-04 unused option: the result is the same bytes with and without it, and no origin never asks',()=>{
+ const atlas=synth(reef('a',3,'A',90),reef('b',5,'B',89),reef('c',12,'C',88)), plain=bestSpots(atlas,screen,{origin:ORIGIN,maxDistanceNm:10});
+ assert.deepEqual(plain.map(t=>t.id),['a','b']);assert.ok(plain.every(t=>!('distance_basis' in t)&&!('distance_why' in t)&&t.distance_nm===distanceNm(ORIGIN,t)));
+ const same=bestSpots(atlas,screen,{origin:ORIGIN,maxDistanceNm:10,distanceFor:null});
+ assert.ok(JSON.stringify(same)===JSON.stringify(plain),'distanceFor: null leaves the answer byte for byte');
+ const calls=[],none=bestSpots(atlas,screen,{distanceFor:viaTable({a:{nm:1,basis:'water'}},calls)});
+ assert.ok(calls.length===0&&none.length===3&&none.every(t=>t.distance_nm===null&&!('distance_basis' in t)),'no origin: the callback is never called');
+});
+test('SC2207-04 a distance rejected by the callback reserves neither its area nor a separation position',()=>{
+ // A: 9 nm straight but 13 nm by water (range 10). B shares A's area; C lies 0.1 nm past A, far from B.
+ const atlas=synth(reef('A',9,'X',90),reef('B',7,'X',89),reef('C',9.1,'Y',88)), calls=[];
+ const got=bestSpots(atlas,screen,{origin:ORIGIN,maxDistanceNm:10,distanceFor:viaTable({A:{nm:13,basis:'water'},B:s=>({nm:s,basis:'water'}),C:s=>({nm:s,basis:'straight'})},calls)});
+ assert.deepEqual(got.map(t=>[t.id,t.trip_rank]),[['B',1],['C',2]],'ranks are contiguous over the kept reefs');
+ assert.ok(got[0].name.startsWith('01 ')&&got[1].name.startsWith('02 '));
+ assert.deepEqual(calls,['A','B','C']);
+ // Separation stays straight-line against reefs KEPT: D 0.1 nm past B is excluded; at the exact boundary it is kept.
+ const near=synth(reef('B',7,'X',90),reef('D',7.1,'Z',89)), ok=s=>({nm:s,basis:'water'});
+ assert.deepEqual(bestSpots(near,screen,{origin:ORIGIN,distanceFor:viaTable({B:ok,D:ok})}).map(t=>t.id),['B']);
+ const gap=distanceNm(near.targets[0],near.targets[1]);
+ assert.deepEqual(bestSpots(near,screen,{origin:ORIGIN,minSeparationNm:gap,distanceFor:viaTable({B:ok,D:ok})}).map(t=>t.id),['B','D']);
+ // The callback is not asked about a spot that fails the area or separation check (nothing to route).
+ const asked=[];bestSpots(near,screen,{origin:ORIGIN,distanceFor:viaTable({B:ok,D:ok},asked)});assert.deepEqual(asked,['B']);
+});
+test('SC2207-04 range is inclusive and cheap filters come before the callback',()=>{
+ const water=nm=>({nm,basis:'water'});
+ const atlas=synth(reef('exact',4,'A',90),reef('over',5,'B',89),reef('far',11,'C',88),reef('deep',6,'D',87,{neighborhood_depth_ft:[90,400]}),
+   reef('outside',7,'E',86,{longitude:-120.5}),reef('land',8,'F',85),reef('held',2,'G',84),reef('later',3,'H',83)), calls=[], stats={};
+ const got=bestSpots(atlas,{...screen,pointAllowed:t=>t.id!=='held'},{origin:ORIGIN,maxDistanceNm:10,bounds:[-121.1,34,-120.9,36],stats,place:t=>({state:t.id==='land'?'unknown':'water'}),
+   distanceFor:viaTable({exact:water(10),over:water(10.0001),later:water(9.99)},calls)});
+ assert.deepEqual(got.map(t=>t.id),['exact','later']);assert.equal(got[0].distance_nm,10,'unrounded, inclusive');
+ assert.deepEqual(calls,['exact','over','later'],'out of straight range, too deep, outside the map, non-water and screen-held reefs are never asked');
+ assert.equal(stats.withheld,1,'only the land/water withholding is counted');
+});
+test('SC2207-04 callback answers: null rejects, metadata is kept, invalid answers throw',()=>{
+ const atlas=synth(reef('a',3,'A',90),reef('b',4,'B',89)), run=answer=>bestSpots(atlas,screen,{origin:ORIGIN,distanceFor:()=>answer});
+ assert.deepEqual(run(null),[]);
+ const [kept]=run({nm:3.5,basis:'straight',why:'no-route'});
+ assert.deepEqual([kept.distance_nm,kept.distance_basis,kept.distance_why],[3.5,'straight','no-route']);
+ const [water]=run({nm:4,basis:'water'});assert.ok(water.distance_nm===4&&water.distance_basis==='water'&&!('distance_why' in water));
+ for(const bad of [{nm:NaN,basis:'water'},{nm:Infinity,basis:'water'},{nm:-1,basis:'water'},{nm:'3',basis:'water'},{nm:3,basis:'air'},{nm:3},{basis:'water'},undefined,'water'])
+  assert.throws(()=>run(bad),/^Error: Invalid trip distance\.$/,String(JSON.stringify(bad)));
 });

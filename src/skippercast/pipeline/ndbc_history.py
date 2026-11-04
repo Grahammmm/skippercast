@@ -22,6 +22,7 @@ import re
 import zlib
 
 from .. import http
+from ..util.units import FT_PER_M, KT_PER_MS
 
 HOST = "www.ndbc.noaa.gov"
 BASE = f"https://{HOST}"
@@ -36,9 +37,9 @@ STATIONS = {"morro-bay": ("slo", (("46215", "Diablo Canyon", 35.204, -120.859),
 FIELDS = {
     "waterTempF": ("WTMP", "°F", -5, 50, 999, lambda n: n * 1.8 + 32),
     "airTempF": ("ATMP", "°F", -60, 60, 999, lambda n: n * 1.8 + 32),
-    "windKnots": ("WSPD", "kt", 0, 90, 99, lambda n: n * 1.9438444924406),
-    "gustKnots": ("GST", "kt", 0, 110, 99, lambda n: n * 1.9438444924406),
-    "waveFt": ("WVHT", "ft", 0, 40, 99, lambda n: n * 3.2808398950131),
+    "windKnots": ("WSPD", "kt", 0, 90, 99, lambda n: n * KT_PER_MS),
+    "gustKnots": ("GST", "kt", 0, 110, 99, lambda n: n * KT_PER_MS),
+    "waveFt": ("WVHT", "ft", 0, 40, 99, lambda n: n * FT_PER_M),
     "periodS": ("DPD", "s", 0, 40, 99, lambda n: n),
 }
 UNITS = {"WVHT": "m", "DPD": "sec", "WTMP": "degC", "ATMP": "degC", "WSPD": "m/s", "GST": "m/s"}

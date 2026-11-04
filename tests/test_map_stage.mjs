@@ -35,7 +35,7 @@ function browser(href) {
 }
 
 /** A fake terrain module: records every handle call and keeps the options mountCoast received. */
-function terrain({ready = true, throws = false} = {}) {
+function terrain({ready = true, throws = false, hold = false} = {}) {
   const fake = {calls: [], mounts: 0, destroyed: 0, options: null};
   const handle = {};
   for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'selectHabitat', 'setVisible',
@@ -44,7 +44,8 @@ function terrain({ready = true, throws = false} = {}) {
   }
   // As packages/coast's viewer does: setPerspective reports the new mode through onPerspective, synchronously.
   handle.setPerspective = value => { fake.calls.push(['setPerspective', value]); fake.options?.onPerspective?.(value); return true; };
-  handle.load = async () => ready;
+  // `hold`: the coast data never answers, so load() stays pending until fake.settle(ready) is called.
+  handle.load = hold ? () => new Promise(resolve => { fake.settle = resolve; }) : async () => ready;
   handle.destroy = () => { fake.destroyed++; };
   fake.module = {
     styles: ['coast.css'],
@@ -53,6 +54,7 @@ function terrain({ready = true, throws = false} = {}) {
       fake.host = host;
       fake.options = options;
       if (throws) { host.shadowRoot.children = ['scene']; throw new Error('WebGL unavailable'); }
+      if (hold) host.shadowRoot.children = ['scene'];
       return handle;
     },
   };
@@ -310,6 +312,25 @@ test('a graphics or asset failure returns the stage to Chart with v1\'s message'
     assert.equal(fake.mounts, 1, 'no retry until a reload, as in v1');
     s.destroy();
   }
+});
+
+test('while the coast data never answers the scene stays mounted; it goes only when the renderer gives up (FE-60)', async () => {
+  const nav = browser(`${ORIGIN}?region=morro-bay&presentation=3d`);
+  const fake = terrain({hold: true});
+  const {stage: s, host} = stage(fake);
+  await tick();
+  await tick();
+  assert.equal(fake.mounts, 1);
+  assert.deepEqual(host.shadowRoot.children, ['scene'], 'the loading scene is in the host while the load is pending');
+  assert.equal(terrainFailed.value, false, 'a pending load is not a failure');
+  assert.equal(shownPresentation.value, '3d');
+  fake.settle(false);
+  await tick();
+  assert.equal(terrainFailed.value, true, 'the renderer gave up');
+  assert.deepEqual(host.shadowRoot.children, [], 'only then is the scene removed and Chart shown');
+  assert.equal(shownPresentation.value, 'chart');
+  assert.equal(nav.params().get('presentation'), '3d');
+  s.destroy();
 });
 
 test('a region without terrain shows Chart and says why; the link keeps the request', async () => {

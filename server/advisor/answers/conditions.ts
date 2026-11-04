@@ -10,7 +10,7 @@
 import {addDays, daysBetween, localParts, PACIFIC, realDate} from './time.ts';
 import {fold} from './resolve.ts';
 import {verdictFor, COMFORT_WORD, BOAT_PHRASE} from './comfort.ts';
-import {MODEL_GAP, rateComfort, REFERENCE_BOAT, type BoatFactors, type FeedHour} from '../../../web/score.ts';
+import {LONG_PERIOD_SWELL, MODEL_GAP, rateComfort, REFERENCE_BOAT, type BoatFactors, type FeedHour} from '../../../web/score.ts';
 import type {Verdict} from './comfort.ts';
 import type {ForecastClock} from './forecast-clock.ts';
 import type {Region} from '../../types.ts';
@@ -135,8 +135,8 @@ export interface DayConditions {
   wind_kt: [number, number] | null; wind_from: string | null; gusts_kt: number | null;
   seas_ft: [number, number] | null; sea_period_s: number | null;
   swell_ft: [number, number] | null; swell_period_s: number | null; swell_from: string | null;
-  comfort: string; comfort_for: string; models_agree: boolean | null;
-  /** Why a comfort word was held at unknown (an old model run); absent when nothing holds it. */
+  comfort: string; comfort_for: string; models_agree: boolean | null; advisory?: string;
+  /** Why a comfort word was held above what the score alone says: Bumpy for a long-period swell hour, Unknown for an old model run; absent when nothing holds it. */
   comfort_held?: string;
 }
 
@@ -148,8 +148,8 @@ export function withForecastClock(day: DayConditions, clock: ForecastClock): Day
     wind_kt: null, wind_from: null, gusts_kt: null, seas_ft: null, sea_period_s: null, swell_ft: null, swell_period_s: null, swell_from: null, comfort: COMFORT_WORD.unknown, models_agree: null};
 }
 
-/** The fishing window at a forecast point on one local date; `boat` (requestBoat) rates it for the caller's boat, else the reference boat. */
-export function windowConditions(feed: Feed, region: Region, pointId: string, date: string, window: Window = WINDOW, boat: BoatFactors | null = null): DayConditions {
+/** The fishing window at a forecast point on one local date; `boat` (requestBoat) rates it for the caller's boat, else the reference boat; a boating advisory overlapping the window (`advisories`) makes an available day 'rough', as the brief does. */
+export function windowConditions(feed: Feed, region: Region, pointId: string, date: string, window: Window = WINDOW, boat: BoatFactors | null = null, advisories: readonly {event: string}[] = []): DayConditions {
   const base = {date, window: `${String(window.start).padStart(2, '0')}:00-${String(window.end).padStart(2, '0')}:00`, comfort_for: boat ? OWN_BOAT_PHRASE : BOAT_PHRASE};
   const empty = (reason: string): DayConditions => ({...base, available: false, reason, wind_kt: null, wind_from: null, gusts_kt: null, seas_ft: null, sea_period_s: null,
     swell_ft: null, swell_period_s: null, swell_from: null, comfort: COMFORT_WORD.unknown, models_agree: null});
@@ -167,9 +167,11 @@ export function windowConditions(feed: Feed, region: Region, pointId: string, da
     h.swell, h.swell_period, h.swell_from, h.secondary, h.secondary_from, h.other_wind, h.other_gust, h.other_sea].some(finite))) {
     return empty('no usable forecast measurements for this window');
   }
-  const scores = hours.map(h => rateHour(h, boat ?? REFERENCE_BOAT));
-  const rated = scores.filter(finite);
+  const rows = hours.map(hour => ({hour, score: rateHour(hour, boat ?? REFERENCE_BOAT)}));
+  const rated = rows.map(r => r.score).filter(finite);
   const verdict: Verdict = rated.length ? verdictFor({conditions: Math.min(...rated)}) : 'unknown';
+  // SC1952-05: the brief's long-period swell hold (verdict.ts longPeriodHour): a Comfortable day with a rated hour in the rule says Bumpy and names the hour.
+  const swell = verdict === 'go' ? longPeriodHour(rows.filter(r => finite(r.score)).map(r => r.hour), region.timezone) : null;
   const agree = hours.filter(h => [h.wind, h.other_wind, h.sea, h.other_sea].every(finite));
   return {...base, available: true,
     wind_kt: range(hours.map(h => h.wind)), wind_from: compass(meanBearing(hours.map(h => h.wind_from))),
@@ -177,9 +179,24 @@ export function windowConditions(feed: Feed, region: Region, pointId: string, da
     seas_ft: range(hours.map(h => Math.max(h.sea ?? -Infinity, h.other_sea ?? -Infinity)).map(v => v === -Infinity ? null : v), 1, 'up'),
     sea_period_s: round(median(hours.map(h => h.sea_period))),
     swell_ft: range(hours.map(h => h.swell)), swell_period_s: round(median(hours.map(h => h.swell_period))), swell_from: compass(meanBearing(hours.map(h => h.swell_from))),
-    comfort: COMFORT_WORD[verdict],
+    comfort: advisories.length ? COMFORT_WORD['no-go'] : swell ? COMFORT_WORD.marginal : COMFORT_WORD[verdict],
+    ...(!advisories.length && swell ? {comfort_held: swell} : {}),
     models_agree: agree.length ? agree.every(h => Math.abs(h.wind! - h.other_wind!) <= MODEL_GAP.wind && Math.abs(h.sea! - h.other_sea!) <= MODEL_GAP.sea) : null,
+    ...(advisories.length ? {advisory: advisories[0]!.event} : {}),
   };
+}
+const clock = (ms: number, tz: string): string => { const h = localParts(ms, tz).hour; return h === 12 ? 'noon' : h === 0 ? 'midnight' : `${h % 12} ${h < 12 ? 'am' : 'pm'}`; };
+/**
+ * The earliest hour in the long-period swell rule (score.ts LONG_PERIOD_SWELL: the rougher model's seas at the height or more, with the GFS-Wave sea or swell period
+ * at the period or more, both from the same hour), named as web/brief/verdict.ts longPeriodHour names it; null when none. The physical threshold is not scaled by any boat.
+ */
+function longPeriodHour(hours: readonly Hour[], tz: string): string | null {
+  for (const hour of [...hours].sort((a, b) => a.time - b.time)) {
+    const heights = [hour.sea, hour.other_sea].filter(finite), periods = [hour.sea_period, hour.swell_period].filter(finite).filter(p => p >= LONG_PERIOD_SWELL.period);
+    const h = heights.length ? Math.max(...heights) : NaN;
+    if (h >= LONG_PERIOD_SWELL.height && periods.length) return `long-period swell (${Number(h.toFixed(1))} ft at ${Math.round(Math.max(...periods))} s) at ${clock(hour.time * 1000, tz)}`;
+  }
+  return null;
 }
 function median(values: (number | null)[]): number | null {
   const v = values.filter(finite).sort((a, b) => a - b);

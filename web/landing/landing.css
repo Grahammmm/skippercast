@@ -117,5 +117,5 @@
 .landing-verdict-word[data-verdict="marginal"] { color: var(--amber); }
 .landing-verdict-word[data-verdict="rough"] { color: var(--coral); }
 .landing-verdict-word[data-verdict="unknown"] { color: var(--muted); }
-.landing-verdict-limit { color: var(--muted); }
+.landing-verdict-limit, .landing-verdict-note { color: var(--muted); }
 .landing-verdict-link { align-self: flex-start; min-height: var(--touch-min); display: inline-flex; align-items: center; }

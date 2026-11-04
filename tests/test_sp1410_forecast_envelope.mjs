@@ -24,7 +24,7 @@ globalThis.DEPLOYMENT = json('../deployments/production.json');
 const GLOBALS = {REGIONS: globalThis.REGIONS, DEPLOYMENT: globalThis.DEPLOYMENT};
 
 const {intelligenceFeed, dailyFeed, feedReader} = await import('../server/advisor/answers/feeds.ts');
-const {windowConditions} = await import('../server/advisor/answers/conditions.ts');
+const {windowConditions, advisoriesFrom, regionZones, windowEpochs, WINDOW} = await import('../server/advisor/answers/conditions.ts');
 const {getConditions} = await import('../server/advisor/tools/get_conditions.ts');
 const {advisorSettings} = await import('../server/advisor/settings.ts');
 const {readFeed} = await import('../server/feeds.ts');
@@ -59,6 +59,7 @@ function readerFor(intel, daily = fixture('daily.json')) {
   return read;
 }
 const ctx = read => ({env: {}, db: null, contact: null, message: {id: 'sp1410'}, language: 'en', settings: advisorSettings({}), now: NOW, deps: {feeds: read}});
+const advisoriesOn = (window = WINDOW) => advisoriesFrom(fixture('daily.json'), regionZones(REGION), ...windowEpochs(DATE, REGION.timezone, window));   // the day's advisories, as get_conditions passes them
 const conditionsFor = async (intel, daily) => (await getConditions.run({port: 'morro-bay', date: 'today'}, ctx(readerFor(intel, daily)))).result;
 const UNAVAILABLE_FIELDS = ['wind_kt', 'wind_from', 'gusts_kt', 'seas_ft', 'sea_period_s', 'swell_ft', 'swell_period_s', 'swell_from', 'models_agree'];
 function deepFreeze(value) {
@@ -154,7 +155,7 @@ if (!BASELINE) {
   test('A2 the card-owned producer-shaped feed is admitted unchanged and gives the same conditions', async () => {
     const feed = fixture('complete.json');
     assert.equal(await intelligenceFeed(REGION, readerFor(feed)), feed);
-    const direct = windowConditions(fixture('complete.json'), REGION, POINT, DATE);
+    const direct = windowConditions(fixture('complete.json'), REGION, POINT, DATE, WINDOW, null, advisoriesOn());
     assert.equal(direct.available, true);
     assert.deepEqual([direct.wind_kt, direct.gusts_kt, direct.seas_ft, direct.swell_ft, direct.wind_from], [[10, 12], 15, [4, 5], [3, 3], 'WNW']);
     const out = await conditionsFor(fixture('complete.json'));
@@ -167,7 +168,7 @@ if (!BASELINE) {
     const feed = json('./fixtures/feeds/intelligence.json');
     assert.equal(await intelligenceFeed(REGION, readerFor(feed)), feed);
     const evening = {start: 17, end: 19};
-    const direct = windowConditions(json('./fixtures/feeds/intelligence.json'), REGION, POINT, DATE, evening);
+    const direct = windowConditions(json('./fixtures/feeds/intelligence.json'), REGION, POINT, DATE, evening, null, advisoriesOn(evening));
     assert.deepEqual([direct.available, direct.wind_kt, direct.seas_ft, direct.wind_from, direct.swell_from], [true, [15, 19], [7, 7], 'NW', 'S']);
     const out = (await getConditions.run({port: 'morro-bay', date: DATE, start_hour: 17, end_hour: 19}, ctx(readerFor(feed)))).result;
     assert.deepEqual(out.days[0], direct);
@@ -201,7 +202,7 @@ if (!BASELINE) {
     for (const [label, feed, available] of variants) {
       const before = JSON.stringify(feed);
       assert.equal(await intelligenceFeed(REGION, readerFor(feed)), feed, `${label}: admitted`);
-      const direct = windowConditions(JSON.parse(before), REGION, POINT, DATE);
+      const direct = windowConditions(JSON.parse(before), REGION, POINT, DATE, WINDOW, null, advisoriesOn());
       assert.equal(direct.available, available, `${label}: the unchanged reader's outcome`);
       const out = await conditionsFor(JSON.parse(before));
       assert.deepEqual(out.days[0], direct, `${label}: get_conditions keeps that outcome`);
@@ -253,7 +254,7 @@ if (!BASELINE) {
     feed.forecast.models.ecmwf_wam.data[1].hourly_units = 'units';
     const before = JSON.stringify(feed);
     assert.equal(await intelligenceFeed(REGION, readerFor(feed)), feed, 'values and units are not this gate\'s policy');
-    const direct = windowConditions(JSON.parse(before), REGION, POINT, DATE);
+    const direct = windowConditions(JSON.parse(before), REGION, POINT, DATE, WINDOW, null, advisoriesOn());
     assert.equal(direct.available, true);
     assert.deepEqual((await conditionsFor(JSON.parse(before))).days[0], direct);
   });

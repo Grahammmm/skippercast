@@ -29,10 +29,20 @@ export function boatRangeNote(loaFt: unknown): string | null {
   return loaFt >= BOAT_NOTE_RANGE_FT.min && loaFt <= BOAT_NOTE_RANGE_FT.max ? null : BOAT_MODEL_NOTE;
 }
 
-/** The saved boat's name, else "your <n> ft boat", else the reference boat. The first-use step's automatic "<n> ft boat" name counts as no name. */
+/** Most code points of a boat name shown in the comfort basis; longer ends in "…". */
+export const BOAT_NAME_SHOWN_MAX = 40;
+
+/** Display only: format/bidi (Cf) and other control (Cc) characters dropped, whitespace runs one space, cut at a whole code point. */
+function shownName(raw: string): string {
+  const s = raw.replace(/\p{Cf}/gu, '').replace(/[\s\u2028\u2029]+/g, ' ').replace(/\p{Cc}/gu, '').replace(/ {2,}/g, ' ').trim();
+  const points = [...s];
+  return points.length > BOAT_NAME_SHOWN_MAX ? `${points.slice(0, BOAT_NAME_SHOWN_MAX - 1).join('')}…` : s;
+}
+
+/** The saved boat's name (shown cleaned, see shownName), else "your <n> ft boat", else the reference boat. The first-use step's automatic "<n> ft boat" name counts as no name. */
 export function boatBasisName(boat: SavedBoatLike): string {
   if (!boat) return REFERENCE_BOAT_NAME;
-  const name = typeof boat.name === 'string' ? boat.name.trim() : '';
+  const name = typeof boat.name === 'string' ? shownName(boat.name) : '';
   if (name && !/^\d+(\.\d+)? ft boat$/.test(name)) return name;
   return finite(boat.loa_ft) ? `your ${Number(boat.loa_ft.toFixed(1))} ft boat` : 'your boat';
 }

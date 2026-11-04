@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from itertools import combinations
 import math
 
+from ..util.units import FT_PER_M, KT_PER_MS
+
 BUCKETS = ((0, 12), (12, 24), (24, 48), (48, 72), (72, 168))
 UNITS = {'wave_height': 'ft', 'wind_speed_10m': 'kn'}
 MATCH_SECONDS = 1800
@@ -116,7 +118,7 @@ def observation_records(station, rows, received_at, source_url):
     result = []
     for row in rows:
         epoch = datetime.fromisoformat(row['time'].replace('Z', '+00:00')).timestamp()
-        for variable, key, factor in [('wave_height', 'WVHT', 3.28084), ('wind_speed_10m', 'WSPD', 1.94384449)]:
+        for variable, key, factor in [('wave_height', 'WVHT', FT_PER_M), ('wind_speed_10m', 'WSPD', KT_PER_MS)]:
             if variable == 'wind_speed_10m' and station.get('wind_verification') == 'ndbc-derived-10m':
                 continue
             value = row.get(key)
@@ -155,7 +157,7 @@ def derived_wind_data(body, station):
         value = float(raw)
         if not number(value) or not 0 <= value <= 67:
             continue
-        observations.append({'time': epoch, 'value': value * 1.94384449, 'native_value': value})
+        observations.append({'time': epoch, 'value': value * KT_PER_MS, 'native_value': value})
     if not observations:
         raise ValueError('No usable NDBC derived 10 m winds')
     return {'station': station, 'sample_at': datetime.fromtimestamp(max(o['time'] for o in observations), timezone.utc).isoformat().replace('+00:00', 'Z'),

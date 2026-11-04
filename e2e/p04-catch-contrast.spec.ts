@@ -162,7 +162,10 @@ const INPUTS = [...STYLES, ...FONTS, 'web/species.ts', 'web/app/App.tsx', 'web/a
 // catch flow never renders; check_contrast.mjs changes only the appCss surface hash and its comment, with contrast(),
 // assertions and thresholds untouched. Rebind those two exact hashes.
 const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
-  "web/species.ts": "26717bd67e349d67a6483bb27d0f67afb172847647b1251addfdd5b2f69970df",
+  // SC2207-01 (#1501): species.ts changes only Plan.source_links' type member from href to url.
+  // The interface is erased at runtime; Reports/CatchCards markup, styles, paint and source data
+  // are unchanged. contrast(), assertions and thresholds are untouched. Rebind only species.ts.
+  "web/species.ts": "6c34e52ed3d9aa5e95a26646038bb7eb483e47da738e0d0f0c60ba23b6f83082",
   // BF-one-answer (#1456): App.tsx adds FirstAnswerLine and a desktop shell row. BODY09 mounts
   // Reports/CatchCards directly, never App or FirstAnswerLine; the new hook runs only when
   // FirstAnswerLine mounts. RegionInfo and Reports' id/charters reads are unchanged, with no
@@ -192,7 +195,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // assertions and thresholds are untouched. Rebind only MapStage.tsx.
   // BF-sst-fronts: MapStage.tsx only imports createFronts and adds it to the Chart layers array (an opt-in, off-by-default
   // overlay; no class, colour, token or paint change); BODY09 mounts Reports/CatchCards, never MapStage. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "098731f673945c7ddeaadc362622dbcb785dd19fd6792ca1a17f27fd5cdc2e39",
+  // SC1952-06 (#1497): MapStage.tsx changes only Chart waypoint placement-status text,
+  // importing placementRefused/verdictLine to show the refusal while placement stays armed.
+  // BODY09 mounts Reports/CatchCards, never PresentationToggle; no CSS, token, class,
+  // Reports contrast/paint, backdrop, assertion or threshold changes. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "621daf68b04d037eb2553e5c8e5db968104bf216b16b1de7e7c75ae4f39f5a6d",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "0a636f225f5b51d1e34f2de059c826e4a0f2af876fcf20f827f2ccb5ef705008",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   // BF-wcag: app.css and panel.css add only 24 px min-height target floors (no paint); app.css merged with SC2222-07.

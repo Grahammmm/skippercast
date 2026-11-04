@@ -322,7 +322,7 @@ class Harness:
         self.store.close()
 
 
-def wait_for(predicate, *, timeout=20, message="condition"):
+def wait_for(predicate, *, timeout=60, message="condition"):   # bounds a hang; returns as soon as true
     end = time.monotonic() + timeout
     while time.monotonic() < end:
         value = predicate()

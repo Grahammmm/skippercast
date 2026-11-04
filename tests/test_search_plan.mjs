@@ -130,3 +130,56 @@ test('a real region file: every non-reef plan yields its fields as items', async
     assert.equal(got.name, p.name, id);
   }
 });
+
+// SC2207-01: a plan's reviewed {title, url} source links reach the brief's search-plan block, safe ones only.
+const SAFE = [{title: 'Official page', url: 'https://example.test/path?q=1#part'}, {title: '<img src=x onerror=alert(1)> & source', url: 'https://example.test/two'}];
+const UNSAFE = [{title: 'Plain http', url: 'http://example.test/x'}, {title: 'Script', url: 'javascript:alert(1)'}, {title: 'Creds', url: 'https://user:pass@example.test/c'},
+  {title: 'Old shape', href: 'https://example.test/old'}, {title: ' ', url: 'https://example.test/blank'}, null, 'x'];
+const anchors = html => [...html.matchAll(/<a href="([^"]*)"[^>]*>/g)].map(x => x[1]);
+
+test('committed source URLs reach the plan the brief reads', async () => {
+  const json = JSON.parse(await readFile(join(ROOT, 'dist/regions/morro-bay/search-plans.json'), 'utf8'));
+  const loaded = {region: json.region_id, plans: json.profiles};
+  let checked = 0;
+  for (const [id, p] of Object.entries(json.profiles)) {
+    if (p.numeric_bite_model !== false) continue;
+    assert.ok(p.source_links.length > 0, id);
+    assert.deepEqual(planFor(id, loaded).links, p.source_links.map(({title, url}) => ({title, href: url})), id);
+    checked++;
+  }
+  assert.ok(checked > 0);
+});
+
+test('brief renders the same safe sources without changing plan items', async () => {
+  const base = plan('Chinook salmon'), withLinks = plan('Chinook salmon', {source_links: [UNSAFE[0], SAFE[0], ...UNSAFE.slice(1), SAFE[1]]});
+  const html = await where({plans: {chinook: withLinks}}), before = await where({plans: {chinook: base}});
+  assert.deepEqual(planFor('chinook', {region: 'test-bay', plans: {chinook: withLinks}}).items, planFor('chinook', {region: 'test-bay', plans: {chinook: base}}).items);
+  assert.deepEqual(anchors(html), SAFE.map(l => l.url));
+  assert.match(html, /<ul aria-label="Search plan sources"><li><a href="https:\/\/example\.test\/path\?q=1#part" target="_blank" rel="noopener" aria-label="Official page \(opens in a new tab\)">Official page<\/a><\/li>/);
+  assert.doesNotMatch(html, /<img|http:\/\/example|javascript:|user:pass|Old shape/);
+  assert.match(html, /&lt;img src=x onerror=alert\(1\)(?:&gt;|>) &amp; source<\/a>/);
+  assert.equal(count(html, /<li data-field="/g), count(before, /<li data-field="/g));
+  assert.ok(html.indexOf('data-field="tactics_basis"') < html.indexOf('Search plan sources'), 'sources follow the basis');
+});
+
+test('unused source links preserve brief HTML and isolation', async () => {
+  const baseline = await where();
+  for (const source_links of [undefined, [], UNSAFE, 'https://example.test/s', null, {url: 'https://example.test/s'}]) {
+    const html = await where({plans: {chinook: plan('Chinook salmon', {source_links})}});
+    assert.equal(html, baseline);
+    assert.doesNotMatch(html, /Search plan sources|<a /);
+  }
+  // Ranked picks and the reef empty path never show sources, even when the plan has them.
+  const reef = {reef: {name: 'Lingcod & rockfish', kind: 'reef', numeric_bite_model: false, search_for: 'Rock relief.', source_links: SAFE}};
+  assert.doesNotMatch(await where({id: 'morro-bay', target: 'reef', plans: reef, name: 'Morro Bay'}), /Search plan sources|example\.test/);
+  const picks = [{id: 'm-a', kind: 'habitat', name: 'Reef habitat', distance: '4.0 nm', depth: '~40–80 ft', fit: 'Fits 3 of 3', reason: 'Terrain score 80/100.', nm: 4, screen: {inside: false, name: null, distanceM: null, screened: true}}];
+  assert.doesNotMatch(await where({plans: {chinook: plan('Chinook salmon', {source_links: SAFE})}, ranking: {...NONE, source: 'terrain', label: 'Terrain', picks}}), /Search plan sources|example\.test/);
+  // Another region's sources never leak; a numeric model never exposes them.
+  const other = await where({id: 'other-bay', plans: {chinook: plan('Chinook salmon', {source_links: [{title: 'Region A only', url: 'https://example.test/a'}]})}, plansRegion: 'test-bay', name: 'Other Bay'});
+  assert.doesNotMatch(other, /Region A only|example\.test\/a/);
+  for (const numeric_bite_model of [true, undefined, 'false']) {
+    const html = await where({target: 'modelled', plans: {modelled: plan('Modelled fish', {numeric_bite_model, source_links: SAFE})}});
+    assert.doesNotMatch(html, /Search plan sources|example\.test/);
+  }
+  assert.equal(planFor('modelled', {region: 'test-bay', plans: PLANS_A}), null);
+});

@@ -268,25 +268,33 @@ export async function loadRegs(region: RulesRegion, fetchFn: typeof fetch = fetc
     regsData.value = {region: region.id, data: candidate};
     return true;
   };
-  const get = async (url: string): Promise<Data> => {
-    const r = await fetchFn(url, {cache: 'no-cache'}).catch((e: unknown) => { transient = true; throw e; });
-    if (!r.ok) { transient ||= r.status === 429 || (r.status >= 500 && r.status <= 599); throw new Error(String(r.status)); }
-    // A body that dies in transit is transient; a body that is not JSON (SyntaxError) is the file's answer.
-    return r.json().catch((e: unknown) => { if (!(e instanceof SyntaxError)) transient = true; throw e; });
+  const settled = async (url: string): Promise<{d: Data | null; transient: boolean}> => {
+    let failed = false;
+    try {
+      const r = await fetchFn(url, {cache: 'no-cache'}).catch((e: unknown) => { failed = true; throw e; });
+      if (!r.ok) { failed = r.status === 429 || (r.status >= 500 && r.status <= 599); throw new Error(String(r.status)); }
+      // A body that dies in transit is transient; invalid JSON is the file's answer.
+      const d = await r.json().catch((e: unknown) => { if (!(e instanceof SyntaxError)) failed = true; throw e; });
+      return {d, transient: failed};
+    } catch { return {d: null, transient: failed}; }
   };
   const asset = region.assets?.regulations;
+  // Start the startup-copy/fallback chain and daily part together, with failure handlers attached immediately.
+  // Keep request failures independent: a successful fallback must not erase a daily transport failure.
+  const first = (async () => {
+    if (!asset) return;
+    const copy = await settled(regsStartupURL(region.id));
+    if (copy.d && accept(copy.d)) return;
+    const registry = await settled(asset);
+    const loaded = registry.d !== null && accept(registry.d);
+    transient ||= registry.transient || (!loaded && copy.transient);
+  })();
+  const second = settled(dailyPartPath(region.id, 'regulations'));
   return ours.promise = (async () => {
-    if (asset) {
-      // The region's startup copy first; the whole registry only when the copy is missing, unreadable or not valid for this region.
-      // A transport, 429 or 5xx failure of the copy alone does not ask again: it counts only if the whole registry fails to load too.
-      let loaded = await get(regsStartupURL(region.id)).then(accept, () => false);
-      const copyTransient = transient;
-      if (!loaded) {
-        transient = false;
-        loaded = await get(asset).then(accept, () => false);
-        transient ||= !loaded && copyTransient;
-      }
-    }
-    await get(dailyPartPath(region.id, 'regulations')).then(d => validDailyPart(d, 'regulations', region.id) && accept(d.regulations), () => false);
+    await first;
+    // Registry first, daily last, even when the daily answer arrived first (equal review times favour daily).
+    const b = await second;
+    transient ||= b.transient;
+    if (b.d && validDailyPart(b.d, 'regulations', region.id)) accept(b.d.regulations);
   })().finally(() => { ours.retry = transient || regsData.peek()?.region !== region.id; ours.promise = null; });
 }

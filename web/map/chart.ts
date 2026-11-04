@@ -36,7 +36,7 @@ import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './e
 import {openBandPadding, toEdge, type Box} from './open-band.ts';
 import {browserGate, flyoverLegs, markFlyoverSeen, mayFly, type FlyoverGate} from './flyover.ts';
 import {COASTLINE_SOURCE, DENSITY_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
-import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markData, markSources, markStyle} from './marks.ts';
+import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markData, markScreen, markSources, markStyle} from './marks.ts';
 import {IDLE, LOADING, MPA_FILL, MPA_LABEL, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState, type MpaResult} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {RANKED_PICK, RANKED_PIN, drawnSpots, rankedFeatures, rankedMark, rankedStyle, rankedZoom, zoomToGroup} from './ranked.ts';
@@ -212,7 +212,9 @@ export function createChart(options: ChartOptions): {destroy(): void} {
         // RF0850-2: while region.json is loading the style draws no shoreline; the camera effect asks once the list is known.
         style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek(), shoreline: drawnShore = chartFilesPending(id) ? '' : coastlineFetchPath(id, start.zoom) ?? ''}),
         onPick: (layer, properties, at) => {
-          if (placeWaypoint(region.peek(), at)) return;
+          // BF-closures-everywhere: an armed tap is screened by the marks' screen of THIS region, read now; another region's, a stale one or none reads not checked and refuses.
+          const here = region.peek();
+          if (placeWaypoint(here, at, markData.peek()?.region.id === here ? markScreen.peek() : null)) return;
           // A grouped ranked pin zooms to its spots and keeps the selection, as v1's does (#495).
           if (layer === RANKED_PICK && zoomToGroup(properties)) return;
           const other = layer === COASTLINE_PICK ? coastlineMark(properties) : layer === SEAFLOOR_PICK ? seafloor?.mark(String(properties?.id ?? '')) ?? null

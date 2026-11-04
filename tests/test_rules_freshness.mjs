@@ -112,7 +112,7 @@ async function card(d, target = 'reef') {
 
 test('the mark card renders the label beside an official link in every case', async t => {
   await load();
-  // One hour ago can be yesterday near midnight; freeze the rendering clock at midday.
+  // Keep the check and render on the same Pacific day, even near midnight.
   t.mock.timers.enable({apis: ['Date'], now: NOW});
   const now = Date.now();
   const none = data(now - HOUR); delete none.checks['rules-groundfish'].data_retrieved_at;

@@ -101,7 +101,7 @@ interface Layer {
 }
 
 /** A manifest layer, or null when the manifest has none; throws when the manifest is not the region's or the layer is malformed. */
-function layerOf(data: unknown, regionId: string, id: string, kind: string, needs: readonly string[]): Layer | null {
+export function layerOf(data: unknown, regionId: string, id: string, kind: string, needs: readonly string[]): Layer | null {
   if (!object(data) || data.schema_version !== 1 || data.region_id !== regionId || !object(data.layers)) throw new Error('Not this region\'s ocean manifest');
   const l = data.layers[id];
   if (l === undefined) return null;

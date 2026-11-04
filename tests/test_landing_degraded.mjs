@@ -44,7 +44,7 @@ const notices = root => all(root).filter(n => n.attrs?.['data-degraded'] === 'co
 const verdictOf = root => all(root).find(n => n.attrs?.class === 'landing-verdict');
 const settle = () => new Promise(r => setTimeout(r, 60));
 
-const V = {verdict: 'comfortable', word: 'Comfortable', sentence: 'Wind and sea inside the reference boat’s limits.', day: 'Tomorrow', date: '2026-10-09', place: 'Morro Bay & Avila', href: '/map?region=morro-bay&profile=boat&day=2026-10-09'};
+const V = {verdict: 'comfortable', word: 'Comfortable', sentence: 'Wind and sea inside the reference boat’s limits.', day: 'Tomorrow', date: '2026-10-09', place: 'Morro Bay & Avila', href: '/map?region=morro-bay&profile=boat&day=2026-10-09', boatName: 'reference 23 ft boat'};
 /** The verdict as it rendered before SC1322-06 (the not-degraded snapshot). */
 const LIVE_HTML = '<section class="landing-verdict" aria-live="polite" aria-label="Tomorrow’s brief" data-day="2026-10-09"><p class="landing-verdict-head">Tomorrow near Morro Bay &amp; Avila, reference 23 ft boat: <strong class="landing-verdict-word" data-verdict="comfortable">Comfortable</strong></p><p class="landing-verdict-limit">Wind and sea inside the reference boat’s limits.</p><a class="landing-verdict-link" href="/map?region=morro-bay&amp;profile=boat&amp;day=2026-10-09">Open the full brief</a></section>';
 /** /map's notice, word for word as tests/test_app_shell.mjs asserts it on the masthead. */

@@ -44,6 +44,8 @@ async function load() {
       export {RAIL_ENTRIES, toggled} from './web/app/LayerRail.tsx';
       export {MarkCard, clearSelection, currentMark, placeholderMark, readingCard, terrainCard} from './web/app/MarkCard.tsx';
       export {chartMark} from './web/map/chart.ts';
+      export {PresentationToggle} from './web/app/MapStage.tsx';
+      export {beginWaypointPlacement, cancelWaypointPlacement, placeWaypoint, placementRefused} from './web/waypoint-placement.ts';
       export {Legend, RankedRow} from './web/app/Legend.tsx';
       export {rankedSpots} from './web/map/ranked.ts';
       export {landWater} from './web/land-water.ts';
@@ -789,4 +791,43 @@ test('the legend keys the ranked trip spots while the Chart draws them (#422)', 
     state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d`);
     assert.equal(render(h(RankedRow, {})), '', 'the terrain draws no ranked pins, so no row');
   } finally { rankedSpots.value = []; markScreen.value = CHECKING; }
+});
+
+test('SC1952-06: the armed Chart status shows a refusal as text, keeps the instruction and Cancel, and hides it when disarmed, in 3D or in another region', async () => {
+  const {PresentationToggle, beginWaypointPlacement, cancelWaypointPlacement, placeWaypoint, placementRefused, assessScreen, render, h, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  const NAME = '<img src=x onerror=alert(1)> Reserve';
+  const BOX = {type: 'Polygon', coordinates: [[[-121.01, 34.99], [-120.99, 34.99], [-120.99, 35.01], [-121.01, 35.01], [-121.01, 34.99]]]};
+  const screen = assessScreen({areas: [{type: 'Feature', properties: {NAME, Type: 'SMR'}, geometry: BOX}], checkedAt: new Date().toISOString(), live: true}, Date.now());
+  const status = () => render(h(PresentationToggle, {}));
+  const got = [];
+  try {
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart`);
+    assert.doesNotMatch(status(), /Tap the Chart/, 'not armed: no status');
+    beginWaypointPlacement('morro-bay', at => got.push(at));
+    let html = status();
+    assert.match(html, /Tap the Chart to place your waypoint\. <button[^>]*>Cancel waypoint<\/button>/);
+    assert.doesNotMatch(html, /not checked|Inside|m from/, 'armed and untouched: no refusal');
+    placeWaypoint('morro-bay', {lat: 35, lon: -121.2}, null);
+    html = status();
+    assert.match(html, /Tap the Chart to place your waypoint\. Protected areas not checked\. <button[^>]*>Cancel waypoint<\/button>/);
+    placeWaypoint('morro-bay', {lat: 35, lon: -121}, screen);
+    html = status();
+    assert.ok(html.includes('Inside &lt;img src=x onerror=alert(1)> Reserve. '), html);
+    assert.ok(!html.includes('<img'), 'a closure name is text, never markup');
+    placeWaypoint('morro-bay', {lat: 35, lon: -120.99 + 30 / (111412.84 * Math.cos(35 * Math.PI / 180))}, screen);
+    assert.match(status(), /Tap the Chart[^<]*\d+ m from &lt;img src=x onerror=alert\(1\)> Reserve\. <button/);
+    placeWaypoint('morro-bay', {lat: 35, lon: -121}, screen);
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d`);
+    assert.doesNotMatch(status(), /Tap the Chart|Inside/, 'not on the Chart: no refusal shown');
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart`);
+    assert.match(status(), /Inside/);
+    state.syncFromURL(`${ORIGIN}?region=another-region&presentation=chart`);
+    assert.doesNotMatch(status(), /Tap the Chart|Inside/, 'armed for another region: no refusal shown');
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart`);
+    cancelWaypointPlacement();
+    assert.equal(placementRefused.value, null);
+    assert.doesNotMatch(status(), /Tap the Chart|Inside/, 'cancel clears the status and the refusal');
+    assert.equal(got.length, 0, 'no refused tap completed');
+  } finally { cancelWaypointPlacement(); }
 });

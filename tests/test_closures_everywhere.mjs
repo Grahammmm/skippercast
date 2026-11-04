@@ -3,6 +3,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {isDeepStrictEqual} from 'node:util';
+import {mkdtemp} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {build} from 'esbuild';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {screenPlace, placeRefused, distanceM} from '../dist/geo-screen.js';
 import * as ranking from '../web/ranking.ts';
 import * as legs from '../web/trip-legs.ts';
@@ -127,8 +134,11 @@ test('a waypoint click inside a closure is refused and placement stays armed; ou
   assert.equal(placement.placeWaypoint('r', {lat: 35.5, lon: -121}, planner()), true);
   assert.equal(got.length, 1); assert.equal(got[0].screen.inside, false); assert.equal(got[0].screen.screened, true); assert.equal(placement.placementRefused.value, null);
   placement.beginWaypointPlacement('r', p => got.push(p));
-  placement.placeWaypoint('r', {lat: 35.5, lon: -121});
-  assert.equal(got[1].screen.screened, false, 'no screen given: carried as not checked');
+  assert.equal(placement.placeWaypoint('r', {lat: 35.5, lon: -121}), true);
+  assert.equal(got.length, 1, 'no screen given: not checked is refused, the pick is not completed');
+  assert.equal(placement.placementRefused.value.screened, false); assert.ok(placement.waypointPlacement.value, 'still armed');
+  assert.equal(placement.placeWaypoint('r', {lat: 35.5, lon: -121}, planner()), true);
+  assert.equal(got.length, 2); assert.equal(got[1].screen.screened, true); assert.equal(placement.placementRefused.value, null);
   assert.equal(placement.placeWaypoint('r', {lat: 35, lon: -121}, planner()), false, 'nothing armed: not a placement');
 });
 
@@ -156,14 +166,33 @@ test('rows are routed with their verdict, and the row line is plain text (a clos
   assert.match(line, /Protected areas not checked/);
 });
 
+test('the listed Boat picks (the list and the run line read them) keep each pick\'s screen verdict unchanged, routed or not', async () => {
+  const out = join(await mkdtemp(join(tmpdir(), 'closures-where-')), 'where.mjs');
+  await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: "export {listedBoatPicks} from './web/brief/WhereToLook.tsx';"},
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+  const {listedBoatPicks} = await import(pathToFileURL(out).href);
+  const verdicts = [{inside: false, name: null, distanceM: null, screened: true}, {inside: false, name: NAME, distanceM: 40, screened: true}, {inside: false, name: null, distanceM: null, screened: false}];
+  const origin = {latitude: 35.37, longitude: -120.86};
+  const picks = verdicts.map((screen, i) => ({id: `p${i}`, kind: 'spot', name: `P${i}`, distance: '2 nm', nm: 2, at: {latitude: 35.4 + i / 100, longitude: -120.86}, depth: '~60 ft', fit: 'Fits', reason: 'Hard.', screen}));
+  const r = {source: 'atlas', label: 'Survey reef atlas', basis: '', empty: '', harbor: 'Harbor', origin, picks};
+  const lw = {region: 'closures', state: 'ready', model: {id: 'closures-model'}, lines: null, linesLoading: false};
+  const route = (model, lines, from, to) => ({ok: true, nm: 3, points: []});
+  const painted = listedBoatPicks(r, lw, 'closures', route);
+  assert.ok(painted.length === 3 && painted.every(p => p.basis === 'straight'), 'nothing is routed while painting');
+  painted.forEach((p, i) => assert.ok(isDeepStrictEqual(p.screen, verdicts[i]), `unrouted ${p.id} keeps its verdict`));
+  ranking.routedPicks(picks, origin, lw.model, null, null, 4, route).forEach((p, i) => assert.ok(isDeepStrictEqual(p.screen, verdicts[i]), `routed ${p.id} keeps its verdict`));
+});
+
 // The enumeration is derived from each module's exports: a new exported function must be named here as carrying a verdict or as not naming a place.
 const CARRIES = new Set(['atlasPicks', 'habitatPicks', 'ranking', 'routedPicks', 'tripLegs', 'placeWaypoint', 'checkGpx', 'reachRing', 'createPlanner',
-  'currentRanking', 'boatPicks', 'screenLine']);
+  'currentRanking', 'boatPicks', 'listedBoatPicks', 'screenLine']);
 const NO_PLACE = new Set(['harborOrigin', 'loadTerrainHabitat', 'loadReefPublication', 'recheckReefPublication', 'cancelWaypointPlacement', 'beginWaypointPlacement',
   'loadContourFile', 'nextFriday', 'planFit', 'parseReach', 'parseStoredReach', 'loadReach', 'saveReach', 'reachFor', 'nmText', 'parseSpearDepth', 'parseShoreSwim',
   'parseStoredSpear', 'loadSpear', 'saveSpear', 'shoreSwimLimit', 'parseStoredLaunch', 'loadLaunch', 'saveLaunch', 'isReachProfile', 'routeAfterPaint', 'choosePick',
   // Only aggregates confidence percentages; it neither names nor returns a place.
-  'sharedConfidence', 'pickRun', 'diveText', 'WhereToLook']);
+  'sharedConfidence', 'pickRun',
+  // Only words a verdict it is handed (a refused placement's status, a leg's line); it screens nothing and names no place of its own.
+  'verdictLine', 'diveText', 'WhereToLook']);
 test('every exported function of the owned modules either carries a screen verdict or is listed as naming no place', () => {
   const fns = (mod, names = Object.keys(mod)) => names.filter(k => typeof mod[k] === 'function');
   const tsx = readFileSync(new URL('../web/brief/WhereToLook.tsx', import.meta.url), 'utf8');

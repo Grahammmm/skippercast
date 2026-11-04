@@ -28,6 +28,7 @@ from zoneinfo import ZoneInfo
 
 from .. import http
 from ..platform.contracts import atomic_json
+from ..util.units import FT_PER_M, KT_PER_MS
 from .coast_snapshots import COUNTY, REGION, _ms, _number, _read
 from .goes_frames import iso
 
@@ -42,7 +43,7 @@ ALERTS_URL = NWS + "alerts/active?area=CA,PZ"  # CA alone omits marine-zone aler
 DAILY_URL = f"https://raw.githubusercontent.com/Grahammmm/skippercast/data/regions/{REGION}/latest.json"
 CATALOG_URL = "https://github.com/Grahammmm/skippercast/blob/a481da68923649db6fda277af4bd6f40813f6436/catalog/sources.json"
 HOSTS = ("api.weather.gov", "api.tidesandcurrents.noaa.gov", "raw.githubusercontent.com")
-FT, KT, HOUR, DAY = 3.280839895, 1.943844492, 3_600_000, 86_400_000
+FT, KT, HOUR, DAY = round(FT_PER_M, 9), round(KT_PER_MS, 9), 3_600_000, 86_400_000  # 9 places: the published feed's precision, unchanged
 FIELDS = (("windKnots", "windSpeed", "knots"), ("gustKnots", "windGust", "knots"), ("waveFt", "waveHeight", "feet"),
           ("wavePeriodS", "wavePeriod", "seconds"), ("swellFt", "primarySwellHeight", "feet"),
           ("swellPeriodS", "primarySwellPeriod", "seconds"), ("windWaveFt", "windWaveHeight", "feet"),

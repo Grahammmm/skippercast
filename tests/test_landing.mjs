@@ -387,6 +387,18 @@ test('the night map frames the region with the harbor right of centre, over the 
   }
 });
 
+test('the night map keeps a region only when its timezone is absent or a zone Intl knows (RF1939-9)', async () => {
+  const {nightRegion} = await loadNight();
+  const region = JSON.parse(readFileSync(join(ROOT, 'regions/morro-bay/region.json'), 'utf8'));
+  const read = async timezone => {
+    const {timezone: _drop, ...rest} = region;
+    return nightRegion('morro-bay', async () => ({ok: true, json: async () => timezone === undefined ? rest : {...rest, timezone}}), 'https://s.test/');
+  };
+  assert.equal((await read(undefined)).timezone, 'America/Los_Angeles', 'absent: the shared default zone');
+  for (const zone of ['America/Los_Angeles', 'UTC']) assert.equal((await read(zone)).timezone, zone);
+  for (const bad of ['Mars/Base', '', 42, null, 'A'.repeat(65)]) assert.equal(await read(bad), null, `${JSON.stringify(bad)} is refused without throwing`);
+});
+
 test('the night map draws the first listed source with a fresh frame, the night style with the landing glow, and credits both once drawn', async () => {
   const {NIGHT_SOURCES, NightCredit, currentsState, nightSource, nightState, nightStyle, readPalette, render, h} = await loadNight();
   const now = new Date('2026-10-07T12:20:00Z'), cells = [{lat: 35.3, lon: -121, uMs: 0.2, vMs: 0.1, speedKnots: 0.43, towardDeg: 63}];

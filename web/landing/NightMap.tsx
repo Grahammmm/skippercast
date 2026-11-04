@@ -17,6 +17,7 @@ import type {ReportLocalArea} from '../../packages/coast/src/state/report-bindin
 import {chartFilesOf} from '../chart-files.ts';
 import {coastOcean} from '../coast-data.ts';
 import {DEFAULT_PROFILE} from '../profile.ts';
+import {DEFAULT_ZONE, validZone} from '../zone.ts';
 import type {CurrentChoice} from '../state.ts';
 import {COASTLINE_GLOW, coastlineLayers, coastlineSource, shorelineOverviewURL, shorelineURL} from '../map/coastline.ts';
 import {createCurrents, currentsState, regionPlace, type Currents} from '../map/currents.ts';
@@ -63,8 +64,10 @@ export async function nightRegion(id: string, fetchFn: typeof fetch, page: strin
     const [lat, lon] = c, [west, south, east, north] = b;
     if (c.length !== 2 || !finite(lat) || !finite(lon) || b.length !== 4 || !finite(west) || !finite(south) || !finite(east) || !finite(north)) return null;
     const h = r.harbor, areas = Array.isArray(r.map?.local_areas) ? r.map.local_areas as ReportLocalArea[] : [];
+    const timezone = r.timezone === undefined ? DEFAULT_ZONE : validZone(r.timezone) ? r.timezone : null;
+    if (!timezone) return null;
     return {
-      id, center: [lat, lon], timezone: typeof r.timezone === 'string' ? r.timezone : 'America/Los_Angeles', bounds: [west, south, east, north],
+      id, center: [lat, lon], timezone, bounds: [west, south, east, north],
       harbor: finite(h?.latitude) && finite(h?.longitude) ? {latitude: h.latitude, longitude: h.longitude} : {latitude: lat, longitude: lon},
       localAreas: areas.filter(a => typeof a?.id === 'string' && Array.isArray(a.bounds)), chartFiles: chartFilesOf(r.chart_files),
     };

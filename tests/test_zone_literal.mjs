@@ -10,7 +10,7 @@ import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {terrainHour} from '../web/map/stage.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname, LA = 'America/Los_Angeles', HOME = 'web/zone.ts';
-const ALLOWED = ['web/landing/NightMap.tsx']; // RF0850-7 owns NightMap.tsx; when its literal goes, remove it from this list.
+const ALLOWED = []; // No file may spell the zone besides web/zone.ts (RF1939-9 removed the last, NightMap.tsx); an entry here needs a literal to excuse.
 
 /** Line numbers where a quoted ('…', "…" or `…`) string names the zone, outside comments. */
 export function zoneLiterals(text) {
@@ -21,14 +21,14 @@ export function zoneLiterals(text) {
 }
 
 /** Problems with a {path: text} tree: a stray literal, a missing home, or a stale allowlist entry. */
-export function treeProblems(files) {
+export function treeProblems(files, allowed = ALLOWED) {
   const problems = [];
   for (const [path, text] of Object.entries(files)) {
     const hits = zoneLiterals(text);
-    if (hits.length && path !== HOME && !ALLOWED.includes(path)) problems.push(`${path}:${hits.join(',')} spells the zone; import DEFAULT_ZONE from ${HOME}`);
+    if (hits.length && path !== HOME && !allowed.includes(path)) problems.push(`${path}:${hits.join(',')} spells the zone; import DEFAULT_ZONE from ${HOME}`);
   }
   if (zoneLiterals(files[HOME] ?? '').length !== 1) problems.push(`${HOME} must define the zone exactly once`);
-  for (const path of ALLOWED) if (!zoneLiterals(files[path] ?? '').length) problems.push(`remove ${path.split('/').pop()} from the allowlist`);
+  for (const path of allowed) if (!zoneLiterals(files[path] ?? '').length) problems.push(`remove ${path.split('/').pop()} from the allowlist`);
   return problems;
 }
 
@@ -53,8 +53,7 @@ test('a stray literal, a lost home or a stale allowlist entry fails the scan', a
   const files = await webTree();
   assert.match(treeProblems({...files, 'web/brief/Run.tsx': `tz = info?.timezone ?? "${LA}";`}).join('\n'), /^web\/brief\/Run\.tsx:1 spells the zone/);
   assert.match(treeProblems({...files, [HOME]: 'export const DEFAULT_ZONE = ZONE;'}).join('\n'), /web\/zone\.ts must define the zone exactly once/);
-  const night = files[ALLOWED[0]].replaceAll(`'${LA}'`, 'DEFAULT_ZONE');
-  assert.deepEqual(treeProblems({...files, [ALLOWED[0]]: night}), ['remove NightMap.tsx from the allowlist']);
+  assert.deepEqual(treeProblems(files, ['web/landing/NightMap.tsx']), ['remove NightMap.tsx from the allowlist']);
 });
 
 test('the defaults read the same zone as before', async () => {

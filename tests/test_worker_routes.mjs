@@ -10,7 +10,7 @@ import {stripJsonComments} from '../scripts/wrangler_config.mjs';
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
 globalThis.REGIONS = {'morro-bay': read('../regions/morro-bay/region.json')};
 globalThis.DEPLOYMENT = read('../deployments/production.json');
-globalThis.SHELLS = {'/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html', '/sources.html': '/sources.0123456789.html'};
+globalThis.SHELLS = {'/landing.html': '/landing.0123456789.html', '/app.html': '/app.0123456789.html', '/sources.html': '/sources.0123456789.html', '/skill.html': '/skill.0123456789.html'};
 globalThis.BUILD_ID = 'build-test';
 import {withSessions} from './fixtures/test-sessions.mjs';
 const {default: deployed} = await import('../server/index.ts');
@@ -117,6 +117,41 @@ test('#475: /sources serves the sources shell, /sources/ redirects to it and /so
   const {shellFor} = await import('../server/routes/assets.ts');
   assert.equal(shellFor('/sources', new URLSearchParams()), '/sources.html');
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) assert.equal((await call('/sources', {})).headers.get(name), value, `/sources: ${name}`);
+});
+
+// SC2207-03: /skill serves the forecast skill page like /status and /coverage; /skill.html still answers.
+test('SC2207-03: /skill and /skill.html serve the same hashed skill shell, no-store, with the security headers', async () => {
+  const shell = async path => { const r = await call(path, {}); return r.status === 299 ? [r.status, await r.text(), r.headers.get('Cache-Control')] : [r.status, r.headers.get('Location'), r.headers.get('Cache-Control')]; };
+  const skill = [299, '/skill.0123456789', 'no-store'];
+  for (const query of ['', '?ui=v1', '?region=morro-bay']) {
+    assert.deepEqual(await shell(`/skill${query}`), skill, `/skill${query}`);
+    assert.deepEqual(await shell(`/skill.html${query}`), skill, `/skill.html${query}`);
+  }
+  for (const path of ['/skill', '/skill.html']) for (const [name, value] of Object.entries(SECURITY_HEADERS)) assert.equal((await call(path, {})).headers.get(name), value, `${path}: ${name}`);
+  const {shellFor} = await import('../server/routes/assets.ts');
+  assert.equal(shellFor('/skill', new URLSearchParams()), '/skill.html');
+  assert.equal(shellFor('/skill', new URLSearchParams('ui=v1')), '/skill.html');
+});
+
+test('SC2207-03: a build without the skill mapping still serves the page unhashed; without ASSETS it is the existing 404', async () => {
+  const saved = globalThis.SHELLS['/skill.html'];
+  delete globalThis.SHELLS['/skill.html'];
+  try {
+    const fallback = await call('/skill', {});
+    assert.deepEqual([fallback.status, await fallback.text(), fallback.headers.get('Cache-Control')], [299, '/skill', 'no-store'], '/skill: the page itself, still no-store');
+    // /skill.html is not a registered page path, so with no SHELLS entry it is an ordinary asset request, as before this change.
+    const plain = await call('/skill.html', {});
+    assert.deepEqual([plain.status, await plain.text(), plain.headers.get('Cache-Control')], [299, '/skill.html', null], '/skill.html unmapped');
+  } finally { globalThis.SHELLS['/skill.html'] = saved; }
+  assert.equal(globalThis.SHELLS['/skill.html'], '/skill.0123456789.html');
+  for (const path of ['/skill', '/skill.html']) assert.equal((await call(path, {env: {ASSETS: undefined}})).status, 404, `${path} without ASSETS`);
+});
+
+test('SC2207-03: /skill/, /skillx, /Skill and /skill/child are not the skill page', async () => {
+  for (const path of ['/skill/', '/skillx', '/Skill', '/skill/child']) {
+    const r = await call(path, {});
+    assert.deepEqual([r.status, await r.text(), r.headers.get('Cache-Control')], [299, path, null], `${path} falls through to the site untouched`);
+  }
 });
 
 // FE-78 (design § 3A.3): Fish and coast keys open the app at /, and /coast is the app at presentation=3d.
