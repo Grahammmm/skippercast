@@ -48,6 +48,13 @@ const FINGERPRINTED = /\.[0-9a-f]{10}\.(?:js|css)$/;
 // FE-51: the v2 app's page as a pack saves it, and its basemap archive (offline-core.js BASEMAP_ARCHIVE).
 const V2_SHELL = '/map';
 const BASEMAP_ARCHIVE = /^\/feeds\/tiles\/basemap\/[A-Za-z0-9._-]{1,120}\.pmtiles$/;
+// Ocean keys (offline-core.js isOceanKey, identical): a region's habitat manifest and its tiles.
+const OCEAN_KEY = [/^\/feeds\/conditions\/regions\/[a-z0-9-]{1,64}\/habitat-dynamics\.json$/, /^\/feeds\/conditions\/regions\/[a-z0-9-]{1,64}\/habitat-tiles\/[A-Za-z0-9._-]{1,120}$/];
+const OCEAN_LAYERS = ['sst-analysis', 'wcofs-surface-forecast'];
+const PACK_META = '/__skippercast-pack.json'; // offline-core.js PACK_META: a committed pack holds it
+function isOceanKey(url, origin) {
+  try { const u = new URL(url); return u.origin === origin && OCEAN_KEY.some(p => p.test(u.pathname)); } catch { return false; }
+}
 
 /** Which strategy answers this request, or null to leave it to the network. */
 function routeFor(request, origin) {
@@ -156,6 +163,55 @@ async function newestSaved(request, key = request) {
   return best;
 }
 
+/** The layers of a saved habitat manifest whose every tile is saved (plan D8): presence only, no hashes or ages. */
+async function oceanComplete(hit, manifestURL, stores) {
+  const done = new Set();
+  try {
+    const bytes = await hit.clone().arrayBuffer();
+    if (bytes.byteLength > 1048576) return done;
+    const layers = JSON.parse(new TextDecoder().decode(bytes)).layers, folder = new URL('habitat-tiles/', manifestURL);
+    // A tile is saved only inside this region's habitat-tiles folder (as habitatTileURL resolves it), in sc-data or a committed pack.
+    const saved = async t => {
+      try {
+        const u = new URL(t.path, manifestURL);
+        if (u.search || u.hash || !isOceanKey(u.href, self.location.origin) || !u.pathname.startsWith(folder.pathname)) return false;
+        for (const cache of stores) if (await cache.match(u.href, {ignoreVary: true})) return true;
+      } catch {}
+      return false;
+    };
+    for (const id of OCEAN_LAYERS) {
+      const layer = layers[id];
+      if (!['ok', 'retained'].includes(layer?.status) || !Array.isArray(layer.tiles) || !layer.tiles.length) continue;
+      let all = true;
+      for (const t of layer.tiles) all = all && await saved(t);
+      if (all) done.add(id);
+    }
+  } catch { return new Set(); }
+  return done;
+}
+
+/** After a network failure on a habitat manifest: the committed pack's copy, unless a newer sc-data copy is complete for every layer the pack saved. */
+async function manifestOffline(request) {
+  const region = /^\/feeds\/conditions\/regions\/([a-z0-9-]+)\//.exec(new URL(request.url).pathname)[1];
+  const names = await caches.keys(), packs = [], at = r => r.headers.get(SAVED_HEADER) || '';
+  for (const name of names.filter(n => n.startsWith(PACK_PREFIX))) {
+    const cache = await caches.open(name), meta = await cache.match(PACK_META);
+    const owner = meta ? await meta.json().then(m => m?.region_id, () => null) : null;
+    if (owner) packs.push({cache, owner});
+  }
+  const data = names.includes(DATA_CACHE) ? await caches.open(DATA_CACHE) : null, stores = [...(data ? [data] : []), ...packs.map(p => p.cache)];
+  const fromData = data ? await data.match(request, {ignoreVary: true}) : undefined;
+  let fromPack;
+  for (const p of packs) {
+    const hit = p.owner === region ? await p.cache.match(request, {ignoreVary: true}) : undefined;
+    if (hit && (!fromPack || at(hit) > at(fromPack))) fromPack = hit;
+  }
+  if (!fromData || !fromPack) return fromData || fromPack || null;
+  if (at(fromData) <= at(fromPack)) return fromPack;
+  const wanted = await oceanComplete(fromPack, request.url, stores), have = await oceanComplete(fromData, request.url, stores);
+  return [...wanted].every(id => have.has(id)) ? fromData : fromPack;
+}
+
 async function trimCache(name, limit) {
   const cache = await caches.open(name), keys = await cache.keys();
   for (const key of keys.slice(0, Math.max(0, keys.length - limit))) await cache.delete(key);
@@ -182,7 +238,8 @@ async function networkFirstData(event) {
     }
     return response;
   } catch (error) {
-    const saved = await newestSaved(request);
+    const manifest = isOceanKey(request.url, self.location.origin) && new URL(request.url).pathname.endsWith('habitat-dynamics.json');
+    const saved = await (manifest ? manifestOffline(request) : newestSaved(request));
     if (!saved) throw error;
     const response = offlineResponse(saved);
     event.waitUntil(tellClient(event.clientId, response.headers.get(OFFLINE_HEADER), request.url));

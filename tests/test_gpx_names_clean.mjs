@@ -7,7 +7,8 @@ const user = (name, id) => ({name, id, latitude: 0, longitude: 0, user_waypoint:
 const atlasPoint = (name, id) => ({name, id, latitude: 0, longitude: 0, neighborhood_depth_ft: [100, 200]});
 function output(points, options = {}) {
   const xml = featuresGPX({}, {selected: points, waypoints: points, areas: [], drifts: []}, 'Day', options);
-  assert.deepEqual(checkGpx(xml, {waypoints: points.length}), {ok: true});
+  assert.deepEqual(checkGpx(xml, {waypoints: points.length}), {ok: true,
+    screen: Array(points.length).fill({inside: false, name: null, distanceM: null, screened: false})});
   return xml;
 }
 const names = xml => [...xml.matchAll(/<wpt[^>]*><name>(.*?)<\/name>/g)].map(m => m[1]);

@@ -29,6 +29,7 @@ import {auth} from './routes/auth.ts';
 import {session, privacy} from './routes/account.ts';
 import {boat} from './routes/boat.ts';
 import {trips} from './routes/trips.ts';
+import {catchLog} from './routes/catch-log.ts';
 import {subscriptions} from './routes/subscriptions.ts';
 import {feedback} from './routes/feedback.ts';
 // TA-W2: the Text Advisor admin (requireUser, then requireAdmin inside).
@@ -62,6 +63,7 @@ app.route('/', session);
 app.use('/api/*', requireUser);
 app.route('/', boat);
 app.route('/', trips);
+app.route('/', catchLog);
 app.route('/', subscriptions);
 app.route('/', feedback);
 app.route('/', privacy);

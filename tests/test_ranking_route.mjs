@@ -29,7 +29,7 @@ const inputs = (patch = {}) => ({region: 'morro-bay', profile: 'boat', target: '
 const ORIGIN = {latitude: 35.37, longitude: -120.86};
 /** A pick `nm` straight-line nm due north of ORIGIN. */
 const at = nm => ({latitude: ORIGIN.latitude + nm / 60, longitude: ORIGIN.longitude});
-const pick = (id, nm) => ({id, kind: 'spot', name: `Reef ${id}`, distance: `${nm.toFixed(1)} nm`, nm: distanceNm(ORIGIN, at(nm)), at: at(nm), depth: '~60–90 ft', fit: 'Fits', reason: 'Hard bottom.'});
+const pick = (id, nm) => ({id, kind: 'spot', name: `Reef ${id}`, distance: `${nm.toFixed(1)} nm`, nm: distanceNm(ORIGIN, at(nm)), at: at(nm), depth: '~60–90 ft', fit: 'Fits', reason: 'Hard bottom.', screen: {inside: false, name: null, distanceM: null, screened: true}});
 /** A fake route: `answer(to)` per call, every call recorded. */
 const fake = answer => { const calls = []; const route = (model, lines, from, to) => { calls.push({model, lines, from, to}); return answer(to); }; return {route, calls}; };
 const times = k => fake(to => ({ok: true, nm: distanceNm(ORIGIN, to) * k, points: []}));
@@ -153,7 +153,7 @@ test('the Boat list renders by water on an open-water product; the range title s
   const model = landWaterModel({...coast, bounds: [-12110000, 3530000, -12075000, 3555000], tiles: {'12/671/1616': `w${G * G}`}}, 'fixture');
   const from = cell(4, 8), to = cell(28, 8), straight = distanceNm(from, to);
   const r = {source: 'atlas', label: 'Survey reef atlas', basis: 'b', empty: '', harbor: 'Fixture Harbor', origin: from, reach: 30,
-    picks: [{id: 'a', kind: 'spot', name: 'Reef a', distance: `${straight.toFixed(1)} nm`, nm: straight, at: to, depth: '~60–90 ft', fit: 'Fits', reason: 'Hard bottom.'}]};
+    picks: [{id: 'a', kind: 'spot', name: 'Reef a', distance: `${straight.toFixed(1)} nm`, nm: straight, at: to, depth: '~60–90 ft', fit: 'Fits', reason: 'Hard bottom.', screen: {inside: false, name: null, distanceM: null, screened: true}}]};
   m.region.value = 'fixture'; m.profile.value = 'boat'; m.cruiseSpeed.value = 20; m.reachRange.value = {boat: 30};
   m.landWater.value = {region: 'fixture', state: 'ready', model, lines: null, linesLoading: false};
   const [routed] = m.boatPicks(r);
