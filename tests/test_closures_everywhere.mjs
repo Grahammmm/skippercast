@@ -8,6 +8,7 @@ import * as ranking from '../web/ranking.ts';
 import * as legs from '../web/trip-legs.ts';
 import * as placement from '../web/waypoint-placement.ts';
 import * as gpx from '../web/gpx-check.ts';
+import {featuresGPX} from '../dist/gpx.js';
 import * as reach from '../web/reach.ts';
 import {assessScreen, CHECKING} from '../web/map/habitat.ts';
 
@@ -65,6 +66,23 @@ test('a leg whose endpoints are both outside but whose middle crosses the closur
   for (const leg of legs.tripLegs(null, stops, 20).legs) assert.equal(leg.screen.screened, false, 'no screen given: not checked');
 });
 
+test('water legs screen the routed polyline including endpoint connectors, not the straight chord', () => {
+  const stops = [{id: 'a', name: 'West', lat: 35.05, lon: -121.05}, {id: 'b', name: 'East', lat: 35.05, lon: -120.95}];
+  const route = points => () => ({ok: true, nm: 8, points: points.map(([longitude, latitude]) => ({longitude, latitude}))});
+  const verdict = (choices, r) => legs.tripLegs(null, choices, 20, r, planner()).legs[0];
+  const chord = verdict(stops, undefined);
+  assert.equal(chord.screen.inside, false); assert.equal(chord.screen.screened, true);
+  const crossing = verdict(stops, route([[-121.02, 35], [-120.98, 35]]));
+  assert.equal(crossing.basis, 'water'); assert.equal(crossing.screen.inside, true); assert.equal(crossing.screen.name, NAME);
+  const clear = verdict(stops, route([[-121, 35.1]]));
+  assert.equal(clear.screen.inside, false); assert.equal(clear.screen.screened, true);
+  const across = stops.map(p => ({...p, lat: 35}));
+  assert.equal(verdict(across, route([[-121.05, 35.05], [-120.95, 35.05]])).screen.inside, false, 'a clear detour must not be screened as its blocked chord');
+  assert.equal(verdict(across, route([[-120.98, 35]])).screen.inside, true, 'start connector crosses closure');
+  assert.equal(verdict(across, route([[-121.02, 35]])).screen.inside, true, 'end connector crosses closure');
+  assert.equal(verdict(across, () => ({ok: false, reason: 'no-route'})).screen.inside, true, 'failed routing screens the straight fallback');
+});
+
 test('a reach area that holds a closure whole is inside; the ring is still a plain ring of points', () => {
   const origin = at(-121, 35), ring = reach.reachRing(origin, 5, 128, planner());
   assert.equal(ring.screen.inside, true); assert.equal(ring.length, 129); assert.ok(Array.isArray(ring[0]));
@@ -86,6 +104,19 @@ test('a GPX with a point in the closure, near it, or an unloaded screen fails it
     assert.equal(r.ok, false); assert.equal(r.problems[0], 'Protected areas not checked'); assert.equal(r.screen[0].screened, false);
   }
   assert.equal(gpx.checkGpx(inside, want).ok, true, 'no screen asked: the structure check alone');
+});
+
+test('GPX reference tracks may touch closures while fishable waypoints remain screened', () => {
+  const point = {id: 'clear', name: 'Clear', latitude: 35, longitude: -120.5, user_waypoint: true, category: 'Fishing'};
+  const contours = [{name: '100 ft', desc: 'Depth reference', geometry: {type: 'LineString', coordinates: [[-121.02, 35], [-120.98, 35]]}}];
+  for (const waypoints of [[point], []]) {
+    const xml = featuresGPX({}, {selected: waypoints, waypoints, areas: [], drifts: []}, 'References', {exclusions: [feature], contours});
+    const result = gpx.checkGpx(xml, {waypoints: waypoints.length}, planner());
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(result.screen.length, waypoints.length);
+    assert.ok(result.screen.every(v => v.screened && !placeRefused(v)));
+    assert.equal(gpx.checkGpx(xml.replace('lat="34.99"', 'lat="91"'), {waypoints: waypoints.length}, planner()).ok, false, 'reference track coordinates still need structural validation');
+  }
 });
 
 test('a waypoint click inside a closure is refused and placement stays armed; outside, the pick carries its verdict', () => {

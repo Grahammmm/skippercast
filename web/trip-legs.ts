@@ -32,9 +32,10 @@ export function tripLegs(origin: Point | null, stops: Stop[], speedKn: number | 
     const a = points[i - 1]!, b = points[i]!, from = {latitude: a.lat, longitude: a.lon}, to = {latitude: b.lat, longitude: b.lon};
     const r = route ? route(from, to) : null;
     const nm = r?.ok ? r.nm : distanceNm(from, to);
+    const path = [from, ...(r?.ok ? r.points : []), to].map(p => [p.longitude, p.latitude]);
     legs.push({from: a.name, to: b.name, nm, runMin: speedKn === null ? null : runMinutes(nm, speedKn),
       basis: r?.ok ? 'water' : 'straight', ...(r && !r.ok ? {why: r.reason} : {}),
-      screen: screenPlace(screen, {geometry: {type: 'LineString', coordinates: [[a.lon, a.lat], [b.lon, b.lat]]}})});
+      screen: screenPlace(screen, {geometry: {type: 'LineString', coordinates: path}})});
   }
   return {legs, totalNm: legs.reduce((sum, leg) => sum + leg.nm, 0),
     totalRunMin: speedKn !== null && Number.isFinite(speedKn) && speedKn > 0 ? legs.reduce((sum, leg) => sum + leg.runMin!, 0) : null, skipped};
