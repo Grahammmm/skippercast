@@ -43,7 +43,9 @@ const LISTED = [{}] as unknown as CurrentCell[];
  * `times`, `issuedAt` and `fetchedAt` are epoch ms.
  */
 export function forecastTime(times: readonly number[], issuedAt: number, fetchedAt: number, at: Date, now: Date): number | null {
-  if (!Number.isFinite(issuedAt) || !Number.isFinite(fetchedAt) || !times.every(Number.isFinite)) return null;
+  // A finite epoch beyond Date's +-8.64e15 ms range has no ISO form (toISOString throws): refuse the whole request.
+  const representable = (ms: number): boolean => Number.isFinite(ms) && Number.isFinite(new Date(ms).getTime());
+  if (!representable(issuedAt) || !representable(fetchedAt) || !times.every(representable)) return null;
   const iso = (ms: number): string => new Date(ms).toISOString();
   const frames = [...times].sort((a, b) => a - b).map(t => ({validAt: iso(t), cells: LISTED}));
   const frame = selectCurrentFrame({kind: 'forecast', issuedAt: iso(issuedAt), fetchedAt: iso(fetchedAt), frames} as unknown as CurrentField, at, now);
