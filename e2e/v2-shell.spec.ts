@@ -350,6 +350,13 @@ test.describe('phone', () => {
 // inside the same stage and its in-scene place and target controls stay hidden, and no v1 map mounts.
 test('FE-60: no duplicate map, picker or timeline for one context (/map and /coast)', async ({page, pageErrors, v2, isMobile}) => {
   await page.route(/\/(?:api\/coast|coast-data)\//, () => { /* never answered: the terrain stays loading, offline */ });
+  // Silent means silent for the whole test: the renderer gives up on a dataset after its own 20 s timeout and the stage then
+  // swaps the loading scene for Chart, so on a slow runner the checks below raced that clock (main runs 41654211025,
+  // 41655615036). The give-up itself is covered by tests/test_map_stage.mjs. Long request deadlines never fire here.
+  await page.addInitScript(() => {
+    const timeout = AbortSignal.timeout.bind(AbortSignal);
+    AbortSignal.timeout = ms => (ms >= 10_000 ? new AbortController().signal : timeout(ms));
+  });
   const contexts: Array<[string, string, 'chart' | 'terrain']> = [
     ['/map', v2.url('app', {...AREA, presentation: 'chart'}), 'chart'],
     ['/coast', `/coast?${new URLSearchParams({...AREA, ui: 'v2'})}`, 'terrain'],
