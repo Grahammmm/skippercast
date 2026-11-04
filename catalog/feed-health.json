@@ -3,7 +3,8 @@
   "critical_kinds": ["observation", "advisory", "prediction", "forecast"],
   "feeds": {
     "conditions": {"label": "Live conditions feed", "path": "conditions/latest.json", "max_age_hours": 3, "critical_degraded_hours": 12},
-    "data": {"label": "Daily data feed", "path": "data/latest.json", "max_age_hours": 36, "critical_degraded_hours": 48}
+    "data": {"label": "Daily data feed", "path": "data/latest.json", "max_age_hours": 36, "critical_degraded_hours": 48},
+    "sst-fronts": {"label": "Offshore SST fronts", "path": "conditions/regions/{region}/sst-fronts.json", "max_age_hours": 48}
   },
   "regions": {"label": "Live regional feed", "path": "conditions/regions/{region}/latest.json", "index": "dist/regions/index.json", "max_age_hours": 3, "critical_degraded_hours": 12},
   "coast": {
