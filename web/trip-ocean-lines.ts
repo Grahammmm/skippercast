@@ -6,7 +6,7 @@ import {frameTime} from './map/currents.ts';
 import {DEFAULT_ZONE} from './zone.ts';
 
 export interface OceanLines {readonly water: string; readonly currents: string}
-type Layer = import('./map/ocean-pack.ts').OceanLayerRecord;
+interface Layer {readonly state?: string; readonly why?: string; readonly drawable_until?: string}
 
 const ONLY_FOR = {water: 'only for hours on or after the analysis', currents: 'only for forecast hours'} as const;
 const LAYER = {water: 'sst-analysis', currents: 'wcofs-surface-forecast'} as const;
