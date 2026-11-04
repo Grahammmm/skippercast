@@ -127,8 +127,11 @@ test('a waypoint click inside a closure is refused and placement stays armed; ou
   assert.equal(placement.placeWaypoint('r', {lat: 35.5, lon: -121}, planner()), true);
   assert.equal(got.length, 1); assert.equal(got[0].screen.inside, false); assert.equal(got[0].screen.screened, true); assert.equal(placement.placementRefused.value, null);
   placement.beginWaypointPlacement('r', p => got.push(p));
-  placement.placeWaypoint('r', {lat: 35.5, lon: -121});
-  assert.equal(got[1].screen.screened, false, 'no screen given: carried as not checked');
+  assert.equal(placement.placeWaypoint('r', {lat: 35.5, lon: -121}), true);
+  assert.equal(got.length, 1, 'no screen given: not checked is refused, the pick is not completed');
+  assert.equal(placement.placementRefused.value.screened, false); assert.ok(placement.waypointPlacement.value, 'still armed');
+  assert.equal(placement.placeWaypoint('r', {lat: 35.5, lon: -121}, planner()), true);
+  assert.equal(got.length, 2); assert.equal(got[1].screen.screened, true); assert.equal(placement.placementRefused.value, null);
   assert.equal(placement.placeWaypoint('r', {lat: 35, lon: -121}, planner()), false, 'nothing armed: not a placement');
 });
 
@@ -163,7 +166,9 @@ const NO_PLACE = new Set(['harborOrigin', 'loadTerrainHabitat', 'loadReefPublica
   'loadContourFile', 'nextFriday', 'planFit', 'parseReach', 'parseStoredReach', 'loadReach', 'saveReach', 'reachFor', 'nmText', 'parseSpearDepth', 'parseShoreSwim',
   'parseStoredSpear', 'loadSpear', 'saveSpear', 'shoreSwimLimit', 'parseStoredLaunch', 'loadLaunch', 'saveLaunch', 'isReachProfile', 'routeAfterPaint', 'choosePick',
   // Only aggregates confidence percentages; it neither names nor returns a place.
-  'sharedConfidence', 'pickRun', 'diveText', 'WhereToLook']);
+  'sharedConfidence', 'pickRun',
+  // Only words a verdict it is handed (a refused placement's status, a leg's line); it screens nothing and names no place of its own.
+  'verdictLine', 'diveText', 'WhereToLook']);
 test('every exported function of the owned modules either carries a screen verdict or is listed as naming no place', () => {
   const fns = (mod, names = Object.keys(mod)) => names.filter(k => typeof mod[k] === 'function');
   const tsx = readFileSync(new URL('../web/brief/WhereToLook.tsx', import.meta.url), 'utf8');

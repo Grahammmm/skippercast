@@ -3,7 +3,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {buildExport, draftKey, offlineNotes, readDraft, USER_WAYPOINT_CATEGORIES, userWaypoints} from '../dist/trip-export.js';
 import {createPlanner} from '../web/planner.ts';
-import {beginWaypointPlacement, cancelWaypointPlacement, placeWaypoint, waypointPlacement} from '../web/waypoint-placement.ts';
+import {beginWaypointPlacement, cancelWaypointPlacement, placeWaypoint, placementRefused, verdictLine, waypointPlacement} from '../web/waypoint-placement.ts';
+import {assessScreen} from '../web/map/habitat.ts';
+import {screenPlace} from '../dist/geo-screen.js';
 
 const region = {id: 'test-coast', name: 'Test Coast', timezone: 'UTC', mpa: {bounds: [-2, -2, 2, 2]}};
 const atlas = {targets: [], areas: [], drifts: []};
@@ -132,17 +134,84 @@ test('freshness and last-moment protected-area checks apply to GPX and offline n
 test('placement is explicit, one-shot, cancellable and bound to the region', () => {
   const picked = [];
   cancelWaypointPlacement();
-  assert.equal(placeWaypoint(region.id, {lat: 1, lon: 2}), false);
+  assert.equal(placeWaypoint(region.id, {lat: 1, lon: 2}, screen), false);
   beginWaypointPlacement(region.id, at => picked.push(at));
   assert.equal(waypointPlacement.value, region.id);
-  assert.equal(placeWaypoint(region.id, {lat: NaN, lon: 2}), false);
-  assert.equal(placeWaypoint(region.id, {lat: 1, lon: 2}), true);
-  assert.deepEqual(picked, [{latitude: 1, longitude: 2, screen: {inside: false, name: null, distanceM: null, screened: false}}]);
-  assert.equal(placeWaypoint(region.id, {lat: 1, lon: 2}), false);
+  assert.equal(placeWaypoint(region.id, {lat: NaN, lon: 2}, screen), false);
+  assert.equal(placeWaypoint(region.id, {lat: 1, lon: 2}, screen), true);
+  assert.deepEqual(picked, [{latitude: 1, longitude: 2, screen: {inside: false, name: null, distanceM: null, screened: true}}]);
+  assert.equal(placeWaypoint(region.id, {lat: 1, lon: 2}, screen), false);
   beginWaypointPlacement(region.id, at => picked.push(at));
-  assert.equal(placeWaypoint('another-region', {lat: 1, lon: 2}), false);
+  assert.equal(placeWaypoint('another-region', {lat: 1, lon: 2}, screen), false);
   assert.equal(waypointPlacement.value, null);
   beginWaypointPlacement(region.id, at => picked.push(at)); cancelWaypointPlacement();
-  assert.equal(placeWaypoint(region.id, {lat: 1, lon: 2}), false);
+  assert.equal(placeWaypoint(region.id, {lat: 1, lon: 2}, screen), false);
   assert.equal(picked.length, 1);
+});
+
+// SC1952-06: a tap inside, within 70 m of, or without a checked screen for a closure is refused and placement stays armed.
+const NAME = '<img src=x onerror=alert(1)> Reserve';
+const BOX = {type: 'Polygon', coordinates: [[[-121.01, 34.99], [-120.99, 34.99], [-120.99, 35.01], [-121.01, 35.01], [-121.01, 34.99]]]};
+const iso = new Date().toISOString();
+const closure = (checkedAt = iso, live = true) => assessScreen({areas: [{type: 'Feature', properties: {NAME, Type: 'SMR'}, geometry: BOX}], checkedAt, live}, Date.now());
+const EAST = -120.99, M_LON = 1 / (111412.84 * Math.cos(35 * Math.PI / 180));
+/** The tap `m` metres east of the reserve's east edge, on its mid latitude. */
+const east = m => ({lat: 35, lon: EAST + m * M_LON});
+/** The offset in metres east of the edge whose verdict reads exactly the 70 m threshold (null if none does). */
+const threshold = (() => { for (let m = 69.5; m < 70.5; m += 0.01) if (screenPlace(closure(), {latitude: 35, longitude: east(m).lon}).distanceM === 70) return m; return null; })();
+
+function armed() { const got = []; cancelWaypointPlacement(); beginWaypointPlacement(region.id, at => got.push(at)); return got; }
+
+test('placement refuses inside, edge, 1 m, 69 m and exactly 70 m from a closure, consumes the tap, stays armed and completes once on a clear tap', () => {
+  assert.ok(threshold !== null, 'the fixture reaches exactly the 70 m threshold');
+  const got = armed(), screen = closure();
+  const taps = [{lat: 35, lon: -121}, east(0), east(1), east(69), east(threshold)];
+  for (const tap of taps) {
+    assert.equal(placeWaypoint(region.id, tap, screen), true, JSON.stringify(tap));
+    assert.equal(got.length, 0, 'a refused tap never calls the callback');
+    assert.equal(waypointPlacement.value, region.id, 'still armed');
+    assert.equal(placementRefused.value.screened, true);
+    assert.ok(verdictLine(placementRefused.value), 'a refusal always has its line');
+  }
+  assert.equal(verdictLine(screenPlace(screen, {latitude: 35, longitude: -121})), `Inside ${NAME}`);
+  assert.equal(verdictLine(screenPlace(screen, {latitude: east(69).lat, longitude: east(69).lon})), `69 m from ${NAME}`);
+  assert.equal(placeWaypoint(region.id, east(71), screen), true);
+  assert.equal(got.length, 1); assert.equal(got[0].screen.screened, true); assert.equal(got[0].screen.inside, false);
+  assert.equal(waypointPlacement.value, null); assert.equal(placementRefused.value, null);
+  assert.equal(placeWaypoint(region.id, east(500), screen), false, 'completed once: the next tap is not a placement');
+  assert.equal(got.length, 1);
+});
+
+test('placement without a current screen reads not checked, refuses, and a current screen then lets a clear tap through', () => {
+  const got = armed();
+  const stale = closure(new Date(Date.now() - 72 * 3_600_000).toISOString(), false);
+  const failed = assessScreen({areas: null, checkedAt: null, live: false}, Date.now());
+  for (const [label, screen] of [['unloaded', null], ['missing', undefined], ['stale', stale], ['failed', failed], ['not ready', {ready: () => false, pointAllowed: () => true, geometryAllowed: () => true}]]) {
+    assert.equal(placeWaypoint(region.id, {lat: 10, lon: 10}, screen), true, label);
+    assert.equal(got.length, 0, label);
+    assert.equal(placementRefused.value.screened, false, label);
+    assert.equal(verdictLine(placementRefused.value), 'Protected areas not checked', label);
+    assert.equal(waypointPlacement.value, region.id, `${label}: still armed`);
+  }
+  assert.equal(placeWaypoint(region.id, {lat: 10, lon: 10}, closure()), true);
+  assert.equal(got.length, 1);
+});
+
+test('a refusal never leaks: begin, cancel, another region and completion each clear it', () => {
+  const got = armed();
+  placeWaypoint(region.id, {lat: 35, lon: -121}, closure());
+  assert.ok(placementRefused.value);
+  cancelWaypointPlacement(); assert.equal(placementRefused.value, null);
+  beginWaypointPlacement(region.id, at => got.push(at));
+  placeWaypoint(region.id, {lat: 35, lon: -121}, closure());
+  beginWaypointPlacement(region.id, at => got.push(at)); assert.equal(placementRefused.value, null, 'a new placement starts clean');
+  placeWaypoint(region.id, {lat: 35, lon: -121}, closure());
+  assert.equal(placeWaypoint('another-region', {lat: 35, lon: -121}, closure()), false);
+  assert.equal(placementRefused.value, null); assert.equal(waypointPlacement.value, null);
+  beginWaypointPlacement(region.id, at => got.push(at));
+  placeWaypoint(region.id, {lat: 35, lon: -121}, closure());
+  assert.equal(placeWaypoint(region.id, {lat: NaN, lon: 1}, closure()), false, 'an invalid tap neither completes nor changes the refusal');
+  assert.ok(placementRefused.value);
+  assert.equal(placeWaypoint(region.id, {lat: 10, lon: 10}, closure()), true);
+  assert.equal(placementRefused.value, null); assert.equal(got.length, 1);
 });
