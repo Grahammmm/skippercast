@@ -74,7 +74,8 @@ def read_subset(body, bounds, path):
             raise ValueError("NOAA SST axes changed")
         if temp.units != b"kelvin" or err.units != b"kelvin" or temp.scale_factor != .01 or err.scale_factor != .01 or abs(temp.add_offset - 273.15) > .001 or mask.flag_values.tolist() != [1, 2, 4]:
             raise ValueError("NOAA SST scale, units or mask changed")
-        if not str(nc.variables["time"].units).startswith("b'seconds since 1981-01-01"):
+        time_units = getattr(nc.variables["time"], "units", None)
+        if not isinstance(time_units, bytes) or time_units != b"seconds since 1981-01-01 00:00:00":
             raise ValueError("NOAA SST time units changed")
         sample = datetime.fromtimestamp(datetime(1981, 1, 1, tzinfo=timezone.utc).timestamp() + int(t[0]), timezone.utc)
         sample_at = sample.isoformat(timespec="seconds").replace("+00:00", "Z")

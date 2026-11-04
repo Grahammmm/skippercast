@@ -67,11 +67,12 @@ export function parseResponse(data: ExternalJSON): LookupResult {
   if (!boat.loa_ft) throw Error('lookup could not find this boat');
   const sources: {url: string; title: string}[] = [];
   const add = (url: unknown, title: unknown) => {
-    if (typeof url !== 'string' || !/^https:\/\//.test(url) || sources.some(s => s.url === url) || sources.length >= 6) return;
+    // An overlong URL is skipped, never shortened into a different link, and takes no source slot.
+    if (typeof url !== 'string' || url.length > 500 || !/^https:\/\//.test(url) || sources.some(s => s.url === url) || sources.length >= 6) return;
     let parsed: URL;
     try { parsed = new URL(url); } catch { return; }  // malformed citation: skip it, keep the paid answer
     if (parsed.protocol !== 'https:' || !parsed.hostname) return;
-    sources.push({url: url.slice(0, 500), title: String(title || parsed.hostname).slice(0, 140)});
+    sources.push({url, title: String(title || parsed.hostname).slice(0, 140)});
   };
   for (const b of blocks) {
     for (const c of b.citations || []) add(c.url, c.title);
