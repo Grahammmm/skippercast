@@ -23,6 +23,12 @@ export const catchLog=sqliteTable('catch_log',{
   outcome:text('outcome').notNull(),count:integer('count').notNull().default(0),
   lat:real('lat'),lon:real('lon'),note:text('note'),createdAt:text('created_at').notNull(),
 },t=>[index('catch_log_owner').on(t.owner,t.startedAt)]);
+// BF-saved-spots: the account's own private places (server/routes/spots.ts). Private is the only state:
+// there is deliberately no visibility column. Never read by a public route, feed or preview.
+export const savedSpots=sqliteTable('saved_spots',{
+  id:text('id').primaryKey(),owner:text('owner').notNull(),name:text('name').notNull(),
+  lat:real('lat').notNull(),lon:real('lon').notNull(),note:text('note'),createdAt:text('created_at').notNull(),
+},t=>[index('saved_spots_owner').on(t.owner,t.createdAt)]);
 export const subscriptions=sqliteTable('subscriptions',{
   id:text('id').primaryKey(),owner:text('owner').notNull(),endpoint:text('endpoint').notNull(),
   p256dh:text('p256dh').notNull(),auth:text('auth').notNull(),createdAt:text('created_at').notNull(),
