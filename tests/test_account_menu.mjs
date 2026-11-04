@@ -49,7 +49,7 @@ test('explicit refresh force-fetches after a settled mount and updates sign-in s
   assert.equal(ensureSession(fetchFn), refresh);
   requests[1].resolve(signedIn);
   await refresh;
-  assert.deepEqual(session.value, {state: 'signed-in', name: 'Skipper'});
+  assert.deepEqual(session.value, {state: 'signed-in', name: 'Skipper', advisor: false});
   await ensureSession(fetchFn);
   assert.equal(requests.length, 2);
 });
@@ -65,7 +65,7 @@ test('an older mount response cannot overwrite a newer explicit refresh', async 
   await refresh;
   requests[0].resolve(signedOut);
   await initial;
-  assert.deepEqual(session.value, {state: 'signed-in', name: 'Skipper'});
+  assert.deepEqual(session.value, {state: 'signed-in', name: 'Skipper', advisor: false});
   await ensureSession(fetchFn);
   assert.equal(requests.length, 2);
 });
@@ -97,7 +97,7 @@ test('failed initial reads show offline and a later mount can recover', async ()
   assert.equal(requests.length, 2);
   requests[1].resolve(signedOut);
   await retry;
-  assert.deepEqual(session.value, {state: 'signed-out'});
+  assert.deepEqual(session.value, {state: 'signed-out', advisor: false});
   await ensureSession(fetchFn);
   assert.equal(requests.length, 2);
 });
@@ -109,17 +109,17 @@ test('AccountMenu uses the mount-only session initializer', () => {
 });
 
 test('the session answer reads as signed in, signed out, disabled or offline', () => {
-  assert.deepEqual(readSession({signIn: '/#account', signedIn: true, user: {display_name: ' Skipper '}}), {state: 'signed-in', name: 'Skipper'});
-  assert.deepEqual(readSession({signIn: '/#account', signedIn: true, user: {display_name: ''}}), {state: 'signed-in', name: null});
-  assert.deepEqual(readSession({signIn: '/#account', signedIn: false}), {state: 'signed-out'});
-  assert.deepEqual(readSession({signIn: null, signedIn: false}), {state: 'disabled'});
+  assert.deepEqual(readSession({signIn: '/#account', signedIn: true, user: {display_name: ' Skipper '}}), {state: 'signed-in', name: 'Skipper', advisor: false});
+  assert.deepEqual(readSession({signIn: '/#account', signedIn: true, user: {display_name: ''}}), {state: 'signed-in', name: null, advisor: false});
+  assert.deepEqual(readSession({signIn: '/#account', signedIn: false}), {state: 'signed-out', advisor: false});
+  assert.deepEqual(readSession({signIn: null, signedIn: false}), {state: 'disabled', advisor: false});
   assert.deepEqual(readSession(null), {state: 'offline'});
   assert.deepEqual(readSession({signIn: '/#account', signedIn: true}, false), {state: 'offline'});
-  assert.equal(accountLabel({state: 'signed-in', name: 'Skipper'}), 'Skipper');
+  assert.equal(accountLabel({state: 'signed-in', name: 'Skipper', advisor: false}), 'Skipper');
   assert.equal(accountLabel({state: 'signed-in', name: null}), 'Account');
-  assert.equal(accountLabel({state: 'signed-out'}), 'Sign in');
+  assert.equal(accountLabel({state: 'signed-out', advisor: false}), 'Sign in');
   assert.equal(accountLabel({state: 'loading'}), 'Sign in');
-  assert.equal(accountLabel({state: 'disabled'}), 'Account');
+  assert.equal(accountLabel({state: 'disabled', advisor: false}), 'Account');
 });
 
 test('account.js returns to the hash before #account, else a bare hash the app drops', () => {
@@ -177,4 +177,58 @@ test('the account menu opens the real boat sheet without the retired button and 
       if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key];
     }
   }
+});
+
+// SC0452-02: the advisor flag rides on the one session read.
+test('the advisor flag is strict: only boolean true turns Chat on, whoever is or is not signed in', () => {
+  for (const flag of [undefined, null, false, 'true', 1, 'yes', {}, [true]]) {
+    assert.equal(readSession({signIn: '/#account', signedIn: false, advisor: flag}).advisor, false, String(JSON.stringify(flag)));
+  }
+  assert.deepEqual(readSession({signIn: null, signedIn: false, advisor: true}), {state: 'disabled', advisor: true}, 'on without sign in still offers Chat');
+  assert.deepEqual(readSession({signIn: '/#account', signedIn: false, advisor: true}), {state: 'signed-out', advisor: true});
+  assert.deepEqual(readSession({signIn: '/#account', signedIn: true, user: {display_name: 'Skipper', id: 'u1'}, is_admin: true, advisor: true, publicKey: 'k'}), {state: 'signed-in', name: 'Skipper', advisor: true}, 'no private field is kept');
+  for (const bad of [null, undefined, 'x', 7]) assert.deepEqual(readSession(bad), {state: 'offline'});
+  assert.deepEqual(readSession({signIn: null, advisor: true}, false), {state: 'offline'}, 'an unsuccessful answer is offline even if its body says advisor');
+});
+
+test('the advisor flag is withdrawn by a failed explicit refresh and by any unreadable answer', async () => {
+  const {ensureSession, refreshSession, session} = await freshAccount('advisor-withdrawn');
+  const {requests, fetchFn} = sessionFetch();
+  const initial = ensureSession(fetchFn);
+  requests[0].resolve({signIn: null, signedIn: false, advisor: true});
+  await initial;
+  assert.deepEqual(session.value, {state: 'disabled', advisor: true});
+  for (const fail of [r => r.reject(new Error('timeout')), r => r.resolve(null), r => r.resolve({advisor: true}, false)]) {
+    const refresh = refreshSession(fetchFn);
+    fail(requests.at(-1));
+    await refresh;
+    assert.deepEqual(session.value, {state: 'offline'});
+    const back = refreshSession(fetchFn);
+    requests.at(-1).resolve({signIn: null, signedIn: false, advisor: true});
+    await back;
+    assert.equal(session.value.advisor, true);
+  }
+});
+
+test('advisor and sign in are one publication, and the latest generation wins either way', async () => {
+  const {ensureSession, refreshSession, session} = await freshAccount('advisor-latest');
+  const {requests, fetchFn} = sessionFetch();
+  const published = [];
+  const stop = session.subscribe(value => published.push(value));
+  const old = ensureSession(fetchFn);
+  const newer = refreshSession(fetchFn);
+  requests[1].resolve({...signedIn, advisor: false});
+  await newer;
+  requests[0].resolve({...signedIn, advisor: true});   // an old true after a newer false cannot restore Chat
+  await old;
+  assert.deepEqual(session.value, {state: 'signed-in', name: 'Skipper', advisor: false});
+  const third = refreshSession(fetchFn), fourth = refreshSession(fetchFn);
+  requests[3].resolve({...signedIn, advisor: true});
+  await fourth;
+  requests[2].reject(new Error('offline'));   // an old failure after a newer true cannot hide it
+  await third;
+  assert.deepEqual(session.value, {state: 'signed-in', name: 'Skipper', advisor: true});
+  stop();
+  assert.ok(published.every(value => value.state === 'loading' || value.state === 'offline' || typeof value.advisor === 'boolean'), 'every published answer carries sign in and advisor together');
+  assert.equal(requests.length, 4);
 });

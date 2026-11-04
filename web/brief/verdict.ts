@@ -37,6 +37,8 @@ import {SHORE} from '../../packages/coast/src/shore-conditions.ts';
 import {SPEAR} from '../../packages/coast/src/spear.ts';
 import type {Brief} from './types.ts';
 import {modelAgreement, type Agreement} from './agreement.ts';
+import {cap, englishClock, finite, r0, up1, verdictCopy, type VerdictCopy} from './verdict-copy.ts';
+import type {Language} from '../i18n.ts';
 
 const HOUR = 3_600_000;
 
@@ -74,26 +76,14 @@ export interface BriefVerdict {
   readonly basis: 'comfort-score' | Exclude<Profile, 'boat'>;
 }
 
-const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
-const r0 = (n: number) => String(Math.round(n));
-const r1 = (n: number) => String(Number(n.toFixed(1)));
-/** Seas to 0.1 ft, rounded UP: a printed maximum is never below the value the window rule used (1e-9 absorbs float noise). */
-const up1 = (n: number) => String(Math.ceil(n * 10 - 1e-9) / 10);
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-const compass = (deg: number | null) => finite(deg) ? COMPASS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16]! : null;
-
 function local(ms: number, tz: string): {date: string; hour: number} {
   const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23'})
     .formatToParts(new Date(ms)).map(p => [p.type, p.value]));
   return {date: `${parts.year}-${parts.month}-${parts.day}`, hour: Number(parts.hour)};
 }
 
-/** "7 am", "noon", "1 pm" in the region's zone. */
-export function clockText(ms: number, tz: string): string {
-  const h = local(ms, tz).hour;
-  return h === 12 ? 'noon' : h === 0 ? 'midnight' : `${h % 12} ${h < 12 ? 'am' : 'pm'}`;
-}
+/** "7 am", "noon", "1 pm" in the region's zone (English; the Spanish clock is verdict-copy.ts localClock). */
+export const clockText = englishClock;
 
 /**
  * The hours to rate on `date`: whole hours starting at or after sunrise (or
@@ -156,76 +146,71 @@ export function charges(r: ComfortRating): {kind: Charge; cost: number}[] {
   return list.filter(c => c.cost > 0).sort((a, b) => b.cost - a.cost);
 }
 
-function phrase(kind: Charge, r: ComfortRating, h: FeedHour): string {
-  if (kind === 'wind') return `${r0(r.wind)} kt wind${r.gust !== null && r.gust >= r.wind + 3 ? ` gusting ${r0(r.gust)}` : ''}`;
-  // The period is GFS-Wave's; name it only when its height is the one shown (WAM's period is not in the feed).
-  if (kind === 'seas') return `${up1(r.sea)} ft seas${finite(h.sea_period) && finite(h.sea) && h.sea >= r.sea ? ` at ${r0(h.sea_period)} s` : ''}`;
-  if (kind === 'chop') return `${r1(r.chop ?? 0)} ft of ${r.costs.short > 0 ? 'short, steep ' : ''}wind chop`;
-  const from = compass(h.secondary_from);
-  return `a ${r1(h.secondary ?? 0)} ft cross swell${from ? ` from the ${from}` : ''}`;
-}
-
 /** Said when the date's daylight hours have all passed. */
-export const NO_DAYLIGHT = 'No daylight left on this day.';
+export const NO_DAYLIGHT = verdictCopy('en').unknown('noDaylight');
 /** Added to the limit sentence when the alert check is missing and the day is not held for it. */
-export const NO_ALERT_CHECK = 'No current marine alert check.';
-
-const heldSentence = (reasons: string[]): string | null => reasons.length ? `Held at Marginal: ${reasons.join('; ')}.` : null;
+export const NO_ALERT_CHECK = verdictCopy('en').noAlertCheck();
 
 /** Hours of the bar estimate in the window that read hazardous, as "7 am". */
-function barHazard(brief: Brief, hours: readonly number[], tz: string): string | null {
+function barHazard(brief: Brief, hours: readonly number[], tz: string, c: VerdictCopy): string | null {
   const hit = (brief.bar?.hazardous ?? []).map(h => Date.parse(h.at)).filter(ms => hours.some(at => Math.abs(at - ms) < HOUR)).sort((a, b) => a - b)[0];
-  return hit === undefined ? null : `the bar estimate reads hazardous at ${clockText(hit, tz)}`;
+  return hit === undefined ? null : c.bar(c.clock(hit, tz));
 }
 
 /** The first rated hour in the long-period swell rule (score.ts LONG_PERIOD_SWELL, which keeps it out of every window), named; the rougher model's seas count. */
-export function longPeriodHour(rows: readonly {ms: number; hour: FeedHour}[], tz: string): string | null {
+export function longPeriodHour(rows: readonly {ms: number; hour: FeedHour}[], tz: string, lang: Language = 'en'): string | null {
+  const c = verdictCopy(lang);
   for (const {ms, hour} of [...rows].sort((a, b) => a.ms - b.ms)) {
     const heights = [hour.sea, hour.other_sea].filter(finite), periods = [hour.sea_period, hour.swell_period].filter(finite).filter(p => p >= LONG_PERIOD_SWELL.period);
     const h = heights.length ? Math.max(...heights) : NaN;
-    if (h >= LONG_PERIOD_SWELL.height && periods.length) return `long-period swell (${r1(h)} ft at ${r0(Math.max(...periods))} s) at ${clockText(ms, tz)}`;
+    if (h >= LONG_PERIOD_SWELL.height && periods.length) return c.longPeriod(h, Math.max(...periods), c.clock(ms, tz));
   }
   return null;
 }
 
+/** Where the window ends, as the limit sentence says it: the English label's end, or the Spanish clock at the window's end bound. */
+const untilText = (label: string, bounds: readonly [number, number] | undefined, tz: string, c: VerdictCopy, lang: Language): string =>
+  lang !== 'en' && bounds ? c.clock(bounds[1], tz) : label.split('–')[1]!;
+
 /** The boat verdict from the comfort score over the regional forecast, for `boat`'s factors (the reference boat by default). */
-export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, now: Date, tz: string, boat: BoatFactors = REFERENCE_BOAT): BriefVerdict {
+export function boatVerdict(brief: Brief, forecast: ConditionsForecast | null, now: Date, tz: string, boat: BoatFactors = REFERENCE_BOAT, lang: Language = 'en'): BriefVerdict {
+  const c = verdictCopy(lang);
   const unknown = (limit: string, window: string | null = null): BriefVerdict => ({verdict: 'unknown', limit, held: null, window, score: null, basis: 'comfort-score', agreement: null});
-  if (!forecast) return unknown('No forecast for this day yet.');
+  if (!forecast) return unknown(c.unknown('noForecast'));
   const feed = feedReader(forecast, now);
   const {hours, label, covered, bounds} = windowHours(feed.times, brief.date, tz, brief.sunrise, brief.sunset, now);
-  if (!hours.length) return unknown(covered ? NO_DAYLIGHT : feed.times.length ? 'The forecast does not reach this day yet.' : 'No forecast for this day yet.');
+  if (!hours.length) return unknown(c.unknown(covered ? 'noDaylight' : feed.times.length ? 'beyond' : 'noForecast'));
   const rows = hours.map(ms => ({ms, hour: feed.read(ms)})).map(row => ({...row, rating: rateComfort(row.hour, boat)}));
   const rated = rows.filter((row): row is typeof row & {rating: ComfortRating} => row.rating !== null);
-  if (!rated.length) return {...unknown('No wind and seas forecast for this window.', label), windowBounds: bounds};
+  if (!rated.length) return {...unknown(c.unknown('noBoatWindow'), label), windowBounds: bounds};
   // The limit comes from the hour that rates worst before any cap, so a capped hour never names a charge it does not carry.
   const worst = rated.reduce((a, b) => b.rating.uncapped < a.rating.uncapped ? b : a);
   const score = Math.min(...rated.map(row => row.rating.score));
   const alert = brief.alerts[0];
   let verdict = alert ? 'rough' : FROM_SCORE[verdictFor({conditions: worst.rating.uncapped})];
   const list = charges(worst.rating);
-  const at = clockText(worst.ms, tz);
+  const at = c.clock(worst.ms, tz);
   let limit: string;
   if (verdict === 'comfortable' || !list.length) {
     const wind = Math.max(...rated.map(row => row.rating.wind)), sea = Math.max(...rated.map(row => row.rating.sea));
-    limit = `Wind to ${r0(wind)} kt and seas to ${up1(sea)} ft through ${label!.split('–')[1]}.`;
+    limit = c.calm(r0(wind), up1(sea), untilText(label!, bounds, tz, c, lang));
   } else {
     const [first, second] = list;
-    limit = `${cap(phrase(first!.kind, worst.rating, worst.hour))} at ${at}${second && second.cost >= SECOND_COST ? `, with ${phrase(second.kind, worst.rating, worst.hour)}` : ''}.`;
+    limit = c.limit(c.phrase(first!.kind, worst.rating, worst.hour), at, second && second.cost >= SECOND_COST ? c.phrase(second.kind, worst.rating, worst.hour) : null);
   }
-  if (alert) limit = `${alert.event} in effect. ${limit}`;
+  if (alert) limit = c.alert(alert.event, limit);
   const reasons: string[] = [];
-  if (rated.some(row => row.rating.limited)) reasons.push('forecast detail is partial');
-  if (rated.length < rows.length) reasons.push(`${rows.length - rated.length} of ${rows.length} hours have no forecast`);
-  if (feed.oldestMs !== null && feed.oldestMs > RUN_STALE_MS) reasons.push(`the forecast run is ${Math.floor(feed.oldestMs / HOUR)} h old`);
-  if (brief.missing.includes(ALERT_CHECK_MISSING)) reasons.push('the marine alert check is unavailable');
-  const bar = barHazard(brief, hours, tz);
+  if (rated.some(row => row.rating.limited)) reasons.push(c.partial());
+  if (rated.length < rows.length) reasons.push(c.missing(rows.length - rated.length, rows.length));
+  if (feed.oldestMs !== null && feed.oldestMs > RUN_STALE_MS) reasons.push(c.stale(Math.floor(feed.oldestMs / HOUR)));
+  if (brief.missing.includes(ALERT_CHECK_MISSING)) reasons.push(c.alertMissing());
+  const bar = barHazard(brief, hours, tz, c);
   if (bar) reasons.push(bar);
-  const swell = longPeriodHour(rated, tz);
+  const swell = longPeriodHour(rated, tz, lang);
   if (swell) reasons.push(swell);
-  const held = verdict === 'comfortable' && reasons.length ? heldSentence(reasons) : null;
+  const held = verdict === 'comfortable' && reasons.length ? c.held(reasons) : null;
   if (held) verdict = 'marginal';
-  else if (!alert && brief.missing.includes(ALERT_CHECK_MISSING)) limit = `${limit} ${NO_ALERT_CHECK}`;
+  else if (!alert && brief.missing.includes(ALERT_CHECK_MISSING)) limit = `${limit} ${c.noAlertCheck()}`;
   // Under an alert the day is Rough whatever the hours score, so no score is shown.
   const agreement = modelAgreement(rows);
   const staleAgreement = feed.oldestMs !== null && feed.oldestMs > RUN_STALE_MS && (agreement.state === 'agree' || agreement.state === 'partial');
@@ -283,31 +268,33 @@ export function limitReasons(profile: Exclude<Profile, 'boat'>, hour: {reasons: 
 }
 
 /** The Shore, Spear or Kayak verdict from the profile's own hourly grader. */
-export function profileVerdict(brief: Brief, now: Date, tz: string): BriefVerdict {
+export function profileVerdict(brief: Brief, now: Date, tz: string, lang: Language = 'en'): BriefVerdict {
+  const c = verdictCopy(lang);
   const p = brief.profile as Exclude<Profile, 'boat'>;
   const graded: readonly GradedHour[] = (p === 'shore' ? brief.shore?.hours : p === 'spear' ? brief.spear?.hours : brief.kayak?.hours) ?? [];
   const byMs = new Map(graded.map(h => [Date.parse(h.at), h]));
   const {hours, label, covered, bounds} = windowHours([...byMs.keys()].filter(Number.isFinite), brief.date, tz, brief.sunrise, brief.sunset, now);
   const rows = hours.map(ms => ({ms, hour: byMs.get(ms)!, grade: GRADE[byMs.get(ms)!.verdict] ?? 'unknown' as DayVerdict}));
   const rated = rows.filter(row => row.grade !== 'unknown');
-  if (!rated.length) return {verdict: 'unknown', limit: rows.length ? 'Wind or seas unknown for this window.' : covered ? NO_DAYLIGHT : 'No forecast for this day yet.', held: null, window: label, windowBounds: bounds, score: null, basis: p, agreement: null};
+  if (!rated.length) return {verdict: 'unknown', limit: c.unknown(rows.length ? 'noProfileWindow' : covered ? 'noDaylight' : 'noForecast'), held: null, window: label, windowBounds: bounds, score: null, basis: p, agreement: null};
   const worst = rated.reduce((a, b) => RANK[b.grade] > RANK[a.grade] ? b : a);
   const alert = brief.alerts[0];
   let verdict: DayVerdict = alert ? 'rough' : worst.grade;
-  const why = cap(limitReasons(p, worst.hour, worst.grade).join(', ') || VERDICT_WORD[worst.grade].toLowerCase());
-  let limit = verdict === 'comfortable' ? `${why} through ${label!.split('–')[1]}.` : `${why} at ${clockText(worst.ms, tz)}.`;
-  if (alert) limit = `${alert.event} in effect. ${limit}`;
+  // The reasons and their costs come from the grader's own English; only the display text is translated.
+  const why = cap(limitReasons(p, worst.hour, worst.grade).map(c.profileReason).join(', ') || c.gradeWord(worst.grade));
+  let limit = verdict === 'comfortable' ? c.profileLimit(why, 'through', untilText(label!, bounds, tz, c, lang)) : c.profileLimit(why, 'at', c.clock(worst.ms, tz));
+  if (alert) limit = c.alert(alert.event, limit);
   const reasons: string[] = [];
-  if (rated.length < rows.length) reasons.push(`${rows.length - rated.length} of ${rows.length} hours are unknown`);
-  if (brief.missing.includes(ALERT_CHECK_MISSING)) reasons.push('the marine alert check is unavailable');
-  const held = verdict === 'comfortable' && reasons.length ? heldSentence(reasons) : null;
+  if (rated.length < rows.length) reasons.push(c.missing(rows.length - rated.length, rows.length, true));
+  if (brief.missing.includes(ALERT_CHECK_MISSING)) reasons.push(c.alertMissing());
+  const held = verdict === 'comfortable' && reasons.length ? c.held(reasons) : null;
   if (held) verdict = 'marginal';
-  else if (!alert && brief.missing.includes(ALERT_CHECK_MISSING)) limit = `${limit} ${NO_ALERT_CHECK}`;
+  else if (!alert && brief.missing.includes(ALERT_CHECK_MISSING)) limit = `${limit} ${c.noAlertCheck()}`;
   return {verdict, limit, held, window: label, windowBounds: bounds, score: null, basis: p, agreement: null};
 }
 
 /** The brief's verdict for its profile; null before there is a brief. `boat` rates the Boat profile (the reference boat by default). */
-export function briefVerdict(brief: Brief | null, forecast: ConditionsForecast | null, now: Date, tz: string, boat: BoatFactors = REFERENCE_BOAT): BriefVerdict | null {
+export function briefVerdict(brief: Brief | null, forecast: ConditionsForecast | null, now: Date, tz: string, boat: BoatFactors = REFERENCE_BOAT, lang: Language = 'en'): BriefVerdict | null {
   if (!brief) return null;
-  return brief.profile === 'boat' ? boatVerdict(brief, forecast, now, tz, boat) : profileVerdict(brief, now, tz);
+  return brief.profile === 'boat' ? boatVerdict(brief, forecast, now, tz, boat, lang) : profileVerdict(brief, now, tz, lang);
 }
