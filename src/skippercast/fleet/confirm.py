@@ -66,7 +66,7 @@ def today() -> date:
 # ---- validation ------------------------------------------------------------------------------
 
 def _date(text: Any, *, latest: date | None = None) -> date:
-    if not isinstance(text, str) or not DATE.match(text):
+    if not isinstance(text, str) or not DATE.fullmatch(text):
         raise ConfirmError("invalid date")
     try:
         parsed = date.fromisoformat(text)
@@ -78,13 +78,13 @@ def _date(text: Any, *, latest: date | None = None) -> date:
 
 
 def _text(pattern: re.Pattern, value: Any, message: str) -> str:
-    if not isinstance(value, str) or not pattern.match(value):
+    if not isinstance(value, str) or not pattern.fullmatch(value):
         raise ConfirmError(message)
     return value
 
 
 def _identity(region: str, sink: str, vessel_id: Any, mmsi: Any) -> tuple[str, str]:
-    if not isinstance(region, str) or not REGION.match(region) or sink not in SINKS:
+    if not isinstance(region, str) or not REGION.fullmatch(region) or sink not in SINKS:
         raise ConfirmError("invalid region or sink")
     return _text(VESSEL, vessel_id, "invalid vessel id"), _text(MMSI, mmsi, "invalid MMSI")
 
@@ -97,8 +97,9 @@ def _checked_entry(row: Any) -> dict:
         _text(EVIDENCE, row["evidence_ref"], LEDGER_BAD)
         if row["method"] not in METHODS:
             raise ConfirmError(LEDGER_BAD)
-        confirmed = _date(row["confirmed_on"])
-        if row["withdrawn_on"] is not None and _date(row["withdrawn_on"]) < confirmed:
+        latest = today()
+        confirmed = _date(row["confirmed_on"], latest=latest)
+        if row["withdrawn_on"] is not None and _date(row["withdrawn_on"], latest=latest) < confirmed:
             raise ConfirmError(LEDGER_BAD)
     except ConfirmError:
         raise ConfirmError(LEDGER_BAD) from None
@@ -329,7 +330,7 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv=None) -> int:
     args = _parser().parse_args(argv)
     try:
-        if args.sink not in SINKS or not REGION.match(args.region):
+        if args.sink not in SINKS or not REGION.fullmatch(args.region):
             raise ConfirmError("invalid region or sink")
         registry: dict[str, str] = {}
 

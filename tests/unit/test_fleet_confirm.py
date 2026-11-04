@@ -194,6 +194,11 @@ class AddTests(ConfirmBase):
                 self.assert_refused(self.add(**kwargs), *secrets)
                 self.assertEqual(tree(self.var), before, "a refusal creates and changes nothing")
 
+    def test_evidence_reference_with_a_final_newline_is_refused(self):
+        before = tree(self.var)
+        self.assert_refused(self.add(ref="ref-1\n"), "ref-1")
+        self.assertEqual(tree(self.var), before)
+
     def test_a_different_add_for_a_standing_confirmation_refuses(self):
         self.assertEqual(self.add(1)[0], 0)
         before = self.ledger().read_bytes()
@@ -326,6 +331,7 @@ class PrivateIoTests(ConfirmBase):
             "an invalid date": json.dumps({"version": 1, "entries": [{**row, "confirmed_on": "2026-02-30"}]}),
             "a withdrawal before the confirmation": json.dumps({"version": 1, "entries": [{**row, "withdrawn_on": "2026-10-31"}]}),
             "a url reference": json.dumps({"version": 1, "entries": [{**row, "evidence_ref": "https://example.com"}]}),
+            "a newline reference": json.dumps({"version": 1, "entries": [{**row, "evidence_ref": "ref-1\n"}]}),
             "a numeric MMSI": json.dumps({"version": 1, "entries": [{**row, "mmsi": 999000001}]}),
             "invalid UTF-8": None,
         }
@@ -343,6 +349,30 @@ class PrivateIoTests(ConfirmBase):
                 self.assertEqual(tree(self.var), before)
                 with self.assertRaises(confirm.ConfirmError):
                     confirm.load_confirmations("CA", "staging", self.var)
+
+    def test_persisted_dates_cannot_exceed_utc_today(self):
+        self.assertEqual(self.add(on=TODAY.isoformat())[0], 0)
+        valid = json.loads(self.ledger().read_text())
+        self.assertEqual(confirm.load_confirmations("CA", "staging", self.var), valid["entries"])
+        self.assertEqual(self.withdraw(on=TODAY.isoformat())[0], 0)
+        self.assertEqual(confirm.load_confirmations("CA", "staging", self.var)[0]["withdrawn_on"], TODAY.isoformat())
+        for field in ("confirmed_on", "withdrawn_on"):
+            with self.subTest(field=field):
+                row = {**valid["entries"][0], field: "9999-01-01"}
+                self.ledger().write_text(json.dumps({"version": 1, "entries": [row]}))
+                before = tree(self.var)
+                with self.assertRaisesRegex(confirm.ConfirmError, confirm.LEDGER_BAD):
+                    confirm.load_confirmations("CA", "staging", self.var)
+                self.assertEqual(self.run_cli("confirm", "list", "--region", "CA"),
+                                 (1, "", f"confirm list: {confirm.LEDGER_BAD}\n"))
+                for sink in ("staging", "worker"):
+                    self.ledger(sink).write_text(json.dumps({"version": 1, "entries": [row]}))
+                    coverage_before = tree(self.var)
+                    self.assertEqual(self.run_cli("coverage-status", "--region", "CA", "--sink", sink, "--apply"),
+                                     (1, "", f"coverage-status: {confirm.LEDGER_BAD}\n"))
+                    self.assertEqual(tree(self.var), coverage_before)
+                self.ledger("worker").unlink()
+                self.assertEqual(tree(self.var), before)
 
     def test_symlinked_ledger_paths_are_refused(self):
         outside = self.var / "outside"
