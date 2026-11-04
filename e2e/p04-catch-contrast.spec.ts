@@ -171,7 +171,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // Masthead.tsx. (Kept beside its pin, not in the notes above, so it does not collide with other PRs' notes.)
   // Merged with BF-species-plans-page #1276 (Plan label and icon, see the check_contrast.mjs note below): rebound to
   // the merged file, which carries both changes and nothing else.
-  "web/app/Masthead.tsx": "c8c12a37a7020359c86513ddaf250aa81a333a736f3b5bbd405cf3aa809ca15d",
+  // SC1322-06 (#1438, landing degraded notice): Masthead.tsx moves DegradedNotice verbatim into web/degraded-notice.tsx
+  // (same degraded.ts import, same <p class="app-limits-note app-degraded"> markup) and re-exports it, so /map's
+  // masthead renders the identical element. No CSS, token or catch markup change; contrast(), assertions and
+  // thresholds are untouched. Rebind only Masthead.tsx.
+  "web/app/Masthead.tsx": "1859c84f33775f1c6830f932566a644bdd639fd7c0804947ea38f375ad4b6aff",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
