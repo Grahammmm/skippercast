@@ -1,7 +1,7 @@
 // BF-one-answer: the one line the app leads with, rendered from web/first-answer.ts. Split out of App.tsx so it
 // is one covered surface of the string catalogue (BF-spanish-app): its words come from catalog/app/strings.json
-// in the page's language; the reason is the brief's own verdict sentence (web/brief/verdict.ts), which stays
-// English until that file joins the catalogue.
+// in the page's language; the reason is the brief's own verdict sentence (web/brief/verdict.ts), which
+// currentVerdict phrases in the page's language from the same catalogue (web/brief/verdict-copy.ts).
 import {useEffect} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {currentVerdict, leadBrief, leadDate, leadDayText} from '../brief/Brief.tsx';

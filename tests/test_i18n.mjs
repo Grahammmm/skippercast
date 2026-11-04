@@ -151,6 +151,35 @@ test('with the language es the first answer, the brief and its footer render Spa
   } finally { m.language.value = 'en'; m.feedGaps.value = []; reset(m); }
 });
 
+test('the verdict reason (limit and hold) is Spanish and the same sentence on the Brief and the first answer; flipping back restores English', async () => {
+  const m = await load();
+  const limitOf = html => /<p class="app-verdict-limit">([^<]*)<\/p>/.exec(html)?.[1] ?? '';
+  const reasonOf = html => /<p class="app-first-answer-reason">([^<]*)<\/p>/.exec(html)?.[1] ?? '';
+  // Each case: the change to the synthetic feed and the Spanish sentence both surfaces must show (the English one is the old literal).
+  const cases = {
+    held: [() => {}, 'Viento de hasta 5 kt y mar de hasta 2 ft hasta las 12. Se mantiene en Marginal: el detalle del pronóstico es parcial; la revisión de avisos marinos no está disponible.'],
+    rough: [() => { const g = m.regionalForecast.value.models.gfs_global.data.hourly; g.wind_speed_10m.fill(34); g.wind_gusts_10m.fill(42); },
+      'Viento de 34 kt con ráfagas de 42 a las 7. No hay una revisión actual de avisos marinos.'],
+    unknown: [() => { m.regionalForecast.value = null; }, 'Aún no hay pronóstico para este día.'],
+  };
+  try {
+    for (const [name, [change, want]] of Object.entries(cases)) {
+      await setup(m); change();
+      m.language.value = 'en';
+      const en = {limit: limitOf(m.render(m.h(m.Verdict, {now: NOW}))), reason: reasonOf(answer(m.render(m.h(m.App, {now: NOW}))))};
+      m.language.value = 'es';
+      const es = {limit: limitOf(m.render(m.h(m.Verdict, {now: NOW}))), reason: reasonOf(answer(m.render(m.h(m.App, {now: NOW}))))};
+      assert.equal(es.limit, want, `${name}: the Brief says why in Spanish`);
+      assert.equal(es.reason, want, `${name}: the first answer repeats the Brief's Spanish sentence`);
+      assert.equal(en.reason, en.limit, `${name}: the English first answer repeats the Brief's sentence`);
+      assert.doesNotMatch(en.limit, /[áéíóúñ]/, `${name}: the English sentence is the old one`);
+      m.language.value = 'en';
+      assert.equal(limitOf(m.render(m.h(m.Verdict, {now: NOW}))), en.limit, `${name}: back to English restores the sentence`);
+      reset(m);
+    }
+  } finally { m.language.value = 'en'; reset(m); }
+});
+
 test('check_copy.mjs: clean on main, and fails on a gap, an unknown id and a newly added bare literal (positive control)', async () => {
   assert.deepEqual(catalogueProblems(), [], 'main\'s files and catalogue are clean');
   const root = await mkdtemp(join(tmpdir(), 'i18n-lint-'));
