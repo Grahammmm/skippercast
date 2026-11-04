@@ -7,7 +7,7 @@ import {pathToFileURL} from 'node:url';
 import test from 'node:test';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
-import {planView, PLAN_COPY} from '../web/plan.ts';
+import {planView, sourceLinks, PLAN_COPY} from '../web/plan.ts';
 const ROOT = new URL('..', import.meta.url).pathname;
 const json = path => JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'));
 const INDEX = json('dist/regions/morro-bay/search-plan-index.json'), PLANS = INDEX.profiles;
@@ -41,10 +41,41 @@ test('numeric or missing model declaration withholds every search section; unsaf
     assert.equal(v.kind, 'withheld'); assert.equal('sections' in v, false); assert.equal('evidence' in v, false);
   }
   const bad = ['http://example.test','javascript:alert(1)','https://user:pass@example.test','https://user@example.test','bad'];
-  const source_links = [...bad.map(href => ({title:'Unsafe',href})), {title:' ',href:'https://example.test'}, {title:'Official',href:'https://example.test/path'}];
+  const source_links = [...bad.map(url => ({title:'Unsafe',url})), {title:' ',url:'https://example.test'}, {title:'Official',url:'https://example.test/path'}];
   const v = planView({x:{...PLANS.reef,source_links}}, 'x', 'plan');
-  assert.deepEqual(v.evidence.links, [source_links.at(-1)]);
+  assert.deepEqual(v.evidence.links, [{title:'Official',href:'https://example.test/path'}]);
   assert.equal(planView({x:{...PLANS.reef,source_links:source_links.slice(0,-1)}}, 'x', 'plan').evidence.links.length, 0);
+});
+// SC2207-01: the expected links come from the committed files' own {title, url} shape, not from a hand-written fixture.
+const FULL = json('dist/regions/morro-bay/search-plans.json').profiles;
+const expectedLinks = p => p.source_links.map(({title, url}) => ({title, href: url}));
+test('committed source URLs survive both plan inputs', () => {
+  let checked = 0;
+  for (const profiles of [FULL, PLANS]) for (const [id, p] of Object.entries(profiles)) {
+    if (p.numeric_bite_model !== false) continue;
+    assert.ok(Array.isArray(p.source_links) && p.source_links.length > 0, `${id} has committed sources`);
+    for (const l of p.source_links) assert.deepEqual(Object.keys(l).sort(), ['title', 'url'], id);
+    const before = structuredClone(p.source_links), v = planView(profiles, id, 'plan');
+    assert.deepEqual(v.evidence.links, expectedLinks(p), id);
+    assert.deepEqual(p.source_links, before, `${id} input unchanged`);
+    checked++;
+  }
+  assert.ok(checked >= 2);
+});
+test('source URL reader rejects malformed siblings without losing safe links', () => {
+  const ok = {title: 'Okay', url: 'https://example.test/path?q=1#part'};
+  for (const none of [undefined, null, 'x', 7, {}, {title: 'a', url: 'https://example.test'}]) assert.deepEqual(sourceLinks(none), []);
+  const hostile = {title: 'Hostile', url: 'https://example.test/safe', href: 'javascript:alert(1)'};
+  const rejected = [null, 'x', 7, [], {}, {title: 'No url'}, {url: 'https://example.test'}, {title: '  ', url: 'https://example.test'},
+    {title: 'Blank', url: ' '}, {title: 5, url: 'https://example.test'}, {title: 'Num', url: 5}, {title: 'Href only', href: 'https://example.test'},
+    ...['/relative', '//example.test/x', 'not a url', 'http://example.test', 'javascript:alert(1)', 'data:text/html,x', 'ftp://example.test/f',
+      'https://user:pass@example.test', 'https://user@example.test', 'https://:pass@example.test'].map(url => ({title: 'Bad', url}))];
+  const input = [rejected[0], ok, ...rejected, hostile, ok];
+  const before = structuredClone(input), out = sourceLinks(input);
+  assert.deepEqual(out, [{title: 'Okay', href: ok.url}, {title: 'Hostile', href: 'https://example.test/safe'}, {title: 'Okay', href: ok.url}]);
+  assert.deepEqual(input, before, 'input is not mutated');
+  assert.notEqual(out[0], input[1], 'fresh objects');
+  assert.equal(sourceLinks([{title: ' Spaced ', url: 'HTTPS://Example.test/A b'}])[0].href, 'HTTPS://Example.test/A b', 'bytes preserved');
 });
 let module;
 async function ui() {
@@ -89,6 +120,31 @@ test('render preserves source text, drops empty evidence lists and never exposes
   }
   m.regionPlans.value = {region:'morro-bay',plans:{reef:{...PLANS.reef,source_links:[],required_to_confirm:[]}}};
   assert.doesNotMatch(htmlOf(m,m.PlanView), /<ul/);
+});
+test('plan page renders reviewed source anchors as escaped text', async () => {
+  const m = await ui();
+  for (const id of ['reef', 'halibut']) {
+    setup(m, id);
+    const html = htmlOf(m, m.PlanView);
+    assert.ok(PLANS[id].source_links.length > 0);
+    for (const {title, url} of PLANS[id].source_links) {
+      const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      assert.ok(html.includes(`<a href="${url}" target="_blank" rel="noopener" aria-label="${esc(title)} (opens in a new tab)">${esc(title)}</a>`), `${id} ${url}`);
+    }
+  }
+  const title = '<img src=x onerror=alert(1)> & source';
+  setup(m, 'reef');
+  m.regionPlans.value = {region: 'morro-bay', plans: {reef: {...PLANS.reef, source_links: [{title, url: 'https://example.test/s'}, {title: 'Unsafe', url: 'http://example.test/s'}]}}};
+  const html = htmlOf(m, m.PlanView);
+  assert.doesNotMatch(html, /<img/); assert.match(html, /&lt;img src=x onerror=alert\(1\)(?:&gt;|>) &amp; source/);
+  assert.doesNotMatch(html, /http:\/\/example\.test/); assert.equal((html.match(/<a href="https:\/\/example\.test\/s"/g) ?? []).length, 1);
+  for (const source_links of [[], [{title: 'Unsafe', url: 'javascript:alert(1)'}], [{title: 'Old shape', href: 'https://example.test/s'}]]) {
+    m.regionPlans.value = {region: 'morro-bay', plans: {reef: {...PLANS.reef, source_links, required_to_confirm: []}}};
+    assert.doesNotMatch(htmlOf(m, m.PlanView), /<ul/);
+  }
+  m.regionPlans.value = {region: 'morro-bay', plans: {reef: {...PLANS.reef, numeric_bite_model: true}}};
+  assert.doesNotMatch(htmlOf(m, m.PlanView), /Evidence|<a href="https:\/\/www\.fisheries/);
+  setup(m, 'lobster'); assert.doesNotMatch(htmlOf(m, m.PlanView), /Evidence|ecological evidence/);
 });
 test('unresearched, unknown and region switches show only their own reason and rules', async () => {
   const m = await ui(); setup(m,'lobster');
