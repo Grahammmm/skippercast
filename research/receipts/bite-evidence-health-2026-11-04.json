@@ -1,0 +1,27 @@
+{
+  "schema_version": 2,
+  "scope": "bite-evidence-health",
+  "captured_at": "2026-11-04T08:57:04Z",
+  "repository_commit": "4bcc2be4620f2915e18eff4cd6f7b378ad9162dc",
+  "workflow_file": ".github/workflows/daily-data.yml",
+  "run_query": {
+    "command": "gh run list --repo Grahammmm/skippercast --workflow daily-data.yml --limit 1 --json databaseId,headSha,status,conclusion,createdAt,updatedAt,url,event,workflowName",
+    "queried_at": "2026-11-04T08:56:54Z"
+  },
+  "run": {
+    "databaseId": 41800358504,
+    "headSha": "09f3adf7b442ab2b21bfe978a333ce3c5ffb745d",
+    "status": "completed",
+    "conclusion": "success",
+    "createdAt": "2026-11-04T08:33:02Z",
+    "updatedAt": "2026-11-04T08:45:33Z",
+    "url": "https://github.com/Grahammmm/skippercast/actions/runs/41800358504",
+    "event": "push",
+    "workflowName": "Daily fishing evidence"
+  },
+  "data_commit": "bef5dd8b0ecc52eb960262ad24d86aab436bf900",
+  "health_path": "health.json",
+  "health_sha256": "1be2a124aaefd75983b69a4bfd08df79e7bb16e17888e9471b64c3d809bf2e06",
+  "generated_at": "2026-11-04T08:33:18Z",
+  "health_json": "{\"region_id\":\"morro-bay\",\"generated_at\":\"2026-11-04T08:33:18Z\",\"status\":\"degraded\",\"critical_available\":true,\"recent_report_days_ok\":7,\"sources_ok\":60,\"sources_total\":62,\"issues\":[\"chlorophyll\",\"catches-2026-10-27\"]}\n"
+}
