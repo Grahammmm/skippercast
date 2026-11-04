@@ -184,7 +184,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
   // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),
   // assertions and thresholds are untouched. Rebind only MapStage.tsx.
-  "web/app/MapStage.tsx": "a938155ba181e87dfb4fbcd20b0f9e281ea05940f8bb0f04b418eb38fe6658a5",
+  // BF-sst-fronts: MapStage.tsx only imports createFronts and adds it to the Chart layers array (an opt-in, off-by-default
+  // overlay; no class, colour, token or paint change); BODY09 mounts Reports/CatchCards, never MapStage. Rebind only MapStage.tsx.
+  "web/app/MapStage.tsx": "098731f673945c7ddeaadc362622dbcb785dd19fd6792ca1a17f27fd5cdc2e39",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "0a636f225f5b51d1e34f2de059c826e4a0f2af876fcf20f827f2ccb5ef705008",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   // BF-wcag: app.css and panel.css add only 24 px min-height target floors (no paint); app.css merged with SC2222-07.
@@ -219,7 +221,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // five masthead views, so the Reports masthead is unchanged. contrast(), assertions and thresholds are untouched.
   // All three rebound. Merged with main's SC2222-07 appCss surface hash: rebound to the merged file.
   // BF-wcag: check_contrast.mjs changes only the panelCss/appCss surface hashes and their comments; rebound.
-  "scripts/check_contrast.mjs": "1d41eb1a7b8705c8a3b7a955f18be25e81a21cb618862f341d6ffc69b2d84c29",
+  // BF-sst-fronts: check_contrast.mjs changes only the legendTsx surface hash and its comment (Legend.tsx adds a Temp fronts row
+  // in the existing app-legend-note text role); Reports never mounts the legend. Rebind only check_contrast.mjs.
+  "scripts/check_contrast.mjs": "aa797110dd96a0e2c396a0e6ada0bd770722eedbf62c7d87968d664cac340db0",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
