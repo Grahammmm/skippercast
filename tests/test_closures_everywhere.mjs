@@ -162,7 +162,8 @@ const CARRIES = new Set(['atlasPicks', 'habitatPicks', 'ranking', 'routedPicks',
 const NO_PLACE = new Set(['harborOrigin', 'loadTerrainHabitat', 'loadReefPublication', 'recheckReefPublication', 'cancelWaypointPlacement', 'beginWaypointPlacement',
   'loadContourFile', 'nextFriday', 'planFit', 'parseReach', 'parseStoredReach', 'loadReach', 'saveReach', 'reachFor', 'nmText', 'parseSpearDepth', 'parseShoreSwim',
   'parseStoredSpear', 'loadSpear', 'saveSpear', 'shoreSwimLimit', 'parseStoredLaunch', 'loadLaunch', 'saveLaunch', 'isReachProfile', 'routeAfterPaint', 'choosePick',
-  'pickRun', 'diveText', 'WhereToLook']);
+  // Only aggregates confidence percentages; it neither names nor returns a place.
+  'sharedConfidence', 'pickRun', 'diveText', 'WhereToLook']);
 test('every exported function of the owned modules either carries a screen verdict or is listed as naming no place', () => {
   const fns = (mod, names = Object.keys(mod)) => names.filter(k => typeof mod[k] === 'function');
   const tsx = readFileSync(new URL('../web/brief/WhereToLook.tsx', import.meta.url), 'utf8');
