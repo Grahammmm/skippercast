@@ -16,13 +16,18 @@ export interface LaunchPoint {readonly id: string; readonly name: string; readon
 export const launchPoints = signal<{readonly region: string; readonly points: readonly LaunchPoint[]} | null>(null);
 
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
-/** The valid points of a parsed launch-points.json for `region`. */
+/** The valid points of a parsed launch-points.json for `region`. An id shared by two or more admitted points is
+ * ambiguous: all of them are withheld (never first/last wins), so a saved choice cannot change origin with file
+ * order and falls back to the harbor. */
 export function parseLaunchPoints(json: unknown, region: string): LaunchPoint[] {
   const list = (json as {region_id?: unknown; launch_points?: unknown} | null);
   if (!list || list.region_id !== region || !Array.isArray(list.launch_points)) return [];
-  return list.launch_points.flatMap((p: Record<string, unknown>) => p && typeof p.id === 'string' && typeof p.name === 'string' && finite(p.latitude) && finite(p.longitude)
+  const admitted = list.launch_points.flatMap((p: Record<string, unknown>) => p && typeof p.id === 'string' && typeof p.name === 'string' && finite(p.latitude) && finite(p.longitude)
     && Math.abs(p.latitude) <= 90 && Math.abs(p.longitude) <= 180 && (p.region === undefined || p.region === region)
     ? [{id: p.id, name: p.name, kind: typeof p.kind === 'string' ? p.kind : 'launch', latitude: p.latitude, longitude: p.longitude}] : []);
+  const count = new Map<string, number>();
+  for (const p of admitted) count.set(p.id, (count.get(p.id) ?? 0) + 1);
+  return admitted.filter(p => count.get(p.id) === 1);
 }
 
 // One read per region, kept for revisits; only the region asked for last publishes, so a late answer for a

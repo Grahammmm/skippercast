@@ -56,6 +56,13 @@ const DEFAULT_CELL_M = 1000;
 export const REGION = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,62}[A-Za-z0-9])?$/;
 export const TOKEN = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/;
 const DATE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+/** A YYYY-MM-DD shape that is also a real Gregorian date (no Feb 30, no Apr 31; leap years by the 4/100/400 rule; year 0000 is a leap year). */
+function realDate(value: string): boolean {
+  if (!DATE.test(value)) return false;
+  const [y, m, d] = value.split('-').map(Number) as [number, number, number];
+  const leap = y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0);
+  return d <= (m === 2 ? (leap ? 29 : 28) : [4, 6, 9, 11].includes(m) ? 30 : 31);
+}
 export const SEASON = /^\d{4}$/;
 const CURSOR = /^[A-Za-z0-9_-]{1,400}$/;
 
@@ -113,7 +120,7 @@ export function mapQuery(layer: Exclude<Layer, 'filters'>, params: Params): MapQ
     bbox = [w, s, e, north];
   }
   const from = params.from || null, to = params.to || null;
-  if ((from && !DATE.test(from)) || (to && !DATE.test(to))) return {error: 'from and to must be YYYY-MM-DD'};
+  if ((from && !realDate(from)) || (to && !realDate(to))) return {error: 'from and to must be YYYY-MM-DD'};
   if (from && to && from > to) return {error: 'from is after to'};
   const season = params.season || null, season_part = params.season_part || null;
   if (season && !SEASON.test(season)) return {error: 'season must be a year'};
