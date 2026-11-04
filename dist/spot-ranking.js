@@ -35,11 +35,15 @@ export function plotterName(t,rank=t.trip_rank) {
 // CI6-01B: `place` is the region's land/water check (web/land-water.ts): only a spot it confirms as
 // water is ranked. Without one every spot is unconfirmed and withheld (fail-closed). `stats.withheld`
 // counts the spots that passed every other filter but were withheld by it.
-export function bestSpots(atlas,screen,{species='reef',count=20,maxDepth=300,bounds=null,origin=null,maxDistanceNm=Infinity,minSeparationNm=.15,minConfidence=60,place=null,stats=null}={}) {
+// SC2207-04: an optional `distanceFor(target, straightNm)` decides the range by the caller's own distance (the planner's water
+// route). It runs only with an origin, after the cheap filters and the straight-line range (a lower bound) and after the spot
+// clears the area and separation checks against the reefs kept so far, so a rejected spot reserves nothing. It returns
+// {nm, basis: 'water'|'straight', why?} or null (rejects the spot); the spot is kept when nm <= maxDistanceNm. Separation stays straight-line.
+export function bestSpots(atlas,screen,{species='reef',count=20,maxDepth=300,bounds=null,origin=null,maxDistanceNm=Infinity,minSeparationNm=.15,minConfidence=60,place=null,stats=null,distanceFor=null}={}) {
   if(!screen?.ready()) throw Error('Refresh protected-area checks before selecting spots.');
   if(!['reef','lingcod','rockfish'].includes(species)) throw Error('Best reef spots supports lingcod and rockfish.');
   if(!finite(maxDepth)||maxDepth<=0||maxDepth>300||!Number.isInteger(count)||count<1||count>50) throw Error('Invalid trip filters.');
-  const byArea=new Set(), selected=[];let withheld=0;
+  const byArea=new Set(), selected=[], routed=!!origin&&typeof distanceFor==='function';let withheld=0;
   const eligible=atlas.targets.filter(t=>{
     const [lo,hi]=t.neighborhood_depth_ft||[];
     return t.canonical_habitat && t.evidence_confidence?.percent>=minConfidence && finite(lo)&&finite(hi)&&lo>=0&&hi<=maxDepth
@@ -52,7 +56,14 @@ export function bestSpots(atlas,screen,{species='reef',count=20,maxDepth=300,bou
     ||b.evidence_confidence.percent-a.evidence_confidence.percent||b.habitat_score-a.habitat_score||a.id.localeCompare(b.id));
   for(const t of eligible){
     if(t.area_ids.some(id=>byArea.has(id))||selected.some(s=>distanceNm(s,t)<minSeparationNm))continue;
-    t.trip_rank=selected.length+1;t.name=waypointTitle(t);t.distance_nm=origin?distanceNm(origin,t):null;
+    const d=routed?distanceFor(t,distanceNm(origin,t)):null;
+    if(routed){
+      if(d===null)continue;
+      if(!(d&&finite(d.nm)&&d.nm>=0&&(d.basis==='water'||d.basis==='straight')))throw Error('Invalid trip distance.');
+      if(d.nm>maxDistanceNm)continue;
+    }
+    t.trip_rank=selected.length+1;t.name=waypointTitle(t);t.distance_nm=d?d.nm:origin?distanceNm(origin,t):null;
+    if(d){t.distance_basis=d.basis;if(d.why)t.distance_why=d.why;}
     for(const id of t.area_ids)byArea.add(id);selected.push(t);if(selected.length===count)break;
   }
   if(stats)stats.withheld=withheld;
