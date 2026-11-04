@@ -217,6 +217,39 @@ test('one_read_per_session_and_fail_closed_retry: the request, the projection, e
   } finally { globalThis.setTimeout = real; hung.destroy(); }
 });
 
+test('in_flight_invalidation_keeps_replacement_timeout_and_ignores_late_answer', async t => {
+  let finishA;
+  const pendingA = new Promise(resolve => { finishA = resolve; });
+  const net = spy(({n}) => n === 1 ? pendingA : n === 2 ? new Promise(() => {})
+    : answer({spots: [stored(3, east(150), {name: 'Retried spot'})]}));
+  const h = await harness({net});
+  t.mock.timers.enable({apis: ['setTimeout']});
+  try {
+    await h.turnOn();
+    assert.equal(net.calls.length, 1);
+    h.events.dispatchEvent(new Event(h.k.SAVED_SPOTS_CHANGED));
+    await flush();
+    assert.equal(net.calls.length, 2, 'invalidation starts one replacement read');
+    assert.equal(net.calls[0].init.signal.aborted, true, 'the old read is aborted');
+    assert.equal(h.k.savedSpotsStatus.value.text, 'Loading your saved spots…');
+    t.mock.timers.tick(19999); await flush();
+    assert.equal(h.k.savedSpotsStatus.value.retry, false, 'replacement still has its full deadline');
+    t.mock.timers.tick(1); await flush();
+    assert.equal(net.calls[1].init.signal.aborted, true, 'replacement times out at 20 seconds');
+    assert.equal(h.k.savedSpotsStatus.value.text, 'Your saved spots could not be loaded. Try again.');
+    assert.equal(h.k.savedSpotsStatus.value.retry, true);
+    assert.deepEqual(h.pins(), []);
+    assert.equal(net.calls.length, 2, 'timeout does not retry automatically');
+    h.k.retrySavedSpots(); await flush();
+    assert.equal(net.calls.length, 3, 'explicit retry starts a fresh read');
+    assert.deepEqual(h.pins().map(f => f.properties.name), ['Retried spot']);
+    finishA(answer({spots: [stored(1, east(150), {name: 'Obsolete spot'})]}));
+    await flush();
+    assert.deepEqual(h.pins().map(f => f.properties.name), ['Retried spot'], 'late A cannot replace the retried result');
+    assert.equal(h.k.savedSpotsStatus.value.text, 'Your saved spots are shown only to you.');
+  } finally { h.destroy(); t.mock.timers.reset(); }
+});
+
 test('shared_verdict_inside_margin_unchecked_clear: the card words come from the shared screen and verdictLine', async () => {
   const h = await harness();
   await h.turnOn();

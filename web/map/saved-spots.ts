@@ -223,7 +223,8 @@ export function createSavedSpotLayer(o: SavedSpotLayerOptions): {destroy(): void
     const mine = ++gen, ctl = new AbortController();
     abort?.abort(); abort = ctl;
     store.value = {who, state: 'loading', rows: []};
-    timer = setTimeout(() => ctl.abort(), READ_MS);
+    const readTimer = setTimeout(() => ctl.abort(), READ_MS);
+    timer = readTimer;
     const stopped = new Promise<never>((_, reject) => ctl.signal.addEventListener('abort', () => reject(new Error('stopped'))));
     let rows: SavedSpotRow[] | null = null;
     try {
@@ -233,7 +234,8 @@ export function createSavedSpotLayer(o: SavedSpotLayerOptions): {destroy(): void
         return projectSavedSpots(await response.json());
       })(), stopped]);
     } catch { rows = null; }
-    clearTimeout(timer);
+    // Each read owns its deadline: stale cleanup must not cancel a replacement's timer.
+    clearTimeout(readTimer);
     // A late answer for an older read, an old session or a destroyed layer is dropped.
     if (!alive || mine !== gen || sessionSignal.peek() !== who) return;
     store.value = rows ? {who, state: 'ready', rows} : {who, state: 'failed', rows: []};
