@@ -37,7 +37,7 @@ export function hourlyTable(f: ConditionsForecast | null, tide: Series | null, d
   if (!f) return {rows: [], note: NO_FORECAST};
   const feed = feedReader(f, now), gfs = f.models.gfs_global;
   const issued = num(gfs?.issued), visRun = gfs && issued !== null && now.getTime() - issued * 1000 <= RUN_MAX_MS ? gfs : null;
-  const hours = [...new Set(feed.times)].filter(ms => ms % HOUR === 0 && localParts(new Date(ms), tz).day === day).sort((a, b) => a - b);
+  const hours = [...new Set(feed.times)].filter(ms => ms % HOUR === 0 && Number.isFinite(new Date(ms).getTime()) && localParts(new Date(ms), tz).day === day).sort((a, b) => a - b);
   const rows = hours.map((ms): HourlyRow => {
     const h = feed.read(ms), rating = rateComfort(h, boat), at = new Date(ms).toISOString();
     const wind = num(h.wind), gust = num(h.gust), period = num(h.sea_period);
