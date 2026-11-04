@@ -13,6 +13,7 @@ import {
   canSaveCoastal, closeTrip, deleteCoastal, listPacks, loadPlanner, offlineOpen, plannerView, readCoastal, saveCoastal, savePack, tripError, tripOpen, tripReady,
   type PackMeta, type Progress,
 } from '../trip.ts';
+import {oceanLines} from '../trip-ocean-lines.ts';
 import {regionInfo, zone} from './App.tsx';
 
 const PHASES: Readonly<Record<string, string>> = {files: 'Data and rules', tiles: 'NOAA chart tiles', shell: 'This app', basemap: 'Base map tiles'};
@@ -91,7 +92,7 @@ function ChartPack() {
       <h3 id="app-offline-pack">Chart pack</h3>
       <p>Saves the region's data, rules, protected areas, latest forecast, NOAA chart tiles, base map at zoom 8–12 and this app on this device. The list below shows when each region was saved.</p>
       <p>Check the saved pack before leaving coverage.</p>
-      <p>Water temp and current tiles are not prefetched. Recently viewed tiles may be saved; coverage varies. For Morro Bay and Cambria, save Coastal readings below for water temperature and currents.</p>
+      <p>Water temperature and currents are saved with the pack when current; each saved region below says what was saved. For Morro Bay and Cambria, save Coastal readings below.</p>
       <div class="app-offline-actions">
         <Button variant="primary" icon="download" disabled={!id || !!busy} onClick={() => void save()}>Save {name} for offline</Button>
         {busy ? <Button onClick={() => busy.abort()}>Cancel</Button> : null}
@@ -103,12 +104,16 @@ function ChartPack() {
         {packs !== null ? ' Last checked listing; not rechecked.' : ''}
       </p> : null}
       <ul class="app-offline-list">
-        {packs?.length ? packs.map(({cache, meta}) => (
+        {packs?.length ? packs.map(({cache, meta}) => {
+          const ocean = oceanLines(meta, new Date(), zone());
+          return (
           <li key={cache}>
-            <div><strong>{meta.region_name}</strong><span class="ui-mono">Saved <Saved iso={meta.saved_at} /> · {formatBytes(meta.bytes)}</span><span>{packTiles(meta)}</span></div>
+            <div><strong>{meta.region_name}</strong><span class="ui-mono">Saved <Saved iso={meta.saved_at} /> · {formatBytes(meta.bytes)}</span><span>{packTiles(meta)}</span>
+              {ocean ? <><span>Water temp: {ocean.water}</span><span>Currents: {ocean.currents}</span></> : null}</div>
             <Button size="sm" onClick={() => void remove(cache)} aria-label={`Delete the saved ${meta.region_name}`}>Delete</Button>
           </li>
-        )) : inventoryState === 'success' ? <li>Nothing saved on this device yet.</li> : null}
+          );
+        }) : inventoryState === 'success' ? <li>Nothing saved on this device yet.</li> : null}
       </ul>
     </section>
   );
