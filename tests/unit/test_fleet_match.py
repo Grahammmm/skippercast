@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 import contextlib
 import io
@@ -731,6 +732,64 @@ class GateTests(unittest.TestCase):
         self.assertIn("below", match.gate_problem(self.row(confidence=0.849)))
         self.assertIn("below", match.gate_problem(self.row(confidence=None)))
         self.assertIsNone(match.gate_problem(self.row(status="rejected", match_method="fcc-uls", confidence=0.0)))
+
+    def no_network(self):
+        def refuse(*args, **kwargs):
+            raise AssertionError("the watched gate must not open a socket")
+        for target in ("socket.socket.connect", "socket.socket.connect_ex", "socket.create_connection"):
+            patcher = mock.patch(target, refuse)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def test_gate_rejects_nonfinite_watched_confidence(self):
+        for method in sorted(match.STRONG_METHODS):
+            for value in (float("nan"), float("inf"), float("-inf")):
+                problem = match.gate_problem(self.row(match_method=method, confidence=value))
+                self.assertEqual(problem, "confidence must be a finite number between 0.85 and 1", (method, value))
+
+    def test_gate_rejects_above_one_without_numeric_coercion(self):
+        huge = 10 ** 5000     # float(huge) would raise OverflowError; repr(huge) is thousands of digits
+        for value in (1.01, 2, huge):
+            problem = match.gate_problem(self.row(confidence=value))
+            self.assertEqual(problem, "confidence must be a finite number between 0.85 and 1", type(value).__name__)
+            self.assertLess(len(problem), 100)
+
+    def test_gate_keeps_floor_and_type_refusals(self):
+        for value in (None, True, False, "0.9", "nan", 0.849, 0, -1):
+            self.assertEqual(match.gate_problem(self.row(confidence=value)),
+                             f"confidence {value!r} is below 0.85", repr(value))
+        self.assertEqual(match.gate_problem({k: v for k, v in self.row().items() if k != "confidence"}),
+                         "confidence None is below 0.85")
+        for method in sorted(match.STRONG_METHODS):
+            for value in (0.85, 0.9, 1, 1.0):
+                self.assertIsNone(match.gate_problem(self.row(match_method=method, confidence=value)), (method, value))
+
+    def test_gate_nonwatched_rows_keep_their_exemption(self):
+        for status in ("candidate", "rejected"):
+            for value in (float("nan"), float("inf"), 1.01, 10 ** 5000, None, "x"):
+                self.assertIsNone(match.gate_problem(self.row(status=status, confidence=value)), (status, value))
+        for value in (float("nan"), 1.01):    # a weak method on a watched row still fails by method first
+            self.assertIn("candidate-only", match.gate_problem(self.row(match_method="call-sign", confidence=value)))
+
+    def test_watch_check_counts_invalid_confidence_offline(self):
+        self.no_network()
+        rows = [self.row(mmsi="999000501"), self.row(mmsi="999000502", match_method="fcc-uls", confidence=1),
+                self.row(mmsi="999000503", match_method="call-sign", confidence=0.8, status="candidate"),
+                self.row(mmsi="999000504", match_method="candidate-x", status="candidate", confidence=float("nan")),
+                self.row(mmsi="999000511", confidence=float("nan")),
+                self.row(mmsi="999000512", match_method="fcc-uls", confidence=float("inf")),
+                self.row(mmsi="999000513", match_method="fcc-uls", confidence=1.01)]
+        result = gate.check_rows(rows)
+        self.assertEqual((result["failed"], result["failures"]), (3, {"fcc-uls": 2, "geofence-presence": 1}))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(gate.main(["--region", "CA"], worker=FakeWorker(watch=rows)), 1)
+        text = out.getvalue()
+        result = json.loads(text)
+        self.assertEqual((result["failed"], result["failures"]), (3, {"fcc-uls": 2, "geofence-presence": 1}))
+        self.assertEqual(result["counts"]["watched"], {"fcc-uls": 3, "geofence-presence": 2})
+        for leaked in ("9990005", "NaN", "Infinity", "1.01", str(SEA)):
+            self.assertNotIn(leaked, text, "counts only")
 
     def test_decide_refuses_to_build_a_watched_row_that_fails_the_gate(self):
         """A region whose mmsi_auto were lowered (the loader refuses one) could not make match write a weak row."""
