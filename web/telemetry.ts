@@ -52,6 +52,7 @@ export const BATCH_SIZE = 10;
 export const FLUSH_MS = 10_000;
 /** Keep each beacon well under the server's 4 KiB cap. */
 export const MAX_BEACON_BYTES = 3500;
+const ENCODER = new TextEncoder();
 const MESSAGE_CHARS = 200;
 const REQUEST_ID = /^[A-Za-z0-9_-]{8,64}$/;
 const BUILD = /^(?:[0-9a-f]{10}|dev)$/;
@@ -123,13 +124,15 @@ export function createTelemetry({send, build, region = () => '', source = () => 
   function flush(): void {
     timer = false;
     while (queue.length) {
-      // Take as many events as fit in one beacon (at least one).
+      // Take as many leading events as fit in one beacon, measured in UTF-8 bytes (the server's cap is bytes).
       let count = 0, body = '';
       for (let n = 1; n <= Math.min(queue.length, BATCH_SIZE); n++) {
         const next = JSON.stringify({build: safeBuild, events: queue.slice(0, n)});
-        if (n > 1 && next.length > MAX_BEACON_BYTES) break;
+        if (ENCODER.encode(next).byteLength > MAX_BEACON_BYTES) break;
         count = n; body = next;
       }
+      // An event that alone exceeds the cap can never be sent: drop it so the queue still drains.
+      if (!count) { queue.shift(); continue; }
       queue.splice(0, count);
       try { send(body); } catch { /* telemetry never breaks the page */ }
     }
