@@ -210,6 +210,8 @@ export interface TerrainActions {zoom(direction: 'in' | 'out'): void; reset(): v
 export const terrainActions = signal<TerrainActions | null>(null);
 /** The renderer's habitat status line and ranked reefs (onHabitat, #519) for the rail; null while no terrain is mounted. */
 export const terrainHabitat = signal<CoastHabitat | null>(null);
+/** Registry ids whose draped fill the renderer sampled coarser to fit its caps (SC0452-04), in LAYERS order; the Legend says so. */
+export const terrainCoarsened = signal<readonly string[]>([]);
 // The mounted terrain's ranked-reef actions (one stage exists at a time); null while none is mounted.
 let rankedReefs: {explore(): boolean; select(id: string): void} | null = null;
 /** The renderer's "Explore a ranked reef"; false when no terrain is mounted or it has no reef to show. */
@@ -246,24 +248,33 @@ export function habitatHref(href: string, id: string): string {
 /** Go to a presentation, with a history entry (v2 writes `presentation=chart` explicitly). */
 export const choosePresentation = (next: Presentation): void => { navigate(withParams(location.href, {presentation: next})); };
 
-/** Hand the registry's terrain layers to the renderer: set what changed, remove what went, in § 9 order; returns what is draped. */
+/**
+ * Hand the registry's terrain layers to the renderer: set what changed, remove what went, in § 9 order; returns what is draped.
+ * `coarsened` accumulates the ids whose draped feed the renderer reported coarser (kept while the same feed stays draped).
+ */
 export function drape(h: Pick<CoastHandle, 'setOverlay' | 'removeOverlay'>, feeds: Readonly<Record<string, TerrainLayer>>, p: Palette,
-  draped: ReadonlyMap<string, TerrainLayer> = new Map()): Map<string, TerrainLayer> {
+  draped: ReadonlyMap<string, TerrainLayer> = new Map(), coarsened: Set<string> = new Set()): Map<string, TerrainLayer> {
   const next = new Map<string, TerrainLayer>();
   LAYERS.forEach((e, order) => {
     const feed = feeds[e.id];
     if (!e.terrain || !e.presentations.includes('terrain')) return;
-    if (!feed?.features.length) { if (draped.has(e.id)) h.removeOverlay(e.id); return; }
+    if (!feed?.features.length) { coarsened.delete(e.id); if (draped.has(e.id)) h.removeOverlay(e.id); return; }
     if (draped.get(e.id) !== feed) {
-      try { h.setOverlay(e.id, {kind: e.terrain.kind, features: feed.features, style: drapeStyle(e.terrain, p), order}); } catch (error) {
+      let result: ReturnType<CoastHandle['setOverlay']>;
+      try { result = h.setOverlay(e.id, {kind: e.terrain.kind, features: feed.features, style: drapeStyle(e.terrain, p), order}); } catch (error) {
         // The renderer refuses an overlay it cannot fit or read; the other layers still drape.
         console.warn(`Terrain overlay ${e.id} refused`, error);
+        coarsened.delete(e.id);
         if (draped.has(e.id)) h.removeOverlay(e.id);
         return;
       }
+      // No result: the renderer is gone, so nothing is draped and a later pass may try again.
+      if (!result) { coarsened.delete(e.id); return; }
+      if (result.coarsened) coarsened.add(e.id); else coarsened.delete(e.id);
     }
     next.set(e.id, feed);
   });
+  for (const id of [...coarsened]) if (!next.has(id)) coarsened.delete(id);
   return next;
 }
 
@@ -275,6 +286,12 @@ export function createStage(options: StageOptions): Stage {
   let mountedRegion: string | null = null, again = false;
   let applied: Partial<Record<keyof TerrainState, string>> = {};
   let draped = new Map<string, TerrainLayer>(), overlayPalette: Palette | undefined;
+  const coarsened = new Set<string>();
+  // Publish the coarsened ids when they changed (peek, so the overlay effect never subscribes to its own output).
+  const publishCoarsened = (): void => {
+    const ids = LAYERS.map(e => e.id).filter(id => coarsened.has(id)), shown = terrainCoarsened.peek();
+    if (ids.length !== shown.length || ids.some((id, i) => id !== shown[i])) terrainCoarsened.value = ids;
+  };
   // The native controls start at TERRAIN_DEFAULTS, so a fresh mount needs only the differences.
   let shownOptions: TerrainOptions = {...TERRAIN_DEFAULTS};
   let mounting = false, alive = true, viewTimer: ReturnType<typeof setTimeout> | undefined, clockTimer: ReturnType<typeof setTimeout> | undefined;
@@ -316,7 +333,7 @@ export function createStage(options: StageOptions): Stage {
 
   const release = (): void => {
     const h = handle.peek();
-    handle.value = null; applied = {}; draped = new Map(); terrainMark.value = null; terrainDetail.value = null; terrainPick.value = null;
+    handle.value = null; applied = {}; draped = new Map(); coarsened.clear(); if (terrainCoarsened.peek().length) terrainCoarsened.value = []; terrainMark.value = null; terrainDetail.value = null; terrainPick.value = null;
     shownOptions = {...TERRAIN_DEFAULTS}; terrainReading.value = null; terrainActions.value = null; terrainShading.value = null;
     terrainHabitat.value = null; rankedReefs = null;
     h?.destroy();
@@ -440,7 +457,7 @@ export function createStage(options: StageOptions): Stage {
     effect(() => { if (shownPresentation.value !== 'chart') void mount(); }),
     effect(() => { const h = handle.value, state = wanted.value; if (h) apply(h, state); }),
     effect(() => { const h = handle.value, wanted = terrainOptions.value, on = layers.value.includes('seafloor'); if (h) shownOptions = applyOptions(h, wanted, on, shownOptions); }),
-    effect(() => { const h = handle.value, feeds = terrainLayers.value; if (h && overlayPalette) draped = drape(h, feeds, overlayPalette, draped); }),
+    effect(() => { const h = handle.value, feeds = terrainLayers.value; if (h && overlayPalette) { draped = drape(h, feeds, overlayPalette, draped, coarsened); publishCoarsened(); } }),
     // A link selection (a mark, a terrain habitat, Back) or a new region replaces a picked overlay's card.
     effect(() => { selection.value; habitat.value; region.value; terrainPick.value = null; terrainReading.value = null; }),
     effect(() => { if (current.value === UNSUPPORTED) currentStatus.value = UNSUPPORTED_CURRENT; else if (current.value === 'off') currentStatus.value = ''; }),
