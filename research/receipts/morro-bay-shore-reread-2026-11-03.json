@@ -1,0 +1,3147 @@
+{
+ "schemaVersion": 1,
+ "kind": "shore-reread-dossier",
+ "card": "SC1952-07",
+ "stage": "M1a",
+ "region": "morro-bay",
+ "receiptName": "morro-bay-shore-reread-2026-11-03",
+ "inspectedGitSha": "fdde26c7d36c55ac6f0d6567020909f7389231be",
+ "acquiredAt": {
+  "first": "2026-11-04T08:26:37.775Z",
+  "last": "2026-11-04T08:26:57.563Z"
+ },
+ "approval": {
+  "status": "none",
+  "statement": "Acquisition evidence only. This is not the M1b owner re-read, renews no review window, confirms no register row and approves no fishing legality or access."
+ },
+ "commands": [
+  {
+   "step": "collector acquisition",
+   "command": "memcap -- python scripts/collect_shore_habitat.py --region morro-bay --save-sources var/shore-review/SC1952-07/sources --output var/shore-review/SC1952-07/candidate.geojson",
+   "wrapperNote": "memcap is the host memory-capping wrapper and python the shared checkout interpreter; their absolute paths are left out of the committed receipt.",
+   "exit": 0,
+   "stdout": {
+    "region": "morro-bay",
+    "runs": 5,
+    "vertices": 600,
+    "bytes": 36464
+   },
+   "stderrBytes": 0
+  },
+  {
+   "step": "bounded page acquisition",
+   "command": "memcap -- python3 var/shore-review/SC1952-07/fetch_pages.py",
+   "exit": 0,
+   "scriptSha256": "f7a66f6f32692edce436d77145fdc390a80c2b0f71f684f694946cc6b528b05e",
+   "scriptNote": "Private script, reproduced in the Markdown dossier appendix."
+  }
+ ],
+ "baselines": [
+  {
+   "id": "committed-package",
+   "path": "catalog/shore-habitat/morro-bay.geojson",
+   "sha256": "09a91f7616b761236a9065d0529e3065d5b9b4a2f94b5bb985ca1a3ba090c4b6",
+   "pointers": [
+    "/sourceChecks/acquisitions",
+    "/sourceChecks/accessTerms",
+    "/features"
+   ]
+  },
+  {
+   "id": "archived-review-2026-10-03",
+   "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+   "sha256": "cc1fc5443aa6e3711f011cd65884c13dedbae0f81c8f56998334795efa4e6b6a",
+   "pointers": [
+    "/sourceSubsetChecks/publishedSourceChecks/acquisitions",
+    "/pageReceipts/0",
+    "/legalFacts",
+    "/reviewedSourceFeatures",
+    "/priorGeometrySha256"
+   ]
+  }
+ ],
+ "sources": [
+  {
+   "id": "noaa",
+   "identity": "NOAA ESI Central California 2006 FeatureServer layer 3 (services2.arcgis.com org C8EMgrsFcRFL6LrL)",
+   "url": "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/Central_California_ESI_2006_test/FeatureServer/3/query?where=1%3D1&geometry=-121.35%2C34.92%2C-120.51%2C35.82&geometryType=esriGeometryEnvelope&inSR=4326&outSR=4326&outFields=%2A&f=geojson",
+   "finalUrl": "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/Central_California_ESI_2006_test/FeatureServer/3/query?where=1%3D1&geometry=-121.35%2C34.92%2C-120.51%2C35.82&geometryType=esriGeometryEnvelope&inSR=4326&outSR=4326&outFields=%2A&f=geojson",
+   "httpStatus": 200,
+   "fetchedAt": "2026-11-04T08:26:37.775Z",
+   "bytes": 1080079,
+   "sha256": "79b803306dc128f304948f8751e964ccc6ac605da13830d8e88a538d13348298",
+   "privatePath": "var/shore-review/SC1952-07/sources/noaa-esi-shoreline.json",
+   "acquisition": {
+    "state": "acquired",
+    "evidence": "collector --save-sources"
+   },
+   "baselineRefs": [
+    {
+     "path": "catalog/shore-habitat/morro-bay.geojson",
+     "pointer": "/sourceChecks/acquisitions/noaa",
+     "sha256": "bf6d4aa9d87f7fed640e80d0273f894aadfcd4974c985929f8b2cc533557f169",
+     "bytes": 1080079,
+     "fetchedAt": "2026-10-08T17:49:41.227Z"
+    },
+    {
+     "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+     "pointer": "/sourceSubsetChecks/publishedSourceChecks/acquisitions/noaa",
+     "sha256": "bf6d4aa9d87f7fed640e80d0273f894aadfcd4974c985929f8b2cc533557f169",
+     "bytes": 1080079,
+     "fetchedAt": "2026-10-03T02:48:10.509Z",
+     "normalizedSha256": "3bc3362c90e6fe30cbae6e37dd35b6f6424d884ec437af8925f2d589e9bb6dad"
+    }
+   ],
+   "rawComparison": {
+    "state": "bytes-differ",
+    "note": "Full-response bytes differ from both committed baselines while the byte count is equal (1080079). The raw bytes of the baselines were not retained, so the cause cannot be established; a changed full response does not by itself change any selected run."
+   }
+  },
+  {
+   "id": "access",
+   "identity": "California Coastal Commission Public Access Points FeatureServer layer 0 (services9.arcgis.com org wwVnNW92ZHUIr0V0)",
+   "url": "https://services9.arcgis.com/wwVnNW92ZHUIr0V0/arcgis/rest/services/AccessPoints/FeatureServer/0/query?where=1%3D1&geometry=-121.35%2C34.92%2C-120.51%2C35.82&geometryType=esriGeometryEnvelope&inSR=4326&outSR=4326&outFields=%2A&f=geojson",
+   "finalUrl": "https://services9.arcgis.com/wwVnNW92ZHUIr0V0/arcgis/rest/services/AccessPoints/FeatureServer/0/query?where=1%3D1&geometry=-121.35%2C34.92%2C-120.51%2C35.82&geometryType=esriGeometryEnvelope&inSR=4326&outSR=4326&outFields=%2A&f=geojson",
+   "httpStatus": 200,
+   "fetchedAt": "2026-11-04T08:26:38.645Z",
+   "bytes": 325083,
+   "sha256": "4925eff242f1c841d8035ccbefe851b0251e75063e39826f02cd1031d17cacc3",
+   "privatePath": "var/shore-review/SC1952-07/sources/ccc-access-points.json",
+   "acquisition": {
+    "state": "acquired",
+    "evidence": "collector --save-sources"
+   },
+   "baselineRefs": [
+    {
+     "path": "catalog/shore-habitat/morro-bay.geojson",
+     "pointer": "/sourceChecks/acquisitions/access",
+     "sha256": "4925eff242f1c841d8035ccbefe851b0251e75063e39826f02cd1031d17cacc3",
+     "bytes": 325083,
+     "fetchedAt": "2026-10-08T17:49:41.686Z"
+    },
+    {
+     "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+     "pointer": "/sourceSubsetChecks/publishedSourceChecks/acquisitions/access",
+     "sha256": "4925eff242f1c841d8035ccbefe851b0251e75063e39826f02cd1031d17cacc3",
+     "bytes": 325083,
+     "fetchedAt": "2026-10-03T02:48:10.183Z"
+    }
+   ],
+   "rawComparison": {
+    "state": "bytes-identical",
+    "note": "Full-response bytes equal the committed and archived raw hash, so every inventory field in the response is unchanged since both baselines."
+   }
+  },
+  {
+   "id": "terms",
+   "identity": "ArcGIS item e45f130ce101423ea1de943a69445ece, owner cdenney_coastalcomm, org wwVnNW92ZHUIr0V0 (www.arcgis.com)",
+   "url": "https://www.arcgis.com/sharing/rest/content/items/e45f130ce101423ea1de943a69445ece?f=json",
+   "finalUrl": "https://www.arcgis.com/sharing/rest/content/items/e45f130ce101423ea1de943a69445ece?f=json",
+   "httpStatus": 200,
+   "fetchedAt": "2026-11-04T08:26:38.814Z",
+   "bytes": 4576,
+   "sha256": "e7fafa620aac73d8a21ba894605e37f68399b2d1f40cff763c6bba7586d3b62d",
+   "privatePath": "var/shore-review/SC1952-07/sources/ccc-access-item.json",
+   "acquisition": {
+    "state": "acquired",
+    "evidence": "collector --save-sources"
+   },
+   "baselineRefs": [
+    {
+     "path": "catalog/shore-habitat/morro-bay.geojson",
+     "pointer": "/sourceChecks/acquisitions/terms",
+     "sha256": "27c0da57445206974fb4ff866fff92c0c5aaf8932762bbd89e5989c9e502a2d8",
+     "bytes": 4576,
+     "fetchedAt": "2026-10-08T17:49:41.873Z"
+    },
+    {
+     "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+     "pointer": "/sourceSubsetChecks/publishedSourceChecks/acquisitions/terms",
+     "sha256": "be612bc64d4d928200a343f525508614cf68ebaaaf79e47589ef00dbab38711d",
+     "bytes": 4576,
+     "fetchedAt": "2026-10-03T02:48:10.072Z",
+     "normalizedSha256": "c6ba562bc5a592a58c927fcd93ef31767d10c566f58e845b8a402a54738cebf4"
+    }
+   ],
+   "rawComparison": {
+    "state": "bytes-differ",
+    "note": "Item JSON bytes differ from both baselines with an equal byte count (4576); the item carries time-varying fields (modified, numViews, lastViewed). Baseline bytes were not retained, so the changed field is not identified. The licenseInfo text is compared separately."
+   }
+  },
+  {
+   "id": "cdfwRules",
+   "identity": "CDFW Central Ocean Sport Fishing regulations summary (wildlife.ca.gov)",
+   "url": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+   "finalUrl": "https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central",
+   "httpStatus": 200,
+   "fetchedAt": "2026-11-04T08:26:57.011Z",
+   "bytes": 87866,
+   "sha256": "7bd3c3506c862e5c9fba756014c3dd4aa1372d001724a517adaa19871392d597",
+   "privatePath": "var/shore-review/SC1952-07/pages/cdfw-central-rules.html",
+   "acquisition": {
+    "state": "acquired",
+    "evidence": "fetch_pages.py (bounded, same-host)"
+   },
+   "baselineRefs": [
+    {
+     "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+     "pointer": "/pageReceipts/0",
+     "sha256": "2c125e065ba7c7835f5c4e1c8e5849eaeb7c089c4447a87b4d74bb42f1b8cdb7",
+     "bytes": 87812,
+     "fetchedAt": "2026-10-03T02:42:47.448Z"
+    }
+   ],
+   "rawComparison": {
+    "state": "bytes-differ",
+    "note": "Page bytes differ (87812 -> 87866); no historical HTML was retained, so this is a byte change only and no line diff is claimed. Facts are compared in the rules section."
+   }
+  },
+  {
+   "id": "noaaLayerMetadata",
+   "identity": "NOAA ESI layer 3 definition JSON (same services2.arcgis.com service), used for official legend names",
+   "url": "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/Central_California_ESI_2006_test/FeatureServer/3?f=json",
+   "finalUrl": "https://services2.arcgis.com/C8EMgrsFcRFL6LrL/arcgis/rest/services/Central_California_ESI_2006_test/FeatureServer/3?f=json",
+   "httpStatus": 200,
+   "fetchedAt": "2026-11-04T08:26:57.563Z",
+   "bytes": 28308,
+   "sha256": "f7a2c9d4587e9cef1a7b1b3ccd4f21d9837135a97359a7b909f9a4bf19b6631d",
+   "privatePath": "var/shore-review/SC1952-07/pages/noaa-layer3-metadata.json",
+   "acquisition": {
+    "state": "acquired",
+    "evidence": "fetch_pages.py (bounded, same-host)"
+   },
+   "baselineRefs": [],
+   "rawComparison": {
+    "state": "no-baseline",
+    "note": "No committed baseline for the layer definition; used only to name ESI codes."
+   }
+  }
+ ],
+ "collectorOutcome": {
+  "state": "accepted",
+  "note": "The collector built and validated the candidate from the current responses (5 runs, 600 vertices), so no refusal path was needed. The default catalog output was not written."
+ },
+ "runs": [
+  {
+   "id": "hearst-memorial-beach",
+   "name": "Hearst Memorial Beach · San Simeon",
+   "areaId": "north",
+   "accessIds": [
+    "ccc-770"
+   ],
+   "sourceObjectIds": {
+    "committed": [
+     2094,
+     2100
+    ],
+    "currentSelection": [
+     2094,
+     2100
+    ],
+    "collectorSelection": [
+     2094,
+     2100
+    ]
+   },
+   "source": {
+    "objectClass": {
+     "state": "unchanged",
+     "basis": "ESI code of each selected NOAA object, archived reviewedSourceFeatures.shore vs the current layer response (original object IDs).",
+     "old": {
+      "2094": "3A",
+      "2100": "3A"
+     },
+     "new": {
+      "2094": "3A",
+      "2100": "3A"
+     },
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/reviewedSourceFeatures/shore"
+     }
+    },
+    "fullFeatureGeometry": {
+     "state": "unchanged",
+     "basis": "Complete original vertex list of each selected object, archived vs current response (sha256 of the ordered coordinate array).",
+     "old": {
+      "2094": "dea1a7c8fdbde585ce057b86b72d565f8f29ea34eb514b34d3d4b133a7eb10ff",
+      "2100": "068a125831edec5de0f74e2899f971f6e8fce2b3ac7d19b2d601a81727ea5bfd"
+     },
+     "new": {
+      "2094": "dea1a7c8fdbde585ce057b86b72d565f8f29ea34eb514b34d3d4b133a7eb10ff",
+      "2100": "068a125831edec5de0f74e2899f971f6e8fce2b3ac7d19b2d601a81727ea5bfd"
+     },
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/reviewedSourceFeatures/shore"
+     }
+    },
+    "selectedGeometry": {
+     "state": "unchanged",
+     "basis": "Retained latitude-window vertices of the committed package vs the collector candidate built from the current response (sha256 of ordered coordinates).",
+     "old": {
+      "sha256": "ea3b9d6125ce4e855ec2417e3bfe9889c8fa81a7a53c68bc1b9826dd7b471808",
+      "vertices": 91,
+      "paths": 2
+     },
+     "new": {
+      "sha256": "ea3b9d6125ce4e855ec2417e3bfe9889c8fa81a7a53c68bc1b9826dd7b471808",
+      "vertices": 91,
+      "paths": 2
+     },
+     "baseline": {
+      "path": "catalog/shore-habitat/morro-bay.geojson",
+      "pointer": "/features/0/geometry"
+     }
+    },
+    "priorGeometryHash": {
+     "state": "unverifiable",
+     "basis": "Archived priorGeometrySha256 is not present for this run.",
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/priorGeometrySha256/hearst-memorial-beach"
+     }
+    },
+    "rawResponseChange": {
+     "state": "unverifiable",
+     "basis": "Raw NOAA response bytes differ from the baseline; this does not establish a changed selected run. Selected-geometry and object-class findings above decide."
+    }
+   },
+   "objectDetail": [
+    {
+     "objectId": 2094,
+     "archivedEsi": "3A",
+     "currentEsi": "3A",
+     "esiState": "unchanged",
+     "archivedFeatureCoordinatesSha256": "dea1a7c8fdbde585ce057b86b72d565f8f29ea34eb514b34d3d4b133a7eb10ff",
+     "currentFeatureCoordinatesSha256": "dea1a7c8fdbde585ce057b86b72d565f8f29ea34eb514b34d3d4b133a7eb10ff",
+     "fullFeatureGeometryState": "unchanged"
+    },
+    {
+     "objectId": 2100,
+     "archivedEsi": "3A",
+     "currentEsi": "3A",
+     "esiState": "unchanged",
+     "archivedFeatureCoordinatesSha256": "068a125831edec5de0f74e2899f971f6e8fce2b3ac7d19b2d601a81727ea5bfd",
+     "currentFeatureCoordinatesSha256": "068a125831edec5de0f74e2899f971f6e8fce2b3ac7d19b2d601a81727ea5bfd",
+     "fullFeatureGeometryState": "unchanged"
+    }
+   ],
+   "access": {
+    "state": "unchanged",
+    "accessIds": [
+     "ccc-770"
+    ]
+   },
+   "legal": {
+    "state": "changed",
+    "basis": "Rules page publisher date moved; species bag, season and size facts compared below are unchanged; licence scope unverifiable. See rules.",
+    "ref": "rules"
+   }
+  },
+  {
+   "id": "morro-strand",
+   "name": "Morro Strand",
+   "areaId": "central",
+   "accessIds": [
+    "ccc-804",
+    "ccc-805"
+   ],
+   "sourceObjectIds": {
+    "committed": [
+     2294
+    ],
+    "currentSelection": [
+     2294
+    ],
+    "collectorSelection": [
+     2294
+    ]
+   },
+   "source": {
+    "objectClass": {
+     "state": "unchanged",
+     "basis": "ESI code of each selected NOAA object, archived reviewedSourceFeatures.shore vs the current layer response (original object IDs).",
+     "old": {
+      "2294": "3A"
+     },
+     "new": {
+      "2294": "3A"
+     },
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/reviewedSourceFeatures/shore"
+     }
+    },
+    "fullFeatureGeometry": {
+     "state": "unchanged",
+     "basis": "Complete original vertex list of each selected object, archived vs current response (sha256 of the ordered coordinate array).",
+     "old": {
+      "2294": "63969a1da9949cd5525d9842af952842cd11848c29a7b1457b0df05e74bc5295"
+     },
+     "new": {
+      "2294": "63969a1da9949cd5525d9842af952842cd11848c29a7b1457b0df05e74bc5295"
+     },
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/reviewedSourceFeatures/shore"
+     }
+    },
+    "selectedGeometry": {
+     "state": "unchanged",
+     "basis": "Retained latitude-window vertices of the committed package vs the collector candidate built from the current response (sha256 of ordered coordinates).",
+     "old": {
+      "sha256": "a084433478ea5daec8e0768c765a82736f67cc9b040be2838e7a80933aecc661",
+      "vertices": 137,
+      "paths": 1
+     },
+     "new": {
+      "sha256": "a084433478ea5daec8e0768c765a82736f67cc9b040be2838e7a80933aecc661",
+      "vertices": 137,
+      "paths": 1
+     },
+     "baseline": {
+      "path": "catalog/shore-habitat/morro-bay.geojson",
+      "pointer": "/features/1/geometry"
+     }
+    },
+    "priorGeometryHash": {
+     "state": "unchanged",
+     "basis": "Archived priorGeometrySha256 reproduced from the committed asset (asset geometry object).",
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/priorGeometrySha256/morro-strand"
+     }
+    },
+    "rawResponseChange": {
+     "state": "unverifiable",
+     "basis": "Raw NOAA response bytes differ from the baseline; this does not establish a changed selected run. Selected-geometry and object-class findings above decide."
+    }
+   },
+   "objectDetail": [
+    {
+     "objectId": 2294,
+     "archivedEsi": "3A",
+     "currentEsi": "3A",
+     "esiState": "unchanged",
+     "archivedFeatureCoordinatesSha256": "63969a1da9949cd5525d9842af952842cd11848c29a7b1457b0df05e74bc5295",
+     "currentFeatureCoordinatesSha256": "63969a1da9949cd5525d9842af952842cd11848c29a7b1457b0df05e74bc5295",
+     "fullFeatureGeometryState": "unchanged"
+    }
+   ],
+   "access": {
+    "state": "unchanged",
+    "accessIds": [
+     "ccc-804",
+     "ccc-805"
+    ]
+   },
+   "legal": {
+    "state": "changed",
+    "basis": "Rules page publisher date moved; species bag, season and size facts compared below are unchanged; licence scope unverifiable. See rules.",
+    "ref": "rules"
+   }
+  },
+  {
+   "id": "cayucos-beach",
+   "name": "Cayucos sandy shore",
+   "areaId": "central",
+   "accessIds": [
+    "ccc-797",
+    "ccc-798"
+   ],
+   "sourceObjectIds": {
+    "committed": [
+     2283,
+     2287,
+     2289
+    ],
+    "currentSelection": [
+     2283,
+     2287,
+     2289
+    ],
+    "collectorSelection": [
+     2283,
+     2287,
+     2289
+    ]
+   },
+   "source": {
+    "objectClass": {
+     "state": "unchanged",
+     "basis": "ESI code of each selected NOAA object, archived reviewedSourceFeatures.shore vs the current layer response (original object IDs).",
+     "old": {
+      "2283": "3A",
+      "2287": "3A",
+      "2289": "3A"
+     },
+     "new": {
+      "2283": "3A",
+      "2287": "3A",
+      "2289": "3A"
+     },
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/reviewedSourceFeatures/shore"
+     }
+    },
+    "fullFeatureGeometry": {
+     "state": "unchanged",
+     "basis": "Complete original vertex list of each selected object, archived vs current response (sha256 of the ordered coordinate array).",
+     "old": {
+      "2283": "40d73a2f25b2f5ac7dbe7834c8eaa573730685548afab124b684a0b37815240c",
+      "2287": "ef8e40d185ca10a0bf5720ed08c9da8bc72433bf109fe16e0a4fd54d224e222e",
+      "2289": "a608f4baa5f4a589cc6d6906fbecb99d390b50019fec2b822492b2f3f490cc21"
+     },
+     "new": {
+      "2283": "40d73a2f25b2f5ac7dbe7834c8eaa573730685548afab124b684a0b37815240c",
+      "2287": "ef8e40d185ca10a0bf5720ed08c9da8bc72433bf109fe16e0a4fd54d224e222e",
+      "2289": "a608f4baa5f4a589cc6d6906fbecb99d390b50019fec2b822492b2f3f490cc21"
+     },
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/reviewedSourceFeatures/shore"
+     }
+    },
+    "selectedGeometry": {
+     "state": "unchanged",
+     "basis": "Retained latitude-window vertices of the committed package vs the collector candidate built from the current response (sha256 of ordered coordinates).",
+     "old": {
+      "sha256": "57d3df8fe76fc3678d0ca6ba901ef616e00bfb73d7d703112a1ffc1fc8d25944",
+      "vertices": 115,
+      "paths": 3
+     },
+     "new": {
+      "sha256": "57d3df8fe76fc3678d0ca6ba901ef616e00bfb73d7d703112a1ffc1fc8d25944",
+      "vertices": 115,
+      "paths": 3
+     },
+     "baseline": {
+      "path": "catalog/shore-habitat/morro-bay.geojson",
+      "pointer": "/features/2/geometry"
+     }
+    },
+    "priorGeometryHash": {
+     "state": "unchanged",
+     "basis": "Archived priorGeometrySha256 reproduced from the committed asset (asset geometry object).",
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/priorGeometrySha256/cayucos-beach"
+     }
+    },
+    "rawResponseChange": {
+     "state": "unverifiable",
+     "basis": "Raw NOAA response bytes differ from the baseline; this does not establish a changed selected run. Selected-geometry and object-class findings above decide."
+    }
+   },
+   "objectDetail": [
+    {
+     "objectId": 2283,
+     "archivedEsi": "3A",
+     "currentEsi": "3A",
+     "esiState": "unchanged",
+     "archivedFeatureCoordinatesSha256": "40d73a2f25b2f5ac7dbe7834c8eaa573730685548afab124b684a0b37815240c",
+     "currentFeatureCoordinatesSha256": "40d73a2f25b2f5ac7dbe7834c8eaa573730685548afab124b684a0b37815240c",
+     "fullFeatureGeometryState": "unchanged"
+    },
+    {
+     "objectId": 2287,
+     "archivedEsi": "3A",
+     "currentEsi": "3A",
+     "esiState": "unchanged",
+     "archivedFeatureCoordinatesSha256": "ef8e40d185ca10a0bf5720ed08c9da8bc72433bf109fe16e0a4fd54d224e222e",
+     "currentFeatureCoordinatesSha256": "ef8e40d185ca10a0bf5720ed08c9da8bc72433bf109fe16e0a4fd54d224e222e",
+     "fullFeatureGeometryState": "unchanged"
+    },
+    {
+     "objectId": 2289,
+     "archivedEsi": "3A",
+     "currentEsi": "3A",
+     "esiState": "unchanged",
+     "archivedFeatureCoordinatesSha256": "a608f4baa5f4a589cc6d6906fbecb99d390b50019fec2b822492b2f3f490cc21",
+     "currentFeatureCoordinatesSha256": "a608f4baa5f4a589cc6d6906fbecb99d390b50019fec2b822492b2f3f490cc21",
+     "fullFeatureGeometryState": "unchanged"
+    }
+   ],
+   "access": {
+    "state": "unchanged",
+    "accessIds": [
+     "ccc-797",
+     "ccc-798"
+    ]
+   },
+   "legal": {
+    "state": "changed",
+    "basis": "Rules page publisher date moved; species bag, season and size facts compared below are unchanged; licence scope unverifiable. See rules.",
+    "ref": "rules"
+   }
+  },
+  {
+   "id": "pismo-beach",
+   "name": "Pismo Beach",
+   "areaId": "south",
+   "accessIds": [
+    "ccc-868",
+    "ccc-870"
+   ],
+   "sourceObjectIds": {
+    "committed": [
+     2632,
+     2636,
+     2637
+    ],
+    "currentSelection": [
+     2632,
+     2636,
+     2637
+    ],
+    "collectorSelection": [
+     2632,
+     2636,
+     2637
+    ]
+   },
+   "source": {
+    "objectClass": {
+     "state": "unchanged",
+     "basis": "ESI code of each selected NOAA object, archived reviewedSourceFeatures.shore vs the current layer response (original object IDs).",
+     "old": {
+      "2632": "3A",
+      "2636": "3A",
+      "2637": "3A"
+     },
+     "new": {
+      "2632": "3A",
+      "2636": "3A",
+      "2637": "3A"
+     },
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/reviewedSourceFeatures/shore"
+     }
+    },
+    "fullFeatureGeometry": {
+     "state": "unchanged",
+     "basis": "Complete original vertex list of each selected object, archived vs current response (sha256 of the ordered coordinate array).",
+     "old": {
+      "2632": "4ef97d6398abdb5e71e4dc68cb48bcb23efa7544d33fcc6bf87a81a7e90d8172",
+      "2636": "7ef16fa4b9014673dccb8b08b719935aa7549272693c3a52034a5a1180278ca0",
+      "2637": "fca3b640dda960b6834ab09af2335deae9f674b4a7cb662516019942bdb2b777"
+     },
+     "new": {
+      "2632": "4ef97d6398abdb5e71e4dc68cb48bcb23efa7544d33fcc6bf87a81a7e90d8172",
+      "2636": "7ef16fa4b9014673dccb8b08b719935aa7549272693c3a52034a5a1180278ca0",
+      "2637": "fca3b640dda960b6834ab09af2335deae9f674b4a7cb662516019942bdb2b777"
+     },
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/reviewedSourceFeatures/shore"
+     }
+    },
+    "selectedGeometry": {
+     "state": "unchanged",
+     "basis": "Retained latitude-window vertices of the committed package vs the collector candidate built from the current response (sha256 of ordered coordinates).",
+     "old": {
+      "sha256": "81f69230a1447652c13a721f603458e0f9b6d282e9d575b1f8de80d5e0644af3",
+      "vertices": 150,
+      "paths": 3
+     },
+     "new": {
+      "sha256": "81f69230a1447652c13a721f603458e0f9b6d282e9d575b1f8de80d5e0644af3",
+      "vertices": 150,
+      "paths": 3
+     },
+     "baseline": {
+      "path": "catalog/shore-habitat/morro-bay.geojson",
+      "pointer": "/features/3/geometry"
+     }
+    },
+    "priorGeometryHash": {
+     "state": "unchanged",
+     "basis": "Archived priorGeometrySha256 reproduced from the committed asset (asset geometry object).",
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/priorGeometrySha256/pismo-beach"
+     }
+    },
+    "rawResponseChange": {
+     "state": "unverifiable",
+     "basis": "Raw NOAA response bytes differ from the baseline; this does not establish a changed selected run. Selected-geometry and object-class findings above decide."
+    }
+   },
+   "objectDetail": [
+    {
+     "objectId": 2632,
+     "archivedEsi": "3A",
+     "currentEsi": "3A",
+     "esiState": "unchanged",
+     "archivedFeatureCoordinatesSha256": "4ef97d6398abdb5e71e4dc68cb48bcb23efa7544d33fcc6bf87a81a7e90d8172",
+     "currentFeatureCoordinatesSha256": "4ef97d6398abdb5e71e4dc68cb48bcb23efa7544d33fcc6bf87a81a7e90d8172",
+     "fullFeatureGeometryState": "unchanged"
+    },
+    {
+     "objectId": 2636,
+     "archivedEsi": "3A",
+     "currentEsi": "3A",
+     "esiState": "unchanged",
+     "archivedFeatureCoordinatesSha256": "7ef16fa4b9014673dccb8b08b719935aa7549272693c3a52034a5a1180278ca0",
+     "currentFeatureCoordinatesSha256": "7ef16fa4b9014673dccb8b08b719935aa7549272693c3a52034a5a1180278ca0",
+     "fullFeatureGeometryState": "unchanged"
+    },
+    {
+     "objectId": 2637,
+     "archivedEsi": "3A",
+     "currentEsi": "3A",
+     "esiState": "unchanged",
+     "archivedFeatureCoordinatesSha256": "fca3b640dda960b6834ab09af2335deae9f674b4a7cb662516019942bdb2b777",
+     "currentFeatureCoordinatesSha256": "fca3b640dda960b6834ab09af2335deae9f674b4a7cb662516019942bdb2b777",
+     "fullFeatureGeometryState": "unchanged"
+    }
+   ],
+   "access": {
+    "state": "unchanged",
+    "accessIds": [
+     "ccc-868",
+     "ccc-870"
+    ]
+   },
+   "legal": {
+    "state": "changed",
+    "basis": "Rules page publisher date moved; species bag, season and size facts compared below are unchanged; licence scope unverifiable. See rules.",
+    "ref": "rules"
+   }
+  },
+  {
+   "id": "oceano-beach",
+   "name": "Oceano · Pier Avenue shore",
+   "areaId": "south",
+   "accessIds": [
+    "ccc-875"
+   ],
+   "sourceObjectIds": {
+    "committed": [
+     2638
+    ],
+    "currentSelection": [
+     2638
+    ],
+    "collectorSelection": [
+     2638
+    ]
+   },
+   "source": {
+    "objectClass": {
+     "state": "unchanged",
+     "basis": "ESI code of each selected NOAA object, archived reviewedSourceFeatures.shore vs the current layer response (original object IDs).",
+     "old": {
+      "2638": "3A"
+     },
+     "new": {
+      "2638": "3A"
+     },
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/reviewedSourceFeatures/shore"
+     }
+    },
+    "fullFeatureGeometry": {
+     "state": "unchanged",
+     "basis": "Complete original vertex list of each selected object, archived vs current response (sha256 of the ordered coordinate array).",
+     "old": {
+      "2638": "669ec29c59149204a180e53c6fce2dc1ddce90413536334a0433510f4ef49705"
+     },
+     "new": {
+      "2638": "669ec29c59149204a180e53c6fce2dc1ddce90413536334a0433510f4ef49705"
+     },
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/reviewedSourceFeatures/shore"
+     }
+    },
+    "selectedGeometry": {
+     "state": "unchanged",
+     "basis": "Retained latitude-window vertices of the committed package vs the collector candidate built from the current response (sha256 of ordered coordinates).",
+     "old": {
+      "sha256": "5b631732fd8e5965774bf24189ce9e637de0f47bb1e712e478beb69f276e8d6e",
+      "vertices": 107,
+      "paths": 1
+     },
+     "new": {
+      "sha256": "5b631732fd8e5965774bf24189ce9e637de0f47bb1e712e478beb69f276e8d6e",
+      "vertices": 107,
+      "paths": 1
+     },
+     "baseline": {
+      "path": "catalog/shore-habitat/morro-bay.geojson",
+      "pointer": "/features/4/geometry"
+     }
+    },
+    "priorGeometryHash": {
+     "state": "unchanged",
+     "basis": "Archived priorGeometrySha256 reproduced from the committed asset (asset geometry object).",
+     "baseline": {
+      "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+      "pointer": "/priorGeometrySha256/oceano-beach"
+     }
+    },
+    "rawResponseChange": {
+     "state": "unverifiable",
+     "basis": "Raw NOAA response bytes differ from the baseline; this does not establish a changed selected run. Selected-geometry and object-class findings above decide."
+    }
+   },
+   "objectDetail": [
+    {
+     "objectId": 2638,
+     "archivedEsi": "3A",
+     "currentEsi": "3A",
+     "esiState": "unchanged",
+     "archivedFeatureCoordinatesSha256": "669ec29c59149204a180e53c6fce2dc1ddce90413536334a0433510f4ef49705",
+     "currentFeatureCoordinatesSha256": "669ec29c59149204a180e53c6fce2dc1ddce90413536334a0433510f4ef49705",
+     "fullFeatureGeometryState": "unchanged"
+    }
+   ],
+   "access": {
+    "state": "unchanged",
+    "accessIds": [
+     "ccc-875"
+    ]
+   },
+   "legal": {
+    "state": "changed",
+    "basis": "Rules page publisher date moved; species bag, season and size facts compared below are unchanged; licence scope unverifiable. See rules.",
+    "ref": "rules"
+   }
+  }
+ ],
+ "accessPoints": [
+  {
+   "id": "ccc-770",
+   "objectId": 770,
+   "runId": "hearst-memorial-beach",
+   "state": "unchanged",
+   "fields": {
+    "Name": {
+     "old": "William R. Hearst Memorial Beach",
+     "new": "William R. Hearst Memorial Beach",
+     "state": "unchanged"
+    },
+    "O_PUBLIC": {
+     "old": "Yes",
+     "new": "Yes",
+     "state": "unchanged"
+    },
+    "AccessType": {
+     "old": "Beach Access",
+     "new": "Beach Access",
+     "state": "unchanged"
+    },
+    "Archived": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "Date_Closd": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "ClosureCom": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "coordinates": {
+     "old": [
+      -121.188250803109,
+      35.6432228411853
+     ],
+     "new": [
+      -121.188250803109,
+      35.6432228411853
+     ],
+     "published": [
+      -121.188250803109,
+      35.6432228411853
+     ],
+     "state": "unchanged"
+    }
+   },
+   "publishedPointState": "unchanged",
+   "publishedPoint": {
+    "name": "William R. Hearst Memorial Beach",
+    "coordinates": [
+     -121.188250803109,
+     35.6432228411853
+    ]
+   },
+   "closureFieldsNote": "Closure fields are inventory evidence only, not opening certification.",
+   "unavailableBaselineFields": [],
+   "baseline": {
+    "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+    "pointer": "/reviewedSourceFeatures/access"
+   }
+  },
+  {
+   "id": "ccc-804",
+   "objectId": 804,
+   "runId": "morro-strand",
+   "state": "unchanged",
+   "fields": {
+    "Name": {
+     "old": "Morro Strand State Beach (South)",
+     "new": "Morro Strand State Beach (South)",
+     "state": "unchanged"
+    },
+    "O_PUBLIC": {
+     "old": "Yes",
+     "new": "Yes",
+     "state": "unchanged"
+    },
+    "AccessType": {
+     "old": "Beach Access",
+     "new": "Beach Access",
+     "state": "unchanged"
+    },
+    "Archived": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "Date_Closd": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "ClosureCom": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "coordinates": {
+     "old": [
+      -120.865350728449,
+      35.3918058372938
+     ],
+     "new": [
+      -120.865350728449,
+      35.3918058372938
+     ],
+     "published": [
+      -120.865350728449,
+      35.3918058372938
+     ],
+     "state": "unchanged"
+    }
+   },
+   "publishedPointState": "unchanged",
+   "publishedPoint": {
+    "name": "Morro Strand State Beach (South)",
+    "coordinates": [
+     -120.865350728449,
+     35.3918058372938
+    ]
+   },
+   "closureFieldsNote": "Closure fields are inventory evidence only, not opening certification.",
+   "unavailableBaselineFields": [],
+   "baseline": {
+    "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+    "pointer": "/reviewedSourceFeatures/access"
+   }
+  },
+  {
+   "id": "ccc-805",
+   "objectId": 805,
+   "runId": "morro-strand",
+   "state": "unchanged",
+   "fields": {
+    "Name": {
+     "old": "Morro Strand State Beach (Atascadero Creek Rd.)",
+     "new": "Morro Strand State Beach (Atascadero Creek Rd.)",
+     "state": "unchanged"
+    },
+    "O_PUBLIC": {
+     "old": "Yes",
+     "new": "Yes",
+     "state": "unchanged"
+    },
+    "AccessType": {
+     "old": "Beach Access",
+     "new": "Beach Access",
+     "state": "unchanged"
+    },
+    "Archived": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "Date_Closd": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "ClosureCom": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "coordinates": {
+     "old": [
+      -120.862362726612,
+      35.3786218364282
+     ],
+     "new": [
+      -120.862362726612,
+      35.3786218364282
+     ],
+     "published": [
+      -120.862362726612,
+      35.3786218364282
+     ],
+     "state": "unchanged"
+    }
+   },
+   "publishedPointState": "unchanged",
+   "publishedPoint": {
+    "name": "Morro Strand State Beach (Atascadero Creek Rd.)",
+    "coordinates": [
+     -120.862362726612,
+     35.3786218364282
+    ]
+   },
+   "closureFieldsNote": "Closure fields are inventory evidence only, not opening certification.",
+   "unavailableBaselineFields": [],
+   "baseline": {
+    "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+    "pointer": "/reviewedSourceFeatures/access"
+   }
+  },
+  {
+   "id": "ccc-797",
+   "objectId": 797,
+   "runId": "cayucos-beach",
+   "state": "unchanged",
+   "fields": {
+    "Name": {
+     "old": "Cayucos State Beach",
+     "new": "Cayucos State Beach",
+     "state": "unchanged"
+    },
+    "O_PUBLIC": {
+     "old": "Yes",
+     "new": "Yes",
+     "state": "unchanged"
+    },
+    "AccessType": {
+     "old": "Beach Access",
+     "new": "Beach Access",
+     "state": "unchanged"
+    },
+    "Archived": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "Date_Closd": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "ClosureCom": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "coordinates": {
+     "old": [
+      -120.9061287409,
+      35.4486948401621
+     ],
+     "new": [
+      -120.9061287409,
+      35.4486948401621
+     ],
+     "published": [
+      -120.9061287409,
+      35.4486948401621
+     ],
+     "state": "unchanged"
+    }
+   },
+   "publishedPointState": "unchanged",
+   "publishedPoint": {
+    "name": "Cayucos State Beach",
+    "coordinates": [
+     -120.9061287409,
+     35.4486948401621
+    ]
+   },
+   "closureFieldsNote": "Closure fields are inventory evidence only, not opening certification.",
+   "unavailableBaselineFields": [],
+   "baseline": {
+    "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+    "pointer": "/reviewedSourceFeatures/access"
+   }
+  },
+  {
+   "id": "ccc-798",
+   "objectId": 798,
+   "runId": "cayucos-beach",
+   "state": "unchanged",
+   "fields": {
+    "Name": {
+     "old": "Cayucos Beach",
+     "new": "Cayucos Beach",
+     "state": "unchanged"
+    },
+    "O_PUBLIC": {
+     "old": "Yes",
+     "new": "Yes",
+     "state": "unchanged"
+    },
+    "AccessType": {
+     "old": "Beach Access",
+     "new": "Beach Access",
+     "state": "unchanged"
+    },
+    "Archived": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "Date_Closd": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "ClosureCom": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "coordinates": {
+     "old": [
+      -120.896142738704,
+      35.4415868405399
+     ],
+     "new": [
+      -120.896142738704,
+      35.4415868405399
+     ],
+     "published": [
+      -120.896142738704,
+      35.4415868405399
+     ],
+     "state": "unchanged"
+    }
+   },
+   "publishedPointState": "unchanged",
+   "publishedPoint": {
+    "name": "Cayucos Beach",
+    "coordinates": [
+     -120.896142738704,
+     35.4415868405399
+    ]
+   },
+   "closureFieldsNote": "Closure fields are inventory evidence only, not opening certification.",
+   "unavailableBaselineFields": [],
+   "baseline": {
+    "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+    "pointer": "/reviewedSourceFeatures/access"
+   }
+  },
+  {
+   "id": "ccc-868",
+   "objectId": 868,
+   "runId": "pismo-beach",
+   "state": "unchanged",
+   "fields": {
+    "Name": {
+     "old": "City of Pismo Beach",
+     "new": "City of Pismo Beach",
+     "state": "unchanged"
+    },
+    "O_PUBLIC": {
+     "old": "Yes",
+     "new": "Yes",
+     "state": "unchanged"
+    },
+    "AccessType": {
+     "old": "Beach Access",
+     "new": "Beach Access",
+     "state": "unchanged"
+    },
+    "Archived": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "Date_Closd": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "ClosureCom": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "coordinates": {
+     "old": [
+      -120.643327671047,
+      35.1389368267632
+     ],
+     "new": [
+      -120.643327671047,
+      35.1389368267632
+     ],
+     "published": [
+      -120.643327671047,
+      35.1389368267632
+     ],
+     "state": "unchanged"
+    }
+   },
+   "publishedPointState": "unchanged",
+   "publishedPoint": {
+    "name": "City of Pismo Beach",
+    "coordinates": [
+     -120.643327671047,
+     35.1389368267632
+    ]
+   },
+   "closureFieldsNote": "Closure fields are inventory evidence only, not opening certification.",
+   "unavailableBaselineFields": [],
+   "baseline": {
+    "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+    "pointer": "/reviewedSourceFeatures/access"
+   }
+  },
+  {
+   "id": "ccc-870",
+   "objectId": 870,
+   "runId": "pismo-beach",
+   "state": "unchanged",
+   "fields": {
+    "Name": {
+     "old": "Pismo Beach (Addie Street)",
+     "new": "Pismo Beach (Addie Street)",
+     "state": "unchanged"
+    },
+    "O_PUBLIC": {
+     "old": "Yes",
+     "new": "Yes",
+     "state": "unchanged"
+    },
+    "AccessType": {
+     "old": "Beach Access",
+     "new": "Beach Access",
+     "state": "unchanged"
+    },
+    "Archived": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "Date_Closd": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "ClosureCom": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "coordinates": {
+     "old": [
+      -120.641104669614,
+      35.1359638266716
+     ],
+     "new": [
+      -120.641104669614,
+      35.1359638266716
+     ],
+     "published": [
+      -120.641104669614,
+      35.1359638266716
+     ],
+     "state": "unchanged"
+    }
+   },
+   "publishedPointState": "unchanged",
+   "publishedPoint": {
+    "name": "Pismo Beach (Addie Street)",
+    "coordinates": [
+     -120.641104669614,
+     35.1359638266716
+    ]
+   },
+   "closureFieldsNote": "Closure fields are inventory evidence only, not opening certification.",
+   "unavailableBaselineFields": [],
+   "baseline": {
+    "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+    "pointer": "/reviewedSourceFeatures/access"
+   }
+  },
+  {
+   "id": "ccc-875",
+   "objectId": 875,
+   "runId": "oceano-beach",
+   "state": "unchanged",
+   "fields": {
+    "Name": {
+     "old": "Pismo State Beach",
+     "new": "Pismo State Beach",
+     "state": "unchanged"
+    },
+    "O_PUBLIC": {
+     "old": "Yes",
+     "new": "Yes",
+     "state": "unchanged"
+    },
+    "AccessType": {
+     "old": "Beach Access",
+     "new": "Beach Access",
+     "state": "unchanged"
+    },
+    "Archived": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "Date_Closd": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "ClosureCom": {
+     "old": " ",
+     "new": " ",
+     "state": "unchanged"
+    },
+    "coordinates": {
+     "old": [
+      -120.63006666456,
+      35.0968828235314
+     ],
+     "new": [
+      -120.63006666456,
+      35.0968828235314
+     ],
+     "published": [
+      -120.63006666456,
+      35.0968828235314
+     ],
+     "state": "unchanged"
+    }
+   },
+   "publishedPointState": "unchanged",
+   "publishedPoint": {
+    "name": "Pismo State Beach",
+    "coordinates": [
+     -120.63006666456,
+     35.0968828235314
+    ]
+   },
+   "closureFieldsNote": "Closure fields are inventory evidence only, not opening certification.",
+   "unavailableBaselineFields": [],
+   "baseline": {
+    "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+    "pointer": "/reviewedSourceFeatures/access"
+   }
+  }
+ ],
+ "terms": {
+  "itemId": "e45f130ce101423ea1de943a69445ece",
+  "itemOwner": "cdenney_coastalcomm",
+  "itemOrgId": "wwVnNW92ZHUIr0V0",
+  "itemTitle": "Public Access Points",
+  "itemUrl": "https://www.arcgis.com/home/item.html?id=e45f130ce101423ea1de943a69445ece",
+  "attribution": "Item is owned by the Coastal Commission ArcGIS organisation account (cdenney_coastalcomm, org wwVnNW92ZHUIr0V0), the same org as the AccessPoints FeatureServer host path; portal ownership is a pointer, not a rights confirmation.",
+  "rawItem": {
+   "state": "changed",
+   "basis": "Item JSON bytes differ from both baselines; baseline bytes not retained, changed field not identified.",
+   "old": {
+    "sha256": "27c0da57445206974fb4ff866fff92c0c5aaf8932762bbd89e5989c9e502a2d8",
+    "bytes": 4576
+   },
+   "new": {
+    "sha256": "e7fafa620aac73d8a21ba894605e37f68399b2d1f40cff763c6bba7586d3b62d",
+    "bytes": 4576
+   }
+  },
+  "volatileFieldsObserved": {
+   "modified": "2026-07-29T21:27:58Z",
+   "lastViewed": "2026-11-04T07:00:00Z",
+   "numViews": 91210
+  },
+  "licenseInfo": {
+   "state": "unchanged",
+   "basis": "licenseInfo text with markup stripped and whitespace collapsed (collector rule), current vs committed sourceChecks.accessTerms and vs the archived accessTerms (the archive stored the text with its markup left in; after the same stripping it is equal).",
+   "old": {
+    "sha256": "18d1767d9e8a7d3e9b24ff66a053f2cec196b94489d9c5b6520c33b18ecab14e",
+    "chars": 885
+   },
+   "new": {
+    "sha256": "18d1767d9e8a7d3e9b24ff66a053f2cec196b94489d9c5b6520c33b18ecab14e",
+    "chars": 885
+   },
+   "baseline": {
+    "path": "catalog/shore-habitat/morro-bay.geojson",
+    "pointer": "/sourceChecks/accessTerms"
+   }
+  }
+ },
+ "rules": {
+  "publisherDate": {
+   "state": "changed",
+   "basis": "Page text \"updated on <date>\" vs archived legalFacts.publisherUpdatedDate.",
+   "old": "2026-10-01",
+   "new": "2026-11-02",
+   "baseline": {
+    "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+    "pointer": "/legalFacts/publisherUpdatedDate"
+   }
+  },
+  "surfperch": {
+   "state": "unchanged",
+   "basis": "Section \"Surfperch\": season, combined and per-species bag, shiner perch limit, redtail minimum size.",
+   "old": {
+    "season": "year-round",
+    "combinedDailyPossession": 20,
+    "maximumOneSpecies": 10,
+    "shinerSeparateLimit": 20,
+    "redtailMinimumInches": 10.5
+   },
+   "new": {
+    "season": "year-round",
+    "combinedDailyPossession": 20,
+    "maximumOneSpecies": 10,
+    "shinerSeparateLimit": 20,
+    "redtailMinimumInches": 10.5
+   },
+   "baseline": {
+    "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+    "pointer": "/legalFacts/surfperch"
+   },
+   "citation": {
+    "section": "Surfperch",
+    "quote": "The recreational fishery for surfperch (PDF) (opens in new tab) (family Embiotocidae) is open year-round. The daily bag and possession limit is 20 fish in combination of all species (except shiner perch), with not more than 10 fish of any one species. Shiner perch ( Cymatogaster aggregata ) have a separate bag and possession limit of 20 fish. Redtail surfperch ( Amphistichus rhodoterus ) have a minimum size limit of 10½ inches total length."
+   }
+  },
+  "californiaHalibut": {
+   "state": "unchanged",
+   "basis": "Section \"California Halibut\": season, bag south of Point Sur, minimum length.",
+   "old": {
+    "season": "year-round",
+    "southOfPointSurDailyPossession": 5,
+    "minimumTotalLengthInches": 22
+   },
+   "new": {
+    "season": "year-round",
+    "southOfPointSurDailyPossession": 5,
+    "minimumTotalLengthInches": 22
+   },
+   "baseline": {
+    "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+    "pointer": "/legalFacts/californiaHalibut"
+   },
+   "citation": {
+    "section": "California Halibut",
+    "quote": "The recreational fishery for California halibut ( Paralichthys californicus ) remains open year-round. The daily bag and total possession limit is five fish south of Point Sur, Monterey County. The minimum size limit is 22 inches total length."
+   }
+  },
+  "licenseScope": {
+   "state": "unverifiable",
+   "basis": "The archived licenseScope and licenseNote came from https://wildlife.ca.gov/Licensing/Fishing, which this card does not fetch; the Central page has no licence-requirement text to compare.",
+   "old": "Ordinary beach is outside the public-pier exemption; identify species, verify gear and exact location.",
+   "baseline": {
+    "path": "docs/archive/fish/repo/research/shore-source-review-2026-10-03.json",
+    "pointer": "/legalFacts/licenseScope"
+   }
+  },
+  "rawPage": {
+   "state": "changed",
+   "basis": "Page bytes differ from the archived receipt (87812 -> 87866 bytes). No historical HTML was retained, so this is a byte change only; no line diff is claimed.",
+   "old": {
+    "sha256": "2c125e065ba7c7835f5c4e1c8e5849eaeb7c089c4447a87b4d74bb42f1b8cdb7",
+    "bytes": 87812
+   },
+   "new": {
+    "sha256": "7bd3c3506c862e5c9fba756014c3dd4aa1372d001724a517adaa19871392d597",
+    "bytes": 87866
+   }
+  }
+ },
+ "m2Candidates": [
+  {
+   "id": "ccc-792",
+   "objectId": 792,
+   "name": "Estero Bluffs State Park (West)",
+   "coordinates": [
+    -120.951406748599,
+    35.4537928380511
+   ],
+   "publicFlag": "Yes",
+   "accessType": "Beach Access",
+   "archived": " ",
+   "closureDate": " ",
+   "closureComment": " ",
+   "state": "unverifiable",
+   "basis": "New in this dossier: no archived or committed baseline exists for this object (archived access set holds the eight Morro Bay approaches only). Fields below are current inventory facts; the full-response bytes equal the committed access hash, so they are also what the committed 2026-10-08 acquisition held.",
+   "closureFieldsNote": "Closure fields are inventory evidence only, not opening certification."
+  },
+  {
+   "id": "ccc-793",
+   "objectId": 793,
+   "name": "Estero Bluffs State Park",
+   "coordinates": [
+    -120.942191745917,
+    35.4503498387185
+   ],
+   "publicFlag": "Yes",
+   "accessType": "Beach Access",
+   "archived": " ",
+   "closureDate": " ",
+   "closureComment": " ",
+   "state": "unverifiable",
+   "basis": "New in this dossier: no archived or committed baseline exists for this object (archived access set holds the eight Morro Bay approaches only). Fields below are current inventory facts; the full-response bytes equal the committed access hash, so they are also what the committed 2026-10-08 acquisition held.",
+   "closureFieldsNote": "Closure fields are inventory evidence only, not opening certification."
+  },
+  {
+   "id": "ccc-794",
+   "objectId": 794,
+   "name": "Estero Bluffs State Park (San Geronimo Rd.)",
+   "coordinates": [
+    -120.932671744641,
+    35.4498258386032
+   ],
+   "publicFlag": "Yes",
+   "accessType": "Beach Access",
+   "archived": " ",
+   "closureDate": " ",
+   "closureComment": " ",
+   "state": "unverifiable",
+   "basis": "New in this dossier: no archived or committed baseline exists for this object (archived access set holds the eight Morro Bay approaches only). Fields below are current inventory facts; the full-response bytes equal the committed access hash, so they are also what the committed 2026-10-08 acquisition held.",
+   "closureFieldsNote": "Closure fields are inventory evidence only, not opening certification."
+  },
+  {
+   "id": "ccc-795",
+   "objectId": 795,
+   "name": "Estero Bluffs State Park (East)",
+   "coordinates": [
+    -120.925836743272,
+    35.4491088396811
+   ],
+   "publicFlag": "Yes",
+   "accessType": "Beach Access",
+   "archived": " ",
+   "closureDate": " ",
+   "closureComment": " ",
+   "state": "unverifiable",
+   "basis": "New in this dossier: no archived or committed baseline exists for this object (archived access set holds the eight Morro Bay approaches only). Fields below are current inventory facts; the full-response bytes equal the committed access hash, so they are also what the committed 2026-10-08 acquisition held.",
+   "closureFieldsNote": "Closure fields are inventory evidence only, not opening certification."
+  }
+ ],
+ "m2EsteroBluffs": {
+  "selectionState": "unresolved",
+  "basis": "The fetched NOAA layer lists original objects around the four access points (below), mostly 1A/2A rocky and 5 mixed sand and gravel classes with composite codes; this card does not choose a run, bounds or substrate rule. Choosing among them needs the M2 schema decision and owner review, and an automatic nearest-shore join is not allowed.",
+  "listingRule": "Every layer object with any vertex inside the access points bounding box padded by 0.02 degrees; a listing, not a selection.",
+  "accessPointsBounds": {
+   "lon": [
+    -120.951406748599,
+    -120.925836743272
+   ],
+   "lat": [
+    35.4491088396811,
+    35.4537928380511
+   ]
+  },
+  "legendSource": "pages/noaa-layer3-metadata.json drawingInfo.renderer (field MOSTSENSIT); a composite ESI code has no own legend entry, each part is listed with its code legend where one exists.",
+  "siteSelectionLimits": {
+   "state": "unverifiable",
+   "basis": "No bounded latitude/longitude window is proposed: none can be substantiated from the layer alone without inferring an extent."
+  },
+  "ownerUrl": {
+   "state": "unverifiable",
+   "basis": "The fetched sources carry no official owner page URL for Estero Bluffs State Park; none is guessed. A State Parks page is outside the three-source scope of this card."
+  },
+  "candidateCount": 45,
+  "candidates": [
+   {
+    "objectId": 2234,
+    "esi": "2A",
+    "esiLegend": [
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "2A",
+    "mostSensitiveLegend": "2A-Exposed wave-cut platforms in bedrock",
+    "landwardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "seawardShoretype": null,
+    "vertices": 15,
+    "coordinatesSha256": "9e69b9ac5fa703f17bfafdf1c7af8dc939d148955a72defbacc6ece8f936d839",
+    "firstVertex": [
+     -120.970511133587,
+     35.4598328474901
+    ],
+    "lastVertex": [
+     -120.971150259672,
+     35.4596729434345
+    ],
+    "lonRange": [
+     -120.971150259672,
+     -120.970511133587
+    ],
+    "latRange": [
+     35.4595586634493,
+     35.4598328474901
+    ]
+   },
+   {
+    "objectId": 2236,
+    "esi": "6A/2A",
+    "esiLegend": [
+     {
+      "code": "6A",
+      "legend": "6A-Gravel beaches"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "6A+",
+    "mostSensitiveLegend": "6A+-Gravel beaches (most sens)",
+    "landwardShoretype": "6A: Gravel beaches",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 27,
+    "coordinatesSha256": "7f237450feee16e0a77a4533f8f4ee08d23a0e6d42cf910e27f923a2b8fdc97e",
+    "firstVertex": [
+     -120.971150259672,
+     35.4596729434345
+    ],
+    "lastVertex": [
+     -120.971990707784,
+     35.4594792903631
+    ],
+    "lonRange": [
+     -120.971990707784,
+     -120.971150259672
+    ],
+    "latRange": [
+     35.4594792903631,
+     35.4597604114216
+    ]
+   },
+   {
+    "objectId": 2241,
+    "esi": "4",
+    "esiLegend": [
+     {
+      "code": "4",
+      "legend": "4-Coarse-grained sand"
+     }
+    ],
+    "mostSensitive": "4",
+    "mostSensitiveLegend": "4-Coarse-grained sand",
+    "landwardShoretype": "4: Coarse-grained sand beaches",
+    "seawardShoretype": null,
+    "vertices": 66,
+    "coordinatesSha256": "7d2d1b872966ba1cb9160caa86058ce4f0cb38a492f1db318a3f48ed95f8d6c5",
+    "firstVertex": [
+     -120.965945613743,
+     35.4584013966422
+    ],
+    "lastVertex": [
+     -120.970511133587,
+     35.4598328474901
+    ],
+    "lonRange": [
+     -120.970511133587,
+     -120.965945519743
+    ],
+    "latRange": [
+     35.4584013966422,
+     35.4601812185395
+    ]
+   },
+   {
+    "objectId": 2242,
+    "esi": "2A",
+    "esiLegend": [
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "2A",
+    "mostSensitiveLegend": "2A-Exposed wave-cut platforms in bedrock",
+    "landwardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "seawardShoretype": null,
+    "vertices": 28,
+    "coordinatesSha256": "fb3372e8a0cf5e1b537fd359501d3c5461c39afd35606eaf11653a41ff4d4028",
+    "firstVertex": [
+     -120.965117975554,
+     35.4577579986332
+    ],
+    "lastVertex": [
+     -120.965945613743,
+     35.4584013966422
+    ],
+    "lonRange": [
+     -120.965953707734,
+     -120.965117975554
+    ],
+    "latRange": [
+     35.4577376556135,
+     35.4584013966422
+    ]
+   },
+   {
+    "objectId": 2243,
+    "esi": "4",
+    "esiLegend": [
+     {
+      "code": "4",
+      "legend": "4-Coarse-grained sand"
+     }
+    ],
+    "mostSensitive": "4",
+    "mostSensitiveLegend": "4-Coarse-grained sand",
+    "landwardShoretype": "4: Coarse-grained sand beaches",
+    "seawardShoretype": null,
+    "vertices": 26,
+    "coordinatesSha256": "1000fffe3f93f40b7c1cb05a85b29028780c2e1e4e3739e0206695387f98f4c2",
+    "firstVertex": [
+     -120.964495879405,
+     35.45720638062
+    ],
+    "lastVertex": [
+     -120.965117975554,
+     35.4577579986332
+    ],
+    "lonRange": [
+     -120.965117975554,
+     -120.964458846416
+    ],
+    "latRange": [
+     35.45720638062,
+     35.4577595616343
+    ]
+   },
+   {
+    "objectId": 2244,
+    "esi": "2A",
+    "esiLegend": [
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "2A",
+    "mostSensitiveLegend": "2A-Exposed wave-cut platforms in bedrock",
+    "landwardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "seawardShoretype": null,
+    "vertices": 12,
+    "coordinatesSha256": "fc68c535d17deb64e82ea048a433fefe979077b57e63d56fb5e04435d5f7521d",
+    "firstVertex": [
+     -120.964133952303,
+     35.4567151055961
+    ],
+    "lastVertex": [
+     -120.964495879405,
+     35.45720638062
+    ],
+    "lonRange": [
+     -120.964495941404,
+     -120.964133952303
+    ],
+    "latRange": [
+     35.4567151055961,
+     35.45720638062
+    ]
+   },
+   {
+    "objectId": 2245,
+    "esi": "5/2A",
+    "esiLegend": [
+     {
+      "code": "5",
+      "legend": "5-Mixed sand & gravel"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "5+",
+    "mostSensitiveLegend": "5+-Mixed sand & gravel (most sens)",
+    "landwardShoretype": "5: Mixed sand and gravel beaches",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 17,
+    "coordinatesSha256": "280f872d53eb018a99ca507a185a1b2580f4bf3aa059783961453298733dd2df",
+    "firstVertex": [
+     -120.96325759311,
+     35.4561128945941
+    ],
+    "lastVertex": [
+     -120.964133952303,
+     35.4567151055961
+    ],
+    "lonRange": [
+     -120.964133952303,
+     -120.96325759311
+    ],
+    "latRange": [
+     35.4561128945941,
+     35.4567151055961
+    ]
+   },
+   {
+    "objectId": 2246,
+    "esi": "2A",
+    "esiLegend": [
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "2A",
+    "mostSensitiveLegend": "2A-Exposed wave-cut platforms in bedrock",
+    "landwardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "seawardShoretype": null,
+    "vertices": 12,
+    "coordinatesSha256": "82bbb49622df3f0283f6dd871c1371bded0cde6b06ab776534c1e69e16b01c0b",
+    "firstVertex": [
+     -120.96265625002,
+     35.4561583316364
+    ],
+    "lastVertex": [
+     -120.96325759311,
+     35.4561128945941
+    ],
+    "lonRange": [
+     -120.96325759311,
+     -120.96265625002
+    ],
+    "latRange": [
+     35.4560397395987,
+     35.4561583316364
+    ]
+   },
+   {
+    "objectId": 2247,
+    "esi": "4",
+    "esiLegend": [
+     {
+      "code": "4",
+      "legend": "4-Coarse-grained sand"
+     }
+    ],
+    "mostSensitive": "4",
+    "mostSensitiveLegend": "4-Coarse-grained sand",
+    "landwardShoretype": "4: Coarse-grained sand beaches",
+    "seawardShoretype": null,
+    "vertices": 22,
+    "coordinatesSha256": "5d1ddf83406bf641f919cacf9f20e167c291caf74d21c85fdb64b2aef139202a",
+    "firstVertex": [
+     -120.961098607762,
+     35.4559799277177
+    ],
+    "lastVertex": [
+     -120.96265625002,
+     35.4561583316364
+    ],
+    "lonRange": [
+     -120.96265625002,
+     -120.961098607762
+    ],
+    "latRange": [
+     35.4559799277177,
+     35.456398796706
+    ]
+   },
+   {
+    "objectId": 2248,
+    "esi": "5/2A",
+    "esiLegend": [
+     {
+      "code": "5",
+      "legend": "5-Mixed sand & gravel"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "5+",
+    "mostSensitiveLegend": "5+-Mixed sand & gravel (most sens)",
+    "landwardShoretype": "5: Mixed sand and gravel beaches",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 16,
+    "coordinatesSha256": "9b3d604096871d8db2a45736f8b81bb8766a98985d1fba78eef87dc2c8eb5ddd",
+    "firstVertex": [
+     -120.960460916584,
+     35.4551467186787
+    ],
+    "lastVertex": [
+     -120.961098607762,
+     35.4559799277177
+    ],
+    "lonRange": [
+     -120.961098607762,
+     -120.960459478593
+    ],
+    "latRange": [
+     35.4551467186787,
+     35.4559799277177
+    ]
+   },
+   {
+    "objectId": 2249,
+    "esi": "5/2A",
+    "esiLegend": [
+     {
+      "code": "5",
+      "legend": "5-Mixed sand & gravel"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "5+",
+    "mostSensitiveLegend": "5+-Mixed sand & gravel (most sens)",
+    "landwardShoretype": "5: Mixed sand and gravel beaches",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 16,
+    "coordinatesSha256": "fa9d986058e7c77e75b11a854dd9afc6a20b082eb67820fa4e9bf71e4e896601",
+    "firstVertex": [
+     -120.958917992312,
+     35.4548071917437
+    ],
+    "lastVertex": [
+     -120.959873041457,
+     35.45477053668
+    ],
+    "lonRange": [
+     -120.959873041457,
+     -120.958917992312
+    ],
+    "latRange": [
+     35.45477053668,
+     35.454855128735
+    ]
+   },
+   {
+    "objectId": 2250,
+    "esi": "2A",
+    "esiLegend": [
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "2A",
+    "mostSensitiveLegend": "2A-Exposed wave-cut platforms in bedrock",
+    "landwardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "seawardShoretype": null,
+    "vertices": 13,
+    "coordinatesSha256": "d9ef4cb336792330e30abdfcea565e4e4f884483a3d6ed75a6dba4ba41dac327",
+    "firstVertex": [
+     -120.959873041457,
+     35.45477053668
+    ],
+    "lastVertex": [
+     -120.960460916584,
+     35.4551467186787
+    ],
+    "lonRange": [
+     -120.960460916584,
+     -120.959873041457
+    ],
+    "latRange": [
+     35.45476197367,
+     35.4551467186787
+    ]
+   },
+   {
+    "objectId": 2251,
+    "esi": "2A",
+    "esiLegend": [
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "2A",
+    "mostSensitiveLegend": "2A-Exposed wave-cut platforms in bedrock",
+    "landwardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "seawardShoretype": null,
+    "vertices": 17,
+    "coordinatesSha256": "0ee348dc2c41c37fea7ced20541cc864d2afca67bf611107449fb2ebc2d5610e",
+    "firstVertex": [
+     -120.95857863227,
+     35.4549225967761
+    ],
+    "lastVertex": [
+     -120.958917992312,
+     35.4548071917437
+    ],
+    "lonRange": [
+     -120.958917992312,
+     -120.95857863227
+    ],
+    "latRange": [
+     35.4547484427523,
+     35.4549468457714
+    ]
+   },
+   {
+    "objectId": 2252,
+    "esi": "5/2A",
+    "esiLegend": [
+     {
+      "code": "5",
+      "legend": "5-Mixed sand & gravel"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "5+",
+    "mostSensitiveLegend": "5+-Mixed sand & gravel (most sens)",
+    "landwardShoretype": "5: Mixed sand and gravel beaches",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 35,
+    "coordinatesSha256": "462673141b80661f1202a14c39b972898a061b54ec96c6783f45f065d016c877",
+    "firstVertex": [
+     -120.956520367843,
+     35.4537871107979
+    ],
+    "lastVertex": [
+     -120.95857863227,
+     35.4549225967761
+    ],
+    "lonRange": [
+     -120.95857863227,
+     -120.956520367843
+    ],
+    "latRange": [
+     35.4537871107979,
+     35.4549607207885
+    ]
+   },
+   {
+    "objectId": 2253,
+    "esi": "2A",
+    "esiLegend": [
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "2A",
+    "mostSensitiveLegend": "2A-Exposed wave-cut platforms in bedrock",
+    "landwardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "seawardShoretype": null,
+    "vertices": 90,
+    "coordinatesSha256": "d605527f7db4bef8f6f695f489fb459d3eb716e1c30a0cfd89dc9a6c15438410",
+    "firstVertex": [
+     -120.952559787104,
+     35.4524720329227
+    ],
+    "lastVertex": [
+     -120.956520367843,
+     35.4537871107979
+    ],
+    "lonRange": [
+     -120.956520367843,
+     -120.952559787104
+    ],
+    "latRange": [
+     35.4524659699111,
+     35.4537871107979
+    ]
+   },
+   {
+    "objectId": 2254,
+    "esi": "4",
+    "esiLegend": [
+     {
+      "code": "4",
+      "legend": "4-Coarse-grained sand"
+     }
+    ],
+    "mostSensitive": "4",
+    "mostSensitiveLegend": "4-Coarse-grained sand",
+    "landwardShoretype": "4: Coarse-grained sand beaches",
+    "seawardShoretype": null,
+    "vertices": 40,
+    "coordinatesSha256": "e1e6b7cd7c85ed25783e726a306d5eb7a064a17417ef227f5c39b7d0d81d400a",
+    "firstVertex": [
+     -120.951364848815,
+     35.4513802328941
+    ],
+    "lastVertex": [
+     -120.952559787104,
+     35.4524720329227
+    ],
+    "lonRange": [
+     -120.952559787104,
+     -120.951327565824
+    ],
+    "latRange": [
+     35.4513802328941,
+     35.4524720329227
+    ]
+   },
+   {
+    "objectId": 2255,
+    "esi": "1A",
+    "esiLegend": [
+     {
+      "code": "1A",
+      "legend": "1A-Exposed rocky shores"
+     }
+    ],
+    "mostSensitive": "1A",
+    "mostSensitiveLegend": "1A-Exposed rocky shores",
+    "landwardShoretype": "1A: Exposed rocky shores",
+    "seawardShoretype": null,
+    "vertices": 20,
+    "coordinatesSha256": "a99c5c39cc8f8e5c603631be407c8accad10700f1a096d313aa21ba04ce2660f",
+    "firstVertex": [
+     -120.951246371751,
+     35.4508936458553
+    ],
+    "lastVertex": [
+     -120.951364848815,
+     35.4513802328941
+    ],
+    "lonRange": [
+     -120.951571638822,
+     -120.951246371751
+    ],
+    "latRange": [
+     35.4508936458553,
+     35.4513802328941
+    ]
+   },
+   {
+    "objectId": 2256,
+    "esi": "5",
+    "esiLegend": [
+     {
+      "code": "5",
+      "legend": "5-Mixed sand & gravel"
+     }
+    ],
+    "mostSensitive": "5",
+    "mostSensitiveLegend": "5-Mixed sand & gravel",
+    "landwardShoretype": "5: Mixed sand and gravel beaches",
+    "seawardShoretype": null,
+    "vertices": 22,
+    "coordinatesSha256": "f1b89b96106f8f81b7a2081cb78585e6caecadafc07b083483f1570f57904047",
+    "firstVertex": [
+     -120.95135840565,
+     35.4496395367288
+    ],
+    "lastVertex": [
+     -120.951246371751,
+     35.4508936458553
+    ],
+    "lonRange": [
+     -120.95135840565,
+     -120.95110186368
+    ],
+    "latRange": [
+     35.4496395367288,
+     35.4508936458553
+    ]
+   },
+   {
+    "objectId": 2257,
+    "esi": "6B/2A",
+    "esiLegend": [
+     {
+      "code": "6B",
+      "legend": "6B-Riprap"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "6B+",
+    "mostSensitiveLegend": "6B+-Riprap (most sens)",
+    "landwardShoretype": "6B: Riprap",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 7,
+    "coordinatesSha256": "5fa0ede971807fcd6e65b36350c5ae464052392ba49a917bb06d73892d699e4e",
+    "firstVertex": [
+     -120.915179513005,
+     35.449453089993
+    ],
+    "lastVertex": [
+     -120.915416618034,
+     35.4493660599697
+    ],
+    "lonRange": [
+     -120.915416618034,
+     -120.915179513005
+    ],
+    "latRange": [
+     35.4493649039722,
+     35.449453089993
+    ]
+   },
+   {
+    "objectId": 2258,
+    "esi": "6A/2A",
+    "esiLegend": [
+     {
+      "code": "6A",
+      "legend": "6A-Gravel beaches"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "6A+",
+    "mostSensitiveLegend": "6A+-Gravel beaches (most sens)",
+    "landwardShoretype": "6A: Gravel beaches",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 29,
+    "coordinatesSha256": "8d7ef34446e1a61f5012fbd7313a68d0d130cc022148ca0ef87183b813fdf83e",
+    "firstVertex": [
+     -120.914045454797,
+     35.4491107190318
+    ],
+    "lastVertex": [
+     -120.915179513005,
+     35.449453089993
+    ],
+    "lonRange": [
+     -120.915179513005,
+     -120.914045454797
+    ],
+    "latRange": [
+     35.4491107190318,
+     35.4495796820316
+    ]
+   },
+   {
+    "objectId": 2259,
+    "esi": "2A",
+    "esiLegend": [
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "2A",
+    "mostSensitiveLegend": "2A-Exposed wave-cut platforms in bedrock",
+    "landwardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "seawardShoretype": null,
+    "vertices": 45,
+    "coordinatesSha256": "53bfee1fdfa97d381152b0334e41fb97982c74c2695a32e1649754fa2fe57954",
+    "firstVertex": [
+     -120.951193394567,
+     35.4490273256809
+    ],
+    "lastVertex": [
+     -120.95135840565,
+     35.4496395367288
+    ],
+    "lonRange": [
+     -120.952042470737,
+     -120.951193394567
+    ],
+    "latRange": [
+     35.4490273256809,
+     35.4496395367288
+    ]
+   },
+   {
+    "objectId": 2260,
+    "esi": "2A",
+    "esiLegend": [
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "2A",
+    "mostSensitiveLegend": "2A-Exposed wave-cut platforms in bedrock",
+    "landwardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "seawardShoretype": null,
+    "vertices": 25,
+    "coordinatesSha256": "98b46145d2da17edf244b82a04d1377f13259a8b3b03f48c9f4c295335b2951d",
+    "firstVertex": [
+     -120.913598869725,
+     35.4490918440582
+    ],
+    "lastVertex": [
+     -120.914045454797,
+     35.4491107190318
+    ],
+    "lonRange": [
+     -120.914045454797,
+     -120.913588837708
+    ],
+    "latRange": [
+     35.4487670350239,
+     35.4491107190318
+    ]
+   },
+   {
+    "objectId": 2261,
+    "esi": "6B/3A",
+    "esiLegend": [
+     {
+      "code": "6B",
+      "legend": "6B-Riprap"
+     },
+     {
+      "code": "3A",
+      "legend": "3A-Fine- to medium-grained sand beaches"
+     }
+    ],
+    "mostSensitive": "6B+",
+    "mostSensitiveLegend": "6B+-Riprap (most sens)",
+    "landwardShoretype": "6B: Riprap",
+    "seawardShoretype": "3A: Fine- to medium-grained sand beaches",
+    "vertices": 31,
+    "coordinatesSha256": "50aeee9a22d523c605c74b3de92812f101d6cd8b1b16a5c01a46f71bb70f8dd1",
+    "firstVertex": [
+     -120.908150125876,
+     35.4490774674005
+    ],
+    "lastVertex": [
+     -120.90939387604,
+     35.4487612522919
+    ],
+    "lonRange": [
+     -120.90939387604,
+     -120.908150125876
+    ],
+    "latRange": [
+     35.4487612522919,
+     35.4491574973798
+    ]
+   },
+   {
+    "objectId": 2262,
+    "esi": "3A",
+    "esiLegend": [
+     {
+      "code": "3A",
+      "legend": "3A-Fine- to medium-grained sand beaches"
+     }
+    ],
+    "mostSensitive": "3A",
+    "mostSensitiveLegend": "3A-Fine- to medium-grained sand beaches",
+    "landwardShoretype": "3A: Fine- to medium-grained sand beaches",
+    "seawardShoretype": null,
+    "vertices": 20,
+    "coordinatesSha256": "910200ba9433072b30799061e8730b925ba3be0c3ebec932fd49db047568b6d1",
+    "firstVertex": [
+     -120.906551200592,
+     35.448707283466
+    ],
+    "lastVertex": [
+     -120.908150125876,
+     35.4490774674005
+    ],
+    "lonRange": [
+     -120.908150125876,
+     -120.906551200592
+    ],
+    "latRange": [
+     35.448707283466,
+     35.4490822164165
+    ]
+   },
+   {
+    "objectId": 2263,
+    "esi": "1B",
+    "esiLegend": [
+     {
+      "code": "1B",
+      "legend": "1B-Exposed, solid man-made structures"
+     }
+    ],
+    "mostSensitive": "1B",
+    "mostSensitiveLegend": "1B-Exposed, solid man-made structures",
+    "landwardShoretype": "1B: Exposed, solid man-made structures",
+    "seawardShoretype": null,
+    "vertices": 23,
+    "coordinatesSha256": "7a17511ae4a67f3e5d1616a384c6ee0691a3fe52df576e0589584f41549c7fa7",
+    "firstVertex": [
+     -120.913322292642,
+     35.4486606300346
+    ],
+    "lastVertex": [
+     -120.913598869725,
+     35.4490918440582
+    ],
+    "lonRange": [
+     -120.913598869725,
+     -120.913199318642
+    ],
+    "latRange": [
+     35.4486606300346,
+     35.4491618110684
+    ]
+   },
+   {
+    "objectId": 2264,
+    "esi": "3A",
+    "esiLegend": [
+     {
+      "code": "3A",
+      "legend": "3A-Fine- to medium-grained sand beaches"
+     }
+    ],
+    "mostSensitive": "3A",
+    "mostSensitiveLegend": "3A-Fine- to medium-grained sand beaches",
+    "landwardShoretype": "3A: Fine- to medium-grained sand beaches",
+    "seawardShoretype": null,
+    "vertices": 2,
+    "coordinatesSha256": "4ea579bd570ae12bc0bdd28c08e0e588f7ab11c50a884d0cc58287f2ecfff6a2",
+    "firstVertex": [
+     -120.906378035559,
+     35.4486410964706
+    ],
+    "lastVertex": [
+     -120.906551200592,
+     35.448707283466
+    ],
+    "lonRange": [
+     -120.906551200592,
+     -120.906378035559
+    ],
+    "latRange": [
+     35.4486410964706,
+     35.448707283466
+    ]
+   },
+   {
+    "objectId": 2265,
+    "esi": "3A",
+    "esiLegend": [
+     {
+      "code": "3A",
+      "legend": "3A-Fine- to medium-grained sand beaches"
+     }
+    ],
+    "mostSensitive": "3A",
+    "mostSensitiveLegend": "3A-Fine- to medium-grained sand beaches",
+    "landwardShoretype": "3A: Fine- to medium-grained sand beaches",
+    "seawardShoretype": null,
+    "vertices": 2,
+    "coordinatesSha256": "2bdbced5c37e1810c99ed00c01ebbe25fb9a5020a6d107b3c206bc09af1268aa",
+    "firstVertex": [
+     -120.906346565553,
+     35.4486326904717
+    ],
+    "lastVertex": [
+     -120.906378035559,
+     35.4486410964706
+    ],
+    "lonRange": [
+     -120.906378035559,
+     -120.906346565553
+    ],
+    "latRange": [
+     35.4486326904717,
+     35.4486410964706
+    ]
+   },
+   {
+    "objectId": 2266,
+    "esi": "1A",
+    "esiLegend": [
+     {
+      "code": "1A",
+      "legend": "1A-Exposed rocky shores"
+     }
+    ],
+    "mostSensitive": "1A",
+    "mostSensitiveLegend": "1A-Exposed rocky shores",
+    "landwardShoretype": "1A: Exposed rocky shores",
+    "seawardShoretype": null,
+    "vertices": 9,
+    "coordinatesSha256": "be92b89687589f6b80debb1458bbaefa4dda3c170cf72888289158f445d3ff91",
+    "firstVertex": [
+     -120.912559410502,
+     35.4484392570615
+    ],
+    "lastVertex": [
+     -120.913322292642,
+     35.4486606300346
+    ],
+    "lonRange": [
+     -120.913322292642,
+     -120.912559410502
+    ],
+    "latRange": [
+     35.4484392570615,
+     35.4486606300346
+    ]
+   },
+   {
+    "objectId": 2267,
+    "esi": "5/2A",
+    "esiLegend": [
+     {
+      "code": "5",
+      "legend": "5-Mixed sand & gravel"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "5+",
+    "mostSensitiveLegend": "5+-Mixed sand & gravel (most sens)",
+    "landwardShoretype": "5: Mixed sand and gravel beaches",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 15,
+    "coordinatesSha256": "5a8e1b1c1fb2948ee48f6bbe4ebdd6f63d05a2682ed5de38afec53be8e4c7bda",
+    "firstVertex": [
+     -120.951015915476,
+     35.4483606776286
+    ],
+    "lastVertex": [
+     -120.951193394567,
+     35.4490273256809
+    ],
+    "lonRange": [
+     -120.951193394567,
+     -120.950962475496
+    ],
+    "latRange": [
+     35.4483606776286,
+     35.4490273256809
+    ]
+   },
+   {
+    "objectId": 2268,
+    "esi": "6B/2A",
+    "esiLegend": [
+     {
+      "code": "6B",
+      "legend": "6B-Riprap"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "6B+",
+    "mostSensitiveLegend": "6B+-Riprap (most sens)",
+    "landwardShoretype": "6B: Riprap",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 24,
+    "coordinatesSha256": "5da761c92046d9c3622d57850d86919e809deabda806eaa96b4de98afb2a12e9",
+    "firstVertex": [
+     -120.90939387604,
+     35.4487612522919
+    ],
+    "lastVertex": [
+     -120.910151351111,
+     35.4482656331969
+    ],
+    "lonRange": [
+     -120.910151945112,
+     -120.90939387604
+    ],
+    "latRange": [
+     35.4482656331969,
+     35.4487612522919
+    ]
+   },
+   {
+    "objectId": 2269,
+    "esi": "2A",
+    "esiLegend": [
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "2A",
+    "mostSensitiveLegend": "2A-Exposed wave-cut platforms in bedrock",
+    "landwardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "seawardShoretype": null,
+    "vertices": 49,
+    "coordinatesSha256": "b0fb7c0e3c66c6774c995550cf8583d11826ce785b4efb1a61b951421d11f551",
+    "firstVertex": [
+     -120.910151351111,
+     35.4482656331969
+    ],
+    "lastVertex": [
+     -120.912559410502,
+     35.4484392570615
+    ],
+    "lonRange": [
+     -120.912559410502,
+     -120.910147413105
+    ],
+    "latRange": [
+     35.4479889801573,
+     35.4484392570615
+    ]
+   },
+   {
+    "objectId": 2270,
+    "esi": "5",
+    "esiLegend": [
+     {
+      "code": "5",
+      "legend": "5-Mixed sand & gravel"
+     }
+    ],
+    "mostSensitive": "5",
+    "mostSensitiveLegend": "5-Mixed sand & gravel",
+    "landwardShoretype": "5: Mixed sand and gravel beaches",
+    "seawardShoretype": null,
+    "vertices": 19,
+    "coordinatesSha256": "7e49c1b560fe0068da5a494d83364934026ab011652040a84a7056b87c78f49b",
+    "firstVertex": [
+     -120.929287192054,
+     35.4478962379548
+    ],
+    "lastVertex": [
+     -120.930555568253,
+     35.4479124568764
+    ],
+    "lonRange": [
+     -120.930555568253,
+     -120.929287192054
+    ],
+    "latRange": [
+     35.4478962379548,
+     35.4480901419397
+    ]
+   },
+   {
+    "objectId": 2271,
+    "esi": "5/2A",
+    "esiLegend": [
+     {
+      "code": "5",
+      "legend": "5-Mixed sand & gravel"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "5+",
+    "mostSensitiveLegend": "5+-Mixed sand & gravel (most sens)",
+    "landwardShoretype": "5: Mixed sand and gravel beaches",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 70,
+    "coordinatesSha256": "be8d66aefe43b1e13411449470db173a6fd228d67b7b02c14f9d5c76385e5580",
+    "firstVertex": [
+     -120.921762811882,
+     35.4478841104282
+    ],
+    "lastVertex": [
+     -120.92503728936,
+     35.4475559591904
+    ],
+    "lonRange": [
+     -120.92503728936,
+     -120.921762811882
+    ],
+    "latRange": [
+     35.4475288652916,
+     35.4479210484115
+    ]
+   },
+   {
+    "objectId": 2272,
+    "esi": "5/2A",
+    "esiLegend": [
+     {
+      "code": "5",
+      "legend": "5-Mixed sand & gravel"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "5+",
+    "mostSensitiveLegend": "5+-Mixed sand & gravel (most sens)",
+    "landwardShoretype": "5: Mixed sand and gravel beaches",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 64,
+    "coordinatesSha256": "cc88276e0ab5e6999291e0aeeeaf719082f9a29ff9eb7fbaeb07d6a103ca898c",
+    "firstVertex": [
+     -120.930555568253,
+     35.4479124568764
+    ],
+    "lastVertex": [
+     -120.933914799738,
+     35.447518556627
+    ],
+    "lonRange": [
+     -120.933914799738,
+     -120.930555568253
+    ],
+    "latRange": [
+     35.4474893377377,
+     35.4479124568764
+    ]
+   },
+   {
+    "objectId": 2273,
+    "esi": "5",
+    "esiLegend": [
+     {
+      "code": "5",
+      "legend": "5-Mixed sand & gravel"
+     }
+    ],
+    "mostSensitive": "5",
+    "mostSensitiveLegend": "5-Mixed sand & gravel",
+    "landwardShoretype": "5: Mixed sand and gravel beaches",
+    "seawardShoretype": null,
+    "vertices": 31,
+    "coordinatesSha256": "e4e839ecc1f6dfe1caab000b096490461512a741c20f7e235d1d97d6e2d3b555",
+    "firstVertex": [
+     -120.933914799738,
+     35.447518556627
+    ],
+    "lastVertex": [
+     -120.934672088879,
+     35.4477675226029
+    ],
+    "lonRange": [
+     -120.934672088879,
+     -120.933914799738
+    ],
+    "latRange": [
+     35.447486119617,
+     35.4478983646322
+    ]
+   },
+   {
+    "objectId": 2274,
+    "esi": "2A",
+    "esiLegend": [
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "2A",
+    "mostSensitiveLegend": "2A-Exposed wave-cut platforms in bedrock",
+    "landwardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "seawardShoretype": null,
+    "vertices": 49,
+    "coordinatesSha256": "852f16fb84294d464c0fa6fce22dd0d7007ac00e5d4f308de17b50acf151bdef",
+    "firstVertex": [
+     -120.948641949023,
+     35.4474681256934
+    ],
+    "lastVertex": [
+     -120.951015915476,
+     35.4483606776286
+    ],
+    "lonRange": [
+     -120.951060854463,
+     -120.948641949023
+    ],
+    "latRange": [
+     35.4474681256934,
+     35.4483606776286
+    ]
+   },
+   {
+    "objectId": 2275,
+    "esi": "5/2A",
+    "esiLegend": [
+     {
+      "code": "5",
+      "legend": "5-Mixed sand & gravel"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "5+",
+    "mostSensitiveLegend": "5+-Mixed sand & gravel (most sens)",
+    "landwardShoretype": "5: Mixed sand and gravel beaches",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 56,
+    "coordinatesSha256": "8913c3518b16d1cd842de8d72e64a96d7637d697a7f04635d0719f7c8098b5a4",
+    "firstVertex": [
+     -120.925364055394,
+     35.4473753991526
+    ],
+    "lastVertex": [
+     -120.929287192054,
+     35.4478962379548
+    ],
+    "lonRange": [
+     -120.929287192054,
+     -120.925362930398
+    ],
+    "latRange": [
+     35.4473753991526,
+     35.4478962379548
+    ]
+   },
+   {
+    "objectId": 2276,
+    "esi": "2A",
+    "esiLegend": [
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "2A",
+    "mostSensitiveLegend": "2A-Exposed wave-cut platforms in bedrock",
+    "landwardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "seawardShoretype": null,
+    "vertices": 15,
+    "coordinatesSha256": "a6055d6156b416e474d6a84bc37f887c8687f074532d9968298b41784a8566d7",
+    "firstVertex": [
+     -120.92503728936,
+     35.4475559591904
+    ],
+    "lastVertex": [
+     -120.925364055394,
+     35.4473753991526
+    ],
+    "lonRange": [
+     -120.925364368393,
+     -120.92503728936
+    ],
+    "latRange": [
+     35.4472982751571,
+     35.4475559591904
+    ]
+   },
+   {
+    "objectId": 2277,
+    "esi": "2A",
+    "esiLegend": [
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "2A",
+    "mostSensitiveLegend": "2A-Exposed wave-cut platforms in bedrock",
+    "landwardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "seawardShoretype": null,
+    "vertices": 162,
+    "coordinatesSha256": "edf4d4a4f650ffdb08e0be9e2f84397e167a1a2c0a2e45f39ef78315f05e99a9",
+    "firstVertex": [
+     -120.915416618034,
+     35.4493660599697
+    ],
+    "lastVertex": [
+     -120.921762811882,
+     35.4478841104282
+    ],
+    "lonRange": [
+     -120.921771124871,
+     -120.915416618034
+    ],
+    "latRange": [
+     35.4470840574913,
+     35.4493753099685
+    ]
+   },
+   {
+    "objectId": 2278,
+    "esi": "5/2A",
+    "esiLegend": [
+     {
+      "code": "5",
+      "legend": "5-Mixed sand & gravel"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "5+",
+    "mostSensitiveLegend": "5+-Mixed sand & gravel (most sens)",
+    "landwardShoretype": "5: Mixed sand and gravel beaches",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 80,
+    "coordinatesSha256": "75da49c480b89478dce213a11c324c038678ee3fb6ea6ddc722e22ab5f6d2987",
+    "firstVertex": [
+     -120.941890451967,
+     35.4474012171128
+    ],
+    "lastVertex": [
+     -120.948641949023,
+     35.4474681256934
+    ],
+    "lonRange": [
+     -120.948641949023,
+     -120.941890451967
+    ],
+    "latRange": [
+     35.4467266958205,
+     35.4477243390937
+    ]
+   },
+   {
+    "objectId": 2279,
+    "esi": "1B",
+    "esiLegend": [
+     {
+      "code": "1B",
+      "legend": "1B-Exposed, solid man-made structures"
+     }
+    ],
+    "mostSensitive": "1B",
+    "mostSensitiveLegend": "1B-Exposed, solid man-made structures",
+    "landwardShoretype": "1B: Exposed, solid man-made structures",
+    "seawardShoretype": null,
+    "vertices": 2,
+    "coordinatesSha256": "cf5a34d163833725e77d89752512081336afa8e3937c1c7ed8335d9553c48b2a",
+    "firstVertex": [
+     -120.907740228579,
+     35.4466082141908
+    ],
+    "lastVertex": [
+     -120.906346565553,
+     35.4486326904717
+    ],
+    "lonRange": [
+     -120.907740228579,
+     -120.906346565553
+    ],
+    "latRange": [
+     35.4466082141908,
+     35.4486326904717
+    ]
+   },
+   {
+    "objectId": 2280,
+    "esi": "4/2A",
+    "esiLegend": [
+     {
+      "code": "4",
+      "legend": "4-Coarse-grained sand"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "4+",
+    "mostSensitiveLegend": "4+-Coarse-grained sand (most sens)",
+    "landwardShoretype": "4: Coarse-grained sand beaches",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 43,
+    "coordinatesSha256": "15c01bda22a1b23d0d3301467cc74fed9b5a69258fcf18205de14ccc63493311",
+    "firstVertex": [
+     -120.941104597769,
+     35.4465885400849
+    ],
+    "lastVertex": [
+     -120.941890451967,
+     35.4474012171128
+    ],
+    "lonRange": [
+     -120.941951422934,
+     -120.941104597769
+    ],
+    "latRange": [
+     35.4465885400849,
+     35.4474012171128
+    ]
+   },
+   {
+    "objectId": 2281,
+    "esi": "5/2A",
+    "esiLegend": [
+     {
+      "code": "5",
+      "legend": "5-Mixed sand & gravel"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "5+",
+    "mostSensitiveLegend": "5+-Mixed sand & gravel (most sens)",
+    "landwardShoretype": "5: Mixed sand and gravel beaches",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 118,
+    "coordinatesSha256": "757bfab353e7c50d3745c884ed0b15d7a7ab4ed17499d069056949ce18628e3e",
+    "firstVertex": [
+     -120.934672088879,
+     35.4477675226029
+    ],
+    "lastVertex": [
+     -120.940008947563,
+     35.4462181061188
+    ],
+    "lonRange": [
+     -120.940008947563,
+     -120.934672088879
+    ],
+    "latRange": [
+     35.4462181061188,
+     35.4477675226029
+    ]
+   },
+   {
+    "objectId": 2282,
+    "esi": "5/2A",
+    "esiLegend": [
+     {
+      "code": "5",
+      "legend": "5-Mixed sand & gravel"
+     },
+     {
+      "code": "2A",
+      "legend": "2A-Exposed wave-cut platforms in bedrock"
+     }
+    ],
+    "mostSensitive": "5+",
+    "mostSensitiveLegend": "5+-Mixed sand & gravel (most sens)",
+    "landwardShoretype": "5: Mixed sand and gravel beaches",
+    "seawardShoretype": "2A: Exposed, wave-cut platforms in bedrock",
+    "vertices": 31,
+    "coordinatesSha256": "ebf1f42f42da89138572d76171af9084735ffa806a6d41c961e956e330673381",
+    "firstVertex": [
+     -120.940008947563,
+     35.4462181061188
+    ],
+    "lastVertex": [
+     -120.941104597769,
+     35.4465885400849
+    ],
+    "lonRange": [
+     -120.941104597769,
+     -120.940008947563
+    ],
+    "latRange": [
+     35.4460992960806,
+     35.4465885400849
+    ]
+   },
+   {
+    "objectId": 2283,
+    "esi": "3A",
+    "esiLegend": [
+     {
+      "code": "3A",
+      "legend": "3A-Fine- to medium-grained sand beaches"
+     }
+    ],
+    "mostSensitive": "3A",
+    "mostSensitiveLegend": "3A-Fine- to medium-grained sand beaches",
+    "landwardShoretype": "3A: Fine- to medium-grained sand beaches",
+    "seawardShoretype": null,
+    "vertices": 42,
+    "coordinatesSha256": "40d73a2f25b2f5ac7dbe7834c8eaa573730685548afab124b684a0b37815240c",
+    "firstVertex": [
+     -120.901891057606,
+     35.445942157496
+    ],
+    "lastVertex": [
+     -120.906346565553,
+     35.4486326904717
+    ],
+    "lonRange": [
+     -120.906346565553,
+     -120.901891057606
+    ],
+    "latRange": [
+     35.445942157496,
+     35.4486326904717
+    ]
+   }
+  ],
+  "dependentHold": "SC1952-08 data selection for Estero Bluffs stays held until the selection above is resolved."
+ },
+ "privateFiles": [
+  {
+   "path": "var/shore-review/SC1952-07/candidate.geojson",
+   "bytes": 36464,
+   "sha256": "d7b40d7fe319a738e931ac6e8eaebf0b3d09de3693fe144525baa4f076c1f80a"
+  },
+  {
+   "path": "var/shore-review/SC1952-07/collector.stderr",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "path": "var/shore-review/SC1952-07/collector.stdout",
+   "bytes": 68,
+   "sha256": "8bc7ff41f4e56da686740c6798ec0643e647b1a4c076e6222b1341ba1859261d"
+  },
+  {
+   "path": "var/shore-review/SC1952-07/fetch_pages.py",
+   "bytes": 2006,
+   "sha256": "f7a66f6f32692edce436d77145fdc390a80c2b0f71f684f694946cc6b528b05e"
+  },
+  {
+   "path": "var/shore-review/SC1952-07/pages/cdfw-central-rules.html",
+   "bytes": 87866,
+   "sha256": "7bd3c3506c862e5c9fba756014c3dd4aa1372d001724a517adaa19871392d597"
+  },
+  {
+   "path": "var/shore-review/SC1952-07/pages/noaa-layer3-metadata.json",
+   "bytes": 28308,
+   "sha256": "f7a2c9d4587e9cef1a7b1b3ccd4f21d9837135a97359a7b909f9a4bf19b6631d"
+  },
+  {
+   "path": "var/shore-review/SC1952-07/pages/pages-receipts.json",
+   "bytes": 909,
+   "sha256": "9cdf92dac903f74f821bf249ada45cd0975c5c0158a80ae90b95bb38683ad6ef"
+  },
+  {
+   "path": "var/shore-review/SC1952-07/sources/ccc-access-item.json",
+   "bytes": 4576,
+   "sha256": "e7fafa620aac73d8a21ba894605e37f68399b2d1f40cff763c6bba7586d3b62d"
+  },
+  {
+   "path": "var/shore-review/SC1952-07/sources/ccc-access-points.json",
+   "bytes": 325083,
+   "sha256": "4925eff242f1c841d8035ccbefe851b0251e75063e39826f02cd1031d17cacc3"
+  },
+  {
+   "path": "var/shore-review/SC1952-07/sources/noaa-esi-shoreline.json",
+   "bytes": 1080079,
+   "sha256": "79b803306dc128f304948f8751e964ccc6ac605da13830d8e88a538d13348298"
+  },
+  {
+   "path": "var/shore-review/SC1952-07/sources/receipts.json",
+   "bytes": 1115,
+   "sha256": "f39898c181847e929c5aa18817685b77c34455dc5ad835817c86647455c30d05"
+  }
+ ],
+ "holds": [
+  "M1b owner re-read and M1c review dates remain owner work; no REVIEWS or register edit.",
+  "Closure fields are inventory evidence, not opening certification.",
+  "Acquisition does not approve current fishing legality.",
+  "Raw hash changes (NOAA, terms, CDFW page) are byte changes only; baselines were not retained.",
+  "M2 Estero Bluffs selection unresolved; SC1952-08 selection held."
+ ]
+}
