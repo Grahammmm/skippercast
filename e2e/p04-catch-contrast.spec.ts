@@ -205,7 +205,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // renders none of them. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
   // SC-POPOVER: the desktop legend's basis popovers are placed by anchor positioning so the scrolling legend cannot clip them; no paint changes and
   // Reports' catch sheet renders no legend. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
-  "web/app/app.css": "ec7a13668e7be9850c8d17fbcaef993aa50c376f764f5eeace229caf2cd96ad3",
+  // SC2207-11 (first answer styles): app.css appends only a scoped .app-first-answer* block (opaque --panel, token text roles) that the
+  // Reports catch sheet never mounts (FirstAnswerLine renders only in the desktop App shell); check_contrast.mjs changes only the appCss
+  // surface hash and its comment, with contrast(), pairs, thresholds and line citations untouched. Both rebound from the final bytes.
+  "web/app/app.css": "b1592e490fc050131a7ff30d8ac8a1975e5a540288d84360755875336f986cc6",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "56215598e33a416cb6c877a0661ce3923035f3266872faae9b7eb89db02eb4a2",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -233,7 +236,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // BF-wcag: check_contrast.mjs changes only the panelCss/appCss surface hashes and their comments; rebound.
   // BF-sst-fronts: check_contrast.mjs changes only the legendTsx surface hash and its comment (Legend.tsx adds a Temp fronts row
   // in the existing app-legend-note text role); Reports never mounts the legend. Rebind only check_contrast.mjs.
-  "scripts/check_contrast.mjs": "aa797110dd96a0e2c396a0e6ada0bd770722eedbf62c7d87968d664cac340db0",
+  // SC2207-11: check_contrast.mjs changes only the appCss surface hash and its comment (see the app.css pin above); rebound.
+  "scripts/check_contrast.mjs": "a3f327b903f109d171a7b81c0780b8e62ced94ac1ac8c8f143d8ef502781b41b",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still

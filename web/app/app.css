@@ -439,3 +439,22 @@ body { background: var(--bg); color: var(--text); font: var(--weight-regular) va
 .app-limits-note { color: var(--muted); font-size: var(--text-13); }
 .app-limits-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .app-limits-trigger[data-own="true"] { color: var(--mint); }
+
+/* SC2207-11: first answer. BF-one-answer's FirstAnswerLine (web/app/App.tsx) styled from tokens only: a single column on an opaque --panel
+   band, so every pair is one the contrast check already holds (text, muted, mint, amber, coral, blue on --panel; text on the ghost Button's
+   --panel-2). The verdict word is the unchanged heading, coloured by data-fishable; the words stay, so colour is never the only cue, and
+   unknown is muted, never mint. It wraps from a 320 px available width; no height, clamp or ellipsis. The ghost Button keeps its ui.css
+   target, focus ring and hover. */
+.app-first-answer { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); min-width: 0; box-sizing: border-box; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); background: var(--panel); color: var(--text); overflow-wrap: anywhere; }
+.app-first-answer > * { min-width: 0; }
+.app-first-answer-line { margin: 0; color: var(--text); font: var(--weight-semibold) var(--text-28) / var(--leading-heading) var(--font-sans); }
+.app-first-answer[data-fishable="yes"] .app-first-answer-line { color: var(--mint); }
+.app-first-answer[data-fishable="marginal"] .app-first-answer-line { color: var(--amber); }
+.app-first-answer[data-fishable="no"] .app-first-answer-line { color: var(--coral); }
+.app-first-answer[data-fishable="unknown"] .app-first-answer-line { color: var(--muted); }
+.app-first-answer-reason { margin: 0; color: var(--text); font: var(--weight-regular) var(--text-15) / var(--leading-body) var(--font-sans); }
+.app-first-answer-rules { margin: 0; color: var(--muted); font: var(--weight-regular) var(--text-13) / var(--leading-body) var(--font-sans); }
+.app-first-answer-rules a { color: var(--blue); text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.app-first-answer-rules a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.app-first-answer-more { justify-self: start; box-sizing: border-box; max-width: 100%; white-space: normal; text-align: center; }
+/* end SC2207-11 */

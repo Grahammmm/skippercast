@@ -385,7 +385,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // .app-mark-regs a link rule; legend text paint and backing are unchanged.
   // SC-POPOVER only places the desktop legend's basis popovers against their own button (position: fixed + anchor positioning) so the
   // scrolling legend does not clip them; the popover keeps its existing ui.css paint, and legend text paint and backing are unchanged.
-  "appCss": "ec7a13668e7be9850c8d17fbcaef993aa50c376f764f5eeace229caf2cd96ad3",
+  // SC2207-11 only appends a scoped .app-first-answer* block at the end of app.css (opaque --panel, token text roles); no existing rule or
+  // legend paint changed, and the cited line numbers above are unmoved.
+  "appCss": "b1592e490fc050131a7ff30d8ac8a1975e5a540288d84360755875336f986cc6",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
