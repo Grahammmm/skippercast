@@ -5,6 +5,7 @@ import unittest
 
 from skippercast.platform.bottom_targets import (bag_metadata, cells_qualified,
     fresh_closures, source_url_allowed, vr_transform, terrain_metrics, contained_outline, target_prefix)
+from skippercast.atlas.scoring import habitat_grade, habitat_score
 from tests._support import ROOT
 
 try:
@@ -135,6 +136,77 @@ class ProducedReleaseTests(unittest.TestCase):
             self.assertEqual(t["rating"]["grade_thresholds"],{"A":75,"B":55})
             self.assertEqual(t["habitat_grade"],"A" if t["habitat_score"]>=75 else "B" if t["habitat_score"]>=55 else "C")
             self.assertEqual(t["vertical_datum"],"MLLW")
+
+
+# docs/roadmap.md Next 5 ("coverage limits kept apart from habitat priority"): this block enforces it.
+# Charter, AIS, fleet and coverage fields on a target must never move habitat_score or habitat_grade;
+# only the four terrain metric keys count, so the separation is a failing test, not an accident of the formula.
+FLEET_KEYS = ("charter_trips","charter_identity","ais_stop_hours","ais_effort_hours","fleet_visits","coverage_fraction","coverage_note")
+FLEET_VARIANTS = {
+    "numbers": {"charter_trips":12,"charter_identity":7,"ais_stop_hours":300.5,"ais_effort_hours":1e9,"fleet_visits":99,"coverage_fraction":0.25,"coverage_note":"partial"},
+    "huge": {k:1e308 for k in FLEET_KEYS},
+    "negative": {k:-5 for k in FLEET_KEYS},
+    "nan_and_inf": {"charter_trips":float("nan"),"charter_identity":float("inf"),"ais_stop_hours":float("-inf"),"ais_effort_hours":float("nan"),
+                    "fleet_visits":float("nan"),"coverage_fraction":float("nan"),"coverage_note":float("nan")},
+    "strings": {k:"not a number" for k in FLEET_KEYS},
+    "none": {k:None for k in FLEET_KEYS},
+    "dict_and_list": {"charter_trips":{"a":1},"charter_identity":[1,2],"ais_stop_hours":{},"ais_effort_hours":[],"fleet_visits":{"x":{"y":2}},
+                      "coverage_fraction":(1,2),"coverage_note":{"note":"n"}},
+    "bool": {k:True for k in FLEET_KEYS},
+}
+BARE_METRICS = [
+    {"relief_210m_m":0,"rugose_or_bedrock_fraction_210m":0,"plane_residual_rms_250m_m":0,"rough_habitat_within_250m_ha":0},
+    {"relief_210m_m":8,"rugose_or_bedrock_fraction_210m":0.8,"plane_residual_rms_250m_m":1.5,"rough_habitat_within_250m_ha":6},
+    {"relief_210m_m":15,"rugose_or_bedrock_fraction_210m":1,"plane_residual_rms_250m_m":3,"rough_habitat_within_250m_ha":10},
+    {"relief_210m_m":400,"rugose_or_bedrock_fraction_210m":1,"plane_residual_rms_250m_m":90,"rough_habitat_within_250m_ha":5000},
+    {"relief_210m_m":3.7,"rugose_or_bedrock_fraction_210m":0.31,"plane_residual_rms_250m_m":0.6,"rough_habitat_within_250m_ha":1.2},
+]
+
+
+class HabitatPriorityIgnoresFleetEvidenceTests(unittest.TestCase):
+    def test_fleet_fields_in_metrics_leave_score_and_grade_unchanged(self):
+        for bare in BARE_METRICS:
+            want=habitat_score(bare)
+            for name,extra in FLEET_VARIANTS.items():
+                with self.subTest(bare=bare,extra=name):
+                    got=habitat_score({**bare,**extra})
+                    self.assertEqual(got,want)
+                    self.assertEqual(habitat_grade(got),habitat_grade(want))
+
+    def test_fleet_fields_on_the_target_leave_the_scored_metrics_and_result_unchanged(self):
+        for bare in BARE_METRICS:
+            for name,extra in FLEET_VARIANTS.items():
+                with self.subTest(bare=bare,extra=name):
+                    target={"id":"T","metrics":dict(bare),**extra}
+                    self.assertEqual(habitat_score(target["metrics"]),habitat_score(bare))
+                    self.assertEqual(habitat_grade(habitat_score(target["metrics"])),habitat_grade(habitat_score(bare)))
+
+    def test_fleet_fields_do_not_cause_validation_errors_or_mask_them(self):
+        # Only the four metric keys are validated: fleet junk never raises, and a bad metric still raises.
+        ok=BARE_METRICS[1]
+        for name,extra in FLEET_VARIANTS.items():
+            with self.subTest(extra=name):
+                habitat_score({**ok,**extra})
+                with self.assertRaises(ValueError):habitat_score({**ok,**extra,"relief_210m_m":-1})
+                with self.assertRaises(ValueError):habitat_score({**ok,**extra,"rugose_or_bedrock_fraction_210m":1.5})
+                with self.assertRaises(ValueError):habitat_score({**ok,**extra,"rough_habitat_within_250m_ha":float("nan")})
+                with self.assertRaises(KeyError):habitat_score({k:v for k,v in {**ok,**extra}.items() if k!="plane_residual_rms_250m_m"})
+
+    def test_every_committed_atlas_target_scores_the_same_with_fleet_fields(self):
+        targets=json.loads((ROOT/"dist/data/atlas.json").read_text())["targets"]
+        self.assertGreater(len(targets),0)
+        for t in targets:
+            metrics=t["metrics"]
+            for extra in (FLEET_VARIANTS["numbers"],FLEET_VARIANTS["nan_and_inf"],FLEET_VARIANTS["strings"]):
+                self.assertEqual(habitat_score({**metrics,**extra}),habitat_score(metrics),t["id"])
+
+    def test_a_fifth_key_summed_into_the_score_would_be_caught(self):
+        # Sanity: the fixtures do exercise every term, so an extra summed key (effort hours of 1e9 added
+        # to any term) could not leave all of these scores equal. A score of 0 and of 100 both occur.
+        scores={habitat_score(m) for m in BARE_METRICS}
+        self.assertIn(0,scores)
+        self.assertIn(100,scores)
+        self.assertGreater(len(scores),3)
 
 
 if __name__=="__main__":unittest.main()
