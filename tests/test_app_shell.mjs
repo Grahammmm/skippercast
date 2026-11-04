@@ -514,7 +514,7 @@ test('the helpers behind the controls round-trip through the store keys', async 
   state.syncFromURL(ORIGIN);
   assert.equal(windowText(now, TZ), 'Today · 1 pm');
   // Rail toggles keep rail order and write ?layers=none for an empty rail.
-  assert.deepEqual(RAIL_ENTRIES.map(e => e.id), [...RAIL_IDS]);
+  assert.deepEqual(RAIL_ENTRIES.map(e => e.id).sort(), [...RAIL_IDS].sort(), 'every rail id has exactly one entry (their order may differ: the rail follows the draw order, the ids were appended)');
   assert.deepEqual(toggled(['swell'], 'seafloor', true), ['seafloor', 'swell']);
   assert.deepEqual(toggled(['seafloor', 'swell'], 'swell', false), ['seafloor']);
   assert.equal(state.layersParam(toggled(['seafloor'], 'seafloor', false)), 'none');

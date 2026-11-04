@@ -390,7 +390,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
   // SC2007-02 adds the shared quiet Button (Try again) to the Protected areas row; no text paint changed.
-  "legendTsx": "09d316ca34b38413e8766aa61a324b88abb9fb77ac0880b727feaf4efa0fb76f"
+  // BF-sst-fronts adds a Temp fronts row using the existing app-legend-note text role; no backing, opacity or text paint changed.
+  "legendTsx": "87a45370539e60625d69c6d16d9ecf2b2c0d00055dd21823d7060ff483a759df"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
