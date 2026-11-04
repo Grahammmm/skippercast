@@ -208,7 +208,7 @@ test('offline notes preserve plan/source provenance and safely render user and s
   assert.match(html, /Planned date 2026-09-24/);
   assert.ok(html.includes(NOW.toISOString()));
   assert.ok(html.includes(CHECKED));
-  assert.match(html, /does not update offline/);
+  assert.match(html, /stays unchanged offline/);
   assert.match(html, /not a future clearance/);
   assert.match(html, /AIS unverified/);
 });

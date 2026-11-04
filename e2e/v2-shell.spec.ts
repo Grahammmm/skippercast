@@ -74,7 +74,16 @@ test('FE-52: Reports opens from the masthead (laptop) or the sheet footer (phone
   expect(pageErrors).toEqual([]);
 });
 
-test('view links, the profile switch, the rail and the hour slider update the address without a reload', async ({page, pageErrors, v2, isMobile}) => {
+// The clock is fixed (Date held, timers still run) before the page opens, so each case is the same on every run: an
+// ordinary day (Today has twelve hours left, so End is a real move) and the last hour of Pacific today (Today has one
+// hour, so the Day chip must be pressed and Home is the real move).
+const HOUR_CASES = [
+  {name: 'ordinary day', now: '2026-10-12T19:30:00Z', lastHour: false, atEnd: false, expected: '11 pm', hour: '2026-10-13T06:00Z', day: null},
+  {name: 'last hour today', now: '2026-10-12T06:30:00Z', lastHour: true, atEnd: true, expected: '12 am', hour: '2026-10-12T07:00Z', day: '2026-10-12'},
+] as const;
+
+for (const c of HOUR_CASES) test(`view links, the profile switch, the rail and the hour slider update the address without a reload: ${c.name}`, async ({page, pageErrors, v2, isMobile}) => {
+  await page.clock.setFixedTime(new Date(c.now));
   await v2.open('app', AREA);
   await page.evaluate(() => { (window as unknown as {__v2: number}).__v2 = 1; });
   const stillLoaded = () => page.evaluate(() => (window as unknown as {__v2?: number}).__v2 === 1);
@@ -104,22 +113,46 @@ test('view links, the profile switch, the rail and the hour slider update the ad
   }
   const slider = page.locator('input[aria-label="Hour"]');
   // Today runs from the current hour to 11 pm (FE-12); at 11 pm Pacific it has one hour, so take tomorrow's full day.
-  if (await slider.getAttribute('max') === '0') await page.locator('[aria-label="Day"] button').nth(1).evaluate(b => (b as HTMLButtonElement).click());
+  expect(await slider.getAttribute('max') === '0', 'Today has one hour left only in the last-hour case').toBe(c.lastHour);
+  if (c.lastHour) {
+    // On a phone the Day chips are in the brief sheet, which only peeks: open it as a person would, then press the chip.
+    if (isMobile) {
+      await page.locator('.ui-sheet-handle').focus();
+      await page.keyboard.press('End');
+      await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full');
+    }
+    const tomorrow = page.locator('[aria-label="Day"] button').nth(1);
+    await tomorrow.click();
+    await expect(tomorrow).toHaveAttribute('aria-pressed', 'true');
+    // The same local hour (11 pm) on tomorrow's 24 hours: index 23.
+    await expect(slider).toHaveValue('23');
+    await expect(page.locator('.ui-dock-readout')).toHaveText('11 pm');
+    await expect(page).toHaveURL(u => u.searchParams.get('hour') === '2026-10-13T06:00Z' && u.searchParams.get('day') === '2026-10-12');
+  }
   // At the slider's end, End emits no input event, so choose the opposite endpoint.
-  const atEnd = await slider.inputValue() === await slider.getAttribute('max');
-  const expected = atEnd ? '12 am' : '11 pm';
-  console.info('Hour slider keyboard selection', {atEnd, expected});
+  const max = await slider.getAttribute('max');
+  expect(max, 'the slider has a numeric maximum').toMatch(/^\d+$/);
+  const atEnd = await slider.inputValue() === max;
+  expect(atEnd, 'the endpoint pressed is the opposite one').toBe(c.atEnd);
+  const expectedValue = atEnd ? '0' : max!;
+  if (!c.lastHour) expect(Number(max), 'a multi-hour Today').toBeGreaterThan(0);
+  else expect(max, 'tomorrow is a full 24-hour day').toBe('23');
   await slider.focus();
   await page.keyboard.press(atEnd ? 'Home' : 'End');
+  await expect(slider).toHaveValue(expectedValue);
   await expect(page).toHaveURL(/[?&]hour=\d{4}-\d{2}-\d{2}T\d{2}%3A00Z/);
-  await expect(page.locator('.ui-dock-readout')).toHaveText(expected);
+  expect(new URL(page.url()).searchParams.get('hour'), 'the hour in the address').toBe(c.hour);
+  expect(new URL(page.url()).searchParams.get('day'), 'the day in the address').toBe(c.day);
+  await expect(page.locator('.ui-dock-readout')).toHaveText(c.expected);
   expect(await stillLoaded(), 'no reload').toBe(true);
   // A shared link restores the same choices.
   const shared = page.url();
   await page.goto('about:blank');
   await page.goto(shared);
   await expect(page.locator('[aria-label="Profile"] button[aria-pressed="true"]')).toHaveText('Spear');
-  await expect(page.locator('.ui-dock-readout')).toHaveText(expected);
+  await expect(page.locator('input[aria-label="Hour"]')).toHaveValue(expectedValue);
+  await expect(page.locator('.ui-dock-readout')).toHaveText(c.expected);
+  expect(new URL(page.url()).searchParams.get('hour'), 'the shared hour is kept').toBe(c.hour);
   expect(pageErrors).toEqual([]);
 });
 
