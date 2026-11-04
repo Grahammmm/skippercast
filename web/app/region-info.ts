@@ -11,7 +11,7 @@ import {startupAdmission} from '../landing/region-warm.ts';
 import {tideRegion, type TideRegion} from '../tide-stations.ts';
 import {unavailableTargets} from '../species.ts';
 import {region} from '../state.ts';
-import {DEFAULT_ZONE} from '../zone.ts';
+import {DEFAULT_ZONE, validZone} from '../zone.ts';
 import type {RulesRegion} from '../regs.ts';
 
 /** What the masthead knows about the region: name, centre and zone from regions/<id>/region.json. */
@@ -43,15 +43,6 @@ export const zone = (): string => currentRegionInfo()?.timezone ?? DEFAULT_ZONE;
 export const REGION_READ_TIMEOUT_MS = 10_000;
 /** SCJ-7: the reader's answer when regions/<id>/region.json is a 404, so the region does not exist (not a failed read). */
 export const REGION_MISSING = 'missing' as const;
-
-const zones = new Map<string, boolean>();
-/** RF0510-2: a region's zone is a 1..64-char string Intl knows; answers are cached (few region ids, at most 64 kept). */
-function validZone(value: unknown): value is string {
-  if (typeof value !== 'string' || !value || value.length > 64) return false;
-  let ok = zones.get(value);
-  if (ok === undefined) { try { new Intl.DateTimeFormat('en-US', {timeZone: value}); ok = true; } catch { ok = false; } if (zones.size < 64) zones.set(value, ok); }
-  return ok;
-}
 
 /** Share parsed cold reads, not just headers: each admitted slot includes JSON consumption.
  * Caller cancellation withdraws publication without freeing an abort-ignoring task's slot. */
