@@ -74,9 +74,11 @@ export function parseResponse(data: ExternalJSON): LookupResult {
     if (parsed.protocol !== 'https:' || !parsed.hostname) return;
     sources.push({url, title: String(title || parsed.hostname).slice(0, 140)});
   };
+  // Optional source metadata: a container or row of the wrong shape is skipped, never fatal.
+  const addRow = (row: unknown) => { if (row && typeof row === 'object' && !Array.isArray(row)) add((row as ExternalJSON).url, (row as ExternalJSON).title); };
   for (const b of blocks) {
-    for (const c of b.citations || []) add(c.url, c.title);
-    if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) for (const r of b.content) add(r.url, r.title);
+    if (Array.isArray(b.citations)) for (const c of b.citations) addRow(c);
+    if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) for (const r of b.content) addRow(r);
   }
   const estimated: string[] = Array.isArray(raw.estimated) ? raw.estimated.filter((k: unknown): k is string => typeof k === 'string' && k in boat).slice(0, 12) : [];
   return {boat, confidence: ['high', 'medium', 'low'].includes(raw.confidence) ? raw.confidence : 'low',
