@@ -52,7 +52,7 @@ Rules for every task:
 
 | Status | Count | Tasks |
 | --- | --- | --- |
-| DONE on `main` | 65 | every task except the two below and the two dropped |
+| DONE on `main` | 65 | every task except FE-62 and the two dropped |
 | CHANGED, not started | 1 | FE-62 (part a, the archive, built 2026-10-11; part b, the bridge, pending; then the owner deletes the fish repo) |
 | DROPPED | 2 | FE-13, FE-26 |
 
