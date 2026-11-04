@@ -288,3 +288,17 @@ test('offline save writes chosen station responses and directory; refuses NOAA e
   assert.match(trip, /await tideSelection.packURLs\(id\)/);
   assert.match(trip, /await saveTidePack\(tideURLs, put, signal\)/);
 });
+
+test('invalid_only_predictions_fail_load_without_default_substitution', async () => {
+  const bad = {predictions: [{t: '2026-02-30 12:00', v: '9.9', type: 'H'}, {t: '2026-03-01 24:00', v: '9.9', type: 'L'}]};
+  const badCurve = {predictions: [{t: '2026-02-30 12:00', v: '9.9'}, {t: '2026-03-01 24:00', v: '9.9'}]};
+  const saved = '2026-10-07T10:00:00Z';
+  const sub = await loadTideReading(b, async () => Response.json(bad, {headers: {'X-SC-Offline': saved}}), now.getTime());
+  assert.equal(sub.failed, true); assert.deepEqual(sub.events, []); assert.deepEqual(sub.points, []);
+  assert.equal(sub.fetchedAt, now.toISOString(), 'no valid interval: clock falls back to now');
+  const byInterval = (hiloBody, curveBody) => async url => Response.json(new URL(url).searchParams.get('interval') === 'hilo' ? hiloBody : curveBody, {headers: {'X-SC-Offline': saved}});
+  const curveBad = await loadTideReading(a, byInterval(hilo, badCurve), now.getTime());
+  assert.equal(curveBad.failed, true); assert.equal(curveBad.events.length, 2); assert.deepEqual(curveBad.points, []); assert.equal(curveBad.fetchedAt, saved);
+  const hiloBad = await loadTideReading(a, byInterval(bad, curve), now.getTime());
+  assert.equal(hiloBad.failed, true); assert.deepEqual(hiloBad.events, []); assert.equal(hiloBad.points.length, 2); assert.equal(hiloBad.fetchedAt, saved);
+});

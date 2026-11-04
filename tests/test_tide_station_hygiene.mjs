@@ -78,3 +78,40 @@ test('distinct times are all kept and NOAA error bodies still give nothing', () 
   assert.equal(parseTidePredictions(body).events.length, 2);
   assert.deepEqual(parseTidePredictions({...body, error: {message: 'No data'}}), {points: [], events: []});
 });
+
+const iso = t => t.replace(' ', 'T') + ':00.000Z';
+
+test('tide_prediction_minutes_are_real_utc_calendar_minutes', () => {
+  const impossible = ['2026-02-29 12:00', '2026-02-30 12:00', '2026-04-31 12:00', '2100-02-29 12:00', '2026-00-10 12:00', '2026-13-10 12:00',
+    '2026-03-00 12:00', '2026-03-32 12:00', '2026-03-02 24:00', '2026-03-02 12:60', '2026-3-02 12:00', ' 2026-03-02 12:00', '2026-03-02 12:00 ', '2026-03-02T12:00', 7, null];
+  for (const t of impossible) {
+    for (const type of ['H', 'L', undefined]) {
+      const r = parseTidePredictions({predictions: [{t, v: '1.0', ...(type ? {type} : {})}]});
+      assert.deepEqual(r, {points: [], events: []}, `${JSON.stringify(t)} ${type}`);
+    }
+  }
+  const real = ['2028-02-29 12:00', '2000-02-29 00:00', '2026-12-31 23:59', '2027-01-01 00:00', '2026-03-02 12:00', '2026-04-30 00:00'];
+  for (const t of real) {
+    const pts = parseTidePredictions({predictions: [{t, v: '0'}, {t, v: '-1.5', type: 'L'}]});
+    assert.deepEqual(pts.points, [{at: iso(t), heightFt: 0}], t);
+    assert.deepEqual(pts.events, [{at: iso(t), heightFt: -1.5, type: 'L'}], t);
+  }
+});
+
+test('invalid_rollover_cannot_shadow_valid_prediction', () => {
+  const body = {predictions: [
+    {t: '2026-02-30 12:00', v: '9.9', type: 'H'}, {t: '2026-03-02 12:00', v: '2.0', type: 'H'},
+    {t: '2026-02-30 12:00', v: '9.9'}, {t: '2026-03-02 12:00', v: '2.0'},
+    {t: '2026-03-01 24:00', v: '8.8', type: 'L'}, {t: '2026-03-02 00:00', v: '0.5', type: 'L'},
+    {t: '2026-03-01 24:00', v: '8.8'}, {t: '2026-03-02 00:00', v: '0.5'},
+    {t: '2026-03-02 06:00', v: '1.1', type: 'H'}, {t: '2026-03-02 06:00', v: '7.7', type: 'H'},
+  ]};
+  const before = JSON.stringify(body);
+  const {events, points} = parseTidePredictions(body);
+  assert.deepEqual(events, [
+    {at: '2026-03-02T00:00:00.000Z', heightFt: 0.5, type: 'L'}, {at: '2026-03-02T06:00:00.000Z', heightFt: 1.1, type: 'H'},
+    {at: '2026-03-02T12:00:00.000Z', heightFt: 2.0, type: 'H'},
+  ]);
+  assert.deepEqual(points, [{at: '2026-03-02T00:00:00.000Z', heightFt: 0.5}, {at: '2026-03-02T12:00:00.000Z', heightFt: 2.0}]);
+  assert.equal(JSON.stringify(body), before, 'input not mutated');
+});
