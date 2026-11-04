@@ -95,6 +95,9 @@
     "tile.wind": {"en": "Wind", "es": "Viento"},
     "tile.swell": {"en": "Swell", "es": "Oleaje"},
     "tile.water": {"en": "Water", "es": "Agua"},
-    "tile.tide": {"en": "Tide", "es": "Marea"}
+    "tile.tide": {"en": "Tide", "es": "Marea"},
+    "menu.language": {"en": "Language", "es": "Idioma"},
+    "menu.language.en": {"en": "English", "es": "English"},
+    "menu.language.es": {"en": "Español", "es": "Español"}
   }
 }
