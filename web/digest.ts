@@ -13,10 +13,31 @@ export function nextWeekend(today: string): {sat: string | null; sun: string} {
   return weekday === 0 ? {sat: null, sun: today} : {sat: plus(6 - weekday), sun: plus(7 - weekday)};
 }
 
+/** What an assessment's own status means, in numerical-preference words (not a go/no-go or a clearance). */
+const ASSESSMENT_WORD: Readonly<Record<string, string>> = {
+  'within limits': 'within your saved limits',
+  'above limits': 'above your saved limits',
+  'unverified': 'check incomplete',
+};
+
+/** Stored hazard notes count only as a whole list of non-empty strings; one bad entry drops them all. */
+function storedNotes(hazards: unknown): string[] {
+  if (!Array.isArray(hazards) || !hazards.every(note => typeof note === 'string' && note.trim().length > 0)) return [];
+  return hazards;
+}
+
+/** The chosen status word, then each stored note as stored and in order, prefixed as server/alert-policy.ts alertMessage does. */
 function statusWord(trip: DigestTrip): string {
   try {
-    const status: unknown = JSON.parse(trip.last_assessment ?? 'null')?.status;
-    if (typeof status === 'string' && status) return Object.hasOwn(STATUS_LABEL, status) ? STATUS_LABEL[status]! : status;
+    const assessment: unknown = JSON.parse(trip.last_assessment ?? 'null');
+    if (assessment && typeof assessment === 'object' && !Array.isArray(assessment)) {
+      const {status, hazards} = assessment as {status?: unknown; hazards?: unknown};
+      if (typeof status === 'string' && status) {
+        const word = Object.hasOwn(ASSESSMENT_WORD, status) ? ASSESSMENT_WORD[status]!
+          : Object.hasOwn(STATUS_LABEL, status) ? STATUS_LABEL[status]! : status;
+        return word + storedNotes(hazards).map(note => ` Hazard note: ${note}`).join('');
+      }
+    }
   } catch { /* A missing or malformed assessment is not a verdict. */ }
   return 'not assessed yet';
 }
