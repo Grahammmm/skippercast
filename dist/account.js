@@ -102,6 +102,60 @@ const logFormHTML = () => `<h2 class="account-subhead">Catch log</h2>
     </form>
     <ul class="account-passkeys" id="log-list"></ul>`;
 
+/** One saved spot as list HTML. Name, note and verdict are escaped, so markup in them shows as plain text. */
+export function spotItemHTML(spot, verdict) {
+  const name = String(spot.name ?? '').replace(/[\u0000-\u001f\ufffe\uffff]/g, '').trim() || 'Unnamed spot';
+  return `<li><span>${esc(name)} · ${esc(spot.lat)}, ${esc(spot.lon)}</span>${verdict?.text ? `<p class="account-hint">${esc(verdict.text)}</p>` : ''}${spot.note ? `<p class="account-hint">${esc(spot.note)}</p>` : ''}
+    <button type="button" data-remove-spot="${esc(spot.id)}">Remove</button></li>`;
+}
+
+/** The form's fields as the spots route's body. A position is always sent; the route refuses a missing or unreadable one. */
+export function spotBody(f) {
+  const num = v => (String(v ?? '').trim() === '' ? null : Number(v));
+  return {name: f.name ?? '', lat: num(f.lat), lon: num(f.lon), note: f.note || null};
+}
+
+/** Each spot's protected-area reading from the shared screen: excluded (with the boundary named), unavailable, or clear (no text). */
+export async function spotVerdicts(spots, screen) {
+  const {protectedHitReading} = await import('./trip-export.js');
+  return spots.map(s => {
+    const r = screen?.ready?.() ? screen.inspect({latitude: s.lat, longitude: s.lon}) : null;
+    if (!r?.fresh) return {status: 'unavailable', text: 'Protected-area check unavailable, so this spot cannot be exported yet.'};
+    if (r.status !== 'excluded') return {status: 'clear', text: ''};
+    return {status: 'excluded', text: `${protectedHitReading({inside: r.matches.every(m => m.inside === true), reef: false})} ${r.names.join(', ')}. Not exported.`};
+  });
+}
+
+/**
+ * The saved spots as one GPX file through the planner's own export path (dist/trip-export.js `buildExport`, so gpx.js
+ * names are cleaned and made unique by its one serialiser). A spot inside or near a protected area is left out and named;
+ * with the screen stale or missing nothing is exported. The file must pass the same GPX check the planner runs.
+ */
+export async function exportSpots(spots, screen, region, now = new Date()) {
+  const {buildExport} = await import('./trip-export.js'), {checkGpx} = await import('../web/gpx-check.ts');
+  if (!spots.length) throw Error('You have no saved spots to export.');
+  const verdicts = await spotVerdicts(spots, screen);
+  if (verdicts.some(v => v.status === 'unavailable')) throw Error('Protected-area checks are unavailable or older than 36 hours. Return to the map and refresh before exporting.');
+  const held = spots.filter((s, i) => verdicts[i].status !== 'clear'), clear = spots.filter((s, i) => verdicts[i].status === 'clear');
+  if (!clear.length) throw Error('Every saved spot is inside or near a protected area, so nothing was exported.');
+  const points = clear.map(s => ({id: 'user:' + s.id, name: s.name.trim() ? s.name : 'Waypoint', category: 'other', latitude: s.lat, longitude: s.lon}));
+  const out = buildExport({atlas: {targets: [], areas: [], drifts: []}, screen, ids: points.map(p => p.id), region, title: 'SkipperCast saved spots', now, userWaypoints: points});
+  const check = checkGpx(out.gpx, {waypoints: clear.length});
+  if (!check.ok) throw Error(`The GPX file failed its own check: ${check.problems[0]}. Nothing was handed over.`);
+  return {gpx: out.gpx, exported: clear.length, withheld: held.length};
+}
+
+const spotFormHTML = () => `<h2 class="account-subhead">Saved spots</h2>
+    <p class="home-port-fine">Private to this account. A spot and its note are never shared, mapped, put in a feed or shown to anyone else. Spots inside a protected area are shown with that reading and left out of the GPX file.</p>
+    <form id="spot-form" autocomplete="off">
+      <label for="spot-name">Name</label><input id="spot-name" type="text" maxlength="80" />
+      <label for="spot-lat">Latitude</label><input id="spot-lat" type="number" step="any" required />
+      <label for="spot-lon">Longitude</label><input id="spot-lon" type="number" step="any" required />
+      <label for="spot-note">Private note</label><input id="spot-note" type="text" maxlength="1000" />
+      <div class="home-port-actions"><button type="submit" id="spot-save">Save this spot</button><button type="button" id="spot-export">Download my spots as GPX</button></div>
+    </form>
+    <ul class="account-passkeys" id="spot-list"></ul>`;
+
 function signedOutHTML() {
   return `<h1 id="account-title">Save trips and alerts with an account</h1>
     <p class="home-port-intro">SkipperCast accounts use passkeys: Face ID, Touch ID or your device PIN. There is no password. The map and forecasts stay free without an account.</p>
@@ -122,8 +176,9 @@ function signedInHTML(session, passkeys) {
     <p id="account-status" class="home-port-feedback" role="status"></p>
     <div class="home-port-actions"><button type="button" id="account-add">Add a passkey on this device</button><button type="button" id="account-signout">Sign out</button></div>
     ${logFormHTML()}
+    ${spotFormHTML()}
     <details class="account-danger"><summary>Delete account</summary>
-      <p>Deletes your account, passkeys, saved trips, alerts, notification devices, catch log and comfort feedback. This cannot be undone.</p>
+      <p>Deletes your account, passkeys, saved trips, alerts, notification devices, catch log, saved spots and comfort feedback. This cannot be undone.</p>
       <button type="button" id="account-delete">Delete my account and records</button></details>`;
 }
 
@@ -220,6 +275,40 @@ export async function openAccount() {
       } catch (error) { status(passkeyMessage(error)); }
     });
     showLog();
+    // BF-saved-spots: the list reads each spot against the shared protected-area screen; a screen that cannot load reads "unavailable".
+    let screenOnce = null;
+    const spotScreen = () => screenOnce ??= import('./protected-areas.js').then(m => m.initProtectedAreas(null, () => {})).catch(() => null);
+    let spotRows = [];
+    const spotList = $('#spot-list'), showSpots = async () => {
+      try {
+        spotRows = (await api('spots')).spots;
+        const verdicts = await spotVerdicts(spotRows, await spotScreen());
+        spotList.innerHTML = spotRows.map((s, i) => spotItemHTML(s, verdicts[i])).join('');
+      } catch (error) { status(passkeyMessage(error)); }
+    };
+    spotList.addEventListener('click', async event => {
+      const b = event.target.closest('[data-remove-spot]'); if (!b) return;
+      try { await api('spots/' + encodeURIComponent(b.dataset.removeSpot), {method: 'DELETE', body: {}}); await showSpots(); } catch (error) { status(passkeyMessage(error)); }
+    });
+    $('#spot-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      const field = n => $('#spot-' + n).value;
+      try {
+        await api('spots', {method: 'POST', body: spotBody({name: field('name'), lat: field('lat'), lon: field('lon'), note: field('note')})});
+        $('#spot-form').reset(); await showSpots(); status('Saved to your spots.');
+      } catch (error) { status(passkeyMessage(error)); }
+    });
+    $('#spot-export').addEventListener('click', async () => {
+      try {
+        const screen = await spotScreen();
+        if (screen && !screen.ready()) await screen.refresh();
+        const {getRegion} = await import('./region.js'), out = await exportSpots(spotRows, screen, getRegion());
+        const url = URL.createObjectURL(new Blob([out.gpx], {type: 'application/gpx+xml'})), a = document.createElement('a');
+        a.href = url; a.download = 'SkipperCast-saved-spots.gpx'; a.click(); URL.revokeObjectURL(url);
+        status(`Downloaded ${out.exported} spot${out.exported === 1 ? '' : 's'}${out.withheld ? `; ${out.withheld} left out because of a protected area` : ''}.`);
+      } catch (error) { status(error?.message || 'Could not build the GPX file.'); }
+    });
+    showSpots();
     $('#account-add').addEventListener('click', async () => {
       if (!supported()) { status('This browser does not support passkeys.'); return; }
       status('Follow your device to add a passkey…');
@@ -234,7 +323,7 @@ export async function openAccount() {
       try { await api('auth/logout', {method: 'POST', body: {}}); finish(); } catch (error) { status(passkeyMessage(error)); }
     });
     $('#account-delete').addEventListener('click', async event => {
-      if (!await confirmInPage(event.currentTarget, 'Delete your SkipperCast account and all saved trips, alerts, notification devices, catch log and comfort feedback? This cannot be undone.', 'Yes, delete everything')) return;
+      if (!await confirmInPage(event.currentTarget, 'Delete your SkipperCast account and all saved trips, alerts, notification devices, catch log, saved spots and comfort feedback? This cannot be undone.', 'Yes, delete everything')) return;
       try { await api('privacy', {method: 'DELETE', body: {}}); status('Your account has been deleted.'); finish(); } catch (error) { status(passkeyMessage(error)); }
     });
     for (const button of body.querySelectorAll('[data-remove-passkey]')) button.addEventListener('click', async () => {
