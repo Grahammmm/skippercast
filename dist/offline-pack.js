@@ -6,7 +6,7 @@
 import {getRegion, getRegionDirectory, localContext} from './region.js';
 import {chartLayers} from './chart-map.js';
 import {track} from '../web/telemetry.ts';
-import {PACK_PREFIX, PACK_META, SHARED_FILES, planTiles, tileURL, tileKey, packRequests, stampedHeaders} from './offline-core.js';
+import {PACK_PREFIX, PACK_META, SHARED_FILES, planTiles, tileURL, tileKey, packRequests, stampedHeaders, isOceanKey} from './offline-core.js';
 
 const CONCURRENCY = 4;
 
@@ -51,6 +51,27 @@ async function pool(items, worker, signal) {
 }
 
 /**
+ * Copy what this page loaded since it opened from the recent-data cache into the candidate pack. Ocean keys
+ * (a region's habitat manifest and tiles) stay in `recent`, where the service worker still answers from them;
+ * only the ocean phase may put ocean data into a pack, so they are skipped before the cache lookup and body read.
+ */
+export async function copyRecent({recent, cache, sessionStart, origin, signal}) {
+  let copied = 0, bytes = 0;
+  for (const request of await recent.keys()) {
+    if (signal.aborted) break;
+    if (isOceanKey(request.url, origin)) continue;
+    if (await cache.match(request)) continue;
+    const hit = await recent.match(request);
+    const at = Date.parse(hit?.headers.get('X-SC-Saved-At') || '');
+    if (!hit || !(at >= sessionStart)) continue;
+    const body = await hit.blob();
+    bytes += body.size; copied++;
+    await cache.put(request, new Response(body, {status: hit.status, headers: hit.headers}));
+  }
+  return {copied, bytes};
+}
+
+/**
  * Save the current region. `progress({phase, done, total, bytes})` reports as
  * it goes; `signal` cancels (the partial pack is deleted). Resolves to meta.
  * `more` (FE-51, web/trip.ts) adds the v2 app's shell and basemap tiles to the
@@ -91,17 +112,8 @@ export async function savePack({signal, progress = () => {}, sessionStart = 0, m
     // tide and layer requests), copied from the service worker's recent-data cache.
     let copied = 0;
     if (await caches.has('sc-data')) {
-      const recent = await caches.open('sc-data');
-      for (const request of await recent.keys()) {
-        if (signal.aborted) break;
-        if (await cache.match(request)) continue;
-        const hit = await recent.match(request);
-        const at = Date.parse(hit?.headers.get('X-SC-Saved-At') || '');
-        if (!hit || !(at >= sessionStart)) continue;
-        const body = await hit.blob();
-        bytes += body.size; copied++;
-        await cache.put(request, new Response(body, {status: hit.status, headers: hit.headers}));
-      }
+      const result = await copyRecent({recent: await caches.open('sc-data'), cache, sessionStart, origin, signal});
+      bytes += result.bytes; copied = result.copied;
     }
     const layers = chartLayers(document.getElementById('base-map')?.value === 'nautical' ? 'nautical' : 'fishing');
     const plan = planTiles(region.bounds);
