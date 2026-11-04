@@ -8,19 +8,255 @@
 
 - SC0237-03: the trip-alert form for the Boat profile starts from your own Boat limits when you have saved them in Your limits (wind, gust and sea, kept to the ranges the server accepts), and its note says so; they are your absolute settings, so the boat's wind and sea factors are not applied to them again, while alerts still judge wind chop for a saved custom boat. Without your own Boat limits the form and its notes are unchanged, still scaled by the boat; the other profiles are unchanged.
 
+- Deleting a saved trip, or the 90-day clean-up of old trips, now clears the trip from your private catch-log entries instead of leaving them (and the privacy export) naming a trip that no longer exists; the entries and their other fields are kept (#1549).
+
+- Search discovery now lists the Coverage and Forecast skill pages at the addresses the site serves (/coverage and /skill), and the Coverage page's canonical address is /coverage, not /coverage.html (#1550).
+
+- Reports view: reopening it reads its sections again when one failed last time or the loaded data is 30 minutes old or more, so a dropped read or a tab left open for a day no longer pins “unavailable” or old evidence; what is shown stays until the new read arrives (#1544).
+
 - SC0237-04: the trip planner refuses what the Chart and the GPX check refuse. Saving a waypoint from a Chart tap and Add to trip on a habitat or survey place now decline a place that is not checked, inside a protected area or within the 70 m planning margin of one, with the same one-line reason ("Not saved: 40 m from …"), and add nothing; a place already in the plan is checked again each time it is added. A clear place is added as before, and adding it twice still adds it once.
+
+- The Kayak launch list is asked for again after its response body fails in transit; only a malformed file stays remembered as the answer (#1540).
+
+- The Text Advisor now holds a Comfortable day at Bumpy, and says why, when some listed hours have no forecast or the marine alert check is incomplete, as the brief holds those days at Marginal; days that were already Bumpy, Rough or Unknown read as before, and an advisory still makes a day Rough (#1547).
+
+- Saved-trip alert updates now name long-period swell (2.5 ft or more at 15 s or longer, from the same wave model, point and hour), which used to read “within limits”: the alert carries a hazard note, says surge and entrance conditions need a separate check, and sends an update when the note appears, changes or clears; limits and status are unchanged (#1545).
 
 - BF-og-cards: shared map links carry the landing preview image and name a known region and its listed port in Open Graph previews; no forecast or date enters the preview, and the app remains noindex.
 
+- Tide predictions with an impossible date or hour (such as Feb 30 or 24:00) are now ignored instead of being rolled into the next day, where they hid the real row and could let an unusable answer load or qualify an offline pack (#1534).
+
+- A signed-in planner offers your private saved spots as stops (“Your saved spots”): Add to plan copies a spot's name and position into the plan in this browser as an ordinary waypoint. A spot that is inside, within 70 m of or not checked against a protected area shows its reading and cannot be added, and a spot's note is never copied into the plan, a trip, a link or an export (#1541).
+
+- The selected-hour Conditions value and the hourly table's tide cell now use the nearest eligible reading when there is none at the exact time, instead of the first listed one, so they no longer depend on the feed's order; an exact reading still wins (#1542).
+
+- The GPX check reads each waypoint and track point's own coordinates only: a look-alike such as data-lat, x:lat, LAT or coordinate text inside another attribute no longer counts, and a duplicated, missing or unreadable lat or lon fails the file as before (#1537).
+
+- Boat lookup sources: a link longer than 500 characters is skipped instead of being cut short into a different address; links that are kept are stored unchanged (#1530).
+
+- The private catch log's form offers your own saved trips as an optional Trip choice (stored date and area), and the list shows the chosen trip's saved date (#1526).
+
 - BF-spanish-app: the map app reads Spanish. The first answer, the brief's labels and the rules card come from one string catalogue (`catalog/app/strings.json`, English and Spanish, read by `web/i18n.ts`); the language is the visitor's own choice (`?lang=es`, remembered on the device), else the browser's Accept-Language, else English, and the page `lang` follows it. Rule wording from the reviewed registry stays English and the card says so; regulation numbers, species, port and source names are never translated. `scripts/check_copy.mjs` now fails on a catalogue id with no Spanish value, an unknown id and a bare literal in a covered file.
+
+- The Text Advisor now holds a Comfortable boat day at Bumpy, and names the hour, when the Morro Bay harbour-bar estimate reads hazardous in the window, as the brief holds it at Marginal (#1533).
+
+- Kayak's Where to look now measures distance and range by water from the chosen launch where a water route is computed; otherwise the straight line stays, labelled, with a short reason. Boat, Shore and Spear are unchanged, and Kayak still shows no run time (#1509).
+
+- Save for offline now also stores a region's published land-water and depth-contour files, when the region lists them, so offline Where to look, ranked marks and planner spots can tell land from water and the Boat run can use its water route (#1524).
+
+- A saved spot outside the area the loaded protected-area file covers now reads “not checked” and is held back from the GPX, instead of reading clear (#1525).
+
+- The Trip dialog shows, for each saved pack, a Water temp line and a Currents line saying what its ocean record holds; older packs show no line (#1523).
+
+- The privacy page now says that private catch-log entries and saved spots are kept until you delete them and are included in the data export and in account deletion (#1521).
+
+- The first answer on the desktop app is styled with the app's own colours and spacing instead of showing as bare rows (#1515).
+
+- The Text Advisor no longer reads a forecast hour after a model's published end as a value: such an hour is unknown, as in the app, so it cannot make a day read Comfortable (#1522).
+
+- Shore selections on the Chart show their access, rules and source review times in the loaded region's own time zone; a missing or other region's zone keeps the default (#1518).
+
+- Save for offline now runs an ocean step: for Morro Bay and Cambria, whose water readings come from the coastal report, it records only that report's saved time and saves no extra files; for other regions it saves the water-temperature and current layers whole or not at all, and the pack records what was saved or failed and until when it can be drawn (#1508).
+
+- The Text Advisor now calls a day Rough, and names the advisory, when the daily feed lists a boating advisory (small craft, gale, hazardous seas and the like) that overlaps the fishing window, as the brief does; the measured numbers are unchanged (#1496).
+
+- The Boat run line now names and times the place that Where to look lists, so it can no longer name a pick the list dropped for a water route beyond your range (#1504).
 
 - SC2207-04: the trip planner's Best available applies its maximum one-way distance from the selected port to the water route where one is computed (as Where to look does), so a reef 13 nm round a headland no longer fits a 10 nm plan; a reef without a route keeps its straight line, labelled, and each ranked spot says which. Habitat order, the 0.15 nm separation, the protected-area screen, saved plans, exports and the stops-in-order legs are unchanged.
 
+- Search-plan source links now show: each reviewed source on a plan is listed on the Plan page and in the brief's search-plan block (https links only, opening in a new tab); before, no plan showed a source (#1501).
+
+- Forecast skill is served at /skill (the /skill.html address still works), and the status page links to it (#1506).
+
+- Chart placement now screens your tap: with a waypoint placement armed, a tap that is not checked, inside a protected area or within the 70 m planning margin of one is refused with the reason (“Protected areas not checked”, “Inside …”, “40 m from …”), the placement stays armed, and an unchecked tap is no longer accepted. Trip-plan legs now say when their line is inside or near a protected area, or not checked (#1497).
+
 - SC1952-04: the landing's tomorrow verdict for a returning visitor rates with the boat and Boat comfort limits saved on this device (the same two stored values /map rates with) and names that boat in its heading, with the model note for a boat outside the reference range; with no boat saved, or one that cannot be read, it is still the reference 23 ft boat. It reads only those two stored values, stores nothing and sends neither in any request.
+
+- Season strip: a month with more than one open run now lists them (“Part open: 1–15, 20–25”, or “Part open: 1–5, 10–12 and 1 more”), where it used to name only the first run and read as if the season shut on the 15th (#1488).
+
+- The Text Advisor holds a Comfortable day at Bumpy when a rated hour in the window has long-period swell (2.5 ft at 15 s or longer), and names the earliest such hour, as the brief does; it used to say comfortable (#1494).
+
+- The phone's rules line starts the registry read and the daily rules read together instead of one after the other, so it can appear after one round-trip; the rule state shown is unchanged (#1480).
+
+- The boat name in the brief's “Comfort rating for …” line is shown cleaned: invisible and control characters are dropped, spaces collapsed and the name cut at 40 characters on a whole character; the stored boat is untouched (#1491).
+
+- The desktop app now leads with one answer line above the map: whether tomorrow is fishable for your profile, one reason sentence, the rules state (reviewed, due for review or unavailable) with the official link, and a control that scrolls to the map and the measured detail. On a phone the map and sheet peek still lead (#1456).
+
+- A Temp fronts map layer (off until you turn it on) draws offshore temperature fronts as lines with a width for their uncertainty, says each front's age in words, and shows nothing once the data passes the feed's age limit (at most 72 hours); a missing file reads “no current front data” (#1472).
+
+- Private saved spots: signed in, you can save a place with an optional private note, see your list, remove a spot and download your spots as GPX. A spot inside or within the 70 m planning margin of a protected area is shown with the boundary's name and left out of the file; a missing or old (over 36 h) screen exports nothing, and the note is never put in the GPX. Spots are private to the account, included in the data export and account deletion, and shown on no public page, feed or preview (#1482).
+
+- The map's rules line reads a small per-region copy of the regulations at startup instead of the whole multi-region file (about 25 KB less on first load for Morro Bay); the full file and the daily part are still used when the copy is missing or not valid, and the rule state shown is unchanged (#1476).
+
+- Where to look's by-water distance for the Boat brief is now smoothed along straight water-only shortcuts, so a route is no longer overstated by up to about 8 %; it stays at or above the straight line and never crosses land (#1477).
+
+- Printed seas maxima now round up, so a printed maximum is never below the value the window rule used (a window the 4 ft limit rejected can no longer read “seas to 4 ft”); the advisor's ranges follow the same rule (#1474).
+
+- A public /skill page shows each active port's forecast skill, built from the port's own verification record; a port without enough verified days, runs or valid times is not scored (#1470).
+
+- Protected-area screening now covers every output: each Where to look pick, trip leg, ranked area, waypoint save, Chart placement and GPX export reads one shared verdict (inside, within the 70 m margin, or not checked) and refuses or says so; a screen that is missing or not current counts as not checked, never clear (#1461).
+
+- A private catch log in the signed-in account sheet: record a catch, a blank (no catch, stored with a count of 0) or an unknown outcome with optional time, method, species, count, position and note; list and delete your entries. A position needs both latitude and longitude inside the poles and the antimeridian. Entries are visible only to you, are not scored, shared or put in a feed, and are in the data export (/my-data also serves signed-in accounts) and account deletion (#1458).
+
+- Selecting a ranked area now shows up to three short, dated reasons for it, each naming its source; ranking, scores and sources are unchanged (#1460).
+
+- Trip planner rows no longer repeat “90% confidence” when every ranked place has the same confidence: it is said once above the list (“All ranked places: N% evidence confidence.”) and rows read “#1 · Strong” (#1467).
 
 - BF-advisor-beta: the region/language pilot switches now reach the deployed Worker. Contacts outside the pilot can still opt out, confirm data deletion and request their data; only those control replies bypass the pilot scope.
 
+- The brief's tide sparkline says “No tide curve for this place. The times below are the day’s predicted highs and lows.” when only the highs and lows are listed, instead of “Tide series unavailable” beside a tide height (#1468).
+
+- The Boat brief says when to leave and be back at the harbour entrance: the longest stretch of daylight hours the bar estimate does not call hazardous (at least one hour, earlier on ties), with caution hours named; with no such stretch it says so, and it gives no times when the tide or swell drivers or the entrance bearing are missing. It is not clearance to cross (#1457).
+
+- Comfort ratings with some data missing never read calmer than the full rating on the same values: a limited hour now charges the chop, crossing and short-chop it does carry, so 1.5 ft at 5 s chop no longer rates as the cap (#1465).
+
+- GPX waypoint names are cleaned before being made unique: control and other XML-forbidden characters are removed, names trimmed, an empty name becomes “Waypoint”, and duplicate names still get a suffix (#1453).
+
+- Changing a saved trip whose area is no longer offered now answers that the area is no longer offered and the plan cannot be changed (save a new trip), instead of a generic retryable-looking error (#1455).
+
+- A GPX export refused for a protected area now names it (“Inside or within 70 m of <name> …”) instead of a bare refusal (#1440).
+
+- The Conditions hourly table rates each hour for your saved boat, as the brief does, instead of the reference boat (#1449).
+
+- Boat picks in Where to look show distance and run time by water (“x nm by water”) where a water route is computed, otherwise a labelled straight line with a “run ≥” lower bound; your range to consider is judged on the same distance (#1444).
+
+- The landing shows the saved-copies notice when live data is paused, and prefixes its verdict “From saved copies, not live:”; otherwise it is unchanged (#1438).
+
+- The status page gives the coast-feed sources (ocean, nearshore, water quality and history) their own freshness rows, with the same age limits the Worker applies (#1443).
+
+- First-use setup asks the profile first and the boat details after it, on the landing and in the map's card, instead of the boat questions above the four choices (#1448).
+
+- Each rules card now says in words when the daily source check last confirmed the row (“Checked today”, “Checked Sep 20”, “Check date unknown” or “Check overdue - open the official page”), beside the official link (#1441).
+
+- The trip plan's legs use the water route where one is computed (labelled by water) and otherwise the labelled straight line with the reason; run minutes and totals follow the chosen distance (#1445).
+
+- Trip check: an unreadable marine-alert entry fails closed, treated as an advisory with unknown timing, so the trip stays unverified instead of the check breaking (#1435).
+
+- Trip alerts: a day-before assessment left pending (a failed send still retrying) is now retried on the trip date or reported as missed, instead of the trip going silent (#1434).
+
+- The brief's day verdict, worst-hour score, limit sentence and Comfortable/Marginal/Rough word are rated for your saved boat, and the basis names it; with no saved boat nothing changes (#1429).
+
+- Text Advisor rules replies now name a half-listed season (“opens Apr 1; closing date not listed”) instead of reading as unrestricted (#1431).
+
+- For a target the picker labels “search plan only”, Where to look shows that target's search plan instead of an empty reef list (#1430).
+
+- The brief reads the smaller /api/daily brief part first and the whole daily feed only as a fallback, and the offline pack saves that part (#1424).
+
+- Text Advisor rules replies show real calendar days only: dates such as Feb 31, Apr 31 or 2026-02-29 are no longer printed as if they existed (#1428).
+
+- The first-use “How do you fish?” step asks boat length (8–70 ft) and comfort limits once, saved on this device only; a blank or invalid length saves nothing and the hint says “Boat length 8-70 ft” (#1427).
+
+- The Boat brief's run time, turn-back and fishing time use the water route from where the distances run to the chosen place (“x nm by water”); with no route the straight line stays, labelled with the reason (#1408).
+
+- Addresses with a trailing dot on the host (https://skippercast.com./…) redirect once to the bare host (#1403).
+
+- Share links carry the target and each view setting only when the address has it once, in plain form; anything else is left out of the link (#1396).
+
 - SC-POPOVER: the desktop map legend's basis popovers (Seafloor, Currents, Depth contours, Protected areas) are placed against their own button by CSS anchor positioning, so the legend that now shrinks and scrolls no longer cuts off the part of a popover beyond its box; a browser without anchor positioning keeps the previous in-flow popover.
+
+- On the landing, choosing another port cancels the first port's region warm-up, so it stops fetching that region's files (#1417).
+
+- The layer rail has five one-tap presets (Reef drift, Halibut, Crab, Offshore, Transit), the one for the current target's family first, and a Helm view switch that makes every control at least 48 px, raises the base text size one step and hides rail notes and legend detail; the switch is kept on this device, not in the link (#1388).
+
+- Every fishable place the app shows can go to the chartplotter, not only rocky reefs: a picked survey place saves its own point as a waypoint (reef for hard or mixed bottom, other otherwise), cards that cannot be exported say why, and the GPX file is checked and screened at export (#1389).
+
+- A capped Text Advisor reply never ends in half an emoji (#1372).
+
+- Text Advisor rules for an unknown species link the general regulations card instead of a species page that does not exist (#1375).
+
+- The brief no longer breaks on a tide event with no readable time: such events are left out instead of throwing an error in the tide sparkline and Conditions (#1376).
+
+- A signed-in “This weekend” preview above saved trips shows this Saturday and Sunday's enabled trips in plain text, ordered by start hour; unknown spots read “a saved spot”. Nothing is emailed or pushed (#1377).
+
+- Interactive controls across the app views meet the 24 px minimum target size (fleet rail checkboxes, the brand link, brief footer links, the plan's official-rules link and panel text links), checked by a new accessibility test over the app views (#1384).
+
+- A public /coverage page draws every published region on one California coast strip, active or preview, each linking to its map, with the same facts as a list (#1391).
+
+- Share links keep the terrain grade filter (?grade=) (#1360).
+
+- Tide trend reads no trend from a height that is not a number, or from a next point that is unreadable or not after the matched one, instead of a false “Falling” (#1369).
+
+- Shore runs may now be on rocky shore, named as rocky with their own guidance; sand shore guidance is unchanged (#1359).
+
+- Tide station names in the chooser are cleaned (blank, multi-line or over 80 characters falls back to the station id) and a duplicated prediction row is skipped (#1350).
+
+- Saving a tide pack checks every prediction answer before storing any; a damaged one stops it with “Chosen tide predictions are unavailable. Saved regions are unchanged.” (#1337).
+
+- A stale forecast can no longer wear a calmer label: past 18 hours a day's calmer word becomes unknown, in the brief and in the Text Advisor (#1334).
+
+- A layer-rail toggle the current view cannot draw (“Chart only”) stays reachable by keyboard and reads its reason, instead of dropping out of the tab order (#1245).
+
+- Saved trips are split into Upcoming (soonest first, including today) and Past (newest first, by Pacific date); each past trip opens to its final assessment (or missed-final, or a fixed no-assessment sentence) and the same day's private comfort reports. Forecast records are not observed sea conditions (#1287).
+
+- Trip planner: selected stops are listed in order with leg and total distances and at-least run minutes from the home port, with notes for a missing port, skipped invalid coordinates and what is not modelled (sea state, bar, fuel, per-stop conditions); straight-line only, no export change (#1286).
+
+- Target plan page (?view=plan): the selected target's reviewed search plan, with its methods, confirmation and evidence, review date and dock-day rules; numeric-model plans are withheld, unresearched coverage is explained, and Conditions and the legend link to it and follow the selector (#1276).
+
+- Protected-area screening is one check with a 70 m planning margin at every output (map reef marks and the ?spot= card, Where to look, GPX and notes export, charter grounds): whole boundaries and shapes are screened, not only points, and the margin is measured in metres (#1268).
+
+- The map app counts one anonymous map_viewed event per region per page load (at most ten regions) in the existing usage statistics; nothing under Do Not Track or Global Privacy Control, no identifier or cookie, and the privacy notice says so (#1285).
+
+- Live data degrades instead of billing: past a daily R2-read ceiling the Worker answers from saved copies (kept 7 days) or free fallbacks, with a notice “Live data is paused for today to keep SkipperCast free; some readings are saved copies”; private routes also have per-address and per-account rate limits (#1267).
+
+- Landing: a failed port list now offers Try again beside “Explore the coast” (#1271).
+
+- Conditions shows the target's season across the current year as a twelve-month strip under “Before you go”, from the reviewed registry windows only (open, limits, closed, opener unconfirmed, location needed, part open, not reviewed), with the registry revision, the official link and a not-legal-advice note (#1275).
+
+- At fishing zoom the Chart ramps the survey habitat fill, outlines the reef footprint and shows a screened mark's valid nearby depth band beside it; pick targets, card wording and screening are unchanged (#1274).
+
+- Marks: when a region's file fails to load, the protected-area check now reads unavailable (“Protected-area check unavailable · fishing spots withheld”) instead of leaving spots showing (#1273).
+
+- Desktop mark card: Add to trip, GPX / Review & export and Regulations stay visible at the bottom of the card while it scrolls (#1247).
+
+- The export sheet shows “Planning aid · not a navigation chart.” and “You are responsible for your boat, crew and decisions at sea.” before Download GPX (#1269).
+
+- Fishing time: set the hours you want (kept on this device, no default) and the Boat brief compares the run remainder with them, the legal opening and daylight; a closed target shows the registry reason and official link, and unchecked rules cannot yield enough (#1260).
+
+- The brief footer says “Planning aid · not a navigation chart.” with a Terms link, and the landing carries the same line (#1270).
+
+- Closing the mark card (Clear selection or Escape) returns focus to the map you are looking at in 2D, 3D or after a Chart failure, never to the page body (#1238).
+
+- A Share this view control beside the port control builds one link to the port, day and profile (and hour, target, view, layers, base, presentation, current, habitat or spot when set), and hands it to the share sheet, copies it or shows it to copy (#1265).
+
+- A panel that fails to render now fails alone: the rest of the desktop or phone shell stays, with a status message and a Retry for that panel (#1254).
+
+- The landing leads with tomorrow's verdict from the brief (#1252).
+
+- Saved-trip alerts cover the planned departure and return hours of a same-day plan, not only the fishing hours, and append the clock time when that leg exceeds your wind, gust, sea or boat-scaled chop limit; a malformed or overnight plan keeps the original window (#1259).
+
+- Trip alerts start from the active Kayak, Shore or Spear profile's saved limits (or that mode's defaults), clamped to supported ranges, and say alerts assess offshore seas, not launch or beach surf (#1256).
+
+- Conditions says in words when the two models disagree about wind or seas on the next days' mornings (a gap of 6 kt or 2 ft in at least two hours), without changing any score (#1250).
+
+- Conditions has one hourly table below the chart, a row for every local hour of the dock's day: time, wind, gust, seas, swell, chop, tide, visibility and comfort score (#1251).
+
+- The brief lead shows model agreement beside the comfort score as measured wind and seas gaps, never as an input to the score; missing or stale models cannot give a reassuring line, and differing hours show both readings in Details (#1249).
+
+- Clouds frames are no longer re-requested about every four minutes while the layer is on, since each frame is pinned to one time and never changes (#1248).
+
+- The brief's daily and live buoy feeds refresh when you return to the page, as the forecast does (#1246).
+
+- Protected areas: after a failed boundary load, the layer offers Try again instead of saying unavailable until the page is reloaded (#1229).
+
+- The brief measures distances from the planner's home port rather than always from the region's harbor (#1241).
+
+- A mistyped or stale region link now says there is no region by that name and links the port list, instead of “Region details unavailable. Retry” (#1224).
+
+- On the Chart, access pins of a Hold shore run draw muted like the run (#1244).
+
+- Your limits and cruise speed follow a change made in another tab of the same browser (#1239).
+
+- Shared reads: a response whose body fails mid-transfer is not kept, so the next request fetches again (#1240).
+
+- The brief's Where to look admits places through the same protected-area screen as the trip planner (#1242).
+
+- Your limits form names a gust limit below the wind limit in one plain line (“Your gust limit is below your wind limit, so gusts decide every window.”); values are saved as typed (#1237).
+
+- The brief holds a Comfortable day at Marginal when a window hour has long-period swell (2.5 ft at 15 s or longer), and names the hour (#1230).
+
+- The trip planner opens with the best places chosen and today's date, instead of an empty plan whose date moved a week out (#1232).
+
+- The phone's bottom bar is Coast, Conditions, History and Reports: Fleet comes off the bar for now; the desktop masthead, ?view=fleet and the charter-grounds layer are unchanged (#1225).
 
 - The brief's “Where to look” reef list for lingcod, rockfish and “all” now ranks the same seafloor reef publication as the trip planner, so a reef shows the planner's depth band instead of a different one from the older terrain release; the list reads “Loading ranked reef places…” while it loads, an expired or unavailable publication falls back to the previous list, and clicking a reef row moves the Chart to the place instead of opening a mark card. Gopher rockfish and shallow-reef cabezon keep the labelled atlas list (#1219).
 
