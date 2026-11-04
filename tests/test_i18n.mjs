@@ -97,6 +97,31 @@ test('numbers and dates follow the locale; a fixed zone fixes the day', async ()
   assert.equal(m.leadDayText('2026-09-30', NOW, TZ, 'es'), 'hoy'); assert.equal(m.leadDayText('2026-10-01', NOW, TZ, 'es'), 'mañana');
   assert.equal(m.leadDayText('2026-10-10', NOW, TZ), 'Sat Oct 10'); assert.match(m.leadDayText('2026-10-10', NOW, TZ, 'es'), /^el sáb\.? 10 oct\.?$/);
   assert.equal(m.leadDayText('2026-10-01', NOW, TZ), 'tomorrow', 'English is the default');
+  assert.match(m.comfortBasis({loa_ft: 18.5}, 'es'), /18,5 ft/);
+  assert.match(m.comfortBasis({loa_ft: 18.5}, 'en'), /18\.5 ft/);
+});
+
+test('Spanish verdict window and model agreement times use the region clock, not English labels', async () => {
+  const m = await load(), tz = 'America/Los_Angeles';
+  const at = hour => Date.parse(`2026-10-01T${String(hour + 7).padStart(2, '0')}:00:00Z`);
+  const clock = ms => new Intl.DateTimeFormat('es', {hour: 'numeric', minute: '2-digit', timeZone: tz}).format(ms).replace(':00', '').toLowerCase();
+  try {
+    await setup(m);
+    m.language.value = 'es';
+    const f = m.regionalForecast.value;
+    f.models.ecmwf_ifs025 = structuredClone(f.models.gfs_global);
+    f.models.ecmwf_wam = structuredClone(f.models.ncep_gfswave016);
+    const html = m.render(m.h(m.Verdict, {now: NOW}));
+    const window = /data-day="2026-10-01">([^<]*)</.exec(html)[1];
+    assert.match(window, new RegExp(`${clock(at(12))}$`));
+    assert.doesNotMatch(window, /am|pm|noon|midnight/);
+    const agree = /data-agreement="agree">([^<]*)</.exec(html)[1];
+    assert.ok(agree.includes(`hasta ${clock(at(12))}`), agree);
+    f.models.ecmwf_ifs025.data.hourly.wind_speed_10m.fill(25);
+    const differ = /data-agreement="differ">([^<]*)</.exec(m.render(m.h(m.Verdict, {now: NOW})))[1];
+    assert.doesNotMatch(differ, /am|pm|noon|midnight/);
+    assert.ok(differ.includes(`a las ${clock(at(7))}`), differ);
+  } finally { m.language.value = 'en'; reset(m); }
 });
 
 test('with the language es the first answer, the brief and its footer render Spanish; English is unchanged', async () => {
@@ -151,7 +176,7 @@ async function load() {
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {App, regionInfo} from './web/app/App.tsx';
       export {RulesLine} from './web/app/MarkCard.tsx';
-      export {BriefFooter, BriefGaps, BriefTiles, Details, FEED_GAP, Verdict, dailyFeed, feedGaps, leadDayText, regionalForecast} from './web/brief/Brief.tsx';
+      export {BriefFooter, BriefGaps, BriefTiles, Details, FEED_GAP, Verdict, comfortBasis, dailyFeed, feedGaps, leadDayText, regionalForecast} from './web/brief/Brief.tsx';
       export {parseConditionsForecast} from './web/conditions.ts';
       export {language} from './web/i18n.ts';
       export {markData} from './web/map/marks.ts';

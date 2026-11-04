@@ -277,7 +277,7 @@ export function currentVerdict(brief: BriefModel | null, now: Date): BriefVerdic
 /** The boat the comfort rating names, in `lang`; a saved boat's own name is shown as typed. */
 function boatName(boat: SavedBoatLike, lang: Language): string {
   const name = boatBasisName(boat), length = /^your (\d+(?:\.\d+)?) ft boat$/.exec(name);
-  return name === REFERENCE_BOAT_NAME ? t('brief.boat.reference', lang) : name === 'your boat' ? t('brief.boat.generic', lang) : length ? t('brief.boat.yours', lang, {n: length[1]!}) : name;
+  return name === REFERENCE_BOAT_NAME ? t('brief.boat.reference', lang) : name === 'your boat' ? t('brief.boat.generic', lang) : length ? t('brief.boat.yours', lang, {n: num(Number(length[1]), lang)}) : name;
 }
 
 /** The comfort-score basis naming the boat rated: the saved boat's name, "your <n> ft boat", or the reference 23 ft boat. */
@@ -319,17 +319,18 @@ export function Verdict({now}: {now: Date}) {
   const v = currentVerdict(brief, now), rulesLine = <LeadRules date={date} now={now} />;
   if (!v) return <><Headline brief={brief} />{rulesLine}</>;
   const when = leadDayText(date, now, tz, lang);
+  const window = lang === 'es' && v.windowBounds ? v.windowBounds.map(ms => clock(ms, tz, lang)).join('–') : v.window;
   const provisional = !!brief?.provisional;
   const a = v.agreement, gap = (n: number) => num(Number(n.toFixed(1)), lang);
-  const models = !a || a.state === 'none' ? null : a.state === 'agree' ? t('brief.models.agree', lang, {until: v.window?.split('–')[1] ?? '', wind: gap(a.gap!.wind), sea: gap(a.gap!.sea)})
-    : a.state === 'differ' ? `${t('brief.models.differ', lang, {at: clockText(a.worst!.ms, tz), wind: gap(a.worst!.wind), sea: gap(a.worst!.sea)})}${a.differing > 1 ? ` ${t('brief.models.hours', lang, {n: a.differing, total: a.hours})}` : ''}`
+  const models = !a || a.state === 'none' ? null : a.state === 'agree' ? t('brief.models.agree', lang, {until: window?.split('–')[1] ?? '', wind: gap(a.gap!.wind), sea: gap(a.gap!.sea)})
+    : a.state === 'differ' ? `${t('brief.models.differ', lang, {at: lang === 'es' ? clock(a.worst!.ms, tz, lang) : clockText(a.worst!.ms, tz), wind: gap(a.worst!.wind), sea: gap(a.worst!.sea)})}${a.differing > 1 ? ` ${t('brief.models.hours', lang, {n: a.differing, total: a.hours})}` : ''}`
     : a.state === 'partial' ? t('brief.models.partial', lang, {n: a.compared, total: a.hours}) : t('brief.models.one', lang);
   const modelHour = a?.state === 'differ' && regionalForecast.value ? feedReader(regionalForecast.value, now).read(a.worst!.ms) : null;
   const boat = v.basis === 'comfort-score' ? storedBoat() : null, rangeNote = boat && boatRangeNote(boat.loa_ft) ? t('brief.boat.note', lang) : null;
   return (
     <div class="app-verdict" data-verdict={v.verdict} data-provisional={provisional ? 'true' : undefined}>
       <div class="app-verdict-head">
-        <h1><span class="app-verdict-word">{t(`brief.verdict.${v.verdict}` as StringId, lang)}</span>{' '}<span class="app-verdict-window ui-mono" data-day={date}>{v.window ? `${when}, ${v.window}` : when}</span>{provisional ? ' ' : null}{provisional ? <span class="app-verdict-window app-verdict-provisional ui-mono">{t('brief.provisional', lang)}</span> : null}</h1>
+        <h1><span class="app-verdict-word">{t(`brief.verdict.${v.verdict}` as StringId, lang)}</span>{' '}<span class="app-verdict-window ui-mono" data-day={date}>{window ? `${when}, ${window}` : when}</span>{provisional ? ' ' : null}{provisional ? <span class="app-verdict-window app-verdict-provisional ui-mono">{t('brief.provisional', lang)}</span> : null}</h1>
         <Popover align="end">{v.basis === 'comfort-score' ? comfortBasis(boat, lang) : t('brief.basis.profile', lang)}{rangeNote ? ` ${rangeNote}` : ''}{provisional ? ` ${t('brief.provisional.basis', lang)}` : ''}{v.score !== null ? ` ${t('brief.worst', lang, {score: num(v.score, lang, 20)})}` : ''}</Popover>
       </div>
       <p class="app-verdict-limit">{v.limit}{v.held ? ` ${v.held}` : ''}</p>
@@ -365,7 +366,7 @@ export function Details({brief}: {brief: BriefModel | null}) {
 export const BriefTiles = ({brief, compact = false, dense = false}: {brief: BriefModel | null; compact?: boolean; dense?: boolean}) =>
   <><Tiles tiles={brief?.tiles ?? null} compact={compact} dense={dense} provisional={!!brief?.provisional} nearshore={PROFILE_TABLE[profile.value].swellTile === 'nearshore'} />{compact ? null : <TideStationControl />}</>;
 
-const clock = (iso: string, tz: string, lang: Language = 'en') => new Intl.DateTimeFormat(localeOf(lang), {hour: 'numeric', minute: '2-digit', timeZone: tz}).format(new Date(iso)).replace(':00', '').toLowerCase();
+const clock = (iso: string | number, tz: string, lang: Language = 'en') => new Intl.DateTimeFormat(localeOf(lang), {hour: 'numeric', minute: '2-digit', timeZone: tz}).format(new Date(iso)).replace(':00', '').toLowerCase();
 
 /** The quietest window the model screened, labelled lower exposure; none is said plainly. */
 export function LowerExposure({brief}: {brief: BriefModel | null}) {
