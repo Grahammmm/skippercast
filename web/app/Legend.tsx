@@ -70,6 +70,7 @@ import {stationState} from '../map/stations.ts';
 import {WAVE_MODEL} from '../map/forecast-grid.ts';
 import {currentStatus, shownPresentation, terrainCoverage, terrainOptions} from '../map/stage.ts';
 import {drawnSpots} from '../map/ranked.ts';
+import {retrySavedSpots, savedSpotsOn, savedSpotsStatus, setSavedSpotsOn} from '../map/saved-spots.ts';
 import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {RAIL_ENTRIES, railOn} from './rail.ts';
@@ -307,6 +308,19 @@ export function RankedRow() {
   );
 }
 
+/** The owner's saved spots (SC0922-04): a native checkbox, off at the start, with why it cannot be turned on or what it shows, and Try again after a failed read. */
+export function SavedSpotsRow() {
+  const status = savedSpotsStatus.value, entry = layerEntry('saved-spots');
+  return (
+    <li class="app-legend-saved-spots">
+      <label><input type="checkbox" checked={savedSpotsOn.value} disabled={!status.canToggle} onChange={e => setSavedSpotsOn(e.currentTarget.checked)} /> {entry.label}</label>
+      <Popover iconOnly summary="Your saved spots basis"><p>{entry.basis}</p></Popover>
+      <p class="app-legend-note" data-reason="saved-spots" role="status">{status.text}</p>
+      {status.retry ? <Button variant="quiet" onClick={retrySavedSpots}>Try again</Button> : null}
+    </li>
+  );
+}
+
 /** The habitat-candidate density below zoom 10 (#620): what it shows, its grade filter and the zoom that resolves it; never a count of fish. */
 export function DensityRow() {
   const n = densityShown.value;
@@ -376,6 +390,7 @@ export function Legend() {
           : e.id === 'stations' ? <StationsRow key={e.id} />
           : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
         <RankedRow />
+        <SavedSpotsRow />
         <DensityRow />
         <DepthContoursRow />
         <MpaRow />

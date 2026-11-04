@@ -111,7 +111,7 @@ test('no spot name, note or coordinate reaches any public page or feed, and no p
     }
     assert.equal((await call(env, '/api/spots')).status, 401, 'anonymous gets no list');
   } finally { globalThis.fetch = original; }
-  const root = fileURLToPath(new URL('..', import.meta.url)), allowed = new Set(['server/routes/spots.ts', 'server/routes/account.ts', 'server/app.ts', 'db/schema.ts', 'dist/account.js', 'web/planner.ts', 'web/saved-spots.ts']);
+  const root = fileURLToPath(new URL('..', import.meta.url)), allowed = new Set(['server/routes/spots.ts', 'server/routes/account.ts', 'server/app.ts', 'db/schema.ts', 'dist/account.js', 'web/planner.ts', 'web/saved-spots.ts', 'web/map/saved-spots.ts']);
   const hits = [];
   const walk = dir => { for (const name of readdirSync(dir)) { const full = join(dir, name), rel = full.slice(root.length).replaceAll('\\', '/').replace(/^\//, '');
     if (name === 'node_modules' || name.startsWith('.') || rel === 'dist/client' || rel === 'dist/server') continue;
