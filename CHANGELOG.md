@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC0237-04: the trip planner refuses what the Chart and the GPX check refuse. Saving a waypoint from a Chart tap and Add to trip on a habitat or survey place now decline a place that is not checked, inside a protected area or within the 70 m planning margin of one, with the same one-line reason ("Not saved: 40 m from …"), and add nothing; a place already in the plan is checked again each time it is added. A clear place is added as before, and adding it twice still adds it once.
+
 - BF-og-cards: shared map links carry the landing preview image and name a known region and its listed port in Open Graph previews; no forecast or date enters the preview, and the app remains noindex.
 
 - BF-spanish-app: the map app reads Spanish. The first answer, the brief's labels and the rules card come from one string catalogue (`catalog/app/strings.json`, English and Spanish, read by `web/i18n.ts`); the language is the visitor's own choice (`?lang=es`, remembered on the device), else the browser's Accept-Language, else English, and the page `lang` follows it. Rule wording from the reviewed registry stays English and the card says so; regulation numbers, species, port and source names are never translated. `scripts/check_copy.mjs` now fails on a catalogue id with no Spanish value, an unknown id and a bare literal in a covered file.
@@ -13,6 +15,92 @@
 - BF-advisor-beta: the region/language pilot switches now reach the deployed Worker. Contacts outside the pilot can still opt out, confirm data deletion and request their data; only those control replies bypass the pilot scope.
 
 - SC-POPOVER: the desktop map legend's basis popovers (Seafloor, Currents, Depth contours, Protected areas) are placed against their own button by CSS anchor positioning, so the legend that now shrinks and scrolls no longer cuts off the part of a popover beyond its box; a browser without anchor positioning keeps the previous in-flow popover.
+
+- The brief's “Where to look” reef list for lingcod, rockfish and “all” now ranks the same seafloor reef publication as the trip planner, so a reef shows the planner's depth band instead of a different one from the older terrain release; the list reads “Loading ranked reef places…” while it loads, an expired or unavailable publication falls back to the previous list, and clicking a reef row moves the Chart to the place instead of opening a mark card. Gopher rockfish and shallow-reef cabezon keep the labelled atlas list (#1219).
+
+- Ranked reef waypoints in a GPX export get a short plotter name such as “01 Reef 200-278ft” and a one-line description (a habitat estimate, not a sounding or catch forecast; check rules, closures and your chart) in place of the long method text, which stays on the website and the offline notes; other waypoints and tracks export as before (#1222).
+
+- Bar and shore readings treat a tide, sunrise or sunset time written without a time-zone offset as unknown, instead of reading it in the device's own time zone, so the same report no longer gives a different ebb or flood, tide phase or twilight on a phone in another zone (#1227).
+
+- The coast report keeps a marine alert whose event name is missing or unreadable (shown as “NWS alert (type not given)”) instead of dropping it, so such an alert still shows “Marine alert in effect” and hides windows (#1228).
+
+- On a phone, opening the History view raises the bottom sheet to full height so the recorded series is in view without dragging; you can still drag it down, and other views and desktop are unchanged (#1220).
+
+- Habitat cards from the brief's recommended places now work with the trip: Add to trip saves the place into the plan (adding the same place again adds nothing), GPX saves it and opens the plan, and Regulations links the official CDFW page, instead of three disabled buttons (#1221).
+
+- On a mark card, a rules line that is not confirmed for your fishing date now reads “Not confirmed for your fishing date - open the official rules before you go.” instead of “Needs recheck · last check <date>”; the last-check date no longer shows on that line (#1223).
+
+- With no time chosen, the brief's lead answers for tomorrow and names its day (for example “Marginal tomorrow, 7 am–noon”); an hour chosen in the dock, or a link's day, still wins. The lead also says whether the selected target is legal that day, from the reviewed rules with their official link (#1214).
+
+- New public /status page: for each data source, its last successful publish, its expected interval and whether it is inside it, read in your browser from the published feeds; sources the freshness check does not watch yet are listed as not watched rather than given a state (#1212).
+
+- The brief's verdict names the limit that actually cost the score (the charge the model took, not a raw ranking of comfort costs), and marks provisional forecast days with “Provisional” on the verdict line, in the basis popover and on the Wind and Swell tiles (#1216).
+
+- The rules card also links the species' own CDFW page when the reviewed registry lists one, and treats a source check as stale after the registry's maximum age for it (never more than 36 hours) instead of a fixed 36 hours (#1210).
+
+- Charter-grounds, commercial AIS and shore layers: a read that dropped (network error, timeout, HTTP 429 or a server error) is asked again when you turn the layer back on, instead of staying failed for the visit; a 404 or an invalid file is still not re-requested (#1203).
+
+- After a dropped read of the rules files, the next mark card asks for the rules again instead of saying “Check rules” for the rest of the session; a clean read is not repeated (#1197).
+
+- Bar and shore readings treat a wave or swell period that is zero, negative or not a number as missing: it no longer appears in a reason line, counts as the long-period swell, or changes a band (#1205).
+
+- A dropped read of the Kayak launch list or of Spear's distance from shore is asked again on the next request instead of hiding it for the whole visit; a 404 or an invalid file is still remembered (#1201).
+
+- Depth contours: after a dropped read the Chart asks again on a later camera move, at most once a minute, instead of showing “Depth contours did not load” for the whole visit; a 404 or an unlisted file is not retried (#1202).
+
+- Saved trips: the limit of 20 active trips now holds when several saves arrive at once; the extra ones get the same “Limit of 20 active trips” answer (#1198).
+
+- The trip alerts form's default date is tomorrow by calendar day in the region's time zone, including on the nights the clocks change (before, it could be today or two days ahead) (#1199).
+
+- Trip planner: a failed port-list read is asked again on the next Best available click and a note says when it could not be read (ranking then has no distance limit), and depth-contour tracks that failed to load are asked again when you turn them on (#1206).
+
+- Bar check: a crossing window with no reading at departure or at return now shows the existing “bar caution or unknown at departure or return” reason instead of passing silently (#1195).
+
+- Shore tide phase ignores malformed tide events and curve points, and reads unknown when the same time is listed as both high and low, instead of guessing a rising or falling tide (#1196).
+
+- Saved trips: the seven-day booking window and “tomorrow” are counted by calendar day in the region's time zone, so around a clock change a valid trip is no longer refused (or one day too many accepted) and a next-day trip is still treated as day-before (#1189).
+
+- Trip alerts: on the days the clocks change, a saved window counts the real local hours, so it is no longer always reported as not fully populated and unverified (#1187).
+
+- The trip alerts form says in plain words, before saving, when the date is outside today to seven days ahead, the window ends at or before it starts, or the gust limit is below the wind limit; its date picker offers only that range (#1186).
+
+- The privacy export now lists your notification devices: the push service host and the date each was added, never the full address or keys (#1177).
+
+- The forecast data requests (/api/om) apply the per-address rate limit only to answers not already cached, so people on shared connections (phone carrier, club Wi-Fi) are no longer limited for cached answers (#1176).
+
+- Trip alert notifications that fail with HTTP 429 or a server error are sent again on later checks, at most three tries in all; other failures are final and not resent (#1175).
+
+- Cambria's forecast lattice grows from 2 × 2 to a 3 × 3 grid of offshore points with one corner left out (it fails the water rule), so the Swell field covers more of the Cambria shelf (#1172).
+
+- Tapping a trip-alert notification opens the saved-trip alerts dialog on the map (the account panel when no port is in view) instead of landing on a page with no alert in view (#1169).
+
+- The trip alerts dialog names a saved trip's area and species, and an alert's kind and status, in plain words instead of internal ids (#1170).
+
+- Trip alerts: a marine advisory whose time cannot be read is treated as applicable, so the trip stays unverified, instead of the advisory being silently dropped (#1173).
+
+- Trip alerts raise “Missed day-before assessment” only when the trip was saved before its date and its day-before assessment did not go out; a same-day trip, or one whose day-before assessment was delivered, no longer gets a false one (#1174).
+
+- Cambria and San Simeon now have a NOAA coastline and a land-water index in their Chart files, so the Chart can draw that coast and tell land from water; where NOAA served no tile, a point is treated as unknown, never as certified water (#1162).
+
+- The Text Advisor now names target species it did not recognise (and asks what you meant) while still saving the ones it did, instead of silently dropping them (#1164).
+
+- In the map's Terrain 2D and 3D views, the Seafloor entry's Terrain options now say why there are no reefs (the habitat status sentence), list the ranked reefs (up to 12) so you can select one, and add an “Explore a ranked reef” button (#1165).
+
+- Trip alerts' reads of National Weather Service alerts now identify SkipperCast (a User-Agent) and ask for geo+json, so an NWS refusal for lacking one no longer turns trips into “Marine advisories unavailable” (#1166).
+
+- Morro Bay's forecast lattice gains two water-only shoreward points (longitude −121.00, at latitudes 35.05 and 35.30), so the Swell field draws the complete cell toward Estero Bay (#1158).
+
+- Text Advisor display names are cleaned in one place: invisible and direction-control characters are removed, and the 60-character cut never splits a character such as an emoji (#1151).
+
+- The Text Advisor's trip list says how many more verified boats the port page has when a port has more than the 12 it lists (#1152).
+
+- The Text Advisor no longer moves a report date that carries an explicit year back a year: 12/30/2026 typed in January is now outside the correction window instead of being saved as 2025-12-30; dates typed without a year roll back as before (#1142).
+
+- The Text Advisor refuses impossible calendar days such as 2026-02-30 as a trip date or a week start, instead of reading them as 2 March (#1144).
+
+- The Text Advisor recognises Spanish from an upper-case or decomposed Ñ (for example “MAÑANA PESCA”), not only a lower-case ñ (#1138).
+
+- Text Advisor uploads: an empty file input is skipped, so an upload with no real file answers “no file in the upload” (400) instead of a zero-byte “file type not supported” (415) (#1139).
 
 - RF0905-1: on a phone (below 1024 px) the Chart opens with the region centre (the Morro Bay harbor) in the open band between the top card and the sheet, not under the top card; the padding follows a resize, not a sheet drag. `?view=` and desktop are unchanged.
 

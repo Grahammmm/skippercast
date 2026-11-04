@@ -98,7 +98,13 @@ function intelAt(ageS, {values = CALM, ages = {}, completed = A_NOW, edit = () =
   edit(intel);
   return intel;
 }
-const quietDaily = () => { const d = read('./fixtures/feeds/daily-latest.json'); d.sources['alerts-PZZ645'].data.alerts = []; return d; };   // no advisory: one in the window now reads rough (SC2007-05), whatever the model run's age
+const quietDaily = () => {
+  const d = read('./fixtures/feeds/daily-latest.json'), first = d.sources['alerts-PZZ645'];
+  first.data.alerts = [];
+  // SC0237-01: a complete empty check for both configured zones, so the missing-alert-check hold does not show.
+  d.sources['alerts-PZZ670'] = {...first, id: 'alerts-PZZ670', name: 'NWS PZZ670 advisories', url: first.url.replace('PZZ645', 'PZZ670')};
+  return d;
+};   // no advisory: one in the window now reads rough (SC2007-05), whatever the model run's age
 const feeds = intel => async url => /intelligence\.json$/.test(url) ? intel : /latest\.json$/.test(url) ? quietDaily() : Promise.reject(Error('no feed'));
 const trip = (intel, date = A_DATE) => tripConditions({port: 'morro-bay', date}, {now: A_NOW, language: 'en', deps: {feeds: feeds(intel)}, contact: null, settings: advisorSettings({})});
 const stmt = {bind: () => stmt, all: async () => ({results: []}), first: async () => null, run: async () => ({meta: {changes: 0}})};

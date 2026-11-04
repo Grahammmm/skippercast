@@ -59,6 +59,9 @@ function daily({predictions = TIDES, status = 'ok', alerts = [], regionId = 'mor
   const d = read('./fixtures/feeds/daily-latest.json');
   d.region_id = regionId;
   for (const s of Object.values(d.sources)) if (Array.isArray(s.data?.alerts)) s.data.alerts = alerts;
+  // SC0237-01: a complete check for the region's second configured zone too (the fixture supplies only PZZ645), so bar-only cases stay free of the missing-alert-check hold.
+  const first = d.sources['alerts-PZZ645'];
+  d.sources['alerts-PZZ670'] = {...first, id: 'alerts-PZZ670', name: 'NWS PZZ670 advisories', url: first.url.replace('PZZ645', 'PZZ670'), data: {...first.data, alerts}};
   d.sources.tides.status = status;
   d.sources.tides.data.predictions = predictions;
   return d;
