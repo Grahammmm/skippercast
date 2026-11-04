@@ -148,6 +148,7 @@ test('the deploy script takes the VAPID pair from the backup bucket, generating 
 const ID = '12345678-1234-1234-1234-123456789abc';
 const committed = () => readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
 const ADVISOR_ENV = {TEXT_ADVISOR_ENABLED: 'true', ADVISOR_CHANNEL: 'twilio', ADVISOR_MODEL: ' claude-opus-5-5 ', ADVISOR_NUMBER: '',
+  ADVISOR_BETA_REGIONS: ' morro-bay ', ADVISOR_BETA_LANGS: ' en ',
   BLUEBUBBLES_PRIVATE_API: 'true', ENABLE_ADVISOR: 'true', PATH: '/usr/bin', OTHER_ADVISOR: 'x'};
 
 test('advisor off: the deploy config is byte-identical to the config without the feature, whatever the environment holds', () => {
@@ -173,7 +174,7 @@ test('advisor on: the private media bucket, the advisor queue pair and the advis
   ]);
   // Existing vars stay; advisor vars are trimmed, empty ones left out, unrelated keys ignored.
   assert.deepEqual(config.vars, {IDENTITY_PROVIDER: 'skippercast', BOAT_LOOKUP_ENABLED: 'true', BOAT_LOOKUP_GLOBAL_DAILY_LIMIT: '500', COST_CEILING_R2_READS_PER_DAY: '300000',
-    ADVISOR_CHANNEL: 'twilio', ADVISOR_MODEL: 'claude-opus-5-5', BLUEBUBBLES_PRIVATE_API: 'true', TEXT_ADVISOR_ENABLED: 'true'});
+    ADVISOR_CHANNEL: 'twilio', ADVISOR_MODEL: 'claude-opus-5-5', ADVISOR_BETA_REGIONS: 'morro-bay', ADVISOR_BETA_LANGS: 'en', BLUEBUBBLES_PRIVATE_API: 'true', TEXT_ADVISOR_ENABLED: 'true'});
   // Without advisor vars in the environment only the bindings change.
   assert.deepEqual(deployConfig(committed(), ID, 'skippercast-feeds', '', {advisor: true}).vars, JSON.parse(stripJsonComments(committed())).vars);
   const env = readFileSync(new URL('../server/env.ts', import.meta.url), 'utf8');
@@ -202,11 +203,12 @@ test('the CLI reads ENABLE_ADVISOR and the advisor vars from the environment', (
   const dir = mkdtempSync(join(tmpdir(), 'wrangler-config-')), out = join(dir, 'w.json'), cwd = fileURLToPath(new URL('..', import.meta.url));
   try {
     const on = spawnSync(process.execPath, ['scripts/wrangler_config.mjs', ID, 'skippercast-feeds', out, ''], {cwd, encoding: 'utf8',
-      env: {...process.env, ENABLE_ADVISOR: 'true', ENABLE_QUEUES: '', TEXT_ADVISOR_ENABLED: 'true', ADVISOR_CHANNEL: 'twilio'}});
+      env: {...process.env, ENABLE_ADVISOR: 'true', ENABLE_QUEUES: '', TEXT_ADVISOR_ENABLED: 'true', ADVISOR_CHANNEL: 'twilio', ADVISOR_BETA_REGIONS: ' morro-bay ', ADVISOR_BETA_LANGS: ' en '}});
     assert.equal(on.status, 0, on.stderr);
     assert.match(on.stdout, /with advisor/);
     const config = JSON.parse(readFileSync(out, 'utf8'));
     assert.equal(config.vars.TEXT_ADVISOR_ENABLED, 'true'); assert.equal(config.vars.ADVISOR_CHANNEL, 'twilio');
+    assert.equal(config.vars.ADVISOR_BETA_REGIONS, 'morro-bay'); assert.equal(config.vars.ADVISOR_BETA_LANGS, 'en');
     assert.equal(config.queues.producers[0].binding, 'ADVISOR_QUEUE');
     const off = spawnSync(process.execPath, ['scripts/wrangler_config.mjs', ID, 'skippercast-feeds', out, ''], {cwd, encoding: 'utf8',
       env: {...process.env, ENABLE_ADVISOR: '', ENABLE_QUEUES: '', TEXT_ADVISOR_ENABLED: 'true'}});
@@ -231,7 +233,7 @@ test('the deploy script creates the advisor bucket and queues only with ENABLE_A
   assert.match(body, /queues info "\$queue"/);
   const workflow = readFileSync(new URL('../.github/workflows/deploy-cloudflare.yml', import.meta.url), 'utf8');
   for (const name of ['ENABLE_ADVISOR', 'TEXT_ADVISOR_ENABLED', 'ADVISOR_CHANNEL', 'ADVISOR_REPLIES_ENABLED', 'ADVISOR_SOCIAL_ENABLED', 'ADVISOR_INBOX_ENABLED',
-    'ADVISOR_NUMBER', 'ADVISOR_PUBLIC_BASE', 'ADVISOR_REGION_DEFAULT', 'ADVISOR_MODEL', 'ADVISOR_VISION_MODEL', 'ADVISOR_VISION_PROVIDERS',
+    'ADVISOR_NUMBER', 'ADVISOR_PUBLIC_BASE', 'ADVISOR_REGION_DEFAULT', 'ADVISOR_BETA_REGIONS', 'ADVISOR_BETA_LANGS', 'ADVISOR_MODEL', 'ADVISOR_VISION_MODEL', 'ADVISOR_VISION_PROVIDERS',
     'ADVISOR_DAILY_MESSAGES_PER_CONTACT', 'ADVISOR_DAILY_LLM_PER_CONTACT', 'ADVISOR_GLOBAL_DAILY_LLM', 'ADVISOR_GLOBAL_DAILY_VISION', 'ADVISOR_DAILY_LLM_PER_IP', 'ADVISOR_GLOBAL_DAILY_LLM_WEB', 'ADVISOR_GLOBAL_DAILY_COLD',
     'ADVISOR_AUTO_PUBLISH_AFTER', 'ADVISOR_ADMIN_CONTACT_ID', 'ADVISOR_INBOX_PUBLIC_REPLIES', 'BLUEBUBBLES_PRIVATE_API'])
     assert.match(workflow, new RegExp(`^ {10}${name}: \\$\\{\\{ vars\\.${name} \\}\\}$`, 'm'), name);

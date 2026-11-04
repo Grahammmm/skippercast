@@ -5,6 +5,7 @@
 import type {MiddlewareHandler} from 'hono';
 import {json} from '../http.ts';
 import {advisorSettings} from './settings.ts';
+import type {BetaScope} from './settings.ts';
 import {fleetSettings} from '../fleet/settings.ts';
 import {publicPagesSettings} from '../pages-settings.ts';
 import type {AppEnv} from '../env.ts';
@@ -13,6 +14,16 @@ export const gate: MiddlewareHandler<AppEnv> = async (c, next) => {
   if (!advisorSettings(c.env).enabled) return json({error: 'Not found'}, 404);
   await next();
 };
+
+/**
+ * BF-advisor-beta: whether an inbound whose resolved region and reply language are given is inside the pilot's scope
+ * (betaScope in settings.ts). No list means no restriction. With a region list, a region that could not be resolved
+ * (null) is outside it: the scope fails closed. The engine answers an outside inbound with nothing at all, which is
+ * what the sender gets while TEXT_ADVISOR_ENABLED is off (the gate's 404 sends no text).
+ */
+export function inBetaScope(scope: BetaScope, region: string | null, language: string): boolean {
+  return (!scope.regions || (region !== null && scope.regions.includes(region))) && (!scope.langs || scope.langs.includes(language));
+}
 
 /**
  * /boats/* (charter-fleet design § 13, CF-33): the one boat page serves advisor boats and

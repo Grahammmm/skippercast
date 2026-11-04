@@ -84,3 +84,24 @@ export function advisorSettings(env: AdvisorVars = {}): AdvisorSettings {
     inboxEnabled: flag(env.ADVISOR_INBOX_ENABLED, d.inboxEnabled),
   };
 }
+
+// BF-advisor-beta: the pilot's scope. Two optional comma lists (regions by SLUG, languages en/es). Unset, empty
+// or all-invalid means no restriction (today's behaviour) and an all-invalid value is flagged so health shows it.
+export type BetaVars = {ADVISOR_BETA_REGIONS?: string; ADVISOR_BETA_LANGS?: string};
+export interface BetaScope {
+  regions: string[] | null; langs: string[] | null;       // null = no restriction
+  dropped: {regions: number; langs: number};              // entries that failed validation
+  ignored: {regions: boolean; langs: boolean};            // set, but nothing in it was valid: serving everyone
+}
+const BETA_LANGS: readonly string[] = ['en', 'es'];
+
+function betaList(value: unknown, valid: (v: string) => boolean): {list: string[] | null; dropped: number; ignored: boolean} {
+  const entries = text(value).toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+  const good = [...new Set(entries.filter(valid))];
+  return {list: good.length ? good : null, dropped: entries.length - entries.filter(valid).length, ignored: entries.length > 0 && !good.length};
+}
+
+export function betaScope(vars: AdvisorVars & BetaVars = {}): BetaScope {
+  const r = betaList(vars.ADVISOR_BETA_REGIONS, v => SLUG.test(v)), l = betaList(vars.ADVISOR_BETA_LANGS, v => BETA_LANGS.includes(v));
+  return {regions: r.list, langs: l.list, dropped: {regions: r.dropped, langs: l.dropped}, ignored: {regions: r.ignored, langs: l.ignored}};
+}
