@@ -118,3 +118,72 @@ test('#542: briefForecast gives the brief the NOAA hours at the chosen point, cl
   unclocked.models.gfs_global = {...unclocked.models.gfs_global, meta: {}};
   assert.equal(briefForecast(parseConditionsForecast(unclocked, 'morro-bay', null)), null);
 });
+
+// RF0210-7: readingsAt with no exact sample reads the nearest eligible one. Synthetic points only.
+const SEL = '2026-11-04T10:00:00Z', MIN = 60_000;
+const at = ms => new Date(Date.parse(SEL) + ms).toISOString();
+const rowOf = (...pts) => ({label: 'Tide', unit: 'ft', color: '', points: pts.map(([ms, value]) => ({at: at(ms * MIN), value}))});
+const perms = list => list.length < 2 ? [list] : list.flatMap((x, i) => perms([...list.slice(0, i), ...list.slice(i + 1)]).map(p => [x, ...p]));
+const valueOf = row => readingsAt([row], SEL)[0].value;
+
+test('nearest_reading_is_order_independent', () => {
+  const pts = [[-24, 1], [-6, 4], [6, 5]];
+  const results = perms(pts).map(p => valueOf(rowOf(...p)));
+  assert.equal(results.length, 6);
+  // 09:36=1, 09:54=4, 10:06=5: 09:54 and 10:06 tie, the earlier wins; the farther 1 never wins in any order.
+  assert.ok(results.every(v => v === 4), 'every permutation reads 4');
+  // A unique nearest wins wherever it sits in the list.
+  const unique = [[-25, 1], [-10, 7], [28, 3]];
+  assert.ok(perms(unique).every(p => valueOf(rowOf(...p)) === 7));
+});
+
+test('nearest_reading_tie_uses_earlier_timestamp', () => {
+  assert.equal(valueOf(rowOf([-10, 2], [10, 9])), 2);
+  assert.equal(valueOf(rowOf([10, 9], [-10, 2])), 2);
+  assert.equal(valueOf(rowOf([10, 9], [-10, 2], [20, 5])), 2);
+  // A unique nearest future point still beats an earlier, farther one.
+  assert.equal(valueOf(rowOf([-12, 2], [10, 9])), 9);
+  assert.equal(valueOf(rowOf([10, 9], [-12, 2])), 9);
+  // An equidistant earlier point that is not finite cannot win the tie.
+  assert.equal(valueOf(rowOf([-10, null], [10, 9])), 9);
+});
+
+test('exact_missing_reading_is_not_backfilled', () => {
+  assert.equal(valueOf(rowOf([0, 6], [-5, 1], [5, 2])), 6, 'a finite exact reading wins over closer-looking neighbours');
+  for (const missing of [null, NaN, Infinity, -Infinity, undefined, 'x']) {
+    assert.equal(valueOf(rowOf([-5, 1], [0, missing], [5, 2])), null, `exact ${String(missing)} stays null`);
+    assert.equal(valueOf(rowOf([5, 2], [0, missing], [-5, 1])), null, `exact ${String(missing)} stays null in reverse order`);
+  }
+  // Duplicate exact timestamps keep the first.
+  assert.equal(valueOf(rowOf([0, 3], [0, 8])), 3);
+  assert.equal(valueOf(rowOf([0, null], [0, 8])), null);
+});
+
+test('reading_tolerance_is_strict_and_inputs_are_unchanged', () => {
+  const ms29 = 29 * MIN + 59_999;
+  const edge = {label: 'Tide', unit: 'ft', color: '', points: [{at: at(-ms29), value: 3}]};
+  assert.equal(valueOf(edge), 3, '29m59.999s before is eligible');
+  assert.equal(valueOf({...edge, points: [{at: at(ms29), value: 3}]}), 3, '29m59.999s after is eligible');
+  assert.equal(valueOf(rowOf([-30, 3])), null, 'exactly 30 minutes before is excluded');
+  assert.equal(valueOf(rowOf([30, 3])), null, 'exactly 30 minutes after is excluded');
+  assert.equal(valueOf(rowOf([-30, 3], [29, 4])), 4, 'the excluded point never wins over an eligible one');
+  assert.equal(valueOf(rowOf([-31, 3], [-45, 4])), null);
+  // Unreadable timestamps and values, and an empty row, yield null.
+  const bad = {label: 'Tide', unit: 'ft', color: '', points: [{at: 'not a time', value: 1}, {at: at(-5 * MIN), value: NaN}, {at: at(5 * MIN), value: null}, {at: at(6 * MIN), value: '2'}]};
+  assert.equal(valueOf(bad), null);
+  assert.equal(valueOf(rowOf()), null);
+  // An invalid selected time reads null and keeps the labels and units.
+  const out = readingsAt([rowOf([0, 3])], 'garbage');
+  assert.equal(out.length, 1);
+  assert.equal(out[0].value, null);
+  assert.equal(out[0].label, 'Tide');
+  assert.equal(out[0].unit, 'ft');
+  // The input is read, never reordered or rewritten.
+  const frozen = rowOf([10, 9], [-24, 1], [-10, 2]);
+  frozen.points.forEach(Object.freeze);
+  Object.freeze(frozen.points);
+  Object.freeze(frozen);
+  const before = JSON.stringify(frozen);
+  assert.equal(valueOf(frozen), 2);
+  assert.equal(JSON.stringify(frozen), before);
+});

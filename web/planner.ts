@@ -30,6 +30,7 @@ import {waterRoute, type RouteFailure} from './route.ts';
 import {coordinates, region as activeRegion} from './state.ts';
 import {checkGpx} from './gpx-check.ts';
 import {placeRefused, screenPlace, type PlaceVerdict} from '../dist/geo-screen.js';
+import {session} from './account.ts';
 import {verdictLine} from './waypoint-placement.ts';
 import {launchPoints, loadLaunchPoints} from './launches.ts';
 import {launchChoice} from './reach.ts';
@@ -99,7 +100,13 @@ export interface PlannerDeps {
   route?: RouteFn;
   /** SC2207-04: the land/water product and lines the routes run on for `region`; the loaded, matching state by default (loads the shared lines file once when it is not asked for yet). */
   routeContext?: (region: string) => Promise<RouteContext>;
+  /** SC0022-11: the request the signed-in person's saved-spot list is read with (fetch by default); tests pass a fixture. */
+  savedSpotsFetch?: typeof fetch;
 }
+/** SC0022-11: a saved spot as the picker holds it: the source id, a display name and a position. Never its note, owner or date. */
+export type SavedSpot = {id: string; name: string; latitude: number; longitude: number};
+export type SavedSpotsState = 'idle' | 'loading' | 'ready' | 'failed';
+export type SavedSpotRow = SavedSpot & {refused: boolean; reading: string};
 export type RouteContext = {model: LandWaterModel | null; lines: LandWaterLines | null | false};
 
 /** Only the ready product of `region` (and its lines); another region's, a loading or a failed one is no product. */
@@ -135,6 +142,11 @@ const LOADING = 'Loading current screened reefs…';
 const STORAGE_OK = 'Saved on this browser for each region. Separate from your account’s trip alerts.';
 const STORAGE_OFF = 'Browser storage is unavailable. Keep this page open until you download your plan.';
 const RANKED_LAYERS: Layers = {waypoints: true, outlines: true, alignments: false, exclusions: false};
+const SPOT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SPOT_CLEAR = 'No protected-area boundary found in this screen. Not a legal clearance.';
+const SPOT_UNAVAILABLE = 'Saved spot unavailable. Open the planner and try again.';
+const SPOT_CAP = 'Your plan can keep at most 100 user waypoints. Remove one first.';
+const SPOT_ADDED = 'Added to this browser’s plan. Private notes are not copied.';
 
 /** The next Friday on or after `today` (YYYY-MM-DD). Best available no longer moves the date there (SCJ-8). */
 export function nextFriday(today: string): string {
@@ -519,13 +531,88 @@ export function createPlanner(deps: PlannerDeps) {
   }
   const checkConditions = (): void => { deps.nav.conditions(draft.value.date); };
 
+  // SC0022-11: the signed-in person's saved spots offered as stops. Read only while the planner is open and the session is signed in;
+  // only an id, a display name and a position are kept (never the note, owner or date), and a copy enters the plan as an ordinary user waypoint.
+  const NO_SPOTS: SavedSpot[] = [];
+  const savedRaw = signal<SavedSpot[]>(NO_SPOTS), savedSpotsState = signal<SavedSpotsState>('idle'), savedSpotsOpen = signal(false), savedSpotsStatus = signal('');
+  let spotsGen = 0, spotsAbort: AbortController | null = null, spotsFor: unknown = null;
+  const localBySource = new Map<string, string>();
+  const spotsActive = (): boolean => !disposed && savedSpotsOpen.value && session.value.state === 'signed-in' && activeRegion.value === region.id;
+  const dropSpots = (): void => {
+    spotsGen++; spotsAbort?.abort(); spotsAbort = null; spotsFor = null; localBySource.clear();
+    batch(() => { savedRaw.value = NO_SPOTS; savedSpotsState.value = 'idle'; savedSpotsStatus.value = ''; });
+  };
+  /** The list answer as rows; anything else than a bounded list of valid, unique spots throws, so the picker fails closed. */
+  const projectSpots = (data: unknown): SavedSpot[] => {
+    const list = (data as {spots?: unknown} | null)?.spots, seen = new Set<string>();
+    if (!Array.isArray(list) || list.length > 100) throw Error('malformed');
+    return list.map((raw: unknown): SavedSpot => {
+      const r = raw as {id?: unknown; name?: unknown; lat?: unknown; lon?: unknown} | null;
+      if (!r || typeof r !== 'object' || typeof r.id !== 'string' || !SPOT_ID.test(r.id) || seen.has(r.id) || typeof r.name !== 'string' || r.name.length > 80
+        || typeof r.lat !== 'number' || !(r.lat > -90 && r.lat < 90) || typeof r.lon !== 'number' || !(r.lon > -180 && r.lon < 180)) throw Error('malformed');
+      seen.add(r.id);
+      return {id: r.id, name: r.name.replace(/[\u0000-\u001f\ufffe\uffff]/g, '').trim() || 'Waypoint', latitude: r.lat, longitude: r.lon};
+    });
+  };
+  async function loadSavedSpots(): Promise<void> {
+    const mine = ++spotsGen, ctl = new AbortController();
+    spotsAbort?.abort(); spotsAbort = ctl; spotsFor = session.value;
+    batch(() => { savedRaw.value = NO_SPOTS; savedSpotsState.value = 'loading'; savedSpotsStatus.value = ''; });
+    const timer = setTimeout(() => ctl.abort(), 20000);
+    const stopped = new Promise<never>((_, reject) => ctl.signal.addEventListener('abort', () => reject(Error('stopped'))));
+    try {
+      const rows = await Promise.race([(async () => {
+        const response = await (deps.savedSpotsFetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a)))('/api/spots', {credentials: 'same-origin', cache: 'no-store', signal: ctl.signal});
+        if (!response.ok) throw Error('refused');
+        return projectSpots(await response.json());
+      })(), stopped]);
+      if (mine === spotsGen) batch(() => { savedRaw.value = rows; savedSpotsState.value = 'ready'; });
+    } catch { if (mine === spotsGen) batch(() => { savedRaw.value = NO_SPOTS; savedSpotsState.value = 'failed'; }); }
+    finally { clearTimeout(timer); }
+  }
+  const stopSpots = effect(() => {
+    const s = session.value; void savedSpotsOpen.value; void activeRegion.value;
+    untracked(() => { if (!spotsActive()) { if (spotsFor) dropSpots(); } else if (spotsFor !== s) void loadSavedSpots(); });
+  });
+  /** A spot's own reading: only a screen that says what area it covers speaks for it, in the region the planner is open for; else not checked. */
+  const spotVerdict = (p: SavedSpot): PlaceVerdict => {
+    const sc = screen as {coversGeometry?: unknown} | null;
+    if (activeRegion.value !== region.id || typeof sc?.coversGeometry !== 'function') return {inside: false, name: null, distanceM: null, screened: false};
+    return screenPlace(screen, {latitude: p.latitude, longitude: p.longitude});
+  };
+  const savedSpots = computed<SavedSpotRow[]>(() => {
+    void tick.value;
+    return savedRaw.value.map(p => { const v = spotVerdict(p); return {...p, refused: placeRefused(v), reading: verdictLine(v) ?? SPOT_CLEAR}; });
+  });
+  function setSavedSpotsOpen(on: boolean): void { savedSpotsOpen.value = on; }
+  function refreshSavedSpots(): Promise<void> { return spotsActive() ? loadSavedSpots() : Promise.resolve(); }
+  /** Copies one listed spot into this browser's plan as an ordinary user waypoint, after its screen is read again; repeat clicks add nothing. */
+  function addSavedSpot(id: string): void {
+    const row = spotsActive() && spotsFor === session.value && savedSpotsState.value === 'ready' ? savedRaw.value.find(p => p.id === id) : undefined;
+    if (!row) { savedSpotsStatus.value = SPOT_UNAVAILABLE; return; }
+    const verdict = spotVerdict(row);
+    if (placeRefused(verdict)) { savedSpotsStatus.value = `Not added: ${verdictLine(verdict)}.`; return; }
+    const saved: UserWaypoint[] = draft.value.userWaypoints ?? [], mapped = localBySource.get(row.id);
+    const same = saved.find(w => w.id === mapped) ?? saved.find(w => w.name === row.name && w.category === 'other' && w.latitude === row.latitude && w.longitude === row.longitude);
+    const local = same?.id ?? `user:${crypto.randomUUID()}`;
+    const points = same ? saved : userWaypoints([...saved, {id: local, name: row.name, category: 'other', latitude: row.latitude, longitude: row.longitude}]) as UserWaypoint[];
+    if (!points.some(w => w.id === local)) { savedSpotsStatus.value = SPOT_CAP; return; }
+    localBySource.set(row.id, local);
+    if (!draft.value.ids.includes(local)) {
+      revision++;
+      batch(() => { if (ranked.value) unrank(); persist({...draft.value, userWaypoints: points, ids: [...draft.value.ids, local]}); });
+    }
+    savedSpotsStatus.value = SPOT_ADDED;
+  }
+
   return {
     today, region, draft, launch, setLaunch, preparing, tripAtlas, ranked, filtersDirty, restorePending, allowResearch, search, loading, portsReady, portsFailed, filters, ports,
     scopeStatus, actionStatus, storageNote, tick, summary, spots, protectedHits, notesReady, waypointPosition,
     chooseWaypoint, saveWaypoint, removeWaypoint, addPlace,
+    savedSpots, savedSpotsState, savedSpotsStatus, setSavedSpotsOpen, refreshSavedSpots, addSavedSpot,
     setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     /** For tests and a region change: stop drawing the ranked set. */
-    dispose: () => { disposed = true; prepared = null; stopPrepare(); stopRanked(); stopPort(); },
+    dispose: () => { disposed = true; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); },
   };
 }
