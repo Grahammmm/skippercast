@@ -67,12 +67,15 @@ test('a single ranked row keeps its percent', () => {
   assert.doesNotMatch(html, /export-shared-confidence/);
   assert.match(list, /#1 · Strong · 90% confidence/);
 });
-test('a missing percent prints no undefined%', () => {
-  const {html, list} = renderList([ranked(1, 90), ranked(2, undefined)]);
-  assert.doesNotMatch(html, /export-shared-confidence/);
-  assert.doesNotMatch(html.slice(html.indexOf('id="export-spot-list"')), /NaN%|Infinity%/);
-  assert.match(list, /#1 · Strong · 90% confidence/);
-});
+for (const percent of [undefined, NaN, Infinity, -Infinity]) {
+  test(`a missing or non-finite percent (${percent}) is omitted from its row`, () => {
+    const {html, list} = renderList([ranked(1, 90), ranked(2, percent)]);
+    assert.doesNotMatch(html, /export-shared-confidence/);
+    assert.doesNotMatch(list, /undefined%|NaN%|Infinity%/);
+    assert.match(list, /#1 · Strong · 90% confidence/);
+    assert.match(list, /<strong>#2 · Strong<\/strong>/);
+  });
+}
 test('mixed ranked and unranked: sentence shown and unranked labels unchanged', () => {
   const {html, list} = renderList([ranked(1, 85), ranked(2, 85), unranked(1)]);
   assert.match(html, /All ranked places: 85% evidence confidence\./);

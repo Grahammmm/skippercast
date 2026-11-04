@@ -49,7 +49,7 @@ function SpotRow({t, checked, hit, showConfidence = true, onToggle}: {t: Target;
     <label class="export-check">
       <input type="checkbox" data-spot={t.id} checked={checked} onChange={e => onToggle(e.currentTarget.checked)} />
       <span>
-        <strong>{t.trip_rank ? `#${t.trip_rank} · ${fitLabel(t.trip_fit)}${showConfidence ? ` · ${t.evidence_confidence?.percent}% confidence` : ''}` : t.label}</strong>
+        <strong>{t.trip_rank ? `#${t.trip_rank} · ${fitLabel(t.trip_fit)}${showConfidence && Number.isFinite(t.evidence_confidence?.percent) ? ` · ${t.evidence_confidence?.percent}% confidence` : ''}` : t.label}</strong>
         <small>{exportEvidenceLabel(t)}</small>
         <small>{formatCoordinates(t.latitude, t.longitude, coordinates.value)}</small>
         <small>{t.trip_rank ? t.name : t.id} · grade {t.habitat_grade} · {depth} ft</small>
