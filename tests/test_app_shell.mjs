@@ -37,6 +37,8 @@ async function load() {
       export {Planner} from './web/app/Planner.tsx';
       export {createPlanner} from './web/planner.ts';
       export {AccountMenu} from './web/app/AccountMenu.tsx';
+      export {LanguageChoice} from './web/app/LanguageChoice.tsx';
+      export {language, setLanguage} from './web/i18n.ts';
       export {session, ensureSession, refreshSession, readSession} from './web/account.ts';
       export {coordinates, titleCase, viewParam, MASTHEAD_VIEWS, TAB_VIEWS, ChatEntry, Location, DegradedNotice} from './web/app/Masthead.tsx';
       export {degraded, watchDegraded, installDegradedWatch} from './web/degraded.ts';
@@ -54,7 +56,8 @@ async function load() {
       export {markScreen} from './web/map/marks.ts';
       export {regionUnavailable} from './web/species.ts';
       export {CHECKING, assessScreen} from './web/map/habitat.ts';
-      export {terrainMark, terrainReading} from './web/map/stage.ts';
+      export {createStage, terrainMark, terrainReading} from './web/map/stage.ts';
+      export {createHourClock} from './web/clock.ts';
       export {dayOptions, dockState, hourText, localParts, readout, zoneName} from './web/app/TimeDock.tsx';
       export {Mobile, LayersPanel, afterDetent, toggleLayers} from './web/app/Mobile.tsx';
       export {dragDetent, DRAG_MIN} from './web/ui/Sheet.tsx';
@@ -86,6 +89,31 @@ test('coordinate choice is exposed in settings and used by the plan rows', async
       assert.match(render(h(AccountMenu, {})), new RegExp(`aria-pressed="true"[^>]*>${label}</button>`));
     }
   } finally { state.setCoordinateFormat('dd'); model.dispose(); }
+});
+test('language_choice: the account menu offers English and Español in both languages, and the pressed one follows the language signal', async () => {
+  const {AccountMenu, LanguageChoice, language, setLanguage, session, render, h} = await load();
+  const buttons = html => [...html.matchAll(/<button\b[^>]*\blang="(en|es)"[^>]*>([^<]*)<\/button>/g)].map(m => ({lang: m[1], label: m[2], pressed: /aria-pressed="true"/.test(m[0]), tag: m[0]}));
+  const none = {getItem: () => null, setItem() {}};
+  const before = session.value;
+  try {
+    for (const lang of ['en', 'es']) {
+      setLanguage(lang, {storage: none, doc: null});
+      const html = render(h(LanguageChoice, {}));
+      assert.deepEqual(buttons(html).map(b => [b.lang, b.label, b.pressed]), [['en', 'English', lang === 'en'], ['es', 'Español', lang === 'es']], `${lang}: each language is named in itself, the current one is pressed`);
+      assert.ok(buttons(html).every(b => /type="button"/.test(b.tag)), 'plain buttons, not a form control');
+      assert.match(html, new RegExp(`<h2[^>]*>${lang === 'en' ? 'Language' : 'Idioma'}</h2>`));
+      assert.match(html, /<section aria-labelledby="([^"]+)-language">\s*<h2 id="\1-language"/, 'the group is labelled by its heading');
+    }
+    // In the menu itself, once, before the coordinate format, whatever the account state.
+    for (const state of [{state: 'loading'}, {state: 'offline'}, {state: 'disabled'}, {state: 'signed-out'}, {state: 'signed-in', name: 'Skipper'}]) {
+      session.value = state; setLanguage('en', {storage: none, doc: null});
+      const menu = render(h(AccountMenu, {})), inline = render(h(AccountMenu, {inline: true}));
+      for (const html of [menu, inline]) {
+        assert.equal(buttons(html).length, 2, `${state.state}: one chooser`);
+        assert.ok(html.indexOf('>Language</h2>') > html.indexOf('Your boat') && html.indexOf('>Language</h2>') < html.indexOf('Coordinate format'), `${state.state}: between the boat and the coordinate format`);
+      }
+    }
+  } finally { session.value = before; setLanguage('en', {storage: none, doc: null}); }
 });
 test('startup region reader shares parsed cold work and refuses distinct-key saturation', async () => {
   const {createRegionReader} = await load();
@@ -394,6 +422,89 @@ async function renderShell(href, now = NOW) {
 }
 /** The day chips of the group labelled Day in `html`, as [label, on]. */
 const dayChips = html => [...html.match(/aria-label="Day"[^>]*>(.*?)<\/div>/s)[1].matchAll(/aria-pressed="(true|false)"[^>]*>(?:<svg.*?<\/svg>)?([^<]+)<\/button>/gs)].map(m => [m[2], m[1] === 'true']);
+
+/** An hour clock over a settable reader and a manual scheduler: `fire()` runs the one waiting timeout. */
+function manualClock(createHourClock, start) {
+  let at = new Date(start), next = 1;
+  const timers = new Map(), listeners = new Set();
+  const doc = {hidden: false, addEventListener: (_t, fn) => listeners.add(fn), removeEventListener: (_t, fn) => listeners.delete(fn)};
+  const clock = createHourClock({read: () => new Date(at), doc, schedule: (callback, delay) => { timers.set(next, callback); return next++; }, cancel: id => { timers.delete(id); }});
+  return {clock, timers, listeners, set(value) { at = new Date(value); }, fire() { const [[id, callback]] = [...timers]; timers.delete(id); callback(); }};
+}
+const hourControl = html => html.match(/aria-label="Hour" aria-valuetext="([^"]*)" min="0" max="(\d+)"/).slice(1);
+
+test('shared_clock_crosses_hour_without_navigation: the desktop dock, the phone hour edge and the map stage move together from one injected clock', async () => {
+  const {App, createHourClock, createStage, dockState, narrow, render, h, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  state.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=3d`);
+  // A browser just big enough for the stage: an address, a history that records writes, no-op events.
+  const writes = [];
+  globalThis.location = {href: `${ORIGIN}?region=morro-bay&presentation=3d`};
+  globalThis.history = {state: null, pushState: (...a) => writes.push(a), replaceState: (...a) => writes.push(a)};
+  const calls = [], handle = new Proxy({load: async () => true, destroy() {}}, {get: (target, name) => name in target ? target[name] : (...args) => { calls.push([name, ...args]); return true; }});
+  const host = {dataset: {}, shadowRoot: {children: [], replaceChildren() { this.children = []; }}};
+  const c = manualClock(createHourClock, '2026-10-05T20:59:59.999Z');
+  const released = c.clock.retain();
+  const stage = createStage({host, load: async () => ({styles: [], mountCoast: () => handle}), center: () => [35.37, -120.86], clock: c.clock, doc: {hidden: false, addEventListener() {}, removeEventListener() {}}, viewDelay: 0});
+  try {
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    const before = {desktop: hourControl(render(h(App, {clock: c.clock}))), dock: dockState(c.clock.now.value, TZ).at, dataHour: host.dataset.hour};
+    narrow.value = true;
+    const phoneBefore = hourControl(render(h(App, {clock: c.clock})));
+    narrow.value = false;
+    assert.deepEqual(before.desktop, ['1 pm', '10']);
+    assert.deepEqual(phoneBefore, ['1 pm', '10']);
+    assert.equal(before.dataHour, '2026-10-05T20:00:00.000Z');
+    assert.equal(c.timers.size, 1, 'the app, the layouts and the stage share one ticker');
+    const steps = calls.length;
+    c.set('2026-10-05T21:00:00Z');
+    c.fire();
+    const desktop = hourControl(render(h(App, {clock: c.clock})));
+    narrow.value = true;
+    const phone = hourControl(render(h(App, {clock: c.clock})));
+    narrow.value = false;
+    assert.deepEqual(desktop, ['2 pm', '9'], 'the dock default hour moved on');
+    assert.deepEqual(phone, ['2 pm', '9'], 'the phone hour edge moved on');
+    assert.equal(dockState(c.clock.now.value, TZ).at, Date.parse('2026-10-05T21:00:00Z'));
+    assert.equal(host.dataset.hour, '2026-10-05T21:00:00.000Z', 'the map draws the hour the dock shows');
+    assert.deepEqual(calls.slice(steps).filter(call => call[0] === 'setHour').map(call => call[1].toISOString()), ['2026-10-05T21:00:00.000Z']);
+    assert.deepEqual(writes, [], 'no navigation, no history write');
+    assert.equal(state.hour.value, null, 'nothing was chosen on the way');
+  } finally {
+    stage.destroy();
+    released();
+    narrow.value = false;
+    delete globalThis.location; delete globalThis.history;
+  }
+  assert.equal(c.timers.size, 0);
+  assert.equal(c.listeners.size, 0);
+});
+
+test('selected_hour_survives_clock_rollover: a chosen ?hour= is the same before and after the tick, in range or out', async () => {
+  const {App, createHourClock, render, h, state} = await load();
+  for (const chosen of ['2026-10-06T03:00Z', '2026-10-01T03:00Z']) {
+    state.configureStore({v2: true, storage: memory()});
+    state.syncFromURL(`${ORIGIN}?region=morro-bay&hour=${chosen}`);
+    const c = manualClock(createHourClock, '2026-10-05T20:30:00Z');
+    const release = c.clock.retain();
+    const at = html => html.match(/aria-label="Hour" aria-valuetext="[^"]*"[^>]*>(<output[^>]*>[^<]*<\/output>)/)[0].replace(/ min="\d+" max="\d+" step="1" value="\d+"/, '');
+    const first = at(render(h(App, {clock: c.clock})));
+    for (const next of ['2026-10-05T21:00:00Z', '2026-10-05T22:00:00Z', '2026-10-05T23:00:00Z']) { c.set(next); c.fire(); }
+    const after = at(render(h(App, {clock: c.clock})));
+    release();
+    assert.equal(after, first, `${chosen}: the dock reads the chosen hour the same after three ticks`);
+    assert.equal(state.hour.value, chosen);
+  }
+});
+
+test('fixed_now_and_play_remain_independent: a fixed now ignores the clock and starts no ticker', async () => {
+  const {App, createHourClock, render, h, state} = await load();
+  state.configureStore({v2: true, storage: memory()});
+  state.syncFromURL(`${ORIGIN}?region=morro-bay`);
+  const c = manualClock(createHourClock, '2026-10-05T22:00:00Z');
+  assert.deepEqual(hourControl(render(h(App, {now: NOW, clock: c.clock}))), ['1 pm', '10'], 'the fixed date is what the dock reads');
+  assert.equal(c.timers.size, 0, 'rendering starts no ticker');
+});
 
 test('the shell has the masthead, the command bar, the brief column and the map chrome', async () => {
   const html = await renderShell(`${ORIGIN}?region=morro-bay`);

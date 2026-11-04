@@ -11,7 +11,7 @@ import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
 import catalogue from '../catalog/app/strings.json' with {type: 'json'};
-import {LANGUAGES, acceptedLanguage, initLanguage, language, localeOf, lookup, num, resolveLanguage, supported, t} from '../web/i18n.ts';
+import {LANGUAGES, LANGUAGE_KEY, acceptedLanguage, initLanguage, language, localeOf, lookup, num, resolveLanguage, setLanguage, supported, t} from '../web/i18n.ts';
 import {COVERED, catalogueProblems} from '../scripts/check_copy.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -512,4 +512,88 @@ test('language_switch_roundtrip_and_lint: both files are covered, a bare literal
   }
   await put('catalog/app/strings.json', JSON.stringify({strings: {'where.title': {en: 'Where to look', es: ''}}}));
   assert.match(catalogueProblems(root).join('\n'), /where\.title has no es value/, 'a removed es value fails');
+});
+
+// SC0452-08: the app menu's choice. A page is simulated by a store, a document and an address whose history.replaceState moves it.
+function page(href, {languages = ['en'], store = new Map(), state = {from: 'history'}, blockStorage = false, blockHistory = false} = {}) {
+  const calls = [], doc = {documentElement: {lang: 'en'}}, writes = [];
+  const where = {href};
+  const storage = blockStorage ? null : {getItem: k => store.get(k) ?? null, setItem: (k, v) => { writes.push(k); store.set(k, String(v)); }};
+  const history = blockHistory ? {get state() { throw Error('history blocked'); }, replaceState() { throw Error('history blocked'); }}
+    : {state, replaceState: (...args) => { calls.push(args); where.href = new URL(args[2], where.href).href; }};
+  return {store, doc, calls, writes, where, state, env: () => ({search: new URL(where.href).search, href: where.href, storage, history, languages, doc})};
+}
+
+test('language_choice_both_directions: choosing sets the signal and the document lang at once and stores only the language key', () => {
+  const p = page('https://s.test/map?region=morro-bay', {languages: ['en-US']});
+  try {
+    assert.equal(initLanguage(p.env()), 'en');
+    assert.equal(setLanguage('es', p.env()), 'es');
+    assert.equal(language.value, 'es'); assert.equal(p.doc.documentElement.lang, 'es'); assert.equal(p.store.get(LANGUAGE_KEY), 'es');
+    assert.equal(setLanguage('en', p.env()), 'en');
+    assert.equal(language.value, 'en'); assert.equal(p.doc.documentElement.lang, 'en'); assert.equal(p.store.get(LANGUAGE_KEY), 'en');
+    assert.deepEqual([...new Set(p.writes)], [LANGUAGE_KEY], 'nothing else is written');
+    assert.equal(setLanguage('fr', p.env()), 'en', 'only English and Spanish can be chosen'); assert.equal(p.store.get(LANGUAGE_KEY), 'en');
+    assert.deepEqual(p.calls, [], 'an address without ?lang= is left alone: no replace, no new entry');
+  } finally { language.value = 'en'; }
+});
+
+test('language_choice_reload_and_opposing_link: a stored choice survives a reload, also over the old ?lang= link', () => {
+  try {
+    // The browser asks for English, the visitor chooses Español, a fresh page reads it back.
+    const a = page('https://s.test/map?region=morro-bay#chart', {languages: ['en']});
+    initLanguage(a.env()); setLanguage('es', a.env());
+    assert.equal(initLanguage(page(a.where.href, {store: a.store, languages: ['en']}).env()), 'es', 'the stored choice beats the browser');
+    assert.equal(initLanguage(page(a.where.href, {store: new Map(), languages: ['en']}).env()), 'en', 'positive control: without the stored choice the browser decides');
+    // ?lang=en then Español, and the inverse: only the lang value moves; query order, other parameters, hash and history.state stay.
+    for (const [from, to] of [['en', 'es'], ['es', 'en']]) {
+      const b = page(`https://s.test/map?region=morro-bay&lang=${from}&note=a%20b&day=2#chart`, {languages: [from === 'en' ? 'es' : 'en']});
+      assert.equal(initLanguage(b.env()), from);
+      setLanguage(to, b.env());
+      assert.equal(b.calls.length, 1); assert.equal(b.calls[0][0], b.state, 'history.state is kept as is'); assert.equal(b.calls[0][1], '');
+      assert.equal(b.where.href, `https://s.test/map?region=morro-bay&lang=${to}&note=a%20b&day=2#chart`);
+      assert.equal(initLanguage(page(b.where.href, {store: b.store, languages: [from]}).env()), to, `reload keeps ${to}`);
+    }
+    // A bare or repeated lang parameter, and an unsupported one, are all replaced by the choice; a longer name is not touched.
+    const c = page('https://s.test/map?lang&langx=1&lang=fr&lang=en');
+    setLanguage('es', c.env());
+    assert.equal(c.where.href, 'https://s.test/map?lang=es&langx=1&lang=es&lang=es');
+    // A supported link is stored by init, and a later choice replaces the stored value too.
+    const d = page('https://s.test/map?lang=es', {languages: ['en']});
+    assert.equal(initLanguage(d.env()), 'es'); assert.equal(d.store.get(LANGUAGE_KEY), 'es');
+    setLanguage('en', d.env()); assert.equal(d.store.get(LANGUAGE_KEY), 'en');
+  } finally { language.value = 'en'; }
+});
+
+test('language_choice_storage_unavailable: blocked storage or history never throws and the choice holds for the visit', () => {
+  const quota = () => { throw Object.assign(Error('full'), {name: 'QuotaExceededError'}); };
+  try {
+    for (const [label, storage] of [['null storage', null], ['throwing setItem', {getItem: () => null, setItem: quota}], ['throwing getItem and setItem', {getItem: quota, setItem: quota}]]) {
+      const doc = {documentElement: {lang: 'en'}};
+      assert.doesNotThrow(() => setLanguage('es', {storage, doc}), label);
+      assert.equal(language.value, 'es', label); assert.equal(doc.documentElement.lang, 'es', label);
+      assert.doesNotThrow(() => setLanguage('en', {storage, doc}), label); assert.equal(language.value, 'en', label);
+      assert.doesNotThrow(() => initLanguage({search: '', storage, languages: ['es'], doc}), `init: ${label}`);
+      assert.equal(language.value, 'es', `init: ${label}: the browser decides`);
+    }
+    const throwing = search => Object.defineProperty({search, doc: {documentElement: {lang: 'en'}}}, 'storage', {get() { throw new DOMException('denied', 'SecurityError'); }});
+    assert.doesNotThrow(() => setLanguage('es', throwing(''))); assert.equal(language.value, 'es');
+    assert.doesNotThrow(() => initLanguage(throwing('?lang=en'))); assert.equal(language.value, 'en', 'a supported link wins when storage cannot even be reached');
+    // A supported link still wins init when its write throws.
+    assert.equal(initLanguage({search: '?lang=es', storage: {getItem: () => null, setItem: quota}, languages: ['en']}), 'es');
+    // History refusing does not cancel the choice (storage still takes it).
+    const h = page('https://s.test/map?lang=en', {blockHistory: true});
+    assert.doesNotThrow(() => setLanguage('es', h.env())); assert.equal(language.value, 'es'); assert.equal(h.store.get(LANGUAGE_KEY), 'es');
+    // Both refusing: the visit keeps the choice; nothing throws.
+    const both = {...page('https://s.test/map?lang=en', {blockStorage: true, blockHistory: true}).env()};
+    assert.doesNotThrow(() => setLanguage('en', both)); assert.equal(language.value, 'en');
+    assert.doesNotThrow(() => setLanguage('es', both)); assert.equal(language.value, 'es');
+    // The page's own globals: a localStorage getter that throws (the default environment).
+    const saved = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', {configurable: true, get() { throw new DOMException('denied', 'SecurityError'); }});
+    try {
+      assert.doesNotThrow(() => setLanguage('en')); assert.equal(language.value, 'en');
+      assert.doesNotThrow(() => initLanguage());
+    } finally { if (saved) Object.defineProperty(globalThis, 'localStorage', saved); else delete globalThis.localStorage; }
+  } finally { language.value = 'en'; }
 });
