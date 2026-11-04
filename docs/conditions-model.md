@@ -114,9 +114,18 @@ every limit; the limits differ because each surface reads a different input):
 | Trip alert policy (`server/alert-policy.ts`) | within limits | feed `completed_at` over 3 h old or ahead; any model run over 36 h old or over 1 h ahead, or its source not `ok` | unverified |
 | Text advisor comfort word (`server/advisor/answers/forecast-clock.ts`) | comfortable | oldest model run over 18 h; over 36 h, over 1 h ahead or with no run time; `completed_at` is not read | a calmer word held at unknown with `comfort_held` (rough stays rough); past 36 h the forecast reads as unavailable |
 
-Saved-trip alerts (`server/alert-policy.ts`) still compare a trip's window
-maxima (wind, gusts, seas and chop) with the limits saved on the trip. It reads
-no wave period, so it has no long-period rule. That screen is unchanged here.
+Saved-trip alerts (`server/alert-policy.ts`) still decide `within limits` or
+`above limits` only from a trip's window maxima (wind, gusts, seas and chop)
+against the limits saved on the trip, and unavailable inputs still make the
+status `unverified`. Separately, when the wave-model height and period for the
+same model and hour reach `LONG_PERIOD_SWELL` (`web/score.ts`: 2.5 ft at 15 s),
+the assessment adds a hazard note naming the earliest such local hour in the
+saved window (departure and return extensions included). The note is not a
+missing-data issue, ignores the saved sea limit and boat factors, and does not
+clear the trip; an alert update is sent when it appears, changes or clears. It
+reads only the combined-wave height and period of the two wave models; the
+brief and the advisor may also read GFS swell partitions, which saved-trip
+alerts do not.
 
 ## Model agreement
 
