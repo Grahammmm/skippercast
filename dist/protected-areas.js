@@ -1,6 +1,6 @@
 import { getRegion, assetURL, acceptsFeed } from "./region.js";
 import { fetchJSON } from "./forecast.js";
-import { closureHits, pointGeometry, pointInGeometry } from "./geo-screen.js";
+import { closureHits, geometryCoveredByBounds, pointGeometry, pointInGeometry } from "./geo-screen.js";
 import { esc } from "./marine-charts.js";
 import {revisionCache} from './map-response.js';
 import {loadDailyPart} from './daily-feed.js';
@@ -20,6 +20,14 @@ export async function initProtectedAreas(map, onChange, readJSON=fetchJSON) {
   let data=null, checked=null, live=false, extra=null, extraChecked=null;
   const extraFresh=()=>!assetURL("closures") || !!extra && Date.now()-Date.parse(extraChecked)>=-300000 && Date.now()-Date.parse(extraChecked)<=36*3600000;
   const freshEnough=()=>extraFresh() && !!data && Number.isFinite(Date.parse(checked)) && Date.now()-Date.parse(checked) >= -300000 && Date.now()-Date.parse(checked) <= 36*3600000;
+  // SC0022-04: what this screen covers is the envelope MPA_QUERY asks for, copied once from the region it is initialized for. A screen whose
+  // module query was built for another envelope, or whose region is no longer the active one, covers nothing and is not ready (fails closed).
+  const regionId=getRegion().id, bounds=Array.isArray(getRegion().mpa?.bounds)?Object.freeze([...getRegion().mpa.bounds]):null;
+  const queryEnvelope=new URL(MPA_QUERY).searchParams.get("geometry");
+  const bound=()=>!!bounds && queryEnvelope===bounds.join(",") && getRegion().id===regionId;
+  const covers=g=>{try{return bound() && geometryCoveredByBounds(g,bounds)===true;}catch{return false;}};
+  const coversAll=shapes=>shapes.length>0 && shapes.every(covers);
+  const current=()=>bound() && freshEnough();
   if(map)map.createPane("protectedAreas").style.zIndex=440;
   function draw() {
     layer?.clearLayers();
@@ -50,23 +58,26 @@ export async function initProtectedAreas(map, onChange, readJSON=fetchJSON) {
   // SC-LAUNCH-1: whole geometries, boundary-inclusive, with the 70 m planning margin in metres (geo-screen.js).
   const allowedGeometry=revisionCache(revision,g=>!closureHits([g],[...data.features,...(extra?.features||[])]).length);
   const screen={
-    ready:()=>freshEnough(),
+    ready:()=>current(),
+    coversGeometry:covers,
     revision:()=>`${checked}|${extraChecked}|${freshEnough()}`,
-    exportExclusions:()=>freshEnough()?{checked_at:extra?new Date(Math.min(Date.parse(checked),Date.parse(extraChecked))).toISOString():checked,features:[...data.features,...(extra?.features||[])]}:null,
+    exportExclusions:()=>current()?{checked_at:extra?new Date(Math.min(Date.parse(checked),Date.parse(extraChecked))).toISOString():checked,features:[...data.features,...(extra?.features||[])]}:null,
     inspect(p){
       const shapes=p.geometry||p.geometries?.length?[p.geometry,...(p.geometries||[])]:[pointGeometry(p.longitude,p.latitude)];
+      // A place outside the envelope this screen was built for is not checked: no hit, no name, no clear.
+      if(!coversAll(shapes.filter(Boolean)))return {status:'unavailable',fresh:false,names:[],matches:[]};
       const near=closureHits(shapes,[...(data?.features||[]),...(extra?.features||[])]), within=new Set(closureHits(shapes,near,0));
       const matches=[...near.filter(f=>within.has(f)),...near.filter(f=>!within.has(f))];
       // `inside`: the place's own point lies in the closure (boundary inclusive); without a point, its geometry touches it.
       // A margin-only or reef-area hit is not `inside`, so no output claims the spot is inside a boundary.
       const point=Number.isFinite(p.longitude)&&Number.isFinite(p.latitude)?[p.longitude,p.latitude]:null;
       const inside=f=>within.has(f)&&(!point||pointInGeometry(point,f.geometry));
-      return {status:matches.length?'excluded':freshEnough()?'clear':'unavailable',fresh:freshEnough(),names:matches.map(f=>f.properties.FULLNAME||f.properties.NAME),
+      return {status:matches.length?'excluded':current()?'clear':'unavailable',fresh:current(),names:matches.map(f=>f.properties.FULLNAME||f.properties.NAME),
         matches:matches.map(f=>{const p=f.properties;return {name:p.FULLNAME||p.NAME,url:p.Type==='GEA'?'https://www.fisheries.noaa.gov/west-coast/sustainable-fisheries/west-coast-groundfish-closed-areas':sourceFor(p.NAME),agency:p.Type==='GEA'?'NOAA':'CDFW',inside:inside(f)};})};
     },
-    snapshot:()=>freshEnough()?{revision:`${checked}|${extraChecked}|true`,geometries:[...data.features,...(extra?.features||[])].map(f=>f.geometry)}:null,
-    pointAllowed:p=>freshEnough() && !closureHits([pointGeometry(p.longitude,p.latitude)],[...data.features,...(extra?.features||[])]).length,
-    geometryAllowed:g=>freshEnough() && allowedGeometry(g),
+    snapshot:()=>current()?{revision:`${checked}|${extraChecked}|true`,geometries:[...data.features,...(extra?.features||[])].map(f=>f.geometry)}:null,
+    pointAllowed:p=>current() && covers(pointGeometry(p.longitude,p.latitude)) && !closureHits([pointGeometry(p.longitude,p.latitude)],[...data.features,...(extra?.features||[])]).length,
+    geometryAllowed:g=>current() && covers(g) && allowedGeometry(g),
     async refresh() {
       if(assetURL('closures')) {
         try {

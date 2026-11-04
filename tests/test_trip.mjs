@@ -297,3 +297,57 @@ test('a rejected ocean write is fatal: the storage message, no meta, the prior p
   assert.equal(late.error?.name, 'AbortError');
   assert.equal(late.caches.snapshot(), late.before);
 });
+
+// SC1938-05: the Trip dialog's ocean coverage lines, from the pack's own ocean record, at an injected now (web/trip-ocean-lines.ts).
+const {oceanLines} = await import('../web/trip-ocean-lines.ts');
+const SST = 'sst-analysis', UNTIL = '2026-10-16T12:00:00.000Z', layerRec = (state, extra = {}) => ({state, tiles: {saved: 0, listed: 1}, bytes: 0, ...extra});
+const regional = (sst, wcofs) => ({ocean: {schema_version: 1, path: 'regional', layers: {...sst ? {[SST]: sst} : {}, ...wcofs ? {[WCOFS]: wcofs} : {}}}});
+const NOW = new Date('2026-10-16T11:00:00Z');
+
+test('a saved layer says when it stops showing, in the region\'s zone, one hour before drawable_until', () => {
+  const lines = oceanLines(regional(layerRec('saved', {drawable_until: UNTIL}), layerRec('saved', {drawable_until: UNTIL})), NOW, 'America/Los_Angeles');
+  assert.equal(lines.water, 'saved · not shown after Fri 5 am · only for hours on or after the analysis');
+  assert.equal(lines.currents, 'saved · not shown after Fri 5 am · only for forecast hours');
+  assert.equal(oceanLines(regional(layerRec('saved', {drawable_until: UNTIL}), null), NOW, 'UTC').water.includes('Fri 12 pm'), true, 'the time follows the zone given');
+});
+
+test('a saved layer past its deadline says past its age limit and promises no time; the deadline instant itself is past', () => {
+  const meta = regional(layerRec('saved', {drawable_until: UNTIL}), layerRec('saved', {drawable_until: UNTIL}));
+  for (const now of [new Date(UNTIL), new Date('2026-10-17T00:00:00Z')]) assert.deepEqual(oceanLines(meta, now), {water: 'saved · past its age limit', currents: 'saved · past its age limit'});
+  assert.equal(oceanLines(regional(layerRec('saved'), null), NOW).water, 'saved', 'a saved layer without a valid deadline claims nothing more');
+  assert.equal(oceanLines(regional(layerRec('saved', {drawable_until: 'soon'}), null), NOW).water, 'saved');
+});
+
+test('each state and why of a layer has its own line', () => {
+  const cases = [[layerRec('failed', {reason: 'integrity'}), 'not saved: failed check'], [layerRec('failed', {reason: 'manifest'}), 'not saved: failed check'],
+    [layerRec('over-cap'), 'not saved: too large for this pack'], [layerRec('not-current', {why: 'retrieval'}), 'not saved: forecast too old to show offline'],
+    [layerRec('not-current', {why: 'short-window'}), 'not saved: forecast too old to show offline'], [layerRec('not-current', {why: 'age'}), 'not saved: no current data at save time'],
+    [layerRec('not-current', {why: 'status'}), 'not saved: no current data at save time'], [layerRec('not-current'), 'not saved: no current data at save time'],
+    [layerRec('absent'), 'not saved: not published for this area'], [layerRec('cancelled'), 'not saved'], [layerRec('mystery'), 'not saved'], [null, 'not saved']];
+  for (const [rec, line] of cases) {
+    const lines = oceanLines(regional(rec, rec), NOW);
+    assert.deepEqual([lines.water, lines.currents], [line, line], JSON.stringify(rec));
+  }
+  const mixed = oceanLines(regional(layerRec('saved', {drawable_until: UNTIL}), layerRec('over-cap')), NOW);
+  assert.deepEqual([mixed.water.startsWith('saved · not shown after'), mixed.currents], [true, 'not saved: too large for this pack'], 'the two lines are independent');
+});
+
+test('a pack without an ocean record shows no lines; the older record shapes do not throw', () => {
+  assert.equal(oceanLines({}, NOW), null);
+  assert.equal(oceanLines({ocean: undefined}, NOW), null);
+  assert.deepEqual(oceanLines({ocean: {path: 'regional', layers: {}}}, NOW), {water: 'not saved', currents: 'not saved'});
+});
+
+test('a coastal-report pack points at Coastal readings with or without a committed snapshot; a place with no feed says not published', () => {
+  const saved = oceanLines({ocean: {schema_version: 1, path: 'coastal-report', layers: {}, coastal: {saved_at: '2026-10-15T17:30:00.000Z'}}}, NOW, 'America/Los_Angeles');
+  assert.deepEqual(saved, {water: 'from Coastal readings (saved Thu 10 am)', currents: 'from Coastal readings (saved Thu 10 am)'});
+  for (const coastal of [null, undefined, {}, {saved_at: 'x'}]) assert.deepEqual(oceanLines({ocean: {path: 'coastal-report', layers: {}, coastal}}, NOW), {water: 'from Coastal readings (not saved)', currents: 'from Coastal readings (not saved)'}, String(coastal));
+  assert.deepEqual(oceanLines({ocean: {path: 'none', layers: {}}}, NOW), {water: 'not published for this area', currents: 'not published for this area'});
+});
+
+test('the lines are read from a real saved pack record: a current WCOFS layer is saved with its time, the absent SST layer is not', async () => {
+  const run = await packRun({}), lines = oceanLines(run.meta, new Date(SAVE_AT));
+  assert.equal(lines.currents, 'saved · not shown after Fri 5 am · only for forecast hours');
+  assert.equal(lines.water, 'not saved: not published for this area');
+  assert.equal(oceanLines(run.meta, new Date(UNTIL)).currents, 'saved · past its age limit');
+});
