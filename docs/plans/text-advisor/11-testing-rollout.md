@@ -111,9 +111,10 @@ accounts, devices, money, approval or judgment.
 
 ### A. Merge
 
-- [ ] Review and merge #277 (TA-S2, TA-S3), #278 (TA-S4, TA-S5, video metadata), #279 (TA-S6, TA-S7) and the TA-P1 PR, in that order (CODEOWNERS: each needs your approval).
-- [ ] Review and merge the TA-C5 PR (the threat model section, the fixture privacy scan in `check_repository.py`, the data-rights rows, the CONTRIBUTING line; CODEOWNERS: `docs/legal/` needs your approval).
-- [ ] Then the hardening PR (`claude/ta-hardening`, "Harden the Text Advisor against the threat-model findings"), which fixes [threat model § 9.10](../../legal/threat-model.md#910-text-advisor-top-residual-risks) items 2–5 and 7–9 and writes the runbook side of item 1. Accept item 6's residual (SMS sender ids, the webhook's path token) in writing, or ask for more; the relay settings (C) and B7 are yours.
+- [x] Review and merge #277 (TA-S2, TA-S3), #278 (TA-S4, TA-S5, video metadata), #279 (TA-S6, TA-S7) and the TA-P1 PR, in that order (CODEOWNERS: each needs your approval). Done: #277, #278, #279 and TA-P1 (#280), merged 2026-10-04/05.
+- [x] Review and merge the TA-C5 PR (the threat model section, the fixture privacy scan in `check_repository.py`, the data-rights rows, the CONTRIBUTING line; CODEOWNERS: `docs/legal/` needs your approval). Done: the TA-C5 commit reached main in the hardening PR #283 (#282 closed).
+- [x] Then the hardening PR (`claude/ta-hardening`, "Harden the Text Advisor against the threat-model findings"), which fixes [threat model § 9.10](../../legal/threat-model.md#910-text-advisor-top-residual-risks) items 2–5 and 7–9 and writes the runbook side of item 1. Done: #283, merged 2026-10-05.
+- [ ] Accept item 6's residual (SMS sender ids, the webhook's path token) in writing, or ask for more; the relay settings (C) and B7 are yours.
 
 ### B. Decisions
 
@@ -144,9 +145,9 @@ accounts, devices, money, approval or judgment.
 - [ ] Put the rotation dates in your calendar ([secrets rotation](../../operations/runbooks/secrets-rotation.md), the Text Advisor table): `ADVISOR_WEBHOOK_TOKEN` every 90 days and whenever someone leaves the Cloudflare account; the others yearly.
 - [ ] `ADVISOR_WEBHOOK_TOKEN` (relay setup step 8.1).
 - [ ] `BLUEBUBBLES_URL` (`https://relay.skippercast.com`), `BLUEBUBBLES_PASSWORD`, `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`.
-- [ ] `ANTHROPIC_API_KEY` is set (the boat lookup uses it): confirm the account's spend limit covers the advisor's caps.
-- [ ] `R2_ADVISOR_TOKEN`: a Cloudflare API token with R2 object read and write on `skippercast-advisor-media` only.
-- [ ] `WATCHDOG_GITHUB_TOKEN` is set: confirm it has Actions read and write, so the Worker can dispatch `advisor-media.yml`.
+- [ ] `ANTHROPIC_API_KEY` (the boat lookup uses it): not a repo secret yet; add it, then confirm the account's spend limit covers the advisor's caps.
+- [x] `R2_ADVISOR_TOKEN` (set): a Cloudflare API token with R2 object read and write on `skippercast-advisor-media` only.
+- [ ] `WATCHDOG_GITHUB_TOKEN`: not a repo secret yet; add it with Actions read and write, so the Worker can dispatch `advisor-media.yml`.
 - [ ] `CF_ANALYTICS_TOKEN` (Account Analytics: Read) for the admin Funnel.
 - [ ] `META_APP_ID` and `META_APP_SECRET`; then `node scripts/advisor/meta-token.mjs` for `META_PAGE_ID`, `META_PAGE_TOKEN` and `META_IG_USER_ID`; `META_VERIFY_TOKEN` (a long random string, for the inbox webhook).
 - [ ] Only with B5: `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` (`TWILIO_FROM` only after a port).
@@ -157,7 +158,7 @@ accounts, devices, money, approval or judgment.
 - [ ] B2: `ADVISOR_AUTO_PUBLISH_AFTER` `0`. B1 (optional): `ADVISOR_VISION_PROVIDERS` `claude`. B3: `BLUEBUBBLES_PRIVATE_API` `true` only if you enabled it.
 - [ ] Leave the cap variables unset: the defaults are the pilot caps (item 8). The hardening adds three, also best left at their defaults: `ADVISOR_GLOBAL_DAILY_COLD` (50 texts a day we start to numbers that never texted us: web link codes, crew invitations, admin invites), `ADVISOR_GLOBAL_DAILY_LLM_WEB` (400 of the 2,000 daily model calls for the web chat) and `ADVISOR_DAILY_LLM_PER_IP` (30 web model calls per address a day).
 - [ ] B7: `WORKERS_INVOCATION_LOGS` `false` if you chose it.
-- [ ] `DATA_RUNNER` is set (the data jobs use it).
+- [x] `DATA_RUNNER` is set (the data jobs use it).
 - [ ] The switches only in the order of § Flip order; `ADVISOR_ADMIN_CONTACT_ID` in H.
 
 ### F. Legal copy
