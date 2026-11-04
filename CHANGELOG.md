@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC0452-11: seven caveats the copy lint used to excuse now read plainly and keep every limit they carried (the regulation-page check and harbor clearance, charter ground positions and depths, commercial AIS coverage, tuna habitat, the dated charter report, adult-Chinook temperatures, and the offline trip notes' date label); their seven `consecutive-not` entries are gone from `scripts/copy-lint-baseline.json`, which keeps only the five `method-name` entries for published model, survey and datum labels. No other copy, data or behaviour changes.
+
 - SC0237-04: the trip planner refuses what the Chart and the GPX check refuse. Saving a waypoint from a Chart tap and Add to trip on a habitat or survey place now decline a place that is not checked, inside a protected area or within the 70 m planning margin of one, with the same one-line reason ("Not saved: 40 m from …"), and add nothing; a place already in the plan is checked again each time it is added. A clear place is added as before, and adding it twice still adds it once.
 
 - BF-og-cards: shared map links carry the landing preview image and name a known region and its listed port in Open Graph previews; no forecast or date enters the preview, and the app remains noindex.

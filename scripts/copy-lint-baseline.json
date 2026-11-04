@@ -1,17 +1,10 @@
 {
  "note": "Copy that predates the copy lint (scripts/check_copy.mjs). This list only shrinks: fix or move copy, then run `node scripts/check_copy.mjs --update`. Never add entries.",
  "entries": [
-  {"file":"dist/bite-evidence.js","rule":"consecutive-not","text":"A regulation-page check detects access and changes, not permission to fish. Harbor information is not live entrance clearance."},
-  {"file":"dist/charter-grounds.js","rule":"consecutive-not","text":"Captains named “ X ”; they did not publish GPS positions or fishing depths. Purple shows our approximate search water, not a boat track or a confirmed reef."},
   {"file":"dist/charter-grounds.js","rule":"method-name","text":"Outline survey depths X ft X · MLLW"},
-  {"file":"dist/commercial-ais.html","rule":"consecutive-not","text":"AIS does not cover every boat; detection and classification errors remain possible. Apparent fishing effort is not proof of fishing or catches."},
   {"file":"dist/forecast.js","rule":"method-name","text":"NOAA GFS Wave 0.16°"},
   {"file":"dist/live-conditions.js","rule":"method-name","text":"X ft MLLW"},
-  {"file":"dist/species-research.html","rule":"consecutive-not","text":"Essential habitat is not a hotspot. The app does not assign a tuna school to a management polygon."},
-  {"file":"dist/species-research.html","rule":"consecutive-not","text":"It is presented as dated context, not mapped as a present hotspot. Named features such as White Rocks must not be confused with a similarly named reef near Cayucos."},
-  {"file":"dist/species-research.html","rule":"consecutive-not","text":"They are not a local adult-Chinook catch-temperature model. Freshwater spawning or egg-survival temperatures are not used as ocean-fishing targets."},
   {"file":"dist/tomorrow.js","rule":"method-name","text":"GFS and ECMWF agree"},
-  {"file":"dist/tomorrow.js","rule":"method-name","text":"GFS and ECMWF disagree"},
-  {"file":"dist/trip-export.js","rule":"consecutive-not","text":"This file does not update offline. The planned date is a label, not a future clearance."}
+  {"file":"dist/tomorrow.js","rule":"method-name","text":"GFS and ECMWF disagree"}
  ]
 }
