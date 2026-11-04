@@ -1,0 +1,29 @@
+{
+  "schema_version": 2,
+  "scope": "charter-grounds-test",
+  "ran_at": "2026-11-04T08:56:49Z",
+  "commit": "4bcc2be4620f2915e18eff4cd6f7b378ad9162dc",
+  "command": "node --test tests/test_charters.mjs",
+  "node_version": "v22.23.2",
+  "exit_code": 0,
+  "tests": 6,
+  "pass": 6,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "todo": 0,
+  "result": "pass",
+  "files": [
+    {
+      "path": "dist/data/charter-grounds.json",
+      "sha256": "3d37382a197d6709fe7d56b055815eef1caff7733f6f3c35d6f05704f3cf297e"
+    }
+  ],
+  "coverage": {
+    "audit_date": "2026-09-21",
+    "from": "2026-04-01",
+    "through": "2026-09-20",
+    "dates_checked": 173,
+    "dates_available": 173
+  }
+}
