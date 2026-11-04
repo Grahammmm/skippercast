@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- BF-advisor-beta: the region/language pilot switches now reach the deployed Worker. Contacts outside the pilot can still opt out, confirm data deletion and request their data; only those control replies bypass the pilot scope.
+
 - SC-POPOVER: the desktop map legend's basis popovers (Seafloor, Currents, Depth contours, Protected areas) are placed against their own button by CSS anchor positioning, so the legend that now shrinks and scrolls no longer cuts off the part of a popover beyond its box; a browser without anchor positioning keeps the previous in-flow popover.
 
 - RF0905-1: on a phone (below 1024 px) the Chart opens with the region centre (the Morro Bay harbor) in the open band between the top card and the sheet, not under the top card; the padding follows a resize, not a sheet drag. `?view=` and desktop are unchanged.

@@ -12,7 +12,7 @@ import {build} from 'esbuild';
 import fixture from './fixtures/coast/skippercast-report.json' with {type: 'json'};
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 
-const {tideTrend, sparkArgs, TIDE_UNAVAILABLE, TIDE_COLOUR} = await import('../web/tides.ts');
+const {tideTrend, sparkArgs, TIDE_UNAVAILABLE, TIDE_NO_CURVE, TIDE_COLOUR} = await import('../web/tides.ts');
 const {tideAt, tideChart} = await import('../packages/coast/src/ui/briefing.ts');
 const {chart} = await import('../packages/coast/src/charts/series.ts');
 const {slo} = await import('../packages/coast/src/counties.ts');
@@ -121,12 +121,48 @@ test('TideSpark mounts the curve through CoastMarkup and lists the events with t
   assert.match(html, /<li>(High|Low) <span class="ui-mono">\d{1,2}:\d\d [ap]m · \d+\.\d ft MLLW<\/span><\/li>/);
 });
 
-test('TideSpark: without a curve it says so and keeps the events; before a brief it shows its empty state', async () => {
+const NO_CURVE_TEXT = 'No tide curve for this place. The times below are the day’s predicted highs and lows.';
+const sparkBrief = overrides => buildCoastBrief({report: {...report, ...overrides}, county: slo, areaId: 'central', profile: 'boat', date, now, at: '2026-10-08T21:00:00.000Z'});
+
+test('TideSpark: no curve but events says there is no curve for this place and keeps the events', async () => {
   const {TideSpark, render, h} = await load();
-  const brief = buildCoastBrief({report: {...report, tides: []}, county: slo, areaId: 'central', profile: 'boat', date, now, at: '2026-10-08T21:00:00.000Z'});
+  const brief = sparkBrief({tides: []});
+  assert.ok(brief.tideEvents.length >= 1);
   const html = render(h(TideSpark, {brief, now}));
-  assert.match(html, /<span class="app-spark-empty">Tide series unavailable<\/span>/);
+  assert.equal(TIDE_NO_CURVE, NO_CURVE_TEXT);
+  assert.ok(html.includes(`<span class="app-spark-empty">${NO_CURVE_TEXT}</span>`));
+  assert.doesNotMatch(html, /Tide series unavailable/);
   assert.doesNotMatch(html, /app-coast-markup/);
   assert.match(html, /<figcaption><ul class="app-spark-events"><li>/);
+  assert.equal((html.match(/<li>/g) ?? []).length, brief.tideEvents.length);
+});
+
+test('TideSpark: no curve and no events reads "Tide series unavailable" with no list', async () => {
+  const {TideSpark, render, h} = await load();
+  const brief = sparkBrief({tides: [], tideEvents: []});
+  assert.equal(brief.tideEvents.length, 0);
+  const html = render(h(TideSpark, {brief, now}));
+  assert.match(html, /<span class="app-spark-empty">Tide series unavailable<\/span>/);
+  assert.doesNotMatch(html, /figcaption|app-coast-markup/);
+});
+
+test('TideSpark: one curve point (fewer than two) with events reads the no-curve text', async () => {
+  const {TideSpark, render, h} = await load();
+  const brief = sparkBrief({tides: synthetic.slice(0, 1)});
+  assert.equal(brief.tides.length, 1);
+  assert.ok(brief.tideEvents.length >= 1);
+  const html = render(h(TideSpark, {brief, now}));
+  assert.ok(html.includes(`<span class="app-spark-empty">${NO_CURVE_TEXT}</span>`));
+  assert.doesNotMatch(html, /app-coast-markup/);
+  assert.match(html, /<figcaption>/);
+});
+
+test('TideSpark: before a brief it shows its empty state, byte-identical', async () => {
+  const {TideSpark, render, h} = await load();
   assert.equal(render(h(TideSpark, {brief: null, now})), '<figure class="app-spark" aria-label="Tide curve"><span class="app-spark-empty">—</span></figure>');
+});
+
+test('the tide tile with no curve and no next event still reads "Tide series unavailable"', () => {
+  const brief = sparkBrief({tides: [], tideEvents: []});
+  assert.equal(brief.tiles.find(t => t.id === 'tide').detail, TIDE_UNAVAILABLE);
 });

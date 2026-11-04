@@ -30,7 +30,8 @@
 import type {Env} from '../env.ts';
 import type {LlmUsage} from '../analytics.ts';
 import {recordLlm} from '../analytics.ts';
-import {advisorSettings} from './settings.ts';
+import {advisorSettings, betaScope} from './settings.ts';
+import {inBetaScope} from './gate.ts';
 import {advisorLog} from './log.ts';
 import {localClock, DEFAULT_TZ} from './cron.ts';
 import {parseCommand, normalizeCommand, detectLanguage, chooseLanguage} from './intents.ts';
@@ -397,6 +398,18 @@ async function answerTurn(input: EngineInput): Promise<EngineResult> {
   if (!settings.repliesEnabled) return done([], 'held');
   if (contact.status === 'blocked') return done([], 'blocked');
   const command = parseCommand(text);
+  // BF-advisor-beta: outside the pilot's regions or languages gets no advisor reply. The region is the
+  // home port's (null when that port is unknown) else ADVISOR_REGION_DEFAULT; the language is the one the reply would use.
+  const scope = betaScope(env);
+  let outsideScope = false;
+  if (scope.regions || scope.langs) {
+    const reply = chooseLanguage(contact.language, (command && SPANISH_COMMANDS.has(normalizeCommand(text)) ? 'es' : null) ?? detectLanguage(text), null).reply;
+    outsideScope = !inBetaScope(scope, contact.home_port ? portRegion(contact.home_port) : settings.regionDefault, reply);
+  }
+  // Opt-out and privacy controls are not pilot features. Keep their confirmations and
+  // actions reachable, but never interpret public comments as contact commands.
+  const privacyCommand = command === 'stop' || command === 'forget' || command === 'delete' || command === 'export';
+  if (outsideScope && (!privacyCommand || message.channel === 'instagram_comment')) return done([], 'out_of_scope');
   if (contact.status === 'stopped') {
     // No outbound of any kind until START (02 § STOP).
     if (command !== 'start') return done([], 'stopped');
@@ -435,6 +448,8 @@ async function answerTurn(input: EngineInput): Promise<EngineResult> {
     const result = await commandTurn(command, {env, contact, settings, language, say, welcomeFirst, db, message, now, languageUpdate});
     if (result) return result;
   }
+  // DELETE without a pending FORGET ME is not a command; do not fall through to chat outside the pilot.
+  if (outsideScope) return done([], 'out_of_scope');
 
   // Stage 0: the daily message cap (OP-3): one "limit" text a day, on the first message over it.
   const sent = await messagesToday(db, contact, now);

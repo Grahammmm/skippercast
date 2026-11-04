@@ -24,6 +24,7 @@ import {canonicalJson, factId, valueKey} from '../ids.ts';
 import type {JsonValue} from '../ids.ts';
 import {checkVesselColumn} from '../registry.ts';
 import {pinnedNames} from '../jobs.ts';
+import {tripActivityClaims} from '../activity.ts';
 import type {AdminOutcome} from '../../advisor/admin/skippers.ts';
 import {validId} from '../../advisor/admin/skippers.ts';
 
@@ -228,7 +229,10 @@ export async function vesselDetail(db: D1Database, id: string): Promise<Record<s
     offerings: offerings.results.map(({days_json, target_species_json, source_fact_ids_json, ...o}) =>
       ({...o, days: parse(days_json as string | null), target_species: parse(target_species_json as string | null), source_fact_ids: parse(source_fact_ids_json as string | null)})),
     changes: changes.results.map(({before_json, after_json, ...c}) => ({...c, before: parse(before_json), after: parse(after_json)})),
-    watch: watch.results, trips: trips.results, advisor_boats: boats.results, open_reviews: reviews.results, operator,
+    watch: watch.results,
+    trips: await Promise.all(trips.results.map(async trip => ({...trip,
+      claims: await tripActivityClaims(db, String(trip.id), !!row.mmsi && trip.mmsi === row.mmsi && !!(row.uscg_doc || row.state_reg))}))),
+    advisor_boats: boats.results, open_reviews: reviews.results, operator,
   };
 }
 

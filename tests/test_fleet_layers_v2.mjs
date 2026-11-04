@@ -250,6 +250,7 @@ test('Accept 1: the rail offers the activity layers only with access; the legend
 test('Accept 3: v1\'s fleet-activity.js is byte for byte as before FE-24, with N5\'s mode names', async () => {
   // Re-pinned by charter-fleet N5, which renamed the event and segment kinds in EVENT_STYLE and SEGMENT_STYLE.
   // Re-pinned again for statusText's singular counts ("1 stop", #422 FE-24 follow-up).
+  // BF-evidence-ladder: cards now render the constructor-built rung, count and coverage caveat.
   const sha = createHash('sha256').update(await readFile(new URL('dist/fleet-activity.js', ROOT))).digest('hex');
-  assert.equal(sha, '845efe4f02007b9d4756174b3716c8befffa123c3502cae435fbbecae9f5509d');
+  assert.equal(sha, '564e4194271ef18a12a8fa47853a4d048f2c0173e3956efc38b0ce059f5e813a');
 });
