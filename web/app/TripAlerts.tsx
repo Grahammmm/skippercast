@@ -10,7 +10,7 @@ import {sharedFetch} from '../shared-fetch.ts';
 import {profile} from '../state.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 import {PROFILE_TABLE} from '../profile.ts';
-import {limitsFor} from '../limits.ts';
+import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {
   alertDate, alertNames, alertSpecies, api, comfortBody, dateRange, disablePush, enablePush, eventLine, feedbackPhase, formProblem, profileTripDefaults, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
@@ -91,7 +91,12 @@ export function SavedTrips({recaps, names, remove}: {recaps: ReturnType<typeof t
 function SignedIn({session, region, boat, target}: {session: SessionAnswer; region: RegionAlerts; boat: Boat; target: string | null}) {
   const [p] = useState(() => profile.peek());
   const saved = p === 'boat' ? tripBoat(boat.factors, boat.saved?.boat) : null;
-  const limits = p === 'boat' ? tripDefaults(boat.factors) : profileTripDefaults(limitsFor(p));
+  // Own Boat limits are absolute, so they start the form as saved (clamped to the server's ranges) and are never scaled by the boat's factors.
+  // Decided once at mount: a later signal change must not replace typed thresholds or make the note describe another source.
+  const [{ownBoatLimits, limits}] = useState(() => {
+    const own = p === 'boat' && hasOwnLimits('boat');
+    return {ownBoatLimits: own, limits: own || p !== 'boat' ? profileTripDefaults(limitsFor(p)) : tripDefaults(boat.factors)};
+  });
   const choice = alertSpecies(region, target), names = useMemo(() => alertNames(region), [region]), range = dateRange(region.timezone);
   const [species, setSpecies] = useState(choice.value);
   const [status, setStatus] = useState('');
@@ -169,6 +174,8 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
         </form>
         <p class="small" id="trip-boat-note">{p !== 'boat'
           ? `Limits start from your ${PROFILE_TABLE[p].label} limits; alerts still judge wind, gusts and offshore seas only, not surf at your launch or beach.`
+          : ownBoatLimits
+          ? `Limits start from your Boat limits, without boat-factor scaling; alerts ${saved ? 'judge wind chop for your saved boat too.' : 'judge wind, gusts and offshore seas only.'}`
           : saved
           ? `Limits start from your saved boat${saved.name ? ` (${saved.name})` : ''}; alerts judge wind chop for it too.`
           : 'Limits start from the reference 23 ft boat. Set your boat to tailor them.'}</p>

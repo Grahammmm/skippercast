@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC0237-03: the trip-alert form for the Boat profile starts from your own Boat limits when you have saved them in Your limits (wind, gust and sea, kept to the ranges the server accepts), and its note says so; they are your absolute settings, so the boat's wind and sea factors are not applied to them again, while alerts still judge wind chop for a saved custom boat. Without your own Boat limits the form and its notes are unchanged, still scaled by the boat; the other profiles are unchanged.
+
 - SC2207-04: the trip planner's Best available applies its maximum one-way distance from the selected port to the water route where one is computed (as Where to look does), so a reef 13 nm round a headland no longer fits a 10 nm plan; a reef without a route keeps its straight line, labelled, and each ranked spot says which. Habitat order, the 0.15 nm separation, the protected-area screen, saved plans, exports and the stops-in-order legs are unchanged.
 
 - SC1952-04: the landing's tomorrow verdict for a returning visitor rates with the boat and Boat comfort limits saved on this device (the same two stored values /map rates with) and names that boat in its heading, with the model note for a boat outside the reference range; with no boat saved, or one that cannot be read, it is still the reference 23 ft boat. It reads only those two stored values, stores nothing and sends neither in any request.

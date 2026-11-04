@@ -14,7 +14,7 @@ const out = join(dir, 'form.mjs');
 await build({stdin: {resolveDir: ROOT, loader: 'ts', contents: `
   export {SignedIn} from './web/app/TripAlerts.tsx';
   export {profile} from './web/state.ts';
-  export {savedLimits, limitsFor} from './web/limits.ts';
+  export {savedLimits, limitsFor, resetLimits} from './web/limits.ts';
   export {defaultLimits} from './packages/coast/src/limits.ts';
   export {tripDefaults, tripBoat, tripBody, alertDate} from './web/alerts.ts';
   export {PROFILE_TABLE} from './web/profile.ts';
@@ -59,11 +59,68 @@ test('each non-boat form uses its own default or saved limits, including saved k
   }
 });
 
-test('boat reference and custom factors keep byte-identical defaults and both original notes', () => {
-  ui.savedLimits.value = {boat: {wind: 1, gust: 2, seas: .5}};
-  for (const boat of [reference, custom])
-    assert.equal(JSON.stringify(open('boat', boat).values), JSON.stringify(fields(tripDefaults(boat.factors))));
-  assert.equal(open('boat', reference).note, 'Limits start from the reference 23 ft boat. Set your boat to tailor them.');
+const REFERENCE_NOTE = 'Limits start from the reference 23 ft boat. Set your boat to tailor them.';
+const OWN_WITH_BOAT = 'Limits start from your Boat limits, without boat-factor scaling; alerts judge wind chop for your saved boat too.';
+const OWN_NO_BOAT = 'Limits start from your Boat limits, without boat-factor scaling; alerts judge wind, gusts and offshore seas only.';
+const unnamed = {factors: {wind: 1.3, sea: 1.4, custom: true}, saved: {boat: {}}};
+
+test('boat without own Boat limits keeps byte-identical factor defaults and both original notes', () => {
+  const own = ui.defaultLimits('boat');
+  for (const [label, saved] of [
+    ['empty map', {}],
+    ['only another profile saved', {kayak: {...ui.defaultLimits('kayak'), wind: 6, gust: 9, seas: 1.5}}],
+    ['reset after saving', (() => { ui.savedLimits.value = {boat: {...own, wind: 5, gust: 7, seas: 1}}; ui.resetLimits('boat'); return ui.savedLimits.value; })()],
+  ]) {
+    ui.savedLimits.value = saved;
+    for (const boat of [reference, custom, unnamed])
+      assert.equal(JSON.stringify(open('boat', boat).values), JSON.stringify(fields(tripDefaults(boat.factors))), `${label} ${JSON.stringify(boat.factors)}`);
+    assert.equal(open('boat', reference).note, REFERENCE_NOTE, label);
+    assert.equal(open('boat').note, 'Limits start from your saved boat (Fixture); alerts judge wind chop for it too.', label);
+    assert.equal(open('boat', unnamed).note, 'Limits start from your saved boat; alerts judge wind chop for it too.', label);
+  }
+});
+
+test('own Boat limits start the form as saved, unscaled by any boat, with the Boat-limits note', () => {
+  ui.savedLimits.value = {boat: {...ui.defaultLimits('boat'), wind: 6, gust: 11, seas: 2.5}};
+  const want = {wind_limit: 6, gust_limit: 11, sea_limit: 2.5};
+  for (const boat of [reference, custom, unnamed, {factors: {wind: 0.5, sea: 0.5, custom: true}, saved: {boat: {name: 'Small'}}}, {factors: {wind: 2, sea: 2, custom: true}, saved: {boat: {name: 'Large'}}}])
+    assert.deepEqual(open('boat', boat).values, want, JSON.stringify(boat.factors));
+  assert.equal(open('boat', reference).note, OWN_NO_BOAT);
+  assert.equal(open('boat', custom).note, OWN_WITH_BOAT);
+  assert.equal(open('boat', unnamed).note, OWN_WITH_BOAT);
+  assert.doesNotMatch(open('boat', custom).note, /Fixture/);
+});
+
+test('own Boat limits are clamped and stepped to the server ranges without mutating the saved entry', () => {
+  for (const [saved, expected] of [
+    [{wind: 45, gust: 2, seas: .2}, {wind_limit: 30, gust_limit: 30, sea_limit: .5}],
+    [{wind: 6.4, gust: 9.6, seas: 1.3}, {wind_limit: 6, gust_limit: 10, sea_limit: 1.5}],
+    [{wind: -5, gust: 100, seas: 99}, {wind_limit: 1, gust_limit: 40, sea_limit: 10}],
+    [{wind: NaN, gust: 9, seas: Infinity}, {wind_limit: tripDefaults().wind, gust_limit: 9, sea_limit: tripDefaults().sea}],
+  ]) {
+    const entry = Object.freeze({...ui.defaultLimits('boat'), ...saved});
+    ui.savedLimits.value = {boat: entry};
+    assert.deepEqual(open('boat', custom).values, expected, JSON.stringify(saved));
+    assert.equal(ui.savedLimits.value.boat, entry);
+  }
+});
+
+test('own limits saved for another profile do not trigger the Boat-limits note or values', () => {
+  ui.savedLimits.value = {kayak: {...ui.defaultLimits('kayak'), wind: 6, gust: 9, seas: 1.5}, shore: {...ui.defaultLimits('shore'), wind: 7, gust: 10, seas: 2}};
+  assert.deepEqual(open('boat', custom).values, fields(tripDefaults(custom.factors)));
+  assert.equal(open('boat', custom).note, 'Limits start from your saved boat (Fixture); alerts judge wind chop for it too.');
+  assert.deepEqual(open('kayak').values, {wind_limit: 6, gust_limit: 9, sea_limit: 1.5});
+});
+
+test('reopening reads the current Boat limits: new, then reset, then a profile switch', () => {
+  ui.savedLimits.value = {};
+  assert.equal(open('boat').note, 'Limits start from your saved boat (Fixture); alerts judge wind chop for it too.');
+  ui.savedLimits.value = {boat: {...ui.defaultLimits('boat'), wind: 5, gust: 7, seas: 1}};
+  assert.deepEqual(open('boat').values, {wind_limit: 5, gust_limit: 7, sea_limit: 1});
+  assert.equal(open('boat').note, OWN_WITH_BOAT);
+  assert.equal(open('shore').note, `Limits start from your ${ui.PROFILE_TABLE.shore.label} limits; alerts still judge wind, gusts and offshore seas only, not surf at your launch or beach.`);
+  ui.resetLimits('boat');
+  assert.deepEqual(open('boat').values, fields(tripDefaults(custom.factors)));
   assert.equal(open('boat').note, 'Limits start from your saved boat (Fixture); alerts judge wind chop for it too.');
 });
 
@@ -113,4 +170,26 @@ test('actual submit passes tripBody no saved boat for any non-boat, even with a 
       assert.equal(Object.hasOwn(posted, 'boat'), p === 'boat');
     }
   } finally { globalThis.fetch = oldFetch; globalThis.FormData = oldData; }
+});
+
+test('boat submit posts the edited limits, not the defaults, with only the existing boat fields', async () => {
+  ui.savedLimits.value = {boat: {...ui.defaultLimits('boat'), wind: 6, gust: 11, seas: 2.5}, kayak: {...ui.defaultLimits('kayak'), wind: 4, gust: 5, seas: 1}};
+  const oldFetch = globalThis.fetch, oldData = globalThis.FormData;
+  const requests = [];
+  globalThis.fetch = async (url, init) => { requests.push({url, ...init}); return Response.json({trips: [], events: []}); };
+  try {
+    for (const boat of [custom, reference]) {
+      const {form, values} = open('boat', boat);
+      assert.deepEqual(values, {wind_limit: 6, gust_limit: 11, sea_limit: 2.5});
+      const edited = {date: ui.alertDate('UTC'), point: 'central', start_hour: 8, end_hour: 12, wind_limit: 9, gust_limit: 14, sea_limit: 3.5};
+      globalThis.FormData = class { get(k) { return edited[k]; } };
+      await form.props.onSubmit({preventDefault() {}, currentTarget: {}});
+      await new Promise(resolve => setImmediate(resolve));
+      const posted = JSON.parse(requests.findLast(r => r.method === 'POST').body);
+      assert.deepEqual(posted, ui.tripBody(edited, 'fixture', 'reef', ui.tripBoat(boat.factors, boat.saved?.boat)));
+      assert.equal(posted.wind_limit, 9);
+      assert.equal(Object.hasOwn(posted, 'boat'), boat === custom);
+      assert.doesNotMatch(JSON.stringify(posted), /kayak|seas|profile|limits"/);
+    }
+  } finally { globalThis.fetch = oldFetch; globalThis.FormData = oldData; ui.savedLimits.value = {}; }
 });
