@@ -16,8 +16,9 @@ makes it ``complete-with-known-gaps`` (``report.json`` ``known_gaps``; the
 instead of the run's discovery output, and a refused profile makes the step
 ``partial``. ``validate-profile`` checks OSINT profiles
 (``fleet.profile``), ``coverage-status`` the regions' charter identity
-coverage (``fleet.coverage``) and ``report`` writes the fleet report
-(``fleet.report``).
+coverage (``fleet.coverage``), ``confirm add|withdraw|list`` the private
+operator-confirmed identity ledger (``fleet.confirm``) and ``report`` writes
+the fleet report (``fleet.report``).
 """
 from __future__ import annotations
 
@@ -28,7 +29,7 @@ import sys
 from typing import Any, Callable, Mapping
 
 from .. import validate
-from . import agent, coverage, enrich, profile, refresh
+from . import agent, confirm, coverage, enrich, profile, refresh
 from . import report as fleet_report
 from .adapters import RunContext
 from .config import FleetConfigError, load_region
@@ -113,10 +114,12 @@ def main(argv=None) -> int:
         return profile.main(argv[1:])
     if argv and argv[0] == "coverage-status":
         return coverage.main(argv[1:])
+    if argv and argv[0] == "confirm":
+        return confirm.main(argv[1:])
     if argv and argv[0] == "report":
         return fleet_report.main(argv[1:])
     parser = argparse.ArgumentParser(prog="python -m skippercast.fleet", description=__doc__.splitlines()[0])
-    parser.add_argument("step", choices=[*STEPS, "run", "validate-profile", "coverage-status", "report"])
+    parser.add_argument("step", choices=[*STEPS, "run", "validate-profile", "coverage-status", "confirm", "report"])
     parser.add_argument("--region", required=True, help="fleet region id, e.g. CA")
     parser.add_argument("--sink", choices=["staging", "worker"], default="staging")
     parser.add_argument("--run-id", help="resume this run (default: a new run)")
