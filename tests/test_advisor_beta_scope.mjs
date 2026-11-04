@@ -34,13 +34,19 @@ const HELP = {
 const DARK = {actions: [], intent: 'out_of_scope'};
 
 /** One turn for a contact (language, home port) sending `body`, on a fresh database; `earlier` messages already today. */
-async function turn(vars, {language = 'en', port = null, body = 'HELP', earlier = 0} = {}) {
+async function turn(vars, {language = 'en', port = null, body = 'HELP', earlier = 0, previousIntent = null, status = 'active', channel = 'imessage'} = {}) {
   const {sql, db} = advisorDatabase();
   sql.prepare(`INSERT INTO advisor_contacts(id,phone_hash,phone_enc,channel,role,language,status,home_port,last_seen_at,created_at,updated_at) VALUES('c1','h1','ENC','imessage','angler',?,'active',?,?,?,?)`)
     .run(language, port, iso(T0), iso(T0), iso(T0));
   const add = (id, text, ago, status) => sql.prepare(`INSERT INTO advisor_messages(id,contact_id,direction,channel,provider_id,body,status,created_at) VALUES(?,'c1','in','imessage',?,?,?,?)`).run(id, `p-${id}`, text, status, iso(T0 - ago * 60000));
   for (let i = 0; i < earlier; i++) add(`e${i}`, `earlier ${i}`, 10 + i, 'done');
   add('m1', body, 0, 'processing');
+  sql.prepare('UPDATE advisor_contacts SET status=?,channel=?').run(status, channel);
+  sql.prepare('UPDATE advisor_messages SET channel=?').run(channel);
+  if (previousIntent) {
+    add('previous', 'FORGET ME', 1, 'done');
+    sql.prepare('UPDATE advisor_messages SET intent=? WHERE id=?').run(previousIntent, 'previous');
+  }
   const requests = [], fetcher = async (...a) => { requests.push(a); throw Error('no model call expected'); };
   const result = await runTurn({env: {...ON, DB: db, ...vars}, contact: sql.prepare('SELECT * FROM advisor_contacts').get(), message: sql.prepare('SELECT * FROM advisor_messages WHERE id=?').get('m1'),
     now: T0, deps: {sleep: async () => {}, clock: () => T0, fetcher}});
@@ -92,6 +98,37 @@ dbTest('pilot on: Morro Bay in English is served; another region, Spanish or an 
   // a region list alone does not restrict language, and a language list alone does not restrict region
   assert.deepEqual((await turn({ADVISOR_BETA_REGIONS: 'morro-bay'}, {language: 'es', body: 'ayuda'})).result, HELP.es);
   assert.deepEqual((await turn({ADVISOR_BETA_LANGS: 'en'}, {port: 'monterey'})).result, HELP.en);
+});
+
+dbTest('outside scope: opt-out and privacy commands retain their actions without a model call', async () => {
+  for (const c of [{language: 'es'}, {port: 'monterey'}]) {
+    for (const body of ['STOP', 'ALTO']) {
+      const {result, requests} = await turn(PILOT, {...c, body});
+      assert.equal(result.intent, 'stop');
+      assert.ok(result.actions.some(a => a.type === 'set_status' && a.status === 'stopped'));
+      assert.equal(requests.length, 0);
+    }
+    const stopped = await turn(PILOT, {...c, language: 'en', status: 'stopped', body: 'HELP'});
+    assert.equal(stopped.result.actions.length, 0, 'switching to English cannot bypass STOP');
+    for (const body of ['FORGET ME', 'OLVÍDAME']) {
+      const {result, requests} = await turn(PILOT, {...c, body});
+      assert.equal(result.intent, 'forget.ask');
+      assert.ok(result.actions.some(a => a.type === 'send_text'), 'deletion confirmation remains reachable');
+      assert.equal(requests.length, 0);
+    }
+    for (const body of ['DELETE', 'BORRAR']) {
+      const {result, requests} = await turn(PILOT, {...c, body, previousIntent: 'forget.ask'});
+      assert.equal(result.intent, 'forget');
+      assert.ok(result.actions.some(a => a.type === 'forget'));
+      assert.equal(requests.length, 0);
+      assert.deepEqual((await turn(PILOT, {...c, body})).result, DARK, 'no deletion or reply without confirmation');
+    }
+    const exported = await turn(PILOT, {...c, body: 'SEND ME MY DATA'});
+    assert.equal(exported.result.intent, 'export');
+    assert.ok(exported.result.actions.some(a => a.type === 'export'));
+    assert.equal(exported.requests.length, 0);
+    assert.deepEqual((await turn(PILOT, {...c, body: 'STOP', channel: 'instagram_comment'})).result, DARK, 'public comments are not contact commands');
+  }
 });
 
 dbTest('both vars unset, empty, blank or junk: every inbound behaves exactly as on main, and rolling back restores it', async () => {
