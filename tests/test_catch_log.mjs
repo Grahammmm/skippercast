@@ -84,6 +84,24 @@ test('the account export holds both rows with their coordinates, and deleting th
   sql.close();
 });
 
+// The exact files that may mention the private log: the route, the export, the app mount, the schema, the account sheet,
+// the private trip cleanup (delete route, retention prune), and (SC0022-07) the two signed-in
+// readers of the past-trip recap. Never a directory or a pattern.
+const PRIVATE_READERS = new Set(['server/routes/catch-log.ts', 'server/routes/account.ts', 'server/app.ts', 'db/schema.ts', 'dist/account.js', 'server/routes/trips.ts', 'server/trips.ts', 'web/alerts.ts', 'web/app/TripAlerts.tsx']);
+const isUnapprovedReader = (rel, text) => /\.(ts|tsx|js|mjs|py)$/.test(rel) && /catch_log\b|api\/catch-log|routes\/catch-log/.test(text) && !PRIVATE_READERS.has(rel);
+
+test('private_log_reader_allowlist_stays_exact', () => {
+  assert.deepEqual([...PRIVATE_READERS].filter(p => p.startsWith('web/')).sort(), ['web/alerts.ts', 'web/app/TripAlerts.tsx']);
+  const mention = '// GET /api/catch-log';
+  for (const rel of PRIVATE_READERS) assert.equal(isUnapprovedReader(rel, mention), false, rel);
+  // Anywhere else, including beside an approved reader, the same text is rejected.
+  for (const rel of ['web/app/Brief.tsx', 'web/app/TripAlerts2.tsx', 'web/alerts.js', 'web/public-feed.ts', 'dist/feed.js', 'server/routes/feeds.ts', 'scripts/export.py', 'web/app/TripAlerts.tsx.bak.ts'])
+    assert.equal(isUnapprovedReader(rel, mention), true, rel);
+  assert.equal(isUnapprovedReader('web/public-feed.ts', 'SELECT * FROM catch_log'), true);
+  assert.equal(isUnapprovedReader('web/public-feed.ts', 'no mention of the log'), false);
+  assert.equal(isUnapprovedReader('web/notes.md', mention), false, 'non-code files are not scanned');
+});
+
 test('no log field reaches any feed or public page, and no public code reads the log table', async () => {
   const {sql, adapter} = database(), original = globalThis.fetch;
   const env = {DB: adapter, FEEDS: {get: async () => null, head: async () => null, list: async () => ({objects: []})}, ASSETS: {fetch: async () => new Response('<!doctype html><title>shell</title>', {headers: {'Content-Type': 'text/html'}})}};
@@ -97,13 +115,13 @@ test('no log field reaches any feed or public page, and no public code reads the
       for (const s of secrets) assert.ok(!text.includes(s), `${path} (${who ?? 'anonymous'}) must not contain ${s}`);
     }
   } finally { globalThis.fetch = original; }
-  const root = fileURLToPath(new URL('..', import.meta.url)), allowed = new Set(['server/routes/catch-log.ts', 'server/routes/account.ts', 'server/app.ts', 'db/schema.ts', 'dist/account.js', 'server/routes/trips.ts', 'server/trips.ts']);
+  const root = fileURLToPath(new URL('..', import.meta.url));
   const hits = [];
   const walk = dir => { for (const name of readdirSync(dir)) { const full = join(dir, name), rel = full.slice(root.length).replaceAll('\\', '/').replace(/^\//, '');
     if (name === 'node_modules' || name.startsWith('.') || rel === 'dist/client' || rel === 'dist/server') continue;
-    if (statSync(full).isDirectory()) walk(full); else if (/\.(ts|tsx|js|mjs|py)$/.test(name) && /catch_log\b|api\/catch-log|routes\/catch-log/.test(readFileSync(full, 'utf8')) && !allowed.has(rel)) hits.push(rel); } };
+    if (statSync(full).isDirectory()) walk(full); else if (isUnapprovedReader(rel, readFileSync(full, 'utf8'))) hits.push(rel); } };
   for (const dir of ['server', 'web', 'dist', 'src', 'packages', 'scripts']) walk(join(root, dir));
-  assert.deepEqual(hits, [], 'only the log route, the export, the app mount, the schema, the account view and the private trip cleanup (delete route, retention prune) mention the log');
+  assert.deepEqual(hits, [], 'only the log route, the export, the app mount, the schema, the account view, the private trip cleanup and the two signed-in readers mention the log');
   sql.close();
 });
 

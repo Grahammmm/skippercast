@@ -73,3 +73,17 @@ test('the API helper sends JSON to /api/ and surfaces the server\'s error', asyn
 test('the VAPID key decodes from base64url', () => {
   assert.deepEqual([...alerts.b64('AQID_-8')], [1, 2, 3, 255, 239]);
 });
+
+test('the optional catch-log read asks GET /api/catch-log and a refused, broken or malformed answer reads as no entries', async () => {
+  const calls = [];
+  const row = {id: 'e1', trip_id: 't1', started_at: '2026-11-01T15:00:00.000Z', outcome: 'fish', count: 2, note: 'private', lat: 35.1, lon: -120.9};
+  const answer = async (url, init) => { calls.push([url, init]); return Response.json({entries: [row]}); };
+  assert.deepEqual(alerts.catchLogEntries(await alerts.api('catch-log', {}, answer)), [{id: 'e1', trip_id: 't1', started_at: row.started_at, outcome: 'fish', count: 2}]);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], '/api/catch-log');
+  assert.equal(calls[0][1].method, undefined, 'a plain GET');
+  const read = fetchFn => alerts.api('catch-log', {}, fetchFn).then(alerts.catchLogEntries, () => []);
+  for (const fetchFn of [async () => Response.json({error: 'Sign in'}, {status: 401}), async () => Response.json({error: 'down'}, {status: 503}), async () => new Response('<html>'),
+    async () => { throw new Error('offline'); }, async () => Response.json({entries: 'x'}), async () => Response.json({})])
+    assert.deepEqual(await read(fetchFn), []);
+});
