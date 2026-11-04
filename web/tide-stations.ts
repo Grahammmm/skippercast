@@ -100,7 +100,10 @@ export function parseTidePredictions(body: unknown): {points: TidePoint[]; event
     if (!record(row) || typeof row.t !== 'string' || !/^\d{4}-\d\d-\d\d \d\d:\d\d$/.test(row.t) || typeof row.v !== 'string' || !row.v.trim()) continue;
     const time = Date.parse(row.t.replace(' ', 'T') + ':00Z'), heightFt = Number(row.v);
     if (!Number.isFinite(time) || !Number.isFinite(heightFt)) continue;
-    const point = {at: new Date(time).toISOString(), heightFt};
+    const at = new Date(time).toISOString();
+    // Date.parse rolls impossible days (02-30, 24:00) forward; only a real calendar minute round-trips unchanged.
+    if (at.slice(0, 16) !== row.t.replace(' ', 'T')) continue;
+    const point = {at, heightFt};
     if (row.type === 'H' || row.type === 'L') { if (!seenEvents.has(point.at)) { seenEvents.add(point.at); events.push({...point, type: row.type}); } }
     else if (row.type === undefined && !seenPoints.has(point.at)) { seenPoints.add(point.at); points.push(point); }
   }
