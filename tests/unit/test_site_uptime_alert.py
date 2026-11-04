@@ -19,7 +19,7 @@ class FakeSite:
     """A real HTTP server on 127.0.0.1. routes: path -> list of (status, body[, location|delay]); each hit consumes one, the last repeats."""
 
     def __init__(self, routes):
-        self.routes, self.hits = {p: r if isinstance(r, list) else [r] for p, r in routes.items()}, []
+        self.routes, self.hits, self.agents = {p: r if isinstance(r, list) else [r] for p, r in routes.items()}, [], []
         site = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -28,6 +28,7 @@ class FakeSite:
 
             def do_GET(self):
                 site.hits.append(self.path)
+                site.agents.append((self.headers.get("User-Agent"), self.headers.get("Cache-Control")))
                 queue = site.routes[self.path]
                 status, body, *extra = queue.pop(0) if len(queue) > 1 else queue[0]
                 if extra and isinstance(extra[0], float):
@@ -214,6 +215,59 @@ class SiteUptimeTest(unittest.TestCase):
                 self.assertEqual(code, 2)
                 self.assertFalse(self.report.exists())
                 self.assertEqual(self.gh.calls, [])
+
+    def test_every_request_carries_the_skippercast_user_agent_including_retry_and_same_host_redirect(self):
+        site = self.site(_api_health=(503, ""), root=(302, "", "/map"))
+        self.run_once(site, "--dry-run")
+        self.assertEqual(site.hits.count("/api/health"), 2)  # first try and the retry
+        self.assertEqual(site.hits.count("/map"), 2)  # direct probe and the followed redirect from /
+        self.assertEqual(len(site.agents), len(site.hits))
+        self.assertEqual(set(site.agents), {("SkipperCast-uptime-check/1.0", "no-cache")})
+
+    def test_403_on_every_path_is_refused_and_the_issue_says_so(self):
+        site = self.site(_api_health=(403, "blocked secret-body"), root=(403, ""), _map=(403, ""))
+        report = self.run_once(site)
+        self.assertTrue(report["down"])  # a refusal still counts as a failure
+        self.assertEqual(report["failures"], [{"path": p, "error": "refused", "status": 403} for p in uptime.PATHS])
+        self.assertEqual(uptime.describe(report["failures"][1]), "/ refused 403")
+        body = self.gh.issues[0]["body"]
+        self.assertIn("- /map refused 403", body)
+        self.assertIn("Every path was refused (4xx), not unreachable: check edge bot rules", body)
+        self.assertNotIn("secret-body", body)
+        self.assertEqual(site.hits.count("/map"), 2)  # the retry rule still applies
+
+    def test_refused_and_timeout_together_are_both_listed_without_the_refused_sentence(self):
+        report = self.run_once(self.site(_api_health=(403, ""), _map=(200, "slow", 1.0)), timeout=0.2)
+        self.assertEqual(report["failures"], [{"path": "/api/health", "error": "refused", "status": 403},
+                                              {"path": "/map", "error": "timeout"}])
+        body = self.gh.issues[0]["body"]
+        self.assertIn("- /api/health refused 403\n- /map timeout", body)
+        self.assertNotIn("refused (4xx)", body)
+
+    def test_refused_sentence_only_when_every_failure_is_a_refusal(self):
+        self.run_once(self.site(_map=(403, "")))
+        self.assertIn("Every path was refused (4xx)", self.gh.issues[0]["body"])  # the one failure is a refusal
+        text = uptime.plan([{"path": "/map", "error": "refused", "status": 403}, {"path": "/", "status": 503}], [], T0)[0][2]
+        self.assertNotIn("Every path was refused", text)
+
+    def test_503_and_cross_host_redirect_keep_their_old_shape(self):
+        self.assertEqual(self.run_once(self.site(_map=(503, "")), "--dry-run")["failures"], [{"path": "/map", "status": 503}])
+        redirect = self.run_once(self.site(root=(301, "", "http://other.invalid/x")), "--dry-run")["failures"]
+        self.assertEqual(redirect, [{"path": "/", "status": 301, "error": "redirect"}])
+        self.assertEqual(uptime.describe(redirect[0]), "/ redirect 301")
+
+    def test_401_and_429_are_refused_but_404_is_a_plain_status(self):
+        for status, expected in ((401, {"error": "refused", "status": 401}), (429, {"error": "refused", "status": 429}),
+                                 (404, {"status": 404})):
+            with self.subTest(status=status):
+                failures = self.run_once(self.site(_map=(status, "")), "--dry-run")["failures"]
+                self.assertEqual(failures, [{"path": "/map", **expected}])
+
+    def test_refused_first_try_then_200_on_retry_is_up(self):
+        site = self.site(_map=[(403, ""), (200, "<html>")])
+        self.assertFalse(self.run_once(site)["down"])
+        self.assertEqual(site.hits.count("/map"), 2)
+        self.assertEqual(self.gh.writes(), [])
 
     def test_plan_stays_quiet_before_the_interval_and_after_it_was_reported(self):
         self.assertEqual(uptime.plan([], [], T0), [])
