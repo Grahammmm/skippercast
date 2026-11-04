@@ -1,0 +1,283 @@
+{
+ "generated_at": "2026-11-04T03:07:56.066252Z",
+ "minimum": {
+  "days": 7,
+  "runs": 3,
+  "valid_times": 30
+ },
+ "ports": [
+  {
+   "id": "morro-bay",
+   "name": "Morro Bay & Avila",
+   "stations": [
+    {
+     "id": "46215",
+     "name": "Diablo Canyon"
+    },
+    {
+     "id": "46028",
+     "name": "Cape San Martin offshore"
+    }
+   ]
+  }
+ ],
+ "schema_version": 1,
+ "scores": [
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 24,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46215",
+   "tolerance": "within 1 ft at 3 ft or less, within 25% above 3 ft",
+   "valid_times": 0,
+   "variable": "wave_height",
+   "window_days": 7,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 24,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46215",
+   "tolerance": "within 1 ft at 3 ft or less, within 25% above 3 ft",
+   "valid_times": 0,
+   "variable": "wave_height",
+   "window_days": 30,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 48,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46215",
+   "tolerance": "within 1 ft at 3 ft or less, within 25% above 3 ft",
+   "valid_times": 0,
+   "variable": "wave_height",
+   "window_days": 7,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 48,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46215",
+   "tolerance": "within 1 ft at 3 ft or less, within 25% above 3 ft",
+   "valid_times": 0,
+   "variable": "wave_height",
+   "window_days": 30,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 72,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46215",
+   "tolerance": "within 1 ft at 3 ft or less, within 25% above 3 ft",
+   "valid_times": 0,
+   "variable": "wave_height",
+   "window_days": 7,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 72,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46215",
+   "tolerance": "within 1 ft at 3 ft or less, within 25% above 3 ft",
+   "valid_times": 0,
+   "variable": "wave_height",
+   "window_days": 30,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 24,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46028",
+   "tolerance": "within 5 kn",
+   "valid_times": 0,
+   "variable": "wind_speed_10m",
+   "window_days": 7,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 24,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46028",
+   "tolerance": "within 5 kn",
+   "valid_times": 0,
+   "variable": "wind_speed_10m",
+   "window_days": 30,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 48,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46028",
+   "tolerance": "within 5 kn",
+   "valid_times": 0,
+   "variable": "wind_speed_10m",
+   "window_days": 7,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 48,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46028",
+   "tolerance": "within 5 kn",
+   "valid_times": 0,
+   "variable": "wind_speed_10m",
+   "window_days": 30,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 72,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46028",
+   "tolerance": "within 5 kn",
+   "valid_times": 0,
+   "variable": "wind_speed_10m",
+   "window_days": 7,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 72,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46028",
+   "tolerance": "within 5 kn",
+   "valid_times": 0,
+   "variable": "wind_speed_10m",
+   "window_days": 30,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 24,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46028",
+   "tolerance": "within 1 ft at 3 ft or less, within 25% above 3 ft",
+   "valid_times": 0,
+   "variable": "wave_height",
+   "window_days": 7,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 24,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46028",
+   "tolerance": "within 1 ft at 3 ft or less, within 25% above 3 ft",
+   "valid_times": 0,
+   "variable": "wave_height",
+   "window_days": 30,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 48,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46028",
+   "tolerance": "within 1 ft at 3 ft or less, within 25% above 3 ft",
+   "valid_times": 0,
+   "variable": "wave_height",
+   "window_days": 7,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 48,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46028",
+   "tolerance": "within 1 ft at 3 ft or less, within 25% above 3 ft",
+   "valid_times": 0,
+   "variable": "wave_height",
+   "window_days": 30,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 72,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46028",
+   "tolerance": "within 1 ft at 3 ft or less, within 25% above 3 ft",
+   "valid_times": 0,
+   "variable": "wave_height",
+   "window_days": 7,
+   "within": null
+  },
+  {
+   "days": 0,
+   "enough": false,
+   "lead_hours": 72,
+   "n": 0,
+   "port": "morro-bay",
+   "runs": 0,
+   "station": "46028",
+   "tolerance": "within 1 ft at 3 ft or less, within 25% above 3 ft",
+   "valid_times": 0,
+   "variable": "wave_height",
+   "window_days": 30,
+   "within": null
+  }
+ ],
+ "windows_days": [
+  7,
+  30
+ ]
+}
