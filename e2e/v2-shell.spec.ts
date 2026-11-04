@@ -358,6 +358,17 @@ test('FE-60: no duplicate map, picker or timeline for one context (/map and /coa
     await page.goto(url);
     await expect(page).toHaveURL(/\/map\?/);
     await expect(page.locator('.app-location'), name).toContainText('Morro Bay');
+    // Inspect the deliberately loading embed before other controls: its real
+    // fetch deadline removes the scene, so this is not a stable end-of-test state.
+    if (surface === 'terrain') {
+      const host = page.locator('.app-terrain');
+      await expect.poll(() => host.evaluate(el => !!el.shadowRoot?.getElementById('scene')), name).toBe(true);
+      // The host owns place, target and time: the embed's own species picker is hidden and it draws no timeline.
+      expect(await host.evaluate(el => {
+        const root = el.shadowRoot!, species = root.getElementById('species') as HTMLElement | null;
+        return {species: !species || species.hidden, timeline: root.querySelectorAll('input[type="range"][aria-label="Hour"], .time-dock-center').length};
+      }), name).toEqual({species: true, timeline: 0});
+    }
     // One map: one stage, one visible surface, at most one MapLibre canvas, no v1 map.
     await expect(page.locator('section.app-stage'), name).toHaveCount(1);
     await expect(page.locator(surface === 'chart' ? '.app-map' : '.app-terrain'), name).toBeVisible();
@@ -374,15 +385,6 @@ test('FE-60: no duplicate map, picker or timeline for one context (/map and /coa
     // One timeline: one hour slider and at most one day picker.
     await expect(page.locator('input[aria-label="Hour"]'), `${name}: hour slider`).toHaveCount(1);
     expect(await page.getByRole('group', {name: 'Day', exact: true}).count(), `${name}: day picker`).toBeLessThanOrEqual(1);
-    if (surface === 'terrain') {
-      const host = page.locator('.app-terrain');
-      await expect.poll(() => host.evaluate(el => !!el.shadowRoot?.getElementById('scene')), name).toBe(true);
-      // The host owns place, target and time: the embed's own species picker is hidden and it draws no timeline.
-      expect(await host.evaluate(el => {
-        const root = el.shadowRoot!, species = root.getElementById('species') as HTMLElement | null;
-        return {species: !species || species.hidden, timeline: root.querySelectorAll('input[type="range"][aria-label="Hour"], .time-dock-center').length};
-      }), name).toEqual({species: true, timeline: 0});
-    }
   }
   expect(pageErrors).toEqual([]);
 });

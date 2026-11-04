@@ -256,6 +256,28 @@ class RolloutTests(unittest.TestCase):
             self.assertNotEqual(jobs.ledger_data(before), jobs.ledger_data(edited(change)))
         self.assertNotEqual(jobs.ledger_data(before), jobs.ledger_data(dict(after, reaches=[refreshed, row])))
 
+    def test_physical_input_hash_alone_is_not_a_ledger_data_change(self):
+        # PR #1432 shape: same areas and statuses, only run keys and physical_input_hash differ.
+        row = {'id': 'r01', 'status': 'habitat-screened', 'tier1_km2': 1.0, 'tier2_km2': 0.0,
+               'last_survey_run': '2026-11-02T06:44:39+00:00', 'survey_run_hash': 'd'*64,
+               'physical_input_hash': 'a'*64}
+        before = {'reaches': [row], 'totals': {'tier2_km2': 0.0}}
+        refreshed = dict(row, last_survey_run='2026-11-03T06:44:39+00:00', survey_run_hash='1'*64,
+                         physical_input_hash='b'*64)
+        after = {'reaches': [refreshed], 'totals': {'tier2_km2': 0.0}}
+        self.assertEqual(jobs.ledger_data(before), jobs.ledger_data(after))
+        self.assertEqual(before['reaches'][0]['physical_input_hash'], 'a'*64)  # input is not mutated
+        # The hash does not hide a real change made alongside it.
+        for change in ({'tier2_km2': 0.2}, {'status': 'held'}):
+            self.assertNotEqual(jobs.ledger_data(before),
+                                jobs.ledger_data(dict(after, reaches=[dict(refreshed, **change)])))
+        changed_totals = dict(after, totals={'tier2_km2': 0.2})
+        self.assertNotEqual(jobs.ledger_data(before), jobs.ledger_data(changed_totals))
+        self.assertNotEqual(jobs.ledger_data(before), jobs.ledger_data(dict(after, reaches=[refreshed, row])))
+        self.assertNotEqual(jobs.ledger_data(before), jobs.ledger_data(dict(after, reaches=[])))
+        # A non-dict reach row passes through unchanged.
+        self.assertEqual(jobs.ledger_data({'reaches': ['r01']}), {'reaches': ['r01']})
+
     def test_ledger_only_reports_failed_or_missing_current_publication(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); s3 = Bucket()

@@ -24,13 +24,14 @@ from skippercast.runs import RunManifest
 from skippercast.pipeline.collect import collect as daily
 from skippercast.pipeline.live import collect as live
 from skippercast.pipeline.regulation_review import coverage
+from skippercast.pipeline.sst_fronts import publish_region
 
 
 ERROR_CHARS = 300
 RUNS = REPO/"var/runs"
 # Per-region files recorded as run outputs (pointers only: history, tiles and archives are not hashed).
 OUTPUTS = {"daily": ("latest.json", "health.json", "regulations-health.json"), "live": ("latest.json", "health.json"),
-           "intelligence": ("intelligence.json",), "habitat": ("habitat-dynamics.json", "habitat-health.json")}
+           "intelligence": ("intelligence.json",), "habitat": ("habitat-dynamics.json", "habitat-health.json", "sst-fronts.json")}
 PREVIOUS = {"daily": "latest.json", "live": "latest.json", "intelligence": "intelligence.json",
             "habitat": "habitat-dynamics.json"}
 
@@ -71,6 +72,17 @@ def record_failure(run, ident, error, duration_ms):
     run.region(ident, "failed", error_class=type(error).__name__, error=str(error), duration_ms=duration_ms)
 
 
+def publish_fronts(ident, output, now):
+    """Write the region's sst-fronts.json beside its habitat product (BF-sst-fronts), from the tiles just published.
+
+    The fronts file is a derived layer: when it cannot be made the habitat refresh still publishes, the failure is
+    announced, and the client reads a missing or old file as "no current front data"."""
+    try:
+        publish_region(output/"regions"/ident, REPO/"catalog/feed-health.json", now)
+    except (OSError, ValueError) as error:  # SstFrontError and bad JSON are ValueErrors
+        print(f"::warning title=Region {ident} SST fronts not written::{type(error).__name__}: {str(error)[:300]}",file=sys.stderr)
+
+
 def refresh_region(kind, region, output, previous_root, now, default, manifest=None):
     """Collect and write one region; return its index row. Raises on failure."""
     started=time.monotonic()
@@ -84,6 +96,7 @@ def refresh_region(kind, region, output, previous_root, now, default, manifest=N
         else:
             from skippercast.pipeline.habitat_dynamics import run
         data=run(ident,output,previous_root,now)
+        if kind=='habitat': publish_fronts(ident,output,now)
         if manifest: record_region(manifest,kind,ident,data,output,previous_root,round((time.monotonic()-started)*1000))
         return {'region_id':ident,'status':data['health']['status'],'completed_at':data['completed_at'],'issues':data['health']['issues'],'coverage_gaps':data['health'].get('coverage_gaps',[]),
                 'forecast_coverage':data['health'].get('forecast_coverage') if kind=='intelligence' else None}
