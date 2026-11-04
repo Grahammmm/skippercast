@@ -16,7 +16,8 @@ import {distanceNm} from '../dist/spot-ranking.js';
 import {assessScreen} from '../web/map/habitat.ts';
 import {rankedHabitat} from '../packages/coast/src/coast3d/regional.ts';
 import {ranking} from '../web/ranking.ts';
-import {durationText, planRun} from '../web/brief/run.ts';
+import {durationText, planRun, runRouteNote, runRouteScreen} from '../web/brief/run.ts';
+import {PLANNING_MARGIN_M, screenPlace} from '../dist/geo-screen.js';
 import {decodeCells, landWaterModel} from '../web/land-water.ts';
 
 const ROOT = new URL('..', import.meta.url).pathname, TZ = 'America/Los_Angeles';
@@ -53,7 +54,8 @@ async function load() {
   if (mod) return mod;
   const out = join(await mkdtemp(join(tmpdir(), 'run-route-')), 'run.mjs');
   await build({stdin: {resolveDir: ROOT, loader: 'ts', contents: `
-      export {RunLine, runPlace, runText, runBasis} from './web/brief/Run.tsx';
+      export {RunLine, runPlace, runText, runBasis, runScreenFor, watchBoundaries} from './web/brief/Run.tsx';
+      export {protectedScreen} from './web/trip.ts';
       export {WhereToLook, boatPicks, listedBoatPicks, routeAfterPaint} from './web/brief/WhereToLook.tsx';
       export {routeCalls} from './web/route.ts';
       export {effect} from '@preact/signals';
@@ -308,3 +310,248 @@ test('run_invalid_distance_and_unused_feature: a distance that is not a usable n
   }
   m.profile.value = 'boat';
 });
+
+// SC0452-07: the run line names a protected area the line it times crosses or passes within the planning margin of.
+// Synthetic screens only (the shape protected-areas.js hands out: ready, coversGeometry, exportExclusions); no fetch.
+const M_LAT = 111320, mLon = lat => M_LAT * Math.cos(lat * Math.PI / 180);
+/** A square area `halfM` metres either side of `at`, as a GeoJSON polygon. */
+const box = (at, halfM) => { const dy = halfM / M_LAT, dx = halfM / mLon(at.latitude), {latitude: y, longitude: x} = at;
+  return {type: 'Polygon', coordinates: [[[x - dx, y - dy], [x + dx, y - dy], [x + dx, y + dy], [x - dx, y + dy], [x - dx, y - dy]]]}; };
+const mid = (a, b) => ({latitude: (a.latitude + b.latitude) / 2, longitude: (a.longitude + b.longitude) / 2});
+/** A ready screen over `areas` ([name, geometry]); `patch` overrides any method. */
+const screenOf = (areas, patch = {}) => ({ready: () => true, coversGeometry: () => true,
+  exportExclusions: () => ({features: areas.map(([name, geometry]) => ({properties: {NAME: name}, geometry}))}), ...patch});
+const loaded = (screen, region = 'fixture') => ({state: 'loaded', region, screen});
+const verdict = (v, ...area) => runRouteScreen(...v, screenOf(area));
+const waterPick = (at, routePoints, id = 'a') => ({...pick(at, undefined, id), basis: 'water', routePoints});
+const straightPick = (at, id = 'a', why) => ({...pick(at, undefined, id), basis: 'straight', ...(why ? {why} : {})});
+const A = {latitude: 35.30, longitude: -120.90}, B = {latitude: 35.30, longitude: -120.80}, UP = {latitude: 35.36, longitude: -120.85};
+/** Screened, not inside, and nothing within the margin: the verdict that earns no note. (A farther area may still be the nearest one named.) */
+const isClear = v => v.screened === true && v.inside === false && (v.distanceM === null || v.distanceM > PLANNING_MARGIN_M);
+
+/** Runs `fn` with every network call refused and the protected-area signal put back after. */
+async function guarded(fn) {
+  const m = await load(), was = globalThis.fetch, signal = m.protectedScreen.value;
+  globalThis.fetch = () => { throw new Error('unexpected network call'); };
+  try { return await fn(m); } finally { globalThis.fetch = was; m.protectedScreen.value = signal; }
+}
+/** The run line with the protected-area signal set; the note paragraph, or null. */
+async function noted(value, lw, r = rank(), ...rest) {
+  const m = await load(); m.protectedScreen.value = value;
+  const html = await line(lw, r, ...rest);
+  return {html, note: html.match(/<p class="app-run-protected">([^<]*)<\/p>/)?.[1] ?? null};
+}
+/** The route a headland Boat list paints and the area on its water detour (clear of both ends and of the straight line) or on the chord. */
+async function headland() {
+  const lw = state(HEADLAND), r = rank();
+  await prepare(r, lw);
+  const [p] = await listed(r, lw), path = [HARBOR, ...p.routePoints, AWAY];
+  assert.equal(p.basis, 'water');
+  let best = 0;
+  for (let i = 1; i < path.length; i++) if (Math.abs(mid(path[i - 1], path[i]).latitude - HARBOR.latitude) > Math.abs(mid(path[best], path[best + 1]).latitude - HARBOR.latitude)) best = i - 1;
+  const detour = ['Detour Sound', box(mid(path[best], path[best + 1]), 60)], chord = ['Chord Banks', box(mid(HARBOR, AWAY), 100)];
+  return {lw, r, p, detour, chord};
+}
+
+test('run_line_uses_water_bends_and_endpoint_connectors: a bent route crosses what the chord and both ends miss, and the converse', () => {
+  const bends = [{latitude: 35.31, longitude: -120.88}, {latitude: 35.31, longitude: -120.82}], at = {latitude: 35.30, longitude: -120.80};
+  const top = ['Top Reef', box(mid(bends[0], bends[1]), 80)], onChord = ['Chord Banks', box(mid(A, B), 80)];
+  const water = waterPick(at, bends), chord = straightPick(at);
+  const screen = screenOf([top]);
+  assert.equal(runRouteScreen(A, water, screen).inside, true, 'the middle of the bent route crosses the area');
+  assert.deepEqual(runRouteScreen(A, water, screen).name, 'Top Reef');
+  assert.ok(isClear(runRouteScreen(A, chord, screen)), 'the straight chord misses it');
+  for (const end of [A, at]) assert.ok(isClear(screenPlace(screen, end)), 'both ends and every bend are clear on their own');
+  for (const bend of bends) assert.ok(isClear(screenPlace(screen, bend)), 'each bend is clear on its own');
+  // The converse: the chord crosses, the water path goes round.
+  const round = screenOf([onChord]);
+  assert.equal(runRouteScreen(A, chord, round).inside, true);
+  assert.ok(isClear(runRouteScreen(A, water, round)), 'the water path avoids what the chord crosses');
+  // The connectors: harbor to the first snapped end, and the last snapped end to the place, are part of the line.
+  const first = ['Start Cove', box(mid(A, bends[0]), 50)], last = ['End Cove', box(mid(bends[1], at), 50)];
+  assert.equal(runRouteScreen(A, water, screenOf([first])).name, 'Start Cove');
+  assert.equal(runRouteScreen(A, water, screenOf([last])).name, 'End Cove');
+  assert.ok(isClear(runRouteScreen(A, water, screenOf([['Elsewhere', box({latitude: 35.5, longitude: -120.5}, 80)]]))), 'an area far from the line');
+  // The route's bends decide it: the same place and screen, other bends, other verdict.
+  assert.ok(isClear(runRouteScreen(A, waterPick(at, [{latitude: 35.29, longitude: -120.85}]), screen)));
+});
+
+test('run_line_uses_water_bends_and_endpoint_connectors (rendered): the line follows the list\'s route; times, list and pick are untouched', async () => guarded(async m => {
+  const {lw, r, p, detour, chord} = await headland(), before = JSON.stringify(await listed(r, lw)), calls = m.routeCalls;
+  const none = await noted({state: 'idle'}, lw, r);
+  const hit = await noted(loaded(screenOf([detour])), lw, r), onChord = await noted(loaded(screenOf([chord])), lw, r);
+  assert.equal(hit.note, 'Route crosses or touches Detour Sound.');
+  assert.equal(onChord.note, null, 'the chord crosses Chord Banks, but the line goes by water round it');
+  assert.equal(none.note, 'Route: protected areas not checked.');
+  const strip = html => html.replace(/<p class="app-run-protected">[^<]*<\/p>/, '');
+  assert.equal(strip(hit.html), strip(none.html), 'the lead, the times and the distance are the same with or without the screen');
+  assert.equal(strip(onChord.html), strip(none.html));
+  assert.equal(JSON.stringify(await listed(r, lw)), before, 'the list, its order and every pick verdict are unchanged');
+  assert.ok(hit.html.includes(`${p.nm.toFixed(1)} nm by water`));
+  assert.equal(m.routeCalls, calls, 'no route searched for the screen');
+  // No water route (the lines of another region): the labelled straight line is screened the same way.
+  const fallback = await noted(loaded(screenOf([chord])), IDLE, r), elsewhere = await noted(loaded(screenOf([detour])), IDLE, r);
+  assert.match(fallback.html, /nm straight line/);
+  assert.equal(fallback.note, 'Route crosses or touches Chord Banks.');
+  assert.equal(elsewhere.note, null, 'the detour is not on the straight line');
+}));
+
+test('run_line_margin_inside_unknown_and_clear: the note at the margin, for a crossing, with no name, with markup, and for a clear line', async () => guarded(async () => {
+  // The helper at the exact threshold, apart from any geometry.
+  assert.equal(PLANNING_MARGIN_M, 70);
+  assert.equal(runRouteNote({inside: false, name: 'Cove', distanceM: 69, screened: true}), 'Route passes within 70 m of Cove.');
+  assert.equal(runRouteNote({inside: false, name: 'Cove', distanceM: 70, screened: true}), 'Route passes within 70 m of Cove.', 'exactly 70 m is within the margin');
+  assert.equal(runRouteNote({inside: false, name: 'Cove', distanceM: 70.1, screened: true}), null);
+  assert.equal(runRouteNote({inside: false, name: 'Cove', distanceM: 5000, screened: true}), null);
+  assert.equal(runRouteNote({inside: false, name: null, distanceM: null, screened: true}), null, 'nothing within reach is no note, and no clearance claim');
+  assert.equal(runRouteNote({inside: true, name: 'Cove', distanceM: 0, screened: true}), 'Route crosses or touches Cove.');
+  assert.equal(runRouteNote({inside: true, name: null, distanceM: 0, screened: true}), 'Route crosses or touches a protected area.');
+  assert.equal(runRouteNote({inside: false, name: null, distanceM: 40, screened: true}), 'Route passes within 70 m of a protected area.');
+  assert.equal(runRouteNote({inside: false, name: 'Cove', distanceM: 10, screened: false}), 'Route: protected areas not checked.', 'not screened wins over any field');
+  // Real geometry: a line along the harbor's parallel, an area 40 m or 500 m north of it, one on it, one touching its end.
+  const water = waterPick(B, [mid(A, B)]), west = {latitude: A.latitude, longitude: A.longitude};
+  const off = (m, name = 'Off Reef') => [name, box({latitude: A.latitude + (m + 30) / M_LAT, longitude: mid(A, B).longitude}, 30)];
+  assert.match(runRouteNote(runRouteScreen(west, water, screenOf([off(40)]))), /^Route passes within 70 m of Off Reef\.$/);
+  assert.equal(runRouteScreen(west, water, screenOf([off(500)])).screened, true);
+  assert.equal(runRouteNote(runRouteScreen(west, water, screenOf([off(500)]))), null);
+  assert.equal(runRouteNote(runRouteScreen(west, water, screenOf([['Over Reef', box(mid(A, B), 30)]]))), 'Route crosses or touches Over Reef.');
+  assert.equal(runRouteNote(runRouteScreen(west, water, screenOf([['Edge Reef', box({latitude: B.latitude, longitude: B.longitude + 30 / mLon(B.latitude)}, 30)]]))), 'Route crosses or touches Edge Reef.', 'an area that only touches the place');
+  // Several areas: the shared verdict names the nearest, a crossing over a near one.
+  assert.equal(runRouteScreen(west, water, screenOf([off(60, 'Far Reef'), off(20, 'Near Reef')])).name, 'Near Reef');
+  assert.equal(runRouteScreen(west, water, screenOf([off(20, 'Near Reef'), ['Over Reef', box(mid(A, B), 30)]])).name, 'Over Reef');
+  // Rendered: an area with no name, markup in a name, and a clear line (no note, nothing said about being allowed).
+  const {lw, r, detour} = await headland(), area = detour[1];
+  assert.equal((await noted(loaded(screenOf([[null, area]])), lw, r)).note, 'Route crosses or touches a protected area.');
+  const markup = await noted(loaded(screenOf([['<b>Cove &</b>', area]])), lw, r);
+  assert.ok(markup.html.includes('Route crosses or touches &lt;b>Cove &amp;&lt;/b>.') && !markup.html.includes('<b>Cove'), 'the name is text, never markup');
+  const clear = await noted(loaded(screenOf([['Far Reef', box({latitude: 35.9, longitude: -120.2}, 80)]])), lw, r);
+  assert.equal(clear.note, null);
+  assert.doesNotMatch(clear.html.replace(/<details.*<\/details>/s, ''), /app-run-protected|clear of|safe|allowed|permitted|legal/i, 'outside the method popover the line says nothing about being clear or allowed');
+}));
+
+test('run_line_fallback_and_bad_geometry: every route failure screens its straight line; a line that cannot be drawn is not checked, never clear', async () => {
+  const bends = [{latitude: 35.31, longitude: -120.88}, {latitude: 35.31, longitude: -120.82}], at = B;
+  const onChord = screenOf([['Chord Banks', box(mid(A, B), 80)]]), onBends = screenOf([['Top Reef', box(mid(bends[0], bends[1]), 80)]]);
+  for (const why of [undefined, 'no-product', 'lines-needed', 'start-not-water', 'end-not-water', 'no-route', 'too-far']) {
+    assert.equal(runRouteScreen(A, straightPick(at, 'a', why), onChord).name, 'Chord Banks', `${why}: the labelled straight line is screened`);
+    assert.ok(isClear(runRouteScreen(A, {...straightPick(at, 'a', why), routePoints: bends}, onBends)), `${why}: a fallback line ignores bends it was never routed along`);
+  }
+  const UNCHECKED = {inside: false, name: null, distanceM: null, screened: false};
+  const water = (points) => waterPick(at, points);
+  const bad = [['missing', undefined], ['null', null], ['not an array', {length: 2}], ['NaN', [{latitude: NaN, longitude: -120.85}]], ['Infinity', [{latitude: 35.31, longitude: Infinity}]],
+    ['latitude 91', [{latitude: 91, longitude: -120.85}]], ['longitude -181', [{latitude: 35.31, longitude: -181}]], ['null point', [bends[0], null, bends[1]]],
+    ['text coordinate', [{latitude: '35.31', longitude: -120.85}]], ['missing field', [{latitude: 35.31}]]];
+  for (const [label, points] of bad) assert.deepEqual(runRouteScreen(A, water(points), onChord), UNCHECKED, `${label}: the chord must not stand in for a detour it cannot see`);
+  for (const origin of [null, undefined, {latitude: NaN, longitude: -120.9}, {latitude: 35.3, longitude: 181}, {latitude: 35.3}]) assert.deepEqual(runRouteScreen(origin, water(bends), onChord), UNCHECKED, JSON.stringify(origin));
+  assert.deepEqual(runRouteScreen(A, null, onChord), UNCHECKED, 'no pick');
+  assert.deepEqual(runRouteScreen(A, {...water(bends), at: undefined}, onChord), UNCHECKED, 'no place');
+  assert.deepEqual(runRouteScreen(A, {...water(bends), at: {latitude: 95, longitude: 0}}, onChord), UNCHECKED, 'a place off the globe');
+  assert.deepEqual(runRouteScreen(A, straightPick({latitude: NaN, longitude: 0}), onChord), UNCHECKED);
+  // A route with no bends is still a line: harbor to place.
+  assert.equal(runRouteScreen(A, water([]), onChord).name, 'Chord Banks', 'an explicitly empty bend list screens its end-to-end line');
+  assert.equal(runRouteScreen(A, water(undefined), onChord).screened, false, 'no property is not an empty list');
+});
+
+test('run_line_screen_lifecycle_and_coverage: a screen that is not loaded, current, for this region and covering the line is "not checked"; a refresh updates the note', async () => guarded(async m => {
+  const {lw, r, detour} = await headland(), ok = screenOf([detour]), NOTE = 'Route: protected areas not checked.', HIT = 'Route crosses or touches Detour Sound.';
+  // What the run reads from the shared signal.
+  for (const value of [{state: 'idle'}, {state: 'loading'}, {state: 'failed'}]) assert.equal(m.runScreenFor(value, 'fixture'), null, value.state);
+  assert.equal(m.runScreenFor(loaded(ok, 'elsewhere'), 'fixture'), null, 'another region\'s screen');
+  assert.equal(m.runScreenFor(loaded(ok), null), null, 'no region');
+  assert.equal(m.runScreenFor(loaded(screenOf([], {ready: () => false})), 'fixture'), null, 'a screen that is not current (stale or expired)');
+  assert.equal(m.runScreenFor(loaded(screenOf([], {ready: () => { throw new Error('boom'); }})), 'fixture'), null, 'a screen that throws');
+  assert.equal(m.runScreenFor(loaded(ok), 'fixture'), ok);
+  // What the screen itself cannot say.
+  const bends = [{latitude: 35.31, longitude: -120.88}, {latitude: 35.31, longitude: -120.82}], water = waterPick(B, bends);
+  for (const [label, patch] of [['partial coverage', {coversGeometry: () => false}], ['coverage that throws', {coversGeometry: () => { throw new Error('boom'); }}],
+    ['closures that throw', {exportExclusions: () => { throw new Error('boom'); }}], ['no closures', {exportExclusions: () => null}]]) {
+    assert.equal(runRouteScreen(A, water, screenOf([detour], patch)).screened, false, label);
+    assert.equal(runRouteScreen(A, straightPick(B), screenOf([detour], patch)).screened, false, `${label}, straight line`);
+  }
+  assert.equal(runRouteScreen(A, water, null).screened, false);
+  assert.equal(runRouteScreen(A, water, {}).screened, false);
+  assert.equal(runRouteScreen(A, water, 'screen').screened, false);
+  // Rendered, one signal after another.
+  for (const [label, value] of [['idle', {state: 'idle'}], ['loading', {state: 'loading'}], ['failed', {state: 'failed'}], ['wrong region', loaded(ok, 'elsewhere')],
+    ['not current', loaded(screenOf([detour], {ready: () => false}))], ['partial coverage', loaded(screenOf([detour], {coversGeometry: () => false}))],
+    ['throwing', loaded(screenOf([detour], {ready: () => { throw new Error('boom'); }}))]]) assert.equal((await noted(value, lw, r)).note, NOTE, label);
+  assert.equal((await noted(loaded(ok), lw, r)).note, HIT);
+  // A refresh (`skippercast:boundaries`) re-renders the line, which reads the screen as it is now.
+  let current = true, areas = [detour];
+  const live = screenOf([], {ready: () => current, exportExclusions: () => ({features: areas.map(([name, geometry]) => ({properties: {NAME: name}, geometry}))})});
+  assert.equal((await noted(loaded(live), lw, r)).note, HIT);
+  current = false;
+  assert.equal((await noted(loaded(live), lw, r)).note, NOTE, 'the screen went unavailable: the old name is gone, not kept');
+  current = true; areas = [];
+  assert.equal((await noted(loaded(live), lw, r)).note, null, 'refreshed without the area: no note');
+  areas = [detour];
+  // A late answer for the region left behind does not clear (or name anything on) the current run; the current region's does.
+  assert.equal((await noted(loaded(ok, 'elsewhere'), lw, r)).note, NOTE);
+  assert.equal((await noted(loaded(ok, 'fixture'), lw, r)).note, HIT);
+  // The boundary listener: added once, removed with the stop, nothing without a document, no timer.
+  const added = [], removed = [], doc = {addEventListener: (type, fn) => added.push([type, fn]), removeEventListener: (type, fn) => removed.push([type, fn])};
+  let bumps = 0;
+  const stop = m.watchBoundaries(() => { bumps++; }, doc);
+  assert.equal(added.length, 1);
+  assert.equal(added[0][0], 'skippercast:boundaries');
+  added[0][1](); added[0][1]();
+  assert.equal(bumps, 2, 'each refresh calls back');
+  assert.equal(removed.length, 0);
+  stop();
+  assert.ok(removed.length === 1 && removed[0][0] === 'skippercast:boundaries' && removed[0][1] === added[0][1], 'the same listener, removed on unmount');
+  assert.equal(typeof document, 'undefined', 'this test runs with no document');
+  assert.doesNotThrow(() => m.watchBoundaries(() => {})(), 'server rendering has no document and needs none');
+}));
+
+test('run_line_selected_pick_and_no_side_effects: the note belongs to the timed pick; no list, time or route search changes; inactive states say nothing', async () => guarded(async m => {
+  const a = pick(AWAY, undefined, 'a'), b = pick(WEST[0], undefined, 'b'), reef = {...pick(WEST[1], undefined, 'r1'), kind: 'reef'};
+  const two = rank(AWAY, {picks: [a, b, reef]}), lw = state(HEADLAND);
+  await prepare(two, lw);
+  const picks = await listed(two, lw), [pa, pb, pr] = picks;
+  assert.deepEqual(picks.map(p => p.id), ['a', 'b', 'r1']);
+  assert.ok([pa, pb, pr].every(p => p.basis === 'water' && Array.isArray(p.routePoints)));
+  // An area 40 m either side of the middle of a pick's own route (a segment of [harbor, ...bends, place]).
+  const onRoute = (name, p, halfM) => { const path = [HARBOR, ...p.routePoints, p.at], i = Math.floor((path.length - 2) / 2); return [name, box(mid(path[i], path[i + 1]), halfM)]; };
+  const detour = onRoute('Detour Sound', pa, 60), nearB = onRoute('Near Reef', pb, 40), nearR = onRoute('Reef Cove', pr, 40);
+  const hit = (pick, area) => { const v = runRouteScreen(HARBOR, pick, screenOf([area])); return v.screened && !isClear(v); };
+  assert.ok(hit(pa, detour) && hit(pb, nearB) && hit(pr, nearR), 'each area is on its own pick\'s route');
+  assert.ok(!hit(pb, detour) && !hit(pa, nearB) && !hit(pa, nearR) && !hit(pb, nearR) && !hit(pr, nearB), 'and on no other pick\'s');
+  const note = async (areas, ...args) => (await noted(loaded(screenOf(areas)), lw, two, ...args)).note;
+  const calls = m.routeCalls, before = JSON.stringify(await listed(two, lw));
+  assert.equal(await note([detour, nearB, nearR]), 'Route crosses or touches Detour Sound.', 'the top pick\'s route, not the nearest area');
+  assert.equal(await note([nearB]), null, 'the top pick is not on the area that sits on another pick\'s route');
+  assert.equal(await note([detour, nearB, nearR], 20, 'b'), 'Route crosses or touches Near Reef.', 'a selected listed spot is the pick timed');
+  assert.equal(await note([detour], 20, 'b'), null, 'and the top pick\'s route is not read for it');
+  assert.match((await noted(loaded(screenOf([nearB])), lw, two, 20, 'b')).html, /Up to [^<]* fishing at Reef b\./);
+  const dropped = await noted(loaded(screenOf([detour, nearB])), lw, two, 20, 'gone');
+  assert.equal(dropped.note, 'Route crosses or touches Detour Sound.', 'a selection the list does not hold falls back to the top pick\'s route');
+  assert.match(dropped.html, /outside the ranked list, so times are for the top pick/);
+  const mismatch = await noted(loaded(screenOf([nearR, detour])), lw, two, 20, null, 'r1');
+  assert.equal(mismatch.note, 'Route crosses or touches Detour Sound.', 'a reef id never selects as a habitat: the top pick\'s route');
+  assert.equal(await note([nearR], 20, null, 'r1'), null);
+  // Still a planning line: the no-time state shows it; nothing else about the run moved.
+  const slow = await noted(loaded(screenOf([detour])), lw, two, 2);
+  assert.match(slow.html, /data-state="no-time"/);
+  assert.equal(slow.note, 'Route crosses or touches Detour Sound.');
+  assert.equal(JSON.stringify(await listed(two, lw)), before, 'the list is as it was');
+  assert.equal(m.routeCalls, calls, 'repeated renders and every screen change searched no route');
+  // Inactive states and other profiles: no note, and (fetch refused above) no request.
+  const over = {...brief, windows: [{...WINDOW, start: '2026-10-12T08:00:00.000Z', end: '2026-10-12T09:00:00.000Z'}]};
+  m.protectedScreen.value = loaded(screenOf([detour]));
+  for (const [label, html] of [['no speed', await line(lw, two, null)], ['no window', await line(lw, two, 20, null, null, {...brief, windows: []})], ['over', await line(lw, two, 20, null, null, over)],
+    ['no place', await line(lw, {...two, picks: []})], ['no harbor position', await line(lw, {...two, origin: undefined, picks: [{...a, nm: null}]})]]) {
+    assert.doesNotMatch(html, /app-run-protected|protected area/, label);
+  }
+  assert.match(await line(lw, two, 20, null, null, over), /data-state="over"/);
+  for (const other of ['kayak', 'shore', 'spear']) {
+    m.profile.value = other;
+    assert.equal(m.render(m.h(m.RunLine, {brief: {...brief, profile: other}, ranking: two, now: NOW})), '', other);
+  }
+  m.profile.value = 'boat';
+  assert.equal(m.routeCalls, calls);
+  // The basis says what the screen is and is not.
+  const basis = m.runBasis('Morro Bay');
+  assert.match(basis, /screened against the loaded protected-area boundaries, including a 70 m planning margin/);
+  assert.match(basis, /does not determine whether transit or fishing is allowed; check the official rules/);
+  assert.match(basis, /not a navigation route/);
+}));
