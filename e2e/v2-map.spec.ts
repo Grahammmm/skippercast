@@ -4,8 +4,8 @@
 // synthetic basemap fixture (tests/fixtures/basemap/tiny.pmtiles, served by
 // range here, since the published archive lives on R2) and the region's
 // committed shoreline. The Fish Worker bridge (/api/coast, /coast-data) never answers
-// here: either it is held open, so the terrain stays mounted and loading, or it
-// fails, so the stage must return to Chart with v1's message.
+// here: it is held open for loading checks, answered by a tiny synthetic terrain
+// for longer interaction sequences, or failed to check Chart fallback with v1's message.
 import {createHash} from 'node:crypto';
 import {syntheticTerrain} from './terrain-keyboard-fixture.ts';
 import {readFileSync} from 'node:fs';
@@ -46,6 +46,9 @@ test('3D shows the terrain; switching to 2D keeps place, target, profile, hour a
   const three: string[] = [];
   page.on('request', request => { if (/\/assets\/(?:viewer|embed|terrain)\./.test(request.url())) three.push(request.url()); });
   await holdCoastData(page);
+  // This multi-presentation/history sequence can outlast the real fetch timeout.
+  const terrain = await syntheticTerrain(page);
+  terrain.release();
   await v2.open('app', {...PLACE, presentation: 'chart'});
   await expect(page.locator('.app-map')).toBeVisible();
   expect(three, 'Chart loads no renderer').toEqual([]);
@@ -964,8 +967,8 @@ test('?layers= restores the rail, a Fish ?layer= opens its entry, and a profile 
 });
 
 test('in 3D the Chart\'s entries and the base read "Chart only" and never toggle hidden layers', async ({page, pageErrors, v2}) => {
-  await holdCoastData(page);
-  await v2.open('app', {region: 'morro-bay', presentation: '3d', layers: 'seafloor', view: PLACE.view});
+  // Keep 3D available throughout the rail and axe checks, not just until the fetch deadline.
+  await terrain3d(page, v2);
   await expect(page.locator('.app-terrain')).toBeVisible();
   await showLayers(page);
   for (const name of ['Water temp', 'Swell', 'Clouds']) {

@@ -38,6 +38,25 @@ spots.post('/api/spots', async c => {
   if (!added.meta.changes) throw new ClientError(`you can keep at most ${MAX_SPOTS} saved spots; remove one first`);
   return json({id, owner, ...s, created_at}, 201);
 });
+// Rename or re-note a spot. Only these two columns can change: a new position is a new spot, because the
+// protected-area screen runs where a spot is shown or exported. Column names come from this list, never from the request.
+const EDITABLE = ['name', 'note'] as const;
+spots.patch('/api/spots/:id', async c => {
+  const owner = c.var.owner, d = db(c.env), id = c.req.param('id');
+  // Ownership first: an id that is missing and one owned by someone else answer alike, whatever the body holds.
+  const row = await d.prepare('SELECT lat,lon FROM saved_spots WHERE id=? AND owner=?').bind(id, owner).first<{lat: number; lon: number}>();
+  if (!row) return notFound();
+  const edit = await body(c.req.raw, 4096 + NOTE_CHARS * 4);
+  for (const key of ['lat', 'lon']) if (Object.hasOwn(edit, key)) throw new ClientError(`${key} cannot be changed; save a new spot for a different position`);
+  if (Object.keys(edit).some(key => !(EDITABLE as readonly string[]).includes(key))) throw new ClientError('only name and note can be changed');
+  const sent = EDITABLE.filter(key => Object.hasOwn(edit, key));
+  if (!sent.length) throw new ClientError('send name and/or note');
+  // Same checks as a save; the spot's own position stands in for the coordinates this request may not carry.
+  const s = validateSpot({name: edit.name, note: edit.note, lat: row.lat, lon: row.lon});
+  // Only the supplied columns are written, so a name edit and a note edit in flight together both survive.
+  const saved = await d.prepare(`UPDATE saved_spots SET ${sent.map(key => key + '=?').join(',')} WHERE id=? AND owner=? RETURNING *`).bind(...sent.map(key => s[key]), id, owner).first();
+  return saved ? json(saved) : notFound();
+});
 spots.delete('/api/spots/:id', async c => {
   const done = await db(c.env).prepare('DELETE FROM saved_spots WHERE id=? AND owner=?').bind(c.req.param('id'), c.var.owner).run();
   return done.meta.changes ? json({deleted: true}) : notFound();

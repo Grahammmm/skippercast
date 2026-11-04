@@ -173,3 +173,45 @@ test('rendered_recap_lists_fish_blank_unknown_privately', async () => {
     assert.doesNotMatch(hostile, /<script>/);
   } finally { await rm(dir, {recursive: true, force: true}); }
 });
+
+test('recap_render_says_when_older_entries_were_not_read: loading and incomplete reads are worded once under Past, a complete read adds nothing', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'trip-recap-read-'));
+  try {
+    const out = join(dir, 'view.mjs');
+    await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
+      export {SavedTrips} from './web/app/TripAlerts.tsx';
+      export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
+      bundle: true, platform: 'node', format: 'esm', outfile: out, logLevel: 'silent',
+      jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+    const {SavedTrips, render, h} = await import(pathToFileURL(out).href);
+    const names = {point: new Map([['synthetic', 'Test area']]), species: new Map([['reef', 'Test species']])};
+    const draw = (trips, entries, read) => render(h(SavedTrips, {recaps: tripRecaps(trips, [], [], today, entries), names, remove: () => () => {}, ...(read ? {read} : {})}));
+    const oldest = [trip('newer', '2026-11-01'), trip('oldest', '2026-10-01')];
+    const notRead = /Older catch-log entries were not read\. The entries shown may be incomplete\./g, reading = /Reading your catch log…/g;
+    const count = (html, re) => (html.match(re) ?? []).length;
+
+    // Entries were found only past page one, one of them started before its trip; once the pages ended nothing is said about reading.
+    const found = [logged('f1', 'newer', 'fish', 2), logged('before', 'oldest', 'fish', 5, '2019-01-01T00:00:00.000Z')];
+    const complete = draw(oldest, found, {loading: false, complete: true});
+    assert.match(complete, /Fish · 5 fish/);
+    assert.equal(count(complete, notRead) + count(complete, reading), 0);
+    assert.equal(complete, draw(oldest, found), 'no read state is a complete read');
+
+    // A read that stopped keeps what it read, says so once under Past and does not say nothing was logged.
+    const stopped = draw(oldest, [found[0]], {loading: false, complete: false});
+    assert.equal(count(stopped, notRead), 1);
+    assert.ok(stopped.indexOf('<h3>Past</h3>') < stopped.search(notRead), 'under Past');
+    assert.match(stopped, /Fish · 2 fish/);
+    assert.doesNotMatch(stopped, /no catch|nothing (was )?logged|none logged/i);
+    // Even a stop with nothing read (a failed first page) is worded, not drawn as an empty history.
+    const none = draw(oldest, [], {loading: false, complete: false});
+    assert.equal(count(none, notRead), 1);
+    assert.doesNotMatch(none, /Your catch log/);
+
+    const loading = draw(oldest, [], {loading: true, complete: false});
+    assert.equal(count(loading, reading), 1);
+    assert.equal(count(loading, notRead), 0);
+    // Without a past trip there is no Past section to carry either line.
+    assert.equal(count(draw([trip('future', '2026-11-03')], [], {loading: false, complete: false}), notRead), 0);
+  } finally { await rm(dir, {recursive: true, force: true}); }
+});

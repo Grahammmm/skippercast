@@ -107,6 +107,44 @@ export function catchLogEntries(answer: unknown): CatchLogEntry[] {
   return kept;
 }
 
+/** At most this many sequential GET /api/catch-log requests (each up to 200 rows) per recap read: a fixed bound on the dialog's work, never derived from a date. */
+export const RECAP_PAGE_CAP = 10;
+export type RecapCatchLog = {entries: CatchLogEntry[]; complete: boolean};
+
+/**
+ * The recap's whole catch log: GET /api/catch-log, then each page's opaque X-SC-Catch-Log-Next-Cursor, up to RECAP_PAGE_CAP pages.
+ * `complete` is true only when a well-formed page said X-SC-Catch-Log-Has-More: false and no row was dropped. A failed page, a bad header,
+ * a repeated cursor or the cap stops the read with what was read so far and complete false. It never stops because of a time: entries join a
+ * trip by exact trip id, whatever their started_at. Never rejects; aborting `signal` ends the read (incomplete) without further requests.
+ */
+export async function readRecapCatchLog(fetchFn: typeof fetch = fetch, signal?: AbortSignal): Promise<RecapCatchLog> {
+  const entries: CatchLogEntry[] = [], seen = new Set<string>(), used = new Set<string>();
+  let cursor: string | null = null, rejected = false;
+  for (let page = 0; page < RECAP_PAGE_CAP; page++) {
+    if (signal?.aborted) return {entries, complete: false};
+    const controller = new AbortController(), stop = () => controller.abort(), timer = setTimeout(stop, 20000);
+    signal?.addEventListener('abort', stop);
+    let response: Response, answer: unknown;
+    try {
+      response = await fetchFn('/api/catch-log' + (cursor === null ? '' : `?cursor=${encodeURIComponent(cursor)}`), {signal: controller.signal, headers: {'Content-Type': 'application/json'}});
+      answer = await response.json();
+    } catch { return {entries, complete: false}; } finally { clearTimeout(timer); signal?.removeEventListener('abort', stop); }
+    if (signal?.aborted || !response.ok) return {entries, complete: false};
+    const rows = (answer as {entries?: unknown} | null)?.entries;
+    if (!Array.isArray(rows)) return {entries, complete: false};
+    const kept = catchLogEntries(answer);
+    if (kept.length !== rows.length) rejected = true;
+    for (const entry of kept) if (!seen.has(entry.id)) { seen.add(entry.id); entries.push(entry); }
+    const more = response.headers.get('X-SC-Catch-Log-Has-More');
+    if (more === 'false') return {entries, complete: !rejected};
+    const next = response.headers.get('X-SC-Catch-Log-Next-Cursor');
+    if (more !== 'true' || !next || used.has(next)) return {entries, complete: false};
+    used.add(next);
+    cursor = next;
+  }
+  return {entries, complete: false};
+}
+
 /** Group private records by Pacific trip date; later array entries win within each assessment kind. Catch-log rows join only by exact trip id. */
 export function tripRecaps(trips: SavedTrip[], events: AlertEvent[], feedback: Feedback[], today: string, entries: CatchLogEntry[] = []): {
   upcoming: SavedTrip[]; past: {trip: SavedTrip; final: AlertEvent | null; reports: Feedback[]; catches: CatchLogEntry[]}[];
