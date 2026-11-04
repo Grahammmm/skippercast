@@ -1,5 +1,5 @@
 import {test, expect, THROTTLED_MOBILE} from './fixtures.ts';
-import type {Page} from '@playwright/test';
+import type {CDPSession, Page} from '@playwright/test';
 import {stubLiveFeeds, stubForecast} from '../scripts/measure_startup.mjs';
 import {readFileSync} from 'node:fs';
 import {forecastFixture} from './forecast-fixture.ts';
@@ -9,6 +9,15 @@ const FUNNEL_BUDGET_MS = 30_000;
 const PORT_KEY = 'skippercast-home-port-v1';
 const cells = [['morro', 'morro-bay', 'boat'], ['morro', 'morro-bay', 'shore'],
   ['morro', 'morro-bay', 'spear'], ['morro', 'morro-bay', 'kayak'], ['monterey', 'monterey-point-sur', 'boat']];
+// The mobile CPU throttle belongs to the measured window only: from the user's first request until the brief's verdict word
+// is on screen. Everything after that is an assertion about what the page shows, and the /map page it lands on starts the
+// whole map there (SC0922-05: docs/diagnostics/SC0922-05.md), so a 4x throttle would multiply the map's startup into every
+// remaining locator round trip. `cpuRates` records what was really sent, so a test can pin the measured window.
+const cpuRates = new WeakMap<CDPSession, number[]>();
+async function cpu(cdp: CDPSession, rate: number) {
+  await cdp.send('Emulation.setCPUThrottlingRate', {rate});
+  cpuRates.get(cdp)!.push(rate);
+}
 async function prepare(page: Page, region = 'morro-bay') {
   await stubLiveFeeds(page, {id: region});
   // Startup's byte-budget stand-in omits units; use the unit-checked calm UI fixture.
@@ -47,7 +56,7 @@ async function prepare(page: Page, region = 'morro-bay') {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Network.enable');
   await cdp.send('Network.emulateNetworkConditions', {offline: false, ...THROTTLED_MOBILE});
-  await cdp.send('Emulation.setCPUThrottlingRate', {rate: THROTTLED_MOBILE.cpu});
+  cpuRates.set(cdp, []); await cpu(cdp, THROTTLED_MOBILE.cpu);
   return cdp;
 }
 async function port(page: Page, query: string) {
@@ -56,17 +65,23 @@ async function port(page: Page, query: string) {
   await input.fill(query); await expect(page.getByRole('button', {name: 'Go'})).toBeEnabled(); await input.press('Enter');
   await expect(page.locator('.landing-step[data-step="profile"]')).toBeVisible();
 }
-async function verdict(page: Page, started: number, label: string) {
+async function verdict(page: Page, cdp: CDPSession, started: number, label: string) {
   const word = page.locator('.app-verdict .app-verdict-word');
-  await expect(word).toBeVisible({timeout: FUNNEL_BUDGET_MS});
-  const elapsed = Date.now() - started;
-  console.log(`FUNNEL ${label}: ${elapsed} ms`);
-  expect(elapsed).toBeLessThanOrEqual(FUNNEL_BUDGET_MS);
-  await expect(word).toHaveText(/^(Comfortable|Marginal|Rough)$/);
-  await expect(page.locator('.app-verdict-limit')).toHaveText(/\.$/);
-  await expect(page.locator('.app-verdict')).not.toContainText(/\b(?:Confidence|High|Low|Go)\b/);
-  await expect(page.locator('dialog[open], [role="dialog"]:visible, .app-firstrun, .port-dialog[open]')).toHaveCount(0);
-  await expect(page.getByText(/sign in to continue|create (an )?account|passkey|take a tour|welcome to/i).filter({visible: true})).toHaveCount(0);
+  await test.step(`${label}: verdict word within the funnel budget (throttled)`, async () => {
+    await expect(word).toBeVisible({timeout: FUNNEL_BUDGET_MS});
+    const elapsed = Date.now() - started;
+    console.log(`FUNNEL ${label}: ${elapsed} ms`);
+    expect(elapsed).toBeLessThanOrEqual(FUNNEL_BUDGET_MS);
+  });
+  // The budget is measured; the content checks below are not timed, so they run at full CPU speed.
+  await cpu(cdp, 1);
+  await test.step(`${label}: verdict content and absences (unthrottled)`, async () => {
+    await expect(word).toHaveText(/^(Comfortable|Marginal|Rough)$/);
+    await expect(page.locator('.app-verdict-limit')).toHaveText(/\.$/);
+    await expect(page.locator('.app-verdict')).not.toContainText(/\b(?:Confidence|High|Low|Go)\b/);
+    await expect(page.locator('dialog[open], [role="dialog"]:visible, .app-firstrun, .port-dialog[open]')).toHaveCount(0);
+    await expect(page.getByText(/sign in to continue|create (an )?account|passkey|take a tour|welcome to/i).filter({visible: true})).toHaveCount(0);
+  });
 }
 for (const [query, region, profile] of cells) test(`${query} → ${profile} → useful brief`, async ({page, pageErrors}, info) => {
   // This case checks three journeys, each still bounded by FUNNEL_BUDGET_MS.
@@ -79,11 +94,12 @@ for (const [query, region, profile] of cells) test(`${query} → ${profile} → 
     await expect(page).toHaveURL(/\/map\?/);
     expect(new URL(page.url()).searchParams.get('region')).toBe(region);
     expect(new URL(page.url()).searchParams.get('profile')).toBe(profile);
-    await verdict(page, started, `${info.project.name}/${query}/${profile}`);
+    await verdict(page, cdp, started, `${info.project.name}/${query}/${profile}`);
+    expect(cpuRates.get(cdp)).toEqual([THROTTLED_MOBILE.cpu, 1]);
     expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('funnel-actions')!))).toEqual(['input', 'Enter', 'click']);
     if (query === 'morro' && profile === 'boat') {
       await page.evaluate(() => sessionStorage.setItem('funnel-actions', '[]'));
-      const returning = Date.now(); await page.goto('/');
+      await cpu(cdp, THROTTLED_MOBILE.cpu); const returning = Date.now(); await page.goto('/');
       // Phase 1, the return: the landing resolves the saved port asynchronously (savedPortTarget awaits the port
       // directory, then web/landing/main.tsx calls location.replace), so goto('/') resolving does not mean the
       // redirect has happened. Wait for the /map document it lands on and for a useful verdict there; a reload
@@ -92,16 +108,18 @@ for (const [query, region, profile] of cells) test(`${query} → ${profile} → 
       const saved = new URL(page.url());
       expect(saved.searchParams.get('region')).toBe(region);
       expect(saved.searchParams.get('profile')).toBe(profile);
-      await verdict(page, returning, `${info.project.name}/returning`);
+      await verdict(page, cdp, returning, `${info.project.name}/returning`);
       expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('funnel-actions')!))).toEqual([]);
       // Phase 2, persistence: reloading the settled brief is a separate check with its own timer and budget.
-      const reloading = Date.now(); await page.reload();
+      await cpu(cdp, THROTTLED_MOBILE.cpu); const reloading = Date.now(); await page.reload();
       await expect(page).toHaveURL(/\/map\?/);
       const reloaded = new URL(page.url());
       expect(reloaded.searchParams.get('region')).toBe(region);
       expect(reloaded.searchParams.get('profile')).toBe(profile);
-      await verdict(page, reloading, `${info.project.name}/returning-reload`);
+      await verdict(page, cdp, reloading, `${info.project.name}/returning-reload`);
       expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('funnel-actions')!))).toEqual([]);
+      // Each of the three timed visits was throttled, then lifted once its budget was measured.
+      expect(cpuRates.get(cdp)).toEqual([THROTTLED_MOBILE.cpu, 1, THROTTLED_MOBILE.cpu, 1, THROTTLED_MOBILE.cpu, 1]);
     }
     expect(pageErrors).toEqual([]);
   } finally { await cdp.send('Emulation.setCPUThrottlingRate', {rate: 1}); await cdp.detach(); }
@@ -146,7 +164,7 @@ test('duplicate profile activation saves and navigates once without waiting for 
   try {
     const started = Date.now(); await page.goto('/?ui=v2'); await port(page, 'morro');
     await page.locator('[data-profile="boat"]').evaluate(button => { (button as HTMLElement).click(); (button as HTMLElement).click(); });
-    await expect(page).toHaveURL(/\/map\?/); await verdict(page, started, 'duplicate');
+    await expect(page).toHaveURL(/\/map\?/); await verdict(page, cdp, started, 'duplicate');
     expect(navigations).toBe(1);
     expect(await page.evaluate(() => Number(sessionStorage.getItem('funnel-writes')))).toBe(1); expect(pageErrors).toEqual([]);
   } finally { await cdp.detach(); }
@@ -163,7 +181,7 @@ test('Save-Data skips warm-up and reaches a brief', async ({page, pageErrors}) =
     await expect(page.locator('.landing-step [role="status"]')).toHaveText('');
     expect(requests.filter(p => /atlas-marks|search-plan-index|poster\.svg|\/api\/forecast/.test(p))).toEqual([]);
     await page.locator('[data-profile="boat"]').click(); await expect(page).toHaveURL(/profile=boat/);
-    await verdict(page, started, 'Save-Data'); expect(pageErrors).toEqual([]);
+    await verdict(page, cdp, started, 'Save-Data'); expect(pageErrors).toEqual([]);
   } finally { await cdp.detach(); }
 });
 test('failed feeds give an honest unavailable lead instead of waiting forever', async ({page, pageErrors}) => {
