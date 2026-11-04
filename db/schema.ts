@@ -333,7 +333,10 @@ export const fleetChanges=sqliteTable('fleet_changes',{
 },t=>[index('fc_vessel').on(t.vesselId),index('fc_kind').on(t.kind,t.detectedAt)]);
 
 // Private outreach notes and drafts (D14); body at most 8,000 characters (checked in
-// code). No code path sends anything; an operator's removal request deletes these rows.
+// code). No code path sends anything. A vessel removal request (editVessel, same D1 batch as
+// the removal date) deletes every row of that vessel's operator, consent-change and status
+// audit notes included, even when the operator has other listed vessels; the current consent
+// stays on fleet_operators. There is no age-based deletion.
 export const fleetOutreach=sqliteTable('fleet_outreach',{
   id:text('id').primaryKey(),operatorId:text('operator_id').notNull(),kind:text('kind').notNull(),channel:text('channel'),
   body:text('body').notNull(),status:text('status').notNull().default('draft'),
