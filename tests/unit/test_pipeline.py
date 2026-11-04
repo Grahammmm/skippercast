@@ -1,5 +1,8 @@
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest import mock
+import copy
+import socket
 import unittest
 import ssl
 from skippercast import http
@@ -137,6 +140,51 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(r["data"], previous["data"])
         r = source("a", "A", "observation", "https://example.org", 6, lambda c: previous["data"], now)
         self.assertEqual(r["status"], "stale")
+
+    def _spectral_source(self, body, previous=None):
+        """Run the real spectral parser through source() with an injected client; no network."""
+        class Injected:
+            def __init__(self, now):
+                self.requests = []
+            def get(self, url, **_):
+                self.requests.append({"url": url})
+                return body
+        blocked = mock.patch.object(socket, "socket", side_effect=AssertionError("network blocked"))
+        blocked.start()
+        self.addCleanup(blocked.stop)
+        return source("buoy-46028-spectrum", "Swell and wind waves", "observation",
+                      "https://www.ndbc.noaa.gov/data/realtime2/46028.spec", 6,
+                      lambda c: parsers.ndbc(c.get("https://www.ndbc.noaa.gov/data/realtime2/46028.spec"),
+                                             "46028", True),
+                      datetime(2026, 9, 21, 16, 0, tzinfo=timezone.utc), previous, client_factory=Injected)
+
+    SPECTRAL = ("#YY MM DD hh mm WVHT SwH SwP WWH WWP SwD WWD STEEPNESS APD MWD\n"
+                "#yr mo dy hr mn m m {swp} m sec - - - sec degT\n"
+                "2026 09 21 15 00 1.5 1.2 10.0 0.3 5.0 W NW SWELL 6.0 270\n")
+
+    def test_bad_spectral_units_fail_source(self):
+        r = self._spectral_source(self.SPECTRAL.format(swp="min"))
+        self.assertEqual(r["status"], "failed")
+        self.assertIsNone(r["data"])
+        self.assertNotIn("last_success_at", r)
+        self.assertNotIn("data_retrieved_at", r)
+        self.assertTrue(r["issue"].startswith("ValueError: Unexpected NDBC units: SwP 'min'"), r["issue"])
+        self.assertEqual(len(r["requests"]), 1)
+        ok = self._spectral_source(self.SPECTRAL.format(swp="sec"))
+        self.assertEqual(ok["status"], "ok")
+        self.assertEqual(ok["data"]["observations"][0]["SwP"], 10.0)
+
+    def test_bad_spectral_units_retain_previous_dates(self):
+        previous = {"data": {"station": "46028", "sample_at": "2026-09-21T14:00:00Z", "observations": []},
+                    "last_success_at": "2026-09-21T14:05:00Z", "data_retrieved_at": "2026-09-21T14:05:00Z"}
+        before = copy.deepcopy(previous)
+        r = self._spectral_source(self.SPECTRAL.format(swp="min"), previous)
+        self.assertEqual(r["status"], "retained")
+        self.assertTrue(r["issue"].startswith("ValueError: Unexpected NDBC units: SwP 'min'"), r["issue"])
+        self.assertEqual(r["data"], before["data"])
+        self.assertEqual(r["last_success_at"], before["last_success_at"])
+        self.assertEqual(r["data_retrieved_at"], before["data_retrieved_at"])
+        self.assertEqual(previous, before)  # the earlier record is untouched
 
     def test_erddap_axis_orientation_missing_cells_and_quality(self):
         meta = {"attrs": {"NC_GLOBAL": {"time_coverage_end": "2026-09-20T12:00:00Z"},

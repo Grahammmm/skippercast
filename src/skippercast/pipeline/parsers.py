@@ -110,8 +110,8 @@ def ndbc(body, station, spectral=False):
     if not required.issubset(keys):
         raise ValueError("NDBC columns changed")
     unit_map = dict(zip(keys, units))
-    expected = {"WVHT": "m"} if spectral else {"WVHT": "m", "WSPD": "m/s", "DPD": "sec", "WTMP": "degC",
-                                                "ATMP": "degC", "APD": "sec", "GST": "m/s"}
+    expected = {"WVHT": "m", "SwH": "m", "SwP": "sec", "WWH": "m", "WWP": "sec"} if spectral else {
+        "WVHT": "m", "WSPD": "m/s", "DPD": "sec", "WTMP": "degC", "ATMP": "degC", "APD": "sec", "GST": "m/s"}
     for key in keys:  # header order, so the first offending column is named
         if key in expected and unit_map.get(key) != expected[key]:
             raise ValueError(f"Unexpected NDBC units: {key} {unit_map.get(key)!r}")
