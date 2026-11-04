@@ -10,7 +10,8 @@
 // still shows the top pick), which opens Your limits at that
 // field; the list keeps only places inside it. With a cruise speed, a Boat
 // pick shows its one-way run time. SC1322-10: a Boat pick's distance, run time and range use the water
-// route (web/ranking.ts `routedPicks`) where one is computed, else the straight line, labelled.
+// route (web/ranking.ts `routedPicks`) where one is computed, else the straight line, labelled. SC2207-05: Kayak's distance
+// and range use the same route from its chosen launch (no run time), with a short reason beside a straight line.
 // CI6-01B: the list ranks only places its land/water check confirms as water
 // (web/land-water.ts); the region's index loads with the brief, and the lines file
 // only when a place falls in a cell the index leaves mixed.
@@ -29,7 +30,7 @@ import {isReachProfile, nmText, reachFor, shoreSwimLimit, spearPlan} from '../re
 import {loadShoreLines, shoreLines} from '../shore-distance.ts';
 import {landWater, loadLandWater, loadLandWaterLines, placeFor, type LandWaterState} from '../land-water.ts';
 import {loadReefPublication, ranking, recheckReefPublication, reefPublication, regionLoad, routedPicks, ROUTE_BUDGET, TOP, type Pick, type Ranking, type RoutedPick, type RouteFn} from '../ranking.ts';
-import {waterRoute, type Route} from '../route.ts';
+import {waterRoute, type Route, type RouteFailure} from '../route.ts';
 import {fitCamera} from '../map/ranked.ts';
 import {cameraParam} from '../map/stage.ts';
 import {habitat, navigate, profile, region, selection, setParams, species} from '../state.ts';
@@ -82,6 +83,20 @@ export function boatPicks(r: Ranking, lw: LandWaterState = landWater.value, id: 
     return got;
   };
   return routedPicks(r.picks, r.origin, model, lines, r.reach ?? null, TOP, once);
+}
+
+/** SC2207-05: why a Kayak pick still shows a straight line: the route's own failure, or that it is not computed yet. */
+const ROUTE_WHY: Readonly<Record<RouteFailure, string>> = {
+  'no-product': 'no land/water data',
+  'lines-needed': 'shoreline still loading',
+  'start-not-water': 'launch/origin not on confirmed water',
+  'end-not-water': 'place not on confirmed water',
+  'no-route': 'no water path found',
+  'too-far': 'route search limit reached',
+};
+export function routeWhyText(pick: Pick & {basis?: 'water' | 'straight'; why?: RouteFailure}): string | null {
+  if (pick.basis !== 'straight' || pick.nm === null) return null;
+  return pick.why ? ROUTE_WHY[pick.why] ?? 'water route not computed' : 'water route not computed';
 }
 
 /** Bumped once the routes the painted Boat list still lacks are all computed, so it renders again by water. */
@@ -141,7 +156,7 @@ function RangeControl({measured}: {measured: string | undefined}) {
   return (
     <>
       <Button variant="ghost" size="sm" class="app-where-range" aria-haspopup="dialog" data-reach={nm ?? undefined} onClick={() => setOpen(true)}
-        title={nm === null ? 'Set how far out to look' : `Range to consider: ${nmText(nm)} ${p === 'boat' ? 'by water where routed, else straight line,' : 'straight line'} from ${from}`}>
+        title={nm === null ? 'Set how far out to look' : `Range to consider: ${nmText(nm)} ${p === 'boat' || p === 'kayak' ? 'by water where routed, else straight line,' : 'straight line'} from ${from}`}>
         {nm === null ? 'Set range' : `Range ${nmText(nm)}`}
       </Button>
       <LimitsDialog open={open} onClose={() => setOpen(false)} title={`Your limits · ${label}`}>
@@ -213,16 +228,16 @@ function Why({pick}: {pick: Pick}) {
 }
 
 export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
-  const boat = profile.value === 'boat', r = given ?? currentRanking(Date.now(), boat ? ROUTE_BUDGET : undefined), id = region.value, speed = cruiseSpeed.value;
-  // SC1322-10: Boat lists by water where routed; other profiles keep the ranking's picks as they are. The render uses
+  const boat = profile.value === 'boat', kayak = profile.value === 'kayak', water = boat || kayak, r = given ?? currentRanking(Date.now(), water ? ROUTE_BUDGET : undefined), id = region.value, speed = cruiseSpeed.value;
+  // SC1322-10: Boat (and, SC2207-05, Kayak from its launch) list by water where routed; other profiles keep the ranking's picks as they are. The render uses
   // memoised routes only and routes the rest after the paint (routeAfterPaint), so the list never waits on a route.
   const lw = landWater.value, unrouted = {n: 0};
   void routeTick.value;
-  const picks: readonly (Pick & {basis?: 'water' | 'straight'})[] = boat ? boatPicks(r, lw, id, waterRoute, 0, unrouted) : r.picks;
+  const picks: readonly (Pick & {basis?: 'water' | 'straight'; why?: RouteFailure})[] = water ? boatPicks(r, lw, id, waterRoute, 0, unrouted) : r.picks;
   useEffect(() => unrouted.n ? routeAfterPaint(r, lw, id) : undefined);
   // The lines file is asked for once the region's index is ready and a candidate still waits on it (a mixed cell),
   // so a list that was pending on the index itself asks as soon as the index lands; clean cells never load it.
-  // A Boat route that needs the lines (lines-needed) does not ask for them: that pick keeps its labelled straight line.
+  // A Boat or Kayak route that needs the lines (lines-needed) does not ask for them: that pick keeps its labelled straight line.
   const wantLines = !!id && !!r.pending && lw.region === id && lw.state === 'ready' && lw.lines === null;
   // SCJ-2a: the publication loads once per region, and its live manifest is checked again now (a cached one) and each
   // minute, as the planner checks its plan, so a held, unavailable or superseded publication stops ranking.
@@ -260,7 +275,7 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
             <li key={pick.id} data-mark={pick.id}>
               <button type="button" class="app-pick" aria-pressed={selected(pick)} onClick={() => choosePick(pick)}>
                 <span class="app-pick-rank ui-mono">{i + 1}</span>
-                <span>{pick.name} <span class="ui-mono">{pick.distance} · {pick.depth}{boat ? pickRun(pick.nm, speed, pick.basis) : ''}</span></span>
+                <span>{pick.name} <span class="ui-mono">{pick.distance} · {pick.depth}{boat ? pickRun(pick.nm, speed, pick.basis) : ''}</span>{kayak && routeWhyText(pick) ? <span class="app-pick-route-why" data-route-why={pick.why ?? 'not-computed'}> · {routeWhyText(pick)}</span> : null}</span>
                 <span class="app-fit ui-eyebrow">{pick.fit}</span>
                 <span class="app-pick-reason">{pick.reason}</span>
                 {screenLine(pick.screen) && <span class="app-pick-reason">{screenLine(pick.screen)}</span>}

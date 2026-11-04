@@ -170,6 +170,13 @@ test('"Where to look" asks for a range or shows it for Boat and Kayak, and a Boa
   html = render(h(WhereToLook, {ranking: r}));
   assert.match(html, />Set range</, 'kayak has its own range');
   assert.doesNotMatch(html, /run ≥/, 'run times are the Boat brief\'s');
+  // SC2207-05: with a saved range and a stored speed, Kayak's title names the water basis but it still shows no Boat run time.
+  reachRange.value = {kayak: 10};
+  html = render(h(WhereToLook, {ranking: r}));
+  assert.match(html, /data-reach="10"[^>]*title="Range to consider: 10 nm by water where routed, else straight line, from Morro Bay"[^>]*>Range 10 nm</);
+  assert.match(html, /7\.4 nm straight line · ~60–90 ft</, 'the listed place keeps its labelled straight line');
+  assert.doesNotMatch(html, /run ≥|· run /, 'Kayak never shows the Boat cruise run text');
+  reachRange.value = {};
   profile.value = 'shore'; assert.doesNotMatch(render(h(WhereToLook, {ranking: r})), /app-where-range/);
   profile.value = 'spear'; assert.doesNotMatch(render(h(WhereToLook, {ranking: r})), /data-reach|Set range/, 'Spear shows its dive limits instead (tests/test_spear_kayak.mjs)');
   profile.value = 'boat';

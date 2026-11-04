@@ -166,7 +166,7 @@ const NO_PLACE = new Set(['harborOrigin', 'loadTerrainHabitat', 'loadReefPublica
   'loadContourFile', 'nextFriday', 'planFit', 'parseReach', 'parseStoredReach', 'loadReach', 'saveReach', 'reachFor', 'nmText', 'parseSpearDepth', 'parseShoreSwim',
   'parseStoredSpear', 'loadSpear', 'saveSpear', 'shoreSwimLimit', 'parseStoredLaunch', 'loadLaunch', 'saveLaunch', 'isReachProfile', 'routeAfterPaint', 'choosePick',
   // Only aggregates confidence percentages; it neither names nor returns a place.
-  'sharedConfidence', 'pickRun',
+  'sharedConfidence', 'pickRun', 'routeWhyText',
   // Only words a verdict it is handed (a refused placement's status, a leg's line); it screens nothing and names no place of its own.
   'verdictLine', 'diveText', 'WhereToLook']);
 test('every exported function of the owned modules either carries a screen verdict or is listed as naming no place', () => {
