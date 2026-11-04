@@ -36,7 +36,7 @@ import {createWind} from '../map/wind.ts';
 import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked} from '../map/stage.ts';
 import {poster, posterPlacement} from '../map/poster.ts';
 import {profile, region, species} from '../state.ts';
-import {cancelWaypointPlacement, waypointPlacement} from '../waypoint-placement.ts';
+import {cancelWaypointPlacement, placementRefused, verdictLine, waypointPlacement} from '../waypoint-placement.ts';
 import {currentRegionInfo, zone} from './App.tsx';
 
 export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> = [
@@ -47,10 +47,11 @@ const NOTE_ID = 'app-stage-note';
 /** Chart, 2D, 3D; where no terrain can show, the terrain choices are disabled and point at the reason in the status line. */
 export function PresentationToggle() {
   const shown = shownPresentation.value, blocked = terrainBlocked.value;
+  const armed = waypointPlacement.value === region.value && shown === 'chart', refused = armed && placementRefused.value ? verdictLine(placementRefused.value) : null;
   return (
     <div class="app-presentation">
       <p id={NOTE_ID} class="app-stage-note" role="status">{blocked ?? ''}</p>
-      {waypointPlacement.value === region.value && shown === 'chart' ? <p class="app-stage-note" role="status">Tap the Chart to place your waypoint. <button onClick={cancelWaypointPlacement}>Cancel waypoint</button></p> : null}
+      {armed ? <p class="app-stage-note" role="status">Tap the Chart to place your waypoint. {refused ? <>{refused}. </> : null}<button onClick={cancelWaypointPlacement}>Cancel waypoint</button></p> : null}
       <div role="group" aria-label="Map presentation" class="ui-segmented">
         {PRESENTATIONS.map(p => {
           const off = p.value !== 'chart' && !!blocked;

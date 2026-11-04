@@ -127,7 +127,7 @@ test('loads the region\'s file, then the daily checks when as recent; another ju
   const fetchFn = async url => { urls.push(url); return url in answers ? Response.json(answers[url]) : new Response('', {status: 404}); };
   regsData.value = null;
   await loadRegs(MORRO, fetchFn);
-  assert.deepEqual(urls.slice(0, 3), ['regions/morro-bay/regulations-startup.json', 'data/regulations.json', '/api/daily?region=morro-bay&part=regulations'], 'no startup copy: the whole registry, then the daily part');
+  assert.deepEqual(urls.slice(0, 3), ['regions/morro-bay/regulations-startup.json', '/api/daily?region=morro-bay&part=regulations', 'data/regulations.json'], 'startup copy and daily start together; absent copy falls back to the whole registry');
   assert.equal(regsData.value?.region, 'morro-bay');
   assert.equal(regsData.value.data.checks['rules-groundfish'].data_retrieved_at, daily.checks['rules-groundfish'].data_retrieved_at, 'the daily checks replace the committed ones');
   regsData.value = null;
@@ -216,7 +216,7 @@ test('a copy that is missing, unreadable, for another jurisdiction or not valid 
     fresh();
     const s = serve({[COPY_URL]: answer, [FULL_URL]: {...data(), revision: 'full'}});
     await loadRegs(MORRO, s.fetchFn);
-    assert.deepEqual(s.urls, [COPY_URL, FULL_URL, DAILY_URL], `${name}: the copy, the whole registry (one extra request), then the daily part`);
+    assert.deepEqual(s.urls, [COPY_URL, DAILY_URL, FULL_URL], `${name}: copy and daily start together; the whole registry is the extra fallback request`);
     assert.equal(regsData.value?.data.revision, 'full', `${name}: the whole registry shows`);
   }
 });
@@ -238,7 +238,7 @@ test('a copy that fails in transit is not asked again when the whole registry lo
     const s = serve({[COPY_URL]: failure, [FULL_URL]: data()});
     await loadRegs(MORRO, s.fetchFn);
     await loadRegs(MORRO, s.fetchFn);
-    assert.deepEqual(s.urls, [COPY_URL, FULL_URL, DAILY_URL], `${failure}: whole registry loaded, read once`);
+    assert.deepEqual(s.urls, [COPY_URL, DAILY_URL, FULL_URL], `${failure}: whole registry loaded, read once`);
     assert.ok(regsData.value);
     fresh();
     const none = serve({[COPY_URL]: failure});
