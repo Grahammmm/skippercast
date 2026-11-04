@@ -116,7 +116,9 @@ def wcofs(client, region, now):
     time_block=re.search(r'\btime\s*\{(.*?)\}',das,re.S)
     unit=re.search(r'(seconds|hours|days) since ([^"]+)',time_block[1] if time_block else '')
     if not unit:raise ValueError('WCOFS time metadata unavailable')
-    origin=datetime.fromisoformat(unit[2].strip().replace('UTC','').strip().replace('Z','+00:00')).replace(tzinfo=timezone.utc)
+    origin=datetime.fromisoformat(unit[2].strip().replace('UTC','').strip().replace('Z','+00:00'))
+    # Unzoned origins are UTC; a zoned origin keeps its instant (replace() would drop the offset).
+    origin=origin.replace(tzinfo=timezone.utc) if origin.tzinfo is None else origin.astimezone(timezone.utc)
     factor={'seconds':1,'hours':3600,'days':86400}[unit[1]]
     n=(y1-y0+1)*(x1-x0+1);cut=f'[{y0}:1:{y1}][{x0}:1:{x1}]';query=f'Latitude{cut},Longitude{cut},mask{cut},u_eastward[0][0]{cut},v_northward[0][0]{cut},time'
     frames=[]
