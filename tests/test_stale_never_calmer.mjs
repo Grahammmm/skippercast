@@ -98,7 +98,8 @@ function intelAt(ageS, {values = CALM, ages = {}, completed = A_NOW, edit = () =
   edit(intel);
   return intel;
 }
-const feeds = intel => async url => /intelligence\.json$/.test(url) ? intel : /latest\.json$/.test(url) ? read('./fixtures/feeds/daily-latest.json') : Promise.reject(Error('no feed'));
+const quietDaily = () => { const d = read('./fixtures/feeds/daily-latest.json'); d.sources['alerts-PZZ645'].data.alerts = []; return d; };   // no advisory: one in the window now reads rough (SC2007-05), whatever the model run's age
+const feeds = intel => async url => /intelligence\.json$/.test(url) ? intel : /latest\.json$/.test(url) ? quietDaily() : Promise.reject(Error('no feed'));
 const trip = (intel, date = A_DATE) => tripConditions({port: 'morro-bay', date}, {now: A_NOW, language: 'en', deps: {feeds: feeds(intel)}, contact: null, settings: advisorSettings({})});
 const stmt = {bind: () => stmt, all: async () => ({results: []}), first: async () => null, run: async () => ({meta: {changes: 0}})};
 const daily = intel => dailyInputs({DB: {prepare: () => stmt}}, 'morro-bay', A_DATE, {feeds: feeds(intel)}, A_NOW);
