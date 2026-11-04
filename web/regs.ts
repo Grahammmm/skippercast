@@ -19,6 +19,7 @@ import {dailyPartPath} from '../dist/offline-core.js';
 import {validDailyPart} from './map/habitat.ts';
 import {regsStartupURL} from './startup-forms.ts';
 import {DEFAULT_ZONE} from './zone.ts';
+import {shortDate, t, type Language, type StringId} from './i18n.ts';
 
 /** The registry is v1's JSON, read field by field as v1 reads it. */
 type Data = any;
@@ -151,7 +152,9 @@ export function openingAt(data: Data, species: string, region: RulesRegion, date
   return times.length ? Math.max(...times) : null;
 }
 
-const SUMMARY_STATUS: Readonly<Record<string, string>> = {open: 'Open', restricted: 'Open · limits', closed: 'Closed', scheduled: 'Opener unconfirmed', excluded: 'Protected area', unknown: 'Check rules'};
+/** The card's status labels, as catalogue ids (catalog/app/strings.json rules.status.*). */
+const SUMMARY_STATUS: Readonly<Record<string, StringId>> = {open: 'rules.status.open', restricted: 'rules.status.restricted', closed: 'rules.status.closed', scheduled: 'rules.status.scheduled',
+  excluded: 'rules.status.excluded', unknown: 'rules.status.unknown'};
 /** dist/regulations.js `firstClause`: the rule's own first clause, cut, never rewritten. */
 export function firstClause(text: unknown, max = 48): string | null {
   const t = String(text ?? '').trim();
@@ -161,19 +164,19 @@ export function firstClause(text: unknown, max = 48): string | null {
   return /\bexcept\b|\bno more than\b|\bwith an allowance\b|\balternat/i.test(t.slice(clause.length)) ? `${clause} (exceptions below)` : clause;
 }
 /** dist/regulations.js `depthLimit`. */
-export function depthLimit(profile: Data, today: string): string | null {
+export function depthLimit(profile: Data, today: string, lang: Language = 'en'): string | null {
   const w = profile?.windows?.find((x: Data) => today >= x.start && today <= x.end);
   if (!w) return null;
-  if (w.access === 'shoreward-50fm') return 'Inside 50-fm line';
-  if (w.access === 'seaward-50fm') return 'Outside 50-fm line';
+  if (w.access === 'shoreward-50fm') return t('rules.depth.inside', lang);
+  if (w.access === 'seaward-50fm') return t('rules.depth.outside', lang);
   if (w.access || w.restriction) return null;
-  return /\ball depths\b/i.test(profile.season || '') ? 'All depths' : null;
+  return /\ball depths\b/i.test(profile.season || '') ? t('rules.depth.all', lang) : null;
 }
 /** The registry's own scheduled-check interval (`check_interval_hours`), or null when it names none. A check older than this is overdue, though still inside the hard `maxAgeHours` ceiling. */
 export const checkIntervalHours = (data: Data): number | null => Number.isFinite(data?.check_interval_hours) && data.check_interval_hours > 0 ? data.check_interval_hours : null;
 /** A CDFW per-place fishing-map page (the area regulations page). */
 const isAreaPage = (u: unknown): boolean => typeof u === 'string' && /^https:\/\/[^/]+\/Fishing\/Ocean\/Regulations\/Fishing-Map\//.test(u);
-const shortDay = (s: unknown, tz: string): string | null => Number.isFinite(Date.parse(String(s))) ? new Date(String(s)).toLocaleDateString('en-US', {timeZone: tz, month: 'short', day: 'numeric'}) : null;
+const shortDay = (s: unknown, tz: string, lang: Language = 'en'): string | null => Number.isFinite(Date.parse(String(s))) ? shortDate(String(s), lang, tz, {month: 'short', day: 'numeric'}) : null;
 /** The oldest daily check among the profiles' sources, or null when any source has no parseable check time (or, given `now`, one in the future). */
 function oldestCheck(data: Data, profiles: Data[], now?: number): string | null {
   const ids = [...new Set(profiles.flatMap(p => p.source_ids as string[]))];
@@ -186,21 +189,21 @@ export interface Freshness { text: string; state: 'checked-today' | 'checked-ear
  * (clock error), is unknown; one past the registry's max age is overdue. A rule that reads unknown keeps its own
  * "Check rules" and never gets a line saying a check confirmed it.
  */
-export function freshnessLabel(data: Data, species: string, state: RuleState, region: RulesRegion, now: number = Date.now()): Freshness {
+export function freshnessLabel(data: Data, species: string, state: RuleState, region: RulesRegion, now: number = Date.now(), lang: Language = 'en'): Freshness {
   const tz = zoneOf(region), ids = species === 'reef' ? ['lingcod', 'rockfish'] : [species];
   const profiles = validRegulations(data, region) ? ids.map(id => ruleProfile(data, id, region)).filter(Boolean) : [];
   const at = profiles.length === ids.length ? oldestCheck(data, profiles, now) : null, hours = at ? age(at, now) : NaN;
-  if (!Number.isFinite(hours) || hours < 0) return {text: 'Check date unknown', state: 'unknown'};
-  if (hours > maxAgeHours(data)) return {text: 'Check overdue - open the official page', state: 'stale'};
-  if (state.status === 'unknown') return {text: 'Check date unknown', state: 'unknown'};
-  return dayIn(tz, Date.parse(at!)) === dayIn(tz, now) ? {text: 'Checked today', state: 'checked-today'} : {text: `Checked ${shortDay(at, tz)}`, state: 'checked-earlier'};
+  if (!Number.isFinite(hours) || hours < 0) return {text: t('rules.fresh.unknown', lang), state: 'unknown'};
+  if (hours > maxAgeHours(data)) return {text: t('rules.fresh.overdue', lang), state: 'stale'};
+  if (state.status === 'unknown') return {text: t('rules.fresh.unknown', lang), state: 'unknown'};
+  return dayIn(tz, Date.parse(at!)) === dayIn(tz, now) ? {text: t('rules.fresh.today', lang), state: 'checked-today'} : {text: t('rules.fresh.on', lang, {date: shortDay(at, tz, lang)!}), state: 'checked-earlier'};
 }
 /** dist/regulations.js `ruleSummary`: status, bag, size, depth, the verified date and one official link. */
-export function ruleSummary(data: Data, species: string, state: RuleState, region: RulesRegion): RuleSummary {
+export function ruleSummary(data: Data, species: string, state: RuleState, region: RulesRegion, lang: Language = 'en'): RuleSummary {
   const tz = zoneOf(region), ids = species === 'reef' ? ['lingcod', 'rockfish'] : [species];
   const profiles = validRegulations(data, region) ? ids.map(id => ruleProfile(data, id, region)).filter(Boolean) : [];
   const status = SUMMARY_STATUS[state.status] ? state.status : 'unknown';
-  const summary: RuleSummary = {status, label: SUMMARY_STATUS[status]!, bag: [], size: [], depth: null, verified: null, checked: null, link: CDFW_OCEAN, linkLabel: 'Official CDFW rules'};
+  const summary: RuleSummary = {status, label: t(SUMMARY_STATUS[status]!, lang), bag: [], size: [], depth: null, verified: null, checked: null, link: CDFW_OCEAN, linkLabel: t('rules.link.cdfw', lang)};
   if (profiles.length !== ids.length) return summary;
   const named = profiles.length > 1;
   for (const p of profiles) {
@@ -209,11 +212,11 @@ export function ruleSummary(data: Data, species: string, state: RuleState, regio
     if (size) summary.size.push(named ? `${p.name}: ${size}` : size);
   }
   if (['open', 'restricted'].includes(status)) {
-    const depths = [...new Set(profiles.map(p => depthLimit(p, state.today)))];
+    const depths = [...new Set(profiles.map(p => depthLimit(p, state.today, lang)))];
     summary.depth = depths.length === 1 ? depths[0]! : null;
   }
   const oldest = oldestCheck(data, profiles);
-  const short = (s: unknown): string | null => shortDay(s, tz);
+  const short = (s: unknown): string | null => shortDay(s, tz, lang);
   // SP-RULES-STATUS: "Verified" is a source-check statement for a known state only. An unknown state (outside the
   // reviewed rule period, a review time beyond the tolerance, a season that needs a fishing location) can have no
   // source issues, so the state itself gates the badge; its last parseable check still reads as `checked`.
@@ -222,7 +225,7 @@ export function ruleSummary(data: Data, species: string, state: RuleState, regio
   if (oldest && !state.overdue && status !== 'unknown' && !state.issues?.length && data.rules_review_status === 'reviewed') summary.verified = short(oldest);
   else summary.checked = short(oldest);
   const primary = species === 'reef' ? 'rules-groundfish' : profiles[0].primary_source_id || profiles[0].source_ids[0];
-  if (data.sources?.[primary]?.url) { summary.link = officialURL(data.sources[primary].url, region); summary.linkLabel = species === 'reef' ? 'Official groundfish rules' : 'Official rules'; }
+  if (data.sources?.[primary]?.url) { summary.link = officialURL(data.sources[primary].url, region); summary.linkLabel = t(species === 'reef' ? 'rules.link.groundfish' : 'rules.link.official', lang); }
   // No species page: the card's one official link is the place's own area page when the profile cites one, never another
   // page (a committed San Francisco halibut profile's first source is the coast-wide groundfish summary).
   if (species !== 'reef' && !speciesPage(data, species, region) && !isAreaPage(summary.link)) {
@@ -235,15 +238,15 @@ export function ruleSummary(data: Data, species: string, state: RuleState, regio
  * The species' own CDFW page when the reviewed registry lists one (salmon, crab, lingcod and rockfish, Pacific halibut,
  * lobster), else null: `ruleSummary().link` stays the place's page, so the card can offer both. Link only; no rule text.
  */
-export function speciesPage(data: Data, species: string, region: RulesRegion): {href: string; label: string} | null {
+export function speciesPage(data: Data, species: string, region: RulesRegion, lang: Language = 'en'): {href: string; label: string} | null {
   const id = species === 'reef' ? null : SPECIES_PAGE[species], p = validRegulations(data, region) ? ruleProfile(data, species, region) : null;
   const url = id && p?.source_ids.includes(id) ? data.sources?.[id]?.url : null;
-  return url && officialURL(url, region) === url ? {href: url, label: `Official ${p.name} rules`} : null;
+  return url && officialURL(url, region) === url ? {href: url, label: t('rules.link.species', lang, {name: p.name})} : null;
 }
 /** True when the card's only official link is the place's area regulations page (no species page in the reviewed registry). */
-export const areaPageOnly = (s: RuleSummary, page: unknown): boolean => !page && s.linkLabel === 'Official rules' && isAreaPage(s.link);
+export const areaPageOnly = (s: RuleSummary, page: unknown): boolean => !page && (['en', 'es'] as const).some(l => s.linkLabel === t('rules.link.official', l)) && isAreaPage(s.link);
 /** dist/regulations.js `ruleSummaryHTML`'s verified wording. */
-export const verifiedText = (s: RuleSummary): string => s.verified ? `Verified ${s.verified}` : s.checked ? 'Not confirmed for your fishing date - open the official rules before you go.' : 'Not verified';
+export const verifiedText = (s: RuleSummary, lang: Language = 'en'): string => s.verified ? t('rules.verified', lang, {date: s.verified}) : s.checked ? t('rules.notconfirmed', lang) : t('rules.notverified', lang);
 
 /** The region's reviewed registry, keyed by region so another region's never shows. */
 export const regsData = signal<{region: string; data: Data} | null>(null);
