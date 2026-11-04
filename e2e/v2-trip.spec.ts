@@ -115,7 +115,9 @@ test('the ranked export runs in v2: best reefs, complete outlines, a restored pl
   await v2.open('app', {...AREA, diagnostics: '1'});
   await openPlan(page, isMobile);
   await rankBest(page, reefs.gate);
-  await expect(page.locator('#export-spot-list')).toContainText('#1 · Strong · 90% confidence');
+  await expect(page.locator('#export-spot-list')).toContainText('#1 · Strong');
+  await expect(page.locator('#export-spot-list')).not.toContainText('% confidence');
+  await expect(page.locator('#export-shared-confidence')).toHaveText('All ranked places: 90% evidence confidence.');
   await expect(page.locator('[data-layer="outlines"]')).toBeChecked();
   await expect(page.locator('[data-layer="alignments"]')).not.toBeChecked();
   await expect(page.locator('[data-layer="exclusions"]')).not.toBeChecked();

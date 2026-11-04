@@ -10,7 +10,7 @@ import {formatCoordinates} from '../../dist/coordinates.js';
 import {exportEvidenceLabel, protectedHitReading, USER_WAYPOINT_CATEGORIES} from '../../dist/trip-export.js';
 import {fitLabel} from '../../dist/spot-ranking.js';
 import type {Filters, LayerKey, Planner as Model, Preset, ProtectedHit, Target, TripSpecies} from '../planner.ts';
-import {PORTS_FAILED_NOTE} from '../planner.ts';
+import {PORTS_FAILED_NOTE, sharedConfidence} from '../planner.ts';
 import {tripLegs} from '../trip-legs.ts';
 import {cruiseSpeed} from '../limits.ts';
 import {landWater, loadLandWaterLines, type LandWaterState} from '../land-water.ts';
@@ -43,13 +43,13 @@ export const EXPORT_CAVEATS = ['Planning aid · not a navigation chart.', 'You a
 const PRESETS: readonly (readonly [Preset, string])[] = [['map', 'Current map'], ['filtered', 'Filtered research references'], ['region', 'Whole region'], ['none', 'Clear selection']];
 
 /** The spot's checkbox title and lines, as v1 listed them. */
-function SpotRow({t, checked, hit, onToggle}: {t: Target; checked: boolean; hit?: ProtectedHit; onToggle: (on: boolean) => void}) {
+function SpotRow({t, checked, hit, showConfidence = true, onToggle}: {t: Target; checked: boolean; hit?: ProtectedHit; showConfidence?: boolean; onToggle: (on: boolean) => void}) {
   const depth = t.canonical_habitat ? (t.neighborhood_depth_ft ?? []).map(n => Math.round(n)).join('–') : t.center_depth_ft;
   return (
     <label class="export-check">
       <input type="checkbox" data-spot={t.id} checked={checked} onChange={e => onToggle(e.currentTarget.checked)} />
       <span>
-        <strong>{t.trip_rank ? `#${t.trip_rank} · ${fitLabel(t.trip_fit)} · ${t.evidence_confidence?.percent}% confidence` : t.label}</strong>
+        <strong>{t.trip_rank ? `#${t.trip_rank} · ${fitLabel(t.trip_fit)}${showConfidence ? ` · ${t.evidence_confidence?.percent}% confidence` : ''}` : t.label}</strong>
         <small>{exportEvidenceLabel(t)}</small>
         <small>{formatCoordinates(t.latitude, t.longitude, coordinates.value)}</small>
         <small>{t.trip_rank ? t.name : t.id} · grade {t.habitat_grade} · {depth} ft</small>
@@ -81,7 +81,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
   const blocked = !ranked || m.filtersDirty.value || !d.ids.length;
   const filter = <K extends keyof Filters>(key: K, parse: (v: string) => Filters[K]) => (e: Event) => m.setFilter(key, parse((e.currentTarget as HTMLInputElement).value));
   const device = DEVICE_HELP[deviceChoice.value] ?? DEVICE_HELP.generic!;
-  const spots = m.spots.value;
+  const spots = m.spots.value, shared = sharedConfidence(spots);
   const port = !m.portsFailed.value && m.ports.value.find(p => p.id === f.port);
   const selected = d.ids.map(id => m.tripAtlas.value.targets.find(t => t.id === id)).filter((t): t is Target => !!t);
   const waypoints = (d.userWaypoints ?? []).filter(t => d.ids.includes(t.id));
@@ -167,8 +167,9 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
           </div>
           <p id="export-scope-status" role="status">{m.scopeStatus.value}</p>
           <label>Find a spot<input id="export-search" type="search" placeholder="Name, ID or grade" autoComplete="off" value={m.search.value} onInput={e => { m.search.value = e.currentTarget.value; }} /></label>
+          {shared === null ? null : <p id="export-shared-confidence">All ranked places: {shared}% evidence confidence.</p>}
           <div id="export-spot-list" class="export-spot-list" role="group" aria-label="Choose fishing spots">
-            {spots.length ? spots.map(t => <SpotRow key={t.id} t={t} checked={d.ids.includes(t.id)} hit={m.protectedHits.value.find(h => h.id === t.id)} onToggle={on => m.toggleSpot(t.id, on)} />)
+            {spots.length ? spots.map(t => <SpotRow key={t.id} t={t} showConfidence={shared === null} checked={d.ids.includes(t.id)} hit={m.protectedHits.value.find(h => h.id === t.id)} onToggle={on => m.toggleSpot(t.id, on)} />)
               : <p>No matching measured reefs loaded. Select Best available to load the current screened publication, or deliberately opt in to research references. Your existing selection is retained.</p>}
           </div>
         </div>
