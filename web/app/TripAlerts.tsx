@@ -13,7 +13,7 @@ import {PROFILE_TABLE} from '../profile.ts';
 import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {
-  alertDate, alertNames, alertSpecies, api, catchLogEntries, comfortBody, dateRange, disablePush, enablePush, eventLine, feedbackPhase, formProblem, profileTripDefaults, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
+  alertDate, alertNames, alertSpecies, api, catchLogEntries, comfortBody, dateRange, enablePush, eventLine, feedbackPhase, formProblem, profileTripDefaults, stopNotifications, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
   type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RegionAlerts, type SavedTrip,
 } from '../alerts.ts';
 
@@ -104,6 +104,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const choice = alertSpecies(region, target), names = useMemo(() => alertNames(region), [region]), range = dateRange(region.timezone);
   const [species, setSpecies] = useState(choice.value);
   const [status, setStatus] = useState('');
+  const [stopping, setStopping] = useState(false);
   const [trips, setTrips] = useState<{trips: SavedTrip[]; events: AlertEvent[]} | null>(null);
   const digest = trips ? weekendDigest(trips.trips, names, range.min) : null;
   const [feedback, setFeedback] = useState<Feedback[] | null>(null);
@@ -193,7 +194,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
         <p class="small">Uses the selected target species. These alerts assess the saved area's weather window and reviewed rules; they do not plan navigation or predict catches.</p>
         <div class="inavx-actions">
           <Button size="sm" onClick={act(async () => { await enablePush(session.publicKey); setStatus('Notifications enabled on this device. Saved trips are checked automatically.'); })}>Enable notifications on this device</Button>
-          <Button size="sm" onClick={act(async () => { await disablePush(); setStatus('Account notifications stopped. Saved assessments remain available here.'); })}>Stop notifications</Button>
+          {(['device', 'all'] as const).map(scope => <Button key={scope} size="sm" disabled={stopping} onClick={() => { setStopping(true); stopNotifications(scope).then(setStatus, fail).finally(() => setStopping(false)); }}>{scope === 'device' ? 'Stop notifications on this device' : 'Stop on all devices'}</Button>)}
         </div>
         <p id="alert-status" role="status">{status}</p>
         {digest ? <section aria-labelledby="weekend-heading">
