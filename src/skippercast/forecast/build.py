@@ -167,9 +167,13 @@ def fetch_model(model, cycle, workers=16, log=log_err):
             raise ValueError(f'{model.id} {f.name}: not offered at any step (index selector {f.select})')
         if len(have) < len(model.steps):
             log(f'{model.id} {f.name}: missing at {len(model.steps) - len(have)} of {len(model.steps)} steps')
-    first = results[model.steps[0]]
     native = [f.name for f in model.fields if len(f.select) > 2 and f.select[2] == 'native']
-    reference = first[native[0]] if native else first[model.fields[0].name]
+    ref = native[0] if native else model.fields[0].name
+    # the loop above raised for a field offered at no step, so next() always finds one
+    ref_step = next(s for s in model.steps if ref in results[s])
+    reference = results[ref_step][ref]
+    if ref_step != model.steps[0]:
+        log(f'{model.id} {ref}: reference grid from step {ref_step}')
     _, lats, lons = reference
     shape = reference[0].shape
     for step_fields in results.values():  # put every field on the reference grid
@@ -195,8 +199,8 @@ def fetch_model(model, cycle, workers=16, log=log_err):
             raise ValueError(f'{model.id} land-sea mask missing')
         sea = mask_grid[0] < 0.5
     else:
-        first = model.fields[0].name
-        sea = np.isfinite(cubes[first]).any(axis=0)
+        first_field = model.fields[0].name
+        sea = np.isfinite(cubes[first_field]).any(axis=0)
     return times, lats, lons, cubes, sea
 
 
