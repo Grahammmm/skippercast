@@ -26,11 +26,12 @@ from skippercast.seafloor import classified_habitat as ch
 from skippercast.seafloor.io import sha256
 from skippercast.seafloor.fetch import fetch_source
 from skippercast.seafloor.normalized import verify_review
+from skippercast.util.units import M_PER_FT
 
 MAX_EDGE = 512
 MAX_PIXELS = 25_000_000
-MIN_DEPTH_M = 25 * 0.3048
-MAX_DEPTH_M = 300 * 0.3048
+MIN_DEPTH_M = 25 * M_PER_FT
+MAX_DEPTH_M = 300 * M_PER_FT
 
 # This is a narrow compatibility pin for one already-reviewed, fail-closed
 # legacy San Simeon physical identity. That implementation had no

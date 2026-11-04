@@ -1,4 +1,6 @@
 """Offline synthetic checks for the private bedrock-window proposer."""
+from pathlib import Path
+
 from affine import Affine
 import numpy as np
 import pytest
@@ -20,6 +22,60 @@ def test_nominal_depth_includes_25_and_300_ft_endpoints_and_excludes_nodata():
     assert nominal_depth_count(values, valid) == 2
     valid[0, 1] = False  # masked/no-data at the upper endpoint is not usable support
     assert nominal_depth_count(values, valid) == 1
+
+
+def test_private_proposer_depth_limits_use_shared_foot_constant():
+    import ast
+    tree = ast.parse(Path(plan_module.__file__).read_text())
+    imports_shared = any(
+        isinstance(n, ast.ImportFrom) and n.module == 'skippercast.util.units'
+        and any(a.name == 'M_PER_FT' and a.asname is None for a in n.names)
+        for n in tree.body)
+    assert imports_shared
+
+    def threshold(name):
+        node = next(n for n in tree.body if isinstance(n, ast.Assign)
+                    and [t.id for t in n.targets if isinstance(t, ast.Name)] == [name])
+        return node.value
+    for name, feet in (('MIN_DEPTH_M', 25), ('MAX_DEPTH_M', 300)):
+        expr = threshold(name)
+        assert isinstance(expr, ast.BinOp) and isinstance(expr.op, ast.Mult)
+        assert isinstance(expr.left, ast.Constant) and expr.left.value == feet
+        assert isinstance(expr.right, ast.Name) and expr.right.id == 'M_PER_FT'
+    # Independent old formulas, exact (not approximate).
+    assert plan_module.MIN_DEPTH_M == 25 * 0.3048
+    assert plan_module.MAX_DEPTH_M == 300 * 0.3048
+
+
+# Endpoints spelled independently of the module's constants.
+_LOW, _HIGH = 25 * 0.3048, 300 * 0.3048
+
+
+def test_nominal_depth_legacy_endpoints_and_float_neighbors():
+    values = np.array([[np.nextafter(_LOW, 0), _LOW, np.nextafter(_LOW, 1e9),
+                        np.nextafter(_HIGH, 0), _HIGH, np.nextafter(_HIGH, 1e9),
+                        0.0, 1000.0]], dtype=np.float64)
+    valid = np.ones(values.shape, dtype=bool)
+    assert nominal_depth_count(values, valid) == 4
+    for column, counted in enumerate([0, 1, 1, 1, 1, 0, 0, 0]):
+        only = np.zeros(values.shape, dtype=bool)
+        only[0, column] = True
+        assert nominal_depth_count(values, only) == counted, column
+
+
+def test_nominal_depth_legacy_mask_and_nonfinite_values():
+    values = np.array([[np.nan, np.inf, -np.inf, _LOW, _HIGH]], dtype=np.float64)
+    valid = np.ones(values.shape, dtype=bool)
+    assert nominal_depth_count(values, valid) == 2
+    for column in (3, 4):  # a masked endpoint is not usable support
+        masked = valid.copy()
+        masked[0, column] = False
+        assert nominal_depth_count(values, masked) == 1
+    assert nominal_depth_count(values, np.zeros(values.shape, dtype=bool)) == 0
+    assert nominal_depth_count(np.empty((0, 0)), np.empty((0, 0), dtype=bool)) == 0
+    assert nominal_depth_count(np.empty((2, 0)), np.empty((2, 0), dtype=bool)) == 0
+    with pytest.raises(ValueError):
+        nominal_depth_count(values, np.ones((1, 4), dtype=bool))
 
 
 def test_tiles_are_nonoverlapping_inset_and_partial_edges_stay_in_bounds():
