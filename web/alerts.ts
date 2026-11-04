@@ -215,8 +215,46 @@ export async function enablePush(publicKey: string | null | undefined): Promise<
   await api('subscription', {method: 'POST', body: JSON.stringify(subscription.toJSON())});
 }
 
-export async function disablePush(): Promise<void> {
-  await api('subscription', {method: 'DELETE'});
-  const registration = await navigator.serviceWorker?.getRegistration('/sw.js');
-  await (await registration?.pushManager.getSubscription())?.unsubscribe();
+/** How a stop request ended: the browser subscription was removed, this device had none, or the server stopped but the browser could not unsubscribe. */
+export type StopResult = 'stopped' | 'none' | 'partial';
+type PushNavigator = {serviceWorker?: {getRegistration(scope?: string): Promise<{pushManager: {getSubscription(): Promise<{endpoint: string; unsubscribe(): Promise<boolean>} | null>}} | undefined>}};
+
+/** This browser's existing push subscription, found without registering a worker, asking permission or subscribing. */
+const localSubscription = async (nav: PushNavigator) => (await nav.serviceWorker?.getRegistration('/sw.js'))?.pushManager.getSubscription() ?? null;
+const unsubscribed = async (subscription: {unsubscribe(): Promise<boolean>}): Promise<StopResult> => {
+  try { return (await subscription.unsubscribe()) ? 'stopped' : 'partial'; } catch { return 'partial'; }
+};
+
+/** Stop notifications on this device only: the server removes this endpoint's row, then this browser unsubscribes. Other devices keep theirs. */
+export async function disablePush(fetchFn: typeof fetch = fetch, nav: PushNavigator = navigator): Promise<StopResult> {
+  const subscription = await localSubscription(nav);
+  if (!subscription) return 'none';
+  let status = 0;
+  const tracked: typeof fetch = async (input, init) => { const r = await fetchFn(input, init); status = r.status; return r; };
+  try { await api('subscription', {method: 'DELETE', body: JSON.stringify({endpoint: subscription.endpoint})}, tracked); } catch (error) {
+    // 404: the server already holds no row for this endpoint, so only the browser is left to clean up. Any other failure keeps the subscription for a retry.
+    if (status !== 404) throw error;
+  }
+  return unsubscribed(subscription);
+}
+
+/** Stop notifications on every device of this account: the server removes all the caller's rows, then this browser unsubscribes if it has a subscription. */
+export async function disableAllPush(fetchFn: typeof fetch = fetch, nav: PushNavigator = navigator): Promise<StopResult> {
+  await api('subscription', {method: 'DELETE', body: JSON.stringify({all: true})}, fetchFn);
+  try {
+    const subscription = await localSubscription(nav);
+    return subscription ? await unsubscribed(subscription) : 'stopped';
+  } catch { return 'partial'; }
+}
+
+/** The status line for a finished stop, from the scope the person chose. */
+export const stopStatus = (scope: 'device' | 'all', result: StopResult): string =>
+  result === 'none' ? 'No notifications are enabled on this device. Other devices were not changed.'
+  : result === 'partial' ? 'The server stopped notifications, but this browser could not unsubscribe. Try again.'
+  : scope === 'all' ? 'Notifications stopped on all devices. Saved assessments remain available here.'
+  : 'Notifications stopped on this device. Other devices were not changed. Saved assessments remain available here.';
+
+/** One stop action for the sheet: runs the chosen scope and returns the status line to show. Errors propagate to the sheet's error line. */
+export async function stopNotifications(scope: 'device' | 'all', fetchFn: typeof fetch = fetch, nav: PushNavigator = navigator): Promise<string> {
+  return stopStatus(scope, await (scope === 'all' ? disableAllPush : disablePush)(fetchFn, nav));
 }
