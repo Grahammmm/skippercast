@@ -32,10 +32,10 @@ spots.get('/api/spots/:id', async c => {
 });
 spots.post('/api/spots', async c => {
   const owner = c.var.owner, d = db(c.env), s = validateSpot(await body(c.req.raw, 4096 + NOTE_CHARS * 4));
-  const held = await d.prepare('SELECT COUNT(*) AS n FROM saved_spots WHERE owner=?').bind(owner).first<{n: number}>();
-  if ((held?.n ?? 0) >= MAX_SPOTS) throw new ClientError(`you can keep at most ${MAX_SPOTS} saved spots; remove one first`);
   const id = crypto.randomUUID(), created_at = new Date().toISOString();
-  await d.prepare('INSERT INTO saved_spots(id,owner,name,lat,lon,note,created_at) VALUES(?,?,?,?,?,?,?)').bind(id, owner, s.name, s.lat, s.lon, s.note, created_at).run();
+  // Capacity check and insert are one statement, so two saves at 99 cannot both pass a stale count.
+  const added = await d.prepare('INSERT INTO saved_spots(id,owner,name,lat,lon,note,created_at) SELECT ?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM saved_spots WHERE owner=?) < ?').bind(id, owner, s.name, s.lat, s.lon, s.note, created_at, owner, MAX_SPOTS).run();
+  if (!added.meta.changes) throw new ClientError(`you can keep at most ${MAX_SPOTS} saved spots; remove one first`);
   return json({id, owner, ...s, created_at}, 201);
 });
 spots.delete('/api/spots/:id', async c => {
