@@ -120,8 +120,9 @@ test('Brief view templates, disclosure, missing/expired/stale suppression and re
 
 import {createHash} from 'node:crypto';
 // Re-pinned for BF-stale-never-calmer: RUN_STALE_MS/RUN_MAX_MS read score.ts FORECAST_AGE (same 18 h/36 h) and a run over 1 h ahead is unusable.
+// Re-pinned for SC1938-12: seas wording rounds the printed maximum up (up1).
 test('verdict source outside agreement additions is unchanged', async () => {
   const source = await readFile(new URL('../web/brief/verdict.ts', import.meta.url), 'utf8');
   const stripped = source.replace(/, agreement: (?:staleAgreement \? null : agreement|null)/g, '').split('\n').filter(line => !/agreement|Agreement/.test(line)).join('\n');
-  assert.equal(createHash('sha256').update(stripped).digest('hex'), '4f8555c656a126588405700f4e48cae0fe7de502d9fedcaf5c102c6458de4323');
+  assert.equal(createHash('sha256').update(stripped).digest('hex'), '403826fd58861c52aeea3928c9364f1df0a46e0bcbf6a835eea13aa9093b7f53');
 });
