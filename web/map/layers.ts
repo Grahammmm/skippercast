@@ -124,7 +124,7 @@ export const LAYERS: readonly LayerEntry[] = Object.freeze([
     attribution: 'NOAA CoastWatch SST analysis',
     legend: [{label: 'Temperature front: line, with its uncertainty band', swatch: 'contrast2'}],
     basis: 'Offshore temperature fronts found in the region\'s published daily sea-surface temperature analysis, drawn as an edge with a band whose half-width is the analysis\'s own stated error divided by the front\'s strength, named with the age of its observation and withheld past its feed age limit (never past 72 hours). Surface water only; a front is an edge to search along, not a fish or catch location.',
-    task: 'BF-sst-fronts'}),
+    task: 'CI6-15'}),
   entry({id: 'chlorophyll', label: 'Chlorophyll', control: 'chlorophyll', presentations: ['chart'], sources: ['chlorophyll'], time: ['observed'],
     legend: [{label: '≤0.01 mg/m³', swatch: 'depth0'}, {label: '0.1 mg/m³', swatch: 'blue'}, {label: '1 mg/m³', swatch: 'mint'}, {label: '10 mg/m³', swatch: 'amber'}, {label: '100 mg/m³', swatch: 'coral'}],
     attribution: 'NOAA NESDIS STAR / CoastWatch',

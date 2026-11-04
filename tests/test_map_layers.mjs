@@ -28,7 +28,7 @@ const sentinel = readPalette(name => `token(${name})`);
 const SENTINELS = new Set(Object.values(sentinel));
 
 // design.md § 9, "Draw order, bottom to top", as entry ids; the ENC chart base sits with the bases.
-const DESIGN_ORDER = ['basemap', 'aerial', 'chart', 'relief', 'water-temp', 'water-temp-contours', 'sst-contrast', 'chlorophyll', 'swell', 'wind', 'depth-contours', 'mpas', 'habitat',
+const DESIGN_ORDER = ['basemap', 'aerial', 'chart', 'relief', 'water-temp', 'water-temp-contours', 'sst-contrast', 'sst-fronts', 'chlorophyll', 'swell', 'wind', 'depth-contours', 'mpas', 'habitat',
   'shore-runs', 'seafloor', 'charter-grounds', 'commercial-ais', 'fleet-heat', 'fleet-tracks', 'fleet-events', 'currents',
   'clouds', 'reach', 'marks', 'selection', 'trip-ranked', 'stations', 'coastline'];
 

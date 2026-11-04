@@ -204,7 +204,7 @@ function FrontsRow() {
     <li class="app-legend-sst-fronts">
       Temp fronts
       <Popover iconOnly summary="Temp fronts basis">{s.basis}</Popover>
-      {d ? <p class="app-legend-note" data-band="sst-fronts"><span class="app-swatch" data-layer="sst-fronts" aria-hidden="true"></span> Line: the front. Band: how far its position may be off, from the analysis's own error.</p> : null}
+      {d ? <p class="app-legend-note" data-band="sst-fronts">Line: the front. Band: how far its position may be off, from the analysis's own error.</p> : null}
       {d ? <p class="app-legend-note ui-mono" data-stamp="sst-fronts">{d.product} · {s.note}</p> : null}
       {s.reason ? <p class="app-legend-note" data-reason="sst-fronts">{s.reason}</p> : null}
     </li>
