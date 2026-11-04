@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {publishedChartFiles} from '../web/chart-files.ts';
 import {launchPoints, loadLaunchPoints, resetLaunchPoints} from '../web/launches.ts';
-import {loadShoreLines, resetShoreLines, shoreLines} from '../web/shore-distance.ts';
+import {loadShoreLines, resetShoreLines, shoreLines, yardsFromShore} from '../web/shore-distance.ts';
 
 const PAGE = 'https://example.test/';
 const launchBody = region => JSON.stringify({region_id: region, launch_points: [{id: 'ramp', name: 'Ramp', latitude: 35.3, longitude: -120.8}]});
@@ -118,4 +118,41 @@ test('shore lines: an overview the region does not list still makes no request',
     assert.equal(f.calls, 0);
     assert.deepEqual(shoreLines.value, {region: 'r', lines: null});
   } finally { publishedChartFiles.value = null; resetShoreLines(); }
+});
+
+// RF0920-2: a malformed MultiLineString member costs only itself; an all-invalid file is remembered like any invalid file.
+const multiBody = members => JSON.stringify({type: 'FeatureCollection', features: [{type: 'Feature', geometry: {type: 'MultiLineString', coordinates: members}}]});
+const SIBLING = [[-120.8, 35.3], [-120.81, 35.31]];
+
+async function withoutNetwork(run) {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = () => { throw new Error('global fetch must not run'); };
+  resetShoreLines();
+  try { await run(); } finally { globalThis.fetch = realFetch; publishedChartFiles.value = null; resetShoreLines(); }
+}
+
+test('shore_mixed_multipart_load_keeps_usable_siblings', async () => {
+  await withoutNetwork(async () => {
+    const f = scripted([new Response(multiBody([null, SIBLING, {length: 2}, 7]))]);
+    await loadShoreLines('r', PAGE, f);
+    await loadShoreLines('r', PAGE, f);
+    assert.equal(f.calls, 1, 'one fetch across two visits');
+    assert.equal(shoreLines.value.region, 'r');
+    assert.deepEqual(shoreLines.value.lines, [SIBLING]);
+    const spot = {latitude: 35.3, longitude: -120.82};
+    const d = yardsFromShore(spot, shoreLines.value.lines);
+    assert.ok(Number.isFinite(d) && d === yardsFromShore(spot, [SIBLING]), 'the same distance as the valid line alone');
+  });
+});
+
+test('shore_all_invalid_multipart_is_terminal_no_lines', async () => {
+  await withoutNetwork(async () => {
+    const f = scripted([new Response(multiBody([null, {}, [[-120.8, 35.3]], []])), new Response(shoreBody())]);
+    await loadShoreLines('r', PAGE, f);
+    const first = shoreLines.value;
+    assert.deepEqual(first, {region: 'r', lines: null});
+    await loadShoreLines('r', PAGE, f);
+    assert.equal(f.calls, 1, 'an invalid answer is not asked again');
+    assert.equal(shoreLines.value, first, 'nothing republished');
+  });
 });
