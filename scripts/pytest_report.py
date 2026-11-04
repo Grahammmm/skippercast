@@ -8,6 +8,11 @@ was skipped for a reason not in ALLOWED_SKIPS. The survey-science job installs e
 package the suite uses, so the only legitimate skips left are tests that re-derive a
 receipt from private, gitignored caches (var/, original survey archives) that exist
 only on the maintainer's machine; each has a committed-output twin that does run.
+
+An expected failure (pytest writes <skipped type="pytest.xfail">) is not a skip: it is its
+own counted outcome, "xfailed", and --strict-skips ignores it. Only that exact type counts;
+a skip whose reason merely mentions xfail is still a skip. A strict XPASS is a <failure>, so
+it stays failed here and in pytest's own exit status; this script does not re-decide it.
 """
 from collections import Counter
 from datetime import datetime
@@ -69,9 +74,12 @@ def cases(paths):
             reason = None
             for child in case:
                 if child.tag in {'failure', 'error'}:
-                    outcome = 'failed' if child.tag == 'failure' else 'error'
-                elif child.tag == 'skipped':
-                    outcome, reason = 'skipped', (child.get('message') or '').strip()
+                    # a failure or error wins over a skipped child, whatever the child order
+                    outcome, reason = ('failed' if child.tag == 'failure' else 'error'), None
+                elif child.tag == 'skipped' and outcome not in {'failed', 'error'}:
+                    # only the exact type pytest writes for an expected failure; never the reason text
+                    outcome = 'xfailed' if child.get('type') == 'pytest.xfail' else 'skipped'
+                    reason = (child.get('message') or '').strip()
             time = _time(case.get('time') or 0)
             yield {'id': f"{case.get('classname')}::{case.get('name')}", 'layer': layer(case.get('classname', '')),
                    'outcome': outcome, 'reason': reason, 'time': time or 0.0, 'time_unreadable': time is None}
@@ -82,13 +90,14 @@ def report(rows, title, slowest=10):
     outcomes = Counter(row['outcome'] for row in rows)
     lines = [f'### {title}', '',
              f"{len(rows)} tests: {outcomes['passed']} passed, {outcomes['failed']} failed, "
-             f"{outcomes['error']} errors, {outcomes['skipped']} skipped; "
+             f"{outcomes['error']} errors, {outcomes['skipped']} skipped, {outcomes['xfailed']} xfailed; "
              f"{sum(row['time'] for row in rows):.1f} s in tests", '',
-             '| Layer | Tests | Skipped | Time (s) |', '| --- | ---: | ---: | ---: |']
+             '| Layer | Tests | Skipped | Xfailed | Time (s) |', '| --- | ---: | ---: | ---: | ---: |']
     for name in [*(name for _, name in LAYERS), 'other']:
         if by_layer[name]:
             layer_rows = [row for row in rows if row['layer'] == name]
             lines.append(f"| {name} | {len(layer_rows)} | {sum(r['outcome'] == 'skipped' for r in layer_rows)} "
+                         f"| {sum(r['outcome'] == 'xfailed' for r in layer_rows)} "
                          f"| {sum(r['time'] for r in layer_rows):.1f} |")
     unreadable = sum(bool(row.get('time_unreadable')) for row in rows)
     lines += ['', f'{unreadable} test time(s) unreadable; counted as 0 s'] if unreadable else []
@@ -174,7 +183,8 @@ def main(argv=None):
                         help='JSON Actions run receipts; report R12 budget instead of JUnit')
     parser.add_argument('--title', default='Python tests')
     parser.add_argument('--strict-skips', action='store_true',
-                        help='exit 1 if a test was skipped for a reason not in ALLOWED_SKIPS')
+                        help='exit 1 if a test was skipped for a reason not in ALLOWED_SKIPS '
+                             '(expected failures, counted as xfailed, are not skips)')
     args = parser.parse_args(argv)
     if args.ci_runs:
         if args.junit:
