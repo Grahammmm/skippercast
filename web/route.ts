@@ -39,15 +39,32 @@ type Item = [number, number, number];
 const less = (a: Item, b: Item): boolean => a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]);
 const toLat = (fy: number, n: number): number => Math.atan(Math.sinh(Math.PI * (1 - 2 * fy / n))) * 180 / Math.PI;
 
+/** Point classifications and per-tile line subsets, per product and lines object (null and false keyed apart). */
+type Shared = {readonly memo: Map<number, number>; readonly near: Map<string, LandWaterLines>};
+const SHARED = new WeakMap<LandWaterModel, Map<LandWaterLines | null | false, Shared>>();
+function sharedFor(model: LandWaterModel, lines: LandWaterLines | null | false): Shared {
+  let byLines = SHARED.get(model);
+  if (!byLines) SHARED.set(model, byLines = new Map());
+  let got = byLines.get(lines);
+  if (!got) {
+    // Only the latest lines object is kept per product, so a replaced lines file does not pin the old one.
+    for (const key of byLines.keys()) if (key) byLines.delete(key);
+    byLines.set(lines, got = {memo: new Map(), near: new Map()});
+  }
+  return got;
+}
+
 /** A* over the passable sub-cells from `from` to `to` (both {latitude, longitude}); `maxNodes` is for tests. */
 export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines | null | false, from: RoutePoint, to: RoutePoint, maxNodes: number = MAX_NODES): Route {
   if (!model) return fail('no-product');
   const n = 2 ** model.zoom, S = model.grid * SUB, size = n * S, Q = 4 * size;
   let sawMixed = false;
+  // The point classification depends only on the product and the lines, so routes over the same pair share it
+  // (a Boat list routes several picks from one origin; with many mixed cells each lookup scans the lines).
+  const shared = sharedFor(model, lines), near = shared.near, memo = shared.memo;
   // Per-tile subsets of the lines: only segments that can reach a point in the tile (edge: within twice the
   // edge distance of it; parity: spanning its rows and not wholly west of it). linesPlace on the subset
   // gives the same answer as on the whole file, without scanning every segment.
-  const near = new Map<string, LandWaterLines>();
   const subset = (all: LandWaterLines, tx: number, ty: number): LandWaterLines => {
     const key = `${tx}/${ty}`, hit = near.get(key);
     if (hit) return hit;
@@ -71,7 +88,6 @@ export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines |
   const at = (qx: number, qy: number): RoutePoint => ({latitude: toLat(qy / Q * n, n), longitude: qx / Q * 360 - 180});
   // Whether a point in quarter-sub-cell units classifies water: 0 no, 1 in a clean water cell, 2 in a mixed one.
   // The memo keeps -1 for a mixed cell blocked because lines are null, so every lookup (cached too) flags it.
-  const memo = new Map<number, number>();
   const water = (qx: number, qy: number): number => {
     const id = qy * Q + qx;
     let v = memo.get(id);

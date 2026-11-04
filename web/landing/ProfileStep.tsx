@@ -5,6 +5,8 @@
 // failed or skipped warm-up says nothing, because the map loads as it would
 // have. "Change port" goes back to the port step. Focus moves to the heading
 // when the step appears, so keyboard and screen-reader users land on it.
+// MYB-1's boat fields come after this choice, not in it (SC-LANDING-ORDER):
+// choosing Boat opens the map asking for the boat (Landing.tsx, boat-entry.ts carryAsk).
 import {useEffect, useRef} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {PROFILE_NOTES, PROFILE_TABLE, PROFILES, type Profile} from '../profile.ts';

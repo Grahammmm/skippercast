@@ -39,7 +39,8 @@ import {speciesOptions} from '../packages/coast/src/habitat-types.ts';
 import {hasCoastTerrain} from './coast-context.ts';
 import {yardsFromShore} from './shore-distance.ts';
 import {PROFILE_TABLE, terrainDepthLimitFt, type Profile} from './profile.ts';
-import {LAND_WATER_BASIS, NO_LAND_WATER, keepWater, withheldNote, type Place} from './land-water.ts';
+import {LAND_WATER_BASIS, NO_LAND_WATER, keepWater, withheldNote, type LandWaterLines, type LandWaterModel, type Place} from './land-water.ts';
+import {waterRoute, type Route, type RouteFailure, type RoutePoint} from './route.ts';
 import type {HabitatFeature} from './map/coast-ranking.js';
 import {CHECKING, SCREEN_NOTES, fitLine, markAreas, markFit, markShown, withheld, type AtlasTarget, type MarkData, type MarkScreen} from './map/habitat.ts';
 
@@ -53,14 +54,16 @@ export interface Pick {
   readonly distance: string; readonly depth: string; readonly fit: string; readonly reason: string;
   /** Straight-line nautical miles from the harbor (the Boat brief's run time); null without a harbor. */
   readonly nm: number | null;
-  /** Where a 'reef' pick is: its row moves the Chart there. */
-  readonly at?: {readonly latitude: number; readonly longitude: number};
+  /** Where the pick is: a 'reef' row moves the Chart there, and it is the Boat run's destination (web/brief/Run.tsx). */
+  readonly at: {readonly latitude: number; readonly longitude: number};
 }
 export type RankingSource = 'terrain' | 'atlas' | 'publication';
 /** One source's list: its label and basis sentence (§ 12), its picks, and what to say when it has none. */
 export interface Ranking {readonly source: RankingSource | null; readonly label: string; readonly basis: string; readonly picks: readonly Pick[]; readonly empty: string;
   /** The harbor the picks' distances run from; absent before the region's marks load. */
   readonly harbor?: string;
+  /** The position the picks' distances run from (the Boat run's start); absent with `harbor`. */
+  readonly origin?: {readonly latitude: number; readonly longitude: number};
   /** The range to consider the picks were kept inside (nm, one way); absent when none applied. */
   readonly reach?: number;
   /** Places that passed every other filter but are not confirmed water (web/land-water.ts), withheld. */
@@ -93,6 +96,7 @@ export interface Keep {
   readonly maxNm: number | null;
   /** Spear from shore: the overview shoreline and the farthest swim (yards). */
   readonly shore: {readonly lines: readonly (readonly number[])[][]; readonly maxYd: number} | null;
+  /** How many picks a list keeps; absent, TOP (the Boat brief asks for more, so a water route can refill a dropped pick). */ readonly top?: number;
 }
 export const KEEP_ALL: Keep = Object.freeze({maxNm: null, shore: null});
 /** Yards from shore, rounded to 25 for display, when the shore filter applies; else null. */
@@ -115,14 +119,14 @@ function atlasScreened(data: MarkData | null, screen: MarkScreen, target: string
   }).map(t => ({t, fit: markFit(t, target), score: (t as AtlasTarget & {habitat_score?: number}).habitat_score ?? 0}));
   rated.sort((a, b) => (b.fit?.n ?? 0) - (a.fit?.n ?? 0) || b.score - a.score || a.t.id.localeCompare(b.t.id));
   const {kept: onWater, withheld: held, pending} = keepWater(rated.map(r => ({...r, latitude: r.t.latitude, longitude: r.t.longitude})), place);
-  return {withheld: held, pending, picks: onWater.slice(0, TOP).map(({t, fit}) => {
+  return {withheld: held, pending, picks: onWater.slice(0, keep.top ?? TOP).map(({t, fit}) => {
     const [lo, hi] = t.neighborhood_depth_ft as [number, number];
     // Only the two supported species screens can supply a target-specific reason.
     const species = target === 'lingcod' ? 'lingcod'
       : target === 'rockfish' || target === 'rockfish-reef' || target === 'gopher-rockfish' ? 'rockfish' : null;
     const reason = species ? speciesFit(t, species)?.reason : null;
     const nm = miles(origin, t), yd = swim(keep, t);
-    return {id: t.id, kind: 'spot', name: t.label, distance: yd === null ? distance(nm) : swimText(yd), nm, depth: band(lo, hi),
+    return {id: t.id, kind: 'spot', name: t.label, distance: yd === null ? distance(nm) : swimText(yd), nm, at: {latitude: t.latitude, longitude: t.longitude}, depth: band(lo, hi),
       fit: fit?.line ?? 'Habitat fit unrated for this target', reason: reason ?? t.terrain_interpretation ?? 'Surveyed reef terrain.'};
   })};
 }
@@ -150,10 +154,10 @@ function habitatScreened(ranked: readonly HabitatFeature[], screen: MarkScreen, 
       && kept(keep, miles(origin, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}), swim(keep, {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}));
   });
   const {kept: onWater, withheld: held, pending} = keepWater(admitted.map(f => ({f, latitude: f.properties.waypoint_latitude, longitude: f.properties.waypoint_longitude})), place);
-  return {withheld: held, pending, picks: onWater.slice(0, TOP).map(({f}) => {
+  return {withheld: held, pending, picks: onWater.slice(0, keep.top ?? TOP).map(({f}) => {
     const p = f.properties, id = String(f.id ?? p.id), n = field ? Number(p[field]) : NaN;
     const at = {latitude: p.waypoint_latitude, longitude: p.waypoint_longitude}, nm = miles(origin, at), yd = swim(keep, at);
-    return {id, kind: 'habitat', name: 'Reef habitat', distance: yd === null ? distance(nm) : swimText(yd), nm,
+    return {id, kind: 'habitat', name: 'Reef habitat', distance: yd === null ? distance(nm) : swimText(yd), nm, at,
       depth: band(p.depth_min_ft, p.depth_max_ft), fit: label && n >= 1 && n <= 3 ? fitLine(label, n) : 'Screened reef habitat',
       reason: `Terrain score ${p.terrain_score}/100${p.terrain_grade ? ` · grade ${p.terrain_grade}` : ''}.`};
   })};
@@ -249,7 +253,7 @@ function publicationScreened(loaded: Extract<ReefPublication, {state: 'ready'}>[
   const watched: Place = p => { const at = place(p); pending ||= at.state === 'unknown' && at.reason === 'pending'; return at; };
   const stats = {withheld: 0};
   const ranked = rankSpots(loaded, screen, {species, count: 50, maxDepth: Math.min(limitFt, 300), origin, maxDistanceNm: keep.maxNm ?? Infinity, place: watched, stats});
-  return {withheld: stats.withheld, pending, picks: ranked.filter(t => kept(keep, miles(origin, t), swim(keep, t))).slice(0, TOP).map(t => {
+  return {withheld: stats.withheld, pending, picks: ranked.filter(t => kept(keep, miles(origin, t), swim(keep, t))).slice(0, keep.top ?? TOP).map(t => {
     const [lo, hi] = t.neighborhood_depth_ft as [number, number], nm = miles(origin, t), yd = swim(keep, t);
     return {id: t.id, kind: 'reef', name: t.name, distance: yd === null ? distance(nm) : swimText(yd), nm, depth: band(lo, hi),
       fit: label ? fitLine(label, t.trip_fit) : 'Screened reef habitat', reason: t.terrain_interpretation ?? 'Surveyed reef terrain.', at: {latitude: t.latitude, longitude: t.longitude}};
@@ -280,6 +284,7 @@ export interface RankingInputs {
   readonly plannerScreen?: PlannerScreenState;
   /** SCJ-2c: the home port the distances run from is still loading; nothing is measured until it lands. */
   readonly originPending?: boolean;
+  /** SC1322-10: how many picks to list; absent, TOP. The Boat brief asks for ROUTE_BUDGET, then `routedPicks` keeps TOP. */ readonly top?: number;
 }
 /** Where the current region's region.json read stands (web/app/App.tsx loadRegion writes it); here so the brief reads it without the shell. */
 export const regionLoad = signal<{id: string; state: 'loading' | 'ready' | 'error' | 'missing'} | null>(null);
@@ -299,7 +304,7 @@ export function ranking(i: RankingInputs): Ranking {
   const reach = origin && known(i.reachNm) && i.reachNm > 0 ? i.reachNm : null;
   // A swim limit applies only once the shoreline has loaded; until then the basis says it is not applied.
   const shore = i.shore && i.shore.lines ? {lines: i.shore.lines, maxYd: i.shore.maxYd} : null;
-  const keep: Keep = {maxNm: reach, shore};
+  const keep: Keep = {maxNm: reach, shore, ...(i.top ? {top: i.top} : {})};
   const ranged = reach === null ? '' : ` Only places within your ${Number(reach.toFixed(1))} nm range are listed.`;
   const swum = shore ? ` Only places within ${shore.maxYd} yd of the mapped shoreline are listed, measured straight to the simplified overview line, so the distance is approximate and not a swim route.`
     : i.shore ? ' Your swim limit is not applied: the shoreline to measure from has not loaded, or this region has none.' : '';
@@ -314,7 +319,7 @@ export function ranking(i: RankingInputs): Ranking {
     ...(s.withheld ? {withheld: s.withheld} : {}), ...(s.pending ? {pending: true} : {}),
   });
   const within = `within ${limit} ft${reach === null ? '' : ` and ${Number(reach.toFixed(1))} nm of ${harbor}`}${shore ? ` and ${shore.maxYd} yd of shore` : ''}`;
-  const extra = {...(origin ? {harbor: origin.name} : {}), ...(reach === null ? {} : {reach})};
+  const extra = {...(origin ? {harbor: origin.name, origin: {latitude: origin.latitude, longitude: origin.longitude}} : {}), ...(reach === null ? {} : {reach})};
   // A region that does not exist has nothing to rank for any profile, Shore included.
   if (i.missing) return {source: null, label: '', basis: '', picks: [], empty: 'No ranked places: this region does not exist.'};
   if (PROFILE_TABLE[i.profile].whereToLook === 'shore-runs')
@@ -352,4 +357,31 @@ export function ranking(i: RankingInputs): Ranking {
   const empty = i.screen.status !== 'ready' ? i.screen.note : s.withheld ? `No other surveyed reef marks ${within} for this target.`
     : `No surveyed reef marks ${within} for this target.`;
   return {source: 'atlas', label: 'Survey reef atlas', ...checked(s, ATLAS_BASIS + from, empty), ...extra};
+}
+
+/** SC1322-10: the most water routes one Boat list computes; picks past it keep their straight line. */
+export const ROUTE_BUDGET = 24;
+/** A Boat pick whose `nm` is the water route where one was computed, else the straight line (and why no route, when one was tried). */
+export type RoutedPick = Pick & {readonly basis: 'water' | 'straight'; readonly why?: RouteFailure};
+/** A route, or null when it is not computed yet (the brief paints the list first): that pick keeps its labelled straight line. */
+export type RouteFn = (model: LandWaterModel | null, lines: LandWaterLines | null | false, from: RoutePoint, to: RoutePoint) => Route | null;
+/**
+ * SC1322-10: the Boat list by water (web/route.ts, FSC-04). `picks` come in rank order, already inside the range by straight
+ * line, a lower bound on any water route, so a place outside it is never routed and the ranking stays straight-line cheap.
+ * Each is routed in turn until `limit` are kept or ROUTE_BUDGET routes ran; one whose route runs past `maxNm` is dropped and
+ * the next fills its place. Without a route a pick keeps its straight line, labelled, and is kept or dropped by it.
+ */
+export function routedPicks(picks: readonly Pick[], origin: RoutePoint | null | undefined, model: LandWaterModel | null, lines: LandWaterLines | null | false,
+  maxNm: number | null, limit: number, route: RouteFn = waterRoute): RoutedPick[] {
+  const out: RoutedPick[] = []; let calls = 0;
+  for (const p of picks) {
+    if (out.length >= limit) break;
+    if (p.nm == null) { out.push({...p, basis: 'straight'}); continue; }
+    if (!inside(p.nm, maxNm)) continue;
+    const r = origin && p.at && calls < ROUTE_BUDGET ? (calls++, route(model, lines, origin, p.at)) : null;
+    if (r?.ok && !inside(r.nm, maxNm)) continue;
+    const nm = r?.ok ? r.nm : p.nm;
+    out.push({...p, nm, basis: r?.ok ? 'water' : 'straight', distance: `${nm.toFixed(1)} nm ${r?.ok ? 'by water' : 'straight line'}`, ...(r && !r.ok ? {why: r.reason} : {})});
+  }
+  return out;
 }

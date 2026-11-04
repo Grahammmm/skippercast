@@ -86,7 +86,7 @@ export function basemapRangeKey(archive, range) {
 }
 
 /** Parts of the daily feed the map reads through the Worker (/api/daily; dist/daily-feed.js). */
-export const DAILY_PARTS = ['regulations', 'mpa-boundaries', 'additional-closures'];
+export const DAILY_PARTS = ['regulations', 'mpa-boundaries', 'additional-closures', 'brief'];
 /** The /api/daily URL for one part: the same string the page requests, so a saved copy matches. */
 export const dailyPartPath = (regionId, part) => `/api/daily?region=${encodeURIComponent(regionId)}&part=${encodeURIComponent(part)}`;
 

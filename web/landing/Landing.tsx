@@ -11,6 +11,7 @@
 // "Explore the coast" takes the same second step with nothing to warm. No map
 // engine loads here (FE-25 adds the live map after first paint).
 import {useEffect, useRef, useState} from 'preact/hooks';
+import {carryAsk} from '../boat-entry.ts';
 import {exploreURL, loadPorts, portURL, savePort, type Port} from '../ports.ts';
 import type {Profile} from '../profile.ts';
 import {PortInput} from './PortInput.tsx';
@@ -19,6 +20,8 @@ import {warmRegion, type WarmState} from './region-warm.ts';
 import {DEFAULT_REGION, loadReadout, type Readout as Data} from './readings.ts';
 import {Readout} from './Readout.tsx';
 import type {LandingVerdict} from './live-verdict.ts';
+import {degraded} from '../degraded.ts';
+import {DegradedNotice} from '../degraded-notice.tsx';
 
 /** The nav (§ 7): Fleet and Reports open the app's views (Reports, FE-52), How it's built the sources page (Q16). */
 export const NAV = [
@@ -56,10 +59,13 @@ export type LandingAppProps = {
   verdict?: () => Promise<LandingVerdict | null>;
 };
 
-/** Tomorrow's answer for the reference boat, as the app's lead gives it; below the funnel, so nothing above the port input moves. */
-export const LiveVerdict = ({v}: {v: LandingVerdict}) => (
-  <section class="landing-verdict" aria-live="polite" aria-label="Tomorrow’s brief" data-day={v.date}>
-    <p class="landing-verdict-head">{v.day} near {v.place}, reference 23 ft boat: <strong class="landing-verdict-word" data-verdict={v.verdict}>{v.word}</strong></p>
+/**
+ * Tomorrow's answer for the reference boat, as the app's lead gives it; below the funnel, so nothing above the port input moves.
+ * SC1322-06: `saved` (the Worker is past its cost ceiling, web/degraded.ts) labels it as from saved copies, not current.
+ */
+export const LiveVerdict = ({v, saved = false}: {v: LandingVerdict; saved?: boolean}) => (
+  <section class="landing-verdict" aria-live="polite" aria-label={saved ? 'Tomorrow’s brief, from saved copies' : 'Tomorrow’s brief'} data-day={v.date} data-degraded={saved ? 'cost-ceiling' : undefined}>
+    <p class="landing-verdict-head">{saved ? 'From saved copies, not live: ' : null}{v.day} near {v.place}, reference 23 ft boat: <strong class="landing-verdict-word" data-verdict={v.verdict}>{v.word}</strong></p>
     <p class="landing-verdict-limit">{v.sentence}</p>
     <a class="landing-verdict-link" href={v.href}>Open the full brief</a>
   </section>
@@ -120,13 +126,15 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
   const restart = () => { leaveWarm(); setChoice(null); setWarmth(null); setBack(true); };
   // Step 2: accept once, synchronously, even before navigation unmounts us.
   const finished = useRef(false);
+  // SC-LANDING-ORDER: a Boat choice opens the map asking for the boat (MYB-1's fields, after the choice; boat-entry.ts carryAsk).
   const finish = (profile: Profile) => {
     if (!choice || finished.current) return;
     finished.current = true;
-    if (choice.port) { savePort(choice.port.id); navigate(portURL(href, choice.port, profile)); return; }
+    const open = (url: string) => navigate(profile === 'boat' ? carryAsk(url) : url);
+    if (choice.port) { savePort(choice.port.id); open(portURL(href, choice.port, profile)); return; }
     const url = new URL(exploreURL(href));
     url.searchParams.set('profile', profile);
-    navigate(url.href);
+    open(url.href);
   };
   return (
     <>
@@ -134,7 +142,9 @@ export function LandingApp({href, initialProfile = null, fleet = null, navigate 
       {choice
         ? <ProfileStep place={choice.place} warm={choice.port ? warmth : null} current={initialProfile} onChoose={finish} onBack={restart} />
         : <PortInput ports={ports} onChoose={choose} onExplore={explore} onRetry={failed ? loadList : undefined} autoFocus={back} />}
-      {answer ? <LiveVerdict v={answer} /> : null}
+      {/* SC1322-06: /map's cost-ceiling notice, above the verdict, which then reads as saved copies; nothing while live. */}
+      <DegradedNotice />
+      {answer ? <LiveVerdict v={answer} saved={degraded.value !== null} /> : null}
     </>
   );
 }

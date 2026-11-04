@@ -118,22 +118,27 @@ const CONDITIONAL = ['Range', 'If-None-Match', 'If-Modified-Since', 'If-Match', 
  * conditional requests from it (206/304), so every PMTiles byte range comes
  * from one consistent object version. A Range miss is answered from R2 with
  * that range and fills the cache with the whole object after the reply.
+ * Entries are keyed by the logical feed path, so a hit needs no R2 read (not
+ * even the release pointer); a new release shows once max-age expires.
  */
 type Fill = (object: {size: number; range?: R2Range; httpEtag?: string; body?: ReadableStream}) => Promise<void>;
-async function fromEdge(request: Request, key: string, headers: Headers, ctx: WaitUntil, build: string | undefined, selected: R2Bucket, logicalKey = key): Promise<{cache: Cache | null; hit?: Response; fill?: Fill}> {
+const edgeKey = (request: Request, logicalKey: string, build: string | undefined, headers?: Headers): Request =>
+  cacheKey(new URL('/feeds/' + logicalKey, request.url), {params: [], build, headers});
+async function edgeLookup(request: Request, logicalKey: string, build: string | undefined): Promise<{cache: Cache | null; hit?: Response}> {
   const cache = edgeCache();
   if (!cache) return {cache: null};
   const conditional = new Headers();
   for (const name of CONDITIONAL) if (request.headers.has(name)) conditional.set(name, request.headers.get(name)!);
-  const cachePath = key === logicalKey ? key : `${key}/${logicalKey}`;
-  const lookup = cacheKey(new URL('/feeds/' + cachePath, request.url), {params: [], build, headers: conditional});
   try {
-    const hit = await cache.match(lookup);
+    const hit = await cache.match(edgeKey(request, logicalKey, build, conditional));
     if (hit) return {cache, hit: tagged(hit, 'hit')};
   } catch { /* fall through to R2 */ }
-  const whole = cacheKey(new URL('/feeds/' + cachePath, request.url), {params: [], build});
-  const snapshot = new Headers(headers);  // before the reply adds range/ETag headers
-  const fill: Fill = async object => {
+  return {cache};
+}
+function edgeFill(cache: Cache, request: Request, key: string, logicalKey: string, headers: Headers, ctx: WaitUntil, build: string | undefined, selected: R2Bucket): Fill {
+  const whole = edgeKey(request, logicalKey, build);
+  const snapshot = new Headers(headers);  // before the reply adds range/ETag headers; keeps X-Feed-Generation
+  return async object => {
     if (!object || object.size > EDGE_CACHE_MAX_BYTES) return;
     const full = object.body && !object.range ? object as {size: number; httpEtag: string; body: ReadableStream} : await selected.get(key);
     if (!full?.body) return;
@@ -142,7 +147,6 @@ async function fromEdge(request: Request, key: string, headers: Headers, ctx: Wa
     copy.set('Content-Length', String(full.size));
     await store(cache, whole, new Response(full.body, {status: 200, headers: copy}), ctx);
   };
-  return {cache, fill};
 }
 
 /**
@@ -153,6 +157,9 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
   const logicalKey = feedKey(path);
   if (!logicalKey) return null;
   const selected = bucket;
+  // A non-seafloor edge-cache hit answers before any R2 read; seafloor stays resolve-first and uncached.
+  const edge: {cache: Cache | null; hit?: Response} = selected && !logicalKey.startsWith('tiles/seafloor/') ? await edgeLookup(request, logicalKey, build) : {cache: null};
+  if (edge.hit) return edge.hit;
   const target = await resolver(selected)(logicalKey);
   if (target.missing) return new Response('Not found', {status: 404, headers: {'Cache-Control': 'no-store'}});
   const key = target.key;
@@ -183,11 +190,7 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
   if (target.generation) headers.set('X-Feed-Generation', target.generation);
   if (selected) {
     // Seafloor archives are gated on a live publication receipt and never cached.
-    const edge = seafloor ? {cache: null} : await fromEdge(request, key, headers, ctx, build, selected, logicalKey);
-    if (edge.hit) {
-      if (target.generation) edge.hit.headers.set('X-Feed-Generation', target.generation);
-      return edge.hit;
-    }
+    const fill = edge.cache && !seafloor ? edgeFill(edge.cache, request, key, logicalKey, headers, ctx, build, selected) : undefined;
     const object = await selected.get(key, {range: request.headers, onlyIf: request.headers}) as R2Object | R2ObjectBody | null;
     if (object) {
       if (publication && object.customMetadata?.sha256 !== expectedHash) {
@@ -202,13 +205,13 @@ export async function serveFeed(request: Request, path: string, assets: Fetcher 
         const {offset = 0, length = object.size - offset} = object.range as {offset?: number; length?: number};
         headers.set('Content-Range', `bytes ${offset}-${offset + length - 1}/${object.size}`);
         headers.set('Content-Length', String(length));
-        if (edge.fill) { const fill = edge.fill({size: object.size, range: object.range}).catch(() => {}); if (ctx?.waitUntil) ctx.waitUntil(fill); else await fill; }
+        if (fill) { const filled = fill({size: object.size, range: object.range}).catch(() => {}); if (ctx?.waitUntil) ctx.waitUntil(filled); else await filled; }
         return new Response(object.body, {status: 206, headers});
       }
       headers.set('Content-Length', String(object.size));
-      if (edge.fill && object.size <= EDGE_CACHE_MAX_BYTES) {
+      if (fill && object.size <= EDGE_CACHE_MAX_BYTES) {
         const [reply, keep] = (object.body as ReadableStream).tee();
-        await edge.fill({size: object.size, httpEtag: object.httpEtag, body: keep});
+        await fill({size: object.size, httpEtag: object.httpEtag, body: keep});
         return new Response(reply, {status: 200, headers});
       }
       return new Response((object as R2ObjectBody).body, {status: 200, headers});

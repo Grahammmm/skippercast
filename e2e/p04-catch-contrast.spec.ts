@@ -171,7 +171,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // Masthead.tsx. (Kept beside its pin, not in the notes above, so it does not collide with other PRs' notes.)
   // Merged with BF-species-plans-page #1276 (Plan label and icon, see the check_contrast.mjs note below): rebound to
   // the merged file, which carries both changes and nothing else.
-  "web/app/Masthead.tsx": "c8c12a37a7020359c86513ddaf250aa81a333a736f3b5bbd405cf3aa809ca15d",
+  // SC1322-06 (#1438, landing degraded notice): Masthead.tsx moves DegradedNotice verbatim into web/degraded-notice.tsx
+  // (same degraded.ts import, same <p class="app-limits-note app-degraded"> markup) and re-exports it, so /map's
+  // masthead renders the identical element. No CSS, token or catch markup change; contrast(), assertions and
+  // thresholds are untouched. Rebind only Masthead.tsx.
+  "web/app/Masthead.tsx": "1859c84f33775f1c6830f932566a644bdd639fd7c0804947ea38f375ad4b6aff",
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
@@ -187,7 +191,9 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC-E2E-GREEN: the legend shrinks and scrolls beside a mark-card min height, the phone .app-area row wraps, and the
   // brief's .app-verdict-rules line gets margins, size and the existing .app-mark-regs a link rule; Reports' catch sheet
   // renders none of them. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
-  "web/app/app.css": "4f344ed4cba0faf3937427b70eeb059502be5d49d02f537599b50f82fc1e946e",
+  // SC-POPOVER: the desktop legend's basis popovers are placed by anchor positioning so the scrolling legend cannot clip them; no paint changes and
+  // Reports' catch sheet renders no legend. check_contrast.mjs changes only the appCss surface hash and its comment. Both rebound.
+  "web/app/app.css": "ec7a13668e7be9850c8d17fbcaef993aa50c376f764f5eeace229caf2cd96ad3",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "56215598e33a416cb6c877a0661ce3923035f3266872faae9b7eb89db02eb4a2",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -213,9 +219,15 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // five masthead views, so the Reports masthead is unchanged. contrast(), assertions and thresholds are untouched.
   // All three rebound. Merged with main's SC2222-07 appCss surface hash: rebound to the merged file.
   // BF-wcag: check_contrast.mjs changes only the panelCss/appCss surface hashes and their comments; rebound.
-  "scripts/check_contrast.mjs": "3d4ed49b7b178b0c9e31e6b202a0147512b76f8c750c545d00b681dca2cbecfa",
-  "package.json": "f4ea6ab7f27dfe024e03df1461bb6afa8383702283215091dcdf6fbe3aa2b1d0",
-  "pnpm-lock.yaml": "60a3c514df2574ebef9ac7252f2e0892b2f44d85c18de7f39c48d39adcaa0e4f",
+  "scripts/check_contrast.mjs": "1d41eb1a7b8705c8a3b7a955f18be25e81a21cb618862f341d6ffc69b2d84c29",
+  // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
+  // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
+  // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
+  // renders Reports with preact from these pins, but no CSS, token, font or catch markup source changes; the
+  // measured colours come from the pinned styles above. Reports never mounts MapStage, so maplibre-gl and three
+  // are not loaded. contrast(), assertions and thresholds are untouched. Rebind only these two.
+  "package.json": "b9fe30cef565b90f8995e9956cfc43f99bcbe103e72387bd73d215f8247a4774",
+  "pnpm-lock.yaml": "1b0d51c0eecc804cf6687293d7a92763057574fbb63686e43f2c5d86b7f65223",
   "e2e/coast-report-fixture.ts": "2746e2ac1ff9fbce2a96925a7088180e682060e79dfb1330efea4ac0e2ca65c1"
 };
 function qualifiedInputs() {

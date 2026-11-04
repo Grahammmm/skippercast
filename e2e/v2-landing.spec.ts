@@ -191,6 +191,37 @@ test('a 200ms pointer press chooses Boat without moving the half-height sheet', 
   expect(pageErrors).toEqual([]);
 });
 
+// SC-LANDING-ORDER: the boat step replaces the card inside the sheet; peek clips the sheet body,
+// so tapping Boat at peek, or arriving from the landing's Boat choice, opens the sheet to full.
+for (const arrival of ['tap', 'landing'] as const) {
+  test(`the boat step is operable on the 320px phone after ${arrival === 'tap' ? 'tapping Boat at peek' : 'the landing\'s Boat choice'}`, async ({page, pageErrors, v2, isMobile}) => {
+    test.skip(!isMobile, 'phone layout only');
+    await page.setViewportSize({width: 320, height: 568});
+    const sheet = page.locator('.ui-sheet'), entry = sheet.locator('[data-first-use-boat]');
+    if (arrival === 'tap') {
+      await v2.open('app', {region: 'morro-bay'});
+      await expect(sheet).toHaveAttribute('data-detent', 'peek');
+      await sheet.locator('.app-firstrun button[data-profile="boat"]').click();
+    } else {
+      await v2.open('app', {region: 'morro-bay', profile: 'boat', 'boat-entry': 'ask'});
+    }
+    await expect(entry).toBeVisible();
+    await expect(sheet).toHaveAttribute('data-detent', 'full');
+    for (const control of [...await entry.locator('input').all(), entry.getByRole('button', {name: 'Save boat'}), entry.getByRole('button', {name: 'Not now'})]) {
+      await control.scrollIntoViewIfNeeded();
+      await expect(control).toBeInViewport({ratio: 1});
+      await expect.poll(async () => {
+        const target = (await control.boundingBox())!, tabs = (await page.locator('.app-tabs').boundingBox())!;
+        return target.y + target.height <= tabs.y;
+      }, {message: 'boat control is above the fixed navigation'}).toBe(true);
+    }
+    await entry.locator('input[name="lengthFt"]').fill('21');
+    await entry.getByRole('button', {name: 'Save boat'}).click();
+    await expect(entry).toHaveCount(0);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 for (const [width, height] of [[320, 568], [390, 844]] as const) {
   test(`Tab from peek reveals every first-run choice on the ${width}px phone`, async ({page, pageErrors, v2, isMobile}) => {
     test.skip(!isMobile, 'phone layout only');
@@ -215,6 +246,7 @@ for (const [width, height] of [[320, 568], [390, 844]] as const) {
       }, {message: 'focused choice is above the fixed navigation'}).toBe(true);
     }
     // Return to Kayak and choose using only the keyboard.
+    await expect(card.locator('fieldset'), 'profile first: the card itself asks no boat fields; they follow a Boat choice (SC-LANDING-ORDER)').toHaveCount(0);
     await page.keyboard.press('Shift+Tab');
     await expect(card.locator('button[data-profile="kayak"]')).toBeFocused();
     await page.keyboard.press('Enter');
@@ -298,13 +330,15 @@ for (const [width, height] of [[390, 844], [360, 800]] as const) {
     await expect(sheet).toHaveAttribute('data-detent', 'peek');
     await above();
     await expect(card.locator('#first-run-title')).toBeVisible();
-    for (const hidden of [card.locator('p'), card.locator('.ui-eyebrow')]) await expect(hidden).toBeHidden();
+    // The intro (the card's own p) and the MYB-1 boat fields (whose hint is a p too) are both out of the peek row.
+    for (const hidden of [card.locator(':scope > p'), card.locator('.ui-eyebrow'), card.locator('fieldset')]) await expect(hidden).toBeHidden();
     for (const clipped of [card.getByRole('button', {name: 'Keep Boat for now'}), card.locator('small').first()]) expect((await clipped.boundingBox())!.height).toBeLessThanOrEqual(1);
     await page.screenshot({path: test.info().outputPath(`bl-sc-2-peek-${width}x${height}.png`)});
     // Dragged (stepped) to half: the whole card as before.
     await handle.click();
     await expect(sheet).toHaveAttribute('data-detent', 'half');
-    for (const shown of [card.locator('p'), card.locator('.ui-eyebrow'), card.getByRole('button', {name: 'Keep Boat for now'}), card.locator('small').first()]) await expect(shown).toBeVisible();
+    for (const shown of [card.locator(':scope > p'), card.locator('.ui-eyebrow'), card.getByRole('button', {name: 'Keep Boat for now'}), card.locator('small').first()]) await expect(shown).toBeVisible();
+    await expect(card.locator('fieldset'), 'the MYB-1 boat fields wait for full, keeping the choices on screen at half').toBeHidden();
     // SC-N4: Layers takes the sheet; back at peek the compact row returns.
     await page.locator('button[aria-label="Layers"]').click();
     await expect(page.locator('.app-sheet-layers')).toBeVisible();

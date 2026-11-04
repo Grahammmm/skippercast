@@ -172,6 +172,28 @@ export function depthLimit(profile: Data, today: string): string | null {
 export const checkIntervalHours = (data: Data): number | null => Number.isFinite(data?.check_interval_hours) && data.check_interval_hours > 0 ? data.check_interval_hours : null;
 /** A CDFW per-place fishing-map page (the area regulations page). */
 const isAreaPage = (u: unknown): boolean => typeof u === 'string' && /^https:\/\/[^/]+\/Fishing\/Ocean\/Regulations\/Fishing-Map\//.test(u);
+const shortDay = (s: unknown, tz: string): string | null => Number.isFinite(Date.parse(String(s))) ? new Date(String(s)).toLocaleDateString('en-US', {timeZone: tz, month: 'short', day: 'numeric'}) : null;
+/** The oldest daily check among the profiles' sources, or null when any source has no parseable check time (or, given `now`, one in the future). */
+function oldestCheck(data: Data, profiles: Data[], now?: number): string | null {
+  const ids = [...new Set(profiles.flatMap(p => p.source_ids as string[]))];
+  const times = ids.map(id => data.checks?.[id]?.data_retrieved_at).filter(s => Number.isFinite(Date.parse(s)));
+  return times.length === ids.length && !(now !== undefined && times.some(t => Date.parse(t) > now)) ? times.sort((a, b) => Date.parse(a) - Date.parse(b))[0] : null;
+}
+export interface Freshness { text: string; state: 'checked-today' | 'checked-earlier' | 'unknown' | 'stale' }
+/**
+ * When the daily source check last confirmed this target's rules, in words. No check time, or one in the future
+ * (clock error), is unknown; one past the registry's max age is overdue. A rule that reads unknown keeps its own
+ * "Check rules" and never gets a line saying a check confirmed it.
+ */
+export function freshnessLabel(data: Data, species: string, state: RuleState, region: RulesRegion, now: number = Date.now()): Freshness {
+  const tz = zoneOf(region), ids = species === 'reef' ? ['lingcod', 'rockfish'] : [species];
+  const profiles = validRegulations(data, region) ? ids.map(id => ruleProfile(data, id, region)).filter(Boolean) : [];
+  const at = profiles.length === ids.length ? oldestCheck(data, profiles, now) : null, hours = at ? age(at, now) : NaN;
+  if (!Number.isFinite(hours) || hours < 0) return {text: 'Check date unknown', state: 'unknown'};
+  if (hours > maxAgeHours(data)) return {text: 'Check overdue - open the official page', state: 'stale'};
+  if (state.status === 'unknown') return {text: 'Check date unknown', state: 'unknown'};
+  return dayIn(tz, Date.parse(at!)) === dayIn(tz, now) ? {text: 'Checked today', state: 'checked-today'} : {text: `Checked ${shortDay(at, tz)}`, state: 'checked-earlier'};
+}
 /** dist/regulations.js `ruleSummary`: status, bag, size, depth, the verified date and one official link. */
 export function ruleSummary(data: Data, species: string, state: RuleState, region: RulesRegion): RuleSummary {
   const tz = zoneOf(region), ids = species === 'reef' ? ['lingcod', 'rockfish'] : [species];
@@ -189,10 +211,8 @@ export function ruleSummary(data: Data, species: string, state: RuleState, regio
     const depths = [...new Set(profiles.map(p => depthLimit(p, state.today)))];
     summary.depth = depths.length === 1 ? depths[0]! : null;
   }
-  const sourceIds = [...new Set(profiles.flatMap(p => p.source_ids as string[]))];
-  const times = sourceIds.map(id => data.checks?.[id]?.data_retrieved_at).filter(s => Number.isFinite(Date.parse(s)));
-  const oldest = times.length === sourceIds.length ? times.sort((a, b) => Date.parse(a) - Date.parse(b))[0] : null;
-  const short = (s: unknown): string | null => Number.isFinite(Date.parse(String(s))) ? new Date(String(s)).toLocaleDateString('en-US', {timeZone: tz, month: 'short', day: 'numeric'}) : null;
+  const oldest = oldestCheck(data, profiles);
+  const short = (s: unknown): string | null => shortDay(s, tz);
   // SP-RULES-STATUS: "Verified" is a source-check statement for a known state only. An unknown state (outside the
   // reviewed rule period, a review time beyond the tolerance, a season that needs a fishing location) can have no
   // source issues, so the state itself gates the badge; its last parseable check still reads as `checked`.

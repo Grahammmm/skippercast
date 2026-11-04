@@ -44,8 +44,12 @@ publicApi.get('/api/daily', c => dailyPart(c));
 // Parts of the daily feed the map reads at startup (P4-05). The whole feed is
 // ~1.4 MB; the regulations badge needs its rule checks (~45 KB), and the MPA
 // screen needs one record only when the live boundary query fails.
-export const DAILY_PARTS = ['regulations', 'mpa-boundaries', 'additional-closures'] as const;
+// The 'brief' part (SC2222-02) holds only what the brief (web/brief/model.ts) and the station pins
+// (web/map/station-model.ts) read: buoys, tides, advisories, chlorophyll, landing reports and names.
+export const DAILY_PARTS = ['regulations', 'mpa-boundaries', 'additional-closures', 'brief'] as const;
 type DailyPart = typeof DAILY_PARTS[number];
+const BRIEF_KINDS = new Set(['observation', 'prediction', 'advisory']), NOT_BRIEF = new Set(['mpa-boundaries', 'additional-closures', 'regulations']);
+const briefSource = ([key, source]: [string, ExternalJSON]) => !NOT_BRIEF.has(key) && (key === 'tides' || key === 'chlorophyll' || BRIEF_KINDS.has(source?.kind));
 
 /** The checks the app applies to the whole daily feed (dist/bite-evidence.js validFeed, dist/region.js acceptsFeed). */
 export function validDailyFeed(feed: ExternalJSON, regionId: string): boolean {
@@ -60,6 +64,8 @@ export function dailyPartOf(feed: ExternalJSON, part: DailyPart): ExternalJSON {
   const head = {schema_version: feed.schema_version, region_id: feed.region_id, generated_at: feed.generated_at,
     catch_probability: null, bite_score: null, part};
   if (part === 'regulations') return {...head, regulations: feed.regulations ?? null};
+  if (part === 'brief') return {...head, sources: Object.fromEntries(Object.entries(feed.sources as Record<string, ExternalJSON>).filter(briefSource)),
+    reports: feed.reports ?? [], ...('landing_names' in feed ? {landing_names: feed.landing_names} : {}), health: feed.health};
   return {...head, sources: part in feed.sources ? {[part]: feed.sources[part]} : {}};
 }
 

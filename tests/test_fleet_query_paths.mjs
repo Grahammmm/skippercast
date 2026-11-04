@@ -36,13 +36,8 @@ const CLASS = Object.freeze({
   'server/fleet/admin/reviews.ts': ['admin', 'admin review queue'],
   'server/fleet/admin/vessels.ts': ['admin', 'admin vessel editor'],
 });
-// Job reads of contact columns without the do-not-contact exclusion, as main has them today.
-const CONTACT_READS = Object.freeze({
-  'server/fleet/jobs.ts SELECT id,slug,name,website,phone_business,email_business,booking_platform FROM fleet_operators':
-    'KNOWN GAP (follow-up): operator snapshot page for the jobs runner includes do-not-contact operators',
-  'server/fleet/jobs.ts SELECT ${VESSEL_COLUMNS} FROM fleet_vessels':
-    'KNOWN GAP (follow-up): vessel snapshot page (phone_business,email_business) has no do-not-contact exclusion',
-});
+// Job reads of contact columns without the do-not-contact exclusion, as main has them today (none since SC1322-01).
+const CONTACT_READS = Object.freeze({});
 // One pass: group 1 is a string or template literal; a comment matches without a group.
 const LITERAL = /(`(?:\\[\s\S]|\$\{[^}]*\}|[^\\`])*`|'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g;
 

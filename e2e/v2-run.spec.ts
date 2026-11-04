@@ -80,7 +80,9 @@ test('acceptance 1 and 2: the line asks for a cruise speed, saves it on the devi
   await expect(run).toHaveAttribute('data-state', 'ok');
   await expect(run.locator('.app-run-lead')).toContainText(/Up to \d+ h( \d+ min)? fishing at /);
   await expect(run.locator('.app-run-times')).toContainText(/Leave \d+(:\d\d)? am · there \d+(:\d\d)? am · turn back \d+(:\d\d)? (am|pm) · in by \d+(:\d\d)? (am|pm)/);
-  await expect(run.locator('.app-run-detail')).toContainText(/nm straight line · at least \d+ min each way at 20 kt/);
+  // FSC-05: Morro Bay's land/water product routes the top pick over water, so the run reads "by water", not the straight-line fallback.
+  await expect(run.locator('.app-run-detail')).toContainText(/\d+\.\d nm by water · at least \d+ min each way at 20 kt/);
+  await expect(run.locator('.app-run-detail')).not.toContainText('nm straight line');
   await run.scrollIntoViewIfNeeded();
   await info.attach(`run-${info.project.name}`, {body: await page.screenshot(), contentType: 'image/png'});
   expect(pageErrors).toEqual([]);

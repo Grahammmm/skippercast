@@ -37,6 +37,7 @@ function server({daily = true, live = true} = {}) {
   s.fetch = async path => {
     path = String(path); s.paths.push(path);
     if (s.held) await new Promise(r => s.held.push(r));
+    if (path.startsWith('/api/daily')) return new Response('', {status: 404}); // SC2222-03: the brief part refused, so the whole feed is read
     const isDaily = path.startsWith('/feeds/data/'), id = decodeURIComponent(path.split('/')[4]);
     if (!(isDaily ? s.daily : s.live)) return new Response('', {status: 503});
     const conditions = {schema_version: 1, region_id: id, sources: {diablo: {id: 'diablo', name: 'NDBC 46042', kind: 'observation', url: '', checked_at: '2026-10-08T21:00:00Z', status: 'ok'}}};
@@ -59,9 +60,9 @@ test('edge 1: kept at 29 min; at 31 min one read of each feed for the same regio
   await loadDailyFeed(ID, s.fetch);
   const t = Date.now(), first = dailyFeed.value;
   assert.equal(refreshDailyIfStale(t + 29 * MIN), null);
-  assert.equal(s.paths.length, 2, 'no fetch while fresh');
+  assert.equal(s.paths.length, 3, 'no fetch while fresh');
   await refreshDailyIfStale(t + 31 * MIN);
-  assert.deepEqual(s.paths.slice(2).sort(), [`/feeds/conditions/regions/${ID}/latest.json`, `/feeds/data/regions/${ID}/latest.json`]);
+  assert.deepEqual(s.paths.slice(3).sort(), [`/api/daily?region=${ID}&part=brief`, `/feeds/conditions/regions/${ID}/latest.json`, `/feeds/data/regions/${ID}/latest.json`]);
   assert.notEqual(dailyFeed.value, first, 'the new read replaces the feed');
   assert.equal(dailyFeed.value.region_id, ID);
 });
@@ -73,7 +74,7 @@ test('edge 2: a first read that got neither feed is read again at 1 min; success
   assert.deepEqual(feedGaps.value, [FEED_GAP.both], 'a failed first load behaves as before');
   s.daily = s.live = true;
   await refreshDailyIfStale(Date.now() + MIN);
-  assert.equal(s.paths.length, 4);
+  assert.equal(s.paths.length, 6);
   assert.equal(dailyFeed.value?.region_id, ID);
   assert.deepEqual(feedGaps.value, []);
 });
@@ -110,10 +111,10 @@ test('edge 4: a pending load is not read twice; a hidden page reads nothing, a v
   s.release(); await first;
   doc.visibilityState = 'hidden';
   await fire();
-  assert.equal(s.paths.length, 2, 'hidden: no read');
+  assert.equal(s.paths.length, 3, 'hidden: no read');
   doc.visibilityState = 'visible';
   await fire();
-  assert.equal(s.paths.length, 4, 'visible after a failed read: both feeds again');
+  assert.equal(s.paths.length, 6, 'visible after a failed read: both feeds again');
   doc.visibilityState = 'hidden';
 });
 
@@ -141,7 +142,7 @@ test('edge 6: one visibilitychange listener drives both the forecast and the dai
   doc.visibilityState = 'visible';
   await fire();
   assert.equal(forecastCalls, 2, 'the failed forecast is read again');
-  assert.equal(s.paths.length, 4, 'the failed feeds are read again');
+  assert.equal(s.paths.length, 6, 'the failed feeds are read again');
   doc.visibilityState = 'hidden';
   regionalForecast.value = null;
 });
