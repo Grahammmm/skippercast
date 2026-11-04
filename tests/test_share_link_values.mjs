@@ -75,3 +75,64 @@ test('single() needs exactly one matching value; the shapes are fixed', () => {
   assert.equal(single(p, 'c', PLAIN), 'Bad');
   assert.equal(single(p, 'a', TARGET_ID), 'x', 'calling twice gives the same answer (no sticky regex state)');
 });
+
+// RF1100-13: the legacy Fish `species` alias is read from the original query, so a repeated alias is as ambiguous as a
+// repeated `target`. An explicit `target` (present, even empty or bad) always blocks the alias fallback.
+const blockFetch = fn => {
+  const real = globalThis.fetch;
+  globalThis.fetch = () => { throw new Error('fetch is not allowed'); };
+  try { return fn(); } finally { globalThis.fetch = real; }
+};
+const expectNoTarget = (query, base = MAIN_URL, title = MAIN_TITLE) => {
+  const made = blockFetch(() => link(query));
+  assert.deepEqual(param(made, 'target'), [], query);
+  assert.deepEqual(param(made, 'species'), [], `${query}: no species key leaks out`);
+  assert.equal(made.url, base, query);
+  assert.equal(made.title, title, query);
+};
+
+test('share_species_alias_refuses_duplicates_before_rewrite', () => {
+  for (const q of ['species=lingcod&species=rockfish', 'species=rockfish&species=lingcod', 'species=lingcod&species=lingcod',
+    'species=lingcod&species=', 'species=&species=lingcod', 'species=lingcod&species=Lingcod']) {
+    expectNoTarget(`${BASE}&${q}`);
+  }
+});
+
+test('share_species_alias_keeps_only_one_valid_id', () => {
+  for (const ok of ['lingcod', 'ling%63od', 'a'.repeat(64)]) {
+    const made = blockFetch(() => link(`${BASE}&species=${ok}`));
+    assert.deepEqual(param(made, 'target'), [decodeURIComponent(ok)], ok);
+    assert.deepEqual(param(made, 'species'), [], `${ok}: no species key leaks out`);
+    assert.equal(made.url, `${MAIN_URL}&target=${decodeURIComponent(ok)}`, ok);
+    assert.equal(made.title, MAIN_TITLE, ok);
+  }
+  for (const bad of ['', 'Lingcod', '1abc', 'a%20b', 'a%0Ab', 'a%23b', 'a'.repeat(65)]) expectNoTarget(`${BASE}&species=${bad}`);
+});
+
+test('share_explicit_target_presence_blocks_alias_fallback', () => {
+  assert.equal(blockFetch(() => link(`${BASE}&target=rockfish&species=lingcod&species=cabezon`)).url, `${MAIN_URL}&target=rockfish`);
+  assert.equal(blockFetch(() => link(`${BASE}&species=lingcod&species=cabezon&target=rockfish`)).url, `${MAIN_URL}&target=rockfish`);
+  assert.equal(blockFetch(() => link(`${BASE}&target=rockfish&species=Bad`)).url, `${MAIN_URL}&target=rockfish`);
+  assert.equal(blockFetch(() => link(`${BASE}&species=lingcod&target=rockfish`)).url, `${MAIN_URL}&target=rockfish`);
+  for (const q of ['target=&species=lingcod', 'species=lingcod&target=', 'target=Bad&species=lingcod', 'target=a&target=b&species=lingcod',
+    'species=lingcod&target=a&target=b', 'target=rockfish&target=rockfish&species=lingcod', 'species=lingcod&target=rockfish&target=rockfish']) {
+    expectNoTarget(`${BASE}&${q}`);
+  }
+});
+
+test('share_alias_refusal_preserves_other_state', () => {
+  const dup = 'species=lingcod&species=rockfish';
+  const coastBase = 'coast=central&layers=terrain&base=sat&spot=a1&habitat=reef&grade=ab';
+  const coastUrl = `${ORIGIN}/map?coast=central&profile=boat&day=2026-11-04&layers=terrain&base=sat&habitat=reef&spot=a1&grade=ab`;
+  expectNoTarget(coastBase, coastUrl, 'Wed Nov 4 · Boat');
+  expectNoTarget(`${dup}&${coastBase}&utm_source=x#frag`, coastUrl, 'Wed Nov 4 · Boat');
+  expectNoTarget(`${coastBase}&${dup}`, coastUrl, 'Wed Nov 4 · Boat');
+  const hourBase = 'region=morro-bay&port=morro-bay&hour=2026-11-05T15:00Z&current=on';
+  const hourUrl = `${ORIGIN}/map?region=morro-bay&port=morro-bay&profile=boat&day=2026-11-05&hour=2026-11-05T15%3A00Z&current=on`;
+  expectNoTarget(hourBase, hourUrl, 'Morro Bay · Thu Nov 5 · Boat');
+  expectNoTarget(`${hourBase}&${dup}&token=secret`, hourUrl, 'Morro Bay · Thu Nov 5 · Boat');
+  // A single legacy species still rewrites exactly as before, with mode/place/grade.
+  const made = blockFetch(() => link('mode=boat&species=rockfish&place=coast&grade=ab'));
+  assert.equal(made.url, `${ORIGIN}/map?coast=central&profile=boat&day=2026-11-04&target=rockfish&grade=ab`);
+  assert.equal(made.title, 'Wed Nov 4 · Boat');
+});

@@ -68,8 +68,9 @@ import {windState} from '../map/wind.ts';
 import {ringBasis, ringSummary} from '../map/nearshore.ts';
 import {stationState} from '../map/stations.ts';
 import {WAVE_MODEL} from '../map/forecast-grid.ts';
-import {currentStatus, shownPresentation, terrainCoverage, terrainOptions} from '../map/stage.ts';
+import {currentStatus, shownPresentation, terrainCoarsened, terrainCoverage, terrainOptions} from '../map/stage.ts';
 import {drawnSpots} from '../map/ranked.ts';
+import {retrySavedSpots, savedSpotsOn, savedSpotsStatus, setSavedSpotsOn} from '../map/saved-spots.ts';
 import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {RAIL_ENTRIES, railOn} from './rail.ts';
@@ -114,6 +115,11 @@ function TerrainSeafloorRow() {
 }
 
 const retryable: readonly string[] = Object.values(TRANSIENT_DETAILS);
+/** A fill the terrain draped with fewer samples (SC0452-04): renderer sampling only, nothing about the source boundary. */
+const COARSE_DRAPE = 'This fill was draped with fewer terrain samples. On steep relief it can sit above or below the surface. Its outline positions are unchanged.';
+/** The coarse-drape note for registry layer `id`, on the terrain only: the Chart never draws that fill. */
+const coarseNote = (id: string) => shownPresentation.value !== 'chart' && terrainCoarsened.value.includes(id)
+  ? <p class="app-legend-note" data-drape={id}>{COARSE_DRAPE}</p> : null;
 /**
  * The protected areas' row: the check date, or what the drawing lacks, so a missing outline never reads as
  * open water. "Loading boundaries." until they load, "Map unavailable." without a map, and unavailable when
@@ -136,6 +142,7 @@ export function MpaRow() {
         </Popover>
       </span>
       {s.note ? <p class="app-mpa-note">{s.note}</p> : null}
+      {coarseNote('mpas')}
       {s.status === 'unavailable' && retryable.includes(s.detail) ? <Button variant="quiet" onClick={() => { retryMpas.value++; }}>Try again</Button> : null}
       {withheld ? <p class="app-mpa-marks" data-reason="marks">{marks}</p> : null}
       <a class="app-mpa-rules" href={CDFW_MPA_PAGE} target="_blank" rel="noopener">Official rules and boundaries (CDFW)</a>
@@ -281,6 +288,7 @@ function FleetRow() {
       <Popover iconOnly summary="Charter grounds basis">{layerEntry('charter-grounds').basis}{audit ? ` Research checked ${audit}.` : ''}</Popover>
       {g.drawn ? <p class="app-legend-note ui-mono" data-stamp="charter-grounds">{g.drawn} named vicinit{g.drawn === 1 ? 'y' : 'ies'} · no verified charter AIS</p> : null}
       {g.note || !g.drawn ? <p class="app-legend-note" data-reason="charter-grounds">{g.note || NOTES.loading}</p> : null}
+      {coarseNote('charter-grounds')}
       {ais ? <>
         <p class="app-legend-note app-legend-sub">{a.drawn && chart ? <span class="app-swatch" data-layer="commercial-ais" aria-hidden="true"></span> : null}{layerEntry('commercial-ais').label}
           <Popover iconOnly summary="Commercial AIS basis">{layerEntry('commercial-ais').basis} {AIS_CREDIT}</Popover></p>
@@ -303,6 +311,19 @@ export function RankedRow() {
     <li class="app-legend-ranked">
       <span class="app-swatch" data-layer="trip-ranked" aria-hidden="true"></span>{entry.legend[0]?.label ?? entry.label}
       <Popover iconOnly summary="Ranked trip spots basis"><p>{entry.basis}</p></Popover>
+    </li>
+  );
+}
+
+/** The owner's saved spots (SC0922-04): a native checkbox, off at the start, with why it cannot be turned on or what it shows, and Try again after a failed read. */
+export function SavedSpotsRow() {
+  const status = savedSpotsStatus.value, entry = layerEntry('saved-spots');
+  return (
+    <li class="app-legend-saved-spots">
+      <label><input type="checkbox" style={{width: '24px', height: '24px'}} checked={savedSpotsOn.value} disabled={!status.canToggle} onChange={e => setSavedSpotsOn(e.currentTarget.checked)} /> {entry.label}</label>
+      <Popover iconOnly summary="Your saved spots basis"><p>{entry.basis}</p></Popover>
+      <p class="app-legend-note" data-reason="saved-spots" role="status">{status.text}</p>
+      {status.retry ? <Button variant="quiet" onClick={retrySavedSpots}>Try again</Button> : null}
     </li>
   );
 }
@@ -376,6 +397,7 @@ export function Legend() {
           : e.id === 'stations' ? <StationsRow key={e.id} />
           : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
         <RankedRow />
+        <SavedSpotsRow />
         <DensityRow />
         <DepthContoursRow />
         <MpaRow />

@@ -6,7 +6,10 @@
 // the same committed JSON (`regions/…` or `data/…`, GET, default caching)
 // share one request; each caller gets its own clone of the response. Live
 // feeds (/api/, /feeds/), other origins and reads asking for a fresh copy
-// (`cache: 'no-store' | 'no-cache' | 'reload'`) pass straight through. A
+// (`cache: 'no-store' | 'no-cache' | 'reload'`) pass straight through, as do
+// reads carrying any request header (Range, If-None-Match, Authorization…):
+// a header can change the representation, so such a read neither seeds nor
+// reuses the shared whole-file cache. A
 // failed or non-OK read is forgotten, so the next caller asks again. An OK
 // body is read whole before the share is kept: a body that breaks mid-transfer
 // fails that read like a transport failure and is forgotten too. A body that
@@ -21,10 +24,20 @@ const wrapped = new WeakMap<typeof fetch, typeof fetch>();
 
 const pageBase = (): string => (globalThis as {location?: {href?: string}}).location?.href ?? 'http://localhost/';
 
+/** True when `headers` holds any header entry (any name: it may change the representation) or cannot be inspected; the caller's headers are only read, never changed. */
+function hasHeaders(headers: HeadersInit | undefined): boolean {
+  if (headers == null) return false;
+  try {
+    for (const _entry of new Headers(headers)) return true;
+    return false;
+  } catch { return true; }
+}
+
 /** The cache key for a shareable read of `input`, or null when the read must go to the network itself. */
 export function sharedKey(input: RequestInfo | URL, init: RequestInit = {}, base: string = pageBase()): string | null {
   if (typeof input !== 'string' && !(input instanceof URL)) return null;
   if ((init.method ?? 'GET').toUpperCase() !== 'GET' || (init.cache && FRESH.has(init.cache)) || init.body != null) return null;
+  if (hasHeaders(init.headers)) return null;
   let url: URL, page: URL;
   try { url = new URL(input, base); page = new URL(base); } catch { return null; }
   return url.origin === page.origin && STATIC.test(url.pathname) && !url.search ? url.href : null;

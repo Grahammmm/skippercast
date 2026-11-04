@@ -393,7 +393,11 @@ export const SURFACE_SOURCE_SHA256 = {
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
   // SC2007-02 adds the shared quiet Button (Try again) to the Protected areas row; no text paint changed.
   // BF-sst-fronts adds a Temp fronts row using the existing app-legend-note text role; no backing, opacity or text paint changed.
-  "legendTsx": "87a45370539e60625d69c6d16d9ecf2b2c0d00055dd21823d7060ff483a759df"
+  // SC0922-04 adds the Your saved spots row (a native checkbox label and an app-legend-note status in the existing text roles, the shared quiet Button); no backing, opacity or text paint changed.
+  // SC0922-04 CI fix sizes only the saved-spots checkbox to 24px; declared text and backing paints are unchanged.
+  // SC0452-04 adds two coarse-drape notes (MPA and charter-grounds rows) that reuse the existing app-legend-note paint; no backing, opacity, token or threshold changed.
+  // Main-merge reconciliation: both additions retain existing text roles and paint; rebind the combined source only.
+  "legendTsx": "8a1d239f0c2d5fc1945877239ef05491e66036baff58276e884c4ae8c15ff62f"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
@@ -414,8 +418,8 @@ export function checkSurfaceSource(sources) {
         ['legend-labels', 'muted', glass, [glass[3], glass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'panel.css:858-868,2678-2684; bridge:21,27'],
         ['sheen-text', 'text', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,26'],
         ['sheen-muted', 'muted', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,27'],
-        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,176,216,230; Legend.tsx:349'],
-        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:176,197,245; Legend.tsx:88,219,349'],
+        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,176,216,230; Legend.tsx:356'],
+        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:176,197,245; Legend.tsx:88,225,356'],
       ]) {
         const foreground = resolve(role);
         results.push({theme, id, binding, foreground, surface,

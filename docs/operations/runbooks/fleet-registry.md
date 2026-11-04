@@ -135,7 +135,25 @@ The summary's `charter-identity coverage` block is `coverage-status`'s output fo
    PYTHONPATH=src python -m pytest research/tests/test_mendocino_camera_relevance.py
    ```
    It needs `pyshp` (in `requirements-survey.txt`). The script checks each archive's sha256 against the reviewed pair file and stops if either changed. In the diff only `region_sha256` and `reviewed_at` may change; anything else means the audit's result changed and needs its own review.
-3. Run the checks in [AGENTS.md](../../../AGENTS.md#before-opening-a-pr) and open the PR. `coverage-status` never writes `ready`: a registry MMSI is not an operator-confirmed identity.
+3. Run the checks in [AGENTS.md](../../../AGENTS.md#before-opening-a-pr) and open the PR. `coverage-status` never writes `ready`: a registry MMSI is not an operator-confirmed identity, and how many operator confirmations make a region `ready` is an owner decision, not something the command or a reviewer sets.
+
+## Recording an operator-confirmed identity (private)
+
+`coverage-status` counts confirmed identities in its reason text (`C operator-confirmed identities; ready threshold is an owner decision.`) and still never writes `ready`. The confirmations live in a private ledger on the box, never in the Worker registry (no D1 migration), never published and never committed: `<FLEET_VAR>/<REGION>/confirmations/<sink>.json`, written `0600` in a `0700` directory. There is one ledger per sink, so a staging confirmation never counts against the Worker registry. Use the same `SKIPPERCAST_FLEET_VAR` the `coverage-status` run uses.
+
+```bash
+python -m skippercast.fleet confirm add --region CA --sink staging --vessel-id <ID> --mmsi <9 digits> \
+  --method operator-statement --confirmed-on 2026-11-04 --evidence-ref <opaque-token>
+python -m skippercast.fleet confirm withdraw --region CA --sink staging --vessel-id <ID> --mmsi <9 digits> --withdrawn-on 2026-11-05
+python -m skippercast.fleet confirm list --region CA --sink staging
+```
+
+- `--method` is one of `operator-statement`, `uscg-documentation-matched-to-operator`, `cdfw-cpfv-licence-matched-to-operator`. Name similarity, AIS type or a home port are not methods.
+- `--evidence-ref` is an opaque token (1-128 of letters, digits, `_`, `-`) that points at evidence you keep elsewhere. Never put a name, contact, path or URL in it; the ledger only records that you say you confirmed it, it does not check the evidence.
+- `add` and `withdraw` read the sink's registry first (read-only) and refuse an MMSI the registry does not hold for that vessel. `--sink worker` reads the Worker's snapshot, so like `coverage-status --sink worker` it works only where the job's OIDC token exists.
+- Dates are `YYYY-MM-DD` and not in the future. An identical `add` or a repeated `withdraw` changes nothing; a different `add` for a standing confirmation is refused (withdraw it first). A withdrawn pair is re-confirmed with a later `add`, which replaces its entry: the ledger holds the current state, not a history.
+- If the registry's MMSI for a vessel changes, the entry is `stale`: it counts for nothing and `withdraw` refuses it too; the evidence is never silently reassigned to the new MMSI. Confirm the new pair separately.
+- `list` prints vessel id, MMSI, method, dates and `active`/`withdrawn`/`stale` only; evidence references are never printed. A corrupt or unreadable ledger stops `coverage-status` before anything is written; it is never read as zero.
 
 ## Known gaps
 

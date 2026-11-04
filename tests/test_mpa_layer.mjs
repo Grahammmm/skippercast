@@ -441,14 +441,14 @@ test('the legend row says what the drawing covers, links the official rules and 
   // The legend shows the row on the Chart, under the rail's layers, and names an unavailable load only in the row.
   state.value = {status: 'unavailable', note: notes.unavailable, detail: 'The boundary snapshot did not load.', checked: null, count: 0};
   const legend = render(h(Legend, {}));
-  assert.match(legend, /<ul><li class="app-legend-mpa" data-mpa="unavailable">/, 'no "No layers on." while the areas draw');
+  assert.match(legend, /<ul><li class="app-legend-saved-spots">(?:(?!<li)[^])*<\/li><li class="app-legend-mpa" data-mpa="unavailable">/, 'no "No layers on." while the areas draw: only the saved-spots row (SC0922-04) comes before the areas row');
   assert.match(legend, /Boundaries did not load, so none are drawn; an area without an outline may still be protected\./);
   assert.doesNotMatch(legend, /data-unavailable="mpas"/);
   // FE-82: in Terrain the areas drape too, so the row stays; the Chart's own failure does not speak for the drape.
   store.syncFromURL(`${PAGE}?region=morro-bay&layers=none&presentation=3d`);
   chartFailed.value = true;
   state.value = {status: 'complete', note: 'CDFW ds582 snapshot for this region, checked 2026-09-21.', detail: '', checked: '2026-09-21', count: 8};
-  assert.match(render(h(Legend, {})), /<ul><li class="app-legend-mpa" data-mpa="complete">/);
+  assert.match(render(h(Legend, {})), /<ul><li class="app-legend-saved-spots">(?:(?!<li)[^])*<\/li><li class="app-legend-mpa" data-mpa="complete">/);
   chartFailed.value = false;
 });
 

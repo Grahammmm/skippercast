@@ -32,11 +32,30 @@ spots.get('/api/spots/:id', async c => {
 });
 spots.post('/api/spots', async c => {
   const owner = c.var.owner, d = db(c.env), s = validateSpot(await body(c.req.raw, 4096 + NOTE_CHARS * 4));
-  const held = await d.prepare('SELECT COUNT(*) AS n FROM saved_spots WHERE owner=?').bind(owner).first<{n: number}>();
-  if ((held?.n ?? 0) >= MAX_SPOTS) throw new ClientError(`you can keep at most ${MAX_SPOTS} saved spots; remove one first`);
   const id = crypto.randomUUID(), created_at = new Date().toISOString();
-  await d.prepare('INSERT INTO saved_spots(id,owner,name,lat,lon,note,created_at) VALUES(?,?,?,?,?,?,?)').bind(id, owner, s.name, s.lat, s.lon, s.note, created_at).run();
+  // Capacity check and insert are one statement, so two saves at 99 cannot both pass a stale count.
+  const added = await d.prepare('INSERT INTO saved_spots(id,owner,name,lat,lon,note,created_at) SELECT ?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM saved_spots WHERE owner=?) < ?').bind(id, owner, s.name, s.lat, s.lon, s.note, created_at, owner, MAX_SPOTS).run();
+  if (!added.meta.changes) throw new ClientError(`you can keep at most ${MAX_SPOTS} saved spots; remove one first`);
   return json({id, owner, ...s, created_at}, 201);
+});
+// Rename or re-note a spot. Only these two columns can change: a new position is a new spot, because the
+// protected-area screen runs where a spot is shown or exported. Column names come from this list, never from the request.
+const EDITABLE = ['name', 'note'] as const;
+spots.patch('/api/spots/:id', async c => {
+  const owner = c.var.owner, d = db(c.env), id = c.req.param('id');
+  // Ownership first: an id that is missing and one owned by someone else answer alike, whatever the body holds.
+  const row = await d.prepare('SELECT lat,lon FROM saved_spots WHERE id=? AND owner=?').bind(id, owner).first<{lat: number; lon: number}>();
+  if (!row) return notFound();
+  const edit = await body(c.req.raw, 4096 + NOTE_CHARS * 4);
+  for (const key of ['lat', 'lon']) if (Object.hasOwn(edit, key)) throw new ClientError(`${key} cannot be changed; save a new spot for a different position`);
+  if (Object.keys(edit).some(key => !(EDITABLE as readonly string[]).includes(key))) throw new ClientError('only name and note can be changed');
+  const sent = EDITABLE.filter(key => Object.hasOwn(edit, key));
+  if (!sent.length) throw new ClientError('send name and/or note');
+  // Same checks as a save; the spot's own position stands in for the coordinates this request may not carry.
+  const s = validateSpot({name: edit.name, note: edit.note, lat: row.lat, lon: row.lon});
+  // Only the supplied columns are written, so a name edit and a note edit in flight together both survive.
+  const saved = await d.prepare(`UPDATE saved_spots SET ${sent.map(key => key + '=?').join(',')} WHERE id=? AND owner=? RETURNING *`).bind(...sent.map(key => s[key]), id, owner).first();
+  return saved ? json(saved) : notFound();
 });
 spots.delete('/api/spots/:id', async c => {
   const done = await db(c.env).prepare('DELETE FROM saved_spots WHERE id=? AND owner=?').bind(c.req.param('id'), c.var.owner).run();

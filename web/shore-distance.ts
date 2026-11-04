@@ -13,6 +13,11 @@ import {sharedFetch} from './shared-fetch.ts';
 /** The loaded lines ([lon, lat] each) for a region; null before or without them. */
 export const shoreLines = signal<{readonly region: string; readonly lines: readonly (readonly number[])[][] | null} | null>(null);
 
+// RF1330-1: a vertex is [lon, lat] with both finite and on the globe (lon -180..180, lat -90..90, inclusive).
+// A line with any other vertex is rejected whole (never trimmed or joined), so a malformed segment cannot pass
+// through the queried point and claim zero yards.
+const onGlobe = (p: unknown): boolean => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]) && Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90;
+
 /** The LineString and MultiLineString coordinates of a GeoJSON FeatureCollection. */
 export function linesOf(json: unknown): number[][][] {
   const features = (json as {features?: unknown} | null)?.features;
@@ -22,7 +27,7 @@ export function linesOf(json: unknown): number[][][] {
     if (g?.type === 'LineString' && Array.isArray(g.coordinates)) return [g.coordinates as number[][]];
     if (g?.type === 'MultiLineString' && Array.isArray(g.coordinates)) return g.coordinates as number[][][];
     return [];
-  }).filter(l => l.length > 1 && l.every(p => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])));
+  }).filter(l => Array.isArray(l) && l.length > 1 && l.every(onGlobe));
 }
 
 const YD_PER_DEG_LAT = 111_320 / 0.9144;

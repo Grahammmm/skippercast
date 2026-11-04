@@ -18,7 +18,7 @@ import {BASEMAP_MANIFEST, ENC_LAYER, basemapArchive, chartFailed, chartMark, cha
 import {readPalette} from '../web/map/palette.ts';
 import {mpaLayers, mpaMark, mpaQuery} from '../web/map/mpa.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from '../web/map/style.ts';
-import {camera, cameraParam, choosePresentation, createStage, drape, terrainFailed, terrainPick, zoomForSpan} from '../web/map/stage.ts';
+import {camera, cameraParam, choosePresentation, createStage, drape, terrainCoarsened, terrainFailed, terrainPick, zoomForSpan} from '../web/map/stage.ts';
 import {configureStore, region, setParams, syncFromURL} from '../web/state.ts';
 import {effect} from '@preact/signals';
 import {publishedChartFiles} from '../web/chart-files.ts';
@@ -31,17 +31,17 @@ const SENTINELS = new Set(Object.values(sentinel));
 // design.md § 9, "Draw order, bottom to top", as entry ids; the ENC chart base sits with the bases.
 const DESIGN_ORDER = ['basemap', 'aerial', 'chart', 'relief', 'water-temp', 'water-temp-contours', 'sst-contrast', 'sst-fronts', 'chlorophyll', 'swell', 'wind', 'depth-contours', 'mpas', 'habitat',
   'shore-runs', 'seafloor', 'charter-grounds', 'commercial-ais', 'fleet-heat', 'fleet-tracks', 'fleet-events', 'currents',
-  'clouds', 'reach', 'marks', 'selection', 'trip-ranked', 'stations', 'coastline'];
+  'clouds', 'reach', 'marks', 'selection', 'trip-ranked', 'saved-spots', 'stations', 'coastline'];
 
 test('the registry is in § 9 draw order and every entry declares its presentations, time and basis', () => {
   assert.deepEqual(LAYERS.map(e => e.id), DESIGN_ORDER);
   const design = readFileSync(new URL('../docs/plans/front-end/design.md', import.meta.url), 'utf8');
-  assert.match(design, /Draw order, bottom\s+to top: basemap, aerial, ENC chart, relief, water temperature field, contours,\s+temperature contrast cells, chlorophyll, swell field, wind arrows, depth contours, MPAs, habitat polygons,\s+shore runs,\s+seafloor candidates, charter\s+grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents\s+streamlines \(canvas\), clouds \(raster, above fields so the loop reads as\s+sky\), reach ring, marks, selection, ranked trip spots, station pins, coastline glow\./, 'the design states the order this test pins');
+  assert.match(design, /Draw order, bottom\s+to top: basemap, aerial, ENC chart, relief, water temperature field, contours,\s+temperature contrast cells, chlorophyll, swell field, wind arrows, depth contours, MPAs, habitat polygons,\s+shore runs,\s+seafloor candidates, charter\s+grounds, commercial AIS, fleet heat, fleet tracks, fleet events, currents\s+streamlines \(canvas\), clouds \(raster, above fields so the loop reads as\s+sky\), reach ring, marks, selection, ranked trip spots, private saved spots, station pins, coastline glow\./, 'the design states the order this test pins');
   for (const e of LAYERS) {
     assert.ok(e.presentations.length > 0 && e.presentations.every(p => p === 'chart' || p === 'terrain'), `${e.id} presentations`);
     assert.ok(e.time.length > 0 && e.time.every(t => ['static', 'hour', 'observed'].includes(t)), `${e.id} time`);
     assert.match(e.basis, /^[A-Z].+\.$/, `${e.id} basis is one sentence`);
-    assert.match(e.task, /^(FE|CI\d+)-\d+$/, `${e.id} names its dev-plan or roadmap task`);
+    assert.match(e.task, /^(FE|CI\d+|SC\d+)-\d+$/, `${e.id} names its dev-plan or roadmap task`);
   }
   assert.equal(new Set(LAYERS.map(e => e.id)).size, LAYERS.length, 'ids are unique');
   const owned = LAYERS.flatMap(e => e.sources);
@@ -306,9 +306,14 @@ const doc = () => ({hidden: false, addEventListener() {}, removeEventListener() 
 
 /** A fake terrain whose renderer reports a camera through onView and keeps the overlays it is given. */
 function terrain() {
-  const fake = {options: null, overlays: new Map(), sets: 0};
-  const handle = {load: async () => true, destroy() {},
-    setOverlay(id, overlay) { fake.sets++; fake.overlays.set(id, overlay); }, removeOverlay: id => fake.overlays.delete(id)};
+  // `coarse` names the ids the renderer drapes coarser, `refuse` the ids it throws on; `silent` makes every answer null (a destroyed handle).
+  const fake = {options: null, overlays: new Map(), sets: 0, coarse: new Set(), refuse: new Set(), silent: false, ready: true, destroys: 0};
+  const handle = {load: async () => fake.ready, destroy() { fake.destroys++; },
+    setOverlay(id, overlay) {
+      if (fake.refuse.has(id)) throw new Error('refused');
+      fake.sets++; fake.overlays.set(id, overlay);
+      return fake.silent ? null : {cell: 1, step: fake.coarse.has(id) ? 3 : 1, coarsened: fake.coarse.has(id)};
+    }, removeOverlay: id => fake.overlays.delete(id)};
   for (const name of ['setPerspective', 'setLocation', 'setSpecies', 'setHour', 'setDepthLimit', 'setCurrentLayer', 'selectHabitat', 'setVisible']) handle[name] = () => true;
   fake.module = {styles: [], mountCoast(_host, options) { fake.options = options; return handle; }};
   return fake;
@@ -673,7 +678,7 @@ test('FE-82: protected areas, reef marks and charter grounds drape on the terrai
 test('FE-82: the stage drapes each feed in § 9 order, replaces what changed, removes what went and survives a refusal', t => {
   const warn = t.mock.method(console, 'warn', () => {});
   const calls = [];
-  const h = {setOverlay: (id, o) => { calls.push(['set', id, o.order, o.features.length]); if (id === 'charter-grounds' && o.features.length > 1) throw new Error('too big'); },
+  const h = {setOverlay: (id, o) => { calls.push(['set', id, o.order, o.features.length]); if (id === 'charter-grounds' && o.features.length > 1) throw new Error('too big'); return {cell: 1, step: 1, coarsened: false}; },
     removeOverlay: id => { calls.push(['remove', id]); return true; }};
   const point = id => ({id, geometry: {type: 'Point', coordinates: [-120.9, 35.4]}});
   const marks = {features: [point('a')], pick: () => null}, mpas = {features: [point(0)], pick: () => null};
@@ -687,6 +692,116 @@ test('FE-82: the stage drapes each feed in § 9 order, replaces what changed, re
   assert.deepEqual(calls, [['remove', 'mpas'], ['set', 'charter-grounds', order('charter-grounds'), 2], ['set', 'marks', order('marks'), 1]]);
   assert.equal(warn.mock.callCount(), 1, 'the refusal is logged');
   assert.deepEqual([...draped.keys()], ['marks'], 'the refused overlay is not counted as draped');
+});
+
+// SC0452-04: the stage keeps which draped fills the renderer sampled coarser, for the Legend's note.
+const CAP = (c, id) => ({cell: 1, step: c.has(id) ? 3 : 1, coarsened: c.has(id)});
+const featureAt = id => ({id, geometry: {type: 'Point', coordinates: [-120.9, 35.4]}});
+const layerOf = (...ids) => ({features: ids.map(featureAt), pick: () => null});
+
+test('SC0452-04: drape keeps a coarsened flag while the same feed stays draped and clears it on removal, refusal, a null result and a finer replacement', t => {
+  t.mock.method(console, 'warn', () => {});
+  const coarse = new Set(['mpas', 'charter-grounds', 'marks']), sets = [], refuse = new Set();
+  let silent = false;
+  const h = {setOverlay: (id, o) => { if (refuse.has(id)) throw new Error('refused'); sets.push(id); return silent ? null : CAP(coarse, id); }, removeOverlay: () => true};
+  const flags = new Set();
+  const mpas = layerOf(0), grounds = layerOf('g'), marks = layerOf('m');
+  let draped = drape(h, {mpas, 'charter-grounds': grounds}, OVERLAY_PALETTE, new Map(), flags);
+  assert.deepEqual([...flags].sort(), ['charter-grounds', 'mpas'], 'each capped fill is flagged on its own');
+  sets.length = 0;
+  draped = drape(h, {mpas, 'charter-grounds': grounds}, OVERLAY_PALETTE, draped, flags);
+  assert.deepEqual([[...flags].sort(), sets], [['charter-grounds', 'mpas'], []], 'an unchanged feed keeps its flag without another set');
+  // A finer replacement clears only its own id.
+  coarse.delete('mpas');
+  draped = drape(h, {mpas: layerOf(0), 'charter-grounds': grounds}, OVERLAY_PALETTE, draped, flags);
+  assert.deepEqual([...flags], ['charter-grounds']);
+  // A coarse replacement under the same id flags it again; a refusal clears it and leaves the other fill draped.
+  coarse.add('mpas');
+  draped = drape(h, {mpas: layerOf(0), 'charter-grounds': grounds}, OVERLAY_PALETTE, draped, flags);
+  assert.deepEqual([...flags].sort(), ['charter-grounds', 'mpas']);
+  refuse.add('mpas');
+  draped = drape(h, {mpas: layerOf(0, 1), 'charter-grounds': grounds}, OVERLAY_PALETTE, draped, flags);
+  assert.deepEqual([[...flags], [...draped.keys()]], [['charter-grounds'], ['charter-grounds']]);
+  refuse.clear();
+  // A null result (the renderer is gone) clears the flag and the feed is not counted as draped, so a later pass retries it.
+  silent = true;
+  draped = drape(h, {mpas: layerOf(0, 1), 'charter-grounds': grounds}, OVERLAY_PALETTE, draped, flags);
+  assert.deepEqual([[...flags], [...draped.keys()]], [['charter-grounds'], ['charter-grounds']]);
+  silent = false; sets.length = 0;
+  draped = drape(h, {mpas: layerOf(0, 1), 'charter-grounds': grounds}, OVERLAY_PALETTE, draped, flags);
+  assert.deepEqual([sets, [...flags].sort()], [['mpas'], ['charter-grounds', 'mpas']], 'the retry sets only the feed that was not draped');
+  // Missing and empty feeds clear their flags.
+  draped = drape(h, {mpas: {features: [], pick: () => null}}, OVERLAY_PALETTE, draped, flags);
+  assert.deepEqual([...flags], [], 'an empty and a missing feed');
+  // Reef marks are points the renderer never reports coarser.
+  coarse.clear();
+  drape(h, {marks}, OVERLAY_PALETTE, new Map(), flags);
+  assert.deepEqual([...flags], []);
+  // Without an accumulator the old call shape still works.
+  assert.equal(drape(h, {marks}, OVERLAY_PALETTE).size, 1);
+});
+
+test('SC0452-04: the stage publishes the coarsened ids across 2D and 3D and clears them on removal, refusal, a null result and release', async t => {
+  t.mock.method(console, 'warn', () => {});
+  browser(`${PAGE}?region=morro-bay&presentation=3d`);
+  const {land, stage} = chartStage({overlayPalette: () => OVERLAY_PALETTE});
+  let destroyed = false;
+  t.after(() => { if (!destroyed) stage.destroy(); setTerrainLayer('mpas', null); setTerrainLayer('charter-grounds', null); });
+  land.coarse.add('mpas');
+  for (let i = 0; i < 8; i++) await tick();
+  assert.deepEqual(terrainCoarsened.value, ['mpas'], 'the capped checked areas');
+  setTerrainLayer('charter-grounds', layerOf('g1'));
+  assert.deepEqual(terrainCoarsened.value, ['mpas'], 'nominal grounds are not flagged');
+  land.coarse.add('charter-grounds');
+  setTerrainLayer('charter-grounds', layerOf('g2'));
+  assert.deepEqual(terrainCoarsened.value, ['mpas', 'charter-grounds'], 'in registry order');
+  // The same feeds stay draped across a presentation change: no resend, flags kept.
+  const sets = land.sets;
+  choosePresentation('2d'); await tick();
+  choosePresentation('3d'); await tick();
+  setParams({presentation: 'chart'}); await tick();
+  assert.deepEqual([land.sets, terrainCoarsened.value], [sets, ['mpas', 'charter-grounds']], 'Chart only hides the terrain; the flags wait');
+  setParams({presentation: '3d'}); await tick();
+  // A finer replacement clears only its id; reef marks are never flagged.
+  land.coarse.delete('charter-grounds');
+  setTerrainLayer('charter-grounds', layerOf('g3'));
+  assert.deepEqual(terrainCoarsened.value, ['mpas']);
+  // A refusal clears the flag and removes the old overlay; the other fill is untouched.
+  land.refuse.add('mpas');
+  setTerrainLayer('mpas', layerOf(1));
+  assert.deepEqual([terrainCoarsened.value, land.overlays.has('mpas')], [[], false], 'refused: no flag, and the old overlay is removed');
+  land.refuse.clear();
+  land.coarse.add('mpas');
+  setTerrainLayer('mpas', layerOf(2));
+  assert.deepEqual(terrainCoarsened.value, ['mpas']);
+  // The layer going away clears it.
+  setTerrainLayer('mpas', null);
+  assert.deepEqual(terrainCoarsened.value, []);
+  // A null result (a handle already destroyed) leaves no flag.
+  land.silent = true;
+  setTerrainLayer('mpas', layerOf(3));
+  assert.deepEqual(terrainCoarsened.value, []);
+  land.silent = false;
+  setTerrainLayer('mpas', layerOf(4));
+  assert.deepEqual(terrainCoarsened.value, ['mpas']);
+  // Releasing the handle clears everything, and a second destroy changes nothing.
+  stage.destroy(); destroyed = true;
+  assert.deepEqual(terrainCoarsened.value, []);
+  setTerrainLayer('mpas', layerOf(5));
+  stage.destroy();
+  assert.deepEqual(terrainCoarsened.value, [], 'a late feed cannot republish after destroy');
+});
+
+test('SC0452-04: a terrain that fails to load takes its coarsened flags with it', async t => {
+  t.mock.method(console, 'warn', () => {});
+  t.mock.method(console, 'error', () => {});
+  browser(`${PAGE}?region=morro-bay&presentation=3d`);
+  const {land, stage} = chartStage({overlayPalette: () => OVERLAY_PALETTE});
+  t.after(() => { stage.destroy(); terrainFailed.value = false; setTerrainLayer('mpas', null); });
+  land.coarse.add('mpas'); land.ready = false;
+  for (let i = 0; i < 8; i++) await tick();
+  assert.equal(terrainFailed.value, true);
+  assert.deepEqual(terrainCoarsened.value, [], 'the failed load released the handle');
 });
 
 test('FE-82: in Terrain the protected areas and reef marks drape without the Chart, and a pick selects what the Chart\'s would', async t => {

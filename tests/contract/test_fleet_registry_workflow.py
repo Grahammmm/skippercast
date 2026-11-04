@@ -99,6 +99,17 @@ class FleetRegistryRunbookTests(unittest.TestCase):
             self.assertIn(needle, self.text)
         self.assertNotRegex(self.text, r'gh workflow run fleet-registry\.yml[^\n`]*--ref', 'the workflow runs only from main')
 
+    def test_documents_the_private_confirmation_ledger_and_that_ready_is_the_owners_decision(self):
+        for needle in ('## Recording an operator-confirmed identity (private)', 'confirm add', 'confirm withdraw',
+                       'confirm list', 'confirmations/<sink>.json', 'operator-statement',
+                       'uscg-documentation-matched-to-operator', 'cdfw-cpfv-licence-matched-to-operator',
+                       'never published and never committed', 'ready threshold is an owner decision'):
+            self.assertIn(needle, self.text)
+        self.assertRegex(self.text, r'(?s)never writes `ready`.*?owner decision')
+        self.assertIn('stale', self.text)
+        from skippercast.fleet import coverage
+        self.assertIn('ready threshold is an owner decision', coverage.__doc__ or '')
+
     def test_notes_the_receipt_and_the_open_issues(self):
         self.assertIn('regions/fort-bragg-point-arena/region.json', self.text)
         self.assertIn('research/receipts/h11730-fort-bragg-regional-camera-support.json', self.text)

@@ -43,6 +43,7 @@ import {SAVE_WORDS, saveMarkSpot, spotCandidate, type SpotResult} from '../saved
 import {addPlaceToTrip, addToTrip, placeTripId, reviewPlace, reviewTrip, tripIds} from '../trip.ts';
 import {regulationsLink} from '../map/habitat.ts';
 import {drawnSpots} from '../map/ranked.ts';
+import {SAVED_CARD_PREFIX} from '../map/saved-spots.ts';
 import {mapFocusTarget} from './map-focus.ts';
 import {MarkForecast} from '../brief/MarkForecast.tsx';
 import type {LatLon} from '../brief/mark-forecast.ts';
@@ -172,6 +173,8 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
   const spot = selected === spotCard.value && !selected.withheld ? selection.value : selected.trip ?? null;
   const target = spot ? markData.value?.atlas?.targets.find(t => t.id === spot) as {canonical_habitat?: boolean} | undefined : undefined;
   const place = markPlace(selected);
+  // SC0922-04: a private saved-spot card (web/map/saved-spots.ts) offers no trip, GPX or save action: it has no position of its own to hand on.
+  const privateSaved = selected.id.startsWith(SAVED_CARD_PREFIX);
   // SCJ-1: a habitat card (the brief's recommended places) joins a trip, or opens it for GPX, as a user waypoint, and links its region's rules page.
   const habitat = selected.id.startsWith('habitat:'), survey = selected.id.startsWith('survey:'), at = selected.withheld ? undefined : selected.position;
   const where = (habitat || survey) && at && Number.isFinite(at.latitude) && Number.isFinite(at.longitude)
@@ -203,7 +206,7 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
       ) : null}
       <RulesLine mark={selected} />
       {place ? <MarkForecast place={place} /> : null}
-      <div class="app-mark-actions">
+      {privateSaved ? null : <div class="app-mark-actions">
         <Button size="sm" icon={added ? 'check' : 'plus'} disabled={!spot && !where} onClick={() => { if (spot) void addToTrip(spot); else if (where) void addPlaceToTrip(where); }}>
           {added ? 'Added to trip' : target && target.canonical_habitat !== true ? 'Save research reference' : 'Add to trip'}</Button>
         <Button size="sm" icon="download" disabled={!spot && !where} onClick={() => { if (spot) void reviewTrip(spot); else if (where) void reviewPlace(where); }}>{selected.trip ? 'Review & export' : 'GPX'}</Button>
@@ -214,7 +217,7 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
           </a>
         ) : <Button size="sm" icon="shield" disabled>Regulations</Button>}
         <SaveSpotAction mark={selected} />
-      </div>
+      </div>}
       {!selected.withheld && (survey && !where || /^(geology|charter|fleet):/.test(selected.id)) ? <p class="app-mark-why">{survey ? 'Pick this place on the map to export its position' : selected.id.startsWith('geology:') ? 'Geology unit: context for reading the map, not a place to fish' : 'Charter-reported grounds and AIS activity are not exported: they show apparent activity, not a verified place.'}</p> : null}
       {habitat && !selected.withheld && !where ? <p class="app-mark-why">This place has no saved position yet, so it cannot be added to a trip or exported.</p> : null}
       <div class="app-mark-basis">

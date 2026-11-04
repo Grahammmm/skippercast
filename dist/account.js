@@ -1,17 +1,30 @@
 // Account sheet: create a SkipperCast account or sign in with a passkey, add or
 // remove passkeys, sign out, delete the account. Opens from the Guide entry or
 // any #account link. Passkey ceremonies use the vendored @simplewebauthn/browser
-// (window.SimpleWebAuthnBrowser, loaded with SRI in app.html).
+// (globalThis.SimpleWebAuthnBrowser), which loadPasskeyLibrary() adds once, with SRI,
+// when a ceremony starts: app.html does not load it for map page views.
 const RETURN_KEY = 'skippercast-account-return';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[c]);
 const day = iso => iso ? new Date(iso).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'}) : '';
 
-async function api(path, {method = 'GET', body} = {}) {
+async function api(path, {method = 'GET', body, includeResponse = false} = {}) {
   const response = await fetch('/api/' + path, {method, headers: {'Content-Type': 'application/json'},
     body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(20000)});
   const data = await response.json().catch(() => ({}));
   if (!response.ok) { const error = Error(data.error || 'Could not complete this request.'); error.status = response.status; throw error; }
-  return data;
+  return includeResponse ? {data, response} : data;
+}
+
+/**
+ * One page of the owner's catch log (SC0922-03): the newest page when `cursor` is null, else the page after that cursor.
+ * The body stays {entries}; the server says whether older rows exist, and where they start, in two response headers.
+ * An answer without a usable entries list or without the has-more header is refused, never read as a finished list.
+ */
+export async function readLogPage(cursor = null) {
+  const {data, response} = await api(cursor ? 'catch-log?cursor=' + encodeURIComponent(cursor) : 'catch-log', {includeResponse: true});
+  const more = response.headers.get('X-SC-Catch-Log-Has-More'), next = response.headers.get('X-SC-Catch-Log-Next-Cursor');
+  if (!Array.isArray(data?.entries) || (more !== 'true' && more !== 'false') || (more === 'true') !== Boolean(next)) throw Error('The catch log answer was incomplete');
+  return {entries: data.entries, nextCursor: more === 'true' ? next : null, hasMore: more === 'true'};
 }
 
 /**
@@ -27,6 +40,7 @@ export function signInHref(signIn) {
 /** Plain-language message for a failed passkey ceremony. */
 export function passkeyMessage(error) {
   const name = error?.name, code = error?.code;
+  if (code === 'PASSKEY_LIBRARY_UNAVAILABLE') return PASSKEY_UNAVAILABLE;
   if (code === 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED' || name === 'InvalidStateError') return 'This device already has a passkey for this account.';
   if (name === 'NotAllowedError' || name === 'AbortError') return 'The passkey request was cancelled or timed out. Try again when ready.';
   if (name === 'SecurityError') return 'Passkeys are not available on this address.';
@@ -58,7 +72,51 @@ export function confirmInPage(anchor, message, confirmLabel) {
 }
 
 const webauthn = () => globalThis.SimpleWebAuthnBrowser;
-const supported = () => !!webauthn()?.browserSupportsWebAuthn?.();
+
+/** The vendored passkey library: same-origin absolute path (so /map and hash links resolve it alike), pinned by SRI to the bytes in scripts/web-vendor-sha256.json. */
+export const PASSKEY_LIBRARY = {src: '/vendor/simplewebauthn-browser-14.0.0/index.umd.min.js', integrity: 'sha256-KbsGmbRbw5o1DZkqE7/BpNQNiVMTkFgeH1fxFCxuIh0='};
+export const PASSKEY_UNAVAILABLE = 'Passkeys are unavailable right now. Try again when you are online.';
+const PASSKEY_LOAD_MS = 20000;
+const UNSUPPORTED = 'This browser does not support passkeys. Try an up-to-date Safari, Chrome, Edge or Firefox.';
+const isComplete = lib => ['browserSupportsWebAuthn', 'startAuthentication', 'startRegistration'].every(name => typeof lib?.[name] === 'function');
+
+let passkeyLoad = null;   // the one shared attempt: pending, or resolved once the library has loaded
+/**
+ * Resolves with the passkey library, adding its script the first time a ceremony needs it. Callers that overlap share one
+ * attempt; a loaded library is reused for the page's life. A script error (an SRI mismatch included), a missing or incomplete
+ * global, a refused insert or no answer in 20 s rejects with PASSKEY_UNAVAILABLE and clears only that attempt, so the next
+ * deliberate try loads afresh and a late event from the old attempt cannot settle it. The script has no crossorigin attribute:
+ * a same-origin request, never with credentials mode changed or another origin.
+ */
+export function loadPasskeyLibrary() {
+  if (isComplete(webauthn())) return Promise.resolve(webauthn());
+  if (passkeyLoad) return passkeyLoad.promise;
+  const attempt = {promise: null};
+  attempt.promise = new Promise((resolve, reject) => {
+    passkeyLoad = attempt;
+    let script = null, timer = null, settled = false;
+    const settle = ok => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      script?.removeEventListener('load', onLoad); script?.removeEventListener('error', onError);
+      if (ok) { resolve(webauthn()); return; }
+      try { script?.remove(); } catch { /* already gone */ }
+      if (passkeyLoad === attempt) passkeyLoad = null;
+      reject(Object.assign(Error(PASSKEY_UNAVAILABLE), {code: 'PASSKEY_LIBRARY_UNAVAILABLE'}));
+    };
+    const onLoad = () => settle(isComplete(webauthn()));
+    const onError = () => settle(false);
+    try {
+      script = document.createElement('script');
+      script.src = PASSKEY_LIBRARY.src; script.integrity = PASSKEY_LIBRARY.integrity;
+      script.addEventListener('load', onLoad); script.addEventListener('error', onError);
+      timer = setTimeout(() => settle(false), PASSKEY_LOAD_MS);
+      document.head.append(script);
+    } catch { settle(false); }
+  });
+  return attempt.promise;
+}
 
 function finish() {
   // Reload so trip alerts, feedback and AI lookup pick up the new session,
@@ -119,7 +177,9 @@ const logFormHTML = () => `<h2 class="account-subhead">Catch log</h2>
       <label for="log-note">Note</label><input id="log-note" type="text" maxlength="1000" />
       <div class="home-port-actions"><button type="submit" id="log-save">Save to my log</button></div>
     </form>
-    <ul class="account-passkeys" id="log-list"></ul>`;
+    <ul class="account-passkeys" id="log-list"></ul>
+    <p class="account-hint" id="log-status" role="status"></p>
+    <div class="home-port-actions"><button type="button" id="log-retry" hidden>Try again</button><button type="button" id="log-older" hidden>Show older entries</button></div>`;
 
 /** One saved spot as list HTML. Name, note and verdict are escaped, so markup in them shows as plain text. */
 export function spotItemHTML(spot, verdict) {
@@ -134,9 +194,8 @@ export function spotBody(f) {
   return {name: f.name ?? '', lat: num(f.lat), lon: num(f.lon), note: f.note || null};
 }
 
-// SC0022-04: one visible line, "Protected areas not checked for this spot: outside coverage or check unavailable. Not exported."; written as two
-// literals because scripts/check_copy.mjs reads each literal alone and flags two "not" sentences in a row (its baseline may not grow).
-const UNCHECKED_SPOT = 'Protected areas not checked for this spot: outside coverage or check unavailable.' + ' Not exported.';
+// SC0022-04: the reading for a spot the protected-area screen could not check.
+const UNCHECKED_SPOT = 'Protected areas not checked for this spot: outside coverage or check unavailable; not exported.';
 
 /** Each spot's reading from the shared screen (dist/geo-screen.js `screenPlace`, BF-closures-everywhere): excluded (boundary named), unavailable (not checked), or clear (no text). */
 export async function spotVerdicts(spots, screen) {
@@ -169,7 +228,7 @@ export async function exportSpots(spots, screen, region, now = new Date()) {
 }
 
 const spotFormHTML = () => `<h2 class="account-subhead">Saved spots</h2>
-    <p class="home-port-fine">Private to this account. A spot and its note are never shared, mapped, put in a feed or shown to anyone else. Spots inside a protected area are shown with that reading and left out of the GPX file.</p>
+    <p class="home-port-fine">Private to this account. You can show your saved spots on your own Chart. Spots and notes are never shared, put in a public feed or shown to anyone else. Private notes are never drawn on the map or included in GPX. Spots inside a protected area are shown with that reading and left out of the GPX file.</p>
     <form id="spot-form" autocomplete="off">
       <label for="spot-name">Name</label><input id="spot-name" type="text" maxlength="80" />
       <label for="spot-lat">Latitude</label><input id="spot-lat" type="number" step="any" required />
@@ -243,37 +302,59 @@ export async function openAccount() {
     body.innerHTML = signedOutHTML();
     const buttons = [$('#account-create'), $('#account-signin')];
     const busy = on => buttons.forEach(b => { b.disabled = on; });
-    if (!supported()) { busy(true); status('This browser does not support passkeys. Try an up-to-date Safari, Chrome, Edge or Firefox.'); return; }
+    // Without the native API there is nothing to load: say so now. Otherwise the library loads when a ceremony starts
+    // (a tap on Create or Sign in, or the optional autofill below), never because the dialog is merely open signed in.
+    if (typeof globalThis.PublicKeyCredential !== 'function') { busy(true); status(UNSUPPORTED); return; }
     // #597: once the person taps Create or Sign in, or this dialog is closed or replaced, a passkey-autofill request
-    // still waiting for its options must not start: its ceremony would abort theirs through the shared abort service.
+    // still waiting for the library, its support check or its options must not start: its ceremony would abort theirs
+    // through the shared abort service.
     let manual = false;
-    const signIn = async (autofill = false) => {
+    const stale = autofill => open !== self || (autofill && manual);
+    const signIn = async (lib, autofill = false) => {
       const options = await api('auth/login/options', {method: 'POST', body: {}});
-      if (autofill && (manual || open !== self)) return;
-      const response = await webauthn().startAuthentication({optionsJSON: options, useBrowserAutofill: autofill});
+      if (stale(autofill)) return;
+      const response = await lib.startAuthentication({optionsJSON: options, useBrowserAutofill: autofill});
+      if (open !== self) return;
       await api('auth/login/verify', {method: 'POST', body: {response}});
       status('Signed in.'); finish();
+    };
+    // The library, once it has loaded and this browser supports passkeys; null when the dialog was closed or replaced meanwhile
+    // (nothing is painted into it) or when the browser lacks passkeys (said, and the buttons stay off).
+    const ready = async () => {
+      const lib = await loadPasskeyLibrary();
+      if (open !== self) return null;
+      if (!lib.browserSupportsWebAuthn()) { status(UNSUPPORTED); return null; }
+      return lib;
     };
     $('#account-create').addEventListener('click', async () => {
       manual = true; busy(true); status('Follow your device to create a passkey…');
       try {
+        const lib = await ready(); if (!lib) return;
         const name = $('#account-name').value.trim();
         const options = await api('auth/register/options', {method: 'POST', body: {display_name: name}});
-        const response = await webauthn().startRegistration({optionsJSON: options});
+        if (open !== self) return;
+        const response = await lib.startRegistration({optionsJSON: options});
+        if (open !== self) return;
         await api('auth/register/verify', {method: 'POST', body: {response, display_name: name}});
         status('Account created.'); finish();
-      } catch (error) { status(passkeyMessage(error)); busy(false); }
+      } catch (error) { if (open === self) { status(passkeyMessage(error)); busy(false); } }
     });
     $('#account-signin').addEventListener('click', async () => {
       manual = true; busy(true); status('Choose your SkipperCast passkey…');
-      try { await signIn(false); } catch (error) { status(passkeyMessage(error)); busy(false); }
+      try { const lib = await ready(); if (lib) await signIn(lib, false); } catch (error) { if (open === self) { status(passkeyMessage(error)); busy(false); } }
     });
-    // Passkey autofill: suggestions appear in the name field where supported.
-    try {
-      // Only the server's answer is shown: the browser ends a pending autofill
-      // request (AbortError/NotAllowedError) whenever a button starts another.
-      if (await webauthn().browserSupportsWebAuthnAutofill()) signIn(true).catch(error => { if (open && error?.status) status(passkeyMessage(error)); });
-    } catch { /* optional */ }
+    // Passkey autofill: suggestions appear in the name field where supported. Optional, so a library that will not
+    // load stays silent here; only the server's answer is shown, because the browser ends a pending autofill request
+    // (AbortError/NotAllowedError) whenever a button starts another.
+    (async () => {
+      try {
+        const lib = await loadPasskeyLibrary();
+        if (stale(true)) return;
+        if (!await lib.browserSupportsWebAuthnAutofill()) return;
+        if (stale(true)) return;
+        await signIn(lib, true);
+      } catch (error) { if (open === self && error?.status) status(passkeyMessage(error)); }
+    })();
     $('#account-name').focus();
     return;
   }
@@ -282,13 +363,46 @@ export async function openAccount() {
     let passkeys = [];
     try { passkeys = (await api('auth/passkeys')).passkeys; } catch (error) { status(passkeyMessage(error)); }
     body.innerHTML = signedInHTML(session, passkeys);
-    const list = $('#log-list'), tripSelect = $('#log-trip');
+    const list = $('#log-list'), tripSelect = $('#log-trip'), older = $('#log-older'), retry = $('#log-retry'), logStatus = $('#log-status');
     // Saved trips (one read per render, independent of the log, passkeys and spots): they label the Trip choice and date the entries.
-    let trips = [], entries = null;
+    // SC0922-03: the log is read a page at a time. `entries` holds every page shown so far in server order, `nextCursor` where the
+    // next older page starts (null: none), and `generation` counts first-page reads so an older-page read that a refresh or a newly
+    // saved entry has overtaken is dropped. `gone` holds ids removed here, so a page read before a removal cannot bring one back.
+    let trips = [], entries = null, nextCursor = null, busy = false, generation = 0, loadFailed = false, gone = new Set();
     const live = () => open === self && list.isConnected;
-    const drawLog = () => { if (entries) list.innerHTML = entries.map(row => logItemHTML(row, trips)).join(''); };
+    const drawLog = () => {
+      if (entries) list.innerHTML = entries.map(row => logItemHTML(row, trips)).join('');
+      const keepFocus = document.activeElement === older && !(entries && nextCursor);
+      older.hidden = !(entries && nextCursor); older.textContent = busy ? 'Loading older entries…' : 'Show older entries';
+      older.setAttribute('aria-disabled', String(busy));   // not `disabled`: a disabled button drops keyboard focus mid-load
+      retry.hidden = !loadFailed;
+      if (keepFocus) { logStatus.tabIndex = -1; logStatus.focus(); }
+    };
     const showLog = async () => {
-      try { const data = await api('catch-log'); if (!live()) return; entries = data.entries; drawLog(); } catch (error) { if (live()) status(passkeyMessage(error)); }
+      const mine = ++generation; busy = false; gone = new Set();
+      try {
+        const page = await readLogPage();
+        if (!live() || mine !== generation) return;
+        entries = page.entries; nextCursor = page.nextCursor; loadFailed = false;
+        logStatus.textContent = entries.length || nextCursor ? '' : 'No entries yet.';
+      } catch {
+        if (!live() || mine !== generation) return;
+        loadFailed = true; logStatus.textContent = 'Could not load your catch log. Try again.';
+      }
+      drawLog();
+    };
+    const showOlder = async () => {
+      if (busy || !nextCursor || !live()) return;
+      const mine = generation, cursor = nextCursor;
+      busy = true; logStatus.textContent = ''; drawLog();
+      try {
+        const page = await readLogPage(cursor);
+        if (!live() || mine !== generation) return;
+        const seen = new Set(entries.map(row => row.id));
+        for (const row of page.entries) if (!seen.has(row?.id) && !gone.has(row?.id)) { seen.add(row?.id); entries.push(row); }
+        nextCursor = page.nextCursor;
+      } catch { if (live() && mine === generation) logStatus.textContent = 'Could not load older entries. Try again.'; }
+      finally { if (live() && mine === generation) { busy = false; drawLog(); } }
     };
     const loadTrips = async () => {
       try {
@@ -302,8 +416,16 @@ export async function openAccount() {
     };
     list.addEventListener('click', async event => {
       const b = event.target.closest('[data-remove-log]'); if (!b) return;
-      try { await api('catch-log/' + encodeURIComponent(b.dataset.removeLog), {method: 'DELETE', body: {}}); await showLog(); } catch (error) { status(passkeyMessage(error)); }
+      const id = b.dataset.removeLog;
+      try {
+        await api('catch-log/' + encodeURIComponent(id), {method: 'DELETE', body: {}});
+        // Only this row goes: older pages already shown and the cursor stay, and the cursor stays valid if it pointed at this row.
+        gone.add(id);
+        if (live() && entries) { entries = entries.filter(row => row.id !== id); if (!entries.length && !nextCursor) logStatus.textContent = 'No entries yet.'; drawLog(); }
+      } catch (error) { status(passkeyMessage(error)); }
     });
+    older.addEventListener('click', showOlder);
+    retry.addEventListener('click', showLog);
     $('#log-form').addEventListener('submit', async event => {
       event.preventDefault();
       const field = n => $('#log-' + n).value;
@@ -317,7 +439,7 @@ export async function openAccount() {
     let screenOnce = null;
     const spotScreen = () => screenOnce ??= import('./protected-areas.js').then(m => m.initProtectedAreas(null, () => {})).catch(() => null);
     let spotRows = [];
-    const spotList = $('#spot-list'), showSpots = async () => {
+    const spotList = $('#spot-list'), spotsChanged = () => { try { globalThis.dispatchEvent?.(new Event('skippercast:saved-spots-changed')); } catch { /* the Chart layer reads again on its next turn-on */ } }, showSpots = async () => {
       try {
         spotRows = (await api('spots')).spots;
         const verdicts = await spotVerdicts(spotRows, await spotScreen());
@@ -326,14 +448,14 @@ export async function openAccount() {
     };
     spotList.addEventListener('click', async event => {
       const b = event.target.closest('[data-remove-spot]'); if (!b) return;
-      try { await api('spots/' + encodeURIComponent(b.dataset.removeSpot), {method: 'DELETE', body: {}}); await showSpots(); } catch (error) { status(passkeyMessage(error)); }
+      try { await api('spots/' + encodeURIComponent(b.dataset.removeSpot), {method: 'DELETE', body: {}}); spotsChanged(); await showSpots(); } catch (error) { status(passkeyMessage(error)); }
     });
     $('#spot-form').addEventListener('submit', async event => {
       event.preventDefault();
       const field = n => $('#spot-' + n).value;
       try {
         await api('spots', {method: 'POST', body: spotBody({name: field('name'), lat: field('lat'), lon: field('lon'), note: field('note')})});
-        $('#spot-form').reset(); await showSpots(); status('Saved to your spots.');
+        $('#spot-form').reset(); spotsChanged(); await showSpots(); status('Saved to your spots.');
       } catch (error) { status(passkeyMessage(error)); }
     });
     $('#spot-export').addEventListener('click', async () => {
@@ -348,14 +470,18 @@ export async function openAccount() {
     });
     showSpots();
     $('#account-add').addEventListener('click', async () => {
-      if (!supported()) { status('This browser does not support passkeys.'); return; }
       status('Follow your device to add a passkey…');
       try {
+        const lib = await loadPasskeyLibrary();
+        if (open !== self) return;
+        if (!lib.browserSupportsWebAuthn()) { status('This browser does not support passkeys.'); return; }
         const options = await api('auth/passkeys/options', {method: 'POST', body: {}});
-        const response = await webauthn().startRegistration({optionsJSON: options});
+        if (open !== self) return;
+        const response = await lib.startRegistration({optionsJSON: options});
+        if (open !== self) return;
         await api('auth/passkeys', {method: 'POST', body: {response}});
         await render(); status('Passkey added.');
-      } catch (error) { status(passkeyMessage(error)); }
+      } catch (error) { if (open === self) status(passkeyMessage(error)); }
     });
     $('#account-signout').addEventListener('click', async () => {
       try { await api('auth/logout', {method: 'POST', body: {}}); finish(); } catch (error) { status(passkeyMessage(error)); }

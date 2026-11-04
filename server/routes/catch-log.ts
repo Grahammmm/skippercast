@@ -18,9 +18,17 @@ function text(v: unknown, name: string, max: number): string | null {
   if (typeof v !== 'string' || [...v].length > max) throw new ClientError(`${name} must be text of at most ${max} characters`);
   return v.trim() ? v : null;
 }
+/** The written calendar day must exist and the written hour must be 00-23: Date.parse alone rolls 02-30 into March and 24:00 into the next day. */
+function realWrittenTime(v: string): boolean {
+  const year = Number(v.slice(0, 4)), month = Number(v.slice(5, 7)), day = Number(v.slice(8, 10)), hour = Number(v.slice(11, 13));
+  // setUTCFullYear, not Date.UTC, so years 0000-0099 are not mapped to 1900-1999.
+  const scratch = new Date(0);
+  scratch.setUTCFullYear(year, month - 1, day);
+  return hour <= 23 && scratch.getUTCFullYear() === year && scratch.getUTCMonth() === month - 1 && scratch.getUTCDate() === day;
+}
 function when(v: unknown, name: string): string | null {
   if (v === undefined || v === null) return null;
-  if (typeof v !== 'string' || !ISO.test(v) || Number.isNaN(Date.parse(v))) throw new ClientError(`${name} must be an ISO date and time with a zone`);
+  if (typeof v !== 'string' || !ISO.test(v) || Number.isNaN(Date.parse(v)) || !realWrittenTime(v)) throw new ClientError(`${name} must be an ISO date and time with a zone`);
   return new Date(v).toISOString();
 }
 /** Both coordinates or neither. Finite numbers strictly inside the poles and the antimeridian; stored as entered. */
@@ -48,9 +56,40 @@ export function validateLogEntry(input: Record<string, unknown>) {
   return {trip_id, started_at, ended_at, method: text(input.method, 'method', 40), species: text(input.species, 'species', 60), outcome, count, lat: c?.lat ?? null, lon: c?.lon ?? null, note: text(input.note, 'note', NOTE_CHARS)};
 }
 
+// SC0922-03: a list page is the LIST_LIMIT newest rows; an optional `cursor` continues after the last row returned.
+// A cursor is a position (version, started_at, id), not a capability: the list query is always bound to the caller.
+const CURSOR_VERSION = 1, CURSOR_CHARS = 512, CANONICAL_TIME = /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/;
+const bad = () => new ClientError('invalid catch-log cursor');
+const b64url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+export const encodeLogCursor = (started_at: string, id: string): string => b64url(new TextEncoder().encode(JSON.stringify([CURSOR_VERSION, started_at, id])));
+export function decodeLogCursor(token: string): {started_at: string; id: string} {
+  if (!token || token.length > CURSOR_CHARS || !/^[A-Za-z0-9_-]+$/.test(token)) throw bad();
+  let parsed: unknown;
+  try {
+    const raw = atob(token.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - token.length % 4) % 4));
+    const bytes = Uint8Array.from(raw, ch => ch.charCodeAt(0));
+    if (b64url(bytes) !== token) throw bad();   // one spelling per position: no stray trailing bits
+    parsed = JSON.parse(new TextDecoder('utf-8', {fatal: true, ignoreBOM: false}).decode(bytes));
+  } catch { throw bad(); }
+  if (!Array.isArray(parsed) || parsed.length !== 3 || parsed[0] !== CURSOR_VERSION) throw bad();
+  const [, started_at, id] = parsed;
+  if (typeof started_at !== 'string' || !CANONICAL_TIME.test(started_at) || Number.isNaN(Date.parse(started_at)) || new Date(started_at).toISOString() !== started_at) throw bad();
+  if (typeof id !== 'string' || !id || id.length > 64 || /[\u0000-\u001f\u007f]/.test(id)) throw bad();
+  return {started_at, id};
+}
+
 catchLog.get('/api/catch-log', async c => {
-  const rows = (await db(c.env).prepare('SELECT * FROM catch_log WHERE owner=? ORDER BY started_at DESC, id LIMIT ?').bind(c.var.owner, LIST_LIMIT).all()).results;
-  return json({entries: rows});
+  const given = c.req.queries('cursor');
+  const after = given === undefined ? null : given.length === 1 ? decodeLogCursor(given[0]!) : (() => { throw bad(); })();
+  const where = after ? ' AND (started_at < ? OR (started_at = ? AND id > ?))' : '';
+  const args = after ? [c.var.owner, after.started_at, after.started_at, after.id, LIST_LIMIT + 1] : [c.var.owner, LIST_LIMIT + 1];
+  const found = (await db(c.env).prepare(`SELECT * FROM catch_log WHERE owner=?${where} ORDER BY started_at DESC, id ASC LIMIT ?`).bind(...args).all()).results as {started_at: string; id: string}[];
+  const rows = found.slice(0, LIST_LIMIT), more = found.length > LIST_LIMIT;
+  // The body stays {entries}; the page position travels in headers so a caller that sends no cursor sees today's JSON.
+  const res = json({entries: rows});
+  res.headers.set('X-SC-Catch-Log-Has-More', more ? 'true' : 'false');
+  if (more) { const last = rows[rows.length - 1]!; res.headers.set('X-SC-Catch-Log-Next-Cursor', encodeLogCursor(last.started_at, last.id)); }
+  return res;
 });
 // Another account's id answers exactly what an id that never existed answers.
 catchLog.get('/api/catch-log/:id', async c => {
@@ -64,6 +103,23 @@ catchLog.post('/api/catch-log', async c => {
   await d.prepare('INSERT INTO catch_log(id,owner,trip_id,started_at,ended_at,method,species,outcome,count,lat,lon,note,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)')
     .bind(id, owner, e.trip_id, e.started_at, e.ended_at, e.method, e.species, e.outcome, e.count, e.lat, e.lon, e.note, created_at).run();
   return json({id, owner, ...e, created_at}, 201);
+});
+// SC1137-10: PATCH merges the named fields into the stored entry and validates the whole result once. Omitted fields keep their
+// stored value; an optional field is cleared with null (or blank text), ended_at only with null, lat/lon only as a pair. id, owner
+// and created_at are never writable. A missing or foreign id answers 404 before the body is read, as GET and DELETE do.
+const MUTABLE = ['trip_id', 'started_at', 'ended_at', 'method', 'species', 'outcome', 'count', 'lat', 'lon', 'note'] as const;
+catchLog.patch('/api/catch-log/:id', async c => {
+  const owner = c.var.owner, d = db(c.env), id = c.req.param('id');
+  const stored = await d.prepare('SELECT * FROM catch_log WHERE id=? AND owner=?').bind(id, owner).first<Record<string, unknown>>();
+  if (!stored) return notFound();
+  const patch = await body(c.req.raw, 4096 + NOTE_CHARS * 4), named = Object.keys(patch);
+  if (named.some(k => !(MUTABLE as readonly string[]).includes(k))) throw new ClientError(`only ${MUTABLE.join(', ')} can be changed`);
+  if (('lat' in patch || 'lon' in patch) && !('lat' in patch && 'lon' in patch)) throw new ClientError('coordinates_incomplete: send latitude and longitude together or neither');
+  const e = validateLogEntry({...Object.fromEntries(MUTABLE.map(k => [k, stored[k]])), ...patch});
+  if (e.trip_id && !await d.prepare('SELECT 1 AS ok FROM trips WHERE id=? AND owner=?').bind(e.trip_id, owner).first()) return notFound();
+  const row = await d.prepare('UPDATE catch_log SET trip_id=?,started_at=?,ended_at=?,method=?,species=?,outcome=?,count=?,lat=?,lon=?,note=? WHERE id=? AND owner=? RETURNING *')
+    .bind(e.trip_id, e.started_at, e.ended_at, e.method, e.species, e.outcome, e.count, e.lat, e.lon, e.note, id, owner).first();
+  return row ? json(row) : notFound();
 });
 catchLog.delete('/api/catch-log/:id', async c => {
   const done = await db(c.env).prepare('DELETE FROM catch_log WHERE id=? AND owner=?').bind(c.req.param('id'), c.var.owner).run();

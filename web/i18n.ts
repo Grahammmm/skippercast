@@ -84,23 +84,68 @@ export interface LanguageEnv {
   /** navigator.languages: the browser's Accept-Language list, most preferred first. */
   languages?: readonly string[];
   doc?: {documentElement: {lang: string}} | null;
+  /** location.href: setLanguage rewrites a `lang` parameter already in it, and only that. */
+  href?: string;
+  history?: Pick<History, 'state' | 'replaceState'> | null;
 }
 
+/** `read()`, or `fallback` when it throws: a blocked browser API can throw from the global's getter itself. */
+function safely<T>(read: () => T, fallback: T): T {
+  try { return read() ?? fallback; } catch { return fallback; }
+}
+
+// Everything is read inside a try, and nothing at import: Node tests and server rendering import this file with no window.
 const browser = (): LanguageEnv => ({
-  search: globalThis.location?.search, storage: globalThis.localStorage ?? null,
-  languages: globalThis.navigator?.languages, doc: globalThis.document ?? null,
+  search: safely(() => globalThis.location?.search, ''), href: safely(() => globalThis.location?.href, undefined),
+  storage: safely(() => globalThis.localStorage, null), history: safely(() => globalThis.history, null),
+  languages: safely(() => globalThis.navigator?.languages, undefined), doc: safely(() => globalThis.document, null),
 });
 
 /** Resolve the language from ?lang=, the stored preference, then the browser's Accept-Language, and apply it (signal and document lang). */
 export function initLanguage(env: LanguageEnv = browser()): Language {
   let preference: string | null = null;
-  try {
-    const linked = supported(new URLSearchParams(env.search ?? '').get('lang'));
-    if (linked) { preference = linked; env.storage?.setItem(LANGUAGE_KEY, linked); }
-    else preference = env.storage?.getItem(LANGUAGE_KEY) ?? null;
-  } catch { /* storage blocked: no preference */ }
+  const linked = supported(new URLSearchParams(env.search ?? '').get('lang'));
+  if (linked) {
+    preference = linked;   // decided before the write: a link still wins when storage refuses it
+    try { env.storage?.setItem(LANGUAGE_KEY, linked); } catch { /* storage blocked: the link holds for this visit */ }
+  } else {
+    try { preference = env.storage?.getItem(LANGUAGE_KEY) ?? null; } catch { /* storage blocked: no preference */ }
+  }
   const lang = resolveLanguage(preference, env.languages?.join(',') ?? null);
   language.value = lang;
   if (env.doc) env.doc.documentElement.lang = lang;
   return lang;
+}
+
+/** `href` with the value of every `lang` parameter set to `lang`; null when it has none. Other parameters and the hash are kept byte for byte. */
+export function withLanguageParam(href: string, lang: Language): string | null {
+  const url = new URL(href, 'https://x.invalid/');
+  let found = false;
+  const query = url.search.slice(1).split('&').map(part => {
+    const name = part.split('=')[0] ?? '';
+    const key = safely(() => decodeURIComponent(name.replace(/\+/g, ' ')), name);
+    if (key !== 'lang') return part;
+    found = true;
+    return `lang=${lang}`;
+  }).join('&');
+  return found ? `${url.pathname}?${query}${url.hash}` : null;
+}
+
+/**
+ * A deliberate choice (the app menu): the signal and the document lang change now, whatever else fails;
+ * the choice is then stored under LANGUAGE_KEY. When the address already carries `?lang=`, only that value is
+ * replaced in place, so a reload does not read the old link over the new choice (no navigation, no new history entry).
+ * Limit: with storage AND history both refusing, the choice lasts the visit and a reload reads the browser again.
+ */
+export function setLanguage(lang: Language, env: LanguageEnv = browser()): Language {
+  const chosen = supported(lang);
+  if (!chosen) return language.peek();
+  language.value = chosen;
+  if (env.doc) env.doc.documentElement.lang = chosen;
+  try { env.storage?.setItem(LANGUAGE_KEY, chosen); } catch { /* storage blocked: the choice holds for this visit */ }
+  try {
+    const next = env.href && env.history ? withLanguageParam(env.href, chosen) : null;
+    if (next !== null && env.history) env.history.replaceState(env.history.state, '', next);
+  } catch { /* address not rewritable: the choice holds for this visit */ }
+  return chosen;
 }

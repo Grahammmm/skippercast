@@ -349,3 +349,114 @@ test('landing: choosing Boat navigates at once asking the map for the boat; othe
     assert.equal(storage.getItem(m.BOAT_KEY), null, `${p}: the landing saves no boat`);
   }
 });
+
+// RF1100-15: a failed read of the saved boat is not an empty store. Synthetic storage only, no network.
+const FULL = {schema_version: 1, boat: {name: 'Ruby', loa_ft: 23, beam_ft: 8.5, hull: 'modified-v', layout: 'center-console', displacement_lb: 4000},
+  query: 'Parker 2320', preset: 'p', saved_at: '2026-01-01T00:00:00Z', lookup: {source: 'x'}};
+/** A memory store whose getItem throws for `failKey` while `failing.on`; every setItem/removeItem is recorded. */
+function flaky(initial, failKey, failing = {on: true}) {
+  const s = memory(initial);
+  s.writes = [];
+  const get = s.getItem;
+  s.getItem = k => { if (failing.on && k === failKey) throw new Error('read denied'); return get(k); };
+  const set = s.setItem;
+  s.setItem = (k, v) => { s.writes.push(k); set(k, v); };
+  s.removeItem = k => { s.writes.push(k); s.map.delete(k); };
+  return s;
+}
+
+test('boat_read_failure_preserves_existing_profile', async () => {
+  const bytes = JSON.stringify(FULL);
+  const {m} = await fresh();
+  const boatStore = flaky({'skippercast-boat-v1': bytes}, 'skippercast-boat-v1');
+  const before = m.boatSaved.value;
+  const result = m.saveFirstUse({lengthFt: '25', profile: 'boat'}, boatStore);
+  assert.ok(util.isDeepStrictEqual(result, {boat: false, notices: [m.ENTRY_COPY.failed]}), JSON.stringify(result));
+  assert.equal(m.ENTRY_COPY.failed, 'Could not save the boat in this browser.');
+  assert.equal(boatStore.writes.length, 0, 'no write or removal');
+  assert.equal(boatStore.map.get('skippercast-boat-v1'), bytes, 'original backing bytes');
+  assert.equal(m.boatSaved.value, before, 'no re-rating signal');
+});
+
+test('boat_read_failure_retry_keeps_profile', async () => {
+  const bytes = JSON.stringify(FULL);
+  const {m} = await fresh();
+  const failing = {on: true};
+  const boatStore = flaky({'skippercast-boat-v1': bytes}, 'skippercast-boat-v1', failing);
+  const before = m.boatSaved.value;
+  const first = m.saveFirstUse({lengthFt: '25', profile: 'boat'}, boatStore);
+  assert.equal(first.boat, false);
+  assert.equal(boatStore.map.get('skippercast-boat-v1'), bytes);
+  assert.equal(m.boatSaved.value, before);
+  failing.on = false;
+  const second = m.saveFirstUse({lengthFt: '25', profile: 'boat'}, boatStore);
+  assert.ok(util.isDeepStrictEqual(second, {boat: true, notices: []}), JSON.stringify(second));
+  assert.equal(boatStore.writes.length, 1, 'one write on the retry');
+  assert.equal(m.boatSaved.value, before + 1, 'signal once');
+  const saved = JSON.parse(boatStore.map.get('skippercast-boat-v1'));
+  // 'Ruby' is a custom name, so it stays; everything else but the length is untouched.
+  assert.ok(util.isDeepStrictEqual(saved, {...FULL, boat: {...FULL.boat, loa_ft: 25}}), JSON.stringify(saved));
+});
+
+test('boat_read_failure_does_not_skip_limits', async () => {
+  const bytes = JSON.stringify(FULL);
+  const limits = '{"boat":{"wind":12,"gust":18,"seas":4},"kayak":{"wind":9}}';
+  const {m, storage} = await fresh({'skippercast-limits-v1': limits});
+  const boatStore = flaky({'skippercast-boat-v1': bytes}, 'skippercast-boat-v1');
+  const before = m.boatSaved.value;
+  const result = m.saveFirstUse({lengthFt: '25', wind: '10', profile: 'boat'}, boatStore);
+  assert.ok(util.isDeepStrictEqual(result, {boat: false, notices: [m.ENTRY_COPY.failed]}), JSON.stringify(result));
+  const saved = JSON.parse(storage.getItem(m.STORAGE_KEYS.limits));
+  assert.equal(saved.boat.wind, 10, 'typed wind saved for the selected profile');
+  assert.equal(saved.boat.seas, 4, 'untouched seas kept');
+  assert.equal(saved.kayak.wind, 9, 'other profile kept');
+  assert.equal(boatStore.map.get('skippercast-boat-v1'), bytes);
+  assert.equal(boatStore.writes.length, 0);
+  assert.equal(m.boatSaved.value, before);
+  // Both paths failing: still returns, one failure notice.
+  const both = flaky({'skippercast-boat-v1': bytes}, 'skippercast-boat-v1');
+  m.configureStore({storage: broken()});
+  const twice = m.saveFirstUse({lengthFt: '25', wind: '10', profile: 'boat'}, both);
+  assert.ok(util.isDeepStrictEqual(twice, {boat: false, notices: [m.ENTRY_COPY.failed]}), JSON.stringify(twice));
+  assert.equal(both.writes.length, 0);
+});
+
+test('boat_invalid_or_blank_length_never_reads_storage', async () => {
+  const {m} = await fresh();
+  const before = m.boatSaved.value;
+  for (const bad of ['', '   ', '7', '71', 'abc']) {
+    let reads = 0;
+    const boatStore = flaky({'skippercast-boat-v1': JSON.stringify(FULL)}, 'skippercast-boat-v1');
+    const get = boatStore.getItem;
+    boatStore.getItem = k => { reads++; return get(k); };
+    const result = m.saveFirstUse({lengthFt: bad, profile: 'boat'}, boatStore);
+    assert.ok(util.isDeepStrictEqual(result, {boat: false, notices: []}), `${JSON.stringify(bad)}: ${JSON.stringify(result)}`);
+    assert.equal(reads, 0, `${JSON.stringify(bad)}: no read`);
+    assert.equal(boatStore.writes.length, 0, `${JSON.stringify(bad)}: no write`);
+  }
+  assert.equal(m.boatSaved.value, before);
+  // Boundaries and a decimal still save (controls).
+  for (const ok of ['8', '70', '19.5']) {
+    const boatStore = memory();
+    assert.equal(m.saveFirstUse({lengthFt: ok, profile: 'boat'}, boatStore).boat, true, ok);
+    assert.equal(JSON.parse(boatStore.getItem(m.BOAT_KEY)).boat.loa_ft, Number(ok));
+  }
+});
+
+test('boat_unreadable_json_is_not_a_read_failure', async () => {
+  const {m} = await fresh();
+  for (const stored of ['{not json', '', 'null', JSON.stringify({schema_version: 2, boat: {name: 'Old', loa_ft: 30}})]) {
+    const boatStore = flaky(stored === '' ? {} : {'skippercast-boat-v1': stored}, 'never');
+    const before = m.boatSaved.value;
+    const result = m.saveFirstUse({lengthFt: '20', profile: 'boat'}, boatStore);
+    assert.ok(util.isDeepStrictEqual(result, {boat: true, notices: []}), `${stored}: ${JSON.stringify(result)}`);
+    const saved = JSON.parse(boatStore.map.get('skippercast-boat-v1'));
+    assert.equal(saved.schema_version, 1); assert.equal(saved.boat.name, '20 ft boat'); assert.equal(saved.boat.loa_ft, 20);
+    assert.equal(saved.query, ''); assert.equal(saved.preset, null); assert.equal(saved.lookup, null);
+    assert.equal(m.boatSaved.value, before + 1, `${stored}: one signal`);
+  }
+  // A valid envelope still changes only length and an auto name.
+  const boatStore = flaky({'skippercast-boat-v1': JSON.stringify({...FULL, boat: {...FULL.boat, name: '23 ft boat'}})}, 'never');
+  m.saveFirstUse({lengthFt: '25', profile: 'boat'}, boatStore);
+  assert.ok(util.isDeepStrictEqual(JSON.parse(boatStore.map.get('skippercast-boat-v1')), {...FULL, boat: {...FULL.boat, loa_ft: 25, name: '25 ft boat'}}));
+});

@@ -88,13 +88,23 @@ def check_page_references(path):
 
 
 def sri_digest(integrity, data):
-    """True when one of the SRI tokens (sha256/384/512, base64) matches data."""
+    """True when an SRI token of the strongest algorithm present matches data.
+
+    Like a browser, only tokens of the strongest supported algorithm
+    (sha512 > sha384 > sha256) are compared; a weaker match never rescues a
+    stronger mismatch, and any one of several equal-strength tokens suffices.
+    """
+    strength = ("sha256", "sha384", "sha512")
+    candidates = []
     for token in integrity.split():
         algorithm, _, value = token.partition("-")
-        if algorithm in {"sha256", "sha384", "sha512"} and value:
-            if base64.b64encode(hashlib.new(algorithm, data).digest()).decode() == value:
-                return True
-    return False
+        if algorithm in strength and value:
+            candidates.append((algorithm, value))
+    if not candidates:
+        return False
+    strongest = max((algorithm for algorithm, _ in candidates), key=strength.index)
+    expected = base64.b64encode(hashlib.new(strongest, data).digest()).decode()
+    return any(algorithm == strongest and value == expected for algorithm, value in candidates)
 
 
 def check_vendor_integrity(pinned):

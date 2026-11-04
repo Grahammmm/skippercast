@@ -6,6 +6,7 @@ import {execFileSync, spawnSync} from 'node:child_process';
 import {mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import util from 'node:util';
 import {
   BASELINE, compare, formatBaseline, grown, htmlUnits, lint, lintFile, literals, readBaseline, sentences, tally, unitFindings,
 } from '../scripts/check_copy.mjs';
@@ -163,4 +164,151 @@ test('the baseline only shrinks: new findings fail, fixes must be removed, --upd
   } finally {
     rmSync(root, {recursive: true, force: true});
   }
+});
+
+// SC0707-03: the two "not checked for this spot" lines are each ONE literal that the unchanged lint can read whole.
+// The expected lines are written here independently of the product constants.
+const UNCHECKED = [
+  {file: 'dist/account.js', line: 'Protected areas not checked for this spot: outside coverage or check unavailable; not exported.', old: 'Protected areas not checked for this spot: outside coverage or check unavailable. Not exported.'},
+  {file: 'web/saved-spots.ts', line: 'Protected areas not checked for this spot: outside coverage or check unavailable; not saved.', old: 'Protected areas not checked for this spot. Not saved.'},
+];
+
+test('unchecked_copy_is_one_complete_linted_literal', () => {
+  for (const {file, line} of UNCHECKED) {
+    const source = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
+    // Each caveat: not checked, why, and the refused action.
+    for (const part of ['not checked for this spot', 'outside coverage', 'check unavailable']) assert.ok(line.includes(part), `${file}: ${part}`);
+    assert.ok(/not (?:exported|saved)\.$/.test(line), `${file}: the refused action closes the line`);
+    // Exactly one literal holds the whole line, and no other literal carries a half of it.
+    assert.equal(literals(source).filter(l => l.value === line).length, 1, `${file}: the whole line is one literal`);
+    assert.equal(literals(source).filter(l => l.value.includes('not checked for this spot')).length, 1, `${file}: no split half`);
+    // That literal stands alone: not joined to another by + and not built at runtime.
+    const quoted = `'${line}'`;
+    const at = source.indexOf(quoted);
+    assert.ok(at >= 0 && source.indexOf(quoted, at + 1) < 0, `${file}: the quoted line occurs once`);
+    assert.match(source.slice(Math.max(0, at - 3), at), /[:=]\s*$/, `${file}: not concatenated before`);
+    assert.match(source.slice(at + quoted.length, at + quoted.length + 3), /^\s*[,;]/, `${file}: not concatenated after`);
+    assert.doesNotMatch(source, /lint[^\n]*two literals|two literals[^\n]*lint|reads each literal alone/i, `${file}: no lint-evasion comment`);
+    // The unchanged lint reads it whole and finds nothing.
+    assert.deepEqual(unitFindings(line), []);
+    assert.deepEqual(lintFile(file, source), []);
+  }
+});
+
+test('the old joined unchecked sentences still read as consecutive-not', () => {
+  for (const {old} of UNCHECKED) assert.deepEqual(rules(unitFindings(old)), ['consecutive-not'], old);
+  // A semicolon keeps one sentence only when it really is one: a stray full stop brings the finding back.
+  assert.deepEqual(rules(unitFindings('Protected areas not checked for this spot: outside coverage or check unavailable. Not saved.')), ['consecutive-not']);
+});
+
+// SC0452-11: seven caveats that the baseline once excused are now plain copy, and the baseline keeps only the five
+// method-name entries (published model, survey and datum labels in source lines).
+const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+const SEVEN = [
+  {file: 'dist/bite-evidence.js',
+    old: 'A regulation-page check detects access and changes, not permission to fish. Harbor information is not live entrance clearance.',
+    now: 'A regulation-page check detects access and changes, not permission to fish. Harbor information provides no live entrance clearance.'},
+  {file: 'dist/charter-grounds.js',
+    old: 'Captains named “${esc(g.reported_ground)}”; they did not publish GPS positions or fishing depths. Purple shows our approximate search water, not a boat track or a confirmed reef.',
+    now: 'Captains named “${esc(g.reported_ground)}” without publishing GPS positions or fishing depths. Purple shows our approximate search water, not a boat track or a confirmed reef.'},
+  {file: 'dist/commercial-ais.html',
+    old: 'AIS does not cover every boat; detection and classification errors remain possible.',
+    now: 'AIS coverage omits some boats; detection and classification errors remain possible.'},
+  {file: 'dist/species-research.html',
+    old: 'Essential habitat is not a hotspot. The app does not assign a tuna school to a management polygon.',
+    now: 'Essential habitat is not a hotspot. The app assigns no tuna school to a management polygon.'},
+  {file: 'dist/species-research.html',
+    old: 'It is presented as dated context, not mapped as a present hotspot. Named features such as White Rocks must not be confused with a similarly named reef near Cayucos.',
+    now: 'It is presented as dated context, not mapped as a present hotspot. Keep named features such as White Rocks distinct from a similarly named reef near Cayucos.'},
+  {file: 'dist/species-research.html',
+    old: 'They are not a local adult-Chinook catch-temperature model. Freshwater spawning or egg-survival temperatures are not used as ocean-fishing targets.',
+    now: 'They are not a local adult-Chinook catch-temperature model. Freshwater spawning or egg-survival temperatures are excluded as ocean-fishing targets.'},
+  {file: 'dist/trip-export.js',
+    old: 'This file does not update offline. The planned date is a label, not a future clearance.',
+    now: 'This file stays unchanged offline. The planned date is a label, not a future clearance.'},
+];
+const METHOD_LABELS = [
+  {file: 'dist/charter-grounds.js', rule: 'method-name', text: 'Outline survey depths X ft X · MLLW'},
+  {file: 'dist/forecast.js', rule: 'method-name', text: 'NOAA GFS Wave 0.16°'},
+  {file: 'dist/live-conditions.js', rule: 'method-name', text: 'X ft MLLW'},
+  {file: 'dist/tomorrow.js', rule: 'method-name', text: 'GFS and ECMWF agree'},
+  {file: 'dist/tomorrow.js', rule: 'method-name', text: 'GFS and ECMWF disagree'},
+];
+const notRule = findings => findings.filter(f => f.rule === 'consecutive-not');
+// Entities and the escape boundary are the source's own; the lint sees the same text the person reads.
+const plain = html => html.replace(/&#x27;/g, "'").replace(/&amp;/g, '&');
+
+test('seven_caveats_are_present_and_lint_clean: each new span is in its file, the old one is gone, and the files lint clean', () => {
+  for (const {file, old, now} of SEVEN) {
+    const source = read(file);
+    assert.ok(source.includes(now), `${file} says: ${now}`);
+    assert.ok(!source.includes(old), `${file} no longer says: ${old}`);
+    assert.deepEqual(notRule(lintFile(file, source)), [], `${file} has no consecutive-not finding`);
+    // Positive control: restoring the old wording in that file is a finding again.
+    assert.equal(notRule(lintFile(file, source.replace(now, old))).length, 1, `${file} with the old wording is flagged`);
+  }
+  assert.deepEqual(rules(unitFindings(SEVEN[6].old)), ['consecutive-not']);
+  assert.deepEqual(rules(unitFindings(SEVEN[6].now)), []);
+});
+
+test('baseline_keeps_five_method_labels_exactly: only the five method-name entries remain, unchanged', () => {
+  const entries = JSON.parse(read(BASELINE)).entries;
+  assert.equal(entries.length, 5);
+  assert.ok(util.isDeepStrictEqual(entries, METHOD_LABELS), 'the baseline is exactly the five original method-name entries');
+  assert.ok(entries.every(e => e.rule === 'method-name'));
+});
+
+test('offline_notes_keep_date_and_clearance_limits: static offline statement, date label, four checks, chart and sounder', async () => {
+  const {offlineNotes} = await import('../dist/trip-export.js');
+  const result = {created_at: '2026-09-22T18:00:00.000Z', boundary_checked_at: null, counts: {waypoints: 0, tracks: 0},
+    features: {selected: []}, exclusions: [], contours: [], layers: {}, avoid_bounds: [], source_validation_date: null};
+  const region = {id: 'test-coast', name: 'Test Coast', regulations_url: 'https://example.org/rules'};
+  const html = offlineNotes(result, region, {name: 'Plan', date: '2030-01-02'});
+  const text = html.replace(/<[^>]+>/g, ' ');
+  assert.match(text, /Planned date 2030-01-02/);
+  assert.match(text, /check current regulations, closures, marine conditions and harbor access\. This file stays unchanged offline\. The planned date is a label, not a future clearance\. Follow your official navigation chart and sounder\./);
+  assert.doesNotMatch(html, /does not update offline/);
+  assert.deepEqual(rules(unitFindings(text.replace(/\s+/g, ' '))).filter(r => r === 'consecutive-not'), []);
+  // The separate protected-boundary report keeps its own sentence byte for byte.
+  assert.ok(read('dist/trip-export.js').includes('Recheck before departure; this file does not update offline.</p>'));
+});
+
+test('bite_evidence_html_keeps_access_and_clearance_limits: the emitted evidence says what a page check cannot show', async () => {
+  const {evidenceHTML} = await import('../dist/bite-evidence.js');
+  const html = evidenceHTML({sources: {}, generated_at: new Date().toISOString(), reports: [], status: {}}, 'reef',
+    {name: 'Test point', latitude: 35.3, longitude: -120.9});
+  assert.ok(html.includes('A regulation-page check detects access and changes, not permission to fish. Harbor information provides no live entrance clearance.'));
+  assert.ok(!html.includes('Harbor information is not live entrance clearance'));
+});
+
+test('published_ground_name_stays_escaped: the ground card keeps the esc call, the esc implementation and every qualification', () => {
+  const source = read('dist/charter-grounds.js');
+  const escSource = source.match(/const esc = \(s\) =>[\s\S]*?\n  \);\n/)?.[0] ?? '';
+  assert.equal(escSource, [
+    'const esc = (s) =>', '  String(s ?? "").replace(', '    /[&<>"\']/g,', '    (c) =>',
+    '      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", \'"\': "&quot;", "\'": "&#39;" })[', '        c', '      ],', '  );', ''].join('\n'));
+  const paragraph = source.match(/<p class="evidence-note charter-note">[\s\S]*?<\/p>/)?.[0] ?? '';
+  assert.ok(paragraph.includes('<strong>Reported area, exact stops unknown.</strong><br>Captains named “${esc(g.reported_ground)}” without publishing GPS positions or fishing depths. Purple shows our approximate search water, not a boat track or a confirmed reef.'));
+  assert.equal((paragraph.match(/\$\{/g) || []).length, 1, 'the ground name is the only interpolation');
+  // Render the paragraph from the file's own text with a hostile name: the escape boundary holds.
+  const esc = new Function(`${escSource}; return esc;`)();
+  const render = new Function('esc', 'g', `return \`${paragraph}\`;`);
+  const out = render(esc, {reported_ground: '<b>Pecho & “Rock”</b> Café'});
+  assert.ok(out.includes('Captains named “&lt;b&gt;Pecho &amp; “Rock”&lt;/b&gt; Café”'));
+  assert.ok(!out.includes('<b>'));
+  // The qualifications: unpublished positions AND depths, approximate search water, neither a track nor a confirmed reef.
+  assert.match(out, /without publishing GPS positions or fishing depths/);
+  assert.match(out, /approximate search water, not a boat track or a confirmed reef/);
+});
+
+test('research_caveats_keep_distinctions: salmon, tuna, dated charter and AIS pages keep every limit and link', () => {
+  const research = plain(read('dist/species-research.html'));
+  for (const s of [
+    'concern food-web conditions and survival. They are not a local adult-Chinook catch-temperature model. Freshwater spawning or egg-survival temperatures are excluded as ocean-fishing targets.',
+    'are broad management habitat descriptions. Essential habitat is not a hotspot. The app assigns no tuna school to a management polygon.',
+    'starting in 280 ft before moving shallower. It is outside the requested bottom-fishing area/depth and provides no reusable exact GPS stops. It is presented as dated context, not mapped as a present hotspot. Keep named features such as White Rocks distinct from a similarly named reef near Cayucos.',
+  ]) assert.ok(research.includes(s), s);
+  for (const href of ['local-physical-indicators', 'inport/item/80237', 'inport/item/80247', 'wonews.com/a-trip-to-lingcod-alley']) assert.ok(research.includes(href), href);
+  const ais = read('dist/commercial-ais.html');
+  assert.ok(ais.includes('2024 vessel classification is provisional. AIS coverage omits some boats; detection and classification errors remain possible. Apparent fishing effort is not proof of fishing or catches.'));
 });

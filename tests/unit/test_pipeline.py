@@ -1,5 +1,8 @@
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest import mock
+import copy
+import socket
 import unittest
 import ssl
 from skippercast import http
@@ -138,6 +141,51 @@ class PipelineTests(unittest.TestCase):
         r = source("a", "A", "observation", "https://example.org", 6, lambda c: previous["data"], now)
         self.assertEqual(r["status"], "stale")
 
+    def _spectral_source(self, body, previous=None):
+        """Run the real spectral parser through source() with an injected client; no network."""
+        class Injected:
+            def __init__(self, now):
+                self.requests = []
+            def get(self, url, **_):
+                self.requests.append({"url": url})
+                return body
+        blocked = mock.patch.object(socket, "socket", side_effect=AssertionError("network blocked"))
+        blocked.start()
+        self.addCleanup(blocked.stop)
+        return source("buoy-46028-spectrum", "Swell and wind waves", "observation",
+                      "https://www.ndbc.noaa.gov/data/realtime2/46028.spec", 6,
+                      lambda c: parsers.ndbc(c.get("https://www.ndbc.noaa.gov/data/realtime2/46028.spec"),
+                                             "46028", True),
+                      datetime(2026, 9, 21, 16, 0, tzinfo=timezone.utc), previous, client_factory=Injected)
+
+    SPECTRAL = ("#YY MM DD hh mm WVHT SwH SwP WWH WWP SwD WWD STEEPNESS APD MWD\n"
+                "#yr mo dy hr mn m m {swp} m sec - - - sec degT\n"
+                "2026 09 21 15 00 1.5 1.2 10.0 0.3 5.0 W NW SWELL 6.0 270\n")
+
+    def test_bad_spectral_units_fail_source(self):
+        r = self._spectral_source(self.SPECTRAL.format(swp="min"))
+        self.assertEqual(r["status"], "failed")
+        self.assertIsNone(r["data"])
+        self.assertNotIn("last_success_at", r)
+        self.assertNotIn("data_retrieved_at", r)
+        self.assertTrue(r["issue"].startswith("ValueError: Unexpected NDBC units: SwP 'min'"), r["issue"])
+        self.assertEqual(len(r["requests"]), 1)
+        ok = self._spectral_source(self.SPECTRAL.format(swp="sec"))
+        self.assertEqual(ok["status"], "ok")
+        self.assertEqual(ok["data"]["observations"][0]["SwP"], 10.0)
+
+    def test_bad_spectral_units_retain_previous_dates(self):
+        previous = {"data": {"station": "46028", "sample_at": "2026-09-21T14:00:00Z", "observations": []},
+                    "last_success_at": "2026-09-21T14:05:00Z", "data_retrieved_at": "2026-09-21T14:05:00Z"}
+        before = copy.deepcopy(previous)
+        r = self._spectral_source(self.SPECTRAL.format(swp="min"), previous)
+        self.assertEqual(r["status"], "retained")
+        self.assertTrue(r["issue"].startswith("ValueError: Unexpected NDBC units: SwP 'min'"), r["issue"])
+        self.assertEqual(r["data"], before["data"])
+        self.assertEqual(r["last_success_at"], before["last_success_at"])
+        self.assertEqual(r["data_retrieved_at"], before["data_retrieved_at"])
+        self.assertEqual(previous, before)  # the earlier record is untouched
+
     def test_erddap_axis_orientation_missing_cells_and_quality(self):
         meta = {"attrs": {"NC_GLOBAL": {"time_coverage_end": "2026-09-20T12:00:00Z"},
                           "chlorophyll": {"valid_min": "0.001", "valid_max": "100"}},
@@ -167,6 +215,52 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("Big Sur", monterey["note"])
         with self.assertRaises(ValueError):
             parsers.tides({"error": {"message": "outage"}}, "9413450", "Monterey reference")
+
+    def _tide_data(self, *rows):
+        return {"predictions": [{"t": t, "v": v, "type": k} for t, v, k in rows]}
+
+    def test_tides_reject_reversed_and_interior_reversal(self):
+        note = "Port San Luis reference."
+        reversed_rows = self._tide_data(("2026-09-22 07:00", "-0.3", "L"), ("2026-09-22 01:00", "4.2", "H"))
+        interior = self._tide_data(("2026-09-22 01:00", "4.2", "H"), ("2026-09-22 13:00", "4.0", "H"),
+                                   ("2026-09-22 07:00", "-0.3", "L"), ("2026-09-23 02:00", "4.4", "H"))
+        for data in (reversed_rows, interior):
+            with self.assertRaisesRegex(ValueError, "must be strictly increasing"):
+                parsers.tides(data, "9412110", note)
+
+    def test_tides_reject_duplicate_instants(self):
+        note = "Port San Luis reference."
+        cases = [
+            self._tide_data(("2026-09-22 01:00", "4.2", "H"), ("2026-09-22 01:00", "4.2", "H")),
+            self._tide_data(("2026-09-22 01:00", "4.2", "H"), ("2026-09-22 01:00", "-0.3", "L")),
+            self._tide_data(("2026-09-22 01:00:00", "4.2", "H"), ("2026-09-22 01:00:00.000", "4.2", "H")),
+            self._tide_data(("2026-09-22 01:00", "4.2", "H"), ("2026-09-22 07:00", "-0.3", "L"),
+                            ("2026-09-22 07:00", "-0.3", "L")),
+        ]
+        for data in cases:
+            before = copy.deepcopy(data)
+            with self.assertRaisesRegex(ValueError, "must be strictly increasing"):
+                parsers.tides(data, "9412110", note)
+            self.assertEqual(data, before)
+
+    def test_tides_keep_valid_rows_and_single_row_horizon(self):
+        note = "Port San Luis reference."
+        single = self._tide_data(("2026-09-22 01:00", "4.2", "H"))
+        r = parsers.tides(single, "9412110", note)
+        self.assertEqual(r["coverage_start"], "2026-09-22T01:00:00Z")
+        self.assertEqual(r["coverage_end"], "2026-09-22T01:00:00Z")
+        self.assertEqual(len(r["predictions"]), 1)
+        multi = self._tide_data(("2026-09-22 01:00", "4.2", "H"), ("2026-09-22 07:00:00.500", "-0.3", "L"),
+                                ("2026-09-23 02:10", "4.4", "H"))
+        before = copy.deepcopy(multi)
+        r = parsers.tides(multi, "9412110", note)
+        self.assertEqual(multi, before)
+        self.assertEqual([p["time"] for p in r["predictions"]],
+                         ["2026-09-22T01:00:00Z", "2026-09-22T07:00:00.500000Z", "2026-09-23T02:10:00Z"])
+        self.assertEqual([p["type"] for p in r["predictions"]], ["H", "L", "H"])
+        self.assertEqual((r["coverage_start"], r["coverage_end"]), ("2026-09-22T01:00:00Z", "2026-09-23T02:10:00Z"))
+        self.assertEqual((r["station"], r["datum"], r["units"], r["timezone"], r["note"]),
+                         ("9412110", "MLLW", "ft", "UTC", note))
 
     def test_zero_alerts_requires_recognized_response(self):
         self.assertEqual(parsers.alerts({"type": "FeatureCollection", "features": []})["alerts"], [])

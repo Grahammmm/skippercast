@@ -453,7 +453,7 @@ processor state (last processed time per MMSI, open trips, run log).
 | Trips, segments, events, aggregates, labels, hours (D1) | permanently, by season |
 | Facts | permanently; superseded rows are history |
 | Google Places facts | `place_id` indefinitely; latitude/longitude 30 days; nothing else (CF-16 re-read the terms: rating and count may not be stored). `enrich-code` sends `fact.purge` each run |
-| Outreach | until an admin deletes it; an operator's removal request deletes it |
+| Outreach | until an admin deletes it; no age limit. A vessel's removal request (`removal_requested` on the admin vessel edit) deletes, in the same D1 batch as the removal date, every `fleet_outreach` row of that vessel's operator whatever its kind, status or age, including the consent-change and outreach-status audit notes. That is outreach erasure only: the operator's current consent (status, scope, who/when, revoked time) and outreach status stay on `fleet_operators`, and it is not a consent revocation or a do-not-contact change. It is operator-wide: if the operator has other listed vessels their outreach goes too, while only the requested vessel is hidden and dated. Other operators' rows, and a vessel with no operator, are untouched. A repeat request clears notes added since; unhiding does not bring rows back |
 | Run directories, HTTP cache (Hermes) | 90 days |
 
 ## 6. Source adapters
@@ -1267,7 +1267,8 @@ install → `FLEET_MAP_ENABLED`.
   aisstream cells. When Q1 settles, moving aisstream to `api-terms` is a
   one-line change there, and the next processor run rewrites the cells' rights.
 - **Operators' wishes**: `hidden` and `do-not-contact` are honoured by every
-  query; a removal request also deletes outreach rows.
+  query; a vessel's removal request also deletes its operator's outreach rows
+  (section 5, Retention: audit notes go, current consent stays).
 - `docs/legal/threat-model.md` gains a fleet section (`/go/` redirect, job
   routes, admin data, outreach) in CF-06.
 

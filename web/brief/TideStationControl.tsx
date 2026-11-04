@@ -60,6 +60,6 @@ export function TideStationControl() {
     {chosen ? <p class="app-caveat">Selected tide display only; bar and shore checks use their configured reference station.</p> : null}
     {selection.loading.value ? <p role="status">Loading station predictions…</p> : null}
     {selection.notice.value ? <p role="status">{selection.notice.value}</p> : null}
-    {selection.error.value ? <p role="status">{selection.error.value} <Button size="sm" onClick={() => { void selection.list(); void selection.refresh(); }}>Retry tide station</Button></p> : null}
+    {selection.error.value ? <p role="status">{selection.error.value} <Button size="sm" onClick={() => { void selection.refresh(); void selection.list(); }}>Retry tide station</Button></p> : null}
   </div>;
 }

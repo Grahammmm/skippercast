@@ -334,3 +334,115 @@ test('Water keeps the latest finite station reading when daily has no selected o
   const water = tile(buildCoastBrief({report, county: slo, areaId: area.id, profile: 'boat', date: tomorrow, now}), 'water');
   assert.equal(water.value, 57.6);
 });
+
+// RF1020-3: the seven-day fleet window is today plus the six previous LOCAL calendar dates in the region's zone,
+// whatever the UTC offset does in between. Synthetic date-only reports, fixed instants, no network.
+const LA = 'America/Los_Angeles';
+const offline = async fn => {
+  const saved = globalThis.fetch;
+  globalThis.fetch = () => { throw new Error('fleet window tests are offline'); };
+  try { return await fn(); } finally { globalThis.fetch = saved; }
+};
+const trip = (date, boat = `Boat ${date}`, port = 'Morro Bay') => ({date, boat, port});
+// 1 when a lone report on `date` counts at `at`, else 0.
+const counts = (at, date, zone = LA) => fleetLine([trip(date)], 'Morro Bay', zone, new Date(at))?.count ?? 0;
+const window = (at, dates, zone = LA) => dates.filter(date => counts(at, date, zone));
+
+test('fleet_window_spring_forward_has_seven_local_dates', () => offline(() => {
+  // Monday 9 March 2026 00:30 PDT, the first local day after the clocks went forward on the 8th.
+  const at = '2026-03-09T07:30:00.000Z';
+  const dates = ['2026-03-02', '2026-03-03', '2026-03-04', '2026-03-05', '2026-03-06', '2026-03-07', '2026-03-08', '2026-03-09', '2026-03-10'];
+  assert.deepEqual(window(at, dates), dates.slice(1, 8), 'March 3 to March 9 count; March 2 and March 10 do not');
+  const line = fleetLine(dates.map(date => trip(date)), 'Morro Bay', LA, new Date(at));
+  assert.deepEqual(line, {count: 7, port: 'Morro Bay', text: '7 boats reported from Morro Bay in the last 7 days', href: '/report'});
+}));
+
+test('fleet_window_fall_back_keeps_oldest_date', () => offline(() => {
+  // Sunday 1 November 2026 23:30 PST, the last local day of the 25-hour fall-back day's week.
+  const dates = ['2026-10-25', '2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02'];
+  assert.deepEqual(window('2026-11-02T07:30:00.000Z', dates), dates.slice(1, 8), 'October 26 to November 1 count; October 25 and November 2 do not');
+  const line = fleetLine(dates.map(date => trip(date)), 'Morro Bay', LA, new Date('2026-11-02T07:30:00.000Z'));
+  assert.equal(line.count, 7);
+  // The repeated 01:30 (PDT, then PST) is the same local day and gives the same window.
+  for (const at of ['2026-11-01T08:30:00.000Z', '2026-11-01T09:30:00.000Z']) {
+    assert.deepEqual(window(at, dates), dates.slice(1, 8), at);
+    assert.equal(fleetLine(dates.map(date => trip(date)), 'Morro Bay', LA, new Date(at)).count, 7, at);
+  }
+}));
+
+test('fleet_window_is_stable_within_local_day', () => offline(() => {
+  const range = (from, days) => Array.from({length: days}, (_, i) => new Date(Date.parse(`${from}T12:00:00Z`) + i * 86_400_000).toISOString().slice(0, 10));
+  // [first local instant, last local instant, oldest eligible date] for the transition days and the days after them.
+  const days = [
+    ['2026-03-08T08:00:00.000Z', '2026-03-09T06:59:59.999Z', '2026-03-02'], // 8 March, 23 h long
+    ['2026-03-09T07:00:00.000Z', '2026-03-10T06:59:59.999Z', '2026-03-03'],
+    ['2026-11-01T07:00:00.000Z', '2026-11-02T07:59:59.999Z', '2026-10-26'], // 1 November, 25 h long
+    ['2026-11-02T08:00:00.000Z', '2026-11-03T07:59:59.999Z', '2026-10-27'],
+  ];
+  for (const [start, end, first] of days) {
+    const before = new Date(Date.parse(`${first}T12:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+    const eligible = range(first, 7), candidates = [before, ...eligible, ...range(first, 8).slice(7)];
+    for (const at of [start, end]) assert.deepEqual(window(at, candidates), eligible, `${first}: ${at}`);
+  }
+}));
+
+test('fleet_window_calendar_rollover_and_host_zone', {concurrency: false}, () => offline(() => {
+  const saved = process.env.TZ;
+  try {
+    for (const host of ['UTC', 'Asia/Tokyo']) {
+      process.env.TZ = host;
+      const first = (at, zone, dates) => dates.filter(date => counts(at, date, zone));
+      // Month: 3 March 2026 in UTC reaches back to 25 February.
+      assert.deepEqual(first('2026-03-03T12:00:00.000Z', 'UTC', ['2026-02-24', '2026-02-25', '2026-03-03', '2026-03-04']), ['2026-02-25', '2026-03-03'], host);
+      // Leap day: 3 March 2028 reaches back to 26 February over the 29th.
+      assert.deepEqual(first('2028-03-03T12:00:00.000Z', 'UTC', ['2028-02-25', '2028-02-26', '2028-02-29', '2028-03-03']), ['2028-02-26', '2028-02-29', '2028-03-03'], host);
+      // Year: 3 January 2027 reaches back to 28 December.
+      assert.deepEqual(first('2027-01-03T12:00:00.000Z', 'UTC', ['2026-12-27', '2026-12-28', '2027-01-03']), ['2026-12-28', '2027-01-03'], host);
+      // The region's zone, not the host's or UTC's, sets today: 1 January 03:00Z is still 31 December in Los Angeles.
+      const at = '2027-01-01T03:00:00.000Z';
+      assert.deepEqual(first(at, LA, ['2026-12-24', '2026-12-25', '2026-12-31', '2027-01-01']), ['2026-12-25', '2026-12-31'], host);
+      assert.deepEqual(first(at, 'UTC', ['2026-12-25', '2026-12-26', '2026-12-31', '2027-01-01']), ['2026-12-26', '2026-12-31', '2027-01-01'], host);
+      // A zone ahead of both: 31 December 20:00Z is 1 January 05:00 in Tokyo and 31 December noon in Los Angeles.
+      const late = '2026-12-31T20:00:00.000Z';
+      assert.deepEqual(first(late, 'Asia/Tokyo', ['2026-12-25', '2026-12-26', '2027-01-01', '2027-01-02']), ['2026-12-26', '2027-01-01'], host);
+      assert.deepEqual(first(late, LA, ['2026-12-24', '2026-12-25', '2026-12-31', '2027-01-01']), ['2026-12-25', '2026-12-31'], host);
+    }
+  } finally {
+    if (saved === undefined) delete process.env.TZ; else process.env.TZ = saved;
+  }
+}));
+
+test('fleet_window_preserves_ports_and_deduplication', () => offline(() => {
+  const at = new Date('2026-03-09T07:30:00.000Z');
+  const reports = [trip('2026-03-03', 'Avenger'), trip('2026-03-09', 'Avenger'), trip('2026-03-05', 'Avenger'), // one boat, three eligible dates
+    trip('2026-03-04', 'Flying Fish', 'Avila Beach'), trip('2026-03-04', 'Elsewhere', 'Santa Cruz'), trip('2026-03-04', 'Not Avila', 'Avilaville'),
+    trip('2026-03-02', 'Too Old'), trip('2026-03-10', 'Tomorrow'), {date: '2026-03-04', boat: '', port: 'Morro Bay'}];
+  assert.deepEqual(fleetLine(reports, ['Morro Bay', 'Avila'], LA, at),
+    {count: 2, port: 'Morro Bay & Avila Beach', text: '2 boats reported from Morro Bay & Avila Beach in the last 7 days', href: '/report'});
+  assert.deepEqual(fleetLine(reports, ['Avila', 'Morro Bay'], LA, at)?.port, 'Avila Beach & Morro Bay');
+  assert.equal(fleetLine(reports, 'Morro Bay', LA, at).text, '1 boat reported from Morro Bay in the last 7 days');
+  assert.equal(fleetLine(reports, ['Monterey'], LA, at), null, 'another port takes none of these trips');
+  assert.equal(fleetLine(reports, [], LA, at), null, 'no ports, no line');
+  assert.equal(fleetLine(reports, '', LA, at), null);
+  assert.equal(fleetLine([trip('2026-03-02', 'Too Old'), trip('2026-03-10', 'Tomorrow')], 'Morro Bay', LA, at), null, 'nothing eligible, no line');
+  assert.equal(fleetLine([], 'Morro Bay', LA, at), null);
+}));
+
+test('brief_adapters_share_dst_fleet_bounds', () => offline(() => {
+  const cases = [
+    ['2026-03-09T07:30:00.000Z', '2026-03-09', ['2026-03-02', '2026-03-03', '2026-03-09', '2026-03-10']],
+    ['2026-11-02T07:30:00.000Z', '2026-11-01', ['2026-10-25', '2026-10-26', '2026-11-01', '2026-11-02']],
+  ];
+  for (const [instant, local, dates] of cases) {
+    const at = new Date(instant);
+    const reports = dates.map(day => trip(day, `Boat ${day}`));
+    const expected = {count: 2, port: 'Morro Bay', text: '2 boats reported from Morro Bay in the last 7 days', href: '/report'};
+    assert.deepEqual(fleetLine(reports, ['Morro Bay'], LA, at), expected, instant);
+    const coastBrief = buildCoastBrief({report, county: slo, areaId: 'central', profile: 'boat', date: local, now: at, reports, port: ['Morro Bay']});
+    assert.deepEqual(coastBrief.fleet, expected, `coast ${instant}`);
+    const daily = {...montereyDaily, landing_names: ['Morro Bay'], reports};
+    const morro = {...montereyPlace, name: 'Morro Bay', port: undefined};
+    assert.deepEqual(buildRegionalBrief({daily, forecast: montereyForecast, place: morro, profile: 'boat', date: local, now: at}).fleet, expected, `regional ${instant}`);
+    assert.deepEqual(buildBrief({context: morroContext, coast: {report, county: slo}, regional: {daily, forecast: montereyForecast, place: morro}, profile: 'boat', date: local, now: at}).fleet, expected, `buildBrief ${instant}`);
+  }
+}));

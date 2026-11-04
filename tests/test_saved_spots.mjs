@@ -21,20 +21,28 @@ const {getRegion} = await import('../dist/region.js');
 const {pointInGeometry} = await import('../dist/geo-screen.js');
 const worker = withSessions(deployed), ORIGIN = 'https://skippercast.com';
 
-function database() {
+function database(beforeRun) {
   const sql = new DatabaseSync(':memory:');
   for (const {tag} of [...read('../drizzle/meta/_journal.json').entries].sort((a, b) => a.idx - b.idx)) sql.exec(readFileSync(new URL(`../drizzle/${tag}.sql`, import.meta.url), 'utf8'));
-  const adapter = {prepare(query) { let args = []; const statement = sql.prepare(query); return {bind(...a) { args = a; return this; }, async first() { return statement.get(...args) || null; }, async all() { return {results: statement.all(...args)}; }, async run() { const info = statement.run(...args); return {meta: {changes: Number(info.changes)}}; }}; },
+  const adapter = {prepare(query) { let args = []; const statement = sql.prepare(query); return {bind(...a) { args = a; return this; }, async first() { if (beforeRun) await beforeRun(query, args); return statement.get(...args) || null; }, async all() { return {results: statement.all(...args)}; }, async run() { if (beforeRun) await beforeRun(query, args); const info = statement.run(...args); return {meta: {changes: Number(info.changes)}}; }}; },
     async batch(queries) { sql.exec('BEGIN'); try { const out = []; for (const q of queries) out.push(await q.run()); sql.exec('COMMIT'); return out; } catch (e) { sql.exec('ROLLBACK'); throw e; } }};
   return {sql, adapter};
 }
-const call = (env, path, {owner, method = 'GET', body} = {}) => {
+const call = (env, path, {owner, method = 'GET', body, raw, origin = true} = {}) => {
   const headers = {'Content-Type': 'application/json', 'CF-Connecting-IP': '203.0.113.9'};
   if (owner) headers['x-test-owner'] = owner;
-  if (method !== 'GET') headers.Origin = ORIGIN;
-  return worker.fetch(new Request(ORIGIN + path, {method, headers, body: body === undefined ? undefined : JSON.stringify(body)}), env);
+  if (method !== 'GET' && origin) headers.Origin = ORIGIN;
+  return worker.fetch(new Request(ORIGIN + path, {method, headers, body: raw !== undefined ? raw : body === undefined ? undefined : JSON.stringify(body)}), env);
 };
 const post = async (env, owner, spot) => { const r = await call(env, '/api/spots', {owner, method: 'POST', body: spot}); return {status: r.status, data: await r.json()}; };
+const seed = (sql, owner, n, tag = owner) => { for (let i = 0; i < n; i++) sql.prepare('INSERT INTO saved_spots(id,owner,name,lat,lon,created_at) VALUES(?,?,?,?,?,?)').run(`${tag}-${i}`, owner, 'n' + i, 1, 1, 'x'); };
+const isSpotInsert = query => /^\s*INSERT\s+INTO\s+saved_spots/i.test(query);
+// Test-only write barrier: the first `parties` saved-spot INSERT statements wait here, whatever their VALUES/SELECT form, then run together.
+function barrier(parties) {
+  let arrived = 0, release; const opened = new Promise(r => { release = r; });
+  const timer = setTimeout(release, 2000);
+  return {release, hook: async query => { if (!isSpotInsert(query) || arrived >= parties) return; if (++arrived >= parties) release(); await opened; }, arrived: () => arrived, done: () => clearTimeout(timer)};
+}
 const count = (sql, owner) => sql.prepare('SELECT COUNT(*) AS n FROM saved_spots WHERE owner=?').get(owner).n;
 
 // Protected areas: the committed ds582 polygons through the real shared screen (offline fetch), as test_closure_every_output does.
@@ -111,7 +119,7 @@ test('no spot name, note or coordinate reaches any public page or feed, and no p
     }
     assert.equal((await call(env, '/api/spots')).status, 401, 'anonymous gets no list');
   } finally { globalThis.fetch = original; }
-  const root = fileURLToPath(new URL('..', import.meta.url)), allowed = new Set(['server/routes/spots.ts', 'server/routes/account.ts', 'server/app.ts', 'db/schema.ts', 'dist/account.js', 'web/planner.ts', 'web/saved-spots.ts']);
+  const root = fileURLToPath(new URL('..', import.meta.url)), allowed = new Set(['server/routes/spots.ts', 'server/routes/account.ts', 'server/app.ts', 'db/schema.ts', 'dist/account.js', 'web/planner.ts', 'web/saved-spots.ts', 'web/map/saved-spots.ts']);
   const hits = [];
   const walk = dir => { for (const name of readdirSync(dir)) { const full = join(dir, name), rel = full.slice(root.length).replaceAll('\\', '/').replace(/^\//, '');
     if (name === 'node_modules' || name.startsWith('.') || rel === 'dist/client' || rel === 'dist/server') continue;
@@ -177,7 +185,7 @@ test('a spot 30 m outside a boundary is inside the planning margin: read as such
 });
 
 // SC0022-04: the screen only speaks for the envelope its boundary file was fetched for (Morro Bay's mpa.bounds).
-const TEXT = 'Protected areas not checked for this spot: outside coverage or check unavailable. Not exported.';
+const TEXT = 'Protected areas not checked for this spot: outside coverage or check unavailable; not exported.';
 const REFUSAL = /unavailable or older than 36 hours, or a saved spot is outside coverage\. Nothing was exported\./;
 const FAR = {lat: 40.0, lon: -124.0};
 const E = getRegion().mpa.bounds, EDGE = {lat: 35.4, lon: E[0] + 30 / (111412.84 * Math.cos(35.4 * Math.PI / 180))};
@@ -239,4 +247,238 @@ test('a far-away spot stays stored and readable by its owner, and its list readi
   assert.equal(verdict.text, TEXT); assert.ok(spotItemHTML(spots[0], verdict).includes(TEXT));
   await assert.rejects(exportSpots(spots, screen, getRegion()), REFUSAL);
   sql.close();
+});
+
+// RF1020-1: the cap is admitted and written by one statement, so competing saves cannot pass a stale count.
+const FULL_MESSAGE = 'you can keep at most 100 saved spots; remove one first';
+const owned = (sql, owner) => sql.prepare('SELECT id,name,note FROM saved_spots WHERE owner=? AND id NOT LIKE ?').all(owner, owner + '-%');
+async function race(env, gate, jobs) {
+  try { return await Promise.all(jobs); } finally { gate.release(); gate.done(); }
+}
+
+test('saved_spots_two_saves_compete_for_last_slot', {timeout: 15000}, async () => {
+  const gate = barrier(2), {sql, adapter} = database(gate.hook), env = {DB: adapter};
+  try {
+    seed(sql, 'alice', 99);
+    const results = await race(env, gate, [post(env, 'alice', {name: 'first', lat: 1, lon: 1}), post(env, 'alice', {name: 'second', lat: 2, lon: 2})]);
+    assert.equal(gate.arrived(), 2, 'both saves reached their write together');
+    assert.deepEqual(results.map(r => r.status).sort(), [201, 400]);
+    const [won] = results.filter(r => r.status === 201), [lost] = results.filter(r => r.status === 400);
+    assert.equal(lost.data.error, FULL_MESSAGE);
+    assert.deepEqual(Object.keys(lost.data).filter(k => k !== 'request_id'), ['error'], 'no saved-row payload on a refusal');
+    assert.equal(count(sql, 'alice'), 100);
+    assert.equal((await (await call(env, '/api/spots', {owner: 'alice'})).json()).spots.length, 100);
+    const added = owned(sql, 'alice');
+    assert.equal(added.length, 1);
+    assert.equal(added[0].id, won.data.id); assert.equal(added[0].name, won.data.name);
+    assert.equal(sql.prepare("SELECT COUNT(*) AS n FROM saved_spots WHERE owner='alice' AND name LIKE 'n%'").get().n, 99, "the owner's existing spots are unchanged");
+  } finally { gate.done(); sql.close(); }
+});
+
+test('saved_spots_two_slots_accept_both', {timeout: 15000}, async () => {
+  const gate = barrier(2), {sql, adapter} = database(gate.hook), env = {DB: adapter};
+  try {
+    seed(sql, 'alice', 98);
+    const results = await race(env, gate, [post(env, 'alice', {name: 'first', lat: 1, lon: 1}), post(env, 'alice', {name: 'second', lat: 2, lon: 2})]);
+    assert.deepEqual(results.map(r => r.status), [201, 201]);
+    assert.equal(count(sql, 'alice'), 100);
+    assert.deepEqual(owned(sql, 'alice').map(r => r.id).sort(), results.map(r => r.data.id).sort());
+  } finally { gate.done(); sql.close(); }
+});
+
+test('saved_spots_cap_is_owner_scoped_during_competing_saves', {timeout: 15000}, async () => {
+  const gate = barrier(3), {sql, adapter} = database(gate.hook), env = {DB: adapter};
+  try {
+    seed(sql, 'alice', 100); seed(sql, 'bob', 50); seed(sql, 'carol', 103);
+    const [a, b, c] = await race(env, gate, [post(env, 'alice', {lat: 1, lon: 1}), post(env, 'bob', {lat: 1, lon: 1}), post(env, 'carol', {lat: 1, lon: 1})]);
+    assert.equal(a.status, 400); assert.equal(a.data.error, FULL_MESSAGE);
+    assert.equal(b.status, 201);
+    assert.equal(c.status, 400, 'an owner already above the cap is refused too'); assert.equal(c.data.error, FULL_MESSAGE);
+    assert.deepEqual([count(sql, 'alice'), count(sql, 'bob'), count(sql, 'carol')], [100, 51, 103], 'nothing was added to the full owners and nothing was deleted');
+    assert.equal((await call(env, '/api/spots', {method: 'POST', body: {lat: 1, lon: 1}})).status, 401, 'anonymous save stays refused');
+  } finally { gate.done(); sql.close(); }
+});
+
+test('saved_spots_delete_releases_one_slot', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter};
+  try {
+    seed(sql, 'alice', 100);
+    const refused = await post(env, 'alice', {lat: 1, lon: 1});
+    assert.equal(refused.status, 400); assert.equal(refused.data.error, FULL_MESSAGE);
+    assert.equal((await call(env, '/api/spots/alice-0', {owner: 'bob', method: 'DELETE', body: {}})).status, 404);
+    assert.equal((await post(env, 'alice', {lat: 1, lon: 1})).status, 400, "another owner's delete attempt frees nothing");
+    assert.equal((await call(env, '/api/spots/alice-0', {owner: 'alice', method: 'DELETE', body: {}})).status, 200);
+    assert.equal((await post(env, 'alice', {lat: 1, lon: 1})).status, 201);
+    assert.equal((await post(env, 'alice', {lat: 1, lon: 1})).status, 400);
+    assert.equal(count(sql, 'alice'), 100);
+  } finally { sql.close(); }
+});
+
+test('saved_spots_validation_and_storage_failure_are_not_success', async () => {
+  const writes = []; let failWrite = false;
+  const {sql, adapter} = database(async query => { if (isSpotInsert(query)) { writes.push(query); if (failWrite) throw new Error('D1 down'); } }), env = {DB: adapter};
+  const quiet = console.error; console.error = () => {};
+  try {
+    for (const fields of [{lat: 35.5}, {lat: 1, lon: 1, name: 'x'.repeat(81)}, {lat: 1, lon: 1, note: 7}]) assert.equal((await post(env, 'alice', fields)).status, 400);
+    assert.equal(writes.length, 0, 'malformed input is refused before any write');
+    seed(sql, 'alice', 100);
+    const full = await post(env, 'alice', {lat: 1, lon: 1});
+    assert.equal(full.status, 400); assert.equal(full.data.error, FULL_MESSAGE);
+    assert.equal(writes.length, 1); assert.ok(!('id' in full.data) && !('created_at' in full.data), 'a zero-change write returns no saved row');
+    sql.prepare("DELETE FROM saved_spots WHERE id='alice-0'").run(); failWrite = true;
+    const down = await post(env, 'alice', {lat: 1, lon: 1});
+    assert.equal(down.status, 503); assert.doesNotMatch(down.data.error, /at most 100/);
+    assert.equal(count(sql, 'alice'), 99, 'a storage failure stores nothing and is not reported as success');
+  } finally { console.error = quiet; sql.close(); }
+});
+
+// SC1137-08: PATCH /api/spots/:id changes a saved spot's name and/or private note, nothing else.
+const patch = async (env, owner, id, fields, extra = {}) => { const r = await call(env, '/api/spots/' + id, {owner, method: 'PATCH', body: fields, ...extra}); return {status: r.status, data: await r.json()}; };
+const row = (sql, id) => sql.prepare('SELECT * FROM saved_spots WHERE id=?').get(id);
+const envelope = ({status, data: {request_id, ...rest}}) => [status, rest];
+const POSITION_WORDS = ['lat cannot be changed; save a new spot for a different position', 'lon cannot be changed; save a new spot for a different position'];
+
+test('spot_patch_rename_retains_identity_position_and_note', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter};
+  try {
+    const first = await post(env, 'alice', SPOT);
+    await post(env, 'alice', {name: 'second', lat: 2, lon: 2});
+    const before = {...row(sql, first.data.id)}, order = (await (await call(env, '/api/spots', {owner: 'alice'})).json()).spots.map(s => s.id);
+    const renamed = await patch(env, 'alice', first.data.id, {name: 'Fixed Reef'});
+    assert.equal(renamed.status, 200);
+    assert.deepEqual(renamed.data, {...before, name: 'Fixed Reef'}, 'the stored row comes back, only the name changed');
+    assert.deepEqual({...row(sql, first.data.id)}, renamed.data);
+    assert.equal((await (await call(env, '/api/spots/' + first.data.id, {owner: 'alice'})).json()).name, 'Fixed Reef');
+    assert.deepEqual((await (await call(env, '/api/spots', {owner: 'alice'})).json()).spots.map(s => s.id), order, 'list order unchanged');
+    const both = await patch(env, 'alice', first.data.id, {name: 'Again', note: 'new note'});
+    assert.deepEqual(both.data, {...before, name: 'Again', note: 'new note'});
+    for (const blank of [null, '']) {
+      const r = await patch(env, 'alice', first.data.id, {name: blank});
+      assert.equal(r.status, 200); assert.equal(r.data.name, '', 'a blank name is stored as POST stores it'); assert.equal(r.data.note, 'new note');
+    }
+    const exported = await (await call(env, '/api/privacy', {owner: 'alice'})).json(), other = (await call(env, '/api/spots', {owner: 'alice'}).then(r => r.json())).spots.find(s => s.id !== first.data.id);
+    assert.deepEqual(exported.saved_spots.find(s => s.id === first.data.id), {...before, name: '', note: 'new note'}, 'the owner export carries the edited row');
+    assert.deepEqual([other.name, other.note, other.lat, other.lon], ['second', null, 2, 2], 'the other spot is untouched');
+  } finally { sql.close(); }
+});
+
+test('spot_patch_note_set_clear_and_unicode_limits', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter};
+  try {
+    const made = await post(env, 'alice', {name: 'keep', lat: 3, lon: 4, note: 'old'}), id = made.data.id;
+    assert.deepEqual(await patch(env, 'alice', id, {note: 'private'}).then(r => [r.status, r.data.name, r.data.note]), [200, 'keep', 'private'], 'a note-only edit leaves the name');
+    for (const clear of [null, '', '   \n\t ']) {
+      await patch(env, 'alice', id, {note: 'something'});
+      const r = await patch(env, 'alice', id, {note: clear});
+      assert.deepEqual([r.status, r.data.note, row(sql, id).note, r.data.name], [200, null, null, 'keep'], JSON.stringify(clear));
+    }
+    assert.equal((await patch(env, 'alice', id, {note: '  padded  '})).data.note, '  padded  ', 'a nonblank note is not trimmed');
+    const fish = n => '🐟'.repeat(n);
+    assert.equal((await patch(env, 'alice', id, {note: fish(1000)})).status, 200, '1000 code points');
+    const longNote = await patch(env, 'alice', id, {note: fish(1001)});
+    assert.equal(longNote.status, 400); assert.match(longNote.data.error, /note must be text of at most 1000/);
+    assert.equal(row(sql, id).note, fish(1000), 'a refused note changes nothing');
+    assert.equal((await patch(env, 'alice', id, {name: fish(40)})).status, 200, '40 surrogate pairs are 80 UTF-16 units');
+    assert.equal((await patch(env, 'alice', id, {name: 'x'.repeat(80)})).status, 200);
+    for (const name of [fish(41), 'x'.repeat(81)]) { const r = await patch(env, 'alice', id, {name}); assert.equal(r.status, 400); assert.match(r.data.error, /name must be text of at most 80/); }
+    assert.equal(row(sql, id).name, 'x'.repeat(80));
+    // A bad value in one field refuses the whole request: the other field is not applied either.
+    const mixed = await patch(env, 'alice', id, {name: 'changed', note: 7});
+    assert.equal(mixed.status, 400); assert.match(mixed.data.error, /note must be/);
+    assert.equal(row(sql, id).name, 'x'.repeat(80));
+    for (const fields of [{name: 7}, {name: ['a']}, {note: {a: 1}}, {note: false}]) { assert.equal((await patch(env, 'alice', id, fields)).status, 400, JSON.stringify(fields)); }
+    assert.deepEqual([row(sql, id).name, row(sql, id).note, row(sql, id).lat, row(sql, id).lon], ['x'.repeat(80), fish(1000), 3, 4]);
+  } finally { sql.close(); }
+});
+
+test('spot_patch_position_and_unknown_keys_refused', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter};
+  try {
+    const made = await post(env, 'alice', {name: 'stay', lat: 35.5, lon: -121.2, note: 'n'}), id = made.data.id, before = {...row(sql, id)};
+    const refused = [[{lat: 36}, POSITION_WORDS[0]], [{lon: -120}, POSITION_WORDS[1]], [{lat: 36, lon: -120}, POSITION_WORDS[0]], [{lon: -120, lat: 36, name: 'moved'}, POSITION_WORDS[0]],
+      [{lat: null}, POSITION_WORDS[0]], [{lon: null}, POSITION_WORDS[1]], [{lat: 35.5}, POSITION_WORDS[0]], [{lat: 35.5, lon: -121.2, name: 'same spot'}, POSITION_WORDS[0]]];
+    for (const [fields, message] of refused) { const r = await patch(env, 'alice', id, fields); assert.equal(r.status, 400, JSON.stringify(fields)); assert.equal(r.data.error, message, JSON.stringify(fields)); }
+    for (const fields of [{latitude: 36}, {longitude: 1}, {owner: 'bob'}, {id: 'other'}, {created_at: 'x'}, {visibility: 'public'}, {name: 'renamed', extra: 1}, {name: 'renamed', note: 'x', owner: 'alice'}]) {
+      const r = await patch(env, 'alice', id, fields); assert.equal(r.status, 400, JSON.stringify(fields)); assert.equal(r.data.error, 'only name and note can be changed');
+    }
+    assert.deepEqual({...row(sql, id)}, before, 'no refused request changed anything');
+    assert.equal(count(sql, 'alice'), 1);
+  } finally { sql.close(); }
+});
+
+test('spot_patch_unknown_and_foreign_indistinguishable', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter};
+  try {
+    const mine = await post(env, 'alice', SPOT), before = {...row(sql, mine.data.id)};
+    for (const fields of [{name: 'taken'}, {lat: 1}, {unknown: 1}, {}, {note: 'x'.repeat(2000)}]) {
+      const foreign = await patch(env, 'bob', mine.data.id, fields), missing = await patch(env, 'bob', 'no-such-id', fields);
+      assert.equal(foreign.status, 404, JSON.stringify(fields));
+      assert.deepEqual(envelope(foreign), envelope(missing), 'identical to an id that never existed');
+      assert.equal(foreign.data.error, 'Not found');
+    }
+    for (const raw of ['{"name":', '[]', 'null', '']) {
+      const foreign = await call(env, '/api/spots/' + mine.data.id, {owner: 'bob', method: 'PATCH', raw}), missing = await call(env, '/api/spots/no-such-id', {owner: 'bob', method: 'PATCH', raw});
+      assert.deepEqual([foreign.status, (await foreign.json()).error], [404, 'Not found']); assert.equal(missing.status, 404, 'a malformed body is no ownership oracle');
+    }
+    assert.deepEqual({...row(sql, mine.data.id)}, before, "the other owner's row is untouched");
+    // Signed out and a missing Origin never reach the row.
+    const out = await call(env, '/api/spots/' + mine.data.id, {method: 'PATCH', body: {name: 'x'}});
+    assert.equal(out.status, 401);
+    const noOrigin = await call(env, '/api/spots/' + mine.data.id, {owner: 'alice', method: 'PATCH', body: {name: 'x'}, origin: false});
+    assert.equal(noOrigin.status, 400); assert.match((await noOrigin.json()).error, /origin rejected/);
+    assert.deepEqual({...row(sql, mine.data.id)}, before);
+    assert.equal((await patch(env, 'alice', mine.data.id, {name: 'mine'})).status, 200, 'the owner can still edit');
+  } finally { sql.close(); }
+});
+
+test('spot_patch_bad_json_and_empty_object', async () => {
+  const writes = []; const {sql, adapter} = database(async query => { if (/^\s*UPDATE\s+saved_spots/i.test(query)) writes.push(query); }), env = {DB: adapter};
+  try {
+    const made = await post(env, 'alice', SPOT), id = made.data.id, before = {...row(sql, id)};
+    const send = async raw => { const r = await call(env, '/api/spots/' + id, {owner: 'alice', method: 'PATCH', raw}); return {status: r.status, error: (await r.json()).error}; };
+    for (const [raw, message] of [['{"name":', 'invalid JSON body'], ['[]', 'invalid JSON body'], ['[{"name":"x"}]', 'invalid JSON body'], ['null', 'invalid JSON body'], ['"name"', 'invalid JSON body'], ['7', 'invalid JSON body'], ['', 'invalid JSON body'],
+      [JSON.stringify({note: 'x'.repeat(9000)}), 'body too large'], ['{}', 'send name and/or note']]) {
+      assert.deepEqual(await send(raw), {status: 400, error: message}, String(raw).slice(0, 30));
+    }
+    assert.equal(writes.length, 0, 'no update statement ran for any of them');
+    assert.deepEqual({...row(sql, id)}, before);
+  } finally { sql.close(); }
+});
+
+test('spot_patch_at_cap_and_interleaved_updates', {timeout: 15000}, async () => {
+  const updates = query => /^\s*UPDATE\s+saved_spots/i.test(query);
+  const quiet = console.error; console.error = () => {};
+  try {
+    // A metadata edit adds nothing, so it works at the cap and above it; the POST cap is untouched.
+    const full = database(), fullEnv = {DB: full.adapter};
+    seed(full.sql, 'alice', 100); seed(full.sql, 'carol', 103);
+    assert.equal((await patch(fullEnv, 'alice', 'alice-3', {name: 'renamed', note: 'kept'})).status, 200);
+    assert.equal((await patch(fullEnv, 'carol', 'carol-0', {note: 'legacy'})).status, 200);
+    assert.deepEqual([count(full.sql, 'alice'), count(full.sql, 'carol')], [100, 103]);
+    assert.equal((await post(fullEnv, 'alice', {lat: 1, lon: 1})).data.error, FULL_MESSAGE, 'a full account still cannot save another');
+    full.sql.close();
+    // Two edits in flight together, each to its own column, both land.
+    let arrived = 0, release; const opened = new Promise(r => { release = r; }), timer = setTimeout(release, 2000);
+    const both = database(async query => { if (!updates(query) || arrived >= 2) return; if (++arrived >= 2) release(); await opened; }), env = {DB: both.adapter};
+    try {
+      const id = (await post(env, 'alice', {name: 'orig', lat: 5, lon: 6, note: 'orig note'})).data.id;
+      const results = await Promise.all([patch(env, 'alice', id, {name: 'new name'}), patch(env, 'alice', id, {note: 'new note'})]);
+      assert.equal(arrived, 2, 'both edits reached their write together');
+      assert.deepEqual(results.map(r => r.status), [200, 200]);
+      assert.deepEqual([row(both.sql, id).name, row(both.sql, id).note], ['new name', 'new note']);
+    } finally { clearTimeout(timer); release(); both.sql.close(); }
+    // A delete that lands between the ownership check and the write answers not-found and brings nothing back.
+    let deleted = null;
+    const raced = database(async query => { if (updates(query) && deleted) { deleted.sql.prepare("DELETE FROM saved_spots WHERE id='gone'").run(); deleted = null; } }), racedEnv = {DB: raced.adapter};
+    seed(raced.sql, 'alice', 1, 'gone'); raced.sql.prepare("UPDATE saved_spots SET id='gone' WHERE id='gone-0'").run(); deleted = raced;
+    const lost = await patch(racedEnv, 'alice', 'gone', {name: 'late'});
+    assert.deepEqual(envelope(lost), [404, {error: 'Not found'}]); assert.equal(row(raced.sql, 'gone'), undefined, 'the deleted spot is not recreated');
+    raced.sql.close();
+    // A storage failure is not success and changes nothing.
+    let fail = false; const broken = database(async query => { if (fail && updates(query)) throw new Error('D1 down'); }), brokenEnv = {DB: broken.adapter};
+    const kept = (await post(brokenEnv, 'alice', {name: 'kept', lat: 1, lon: 1})).data.id; fail = true;
+    const down = await patch(brokenEnv, 'alice', kept, {name: 'lost'});
+    assert.equal(down.status, 503); assert.ok(!('name' in down.data));
+    assert.equal(row(broken.sql, kept).name, 'kept'); broken.sql.close();
+  } finally { console.error = quiet; }
 });

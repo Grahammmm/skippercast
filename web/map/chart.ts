@@ -35,11 +35,12 @@ import {createCurrents, type Currents, type CurrentsOptions} from './currents.ts
 import {createEngine, ZOOM_OFFSET, type Engine, type MapLibraryModule} from './engine.ts';
 import {openBandPadding, toEdge, type Box} from './open-band.ts';
 import {browserGate, flyoverLegs, markFlyoverSeen, mayFly, type FlyoverGate} from './flyover.ts';
-import {COASTLINE_SOURCE, DENSITY_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
+import {COASTLINE_SOURCE, DENSITY_SOURCE, ENC_SOURCE, MARKS_SOURCE, MPA_SOURCE, RANKED_SOURCE, SAVED_SPOTS_SOURCE, SEAFLOOR_SOURCE, attributionFor, layerEntry, overlayFeatures, setTerrainLayer} from './layers.ts';
 import {GEOLOGY_PICK, MARK_PICK, SURVEY_PICK, chartPick, createMarks, markData, markScreen, markSources, markStyle} from './marks.ts';
 import {IDLE, LOADING, MPA_FILL, MPA_LABEL, loadMpas, mpaLayers, mpaMark, mpaSource, mpaState, type MpaResult} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {RANKED_PICK, RANKED_PIN, drawnSpots, rankedFeatures, rankedMark, rankedStyle, rankedZoom, zoomToGroup} from './ranked.ts';
+import {SAVED_SPOT_PICK, createSavedSpotLayer, pickSavedSpot, savedSpotStyle} from './saved-spots.ts';
 import {SEAFLOOR_PICK, createSeafloor, seafloorLayers, seafloorSource} from './seafloor.ts';
 import {BASEMAP_MANIFEST, BASEMAP_SOURCE, basemapArchive, basemapStyle} from './style.ts';
 import {camera, cameraParam, parseCamera, shownPresentation, type Camera} from './stage.ts';
@@ -86,10 +87,10 @@ export function chartStyle(o: ChartStyleOptions): MapLibre.StyleSpecification {
   sources[MPA_SOURCE] = mpaSource();
   sources[SEAFLOOR_SOURCE] = seafloorSource();
   sources[COASTLINE_SOURCE] = coastlineSource(o.region, o.page, o.shoreline ?? shorelineURL(o.region));
-  const marks = markStyle(o.palette), ranked = rankedStyle(o.palette);
-  Object.assign(sources, marks.sources, {[RANKED_SOURCE]: ranked.source});
+  const marks = markStyle(o.palette), ranked = rankedStyle(o.palette), saved = savedSpotStyle(o.palette);
+  Object.assign(sources, marks.sources, {[RANKED_SOURCE]: ranked.source, [SAVED_SPOTS_SOURCE]: saved.source});
   layers.push({id: ENC_LAYER, type: 'raster', source: ENC_SOURCE, minzoom: ENC_MIN_ZOOM - ZOOM_OFFSET, layout: {visibility: o.base === 'chart' ? 'visible' : 'none'}});
-  layers.push(...mpaLayers(o.palette), ...marks.habitat, ...seafloorLayers(o.palette), ...marks.marks, ...ranked.layers, ...coastlineLayers(o.palette));
+  layers.push(...mpaLayers(o.palette), ...marks.habitat, ...seafloorLayers(o.palette), ...marks.marks, ...ranked.layers, ...saved.layers, ...coastlineLayers(o.palette));
   return {...style, sources, layers} as unknown as MapLibre.StyleSpecification;
 }
 
@@ -207,7 +208,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
             detailRegion = id; drawnShore = shorelineURL(id); engine.peek()?.setData(COASTLINE_SOURCE, new URL(drawnShore, page()).href);
           } else markUnavailable(layer, error);
         }, attribution: archive ? attributionFor(['basemap']) : undefined,
-        pickLayers: [RANKED_PICK, MARK_PICK, SURVEY_PICK, GEOLOGY_PICK, SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL, ...drawn.flatMap(l => l.pick?.ordered ? l.pick.layers : [])],
+        pickLayers: [RANKED_PICK, SAVED_SPOT_PICK, MARK_PICK, SURVEY_PICK, GEOLOGY_PICK, SEAFLOOR_PICK, COASTLINE_PICK, MPA_FILL, ...drawn.flatMap(l => l.pick?.ordered ? l.pick.layers : [])],
         pickFirst: () => drawn.flatMap(l => l.pick && !l.pick.ordered ? l.pick.layers : []),
         // RF0850-2: while region.json is loading the style draws no shoreline; the camera effect asks once the list is known.
         style: chartStyle({palette: palette(), archive, page: page(), region: id, base: base.peek(), shoreline: drawnShore = chartFilesPending(id) ? '' : coastlineFetchPath(id, start.zoom) ?? ''}),
@@ -215,6 +216,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
           // BF-closures-everywhere: an armed tap is screened by the marks' screen of THIS region, read now; another region's, a stale one or none reads not checked and refuses.
           const here = region.peek();
           if (placeWaypoint(here, at, markData.peek()?.region.id === here ? markScreen.peek() : null)) return;
+          // SC0922-04: a private saved-spot pin opens its own card here; it never selects through the link, the camera or history.
+          if (layer === SAVED_SPOT_PICK) { pickSavedSpot(properties, mark => { chartMark.value = mark; }); return; }
           // A grouped ranked pin zooms to its spots and keeps the selection, as v1's does (#495).
           if (layer === RANKED_PICK && zoomToGroup(properties)) return;
           const other = layer === COASTLINE_PICK ? coastlineMark(properties) : layer === SEAFLOOR_PICK ? seafloor?.mark(String(properties?.id ?? '')) ?? null
@@ -332,6 +335,8 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       pick: i => { const mark = mpaMark(data.features[Number(i)]?.properties as Record<string, unknown> | undefined); return mark && chartPick(null, null, mark); }});
   }
 
+  // SC0922-04: the owner's saved spots; nothing is asked of the account until a person turns the layer on. Its list is read without the shared fetch cache.
+  const savedSpots = createSavedSpotLayer({engine, chartMark, fetchFn: options.fetchFn});
   const drawn = layers.map(create => create(engine));
   const fieldReading = (at: {lon: number; lat: number}): ChartMark | null =>
     currents?.reading(at) ?? drawn.map(l => l.reading?.(at) ?? null).find(m => m !== null) ?? null;
@@ -345,6 +350,7 @@ export function createChart(options: ChartOptions): {destroy(): void} {
       seafloor?.destroy();
       marks.destroy();
       currents?.destroy();
+      savedSpots.destroy();
       for (const layer of drawn) layer.destroy();
       engine.peek()?.destroy();
       engine.value = null;

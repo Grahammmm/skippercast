@@ -12,6 +12,7 @@ import {region as currentRegion} from './state.ts';
 import {loadProtectedScreen, type ProtectedScreen} from './trip.ts';
 import {placeRefused, screenPlace} from '../dist/geo-screen.js';
 import type {ChartMark} from './map/coastline.ts';
+import {SAVED_SPOTS_CHANGED} from './map/saved-spots.ts';
 
 export type SpotCandidate = {readonly name: string; readonly lat: number; readonly lon: number; readonly note: null};
 export type SpotResult = {readonly state: 'saved' | 'refused' | 'failed'; readonly message: string};
@@ -21,8 +22,7 @@ export const SAVE_WORDS = {
   helper: 'Private to your account. You can keep up to 100 saved spots.',
   context: 'This is map context, not a spot to save.',
   noPosition: 'This mark has no position to save.',
-  // Two literals, as dist/account.js writes its unchecked line: scripts/check_copy.mjs reads each literal alone and flags two "not" sentences in a row.
-  notChecked: 'Protected areas not checked for this spot.' + ' Not saved.',
+  notChecked: 'Protected areas not checked for this spot: outside coverage or check unavailable; not saved.',
   inside: 'Inside a protected area. Not saved.',
   margin: 'Within 70 m of a protected area. Not saved.',
   signIn: 'Sign in again to save this spot.',
@@ -70,6 +70,8 @@ export type SaveDeps = {
   loadScreen?: (region: string) => Promise<ProtectedScreen>;
   /** Asked once after a 401. */
   refresh?: () => unknown;
+  /** Where the zero-detail change event goes; the page by default. */
+  events?: Pick<EventTarget, 'dispatchEvent'>;
 };
 
 const isResult = (value: SpotCandidate | SpotResult): value is SpotResult => 'state' in value;
@@ -116,7 +118,13 @@ export async function saveMarkSpot(mark: ChartMark, deps: SaveDeps = {}): Promis
   } catch { return failed(SAVE_WORDS.uncertain); }
   if (response.status === 201) {
     const row = await response.json().catch(() => null);
-    return confirmed(row, candidate) ? {state: 'saved', message: SAVE_WORDS.saved} : failed(SAVE_WORDS.uncertain);
+    if (!confirmed(row, candidate)) return failed(SAVE_WORDS.uncertain);
+    // SC0922-04: tell the owner's Chart layer, if it is listening, that the list changed: no row, id, name, position or note travels with it, and a session that changed since says nothing.
+    if (readSession() === who) {
+      const target = deps.events ?? globalThis;
+      try { if (typeof target.dispatchEvent === 'function') target.dispatchEvent(new Event(SAVED_SPOTS_CHANGED)); } catch { /* the layer reads again on its next turn-on */ }
+    }
+    return {state: 'saved', message: SAVE_WORDS.saved};
   }
   if (response.status === 401) { try { void (deps.refresh ?? (() => refreshSession()))(); } catch { /* the session reads again on its own */ } return failed(SAVE_WORDS.signIn); }
   if (response.status === 400) {

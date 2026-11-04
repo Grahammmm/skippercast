@@ -125,7 +125,7 @@ export async function initCharterGrounds(
     const html = `<div class="eyebrow charter-ink">CHARTER-REPORTED GROUND · ${esc(g.precision)}</div>
       <h2>${esc(g.label)}</h2>
       <p class="charter-lead"><strong>${g.report_count} reported trips · ${g.boats.length} boat${g.boats.length === 1 ? "" : "s"}</strong><br>Latest report ${date(g.latest_report)}</p>
-      <p class="evidence-note charter-note"><strong>Reported area, exact stops unknown.</strong><br>Captains named “${esc(g.reported_ground)}”; they did not publish GPS positions or fishing depths. Purple shows our approximate search water, not a boat track or a confirmed reef.</p>
+      <p class="evidence-note charter-note"><strong>Reported area, exact stops unknown.</strong><br>Captains named “${esc(g.reported_ground)}” without publishing GPS positions or fishing depths. Purple shows our approximate search water, not a boat track or a confirmed reef.</p>
       <div class="stats"><div class="stat"><span>Trips reporting ${speciesName}</span><strong>${summary.trips}</strong><span>on ${summary.dates} dates</span></div><div class="stat"><span>Outline survey depths</span><strong>${g.depth_ft.join("–")} ft</strong><span>${g.survey_year} · MLLW</span></div></div>
       <div id="charter-recent-evidence" class="evidence-note"><p class="small">Checking recent reports for this named ground…</p></div>
       <p>${esc(g.approach)}</p>

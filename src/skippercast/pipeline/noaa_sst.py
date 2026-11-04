@@ -44,7 +44,10 @@ def latest_file(client, now):
             path = entry.attrib.get("urlPath", "")
             match = FILE.fullmatch(path.rsplit("/", 1)[-1])
             if match and path == f"{PATH}/{year}/{match.group(0)}":
-                date = datetime.strptime(match.group(1), "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+                try:
+                    date = datetime.strptime(match.group(1), "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+                except ValueError:
+                    continue  # impossible calendar/clock fields: skip this entry, keep its siblings
                 if date <= now:
                     found.append((date, path, url))
         if found:
