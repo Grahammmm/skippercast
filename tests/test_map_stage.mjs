@@ -10,6 +10,7 @@ import {
 } from '../web/map/stage.ts';
 import {configureStore, navigate, setParams, syncFromURL} from '../web/state.ts';
 import {dockTime} from '../web/hour.ts';
+import {createHourClock} from '../web/clock.ts';
 
 const ORIGIN = 'https://s.test/map';
 const NOW = new Date('2026-10-05T20:17:00Z');
@@ -74,11 +75,11 @@ function document() {
   };
 }
 
-function stage(fake, {center = [35.37, -120.86], doc = document(), now = () => NOW} = {}) {
+function stage(fake, {center = [35.37, -120.86], doc = document(), now = () => NOW, clock} = {}) {
   const host = {dataset: {}, shadowRoot: {children: [], replaceChildren() { this.children = []; }}};
   terrainFailed.value = false;
   terrainMark.value = null;
-  const s = createStage({host, load: async () => fake.module, center: () => center, now, doc, viewDelay: 0});
+  const s = createStage({host, load: async () => fake.module, center: () => center, now, clock, doc, viewDelay: 0});
   return {stage: s, host, doc};
 }
 
@@ -367,6 +368,49 @@ test('without ?hour= the terrain hour moves on at each hour boundary, not frozen
   t.mock.timers.tick(60 * 60 * 1000);
   assert.deepEqual(fake.last('setHour'), new Date('2026-10-06T03:00:00Z'), 'a chosen hour stays chosen');
   s.destroy();
+});
+
+/** An hour clock over a settable reader and a manual scheduler: `fire()` runs the one waiting timeout. */
+function manualClock(start) {
+  let at = new Date(start), next = 1;
+  const timers = new Map();
+  const clock = createHourClock({read: () => new Date(at), doc: document(), schedule: (callback, delay) => { timers.set(next, {callback, delay}); return next++; }, cancel: id => { timers.delete(id); }});
+  return {clock, timers, set(value) { at = new Date(value); }, fire() { const [[id, timer]] = [...timers]; timers.delete(id); timer.callback(); }};
+}
+
+test('shared clock: a stage follows an injected clock across the hour, shows it on the host, and releases it on destroy', async () => {
+  browser(`${ORIGIN}?region=morro-bay&presentation=3d`);
+  const fake = terrain();
+  const c = manualClock('2026-10-05T20:59:59.999Z');
+  const {stage: s, host} = stage(fake, {clock: c.clock, now: () => new Date('2030-01-01T00:00:00Z')});
+  for (let i = 0; i < 10; i++) await Promise.resolve();
+  assert.deepEqual(fake.options.initial.hour, new Date('2026-10-05T20:00:00Z'), 'an explicit clock wins over now');
+  assert.equal(host.dataset.hour, '2026-10-05T20:00:00.000Z');
+  assert.equal(c.timers.size, 1);
+  c.set('2026-10-05T21:00:00Z');
+  c.fire();
+  assert.deepEqual(fake.last('setHour'), new Date('2026-10-05T21:00:00Z'));
+  assert.equal(host.dataset.hour, '2026-10-05T21:00:00.000Z', 'data-hour follows the clock');
+  const mounts = fake.mounts;
+  setParams({hour: '2026-10-06T03:00Z'});
+  c.set('2026-10-05T23:30:00Z');
+  c.fire();
+  assert.deepEqual(fake.last('setHour'), new Date('2026-10-06T03:00:00Z'), 'a chosen hour survives the tick');
+  assert.equal(fake.mounts, mounts, 'a tick does not remount the renderer');
+  s.destroy();
+  s.destroy();
+  assert.equal(c.timers.size, 0, 'destroy releases the clock, once or twice');
+});
+
+test('shared clock: stages on one clock share one timeout, and the last destroy stops it', async () => {
+  browser(`${ORIGIN}?region=morro-bay&presentation=3d`);
+  const c = manualClock('2026-10-05T20:17:00Z');
+  const a = stage(terrain(), {clock: c.clock}), b = stage(terrain(), {clock: c.clock});
+  assert.equal(c.timers.size, 1);
+  a.stage.destroy();
+  assert.equal(c.timers.size, 1, 'one stage still using it');
+  b.stage.destroy();
+  assert.equal(c.timers.size, 0);
 });
 
 test('FE-80: host chrome; the Seafloor entry\'s options reach the setters, readings and sources arrive as data, the view buttons drive the handle', async () => {

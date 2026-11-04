@@ -291,3 +291,34 @@ test('"Where to look" shows Spear\'s dive limits in words that promise nothing',
   assert.doesNotMatch(html, CLAIMS);
   profile.value = 'boat'; depth.value = null; spearPlan.value = {from: null, shoreYd: null};
 });
+
+// RF0920-2: one malformed MultiLineString member must not discard its valid siblings.
+const fc = (...geometries) => ({type: 'FeatureCollection', features: geometries.map(geometry => ({type: 'Feature', geometry}))});
+const multi = coordinates => ({type: 'MultiLineString', coordinates});
+const deepFreeze = v => { if (v && typeof v === 'object' && !Object.isFrozen(v)) { Object.freeze(v); Object.values(v).forEach(deepFreeze); } return v; };
+const GOOD_A = [[-120.8, 35.3], [-120.81, 35.31]], GOOD_B = [[-120.9, 35.4], [-120.91, 35.41], [-120.92, 35.42]];
+
+test('shore_parser_ignores_non_array_multipart_members', () => {
+  const arrayLike = {length: 2, 0: [-120.1, 35.1], 1: [-120.2, 35.2]};
+  const fakeArray = {length: 2, every: () => true};
+  const json = deepFreeze(fc(
+    multi([GOOD_A, null]), multi([null, GOOD_B]), multi([7, 'ab', true, {}, arrayLike, fakeArray, [], [[-120.3, 35.3]]]),
+    multi([null, GOOD_A, undefined, GOOD_B]), {type: 'LineString', coordinates: GOOD_B}));
+  let lines;
+  assert.doesNotThrow(() => { lines = linesOf(json); });
+  assert.deepEqual(lines, [GOOD_A, GOOD_B, GOOD_A, GOOD_B, GOOD_B], 'valid lines survive in original order');
+  assert.deepEqual(linesOf(fc(multi([null, 3, {}]))), [], 'only bad members: no lines, no throw');
+});
+
+test('shore_parser_preserves_position_validation', () => {
+  const rejected = [
+    [[-120.8, 35.3], null], [[-120.8, 35.3], 5], [[-120.8, 35.3], 'ab'], [[-120.8, 35.3], [-120.9]],
+    [[-120.8, 35.3], [NaN, 35.4]], [[-120.8, 35.3], [-120.9, Infinity]], [[-120.8, 35.3], ['-120.9', '35.4']],
+  ];
+  const accepted = [[[0, 0], [-1, -2]], [[1, 2, 3], [4, 5, 6]], [[1, 2], [1, 2]]];
+  const json = deepFreeze(fc(multi([...rejected, GOOD_A, ...accepted])));
+  assert.deepEqual(linesOf(json), [GOOD_A, ...accepted], 'a bad position rejects its whole line only; good siblings and finite zero, negative, extra-dimension and duplicate positions stay');
+  assert.deepEqual(linesOf(fc({type: 'LineString', coordinates: null}, {type: 'Polygon', coordinates: [GOOD_A]}, null, 4)), [], 'unsupported or malformed features give no lines');
+  assert.deepEqual(linesOf(null), []);
+  assert.deepEqual(linesOf({features: 'no'}), []);
+});
