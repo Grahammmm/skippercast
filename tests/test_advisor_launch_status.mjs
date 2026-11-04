@@ -8,7 +8,7 @@ import {mkdtempSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {launchStatus, parseArgs, parsePlan, runPreflight, PLAN_DOC, RUNBOOKS, PILOT_SPECIES} from '../scripts/advisor/preflight.mjs';
+import {launchStatus, parseArgs, parsePlan, redactError, runPreflight, PLAN_DOC, RUNBOOKS, PILOT_SPECIES} from '../scripts/advisor/preflight.mjs';
 
 const BASE = 'https://example.test', SESSION = 'Ab1'.repeat(14) + 'Z', NOW = Date.parse('2026-10-20T16:00:00Z');
 const PLAN = readFileSync(fileURLToPath(new URL(`../${PLAN_DOC}`, import.meta.url)), 'utf8');
@@ -67,6 +67,11 @@ test('every row and owner item has one of the four states, none says unknown, ow
 test('edge 1: a readiness row the parser cannot read fails the run naming that row', async () => {
   await assert.rejects(run({plan: PLAN.replace(/^\| 7 \| Wording reviewed by the owner \| by hand: .*$/m, '| 7 | Wording reviewed by the owner |')}), /could not be parsed: \| 7 \| Wording reviewed/);
   await assert.rejects(run({plan: PLAN.replace('| 9 | Golden', '| nine | Golden')}), /could not be parsed.*nine/);
+  // Valid Markdown table shapes are read, never dropped: indented rows and rows without the opening pipe.
+  for (const shape of [m => `  ${m}`, m => m.replace(/^\| /, '')]) assert.equal(parsePlan(PLAN.replace(/^\| 7 \|.*$/m, shape)).rows.length, 18);
+  // Anything in the table that is not a row fails naming it: a pipe-less line, or a row after a break.
+  await assert.rejects(run({plan: PLAN.replace(/^\| 7 \|.*$/m, m => `${m}\nrow seven and a half`)}), /could not be parsed: row seven and a half/);
+  await assert.rejects(run({plan: PLAN.replace(/^\| 7 \|.*$/m, m => `${m}\n\n| 77 | Late | by hand: x | y |`)}), /could not be parsed: \| 77 \| Late/);
 });
 
 test('edge 5: zero rows parsed, or no owner items, fails the run; an empty report is never a pass', async () => {
@@ -75,7 +80,7 @@ test('edge 5: zero rows parsed, or no owner items, fails the run; an empty repor
 });
 
 test('a row removed from the plan leaves the report; a row added without a check is fail, with a by-hand step owner-only', async () => {
-  const gone = await run({plan: PLAN.replace(/^\| 12 \|.*$/m, '')});
+  const gone = await run({plan: PLAN.replace(/^\| 12 \|.*\n/m, '')});
   assert.equal(gone.row('12'), undefined); assert.match(gone.text, /not in the plan table \(ignored\): 12/);
   const added = await run({plan: PLAN.replace(/^\| 18 \|.*$/m, m => `${m}\n| 19 | New row | preflight: nothing yet | x |\n| 20 | Hand row | by hand: do the thing | x |`)});
   assert.equal(stateOf(added.row('19')), 'FAIL'); assert.match(added.row('19'), /no preflight check covers this row/);
@@ -89,6 +94,14 @@ test('edge 2 and 3: a check that throws is a fail with its error, the cookie ins
   assert.equal(stateOf(row('10')), 'FAIL'); assert.match(row('10'), /not checked, a check threw: Error: spawn failed for/);
   assert.equal(stateOf(row('18')), 'FAIL');
   assert.ok(!text.includes(SESSION) && !text.includes('+15550100123'));
+  const leaks = 'BLUEBUBBLES_PASSWORD=*** META_PAGE_ID=123456789012345 phone=(415) 555-0123 or 415-555-0199 or +14155550123 api_key: ab12 Authorization: Bearer abc.def TOKEN=A1 ADVISOR_WEBHOOK_SECRET_VALUE_FROM_THE_ENVIRONMENT_X';
+  const thrownLeak = await run({runGolden: () => { throw new Error(`relay refused: ${leaks}`); }});
+  const netLeak = await run({fetcher: async () => { throw new Error(`fetch failed: ${leaks}`); }});
+  for (const r of [thrownLeak, netLeak]) {
+    assert.match(r.text, /relay refused|fetch failed/, 'the explanation stays'); assert.match(r.text, /\[redacted\]/);
+    for (const bad of ['***', '1234567890', '555-0123', '555-0199', '4155550123', 'ab12', 'abc.def', '=A1', 'WEBHOOK_SECRET_VALUE']) assert.ok(!r.text.includes(bad), `leaked ${bad}`);
+  }
+  assert.equal(redactError('ECONNRESET reading https://x.test/api: socket hang up'), 'ECONNRESET reading https://x.test/api: socket hang up');
   const net = await run({fetcher: async () => { throw new Error(`socket reset sending ${COOKIE_HEADER}${SESSION}`); }});
   assert.ok(!net.text.includes(SESSION)); assert.equal(stateOf(net.row('1')), 'FAIL'); assert.match(net.row('1'), /socket reset/);
 });
@@ -116,15 +129,20 @@ test('golden conversations (row 9) never read greener than the evidence', async 
   assert.equal(stateOf(noLocal.row('9')), 'OWNER-ONLY'); assert.match(noLocal.row('9'), /by hand: .*preflight\.mjs --local/);
 });
 
-test('invitations (row 11) never read greener than the evidence', async () => {
-  assert.equal(stateOf((await run()).row('11')), 'PASS');
-  assert.match((await run()).row('11'), /does not prove: .*invitations were sent or accepted/);
-  assert.equal(stateOf((await run({boats: ['one', 'two']})).row('11')), 'FAIL', 'a pending invitation is not a verified boat');
-  assert.equal(stateOf((await run({boats: []})).row('11')), 'FAIL');
-  assert.equal(stateOf((await run({routes: {'/boats/two': [404, 'gone']}})).row('11')), 'FAIL');
-  assert.equal(stateOf((await run({routes: {'/api/admin/boats': [500, 'oops']}})).row('11')), 'FAIL');
+test('invitations (row 11): a passing boat count never completes the invitation step', async () => {
+  const ok = await run();
+  assert.equal(stateOf(ok.row('11')), 'OWNER-ONLY', 'verified boats alone are not 3-5 invited with consent');
+  assert.match(ok.row('11'), /\[pass\] check At least 3 verified boats.*\[owner-only\] by hand \(H9\): Invite 3–5 skippers/);
+  assert.match(ok.row('11'), /does not prove: .*invitations were sent or accepted/);
+  assert.match(ok.row('11'), /consent given on 0/, 'no consent shows as the count it is');
+  assert.equal(stateOf((await run({boats: ['a', 'b', 'c', 'd', 'e', 'f']})).row('11')), 'FAIL', 'six verified boats disprove 3-5');
+  assert.equal(stateOf((await run({boats: ['a', 'b', 'c', 'd', 'e']})).row('11')), 'OWNER-ONLY');
+  for (const o of [{boats: ['one', 'two']}, {boats: []}, {routes: {'/boats/two': [404, 'gone']}}, {routes: {'/api/admin/boats': [500, 'oops']}}]) {
+    const r = await run(o); assert.equal(stateOf(r.row('11')), 'FAIL', JSON.stringify(o)); assert.doesNotMatch(r.row('11'), /H9/, 'a failed row is not asked of the owner yet');
+  }
   const blocked = await run({cookie: null});
   assert.equal(stateOf(blocked.row('11')), 'BLOCKED'); assert.equal(blocked.exitCode, 1); assert.match(blocked.lines.at(-1), /^NOT READY: fix the fail and blocked/);
+  await assert.rejects(run({plan: PLAN.replace(/^- \[ \] Invite 3.*$/m, '- [ ] Something else')}).then(r => { assert.equal(stateOf(r.row('11')), 'FAIL'); assert.match(r.row('11'), /owner step for this row was not found/); throw Error('ok'); }), /^Error: ok$/);
 });
 
 test('a row whose automatic check passes still waits when the plan names a by-hand step (row 16, 15)', async () => {
