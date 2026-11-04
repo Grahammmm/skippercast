@@ -297,4 +297,3 @@ test('a rejected ocean write is fatal: the storage message, no meta, the prior p
   assert.equal(late.error?.name, 'AbortError');
   assert.equal(late.caches.snapshot(), late.before);
 });
-
