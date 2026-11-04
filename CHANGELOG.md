@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC1952-04: the landing's tomorrow verdict for a returning visitor rates with the boat and Boat comfort limits saved on this device (the same two stored values /map rates with) and names that boat in its heading, with the model note for a boat outside the reference range; with no boat saved, or one that cannot be read, it is still the reference 23 ft boat. It reads only those two stored values, stores nothing and sends neither in any request.
+
 - BF-advisor-beta: the region/language pilot switches now reach the deployed Worker. Contacts outside the pilot can still opt out, confirm data deletion and request their data; only those control replies bypass the pilot scope.
 
 - SC-POPOVER: the desktop map legend's basis popovers (Seafloor, Currents, Depth contours, Protected areas) are placed against their own button by CSS anchor positioning, so the legend that now shrinks and scrolls no longer cuts off the part of a popover beyond its box; a browser without anchor positioning keeps the previous in-flow popover.
