@@ -318,7 +318,8 @@ test('survey outline joins the trip and downloads checked GPX; charter ground ex
   await card.getByRole('button', {name: 'GPX', exact: true}).click();
   await expect(page.locator('#export-content')).toContainText('rocky habitat context 060 · reef');
   const xml = await download(page), {checkGpx} = await import('../web/gpx-check.ts');
-  expect(checkGpx(xml, {waypoints: 1})).toEqual({ok: true});
+  expect(checkGpx(xml, {waypoints: 1})).toEqual({ok: true,
+    screen: [{inside: false, name: null, distanceM: null, screened: false}]});
   expect(xml).toContain(`<cmt>user:survey-${id}</cmt>`);
   // The pick itself (5 decimals), within a few pixels of where the test clicked: not the outline's centroid or a sampled reading.
   const [, lat, lon] = /<wpt lat="([\d.-]+)" lon="([\d.-]+)"/.exec(xml)!;
