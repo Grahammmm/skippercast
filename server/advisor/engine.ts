@@ -30,7 +30,8 @@
 import type {Env} from '../env.ts';
 import type {LlmUsage} from '../analytics.ts';
 import {recordLlm} from '../analytics.ts';
-import {advisorSettings} from './settings.ts';
+import {advisorSettings, betaScope} from './settings.ts';
+import {inBetaScope} from './gate.ts';
 import {advisorLog} from './log.ts';
 import {localClock, DEFAULT_TZ} from './cron.ts';
 import {parseCommand, normalizeCommand, detectLanguage, chooseLanguage} from './intents.ts';
@@ -397,6 +398,13 @@ async function answerTurn(input: EngineInput): Promise<EngineResult> {
   if (!settings.repliesEnabled) return done([], 'held');
   if (contact.status === 'blocked') return done([], 'blocked');
   const command = parseCommand(text);
+  // BF-advisor-beta: outside the pilot's regions or languages gets nothing, as with the feature off. The region is the
+  // home port's (null when that port is unknown) else ADVISOR_REGION_DEFAULT; the language is the one the reply would use.
+  const scope = betaScope(env);
+  if (scope.regions || scope.langs) {
+    const reply = chooseLanguage(contact.language, (command && SPANISH_COMMANDS.has(normalizeCommand(text)) ? 'es' : null) ?? detectLanguage(text), null).reply;
+    if (!inBetaScope(scope, contact.home_port ? portRegion(contact.home_port) : settings.regionDefault, reply)) return done([], 'out_of_scope');
+  }
   if (contact.status === 'stopped') {
     // No outbound of any kind until START (02 § STOP).
     if (command !== 'start') return done([], 'stopped');
