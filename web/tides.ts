@@ -12,7 +12,8 @@
 //   here a non-finite height or an unreadable or out-of-order next point reads no trend too;
 // - the sparkline (`tideChart`): `chart()` in mini mode over the day's curve
 //   with night shading, a 15-minute gap rule and the curve's range; fewer
-//   than two points draw nothing and read "Tide series unavailable".
+//   than two points draw nothing: with no events either they read
+//   "Tide series unavailable", with events they read TIDE_NO_CURVE.
 // tests/test_tides.mjs pins both against briefing.ts.
 //
 // Erasable syntax only: Node tests import this file by type stripping.
@@ -21,6 +22,8 @@ import type {TideEvent, TidePoint} from '../packages/coast/src/types.ts';
 
 export type TideTrend = 'Rising' | 'Falling' | 'Turning';
 export const TIDE_UNAVAILABLE = 'Tide series unavailable';
+/** No curve but the day's highs and lows are listed (a place with no local coast report). */
+export const TIDE_NO_CURVE = 'No tide curve for this place. The times below are the day’s predicted highs and lows.';
 /** The curve point must sit this close to the selected time. */
 export const TREND_MATCH_MS = 4 * 60_000;
 /** The next point must follow within this, or the curve is too coarse to call a trend. */
