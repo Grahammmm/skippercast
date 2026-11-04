@@ -104,6 +104,23 @@ catchLog.post('/api/catch-log', async c => {
     .bind(id, owner, e.trip_id, e.started_at, e.ended_at, e.method, e.species, e.outcome, e.count, e.lat, e.lon, e.note, created_at).run();
   return json({id, owner, ...e, created_at}, 201);
 });
+// SC1137-10: PATCH merges the named fields into the stored entry and validates the whole result once. Omitted fields keep their
+// stored value; an optional field is cleared with null (or blank text), ended_at only with null, lat/lon only as a pair. id, owner
+// and created_at are never writable. A missing or foreign id answers 404 before the body is read, as GET and DELETE do.
+const MUTABLE = ['trip_id', 'started_at', 'ended_at', 'method', 'species', 'outcome', 'count', 'lat', 'lon', 'note'] as const;
+catchLog.patch('/api/catch-log/:id', async c => {
+  const owner = c.var.owner, d = db(c.env), id = c.req.param('id');
+  const stored = await d.prepare('SELECT * FROM catch_log WHERE id=? AND owner=?').bind(id, owner).first<Record<string, unknown>>();
+  if (!stored) return notFound();
+  const patch = await body(c.req.raw, 4096 + NOTE_CHARS * 4), named = Object.keys(patch);
+  if (named.some(k => !(MUTABLE as readonly string[]).includes(k))) throw new ClientError(`only ${MUTABLE.join(', ')} can be changed`);
+  if (('lat' in patch || 'lon' in patch) && !('lat' in patch && 'lon' in patch)) throw new ClientError('coordinates_incomplete: send latitude and longitude together or neither');
+  const e = validateLogEntry({...Object.fromEntries(MUTABLE.map(k => [k, stored[k]])), ...patch});
+  if (e.trip_id && !await d.prepare('SELECT 1 AS ok FROM trips WHERE id=? AND owner=?').bind(e.trip_id, owner).first()) return notFound();
+  const row = await d.prepare('UPDATE catch_log SET trip_id=?,started_at=?,ended_at=?,method=?,species=?,outcome=?,count=?,lat=?,lon=?,note=? WHERE id=? AND owner=? RETURNING *')
+    .bind(e.trip_id, e.started_at, e.ended_at, e.method, e.species, e.outcome, e.count, e.lat, e.lon, e.note, id, owner).first();
+  return row ? json(row) : notFound();
+});
 catchLog.delete('/api/catch-log/:id', async c => {
   const done = await db(c.env).prepare('DELETE FROM catch_log WHERE id=? AND owner=?').bind(c.req.param('id'), c.var.owner).run();
   return done.meta.changes ? json({deleted: true}) : notFound();
