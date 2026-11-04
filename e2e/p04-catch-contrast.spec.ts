@@ -260,7 +260,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // BF-sst-fronts: check_contrast.mjs changes only the legendTsx surface hash and its comment (Legend.tsx adds a Temp fronts row
   // in the existing app-legend-note text role); Reports never mounts the legend. Rebind only check_contrast.mjs.
   // SC2207-11: check_contrast.mjs changes only the appCss surface hash and its comment (see the app.css pin above); rebound.
-  "scripts/check_contrast.mjs": "a3f327b903f109d171a7b81c0780b8e62ced94ac1ac8c8f143d8ef502781b41b",
+  // SC0452-04 (#1574): check_contrast.mjs changes only the Legend.tsx surface hash,
+  // its applicability comment and moved line citations for the coarse-drape notes.
+  // BODY09 mounts Reports/CatchCards, never Legend; contrast(), catch paint,
+  // backing, assertions and thresholds are unchanged. Rebind only this source.
+  "scripts/check_contrast.mjs": "659cea8a887e7d2e56311b1f28f9410c0062b45005863902a0255bfee029c716",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
