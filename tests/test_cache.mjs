@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
-import {cacheKey, overLimit} from '../server/edge-cache.ts';
+import {cacheKey, cached, overLimit} from '../server/edge-cache.ts';
 import {useBucket, EDGE_CACHE_MAX_BYTES} from '../server/feeds.ts';
 
 const read = p => JSON.parse(readFileSync(new URL(p, import.meta.url)));
@@ -290,4 +290,48 @@ test('snapshot cache separates logical MIME/TTL and reports the current generati
   assert.equal(r.headers.get('X-SC-Cache'), 'hit');assert.equal(r.headers.get('X-Feed-Generation'), first);
   assert.equal(r.headers.get('Cache-Control'), 'public, max-age=60');assert.equal(r.headers.get('Content-Type'), 'application/json');
   assert.deepEqual(await r.json(), {});
+}));
+
+const keyOf = (query, options) => cacheKey('https://s/api/om/v1/forecast' + query, options).url;
+
+test('cache_key_preserves_repeated_value_order', () => {
+  assert.notEqual(keyOf('?latitude=35&latitude=36&longitude=-120'), keyOf('?latitude=36&latitude=35&longitude=-120'));
+  assert.equal(keyOf('?latitude=35&latitude=36'), 'https://s/api/om/v1/forecast?latitude=35&latitude=36&sc-build=dev');
+  assert.equal(keyOf('?latitude=35&latitude=35'), 'https://s/api/om/v1/forecast?latitude=35&latitude=35&sc-build=dev');
+  assert.notEqual(keyOf('?a=&a=1'), keyOf('?a=1&a='));
+  assert.equal(keyOf('?a=&a=1'), 'https://s/api/om/v1/forecast?a=&a=1&sc-build=dev');
+  // Distinct names still share whatever order they arrive in; values keep their own order.
+  assert.equal(keyOf('?a=1&b=2&a=3'), keyOf('?b=2&a=1&a=3'));
+  assert.notEqual(keyOf('?a=3&a=1'), keyOf('?a=1&a=3'));
+  // Percent-decoded names follow the same rule.
+  assert.equal(keyOf('?%61=2&b=0&%61=1'), keyOf('?b=0&a=2&a=1'));
+  assert.notEqual(keyOf('?%61=2&%61=1'), keyOf('?%61=1&%61=2'));
+});
+
+test('cache_key_filtering_preserves_repeat_order', () => {
+  const options = {params: ['latitude', 'longitude']};
+  assert.equal(keyOf('?latitude=36&junk=1&longitude=-120&latitude=35&junk=2', options),
+    'https://s/api/om/v1/forecast?latitude=36&latitude=35&longitude=-120&sc-build=dev');
+  assert.notEqual(keyOf('?latitude=36&latitude=35', options), keyOf('?latitude=35&latitude=36', options));
+  assert.equal(keyOf('?latitude=36&latitude=35', {params: []}), 'https://s/api/om/v1/forecast?sc-build=dev');
+  assert.equal(keyOf('?latitude=36&latitude=35&sc-build=evil', {params: ['latitude']}), 'https://s/api/om/v1/forecast?latitude=36&latitude=35&sc-build=dev');
+  assert.notEqual(keyOf('?a=2&a=1', {build: 'x'}), keyOf('?a=2&a=1', {build: 'y'}));
+  assert.equal(cacheKey('https://s/x?a=2&a=1', {headers: new Headers({Accept: 'application/json'})}).headers.get('Accept'), 'application/json');
+});
+
+test('cached_repeated_first_values_do_not_cross_contaminate', () => withEdge(async cache => {
+  globalThis.fetch = async () => { throw Error('no network in this test'); };
+  let produced = 0;
+  const serve = query => cached(cacheKey('https://s/api/om/v1/forecast' + query), undefined, async () => {
+    produced++;
+    const first = new URL('https://s/x' + query).searchParams.get('latitude');
+    return {response: Response.json({latitude: first}, {headers: {'Cache-Control': 'public, max-age=300'}})};
+  });
+  const a1 = await serve('?latitude=35&latitude=36&longitude=-120');
+  const b = await serve('?latitude=36&latitude=35&longitude=-120');
+  const a2 = await serve('?longitude=-120&latitude=35&latitude=36');
+  assert.deepEqual([a1, b, a2].map(r => r.headers.get('X-SC-Cache')), ['miss', 'miss', 'hit']);
+  assert.deepEqual([(await a1.json()).latitude, (await b.json()).latitude, (await a2.json()).latitude], ['35', '36', '35']);
+  assert.equal(produced, 2);
+  assert.equal(cache.entries.size, 2);
 }));
