@@ -190,6 +190,11 @@ function EmptyOrPlan({empty}: {empty: string}) {
         {plan.items.map((item, i) => <li key={i} data-field={item.field}>{item.label}: {item.text}</li>)}
       </ul>
       {plan.basis ? <p data-field="tactics_basis">{plan.basis}</p> : null}
+      {plan.links.length ? (
+        <ul aria-label="Search plan sources">
+          {plan.links.map((l, i) => <li key={i}><a href={l.href} target="_blank" rel="noopener" aria-label={`${l.title} (opens in a new tab)`}>{l.title}</a></li>)}
+        </ul>
+      ) : null}
     </div>
   );
 }
