@@ -266,7 +266,8 @@ export async function loadRegs(region: RulesRegion, fetchFn: typeof fetch = fetc
   let transient = false;
   const accept = (candidate: Data): boolean => {
     const current = regsData.peek(), mine = current?.region === region.id ? current.data : null;
-    if (reading?.region !== region.id || candidate?.jurisdiction_id !== region.jurisdiction_id || !validRegulations(candidate, region)) return false;
+    // Only the request that is still current may publish: a first A answering after A -> B -> A is obsolete even at an equal or newer review time.
+    if (reading !== ours || candidate?.jurisdiction_id !== region.jurisdiction_id || !validRegulations(candidate, region)) return false;
     if (mine && Date.parse(candidate.reviewed_at) < Date.parse(mine.reviewed_at)) return false;
     regsData.value = {region: region.id, data: candidate};
     return true;
