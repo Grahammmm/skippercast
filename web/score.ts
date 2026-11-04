@@ -224,8 +224,10 @@ function finish(comfort: number, control: number, mode: ControlMode): Scores {
 
 /** go / marginal / no-go from a rated hour or window; a hazard is always no-go. */
 export function verdictFor(rating: {conditions?: number | null; hazard?: boolean} | null | undefined): Verdict {
-  if (!rating || !Number.isFinite(rating.conditions as number)) return 'unknown';
-  if (rating.hazard || (rating.conditions as number) < THRESHOLDS.noGo) return 'no-go';
+  if (!rating) return 'unknown';
+  if (rating.hazard) return 'no-go'; // an explicit hazard holds even when its score is missing
+  if (!Number.isFinite(rating.conditions as number)) return 'unknown';
+  if ((rating.conditions as number) < THRESHOLDS.noGo) return 'no-go';
   return (rating.conditions as number) >= THRESHOLDS.go ? 'go' : 'marginal';
 }
 
