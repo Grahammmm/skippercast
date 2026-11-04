@@ -394,3 +394,82 @@ test('deleted_trip_is_refused_without_new_log', async () => {
   assert.equal(logCount(sql, 'alice'), before);
   sql.close();
 });
+
+// RF0920-1: the written calendar day must exist and the written hour must be 00-23; nothing is rolled into another day.
+const TIME_ERROR = name => `${name} must be an ISO date and time with a zone`;
+// Runs `fn` with the network blocked and the database closed even when an assertion fails.
+async function withLog(fn, wrap) {
+  const {sql, adapter} = database(wrap), original = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error('offline'); };
+  try { await fn(sql, {DB: adapter}); } finally { globalThis.fetch = original; sql.close(); }
+}
+// The write route allows 30 calls a minute per account, so each refusal in a long matrix is sent as its own account.
+let refusals = 0;
+const totalRows = sql => sql.prepare('SELECT COUNT(*) AS n FROM catch_log').get().n;
+const refuseField = async (env, field, value) => {
+  const entry = field === 'started_at' ? {...BLANK, started_at: value} : {...BLANK, ended_at: value};
+  const r = await post(env, 'refused-' + refusals++, entry);
+  assert.deepEqual([r.status, r.data.error], [400, TIME_ERROR(field)], `${field} ${value}`);
+};
+
+test('catch_log_refuses_impossible_written_dates', async () => withLog(async (sql, env) => {
+  const impossible = ['2026-02-29', '2026-02-30', '2026-04-31', '2100-02-29', '2026-06-31', '2026-11-31', '2026-01-32', '2026-00-10', '2026-13-01', '2026-01-00'];
+  for (const day of impossible) for (const zone of ['Z', '+05:00', '-07:00']) for (const field of ['started_at', 'ended_at']) await refuseField(env, field, `${day}T14:00:00${zone}`);
+  assert.equal(totalRows(sql), 0, 'no row saved');
+}));
+
+test('catch_log_refuses_normalized_midnight', async () => withLog(async (sql, env) => {
+  for (const t of ['24:00', '24:00:00', '24:00:00.0', '24:00:00.000', '24:00:00.00']) for (const zone of ['Z', '+02:00', '-08:00']) for (const field of ['started_at', 'ended_at']) await refuseField(env, field, `2026-11-01T${t}${zone}`);
+  assert.equal(totalRows(sql), 0, 'no row saved');
+  for (const t of ['23:59', '23:59:59', '00:00', '00:00:00.000']) assert.equal((await post(env, 'alice', {...BLANK, started_at: `2026-11-01T${t}Z`})).status, 201, t);
+  assert.equal(logCount(sql, 'alice'), 4, 'the valid hours are stored');
+}));
+
+test('catch_log_preserves_real_zoned_calendar_times', async () => withLog(async (sql, env) => {
+  const cases = [['2028-02-29T12:00:00Z', '2028-02-29T12:00:00.000Z'], ['2000-02-29T00:00:00Z', '2000-02-29T00:00:00.000Z'], ['2026-02-28T23:59:59Z', '2026-02-28T23:59:59.000Z'],
+    ['0096-02-29T12:00:00Z', '0096-02-29T12:00:00.000Z'], ['2026-12-31T23:59:59-08:00', '2027-01-01T07:59:59.000Z'], ['2026-01-01T00:00:00+05:30', '2025-12-31T18:30:00.000Z'],
+    ['2026-03-01T00:00:00+05:30', '2026-02-28T18:30:00.000Z'], ['2026-02-28T22:00:00-05:00', '2026-03-01T03:00:00.000Z'], ['2026-11-01T14:00Z', '2026-11-01T14:00:00.000Z'],
+    ['2026-11-01T14:00:00.1Z', '2026-11-01T14:00:00.100Z'], ['2026-11-01T14:00:00.12Z', '2026-11-01T14:00:00.120Z'], ['2026-11-01T14:00:00.123Z', '2026-11-01T14:00:00.123Z'], ['2026-04-30T09:00:00+00:00', '2026-04-30T09:00:00.000Z']];
+  for (const [input, stored] of cases) {
+    const r = await post(env, 'alice', {...BLANK, started_at: input, ended_at: '2100-01-01T00:00:00Z'});
+    assert.equal(r.status, 201, input);
+    assert.equal(r.data.started_at, stored, input);
+    assert.equal(sql.prepare('SELECT started_at FROM catch_log WHERE id=?').get(r.data.id).started_at, stored, `${input} stored`);
+  }
+  const end = await post(env, 'alice', {...BLANK, started_at: '2026-02-27T00:00:00Z', ended_at: '2028-02-29T23:00:00-01:00'});
+  assert.deepEqual([end.status, end.data.ended_at], [201, '2028-03-01T00:00:00.000Z'], 'an end time converts the same way');
+}));
+
+test('catch_log_invalid_time_has_no_write_or_trip_lookup', async () => {
+  const calls = [];
+  await withLog(async (sql, env) => {
+    addTrip(sql, 'trip-a', 'alice', '2026-11-05');
+    for (const bad of [{started_at: '2026-02-30T14:00:00Z'}, {started_at: '2026-11-01T24:00:00Z'}, {ended_at: '2026-04-31T14:00:00-07:00'}, {ended_at: '2026-11-02T24:00:00Z'}]) {
+      calls.length = 0;
+      const r = await post(env, 'alice', {...FISH, trip_id: 'trip-a', ...bad});
+      assert.equal(r.status, 400, JSON.stringify(bad));
+      assert.equal(r.data.error, TIME_ERROR(Object.keys(bad)[0]), 'an invalid optional end is refused, not discarded');
+      assert.deepEqual(calls.filter(q => /FROM trips|INTO catch_log/.test(q)), [], 'no trip lookup and no log insert after validation fails');
+      assert.equal(logCount(sql, 'alice'), 0);
+    }
+    calls.length = 0;
+    assert.equal((await post(env, 'alice', {...FISH, trip_id: 'trip-a'})).status, 201, 'a valid request in the same fixture stores once');
+    assert.equal(logCount(sql, 'alice'), 1);
+    assert.ok(calls.some(q => /FROM trips/.test(q)) && calls.some(q => /INSERT INTO catch_log/.test(q)));
+    const anon = await call(env, '/api/catch-log', {method: 'POST', body: {...FISH, started_at: '2026-02-30T14:00:00Z'}});
+    assert.equal(anon.status, 401, 'anonymous stays 401');
+  }, a => ({...a, prepare(q) { calls.push(q); return a.prepare(q); }, batch: a.batch}));
+});
+
+test('catch_log_orders_valid_instants_after_offset_conversion', async () => withLog(async (sql, env) => {
+  const same = await post(env, 'alice', {...BLANK, started_at: '2026-11-01T14:00:00Z', ended_at: '2026-11-01T07:00:00-07:00'});
+  assert.deepEqual([same.status, same.data.started_at, same.data.ended_at], [201, '2026-11-01T14:00:00.000Z', '2026-11-01T14:00:00.000Z'], 'equal instants in different offsets are accepted');
+  const reversed = await post(env, 'alice', {...BLANK, started_at: '2026-11-01T14:00:00Z', ended_at: '2026-11-01T06:59:00-07:00'});
+  assert.deepEqual([reversed.status, reversed.data.error], [400, 'ended_at is before started_at'], 'a real reversed interval keeps its own message');
+  for (const absent of [{}, {ended_at: null}]) assert.equal((await post(env, 'alice', {...BLANK, ...absent})).status, 201, 'optional end absent or null');
+  for (const absent of [{started_at: undefined}, {started_at: null}]) {
+    const r = await post(env, 'alice', {...BLANK, ...absent});
+    assert.deepEqual([r.status, r.data.error], [400, 'started_at is required']);
+  }
+  assert.equal(logCount(sql, 'alice'), 3, 'only the accepted entries were stored');
+}));
