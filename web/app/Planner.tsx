@@ -12,6 +12,8 @@ import {fitLabel} from '../../dist/spot-ranking.js';
 import type {Filters, LayerKey, Planner as Model, Preset, ProtectedHit, Target, TripSpecies} from '../planner.ts';
 import {PORTS_FAILED_NOTE, sharedConfidence} from '../planner.ts';
 import {tripLegs} from '../trip-legs.ts';
+import {protectedScreen} from '../trip.ts';
+import {verdictLine} from '../waypoint-placement.ts';
 import {cruiseSpeed} from '../limits.ts';
 import {landWater, loadLandWaterLines, type LandWaterState} from '../land-water.ts';
 import {waterRoute, type Route, type RoutePoint} from '../route.ts';
@@ -60,6 +62,9 @@ function SpotRow({t, checked, hit, showConfidence = true, onToggle}: {t: Target;
   );
 }
 
+/** A leg's protected-area line after its distance and minutes: not checked, inside, or near; a checked clear leg adds nothing (no claim of safety). Plain text, so a closure's name is never markup. */
+const legLine = (v: Parameters<typeof verdictLine>[0]): string => { const line = verdictLine(v); return line ? ` · ${line}` : ''; };
+
 function BoundaryNote({hit}: {hit?: ProtectedHit}) {
   return hit ? <p>{protectedHitReading(hit)} Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</p> : null;
 }
@@ -85,9 +90,12 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
   const port = !m.portsFailed.value && m.ports.value.find(p => p.id === f.port);
   const selected = d.ids.map(id => m.tripAtlas.value.targets.find(t => t.id === id)).filter((t): t is Target => !!t);
   const waypoints = (d.userWaypoints ?? []).filter(t => d.ids.includes(t.id));
+  // BF-closures-everywhere: the planner's shared screen for THIS region, else null (every leg then reads not checked). Its contents are mutable, so the tick (minute and boundary updates) is read here too.
+  void m.tick.value;
+  const shown = protectedScreen.value, screen = shown.state === 'loaded' && shown.region === m.region.id ? shown.screen : null;
   const route = tripLegs(port ? {name: port.name, lat: port.match[0], lon: port.match[1]} : null,
     [...selected, ...waypoints].map(t => ({id: t.id, name: t.name || ('label' in t ? t.label : t.id), lat: t.latitude, lon: t.longitude})), cruiseSpeed.value,
-    legRoute(landWater.value, m.region.id));
+    legRoute(landWater.value, m.region.id), screen);
   // The shoreline lines are asked for once when a leg waits on them (shared with the brief's request); the legs re-render when they land.
   const waits = route.legs.some(leg => leg.why === 'lines-needed');
   useEffect(() => { if (waits) void loadLandWaterLines(m.region.id); }, [waits, m]);
@@ -128,7 +136,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
           {route.legs.length > 0 && <section aria-label="Your stops in order">
             <h3>Your stops in order</h3>
             {!port && <p>No home port chosen, so the run from port is not counted.</p>}
-            <ol aria-label="Stops in order">{route.legs.map((leg, i) => <li key={i}>{leg.from} → {leg.to} · {leg.nm.toFixed(1)} nm{leg.basis === 'straight' ? ' straight line' : ''}{leg.runMin === null ? '' : ` · at least ${leg.runMin} min`}</li>)}</ol>
+            <ol aria-label="Stops in order">{route.legs.map((leg, i) => <li key={i}>{leg.from} → {leg.to} · {leg.nm.toFixed(1)} nm{leg.basis === 'straight' ? ' straight line' : ''}{leg.runMin === null ? '' : ` · at least ${leg.runMin} min`}{legLine(leg.screen)}</li>)}</ol>
             <p>Total: {route.totalNm.toFixed(1)} nm{route.totalRunMin === null ? '' : ` · at least ${route.totalRunMin} min`}</p>
             <p class="export-note">{route.legs.some(leg => leg.basis === 'straight') ? 'Straight-line legs between stops; the real route is longer. ' : ''}Sea state, the bar, fuel and conditions at each stop are not included.</p>
           </section>}
