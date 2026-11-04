@@ -30,6 +30,7 @@ export interface Env {
   // Text Advisor vars (repository variables copied by scripts/wrangler_config.mjs);
   // read only through advisorSettings() in server/advisor/settings.ts, which holds the defaults.
   TEXT_ADVISOR_ENABLED?: string;     // "true" turns the advisor on; anything else: every advisor route 404s
+  PUBLIC_PAGES_ENABLED?: string;     // public port and species pages independently of the advisor
   ADVISOR_REPLIES_ENABLED?: string;  // "false" stores and acks inbound but sends nothing and calls no model
   ADVISOR_NUMBER?: string;           // the owned number, E.164 (+1XXXXXXXXXX)
   ADVISOR_CHANNEL?: string;          // outbound adapter: "bluebubbles" (default) or "twilio"

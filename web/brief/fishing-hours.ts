@@ -18,8 +18,8 @@ export function fishingHours(run: Extract<RunState, {kind: 'ok' | 'no-time'}>,
   const endedBy: End = run.kind === 'ok' && rule.opensAt !== null && rule.opensAt > Date.parse(run.arrive) ? 'opening'
     : sunset && Date.parse(run.window.end) + 3600000 > Date.parse(sunset) ? 'daylight' : 'conditions';
   if (run.kind === 'no-time') return {kind: 'none', endedBy, ...(unknown ? {rulesUnconfirmed: true} : {})};
-  if (wantedMin === null) return {kind: 'no-wanted'};
-  if (Number.isFinite(light) && wantedMin > light) return {kind: 'beyond-daylight', daylightMin: Math.floor(light), wantedMin};
+  if (wantedMin === null || !Number.isFinite(wantedMin) || wantedMin <= 0) return {kind: 'no-wanted'};
+  if (Number.isFinite(light) && light > 0 && wantedMin > light) return {kind: 'beyond-daylight', daylightMin: Math.floor(light), wantedMin};
   const start = Math.max(Date.parse(run.arrive), rule.opensAt ?? -Infinity);
   const availableMin = Math.max(0, Math.floor((Date.parse(run.turnBack) - start) / (60000 * ROUND_MIN)) * ROUND_MIN);
   if (!availableMin) return {kind: 'none', endedBy, ...(unknown ? {rulesUnconfirmed: true} : {})};

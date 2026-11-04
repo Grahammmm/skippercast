@@ -11,6 +11,7 @@ import {profile} from '../state.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {limitsFor} from '../limits.ts';
+import {weekendDigest, toText} from '../digest.ts';
 import {
   alertDate, alertNames, alertSpecies, api, comfortBody, dateRange, disablePush, enablePush, eventLine, feedbackPhase, formProblem, profileTripDefaults, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
   type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type Feedback, type RegionAlerts, type SavedTrip,
@@ -95,6 +96,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const [species, setSpecies] = useState(choice.value);
   const [status, setStatus] = useState('');
   const [trips, setTrips] = useState<{trips: SavedTrip[]; events: AlertEvent[]} | null>(null);
+  const digest = trips ? weekendDigest(trips.trips, names, range.min) : null;
   const [feedback, setFeedback] = useState<Feedback[] | null>(null);
   const [comfortStatus, setComfortStatus] = useState('');
   const [confirming, setConfirming] = useState(false);
@@ -176,6 +178,11 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           <Button size="sm" onClick={act(async () => { await disablePush(); setStatus('Account notifications stopped. Saved assessments remain available here.'); })}>Stop notifications</Button>
         </div>
         <p id="alert-status" role="status">{status}</p>
+        {digest ? <section aria-labelledby="weekend-heading">
+          <h3 id="weekend-heading">This weekend</h3>
+          <p style={{whiteSpace: 'pre-line'}}>{toText(digest)}</p>
+          <p class="small">Shown here only; SkipperCast does not email this yet.</p>
+        </section> : null}
         {trips ? <SavedTrips recaps={tripRecaps(trips.trips, trips.events, feedback ?? [], dateRange(DEFAULT_ZONE).min)} names={names} remove={remove} /> : <div id="saved-trips" />}
         {trips?.events.length ? (
           <details id="alert-history">

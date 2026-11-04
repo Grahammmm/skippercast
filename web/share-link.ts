@@ -1,9 +1,10 @@
 // Shareable links (BF-deep-links): the one canonical address Share copies. It names the region, the port the control
 // shows, the dock's absolute day (today included, so Wednesday's link still means Wednesday) and the profile, then the
-// hour, target and listed view keys the address has. A whitelist: nothing else (ui, utm, a token, the hash) is carried,
-// values are re-encoded, and the title names place, day and profile only, never a condition.
+// hour, target, listed view keys and the grade filter the address has. A whitelist: nothing else (ui, utm, a token, the hash) is carried,
+// a value is carried only when the address has it once, in plain form, values are re-encoded, and the title names place, day and profile only, never a condition.
 // Pure and DOM-free; erasable syntax only: Node tests import this file by type stripping.
 import {canonicalHour, fishLink} from './fish-links.ts';
+import {gradeParam, parseGrade} from './grade.ts';
 import {dockTime, horizonDays, localParts} from './hour.ts';
 import {currentPort, type Port} from './ports.ts';
 import {isProfile, PROFILE_TABLE, type Profile} from './profile.ts';
@@ -11,6 +12,17 @@ import {parsePort} from './state.ts';
 
 /** View keys a link keeps when the address already has them, in this order, after region, port, profile, day, hour and target. */
 export const SHARED_VIEW_KEYS = ['view', 'layers', 'base', 'presentation', 'current', 'habitat', 'spot'] as const;
+
+/** A carried view value: 1-200 characters, no whitespace, control character or `#`. */
+export const PLAIN = /^[^\s#\u0000-\u001f\u007f]{1,200}$/u;
+/** A carried target: the id shape fishLink accepts for `species`. */
+export const TARGET_ID = /^[a-z][a-z0-9-]{0,63}$/;
+
+/** The key's value when the address has it exactly once and it matches `shape`; otherwise null (left out, never rewritten). */
+export function single(p: URLSearchParams, key: string, shape: RegExp): string | null {
+  const values = p.getAll(key);
+  return values.length === 1 && shape.test(values[0]!) ? values[0]! : null;
+}
 
 export interface ShareInput {
   /** The current address; only whitelisted keys are read from it. */
@@ -61,12 +73,14 @@ export function shareLink({href, origin, ports, region, savedId, profile, now, t
   if (isProfile(profile)) p.set('profile', profile);
   if (day) p.set('day', day);
   if (hour) p.set('hour', hour);
-  const target = from.get('target');
+  const target = single(from, 'target', TARGET_ID);
   if (target) p.set('target', target);
   for (const key of SHARED_VIEW_KEYS) {
-    const value = from.get(key);
+    const value = single(from, key, PLAIN);
     if (value) p.set(key, value);
   }
+  const grade = gradeParam(parseGrade(from.get('grade')));
+  if (grade) p.set('grade', grade);
   const title = [port?.name, shareDayText(day ?? localParts(new Date(shown.at), tz).day), isProfile(profile) ? PROFILE_TABLE[profile].label : null]
     .filter(Boolean).join(' · ');
   return {url: out.href, title};

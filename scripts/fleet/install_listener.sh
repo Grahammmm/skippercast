@@ -145,6 +145,14 @@ except BaseException:
 PY
 }
 
+# listed <name> [<item>...]: 0 when <name> is one of the items.
+listed() {
+  local want=$1 item
+  shift
+  for item in "$@"; do [ "$item" = "$want" ] && return 0; done
+  return 1
+}
+
 # build_revision <source checkout> <sha>: app/<sha> with its virtualenv; reused when complete.
 build_revision() {
   local source=$1 sha=$2 dir="$APP/$2" present=()
@@ -155,8 +163,10 @@ build_revision() {
   rm -rf "$dir"
   mkdir -p "$dir"
   mapfile -t present < <(git -C "$source" ls-tree --name-only "$sha" -- "${ARCHIVE_PATHS[@]}")
+  # Plain bash membership test: `printf | grep -q` under pipefail fails at random when grep
+  # exits on its first match and printf takes SIGPIPE.
   for required in pyproject.toml src scripts/fleet; do
-    printf '%s\n' "${present[@]}" | grep -qx "$required" || die "revision $sha has no $required"
+    listed "$required" "${present[@]}" || die "revision $sha has no $required"
   done
   note "copying $sha to $dir"
   git -C "$source" archive --format=tar "$sha" -- "${present[@]}" | tar -x -C "$dir"

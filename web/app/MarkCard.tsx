@@ -35,7 +35,7 @@ import {shownPresentation, terrainActions, terrainDetail, terrainMark, terrainPi
 import {coordinates, navigate, profile, selection, setParams, species} from '../state.ts';
 import {formatCoordinates} from '../../dist/coordinates.js';
 import {PROFILE_TABLE} from '../profile.ts';
-import {areaPageOnly, loadRegs, regsData, regulationState, ruleSummary, speciesPage, verifiedText, type RulesRegion} from '../regs.ts';
+import {areaPageOnly, freshnessLabel, loadRegs, regsData, regulationState, ruleSummary, speciesPage, verifiedText, type RulesRegion} from '../regs.ts';
 import {zone} from './App.tsx';
 import {dockState} from './TimeDock.tsx';
 import {addPlaceToTrip, addToTrip, placeTripId, reviewPlace, reviewTrip, tripIds} from '../trip.ts';
@@ -82,12 +82,13 @@ export function RulesLine({mark}: {mark: Mark}) {
   if (!region || !RULED.test(mark.id) || mark.withheld) return null;
   const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget, data = loaded?.region === region.id ? loaded.data : null;
   const at = dockState(new Date(), zone()).at, day = new Intl.DateTimeFormat('en-CA', {timeZone: zone(), year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
-  const state = regulationState(data, target, region, Date.now(), day, at), s = ruleSummary(data, target, state, region), page = speciesPage(data, target, region);
+  const state = regulationState(data, target, region, Date.now(), day, at), s = ruleSummary(data, target, state, region), page = speciesPage(data, target, region), fresh = freshnessLabel(data, target, state, region);
   const name = target === 'reef' ? 'Lingcod & rockfish' : state.profile?.name ?? target;
   const cell = (label: string, values: readonly string[]) => values.length ? <div><dt>{label}</dt>{values.map(v => <dd key={v} class="ui-mono">{v}</dd>)}</div> : null;
   return (
     <div class="app-mark-regs" role="group" aria-label={`Rules at a glance: ${name}`}>
       <p><span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> <span class="ui-mono">{verifiedText(s)}</span></p>
+      <p class="app-mark-regs-fresh ui-mono" data-state={fresh.state}>{fresh.text}</p>
       <dl>{cell('Bag', s.bag)}{cell('Size', s.size)}{cell('Depth', s.depth ? [s.depth] : [])}</dl>
       {page && <a href={page.href} target="_blank" rel="noopener" aria-label={`${page.label} (official page, opens in a new tab)`}>{page.label}</a>}
       <a href={s.link} target="_blank" rel="noopener" aria-label={`${s.linkLabel} for ${name} (official page, opens in a new tab)`}>{s.linkLabel}</a>
@@ -152,10 +153,10 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
   const target = spot ? markData.value?.atlas?.targets.find(t => t.id === spot) as {canonical_habitat?: boolean} | undefined : undefined;
   const place = markPlace(selected);
   // SCJ-1: a habitat card (the brief's recommended places) joins a trip, or opens it for GPX, as a user waypoint, and links its region's rules page.
-  const habitat = selected.id.startsWith('habitat:'), at = selected.position;
-  const where = habitat && at && Number.isFinite(at.latitude) && Number.isFinite(at.longitude)
-    ? {id: selected.id, name: selected.name, latitude: at.latitude, longitude: at.longitude, shore: /\bshore\b/i.test(`${selected.name} ${selected.kind}`)} : null;
-  const added = spot ? tripIds.value.includes(spot) : !!where && tripIds.value.includes(placeTripId(where.id));
+  const habitat = selected.id.startsWith('habitat:'), survey = selected.id.startsWith('survey:'), at = selected.withheld ? undefined : selected.position;
+  const where = (habitat || survey) && at && Number.isFinite(at.latitude) && Number.isFinite(at.longitude)
+    ? {id: selected.id, name: (survey && selected.kind === 'Historical kelp detections' ? `Historical kelp detections · ${selected.name}` : selected.name).slice(0, 80), latitude: at.latitude, longitude: at.longitude, shore: survey ? !['Mapped hard bottom', 'Mapped mixed bottom'].includes(selected.kind) : /\bshore\b/i.test(`${selected.name} ${selected.kind}`)} : null;
+  const added = spot ? tripIds.value.includes(spot) : !!where && tripIds.value.includes(survey ? `user:survey-${where.id.slice(7).replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}` : placeTripId(where.id));
   const regulations = selected.regulations ?? (habitat && markData.value?.region ? regulationsLink(markData.value.region) : undefined);
   const close = () => {
     const back = returnTo?.isConnected ? returnTo : mapFocusTarget(document);
@@ -193,7 +194,8 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
           </a>
         ) : <Button size="sm" icon="shield" disabled>Regulations</Button>}
       </div>
-      {habitat && !where ? <p class="app-mark-why">This place has no saved position yet, so it cannot be added to a trip or exported.</p> : null}
+      {!selected.withheld && (survey && !where || /^(geology|charter|fleet):/.test(selected.id)) ? <p class="app-mark-why">{survey ? 'Pick this place on the map to export its position' : selected.id.startsWith('geology:') ? 'Geology unit: context for reading the map, not a place to fish' : 'Charter-reported grounds and AIS activity are not exported: they show apparent activity, not a verified place.'}</p> : null}
+      {habitat && !selected.withheld && !where ? <p class="app-mark-why">This place has no saved position yet, so it cannot be added to a trip or exported.</p> : null}
       <div class="app-mark-basis">
         <Popover>{selected.basis}{selected.terms?.map(t => (
           <p key={t.href}><a href={t.href} target="_blank" rel="noopener" aria-label={`${t.label} (publisher's page, opens in a new tab)`}>{t.label}</a></p>

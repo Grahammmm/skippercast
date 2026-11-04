@@ -120,3 +120,38 @@ test('edge 8: visibility 16093 m reads 10.0 mi; NaN, strings and negative values
   stale.models.gfs_global = {...stale.models.gfs_global, issued: NORMAL - 40 * HOUR};
   assert.ok(hourlyTable(stale, null, '2026-06-15', TZ, nowAt(NORMAL)).rows.every(r => r.visibilityMi === null && r.wind === null));
 });
+
+// MYB-2b: rows are rated for the boat passed (the view passes the saved boat's
+// activeBoatFactors(), as the brief verdict does); omitted, the reference boat.
+const {REFERENCE_BOAT} = await import('../web/score.ts');
+const {boatFactors} = await import('../dist/boat-handling.js');
+const {createHash} = await import('node:crypto');
+const PINNED = '8019b2110275ef936162d19e9ccbe921bdbaec71c792b7abea80858375904e20';
+const SMALL = Object.freeze({sea: 0.6, wind: 0.6, chopPeriod: 8});
+const dump = ({rows, note}) => JSON.stringify({note, rows, cells: rows.map(hourlyCells)});
+
+test('MYB-2b: a non-reference boat rates every row with rateComfort(hour, boat), and differently from the reference', () => {
+  const f = forecast(NORMAL), now = nowAt(NORMAL), read = feedReader(f, now).read;
+  const ref = hourlyTable(f, null, '2026-06-15', TZ, now).rows, small = hourlyTable(f, null, '2026-06-15', TZ, now, SMALL).rows;
+  assert.equal(small.length, 24);
+  small.forEach((r, i) => {
+    const rating = rateComfort(read(r.ms), SMALL);
+    assert.equal(r.score, rating.score);
+    assert.equal(r.limited, rating.limited);
+    assert.equal(hourlyCells(r).at(-1), rating.score.toFixed(1));
+    assert.deepEqual({...r, score: null}, {...ref[i], score: null}, 'only the score depends on the boat');
+  });
+  assert.ok(small.some((r, i) => r.score !== ref[i].score), 'the small boat rates differently');
+  assert.ok(small.every((r, i) => r.score <= ref[i].score), 'a less tolerant boat never rates higher');
+});
+
+test('MYB-2b: with no boat saved the table is byte-identical to the reference-boat table it always produced', () => {
+  for (const [t0, day] of [[NORMAL, '2026-06-15'], [SPRING, '2026-03-08'], [FALL, '2026-11-01']]) {
+    const f = forecast(t0, {ecmwfAge: t0 === FALL ? 40 : 6}), now = nowAt(t0), before = dump(hourlyTable(f, null, day, TZ, now));
+    assert.equal(dump(hourlyTable(f, null, day, TZ, now, REFERENCE_BOAT)), before, day);
+    assert.equal(dump(hourlyTable(f, null, day, TZ, now, boatFactors(null))), before, `${day}: nothing saved`);
+  }
+  // Pinned from main ea41c719 (before the boat parameter existed): the default output has not moved by a byte.
+  const out = dump(hourlyTable(forecast(NORMAL), null, '2026-06-15', TZ, nowAt(NORMAL)));
+  assert.equal(createHash('sha256').update(out).digest('hex'), PINNED);
+});

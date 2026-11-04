@@ -138,10 +138,10 @@ const RANKING = {source: 'atlas', label: 'Survey reef atlas', basis: '', picks: 
 
 test('the place: the selected pick, else the top pick, said so; none without a distance', async () => {
   const {runPlace} = await load();
-  assert.deepEqual(runPlace(RANKING, 'b', null), {name: 'Reef b', nm: 3.1, chosen: true, unranked: false});
-  assert.deepEqual(runPlace(RANKING, 'elsewhere', null), {name: 'Reef a', nm: 7.4, chosen: false, unranked: true}, 'a selection outside the screened picks falls back to the top pick, flagged');
-  assert.deepEqual(runPlace(RANKING, null, null), {name: 'Reef a', nm: 7.4, chosen: false, unranked: false});
-  assert.deepEqual(runPlace({...RANKING, picks: [pick('h1', 2, 'habitat')]}, null, 'h1'), {name: 'Reef h1', nm: 2, chosen: true, unranked: false});
+  assert.deepEqual(runPlace(RANKING, 'b', null), {name: 'Reef b', nm: 3.1, basis: 'straight', why: 'no-product', chosen: true, unranked: false});
+  assert.deepEqual(runPlace(RANKING, 'elsewhere', null), {name: 'Reef a', nm: 7.4, basis: 'straight', why: 'no-product', chosen: false, unranked: true}, 'a selection outside the screened picks falls back to the top pick, flagged');
+  assert.deepEqual(runPlace(RANKING, null, null), {name: 'Reef a', nm: 7.4, basis: 'straight', why: 'no-product', chosen: false, unranked: false});
+  assert.deepEqual(runPlace({...RANKING, picks: [pick('h1', 2, 'habitat')]}, null, 'h1'), {name: 'Reef h1', nm: 2, basis: 'straight', why: 'no-product', chosen: true, unranked: false});
   assert.equal(runPlace({...RANKING, picks: []}, null, null), null);
   assert.equal(runPlace({...RANKING, picks: [{...pick('a', 1), nm: null}]}, null, null), null, 'no harbor, no distance');
 });
@@ -160,8 +160,8 @@ test('the line renders each state for Boat only, with times in the region\'s zon
   assert.match(ok, /Up to 4 h 10 min fishing at Reef a\./);
   assert.match(ok, /Leave 7 am · there 7:25 am · turn back 11:35 am · in by 12 pm · window 7 am–12 pm/);
   assert.doesNotMatch(ok, /app-run-note|outside the ranked list/);
-  assert.match(ok, /7\.4 nm straight line · at least 25 min each way at 20 kt · top pick/);
-  assert.match(ok, /<details class="ui-popover"[^>]*>.*straight-line distance from Morro Bay at the cruise speed you set/s, 'the method sits in the basis');
+  assert.match(ok, /7\.4 nm straight line \(no water route: no land\/water data\) · at least 25 min each way at 20 kt · top pick/);
+  assert.match(ok, /<details class="ui-popover"[^>]*>.*Run time is the distance from Morro Bay at the cruise speed you set/s, 'the method sits in the basis');
 
   const ask = line({}, null);
   assert.match(ask, /data-state="no-speed"/);

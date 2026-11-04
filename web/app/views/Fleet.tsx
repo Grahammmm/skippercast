@@ -34,8 +34,9 @@ const checked = (event: Event): boolean => (event.currentTarget as HTMLInputElem
 /** Turn the Charter fleet entry on or off (the rail's own toggle). */
 const showGrounds = (on: boolean): void => { setParams({layers: layersParam(toggled(layers.value, 'fleet', on))}); };
 
+/** A 24 px target (WCAG 2.5.8; app.css draws rail inputs at 16 px). Preact 11 sets style values verbatim, so lengths carry their unit. */
 function Check({label, on, onChange}: {label: string; on: boolean; onChange: (on: boolean) => void}) {
-  return <label class="app-rail-option app-fleet-check"><input type="checkbox" checked={on} onChange={event => onChange(checked(event))} />{label}</label>;
+  return <label class="app-rail-option app-fleet-check"><input type="checkbox" style={{minWidth: '24px', minHeight: '24px'}} checked={on} onChange={event => onChange(checked(event))} />{label}</label>;
 }
 
 /** The public part: grounds, the AIS option and the directory link. */

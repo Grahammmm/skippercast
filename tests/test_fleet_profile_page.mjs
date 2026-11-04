@@ -70,7 +70,7 @@ dbTest('acceptance 1: with FLEET_ENABLED off an advisor boat page is byte-identi
       for (const [name, path] of SNAPSHOTS) writeFileSync(snapshotUrl(name), await (await get(path, {...ADVISOR, DB: db})).text());
     }
     for (const [name, path] of SNAPSHOTS) {
-      const expected = readFileSync(snapshotUrl(name), 'utf8');
+      const expected = readFileSync(snapshotUrl(name), 'utf8').replace('Morro Bay fishing report', 'Morro Bay fishing conditions').replace('Reporte de pesca de Morro Bay', 'Condiciones de pesca en Morro Bay');
       // Off, a typo, and on for boats with no registry link (Gray Example is pending as well).
       for (const env of [{...ADVISOR}, {...ADVISOR, FLEET_ENABLED: 'false'}, {...ADVISOR, FLEET_ENABLED: 'yes'}, {...ADVISOR, FLEET_ENABLED: 'true'}]) {
         const response = await get(path, {...env, DB: db});
@@ -160,7 +160,7 @@ const visible = page => page.replace(/<script[\s\S]*?<\/script>/g, ' ').replace(
 dbTest('acceptance 1: with FLEET_ENABLED off a linked advisor boat is still byte-identical and registry slugs 404', async () => {
   const {sql, db} = seedAll();
   try {
-    assert.equal(await (await get('/boats/sea-example', {...ADVISOR, DB: db})).text(), readFileSync(snapshotUrl('sea-example.en.html'), 'utf8'));
+    assert.equal(await (await get('/boats/sea-example', {...ADVISOR, DB: db})).text(), readFileSync(snapshotUrl('sea-example.en.html'), 'utf8').replace('Morro Bay fishing report', 'Morro Bay fishing conditions'));
     for (const path of ['/boats/blue-example', '/boats/sea-example-charters']) assert.equal((await get(path, {...ADVISOR, DB: db})).status, 404, path);
     // Both flags off: the whole prefix is dark, as before.
     for (const path of ['/boats/sea-example', '/boats/blue-example']) {
@@ -179,7 +179,7 @@ dbTest('the registry profile: class, landing and port, length, offerings as list
     const page = await response.text(), text = visible(page);
     assert.match(page, /<title>Blue Example: charter fishing boat · SkipperCast<\/title>/);
     assert.match(page, /<meta name="robots" content="noindex">/, 'registry-only and no operator consent: noindex');
-    assert.match(text, /Blue Example Pier Example Landing, Morro Bay · Morro Bay fishing report/);
+    assert.match(text, /Blue Example Pier Example Landing, Morro Bay · Morro Bay fishing conditions/);
     assert.match(text, /About the boat Party boat 42 ft long Google : 4\.7 out of 5 · 128 reviews/);
     assert.match(page, /<a href="https:\/\/www\.google\.com\/maps\/place\/\?q=place_id:ChIJexampleexample" rel="noopener nofollow">Google<\/a>/);
     assert.match(text, /Full day rockfish · Full day · 10 h · departs 05:30 \$145 per person, as listed on landing\.example\.com on Sep 20, 2026/);
@@ -251,7 +251,7 @@ dbTest('a linked advisor boat keeps its page and gains the registry cards, with 
   const {sql, db} = seedAll();
   try {
     const page = await (await get('/boats/sea-example', {...ADVISOR, ...FLEET, DB: db})).text();
-    const before = readFileSync(snapshotUrl('sea-example.en.html'), 'utf8');
+    const before = readFileSync(snapshotUrl('sea-example.en.html'), 'utf8').replace('Morro Bay fishing report', 'Morro Bay fishing conditions');
     // Everything up to the end of the advisor body is unchanged; the registry cards follow it.
     const cut = before.indexOf('\n<section class="adv-cta"');
     assert.ok(cut > 0 && page.startsWith(before.slice(0, cut)), 'the advisor part of the page is unchanged');

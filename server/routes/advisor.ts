@@ -5,7 +5,7 @@
 // path such as /ports/x never falls through to the static site while dark.
 import {Hono} from 'hono';
 import type {Context} from 'hono';
-import {gate, boatsGate} from '../advisor/gate.ts';
+import {gate, boatsGate, pagesGate} from '../advisor/gate.ts'; import {publicPagesSettings} from '../pages-settings.ts';
 import {fleetSettings} from '../fleet/settings.ts';
 import {advisorSettings} from '../advisor/settings.ts';
 import {relayState} from '../advisor/relay.ts';
@@ -55,11 +55,11 @@ import type {MetaPayload} from '../advisor/social/inbox.ts';
 // TA-S4: generated post graphics for Meta's fetch.
 import {GRAPHIC_NAME, GRAPHIC_PUBLIC_STATUSES, servableGraphic} from '../advisor/social/graphics.ts';
 // TA-W1: the public pages, their cache key and the sitemap.
-import {cacheKey, cached} from '../edge-cache.ts';
+import {cacheKey, cached, edgeCache, store, tagged} from '../edge-cache.ts';
 import {pageLanguage, pageResponse} from '../advisor/pages/render.ts';
 import {pagesVersion, notFoundPage} from '../advisor/pages/data.ts';
 import type {PageDeps} from '../advisor/pages/data.ts';
-import {portPage, PORT_MAX_AGE} from '../advisor/pages/port.ts';
+import {portPage, portPageKey, PORT_MAX_AGE} from '../advisor/pages/port.ts';
 import {speciesPage, speciesPageKey, SPECIES_MAX_AGE} from '../advisor/pages/species.ts';
 import {boatPage, BOAT_MAX_AGE} from '../advisor/pages/boat.ts';
 import {sitemapXml, robotsTxt, SITEMAP_PATH, SITEMAP_MAX_AGE} from '../advisor/pages/sitemap.ts';
@@ -72,7 +72,7 @@ export const advisorPublic = new Hono<AppEnv>();
 // Hardening: '/u' and '/my-data' are the upload and export pages (the token in the fragment).
 // CF-33: '/boats/*' passes when either the advisor or the charter fleet is on (boatsGate).
 export const ADVISOR_PATHS = ['/api/advisor/*', '/ports/*', '/species/*', '/media/*', '/u', '/u/*', '/my-data', '/contact.vcf', '/text', '/qr/*', '/chat.html'] as const;
-for (const path of ADVISOR_PATHS) advisorPublic.use(path, gate);
+for (const path of ADVISOR_PATHS) advisorPublic.use(path, path === '/ports/*' || path === '/species/*' ? pagesGate : gate);
 advisorPublic.use('/boats/*', boatsGate);
 
 // Liveness and configuration shape only: never a secret, the number or the relay URL.
@@ -624,9 +624,9 @@ advisorPublic.post('/api/advisor/jobs/media-done', async c => {
 
 /** Test seam: the feed reader and clock the page reads use (the engine's EngineDeps shape). */
 export const pagesDeps: PageDeps = {};
-advisorPublic.use(SITEMAP_PATH, gate);
+advisorPublic.use(SITEMAP_PATH, pagesGate);
 
-type Render = (env: Env, language: PageLanguage, settings: ReturnType<typeof advisorSettings>) => Promise<string | null>;
+type Render = (env: Env, language: PageLanguage, settings: ReturnType<typeof advisorSettings>) => Promise<string | {body: string; noStore: boolean} | null>;
 
 /** The cache key of a page: path, the resolved language, the build and the pages version. */
 export const pageCacheKey = (url: URL, language: PageLanguage, version: string): Request =>
@@ -638,7 +638,7 @@ export const pageCacheKey = (url: URL, language: PageLanguage, version: string):
  * fleet is off, so the advisor's keys stay as they were.
  */
 export const flagsVersion = (env: Env, version: string): string =>
-  fleetSettings(env).enabled ? `${version}:fleet${advisorSettings(env).enabled ? '' : '-solo'}` : version;
+  (fleetSettings(env).enabled ? `${version}:fleet${advisorSettings(env).enabled ? '' : '-solo'}` : version) + (publicPagesSettings(env).enabled ? `:public-pages${advisorSettings(env).enabled ? '-advisor' : ''}` : '');
 
 async function servePage(c: Context<AppEnv>, maxAge: number, render: Render): Promise<Response> {
   const env = c.env, url = new URL(c.req.url);
@@ -647,17 +647,25 @@ async function servePage(c: Context<AppEnv>, maxAge: number, render: Render): Pr
   try {
     if (!env.DB) return json({error: 'This service is temporarily unavailable.'}, 503);
     const key = pageCacheKey(url, language, flagsVersion(env, await pagesVersion(env.DB)));
-    return await cached(key, waitUntil(c), async () => {
-      const body = await render(env, language, settings);
-      return {response: body === null ? pageResponse(notFoundPage(language, settings, url.pathname, settings.enabled), {status: 404, language}) : pageResponse(body, {maxAge, language})};
-    }, async () => await overLimit(env.PUBLIC_LIMITER, 'advisor-page:' + clientIP(c.req.raw)) ? tooManyRequests() : null);
+    const cache = edgeCache(); try { const hit = await cache?.match(key); if (hit) return tagged(hit, 'hit'); } catch { /* fail open */ }
+    if (await overLimit(env.PUBLIC_LIMITER, 'advisor-page:' + clientIP(c.req.raw))) return tooManyRequests();
+    const rendered = await render(env, language, settings);
+    const response = rendered === null ? pageResponse(notFoundPage(language, settings, url.pathname.startsWith('/ports/') ? '/ports' : url.pathname, settings.enabled), {status: 404, language})
+      : pageResponse(typeof rendered === 'string' ? rendered : rendered.body, {maxAge: typeof rendered === 'string' || !rendered.noStore ? maxAge : 0, language});
+    if (response.status === 200 && response.headers.get('Cache-Control') !== 'no-store') await store(cache, key, response.clone(), waitUntil(c));
+    return tagged(response, 'miss');
   } catch (error) {
     advisorLog('error', 'advisor_page_failed', {reason: String((error as Error)?.message).slice(0, 200)});
     return json({error: 'This service is temporarily unavailable.'}, 503);
   }
 }
 
-advisorPublic.get('/ports/:id', c => servePage(c, PORT_MAX_AGE, (env, language, settings) => portPage(env, c.req.param('id'), language, settings, pagesDeps)));
+const portRoute = (c: Context<AppEnv>): Promise<Response> => {
+  const segment = c.req.param('id') ?? '', key = portPageKey(segment);
+  if (key && (key !== segment || new URL(c.req.url).pathname.endsWith('/'))) return Promise.resolve(new Response(null, {status: 301, headers: {Location: `/ports/${key}${new URL(c.req.url).search}`, 'Cache-Control': 'public, max-age=86400'}}));
+  return servePage(c, PORT_MAX_AGE, (env, language, settings) => key ? portPage(env, key, language, settings, pagesDeps).then(body => body && {body, noStore: body.includes('<meta name="robots" content="noindex">')}) : Promise.resolve(null)); // noindex only when the day has no conditions
+};
+advisorPublic.get('/ports/:id', portRoute); advisorPublic.get('/ports/:id/', portRoute); advisorPublic.get('/ports/', c => servePage(c, PORT_MAX_AGE, () => Promise.resolve(null)));
 
 advisorPublic.get('/species/:key', async c => {
   const segment = c.req.param('key'), key = speciesPageKey(segment);
@@ -672,15 +680,15 @@ advisorPublic.get(SITEMAP_PATH, async c => {
   const env = c.env;
   if (!env.DB) return json({error: 'This service is temporarily unavailable.'}, 503);
   const key = cacheKey(new URL(SITEMAP_PATH, c.req.url), {params: [], build: `${build()}:${flagsVersion(env, await pagesVersion(env.DB))}`});
-  return cached(key, waitUntil(c), async () => ({response: new Response(await sitemapXml(env.DB!, advisorSettings(env).publicBase, {fleet: fleetSettings(env).enabled}), {status: 200, headers: {
+  return cached(key, waitUntil(c), async () => ({response: new Response(await sitemapXml(env.DB!, advisorSettings(env).publicBase, {fleet: fleetSettings(env).enabled, advisor: advisorSettings(env).enabled}), {status: 200, headers: {
     'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': `public, max-age=${SITEMAP_MAX_AGE}`, 'X-Content-Type-Options': 'nosniff'}})}));
 });
 
-// No robots.txt is published: while the advisor is dark the request falls through to the
-// static site exactly as before; when it is on, the Worker answers with the sitemap line.
+// While the advisor and the public pages are both dark the request falls through to the
+// static site exactly as before; when either is on, the Worker answers with the sitemap line.
 advisorPublic.get('/robots.txt', async (c, next) => {
   const settings = advisorSettings(c.env);
-  if (!settings.enabled) { await next(); return; }
+  if (!settings.enabled && !publicPagesSettings(c.env).enabled) { await next(); return; }
   return new Response(robotsTxt(settings.publicBase), {status: 200, headers: {'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600'}});
 });
 // TA-W1 end.

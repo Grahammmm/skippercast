@@ -33,6 +33,13 @@ export const DM_WINDOW_MS = 24 * 3600000;          // Meta: a reply within 24 h 
 export const PRIVATE_REPLY_WINDOW_MS = 7 * 86400000; // Meta: a private reply within 7 days of the comment
 export const MAX_IMAGES = 4;                         // image messages per outbound row (v1: approved media only)
 export const DOWNLOAD_TIMEOUT_MS = 60000;
+export const CLOCK_SKEW_MS = 5 * 60000;              // a stored time this far ahead of our clock still counts as now
+
+/** Inside a reply window: a readable time, at most CLOCK_SKEW_MS ahead and at most windowMs ago. Anything else is outside. */
+export function withinWindow(at: string | null | undefined, now: number, windowMs: number): boolean {
+  const age = typeof at === 'string' ? now - Date.parse(at) : NaN;
+  return Number.isFinite(age) && age >= -CLOCK_SKEW_MS && age <= windowMs;
+}
 /** Hosts Meta serves DM attachments from (lookaside.fbsbx.com, the fbcdn and cdninstagram CDNs). */
 const MEDIA_HOST = /(?:^|\.)(?:fbsbx\.com|fbcdn\.net|cdninstagram\.com)$/;
 const MEDIA_ID = /^[\w-]{1,64}$/;
@@ -97,7 +104,7 @@ export function createInstagram(options: InstagramOptions = {}): ChannelAdapter 
     if (!cfg || !env.DB) return {providerId: null, status: 'failed', error: 'not-configured'};
     if (!IG_SID.test(message.to)) return {providerId: null, status: 'failed', error: 'no-address'};
     const last = await lastDm(env.DB, message.to);
-    if (!last || now() - Date.parse(last) > DM_WINDOW_MS) return {providerId: null, status: 'failed', error: 'outside-window'};
+    if (!withinWindow(last, now(), DM_WINDOW_MS)) return {providerId: null, status: 'failed', error: 'outside-window'};
     const urls = await imageUrls(env, message.mediaKeys ?? []);
     if (typeof urls === 'string') return {providerId: null, status: 'failed', error: urls};
     const text = (message.text ?? '').trim();
@@ -163,7 +170,7 @@ export function commentChannel(env: Env, comment: {providerId: string; receivedA
       if (!text) return {providerId: null, status: 'failed', error: 'empty'};
       try {
         if (mode === 'private') {
-          if (now() - Date.parse(comment.receivedAt) > PRIVATE_REPLY_WINDOW_MS) return {providerId: null, status: 'failed', error: 'outside-window'};
+          if (!withinWindow(comment.receivedAt, now(), PRIVATE_REPLY_WINDOW_MS)) return {providerId: null, status: 'failed', error: 'outside-window'};
           return {providerId: await igSendMessage(cfg, env.META_IG_USER_ID!, {comment_id: comment.providerId}, {text: Array.from(text).slice(0, 1000).join('')}), status: 'sent'};
         }
         return {providerId: await igCommentReply(cfg, comment.providerId, Array.from(text).slice(0, IG_COMMENT_MAX).join('')), status: 'sent'};

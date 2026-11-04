@@ -10,13 +10,16 @@
 import {addDays, daysBetween, localParts, PACIFIC, realDate} from './time.ts';
 import {fold} from './resolve.ts';
 import {verdictFor, COMFORT_WORD, BOAT_PHRASE} from './comfort.ts';
-import {MODEL_GAP, rateComfort, type FeedHour} from '../../../web/score.ts';
+import {MODEL_GAP, rateComfort, REFERENCE_BOAT, type BoatFactors, type FeedHour} from '../../../web/score.ts';
 import type {Verdict} from './comfort.ts';
+import type {ForecastClock} from './forecast-clock.ts';
 import type {Region} from '../../types.ts';
 
 export const HORIZON_DAYS = 7;
 export interface Window {start: number; end: number}
 export const WINDOW: Readonly<Window> = Object.freeze({start: 6, end: 14});
+/** comfort_for when the request sent its boat's factors (MYB-2); BOAT_PHRASE, the reference boat, otherwise. */
+export const OWN_BOAT_PHRASE = 'your boat';
 
 // ---- dates ------------------------------------------------------------------------------
 
@@ -91,9 +94,22 @@ export function readHour(feed: Feed, point: number, time: number): Hour {
   };
 }
 
-/** Comfort score for one hour, as the app scores it: the full rubric when every part is there, else the limited one (capped). */
-export function rateHour(h: Hour): number | null {
-  return rateComfort(h)?.score ?? null;
+/** Comfort score for one hour, as the app scores it: the full rubric when every part is there, else the limited one (capped); for `boat`'s factors (the reference boat by default). */
+export function rateHour(h: Hour, boat: BoatFactors = REFERENCE_BOAT): number | null {
+  return rateComfort(h, boat)?.score ?? null;
+}
+
+/**
+ * MYB-2: optional boat factors from a request, checked like dist/boat-handling.js boatFactors
+ * (sea clamped to 0.45-2.6, wind to 0.6-1.8, chopPeriod finite and above zero). Anything else,
+ * NaN included, is rejected (null), so the reference boat rates the hour. The server never reads
+ * a browser's saved boat; only what the caller sends.
+ */
+export function requestBoat(input: unknown): BoatFactors | null {
+  if (!input || typeof input !== 'object') return null;
+  const {sea, wind, chopPeriod} = input as Record<string, unknown>;
+  if (!finite(sea) || !finite(wind) || !finite(chopPeriod) || chopPeriod <= 0) return null;
+  return {sea: Math.min(2.6, Math.max(0.45, sea)), wind: Math.min(1.8, Math.max(0.6, wind)), chopPeriod};
 }
 
 const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
@@ -117,11 +133,21 @@ export interface DayConditions {
   seas_ft: [number, number] | null; sea_period_s: number | null;
   swell_ft: [number, number] | null; swell_period_s: number | null; swell_from: string | null;
   comfort: string; comfort_for: string; models_agree: boolean | null;
+  /** Why a comfort word was held at unknown (an old model run); absent when nothing holds it. */
+  comfort_held?: string;
 }
 
-/** The fishing window at a forecast point on one local date. */
-export function windowConditions(feed: Feed, region: Region, pointId: string, date: string, window: Window = WINDOW): DayConditions {
-  const base = {date, window: `${String(window.start).padStart(2, '0')}:00-${String(window.end).padStart(2, '0')}:00`, comfort_for: BOAT_PHRASE};
+/** The day as the model run's age allows (forecast-clock.ts): fresh unchanged; held keeps the readings and a rough word but holds any calmer word at unknown; unusable reads as no forecast. */
+export function withForecastClock(day: DayConditions, clock: ForecastClock): DayConditions {
+  if (clock.state === 'fresh' || !day.available) return day;
+  if (clock.state === 'held') return day.comfort === COMFORT_WORD['no-go'] ? day : {...day, comfort: COMFORT_WORD.unknown, comfort_held: `forecast run is ${clock.ageHours} h old`};
+  return {date: day.date, window: day.window, comfort_for: day.comfort_for, available: false, reason: 'forecast run is more than 36 hours old or has no run time',
+    wind_kt: null, wind_from: null, gusts_kt: null, seas_ft: null, sea_period_s: null, swell_ft: null, swell_period_s: null, swell_from: null, comfort: COMFORT_WORD.unknown, models_agree: null};
+}
+
+/** The fishing window at a forecast point on one local date; `boat` (requestBoat) rates it for the caller's boat, else the reference boat. */
+export function windowConditions(feed: Feed, region: Region, pointId: string, date: string, window: Window = WINDOW, boat: BoatFactors | null = null): DayConditions {
+  const base = {date, window: `${String(window.start).padStart(2, '0')}:00-${String(window.end).padStart(2, '0')}:00`, comfort_for: boat ? OWN_BOAT_PHRASE : BOAT_PHRASE};
   const empty = (reason: string): DayConditions => ({...base, available: false, reason, wind_kt: null, wind_from: null, gusts_kt: null, seas_ft: null, sea_period_s: null,
     swell_ft: null, swell_period_s: null, swell_from: null, comfort: COMFORT_WORD.unknown, models_agree: null});
   const point = region.forecast_points.findIndex(p => p.id === pointId);
@@ -138,7 +164,7 @@ export function windowConditions(feed: Feed, region: Region, pointId: string, da
     h.swell, h.swell_period, h.swell_from, h.secondary, h.secondary_from, h.other_wind, h.other_gust, h.other_sea].some(finite))) {
     return empty('no usable forecast measurements for this window');
   }
-  const scores = hours.map(rateHour);
+  const scores = hours.map(h => rateHour(h, boat ?? REFERENCE_BOAT));
   const rated = scores.filter(finite);
   const verdict: Verdict = rated.length ? verdictFor({conditions: Math.min(...rated)}) : 'unknown';
   const agree = hours.filter(h => [h.wind, h.other_wind, h.sea, h.other_sea].every(finite));

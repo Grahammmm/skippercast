@@ -88,19 +88,25 @@ test('acceptance 1 and 3: a stale tile shows the stale state and its age; the br
   expect(pageErrors).toEqual([]);
 });
 
-test('acceptance 2: at the half detent the sheet shows the headline, tiles, top pick and hour slider', async ({page, pageErrors, v2, isMobile}) => {
+test('acceptance 2: at the half detent the sheet shows the headline, tiles and hour slider; expanding shows the top pick', async ({page, pageErrors, v2, isMobile}) => {
   test.skip(!isMobile, 'the sheet is the phone layout');
   await v2.open('app', {region: 'morro-bay'});
   await expect(page.locator('.app-sheet-brief')).toHaveAttribute('data-basis', 'regional');
   await page.locator('.ui-sheet-handle').click();
   await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'half');
   const sheet = page.locator('.ui-sheet');
-  for (const part of [sheet.locator('h1'), sheet.locator('.app-tiles'), sheet.getByRole('heading', {name: 'Where to look'}),
-    sheet.locator('.app-pick, .app-empty').first(), sheet.getByRole('slider', {name: 'Hour'})]) await expect(part).toBeInViewport({ratio: 1});
+  // G 2026-11-02: SC-LAUNCH-3's legality line stays in the default view, so the top pick is reached by expanding the sheet.
+  for (const part of [sheet.locator('h1'), sheet.locator('.app-tiles'), sheet.getByRole('slider', {name: 'Hour'})]) await expect(part).toBeInViewport({ratio: 1});
   // Compact tiles keep the stale state and the age.
   const water = sheet.locator('.ui-tile', {hasText: 'Water'});
   await expect(water).toHaveAttribute('data-state', 'stale');
   await expect(water.locator('.ui-tile-source')).toContainText('NDBC 46011 · 5 h');
+  // Expanded, the sheet holds Where to look and its top pick, scrolled to in the sheet body.
+  await page.locator('.ui-sheet-handle').press('End');
+  await expect(page.locator('.ui-sheet')).toHaveAttribute('data-detent', 'full');
+  // Each part is scrolled to the middle of the sheet body: scrollIntoViewIfNeeded aligns a part already partly in view to
+  // the body's edge, and the scroll offset snaps to device pixels, leaving a quarter pixel of a 16.5 px heading clipped.
+  for (const part of [sheet.getByRole('heading', {name: 'Where to look'}), sheet.locator('.app-pick, .app-empty').first()]) { await part.evaluate(el => el.scrollIntoView({block: 'center'})); await expect(part).toBeInViewport({ratio: 1}); }
   expect(pageErrors).toEqual([]);
 });
 
@@ -125,6 +131,11 @@ test('FE-33: where a coast report binds, the sparkline draws its tide curve in t
   const spark = root.locator('figure.app-spark');
   const chart = spark.locator('svg.series-chart');
   await expect(chart).toHaveAttribute('aria-label', /^Tide in ft MLLW\./);
+  // The stroke comes from panel.css and the token bridge, linked in the chart's shadow root (web/app/CoastMarkup.tsx): read it once both have loaded.
+  await expect.poll(() => chart.evaluate(el => {
+    const links = [...(el.getRootNode() as ShadowRoot).querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')];
+    return links.length === 2 && links.every(link => link.sheet !== null);
+  }), {message: 'the shadow root stylesheets loaded'}).toBe(true);
   expect(await chart.locator('path').evaluate(el => getComputedStyle(el).stroke)).toBe(await page.evaluate(() => {
     const probe = Object.assign(document.createElement('i'), {style: 'color: var(--amber)'});
     document.body.append(probe);

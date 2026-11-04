@@ -7,7 +7,8 @@ import {test, expect, checkA11y} from './fixtures.ts';
 
 test('the port page shows the reports, the boats and the seasons, with the chat closed', async ({page, pageErrors}, info) => {
   expect((await page.goto('/ports/morro-bay'))?.status()).toBe(200);
-  await expect(page.locator('h1')).toHaveText('Morro Bay fishing report');
+  await expect(page.locator('h1')).toHaveText('Morro Bay fishing conditions');
+  await expect(page).toHaveTitle('Morro Bay fishing conditions · SkipperCast');
   const reports = page.getByRole('region', {name: 'Skipper reports, last 14 days'});
   await expect(reports.getByRole('link', {name: 'Rita G'})).toHaveAttribute('href', '/boats/e2e-rita-g');
   await expect(reports).toContainText('45 vermilion, 12 lingcod (2 released)');
@@ -20,6 +21,8 @@ test('the port page shows the reports, the boats and the seasons, with the chat 
   await expect(page.getByRole('button', {name: 'Text SkipperCast'})).toBeVisible();   // the chat island, closed
   await checkA11y(page, 'advisor-port', info.project.name);
   expect(pageErrors).toEqual([]);
+  await page.getByRole('link', {name: 'Open the Morro Bay map'}).click();
+  await expect(page).toHaveURL(/\/map\?region=morro-bay&port=morro-bay/);
 });
 
 test('the species page shows the cues, the rules card and recent catches', async ({page, pageErrors}, info) => {
@@ -82,4 +85,19 @@ test('the v2 masthead links to the web chat while the advisor is on', async ({pa
   await expect(page).toHaveURL(/\/chat\.html$/);
   await expect(page.locator('h1')).toHaveText('Text SkipperCast');
   expect(pageErrors).toEqual([]);
+});
+
+test('the sitemap lists the port and species pages; the pages\' JSON-LD WebPage names its own canonical, and only on indexable pages', async ({page, request}) => {
+  const sitemap = await request.get('/sitemap-advisor.xml');
+  expect(sitemap.status()).toBe(200);
+  const xml = await sitemap.text();
+  for (const path of ['/ports/morro-bay', '/species/lingcod']) expect(xml).toContain(`<loc>https://skippercast.com${path}</loc>`);
+  // robots.txt is not asserted: the static dist/robots.txt is served before the Worker's (wrangler assets, no run_worker_first).
+  for (const path of ['/ports/morro-bay', '/species/lingcod']) {   // the port page is noindex when this run has no forecast feed
+    await page.goto(path);
+    const web = JSON.parse(await page.locator('script[type="application/ld+json"]').first().textContent() ?? '[]').find((n: {'@type': string}) => n['@type'] === 'WebPage');
+    if (await page.locator('meta[name="robots"][content="noindex"]').count()) { expect(web).toBeUndefined(); continue; }
+    expect(web.url).toBe(await page.locator('link[rel="canonical"]').getAttribute('href'));
+    expect(web.name).toBe(await page.title());
+  }
 });

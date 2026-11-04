@@ -242,7 +242,7 @@ export function regionalReport(daily: RegionalDailyFeed, forecast: RegionalForec
     windKnots: num(row.WSPD, MS_TO_KT), gustKnots: num(row.GST, MS_TO_KT), directionDeg: num(row.MWD),
   }));
   const tideEvents: TideEvent[] = ((tides?.data?.predictions as Record<string, unknown>[] | undefined) ?? [])
-    .filter(row => finite(row.height_ft) && (row.type === 'H' || row.type === 'L'))
+    .filter(row => finite(row.height_ft) && (row.type === 'H' || row.type === 'L') && typeof row.time === 'string' && Number.isFinite(Date.parse(row.time)))
     .map(row => ({at: String(row.time), heightFt: row.height_ft as number, type: row.type as 'H' | 'L'}));
   const alerts: Alert[] = advisories.flatMap(source => ((source.data?.alerts as Record<string, unknown>[] | undefined) ?? []).map(row => ({
     id: String(row.id), event: String(row.event), headline: String(row.headline ?? row.event), description: '',

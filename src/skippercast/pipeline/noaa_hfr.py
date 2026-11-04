@@ -16,7 +16,8 @@ METADATA = f"{HOST}/thredds/ncss/grid/{DATASET}/dataset.xml"
 def _bounds(bounds):
     pairs = [bounds.get(k) if isinstance(bounds, dict) else None for k in ("longitude", "latitude")]
     if not all(isinstance(p, (list, tuple)) and len(p) == 2 and all(
-            isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x) for x in p) for p in pairs):
+            isinstance(x, (int, float)) and not isinstance(x, bool) and
+            (isinstance(x, int) or math.isfinite(x)) for x in p) for p in pairs):
         raise ValueError("Invalid NOAA HFRNet regional bounds")
     (west, east), (south, north) = pairs
     if not (-180 <= west < east <= 180 and -80 <= south < north <= 80):

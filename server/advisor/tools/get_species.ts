@@ -5,7 +5,7 @@
 // catalog/advisor/protected.json. A sub-species (vermilion) gets its parent
 // group's claims. No rule, no catch claim: rules come only from get_rules.
 // TA-A6: the cues are in the reply language (lookalikes.json cues_es).
-import type {AdvisorTool} from './tool.ts';
+import {echoText, type AdvisorTool} from './tool.ts';
 import catalog from '../../../catalog/species.json' with {type: 'json'};
 import extra from '../../../catalog/advisor/species-extra.json' with {type: 'json'};
 import lookalikes from '../../../catalog/advisor/lookalikes.json' with {type: 'json'};
@@ -38,7 +38,7 @@ export const getSpecies: AdvisorTool = {
   intent: 'species',
   async run(input, ctx) {
     const key = resolveSpecies(String(input.species_key ?? ''))?.key;
-    if (!key) return {result: {error: 'unknown species', asked: String(input.species_key ?? '').slice(0, 40)}};
+    if (!key) return {result: {error: 'unknown species', asked: echoText(input.species_key)}};
     const own = SPECIES.get(key), parentKey = EXTRA.get(key)?.parent ?? null, parent = parentKey ? SPECIES.get(parentKey) : undefined;
     const source = own ?? parent;
     const cue = cuesFor(key);

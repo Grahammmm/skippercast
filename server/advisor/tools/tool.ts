@@ -28,6 +28,12 @@ export interface AdvisorTool {
 /** The characters of a tool result the model sees (engine.ts cuts longer JSON, which would no longer parse). */
 export const TOOL_RESULT_MAX = 4000;
 
+/** Model-supplied text a tool echoes back (RF1300-16): whitespace folded, Cc/Cf removed, trimmed, cut at `max` UTF-16 units without a lone high surrogate. */
+export function echoText(raw: unknown, max = 40): string {
+  const cut = String(raw ?? '').replace(/\s+/g, ' ').replace(/[\p{Cc}\p{Cf}]/gu, '').trim().slice(0, max);
+  return cut.replace(/[\uD800-\uDBFF]$/, '');
+}
+
 export const NOT_BUILT = Object.freeze({unavailable: true, reason: 'not built yet'});
 /** A stub with its final schema: answers NOT_BUILT until its task replaces the file. */
 export function stubTool(def: Omit<AdvisorTool, 'run'>): AdvisorTool {

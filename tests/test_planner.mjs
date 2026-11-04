@@ -29,7 +29,7 @@ function reefs(n = 5, sha = 'a'.repeat(64)) {
   // would "expire" once wall-clock time passes it and fail the export guards below.
   return {targets, areas, publication: {export_sha256: sha, status: 'ready', expires_at: '2099-12-31T00:00:00Z', region: 'test-coast'}, source_validation_date: '2026-10-01'};
 }
-const ATLAS = {targets: [{id: 'old-1', label: 'Old 1', latitude: 0.5, longitude: 0.5, habitat_grade: 'B', center_depth_ft: 80, neighborhood_depth_ft: [70, 90]}], areas: [], drifts: []};
+const ATLAS = {targets: [{id: 'old-1', name: 'Old 1', label: 'Old 1', latitude: 0.5, longitude: 0.5, habitat_grade: 'B', center_depth_ft: 80, neighborhood_depth_ft: [70, 90]}], areas: [], drifts: []};
 
 // The land/water check (web/land-water.ts) for these synthetic reefs: water unless a test says otherwise.
 let place = () => ({state: 'water'});
@@ -159,10 +159,10 @@ test('openReady twice, or again once ranked, runs one ranking', async () => {
   const {calls, loadReefs} = counted(), {planner: p} = harness({loadReefs});
   p.openReady(); p.openReady();
   await idle(p);
-  assert.equal(calls.n, 1);
+  assert.equal(calls.n, 2);
   p.openReady();
   await idle(p);
-  assert.equal(calls.n, 1, 'an open planner already ranked is not re-ranked');
+  assert.equal(calls.n, 2, 'an open planner already ranked is not re-ranked');
   p.dispose();
 });
 

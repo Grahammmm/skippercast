@@ -22,10 +22,30 @@ __all__ = ["DEFAULT_RESOLUTION_M", "Grid", "GRID", "grid_cell"]
 DEFAULT_RESOLUTION_M = 1000.0  # design.md section 3, and map.ts DEFAULT_CELL_M
 
 
+def _number(name: str, value: object) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"grid_cell: {name} is not a number")
+    if not math.isfinite(value):
+        raise ValueError(f"grid_cell: {name} is not finite")
+
+
 def grid_cell(lat: float, lon: float, resolution_m: float) -> tuple[str, float, float]:
-    """(cell_id, centre lat, centre lon) of the grid cell holding the point."""
+    """(cell_id, centre lat, centre lon) of the grid cell holding the point.
+    Refuses (``ValueError``) a bool, non-number or non-finite argument, lat outside -90..90,
+    lon outside -180..180 and resolution_m <= 0. +180 is binned as -180; +90 is binned in the top row."""
+    for name, value in (("lat", lat), ("lon", lon), ("resolution_m", resolution_m)):
+        _number(name, value)
+    if not -90 <= lat <= 90:
+        raise ValueError("grid_cell: lat outside -90..90")
+    if not -180 <= lon <= 180:
+        raise ValueError("grid_cell: lon outside -180..180")
+    if resolution_m <= 0:
+        raise ValueError("grid_cell: resolution_m must be > 0")
     d_lat = resolution_m / METRES_PER_DEG
+    lon = -180.0 if lon == 180.0 else lon
     row = math.floor(lat / d_lat)
+    if row * d_lat >= 90.0:
+        row -= 1
     centre_lat = (row + 0.5) * d_lat
     d_lon = resolution_m / (METRES_PER_DEG * max(math.cos(math.radians(centre_lat)), 0.01))
     col = math.floor(lon / d_lon)

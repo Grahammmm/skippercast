@@ -25,7 +25,8 @@ import {landingNames, resolvePort, resolveSpecies} from './resolve.ts';
 import {regionConfig} from './regions.ts';
 import {dailyFeed, intelligenceFeed, feedReader} from './feeds.ts';
 import type {FeedReader} from './feeds.ts';
-import {advisoriesFrom, parseTripDate, regionZones, windowConditions, windowEpochs, WINDOW, HORIZON_DAYS} from './conditions.ts';
+import {advisoriesFrom, parseTripDate, regionZones, requestBoat, windowConditions, windowEpochs, withForecastClock, WINDOW, HORIZON_DAYS} from './conditions.ts';
+import {forecastClock} from './forecast-clock.ts';
 import type {Advisory, DayConditions, Window} from './conditions.ts';
 import {reportEvidence, CONFIDENCE_WORDS} from './confidence.ts';
 import type {Confidence, LandingReport} from './confidence.ts';
@@ -87,7 +88,8 @@ export function leadsWithAdvisory(reply: string, events: readonly string[]): boo
   return events.some(e => first.includes(e.toUpperCase()));
 }
 
-export interface ConditionsInput {port: string; date?: string | null; start_hour?: unknown; end_hour?: unknown}
+/** `boat`: optional comfort factors ({sea, wind, chopPeriod}, conditions.ts requestBoat); absent or invalid rates the reference boat. */
+export interface ConditionsInput {port: string; date?: string | null; start_hour?: unknown; end_hour?: unknown; boat?: unknown}
 
 /** Oldest required-zone check, or null unless every configured zone has complete evidence. */
 function advisoryCheckTime(sources: Record<string, unknown> | undefined, zones: readonly string[]): string | null {
@@ -123,7 +125,8 @@ export async function tripConditions(input: ConditionsInput, opts: PlanningOptio
   const read = opts.read ?? once(feedReader(opts.deps));
   const [intel, daily] = await Promise.all([intelligenceFeed(region, read), dailyFeed(region, read)]);
   const pointId = FORECAST_POINT.get(port) ?? region.forecast_points[0]?.id ?? '';
-  const days: DayConditions[] = when.dates.map(date => windowConditions(intel, region, pointId, date, window));
+  const clock = forecastClock(intel, opts.now), boat = requestBoat(input.boat);
+  const days: DayConditions[] = when.dates.map(date => withForecastClock(windowConditions(intel, region, pointId, date, window, boat), clock));
   const zones = regionZones(region);
   const advisoriesAsOf = advisoryCheckTime(daily?.sources, zones);
   const byDay = when.dates.map(date => { const [from, to] = windowEpochs(date, tz, window); return {date, advisories: daily ? advisoriesFrom(daily, zones, from, to) : []}; });
@@ -139,6 +142,7 @@ export async function tripConditions(input: ConditionsInput, opts: PlanningOptio
     ...(line ? {advisory_line: line} : {}),
     days,
     forecast_issued: intel?.completed_at ?? null,
+    forecast_age_hours: clock.ageHours,
     note: [alerts?.length ? `Start the reply with advisory_line (the word in capitals, SMALL CRAFT ADVISORY), and end with "${t(language, 'nws_closer')}"` : null,
       advisoriesAsOf === null ? 'NWS advisories could not be checked: say so and point to the NWS forecast.' : null,
       'Comfort is for a mid-size center console; the person\'s own boat may differ. Never say the harbor bar is open or closed. Never give a percentage or a catch number.'].filter(Boolean).join(' '),

@@ -147,13 +147,20 @@ export function shoreReviewLines(run: ShoreRunClocks, now = Date.now()): string 
 export interface ShoreGuidance {readonly text: string; readonly href: string; readonly label: string}
 
 const CHECKS = 'Before you go, check the current CDFW rules for this area, the access point\'s posted status, the surf and the county\'s beach water-quality status.';
-/** Method guidance for the shore target, with the official rules link. It describes how to check a run, not what it holds. */
-export function shoreGuidance(target: string): ShoreGuidance {
-  const lead = target === 'surfperch'
-    ? 'Surfperch: a sandy-beach surf method; the run marks historical sandy shore to look along.'
-    : target === 'halibut'
-      ? 'California halibut: a sandy-bottom method; the run marks historical sandy shore to look along, and size and bag limits apply.'
-      : 'The run marks historical sandy shore to look along.';
+/** Method guidance for the shore target and the run's substrate (sand or rocky), with the official rules link. It describes how to check a run, not what it holds. */
+export function shoreGuidance(target: string, substrate: string = 'sand'): ShoreGuidance {
+  const lead = substrate === 'rocky'
+    ? target === 'surfperch'
+      ? 'Surfperch: a rocky-shore surf method; the run marks historical rocky shore to look along.'
+      : target === 'halibut'
+        ? 'California halibut: usually a sandy-bottom fish; the run marks historical rocky shore, so look at sand pockets beside it, and size and bag limits apply.'
+        : 'The run marks historical rocky shore to look along.'
+    : substrate !== 'sand' ? 'The run marks historical shore to look along.'
+    : target === 'surfperch'
+      ? 'Surfperch: a sandy-beach surf method; the run marks historical sandy shore to look along.'
+      : target === 'halibut'
+        ? 'California halibut: a sandy-bottom method; the run marks historical sandy shore to look along, and size and bag limits apply.'
+        : 'The run marks historical sandy shore to look along.';
   return {text: `${lead} Fish presence is unverified. ${CHECKS}`, href: CDFW_RULES_URL, label: 'Official CDFW regional rules'};
 }
 

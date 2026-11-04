@@ -2,7 +2,7 @@
 // § 8, § 9 Shore runs). The region's reviewed shore-habitat package
 // (catalog/shore-habitat/<id>.geojson, published by the platform build as
 // dist/regions/<id>/shore-habitat.geojson, FE-43) draws only with
-// `profile=shore`: each ESI 2006 sandy-shore run as a wide soft --amber line
+// `profile=shore`: each ESI 2006 shore run (sandy, or rocky where reviewed) as a wide soft --amber line
 // tinted by its priority (web/brief/shore.ts), its public access points as
 // pins with a 44 px target, and one mark card per run with its review dates,
 // the method guidance and the official rules link.
@@ -54,7 +54,7 @@ export const shoreURL = (id: string): string => `regions/${id}/shore-habitat.geo
 type Position = [number, number];
 export interface AccessPoint {readonly id: string; readonly name: string; readonly coordinates: Position; readonly sourceUrl: string; readonly checkedAt: string}
 export interface RunProps extends ShoreRunClocks {
-  readonly id: string; readonly name: string; readonly areaId: string; readonly region: string; readonly shoreClass: string;
+  readonly id: string; readonly name: string; readonly areaId: string; readonly region: string; readonly substrate?: string; readonly shoreClass: string;
   readonly sourceYear: number; readonly sourceUrl: string; readonly access: readonly AccessPoint[]; readonly accessUrl: string; readonly attribution: string;
 }
 export interface Run {readonly type: 'Feature'; readonly id: string; readonly geometry: {readonly type: 'MultiLineString'; readonly coordinates: Position[][]}; readonly properties: RunProps}
@@ -115,7 +115,7 @@ export function shoreOverlay(p: Palette, data: ReturnType<typeof shoreCollection
 
 /** The card for a run: its status and reasons, review dates, access points, method guidance and the rules link. */
 export function runMark(r: ShownRun, target: string, now = Date.now()): ChartMark {
-  const p = r.run.properties, guide = shoreGuidance(target);
+  const p = r.run.properties, guide = shoreGuidance(target, p.substrate);
   const access = r.status.label === 'Blocked' ? '' : ` Public access: ${p.access.map(a => a.name).join('; ')}.`;
   return {
     id: `shore:${p.id}`, name: p.name, kind: `Shore run · ${r.status.label}`,

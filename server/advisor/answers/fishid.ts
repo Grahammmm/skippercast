@@ -108,13 +108,15 @@ const MONTHS: Record<Language, string[]> = {
   en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   es: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
 };
-/** "Apr 1" / "1 abr" from YYYY-MM-DD or MM-DD; the input itself when it is neither. */
+const DAYS = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+/** "Apr 1" / "1 abr" from YYYY-MM-DD or MM-DD; the input itself when it is neither or names a day that does not exist. */
 export function monthDay(date: string | null, language: Language): string | null {
   if (!date) return null;
-  const m = /^(?:\d{4}-)?(\d{2})-(\d{2})$/.exec(date);
+  const m = /^(?:(\d{4})-)?(\d{2})-(\d{2})$/.exec(date);
   if (!m) return date;
-  const month = MONTHS[language][Number(m[1]) - 1], day = Number(m[2]);
-  if (!month || !day) return date;
+  const mi = Number(m[2]) - 1, month = MONTHS[language][mi], day = Number(m[3]);
+  const real = !m[1] || new Date(Date.UTC(Number(m[1]), mi, day)).getUTCDate() === day;
+  if (!month || !day || day > DAYS[mi]! || !real) return date;
   return language === 'es' ? `${day} ${month}` : `${month} ${day}`;
 }
 
@@ -136,6 +138,8 @@ export function ruleParts(r: RuleSummary, language: Language): string[] {
   else if (r.bag_limit !== null) parts.push(t(language, 'rule_bag', {n: r.bag_limit}));
   if (r.season_open && r.season_close) parts.push(t(language, 'rule_season', {open: monthDay(r.season_open, language)!, close: monthDay(r.season_close, language)!}));
   else if (!r.season_open && !r.season_close && r.bag_limit !== 0) parts.push(t(language, 'rule_year_round'));
+  else if (r.season_open) parts.push(t(language, 'rule_season_opens', {open: monthDay(r.season_open, language)!}));
+  else if (r.season_close) parts.push(t(language, 'rule_season_closes', {close: monthDay(r.season_close, language)!}));
   if (r.depth_limit_ft !== null) parts.push(t(language, 'rule_depth', {n: r.depth_limit_ft}));
   return parts;
 }

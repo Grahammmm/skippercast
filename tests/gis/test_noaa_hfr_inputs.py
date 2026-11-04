@@ -71,6 +71,14 @@ class BoundsBeforeRequestTests(unittest.TestCase):
         self.assert_refused({"latitude": [34.95, 85.0], "longitude": [-121.05, -120.9]})
         self.assert_refused({"latitude": [34.95, 35.05], "longitude": [-181.0, -120.9]})
 
+    def test_huge_integer_coordinates_make_no_request(self):
+        for axis in ("latitude", "longitude"):
+            for index, value in ((0, -10**400), (1, 10**400)):
+                with self.subTest(axis=axis, index=index):
+                    bounds = {key: list(pair) for key, pair in BOUNDS.items()}
+                    bounds[axis][index] = value
+                    self.assert_refused(bounds)
+
     def test_malformed_bounds_make_no_request(self):
         for bounds in ({"latitude": [True, 35.05], "longitude": [-121.05, -120.9]},
                        {"latitude": [34.95, 35.05], "longitude": [-121.05, False]},

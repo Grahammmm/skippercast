@@ -2,6 +2,7 @@
 
 Manual refresh only; builds/tests stay offline. Full provider receipts stay in
 ignored var/station-locations. This does not select stations or change failover.
+Inventory bodies are read up to 32 MiB; stored names are trimmed one-line text of at most 120 characters.
 """
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -18,6 +19,14 @@ URLS = {
     "ndbc": "https://www.ndbc.noaa.gov/activestations.xml",
     "coops": "https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=tidepredictions",
 }
+SAFE_KEY = re.compile(r"[A-Za-z0-9_-]{1,40}")  # other context keys are shown as "contexts.?"
+MAX_INVENTORY_BYTES = 32 * 1024 * 1024  # a larger body is an error for that provider: not hashed, parsed or written
+
+
+def _shaped(value, kind, rel, field):
+    if not isinstance(value, kind):  # a misshaped block is named, never iterated or split into characters
+        raise SystemExit(f"build_station_locations: {rel}: {field} is not {'an object' if kind is dict else 'a list'}")
+    return value
 
 
 def configured(root=ROOT):
@@ -29,17 +38,26 @@ def configured(root=ROOT):
             raise SystemExit(f"build_station_locations: {path.relative_to(root)}: unreadable JSON") from None
         if not isinstance(region, dict):
             raise SystemExit(f"build_station_locations: {path.relative_to(root)}: not a JSON object")
-        for context in [region, *region.get("contexts", {}).values()]:
-            stations = context.get("stations", {})
+        rel = path.relative_to(root)
+        contexts = _shaped(region.get("contexts", {}), dict, rel, "contexts")
+        for prefix, context in [("", region), *((f"contexts.{k if SAFE_KEY.fullmatch(k) else '?'}.", c) for k, c in contexts.items())]:
+            _shaped(context, dict, rel, prefix[:-1])  # the region itself is already an object
+            stations = context.get("stations")
+            stations = {} if stations is None else _shaped(stations, dict, rel, f"{prefix}stations")
+            roles = _shaped(stations.get("roles", {}), dict, rel, f"{prefix}stations.roles")
             for role in ("tide", "nearshore_buoy", "offshore_buoy"):
                 provider = "coops" if role == "tide" else "ndbc"
-                ids = [stations.get(role), *stations.get("roles", {}).get(role, {}).get("stations", [])]
+                entry = _shaped(roles.get(role, {}), dict, rel, f"{prefix}stations.roles.{role}")
+                ids = [stations.get(role), *_shaped(entry.get("stations", []), list, rel, f"{prefix}stations.roles.{role}.stations")]
                 if any(x is not None and not isinstance(x, str) for x in ids):  # 0, false and [] are refused too
                     raise SystemExit(f"build_station_locations: {path.relative_to(root)}: {role} station id is not a string")
                 wanted[provider].update(x for x in ids if x)
     # The already-bound SLO county is the only coast county today. Verify this
     # extraction against the typed county module in the offline acceptance test.
-    county = (root / "packages/coast/src/counties.ts").read_text()
+    try:
+        county = (root / "packages/coast/src/counties.ts").read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        raise SystemExit("build_station_locations: packages/coast/src/counties.ts: unreadable") from None
     wanted["coops"].update(re.findall(r"tideStation:\{id:'([^']+)'", county))
     wanted["ndbc"].update(re.findall(r"temperatureStationId:'([^']+)'", county))
     for block in re.findall(r"buoys:\[(.*?)\]", county, re.S):
@@ -65,9 +83,12 @@ def main(argv=None, *, root=ROOT, opener=urlopen):
     for provider, url in URLS.items():
         try:
             with opener(url, timeout=60) as response:
-                raws[provider] = raw = response.read()
+                raws[provider] = raw = response.read(MAX_INVENTORY_BYTES + 1)
         except (OSError, ValueError) as error:  # HTTPError, URLError and timeouts are OSErrors
             errors.append(f"{provider}: fetch failed ({type(error).__name__})")
+            continue
+        if len(raw) > MAX_INVENTORY_BYTES:  # no sha, no parse; errors means nothing is written
+            errors.append(f"{provider}: inventory over 32 MiB")
             continue
         retrieved = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         sources[provider] = {"url": url, "retrieved_at": retrieved, "sha256": sha256(raw).hexdigest()}
@@ -96,9 +117,13 @@ def main(argv=None, *, root=ROOT, opener=urlopen):
             if not isinstance(row.get("name"), str) or not row["name"].strip():
                 errors.append(f"{provider}:{ident}: name missing or empty")
                 continue
+            name = row["name"].strip()  # controls are checked before trimming, so a trailing newline or NEL is refused
+            if len(name) > 120 or any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in row["name"]):
+                errors.append(f"{provider}:{ident}: name is not plain one-line text")  # the name itself is never echoed
+                continue
             lat, lon = coords
             stations[f"{provider}:{ident}"] = {
-                "provider": provider, "id": ident, "name": row["name"], "latitude": lat, "longitude": lon,
+                "provider": provider, "id": ident, "name": name, "latitude": lat, "longitude": lon,
                 **({"program": row.get("pgm", "NDBC"), "owner": row.get("owner", "NDBC")} if provider == "ndbc" else
                    {"type": row.get("type"), "reference_id": row.get("reference_id")}),
             }

@@ -44,6 +44,7 @@ import {
 } from '../map/stage.ts';
 import {base, current, DEFAULT_CURRENT, grade, isBase, layers, layersParam, profile, region, setParams, species, UNSUPPORTED, type Base} from '../state.ts';
 import {RAIL_ENTRIES, railOn, toggled} from './rail.ts';
+import {Presets} from './Presets.tsx';
 
 export {RAIL_ENTRIES, railOn, toggled, type RailEntry} from './rail.ts';
 
@@ -256,7 +257,7 @@ export function LookFor() {
 export function LayerRail() {
   const on = layers.value, source = current.value, shown = shownPresentation.value;
   return (
-    <Rail class="app-rail" header={<LookFor />} footer={<BaseChoice />}>
+    <Rail class="app-rail" header={<><LookFor /><Presets /></>} footer={<BaseChoice />}>
       {RAIL_ENTRIES.map(e => {
         const here = drawsIn(e.id, shown), active = railOn(e.id, on, source);
         return e.id === 'currents' ? (

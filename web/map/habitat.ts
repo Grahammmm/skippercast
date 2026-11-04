@@ -248,9 +248,10 @@ export function withheldCard(t: AtlasTarget, w: Withheld, screen: MarkScreen): C
 
 const UNIT: Readonly<Record<string, string>> = {rock: 'Mapped hard bottom', mixed: 'Mapped mixed bottom', sediment: 'Mapped soft bottom', kelp: 'Historical kelp detections'};
 /** A survey habitat outline's card, from the published feature (v1's habitatDetails facts). */
-export function surveyCard(p: Props, survey: Survey, region: RegionData): ChartMark {
+export function surveyCard(p: Props, survey: Survey, region: RegionData, at?: {latitude: number; longitude: number}): ChartMark {
   const kelp = p.habitat_kind === 'kelp', area = Number(p.area_km2), margin = survey.mpa_margin_m;
   return {
+    ...(at && Number.isFinite(at.latitude) && Number.isFinite(at.longitude) ? {position: {latitude: +at.latitude.toFixed(5), longitude: +at.longitude.toFixed(5)}} : {}),
     id: `survey:${String(p.id)}`, name: String(p.name ?? 'Survey habitat'), kind: UNIT[String(p.habitat_kind)] ?? 'Survey context',
     reading: Number.isFinite(area) ? `${area.toFixed(3)} km²` : '—',
     source: joined(survey.source_kind ?? 'Survey habitat', `${kelp ? 'observed' : 'compiled'} ${isoDate(p.source_date)}`),

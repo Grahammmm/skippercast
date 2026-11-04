@@ -31,6 +31,7 @@ import io
 import re
 from typing import IO, Iterable, Iterator, Mapping
 import zipfile
+import zlib
 
 from .base import Candidate, Fact, RunContext
 
@@ -39,6 +40,7 @@ __all__ = ["FccUls", "FccFormatError", "is_entity", "parse_ship_zip", "licence_u
 ID = "fcc-uls"
 DEFAULT_URL = "https://data.fcc.gov/download/pub/uls/complete/l_ship.zip"
 MAX_BYTES = 200_000_000
+MAX_MEMBER_BYTES = 1_000_000_000  # uncompressed bytes per EN/HD/SH member
 LICENCE_URL = "https://wireless2.fcc.gov/UlsApp/UlsSearch/license.jsp?licKey={usi}"
 
 STATUSES = {"A": "active", "E": "expired", "C": "cancelled", "T": "terminated", "L": "pending-legal",
@@ -95,13 +97,29 @@ def _date(text: str) -> str | None:
     return f"{match.group(3)}-{match.group(1)}-{match.group(2)}" if match else None
 
 
-def _records(archive: zipfile.ZipFile, kind: str, stats: dict) -> Iterator[list[str]]:
-    name = next((n for n in archive.namelist() if n.upper() == f"{kind}.DAT"), None)
-    if name is None:
+def _member(archive: zipfile.ZipFile, kind: str) -> str:
+    """The one member named ``<kind>.dat`` (any case), refused when missing, repeated or past the size cap."""
+    names = [n for n in archive.namelist() if n.upper() == f"{kind}.DAT"]
+    if not names:
         raise FccFormatError(f"{kind}.dat is missing from the ship file")
+    if len(names) > 1:
+        raise FccFormatError(f"{kind}.dat appears more than once in the ship file")
+    if archive.getinfo(names[0]).file_size > MAX_MEMBER_BYTES:
+        raise FccFormatError(f"{kind}.dat expands past the size cap")
+    return names[0]
+
+
+def _lines(raw: IO[bytes], kind: str) -> Iterator[str]:
+    try:
+        yield from io.TextIOWrapper(raw, encoding="latin-1", newline="")
+    except (zipfile.BadZipFile, EOFError, zlib.error):  # a bad CRC or a cut-off compressed stream
+        raise FccFormatError(f"{kind}.dat is damaged") from None
+
+
+def _records(archive: zipfile.ZipFile, name: str, kind: str, stats: dict) -> Iterator[list[str]]:
     seen = 0
     with archive.open(name) as raw:
-        for line in io.TextIOWrapper(raw, encoding="latin-1", newline=""):
+        for line in _lines(raw, kind):
             fields = line.rstrip("\r\n").split("|")
             if fields[0] != kind:
                 stats["skipped_lines"] = stats.get("skipped_lines", 0) + 1
@@ -142,19 +160,23 @@ def parse_ship_zip(data: bytes | IO[bytes], state: str, *, source_id: str, right
     ports = ports or {}
     state = state.strip().upper()
     wanted = {c.strip().upper() for c in categories} if categories else None
-    archive = zipfile.ZipFile(io.BytesIO(data) if isinstance(data, (bytes, bytearray)) else data)
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(data) if isinstance(data, (bytes, bytearray)) else data)
+    except (zipfile.BadZipFile, zipfile.LargeZipFile, EOFError, OSError):
+        raise FccFormatError("ship file is not a readable zip") from None
+    members = {kind: _member(archive, kind) for kind in ("EN", "HD", "SH")}  # all checked before any record
     licensees: dict[str, tuple[str | None, str | None]] = {}  # usi -> (entity name or None, port id)
-    for f in _records(archive, "EN", stats):
+    for f in _records(archive, members["EN"], "EN", stats):
         if f[5].strip() != "L" or f[17].strip().upper() != state:
             continue
         entity = f[7].strip() if is_entity(f[23], f[7], f[8], f[10]) else None
         licensees[f[1]] = (entity, ports.get(_norm(f[16])))
     headers: dict[str, list[str]] = {}
-    for f in _records(archive, "HD", stats):
+    for f in _records(archive, members["HD"], "HD", stats):
         if f[1] in licensees:
             headers[f[1]] = f
     emitted = unnamed = 0
-    for f in _records(archive, "SH", stats):
+    for f in _records(archive, members["SH"], "SH", stats):
         usi = f[1]
         if usi not in licensees or (wanted is not None and f[8].strip().upper() not in wanted):
             continue
