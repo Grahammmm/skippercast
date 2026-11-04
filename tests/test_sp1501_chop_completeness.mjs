@@ -70,7 +70,7 @@ function limited(period, over = {}) {
   assert.ok(rating);
   assert.equal(rating.limited, true);
   assert.ok(rating.score <= 6.9);
-  assert.equal(rating.chop, null);
+  assert.equal(rating.chop, over.chop ?? calm.chop);
   assert.equal(rating.costs.short, 0);
   return rating;
 }
@@ -107,7 +107,7 @@ focused('A3 appreciable chop retains valid full-rubric penalties, never invents 
   }
   for (const period of [null, undefined, NaN, Infinity, -Infinity]) {
     const r = limited(period, {chop: 1});
-    assert.deepEqual([r.score, r.uncapped, r.costs.chop, r.costs.short], [6.9, 10, 0, 0]);
+    assert.deepEqual([r.score, r.uncapped, r.costs.chop, r.costs.short], [6.9, 9.5, 0.54, 0]);
     // The exported cost helper also must not call an absent/nonfinite period
     // a zero-second wave, even when a legacy caller invokes it directly.
     const c = {wind: 2, gust: 3, sea: {height: 1}, chop: {height: 1, period}, swell: {height: 1, from: 300}, secondary: {height: 0, from: 200}};
