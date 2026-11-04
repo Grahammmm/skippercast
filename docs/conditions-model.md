@@ -91,6 +91,26 @@ forecast and not a safety clearance.
   buoy cannot raise it.
 - **Seas read up, never down.** Printed seas maxima round up (brief to 0.1 ft, advisor to whole feet), so a printed maximum is never below the value the window rule used.
 
+**Advisor holds.** The text advisor's day word (`server/advisor/answers/conditions.ts`,
+`planning.ts`, `reports.ts`) applies a subset of these holds, in its own words
+(Bumpy where the brief says Marginal) and over its own window (the asked
+hours of the asked date, by default 06:00-14:00, not the brief's sunrise-to-noon
+window). A present boating advisory makes the day Rough (SC2007-05). A Comfortable day is
+held at Bumpy, with `comfort_held` naming each reason once and in this order,
+when a rated hour is in the long-period swell rule (SC1952-05), when listed
+hours have no forecast ("N of M hours have no forecast", counted from the
+window's forecast hours that scored nothing; SC0237-01), when the marine alert
+check is unavailable (a configured zone has no record, a failed status, no
+alerts list or no parseable check time; no age limit; SC0237-01), and, for
+`get_conditions` only, when the bar estimate reads hazardous (SC0022-08). A
+model run's end time makes later hours unknown samples (SC2007-06), which
+count as hours with no forecast. A day that is already Bumpy, Rough or
+Unknown, or unavailable, is not given a held reason; an old model run still
+holds a calmer word at Unknown and an unusable run reads as no forecast. The
+daily-report inputs apply the same advisory, long-period and thin-evidence
+holds but do not check the bar. Limited estimates keep the shared score cap;
+the advisor adds no separate limited-estimate hold.
+
 `tests/test_brief_verdict.mjs` pins the bands, the caps, the limit sentence
 and the Unknown cases.
 
