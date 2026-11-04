@@ -23,14 +23,15 @@
         Draft — pending review by counsel. This notice describes what the
         current code does; it has not yet been reviewed by a lawyer.
       </p>
-      <p class="small">Draft dated October 11, 2026.</p>
+      <p class="small">Draft dated November 4, 2026.</p>
 
       <h2 id="summary">In short</h2>
       <ul>
         <li>The map, forecasts and downloads work without an account.</li>
         <li>
-          If you sign in, we store only what you save: trip alerts, notification
-          devices and comfort ratings. You can export or delete it at any time.
+          If you sign in, we store the records you save: trip alerts,
+          notification devices, comfort ratings, private catch-log entries and
+          saved spots. You can export or delete your records at any time.
         </li>
         <li>
           We do not sell or share personal information, and we run no
@@ -98,6 +99,16 @@
             <td>Deleted 365 days after the rating, or when you delete your data.</td>
           </tr>
           <tr>
+            <th scope="row">Private catch log: start time, optional end time, method and species, outcome (fish, blank or unknown), count, optional position and note, and a linked trip if you choose one</th>
+            <td>Keep your own record of fishing effort and outcomes, including trips with no catch.</td>
+            <td>Until you delete the entry or delete all your account records; no automatic age-based deletion.</td>
+          </tr>
+          <tr>
+            <th scope="row">Saved spots: name, position and optional note</th>
+            <td>Keep your own private places for later use and export.</td>
+            <td>Until you delete the spot or delete all your account records; no automatic age-based deletion.</td>
+          </tr>
+          <tr>
             <th scope="row">Request counters: a one-way hash of your identifier plus a time window, and a count</th>
             <td>Rate limits (30 requests a minute; 20 boat lookups a day).</td>
             <td>Removed after they expire: about two minutes for the per-minute counter, two days for the daily lookup counter.</td>
@@ -105,8 +116,14 @@
         </tbody>
       </table>
       <p>
+        Catch-log entries and saved spots are associated with your account and
+        each has a record identifier and a creation time.
+      </p>
+      <p>
         Expired records are removed by a scheduled cleanup job, so deletion can
-        lag the dates above by a short time.
+        lag the dates above by a short time. Catch-log entries and saved spots
+        do not expire automatically; they stay until you delete them or delete
+        all your account records.
       </p>
       <p>
         <strong>Sale and sharing.</strong> We do not sell personal information
@@ -114,8 +131,9 @@
         not done so in the past 12 months.
       </p>
       <p>
-        <strong>Sensitive information.</strong> We do not collect sensitive
-        personal information as defined by the CCPA.
+        <strong>Sensitive information.</strong> Catch-log entries can include a
+        position, and saved spots include a position. Their classification
+        under the CCPA remains for counsel to review.
       </p>
 
       <h2 id="boat-lookup">AI boat lookup</h2>
@@ -251,7 +269,9 @@
         browser’s local storage, and recent forecasts in session storage. They
         never leave your device unless you export them. If you use “find a
         nearby port” or the boat-position tool, your location is used in the
-        browser only and is not sent to SkipperCast.
+        browser only and is not sent to SkipperCast. Positions you choose to
+        save in a catch-log entry or saved spot are stored with your account as
+        described above.
       </p>
 
       <h2 id="service-providers">Service providers and data sources</h2>
@@ -355,13 +375,15 @@
       <ul>
         <li>
           <strong>Export:</strong> under “My trip alerts”, “Export my records” downloads
-          your trips, comfort feedback and alert history as JSON (served by
+          your trips, comfort feedback, alert history, private catch-log entries
+          and saved spots (with their positions and notes) as JSON (served by
           <code>GET /api/privacy</code>).
         </li>
         <li>
           <strong>Delete:</strong> “Delete all my records” permanently removes your
-          trips, alerts, delivery receipts, notification devices and comfort
-          feedback (<code>DELETE /api/privacy</code>).
+          trips, alerts, delivery receipts, notification devices, comfort
+          feedback, private catch-log entries and saved spots
+          (<code>DELETE /api/privacy</code>).
         </li>
         <li>
           <strong>Correct:</strong> delete and re-save a trip; “Stop
