@@ -120,7 +120,7 @@ export async function spotVerdicts(spots, screen) {
   const {screenPlace, placeRefused} = await import('./geo-screen.js'), {protectedHitReading} = await import('./trip-export.js');
   return spots.map(s => {
     const v = screenPlace(screen, {latitude: s.lat, longitude: s.lon});
-    if (!v.screened) return {status: 'unavailable', text: 'Protected-area check unavailable, so this spot cannot be exported yet.'};
+    if (!v.screened) return {status: 'unavailable', text: 'Protected areas not checked for this spot: outside coverage or check unavailable. Not exported.'};
     if (!placeRefused(v)) return {status: 'clear', text: ''};
     return {status: 'excluded', text: `${protectedHitReading({inside: v.inside, reef: false})} ${v.name ? v.name + '.' : ''} Not exported.`.replace(/\s+/g, ' ')};
   });
@@ -135,7 +135,7 @@ export async function exportSpots(spots, screen, region, now = new Date()) {
   const {buildExport} = await import('./trip-export.js'), {checkGpx} = await import('../web/gpx-check.ts');
   if (!spots.length) throw Error('You have no saved spots to export.');
   const verdicts = await spotVerdicts(spots, screen);
-  if (verdicts.some(v => v.status === 'unavailable')) throw Error('Protected-area checks are unavailable or older than 36 hours. Return to the map and refresh before exporting.');
+  if (verdicts.some(v => v.status === 'unavailable')) throw Error('Protected-area checks are unavailable or older than 36 hours, or a saved spot is outside coverage. Nothing was exported.');
   const held = spots.filter((s, i) => verdicts[i].status !== 'clear'), clear = spots.filter((s, i) => verdicts[i].status === 'clear');
   if (!clear.length) throw Error('Every saved spot is inside or near a protected area, so nothing was exported.');
   const points = clear.map(s => ({id: 'user:' + s.id, name: s.name.trim() ? s.name : 'Waypoint', category: 'other', latitude: s.lat, longitude: s.lon}));
