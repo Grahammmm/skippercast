@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC0452-10: Where to look and the Boat run line read Spanish. The list's heading, its by-water and straight-line distances, the protected-area screen lines (not checked, inside, metres from), the range and dive controls and the search-plan labels, and the run line's speed and window prompts, fishing-time sentences, method note and the entrance's leave-by and be-back-by line come from `catalog/app/strings.json`, and both files join the copy lint's covered list. Place, harbor and closure names are shown as published, rule wording stays the registry's English and is marked as such, a sentence the catalogue does not know is shown as it came, and the English text, ranking and run arithmetic are unchanged.
+
 - SC0452-11: seven caveats the copy lint used to excuse now read plainly and keep every limit they carried (the regulation-page check and harbor clearance, charter ground positions and depths, commercial AIS coverage, tuna habitat, the dated charter report, adult-Chinook temperatures, and the offline trip notes' date label); their seven `consecutive-not` entries are gone from `scripts/copy-lint-baseline.json`, which keeps only the five `method-name` entries for published model, survey and datum labels. No other copy, data or behaviour changes.
 
 - SC0237-03: the trip-alert form for the Boat profile starts from your own Boat limits when you have saved them in Your limits (wind, gust and sea, kept to the ranges the server accepts), and its note says so; they are your absolute settings, so the boat's wind and sea factors are not applied to them again, while alerts still judge wind chop for a saved custom boat. Without your own Boat limits the form and its notes are unchanged, still scaled by the boat; the other profiles are unchanged.

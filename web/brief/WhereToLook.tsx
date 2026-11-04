@@ -40,6 +40,7 @@ import {regionCoverage, regionPlans, targetState} from '../species.ts';
 import {planFor, noPlanText} from '../search-plan.ts';
 import {regionInfo} from '../app/region-info.ts';
 import {NO_REASONS, reasonsFor, targetEvidence} from '../area-reasons.ts';
+import {language, t, type Language, type StringId} from '../i18n.ts';
 
 export type {Pick, Ranking};
 
@@ -86,17 +87,17 @@ export function boatPicks(r: Ranking, lw: LandWaterState = landWater.value, id: 
 }
 
 /** SC2207-05: why a Kayak pick still shows a straight line: the route's own failure, or that it is not computed yet. */
-const ROUTE_WHY: Readonly<Record<RouteFailure, string>> = {
-  'no-product': 'no land/water data',
-  'lines-needed': 'shoreline still loading',
-  'start-not-water': 'launch/origin not on confirmed water',
-  'end-not-water': 'place not on confirmed water',
-  'no-route': 'no water path found',
-  'too-far': 'route search limit reached',
-};
-export function routeWhyText(pick: Pick & {basis?: 'water' | 'straight'; why?: RouteFailure}): string | null {
+const ROUTE_WHY: Readonly<Record<RouteFailure, true>> = {'no-product': true, 'lines-needed': true, 'start-not-water': true, 'end-not-water': true, 'no-route': true, 'too-far': true};
+export function routeWhyText(pick: Pick & {basis?: 'water' | 'straight'; why?: RouteFailure}, lang: Language = 'en'): string | null {
   if (pick.basis !== 'straight' || pick.nm === null) return null;
-  return pick.why ? ROUTE_WHY[pick.why] ?? 'water route not computed' : 'water route not computed';
+  return t(pick.why && Object.hasOwn(ROUTE_WHY, pick.why) ? `where.why.${pick.why}` : 'where.why.pending', lang);
+}
+
+/** A routed row's distance in `lang`: the list's own number and basis, from its own English label; any other label is shown as it came. */
+function distanceLabel(pick: Pick & {basis?: 'water' | 'straight'}, lang: Language): string {
+  if (lang === 'en' || pick.nm === null || !pick.basis) return pick.distance;
+  const id: StringId = pick.basis === 'water' ? 'where.distance.water' : 'where.distance.straight', nm = pick.nm.toFixed(1);
+  return pick.distance === t(id, 'en', {nm}) ? t(id, lang, {nm: nm.replace('.', ',')}) : pick.distance;
 }
 
 /** Bumped once the routes the painted Boat list still lacks are all computed, so it renders again by water. */
@@ -129,10 +130,11 @@ export function routeAfterPaint(r: Ranking, lw: LandWaterState, id: string | nul
 
 /** Select a pick's mark or habitat (a history entry), as a click on the map would; a publication place moves the Chart to it. */
 /** BF-closures-everywhere: the line a pick's protected-area verdict adds, as plain text (rendered as a text child, so a closure's name is never markup); null when it is clear. */
-export function screenLine(v: Pick['screen']): string | null {
-  if (!v.screened) return 'Protected areas not checked';
-  if (v.inside) return `Inside ${v.name ?? 'a protected area'}`;
-  return v.distanceM !== null && v.distanceM <= 70 ? `${Math.round(v.distanceM)} m from ${v.name ?? 'a protected area'}` : null;
+export function screenLine(v: Pick['screen'], lang: Language = 'en'): string | null {
+  if (!v.screened) return t('where.screen.unchecked', lang);
+  const name = v.name ?? t('where.screen.area', lang);
+  if (v.inside) return t('where.screen.inside', lang, {name});
+  return v.distanceM !== null && v.distanceM <= 70 ? t('where.screen.near', lang, {m: Math.round(v.distanceM), name}) : null;
 }
 export function choosePick(pick: Pick, href: string = location.href): void {
   if (pick.kind === 'reef') {
@@ -147,9 +149,9 @@ export function choosePick(pick: Pick, href: string = location.href): void {
 const selected = (pick: Pick): boolean => pick.kind === 'spot' ? selection.value === pick.id : pick.kind === 'habitat' && habitat.value === pick.id;
 
 /** A Boat pick's one-way run at the saved cruise speed: "run 30 min" by water; "run ≥ 25 min" on the straight line, a lower bound. Empty without a speed or a distance. */
-export function pickRun(nm: number | null, speedKn: number | null, basis: 'water' | 'straight' = 'straight'): string {
+export function pickRun(nm: number | null, speedKn: number | null, basis: 'water' | 'straight' = 'straight', lang: Language = 'en'): string {
   const min = nm === null || speedKn === null ? null : runMinutes(nm, speedKn);
-  return min === null ? '' : ` · run ${basis === 'water' ? '' : '≥ '}${durationText(min)}`;
+  return min === null ? '' : t('where.run', lang, {bound: basis === 'water' ? '' : '≥ ', duration: durationText(min)});
 }
 
 /**
@@ -158,17 +160,18 @@ export function pickRun(nm: number | null, speedKn: number | null, basis: 'water
  */
 function RangeControl({measured}: {measured: string | undefined}) {
   const [open, setOpen] = useState(false);
-  const p = profile.value;
+  const p = profile.value, lang = language.value;
   if (p === 'spear') return <DiveControl />;
   if (!isReachProfile(p) || !measured) return null;
-  const nm = reachFor(p), label = PROFILE_TABLE[p].label, from = measured || 'the harbor';
+  const nm = reachFor(p), label = t(`where.profile.${p}`, lang), from = measured || t('where.harbor', lang);
+  const basis = t(p === 'boat' || p === 'kayak' ? 'where.range.routed' : 'where.range.straight', lang);
   return (
     <>
       <Button variant="ghost" size="sm" class="app-where-range" aria-haspopup="dialog" data-reach={nm ?? undefined} onClick={() => setOpen(true)}
-        title={nm === null ? 'Set how far out to look' : `Range to consider: ${nmText(nm)} ${p === 'boat' || p === 'kayak' ? 'by water where routed, else straight line,' : 'straight line'} from ${from}`}>
-        {nm === null ? 'Set range' : `Range ${nmText(nm)}`}
+        title={nm === null ? t('where.range.setTitle', lang) : t('where.range.title', lang, {nm: nmText(nm), basis, from})}>
+        {nm === null ? t('where.range.set', lang) : t('where.range.value', lang, {nm: nmText(nm)})}
       </Button>
-      <LimitsDialog open={open} onClose={() => setOpen(false)} title={`Your limits · ${label}`}>
+      <LimitsDialog open={open} onClose={() => setOpen(false)} title={t('where.limits', lang, {profile: label})}>
         <LimitsForm profile={p} focusReach onDone={() => setOpen(false)} />
       </LimitsDialog>
     </>
@@ -176,21 +179,21 @@ function RangeControl({measured}: {measured: string | undefined}) {
 }
 
 /** The words for Spear's dive limits: the depth, then where from and the swim when set. */
-export function diveText(depthFt: number, plan: {from: 'shore' | 'boat' | null; shoreYd: number | null}): string {
-  const from = plan.from === 'boat' ? ' · from a boat' : plan.from === 'shore' ? plan.shoreYd === null ? ' · from shore' : ` · ${plan.shoreYd} yd from shore` : '';
-  return `To ${depthFt} ft${from}`;
+export function diveText(depthFt: number, plan: {from: 'shore' | 'boat' | null; shoreYd: number | null}, lang: Language = 'en'): string {
+  const from = plan.from === 'boat' ? t('where.dive.boat', lang) : plan.from === 'shore' ? plan.shoreYd === null ? t('where.dive.shore', lang) : t('where.dive.swim', lang, {yd: plan.shoreYd}) : '';
+  return `${t('where.dive.depth', lang, {ft: depthFt})}${from}`;
 }
 
 /** Spear: its dive limits, opening Your limits at the depth field. */
 function DiveControl() {
   const [open, setOpen] = useState(false);
-  const depth = depthLimitFt('spear') ?? 0;
+  const depth = depthLimitFt('spear') ?? 0, lang = language.value;
   return (
     <>
-      <Button variant="ghost" size="sm" class="app-where-range" aria-haspopup="dialog" data-dive={depth} onClick={() => setOpen(true)} title="Your dive limits">
-        {diveText(depth, spearPlan.value)}
+      <Button variant="ghost" size="sm" class="app-where-range" aria-haspopup="dialog" data-dive={depth} onClick={() => setOpen(true)} title={t('where.dive.title', lang)}>
+        {diveText(depth, spearPlan.value, lang)}
       </Button>
-      <LimitsDialog open={open} onClose={() => setOpen(false)} title="Your limits · Spear">
+      <LimitsDialog open={open} onClose={() => setOpen(false)} title={t('where.limits', lang, {profile: t('where.profile.spear', lang)})}>
         <LimitsForm profile="spear" focusDepth onDone={() => setOpen(false)} />
       </LimitsDialog>
     </>
@@ -205,18 +208,18 @@ function EmptyOrPlan({empty}: {empty: string}) {
   const p = profile.value, id = region.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget, loaded = regionPlans.value;
   const plans = loaded && loaded.region === id ? loaded.plans : null;
   if (!plans || targetState(target, p, plans, regionCoverage(id)) !== 'plan') return <p class="app-empty">{empty}</p>;
-  const plan = planFor(target, loaded, id), info = regionInfo.value;
+  const plan = planFor(target, loaded, id), info = regionInfo.value, lang = language.value;
   if (!plan) return <p class="app-empty">{empty} {noPlanText(info?.id === id ? info.name : null)}</p>;
   return (
     <div data-plan={plan.id}>
-      <h3 class="ui-eyebrow">Search plan</h3>
+      <h3 class="ui-eyebrow">{t('where.plan', lang)}</h3>
       <ul class="app-picks">
         {plan.items.map((item, i) => <li key={i} data-field={item.field}>{item.label}: {item.text}</li>)}
       </ul>
       {plan.basis ? <p data-field="tactics_basis">{plan.basis}</p> : null}
       {plan.links.length ? (
-        <ul aria-label="Search plan sources">
-          {plan.links.map((l, i) => <li key={i}><a href={l.href} target="_blank" rel="noopener" aria-label={`${l.title} (opens in a new tab)`}>{l.title}</a></li>)}
+        <ul aria-label={t('where.plan.sources', lang)}>
+          {plan.links.map((l, i) => <li key={i}><a href={l.href} target="_blank" rel="noopener" aria-label={t('where.plan.link', lang, {title: l.title})}>{l.title}</a></li>)}
         </ul>
       ) : null}
     </div>
@@ -233,7 +236,7 @@ function Why({pick}: {pick: Pick}) {
   const reasons = found ? reasonsFor(pick.id, targetEvidence(found, pick.kind === 'spot' ? data?.atlas : null, data?.region.source_names), Date.now()) : [];
   if (!reasons.length) return <p class="app-empty app-pick-why" data-why="none">{NO_REASONS}</p>;
   return (
-    <ul class="app-pick-why" data-why="reasons" aria-label="Why this area">
+    <ul class="app-pick-why" data-why="reasons" aria-label={t('where.why', language.value)}>
       {reasons.map((x, i) => (
         <li key={i}><span class="ui-mono">{x.date}</span> {x.text} · {x.sourceURL ? <a href={x.sourceURL} target="_blank" rel="noopener noreferrer">{x.source}</a> : x.source}</li>
       ))}
@@ -242,7 +245,7 @@ function Why({pick}: {pick: Pick}) {
 }
 
 export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
-  const boat = profile.value === 'boat', kayak = profile.value === 'kayak', water = boat || kayak, r = given ?? currentRanking(Date.now(), water ? ROUTE_BUDGET : undefined), id = region.value, speed = cruiseSpeed.value;
+  const boat = profile.value === 'boat', kayak = profile.value === 'kayak', water = boat || kayak, r = given ?? currentRanking(Date.now(), water ? ROUTE_BUDGET : undefined), id = region.value, speed = cruiseSpeed.value, lang = language.value;
   // SC1322-10: Boat (and, SC2207-05, Kayak from its launch) list by water where routed; other profiles keep the ranking's picks as they are. The render uses
   // memoised routes only and routes the rest after the paint (routeAfterPaint), so the list never waits on a route.
   const lw = landWater.value, unrouted = {n: 0};
@@ -279,9 +282,9 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
   return (
     <section class="app-where" data-source={r.source ?? undefined}>
       <div class="app-where-head">
-        <h2 class="ui-eyebrow">Where to look</h2>
+        <h2 class="ui-eyebrow">{t('where.title', lang)}</h2>
         {r.source ? <span class="app-where-source ui-mono">{r.label}</span> : null}
-        {r.source ? <Popover iconOnly summary={`About the ${r.label.toLowerCase()} ranking`} align="end">{r.basis}</Popover> : null}
+        {r.source ? <Popover iconOnly summary={t('where.about', lang, {label: r.label.toLowerCase()})} align="end">{r.basis}</Popover> : null}
       </div>
       {picks.length ? (
         <ol class="app-picks">
@@ -289,10 +292,10 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
             <li key={pick.id} data-mark={pick.id}>
               <button type="button" class="app-pick" aria-pressed={selected(pick)} onClick={() => choosePick(pick)}>
                 <span class="app-pick-rank ui-mono">{i + 1}</span>
-                <span>{pick.name} <span class="ui-mono">{pick.distance} · {pick.depth}{boat ? pickRun(pick.nm, speed, pick.basis) : ''}</span>{kayak && routeWhyText(pick) ? <span class="app-pick-route-why" data-route-why={pick.why ?? 'not-computed'}> · {routeWhyText(pick)}</span> : null}</span>
+                <span>{pick.name} <span class="ui-mono">{water ? distanceLabel(pick, lang) : pick.distance} · {pick.depth}{boat ? pickRun(pick.nm, speed, pick.basis, lang) : ''}</span>{kayak && routeWhyText(pick, lang) ? <span class="app-pick-route-why" data-route-why={pick.why ?? 'not-computed'}> · {routeWhyText(pick, lang)}</span> : null}</span>
                 <span class="app-fit ui-eyebrow">{pick.fit}</span>
                 <span class="app-pick-reason">{pick.reason}</span>
-                {screenLine(pick.screen) && <span class="app-pick-reason">{screenLine(pick.screen)}</span>}
+                {screenLine(pick.screen, lang) && <span class="app-pick-reason">{screenLine(pick.screen, lang)}</span>}
               </button>
               {selected(pick) ? <Why pick={pick} /> : null}
             </li>

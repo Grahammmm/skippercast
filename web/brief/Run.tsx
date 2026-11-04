@@ -27,19 +27,50 @@ import {loadRegs, regsData, regulationState, ruleSummary, openingAt} from '../re
 import {fishingHours, type FishingHours} from './fishing-hours.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 import {entranceWindow} from '../../packages/coast/src/entrance-window.ts';
+import {language, localeOf, num, t, type Language, type StringId} from '../i18n.ts';
+
+/**
+ * The catalogue sentence, in `lang`, for an upstream English sentence: `text` is matched whole against the English of each id in
+ * `ids` (a `{name}` takes whatever the producer wrote there, kept verbatim, `fix` aside); null when none matches, so an unknown
+ * sentence is never guessed at.
+ */
+function known(text: string, ids: readonly StringId[], lang: Language, fix: (value: string) => string = v => v): string | null {
+  for (const id of ids) {
+    const names: string[] = [];
+    const pattern = t(id).split(/(\{\w+\})/).map(part => {
+      const named = /^\{(\w+)\}$/.exec(part);
+      if (!named) return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      names.push(named[1]!);
+      return '([\\s\\S]+?)';
+    }).join('');
+    const hit = new RegExp(`^${pattern}$`).exec(text);
+    if (hit) return t(id, lang, Object.fromEntries(names.map((name, i) => [name, fix(hit[i + 1]!)])));
+  }
+  return null;
+}
+
+/** The sentences the run's producers (run.ts, daily.ts, entrance-window.ts) write in English, each a catalogue entry. */
+const REASON_IDS: readonly StringId[] = ['run.window.alert', 'run.window.noForecast', 'run.window.stale', 'run.window.alertCheck', 'run.window.incomplete', 'run.window.custom', 'run.window.none',
+  'run.entrance.noWindow', 'run.entrance.noHours', 'run.entrance.noBearing', 'run.entrance.missing', 'run.entrance.caution', 'run.entrance.clear', 'run.bar',
+  'run.route.unchecked', 'run.route.inside', 'run.route.near'];
+
+/** An upstream sentence in `lang`: its catalogue Spanish when it is one of the finite known sentences, else as it came. */
+const reasonText = (text: string, lang: Language): string => lang === 'en' ? text : known(text, REASON_IDS, lang, v => v === t('where.screen.area') ? t('where.screen.area', lang) : v) ?? text;
+/** The same for display: a sentence with no Spanish is marked as English on a Spanish page, never hidden or guessed. */
+const said = (text: string, lang: Language) => lang === 'es' && reasonText(text, lang) === text ? <span lang="en">{text}</span> : reasonText(text, lang);
 
 export function EntranceLine({brief, tz}: {brief: Brief; tz: string}) {
   if (!brief.bar) return null;
+  const lang = language.value;
   const result = entranceWindow(brief.bar.hours, {entrance: brief.bar.entrance,
     sunrise: brief.sunrise ? Date.parse(brief.sunrise) : null, sunset: brief.sunset ? Date.parse(brief.sunset) : null,
-    formatHour: at => clock(at, tz)});
+    formatHour: at => clock(at, tz, lang)});
   const times = result.judged && result.departBy !== null && result.returnBy !== null
-    ? `Leave by ${clock(new Date(result.departBy).toISOString(), tz)} · be back by ${clock(new Date(result.returnBy).toISOString(), tz)}. ` : '';
-  return <p class="app-run-entrance">{brief.bar.entrance.name}: {times}{result.reason}</p>;
+    ? t('run.entrance.times', lang, {depart: clock(new Date(result.departBy).toISOString(), tz, lang), back: clock(new Date(result.returnBy).toISOString(), tz, lang)}) : '';
+  return <p class="app-run-entrance">{brief.bar.entrance.name}: {times}{said(result.reason, lang)}</p>;
 }
 
-const WHY: Record<RouteFailure, string> = {'no-product': 'no land/water data', 'lines-needed': 'shoreline still loading', 'start-not-water': 'the harbor or place is not on confirmed water',
-  'end-not-water': 'the harbor or place is not on confirmed water', 'no-route': 'no water path found', 'too-far': 'too far to route'};
+const WHY_IDS: readonly RouteFailure[] = ['no-product', 'lines-needed', 'start-not-water', 'end-not-water', 'no-route', 'too-far'];
 
 /**
  * The run's place, from the list as painted: the selected listed pick, else the first listed one; null when none is
@@ -73,55 +104,56 @@ export function watchBoundaries(onChange: () => void, doc: Pick<Document, 'addEv
 }
 
 // A straight line with no reason is a route the list has not computed yet, not a failed one.
-const distanceText = (p: RunPlace): string => p.basis === 'water' ? `${p.nm.toFixed(1)} nm by water`
-  : `${p.nm.toFixed(1)} nm straight line (${p.why ? `no water route: ${WHY[p.why]}` : 'water route not computed yet'})`;
+const distanceText = (p: RunPlace, lang: Language): string => {
+  const nm = lang === 'es' ? p.nm.toFixed(1).replace('.', ',') : p.nm.toFixed(1);
+  if (p.basis === 'water') return t('where.distance.water', lang, {nm});
+  const why = p.why && WHY_IDS.includes(p.why) ? t('run.why.failed', lang, {why: t(`run.why.${p.why}`, lang)}) : t('run.why.pending', lang);
+  return t('run.distance.straightWhy', lang, {nm, why});
+};
 
-/** "8 am", "8:25 am": the lower-exposure line's clock. */
-const clock = (iso: string, tz: string) => new Intl.DateTimeFormat('en-US', {hour: 'numeric', minute: '2-digit', timeZone: tz}).format(new Date(iso)).replace(':00', '').toLowerCase();
-const kt = (n: number) => Number(n.toFixed(1)).toString();
+/** "8 am", "8:25 am": the lower-exposure line's clock; in Spanish the locale's own 24-hour clock in the same zone. */
+const clock = (iso: string, tz: string, lang: Language = 'en') => new Intl.DateTimeFormat(localeOf(lang), {hour: 'numeric', minute: '2-digit', timeZone: tz}).format(new Date(iso)).replace(':00', '').toLowerCase();
+const kt = (n: number, lang: Language = 'en') => lang === 'es' ? num(n, lang, 1) : Number(n.toFixed(1)).toString();
 
 /** The basis: what the sum uses and what it leaves to the skipper. */
-export const runBasis = (harbor: string) =>
-  `Run time is the distance from ${harbor} at the cruise speed you set, rounded up to ${ROUND_MIN} minutes. It follows water cells of the NOAA shoreline and reads "by water"; with no route computed it falls back to the straight line, labelled with why, or as waiting for the list's route. It is a planning distance, not a navigation route. `
-  + 'Sea state, the bar crossing and fuel are left out. In by is the end of the lower-exposure window, which already weighs your limits, alerts, daylight and the bar at the window\'s start and end; leaving later than its start, the bar at your departure is yours to check. '
-  + 'Counts from the legal opening when the target has one that day. '
-  + 'A planning sum for your own decision; it cannot clear the entrance or promise a return. '
-  + 'The line is screened against the loaded protected-area boundaries, including a 70 m planning margin. This does not determine whether transit or fishing is allowed; check the official rules.';
+export const runBasis = (harbor: string, lang: Language = 'en') => t('run.basis.text', lang, {harbor, round: ROUND_MIN});
 
 /** The line's words for a run state; `tz` is the region's time zone. */
-export function runText(state: RunState, tz: string, unranked = false): {lead: string; times?: string; run?: string; note?: string} {
-  const top = unranked && (state.kind === 'ok' || state.kind === 'no-time') ? `Your selected place is outside the ranked list, so times are for the top pick. ` : '';
-  const text = words(state, tz);
+export function runText(state: RunState, tz: string, unranked = false, lang: Language = 'en'): {lead: string; times?: string; run?: string; note?: string} {
+  const top = unranked && (state.kind === 'ok' || state.kind === 'no-time') ? t('run.lead.unranked', lang) : '';
+  const text = words(state, tz, lang);
   const note = state.kind === 'ok' || state.kind === 'no-time' ? barNote(state.window) ?? undefined : undefined;
-  return {...text, lead: top + text.lead, ...(note ? {note} : {})};
+  return {...text, lead: top + text.lead, ...(note ? {note: reasonText(note, lang)} : {})};
 }
 
-function words(state: RunState, tz: string): {lead: string; times?: string; run?: string} {
+function words(state: RunState, tz: string, lang: Language): {lead: string; times?: string; run?: string} {
+  const at = (iso: string) => clock(iso, tz, lang);
   switch (state.kind) {
-    case 'no-speed': return {lead: 'Set your cruise speed to see run time and when to turn back.'};
-    case 'no-place': return {lead: 'Run time shows once a place to look is listed.'};
-    case 'no-window': return {lead: state.reason};
-    case 'over': return {lead: `Turn-back time for the ${clock(state.window.start, tz)}–${clock(state.window.end, tz)} window has passed.`};
-    case 'no-time': return {lead: `The run to ${state.place.name} and back fills the ${clock(state.window.start, tz)}–${clock(state.window.end, tz)} window at ${kt(state.speedKn)} kt.`,
-      run: `${distanceText(state.place)} · at least ${durationText(state.runMin)} each way`};
-    case 'ok': return {lead: `Up to ${durationText(state.fishMin)} fishing at ${state.place.name}.`,
-      times: `Leave ${clock(state.depart, tz)} · there ${clock(state.arrive, tz)} · turn back ${clock(state.turnBack, tz)} · in by ${clock(state.back, tz)} · window ${clock(state.window.start, tz)}–${clock(state.window.end, tz)}`,
-      run: `${distanceText(state.place)} · at least ${durationText(state.runMin)} each way at ${kt(state.speedKn)} kt`};
+    case 'no-speed': return {lead: t('run.lead.noSpeed', lang)};
+    case 'no-place': return {lead: t('run.lead.noPlace', lang)};
+    case 'no-window': return {lead: reasonText(state.reason, lang)};
+    case 'over': return {lead: t('run.lead.over', lang, {start: at(state.window.start), end: at(state.window.end)})};
+    case 'no-time': return {lead: t('run.lead.noTime', lang, {name: state.place.name, start: at(state.window.start), end: at(state.window.end), speed: kt(state.speedKn, lang)}),
+      run: t('run.detail.each', lang, {distance: distanceText(state.place, lang), duration: durationText(state.runMin)})};
+    case 'ok': return {lead: t('run.lead.ok', lang, {duration: durationText(state.fishMin), name: state.place.name}),
+      times: t('run.times', lang, {depart: at(state.depart), arrive: at(state.arrive), turn: at(state.turnBack), back: at(state.back), start: at(state.window.start), end: at(state.window.end)}),
+      run: t('run.detail.eachSpeed', lang, {distance: distanceText(state.place, lang), duration: durationText(state.runMin), speed: kt(state.speedKn, lang)})};
   }
 }
 
-export function fishingWords(result: FishingHours, tz: string, sunset: string | null, opensAt: number | null): string {
-  const duration = durationText;
-  if (result.kind === 'closed') return `${result.label} is closed that day: ${result.reason}`;
+export function fishingWords(result: FishingHours, tz: string, sunset: string | null, opensAt: number | null, lang: Language = 'en'): string {
+  const duration = durationText, at = (iso: string) => clock(iso, tz, lang);
+  if (result.kind === 'closed') return t('run.hours.closed', lang, {label: result.label, reason: result.reason});
   if (result.kind === 'no-wanted') return '';
-  const edge = 'endedBy' in result ? result.endedBy === 'opening' && opensAt !== null ? `the legal opening at ${clock(new Date(opensAt).toISOString(), tz)}`
-    : result.endedBy === 'daylight' && sunset ? `the sunset at ${clock(sunset, tz)}` : 'the conditions window' : '';
-  if (result.kind === 'none') return `${result.rulesUnconfirmed ? 'Rules not confirmed · ' : ''}No fishing time remains — ended by ${edge}.`;
-  const wanted = `${duration(result.wantedMin)} wanted · `;
-  if (result.kind === 'beyond-daylight') return `${wanted}the day has ${duration(result.daylightMin)} of daylight.`;
-  const available = `${wanted}${duration(result.availableMin)} available`;
-  if (result.kind === 'enough') return `${available} (${duration(result.spareMin)} to spare).`;
-  return result.rulesUnconfirmed ? `Rules not confirmed · ${available}; check the official rules.` : `${available}, ${duration(result.shortMin)} short — ended by ${edge}.`;
+  const edge = 'endedBy' in result ? result.endedBy === 'opening' && opensAt !== null ? t('run.hours.edge.opening', lang, {time: at(new Date(opensAt).toISOString())})
+    : result.endedBy === 'daylight' && sunset ? t('run.hours.edge.daylight', lang, {time: at(sunset)}) : t('run.hours.edge.conditions', lang) : '';
+  const unconfirmed = t('run.hours.unconfirmed', lang);
+  if (result.kind === 'none') return (result.rulesUnconfirmed ? unconfirmed : '') + t('run.hours.none', lang, {edge});
+  const wanted = t('run.hours.wanted', lang, {duration: duration(result.wantedMin)});
+  if (result.kind === 'beyond-daylight') return wanted + t('run.hours.beyond', lang, {duration: duration(result.daylightMin)});
+  const available = wanted + t('run.hours.available', lang, {duration: duration(result.availableMin)});
+  if (result.kind === 'enough') return t('run.hours.enough', lang, {available, spare: duration(result.spareMin)});
+  return result.rulesUnconfirmed ? unconfirmed + t('run.hours.unknownShort', lang, {available}) : t('run.hours.short', lang, {available, short: duration(result.shortMin), edge});
 }
 
 /** Fishing time and the return for the Boat brief; nothing for the other profiles or before the brief loads. */
@@ -143,8 +175,9 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   useEffect(() => { if (id && shows && place) void loadProtectedScreen(id); }, [id, shows, !!place]);
   useEffect(() => watchBoundaries(() => setRevision(n => n + 1)), []);
   if (!brief || !r) return null;
+  const lang = language.value;
   const state = planRun(brief, place, cruiseSpeed.value, now), tz = regionInfo.value?.timezone ?? DEFAULT_ZONE;
-  const text = runText(state, tz, place?.unranked), harbor = r.harbor ?? 'the harbor';
+  const text = runText(state, tz, place?.unranked, lang), harbor = r.harbor ?? t('where.harbor', lang);
   const target = species.value ?? PROFILE_TABLE.boat.defaultTarget;
   const loaded = regsData.value, data = loaded?.region === rules?.id ? loaded?.data : null;
   const active = state.kind === 'ok' || state.kind === 'no-time';
@@ -153,33 +186,36 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   const date = active ? new Intl.DateTimeFormat('en-CA', {timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(state.window.start)) : '';
   const opensAt = rules ? openingAt(data, target, rules, date) : null;
   // Read at the opening (not before it) so a timed opener clips rather than closing the whole day.
-  const rule = rules ? regulationState(data, target, rules, now.getTime(), date, opensAt) : {status: 'unknown', label: 'Check rules', reason: 'Rules unavailable.', today: date, issues: []};
-  const summary = rules ? ruleSummary(data, target, rule, rules) : null;
+  const rule = rules ? regulationState(data, target, rules, now.getTime(), date, opensAt) : {status: 'unknown', label: t('rules.status.unknown', lang), reason: t('run.rules.unavailable', lang), today: date, issues: []};
+  const summary = rules ? ruleSummary(data, target, rule, rules, lang) : null;
   const result = active ? fishingHours(state, {wantedMin: wantedHours.value === null ? null : wantedHours.value * 60, sunrise: brief.sunrise, sunset: brief.sunset, rule: {...rule, opensAt, label: target === 'reef' ? 'Lingcod & rockfish' : rule.profile?.name ?? target}}) : null;
-  const verdict = result ? fishingWords(result, tz, brief.sunset, opensAt) : '';
-  if (state.kind === 'ok' && result && result.kind !== 'no-wanted') text.lead = `Run to ${state.place.name}.`;
+  const verdict = result ? fishingWords(result, tz, brief.sunset, opensAt, lang) : '';
+  if (state.kind === 'ok' && result && result.kind !== 'no-wanted') text.lead = t('run.lead.wanted', lang, {name: state.place.name});
   // Nothing to time: range removed every place the ranking found; or places are listed with no distance (no harbor position).
-  if (state.kind === 'no-place' && r.picks.length) text.lead = listed.length ? 'No harbor position to measure from, so no run time.'
-    : r.reach != null ? 'No listed place is within your range, so no run time.' : text.lead;
+  if (state.kind === 'no-place' && r.picks.length) text.lead = listed.length ? t('run.lead.noHarbor', lang)
+    : r.reach != null ? t('run.lead.noRange', lang) : text.lead;
+  // Upstream English with no catalogue sentence is marked English on a Spanish page (never hidden or guessed at).
+  const lead = state.kind === 'no-window' && text.lead === state.reason ? said(state.reason, lang) : text.lead;
+  const note = state.kind === 'ok' || state.kind === 'no-time' ? barNote(state.window) : null;
   return (
-    <section class="app-run" aria-label="Fishing time and return" data-state={state.kind}>
+    <section class="app-run" aria-label={t('run.aria', lang)} data-state={state.kind}>
       <EntranceLine brief={brief} tz={tz} />
-      <p class="app-run-lead"><span class="ui-eyebrow">Fishing time</span> {text.lead}</p>
-      {text.times ? <p class="app-run-times ui-mono">{text.times}{brief.sunrise && brief.sunset ? ` · Daylight ${clock(brief.sunrise, tz)}–${clock(brief.sunset, tz)}` : ''}</p> : null}
-      {verdict ? <p class="app-run-hours" data-kind={result!.kind}>{text.note ? `${text.note} — check the bar. ` : ''}{verdict}{' '}
-        {['scheduled', 'restricted'].includes(rule.status) ? `${summary?.label ?? rule.label}: ${rule.reason} ` : ''}
+      <p class="app-run-lead"><span class="ui-eyebrow">{t('run.fishing', lang)}</span> {lead}</p>
+      {text.times ? <p class="app-run-times ui-mono">{text.times}{brief.sunrise && brief.sunset ? t('run.daylight', lang, {start: clock(brief.sunrise, tz, lang), end: clock(brief.sunset, tz, lang)}) : ''}</p> : null}
+      {verdict ? <p class="app-run-hours" data-kind={result!.kind}>{note ? <>{said(note, lang)}{t('run.bar.check', lang)}</> : ''}{verdict}{' '}
+        {['scheduled', 'restricted'].includes(rule.status) ? <>{summary?.label ?? rule.label}: {lang === 'es' ? <span lang="en">{rule.reason}</span> : rule.reason} </> : ''}
         {summary ? <a href={summary.link}>{summary.linkLabel}</a> : null}</p> : null}
-      {text.note ? <p class="app-run-note">{text.note}.</p> : null}
+      {note ? <p class="app-run-note">{said(note, lang)}.</p> : null}
       {text.run ? (
         <p class="app-run-detail ui-mono">
-          {text.run}{place && !place.chosen ? ' · top pick' : ''}{' '}
-          <Popover summary="basis" align="start">{runBasis(harbor)}</Popover>
+          {text.run}{place && !place.chosen ? t('run.topPick', lang) : ''}{' '}
+          <Popover summary={t('run.basis', lang)} align="start">{runBasis(harbor, lang)}</Popover>
         </p>
       ) : null}
-      {routeNote ? <p class="app-run-protected">{routeNote}</p> : null}
+      {routeNote ? <p class="app-run-protected">{said(routeNote, lang)}</p> : null}
       {state.kind === 'no-speed' || result?.kind === 'no-wanted' ? <>
-        <Button variant="ghost" size="sm" icon="settings" aria-haspopup="dialog" onClick={() => setOpen(true)}>{state.kind === 'no-speed' ? 'Set cruise speed' : 'Set hours I want'}</Button>
-        <LimitsDialog open={open} onClose={() => setOpen(false)} title="Your limits · Boat">
+        <Button variant="ghost" size="sm" icon="settings" aria-haspopup="dialog" onClick={() => setOpen(true)}>{t(state.kind === 'no-speed' ? 'run.set.speed' : 'run.set.hours', lang)}</Button>
+        <LimitsDialog open={open} onClose={() => setOpen(false)} title={t('where.limits', lang, {profile: t('where.profile.boat', lang)})}>
           <LimitsForm profile="boat" focusCruise={state.kind === 'no-speed'} focusWanted={result?.kind === 'no-wanted'} onDone={() => setOpen(false)} />
         </LimitsDialog>
       </> : null}
