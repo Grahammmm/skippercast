@@ -179,3 +179,73 @@ The app sees the header and shows "Live
 data is paused for today to keep SkipperCast free; some readings are saved
 copies.", with the saved copy's time when it has one (`web/degraded.ts:55-58`),
 on the desktop masthead and the mobile sheet (`web/app/Masthead.tsx:98`).
+
+## Readers under a 429 or the cost-ceiling 503
+
+Every client file that names `/feeds/`, `/api/daily`, `/api/om` or
+`/api/coast` (`grep -rlE "/feeds/|/api/daily|/api/om|/api/coast" web dist`,
+tests and the two data files under `dist/data/` left out) is below, as a
+reader or under "Not a reader". Each answer was read from the code at the line
+named. Meanings:
+
+- **keeps last good**: the reader holds an earlier copy and goes on showing it.
+- **shows the notice**: the page's cost-ceiling notice appears. The 503 carries
+  `X-SC-Degraded` (`server/cost-ceiling.ts:211-215`), so the notice appears on
+  the two pages that call `installDegradedWatch` (the app, `web/app/main.tsx:23`;
+  the landing page, `web/landing/main.tsx:68`) and on no other page. A 429
+  carries no such mark, so a 429 never shows the notice.
+- **says unavailable**: the reader tells the user the data is not available.
+- **throws to caller (X)**: the reader rethrows; X handles it.
+- **not checked: reason**: the code cannot be read from here.
+
+Two facts apply to every row. A degraded answer from a saved copy is a `200`
+with the mark (`server/cost-ceiling.ts:195-208`), so a reader sees normal data;
+only the `503` (no saved copy) is an error. And the `503` is sent only for
+`/feeds/*` (seafloor archives excepted), `/api/daily`, `/api/forecast`,
+`/api/intelligence`, `/api/habitat` and `/api/om/*`
+(`server/cost-ceiling.ts:110-117`, `:243`). `/api/coast/*` is not on that list:
+past the ceiling it is answered, marked and without a saved-copy time
+(`server/cost-ceiling.ts:217-222`, `:243`), and its own failures reach the reader as
+non-OK answers like a 429.
+
+| Reader (file:function) | Path(s) read | On 429 | On 503 degraded | Evidence |
+| --- | --- | --- | --- | --- |
+| `web/coast-data.ts:request` | `/api/coast/{report,ocean,history}` | keeps last good (an unexpired snapshot: report 3 h, ocean 6 h, history 36 h); with none it is `error`, and the views say unavailable. No retry until `refresh()` or a new place | not sent for this path; any non-OK answer is handled as the 429 is | `web/coast-data.ts:35-41`, `:198-199`, `:209-214` |
+| `web/app/views/History.tsx:historyState` | `/api/coast/history` (through `coast-data.ts`) | keeps last good while the snapshot lives; else says unavailable ("Recorded history is unavailable right now…") | as 429; not sent for this path | `web/app/views/History.tsx:49-52`, `:60` |
+| `web/app/Trip.tsx:save` | `/api/coast/{report,ocean,history}` (saved by `saveCoastal`) | keeps last good (the earlier saved readings stay) and says "Save failed. Previous saved readings are unchanged…" | as 429; not sent for this path | `web/app/Trip.tsx:128-130` |
+| `dist/coastal-offline-core.js:saveCoastalSnapshot` | `/api/coast/{report,ocean,history}` | throws to caller (`web/trip.ts` `saveCoastal`, then `Trip.tsx`): a non-200 is "Complete readable snapshot unavailable", the half-written cache is removed and the committed snapshot is untouched | as 429; not sent for this path. A marked `200` is saved like a live one (only `X-SC-Offline` is refused) | `dist/coastal-offline-core.js:23`, `:28`, `:30` |
+| `web/map/clouds.ts:cloudIndex` | `/feeds/conditions/goes-times.json` (and `/api/coast/ocean` through `coast-data.ts`) | keeps last good (the index in memory; its frames leave through the 90-minute gate); a first read that fails gives "no frames for this area" | as 429, plus shows the notice | `web/map/clouds.ts:81-86`, `:155-156` |
+| `web/map/habitat-feed.ts:manifestLayer`, `allRows` | `/feeds/conditions/regions/<id>/habitat-dynamics.json` and its tiles | says unavailable (`state: 'error'`; the layers print "…unavailable"); no stored copy, no retry | as 429, plus shows the notice | `web/map/habitat-feed.ts:164`, `:176`, `:251`, `:343`; `web/map/sst.ts:156`, `web/map/currents.ts:117`, `web/map/contrast.ts:138`, `web/map/chlorophyll.ts:20` |
+| `web/map/style.ts:basemapArchive` | `/feeds/tiles/basemap/manifest.json` | says unavailable on the Chart (`basemap` marked unavailable). On the landing page's night map: nothing shown, no notice (the static shoreline stays) | as 429; on the landing page the notice shows | `web/map/style.ts:25`; `web/map/chart.ts:194`; `web/landing/NightMap.tsx:134` |
+| `web/reports.ts:loadReports` | `/feeds/data/recent-intel.json`, `/feeds/data/regions/<id>/latest.json`, the region's charter grounds | says unavailable, section by section (the other sections still show); no stored copy | as 429, plus shows the notice | `web/reports.ts:106-109`, `:115-117`; `web/app/views/Reports.tsx:62`, `:82` |
+| `web/brief/Brief.tsx:readDaily`, `readFeed` | `/api/daily?part=brief`, `/feeds/data/regions/<id>/latest.json`, the conditions feed | the brief part falls back once to the whole daily feed (a different URL; no retry of the same one). A refresh that reads neither keeps last good. A first load that reads neither says unavailable ("Daily feed could not be read") | as 429, plus shows the notice | `web/brief/Brief.tsx:70-75`, `:82-85`, `:127-129`; `:64-68` |
+| `web/landing/readings.ts:loadReadout` | `/feeds/conditions/regions/<id>/latest.json` | says unavailable (tiles read "No reading"); one read per page, no retry, no stored copy | as 429, plus shows the notice | `web/landing/readings.ts:173-181`, `:129` |
+| `dist/daily-feed.js:loadDailyPart` | `/api/daily?part=…` | throws to caller (`dist/protected-areas.js`, which then reads the full daily feed) | as 429 | `dist/daily-feed.js:25`; `dist/protected-areas.js:8` |
+| `dist/forecast.js:fetchJSON` | `/api/om/…` (and any URL passed in) | throws to caller (`dist/marine-data.js` `attempt`, `dist/live-conditions.js`, `dist/protected-areas.js`): "HTTP 429"; no retry here | as 429 | `dist/forecast.js:223-228` |
+| `dist/marine-data.js:loadMarine` | `/api/om/v1/{forecast,marine}`, `/api/om/data/<model>/static/meta.json` | retries each failed URL once at once, then keeps last good (the same model's earlier result, in this tab, under 3 h, only when a `previous` is passed), else the model carries the error. Nothing in `web/` or `dist/` calls `loadMarine` at this head | as 429 | `dist/marine-data.js:307-313`, `:331-336`; `dist/morning-outlook.js:69` |
+| `dist/status-page.js:load` | `/feeds/conditions/latest.json`, `/feeds/data/latest.json`, the coast and region feeds | says unavailable (the row reads "unavailable"); no stored copy | as 429, but no notice: `status.html` does not call `installDegradedWatch`, and a saved copy is shown with the feed's own time | `dist/status-page.js:35`, `:208-210` |
+| `dist/recent-discussions.js:initRecentDiscussions` | `/feeds/data/recent-intel.json` | says unavailable ("Recent discussion search is unavailable…"). Nothing calls it at this head; the app uses only `recentDiscussionState` through `web/reports.ts` | as 429 | `dist/recent-discussions.js:42-44` |
+| `dist/seafloor-data.js:loadManifest` | `/feeds/tiles/seafloor/manifest-<region>.json` | says unavailable ("Seafloor layer unavailable"); never uses a cached copy | not the ceiling's: this path is outside the saved-copy list (`server/cost-ceiling.ts:115`). A 503 from the route itself is read as its own body says (`updating`, else unavailable) | `dist/seafloor-data.js:38-50` |
+| `dist/sw.js:networkFirstData`, `networkFirstCoastal` | `/feeds/*` (except `/feeds/tiles/seafloor/`), `/api/daily`, `/api/om/*`; `/api/coast/{report,ocean,history}` | returns the 429 itself. A saved copy is used only when the network request throws, never for an HTTP status | **saved file**: returns the 503; the saved copy in `sc-data` is not used. **unsaved file**: returns the 503. Both the same. A marked `200` is stored as a new copy (only status and type are checked) | `dist/sw.js:63-68`, `:119-121`, `:175-189`, `:221-226` |
+| `web/shared-fetch.ts:shareStatic` | `/regions/…` and `/data/…` JSON only; `/feeds/` and `/api/` pass straight through | passes the answer on unchanged; no retry (a non-OK read is forgotten so the next caller asks again) | as 429 | `web/shared-fetch.ts:9`, `:18`, `:27`, `:76` |
+
+### Not a reader
+
+| File | Why |
+| --- | --- |
+| `web/map/habitat.ts` | `/api/daily` appears only in a comment on `validDailyPart` (line 132); it fetches nothing. |
+| `dist/feeds.js` | Rewrites URLs to `/feeds/` (`feedURL`, `withFeeds`); it fetches nothing. |
+| `dist/offline-core.js` | Builds the `/api/daily` URLs (`dailyPartPath`, `packRequests`); the fetching is in `dist/offline-pack.js` (not checked: outside the grep list). |
+| `dist/data/daily-evidence.json`, `dist/data/source-catalog.json` | Data files that hold the path text; no code. |
+
+### Readers the grep does not find
+
+These build the paths through `dailyPartPath` or `feedURL` and so do not name them: `web/regs.ts`, `web/map/marks.ts`, `web/trip.ts`, `dist/offline-pack.js`, `dist/protected-areas.js`, `dist/coasts.js`, `dist/live-conditions.js`. Only `dist/protected-areas.js` was read (above). The rest: not checked: outside the 21-file list; each needs its own row.
+
+### Gaps (nothing shown, no notice)
+
+- The landing page's night map on a 429 of the basemap manifest: the map is dropped and the static shoreline stays, with no message (`web/landing/NightMap.tsx:124-129`).
+- `status.html` shows a last-known copy on a degraded `200` with no notice, only the feed's own time.
+- `dist/sw.js` never serves its saved copy for a 429 or a 503, so a reader behind it gets the error even when a saved copy exists.
+
+This section changes no setting, limit, header or code; each gap becomes its own unit.

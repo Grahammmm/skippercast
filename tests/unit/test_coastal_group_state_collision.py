@@ -189,11 +189,9 @@ STOPPED_BUT_UNCERTAIN = ("_group_state reports a stopped group `uncertain` (runn
                          "SC-FLAKE-PGID")
 
 
-@pytest.mark.xfail(strict=True, reason=STOPPED_BUT_UNCERTAIN + ": unrelated process exited mid-scan (ESRCH)")
 def test_unrelated_process_exiting_during_the_scan_does_not_make_a_stopped_group_uncertain(spawn, scan):
-    # Not a member, not a collision: any process leaving /proc between the scan's open
-    # and read of its stat file raises ProcessLookupError, which process_identity does
-    # not catch and _group_state's `except OSError` turns into `uncertain`.
+    # Not a member, not a collision: a process leaving /proc between open and read
+    # raises ProcessLookupError. Treat that as disappearance, just like ENOENT.
     victim = spawn(["sleep", "300"])
     scan.only(victim.pid)
 
