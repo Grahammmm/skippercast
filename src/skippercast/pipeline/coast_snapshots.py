@@ -27,6 +27,7 @@ import re
 import sys
 
 from ..platform.contracts import atomic_json
+from ..util.units import KT_PER_MS
 from .goes_frames import CAPABILITIES_URL, epoch, iso
 
 COUNTY, REGION = "slo", "morro-bay"
@@ -88,7 +89,8 @@ def _frames(data, kind, fields, issued, now):
             if not forecast and (row[4] < 0 or row[4] > 2 or not float(row[5]).is_integer() or not 2 <= row[5] <= 20):
                 continue  # radar cells outside the HDOP and site-count gate are left out, as fish does
             # u/v are reconstructed for display from the rounded speed and bearing, not model precision.
-            ms, rad = speed / 1.94384449, math.radians(toward)
+            # Keep the legacy feed's eight-place factor at published rounding boundaries.
+            ms, rad = speed / round(KT_PER_MS, 8), math.radians(toward)
             cell = {"lat": lat, "lon": lon, "speedKnots": speed, "towardDeg": toward,
                     "uMs": round(ms * math.sin(rad), 5), "vMs": round(ms * math.cos(rad), 5)}
             if not forecast:
