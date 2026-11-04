@@ -22,6 +22,17 @@ import {PROFILE_TABLE} from '../profile.ts';
 import {loadRegs, regsData, regulationState, ruleSummary, openingAt} from '../regs.ts';
 import {fishingHours, type FishingHours} from './fishing-hours.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
+import {entranceWindow} from '../../packages/coast/src/entrance-window.ts';
+
+export function EntranceLine({brief, tz}: {brief: Brief; tz: string}) {
+  if (!brief.bar) return null;
+  const result = entranceWindow(brief.bar.hours, {entrance: brief.bar.entrance,
+    sunrise: brief.sunrise ? Date.parse(brief.sunrise) : null, sunset: brief.sunset ? Date.parse(brief.sunset) : null,
+    formatHour: at => clock(at, tz)});
+  const times = result.judged && result.departBy !== null && result.returnBy !== null
+    ? `Leave by ${clock(new Date(result.departBy).toISOString(), tz)} · be back by ${clock(new Date(result.returnBy).toISOString(), tz)}. ` : '';
+  return <p class="app-run-entrance">{brief.bar.entrance.name}: {times}{result.reason}</p>;
+}
 
 const WHY: Record<RouteFailure, string> = {'no-product': 'no land/water data', 'lines-needed': 'shoreline still loading', 'start-not-water': 'the harbor or place is not on confirmed water',
   'end-not-water': 'the harbor or place is not on confirmed water', 'no-route': 'no water path found', 'too-far': 'too far to route'};
@@ -126,6 +137,7 @@ export function RunLine({brief, ranking, now}: {brief: Brief | null; ranking?: R
   if (state.kind === 'no-place' && r.picks.length) text.lead = 'No harbor position to measure from, so no run time.';
   return (
     <section class="app-run" aria-label="Fishing time and return" data-state={state.kind}>
+      <EntranceLine brief={brief} tz={tz} />
       <p class="app-run-lead"><span class="ui-eyebrow">Fishing time</span> {text.lead}</p>
       {text.times ? <p class="app-run-times ui-mono">{text.times}{brief.sunrise && brief.sunset ? ` · Daylight ${clock(brief.sunrise, tz)}–${clock(brief.sunset, tz)}` : ''}</p> : null}
       {verdict ? <p class="app-run-hours" data-kind={result!.kind}>{text.note ? `${text.note} — check the bar. ` : ''}{verdict}{' '}

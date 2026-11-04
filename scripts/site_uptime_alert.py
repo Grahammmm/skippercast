@@ -10,6 +10,7 @@ A path is up on HTTP 200 (and, for /api/health, a JSON object body). Same issue 
   * up again    -> the issue is closed with how long it was down.
   * probe crash -> not a `site-down` issue: the script exits non-zero and the workflow step fails.
 
+Probes send the User-Agent SkipperCast-uptime-check/1.0; a 401, 403 or 429 is named `refused` (still a failure).
 Issue text carries paths, status codes and error class names only: never response bodies, headers, redirect targets or tokens.
 A redirect to another host is never followed and counts as down.
 
@@ -37,6 +38,8 @@ PATHS = ("/api/health", "/", "/map")
 TIMEOUT = 15.0
 RETRY_DELAY = 20
 STILL_HOURS = stale.STILL_HOURS
+USER_AGENT = "SkipperCast-uptime-check/1.0"
+REFUSED = (401, 403, 429)
 
 
 class SameHost(request.HTTPRedirectHandler):
@@ -49,10 +52,14 @@ class SameHost(request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+def _request(url):
+    return request.Request(url, headers={"User-Agent": USER_AGENT, "Cache-Control": "no-cache"})
+
+
 def probe(base, path, timeout=TIMEOUT):
     """None when the path is up, else {path, status|error}. Never keeps a response body or header."""
     try:
-        with request.build_opener(SameHost).open(request.Request(base + path), timeout=timeout) as response:
+        with request.build_opener(SameHost).open(_request(base + path), timeout=timeout) as response:
             if response.status != 200:
                 return {"path": path, "status": response.status}
             if path == "/api/health":
@@ -66,6 +73,8 @@ def probe(base, path, timeout=TIMEOUT):
     except error.HTTPError as exc:
         if 300 <= exc.code < 400:
             return {"path": path, "status": exc.code, "error": "redirect"}
+        if exc.code in REFUSED:  # the edge answered and said no: a bot rule, not an unreachable site
+            return {"path": path, "status": exc.code, "error": "refused"}
         return {"path": path, "status": exc.code}
     except (OSError, http.client.HTTPException) as exc:
         # Transport failures only (URLError, timeouts, resets, TLS, a dropped or malformed response): the site is down.
@@ -100,8 +109,10 @@ def plan(failures, issues, now, still_hours=STILL_HOURS):
             actions.append(("close", issue["number"], f"Recovered: the site was down for {minutes // 60} h {minutes % 60} min."))
         return actions
     lines = "\n".join(f"- {describe(f)}" for f in failures)
+    refused = ("\n\nEvery path was refused (4xx), not unreachable: check edge bot rules before treating this as an outage."
+               if all(f.get("error") == "refused" for f in failures) else "")
     if not issues:
-        body = (f"The site did not answer on:\n{lines}\n\nThis issue is the alert: it is not repeated every hour. A `still: N h` "
+        body = (f"The site did not answer on:\n{lines}{refused}\n\nThis issue is the alert: it is not repeated every hour. A `still: N h` "
                 f"comment follows every {still_hours} h while it stays down, and the issue closes when the site answers again.")
         return [("create", TITLE, body)]
     issue = issues[0]
