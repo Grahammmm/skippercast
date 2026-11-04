@@ -11,9 +11,12 @@
 // needs both orthogonal neighbours passable (no corner cutting). A move that touches a mixed cell must also
 // classify water at 1/4, 1/2 and 3/4 of its length: the edge band is at least 50 m wide where a line crosses
 // a move (at most ~90 m), so one of those points falls inside it. A* with the great-circle distance
-// (dist/spot-ranking.js `distanceNm`) as segment cost and heuristic. The path is not smoothed: its stair
-// steps overstate the length by at most ~8 % (a 22.5° course on the 8-way grid), and the length is never
-// below the straight line. Erasable syntax only (Node tests import it); no DOM, no fetch, no signals.
+// (dist/spot-ranking.js `distanceNm`) as segment cost and heuristic. The A* path is then smoothed by
+// line-of-sight: from each vertex the farthest later vertex whose straight segment passes only water
+// sub-cells (sampled at every 1/4 sub-cell, no corner cutting, segments up to 400 sub-cells) replaces the
+// stair steps between, so the length is overstated only where land forces a bend (the raw grid path
+// overstates it by up to ~8 %, a 22.5° course on the 8-way grid). It is never below the straight line.
+// Erasable syntax only (Node tests import it); no DOM, no fetch, no signals.
 import {distanceNm} from '../dist/spot-ranking.js';
 import {linesPlace, placeOf, type LandWaterLines, type LandWaterModel} from './land-water.ts';
 import {M_PER_NMI} from './units.ts';
@@ -27,12 +30,12 @@ export interface RoutePoint {readonly latitude: number; readonly longitude: numb
 export type RouteFailure = 'no-product' | 'lines-needed' | 'start-not-water' | 'end-not-water' | 'no-route' | 'too-far';
 /**
  * A route: `nm` is the raw length (start → first centre → … → last centre → end; callers round), `points` the
- * passable sub-cell centres it runs through. Or a named failure: `lines-needed` when the lines file is not
+ * passable sub-cell centres where the smoothed route bends (first and last are the snapped ends). Or a named failure: `lines-needed` when the lines file is not
  * loaded (null) and a mixed cell blocked the start, the end or the only passage.
  */
 export type Route = {readonly ok: true; readonly nm: number; readonly points: RoutePoint[]} | {readonly ok: false; readonly reason: RouteFailure};
 
-const SUB = 4, UNIT = 100000, EARTH_M = 6378137;
+const SUB = 4, UNIT = 100000, EARTH_M = 6378137, SMOOTH_MAX = 400;
 const fail = (reason: RouteFailure): Route => ({ok: false, reason});
 /** A heap entry [f, push order, sub-cell id]; lower f first, then earlier push (deterministic ties). */
 type Item = [number, number, number];
@@ -123,6 +126,33 @@ export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines |
     }
     return best;
   };
+  // Whether the straight segment between two sub-cell centres runs over water only: a sample at every quarter
+  // sub-cell along its longer axis (a move checks 1/4 steps too) must classify water, and every sub-cell the
+  // segment enters must be passable, including both orthogonal neighbours where it crosses a corner (no corner
+  // cutting). A mixed cell with null lines (-1) never counts as water, so it is never clear.
+  const clear = (a: number, b: number): boolean => {
+    const ax = 4 * (a % size) + 2, ay = 4 * Math.floor(a / size) + 2, dx = 4 * (b % size) + 2 - ax, dy = 4 * Math.floor(b / size) + 2 - ay;
+    const steps = Math.max(Math.abs(dx), Math.abs(dy));
+    let px = a % size, py = Math.floor(a / size);
+    for (let k = 1; k <= steps; k++) {
+      const x = ax + dx * k / steps, y = ay + dy * k / steps, cx = Math.floor(x / 4), cy = Math.floor(y / 4);
+      if (!water(Math.round(x), Math.round(y)) || !cellWater(cx, cy)) return false;
+      if (cx !== px && cy !== py && (!cellWater(cx, py) || !cellWater(px, cy))) return false;
+      px = cx; py = cy;
+    }
+    return true;
+  };
+  // String-pulling: from each anchor take the farthest later vertex it sees (clear), so stair steps collapse
+  // into straight runs. Segments over SMOOTH_MAX sub-cells are not tried (the chain stays); the ends are kept.
+  const smooth = (chain: number[]): number[] => {
+    const out = [chain[0]!], span = (a: number, b: number): number => Math.max(Math.abs((a % size) - (b % size)), Math.abs(Math.floor(a / size) - Math.floor(b / size)));
+    for (let i = 0, j = 0; i < chain.length - 1; i = j) {
+      j = i + 1;
+      for (let k = chain.length - 1; k > i + 1; k--) if (span(chain[i]!, chain[k]!) <= SMOOTH_MAX && clear(chain[i]!, chain[k]!)) { j = k; break; }
+      out.push(chain[j]!);
+    }
+    return out;
+  };
   const start = snap(from);
   if (start < 0) return fail(sawMixed ? 'lines-needed' : 'start-not-water');
   sawMixed = false;
@@ -159,10 +189,12 @@ export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines |
     const [, , id] = pop();
     if (closed.has(id)) continue;
     if (id === end) {
-      const points: RoutePoint[] = [];
-      for (let k: number | undefined = id; k !== undefined; k = parent.get(k)) points.push(centre(k));
-      points.reverse();
-      const nm = distanceNm(from, points[0]!) + g.get(id)! + distanceNm(points[points.length - 1]!, to);
+      const chain: number[] = [];
+      for (let k: number | undefined = id; k !== undefined; k = parent.get(k)) chain.push(k);
+      chain.reverse();
+      const points = smooth(chain).map(centre);
+      let nm = distanceNm(from, points[0]!) + distanceNm(points[points.length - 1]!, to);
+      for (let k = 1; k < points.length; k++) nm += distanceNm(points[k - 1]!, points[k]!);
       // The triangle inequality keeps nm at or above the straight line; max() only absorbs float rounding.
       return {ok: true, nm: Math.max(nm, distanceNm(from, to)), points};
     }
