@@ -38,6 +38,7 @@ import {withTideSelection} from '../tide-stations.ts';
 import {briefVerdict, clockText, feedReader, VERDICT_WORD, type BriefVerdict} from './verdict.ts';
 import {activeBoatFactors, savedBoat} from '../../dist/boat-handling.js';
 import {boatBasisName, boatRangeNote, type SavedBoatLike} from '../boat-range.ts';
+import {boatSaved} from '../boat-entry.ts';
 import type {BoatFactors} from '../score.ts';
 import type {Brief as BriefModel, RegionalDailyFeed} from './types.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
@@ -268,6 +269,7 @@ const storedBoat = (): SavedBoatLike => (savedBoat() as {boat?: SavedBoatLike} |
 /** The day verdict for the brief shown now: the regional forecast only when it is this region's, rated for the saved boat (MYB-2). */
 export function currentVerdict(brief: BriefModel | null, now: Date): BriefVerdict | null {
   const info = regionInfo.value, forecast = regionalForecast.value;
+  void boatSaved.value;   // a boat saved on first use (boat-entry.ts) re-rates the verdict on screen
   return briefVerdict(brief, info && forecast?.region === info.id ? forecast : null, now, info?.timezone ?? DEFAULT_ZONE, activeBoatFactors() as BoatFactors);
 }
 

@@ -3,7 +3,7 @@ import {planView, PLAN_COPY} from '../plan.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {regionCoverage, regionPlans, targetLabel, targetState, TARGET_STATE_TEXT} from '../species.ts';
 import {profile, region, setParams, species, withParams} from '../state.ts';
-import {loadRegs, regsData, regulationState, ruleSummary, verifiedText} from '../regs.ts';
+import {freshnessLabel, loadRegs, regsData, regulationState, ruleSummary, verifiedText} from '../regs.ts';
 import {currentRegionInfo, zone} from './App.tsx';
 import {dockState} from './TimeDock.tsx';
 import './plan.css';
@@ -20,17 +20,18 @@ export function targetRules(now: Date) {
   const target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget, at = dockState(now, zone()).at;
   const date = new Intl.DateTimeFormat('en-CA', {timeZone: zone(), year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date(at));
   const state = regulationState(data, target, rules, now.getTime(), date, at);
-  return {state, summary: ruleSummary(data, target, state, rules), available: !!data};
+  return {state, summary: ruleSummary(data, target, state, rules), freshness: freshnessLabel(data, target, state, rules, now.getTime()), available: !!data};
 }
 export function TargetRules({now = new Date()}: {now?: Date}) {
   const rules = currentRegionInfo()?.rules;
   useEffect(() => { if (rules) void loadRegs(rules); }, [rules?.id]);
-  const {state, summary: s} = targetRules(now);
+  const {state, summary: s, freshness} = targetRules(now);
   const name = targetLabel(profile.value, region.value, species.value);
   return <div class="app-plan-rules" data-status={s.status}>
     <p><span class="app-mark-regs-badge" data-status={s.status}>{s.label}</span> {name}. {state.reason}</p>
     {[...s.bag, ...s.size, ...(s.depth ? [s.depth] : [])].map((line, i) => <p key={i}>{line}</p>)}
     <p>{verifiedText(s)}</p>
+    <p class="app-plan-rules-fresh" data-state={freshness.state}>{freshness.text}</p>
     <a href={s.link} target="_blank" rel="noopener" aria-label={`${s.linkLabel} for ${name} (opens in a new tab)`}>{s.linkLabel}</a>
   </div>;
 }

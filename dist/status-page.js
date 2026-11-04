@@ -87,7 +87,7 @@ const KIND_LABELS = Object.freeze({
 
 /**
  * The status rows for what the visitor's browser read.
- * feeds: {conditions, data, index, regions: {id: feed}} where a feed that failed to load is null/absent.
+ * feeds: {conditions, data, index, regions: {id: feed}, coast?: {feed name: feed}} where a feed that failed to load is null/absent.
  */
 export function statusRows(feeds, now = Date.now()) {
   const rows = [];
@@ -117,6 +117,41 @@ export function statusRows(feeds, now = Date.now()) {
     for (const source of list) rows.push(rollup('Daily evidence', kind === 'forecast' ? FORECAST_NAMES[source.id] || 'Forecast model tiles' : String(source.name || source.id), [source], now, daily.max_age_hours));
   }
   if (!sources.length && feeds.data) rows.push(unreadable('Daily evidence', 'Daily evidence sources', daily.max_age_hours));
+  if (feeds.coast) rows.push(...coastRows(feeds.coast, now));
+  return rows;
+}
+
+const COAST = 'Morro Bay coast feeds';
+const coastStatus = s => s.status ?? s.outcome;
+// Only these values are shown; anything else in a feed reads as unknown, so no feed text reaches the page.
+const coastLabel = value => (['error', 'pending', 'stale'].includes(value) ? value : 'unknown');
+
+/**
+ * The Morro Bay coast feeds (catalog/feed-health.json coast, the limits server/coast-data.ts uses): one row per
+ * listed source, from that source's own fetchedAt and status/outcome in the feed; history from its generatedAt.
+ * coast: {ocean, nearshore, 'water-quality', history}, each parsed JSON or null when it failed to load.
+ */
+export function coastRows(coast, now = Date.now()) {
+  const rows = [];
+  for (const [feedName, config] of Object.entries(health.coast)) {
+    const feed = coast[feedName], limit = config.max_age_hours;
+    for (const id of config.sources) {
+      const name = SOURCE_NAMES[id] || id;
+      if (!feed || typeof feed !== 'object' || Array.isArray(feed)) { rows.push(unreadable(COAST, name, limit)); continue; }
+      if (feedName === 'history') { rows.push(row(COAST, name, clock(feed.generatedAt), limit, now)); continue; }
+      // The nearshore feed lists one entry per CDIP site (cdip-<site>); they roll up into the one catalog row.
+      const members = (Array.isArray(feed.sources) ? feed.sources : []).filter(s => s && typeof s === 'object' &&
+        (feedName === 'nearshore' ? String(s.id).startsWith('cdip-') : s.id === id));
+      if (!members.length) { rows.push(unreadable(COAST, name, limit, 'not in the feed')); continue; }
+      if (members.length === 1) {
+        const status = coastStatus(members[0]);
+        rows.push(row(COAST, name, clock(members[0].fetchedAt), limit, now, {degraded: status === 'ok' ? '' : coastLabel(status)}));
+        continue;
+      }
+      rows.push(rollup(COAST, name, members.map(s => ({status: coastStatus(s) === 'ok' ? 'ok' : coastLabel(coastStatus(s)),
+        last_success_at: s.fetchedAt, max_age_hours: limit})), now, limit));
+    }
+  }
   return rows;
 }
 
@@ -131,9 +166,9 @@ export const NOT_SHOWN = Object.freeze({
 /** catalog/sources.json id -> category. A test keeps this complete against the catalog. */
 export const SOURCE_COVERAGE = Object.freeze({
   ...Object.fromEntries(['ndbc-buoys', 'nws-weather', 'noaa-tides', 'cdfw-mpas', 'cdfw-rules', 'noaa-gfs', 'ecmwf-ifs', 'noaa-gfs-wave', 'ecmwf-wam',
-    'noaa-blended-sst', 'noaa-viirs-merged-chlorophyll', 'noaa-ndbc-hfr-uswc-6km', 'landing-reports', 'harbor-authority'].map(id => [id, 'watched'])),
-  ...Object.fromEntries(['ndbc-history', 'noaa-goes-nowcoast', 'cdip-mop', 'slo-beach-water-quality', 'noaa-wcofs', 'noaa-gefs-members', 'noaa-gefs-wave-prob']
-    .map(id => [id, 'scheduled-unwatched'])),
+    'noaa-blended-sst', 'noaa-viirs-merged-chlorophyll', 'noaa-ndbc-hfr-uswc-6km', 'landing-reports', 'harbor-authority',
+    'ndbc-history', 'noaa-goes-nowcoast', 'cdip-mop', 'slo-beach-water-quality', 'noaa-wcofs'].map(id => [id, 'watched'])),
+  ...Object.fromEntries(['noaa-gefs-members', 'noaa-gefs-wave-prob'].map(id => [id, 'scheduled-unwatched'])),
   ...Object.fromEntries(['usgs-naip'].map(id => [id, 'browser-direct'])),
 });
 export const coverageOf = id => SOURCE_COVERAGE[id] || 'fixed';
@@ -175,11 +210,14 @@ async function load(url) {
 }
 
 async function main() {
-  const [conditions, data, index] = await Promise.all([load('/feeds/conditions/latest.json'), load('/feeds/data/latest.json'), load('/regions/index.json')]);
+  const coastNames = Object.keys(health.coast);
+  const [conditions, data, index, ...coastFeeds] = await Promise.all([load('/feeds/conditions/latest.json'), load('/feeds/data/latest.json'), load('/regions/index.json'),
+    ...coastNames.map(name => load(`/feeds/${health.coast[name].path}`))]);
+  const coast = Object.fromEntries(coastNames.map((name, i) => [name, coastFeeds[i]]));
   const regions = {};
   await Promise.all((index?.regions || []).map(async entry => { regions[entry.id] = await load(`/feeds/conditions/regions/${encodeURIComponent(entry.id)}/latest.json`); }));
   const now = Date.now();
-  document.getElementById('status-rows').innerHTML = renderRows(statusRows({conditions, data, index, regions}, now));
+  document.getElementById('status-rows').innerHTML = renderRows(statusRows({conditions, data, index, regions, coast}, now));
   document.getElementById('status-checked').textContent = new Date(now).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
   document.getElementById('status-coverage').innerHTML = renderCoverage();
 }

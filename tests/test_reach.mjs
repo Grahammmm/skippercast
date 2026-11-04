@@ -162,7 +162,7 @@ test('"Where to look" asks for a range or shows it for Boat and Kayak, and a Boa
   reachRange.value = {boat: 12}; cruiseSpeed.value = 20;
   html = render(h(WhereToLook, {ranking: r}));
   assert.match(html, /data-reach="12"[^>]*>Range 12 nm</);
-  assert.match(html, /7\.4 nm · ~60–90 ft · run ≥ 25 min</);
+  assert.match(html, /7\.4 nm straight line · ~60–90 ft · run ≥ 25 min</);
   assert.equal(pickRun(7.4, 20), ' · run ≥ 25 min', '22.2 min rounds up to 25');
   assert.equal(pickRun(null, 20), '');
   assert.equal(pickRun(3, null), '');
