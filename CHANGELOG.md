@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC0237-04: the trip planner refuses what the Chart and the GPX check refuse. Saving a waypoint from a Chart tap and Add to trip on a habitat or survey place now decline a place that is not checked, inside a protected area or within the 70 m planning margin of one, with the same one-line reason ("Not saved: 40 m from …"), and add nothing; a place already in the plan is checked again each time it is added. A clear place is added as before, and adding it twice still adds it once.
+
 - BF-og-cards: shared map links carry the landing preview image and name a known region and its listed port in Open Graph previews; no forecast or date enters the preview, and the app remains noindex.
 
 - BF-spanish-app: the map app reads Spanish. The first answer, the brief's labels and the rules card come from one string catalogue (`catalog/app/strings.json`, English and Spanish, read by `web/i18n.ts`); the language is the visitor's own choice (`?lang=es`, remembered on the device), else the browser's Accept-Language, else English, and the page `lang` follows it. Rule wording from the reviewed registry stays English and the card says so; regulation numbers, species, port and source names are never translated. `scripts/check_copy.mjs` now fails on a catalogue id with no Spanish value, an unknown id and a bare literal in a covered file.
