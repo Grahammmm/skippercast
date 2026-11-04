@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- SC0237-04: the trip planner refuses what the Chart and the GPX check refuse. Saving a waypoint from a Chart tap and Add to trip on a habitat or survey place now decline a place that is not checked, inside a protected area or within the 70 m planning margin of one, with the same one-line reason ("Not saved: 40 m from …"), and add nothing; a place already in the plan is checked again each time it is added. A clear place is added as before, and adding it twice still adds it once.
+
+- BF-og-cards: shared map links carry the landing preview image and name a known region and its listed port in Open Graph previews; no forecast or date enters the preview, and the app remains noindex.
+
 - BF-spanish-app: the map app reads Spanish. The first answer, the brief's labels and the rules card come from one string catalogue (`catalog/app/strings.json`, English and Spanish, read by `web/i18n.ts`); the language is the visitor's own choice (`?lang=es`, remembered on the device), else the browser's Accept-Language, else English, and the page `lang` follows it. Rule wording from the reviewed registry stays English and the card says so; regulation numbers, species, port and source names are never translated. `scripts/check_copy.mjs` now fails on a catalogue id with no Spanish value, an unknown id and a bare literal in a covered file.
 
 - SC2207-04: the trip planner's Best available applies its maximum one-way distance from the selected port to the water route where one is computed (as Where to look does), so a reef 13 nm round a headland no longer fits a 10 nm plan; a reef without a route keeps its straight line, labelled, and each ranked spot says which. Habitat order, the 0.15 nm separation, the protected-area screen, saved plans, exports and the stops-in-order legs are unchanged.

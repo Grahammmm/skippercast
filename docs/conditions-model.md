@@ -91,6 +91,26 @@ forecast and not a safety clearance.
   buoy cannot raise it.
 - **Seas read up, never down.** Printed seas maxima round up (brief to 0.1 ft, advisor to whole feet), so a printed maximum is never below the value the window rule used.
 
+**Advisor holds.** The text advisor's day word (`server/advisor/answers/conditions.ts`,
+`planning.ts`, `reports.ts`) applies a subset of these holds, in its own words
+(Bumpy where the brief says Marginal) and over its own window (the asked
+hours of the asked date, by default 06:00-14:00, not the brief's sunrise-to-noon
+window). A present boating advisory makes the day Rough (SC2007-05). A Comfortable day is
+held at Bumpy, with `comfort_held` naming each reason once and in this order,
+when a rated hour is in the long-period swell rule (SC1952-05), when listed
+hours have no forecast ("N of M hours have no forecast", counted from the
+window's forecast hours that scored nothing; SC0237-01), when the marine alert
+check is unavailable (a configured zone has no record, a failed status, no
+alerts list or no parseable check time; no age limit; SC0237-01), and, for
+`get_conditions` only, when the bar estimate reads hazardous (SC0022-08). A
+model run's end time makes later hours unknown samples (SC2007-06), which
+count as hours with no forecast. A day that is already Bumpy, Rough or
+Unknown, or unavailable, is not given a held reason; an old model run still
+holds a calmer word at Unknown and an unusable run reads as no forecast. The
+daily-report inputs apply the same advisory, long-period and thin-evidence
+holds but do not check the bar. Limited estimates keep the shared score cap;
+the advisor adds no separate limited-estimate hold.
+
 `tests/test_brief_verdict.mjs` pins the bands, the caps, the limit sentence
 and the Unknown cases.
 
@@ -114,9 +134,18 @@ every limit; the limits differ because each surface reads a different input):
 | Trip alert policy (`server/alert-policy.ts`) | within limits | feed `completed_at` over 3 h old or ahead; any model run over 36 h old or over 1 h ahead, or its source not `ok` | unverified |
 | Text advisor comfort word (`server/advisor/answers/forecast-clock.ts`) | comfortable | oldest model run over 18 h; over 36 h, over 1 h ahead or with no run time; `completed_at` is not read | a calmer word held at unknown with `comfort_held` (rough stays rough); past 36 h the forecast reads as unavailable |
 
-Saved-trip alerts (`server/alert-policy.ts`) still compare a trip's window
-maxima (wind, gusts, seas and chop) with the limits saved on the trip. It reads
-no wave period, so it has no long-period rule. That screen is unchanged here.
+Saved-trip alerts (`server/alert-policy.ts`) still decide `within limits` or
+`above limits` only from a trip's window maxima (wind, gusts, seas and chop)
+against the limits saved on the trip, and unavailable inputs still make the
+status `unverified`. Separately, when the wave-model height and period for the
+same model and hour reach `LONG_PERIOD_SWELL` (`web/score.ts`: 2.5 ft at 15 s),
+the assessment adds a hazard note naming the earliest such local hour in the
+saved window (departure and return extensions included). The note is not a
+missing-data issue, ignores the saved sea limit and boat factors, and does not
+clear the trip; an alert update is sent when it appears, changes or clears. It
+reads only the combined-wave height and period of the two wave models; the
+brief and the advisor may also read GFS swell partitions, which saved-trip
+alerts do not.
 
 ## Model agreement
 

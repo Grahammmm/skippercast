@@ -11,7 +11,7 @@ import ports from '../../../catalog/home-ports.json' with {type: 'json'};
 import {BAR_CHECK, barHours, entranceFor} from '../../../packages/coast/src/bar-conditions.ts';
 import type {ForecastHour, TideEvent} from '../../../packages/coast/src/types.ts';
 import {COMFORT_WORD} from './comfort.ts';
-import {readHour} from './conditions.ts';
+import {ALERT_CHECK_UNAVAILABLE, readHour, UNRATED_HOURS} from './conditions.ts';
 import type {DayConditions, Window} from './conditions.ts';
 import {localParts} from './time.ts';
 import type {Region} from '../../types.ts';
@@ -99,13 +99,13 @@ const LONG_PERIOD = 'long-period swell';
 
 /**
  * The day as the bar allows (web/brief/verdict.ts): an available Comfortable day with a hazardous bar hour reads Bumpy and
- * names the local hour; a Bumpy day held for long-period swell keeps that reason and gains the bar's. Every other day, and
+ * names the local hour; a Bumpy day held for long-period swell, unrated hours or a missing alert check keeps those reasons and gains the bar's. Every other day, and
  * every measurement, is returned as it was. A hold never makes a day calmer.
  */
 export function withBarHold(day: DayConditions, check: BarCheck | null | undefined, tz: string): DayConditions {
   if (!check?.hazardous_at || !day.available) return day;
-  const reason = `the bar estimate reads hazardous at ${clockText(Date.parse(check.hazardous_at), tz)}`;
+  const held = day.comfort_held, reason = `the bar estimate reads hazardous at ${clockText(Date.parse(check.hazardous_at), tz)}`;
   if (day.comfort === COMFORT_WORD.go) return {...day, comfort: COMFORT_WORD.marginal, comfort_held: reason};
-  if (day.comfort === COMFORT_WORD.marginal && day.comfort_held?.startsWith(LONG_PERIOD) && !day.comfort_held.includes(reason)) return {...day, comfort_held: `${day.comfort_held}; ${reason}`};
+  if (day.comfort === COMFORT_WORD.marginal && held && (held.startsWith(LONG_PERIOD) || UNRATED_HOURS.test(held) || held.startsWith(ALERT_CHECK_UNAVAILABLE)) && !held.includes(reason)) return {...day, comfort_held: `${held}; ${reason}`};
   return day;
 }

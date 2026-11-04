@@ -103,14 +103,17 @@ test('the rougher model height counts; the swell period alone qualifies; the lar
   assert.equal(day({over: {wave_period: -16, swell_wave_period: 10, wave_height: 3, wam: 3}}).comfort_held, undefined, 'a negative period');
 });
 
-test('seas and period in different hours do not combine; an unrated hour cannot hold another hour', () => {
+test('seas and period in different hours do not combine', () => {
   const split = day({by: t => t === at(DATE, 8) ? {wave_height: 3, wam: 3, wave_period: 10, swell_wave_period: 10} : t === at(DATE, 9) ? {wave_height: 2, wam: 2, wave_period: 17, swell_wave_period: 17} : {}});
   assert.deepEqual([split.comfort, 'comfort_held' in split], ['comfortable', false]);
+});
+test('an unrated hour cannot hold another hour for long-period swell; it holds the day for its own missing forecast (SC0237-01)', () => {
   // 7 am has the long swell but no wind at all, so the hour is not rated (the brief excludes unrated rows too).
   const noWind = feed({by: only([7], {...LP, wind_speed_10m: null, wind_gusts_10m: null, ecmwf_wind: null, ecmwf_gust: null})});
   assert.equal(rateHour(readHour(noWind, POINT_INDEX, at(DATE, 7))), null, 'the fixture hour is unrated');
   const d = windowConditions(noWind, REGION, POINT, DATE);
-  assert.deepEqual([d.comfort, 'comfort_held' in d], ['comfortable', false]);
+  assert.deepEqual([d.comfort, d.comfort_held], ['bumpy', '1 of 9 hours have no forecast']);
+  assert.doesNotMatch(d.comfort_held, /long-period/, 'the unrated hit names no long-period swell');
 });
 
 test('the earliest hit wins whatever the timestamp order; only the asked date and window count; custom windows are inclusive', () => {
@@ -216,8 +219,15 @@ test('the text agrees with the brief\'s own longPeriodHour on the same hours', (
 
 // ---- the public tool: both branches, and a two-day ask --------------------------------------------------
 
+// A complete, empty alert check for both configured zones (SC0237-01): without it the advisor holds a Comfortable word for the missing check.
+const quietDaily = () => {
+  const d = read('./fixtures/feeds/daily-latest.json'), first = d.sources['alerts-PZZ645'];
+  first.data.alerts = [];
+  d.sources['alerts-PZZ670'] = {...first, id: 'alerts-PZZ670', name: 'NWS PZZ670 advisories', url: first.url.replace('PZZ645', 'PZZ670')};
+  return d;
+};
 const ctx = (intel, over = {}) => ({env: {}, contact: {id: 'c1', role: 'angler', home_port: 'morro-bay'}, message: {id: 'in1'},
-  deps: {feeds: async url => /intelligence\.json$/.test(url) ? intel : Promise.reject(Error('no feed'))}, db: null, language: 'en', settings: advisorSettings({}), now: NOW, ...over});
+  deps: {feeds: async url => /intelligence\.json$/.test(url) ? intel : /latest\.json$/.test(url) ? quietDaily() : Promise.reject(Error('no feed'))}, db: null, language: 'en', settings: advisorSettings({}), now: NOW, ...over});
 
 test('get_conditions without species exposes the Bumpy word and the hour; a two-day ask holds only the matching day', async () => {
   const sat = '2026-10-03', sun = '2026-10-04';
