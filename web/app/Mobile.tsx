@@ -38,7 +38,7 @@ import {Legend} from './Legend.tsx';
 import {MapStage} from './MapStage.tsx';
 import {useHourNow, type HourClock} from '../clock.ts';
 import {MarkCard, currentMark} from './MarkCard.tsx';
-import {Brand, DegradedNotice, FreshnessDot, Location, ViewNav} from './Masthead.tsx';
+import {Brand, DegradedNotice, FreshnessDot, Location, ViewNav, viewLabel} from './Masthead.tsx';
 import {Conditions} from './views/Conditions.tsx';
 import {Fleet} from './views/Fleet.tsx';
 import {History} from './views/History.tsx';
@@ -46,7 +46,7 @@ import {Reports} from './views/Reports.tsx';
 import {PlanView} from './PlanView.tsx';
 import {appView, setParams, withParams, type AppView} from '../state.ts';
 import {waypointPlacement} from '../waypoint-placement.ts';
-import {language} from '../i18n.ts';
+import {language, t} from '../i18n.ts';
 import {dayOptions, dockState, hourText, localParts, readout, selectDay, selectHour} from './TimeDock.tsx';
 
 /** What the sheet shows: the brief, or the layer rail with the legend. */
@@ -73,11 +73,11 @@ export const showsFirstRun = (panel: Panel): boolean => panel !== 'layers';
 
 /** The hour slider and its readout, pinned at the sheet's top edge. */
 export function HourEdge({now}: {now: Date}) {
-  const tz = zone(), state = dockState(now, tz), outside = state.index < 0;
+  const tz = zone(), state = dockState(now, tz), outside = state.index < 0, lang = language.value;
   const at = (i: number): number => state.hours[i] ?? state.at;
   return (
-    <div class="app-sheet-hour" role="group" aria-label="Time">
-      <Range label="Hour" value={Math.max(0, state.index)} max={outside ? 0 : state.hours.length - 1} onChange={i => selectHour(now, tz, at(i))} disabled={outside}
+    <div class="app-sheet-hour" role="group" aria-label={t('shell.time', lang)}>
+      <Range label={t('shell.hour', lang)} value={Math.max(0, state.index)} max={outside ? 0 : state.hours.length - 1} onChange={i => selectHour(now, tz, at(i))} disabled={outside}
         valueText={i => outside ? readout(state, tz) : hourText(localParts(new Date(at(i)), tz).hour)} class="ui-dock-range" />
       <output class="ui-dock-readout ui-mono" aria-live="off">{readout(state, tz)}</output>
     </div>
@@ -91,7 +91,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
   // for another day than the dock's (tomorrow, until a time is chosen) the dock's heading moves
   // below the lead to head the dock-day evidence, as the desktop column does.
   const lead = leadDate(now), apart = lead !== state.day, dockHead = <span class="ui-eyebrow">{windowText(now, tz)}</span>;
-  const leadText = leadDayText(lead, now, tz, language.value);
+  const lang = language.value, leadText = leadDayText(lead, now, tz, lang);
   return (
     <div class="app-sheet-brief" onFocusIn={onFocus} data-basis={brief?.basis}>
       {currentMark.value ? <Guard name="mark-card"><MarkCard /></Guard> : (
@@ -112,9 +112,9 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
       <Guard name="run"><RunLine brief={brief} ranking={ranking} now={now} /></Guard>
       <Guard name="tide"><TideSpark brief={brief} now={now} /></Guard>
       <div class="app-sheet-menus">
-        <Segmented label="Day" options={dayOptions(now, tz, state.day)} value={state.day} onChange={d => selectDay(now, tz, d, state)} />
+        <Segmented label={t('shell.day', lang)} options={dayOptions(now, tz, state.day)} value={state.day} onChange={d => selectDay(now, tz, d, state)} />
         <TargetSelect />
-        <div class="app-area" role="group" aria-label="Area and port">
+        <div class="app-area" role="group" aria-label={t('command.areaPort', lang)}>
           <AreaSelect />
           <PortControl />
         </div>
@@ -128,15 +128,16 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
 /** The sheet footer's second way into the Reports view (the Reports tab is the first). */
 export const ReportsLink = () =>
   <a href={withParams(typeof location === 'undefined' ? 'https://skippercast.com/map' : location.href, {view: 'reports'})} class="app-reports-link"
-    onClick={event => { event.preventDefault(); setParams({view: 'reports'}); }}>Reports</a>;
+    onClick={event => { event.preventDefault(); setParams({view: 'reports'}); }}>{viewLabel('reports', language.value)}</a>;
 
 /** The layer rail and the legend as the sheet's content. */
 export function LayersPanel({onClose}: {onClose: () => void}) {
+  const lang = language.value;
   return (
     <div class="app-sheet-layers">
       <div class="app-sheet-head">
-        <span class="ui-eyebrow">Layers</span>
-        <Button size="sm" icon="close" onClick={onClose}>Done</Button>
+        <span class="ui-eyebrow">{t('shell.layers', lang)}</span>
+        <Button size="sm" icon="close" onClick={onClose}>{t('shell.done', lang)}</Button>
       </div>
       <Guard name="layer-rail"><LayerRail /></Guard>
       <Guard name="legend"><Legend /></Guard>
@@ -151,6 +152,7 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
   const apply = ({panel: p, detent: d}: {panel: Panel; detent: Detent}) => { setPanel(p); setDetent(d); };
   useEffect(() => setDetent(d => viewDetent(appView.value, d)), [appView.value]);
   useEffect(() => setDetent(d => boatEntryDetent(boatEntryOpen.value, d)), [boatEntryOpen.value]);
+  const lang = language.value;
   const layersOpen = panel === 'layers', conditions = appView.value === 'conditions', fleet = appView.value === 'fleet';
   return (
     <div class="app-mobile">
@@ -161,12 +163,12 @@ export function Mobile({now: fixedNow, clock, firstRun}: {now?: Date; clock?: Ho
             <Brand />
             <Location />
           </div>
-          <IconButton icon="layers" label="Layers" variant="ghost" pressed={layersOpen} onClick={() => apply(toggleLayers(panel, detent))} />
+          <IconButton icon="layers" label={t('shell.layers', lang)} variant="ghost" pressed={layersOpen} onClick={() => apply(toggleLayers(panel, detent))} />
           <LimitsControl compact />
         </div>
         <ProfileSwitch class="app-profile" />
       </header>
-      {appView.value === 'reports' || appView.value === 'plan' ? <main class="app-mobile-page">{firstRun}{appView.value === 'plan' ? <Guard name="plan"><TargetSelect /><PlanView now={now} /></Guard> : <Guard name="reports"><Reports now={now} /></Guard>}</main> : <Sheet label={layersOpen ? 'Layers' : appView.value === 'conditions' ? 'Conditions' : appView.value === 'fleet' ? 'Fleet' : appView.value === 'history' ? 'History' : 'Brief'} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => apply(afterDetent(panel, next))}
+      {appView.value === 'reports' || appView.value === 'plan' ? <main class="app-mobile-page">{firstRun}{appView.value === 'plan' ? <Guard name="plan"><TargetSelect /><PlanView now={now} /></Guard> : <Guard name="reports"><Reports now={now} /></Guard>}</main> : <Sheet label={layersOpen ? t('shell.layers', lang) : appView.value === 'conditions' || appView.value === 'fleet' || appView.value === 'history' ? viewLabel(appView.value, lang) : t('shell.brief', lang)} detent={waypointPlacement.value ? 'peek' : detent} onDetent={next => apply(afterDetent(panel, next))}
         class={['app-sheet', currentMark.value ? 'app-sheet--mark' : ''].filter(Boolean).join(' ')} edge={<Guard name="time-dock"><HourEdge now={now} /></Guard>}
         onBodyFocus={event => {
           const target = event.target as Element | null;

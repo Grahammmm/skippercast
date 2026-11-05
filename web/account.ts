@@ -7,6 +7,7 @@
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import {signal} from '@preact/signals';
+import {t, type Language} from './i18n.ts';
 
 /** dist/account.js's key: after sign in or close it restores this hash. */
 export const RETURN_KEY = 'skippercast-account-return';
@@ -62,9 +63,9 @@ export function refreshSession(fetchFn: typeof fetch = fetch): Promise<Session> 
 }
 
 /** The trigger's text: the account name, "Account", or "Sign in". */
-export function accountLabel(s: Session): string {
-  if (s.state === 'signed-in') return s.name ?? 'Account';
-  return s.state === 'signed-out' || s.state === 'loading' ? 'Sign in' : 'Account';
+export function accountLabel(s: Session, lang: Language = 'en'): string {
+  if (s.state === 'signed-in') return s.name ?? t('accountMenu.account', lang);
+  return t(s.state === 'signed-out' || s.state === 'loading' ? 'accountMenu.signIn' : 'accountMenu.account', lang);
 }
 
 /** Where account.js returns after it closes or reloads: the hash before #account, else a bare "#". */

@@ -631,3 +631,11 @@ test('SC0707-06: first run and Your limits are covered, and their ids keep their
   const vars = text => [...text.matchAll(/\{(\w+)\}/g)].map(x => x[1]).sort().join();
   for (const [id, entry] of ids) { assert.ok(entry.es?.trim(), `${id} has an es value`); assert.equal(vars(entry.es), vars(entry.en), `${id}: same variables in en and es`); }
 });
+
+test('SC0707-07: the app shell is covered, and its ids keep their variables in es', () => {
+  for (const file of ['Masthead', 'Mobile', 'CommandBar', 'AccountMenu']) assert.ok(COVERED.includes(`web/app/${file}.tsx`), file);
+  const ids = Object.entries(catalogue.strings).filter(([id]) => /^(?:shell|command|accountMenu)\./.test(id));
+  assert.ok(ids.length >= 88, 'the three families are in the catalogue');
+  const vars = text => [...text.matchAll(/\{(\w+)\}/g)].map(x => x[1]).sort().join();
+  for (const [id, entry] of ids) { assert.ok(entry.es?.trim(), `${id} has an es value`); assert.equal(vars(entry.es), vars(entry.en), `${id}: same variables in en and es`); }
+});

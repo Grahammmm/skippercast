@@ -20,6 +20,7 @@ import {Button, IconButton} from '../ui/Button.tsx';
 import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {PortDialog, PortInput} from '../landing/PortInput.tsx';
+import {language, t, type Language} from '../i18n.ts';
 import {PROFILES, PROFILE_TABLE, type Profile} from '../profile.ts';
 import {optionText, regionMenu, regionTargets, type TargetOption} from '../species.ts';
 import {currentPort, exploreURL, linkedPort, loadPorts, portURL, savedPortId, savePort, type Port} from '../ports.ts';
@@ -31,7 +32,23 @@ import {dayOptions, dockState, readout} from './TimeDock.tsx';
 import {titleCase} from './Masthead.tsx';
 import {LimitsControl} from './LimitsPanel.tsx';
 
-const PROFILE_OPTIONS = PROFILES.map(id => ({value: id, label: PROFILE_TABLE[id].label, icon: id} as const));
+/** A profile's name in `lang` (the catalogue's where.profile.* values; the table's own label is English). */
+const profileName = (p: Profile, lang: Language): string => t(`where.profile.${p}`, lang);
+
+/**
+ * A target menu option in `lang`: the published target name is never translated, only the state that follows it.
+ * English is the picker's own optionText, byte for byte.
+ */
+export function shellTargetText(option: TargetOption, lang: Language = 'en'): string {
+  if (lang !== 'es' || !option.state) return optionText(option);
+  return `${option.label} · ${t(`command.state.${option.state}`, lang)}`;
+}
+
+/** A menu group's heading in `lang`. English returns the picker's label verbatim; the group is read from its stable key, not its words. */
+export function shellGroupLabel(group: {readonly label: string; readonly options: readonly TargetOption[]}, p: Profile, lang: Language = 'en'): string {
+  if (lang !== 'es') return group.label;
+  return t(`command.group.${group.options[0]?.group ?? 'profile'}`, lang, {profile: profileName(p, lang)});
+}
 
 /** The profile's target list in the current region, plus the link's target when it is not in it. */
 export function targetList(p: Profile, current: string | null): TargetOption[] {
@@ -47,23 +64,25 @@ export function windowText(now: Date, tz: string): string {
 }
 
 export function ProfileSwitch({class: cls}: {class?: string} = {}) {
-  return <Segmented label="Profile" options={PROFILE_OPTIONS} value={profile.value} onChange={next => setParams(profilePatch(next))} class={cls} />;
+  const lang = language.value;
+  const options = PROFILES.map(id => ({value: id, label: profileName(id, lang), icon: id} as const));
+  return <Segmented label={t('command.profile', lang)} options={options} value={profile.value} onChange={next => setParams(profilePatch(next))} class={cls} />;
 }
 
 export function TargetSelect() {
-  const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget;
+  const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget, lang = language.value;
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();
   const groups = regionMenu(p, region.value, species.value).map(g => ({...g, options: g.options.filter(t => !q || t.id === target || t.label.toLowerCase().includes(q))}))
     .filter(g => g.options.length);
   return (
-    <div class="app-target" role="group" aria-label="Target species">
-      <input type="search" class="app-target-search" aria-label="Find a target" placeholder="Find a target" value={query}
+    <div class="app-target" role="group" aria-label={t('command.targetSpecies', lang)}>
+      <input type="search" class="app-target-search" aria-label={t('command.findTarget', lang)} placeholder={t('command.findTarget', lang)} value={query}
         onInput={event => setQuery((event.currentTarget as HTMLInputElement).value)} />
-      <label>Target
+      <label>{t('command.target', lang)}
         <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
           {groups.map(g => (
-            <optgroup key={g.label} label={g.label}>{g.options.map(t => <option key={t.id} value={t.id} disabled={!!t.unavailable}>{optionText(t)}</option>)}</optgroup>
+            <optgroup key={g.label} label={shellGroupLabel(g, p, lang)}>{g.options.map(o => <option key={o.id} value={o.id} disabled={!!o.unavailable}>{shellTargetText(o, lang)}</option>)}</optgroup>
           ))}
         </select>
       </label>
@@ -72,11 +91,11 @@ export function TargetSelect() {
 }
 
 export function AreaSelect() {
-  const a = area.value;
+  const a = area.value, lang = language.value;
   return (
-    <label>Area
+    <label>{t('command.area', lang)}
       <select value={a ?? ''} onChange={event => setParams({area: (event.currentTarget as HTMLSelectElement).value || null})}>
-        <option value="">Whole region</option>
+        <option value="">{t('command.wholeRegion', lang)}</option>
         {a ? <option value={a}>{titleCase(a)}</option> : null}
       </select>
     </label>
@@ -92,14 +111,14 @@ export function choosePort(port: Port, href: string = location.href): void {
 
 /** BF-deep-links: Share hands the canonical link (web/share-link.ts) to the share sheet, else copies it, else shows it to copy. */
 export function ShareControl() {
-  const [status, setStatus] = useState('');
+  const [copied, setCopied] = useState(false), lang = language.value;
   const [manual, setManual] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined), wrap = useRef<HTMLSpanElement>(null);
   const press = async () => {
     const ports = await loadPorts().catch(() => null);
     const link = shareLink({href: location.href, origin: location.origin, ports, region: region.peek(), savedId: savedPortId(), profile: profile.peek(), now: new Date(), tz: zone()});
     const outcome = await shareOrCopy(link);
-    if (outcome === 'copied') { clearTimeout(timer.current); setStatus('Link copied'); timer.current = setTimeout(() => setStatus(''), 3000); }
+    if (outcome === 'copied') { clearTimeout(timer.current); setCopied(true); timer.current = setTimeout(() => setCopied(false), 3000); }
     if (outcome === 'manual') setManual(link.url);
   };
   useEffect(() => {
@@ -110,9 +129,9 @@ export function ShareControl() {
   const dismiss = (event: KeyboardEvent) => { if (event.key === 'Escape') { setManual(null); wrap.current?.querySelector('button')?.focus(); } };
   return (
     <span class="app-share" ref={wrap}>
-      <IconButton icon="arrow" label="Share this view" onClick={() => void press()} />
-      <span class="app-share-status" role="status">{status}</span>
-      {manual ? <Popover summary="Link" sources={false} class="app-share-popover"><input readOnly value={manual} aria-label="Link to copy" onKeyDown={dismiss} /></Popover> : null}
+      <IconButton icon="arrow" label={t('command.share', lang)} onClick={() => void press()} />
+      <span class="app-share-status" role="status">{copied ? t('command.linkCopied', lang) : ''}</span>
+      {manual ? <Popover summary={t('command.link', lang)} sources={false} class="app-share-popover"><input readOnly value={manual} aria-label={t('command.linkToCopy', lang)} onKeyDown={dismiss} /></Popover> : null}
     </span>
   );
 }
@@ -130,11 +149,11 @@ export function PortControl() {
       if (new URL(location.href).searchParams.has('port') && !linkedPort(list, region.peek(), port.peek())) setParams({port: null});
     }, () => setPorts([]));
   }, []);
-  const close = () => setOpen('closed');
+  const close = () => setOpen('closed'), lang = language.value;
   return (
     <>
-      <Button icon="pin" class="app-port" aria-label={current ? `Change port (${current.name})` : 'Choose port'} onClick={() => show('search')}>{current?.name ?? 'Port'}</Button>
-      <IconButton icon="target" label="Use my location" onClick={() => show('locate')} />
+      <Button icon="pin" class="app-port" aria-label={current ? t('command.changePort', lang, {name: current.name}) : t('command.choosePort', lang)} onClick={() => show('search')}>{current?.name ?? t('command.port', lang)}</Button>
+      <IconButton icon="target" label={t('command.useLocation', lang)} onClick={() => show('locate')} />
       <ShareControl />
       <PortDialog open={open !== 'closed'} onClose={close}>
         <PortInput ports={ports} autoFocus locate={open === 'locate'} onChoose={port => { close(); choosePort(port); }} onExplore={() => { close(); navigate(exploreURL(location.href)); }} />
@@ -144,19 +163,20 @@ export function PortControl() {
 }
 
 export function CommandBar({now = new Date()}: {now?: Date} = {}) {
+  const lang = language.value;
   return (
-    <section class="app-command" aria-label="Command bar">
+    <section class="app-command" aria-label={t('command.bar', lang)}>
       {/* The limits trigger is an icon beside the switch, so the bar stays one row on a 1280 px laptop. */}
       <div class="app-profile-limits">
         <ProfileSwitch />
         <LimitsControl compact />
       </div>
       <TargetSelect />
-      <div class="app-area" role="group" aria-label="Area and port">
+      <div class="app-area" role="group" aria-label={t('command.areaPort', lang)}>
         <AreaSelect />
         <PortControl />
       </div>
-      <output class="app-window ui-mono" aria-label="Time window">{windowText(now, zone())}</output>
+      <output class="app-window ui-mono" aria-label={t('command.timeWindow', lang)}>{windowText(now, zone())}</output>
     </section>
   );
 }
