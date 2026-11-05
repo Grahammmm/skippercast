@@ -100,3 +100,17 @@ test('every formatCoordinate output parses back within the format precision', ()
     }
   }
 });
+
+test('labelled units must sit in degree, minute, second positions', () => {
+  for (const text of ['35°21″N', '35′N', '35″ N', '35 21″ N', '35°21′27′ N', '35″21′ N', "35 21\" N", "35' N"]) {
+    const r = parseCoordinate(text, 'latitude');
+    assert.ok(!('value' in r), `${text} should be refused, got ${JSON.stringify(r)}`);
+    assert.match(r.error, /order/);
+  }
+  const close = (text, want) => assert.ok(Math.abs(parseCoordinate(text, 'latitude').value - want) < 1e-9, text);
+  close('35°21′N', 35 + 21 / 60);
+  close("35d 21' 27\" N", 35 + 21 / 60 + 27 / 3600);
+  close('35° 21.456′ N', 35 + 21.456 / 60);
+  close('35 ° 21 ′ N', 35 + 21 / 60);
+  close('35°N', 35);
+});

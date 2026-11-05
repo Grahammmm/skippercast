@@ -48,9 +48,13 @@ export function parseCoordinate(text, axis) {
     s = s.slice(sign[0].length);
   }
   if (!s) return fail('No number found in the position.');
-  const body = s.replace(/[\u00b0\u2032\u2033]/g, ' ').trim();
-  const parts = body.split(/\s+/);
+  const body = s.replace(/\s+([\u00b0\u2032\u2033])/g, '$1').replace(/([\u00b0\u2032\u2033])/g, '$1 ').trim();
+  const rawParts = body.split(/\s+/), marks = rawParts.map(p => /[\u00b0\u2032\u2033]$/.test(p) ? p.slice(-1) : '');
+  const parts = rawParts.map((p, i) => marks[i] ? p.slice(0, -1) : p);
   if (parts.length > 3) return fail('Too many parts; use degrees, minutes and seconds at most.');
+  if (marks.some((mark, i) => mark && mark !== ['\u00b0', '\u2032', '\u2033'][i])) {
+    return fail('Degree, minute and second signs must come in that order: degrees (°) first, then minutes (′), then seconds (″).');
+  }
   if (parts.some(p => /^[-\u2212]\d/.test(p))) return fail('Minutes and seconds cannot be negative.');
   if (parts.some(p => !/^(\d+\.?\d*|\.\d+)$/.test(p))) return fail('That is not a number; expected digits such as 35.3576, 35 21.456 or 35 21 27.36.');
   const nums = parts.map(Number);
