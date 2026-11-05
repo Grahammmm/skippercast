@@ -45,9 +45,9 @@ const NAME_START = 'A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-
 const NAME = `[${NAME_START}][${NAME_START}\\-.0-9\\u00B7\\u0300-\\u036F\\u203F\\u2040]*`;
 const qualified = new RegExp(`^(?:(${NAME}):)?(${NAME})$`, 'u'), prefixName = new RegExp(`^${NAME}$`, 'u');
 const declaration = /<\?xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(?:"([^"]*)"|'([^']*)')(?:[ \t\r\n]+encoding[ \t\r\n]*=[ \t\r\n]*(?:"([A-Za-z][\w.-]*)"|'([A-Za-z][\w.-]*)'))?(?:[ \t\r\n]+standalone[ \t\r\n]*=[ \t\r\n]*(?:"(?:yes|no)"|'(?:yes|no)'))?[ \t\r\n]*\?>/y;
-const head = /<([^\s<>/=!?"'&]+)/y, close = /<\/([^\s<>/=!?"'&]+)[ \t\r\n]*>/y;
+const head = /<([^ \t\r\n<>/=!?"'&]+)/y, close = /<\/([^ \t\r\n<>/=!?"'&]+)[ \t\r\n]*>/y;
 /** One whole quoted attribute (readAttributes' token, with XML whitespace and no raw `<` in the value), and the tag's end. */
-const attribute = /[ \t\r\n]+([^\s=<>"'/&]+)[ \t\r\n]*=[ \t\r\n]*(?:"([^"<]*)"|'([^'<]*)')/y, tagEnd = /[ \t\r\n]*(\/?)>/y;
+const attribute = /[ \t\r\n]+([^ \t\r\n=<>"'/&]+)[ \t\r\n]*=[ \t\r\n]*(?:"([^"<]*)"|'([^'<]*)')/y, tagEnd = /[ \t\r\n]*(\/?)>/y;
 const ENTITIES: Record<string, string> = {amp: '&', lt: '<', gt: '>', quot: '"', apos: "'"};
 const reference = /&(?:(amp|lt|gt|quot|apos)|#([0-9]+)|#x([0-9A-Fa-f]+));/y;
 const xmlCharacter = (n: number): boolean => n === 9 || n === 10 || n === 13 || (n >= 0x20 && n <= 0xd7ff) || (n >= 0xe000 && n <= 0xfffd) || (n >= 0x10000 && n <= 0x10ffff);
@@ -126,7 +126,7 @@ function read(input: string): GpxWaypointResult {
   if (typeof input !== 'string') return fail('invalid-xml');
   if (input.length > MAX_GPX_BYTES || new TextEncoder().encode(input).length > MAX_GPX_BYTES) fail('file-too-large');
   if (illegal.test(input)) fail('invalid-xml');
-  const s = input.startsWith('\ufeff') ? input.slice(1) : input;
+  const s = (input.startsWith('\ufeff') ? input.slice(1) : input).replace(/\r\n?/g, '\n'); // XML end-of-line normalization; &#13; stays a CR
   let pos = 0;
   if (s.startsWith('<?xml')) {
     declaration.lastIndex = 0;
