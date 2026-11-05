@@ -385,13 +385,19 @@ class HTTPCache:
             return None
         return meta if meta.get("url") == url and (meta.get("etag") or meta.get("last_modified")) else None
 
-    def body(self, url: str, meta: dict) -> bytes | None:
-        """The cached body, or None when it is missing or no longer matches its hash."""
+    def body(self, url: str, meta: dict, limit: int | None = None) -> bytes | None:
+        """The cached body, or None when it is missing or no longer matches its hash.
+
+        With a `limit`, at most limit + 1 bytes are read and a larger body raises
+        BodyTooLarge (the cache is left as it is: another caller may allow more)."""
         _, body_path = self._paths(url)
         try:
-            body = body_path.read_bytes()
+            with body_path.open("rb") as handle:
+                body = handle.read() if limit is None else handle.read(limit + 1)
         except OSError:
             return None
+        if limit is not None and len(body) > limit:
+            raise BodyTooLarge("Response exceeds bounded collection size")
         return body if hashlib.sha256(body).hexdigest() == meta.get("sha256") else None
 
     def store(self, url: str, body: bytes, headers: Headers) -> None:
@@ -771,7 +777,7 @@ class Session:
                                   allowlist, prefixes, truncate, data)
                 from_cache = False
                 if hop.status == 304 and cached and store:
-                    body = store.body(url, cached)
+                    body = store.body(url, cached, limit)
                     if body is None:  # cache damaged: refetch without validators
                         store.forget(url)
                         hop = self._fetch(method, url, dict(base_headers), timeout, limit, None,
