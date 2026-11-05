@@ -44,6 +44,14 @@ export function seasonYear(data: any, species: string, region: RulesRegion, year
     return {month: m + 1, state, label};
   });
   const primary = profiles[0].primary_source_id || profiles[0].source_ids[0];
-  const link = speciesPage(data, species, region) ?? {href: officialURL(data.sources[primary]?.url ?? CDFW_OCEAN, region), label: 'Official rules'};
+  const page = speciesPage(data, species, region);
+  let link = page ?? {href: officialURL(data.sources[primary]?.url ?? CDFW_OCEAN, region), label: 'Official rules'};
+  // Same rule as the rules card (regs.ts ruleSummary): with no species page, a non-reef target links the first cited,
+  // sanitized fishing-map area page rather than another category's page (halibut's first source is groundfish).
+  const isArea = (u: unknown): boolean => typeof u === 'string' && /^https:\/\/[^/]+\/Fishing\/Ocean\/Regulations\/Fishing-Map\//.test(u);
+  if (!page && species !== 'reef' && !isArea(link.href)) {
+    const area = profiles[0].source_ids.map((id: string) => officialURL(data.sources?.[id]?.url, region)).find(isArea);
+    if (area) link = {href: area, label: link.label};
+  }
   return {months, revision: data.reviewed_at, link};
 }
