@@ -264,7 +264,8 @@ export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/F
   'web/map/layers.ts', 'web/app/rail.ts', 'web/app/LayerRail.tsx', 'web/app/Legend.tsx',
   'web/app/Planner.tsx', 'web/app/Trip.tsx', 'web/trip-ocean-lines.ts', 'web/planner-copy.ts',
   'web/app/views/Conditions.tsx', 'web/app/views/HourlyTable.tsx', 'web/app/views/History.tsx', 'web/model-disagreement.ts', 'web/view-copy.ts',
-  'web/app/MarkCard.tsx', 'web/saved-spots.ts', 'web/mark-copy.ts'];
+  'web/app/MarkCard.tsx', 'web/saved-spots.ts', 'web/mark-copy.ts',
+  'web/app/PlanView.tsx', 'web/plan.ts', 'web/app/ControlsTour.tsx', 'web/tour.ts', 'web/app/Presets.tsx', 'web/app/presets.ts'];
 /** Prose-like literals in covered files that are data or code, not copy: a species group name (not translated) and a prefix the model writes. */
 export const LITERAL_OK = new Set(['Lingcod & rockfish', 'Using your limits']);
 /** Server wire tokens (compared, never shown), allowed only in the one file that compares them. */
