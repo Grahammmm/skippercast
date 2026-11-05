@@ -23,6 +23,7 @@ import {buildExport, draftKey, exportPresetTargets, isMeasuredTarget, offlineNot
 import {loadReefTrip} from '../dist/reef-trip-data.js';
 import {bestSpots, waypointTitle} from '../dist/spot-ranking.js';
 import {HOME_PORT_KEY} from '../dist/home-port.js';
+import {browserStorage} from '../dist/browser-storage.js';
 import {track} from './telemetry.ts';
 import {ensureLandWater, landWater as landWaterState, loadLandWaterLines, withheldNote, type LandWaterLines, type LandWaterModel, type Place} from './land-water.ts';
 import {ROUTE_BUDGET, type RouteFn} from './ranking.ts';
@@ -181,7 +182,7 @@ export type Planner = ReturnType<typeof createPlanner>;
 
 export function createPlanner(deps: PlannerDeps) {
   const {atlas, screen, region, map} = deps;
-  const storage = deps.storage === undefined ? globalThis.localStorage : deps.storage;
+  const storage = deps.storage === undefined ? browserStorage() : deps.storage;
   const now = deps.now ?? (() => new Date());
   const loadReefs = deps.loadReefs ?? reefTrip;
   const emit = deps.emit ?? dispatch;
@@ -204,14 +205,14 @@ export function createPlanner(deps: PlannerDeps) {
   const allowResearch = signal(false), search = signal(''), loading = signal(false), portsReady = signal(false), portsFailed = signal(false);
   const filters = signal<Filters>({species: 'reef', limit: 20, depth: 300, scope: 'region', port: '', distance: deps.reachNm ?? 20});
   const ports = signal<Port[]>([]);
-  const scopeStatus = signal(''), actionStatus = signal(''), storageNote = signal(STORAGE_OK);
+  const scopeStatus = signal(''), actionStatus = signal(''), storageNote = signal(storage ? STORAGE_OK : STORAGE_OFF);
   /** Bumped when the screen's age or the map may have changed (open, boundaries, each minute while open). */
   const tick = signal(0);
   let revision = 0, restoring = false, canonical: Reefs | null = null;
 
   const persist = (next: Draft): void => {
     draft.value = next;
-    try { storage?.setItem(draftKey(region.id), JSON.stringify(next)); storageNote.value = STORAGE_OK; } catch { storageNote.value = STORAGE_OFF; }
+    try { if (!storage) throw Error('no storage'); storage.setItem(draftKey(region.id), JSON.stringify(next)); storageNote.value = STORAGE_OK; } catch { storageNote.value = STORAGE_OFF; }
   };
   const launch = computed(() => launchPoints.value?.region === region.id ? launchPoints.value.points.find(p => p.id === (launchChoice.value[region.id] ?? draft.value.launchId)) ?? launchPoints.value.points[0] : undefined);
   const launchPoint = (): UserWaypoint[] => draft.value.launchId && launch.value ? userWaypoints([{...launch.value, id: `user:launch-${launch.value.id.replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}`, name: `Launch · ${launch.value.name}`.slice(0, 80), category: 'other'}]) as UserWaypoint[] : [];
