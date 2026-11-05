@@ -38,6 +38,10 @@ import {launchChoice} from './reach.ts';
 import {assessContours, depthContoursURL, NOTES} from './map/depth-contours.ts';
 import {chartFileListed} from './chart-files.ts';
 import {loadPorts, plannerPort, portChoice} from './ports.ts';
+import {activeBoatFactors, savedBoat} from '../dist/boat-handling.js';
+import {hasOwnLimits, limitsFor} from './limits.ts';
+import {profile as activeProfile} from './state.ts';
+import {buildAlertPlan, MSG as ALERT_MSG, postTrip, type AlertLegs, type AlertPlan, type AlertSettings, type AlertStop} from './planner-alerts.ts';
 
 export type Layers = {waypoints: boolean; outlines: boolean; alignments: boolean; exclusions: boolean};
 export type LayerKey = keyof Layers;
@@ -71,7 +75,8 @@ export type RankedDetail = {targets: Target[]; areas: Area[]; publication?: Publ
 export type Summary =
   | {ok: true; counts: {waypoints: number; tracks: number; outlines: number; alignments: number; exclusions: number; trackPoints: number; largestTrack: number; contours?: number}}
   | {ok: false; message: string};
-type Region = {id: string; timezone: string; mpa: {bounds: number[]}};
+/** `species` and `forecast_points` are the alert metadata of the region file (SC1822-04); a region without them cannot save an alert. */
+type Region = {id: string; timezone: string; mpa: {bounds: number[]}; species?: string[]; forecast_points?: {id: string; name: string; latitude: number; longitude: number}[]};
 
 export interface PlannerDeps {
   atlas: Atlas;
@@ -103,7 +108,18 @@ export interface PlannerDeps {
   routeContext?: (region: string) => Promise<RouteContext>;
   /** SC0022-11: the request the signed-in person's saved-spot list is read with (fetch by default); tests pass a fixture. */
   savedSpotsFetch?: typeof fetch;
+  /** SC1822-04: the request the explicit trip-alert save is sent with (fetch by default); tests pass a fixture. */
+  alertFetch?: typeof fetch;
+  /** SC1822-04: the profile, limits and boat read once per explicit attempt (this device's own by default). */
+  alertSettings?: () => AlertSettings;
 }
+/** SC1822-04: the stop-by-stop legs for the alert's snapshot, computed where the dialog's route context lives (web/app/Planner.tsx). */
+export type AlertLegsFn = (stops: AlertStop[]) => AlertLegs;
+export const ALERT_STORAGE_NOTE = 'Saved in this browser. Alert me for this trip saves a separate snapshot to your account.';
+const deviceAlertSettings = (): AlertSettings => {
+  const p = activeProfile.peek();
+  return {profile: p, ownBoatLimits: p === 'boat' && hasOwnLimits('boat'), limits: limitsFor(p), factors: activeBoatFactors(), boat: savedBoat()?.boat ?? null};
+};
 /** SC0022-11: a saved spot as the picker holds it: the source id, a display name and a position. Never its note, owner or date. */
 export type SavedSpot = {id: string; name: string; latitude: number; longitude: number};
 export type SavedSpotsState = 'idle' | 'loading' | 'ready' | 'failed';
@@ -606,14 +622,74 @@ export function createPlanner(deps: PlannerDeps) {
     savedSpotsStatus.value = SPOT_ADDED;
   }
 
+  // SC1822-04: an explicit, signed-in-only save of the current plan with the alert POST. Nothing is sent until the click; every refusal says why.
+  const alertOpen = signal(false), alertStatus = signal(''), alertBusy = signal(false), alertSaved = signal('');
+  let alertGen = 0, alertAbort: AbortController | null = null, alertFor: unknown = null;
+  const alertActive = (): boolean => !disposed && alertOpen.value && session.value.state === 'signed-in' && activeRegion.value === region.id;
+  const resetAlert = (): void => {
+    alertGen++; alertAbort?.abort(); alertAbort = null; alertFor = null;
+    batch(() => { alertBusy.value = false; alertStatus.value = ''; alertSaved.value = ''; });
+  };
+  const stopAlert = effect(() => {
+    const s = session.value; void alertOpen.value; void activeRegion.value;
+    untracked(() => { if (!alertActive()) { if (alertFor) resetAlert(); } else if (alertFor !== s) { if (alertFor) resetAlert(); alertFor = s; } });
+  });
+  /** The plan as an alert request (or the sentence that refuses it), from the checked stops in order, the launch last; unchecked and unresolved ids are never sent. */
+  function alertPlan(legs: AlertLegsFn): AlertPlan {
+    const d = exportDraft(), pool = [...tripAtlas.value.targets, ...(d.userWaypoints ?? []).map(userWaypointTarget)], launchId = launchPoint()[0]?.id, seen = new Set<string>(), stops: AlertStop[] = [];
+    let unresolved = false;
+    for (const id of d.ids) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const t = pool.find(x => x.id === id);
+      if (t) stops.push({id, name: t.name || t.label || '', lat: t.latitude, lon: t.longitude, ...(id === launchId ? {launch: true} : {})}); else unresolved = true;
+    }
+    let settings: AlertSettings;
+    try { settings = (deps.alertSettings ?? deviceAlertSettings)(); } catch { return {ok: false, message: ALERT_MSG.settings, code: 'plan'}; }
+    // A screen that does not speak for the point, a wrong region or one that throws is "not checked", never clear.
+    const refused = (s: AlertStop): boolean => { try { return placeRefused(spotVerdict({id: s.id, name: s.name, latitude: s.lat, longitude: s.lon})); } catch { return true; } };
+    return buildAlertPlan({region, now: now().getTime(), date: draft.value.date, stops, unresolved, species: filters.value.species, settings, legs, refused});
+  }
+  /** What the section shows: null unless the planner is open for a signed-in person in a region with alert data. */
+  function alertPreview(legs: AlertLegsFn): AlertPlan | null {
+    void tick.value;
+    if (!alertActive()) return null;
+    const plan = alertPlan(legs);
+    return !plan.ok && plan.code === 'region' ? null : plan;
+  }
+  async function saveAlert(legs: AlertLegsFn): Promise<void> {
+    if (alertBusy.peek() || !alertActive()) return; // one request per click: the guard is set before anything is awaited
+    const first = alertPlan(legs);
+    if (!first.ok) { alertStatus.value = first.message; return; }
+    const key = JSON.stringify(first.body);
+    if (alertSaved.peek() === key) { alertStatus.value = ALERT_MSG.again; return; }
+    const mine = ++alertGen, rev = revision, who = session.value, ctl = new AbortController();
+    alertAbort?.abort(); alertAbort = ctl;
+    batch(() => { alertBusy.value = true; alertStatus.value = ''; });
+    try {
+      // The same gates as a GPX download (restore, filters, research, publication recheck), without handing the file over.
+      try { await exportFile('gpx'); } catch (error) { if (mine === alertGen) alertStatus.value = (error as Error).message; return; }
+      if (mine !== alertGen) return;
+      if (rev !== revision || session.value !== who || !alertActive()) { alertStatus.value = ALERT_MSG.changed; return; }
+      const again = alertPlan(legs);
+      if (!again.ok) { alertStatus.value = again.message; return; }
+      if (JSON.stringify(again.body) !== key) { alertStatus.value = ALERT_MSG.changed; return; }
+      const result = await postTrip(again.body, deps.alertFetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a)), ctl);
+      if (mine !== alertGen) return;
+      batch(() => { alertStatus.value = result.message; if (result.ok) alertSaved.value = key; });
+    } finally { if (mine === alertGen) alertBusy.value = false; }
+  }
+  function setAlertOpen(on: boolean): void { alertOpen.value = on; }
+
   return {
     today, region, draft, launch, setLaunch, preparing, tripAtlas, ranked, filtersDirty, restorePending, allowResearch, search, loading, portsReady, portsFailed, filters, ports,
     scopeStatus, actionStatus, storageNote, tick, summary, spots, protectedHits, notesReady, waypointPosition,
     chooseWaypoint, saveWaypoint, removeWaypoint, addPlace,
     savedSpots, savedSpotsState, savedSpotsStatus, setSavedSpotsOpen, refreshSavedSpots, addSavedSpot,
+    alertStatus, alertBusy, alertSaved, setAlertOpen, alertPreview, saveAlert,
     setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     /** For tests and a region change: stop drawing the ranked set. */
-    dispose: () => { disposed = true; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); },
+    dispose: () => { disposed = true; prepared = null; stopPrepare(); stopRanked(); stopPort(); stopSpots(); dropSpots(); stopAlert(); resetAlert(); },
   };
 }
