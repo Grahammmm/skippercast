@@ -85,7 +85,63 @@ export function formProblem(form: AlertForm, range: {min: string; max: string}):
 export const comfortBody = (region: string, rating: number, phase: string) =>
   ({region, rating, phase, wind: null, sea: null, period: null, heading: null, point: null});
 
-export type SavedTrip = {id: string; date: string; point: string; species: string; start_hour: number; end_hour: number; boat_name?: string | null; boat_sea?: number | null; wind_limit?: number; gust_limit?: number; sea_limit?: number};
+export type SavedTrip = {id: string; region?: string; date: string; point: string; species: string; start_hour: number; end_hour: number; boat_name?: string | null; boat_sea?: number | null; wind_limit?: number; gust_limit?: number; sea_limit?: number};
+/** What a saved trip lets the form reuse. `omitted` names what was left out, in order: area, species, hours, limits. */
+export type ReuseOmission = 'area' | 'species' | 'hours' | 'limits';
+export type Reuse = {fields: Partial<Omit<AlertForm, 'date'>>; species: string | null; omitted: ReuseOmission[]};
+const inRange = (v: unknown, lo: number, hi: number, step: number): v is number => typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi && Number.isInteger(v / step);
+
+/**
+ * The parts of a saved trip the alert form can start from again, as stored (never scaled, rounded or clamped), without its date.
+ * The area counts only from this region and while the region still lists it; the species only while the region lists it.
+ * Hours and wind/gust copy as valid pairs, the sea limit alone; anything else is left out and named. Pure: nothing is read or changed.
+ */
+export function reuseTrip(trip: SavedTrip, region: RegionAlerts): Reuse {
+  const fields: Reuse['fields'] = {}, omitted: ReuseOmission[] = [];
+  let species: string | null = null;
+  if (trip.region === region.id && typeof trip.point === 'string' && region.forecast_points.some(p => p.id === trip.point)) fields.point = trip.point;
+  else omitted.push('area');
+  if (typeof trip.species === 'string' && region.species.includes(trip.species)) species = trip.species;
+  else omitted.push('species');
+  const {start_hour: s, end_hour: e, wind_limit: w, gust_limit: g, sea_limit: sea} = trip;
+  if (inRange(s, 0, 22, 1) && inRange(e, 1, 23, 1) && e > s) { fields.start_hour = s; fields.end_hour = e; } else omitted.push('hours');
+  let lost = false;
+  if (inRange(w, 1, 30, 1) && inRange(g, 1, 40, 1) && g >= w) { fields.wind_limit = w; fields.gust_limit = g; } else lost = true;
+  if (inRange(sea, .5, 10, .5)) fields.sea_limit = sea; else lost = true;
+  if (lost) omitted.push('limits');
+  return {fields, species, omitted};
+}
+
+/** How many of the three limits a reuse copied: all, some or none. */
+export const reusedLimits = (fields: Reuse['fields']): 'all' | 'some' | 'none' => {
+  const n = [fields.wind_limit, fields.gust_limit, fields.sea_limit].filter(v => v !== undefined).length;
+  return n === 3 ? 'all' : n ? 'some' : 'none';
+};
+
+/** The alert form as the fill needs it: its named controls (a real HTMLFormElement's `elements` fits). */
+export type FillableForm = {elements: {namedItem(name: string): {value: string; focus?(): void} | null}};
+/** Puts a reuse's fields into the form's own controls, leaves the date empty for the person to choose and focuses it. Touches only the form: no request, no storage. */
+export function fillAlertForm(form: FillableForm, reuse: Reuse): void {
+  for (const [name, value] of Object.entries(reuse.fields)) { const control = form.elements.namedItem(name); if (control) control.value = String(value); }
+  const date = form.elements.namedItem('date');
+  if (date) { date.value = ''; date.focus?.(); }
+}
+
+const OMITTED_TEXT: Readonly<Record<ReuseOmission, string>> = {
+  area: 'Area was not copied because it is no longer offered in this region.',
+  species: 'Alert species was not copied because it is no longer listed in this region.',
+  hours: 'Saved hours could not be copied.',
+  limits: 'Some saved limits could not be copied.',
+};
+/** The status after Use again: what was copied and, in order, what was left out. */
+export const reuseStatus = (omitted: readonly ReuseOmission[]): string => ['Window copied. Choose a date, then save.', ...omitted.map(o => OMITTED_TEXT[o])].join(' ');
+
+/** The limits note once they came from a saved trip, replacing the profile/boat wording; the boat part says the current boat is what alerts use. */
+export const reuseLimitsNote = (date: string, copied: 'all' | 'some', boat: boolean): string =>
+  `${copied === 'all' ? `Limits start from your saved trip on ${date}; you can edit them before saving.` : `Some limits start from your saved trip on ${date}; other limits were left unchanged.`} ${boat
+    ? "Alerts use your current boat settings, not the old trip's boat."
+    : 'Alerts still judge wind, gusts and offshore seas only, not surf at your launch or beach.'}`;
+
 export type AlertEvent = {id: string | number; trip_id?: string; kind: string; status: string; message: string; created_at?: string};
 export type Feedback = {observed_at: string; rating: number; context: string};
 
