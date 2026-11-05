@@ -137,6 +137,17 @@ test('rows are validated before anything is written', {skip}, async () => {
   } finally { sql.close(); }
 });
 
+test('last_seen_source accepts the local-nmea receiver and still rejects an unknown source', {skip}, async () => {
+  const {sql, db} = database();
+  try {
+    assert.equal((await post(db, {rows: [row(A, {last_seen_source: 'local-nmea'})]})).status, 200);
+    assert.equal(stored(sql, A).last_seen_source, 'local-nmea');
+    const refused = await post(db, {rows: [row(C, {last_seen_source: 'local-nmea-2'})]});
+    assert.equal(refused.status, 400);
+    assert.match(refused.body.error, /last_seen_source/);
+  } finally { sql.close(); }
+});
+
 test('AIS never overrides a registry MMSI', {skip}, async () => {
   const {sql, db} = database();
   try {

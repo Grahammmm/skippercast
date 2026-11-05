@@ -46,7 +46,7 @@ export const LAYERS = ['filters', 'events', 'tracks', 'heat'] as const;
 export type Layer = typeof LAYERS[number];
 /** The fishing modes (src/skippercast/fleet/ais/classify.py FISHING_KINDS): the kind filter and the only segments tracks draw. */
 export const FISHING_KINDS = ['drift-anchor', 'troll-slow', 'troll-pelagic'] as const;
-export const SOURCES = ['aisstream', 'marinecadastre', 'datalastic'] as const;
+export const SOURCES = ['aisstream', 'marinecadastre', 'datalastic', 'local-nmea'] as const;
 export const BASIS = 'inferred-from-movement';
 export const PLANNING_ONLY = 'noaa-planning-only';
 const MAX_VALUES = 10;   // keeps every statement under D1's 100 bound parameters

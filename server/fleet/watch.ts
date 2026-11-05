@@ -38,7 +38,7 @@ export const MATCH_METHODS = ['fcc-uls', 'call-sign', 'ais-static-name', 'geofen
 export const STRONG_METHODS: readonly (typeof MATCH_METHODS)[number][] = ['fcc-uls', 'geofence-presence', 'admin', 'schedule-correlation'];
 /** The least confidence of a `watched` row (src/skippercast/fleet/config.py WATCHED_MIN_CONFIDENCE). */
 export const WATCHED_MIN = 0.85;
-const SOURCES = ['aisstream', 'marinecadastre', 'datalastic'] as const;
+const SOURCES = ['aisstream', 'marinecadastre', 'datalastic', 'local-nmea'] as const;
 const MMSI = /^[1-9]\d{0,8}$/;
 const HEX32 = /^[0-9a-f]{32}$/;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
