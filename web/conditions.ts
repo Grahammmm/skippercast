@@ -96,7 +96,9 @@ export function briefForecast(f: ConditionsForecast | null, family: Family = 'gf
   const times = (wind.data as {hourly?: {time?: unknown}} | null)?.hourly?.time;
   if (!Array.isArray(times)) return null;
   const at = (run: ModelRun, variable: string, unit: string, epoch: number) => sample(run.data, variable, epoch, unit, run.end ? {data_end_time: run.end} : null);
-  const hours: ForecastHour[] = times.filter(finite).map(epoch => {
+  // Only hours a Date can hold are rows: a finite epoch past the Date range is skipped alone, never throwing away its neighbours.
+  const representable = (epoch: unknown): epoch is number => finite(epoch) && Number.isFinite(new Date(epoch * 1000).getTime());
+  const hours: ForecastHour[] = times.filter(representable).map(epoch => {
     const speed = at(wind, 'wind_speed_10m', 'kn', epoch), gust = at(wind, 'wind_gusts_10m', 'kn', epoch);
     const period = at(wave, 'wave_period', 's', epoch), swellPeriod = at(wave, 'swell_wave_period', 's', epoch);
     return {
