@@ -83,8 +83,8 @@ export const SAVED_SPOTS_SOURCE = 'private-saved-spots';
 export const CONTRAST_SOURCE = 'sst-contrast';
 /** Temp fronts' observed edges (web/map/fronts.ts, BF-sst-fronts). */
 export const FRONTS_SOURCE = 'sst-fronts';
-export const COASTLINE_ATTRIBUTION = 'NOAA NGS · CUSP shoreline';
-export const ENC_ATTRIBUTION = 'NOAA ENC display · planning only';
+export const COASTLINE_ATTRIBUTION = t('layer.attr.coastline', 'en');
+export const ENC_ATTRIBUTION = t('layer.attr.enc', 'en');
 export const MPA_SOURCE = 'mpas';
 /** The region's shelf depth contours (web/map/depth-contours.ts, CI6-13). */
 export const DEPTH_CONTOURS_SOURCE = 'depth-contours';
@@ -94,7 +94,7 @@ export const DEPTH_CONTOURS_SOURCE = 'depth-contours';
  * coastline credit, MapLibre's attribution stays one line on a phone: the box paints when MapLibre
  * loads, and a wrapped box becomes the page's largest paint (the LCP budget, design § 13).
  */
-export const MPA_ATTRIBUTION = 'CDFW ds582 · CC BY 4.0';
+export const MPA_ATTRIBUTION = t('layer.attr.mpa', 'en');
 
 const STATIC: readonly TimeBehaviour[] = ['static'];
 const entry = (e: Omit<LayerEntry, 'sources' | 'legend' | 'time'> & Partial<Pick<LayerEntry, 'sources' | 'legend' | 'time'>>): LayerEntry =>
@@ -117,19 +117,19 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
     basis: copy('water-temp-contours', 'basis', lang), task: 'FE-16'}),
   // CI6-03: its own rail entry, off by default, because Water temp (on by default for Shore) must not turn it on.
   entry({id: 'sst-contrast', label: copy('sst-contrast', 'label', lang), control: 'sst-contrast', presentations: ['chart'], time: ['observed'], sources: [CONTRAST_SOURCE],
-    attribution: 'NOAA CoastWatch SST analysis',
+    attribution: t('layer.attr.sst', 'en'),
     legend: [{label: copy('sst-contrast', 'legend0', lang), swatch: 'contrast1'}],
     basis: copy('sst-contrast', 'basis', lang),
     task: 'CI6-03'}),
   // BF-sst-fronts: observed fronts as edges with their age and an uncertainty band; its own rail entry, off by default, beside (never in place of) Temp contrast.
   entry({id: 'sst-fronts', label: copy('sst-fronts', 'label', lang), control: 'sst-fronts', presentations: ['chart'], time: ['observed'], sources: [FRONTS_SOURCE],
-    attribution: 'NOAA CoastWatch SST analysis',
+    attribution: t('layer.attr.sst', 'en'),
     legend: [{label: copy('sst-fronts', 'legend0', lang), swatch: 'contrast2'}],
     basis: copy('sst-fronts', 'basis', lang),
     task: 'CI6-15'}),
   entry({id: 'chlorophyll', label: copy('chlorophyll', 'label', lang), control: 'chlorophyll', presentations: ['chart'], sources: ['chlorophyll'], time: ['observed'],
     legend: [{label: '≤0.01 mg/m³', swatch: 'depth0'}, {label: '0.1 mg/m³', swatch: 'blue'}, {label: '1 mg/m³', swatch: 'mint'}, {label: '10 mg/m³', swatch: 'amber'}, {label: '100 mg/m³', swatch: 'coral'}],
-    attribution: 'NOAA NESDIS STAR / CoastWatch',
+    attribution: t('layer.attr.chlorophyll', 'en'),
     basis: copy('chlorophyll', 'basis', lang), task: 'CI6-08'}),
   entry({id: 'swell', label: copy('swell', 'label', lang), control: 'swell', presentations: ['chart'], time: ['hour'], legend: [{label: copy('swell', 'legend0', lang), swatch: 'swell2'}],
     basis: copy('swell', 'basis', lang), task: 'FE-17'}),
@@ -138,7 +138,7 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
     basis: copy('wind', 'basis', lang), task: 'CI6-10'}),
   // CI6-13: shelf contours from reviewed survey grids, every zoom, Chart only; the ENC base above zoom 10 is unchanged.
   entry({id: 'depth-contours', label: copy('depth-contours', 'label', lang), control: 'always', presentations: ['chart'], sources: [DEPTH_CONTOURS_SOURCE],
-    attribution: 'USGS · CSUMB survey grids', legend: [{label: copy('depth-contours', 'legend0', lang), swatch: 'depth1'}, {label: copy('depth-contours', 'legend1', lang), swatch: 'muted'}],
+    attribution: t('layer.attr.depth', 'en'), legend: [{label: copy('depth-contours', 'legend0', lang), swatch: 'depth1'}, {label: copy('depth-contours', 'legend1', lang), swatch: 'muted'}],
     basis: copy('depth-contours', 'basis', lang), task: 'CI6-13'}),
 
   entry({id: 'mpas', label: copy('mpas', 'label', lang), control: 'always', presentations: ['chart', 'terrain'],
@@ -160,7 +160,7 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
     terrain: {kind: 'fill', color: 'amber', opacity: 0.15, outline: 'amber'}, sources: ['charter-grounds', 'charter-grounds-hatch'],
     legend: [{label: copy('charter-grounds', 'legend0', lang), swatch: 'amber'}],
     basis: copy('charter-grounds', 'basis', lang), task: 'FE-21'}),
-  entry({id: 'commercial-ais', label: copy('commercial-ais', 'label', lang), control: 'fleet', presentations: ['chart'], sources: ['commercial-ais'], attribution: 'Global Fishing Watch · CC BY-NC 4.0',
+  entry({id: 'commercial-ais', label: copy('commercial-ais', 'label', lang), control: 'fleet', presentations: ['chart'], sources: ['commercial-ais'], attribution: t('layer.attr.ais', 'en'),
     legend: [{label: copy('commercial-ais', 'legend0', lang), swatch: 'amber'}],
     basis: copy('commercial-ais', 'basis', lang), task: 'FE-21'}),
   entry({id: 'fleet-heat', label: copy('fleet-heat', 'label', lang), control: 'fleet', presentations: ['chart'], gate: 'admin', sources: ['fleet-heat'],
@@ -177,24 +177,24 @@ const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
   entry({id: 'clouds', label: copy('clouds', 'label', lang), control: 'clouds', presentations: ['chart'], time: ['observed'],
     basis: copy('clouds', 'basis', lang), task: 'FE-22'}),
   // #644: the Boat or Kayak range to consider, around the harbor; under the marks so they stay on top.
-  entry({id: 'reach', label: copy('reach', 'label', lang), control: 'always', presentations: ['chart'], gate: 'Boat or Kayak with a saved range', sources: ['reach'],
+  entry({id: 'reach', label: copy('reach', 'label', lang), control: 'always', presentations: ['chart'], gate: t('layer.gate.reach', 'en'), sources: ['reach'],
     legend: [{label: copy('reach', 'legend0', lang), swatch: 'blue'}],
     basis: copy('reach', 'basis', lang), task: 'FE-51'}),
   entry({id: 'marks', label: copy('marks', 'label', lang), control: 'always', presentations: ['chart', 'terrain'],
-    terrain: {kind: 'point', color: 'bg', opacity: 0.75, outline: 'mint', size: 18}, gate: 'Chart: zoom ≥ 10; a density below it. Terrain: no zoom cutoff.', sources: [DENSITY_SOURCE, MARKS_SOURCE],
+    terrain: {kind: 'point', color: 'bg', opacity: 0.75, outline: 'mint', size: 18}, gate: t('layer.gate.marks', 'en'), sources: [DENSITY_SOURCE, MARKS_SOURCE],
     legend: [{label: copy('marks', 'legend0', lang), swatch: 'mint'}, {label: copy('marks', 'legend1', lang), swatch: 'depth1'}],
     basis: copy('marks', 'basis', lang), task: 'FE-18'}),
   entry({id: 'selection', label: copy('selection', 'label', lang), control: 'always', presentations: ['chart'], sources: [SELECTION_SOURCE],
     basis: copy('selection', 'basis', lang), task: 'FE-18'}),
-  entry({id: 'trip-ranked', label: copy('trip-ranked', 'label', lang), control: 'always', presentations: ['chart'], sources: [RANKED_SOURCE], gate: 'a ranked trip plan',
+  entry({id: 'trip-ranked', label: copy('trip-ranked', 'label', lang), control: 'always', presentations: ['chart'], sources: [RANKED_SOURCE], gate: t('layer.gate.ranked', 'en'),
     legend: [{label: copy('trip-ranked', 'legend0', lang), swatch: 'mint'}],
     basis: copy('trip-ranked', 'basis', lang), task: 'FE-51'}),
   // SC0922-04: the owner's own positions, off by default and session-only (not a rail entry, a link layer or a profile default).
-  entry({id: 'saved-spots', label: copy('saved-spots', 'label', lang), control: 'always', presentations: ['chart'], sources: [SAVED_SPOTS_SOURCE], gate: 'signed in, turned on in the legend',
+  entry({id: 'saved-spots', label: copy('saved-spots', 'label', lang), control: 'always', presentations: ['chart'], sources: [SAVED_SPOTS_SOURCE], gate: t('layer.gate.saved', 'en'),
     basis: copy('saved-spots', 'basis', lang), task: 'SC0922-04'}),
   entry({id: 'stations', label: copy('stations', 'label', lang), control: 'stations', presentations: ['chart'], sources: ['stations'], time: ['observed', 'hour'],
     legend: [{label: copy('stations', 'legend0', lang), swatch: 'blue'}, {label: copy('stations', 'legend1', lang), swatch: 'mint'}, {label: copy('stations', 'legend2', lang), swatch: 'muted'}, {label: copy('stations', 'legend3', lang), swatch: 'blue'}],
-    attribution: 'NOAA NDBC · NOAA CO-OPS · CDIP/Scripps', basis: copy('stations', 'basis', lang), task: 'CI6-18'}),
+    attribution: t('layer.attr.stations', 'en'), basis: copy('stations', 'basis', lang), task: 'CI6-18'}),
   entry({id: 'coastline', label: copy('coastline', 'label', lang), control: 'always', presentations: ['chart'], sources: [COASTLINE_SOURCE], attribution: COASTLINE_ATTRIBUTION,
     basis: copy('coastline', 'basis', lang), task: 'FE-11'}),
 ]);
@@ -210,7 +210,7 @@ export const LAYERS: readonly LayerEntry[] = REGISTRY.en;
 /** The registry entry for `id`; throws on an unknown id so a typo cannot hide a layer. */
 export function layerEntry(id: string): LayerEntry {
   const found = LAYERS.find(e => e.id === id);
-  if (!found) throw new Error(`Unknown map layer ${id}`);
+  if (!found) throw new Error(t('dev.unknownLayer', 'en', {id}));
   return found;
 }
 

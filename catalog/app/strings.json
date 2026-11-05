@@ -730,6 +730,22 @@
     "legend.bs.saved": {"en": "Your saved spots basis", "es": "Tus sitios guardados: fundamento"},
     "legend.bs.density": {"en": "Habitat candidate density basis", "es": "Densidad de candidatos de hábitat: fundamento"},
     "legend.bs.depth": {"en": "Depth contours basis", "es": "Curvas de profundidad: fundamento"},
-    "legend.bs.stations": {"en": "Stations basis", "es": "Estaciones: fundamento"}
+    "legend.bs.stations": {"en": "Stations basis", "es": "Estaciones: fundamento"},
+    "legend.mpa.licence": {"en": "CC BY 4.0", "es": "CC BY 4.0"},
+    "legend.windStamp": {"en": "NOAA NCEP · GFS · {stamp}", "es": "NOAA NCEP · GFS · {stamp}"},
+    "layer.attr.coastline": {"en": "NOAA NGS · CUSP shoreline", "es": "NOAA NGS · CUSP shoreline"},
+    "layer.attr.enc": {"en": "NOAA ENC display · planning only", "es": "NOAA ENC display · planning only"},
+    "layer.attr.mpa": {"en": "CDFW ds582 · CC BY 4.0", "es": "CDFW ds582 · CC BY 4.0"},
+    "layer.attr.sst": {"en": "NOAA CoastWatch SST analysis", "es": "NOAA CoastWatch SST analysis"},
+    "layer.attr.chlorophyll": {"en": "NOAA NESDIS STAR / CoastWatch", "es": "NOAA NESDIS STAR / CoastWatch"},
+    "layer.attr.depth": {"en": "USGS · CSUMB survey grids", "es": "USGS · CSUMB survey grids"},
+    "layer.attr.ais": {"en": "Global Fishing Watch · CC BY-NC 4.0", "es": "Global Fishing Watch · CC BY-NC 4.0"},
+    "layer.attr.stations": {"en": "NOAA NDBC · NOAA CO-OPS · CDIP/Scripps", "es": "NOAA NDBC · NOAA CO-OPS · CDIP/Scripps"},
+    "layer.gate.reach": {"en": "Boat or Kayak with a saved range", "es": "Boat or Kayak with a saved range"},
+    "layer.gate.marks": {"en": "Chart: zoom ≥ 10; a density below it. Terrain: no zoom cutoff.", "es": "Chart: zoom ≥ 10; a density below it. Terrain: no zoom cutoff."},
+    "layer.gate.ranked": {"en": "a ranked trip plan", "es": "a ranked trip plan"},
+    "layer.gate.saved": {"en": "signed in, turned on in the legend", "es": "signed in, turned on in the legend"},
+    "dev.unknownLayer": {"en": "Unknown map layer {id}", "es": "Unknown map layer {id}"},
+    "dev.railMissing": {"en": "rail entry missing for {id}", "es": "rail entry missing for {id}"}
   }
 }

@@ -29,7 +29,7 @@ export function railEntries(lang: Language = 'en'): readonly RailEntry[] {
 
 /** The English list, kept as the compatibility export (the landing's layer dots and the tests read it). */
 export const RAIL_ENTRIES: readonly RailEntry[] = railEntries('en');
-for (const id of RAIL_IDS) if (!RAIL_ENTRIES.some(e => e.id === id)) throw new Error(`rail entry missing for ${id}`);
+for (const id of RAIL_IDS) if (!RAIL_ENTRIES.some(e => e.id === id)) throw new Error(t('dev.railMissing', 'en', {id}));
 
 /** Whether rail entry `id` is on: Currents while a source is chosen (FE-15), any other entry while the rail list has it. */
 export const railOn = (id: string, on: readonly string[], source: string): boolean => id === 'currents' ? source !== 'off' : on.includes(id);
