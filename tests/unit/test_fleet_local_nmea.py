@@ -8,7 +8,7 @@ import asyncio
 from contextlib import aclosing
 from datetime import date
 import os
-from pathlib import Path
+from tests._support import FIXTURES
 import socket
 import unittest
 from unittest import mock
@@ -19,7 +19,7 @@ from skippercast.fleet.ais.sources.base import AisPosition, AisSource, AisStatic
 from skippercast.fleet.ais.sources.local_nmea import (ENV_URL, Assembler, Fragment, LocalNmeaSource, MalformedMessage,
                                                       MalformedSentence, decode, normalise, parse_sentence)
 
-FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "local_nmea" / "synthetic.nmea"
+FIXTURE = FIXTURES / "local_nmea" / "synthetic.nmea"
 BBOX = ((32.0, -118.0), (33.5, -116.5))
 # 2026-11-05 20:00:30.5 UTC
 NOW = 1793908830.5
