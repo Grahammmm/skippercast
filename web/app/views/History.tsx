@@ -12,10 +12,12 @@ import type {HistoryBundle, HistoryMetric} from '../../../packages/coast/src/his
 import type {HistorySelection} from '../../../packages/coast/src/ui/history.ts';
 import type {County} from '../../../packages/coast/src/types.ts';
 import {coastData, coastHistory, coastStatus, type CoastSnapshot, type CoastStatus} from '../../coast-data.ts';
+import {language, t, type StringId} from '../../i18n.ts';
 import {regionPlace} from '../../map/currents.ts';
 import {historyMetric, historyRange, historyStation, navigate, profile, species, withParams, type UrlKey} from '../../state.ts';
 import {regionInfo} from '../App.tsx';
 import {CoastMarkup, isRenderableHistory, type CoastSelection} from '../CoastMarkup.tsx';
+import {historyCopy} from '../../view-copy.ts';
 
 /** The measurements historyView lists, in its order; anything else falls back to its default (sea temperature). */
 export const HISTORY_METRICS: readonly HistoryMetric[] = ['waterTempF', 'waveFt', 'windKnots', 'airTempF', 'gustKnots', 'periodS'];
@@ -54,10 +56,10 @@ export function historyState(snapshot: CoastSnapshot<'history'> | null, status: 
   return {kind: 'unavailable'};
 }
 
-const NOTES: Record<Exclude<HistoryState['kind'], 'ready'>, string> = {
-  unbound: 'Recorded history is unavailable for this region. SkipperCast collects buoy history only where a local coast report covers the area (Morro Bay and Cambria today).',
-  loading: 'Loading recorded history…',
-  unavailable: 'Recorded history is unavailable right now: the history snapshot could not be read or is out of date.',
+const NOTES: Record<Exclude<HistoryState['kind'], 'ready'>, StringId> = {
+  unbound: 'history.note.unbound',
+  loading: 'history.note.loading',
+  unavailable: 'history.note.unavailable',
 };
 
 /** Ask for the history snapshot for the region's place while the view is shown. */
@@ -73,6 +75,7 @@ function useHistorySnapshot(): void {
 
 export function History({now = new Date()}: {now?: Date} = {}) {
   useHistorySnapshot();
+  const lang = language.value;
   const state = historyState(coastHistory.value, coastStatus.value.history);
   const selection = historySelection(historyStation.value, historyMetric.value, historyRange.value);
   const choose = (choice: CoastSelection) => {
@@ -81,10 +84,10 @@ export function History({now = new Date()}: {now?: Date} = {}) {
   };
   return (
     <section class="app-history" aria-labelledby="app-history-title">
-      <h2 id="app-history-title">Recorded history</h2>
+      <h2 id="app-history-title">{t('history.title', lang)}</h2>
       {state.kind === 'ready'
-        ? <CoastMarkup renderer="historyView" args={[{county: state.county, now}, state.bundle, selection]} onSelect={choose} />
-        : <p class="app-empty" role="status">{NOTES[state.kind]}</p>}
+        ? <CoastMarkup renderer="historyView" args={[{county: state.county, now}, state.bundle, selection, historyCopy(lang)]} onSelect={choose} />
+        : <p class="app-empty" role="status">{t(NOTES[state.kind], lang)}</p>}
     </section>
   );
 }

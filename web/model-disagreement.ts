@@ -8,6 +8,7 @@
 import {dateKey} from '../packages/coast/src/daily.ts';
 import {DEFAULT_START_HOUR, feedReader, WINDOW_END_HOUR} from './brief/verdict.ts';
 import {FAMILIES, type ConditionsForecast} from './conditions.ts';
+import {localeOf, num, t, type Language} from './i18n.ts';
 import type {FeedHour} from './score.ts';
 
 export const THRESHOLDS = Object.freeze({windKt: 6, seaFt: 2, hours: 2});
@@ -45,16 +46,23 @@ export function disagreements(forecast: ConditionsForecast, now: Date, tz: strin
   return out;
 }
 
-/** "today", "tomorrow" (the brief's leadDayText rule), else the weekday name, "Thursday". */
-export function dayWord(date: string, now: Date, tz: string): string {
+/** Which of the three day classes `date` is: today, tomorrow (the brief's leadDayText rule), or a later weekday. */
+const dayClass = (date: string, now: Date, tz: string): 'today' | 'tomorrow' | 'weekday' => {
   const today = dateKey(now, tz), next = new Date(Date.parse(`${today}T12:00:00Z`) + DAY).toISOString().slice(0, 10);
-  if (date === today) return 'today';
-  if (date === next) return 'tomorrow';
-  return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-US', {timeZone: 'UTC', weekday: 'long'});
+  return date === today ? 'today' : date === next ? 'tomorrow' : 'weekday';
+};
+const weekdayName = (date: string, lang: Language): string => new Date(`${date}T12:00:00Z`).toLocaleDateString(localeOf(lang), {timeZone: 'UTC', weekday: 'long'});
+
+/** "today", "tomorrow" (the brief's leadDayText rule), else the weekday name, "Thursday"; Spanish "hoy", "mañana", "jueves". */
+export function dayWord(date: string, now: Date, tz: string, lang: Language = 'en'): string {
+  const kind = dayClass(date, now, tz);
+  return kind === 'weekday' ? weekdayName(date, lang) : t(`disagree.${kind}`, lang);
 }
 
-/** One plain sentence for an item; values rounded as the chart rounds them (kt whole, ft one decimal). */
-export function sentence(item: Disagreement, now: Date, tz: string): string {
-  const unit = item.quantity === 'wind' ? 'kt' : 'ft', v = (n: number) => `${Number(n.toFixed(unit === 'ft' ? 1 : 0))} ${unit}`;
-  return `Models disagree about ${dayWord(item.date, now, tz)} morning: ${item.quantity} ${v(item.noaa)} (${FAMILIES.gfs.label}) vs ${v(item.ecmwf)} (${FAMILIES.ecmwf.label}). The score uses the rougher.`;
+/** One plain sentence for an item, a single catalogue template per day class and quantity; values rounded as the chart rounds them (kt whole, ft one decimal). */
+export function sentence(item: Disagreement, now: Date, tz: string, lang: Language = 'en'): string {
+  const digits = item.quantity === 'wind' ? 0 : 1, v = (n: number) => lang === 'en' ? String(Number(n.toFixed(digits))) : num(Number(n.toFixed(digits)), lang, digits);
+  const kind = dayClass(item.date, now, tz);
+  const vars = {noaa: v(item.noaa), ecmwf: v(item.ecmwf), modelA: FAMILIES.gfs.label, modelB: FAMILIES.ecmwf.label, day: kind === 'weekday' ? weekdayName(item.date, lang) : ''};
+  return t(`disagree.${item.quantity}.${kind}`, lang, vars);
 }
