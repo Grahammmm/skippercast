@@ -206,7 +206,7 @@ function read(input: string): GpxWaypointResult {
         if (key !== 'xmlns' && !key.startsWith('xmlns:')) continue;
         const prefix = key === 'xmlns' ? '' : key.slice(6);
         if (key !== 'xmlns' && (!prefixName.test(prefix) || prefix === 'xmlns' || !value || (prefix === 'xml' && value !== XML_NAMESPACE))) fail('invalid-xml');
-        // Namespaces in XML 1.0: the xml and xmlns namespace URIs are reserved; only the xml prefix may bind the first, nothing may bind the second.
+        // Reserved bindings (Namespaces in XML 1.0, section 3): the xmlns namespace is never bound; the xml namespace only to the prefix xml.
         if (value === XMLNS_NAMESPACE || (value === XML_NAMESPACE && prefix !== 'xml')) fail('invalid-xml');
         if (namespaces === (top ? top.namespaces : BASE_NAMESPACES)) namespaces = new Map(namespaces);
         namespaces.set(prefix, value);

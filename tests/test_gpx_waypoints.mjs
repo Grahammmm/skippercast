@@ -57,7 +57,6 @@ test('gpx_waypoints_namespace_and_placement', () => {
   // An empty prefix suffix is malformed, never a default-namespace declaration.
   assert.equal(code(gpx11(`<wpt xmlns:="${NS11}" lat="1" lon="2"/>`)), 'invalid-xml', 'xmlns: with no prefix is fatal');
   assert.equal(code(gpx11(`<wpt xmlns:="urn:other" lat="1" lon="2"/>`)), 'invalid-xml');
-  assert.equal(ok(gpx11(`<wpt xmlns:xml="http://www.w3.org/XML/1998/namespace" xml:lang="en" lat="1" lon="2"/>`)).waypoints.length, 1, 'legal xmlns:xml still reads');
   // XML name characters: U+00D7 and U+00F7 are not name characters; U+00C0 and an astral letter are.
   assert.equal(code(gpx11(`<wpt lat="1" lon="2" \u00d7a="1"/>`)), 'invalid-xml', 'U+00D7 cannot start an attribute name');
   assert.equal(code(gpx11(`<wpt lat="1" lon="2" a\u00f7="1"/>`)), 'invalid-xml', 'U+00F7 is not a name character');
@@ -156,12 +155,13 @@ test('gpx_waypoints_requires_complete_document', () => {
     ['duplicate namespace-expanded attribute', gpx11('<wpt xmlns:a="urn:x" xmlns:b="urn:x" a:k="1" b:k="2" lat="1" lon="2"/>')],
     ['undeclared element prefix', gpx11('<zz:wpt lat="1" lon="2"/>')],
     ['undeclared attribute prefix', gpx11('<wpt zz:k="1" lat="1" lon="2"/>')],
-    ['default namespace bound to the xml namespace', gpx11('<wpt xmlns="http://www.w3.org/XML/1998/namespace" lat="1" lon="2"/>')],
-    ['default namespace bound to the xmlns namespace', gpx11('<wpt xmlns="http://www.w3.org/2000/xmlns/" lat="1" lon="2"/>')],
-    ['other prefix bound to the xml namespace', gpx11('<wpt xmlns:a="http://www.w3.org/XML/1998/namespace" lat="1" lon="2"/>')],
-    ['other prefix bound to the xmlns namespace', gpx11('<wpt xmlns:a="http://www.w3.org/2000/xmlns/" lat="1" lon="2"/>')],
-    ['xml prefix bound to the xmlns namespace', gpx11('<wpt xmlns:xml="http://www.w3.org/2000/xmlns/" lat="1" lon="2"/>')],
     ['empty prefix namespace', gpx11('<wpt xmlns:a="" lat="1" lon="2"/>')],
+    ['xml namespace on another prefix', gpx11(wpt(5, 6) + '<wpt xmlns:a="http://www.w3.org/XML/1998/namespace" lat="1" lon="2"/>')],
+    ['xml namespace as default', gpx11(wpt(5, 6) + '<wpt xmlns="http://www.w3.org/XML/1998/namespace" lat="1" lon="2"/>')],
+    ['xmlns namespace on a prefix', gpx11(wpt(5, 6) + '<wpt xmlns:a="http://www.w3.org/2000/xmlns/" lat="1" lon="2"/>')],
+    ['xmlns namespace as default', gpx11(wpt(5, 6) + '<wpt xmlns="http://www.w3.org/2000/xmlns/" lat="1" lon="2"/>')],
+    ['xmlns namespace on prefix xml', gpx11(wpt(5, 6) + '<wpt xmlns:xml="http://www.w3.org/2000/xmlns/" lat="1" lon="2"/>')],
+    ['xml prefix bound elsewhere', gpx11(wpt(5, 6) + '<wpt xmlns:xml="urn:x" lat="1" lon="2"/>')],
     ['non-initial PI', gpx11('<?pi x?>')],
     ['PI before root', `<?xml-stylesheet href="x"?>` + gpx11('')],
     ['whitespace before declaration', ' ' + good],
@@ -184,6 +184,9 @@ test('gpx_waypoints_requires_complete_document', () => {
   // Legal oddities still read: BOM, other-cased utf-8, comments around root, `>` inside a quoted attribute, scoped prefix declared late.
   const odd = `\ufeff<?xml version="1.0" encoding="utf-8"?><!-- c -->\n<g:gpx xmlns:g="${NS11}" version="1.1"><g:wpt lat="1" lon="2" note="a>b"><g:name>X</g:name></g:wpt></g:gpx>\n<!-- end -->\n`;
   same(ok(odd).waypoints, [{name: 'X', lat: 1, lon: 2, note: null}], 'legal variants');
+  // Legal reserved-name uses: explicit xmlns:xml with its own URI, and a namespace reset.
+  assert.equal(ok(gpx11('<wpt xmlns:xml="http://www.w3.org/XML/1998/namespace" lat="1" lon="2"/>')).waypoints.length, 1, 'explicit xmlns:xml');
+  assert.equal(ok(gpx11('<foo xmlns=""><bar xmlns="http://www.topografix.com/GPX/1/1"><wpt lat="1" lon="2"/></bar></foo>')).waypoints.length, 0, 'namespace reset');
 });
 
 test('gpx_waypoints_caps_are_utf8_and_all_candidates', () => {
