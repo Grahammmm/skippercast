@@ -60,7 +60,7 @@ function validatePlanBody(plan:ExternalJSON):TripPlanBody|null{
   if(typeof plan!=='object'||Array.isArray(plan))throw new ClientError('invalid plan');
   const list=(v:unknown,max:number,what:string):ExternalJSON[]=>{if(v===undefined||v===null)return[];if(!Array.isArray(v)||v.length>max)throw new ClientError(`too many ${what} (limit ${max})`);return v;};
   const spots=list(plan.spots,PLAN_LIMITS.spots,'spots').map((s,i):TripSpot=>{
-    if(!s||typeof s!=='object'||!SLUG.test(s.id))throw new ClientError('invalid spot id');
+    if(!s||typeof s!=='object'||typeof s.id!=='string'||!SLUG.test(s.id))throw new ClientError('invalid spot id');
     return {id:s.id,name:cleanText(s.name,80),lat:num(s.lat,-90,90,'spot latitude'),lon:num(s.lon,-180,180,'spot longitude'),order:s.order===undefined||s.order===null?i:(Number.isInteger(s.order)&&s.order>=0&&s.order<PLAN_LIMITS.spots?s.order:(()=>{throw new ClientError('invalid spot order');})()),notes:cleanText(s.notes,280),depth_ft:s.depth_ft===undefined||s.depth_ft===null?null:num(s.depth_ft,0,3000,'spot depth')};
   });
   const legs=list(plan.legs,PLAN_LIMITS.legs,'legs').map((l):TripLeg=>{
