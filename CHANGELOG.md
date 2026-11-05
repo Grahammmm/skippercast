@@ -3,6 +3,7 @@
 ## Unreleased
 
 - RF1600-6: a non-finite optional number (inf, -inf, Infinity or 1e999 in heading, status, length, width, IMO or vessel type) in a MarineCadastre AIS CSV row is now treated as unavailable, like NaN, instead of aborting the whole day; the row's other fields and the following rows are still read.
+- RF1600-5: the aisstream AIS normaliser no longer emits a position whose latitude or longitude is NaN or infinite, and reads a NaN or infinite speed, course or heading as not available while keeping the otherwise valid fix; ordinary values, unavailable markers and static records are unchanged.
 
 - SC0452-10: Where to look and the Boat run line read Spanish. The list's heading, its by-water and straight-line distances, the protected-area screen lines (not checked, inside, metres from), the range and dive controls and the search-plan labels, and the run line's speed and window prompts, fishing-time sentences, method note and the entrance's leave-by and be-back-by line come from `catalog/app/strings.json`, and both files join the copy lint's covered list. Place, harbor and closure names are shown as published, rule wording stays the registry's English and is marked as such, a sentence the catalogue does not know is shown as it came, and the English text, ranking and run arithmetic are unchanged.
 

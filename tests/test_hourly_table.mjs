@@ -135,6 +135,24 @@ test('edge 8: visibility 16093 m reads 10.0 mi; NaN, strings and negative values
   assert.ok(hourlyTable(stale, null, '2026-06-15', TZ, nowAt(NORMAL)).rows.every(r => r.visibilityMi === null && r.wind === null));
 });
 
+test('RF1600-3: a GFS run issued over an hour in the future is refused for visibility as for wind; exact boundaries hold', () => {
+  const now = nowAt(NORMAL), nowS = now.getTime() / 1000, maxS = 36 * HOUR;
+  const at = issued => {
+    const f = forecast(NORMAL);
+    f.models.gfs_global = {...f.models.gfs_global, issued};
+    return hourlyTable(f, null, '2026-06-15', TZ, now).rows;
+  };
+  for (const ahead of [3601, 24 * HOUR]) {
+    const rows = at(nowS + ahead);
+    assert.ok(rows.length > 0, 'ECMWF clock keeps the rows');
+    assert.ok(rows.every(r => r.wind === null && r.visibilityMi === null && hourlyCells(r)[6] === '—'), `+${ahead}s`);
+  }
+  for (const issued of [nowS, nowS + HOUR, nowS - maxS]) assert.equal(at(issued)[0].visibilityMi, 10, `admitted ${issued - nowS}`);
+  assert.equal(at(nowS - maxS - 1)[0].visibilityMi, null, 'max age + 1 s');
+  assert.equal(at(nowS + HOUR + 0.001)[0].visibilityMi, null, '+1 h + 1 ms');
+  for (const bad of [null, 'x', NaN, Infinity]) assert.equal(at(bad)[0].visibilityMi, null);
+});
+
 // MYB-2b: rows are rated for the boat passed (the view passes the saved boat's
 // activeBoatFactors(), as the brief verdict does); omitted, the reference boat.
 const {REFERENCE_BOAT} = await import('../web/score.ts');
