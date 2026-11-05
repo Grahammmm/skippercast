@@ -12,6 +12,7 @@ import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
 import {Icon} from '../ui/icons.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
+import {language, t, type StringId} from '../i18n.ts';
 import {accountLabel, boat, choosePreset, ensureSession, followAccountHash, followAlertsHash, loadBoat, openAccountDialog, openBoatSheet, session, type Session} from '../account.ts';
 import {coordinates, region, setCoordinateFormat, species} from '../state.ts';
 import {offlineOpen, openTrip, tripIds} from '../trip.ts';
@@ -19,22 +20,28 @@ import {tourTransition, type TourAction, type TourState} from '../tour.ts';
 import {ControlsTour} from './ControlsTour.tsx';
 import {LanguageChoice} from './LanguageChoice.tsx';
 
-const ACCOUNT_LINE: Readonly<Record<Session['state'], string>> = {
-  'loading': 'Checking your account…',
-  'offline': 'Accounts need a connection. Try again when you are online.',
-  'disabled': 'Accounts are not available on this site. The map and forecasts stay public.',
-  'signed-out': 'Accounts use a passkey: Face ID, Touch ID or your device PIN. No password.',
-  'signed-in': 'Your saved trips and alerts are private to this account.',
+/** The catalogue id of the line under the account heading, by session state. */
+const ACCOUNT_LINE: Readonly<Record<Session['state'], StringId>> = {
+  'loading': 'accountMenu.state.loading',
+  'offline': 'accountMenu.state.offline',
+  'disabled': 'accountMenu.state.disabled',
+  'signed-out': 'accountMenu.state.signedOut',
+  'signed-in': 'accountMenu.state.signedIn',
 };
+/** The boat presets the catalogue names; a preset it does not know keeps the label the boat module supplied. */
+const PRESET_IDS: Readonly<Record<string, StringId>> = {
+  skiff: 'accountMenu.preset.skiff', console: 'accountMenu.preset.console', walkaround: 'accountMenu.preset.walkaround', cabin: 'accountMenu.preset.cabin',
+};
+const COORDINATE_LABELS = [['dd', 'accountMenu.coordinates.dd'], ['ddm', 'accountMenu.coordinates.ddm'], ['dms', 'accountMenu.coordinates.dms']] as const;
 const FOCUSABLE = 'button:not([disabled]), a[href]';
 
 type AlertsView = typeof import('./TripAlerts.tsx').TripAlerts;
 /** The alerts dialog's body loads on first open, so the app entry carries none of it. */
 function LazyAlerts({regionId}: {regionId: string}) {
   const [View, setView] = useState<{c: AlertsView} | null>(null);
-  const [error, setError] = useState('');
-  useEffect(() => { import('./TripAlerts.tsx').then(m => setView({c: m.TripAlerts}), () => setError('Your alerts could not load. Try again when you are online.')); }, []);
-  return View ? <View.c regionId={regionId} target={species.peek()} /> : <p role="status">{error || 'Loading your alerts…'}</p>;
+  const [failed, setFailed] = useState(false), lang = language.value;
+  useEffect(() => { import('./TripAlerts.tsx').then(m => setView({c: m.TripAlerts}), () => setFailed(true)); }, []);
+  return View ? <View.c regionId={regionId} target={species.peek()} /> : <p role="status">{t(failed ? 'accountMenu.alertsError' : 'accountMenu.alertsLoading', lang)}</p>;
 }
 
 /** `inline`: the panel opens in the flow (the mobile sheet's footer) instead of under the button. */
@@ -44,7 +51,7 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
   const [tour, setTour] = useState<TourState>(null);
   const root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null), panel = useRef<HTMLDivElement>(null), tourWasOpen = useRef(false);
   const id = useId();
-  const s = session.value, b = boat.value, regionId = region.value;
+  const s = session.value, b = boat.value, regionId = region.value, lang = language.value;
 
   useEffect(() => {
     void ensureSession();
@@ -89,53 +96,53 @@ export function AccountMenu({inline = false}: {inline?: boolean} = {}) {
   return (
     <div class="app-account" ref={root} data-inline={inline ? 'true' : undefined} onKeyDown={onDismissKey}>
       <button ref={trigger} type="button" class="ui-button ui-button--quiet app-account-trigger" aria-expanded={open} aria-controls={id}
-        onClick={() => setOpen(!open)}><Icon name="user" size={18} />{accountLabel(s)}</button>
-      <div id={id} ref={panel} class="app-account-panel" hidden={!open} onKeyDown={onKeyDown} aria-label="Account, boat and alerts" role="group">
+        onClick={() => setOpen(!open)}><Icon name="user" size={18} />{accountLabel(s, lang)}</button>
+      <div id={id} ref={panel} class="app-account-panel" hidden={!open} onKeyDown={onKeyDown} aria-label={t('accountMenu.aria', lang)} role="group">
         <section aria-labelledby={`${id}-account`}>
-          <h2 id={`${id}-account`} class="ui-eyebrow">{s.state === 'signed-in' ? (s.name ? `Signed in as ${s.name}` : 'Signed in') : 'Account'}</h2>
-          <p>{ACCOUNT_LINE[s.state]}</p>
+          <h2 id={`${id}-account`} class="ui-eyebrow">{s.state === 'signed-in' ? (s.name ? t('accountMenu.signedInAs', lang, {name: s.name}) : t('accountMenu.signedIn', lang)) : t('accountMenu.account', lang)}</h2>
+          <p>{t(ACCOUNT_LINE[s.state], lang)}</p>
           {s.state === 'signed-in' || s.state === 'signed-out'
             ? <Button variant={s.state === 'signed-out' ? 'primary' : 'ghost'} size="sm" onClick={run(openAccountDialog)}>
-                {s.state === 'signed-out' ? 'Sign in or create an account' : 'Account, passkeys and sign out'}</Button>
+                {t(s.state === 'signed-out' ? 'accountMenu.signInCreate' : 'accountMenu.manage', lang)}</Button>
             : null}
         </section>
         <section aria-labelledby={`${id}-boat`}>
-          <h2 id={`${id}-boat`} class="ui-eyebrow">Your boat</h2>
-          <p>{b?.name ? `Ratings use ${b.name}.` : 'Ratings use the reference 23 ft deep-V walkaround.'} Saved in this browser only.</p>
+          <h2 id={`${id}-boat`} class="ui-eyebrow">{t('accountMenu.boat', lang)}</h2>
+          <p>{b?.name ? t('accountMenu.ratingsNamed', lang, {name: b.name}) : t('accountMenu.ratingsReference', lang)}{' '}{t('accountMenu.browserOnly', lang)}</p>
           <div class="app-account-presets">
             {(b?.presets ?? []).map(p => (
               <Button key={p.id} size="sm" pressed={b?.preset === p.id} data-preset={p.id} onClick={run(() => choosePreset(p.id))}>
-                <span>{p.label}</span><small>{p.detail}</small>
+                <span>{lang === 'es' && Object.hasOwn(PRESET_IDS, p.id) ? t(PRESET_IDS[p.id] as StringId, lang) : p.label}</span><small>{p.detail}</small>
               </Button>
             ))}
           </div>
-          <Button size="sm" variant="quiet" onClick={run(openBoatSheet)}>Enter my exact boat</Button>
+          <Button size="sm" variant="quiet" onClick={run(openBoatSheet)}>{t('accountMenu.exactBoat', lang)}</Button>
         </section>
         <LanguageChoice />
         <section aria-labelledby={`${id}-coordinates`}>
-          <h2 id={`${id}-coordinates`} class="ui-eyebrow">Coordinate format</h2>
-          <p>Saved in this browser. GPX always uses decimal degrees.</p>
-          {([['dd', 'Decimal degrees'], ['ddm', 'Degrees and decimal minutes'], ['dms', 'Degrees minutes seconds']] as const).map(([value, label]) =>
-            <Button key={value} size="sm" pressed={coordinates.value === value} onClick={() => setCoordinateFormat(value)}>{label}</Button>)}
+          <h2 id={`${id}-coordinates`} class="ui-eyebrow">{t('accountMenu.coordinates', lang)}</h2>
+          <p>{t('accountMenu.coordinatesNote', lang)}</p>
+          {COORDINATE_LABELS.map(([value, label]) =>
+            <Button key={value} size="sm" pressed={coordinates.value === value} onClick={() => setCoordinateFormat(value)}>{t(label, lang)}</Button>)}
         </section>
         <section aria-labelledby={`${id}-alerts`}>
-          <h2 id={`${id}-alerts`} class="ui-eyebrow">Trip alerts</h2>
-          <p>{regionId ? 'Save a date, area and comfort limits; get material changes and a day-before assessment.' : 'Choose a port to save trip alerts for it.'}</p>
-          <Button size="sm" icon="bell" disabled={!regionId} onClick={run(() => setAlerts(true))}>Saved-trip alerts</Button>
+          <h2 id={`${id}-alerts`} class="ui-eyebrow">{t('accountMenu.alerts', lang)}</h2>
+          <p>{t(regionId ? 'accountMenu.alertsBlurb' : 'accountMenu.alertsNoRegion', lang)}</p>
+          <Button size="sm" icon="bell" disabled={!regionId} onClick={run(() => setAlerts(true))}>{t('accountMenu.alertsAction', lang)}</Button>
         </section>
         <section aria-labelledby={`${id}-take`}>
-          <h2 id={`${id}-take`} class="ui-eyebrow">Take it with you</h2>
+          <h2 id={`${id}-take`} class="ui-eyebrow">{t('accountMenu.take', lang)}</h2>
           <ul class="app-account-links">
             <li><Button size="sm" variant="quiet" icon="pin" disabled={!regionId} onClick={run(openTrip)}>
-              Trip plan and GPX{tripIds.value.length ? ` · ${tripIds.value.length} saved` : ''}</Button></li>
-            <li><Button size="sm" variant="quiet" icon="download" disabled={!regionId} onClick={run(() => { offlineOpen.value = true; })}>Save for offline</Button></li>
-            <li><Button size="sm" variant="quiet" onClick={run(() => tourAction('replay'))}>Replay controls tour</Button></li>
-            <li><a href="downloads/spot-notes.html" target="_blank" rel="noopener"><Icon name="download" size={16} />Offline spot notes (new tab)</a></li>
+              {t('accountMenu.trip', lang)}{tripIds.value.length ? ` · ${t('accountMenu.tripSaved', lang, {n: tripIds.value.length})}` : ''}</Button></li>
+            <li><Button size="sm" variant="quiet" icon="download" disabled={!regionId} onClick={run(() => { offlineOpen.value = true; })}>{t('accountMenu.offline', lang)}</Button></li>
+            <li><Button size="sm" variant="quiet" onClick={run(() => tourAction('replay'))}>{t('accountMenu.replay', lang)}</Button></li>
+            <li><a href="downloads/spot-notes.html" target="_blank" rel="noopener"><Icon name="download" size={16} />{t('accountMenu.spotNotes', lang)}</a></li>
           </ul>
         </section>
       </div>
       {alerts && regionId
-        ? <PortDialog open onClose={() => { setAlerts(false); trigger.current?.focus(); }} title="Trip alerts"><LazyAlerts regionId={regionId} /></PortDialog>
+        ? <PortDialog open onClose={() => { setAlerts(false); trigger.current?.focus(); }} title={t('accountMenu.alerts', lang)}><LazyAlerts regionId={regionId} /></PortDialog>
         : null}
       {tour !== null ? <ControlsTour step={tour} act={tourAction} /> : null}
     </div>

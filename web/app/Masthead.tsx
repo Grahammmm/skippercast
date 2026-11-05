@@ -7,7 +7,8 @@
 // FE-55: the chat entry links to the Text Advisor's web chat, and only while
 // the advisor is on (SC0452-02: read from the shared /api/session answer).
 import {useEffect} from 'preact/hooks';
-import {CHAT_ENTRY, CHAT_PATH} from '../advisor/entry.ts';
+import {CHAT_PATH} from '../advisor/entry.ts';
+import {language, t, type Language} from '../i18n.ts';
 import {Icon, type IconName} from '../ui/icons.tsx';
 import {ensureSession, session} from '../account.ts';
 import {appView, region, setParams, withParams, type AppView} from '../state.ts';
@@ -15,7 +16,10 @@ import {currentRegionInfo, freshness, regionLoad, retryRegion} from './App.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
 import {DegradedNotice} from '../degraded-notice.tsx';
 
-export const VIEW_LABELS: Readonly<Record<AppView, string>> = {coast: 'Coast', conditions: 'Conditions', history: 'History', fleet: 'Fleet', reports: 'Reports', plan: 'Plan'};
+/** A view's name in `lang` (the catalogue's shell.view.*); rendering passes the language it reads from the signal. */
+export const viewLabel = (view: AppView, lang: Language = 'en'): string => t(`shell.view.${view}`, lang);
+/** The English names, kept for callers that compare against them; the catalogue is their source. */
+export const VIEW_LABELS: Readonly<Record<AppView, string>> = {coast: viewLabel('coast'), conditions: viewLabel('conditions'), history: viewLabel('history'), fleet: viewLabel('fleet'), reports: viewLabel('reports'), plan: viewLabel('plan')};
 /** The tab icons of the mobile nav (§ 6 mobile). */
 export const VIEW_ICONS: Readonly<Record<AppView, IconName>> = {coast: 'map', conditions: 'wind', history: 'history', fleet: 'fleet', reports: 'chart', plan: 'chart'};
 /** The masthead's views: all five (FE-52 adds Reports). */
@@ -23,7 +27,7 @@ export const MASTHEAD_VIEWS: readonly AppView[] = ['coast', 'conditions', 'histo
 /** The mobile nav's four tabs (§ 6 mobile). Fleet leaves the bar while it has nothing a user can act on
  * (G 2026-11-01, AIS research-only); re-add it when it does. It stays on the desktop masthead and at ?view=fleet. */
 export const TAB_VIEWS: readonly AppView[] = ['coast', 'conditions', 'history', 'reports'];
-const FRESHNESS_LABEL = {ok: 'Every reading is fresh', stale: 'A reading is stale', offline: 'Offline', unknown: 'No readings yet'} as const;
+
 
 /** The ?view= value for a masthead view: coast is the default and is not written. */
 export const viewParam = (v: AppView): string | null => (v === 'coast' ? null : v);
@@ -48,31 +52,31 @@ export function Location() {
   const info = currentRegionInfo();
   const load = regionLoad.value;
   const state = load?.id === region.value ? load.state : null;
-  const missing = state === 'missing';
+  const missing = state === 'missing', lang = language.value;
   return (
     <>
       <span class="app-location ui-mono" data-region={region.value ?? ''}>
-        {info ? <>{info.name} <span class="app-location-coords">{coordinates(info.center)}</span></> : missing ? `"${region.value}"` : region.value ? `${titleCase(region.value)} —` : 'No port chosen'}
+        {info ? <>{info.name} <span class="app-location-coords">{coordinates(info.center)}</span></> : missing ? `"${region.value}"` : region.value ? `${titleCase(region.value)} —` : t('shell.location.none', lang)}
       </span>
-      {state === 'loading' ? <span role="status">Loading region…</span> : null}
-      {state === 'error' ? <span role="status">Region details unavailable. <button type="button" onClick={retryRegion}>Retry region details</button></span> : null}
-      {missing ? <span role="status">There is no region called "{region.value}". <a href="/">Choose a port</a></span> : null}
+      {state === 'loading' ? <span role="status">{t('shell.location.loading', lang)}</span> : null}
+      {state === 'error' ? <span role="status">{t('shell.location.error', lang)}{' '}<button type="button" onClick={retryRegion}>{t('shell.location.retry', lang)}</button></span> : null}
+      {missing ? <span role="status">{t('shell.location.missing', lang, {region: region.value ?? ''})}{' '}<a href="/">{t('shell.location.choose', lang)}</a></span> : null}
     </>
   );
 }
 
 /** The views as ?view= links; `icons` adds each view's tab icon and lists the four tabs (the mobile nav). */
 export function ViewNav({href, icons = false, class: cls}: {href?: string; icons?: boolean; class?: string} = {}) {
-  const current = appView.value;
+  const current = appView.value, lang = language.value;
   const base = href ?? (typeof location === 'undefined' ? 'https://skippercast.com/map' : location.href);
   return (
-    <nav aria-label="Views" class={cls}>
+    <nav aria-label={t('shell.views', lang)} class={cls}>
       <ul class="app-views">
         {(icons ? TAB_VIEWS : MASTHEAD_VIEWS).map(v => (
           <li key={v}>
             <a href={withParams(base, {view: viewParam(v)})} aria-current={v === current ? 'page' : undefined} data-view={v}
               onClick={event => { event.preventDefault(); setParams({view: viewParam(v)}); }}>
-              {icons ? <Icon name={VIEW_ICONS[v]} size={18} /> : null}{VIEW_LABELS[v]}
+              {icons ? <Icon name={VIEW_ICONS[v]} size={18} /> : null}{viewLabel(v, lang)}
             </a>
           </li>
         ))}
@@ -82,9 +86,10 @@ export function ViewNav({href, icons = false, class: cls}: {href?: string; icons
 }
 
 export function FreshnessDot() {
-  const fresh = freshness.value;
+  const fresh = freshness.value, lang = language.value;
+  const state = {ok: t('shell.fresh.ok', lang), stale: t('shell.fresh.stale', lang), offline: t('shell.fresh.offline', lang), unknown: t('shell.fresh.unknown', lang)}[fresh.state];
   return (
-    <span class="app-fresh" role="status" data-state={fresh.state} aria-label={`Freshness: ${FRESHNESS_LABEL[fresh.state]}`}>
+    <span class="app-fresh" role="status" data-state={fresh.state} aria-label={t('shell.fresh', lang, {state})}>
       <span class="app-fresh-dot" aria-hidden="true"></span>
       <span class="ui-mono">{fresh.age ?? '—'}</span>
     </span>
@@ -101,9 +106,9 @@ export {DegradedNotice};
  */
 export function ChatEntry() {
   useEffect(() => { void ensureSession(); }, []);
-  const current = session.value;
+  const current = session.value, lang = language.value;
   return current.state !== 'loading' && current.state !== 'offline' && current.advisor
-    ? <a class="ui-button ui-button--quiet" href={CHAT_PATH} data-advisor-entry>{CHAT_ENTRY}</a> : null;
+    ? <a class="ui-button ui-button--quiet" href={CHAT_PATH} data-advisor-entry>{t('shell.chat', lang)}</a> : null;
 }
 
 export function Masthead({href}: {href?: string} = {}) {
