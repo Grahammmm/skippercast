@@ -139,3 +139,27 @@ test('strip has twelve word-labelled cells, safe link and no promises; Condition
     assert.doesNotMatch(view(), /class="app-season"/); assert.match(view(), /Current CDFW ocean fishing rules/);
   } finally { await rm(dir, {recursive: true, force: true}); }
 });
+test('structured 50-fathom access is Open · limits with or without prose; other access values are unchanged', () => {
+  const d = data(), p = d.species.lingcod, full = extra => [{start: d.valid_from, end: d.valid_through, ...extra}];
+  for (const access of ['shoreward-50fm', 'seaward-50fm']) for (const restriction of [undefined, 'Synthetic limits']) {
+    p.windows = full({access, restriction});
+    assert.ok(seasonYear(d, 'lingcod', region, 2026).months.every(m => m.state === 'limits' && m.label === 'Open · limits'), `${access} ${restriction}`);
+  }
+  for (const access of [undefined, '', 'unknown', 'SHOREWARD-50FM']) { p.windows = full({access}); assert.equal(month(d, 1).state, 'open', `access ${access}`); }
+  p.windows = full({access: 'seaward-50fm', requires_opening_review: true}); assert.equal(month(d, 1).state, 'scheduled');
+  p.windows = full({access: 'seaward-50fm', geography: {kind: 'latitude-band', south: 34, north: 36, source_id: p.source_ids[0], note: 'Synthetic area'}}); assert.equal(month(d, 1).state, 'area');
+  p.windows = [{start: '2026-01-01', end: '2026-01-15', access: 'shoreward-50fm'}];
+  assert.equal(month(d, 1).state, 'part'); assert.equal(month(d, 1).label, 'Part open: 1–15');
+  p.windows = [{start: '2026-01-01', end: '2026-01-10', access: 'shoreward-50fm'}, {start: '2026-01-11', end: '2026-01-15'}];
+  assert.equal(month(d, 1).label, 'Part open: 1–15', 'limited and open days form one run');
+  p.windows = [];
+  assert.equal(month(d, 1).state, 'closed');
+  d.species.rockfish.windows = full({}); p.windows = full({access: 'shoreward-50fm'});
+  assert.equal(month(d, 1, 'reef').state, 'limits');
+  d.species.rockfish.windows = [];
+  assert.equal(month(d, 1, 'reef').state, 'closed', 'a closed member wins over a limited one');
+  d.species.rockfish.windows = full({}); d.rules_review_status = 'pending';
+  assert.equal(month(d, 1, 'reef').state, 'not-reviewed');
+  d.rules_review_status = 'reviewed'; d.valid_from = '2026-06-01';
+  assert.equal(month(d, 1, 'reef').state, 'not-reviewed', 'outside the review interval');
+});
