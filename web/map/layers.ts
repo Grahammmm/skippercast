@@ -18,7 +18,7 @@ import type {RailId} from '../profile.ts';
 import type {ChartMark} from './coastline.ts';
 import type {Palette, PaletteKey} from './palette.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from './style.ts';
-import {STATION_BASIS} from './station-model.ts';
+import {t, type Language, type StringId} from '../i18n.ts';
 
 /** Where a layer draws: the MapLibre Chart, the packages/coast terrain (2D and 3D), or both. */
 export type LayerPresentation = 'chart' | 'terrain';
@@ -101,109 +101,124 @@ const entry = (e: Omit<LayerEntry, 'sources' | 'legend' | 'time'> & Partial<Pick
   Object.freeze({sources: [], legend: [], time: STATIC, ...e});
 
 /** § 9 draw order, bottom to top. The ENC chart sits with the bases, above the aerial. */
-export const LAYERS: readonly LayerEntry[] = Object.freeze([
-  entry({id: 'basemap', label: 'Basemap', control: 'base', presentations: ['chart'], sources: [BASEMAP_SOURCE], attribution: BASEMAP_ATTRIBUTION,
-    basis: 'OpenStreetMap data in a Protomaps extract, rebuilt quarterly; the build date names the archive.', task: 'FE-10'}),
-  entry({id: 'aerial', label: 'Aerial', control: 'base', presentations: ['chart'],
-    basis: 'USGS/USDA NAIP natural-colour mosaic, dated imagery.', task: 'FE-23'}),
-  entry({id: 'chart', label: 'Chart detail', control: 'base', presentations: ['chart'], sources: [ENC_SOURCE], attribution: ENC_ATTRIBUTION, gate: 'zoom ≥ 10',
-    basis: 'NOAA electronic navigational chart display service, drawn from zoom 10; for planning, never for navigation.', task: 'FE-11'}),
+const build = (lang: Language): readonly LayerEntry[] => Object.freeze([
+  entry({id: 'basemap', label: copy('basemap', 'label', lang), control: 'base', presentations: ['chart'], sources: [BASEMAP_SOURCE], attribution: BASEMAP_ATTRIBUTION,
+    basis: copy('basemap', 'basis', lang), task: 'FE-10'}),
+  entry({id: 'aerial', label: copy('aerial', 'label', lang), control: 'base', presentations: ['chart'],
+    basis: copy('aerial', 'basis', lang), task: 'FE-23'}),
+  entry({id: 'chart', label: copy('chart', 'label', lang), control: 'base', presentations: ['chart'], sources: [ENC_SOURCE], attribution: ENC_ATTRIBUTION, gate: 'zoom ≥ 10',
+    basis: copy('chart', 'basis', lang), task: 'FE-11'}),
   // The renderer always draws the terrain itself; the Seafloor entry holds its options and its reefs and pins (FE-80).
-  entry({id: 'relief', label: 'Terrain relief', control: 'seafloor', presentations: ['terrain'],
-    basis: 'Reviewed regional terrain and imagery, checked by hash in the browser before it draws.', task: 'FE-80'}),
-  entry({id: 'water-temp', label: 'Water temp', control: 'water-temp', presentations: ['chart'], time: ['observed'], legend: [{label: 'Cold to warm', swatch: 'sst0'}],
-    basis: 'The bound coast report\'s daily sea-surface temperature analysis, or else the region\'s own published analysis checked by hash in the browser, named with its product, grid and age where it draws and withheld past its 72-hour age limit; surface water only, neither bottom temperature nor a forecast.', task: 'FE-16'}),
-  entry({id: 'water-temp-contours', label: 'Water temp contours', control: 'water-temp', presentations: ['chart'], time: ['observed'],
-    basis: 'Half-degree Fahrenheit contours of the same analysis, labelled at whole degrees.', task: 'FE-16'}),
+  entry({id: 'relief', label: copy('relief', 'label', lang), control: 'seafloor', presentations: ['terrain'],
+    basis: copy('relief', 'basis', lang), task: 'FE-80'}),
+  entry({id: 'water-temp', label: copy('water-temp', 'label', lang), control: 'water-temp', presentations: ['chart'], time: ['observed'], legend: [{label: copy('water-temp', 'legend0', lang), swatch: 'sst0'}],
+    basis: copy('water-temp', 'basis', lang), task: 'FE-16'}),
+  entry({id: 'water-temp-contours', label: copy('water-temp-contours', 'label', lang), control: 'water-temp', presentations: ['chart'], time: ['observed'],
+    basis: copy('water-temp-contours', 'basis', lang), task: 'FE-16'}),
   // CI6-03: its own rail entry, off by default, because Water temp (on by default for Shore) must not turn it on.
-  entry({id: 'sst-contrast', label: 'Temp contrast', control: 'sst-contrast', presentations: ['chart'], time: ['observed'], sources: [CONTRAST_SOURCE],
+  entry({id: 'sst-contrast', label: copy('sst-contrast', 'label', lang), control: 'sst-contrast', presentations: ['chart'], time: ['observed'], sources: [CONTRAST_SOURCE],
     attribution: 'NOAA CoastWatch SST analysis',
-    legend: [{label: 'Temperature change per distance, °F per nautical mile', swatch: 'contrast1'}],
-    basis: 'The region\'s published daily sea-surface temperature analysis, partly interpolated, with gaps under cloud filled, drawn as the change in temperature per nautical mile only in grid cells where the change across neighbouring cells exceeds their summed analysis error; named with its product, grid and age where it draws and withheld past its 72-hour age limit. Surface water only; a contrast cell is not a fish or catch location.',
+    legend: [{label: copy('sst-contrast', 'legend0', lang), swatch: 'contrast1'}],
+    basis: copy('sst-contrast', 'basis', lang),
     task: 'CI6-03'}),
   // BF-sst-fronts: observed fronts as edges with their age and an uncertainty band; its own rail entry, off by default, beside (never in place of) Temp contrast.
-  entry({id: 'sst-fronts', label: 'Temp fronts', control: 'sst-fronts', presentations: ['chart'], time: ['observed'], sources: [FRONTS_SOURCE],
+  entry({id: 'sst-fronts', label: copy('sst-fronts', 'label', lang), control: 'sst-fronts', presentations: ['chart'], time: ['observed'], sources: [FRONTS_SOURCE],
     attribution: 'NOAA CoastWatch SST analysis',
-    legend: [{label: 'Temperature front: line, with its uncertainty band', swatch: 'contrast2'}],
-    basis: 'Offshore temperature fronts found in the region\'s published daily sea-surface temperature analysis, drawn as an edge with a band whose half-width is the analysis\'s own stated error divided by the front\'s strength, named with the age of its observation and withheld past its feed age limit (never past 72 hours). Surface water only; a front is an edge to search along, not a fish or catch location.',
+    legend: [{label: copy('sst-fronts', 'legend0', lang), swatch: 'contrast2'}],
+    basis: copy('sst-fronts', 'basis', lang),
     task: 'CI6-15'}),
-  entry({id: 'chlorophyll', label: 'Chlorophyll', control: 'chlorophyll', presentations: ['chart'], sources: ['chlorophyll'], time: ['observed'],
+  entry({id: 'chlorophyll', label: copy('chlorophyll', 'label', lang), control: 'chlorophyll', presentations: ['chart'], sources: ['chlorophyll'], time: ['observed'],
     legend: [{label: '≤0.01 mg/m³', swatch: 'depth0'}, {label: '0.1 mg/m³', swatch: 'blue'}, {label: '1 mg/m³', swatch: 'mint'}, {label: '10 mg/m³', swatch: 'amber'}, {label: '100 mg/m³', swatch: 'coral'}],
     attribution: 'NOAA NESDIS STAR / CoastWatch',
-    basis: 'NOAA NPP/NOAA-20 merged OCI surface chlorophyll proxy on its native 0.0375° grid, labelled with its sample date and withheld at the manifest age limit; cloud gaps stay empty. Not bait or fish.', task: 'CI6-08'}),
-  entry({id: 'swell', label: 'Swell', control: 'swell', presentations: ['chart'], time: ['hour'], legend: [{label: 'Swell height', swatch: 'swell2'}],
-    basis: 'NOAA GFS-Wave model forecast (wcoast.0p16 grid) of the primary swell, wind sea or secondary swell on the region\'s forecast grid, from a run issued within 36 hours, and where a coast report binds, its nearshore model sites (CDIP MOP) as rings; model output, not buoy observations.', task: 'FE-17'}),
-  entry({id: 'wind', label: 'Wind', control: 'swell', presentations: ['chart'], sources: ['wind-arrows', 'wind-labels'], time: ['hour'],
-    attribution: 'NOAA NCEP', legend: [{label: '10 m wind · arrows toward · knots', swatch: 'text'}],
-    basis: 'NOAA GFS 10 m wind from the native approximately 13 km forecast tiles, sampled on the regional forecast grid, not observations; runs older than 36 hours or retrievals older than 6 hours are withheld. Arrows point toward; labels are knots.', task: 'CI6-10'}),
+    basis: copy('chlorophyll', 'basis', lang), task: 'CI6-08'}),
+  entry({id: 'swell', label: copy('swell', 'label', lang), control: 'swell', presentations: ['chart'], time: ['hour'], legend: [{label: copy('swell', 'legend0', lang), swatch: 'swell2'}],
+    basis: copy('swell', 'basis', lang), task: 'FE-17'}),
+  entry({id: 'wind', label: copy('wind', 'label', lang), control: 'swell', presentations: ['chart'], sources: ['wind-arrows', 'wind-labels'], time: ['hour'],
+    attribution: 'NOAA NCEP', legend: [{label: copy('wind', 'legend0', lang), swatch: 'text'}],
+    basis: copy('wind', 'basis', lang), task: 'CI6-10'}),
   // CI6-13: shelf contours from reviewed survey grids, every zoom, Chart only; the ENC base above zoom 10 is unchanged.
-  entry({id: 'depth-contours', label: 'Depth contours', control: 'always', presentations: ['chart'], sources: [DEPTH_CONTOURS_SOURCE],
-    attribution: 'USGS · CSUMB survey grids', legend: [{label: 'Depth contour every 30 ft; heavier every 150 ft', swatch: 'depth1'}, {label: 'Survey edge: no reviewed grid beyond', swatch: 'muted'}],
-    basis: 'Shelf depth contours every 30 ft to 600 ft, traced from reviewed seafloor survey grids (in Morro Bay the USGS/CSUMB 2 m grids, surveyed 2008, averaged to 16 m blocks) and withheld one year after their source review; depths are feet below each survey\'s own vertical datum, which the grids leave unverified (the USGS report names MLLW), so they are not chart depths and not for navigation, and the lines stop at the dashed survey edge where no reviewed grid continues.', task: 'CI6-13'}),
+  entry({id: 'depth-contours', label: copy('depth-contours', 'label', lang), control: 'always', presentations: ['chart'], sources: [DEPTH_CONTOURS_SOURCE],
+    attribution: 'USGS · CSUMB survey grids', legend: [{label: copy('depth-contours', 'legend0', lang), swatch: 'depth1'}, {label: copy('depth-contours', 'legend1', lang), swatch: 'muted'}],
+    basis: copy('depth-contours', 'basis', lang), task: 'CI6-13'}),
 
-  entry({id: 'mpas', label: 'Marine protected areas', control: 'always', presentations: ['chart', 'terrain'],
+  entry({id: 'mpas', label: copy('mpas', 'label', lang), control: 'always', presentations: ['chart', 'terrain'],
     terrain: {kind: 'fill', color: 'mpaFill', opacity: 'mpaFillOpacity', outline: 'mpaLine'}, sources: [MPA_SOURCE], attribution: MPA_ATTRIBUTION,
-    legend: [{label: 'Marine protected area', swatch: 'mpaLine'}],
-    basis: 'CDFW marine protected areas, ds582; boundaries are context, rules are in the regulations page.', task: 'FE-19'}),
-  entry({id: 'habitat', label: 'Habitat', control: 'always', presentations: ['chart'], gate: 'zoom ≥ 10', sources: [SURVEY_SOURCE, GEOLOGY_SOURCE],
-    legend: [{label: 'Hard bottom', swatch: 'depth1'}, {label: 'Mixed bottom', swatch: 'muted'}, {label: 'Soft bottom', swatch: 'amber'}, {label: 'Kelp', swatch: 'mint'}],
-    basis: 'Survey habitat and geology polygons, each with its survey and year.', task: 'FE-18'}),
-  entry({id: 'shore-runs', label: 'Shore runs', control: 'always', presentations: ['chart'], gate: 'profile = shore', sources: ['shore-runs', 'shore-access'],
-    legend: [{label: 'Shore run; fainter without a surf model, grey on hold', swatch: 'amber'}, {label: 'Public access point', swatch: 'amber'}],
-    basis: 'NOAA ESI 2006 sandy-shore runs and public access points from the California Coastal Commission inventory, each with its source, access and rules review dates; held while the protected-area or marine alert check is unavailable, a marine alert covers the area or the county posts a beach-health advisory, closure or warning there; hidden when source review expires. Review dates remain historical context. Ranking does not establish legal permission.', task: 'FE-36'}),
-  entry({id: 'seafloor', label: 'Seafloor', control: 'seafloor', presentations: ['chart'], sources: [SEAFLOOR_SOURCE],
-    legend: [{label: 'Strongest grade or fit', swatch: 'depth0'}, {label: 'Weakest grade or fit', swatch: 'depth2'}, {label: 'Surveyed cell', swatch: 'depth3'}],
-    basis: 'Terrain screening of original seafloor surveys (grids of 16 m or finer, 250 m coverage cells) at nominal 25–300 ft in each survey\'s own vertical datum, drawn only while its 35-day legal screen is current.', task: 'FE-14'}),
+    legend: [{label: copy('mpas', 'legend0', lang), swatch: 'mpaLine'}],
+    basis: copy('mpas', 'basis', lang), task: 'FE-19'}),
+  entry({id: 'habitat', label: copy('habitat', 'label', lang), control: 'always', presentations: ['chart'], gate: 'zoom ≥ 10', sources: [SURVEY_SOURCE, GEOLOGY_SOURCE],
+    legend: [{label: copy('habitat', 'legend0', lang), swatch: 'depth1'}, {label: copy('habitat', 'legend1', lang), swatch: 'muted'}, {label: copy('habitat', 'legend2', lang), swatch: 'amber'}, {label: copy('habitat', 'legend3', lang), swatch: 'mint'}],
+    basis: copy('habitat', 'basis', lang), task: 'FE-18'}),
+  entry({id: 'shore-runs', label: copy('shore-runs', 'label', lang), control: 'always', presentations: ['chart'], gate: 'profile = shore', sources: ['shore-runs', 'shore-access'],
+    legend: [{label: copy('shore-runs', 'legend0', lang), swatch: 'amber'}, {label: copy('shore-runs', 'legend1', lang), swatch: 'amber'}],
+    basis: copy('shore-runs', 'basis', lang), task: 'FE-36'}),
+  entry({id: 'seafloor', label: copy('seafloor', 'label', lang), control: 'seafloor', presentations: ['chart'], sources: [SEAFLOOR_SOURCE],
+    legend: [{label: copy('seafloor', 'legend0', lang), swatch: 'depth0'}, {label: copy('seafloor', 'legend1', lang), swatch: 'depth2'}, {label: copy('seafloor', 'legend2', lang), swatch: 'depth3'}],
+    basis: copy('seafloor', 'basis', lang), task: 'FE-14'}),
   // FE-21: v1's own sentences, verbatim (dist/charter-grounds.js; dist/commercial-ais.html), pinned by tests/test_fleet_public_layers.mjs.
   // On the terrain the hatch reads as a faint fill of the same colour: the drape has no line pattern.
-  entry({id: 'charter-grounds', label: 'Charter grounds', control: 'fleet', presentations: ['chart', 'terrain'],
+  entry({id: 'charter-grounds', label: copy('charter-grounds', 'label', lang), control: 'fleet', presentations: ['chart', 'terrain'],
     terrain: {kind: 'fill', color: 'amber', opacity: 0.15, outline: 'amber'}, sources: ['charter-grounds', 'charter-grounds-hatch'],
-    legend: [{label: 'Charter ground', swatch: 'amber'}],
-    basis: 'These are named areas from published trip records, not AIS-confirmed fishing positions. Only lingcod and rockfish are supported by this layer. The outlines are our survey-depth-screened search windows, not published charter boundaries.', task: 'FE-21'}),
-  entry({id: 'commercial-ais', label: 'Commercial AIS 2024', control: 'fleet', presentations: ['chart'], sources: ['commercial-ais'], attribution: 'Global Fishing Watch · CC BY-NC 4.0',
-    legend: [{label: 'Apparent fishing hours', swatch: 'amber'}],
-    basis: 'These two months are a dated sample, not a continuous season or a live fleet feed. Each outline preserves an original 0.01° statistical grid cell, about 0.9 × 1.1 km here. Apparent fishing effort is not proof of fishing or catches.', task: 'FE-21'}),
-  entry({id: 'fleet-heat', label: 'Fleet heat', control: 'fleet', presentations: ['chart'], gate: 'admin', sources: ['fleet-heat'],
-    legend: [{label: 'Activity heat · aggregate cells', swatch: 'amber'}],
-    basis: 'Inferred from movement; filters in the Fleet view.', task: 'FE-24'}),
-  entry({id: 'fleet-tracks', label: 'Fleet tracks', control: 'fleet', presentations: ['chart'], gate: 'admin', sources: ['fleet-tracks'],
-    legend: [{label: 'Trip tracks · by segment; gaps dashed', swatch: 'amber'}],
-    basis: 'Inferred from movement; filters in the Fleet view.', task: 'FE-24'}),
-  entry({id: 'fleet-events', label: 'Fleet events', control: 'fleet', presentations: ['chart'], gate: 'admin', sources: ['fleet-events'],
-    legend: [{label: 'Activity stops · sized by dwell', swatch: 'amber'}],
-    basis: 'Inferred from movement; filters in the Fleet view.', task: 'FE-24'}),
-  entry({id: 'currents', label: 'Currents', control: 'currents', presentations: ['chart', 'terrain'], time: ['hour', 'observed'], legend: [{label: 'Surface flow', swatch: 'flow'}, {label: 'Fastest fifth', swatch: 'flowFast'}],
-    basis: 'WCOFS surface forecast at about 4 km, or HF radar observed within 6 hours at 1 or 6 km; arrows follow the toward-bearing and their motion is illustrative.', task: 'FE-15'}),
-  entry({id: 'clouds', label: 'Clouds', control: 'clouds', presentations: ['chart'], time: ['observed'],
-    basis: 'GOES infrared, observed frames within 90 minutes; a loop of real frames, never a forecast.', task: 'FE-22'}),
+    legend: [{label: copy('charter-grounds', 'legend0', lang), swatch: 'amber'}],
+    basis: copy('charter-grounds', 'basis', lang), task: 'FE-21'}),
+  entry({id: 'commercial-ais', label: copy('commercial-ais', 'label', lang), control: 'fleet', presentations: ['chart'], sources: ['commercial-ais'], attribution: 'Global Fishing Watch · CC BY-NC 4.0',
+    legend: [{label: copy('commercial-ais', 'legend0', lang), swatch: 'amber'}],
+    basis: copy('commercial-ais', 'basis', lang), task: 'FE-21'}),
+  entry({id: 'fleet-heat', label: copy('fleet-heat', 'label', lang), control: 'fleet', presentations: ['chart'], gate: 'admin', sources: ['fleet-heat'],
+    legend: [{label: copy('fleet-heat', 'legend0', lang), swatch: 'amber'}],
+    basis: copy('fleet-heat', 'basis', lang), task: 'FE-24'}),
+  entry({id: 'fleet-tracks', label: copy('fleet-tracks', 'label', lang), control: 'fleet', presentations: ['chart'], gate: 'admin', sources: ['fleet-tracks'],
+    legend: [{label: copy('fleet-tracks', 'legend0', lang), swatch: 'amber'}],
+    basis: copy('fleet-tracks', 'basis', lang), task: 'FE-24'}),
+  entry({id: 'fleet-events', label: copy('fleet-events', 'label', lang), control: 'fleet', presentations: ['chart'], gate: 'admin', sources: ['fleet-events'],
+    legend: [{label: copy('fleet-events', 'legend0', lang), swatch: 'amber'}],
+    basis: copy('fleet-events', 'basis', lang), task: 'FE-24'}),
+  entry({id: 'currents', label: copy('currents', 'label', lang), control: 'currents', presentations: ['chart', 'terrain'], time: ['hour', 'observed'], legend: [{label: copy('currents', 'legend0', lang), swatch: 'flow'}, {label: copy('currents', 'legend1', lang), swatch: 'flowFast'}],
+    basis: copy('currents', 'basis', lang), task: 'FE-15'}),
+  entry({id: 'clouds', label: copy('clouds', 'label', lang), control: 'clouds', presentations: ['chart'], time: ['observed'],
+    basis: copy('clouds', 'basis', lang), task: 'FE-22'}),
   // #644: the Boat or Kayak range to consider, around the harbor; under the marks so they stay on top.
-  entry({id: 'reach', label: 'Your range', control: 'always', presentations: ['chart'], gate: 'Boat or Kayak with a saved range', sources: ['reach'],
-    legend: [{label: 'Your range: straight line from the harbor, not a route', swatch: 'blue'}],
-    basis: 'The range to consider you saved on this device, drawn as a straight-line circle around the region\'s harbor; the real route is longer, and the ring says nothing about sea state, the bar or fuel.', task: 'FE-51'}),
-  entry({id: 'marks', label: 'Marks', control: 'always', presentations: ['chart', 'terrain'],
+  entry({id: 'reach', label: copy('reach', 'label', lang), control: 'always', presentations: ['chart'], gate: 'Boat or Kayak with a saved range', sources: ['reach'],
+    legend: [{label: copy('reach', 'legend0', lang), swatch: 'blue'}],
+    basis: copy('reach', 'basis', lang), task: 'FE-51'}),
+  entry({id: 'marks', label: copy('marks', 'label', lang), control: 'always', presentations: ['chart', 'terrain'],
     terrain: {kind: 'point', color: 'bg', opacity: 0.75, outline: 'mint', size: 18}, gate: 'Chart: zoom ≥ 10; a density below it. Terrain: no zoom cutoff.', sources: [DENSITY_SOURCE, MARKS_SOURCE],
-    legend: [{label: 'Reef mark; badge: habitat fit, 3 strongest', swatch: 'mint'}, {label: 'Habitat candidates, denser here', swatch: 'depth1'}],
-    basis: 'Atlas reef marks, each with its source survey; on the Chart, below zoom 10 they draw as a density weighted by terrain grade and habitat fit. On terrain, marks have no zoom cutoff.', task: 'FE-18'}),
-  entry({id: 'selection', label: 'Selection', control: 'always', presentations: ['chart'], sources: [SELECTION_SOURCE],
-    basis: 'The selected mark, outlined.', task: 'FE-18'}),
-  entry({id: 'trip-ranked', label: 'Ranked trip spots', control: 'always', presentations: ['chart'], sources: [RANKED_SOURCE], gate: 'a ranked trip plan',
-    legend: [{label: 'Ranked trip spot; number: the planner\'s order', swatch: 'mint'}],
-    basis: 'The trip planner\'s ranked reefs from the current seafloor publication, numbered in its order and drawn while its protected-area check and the marks\' run-time screen are current.', task: 'FE-51'}),
+    legend: [{label: copy('marks', 'legend0', lang), swatch: 'mint'}, {label: copy('marks', 'legend1', lang), swatch: 'depth1'}],
+    basis: copy('marks', 'basis', lang), task: 'FE-18'}),
+  entry({id: 'selection', label: copy('selection', 'label', lang), control: 'always', presentations: ['chart'], sources: [SELECTION_SOURCE],
+    basis: copy('selection', 'basis', lang), task: 'FE-18'}),
+  entry({id: 'trip-ranked', label: copy('trip-ranked', 'label', lang), control: 'always', presentations: ['chart'], sources: [RANKED_SOURCE], gate: 'a ranked trip plan',
+    legend: [{label: copy('trip-ranked', 'legend0', lang), swatch: 'mint'}],
+    basis: copy('trip-ranked', 'basis', lang), task: 'FE-51'}),
   // SC0922-04: the owner's own positions, off by default and session-only (not a rail entry, a link layer or a profile default).
-  entry({id: 'saved-spots', label: 'Your saved spots', control: 'always', presentations: ['chart'], sources: [SAVED_SPOTS_SOURCE], gate: 'signed in, turned on in the legend',
-    basis: 'Your account’s saved positions, shown only to you; protected-area readings are planning context, not permission to fish.', task: 'SC0922-04'}),
-  entry({id: 'stations', label: 'Stations', control: 'stations', presentations: ['chart'], sources: ['stations'], time: ['observed', 'hour'],
-    legend: [{label: 'Buoy observation', swatch: 'blue'}, {label: 'Tide prediction', swatch: 'mint'}, {label: 'Stale or unavailable', swatch: 'muted'}, {label: 'CDIP MOP model site: ring', swatch: 'blue'}],
-    attribution: 'NOAA NDBC · NOAA CO-OPS · CDIP/Scripps', basis: STATION_BASIS, task: 'CI6-18'}),
-  entry({id: 'coastline', label: 'Coastline', control: 'always', presentations: ['chart'], sources: [COASTLINE_SOURCE], attribution: COASTLINE_ATTRIBUTION,
-    basis: 'NOAA NGS CUSP shoreline, 1994–2010 sources.', task: 'FE-11'}),
+  entry({id: 'saved-spots', label: copy('saved-spots', 'label', lang), control: 'always', presentations: ['chart'], sources: [SAVED_SPOTS_SOURCE], gate: 'signed in, turned on in the legend',
+    basis: copy('saved-spots', 'basis', lang), task: 'SC0922-04'}),
+  entry({id: 'stations', label: copy('stations', 'label', lang), control: 'stations', presentations: ['chart'], sources: ['stations'], time: ['observed', 'hour'],
+    legend: [{label: copy('stations', 'legend0', lang), swatch: 'blue'}, {label: copy('stations', 'legend1', lang), swatch: 'mint'}, {label: copy('stations', 'legend2', lang), swatch: 'muted'}, {label: copy('stations', 'legend3', lang), swatch: 'blue'}],
+    attribution: 'NOAA NDBC · NOAA CO-OPS · CDIP/Scripps', basis: copy('stations', 'basis', lang), task: 'CI6-18'}),
+  entry({id: 'coastline', label: copy('coastline', 'label', lang), control: 'always', presentations: ['chart'], sources: [COASTLINE_SOURCE], attribution: COASTLINE_ATTRIBUTION,
+    basis: copy('coastline', 'basis', lang), task: 'FE-11'}),
 ]);
+
+/** A registry sentence or label from the catalogue (layer.<id>.label | basis | legend<N>). */
+const copy = (id: string, part: string, lang: Language): string => t(`layer.${id}.${part}` as StringId, lang);
+
+/** The registry by language, built once from the catalogue; no language is read here. English is the compatibility export. */
+const REGISTRY: Readonly<Record<Language, readonly LayerEntry[]>> = Object.freeze({en: build('en'), es: build('es')});
+/** The English registry: the ids, order, sources, gates and English copy every reader and test relies on. */
+export const LAYERS: readonly LayerEntry[] = REGISTRY.en;
 
 /** The registry entry for `id`; throws on an unknown id so a typo cannot hide a layer. */
 export function layerEntry(id: string): LayerEntry {
   const found = LAYERS.find(e => e.id === id);
   if (!found) throw new Error(`Unknown map layer ${id}`);
   return found;
+}
+
+/** A layer's label, basis sentence and prose legend rows in `lang`; the swatches and numeric rows are the registry's own. Throws on an unknown id. */
+export function layerCopy(id: string, lang: Language = 'en'): Pick<LayerEntry, 'label' | 'basis' | 'legend'> {
+  layerEntry(id);
+  const found = REGISTRY[lang === 'es' ? 'es' : 'en'].find(e => e.id === id)!;
+  return {label: found.label, basis: found.basis, legend: found.legend};
 }
 
 /** The layer that owns MapLibre source `sourceId`, or null for a source no entry owns. */
@@ -230,7 +245,9 @@ export const railLayers = (rail: LayerControl): LayerEntry[] => LAYERS.filter(e 
  */
 export const drawsIn = (rail: LayerControl, shown: Presentation): boolean =>
   railLayers(rail).some(e => e.presentations.includes(shown === 'chart' ? 'chart' : 'terrain'));
-export const CHART_ONLY = 'Chart only';
+export const CHART_ONLY = t('rail.chartOnly', 'en');
+/** The "Chart only" reason in `lang`. */
+export const chartOnly = (lang: Language = 'en'): string => t('rail.chartOnly', lang);
 
 /** The entries that draw in `presentation`, in draw order. */
 export const layersIn = (presentation: LayerPresentation): LayerEntry[] => LAYERS.filter(e => e.presentations.includes(presentation));
