@@ -37,7 +37,7 @@ export function readDraft(raw,atlas,today) {
   for(const t of waypoints)ids.add(t.id);
   const plan=value?.rankedPlan;
   const rankedPlan=plan&&/^[a-f0-9]{64}$/.test(plan.sha256||'')&&['reef','lingcod','rockfish'].includes(plan.species)
-    &&Array.isArray(plan.priorities)&&plan.priorities.length<=50&&plan.priorities.every(p=>typeof p.id==='string'&&p.id.length<=160&&Number.isInteger(p.rank)&&p.rank>=1&&p.rank<=50)
+    &&Array.isArray(plan.priorities)&&plan.priorities.length<=50&&plan.priorities.every(p=>p&&typeof p==='object'&&!Array.isArray(p)&&typeof p.id==='string'&&p.id.length<=160&&Number.isInteger(p.rank)&&p.rank>=1&&p.rank<=50)
     &&new Set(plan.priorities.map(p=>p.id)).size===plan.priorities.length&&new Set(plan.priorities.map(p=>p.rank)).size===plan.priorities.length ? plan:null;
   for(const p of rankedPlan?.priorities||[])ids.add(p.id);
   return {ids:[...new Set(Array.isArray(value?.ids)?value.ids:[])].filter(id=>ids.has(id)),rankedPlan,
