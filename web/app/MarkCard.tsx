@@ -49,8 +49,7 @@ import {launchOrigin, loadLaunchPoints} from '../launches.ts';
 import {homePortOrigin, loadRegionPorts, plannerPort, regionPorts, savedPortId} from '../ports.ts';
 import {landWater, loadLandWater, loadLandWaterLines} from '../land-water.ts';
 import {harborOrigin, type Origin} from '../ranking.ts';
-import {waterRoute} from '../route.ts';
-import {markDistance, markDistanceLine, straightDistance, type MarkDistance as MarkDistanceResult} from '../mark-distance.ts';
+import {markDistanceLine, routeAfterPaint, straightDistance, type MarkDistance as MarkDistanceResult} from '../mark-distance.ts';
 import {mapFocusTarget} from './map-focus.ts';
 import {MarkForecast} from '../brief/MarkForecast.tsx';
 import type {LatLon} from '../brief/mark-forecast.ts';
@@ -154,8 +153,7 @@ export function MarkDistance({mark}: {mark: Mark}) {
   // The route for this pair, once per stable (region, origin, mark, product, lines) key; a failure is kept, so a re-render never asks again.
   useEffect(() => {
     if (!from || !to || !model || current) return;
-    const timer = setTimeout(() => setRouted({region: id, from, to, model, lines, result: markDistance(from, to, model, lines, waterRoute)}), 0);
-    return () => clearTimeout(timer);
+    return routeAfterPaint(from, to, model, lines, result => setRouted({region: id, from, to, model, lines, result}));
   }, [id, from?.latitude, from?.longitude, to?.latitude, to?.longitude, model, lines, current]);
   // Losing the target (a private pin's access, a cleared mark) erases the displayed result at once.
   useEffect(() => { if (!to && routed) setRouted(null); }, [!to, routed]);

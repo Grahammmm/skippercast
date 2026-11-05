@@ -27,6 +27,7 @@ async function components() {
       export * from './web/map/saved-spots.ts';
       export {SavedSpotsRow, Legend} from './web/app/Legend.tsx';
       export {MarkCard} from './web/app/MarkCard.tsx';
+      export {regionPorts} from './web/ports.ts';
       export {saveMarkSpot} from './web/saved-spots.ts';
       export {chartStyle, createChart, chartMark} from './web/map/chart.ts';
       export {LAYERS, SAVED_SPOTS_SOURCE} from './web/map/layers.ts';
@@ -540,4 +541,54 @@ test('the Chart wiring: a pin click opens the private card without touching the 
   assert.deepEqual(map.data['private-saved-spots'].features, []);
   chart.destroy();
   assert.equal(k.chartMark.value, null);
+});
+
+test('saved_spot_distance_is_ephemeral_and_revocable: a real private card gets a derived line while staying positionless; forged, stale and revoked cards get none', async () => {
+  const k = await components();
+  const h = await harness();
+  await h.turnOn();
+  k.state.profile.value = 'boat'; k.state.region.value = 'morro-bay';
+  k.regionPorts.value = {region: 'morro-bay', state: 'ready', list: [{id: 'a', name: 'Fixture Port', region: 'morro-bay', status: 'active', forecast_point: 'x', forecast_name: 'x', match: [CY, CX - 0.1]}]};
+  const LINE = /data-mark-distance="straight">Fixture Port · \d+\.\d nm straight line/;
+  assert.ok(k.pickSavedSpot(h.pins()[0].properties, mark => { h.chartMark.value = mark; }));
+  const card = h.chartMark.value;
+  assert.equal(card.position, undefined, 'the card itself stays positionless');
+  assert.deepEqual(k.savedSpotDistancePosition(card), east(150), 'a coordinate pair only');
+  assert.ok(!Object.keys(k.savedSpotDistancePosition(card)).some(key => !['latitude', 'longitude'].includes(key)));
+  const html = k.render(k.h(k.MarkCard, {mark: card}));
+  assert.match(html, LINE, 'the derived line');
+  assert.doesNotMatch(html, /Add to trip|GPX|Review &amp; export|Save this spot|app-mark-actions/, 'every action stays absent');
+  for (const secret of [NOTE, OWNER, ROW_ID.slice(0, -2), String(east(150).latitude), String(east(150).longitude)]) assert.ok(!html.includes(secret), `no ${secret}`);
+  assert.match(html, /A saved position, not a recommendation\./);
+  // Forged and copied cards, even with a position of their own, get nothing from the accessor and no line.
+  const forged = {...card, position: east(150)};
+  assert.equal(k.savedSpotDistancePosition(forged), null, 'a copied card');
+  assert.equal(k.savedSpotDistancePosition({id: card.id, name: 'x', kind: 'x', reading: '', source: '', basis: '', position: east(150)}), null, 'a forged card');
+  assert.doesNotMatch(k.render(k.h(k.MarkCard, {mark: forged})), /data-mark-distance/, 'no line for a forged card');
+  // Shore and Spear gain nothing.
+  k.state.profile.value = 'shore';
+  assert.doesNotMatch(k.render(k.h(k.MarkCard, {mark: card})), /data-mark-distance/);
+  k.state.profile.value = 'boat';
+  // Another presentation, then back: access is revoked synchronously and the line goes with it.
+  k.state.presentation.value = '2d';
+  assert.equal(k.savedSpotDistancePosition(card), null, 'not on the Chart');
+  assert.doesNotMatch(k.render(k.h(k.MarkCard, {mark: card})), /data-mark-distance/);
+  k.state.presentation.value = 'chart';
+  assert.deepEqual(k.savedSpotDistancePosition(card), east(150));
+  // A refreshed list replaces the rows: the old card (same key s0) no longer reads, a new card does.
+  k.state.region.value = 'morro-bay';
+  h.who.value = SIGNED_IN();
+  await flush();
+  assert.equal(k.savedSpotDistancePosition(card), null, 'a new session invalidates the old card');
+  await h.turnOn();
+  assert.equal(k.savedSpotDistancePosition(card), null, 'a re-read list has new row objects, so the old card stays dead');
+  assert.ok(k.pickSavedSpot(h.pins()[0].properties, mark => { h.chartMark.value = mark; }));
+  assert.deepEqual(k.savedSpotDistancePosition(h.chartMark.value), east(150));
+  // Turning the layer off revokes it at once.
+  const live = h.chartMark.value;
+  k.setSavedSpotsOn(false);
+  assert.equal(k.savedSpotDistancePosition(live), null, 'off');
+  assert.equal(h.net.calls.length >= 1 && h.net.calls.every(c => c.url === '/api/spots' && (c.init?.method ?? 'GET') === 'GET'), true, 'only the existing list read; the line asks for nothing');
+  k.regionPorts.value = null;
+  h.destroy();
 });

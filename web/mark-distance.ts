@@ -7,7 +7,7 @@
 import {distanceNm} from '../dist/spot-ranking.js';
 import {ROUTE_BUDGET, type RouteFn} from './ranking.ts';
 import type {LandWaterLines, LandWaterModel} from './land-water.ts';
-import type {RouteFailure, RoutePoint} from './route.ts';
+import {waterRoute, type RouteFailure, type RoutePoint} from './route.ts';
 import {durationText, runMinutes} from './brief/run.ts';
 import {t, type Language} from './i18n.ts';
 
@@ -49,4 +49,15 @@ export function markDistanceLine(originName: string, d: MarkDistance, speedKn: n
   const min = speedKn === null ? null : runMinutes(d.nm, speedKn);
   const run = min === null ? '' : t('where.run', lang, {bound: d.basis === 'water' ? '' : '≥ ', duration: durationText(min)});
   return `${originName} · ${t(d.basis === 'water' ? 'where.distance.water' : 'where.distance.straight', lang, {nm: shown})}${run}`;
+}
+
+/**
+ * The deferred water route for one pair: nothing is searched while the card paints; one task after the paint asks `route` once and
+ * hands the result to `done`. The returned cancel stops a task not yet run, and a result is never delivered after it.
+ */
+export function routeAfterPaint(from: unknown, to: unknown, model: LandWaterModel | null, lines: LandWaterLines | null | false, done: (d: MarkDistance | null) => void,
+  route: RouteFn = waterRoute, schedule: (fn: () => void, ms: number) => unknown = setTimeout, cancel: (id: never) => void = clearTimeout): () => void {
+  let live = true;
+  const id = schedule(() => { if (live) { live = false; done(markDistance(from, to, model, lines, route)); } }, 0);
+  return () => { live = false; cancel(id as never); };
 }
