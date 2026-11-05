@@ -41,9 +41,9 @@ import {RulesLine} from './RulesCard.tsx';
 import {session, type Session} from '../account.ts';
 import {resultMessage, saveMarkSpot, spotCandidate, uncertainResult, type SpotResult} from '../saved-spots.ts';
 import {language, t} from '../i18n.ts';
-import {resolveMarkCopy} from '../mark-copy.ts';
+import {copyText, resolveMarkCopy} from '../mark-copy.ts';
 import {addPlaceToTrip, addToTrip, placeTripId, reviewPlace, reviewTrip, tripIds} from '../trip.ts';
-import {regulationsLink} from '../map/habitat.ts';
+import {regulationsCopy, regulationsLink} from '../map/habitat.ts';
 import {drawnSpots} from '../map/ranked.ts';
 import {SAVED_CARD_PREFIX, savedSpotDistancePosition} from '../map/saved-spots.ts';
 import {cruiseSpeed} from '../limits.ts';
@@ -239,6 +239,8 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
     ? {id: selected.id, name: (survey && selected.kind === t('mark.kind.kelp', 'en') ? `${t('mark.kind.kelp', 'en')} · ${selected.name}` : selected.name).slice(0, 80), latitude: at.latitude, longitude: at.longitude, shore: survey ? ![t('mark.kind.hard', 'en'), t('mark.kind.mixed', 'en')].includes(selected.kind) : /\bshore\b/i.test(`${selected.name} ${selected.kind}`)} : null;
   const added = spot ? tripIds.value.includes(spot) : !!where && tripIds.value.includes(survey ? `user:survey-${where.id.slice(7).replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}` : placeTripId(where.id));
   const regulations = selected.regulations ?? (habitat && markData.value?.region ? regulationsLink(markData.value.region) : undefined);
+  // The fallback link (a habitat card with no regulations of its own) is named in the page's language too.
+  const regulationsName = !regulations || selected.regulations ? '' : lang === 'es' && markData.value?.region ? copyText(regulationsCopy(markData.value.region), lang) : regulations.label;
   const close = () => {
     const back = returnTo?.isConnected ? returnTo : mapFocusTarget(document);
     returnTo = null;
@@ -272,7 +274,7 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
         <Button size="sm" icon="download" disabled={!spot && !where} onClick={() => { if (spot) void reviewTrip(spot); else if (where) void reviewPlace(where); }}>{selected.trip ? t('mark.review', lang) : 'GPX'}</Button>
         {regulations ? (
           <a class="ui-button ui-button--ghost ui-button--sm" href={regulations.href} target="_blank" rel="noopener"
-            aria-label={t('mark.regulationsAria', lang, {label: selected.regulations ? shown.regulationsLabel! : regulations.label})}>
+            aria-label={t('mark.regulationsAria', lang, {label: selected.regulations ? shown.regulationsLabel! : regulationsName})}>
             <Icon name="shield" size={16} />{t('mark.regulations', lang)}
           </a>
         ) : <Button size="sm" icon="shield" disabled>{t('mark.regulations', lang)}</Button>}
