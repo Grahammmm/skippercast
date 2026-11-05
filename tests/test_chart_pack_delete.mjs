@@ -59,7 +59,7 @@ async function harness(t, responses) {
       b.onResolve({filter: /.*/}, args => {
         if (args.importer !== trip) return;
         if (args.path === 'preact/hooks') return {path: resolve(inventory, 'runtime.mjs')};
-        if (['../ui/Button.tsx', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-ocean-lines.ts', './App.tsx'].includes(args.path))
+        if (['../ui/Button.tsx', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-ocean-lines.ts', '../trip-forecast-end.ts', './App.tsx'].includes(args.path))
           return {path: resolve(fixtures, 'boundary.mjs')};
         if (['../../dist/offline-core.js', 'preact/jsx-runtime'].includes(args.path)) return;
         throw new Error(`unadmitted product import: ${args.path}`);
