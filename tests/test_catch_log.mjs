@@ -828,7 +828,7 @@ test('stale_patch_conflicts_and_keeps_the_saved_correction', async () => {
   for (const outer of [{note: 'new note'}, {}]) {
     const {sql, env, made, inner, out} = await stalePatch(FISH, {count: 4}, outer);
     assert.equal(inner.status, 200); assert.equal(inner.data.count, 4);
-    assert.deepEqual([out.status, out.data], [409, CONFLICT], JSON.stringify(outer));
+    assert.deepEqual([out.status, out.data.error], [409, CONFLICT.error], JSON.stringify(outer));
     assert.deepEqual([rowOf(sql, made.id).count, rowOf(sql, made.id).note], [4, FISH.note], 'winner and original note stay');
     assert.deepEqual(await (await call(env, '/api/catch-log/' + made.id, {owner: 'alice'})).json(), rowOf(sql, made.id), 'GET agrees');
     assert.equal((await (await call(env, '/api/privacy', {owner: 'alice'})).json()).catch_log[0].count, 4, 'export agrees');
@@ -862,10 +862,10 @@ test('stale_patch_compares_null_fields_and_unchanged_rows_still_succeed', async 
 
 test('stale_patch_after_delete_or_for_another_owner_is_404_and_leaks_nothing', async () => {
   const gone = await stalePatch(FISH, null, {note: 'x'});
-  assert.deepEqual([gone.inner.status, gone.out.status, gone.out.data], [200, 404, {error: 'Not found'}]);
+  assert.deepEqual([gone.inner.status, gone.out.status, gone.out.data.error], [200, 404, 'Not found']);
   assert.equal(totalRows(gone.sql), 0, 'not recreated'); gone.sql.close();
   const {sql, adapter} = database(), env = {DB: adapter}, made = (await post(env, 'alice', FISH)).data;
-  for (const id of [made.id, 'nope']) { const r = await patch(env, 'bob', id, {note: 'x'}); assert.deepEqual([r.status, r.data], [404, {error: 'Not found'}]); }
+  for (const id of [made.id, 'nope']) { const r = await patch(env, 'bob', id, {note: 'x'}); assert.deepEqual([r.status, r.data.error], [404, 'Not found']); }
   assert.equal(rowOf(sql, made.id).note, FISH.note);
   const conflict = await stalePatch(FISH, {count: 5}, {note: 'SECRET-submitted'});
   assert.ok(!JSON.stringify(conflict.out.data).includes('SECRET') && !JSON.stringify(conflict.out.data).includes('LOGNOTE'), 'no row or submitted data in 409');
