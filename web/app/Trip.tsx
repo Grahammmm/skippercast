@@ -3,7 +3,8 @@
 // open) inside a modal dialog that follows `#export`, so Back closes it and a
 // reload restores a ranked plan. Offline is this app's own: the chart pack and the coastal
 // snapshots, each with its saved time, and each snapshot product with the time
-// its source assembled it.
+// its source assembled it. SC0707-10: every word is a catalogue id read at render; a status
+// is kept as an id and its variables, so a language change updates it without a second save or delete.
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {formatBytes, relativeTime} from '../../dist/offline-core.js';
 import {Button, IconButton} from '../ui/Button.tsx';
@@ -15,28 +16,56 @@ import {
 } from '../trip.ts';
 import {oceanLines} from '../trip-ocean-lines.ts';
 import {forecastEndLine} from '../trip-forecast-end.ts';
+import {language, localeOf, t, type Language, type StringId} from '../i18n.ts';
 import {regionInfo, zone} from './App.tsx';
 
-const PHASES: Readonly<Record<string, string>> = {files: 'Data and rules', tiles: 'NOAA chart tiles', shell: 'This app', basemap: 'Base map tiles'};
-const PRODUCTS: Readonly<Record<string, string>> = {'/api/coast/report': 'Local report', '/api/coast/ocean': 'Surface currents', '/api/coast/history': 'Measured history'};
+const PHASES: Readonly<Record<string, StringId>> = {files: 'trip.phase.files', tiles: 'trip.phase.tiles', shell: 'trip.phase.shell', basemap: 'trip.phase.basemap'};
+const PRODUCTS: Readonly<Record<string, StringId>> = {'/api/coast/report': 'trip.product.report', '/api/coast/ocean': 'trip.product.ocean', '/api/coast/history': 'trip.product.history'};
 
-/** "Oct 9, 3:42 PM PDT" in the region's zone. */
-export const stamp = (iso: string, timeZone = zone()): string =>
-  new Date(iso).toLocaleString('en-US', {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone, timeZoneName: 'short'});
-const Saved = ({iso}: {iso: string}) => <>{relativeTime(iso) ?? ''} · <time dateTime={iso}>{stamp(iso)}</time></>;
+/** A status line kept as its catalogue id and variables (and an English tail the store supplies), never as translated text. */
+type Status = {id: StringId; vars?: Readonly<Record<string, string | number>>; missing?: number; tail?: string} | null;
+const statusText = (s: Status, lang: Language): string => !s ? '' : t(s.id, lang, {...s.vars, ...(s.missing === undefined ? {} : {missing: s.missing ? t('trip.status.missing', lang, {n: s.missing}) : ''})}) + (s.tail ?? '');
+
+/** "Oct 9, 3:42 PM PDT" in the region's zone ("9 oct, 3:42 p. m. PDT" in Spanish). */
+export const stamp = (iso: string, timeZone = zone(), lang: Language = 'en'): string =>
+  new Date(iso).toLocaleString(localeOf(lang), {month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone, timeZoneName: 'short'});
+
+/** How long ago `iso` was: English is the shared relativeTime; Spanish keeps its thresholds. Null when the time cannot be read. */
+export function agoText(iso: string, lang: Language = 'en', now = Date.now()): string | null {
+  if (lang !== 'es') return relativeTime(iso, now);
+  const at = Date.parse(iso);
+  if (!Number.isFinite(at) || at <= 0) return null;
+  const minutes = Math.max(0, Math.round((now - at) / 60000));
+  if (minutes < 1) return t('trip.ago.now', lang);
+  if (minutes < 60) return t('trip.ago.min', lang, {n: minutes});
+  const hours = Math.round(minutes / 60);
+  return hours < 48 ? t('trip.ago.hour', lang, {n: hours}) : t('trip.ago.day', lang, {n: Math.round(hours / 24)});
+}
+const Saved = ({iso, lang}: {iso: string; lang: Language}) => {
+  const when = agoText(iso, lang);
+  if (lang === 'es' && when === null) return <>{t('trip.time.unavailable', lang)}</>;
+  return <>{when ?? ''} · <time dateTime={iso}>{stamp(iso, zone(), lang)}</time></>;
+};
 
 /** Items the save could not store: the top-level list plus the v2 phase's own (a shoreline, land-water or contour file, a base map tile); one URL counts once. */
 export const packMissing = (m: PackMeta): number => new Set([...m.missing, ...m.v2?.missing ?? []]).size;
 
 /** A saved pack's tile line: chart tiles, and base map tiles when the v2 app saved it. */
-export function packTiles(m: PackMeta): string {
-  const zoom = m.tiles.max_zoom === null ? '' : ` (zoom ${m.tiles.min_zoom}–${m.tiles.max_zoom})`;
-  const base = m.v2 ? ` · ${m.v2.basemap.saved} of ${m.v2.basemap.planned} base map tiles` : '';
-  return `${m.tiles.saved} of ${m.tiles.planned} chart tiles${base}${zoom}${packMissing(m) ? ` · ${packMissing(m)} items missing` : ''}`;
+export function packTiles(m: PackMeta, lang: Language = 'en'): string {
+  const zoom = m.tiles.max_zoom === null ? '' : t('trip.tiles.zoom', lang, {min: m.tiles.min_zoom, max: m.tiles.max_zoom});
+  const base = m.v2 ? t('trip.tiles.base', lang, {saved: m.v2.basemap.saved, planned: m.v2.basemap.planned}) : '';
+  return `${t('trip.tiles', lang, {saved: m.tiles.saved, planned: m.tiles.planned})}${base}${zoom}${packMissing(m) ? t('trip.tiles.missing', lang, {n: packMissing(m)}) : ''}`;
+}
+
+/** The planner-load refusal the store wrote in English, in `lang`; any other text is shown as it is. */
+function loadFailed(error: string, lang: Language): string {
+  if (lang !== 'es') return error;
+  const [head = '', tail = ''] = t('trip.loadFailed', 'en', {detail: '\u0000'}).split('\u0000');
+  return error.length >= head.length + tail.length && error.startsWith(head) && error.endsWith(tail) ? t('trip.loadFailed', lang, {detail: error.slice(head.length, error.length - tail.length)}) : error;
 }
 
 function TripDialog() {
-  const ref = useRef<HTMLDialogElement>(null), open = tripOpen.value, error = tripError.value, planner = plannerView.value;
+  const ref = useRef<HTMLDialogElement>(null), open = tripOpen.value, error = tripError.value, planner = plannerView.value, lang = language.value;
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -46,22 +75,22 @@ function TripDialog() {
   return (
     <dialog ref={ref} id="export-panel" class="app-trip" aria-labelledby="export-heading" onClose={closeTrip}>
       <div class="port-dialog-head">
-        <h2 id="export-heading" tabIndex={-1}>Trip plan and GPX</h2>
-        <IconButton icon="close" label="Close the trip plan" onClick={closeTrip} />
+        <h2 id="export-heading" tabIndex={-1}>{t('trip.title', lang)}</h2>
+        <IconButton icon="close" label={t('trip.close', lang)} onClick={closeTrip} />
       </div>
-      {tripReady.value ? null : <p role="status">{error || 'Loading the trip planner…'}</p>}
-      {error ? <Button size="sm" onClick={() => void loadPlanner()}>Try again</Button> : null}
+      {tripReady.value ? null : <p role="status">{error ? loadFailed(error, lang) : t('trip.loading', lang)}</p>}
+      {error ? <Button size="sm" onClick={() => void loadPlanner()}>{t('trip.retry', lang)}</Button> : null}
       {planner ? <planner.View model={planner.model} open={open} /> : null}
     </dialog>
   );
 }
 
 function ChartPack() {
-  const id = region.value, name = regionInfo.value?.name ?? id ?? 'this region';
+  const lang = language.value, id = region.value, name = regionInfo.value?.name ?? id ?? t('trip.thisRegion', lang);
   const [packs, setPacks] = useState<{cache: string; meta: PackMeta}[] | null>(null);
   const [busy, setBusy] = useState<AbortController | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState<Status>(null);
   const [room, setRoom] = useState<{used: number; quota: number} | null>(null);
   const [inventoryState, setInventoryState] = useState<'loading' | 'success' | 'error'>('loading');
   const refreshId = useRef(0);
@@ -82,48 +111,48 @@ function ChartPack() {
   useEffect(() => { void refresh(); return () => { ++refreshId.current; }; }, []);
   const save = async () => {
     if (!id || busy) return;
-    if (!navigator.onLine) { setStatus('You are offline. Connect to save this region; saved regions are unchanged.'); return; }
+    if (!navigator.onLine) { setStatus({id: 'trip.status.offline'}); return; }
     const controller = new AbortController();
-    setBusy(controller); setStatus('');
+    setBusy(controller); setStatus(null);
     try {
       const {meta, keep} = await savePackKept(() => savePack(id, controller.signal, setProgress));
-      setStatus(`Saved ${meta.region_name} · ${formatBytes(meta.bytes)}.${packMissing(meta) ? ` ${packMissing(meta)} items could not be saved and will be missing offline.` : ''}${KEEP_WORDS[keep] ? ` ${KEEP_WORDS[keep]}` : ''}`);
+      setStatus({id: 'trip.status.saved', vars: {name: meta.region_name, bytes: formatBytes(meta.bytes)}, missing: packMissing(meta), ...(KEEP_WORDS[keep] ? {tail: ` ${KEEP_WORDS[keep]}`} : {})});
     } catch (e) {
-      setStatus(controller.signal.aborted ? 'Cancelled. Nothing new was saved.' : `Could not save: ${(e as Error).message}`);
+      setStatus(controller.signal.aborted ? {id: 'trip.status.cancelled'} : {id: 'trip.status.failed', vars: {detail: (e as Error).message}});
     } finally { setBusy(null); setProgress(null); void refresh(); }
   };
   const remove = async (cache: string) => {
     if (busy) return;
-    try { await caches.delete(cache); setStatus('Saved region deleted.'); } catch { setStatus('Saved region could not be deleted. Offline storage may be unavailable.'); }
+    try { await caches.delete(cache); setStatus({id: 'trip.status.deleted'}); } catch { setStatus({id: 'trip.status.deleteFailed'}); }
     finally { void refresh(); }
   };
   return (
     <section class="app-offline" aria-labelledby="app-offline-pack">
-      <h3 id="app-offline-pack">Chart pack</h3>
-      <p>Saves the region's data, rules, protected areas, latest forecast, NOAA chart tiles, base map at zoom 8–12, the published land-water screen and depth contours (where the region publishes them) and this app on this device. The list below shows when each region was saved.</p>
-      <p>Check the saved pack before leaving coverage.</p>
-      <p>Water temperature and currents are saved with the pack when current; each saved region below says what was saved. For Morro Bay and Cambria, save Coastal readings below.</p>
+      <h3 id="app-offline-pack">{t('trip.pack.heading', lang)}</h3>
+      <p>{t('trip.pack.intro', lang)}</p>
+      <p>{t('trip.pack.check', lang)}</p>
+      <p>{t('trip.pack.ocean', lang)}</p>
       <div class="app-offline-actions">
-        <Button variant="primary" icon="download" disabled={!id || !!busy} onClick={() => void save()}>Save {name} for offline</Button>
-        {busy ? <Button onClick={() => busy.abort()}>Cancel</Button> : null}
+        <Button variant="primary" icon="download" disabled={!id || !!busy} onClick={() => void save()}>{t('trip.save', lang, {name})}</Button>
+        {busy ? <Button onClick={() => busy.abort()}>{t('trip.cancel', lang)}</Button> : null}
       </div>
-      {progress ? <progress max={Math.max(1, progress.total)} value={progress.done} aria-label="Saving" /> : null}
-      <p role="status" aria-live="polite">{progress ? `${PHASES[progress.phase] ?? progress.phase} · ${progress.done} of ${progress.total} · ${formatBytes(progress.bytes)}` : status}</p>
+      {progress ? <progress max={Math.max(1, progress.total)} value={progress.done} aria-label={t('trip.saving', lang)} /> : null}
+      <p role="status" aria-live="polite">{progress ? t('trip.progress', lang, {phase: PHASES[progress.phase] ? t(PHASES[progress.phase]!, lang) : progress.phase, done: progress.done, total: progress.total, bytes: formatBytes(progress.bytes)}) : statusText(status, lang)}</p>
       {inventoryState !== 'success' ? <p role="status" aria-live="polite">
-        {inventoryState === 'loading' ? 'Checking saved regions…' : 'Saved regions could not be checked. Offline storage may be unavailable.'}
-        {packs !== null ? ' Last checked listing; not rechecked.' : ''}
+        {inventoryState === 'loading' ? t('trip.checking', lang) : t('trip.checkFailed', lang)}
+        {packs !== null ? t('trip.retained', lang) : ''}
       </p> : null}
       <ul class="app-offline-list">
         {packs?.length ? packs.map(({cache, meta}) => {
-          const ocean = oceanLines(meta, new Date(), zone());
+          const ocean = oceanLines(meta, new Date(), zone(), lang);
           return (
           <li key={cache}>
-            <div><strong>{meta.region_name}</strong><span class="ui-mono">Saved <Saved iso={meta.saved_at} /> · {formatBytes(meta.bytes)}</span><span>{packTiles(meta)}</span><span>{forecastEndLine(meta, new Date(), zone())}</span>
-              {ocean ? <><span>Water temp: {ocean.water}</span><span>Currents: {ocean.currents}</span></> : null}</div>
-            <Button size="sm" disabled={!!busy} onClick={() => void remove(cache)} aria-label={`Delete the saved ${meta.region_name}`}>Delete</Button>
+            <div><strong>{meta.region_name}</strong><span class="ui-mono">{t('trip.saved', lang)} <Saved iso={meta.saved_at} lang={lang} /> · {formatBytes(meta.bytes)}</span><span>{packTiles(meta, lang)}</span><span>{forecastEndLine(meta, new Date(), zone())}</span>
+              {ocean ? <><span>{t('tripOcean.water', lang, {line: ocean.water})}</span><span>{t('tripOcean.currents', lang, {line: ocean.currents})}</span></> : null}</div>
+            <Button size="sm" disabled={!!busy} onClick={() => void remove(cache)} aria-label={t('trip.deleteAria', lang, {name: meta.region_name})}>{t('trip.delete', lang)}</Button>
           </li>
           );
-        }) : inventoryState === 'success' ? <li>Nothing saved on this device yet.</li> : null}
+        }) : inventoryState === 'success' ? <li>{t('trip.empty', lang)}</li> : null}
       </ul>
       {room ? <p>{estimateWords(room)}</p> : null}
     </section>
@@ -132,36 +161,37 @@ function ChartPack() {
 
 type Snapshot = {saved_at: string; bytes: number; products: {path: string; bytes: number; generated_at: string}[]};
 function CoastalReadings() {
+  const lang = language.value;
   const [meta, setMeta] = useState<Snapshot | null | undefined>(undefined);
   const [writable, setWritable] = useState(false);
   const [busy, setBusy] = useState<AbortController | null>(null);
-  const [status, setStatus] = useState('');
-  const show = () => readCoastal().then(m => setMeta(m as Snapshot | null), () => { setMeta(null); setStatus('Offline storage is unavailable. Online readings remain usable.'); });
+  const [status, setStatus] = useState<Status>(null);
+  const show = () => readCoastal().then(m => setMeta(m as Snapshot | null), () => { setMeta(null); setStatus({id: 'trip.coastal.unavailable'}); });
   useEffect(() => { void show(); void canSaveCoastal().then(setWritable, () => setWritable(false)); }, []);
   const save = async () => {
     const controller = new AbortController();
-    setBusy(controller); setStatus('Saving the three public snapshots…');
-    try { await saveCoastal(controller.signal); setStatus(''); } catch (e) {
-      setStatus((e as {committed?: boolean}).committed ? 'New readings saved; clearing the older copy failed. Delete them to clear both.'
-        : controller.signal.aborted ? 'Save cancelled. Previous saved readings are unchanged.' : 'Save failed. Previous saved readings are unchanged; check the connection or storage.');
+    setBusy(controller); setStatus({id: 'trip.coastal.saving'});
+    try { await saveCoastal(controller.signal); setStatus(null); } catch (e) {
+      setStatus({id: (e as {committed?: boolean}).committed ? 'trip.coastal.committed'
+        : controller.signal.aborted ? 'trip.coastal.cancelled' : 'trip.coastal.failed'});
     } finally { setBusy(null); void show(); }
   };
   const remove = async () => {
-    try { await deleteCoastal(); setStatus('Saved readings deleted.'); } catch { setStatus('Saved readings could not be deleted. Offline storage may be unavailable.'); }
+    try { await deleteCoastal(); setStatus({id: 'trip.coastal.deleted'}); } catch { setStatus({id: 'trip.coastal.deleteFailed'}); }
     void show();
   };
   return (
     <section class="app-offline" aria-labelledby="app-offline-coastal">
-      <h3 id="app-offline-coastal">Coastal readings</h3>
-      <p>The public SLO report, surface currents and measured history as published, each with its source time. Terrain and imagery stay online.</p>
+      <h3 id="app-offline-coastal">{t('trip.coastal.heading', lang)}</h3>
+      <p>{t('trip.coastal.intro', lang)}</p>
       <div class="app-offline-actions">
-        <Button icon="download" disabled={!writable || !!busy} onClick={() => void save()}>Save coastal readings</Button>
-        {busy ? <Button onClick={() => busy.abort()}>Cancel</Button> : <Button disabled={!meta || !writable} onClick={() => void remove()}>Delete saved readings</Button>}
+        <Button icon="download" disabled={!writable || !!busy} onClick={() => void save()}>{t('trip.coastal.save', lang)}</Button>
+        {busy ? <Button onClick={() => busy.abort()}>{t('trip.cancel', lang)}</Button> : <Button disabled={!meta || !writable} onClick={() => void remove()}>{t('trip.coastal.delete', lang)}</Button>}
       </div>
-      <p role="status" aria-live="polite">{status || (meta ? <>Saved <Saved iso={meta.saved_at} /> · {formatBytes(meta.bytes)}</> : meta === null ? 'No coastal readings saved.' : 'Checking saved readings…')}</p>
+      <p role="status" aria-live="polite">{status ? statusText(status, lang) : (meta ? <>{t('trip.saved', lang)} <Saved iso={meta.saved_at} lang={lang} /> · {formatBytes(meta.bytes)}</> : meta === null ? t('trip.coastal.none', lang) : t('trip.coastal.checking', lang))}</p>
       {meta ? (
         <ul class="app-offline-list">
-          {meta.products.map(p => <li key={p.path}><strong>{PRODUCTS[p.path] ?? p.path}</strong><span class="ui-mono">{formatBytes(p.bytes)} · source assembled <time dateTime={p.generated_at}>{stamp(p.generated_at)}</time></span></li>)}
+          {meta.products.map(p => <li key={p.path}><strong>{PRODUCTS[p.path] ? t(PRODUCTS[p.path]!, lang) : p.path}</strong><span class="ui-mono">{formatBytes(p.bytes)} · {t('trip.coastal.assembled', lang)} <time dateTime={p.generated_at}>{stamp(p.generated_at, zone(), lang)}</time></span></li>)}
         </ul>
       ) : null}
     </section>
@@ -174,7 +204,7 @@ export function Trip() {
     <>
       <TripDialog />
       {offlineOpen.value ? (
-        <PortDialog open onClose={() => { offlineOpen.value = false; }} title="Save for offline">
+        <PortDialog open onClose={() => { offlineOpen.value = false; }} title={t('trip.saveOffline', language.value)}>
           <ChartPack />
           <CoastalReadings />
         </PortDialog>
