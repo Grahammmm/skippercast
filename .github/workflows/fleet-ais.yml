@@ -127,6 +127,7 @@ jobs:
           fi
           python -m skippercast.fleet.ais process "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
           if [ -z "$WINDOW_FROM" ]; then
+            python -m skippercast.fleet.ais port-coverage --region "$REGION" | tee -a "$GITHUB_STEP_SUMMARY"
             # Labelled trips' raw positions to ais/validation/, kept while their labels exist (CF-48).
             python -m skippercast.fleet.ais validate --region "$REGION" --sync-only
           fi

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- AISLIVE-01: the fleet-ais run summary gains a counts-only "AIS coverage by port" block (`python -m skippercast.fleet.ais port-coverage`): per region port the distinct MMSIs and MMSI-days heard in the last 30 days, and the ports never heard; it reads the processor state read-only and prints no MMSI or position.
 - Landing Spanish keeps custom boat names literal even when named “your boat” or “your 19 ft boat”. Its first-paint catalogue slice shares the app's language runtime; readings load after mount so the original install budget stays unchanged.
 - RF1600-6: a non-finite optional number (inf, -inf, Infinity or 1e999 in heading, status, length, width, IMO or vessel type) in a MarineCadastre AIS CSV row is now treated as unavailable, like NaN, instead of aborting the whole day; the row's other fields and the following rows are still read.
 - RF1600-5: the aisstream AIS normaliser no longer emits a position whose latitude or longitude is NaN or infinite, and reads a NaN or infinite speed, course or heading as not available while keeping the otherwise valid fix; ordinary values, unavailable markers and static records are unchanged.
