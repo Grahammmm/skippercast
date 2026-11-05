@@ -118,7 +118,7 @@ def main(argv=None, *, root=ROOT, opener=urlopen):
                 errors.append(f"{provider}:{ident}: name missing or empty")
                 continue
             name = row["name"].strip()  # controls are checked before trimming, so a trailing newline or NEL is refused
-            if len(name) > 120 or any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in row["name"]):
+            if len(name) > 120 or any(ord(c) < 32 or 127 <= ord(c) <= 159 or 0xD800 <= ord(c) <= 0xDFFF for c in row["name"]):  # lone surrogates cannot be UTF-8 encoded
                 errors.append(f"{provider}:{ident}: name is not plain one-line text")  # the name itself is never echoed
                 continue
             lat, lon = coords

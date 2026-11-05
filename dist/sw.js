@@ -149,6 +149,12 @@ async function newestSaved(request, key = request) {
   let best = null, bestAt = '';
   for (const name of names) {
     const cache = await caches.open(name);
+    // A pack answers only once its final PACK_META commit record exists; checked per lookup, never remembered.
+    if (name !== DATA_CACHE) {
+      let committed = false;
+      try { committed = (await (await cache.match(PACK_META))?.json())?.schema_version === 1; } catch { /* unreadable: not a candidate */ }
+      if (!committed) continue;
+    }
     let hit = await cache.match(key, {ignoreVary: true}) || (loose ? await cache.match(key, {ignoreVary: true, ignoreSearch: true}) : undefined);
     if (!hit && dataset) {
       for (const saved of await cache.keys()) {

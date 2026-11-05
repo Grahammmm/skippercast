@@ -112,6 +112,7 @@ export interface FleetClaim {readonly rung: string; readonly count: number; read
 
 /** One claim as a sentence: rung, evidence count and the coverage caveat, always together. A claim without a known rung is not shown. */
 export function claimLine(claim: FleetClaim): string | null {
+  if (!Object.hasOwn(RUNG_LABELS, claim.rung)) return null; // `toString`, `constructor`… are inherited, not rungs
   const name = RUNG_LABELS[claim.rung];
   if (!name || !(claim.count > 0) || !claim.caveat) return null;
   return `${name} (${claim.count} ${claim.count === 1 ? 'piece' : 'pieces'} of evidence). ${claim.caveat}`;

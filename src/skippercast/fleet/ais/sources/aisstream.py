@@ -37,6 +37,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+import math
 import re
 from typing import Any, AsyncIterator, Awaitable, Callable, Iterable, Iterator
 
@@ -132,6 +133,8 @@ def _text(value) -> str | None:
 
 def _number(value, unavailable: float | None = None, low: float | None = None, high: float | None = None):
     if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    if isinstance(value, float) and not math.isfinite(value):
         return None
     if unavailable is not None and value >= unavailable:
         return None

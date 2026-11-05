@@ -85,3 +85,42 @@ test('unchanged: exactly 8192 bytes of a valid object is accepted', async () => 
   const value = await body(streamed(exact));
   assert.equal(value.a.length, (8192 - 8) / 2);
 });
+
+/** A pull-driven stream (no read-ahead) that counts pulls and cancels; `cancel` decides how cancellation fails. */
+const open = (chunks, cancel) => {
+  const seen = {cancels: 0, pulls: 0};
+  const stream = new ReadableStream({
+    pull(c) { seen.pulls++; if (chunks.length) c.enqueue(chunks.shift()); else c.close(); },
+    cancel() { seen.cancels++; return cancel(); },
+  }, {highWaterMark: 0});
+  return {seen, request: new Request('https://example.test/', {method: 'POST', duplex: 'half', body: stream})};
+};
+const big = n => bytes(`{"a":"${'x'.repeat(n - 8)}"}`);
+
+test('oversize_cancel_rejects_keeps_client_error: a rejecting cancel does not replace body too large', async () => {
+  const {seen, request} = open([big(8193)], () => Promise.reject(Error('synthetic cancel failure')));
+  await refused(request, 'body too large');
+  assert.equal(seen.cancels, 1);
+});
+
+test('oversize_cancel_throws_keeps_client_error: a throwing cancel, crossing split over chunks, custom cap', async () => {
+  const whole = big(40), {seen, request} = open([whole.slice(0, 15), whole.slice(15, 30), whole.slice(30), bytes('late')], () => { throw Error('synthetic cancel throw'); });
+  await assert.rejects(body(request, 32), error => error instanceof ClientError && error.message === 'body too large');
+  assert.equal(seen.cancels, 1);
+  assert.equal(seen.pulls, 3, "no read after the crossing chunk");
+});
+
+test('oversize_successful_cancel_and_exact_limit_unchanged', async () => {
+  const {seen, request} = open([big(8193)], () => undefined);
+  await refused(request, 'body too large');
+  assert.equal(seen.cancels, 1);
+  const exact = open([bytes(`{"a":"${'é'.repeat((8192 - 8) / 2)}"}`)], () => { throw Error('must not cancel'); });
+  assert.equal((await body(exact.request)).a.length, (8192 - 8) / 2);
+  assert.equal(exact.seen.cancels, 0);
+});
+
+test('read_error_is_not_relabelled_oversize: a read failure before the cap keeps its own rejection', async () => {
+  const failing = new ReadableStream({pull(c) { c.error(Error('synthetic read failure')); }});
+  const request = new Request('https://example.test/', {method: 'POST', duplex: 'half', body: failing});
+  await assert.rejects(body(request), error => !(error instanceof ClientError) && error.message === 'synthetic read failure');
+});

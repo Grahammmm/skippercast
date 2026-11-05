@@ -85,6 +85,16 @@ const KIND_LABELS = Object.freeze({
   'charter-reports': 'Landing reports',
 });
 
+const REGION_ID = /^[a-z0-9-]+$/;
+const isObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+/** The region index's entries, or [] when the index or ANY member has the wrong shape (the whole list is then
+ * unavailable: a valid subset must not read as complete coverage, and no id is ever invented). */
+function regionEntries(index) {
+  const list = isObject(index) ? index.regions : null;
+  return Array.isArray(list) && list.every(e => isObject(e) && typeof e.id === 'string' && REGION_ID.test(e.id)) ? list : [];
+}
+
 /**
  * The status rows for what the visitor's browser read.
  * feeds: {conditions, data, index, regions: {id: feed}, coast?: {feed name: feed}} where a feed that failed to load is null/absent.
@@ -93,7 +103,7 @@ export function statusRows(feeds, now = Date.now()) {
   const rows = [];
   const live = health.feeds.conditions, daily = health.feeds.data, regional = health.regions;
   rows.push(feedRow('Live conditions', 'Live conditions feed', feeds.conditions, live.max_age_hours, now));
-  const entries = Array.isArray(feeds.index?.regions) ? feeds.index.regions : [];
+  const entries = regionEntries(feeds.index);
   if (!entries.length) rows.push(unreadable('Live conditions', 'Regional buoy feeds', regional.max_age_hours, 'the region list could not be read, so no region is shown'));
   for (const entry of entries) {
     const feed = feeds.regions?.[entry.id];
@@ -209,13 +219,13 @@ async function load(url) {
   try { const response = await fetch(url, {cache: 'no-store'}); return response.ok ? await response.json() : null; } catch { return null; }
 }
 
-async function main() {
+export async function main() {
   const coastNames = Object.keys(health.coast);
   const [conditions, data, index, ...coastFeeds] = await Promise.all([load('/feeds/conditions/latest.json'), load('/feeds/data/latest.json'), load('/regions/index.json'),
     ...coastNames.map(name => load(`/feeds/${health.coast[name].path}`))]);
   const coast = Object.fromEntries(coastNames.map((name, i) => [name, coastFeeds[i]]));
   const regions = {};
-  await Promise.all((index?.regions || []).map(async entry => { regions[entry.id] = await load(`/feeds/conditions/regions/${encodeURIComponent(entry.id)}/latest.json`); }));
+  await Promise.all(regionEntries(index).map(async entry => { regions[entry.id] = await load(`/feeds/conditions/regions/${encodeURIComponent(entry.id)}/latest.json`); }));
   const now = Date.now();
   document.getElementById('status-rows').innerHTML = renderRows(statusRows({conditions, data, index, regions, coast}, now));
   document.getElementById('status-checked').textContent = new Date(now).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';

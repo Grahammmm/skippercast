@@ -14,7 +14,12 @@ WAVE_MODELS = ('ncep_gfswave016', 'ecmwf_wam')
 
 
 def _number(value):
-    return type(value) in (int, float) and math.isfinite(value)
+    if type(value) not in (int, float):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:  # a JSON integer too large for a float is unavailable
+        return False
 
 
 def _sample(model, point_index, epoch, field, unit, now):
