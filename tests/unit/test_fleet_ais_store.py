@@ -244,7 +244,7 @@ class SubscriptionTest(unittest.TestCase):
 
 class SourceInterfaceTest(unittest.TestCase):
     def test_registry_and_protocol(self):
-        self.assertEqual(set(SOURCES), {'aisstream', 'datalastic', 'marinecadastre'})
+        self.assertEqual(set(SOURCES), {'aisstream', 'datalastic', 'marinecadastre', 'local-nmea'})
         for ident in SOURCES:
             source = get_source(ident)
             self.assertIsInstance(source, AisSource)
