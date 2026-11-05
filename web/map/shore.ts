@@ -8,7 +8,8 @@
 // the method guidance and the official rules link.
 //
 // Expiry is honoured: a run past its source review is not drawn (the terrain's
-// rule, packages/coast viewer `loadShore`); only a protected-area check that is
+// rule, packages/coast viewer `loadShore`), and neither is a run never reviewed (null clocks; counted in
+// `shoreState.unreviewed`, said as "not yet reviewed", never as expired or current); only a protected-area check that is
 // not current, a marine alert check that is not current (or no coast report), a marine
 // alert for the area or a county beach-health notice holds
 // guidance (web/brief/shore.ts); a run or
@@ -21,7 +22,7 @@ import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import type {Report} from '../../packages/coast/src/types.ts';
 import {closureHits} from '../../dist/geo-screen.js';
-import {activeAlerts, alertCheckCurrent, beachNotices, nextShoreChange, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus, rankRuns, type ShoreRunClocks, type ShoreStatus} from '../brief/shore.ts';
+import {activeAlerts, alertCheckCurrent, beachNotices, nextShoreChange, shoreGuidance, shoreNeverReviewed, shoreReviewLines, shoreShown, shoreStatus, rankRuns, type ShoreRunClocks, type ShoreStatus} from '../brief/shore.ts';
 import {zone} from '../app/region-info.ts';
 import {coastData} from '../coast-data.ts';
 import {PROFILE_TABLE} from '../profile.ts';
@@ -128,8 +129,13 @@ export function runMark(r: ShownRun, target: string, now = Date.now(), tz: strin
   };
 }
 
-export interface ShoreState {readonly drawn: number; readonly held: number; readonly blocked: number}
-export const shoreState = signal<ShoreState>({drawn: 0, held: 0, blocked: 0});
+/** `unreviewed` counts the region's runs left out because no owner review exists yet; it is not an expiry and not a Current status. */
+export interface ShoreState {readonly drawn: number; readonly held: number; readonly blocked: number; readonly unreviewed: number}
+export const shoreState = signal<ShoreState>({drawn: 0, held: 0, blocked: 0, unreviewed: 0});
+
+/** How many of the package's runs have never been reviewed (null source clocks): withheld from Chart, said in the state. */
+export const unreviewedCount = (pkg: ShorePackage | null): number =>
+  (pkg?.features ?? []).filter(f => f?.geometry?.type === 'MultiLineString' && f.properties?.region === pkg!.regionId && shoreNeverReviewed(f.properties)).length;
 
 export interface ShoreOptions {
   engine: ReadonlySignal<Engine | null>;
@@ -171,7 +177,9 @@ export function createShore({engine, fetchFn = (...a) => fetch(...a), page = () 
     }),
     effect(() => {
       const list = shown.value;
-      shoreState.value = {drawn: list.length, held: list.filter(r => r.status.label === 'Hold').length, blocked: list.filter(r => r.status.label === 'Blocked').length};
+      const p = pkg.value;
+      shoreState.value = {drawn: list.length, held: list.filter(r => r.status.label === 'Hold').length, blocked: list.filter(r => r.status.label === 'Blocked').length,
+        unreviewed: on.value && p && p.region === region.value ? unreviewedCount(p.data) : 0};
     }),
     effect(() => {
       const e = engine.value, list = shown.value;
@@ -190,7 +198,7 @@ export function createShore({engine, fetchFn = (...a) => fetch(...a), page = () 
     return r ? runMark(r, target.peek(), now(), zone()) : null;
   };
   return {
-    destroy() { clearInterval(timer); clearTimeout(soon); for (const dispose of disposers) dispose(); shoreState.value = {drawn: 0, held: 0, blocked: 0}; },
+    destroy() { clearInterval(timer); clearTimeout(soon); for (const dispose of disposers) dispose(); shoreState.value = {drawn: 0, held: 0, blocked: 0, unreviewed: 0}; },
     pick: {layers: [ACCESS_HIT, RUNS_HIT] as const, mark: (_layer: string, properties: Record<string, unknown> | null): ChartMark | null => pick(properties?.id)},
   };
 }
