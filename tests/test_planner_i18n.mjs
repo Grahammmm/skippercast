@@ -37,9 +37,9 @@ test('planner_es_screen_and_refusal_matrix: templates keep names and numbers; un
   assert.equal(plannerText('Not added: Inside <img src=x>.', 'es'), 'No se agregó: Dentro de <img src=x>.', 'a closure name is kept as text, never translated or parsed');
   assert.equal(plannerText('Inside Not saved: Inside X.', 'es'), 'Dentro de Not saved: Inside X.', 'a name that looks like a message is not translated inside');
   assert.equal(plannerText('Reef outline R1: Inside or within 25 m of Reserve A, Reserve B and 2 more. Turn off that layer or choose a different spot.', 'es'),
-    'Contorno de arrecife R1: Dentro de Reserve A, Reserve B and 2 more o a 25 m de ella. Desactiva esa capa o elige otro lugar.');
+    'Contorno de arrecife R1: Dentro de Reserve A, Reserve B and 2 more o a 25 m o menos de ella. Desactiva esa capa o elige otro lugar.');
   assert.equal(plannerText('Alignment: Inside or within 25 m of Reserve A. Turn off that layer or choose a different spot.', 'es'),
-    'Alineación: Dentro de Reserve A o a 25 m de ella. Desactiva esa capa o elige otro lugar.');
+    'Alineación: Dentro de Reserve A o a 25 m o menos de ella. Desactiva esa capa o elige otro lugar.');
   const ranked = (extra) => `3 distinct reef spots ranked. Waypoints + reef outlines only. ${extra}Check conditions for 2026-11-06 before committing to the trip.`;
   assert.equal(plannerText(ranked(''), 'es'), '3 lugares de arrecife distintos ordenados. Solo puntos de referencia y contornos de arrecife. Revisa las condiciones para 2026-11-06 antes de comprometerte con el viaje.');
   assert.equal(plannerText(ranked('Fewer than your requested limit qualified. 1 spot withheld: land/water not confirmed. '), 'es'),
@@ -70,8 +70,8 @@ test('planner_verdict: fields, not words; thresholds and rounding as English', (
   assert.equal(plannerVerdict(v({distanceM: 5000, name: 'Far'}), 'es'), verdictLine(v({distanceM: 5000, name: 'Far'})) === null ? null : plannerVerdict(v({distanceM: 5000, name: 'Far'}), 'es'));
   assert.equal(plannerVerdict(v({}), 'es'), plannerVerdict(v({}), 'en'), 'an unrefused verdict has no line in both languages');
   assert.equal(hitReading({inside: true, reef: false}, 'es'), 'Dentro de un límite de área protegida; SkipperCast lo excluye como objetivo de pesca.');
-  assert.match(hitReading({inside: false, reef: true}, 'es'), /^Este lugar o su área de arrecife está dentro de un límite de área protegida o a \d+ m de él; /);
-  assert.match(hitReading({inside: false, reef: false}, 'es'), /^Dentro de un límite de área protegida o a \d+ m de él; /);
+  assert.match(hitReading({inside: false, reef: true}, 'es'), /^Este lugar o su área de arrecife está dentro de un límite de área protegida o a \d+ m o menos de él; /);
+  assert.match(hitReading({inside: false, reef: false}, 'es'), /^Dentro de un límite de área protegida o a \d+ m o menos de él; /);
 });
 
 const root = new URL('..', import.meta.url).pathname;
