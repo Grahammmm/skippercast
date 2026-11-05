@@ -22,6 +22,7 @@ import {CoastMarkup} from '../CoastMarkup.tsx';
 import {HourlyTable} from './HourlyTable.tsx';
 import {CurrentSource} from '../LayerRail.tsx';
 import {dockState, localParts, selectHour} from '../TimeDock.tsx';
+import {moonLine} from '../../moon.ts';
 import {PlanLink, TargetRules, targetRules} from '../PlanView.tsx';
 
 /** Load the forecast for the region shown (shared with the brief, once per region). */
@@ -79,6 +80,7 @@ export function Conditions({now = new Date()}: {now?: Date} = {}) {
           {brief.tideEvents.map(e => <li key={e.at}>{e.type === 'H' ? 'High' : 'Low'} <span class="ui-mono">{timeText(e.at, tz)} · {e.heightFt.toFixed(1)} ft {brief.tideDatum}</span></li>)}
         </ul>
       ) : <p class="app-empty">No tide predictions for {localParts(new Date(state.at), tz).weekday || 'this day'}.</p>}
+      <p class="app-conditions-moon">{moonLine(state.day, tz)}</p>
       <h3 class="ui-eyebrow">Before you go</h3>
       <ul class="app-conditions-notes">
         <li>{notes.caveat}</li>
