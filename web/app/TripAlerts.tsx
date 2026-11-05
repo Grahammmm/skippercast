@@ -62,7 +62,7 @@ function ConfirmDelete({onConfirm, onCancel}: {onConfirm: () => void; onCancel: 
   return (
     <div ref={box} class="account-confirm" role="alertdialog" aria-labelledby={id}
       onKeyDown={(e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onCancel(); } }}>
-      <p id={id}>Delete your SkipperCast account and all saved trips, notification subscriptions, assessments and comfort feedback? This cannot be undone.</p>
+      <p id={id}>Delete your SkipperCast account, passkeys, sign-in sessions, pending sign-in requests, saved trips, notification subscriptions, assessments, notification delivery records, comfort feedback, catch log and saved spots? This cannot be undone.</p>
       <div class="home-port-actions">
         <Button size="sm" onClick={onCancel}>Cancel</Button>
         <Button size="sm" class="account-destructive" onClick={onConfirm}>Yes, delete everything</Button>
@@ -222,7 +222,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
         ) : null}
         <details ref={privacy}>
           <summary>Privacy & account data</summary>
-          <p>Trips, notification endpoints and comfort feedback are stored privately. Delete a trip to stop its monitoring. Comfort feedback is retained for one year; trips and assessments for 90 days.</p>
+          <p>Trips, notification endpoints, comfort feedback, catch-log entries and saved spots are stored privately. Delete a trip to stop its monitoring. Comfort feedback is retained for one year; trips and assessments for 90 days. Catch-log entries and saved spots are kept until you delete them or delete your account.</p>
           <Button size="sm" onClick={exportRecords}>Export my records</Button>{' '}
           <Button data-delete-account size="sm" disabled={confirming} onClick={() => setConfirming(true)}>Delete my account and records</Button>{' '}
           <a href="#account">Account, passkeys and sign out</a>
