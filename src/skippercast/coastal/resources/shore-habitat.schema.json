@@ -48,6 +48,10 @@
     "features": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/run"}}
   },
   "$defs": {
+    "nullableTimestamp": {
+      "description": "A review clock: a timestamp, or null while the run has never been reviewed. Only per-run and per-approach clocks use it; the root reviews stay dated.",
+      "oneOf": [{"$ref": "common.schema.json#/$defs/timestamp"}, {"type": "null"}]
+    },
     "position": {
       "type": "array", "minItems": 2, "maxItems": 2,
       "prefixItems": [{"type": "number", "minimum": -180, "maximum": 180}, {"type": "number", "minimum": -90, "maximum": 90}]
@@ -82,7 +86,7 @@
         "coordinates": {"$ref": "#/$defs/position"},
         "sourceUrl": {"$ref": "common.schema.json#/$defs/https_url"},
         "publicAccess": {"const": true},
-        "checkedAt": {"$ref": "common.schema.json#/$defs/timestamp"},
+        "checkedAt": {"$ref": "#/$defs/nullableTimestamp"},
         "note": {"type": "string", "minLength": 1}
       }
     },
@@ -123,16 +127,34 @@
             "horizontalAccuracyM": {"type": ["number", "null"]},
             "access": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/access"}},
             "accessUrl": {"$ref": "common.schema.json#/$defs/https_url"},
-            "checkedAt": {"$ref": "common.schema.json#/$defs/timestamp"},
-            "reviewExpiresAt": {"$ref": "common.schema.json#/$defs/timestamp"},
-            "accessReviewedAt": {"$ref": "common.schema.json#/$defs/timestamp"},
-            "accessReviewExpiresAt": {"$ref": "common.schema.json#/$defs/timestamp"},
-            "legalReviewedAt": {"$ref": "common.schema.json#/$defs/timestamp"},
-            "legalReviewExpiresAt": {"$ref": "common.schema.json#/$defs/timestamp"},
+            "checkedAt": {"$ref": "#/$defs/nullableTimestamp"},
+            "reviewExpiresAt": {"$ref": "#/$defs/nullableTimestamp"},
+            "accessReviewedAt": {"$ref": "#/$defs/nullableTimestamp"},
+            "accessReviewExpiresAt": {"$ref": "#/$defs/nullableTimestamp"},
+            "legalReviewedAt": {"$ref": "#/$defs/nullableTimestamp"},
+            "legalReviewExpiresAt": {"$ref": "#/$defs/nullableTimestamp"},
+            "sourceAcquisitions": {
+              "description": "Only on a run added after the region package: the acquisitions that run was built from. Absent on the original sand runs.",
+              "type": "object",
+              "required": ["noaa", "access", "terms"],
+              "additionalProperties": false,
+              "properties": {"noaa": {"$ref": "#/$defs/receipt"}, "access": {"$ref": "#/$defs/receipt"}, "terms": {"$ref": "#/$defs/receipt"}}
+            },
             "legalSourceUrl": {"$ref": "common.schema.json#/$defs/https_url"},
             "license": {"type": "string", "minLength": 1},
             "attribution": {"type": "string", "minLength": 1}
-          }
+          },
+          "allOf": [
+            {"oneOf": [
+            {"properties": {"checkedAt": {"$ref": "common.schema.json#/$defs/timestamp"}, "reviewExpiresAt": {"$ref": "common.schema.json#/$defs/timestamp"}}},
+            {"properties": {"checkedAt": {"type": "null"}, "reviewExpiresAt": {"type": "null"}}}]},
+            {"oneOf": [
+            {"properties": {"accessReviewedAt": {"$ref": "common.schema.json#/$defs/timestamp"}, "accessReviewExpiresAt": {"$ref": "common.schema.json#/$defs/timestamp"}}},
+            {"properties": {"accessReviewedAt": {"type": "null"}, "accessReviewExpiresAt": {"type": "null"}}}]},
+            {"oneOf": [
+            {"properties": {"legalReviewedAt": {"$ref": "common.schema.json#/$defs/timestamp"}, "legalReviewExpiresAt": {"$ref": "common.schema.json#/$defs/timestamp"}}},
+            {"properties": {"legalReviewedAt": {"type": "null"}, "legalReviewExpiresAt": {"type": "null"}}}]}
+          ]
         }
       }
     }

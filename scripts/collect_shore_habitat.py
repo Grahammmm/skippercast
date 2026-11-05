@@ -79,9 +79,34 @@ SITES = {
             {'id': 'oceano-beach', 'name': 'Oceano · Pier Avenue shore', 'areaId': 'south', 'objects': [2638],
              'lat': (35.089, 35.114), 'access': [875], 'accessUrl': 'https://ohv.parks.ca.gov/?page_id=1207',
              'note': 'Pier Avenue approach. Respect posted vehicle, creek-crossing, dune and wildlife restrictions; do not infer access from a habitat line.'},
+            # Rocky run (SC1952-08): only the named objects at their exact ESI code, only vertices inside 'lon' x 'lat'
+            # (the State Parks "Estero Bluffs SP" bounding box), and no review dates until the owner's gate ('reviewed': False).
+            {'id': 'estero-bluffs', 'name': 'Estero Bluffs', 'areaId': 'central', 'substrate': 'rocky', 'reviewed': False,
+             'classes': {2234: '2A', 2237: '2A', 2242: '2A', 2244: '2A', 2246: '2A', 2250: '2A', 2251: '2A', 2253: '2A',
+                         2255: '1A', 2259: '2A', 2274: '2A', 2276: '2A', 2277: '2A'},
+             'objects': [2234, 2237, 2242, 2244, 2246, 2250, 2251, 2253, 2255, 2259, 2274, 2276, 2277],
+             'lon': (-120.97380, -120.91612), 'lat': (35.44610, 35.46514), 'access': [792, 793, 794, 795],
+             'accessUrl': 'https://www.parks.ca.gov/?page_id=22263',
+             'note': 'Estero Bluffs State Park, California State Parks; the Cayucos Land Conservancy holds a conservation easement. Use signed public approaches, keep off the bluff edges and recheck access on arrival.'},
         ],
     },
 }
+
+# ESI codes the rocky shoreClass text names; a site's 'classes' may use only these.
+ROCKY_LEGEND = {'1A': 'exposed rocky shores', '2A': 'exposed wave-cut platforms in bedrock'}
+# Extra NOAA window for sites added without refetching the region (offline additive rebuild).
+WINDOWS = {'estero-bluffs': (-121.02, 35.43, -120.89, 35.50)}
+# sha256 of each legacy sand feature as serialized in the committed package before SC1952-08; the additive
+# rebuild keeps these bytes and refuses a baseline in which any of them differs.
+LEGACY_FEATURE_SHA256 = {
+    'hearst-memorial-beach': '48603c7b01fdc4dbd2183363305ab442b88e919aa2608007a513097d7a1e4ae2',
+    'morro-strand': '49dc5d8595816e286ba1db891b7009de12f81c0567671ab483faedca23d9a7c9',
+    'cayucos-beach': 'd33c25f6e8ba9f64a018028e697e72b3a83f75b80284f4e6f0fa3670dd46b20a',
+    'pismo-beach': 'faa67135a343eae09d143f19b3153dd611366c2f50aaa7b3f79d060995060827',
+    'oceano-beach': '93db830f657f9a23a295196e4ec72e99783d66f7de737faee0faa87dd0d06623',
+}
+ADDED_SITE = 'estero-bluffs'
+ADD_FILES = {'noaa': 'noaa-esi-shoreline.json', 'access': 'ccc-access-estero.json'}
 
 LIMITATIONS = [
     'Historical shoreline classification; not today’s shoreline or surf channels.',
@@ -166,6 +191,7 @@ def blank(value):
 
 
 def access_point(feature, ident, reviewed_at, note):
+    """One approach; ``reviewed_at`` is the access review date, or None while the run has never been reviewed."""
     p, g = feature.get('properties') or {}, feature.get('geometry') or {}
     if (g.get('type') != 'Point' or not finite_pair(g.get('coordinates')) or p.get('O_PUBLIC') != 'Yes'
             or p.get('AccessType') != 'Beach Access' or str(p.get('Archived') or '').strip().lower() == 'yes'
@@ -176,18 +202,18 @@ def access_point(feature, ident, reviewed_at, note):
             'publicAccess': True, 'checkedAt': reviewed_at, 'note': note}
 
 
-def run_paths(feature, lat_min, lat_max):
+def run_paths(feature, lat_min, lat_max, lon_min=-180, lon_max=180):
     g = feature.get('geometry') or {}
     lines = [g.get('coordinates')] if g.get('type') == 'LineString' else g.get('coordinates') if g.get('type') == 'MultiLineString' else None
     if not isinstance(lines, list):
-        raise ValueError('Reviewed sandy source feature has no line geometry')
+        raise ValueError('Reviewed source feature has no line geometry')
     paths = []
     for line in lines:
         run = []
         for point in line:
             if not finite_pair(point):
                 raise ValueError('Invalid coordinate')
-            if lat_min <= point[1] <= lat_max:
+            if lat_min <= point[1] <= lat_max and lon_min <= point[0] <= lon_max:
                 run.append(point)
                 continue
             if len(run) >= 2:
@@ -198,43 +224,57 @@ def run_paths(feature, lat_min, lat_max):
     return paths
 
 
-def extract(region, shore, access):
-    """Runs and approaches for ``region``; review dates come only from ``REVIEWS``."""
+def site_feature(region, site, by_shore, by_access, receipts=None):
+    """One run. A site with ``reviewed: False`` carries null review clocks: no download, import or regional date renews it."""
+    reviewed = site.get('reviewed', True)
+    review = REVIEWS[region] if reviewed else None
+    classes, rocky = site.get('classes'), site.get('substrate') == 'rocky'
+    if rocky and (not classes or set(classes) != set(site['objects']) or not set(classes.values()) <= set(ROCKY_LEGEND)):
+        raise ValueError('Rocky site needs one named ESI code per object: ' + site['id'])
+    paths, ids = [], []
+    for ident in site['objects']:
+        f = by_shore.get(ident)
+        if not f or (f.get('properties') or {}).get('ESI') != (classes[ident] if classes else '3A'):
+            raise ValueError(f'Reviewed {"rocky" if rocky else "sandy"} source feature changed: {ident}')
+        kept = run_paths(f, *site['lat'], *site.get('lon', (-180, 180)))
+        if kept:
+            paths += kept
+            ids.append(ident)
+    if not paths:
+        raise ValueError('Missing site geometry: ' + site['id'])
+    points = []
+    for ident in site['access']:
+        if ident not in by_access:
+            raise ValueError(f'Unverified public beach approach {ident}')
+        points.append(access_point(by_access[ident], ident, review['access']['reviewedAt'] if review else None, site['note']))
+    codes = sorted(set(classes.values())) if classes else ['3A']
+    shore_class = ('NOAA ESI ' + ', '.join(codes) + ' · ' + ' and '.join(ROCKY_LEGEND[c] for c in codes)) if rocky \
+        else 'NOAA ESI 3A · fine to medium-grained sandy beach'
+    method = ('Original NOAA vertices of the named rocky shore objects inside the State Parks unit bounding box, in source order; no interpolation, buffers, '
+              'coordinate simplification, or connections across gaps.') if rocky else \
+        'Contiguous original NOAA vertices selected within named beach latitude limits; no interpolation, buffers, coordinate simplification, or connections across gaps.'
+    clocks = {'checkedAt': None, 'reviewExpiresAt': None, 'accessReviewedAt': None, 'accessReviewExpiresAt': None,
+              'legalReviewedAt': None, 'legalReviewExpiresAt': None} if not review else {
+        'checkedAt': review['source']['reviewedAt'], 'reviewExpiresAt': review['source']['expiresAt'],
+        'accessReviewedAt': review['access']['reviewedAt'], 'accessReviewExpiresAt': review['access']['expiresAt'],
+        'legalReviewedAt': review['legal']['reviewedAt'], 'legalReviewExpiresAt': review['legal']['expiresAt']}
+    props = {'id': site['id'], 'name': site['name'], 'areaId': site['areaId'], 'region': region, 'substrate': 'rocky' if rocky else 'sand',
+             'shoreClass': shore_class, 'sourceYear': 2006, 'sourceUrl': NOAA + '/3', 'sourceObjectIds': ids, 'geometryMethod': method,
+             'horizontalAccuracyM': None, 'access': points, 'accessUrl': site['accessUrl'], **clocks, 'legalSourceUrl': RULES,
+             'license': 'NOAA ESI: no use constraints beyond stated mapping limitations; CCC access: factual coordinates/names only, source terms retained in provenance.',
+             'attribution': 'NOAA NOS Office of Response and Restoration, Central California ESI (2006); California Coastal Commission access inventory.'}
+    if not reviewed and receipts:
+        props['sourceAcquisitions'] = {k: receipts[k] for k in ('noaa', 'access', 'terms')}
+    return {'type': 'Feature', 'id': site['id'], 'geometry': {'type': 'MultiLineString', 'coordinates': paths}, 'properties': props}
+
+
+def extract(region, shore, access, receipts=None):
+    """Runs and approaches for ``region``; review dates come only from ``REVIEWS`` and never for an unreviewed site."""
     if shore.get('type') != 'FeatureCollection' or access.get('type') != 'FeatureCollection':
         raise ValueError('Invalid GeoJSON')
-    review = REVIEWS[region]
     by_shore = {f.get('properties', {}).get('OBJECTID'): f for f in shore['features']}
     by_access = {f.get('properties', {}).get('OBJECTID'): f for f in access['features']}
-    features = []
-    for site in SITES[region]['sites']:
-        paths, ids = [], []
-        for ident in site['objects']:
-            f = by_shore.get(ident)
-            if not f or (f.get('properties') or {}).get('ESI') != '3A':
-                raise ValueError(f'Reviewed sandy source feature changed: {ident}')
-            kept = run_paths(f, *site['lat'])
-            if kept:
-                paths += kept
-                ids.append(ident)
-        if not paths:
-            raise ValueError('Missing site geometry: ' + site['id'])
-        points = []
-        for ident in site['access']:
-            if ident not in by_access:
-                raise ValueError(f'Unverified public beach approach {ident}')
-            points.append(access_point(by_access[ident], ident, review['access']['reviewedAt'], site['note']))
-        features.append({'type': 'Feature', 'id': site['id'], 'geometry': {'type': 'MultiLineString', 'coordinates': paths}, 'properties': {
-            'id': site['id'], 'name': site['name'], 'areaId': site['areaId'], 'region': region, 'substrate': 'sand',
-            'shoreClass': 'NOAA ESI 3A · fine to medium-grained sandy beach', 'sourceYear': 2006, 'sourceUrl': NOAA + '/3',
-            'sourceObjectIds': ids,
-            'geometryMethod': 'Contiguous original NOAA vertices selected within named beach latitude limits; no interpolation, buffers, coordinate simplification, or connections across gaps.',
-            'horizontalAccuracyM': None, 'access': points, 'accessUrl': site['accessUrl'],
-            'checkedAt': review['source']['reviewedAt'], 'reviewExpiresAt': review['source']['expiresAt'],
-            'accessReviewedAt': review['access']['reviewedAt'], 'accessReviewExpiresAt': review['access']['expiresAt'],
-            'legalReviewedAt': review['legal']['reviewedAt'], 'legalReviewExpiresAt': review['legal']['expiresAt'], 'legalSourceUrl': RULES,
-            'license': 'NOAA ESI: no use constraints beyond stated mapping limitations; CCC access: factual coordinates/names only, source terms retained in provenance.',
-            'attribution': 'NOAA NOS Office of Response and Restoration, Central California ESI (2006); California Coastal Commission access inventory.'}})
-    return features
+    return [site_feature(region, site, by_shore, by_access, receipts) for site in SITES[region]['sites']]
 
 
 def build_asset(region, bodies, receipts):
@@ -242,11 +282,66 @@ def build_asset(region, bodies, receipts):
     terms = re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', str(data['terms'].get('licenseInfo') or ''))).strip()
     if not terms:
         raise ValueError('Coastal Commission source terms are missing')
-    features = extract(region, data['noaa'], data['access'])
+    features = extract(region, data['noaa'], data['access'], receipts)
     return {'type': 'FeatureCollection', 'schemaVersion': 1, 'countyId': SITES[region]['countyId'], 'regionId': region,
             'builtAt': max(r['fetchedAt'] for r in receipts.values()), 'sourceYear': 2006,
             'sourceChecks': {'noaaUrl': NOAA, 'accessUrl': ACCESS, 'acquisitions': receipts, 'accessTermsUrl': TERMS_PAGE, 'accessTerms': terms},
             'reviews': REVIEWS[region], 'limitations': LIMITATIONS, 'features': features}
+
+
+def feature_bytes(feature):
+    return json.dumps(feature, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+
+
+def add_site(region, site_id, baseline, bodies, receipts):
+    """The committed package plus one more run, offline: the five legacy sand features keep their exact bytes.
+
+    ``baseline`` is the committed package (parsed); a legacy feature that is missing, changed or out of order is
+    refused. An existing ``site_id`` feature is replaced, never duplicated. Root reviews and acquisitions stay as they are.
+    """
+    if site_id != ADDED_SITE or region != 'morro-bay':
+        raise ValueError('Unknown site to add: ' + str(site_id))
+    site = next(s for s in SITES[region]['sites'] if s['id'] == site_id)
+    legacy = [f for f in baseline.get('features', []) if f.get('id') != site_id]
+    if [f.get('id') for f in legacy] != list(LEGACY_FEATURE_SHA256):
+        raise ValueError('Baseline legacy runs changed or reordered')
+    for f in legacy:
+        if hashlib.sha256(feature_bytes(f)).hexdigest() != LEGACY_FEATURE_SHA256[f['id']]:
+            raise ValueError('Baseline legacy run changed: ' + f['id'])
+    shore, access = parse(bodies['noaa']), parse(bodies['access'])
+    if shore.get('type') != 'FeatureCollection' or access.get('type') != 'FeatureCollection':
+        raise ValueError('Invalid GeoJSON')
+    by_shore = {f.get('properties', {}).get('OBJECTID'): f for f in shore['features']}
+    by_access = {f.get('properties', {}).get('OBJECTID'): f for f in access['features']}
+    return {**baseline, 'features': legacy + [site_feature(region, site, by_shore, by_access, receipts)]}
+
+
+def load_added(directory, region, now):
+    """Saved responses for the additive rebuild: the NOAA window response is hash-checked; access points come from the
+    SC1952-07 receipt (a subset, not the full response), and the access and terms receipts are that dossier's."""
+    directory = Path(directory)
+    try:
+        receipts = json.loads((directory / 'receipts.json').read_text(encoding='utf-8'))
+    except (OSError, UnicodeDecodeError, ValueError, RecursionError):
+        raise ValueError('Unreadable saved receipts: receipts.json') from None
+    if not isinstance(receipts, dict):
+        raise ValueError('Saved receipts must be a JSON object')
+    urls = {**source_urls(region), 'noaa': query_url(NOAA + '/3/query', WINDOWS[ADDED_SITE])}
+    bodies = {}
+    for key, name in ADD_FILES.items():
+        try:
+            bodies[key] = (directory / name).read_bytes()
+        except OSError:
+            raise ValueError('Missing or invalid saved source receipt: ' + key) from None
+    for key in ('noaa', 'access', 'terms'):
+        r = receipts.get(key)
+        at = parse_time(r.get('fetchedAt') if isinstance(r, dict) else None)
+        if (at is None or at > now.timestamp() + 3600 or r.get('url') != urls[key] or set(r) != {'url', 'fetchedAt', 'responseSha256', 'bytes'}
+                or not isinstance(r.get('bytes'), int) or r['bytes'] < 1 or not re.fullmatch(r'[0-9a-f]{64}', str(r.get('responseSha256')))):
+            raise ValueError('Missing or invalid saved source receipt: ' + key)
+    if receipts['noaa']['responseSha256'] != hashlib.sha256(bodies['noaa']).hexdigest() or receipts['noaa']['bytes'] != len(bodies['noaa']):
+        raise ValueError('Missing or invalid saved source receipt: noaa')
+    return bodies, {k: receipts[k] for k in ('noaa', 'access', 'terms')}
 
 
 def _write_atomic(path, data):
@@ -268,6 +363,7 @@ def main(argv=None):
     p.add_argument('--sources', type=Path, help='rebuild offline from responses saved by --save-sources')
     p.add_argument('--save-sources', type=Path, help='keep the raw responses and receipts here (use var/)')
     p.add_argument('--output', type=Path)
+    p.add_argument('--add-site', choices=[ADDED_SITE], help='offline: add one run to the committed package from --sources, keeping the legacy runs byte for byte')
     args = p.parse_args(argv)
     try:
         return run(args)
@@ -277,18 +373,24 @@ def main(argv=None):
 
 
 def run(args):
-    if args.sources:
-        bodies, receipts = load_saved(args.sources, args.region, datetime.now(timezone.utc))
+    output = args.output or ROOT / 'catalog/shore-habitat' / f'{args.region}.geojson'
+    if args.add_site:
+        if not args.sources or args.save_sources:
+            raise ValueError('--add-site needs --sources and no --save-sources')
+        bodies, receipts = load_added(args.sources, args.region, datetime.now(timezone.utc))
+        asset = add_site(args.region, args.add_site, json.loads(output.read_bytes()), bodies, receipts)
     else:
-        bodies, receipts = download(args.region)
-    asset = build_asset(args.region, bodies, receipts)
+        if args.sources:
+            bodies, receipts = load_saved(args.sources, args.region, datetime.now(timezone.utc))
+        else:
+            bodies, receipts = download(args.region)
+        asset = build_asset(args.region, bodies, receipts)
     validate.check('shore-habitat', asset)
     if args.save_sources:
         args.save_sources.mkdir(parents=True, exist_ok=True)
         for key, name in SOURCE_FILES.items():
             _write_atomic(args.save_sources / name, bodies[key])
         _write_atomic(args.save_sources / 'receipts.json', (json.dumps(receipts, indent=1) + '\n').encode())
-    output = args.output or ROOT / 'catalog/shore-habitat' / f'{args.region}.geojson'
     output.parent.mkdir(parents=True, exist_ok=True)
     _write_atomic(output, (json.dumps(asset, ensure_ascii=False, separators=(',', ':')) + '\n').encode('utf-8'))
     vertices = sum(len(line) for f in asset['features'] for line in f['geometry']['coordinates'])
