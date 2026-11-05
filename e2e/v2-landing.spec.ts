@@ -679,7 +679,9 @@ test('the landing warms the app\'s first-paint files, and none under Save-Data',
   await saving.route(url => url.origin !== new URL(baseURL!).origin, route => route.abort('blockedbyclient'));
   await saving.addInitScript(() => Object.defineProperty(navigator, 'connection', {value: {saveData: true}, configurable: true}));
   const quiet = await saving.newPage(), asked: string[] = [];
-  quiet.on('request', r => asked.push(new URL(r.url()).pathname));
+  // Deferred readings import shared app chunks even under Save-Data. Those
+  // script loads are needed by the landing, not warmApp's speculative fetches.
+  quiet.on('request', r => { if (r.resourceType() === 'fetch') asked.push(new URL(r.url()).pathname); });
   await quiet.goto('/');
   await expect(quiet.locator('#landing-app input')).toBeVisible();
   await quiet.waitForTimeout(1500);

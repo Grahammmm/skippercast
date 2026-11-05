@@ -13,8 +13,9 @@ import {boatFactors, savedBoat} from '../../dist/boat-handling.js';
 import {dateKey} from '../../packages/coast/src/daily.ts';
 import {createRegionReader, REGION_MISSING} from '../app/region-info.ts';
 import {briefFrom, leadDayText, leadHour, loadDailyFeed} from '../brief/Brief.tsx';
-import {briefVerdict, VERDICT_WORD, type DayVerdict} from '../brief/verdict.ts';
-import {boatBasisName, boatRangeNote, type SavedBoatLike} from '../boat-range.ts';
+import {briefVerdict, type DayVerdict} from '../brief/verdict.ts';
+import {boatBasisName, customBoatName, boatRangeNote, type SavedBoatLike} from '../boat-range.ts';
+import {num, t, type Language, type StringId} from '../i18n.ts';
 import {createCoastData} from '../coast-data.ts';
 import {loadConditionsForecast} from '../conditions.ts';
 import {parseLimits, type ComfortLimits} from '../limits.ts';
@@ -29,7 +30,7 @@ export type LandingVerdict = {verdict: DayVerdict; word: string; sentence: strin
   boatNote?: string | null};
 
 /** The heading's boat when none is saved or the saved one is unreadable. */
-export const REFERENCE_BOAT_LABEL = 'reference 23 ft boat';
+export const REFERENCE_BOAT_LABEL = t('landing.boat.reference', 'en');
 
 /**
  * What this device saved for rating the Boat verdict, read once: the saved boat (only a plain object
@@ -45,6 +46,14 @@ function deviceBoat(): {boat: NonNullable<SavedBoatLike> | null; factors: Return
     if (boat && typeof boat === 'object' && !Array.isArray(boat)) return {boat: boat as NonNullable<SavedBoatLike>, factors: boatFactors(boat), limits};
   } catch { /* unreadable: the reference boat */ }
   return {boat: null, factors: boatFactors(null), limits};
+}
+
+/** The saved boat's name as the heading gives it: a saved custom name stays literal; the length and no-name forms follow `lang` (as web/brief/Brief.tsx boatName does). */
+function boatName(boat: NonNullable<SavedBoatLike>, lang: Language): string {
+  const name = boatBasisName(boat);
+  if (lang === 'en' || customBoatName(boat) !== null) return name;
+  const length = /^your (\d+(?:\.\d+)?) ft boat$/.exec(name);
+  return name === 'your boat' ? t('brief.boat.generic', lang) : length ? t('brief.boat.yours', lang, {n: num(Number(length[1]), lang)}) : name;
 }
 
 /** The brief link for the verdict's day, on the Boat profile (the brief rates with the same saved boat). */
@@ -66,17 +75,17 @@ async function boundReport(info: Parameters<typeof regionPlace>[0]) {
  * Tomorrow's verdict for the default region at `now`, or null when the region or its feeds cannot be
  * read (no brief). A missing forecast reads Unknown, never a calmer word, as in the app.
  */
-export async function loadLandingVerdict(fetchFn: typeof fetch = fetch, now: Date = new Date(), page: string = location.href): Promise<LandingVerdict | null> {
+export async function loadLandingVerdict(fetchFn: typeof fetch = fetch, now: Date = new Date(), page: string = location.href, lang: Language = 'en'): Promise<LandingVerdict | null> {
   const info = await createRegionReader(fetchFn)(DEFAULT_REGION).catch(() => null);
   if (!info || info === REGION_MISSING) return null;
   const [feed, forecast, coast] = await Promise.all([loadDailyFeed(info.id, fetchFn), loadConditionsForecast(info.id, info.center, fetchFn, page), boundReport(info).catch(() => null)]);
   const tz = info.timezone, hour = leadHour(null, null, now, tz);
   const mine = deviceBoat();
   const brief = briefFrom({info, feed, forecast, coast, profile: 'boat', hour, limits: mine.limits}, now);
-  const v = briefVerdict(brief, forecast?.region === info.id ? forecast : null, now, tz, mine.factors);
+  const v = briefVerdict(brief, forecast?.region === info.id ? forecast : null, now, tz, mine.factors, lang);
   if (!brief || !v) return null;
-  const date = brief.date ?? dateKey(hour ? new Date(hour) : now, tz), when = leadDayText(date, now, tz);
-  return {verdict: v.verdict, word: VERDICT_WORD[v.verdict], sentence: `${v.limit}${v.held ? ` ${v.held}` : ''}`,
+  const date = brief.date ?? dateKey(hour ? new Date(hour) : now, tz), when = leadDayText(date, now, tz, lang);
+  return {verdict: v.verdict, word: t(`brief.verdict.${v.verdict}` as StringId, lang), sentence: `${v.limit}${v.held ? ` ${v.held}` : ''}`,
     day: when.charAt(0).toUpperCase() + when.slice(1), date, place: info.name, href: briefHref(info.id, date),
-    boatName: mine.boat ? boatBasisName(mine.boat) : REFERENCE_BOAT_LABEL, boatNote: mine.boat ? boatRangeNote(mine.boat.loa_ft) : null};
+    boatName: mine.boat ? boatName(mine.boat, lang) : t('landing.boat.reference', lang), boatNote: mine.boat && boatRangeNote(mine.boat.loa_ft) ? t('brief.boat.note', lang) : null};
 }
