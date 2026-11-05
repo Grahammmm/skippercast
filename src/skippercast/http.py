@@ -608,19 +608,28 @@ class Session:
             return body, None
         if encoding not in ("gzip", "x-gzip"):
             raise ContractError("Unsupported response compression")
-        decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
-        try:
-            bound = 0 if limit is None else limit + 1
-            decoded = decoder.decompress(body, bound)
-            if limit is None:
-                decoded += decoder.flush()
-            elif decoder.unconsumed_tail or len(decoded) > limit:
-                raise BodyTooLarge("Response exceeds bounded collection size")
-        except zlib.error as error:
-            raise ContractError(f"Corrupt gzip response: {error}") from error
-        if not decoder.eof:
-            raise ContractError("Truncated gzip response")
-        return decoded, len(body)
+        chunks: list[bytes] = []
+        remaining, rest = limit, body
+        while True:
+            decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
+            try:
+                # max_length 0 means unlimited, so a bounded call always asks for remaining + 1.
+                chunk = decoder.decompress(rest, 0 if remaining is None else remaining + 1)
+            except zlib.error as error:
+                raise ContractError(f"Corrupt gzip response: {error}") from error
+            if remaining is not None:
+                if len(chunk) > remaining:
+                    raise BodyTooLarge("Response exceeds bounded collection size")
+                remaining -= len(chunk)
+            if not decoder.eof:
+                raise ContractError("Truncated gzip response")
+            chunks.append(chunk)
+            rest = decoder.unused_data
+            if not rest.strip(b"\0"):
+                break  # nothing left, or terminal zero padding
+            if rest[:2] != b"\x1f\x8b":
+                raise ContractError("Corrupt gzip response: trailing data after the last member")
+        return b"".join(chunks), len(body)
 
     def _hop(self, method: str, url: str, headers: dict, timeout: float, limit: int | None,
              sink: BinaryIO | None, truncate: bool = False, data: bytes | None = None) -> _Hop:
