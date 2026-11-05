@@ -37,6 +37,7 @@ const fail = (code: GpxErrorCode): never => { throw new Fatal(code); };
 
 const GPX_NAMESPACES = new Map([['http://www.topografix.com/GPX/1/0', '1.0'], ['http://www.topografix.com/GPX/1/1', '1.1']]);
 const XML_NAMESPACE = 'http://www.w3.org/XML/1998/namespace';
+const XMLNS_NAMESPACE = 'http://www.w3.org/2000/xmlns/';
 const BASE_NAMESPACES = new Map([['', ''], ['xml', XML_NAMESPACE]]);
 
 const NAME_START = 'A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD\\u{10000}-\\u{EFFFF}';
@@ -205,6 +206,8 @@ function read(input: string): GpxWaypointResult {
         if (key !== 'xmlns' && !key.startsWith('xmlns:')) continue;
         const prefix = key === 'xmlns' ? '' : key.slice(6);
         if (key !== 'xmlns' && (!prefixName.test(prefix) || prefix === 'xmlns' || !value || (prefix === 'xml' && value !== XML_NAMESPACE))) fail('invalid-xml');
+        // Namespaces in XML 1.0: the xml and xmlns namespace URIs are reserved; only the xml prefix may bind the first, nothing may bind the second.
+        if (value === XMLNS_NAMESPACE || (value === XML_NAMESPACE && prefix !== 'xml')) fail('invalid-xml');
         if (namespaces === (top ? top.namespaces : BASE_NAMESPACES)) namespaces = new Map(namespaces);
         namespaces.set(prefix, value);
       }
