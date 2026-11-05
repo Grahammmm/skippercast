@@ -400,7 +400,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC1952-08 adds a Shore runs "not yet reviewed" note using the existing app-legend-note text role; no backing, opacity or text paint changed.
   // SC0707-09 moves the Legend's fixed words and basis sentences to the string catalogue and labels run-time English; every row keeps its
   // existing app-legend-note/ui-mono text roles and no backing, opacity, token or threshold changed. Line citations above moved with the source.
-  "legendTsx": "0de8b86bcacd18ebd5c56b81b42703525cfe0e00b3ef43e29b56a5c07080ee10"
+  // SC1352-02 resolves a layer's status note, reason and stamp in the page's language (one Status wrapper around the existing text);
+  // every row keeps its app-legend-note/ui-mono text roles and no backing, opacity, token or threshold changed. Line citations above moved with the source.
+  "legendTsx": "876614cf59d59c4d5d0a857d9592c12a4630973334252e8cfdf2b34887d61da6"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
@@ -421,8 +423,8 @@ export function checkSurfaceSource(sources) {
         ['legend-labels', 'muted', glass, [glass[3], glass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'panel.css:858-868,2678-2684; bridge:21,27'],
         ['sheen-text', 'text', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,26'],
         ['sheen-muted', 'muted', sheen, [0, sheen[3]], panel, panel, 'panel.css:1191-1201; bridge:20,24,27'],
-        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,176,216,230; Legend.tsx:368'],
-        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:176,197,245; Legend.tsx:100,234,368'],
+        ['app-legend-text', 'text', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:11,176,216,230; Legend.tsx:375'],
+        ['app-legend-muted', 'muted', nativeGlass, [nativeGlass[3], nativeGlass[3]], [0, 0, 0, 1], [255, 255, 255, 1], 'app.css:176,197,245; Legend.tsx:107,241,375'],
       ]) {
         const foreground = resolve(role);
         results.push({theme, id, binding, foreground, surface,

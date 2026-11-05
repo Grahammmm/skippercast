@@ -38,7 +38,8 @@ import {ENC_MIN_ZOOM} from '../map/chart.ts';
 import {aisOn, aisState} from '../map/commercial-ais.ts';
 import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, toggleActivity} from '../map/fleet.ts';
-import {chartOnly, drawsIn, layerCopy, railNotes} from '../map/layers.ts';
+import {chartOnly, drawsIn, layerCopy, railNoteCopies, railNotes} from '../map/layers.ts';
+import {statusText} from '../map/status-copy.ts';
 import type {CoastHabitat} from '../../packages/coast/src/embed-types.ts';
 import {
   currentStatus, exploreRankedReef, selectRankedReef, setTerrainOption, shownPresentation, terrainHabitat, terrainOptions, terrainShading,
@@ -262,6 +263,8 @@ export function LayerRail() {
   const on = layers.value, source = current.value, shown = shownPresentation.value, lang = language.value;
   const basisLabel = (label: string) => t('rail.basisSummary', lang, {label});
   const runtime = (note: string | undefined) => note ? <EnglishDetail lang={lang}>{note}</EnglishDetail> : undefined;
+  // SC1352-02: a note whose producer attached catalogue parts reads in the page's language; any other stays labelled English.
+  const railNote = (id: string) => { const raw = railNotes.value[id as keyof typeof railNotes.value]; const r = raw ? statusText(raw, railNoteCopies.value[id as keyof typeof railNotes.value], lang) : null; return r?.translated ? r.text : runtime(raw || undefined); };
   return (
     <Rail class="app-rail" label={t('rail.aria', lang)} header={<><LookFor /><Presets /></>} footer={<BaseChoice />}>
       {railEntries(lang).map(e => {
@@ -273,7 +276,7 @@ export function LayerRail() {
           </RailItem>
         ) : (
           <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(e.label)} disabled={!here}
-            note={!here ? chartOnly(lang) : e.id === 'seafloor' && shown !== 'chart' ? undefined : runtime(railNotes.value[e.id] || undefined)}
+            note={!here ? chartOnly(lang) : e.id === 'seafloor' && shown !== 'chart' ? undefined : railNote(e.id)}
             onToggle={(id, next) => setParams({layers: layersParam(toggled(layers.value, id, next))})}>
             {e.id === 'fleet' && active && here ? <FleetOptions /> : null}
             {e.id === 'seafloor' && shown !== 'chart' ? <TerrainOptions on={active} /> : null}
