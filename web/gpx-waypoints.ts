@@ -7,7 +7,7 @@ export const MAX_GPX_BYTES = 1_048_576;
 /** Most GPX-namespace `wpt` + `rtept` elements in one file (inclusive), rejected ones included. Deliberately not the 100 stored-spot capacity. */
 export const MAX_GPX_POINTS = 1_000;
 const MAX_DEPTH = 64;
-/** The spots route's limits (server/routes/spots.ts NAME_UNITS in UTF-16 units, NOTE_CHARS in code points). */
+/** The spot-store limits (NAME_UNITS in UTF-16 units, NOTE_CHARS in code points, as the server's spots route file defines them). */
 const NAME_UNITS = 80, NOTE_CHARS = 1000;
 
 export type GpxWaypoint = {name: string; lat: number; lon: number; note: string | null};
