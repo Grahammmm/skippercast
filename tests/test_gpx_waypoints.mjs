@@ -54,6 +54,16 @@ test('gpx_waypoints_namespace_and_placement', () => {
   same(decoy.waypoints, [{name: '', lat: 5, lon: 6, note: null}], 'decoys');
   same(decoy.rejected.map(x => x.reason), ['invalid-latitude'], 'xlat is not lat');
   assert.equal(code(gpx11(`<wpt lat="1" lat="2" lon="3"/>`)), 'invalid-xml', 'duplicate attribute is fatal');
+  // An empty prefix suffix is malformed, never a default-namespace declaration.
+  assert.equal(code(gpx11(`<wpt xmlns:="${NS11}" lat="1" lon="2"/>`)), 'invalid-xml', 'xmlns: with no prefix is fatal');
+  assert.equal(code(gpx11(`<wpt xmlns:="urn:other" lat="1" lon="2"/>`)), 'invalid-xml');
+  // XML name characters: U+00D7 and U+00F7 are not name characters; U+00C0 and an astral letter are.
+  assert.equal(code(gpx11(`<wpt lat="1" lon="2" \u00d7a="1"/>`)), 'invalid-xml', 'U+00D7 cannot start an attribute name');
+  assert.equal(code(gpx11(`<wpt lat="1" lon="2" a\u00f7="1"/>`)), 'invalid-xml', 'U+00F7 is not a name character');
+  assert.equal(code(gpx11(`<\u00d7x lat="1" lon="2"/>`)), 'invalid-xml', 'U+00D7 cannot start an element name');
+  assert.equal(code(gpx11(`<wpt xmlns:\u00d7p="urn:x" lat="1" lon="2"/>`)), 'invalid-xml', 'U+00D7 cannot start a prefix');
+  assert.equal(code(gpx11(`<wpt lat="1" lon="2" a\u2000="1"/>`)), 'invalid-xml', 'U+2000 is not a name character');
+  assert.equal(ok(gpx11(`<wpt lat="1" lon="2" \u00c0\u00b7x="1" \u{10000}="2"/>`)).waypoints.length, 1, 'legal non-ASCII names still read');
 });
 
 test('gpx_waypoints_text_and_limits', () => {

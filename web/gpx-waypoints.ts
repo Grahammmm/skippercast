@@ -39,8 +39,10 @@ const GPX_NAMESPACES = new Map([['http://www.topografix.com/GPX/1/0', '1.0'], ['
 const XML_NAMESPACE = 'http://www.w3.org/XML/1998/namespace';
 const BASE_NAMESPACES = new Map([['', ''], ['xml', XML_NAMESPACE]]);
 
-const NAME = '[A-Za-z_\\u0080-\\uFFFF][\\w.\\-\\u0080-\\uFFFF]*';
-const qualified = new RegExp(`^(?:(${NAME}):)?(${NAME})$`), prefixName = new RegExp(`^${NAME}$`);
+const NAME_START = 'A-Z_a-z\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u02FF\\u0370-\\u037D\\u037F-\\u1FFF\\u200C\\u200D\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD\\u{10000}-\\u{EFFFF}';
+/** XML 1.0 (fifth edition) NameStartChar and NameChar without the colon (an NCName). */
+const NAME = `[${NAME_START}][${NAME_START}\\-.0-9\\u00B7\\u0300-\\u036F\\u203F\\u2040]*`;
+const qualified = new RegExp(`^(?:(${NAME}):)?(${NAME})$`, 'u'), prefixName = new RegExp(`^${NAME}$`, 'u');
 const declaration = /<\?xml[ \t\r\n]+version[ \t\r\n]*=[ \t\r\n]*(?:"([^"]*)"|'([^']*)')(?:[ \t\r\n]+encoding[ \t\r\n]*=[ \t\r\n]*(?:"([A-Za-z][\w.-]*)"|'([A-Za-z][\w.-]*)'))?(?:[ \t\r\n]+standalone[ \t\r\n]*=[ \t\r\n]*(?:"(?:yes|no)"|'(?:yes|no)'))?[ \t\r\n]*\?>/y;
 const head = /<([^\s<>/=!?"'&]+)/y, close = /<\/([^\s<>/=!?"'&]+)[ \t\r\n]*>/y;
 /** One whole quoted attribute (readAttributes' token, with XML whitespace and no raw `<` in the value), and the tag's end. */
@@ -202,7 +204,7 @@ function read(input: string): GpxWaypointResult {
       for (const [key, value] of list) {
         if (key !== 'xmlns' && !key.startsWith('xmlns:')) continue;
         const prefix = key === 'xmlns' ? '' : key.slice(6);
-        if (prefix && (!prefixName.test(prefix) || prefix === 'xmlns' || !value || (prefix === 'xml' && value !== XML_NAMESPACE))) fail('invalid-xml');
+        if (key !== 'xmlns' && (!prefixName.test(prefix) || prefix === 'xmlns' || !value || (prefix === 'xml' && value !== XML_NAMESPACE))) fail('invalid-xml');
         if (namespaces === (top ? top.namespaces : BASE_NAMESPACES)) namespaces = new Map(namespaces);
         namespaces.set(prefix, value);
       }
