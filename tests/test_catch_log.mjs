@@ -806,3 +806,68 @@ test('patch_reorders_without_changing_cursor_contract', async () => {
   assert.deepEqual((await theirs.json()).entries.map(e => e.id), [], "alice's cursor stays owner-bound: bob's own rows sort before it and none of alice's appear");
   sql.close();
 });
+
+// RF1540-2: a PATCH that read an older row is refused with 409 instead of restoring omitted fields over a saved correction.
+// The hook returns the outer request's real SELECT result only after a nested real request has committed its own change.
+async function stalePatch(seed, nested, outer, {owner = 'alice', afterSnapshot} = {}) {
+  let armed = null;
+  const {sql, adapter} = database(a => ({...a, prepare(q) {
+    const s = a.prepare(q);
+    if (!armed || !/^SELECT \* FROM catch_log WHERE id=\? AND owner=\?$/.test(q)) return s;
+    const w = {bind(...x) { s.bind(...x); return w; }, async first() { const snap = await s.first(), run = armed; armed = null; await run(); return snap; }};
+    return w;
+  }, batch: a.batch})), env = {DB: adapter}, made = (await post(env, 'alice', seed)).data;
+  let inner;
+  armed = async () => { inner = nested ? await patch(env, 'alice', made.id, nested) : await call(env, '/api/catch-log/' + made.id, {owner: 'alice', method: 'DELETE', body: {}}).then(async r => ({status: r.status, data: await r.json()})); };
+  const out = await patch(env, owner, made.id, outer);
+  return {sql, env, made, inner, out};
+}
+const CONFLICT = {error: 'This entry changed while you were editing it. Reload it and try again.'};
+
+test('stale_patch_conflicts_and_keeps_the_saved_correction', async () => {
+  for (const outer of [{note: 'new note'}, {}]) {
+    const {sql, env, made, inner, out} = await stalePatch(FISH, {count: 4}, outer);
+    assert.equal(inner.status, 200); assert.equal(inner.data.count, 4);
+    assert.deepEqual([out.status, out.data], [409, CONFLICT], JSON.stringify(outer));
+    assert.deepEqual([rowOf(sql, made.id).count, rowOf(sql, made.id).note], [4, FISH.note], 'winner and original note stay');
+    assert.deepEqual(await (await call(env, '/api/catch-log/' + made.id, {owner: 'alice'})).json(), rowOf(sql, made.id), 'GET agrees');
+    assert.equal((await (await call(env, '/api/privacy', {owner: 'alice'})).json()).catch_log[0].count, 4, 'export agrees');
+    assert.equal((await patch(env, 'alice', made.id, outer)).status, 200, 'a fresh edit after rereading works');
+    sql.close();
+  }
+});
+
+test('stale_patch_cannot_combine_into_an_invalid_entry', async () => {
+  const a = await stalePatch({...FISH, count: 1}, {outcome: 'blank', count: 0}, {count: 9999});
+  assert.equal(a.out.status, 409);
+  assert.deepEqual([rowOf(a.sql, a.made.id).outcome, rowOf(a.sql, a.made.id).count], ['blank', 0]);
+  a.sql.close();
+  const b = await stalePatch(FISH, {started_at: '2026-11-01T14:00:00Z', ended_at: '2026-11-01T15:00:00Z'}, {ended_at: '2026-11-01T18:00:00Z'});
+  assert.equal(b.out.status, 409);
+  assert.equal(rowOf(b.sql, b.made.id).ended_at, '2026-11-01T15:00:00.000Z');
+  b.sql.close();
+});
+
+test('stale_patch_compares_null_fields_and_unchanged_rows_still_succeed', async () => {
+  const minimal = {started_at: '2026-11-01T14:00:00Z', outcome: 'unknown'};
+  const ok = await stalePatch(minimal, {note: 'noted'}, {}); // nested succeeded, so the outer snapshot is stale
+  assert.equal(ok.out.status, 409); ok.sql.close();
+  const nul = await stalePatch(minimal, {species: 'lingcod'}, {method: 'drift'});
+  assert.equal(nul.out.status, 409); assert.equal(rowOf(nul.sql, nul.made.id).method, null); nul.sql.close();
+  const { sql, adapter } = database(), env = {DB: adapter}, made = (await post(env, 'alice', minimal)).data;
+  assert.equal((await patch(env, 'alice', made.id, {method: 'drift'})).status, 200, 'null optional fields compare equal');
+  assert.equal((await patch(env, 'alice', made.id, {})).status, 200, 'unchanged {} is a 200 no-op');
+  sql.close();
+});
+
+test('stale_patch_after_delete_or_for_another_owner_is_404_and_leaks_nothing', async () => {
+  const gone = await stalePatch(FISH, null, {note: 'x'});
+  assert.deepEqual([gone.inner.status, gone.out.status, gone.out.data], [200, 404, {error: 'Not found'}]);
+  assert.equal(totalRows(gone.sql), 0, 'not recreated'); gone.sql.close();
+  const {sql, adapter} = database(), env = {DB: adapter}, made = (await post(env, 'alice', FISH)).data;
+  for (const id of [made.id, 'nope']) { const r = await patch(env, 'bob', id, {note: 'x'}); assert.deepEqual([r.status, r.data], [404, {error: 'Not found'}]); }
+  assert.equal(rowOf(sql, made.id).note, FISH.note);
+  const conflict = await stalePatch(FISH, {count: 5}, {note: 'SECRET-submitted'});
+  assert.ok(!JSON.stringify(conflict.out.data).includes('SECRET') && !JSON.stringify(conflict.out.data).includes('LOGNOTE'), 'no row or submitted data in 409');
+  sql.close(); conflict.sql.close();
+});
