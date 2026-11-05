@@ -12,6 +12,7 @@ import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import montereyDaily from './fixtures/brief/monterey-daily.json' with {type: 'json'};
 import catalogue from '../catalog/app/strings.json' with {type: 'json'};
 import {LANGUAGES, LANGUAGE_KEY, acceptedLanguage, initLanguage, language, localeOf, lookup, num, resolveLanguage, setLanguage, supported, t} from '../web/i18n.ts';
+import {PROFILE_TABLE} from '../web/profile.ts';
 import {COVERED, catalogueProblems} from '../scripts/check_copy.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -231,7 +232,7 @@ async function load() {
     stdin: {resolveDir: ROOT, loader: 'ts', contents: `
       export {App, regionInfo} from './web/app/App.tsx';
       export {RulesLine} from './web/app/MarkCard.tsx';
-      export {BriefFooter, BriefGaps, BriefTiles, Details, FEED_GAP, Verdict, comfortBasis, dailyFeed, feedGaps, leadDayText, regionalForecast} from './web/brief/Brief.tsx';
+      export {BriefFooter, BriefGaps, BriefTiles, Caveat, Details, FEED_GAP, Verdict, comfortBasis, dailyFeed, feedGaps, leadDayText, regionalForecast} from './web/brief/Brief.tsx';
       export {parseConditionsForecast} from './web/conditions.ts';
       export {language} from './web/i18n.ts';
       export {markData} from './web/map/marks.ts';
@@ -638,4 +639,36 @@ test('SC0707-07: the app shell is covered, and its ids keep their variables in e
   assert.ok(ids.length >= 88, 'the three families are in the catalogue');
   const vars = text => [...text.matchAll(/\{(\w+)\}/g)].map(x => x[1]).sort().join();
   for (const [id, entry] of ids) { assert.ok(entry.es?.trim(), `${id} has an es value`); assert.equal(vars(entry.es), vars(entry.en), `${id}: same variables in en and es`); }
+});
+
+// SC1352-01: the brief's one profile caveat follows the language where it renders; the table and model keep their English.
+const CAVEAT_ES = {
+  boat: 'El hábitat describe un lugar donde buscar; la presencia de peces no está verificada.',
+  shore: 'El estado del mar mar adentro no mide las olas que rompen en tu playa; revisa el oleaje de la playa, el acceso y la calidad del agua.',
+  spear: 'La visibilidad bajo el agua no está verificada; las corrientes superficiales no autorizan una inmersión.',
+  kayak: 'El viento, la deriva mar adentro y el oleaje en el punto de salida al agua determinan un día de kayak; un pronóstico no autoriza una salida a remo.',
+};
+
+test('caveat_null_model_each_profile_es: the no-model fallback is Spanish per profile and exact English round trip', async () => {
+  const m = await load();
+  const html = (lang, p) => { m.language.value = lang; m.profile.value = p; try { return m.render(m.h(m.Caveat, {brief: null})); } finally { m.language.value = 'en'; m.profile.value = 'boat'; } };
+  for (const p of Object.keys(CAVEAT_ES)) {
+    assert.equal(html('en', p), `<p class="app-caveat">${PROFILE_TABLE[p].caveat}</p>`, p);
+    assert.equal(html('es', p), `<p class="app-caveat">${CAVEAT_ES[p]}</p>`, p);
+  }
+  assert.match(CAVEAT_ES.boat, /no está verificada/); assert.match(CAVEAT_ES.spear, /no autorizan una inmersión/); assert.match(CAVEAT_ES.kayak, /no autoriza una salida a remo/);
+  assert.doesNotMatch(Object.values(CAVEAT_ES).join(' '), /\{\w+\}/);
+});
+
+test('caveat_loaded_profile_not_new_global_profile + unknown prose + other readers stay English', async () => {
+  const m = await load();
+  const html = (lang, global, brief) => { m.language.value = lang; m.profile.value = global; try { return m.render(m.h(m.Caveat, {brief})); } finally { m.language.value = 'en'; m.profile.value = 'boat'; } };
+  const spear = {profile: 'spear', caveat: PROFILE_TABLE.spear.caveat};
+  assert.equal(html('es', 'boat', spear), `<p class="app-caveat">${CAVEAT_ES.spear}</p>`, 'a loaded Spear brief keeps its own caveat');
+  assert.equal(html('en', 'boat', spear), `<p class="app-caveat">${PROFILE_TABLE.spear.caveat}</p>`);
+  assert.equal(html('es', 'spear', {profile: 'boat', caveat: PROFILE_TABLE.boat.caveat}), `<p class="app-caveat">${CAVEAT_ES.boat}</p>`, 'a fresh brief switches normally');
+  assert.equal(html('es', 'boat', {profile: 'spear', caveat: 'Custom <b>model</b> & more.'}), '<p class="app-caveat">Custom &lt;b>model&lt;/b> &amp; more.</p>', 'unknown model prose passes through, escaped once');
+  assert.equal(html('es', 'boat', {profile: 'spear', caveat: ''}), '<p class="app-caveat"></p>', 'an empty model caveat is not replaced');
+  assert.equal(html('es', 'boat', {profile: 'spear', caveat: PROFILE_TABLE.boat.caveat}), `<p class="app-caveat">${PROFILE_TABLE.boat.caveat}</p>`, "another profile's sentence is not replaced");
+  for (const p of Object.keys(CAVEAT_ES)) assert.match(PROFILE_TABLE[p].caveat, /^[A-Z][\x00-\x7f]+\.$/, 'the table stays English');
 });

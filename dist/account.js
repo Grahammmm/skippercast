@@ -4,6 +4,12 @@
 // (globalThis.SimpleWebAuthnBrowser), which loadPasskeyLibrary() adds once, with SRI,
 // when a ceremony starts: app.html does not load it for map page views.
 const RETURN_KEY = 'skippercast-account-return';
+import {coordinateFormat, formatCoordinates} from './coordinates.js';
+
+// The position format chosen in the account menu, read at each draw; blocked or unreadable storage means decimal degrees.
+function chosenFormat() {
+  try { return coordinateFormat(globalThis.localStorage?.getItem('skippercast-coordinates-v1')); } catch { return 'dd'; }
+}
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[c]);
 const day = iso => iso ? new Date(iso).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'}) : '';
 
@@ -133,10 +139,10 @@ const OUTCOME_WORDS = {fish: 'Fish', blank: 'Blank: no fish', unknown: 'Not sure
  * `trips` are the person's saved trips: an entry whose trip_id is exactly one of them also shows that trip's saved date
  * (a stored calendar date, never parsed as an instant); a null, orphan or deleted association adds nothing.
  */
-export function logItemHTML(row, trips = []) {
+export function logItemHTML(row, trips = [], format = chosenFormat()) {
   const trip = row.trip_id ? (Array.isArray(trips) ? trips : []).find(t => t?.id === row.trip_id) : null;
   const bits = [day(row.started_at), OUTCOME_WORDS[row.outcome] ?? row.outcome, row.outcome === 'fish' ? `${row.count} fish` : '', row.species, row.method,
-    row.lat != null && row.lon != null ? `${row.lat}, ${row.lon}` : '', trip?.date ? `Trip: ${trip.date}` : ''].filter(Boolean);
+    row.lat != null && row.lon != null ? formatCoordinates(row.lat, row.lon, format) : '', trip?.date ? `Trip: ${trip.date}` : ''].filter(Boolean);
   return `<li><span>${bits.map(esc).join(' · ')}</span>${row.note ? `<p class="account-hint">${esc(row.note)}</p>` : ''}
     <button type="button" data-remove-log="${esc(row.id)}">Remove</button></li>`;
 }
@@ -182,9 +188,9 @@ const logFormHTML = () => `<h2 class="account-subhead">Catch log</h2>
     <div class="home-port-actions"><button type="button" id="log-retry" hidden>Try again</button><button type="button" id="log-older" hidden>Show older entries</button></div>`;
 
 /** One saved spot as list HTML. Name, note and verdict are escaped, so markup in them shows as plain text. */
-export function spotItemHTML(spot, verdict) {
+export function spotItemHTML(spot, verdict, format = chosenFormat()) {
   const name = String(spot.name ?? '').replace(/[\u0000-\u001f\ufffe\uffff]/g, '').trim() || 'Unnamed spot';
-  return `<li><span>${esc(name)} · ${esc(spot.lat)}, ${esc(spot.lon)}</span>${verdict?.text ? `<p class="account-hint">${esc(verdict.text)}</p>` : ''}${spot.note ? `<p class="account-hint">${esc(spot.note)}</p>` : ''}
+  return `<li><span>${esc(name)} · ${esc(formatCoordinates(spot.lat, spot.lon, format))}</span>${verdict?.text ? `<p class="account-hint">${esc(verdict.text)}</p>` : ''}${spot.note ? `<p class="account-hint">${esc(spot.note)}</p>` : ''}
     <button type="button" data-remove-spot="${esc(spot.id)}">Remove</button></li>`;
 }
 
