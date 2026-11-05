@@ -8,30 +8,33 @@
 // region.json name), not the visitor's launch: the landing reads the default
 // region until it follows the port input.
 import {Tile, type TileHue} from '../ui/Tile.tsx';
+import {language, t} from './i18n.ts';
 import type {IconName} from '../ui/icons.tsx';
-import {DEFAULT_PLACE, placeLabel, type Readout as Data, type ReadingId} from './readings.ts';
+import {DEFAULT_PLACE, placeLabel} from './place.ts';
+import type {Readout as Data, ReadingId} from './readings.ts';
 
 const LOOK: Readonly<Record<ReadingId, {hue: TileHue; icon: IconName}>> = {
   wind: {hue: 'mint', icon: 'wind'}, swell: {hue: 'blue', icon: 'wave'}, water: {hue: 'coral', icon: 'temperature'}, tide: {hue: 'amber', icon: 'tide'},
 };
 
 export function Readout({data, fleet, conditions}: {data: Data | null; fleet?: string | null; /** The app's Conditions view for the region. */ conditions?: string}) {
+  const lang = language.value, place = data?.place ?? DEFAULT_PLACE;
   return (
     <section class="landing-readout" aria-labelledby="landing-readout-title" aria-busy={data ? undefined : 'true'}>
-      <h2 id="landing-readout-title" class="landing-readout-title ui-eyebrow">Latest readings · {placeLabel(data?.place ?? DEFAULT_PLACE)}</h2>
+      <h2 id="landing-readout-title" class="landing-readout-title ui-eyebrow">{t('landing.readout.title', lang, {place: lang === 'es' ? place.trim() : placeLabel(place)})}</h2>
       <ul class="landing-tiles">
         {data ? data.readings.map(r => (
           <li key={r.id} data-reading={r.id}>
             <Tile label={r.label} icon={LOOK[r.id].icon} hue={LOOK[r.id].hue} reading={r.reading} unit={r.unit} detail={r.detail}
               source={r.source} stale={r.stale} basis={r.basis} class="landing-tile" />
           </li>
-        )) : <li class="landing-tiles-wait ui-eyebrow">Loading the latest readings…</li>}
+        )) : <li class="landing-tiles-wait ui-eyebrow">{t('landing.readout.wait', lang)}</li>}
       </ul>
       <div class="landing-readout-foot">
         <p class="landing-fresh ui-eyebrow" data-state={!data ? 'unknown' : data.feed.stale ? 'stale' : 'ok'}>
-          {!data ? 'Checking the buoys' : data.feed.age === null ? 'Buoy feed unavailable' : `Buoy feed ${data.feed.stale ? 'stale, ' : ''}updated ${data.feed.age} ago`}
+          {!data ? t('landing.readout.checking', lang) : data.feed.age === null ? t('landing.readout.feedMissing', lang) : t(data.feed.stale ? 'landing.readout.feedStale' : 'landing.readout.feedFresh', lang, {age: data.feed.age})}
         </p>
-        {conditions ? <a class="landing-more" href={conditions}>Hour by hour on the map</a> : null}
+        {conditions ? <a class="landing-more" href={conditions}>{t('landing.readout.more', lang)}</a> : null}
       </div>
       {fleet ? <p class="landing-fleet" data-fleet="true">{fleet}</p> : null}
     </section>

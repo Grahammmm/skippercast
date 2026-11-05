@@ -156,6 +156,12 @@ test('gpx_waypoints_requires_complete_document', () => {
     ['undeclared element prefix', gpx11('<zz:wpt lat="1" lon="2"/>')],
     ['undeclared attribute prefix', gpx11('<wpt zz:k="1" lat="1" lon="2"/>')],
     ['empty prefix namespace', gpx11('<wpt xmlns:a="" lat="1" lon="2"/>')],
+    ['xml namespace on another prefix', gpx11(wpt(5, 6) + '<wpt xmlns:a="http://www.w3.org/XML/1998/namespace" lat="1" lon="2"/>')],
+    ['xml namespace as default', gpx11(wpt(5, 6) + '<wpt xmlns="http://www.w3.org/XML/1998/namespace" lat="1" lon="2"/>')],
+    ['xmlns namespace on a prefix', gpx11(wpt(5, 6) + '<wpt xmlns:a="http://www.w3.org/2000/xmlns/" lat="1" lon="2"/>')],
+    ['xmlns namespace as default', gpx11(wpt(5, 6) + '<wpt xmlns="http://www.w3.org/2000/xmlns/" lat="1" lon="2"/>')],
+    ['xmlns namespace on prefix xml', gpx11(wpt(5, 6) + '<wpt xmlns:xml="http://www.w3.org/2000/xmlns/" lat="1" lon="2"/>')],
+    ['xml prefix bound elsewhere', gpx11(wpt(5, 6) + '<wpt xmlns:xml="urn:x" lat="1" lon="2"/>')],
     ['non-initial PI', gpx11('<?pi x?>')],
     ['PI before root', `<?xml-stylesheet href="x"?>` + gpx11('')],
     ['whitespace before declaration', ' ' + good],
@@ -178,6 +184,9 @@ test('gpx_waypoints_requires_complete_document', () => {
   // Legal oddities still read: BOM, other-cased utf-8, comments around root, `>` inside a quoted attribute, scoped prefix declared late.
   const odd = `\ufeff<?xml version="1.0" encoding="utf-8"?><!-- c -->\n<g:gpx xmlns:g="${NS11}" version="1.1"><g:wpt lat="1" lon="2" note="a>b"><g:name>X</g:name></g:wpt></g:gpx>\n<!-- end -->\n`;
   same(ok(odd).waypoints, [{name: 'X', lat: 1, lon: 2, note: null}], 'legal variants');
+  // Legal reserved-name uses: explicit xmlns:xml with its own URI, and a namespace reset.
+  assert.equal(ok(gpx11('<wpt xmlns:xml="http://www.w3.org/XML/1998/namespace" lat="1" lon="2"/>')).waypoints.length, 1, 'explicit xmlns:xml');
+  assert.equal(ok(gpx11('<foo xmlns=""><bar xmlns="http://www.topografix.com/GPX/1/1"><wpt lat="1" lon="2"/></bar></foo>')).waypoints.length, 0, 'namespace reset');
 });
 
 test('gpx_waypoints_caps_are_utf8_and_all_candidates', () => {

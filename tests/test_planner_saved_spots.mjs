@@ -351,7 +351,10 @@ test('saved_spots_component_states_and_signed_out_parity', async () => {
     await settle(); const signedInHtml = plain(view(h).html);
     m.session.value = {state: 'signed-out'}; await settle();
     const out = plain(view(h).html); assert.equal(section(out), null); assert.ok(!out.includes('saved spot'));
-    assert.ok(signedInHtml.replace(section(signedInHtml), '') === out, 'signed out: the existing planner, unchanged');
+    // SC1822-04: the signed-in page also carries its own trip-alert section and storage sentence; with those two put back, signed out is the same planner.
+    const alertSection = /<section class="export-card" id="planner-alert"[\s\S]*?<\/section>/.exec(signedInHtml)?.[0] ?? '';
+    const withoutAlerts = signedInHtml.replace(alertSection, '').replace('Saved in this browser. Alert me for this trip saves a separate snapshot to your account.', 'Saved on this browser for each region. Separate from your account’s trip alerts.');
+    assert.ok(withoutAlerts.replace(section(withoutAlerts), '') === out, 'signed out: the existing planner, unchanged');
     for (const state of [{state: 'loading'}, {state: 'offline'}, {state: 'disabled'}]) { m.session.value = state; await settle(); assert.ok(plain(view(h).html) === out, `${state.state}: no picker, same planner`); }
     assert.ok(waypointsOf(h).some(w => w.name === '<b>Bold</b> Reef'), 'sign-out keeps the person’s deliberate local copy');
     assert.equal(rowsOf(h).length, 0, 'and clears the fetched account rows'); h.planner.dispose();
