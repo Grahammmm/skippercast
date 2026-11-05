@@ -170,15 +170,23 @@ test('the baseline only shrinks: new findings fail, fixes must be removed, --upd
 // The expected lines are written here independently of the product constants.
 const UNCHECKED = [
   {file: 'dist/account.js', line: 'Protected areas not checked for this spot: outside coverage or check unavailable; not exported.', old: 'Protected areas not checked for this spot: outside coverage or check unavailable. Not exported.'},
-  {file: 'web/saved-spots.ts', line: 'Protected areas not checked for this spot: outside coverage or check unavailable; not saved.', old: 'Protected areas not checked for this spot. Not saved.'},
+  {file: 'web/saved-spots.ts', catalogue: 'mark.save.notChecked', line: 'Protected areas not checked for this spot: outside coverage or check unavailable; not saved.', old: 'Protected areas not checked for this spot. Not saved.'},
 ];
 
 test('unchecked_copy_is_one_complete_linted_literal', () => {
-  for (const {file, line} of UNCHECKED) {
+  for (const {file, line, catalogue} of UNCHECKED) {
     const source = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
     // Each caveat: not checked, why, and the refused action.
     for (const part of ['not checked for this spot', 'outside coverage', 'check unavailable']) assert.ok(line.includes(part), `${file}: ${part}`);
     assert.ok(/not (?:exported|saved)\.$/.test(line), `${file}: the refused action closes the line`);
+    if (catalogue) {
+      // SC0922-09: the line moved to the string catalogue, where it is one complete English value (the unchanged lint reads it whole).
+      const strings = JSON.parse(readFileSync(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings;
+      assert.equal(strings[catalogue].en, line, `${catalogue}: the whole line is one catalogue value`);
+      assert.ok(!source.includes('not checked for this spot'), `${file}: no copy of it left in the module`);
+      assert.deepEqual(unitFindings(line), []);
+      continue;
+    }
     // Exactly one literal holds the whole line, and no other literal carries a half of it.
     assert.equal(literals(source).filter(l => l.value === line).length, 1, `${file}: the whole line is one literal`);
     assert.equal(literals(source).filter(l => l.value.includes('not checked for this spot')).length, 1, `${file}: no split half`);
