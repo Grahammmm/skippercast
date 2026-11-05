@@ -232,3 +232,13 @@ test('advisor and sign in are one publication, and the latest generation wins ei
   assert.ok(published.every(value => value.state === 'loading' || value.state === 'offline' || typeof value.advisor === 'boolean'), 'every published answer carries sign in and advisor together');
   assert.equal(requests.length, 4);
 });
+
+test('SC0707-07: accountLabel follows the language and passes an account name through untouched', () => {
+  assert.equal(accountLabel({state: 'signed-out', advisor: false}), 'Sign in');
+  assert.equal(accountLabel({state: 'signed-out', advisor: false}, 'es'), 'Iniciar sesión');
+  assert.equal(accountLabel({state: 'loading'}, 'es'), 'Iniciar sesión');
+  assert.equal(accountLabel({state: 'offline'}, 'es'), 'Cuenta');
+  assert.equal(accountLabel({state: 'disabled', advisor: false}, 'es'), 'Cuenta');
+  assert.equal(accountLabel({state: 'signed-in', name: null, advisor: false}, 'es'), 'Cuenta');
+  assert.equal(accountLabel({state: 'signed-in', name: 'Skipper', advisor: false}, 'es'), 'Skipper');
+});
