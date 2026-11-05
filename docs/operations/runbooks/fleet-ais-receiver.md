@@ -13,7 +13,7 @@ Rules that do not change: the watch gate and `decide()` in `match.py` stay as th
 
 ## 2. Parts
 
-Prices are the figures in `reports/AIS-LIVE-PLAN.md` (route B). **Price not re-checked** against the vendor pages on any date: the builder of this runbook had no web access, so every figure below is the plan's, not a live quote. Re-check each on the buy date and write that date in the "Date checked" column before anything is bought.
+Prices are the figures in `reports/AIS-LIVE-PLAN.md` (route B), except power, which the plan does not price. **Price not re-checked** against the vendor pages on any date: the builder of this runbook had no web access, so every figure below is the plan's, not a live quote. The plan gives no power-supply price, so none is shown. Re-check each on the buy date and write that date in the "Date checked" column before anything is bought.
 
 | Part | Option | Price (USD) | Date checked | Link |
 |---|---|---|---|---|
@@ -21,10 +21,10 @@ Prices are the figures in `reports/AIS-LIVE-PLAN.md` (route B). **Price not re-c
 | Computer | Raspberry Pi, with SD card | 80 (plan range 60-80) | price not re-checked | https://www.raspberrypi.com/products/ |
 | Antenna | Marine VHF antenna | 100 (plan range 50-150) | price not re-checked | vendor choice at buy time |
 | Cable and mount | coax, connector, mast clamp | 40 | price not re-checked | vendor choice at buy time |
-| Power | Pi power supply and outdoor-rated plug | 25 | price not re-checked | vendor choice at buy time |
+| Power | Pi power supply and outdoor-rated plug | unknown: not in the plan, no dated quote yet | not checked | https://www.raspberrypi.com/products/27w-power-supply/ (official Pi supply page, 2026-11-05: lists resellers, no price shown) |
 | Receiver | 2 (alternative): RTL-SDR dongle plus AIS-catcher software, replaces the dAISy HAT | no figure in the plan | price not re-checked | https://www.rtl-sdr.com/ |
 
-**Total, option 1:** 79 + 80 + 100 + 40 + 25 = **$324**, under the $350 limit. The antenna is the swing item: at the plan's top figure ($150) the total is $374, over the limit, so choose an antenna that keeps the re-checked total under $350 or take the question back to G before buying. Option 2 is left out of the total because the plan gives no price for the dongle; do not invent one.
+**Total, option 1:** the four plan-priced parts are 79 + 80 + 100 + 40 = **$299**. Power is **unknown** until a dated, linked vendor price is written in the table, so the complete total is unknown and is not claimed to be under the $350 limit. Under $350 holds only if the power quote is $51 or less and the other parts stay at the plan figures. The antenna is the swing item: at the plan's top figure ($150) the four parts alone are $349, leaving $1 for power, so re-check every price and take the question back to G before buying if the complete total reaches $350.
 
 ## 3. Site criteria
 
