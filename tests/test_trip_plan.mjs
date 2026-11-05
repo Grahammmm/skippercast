@@ -133,3 +133,60 @@ test('trip_spot_string_roundtrip_and_owner_boundary',async()=>{
     assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM trips').get().n,1);
   }finally{sql.close();}
 });
+
+const HEX='b'.repeat(64);
+const exp=sha256=>({format:'gpx',sha256,exported_at:'2026-09-30T14:00:00Z'});
+const BAD_HASHES=[undefined,null,123,0,true,false,[],[HEX],[[HEX]],{},{toString:null}];
+const withExport=e=>({exports:[e]});
+
+test('trip_export_hash_requires_string',()=>{
+  const missing=exp(HEX);delete missing.sha256;
+  for(const e of [missing,...BAD_HASHES.map(exp)])assert.throws(()=>validateTripPlan({plan:withExport(e)},region,'reef'),x=>x.message==='invalid export'&&x.constructor.name==='ClientError',JSON.stringify(e.sha256));
+});
+
+test('trip_export_hash_string_grammar_unchanged',()=>{
+  for(const h of [HEX,'0'.repeat(64)])assert.equal(validateTripPlan({plan:withExport(exp(h))},region,'reef').plan.exports[0].sha256,h);
+  for(const h of ['','b'.repeat(63),'b'.repeat(65),'B'.repeat(64),' '+HEX,HEX+' ',HEX+'\n','z'.repeat(64)])assert.throws(()=>validateTripPlan({plan:withExport(exp(h))},region,'reef'),/invalid export/,JSON.stringify(h));
+});
+
+test('trip_post_and_patch_bad_export_hash_never_write',async()=>{
+  const {sql,adapter}=database(),env={DB:adapter};
+  const snap=id=>JSON.stringify(sql.prepare('SELECT * FROM trips WHERE id=?').get(id));
+  const count=()=>sql.prepare('SELECT COUNT(*) AS n FROM trips').get().n;
+  try{
+    const created=await worker.fetch(request('trips',{owner:'alice',method:'POST',body:{...alert,plan}}),env);
+    assert.equal(created.status,201);const {id}=await created.json();
+    const before=snap(id);
+    for(const h of BAD_HASHES){
+      const later={...plan,exports:[exp(HEX),exp(h)]};
+      const post=await worker.fetch(request('trips',{owner:'alice',method:'POST',body:{...alert,plan:later}}),env);
+      assert.equal(post.status,400,'POST '+JSON.stringify(h));const pb=await post.json();assert.equal(pb.error,'invalid export');
+      const patch=await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id,status:'done',plan:later}}),env);
+      assert.equal(patch.status,400,'PATCH '+JSON.stringify(h));assert.equal((await patch.json()).error,'invalid export');
+    }
+    assert.equal(count(),1,'no trip row was inserted');
+    assert.equal(snap(id),before,'the stored trip row is byte-identical');
+    const bad={plan:withExport(exp([HEX]))};
+    assert.equal((await worker.fetch(request('trips',{owner:'bob',method:'PATCH',body:{id,...bad}}),env)).status,404,'foreign id is 404 before export validation');
+    assert.equal((await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id:'missing',...bad}}),env)).status,404);
+    assert.equal(snap(id),before);
+  }finally{sql.close();}
+});
+
+test('trip_export_hash_string_roundtrip_and_repair',async()=>{
+  const {sql,adapter}=database(),env={DB:adapter};
+  try{
+    const created=await worker.fetch(request('trips',{owner:'alice',method:'POST',body:{...alert,plan:{...plan,exports:[exp('0'.repeat(64))]}}}),env);
+    assert.equal(created.status,201);const {id}=await created.json();
+    const patched=await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id,plan:{...plan,exports:[exp(HEX)]}}}),env);
+    assert.equal(patched.status,200);assert.equal((await patched.json()).plan.exports[0].sha256,HEX);
+    assert.equal((await (await worker.fetch(request('trips',{owner:'alice'}),env)).json()).trips[0].plan.exports[0].sha256,HEX);
+    assert.equal(JSON.parse(sql.prepare('SELECT plan FROM trips WHERE id=?').get(id).plan).exports[0].sha256,HEX);
+    sql.prepare('UPDATE trips SET plan=? WHERE id=?').run(JSON.stringify({...plan,exports:[exp([HEX])]}),id);
+    const repaired=await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id,plan:{...plan,exports:[exp(HEX)]}}}),env);
+    assert.equal(repaired.status,200);assert.equal(JSON.parse(sql.prepare('SELECT plan FROM trips WHERE id=?').get(id).plan).exports[0].sha256,HEX);
+    sql.prepare('UPDATE trips SET plan=? WHERE id=?').run(JSON.stringify({...plan,exports:[exp([HEX])]}),id);
+    assert.equal((await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id,plan:null}}),env)).status,200);
+    assert.equal(sql.prepare('SELECT plan FROM trips WHERE id=?').get(id).plan,null);
+  }finally{sql.close();}
+});

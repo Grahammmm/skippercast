@@ -71,7 +71,7 @@ function validatePlanBody(plan:ExternalJSON):TripPlanBody|null{
   const clock=(v:unknown,what:string):string|null=>{if(v===undefined||v===null||v==='')return null;if(typeof v!=='string'||!CLOCK.test(v))throw new ClientError('invalid '+what);return v;};
   const hours=list(w.hours,24,'window hours').map(h=>{if(!Number.isInteger(h)||h<0||h>23)throw new ClientError('invalid window hours');return h as number;});
   const exports=list(plan.exports,PLAN_LIMITS.exports,'exports').map((e):TripExport=>{
-    if(!e||typeof e!=='object'||!(EXPORT_FORMATS as readonly string[]).includes(e.format)||!SHA.test(e.sha256)||typeof e.exported_at!=='string'||!Number.isFinite(Date.parse(e.exported_at)))throw new ClientError('invalid export');
+    if(!e||typeof e!=='object'||!(EXPORT_FORMATS as readonly string[]).includes(e.format)||typeof e.sha256!=='string'||!SHA.test(e.sha256)||typeof e.exported_at!=='string'||!Number.isFinite(Date.parse(e.exported_at)))throw new ClientError('invalid export');
     return {format:e.format,sha256:e.sha256,exported_at:new Date(e.exported_at).toISOString()};
   });
   const body:TripPlanBody={spots,legs,window:{depart:clock(w.depart,'departure'),return_by:clock(w.return_by,'return time'),hours},exports};
