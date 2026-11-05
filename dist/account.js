@@ -245,7 +245,7 @@ function signedOutHTML() {
     <input id="account-name" type="text" maxlength="60" autocomplete="username webauthn" placeholder="e.g. Graham" />
     <p id="account-status" class="home-port-feedback" role="status"></p>
     <div class="home-port-actions"><button type="button" id="account-create" class="account-primary">Create account</button><button type="button" id="account-signin">Sign in with a passkey</button></div>
-    <p class="home-port-fine">Your passkey stays on your device or in your password manager; SkipperCast stores only its public key. Saved trips, alerts and boat comfort feedback belong to your account, and you can delete the account at any time.</p>`;
+    <p class="home-port-fine">Your passkey stays on your device or in your password manager; SkipperCast stores only its public key. Saved trips, alerts, boat comfort feedback, catch-log entries and saved spots belong to your account, and you can delete the account at any time.</p>`;
 }
 
 function signedInHTML(session, passkeys) {

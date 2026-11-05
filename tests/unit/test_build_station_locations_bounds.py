@@ -105,3 +105,49 @@ def test_name_error_and_coordinate_error_are_counted_together(root, capsys):
     assert "coops:9412110: name is not plain one-line text" in err and err.endswith(" (2 errors)\n")
     assert "A\tB" not in err
     assert_untouched(root)
+
+
+SURROGATES = ["\ud800", "\udbff", "\udc00", "\udfff"]
+
+
+@pytest.mark.parametrize("bad", SURROGATES, ids=["d800", "dbff", "dc00", "dfff"])
+@pytest.mark.parametrize("shape", ["{}Port", "Po{}rt", "Port{}", "{}\ud83d", "\ude1f\ud83d"], ids=["lead", "mid", "trail", "before_high", "reversed"])
+def test_surrogate_name_is_named_and_writes_nothing(root, capsys, bad, shape):
+    name = shape.format(bad)
+    code, err = run(root, Opener(coops_body=coops([dict(GOOD_COOPS[0], name=name)])), capsys)
+    assert (code, err) == (1, "build_station_locations: coops:9412110: name is not plain one-line text (1 error)\n")
+    assert_untouched(root)
+
+
+def test_surrogate_name_preserves_existing_receipts(root, capsys):
+    receipts = root / "var/station-locations"
+    receipts.mkdir(parents=True)
+    (receipts / "ndbc.xml").write_bytes(b"old-ndbc")
+    (receipts / "coops.json").write_bytes(b"old-coops")
+    code, err = run(root, Opener(coops_body=coops([dict(GOOD_COOPS[0], name="Port\ud800")])), capsys)
+    assert code == 1 and "name is not plain one-line text" in err
+    assert (receipts / "ndbc.xml").read_bytes() == b"old-ndbc" and (receipts / "coops.json").read_bytes() == b"old-coops"
+    assert sorted(p.name for p in receipts.iterdir()) == ["coops.json", "ndbc.xml"]
+    assert (root / "catalog/station-locations.json").read_bytes() == b'{"old": true}\n'
+    assert sorted(p.name for p in (root / "catalog").iterdir()) == ["station-locations.json"]
+
+
+def test_surrogate_name_and_bad_coordinate_are_collected(root, capsys):
+    rows = dict(GOOD_NDBC, **{"46215": 'lat="95" lon="-120.859" name="Diablo Canyon"'})
+    code, err = run(root, Opener(ndbc_body=ndbc(rows), coops_body=coops([dict(GOOD_COOPS[0], name="X\udc00")])), capsys)
+    assert code == 1 and "ndbc:46215: lat '95' is not a finite number within ±90" in err
+    assert "coops:9412110: name is not plain one-line text" in err and err.endswith(" (2 errors)\n")
+    assert "Traceback" not in err and "\udc00" not in err
+    assert_untouched(root)
+
+
+@pytest.mark.parametrize("name", ["Bay \ud83d\udc1f", "Bahía", "Plain"], ids=["escaped_pair", "bmp", "ascii"])
+def test_scalar_unicode_name_still_round_trips(root, capsys, name):
+    assert run(root, Opener(coops_body=coops([dict(GOOD_COOPS[0], name=name)])), capsys) == (0, "")
+    data = (root / "catalog/station-locations.json").read_bytes()
+    assert json.loads(data.decode("utf-8"))["stations"]["coops:9412110"]["name"] == name.encode("utf-16", "surrogatepass").decode("utf-16")
+
+
+def test_unselected_surrogate_name_is_ignored(root, capsys):
+    rows = [*GOOD_COOPS, {"id": "9999999", "lat": 1, "lng": 2, "name": "Other\ud800", "type": "R"}]
+    assert run(root, Opener(coops_body=coops(rows)), capsys) == (0, "")

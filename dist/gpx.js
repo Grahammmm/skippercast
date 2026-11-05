@@ -24,11 +24,21 @@ export function tripFeatures(atlas,ids,options={}) {
     areas:options.outlines===false?[]:atlas.areas.filter(a=>areaIds.has(a.id)),
     drifts:options.alignments===false?[]:atlas.drifts.filter(d=>driftIds.has(d.id))};
 }
+// GPX lat/lon are xsd:decimal: expand JS exponent spelling (1e-7) without rounding.
+const dec = v => {
+  const s = String(v), m = /^(-?)(\d+)(?:\.(\d+))?[eE]([+-]?\d+)$/.exec(s);
+  if (!m) return s;
+  const [, sign, int, frac = '', exp] = m, digits = int + frac, point = int.length + Number(exp);
+  const body = point <= 0 ? '0.' + '0'.repeat(-point) + digits
+    : point >= digits.length ? digits + '0'.repeat(point - digits.length)
+    : digits.slice(0, point) + '.' + digits.slice(point);
+  return sign + body;
+};
 export function geometryTrack(name,description,geometry) {
   const segments=geometry.type==='Polygon'?geometry.coordinates:geometry.type==='MultiPolygon'?geometry.coordinates.flat():geometry.type==='LineString'?[geometry.coordinates]:geometry.type==='MultiLineString'?geometry.coordinates:[];
   if(!segments.length || segments.some(s=>s.length<2 || s.some(p=>!Number.isFinite(p[0])||!Number.isFinite(p[1])||Math.abs(p[0])>180||Math.abs(p[1])>90)))throw Error('Invalid export geometry');
   if(geometry.type.includes('Polygon') && segments.some(r=>r.length<4 || r[0][0]!==r.at(-1)[0] || r[0][1]!==r.at(-1)[1]))throw Error('Invalid export polygon: boundary rings must be closed and contain at least four positions.');
-  return `<trk><name>${xml(name)}</name><desc>${xml(description)}</desc>${segments.map(ring=>`<trkseg>${ring.map(([lon,lat])=>`<trkpt lat="${lat}" lon="${lon}"/>`).join('')}</trkseg>`).join('')}</trk>`;
+  return `<trk><name>${xml(name)}</name><desc>${xml(description)}</desc>${segments.map(ring=>`<trkseg>${ring.map(([lon,lat])=>`<trkpt lat="${dec(lat)}" lon="${dec(lon)}"/>`).join('')}</trkseg>`).join('')}</trk>`;
 }
 // Keep each polygon ring in a separate track segment, including interior holes.
 export function tripGPX(atlas, ids, title='SkipperCast fishing set', options={}) {
@@ -40,14 +50,14 @@ export function featuresGPX(atlas,features,title,options={}) {
   const names=new Set(), unique=name=>{const base=xmlText(name).trim()||'Waypoint';let next=base,n=2;while(names.has(next.toLowerCase()))next=`${base} (${n++})`;names.add(next.toLowerCase());return next;};
   const points=selected.map(t=>{
   const name=unique(!t.user_waypoint&&t.trip_rank&&plotterWord(t.trip_species)?plotterName(t):t.name);
-  if(t.user_waypoint)return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(name)}</name><cmt>${xml(t.id)}</cmt><desc>User waypoint. User-supplied label; not verified habitat, depth or navigation guidance. Check current regulations, closures, conditions and official charts.</desc><type>${xml(t.category)}</type></wpt>`;
+  if(t.user_waypoint)return `<wpt lat="${dec(t.latitude)}" lon="${dec(t.longitude)}"><name>${xml(name)}</name><cmt>${xml(t.id)}</cmt><desc>User waypoint. User-supplied label; not verified habitat, depth or navigation guidance. Check current regulations, closures, conditions and official charts.</desc><type>${xml(t.category)}</type></wpt>`;
   // SCJ-4: a ranked spot gets a short plotter name and a one-line description; the method notes stay in the offline notes.
   // Producer credits, use terms and policy URLs travel with the waypoint in <src>, so a waypoint-only GPX keeps them.
   if(t.trip_rank&&plotterWord(t.trip_species)){
     const [lo,hi]=t.neighborhood_depth_ft.map(n=>Math.round(n));
     const desc=`${plotterWord(t.trip_species)} habitat, about ${lo}–${hi} ft. Habitat estimate, not a sounding or catch forecast. Check current rules, closures and your chart.`;
     const rights=(t.source_rights||[]).map(r=>`${r.credit} ${r.notice}${r.policyURL?' '+r.policyURL:''}`).join(' ');
-    return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(name)}</name><cmt>${xml(t.id)}</cmt><desc>${xml(desc)}</desc>${rights?`<src>${xml(rights)}</src>`:''}<link href="${xml(t.source_url)}"/><sym>Fishing Area</sym></wpt>`;
+    return `<wpt lat="${dec(t.latitude)}" lon="${dec(t.longitude)}"><name>${xml(name)}</name><cmt>${xml(t.id)}</cmt><desc>${xml(desc)}</desc>${rights?`<src>${xml(rights)}</src>`:''}<link href="${xml(t.source_url)}"/><sym>Fishing Area</sym></wpt>`;
   }
   const notes = [
     t.label,
@@ -62,7 +72,7 @@ export function featuresGPX(atlas,features,title,options={}) {
     t.special_note,
     "Check current regulations, closures, conditions and sounder depths.",
   ].join(" ");
-  return `<wpt lat="${t.latitude}" lon="${t.longitude}"><name>${xml(name)}</name><cmt>${xml(t.id)}</cmt><desc>${xml(notes)}</desc><link href="${xml(t.source_url)}"/><sym>Fishing Area</sym></wpt>`;
+  return `<wpt lat="${dec(t.latitude)}" lon="${dec(t.longitude)}"><name>${xml(name)}</name><cmt>${xml(t.id)}</cmt><desc>${xml(notes)}</desc><link href="${xml(t.source_url)}"/><sym>Fishing Area</sym></wpt>`;
   });
   const tracks=features.areas.map(a=>{
     const t=features.selected.find(t=>t.canonical_habitat&&t.area_ids.includes(a.id));

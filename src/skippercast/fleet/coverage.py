@@ -12,6 +12,13 @@ It never says ``ready``: an MMSI in the registry is not an operator-confirmed
 identity (``catalog/data-needs.json`` ``charter-identity``). The reason holds
 counts only, never names, contacts or URLs.
 
+The private confirmation ledger (``fleet.confirm``; ``<FLEET_VAR>/<region>/confirmations/<sink>.json``)
+records which identities an operator confirmed. The reason counts, among the active vessels it already counts, those
+with a standing (not withdrawn) confirmation for exactly the MMSI the registry holds now; a withdrawn, stale (the
+registry's MMSI changed), inactive or unmapped one adds nothing. A missing ledger is zero confirmations; a corrupt
+one stops the command before anything is written. Even when every counted boat is confirmed the status stays
+``partial``: the ready threshold is an owner decision, so this never writes ``ready``.
+
 ``--apply`` writes the status into each mapped ``regions/<id>/region.json``
 ``coverage.charter-identity`` (that entry only, formatting kept); then rebuild
 with ``PYTHONPATH=src python -m skippercast.platform.build``.
@@ -24,9 +31,10 @@ import os
 from pathlib import Path
 import re
 import sys
-from typing import Mapping
+from typing import Iterable, Mapping
 
 from ..paths import repo_root
+from . import confirm
 from .config import FleetRegion, load_region
 from .ingest import load_snapshot
 from .resolve import Snapshot
@@ -39,22 +47,30 @@ UNMAPPED = {"status": "missing", "reason": "0 charter fleet ports map to this re
 ENTRY = re.compile(r'(\n    "charter-identity": \{\n      "status": )"[^"]*"(,\n      "reason": )"(?:[^"\\]|\\.)*"(\n    \})')
 
 
-def reason(boats: int, mmsi: int) -> str:
-    return (f"{boats} {'boat' if boats == 1 else 'boats'} registered in the charter fleet registry, {mmsi} with an "
-            "identified MMSI; registry identities are not operator-confirmed.")
+def reason(boats: int, mmsi: int, confirmed: int | None = None) -> str:
+    """Counts only. Without ``confirmed`` the legacy text (the committed region coverage); with it, the confirmed count."""
+    head = f"{boats} {'boat' if boats == 1 else 'boats'} registered in the charter fleet registry, {mmsi} with an identified MMSI;"
+    if confirmed is None:
+        return head + " registry identities are not operator-confirmed."
+    return f"{head} {confirmed} operator-confirmed identities; ready threshold is an owner decision."
 
 
-def coverage_status(region: FleetRegion, snapshot: Snapshot) -> dict[str, dict]:
-    """``{coastal region id: {"status", "reason"}}`` for every coastal region the fleet region's ports map to."""
+def coverage_status(region: FleetRegion, snapshot: Snapshot, confirmations: Iterable[Mapping] = ()) -> dict[str, dict]:
+    """``{coastal region id: {"status", "reason"}}`` for every coastal region the fleet region's ports map to.
+
+    ``confirmations`` are ``fleet.confirm`` ledger entries. Never ``ready`` (see the module docstring).
+    """
     coastal = {p.id: p.region for p in region.ports if p.region}
-    counts = {ident: [0, 0] for ident in sorted(set(coastal.values()))}
+    standing = confirm.active_pairs(confirmations)
+    counts = {ident: [0, 0, 0] for ident in sorted(set(coastal.values()))}
     for vessel in snapshot.vessels:
         ident = coastal.get(vessel.get("port_id"))
         if ident and vessel.get("status") == "active":
             counts[ident][0] += 1
             counts[ident][1] += bool(vessel.get("mmsi"))
-    return {ident: {"status": "partial" if boats else "missing", "reason": reason(boats, mmsi)}
-            for ident, (boats, mmsi) in counts.items()}
+            counts[ident][2] += (vessel.get("id"), str(vessel.get("mmsi") or "").strip()) in standing
+    return {ident: {"status": "partial" if boats else "missing", "reason": reason(boats, mmsi, confirmed)}
+            for ident, (boats, mmsi, confirmed) in counts.items()}
 
 
 def apply(statuses: Mapping[str, Mapping[str, str]], root: Path | None = None) -> list[str]:
@@ -96,6 +112,11 @@ def main(argv=None) -> int:
     parser.add_argument("--apply", action="store_true", help="write the statuses into regions/*/region.json")
     args = parser.parse_args(argv)
     region = load_region(args.region)
+    try:  # before any store is opened: a corrupt ledger must never read as zero confirmations
+        confirmations = confirm.load_confirmations(region.id, args.sink, fleet_var())
+    except confirm.ConfirmError as error:
+        print(f"coverage-status: {error}", file=sys.stderr)
+        return 1
     run_id = new_run_id()
     if args.sink == "staging":
         path = fleet_var() / "staging" / f"{region.id}.sqlite"
@@ -104,7 +125,7 @@ def main(argv=None) -> int:
     else:
         sink = WorkerSink(worker_base(), region.id, run_id, lambda: 0)
     try:
-        statuses = coverage_status(region, load_snapshot(sink, region.id))
+        statuses = coverage_status(region, load_snapshot(sink, region.id), confirmations)
     finally:
         sink.close()
     print(json.dumps(statuses, indent=2, sort_keys=True))

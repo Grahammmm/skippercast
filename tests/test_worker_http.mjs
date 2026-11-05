@@ -143,7 +143,7 @@ test('push subscriptions: create, ownership, device cap, bad endpoints and delet
       assert.equal(rejected.status, 400, String(endpoint));assert.match((await rejected.json()).error, /push endpoint rejected|subscription missing/);
     }
     assert.equal((await worker.fetch(request('/api/subscription', {owner: 'bob', method: 'POST', body: sub(9)}), env)).status, 200);
-    const removed = await worker.fetch(request('/api/subscription', {owner: 'alice', method: 'DELETE', body: {}}), env);
+    const removed = await worker.fetch(request('/api/subscription', {owner: 'alice', method: 'DELETE', body: {all: true}}), env);
     assert.deepEqual(await removed.json(), {enabled: false});
     assert.deepEqual(sql.prepare('SELECT owner FROM subscriptions').all().map(r => r.owner), ['bob'], 'delete removes only the caller\'s devices');
   } finally { sql.close(); }
@@ -330,7 +330,7 @@ test('public health is minimal: no binding or secret presence is disclosed', asy
 // --- Notification-device admission: concurrent writes must hold the five-device cap and endpoint ownership ---
 const subscriptionId = endpoint => createHash('sha256').update(endpoint).digest('hex');
 const deviceEndpoint = n => `https://fcm.googleapis.com/fcm/send/race-device-${n}`;
-const SEEDED_AT = '2026-01-01T00:00:00.000Z', LIMIT_MESSAGE = 'Limit of five notification devices', OWNER_MESSAGE = 'Subscription belongs to another signed-in user';
+const SEEDED_AT = '2026-01-01T00:00:00.000Z', LIMIT_MESSAGE = 'Limit of five notification devices. Stop notifications on another device to free a slot, or use Stop on all devices here.', OWNER_MESSAGE = 'Subscription belongs to another signed-in user';
 function seedDevices(sql, owner, count, keys, first = 1) {
   for (let n = first; n < first + count; n++) sql.prepare('INSERT INTO subscriptions(id,owner,endpoint,p256dh,auth,created_at) VALUES(?,?,?,?,?,?)').run(subscriptionId(deviceEndpoint(`${owner}-${n}`)), owner, deviceEndpoint(`${owner}-${n}`), keys.p256dh, keys.auth, SEEDED_AT);
 }
@@ -505,8 +505,101 @@ test('subscription_refusals_and_storage_errors_do_not_claim_success', async () =
     // DELETE removes only the caller's devices and frees capacity for a later registration.
     seedDevices(db.sql, 'bob', 1, keys);
     assert.equal((await post(env, 'alice', {endpoint: deviceEndpoint('sixth'), keys})).status, 409);
-    assert.deepEqual(await (await worker.fetch(request('/api/subscription', {owner: 'alice', method: 'DELETE', body: {}}), env)).json(), {enabled: false});
+    assert.deepEqual(await (await worker.fetch(request('/api/subscription', {owner: 'alice', method: 'DELETE', body: {all: true}}), env)).json(), {enabled: false});
     assert.deepEqual(storedDevices(db.sql).map(r => r.owner), ['bob']);
     assert.equal((await post(env, 'alice', {endpoint: deviceEndpoint('sixth'), keys})).status, 200, 'deleting frees the slots');
   } finally { console.error = realError; db.sql.close(); }
+});
+
+// --- Stopping notifications names its scope: one device by endpoint, or every device with all: true ---
+const del = (env, owner, body) => worker.fetch(request('/api/subscription', {owner, method: 'DELETE', body}), env);
+const deviceKey = owner => n => deviceEndpoint(`${owner}-${n}`);
+
+test('delete_one_of_two_devices', async () => {
+  const db = database(), env = {DB: db.adapter};
+  try {
+    const keys = await pushKeys();
+    seedDevices(db.sql, 'alice', 2, keys);seedDevices(db.sql, 'bob', 1, keys);
+    const before = storedDevices(db.sql), laptop = deviceKey('alice')(1), phone = deviceKey('alice')(2);
+    const response = await del(env, 'alice', {endpoint: laptop});
+    assert.equal(response.status, 200);assert.deepEqual(await response.json(), {enabled: false});
+    const after = storedDevices(db.sql);
+    assert.deepEqual(after.map(r => r.endpoint), before.filter(r => r.endpoint !== laptop).map(r => r.endpoint), 'only the named device is gone');
+    assert.ok(after.every(r => before.some(b => b.id === r.id && b.p256dh === r.p256dh && b.auth === r.auth && b.owner === r.owner)), 'the other rows are unchanged');
+    assert.ok(after.some(r => r.endpoint === phone));
+    // Stopping the same device again finds nothing and changes nothing.
+    assert.equal((await del(env, 'alice', {endpoint: laptop})).status, 404);
+    assert.equal(storedDevices(db.sql).length, 2);
+  } finally { db.sql.close(); }
+});
+
+test('delete_all_is_explicit_and_owner_scoped', async () => {
+  const db = database(), env = {DB: db.adapter};
+  try {
+    const keys = await pushKeys();
+    seedDevices(db.sql, 'alice', 5, keys);seedDevices(db.sql, 'bob', 2, keys);
+    assert.equal((await post(env, 'alice', {endpoint: deviceEndpoint('sixth'), keys})).status, 409);
+    for (const pass of ['first', 'repeat with no devices left']) {
+      const response = await del(env, 'alice', {all: true});
+      assert.equal(response.status, 200, pass);assert.deepEqual(await response.json(), {enabled: false}, pass);
+      assert.deepEqual(storedDevices(db.sql).map(r => r.owner), ['bob', 'bob'], pass);
+    }
+    assert.equal((await post(env, 'alice', {endpoint: deviceEndpoint('sixth'), keys})).status, 200, 'the slots are free again');
+  } finally { db.sql.close(); }
+});
+
+test('delete_foreign_matches_missing', async () => {
+  const db = database(), env = {DB: db.adapter};
+  try {
+    const keys = await pushKeys();
+    seedDevices(db.sql, 'alice', 1, keys);seedDevices(db.sql, 'bob', 1, keys);
+    const before = storedDevices(db.sql);
+    const foreign = await del(env, 'alice', {endpoint: deviceKey('bob')(1)}), absent = await del(env, 'alice', {endpoint: deviceEndpoint('nobody')});
+    assert.equal(foreign.status, 404);assert.equal(absent.status, 404);
+    const [a, b] = [await errorBody(foreign), await errorBody(absent)];
+    assert.deepEqual(a, {error: 'Not found'});assert.deepEqual(a, b, 'a foreign endpoint answers exactly as a missing one');
+    assert.deepEqual(storedDevices(db.sql), before, 'no row changed');
+  } finally { db.sql.close(); }
+});
+
+test('delete_no_body_never_clears_account', async () => {
+  const db = database(), env = {DB: db.adapter};
+  try {
+    const keys = await pushKeys();
+    seedDevices(db.sql, 'alice', 3, keys);seedDevices(db.sql, 'bob', 1, keys);
+    const before = storedDevices(db.sql), endpoint = deviceKey('alice')(1);
+    const SCOPE = "Send this device's endpoint or all: true. Update this page before stopping notifications.";
+    const cases = [
+      ['no body', undefined, 'invalid JSON body'], ['zero-byte body', '', 'invalid JSON body'], ['malformed JSON', '{"endpoint":', 'invalid JSON body'],
+      ['null', 'null', 'invalid JSON body'], ['array', [], 'invalid JSON body'], ['empty object', {}, SCOPE], ['other key only', {device: endpoint}, 'Only endpoint or all can be sent.'],
+      ['mixed endpoint and all', {endpoint, all: true}, "Send this device's endpoint or all: true, not both."], ['unknown key beside endpoint', {endpoint, extra: 1}, 'Only endpoint or all can be sent.'],
+      ['all false', {all: false}, 'all must be true'], ['all as string', {all: 'true'}, 'all must be true'],
+      ['empty endpoint', {endpoint: ''}, 'invalid endpoint'], ['non-string endpoint', {endpoint: 7}, 'invalid endpoint'], ['overlong endpoint', {endpoint: 'https://fcm.googleapis.com/' + 'x'.repeat(2000)}, 'invalid endpoint'],
+    ];
+    for (const [name, body, message] of cases) {
+      const response = await del(env, 'alice', body);
+      assert.equal(response.status, 400, name);assert.deepEqual(await errorBody(response), {error: message}, name);
+      assert.deepEqual(storedDevices(db.sql), before, `${name}: every row is preserved`);
+    }
+    assert.equal((await worker.fetch(request('/api/subscription', {method: 'DELETE', body: {all: true}}), env)).status, 401, 'signed-out callers are refused');
+    const badOrigin = new Request(origin + '/api/subscription', {method: 'DELETE', headers: {'Content-Type': 'application/json', Origin: 'https://attacker.test', 'x-test-owner': 'alice'}, body: JSON.stringify({all: true})});
+    assert.notEqual((await worker.fetch(badOrigin, env)).status, 200);
+    assert.deepEqual(storedDevices(db.sql), before, 'refused callers deleted nothing');
+  } finally { db.sql.close(); }
+});
+
+test('device_cap_explains_recovery', async () => {
+  const db = database(), env = {DB: db.adapter};
+  try {
+    const keys = await pushKeys();
+    seedDevices(db.sql, 'alice', 5, keys);seedDevices(db.sql, 'bob', 1, keys);
+    const refused = await post(env, 'alice', {endpoint: deviceEndpoint('sixth'), keys});
+    assert.equal(refused.status, 409);assert.deepEqual(await errorBody(refused), {error: LIMIT_MESSAGE});
+    assert.match(LIMIT_MESSAGE, /Stop notifications on another device to free a slot/);
+    assert.equal((await post(env, 'alice', {endpoint: deviceKey('alice')(3), keys})).status, 200, 'an owned device still refreshes at five');
+    assert.equal((await post(env, 'alice', {endpoint: deviceKey('bob')(1), keys})).status, 409, 'a foreign endpoint keeps the ownership refusal');
+    assert.equal((await del(env, 'alice', {endpoint: deviceKey('alice')(5)})).status, 200);
+    assert.equal((await post(env, 'alice', {endpoint: deviceEndpoint('sixth'), keys})).status, 200, 'removing one device frees exactly one slot');
+    assert.equal((await post(env, 'alice', {endpoint: deviceEndpoint('seventh'), keys})).status, 409);
+  } finally { db.sql.close(); }
 });

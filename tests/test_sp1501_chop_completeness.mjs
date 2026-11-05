@@ -21,25 +21,39 @@ const originalRead = fs.readFileSync.bind(fs);
 const originalOpen = fs.openSync.bind(fs);
 const originalAsyncRead = fsp.readFile.bind(fsp);
 const repoRoot = fs.realpathSync(fileURLToPath(new URL('../', import.meta.url)));
-// Node's ESM/type-stripping loader needs read-only source access. Resolve
-// symlinks before allowing regular source/fixture files in this clone only.
+// The clone's own node_modules may be a symlink to another checkout: its real
+// directory is the only extra root admitted. Missing/unresolvable => no extra root.
+const dependencyRoot = (() => {
+  try { return fs.realpathSync(path.join(repoRoot, 'node_modules')); } catch { return null; }
+})();
+const inside = (root, target) => {
+  const relative = path.relative(root, target);
+  return relative !== '' && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+};
+// Pure admission: lexical AND real path must each sit in the clone or the
+// dependency root (independently), and the real path is a regular source file.
+const admit = (roots, lexical, real, isFile) => {
+  if (typeof lexical !== 'string' || typeof real !== 'string' || isFile !== true) return false;
+  const within = target => roots.some(root => inside(root, target));
+  return within(lexical) && within(real) && /\.(?:ts|js|mjs|json)$/.test(real);
+};
+const roots = [repoRoot, dependencyRoot].filter(Boolean);
+// Node's ESM/type-stripping loader needs read-only source access.
 const readable = value => {
-  const name = value instanceof URL ? fileURLToPath(value) : value;
-  if (typeof name !== 'string') return false;
-  const inside = target => {
-    const relative = path.relative(repoRoot, target);
-    return relative !== '' && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
-  };
-  if (!inside(path.resolve(name))) return false;
   try {
+    const name = value instanceof URL ? fileURLToPath(value) : value;
+    if (typeof name !== 'string') return false;
+    const lexical = path.resolve(name);
+    if (!roots.some(root => inside(root, lexical))) return false;
     const real = fs.realpathSync(name);
-    return inside(real) && /\.(?:ts|js|mjs|json)$/.test(real) && fs.statSync(real).isFile();
+    return admit(roots, lexical, real, fs.statSync(real).isFile());
   } catch {
     return false;
   }
 };
+const readOnlyOptions = options => !(options && typeof options === 'object' && options.flag !== undefined && options.flag !== 'r');
 mock.method(fs, 'readFileSync', (path, ...args) => {
-  if (!readable(path)) return denied();
+  if (!readable(path) || !readOnlyOptions(args[0])) return denied();
   return originalRead(path, ...args);
 });
 mock.method(fs, 'openSync', (path, flags, ...args) => {
@@ -47,9 +61,7 @@ mock.method(fs, 'openSync', (path, flags, ...args) => {
   return originalOpen(path, flags, ...args);
 });
 mock.method(fsp, 'readFile', (path, ...args) => {
-  if (!readable(path)) return denied();
-  const options = args[0];
-  if (options && typeof options === 'object' && options.flag && options.flag !== 'r') return denied();
+  if (!readable(path) || !readOnlyOptions(args[0])) return denied();
   return originalAsyncRead(path, ...args);
 });
 for (const name of ['writeFileSync', 'appendFileSync', 'mkdirSync', 'renameSync', 'unlinkSync', 'rmSync', 'createWriteStream', 'createReadStream', 'readFile', 'writeFile', 'open']) mock.method(fs, name, denied);
@@ -167,6 +179,38 @@ focused('A4 advisory and hazard precedence remain intact for complete and partia
 
 focused('offline network, model and live-store sentinels are active', () => {
   for (const invoke of [() => globalThis.fetch('https://synthetic.invalid'), () => net.connect(), () => cp.spawn('synthetic-only'), () => fs.readFileSync('synthetic-live-store'), () => fsp.writeFile('synthetic-live-store', '')]) {
+    assert.throws(invoke, /SP1501_OFFLINE_SENTINEL/);
+  }
+  // own_dependency_alias_and_realpath_read
+  const alias = path.join(repoRoot, 'node_modules', 'preact', 'package.json');
+  const aliasText = fs.readFileSync(alias, 'utf8');
+  assert.equal(aliasText, fs.readFileSync(fs.realpathSync(alias), 'utf8'));
+  assert.equal(JSON.parse(aliasText).name, 'preact');
+  assert.equal(JSON.parse(fs.readFileSync(fixturePath, 'utf8')).feed.chop_period, calm.chop_period);
+  assert.equal(fs.readFileSync(fixturePath, {encoding: 'utf8', flag: 'r'}), fs.readFileSync(fixturePath, 'utf8'));
+  // dependency_source_suffixes_only, path_escape_and_prefix_siblings_denied (pure, synthetic paths)
+  const R = [path.resolve('/sp1501/clone'), path.resolve('/sp1501/deps-real')];
+  const ok = (lexical, real = lexical, isFile = true) => admit(R, lexical, real, isFile);
+  for (const accepted of ['/sp1501/clone/web/a.ts', '/sp1501/clone/x.js', '/sp1501/deps-real/p/i.mjs', '/sp1501/deps-real/p/package.json']) assert.equal(ok(accepted), true, accepted);
+  assert.equal(ok('/sp1501/clone/node_modules/p/package.json', '/sp1501/deps-real/p/package.json'), true, 'clone alias into the dependency root');
+  for (const refused of ['/sp1501/deps-real/.bin/x.sqlite', '/sp1501/clone/a.cjs', '/sp1501/clone/a.JSON', '/sp1501/clone/a.d.ts.map', '/sp1501/clone', '/sp1501/deps-real', '/sp1501/clone-evil/a.ts', '/sp1501/deps-real-evil/a.js', '/sp1501/clone/../elsewhere/a.ts', '/sp1501/other/a.json']) assert.equal(ok(path.resolve(refused)), false, refused);
+  assert.equal(ok('/sp1501/clone/a.ts', '/sp1501/clone/a.ts', false), false, 'directory');
+  assert.equal(ok('/sp1501/clone/link.ts', '/sp1501/outside/real.ts'), false, 'in-clone symlink escaping both roots');
+  assert.equal(ok('/sp1501/outside/alias.ts', '/sp1501/clone/real.ts'), false, 'external alias pointing inward');
+  assert.equal(ok('/sp1501/clone/a.ts', null), false, 'unresolved realpath');
+  assert.equal(admit(R, 5, '/sp1501/clone/a.ts', true), false, 'fd');
+  assert.equal(readable(path.join(repoRoot, 'no-such-sp1501-file.json')), false, 'missing file');
+  assert.equal(readable(repoRoot), false, 'root directory');
+  assert.equal(readable(Buffer.from(fixturePath)), false, 'buffer');
+  assert.equal(readable(3), false, 'fd number');
+  assert.equal(readable(new URL('http://synthetic.invalid/a.json')), false, 'non-file URL');
+  assert.equal(readable(path.join(repoRoot, 'package-lock.json.bak')), false, 'suffix');
+  // writes_cannot_hide_as_reads: refused before delegation (the fixture must stay untouched)
+  assert.throws(() => fs.readFileSync(fixturePath, {flag: 'w'}), /SP1501_OFFLINE_SENTINEL/);
+  assert.throws(() => fsp.readFile(fixturePath, {flag: 'a'}), /SP1501_OFFLINE_SENTINEL/);
+  for (const flags of ['w', 'r+', 0, 1, 2]) assert.throws(() => fs.openSync(fixturePath, flags), /SP1501_OFFLINE_SENTINEL/);
+  assert.equal(typeof fsp.readFile(fixturePath, 'utf8').then, 'function');
+  for (const invoke of [() => dns.lookup('synthetic.invalid'), () => dns.resolve('synthetic.invalid'), () => http.request('http://synthetic.invalid'), () => https.get('https://synthetic.invalid'), () => tls.connect(443), () => cp.exec('synthetic-only'), () => fs.writeFileSync(fixturePath, ''), () => fs.rmSync(fixturePath), () => fsp.rm(fixturePath), () => fsp.mkdir('synthetic-live-store')]) {
     assert.throws(invoke, /SP1501_OFFLINE_SENTINEL/);
   }
 });

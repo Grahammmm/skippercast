@@ -13,7 +13,7 @@ import {PROFILE_TABLE} from '../profile.ts';
 import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {
-  alertDate, alertNames, alertSpecies, api, comfortBody, dateRange, disablePush, enablePush, eventLine, feedbackPhase, formProblem, profileTripDefaults, readRecapCatchLog, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
+  alertDate, alertNames, alertSpecies, api, comfortBody, dateRange, enablePush, eventLine, feedbackPhase, formProblem, profileTripDefaults, readRecapCatchLog, stopNotifications, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
   type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type SavedTrip,
 } from '../alerts.ts';
 
@@ -62,7 +62,7 @@ function ConfirmDelete({onConfirm, onCancel}: {onConfirm: () => void; onCancel: 
   return (
     <div ref={box} class="account-confirm" role="alertdialog" aria-labelledby={id}
       onKeyDown={(e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onCancel(); } }}>
-      <p id={id}>Delete your SkipperCast account and all saved trips, notification subscriptions, assessments and comfort feedback? This cannot be undone.</p>
+      <p id={id}>Delete your SkipperCast account, passkeys, sign-in sessions, pending sign-in requests, saved trips, notification subscriptions, assessments, notification delivery records, comfort feedback, catch log and saved spots? This cannot be undone.</p>
       <div class="home-port-actions">
         <Button size="sm" onClick={onCancel}>Cancel</Button>
         <Button size="sm" class="account-destructive" onClick={onConfirm}>Yes, delete everything</Button>
@@ -108,6 +108,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const choice = alertSpecies(region, target), names = useMemo(() => alertNames(region), [region]), range = dateRange(region.timezone);
   const [species, setSpecies] = useState(choice.value);
   const [status, setStatus] = useState('');
+  const [stopping, setStopping] = useState(false);
   const [trips, setTrips] = useState<{trips: SavedTrip[]; events: AlertEvent[]} | null>(null);
   const digest = trips ? weekendDigest(trips.trips, names, range.min) : null;
   const [feedback, setFeedback] = useState<Feedback[] | null>(null);
@@ -198,7 +199,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
         <p class="small">Uses the selected target species. These alerts assess the saved area's weather window and reviewed rules; they do not plan navigation or predict catches.</p>
         <div class="inavx-actions">
           <Button size="sm" onClick={act(async () => { await enablePush(session.publicKey); setStatus('Notifications enabled on this device. Saved trips are checked automatically.'); })}>Enable notifications on this device</Button>
-          <Button size="sm" onClick={act(async () => { await disablePush(); setStatus('Account notifications stopped. Saved assessments remain available here.'); })}>Stop notifications</Button>
+          {(['device', 'all'] as const).map(scope => <Button key={scope} size="sm" disabled={stopping} onClick={() => { setStopping(true); stopNotifications(scope).then(setStatus, fail).finally(() => setStopping(false)); }}>{scope === 'device' ? 'Stop notifications on this device' : 'Stop on all devices'}</Button>)}
         </div>
         <p id="alert-status" role="status">{status}</p>
         {digest ? <section aria-labelledby="weekend-heading">
@@ -221,7 +222,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
         ) : null}
         <details ref={privacy}>
           <summary>Privacy & account data</summary>
-          <p>Trips, notification endpoints and comfort feedback are stored privately. Delete a trip to stop its monitoring. Comfort feedback is retained for one year; trips and assessments for 90 days.</p>
+          <p>Trips, notification endpoints, comfort feedback, catch-log entries and saved spots are stored privately. Delete a trip to stop its monitoring. Comfort feedback is retained for one year; trips and assessments for 90 days. Catch-log entries and saved spots are kept until you delete them or delete your account.</p>
           <Button size="sm" onClick={exportRecords}>Export my records</Button>{' '}
           <Button data-delete-account size="sm" disabled={confirming} onClick={() => setConfirming(true)}>Delete my account and records</Button>{' '}
           <a href="#account">Account, passkeys and sign out</a>

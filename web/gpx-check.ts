@@ -56,7 +56,9 @@ export function checkGpx(xml: string, expected: {waypoints: number}, screen?: un
     }
     if (!stack.length) {
       roots++;
-      if (name !== 'gpx' || !/\bversion\s*=\s*(["'])1\.1\1/.test(attrs) || !/\bxmlns\s*=\s*(["'])http:\/\/www\.topografix\.com\/GPX\/1\/1\1/.test(attrs)) fail('Expected GPX 1.1 root');
+      // Identity comes from whole attribute tokens: exactly one unqualified `version` and one `xmlns`, never names or text inside other values.
+      const root = readAttributes(attrs), only = (key: string): string | undefined => { const found = root.list.filter(([k]) => k === key); return found.length === 1 ? found[0]![1] : undefined; };
+      if (name !== 'gpx' || !root.ok || only('version') !== '1.1' || only('xmlns') !== 'http://www.topografix.com/GPX/1/1') fail('Expected GPX 1.1 root');
     }
     for (const [, value] of readAttributes(attrs).list) decode(value);
     if (name === 'wpt' || name === 'trkpt') {

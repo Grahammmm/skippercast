@@ -8,6 +8,7 @@ import test from 'node:test';
 import {build} from 'esbuild';
 import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import {seasonYear} from '../web/season.ts';
+import {speciesPage} from '../web/regs.ts';
 const root = new URL('..', import.meta.url).pathname;
 const region = JSON.parse(readFileSync(new URL('./fixtures/regulations/fe61-v1.json', import.meta.url))).region;
 const committed = JSON.parse(readFileSync(new URL('../dist/data/regulations.json', import.meta.url)));
@@ -137,5 +138,74 @@ test('strip has twelve word-labelled cells, safe link and no promises; Condition
     assert.match(view(), /aria-label="Rockfish \/ rock cod season 2026"/);
     m.regsData.value = {region: 'other', data: d};
     assert.doesNotMatch(view(), /class="app-season"/); assert.match(view(), /Current CDFW ocean fishing rules/);
+  } finally { await rm(dir, {recursive: true, force: true}); }
+});
+test('structured 50-fathom access is Open · limits with or without prose; other access values are unchanged', () => {
+  const d = data(), p = d.species.lingcod, full = extra => [{start: d.valid_from, end: d.valid_through, ...extra}];
+  for (const access of ['shoreward-50fm', 'seaward-50fm']) for (const restriction of [undefined, 'Synthetic limits']) {
+    p.windows = full({access, restriction});
+    assert.ok(seasonYear(d, 'lingcod', region, 2026).months.every(m => m.state === 'limits' && m.label === 'Open · limits'), `${access} ${restriction}`);
+  }
+  for (const access of [undefined, '', 'unknown', 'SHOREWARD-50FM']) { p.windows = full({access}); assert.equal(month(d, 1).state, 'open', `access ${access}`); }
+  p.windows = full({access: 'seaward-50fm', requires_opening_review: true}); assert.equal(month(d, 1).state, 'scheduled');
+  p.windows = full({access: 'seaward-50fm', geography: {kind: 'latitude-band', south: 34, north: 36, source_id: p.source_ids[0], note: 'Synthetic area'}}); assert.equal(month(d, 1).state, 'area');
+  p.windows = [{start: '2026-01-01', end: '2026-01-15', access: 'shoreward-50fm'}];
+  assert.equal(month(d, 1).state, 'part'); assert.equal(month(d, 1).label, 'Part open: 1–15');
+  p.windows = [{start: '2026-01-01', end: '2026-01-10', access: 'shoreward-50fm'}, {start: '2026-01-11', end: '2026-01-15'}];
+  assert.equal(month(d, 1).label, 'Part open: 1–15', 'limited and open days form one run');
+  p.windows = [];
+  assert.equal(month(d, 1).state, 'closed');
+  d.species.rockfish.windows = full({}); p.windows = full({access: 'shoreward-50fm'});
+  assert.equal(month(d, 1, 'reef').state, 'limits');
+  d.species.rockfish.windows = [];
+  assert.equal(month(d, 1, 'reef').state, 'closed', 'a closed member wins over a limited one');
+  d.species.rockfish.windows = full({}); d.rules_review_status = 'pending';
+  assert.equal(month(d, 1, 'reef').state, 'not-reviewed');
+  d.rules_review_status = 'reviewed'; d.valid_from = '2026-06-01';
+  assert.equal(month(d, 1, 'reef').state, 'not-reviewed', 'outside the review interval');
+});
+
+const AREA = 'https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/San-Francisco';
+const sf = JSON.parse(readFileSync(new URL('../regions/bodega-point-reyes/region.json', import.meta.url)));
+const sfData = () => JSON.parse(readFileSync(new URL('../dist/' + sf.assets.regulations.replace(/^\//, ''), import.meta.url)));
+const href = (d, species = 'halibut') => seasonYear(d, species, sf, 2026).link.href;
+test('committed halibut calendar links its cited area page; lingcod and reef keep groundfish', () => {
+  const d = sfData();
+  assert.equal(speciesPage(d, 'halibut', sf), null);
+  assert.equal(href(d), AREA);
+  assert.equal(seasonYear(d, 'halibut', sf, 2026).link.label, 'Official rules');
+  assert.match(href(d, 'lingcod'), /Groundfish-Summary$/);
+  assert.match(href(d, 'reef'), /Groundfish-Summary$/);
+});
+test('area fallback: first cited safe area wins; uncited, unsafe and absent areas fall back; dates unchanged', () => {
+  const d = sfData(), ids = d.species.halibut.source_ids;
+  const before = JSON.stringify(seasonYear(d, 'halibut', sf, 2026).months);
+  const second = 'https://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Central';
+  d.sources['x-second'] = {...d.sources[ids.find(i => d.sources[i].url === AREA)], url: second};
+  d.species.halibut.source_ids = [...ids, 'x-second'];
+  assert.equal(href(d), AREA, 'first cited area wins');
+  const unsafe = u => { const e = sfData(); e.sources['x-bad'] = {url: u}; e.species.halibut.source_ids = ['x-bad', ...ids]; return e; };
+  for (const u of ['http://wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Bad', 'https://u:p@wildlife.ca.gov/Fishing/Ocean/Regulations/Fishing-Map/Bad', 'https://evil.example/Fishing/Ocean/Regulations/Fishing-Map/Bad', 'not a url'])
+    assert.equal(href(unsafe(u)), AREA, u);
+  const none = sfData(); none.species.halibut.source_ids = ids.filter(i => none.sources[i].url !== AREA);
+  assert.match(href(none), /Groundfish-Summary$/, 'no cited area keeps the old fallback');
+  const uncited = sfData(); uncited.species.halibut.source_ids = none.species.halibut.source_ids; uncited.species.halibut.primary_source_id = undefined;
+  assert.match(href(uncited), /Groundfish-Summary$/, 'an uncited area elsewhere in data.sources is not used');
+  assert.equal(JSON.stringify(seasonYear(sfData(), 'halibut', sf, 2026).months), before);
+  assert.equal(seasonYear(sfData(), 'halibut', sf, 99999), null);
+});
+test('halibut calendar renders the area anchor', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'season-')), out = join(dir, 'render.mjs');
+  try {
+    await build({stdin: {resolveDir: root, loader: 'ts', contents: `export {SeasonStrip} from './web/app/SeasonStrip.tsx'; export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
+      bundle: true, format: 'esm', platform: 'node', outfile: out, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+    const m = await import(pathToFileURL(out).href), d = sfData();
+    const html = species => m.render(m.h(m.SeasonStrip, {data: d, species, region: sf, year: 2026}));
+    const h = html('halibut');
+    assert.ok(h.includes(`href="${AREA}"`));
+    assert.equal((h.match(/<li\b/g) ?? []).length, 12);
+    assert.match(h, /Not legal advice/);
+    assert.match(html('lingcod'), /href="[^"]*Groundfish-Summary"/);
+    assert.match(html('reef'), /href="[^"]*Groundfish-Summary"/);
   } finally { await rm(dir, {recursive: true, force: true}); }
 });

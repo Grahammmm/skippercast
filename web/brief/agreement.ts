@@ -14,7 +14,7 @@ const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFi
 const round = (n: number) => Number(n.toFixed(1));
 
 export function modelAgreement(rows: readonly {ms: number; hour: FeedHour}[]): Agreement {
-  const timed = rows.filter(row => finite(row.ms));
+  const timed = rows.filter(row => finite(row.ms) && Number.isFinite(new Date(row.ms).getTime()));
   const unique = [...new Map([...timed].reverse().map(row => [row.ms, row])).values()].sort((a, b) => a.ms - b.ms);
   let compared = 0, differing = 0, largest = -1, maxWind = 0, maxSea = 0;
   let worst: Agreement['worst'] = null;

@@ -3,10 +3,16 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {load, transport, labels, grounds, response, flush, A, B} from './fixtures/sp1605_reports_source_key/harness.mjs';
 
-function deferredTransport() {
+function deferredTransport({badFirstDiscussions = false} = {}) {
   const waiting = [], calls = [];
+  let intelCalls = 0;
   const fetchFn = async url => {
     calls.push(String(url));
+    // The first load's discussions feed carries a null candidate: the REAL discussions mapper
+    // rejects that load. (A malformed charter ground no longer rejects; it only empties that section.)
+    if (badFirstDiscussions && url === '/feeds/data/recent-intel.json' && intelCalls++ === 0) {
+      return response({schema_version: 1, generated_at: new Date().toISOString(), health: {status: 'ok'}, candidates: [null]});
+    }
     if (url === A || url === B) return new Promise(resolve => waiting.push({url, resolve}));
     return transport()(url);
   };
@@ -118,11 +124,11 @@ test('A3: obsolete successes in both orders, ABA and return to settled data cann
 
 test('A3: obsolete rejection in both orders cannot clear or overwrite current-source work', async () => {
   for (const oldFirst of [true, false]) {
-    const m = await load(), d = deferredTransport();
+    const m = await load(), d = deferredTransport({badFirstDiscussions: true});
     const old = await start(m, A, d.fetchFn), current = await start(m, B, d.fetchFn);
-    // A malformed synthetic source causes the REAL mapper to reject the old
-    // load. Transport failures themselves are handled per-section, below.
-    const rejectOld = () => d.waiting[0].resolve(response({audit_date: '2026-10-01', grounds: [{label: 'Broken synthetic', reports: null}]}));
+    // A malformed discussions feed (see deferredTransport) makes the REAL mapper reject the old
+    // load once its charter source settles. Transport failures themselves are handled per-section, below.
+    const rejectOld = () => finish(d.waiting[0], 'Obsolete A');
     if (oldFirst) {
       rejectOld();
       assert.ok(await old.result instanceof TypeError);

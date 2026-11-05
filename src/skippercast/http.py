@@ -385,13 +385,19 @@ class HTTPCache:
             return None
         return meta if meta.get("url") == url and (meta.get("etag") or meta.get("last_modified")) else None
 
-    def body(self, url: str, meta: dict) -> bytes | None:
-        """The cached body, or None when it is missing or no longer matches its hash."""
+    def body(self, url: str, meta: dict, limit: int | None = None) -> bytes | None:
+        """The cached body, or None when it is missing or no longer matches its hash.
+
+        With a `limit`, at most limit + 1 bytes are read and a larger body raises
+        BodyTooLarge (the cache is left as it is: another caller may allow more)."""
         _, body_path = self._paths(url)
         try:
-            body = body_path.read_bytes()
+            with body_path.open("rb") as handle:
+                body = handle.read() if limit is None else handle.read(limit + 1)
         except OSError:
             return None
+        if limit is not None and len(body) > limit:
+            raise BodyTooLarge("Response exceeds bounded collection size")
         return body if hashlib.sha256(body).hexdigest() == meta.get("sha256") else None
 
     def store(self, url: str, body: bytes, headers: Headers) -> None:
@@ -608,19 +614,28 @@ class Session:
             return body, None
         if encoding not in ("gzip", "x-gzip"):
             raise ContractError("Unsupported response compression")
-        decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
-        try:
-            bound = 0 if limit is None else limit + 1
-            decoded = decoder.decompress(body, bound)
-            if limit is None:
-                decoded += decoder.flush()
-            elif decoder.unconsumed_tail or len(decoded) > limit:
-                raise BodyTooLarge("Response exceeds bounded collection size")
-        except zlib.error as error:
-            raise ContractError(f"Corrupt gzip response: {error}") from error
-        if not decoder.eof:
-            raise ContractError("Truncated gzip response")
-        return decoded, len(body)
+        chunks: list[bytes] = []
+        remaining, rest = limit, body
+        while True:
+            decoder = zlib.decompressobj(16 + zlib.MAX_WBITS)
+            try:
+                # max_length 0 means unlimited, so a bounded call always asks for remaining + 1.
+                chunk = decoder.decompress(rest, 0 if remaining is None else remaining + 1)
+            except zlib.error as error:
+                raise ContractError(f"Corrupt gzip response: {error}") from error
+            if remaining is not None:
+                if len(chunk) > remaining:
+                    raise BodyTooLarge("Response exceeds bounded collection size")
+                remaining -= len(chunk)
+            if not decoder.eof:
+                raise ContractError("Truncated gzip response")
+            chunks.append(chunk)
+            rest = decoder.unused_data
+            if not rest.strip(b"\0"):
+                break  # nothing left, or terminal zero padding
+            if rest[:2] != b"\x1f\x8b":
+                raise ContractError("Corrupt gzip response: trailing data after the last member")
+        return b"".join(chunks), len(body)
 
     def _hop(self, method: str, url: str, headers: dict, timeout: float, limit: int | None,
              sink: BinaryIO | None, truncate: bool = False, data: bytes | None = None) -> _Hop:
@@ -762,7 +777,7 @@ class Session:
                                   allowlist, prefixes, truncate, data)
                 from_cache = False
                 if hop.status == 304 and cached and store:
-                    body = store.body(url, cached)
+                    body = store.body(url, cached, limit)
                     if body is None:  # cache damaged: refetch without validators
                         store.forget(url)
                         hop = self._fetch(method, url, dict(base_headers), timeout, limit, None,

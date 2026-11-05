@@ -162,6 +162,7 @@ test('private and error responses are never stored', async () => {
 test('the newest copy across the recent-data cache and trip packs wins', async () => {
   const worker = loadWorker();
   const put = async (name, url, at, body) => (await worker.storage.open(name)).put(url, new Response(body, {headers: {'X-SC-Saved-At': at}}));
+  await commit(worker, 'sc-pack-morro-bay-1', 'morro-bay');
   await put('sc-data', ORIGIN + '/data/regulations.json', '2026-09-01T00:00:00.000Z', 'old');
   await put('sc-pack-morro-bay-1', ORIGIN + '/data/regulations.json', '2026-09-20T00:00:00.000Z', 'new');
   const response = await dispatch(worker, get('/data/regulations.json?v=3'));
@@ -172,6 +173,7 @@ test('the newest copy across the recent-data cache and trip packs wins', async (
 test('a saved tide prediction answers the next day\'s dated request for the same station', async () => {
   const worker = loadWorker();
   const tides = (begin, end) => `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&application=SkipperCast&station=9412110&begin_date=${begin}&end_date=${end}&datum=MLLW&time_zone=gmt&interval=hilo&units=english&format=json`;
+  await commit(worker, 'sc-pack-morro-bay-1', 'morro-bay');
   await (await worker.storage.open('sc-pack-morro-bay-1')).put(tides('20260928', '20261007'), new Response('{"predictions":[]}', {headers: {'X-SC-Saved-At': '2026-09-29T00:00:00.000Z'}}));
   const response = await dispatch(worker, get(tides('20260929', '20261008')));
   assert.equal(response.headers.get('X-SC-Offline'), '2026-09-29T00:00:00.000Z');
@@ -181,6 +183,7 @@ test('a saved tide prediction answers the next day\'s dated request for the same
 
 test('chart tiles come from a trip pack offline, marked with their saved time', async () => {
   const worker = loadWorker();
+  await commit(worker, 'sc-pack-morro-bay-1', 'morro-bay');
   await (await worker.storage.open('sc-pack-morro-bay-1')).put(tileKey('0,1,2,6', 11, 330, 800), new Response('png', {headers: {'X-SC-Saved-At': '2026-09-29T01:00:00.000Z'}}));
   const response = await dispatch(worker, new Request(chartTile(11, 330, 800), {mode: 'no-cors'}));
   assert.equal(await response.text(), 'png');
@@ -306,6 +309,7 @@ test('coastal fallback rejects missing or damaged members before serving any pro
 const ARCHIVE = ORIGIN + '/feeds/tiles/basemap/ca-coast-20261008.pmtiles';
 const ranged = (url, range) => new Request(url, {headers: {Range: range}});
 async function v2Pack(worker) {
+  await commit(worker, 'sc-pack-morro-bay-2', 'morro-bay');
   const pack = await worker.storage.open('sc-pack-morro-bay-2'), at = {'X-SC-Saved-At': '2026-10-09T01:00:00.000Z'};
   await pack.put(ORIGIN + '/map', new Response('v2 page', {headers: {...at, 'Content-Type': 'text/html'}}));
   await pack.put(ORIGIN + '/assets/app.0123456789.js', new Response('v2 code', {headers: at}));
@@ -551,6 +555,7 @@ test('plan test 20: the coastal route ignores pack contents, and a manifest read
 // SC1952-03: the land-water index and lines and both depth-contour files a pack saved answer offline, marked with the saved time.
 test('offline, a pack\'s saved land-water and depth-contour files answer, also with a ?v= tag; an unsaved one fails', async () => {
   const worker = loadWorker(), at = '2026-10-09T01:00:00.000Z';
+  await commit(worker, 'sc-pack-morro-bay-3', 'morro-bay');
   const pack = await worker.storage.open('sc-pack-morro-bay-3');
   const files = ['land-water.json', 'land-water-lines.json', 'depth-contours.geojson', 'depth-contours-overview.geojson'];
   for (const name of files) await pack.put(`${ORIGIN}/regions/morro-bay/${name}`, new Response(`saved ${name}`, {headers: {'X-SC-Saved-At': at}}));
@@ -564,4 +569,54 @@ test('offline, a pack\'s saved land-water and depth-contour files answer, also w
   }
   await assert.rejects(dispatch(worker, get('/regions/morro-bay/shoreline.geojson')), /offline/, 'a file the pack did not save stays unavailable');
   await assert.rejects(dispatch(worker, get('/regions/cambria-san-simeon/land-water.json')), /offline/, 'another region\'s file is not answered from this pack');
+});
+
+// RF1540-4: a pack answers only once its PACK_META commit record exists and parses with schema_version 1.
+test('RF1540-4: an unfinished pack never answers /map, data or a basemap range; committing it makes it win on the next request', async () => {
+  const worker = loadWorker(), old = '2026-10-01T00:00:00.000Z', fresh = '2026-10-02T00:00:00.000Z';
+  const stamp = at => ({'X-SC-Saved-At': at});
+  const DATA = ORIGIN + '/data/regulations.json';
+  const range = {...stamp(fresh), 'Content-Range': 'bytes 0-3/9'};
+  await commit(worker, 'sc-pack-morro-bay-1', 'morro-bay');
+  const olderPack = await worker.storage.open('sc-pack-morro-bay-1'), staged = await worker.storage.open('sc-pack-morro-bay-2');
+  await olderPack.put(ORIGIN + '/map', new Response('old', {headers: stamp(old)}));
+  await olderPack.put(DATA, new Response('old', {headers: stamp(old)}));
+  await olderPack.put(basemapRangeKey(ARCHIVE, 'bytes=0-3'), new Response('old', {status: 206, headers: {...stamp(old), 'Content-Range': 'bytes 0-3/8'}}));
+  await staged.put(ORIGIN + '/map', new Response('new', {headers: stamp(fresh)}));
+  await staged.put(DATA, new Response('new', {headers: stamp(fresh)}));
+  await staged.put(basemapRangeKey(ARCHIVE, 'bytes=0-3'), new Response('new', {status: 206, headers: range}));
+  const asks = () => [dispatch(worker, nav('/map?region=morro-bay')), dispatch(worker, get('/data/regulations.json')), dispatch(worker, ranged(ARCHIVE, 'bytes=0-3'))];
+  for (const r of await Promise.all(asks())) { assert.equal(await r.text(), 'old'); assert.equal(r.headers.get('X-SC-Offline'), old); }
+  assert.equal((await dispatch(worker, ranged(ARCHIVE, 'bytes=0-3'))).status, 206);
+  assert.equal((await dispatch(worker, ranged(ARCHIVE, 'bytes=0-3'))).headers.get('Content-Range'), 'bytes 0-3/8');
+  assert.equal(await staged.match(ORIGIN + '/__skippercast-pack.json'), undefined, 'the reader adds no metadata');
+  assert.ok(await worker.storage.has('sc-pack-morro-bay-2'), 'the reader deletes nothing');
+  await commit(worker, 'sc-pack-morro-bay-2', 'morro-bay');
+  for (const r of await Promise.all(asks())) { assert.equal(await r.text(), 'new'); assert.equal(r.headers.get('X-SC-Offline'), fresh); }
+  assert.equal((await dispatch(worker, ranged(ARCHIVE, 'bytes=0-3'))).headers.get('Content-Range'), 'bytes 0-3/9');
+});
+
+test('RF1540-4: with only an unfinished (orphaned) pack every fallback fails offline', async () => {
+  const worker = loadWorker(), at = {'X-SC-Saved-At': '2026-10-02T00:00:00.000Z'};
+  const orphan = await worker.storage.open('sc-pack-morro-bay-9');
+  await orphan.put(ORIGIN + '/map', new Response('new', {headers: at}));
+  await orphan.put(ORIGIN + '/data/regulations.json', new Response('new', {headers: at}));
+  await orphan.put(basemapRangeKey(ARCHIVE, 'bytes=0-3'), new Response('new', {status: 206, headers: at}));
+  await assert.rejects(dispatch(worker, nav('/map?region=morro-bay')), /offline/);
+  await assert.rejects(dispatch(worker, get('/data/regulations.json')), /offline/);
+  await assert.rejects(dispatch(worker, ranged(ARCHIVE, 'bytes=0-3')), /offline/);
+});
+
+test('RF1540-4: empty, malformed, null and wrong-schema metadata skip that pack; sc-data needs no metadata', async () => {
+  for (const meta of ['', '{not json', 'null', '{"schema_version":2}', '{}', '[]']) {
+    const worker = loadWorker(), put = (name, path, at, body) => keep(worker, name, path, at, body);
+    await put('sc-pack-morro-bay-2', '/data/regulations.json', T2, 'bad pack');
+    await put('sc-pack-morro-bay-2', '/__skippercast-pack.json', T2, meta);
+    await assert.rejects(dispatch(worker, get('/data/regulations.json')), /offline/, `meta ${JSON.stringify(meta)} alone`);
+    await commit(worker, 'sc-pack-morro-bay-1', 'morro-bay');
+    await put('sc-pack-morro-bay-1', '/data/regulations.json', T0, 'good pack');
+    assert.equal(await (await dispatch(worker, get('/data/regulations.json'))).text(), 'good pack', `meta ${JSON.stringify(meta)} beside a committed pack`);
+    await put('sc-data', '/data/regulations.json', T1, 'data');
+    assert.equal(await (await dispatch(worker, get('/data/regulations.json'))).text(), 'data', 'sc-data without metadata still beats an older pack');
+  }
 });

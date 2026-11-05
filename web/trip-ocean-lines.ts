@@ -37,6 +37,8 @@ export function oceanLines(meta: Pick<PackMeta, 'ocean'>, now: Date, zone: strin
     const line = at && Number.isFinite(Date.parse(at)) ? `from Coastal readings (saved ${frameTime(at, zone)})` : 'from Coastal readings (not saved)';
     return {water: line, currents: line};
   }
-  const layers = ocean.layers as unknown as Record<string, Layer | undefined>;
+  // A persisted record can lack `layers` (older or damaged data): only a plain object counts as layer evidence, anything else is "none recorded".
+  const raw: unknown = ocean.layers;
+  const layers: Record<string, Layer | undefined> = raw !== null && typeof raw === 'object' && !Array.isArray(raw) ? raw as Record<string, Layer | undefined> : {};
   return {water: layerLine('water', layers[LAYER.water], now, zone), currents: layerLine('currents', layers[LAYER.currents], now, zone)};
 }

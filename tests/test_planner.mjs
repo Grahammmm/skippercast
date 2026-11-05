@@ -365,3 +365,23 @@ test('the combined target ranks on the weaker fit', () => {
   assert.equal(nextFriday('2026-10-16'), '2026-10-16');
   assert.equal(nextFriday('2026-10-17'), '2026-10-23');
 });
+
+test('planner_opens_after_corrupt_ranked_priority; export gates stay', async () => {
+  const stored = JSON.stringify({ids: ['old-1', 'ranked-only'], name: 'Sunday reef', date: '2026-10-18',
+    rankedPlan: {sha256: 'a'.repeat(64), species: 'reef', priorities: [{id: 'ranked-only', rank: 1}, null]}});
+  const {planner: p, saved} = harness({stored});
+  try {
+    assert.equal(p.draft.value.rankedPlan, null);
+    assert.deepEqual(p.draft.value.ids, ['old-1']);
+    assert.equal(p.draft.value.name, 'Sunday reef');
+    assert.equal(p.ranked.value, false);
+    p.edit({name: 'Monday reef'});
+    assert.equal(saved().rankedPlan, null);
+    assert.deepEqual(saved().ids, ['old-1']);
+    p.setLayer('outlines', false);
+    assert.match(p.summary.value.message, /Research coordinates need explicit opt-in/);
+    p.setResearch(true);
+    assert.equal(p.summary.value.ok, true, JSON.stringify(p.summary.value));
+    assert.ok((await (await p.exportFile('gpx')).text()).includes('<gpx'));
+  } finally { p.dispose(); }
+});

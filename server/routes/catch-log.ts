@@ -29,7 +29,10 @@ function realWrittenTime(v: string): boolean {
 function when(v: unknown, name: string): string | null {
   if (v === undefined || v === null) return null;
   if (typeof v !== 'string' || !ISO.test(v) || Number.isNaN(Date.parse(v)) || !realWrittenTime(v)) throw new ClientError(`${name} must be an ISO date and time with a zone`);
-  return new Date(v).toISOString();
+  // The cursor codec and string ordering only know four-digit UTC years: a zone that carries the instant past 0000-9999 is refused, not clamped.
+  const utc = new Date(v).toISOString();
+  if (!/^\d{4}-/.test(utc)) throw new ClientError(`${name} must be an ISO date and time with a zone`);
+  return utc;
 }
 /** Both coordinates or neither. Finite numbers strictly inside the poles and the antimeridian; stored as entered. */
 export function coordinates(lat: unknown, lon: unknown): {lat: number; lon: number} | null {
@@ -117,9 +120,13 @@ catchLog.patch('/api/catch-log/:id', async c => {
   if (('lat' in patch || 'lon' in patch) && !('lat' in patch && 'lon' in patch)) throw new ClientError('coordinates_incomplete: send latitude and longitude together or neither');
   const e = validateLogEntry({...Object.fromEntries(MUTABLE.map(k => [k, stored[k]])), ...patch});
   if (e.trip_id && !await d.prepare('SELECT 1 AS ok FROM trips WHERE id=? AND owner=?').bind(e.trip_id, owner).first()) return notFound();
-  const row = await d.prepare('UPDATE catch_log SET trip_id=?,started_at=?,ended_at=?,method=?,species=?,outcome=?,count=?,lat=?,lon=?,note=? WHERE id=? AND owner=? RETURNING *')
-    .bind(e.trip_id, e.started_at, e.ended_at, e.method, e.species, e.outcome, e.count, e.lat, e.lon, e.note, id, owner).first();
-  return row ? json(row) : notFound();
+  // RF1540-2: compare-and-swap. The write applies only while every mutable column still equals the value read above (null-safe IS),
+  // so a concurrent saved correction is never restored over. No row left: gone -> 404, still there but changed -> 409 (no row data).
+  const row = await d.prepare(`UPDATE catch_log SET ${MUTABLE.map(k => `${k}=?`).join(',')} WHERE id=? AND owner=? AND ${MUTABLE.map(k => `${k} IS ?`).join(' AND ')} RETURNING *`)
+    .bind(e.trip_id, e.started_at, e.ended_at, e.method, e.species, e.outcome, e.count, e.lat, e.lon, e.note, id, owner, ...MUTABLE.map(k => stored[k])).first();
+  if (row) return json(row);
+  return await d.prepare('SELECT 1 AS ok FROM catch_log WHERE id=? AND owner=?').bind(id, owner).first()
+    ? json({error: 'This entry changed while you were editing it. Reload it and try again.'}, 409) : notFound();
 });
 catchLog.delete('/api/catch-log/:id', async c => {
   const done = await db(c.env).prepare('DELETE FROM catch_log WHERE id=? AND owner=?').bind(c.req.param('id'), c.var.owner).run();

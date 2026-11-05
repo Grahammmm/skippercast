@@ -336,3 +336,28 @@ test('held or incomplete contour provenance is refused for the whole export', ()
   for (const collection of cases) assert.throws(() => buildExport(contourRequest({contours: {collection}})), /Depth contours cannot be exported/);
   assert.throws(() => buildExport(contourRequest({contours: {collection: MORRO}, now: new Date('2027-09-27T00:00:00Z')})), /Depth contours cannot be exported/);
 });
+
+const SHA = 'a'.repeat(64);
+const planWith = priorities => JSON.stringify({ids: ['a', 'ranked-only', 'a'], name: 'Keep me', date: '2028-02-29', avoidScope: 'region', rankedPlan: {sha256: SHA, species: 'reef', priorities}});
+
+test('draft_null_priority_discards_whole_ranking, nonrecord entries too; independent fields survive', () => {
+  const good = {id: 'ranked-only', rank: 1};
+  for (const priorities of [[null], [good, null], [null, good], [good, {id: 'b', rank: 2}, null], [true], [7], ['x'], [[]], [{}], [{id: 'b'}], [{rank: 2}]]) {
+    const draft = readDraft(planWith(priorities), atlasFixture(), '2026-09-22');
+    assert.equal(draft.rankedPlan, null, JSON.stringify(priorities));
+    assert.deepEqual(draft.ids, ['a'], 'ranked-only ids are dropped, atlas ids kept once');
+    assert.equal(draft.name, 'Keep me');
+    assert.equal(draft.date, '2028-02-29');
+    assert.equal(draft.avoidScope, 'region');
+  }
+});
+
+test('draft_valid_ranking_compatibility: valid and empty rankings are kept', () => {
+  const kept = readDraft(planWith([{id: 'ranked-only', rank: 1}, {id: 'b', rank: 50}]), atlasFixture(), '2026-09-22');
+  assert.equal(kept.rankedPlan.priorities.length, 2);
+  assert.deepEqual(kept.ids, ['a', 'ranked-only']);
+  assert.deepEqual(readDraft(planWith([]), atlasFixture(), '2026-09-22').rankedPlan.priorities, []);
+  assert.equal(readDraft(planWith([{id: 'b', rank: 1}, {id: 'b', rank: 2}]), atlasFixture(), '2026-09-22').rankedPlan, null);
+  assert.equal(readDraft(planWith([{id: 'b', rank: 1}, {id: 'c', rank: 1}]), atlasFixture(), '2026-09-22').rankedPlan, null);
+  assert.equal(readDraft(planWith([{id: 'b', rank: 51}]), atlasFixture(), '2026-09-22').rankedPlan, null);
+});
