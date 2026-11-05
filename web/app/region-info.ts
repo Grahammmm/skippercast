@@ -44,6 +44,11 @@ export const REGION_READ_TIMEOUT_MS = 10_000;
 /** SCJ-7: the reader's answer when regions/<id>/region.json is a 404, so the region does not exist (not a failed read). */
 export const REGION_MISSING = 'missing' as const;
 
+/** RF1600-4: exactly two finite numbers, [latitude, longitude], inside the real coordinate ranges. No coercion or clamping. */
+const validCenter = (c: unknown): c is [number, number] => Array.isArray(c) && c.length === 2
+  && typeof c[0] === 'number' && typeof c[1] === 'number' && Number.isFinite(c[0]) && Number.isFinite(c[1])
+  && Math.abs(c[0]) <= 90 && Math.abs(c[1]) <= 180;
+
 /** Share parsed cold reads, not just headers: each admitted slot includes JSON consumption.
  * Caller cancellation withdraws publication without freeing an abort-ignoring task's slot. */
 export function createRegionReader(fetchFn: typeof fetch, {limit = 4, timeoutMs = REGION_READ_TIMEOUT_MS} = {}) {
@@ -55,7 +60,7 @@ export function createRegionReader(fetchFn: typeof fetch, {limit = 4, timeoutMs 
       & Omit<RulesRegion, 'id' | 'assets'>;
     if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
     const center = json.map?.center;
-    if (typeof json.name !== 'string' || !center || center.length !== 2 || !center.every(Number.isFinite)) return null;
+    if (typeof json.name !== 'string' || !validCenter(center)) return null;
     const timezone = json.timezone === undefined ? DEFAULT_ZONE : validZone(json.timezone) ? json.timezone : null;
     if (!timezone) return null;
     const areas = Array.isArray(json.map?.local_areas) ? json.map.local_areas as ReportLocalArea[] : [];

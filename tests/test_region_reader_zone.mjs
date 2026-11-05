@@ -83,3 +83,21 @@ test('a JSON body that is not an object is null with no TypeError; a 404 is stil
   assert.equal(await createRegionReader(async () => new Response('nope', {status: 404}))('nowhere'), REGION_MISSING);
   assert.equal(await createRegionReader(async () => new Response('nope', {status: 500}))('broken'), null);
 });
+
+// RF1600-4: the center is exactly [latitude, longitude], two finite numbers in range; anything else is a failed read.
+test('a malformed or out-of-range center is null (never a throw or REGION_MISSING); boundaries are valid', async () => {
+  const {createRegionReader, REGION_MISSING} = await load();
+  const bad = ['ab', {0: 35.37, 1: -120.86, length: 2}, null, true, 5, [], [1], [1, 2, 3], ['35', '-120'], [null, 1], [true, 1], [[1], [2]],
+    [90.01, 0], [-90.01, 0], [0, 180.01], [0, -180.01], [-120.86, 181], [35.37, 360]];
+  for (const center of bad) {
+    const r = await readJson({...BASE, map: {center}, jurisdiction_id: 'ca', species: ['x']});
+    assert.equal(r, null, `center ${JSON.stringify(center)}`);
+    assert.notEqual(r, REGION_MISSING);
+  }
+  assert.equal(await readJson({name: 'No map'}), null);
+  const direct = center => createRegionReader(async () => ({ok: true, json: async () => ({name: 'T', map: {center}})}))('direct');
+  for (const center of [[NaN, 0], [0, Infinity], [-Infinity, 0]]) assert.equal(await direct(center), null);
+  for (const center of [[-90, -180], [90, 180], [0, 0], [35.37, -120.86]]) {
+    assert.deepEqual((await readJson({...BASE, map: {center}}, 'edge')).center, center);
+  }
+});
