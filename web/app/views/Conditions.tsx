@@ -25,7 +25,7 @@ import {CurrentSource} from '../LayerRail.tsx';
 import {dockState, localParts, selectHour} from '../TimeDock.tsx';
 import {moonLine} from '../../moon.ts';
 import {PlanLink, TargetRules, targetRules} from '../PlanView.tsx';
-import {conditionsCopy, fixed} from '../../view-copy.ts';
+import {conditionsCopy, fixed, localTime} from '../../view-copy.ts';
 
 /** Load the forecast for the region shown (shared with the brief, once per region). */
 function useForecast(): void {
@@ -34,10 +34,10 @@ function useForecast(): void {
 }
 
 const FAMILY_OPTIONS = (Object.keys(FAMILIES) as Family[]).map(value => ({value, label: FAMILIES[value].label}));
-const timeText = (iso: string, tz: string, withDay = false, lang: Language = 'en') => new Intl.DateTimeFormat(localeOf(lang), {...withDay ? {weekday: 'short'} : {}, hour: 'numeric', minute: '2-digit', timeZone: tz, timeZoneName: 'short'}).format(new Date(iso));
+const timeText = (iso: string, tz: string, withDay = false, lang: Language = 'en') => localTime(new Date(iso), tz, lang, {...withDay ? {weekday: 'short'} : {}, hour: 'numeric', minute: '2-digit', timeZoneName: 'short'});
 /** The selected hour's weekday: English keeps the dock's own short name, another language formats it in the region zone. */
 const dayName = (at: number | string, tz: string, lang: Language): string =>
-  lang === 'en' ? localParts(new Date(at), tz).weekday : new Intl.DateTimeFormat(localeOf(lang), {timeZone: tz, weekday: 'short'}).format(new Date(at));
+  lang === 'en' ? localParts(new Date(at), tz).weekday : new Intl.DateTimeFormat(localeOf(lang), {timeZone: tz, weekday: 'long'}).format(new Date(at));
 const value = (v: number | null, unit: string, lang: Language = 'en') => {
   if (v === null) return '—';
   const digits = unit === 'ft' ? 1 : 0;

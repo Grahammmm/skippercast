@@ -21,12 +21,20 @@ const FEED_SOURCE = t('conditions.source.feed', 'en');
 export const fixed = (n: number, digits: number, lang: Language): string =>
   lang === 'en' ? n.toFixed(digits) : new Intl.NumberFormat(localeOf(lang), {minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false}).format(n);
 
+/** `date` in `tz` and `lang`; a zone name is the region's short name ("PDT") in every language, never "GMT-7". */
+export function localTime(date: Date, tz: string, lang: Language, options: Intl.DateTimeFormatOptions): string {
+  const format = (locale: string) => new Intl.DateTimeFormat(locale, {timeZone: tz, ...options}).formatToParts(date);
+  if (lang === 'en') return new Intl.DateTimeFormat(localeOf(lang), {timeZone: tz, ...options}).format(date);
+  const zone = options.timeZoneName ? format('en-US').find(p => p.type === 'timeZoneName')?.value : undefined;
+  return format(localeOf(lang)).map(p => p.type === 'timeZoneName' && zone ? zone : p.value).join('');
+}
+
 /** The renderers' host copy in `lang`: undefined for English (their own text), the catalogue for anything else. */
 export function coastCopy(lang: Language): CoastCopy | undefined {
   if (lang === 'en') return undefined;
   return {
     text: (key, vars) => t(key, lang, vars),
-    time: (at, tz, options) => Number.isFinite(Date.parse(at)) ? new Intl.DateTimeFormat(localeOf(lang), {timeZone: tz, ...options}).format(new Date(at)) : t('history.timeNA', lang),
+    time: (at, tz, options) => Number.isFinite(Date.parse(at)) ? localTime(new Date(at), tz, lang, options) : t('history.timeNA', lang),
     number: (n, digits, group = false) => new Intl.NumberFormat(localeOf(lang), {minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: group}).format(n),
     age: (at, now) => {
       const minutes = Math.round((now.getTime() - Date.parse(at)) / 60000);

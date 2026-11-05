@@ -30,7 +30,7 @@ export function HourlyTable({forecast, tide, at, tz, now}: {forecast: Conditions
   }, [at, rows.length]);
   const hourOf = (ms: number) => localParts(new Date(ms), tz).hour;
   const label = (ms: number) => rows.filter(x => hourOf(x.ms) === hourOf(ms)).length > 1 ? `${hourText(hourOf(ms), lang)} ${zoneName(new Date(ms), tz)}` : hourText(hourOf(ms), lang);
-  const day = lang === 'en' ? local.weekday : new Intl.DateTimeFormat(localeOf(lang), {timeZone: tz, weekday: 'short'}).format(new Date(at));
+  const day = lang === 'en' ? local.weekday : new Intl.DateTimeFormat(localeOf(lang), {timeZone: tz, weekday: 'long'}).format(new Date(at));
   const caption = <caption>{t('hourly.caption', lang, {day})}</caption>;
   if (!rows.length) return <div class="app-hourly"><table>{caption}</table><p class="app-empty">{note === NO_FORECAST ? t('hourly.none', lang) : note}</p></div>;
   return (

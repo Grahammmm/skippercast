@@ -9,14 +9,14 @@ export function linePath(points:Point[],x:(at:string)=>number,y:(v:number)=>numb
 }
 /** Shared time axis with explicit independent row scales and gaps. */
 export function chart(rows:Series[],start:string,end:string,selected:string,tz:string,options:{height?:number;mini?:boolean;sunrise?:string|null;sunset?:string|null;windows?:{start:string;end:string}[];copy?:CoastCopy}={}){
- const copy=options.copy,num=(v:number,d:number)=>copy&&Number.isFinite(v)?copy.number(v,d):value(v,d);
+ const copy=options.copy,num=(v:number,d:number)=>copy&&Number.isFinite(v)?esc(copy.number(v,d)):value(v,d);
  const width=840,left=options.mini?0:69,right=options.mini?0:32,rowH=options.mini?80:90,bottom=options.mini?0:30,height=rows.length*rowH+bottom;
  const t0=Date.parse(start),t1=Date.parse(end),x=(at:string)=>left+(Date.parse(at)-t0)/(t1-t0||1)*(width-left-right);
  let content='';
  if(options.sunrise&&options.sunset){const dawn=Math.max(left,Math.min(width-right,x(options.sunrise))),dusk=Math.max(left,Math.min(width-right,x(options.sunset)));content+=`<rect x="${left}" y="0" width="${dawn-left}" height="${height-bottom}" style="fill:var(--coast-night,#030d17)" opacity=".5"/><rect x="${dusk}" y="0" width="${width-right-dusk}" height="${height-bottom}" style="fill:var(--coast-night,#030d17)" opacity=".5"/>`;}
  for(const w of options.windows??[]){const a=Math.max(left,x(w.start)),b=Math.min(width-right,x(w.end));if(b>a)content+=`<rect x="${a}" y="0" width="${b-a}" height="${height-bottom}" style="fill:var(--coast-mint,#58e8b8)" opacity=".08"/>`;}
  const ticks=options.mini?[]:[0,.25,.5,.75,1];
- content+=ticks.map(f=>`<line x1="${left+f*(width-left-right)}" x2="${left+f*(width-left-right)}" y1="0" y2="${height-bottom}" style="stroke:var(--coast-muted,#86abc2)" stroke-opacity=".1"/><text x="${left+f*(width-left-right)}" y="${height-6}" text-anchor="middle" class="axis">${(copy?copy.time:time)(new Date(t0+f*(t1-t0)).toISOString(),tz,{hour:'numeric'})}</text>`).join('');
+ content+=ticks.map(f=>`<line x1="${left+f*(width-left-right)}" x2="${left+f*(width-left-right)}" y1="0" y2="${height-bottom}" style="stroke:var(--coast-muted,#86abc2)" stroke-opacity=".1"/><text x="${left+f*(width-left-right)}" y="${height-6}" text-anchor="middle" class="axis">${copy?esc(copy.time(new Date(t0+f*(t1-t0)).toISOString(),tz,{hour:'numeric'})):time(new Date(t0+f*(t1-t0)).toISOString(),tz,{hour:'numeric'})}</text>`).join('');
  rows.forEach((inputRow,i)=>{const row={...inputRow,points:inputRow.points.filter(p=>Date.parse(p.at)>=t0&&Date.parse(p.at)<=t1)};const offset=i*rowH,values=row.points.map(p=>p.value).filter((v):v is number=>typeof v==='number'&&Number.isFinite(v));const low=row.min??Math.min(0,...values),high=row.max??Math.max(low+1,...values)*1.15;const y=(v:number)=>offset+rowH-13-(v-low)/(high-low)*(rowH-29);
   const path=linePath(row.points.filter(p=>Date.parse(p.at)>=t0&&Date.parse(p.at)<=t1),x,y,row.gapMs);
   if(!options.mini)content+=`<text x="0" y="${offset+22}" class="axis-label" style="fill:${row.color}">${esc(row.label)}</text><text x="0" y="${offset+39}" class="axis">${esc(row.unit)}</text><text x="${width-2}" y="${offset+20}" text-anchor="end" class="axis">${num(high,0)}</text><text x="${width-2}" y="${offset+rowH-13}" text-anchor="end" class="axis">${num(low,0)}</text>`;
