@@ -13,12 +13,14 @@ import {isProfile, type Profile} from '../profile.ts';
 import {loadPorts, portURL, savedPortId, type Port} from '../ports.ts';
 import {LandingApp, LandingHead} from './Landing.tsx';
 import {LayerDots} from './LayerDots.tsx';
-import {DEFAULT_REGION} from './readings.ts';
+import {DEFAULT_REGION} from './place.ts';
 import {saveData} from './save-data.ts';
 import {warmApp} from './warm.ts';
 import {Shoreline, ShorelineCredit} from './Shoreline.tsx';
 import {initTelemetry} from '../telemetry.ts';
 import {installDegradedWatch} from '../degraded.ts';
+import {initLanguage, language, t} from './i18n.ts';
+import {applyLandingCopy} from './copy.ts';
 
 /** web/state.ts STORAGE_KEYS.profile (equal by test); the store itself is the app's and loads there. */
 export const PROFILE_KEY = 'skippercast-profile-v1';
@@ -62,9 +64,13 @@ function nightMap(): void {
   import('./NightMap.tsx').then(({NightMap, NightCredit}) => {
     mount('landing-night', <NightMap page={location.href} region={DEFAULT_REGION} onState={state => mark('night', state)} />);
     mount('landing-credit', <><ShorelineCredit /><NightCredit /></>);
-  }, error => console.warn('Night map unavailable; the static shoreline stays.', error));
+  }, error => console.warn(t('landing.night.unavailable', language.value), error));
 }
 
+// SC0707-05: the language first, before anything is mounted or a saved port navigates: the map app's own choice (web/i18n.ts initLanguage:
+// ?lang=, the stored preference, then the browser's Accept-Language), the document's lang, and the static hero and footer in that language.
+const lang = initLanguage();
+applyLandingCopy(document, lang);
 installDegradedWatch(); // SC1322-06: before any read, as web/app/main.tsx, so the cost-ceiling mark reaches the landing's notice.
 // Cookie-less funnel and error reporting, as v1's dist/boot.js; nothing is sent under Do Not Track or GPC (web/telemetry.ts).
 initTelemetry();
@@ -76,5 +82,5 @@ mount('landing-shore', <Shoreline />);
 mount('landing-credit', <ShorelineCredit />);
 mount('landing-head', <LandingHead href={location.href} />);
 // BF-landing-live: tomorrow's verdict loads by dynamic import once the readout is in; nothing more under Save-Data.
-mount('landing-app', <LandingApp href={location.href} initialProfile={profile} verdict={() => saveData(navigator) ? Promise.resolve(null) : import('./live-verdict.ts').then(m => m.loadLandingVerdict())} />);
+mount('landing-app', <LandingApp href={location.href} initialProfile={profile} verdict={() => saveData(navigator) ? Promise.resolve(null) : import('./live-verdict.ts').then(m => m.loadLandingVerdict(undefined, undefined, undefined, lang))} />);
 mount('landing-dots', <LayerDots href={location.href} region={DEFAULT_REGION} onPreview={layer => mark('preview', layer)} />);

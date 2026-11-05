@@ -167,11 +167,11 @@ async function load() {
 test('the landing page holds the hero and footer statically; its parts render the nav, port question and readout; no map engine', async () => {
   const {LandingHead, LandingApp, Shoreline, ShorelineCredit, SHORELINE, NAV, render, h} = await load();
   const page = readFileSync(join(ROOT, 'dist/landing.html'), 'utf8');
-  assert.match(page, /<h1 class="landing-title">Know the water before you leave the dock\.<\/h1>/);
-  assert.match(page, /<p class="landing-lede">Wind, swell, water temperature and tide from fixed Central Coast buoys and a tide gauge, each with its station and age, beside the seafloor and currents on one map\.<\/p>/);
+  assert.match(page, /<h1 class="landing-title" data-i18n="landing\.hero\.title">Know the water before you leave the dock\.<\/h1>/);
+  assert.match(page, /<p class="landing-lede" data-i18n="landing\.hero\.lede">Wind, swell, water temperature and tide from fixed Central Coast buoys and a tide gauge, each with its station and age, beside the seafloor and currents on one map\.<\/p>/);
   assert.doesNotMatch(page, /your launch/, 'the readings are fixed stations, not the visitor\'s launch');
   assert.equal((page.match(/<footer/g) || []).length, 1);
-  assert.match(page, /<p>Forecasts, observations and habitat carry separate clocks; check the rules before you fish\.<\/p>/);
+  assert.match(page, /<p data-i18n="brief\.disclaimer">Forecasts, observations and habitat carry separate clocks; check the rules before you fish\.<\/p>/);
   assert.doesNotMatch(page, /CUSP|surveyed/, 'the credit comes from the generated module, not the page');
   assert.equal(render(h(ShorelineCredit, {})), `<p class="landing-credit">Shoreline: ${SHORELINE.attribution}, surveyed ${SHORELINE.sourceYears[0]}–${SHORELINE.sourceYears.at(-1)}.</p>`);
   for (const id of ['landing-night', 'landing-shore', 'landing-head', 'landing-app', 'landing-dots', 'landing-credit']) assert.match(page, new RegExp(`<div id="${id}" class="landing-host">`));

@@ -9,15 +9,17 @@
 // choosing Boat opens the map asking for the boat (Landing.tsx, boat-entry.ts carryAsk).
 import {useEffect, useRef} from 'preact/hooks';
 import {Button} from '../ui/Button.tsx';
-import {PROFILE_NOTES, PROFILE_TABLE, PROFILES, type Profile} from '../profile.ts';
+import {PROFILES, type Profile} from '../profile.ts';
+import {language, t} from './i18n.ts';
 import type {WarmState} from './region-warm.ts';
 
+/** The English step copy (the catalogue's en values, equal to the strings this file carried before SC0707-05); the rendered text follows the page language. */
 export const STEP_COPY = {
-  title: 'How do you fish?',
-  intro: 'This sets the depth limit, the species list and the map’s layers. Change it any time from the map.',
-  back: 'Change port',
-  loading: (place: string): string => `Loading the ${place} map…`,
-  ready: (place: string): string => `${place} map files ready.`,
+  title: t('landing.step.title', 'en'),
+  intro: t('landing.step.intro', 'en'),
+  back: t('landing.step.back', 'en'),
+  loading: (place: string): string => t('landing.step.loading', 'en', {place}),
+  ready: (place: string): string => t('landing.step.ready', 'en', {place}),
 } as const;
 
 export type ProfileStepProps = {
@@ -34,21 +36,22 @@ export type ProfileStepProps = {
 export function ProfileStep({place, warm, current = null, onChoose, onBack}: ProfileStepProps) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus(); }, []);
-  const status = warm === 'loading' ? STEP_COPY.loading(place) : warm === 'ready' ? STEP_COPY.ready(place) : '';
+  const lang = language.value;
+  const status = warm === 'loading' ? t('landing.step.loading', lang, {place}) : warm === 'ready' ? t('landing.step.ready', lang, {place}) : '';
   return (
     <section class="landing-step" aria-labelledby="landing-step-title" data-step="profile">
       <p class="ui-eyebrow landing-step-place">{place}</p>
-      <h2 id="landing-step-title" ref={heading} tabIndex={-1}>{STEP_COPY.title}</h2>
-      <p class="landing-step-intro">{STEP_COPY.intro}</p>
+      <h2 id="landing-step-title" ref={heading} tabIndex={-1}>{t('landing.step.title', lang)}</h2>
+      <p class="landing-step-intro">{t('landing.step.intro', lang)}</p>
       <div class="landing-step-options">
         {PROFILES.map(p => (
           <Button key={p} icon={p} data-profile={p} pressed={current === null ? undefined : p === current} onClick={() => onChoose(p)}>
-            <span><strong>{PROFILE_TABLE[p].label}</strong><small>{PROFILE_NOTES[p]}</small></span>
+            <span><strong>{t(`where.profile.${p}`, lang)}</strong><small>{t(`landing.profile.note.${p}`, lang)}</small></span>
           </Button>
         ))}
       </div>
       <p class="landing-step-status" role="status" data-warm={warm ?? undefined}>{status}</p>
-      <Button variant="quiet" size="sm" class="landing-step-back" onClick={onBack}>{STEP_COPY.back}</Button>
+      <Button variant="quiet" size="sm" class="landing-step-back" onClick={onBack}>{t('landing.step.back', lang)}</Button>
     </section>
   );
 }
