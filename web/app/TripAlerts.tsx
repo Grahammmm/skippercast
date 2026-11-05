@@ -13,7 +13,7 @@ import {PROFILE_TABLE} from '../profile.ts';
 import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {
-  alertDate, alertNames, alertSpecies, fillAlertForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, eventLine, feedbackPhase, formProblem, latestTripEvent, assessmentTime, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotifications, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
+  alertDate, alertNames, alertSpecies, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, eventLine, feedbackPhase, formProblem, latestTripEvent, assessmentTime, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotifications, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
   type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type SavedTrip,
 } from '../alerts.ts';
 
@@ -129,7 +129,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const useAgain = (trip: SavedTrip) => {
     const form = formRef.current, r = reuseTrip(trip, region);
     if (!form) return;
-    fillAlertForm(form, r);
+    fillAlertForm(form as unknown as FillableForm, r);
     if (r.species !== null) setSpecies(r.species);
     setStatus('');
     setReuse({message: reuseStatus(r.omitted), date: trip.date, copied: reusedLimits(r.fields)});
