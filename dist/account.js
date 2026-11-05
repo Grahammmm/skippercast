@@ -4,7 +4,7 @@
 // (globalThis.SimpleWebAuthnBrowser), which loadPasskeyLibrary() adds once, with SRI,
 // when a ceremony starts: app.html does not load it for map page views.
 const RETURN_KEY = 'skippercast-account-return';
-import {coordinateFormat, formatCoordinates} from './coordinates.js';
+import {coordinateFormat, formatCoordinate, formatCoordinates, parseCoordinate} from './coordinates.js';
 
 // The position format chosen in the account menu, read at each draw; blocked or unreadable storage means decimal degrees.
 function chosenFormat() {
@@ -147,11 +147,54 @@ export function logItemHTML(row, trips = [], format = chosenFormat()) {
     <button type="button" data-remove-log="${esc(row.id)}">Remove</button></li>`;
 }
 
-/** The form's fields as the log route's body: a blank sends no count, a position is sent only when both boxes are filled. */
+/** A typed position the form refused: a plain Error carrying `.field` ('lat' or 'lon') and the parser's reason. */
+function fieldError(field, message) { const error = Error(message); error.field = field; return error; }
+/** Reads one typed latitude or longitude box into decimal degrees; a refusal names its box and carries the parser's reason. */
+function readPosition(text, field) {
+  const r = parseCoordinate(String(text ?? ''), field === 'lat' ? 'latitude' : 'longitude');
+  if (r.error !== undefined) throw fieldError(field, r.error);
+  return r.value;
+}
+const blankText = v => String(v ?? '').trim() === '';
+
+/** One latitude or longitude box: a text input with an example in the chosen format as its hint and an empty error line beside it. */
+export function positionFieldHTML(prefix, field, label, note = '', format = chosenFormat()) {
+  const latitude = field === 'lat', id = `${prefix}-${field}`;
+  const example = latitude ? formatCoordinate(35.3576, 'latitude', format) : formatCoordinate(-120.8578, 'longitude', format);
+  return `<label for="${id}">${label}${note ? ` <span class="account-hint">${note}</span>` : ''}</label><input id="${id}" type="text" inputmode="text" autocomplete="off" aria-describedby="${id}-hint ${id}-error" /><span class="account-hint" id="${id}-hint">For example ${esc(example)}</span><p class="account-hint" role="alert" id="${id}-error" hidden></p>`;
+}
+
+/**
+ * Runs a position form's submit: clears each box's error, builds the body, and when a box was refused shows the reason beside
+ * that box, marks it invalid, focuses it and sends nothing. `$` finds an element by selector; `send` posts the built body.
+ */
+export async function submitPositionForm($, prefix, build, send) {
+  for (const f of ['lat', 'lon']) {
+    const err = $(`#${prefix}-${f}-error`), box = $(`#${prefix}-${f}`);
+    if (err) { err.textContent = ''; err.hidden = true; }
+    box?.removeAttribute?.('aria-invalid');
+  }
+  let body;
+  try { body = build(); } catch (error) {
+    if (error?.field !== 'lat' && error?.field !== 'lon') throw error;
+    const err = $(`#${prefix}-${error.field}-error`), box = $(`#${prefix}-${error.field}`);
+    if (err) { err.textContent = error.message; err.hidden = false; }
+    box?.setAttribute?.('aria-invalid', 'true');
+    box?.focus?.();
+    return false;
+  }
+  await send(body);
+  return true;
+}
+
+/** The form's fields as the log route's body: a blank sends no count, a position is sent only when both boxes are filled; typed positions are read in decimal degrees, degrees and decimal minutes, or degrees minutes seconds. */
 export function logBody(f) {
   const num = v => (String(v ?? '').trim() === '' ? null : Number(v));
+  const hasLat = !blankText(f.lat), hasLon = !blankText(f.lon);
+  if (hasLat !== hasLon) throw fieldError(hasLat ? 'lon' : 'lat', 'Enter both latitude and longitude, or neither.');
+  const lat = hasLat ? readPosition(f.lat, 'lat') : null, lon = hasLon ? readPosition(f.lon, 'lon') : null;
   const started = f.started ? new Date(f.started) : new Date();
-  const out = {started_at: started.toISOString(), outcome: f.outcome, method: f.method || null, species: f.species || null, note: f.note || null, lat: num(f.lat), lon: num(f.lon)};
+  const out = {started_at: started.toISOString(), outcome: f.outcome, method: f.method || null, species: f.species || null, note: f.note || null, lat, lon};
   if (f.outcome === 'fish') out.count = num(f.count);
   if (f.trip_id !== undefined && f.trip_id !== null && f.trip_id !== '') out.trip_id = f.trip_id;   // the chosen id exactly; the route checks it is the caller's own
   return out;
@@ -178,8 +221,8 @@ const logFormHTML = () => `<h2 class="account-subhead">Catch log</h2>
       <label for="log-species">Target species</label><input id="log-species" type="text" maxlength="60" />
       <label for="log-method">Method</label><input id="log-method" type="text" maxlength="40" />
       <label for="log-trip">Trip <span class="account-hint">(optional)</span></label><select id="log-trip">${NO_TRIP}</select>
-      <label for="log-lat">Latitude <span class="account-hint">(optional, private)</span></label><input id="log-lat" type="number" step="any" />
-      <label for="log-lon">Longitude <span class="account-hint">(optional, private)</span></label><input id="log-lon" type="number" step="any" />
+      ${positionFieldHTML('log', 'lat', 'Latitude', '(optional, private)')}
+      ${positionFieldHTML('log', 'lon', 'Longitude', '(optional, private)')}
       <label for="log-note">Note</label><input id="log-note" type="text" maxlength="1000" />
       <div class="home-port-actions"><button type="submit" id="log-save">Save to my log</button></div>
     </form>
@@ -194,10 +237,9 @@ export function spotItemHTML(spot, verdict, format = chosenFormat()) {
     <button type="button" data-remove-spot="${esc(spot.id)}">Remove</button></li>`;
 }
 
-/** The form's fields as the spots route's body. A position is always sent; the route refuses a missing or unreadable one. */
+/** The form's fields as the spots route's body. A position is always required; a blank or unreadable box is refused here with the parser's reason. */
 export function spotBody(f) {
-  const num = v => (String(v ?? '').trim() === '' ? null : Number(v));
-  return {name: f.name ?? '', lat: num(f.lat), lon: num(f.lon), note: f.note || null};
+  return {name: f.name ?? '', lat: readPosition(f.lat, 'lat'), lon: readPosition(f.lon, 'lon'), note: f.note || null};
 }
 
 // SC0022-04: the reading for a spot the protected-area screen could not check.
@@ -237,8 +279,8 @@ const spotFormHTML = () => `<h2 class="account-subhead">Saved spots</h2>
     <p class="home-port-fine">Private to this account. You can show your saved spots on your own Chart. Spots and notes are never shared, put in a public feed or shown to anyone else. Private notes are never drawn on the map or included in GPX. Spots inside a protected area are shown with that reading and left out of the GPX file.</p>
     <form id="spot-form" autocomplete="off">
       <label for="spot-name">Name</label><input id="spot-name" type="text" maxlength="80" />
-      <label for="spot-lat">Latitude</label><input id="spot-lat" type="number" step="any" required />
-      <label for="spot-lon">Longitude</label><input id="spot-lon" type="number" step="any" required />
+      ${positionFieldHTML('spot', 'lat', 'Latitude')}
+      ${positionFieldHTML('spot', 'lon', 'Longitude')}
       <label for="spot-note">Private note</label><input id="spot-note" type="text" maxlength="1000" />
       <div class="home-port-actions"><button type="submit" id="spot-save">Save this spot</button><button type="button" id="spot-export">Download my spots as GPX</button></div>
     </form>
@@ -436,8 +478,10 @@ export async function openAccount() {
       event.preventDefault();
       const field = n => $('#log-' + n).value;
       try {
-        await api('catch-log', {method: 'POST', body: logBody({started: field('started'), outcome: field('outcome'), count: field('count'), species: field('species'), method: field('method'), trip_id: field('trip'), lat: field('lat'), lon: field('lon'), note: field('note')})});
-        $('#log-form').reset(); await showLog(); status('Saved to your log.');
+        await submitPositionForm($, 'log', () => logBody({started: field('started'), outcome: field('outcome'), count: field('count'), species: field('species'), method: field('method'), trip_id: field('trip'), lat: field('lat'), lon: field('lon'), note: field('note')}), async body => {
+          await api('catch-log', {method: 'POST', body});
+          $('#log-form').reset(); await showLog(); status('Saved to your log.');
+        });
       } catch (error) { status(passkeyMessage(error)); }
     });
     showLog(); loadTrips();
@@ -460,8 +504,10 @@ export async function openAccount() {
       event.preventDefault();
       const field = n => $('#spot-' + n).value;
       try {
-        await api('spots', {method: 'POST', body: spotBody({name: field('name'), lat: field('lat'), lon: field('lon'), note: field('note')})});
-        $('#spot-form').reset(); spotsChanged(); await showSpots(); status('Saved to your spots.');
+        await submitPositionForm($, 'spot', () => spotBody({name: field('name'), lat: field('lat'), lon: field('lon'), note: field('note')}), async body => {
+          await api('spots', {method: 'POST', body});
+          $('#spot-form').reset(); spotsChanged(); await showSpots(); status('Saved to your spots.');
+        });
       } catch (error) { status(passkeyMessage(error)); }
     });
     $('#spot-export').addEventListener('click', async () => {

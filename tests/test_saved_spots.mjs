@@ -74,7 +74,7 @@ test('a spot with a note is saved, read back with the 4-byte emoji intact, and s
   assert.ok(!sql.prepare("PRAGMA table_info('saved_spots')").all().some(c => /visib|public|shared/i.test(c.name)), 'no visibility column');
   const html = spotItemHTML(list.spots[0], {text: 'x <i>'});
   assert.ok(!html.includes('<b>') && !html.includes('<i>') && html.includes('&lt;b&gt;bold&lt;/b&gt; 🐟 &amp;'), 'markup is escaped');
-  assert.deepEqual(spotBody({name: 'N', lat: '35.5', lon: ' ', note: ''}), {name: 'N', lat: 35.5, lon: null, note: null});
+  assert.deepEqual(spotBody({name: 'N', lat: '35.5', lon: '-121', note: ''}), {name: 'N', lat: 35.5, lon: -121, note: null});
   sql.close();
 });
 
