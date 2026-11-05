@@ -313,6 +313,7 @@ test('map first run: arriving from the landing\'s Boat choice asks for the boat 
   const href = `${MAP}&profile=boat&boat-entry=ask`;
   await withMap(href, s, () => mounted(m, firstRun(m, storage, href), storage, async ({view, type, submit}) => {
     assert.match(view().html, /Your boat \(optional\)/);
+    await tick(50); // BoatEntry's mount effect
     assert.equal(m.boatEntryOpen.value, true, 'arrival opens the phone sheet too');
     assert.doesNotMatch(view().html, /How do you fish\?/, 'the profile was answered on the landing');
     assert.equal(s.map.size, 0, 'read once');
