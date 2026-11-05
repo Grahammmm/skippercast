@@ -155,6 +155,16 @@ python -m skippercast.fleet confirm list --region CA --sink staging
 - If the registry's MMSI for a vessel changes, the entry is `stale`: it counts for nothing and `withdraw` refuses it too; the evidence is never silently reassigned to the new MMSI. Confirm the new pair separately.
 - `list` prints vessel id, MMSI, method, dates and `active`/`withdrawn`/`stale` only; evidence references are never printed. A corrupt or unreadable ledger stops `coverage-status` before anything is written; it is never read as zero.
 
+## NAIS transmit check
+
+`scripts/fleet/nais_presence.py` counts, for up to five private targets, the days each was heard in a window of at most 7 days (NOAA MarineCadastre day files, about 300 MB per UTC day). It reads through `MarineCadastreSource.history` and stores nothing: no Worker call, no registry, `watch.json` or backfill store. It stops with exit 3 below 50 GB free.
+
+```sh
+python scripts/fleet/nais_presence.py --region CA --from 2026-0X-DD --to <+6 days> --targets <private file {"A": mmsi, ...}> --private-out <private path>
+```
+
+Stdout is labels and counts only (days heard at the Morro Bay / Port San Luis geofences, days heard anywhere in the region, days checked, missing and failed days). Keep the label-to-boat map in the private targets file. "Not heard" proves neither that a boat has no transponder nor that it made no trip.
+
 ## Known gaps
 
 - design.md § 9 "Known gaps, CF-17 scope": the staging sink writes no `<run_id>:registry.<batch>` row, so a staging run's `fleet_runs` has the step rows only.
