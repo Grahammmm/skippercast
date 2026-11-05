@@ -202,7 +202,7 @@ async function manifestOffline(request) {
   const names = await caches.keys(), packs = [], at = r => r.headers.get(SAVED_HEADER) || '';
   for (const name of names.filter(n => n.startsWith(PACK_PREFIX))) {
     const cache = await caches.open(name), meta = await cache.match(PACK_META);
-    const owner = meta ? await meta.json().then(m => m?.region_id, () => null) : null;
+    const owner = meta ? await meta.json().then(m => m?.schema_version === 1 ? m.region_id : null, () => null) : null;
     if (owner) packs.push({cache, owner});
   }
   const data = names.includes(DATA_CACHE) ? await caches.open(DATA_CACHE) : null, stores = [...(data ? [data] : []), ...packs.map(p => p.cache)];

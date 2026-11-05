@@ -70,11 +70,12 @@ test('rendered groups, disclosures, assessment fallback, comfort reports and unc
     const {SavedTrips, render, h} = await import(pathToFileURL(out).href);
     const names = {point: new Map([['synthetic', 'Test area']]), species: new Map([['reef', 'Test species']])};
     const draw = (trips, events = [], feedback = []) => render(h(SavedTrips, {
-      recaps: tripRecaps(trips, events, feedback, today), names, remove: () => () => {},
+      recaps: tripRecaps(trips, events, feedback, today), names, remove: () => () => {}, useAgain: () => {},
     }));
     assert.equal(draw([]), '<div id="saved-trips"><p>No saved trips.</p></div>');
     let html = draw([trip('future', '2026-11-03')]);
     assert.match(html, /<h3>Upcoming<\/h3>/);
+    assert.match(html, /aria-label="Use again: trip on 2026-11-03 at Test area"[^>]*>Use again<\/button>/);
     assert.doesNotMatch(html, /<h3>Past<\/h3>|No saved trips/);
     html = draw([trip('past', '2026-11-01')]);
     assert.match(html, /<h3>Past<\/h3>/);
@@ -83,6 +84,7 @@ test('rendered groups, disclosures, assessment fallback, comfort reports and unc
     assert.match(html, /No day-before assessment was delivered/);
     assert.match(html, /Your own record of each trip\. Forecast assessments are what we sent before the day, not what the sea did\./);
     assert.match(html, /aria-label="Delete the trip on 2026-11-01 at Test area"/);
+    assert.match(html, /<\/details><button[^>]*>Delete<\/button> <button aria-label="Use again: trip on 2026-11-01 at Test area" type="button"[^>]*>Use again<\/button>/, 'collapsed past rows offer Use again outside the disclosure');
     assert.doesNotMatch(html, /Your comfort reports/);
     html = draw([trip('past', '2026-11-01'), trip('future', '2026-11-03')],
       [event('final', 'past', 'final'), event('orphan', 'deleted', 'final')], [report('2026-11-02T07:30:00Z', 8)]);
@@ -150,7 +152,7 @@ test('rendered_recap_lists_fish_blank_unknown_privately', async () => {
       jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
     const {SavedTrips, render, h} = await import(pathToFileURL(out).href);
     const names = {point: new Map([['synthetic', 'Test area']]), species: new Map([['reef', 'Test species']])};
-    const draw = (trips, entries, events = [], feedback = []) => render(h(SavedTrips, {recaps: tripRecaps(trips, events, feedback, today, entries), names, remove: () => () => {}}));
+    const draw = (trips, entries, events = [], feedback = []) => render(h(SavedTrips, {recaps: tripRecaps(trips, events, feedback, today, entries), names, remove: () => () => {}, useAgain: () => {}}));
     const none = draw([trip('past', '2026-11-01')], []);
     assert.doesNotMatch(none, /catch log|Fish ·|Blank|Not sure/i);
     // A trip with nothing logged, a failed read and an empty read all draw the same page.
@@ -185,7 +187,7 @@ test('recap_render_says_when_older_entries_were_not_read: loading and incomplete
       jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
     const {SavedTrips, render, h} = await import(pathToFileURL(out).href);
     const names = {point: new Map([['synthetic', 'Test area']]), species: new Map([['reef', 'Test species']])};
-    const draw = (trips, entries, read) => render(h(SavedTrips, {recaps: tripRecaps(trips, [], [], today, entries), names, remove: () => () => {}, ...(read ? {read} : {})}));
+    const draw = (trips, entries, read) => render(h(SavedTrips, {recaps: tripRecaps(trips, [], [], today, entries), names, remove: () => () => {}, useAgain: () => {}, ...(read ? {read} : {})}));
     const oldest = [trip('newer', '2026-11-01'), trip('oldest', '2026-10-01')];
     const notRead = /Older catch-log entries were not read\. The entries shown may be incomplete\./g, reading = /Reading your catch log…/g;
     const count = (html, re) => (html.match(re) ?? []).length;
@@ -213,5 +215,41 @@ test('recap_render_says_when_older_entries_were_not_read: loading and incomplete
     assert.equal(count(loading, notRead), 0);
     // Without a past trip there is no Past section to carry either line.
     assert.equal(count(draw([trip('future', '2026-11-03')], [], {loading: false, complete: false}), notRead), 0);
+  } finally { await rm(dir, {recursive: true, force: true}); }
+});
+
+test('rendered_upcoming_limits_assessment_stay_in_own_row', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'trip-recap-upcoming-'));
+  try {
+    const out = join(dir, 'view.mjs');
+    await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
+      export {SavedTrips} from './web/app/TripAlerts.tsx';
+      export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
+      bundle: true, platform: 'node', format: 'esm', outfile: out, logLevel: 'silent',
+      jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+    const {SavedTrips, render, h} = await import(pathToFileURL(out).href);
+    const names = {point: new Map([['synthetic', 'Test area']]), species: new Map([['reef', 'Test species']])};
+    const draw = (trips, events, extra = {}) => render(h(SavedTrips, {recaps: tripRecaps(trips, events ?? [], [], today), names, remove: () => () => {}, useAgain: () => {}, events, ...extra}));
+    const limited = (id, date, w, g, s) => ({...trip(id, date), wind_limit: w, gust_limit: g, sea_limit: s});
+    const ev = (id, trip_id, kind, status, created_at) => ({id, trip_id, kind, status, message: `Synthetic ${id}`, created_at});
+    const trips = [limited('one', '2026-11-03', 9, 14, 2.5), limited('two', '2026-11-04', 12, 18, 4), limited('none', '2026-11-05', 10, 15, 3)];
+    const events = [ev(1, 'two', 'retraction', 'held', '2026-11-03T08:00:00Z'), ev(2, 'one', 'update', 'in-app', '2026-11-03T07:30:00Z'),
+      ev(3, 'one', 'final', 'delivered', '2026-11-02T07:30:00Z'), ev(4, 'gone', '<script>alert(1)</script>', '<b>x</b>', 'bad')];
+    const html = draw(trips, events, {timeZone: 'America/Los_Angeles'});
+    const rows = html.slice(html.indexOf('<h3>Upcoming</h3>')).split('</p>');
+    const row = id => rows.find(r => r.includes(`2026-11-0${id}`));
+    assert.match(row(3), /Saved limits: wind 9 kt · gust 14 kt · sea 2.5 ft · Material change · shown here · <time datetime="2026-11-03T07:30:00Z">02 Nov 2026, 23:30 (GMT-8|PST)<\/time>/);
+    assert.doesNotMatch(row(3), /withdrawn|Day-before|12 kt/);
+    assert.match(row(4), /wind 12 kt · gust 18 kt · sea 4 ft · Earlier alert withdrawn · not delivered — read it here · <time/);
+    assert.doesNotMatch(row(4), /Material change/);
+    assert.match(row(5), /wind 10 kt · gust 15 kt · sea 3 ft · No recent assessment<\/span>/);
+    assert.doesNotMatch(html, /<script|<b>x/);
+    assert.match(row(3), /aria-label="Delete the trip on 2026-11-03 at Test area"/);
+    // Events that are another trip's, an empty window and an omitted events prop all say so.
+    assert.match(draw([trips[0]], [ev(9, 'other', 'update', 'in-app', '2026-11-03T07:30:00Z')]), /No recent assessment/);
+    assert.match(draw([trips[0]], []), /No recent assessment/);
+    assert.match(draw([trips[0]], undefined), /No recent assessment/);
+    // An old fixture without stored limits says so rather than inventing numbers; a bad time is plain text.
+    assert.match(draw([trip('x', '2026-11-03')], [ev(8, 'x', 'update', 'in-app', 'nope')]), /wind not recorded · gust not recorded · sea not recorded · Material change · shown here · Time unavailable<\/span>/);
   } finally { await rm(dir, {recursive: true, force: true}); }
 });

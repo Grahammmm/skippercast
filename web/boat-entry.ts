@@ -12,22 +12,31 @@
 import {signal} from '@preact/signals';
 import {BOAT_KEY, normalizeBoat} from '../dist/boat-handling.js';
 import {loadLimits, limitsFor, saveLimits, savedLimits} from './limits.ts';
+import {num, t, type Language} from './i18n.ts';
 import type {Profile} from './profile.ts';
 import {readStored, STORAGE_KEYS, type StoreStorage} from './state.ts';
 
-export const ENTRY_COPY = {
-  legend: 'Your boat (optional)',
-  line: 'Boat length makes every rating yours; the rest can wait.',
-  length: 'Boat length (ft)',
-  lengthHint: 'Boat length 8-70 ft',
-  wind: 'Wind limit (kt)',
-  seas: 'Seas limit (ft)',
-  limitsHint: 'Blank keeps the default',
-  failed: 'Could not save the boat in this browser.',
-} as const;
+/** The optional-field copy in `lang` (SC0707-06: catalogue values; English by default). */
+export const entryCopy = (lang: Language = 'en') => ({
+  legend: t('boatEntry.legend', lang),
+  line: t('boatEntry.line', lang),
+  length: t('boatEntry.length', lang),
+  lengthHint: t('boatEntry.lengthHint', lang),
+  wind: t('boatEntry.wind', lang),
+  seas: t('boatEntry.seas', lang),
+  limitsHint: t('boatEntry.limitsHint', lang),
+  failed: t('boatEntry.failed', lang),
+}) as const;
 
-/** The three optional fields, by input name, in the order both screens show them. */
-export const ENTRY_FIELDS = [['lengthFt', ENTRY_COPY.length], ['wind', ENTRY_COPY.wind], ['seas', ENTRY_COPY.seas]] as const;
+/** The three optional fields, by input name, in the order both screens show them, labelled in `lang`. */
+export const entryFields = (lang: Language = 'en') => {
+  const copy = entryCopy(lang);
+  return [['lengthFt', copy.length], ['wind', copy.wind], ['seas', copy.seas]] as const;
+};
+
+/** English-compatible values for existing imports and tests. */
+export const ENTRY_COPY = entryCopy('en');
+export const ENTRY_FIELDS = entryFields('en');
 
 export type FirstUseEntry = {lengthFt?: string; wind?: string; seas?: string; profile: Profile};
 export type FirstUseResult = {boat: boolean; notices: string[]};
@@ -69,7 +78,7 @@ export const boatSaved = signal(0);
  * Returns whether a boat was written and one-line notices (a limit that was
  * clamped, or a storage failure). Never throws.
  */
-export function saveFirstUse(entry: FirstUseEntry, storage: StoreStorage | null = browserStorage()): FirstUseResult {
+export function saveFirstUse(entry: FirstUseEntry, storage: StoreStorage | null = browserStorage(), lang: Language = 'en'): FirstUseResult {
   const notices: string[] = [];
   let boat = false, failed = false;
   if (!blank(entry.lengthFt)) {
@@ -87,11 +96,11 @@ export function saveFirstUse(entry: FirstUseEntry, storage: StoreStorage | null 
       if (readStored(STORAGE_KEYS.limits) !== JSON.stringify(savedLimits.peek())) failed = true;
       for (const field of ['wind', 'seas'] as const) {
         const raw = typed[field];
-        if (raw !== undefined && Number(raw) !== saved[field]) notices.push(`${field === 'wind' ? 'Wind' : 'Seas'} limit saved as ${saved[field]} ${field === 'wind' ? 'kt' : 'ft'}.`);
+        if (raw !== undefined && Number(raw) !== saved[field]) notices.push(t(field === 'wind' ? 'boatEntry.windSaved' : 'boatEntry.seasSaved', lang, {n: num(saved[field], lang)}));
       }
     } catch { failed = true; }
   }
-  if (failed) notices.push(ENTRY_COPY.failed);
+  if (failed) notices.push(t('boatEntry.failed', lang));
   return {boat, notices};
 }
 
