@@ -14,6 +14,7 @@ import type {Series} from '../packages/coast/src/charts/series.ts';
 import {feedReader, RUN_MAX_MS} from './brief/verdict.ts';
 import {readingsAt, type ConditionsForecast} from './conditions.ts';
 import {localParts} from './hour.ts';
+import {compass} from './landing/readings.ts';
 import {sample} from './map/forecast-grid.ts';
 import {rateComfort, REFERENCE_BOAT, type BoatFactors} from './score.ts';
 
@@ -23,8 +24,9 @@ export const LIMITED_NOTE = 'Limited estimate: a model or partition is missing.'
 
 export interface HourlyRow {
   readonly at: string; readonly ms: number;
-  readonly wind: number | null; readonly gust: number | null; readonly seas: number | null;
+  readonly wind: number | null; readonly windFrom: number | null; readonly gust: number | null; readonly seas: number | null;
   readonly swell: {readonly h: number | null; readonly period: number | null; readonly from: number | null};
+  readonly second: {readonly h: number | null; readonly from: number | null};
   readonly chop: {readonly h: number | null; readonly period: number | null};
   readonly tide: number | null; readonly visibilityMi: number | null;
   readonly score: number | null; readonly limited: boolean;
@@ -43,9 +45,10 @@ export function hourlyTable(f: ConditionsForecast | null, tide: Series | null, d
     const wind = num(h.wind), gust = num(h.gust), period = num(h.sea_period);
     const metres = visRun ? sample(visRun.data, 'visibility', ms / 1000, 'm', visRun.end ? {data_end_time: visRun.end} : null) : null;
     return {
-      at, ms, wind, gust: gust !== null && wind !== null && gust >= wind ? gust : null,
+      at, ms, wind, windFrom: wind === null ? null : num(h.wind_from), gust: gust !== null && wind !== null && gust >= wind ? gust : null,
       seas: period !== null && period > 0 ? num(h.sea) : null,
       swell: {h: num(h.swell), period: num(h.swell_period), from: num(h.swell_from)},
+      second: {h: num(h.secondary), from: num(h.secondary_from)},
       chop: {h: num(h.chop), period: num(h.chop_period)},
       tide: tide ? readingsAt([tide], at)[0]!.value : null,
       visibilityMi: metres === null ? null : Math.round(metres / METRES_PER_MILE * 10) / 10,
@@ -57,10 +60,12 @@ export function hourlyTable(f: ConditionsForecast | null, tide: Series | null, d
 
 const fix = (v: number | null, digits: number, unit: string) => v === null ? '—' : `${v.toFixed(digits)}${unit}`;
 
-/** A row's cells after the time: wind, gust, seas, swell, chop, tide, visibility, score ("*" marks a limited estimate). */
+/** A row's cells after the time: wind, gust, seas, swell, second swell, chop, tide, visibility, score ("*" marks a limited estimate). */
 export function hourlyCells(r: HourlyRow): string[] {
   const swell = r.swell.h === null ? '—' : `${fix(r.swell.h, 1, ' ft')} · ${fix(r.swell.period, 0, ' s')} · ${fix(r.swell.from, 0, '°')}`;
   const chop = r.chop.h === null ? '—' : `${fix(r.chop.h, 1, ' ft')} · ${fix(r.chop.period, 0, ' s')}`;
-  return [fix(r.wind, 0, ' kt'), fix(r.gust, 0, ' kt'), fix(r.seas, 1, ' ft'), swell, chop, fix(r.tide, 1, ' ft'), fix(r.visibilityMi, 1, ' mi'),
+  const wind = r.wind !== null && r.windFrom !== null ? `${fix(r.wind, 0, ' kt')} from ${compass(r.windFrom)}` : fix(r.wind, 0, ' kt');
+  const second = r.second.h !== null && r.second.h > 0 && r.second.from !== null ? `${fix(r.second.h, 1, ' ft')} · from ${compass(r.second.from)}` : '—';
+  return [wind, fix(r.gust, 0, ' kt'), fix(r.seas, 1, ' ft'), swell, second, chop, fix(r.tide, 1, ' ft'), fix(r.visibilityMi, 1, ' mi'),
     r.score === null ? '—' : `${r.score.toFixed(1)}${r.limited ? '*' : ''}`];
 }
