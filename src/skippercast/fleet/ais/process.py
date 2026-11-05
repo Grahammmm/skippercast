@@ -98,7 +98,8 @@ POST_TRIPS = 50                  # trips per activity request (a window splits a
 POST_BYTES = 768 * 1024          # under the Worker's 1 MB body limit
 POST_WINDOWS = 50
 CELLS_PER_POST = 500
-SOURCE_RIGHTS = {"aisstream": "internal-only", "datalastic": "internal-only", "marinecadastre": "noaa-planning-only"}
+SOURCE_RIGHTS = {"aisstream": "internal-only", "datalastic": "internal-only", "marinecadastre": "noaa-planning-only",
+                "local-nmea": "internal-only"}
 # A trip heard by two sources counts once in the aggregates: the live sources win; the backfill fills the rest.
 SOURCE_PRECEDENCE = ("aisstream", "datalastic", "marinecadastre")
 # Raw store per source under <FLEET_VAR>/<region>/ais: the listener's, and the backfill's (ais/backfill.py).
