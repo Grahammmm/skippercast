@@ -16,7 +16,7 @@ export function validateSubscription(s:ExternalJSON):PushSubscriptionInput{
   let u:URL;try{u=new URL(s.endpoint);}catch{throw new ClientError('push endpoint rejected');}
   const allowed=u.hostname==='fcm.googleapis.com'||u.hostname==='updates.push.services.mozilla.com'||u.hostname==='web.push.apple.com'||u.hostname.endsWith('.notify.windows.com');
   if(u.protocol!=='https:'||u.port||u.username||u.password||!allowed||u.href.length>2000)throw new ClientError('push endpoint rejected');
-  if(!/^[\w-]{87}$/.test(s.keys.p256dh)||!/^[\w-]{22}$/.test(s.keys.auth))throw new ClientError('push keys invalid');return s;
+  if(typeof s.keys.p256dh!=='string'||typeof s.keys.auth!=='string'||!/^[\w-]{87}$/.test(s.keys.p256dh)||!/^[\w-]{22}$/.test(s.keys.auth))throw new ClientError('push keys invalid');return s;
 }
 // Calendar days (not 24-hour steps, which skip or repeat a day in DST weeks).
 const plusDays=(date:string,n:number):string=>new Date(Date.parse(date+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);

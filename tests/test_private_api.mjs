@@ -43,6 +43,21 @@ test('push subscriptions cannot turn the sender into an arbitrary URL fetcher',(
   assert.ok(validateSubscription({endpoint:'https://web.push.apple.com/test-endpoint',keys}));
   for(const endpoint of ['http://fcm.googleapis.com/path','https://127.0.0.1/','https://fcm.googleapis.com.attacker.test/','https://web.push.apple.com:444/','https://user:password@web.push.apple.com/'])assert.throws(()=>validateSubscription({endpoint,keys}));
 });
+test('subscription_keys_require_actual_strings',()=>{
+  const good={p256dh:'a'.repeat(87),auth:'b'.repeat(22)},endpoint='https://web.push.apple.com/test-endpoint';
+  assert.ok(validateSubscription({endpoint,keys:good}));
+  const bad=[undefined,null,true,7,[],['a'.repeat(87)],[['a'.repeat(87)]],{},{toString:null}];
+  const badAuth=[undefined,null,true,7,[],['b'.repeat(22)],[['b'.repeat(22)]],{},{toString:null}];
+  for(const p256dh of bad)assert.throws(()=>validateSubscription({endpoint,keys:{...good,p256dh}}),e=>e?.constructor?.name==='ClientError'&&e.message==='push keys invalid');
+  for(const auth of badAuth)assert.throws(()=>validateSubscription({endpoint,keys:{...good,auth}}),e=>e?.constructor?.name==='ClientError'&&e.message==='push keys invalid');
+});
+test('subscription_string_key_boundaries_unchanged',()=>{
+  const endpoint='https://web.push.apple.com/test-endpoint',ok={p256dh:'A-_9'.repeat(22).slice(0,87),auth:'z-_Z'.repeat(6).slice(0,22)};
+  assert.ok(validateSubscription({endpoint,keys:ok}));
+  for(const keys of [{...ok,p256dh:ok.p256dh.slice(1)},{...ok,p256dh:ok.p256dh+'a'},{...ok,auth:ok.auth.slice(1)},{...ok,auth:ok.auth+'a'},{...ok,auth:ok.auth.slice(1)+'='},{...ok,auth:ok.auth.slice(1)+' '},{...ok,p256dh:ok.p256dh.slice(1)+'+'},{...ok,p256dh:ok.p256dh.slice(1)+'/'}])assert.throws(()=>validateSubscription({endpoint,keys}),e=>e?.message==='push keys invalid');
+  assert.throws(()=>validateSubscription({endpoint,keys:null}),e=>e?.message==='subscription missing');
+  assert.throws(()=>validateSubscription({endpoint:'http://fcm.googleapis.com/x',keys:ok}),e=>e?.message==='push endpoint rejected');
+});
 test('public feed requests use edge-compatible redirect handling and reject redirected data',async()=>{
   const originalFetch=globalThis.fetch,originalCaches=globalThis.caches;let calls=0;
   try{

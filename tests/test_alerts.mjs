@@ -188,3 +188,29 @@ test('recap_unmount_stops_chain: aborting while the second page is pending ends 
   assert.deepEqual(await alerts.readRecapCatchLog(paged([{rows: []}], before), pre.signal), {entries: [], complete: false});
   assert.equal(before.length, 0);
 });
+
+test('upcoming_latest_event_uses_first_exact_trip_match: newest-first, trips kept apart, nothing mutated', () => {
+  const ev = (id, trip_id, kind) => ({id, trip_id, kind, status: 'in-app', message: 'm'});
+  const events = [ev(1, 'b', 'update'), ev(2, 'a', 'update'), ev(3, 'a', 'final'), ev(4, undefined, 'update'), ev(5, '', 'update')];
+  const before = JSON.stringify(events);
+  assert.equal(alerts.latestTripEvent(events, 'a').id, 2, 'the first own event wins, with no kind preference');
+  assert.equal(alerts.latestTripEvent(events, 'b').id, 1);
+  assert.equal(alerts.latestTripEvent(events, 'c'), null);
+  assert.equal(alerts.latestTripEvent(events, ''), null);
+  assert.equal(alerts.latestTripEvent([], 'a'), null);
+  assert.equal(JSON.stringify(events), before);
+});
+
+test('saved_limits_are_as_stored_not_boat_or_profile', () => {
+  const t = {id: 'a', date: 'd', point: 'p', species: 's', start_hour: 7, end_hour: 13, boat_sea: 0.5, wind_limit: 9, gust_limit: 14, sea_limit: 2.5};
+  assert.equal(alerts.savedTripLimits(t), 'Saved limits: wind 9 kt · gust 14 kt · sea 2.5 ft');
+  assert.equal(alerts.savedTripLimits({...t, wind_limit: undefined, gust_limit: NaN, sea_limit: Infinity}), 'Saved limits: wind not recorded · gust not recorded · sea not recorded');
+  assert.equal(alerts.savedTripLimits({...t, sea_limit: '3'}), 'Saved limits: wind 9 kt · gust 14 kt · sea not recorded');
+});
+
+test('assessment_time_has_explicit_region_zone', () => {
+  const e = {id: 1, kind: 'update', status: 'held', message: '', created_at: '2026-11-05T07:30:00Z'};
+  assert.match(alerts.assessmentTime(e, 'America/Los_Angeles'), /^04 Nov 2026, 23:30 (GMT-8|PST)$/);
+  assert.match(alerts.assessmentTime(e, 'UTC'), /^05 Nov 2026, 07:30 UTC$/);
+  for (const created_at of [undefined, '', 'not a date', 5]) assert.equal(alerts.assessmentTime({...e, created_at}), 'Time unavailable');
+});

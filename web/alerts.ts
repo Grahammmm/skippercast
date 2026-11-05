@@ -85,8 +85,8 @@ export function formProblem(form: AlertForm, range: {min: string; max: string}):
 export const comfortBody = (region: string, rating: number, phase: string) =>
   ({region, rating, phase, wind: null, sea: null, period: null, heading: null, point: null});
 
-export type SavedTrip = {id: string; date: string; point: string; species: string; start_hour: number; end_hour: number; boat_name?: string | null; boat_sea?: number | null};
-export type AlertEvent = {id: string | number; trip_id?: string; kind: string; status: string; message: string};
+export type SavedTrip = {id: string; date: string; point: string; species: string; start_hour: number; end_hour: number; boat_name?: string | null; boat_sea?: number | null; wind_limit?: number; gust_limit?: number; sea_limit?: number};
+export type AlertEvent = {id: string | number; trip_id?: string; kind: string; status: string; message: string; created_at?: string};
 export type Feedback = {observed_at: string; rating: number; context: string};
 
 /** The recap's minimal projection of one private catch-log row (the signed-in GET /api/catch-log answer): no coordinates, note, owner, method or species. */
@@ -194,6 +194,26 @@ export const STATUS_LABEL: Readonly<Record<string, string>> = {
 const label = (labels: Readonly<Record<string, string>>, key: string): string => (Object.hasOwn(labels, key) ? labels[key] : undefined) ?? key;
 /** The assessment's heading: "Day-before assessment · shown here"; an unknown kind or status prints as written. */
 export const eventLine = (e: AlertEvent): string => `${label(KIND_LABEL, e.kind)} · ${label(STATUS_LABEL, e.status)}`;
+
+/** The newest event GET /api/trips returned for this exact trip (the list is newest first), or null when none of the returned events is its own. */
+export function latestTripEvent(events: readonly AlertEvent[], tripId: string): AlertEvent | null {
+  if (typeof tripId !== 'string' || !tripId) return null;
+  return events.find(e => e.trip_id === tripId) ?? null;
+}
+
+/** The limits the trip was saved with, as stored: "Saved limits: wind 9 kt · gust 14 kt · sea 2.5 ft"; a field that is not a finite number reads "not recorded". */
+export function savedTripLimits(t: SavedTrip): string {
+  const v = (x: unknown, unit: string): string => (typeof x === 'number' && Number.isFinite(x) ? `${x} ${unit}` : 'not recorded');
+  return `Saved limits: wind ${v(t.wind_limit, 'kt')} · gust ${v(t.gust_limit, 'kt')} · sea ${v(t.sea_limit, 'ft')}`;
+}
+
+/** The assessment's time in the region's zone, or "Time unavailable" when it has no usable timestamp. */
+export function assessmentTime(e: AlertEvent, timeZone: string = DEFAULT_ZONE): string {
+  if (typeof e.created_at !== 'string' || !e.created_at) return 'Time unavailable';
+  const d = new Date(e.created_at);
+  if (Number.isNaN(d.getTime())) return 'Time unavailable';
+  return new Intl.DateTimeFormat('en-GB', {timeZone, year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZoneName: 'short'}).format(d);
+}
 
 /** The feedback's phase, or '' when its stored context does not parse. */
 export function feedbackPhase(f: Feedback): string {
