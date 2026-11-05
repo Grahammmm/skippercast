@@ -57,10 +57,10 @@ export function targetList(p: Profile, current: string | null): TargetOption[] {
 export const targetOptions = (p: Profile, current: string | null): string[] => targetList(p, current).map(t => t.id);
 
 /** "Today · 2 pm" or "Tue · 6 am": the time window the dock has selected. */
-export function windowText(now: Date, tz: string): string {
+export function windowText(now: Date, tz: string, lang: Language = 'en'): string {
   const state = dockState(now, tz);
-  const label = dayOptions(now, tz, state.day).find(o => o.value === state.day)?.label ?? state.day;
-  return `${label} · ${readout(state, tz)}`;
+  const label = dayOptions(now, tz, state.day, lang).find(o => o.value === state.day)?.label ?? state.day;
+  return `${label} · ${readout(state, tz, lang)}`;
 }
 
 export function ProfileSwitch({class: cls}: {class?: string} = {}) {
@@ -176,7 +176,7 @@ export function CommandBar({now = new Date()}: {now?: Date} = {}) {
         <AreaSelect />
         <PortControl />
       </div>
-      <output class="app-window ui-mono" aria-label={t('command.timeWindow', lang)}>{windowText(now, zone())}</output>
+      <output class="app-window ui-mono" aria-label={t('command.timeWindow', lang)}>{windowText(now, zone(), lang)}</output>
     </section>
   );
 }

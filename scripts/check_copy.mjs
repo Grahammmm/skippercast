@@ -259,7 +259,8 @@ export function lintFile(path, source) {
 export const CATALOGUE = 'catalog/app/strings.json';
 export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/FirstAnswerLine.tsx', 'web/app/RulesCard.tsx', 'web/brief/verdict-copy.ts', 'web/brief/WhereToLook.tsx', 'web/brief/Run.tsx', 'web/app/LanguageChoice.tsx',
   'web/landing/main.tsx', 'web/landing/copy.ts', 'web/landing/Landing.tsx', 'web/landing/PortInput.tsx', 'web/landing/ProfileStep.tsx', 'web/landing/Readout.tsx', 'web/landing/readings.ts', 'web/landing/live-verdict.ts', 'web/app/FirstRun.tsx', 'web/app/LimitsPanel.tsx',
-  'web/app/Masthead.tsx', 'web/app/Mobile.tsx', 'web/app/CommandBar.tsx', 'web/app/AccountMenu.tsx'];
+  'web/app/Masthead.tsx', 'web/app/Mobile.tsx', 'web/app/CommandBar.tsx', 'web/app/AccountMenu.tsx',
+  'web/app/TimeDock.tsx', 'web/ui/Dock.tsx', 'web/season.ts', 'web/app/SeasonStrip.tsx'];
 /** Prose-like literals in covered files that are data or code, not copy: a species group name (not translated) and a prefix the model writes. */
 export const LITERAL_OK = new Set(['Lingcod & rockfish', 'Using your limits']);
 

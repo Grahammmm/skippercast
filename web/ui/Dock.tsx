@@ -5,6 +5,7 @@
 // hears "2 pm", not "14". FE-05 binds the dock to the day and hour signals.
 import {IconButton} from './Button.tsx';
 import {Segmented, type SegmentedOption} from './Chip.tsx';
+import {t} from '../i18n.ts';
 
 export type RangeProps = {
   /** The accessible name ("Hour"). */
@@ -28,7 +29,12 @@ export function Range({label, value, min = 0, max, step = 1, onChange, valueText
   );
 }
 
+/** The dock's accessible names and button labels; the English default is the catalogue's. */
+export interface DockLabels {time: string; day: string; hour: string; play: string; pause: string; nextHour: string}
+const ENGLISH: DockLabels = {time: t('shell.time'), day: t('shell.day'), hour: t('shell.hour'), play: t('dock.play'), pause: t('dock.pause'), nextHour: t('dock.nextHour')};
+
 export type DockProps<D extends string> = {
+  labels?: DockLabels;
   days: ReadonlyArray<SegmentedOption<D>>;
   day: D;
   onDay: (day: D) => void;
@@ -49,14 +55,14 @@ export type DockProps<D extends string> = {
   class?: string;
 };
 
-export function Dock<D extends string>({days, day, onDay, playing, onPlay, hour, hours, onHour, hourText, disabled = false, stepOnly = false, advanceDisabled = false, class: cls}: DockProps<D>) {
+export function Dock<D extends string>({days, day, onDay, playing, onPlay, hour, hours, onHour, hourText, labels = ENGLISH, disabled = false, stepOnly = false, advanceDisabled = false, class: cls}: DockProps<D>) {
   return (
-    <div class={['ui-dock', cls].filter(Boolean).join(' ')} role="group" aria-label="Time">
-      <Segmented label="Day" options={days} value={day} onChange={onDay} />
+    <div class={['ui-dock', cls].filter(Boolean).join(' ')} role="group" aria-label={labels.time}>
+      <Segmented label={labels.day} options={days} value={day} onChange={onDay} />
       {stepOnly
-        ? <IconButton icon="chevron" label="Next hour" disabled={disabled || advanceDisabled} onClick={() => onPlay(true)} />
-        : <IconButton icon={playing ? 'pause' : 'play'} label={playing ? 'Pause' : 'Play'} pressed={playing} disabled={disabled || (advanceDisabled && !playing)} onClick={() => onPlay(!playing)} />}
-      <Range label="Hour" value={hour} max={Math.max(0, hours - 1)} onChange={onHour} valueText={hourText} disabled={disabled} class="ui-dock-range" />
+        ? <IconButton icon="chevron" label={labels.nextHour} disabled={disabled || advanceDisabled} onClick={() => onPlay(true)} />
+        : <IconButton icon={playing ? 'pause' : 'play'} label={playing ? labels.pause : labels.play} pressed={playing} disabled={disabled || (advanceDisabled && !playing)} onClick={() => onPlay(!playing)} />}
+      <Range label={labels.hour} value={hour} max={Math.max(0, hours - 1)} onChange={onHour} valueText={hourText} disabled={disabled} class="ui-dock-range" />
       <output class="ui-dock-readout ui-mono" aria-live="off">{hourText(hour)}</output>
     </div>
   );

@@ -1,10 +1,10 @@
 // A calendar of the registry's reviewed dates, not a current-source verification.
+import {t, type Language} from './i18n.ts';
 import {CDFW_OCEAN, officialURL, ruleProfile, speciesPage, validRegulations, type RulesRegion} from './regs.ts';
 export type MonthState = 'open' | 'limits' | 'closed' | 'scheduled' | 'not-reviewed' | 'part' | 'area';
-const LABEL: Record<MonthState, string> = {open: 'Open', limits: 'Open · limits', closed: 'Closed', scheduled: 'Opener unconfirmed', 'not-reviewed': 'Not reviewed', part: 'Mixed', area: 'Choose fishing location'};
 // Geography is unknown until a location is chosen, so it outranks a closed reef member.
 const ORDER: MonthState[] = ['not-reviewed', 'area', 'closed', 'scheduled', 'limits', 'open'];
-export function seasonYear(data: any, species: string, region: RulesRegion, year: number): {
+export function seasonYear(data: any, species: string, region: RulesRegion, year: number, lang: Language = 'en'): {
   months: {month: number; state: MonthState; label: string}[]; revision: string; link: {href: string; label: string};
 } | null {
   if (!Number.isInteger(year) || year < 1000 || year > 9999 || !validRegulations(data, region)) return null;
@@ -29,7 +29,7 @@ export function seasonYear(data: any, species: string, region: RulesRegion, year
       stateOn(`${year}-${String(m + 1).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`));
     const unique = new Set(days);
     const state: MonthState = unique.size === 1 ? days[0]! : unique.has('not-reviewed') && unique.size === 2 ? 'not-reviewed' : 'part';
-    let label = LABEL[state];
+    let label = t(`season.state.${state}`, lang);
     if (state === 'part') {
       const open = (s: MonthState) => s === 'open' || s === 'limits';
       // Every maximal run of open/limits days, in order; two are spelled out, the rest are counted.
@@ -39,13 +39,13 @@ export function seasonYear(data: any, species: string, region: RulesRegion, year
         if (i > 0 && open(days[i - 1]!)) runs[runs.length - 1] = runs[runs.length - 1]!.replace(/–\d+$/, `–${i + 1}`);
         else runs.push(`${i + 1}–${i + 1}`);
       });
-      if (runs.length) label = `Part open: ${runs.slice(0, 2).join(', ')}${runs.length > 2 ? ` and ${runs.length - 2} more` : ''}`;
+      if (runs.length) label = t('season.partOpen', lang, {runs: runs.slice(0, 2).join(', ') + (runs.length > 2 ? t('season.more', lang, {n: runs.length - 2}) : '')});
     }
     return {month: m + 1, state, label};
   });
   const primary = profiles[0].primary_source_id || profiles[0].source_ids[0];
   const page = speciesPage(data, species, region);
-  let link = page ?? {href: officialURL(data.sources[primary]?.url ?? CDFW_OCEAN, region), label: 'Official rules'};
+  let link = page ?? {href: officialURL(data.sources[primary]?.url ?? CDFW_OCEAN, region), label: t('season.official', lang)};
   // Same rule as the rules card (regs.ts ruleSummary): with no species page, a non-reef target links the first cited,
   // sanitized fishing-map area page rather than another category's page (halibut's first source is groundfish).
   const isArea = (u: unknown): boolean => typeof u === 'string' && /^https:\/\/[^/]+\/Fishing\/Ocean\/Regulations\/Fishing-Map\//.test(u);

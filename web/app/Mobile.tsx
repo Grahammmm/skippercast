@@ -78,8 +78,8 @@ export function HourEdge({now}: {now: Date}) {
   return (
     <div class="app-sheet-hour" role="group" aria-label={t('shell.time', lang)}>
       <Range label={t('shell.hour', lang)} value={Math.max(0, state.index)} max={outside ? 0 : state.hours.length - 1} onChange={i => selectHour(now, tz, at(i))} disabled={outside}
-        valueText={i => outside ? readout(state, tz) : hourText(localParts(new Date(at(i)), tz).hour)} class="ui-dock-range" />
-      <output class="ui-dock-readout ui-mono" aria-live="off">{readout(state, tz)}</output>
+        valueText={i => outside ? readout(state, tz, lang) : hourText(localParts(new Date(at(i)), tz).hour, lang)} class="ui-dock-range" />
+      <output class="ui-dock-readout ui-mono" aria-live="off">{readout(state, tz, lang)}</output>
     </div>
   );
 }
@@ -90,7 +90,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
   // SC-LAUNCH-3: the head introduces the lead, so it names the lead's day. When the lead answers
   // for another day than the dock's (tomorrow, until a time is chosen) the dock's heading moves
   // below the lead to head the dock-day evidence, as the desktop column does.
-  const lead = leadDate(now), apart = lead !== state.day, dockHead = <span class="ui-eyebrow">{windowText(now, tz)}</span>;
+  const lead = leadDate(now), apart = lead !== state.day, dockHead = <span class="ui-eyebrow">{windowText(now, tz, language.value)}</span>;
   const lang = language.value, leadText = leadDayText(lead, now, tz, lang);
   return (
     <div class="app-sheet-brief" onFocusIn={onFocus} data-basis={brief?.basis}>
@@ -112,7 +112,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
       <Guard name="run"><RunLine brief={brief} ranking={ranking} now={now} /></Guard>
       <Guard name="tide"><TideSpark brief={brief} now={now} /></Guard>
       <div class="app-sheet-menus">
-        <Segmented label={t('shell.day', lang)} options={dayOptions(now, tz, state.day)} value={state.day} onChange={d => selectDay(now, tz, d, state)} />
+        <Segmented label={t('shell.day', lang)} options={dayOptions(now, tz, state.day, lang)} value={state.day} onChange={d => selectDay(now, tz, d, state)} />
         <TargetSelect />
         <div class="app-area" role="group" aria-label={t('command.areaPort', lang)}>
           <AreaSelect />

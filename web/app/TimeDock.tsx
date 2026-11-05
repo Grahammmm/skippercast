@@ -8,16 +8,22 @@
 // steps one hour per press. A ?hour= outside the horizon is kept, never reset
 // (v1's coastal-clock.js rule): the slider is off and the readout says so.
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {Dock} from '../ui/Dock.tsx';
+import {Dock, type DockLabels} from '../ui/Dock.tsx';
 import {dockTime, horizonDays, localParts, nearestHour, nextHour, play, type DockTime} from '../hour.ts';
 import {day, hour, hourParam, setParams} from '../state.ts';
 import {zone} from './App.tsx';
+import {language, localeOf, t, type Language} from '../i18n.ts';
 
 export {localParts};
 export const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
 
-/** "2 pm" for an hour of the day. */
-export const hourText = (h: number): string => `${h % 12 || 12} ${h < 12 ? 'am' : 'pm'}`;
+/**
+ * "2 pm" for an hour of the day; Spanish reads the 24-hour clock ("14"). Display only: nothing
+ * here feeds the dock's parsing or selection, which stay on web/hour.ts's en-US parts.
+ */
+export const hourText = (h: number, lang: Language = 'en'): string =>
+  lang === 'en' ? `${h % 12 || 12} ${h < 12 ? 'am' : 'pm'}`
+    : new Intl.DateTimeFormat(localeOf(lang), {hour: 'numeric', hourCycle: 'h23', timeZone: 'UTC'}).format(Date.UTC(2000, 0, 1, h));
 /** The zone's short name ("PDT") at `date`. */
 export const zoneName = (date: Date, tz: string): string =>
   new Intl.DateTimeFormat('en-US', {timeZone: tz, timeZoneName: 'short'}).formatToParts(date).find(p => p.type === 'timeZoneName')?.value ?? tz;
@@ -26,8 +32,11 @@ export const zoneName = (date: Date, tz: string): string =>
  * Day chips: Today, then weekdays; the eighth day repeats today's weekday, so it carries its
  * date ("Mon 12"). A selected day outside the horizon is kept as a chip.
  */
-export function dayOptions(now: Date, tz: string, selected: string | null): {value: string; label: string}[] {
-  const options = horizonDays(now, tz).map((d, i) => ({value: d.day, label: i === 0 ? 'Today' : i >= 7 ? `${d.weekday} ${Number(d.day.slice(8))}` : d.weekday}));
+export function dayOptions(now: Date, tz: string, selected: string | null, lang: Language = 'en'): {value: string; label: string}[] {
+  // The weekday text is display only: English keeps hour.ts's own, other languages format the day's first real hour in the region zone.
+  const weekday = (d: {weekday: string; hours: readonly number[]}): string =>
+    lang === 'en' ? d.weekday : new Intl.DateTimeFormat(localeOf(lang), {timeZone: tz, weekday: 'short'}).format(d.hours[0]!);
+  const options = horizonDays(now, tz).map((d, i) => ({value: d.day, label: i === 0 ? t('dock.today', lang) : i >= 7 ? `${weekday(d)} ${Number(d.day.slice(8))}` : weekday(d)}));
   if (selected && !options.some(o => o.value === selected)) options.push({value: selected, label: selected.slice(5)});
   return options;
 }
@@ -36,9 +45,9 @@ export function dayOptions(now: Date, tz: string, selected: string | null): {val
 export const dockState = (now: Date, tz: string): DockTime => dockTime(day.value, hour.value, now, tz);
 
 /** "2 pm" for the selected hour; outside the horizon the slider is off and this says why. */
-export function readout(state: DockTime, tz: string): string {
-  const text = hourText(localParts(new Date(state.at), tz).hour);
-  return state.index < 0 ? `${text} · outside the forecast` : text;
+export function readout(state: DockTime, tz: string, lang: Language = 'en'): string {
+  const text = hourText(localParts(new Date(state.at), tz).hour, lang);
+  return state.index < 0 ? `${text}${t('dock.outside', lang)}` : text;
 }
 
 /** Write hour `at` (epoch ms): ?hour= ISO UTC, ?day= its local day unless that is today. */
@@ -53,6 +62,9 @@ export function selectDay(now: Date, tz: string, d: string, state: DockTime): vo
   const at = nearestHour(hours, localParts(new Date(state.at), tz).hour, tz);
   if (at !== null) selectHour(now, tz, at);
 }
+
+/** The dock's own words in `lang`. */
+export const dockLabels = (lang: Language): DockLabels => ({time: t('shell.time', lang), day: t('shell.day', lang), hour: t('shell.hour', lang), play: t('dock.play', lang), pause: t('dock.pause', lang), nextHour: t('dock.nextHour', lang)});
 
 const media = (): MediaQueryList | null => typeof matchMedia === 'function' ? matchMedia(REDUCED_MOTION) : null;
 
@@ -70,7 +82,7 @@ function useReducedMotion(): boolean {
 }
 
 export function TimeDock({now = new Date()}: {now?: Date} = {}) {
-  const tz = zone();
+  const tz = zone(), lang = language.value;
   const state = dockState(now, tz);
   const reduced = useReducedMotion();
   const [playing, setPlaying] = useState(false);
@@ -86,13 +98,13 @@ export function TimeDock({now = new Date()}: {now?: Date} = {}) {
   }, [playing, tz]);
   // The day strip scrolls sideways on narrow stages: keep the chosen chip in view.
   const dock = useRef<HTMLDivElement>(null);
-  useEffect(() => { dock.current?.querySelector<HTMLElement>('[aria-label="Day"] [aria-pressed="true"]')?.scrollIntoView?.({block: 'nearest', inline: 'nearest'}); }, [state.day]);
+  useEffect(() => { dock.current?.querySelector<HTMLElement>('.ui-segmented [aria-pressed="true"]')?.scrollIntoView?.({block: 'nearest', inline: 'nearest'}); }, [state.day, lang]);
   const at = (i: number): number => state.hours[i] ?? state.at;
   return (
     <div class="app-dock" ref={dock}>
-      <Dock days={dayOptions(now, tz, state.day)} day={state.day} onDay={d => selectDay(now, tz, d, state)} playing={playing} onPlay={setPlaying}
+      <Dock days={dayOptions(now, tz, state.day, lang)} labels={dockLabels(lang)} day={state.day} onDay={d => selectDay(now, tz, d, state)} playing={playing} onPlay={setPlaying}
         stepOnly={reduced} advanceDisabled={nextHour(state.at, now) === null} hour={Math.max(0, state.index)} hours={state.index < 0 ? 1 : state.hours.length} disabled={state.index < 0}
-        onHour={i => selectHour(now, tz, at(i))} hourText={i => state.index < 0 ? readout(state, tz) : hourText(localParts(new Date(at(i)), tz).hour)} />
+        onHour={i => selectHour(now, tz, at(i))} hourText={i => state.index < 0 ? readout(state, tz, lang) : hourText(localParts(new Date(at(i)), tz).hour, lang)} />
       <span class="app-dock-zone ui-mono">{zoneName(new Date(state.at), tz)}</span>
     </div>
   );
