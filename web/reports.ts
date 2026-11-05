@@ -86,9 +86,20 @@ export interface CharterRow {readonly label: string; readonly ground: string; re
 export interface Charters {readonly audit: string; readonly rows: readonly CharterRow[]; readonly more: number}
 type Ground = {label: string; reported_ground: string; precision: string; reports: {species: string[]; date: string; boat: string; source_url?: unknown}[]};
 
-/** Grounds with trips reported for `species`, newest report first (not a ranking); broad regional names left out, as v1 does. */
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const isStrings = (v: unknown): boolean => Array.isArray(v) && v.every(s => typeof s === 'string');
+/** Structure `reportSummary` and the row mapping read; broad regional names are excluded before their reports are inspected. */
+const groundShapeOk = (g: unknown): boolean => {
+  if (!isRecord(g) || typeof g.precision !== 'string') return false;
+  if (g.precision === 'Broad regional name') return true;
+  return typeof g.label === 'string' && typeof g.reported_ground === 'string' && Array.isArray(g.reports)
+    && g.reports.every(r => isRecord(r) && typeof r.date === 'string' && typeof r.boat === 'string' && isStrings(r.species));
+};
+
+/** Grounds with trips reported for `species`, newest report first (not a ranking); broad regional names left out, as v1 does. A malformed ground refuses the whole section (null). */
 export function chartersFrom(evidence: {audit_date?: unknown; grounds?: unknown} | null, species: string): Charters | null {
   if (!evidence || typeof evidence.audit_date !== 'string' || !Array.isArray(evidence.grounds)) return null;
+  if (!evidence.grounds.every(groundShapeOk)) return null;
   const all = (evidence.grounds as Ground[]).filter(g => g.precision !== 'Broad regional name')
     .map(g => ({g, s: reportSummary(g, species)})).filter(({s}) => s.trips > 0)
     .sort((a, b) => String(b.s.latest).localeCompare(String(a.s.latest)) || a.g.label.localeCompare(b.g.label))
