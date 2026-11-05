@@ -18,6 +18,8 @@
 // Erasable syntax only: tests/test_depth_contours.mjs imports this file by type stripping.
 import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
+import type {StringId} from '../i18n.ts';
+import {cp, type CopyVar, type MarkCopyPart} from '../mark-copy.ts';
 import {region} from '../state.ts';
 import {chartFileListed, chartFilesPending} from '../chart-files.ts';
 import type {ChartMark} from './coastline.ts';
@@ -96,6 +98,16 @@ export function omittedNote(omitted: readonly OmittedSource[]): string {
   const items = unreviewed.map(o => `${o.source_id} (${PHRASE.get(o.review_status) ?? o.review_status})`).join(', ');
   return `${n} bound survey${n === 1 ? '' : 's'} not drawn: ${items}.`
     + (m ? ` ${m} reviewed survey${m === 1 ? '' : 's'} not traced in this file: ${untraced.map(o => o.source_id).join(', ')}.` : '');
+}
+/** SC0922-10: the card wording for a bound survey the file leaves out, as catalogue parts; empty exactly when `omittedNote` is ''. */
+const cid = (key: string): StringId => `mark.layer.contour.${key}` as StringId;
+export function omittedCopy(omitted: readonly OmittedSource[]): MarkCopyPart[] {
+  const unreviewed = omitted.filter(o => o.review_status !== 'approved'), untraced = omitted.filter(o => o.review_status === 'approved');
+  const n = unreviewed.length, m = untraced.length;
+  if (!n) return [];
+  const items = unreviewed.flatMap((o, i): CopyVar[] => [...i ? [', '] : [], o.source_id, ' (', PHRASE.has(o.review_status) ? {id: cid(`status.${o.review_status}`)} : o.review_status, ')']);
+  return [cp(cid(n === 1 ? 'omitted.one' : 'omitted.many'), {n, items}),
+    ...m ? [' ', cp(cid(m === 1 ? 'untraced.one' : 'untraced.many'), {n: m, ids: untraced.map(o => o.source_id).join(', ')})] : []];
 }
 /** What the legend shows for the contours. */
 export const contourState = signal<ContourState>(IDLE);
@@ -191,6 +203,7 @@ export function contoursOverlay(p: Palette, data: ContourCollection): Overlay {
 const PROVENANCE_READING = new Map([
   ['filled', ' Dashed: a small gap here was filled with the shallowest neighbouring depth; not measured at this spot.'],
   ['verified', ' Two independent surveys agree here within the published tolerance.']]);
+const REASON_ID = new Map([['hole', 'reading.hole'], ['ring-range', 'reading.ringRange'], ['datum-suspect', 'reading.datumSuspect'], ['nodata', 'reading.nodata']]);
 const UNRESOLVED_READING = new Map([
   ['hole', 'The survey has no usable measurement here; the gap is too large to fill safely.'],
   ['conflict', 'Two surveys disagree here; the shallower reading is <shoal_hint_ft> ft. Treat as a possible shoal.'],
@@ -207,18 +220,26 @@ export function contourMark(properties: Record<string, unknown> | null | undefin
   const basis = layerEntry(REGISTRY_ID).basis;
   const terms = /^https:\/\//.test(s.url) ? [{href: s.url, label: 'Survey data release'}] : undefined;
   const note = omittedNote(omitted), more = note ? ` ${note}` : '';
+  // The card's words as catalogue parts: the registry's own basis sentence, the code's wrappers; names, ids and dates stay as published.
+  const moreCopy: MarkCopyPart[] = note ? [' ', ...omittedCopy(omitted)] : [];
+  const sourceCopy = [cp(cid('source'), {name: s.name, attribution: s.attribution || {id: cid('surveyGrid')}, date: s.survey_date, datum: s.vertical_datum})];
+  const common = {source: sourceCopy, basis: [cp('layer.depth-contours.basis')]};
+  const copyTerms = terms ? {copyTerms: [[cp(cid('release'))]]} : {};
   if (p.kind === 'unresolved-area') {
     const hint = Number(p.shoal_hint_ft), reason = String(p.reason), reading = UNRESOLVED_READING.get(reason);
     if (!reading || (reason === 'conflict' && !(Number.isInteger(hint) && hint > 0))) return null;
     return {
       id: `depth-contours:${s.source_id}:unresolved:${reason}`, name: 'Unverified / no data', kind: 'Where the survey could not be verified',
-      reading: `${reading.replace('<shoal_hint_ft>', String(hint))}${more}`, source, basis, ...(terms ? {terms} : {}),
+      reading: `${reading.replace('<shoal_hint_ft>', String(hint))}${more}`, source, basis, ...(terms ? {terms} : {}), ...copyTerms,
+      copy: {name: [cp(cid('unverified'))], kind: [cp(cid('unverifiedKind'))], ...common,
+        reading: [reason === 'conflict' ? cp(cid('reading.conflict'), {depth: String(hint)}) : cp(cid(REASON_ID.get(reason)!)), ...moreCopy]},
     };
   }
   if (p.kind === 'survey-edge') return {
     id: `depth-contours:${s.source_id}:edge`, name: 'Survey edge', kind: 'Where the reviewed survey grid stops',
     reading: `No reviewed grid continues past this line, so no contours are drawn beyond it; that is missing data, not flat water.${more}`,
-    source, basis, ...(terms ? {terms} : {}),
+    source, basis, ...(terms ? {terms} : {}), ...copyTerms,
+    copy: {name: [cp(cid('edge'))], kind: [cp(cid('edgeKind'))], ...common, reading: [cp(cid('edgeReading')), ...moreCopy]},
   };
   const depth = Number(p.depth_ft);
   if (!Number.isInteger(depth) || depth <= 0) return null;
@@ -226,7 +247,9 @@ export function contourMark(properties: Record<string, unknown> | null | undefin
     id: `depth-contours:${s.source_id}:${depth}`, name: `${depth} ft depth contour`,
     kind: depth % INDEX_FT === 0 ? `Index contour · every ${INDEX_FT} ft` : `Depth contour · every ${INTERVAL_FT} ft`,
     reading: `${depth} ft below the survey's ${s.vertical_datum}, traced from 16 m averaged blocks of the survey grid; not a sounding or a chart depth.${PROVENANCE_READING.get(p.provenance as string) ?? ''}${more}`,
-    source, basis, ...(terms ? {terms} : {}),
+    source, basis, ...(terms ? {terms} : {}), ...copyTerms,
+    copy: {name: [cp(cid('name'), {depth})], kind: [depth % INDEX_FT === 0 ? cp(cid('index'), {n: INDEX_FT}) : cp(cid('minor'), {n: INTERVAL_FT})], ...common,
+      reading: [cp(cid('reading.base'), {depth, datum: s.vertical_datum}), ...p.provenance === 'filled' || p.provenance === 'verified' ? [cp(cid(`prov.${p.provenance}`))] : [], ...moreCopy]},
   };
 }
 

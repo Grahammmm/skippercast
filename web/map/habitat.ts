@@ -19,11 +19,16 @@ import {speciesFit} from '../../dist/species-fit.js';
 import type {CoastSelection, CoastTargetDetail} from '../../packages/coast/src/embed-types.ts';
 import {speciesOptions} from '../../packages/coast/src/habitat-types.ts';
 import {gradeAllows, type GradeFilter} from '../grade.ts';
+import type {StringId} from '../i18n.ts';
+import {cp, joinParts, type CopyVar, type MarkCopyPart} from '../mark-copy.ts';
 import {withinDepth, type Profile} from '../profile.ts';
 import type {ChartMark} from './coastline.ts';
 import {CDFW_MPA_PAGE, NOAA_GEA_PAGE, type ScreenSource} from './mpa.ts';
 
 type Props = Record<string, unknown>;
+/** SC0922-10: a catalogue id for this module's card words (mark.layer.habitat.<key>). */
+const hid = (key: string): StringId => `mark.layer.habitat.${key}` as StringId;
+const AND: StringId = 'mark.layer.and';
 export interface Feature {readonly type: 'Feature'; readonly geometry: unknown; readonly properties: Props}
 export interface Collection {readonly type: 'FeatureCollection'; readonly features: readonly Feature[]}
 export const EMPTY: Collection = Object.freeze({type: 'FeatureCollection', features: []});
@@ -64,6 +69,9 @@ export function markFit(t: AtlasTarget, target: string): {n: number; line: strin
   return {n, line: fitLine(screens.join(' and '), n)};
 }
 
+/** The species a target's fit names ("lingcod and rockfish") as catalogue-ready parts, or null where no screen rates it. */
+const fitSpecies = (target: string): CopyVar[] | null => SCREENS[target]?.flatMap((x, i): CopyVar[] => i ? [{id: AND}, x] : [x]) ?? null;
+
 /** dist/species.js `matchesSpecies` for the target's family: reef and rockfish show every mark, lingcod its rough relief. */
 export function markShown(t: AtlasTarget, target: string): boolean {
   if (habitatFamily(target) !== 'reef') return false;
@@ -98,14 +106,19 @@ export type ScreenInputs = ScreenSource & {readonly live: boolean};
 export interface Boundary {readonly name: string; readonly federal: boolean; readonly geometry: unknown}
 export type ScreenStatus = 'checking' | 'ready' | 'stale' | 'unavailable';
 /** The screen at one time: its legend line, the source line for a withheld card, and when a ready screen goes stale. */
-export interface MarkScreen {readonly status: ScreenStatus; readonly note: string; readonly source: string; readonly boundaries: readonly Boundary[]; readonly until: number}
+export interface MarkScreen {
+  readonly status: ScreenStatus; readonly note: string; readonly source: string; readonly boundaries: readonly Boundary[]; readonly until: number;
+  /** SC0922-10: `note` and `source` as catalogue parts for the card's language (display only; absent on a screen built by hand). */
+  readonly noteCopy?: readonly MarkCopyPart[]; readonly sourceCopy?: readonly MarkCopyPart[];
+}
 /** v1's lines while marks are withheld (dist/app.js `updateReefCoverage`, dist/protected-areas.js status). */
 export const SCREEN_NOTES = {
   checking: 'Checking protected areas before showing fishing spots…',
   unavailable: 'Protected-area check unavailable · fishing spots withheld',
   stale: 'Boundary check stale; fishing targets withheld',
 } as const;
-export const CHECKING: MarkScreen = Object.freeze({status: 'checking', note: SCREEN_NOTES.checking, source: 'CDFW ds582 check in progress', boundaries: [], until: Infinity});
+export const CHECKING: MarkScreen = Object.freeze({status: 'checking', note: SCREEN_NOTES.checking, source: 'CDFW ds582 check in progress', boundaries: [], until: Infinity,
+  noteCopy: [cp(hid('screen.checking'))], sourceCopy: [cp(hid('ds582.progress'))]});
 
 const boundary = (f: Props): Boundary => {
   const p = (f.properties ?? {}) as Props;
@@ -117,12 +130,14 @@ export function assessScreen(i: ScreenInputs | null, now: number): MarkScreen {
   const c = i.closures, at = i.areas ? i.checkedAt : null;
   const when = (t: string | null | undefined, live = false) => live ? 'checked this session' : t ? `checked ${t.slice(0, 10)}` : 'check unavailable';
   const source = [`CDFW ds582 ${when(at, i.live && !!at)}`, c !== undefined && `NOAA closures ${when(c?.checkedAt)}`].filter(Boolean).join(' · ');
+  const whenCopy = (t: string | null | undefined, live = false): MarkCopyPart => live ? cp(hid('when.session')) : t ? cp(hid('when.date'), {date: t.slice(0, 10)}) : cp(hid('when.unavailable'));
+  const sourceCopy = joinParts([[cp(hid('ds582'), {when: whenCopy(at, i.live && !!at)})], c !== undefined && [cp(hid('noaa'), {when: whenCopy(c?.checkedAt)})]], ' · ');
   const fresh = freshCheck(at, now) && (c === undefined || !!c && freshCheck(c.checkedAt, now));
   if (!fresh) {
     const status = i.areas ? 'stale' : 'unavailable';
-    return {status, note: SCREEN_NOTES[status], source, boundaries: [], until: Infinity};
+    return {status, note: SCREEN_NOTES[status], source, boundaries: [], until: Infinity, noteCopy: [cp(hid(`screen.${status}`))], sourceCopy};
   }
-  return {status: 'ready', source, until: Math.min(...[at!, c?.checkedAt].filter(t => t != null).map(t => Date.parse(t!))) + SCREEN_MAX_AGE_MS,
+  return {status: 'ready', source, sourceCopy, until: Math.min(...[at!, c?.checkedAt].filter(t => t != null).map(t => Date.parse(t!))) + SCREEN_MAX_AGE_MS,
     note: `Reef marks inside protected areas${c ? ' or groundfish exclusions' : ''} are withheld · ${i.live ? 'boundaries checked this session' : `boundary snapshot ${at!.slice(0, 10)}`}`,
     boundaries: [...i.areas!, ...c?.areas ?? []].map(boundary)};
 }
@@ -148,19 +163,21 @@ export function closureCheckedAt(c: {readonly checkedAt: string | null; readonly
 }
 
 /** Why a mark is withheld: the screen's own line, or the areas it lies in; null when it shows (v1's `pointAllowed`). */
-export interface Withheld {readonly reading: string; readonly inside: readonly Boundary[]}
+export interface Withheld {readonly reading: string; readonly inside: readonly Boundary[]; /** SC0922-10: `reading` as catalogue parts (display only). */ readonly copy?: readonly MarkCopyPart[]}
 /** What the screen checks for one place: its point, its own outline and any reef areas (EPSG:4326 lon/lat). */
 export interface Screened {readonly latitude?: number; readonly longitude?: number; readonly geometry?: unknown}
 /** The geometries of a mark's reef areas in its atlas (dist/gpx.js `tripFeatures` exports the same areas). */
 export const markAreas = (t: {area_ids?: readonly string[]}, atlas: Atlas | null | undefined): unknown[] =>
   (t.area_ids ?? []).flatMap(id => atlas?.areas?.filter(a => a.id === id).map(a => a.geometry) ?? []);
 export function withheld(t: Screened, screen: MarkScreen, areas: readonly unknown[] = []): Withheld | null {
-  if (screen.status !== 'ready') return {reading: screen.note, inside: []};
+  if (screen.status !== 'ready') return {reading: screen.note, inside: [], ...screen.noteCopy ? {copy: screen.noteCopy} : {}};
   const at = Number.isFinite(t.latitude) && Number.isFinite(t.longitude) ? pointGeometry(t.longitude, t.latitude) : null;
   const inside = closureHits([at, t.geometry, ...areas], screen.boundaries, PLANNING_MARGIN_M);
   if (!inside.length) return null;
   const contains = at && inside.every(b => pointInGeometry([t.longitude!, t.latitude!], b.geometry));
-  return {reading: `${contains ? 'Inside' : `Inside or within ${PLANNING_MARGIN_M} m of`} ${inside.map(b => b.name).join('; ')}`, inside};
+  const names = inside.map(b => b.name).join('; ');
+  return {reading: `${contains ? 'Inside' : `Inside or within ${PLANNING_MARGIN_M} m of`} ${names}`, inside,
+    copy: [contains ? cp(hid('inside'), {names}) : cp(hid('within'), {margin: PLANNING_MARGIN_M, names})]};
 }
 
 /** How much a terrain grade adds to the wide view's density (#620): A strongest; an ungraded mark counts as C. */
@@ -201,13 +218,17 @@ export const geologyFeatures = (data: MarkData | null, target: string): Collecti
 /** CDFW's ocean sport fishing regulations, for a region whose data names no regional page (v1's species.js names the Central one). */
 export const CDFW_REGULATIONS = 'https://wildlife.ca.gov/Fishing/Ocean/Regulations';
 /** The official page the regulations line links: the region's own CDFW page if its data names one, else CDFW's ocean page. Never advice. */
+const ownRegulations = (region: RegionData): string | null => typeof region.regulations_url === 'string' && /^https:\/\/wildlife\.ca\.gov\//.test(region.regulations_url) ? region.regulations_url : null;
 export function regulationsLink(region: RegionData): {href: string; label: string} {
-  const own = region.regulations_url;
-  return typeof own === 'string' && /^https:\/\/wildlife\.ca\.gov\//.test(own)
-    ? {href: own, label: 'CDFW regional fishing regulations'} : {href: CDFW_REGULATIONS, label: 'CDFW ocean fishing regulations'};
+  const own = ownRegulations(region);
+  return own ? {href: own, label: 'CDFW regional fishing regulations'} : {href: CDFW_REGULATIONS, label: 'CDFW ocean fishing regulations'};
 }
+/** SC0922-10: the words of `regulationsLink(region).label` as catalogue parts. */
+export const regulationsCopy = (region: RegionData): MarkCopyPart[] => [cp(hid(ownRegulations(region) ? 'regs.regional' : 'regs.ocean'))];
 /** The card's regulations line: what the layer's own build screened, then the rules check (FE-54 adds the rules themselves). */
 const rules = (screen?: string | false): string => screen ? `${screen}; check current rules before you fish.` : 'Check current rules before you fish.';
+/** The rules line as catalogue parts: the layer's own screening sentence (parts) then the rules check, or the check alone. */
+const rulesCopy = (screen?: readonly MarkCopyPart[] | false): MarkCopyPart[] => screen ? [...screen, cp(hid('rules.checkAfter'))] : [cp(hid('rules.check'))];
 const isoDate = (value: unknown): string => {
   const s = String(value ?? '');
   return /^\d{8}$/.test(s) ? `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6)}` : s.slice(0, 10);
@@ -219,15 +240,24 @@ const depthRange = (d: readonly number[] | undefined): string => d?.length === 2
 export function atlasCard(t: AtlasTarget, data: MarkData, target: string): ChartMark {
   const source = data.atlas?.sources?.find(s => s.id === t.source_id), date = data.atlas?.source_validation_date;
   const screened = t.recorded_validation?.closed_or_screened_area_clearance_m ?? t.qualification?.closure_clearance_m;
+  const fit = markFit(t, target), species = fitSpecies(target);
   return {
     id: `spot:${t.id}`, name: t.label, kind: joined('Reef mark', t.habitat_grade && `grade ${t.habitat_grade}`, depthRange(t.neighborhood_depth_ft)),
-    reading: markFit(t, target)?.line ?? 'Habitat fit unrated for this target',
+    reading: fit?.line ?? 'Habitat fit unrated for this target',
     position: {latitude: t.latitude, longitude: t.longitude},
     source: joined(t.source_name ?? data.region.source_names?.[t.source_id ?? ''] ?? source?.name ?? t.source_id, t.survey_year && `surveyed ${t.survey_year}`, date && `atlas ${date}`),
     // v1's wording (dist/terrain-evidence.js): a build-time screen with its measured clearance, never a promise.
     rules: rules(typeof screened === 'number' && screened > 0 && !!date && `Screened against protected areas with ${Math.round(screened)} m clearance in the atlas of ${date}`),
     regulations: regulationsLink(data.region),
     basis: [t.terrain_interpretation, t.evidence_status, source && joined(source.credit, source.rights)].filter(Boolean).join(' '),
+    // Name, evidence and the basis's published prose stay as published; only the words the code wrote follow the language.
+    copy: {
+      kind: joinParts([[cp(hid('reefMark'))], t.habitat_grade && [cp(hid('grade'), {grade: t.habitat_grade})], depthRange(t.neighborhood_depth_ft)], ' · '),
+      reading: fit && species ? [cp(hid('fit'), {species, n: fit.n})] : [cp(hid('fitUnrated'))],
+      source: joinParts([t.source_name ?? data.region.source_names?.[t.source_id ?? ''] ?? source?.name ?? t.source_id, !!t.survey_year && [cp(hid('surveyed'), {year: t.survey_year})], date && [cp(hid('atlas'), {date})]], ' · '),
+      rules: rulesCopy(typeof screened === 'number' && screened > 0 && !!date && [cp(hid('rules.screened'), {margin: Math.round(screened), date})]),
+      regulationsLabel: regulationsCopy(data.region),
+    },
   };
 }
 
@@ -243,6 +273,12 @@ export function withheldCard(t: AtlasTarget, w: Withheld, screen: MarkScreen): C
     regulations: federal ? {href: NOAA_GEA_PAGE, label: 'NOAA groundfish closed areas'} : {href: CDFW_MPA_PAGE, label: 'CDFW marine protected areas'},
     basis: 'Atlas marks are checked again in the browser against current protected-area boundaries and the region\'s closures before they show. '
       + 'A mark inside one is withheld, and every mark is withheld while that check is unavailable or more than 36 hours old.',
+    copy: {
+      name: [cp(hid(screen.status === 'checking' ? 'checkingMark' : 'withheldMark'))], kind: [cp(hid('reefMarkId'), {id: t.id})],
+      ...w.copy ? {reading: w.copy} : {}, ...screen.sourceCopy ? {source: screen.sourceCopy} : {},
+      rules: [cp(hid(w.inside.length ? (federal ? 'withheld.gea' : 'withheld.mpa') : 'rules.checkBoundaries'))],
+      regulationsLabel: [cp(hid(federal ? 'regs.noaa' : 'regs.mpa'))], basis: [cp(hid('withheld.basis'))],
+    },
   };
 }
 
@@ -257,6 +293,13 @@ export function surveyCard(p: Props, survey: Survey, region: RegionData, at?: {l
     source: joined(survey.source_kind ?? 'Survey habitat', `${kelp ? 'observed' : 'compiled'} ${isoDate(p.source_date)}`),
     rules: rules(typeof margin === 'number' && `MPAs subtracted with a ${margin} m margin when built on ${isoDate(survey.created_at)}`), regulations: regulationsLink(region),
     basis: [p.limitations, p.depth_note].filter(Boolean).join(' '),
+    copy: {
+      ...p.name == null ? {name: [cp(hid('surveyHabitat'))]} : {},
+      kind: [cp(hid(Object.hasOwn(UNIT, String(p.habitat_kind)) ? `unit.${String(p.habitat_kind)}` : 'surveyContext'))],
+      source: joinParts([survey.source_kind ?? [cp(hid('surveyHabitat'))], [cp(hid(kelp ? 'observed' : 'compiled'), {date: isoDate(p.source_date)})]], ' · '),
+      rules: rulesCopy(typeof margin === 'number' && [cp(hid('rules.mpaSubtracted'), {margin, date: isoDate(survey.created_at)})]),
+      regulationsLabel: regulationsCopy(region),
+    },
   };
 }
 
@@ -268,12 +311,18 @@ export function geologyCard(p: Props, geology: Geology, region: RegionData): Cha
     reading: Number.isFinite(Number(p.area_km2)) ? `${Number(p.area_km2)} km²` : '—', source: s.attribution ?? 'Geological map',
     rules: rules(/MPA exclusion/i.test(s.derivation ?? '') && 'MPAs excluded when the layer was built'), regulations: regulationsLink(region),
     basis: [s.derivation, s.limitations].filter(Boolean).join(' '),
+    copy: {
+      ...p.label == null ? {name: [cp(hid('geology'))]} : {}, kind: [cp(hid('geologyKind'), {unit: String(p.unit ?? '—')})],
+      ...s.attribution == null ? {source: [cp(hid('geologicalMap'))]} : {},
+      rules: rulesCopy(/MPA exclusion/i.test(s.derivation ?? '') && [cp(hid('rules.mpaExcluded'))]), regulationsLabel: regulationsCopy(region),
+    },
   };
 }
 
 /** The terrain's habitat selection before its evidence arrives: its id and position. */
 export const terrainCard = (s: CoastSelection): ChartMark => ({id: `habitat:${s.id ?? ''}`, name: 'Selected habitat', kind: s.id ? `Terrain habitat · ${s.id}` : 'Terrain habitat',
-  reading: '', position: {latitude: s.latitude, longitude: s.longitude}, source: 'Coastal terrain selection', basis: 'Chosen in the 2D or 3D terrain, where its evidence and source lines show.'});
+  reading: '', position: {latitude: s.latitude, longitude: s.longitude}, source: 'Coastal terrain selection', basis: 'Chosen in the 2D or 3D terrain, where its evidence and source lines show.',
+  copy: {name: [cp(hid('selectedHabitat'))], kind: [s.id ? cp(hid('terrainHabitatId'), {id: s.id}) : cp(hid('terrainHabitat'))], source: [cp(hid('coastalSelection'))], basis: [cp(hid('terrainBasis'))]}});
 
 /** The renderer's evidence (onTargetDetail) verbatim, its "species fit n/3" in § 12's wording; the first sentence is the source line. */
 export function terrainDetailCard(d: CoastTargetDetail, coastSpecies: string): ChartMark {
@@ -283,7 +332,9 @@ export function terrainDetailCard(d: CoastTargetDetail, coastSpecies: string): C
     return fit ? fitLine(label, Number(fit[1])).toLowerCase() : part;
   }).join(' · ');
   const [source = '', ...rest] = d.evidence.split(/(?<=\.) /);
-  return {id: `habitat:${d.id}`, name: d.title, kind: `Terrain ${d.kind} habitat · ${d.id}`, reading: facts, source, basis: rest.join(' ') || d.evidence};
+  return {id: `habitat:${d.id}`, name: d.title, kind: `Terrain ${d.kind} habitat · ${d.id}`, reading: facts, source, basis: rest.join(' ') || d.evidence,
+    // The renderer's title, facts and evidence are published display text and stay verbatim; only the kind wrapper is ours.
+    copy: {kind: [cp(hid('terrainKindHabitatId'), {kind: d.kind, id: d.id})]}};
 }
 
 /** packages/coast `resolveHabitatSelection`'s receipt (web/map/coast-habitat.d.ts). */
@@ -293,4 +344,6 @@ export const receiptCard = (r: HabitatReceipt): ChartMark => ({
   id: `habitat:${r.id}`, name: r.kind === 'shore' ? 'Shore habitat' : 'Reef habitat', kind: `Terrain habitat · ${r.id}`, reading: '', position: {latitude: r.latitude, longitude: r.longitude},
   source: `Reviewed coastal habitat · valid until ${r.expiresAt.slice(0, 10)}`,
   basis: 'Restored from the reviewed habitat release; its evidence lines show in the 2D and 3D terrain.',
+  copy: {name: [cp(hid(r.kind === 'shore' ? 'shoreHabitat' : 'reefHabitat'))], kind: [cp(hid('terrainHabitatId'), {id: r.id})], source: [cp(hid('receiptSource'), {date: r.expiresAt.slice(0, 10)})],
+    basis: [cp(hid('receiptBasis'))]},
 });

@@ -5,11 +5,33 @@
 import {t, type StringId} from './i18n.ts';
 import type {ChartMark} from './map/coastline.ts';
 
-export type MarkCopyPart = string | {readonly id: StringId; readonly vars?: Readonly<Record<string, string | number>>};
+/** A variable of a catalogue string: a value, another catalogue string (with its own variables), or a list of those joined in order. */
+export type CopyVar = string | number | {readonly id: StringId; readonly vars?: Readonly<Record<string, CopyVar>>} | readonly CopyVar[];
+export type MarkCopyPart = string | {readonly id: StringId; readonly vars?: Readonly<Record<string, CopyVar>>};
 export type MarkCopyFields = Partial<Readonly<Record<'name' | 'kind' | 'reading' | 'source' | 'basis' | 'rules' | 'regulationsLabel', readonly MarkCopyPart[]>>>;
 
+const value = (v: CopyVar, lang: string): string | number =>
+  typeof v === 'string' || typeof v === 'number' ? v : 'id' in v ? render({id: v.id, vars: v.vars}, lang) : (v as readonly CopyVar[]).map(x => String(value(x, lang))).join('');
+const render = (p: {readonly id: StringId; readonly vars?: Readonly<Record<string, CopyVar>>}, lang: string): string =>
+  t(p.id, lang, Object.fromEntries(Object.entries(p.vars ?? {}).map(([k, v]) => [k, value(v, lang)])));
 const join = (parts: readonly MarkCopyPart[], lang: string): string =>
-  parts.map(p => typeof p === 'string' ? p : t(p.id, lang, p.vars)).join('');
+  parts.map(p => typeof p === 'string' ? p : render(p, lang)).join('');
+
+/** The text of parts in `lang`. */
+export const copyText = (parts: readonly MarkCopyPart[], lang: string): string => join(parts, lang);
+/** SC0922-10: a catalogue part for producers (a plain object; nothing is resolved until the card renders). */
+export const cp = (id: StringId, vars?: Readonly<Record<string, CopyVar>>): MarkCopyPart => vars ? {id, vars} : {id};
+/** Parts for several pieces in order with `sep` between them; a piece that is empty is left out (as the producers' own joins do). */
+export function joinParts(items: readonly (readonly MarkCopyPart[] | string | false | null | undefined)[], sep: string): MarkCopyPart[] {
+  const out: MarkCopyPart[] = [];
+  for (const item of items) {
+    const parts = typeof item === 'string' ? (item.trim() ? [item] : []) : item || [];
+    if (!parts.length) continue;
+    if (out.length) out.push(sep);
+    out.push(...parts);
+  }
+  return out;
+}
 
 export interface MarkDisplay {
   readonly name: string; readonly kind: string; readonly reading: string; readonly source: string; readonly basis: string;
