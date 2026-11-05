@@ -69,6 +69,6 @@ test('the line reads "Moon: <name>, <n>% lit" and makes no rise, set, solunar, b
 test('the Conditions view shows the line under Tide events for the dock day and feeds nothing else', () => {
   const src = readFileSync(new URL('../web/app/views/Conditions.tsx', import.meta.url), 'utf8');
   assert.equal(src.split('moonLine(').length - 1, 1);
-  assert.ok(src.indexOf('Tide events') < src.indexOf('moonLine(') && src.indexOf('moonLine(') < src.indexOf('Before you go'));
+  assert.ok(src.indexOf("'conditions.tides'") < src.indexOf('moonLine(') && src.indexOf('moonLine(') < src.indexOf("'conditions.before'"));
   assert.match(src, /moonLine\(state\.day, tz\)/);
 });

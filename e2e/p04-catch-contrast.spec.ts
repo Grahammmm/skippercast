@@ -20,7 +20,7 @@ const read = (p: string) => readFileSync(resolve(ROOT, p));
 // plain imports in the document head, so HEAD_STYLES are the shell's three sheets plus those four, linked in order; the
 // ?url sheets stay URL assets. All are qualified, hash-pinned below and, where the page requests them, served exact;
 // model-disagreement.css is only a URL string in the bundle (Reports never mounts Conditions) and must not be requested.
-const HEAD_STYLES = ['web/tokens.css', 'web/ui/ui.css', 'web/app/app.css', 'web/app/plan.css', 'web/app/season.css', 'web/app/views/hourly-table.css', 'web/ui/guard.css'];
+const HEAD_STYLES = ['web/tokens.css', 'web/ui/ui.css', 'web/app/app.css', 'web/app/plan.css', 'web/app/season.css', 'web/app/views/hourly-table.css', 'web/ui/guard.css', 'web/brief/brief-print.css'];
 const URL_STYLES = ['packages/coast/panel.css', 'packages/coast/tokens-bridge.css', 'web/app/views/model-disagreement.css'];
 const UNREQUESTED_STYLES = ['web/app/views/model-disagreement.css'];
 const STYLES = [...HEAD_STYLES, ...URL_STYLES];
@@ -238,6 +238,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC2037-02: hourly-table.css appends only a scoped .app-hourly-over rule (amber token colour, semibold) for own-limit cell marks; Reports never mounts the hourly table, so no counted paint changes. Rebound from the final bytes.
   "web/app/views/hourly-table.css": "deddfad213ef5d81cd6f82be591b5259a874a1da2961c307df9a9ca1ef644ee0",
   "web/ui/guard.css": "8e53f065f8f7af23121f7eb346ebeefe571baa21eebf1b6179e27a8b86b74d11",
+  // SC2037-04: Brief.tsx imports brief-print.css (only a hidden .app-print-only class and an @media print block; no screen paint); Reports bundles Brief.
+  "web/brief/brief-print.css": "35b695c448385cd449304ca7158d3b8c26dfe9db3d3a9c90ecd0c17796b45dc0",
   "web/app/views/model-disagreement.css": "c6edfd6e81395b8d5e9fe67e982e399989172765490456f6a28ec036c115b72c",
   "packages/coast/panel.css": "ca0495fc90db3cf3f140d520c8231751660268af72bc7b9a4a3ac4dc1679314e",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",

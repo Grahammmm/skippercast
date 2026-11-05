@@ -5,7 +5,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-const {hourlyTable, hourlyCells, NO_FORECAST, overLimits, limitLabel, LIMITS_NOTE} = await import('../web/hourly-table.ts');
+const {hourlyTable, hourlyCells, NO_FORECAST, overLimits} = await import('../web/hourly-table.ts');
+const {t} = await import('../web/i18n.ts');
 const {feedReader} = await import('../web/brief/verdict.ts');
 const {rateComfort} = await import('../web/score.ts');
 
@@ -246,11 +247,12 @@ test('SC2037-02: default limits (null) mark nothing; a missing value is never ma
 });
 
 test('SC2037-02: the accessible labels name the limit; the note says marks compare NOAA values and the window can differ', () => {
-  assert.equal(limitLabel('wind', mine), 'over your 12 kt wind limit');
-  assert.equal(limitLabel('gust', mine), 'over your 18 kt gust limit');
-  assert.equal(limitLabel('seas', mine), 'over your 5 ft seas limit');
-  assert.match(LIMITS_NOTE, /NOAA values/);
-  assert.match(LIMITS_NOTE, /window can differ/);
+  assert.equal(t('hourly.over.wind', 'en', {limit: '12'}), 'over your 12 kt wind limit');
+  assert.equal(t('hourly.over.gust', 'en', {limit: '18'}), 'over your 18 kt gust limit');
+  assert.equal(t('hourly.over.seas', 'en', {limit: '5'}), 'over your 5 ft seas limit');
+  assert.match(t('hourly.limits', 'en'), /NOAA values/);
+  assert.match(t('hourly.limits', 'en'), /window can differ/);
+  assert.match(t('hourly.limits', 'es'), /NOAA/);
 });
 
 test('SC2037-02: marking leaves the cell text and score unchanged', () => {

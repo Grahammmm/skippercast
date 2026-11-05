@@ -71,16 +71,8 @@ export function hourlyCells(r: HourlyRow): string[] {
     r.score === null ? '—' : `${r.score.toFixed(1)}${r.limited ? '*' : ''}`];
 }
 
-/** The note under the table when any cell is marked over the person's own limits. */
-export const LIMITS_NOTE = "▲ marks an hour over your own limits, comparing this table's NOAA values with them. The brief's lower-exposure window also weighs other hazards, so a marked hour and the window can differ.";
-
 /** Which of wind, gust and seas are over the person's own limits: the strictly-greater, finite-only comparison of packages/coast/src/daily.ts buildDaily's overLimit. `null` (default limits) marks nothing. */
 export function overLimits(r: HourlyRow, limits: ComfortLimits | null): Record<LimitField, boolean> {
   const over = (v: number | null, max: number | undefined) => !!limits && v !== null && Number.isFinite(v) && typeof max === 'number' && v > max;
   return {wind: over(r.wind, limits?.wind), gust: over(r.gust, limits?.gust), seas: over(r.seas, limits?.seas)};
-}
-
-/** The words naming the limit a marked cell is over, for its accessible label. */
-export function limitLabel(field: LimitField, limits: ComfortLimits): string {
-  return field === 'seas' ? `over your ${limits.seas} ft seas limit` : `over your ${limits[field]} kt ${field} limit`;
 }

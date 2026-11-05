@@ -23,13 +23,14 @@ import type {CoastReportContext} from '../../packages/coast/src/state/report-bin
 import {briefForecast, loadConditionsForecast, type ConditionsForecast} from '../conditions.ts';
 import {feedPath} from '../landing/readings.ts';
 import {PROFILE_TABLE, type Profile} from '../profile.ts';
-import {day, hour, hourParam, parseHour, profile, species} from '../state.ts';
+import {day, hour, hourParam, parseHour, port, profile, species} from '../state.ts';
 import {dockTime, horizonDays} from '../hour.ts';
 import {loadRegs, regsData, regulationState, ruleSummary} from '../regs.ts';
 import {useEffect} from 'preact/hooks';
 import {hasOwnLimits, limitsFor, type ComfortLimits} from '../limits.ts';
 import {regionInfo, type RegionInfo} from '../app/region-info.ts';
 import {Popover} from '../ui/Popover.tsx';
+import {Button} from '../ui/Button.tsx';
 import {buildCoastBrief, buildRegionalBrief} from './model.ts';
 import {Tiles} from './Tiles.tsx';
 import {TideStationControl} from './TideStationControl.tsx';
@@ -44,6 +45,7 @@ import type {BoatFactors} from '../score.ts';
 import type {Brief as BriefModel, RegionalDailyFeed} from './types.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
 import {dailyPartPath} from '../../dist/offline-core.js';
+import './brief-print.css';
 import {validDailyPart} from '../map/habitat.ts';
 
 export type {BriefModel};
@@ -427,6 +429,44 @@ export function BriefLinks({brief}: {brief: BriefModel | null}) {
       {brief.fleet ? <li><a href={brief.fleet.href}>{brief.fleet.text}</a></li> : null}
       <li class="app-local" data-available={String(brief.localReport.available)}>{brief.localReport.text}</li>
     </ul>
+  );
+}
+
+/** SC2037-04: when the page was last sent to print (epoch ms); the print block falls back to render time. */
+export const printedAt = signal<number | null>(null);
+
+/** Epoch ms -> "Wed 6:05 PM PDT" in the region zone (never the device zone). */
+export const printedText = (ms: number, tz: string, lang: Language = 'en'): string =>
+  new Intl.DateTimeFormat(localeOf(lang), {weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: tz, timeZoneName: 'short'}).format(new Date(ms));
+
+/** Open every disclosure in the brief for the printout (a closed one prints nothing), then restore them. */
+const opened: HTMLDetailsElement[] = [];
+export function beforePrint(now: () => number = Date.now, doc: Document | undefined = typeof document === 'undefined' ? undefined : document): void {
+  printedAt.value = now();
+  opened.length = 0;
+  doc?.querySelectorAll<HTMLDetailsElement>('details:not([open])').forEach(d => { d.open = true; opened.push(d); });
+}
+export function afterPrint(): void { opened.splice(0).forEach(d => { d.open = false; }); }
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('beforeprint', () => beforePrint());
+  window.addEventListener('afterprint', afterPrint);
+}
+
+/** The button (screen only) and the print-only block: where and when, the printed-at time, the no-update line. */
+export function PrintBrief({now}: {now: Date}) {
+  const tz = regionInfo.value?.timezone ?? DEFAULT_ZONE, lang = language.value;
+  const at = leadHour(hour.value, day.value, now, tz), date = leadDate(now), when = at ? new Date(at) : now;
+  const place = [regionInfo.value?.name, port.value ? port.value.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null, PROFILE_TABLE[profile.value].label].filter(Boolean).join(' · ');
+  return (
+    <>
+      <Button class="app-print-button" onClick={() => window.print()}>{t('brief.print', lang)}</Button>
+      <div class="app-print-only" data-print="brief">
+        <p class="app-print-place">{place}</p>
+        <p class="app-print-when ui-mono">{leadDayText(date, now, tz, lang)}, {clock(when.getTime(), tz, lang)}</p>
+        <p class="app-print-at ui-mono">{t('brief.print.at', lang, {time: printedText(printedAt.value ?? now.getTime(), tz, lang)})}</p>
+        <p class="app-print-stale">{t('brief.print.stale', lang)}</p>
+      </div>
+    </>
   );
 }
 
