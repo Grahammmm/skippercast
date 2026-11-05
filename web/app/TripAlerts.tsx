@@ -13,7 +13,7 @@ import {PROFILE_TABLE} from '../profile.ts';
 import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {
-  alertDate, alertNames, alertSpecies, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, eventLine, feedbackPhase, formProblem, latestTripEvent, assessmentTime, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotifications, tripBody, tripBoat, tripDefaults, tripLine, tripPlanSummary, tripRecaps,
+  alertDate, alertNames, alertSpecies, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, deviceStatus, deviceButtons, DEVICE_LINE, type DeviceStatus, eventLine, feedbackPhase, formProblem, latestTripEvent, assessmentTime, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotifications, tripBody, tripBoat, tripDefaults, tripLine, tripPlanSummary, tripRecaps,
   type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type SavedTrip, type TripPlanSummary,
 } from '../alerts.ts';
 
@@ -134,6 +134,9 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const [species, setSpecies] = useState(choice.value);
   const [status, setStatus] = useState('');
   const [stopping, setStopping] = useState(false);
+  const [device, setDevice] = useState<DeviceStatus | null>(null);
+  const checkDevice = () => { void deviceStatus().then(setDevice, () => setDevice('unchecked')); };
+  useEffect(checkDevice, []);
   const [trips, setTrips] = useState<{trips: SavedTrip[]; events: AlertEvent[]} | null>(null);
   const digest = trips ? weekendDigest(trips.trips, names, range.min) : null;
   const [feedback, setFeedback] = useState<Feedback[] | null>(null);
@@ -237,9 +240,10 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           : 'Limits start from the reference 23 ft boat. Set your boat to tailor them.'}</p>
         <p class="small">Uses the selected target species. These alerts assess the saved area's weather window and reviewed rules; they do not plan navigation or predict catches.</p>
         <div class="inavx-actions">
-          <Button size="sm" onClick={act(async () => { await enablePush(session.publicKey); setStatus('Notifications enabled on this device. Saved trips are checked automatically.'); })}>Enable notifications on this device</Button>
-          {(['device', 'all'] as const).map(scope => <Button key={scope} size="sm" disabled={stopping} onClick={() => { setStopping(true); stopNotifications(scope).then(setStatus, fail).finally(() => setStopping(false)); }}>{scope === 'device' ? 'Stop notifications on this device' : 'Stop on all devices'}</Button>)}
+          {deviceButtons(device).enable ? <Button size="sm" onClick={() => { enablePush(session.publicKey).then(() => setStatus('Notifications enabled on this device. Saved trips are checked automatically.'), fail).finally(checkDevice); }}>Enable notifications on this device</Button> : null}
+          {(['device', 'all'] as const).filter(scope => scope === 'all' || deviceButtons(device).stopDevice).map(scope => <Button key={scope} size="sm" disabled={stopping} onClick={() => { setStopping(true); stopNotifications(scope).then(setStatus, fail).finally(() => { setStopping(false); checkDevice(); }); }}>{scope === 'device' ? 'Stop notifications on this device' : 'Stop on all devices'}</Button>)}
         </div>
+        <p id="device-status" role="status" class="small">{device ? DEVICE_LINE[device] : ''}</p>
         <p id="alert-status" role="status">{status}</p>
         {digest ? <section aria-labelledby="weekend-heading">
           <h3 id="weekend-heading">This weekend</h3>

@@ -310,9 +310,11 @@ export function feedbackPhase(f: Feedback): string {
 export const b64 = (s: string): Uint8Array<ArrayBuffer> =>
   Uint8Array.from(atob(s.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0));
 
+const NOT_AVAILABLE = 'Notifications are not available here. On iPad/iPhone, add SkipperCast to the Home Screen and open it there.';
+
 /** Subscribe this device to the account's push and register it with the server. */
 export async function enablePush(publicKey: string | null | undefined): Promise<void> {
-  if (!('serviceWorker' in navigator) || !('PushManager' in globalThis) || !publicKey) throw Error('Notifications are not available here. On iPad/iPhone, add SkipperCast to the Home Screen and open it there.');
+  if (!('serviceWorker' in navigator) || !('PushManager' in globalThis) || !publicKey) throw Error(NOT_AVAILABLE);
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') throw Error('Notifications were not enabled. You can still read assessments here.');
   const registration = await navigator.serviceWorker.register('/sw.js');
@@ -326,7 +328,7 @@ export type StopResult = 'stopped' | 'none' | 'partial';
 type PushNavigator = {serviceWorker?: {getRegistration(scope?: string): Promise<{pushManager: {getSubscription(): Promise<{endpoint: string; unsubscribe(): Promise<boolean>} | null>}} | undefined>}};
 
 /** This browser's existing push subscription, found without registering a worker, asking permission or subscribing. */
-const localSubscription = async (nav: PushNavigator) => (await nav.serviceWorker?.getRegistration('/sw.js'))?.pushManager.getSubscription() ?? null;
+export const localSubscription = async (nav: PushNavigator) => (await nav.serviceWorker?.getRegistration('/sw.js'))?.pushManager.getSubscription() ?? null;
 const unsubscribed = async (subscription: {unsubscribe(): Promise<boolean>}): Promise<StopResult> => {
   try { return (await subscription.unsubscribe()) ? 'stopped' : 'partial'; } catch { return 'partial'; }
 };
@@ -364,3 +366,34 @@ export const stopStatus = (scope: 'device' | 'all', result: StopResult): string 
 export async function stopNotifications(scope: 'device' | 'all', fetchFn: typeof fetch = fetch, nav: PushNavigator = navigator): Promise<string> {
   return stopStatus(scope, await (scope === 'all' ? disableAllPush : disablePush)(fetchFn, nav));
 }
+
+/** Whether this account will notify this device: server-confirmed, set up here but not sending, unchecked, blocked, off, or unavailable. */
+export type DeviceStatus = 'confirmed' | 'not-sending' | 'unchecked' | 'blocked' | 'off' | 'unavailable';
+type NotificationLike = {permission?: string} | undefined;
+
+/** Read on opening and after each button. Reads the permission and the local subscription and asks the server only when a subscription exists;
+ *  it never asks permission, registers a worker or subscribes. A failed check is `unchecked`, never `confirmed`. */
+export async function deviceStatus(fetchFn: typeof fetch = fetch, nav: PushNavigator = navigator, notif: NotificationLike = globalThis.Notification): Promise<DeviceStatus> {
+  if (!('serviceWorker' in nav) || !('PushManager' in globalThis) || !notif) return 'unavailable';
+  if (notif.permission === 'denied') return 'blocked';
+  let subscription;
+  try { subscription = await localSubscription(nav); } catch { return 'off'; }
+  if (!subscription) return 'off';
+  try {
+    const r = await api<{registered?: unknown}>('subscription/status', {method: 'POST', body: JSON.stringify({endpoint: subscription.endpoint})}, fetchFn);
+    return r.registered === true ? 'confirmed' : r.registered === false ? 'not-sending' : 'unchecked';
+  } catch { return 'unchecked'; }
+}
+
+/** The sheet's line for each state. */
+export const DEVICE_LINE: Readonly<Record<DeviceStatus, string>> = {
+  confirmed: 'This account sends trip alerts to this device (checked with the server).',
+  'not-sending': 'This browser is set up for notifications, but this account is not sending to it. It may have been stopped from another device or set up by another account. Press Enable to repair it.',
+  unchecked: 'Could not check with the server. This browser has a subscription that may not be active.',
+  blocked: "Notifications are blocked in this browser's settings. Allow them for this site in the browser's site settings.",
+  off: 'Notifications are not enabled on this device.',
+  unavailable: NOT_AVAILABLE,
+};
+/** Which buttons the state shows: Enable is hidden only when the server confirmed; Stop on this device shows whenever a local subscription exists. Stop on all devices always shows. */
+export const deviceButtons = (s: DeviceStatus | null): {enable: boolean; stopDevice: boolean} =>
+  ({enable: s !== 'confirmed', stopDevice: s === 'confirmed' || s === 'not-sending' || s === 'unchecked'});
