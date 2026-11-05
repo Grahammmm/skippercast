@@ -30,7 +30,9 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import sys
+import tempfile
 from typing import Iterable, Mapping
 
 from ..paths import repo_root
@@ -95,12 +97,20 @@ def apply(statuses: Mapping[str, Mapping[str, str]], root: Path | None = None) -
         if new != text:
             pending.append((ident, path, new))
     for _, path, new in pending:
-        tmp = path.with_name(f".region.json.{os.getpid()}.tmp")
+        fd, name = tempfile.mkstemp(dir=path.parent, prefix=".region.json.", suffix=".tmp")  # fresh, O_EXCL, never a followed link
+        tmp = Path(name)
         try:
-            tmp.write_text(new, encoding="utf-8")
+            try:
+                os.fchmod(fd, stat.S_IMODE(path.stat().st_mode))
+                handle = os.fdopen(fd, "w", encoding="utf-8")
+            except BaseException:
+                os.close(fd)
+                raise
+            with handle:
+                handle.write(new)
             os.replace(tmp, path)
         except BaseException:
-            tmp.unlink(missing_ok=True)
+            tmp.unlink(missing_ok=True)  # only the entry this call created
             raise
     return [ident for ident, _, _ in pending]
 

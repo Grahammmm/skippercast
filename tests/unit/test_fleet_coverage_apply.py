@@ -154,6 +154,107 @@ class ApplyTests(unittest.TestCase):
                 self.assertEqual(self.raw("a"), before)
                 self.assertEqual(self.leftovers(), [])
 
+    def legacy(self):
+        return self.root / "regions" / "a" / f".region.json.{os.getpid()}.tmp"
+
+    def test_apply_ignores_planted_legacy_temp_symlink(self):
+        sentinel = self.root / "sentinel.txt"
+        sentinel.write_bytes(b"keep")
+        self.legacy().symlink_to(sentinel)
+        self.assertEqual(coverage.apply({"a": NEW}, self.root), ["a"])
+        final = self.root / "regions/a/region.json"
+        self.assertEqual(sentinel.read_bytes(), b"keep")
+        self.assertTrue(self.legacy().is_symlink())
+        self.assertEqual(os.readlink(self.legacy()), str(sentinel))
+        self.assertFalse(final.is_symlink())
+        self.assertEqual(final.read_bytes(), region(entry=NEW).encode())
+
+    def test_apply_ignores_stale_regular_dangling_and_directory_entries(self):
+        gone = self.root / "gone.txt"
+        for kind in ("regular", "dangling", "directory"):
+            with self.subTest(kind=kind):
+                self.write("a", region())
+                legacy = self.legacy()
+                if legacy.is_symlink() or legacy.is_file():
+                    legacy.unlink()
+                elif legacy.is_dir():
+                    legacy.rmdir()
+                if kind == "regular":
+                    legacy.write_bytes(b"stale")
+                elif kind == "dangling":
+                    legacy.symlink_to(gone)
+                else:
+                    legacy.mkdir()
+                self.assertEqual(coverage.apply({"a": NEW}, self.root), ["a"])
+                self.assertEqual(self.raw("a"), region(entry=NEW).encode())
+                if kind == "regular":
+                    self.assertEqual(legacy.read_bytes(), b"stale")
+                elif kind == "dangling":
+                    self.assertTrue(legacy.is_symlink())
+                else:
+                    self.assertTrue(legacy.is_dir() and not legacy.is_symlink())
+                self.assertFalse(gone.exists())
+
+    def test_apply_fresh_temp_is_same_directory_and_closed_before_replace(self):
+        path = self.root / "regions/a/region.json"
+        path.chmod(0o640)
+        real_mkstemp, real_replace, seen = tempfile.mkstemp, os.replace, {}
+
+        def mkstemp(**kw):
+            fd, name = real_mkstemp(**kw)
+            seen["name"] = name
+            return fd, name
+
+        def replace(src, dst):
+            seen["src"] = str(src)
+            self.assertEqual(Path(src).read_bytes(), region(entry=NEW).encode(), "fully written before replace")
+            real_replace(src, dst)
+
+        with mock.patch.object(coverage.tempfile, "mkstemp", mkstemp), mock.patch.object(coverage.os, "replace", replace):
+            coverage.apply({"a": NEW}, self.root)
+        self.assertEqual(seen["src"], seen["name"])
+        self.assertEqual(Path(seen["name"]).parent, path.parent)
+        self.assertNotEqual(Path(seen["name"]), self.legacy())
+        self.assertFalse(path.is_symlink())
+        self.assertEqual(path.stat().st_mode & 0o777, 0o640)
+        self.assertFalse(Path(seen["name"]).exists())
+        self.assertEqual(self.leftovers(), [])
+
+    def _failure(self, attr, replacement):
+        sentinel = self.root / "sentinel.txt"
+        sentinel.write_bytes(b"keep")
+        self.legacy().symlink_to(sentinel)
+        closed, real_close = [], os.close
+        with mock.patch.object(coverage.os, "close", lambda fd: (closed.append(fd), real_close(fd))[1]), \
+                mock.patch.object(coverage.os, attr, replacement), self.assertRaisesRegex(OSError, "boom"):
+            coverage.apply({"a": NEW}, self.root)
+        self.assertEqual(self.raw("a"), region().encode())
+        self.assertEqual(sentinel.read_bytes(), b"keep")
+        self.assertTrue(self.legacy().is_symlink())
+        self.assertEqual([p.name for p in self.root.glob("regions/a/.*.tmp")], [self.legacy().name])
+        return closed
+
+    def test_apply_write_failure_closes_descriptor_and_only_cleans_own_temp(self):
+        files, real = [], os.fdopen
+
+        def fdopen(fd, *a, **k):
+            f = real(fd, *a, **k)
+            files.append(f)
+            f.write = mock.Mock(side_effect=OSError("boom"))
+            return f
+
+        self._failure("fdopen", fdopen)
+        self.assertTrue(files and files[0].closed)
+
+    def test_apply_failure_before_fdopen_owns_descriptor_closes_it(self):
+        closed = self._failure("fdopen", mock.Mock(side_effect=OSError("boom")))
+        self.assertEqual(len(closed), 1)
+        with self.assertRaises(OSError):
+            os.fstat(closed[0])
+
+    def test_apply_replace_failure_preserves_old_destination_and_stale_entries(self):
+        self._failure("replace", mock.Mock(side_effect=OSError("boom")))
+
 
 if __name__ == "__main__":
     unittest.main()
