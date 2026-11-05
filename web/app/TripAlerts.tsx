@@ -13,7 +13,7 @@ import {PROFILE_TABLE} from '../profile.ts';
 import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {
-  alertDate, alertNames, alertSpecies, api, comfortBody, dateRange, enablePush, eventLine, feedbackPhase, formProblem, profileTripDefaults, readRecapCatchLog, stopNotifications, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
+  alertDate, alertNames, alertSpecies, api, comfortBody, dateRange, enablePush, eventLine, feedbackPhase, formProblem, latestTripEvent, assessmentTime, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotifications, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
   type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type SavedTrip,
 } from '../alerts.ts';
 
@@ -77,11 +77,16 @@ const catchLine = (c: CatchLogEntry) => c.outcome === 'fish' ? `Fish · ${c.coun
 /** The catch-log read's state beside the recap: still reading, or finished with every page (complete) or not. Left out, the recap is drawn as a complete read. */
 export type CatchRead = Pick<RecapCatchLog, 'complete'> & {loading: boolean};
 
-export function SavedTrips({recaps, names, remove, read = {loading: false, complete: true}}: {recaps: ReturnType<typeof tripRecaps>; names: AlertNames; remove: (id: string) => () => void; read?: CatchRead}) {
+export function SavedTrips({recaps, names, remove, read = {loading: false, complete: true}, events = [], timeZone = DEFAULT_ZONE}: {recaps: ReturnType<typeof tripRecaps>; names: AlertNames; remove: (id: string) => () => void; read?: CatchRead; events?: AlertEvent[]; timeZone?: string}) {
+  const standing = (t: SavedTrip) => {
+    const e = latestTripEvent(events, t.id);
+    const when = e && (assessmentTime(e, timeZone) === 'Time unavailable' ? 'Time unavailable' : <time dateTime={e.created_at}>{assessmentTime(e, timeZone)}</time>);
+    return <><br /><span class="small">{savedTripLimits(t)} · {e ? <>{eventLine(e)} · {when}</> : 'No recent assessment'}</span></>;
+  };
   const deletion = (t: SavedTrip) => <Button size="sm" variant="quiet" onClick={remove(t.id)} aria-label={`Delete the trip on ${t.date} at ${names.point.get(t.point) ?? t.point}`}>Delete</Button>;
   return <div id="saved-trips">
     {!recaps.upcoming.length && !recaps.past.length ? <p>No saved trips.</p> : null}
-    {recaps.upcoming.length ? <><h3>Upcoming</h3>{recaps.upcoming.map(t => <p key={t.id}><strong>{tripLine(t, names)}</strong> {deletion(t)}</p>)}</> : null}
+    {recaps.upcoming.length ? <><h3>Upcoming</h3>{recaps.upcoming.map(t => <p key={t.id}><strong>{tripLine(t, names)}</strong> {deletion(t)}{standing(t)}</p>)}</> : null}
     {recaps.past.length ? <><h3>Past</h3>
       <p class="small">Your own record of each trip. Forecast assessments are what we sent before the day, not what the sea did.</p>
       {read.loading ? <p class="small">Reading your catch log…</p> : !read.complete ? <p class="small">Older catch-log entries were not read. The entries shown may be incomplete.</p> : null}
@@ -207,7 +212,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           <p style={{whiteSpace: 'pre-line'}}>{toText(digest)}</p>
           <p class="small">Shown here only; SkipperCast does not email this yet.</p>
         </section> : null}
-        {trips ? <SavedTrips recaps={tripRecaps(trips.trips, trips.events, feedback ?? [], dateRange(DEFAULT_ZONE).min, catchRead.entries)} names={names} remove={remove} read={catchRead} /> : <div id="saved-trips" />}
+        {trips ? <SavedTrips recaps={tripRecaps(trips.trips, trips.events, feedback ?? [], dateRange(DEFAULT_ZONE).min, catchRead.entries)} names={names} remove={remove} read={catchRead} events={trips.events} timeZone={region.timezone} /> : <div id="saved-trips" />}
         {trips?.events.length ? (
           <details id="alert-history">
             <summary>Recent assessments ({trips.events.length})</summary>

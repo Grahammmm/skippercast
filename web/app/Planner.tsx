@@ -11,7 +11,8 @@ import {formatCoordinates} from '../../dist/coordinates.js';
 import {exportEvidenceLabel, protectedHitReading, USER_WAYPOINT_CATEGORIES} from '../../dist/trip-export.js';
 import {fitLabel} from '../../dist/spot-ranking.js';
 import type {Filters, LayerKey, Planner as Model, Preset, ProtectedHit, Target, TripSpecies} from '../planner.ts';
-import {PORTS_FAILED_NOTE, sharedConfidence} from '../planner.ts';
+import {ALERT_STORAGE_NOTE, PORTS_FAILED_NOTE, sharedConfidence, type AlertLegsFn} from '../planner.ts';
+import {AREA_NOTE} from '../planner-alerts.ts';
 import {tripLegs} from '../trip-legs.ts';
 import {protectedScreen} from '../trip.ts';
 import {verdictLine} from '../waypoint-placement.ts';
@@ -90,6 +91,28 @@ function SavedSpots({m}: {m: Model}) {
   );
 }
 
+/** SC1822-04: the signed-in person's explicit "Alert me for this trip": a preview of exactly what is saved, then one private snapshot. Nothing is sent until the click. */
+function AlertSave({m, legs, open}: {m: Model; legs: AlertLegsFn; open: boolean}) {
+  useEffect(() => { if (!open) return; m.setAlertOpen(true); return () => m.setAlertOpen(false); }, [open, m]);
+  const plan = open ? m.alertPreview(legs) : null, status = m.alertStatus.value;
+  if (!plan) return null;
+  const p = plan.ok ? plan.preview : null, done = plan.ok && m.alertIsSaved(plan.body);
+  return (
+    <section class="export-card" id="planner-alert" aria-label="Trip alerts for this plan">
+      <h3>Trip alerts for this plan</h3>
+      {p ? <>
+        <p class="export-note" id="planner-alert-preview">{p.date} · {p.area} · {p.target} · {p.hours} · wind {p.limits.wind} kt, gusts {p.limits.gust} kt, seas {p.limits.sea} ft · {p.boat} · {p.stops} stop{p.stops === 1 ? '' : 's'}, {p.legs} leg{p.legs === 1 ? '' : 's'}</p>
+        <ol aria-label="Legs saved with the alert" id="planner-alert-legs">{p.legList.map((l, i) => <li key={i}>{l.from} → {l.to} · {l.nm.toFixed(1)} nm{l.basis === 'straight' ? ' straight line' : ''} · at least {l.minutes} min{l.screen ? legLine(l.screen as Parameters<typeof verdictLine>[0]) : ' · Protected areas not checked'}</li>)}</ol>
+        {p.legList.some(l => l.basis === 'straight') ? <p class="export-note" id="planner-alert-legs-note">Straight-line legs between stops; the real route is longer. Sea state, the bar, fuel and conditions at each stop are not included.</p> : null}
+        {p.groupNote ? <p class="export-note">{p.groupNote}</p> : null}
+        <p class="export-note">{AREA_NOTE} Saved legs are planning estimates, not a navigation route. Later edits to this plan do not change the saved alert.</p>
+        <button type="button" id="planner-save-alert" disabled={m.alertBusy.value || done} onClick={() => void m.saveAlert(legs)}>Alert me for this trip</button>
+      </> : <p class="export-note" id="planner-alert-preview">{plan.ok ? '' : plan.message}</p>}
+      <p role="status" id="planner-alert-status">{status}</p>
+    </section>
+  );
+}
+
 export function Planner({model: m, open}: {model: Model; open: boolean}) {
   // While the dialog shows: the screen's age each minute and new boundaries refresh the counts; opening restores a saved ranked plan, else ranks an empty one (SCJ-8).
   useEffect(() => {
@@ -120,6 +143,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
     [...selected, ...waypoints].map(t => ({id: t.id, name: t.name || ('label' in t ? t.label : t.id), lat: t.latitude, lon: t.longitude})), cruiseSpeed.value,
     legRoute(landWater.value, m.region.id), screen);
   // The shoreline lines are asked for once when a leg waits on them (shared with the brief's request); the legs re-render when they land.
+  const alertLegs: AlertLegsFn = stops => tripLegs(port ? {name: port.name, lat: port.match[0], lon: port.match[1]} : null, stops, cruiseSpeed.value, legRoute(landWater.value, m.region.id), screen);
   const waits = route.legs.some(leg => leg.why === 'lines-needed');
   useEffect(() => { if (waits) void loadLandWaterLines(m.region.id); }, [waits, m]);
 
@@ -130,7 +154,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
           <label>Plan name<input id="export-name" maxLength={80} value={d.name} onInput={e => m.edit({name: e.currentTarget.value})} /></label>
           <label>Fishing date<input type="date" id="export-date" value={d.date} onInput={e => m.edit({date: e.currentTarget.value})} /></label>
         </div>
-        <p class="export-note" id="export-storage">{m.storageNote.value}</p>
+        <p class="export-note" id="export-storage">{session.value.state === 'signed-in' && m.storageNote.value.startsWith('Saved on this browser') ? ALERT_STORAGE_NOTE : m.storageNote.value}</p>
       </div>
       <section class="export-card" aria-label="Your waypoints">
         <h2>Your waypoints</h2>
@@ -206,6 +230,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
           {session.value.state === 'signed-in' ? <SavedSpots m={m} /> : null}
         </div>
       </details>
+      <AlertSave m={m} legs={alertLegs} open={open} />
       <details class="export-card" id="export-layers">
         <summary><span>2. What to include</span><strong id="export-layer-count">{Object.values(d.layers).filter(Boolean).length + (m.contourTracks.value ? 1 : 0)} layers</strong></summary>
         <div class="export-card-body export-checks">
