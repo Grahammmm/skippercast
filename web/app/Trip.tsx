@@ -89,7 +89,11 @@ function ChartPack() {
       setStatus(controller.signal.aborted ? 'Cancelled. Nothing new was saved.' : `Could not save: ${(e as Error).message}`);
     } finally { setBusy(null); setProgress(null); void refresh(); }
   };
-  const remove = async (cache: string) => { await caches.delete(cache); setStatus('Saved region deleted.'); void refresh(); };
+  const remove = async (cache: string) => {
+    if (busy) return;
+    try { await caches.delete(cache); setStatus('Saved region deleted.'); } catch { setStatus('Saved region could not be deleted. Offline storage may be unavailable.'); }
+    finally { void refresh(); }
+  };
   return (
     <section class="app-offline" aria-labelledby="app-offline-pack">
       <h3 id="app-offline-pack">Chart pack</h3>
@@ -113,7 +117,7 @@ function ChartPack() {
           <li key={cache}>
             <div><strong>{meta.region_name}</strong><span class="ui-mono">Saved <Saved iso={meta.saved_at} /> · {formatBytes(meta.bytes)}</span><span>{packTiles(meta)}</span>
               {ocean ? <><span>Water temp: {ocean.water}</span><span>Currents: {ocean.currents}</span></> : null}</div>
-            <Button size="sm" onClick={() => void remove(cache)} aria-label={`Delete the saved ${meta.region_name}`}>Delete</Button>
+            <Button size="sm" disabled={!!busy} onClick={() => void remove(cache)} aria-label={`Delete the saved ${meta.region_name}`}>Delete</Button>
           </li>
           );
         }) : inventoryState === 'success' ? <li>Nothing saved on this device yet.</li> : null}

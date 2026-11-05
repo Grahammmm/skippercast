@@ -4,6 +4,7 @@
 // applies it. Nothing leaves the browser.
 import { BOAT_KEY, normalizeBoat, savedBoat } from './boat-handling.js';
 import { latestTomorrow, clock } from './tomorrow.js';
+import { browserStorage } from './browser-storage.js';
 
 export const FIRST_RUN_KEY = 'skippercast-first-run-v1';
 const STEPS = ['boat', 'answer'];
@@ -19,20 +20,20 @@ const read = (storage) => { try { return storage?.getItem(FIRST_RUN_KEY) || null
 const write = (storage, value) => { try { value ? storage.setItem(FIRST_RUN_KEY, value) : storage.removeItem(FIRST_RUN_KEY); return true; } catch { return false; } };
 
 /** The pending first-run step ('boat', 'answer') or null when there is none. */
-export function pendingStep(storage = globalThis.localStorage) {
+export function pendingStep(storage = browserStorage()) {
   const step = read(storage);
   return STEPS.includes(step) ? step : null;
 }
 /** Called by the port chooser on a first visit. */
-export function startFirstRun(storage = globalThis.localStorage) { return write(storage, 'boat'); }
-export function advance(storage = globalThis.localStorage) {
+export function startFirstRun(storage = browserStorage()) { return write(storage, 'boat'); }
+export function advance(storage = browserStorage()) {
   const i = STEPS.indexOf(pendingStep(storage));
   return write(storage, i >= 0 && i + 1 < STEPS.length ? STEPS[i + 1] : null);
 }
-export function finish(storage = globalThis.localStorage) { return write(storage, null); }
+export function finish(storage = browserStorage()) { return write(storage, null); }
 
 /** Save a preset boat the same way the boat sheet does (boat-profile.js). */
-export function savePreset(id, storage = globalThis.localStorage, now = new Date()) {
+export function savePreset(id, storage = browserStorage(), now = new Date()) {
   const preset = PRESETS.find((p) => p.id === id);
   if (!preset) return false;
   try {
@@ -109,7 +110,7 @@ function showAnswer(storage) {
 }
 
 /** Run the pending first-run step, if any. */
-export function initFirstRun(storage = globalThis.localStorage) {
+export function initFirstRun(storage = browserStorage()) {
   const step = pendingStep(storage);
   if (step === 'boat') boatStep(storage);
   else if (step === 'answer') showAnswer(storage);
