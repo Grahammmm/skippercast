@@ -96,12 +96,14 @@ function AlertSave({m, legs, open}: {m: Model; legs: AlertLegsFn; open: boolean}
   useEffect(() => { if (!open) return; m.setAlertOpen(true); return () => m.setAlertOpen(false); }, [open, m]);
   const plan = open ? m.alertPreview(legs) : null, status = m.alertStatus.value;
   if (!plan) return null;
-  const p = plan.ok ? plan.preview : null, done = plan.ok && m.alertSaved.value === JSON.stringify(plan.body);
+  const p = plan.ok ? plan.preview : null, done = plan.ok && m.alertIsSaved(plan.body);
   return (
     <section class="export-card" id="planner-alert" aria-label="Trip alerts for this plan">
       <h3>Trip alerts for this plan</h3>
       {p ? <>
         <p class="export-note" id="planner-alert-preview">{p.date} · {p.area} · {p.target} · {p.hours} · wind {p.limits.wind} kt, gusts {p.limits.gust} kt, seas {p.limits.sea} ft · {p.boat} · {p.stops} stop{p.stops === 1 ? '' : 's'}, {p.legs} leg{p.legs === 1 ? '' : 's'}</p>
+        <ol aria-label="Legs saved with the alert" id="planner-alert-legs">{p.legList.map((l, i) => <li key={i}>{l.from} → {l.to} · {l.nm.toFixed(1)} nm{l.basis === 'straight' ? ' straight line' : ''} · at least {l.minutes} min{l.screen ? legLine(l.screen as Parameters<typeof verdictLine>[0]) : ' · Protected areas not checked'}</li>)}</ol>
+        {p.legList.some(l => l.basis === 'straight') ? <p class="export-note" id="planner-alert-legs-note">Straight-line legs between stops; the real route is longer. Sea state, the bar, fuel and conditions at each stop are not included.</p> : null}
         {p.groupNote ? <p class="export-note">{p.groupNote}</p> : null}
         <p class="export-note">{AREA_NOTE} Saved legs are planning estimates, not a navigation route. Later edits to this plan do not change the saved alert.</p>
         <button type="button" id="planner-save-alert" disabled={m.alertBusy.value || done} onClick={() => void m.saveAlert(legs)}>Alert me for this trip</button>

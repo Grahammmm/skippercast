@@ -218,3 +218,48 @@ test('planner_alert_guide_and_snapshot_copy', () => {
   for (const s of ['Private notes are never copied', 'up to 12 stops', 'nearest the first stop', 'Reef group', 'Later edits to the browser plan do not change the saved alert', 'not a navigation route']) assert.ok(alerts.includes(s), s);
   assert.ok(!/every stop's weather|navigable route\b(?! )/.test(alerts.replace('not a navigation route', '')));
 });
+
+test('planner_alert_checked_launch_must_resolve_exactly', async () => {
+  const ramp = {id: 'ramp.1', name: 'Ramp One', latitude: 35.37, longitude: -120.86}, other = {id: 'ramp.2', name: 'Other Ramp', latitude: 35.2, longitude: -120.7};
+  const unavailable = [['loading (no list)', null], ['another region', {region: 'other-coast', points: [ramp]}], ['id not listed', {region: REGION.id, points: [other]}]];
+  for (const [label, list] of unavailable) {
+    m.launchPoints.value = list;
+    const h = harness({launchId: 'ramp.1'}); await h.save(); await settle();
+    assert.equal(h.calls.length, 0, `${label}: nothing sent`); assert.equal(h.planner.alertStatus.value, 'Some selected stops are unavailable. Review your plan before saving alerts.', label);
+    const p = h.preview(); assert.equal(p.ok, false, `${label}: preview refuses`); h.planner.dispose();
+  }
+  m.launchPoints.value = {region: REGION.id, points: [other, ramp]};
+  const ok1 = harness({launchId: 'ramp.1'}); await ok1.save(); await settle();
+  assert.equal(ok1.calls.length, 1); assert.equal(ok1.calls[0].body.plan.spots.at(-1).name, 'Launch · Ramp One', 'the actual launch, not the first listed'); ok1.planner.dispose();
+  m.launchPoints.value = null;
+});
+
+test('planner_alert_preview_shows_each_leg_basis_and_protected_area_reading', async () => {
+  globalThis.document = {addEventListener() {}, removeEventListener() {}, dispatchEvent() {}};
+  try {
+    m.cruiseSpeed.value = 20;
+    const legs = stops => ({legs: stops.slice(1).map((s, i) => ({from: stops[i].name, to: s.name, nm: 2.5, runMin: 10, basis: i ? 'water' : 'straight', screen: i ? {screened: true, inside: true, name: 'Test <b>Reserve</b>'} : {screened: false}})), skipped: []});
+    const h = harness();
+    const view = h.planner.alertPreview(legs); assert.equal(view.ok, true);
+    assert.deepEqual(view.preview.legList.map(l => [l.from, l.to, l.nm, l.minutes, l.basis]), [['North Reef', 'Second Reef', 2.5, 10, 'straight']]);
+    const only = harness({points: [FIRST, SECOND, wp('user:third', 'Third', 35.31, -120.91)]});
+    const original = only.planner.alertPreview; only.planner.alertPreview = () => original(legs);
+    const html = m.render(m.h(m.Planner, {model: only.planner, open: true}));
+    const section = html.slice(html.indexOf('id="planner-alert-legs"'), html.indexOf('id="planner-save-alert"'));
+    assert.match(section, /North Reef → Second Reef · 2\.5 nm straight line · at least 10 min · Protected areas not checked/);
+    assert.match(section, /Second Reef → Third · 2\.5 nm · at least 10 min · Inside Test &lt;b>Reserve&lt;\/b>/);
+    assert.match(section, /Straight-line legs between stops; the real route is longer\./);
+    h.planner.dispose(); only.planner.dispose();
+  } finally { delete globalThis.document; }
+});
+
+test('planner_alert_same_snapshot_is_not_saved_again_after_A_B_A', async () => {
+  const h = harness();
+  await h.save(); await settle(); assert.equal(h.calls.length, 1);
+  h.planner.edit({date: '2026-10-14'}); await h.save(); await settle(); assert.equal(h.calls.length, 2);
+  h.planner.edit({date: '2026-10-13'}); await h.save(); await settle();
+  assert.equal(h.calls.length, 2, 'A again is not sent a third time'); assert.match(h.planner.alertStatus.value, /already saved/);
+  assert.equal(h.planner.alertIsSaved(h.calls[0].body), true); assert.equal(h.planner.alertIsSaved(h.calls[1].body), true);
+  h.planner.edit({date: '2026-10-15'}); await h.save(); await settle(); assert.equal(h.calls.length, 3, 'a new snapshot still saves');
+  h.planner.dispose();
+});

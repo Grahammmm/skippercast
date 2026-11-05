@@ -15,7 +15,7 @@ export type AlertInput = {
   region: AlertRegion; now: number; date: string; stops: AlertStop[]; unresolved: boolean; species: string; settings: AlertSettings;
   legs: (stops: AlertStop[]) => AlertLegs; refused: (stop: AlertStop) => boolean;
 };
-export type AlertPreview = {date: string; area: string; target: string; groupNote: string; hours: string; limits: Limits; boat: string; stops: number; legs: number};
+export type AlertPreview = {date: string; area: string; target: string; groupNote: string; hours: string; limits: Limits; boat: string; stops: number; legs: number; legList: {from: string; to: string; nm: number; minutes: number; basis: 'water' | 'straight'; screen: unknown}[]};
 export type AlertPlan = {ok: true; body: Record<string, unknown>; preview: AlertPreview} | {ok: false; message: string; code: 'date' | 'plan' | 'region'};
 
 export const MSG = {
@@ -94,10 +94,11 @@ export function buildAlertPlan(i: AlertInput): AlertPlan {
   const launch = i.stops.findIndex(s => s.launch);
   const computed = i.legs(i.stops);
   if (computed.skipped.length || computed.legs.length > MAX_LEGS) return no(MSG.legs);
-  const legs = [];
+  const legs = [], legList: AlertPreview['legList'] = [];
   for (const l of computed.legs) {
     if (!finite(l.nm) || l.nm < 0 || l.nm > 300 || !finite(l.runMin) || l.runMin < 0 || l.runMin > 1440) return no(MSG.legs);
-    legs.push({from: cleanName(l.from, 'Stop'), to: cleanName(l.to, 'Stop'), nm: l.nm, minutes: l.runMin});
+    const from = cleanName(l.from, 'Stop'), to = cleanName(l.to, 'Stop');
+    legs.push({from, to, nm: l.nm, minutes: l.runMin}); legList.push({from, to, nm: l.nm, minutes: l.runMin, basis: l.basis, screen: l.screen});
   }
 
   const s = i.settings, own = s.profile === 'boat' && s.ownBoatLimits;
@@ -109,7 +110,7 @@ export function buildAlertPlan(i: AlertInput): AlertPlan {
   const body = {...tripBody(form, region.id, target.id, null), boat, launch_point: launch >= 0 ? spots[launch]!.id : null, targets: [target.id], status: 'planned', plan};
   if (bytes(plan) > PLAN_BYTES || bytes(body) > BODY_BYTES) return no(MSG.big);
   const source = s.profile !== 'boat' ? 'Limits from your profile limits' : own ? 'Limits from your Boat limits, unscaled' : boat ? `Limits from your saved boat${boat.name ? ` (${boat.name})` : ''}` : 'Limits from the reference 23 ft boat';
-  return {ok: true, body, preview: {date: i.date, area: area.name, target: target.id, groupNote: target.grouped ? GROUP_NOTE : '', hours: '07:00–13:00', limits, boat: source, stops: spots.length, legs: legs.length}};
+  return {ok: true, body, preview: {date: i.date, area: area.name, target: target.id, groupNote: target.grouped ? GROUP_NOTE : '', hours: '07:00–13:00', limits, boat: source, stops: spots.length, legs: legs.length, legList}};
 }
 
 /** The sentence for a finished request: only a 201 with a nonempty id is success. */

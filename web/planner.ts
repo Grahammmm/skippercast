@@ -623,12 +623,12 @@ export function createPlanner(deps: PlannerDeps) {
   }
 
   // SC1822-04: an explicit, signed-in-only save of the current plan with the alert POST. Nothing is sent until the click; every refusal says why.
-  const alertOpen = signal(false), alertStatus = signal(''), alertBusy = signal(false), alertSaved = signal('');
+  const alertOpen = signal(false), alertStatus = signal(''), alertBusy = signal(false), alertSaved = signal(''), alertSavedKeys = signal<string[]>([]);
   let alertGen = 0, alertAbort: AbortController | null = null, alertFor: unknown = null;
   const alertActive = (): boolean => !disposed && alertOpen.value && session.value.state === 'signed-in' && activeRegion.value === region.id;
   const resetAlert = (): void => {
     alertGen++; alertAbort?.abort(); alertAbort = null; alertFor = null;
-    batch(() => { alertBusy.value = false; alertStatus.value = ''; alertSaved.value = ''; });
+    batch(() => { alertBusy.value = false; alertStatus.value = ''; alertSaved.value = ''; alertSavedKeys.value = []; });
   };
   const stopAlert = effect(() => {
     const s = session.value; void alertOpen.value; void activeRegion.value;
@@ -637,7 +637,9 @@ export function createPlanner(deps: PlannerDeps) {
   /** The plan as an alert request (or the sentence that refuses it), from the checked stops in order, the launch last; unchecked and unresolved ids are never sent. */
   function alertPlan(legs: AlertLegsFn): AlertPlan {
     const d = exportDraft(), pool = [...tripAtlas.value.targets, ...(d.userWaypoints ?? []).map(userWaypointTarget)], launchId = launchPoint()[0]?.id, seen = new Set<string>(), stops: AlertStop[] = [];
-    let unresolved = false;
+    // A checked launch must resolve to exactly the saved launch: a list still loading, unavailable, or without the id refuses the whole save (never the first point).
+    const wanted = launchChoice.value[region.id] ?? draft.value.launchId, listed = launchPoints.value?.region === region.id ? launchPoints.value.points : null;
+    let unresolved = !!draft.value.launchId && (!listed || !listed.some(p => p.id === wanted));
     for (const id of d.ids) {
       if (seen.has(id)) continue;
       seen.add(id);
@@ -662,7 +664,7 @@ export function createPlanner(deps: PlannerDeps) {
     const first = alertPlan(legs);
     if (!first.ok) { alertStatus.value = first.message; return; }
     const key = JSON.stringify(first.body);
-    if (alertSaved.peek() === key) { alertStatus.value = ALERT_MSG.again; return; }
+    if (alertSavedKeys.peek().includes(key)) { alertStatus.value = ALERT_MSG.again; return; }
     const mine = ++alertGen, rev = revision, who = session.value, ctl = new AbortController();
     alertAbort?.abort(); alertAbort = ctl;
     batch(() => { alertBusy.value = true; alertStatus.value = ''; });
@@ -676,7 +678,7 @@ export function createPlanner(deps: PlannerDeps) {
       if (JSON.stringify(again.body) !== key) { alertStatus.value = ALERT_MSG.changed; return; }
       const result = await postTrip(again.body, deps.alertFetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a)), ctl);
       if (mine !== alertGen) return;
-      batch(() => { alertStatus.value = result.message; if (result.ok) alertSaved.value = key; });
+      batch(() => { alertStatus.value = result.message; if (result.ok) { alertSaved.value = key; alertSavedKeys.value = [...alertSavedKeys.peek(), key]; } });
     } finally { if (mine === alertGen) alertBusy.value = false; }
   }
   function setAlertOpen(on: boolean): void { alertOpen.value = on; }
@@ -686,7 +688,7 @@ export function createPlanner(deps: PlannerDeps) {
     scopeStatus, actionStatus, storageNote, tick, summary, spots, protectedHits, notesReady, waypointPosition,
     chooseWaypoint, saveWaypoint, removeWaypoint, addPlace,
     savedSpots, savedSpotsState, savedSpotsStatus, setSavedSpotsOpen, refreshSavedSpots, addSavedSpot,
-    alertStatus, alertBusy, alertSaved, setAlertOpen, alertPreview, saveAlert,
+    alertStatus, alertBusy, alertSaved, alertIsSaved: (body: unknown): boolean => alertSavedKeys.value.includes(JSON.stringify(body)), setAlertOpen, alertPreview, saveAlert,
     setFilter, edit, setLayer, contourTracks, setContourTracks, toggleSpot, setResearch, preset, add, review(id: string) { add(id); open(); }, open,
     selectBest, openReady, restore, exportFile, deliver, showOnMap, checkConditions,
     /** For tests and a region change: stop drawing the ranked set. */
