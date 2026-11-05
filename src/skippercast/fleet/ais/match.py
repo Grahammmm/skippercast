@@ -117,7 +117,8 @@ OPS_PER_POST = 400
 FT_PER_M = 3.28084
 FACT_SOURCE = "ais-static"
 SOURCE_URLS = {"aisstream": "https://aisstream.io/", "marinecadastre": "https://hub.marinecadastre.gov/",
-               "datalastic": "https://datalastic.com/"}
+               "datalastic": "https://datalastic.com/",
+               "local-nmea": "https://github.com/Grahammmm/skippercast/blob/main/src/skippercast/fleet/ais/sources/local_nmea.py"}
 CONFIDENCE = {"admin": 1.0, "registry": 0.9, "registry-disagrees": 0.5, "call-sign": 0.8, "ais-static-name": 0.7,
               "unknown": 0.1, "contradicted": 0.4, SCHEDULE: 0.85}
 # The only methods that may tie an MMSI to a vessel as `watched` (server/fleet/watch.ts STRONG_METHODS).

@@ -68,7 +68,7 @@ type Result = {status: number; body: Record<string, unknown>};
 class Invalid extends Error {}
 
 const ENUMS: Record<string, readonly string[]> = {
-  source: ['aisstream', 'marinecadastre', 'datalastic'], rights: FLEET_ENUMS.rights, status: ['open', 'closed', 'truncated'],
+  source: ['aisstream', 'marinecadastre', 'datalastic', 'local-nmea'], rights: FLEET_ENUMS.rights, status: ['open', 'closed', 'truncated'],
   segment: ['in-port', 'transit', 'drift-anchor', 'troll-slow', 'troll-pelagic', 'uncertain', 'gap'],
   event: ['drift-anchor', 'troll-slow', 'troll-pelagic'],
   basis: [BASIS], vesselClass: FLEET_ENUMS.vesselClass, tripType: FLEET_ENUMS.tripType,
