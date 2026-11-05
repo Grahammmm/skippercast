@@ -293,6 +293,8 @@ export interface PackMeta {
   v2?: {basemap: {saved: number; planned: number}; shell: {saved: number; requested: number}; /** URLs (and basemap tiles) the v2 phase could not save. */ missing?: string[]};
   /** The ocean phase's record (D9), additive: absent from packs saved before it. */
   ocean?: Awaited<ReturnType<typeof oceanPhase>>;
+  /** ISO time of the last hour both the saved wind and wave models cover; additive, absent from older packs or when a model was not saved. */
+  forecast_end?: string;
 }
 export type Progress = {phase: string; done: number; total: number; bytes: number};
 export async function listPacks(): Promise<{cache: string; meta: PackMeta}[]> {

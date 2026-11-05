@@ -14,6 +14,7 @@ import {
   type PackMeta, type Progress,
 } from '../trip.ts';
 import {oceanLines} from '../trip-ocean-lines.ts';
+import {forecastEndLine} from '../trip-forecast-end.ts';
 import {regionInfo, zone} from './App.tsx';
 
 const PHASES: Readonly<Record<string, string>> = {files: 'Data and rules', tiles: 'NOAA chart tiles', shell: 'This app', basemap: 'Base map tiles'};
@@ -117,7 +118,7 @@ function ChartPack() {
           const ocean = oceanLines(meta, new Date(), zone());
           return (
           <li key={cache}>
-            <div><strong>{meta.region_name}</strong><span class="ui-mono">Saved <Saved iso={meta.saved_at} /> · {formatBytes(meta.bytes)}</span><span>{packTiles(meta)}</span>
+            <div><strong>{meta.region_name}</strong><span class="ui-mono">Saved <Saved iso={meta.saved_at} /> · {formatBytes(meta.bytes)}</span><span>{packTiles(meta)}</span><span>{forecastEndLine(meta, new Date(), zone())}</span>
               {ocean ? <><span>Water temp: {ocean.water}</span><span>Currents: {ocean.currents}</span></> : null}</div>
             <Button size="sm" disabled={!!busy} onClick={() => void remove(cache)} aria-label={`Delete the saved ${meta.region_name}`}>Delete</Button>
           </li>

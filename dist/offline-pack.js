@@ -43,6 +43,21 @@ async function conditionsRequests(region) {
   } catch { return []; }
 }
 
+/**
+ * The last hour both the saved wind and the saved wave models cover: per kind the newest `data_end_time` (unix seconds) in the pack's
+ * own saved meta responses, then the earlier of the two kinds, as an ISO time. null (no guess) when a kind has none or none is finite.
+ */
+export async function forecastEnd(cache, models) {
+  const newest = {};
+  for (const m of models) {
+    let end = NaN;
+    try { const hit = await cache.match(m.meta); end = hit ? Number((await hit.json())?.data_end_time) : NaN; } catch { /* unreadable: no end */ }
+    if (Number.isFinite(end) && end > 0 && !(end <= newest[m.kind])) newest[m.kind] = end;
+  }
+  if (!Number.isFinite(newest.wind) || !Number.isFinite(newest.wave)) return null;
+  return new Date(Math.min(newest.wind, newest.wave) * 1000).toISOString();
+}
+
 async function pool(items, worker, signal) {
   let next = 0;
   await Promise.all(Array.from({length: Math.min(CONCURRENCY, items.length)}, async () => {
@@ -131,12 +146,13 @@ export async function savePack({signal, progress = () => {}, sessionStart = 0, m
     if (signal.aborted) throw new DOMException('Cancelled', 'AbortError');
     // The ocean record (web/trip.ts) is the meta's own, beside `v2`, not inside it.
     const {ocean, ...v2} = answer ?? {};
+    const forecast_end = await forecastEnd(cache, (await import('./marine-data.js').catch(() => ({MODELS: []}))).MODELS);
     const meta = {
       schema_version: 1, region_id: region.id, region_name: region.name, saved_at: started.toISOString(), bytes,
       files: {saved: urls.length - missing.length, requested: urls.length, from_session: copied},
       missing: missing.slice(0, 50),
       tiles: {saved: tilesSaved, planned: plan.tiles.length, min_zoom: plan.minZoom, max_zoom: plan.maxZoom, requested_max_zoom: plan.requestedMaxZoom, layers},
-      ...(answer ? {v2} : {}), ...(ocean ? {ocean} : {}),
+      ...(answer ? {v2} : {}), ...(ocean ? {ocean} : {}), ...(forecast_end ? {forecast_end} : {}),
     };
     await cache.put(PACK_META, new Response(JSON.stringify(meta), {headers: {'Content-Type': 'application/json'}}));
     // The new pack is complete: older packs of the same region go.
