@@ -150,11 +150,18 @@ const isoDay = ms => new Date(ms).toISOString().slice(0, 10);
 /** Every row with its id, status 'review', reviewed_at now and review_due (90 days, or the season end when sooner and not past). */
 export function importRows(now = Date.now(), files = regulationFiles()) {
   const today = isoDay(now), due90 = isoDay(now + REVIEW_DAYS * DAY), stamp = new Date(now).toISOString();
-  return files.flatMap(rowsForFile).map(row => {
+  const out = files.flatMap(rowsForFile).map(row => {
     const end = /^\d{4}-\d{2}-\d{2}$/.test(row.season_close ?? '') && row.season_close >= today && row.season_close < due90 ? row.season_close : due90;
     const {file_species, ...rest} = row;
     return {id: ruleId(row), ...rest, reviewed_at: stamp, review_due: end, status: 'review', updated_by: UPDATED_BY, updated_at: stamp, file_species};
   });
+  // Two rows with one id would overwrite each other in the upserts, so input order would pick the stored limit: refuse the batch.
+  const seen = new Set();
+  for (const r of out) {
+    if (seen.has(r.id)) throw new Error(`Duplicate imported rule: ${r.jurisdiction}/${r.region}/${r.species_key}`);
+    seen.add(r.id);
+  }
+  return out;
 }
 
 export const COLUMNS = ['id', 'region', 'jurisdiction', 'species_key', 'species_label', 'size_min_in', 'size_max_in', 'bag_limit', 'bag_notes',
