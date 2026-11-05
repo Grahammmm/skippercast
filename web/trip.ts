@@ -17,6 +17,7 @@ import {shorelineOverviewURL, shorelineURL} from './map/coastline.ts';
 import {chartFileListed} from './chart-files.ts';
 import {landWaterLinesURL, landWaterURL} from './land-water.ts';
 import {depthContoursOverviewURL, depthContoursURL} from './map/depth-contours.ts';
+import {browserStorage} from '../dist/browser-storage.js';
 import {atlasMarksURL, planIndexURL} from './startup-forms.ts';
 import {MARKS_SOURCE} from './map/layers.ts';
 import {markSources} from './map/marks.ts';
@@ -51,7 +52,7 @@ export const tripIds = signal<readonly string[]>([]);
 /** trip-export.js `draftKey`, restated so the app's first paint loads no planner code (tests/test_trip.mjs pins it). */
 export const draftKey = (id: string): string => `skippercast.export.v1.${id}`;
 /** The draft's ids for `id` as the planner saved them (web/planner.ts `persist`); the planner screens them again. */
-export function savedIds(id: string | null, storage: Pick<Storage, 'getItem'> | undefined = globalThis.localStorage): string[] {
+export function savedIds(id: string | null, storage: Pick<Storage, 'getItem'> | null | undefined = browserStorage()): string[] {
   try {
     const ids = id ? (JSON.parse(storage?.getItem(draftKey(id)) ?? 'null') as {ids?: unknown} | null)?.ids : null;
     return Array.isArray(ids) ? [...new Set(ids.filter((v): v is string => typeof v === 'string'))] : [];
