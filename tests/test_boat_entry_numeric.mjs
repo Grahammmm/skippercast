@@ -7,7 +7,12 @@ import {mkdtemp, readFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {build} from 'esbuild';
+import {existsSync} from 'node:fs';
 import {chromium} from '@playwright/test';
+
+// The CI check job runs node --test without Playwright's browsers; skip there as
+// tests/test_region_phone_capture.mjs does, and run wherever Chromium is installed.
+const needsChromium = {skip: !existsSync(chromium.executablePath()) && 'chromium not installed'};
 
 const ROOT = new URL('..', import.meta.url).pathname;
 let bundle;
@@ -65,7 +70,7 @@ const state = page => page.evaluate(() => ({
   mismatch: [...document.querySelectorAll('input')].map(i => i.validity.stepMismatch),
 }));
 
-test('boat_entry_inputs_declare_step_any_decimal_number', async () => {
+test('boat_entry_inputs_declare_step_any_decimal_number', needsChromium, async () => {
   await withForm(async page => {
     const inputs = await page.evaluate(() => [...document.querySelectorAll('form input')].map(i => ({name: i.name, type: i.type, step: i.getAttribute('step'), mode: i.inputMode, required: i.required, min: i.getAttribute('min'), max: i.getAttribute('max')})));
     assert.deepEqual(inputs.map(i => i.name), ['lengthFt', 'wind', 'seas']);
@@ -73,7 +78,7 @@ test('boat_entry_inputs_declare_step_any_decimal_number', async () => {
   });
 });
 
-test('boat_entry_fractional_seas_submits_natively', async () => {
+test('boat_entry_fractional_seas_submits_natively', needsChromium, async () => {
   await withForm(async page => {
     await fill(page, {lengthFt: '19', wind: '12', seas: '2.5'});
     await save(page);
@@ -86,7 +91,7 @@ test('boat_entry_fractional_seas_submits_natively', async () => {
   });
 });
 
-test('boat_entry_fractional_length_submits_natively', async () => {
+test('boat_entry_fractional_length_submits_natively', needsChromium, async () => {
   await withForm(async page => {
     await fill(page, {lengthFt: '19.5'});
     await save(page);
@@ -106,7 +111,7 @@ test('boat_entry_fractional_length_submits_natively', async () => {
   });
 });
 
-test('boat_entry_integer_and_blank_are_unchanged', async () => {
+test('boat_entry_integer_and_blank_are_unchanged', needsChromium, async () => {
   await withForm(async page => {
     await fill(page, {lengthFt: '19', wind: '12', seas: '3'});
     await save(page);
@@ -133,7 +138,7 @@ test('boat_entry_integer_and_blank_are_unchanged', async () => {
   });
 });
 
-test('boat_entry_validation_still_delegates_to_existing_policy', async () => {
+test('boat_entry_validation_still_delegates_to_existing_policy', needsChromium, async () => {
   // Malformed native number input (real keystrokes) stays invalid and never submits.
   await withForm(async page => {
     await page.locator('[name="seas"]').click();
