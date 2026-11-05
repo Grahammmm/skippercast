@@ -177,12 +177,28 @@ export function savedSpotMark(properties: Record<string, unknown> | null): Chart
   return cardFor(row);
 }
 
+/** SC1822-09: each private card is bound to the row it was made from, so the card needs no position of its own. */
+const CARD_ROW = new WeakMap<ChartMark, SavedSpotRow>();
+
+/**
+ * The point behind a real private card, for the card's distance line only: a fresh coordinate pair, never the row, note or database id.
+ * Null for a forged or copied card, a row no longer in the current session's ready list, a layer that does not draw, or a signed-out session.
+ * Reads the layer's signals, so a caller re-renders the moment access is lost.
+ */
+export function savedSpotDistancePosition(mark: ChartMark): {latitude: number; longitude: number} | null {
+  const row = CARD_ROW.get(mark), read = store.value;
+  if (!row || !drawable.value || read.state !== 'ready' || !read.rows.includes(row)) return null;
+  return {latitude: row.latitude, longitude: row.longitude};
+}
+
 function cardFor(row: SavedSpotRow): ChartMark {
   const at = region.peek(), data = markData.peek()?.region;
-  return {
+  const card: ChartMark = {
     id: `${SAVED_CARD_PREFIX}${row.key}`, name: row.name, kind: CARD_WORDS.kind, reading: readingFor(verdictFor(row, at)), source: CARD_WORDS.source,
     rules: CARD_WORDS.caveat, regulations: regulationsLink(data && data.id === at ? data : {id: at ?? ''}), basis: layerEntry('saved-spots').basis,
   };
+  CARD_ROW.set(card, row);
+  return card;
 }
 
 /** A pick of a pin: the private card replaces the Chart's selection. It never touches the address, history or camera. */
