@@ -1,9 +1,9 @@
 {
   "counts": {
-    "all_reference_keys": 303,
-    "schema_location_references": 303
+    "all_reference_keys": 313,
+    "schema_location_references": 313
   },
-  "manifest_sha256": "0549f7c5021fa27c68c8da98e1969216deb79998daa68fabce71438998df27ee",
+  "manifest_sha256": "b6c250b13d6ecb68683f8dac0307517826bb407527713275b44ff18ef88ffdad",
   "oracle": "referencing (python-jsonschema) Registry.crawl + Resolver.lookup, Draft 2020-12 subresources_of; no retrieve",
   "reference_keys_outside_schema_locations": [],
   "references": [
@@ -2306,10 +2306,10 @@
       "keyword": "$ref",
       "outcome": "resolved",
       "pointer": "/$defs/access/properties/checkedAt/$ref",
-      "reference": "common.schema.json#/$defs/timestamp",
+      "reference": "#/$defs/nullableTimestamp",
       "source_path": "schemas/shore-habitat.schema.json",
-      "target_path": "schemas/common.schema.json",
-      "target_pointer": "/$defs/timestamp"
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/nullableTimestamp"
     },
     {
       "keyword": "$ref",
@@ -2328,6 +2328,15 @@
       "source_path": "schemas/shore-habitat.schema.json",
       "target_path": "schemas/common.schema.json",
       "target_pointer": "/$defs/https_url"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/nullableTimestamp/oneOf/0/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
     },
     {
       "keyword": "$ref",
@@ -2395,6 +2404,60 @@
     {
       "keyword": "$ref",
       "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/allOf/0/oneOf/0/properties/checkedAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/allOf/0/oneOf/0/properties/reviewExpiresAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/allOf/1/oneOf/0/properties/accessReviewExpiresAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/allOf/1/oneOf/0/properties/accessReviewedAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/allOf/2/oneOf/0/properties/legalReviewExpiresAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/allOf/2/oneOf/0/properties/legalReviewedAt/$ref",
+      "reference": "common.schema.json#/$defs/timestamp",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/common.schema.json",
+      "target_pointer": "/$defs/timestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
       "pointer": "/$defs/run/properties/properties/properties/access/items/$ref",
       "reference": "#/$defs/access",
       "source_path": "schemas/shore-habitat.schema.json",
@@ -2405,19 +2468,19 @@
       "keyword": "$ref",
       "outcome": "resolved",
       "pointer": "/$defs/run/properties/properties/properties/accessReviewExpiresAt/$ref",
-      "reference": "common.schema.json#/$defs/timestamp",
+      "reference": "#/$defs/nullableTimestamp",
       "source_path": "schemas/shore-habitat.schema.json",
-      "target_path": "schemas/common.schema.json",
-      "target_pointer": "/$defs/timestamp"
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/nullableTimestamp"
     },
     {
       "keyword": "$ref",
       "outcome": "resolved",
       "pointer": "/$defs/run/properties/properties/properties/accessReviewedAt/$ref",
-      "reference": "common.schema.json#/$defs/timestamp",
+      "reference": "#/$defs/nullableTimestamp",
       "source_path": "schemas/shore-habitat.schema.json",
-      "target_path": "schemas/common.schema.json",
-      "target_pointer": "/$defs/timestamp"
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/nullableTimestamp"
     },
     {
       "keyword": "$ref",
@@ -2432,10 +2495,10 @@
       "keyword": "$ref",
       "outcome": "resolved",
       "pointer": "/$defs/run/properties/properties/properties/checkedAt/$ref",
-      "reference": "common.schema.json#/$defs/timestamp",
+      "reference": "#/$defs/nullableTimestamp",
       "source_path": "schemas/shore-habitat.schema.json",
-      "target_path": "schemas/common.schema.json",
-      "target_pointer": "/$defs/timestamp"
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/nullableTimestamp"
     },
     {
       "keyword": "$ref",
@@ -2450,19 +2513,19 @@
       "keyword": "$ref",
       "outcome": "resolved",
       "pointer": "/$defs/run/properties/properties/properties/legalReviewExpiresAt/$ref",
-      "reference": "common.schema.json#/$defs/timestamp",
+      "reference": "#/$defs/nullableTimestamp",
       "source_path": "schemas/shore-habitat.schema.json",
-      "target_path": "schemas/common.schema.json",
-      "target_pointer": "/$defs/timestamp"
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/nullableTimestamp"
     },
     {
       "keyword": "$ref",
       "outcome": "resolved",
       "pointer": "/$defs/run/properties/properties/properties/legalReviewedAt/$ref",
-      "reference": "common.schema.json#/$defs/timestamp",
+      "reference": "#/$defs/nullableTimestamp",
       "source_path": "schemas/shore-habitat.schema.json",
-      "target_path": "schemas/common.schema.json",
-      "target_pointer": "/$defs/timestamp"
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/nullableTimestamp"
     },
     {
       "keyword": "$ref",
@@ -2486,10 +2549,37 @@
       "keyword": "$ref",
       "outcome": "resolved",
       "pointer": "/$defs/run/properties/properties/properties/reviewExpiresAt/$ref",
-      "reference": "common.schema.json#/$defs/timestamp",
+      "reference": "#/$defs/nullableTimestamp",
       "source_path": "schemas/shore-habitat.schema.json",
-      "target_path": "schemas/common.schema.json",
-      "target_pointer": "/$defs/timestamp"
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/nullableTimestamp"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/sourceAcquisitions/properties/access/$ref",
+      "reference": "#/$defs/receipt",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/receipt"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/sourceAcquisitions/properties/noaa/$ref",
+      "reference": "#/$defs/receipt",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/receipt"
+    },
+    {
+      "keyword": "$ref",
+      "outcome": "resolved",
+      "pointer": "/$defs/run/properties/properties/properties/sourceAcquisitions/properties/terms/$ref",
+      "reference": "#/$defs/receipt",
+      "source_path": "schemas/shore-habitat.schema.json",
+      "target_path": "schemas/shore-habitat.schema.json",
+      "target_pointer": "/$defs/receipt"
     },
     {
       "keyword": "$ref",
