@@ -3,7 +3,7 @@
 // values (a product name, an ISO instant and its zone, a number). The rail and legend resolve it in the page's
 // language at render, so a language change needs no refetch. English, a missing descriptor or bad metadata return
 // the producer's own string untouched. Erasable syntax only (Node tests import this).
-import {localeOf, t, type StringId} from '../i18n.ts';
+import {localeOf, STRINGS, t, type StringId} from '../i18n.ts';
 import {copyText, type MarkCopyPart} from '../mark-copy.ts';
 
 /** A value in a status template: raw text or number, another catalogue string, or a date, clock time, decimal or age to format. */
@@ -51,9 +51,16 @@ const mark = (p: StatusPart, lang: string): MarkCopyPart =>
 /** The parts in `lang` (also `en`, which the tests use to pin the catalogue to the producers' English); throws on a bad value. */
 export const statusIn = (parts: readonly StatusPart[], lang: string): string => copyText(parts.map(p => mark(p, lang)), lang);
 
+/** True when every catalogue id in the parts, nested ones included, exists. The browser's lookup returns an unknown id as text instead of throwing, so this is checked first. */
+function known(parts: readonly StatusPart[]): boolean {
+  const okVar = (v: StatusVar): boolean => typeof v !== 'object' || !('id' in v) || okId(v.id, v.vars);
+  const okId = (id: string, vars?: Readonly<Record<string, StatusVar>>): boolean => Object.hasOwn(STRINGS, id) && Object.values(vars ?? {}).every(okVar);
+  return parts.every(p => typeof p === 'string' || okId(p.id, p.vars));
+}
+
 /** `raw` shown in `lang`: `translated` is true only when a Spanish descriptor resolved; otherwise the producer's own string, unchanged. */
 export function statusText(raw: string, parts: readonly StatusPart[] | undefined, lang: string): {readonly text: string; readonly translated: boolean} {
-  if (lang !== 'es' || !parts?.length) return {text: raw, translated: false};
+  if (lang !== 'es' || !parts?.length || !known(parts)) return {text: raw, translated: false};
   try {
     const text = statusIn(parts, lang);
     return text.trim() ? {text, translated: true} : {text: raw, translated: false};

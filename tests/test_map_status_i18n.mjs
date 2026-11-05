@@ -26,7 +26,7 @@ async function load() {
       export {LayerRail} from './web/app/LayerRail.tsx';
       export {Legend} from './web/app/Legend.tsx';
       export {railNotes, railNoteCopies, setRailNote} from './web/map/layers.ts';
-      export {language} from './web/i18n.ts';
+      export {language, lookup, STRINGS} from './web/i18n.ts';
       export {regionalStatus, analysisStatus, waterTempState} from './web/map/sst.ts';
       export {contrastStatus, contrastState} from './web/map/contrast.ts';
       export {chlorophyllStatus} from './web/map/chlorophyll.ts';
@@ -154,7 +154,12 @@ test('absent, bad or English metadata leaves the producer string whole and never
   assert.equal(m.resolveStatusText(raw, undefined, 'es'), raw);
   assert.equal(m.resolveStatusText(raw, [], 'es'), raw);
   assert.equal(m.resolveStatusText(raw, [m.sp('map.status.sst.reportExpired')], 'en'), raw);
-  assert.equal(m.statusText(raw, [{id: 'no.such.id'}], 'es').translated === true && m.statusText(raw, [{id: 'no.such.id'}], 'es').text === raw, false, 'an unknown id never replaces the sentence with a bare id');
+  // The browser's lookup returns an unknown id as text instead of throwing (the Node path throws); the status must not depend on that.
+  assert.equal(m.lookup(m.STRINGS, 'no.such.id', 'es', {}, false), 'no.such.id');
+  const unchanged = {text: raw, translated: false};
+  assert.deepEqual(m.statusText(raw, [{id: 'no.such.id'}], 'es'), unchanged, 'an unknown top-level id keeps the producer string');
+  assert.deepEqual(m.statusText(raw, [m.sp('map.status.common.staleNote', {date: {id: 'no.such.id'}})], 'es'), unchanged, 'an unknown nested id keeps the producer string');
+  assert.deepEqual(m.statusText(raw, [m.sp('map.status.sst.reportExpired'), {id: 'no.such.id'}], 'es'), unchanged, 'one unknown id among good parts keeps the producer string');
   const badDate = m.statusText(raw, [m.sp('map.status.common.staleNote', {date: {day: 'not a date', tz: TZ}})], 'es');
   assert.deepEqual([badDate.text, badDate.translated], [raw, false], 'an unreadable date falls back to the raw refusal');
   const badZone = m.statusText(raw, [m.sp('map.status.common.staleNote', {date: {day: ANALYSED, tz: 'Not/AZone'}})], 'es');
