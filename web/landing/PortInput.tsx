@@ -8,7 +8,9 @@
 import {useEffect, useId, useRef, useState} from 'preact/hooks';
 import type {ComponentChildren} from 'preact';
 import {Button, IconButton} from '../ui/Button.tsx';
-import {COPY, forgetHome, hasSavedHome, listPorts, locatePort, type CookieJar, type HomeStorage, type Port} from '../ports.ts';
+import {forgetHome, hasSavedHome, listPorts, locatePort, type CookieJar, type HomeStorage, type Port} from '../ports.ts';
+import {language, t} from './i18n.ts';
+import {portCopy} from './copy.ts';
 
 export type PortInputProps = {
   /** The directory; null while it loads, and an empty list when it failed. */
@@ -28,7 +30,8 @@ export type PortInputProps = {
   cookies?: CookieJar | null;
 };
 
-export function PortInput({ports, onChoose, onExplore, onRetry, label = COPY.question, autoFocus = false, locate = false, geolocation, storage, cookies}: PortInputProps) {
+export function PortInput({ports, onChoose, onExplore, onRetry, label: labelProp, autoFocus = false, locate = false, geolocation, storage, cookies}: PortInputProps) {
+  const lang = language.value, COPY = portCopy(lang), label = labelProp ?? COPY.question;
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
@@ -56,12 +59,12 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label = COPY.que
       <div class="port-input-row">
         <input ref={input} id={id} type="search" autocomplete="off" autofocus={autoFocus} placeholder={COPY.placeholder} value={query} aria-describedby={`${id}-note`}
           onInput={event => { setQuery((event.currentTarget as HTMLInputElement).value); setNearest(null); setFeedback(''); }} />
-        <Button type="submit" variant="primary" icon="arrow" disabled={!matches[0]}>Go</Button>
+        <Button type="submit" variant="primary" icon="arrow" disabled={!matches[0]}>{t('landing.port.go', lang)}</Button>
       </div>
       <div class="port-input-results" aria-live="polite">
-        {ports === null ? <p class="port-input-empty">Loading ports…</p> : null}
-        {ports && !matches.length ? <p class="port-input-empty">{ports.length ? COPY.empty : 'Port choices are unavailable. Explore the coast instead.'}</p> : null}
-        {ports && !ports.length && onRetry ? <Button size="sm" onClick={onRetry}>Try again</Button> : null}
+        {ports === null ? <p class="port-input-empty">{t('landing.port.loading', lang)}</p> : null}
+        {ports && !matches.length ? <p class="port-input-empty">{ports.length ? COPY.empty : t('landing.port.listDown', lang)}</p> : null}
+        {ports && !ports.length && onRetry ? <Button size="sm" onClick={onRetry}>{t('landing.port.retry', lang)}</Button> : null}
         <ul class="port-input-list">
           {matches.map(port => (
             <li key={port.id}>
@@ -71,12 +74,12 @@ export function PortInput({ports, onChoose, onExplore, onRetry, label = COPY.que
             </li>
           ))}
         </ul>
-        {ports && !query && !nearest && !showAll ? <Button variant="quiet" size="sm" onClick={() => setShowAll(true)}>See all {ports.length} ports</Button> : null}
+        {ports && !query && !nearest && !showAll ? <Button variant="quiet" size="sm" onClick={() => setShowAll(true)}>{t('landing.port.all', lang, {n: ports.length})}</Button> : null}
       </div>
       <p class="port-input-feedback" role="status">{feedback}</p>
       <div class="port-input-actions">
-        <Button icon="target" onClick={findNearby} disabled={!ports}>Use my location</Button>
-        <Button icon="map" onClick={onExplore}>Explore the coast</Button>
+        <Button icon="target" onClick={findNearby} disabled={!ports}>{t('landing.port.locate', lang)}</Button>
+        <Button icon="map" onClick={onExplore}>{t('landing.port.explore', lang)}</Button>
       </div>
       {saved ? <Button variant="quiet" size="sm" class="port-input-forget" onClick={forget}>{COPY.forget}</Button> : null}
       <p id={`${id}-note`} class="port-input-note">{COPY.privacy}</p>
@@ -93,7 +96,8 @@ export type PortDialogProps = {
 };
 
 /** The app's port sheet: a native modal dialog (Escape, the focus trap and the autofocus are the browser's), opened only by a control. */
-export function PortDialog({open, onClose, title = 'Change port', children}: PortDialogProps) {
+export function PortDialog({open, onClose, title, children}: PortDialogProps) {
+  const lang = language.value;
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
   useEffect(() => {
@@ -105,8 +109,8 @@ export function PortDialog({open, onClose, title = 'Change port', children}: Por
   return (
     <dialog ref={ref} class="port-dialog" aria-labelledby={id} onClose={onClose}>
       <div class="port-dialog-head">
-        <h2 id={id}>{title}</h2>
-        <IconButton icon="close" label="Close" onClick={onClose} />
+        <h2 id={id}>{title ?? t('landing.port.dialog', lang)}</h2>
+        <IconButton icon="close" label={t('landing.port.close', lang)} onClick={onClose} />
       </div>
       {open ? children : null}
     </dialog>

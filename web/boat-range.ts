@@ -39,10 +39,16 @@ function shownName(raw: string): string {
   return points.length > BOAT_NAME_SHOWN_MAX ? `${points.slice(0, BOAT_NAME_SHOWN_MAX - 1).join('')}…` : s;
 }
 
+/** A cleaned custom name, distinct from the first-use step's automatic length label. */
+export function customBoatName(boat: SavedBoatLike): string | null {
+  const name = typeof boat?.name === 'string' ? shownName(boat.name) : '';
+  return name && !/^\d+(\.\d+)? ft boat$/.test(name) ? name : null;
+}
+
 /** The saved boat's name (shown cleaned, see shownName), else "your <n> ft boat", else the reference boat. The first-use step's automatic "<n> ft boat" name counts as no name. */
 export function boatBasisName(boat: SavedBoatLike): string {
   if (!boat) return REFERENCE_BOAT_NAME;
-  const name = typeof boat.name === 'string' ? shownName(boat.name) : '';
-  if (name && !/^\d+(\.\d+)? ft boat$/.test(name)) return name;
+  const name = customBoatName(boat);
+  if (name) return name;
   return finite(boat.loa_ft) ? `your ${Number(boat.loa_ft.toFixed(1))} ft boat` : 'your boat';
 }
