@@ -48,6 +48,7 @@ from __future__ import annotations
 import csv
 from datetime import date, datetime, timezone
 import io
+import math
 from pathlib import Path
 import tempfile
 from typing import IO, Iterable, Iterator, MutableMapping
@@ -152,7 +153,7 @@ def _float(text: str, unavailable: float | None = None, low: float | None = None
     if not text:
         return None
     value = float(text)
-    if value != value or (unavailable is not None and value == unavailable):
+    if not math.isfinite(value) or (unavailable is not None and value == unavailable):
         return None
     if (low is not None and value < low) or (high is not None and value > high):
         return None

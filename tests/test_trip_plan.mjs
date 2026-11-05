@@ -86,3 +86,50 @@ test('POST saves the plan, PATCH changes it without touching the alert, GET retu
     await worker.fetch(request('trips',{owner:'alice',method:'DELETE',body:{id}}),env);assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM trips').get().n,1);
   }finally{sql.close();}
 });
+
+const BAD_IDS=[123,0,true,false,null,['reef-a'],[['reef-a']],[],{},{toString:null}];
+const badPlans=()=>[...BAD_IDS.map(id=>({...spot('x',0),id})),(()=>{const s=spot('x',0);delete s.id;return s;})()];
+
+test('trip_spot_id_requires_string',()=>{
+  for(const bad of badPlans())assert.throws(()=>validateTripPlan({plan:{spots:[bad]}},region,'reef'),e=>e.message==='invalid spot id'&&e.constructor.name==='ClientError',JSON.stringify(bad.id));
+});
+
+test('trip_spot_id_string_boundaries_unchanged',()=>{
+  for(const id of ['a','0','123','true','null','undefined','a'.repeat(64)])assert.equal(validateTripPlan({plan:{spots:[spot(id,0)]}},region,'reef').plan.spots[0].id,id);
+  for(const id of ['','a'.repeat(65),'Reef','a b','a_b','a/b'])assert.throws(()=>validateTripPlan({plan:{spots:[spot(id,0)]}},region,'reef'),/invalid spot id/,id);
+});
+
+test('trip_post_and_patch_nonstring_spot_id_never_write',async()=>{
+  const {sql,adapter}=database(),env={DB:adapter};
+  const snap=id=>JSON.stringify(sql.prepare('SELECT * FROM trips WHERE id=?').get(id));
+  const count=()=>sql.prepare('SELECT COUNT(*) AS n FROM trips').get().n;
+  try{
+    const created=await worker.fetch(request('trips',{owner:'alice',method:'POST',body:{...alert,plan}}),env);
+    assert.equal(created.status,201);const {id}=await created.json();
+    const before=snap(id);
+    for(const bad of badPlans()){
+      const post=await worker.fetch(request('trips',{owner:'alice',method:'POST',body:{...alert,plan:{spots:[spot('ok',0),bad]}}}),env);
+      assert.equal(post.status,400,'POST '+JSON.stringify(bad.id));assert.equal((await post.json()).error,'invalid spot id');
+      const patch=await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id,status:'done',plan:{spots:[bad]}}}),env);
+      assert.equal(patch.status,400,'PATCH '+JSON.stringify(bad.id));assert.equal((await patch.json()).error,'invalid spot id');
+    }
+    assert.equal(count(),1,'no trip row was inserted');
+    assert.equal(snap(id),before,'the stored trip row is byte-identical');
+  }finally{sql.close();}
+});
+
+test('trip_spot_string_roundtrip_and_owner_boundary',async()=>{
+  const {sql,adapter}=database(),env={DB:adapter};
+  try{
+    const created=await worker.fetch(request('trips',{owner:'alice',method:'POST',body:{...alert,plan:{spots:[spot('123',0)]}}}),env);
+    assert.equal(created.status,201);const {id}=await created.json();
+    const patched=await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id,plan:{spots:[spot('true',0)]}}}),env);
+    assert.equal(patched.status,200);assert.equal((await patched.json()).plan.spots[0].id,'true');
+    const listed=(await (await worker.fetch(request('trips',{owner:'alice'}),env)).json()).trips[0];assert.equal(listed.plan.spots[0].id,'true');
+    const bad={plan:{spots:[{...spot('x',0),id:123}]}};
+    assert.equal((await worker.fetch(request('trips',{owner:'bob',method:'PATCH',body:{id,...bad}}),env)).status,404,'foreign id is 404 before plan validation');
+    assert.equal((await worker.fetch(request('trips',{owner:'alice',method:'PATCH',body:{id:'missing',...bad}}),env)).status,404);
+    assert.notEqual((await worker.fetch(request('trips',{method:'POST',body:{...alert,plan}}),env)).status,201,'anonymous writes are refused');
+    assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM trips').get().n,1);
+  }finally{sql.close();}
+});
