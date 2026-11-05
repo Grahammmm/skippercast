@@ -106,6 +106,58 @@ class NormaliseTest(unittest.TestCase):
             self.assertLessEqual(set(types), set(aisstream.MESSAGE_TYPES), path)
             AisstreamSource(message_types=types)
 
+    def test_non_finite_values_are_never_emitted(self):
+        names = ('position-report', 'standard-class-b-position-report', 'extended-class-b-position-report')
+        bad = (float('nan'), float('inf'), float('-inf'))
+        for name in names:
+            for key in ('Latitude', 'Longitude'):
+                for value in bad:
+                    with self.subTest(name=name, key=key, value=value):
+                        document = fixture(name)
+                        document['Message'][document['MessageType']][key] = value
+                        records = normalise(document)
+                        self.assertEqual([r for r in records if isinstance(r, AisPosition)], [])
+                        self.assertEqual(len(records), 1 if name.startswith('extended') else 0)
+            for key, attr in (('Sog', 'sog'), ('Cog', 'cog'), ('TrueHeading', 'heading')):
+                for value in bad:
+                    with self.subTest(name=name, key=key, value=value):
+                        document = fixture(name)
+                        body = document['Message'][document['MessageType']]
+                        body[key] = value
+                        valid = normalise(fixture(name))[0]
+                        [record] = [r for r in normalise(document) if isinstance(r, AisPosition)]
+                        self.assertIsNone(getattr(record, attr))
+                        for other in ('lat', 'lon', 'sog', 'cog', 'heading', 'ts'):
+                            if other != attr:
+                                self.assertEqual(getattr(record, other), getattr(valid, other))
+                        json.dumps(record.__dict__, allow_nan=False)
+
+    def test_json_text_overflow_and_huge_integers(self):
+        text = json.dumps(fixture('position-report'))
+        for key in ('"Latitude": 35.36', '"Longitude": -120.9'):
+            self.assertIn(key, text)
+            self.assertEqual(normalise(text.replace(key, key.split(':')[0] + ': 1e999')), [])
+        self.assertEqual(normalise(text.replace('"Latitude": 35.36', '"Latitude": NaN')), [])
+        self.assertIsNone(normalise(text.replace('"Sog": 1.4', '"Sog": 1e999'))[0].sog)
+        for key in ('Latitude', 'Longitude', 'Sog', 'Cog', 'TrueHeading'):
+            document = fixture('position-report')
+            document['Message']['PositionReport'][key] = 10 ** 400
+            records = normalise(document)
+            self.assertEqual(len(records), 0 if key in ('Latitude', 'Longitude') else 1)
+            if records:
+                self.assertIsNone(getattr(records[0], {'Sog': 'sog', 'Cog': 'cog', 'TrueHeading': 'heading'}[key]))
+
+    def test_coordinate_endpoints_stay_allowed(self):
+        for lat, lon in ((90, 180), (-90, -180), (90.0, -180.0)):
+            document = fixture('position-report')
+            document['Message']['PositionReport'].update(Latitude=lat, Longitude=lon)
+            [record] = normalise(document)
+            self.assertEqual((record.lat, record.lon), (float(lat), float(lon)))
+        for lat, lon in ((90.1, 0), (0, -180.1), (True, 0), ('1', 0), (None, 0)):
+            document = fixture('position-report')
+            document['Message']['PositionReport'].update(Latitude=lat, Longitude=lon)
+            self.assertEqual(normalise(document), [])
+
     def test_frames_without_records(self):
         self.assertEqual(normalise(fixture('subscription-confirmation')), [])
         self.assertEqual(normalise({'MessageType': 'BaseStationReport', 'Message': {}, 'MetaData': {}}), [])
