@@ -1,15 +1,22 @@
 # HTTP API reference
 
-Every route the SkipperCast Worker answers, derived by reading `server/app.ts` and `server/routes/`, `server/feeds.ts`, `server/model-api.js` and `server/boat-lookup.ts` on `main` (after PR #24, [P0-01]). The same Worker runs on ChatGPT Sites (skippercast.com today) and on SkipperCast's own Cloudflare account ([Cloudflare](../cloudflare.md)). Where an open PR changes a route, the change is listed under **Pending changes** so this page describes the system as it will be once they merge. The guide's target (P5-03, P3-01) is to generate this from typed route definitions (Hono + zod → OpenAPI); until then this page is maintained by hand. When you change a route, update this page in the same PR.
+Every route the SkipperCast Worker answers, derived by reading `server/app.ts` and `server/routes/`, `server/feeds.ts`, `server/model-api.js` and `server/boat-lookup.ts` as they stand on current `main`. It describes what the repository's code does, not an audit of any live deployment: which bindings and secrets a deployment has is set outside the code. The Worker runs on SkipperCast's own Cloudflare account ([Cloudflare](../cloudflare.md)), with accounts built on passkeys ([ADR 0006](adr/0006-passkey-accounts-stripe-later.md)); the former ChatGPT Sites runtime and its identity headers are gone. This page is maintained by hand. Generating it from typed route definitions (OpenAPI) is a future goal and is not implemented: nothing in `server/` produces an OpenAPI document. When you change a route, update this page in the same PR.
 
 Examples below were produced by running the Worker in Node with an in-memory D1, a fake R2 bucket and synthetic forecast tiles, the same way `tests/test_private_api.mjs` does.
 
 ## Conventions
 
-- **Order of matching** (`server/app.ts`, a Hono app; each route module is under `server/routes/`): `GET /feeds/*` → public `/api/` routes → `/api/auth/*` → `/api/session` → the private gate (`server/middleware/auth.ts`) → private `/api/` routes → `/api/*` `404` → any other path (static site). Routing uses the raw, still percent-encoded path. `HEAD` is answered as `GET` without a body. Unknown `/api/` paths answer `401` to anonymous callers and `404` to signed-in ones, because the identity check comes before the final `404`.
+- **Order of matching** (`server/app.ts`, a Hono app; each route module is under `server/routes/`): `GET /feeds/*` → public `/api/` routes → `/api/auth/*` (see [Accounts / passkeys](#accounts--passkeys)) → `/api/session` → the private gate (`server/middleware/auth.ts`) → private `/api/` routes → `/api/*` `404` → any other path (static site). Routing uses the raw, still percent-encoded path. `HEAD` is answered as `GET` without a body. Unknown `/api/` paths answer `401` to anonymous callers and `404` to signed-in ones, because the identity check comes before the final `404`.
 - **JSON responses** from `/api/*` carry `Content-Type: application/json`, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`, unless a route below sets a public `Cache-Control`.
-- **Identity.** A request is signed in only when `IDENTITY_PROVIDER` is `chatgpt-sites` *and* both `oai-authenticated-user-id` and `oai-authenticated-user-email` headers are present; the owner id is the first. ChatGPT Sites injects those headers and strips visitor copies. The Cloudflare deployment sets `IDENTITY_PROVIDER=none` in `wrangler.jsonc`, so no request is ever signed in there and every private route answers `401`. The variable defaults to `chatgpt-sites` when absent (the Sites package has no Wrangler config).
-- **Mutations** (any non-GET private route) require an `Origin` header in `deployments/production.json` `allowed_origins` or the `EXTRA_ORIGINS` Worker secret, and a budget of 30 requests per owner per minute (`request_limits` table).
+- **Identity** (`server/middleware/context.ts`). The Worker variable `IDENTITY_PROVIDER` decides how a request is tied to an account. `wrangler.jsonc` in the repository sets it to `skippercast`; this page does not infer anything about a deployment's secrets or bindings beyond that. No request header ever names a user, so forged `oai-*` headers or an arbitrary cookie never authenticate.
+
+  | `IDENTITY_PROVIDER` | How the request is identified | Owner id | `signIn` link |
+  | --- | --- | --- | --- |
+  | `skippercast` | The `__Host-sc_session` cookie is looked up (see [Session cookie](#session-cookie)); a missing, malformed, unknown or expired cookie is anonymous | `users.id` of the session's account | `/#account` |
+  | `none`, absent (the default), empty, `chatgpt-sites` or any other string | No identity, whatever the request carries | none | `null` |
+
+  The value is compared as written: it is not trimmed or case-normalised, so `SkipperCast` or ` skippercast` is an unrecognised string. Where the provider is `none` or unrecognised, `/api/auth/*` answers `404` and every private route answers `401` (fail closed). With `skippercast`, an anonymous caller can still register, sign in and sign out; only passkey management answers `401` without a session.
+- **Mutations** (any non-GET private route) require an `Origin` header in `deployments/production.json` `allowed_origins` or the `EXTRA_ORIGINS` Worker secret, and a budget of 30 requests per owner per minute (`request_limits` table). Other limits in front of the private routes (`server/middleware/auth.ts`): before the session lookup, 300 requests a minute per IP (`FEED_LIMITER`); on an authenticated `GET`, 60 a minute per account (`PUBLIC_LIMITER`); both answer `429` with `Retry-After: 60` and are skipped where the binding is absent. `/api/auth/*` has its own separate budget of 20 a minute per IP (D1, `request_limits`), not the 30-a-minute private one.
 - **Bodies** are JSON objects of at most 8,192 bytes, read as a stream; anything else is `400`.
 - **Request ids.** Every response carries `X-Request-Id` (a UUID, or a well-formed incoming `X-Request-Id` of 8–64 letters, digits, `-` or `_`), and every JSON error body repeats it as `request_id`, e.g. `{"error": "origin rejected", "request_id": "…"}`. Failures are logged with the same id (`server/middleware/request-id.ts`).
 - **Errors** (`server/middleware/error.ts`, for paths under `/api/`; the bodies below also carry `request_id`):
@@ -17,7 +24,7 @@ Examples below were produced by running the Worker in Node with an in-memory D1,
   | Status | Body | When |
   | --- | --- | --- |
   | `400` | `{"error": "<message>"}` | A validation error (message kept, e.g. `"date must be within the next seven days"`, `"push endpoint rejected"`, `"origin rejected"`, `"body too large"`) |
-  | `429` | `{"error": "Please try again shortly"}` | The 30-per-minute mutation budget |
+  | `429` | `{"error": "Please try again shortly"}` | The 30-per-minute mutation budget, or the 20-per-minute `/api/auth/*` budget |
   | `503` | `{"error": "This service is temporarily unavailable. Your existing records are preserved."}` | Anything else: storage missing, a feed unreadable, a region mismatch |
 
   A thrown `ClientError` (or `AuthError`) is a validation error, `RateLimited` is `429`, and anything else is `503` (`server/errors.ts`).
@@ -43,7 +50,9 @@ Example (`GET /feeds/forecasts/gfs_global/manifest.json` from R2): `200`, `Cache
 
 Feed contents are described in [data contracts](../data-contracts.md), [live conditions](../live-conditions.md), [the data feed README](../data-feed-readme.md) and [forecast data](../forecast-data.md).
 
-**Pending changes:** PR #43 ([P0-05]) caches R2 objects up to 32 MB whole in the Workers Cache API (Range and conditional requests answered from the cached copy; `X-SC-Cache: hit|miss`; seafloor never cached) and limits `/feeds/` to 300 requests per minute per IP (`FEED_LIMITER`; over the limit `429` with `Retry-After: 60` and `{"error": "Too many requests; try again in a minute."}`); the rate limit and shared cache are absent on ChatGPT Sites. PR #38/#43 ([P0-06]) add security headers to every Worker response.
+- **Edge cache and limit** (`server/feeds.ts`, `server/routes/feeds.ts`, `server/edge-cache.ts`): an R2 object of up to 32 MiB (`EDGE_CACHE_MAX_BYTES`) is cached whole in the Workers Cache API and `Range` and conditional requests are answered from the cached copy; `X-SC-Cache: hit|miss` says which. Seafloor archives are never cached. `/feeds/` is limited to 300 requests per minute per IP (`FEED_LIMITER`): over the limit `429` with `Retry-After: 60` and `{"error": "Too many requests; try again in a minute."}`. Cache and limiter apply only where the Cache API and the binding exist (not in a bare Node test run).
+
+Security headers (HSTS, CSP with `frame-ancestors 'none'`, `Permissions-Policy` and related) are added to every Worker response (`server/middleware/security-headers.ts`); see the static site below.
 
 ## Static site
 
@@ -53,7 +62,7 @@ Any path not under `/api/` or `/feeds/`. Stable page paths (`/`, `/index.html`, 
 
 **Pages** (`server/routes/assets.ts` `shellFor`). `GET /` serves `dist/landing.html`, or `dist/app.html` when the query names an area (`region`, `coast`, `view`, `spot`, `target`, `focus` and the other keys in `AREA_PARAMS`); `GET /index.html` answers the same way, and `GET /map` serves `dist/app.html`. `/landing.html` and `/app.html` serve their own pages. `/coast` and `/coast.html` redirect to `/map` with `presentation=3d` unless the link names one. FE-61 removed the v1 shell and the front-end switch, so no Worker variable or `?ui=` query changes which page is served.
 
-**Pending changes:** PR #25 ([P0-02]) keeps `sw.js` unhashed and serves `GET /sw.js` with `Cache-Control: no-cache`. PR #36 ([P0-09]) adds `/terms.html`, `/privacy.html` and `/licenses.html` pages. PR #38/#43 ([P0-06]) add HSTS, CSP, `frame-ancestors 'none'`, `Permissions-Policy` and related headers to pages and (via a generated `_headers` file) to static assets.
+`GET /sw.js` keeps its unhashed path (`scripts/client-build.mjs` preserves it) and is served with `Cache-Control: no-cache` (`server/routes/assets.ts`). The legal pages `/terms.html`, `/privacy.html` and `/licenses.html` are built into `dist/`. Security headers (HSTS, CSP, `frame-ancestors 'none'`, `Permissions-Policy` and related) go on every Worker response, pages included, and `client-build.mjs` writes a generated `_headers` file for static assets (`server/security-headers.ts`).
 
 ## Public API
 
@@ -62,12 +71,10 @@ Any path not under `/api/` or `/feeds/`. Stable page paths (`/`, `/index.html`, 
 Liveness. Any method answers. No authentication.
 
 ```json
-{"service":"SkipperCast","version":"0.3.0","build":"0c321d2522","storage":true,"feeds":"r2","notifications":false}
+{"service":"SkipperCast","version":"0.3.0","build":"0c321d2522"}
 ```
 
-`storage`: D1 bound; `feeds`: `r2` when `FEEDS` is bound, else `github`; `notifications`: both VAPID keys set.
-
-**Pending changes:** PR #45 ([P3-06]) reduces this to `{"service","version","build"}` so the public endpoint no longer reveals which bindings and secrets exist; feed storage is then visible per response in `X-Feed-Source`. PR #26's smoke test (`scripts/smoke_test.sh`) reads `service` and `build` only.
+Only `service`, `version` and `build` are returned, so the public endpoint does not reveal which bindings and secrets exist; feed storage is visible per response in `X-Feed-Source`. `scripts/smoke_test.sh` reads `service` and `build` only.
 
 ### `GET /api/om/v1/forecast` and `GET /api/om/v1/marine`
 
@@ -104,7 +111,7 @@ Open-Meteo-style model metadata from the model's manifest. `<model>` is one of t
 {"last_run_initialisation_time":0,"data_end_time":18000,"provider":"NOAA GFS","source":"https://example","cycle_iso":"2026-09-28T12:00:00Z"}
 ```
 
-**Pending changes (both `/api/om` routes):** PR #43 caches answers in the Workers Cache API keyed on the path, sorted query and build id (`X-SC-Cache: hit|miss`, `Cache-Control: public, max-age=300, s-maxage=300`) and limits them to 60 requests per minute per IP (`PUBLIC_LIMITER`; `429` + `Retry-After: 60`).
+Both `/api/om` routes cache answers in the Workers Cache API keyed on the path, the sorted query and the build id (`X-SC-Cache: hit|miss`, `Cache-Control: public, max-age=300, s-maxage=300`). Only a cache **miss** counts against the limit of 60 requests per minute per IP (`PUBLIC_LIMITER`; `429` + `Retry-After: 60`); a cache hit is never refused. The limiter applies only where the binding exists.
 
 ### `GET /api/forecast?region=<id>`
 
@@ -112,7 +119,7 @@ The `forecast` object of the region's intelligence feed (`region.intelligence_fe
 
 ### `GET /api/intelligence?region=<id>`
 
-The region's intelligence feed without `forecast`: `{schema_version, region_id, generated_at, completed_at, ocean_collected_at, sources, verification, health}`. Sources whose id starts `model-` or `verify-` are reduced to `{name, status, issue, url, checked_at}`. `Cache-Control: no-store` on `main`. Errors as `/api/forecast`.
+The intelligence feed without `forecast`: `{schema_version, region_id, generated_at, completed_at, ocean_collected_at, sources, verification, health}`. Sources whose id starts `model-` or `verify-` are reduced to `{name, status, issue, url, checked_at}`. `Cache-Control: public, max-age=60, s-maxage=60`. Errors as `/api/forecast`.
 
 ### `GET /api/habitat?region=<id>`
 
@@ -127,7 +134,7 @@ One part of the region's daily feed (`region.daily_feed`, read R2-first), for th
 
 Edge-cached per region and part (`X-SC-Cache`); one feed read fills all three parts. `Cache-Control: public, max-age=300, s-maxage=300`. Limited to 60 requests per minute per IP (`PUBLIC_LIMITER`, key prefix `daily`; `429` + `Retry-After: 60`). Unknown part → `400`; unknown region → `404`. The service worker saves it like the other public data APIs, and offline packs include all three parts. The client (`dist/daily-feed.js`) falls back to the full feed when this fails.
 
-**Pending changes (region endpoints):** PR #43 caches all three keyed on `region` only (other parameters ignored), decodes the intelligence feed once for both `/api/forecast` and `/api/intelligence`, and sets `/api/intelligence` to `public, max-age=60, s-maxage=60`. PR #45 looks regions up with `Object.hasOwn`, so `?region=__proto__` and similar are a plain `404`.
+**Region endpoints (`/api/forecast`, `/api/intelligence`, `/api/habitat`):** all three are edge-cached keyed on `region` only (other parameters are ignored). The intelligence feed is decoded once for both `/api/forecast` and `/api/intelligence` and the sibling answer is cached too. Regions are looked up with `Object.hasOwn`, so `?region=__proto__` and similar are a plain `404`.
 
 ### `POST /api/telemetry`
 
@@ -139,15 +146,30 @@ Cookie-less funnel events and client error reports from `web/telemetry.ts` (`nav
 
 ### `GET /api/session`
 
-Whether the caller is signed in, the push public key and the sign-in link.
+Whether the caller is signed in, the push public key and the sign-in link. Public (it runs before the private gate); it answers for every `IDENTITY_PROVIDER` value and, with the `skippercast` provider, touches storage only when the request carries a session cookie.
+
+| Field | Meaning |
+| --- | --- |
+| `signedIn` | `true` when a request is identified |
+| `publicKey` | `VAPID_PUBLIC_KEY` for Web Push, or `null` when the Worker has none |
+| `signIn` | The sign-in link from the provider rule, even when signed out: `/#account` for `skippercast`, `null` for every other provider |
+| `user` | `{id, display_name}` when identified (`display_name` may be `null`), else `null` |
+| `is_admin` | Always present; `true` only when the account has the Text Advisor admin role (`users.role='admin'`, set only by `scripts/advisor/grant-admin.mjs`), `false` when signed out. The role itself is never exposed |
+| `advisor` | Boolean from the Text Advisor enabled gate (the same decision that answers `/chat.html`); a visibility hint for the page, not an authorization |
+
+The probe exposes no role, credential, public key or session hash. A session that is close to expiry is renewed here like anywhere else identity is resolved (see [Session cookie](#session-cookie)).
+
+Illustrative signed-out answer with the `skippercast` provider (the `publicKey` and `advisor` values depend on the deployment's configuration):
 
 ```json
-{"signedIn":false,"publicKey":null,"signIn":"/signin-with-chatgpt?return_to=%2F%23forecast"}
+{"signedIn":false,"publicKey":null,"signIn":"/#account","user":null,"is_admin":false,"advisor":false}
 ```
 
-On Cloudflare (`IDENTITY_PROVIDER=none`) `signedIn` is always `false` and `signIn` is `null`.
+With any other provider the same answer has `"signIn":null`. Illustrative signed-in answer (placeholders, not real values; `display_name` is `null` when the person never chose one):
 
-Signed in, it also carries `user` (`{id, display_name}`). `is_admin` (always present, `false` when signed out) is `true` when the account has the Text Advisor admin role (`users.role='admin'`, set only by `scripts/advisor/grant-admin.mjs`); the role itself is never exposed.
+```json
+{"signedIn":true,"publicKey":"<VAPID public key>","signIn":"/#account","user":{"id":"<user id>","display_name":null},"is_admin":false,"advisor":false}
+```
 
 ### `GET /api/advisor/health`
 
@@ -308,7 +330,7 @@ Runs saved-trip checks for one page of 25 trips, delivers push alerts and prunes
 - **Limit:** 30 calls per token (`jti`) per minute.
 - **Response:** `{"checked": 25, "changes": 1, "delivered": 1, "held": 0, "in_app": 0, "next_cursor": "<id>|null"}`. The script pages until `next_cursor` is `null` (at most 100 pages).
 
-**Pending changes:** PR #28 ([P0-07]) also prunes from the Worker's cron (`scheduled`), so retention no longer depends on this call.
+Retention does not depend on this call: the Worker's cron (`scheduled`, `server/index.ts` calling `scheduledPrune` in `server/trips.ts`) prunes expired rows too.
 
 <!-- TA-M1: the advisor-media runner job -->
 ### `GET /api/advisor/jobs/media`
@@ -380,17 +402,61 @@ What `fleet-health.yml` (hosted, hourly) reads to open or close the `fleet-ais-s
 
 ### Cron (`scheduled`)
 
-Not an HTTP route. Every 15 minutes on Cloudflare (`wrangler.jsonc` `triggers`), `server/watchdog.ts` reads `conditions/latest.json` (R2, then GitHub) and, if it is more than 45 minutes old and no `live-conditions.yml` run is queued or in progress, dispatches one with the `GITHUB_TOKEN` Worker secret (`dispatchWorkflow`, which TA-M1 exported; the advisor's cron uses it to dispatch `advisor-media.yml` while media or graphics are pending, at most once per 15 minutes). ChatGPT Sites has no cron.
+Not an HTTP route. Every 15 minutes on Cloudflare (`wrangler.jsonc` `triggers`), `server/watchdog.ts` reads `conditions/latest.json` (R2, then GitHub) and, if it is more than 45 minutes old and no `live-conditions.yml` run is queued or in progress, dispatches one with the `GITHUB_TOKEN` Worker secret (`dispatchWorkflow`, which TA-M1 exported; the advisor's cron uses it to dispatch `advisor-media.yml` while media or graphics are pending, at most once per 15 minutes).
+
+## Accounts / passkeys
+
+SkipperCast accounts are passkeys (WebAuthn) and a first-party session cookie: no passwords, email, OAuth or recovery flow (`server/auth.ts`, `server/routes/auth.ts`, [ADR 0006](adr/0006-passkey-accounts-stripe-later.md)). Billing is not part of this API. The `/api/auth/*` routes run before the private gate and answer even to anonymous callers. Examples below use typed placeholders only; a real registration or assertion is browser authenticator output and is not shown.
+
+**Gate for every `/api/auth/*` call**, in this order:
+
+1. The path must start with `/api/auth/`. `/api/auth` without a trailing slash is not this handler: it is an ordinary private path and gets the private gate's answer.
+2. Accounts must be enabled (`IDENTITY_PROVIDER` is `skippercast`, see Conventions); otherwise `404` `{"error": "Accounts are not available on this site", "signIn": null}`, before anything is counted.
+3. Every call, `GET` included, counts against **20 requests per minute per IP** (a D1 budget separate from the private 30-a-minute budget); over it `429` `{"error": "Please try again shortly"}`.
+4. Every non-`GET` needs an allowed `Origin` (`deployments/production.json` `allowed_origins` plus `EXTRA_ORIGINS`), else `400` `origin rejected`.
+5. The relying party is the request's own host: its RP ID is the request hostname and the expected origin the request origin, and that origin must be an allowed one, else `400` `this address cannot use accounts` (also for `GET`, and for logout).
+6. Then the route below. A path or method that matches no entry answers `404` `{"error": "Not found"}`.
+
+An exception caught inside registration or login verification (a verifier error, or a failed challenge-store read in the `expectedChallenge` callback) becomes a fixed `400` auth error with its fixed text, never a `401`. The generic `503` is only for a dependency failure that escapes those catches, such as a missing database binding or an auth-budget failure. Bodies, where a route reads one, are JSON objects of at most 8,192 bytes (`400` `body too large` or `invalid JSON body`); `login/options`, `logout` and `passkeys/options` read no body, so a client may send `{}` or nothing. Responses carry the usual `no-store` and security headers and, on errors, `request_id`.
+
+| Method and path | Body | Success | Specific errors and limits |
+| --- | --- | --- | --- |
+| `POST /api/auth/register/options` | JSON object `{display_name?}` (an empty `{}` is fine; no body at all is `400` `invalid empty body`) | `200` WebAuthn registration options (`PublicKeyCredentialCreationOptionsJSON`): resident key and user verification required, attestation `none`, a random provisional user handle, a 5-minute timeout and a fresh challenge | `400` `invalid name` when `display_name` is not a string, `null` or empty. The name has control characters removed, is trimmed and cut to 60 UTF-16 code units; an empty result means no name. This creates no account and no session: it only stores a `register` challenge bound to the provisional user handle. The name is not kept from this call; `register/verify` reads its own |
+| `POST /api/auth/register/verify` | JSON `{response: <RegistrationResponseJSON>, display_name?}` — the browser's credential, wrapped under `response` | `201` `{"signedIn": true, "user": {"id": "<user id>", "display_name": <string or null>}}` plus the session cookie. Only this success creates the user and passkey (one batch), ends the session this browser already had and starts a new one | `400` `invalid passkey response` (malformed or missing `response`), `invalid name`, `this sign-in request expired; try again` (no live `register` challenge), `passkey could not be verified` (anything else the verifier refuses, including user verification missing or the wrong origin or RP ID), `this passkey is already registered; sign in instead` |
+| `POST /api/auth/login/options` | none read (the client may send `{}`) | `200` WebAuthn authentication options: discoverable credential, user verification required, 5-minute timeout, fresh challenge | Stores a `login` challenge bound to no user. Not signed in yet |
+| `POST /api/auth/login/verify` | JSON `{response: <AuthenticationResponseJSON>}` | `200` `{"signedIn": true, "user": {"id": "<user id>", "display_name": <string or null>}}` plus the session cookie. Updates the passkey's counter and `last_used_at`, ends this browser's previous session and starts a new one | `400` `invalid passkey response` (malformed `response`); `this sign-in request expired; try again` (a known passkey but no live `login` challenge); `that passkey is not recognised here` for an unknown credential, a wrong origin or RP ID, missing user verification, a signature or counter failure. These fixed messages do not say whether a credential exists |
+| `POST /api/auth/logout` | none read | `200` `{"signedIn": false}` plus a cookie that clears `__Host-sc_session` | Works signed out too. Ends only the current session, not the account's other sessions. Still passes the gate above (Origin, 20-a-minute budget, allowed relying party) |
+| `GET /api/auth/passkeys` | none | `200` `{"passkeys": [{"id", "transports", "created_at", "last_used_at"}]}` — oldest first; `transports` is a decoded array; no public key or counter | `401` as below when signed out |
+| `POST /api/auth/passkeys/options` | none read | `200` WebAuthn registration options for the signed-in user, excluding the credentials they already have; stores an `add` challenge bound to them | `409` `{"error": "Limit of 10 passkeys"}` when they already have 10; `401` as below |
+| `POST /api/auth/passkeys` | JSON `{response: <RegistrationResponseJSON>}` | `201` `{"added": true, "id": "<passkey id>"}` | `400` as `register/verify` for a bad or expired response, `passkey could not be verified` when the `add` challenge belongs to another user, `this passkey is already registered` for a duplicate; `409` `Limit of 10 passkeys`, checked again at this step (the cap is not atomic across concurrent additions); `401` as below |
+| `DELETE /api/auth/passkeys` | JSON `{id: "<passkey id>"}` | `200` `{"removed": true}` | `400` `passkey id required` unless `id` is a non-empty string of at most 1,400 characters; `404` `{"error": "Not found"}` for a missing id and for another account's id alike; `409` `This is your only passkey. Add another before removing it, or delete the account.` for the last one. The count is re-checked inside the delete statement, so two parallel removals cannot delete the last passkey; `401` as below |
+
+**Passkey management needs a session.** Any path starting `/api/auth/passkeys` (including unknown ones) answers `401` `{"error": "Sign in to manage passkeys", "signIn": "/#account"}` when there is no session, after the gate above. This is neither the private data gate's `401` nor the accounts-off `404`.
+
+**Challenges.** A challenge is created by an options call with one of three kinds (`register`, `login`, `add`) and lives **300 seconds**. It is single-use: verification deletes it (`DELETE … RETURNING`) whether or not it then matches, so a wrong-kind or expired challenge is spent and cannot be tried again; start over with a new options call. A malformed `response` is refused before any challenge is read and so does not spend one. Login with an unknown credential still tries to spend its challenge. Verification requires user verification, the expected RP ID and the expected origin. Only the 400 messages named above are returned, never verifier internals.
+
+### Session cookie
+
+A successful `register/verify` or `login/verify` sets one cookie:
+
+```
+Set-Cookie: __Host-sc_session=<opaque token>; Max-Age=2592000; Path=/; Secure; HttpOnly; SameSite=Lax
+```
+
+- No `Domain` attribute (the `__Host-` prefix requires `Secure`, `Path=/` and no `Domain`). The token is 32 random bytes in base64url (43 characters); the server stores only its SHA-256 and a user-agent label of at most 80 printable characters, never the token. Any cookie value that is not 43 base64url characters is ignored as anonymous.
+- The session lasts **30 days**. Whenever identity is resolved for a request with a live session that has **strictly fewer than 15 days** left, the expiry is moved to 30 days from now and the response carries the cookie again (a response that already sets its own cookie, such as logout, keeps that one). An expired session is deleted when it is next presented and resolves to anonymous. A request that does not need identity, or carries no session cookie, does no lookup and no renewal.
+- `logout` and `DELETE /api/privacy` send the same cookie with an empty value and `Max-Age=0`.
+- This is unrelated to the Text Advisor's `sc_adv` web-chat cookie.
 
 ## Private API (signed in)
 
-All routes below answer `401` when the caller is not signed in:
+All routes below answer `401` when the caller has no identity. The text depends on the provider rule (`server/middleware/auth.ts`: `signInPath` of `IDENTITY_PROVIDER`), not on where the Worker is hosted. With `skippercast`:
 
 ```json
-{"error":"Sign in to save private trips or feedback","signIn":"/signin-with-chatgpt?return_to=%2F%23forecast"}
+{"error":"Sign in to save private trips or feedback","signIn":"/#account"}
 ```
 
-(On Cloudflare: `{"error":"Accounts are not available on this site yet","signIn":null}`.) Every query is scoped to the caller's owner id. Non-GET routes need an allowed `Origin` and the 30-per-minute budget (see Conventions).
+With any other value (`none`, absent, empty, `chatgpt-sites`, unrecognised): `{"error":"Accounts are not available on this site yet","signIn":null}`. These two differ from the `/api/auth/*` answers: `404` `Accounts are not available on this site` (no "yet") when accounts are off, and `401` `Sign in to manage passkeys` for passkey management (see [Accounts / passkeys](#accounts--passkeys)). Every query is scoped to the caller's owner id. Non-GET routes need an allowed `Origin` and the 30-per-minute budget (see Conventions).
 
 | Method and path | Body | Success | Specific errors and limits |
 | --- | --- | --- | --- |
@@ -398,7 +464,7 @@ All routes below answer `401` when the caller is not signed in:
 | `POST /api/trips` | `{region, point, species, date, start_hour, end_hour, wind_limit, gust_limit, sea_limit}` plus the optional planner fields `launch_point` (slug), `targets` (1–3 region species; `species` is always first), `plan` (`{spots[≤12]: {id, name, lat, lon, order, notes, depth_ft}, legs[≤13]: {from, to, nm, minutes}, window: {depart, return_by, hours[]}, exports[≤20]: {format, sha256, exported_at}}`, 16 KB cap; the request body for these two routes may be 24 KB) and `status` (`draft`, `planned` (default), `done`, `cancelled`) | `201` `{"id": "<uuid>"}` | `400` `unknown area or species`, `date must be within the next seven days` (date in the region's time zone, today to +7 days), `invalid <field>` (hours 0–22 / 1–23, wind 1–30 kn, gust 1–40 kn, seas 0.5–10 ft), `invalid window or thresholds` (end after start, integer hours, gust ≥ wind); `409` `Limit of 20 active trips` |
 | `PATCH /api/trips` | `{"id", launch_point?, targets?, plan?, status?}` — only the given planner fields change; the alert fields are fixed at save time | `200` the trip's planner fields `{id, launch_point, targets, plan, status}` | `400` as for `POST` plus `invalid launch point`, `targets must be one to 3 species of the region`, `targets repeat a species`, `invalid status`, `too many spots (limit 12)`, `plan too large`; `404` `Not found` (another owner's trip too) |
 | `DELETE /api/trips` | `{"id": "<trip id>"}` | `200` `{"deleted": true}` (also when nothing matched) | `400` `trip id required` |
-| `POST /api/events/ack` | `{"id": "<event id>"}` | `200` `{"read": true}`; a `final`/`missed-final` event also closes its trip | `404` `Not found` |
+| `POST /api/events/ack` | `{"id": "<event id>"}` | `200` `{"read": true}`; a `final`/`missed-final` event also closes its trip | `400` `event id required` unless the id is 64 lowercase hex characters; `404` `Not found` |
 | `POST /api/subscription` | Web Push subscription `{endpoint, keys: {p256dh, auth}}` | `200` `{"enabled": true}` | `400` `subscription missing`, `push endpoint rejected` (HTTPS only, no port or credentials, ≤ 2,000 chars, host `fcm.googleapis.com`, `updates.push.services.mozilla.com`, `web.push.apple.com` or `*.notify.windows.com`), `push keys invalid`; `409` `Subscription belongs to another signed-in user`, `Limit of five notification devices. Stop notifications on another device to free a slot, or use Stop on all devices here.` |
 | `DELETE /api/subscription` | exactly one of `{"endpoint": "<this device's endpoint>"}` (1–2,000 characters, not trimmed) or `{"all": true}` | `200` `{"enabled": false}` — `endpoint` removes only that device; `all` removes all the caller's devices (also when there are none) | `400` for no body, `{}`, an endpoint-less body or any other missing scope (`Send this device's endpoint or all: true. Update this page before stopping notifications.`; nothing is deleted, so an older cached page asks for a refresh instead of stopping every device), both keys, `all` other than `true`, unknown keys, an invalid endpoint; `404` `Not found` when no device of the caller has that endpoint (another owner's endpoint answers the same) |
 | `POST /api/comfort` | `{region, rating (1–10 integer), phase ("outbound"\|"fishing"\|"return"), wind?, sea?, period?, heading?, point?}` | `201` `{"saved": true}` | `400` `invalid feedback`, `invalid feedback context` (wind ≤ 200, sea ≤ 100, period ≤ 60, heading ≤ 360, all ≥ 0), `invalid feedback point` |
@@ -415,7 +481,7 @@ All routes below answer `401` when the caller is not signed in:
 | `DELETE /api/spots/:id` | — | `200` `{"deleted": true}` | `404` `Not found` for a missing or another account's id |
 | `GET /api/privacy` | — | `200` `{account, trips, feedback, events, devices, catch_log, saved_spots}` — everything stored for the caller, unpaginated (the catch-log 200-row limit does not apply). `account` is `{user, passkeys, sessions}`: `user` is `{id, created_at, display_name}` or `null`; passkeys `{id, transports, created_at, last_used_at}` (`transports` as stored); sessions `{created_at, expires_at, user_agent}` — no public keys, signature counters or session tokens. `events` are `{message, created_at, status}`. `devices` are `{push_service, created_at}` — the push host (`unknown` when the stored endpoint cannot be parsed) and creation date (`null` when absent), never the endpoint path or keys. `catch_log` (ordered `started_at, id`) and `saved_spots` (ordered `created_at, id`) are the full private rows with coordinates and notes | — |
 | `DELETE /api/privacy` | — (no body needed) | `200` `{"deleted": true, "signedIn": false}` with a `Set-Cookie` that clears `__Host-sc_session` (`Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax`). Deletes the caller's trips, subscriptions, alert events, their delivery receipts, comfort feedback, catch log, saved spots, passkeys, sessions, sign-in challenges bound to the caller, and the user record itself, so the caller is signed out. Other identity domains' records (advisor, fleet) are not part of this route | — |
-| `POST /api/boat/lookup` | `{"query": "<make model year>"}` (3–120 characters after whitespace folding) | `200` `{query, boat, confidence, estimated, notes, sources, looked_up_at}`; `cached: true` when served from the 30-day lookup cache | `400` `invalid boat name`; `429` after 20 lookups per owner per UTC day; `502` when the lookup fails; `503` when `ANTHROPIC_API_KEY` is not set |
+| `POST /api/boat/lookup` | `{"query": "<make model year>"}` (3–120 characters after whitespace folding) | `200` `{query, boat, confidence, estimated, notes, sources, looked_up_at}`; `cached: true` when served from the 30-day lookup cache | `400` `invalid boat name`; `429` after 20 lookups per owner per UTC day, or when the global daily cap is reached (default 500); `502` when the lookup fails; `503` when the kill switch `BOAT_LOOKUP_ENABLED=false` is set or `ANTHROPIC_API_KEY` is not set |
 
 ### Catch-log and saved-spot notes
 
@@ -436,7 +502,7 @@ Example `GET /api/trips`:
 
 The boat lookup sends the query to Anthropic's Messages API with web search (`server/boat-lookup.ts`); `boat` holds the fields of the manual boat form (`loa_ft`, `beam_ft`, `hull`, `layout`, …) validated by `normalizeBoat` in `dist/boat-handling.js`, and `sources` up to six cited URLs.
 
-**Pending changes:** PR #29 ([P0-08]) adds a global daily cap (`BOAT_LOOKUP_GLOBAL_DAILY_LIMIT`, default 500 → `429` `AI boat lookup is busy today…`), a kill switch (`BOAT_LOOKUP_ENABLED=false` → `503`), the model id from `BOAT_AI_MODEL`, and a usage log line per lookup. PR #45 validates `POST /api/events/ack` ids as 64-hex (`400` `event id required`) and trip ids as at most 64 characters. The guide's P3-02 replaces ChatGPT identity with SkipperCast accounts; this whole section changes then.
+The global daily cap (`BOAT_LOOKUP_GLOBAL_DAILY_LIMIT`, default 500; over it `429` `AI boat lookup is busy today; try again tomorrow or enter details by hand.`), the kill switch (`BOAT_LOOKUP_ENABLED=false` → `503` `AI boat lookup is switched off for now; enter your boat details by hand.`), the model id from `BOAT_AI_MODEL` (`server/boat-lookup.ts` `lookupSettings`) and a usage log line per lookup (counts only, never the query or owner) are all implemented. `POST /api/events/ack` validates its id as 64 lowercase hex characters (`400` `event id required`) and trip ids in `PATCH`/`DELETE /api/trips` are at most 64 characters (`400` `trip id required`).
 
 ## Text Advisor admin (signed in, admin role)
 

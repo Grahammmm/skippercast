@@ -69,8 +69,13 @@ def load_file(name, path, register=True):
     return module
 
 
+@functools.lru_cache(maxsize=None)
 def case_parent():
-    """Runner root; else the candidate's sibling out/ when staged; else the inherited temp root (CI)."""
+    """Runner root; else the candidate's sibling out/ when staged; else the inherited temp root (CI).
+
+    Decided once per process: under xdist another test (test_sc162) can create
+    REPO.parent/out mid-run, which would otherwise move the parent between
+    setUp and the isolation assertion."""
     if RUN_ROOT is not None:
         return Path(RUN_ROOT).resolve()
     staged = REPO.parent / "out"
