@@ -1,0 +1,31 @@
+/* SC2037-04: print this brief. Screen layout is unchanged: the print-only block and button rules below
+   apply on screen only to hide the block. In print the map stage, layer rail, legend, time dock, command
+   bar, masthead, tab bar and any open dialog are hidden, and the brief prints as one black-on-white
+   column with link text only (no expanded URLs). */
+.app-print-only { display: none; }
+
+@media print {
+  .app-masthead, .app-command, .app-stage, .app-chrome-left, .app-rail, .app-legend, .app-dock,
+  .app-sheet-hour, .app-sheet-layers, .app-sheet-menus, .app-top, .app-tabs, .ui-sheet-edge,
+  dialog, [role="dialog"], .app-firstrun, .app-print-button, .app-reports-link, .app-first-answer-more {
+    display: none !important;
+  }
+  .app-print-only { display: block !important; }
+
+  html { color-scheme: light !important; }
+  html, body, .app-main, .app-mobile, .app-mobile-page, .app-brief, .app-first-answer, .app-sheet, .ui-sheet, .ui-sheet-body, .app-sheet-brief {
+    display: block !important; position: static !important; transform: none !important;
+    width: auto !important; height: auto !important; max-height: none !important; overflow: visible !important;
+    margin: 0 !important; padding: 0 !important; border: 0 !important; box-shadow: none !important;
+    background: Canvas !important; color: CanvasText !important;
+  }
+  .app-brief *, .app-first-answer *, .app-sheet * { color: CanvasText !important; background: transparent !important; box-shadow: none !important; }
+  .app-brief, .app-sheet-brief { column-count: 1 !important; }
+  .app-brief > *, .app-sheet-brief > * { margin-bottom: 8pt; }
+  .app-tiles { display: block !important; }
+  .ui-tile, .app-window, .app-verdict { break-inside: avoid; page-break-inside: avoid; }
+  .ui-popover-body { display: none !important; }
+  .app-brief a[href], .app-sheet a[href] { text-decoration: none; }
+  .app-brief a[href]::after, .app-sheet a[href]::after { content: none !important; }
+  details > *:not(summary) { display: block !important; }
+}
