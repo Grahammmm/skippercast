@@ -389,7 +389,7 @@ export async function deviceStatus(fetchFn: typeof fetch = fetch, nav: PushNavig
 export const DEVICE_LINE: Readonly<Record<DeviceStatus, string>> = {
   confirmed: 'This account sends trip alerts to this device (checked with the server).',
   'not-sending': 'This browser is set up for notifications, but this account is not sending to it. It may have been stopped from another device or set up by another account. Press Enable to repair it.',
-  unchecked: 'Could not check with the server. This browser has a subscription that may not be active.',
+  unchecked: 'Could not check with the server. This browser has a subscription that may be inactive.',
   blocked: "Notifications are blocked in this browser's settings. Allow them for this site in the browser's site settings.",
   off: 'Notifications are not enabled on this device.',
   unavailable: NOT_AVAILABLE,
