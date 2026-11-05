@@ -156,13 +156,16 @@ def read_rows(data: bytes, column_set: str) -> list[dict[str, str]]:
     aliases = {alias: canonical for canonical, names in COLUMN_SETS[column_set].items() for alias in names}
     mapping = {}
     try:
-        fieldnames, rows = reader.fieldnames or [], list(reader)
+        fieldnames = reader.fieldnames or []
+        for header in fieldnames:  # before any row: DictReader keeps only the last value of a repeated header
+            canonical = aliases.get(_key(header))
+            if canonical:
+                if canonical in mapping.values():
+                    raise FileImportError(f"{column_set}: ambiguous column {canonical}")
+                mapping[header] = canonical
+        rows = list(reader)
     except csv.Error:
         raise FileImportError(f"{column_set}: CSV unreadable near line {reader.reader.line_num}") from None
-    for header in fieldnames:
-        canonical = aliases.get(_key(header))
-        if canonical and canonical not in mapping.values():
-            mapping[header] = canonical
     present = set(mapping.values())
     missing = [c for c in REQUIRED[column_set] if c not in present]
     if missing or (ONE_OF[column_set] and not present & set(ONE_OF[column_set])):
