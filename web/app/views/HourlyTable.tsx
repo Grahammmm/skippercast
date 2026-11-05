@@ -7,8 +7,10 @@ import {useEffect, useRef} from 'preact/hooks';
 import {activeBoatFactors} from '../../../dist/boat-handling.js';
 import type {Series} from '../../../packages/coast/src/charts/series.ts';
 import type {ConditionsForecast} from '../../conditions.ts';
-import {hourlyCells, hourlyTable, NO_FORECAST} from '../../hourly-table.ts';
+import {hourlyCells, hourlyTable, NO_FORECAST, overLimits} from '../../hourly-table.ts';
 import {language, localeOf, t, type Language, type StringId} from '../../i18n.ts';
+import {hasOwnLimits, limitsFor} from '../../limits.ts';
+import {profile} from '../../state.ts';
 import type {BoatFactors} from '../../score.ts';
 import {hourText, localParts, selectHour, zoneName} from '../TimeDock.tsx';
 import './hourly-table.css';
@@ -28,6 +30,8 @@ export function HourlyTable({forecast, tide, at, tz, now}: {forecast: Conditions
     const up = r.top - b.top - head, down = r.bottom - b.bottom;
     if (up < 0) el.scrollTop += up; else if (down > 0) el.scrollTop += down;
   }, [at, rows.length]);
+  const limits = hasOwnLimits(profile.value) ? limitsFor(profile.value) : null;
+  const marked = rows.map(r => overLimits(r, limits)), anyMarked = marked.some(m => m.wind || m.gust || m.seas);
   const hourOf = (ms: number) => localParts(new Date(ms), tz).hour;
   const label = (ms: number) => rows.filter(x => hourOf(x.ms) === hourOf(ms)).length > 1 ? `${hourText(hourOf(ms), lang)} ${zoneName(new Date(ms), tz)}` : hourText(hourOf(ms), lang);
   const day = lang === 'en' ? local.weekday : new Intl.DateTimeFormat(localeOf(lang), {timeZone: tz, weekday: 'long'}).format(new Date(at));
@@ -40,15 +44,19 @@ export function HourlyTable({forecast, tide, at, tz, now}: {forecast: Conditions
           {caption}
           <thead><tr><th scope="col">{t('hourly.time', lang)}</th>{HEADERS.map(h => <th key={h} scope="col">{t(h, lang)}</th>)}</tr></thead>
           <tbody>
-            {rows.map(r => (
+            {rows.map((r, ri) => (
               <tr key={r.at} data-at={r.at} aria-current={r.ms === at ? 'true' : undefined} class={r.ms === at ? 'is-current' : undefined}>
                 <th scope="row"><button type="button" onClick={() => selectHour(now, tz, r.ms)}>{label(r.ms)}</button></th>
-                {hourlyCells(r).map((c, i) => <td key={i} class="ui-mono">{cellText(c, lang)}</td>)}
+                {hourlyCells(r).map((c, i) => {
+                  const f = (['wind', 'gust', 'seas'] as const)[i];
+                  return <td key={i} class="ui-mono">{cellText(c, lang)}{f && limits && marked[ri]![f] ? <span class="app-hourly-over" role="img" aria-label={t(`hourly.over.${f}`, lang, {limit: String(limits[f])})}> ▲</span> : null}</td>;
+                })}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {anyMarked ? <p class="app-hourly-note">{t('hourly.limits', lang)}</p> : null}
       {rows.some(r => r.limited && r.score !== null) ? <p class="app-hourly-note">* {t('hourly.limited', lang)}</p> : null}
     </div>
   );
