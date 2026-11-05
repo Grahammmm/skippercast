@@ -147,6 +147,52 @@ export function logItemHTML(row, trips = [], format = chosenFormat()) {
     <button type="button" data-remove-log="${esc(row.id)}">Remove</button></li>`;
 }
 
+// SC2037-10: the person's own counts over the entries loaded so far. Never a rate, a score or a comparison; nothing is sent.
+const speciesKey = value => typeof value === 'string' ? value.trim().toLocaleLowerCase('en') : '';
+/** Counts of the given rows by outcome, the fish total, and the five species logged most often (trimmed, grouped without case, first-seen spelling). */
+export function logCounts(rows) {
+  const out = {entries: 0, fish: 0, fishTotal: 0, blank: 0, unknown: 0, species: []}, seen = new Map();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    out.entries++;
+    if (row.outcome === 'fish') { out.fish++; out.fishTotal += Number(row.count) || 0; } else if (row.outcome === 'blank') out.blank++; else if (row.outcome === 'unknown') out.unknown++;
+    const key = speciesKey(row.species);
+    if (!key) continue;
+    const found = seen.get(key); if (found) found.count++; else seen.set(key, {name: row.species.trim(), count: 1, key});
+  }
+  out.species = [...seen.values()].sort((a, b) => b.count - a.count || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0)).slice(0, 5).map(({name, count}) => ({name, count}));
+  return out;
+}
+/** Rows whose outcome equals `outcome` and whose trimmed, case-folded species equals the folded `species`; an empty filter is any. */
+export function filterLog(rows, {outcome = '', species = ''} = {}) {
+  const want = speciesKey(species);
+  return (Array.isArray(rows) ? rows : []).filter(row => (!outcome || row.outcome === outcome) && (!want || speciesKey(row.species) === want));
+}
+/** The one-line summary of `counts`; `filtered` and `more` (older pages still unread) change only the opening words. */
+export function logCountsText(counts, {filtered = false, more = false} = {}) {
+  const n = counts.entries, noun = n === 1 ? 'entry' : 'entries';
+  const head = filtered ? (more ? `In the ${n} loaded ${noun} that match` : `In the ${n} ${noun} that match`) : (more ? `In the ${n} ${noun} loaded` : `In the ${n} ${noun}`);
+  const top = counts.species.length ? ` Most logged: ${counts.species.map(s => `${s.name} ${s.count}`).join(', ')}.` : '';
+  return `${head}: ${counts.fish} fish trips (${counts.fishTotal} fish), ${counts.blank} blanks, ${counts.unknown} not sure.${top}${more ? ' Older entries are not loaded yet.' : ''}`;
+}
+export const LOG_NO_MATCH = 'No loaded entries match these filters.';
+/**
+ * Draw the list, the counts line and the species choices for the loaded `entries` under `view` ({outcome, species}).
+ * `els` are {list, counts, species}. The counts are over the filtered rows. A chosen species that no longer appears still filters.
+ */
+export function drawLogView(els, {entries, trips = [], view, more = false}) {
+  const all = Array.isArray(entries) ? entries : [], shown = filterLog(all, view);
+  const options = new Map();
+  for (const row of all) { const key = speciesKey(row.species); if (key && !options.has(key)) options.set(key, row.species.trim()); }
+  const chosen = speciesKey(view.species);
+  if (chosen && !options.has(chosen)) options.set(chosen, view.species.trim());
+  els.species.innerHTML = `<option value="">Any</option>` + [...options].map(([key, name]) => `<option value="${esc(key)}">${esc(name)}</option>`).join('');
+  els.species.value = chosen;
+  els.list.innerHTML = shown.map(row => logItemHTML(row, trips)).join('');
+  const filtered = Boolean(view.outcome || chosen);
+  els.counts.hidden = !all.length;
+  els.counts.textContent = !all.length ? '' : shown.length ? logCountsText(logCounts(shown), {filtered, more}) : LOG_NO_MATCH;
+}
+
 /** A typed position the form refused: a plain Error carrying `.field` ('lat' or 'lon') and the parser's reason. */
 function fieldError(field, message) { const error = Error(message); error.field = field; return error; }
 /** Reads one typed latitude or longitude box into decimal degrees; a refusal names its box and carries the parser's reason. */
@@ -226,6 +272,9 @@ const logFormHTML = () => `<h2 class="account-subhead">Catch log</h2>
       <label for="log-note">Note</label><input id="log-note" type="text" maxlength="1000" />
       <div class="home-port-actions"><button type="submit" id="log-save">Save to my log</button></div>
     </form>
+    <div class="home-port-actions"><label for="log-filter-outcome">Show</label><select id="log-filter-outcome"><option value="">Any</option><option value="fish">Fish</option><option value="blank">Blank: no fish</option><option value="unknown">Not sure</option></select>
+      <label for="log-filter-species">Species</label><select id="log-filter-species"><option value="">Any</option></select></div>
+    <p class="account-hint" id="log-counts" role="status" hidden></p>
     <ul class="account-passkeys" id="log-list"></ul>
     <p class="account-hint" id="log-status" role="status"></p>
     <div class="home-port-actions"><button type="button" id="log-retry" hidden>Try again</button><button type="button" id="log-older" hidden>Show older entries</button></div>`;
@@ -416,10 +465,10 @@ export async function openAccount() {
     // SC0922-03: the log is read a page at a time. `entries` holds every page shown so far in server order, `nextCursor` where the
     // next older page starts (null: none), and `generation` counts first-page reads so an older-page read that a refresh or a newly
     // saved entry has overtaken is dropped. `gone` holds ids removed here, so a page read before a removal cannot bring one back.
-    let trips = [], entries = null, nextCursor = null, busy = false, generation = 0, loadFailed = false, gone = new Set();
+    let view = {outcome: '', species: ''}, trips = [], entries = null, nextCursor = null, busy = false, generation = 0, loadFailed = false, gone = new Set();
     const live = () => open === self && list.isConnected;
     const drawLog = () => {
-      if (entries) list.innerHTML = entries.map(row => logItemHTML(row, trips)).join('');
+      if (entries) drawLogView({list, counts: $('#log-counts'), species: $('#log-filter-species')}, {entries, trips, view, more: Boolean(nextCursor)});
       const keepFocus = document.activeElement === older && !(entries && nextCursor);
       older.hidden = !(entries && nextCursor); older.textContent = busy ? 'Loading older entries…' : 'Show older entries';
       older.setAttribute('aria-disabled', String(busy));   // not `disabled`: a disabled button drops keyboard focus mid-load
@@ -473,6 +522,8 @@ export async function openAccount() {
       } catch (error) { status(passkeyMessage(error)); }
     });
     older.addEventListener('click', showOlder);
+    $('#log-filter-outcome').addEventListener('change', event => { view = {...view, outcome: event.target.value}; drawLog(); });
+    $('#log-filter-species').addEventListener('change', event => { view = {...view, species: event.target.value}; drawLog(); });
     retry.addEventListener('click', showLog);
     $('#log-form').addEventListener('submit', async event => {
       event.preventDefault();
