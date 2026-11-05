@@ -39,7 +39,11 @@ export function parsePoster(text: string, region: string): Poster | null {
   const values = [box[2], box[3], attr(head, 'data-zoom'), attr(head, 'data-west'), attr(head, 'data-north')];
   if (box.length !== 4 || !values.every(v => v !== undefined && v !== null && NUMBER.test(v))) return null;
   const [width, height, zoom, west, north] = values.map(Number) as [number, number, number, number, number];
+  if (![width, height, zoom, west, north].every(Number.isFinite)) return null;
   if (!(width > 0 && height > 0) || Math.abs(north) > 85 || Math.abs(west) > 180) return null;
+  // The zoom must support this module's own arithmetic: world size 512 * 2^zoom and scale 2^-zoom.
+  const world = 512 * 2 ** zoom, inverse = 2 ** -zoom;
+  if (!(Number.isFinite(world) && world > 0 && Number.isFinite(inverse) && inverse > 0)) return null;
   return {region, path: d, width, height, zoom, west, north};
 }
 
