@@ -153,3 +153,11 @@ test('planner_es_files_identical: GPX, notes, names and types are the same bytes
     assert.ok(!en.notes[2].includes('lang="es"') && !en.notes[2].includes('Nombre del plan') && !en.gpx[2].includes('Nombre del plan'), 'no Spanish chrome leaks into the files');
   } finally { ui.language.value = 'en'; p.dispose(); }
 });
+
+test('planner_es_margin_is_inclusive: protected-area warnings say "{n} m o menos", never an exact separation', () => {
+  for (const id of ['planner.hit.near', 'planner.hit.reefNear', 'pm.outlineNamed', 'pm.alignmentNamed']) {
+    const es = catalogue.strings[id].es;
+    assert.match(es, /a \{n\} m o menos de (él|ella)/, id);
+    assert.ok(!/a \{n\} m de /.test(es), `${id} must not read as an exact distance`);
+  }
+});
