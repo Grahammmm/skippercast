@@ -261,7 +261,7 @@ export function LookFor() {
 export function LayerRail() {
   const on = layers.value, source = current.value, shown = shownPresentation.value, lang = language.value;
   const basisLabel = (label: string) => t('rail.basisSummary', lang, {label});
-  const runtime = (note: string | undefined) => note ? <EnglishDetail lang={lang} prefix={false}>{note}</EnglishDetail> : undefined;
+  const runtime = (note: string | undefined) => note ? <EnglishDetail lang={lang}>{note}</EnglishDetail> : undefined;
   return (
     <Rail class="app-rail" label={t('rail.aria', lang)} header={<><LookFor /><Presets /></>} footer={<BaseChoice />}>
       {railEntries(lang).map(e => {

@@ -25,7 +25,7 @@ async function load() {
       export {LayerRail, baseNote, baseOptions} from './web/app/LayerRail.tsx';
       export {Legend, MpaRow, researchDate} from './web/app/Legend.tsx';
       export {RAIL_ENTRIES, railEntries} from './web/app/rail.ts';
-      export {LAYERS, CHART_ONLY, chartOnly, layerCopy, layerEntry} from './web/map/layers.ts';
+      export {LAYERS, CHART_ONLY, chartOnly, layerCopy, layerEntry, railNotes} from './web/map/layers.ts';
       export {STATION_BASIS} from './web/map/station-model.ts';
       export {language} from './web/i18n.ts';
       export {mpaState, TRANSIENT_DETAILS} from './web/map/mpa.ts';
@@ -236,6 +236,20 @@ test('mpa_fleet_es_caveats_and_drape', async t => {
   m.terrainCoarsened.value = ['mpas', 'charter-grounds'];
   s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&layers=fleet`);
   assert.deepEqual(notes(legend(m, 'es')), [], 'no note on the Chart');
+});
+
+test('rail_es_runtime_notes_carry_the_english_source_disclosure', async t => {
+  const m = await load(), s = m.state, prior = m.railNotes.value;
+  t.after(() => { m.language.value = 'en'; m.railNotes.value = prior; });
+  s.configureStore({v2: true, storage: null});
+  s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&layers=water-temp,clouds`);
+  m.railNotes.value = {'water-temp': 'No fresh frame 14:00 <b>x</b>', clouds: 'Frame 13:50 UTC'};
+  const en = rail(m, 'en'), es = rail(m, 'es');
+  assert.ok(en.includes('No fresh frame 14:00 &lt;b>x&lt;/b>') && !/Detalles|lang="en"/.test(en), 'English shows the note bare');
+  assert.ok(es.includes('Detalles de la fuente (en inglés): <span lang="en">No fresh frame 14:00 &lt;b>x&lt;/b></span>'), 'Spanish: one catalogue prefix, the note whole and labelled English');
+  assert.ok(es.includes('Detalles de la fuente (en inglés): <span lang="en">Frame 13:50 UTC</span>'), 'every note block has its own prefix');
+  m.railNotes.value = {};
+  assert.doesNotMatch(rail(m, 'es'), /Detalles de la fuente/, 'no note, no empty disclosure');
 });
 
 test('dynamic_details_never_silently_dropped', async t => {
