@@ -170,6 +170,7 @@ newest revisions for rollback. The raw store lives outside any checkout in
 
 The unit caps its memory at 512 MB (`MemoryMax`). Restart, logs and
 rollback: [fleet AIS listener down](runbooks/fleet-ais-down.md).
+Optional Morro Bay receive-only receiver (plan only, nothing bought): [fleet AIS receiver](runbooks/fleet-ais-receiver.md).
 
 ## The fleet registry run
 
