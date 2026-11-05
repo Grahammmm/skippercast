@@ -29,7 +29,10 @@ function realWrittenTime(v: string): boolean {
 function when(v: unknown, name: string): string | null {
   if (v === undefined || v === null) return null;
   if (typeof v !== 'string' || !ISO.test(v) || Number.isNaN(Date.parse(v)) || !realWrittenTime(v)) throw new ClientError(`${name} must be an ISO date and time with a zone`);
-  return new Date(v).toISOString();
+  // The cursor codec and string ordering only know four-digit UTC years: a zone that carries the instant past 0000-9999 is refused, not clamped.
+  const utc = new Date(v).toISOString();
+  if (!/^\d{4}-/.test(utc)) throw new ClientError(`${name} must be an ISO date and time with a zone`);
+  return utc;
 }
 /** Both coordinates or neither. Finite numbers strictly inside the poles and the antimeridian; stored as entered. */
 export function coordinates(lat: unknown, lon: unknown): {lat: number; lon: number} | null {
