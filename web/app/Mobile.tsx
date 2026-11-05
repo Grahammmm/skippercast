@@ -27,7 +27,7 @@ import {zone} from './App.tsx';
 import {AreaSelect, PortControl, ProfileSwitch, TargetSelect, windowText} from './CommandBar.tsx';
 import {LimitsControl} from './LimitsPanel.tsx';
 import {AccountMenu} from './AccountMenu.tsx';
-import {BriefFooter, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief, leadDate, leadDayText} from '../brief/Brief.tsx';
+import {BriefFooter, PrintBrief, BriefLinks, BriefTiles, Details, LowerExposure, Verdict, currentBrief, leadDate, leadDayText} from '../brief/Brief.tsx';
 import {TideSpark} from '../brief/TideSpark.tsx';
 import {WhereToLook, type Ranking} from '../brief/WhereToLook.tsx';
 import {RunLine} from '../brief/Run.tsx';
@@ -120,6 +120,7 @@ export function SheetBrief({now, ranking, onFocus, detent = 'full'}: {now: Date;
         </div>
       </div>
       <Guard name="brief-links"><BriefLinks brief={brief} /></Guard>
+      <PrintBrief now={now} />
       <BriefFooter><ReportsLink /><AccountMenu inline /></BriefFooter>
     </div>
   );
