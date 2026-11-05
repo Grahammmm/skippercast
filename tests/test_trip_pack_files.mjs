@@ -206,3 +206,15 @@ test('with an unknown list every side file is saved; with [] none is', async () 
   const none = await run({listed: []});
   for (const n of ALL_SIDE) assert.ok(!(urlOf(n) in none.stored), n);
 });
+
+test('SC2037-05: the dist savePack, run alone, makes no storage persist call (the app asks after the save)', async () => {
+  const had = Object.getOwnPropertyDescriptor(globalThis, 'navigator'), calls = {persist: 0, persisted: 0};
+  Object.defineProperty(globalThis, 'navigator', {configurable: true, value: {storage: {persist: async () => { calls.persist++; return true; }, persisted: async () => { calls.persisted++; return false; }}}});
+  try {
+    const r = await run({listed: ALL_SIDE});
+    assert.equal(r.error, undefined, String(r.error));
+  } finally {
+    if (had) Object.defineProperty(globalThis, 'navigator', had); else Reflect.deleteProperty(globalThis, 'navigator');
+  }
+  assert.deepEqual(calls, {persist: 0, persisted: 0});
+});

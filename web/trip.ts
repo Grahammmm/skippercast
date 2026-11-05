@@ -18,6 +18,7 @@ import {chartFileListed} from './chart-files.ts';
 import {landWaterLinesURL, landWaterURL} from './land-water.ts';
 import {depthContoursOverviewURL, depthContoursURL} from './map/depth-contours.ts';
 import {browserStorage} from '../dist/browser-storage.js';
+import {formatBytes} from '../dist/offline-core.js';
 import {atlasMarksURL, planIndexURL} from './startup-forms.ts';
 import {MARKS_SOURCE} from './map/layers.ts';
 import {markSources} from './map/marks.ts';
@@ -307,6 +308,40 @@ export async function savePack(id: string, signal: AbortSignal, progress: (p: Pr
   registerOffline();
   return meta;
 }
+
+/** What the browser said about keeping saved packs: agreed or refused our request, already keeps them, or has no storage API. */
+export type Keep = 'agreed' | 'refused' | 'already' | 'unavailable';
+type StorageNav = {storage?: {persist?: () => Promise<boolean>; persisted?: () => Promise<boolean>; estimate?: () => Promise<{usage?: number; quota?: number}>}};
+/** Ask the browser to keep saved packs, after a save only: no request when it already does or has no way to say. */
+export async function keepSaved(nav: StorageNav = globalThis.navigator as StorageNav): Promise<Keep> {
+  try {
+    const storage = nav?.storage;
+    if (typeof storage?.persist !== 'function' || typeof storage.persisted !== 'function') return 'unavailable';
+    if (await storage.persisted()) return 'already';
+    return (await storage.persist()) ? 'agreed' : 'refused';
+  } catch { return 'unavailable'; }
+}
+/** The browser's estimate of the space used and available, or null when it gives none. */
+export async function storageLine(nav: StorageNav = globalThis.navigator as StorageNav): Promise<{used: number; quota: number} | null> {
+  try {
+    const e = typeof nav?.storage?.estimate === 'function' ? await nav.storage.estimate() : null;
+    return e && Number.isFinite(e.usage) && Number.isFinite(e.quota) ? {used: e.usage as number, quota: e.quota as number} : null;
+  } catch { return null; }
+}
+/** The list's one line from the browser's estimate. */
+export const estimateWords = (r: {used: number; quota: number}): string => `Browser's estimate: ${formatBytes(r.used)} used of ${formatBytes(r.quota)} available`;
+/** Run a save; only once it has resolved, ask the browser to keep it. A save that throws or is cancelled makes no request. */
+export async function savePackKept(save: () => Promise<PackMeta>, nav?: StorageNav): Promise<{meta: PackMeta; keep: Keep}> {
+  const meta = await save();
+  return {meta, keep: await keepSaved(nav)};
+}
+/** The dialog's words for the browser's answer; nothing when it has none. */
+export const KEEP_WORDS: Readonly<Record<Keep, string>> = {
+  agreed: 'This browser agreed to keep saved packs.',
+  already: 'This browser already keeps saved packs.',
+  refused: 'This browser may clear saved packs when space is low.',
+  unavailable: '',
+};
 
 const coastal = () => import('../dist/coastal-offline-core.js');
 const coastalOptions = (signal?: AbortSignal) => ({origin: location.origin, caches: globalThis.caches, signal});
