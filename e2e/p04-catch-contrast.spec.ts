@@ -202,7 +202,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
-  "web/app/LayerRail.tsx": "5d3189de050676a45d6b35ff06470f89b3d9e788cdab4a9ae79267859cb6f6b1",
+  "web/app/LayerRail.tsx": "fdeb4cafb0281cf011b7f4dd326ceacc971e21ee128f1f4da07db8fb072aed7e",
   // SC-MAIN-FLAKE (#1400, contours drawn signal): MapStage.tsx only passes host: chartHost.current! to
   // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
   // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),
@@ -274,7 +274,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1952-08: check_contrast.mjs changes only the Legend.tsx surface hash (Legend adds the not-yet-reviewed shore note
   // in the existing app-legend-note text role). BODY09 mounts Reports/CatchCards, never Legend; contrast(), catch paint,
   // backing, assertions and thresholds are unchanged. Rebind only this source.
-  "scripts/check_contrast.mjs": "b03f282011434e6689d8393066d0aefbe57149ace6e4351099ea2b4d9def7f89",
+  // SC0707-09: LayerRail.tsx reads its words through the catalogue (labels, Chart-only reasons, Terrain options chrome, grade and base choices)
+  // and check_contrast.mjs rebinds only the Legend.tsx surface hash, two line citations and a scope comment. BODY09 mounts Reports/CatchCards, never the
+  // rail or Legend; contrast(), catch paint, backing, assertions and thresholds are unchanged. Rebind only these two sources.
+  "scripts/check_contrast.mjs": "c15f43be963e79a1c7d82a94ca38382e8ab13b1bea83f4f4e4142381517f9538",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
