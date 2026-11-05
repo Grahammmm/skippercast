@@ -67,6 +67,8 @@ import {HEIGHT_SCALE, frameSummary, nearshoreState, swellPartition, swellState} 
 import {windState} from '../map/wind.ts';
 import {ringBasis, ringSummary} from '../map/nearshore.ts';
 import {stationState} from '../map/stations.ts';
+import {shoreState} from '../map/shore.ts';
+import {unreviewedNote} from '../brief/shore.ts';
 import {WAVE_MODEL} from '../map/forecast-grid.ts';
 import {currentStatus, shownPresentation, terrainCoarsened, terrainCoverage, terrainOptions} from '../map/stage.ts';
 import {drawnSpots} from '../map/ranked.ts';
@@ -382,6 +384,12 @@ const PlainRow = ({id, label, reason}: {id: string; label: string; reason: strin
   <li class="app-legend-plain">{label}<p class="app-legend-note" data-reason={id}>{reason}</p></li>
 );
 
+/** The Shore runs row: says that runs awaiting their first owner review are left off the Chart, never as expired or current. */
+function ShoreRow() {
+  const note = shownPresentation.value === 'chart' ? unreviewedNote(shoreState.value.unreviewed) : '';
+  return note ? <li class="app-legend-shore"><p class="app-legend-note" data-reason="shore-runs">{note}</p></li> : null;
+}
+
 export function Legend() {
   const shown = shownPresentation.value;
   const on = RAIL_ENTRIES.filter(e => railOn(e.id, layers.value, current.value));
@@ -398,6 +406,7 @@ export function Legend() {
           : <PlainRow key={e.id} id={e.id} label={e.label} reason="Not drawn yet." />)}
         <RankedRow />
         <SavedSpotsRow />
+        <ShoreRow />
         <DensityRow />
         <DepthContoursRow />
         <MpaRow />

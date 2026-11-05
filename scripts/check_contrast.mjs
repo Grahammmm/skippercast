@@ -397,7 +397,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // SC0922-04 CI fix sizes only the saved-spots checkbox to 24px; declared text and backing paints are unchanged.
   // SC0452-04 adds two coarse-drape notes (MPA and charter-grounds rows) that reuse the existing app-legend-note paint; no backing, opacity, token or threshold changed.
   // Main-merge reconciliation: both additions retain existing text roles and paint; rebind the combined source only.
-  "legendTsx": "8a1d239f0c2d5fc1945877239ef05491e66036baff58276e884c4ae8c15ff62f"
+  // SC1952-08 adds a Shore runs "not yet reviewed" note using the existing app-legend-note text role; no backing, opacity or text paint changed.
+  "legendTsx": "542d7c4ad6842cbf1e0d1669c3070c058e3526c73835da492d60765d5788c440"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];

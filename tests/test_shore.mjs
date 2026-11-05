@@ -4,6 +4,12 @@
 // Synthetic clocks and one synthetic protected area stand in where the committed dates do not reach a case.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {mkdtemp} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {build} from 'esbuild';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import test from 'node:test';
 import {signal} from '@preact/signals';
 import {BEACH_HEALTH_SOURCE, CDFW_RULES_URL, activeAlerts, beachNotices, nextShoreChange, rankRuns, shoreGuidance, shoreNeverReviewed, shoreReviewLines, shoreShown, shoreStatus, unreviewedNote} from '../web/brief/shore.ts';
@@ -498,4 +504,46 @@ test('Chart admits no never-reviewed run, whatever the root review dates say', (
   assert.equal(unreviewedNote(0), '');
   assert.equal(shoreNeverReviewed(ESTERO.properties), true);
   assert.equal(shoreNeverReviewed(LEGACY[0].properties), false);
+});
+
+test('the Chart legend says the never-reviewed run is not shown, on Morro Bay Shore only', async t => {
+  globalThis.location = {href: 'https://s.test/map?region=morro-bay&profile=shore'};
+  const out = join(await mkdtemp(join(tmpdir(), 'shore-legend-')), 'legend.mjs');
+  await build({
+    stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
+      export {Legend} from './web/app/Legend.tsx';
+      export {createShore} from './web/map/shore.ts';
+      export {markScreen} from './web/map/marks.ts';
+      export * as state from './web/state.ts';
+      export {signal} from '@preact/signals';
+      export {render} from 'preact-render-to-string';
+      export {h} from 'preact';`},
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
+    plugins: rendererPlugins,
+  });
+  const m = await import(pathToFileURL(out).href);
+  m.state.configureStore({v2: true, storage: null});
+  m.state.syncFromURL('https://s.test/map?region=morro-bay&profile=shore');
+  const fetchFn = async url => {
+    const path = new URL(url).pathname.slice(1);
+    return path === 'regions/morro-bay/shore-habitat.geojson' ? {ok: true, json: async () => json(`dist/${path}`)} : {ok: false, status: 404, json: async () => null};
+  };
+  m.markScreen.value = READY;
+  const shore = m.createShore({engine: m.signal(null), fetchFn, page: () => location.href, palette: () => sentinel, now: () => NOW, report: m.signal(null)});
+  t.after(() => { shore.destroy(); m.markScreen.value = CHECKING; });
+  const note = /<p class="app-legend-note" data-reason="shore-runs">1 shore run not yet reviewed is not shown\.<\/p>/;
+  const legend = () => m.render(m.h(m.Legend));
+  assert.doesNotMatch(legend(), /data-reason="shore-runs"/, 'nothing is said before the package loads');
+  await flush(); await flush();
+  assert.match(legend(), note, 'Morro Bay on Shore says the Estero run is not yet reviewed');
+  assert.doesNotMatch(legend().match(/<li class="app-legend-shore">.*?<\/li>/)[0], /expired|reviewed on|Current/i, 'never said as expired or current');
+  m.state.syncFromURL('https://s.test/map?region=morro-bay&profile=boat');
+  await flush();
+  assert.doesNotMatch(legend(), /not yet reviewed/, 'hidden off the Shore profile');
+  m.state.syncFromURL('https://s.test/map?region=morro-bay&profile=shore');
+  await flush(); await flush();
+  assert.match(legend(), note, 'back on Shore it returns');
+  m.state.syncFromURL('https://s.test/map?region=cambria-san-simeon&profile=shore');
+  await flush(); await flush();
+  assert.doesNotMatch(legend(), /not yet reviewed/, 'reset after changing region');
 });
