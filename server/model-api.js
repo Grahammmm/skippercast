@@ -235,7 +235,7 @@ function parseQuery(kind, params) {
   if (zone === 'auto') zone = 'GMT';
   if (!validZone(zone)) throw new QueryError('Invalid timezone');
   const speed = params.get('wind_speed_unit') || 'kmh';
-  if (!SPEED[speed]) throw new QueryError('Invalid wind_speed_unit');
+  if (!Object.hasOwn(SPEED, speed)) throw new QueryError('Invalid wind_speed_unit');
   const cell = params.get('cell_selection') || (kind === 'marine' ? 'sea' : 'land');
   if (!['land', 'sea', 'nearest'].includes(cell)) throw new QueryError('Invalid cell_selection');
   // Repeated names already overwrite the same output fields. Preserve their
