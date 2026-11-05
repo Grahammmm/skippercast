@@ -410,3 +410,28 @@ test('session_advisor_matches_gate: the session flag follows the gate that answe
   }
   sql.close();
 });
+
+// SC1822-01: the deletion copy names every record DELETE /api/privacy removes and the retention of the ones with no age limit.
+test('delete_confirmation_names_all_private_record_categories', () => {
+  const src = readFileSync(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
+  const sentence = src.match(/<p id=\{id\}>([^<]*)<\/p>/)?.[1];
+  assert.ok(sentence, 'ConfirmDelete paragraph');
+  for (const word of ['account', 'passkeys', 'sign-in sessions', 'pending sign-in requests', 'saved trips', 'notification subscriptions', 'assessments', 'notification delivery records', 'comfort feedback', 'catch log', 'saved spots', 'This cannot be undone.']) assert.ok(sentence.includes(word), word);
+  assert.match(src, /role="alertdialog"[\s\S]*Cancel[\s\S]*Yes, delete everything/);
+});
+
+test('privacy_copy_distinguishes_retained_log_and_spots', () => {
+  const src = readFileSync(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
+  const para = src.match(/<p>(Trips, notification endpoints[^<]*)<\/p>/)?.[1];
+  assert.ok(para, 'privacy paragraph');
+  assert.ok(para.includes('catch-log entries and saved spots are stored privately'));
+  assert.ok(para.includes('Comfort feedback is retained for one year; trips and assessments for 90 days.'));
+  assert.ok(para.includes('Catch-log entries and saved spots are kept until you delete them or delete your account.'));
+  assert.doesNotMatch(para, /(catch|spots)[^.]*(90 days|one year)/i);
+});
+
+test('account_fine_print_names_log_and_spots', () => {
+  const src = readFileSync(new URL('../dist/account.js', import.meta.url), 'utf8');
+  assert.ok(src.includes('SkipperCast stores only its public key. Saved trips, alerts, boat comfort feedback, catch-log entries and saved spots belong to your account, and you can delete the account at any time.'));
+  assert.ok(src.includes('Delete your SkipperCast account and all saved trips, alerts, notification devices, catch log, saved spots and comfort feedback?'));
+});
