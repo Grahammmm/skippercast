@@ -9,6 +9,7 @@ state-level directories must stay invisible to the coastal-region enumeration
 import contextlib
 import io
 import json
+from pathlib import Path
 import re
 import tempfile
 import unittest
@@ -112,6 +113,46 @@ class FleetRegionFiles(unittest.TestCase):
         for ident in config.region_ids(ROOT):
             region = config.load_region(ident, ROOT)
             self.assertEqual(region.id, ident)
+
+
+def fleet_root(tmp, mutate):
+    """A repo-shaped root whose regions/CA/fleet.json is the real one after ``mutate(doc)``."""
+    root = Path(tmp)
+    for name in ('catalog', 'schemas'):
+        (root / name).symlink_to(ROOT / name)
+    (root / 'regions').mkdir()
+    for child in (ROOT / 'regions').iterdir():
+        if child.name != 'CA':
+            (root / 'regions' / child.name).symlink_to(child)
+    (root / 'regions' / 'CA').mkdir()
+    for child in (ROOT / 'regions' / 'CA').iterdir():
+        if child.name != 'fleet.json':
+            (root / 'regions' / 'CA' / child.name).symlink_to(child)
+    doc = load(ROOT / 'regions' / 'CA' / 'fleet.json')
+    mutate(doc)
+    (root / 'regions' / 'CA' / 'fleet.json').write_text(json.dumps(doc))
+    return root
+
+
+class AisSourcesList(unittest.TestCase):
+    def test_source_that_is_not_the_first_of_sources_is_refused(self):
+        from skippercast.fleet import config
+        with tempfile.TemporaryDirectory() as tmp:
+            root = fleet_root(tmp, lambda d: d['ais'].update(sources=['local-nmea', 'aisstream']))
+            with self.assertRaises(config.FleetConfigError) as caught:
+                config.load_region('CA', root)
+            self.assertIn('ais.sources[0]', str(caught.exception))
+
+    def test_schema_refuses_bad_sources_lists(self):
+        from skippercast import validate
+        if not validate.available():
+            self.skipTest('jsonschema not installed')
+        doc = load(ROOT / 'regions' / 'CA' / 'fleet.json')
+        for bad in ([], ['aisstream', 'aisstream'], ['aisstream', 'datalastic', 'local-nmea', 'x'], ['nope']):
+            doc['ais']['sources'] = bad
+            self.assertNotEqual(validate.errors('fleet-region', doc), [], bad)
+        doc['ais']['sources'] = ['aisstream', 'datalastic', 'local-nmea']
+        self.assertEqual(validate.errors('fleet-region', doc), [])
 
 
 class DryRunRegions(unittest.TestCase):
