@@ -13,7 +13,7 @@ import {PROFILE_TABLE} from '../profile.ts';
 import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {
-  alertDate, alertNames, alertSpecies, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, deviceStatus, deviceButtons, DEVICE_LINE, type DeviceStatus, eventLine, feedbackPhase, formProblem, latestTripEvent, assessmentTime, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotifications, tripBody, tripBoat, tripDefaults, tripLine, tripPlanSummary, tripRecaps,
+  alertDate, alertNames, alertSpecies, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, deviceStatus, latestCheck, deviceButtons, DEVICE_LINE, type DeviceStatus, eventLine, feedbackPhase, formProblem, latestTripEvent, assessmentTime, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotifications, tripBody, tripBoat, tripDefaults, tripLine, tripPlanSummary, tripRecaps,
   type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type SavedTrip, type TripPlanSummary,
 } from '../alerts.ts';
 
@@ -135,7 +135,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const [status, setStatus] = useState('');
   const [stopping, setStopping] = useState(false);
   const [device, setDevice] = useState<DeviceStatus | null>(null);
-  const checkDevice = () => { void deviceStatus().then(setDevice, () => setDevice('unchecked')); };
+  const checkDevice = useMemo(() => latestCheck<DeviceStatus>(() => deviceStatus(), setDevice, () => 'unchecked'), []);
   useEffect(checkDevice, []);
   const [trips, setTrips] = useState<{trips: SavedTrip[]; events: AlertEvent[]} | null>(null);
   const digest = trips ? weekendDigest(trips.trips, names, range.min) : null;

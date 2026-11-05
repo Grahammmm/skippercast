@@ -129,3 +129,23 @@ test('buttons: Enable hidden only when confirmed; Stop on this device only with 
   assert.deepEqual(b('unchecked'), {enable: true, stopDevice: true});
   for (const s of ['blocked', 'off', 'unavailable', null]) assert.deepEqual(b(s), {enable: true, stopDevice: false}, String(s));
 });
+
+test('latestCheck: a slow opening check answering after the post-stop refresh is dropped', async () => {
+  const pending = [], seen = [];
+  const run = alerts.latestCheck(() => new Promise(resolve => pending.push(resolve)), v => seen.push(v), () => 'unchecked');
+  run(); run(); // opening check, then the refresh after Stop on all devices
+  pending[1]('off');
+  await new Promise(r => setImmediate(r));
+  pending[0]('confirmed'); // the delayed opening answer
+  await new Promise(r => setImmediate(r));
+  assert.deepEqual(seen, ['off']);
+});
+
+test('latestCheck: a failed latest check reports unchecked; an older failure is dropped', async () => {
+  const pending = [], seen = [];
+  const run = alerts.latestCheck(() => new Promise((resolve, reject) => pending.push({resolve, reject})), v => seen.push(v), () => 'unchecked');
+  run(); run();
+  pending[0].reject(new Error('x')); pending[1].reject(new Error('y'));
+  await new Promise(r => setImmediate(r));
+  assert.deepEqual(seen, ['unchecked']);
+});

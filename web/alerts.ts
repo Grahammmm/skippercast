@@ -397,3 +397,9 @@ export const DEVICE_LINE: Readonly<Record<DeviceStatus, string>> = {
 /** Which buttons the state shows: Enable is hidden only when the server confirmed; Stop on this device shows whenever a local subscription exists. Stop on all devices always shows. */
 export const deviceButtons = (s: DeviceStatus | null): {enable: boolean; stopDevice: boolean} =>
   ({enable: s !== 'confirmed', stopDevice: s === 'confirmed' || s === 'not-sending' || s === 'unchecked'});
+
+/** Latest check wins: a check that was started before a newer one never delivers its answer, so a slow opening check cannot overwrite the refresh after a button. */
+export function latestCheck<T>(check: () => Promise<T>, apply: (value: T) => void, failed: () => T): () => void {
+  let latest = 0;
+  return () => { const mine = ++latest; void check().then(v => v, failed).then(v => { if (mine === latest) apply(v); }); };
+}
