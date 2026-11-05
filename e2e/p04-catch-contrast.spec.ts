@@ -202,7 +202,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // BF-helm-mode (layer presets, Helm view): LayerRail.tsx imports Presets.tsx and renders it in the rail header after
   // LookFor. BODY09 mounts Reports, not the rail; Presets.tsx imports no CSS (helm.css is linked from dist/app.html,
   // every rule under html.helm). contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
-  "web/app/LayerRail.tsx": "fdeb4cafb0281cf011b7f4dd326ceacc971e21ee128f1f4da07db8fb072aed7e",
+  // SC0707-09: LayerRail.tsx reads its words from the string catalogue and renders each runtime status note behind the
+  // catalogue English-source disclosure (a plain span lang=en in Spanish only; English unchanged). No CSS, token or catch
+  // markup change; BODY09 mounts Reports, not the rail. contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
+  "web/app/LayerRail.tsx": "0488a7b3233c46bae9cecc2ad98d5e1487d184025a86f023c9f3b5c2d832342f",
   // SC-MAIN-FLAKE (#1400, contours drawn signal): MapStage.tsx only passes host: chartHost.current! to
   // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
   // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),
