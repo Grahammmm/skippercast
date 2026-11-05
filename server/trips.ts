@@ -195,7 +195,7 @@ export async function checkTrip(env:Env,trip:TripRow,now:number,feeds:FeedCache)
   const inputs=await tripInputs(feeds,trip.region+':'+(pointConfig?.context||'default'),region,zones);
   const intel=inputs[0],rules=inputs[1]?.regulations;
   const offshore=pointConfig?.offshore,features=inputs[offshore?3:2]?.features,alerts=Array.isArray(features)?features.map((f:ExternalJSON)=>f&&typeof f==='object'&&!Array.isArray(f)?f.properties??null:null):undefined;
-  const assessment=assessTrip(trip,region,intel,rules,alerts,now);let previous:Assessment|null=null;try{previous=JSON.parse(trip.last_assessment as string);}catch{}
+  const assessment=assessTrip(trip,region,intel,rules,alerts,now,inputs[1]);let previous:Assessment|null=null;try{previous=JSON.parse(trip.last_assessment as string);}catch{}
   const final=trip.date===tomorrow&&hour>=18;
   const kind=alertDecision(previous,assessment,{final,missed});if(!kind)return {outcome:'unchanged',created:false};
   const material={status:assessment.status,issues:assessment.issues,values:Object.fromEntries(Object.entries(assessment.values).map(([k,v])=>[k,v===null?null:Math.round(v*10)/10])),...(assessment.hazards?.length?{hazards:assessment.hazards}:{})};
