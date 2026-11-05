@@ -4,16 +4,22 @@
 // Synthetic clocks and one synthetic protected area stand in where the committed dates do not reach a case.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {mkdtemp} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {build} from 'esbuild';
+import {rendererPlugins} from './helpers/esbuild-url.mjs';
 import test from 'node:test';
 import {signal} from '@preact/signals';
-import {BEACH_HEALTH_SOURCE, CDFW_RULES_URL, activeAlerts, beachNotices, nextShoreChange, rankRuns, shoreGuidance, shoreReviewLines, shoreShown, shoreStatus} from '../web/brief/shore.ts';
+import {BEACH_HEALTH_SOURCE, CDFW_RULES_URL, activeAlerts, beachNotices, nextShoreChange, rankRuns, shoreGuidance, shoreNeverReviewed, shoreReviewLines, shoreShown, shoreStatus, unreviewedNote} from '../web/brief/shore.ts';
 import {assessScreen, CHECKING} from '../web/map/habitat.ts';
 import {layerEntry} from '../web/map/layers.ts';
 import {markScreen} from '../web/map/marks.ts';
 import {readPalette} from '../web/map/palette.ts';
 import {SEAFLOOR_CELLS} from '../web/map/seafloor.ts';
 import {
-  ACCESS_HIT, ACCESS_PIN, ACCESS_SOURCE, RECHECK_MS, RUNS_HIT, RUNS_LINE, RUNS_SOURCE, createShore, insideAreas, runMark, shoreCollections, shoreOverlay, shoreState, shoreURL, shownRuns,
+  ACCESS_HIT, ACCESS_PIN, ACCESS_SOURCE, RECHECK_MS, RUNS_HIT, RUNS_LINE, RUNS_SOURCE, createShore, insideAreas, runMark, shoreCollections, shoreOverlay, shoreState, shoreURL, shownRuns, unreviewedCount,
 } from '../web/map/shore.ts';
 import {DEFAULT_ZONE, regionInfo} from '../web/app/region-info.ts';
 import {configureStore, syncFromURL} from '../web/state.ts';
@@ -22,6 +28,9 @@ const ROOT = new URL('..', import.meta.url);
 const json = path => JSON.parse(readFileSync(new URL(path, ROOT), 'utf8'));
 const PACKAGE = json('dist/regions/morro-bay/shore-habitat.geojson');
 const REGION = json('dist/regions/morro-bay/region.json');
+/** The never-reviewed rocky run (SC1952-08) and the dated sand runs that predate it. */
+const ESTERO = PACKAGE.features.find(f => f.id === 'estero-bluffs');
+const LEGACY = PACKAGE.features.filter(f => f.id !== 'estero-bluffs');
 const SNAPSHOT = json(`dist/${REGION.assets.protected_areas}`);
 const HOUR = 3_600_000;
 const NOW = Date.parse('2026-10-11T00:00:00Z');
@@ -123,7 +132,7 @@ test('review dates never set guidance priority or imply current reviews', () => 
 
 test('committed expired access and rules dates remain visible without blanket Hold', () => {
   const runs = shownRuns(PACKAGE, READY, checked(NOW), NOW);
-  assert.equal(runs.length, PACKAGE.features.length);
+  assert.equal(runs.length, LEGACY.length);
   const unblocked = runs.filter(r => r.status.label !== 'Blocked');
   assert.ok(unblocked.length > 0);
   for (const r of unblocked) {
@@ -144,7 +153,7 @@ test('Accept 1: access expiry does not hold guidance; source publication visibil
   const access = Date.parse(PACKAGE.features[0].properties.accessReviewExpiresAt);
   for (const now of [access - 2 * HOUR, access, access + HOUR]) {
     const runs = shownRuns(PACKAGE, screenAt(SNAPSHOT.features, now), checked(now), now);
-    assert.equal(runs.length, PACKAGE.features.length);
+    assert.equal(runs.length, LEGACY.length);
     for (const r of runs) assert.ok(['No surf model', 'Blocked'].includes(r.status.label), r.name);
   }
   const late = Date.parse(PACKAGE.features[0].properties.reviewExpiresAt) + HOUR;
@@ -242,13 +251,15 @@ test('Accept 3: visible only with profile=shore', async t => {
   await flush(); await flush();
   assert.deepEqual(asked, [shoreURL('morro-bay')]);
   assert.deepEqual(calls.find(c => c[0] === 'overlay' && c[2]), ['overlay', 'shore-runs', [RUNS_HIT, RUNS_LINE, ACCESS_HIT, ACCESS_PIN], SEAFLOOR_CELLS]);
-  assert.equal(shoreState.value.drawn, PACKAGE.features.length);
+  assert.equal(shoreState.value.drawn, LEGACY.length);
+  assert.equal(shoreState.value.unreviewed, 1, 'the never-reviewed run is counted, not drawn');
   const id = PACKAGE.features[0].id;
   assert.equal(shore.pick.mark(RUNS_HIT, {id}).id, `shore:${id}`);
   syncFromURL('https://s.test/map?region=morro-bay&profile=spear');
   await flush();
   assert.deepEqual(calls.at(-1), ['overlay', 'shore-runs', null, null]);
   assert.equal(shoreState.value.drawn, 0);
+  assert.equal(shoreState.value.unreviewed, 0, 'nothing is counted off the Shore profile');
   assert.equal(shore.pick.mark(RUNS_HIT, {id}), null);
 });
 
@@ -450,4 +461,89 @@ test('shore pick: injected clock governs expiry text', async t => {
   clock = NOW + 3 * HOUR;
   assert.match(card(), /review expired .+ · rules checked .+, review expired .+ · source review until/, 'equality at expiry is expired');
   assert.equal(shore.pick.mark(RUNS_HIT, {id: 'no-such-run'}), null, 'an unknown mark id still returns null');
+});
+
+test('a never-reviewed run is said as not yet reviewed, never expired, checked or dated', () => {
+  assert.ok(ESTERO, 'the Estero Bluffs run is in the published package');
+  const p = ESTERO.properties;
+  assert.equal(p.substrate, 'rocky');
+  assert.deepEqual([p.checkedAt, p.reviewExpiresAt, p.accessReviewedAt, p.accessReviewExpiresAt, p.legalReviewedAt, p.legalReviewExpiresAt], [null, null, null, null, null, null]);
+  const said = 'Access not yet reviewed \u00b7 rules not yet reviewed \u00b7 source not yet reviewed';
+  for (const now of [NOW, Date.parse('2099-01-01T00:00:00Z'), 0]) {
+    assert.equal(shoreReviewLines(p, now), said);
+    assert.doesNotMatch(shoreReviewLines(p, now), /1970|Invalid Date|expired|checked|until/i);
+  }
+  const card = runMark({run: ESTERO, name: p.name, status: shoreStatus(p, {now: NOW, inside: [], conditions: true})}, 'surfperch', NOW);
+  assert.ok(card.reading.endsWith(said + '.'), card.reading);
+  assert.match(card.basis, /rocky shore/);
+  assert.equal(shoreShown(p, NOW), false);
+  assert.equal(shoreShown(p, Date.parse('2099-01-01T00:00:00Z')), false, 'no later clock turns it on');
+});
+
+test('one-sided or malformed review pairs stay unknown, and dated sand wording is unchanged', () => {
+  const p = ESTERO.properties;
+  assert.match(shoreReviewLines({...p, accessReviewedAt: '2026-10-02T00:00:00Z'}, NOW), /^Access checked Oct 1, 2026, review date unknown \u00b7 rules not yet reviewed/);
+  assert.match(shoreReviewLines({...p, reviewExpiresAt: 'soon', checkedAt: 'soon'}, NOW), /source review date unknown$/);
+  assert.match(shoreReviewLines({...p, legalReviewExpiresAt: 'x', legalReviewedAt: null}, NOW), /rules checked date unknown, review date unknown/);
+  assert.match(shoreReviewLines(LEGACY[0].properties, NOW),
+    /^Access checked Oct 2, 2026, review expired Oct 9, 2026 \u00b7 rules checked Oct 2, 2026, review expired Oct 3, 2026 \u00b7 source review until Nov 1, 2026$/);
+});
+
+test('Chart admits no never-reviewed run, whatever the root review dates say', () => {
+  const far = {...PACKAGE, reviews: {source: {reviewedAt: iso(NOW), expiresAt: '2099-01-01T00:00:00Z'}, access: {reviewedAt: iso(NOW), expiresAt: '2099-01-01T00:00:00Z'}, legal: {reviewedAt: iso(NOW), expiresAt: '2099-01-01T00:00:00Z'}}};
+  for (const pkg of [PACKAGE, far]) {
+    const runs = shownRuns(pkg, READY, checked(NOW), NOW);
+    assert.deepEqual(runs.map(r => r.run.id).sort(), LEGACY.map(f => f.id).sort());
+    assert.equal(runs.some(r => r.run.properties.substrate === 'rocky'), false);
+  }
+  assert.equal(unreviewedCount(PACKAGE), 1);
+  assert.equal(unreviewedCount({...PACKAGE, features: LEGACY}), 0);
+  assert.equal(unreviewedCount(null), 0);
+  assert.equal(unreviewedNote(1), '1 shore run not yet reviewed is not shown.');
+  assert.equal(unreviewedNote(2), '2 shore runs not yet reviewed are not shown.');
+  assert.equal(unreviewedNote(0), '');
+  assert.equal(shoreNeverReviewed(ESTERO.properties), true);
+  assert.equal(shoreNeverReviewed(LEGACY[0].properties), false);
+});
+
+test('the Chart legend says the never-reviewed run is not shown, on Morro Bay Shore only', async t => {
+  globalThis.location = {href: 'https://s.test/map?region=morro-bay&profile=shore'};
+  const out = join(await mkdtemp(join(tmpdir(), 'shore-legend-')), 'legend.mjs');
+  await build({
+    stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
+      export {Legend} from './web/app/Legend.tsx';
+      export {createShore} from './web/map/shore.ts';
+      export {markScreen} from './web/map/marks.ts';
+      export * as state from './web/state.ts';
+      export {signal} from '@preact/signals';
+      export {render} from 'preact-render-to-string';
+      export {h} from 'preact';`},
+    bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
+    plugins: rendererPlugins,
+  });
+  const m = await import(pathToFileURL(out).href);
+  m.state.configureStore({v2: true, storage: null});
+  m.state.syncFromURL('https://s.test/map?region=morro-bay&profile=shore');
+  const fetchFn = async url => {
+    const path = new URL(url).pathname.slice(1);
+    return path === 'regions/morro-bay/shore-habitat.geojson' ? {ok: true, json: async () => json(`dist/${path}`)} : {ok: false, status: 404, json: async () => null};
+  };
+  m.markScreen.value = READY;
+  const shore = m.createShore({engine: m.signal(null), fetchFn, page: () => location.href, palette: () => sentinel, now: () => NOW, report: m.signal(null)});
+  t.after(() => { shore.destroy(); m.markScreen.value = CHECKING; });
+  const note = /<p class="app-legend-note" data-reason="shore-runs">1 shore run not yet reviewed is not shown\.<\/p>/;
+  const legend = () => m.render(m.h(m.Legend));
+  assert.doesNotMatch(legend(), /data-reason="shore-runs"/, 'nothing is said before the package loads');
+  await flush(); await flush();
+  assert.match(legend(), note, 'Morro Bay on Shore says the Estero run is not yet reviewed');
+  assert.doesNotMatch(legend().match(/<li class="app-legend-shore">.*?<\/li>/)[0], /expired|reviewed on|Current/i, 'never said as expired or current');
+  m.state.syncFromURL('https://s.test/map?region=morro-bay&profile=boat');
+  await flush();
+  assert.doesNotMatch(legend(), /not yet reviewed/, 'hidden off the Shore profile');
+  m.state.syncFromURL('https://s.test/map?region=morro-bay&profile=shore');
+  await flush(); await flush();
+  assert.match(legend(), note, 'back on Shore it returns');
+  m.state.syncFromURL('https://s.test/map?region=cambria-san-simeon&profile=shore');
+  await flush(); await flush();
+  assert.doesNotMatch(legend(), /not yet reviewed/, 'reset after changing region');
 });

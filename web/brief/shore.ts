@@ -21,14 +21,17 @@ export const CDFW_RULES_URL = 'https://wildlife.ca.gov/Fishing/Ocean/Regulations
 export type ShorePriority = 0 | 2 | 3;
 export type ShoreLabel = 'Blocked' | 'Hold' | 'No surf model' | 'Current';
 
-/** The original run review dates (schemas/shore-habitat.schema.json `run.properties`). */
+/**
+ * The run review dates (schemas/shore-habitat.schema.json `run.properties`). A run that has never been reviewed
+ * carries null for both ends of a pair: that is "not yet reviewed", not expired, and no date is borrowed for it.
+ */
 export interface ShoreRunClocks {
-  readonly reviewExpiresAt: string;
-  readonly accessReviewedAt: string;
-  readonly accessReviewExpiresAt: string;
-  readonly legalReviewedAt: string;
-  readonly legalReviewExpiresAt: string;
-  readonly checkedAt: string;
+  readonly reviewExpiresAt: string | null;
+  readonly accessReviewedAt: string | null;
+  readonly accessReviewExpiresAt: string | null;
+  readonly legalReviewedAt: string | null;
+  readonly legalReviewExpiresAt: string | null;
+  readonly checkedAt: string | null;
 }
 
 export interface ShoreInputs {
@@ -52,12 +55,20 @@ export interface ShoreStatus {
   readonly reasons: readonly string[];
 }
 
-const time = (s: string): number => { const t = Date.parse(s); return Number.isFinite(t) ? t : -Infinity; };
-const day = (s: string, timeZone: string = DEFAULT_ZONE): string => Number.isFinite(Date.parse(s))
+// A null clock is handled before any Date is built: Date.parse(null) is NaN and new Date(null) is the epoch.
+const time = (s: string | null): number => { const t = typeof s === 'string' ? Date.parse(s) : NaN; return Number.isFinite(t) ? t : -Infinity; };
+const day = (s: string | null, timeZone: string = DEFAULT_ZONE): string => typeof s === 'string' && Number.isFinite(Date.parse(s))
   ? new Date(s).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone}) : 'date unknown';
 
-/** Whether the run may be shown at all: its source review has not expired (the terrain's own rule). */
+/** Whether the run may be shown at all: its source review has not expired (the terrain's own rule). A never-reviewed run is not shown. */
 export const shoreShown = (run: Pick<ShoreRunClocks, 'reviewExpiresAt'>, now: number): boolean => time(run.reviewExpiresAt) > now;
+
+/** True when the run's source review pair is null: no owner review has happened yet (a review state, not an expiry). */
+export const shoreNeverReviewed = (run: Pick<ShoreRunClocks, 'checkedAt' | 'reviewExpiresAt'>): boolean => run.checkedAt === null && run.reviewExpiresAt === null;
+
+/** "1 shore run not yet reviewed is not shown"; empty when there is none. */
+export const unreviewedNote = (count: number): string =>
+  count > 0 ? `${count} shore run${count === 1 ? '' : 's'} not yet reviewed ${count === 1 ? 'is' : 'are'} not shown.` : '';
 
 /** The run's priority and label at `now`. */
 export function shoreStatus(_run: ShoreRunClocks, {now, inside, conditions, alertCheck = true, alerts = [], notices = []}: ShoreInputs): ShoreStatus {
@@ -135,13 +146,17 @@ export function nextShoreChange(report: ShoreReportPart & {readonly alerts?: rea
 }
 
 /** "review until Oct 10, 2026", or "review expired Oct 10, 2026" once that date has passed: a lapsed review is said, never shown as current. */
-const until = (expires: string, now: number, tz: string): string =>
-  Number.isFinite(Date.parse(expires)) ? `review ${time(expires) > now ? 'until' : 'expired'} ${day(expires, tz)}` : 'review date unknown';
+const until = (expires: string | null, now: number, tz: string): string =>
+  typeof expires === 'string' && Number.isFinite(Date.parse(expires)) ? `review ${time(expires) > now ? 'until' : 'expired'} ${day(expires, tz)}` : 'review date unknown';
 
 /** The review dates the card shows at `now`, as calendar days in `tz` (the region's zone; Pacific by default). Expiry compares instants, never zones. */
 export function shoreReviewLines(run: ShoreRunClocks, now = Date.now(), tz: string = DEFAULT_ZONE): string {
-  return `Access checked ${day(run.accessReviewedAt, tz)}, ${until(run.accessReviewExpiresAt, now, tz)} · `
-    + `rules checked ${day(run.legalReviewedAt, tz)}, ${until(run.legalReviewExpiresAt, now, tz)} · source ${until(run.reviewExpiresAt, now, tz)}`;
+  // Only a pair that is null at both ends says "not yet reviewed"; a one-sided or malformed pair stays "date unknown".
+  const none = (a: string | null, b: string | null): boolean => a === null && b === null;
+  const access = none(run.accessReviewedAt, run.accessReviewExpiresAt) ? 'Access not yet reviewed' : `Access checked ${day(run.accessReviewedAt, tz)}, ${until(run.accessReviewExpiresAt, now, tz)}`;
+  const rules = none(run.legalReviewedAt, run.legalReviewExpiresAt) ? 'rules not yet reviewed' : `rules checked ${day(run.legalReviewedAt, tz)}, ${until(run.legalReviewExpiresAt, now, tz)}`;
+  const source = none(run.checkedAt, run.reviewExpiresAt) ? 'source not yet reviewed' : `source ${until(run.reviewExpiresAt, now, tz)}`;
+  return `${access} · ${rules} · ${source}`;
 }
 
 export interface ShoreGuidance {readonly text: string; readonly href: string; readonly label: string}

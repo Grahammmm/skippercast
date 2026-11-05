@@ -196,3 +196,24 @@ test('source deadline timers are cancelled on Off, hour, location, and presentat
  const {v}=harness();const prior=globalThis.clearTimeout;let cancelled=0;globalThis.clearTimeout=((timer:any)=>{if(timer==='source-timer')cancelled++;}) as any;
  try{for(const change of [()=>v.setCurrentLayer('off'),()=>v.setHour(new Date(NaN)),()=>v.setLocation({latitude:35.4,longitude:-120.9}),()=>v.withholdOverlays()]){v.currentExpiryTimer='source-timer';change();}assert.equal(cancelled,4);}finally{globalThis.clearTimeout=prior;}
 });
+test('3D shore: a never-reviewed rocky run is withheld and said so; sand copy is unchanged without one',async()=>{
+ const {v,node}=harness();const coords=[[-120.95,35.45],[-120.94,35.451]];
+ const mk=(id:string,reviewExpiresAt:string|null,substrate:string)=>({id,geometry:{type:'MultiLineString',coordinates:[coords]},properties:{id,name:id,areaId:'central',substrate,reviewExpiresAt,access:[{coordinates:coords[0]}],shoreClass:'class',sourceYear:2006,checkedAt:null,legalReviewExpiresAt:null}});
+ const features=[mk('sand-run','2999-01-01T00:00:00Z','sand'),mk('rocky-run',null,'rocky'),mk('old-run','2000-01-01T00:00:00Z','sand')];
+ const {admitShore}=await import('../../packages/coast/src/shore-review.ts');
+ const priorDocument=(globalThis as any).document;
+ (globalThis as any).document={createElement:()=>({append(){},remove(){},setAttribute(){},style:{}})};
+ try{
+  node('rank-list').append=()=>{};node('pins').append=()=>{};node('habitat').checked=true;node('next-reef').disabled=false;
+  v.options.palette={shoreLine:0};Object.assign(v,{option:()=>({id:'surfperch',label:'Surfperch'}),restoreHabitatSelection:()=>{}});
+  const admitted=admitShore<any>(features,Date.now());v.shoreFeatures=admitted.shown;v.shoreUnreviewed=admitted.unreviewed;
+  assert.deepEqual(v.shoreFeatures.map((f:any)=>f.id),['sand-run']);assert.equal(v.shoreUnreviewed,1);
+  (CoastViewer.prototype as any).drawShore.call(v);
+  assert.equal(node('habitat-status').textContent,'1 sandy-shore context segments. No ranked offshore Surfperch habitat is admitted. 1 shore run not yet reviewed is withheld.');
+  assert.equal(v.pins.length,1,'the never-reviewed run gets no pin');
+  v.shoreUnreviewed=0;(CoastViewer.prototype as any).drawShore.call(v);
+  assert.equal(node('habitat-status').textContent,'1 sandy-shore context segments. No ranked offshore Surfperch habitat is admitted.');
+  v.shoreFeatures=[mk('rocky-run','2999-01-01T00:00:00Z','rocky')];(CoastViewer.prototype as any).drawShore.call(v);
+  assert.match(node('habitat-status').textContent,/^1 rocky-shore context segments\./);
+ }finally{(globalThis as any).document=priorDocument;}
+});
