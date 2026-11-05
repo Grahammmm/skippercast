@@ -101,7 +101,6 @@ export async function savePack({signal, progress = () => {}, sessionStart = 0, m
     }
   }
   try {
-    try { await navigator.storage?.persist?.(); } catch {}
     const config = await regionConfig(region.id).catch(() => null) || `regions/${region.id}/region.json`;
     const configURL = new URL(config, origin + '/').href;
     // Only the ocean phase writes ocean keys (a region's habitat manifest, routed to /feeds/ by withFeeds, is one), so the files phase skips them.

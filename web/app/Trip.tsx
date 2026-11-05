@@ -10,7 +10,7 @@ import {Button, IconButton} from '../ui/Button.tsx';
 import {PortDialog} from '../landing/PortInput.tsx';
 import {region} from '../state.ts';
 import {
-  canSaveCoastal, closeTrip, deleteCoastal, listPacks, loadPlanner, offlineOpen, plannerView, readCoastal, saveCoastal, savePack, tripError, tripOpen, tripReady,
+  KEEP_WORDS, canSaveCoastal, closeTrip, deleteCoastal, estimateWords, listPacks, loadPlanner, offlineOpen, plannerView, readCoastal, saveCoastal, savePack, savePackKept, storageLine, tripError, tripOpen, tripReady,
   type PackMeta, type Progress,
 } from '../trip.ts';
 import {oceanLines} from '../trip-ocean-lines.ts';
@@ -61,6 +61,7 @@ function ChartPack() {
   const [busy, setBusy] = useState<AbortController | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [status, setStatus] = useState('');
+  const [room, setRoom] = useState<{used: number; quota: number} | null>(null);
   const [inventoryState, setInventoryState] = useState<'loading' | 'success' | 'error'>('loading');
   const refreshId = useRef(0);
   const refresh = async () => {
@@ -70,6 +71,7 @@ function ChartPack() {
       const next = await listPacks();
       if (request !== refreshId.current) return;
       setPacks(next); setInventoryState('success');
+      void storageLine().then(r => { if (request === refreshId.current) setRoom(r); });
     } catch {
       // An unreadable inventory is not evidence that the device has no packs.
       // Keep the last successful listing, if any, but qualify it below.
@@ -83,8 +85,8 @@ function ChartPack() {
     const controller = new AbortController();
     setBusy(controller); setStatus('');
     try {
-      const meta = await savePack(id, controller.signal, setProgress);
-      setStatus(`Saved ${meta.region_name} · ${formatBytes(meta.bytes)}.${packMissing(meta) ? ` ${packMissing(meta)} items could not be saved and will be missing offline.` : ''}`);
+      const {meta, keep} = await savePackKept(() => savePack(id, controller.signal, setProgress));
+      setStatus(`Saved ${meta.region_name} · ${formatBytes(meta.bytes)}.${packMissing(meta) ? ` ${packMissing(meta)} items could not be saved and will be missing offline.` : ''}${KEEP_WORDS[keep] ? ` ${KEEP_WORDS[keep]}` : ''}`);
     } catch (e) {
       setStatus(controller.signal.aborted ? 'Cancelled. Nothing new was saved.' : `Could not save: ${(e as Error).message}`);
     } finally { setBusy(null); setProgress(null); void refresh(); }
@@ -122,6 +124,7 @@ function ChartPack() {
           );
         }) : inventoryState === 'success' ? <li>Nothing saved on this device yet.</li> : null}
       </ul>
+      {room ? <p>{estimateWords(room)}</p> : null}
     </section>
   );
 }

@@ -20,3 +20,7 @@ export const savePack = async () => {
   runtime.saves++;
   return runtime.saveMeta ?? {region_name: 'Fixture Harbor', bytes: 128, missing: []};
 };
+// SC2037-05: no storage API in the fixture world: a save keeps the older words and the list shows no estimate line.
+export const KEEP_WORDS = {agreed: '', already: '', refused: '', unavailable: ''};
+export const storageLine = async () => null, estimateWords = () => '';
+export const savePackKept = async save => ({meta: await save(), keep: 'unavailable'});
