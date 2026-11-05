@@ -2,22 +2,23 @@
 // GPX hand-off, rendered from web/planner.ts's signals. It replaces v1's
 // dist/export-ui.js markup with the same controls, ids and copy, so a plan reads
 // and exports as before. Loaded with the planner on first open. Styles:
-// web/app/trip.css.
+// web/app/trip.css. SC0707-10: every word is a catalogue id read at render in the
+// chosen language; the model's English messages go through web/planner-copy.ts.
 import {useEffect} from 'preact/hooks';
 import {signal} from '@preact/signals';
 import {coordinates} from '../state.ts';
 import {session} from '../account.ts';
 import {formatCoordinates} from '../../dist/coordinates.js';
-import {exportEvidenceLabel, protectedHitReading, USER_WAYPOINT_CATEGORIES} from '../../dist/trip-export.js';
-import {fitLabel} from '../../dist/spot-ranking.js';
+import {USER_WAYPOINT_CATEGORIES} from '../../dist/trip-export.js';
 import type {Filters, LayerKey, Planner as Model, Preset, ProtectedHit, Target, TripSpecies} from '../planner.ts';
 import {ALERT_STORAGE_NOTE, PORTS_FAILED_NOTE, sharedConfidence, type AlertLegsFn} from '../planner.ts';
 import {AREA_NOTE} from '../planner-alerts.ts';
 import {tripLegs} from '../trip-legs.ts';
 import {protectedScreen} from '../trip.ts';
-import {verdictLine} from '../waypoint-placement.ts';
 import {cruiseSpeed} from '../limits.ts';
 import {landWater, loadLandWaterLines, type LandWaterState} from '../land-water.ts';
+import {language, t, type Language, type StringId} from '../i18n.ts';
+import {categoryText, countText, evidenceLabel, fitText, hitReading, nmText, plannerText, plannerVerdict} from '../planner-copy.ts';
 import {PlanRules} from './PlanRules.tsx';
 import {waterRoute, type Route, type RoutePoint} from '../route.ts';
 // Leg routes over the land/water product and lines the Boat brief reads (FSC-05), kept until either changes so a re-render does not search again.
@@ -29,65 +30,68 @@ function legRoute(lw: LandWaterState, id: string): (a: RoutePoint, b: RoutePoint
   return (a, b) => { const key = `${a.latitude},${a.longitude}>${b.latitude},${b.longitude}`; if (!byKey.has(key)) byKey.set(key, waterRoute(model, lw.lines, a, b)); return byKey.get(key)!; };
 }
 
-const DEVICE_HELP: Readonly<Record<string, readonly [string, string, string]>> = {
-  generic: ['Chartplotter model not selected', 'Download GPX, copy it to storage supported by your model, then use its Import menu. Most reviewed plotters use SD/microSD; USB support varies. Inserting media alone does not import a plan.', 'https://www8.garmin.com/manuals/webhelp/GUID-3E67C80C-0812-4EEC-BC60-699751B9CF6F/EN-US/GPSMAP_x3_OM_EN-US.pdf'],
-  garmin: ['Garmin GPSMAP / ECHOMAP', 'Use a compatible SD/microSD card. Select GPX as the data-transfer file type, then Manage User Data → Data Transfer → Merge from Card. Avoid Replace from Card if you want to retain existing data. Menu names depend on model.', 'https://support.garmin.com/en-US/?faq=zFDPlv7AnK2eNWRp2AgMkA'],
-  lowrance: ['Lowrance HDS', 'Copy GPX to a compatible memory card. In Storage / Files, select the file and Import. Verify the instructions for your model and software. HDS PRO total capacity: 3,000 waypoints, 100 trails, 10,000 points per trail.', 'https://www.lowrance.com/hds-pro/specs/'],
-  simrad: ['Simrad NSS / NSX', 'Use a compatible memory card; USB is model-specific. Use Files or the waypoint/route/track import controls to import GPX. NSX total capacity: 6,000 waypoints, 50 tracks, 12,000 points per track. Other Simrad models differ.', 'https://www.simrad-yachting.com/en-eu/nsx/specifications/'],
-  raymarine: ['Raymarine Axiom', 'Copy GPX to compatible storage. In LightHouse 4, use My data → Import/export → Import from card, or select the file in Files. Axiom 2 total capacity: 10,000 waypoints and 15 tracks (10,000 points per track).', 'https://docs.raymarine.com/81406/en-US/latest/index.html'],
-  inavx: ['iNavX on iPad / iPhone', 'Use Share / Save file to open GPX in iNavX. Or download, open the file from Files → Downloads, then Share → iNavX. Display imported waypoints and tracks. No USB or memory card is required.', 'https://inavx.com/h/inavx/waypoints.htm'],
+/** Device help: the published device name (a catalogue id for a name that is not a model's own), the translated steps and the official reference. */
+const DEVICE_HELP: Readonly<Record<string, readonly [StringId, StringId, string]>> = {
+  generic: ['planner.help.generic', 'planner.device.generic', 'https://www8.garmin.com/manuals/webhelp/GUID-3E67C80C-0812-4EEC-BC60-699751B9CF6F/EN-US/GPSMAP_x3_OM_EN-US.pdf'],
+  garmin: ['planner.deviceName.garmin', 'planner.device.garmin', 'https://support.garmin.com/en-US/?faq=zFDPlv7AnK2eNWRp2AgMkA'],
+  lowrance: ['planner.deviceName.lowrance', 'planner.device.lowrance', 'https://www.lowrance.com/hds-pro/specs/'],
+  simrad: ['planner.deviceName.simrad', 'planner.device.simrad', 'https://www.simrad-yachting.com/en-eu/nsx/specifications/'],
+  raymarine: ['planner.deviceName.raymarine', 'planner.device.raymarine', 'https://docs.raymarine.com/81406/en-US/latest/index.html'],
+  inavx: ['planner.deviceName.inavx', 'planner.device.inavx', 'https://inavx.com/h/inavx/waypoints.htm'],
 };
-const LAYERS: readonly (readonly [LayerKey, string, string])[] = [
-  ['waypoints', 'Fishing waypoints', 'Selected positions with terrain, depth and source notes.'],
-  ['outlines', 'Linked reef outlines', 'Partial habitat boundaries as tracks, included once per area.'],
-  ['alignments', 'Structure alignment lines', 'Fixed survey alignments as tracks. Not forecast drifts or routes.'],
-  ['exclusions', 'Protected-area outlines', 'AVOID tracks for MPAs and mapped groundfish exclusions; whole outlines that intersect your chosen coverage.'],
+const LAYERS: readonly (readonly [LayerKey, StringId, StringId])[] = [
+  ['waypoints', 'planner.layer.waypoints', 'planner.layer.waypoints.text'],
+  ['outlines', 'planner.layer.outlines', 'planner.layer.outlines.text'],
+  ['alignments', 'planner.layer.alignments', 'planner.layer.alignments.text'],
+  ['exclusions', 'planner.layer.exclusions', 'planner.layer.exclusions.text'],
 ];
-/** C1 and C4 short forms, verbatim from docs/legal/disclaimers.md (placement item 4: before a chartplotter file is downloaded). */
-export const EXPORT_CAVEATS = ['Planning aid · not a navigation chart.', 'You are responsible for your boat, crew and decisions at sea.'] as const;
-const PRESETS: readonly (readonly [Preset, string])[] = [['map', 'Current map'], ['filtered', 'Filtered research references'], ['region', 'Whole region'], ['none', 'Clear selection']];
+/** C1 and C4 short forms, verbatim from docs/legal/disclaimers.md (placement item 4: before a chartplotter file is downloaded). The English constants; the page renders them in the chosen language. */
+export const EXPORT_CAVEATS = [t('brief.planning', 'en'), t('planner.caveat.c4', 'en')] as const;
+const PRESETS: readonly Preset[] = ['map', 'filtered', 'region', 'none'];
 
 /** The spot's checkbox title and lines, as v1 listed them. */
-function SpotRow({t, checked, hit, showConfidence = true, onToggle}: {t: Target; checked: boolean; hit?: ProtectedHit; showConfidence?: boolean; onToggle: (on: boolean) => void}) {
-  const depth = t.canonical_habitat ? (t.neighborhood_depth_ft ?? []).map(n => Math.round(n)).join('–') : t.center_depth_ft;
+function SpotRow({t: spot, checked, hit, showConfidence = true, onToggle}: {t: Target; checked: boolean; hit?: ProtectedHit; showConfidence?: boolean; onToggle: (on: boolean) => void}) {
+  const lang = language.value;
+  const depth = spot.canonical_habitat ? (spot.neighborhood_depth_ft ?? []).map(n => Math.round(n)).join('–') : spot.center_depth_ft;
   return (
     <label class="export-check">
-      <input type="checkbox" data-spot={t.id} checked={checked} onChange={e => onToggle(e.currentTarget.checked)} />
+      <input type="checkbox" data-spot={spot.id} checked={checked} onChange={e => onToggle(e.currentTarget.checked)} />
       <span>
-        <strong>{t.trip_rank ? `#${t.trip_rank} · ${fitLabel(t.trip_fit)}${showConfidence && Number.isFinite(t.evidence_confidence?.percent) ? ` · ${t.evidence_confidence?.percent}% confidence` : ''}` : t.label}</strong>
-        <small>{exportEvidenceLabel(t)}</small>
-        <small>{formatCoordinates(t.latitude, t.longitude, coordinates.value)}</small>
-        <small>{t.trip_rank ? t.name : t.id} · grade {t.habitat_grade} · {depth} ft</small>
-        {t.trip_rank && t.distance_basis && typeof t.distance_nm === 'number' && Number.isFinite(t.distance_nm) ? <small>{t.distance_nm.toFixed(1)} nm {t.distance_basis === 'water' ? 'by water' : 'straight line'}</small> : null}
-        {t.trip_rank ? <small>{t.terrain_interpretation}</small> : null}
-        {hit ? <small>{protectedHitReading(hit)} Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</small> : null}
+        <strong>{spot.trip_rank ? `#${spot.trip_rank} · ${fitText(spot.trip_fit, lang)}${showConfidence && Number.isFinite(spot.evidence_confidence?.percent) ? ` · ${t('planner.spot.confidence', lang, {n: spot.evidence_confidence!.percent})}` : ''}` : spot.label}</strong>
+        <small>{evidenceLabel(spot, lang)}</small>
+        <small>{formatCoordinates(spot.latitude, spot.longitude, coordinates.value)}</small>
+        <small>{spot.trip_rank ? spot.name : spot.id} · {t('planner.spot.grade', lang, {grade: spot.habitat_grade ?? ''})} · {depth} ft</small>
+        {spot.trip_rank && spot.distance_basis && typeof spot.distance_nm === 'number' && Number.isFinite(spot.distance_nm) ? <small>{nmText(spot.distance_nm, lang)} nm {t(spot.distance_basis === 'water' ? 'planner.dist.water' : 'planner.dist.straight', lang)}</small> : null}
+        {spot.trip_rank ? <small>{spot.terrain_interpretation}</small> : null}
+        {hit ? <small>{hitReading(hit, lang)} {t('planner.boundary.context', lang)} {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{t('planner.boundary.link', lang, {agency: m.agency})}</a> </span>)}</small> : null}
       </span>
     </label>
   );
 }
 
 /** A leg's protected-area line after its distance and minutes: not checked, inside, or near; a checked clear leg adds nothing (no claim of safety). Plain text, so a closure's name is never markup. */
-const legLine = (v: Parameters<typeof verdictLine>[0]): string => { const line = verdictLine(v); return line ? ` · ${line}` : ''; };
+const legLine = (v: Parameters<typeof plannerVerdict>[0], lang: Language): string => { const line = plannerVerdict(v, lang); return line ? ` · ${line}` : ''; };
 
 function BoundaryNote({hit}: {hit?: ProtectedHit}) {
-  return hit ? <p>{protectedHitReading(hit)} Boundaries are context; current rules are on the agency page. {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{m.agency} boundary and rules</a> </span>)}</p> : null;
+  const lang = language.value;
+  return hit ? <p>{hitReading(hit, lang)} {t('planner.boundary.context', lang)} {hit.matches.map(m => <span key={m.url + m.name}>{m.name} · <a href={m.url} target="_blank" rel="noopener">{t('planner.boundary.link', lang, {agency: m.agency})}</a> </span>)}</p> : null;
 }
 
 /** SC0022-11: the signed-in person's own spots as stops (plain text throughout). Add copies a name and a position into this browser's plan; the model reads the screen again on every Add. */
 function SavedSpots({m}: {m: Model}) {
-  const state = m.savedSpotsState.value, rows = m.savedSpots.value, status = m.savedSpotsStatus.value;
+  const lang = language.value, state = m.savedSpotsState.value, rows = m.savedSpots.value, status = m.savedSpotsStatus.value;
   return (
-    <section class="export-card" id="export-saved-spots" aria-label="Your saved spots">
-      <h3>Your saved spots</h3>
-      <p class="export-note">Add copies the name and position to this browser’s plan. Notes stay private. Exporting the plan includes its selected positions.</p>
-      {state === 'loading' ? <p role="status">Loading your saved spots…</p> : null}
-      {state === 'failed' ? <p role="status">Saved spots could not be loaded. Try again. <button type="button" onClick={() => void m.refreshSavedSpots()}>Retry</button></p> : null}
-      {state === 'ready' && !rows.length ? <p role="status">No saved spots yet.</p> : null}
-      {rows.length ? <ul aria-label="Saved spots">{rows.map(r => <li key={r.id}>
-        <strong>{r.name}</strong> <small>{formatCoordinates(r.latitude, r.longitude, coordinates.value)}</small> <small>{r.reading}</small>{' '}
-        <button type="button" disabled={r.refused} aria-label={`Add ${r.name} to plan`} onClick={() => m.addSavedSpot(r.id)}>Add to plan</button>
+    <section class="export-card" id="export-saved-spots" aria-label={t('planner.saved.aria', lang)}>
+      <h3>{t('planner.saved.aria', lang)}</h3>
+      <p class="export-note">{t('planner.saved.note', lang)}</p>
+      {state === 'loading' ? <p role="status">{t('planner.saved.loading', lang)}</p> : null}
+      {state === 'failed' ? <p role="status">{t('planner.saved.failed', lang)} <button type="button" onClick={() => void m.refreshSavedSpots()}>{t('planner.saved.retry', lang)}</button></p> : null}
+      {state === 'ready' && !rows.length ? <p role="status">{t('planner.saved.none', lang)}</p> : null}
+      {rows.length ? <ul aria-label={t('planner.saved.list', lang)}>{rows.map(r => <li key={r.id}>
+        <strong>{r.name}</strong> <small>{formatCoordinates(r.latitude, r.longitude, coordinates.value)}</small> <small>{plannerText(r.reading, lang)}</small>{' '}
+        <button type="button" disabled={r.refused} aria-label={t('planner.saved.addAria', lang, {name: r.name})} onClick={() => m.addSavedSpot(r.id)}>{t('planner.saved.add', lang)}</button>
       </li>)}</ul> : null}
-      <p role="status" id="export-saved-spots-status">{status}</p>
+      <p role="status" id="export-saved-spots-status">{plannerText(status, lang)}</p>
     </section>
   );
 }
@@ -95,21 +99,21 @@ function SavedSpots({m}: {m: Model}) {
 /** SC1822-04: the signed-in person's explicit "Alert me for this trip": a preview of exactly what is saved, then one private snapshot. Nothing is sent until the click. */
 function AlertSave({m, legs, open}: {m: Model; legs: AlertLegsFn; open: boolean}) {
   useEffect(() => { if (!open) return; m.setAlertOpen(true); return () => m.setAlertOpen(false); }, [open, m]);
-  const plan = open ? m.alertPreview(legs) : null, status = m.alertStatus.value;
+  const lang = language.value, plan = open ? m.alertPreview(legs) : null, status = m.alertStatus.value;
   if (!plan) return null;
   const p = plan.ok ? plan.preview : null, done = plan.ok && m.alertIsSaved(plan.body);
   return (
-    <section class="export-card" id="planner-alert" aria-label="Trip alerts for this plan">
-      <h3>Trip alerts for this plan</h3>
+    <section class="export-card" id="planner-alert" aria-label={t('planner.alert.aria', lang)}>
+      <h3>{t('planner.alert.aria', lang)}</h3>
       {p ? <>
-        <p class="export-note" id="planner-alert-preview">{p.date} · {p.area} · {p.target} · {p.hours} · wind {p.limits.wind} kt, gusts {p.limits.gust} kt, seas {p.limits.sea} ft · {p.boat} · {p.stops} stop{p.stops === 1 ? '' : 's'}, {p.legs} leg{p.legs === 1 ? '' : 's'}</p>
-        <ol aria-label="Legs saved with the alert" id="planner-alert-legs">{p.legList.map((l, i) => <li key={i}>{l.from} → {l.to} · {l.nm.toFixed(1)} nm{l.basis === 'straight' ? ' straight line' : ''} · at least {l.minutes} min{l.screen ? legLine(l.screen as Parameters<typeof verdictLine>[0]) : ' · Protected areas not checked'}</li>)}</ol>
-        {p.legList.some(l => l.basis === 'straight') ? <p class="export-note" id="planner-alert-legs-note">Straight-line legs between stops; the real route is longer. Sea state, the bar, fuel and conditions at each stop are not included.</p> : null}
-        {p.groupNote ? <p class="export-note">{p.groupNote}</p> : null}
-        <p class="export-note">{AREA_NOTE} Saved legs are planning estimates, not a navigation route. Later edits to this plan do not change the saved alert.</p>
-        <button type="button" id="planner-save-alert" disabled={m.alertBusy.value || done} onClick={() => void m.saveAlert(legs)}>Alert me for this trip</button>
-      </> : <p class="export-note" id="planner-alert-preview">{plan.ok ? '' : plan.message}</p>}
-      <p role="status" id="planner-alert-status">{status}</p>
+        <p class="export-note" id="planner-alert-preview">{`${p.date} · ${p.area} · ${p.target} · ${p.hours} · ${t('planner.alert.limits', lang, {wind: p.limits.wind, gust: p.limits.gust, sea: p.limits.sea})} · ${plannerText(p.boat, lang)} · ${t(p.stops === 1 ? 'planner.alert.stop' : 'planner.alert.stops', lang, {n: p.stops})}, ${t(p.legs === 1 ? 'planner.alert.leg' : 'planner.alert.legs', lang, {n: p.legs})}`}</p>
+        <ol aria-label={t('planner.alert.legsAria', lang)} id="planner-alert-legs">{p.legList.map((l, i) => <li key={i}>{`${l.from} → ${l.to} · ${nmText(l.nm, lang)} nm${l.basis === 'straight' ? t('planner.leg.straight', lang) : ''}${t('planner.leg.min', lang, {n: l.minutes})}${l.screen ? legLine(l.screen as Parameters<typeof plannerVerdict>[0], lang) : t('planner.alert.notChecked', lang)}`}</li>)}</ol>
+        {p.legList.some(l => l.basis === 'straight') ? <p class="export-note" id="planner-alert-legs-note">{t('planner.leg.straightCaveat', lang)}{t('planner.leg.common', lang)}</p> : null}
+        {p.groupNote ? <p class="export-note">{plannerText(p.groupNote, lang)}</p> : null}
+        <p class="export-note">{plannerText(AREA_NOTE, lang)} {t('planner.alert.estimates', lang)}</p>
+        <button type="button" id="planner-save-alert" disabled={m.alertBusy.value || done} onClick={() => void m.saveAlert(legs)}>{t('planner.alert.save', lang)}</button>
+      </> : <p class="export-note" id="planner-alert-preview">{plan.ok ? '' : plannerText(plan.message, lang)}</p>}
+      <p role="status" id="planner-alert-status">{plannerText(status, lang)}</p>
     </section>
   );
 }
@@ -129,6 +133,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
 
   useEffect(() => { if (!open) return; m.setSavedSpotsOpen(true); return () => m.setSavedSpotsOpen(false); }, [open, m]);
 
+  const lang = language.value;
   const d = m.draft.value, f = m.filters.value, s = m.summary.value, ranked = m.ranked.value, research = m.allowResearch.value;
   const blocked = !ranked || m.filtersDirty.value || !d.ids.length;
   const filter = <K extends keyof Filters>(key: K, parse: (v: string) => Filters[K]) => (e: Event) => m.setFilter(key, parse((e.currentTarget as HTMLInputElement).value));
@@ -147,134 +152,138 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
   const alertLegs: AlertLegsFn = stops => tripLegs(port ? {name: port.name, lat: port.match[0], lon: port.match[1]} : null, stops, cruiseSpeed.value, legRoute(landWater.value, m.region.id), screen);
   const waits = route.legs.some(leg => leg.why === 'lines-needed');
   useEffect(() => { if (waits) void loadLandWaterLines(m.region.id); }, [waits, m]);
+  const minutes = (n: number | null): string => n === null ? '' : t('planner.leg.min', lang, {n});
+  const storage = session.value.state === 'signed-in' && m.storageNote.value === t('pm.storageOk', 'en') ? ALERT_STORAGE_NOTE : m.storageNote.value;
 
   return (
     <div id="export-content">
       <div class="export-card export-plan">
         <div class="export-fields">
-          <label>Plan name<input id="export-name" maxLength={80} value={d.name} onInput={e => m.edit({name: e.currentTarget.value})} /></label>
-          <label>Fishing date<input type="date" id="export-date" value={d.date} onInput={e => m.edit({date: e.currentTarget.value})} /></label>
+          <label>{t('planner.planName', lang)}<input id="export-name" maxLength={80} value={d.name} onInput={e => m.edit({name: e.currentTarget.value})} /></label>
+          <label>{t('planner.fishingDate', lang)}<input type="date" id="export-date" value={d.date} onInput={e => m.edit({date: e.currentTarget.value})} /></label>
         </div>
-        <p class="export-note" id="export-storage">{session.value.state === 'signed-in' && m.storageNote.value.startsWith('Saved on this browser') ? ALERT_STORAGE_NOTE : m.storageNote.value}</p>
+        <p class="export-note" id="export-storage">{plannerText(storage, lang)}</p>
       </div>
       <PlanRules date={d.date} species={f.species} region={m.region} />
-      <section class="export-card" aria-label="Your waypoints">
-        <h2>Your waypoints</h2>
-        <p>User labels, not verified habitat, depth or navigation guidance. Saved in this browser’s region draft, separate from account trip alerts.</p>
-        <button id="waypoint-place" onClick={m.chooseWaypoint}>Place a waypoint on the Chart</button>
+      <section class="export-card" aria-label={t('planner.waypoints.heading', lang)}>
+        <h2>{t('planner.waypoints.heading', lang)}</h2>
+        <p>{t('planner.waypoints.note', lang)}</p>
+        <button id="waypoint-place" onClick={m.chooseWaypoint}>{t('planner.waypoints.place', lang)}</button>
         {m.waypointPosition.value ? <form onSubmit={e => {
           e.preventDefault();
           const data = new FormData(e.currentTarget);
           m.saveWaypoint(String(data.get('name')), String(data.get('category')));
         }}>
           <p>{formatCoordinates(m.waypointPosition.value.latitude, m.waypointPosition.value.longitude, coordinates.value)}</p>
-          <label>Waypoint name<input name="name" maxLength={80} required /></label>
-          <label for="waypoint-category">Category</label><select id="waypoint-category" name="category">{USER_WAYPOINT_CATEGORIES.map(category => <option key={category} value={category}>{category}</option>)}</select>
-          <button type="submit">Save waypoint</button> <button type="button" onClick={() => { m.waypointPosition.value = null; }}>Cancel</button>
+          <label>{t('planner.waypoints.name', lang)}<input name="name" maxLength={80} required /></label>
+          <label for="waypoint-category">{t('planner.waypoints.category', lang)}</label><select id="waypoint-category" name="category">{USER_WAYPOINT_CATEGORIES.map(category => <option key={category} value={category}>{categoryText(category, lang)}</option>)}</select>
+          <button type="submit">{t('planner.waypoints.save', lang)}</button> <button type="button" onClick={() => { m.waypointPosition.value = null; }}>{t('planner.cancel', lang)}</button>
         </form> : null}
-        {(d.userWaypoints ?? []).map(t => <article key={t.id}>
-          <label class="export-check"><input type="checkbox" checked={d.ids.includes(t.id)} onChange={e => m.toggleSpot(t.id, e.currentTarget.checked)} /><span>{t.name} · {t.category}</span></label>
-          <p>{formatCoordinates(t.latitude, t.longitude, coordinates.value)}</p>
-          {d.ids.includes(t.id) ? <BoundaryNote hit={m.protectedHits.value.find(h => h.id === t.id)} /> : null}
-          <button onClick={() => m.removeWaypoint(t.id)} aria-label={`Remove waypoint ${t.name}`}>Remove waypoint</button>
+        {(d.userWaypoints ?? []).map(wp => <article key={wp.id}>
+          <label class="export-check"><input type="checkbox" checked={d.ids.includes(wp.id)} onChange={e => m.toggleSpot(wp.id, e.currentTarget.checked)} /><span>{wp.name} · {categoryText(wp.category, lang)}</span></label>
+          <p>{formatCoordinates(wp.latitude, wp.longitude, coordinates.value)}</p>
+          {d.ids.includes(wp.id) ? <BoundaryNote hit={m.protectedHits.value.find(h => h.id === wp.id)} /> : null}
+          <button onClick={() => m.removeWaypoint(wp.id)} aria-label={t('planner.waypoints.removeAria', lang, {name: wp.name})}>{t('planner.waypoints.remove', lang)}</button>
         </article>)}
       </section>
       <details class="export-card" id="export-spots" open>
-        <summary><span>1. Choose your spots</span><strong id="export-selection-count">{d.ids.length} selected</strong></summary>
+        <summary><span>{t('planner.step1', lang)}</span><strong id="export-selection-count">{t('planner.selected', lang, {n: d.ids.length})}</strong></summary>
         <div class="export-card-body">
-          {route.legs.length > 0 && <section aria-label="Your stops in order">
-            <h3>Your stops in order</h3>
-            {!port && <p>No home port chosen, so the run from port is not counted.</p>}
-            <ol aria-label="Stops in order">{route.legs.map((leg, i) => <li key={i}>{leg.from} → {leg.to} · {leg.nm.toFixed(1)} nm{leg.basis === 'straight' ? ' straight line' : ''}{leg.runMin === null ? '' : ` · at least ${leg.runMin} min`}{legLine(leg.screen)}</li>)}</ol>
-            <p>Total: {route.totalNm.toFixed(1)} nm{route.totalRunMin === null ? '' : ` · at least ${route.totalRunMin} min`}</p>
-            <p class="export-note">{route.legs.some(leg => leg.basis === 'straight') ? 'Straight-line legs between stops; the real route is longer. ' : ''}Sea state, the bar, fuel and conditions at each stop are not included.</p>
+          {route.legs.length > 0 && <section aria-label={t('planner.stops.heading', lang)}>
+            <h3>{t('planner.stops.heading', lang)}</h3>
+            {!port && <p>{t('planner.stops.noPort', lang)}</p>}
+            <ol aria-label={t('planner.stops.aria', lang)}>{route.legs.map((leg, i) => <li key={i}>{`${leg.from} → ${leg.to} · ${nmText(leg.nm, lang)} nm${leg.basis === 'straight' ? t('planner.leg.straight', lang) : ''}${minutes(leg.runMin)}${legLine(leg.screen, lang)}`}</li>)}</ol>
+            <p>{t('planner.leg.total', lang, {nm: nmText(route.totalNm, lang), minutes: minutes(route.totalRunMin)})}</p>
+            <p class="export-note">{route.legs.some(leg => leg.basis === 'straight') ? t('planner.leg.straightCaveat', lang) : ''}{t('planner.leg.common', lang)}</p>
           </section>}
-          {route.skipped.length > 0 && <p>Stops skipped because coordinates are unavailable: {route.skipped.join(', ')}.</p>}
-          <button class="primary export-best" id="export-best" disabled={!m.portsReady.value || m.loading.value} onClick={() => void m.selectBest()}>Best available · up to {f.limit} reef spots</button>
-          {m.portsFailed.value && <p class="export-note" id="export-ports-note">{PORTS_FAILED_NOTE}</p>}
-          <p class="export-note">Ranked reef habitat. Confidence % describes habitat evidence.</p>
+          {route.skipped.length > 0 && <p>{t('planner.leg.skipped', lang, {names: route.skipped.join(', ')})}</p>}
+          <button class="primary export-best" id="export-best" disabled={!m.portsReady.value || m.loading.value} onClick={() => void m.selectBest()}>{t('planner.best', lang, {n: f.limit})}</button>
+          {m.portsFailed.value && <p class="export-note" id="export-ports-note">{plannerText(PORTS_FAILED_NOTE, lang)}</p>}
+          <p class="export-note">{t('planner.rankedNote', lang)}</p>
           <details class="export-trip-filters">
-            <summary>Trip filters</summary>
+            <summary>{t('planner.filters', lang)}</summary>
             <div class="export-fields">
-              <label>Target<select id="export-species" value={f.species} onChange={filter('species', v => v as TripSpecies)}>
-                <option value="reef">Lingcod + rockfish</option><option value="lingcod">Lingcod</option><option value="rockfish">Rockfish</option></select></label>
-              <label>Maximum spots<select id="export-limit" value={String(f.limit)} onChange={filter('limit', Number)}>
+              <label>{t('planner.target', lang)}<select id="export-species" value={f.species} onChange={filter('species', v => v as TripSpecies)}>
+                <option value="reef">{t('planner.target.reef', lang)}</option><option value="lingcod">{t('planner.target.lingcod', lang)}</option><option value="rockfish">{t('planner.target.rockfish', lang)}</option></select></label>
+              <label>{t('planner.maxSpots', lang)}<select id="export-limit" value={String(f.limit)} onChange={filter('limit', Number)}>
                 {[10, 20, 30, 50].map(n => <option key={n} value={String(n)}>{n}</option>)}</select></label>
-              <label>Maximum depth (ft)<input id="export-depth" type="number" min="25" max="300" defaultValue={String(f.depth)} onChange={filter('depth', Number)} /></label>
-              <label>Search area<select id="export-best-scope" value={f.scope} onChange={filter('scope', v => v as Filters['scope'])}>
-                <option value="region">Selected region</option><option value="map">Current map view</option></select></label>
-              <label>From port<select id="export-port" value={f.port} onChange={filter('port', String)}>
-                <option value="">No distance limit</option>{m.ports.value.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-              <label>Maximum one-way distance (nm)<input id="export-distance" type="number" min="1" max="100" defaultValue={String(f.distance)} onChange={filter('distance', Number)} /></label>
+              <label>{t('planner.maxDepth', lang)}<input id="export-depth" type="number" min="25" max="300" defaultValue={String(f.depth)} onChange={filter('depth', Number)} /></label>
+              <label>{t('planner.searchArea', lang)}<select id="export-best-scope" value={f.scope} onChange={filter('scope', v => v as Filters['scope'])}>
+                <option value="region">{t('planner.scope.region', lang)}</option><option value="map">{t('planner.scope.map', lang)}</option></select></label>
+              <label>{t('planner.fromPort', lang)}<select id="export-port" value={f.port} onChange={filter('port', String)}>
+                <option value="">{t('planner.noLimit', lang)}</option>{m.ports.value.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+              <label>{t('planner.maxDistance', lang)}<input id="export-distance" type="number" min="1" max="100" defaultValue={String(f.distance)} onChange={filter('distance', Number)} /></label>
             </div>
-            <p class="export-note">Distance is by water where routed, else straight line, from the selected port. Planning distance, not a navigation route. Habitat ranks stay fixed; check the selected day’s conditions separately.</p>
+            <p class="export-note">{t('planner.distanceNote', lang)}</p>
           </details>
-          <p><button id="export-map" disabled={blocked} onClick={m.showOnMap}>Show ranked spots on map</button> <button id="export-conditions" disabled={blocked} onClick={m.checkConditions}>Check trip conditions</button></p>
+          <p><button id="export-map" disabled={blocked} onClick={m.showOnMap}>{t('planner.showMap', lang)}</button> <button id="export-conditions" disabled={blocked} onClick={m.checkConditions}>{t('planner.conditions', lang)}</button></p>
           <details>
-            <summary>How ranking and confidence work</summary>
-            <p>3/3 Strong, 2/3 Good, 1/3 Secondary habitat fit. The combined target uses the weaker of the two fits. We select distinct reefs at least 0.15 nm apart; fewer than your limit may qualify.</p>
-            <p>Confidence index: original survey 25 points, valid metric support up to 25, fine resolution up to 20, interpreted substrate coverage up to 20, known survey year 5, documented independent support 5. Unknown interpolation flags cap it at 90%. This is an evidence rubric, not a statistical probability of catching fish. Reef depths are nominal; verify them on your sounder.</p>
+            <summary>{t('planner.how', lang)}</summary>
+            <p>{t('planner.how.fit', lang)}</p>
+            <p>{t('planner.how.index', lang)}</p>
           </details>
           <label class="export-check"><input id="export-research" type="checkbox" checked={research} onChange={e => m.setResearch(e.currentTarget.checked)} />
-            <span><strong>Research-coordinate export · opt in</strong><small>Include historical research references that are not chart-depth qualified. Verify the bottom and depth on your chart and sounder. This choice does not bypass protected-area checks.</small></span></label>
-          <p class="export-note">The default picker contains measured reefs from a current publication. Their survey depths remain nominal. Research-coordinate export is a separate capability from qualified fishing targets; saved research selections are retained but need this session’s opt-in before download.</p>
-          <p>Start with a set, then check only the spots you want. Current map selects loaded measured reefs in view plus opted-in research references. Filtered research uses the map’s species and depth filters; Best available uses the trip filters above.</p>
+            <span><strong>{t('planner.research.label', lang)}</strong><small>{t('planner.research.text', lang)}</small></span></label>
+          <p class="export-note">{t('planner.research.note', lang)}</p>
+          <p>{t('planner.presets.intro', lang)}</p>
           <div class="export-presets">
-            {PRESETS.map(([scope, label]) => <button key={scope} data-scope={scope} id={scope === 'filtered' ? 'export-filtered-research' : undefined} disabled={scope === 'filtered' && !research} onClick={() => m.preset(scope)}>{label}</button>)}
+            {PRESETS.map(scope => <button key={scope} data-scope={scope} id={scope === 'filtered' ? 'export-filtered-research' : undefined} disabled={scope === 'filtered' && !research} onClick={() => m.preset(scope)}>{t(`planner.preset.${scope}` as StringId, lang)}</button>)}
           </div>
-          <p id="export-scope-status" role="status">{m.scopeStatus.value}</p>
-          <label>Find a spot<input id="export-search" type="search" placeholder="Name, ID or grade" autoComplete="off" value={m.search.value} onInput={e => { m.search.value = e.currentTarget.value; }} /></label>
-          {shared === null ? null : <p id="export-shared-confidence">All ranked places: {shared}% evidence confidence.</p>}
-          <div id="export-spot-list" class="export-spot-list" role="group" aria-label="Choose fishing spots">
-            {spots.length ? spots.map(t => <SpotRow key={t.id} t={t} showConfidence={shared === null} checked={d.ids.includes(t.id)} hit={m.protectedHits.value.find(h => h.id === t.id)} onToggle={on => m.toggleSpot(t.id, on)} />)
-              : <p>No matching measured reefs loaded. Select Best available to load the current screened publication, or deliberately opt in to research references. Your existing selection is retained.</p>}
+          <p id="export-scope-status" role="status">{plannerText(m.scopeStatus.value, lang)}</p>
+          <label>{t('planner.find', lang)}<input id="export-search" type="search" placeholder={t('planner.find.placeholder', lang)} autoComplete="off" value={m.search.value} onInput={e => { m.search.value = e.currentTarget.value; }} /></label>
+          {shared === null ? null : <p id="export-shared-confidence">{t('planner.sharedConfidence', lang, {n: shared})}</p>}
+          <div id="export-spot-list" class="export-spot-list" role="group" aria-label={t('planner.spotList.aria', lang)}>
+            {spots.length ? spots.map(spot => <SpotRow key={spot.id} t={spot} showConfidence={shared === null} checked={d.ids.includes(spot.id)} hit={m.protectedHits.value.find(h => h.id === spot.id)} onToggle={on => m.toggleSpot(spot.id, on)} />)
+              : <p>{t('planner.spotList.empty', lang)}</p>}
           </div>
           {session.value.state === 'signed-in' ? <SavedSpots m={m} /> : null}
         </div>
       </details>
       <AlertSave m={m} legs={alertLegs} open={open} />
       <details class="export-card" id="export-layers">
-        <summary><span>2. What to include</span><strong id="export-layer-count">{Object.values(d.layers).filter(Boolean).length + (m.contourTracks.value ? 1 : 0)} layers</strong></summary>
+        <summary><span>{t('planner.layers', lang)}</span><strong id="export-layer-count">{t('planner.layers.count', lang, {n: Object.values(d.layers).filter(Boolean).length + (m.contourTracks.value ? 1 : 0)})}</strong></summary>
         <div class="export-card-body export-checks">
-          {m.launch.value ? <label class="export-check"><input type="checkbox" checked={!!d.launchId} onChange={e => m.setLaunch(e.currentTarget.checked)} /><span>Include launch ramp: {m.launch.value.name}</span></label> : null}
+          {m.launch.value ? <label class="export-check"><input type="checkbox" checked={!!d.launchId} onChange={e => m.setLaunch(e.currentTarget.checked)} /><span>{t('planner.layers.launch', lang, {name: m.launch.value.name})}</span></label> : null}
           {LAYERS.map(([id, name, description]) => (
             <label key={id} class="export-check"><input type="checkbox" data-layer={id} checked={d.layers[id]} onChange={e => m.setLayer(id, e.currentTarget.checked)} />
-              <span><strong>{name}</strong><small>{description}</small></span></label>
+              <span><strong>{t(name, lang)}</strong><small>{t(description, lang)}</small></span></label>
           ))}
           <label class="export-check"><input type="checkbox" data-export="contours" checked={m.contourTracks.value} onChange={e => m.setContourTracks(e.currentTarget.checked)} />
-            <span><strong>Depth contour tracks</strong><small>Published index contours (every 150 ft) as tracks, with survey, date and datum; not for navigation.</small></span></label>
-          <label>Protected-area coverage<select id="export-avoid-scope" value={d.avoidScope} onChange={e => m.edit({avoidScope: e.currentTarget.value === 'region' ? 'region' : 'map'})}>
-            <option value="map">Current map view</option><option value="region">Whole selected region</option></select></label>
-          <p class="export-note">GPX carries coordinates and text. Chart imagery, bathymetry, live forecasts and predicted drift guides remain in the app. Static outlines do not replace official charts or current rules.</p>
+            <span><strong>{t('planner.layer.contours', lang)}</strong><small>{t('planner.layer.contours.text', lang)}</small></span></label>
+          <label>{t('planner.coverage', lang)}<select id="export-avoid-scope" value={d.avoidScope} onChange={e => m.edit({avoidScope: e.currentTarget.value === 'region' ? 'region' : 'map'})}>
+            <option value="map">{t('planner.coverage.map', lang)}</option><option value="region">{t('planner.coverage.region', lang)}</option></select></label>
+          <p class="export-note">{t('planner.layers.note', lang)}</p>
         </div>
       </details>
       <section class="export-card export-transfer" aria-labelledby="export-transfer-title">
-        <h2 id="export-transfer-title">3. Take your plan aboard</h2>
+        <h2 id="export-transfer-title">{t('planner.transfer', lang)}</h2>
         <div id="export-counts" class="export-counts" aria-live="polite">
-          {s.ok ? <><strong>{s.counts.waypoints} <span>waypoints</span></strong><strong>{s.counts.tracks} <span>tracks</span></strong></> : `${d.ids.length} spots in your plan`}
+          {s.ok ? <><strong>{s.counts.waypoints} <span>{t('planner.counts.waypoints', lang)}</span></strong><strong>{s.counts.tracks} <span>{t('planner.counts.tracks', lang)}</span></strong></> : t('planner.counts.plan', lang, {n: d.ids.length})}
         </div>
         <p id="export-validation" role="status">{s.ok
-          ? `${s.counts.outlines} reef outlines · ${s.counts.alignments} alignments · ${s.counts.exclusions} AVOID outlines${s.counts.contours === undefined ? '' : ` · ${s.counts.contours} depth contour tracks`}. ${s.counts.trackPoints.toLocaleString()} track points; largest track ${s.counts.largestTrack.toLocaleString()}.${s.counts.tracks > 15 ? ' More than 15 tracks: check your device’s free track capacity or reduce outlines.' : ''} Boundaries checked again when you export.`
-          : s.message}</p>
-        {!s.ok && m.protectedHits.value.slice(0, 3).map(h => <p key={h.id}>Not exported: {h.label} is inside {h.matches.map(a => a.name).join(', ')} <button onClick={() => m.removeWaypoint(h.id)}>Remove {h.label}</button></p>)}
-        <p class="export-note">Snapshot prepared moments ago; valid for 60 seconds. Recheck rules before departure.</p>
-        <p id="export-caveats" class="export-note">{EXPORT_CAVEATS[0]} {EXPORT_CAVEATS[1]}</p>
+          ? t('planner.validation', lang, {outlines: s.counts.outlines, alignments: s.counts.alignments, exclusions: s.counts.exclusions,
+            contours: s.counts.contours === undefined ? '' : t('planner.validation.contours', lang, {n: s.counts.contours}),
+            points: countText(s.counts.trackPoints, lang), largest: countText(s.counts.largestTrack, lang), capacity: s.counts.tracks > 15 ? t('planner.validation.capacity', lang) : ''})
+          : plannerText(s.message, lang)}</p>
+        {!s.ok && m.protectedHits.value.slice(0, 3).map(h => <p key={h.id}>{t('planner.notExported', lang, {label: h.label, names: h.matches.map(a => a.name).join(', ')})} <button onClick={() => m.removeWaypoint(h.id)}>{t('planner.remove', lang, {label: h.label})}</button></p>)}
+        <p class="export-note">{t('planner.snapshot', lang)}</p>
+        <p id="export-caveats" class="export-note">{t('brief.planning', lang)} {t('planner.caveat.c4', lang)}</p>
         <div class="export-actions">
-          <button class="primary" id="export-download" disabled={!s.ok} onClick={() => void m.deliver('gpx')}>Download GPX</button>
-          <button id="export-share" disabled={!s.ok} onClick={() => void m.deliver('share')}>{m.preparing.value ? 'Preparing…' : 'Share / Save file'}</button>
-          <button id="export-notes" disabled={!m.notesReady.value} onClick={() => void m.deliver('notes')}>Download offline notes</button>
+          <button class="primary" id="export-download" disabled={!s.ok} onClick={() => void m.deliver('gpx')}>{t('planner.download', lang)}</button>
+          <button id="export-share" disabled={!s.ok} onClick={() => void m.deliver('share')}>{m.preparing.value ? t('planner.preparing', lang) : t('planner.share', lang)}</button>
+          <button id="export-notes" disabled={!m.notesReady.value} onClick={() => void m.deliver('notes')}>{t('planner.notes', lang)}</button>
         </div>
-        <p id="export-action-status" role="status">{m.actionStatus.value}</p>
-        {!s.ok && m.notesReady.value ? <p>GPX withheld. Offline notes contain boundary context only, not fishing coordinates or guidance for the selected spots.</p> : null}
+        <p id="export-action-status" role="status">{plannerText(m.actionStatus.value, lang)}</p>
+        {!s.ok && m.notesReady.value ? <p>{t('planner.withheld', lang)}</p> : null}
         <details class="export-help">
-          <summary>USB, memory card &amp; iNavX help</summary>
-          <label>Your chartplotter<select id="export-device" value={deviceChoice.value} onChange={e => { deviceChoice.value = e.currentTarget.value; }}>
-            {Object.entries(DEVICE_HELP).map(([id, [name]]) => <option key={id} value={id}>{name}</option>)}</select></label>
-          <p id="export-device-help">{device[1]}</p>
-          <a id="export-device-source" href={device[2]} target="_blank" rel="noopener">Official device reference ↗</a>
-          <ol><li>Back up your existing waypoints and tracks.</li><li>Download the GPX. Copy it to the USB drive or SD/microSD card your model supports, or share it to iNavX.</li><li>Import using the device’s menu. Enable waypoints and tracks, then compare a name and coordinate with SkipperCast.</li></ol>
-          <p>GPX interchange is not a guarantee for every device. Total device capacities include existing data; check free space and your model’s limits. Many plotters store far fewer tracks than waypoints. Start with a small waypoint-only set. Reimporting can create duplicates.</p>
-          <p>Offline notes are a separate HTML file to read on a phone, tablet or computer, not to import into a plotter. A saved file keeps the data as downloaded, so recheck rules and conditions before departure.</p>
+          <summary>{t('planner.help', lang)}</summary>
+          <label>{t('planner.help.device', lang)}<select id="export-device" value={deviceChoice.value} onChange={e => { deviceChoice.value = e.currentTarget.value; }}>
+            {Object.entries(DEVICE_HELP).map(([id, [name]]) => <option key={id} value={id}>{t(name, lang)}</option>)}</select></label>
+          <p id="export-device-help">{t(device[1], lang)}</p>
+          <a id="export-device-source" href={device[2]} target="_blank" rel="noopener">{t('planner.help.source', lang)}</a>
+          <ol><li>{t('planner.help.step1', lang)}</li><li>{t('planner.help.step2', lang)}</li><li>{t('planner.help.step3', lang)}</li></ol>
+          <p>{t('planner.help.caveat', lang)}</p>
+          <p>{t('planner.help.notes', lang)}</p>
         </details>
       </section>
     </div>

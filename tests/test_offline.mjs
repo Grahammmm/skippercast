@@ -25,11 +25,15 @@ test('Morro Bay pack coverage: swell forecast, chart tiles and basemap; no prefe
 });
 
 test('save-for-offline UI reminds users to check before leaving coverage without a full-coverage promise', () => {
-  const ui = read('../web/app/Trip.tsx');
-  assert.match(ui, /<p>Check the saved pack before leaving coverage\.<\/p>/);
-  assert.match(ui, /Water temperature and currents are saved with the pack when current; each saved region below says what was saved\./);
-  assert.doesNotMatch(ui, /not prefetched/);
-  assert.doesNotMatch(ui, /full functionality|\d+ miles/i);
+  // SC0707-10: the words moved to the catalogue; the English is pinned there and the component must read it by id.
+  const ui = read('../web/app/Trip.tsx'), strings = JSON.parse(read('../catalog/app/strings.json')).strings;
+  assert.match(ui, /<p>\{t\('trip\.pack\.check', lang\)\}<\/p>/);
+  assert.match(ui, /<p>\{t\('trip\.pack\.ocean', lang\)\}<\/p>/);
+  assert.equal(strings['trip.pack.check'].en, 'Check the saved pack before leaving coverage.');
+  assert.match(strings['trip.pack.ocean'].en, /Water temperature and currents are saved with the pack when current; each saved region below says what was saved\./);
+  const words = ui + strings['trip.pack.intro'].en + strings['trip.pack.check'].en + strings['trip.pack.ocean'].en;
+  assert.doesNotMatch(words, /not prefetched/);
+  assert.doesNotMatch(words, /full functionality|\d+ miles/i);
 });
 
 test('Morro Bay chart tiles at zoom 8-12 fit under the cap, and every tile is inside the grid', () => {
