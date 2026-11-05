@@ -176,6 +176,43 @@ class NaisPresenceTest(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(os.stat(out).st_mode), 0o600)
         self.assertEqual(json.loads(out.read_text())["A"]["home_days"], ["2026-01-12"])
 
+    def test_private_out_replaces_existing_permissive_file_without_exposure(self):
+        out = self.dir / "private.json"
+        out.write_text("old")
+        os.chmod(out, 0o644)
+        seen = []
+        real_replace = os.replace
+
+        def spy(src, dst):
+            seen.append(stat.S_IMODE(os.stat(src).st_mode))
+            real_replace(src, dst)
+
+        with mock.patch.object(nais.os, "replace", spy):
+            self.run_check({"2026-01-12": [pos(999000001, "2026-01-12T20:00", HOME)]}, extra=["--private-out", str(out)])
+        self.assertEqual(seen, [0o600])
+        self.assertEqual(stat.S_IMODE(os.stat(out).st_mode), 0o600)
+        self.assertEqual(json.loads(out.read_text())["A"]["home_days"], ["2026-01-12"])
+
+    def test_private_out_failed_write_leaves_existing_file_and_no_temp(self):
+        out = self.dir / "private.json"
+        out.write_text("old")
+        os.chmod(out, 0o644)
+        with mock.patch.object(nais.json, "dump", side_effect=OSError("disk full")):
+            with self.assertRaises(OSError):
+                self.run_check({"2026-01-12": [pos(999000001, "2026-01-12T20:00", HOME)]}, extra=["--private-out", str(out)])
+        self.assertEqual(out.read_text(), "old")
+        self.assertEqual([p.name for p in self.dir.iterdir() if p.name.startswith(".private")], [])
+
+    def test_duplicate_mmsi_labels_are_rejected_before_any_download(self):
+        self.targets.write_text(json.dumps({"A": 999000001, "B": 999000001}))
+        source = FakeSource({})
+        argv = ["--region", "CA", "--from", "2026-01-12", "--to", "2026-01-14", "--targets", str(self.targets),
+                "--workdir", str(self.dir / "work")]
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
+            nais.main(argv, source=source, out=io.StringIO())
+        self.assertEqual(raised.exception.code, 2)
+        self.assertEqual(source.calls, [])
+
     def test_no_worker_is_constructed(self):
         with mock.patch("skippercast.fleet.ais.process.Worker", Worker, create=True), \
                 mock.patch("skippercast.fleet.ais.backfill.backfill", side_effect=AssertionError("backfill called")):

@@ -19,6 +19,7 @@ from pathlib import Path
 import re
 import shutil
 import sys
+import tempfile
 from zoneinfo import ZoneInfo
 
 from skippercast.fleet.ais.backfill import utc_days, window_ms
@@ -53,6 +54,8 @@ def _targets(path: str) -> dict[str, int]:
             raise ValueError("every target label is one capital letter")
         if not valid_mmsi(mmsi):
             raise ValueError(f"target {label} has an invalid MMSI")
+    if len(set(document.values())) != len(document):
+        raise ValueError("two target labels share one MMSI")
     return dict(document)
 
 
@@ -70,10 +73,21 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _write_private(path: str, document: dict) -> None:
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w") as handle:
-        json.dump(document, handle, indent=2, sort_keys=True)
-    os.chmod(path, 0o600)
+    # mkstemp creates the file 0600 in the target directory; the contents never sit in a more open file, and an existing
+    # (possibly 0644) output is replaced atomically, so a failed write leaves it untouched and the temp file removed.
+    target = Path(path)
+    fd, temp = tempfile.mkstemp(dir=target.parent, prefix=f".{target.name}.", suffix=".tmp")
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w") as handle:
+            json.dump(document, handle, indent=2, sort_keys=True)
+        os.replace(temp, target)
+    except BaseException:
+        try:
+            os.unlink(temp)
+        except OSError:
+            pass
+        raise
 
 
 def main(argv=None, source=None, out=None) -> int:
