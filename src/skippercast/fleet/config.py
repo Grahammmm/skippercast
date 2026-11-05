@@ -92,6 +92,11 @@ class Ais:
     east: float
     message_types: tuple[str, ...]
     mmsi_filter: bool
+    sources: tuple[str, ...] = ()     # all configured source ids, primary first; ``(source,)`` when absent
+
+    def __post_init__(self):
+        if not self.sources:
+            object.__setattr__(self, "sources", (self.source,))
 
     def contains(self, lat: float, lon: float) -> bool:
         return self.south <= lat <= self.north and self.west <= lon <= self.east
@@ -357,6 +362,9 @@ def _region_problems(doc, catalogs, root: Path) -> list[str]:
             elif not value.startswith("https://") and where.startswith("$.sources"):
                 problems.append(f"{where[2:]}: {value!r} is not https")
 
+    ais_sources = doc["ais"].get("sources")
+    if ais_sources is not None and doc["ais"]["source"] != ais_sources[0]:
+        problems.append(f"ais.source {doc['ais']['source']!r} must equal ais.sources[0] {ais_sources[0]!r} (the primary)")
     (south, west), (north, east) = doc["ais"]["bbox"]
     if not (south < north and west < east):
         problems.append("ais.bbox: expected [[south, west], [north, east]] with south < north and west < east")
@@ -423,7 +431,8 @@ def _build(doc, catalogs, path: Path) -> FleetRegion:
                          tuple(tuple(c) for c in p["geofence"]["coordinates"][0]), p["geofence_source"])
                     for p in doc["ports"]),
         landings=tuple(Landing(x["id"], x["name"], x["port"], tuple(x["point"]), x["website"]) for x in doc["landings"]),
-        ais=Ais(ais["source"], south, west, north, east, tuple(ais["message_types"]), ais["mmsi_filter"]),
+        ais=Ais(ais["source"], south, west, north, east, tuple(ais["message_types"]), ais["mmsi_filter"],
+                tuple(ais.get("sources") or (ais["source"],))),
         agencies=tuple(Agency(a["id"], a["name"], a["kind"], a["notes"], a["records_request_url"]) for a in doc["agencies"]),
         sources=tuple(Binding(b["id"], b["adapter"], b["enabled"], _freeze(b["params"]), b["rights"], b.get("note"))
                       for b in doc["sources"]),

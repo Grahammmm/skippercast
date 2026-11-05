@@ -6,6 +6,7 @@ in-memory stream. MMSIs are synthetic (999xxxxxx); geofences are made up.
 """
 import asyncio
 from contextlib import closing
+from dataclasses import replace
 from datetime import datetime, timezone
 import json
 import os
@@ -720,6 +721,229 @@ class WebSocketTest(unittest.TestCase):
     def test_connect_refuses_plain_ws(self):
         with self.assertRaises(ValueError):
             asyncio.run(ws.connect('ws://stream.aisstream.io/v0/stream'))
+
+
+class FakeSource:
+    """A scripted AIS source: each stream() call plays the next plan (records, exceptions, 'hang')."""
+
+    def __init__(self, source_id, *plans):
+        self.id = source_id
+        self.plans = list(plans)
+        self.calls = []
+
+    async def stream(self, bbox, mmsis=None):
+        self.calls.append(mmsis)
+        plan = self.plans.pop(0) if self.plans else ['hang']
+        for item in plan:
+            if item == 'hang':
+                await asyncio.Event().wait()
+            if isinstance(item, BaseException):
+                raise item
+            if isinstance(item, asyncio.Event):
+                item.set()
+                continue
+            yield item
+
+
+def position_from(source_id, mmsi=WATCHED, ts=None):
+    return replace(position(mmsi=mmsi, ts=ts), source=source_id)
+
+
+def stored(listener, table='positions'):
+    out = []
+    for day in listener.store.days():
+        with closing(sqlite3.connect(listener.store.day_path(day))) as conn:
+            out += conn.execute(f'SELECT mmsi, ts, source FROM {table} ORDER BY source, mmsi, ts').fetchall()
+    return out
+
+
+def run_until(listener, done, limit=400):
+    async def scenario():
+        stop = asyncio.Event()
+        runner = asyncio.ensure_future(listener.run(stop))
+        try:
+            for _ in range(limit):
+                await asyncio.sleep(0.005)
+                if done():
+                    break
+        finally:
+            stop.set()
+        await runner
+    asyncio.run(scenario())
+
+
+def region_root(tmp, mutate):
+    """A repo-shaped root whose regions/CA/fleet.json is the real one after ``mutate(doc)``."""
+    from tests._support import ROOT
+    root = Path(tmp)
+    for name in ('catalog', 'schemas'):
+        (root / name).symlink_to(ROOT / name)
+    (root / 'regions').mkdir()
+    for child in (ROOT / 'regions').iterdir():
+        if child.name != 'CA':
+            (root / 'regions' / child.name).symlink_to(child)
+    (root / 'regions' / 'CA').mkdir()
+    for child in (ROOT / 'regions' / 'CA').iterdir():
+        if child.name != 'fleet.json':
+            (root / 'regions' / 'CA' / child.name).symlink_to(child)
+    doc = json.loads((ROOT / 'regions' / 'CA' / 'fleet.json').read_text())
+    mutate(doc)
+    (root / 'regions' / 'CA' / 'fleet.json').write_text(json.dumps(doc))
+    return root
+
+
+TODAY_KEYS = {'schema_version', 'region', 'source', 'written_at', 'started_at', 'git_sha', 'interval_s', 'connected',
+              'last_message_at', 'messages_per_min', 'watched_messages_per_min', 'vessels', 'reconnects',
+              'idle_reconnects', 'last_error', 'drops', 'written', 'ignored', 'stale', 'malformed', 'queue_depth',
+              'queue_max', 'watch_size', 'watch_generated_at', 'watch_errors', 'retention_at'}
+
+
+class MultiSourceConfigTest(unittest.TestCase):
+    def test_ca_config_is_the_same_single_source_run(self):
+        from skippercast.fleet.config import load_region
+        self.assertEqual(load_region('CA').ais.sources, ('aisstream',))
+        with tempfile.TemporaryDirectory() as tmp:
+            built = build_listener('CA', var=Path(tmp), environ={'AISSTREAM_API_KEY': 'k'})
+            self.assertEqual([s.id for s in built.sources], ['aisstream'])
+            self.assertIs(built.source, built.sources[0])
+            self.assertEqual(set(built.heartbeat()), TODAY_KEYS)
+
+    def test_sources_builds_one_source_per_id_and_primary_is_first(self):
+        from skippercast.fleet import config
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as var:
+            root = region_root(tmp, lambda d: d['ais'].update(sources=['aisstream', 'local-nmea']))
+            real = config.load_region
+            with mock.patch.object(config, 'load_region', lambda ident: real(ident, root)):
+                built = build_listener('CA', var=Path(var), environ={'AISSTREAM_API_KEY': 'k'})
+            self.assertEqual([s.id for s in built.sources], ['aisstream', 'local-nmea'])
+            self.assertEqual(built.source.id, 'aisstream')
+            self.assertEqual(set(built.heartbeat()) - TODAY_KEYS, {'sources'})
+
+
+class MultiSourceRunTest(unittest.TestCase):
+    def _listener(self, tmp, primary, secondary, **kw):
+        base = make_listener(tmp, **{**dict(settings=Settings(batch_seconds=0.01, idle_seconds=5),
+                                            clock=FakeClock(NOW + 60)), **kw})
+        return Listener(region='CA', sources=[primary, secondary], store=base.store, bbox=BBOX, geofences=[HARBOR],
+                        retention=RETENTION, watch=base.watch, heartbeat_path=base.heartbeat_path,
+                        mmsi_filter=base.mmsi_filter, settings=base.settings, clock=base.clock, sleep=base.sleep,
+                        jitter=base.jitter, git_sha='abc1234')
+
+    def test_both_sources_reach_the_store_and_the_key_is_mmsi_ts_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ts = ms(NOW) - 5_000
+            primary = FakeSource('aisstream', [position_from('aisstream', ts=ts), position_from('aisstream', ts=ts), 'hang'])
+            secondary = FakeSource('local-nmea', [position_from('local-nmea', ts=ts), 'hang'])
+            listener = self._listener(tmp, primary, secondary)
+            run_until(listener, lambda: listener.counters.written['positions'] >= 2)
+            self.assertEqual(stored(listener), [(WATCHED, ts, 'aisstream'), (WATCHED, ts, 'local-nmea')])
+            beat = json.loads(listener.heartbeat_path.read_text())
+            self.assertEqual(beat['sources']['aisstream']['messages'], 2)
+            self.assertEqual(beat['sources']['local-nmea']['messages'], 1)
+            self.assertEqual(beat['source'], 'aisstream')
+            self.assertTrue(beat['sources']['local-nmea']['last_message_at'])
+
+    def test_one_reader_task_per_source_named_by_id(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            listener = self._listener(tmp, FakeSource('aisstream'), FakeSource('local-nmea'))
+            names = []
+
+            async def scenario():
+                stop = asyncio.Event()
+                runner = asyncio.ensure_future(listener.run(stop))
+                await asyncio.sleep(0.02)
+                names.extend(t.get_name() for t in asyncio.all_tasks())
+                stop.set()
+                await runner
+            asyncio.run(scenario())
+            self.assertIn('ais-reader-aisstream', names)
+            self.assertIn('ais-reader-local-nmea', names)
+            self.assertNotIn('ais-reader', names)
+
+    def test_single_source_keeps_the_reader_name_and_has_no_sources_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            listener = make_listener(tmp, Connector(['hang']))
+            names = []
+
+            async def scenario():
+                stop = asyncio.Event()
+                runner = asyncio.ensure_future(listener.run(stop))
+                await asyncio.sleep(0.02)
+                names.extend(t.get_name() for t in asyncio.all_tasks())
+                stop.set()
+                await runner
+            asyncio.run(scenario())
+            self.assertIn('ais-reader', names)
+            self.assertEqual(set(json.loads(listener.heartbeat_path.read_text())), TODAY_KEYS)
+
+    def test_secondary_not_configured_leaves_the_primary_reading(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            from skippercast.fleet.ais.sources.local_nmea import LocalNmeaSource
+            primary = FakeSource('aisstream', [position_from('aisstream'), 'hang'])
+            with mock.patch.dict(os.environ):
+                os.environ.pop('SKIPPERCAST_AIS_NMEA_URL', None)
+                listener = self._listener(tmp, primary, LocalNmeaSource())
+                run_until(listener, lambda: listener.counters.written['positions'] >= 1)
+            beat = json.loads(listener.heartbeat_path.read_text())
+            self.assertEqual(stored(listener)[0][2], 'aisstream')
+            self.assertFalse(beat['sources']['local-nmea']['connected'])
+            self.assertEqual(beat['sources']['local-nmea']['messages'], 0)
+            self.assertIn('local-nmea', beat['last_error'])
+
+    def test_primary_not_configured_is_fatal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            primary = FakeSource('aisstream', [NotConfigured('no key')])
+            listener = self._listener(tmp, primary, FakeSource('local-nmea'))
+            with self.assertRaises(NotConfigured):
+                asyncio.run(asyncio.wait_for(listener.run(), 5))
+
+    def test_a_secondary_dropping_does_not_reset_or_grow_the_primarys_backoff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            delays = []
+            go = asyncio.Event()
+            boom = ConnectionResetError('dropped')
+            secondary = FakeSource('local-nmea', [boom], [boom], [boom], [go, 'hang'])
+            primary = FakeSource('aisstream', [])
+
+            async def primary_stream(bbox, mmsis=None):
+                primary.calls.append(mmsis)
+                if len(primary.calls) == 1:
+                    yield position_from('aisstream')
+                    await go.wait()
+                    raise boom
+                await asyncio.Event().wait()
+                yield  # pragma: no cover
+            primary.stream = primary_stream
+            listener = self._listener(tmp, primary, secondary, sleep=recording_sleep(4, delays))
+
+            async def both():
+                await asyncio.wait_for(asyncio.gather(listener.read_forever(primary),
+                                                      listener.read_forever(secondary)), 5)
+            with self.assertRaises(Stop):
+                asyncio.run(both())
+            self.assertEqual(delays, [1.0, 2.0, 4.0, 1.0])   # the primary's own first retry waits 1 s, not 8 s
+            self.assertEqual(listener.states['aisstream'].reconnects, 1)
+            self.assertEqual(listener.states['local-nmea'].reconnects, 3)
+
+    def test_mmsi_filter_resubscribes_every_reader(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            primary, secondary = FakeSource('aisstream'), FakeSource('local-nmea')
+            listener = self._listener(tmp, primary, secondary, mmsi_filter=True)
+
+            async def scenario():
+                readers = [asyncio.ensure_future(listener.read_forever(s)) for s in (primary, secondary)]
+                for _ in range(20):
+                    await asyncio.sleep(0)
+                write_watch(listener.watch.path, 'CA', [WATCHED, OTHER])
+                self.assertTrue(listener.reload_watch())
+                for _ in range(20):
+                    await asyncio.sleep(0)
+                for reader in readers:
+                    reader.cancel()
+                await asyncio.gather(*readers, return_exceptions=True)
+            asyncio.run(scenario())
+            for source in (primary, secondary):
+                self.assertEqual(source.calls, [{WATCHED}, {WATCHED, OTHER}], source.id)
 
 
 if __name__ == '__main__':
