@@ -70,7 +70,7 @@ export function BoatEntry({storage, focus = false, onDone}: {storage?: StoreStor
         {ENTRY_FIELDS.map(([name, label]) => (
           <div class="app-limits-field" key={name}>
             <label for={`first-run-boat-${name}`}>{label}</label>
-            <input id={`first-run-boat-${name}`} name={name} type="number" inputMode="decimal" value={boat[name]}
+            <input id={`first-run-boat-${name}`} name={name} type="number" step="any" inputMode="decimal" value={boat[name]}
               onInput={event => setBoat({...boat, [name]: (event.currentTarget as HTMLInputElement).value})} />
           </div>
         ))}
