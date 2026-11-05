@@ -18,7 +18,8 @@ export function seasonYear(data: any, species: string, region: RulesRegion, year
       if (!w) return 'closed';
       if (w.requires_opening_review) return 'scheduled';
       if (w.geography) return 'area';
-      return w.restriction || (w.start_at && day === w.start) ? 'limits' : 'open';
+      // The same two structured depth values regs.ts depthLimit reads: limits even without prose.
+      return w.restriction || w.access === 'shoreward-50fm' || w.access === 'seaward-50fm' || (w.start_at && day === w.start) ? 'limits' : 'open';
     });
     return ORDER.find(s => states.includes(s))!;
   };
