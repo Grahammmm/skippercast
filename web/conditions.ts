@@ -54,11 +54,13 @@ export interface ConditionsForecast {
 }
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+/** A finite clock a Date can hold: `ms` is epoch milliseconds (convert seconds first, `s * 1000`). Zero, negatives and the exact Date endpoints pass; no freshness policy. */
+const dateOk = (ms: unknown): ms is number => finite(ms) && Number.isFinite(new Date(ms).getTime());
 
 /** The feed for `region` at the inshore point nearest `near` (offshore lattice points only when no other answers); null when it is not that region's feed. */
 export function parseConditionsForecast(json: unknown, region: string, near: readonly [number, number] | null): ConditionsForecast | null {
   const f = json as {region_id?: unknown; retrieved?: unknown; requested_points?: unknown; models?: Record<string, {data?: unknown; meta?: {last_run_initialisation_time?: unknown; data_end_time?: unknown}}>} | null;
-  if (!f || f.region_id !== region || !finite(f.retrieved) || !Array.isArray(f.requested_points)) return null;
+  if (!f || f.region_id !== region || !dateOk(f.retrieved) || !Array.isArray(f.requested_points)) return null;
   const points = f.requested_points.flatMap((p, index) => Array.isArray(p) && typeof p[0] === 'string' && finite(p[1]) && finite(p[2]) ? [{id: p[0], lat: p[1], lon: p[2], index}] : []);
   if (points.length !== f.requested_points.length || !points.length) return null;
   const inshore = points.filter(p => !p.id.startsWith('offshore')), pool = inshore.length ? inshore : points;
@@ -68,7 +70,7 @@ export function parseConditionsForecast(json: unknown, region: string, near: rea
   for (const [id, m] of Object.entries(f.models ?? {})) {
     if (!Array.isArray(m?.data) || m.data.length !== points.length) continue;
     const issued = m.meta?.last_run_initialisation_time, end = m.meta?.data_end_time;
-    models[id] = {id, issued: finite(issued) ? issued : null, end: finite(end) ? end : null, data: m.data[point.index]};
+    models[id] = {id, issued: finite(issued) && dateOk(issued * 1000) ? issued : null, end: finite(end) ? end : null, data: m.data[point.index]};
   }
   return {region, retrieved: f.retrieved, point: {id: point.id, lat: point.lat, lon: point.lon}, models, feed: json};
 }
@@ -86,13 +88,15 @@ export async function loadConditionsForecast(region: string, near: readonly [num
  * wave models sampled at every hour the wind model lists (v1's rules: gusts
  * below the sustained wind and seas with no positive period stay null). The
  * clock is the older of the two runs, so a stale run never reads fresh; null
- * when there is no feed or no run clock to measure it by.
+ * when there is no feed or no run clock to measure it by. An unrepresentable
+ * retrieval or run clock counts as missing: the other run's clock is never
+ * borrowed in its place.
  */
 export function briefForecast(f: ConditionsForecast | null, family: Family = 'gfs'): RegionalForecast | null {
   const {label, wind: windId, wave: waveId} = FAMILIES[family];
   const wind = f?.models[windId], wave = f?.models[waveId];
-  const issued = [wind?.issued, wave?.issued].filter(finite);
-  if (!f || !wind || !wave || issued.length < 2) return null;
+  const issued = [wind?.issued, wave?.issued].filter((s): s is number => finite(s) && dateOk(s * 1000));
+  if (!f || !dateOk(f.retrieved) || !wind || !wave || issued.length < 2) return null;
   const times = (wind.data as {hourly?: {time?: unknown}} | null)?.hourly?.time;
   if (!Array.isArray(times)) return null;
   const at = (run: ModelRun, variable: string, unit: string, epoch: number) => sample(run.data, variable, epoch, unit, run.end ? {data_end_time: run.end} : null);
@@ -185,9 +189,9 @@ export interface SourceClock {readonly label: string; readonly kind: 'run' | 'fe
 
 /** The clocks the chart's rows carry, each its own: model runs, the feed's retrieval, the nearshore fetch, the tide predictions' fetch. */
 export function sourceClocks(f: ConditionsForecast | null, family: Family, report: Report | null, site: {name: string; fetchedAt: string} | null): SourceClock[] {
-  const iso = (s: number | null) => s === null ? null : new Date(s * 1000).toISOString();
+  const iso = (s: number | null) => s !== null && dateOk(s * 1000) ? new Date(s * 1000).toISOString() : null;
   const out: SourceClock[] = [FAMILIES[family].wind, FAMILIES[family].wave].map(id => ({label: MODEL_NAMES[id] ?? id, kind: 'run', at: iso(f?.models[id]?.issued ?? null)}));
-  out.push({label: 'Regional forecast feed', kind: 'retrieved', at: f ? new Date(f.retrieved).toISOString() : null});
+  out.push({label: 'Regional forecast feed', kind: 'retrieved', at: f && dateOk(f.retrieved) ? new Date(f.retrieved).toISOString() : null});
   if (site) out.push({label: `Nearshore model · ${site.name}`, kind: 'fetched', at: site.fetchedAt});
   const tides = report?.tides.length ? report.sources.find(s => s.kind === 'prediction') : undefined;
   if (tides) out.push({label: tides.label, kind: 'fetched', at: tides.fetchedAt});
