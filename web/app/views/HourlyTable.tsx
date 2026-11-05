@@ -12,7 +12,7 @@ import type {BoatFactors} from '../../score.ts';
 import {hourText, localParts, selectHour, zoneName} from '../TimeDock.tsx';
 import './hourly-table.css';
 
-const HEADERS = ['Wind (kt)', 'Gust (kt)', 'Seas (ft)', 'Swell (ft · s · from)', 'Chop (ft · s)', 'Tide (where a local report exists)', 'Visibility (mi)', 'Comfort score (0–10)'];
+const HEADERS = ['Wind (kt · from)', 'Gust (kt)', 'Seas (ft)', 'Swell (ft · s · from)', 'Second swell (ft · from)', 'Chop (ft · s)', 'Tide (where a local report exists)', 'Visibility (mi)', 'Comfort score (0–10)'];
 
 export function HourlyTable({forecast, tide, at, tz, now}: {forecast: ConditionsForecast | null; tide: Series | null; at: number; tz: string; now: Date}) {
   const box = useRef<HTMLDivElement>(null);

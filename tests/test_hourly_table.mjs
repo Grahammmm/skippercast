@@ -53,7 +53,7 @@ test('edge 2: every score is rateComfort over the verdict feed reader; full hour
     assert.equal(r.limited, rating.limited);
   }
   assert.equal(rows[0].limited, false);
-  assert.deepEqual(hourlyCells(rows[0]), ['8 kt', '12 kt', '4.2 ft', '3.1 ft · 14 s · 290°', '1.5 ft · 5 s', '—', '10.0 mi', rows[0].score.toFixed(1)]);
+  assert.deepEqual(hourlyCells(rows[0]), ['8 kt from WNW', '12 kt', '4.2 ft', '3.1 ft · 14 s · 290°', '—', '1.5 ft · 5 s', '—', '10.0 mi', rows[0].score.toFixed(1)]);
 });
 
 test('edge 3: a stale or missing ECMWF run makes scores limited (marked *), never higher than with both models', () => {
@@ -92,11 +92,11 @@ test('edge 4: a wave period of 0 blanks the seas; a gust below the wind blanks t
 
 test('edge 5: tide comes from the coast series at the row hour; with no coast report every tide cell is —', () => {
   const f = forecast(NORMAL), now = nowAt(NORMAL);
-  assert.ok(hourlyTable(f, null, '2026-06-15', TZ, now).rows.every(r => r.tide === null && hourlyCells(r)[5] === '—'));
+  assert.ok(hourlyTable(f, null, '2026-06-15', TZ, now).rows.every(r => r.tide === null && hourlyCells(r)[6] === '—'));
   const tide = {label: 'Tide', unit: 'ft', color: '', points: [{at: '2026-06-15T09:00:00Z', value: 3.27}, {at: '2026-06-15T10:00:00Z', value: NaN}]};
   const rows = hourlyTable(f, tide, '2026-06-15', TZ, now).rows;
   assert.equal(rows[2].tide, 3.27);
-  assert.equal(hourlyCells(rows[2])[5], '3.3 ft');
+  assert.equal(hourlyCells(rows[2])[6], '3.3 ft');
   assert.equal(rows[3].tide, null, 'a NaN tide reading is blank');
   assert.equal(rows[10].tide, null, 'no reading near the hour is blank');
 });
@@ -109,7 +109,7 @@ test('hourly_tide_cell_uses_nearest_reading', () => {
   for (const points of [pts, [...pts].reverse(), [pts[2], pts[0], pts[1]]]) {
     const rows = hourlyTable(f, {label: 'Tide', unit: 'ft', color: '', points}, '2026-06-15', TZ, now).rows;
     assert.equal(rows[2].tide, 4);
-    assert.equal(hourlyCells(rows[2])[5], '4.0 ft');
+    assert.equal(hourlyCells(rows[2])[6], '4.0 ft');
     assert.equal(rows[8].tide, null, 'no reading within 30 minutes of the hour is blank');
     rows.forEach((r, i) => assert.deepEqual({...r, tide: null}, {...noTide[i], tide: null}, 'only the tide cell changes; scores and other cells stay'));
   }
@@ -123,12 +123,12 @@ test('edge 8: visibility 16093 m reads 10.0 mi; NaN, strings and negative values
   const f = forecast(NORMAL, {edit: (k, i) => i === 30 ? {visibility: NaN, wind_speed_10m: 'calm', swell_wave_height: -1}[k] : undefined});
   const rows = hourlyTable(f, null, '2026-06-15', TZ, nowAt(NORMAL)).rows;
   assert.equal(rows[0].visibilityMi, 10);
-  assert.equal(hourlyCells(rows[0])[6], '10.0 mi');
+  assert.equal(hourlyCells(rows[0])[7], '10.0 mi');
   const cells = hourlyCells(rows[6]);
   assert.equal(cells[0], '—', 'wind string');
   assert.equal(cells[1], '—', 'gust with no wind to check it against');
   assert.equal(cells[3], '—', 'negative swell');
-  assert.equal(cells[6], '—', 'NaN visibility');
+  assert.equal(cells[7], '—', 'NaN visibility');
   // A GFS run over 36 h old is dropped by the feed reader, and its visibility with it.
   const stale = forecast(NORMAL);
   stale.models.gfs_global = {...stale.models.gfs_global, issued: NORMAL - 40 * HOUR};
@@ -145,7 +145,7 @@ test('RF1600-3: a GFS run issued over an hour in the future is refused for visib
   for (const ahead of [3601, 24 * HOUR]) {
     const rows = at(nowS + ahead);
     assert.ok(rows.length > 0, 'ECMWF clock keeps the rows');
-    assert.ok(rows.every(r => r.wind === null && r.visibilityMi === null && hourlyCells(r)[6] === '—'), `+${ahead}s`);
+    assert.ok(rows.every(r => r.wind === null && r.visibilityMi === null && hourlyCells(r)[7] === '—'), `+${ahead}s`);
   }
   for (const issued of [nowS, nowS + HOUR, nowS - maxS]) assert.equal(at(issued)[0].visibilityMi, 10, `admitted ${issued - nowS}`);
   assert.equal(at(nowS - maxS - 1)[0].visibilityMi, null, 'max age + 1 s');
@@ -158,7 +158,7 @@ test('RF1600-3: a GFS run issued over an hour in the future is refused for visib
 const {REFERENCE_BOAT} = await import('../web/score.ts');
 const {boatFactors} = await import('../dist/boat-handling.js');
 const {createHash} = await import('node:crypto');
-const PINNED = '8019b2110275ef936162d19e9ccbe921bdbaec71c792b7abea80858375904e20';
+const PINNED = 'df00e2a835648398384ca1d54715546b47cd2dd8e6311659d9dcbd2119cbd30f';
 const SMALL = Object.freeze({sea: 0.6, wind: 0.6, chopPeriod: 8});
 const dump = ({rows, note}) => JSON.stringify({note, rows, cells: rows.map(hourlyCells)});
 
@@ -186,4 +186,40 @@ test('MYB-2b: with no boat saved the table is byte-identical to the reference-bo
   // Pinned from main ea41c719 (before the boat parameter existed): the default output has not moved by a byte.
   const out = dump(hourlyTable(forecast(NORMAL), null, '2026-06-15', TZ, nowAt(NORMAL)));
   assert.equal(createHash('sha256').update(out).digest('hex'), PINNED);
+});
+
+// SC2037-01: wind direction in the Wind cell, a second-swell cell; nothing filled.
+const cellsAt = (edit, wave = WAVE) => {
+  const f = forecast(NORMAL, {edit});
+  f.models.ncep_gfswave016 = {...f.models.ncep_gfswave016, data: series(NORMAL, wave, edit)};
+  return hourlyCells(hourlyTable(f, null, '2026-06-15', TZ, nowAt(NORMAL)).rows[0]);
+};
+const SECOND = {...WAVE, secondary_swell_wave_height: [1.2, 'ft'], secondary_swell_wave_direction: [200, '°']};
+
+test('SC2037-01: a row with wind direction and a second swell names both compass words', () => {
+  const cells = cellsAt(undefined, SECOND);
+  assert.equal(cells[0], '8 kt from WNW');
+  assert.equal(cells[4], '1.2 ft · from SSW');
+  assert.equal(cells.length, 9);
+});
+
+test('SC2037-01: missing wind direction leaves the plain wind; no wind is a dash even with a direction', () => {
+  for (const bad of [NaN, Infinity, 'x']) assert.equal(cellsAt(k => k === 'wind_direction_10m' ? bad : undefined)[0], '8 kt');
+  assert.equal(cellsAt(k => k === 'wind_speed_10m' ? NaN : undefined)[0], '—');
+});
+
+test('SC2037-01: no second swell (absent series, zero height, missing or non-finite direction) is a dash', () => {
+  assert.equal(cellsAt()[4], '—', 'absent series');
+  for (const [h, d] of [[0, 200], [-1, 200], [1.2, NaN], [1.2, null], [NaN, 200]]) {
+    const wave = {...WAVE, secondary_swell_wave_height: [h, 'ft'], secondary_swell_wave_direction: [d, '°']};
+    assert.equal(cellsAt(undefined, wave)[4], '—', `${h} ft from ${d}`);
+  }
+  assert.equal(cellsAt(undefined, {...WAVE, secondary_swell_wave_height: [1.2, 'ft']})[4], '—', 'direction series absent');
+});
+
+test('SC2037-01: compass words use the shared 16-point helper (0 and 359.9 are N; 11.25 rounds to NNE)', () => {
+  const wind = d => cellsAt(k => k === 'wind_direction_10m' ? d : undefined)[0];
+  assert.equal(wind(0), '8 kt from N');
+  assert.equal(wind(359.9), '8 kt from N');
+  assert.equal(wind(11.25), '8 kt from NNE');
 });
