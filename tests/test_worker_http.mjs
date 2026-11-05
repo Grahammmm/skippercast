@@ -453,6 +453,31 @@ test('subscription_foreign_endpoint_is_unchanged_at_any_capacity', async () => {
   } finally { over.sql.close(); }
 });
 
+test('subscription_post_bad_key_types_are_400_before_write', async () => {
+  const db = database(), env = {DB: db.adapter}, keys = await pushKeys(), realError = console.error;
+  console.error = () => {};
+  try {
+    seedDevices(db.sql, 'alice', 1, keys);
+    seedDevices(db.sql, 'bob', 1, keys);
+    const before = JSON.stringify(storedDevices(db.sql));
+    let writes = 0;
+    db.hooks.beforeSubscriptionWrite = () => { writes++; };
+    const own = deviceEndpoint('alice-1'), foreign = deviceEndpoint('bob-1');
+    const cases = [{p256dh: [keys.p256dh]}, {auth: [keys.auth]}, {p256dh: [keys.p256dh], auth: [keys.auth]}, {p256dh: {toString: null}}, {auth: {}}, {auth: 7}, {p256dh: null}];
+    for (const endpoint of [own, foreign, deviceEndpoint('fresh')]) for (const bad of cases) {
+      const response = await post(env, 'alice', {endpoint, keys: {...keys, ...bad}});
+      assert.equal(response.status, 400);assert.deepEqual(await errorBody(response), {error: 'push keys invalid'});
+    }
+    assert.equal(writes, 0, 'no subscription write was attempted');
+    assert.equal(JSON.stringify(storedDevices(db.sql)), before, 'rows are byte-identical');
+    // Valid string keys and real dependency failures keep their statuses.
+    assert.equal((await post(env, 'alice', {endpoint: own, keys})).status, 200);
+    assert.equal((await post(env, 'alice', {endpoint: foreign, keys})).status, 409);
+    db.hooks.beforeSubscriptionWrite = () => { throw Error('D1_ERROR: SQLITE_ERROR'); };
+    assert.equal((await post(env, 'alice', {endpoint: deviceEndpoint('fresh'), keys})).status, 503);
+  } finally { console.error = realError; db.sql.close(); }
+});
+
 test('subscription_refusals_and_storage_errors_do_not_claim_success', async () => {
   const db = database(), env = {DB: db.adapter}, keys = await pushKeys(), realError = console.error;
   console.error = () => {};
