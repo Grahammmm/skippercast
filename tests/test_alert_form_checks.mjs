@@ -102,3 +102,109 @@ test('the dialog offers the range on the date input and checks before any reques
   for (const field of ['start_hour" type="number" min="0" max="22"', 'end_hour" type="number" min="1" max="23"', 'wind_limit" type="number" min="1" max="30"', 'gust_limit" type="number" min="1" max="40"'])
     assert.ok(src.includes(field), `other inputs keep their limits: ${field}`);
 });
+
+// SC1822-03: Use again fills the form from a saved trip and sends nothing.
+const {reuseTrip, reusedLimits, reuseStatus, reuseLimitsNote, fillAlertForm} = await import('../web/alerts.ts');
+const deepFreeze = o => { for (const v of Object.values(o)) if (v && typeof v === 'object') deepFreeze(v); return Object.freeze(o); };
+const REGION = deepFreeze({id: 'central', timezone: 'America/Los_Angeles', species: ['rockfish', 'lingcod'], forecast_points: [{id: 'sur', name: 'Point Sur'}, {id: 'mry', name: 'Monterey'}]});
+const SAVED = {id: 't1', region: 'central', date: '2026-10-24', point: 'mry', species: 'lingcod', start_hour: 6, end_hour: 11, wind_limit: 9, gust_limit: 14, sea_limit: 2.5};
+const fakeForm = (start = {}) => {
+  const controls = {};
+  for (const n of ['date', 'point', 'start_hour', 'end_hour', 'wind_limit', 'gust_limit', 'sea_limit']) controls[n] = {value: start[n] ?? 'typed', focused: 0, focus() { this.focused++; }};
+  return {controls, elements: {namedItem: n => controls[n] ?? null}};
+};
+
+test('reuse_upcoming_and_past_copy_exact_window: area, species, hours and limits as stored; the source is untouched', () => {
+  const source = deepFreeze({...SAVED});
+  assert.deepEqual(reuseTrip(source, REGION), {fields: {point: 'mry', start_hour: 6, end_hour: 11, wind_limit: 9, gust_limit: 14, sea_limit: 2.5}, species: 'lingcod', omitted: []});
+  const second = deepFreeze({...SAVED, id: 't2', point: 'sur', species: 'rockfish', start_hour: 5, end_hour: 9, wind_limit: 12, gust_limit: 12, sea_limit: 4});
+  const form = fakeForm();
+  fillAlertForm(form, reuseTrip(source, REGION));
+  fillAlertForm(form, reuseTrip(second, REGION));
+  assert.deepEqual(Object.fromEntries(Object.entries(form.controls).map(([k, c]) => [k, c.value])), {date: '', point: 'sur', start_hour: '5', end_hour: '9', wind_limit: '12', gust_limit: '12', sea_limit: '4'});
+  assert.equal(source.point, 'mry');
+});
+
+test('reuse_requires_new_date_and_focuses_it: the date is emptied on every reuse and focused; the old date is never copied', () => {
+  const fake = fakeForm({date: '2026-11-03'});
+  fillAlertForm(fake, reuseTrip(SAVED, REGION));
+  assert.equal(fake.controls.date.value, '');
+  assert.equal(fake.controls.date.focused, 1);
+  fake.controls.date.value = '2026-11-04';
+  fillAlertForm(fake, reuseTrip(SAVED, REGION));
+  assert.equal(fake.controls.date.value, '');
+  assert.equal(fake.controls.date.focused, 2);
+  assert.notEqual(fake.controls.date.value, SAVED.date);
+  assert.equal(formProblem(form({date: ''}), RANGE), DATE, 'an empty date is refused before any request');
+  assert.equal(formProblem(form({date: RANGE.min}), RANGE), null);
+  assert.equal(formProblem(form({date: RANGE.max}), RANGE), null);
+});
+
+test('reuse_retired_area_and_species_leave_current_choices: only what still exists is copied and the rest is named', () => {
+  const retiredArea = reuseTrip({...SAVED, point: 'gone'}, REGION);
+  assert.ok(!('point' in retiredArea.fields));
+  assert.deepEqual(retiredArea.omitted, ['area']);
+  assert.equal(retiredArea.species, 'lingcod');
+  const retiredSpecies = reuseTrip({...SAVED, species: 'halibut'}, REGION);
+  assert.equal(retiredSpecies.species, null);
+  assert.equal(retiredSpecies.fields.point, 'mry');
+  assert.deepEqual(retiredSpecies.omitted, ['species']);
+  assert.deepEqual(reuseTrip({...SAVED, point: 'gone', species: 'halibut'}, REGION).omitted, ['area', 'species']);
+  assert.deepEqual(reuseTrip({...SAVED, region: 'north'}, REGION).omitted, ['area'], 'the same point id from another region is not the same area');
+  assert.deepEqual(reuseTrip({...SAVED, region: undefined}, REGION).omitted, ['area']);
+  const named = {...REGION, species: ['rockfish'], target_options: [{id: 'lingcod', name: 'Lingcod'}]};
+  assert.equal(reuseTrip(SAVED, named).species, null, 'listed only as a target option is not listed');
+  const empty = reuseTrip(SAVED, {...REGION, species: [], forecast_points: []});
+  assert.deepEqual(empty.omitted, ['area', 'species']);
+  const form = fakeForm();
+  fillAlertForm(form, retiredArea);
+  assert.equal(form.controls.point.value, 'typed', 'the current area is kept, no retired option is injected');
+  assert.equal(reuseStatus(['area', 'species']), 'Window copied. Choose a date, then save. Area was not copied because it is no longer offered in this region. Alert species was not copied because it is no longer listed in this region.');
+  assert.equal(reuseStatus([]), 'Window copied. Choose a date, then save.');
+});
+
+test('reuse_legacy_numeric_fields_are_not_scaled_or_invented: bad numbers stay untouched and are reported', () => {
+  const r = reuseTrip(deepFreeze({...SAVED, sea_limit: 0.5, wind_limit: 1, gust_limit: 40}), REGION);
+  assert.deepEqual([r.fields.sea_limit, r.fields.wind_limit, r.fields.gust_limit], [0.5, 1, 40]);
+  for (const bad of [{start_hour: undefined}, {start_hour: 7.5}, {end_hour: 6}, {end_hour: 24}, {start_hour: 23, end_hour: 23}, {start_hour: NaN}]) {
+    const got = reuseTrip({...SAVED, ...bad}, REGION);
+    assert.deepEqual(got.omitted, ['hours'], JSON.stringify(bad));
+    assert.ok(!('start_hour' in got.fields) && !('end_hour' in got.fields));
+  }
+  for (const bad of [{wind_limit: 31}, {gust_limit: 8}, {wind_limit: null}, {gust_limit: Infinity}, {wind_limit: 9.5}]) {
+    const got = reuseTrip({...SAVED, ...bad}, REGION);
+    assert.deepEqual(got.omitted, ['limits'], JSON.stringify(bad));
+    assert.ok(!('wind_limit' in got.fields) && !('gust_limit' in got.fields));
+    assert.equal(got.fields.sea_limit, 2.5);
+    assert.equal(reusedLimits(got.fields), 'some');
+  }
+  const noSea = reuseTrip({...SAVED, sea_limit: 2.25}, REGION);
+  assert.deepEqual(noSea.omitted, ['limits']);
+  assert.equal(noSea.fields.wind_limit, 9);
+  const none = reuseTrip({...SAVED, wind_limit: undefined, gust_limit: undefined, sea_limit: undefined}, REGION);
+  assert.equal(reusedLimits(none.fields), 'none');
+  assert.deepEqual(none.omitted, ['limits']);
+  assert.equal(reusedLimits(reuseTrip(SAVED, REGION).fields), 'all');
+});
+
+test('reuse_note_replaces_initial_provenance: the limits come from the saved trip and the current boat or offshore caveat stays truthful', () => {
+  assert.equal(reuseLimitsNote('2026-10-24', 'all', false), 'Limits start from your saved trip on 2026-10-24; you can edit them before saving. Alerts still judge wind, gusts and offshore seas only, not surf at your launch or beach.');
+  assert.equal(reuseLimitsNote('2026-10-24', 'some', true), "Some limits start from your saved trip on 2026-10-24; other limits were left unchanged. Alerts use your current boat settings, not the old trip's boat.");
+  for (const note of [reuseLimitsNote('2026-10-24', 'all', true), reuseLimitsNote('2026-10-24', 'some', false)]) assert.doesNotMatch(note, /saved boat|reference 23 ft|Boat limits|your .* limits;/);
+  const src = readFileSync(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
+  assert.match(src, /reuse && reuse\.copied !== 'none' \? reuseLimitsNote\(reuse\.date, reuse\.copied, p === 'boat'\) : p !== 'boat'/, 'the initial notes remain the fallback');
+});
+
+test('reuse_sends_nothing_until_explicit_save: filling the form makes no request and Use again has no network or storage path', async () => {
+  const oldFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = (...a) => { calls.push(a); return Promise.reject(Error('no request expected')); };
+  try { fillAlertForm(fakeForm(), reuseTrip(SAVED, REGION)); } finally { globalThis.fetch = oldFetch; }
+  assert.equal(calls.length, 0);
+  const src = readFileSync(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
+  const handler = src.slice(src.indexOf('const useAgain = (trip'), src.indexOf('/** Cancel returns focus'));
+  assert.ok(handler.length > 100 && !/api\(|refresh|ack\(|fetch|localStorage|sessionStorage|enablePush|location|submit|requestSubmit/.test(handler), 'Use again only fills the form');
+  const save = src.slice(src.indexOf('const save = async'), src.indexOf('const act = '));
+  assert.ok(save.indexOf('region.forecast_points.some') > save.indexOf('formProblem') && save.indexOf("api('trips'") > save.indexOf('region.species.includes'), 'save checks the current area and species before the one request');
+  assert.match(src, /<Button type="submit" variant="primary" disabled=\{unavailable\}>Save this fishing window<\/Button>/);
+});
