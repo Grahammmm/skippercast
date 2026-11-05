@@ -85,7 +85,7 @@ export function formProblem(form: AlertForm, range: {min: string; max: string}):
 export const comfortBody = (region: string, rating: number, phase: string) =>
   ({region, rating, phase, wind: null, sea: null, period: null, heading: null, point: null});
 
-export type SavedTrip = {id: string; region?: string; date: string; point: string; species: string; start_hour: number; end_hour: number; boat_name?: string | null; boat_sea?: number | null; wind_limit?: number; gust_limit?: number; sea_limit?: number};
+export type SavedTrip = {id: string; region?: string; date: string; point: string; species: string; start_hour: number; end_hour: number; boat_name?: string | null; boat_sea?: number | null; wind_limit?: number; gust_limit?: number; sea_limit?: number; targets?: unknown; plan?: unknown};
 /** What a saved trip lets the form reuse. `omitted` names what was left out, in order: area, species, hours, limits. */
 export type ReuseOmission = 'area' | 'species' | 'hours' | 'limits';
 export type Reuse = {fields: Partial<Omit<AlertForm, 'date'>>; species: string | null; omitted: ReuseOmission[]};
@@ -239,6 +239,36 @@ export const alertNames = (region: RegionAlerts): AlertNames => ({
 /** The saved trip's line: "2026-11-02 · Point Sur · Rockfish · 7:00–13:00" with names (raw ids without them or when unknown), with the saved boat when it has one. */
 export const tripLine = (t: SavedTrip, names?: AlertNames): string =>
   `${t.date} · ${names?.point.get(t.point) ?? t.point} · ${names?.species.get(t.species) ?? t.species} · ${t.start_hour}:00–${t.end_hour}:00${t.boat_sea ? ` · ${t.boat_name || 'saved boat'}` : ''}`;
+
+/** What a saved trip's stored plan shows: target names, stop names in saved order and summed leg totals. Never positions, notes or ids. */
+export type TripPlanSummary =
+  | {kind: 'saved'; targets: string[]; stops: string[]; totals: {nm: string; minutes: string} | null}
+  | {kind: 'unavailable'};
+
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+const fixed5 = (units: number) => String(units / 100000);
+
+/** The plan saved with a trip (SC1822-04), read from the parsed GET answer: null without one, 'unavailable' when it is malformed (no partial totals). */
+export function tripPlanSummary(trip: SavedTrip, names?: AlertNames): TripPlanSummary | null {
+  const plan = trip.plan;
+  if (plan === undefined || plan === null) return null;
+  if (!isObj(plan) || !Array.isArray(plan.spots) || !Array.isArray(plan.legs)) return {kind: 'unavailable'};
+  const spots: {name: string; order: number; i: number}[] = [];
+  for (const [i, s] of plan.spots.entries()) {
+    if (!isObj(s) || typeof s.name !== 'string' || typeof s.order !== 'number' || !Number.isInteger(s.order) || s.order < 0) return {kind: 'unavailable'};
+    spots.push({name: s.name, order: s.order, i});
+  }
+  let nm = 0, minutes = 0;
+  for (const l of plan.legs) {
+    if (!isObj(l) || typeof l.nm !== 'number' || typeof l.minutes !== 'number' || !Number.isFinite(l.nm) || !Number.isFinite(l.minutes) || l.nm < 0 || l.minutes < 0) return {kind: 'unavailable'};
+    nm += Math.round(l.nm * 100000); minutes += Math.round(l.minutes * 100000);
+  }
+  const ids = Array.isArray(trip.targets) && trip.targets.length && trip.targets.every(t => typeof t === 'string') ? trip.targets as string[] : [trip.species];
+  return {kind: 'saved',
+    targets: ids.map(id => names?.species.get(id) ?? id),
+    stops: spots.sort((a, b) => a.order - b.order || a.i - b.i).map(s => s.name.trim() ? s.name : 'Unnamed stop'),
+    totals: plan.legs.length ? {nm: fixed5(nm), minutes: fixed5(minutes)} : null};
+}
 
 /** The assessment kinds and delivery statuses server/trips.ts writes, in plain words. */
 export const KIND_LABEL: Readonly<Record<string, string>> = {

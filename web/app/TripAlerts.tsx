@@ -13,8 +13,8 @@ import {PROFILE_TABLE} from '../profile.ts';
 import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {
-  alertDate, alertNames, alertSpecies, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, eventLine, feedbackPhase, formProblem, latestTripEvent, assessmentTime, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotifications, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
-  type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type SavedTrip,
+  alertDate, alertNames, alertSpecies, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, eventLine, feedbackPhase, formProblem, latestTripEvent, assessmentTime, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotifications, tripBody, tripBoat, tripDefaults, tripLine, tripPlanSummary, tripRecaps,
+  type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type SavedTrip, type TripPlanSummary,
 } from '../alerts.ts';
 
 type SessionAnswer = {signedIn?: boolean; signIn?: unknown; publicKey?: string | null};
@@ -77,6 +77,19 @@ const catchLine = (c: CatchLogEntry) => c.outcome === 'fish' ? `Fish · ${c.coun
 /** The catch-log read's state beside the recap: still reading, or finished with every page (complete) or not. Left out, the recap is drawn as a complete read. */
 export type CatchRead = Pick<RecapCatchLog, 'complete'> & {loading: boolean};
 
+/** The plan saved with an alert, as stored: names and leg totals only, never positions or notes, and not re-checked since it was saved. */
+function SavedPlan({plan}: {plan: TripPlanSummary}) {
+  return <div class="small">
+    <strong>Plan saved with this alert</strong> Not re-checked since it was saved.
+    {plan.kind === 'unavailable' ? <p>Saved plan details unavailable.</p> : <>
+      <p>Targets: {plan.targets.join(' · ')}</p>
+      <p>Stops</p>
+      {plan.stops.length ? <ol>{plan.stops.map((s, i) => <li key={i}>{s}</li>)}</ol> : <p>No stops saved.</p>}
+      <p>{plan.totals ? `Saved leg totals: ${plan.totals.nm} nm · ${plan.totals.minutes} min` : 'No legs saved.'}</p>
+    </>}
+  </div>;
+}
+
 export function SavedTrips({recaps, names, remove, useAgain, read = {loading: false, complete: true}, events = [], timeZone = DEFAULT_ZONE}: {recaps: ReturnType<typeof tripRecaps>; names: AlertNames; remove: (id: string) => () => void; useAgain: (trip: SavedTrip) => void; read?: CatchRead; events?: AlertEvent[]; timeZone?: string}) {
   const standing = (t: SavedTrip) => {
     const e = latestTripEvent(events, t.id);
@@ -85,14 +98,20 @@ export function SavedTrips({recaps, names, remove, useAgain, read = {loading: fa
   };
   const deletion = (t: SavedTrip) => <Button size="sm" variant="quiet" onClick={remove(t.id)} aria-label={`Delete the trip on ${t.date} at ${names.point.get(t.point) ?? t.point}`}>Delete</Button>;
   const again = (t: SavedTrip) => <Button type="button" size="sm" variant="quiet" onClick={() => useAgain(t)} aria-label={`Use again: trip on ${t.date} at ${names.point.get(t.point) ?? t.point}`}>Use again</Button>;
+  const planOf = (t: SavedTrip) => { const s = tripPlanSummary(t, names); return s ? <SavedPlan plan={s} /> : null; };
   return <div id="saved-trips">
     {!recaps.upcoming.length && !recaps.past.length ? <p>No saved trips.</p> : null}
-    {recaps.upcoming.length ? <><h3>Upcoming</h3>{recaps.upcoming.map(t => <p key={t.id}><strong>{tripLine(t, names)}</strong> {deletion(t)} {again(t)}{standing(t)}</p>)}</> : null}
+    {recaps.upcoming.length ? <><h3>Upcoming</h3>{recaps.upcoming.map(t => {
+      const row = <p key={t.id}><strong>{tripLine(t, names)}</strong> {deletion(t)} {again(t)}{standing(t)}</p>;
+      const plan = planOf(t);
+      return plan ? <div key={t.id}>{row}{plan}</div> : row;
+    })}</> : null}
     {recaps.past.length ? <><h3>Past</h3>
       <p class="small">Your own record of each trip. Forecast assessments are what we sent before the day, not what the sea did.</p>
       {read.loading ? <p class="small">Reading your catch log…</p> : !read.complete ? <p class="small">Older catch-log entries were not read. The entries shown may be incomplete.</p> : null}
       {recaps.past.map(({trip, final, reports, catches}) => <article key={trip.id}>
         <details><summary>{tripLine(trip, names)}</summary>
+          {planOf(trip)}
           {final ? <><strong>{eventLine(final)}</strong><p style={{whiteSpace: 'pre-line'}}>{final.message}</p></> : <p>No day-before assessment was delivered</p>}
           {reports.length ? <><h4>Your comfort reports</h4>{reports.map((f, i) => <p key={i}>{f.rating}/10 · {feedbackPhase(f)}</p>)}</> : null}
           {catches.length ? <><h4>Your catch log</h4><ul>{catches.map(c => <li key={c.id}>{catchLine(c)}</li>)}</ul></> : null}
