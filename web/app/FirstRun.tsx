@@ -11,16 +11,17 @@
 // chosen, or on arrival from the landing's Boat choice (boat-entry.ts carryAsk).
 import {signal} from '@preact/signals';
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {ASK_PARAM, ENTRY_COPY, ENTRY_FIELDS, saveFirstUse, takeAsk, withoutAsk} from '../boat-entry.ts';
+import {ASK_PARAM, entryCopy, entryFields, saveFirstUse, takeAsk, withoutAsk} from '../boat-entry.ts';
+import {language, t} from '../i18n.ts';
 import {Button} from '../ui/Button.tsx';
-import {DEFAULT_PROFILE, PROFILE_NOTES, PROFILE_TABLE, PROFILES, isProfile, type Profile} from '../profile.ts';
+import {DEFAULT_PROFILE, PROFILES, isProfile, type Profile} from '../profile.ts';
 import {savedHomeMode, type CookieJar} from '../ports.ts';
 import {readURL, setParams, STORAGE_KEYS, type StoreStorage} from '../state.ts';
 
 /** Kept here for existing imports; the notes live in web/profile.ts beside the table, shared with the landing's profile step (#622). */
-export {PROFILE_NOTES};
+export {PROFILE_NOTES} from '../profile.ts';
 
-export const BOAT_ENTRY_COPY = {save: 'Save boat', skip: 'Not now'} as const;
+export const BOAT_ENTRY_COPY = {save: t('boatEntry.save', 'en'), skip: t('boatEntry.skip', 'en')} as const;
 
 /** True while BoatEntry is on screen. */
 export const boatEntryOpen = signal(false);
@@ -61,24 +62,25 @@ export function BoatEntry({storage, focus = false, onDone}: {storage?: StoreStor
   const form = useRef<HTMLFormElement>(null);
   // boatEntryOpen tells the phone's sheet to leave peek, whose clipped body hides the fields (Mobile.tsx boatEntryDetent).
   useEffect(() => { boatEntryOpen.value = true; if (focus) form.current?.focus(); return () => { boatEntryOpen.value = false; }; }, []);
-  const save = (event: Event) => { event.preventDefault(); onDone(saveFirstUse({...boat, profile: 'boat'}, storage).notices); };
+  const lang = language.value, copy = entryCopy(lang);
+  const save = (event: Event) => { event.preventDefault(); onDone(saveFirstUse({...boat, profile: 'boat'}, storage, lang).notices); };
   return (
     <form ref={form} class="app-boat-entry" aria-labelledby="first-use-boat-legend" tabIndex={-1} onSubmit={save} data-first-use-boat="">
       <fieldset class="app-limits" aria-describedby="first-run-boat-hint">
-        <legend id="first-use-boat-legend">{ENTRY_COPY.legend}</legend>
-        <p class="app-limits-hint">{ENTRY_COPY.line}</p>
-        {ENTRY_FIELDS.map(([name, label]) => (
+        <legend id="first-use-boat-legend">{copy.legend}</legend>
+        <p class="app-limits-hint">{copy.line}</p>
+        {entryFields(lang).map(([name, label]) => (
           <div class="app-limits-field" key={name}>
             <label for={`first-run-boat-${name}`}>{label}</label>
             <input id={`first-run-boat-${name}`} name={name} type="number" inputMode="decimal" value={boat[name]}
               onInput={event => setBoat({...boat, [name]: (event.currentTarget as HTMLInputElement).value})} />
           </div>
         ))}
-        <span id="first-run-boat-hint" class="app-limits-hint ui-mono">{ENTRY_COPY.lengthHint} · {ENTRY_COPY.limitsHint}</span>
+        <span id="first-run-boat-hint" class="app-limits-hint ui-mono">{copy.lengthHint} · {copy.limitsHint}</span>
       </fieldset>
       <div class="app-boat-entry-actions">
-        <Button type="submit" variant="primary">{BOAT_ENTRY_COPY.save}</Button>
-        <Button variant="quiet" onClick={() => onDone([])}>{BOAT_ENTRY_COPY.skip}</Button>
+        <Button type="submit" variant="primary">{t('boatEntry.save', lang)}</Button>
+        <Button variant="quiet" onClick={() => onDone([])}>{t('boatEntry.skip', lang)}</Button>
       </div>
     </form>
   );
@@ -97,31 +99,32 @@ export function FirstRun({href, storage, cookies}: {href?: string; storage?: Sto
     if (takeAsk(at) && readURL(at).profile === 'boat') setAsk('carried');
     try { if (new URL(at).searchParams.has(ASK_PARAM)) history.replaceState(history.state, '', withoutAsk(location.href)); } catch { /* keep the address */ }
   }, []);
+  const lang = language.value;
   const notice = notices.length ? (
     <div class="app-firstrun-notice" role="status" data-first-use-notice="">
       <span>{notices.join(' ')}</span>
-      <Button variant="quiet" size="sm" onClick={() => setNotices([])}>Dismiss</Button>
+      <Button variant="quiet" size="sm" onClick={() => setNotices([])}>{t('firstRun.dismiss', lang)}</Button>
     </div>
   ) : null;
   if (!due) {
     if (ask) return <BoatEntry storage={storage} focus={ask === 'chosen'} onDone={held => { setAsk(null); setNotices(held); }} />;
-    return notice ? <section class="app-firstrun" aria-label="Your boat">{notice}</section> : null;
+    return notice ? <section class="app-firstrun" aria-label={t('firstRun.boat', lang)}>{notice}</section> : null;
   }
   // The choice finishes the card as before; choosing Boat then asks for the boat (SC-LANDING-ORDER). "Keep Boat for now" asks nothing more.
   const choose = (p: Profile, keep = false) => { setDue(false); setParams(p === DEFAULT_PROFILE ? {profile: p} : {profile: p, target: null}); if (p === 'boat' && !keep) setAsk('chosen'); };
   return (
     <section class="app-firstrun" role="dialog" aria-labelledby="first-run-title" data-first-run="">
-      <span class="ui-eyebrow">First time here</span>
-      <h2 id="first-run-title">How do you fish?</h2>
-      <p>The profile sets the depth limit, the species list and the map's default layers. Change it any time in the command bar.</p>
+      <span class="ui-eyebrow">{t('firstRun.eyebrow', lang)}</span>
+      <h2 id="first-run-title">{t('firstRun.title', lang)}</h2>
+      <p>{t('firstRun.intro', lang)}</p>
       <div class="app-firstrun-options">
         {PROFILES.map(p => (
           <Button key={p} icon={p} data-profile={p} onClick={() => choose(p)}>
-            <span><strong>{PROFILE_TABLE[p].label}</strong><small>{PROFILE_NOTES[p]}</small></span>
+            <span><strong>{t(`where.profile.${p}`, lang)}</strong><small>{t(`landing.profile.note.${p}`, lang)}</small></span>
           </Button>
         ))}
       </div>
-      <Button variant="quiet" size="sm" onClick={() => choose(DEFAULT_PROFILE, true)}>Keep {PROFILE_TABLE[DEFAULT_PROFILE].label} for now</Button>
+      <Button variant="quiet" size="sm" onClick={() => choose(DEFAULT_PROFILE, true)}>{t('firstRun.keep', lang, {profile: t(`where.profile.${DEFAULT_PROFILE}`, lang)})}</Button>
     </section>
   );
 }

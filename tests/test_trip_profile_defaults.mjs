@@ -40,7 +40,7 @@ function open(p, boat = custom) {
     if (vnode.type === 'form' && vnode.props.id === 'save-alert') form = vnode;
   };
   try {
-    const html = ui.render(ui.h(ui.SignedIn, {session: {}, region: {id: 'fixture', timezone: 'UTC', species: ['reef'], forecast_points: []}, boat, target: null}));
+    const html = ui.render(ui.h(ui.SignedIn, {session: {}, region: {id: 'fixture', timezone: 'UTC', species: ['reef'], forecast_points: [{id: 'central', name: 'Central'}]}, boat, target: null}));
     const values = Object.fromEntries([...html.matchAll(/name="(wind_limit|gust_limit|sea_limit)"[^>]*value="([^"]+)"/g)].map(m => [m[1], Number(m[2])]));
     const note = html.match(/id="trip-boat-note">([^<]+)</)?.[1];
     return {values, note, form};

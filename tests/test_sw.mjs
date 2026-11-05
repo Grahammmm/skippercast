@@ -501,6 +501,57 @@ test('D8: of two committed packs of one region, the newer copy is the pack candi
   assert.equal((await (await dispatch(worker, get(MANIFEST))).json()).tag, 'new');
 });
 
+// RF1920-14: pack metadata is admitted only with numeric schema_version 1 and a truthy region owner, checked on every lookup.
+const META = '/__skippercast-pack.json', PACK1 = 'sc-pack-test-coast-1', PACK2 = 'sc-pack-test-coast-2';
+const setMeta = (worker, cache, body) => keep(worker, cache, META, T1, body);
+const UNSUPPORTED = [['empty', ''], ['malformed', '{"region_id":'], ['null', 'null'], ['{}', {}], ['no version', {region_id: REGION}], ['schema 2', {schema_version: 2, region_id: REGION}],
+  ['schema "1"', {schema_version: '1', region_id: REGION}], ['schema true', {schema_version: true, region_id: REGION}], ['schema 0', {schema_version: 0, region_id: REGION}],
+  ['schema 1 without owner', {schema_version: 1}], ['schema 1 empty owner', {schema_version: 1, region_id: ''}]];
+
+test('habitat_pack_requires_numeric_schema_one', async () => {
+  for (const [label, body] of UNSUPPORTED) {
+    const bad = worker => setMeta(worker, PACK1, body);
+    assert.equal(await answer({pack: BOTH, setup: bad}), null, `${label}: the pack alone answers nothing`);
+    assert.equal(await answer({pack: BOTH, data: {}, dataAt: T0, setup: bad}), 'data', `${label}: only sc-data answers`);
+  }
+  assert.equal(await answer({pack: BOTH, setup: worker => setMeta(worker, PACK1, {schema_version: 1, region_id: REGION})}), 'pack', 'control: schema 1 answers with its saved-at time');
+});
+
+test('invalid_habitat_pack_cannot_shadow_valid_candidates', async () => {
+  for (const [label, body] of UNSUPPORTED) {
+    const newerInvalid = async worker => { await commit(worker, PACK2); await keep(worker, PACK2, MANIFEST, T2, manifestBody('invalid', BOTH)); await setMeta(worker, PACK2, body); };
+    assert.equal(await answer({pack: BOTH, setup: newerInvalid}), 'pack', `${label}: a newer invalid pack does not replace the valid one`);
+  }
+  const wrongRegion = async worker => { await commit(worker, PACK2, 'test-coast-extra'); await keep(worker, PACK2, MANIFEST, T2, manifestBody('other', BOTH)); };
+  assert.equal(await answer({pack: BOTH, setup: wrongRegion}), 'pack', 'valid wrong-region metadata still supplies nothing');
+});
+
+test('invalid_pack_tiles_do_not_complete_newer_habitat_data', async () => {
+  for (const [label, body] of UNSUPPORTED) {
+    const tilesInInvalid = async worker => { await keepTiles(worker, PACK2, 'data', BOTH, T2); await setMeta(worker, PACK2, body); };
+    assert.equal(await answer({pack: BOTH, data: BOTH, setup: tilesInInvalid}), 'pack', `${label}: tiles held by an invalid pack are missing`);
+  }
+  const otherRegion = schema_version => async worker => { await keepTiles(worker, PACK2, 'data', BOTH, T2); await setMeta(worker, PACK2, {schema_version, region_id: 'test-coast-extra'}); };
+  assert.equal(await answer({pack: BOTH, data: BOTH, setup: otherRegion(2)}), 'pack', 'invalid other-region pack tiles are missing');
+  assert.equal(await answer({pack: BOTH, data: BOTH, setup: otherRegion(1)}), 'data', 'valid other-region pack tiles still count (existing cross-pack policy)');
+});
+
+test('habitat_pack_commit_admission_is_rechecked', async () => {
+  const worker = loadWorker();
+  await commit(worker, PACK1);
+  await keep(worker, PACK1, MANIFEST, T0, manifestBody('old', BOTH)); await keepTiles(worker, PACK1, 'old', BOTH, T0);
+  await keep(worker, 'sc-data', MANIFEST, T2, manifestBody('data', BOTH));
+  await keepTiles(worker, PACK2, 'data', BOTH, T2); await setMeta(worker, PACK2, {schema_version: 2, region_id: REGION});
+  const seen = async () => { const r = await dispatch(worker, get(MANIFEST)); return `${(await r.json()).tag} ${r.headers.get('X-SC-Offline')}`; };
+  assert.equal(await seen(), `old ${T0}`, 'invalid: its tiles do not complete the newer data');
+  await setMeta(worker, PACK2, {schema_version: 1, region_id: REGION});
+  assert.equal(await seen(), `data ${T2}`, 'valid: takes effect on the next fetch');
+  await setMeta(worker, PACK2, {schema_version: '1', region_id: REGION});
+  assert.equal(await seen(), `old ${T0}`, 'revoked: takes effect immediately');
+  await setMeta(worker, PACK1, {schema_version: 2, region_id: REGION});
+  assert.equal(await seen(), `data ${T2}`, 'the old pack itself, once invalid, no longer holds the data back');
+});
+
 test('plan test 13: with no pack, offline manifests, tiles and failures are as before', async () => {
   let online = true;
   const worker = loadWorker({network: request => { if (!online) throw new TypeError('Failed to fetch'); return new URL(request.url).pathname.endsWith('.json') && request.url.includes('habitat-dynamics') ? Response.json(manifestBody('live', BOTH)) : new Response('tile'); }});

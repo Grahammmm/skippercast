@@ -24,6 +24,7 @@ async function load() {
       export {ProfileStep} from './web/landing/ProfileStep.tsx';
       export {LandingApp} from './web/landing/Landing.tsx';
       export {FirstRun, BoatEntry, BOAT_ENTRY_COPY, boatEntryOpen} from './web/app/FirstRun.tsx';
+      export {language} from './web/i18n.ts';
       export {configureStore, STORAGE_KEYS} from './web/state.ts';
       export {loadLimits, savedLimits} from './web/limits.ts';
       export {defaultLimits} from './packages/coast/src/limits.ts';
@@ -460,4 +461,62 @@ test('boat_unreadable_json_is_not_a_read_failure', async () => {
   const boatStore = flaky({'skippercast-boat-v1': JSON.stringify({...FULL, boat: {...FULL.boat, name: '23 ft boat'}})}, 'never');
   m.saveFirstUse({lengthFt: '25', profile: 'boat'}, boatStore);
   assert.ok(util.isDeepStrictEqual(JSON.parse(boatStore.map.get('skippercast-boat-v1')), {...FULL, boat: {...FULL.boat, loa_ft: 25, name: '25 ft boat'}}));
+});
+
+// SC0707-06: first run and the boat step in Spanish (catalogue ids firstRun.* and boatEntry.*).
+test('first_run_es_profile_then_optional_boat: the card, the boat step and Dismiss follow the language; en -> es -> en restores the English markup', async () => {
+  const {m, storage} = await fresh();
+  const english = m.render(firstRun(m, storage)), englishBoat = m.render(m.h(m.BoatEntry, {onDone: () => {}}));
+  try {
+    m.language.value = 'es';
+    const card = m.render(firstRun(m, storage));
+    for (const text of ['Primera visita', '¿Cómo pescas?', 'El perfil define el límite de profundidad, la lista de especies y las capas predeterminadas del mapa. Puedes cambiarlo en cualquier momento en la barra de comandos.',
+      'Mantener Barco por ahora', '>Barco<', '>Costa<', '>Pesca submarina<', '>Kayak<', 'Marcas de arrecife y fondo marino hasta 300 ft']) assert.ok(card.includes(text), text);
+    assert.ok(util.isDeepStrictEqual([...card.matchAll(/data-profile="([a-z]+)"/g)].map(x => x[1]), ['boat', 'shore', 'spear', 'kayak']), 'the stored profile ids are unchanged');
+    assert.doesNotMatch(card, /How do you fish|First time here/);
+    const boat = m.render(m.h(m.BoatEntry, {onDone: () => {}}));
+    for (const text of ['>Tu barco (opcional)</legend>', 'La eslora del barco personaliza cada calificación; lo demás puede esperar.', 'Eslora del barco (ft)', 'Límite de viento (kt)', 'Límite de oleaje (ft)',
+      'Eslora del barco 8-70 ft', 'En blanco se conserva el valor predeterminado', '>Guardar barco</button>', '>Ahora no</button>']) assert.ok(boat.includes(text), text);
+    assert.ok(util.isDeepStrictEqual([...boat.matchAll(/<input[^>]* name="([a-zA-Z]+)"/g)].map(x => x[1]), ['lengthFt', 'wind', 'seas']), 'input names are unchanged');
+    // The carried ask is consumed once, the Spanish form opens, Save writes the same JSON, and the notices are Spanish.
+    const href = `${MAP}&profile=boat&boat-entry=ask`, s = session({[m.ASK_KEY]: 'ask'});
+    await withMap(href, s, () => mounted(m, firstRun(m, storage, href), storage, async ({view, type, submit}) => {
+      assert.match(view().html, /Tu barco \(opcional\)/);
+      assert.equal(s.map.size, 0, 'read once');
+      await type({lengthFt: '19.5', wind: '99'}); await submit();
+      assert.equal(JSON.parse(storage.getItem(m.BOAT_KEY)).boat.loa_ft, 19.5, 'the length is stored as a number, not localised text');
+      assert.equal(JSON.parse(storage.getItem(m.STORAGE_KEYS.limits)).boat.wind, 20);
+      assert.ok(view().html.includes('Límite de viento guardado en 20 kt.'), view().html);
+      assert.ok(view().html.includes('Cerrar'), 'Dismiss reads Cerrar');
+      assert.ok(!view().html.includes('Dismiss'));
+    }));
+    // Choosing Boat on the card opens the Spanish boat step; Ahora no writes nothing.
+    const fresh2 = await fresh();
+    await withMap(MAP, session(), () => mounted(m, firstRun(m, fresh2.storage), fresh2.storage, async ({view, click}) => {
+      assert.match(view().html, /¿Cómo pescas\?/);
+      await click(view().profiles.boat);
+      assert.match(view().html, /Tu barco \(opcional\)/);
+      await click(view().buttons['Ahora no']);
+      assert.equal(view().html, ''); assert.equal(fresh2.storage.getItem(m.BOAT_KEY), null);
+    }));
+  } finally { m.language.value = 'en'; }
+  assert.equal(m.render(firstRun(m, storage)), english, 'English first-run markup is restored');
+  assert.equal(m.render(m.h(m.BoatEntry, {onDone: () => {}})), englishBoat, 'English boat-step markup is restored');
+});
+
+test('boat_entry_es_save_skip_and_failure: Spanish notices format numbers for the language; failure is said in Spanish without throwing; English by default', async () => {
+  const {m, storage} = await fresh();
+  const es = m.saveFirstUse({seas: '2.74', profile: 'kayak'}, storage, 'es');
+  assert.ok(util.isDeepStrictEqual(es.notices, ['Límite de oleaje guardado en 2,5 ft.']), JSON.stringify(es.notices));
+  assert.equal(JSON.parse(storage.getItem(m.STORAGE_KEYS.limits)).kayak.seas, 2.5, 'the stored value is the dot-decimal number');
+  const again = await fresh();
+  const en = again.m.saveFirstUse({seas: '2.74', profile: 'kayak'}, again.storage);
+  assert.ok(util.isDeepStrictEqual(en.notices, ['Seas limit saved as 2.5 ft.']), JSON.stringify(en.notices));
+  const blank = (await fresh()).storage;
+  assert.ok(util.isDeepStrictEqual(m.saveFirstUse({lengthFt: ' ', wind: '', profile: 'boat'}, blank, 'es'), {boat: false, notices: []}));
+  assert.equal(blank.map.size, 0, 'blank writes nothing');
+  m.configureStore({storage: broken()});
+  assert.ok(m.saveFirstUse({lengthFt: '19', wind: '12', profile: 'boat'}, broken(), 'es').notices.includes('No se pudo guardar el barco en este navegador.'));
+  assert.ok(m.saveFirstUse({lengthFt: '19', profile: 'boat'}, null, 'es').notices.includes('No se pudo guardar el barco en este navegador.'), 'no storage at all');
+  assert.ok(m.saveFirstUse({lengthFt: '19', profile: 'boat'}, null).notices.includes(m.ENTRY_COPY.failed), 'default language stays English');
 });

@@ -13,7 +13,7 @@ import {PROFILE_TABLE} from '../profile.ts';
 import {hasOwnLimits, limitsFor} from '../limits.ts';
 import {weekendDigest, toText} from '../digest.ts';
 import {
-  alertDate, alertNames, alertSpecies, api, comfortBody, dateRange, enablePush, eventLine, feedbackPhase, formProblem, latestTripEvent, assessmentTime, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotifications, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
+  alertDate, alertNames, alertSpecies, fillAlertForm, type FillableForm, reuseLimitsNote, reuseStatus, reuseTrip, reusedLimits, api, comfortBody, dateRange, enablePush, eventLine, feedbackPhase, formProblem, latestTripEvent, assessmentTime, savedTripLimits, profileTripDefaults, readRecapCatchLog, stopNotifications, tripBody, tripBoat, tripDefaults, tripLine, tripRecaps,
   type AlertEvent, type AlertForm, type AlertNames, type BoatFactors, type CatchLogEntry, type Feedback, type RecapCatchLog, type RegionAlerts, type SavedTrip,
 } from '../alerts.ts';
 
@@ -77,16 +77,17 @@ const catchLine = (c: CatchLogEntry) => c.outcome === 'fish' ? `Fish · ${c.coun
 /** The catch-log read's state beside the recap: still reading, or finished with every page (complete) or not. Left out, the recap is drawn as a complete read. */
 export type CatchRead = Pick<RecapCatchLog, 'complete'> & {loading: boolean};
 
-export function SavedTrips({recaps, names, remove, read = {loading: false, complete: true}, events = [], timeZone = DEFAULT_ZONE}: {recaps: ReturnType<typeof tripRecaps>; names: AlertNames; remove: (id: string) => () => void; read?: CatchRead; events?: AlertEvent[]; timeZone?: string}) {
+export function SavedTrips({recaps, names, remove, useAgain, read = {loading: false, complete: true}, events = [], timeZone = DEFAULT_ZONE}: {recaps: ReturnType<typeof tripRecaps>; names: AlertNames; remove: (id: string) => () => void; useAgain: (trip: SavedTrip) => void; read?: CatchRead; events?: AlertEvent[]; timeZone?: string}) {
   const standing = (t: SavedTrip) => {
     const e = latestTripEvent(events, t.id);
     const when = e && (assessmentTime(e, timeZone) === 'Time unavailable' ? 'Time unavailable' : <time dateTime={e.created_at}>{assessmentTime(e, timeZone)}</time>);
     return <><br /><span class="small">{savedTripLimits(t)} · {e ? <>{eventLine(e)} · {when}</> : 'No recent assessment'}</span></>;
   };
   const deletion = (t: SavedTrip) => <Button size="sm" variant="quiet" onClick={remove(t.id)} aria-label={`Delete the trip on ${t.date} at ${names.point.get(t.point) ?? t.point}`}>Delete</Button>;
+  const again = (t: SavedTrip) => <Button type="button" size="sm" variant="quiet" onClick={() => useAgain(t)} aria-label={`Use again: trip on ${t.date} at ${names.point.get(t.point) ?? t.point}`}>Use again</Button>;
   return <div id="saved-trips">
     {!recaps.upcoming.length && !recaps.past.length ? <p>No saved trips.</p> : null}
-    {recaps.upcoming.length ? <><h3>Upcoming</h3>{recaps.upcoming.map(t => <p key={t.id}><strong>{tripLine(t, names)}</strong> {deletion(t)}{standing(t)}</p>)}</> : null}
+    {recaps.upcoming.length ? <><h3>Upcoming</h3>{recaps.upcoming.map(t => <p key={t.id}><strong>{tripLine(t, names)}</strong> {deletion(t)} {again(t)}{standing(t)}</p>)}</> : null}
     {recaps.past.length ? <><h3>Past</h3>
       <p class="small">Your own record of each trip. Forecast assessments are what we sent before the day, not what the sea did.</p>
       {read.loading ? <p class="small">Reading your catch log…</p> : !read.complete ? <p class="small">Older catch-log entries were not read. The entries shown may be incomplete.</p> : null}
@@ -95,7 +96,7 @@ export function SavedTrips({recaps, names, remove, read = {loading: false, compl
           {final ? <><strong>{eventLine(final)}</strong><p style={{whiteSpace: 'pre-line'}}>{final.message}</p></> : <p>No day-before assessment was delivered</p>}
           {reports.length ? <><h4>Your comfort reports</h4>{reports.map((f, i) => <p key={i}>{f.rating}/10 · {feedbackPhase(f)}</p>)}</> : null}
           {catches.length ? <><h4>Your catch log</h4><ul>{catches.map(c => <li key={c.id}>{catchLine(c)}</li>)}</ul></> : null}
-        </details>{deletion(trip)}
+        </details>{deletion(trip)} {again(trip)}
       </article>)}
     </> : null}
   </div>;
@@ -121,6 +122,18 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
   const [comfortStatus, setComfortStatus] = useState('');
   const [confirming, setConfirming] = useState(false);
   const privacy = useRef<HTMLDetailsElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [reuse, setReuse] = useState<{message: string; date: string; copied: 'all' | 'some' | 'none'} | null>(null);
+  const unavailable = !region.forecast_points.length || !region.species.length;
+  /** Use again: fills the form from a saved trip's still-available parts, clears the date and focuses it. Sends and saves nothing. */
+  const useAgain = (trip: SavedTrip) => {
+    const form = formRef.current, r = reuseTrip(trip, region);
+    if (!form) return;
+    fillAlertForm(form as unknown as FillableForm, r);
+    if (r.species !== null) setSpecies(r.species);
+    setStatus('');
+    setReuse({message: reuseStatus(r.omitted), date: trip.date, copied: reusedLimits(r.fields)});
+  };
   /** Cancel returns focus to the button that asked. */
   const keep = () => { setConfirming(false); requestAnimationFrame(() => privacy.current?.querySelector<HTMLButtonElement>('[data-delete-account]')?.focus()); };
   const fail = (error: unknown) => setStatus((error as Error).message);
@@ -142,6 +155,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
       wind_limit: hours(f.get('wind_limit')), gust_limit: hours(f.get('gust_limit')), sea_limit: hours(f.get('sea_limit'))};
     const problem = formProblem(form, dateRange(region.timezone));
     if (problem) { setStatus(problem); return; }
+    if (!region.forecast_points.some(p => p.id === form.point) || !region.species.includes(species)) { setStatus('Choose an area and alert species this region offers.'); return; }
     try {
       await api('trips', {method: 'POST', body: JSON.stringify(tripBody(form, region.id, species, saved))});
       setStatus('Trip saved. Scheduled checks run about every 30 minutes; notifications require device permission.');
@@ -184,7 +198,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
       </label>
       <details class="insight-card" open>
         <summary>My trip alerts</summary>
-        <form id="save-alert" class="insight-form" onSubmit={e => void save(e)}>
+        <form id="save-alert" ref={formRef} class="insight-form" onSubmit={e => void save(e)}>
           <label>Trip date<input name="date" type="date" defaultValue={alertDate(region.timezone)} min={range.min} max={range.max} required /></label>
           <label>Area<select name="point">{region.forecast_points.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
           <label>From · local hour<input name="start_hour" type="number" min="0" max="22" defaultValue="7" required /></label>
@@ -192,9 +206,10 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           <label>Wind limit · kt<input name="wind_limit" type="number" min="1" max="30" defaultValue={limits.wind} required /></label>
           <label>Gust limit · kt<input name="gust_limit" type="number" min="1" max="40" defaultValue={limits.gust} required /></label>
           <label>Sea limit · ft<input name="sea_limit" type="number" min="0.5" max="10" step="0.5" defaultValue={limits.sea} required /></label>
-          <Button type="submit" variant="primary">Save this fishing window</Button>
+          <Button type="submit" variant="primary" disabled={unavailable}>Save this fishing window</Button>
         </form>
-        <p class="small" id="trip-boat-note">{p !== 'boat'
+        <p id="reuse-status" role="status" class="small">{reuse?.message ?? ''}</p>
+        <p class="small" id="trip-boat-note">{reuse && reuse.copied !== 'none' ? reuseLimitsNote(reuse.date, reuse.copied, p === 'boat') : p !== 'boat'
           ? `Limits start from your ${PROFILE_TABLE[p].label} limits; alerts still judge wind, gusts and offshore seas only, not surf at your launch or beach.`
           : ownBoatLimits
           ? `Limits start from your Boat limits, without boat-factor scaling; alerts ${saved ? 'judge wind chop for your saved boat too.' : 'judge wind, gusts and offshore seas only.'}`
@@ -212,7 +227,7 @@ function SignedIn({session, region, boat, target}: {session: SessionAnswer; regi
           <p style={{whiteSpace: 'pre-line'}}>{toText(digest)}</p>
           <p class="small">Shown here only; SkipperCast does not email this yet.</p>
         </section> : null}
-        {trips ? <SavedTrips recaps={tripRecaps(trips.trips, trips.events, feedback ?? [], dateRange(DEFAULT_ZONE).min, catchRead.entries)} names={names} remove={remove} read={catchRead} events={trips.events} timeZone={region.timezone} /> : <div id="saved-trips" />}
+        {trips ? <SavedTrips recaps={tripRecaps(trips.trips, trips.events, feedback ?? [], dateRange(DEFAULT_ZONE).min, catchRead.entries)} names={names} remove={remove} useAgain={useAgain} read={catchRead} events={trips.events} timeZone={region.timezone} /> : <div id="saved-trips" />}
         {trips?.events.length ? (
           <details id="alert-history">
             <summary>Recent assessments ({trips.events.length})</summary>
