@@ -136,6 +136,46 @@ class ParseTests(unittest.TestCase):
         self.assertEqual((position.lat, position.lon, position.sog, position.heading), (10.0, -150.0, 3.0, 44))
         self.assertEqual(static.ais_class, "B")
 
+    NON_FINITE = ("inf", "-inf", "Infinity", "-Infinity", "1e999", "-1e999")
+
+    def test_a_non_finite_optional_number_is_unavailable_and_the_next_row_is_read(self):
+        later = row(MMSI, T0 + 60_000, 10.001, -150.0, sog="4.5", heading="91", status="7")
+        for bad in self.NON_FINITE:
+            with self.subTest(bad=bad):
+                for field in ("heading", "status", "length", "width", "imo", "vtype"):
+                    records, counts = self.parse([row(MMSI, T0, 10.0, -150.0, **{field: bad}), later])
+                    positions = [r for r in records if isinstance(r, AisPosition)]
+                    self.assertEqual((counts["rows"], counts["positions"], counts["malformed"]), (2, 2, 0), field)
+                    self.assertEqual(positions[1].heading, 91)
+                    if field in ("heading", "status"):
+                        self.assertIsNone(getattr(positions[0], "nav_status" if field == "status" else field))
+                    else:
+                        static = records[1]
+                        self.assertIsInstance(static, AisStatic, field)
+                        self.assertEqual(static.name, "TEST BOAT ONE")
+                        absent = {"length": (static.dim_bow, static.dim_stern), "width": (static.dim_port, static.dim_starboard),
+                                  "imo": (static.imo,), "vtype": (static.ship_type,)}[field]
+                        self.assertEqual(absent, (None,) * len(absent), field)
+        records, _ = self.parse([row(MMSI, T0, 10.0, -150.0, imo="IMOinf")])
+        self.assertIsNone(records[1].imo)
+
+    def test_a_non_finite_static_does_not_poison_the_dedup_cache(self):
+        records, counts = self.parse([row(MMSI, T0, 10.0, -150.0, length="inf"),
+                                      row(MMSI, T0 + 60_000, 10.0, -150.0, length="20")])
+        statics = [r for r in records if isinstance(r, AisStatic)]
+        self.assertEqual([(s.dim_bow, s.dim_port) for s in statics], [(None, 6), (20, 6)])
+        self.assertEqual(counts["statics"], 2)
+
+    def test_nan_blank_sentinel_and_fractional_integers_keep_their_behaviour(self):
+        records, counts = self.parse([row(MMSI, T0, 10.0, -150.0, heading="nan", status="15"),
+                                      row(MMSI, T0 + 60_000, 10.0, -150.0, heading="511", status=""),
+                                      row(MMSI, T0 + 120_000, 10.0, -150.0, heading="90.0", status="3.5")])
+        positions = [r for r in records if isinstance(r, AisPosition)]
+        self.assertEqual([(p.heading, p.nav_status) for p in positions], [(None, None), (None, None), (90, None)])
+        self.assertEqual(counts["malformed"], 0)
+        records, counts = self.parse([row(MMSI, T0, 10.0, -150.0, heading="abc")])
+        self.assertEqual((records, counts["malformed"]), ([], 1))
+
     def test_a_file_without_the_required_columns_is_refused(self):
         with self.assertRaises(MalformedFile):
             self.parse([], header="mmsi,when,lat,lon")
@@ -155,6 +195,15 @@ class SourceTests(unittest.TestCase):
             self.assertEqual(counts["positions"], len(track(t0=T0)))
             self.assertTrue(all(r.source == "marinecadastre" for r in records))
             self.assertEqual(list(Path(tmp).iterdir()), [], "the download is a temporary file")
+
+    def test_history_survives_a_non_finite_optional_value(self):
+        lines = [row(MMSI, T0, 10.0, -150.0, heading="1e999"), row(MMSI, T0 + 60_000, 10.001, -150.0, heading="91")]
+        with tempfile.TemporaryDirectory() as tmp:
+            source = MarineCadastreSource(session=FakeSession({day_url(DAY): zst(lines)}), workdir=Path(tmp))
+            counts = {}
+            records = list(source.history(DAY, BBOX, {MMSI}, counts=counts))
+        self.assertEqual((counts["rows"], counts["positions"]), (2, 2))
+        self.assertTrue(all(r.source == "marinecadastre" for r in records))
 
     def test_an_unpublished_day_and_no_live_feed(self):
         source = MarineCadastreSource(session=FakeSession({day_url(DAY): (404, b"")}))
