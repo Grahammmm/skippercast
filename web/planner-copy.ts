@@ -17,7 +17,7 @@ for (const id of Object.keys(STRINGS)) {
   if (!id.startsWith('pm.')) continue;
   const en = STRINGS[id]!.en, names = [...en.matchAll(/\{(\w+)\}/g)].map(m => m[1]!);
   if (!names.length) { exact.set(en, id as StringId); continue; }
-  const source = en.split(/(\{\w+\})/).map(piece => /^\{\w+\}$/.test(piece) ? '([\\s\\S]*?)' : escape(piece)).join('');
+  const source = en.split(/(\{\w+\})/).map(piece => /^\{\w+\}$/.test(piece) ? (piece === '{n}' ? '(\\d+(?:\\.\\d+)?)' : '([\\s\\S]*?)') : escape(piece)).join('');   // a count is digits, so a template cannot swallow an earlier sentence
   rules.push({id: id as StringId, re: new RegExp(`^${source}$`), names, weight: en.replace(/\{\w+\}/g, '').length});
 }
 rules.sort((a, b) => b.weight - a.weight);
