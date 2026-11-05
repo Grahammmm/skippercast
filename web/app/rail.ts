@@ -4,25 +4,32 @@
 //
 // Erasable syntax only.
 import type {IconName} from '../ui/icons.tsx';
+import {t, type Language} from '../i18n.ts';
 import {RAIL_IDS, type RailId} from '../profile.ts';
-import {layerEntry} from '../map/layers.ts';
+import {layerCopy} from '../map/layers.ts';
 
 export interface RailEntry {readonly id: RailId; readonly label: string; readonly icon: IconName; readonly basis: string}
 
-/** Rail order and copy (§ 9); the basis sentences name product, resolution and age rule. */
-export const RAIL_ENTRIES: readonly RailEntry[] = [
-  {id: 'seafloor', label: 'Seafloor', icon: 'seafloor', basis: layerEntry('seafloor').basis},
-  {id: 'currents', label: 'Currents', icon: 'current', basis: layerEntry('currents').basis},
-  {id: 'water-temp', label: 'Water temp', icon: 'temperature', basis: layerEntry('water-temp').basis},
-  {id: 'sst-contrast', label: 'Temp contrast', icon: 'temperature', basis: layerEntry('sst-contrast').basis},
-  {id: 'sst-fronts', label: 'Temp fronts', icon: 'temperature', basis: layerEntry('sst-fronts').basis},
-  {id: 'chlorophyll', label: 'Chlorophyll', icon: 'map', basis: layerEntry('chlorophyll').basis},
-  {id: 'swell', label: 'Swell + wind', icon: 'wave', basis: `${layerEntry('swell').basis} ${layerEntry('wind').basis}`},
-  {id: 'stations', label: 'Stations', icon: 'target', basis: layerEntry('stations').basis},
-  {id: 'fleet', label: 'Charter fleet', icon: 'fleet', basis: 'Charter grounds and 2024 commercial AIS effort; activity is inferred from movement.'},
-  {id: 'clouds', label: 'Clouds', icon: 'cloud', basis: 'GOES infrared, observed frames within 90 minutes; a loop of real frames, never a forecast.'},
-];
-for (const id of RAIL_IDS) if (!RAIL_ENTRIES.some(e => e.id === id)) throw new Error(`rail entry missing for ${id}`);
+/** The rail's entries in `lang`, in rail order (§ 9); the basis sentences name product, resolution and age rule. Swell + wind joins both registry bases. */
+export function railEntries(lang: Language = 'en'): readonly RailEntry[] {
+  const c = (id: string) => layerCopy(id, lang);
+  return [
+    {id: 'seafloor', label: c('seafloor').label, icon: 'seafloor', basis: c('seafloor').basis},
+    {id: 'currents', label: c('currents').label, icon: 'current', basis: c('currents').basis},
+    {id: 'water-temp', label: c('water-temp').label, icon: 'temperature', basis: c('water-temp').basis},
+    {id: 'sst-contrast', label: c('sst-contrast').label, icon: 'temperature', basis: c('sst-contrast').basis},
+    {id: 'sst-fronts', label: c('sst-fronts').label, icon: 'temperature', basis: c('sst-fronts').basis},
+    {id: 'chlorophyll', label: c('chlorophyll').label, icon: 'map', basis: c('chlorophyll').basis},
+    {id: 'swell', label: t('rail.swell.label', lang), icon: 'wave', basis: `${c('swell').basis} ${c('wind').basis}`},
+    {id: 'stations', label: c('stations').label, icon: 'target', basis: c('stations').basis},
+    {id: 'fleet', label: t('rail.fleet.label', lang), icon: 'fleet', basis: t('rail.fleet.basis', lang)},
+    {id: 'clouds', label: c('clouds').label, icon: 'cloud', basis: c('clouds').basis},
+  ];
+}
+
+/** The English list, kept as the compatibility export (the landing's layer dots and the tests read it). */
+export const RAIL_ENTRIES: readonly RailEntry[] = railEntries('en');
+for (const id of RAIL_IDS) if (!RAIL_ENTRIES.some(e => e.id === id)) throw new Error(t('dev.railMissing', 'en', {id}));
 
 /** Whether rail entry `id` is on: Currents while a source is chosen (FE-15), any other entry while the rail list has it. */
 export const railOn = (id: string, on: readonly string[], source: string): boolean => id === 'currents' ? source !== 'off' : on.includes(id);

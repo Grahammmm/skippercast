@@ -15,15 +15,17 @@ export type RailItemProps = {
   on: boolean;
   onToggle: (id: string, on: boolean) => void;
   /** Shown under the name in mono ("no fresh frame 14:00", "admin"). */
-  note?: string;
+  note?: ComponentChildren;
   /** The basis sentence, rendered in a Popover. */
   basis?: ComponentChildren;
+  /** The Popover's accessible name; defaults to "<label> basis". */
+  basisLabel?: string;
   disabled?: boolean;
   /** Controls of the entry itself (the Currents source), shown under it. */
   children?: ComponentChildren;
 };
 
-export function RailItem({id, label, icon, on, onToggle, note, basis, disabled, children}: RailItemProps) {
+export function RailItem({id, label, icon, on, onToggle, note, basis, basisLabel, disabled, children}: RailItemProps) {
   // SC2222-06: an entry the view cannot draw stays in the tab order (aria-disabled, not native disabled), names its note, and ignores presses.
   const noteId = disabled && note ? `${id}-note` : undefined;
   return (
@@ -35,7 +37,7 @@ export function RailItem({id, label, icon, on, onToggle, note, basis, disabled, 
           {note ? <span id={noteId} class="ui-rail-note ui-mono">{note}</span> : null}
         </span>
       </Button>
-      {basis ? <Popover iconOnly align="end" summary={`${label} basis`}>{basis}</Popover> : null}
+      {basis ? <Popover iconOnly align="end" summary={basisLabel ?? `${label} basis`}>{basis}</Popover> : null}
       {children}
     </li>
   );

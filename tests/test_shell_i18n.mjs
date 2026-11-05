@@ -189,7 +189,8 @@ test('shell_language_switch: en -> es -> en restores the exact English markup, t
   assert.equal(first, again, 'English is restored byte for byte');
   assert.notEqual(first, es);
   assert.ok(es.includes('>English</button>') && es.includes('>Español</button>'), 'each language is still spelled in itself');
-  const shape = html => html.replace(/>[^<]*</g, '><').replace(/\s(?:aria-label|aria-valuetext|placeholder|title|label|aria-pressed|data-on)="[^"]*"/g, '').replace(/id="[^"]*"|aria-labelledby="[^"]*"|aria-controls="[^"]*"/g, '');
+  // The English-source label (SC0707-09) wraps producer text in <span lang="en">; that is a words-only disclosure, so unwrap it before comparing shape.
+  const shape = html => html.replace(/<span lang="en">([^<]*)<\/span>/g, '$1').replace(/>[^<]*</g, '><').replace(/\s(?:aria-label|aria-valuetext|placeholder|title|label|aria-pressed|data-on)="[^"]*"/g, '').replace(/id="[^"]*"|aria-labelledby="[^"]*"|aria-controls="[^"]*"/g, '');
   assert.equal(shape(first), shape(es), 'switching language changes words only: same elements, order and attributes');
   m.setLanguage('en', {storage: none, doc: null});
 });

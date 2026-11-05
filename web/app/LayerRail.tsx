@@ -27,9 +27,10 @@
 // shares the base row and narrows the reef marks, their density below zoom 10 and
 // the seafloor candidates together. In the phone's Layers sheet the rail also opens
 // with the target species ("Look for": the command bar's list, the same `?target=`).
-import {GRADE_FILTERS, GRADE_LABELS, GRADE_MEANING, gradeParam, parseGrade} from '../grade.ts';
+import {GRADE_FILTERS, gradeParam, parseGrade} from '../grade.ts';
+import {language, t, type Language, type StringId} from '../i18n.ts';
 import {PROFILE_TABLE} from '../profile.ts';
-import {optionText, regionMenu} from '../species.ts';
+import {regionMenu} from '../species.ts';
 import {Popover} from '../ui/Popover.tsx';
 import {Rail, RailItem} from '../ui/Rail.tsx';
 import {aerialOffer, flownText, type AerialBase} from '../map/aerial.ts';
@@ -37,16 +38,18 @@ import {ENC_MIN_ZOOM} from '../map/chart.ts';
 import {aisOn, aisState} from '../map/commercial-ais.ts';
 import {CURRENT_SOURCES, currentsState} from '../map/currents.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, toggleActivity} from '../map/fleet.ts';
-import {CHART_ONLY, drawsIn, layerEntry, railNotes} from '../map/layers.ts';
+import {chartOnly, drawsIn, layerCopy, railNotes} from '../map/layers.ts';
 import type {CoastHabitat} from '../../packages/coast/src/embed-types.ts';
 import {
   currentStatus, exploreRankedReef, selectRankedReef, setTerrainOption, shownPresentation, terrainHabitat, terrainOptions, terrainShading,
 } from '../map/stage.ts';
 import {base, current, DEFAULT_CURRENT, grade, isBase, layers, layersParam, profile, region, setParams, species, UNSUPPORTED, type Base} from '../state.ts';
-import {RAIL_ENTRIES, railOn, toggled} from './rail.ts';
+import {railEntries, railOn, toggled} from './rail.ts';
 import {Presets} from './Presets.tsx';
+import {EnglishDetail} from './EnglishDetail.tsx';
+import {shellGroupLabel, shellTargetText} from './CommandBar.tsx';
 
-export {RAIL_ENTRIES, railOn, toggled, type RailEntry} from './rail.ts';
+export {RAIL_ENTRIES, railEntries, railOn, toggled, type RailEntry} from './rail.ts';
 
 /** Choose a surface-current source; the rail's Currents entry is on exactly when one is chosen. */
 export function chooseCurrent(value: string): void {
@@ -62,12 +65,12 @@ const currentsNote = (): string => {
 
 /** The one `?current=` control, shared by the Currents rail entry and the Conditions view (FE-32). */
 export function CurrentSource() {
-  const value = current.value;
+  const value = current.value, lang = language.value;
   return (
-    <label class="app-rail-source">Source
+    <label class="app-rail-source">{t('rail.source', lang)}
       <select value={value} onChange={event => chooseCurrent((event.currentTarget as HTMLSelectElement).value)}>
         {CURRENT_SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-        {value === UNSUPPORTED ? <option value={UNSUPPORTED}>Unsupported source</option> : null}
+        {value === UNSUPPORTED ? <option value={UNSUPPORTED}>{t('rail.unsupported', lang)}</option> : null}
       </select>
     </label>
   );
@@ -78,7 +81,7 @@ function AisOption() {
   return (
     <label class="app-rail-option">
       <input type="checkbox" checked={aisOn.value} onChange={event => { aisOn.value = (event.currentTarget as HTMLInputElement).checked; }} />
-      {layerEntry('commercial-ais').label}
+      {layerCopy('commercial-ais', language.value).label}
     </label>
   );
 }
@@ -89,7 +92,7 @@ function AisOption() {
  * wrapped options never widen the rail.
  */
 function FleetOptions() {
-  const ais = aisState.value.offered, admin = activityAccess.value, on = activityOn.value;
+  const ais = aisState.value.offered, admin = activityAccess.value, on = activityOn.value, lang = language.value;
   if (!ais && !admin) return null;
   return (
     <div class="app-rail-options">
@@ -97,7 +100,7 @@ function FleetOptions() {
       {admin ? ACTIVITY.map(name => (
         <label key={name} class="app-rail-option">
           <input type="checkbox" checked={on.includes(name)} onChange={event => toggleActivity(name, (event.currentTarget as HTMLInputElement).checked)} />
-          {layerEntry(ACTIVITY_ENTRY[name]).label} · admin
+          {t('rail.admin', lang, {label: layerCopy(ACTIVITY_ENTRY[name], lang).label})}
         </label>
       )) : null}
     </div>
@@ -133,10 +136,10 @@ function Range({id, label, value, text, min, max, step, ends, onInput}: {
  * ranked reefs, at most 12, each selecting that reef, and v1's "Explore a ranked reef". Every string but that label is the renderer's.
  */
 function HabitatRanks({habitat}: {habitat: CoastHabitat}) {
-  const ranks = habitat.ranks.slice(0, 12);
+  const ranks = habitat.ranks.slice(0, 12), lang = language.value;
   return (
     <>
-      <p class="app-rail-hint" role="status" data-reason="habitat">{habitat.status}</p>
+      <p class="app-rail-hint" role="status" data-reason="habitat"><EnglishDetail lang={lang}>{habitat.status}</EnglishDetail></p>
       {ranks.length ? (
         <ol>
           {ranks.map(r => (
@@ -148,33 +151,33 @@ function HabitatRanks({habitat}: {habitat: CoastHabitat}) {
           ))}
         </ol>
       ) : null}
-      <button type="button" class="ui-button ui-button--sm" disabled={!habitat.canExplore} onClick={() => { exploreRankedReef(); }}>Explore a ranked reef</button>
+      <button type="button" class="ui-button ui-button--sm" disabled={!habitat.canExplore} onClick={() => { exploreRankedReef(); }}>{t('rail.terrain.explore', lang)}</button>
     </>
   );
 }
 
 /** The terrain's options under the Seafloor entry (FE-80), with the native panel's labels and notes, in a disclosure so the rail stays short. */
 export function TerrainOptions({on}: {on: boolean}) {
-  const o = terrainOptions.value, habitat = terrainHabitat.value;
+  const o = terrainOptions.value, habitat = terrainHabitat.value, lang = language.value, tx = (id: StringId) => t(id, lang);
   return (
     <details class="app-rail-options app-rail-terrain">
-      <summary class="app-rail-option">Terrain options</summary>
+      <summary class="app-rail-option">{tx('rail.terrain.options')}</summary>
       <div class="app-rail-terrain-body">
-      <Range id="terrain-relief" label="Seabed relief" value={o.relief} text={`×${o.relief}`} min={1} max={12} step={1} ends={['True scale', 'Emphasized']}
+      <Range id="terrain-relief" label={tx('rail.terrain.relief')} value={o.relief} text={`×${o.relief}`} min={1} max={12} step={1} ends={[tx('rail.terrain.trueScale'), tx('rail.terrain.emphasized')]}
         onInput={v => setTerrainOption('relief', v)} />
-      <Option label="Water & channels" checked={o.water} onChange={v => setTerrainOption('water', v)} />
-      {o.water ? <Range id="terrain-water" label="Water opacity" value={o.waterOpacity} text={`${Math.round(o.waterOpacity * 100)}%`} min={0} max={0.8} step={0.05}
+      <Option label={tx('rail.terrain.water')} checked={o.water} onChange={v => setTerrainOption('water', v)} />
+      {o.water ? <Range id="terrain-water" label={tx('rail.terrain.waterOpacity')} value={o.waterOpacity} text={`${Math.round(o.waterOpacity * 100)}%`} min={0} max={0.8} step={0.05}
         onInput={v => setTerrainOption('waterOpacity', v)} /> : null}
-      <p class="app-rail-hint">Illustrative +0.8 m water surface. Not a live tide.</p>
-      <Option label="Depth contours · adapt to view" checked={o.contours} onChange={v => setTerrainOption('contours', v)} />
-      <Option label="Fixed depth colours" checked={o.fixedRamp} onChange={v => setTerrainOption('fixedRamp', v)} />
-      {terrainShading.value ? <p class="app-rail-hint" role="status">{terrainShading.value.readout}</p> : null}
-      <Range id="terrain-sun" label="Sun direction" value={o.sunAzimuth} text={`${o.sunAzimuth}°`} min={0} max={360} step={5} ends={['Lighting only', 'Heights unchanged']}
+      <p class="app-rail-hint">{tx('rail.terrain.waterHint')}</p>
+      <Option label={tx('rail.terrain.contours')} checked={o.contours} onChange={v => setTerrainOption('contours', v)} />
+      <Option label={tx('rail.terrain.fixedRamp')} checked={o.fixedRamp} onChange={v => setTerrainOption('fixedRamp', v)} />
+      {terrainShading.value ? <p class="app-rail-hint" role="status"><EnglishDetail lang={lang}>{terrainShading.value.readout}</EnglishDetail></p> : null}
+      <Range id="terrain-sun" label={tx('rail.terrain.sun')} value={o.sunAzimuth} text={`${o.sunAzimuth}°`} min={0} max={360} step={5} ends={[tx('rail.terrain.lightingOnly'), tx('rail.terrain.heightsUnchanged')]}
         onInput={v => setTerrainOption('sunAzimuth', v)} />
-      <Range id="terrain-photo" label="Land" value={o.photoMix} text={o.photoMix >= 1 ? 'Photo' : o.photoMix <= 0 ? 'Shaded relief' : `${Math.round(o.photoMix * 100)}% photo`} min={0} max={1} step={0.05}
-        ends={['Shaded relief', 'Photo']} onInput={v => setTerrainOption('photoMix', v)} />
-      <Option label="Source coverage" checked={o.sourceCoverage} onChange={v => setTerrainOption('sourceCoverage', v)} />
-      <Option label="Reefs & species pins" checked={o.habitat && on} disabled={!on} onChange={v => setTerrainOption('habitat', v)} />
+      <Range id="terrain-photo" label={tx('rail.terrain.land')} value={o.photoMix} text={o.photoMix >= 1 ? tx('rail.terrain.photo') : o.photoMix <= 0 ? tx('rail.terrain.shaded') : t('rail.terrain.photoPct', lang, {n: Math.round(o.photoMix * 100)})} min={0} max={1} step={0.05}
+        ends={[tx('rail.terrain.shaded'), tx('rail.terrain.photo')]} onInput={v => setTerrainOption('photoMix', v)} />
+      <Option label={tx('rail.terrain.coverage')} checked={o.sourceCoverage} onChange={v => setTerrainOption('sourceCoverage', v)} />
+      <Option label={tx('rail.terrain.pins')} checked={o.habitat && on} disabled={!on} onChange={v => setTerrainOption('habitat', v)} />
       {habitat ? <HabitatRanks habitat={habitat} /> : null}
       </div>
     </details>
@@ -182,16 +185,16 @@ export function TerrainOptions({on}: {on: boolean}) {
 }
 
 /** The bases offered here: Night and Chart detail everywhere, Aerial where the region's package names one. */
-export function baseOptions(offer: AerialBase | null): {value: Base; label: string}[] {
-  return [{value: 'night', label: 'Night'}, {value: 'chart', label: 'Chart detail'}, ...(offer ? [{value: 'aerial' as const, label: 'Aerial'}] : [])];
+export function baseOptions(offer: AerialBase | null, lang: Language = 'en'): {value: Base; label: string}[] {
+  return [{value: 'night', label: t('rail.base.night', lang)}, {value: 'chart', label: layerCopy('chart', lang).label}, ...(offer ? [{value: 'aerial' as const, label: layerCopy('aerial', lang).label}] : [])];
 }
 /** The base the Chart draws for `?base=`: an aerial base no region offers leaves the token basemap alone. */
 export const shownBase = (chosen: Base, offer: AerialBase | null): Base => chosen === 'aerial' && !offer ? 'night' : chosen;
 /** The base's note: why it draws nothing here, the imagery's dates, or the chart's zoom gate. */
-export function baseNote(shown: Base, offer: AerialBase | null, drawn: boolean): string {
-  if (!drawn) return CHART_ONLY;
+export function baseNote(shown: Base, offer: AerialBase | null, drawn: boolean, lang: Language = 'en'): string {
+  if (!drawn) return chartOnly(lang);
   if (shown === 'aerial' && offer) return flownText(offer);
-  return shown === 'chart' ? `from zoom ${ENC_MIN_ZOOM}` : '';
+  return shown === 'chart' ? t('rail.base.fromZoom', lang, {n: ENC_MIN_ZOOM}) : '';
 }
 const BASE_NOTE = 'app-rail-base-note';
 
@@ -202,51 +205,52 @@ const GRADE_MEANING_ID = 'app-rail-grade-meaning';
  */
 function GradeChoice() {
   // The description sits outside the label, so the label's text stays "Grade" alone.
+  const lang = language.value;
   return (
     <>
-      <label class="app-rail-source app-rail-grade">Grade
+      <label class="app-rail-source app-rail-grade">{t('rail.grade.label', lang)}
         <select value={grade.value} aria-describedby={GRADE_MEANING_ID}
           onChange={event => setParams({grade: gradeParam(parseGrade((event.currentTarget as HTMLSelectElement).value))})}>
-          {GRADE_FILTERS.map(value => <option key={value} value={value}>{GRADE_LABELS[value]}</option>)}
+          {GRADE_FILTERS.map(value => <option key={value} value={value}>{t(`rail.grade.${value}` as StringId, lang)}</option>)}
         </select>
       </label>
-      <span id={GRADE_MEANING_ID} class="app-visually-hidden">{GRADE_MEANING} Unranked areas show only with All.</span>
+      <span id={GRADE_MEANING_ID} class="app-visually-hidden">{t('rail.grade.meaning', lang)} {t('rail.grade.unranked', lang)}</span>
     </>
   );
 }
 
 function BaseChoice() {
-  const offer = aerialOffer.value, drawn = drawsIn('base', shownPresentation.value);
-  const value = shownBase(base.value, offer), note = baseNote(value, offer, drawn);
+  const offer = aerialOffer.value, drawn = drawsIn('base', shownPresentation.value), lang = language.value;
+  const value = shownBase(base.value, offer), note = baseNote(value, offer, drawn, lang);
   return (
     <div class="app-rail-base">
       <GradeChoice />
-      <label class="app-rail-source">Base
+      <label class="app-rail-source">{t('rail.base.label', lang)}
         <select value={value} disabled={!drawn} aria-describedby={note ? BASE_NOTE : undefined}
           onChange={event => { const next = (event.currentTarget as HTMLSelectElement).value; if (isBase(next)) setParams({base: next}); }}>
-          {baseOptions(offer).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {baseOptions(offer, lang).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </label>
-      <Popover iconOnly align="end" summary="Base basis">
-        <p>Night: {layerEntry('basemap').basis}</p>
-        <p>Chart detail: {layerEntry('chart').basis}</p>
-        {offer ? <p>Aerial: {layerEntry('aerial').basis} {offer.note} Coverage checked {offer.checkedAt}. While it is on, the browser requests its tiles from USGS.</p> : null}
+      <Popover iconOnly align="end" summary={t('rail.basisSummary', lang, {label: t('rail.base.label', lang)})}>
+        <p>{t('rail.base.night', lang)}: {layerCopy('basemap', lang).basis}</p>
+        <p>{layerCopy('chart', lang).label}: {layerCopy('chart', lang).basis}</p>
+        {offer ? <p>{layerCopy('aerial', lang).label}: {layerCopy('aerial', lang).basis} <EnglishDetail lang={lang}>{offer.note}</EnglishDetail> {t('rail.base.coverage', lang, {date: offer.checkedAt})}</p> : null}
       </Popover>
-      {note ? <span id={BASE_NOTE} class="ui-rail-note ui-mono">{note}</span> : null}
+      {note ? <span id={BASE_NOTE} class="ui-rail-note ui-mono" lang={lang === 'es' && value === 'aerial' && drawn ? 'en' : undefined}>{note}</span> : null}
     </div>
   );
 }
 
 /** What to look for (#620): the target species at the head of the rail, shown in the phone's sheet only (app.css); on a computer the command bar holds it. */
 export function LookFor() {
-  const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget;
+  const p = profile.value, target = species.value ?? PROFILE_TABLE[p].defaultTarget, lang = language.value;
   return (
     <div class="app-rail-look">
       {/* "Look for", not "Target": the command bar's Target select stays the one control by that name. */}
-      <label class="app-rail-source app-rail-target">Look for
+      <label class="app-rail-source app-rail-target">{t('rail.lookFor', lang)}
         <select value={target} onChange={event => setParams({target: (event.currentTarget as HTMLSelectElement).value})}>
           {regionMenu(p, region.value, species.value).map(g => (
-            <optgroup key={g.label} label={g.label}>{g.options.map(t => <option key={t.id} value={t.id} disabled={!!t.unavailable}>{optionText(t)}</option>)}</optgroup>
+            <optgroup key={g.label} label={shellGroupLabel(g, p, lang)}>{g.options.map(o => <option key={o.id} value={o.id} disabled={!!o.unavailable}>{shellTargetText(o, lang)}</option>)}</optgroup>
           ))}
         </select>
       </label>
@@ -255,19 +259,21 @@ export function LookFor() {
 }
 
 export function LayerRail() {
-  const on = layers.value, source = current.value, shown = shownPresentation.value;
+  const on = layers.value, source = current.value, shown = shownPresentation.value, lang = language.value;
+  const basisLabel = (label: string) => t('rail.basisSummary', lang, {label});
+  const runtime = (note: string | undefined) => note ? <EnglishDetail lang={lang}>{note}</EnglishDetail> : undefined;
   return (
-    <Rail class="app-rail" header={<><LookFor /><Presets /></>} footer={<BaseChoice />}>
-      {RAIL_ENTRIES.map(e => {
+    <Rail class="app-rail" label={t('rail.aria', lang)} header={<><LookFor /><Presets /></>} footer={<BaseChoice />}>
+      {railEntries(lang).map(e => {
         const here = drawsIn(e.id, shown), active = railOn(e.id, on, source);
         return e.id === 'currents' ? (
-          <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} disabled={!here}
-            note={!here ? CHART_ONLY : active ? currentsNote() : undefined} onToggle={(_, next) => chooseCurrent(next ? DEFAULT_CURRENT : 'off')}>
+          <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(e.label)} disabled={!here}
+            note={!here ? chartOnly(lang) : active ? runtime(currentsNote()) : undefined} onToggle={(_, next) => chooseCurrent(next ? DEFAULT_CURRENT : 'off')}>
             {active && here ? <CurrentSource /> : null}
           </RailItem>
         ) : (
-          <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} disabled={!here}
-            note={!here ? CHART_ONLY : e.id === 'seafloor' && shown !== 'chart' ? undefined : railNotes.value[e.id] || undefined}
+          <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(e.label)} disabled={!here}
+            note={!here ? chartOnly(lang) : e.id === 'seafloor' && shown !== 'chart' ? undefined : runtime(railNotes.value[e.id] || undefined)}
             onToggle={(id, next) => setParams({layers: layersParam(toggled(layers.value, id, next))})}>
             {e.id === 'fleet' && active && here ? <FleetOptions /> : null}
             {e.id === 'seafloor' && shown !== 'chart' ? <TerrainOptions on={active} /> : null}
