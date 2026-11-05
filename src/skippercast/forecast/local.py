@@ -57,7 +57,13 @@ def run_sampler(root, kind, query, now=None):
                             capture_output=True, text=True, timeout=120, env=env)
     data = json.loads(result.stdout or '{}')
     if result.returncode != 0 or (isinstance(data, dict) and data.get('error')):
-        raise ValueError('Forecast sampler: ' + (data.get('reason') if isinstance(data, dict) else result.stderr[-300:]))
+        reason = data.get('reason') if isinstance(data, dict) else None
+        if not (isinstance(reason, str) and reason.strip()):
+            reason = (result.stderr or '').strip()[-300:] if isinstance(result.stderr, str) else ''
+        if not reason:
+            reason = (f'process exited with status {result.returncode}' if result.returncode != 0
+                      else 'sampler reported an error')
+        raise ValueError('Forecast sampler: ' + reason)
     return data
 
 
