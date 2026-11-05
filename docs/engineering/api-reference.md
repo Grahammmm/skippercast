@@ -136,6 +136,65 @@ Edge-cached per region and part (`X-SC-Cache`); one feed read fills all three pa
 
 **Region endpoints (`/api/forecast`, `/api/intelligence`, `/api/habitat`):** all three are edge-cached keyed on `region` only (other parameters are ignored). The intelligence feed is decoded once for both `/api/forecast` and `/api/intelligence` and the sibling answer is cached too. Regions are looked up with `Object.hasOwn`, so `?region=__proto__` and similar are a plain `404`.
 
+### Coast data: `/api/coast/*` (and what is not a route)
+
+The coastal read-only bridge (`server/routes/coast.ts`, `server/coast-data.ts`). Anonymous `GET` and `HEAD` only: no request body is read and no cookie, `Origin`, `Referer`, `Authorization` or other client header is forwarded. Data comes from the owner's reviewed Fish public service, or from SkipperCast's own published feeds and R2 asset groups where they are present (below); it is not an arbitrary proxy and it approves no new source or rights. Other methods → `405` (plain body `Method not allowed`, `Allow: GET, HEAD`). Each request has a 20-second overall deadline; past it, and on any read, size or digest failure not listed below, the answer is `503` `{"error": "Coast source unavailable"}`.
+
+Only these paths are answered, all under `/api/coast/`: `report`, `ocean`, `history`, `habitat/release` and `habitat/tiles`. Everything else (an unknown name, a percent escape, a trailing or doubled slash, `.`/`..`, a query the path does not take, a query key given twice) → `404` `{"error": "Unknown coast dataset"}`.
+
+**Limit, cache and headers.** `/api/coast/*` is limited per IP by `FEED_LIMITER` (key prefix `coast`; 300 requests per minute where the binding exists, as for `/feeds/`): over the limit `429` with `Retry-After: 60` and `{"error": "Too many requests; try again in a minute."}`. No Worker variable or flag turns the router on or off. Every success carries `Cache-Control: no-store`: these answers are not edge-cached and not given a public TTL. From the bridge, only `Content-Type`, `ETag`, `Last-Modified`, `Content-Range`, `Accept-Ranges`, `X-Fish-Habitat-Release`, `X-Fish-Habitat-Source` and `X-Fish-Bathymetry-Source` are passed on, when the upstream sent them, plus `Content-Length`; error answers are JSON with the `json` helper's headers, not these. Further headers appear only in the cases named below.
+
+**`Range`.** Only `Range: bytes=<start>-<end>` with both ends given, `end` not before `start`, safe integers, and a length within the path's byte limit is accepted; anything else (suffix, open-ended, reversed, oversized) → `416` `{"error": "Invalid coast range"}`. The three snapshots (`report`, `ocean`, `history`) take no `Range` at all and answer the same `416`. A valid range is `206`. A range past the end of a locally served object → `416` with `Content-Range: bytes */<size>` and no body. If the upstream does not answer a valid range with a matching `206` and `Content-Range`, the answer is `503` `{"error": "Coast range unavailable"}`.
+
+#### `GET /api/coast`
+
+Not a dataset: it answers `404` `{"error": "Unknown coast dataset"}` (`no-store`). The readable page is `/report` and the feed is `/feed.xml` (`server/coast-pages.ts`, which read `/api/coast/report`); they are not a JSON `/api/coast`. The descendants are [`/api/coast/report`](#get-apicoastreport), `/api/coast/ocean`, `/api/coast/history`, [`/api/coast/habitat/release`](#get-apicoasthabitatrelease) and [`/api/coast/habitat/tiles`](#get-apicoasthabitattiles). See [the coastal service](../coastal-service.md) for what the data is.
+
+#### `GET /api/coast/report`
+
+The San Luis Obispo County coast report packet (`schemaVersion: 1`, `countyId: "slo"`, `generatedAt`, the `forecasts`, `observations`, `tides`, `tideEvents`, `alerts` and `catches` arrays, `sources`, and the enrichments the source packet carries). It is the source's packet with its own assembly, issue and retrieval clocks kept, not a forecast generated here and not a safety rating for an exact place.
+
+- **Query:** optional `county=slo` and optional `region=morro-bay` or `region=cambria-san-simeon`, each at most once. They validate that the request is for the SLO snapshot; they do not select other geography. Any other query key, other value or repeated key → `404 Unknown coast dataset`.
+- **Answer:** `200`, JSON, at most 8 MiB. `HEAD` answers the headers without a body. A bridge answer must be `application/json` with `schemaVersion: 1`, `countyId: "slo"` and a valid `generatedAt`, else `503 Coast source unavailable`.
+- **Sources (`COAST_FEEDS`):** the Worker variable `COAST_FEEDS` is a comma-separated list of `nearshore`, `water-quality`, `ocean`, `history` and `report`. A name is honoured only while none of the catalog sources behind it (`FEED_SOURCES`) is restricted, unavailable or refused for commercial use in `catalog/sources.json`; unset, unknown or refused names change nothing. A listed feed is used only while its published object is bound, present, valid and inside its age limit (`report` 2 hours; the others from `catalog/feed-health.json`); otherwise that source comes from the bridge as before, and `X-Coast-Upstream` names the outcome (for example `nearshore=fish (stale)`). A fresh owned `report` is served even when the bridge's enrichment (nearshore rows, beach water quality) is unavailable, with `fish=unavailable` noted and no value invented.
+- **Headers:** `Cache-Control: no-store`. `X-Coast-Upstream` appears only when `COAST_FEEDS` was consulted for the request; it is not on every answer.
+- **Errors:** as the family above (`404`, `405`, `416`, `429`, `503`).
+
+`/api/coast/ocean` (currents and cloud) and `/api/coast/history` (station series against baseline) are the same kind of SLO snapshot with the same query rules; `ocean` is limited to 8 MiB and `history` to 16 MiB. Neither takes `Range`.
+
+#### `GET /api/coast/habitat/release`
+
+The current habitat release record, as the owner's service published it (not the dynamic-habitat feed at `/api/habitat?region=`). **No query string** is accepted (any query → `404 Unknown coast dataset`). At most 512 KiB.
+
+`/api/habitat/release` and `/api/habitat/tiles` are the upstream service's names for this record and the tiles below. They are **not** public aliases on this Worker: the Worker answers only the `/api/coast/habitat/…` paths, and an anonymous request to the upstream names reaches the private gate instead (not a `404` from this router).
+
+#### `GET /api/coast/habitat/tiles`
+
+The habitat tile archive bytes for one region, as published (the content type is the upstream's or the published object's, not assumed to be GeoJSON). At most 2 MiB for a whole body or a single range.
+
+- **Query:** `region` is required: `morro-bay`, `cambria-san-simeon`, `monterey-point-sur` or `point-arguello-conception`. `release` is optional: exactly 64 lowercase hexadecimal characters, the release the caller expects. No other query key, none twice. Otherwise `404 Unknown coast dataset`.
+- **Published copy:** when the R2 binding holds a ready current release (`coast/current.json`) that includes the `habitat` group, the object is served from R2 only after its whole bytes match the SHA-256 in that release's manifest, and the manifest itself matches its release id. The answer carries `ETag: "sha256-<digest>"`, `Accept-Ranges: bytes`, `Content-Length`, the entry's `Content-Type` and, when the manifest names one, `X-Fish-Habitat-Release`; ranges are `206` with `Content-Range`. A `release` that differs from the manifest entry's → `404` `{"error": "Unknown coast release"}` (the release is never silently swapped); an entry past its `expiresAt` → `503` `{"error": "Coast release expired"}`; a path with no valid manifest entry → `404 Unknown coast dataset`; a whole-body `GET` of an object over the 2 MiB limit, or a manifest, identity or digest failure → `503 Coast source unavailable`. `HEAD` has no body, and its declared size need not fit a `GET`'s limit. With no ready release, or without the group, the bridge answers instead.
+- **Errors:** as the family above. An upstream `404` stays `404`, any other upstream failure is `503 Coast source unavailable`.
+
+The same published-copy rules apply to `/api/coast/habitat/release`.
+
+### `GET /api/fleet/public` and `GET /api/fleet/public/heat`
+
+`GET /api/fleet/public` is **not** a listing: nothing is served at that path, and every `/api/fleet/public/*` path other than `heat` answers `404` `{"error": "Not found"}` (`no-store`), whatever the flags. There is no public events, tracks, boats or ports route.
+
+`GET /api/fleet/public/heat` (`server/routes/public.ts`, `server/fleet/public-heat.ts`; [the public heat runbook](../operations/runbooks/fleet-public-heat.md), [charter fleet design § 14–15](../plans/charter-fleet/design.md#14-map-layers-and-filters)) is the charter fleet's public heat map: grid cells only. Anonymous, ahead of the private gate.
+
+- **Gate:** `404` `{"error": "Not found"}` unless both `FLEET_ENABLED` and `FLEET_PUBLIC_HEAT_ENABLED` are `true` (trimmed, any case; anything else keeps the default, off). This is checked before the limiter and before any query. `FLEET_MAP_ENABLED` is independent and opens only the admin map. Documenting the route does not enable it; going live is the owner's step in the runbook.
+- **Limit:** `PUBLIC_LIMITER`, key prefix `fleet-heat` (60 a minute per IP where the binding exists): `429` with `Retry-After: 60`.
+- **Query:** `region` (required; 1–64 letters, digits or hyphens, starting and ending with a letter or digit), `kind` (optional, one of `drift-anchor`, `troll-slow`, `troll-pelagic`), `season` (optional, a four-digit year), `limit` (optional integer 1–5000, default 5000) and `cursor` (optional, the opaque `meta.next` of the previous page). An empty `kind`, `season` or `limit` counts as absent. Only these names are read; other keys are not examined.
+- **Whole seasons only:** a `season_part` parameter, even an empty one, is a `400`. Publishing part cells beside a whole-season cell would let a reader subtract them and recover the dwell of a part withheld under the floors.
+- **Answer:** `200`, a GeoJSON `FeatureCollection` of `Polygon` cells, most `dwell_min` first, ties by cell id; the cells are of the grid module only. Each feature's properties are exactly `kind`, `season`, `dwell_min`, `vessels_n`, `basis` (always `inferred-from-movement`) and `computed_at`. `meta` is `{region, cell_m, min_vessels, delay_hours, count, capped, next}`: `cell_m` lists the cell sizes in metres present on the page, `min_vessels` is 3, `delay_hours` is 72, `capped` is true when more cells matched than the page holds, and `next` is the cursor for the following page, or `null`. A client pages with `meta.next` until it is `null`, not by counting features. No vessel, boat, pin, track, event, port, class, cell id, season part, source or rights value is in the answer. `Cache-Control: no-store`; it is not shared-edge-cached.
+- **What a cell must clear** (`PUBLIC_HEAT`, applied in SQL and checked again on the rows):
+  - at least **3 distinct vessels** (`vessels_n`);
+  - a **72-hour delay**: the cell's last local calendar date must be wholly at least 72 hours old in every time zone. The code takes the UTC date of now minus 72 + 36 hours as the latest date allowed; a cell with no date, or a date that is not a real `YYYY-MM-DD`, is withheld, not corrected;
+  - **rights** exactly `public-domain`, `public-record`, `facts-only` or `api-terms`. `internal-only` and `noaa-planning-only` (MarineCadastre) cells, and any other or unknown value, never appear. While the AIS stream source (aisstream) stays `internal-only`, its cells are not served; the route returns an empty collection until that changes (runbook, Q1).
+- **Errors:** `400` `{"error": …}` with `region is required`, `invalid kind`, `season must be a year`, `limit must be 1-5000`, `invalid cursor` or `season_part is not offered: whole-season cells only`; `503` `{"error": "This service is temporarily unavailable."}` without storage; `404` and `429` as above.
+
 ### `POST /api/telemetry`
 
 Cookie-less funnel events and client error reports from `web/telemetry.ts` (`navigator.sendBeacon`). Anonymous, but needs an allowed `Origin` (`400 origin rejected`), is limited by `PUBLIC_LIMITER` to 60 a minute per IP (`429` + `Retry-After: 60`) and takes at most 4,096 bytes (`400 body too large`). The body is exactly `{build, events}`: `build` is 10 hex characters or `dev`; `events` holds 1–10 of `{"type": "funnel", "name": "port_selected"|"map_viewed"|"forecast_viewed"|"spot_saved"|"offline_saved"|"install", "region"?}` or `{"type": "error", "kind": "error"|"rejection", "message"?, "source"?, "line"?, "column"?, "request_id"?}`. Any other field or value answers `400 {"error": "invalid telemetry"}`. A funnel event repeated within a batch is written once. Valid batches answer `204` with no body, written to Analytics Engine when `ANALYTICS` is bound and discarded otherwise. `GET` is not a route (it reaches the private gate). See [client telemetry](telemetry.md).
