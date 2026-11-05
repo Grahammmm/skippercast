@@ -142,7 +142,9 @@ def derived_wind_data(body, station):
     if len(lines) < 3 or not lines[0].startswith('#YY'):
         raise ValueError('NDBC derived wind header missing')
     keys, units = lines[0].lstrip('#').split(), lines[1].lstrip('#').split()
-    if len(keys) != len(units) or 'WSPD10' not in keys or dict(zip(keys, units))['WSPD10'] != 'm/s':
+    # Timestamps are read by position, so refuse any header that does not name them as expected.
+    if (len(keys) != len(units) or keys[:5] != ['YY', 'MM', 'DD', 'hh', 'mm'] or units[:5] != ['yr', 'mo', 'dy', 'hr', 'mn']
+            or 'WSPD10' not in keys or dict(zip(keys, units))['WSPD10'] != 'm/s'):
         raise ValueError('NDBC derived wind fields or units changed')
     observations = []
     for line in lines[2:6502]:
