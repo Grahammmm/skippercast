@@ -18,6 +18,7 @@ import {protectedScreen} from '../trip.ts';
 import {verdictLine} from '../waypoint-placement.ts';
 import {cruiseSpeed} from '../limits.ts';
 import {landWater, loadLandWaterLines, type LandWaterState} from '../land-water.ts';
+import {PlanRules} from './PlanRules.tsx';
 import {waterRoute, type Route, type RoutePoint} from '../route.ts';
 // Leg routes over the land/water product and lines the Boat brief reads (FSC-05), kept until either changes so a re-render does not search again.
 let legRoutes: {model: unknown; lines: unknown; byKey: Map<string, Route>} | null = null;
@@ -156,6 +157,7 @@ export function Planner({model: m, open}: {model: Model; open: boolean}) {
         </div>
         <p class="export-note" id="export-storage">{session.value.state === 'signed-in' && m.storageNote.value.startsWith('Saved on this browser') ? ALERT_STORAGE_NOTE : m.storageNote.value}</p>
       </div>
+      <PlanRules date={d.date} species={f.species} region={m.region} />
       <section class="export-card" aria-label="Your waypoints">
         <h2>Your waypoints</h2>
         <p>User labels, not verified habitat, depth or navigation guidance. Saved in this browser’s region draft, separate from account trip alerts.</p>
