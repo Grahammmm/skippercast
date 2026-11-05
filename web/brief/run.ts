@@ -71,9 +71,11 @@ export function noWindowReason(brief: Pick<Brief, 'alerts' | 'missing' | 'tiles'
  */
 export function planRun(brief: Pick<Brief, 'windows' | 'alerts' | 'missing' | 'tiles' | 'limits'>, place: RunPlace | null, speedKn: number | null, now: Date): RunState {
   if (!brief.windows.length) return {kind: 'no-window', reason: noWindowReason(brief)};
-  if (speedKn === null || !(speedKn > 0)) return {kind: 'no-speed'};
-  if (!place || !Number.isFinite(place.nm)) return {kind: 'no-place'};
-  const runMin = runMinutes(place.nm, speedKn)!;
+  if (speedKn === null || !Number.isFinite(speedKn) || !(speedKn > 0)) return {kind: 'no-speed'};
+  if (!place || !Number.isFinite(place.nm) || place.nm < 0) return {kind: 'no-place'};
+  // The helper refuses what overflows (a tiny speed over a long distance): never plan from a refused run.
+  const runMin = runMinutes(place.nm, speedKn);
+  if (runMin === null || !Number.isFinite(runMin)) return {kind: 'no-place'};
   const t = now.getTime(), run = runMin * MINUTE;
   // A short window the run fills does not hide a later one with fishing time.
   let full: RunState | null = null;
