@@ -261,6 +261,7 @@ async function load() {
       export {saveLimits, resetLimits} from './web/limits.ts';
       export {LowerExposure} from './web/brief/Brief.tsx';
       export {configureStore, profile} from './web/state.ts';
+      export {language} from './web/i18n.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
     bundle: true, format: 'esm', platform: 'node', outfile: out, write: true, logLevel: 'silent', jsx: 'automatic', jsxImportSource: 'preact',
@@ -320,4 +321,70 @@ test('Lower exposure keeps the safety caveat visible beside the "using your limi
   const text = render(h(LowerExposure, {brief: plain}));
   assert.match(text, /Harbor entrance and full return route need a separate check/);
   assert.ok(!text.includes('Using your limits'));
+});
+
+// SC0707-06: Your limits in Spanish (catalogue ids limits.*; web/i18n.ts language signal).
+test('limits_es_all_profiles_and_native_values: labels, hints, units and the trigger follow the language; native values stay dot-decimal; English returns byte for byte', async () => {
+  const {LimitsForm, LimitsControl, fieldLabel, render, h, configureStore: configure, saveLimits, resetLimits, profile, language} = await load();
+  configure({storage: null});
+  const english = Object.fromEntries(['boat', 'shore', 'spear', 'kayak'].map(p => [p, render(h(LimitsForm, {profile: p}))]));
+  try {
+    language.value = 'es';
+    const es = Object.fromEntries(['boat', 'shore', 'spear', 'kayak'].map(p => [p, render(h(LimitsForm, {profile: p}))]));
+    assert.match(es.boat, /Barco usa los límites predeterminados\./);
+    assert.match(es.boat, /Viento sostenido máximo[\s\S]*Predeterminado 10 · 4–20/);
+    assert.match(es.boat, /Velocidad de crucero/); assert.match(es.boat, /Horas que quiero pescar/);
+    assert.match(es.boat, /\(nm, solo ida\)/); assert.match(es.boat, /línea recta desde el puerto, no una ruta/);
+    assert.match(es.shore, /Costa usa los límites predeterminados\./); assert.match(es.shore, /Oleaje de rompiente máximo/);
+    assert.match(es.spear, /Resaca máxima/); assert.match(es.spear, /<option[^>]*value="Low"[^>]*>Baja</); assert.match(es.spear, /value="Moderate"[^>]*>Moderada</); assert.match(es.spear, /value="Strong"[^>]*>Fuerte</);
+    assert.match(es.spear, /Predeterminado Moderada/); assert.match(es.spear, /Predeterminado 60 · 10–100 · se excluyen los lugares más profundos/);
+    assert.match(es.spear, /Inmersión más profunda/); assert.match(es.spear, /Sin definir/); assert.match(es.spear, /Un barco/);
+    assert.ok(!es.spear.includes('Distancia máxima a nado'), 'the swim field shows only when diving from shore');
+    assert.match(es.kayak, /Kayak usa los límites predeterminados\./);
+    // Lengths and numbers read for the language in hints (0,5), while the native attributes keep the dot.
+    assert.match(es.kayak, /Sin valor predeterminado · 0,5–10 · línea recta/);
+    assert.match(es.kayak, /min="0\.5"/); assert.ok(!/(?:min|max|step|value)="[^"]*,/.test(es.kayak), 'no comma in a native attribute');
+    assert.ok(!es.kayak.includes('punto de salida</label>'), 'no launch chooser without launches');
+    // fieldLabel: units stay kt/ft; English default unchanged.
+    assert.deepEqual(fieldLabel('shore', 'seas', 'es'), {label: 'Oleaje de rompiente máximo', unit: 'ft'});
+    assert.deepEqual(fieldLabel('boat', 'gust', 'es'), {label: 'Ráfaga máxima', unit: 'kt'});
+    assert.deepEqual(fieldLabel('shore', 'seas'), {label: 'Highest surf', unit: 'ft'});
+    // Trigger and title.
+    profile.value = 'kayak';
+    assert.match(render(h(LimitsControl, {compact: true})), /aria-label="Tus límites para Kayak"/);
+    assert.match(render(h(LimitsControl, {})), /Tus límites<\/button>/);
+    assert.match(render(h(LimitsControl, {})), /Tus límites · Kayak/);
+    assert.match(render(h(LimitsControl, {compact: true})), /aria-label="Cerrar"/);
+    saveLimits('kayak', {wind: 6});
+    assert.match(render(h(LimitsControl, {compact: true})), /Tus límites para Kayak \(definidos\)/);
+    assert.match(render(h(LimitsControl, {})), /Tus límites · definidos/);
+    resetLimits('kayak'); profile.value = 'boat';
+    // A saved 1.5 ft limit is shown dot-decimal in the field's value.
+    saveLimits('shore', {seas: 1.5});
+    assert.match(render(h(LimitsForm, {profile: 'shore'})), /value="1\.5"/);
+    resetLimits('shore');
+  } finally { language.value = 'en'; }
+  for (const p of Object.keys(english)) assert.equal(render(h(LimitsForm, {profile: p})), english[p], `${p}: English markup is restored`);
+});
+
+test('limits_es_reset_and_safety: the safety paragraph and gust warning are kept in Spanish, and a live language switch changes no saved value', async () => {
+  const {LimitsForm, render, h, configureStore: configure, saveLimits, resetLimits, language} = await load();
+  const store = new Map();
+  configure({storage: {getItem: k => store.get(k) ?? null, setItem: (k, v) => { store.set(k, String(v)); }}});
+  try {
+    saveLimits('boat', {wind: 16, gust: 10, seas: 4});
+    const savedJson = JSON.stringify([...store.entries()]);
+    language.value = 'es';
+    const es = render(h(LimitsForm, {profile: 'boat'}));
+    assert.match(es, /Barco usa tus límites\./);
+    assert.match(es, /Tu límite de ráfagas es menor que el de viento, así que las ráfagas determinan cada ventana\./);
+    assert.match(es, /Se guarda solo en este dispositivo\. Las ventanas sugeridas usan estos límites\. Los avisos marinos, el mar de fondo de período largo, una barra peligrosa, el viento hacia mar abierto y el oleaje en el punto de salida para kayak, y la luz del día siguen excluyendo horas sin importar lo que configures\./);
+    assert.match(es, />Restablecer valores predeterminados<\/button>/); assert.match(es, /type="submit"[^>]*>Guardar</);
+    assert.equal(JSON.stringify([...store.entries()]), savedJson, 'rendering in Spanish writes nothing');
+    language.value = 'en';
+    assert.match(render(h(LimitsForm, {profile: 'boat'})), /Your gust limit is below your wind limit, so gusts decide every window\./);
+    assert.equal(JSON.stringify([...store.entries()]), savedJson, 'switching back writes nothing');
+    resetLimits('boat');
+    assert.doesNotMatch(render(h(LimitsForm, {profile: 'boat'})), /gusts decide every window/);
+  } finally { language.value = 'en'; configure({storage: null}); }
 });
