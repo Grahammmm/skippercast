@@ -61,15 +61,15 @@ async function harness(t, responses) {
         if (args.path === 'preact/hooks') return {path: resolve(inventory, 'runtime.mjs')};
         if (['../ui/Button.tsx', '../landing/PortInput.tsx', '../state.ts', '../trip.ts', '../trip-ocean-lines.ts', '../trip-forecast-end.ts', './App.tsx'].includes(args.path))
           return {path: resolve(fixtures, 'boundary.mjs')};
-        if (['../../dist/offline-core.js', 'preact/jsx-runtime'].includes(args.path)) return;
+        if (['../../dist/offline-core.js', 'preact/jsx-runtime', '../i18n.ts'].includes(args.path)) return;   // SC0707-10: the real catalogue reader, nothing else
         throw new Error(`unadmitted product import: ${args.path}`);
       });
     }}],
   });
   for (const input of Object.keys(result.metafile.inputs)) {
     const path = resolve(root, input);
-    assert.ok(path === trip || path === resolve(root, 'dist/offline-core.js') || path.startsWith(inventory + '/') || path.startsWith(fixtures + '/') ||
-      /[/]node_modules[/](?:.*[/])?(?:preact|preact-render-to-string)[/]/.test(path), `unadmitted import graph input: ${input}`);
+    assert.ok(path === trip || path === resolve(root, 'dist/offline-core.js') || path === resolve(root, 'web/i18n.ts') || path === resolve(root, 'web/i18n-core.ts') || path === resolve(root, 'catalog/app/strings.json') || path.startsWith(inventory + '/') || path.startsWith(fixtures + '/') ||
+      /[/]node_modules[/](?:.*[/])?(?:@?preact|preact-render-to-string|signals-core|signals)[/]/.test(path), `unadmitted import graph input: ${input}`);
   }
   m = await import(pathToFileURL(resolve(dir, 'trip.mjs')).href);
   m.reset(responses);

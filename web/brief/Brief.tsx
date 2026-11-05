@@ -408,7 +408,15 @@ export function BriefGaps({brief}: {brief: BriefModel | null}) {
   );
 }
 
-export const Caveat = ({brief}: {brief: BriefModel | null}) => <p class="app-caveat">{brief?.caveat ?? PROFILE_TABLE[profile.value].caveat}</p>;
+const CAVEAT_IDS: Record<Profile, StringId> = {boat: 'brief.caveat.boat', shore: 'brief.caveat.shore', spear: 'brief.caveat.spear', kayak: 'brief.caveat.kayak'};
+
+/** The profile caveat in the chosen language. The model and PROFILE_TABLE keep their English; only a caveat equal to the profile's own table sentence is translated, any other text passes through. */
+export const caveatText = (brief: BriefModel | null, lang: Language): string => {
+  const p = brief?.profile ?? profile.value, raw = brief?.caveat ?? PROFILE_TABLE[p].caveat;
+  return raw === PROFILE_TABLE[p].caveat ? t(CAVEAT_IDS[p], lang) : raw;
+};
+
+export const Caveat = ({brief}: {brief: BriefModel | null}) => <p class="app-caveat">{caveatText(brief, language.value)}</p>;
 
 /** The beach notice link, the fleet line and the local-report line, each only when the model has it. */
 export function BriefLinks({brief}: {brief: BriefModel | null}) {
