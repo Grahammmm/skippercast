@@ -253,3 +253,96 @@ test('rendered_upcoming_limits_assessment_stay_in_own_row', async () => {
     assert.match(draw([trip('x', '2026-11-03')], [ev(8, 'x', 'update', 'in-app', 'nope')]), /wind not recorded · gust not recorded · sea not recorded · Material change · shown here · Time unavailable<\/span>/);
   } finally { await rm(dir, {recursive: true, force: true}); }
 });
+
+// SC1822-05: the plan saved with a trip, as stored. Independent expected values, synthetic data only.
+const planned = (id, date, plan, extra = {}) => ({...trip(id, date), launch_point: {lat: 35.11111, lon: -120.22222}, targets: ['reef', 'retired-id'], plan, ...extra});
+const spot = (name, order, extra = {}) => ({id: `stop-${order}`, name, order, lat: 35.123456, lon: -120.654321, notes: 'PRIVATE-NOTE', ...extra});
+const leg = (nm, minutes) => ({from: 'stop-0', to: 'stop-1', nm, minutes});
+const goodPlan = () => ({spots: [spot('Third', 2), spot('First', 0), spot('Second', 1)], legs: [leg(1.25, 8), leg(2.5, 12)], window: {start: 'SENTINEL-WINDOW'}, exports: [{sha256: 'SENTINEL-HASH'}]});
+
+async function planView() {
+  const dir = await mkdtemp(join(tmpdir(), 'trip-plan-'));
+  try {
+    const out = join(dir, 'view.mjs');
+    await build({stdin: {resolveDir: new URL('..', import.meta.url).pathname, loader: 'ts', contents: `
+      export {SavedTrips} from './web/app/TripAlerts.tsx';
+      export {render} from 'preact-render-to-string'; export {h} from 'preact';`},
+      bundle: true, platform: 'node', format: 'esm', outfile: out, logLevel: 'silent',
+      jsx: 'automatic', jsxImportSource: 'preact', plugins: rendererPlugins});
+    const {SavedTrips, render, h} = await import(pathToFileURL(out).href);
+    const names = {point: new Map([['synthetic', 'Test area']]), species: new Map([['reef', 'Test species']])};
+    return (trips) => render(h(SavedTrips, {recaps: tripRecaps(trips, [], [], today), names, remove: () => () => {}, useAgain: () => {}}));
+  } finally { await rm(dir, {recursive: true, force: true}); }
+}
+
+test('saved_plan_upcoming_and_past_show_stored_names_and_totals', async () => {
+  const draw = await planView();
+  const trips = [planned('future', '2026-11-03', goodPlan()), planned('past', '2026-11-01', goodPlan())];
+  const html = draw(trips);
+  const up = html.slice(html.indexOf('<h3>Upcoming</h3>'), html.indexOf('<h3>Past</h3>')), past = html.slice(html.indexOf('<h3>Past</h3>'));
+  for (const part of [up, past]) {
+    assert.match(part, /Plan saved with this alert/);
+    assert.match(part, /Not re-checked since it was saved\./);
+    assert.match(part, /Targets: Test species · retired-id/);
+    assert.match(part, /<ol><li>First<\/li><li>Second<\/li><li>Third<\/li><\/ol>/);
+    assert.match(part, /Saved leg totals: 3\.75 nm · 20 min/);
+  }
+  assert.match(up, /aria-label="Delete the trip on 2026-11-03[^>]*>Delete<\/button> <button[^>]*>Use again<\/button>/);
+  assert.ok(past.indexOf('</summary>') < past.indexOf('Plan saved with this alert') && past.indexOf('Plan saved with this alert') < past.indexOf('No day-before assessment'), 'plan sits right after the summary');
+  assert.match(past, /<\/details><button[^>]*>Delete<\/button>/);
+});
+
+test('saved_plan_absent_is_render_identical', async () => {
+  const draw = await planView();
+  const bare = [trip('future', '2026-11-03'), trip('past', '2026-11-01')];
+  const html = draw(bare);
+  assert.equal(draw([{...bare[0], plan: null, targets: ['reef'], launch_point: {lat: 1, lon: 2}}, {...bare[1], plan: null}]), html);
+  assert.equal(draw(bare.map(t => ({...t, plan: undefined}))), html);
+  assert.doesNotMatch(html, /Plan saved|Not re-checked|Stops|leg totals/);
+  assert.match(html, /<h3>Upcoming<\/h3><p><strong>2026-11-03/, 'no-plan upcoming row stays a p');
+});
+
+test('saved_plan_unknown_species_is_stored_text', async () => {
+  const draw = await planView();
+  const html = draw([planned('p', '2026-11-03', goodPlan(), {targets: ['reef', 'retired-id', '<script>alert(1)</script>']})]);
+  assert.match(html, /Targets: Test species · retired-id · &lt;script>alert\(1\)&lt;\/script>/);
+  assert.doesNotMatch(html, /<script>/);
+  // Missing or empty targets fall back to the primary species.
+  assert.match(draw([planned('p', '2026-11-03', goodPlan(), {targets: []})]), /Targets: Test species</);
+  assert.match(draw([planned('p', '2026-11-03', goodPlan(), {targets: undefined, species: 'gone'})]), /Targets: gone</);
+});
+
+test('saved_plan_order_totals_do_not_mutate_and_hide_positions_and_status', async () => {
+  const draw = await planView();
+  const plan = {spots: [spot('Dup', 1), spot('Dup', 1), spot('Early', 0), spot('  ', 3)], legs: [leg(0.1, 1.5), leg(0.2, 0)]};
+  const row = planned('p', '2026-11-03', plan, {notes: 'TRIPNOTE'});
+  const frozen = structuredClone(row);
+  const html = draw([row]);
+  assert.ok(isDeepStrictEqual(row, frozen), 'input is not mutated');
+  assert.equal(draw([row]), html, 'repeated draws agree');
+  assert.match(html, /<ol><li>Early<\/li><li>Dup<\/li><li>Dup<\/li><li>Unnamed stop<\/li><\/ol>/);
+  assert.match(html, /Saved leg totals: 0\.3 nm · 1\.5 min/);
+  const full = draw([planned('p', '2026-11-03', goodPlan())]);
+  assert.doesNotMatch(full, /35\.1|120\.|PRIVATE-NOTE|SENTINEL|stop-\d|launch/i);
+  assert.doesNotMatch(full, />(Cancel|Done|Activate)</);
+  assert.equal((full.match(/<button/g) ?? []).length, 2, 'only Delete and Use again');
+});
+
+test('saved_plan_empty_and_malformed_are_honest', async () => {
+  const draw = await planView();
+  const empty = draw([planned('e', '2026-11-03', {spots: [], legs: []})]);
+  assert.match(empty, /No stops saved\./);
+  assert.match(empty, /No legs saved\./);
+  assert.doesNotMatch(empty, /leg totals/);
+  assert.match(draw([planned('z', '2026-11-03', {spots: [spot('A', 0)], legs: [leg(0, 0)]})]), /Saved leg totals: 0 nm · 0 min/);
+  const bad = [null, 'x', [], {spots: []}, {legs: []}, {spots: [spot('A', 0), {name: 5, order: 1}], legs: []}, {spots: [spot('A', -1)], legs: []}, {spots: [spot('A', 0.5)], legs: []},
+    {spots: [], legs: [leg(1, 1), leg(NaN, 1)]}, {spots: [], legs: [leg(1, 1), leg(-1, 1)]}, {spots: [], legs: [leg('2', 1)]}, {spots: [], legs: [null]}];
+  for (const plan of bad.slice(1)) {
+    const html = draw([planned('m', '2026-11-03', plan), planned('ok', '2026-11-04', goodPlan())]);
+    const [first, second] = html.split(/(?=<div><p>)/).slice(-2);
+    assert.match(first, /Saved plan details unavailable\./, JSON.stringify(plan));
+    assert.match(first, /Plan saved with this alert/);
+    assert.doesNotMatch(first, /leg totals|Targets:|<ol>/);
+    assert.match(second, /Saved leg totals: 3\.75 nm/, 'other rows still render');
+  }
+});
