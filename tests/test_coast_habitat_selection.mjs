@@ -40,3 +40,11 @@ test('wide reef context requires original archive bindings and verified bytes; c
   binding={...context,asset:{...context.asset,sha256:'b'.repeat(64)}};assert.equal(await resolveHabitatSelection({id:'wide',species:'lingcod'}),null);assert.equal((await resolveHabitatSelection({id:'123',species:'lingcod'})).latitude,35.9);
  });
 });
+test('a never-reviewed shore run (null source clock) yields no receipt, next to a dated one',async()=>{
+ const run=(id,reviewExpiresAt)=>({id,properties:{id,areaId:'central',reviewExpiresAt,access:[{coordinates:[-120.94,35.45]}]},geometry:{type:'MultiLineString',coordinates:[[[-120.95,35.45],[-120.94,35.46]]]}});
+ const bytes=new TextEncoder().encode(JSON.stringify({features:[run('rocky',null),run('dated',expires)]})),sha256=Buffer.from(await crypto.subtle.digest('SHA-256',bytes)).toString('hex'),asset={url:'/data/shore.json',bytes:bytes.length,sha256};
+ await using(async path=>path.includes('manifest')?Response.json({schemaVersion:1,origin:[-120.98,35.43],shoreAsset:asset}):new Response(bytes),async()=>{
+  assert.equal(await resolveHabitatSelection({id:'rocky',species:'surfperch'}),null);
+  assert.equal((await resolveHabitatSelection({id:'dated',species:'surfperch'})).kind,'shore');
+ });
+});
