@@ -623,3 +623,11 @@ test('language_choice_storage_unavailable: blocked storage or history never thro
     } finally { if (saved) Object.defineProperty(globalThis, 'localStorage', saved); else delete globalThis.localStorage; }
   } finally { language.value = 'en'; }
 });
+
+test('SC0707-06: first run and Your limits are covered, and their ids keep their variables in es', () => {
+  assert.ok(COVERED.includes('web/app/FirstRun.tsx') && COVERED.includes('web/app/LimitsPanel.tsx'));
+  const ids = Object.entries(catalogue.strings).filter(([id]) => /^(?:firstRun|boatEntry|limits)\./.test(id));
+  assert.ok(ids.length >= 60, 'the three families are in the catalogue');
+  const vars = text => [...text.matchAll(/\{(\w+)\}/g)].map(x => x[1]).sort().join();
+  for (const [id, entry] of ids) { assert.ok(entry.es?.trim(), `${id} has an es value`); assert.equal(vars(entry.es), vars(entry.en), `${id}: same variables in en and es`); }
+});
