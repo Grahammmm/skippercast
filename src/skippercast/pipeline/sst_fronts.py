@@ -11,7 +11,8 @@ the position is uncertain by (analysis error / gradient) either side of the line
 A tile frame whose observation time is missing, unparseable, in the future or older than the
 feed's `max_age_hours` in catalog/feed-health.json yields no front; that limit has no default.
 Temperatures or errors that are not finite numbers, or outside the sea's range, are refused
-with an `SstFrontError`. This module reads tiles and writes one JSON document; it never
+with an `SstFrontError`, as are two different measurements of one grid cell (identical overlaps are
+harmless). This module reads tiles and writes one JSON document; it never
 touches the network.
 """
 
@@ -105,7 +106,9 @@ def _grid(rows, res):
         t = _number(temp, *TEMP_RANGE_C, "temperature_c")
         e = _number(err, 0, MAX_ERROR_C, "analysis_error_c")
         y, x = _number(lat, -90, 90, "latitude"), _number(lon, -180, 180, "longitude")
-        grid[(round(y / res), round(x / res))] = (t, e, y)
+        address, measured = (round(y / res), round(x / res)), (t, e, y)
+        if grid.setdefault(address, measured) != measured:  # identical overlaps are harmless; conflicts never pick a winner
+            raise SstFrontError(f"conflicting overlapping measurements at grid address {address}")
     return grid
 
 
