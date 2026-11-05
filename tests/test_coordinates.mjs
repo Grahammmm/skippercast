@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {formatCoordinate, formatCoordinates} from '../dist/coordinates.js';
+import {formatCoordinate, formatCoordinates, parseCoordinate} from '../dist/coordinates.js';
 import {configureStore, coordinates, loadCoordinateFormat, setCoordinateFormat, STORAGE_KEYS, syncFromURL} from '../web/state.ts';
 
 test('three display formats and all hemispheres', () => {
@@ -48,4 +48,69 @@ test('format persists, rejects malformed storage and survives navigation with bl
   setCoordinateFormat('dms'); syncFromURL('https://example.org/?region=test'); assert.equal(coordinates.value, 'dms');
   loadCoordinateFormat(); assert.equal(coordinates.value, 'dd');
   configureStore({storage: null});
+});
+
+test('parseCoordinate reads chartplotter forms', () => {
+  const near = (text, axis, want) => { const r = parseCoordinate(text, axis); assert.ok(Math.abs(r.value - want) < 1e-9, `${text} -> ${JSON.stringify(r)}`); };
+  near('35 21.456 N', 'latitude', 35 + 21.456 / 60);
+  near('35° 21.456′ N', 'latitude', 35 + 21.456 / 60);
+  near('N35 21.456', 'latitude', 35 + 21.456 / 60);
+  near('n 35 21.456', 'latitude', 35 + 21.456 / 60);
+  near('-120 51.5', 'longitude', -(120 + 51.5 / 60));
+  near("35d21'27.36\"N", 'latitude', 35 + 21 / 60 + 27.36 / 3600);
+  near('35°21′27.36″N', 'latitude', 35 + 21 / 60 + 27.36 / 3600);
+  near("35 21' 27.36''  S", 'latitude', -(35 + 21 / 60 + 27.36 / 3600));
+  near('35.3576', 'latitude', 35.3576);
+  near('+35.3576', 'latitude', 35.3576);
+  near('120.5 W', 'longitude', -120.5);
+  near('W 120.5°', 'longitude', -120.5);
+  near('90 N', 'latitude', 90);
+  near('180 W', 'longitude', -180);
+  assert.ok(Object.is(parseCoordinate('0 S', 'latitude').value, -0));
+});
+
+test('parseCoordinate refuses with a reason in words', () => {
+  const bad = [['35 60.0 N', 'latitude'], ['35 21 60 N', 'latitude'], ['35 61 N', 'latitude'], ['-35 N', 'latitude'], ['N -35', 'latitude'],
+    ['35 E', 'latitude'], ['W 35', 'latitude'], ['120 N', 'longitude'], ['91 N', 'latitude'], ['90 0.1 N', 'latitude'],
+    ['181 W', 'longitude'], ['-181', 'longitude'], ['', 'latitude'], ['   ', 'latitude'], ['abc', 'latitude'], ['NaN', 'latitude'],
+    ['Infinity', 'latitude'], ['1e400', 'latitude'], ['35 -21 N', 'latitude'], ['35.5 21 N', 'latitude'], ['35 21.5 10 N', 'latitude'],
+    ['N 35 S', 'latitude'], ['35 21 27 10 N', 'latitude'], ['X 35', 'latitude'], ['N', 'latitude'], [null, 'latitude']];
+  for (const [text, axis] of bad) {
+    const r = parseCoordinate(text, axis);
+    assert.ok(!('value' in r), `${text} should be refused`);
+    assert.match(r.error, /^[A-Z][^\n]*[.;]$/, `${text}: ${r.error}`);
+    assert.ok(!/\bat\b.*:\d+|Error/.test(r.error));
+  }
+});
+
+test('every formatCoordinate output parses back within the format precision', () => {
+  const precision = {dd: 0.000005, ddm: 0.0005 / 60, dms: 0.005 / 3600};
+  const lats = [0, -0, 90, -90], lons = [0, -0, 180, -180];
+  for (let v = -89.5; v <= 89.5; v += 7.3) lats.push(v);
+  for (let v = -179.5; v <= 179.5; v += 13.1) lons.push(v);
+  lats.push(35.35760, 12 + 59.999999 / 60); lons.push(-120.858333, 179.9999999);
+  for (const format of ['dd', 'ddm', 'dms']) {
+    for (const [values, axis] of [[lats, 'latitude'], [lons, 'longitude']]) {
+      for (const v of values) {
+        const text = formatCoordinate(v, axis, format), r = parseCoordinate(text, axis);
+        assert.ok('value' in r, `${text}: ${r.error}`);
+        assert.ok(Math.abs(r.value - v) <= precision[format] + 1e-12, `${format} ${v} -> ${text} -> ${r.value}`);
+        assert.equal(Object.is(r.value, -0) || r.value < 0, Object.is(v, -0) || v < 0, `sign of ${text}`);
+      }
+    }
+  }
+});
+
+test('labelled units must sit in degree, minute, second positions', () => {
+  for (const text of ['35°21″N', '35′N', '35″ N', '35 21″ N', '35°21′27′ N', '35″21′ N', "35 21\" N", "35' N"]) {
+    const r = parseCoordinate(text, 'latitude');
+    assert.ok(!('value' in r), `${text} should be refused, got ${JSON.stringify(r)}`);
+    assert.match(r.error, /order/);
+  }
+  const close = (text, want) => assert.ok(Math.abs(parseCoordinate(text, 'latitude').value - want) < 1e-9, text);
+  close('35°21′N', 35 + 21 / 60);
+  close("35d 21' 27\" N", 35 + 21 / 60 + 27 / 3600);
+  close('35° 21.456′ N', 35 + 21.456 / 60);
+  close('35 ° 21 ′ N', 35 + 21 / 60);
+  close('35°N', 35);
 });
