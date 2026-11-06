@@ -169,7 +169,7 @@ test('the baseline only shrinks: new findings fail, fixes must be removed, --upd
 // SC0707-03: the two "not checked for this spot" lines are each ONE literal that the unchanged lint can read whole.
 // The expected lines are written here independently of the product constants.
 const UNCHECKED = [
-  {file: 'dist/account.js', line: 'Protected areas not checked for this spot: outside coverage or check unavailable; not exported.', old: 'Protected areas not checked for this spot: outside coverage or check unavailable. Not exported.'},
+  {file: 'dist/account.js', catalogue: 'account.spots.unchecked', line: 'Protected areas not checked for this spot: outside coverage or check unavailable; not exported.', old: 'Protected areas not checked for this spot: outside coverage or check unavailable. Not exported.'},
   {file: 'web/saved-spots.ts', catalogue: 'mark.save.notChecked', line: 'Protected areas not checked for this spot: outside coverage or check unavailable; not saved.', old: 'Protected areas not checked for this spot. Not saved.'},
 ];
 

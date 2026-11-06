@@ -7,7 +7,8 @@
 //
 // Erasable syntax only: Node tests import this file by type stripping.
 import {signal} from '@preact/signals';
-import {t, type Language} from './i18n.ts';
+import {language, t, type Language} from './i18n.ts';
+import {accountOptions} from './account-copy.ts';
 
 /** dist/account.js's key: after sign in or close it restores this hash. */
 export const RETURN_KEY = 'skippercast-account-return';
@@ -82,7 +83,7 @@ export function dropEmptyHash(loc: Pick<Location, 'href' | 'hash' | 'pathname' |
 export async function openAccountDialog(): Promise<void> {
   remember(location.hash);
   const {openAccount} = await import('../dist/account.js');
-  await openAccount();
+  await openAccount(accountOptions(language.peek()));   // the language is read once the panel has loaded, so a switch during the load counts
 }
 
 /**
@@ -94,7 +95,7 @@ export function followAccountHash(before: () => void): () => void {
     if (location.hash !== '#account') { dropEmptyHash(); return; }
     before();
     remember(event?.oldURL ? new URL(event.oldURL).hash : '');
-    void import('../dist/account.js').then(m => m.openAccount());
+    void import('../dist/account.js').then(m => m.openAccount(accountOptions(language.peek())));
   };
   addEventListener('hashchange', fromHash);
   fromHash();

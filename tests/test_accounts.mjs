@@ -436,7 +436,8 @@ test('privacy_copy_distinguishes_retained_log_and_spots', () => {
 });
 
 test('account_fine_print_names_log_and_spots', () => {
-  const src = readFileSync(new URL('../dist/account.js', import.meta.url), 'utf8');
+  // SC0922-14: the account copy lives in the catalogue (English values here; dist/account.js reads them as its defaults).
+  const src = Object.values(JSON.parse(readFileSync(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings).map(e => e.en).join('\n');
   assert.ok(src.includes('SkipperCast stores only its public key. Saved trips, alerts, boat comfort feedback, catch-log entries and saved spots belong to your account, and you can delete the account at any time.'));
   assert.ok(src.includes('Delete your SkipperCast account and all saved trips, alerts, notification devices, catch log, saved spots and comfort feedback?'));
 });

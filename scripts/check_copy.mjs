@@ -267,9 +267,19 @@ export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/F
   'web/app/MarkCard.tsx', 'web/saved-spots.ts', 'web/mark-copy.ts', 'web/map/status-copy.ts',
   'web/app/PlanView.tsx', 'web/plan.ts', 'web/app/ControlsTour.tsx', 'web/tour.ts', 'web/app/Presets.tsx', 'web/app/presets.ts',
   'web/app/TripAlerts.tsx', 'web/alerts.ts', 'web/digest.ts',
-  'web/app/views/Reports.tsx', 'web/reports.ts', 'web/reports-copy.ts', 'web/app/views/Fleet.tsx'];
+  'web/app/views/Reports.tsx', 'web/reports.ts', 'web/reports-copy.ts', 'web/app/views/Fleet.tsx',
+  'dist/account.js', 'web/account-copy.ts'];
 /** Prose-like literals in covered files that are data or code, not copy: a species group name (not translated) and a prefix the model writes. */
-export const LITERAL_OK = new Set(['Lingcod & rockfish', 'Using your limits']);
+// dist/account.js: the GPX file's title (file data) and a developer message for an incomplete catch-log answer, never shown.
+export const LITERAL_OK = new Set(['Lingcod & rockfish', 'Using your limits', 'SkipperCast saved spots', 'The catch log answer was incomplete', 'unknown account string']);
+/** Covered modules whose template literals are HTML fragments: their tag names, classes and ids are scaffolding, so only the text between tags and the title, aria-label and placeholder attributes are read as copy. */
+export const HTML_FRAGMENTS = new Set(['dist/account.js']);
+/** The visible words of one HTML-fragment literal (` X ` stands for a ${} expression): text units, then title/aria-label/placeholder values. */
+export function fragmentCopy(value) {
+  const out = /<[a-z][^>]*>/i.test(value) ? htmlUnits(value).map(u => ({value: u.text, index: u.index})) : [];   // a piece with no tag is attributes only
+  for (const m of value.matchAll(/\b(?:title|aria-label|placeholder)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) out.push({value: m[1] ?? m[2], index: m.index});
+  return out;
+}
 /** Server wire tokens (compared, never shown), allowed only in the one file that compares them. */
 export const WIRE_OK = new Map([['web/saved-spots.ts', new Set(['you can keep at most 100 saved spots; remove one first'])],
   ['web/reports.ts', new Set(['Broad regional name'])]]);
@@ -284,7 +294,9 @@ export function catalogueProblems(root = ROOT) {
     try { source = readFileSync(join(root, path), 'utf8'); } catch { continue; }
     for (const m of source.matchAll(/\bt\(\s*(['"])([\w.]+)\1/g)) if (!Object.hasOwn(ids, m[2])) out.push(`${path}:${lineOf(source, m.index)} t('${m[2]}') is not in ${CATALOGUE}`);
     const bare = source.replace(/\/\*[\s\S]*?\*\/|(?<![:'"`\w])\/\/[^\n]*/g, c => c.replace(/[^\n]/g, ' '));   // comments are not copy
-    for (const item of [...literals(source), ...(path.endsWith('.tsx') ? jsxText(bare) : [])])
+    const items = [...literals(source), ...(path.endsWith('.tsx') ? jsxText(bare) : [])].flatMap(item =>
+      HTML_FRAGMENTS.has(path) && /<[a-z][^>]*>|\b[\w-]+="/i.test(item.value) ? fragmentCopy(item.value).map(u => ({value: u.value, index: item.index + u.index})) : [item]);
+    for (const item of items)
       if (isProse(item.value) && !LITERAL_OK.has(item.value.trim()) && !WIRE_OK.get(path)?.has(item.value.trim()) && !item.value.trim().split(/\s+/).every(w => w.includes('-'))) out.push(`${path}:${lineOf(source, item.index)} bare literal "${clip(normal(item.value))}": use a catalogue id`);
   }
   return out;
