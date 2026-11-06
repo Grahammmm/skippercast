@@ -269,6 +269,68 @@ export async function submitPositionForm($, prefix, build, send) {
   return true;
 }
 
+// SC1607-05: "Use my position". One fresh fix is asked for only when the button is pressed; it fills the two boxes and nothing is saved.
+export const POSITION_OPTIONS = Object.freeze({enableHighAccuracy: true, timeout: 15000, maximumAge: 0});
+/** A device fix as the two box values (six decimals, no negative zero) and the accuracy in whole metres rounded up; null when anything is unusable or rounds onto a pole or the antimeridian. */
+export function positionFromFix(fix) {
+  const c = fix?.coords, num = v => typeof v === 'number' && Number.isFinite(v);
+  if (!c || !num(c.latitude) || !num(c.longitude) || !num(c.accuracy) || c.accuracy < 0) return null;
+  const lat = Number(c.latitude.toFixed(6)), lon = Number(c.longitude.toFixed(6));
+  if (!(lat > -90 && lat < 90 && lon > -180 && lon < 180)) return null;
+  const text = n => (n === 0 ? '0.000000' : n.toFixed(6));
+  return {lat: text(lat), lon: text(lon), accuracy: Math.ceil(c.accuracy)};
+}
+/** The words for a refused or failed request: code 1 or a SecurityError is permission, code 3 a time-out, anything else the device. */
+export function positionFailure(error) { return error?.code === 1 || error?.name === 'SecurityError' ? 'denied' : error?.code === 3 ? 'timeout' : 'unavailable'; }
+/** The button, hint and status line under a form's two position boxes. */
+export function positionControlsHTML(prefix, copy) {
+  const t = asCopy(copy);
+  return `<div class="home-port-actions"><button type="button" id="${prefix}-use-position" aria-describedby="${prefix}-position-hint ${prefix}-position-status">${esc(t('account.position.use'))}</button></div><p class="account-hint" id="${prefix}-position-hint">${esc(t('account.position.hint'))}</p><p class="account-hint" role="status" aria-live="polite" id="${prefix}-position-status"></p>`;
+}
+/**
+ * Wires one form's "Use my position" button. `$` finds an element; `alive()` says the dialog and render are still current;
+ * `blocked()` (optional) refuses a request; `after()` (optional) runs when controls are given back. One attempt at a time: while it
+ * is pending the button, both boxes and Save are disabled (their earlier state returns afterwards). `invalidate()` drops a pending
+ * attempt, so a late answer changes nothing. Returns {invalidate, pending}.
+ */
+export function createPositionControl({$, prefix, copy, alive = () => true, blocked = () => false, after = () => {}, geolocation = () => globalThis.navigator?.geolocation}) {
+  const t = asCopy(copy), button = $(`#${prefix}-use-position`), say = text => { const el = $(`#${prefix}-position-status`); if (el) el.textContent = text; };
+  let attempt = null;
+  for (const f of ['lat', 'lon']) { const box = $(`#${prefix}-${f}`); box?.setAttribute('aria-describedby', `${box.getAttribute('aria-describedby') ?? ''} ${prefix}-position-status`.trim()); }
+  const parts = () => [button, $(`#${prefix}-lat`), $(`#${prefix}-lon`), $(`#${prefix}-save`)];
+  const release = a => { for (const [el, was] of a.saved) if (el) el.disabled = was; after(); };
+  const invalidate = () => { const a = attempt; attempt = null; if (a) release(a); say(''); };
+  const fill = pos => {
+    for (const [f, value] of [['lat', pos.lat], ['lon', pos.lon]]) {
+      const box = $(`#${prefix}-${f}`), err = $(`#${prefix}-${f}-error`);
+      box.value = value; box.removeAttribute('aria-invalid'); if (err) { err.textContent = ''; err.hidden = true; }
+      box.dispatchEvent(new Event('input', {bubbles: true}));
+    }
+  };
+  button.addEventListener('click', () => {
+    if (attempt || blocked() || !alive()) return;
+    const geo = geolocation();
+    if (!geo || typeof geo.getCurrentPosition !== 'function') { say(t('account.position.unsupported')); return; }
+    const a = {saved: parts().map(el => [el, el?.disabled])};
+    const settle = (words, apply) => {
+      if (attempt !== a) return;
+      attempt = null;
+      if (!alive() || !button.isConnected) return;
+      release(a);
+      apply?.(); say(words());
+    };
+    attempt = a; for (const el of parts()) if (el) el.disabled = true; say(t('account.position.finding'));
+    try {
+      geo.getCurrentPosition(fix => {
+        const pos = positionFromFix(fix);
+        if (pos) settle(() => t('account.position.filled', {accuracy: pos.accuracy}), () => fill(pos));
+        else settle(() => t('account.position.unavailable'));
+      }, error => settle(() => t('account.position.' + positionFailure(error))), POSITION_OPTIONS);
+    } catch (error) { settle(() => t('account.position.' + positionFailure(error))); }
+  });
+  return {invalidate, get pending() { return attempt !== null; }};
+}
+
 /** The form's fields as the log route's body: a blank sends no count, a position is sent only when both boxes are filled; typed positions are read in decimal degrees, degrees and decimal minutes, or degrees minutes seconds. */
 export function logBody(f, copy) {
   const num = v => (String(v ?? '').trim() === '' ? null : Number(v));
@@ -349,6 +411,7 @@ const logFormHTML = t => `<h2 class="account-subhead">${esc(t('account.log.head'
       <label for="log-trip">${esc(t('account.log.trip'))} <span class="account-hint">${esc(t('account.optional'))}</span></label><select id="log-trip">${noTrip(t)}</select>
       ${positionFieldHTML('log', 'lat', esc(t('account.log.lat')), esc(t('account.optional.private')), chosenFormat(), t)}
       ${positionFieldHTML('log', 'lon', esc(t('account.log.lon')), esc(t('account.optional.private')), chosenFormat(), t)}
+      ${positionControlsHTML('log', t)}
       <label for="log-note">${esc(t('account.log.note'))}</label><input id="log-note" type="text" maxlength="1000" />
       <div class="home-port-actions"><button type="submit" id="log-save">${esc(t('account.log.save'))}</button><button type="button" id="log-cancel" hidden>${esc(t('account.cancel'))}</button></div>
     </form>
@@ -440,6 +503,7 @@ const spotFormHTML = t => `<h2 class="account-subhead">${esc(t('account.spots.he
       <label for="spot-name">${esc(t('account.name'))}</label><input id="spot-name" type="text" maxlength="80" />
       ${positionFieldHTML('spot', 'lat', esc(t('account.log.lat')), '', chosenFormat(), t)}
       ${positionFieldHTML('spot', 'lon', esc(t('account.log.lon')), '', chosenFormat(), t)}
+      ${positionControlsHTML('spot', t)}
       <label for="spot-note">${esc(t('account.spots.note'))}</label><input id="spot-note" type="text" maxlength="1000" />
       <div class="home-port-actions"><button type="submit" id="spot-save">${esc(t('account.spots.save'))}</button><button type="button" id="spot-export">${esc(t('account.spots.export'))}</button></div>
     </form>
@@ -608,12 +672,13 @@ export async function openAccount(options = {}) {
     const focusEdit = id => { [...list.querySelectorAll('[data-edit-log]')].find(b => b.dataset.editLog === id)?.focus(); };
     const leaveEdit = (focusId) => {
       const e = editing; editing = null; if (!e) return;
+      logPos.invalidate();
       renderTripOptions(e.draft.trip); writeForm(e.draft); clearPositionErrors();
       drawLog(); if (focusId) focusEdit(focusId);
     };
     const openEdit = id => {
       const row = entries?.find(r => r.id === id); if (!row || editing) return;
-      const draft = readForm();
+      const draft = readForm(); logPos.invalidate();
       editing = {id, draft, pending: false, original: {...row}};
       renderTripOptions(row.trip_id || '');
       writeForm({started: localInputValue(row.started_at), ended: localInputValue(row.ended_at), outcome: row.outcome, count: row.outcome === 'fish' ? String(row.count) : '',
@@ -704,22 +769,24 @@ export async function openAccount(options = {}) {
     });
     $('#log-form').addEventListener('submit', async event => {
       event.preventDefault();
+      if (logPos.pending) return;   // a position is still being asked for: Save waits
       if (editing) { saveEdit(); return; }
       const field = n => $('#log-' + n).value;
       try {
         await submitPositionForm($, 'log', () => logBody({started: field('started'), ended: field('ended'), outcome: field('outcome'), count: field('count'), species: field('species'), method: field('method'), trip_id: field('trip'), lat: field('lat'), lon: field('lon'), note: field('note')}, t), async body => {
           await api('catch-log', {method: 'POST', body});
-          $('#log-form').reset(); await showLog(); status(t('account.log.saved'));
+          logPos.invalidate(); $('#log-form').reset(); await showLog(); status(t('account.log.saved'));
         });
       } catch (error) { status(error?.local ? error.message : passkeyMessage(error, t)); }
     });
+    const logPos = createPositionControl({$, prefix: 'log', copy: t, alive: live, after: drawLog});
     showLog(); loadTrips();
     // BF-saved-spots: the list reads each spot against the shared protected-area screen; a screen that cannot load reads "unavailable".
     let screenOnce = null;
     const spotScreen = () => screenOnce ??= import('./protected-areas.js').then(m => m.initProtectedAreas(null, () => {})).catch(() => null);
     let spotRows = [], spotReadings = [], loadGen = 0, loading = false, editor = null;
     const spotList = $('#spot-list'), spotsChanged = () => { try { globalThis.dispatchEvent?.(new Event('skippercast:saved-spots-changed')); } catch { /* the Chart layer reads again on its next turn-on */ } }, showSpots = async () => {
-      const gen = ++loadGen; loading = true; editor = null;
+      const gen = ++loadGen; loading = true; editor = null; syncSpotPos();
       try {
         const rows = (await api('spots')).spots;
         const verdicts = await spotVerdicts(rows, await spotScreen(), t);
@@ -737,7 +804,7 @@ export async function openAccount(options = {}) {
       row.replaceWith(holder.content.firstElementChild);
       if (focusEdit) rowOf(id)?.querySelector('[data-edit-spot]')?.focus();
     };
-    const closeEditor = focusEdit => { const e = editor; editor = null; if (e) redrawRow(e.id, focusEdit); };
+    const closeEditor = focusEdit => { const e = editor; editor = null; syncSpotPos(); if (e) redrawRow(e.id, focusEdit); };
     const openEditor = id => {
       const i = spotRows.findIndex(s => s.id === id), row = rowOf(id); if (i < 0 || !row || editor?.pending) return;
       closeEditor(false);
@@ -745,6 +812,7 @@ export async function openAccount(options = {}) {
       const li = holder.content.firstElementChild; row.replaceWith(li);
       fillSpotEdit(li.querySelector('form'), spotRows[i]);
       editor = {id, pending: false, token: {}};
+      spotPos.invalidate(); syncSpotPos();   // a spot's position is never moved from here: the create button rests while a row is open
       li.querySelector('input').focus();
     };
     const saveEditor = async form => {
@@ -767,7 +835,7 @@ export async function openAccount(options = {}) {
       // Confirmed: the stored row replaces this spot where it stands; an older list read still in flight must not put the old name back.
       const j = spotRows.findIndex(s => s.id === saved.id); if (j >= 0) spotRows[j] = saved;
       const reread = loading; loadGen++; loading = false;
-      if (editor === e) editor = null;
+      if (editor === e) { editor = null; syncSpotPos(); }
       if (open === self && token) { redrawRow(saved.id, true); status(t('account.spotEdit.saved')); }
       spotsChanged();
       if (reread && open === self) showSpots();
@@ -786,13 +854,16 @@ export async function openAccount(options = {}) {
       const b = event.target.closest('[data-remove-spot]'); if (!b) return;
       try { await api('spots/' + encodeURIComponent(b.dataset.removeSpot), {method: 'DELETE', body: {}}); spotsChanged(); await showSpots(); } catch (error) { status(passkeyMessage(error, t)); }
     });
+    const spotPos = createPositionControl({$, prefix: 'spot', copy: t, alive: () => open === self && spotList.isConnected, blocked: () => Boolean(editor)});
+    const syncSpotPos = () => { if (!spotPos.pending) $('#spot-use-position').disabled = Boolean(editor); };
     $('#spot-form').addEventListener('submit', async event => {
       event.preventDefault();
+      if (spotPos.pending) return;   // a position is still being asked for: Save waits
       const field = n => $('#spot-' + n).value;
       try {
         await submitPositionForm($, 'spot', () => spotBody({name: field('name'), lat: field('lat'), lon: field('lon'), note: field('note')}), async body => {
           await api('spots', {method: 'POST', body});
-          $('#spot-form').reset(); spotsChanged(); await showSpots(); status(t('account.spots.saved'));
+          spotPos.invalidate(); $('#spot-form').reset(); syncSpotPos(); spotsChanged(); await showSpots(); status(t('account.spots.saved'));
         });
       } catch (error) { status(passkeyMessage(error, t)); }
     });
