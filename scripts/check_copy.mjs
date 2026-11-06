@@ -266,11 +266,13 @@ export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/F
   'web/app/views/Conditions.tsx', 'web/app/views/HourlyTable.tsx', 'web/app/views/History.tsx', 'web/model-disagreement.ts', 'web/view-copy.ts',
   'web/app/MarkCard.tsx', 'web/saved-spots.ts', 'web/mark-copy.ts', 'web/map/status-copy.ts',
   'web/app/PlanView.tsx', 'web/plan.ts', 'web/app/ControlsTour.tsx', 'web/tour.ts', 'web/app/Presets.tsx', 'web/app/presets.ts',
-  'web/app/TripAlerts.tsx', 'web/alerts.ts', 'web/digest.ts'];
+  'web/app/TripAlerts.tsx', 'web/alerts.ts', 'web/digest.ts',
+  'web/app/views/Reports.tsx', 'web/reports.ts', 'web/reports-copy.ts', 'web/app/views/Fleet.tsx'];
 /** Prose-like literals in covered files that are data or code, not copy: a species group name (not translated) and a prefix the model writes. */
 export const LITERAL_OK = new Set(['Lingcod & rockfish', 'Using your limits']);
 /** Server wire tokens (compared, never shown), allowed only in the one file that compares them. */
-export const WIRE_OK = new Map([['web/saved-spots.ts', new Set(['you can keep at most 100 saved spots; remove one first'])]]);
+export const WIRE_OK = new Map([['web/saved-spots.ts', new Set(['you can keep at most 100 saved spots; remove one first'])],
+  ['web/reports.ts', new Set(['Broad regional name'])]]);
 
 /** Catalogue problems under `root`: ids without an es value, unknown ids in t() calls, bare prose literals in covered files. No catalogue, nothing to check. */
 export function catalogueProblems(root = ROOT) {

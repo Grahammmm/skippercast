@@ -18,7 +18,9 @@ import {profile, region, species} from '../../state.ts';
 import type {Charters, Evidence, ReportsData, Watch} from '../../reports.ts';
 import {regionInfo} from '../App.tsx';
 import {CoastMarkup, isSafeCatchState} from '../CoastMarkup.tsx';
-import {DEFAULT_ZONE} from '../../zone.ts';
+import {language, t} from '../../i18n.ts';
+import {catchCopy, countPhrase, evidenceCopy, reportDay, rowCopy} from '../../reports-copy.ts';
+import {EnglishDetail} from '../EnglishDetail.tsx';
 
 /** The loaded sections, the complete inputs they were loaded for and when (ms; a missing time counts as old). */
 export const reportsData = signal<{key: string; data: ReportsData; loadedAt?: number} | null>(null);
@@ -56,33 +58,36 @@ export async function openReports(id: string, target: string, charters: string |
   } finally { if (pending === request) pending = null; }
 }
 
-const day = (iso: string | null | undefined): string => {
-  const at = iso ? Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00Z` : iso) : NaN;
-  return Number.isFinite(at) ? new Intl.DateTimeFormat('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: /^\d{4}-\d{2}-\d{2}$/.test(iso ?? '') ? 'UTC' : DEFAULT_ZONE}).format(at) : 'date unavailable';
-};
 const Out = ({href, children}: {href: string; children: ComponentChildren}) => <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
 
 /** The catch cards, or why there are none; `state` is null outside a coast-report port. */
 export function CatchCards({state}: {state: CatchState | null}) {
-  if (!state) return <p>Dated fleet catch cards show for ports the coast report covers. Choose such a port on the map, or read the <a href="/report">coast report</a>.</p>;
-  if (!isSafeCatchState(state)) return <p>The fleet catch counts in this report failed a check and are not shown.</p>;
-  return <CoastMarkup renderer="catchSheet" args={[state]} class="app-reports-catches" />;
+  const lang = language.value;
+  if (!state) return <p>{t('reports.cards.pre', lang)}<a href="/report">{t('reports.cards.link', lang)}</a>{t('reports.cards.post', lang)}</p>;
+  if (!isSafeCatchState(state)) return <p>{t('reports.cards.unsafe', lang)}</p>;
+  // English passes no copy, so the renderer keeps its own text.
+  return <CoastMarkup renderer="catchSheet" args={lang === 'en' ? [state] : [state, catchCopy(lang)]} class="app-reports-catches" />;
 }
 
 export function EvidenceSection({evidence}: {evidence: Evidence | null}) {
-  if (!evidence) return <p>The daily evidence feed for this region is unavailable. No catch score is assumed.</p>;
+  const lang = language.value;
+  if (!evidence) return <p>{t('reports.evidence.unavailable', lang)}</p>;
+  const text = evidenceCopy(evidence, lang);
   return (
     <>
-      <p><span class="ui-eyebrow">Evidence for recent activity</span> <strong>{evidence.confidence}</strong>. {evidence.reason}</p>
-      <p class="app-reports-small">{day(evidence.start)}–{day(evidence.end)} · {evidence.trips} reported trip{evidence.trips === 1 ? '' : 's'} · {evidence.boats} boat{evidence.boats === 1 ? '' : 's'} · {evidence.days} reporting date{evidence.days === 1 ? '' : 's'}. Confidence describes the evidence for recent activity, not a forecast of your catch or a seven-day prediction. Feed collected {day(evidence.generatedAt)}.</p>
+      <p><span class="ui-eyebrow">{t('reports.evidence.eyebrow', lang)}</span> <strong>{text.confidence}</strong>. {text.reason ?? <EnglishDetail lang={lang}>{evidence.reason}</EnglishDetail>}</p>
+      <p class="app-reports-small">{reportDay(evidence.start, lang)}–{reportDay(evidence.end, lang)} · {countPhrase('trips', evidence.trips, lang)} · {countPhrase('boats', evidence.boats, lang)} · {countPhrase('days', evidence.days, lang)}. {t('reports.evidence.caveat', lang, {date: reportDay(evidence.generatedAt, lang)})}</p>
       {evidence.rows.length ? (
         <ul class="app-reports-list">
-          {evidence.rows.map(r => (
-            <li key={`${r.date}:${r.boat}`}>
-              <span class="ui-mono">{day(r.date)}</span> · {r.boat}: {r.catches}
-              <small>{r.where}{r.url ? <> · <Out href={r.url}>Source</Out></> : null}</small>
-            </li>
-          ))}
+          {evidence.rows.map(r => {
+            const row = rowCopy(r, lang);
+            return (
+              <li key={`${r.date}:${r.boat}`}>
+                <span class="ui-mono">{reportDay(r.date, lang)}</span> · {r.boat}: {row.translated ? row.catches : <EnglishDetail lang={lang}>{row.catches}</EnglishDetail>}
+                <small>{row.translated ? row.where : <EnglishDetail lang={lang}>{row.where}</EnglishDetail>}{r.url ? <> · <Out href={r.url}>{t('reports.source', lang)}</Out></> : null}</small>
+              </li>
+            );
+          })}
         </ul>
       ) : null}
     </>
@@ -90,49 +95,52 @@ export function EvidenceSection({evidence}: {evidence: Evidence | null}) {
 }
 
 export function DiscussionsSection({discussions: d}: {discussions: ReportsData['discussions']}) {
-  if (d.status === 'unavailable') return <p>Recent discussion search is unavailable. Check the public data job for its source status.</p>;
-  if (d.status === 'stale') return <p>The last research snapshot is dated {day(d.generatedAt)}. Current local discussion coverage is unverified.</p>;
+  const lang = language.value;
+  if (d.status === 'unavailable') return <p>{t('reports.disc.unavailable', lang)}</p>;
+  if (d.status === 'stale') return <p>{t('reports.disc.stale', lang, {date: reportDay(d.generatedAt, lang)})}</p>;
   return (
     <>
-      <p class="app-reports-small">Updated {day(d.generatedAt)} · {d.checkedQueries}/{d.totalQueries} rotating searches checked in this update{d.status === 'degraded' ? ' · some sources failed or returned partial results' : ''}. Search coverage rotates across regions; an empty result does not mean fish are absent.</p>
+      <p class="app-reports-small">{t('reports.disc.updated', lang, {date: reportDay(d.generatedAt, lang), checked: d.checkedQueries, total: d.totalQueries, degraded: d.status === 'degraded' ? t('reports.disc.degraded', lang) : ''})}</p>
       {d.candidates.length ? (
         <ul class="app-reports-list">
-          {d.candidates.map(c => <li key={c.url}><Out href={c.url}>{c.title}</Out><small>Published {day(c.published_at)} · {c.source} · {c.location_basis || 'regional search'}</small></li>)}
+          {d.candidates.map(c => <li key={c.url}><Out href={c.url}>{c.title}</Out><small>{t('reports.disc.published', lang, {date: reportDay(c.published_at, lang), source: c.source ?? '', basis: c.location_basis || t('reports.disc.basis', lang)})}</small></li>)}
         </ul>
-      ) : <p>No dated local discussion links passed the search filter for this region yet.</p>}
-      <p class="app-reports-small">These are unreviewed links. Posting date is not fishing date; the search does not verify a catch, species or boat position.</p>
+      ) : <p>{t('reports.disc.empty', lang)}</p>}
+      <p class="app-reports-small">{t('reports.disc.caveat', lang)}</p>
     </>
   );
 }
 
 export function WatchSection({watch}: {watch: Watch | null}) {
-  if (!watch) return <p>The seasonal watch for this coast is unavailable.</p>;
+  const lang = language.value;
+  if (!watch) return <p>{t('reports.watch.unavailable', lang)}</p>;
   return (
     <>
-      <p>{watch.coast}: {watch.items.length ? watch.items.map(w => `${w.name}${w.located ? ' · recent located reports' : ''}`).join('; ') : 'no species on watch'}.{watch.checked ? '' : ' Current source check unavailable.'}</p>
+      <p>{watch.coast}: {watch.items.length ? watch.items.map(w => `${w.name}${w.located ? t('reports.watch.located', lang) : ''}`).join('; ') : t('reports.watch.empty', lang)}.{watch.checked ? '' : t('reports.watch.unchecked', lang)}</p>
       {watch.items.filter(w => w.links.length).map(w => (
         <p key={w.name}>{w.name}: {w.links.map((l, i) => <span key={l.url}>{i ? ' · ' : ''}<Out href={l.url}>{l.date} · {l.publisher}</Out></span>)}</p>
       ))}
-      <p class="app-reports-small">A watch is a reason to check local water and reports; it does not establish fish presence.</p>
+      <p class="app-reports-small">{t('reports.watch.caveat', lang)}</p>
     </>
   );
 }
 
 export function ChartersSection({charters}: {charters: Charters | null}) {
-  if (!charters) return <p>No geographically specific charter evidence is published for this region and target.</p>;
+  const lang = language.value;
+  if (!charters) return <p>{t('reports.charters.none', lang)}</p>;
   return (
     <>
       {charters.rows.length ? (
         <ul class="app-reports-list">
           {charters.rows.map(r => (
-            <li key={r.label}>{r.label}<small>Captains named “{r.ground}” · {r.trips} reported trip{r.trips === 1 ? '' : 's'} · {r.boats} boat{r.boats === 1 ? '' : 's'} · latest report {day(r.latest)}</small>
-              {r.sources.length ? <small>{r.sources.map((source, i) => <span key={`${source.url}:${source.date}:${source.boat}:${i}`}>{i ? ' · ' : 'Source reports: '}<Out href={source.url}>{day(source.date)} · {source.boat}</Out></span>)}</small> : null}
+            <li key={r.label}>{r.label}<small>{t('reports.charters.ground', lang, {ground: r.ground, trips: countPhrase('trips', r.trips, lang), boats: countPhrase('boats', r.boats, lang), date: reportDay(r.latest, lang)})}</small>
+              {r.sources.length ? <small>{r.sources.map((source, i) => <span key={`${source.url}:${source.date}:${source.boat}:${i}`}>{i ? ' · ' : t('reports.charters.sources', lang)}<Out href={source.url}>{reportDay(source.date, lang)} · {source.boat}</Out></span>)}</small> : null}
             </li>
           ))}
         </ul>
-      ) : <p>No charter grounds have reports for this target.</p>}
-      {charters.more ? <p class="app-reports-small">{charters.more} more on the map's Fleet layer.</p> : null}
-      <p class="app-reports-small">Newest report first. Reported areas from published trip records; exact stops unknown. Report counts are not catch rates or a popularity ranking. Research checked {day(charters.audit)}.</p>
+      ) : <p>{t('reports.charters.empty', lang)}</p>}
+      {charters.more ? <p class="app-reports-small">{t('reports.charters.more', lang, {n: charters.more})}</p> : null}
+      <p class="app-reports-small">{t('reports.charters.caveat', lang, {date: reportDay(charters.audit, lang)})}</p>
     </>
   );
 }
@@ -142,35 +150,36 @@ const Section = ({id, title, children}: {id: string; title: string; children: Co
 
 /** The page body for loaded `data` (null while loading) and the catch state. */
 export function ReportsBody({data, catches}: {data: ReportsData | null; catches: CatchState | null}) {
+  const lang = language.value;
   return (
     <>
-      <section class="app-reports-section" aria-label="Fleet catch counts"><CatchCards state={catches} /></section>
+      <section class="app-reports-section" aria-label={t('reports.catches.aria', lang)}><CatchCards state={catches} /></section>
       {data ? (
         <>
-          <Section id="evidence" title="Recent fishing evidence"><EvidenceSection evidence={data.evidence} /></Section>
-          <Section id="discussions" title="Recent discussions"><DiscussionsSection discussions={data.discussions} /></Section>
-          <Section id="watch" title="Seasonal watch"><WatchSection watch={data.watch} /></Section>
-          <Section id="charters" title="Where local charters report fishing"><ChartersSection charters={data.charters} /></Section>
+          <Section id="evidence" title={t('reports.section.evidence', lang)}><EvidenceSection evidence={data.evidence} /></Section>
+          <Section id="discussions" title={t('reports.section.discussions', lang)}><DiscussionsSection discussions={data.discussions} /></Section>
+          <Section id="watch" title={t('reports.section.watch', lang)}><WatchSection watch={data.watch} /></Section>
+          <Section id="charters" title={t('reports.section.charters', lang)}><ChartersSection charters={data.charters} /></Section>
         </>
-      ) : <p role="status">Loading dated reports…</p>}
+      ) : <p role="status">{t('reports.loading', lang)}</p>}
       <footer class="app-reports-footer">
-        <a href="/feed.xml">Follow the coast report (RSS)</a>
-        <a href="/report">Readable coast report</a>
+        <a href="/feed.xml">{t('reports.feed.rss', lang)}</a>
+        <a href="/report">{t('reports.feed.read', lang)}</a>
       </footer>
     </>
   );
 }
 
 export function Reports({now = new Date()}: {now?: Date} = {}) {
-  const id = region.value, info = regionInfo.value, target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget;
+  const id = region.value, info = regionInfo.value, target = species.value ?? PROFILE_TABLE[profile.value].defaultTarget, lang = language.value;
   const charters = info?.id === id ? info.charters ?? null : null;
   useEffect(() => { if (id) void openReports(id, target, charters).catch(() => {}); }, [id, target, charters]);
   const loaded = reportsData.value, report = coastReport.value?.data, county = report ? counties[report.countyId] : undefined;
   return (
     <article class="app-reports" aria-labelledby="reports-title" data-view="reports">
-      <span class="ui-eyebrow">Dated evidence</span>
-      <h1 id="reports-title">Reports</h1>
-      <p class="app-deck">Trip counts, discussions and charter records with their dates and sources. Missing reports do not mean zero catch.</p>
+      <span class="ui-eyebrow">{t('reports.eyebrow', lang)}</span>
+      <h1 id="reports-title">{t('reports.title', lang)}</h1>
+      <p class="app-deck">{t('reports.deck', lang)}</p>
       <ReportsBody data={loaded?.key === reportsKey(id, target, charters) ? loaded.data : null} catches={report && county ? {report, county, now} : null} />
     </article>
   );
