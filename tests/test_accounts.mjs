@@ -414,16 +414,21 @@ test('session_advisor_matches_gate: the session flag follows the gate that answe
 // SC1822-01: the deletion copy names every record DELETE /api/privacy removes and the retention of the ones with no age limit.
 test('delete_confirmation_names_all_private_record_categories', () => {
   const src = readFileSync(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
-  const sentence = src.match(/<p id=\{id\}>([^<]*)<\/p>/)?.[1];
-  assert.ok(sentence, 'ConfirmDelete paragraph');
+  // SC0922-12: the sentence moved to the catalogue; the paragraph still draws it by id.
+  assert.match(src, /<p id=\{id\}>\{t\('alerts\.confirm', lang\)\}<\/p>/, 'ConfirmDelete paragraph');
+  const sentence = JSON.parse(readFileSync(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings['alerts.confirm'].en;
   for (const word of ['account', 'passkeys', 'sign-in sessions', 'pending sign-in requests', 'saved trips', 'notification subscriptions', 'assessments', 'notification delivery records', 'comfort feedback', 'catch log', 'saved spots', 'This cannot be undone.']) assert.ok(sentence.includes(word), word);
-  assert.match(src, /role="alertdialog"[\s\S]*Cancel[\s\S]*Yes, delete everything/);
+  assert.match(src, /role="alertdialog"[\s\S]*alerts\.cancel[\s\S]*alerts\.confirmYes/);
+  const strings = JSON.parse(readFileSync(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings;
+  assert.equal(strings['alerts.cancel'].en, 'Cancel');
+  assert.equal(strings['alerts.confirmYes'].en, 'Yes, delete everything');
+  assert.ok(strings['alerts.confirm'].es.includes('Esto no se puede deshacer.'), 'the Spanish keeps the irreversibility');
 });
 
 test('privacy_copy_distinguishes_retained_log_and_spots', () => {
   const src = readFileSync(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
-  const para = src.match(/<p>(Trips, notification endpoints[^<]*)<\/p>/)?.[1];
-  assert.ok(para, 'privacy paragraph');
+  assert.match(src, /<p>\{t\('alerts\.privacy\.body', lang\)\}<\/p>/, 'privacy paragraph');
+  const para = JSON.parse(readFileSync(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings['alerts.privacy.body'].en;
   assert.ok(para.includes('catch-log entries and saved spots are stored privately'));
   assert.ok(para.includes('Comfort feedback is retained for one year; trips and assessments for 90 days.'));
   assert.ok(para.includes('Catch-log entries and saved spots are kept until you delete them or delete your account.'));

@@ -80,9 +80,10 @@ test('an empty region gives empty name maps and raw-id lines', () => {
 test('the dialog shows the names and plain assessment headings; the Mark read rule is unchanged', () => {
   const src = readFileSync(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
   assert.match(src, /useMemo\(\(\) => alertNames\(region\), \[region\]\)/);
-  assert.match(src, /tripLine\(t, names\)/);
-  assert.match(src, /<strong>\{eventLine\(e\)\}<\/strong>/);
+  assert.match(src, /tripLine\(trip, names, lang\)/);
+  assert.match(src, /<strong>\{eventLine\(e, lang\)\}<\/strong>/);
   assert.doesNotMatch(src, /\{e\.kind\} · \{e\.status\}/);
-  assert.match(src, /aria-label=\{`Delete the trip on \$\{t\.date\} at \$\{names\.point\.get\(t\.point\) \?\? t\.point\}`\}/);
+  assert.match(src, /aria-label=\{t\('alerts\.deleteAria', lang, \{date: trip\.date, point: names\.point\.get\(trip\.point\) \?\? trip\.point\}\)\}/);
+  assert.equal(JSON.parse(readFileSync(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings['alerts.deleteAria'].en, 'Delete the trip on {date} at {point}');
   assert.match(src, /!\['read', 'delivered'\]\.includes\(e\.status\)/);
 });
