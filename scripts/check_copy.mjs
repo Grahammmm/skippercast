@@ -302,6 +302,60 @@ export function catalogueProblems(root = ROOT) {
   return out;
 }
 
+/** Every .tsx screen under web/app (views included), web/brief and web/landing is either in COVERED (its words come from the catalogue) or here with a one-line reason it is not. A file in neither fails the lint, so a new screen cannot ship English-only unnoticed. Exact paths only: no globs, no directory exemptions. NOT_COVERED skips only the catalogue check; the ordinary copy rules still read these files. */
+export const COVERAGE_ROOTS = ['web/app', 'web/brief', 'web/landing'];
+export const NOT_COVERED = {
+  'web/app/App.tsx': 'composition and region loading; no visible text of its own',
+  'web/app/CoastMarkup.tsx': 'renders the coast package\'s chart markup, whose labels are drawn in packages/coast; deferred, not translated here',
+  'web/app/Desktop.tsx': 'desktop layout composition; its only literals are the Brief and Fleet pane aria-labels, deferred',
+  'web/app/EnglishDetail.tsx': 'wraps official English text in lang="en"; the one prefix it adds already comes from the catalogue',
+  'web/app/main.tsx': 'bootstrap that mounts the app and wires state; no visible text',
+  'web/app/MapStage.tsx': 'map stage: waypoint note, presentation chips and terrain-control labels are English, deferred to a later Spanish unit',
+  'web/app/PlanRules.tsx': 'plan-date rules card (headings, check-the-rules line, link labels) is English, deferred to a later Spanish unit',
+  'web/app/views/FleetAdmin.tsx': 'admin-only fleet activity panel; admin views are outside the Spanish scope (#1512)',
+  'web/brief/MarkForecast.tsx': 'regional forecast rows at a mark are English, deferred to a later Spanish unit',
+  'web/brief/TideSpark.tsx': 'tide curve figure: the aria-label and event labels are English, deferred to a later Spanish unit',
+  'web/brief/TideStationControl.tsx': 'tide station picker and its notices are English, deferred to a later Spanish unit',
+  'web/brief/Tiles.tsx': 'Brief tiles (labels, basis sentences, ages) are English, deferred to a later Spanish unit',
+  'web/landing/LayerDots.tsx': 'landing layer dots and their aria-label are English, deferred to a later Spanish unit',
+  'web/landing/NightMap.tsx': 'night map canvas is aria-hidden; its Basemap and Currents credit lines are English, deferred',
+  'web/landing/Shoreline.tsx': 'decorative shoreline SVG (aria-hidden); its English shoreline credit sentence is deferred',
+};
+
+const canonicalPath = p => typeof p === 'string' && p !== '' && !p.startsWith('/') && !p.includes('\\') && !/^[A-Za-z]:/.test(p) && p.split('/').every(seg => seg !== '' && seg !== '.' && seg !== '..');
+
+/** Classification problems under `root`: a .tsx screen in COVERAGE_ROOTS in neither list, a path in both, duplicate or malformed list entries, a missing or multi-line reason. Sparse trees are fine: a missing root is empty and a listed file need not exist. */
+export function coverageProblems(root = ROOT, covered = COVERED, notCovered = NOT_COVERED) {
+  const out = [];
+  const seen = new Set();
+  for (const path of covered) {
+    if (!canonicalPath(path)) out.push(`${String(path)}: COVERED path must be repository-relative with forward slashes`);
+    else if (seen.has(path)) out.push(`${path}: listed twice in COVERED`);
+    seen.add(path);
+  }
+  for (const [path, reason] of Object.entries(notCovered)) {
+    if (!canonicalPath(path)) out.push(`${path}: NOT_COVERED path must be repository-relative with forward slashes`);
+    else if (seen.has(path)) out.push(`${path}: listed in both COVERED and NOT_COVERED`);
+    if (typeof reason !== 'string' || !reason.trim() || /[\r\n]/.test(reason)) out.push(`${path}: NOT_COVERED needs a one-line reason`);
+  }
+  const found = new Set();
+  const walk = rel => {
+    let entries;
+    try { entries = readdirSync(join(root, rel), {withFileTypes: true}); }
+    catch (error) { if (error?.code !== 'ENOENT' && error?.code !== 'ENOTDIR') out.push(`${rel}: cannot read directory (${error?.code ?? error})`); return; }
+    for (const e of entries) {
+      const path = `${rel}/${e.name}`;
+      if (e.isDirectory()) walk(path);
+      else if (e.isFile() && e.name.endsWith('.tsx')) found.add(path);
+    }
+  };
+  for (const r of COVERAGE_ROOTS) walk(r);
+  const covers = new Set(covered), excluded = new Set(Object.keys(notCovered));
+  for (const path of [...found].sort())
+    if (!covers.has(path) && !excluded.has(path)) out.push(`${path}: copy-lint coverage missing; add to COVERED or NOT_COVERED with a reason`);
+  return out;
+}
+
 /** The files the lint reads: pages and modules shipped to the browser. */
 export function copyFiles(root = ROOT) {
   const list = [];
@@ -420,6 +474,8 @@ function main(argv) {
   }
   const catalogue = catalogueProblems();
   if (catalogue.length) { failed = true; console.error(`Catalogue check: ${catalogue.length} problem(s)\n  ${catalogue.join('\n  ')}`); }
+  const coverage = coverageProblems();
+  if (coverage.length) { failed = true; console.error(`Copy coverage: ${coverage.length} problem(s)\n  ${coverage.join('\n  ')}`); }
   if (baseRef) {
     let previous = null;
     try { previous = execFileSync('git', ['show', `${baseRef}:${BASELINE}`], {cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']}); }
