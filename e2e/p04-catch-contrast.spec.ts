@@ -247,12 +247,14 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   "web/fonts/jetbrains-mono-latin.woff2": "83c005d49d8a6a50474c73a5a36ac0468076e9c4a29da7bdb14995d80560a5be",
   // SC1737-06: Reports adds reopen-only age/failure reloads and loadedAt metadata;
   // CatchCards, ReportsBody, catch markup, styles and paint thresholds are unchanged.
+  // SC0922-13: Reports.tsx and catches.ts read the page language (English text, markup, classes and paint are unchanged; catchSheet takes an
+  // optional host copy that English never passes). Only these two hashes are rebound.
   // The legacy failed preload now triggers a reload. Serve only its three exact
   // section URLs as 503 below, retaining unavailable sections and the strict
   // unexpected-request guard; catch markup, paint and controls stay unchanged.
-  "web/app/views/Reports.tsx": "bcf6437dad7fa9d4e5117f0d82d0e8300e843738b3f5596b6bea8c43356875a6",
+  "web/app/views/Reports.tsx": "0b05828f095c4645fcf01dbbe2a349c285d2cbf6078d2ca093c2fdcae0dc5b97",
   "web/app/CoastMarkup.tsx": "3d318379ff1194b26f68adadb523db08c21829ff71cf5e7cfe2ac903821f0efc",
-  "packages/coast/src/ui/catches.ts": "bb8b97124e3b116a81e4b2f2c651c661dba2e064f9bbdfe903781ec1a6d6ea1e",
+  "packages/coast/src/ui/catches.ts": "a25442909c360171a11e5087f629de8cec94a358fc7bff877adce9dffbc0999f",
   "packages/coast/src/counties.ts": "975f2de9b300bf290841cabb061478080b2b61cf44154c83484a2ea9c1851ba2",
   "web/coast-data.ts": "ca649d7b3583777985bcb062614fd4ab7d6dbe97c3bc709a99b524dbd27e7d25",
   // SC2007-02 (Protected areas Try again): check_contrast.mjs changes only the legendTsx surface hash and its

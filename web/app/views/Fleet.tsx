@@ -37,7 +37,7 @@ function Basis({id, lang}: {id: string; lang: Language}) {
 }
 
 /** The public part: grounds, the AIS option and the directory link. */
-function Public({directory}: {directory: readonly Port[]}) {
+export function Public({directory}: {directory: readonly Port[]}) {
   const lang = language.value, on = layers.value.includes('fleet'), grounds = groundsState.value, ais = aisState.value;
   // The layer's own note is English text it wrote at run time: whole, labelled English in Spanish.
   const status = !on ? t('fleet.public.off', lang) : grounds.drawn ? t(grounds.drawn === 1 ? 'fleet.public.drawn.one' : 'fleet.public.drawn.other', lang, {n: grounds.drawn}) : <EnglishDetail lang={lang}>{grounds.note}</EnglishDetail>;
