@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC1352-05: the map's buoy and tide-station cards, the Stations layer note and the nearshore model rings' card, basis and summary read Spanish. Heights use a decimal comma, times show a date and clock in the region's zone, and the fresh, stale and last-good states, the region-default and chosen tide-station labels, and the 90-minute, 48-hour and 3-hour model caveats are all kept; station and site names, ids, datum names and provider notes stay as published, and the English text and stale decisions are unchanged.
+
 - SC1352-04: the Protected areas row and a clicked area's card read Spanish. The loading, map-unavailable, partial, incomplete, failed-load, failed-completeness-check and wrong-region lines keep every "an area without an outline may still be protected" and failed-check statement, and a designation shows a Spanish label with the official English designation beside it; area names, legal citations and the CDFW rules link are unchanged, and the English text, status and Try again decisions are unchanged.
 
 - AISLIVE-01: the fleet-ais run summary gains a counts-only "AIS coverage by port" block (`python -m skippercast.fleet.ais port-coverage`): per region port the distinct MMSIs and MMSI-days heard in the last 30 days, and the ports never heard; it reads the processor state read-only and prints no MMSI or position.
