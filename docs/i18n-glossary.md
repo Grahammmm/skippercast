@@ -163,6 +163,26 @@ Catalogue IDs: `markForecast.*`.
 | from / gusts / toward {n}° true | `desde` / `ráfagas de` / `hacia {n}° verdadero` | `markForecast.from`, `.gusts`, `.towardTrue` | direction wind comes from vs. current goes toward |
 | within 1.5 grid lengths | `a menos de {km} km (1.5 longitudes de malla)` | `markForecast.gap.noCell` | both failure clauses stay |
 
+### Where to look ranking words (SC1137-05)
+
+The list's source labels, basis, empty lines, fit and generated reasons are said from the catalogue by
+`web/brief/ranking-copy.ts` from parts `web/ranking.ts` and `web/area-reasons.ts` attach (display only; English and every
+export read the plain fields). Published names, `terrain_interpretation` and source titles stay as published.
+Catalogue IDs: `ranking.*`; the fit line reuses `mark.layer.habitat.fit`, `.fitUnrated` and the screen notes `mark.layer.habitat.screen.*`.
+
+| English | Spanish | Catalogue ID | Meaning kept |
+| --- | --- | --- | --- |
+| distances are straight-line from | `las distancias son en línea recta desde` | `ranking.basis.publication`, `.terrain`, `.atlas` | a straight line, not a route |
+| not applied / not a swim route | `no es una ruta para nadar` / `No se aplica tu límite de nado` | `ranking.basis.swum`, `ranking.basis.swimOff` | the distance is approximate; the limit may be off |
+| the shoreline is not a navigation boundary | `la línea costera no es un límite de navegación` | `ranking.basis.water` | land/water check; 25 m and tiles stay |
+| fish presence is unverified | `la presencia de peces no está verificada` | `ranking.basis.fish` | a place to look, not a catch probability |
+| spots withheld: land/water not confirmed | `lugares omitidos: no se ha confirmado si son tierra o agua` | `ranking.withheld.one`, `.many` | withheld is never "clear" |
+| Protected-area check not current | `La revisión de áreas protegidas no está actualizada · se omiten los lugares de pesca` | `ranking.empty.screenNotCurrent` | every place withheld |
+| Passed the protected-area check with {m} m clearance | `Pasó la revisión de áreas protegidas con {m} m de separación` | `ranking.reason.clearance` | dated evidence, not a current safety authorization |
+| within {ft} ft ... yd of shore | `dentro de {ft} ft ... y {yd} yd de la costa` | `ranking.within`, `.within.reach`, `.within.shore` | the thresholds in the empty line |
+
+The Where to look sentences say "omitido" for a withheld place (the spec's wording); the map's screen notes say "retenido". Both mean withheld.
+
 ## 2. Observed divergences
 
 Every catalogue Spanish value that renders a listed term differently from
