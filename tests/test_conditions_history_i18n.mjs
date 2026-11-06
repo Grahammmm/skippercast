@@ -93,7 +93,7 @@ const snapshot = () => ({
 });
 // Hashes of main's English output (c8f1bec0) for exactly the calls above.
 const GOLDEN = {
-  history: '07318d6edeb5dc6f94b87b80262b06f7ad38e3bbf7bf277351b932bd527661a1', chart: 'c38de61e46f417c96c30ecb21e0f1334fa0d2a3b3a30157184daaaafcd94eb77', conditions: 'b91c3b15a92e0ec9d8fbbab1866f82cf4b359c8d26ca6c0176edbc1ac95278f6', hourly: '2b06a9ded393bae0a73476cfb36d54f65ea87fa6980443e4e2055f4997ef8912',
+  history: '58a889e1e1f29b3d5eb99edc80853c4168885f98f7688549919e408c11db18ba', chart: '753164a97209761c2cdcc5afb6952cbefeeaa1042f39e0c08109043dbc0064b1', conditions: 'b91c3b15a92e0ec9d8fbbab1866f82cf4b359c8d26ca6c0176edbc1ac95278f6', hourly: '2b06a9ded393bae0a73476cfb36d54f65ea87fa6980443e4e2055f4997ef8912',
 };
 if (process.env.PRINT_GOLDEN) { console.log(JSON.stringify(snapshot())); process.exit(0); }
 

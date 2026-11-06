@@ -109,3 +109,19 @@ test('CoastMarkup re-renders on new arguments and reports the dragged hour', asy
   expect(hours[0]).toBe('2026-10-05T06:00Z');
   expect(hours.at(-1)).toBe('2026-10-05T09:00Z');
 });
+
+// Removing an unused var() fallback must not change even one rendered pixel.
+for (const theme of ['dark', 'light']) test(`fallback removal leaves the ${theme} chart pixel-identical`, async ({page, pageErrors: _}) => {
+  await page.evaluate(theme => { document.documentElement.dataset.theme = theme; }, theme);
+  await mount(page, '2026-10-05T12:00:00Z');
+  const chart = page.locator('svg.series-chart');
+  const before = await chart.screenshot({animations: 'disabled'});
+  await page.evaluate(() => {
+    const root = document.querySelector('[data-coast-theme="tokens"]')!.shadowRoot!;
+    for (const element of root.querySelectorAll('[style]')) {
+      element.setAttribute('style', element.getAttribute('style')!.replace(/var\((--coast-[\w-]+)\)/g, 'var($1,#123456)'));
+    }
+  });
+  const withFallbacks = await chart.screenshot({animations: 'disabled'});
+  expect(before.equals(withFallbacks)).toBe(true);
+});
