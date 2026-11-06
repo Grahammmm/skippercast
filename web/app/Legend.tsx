@@ -155,11 +155,11 @@ export function MpaRow() {
       <span class="app-legend-mpa-head">
         {drawn ? <span class="app-swatch" data-layer="mpas" aria-hidden="true"></span> : null}{c.label}
         <Popover iconOnly summary={t('legend.bs.mpa', lang)}>
-          {c.basis} {s.detail ? <><EnglishDetail lang={lang}>{s.detail}</EnglishDetail> </> : null}{t('legend.mpa.selection', lang)}<a href={DS582_METADATA} target="_blank" rel="noopener">{t('legend.mpa.dataset', lang)}</a>, <a href={CC_BY_4} target="_blank" rel="noopener">{t('legend.mpa.licence', lang)}</a>.
+          {c.basis} {s.detail ? <><Status lang={lang} raw={s.detail} parts={s.copy?.reason} /> </> : null}{t('legend.mpa.selection', lang)}<a href={DS582_METADATA} target="_blank" rel="noopener">{t('legend.mpa.dataset', lang)}</a>, <a href={CC_BY_4} target="_blank" rel="noopener">{t('legend.mpa.licence', lang)}</a>.
           {marks && !withheld ? <p data-reason="marks"><EnglishDetail lang={lang}>{marks}</EnglishDetail></p> : null}
         </Popover>
       </span>
-      {s.note ? <p class="app-mpa-note"><EnglishDetail lang={lang}>{s.note}</EnglishDetail></p> : null}
+      {s.note ? <p class="app-mpa-note"><Status lang={lang} raw={s.note} parts={s.copy?.note} /></p> : null}
       {coarseNote('mpas', lang)}
       {s.status === 'unavailable' && retryable.includes(s.detail) ? <Button variant="quiet" onClick={() => { retryMpas.value++; }}>{t('legend.tryAgain', lang)}</Button> : null}
       {withheld ? <p class="app-mpa-marks" data-reason="marks"><EnglishDetail lang={lang}>{marks}</EnglishDetail></p> : null}
