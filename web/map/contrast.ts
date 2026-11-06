@@ -36,6 +36,7 @@ import {regionalContrast, type ContrastSample, type RegionalContrast} from './ha
 import {CONTRAST_SOURCE, layerEntry, setRailNote} from './layers.ts';
 import {MPA_FILL} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
+import {pair, sp, type StatusCopy} from './status-copy.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
 import {SWELL_LAYER} from './swell.ts';
 import {M_PER_NMI} from '../units.ts';
@@ -77,11 +78,13 @@ export interface ContrastStatus {
   readonly note: string;
   readonly reason: string;
   readonly basis: string;
+  /** SC1352-02: catalogue parts for `note`, `reason` and the legend `stamp`; absent when off. */
+  readonly copy?: StatusCopy;
 }
 
 export const CONTRAST_BASIS = layerEntry(REGISTRY_ID).basis;
 const OFF: ContrastStatus = {drawn: null, note: '', reason: '', basis: CONTRAST_BASIS};
-const none = (note: string, reason: string): ContrastStatus => ({...OFF, note, reason});
+const none = (note: string, reason: string, copy?: StatusCopy): ContrastStatus => ({...OFF, note, reason, ...(copy ? {copy} : {})});
 
 const dates = new Map<string, Intl.DateTimeFormat>();
 /** "Oct 7" in the region's zone. */
@@ -126,33 +129,37 @@ export function contrastBasis(d: DrawnContrast, now: Date, tz: string): string {
 }
 
 const stale = (product: string, analysedAt: string, limit: number, tz: string): ContrastStatus => {
-  const date = dayText(analysedAt, tz);
-  return none(`no fresh analysis · last ${date}`, `Temp contrast withheld: the latest ${product} analysis, for ${date}, is past its ${Math.round(limit / HOUR)}-hour age limit.`);
+  const date = dayText(analysedAt, tz), when = {day: analysedAt, tz};
+  return none(`no fresh analysis · last ${date}`, `Temp contrast withheld: the latest ${product} analysis, for ${date}, is past its ${Math.round(limit / HOUR)}-hour age limit.`,
+    pair(sp('map.status.common.staleNote', {date: when}), sp('map.status.contrast.stale', {product, date: when, hours: Math.round(limit / HOUR)})));
 };
 
 /** What Temp contrast shows from the region's feed (`null` while it loads) at the dock's hour `at`. */
 export function contrastStatus(on: boolean, feed: RegionalContrast | null, at: Date, now: Date, tz: string): ContrastStatus {
   if (!on) return OFF;
-  if (!feed) return none('loading', 'Loading the region\'s surface-temperature analysis.');
-  if (feed.state === 'none') return none('no analysis for this region', 'Temp contrast unavailable: no published surface-temperature analysis covers this region yet.');
-  if (feed.state === 'error') return none('unavailable', 'Temp contrast unavailable: the region\'s surface-temperature analysis failed to load or failed its checks.');
+  if (!feed) return none('loading', 'Loading the region\'s surface-temperature analysis.', pair(sp('map.status.common.loading'), sp('map.status.common.loadingRegion')));
+  if (feed.state === 'none') return none('no analysis for this region', 'Temp contrast unavailable: no published surface-temperature analysis covers this region yet.', pair(sp('map.status.common.noRegion'), sp('map.status.contrast.noRegion')));
+  if (feed.state === 'error') return none('unavailable', 'Temp contrast unavailable: the region\'s surface-temperature analysis failed to load or failed its checks.', pair(sp('map.status.common.unavailable'), sp('map.status.contrast.feedFailed')));
   if (feed.state === 'listed') {
     const limit = ageLimit(feed.maxAgeMs);
     if (feed.analysedAt && (feed.layerStatus === 'stale' || !fresh(feed.analysedAt, now, limit))) return stale(feed.product, feed.analysedAt, limit, tz);
-    return feed.gradients ? none('no analysis in the feed', 'Temp contrast unavailable: the region\'s feed carries no surface-temperature analysis that loaded.')
-      : none('no gradient in the feed', 'Temp contrast unavailable: the region\'s surface-temperature analysis publishes no temperature gradient.');
+    return feed.gradients ? none('no analysis in the feed', 'Temp contrast unavailable: the region\'s feed carries no surface-temperature analysis that loaded.', pair(sp('map.status.common.noFeedAnalysis'), sp('map.status.contrast.noFeedAnalysis')))
+      : none('no gradient in the feed', 'Temp contrast unavailable: the region\'s surface-temperature analysis publishes no temperature gradient.', pair(sp('map.status.contrast.noGradientNote'), sp('map.status.contrast.noGradient')));
   }
-  const limit = ageLimit(feed.maxAgeMs), date = dayText(feed.analysedAt, tz);
+  const limit = ageLimit(feed.maxAgeMs), date = dayText(feed.analysedAt, tz), when = {day: feed.analysedAt, tz}, {product} = feed;
   if (!fresh(feed.analysedAt, now, limit) || !fresh(feed.fetchedAt, now, limit)) return stale(feed.product, feed.analysedAt, limit, tz);
   if (Date.parse(feed.analysedAt) > at.getTime())
-    return none(`analysis after this hour · ${date}`, `Temp contrast unavailable: the ${feed.product} analysis, for ${date}, is later than the selected hour.`);
+    return none(`analysis after this hour · ${date}`, `Temp contrast unavailable: the ${feed.product} analysis, for ${date}, is later than the selected hour.`,
+      pair(sp('map.status.common.afterHourNote', {date: when}), sp('map.status.contrast.afterHour', {product, date: when})));
   const cells = contrastCells(feed.samples, feed.spacingDeg);
   if (!cells.length) return none(`no contrast above the error · ${date}`,
-    `Nothing drawn: in the ${feed.product} analysis for ${date}, no cell's change across neighbouring cells exceeds their summed analysis error.`);
+    `Nothing drawn: in the ${feed.product} analysis for ${date}, no cell's change across neighbouring cells exceeds their summed analysis error.`,
+    pair(sp('map.status.contrast.noContrastNote', {date: when}), sp('map.status.contrast.noContrast', {product, date: when})));
   const stamp = `analysis ${date} · ${age(now.getTime() - Date.parse(feed.analysedAt))} old`;
   const drawn: DrawnContrast = {key: `${feed.sourceId}|${feed.analysedAt}|${feed.fetchedAt}`, product: feed.product, analysedAt: feed.analysedAt, fetchedAt: feed.fetchedAt,
     nativeResolutionDeg: feed.nativeResolutionDeg, spacingDeg: feed.spacingDeg, credit: feed.credit, cells, judged: feed.samples.filter(s => s.gradientCPerKm !== null).length, stamp, limitMs: limit};
-  return {drawn, note: stamp, reason: '', basis: contrastBasis(drawn, now, tz)};
+  const shown = sp('map.status.common.stamp', {date: when, age: {age: now.getTime() - Date.parse(feed.analysedAt)}});
+  return {drawn, note: stamp, reason: '', basis: contrastBasis(drawn, now, tz), copy: {note: [shown], stamp: [`${feed.product} · `, shown]}};
 }
 
 export type ContrastFeature = {type: 'Feature'; properties: {f: number}; geometry: {type: 'Polygon'; coordinates: number[][][]}};
@@ -232,7 +239,7 @@ export function createContrast(o: ContrastOptions): {reading(at: {lon: number; l
     effect(() => {
       const s = status.value;
       contrastState.value = s;
-      setRailNote(REGISTRY_ID, on.value ? s.note : '');
+      setRailNote(REGISTRY_ID, on.value ? s.note : '', on.value ? s.copy?.note : undefined);
     }),
     // A new analysis redraws; none (off, stale, nothing supported) removes the cells at once.
     effect(() => {

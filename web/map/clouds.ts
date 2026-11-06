@@ -25,6 +25,7 @@ import {dockTime, localParts} from '../hour.ts';
 import {appView, day, hour, layers} from '../state.ts';
 import {unavailable} from './chart.ts';
 import {setRailNote} from './layers.ts';
+import {sp, type StatusPart} from './status-copy.ts';
 import type {Engine, Overlay} from './engine.ts';
 import {cloudFrames, cloudImage, cloudTiles, pinnedTileUrl, type CloudImage} from './frames.ts';
 import {MARK_PICK} from './marks.ts';
@@ -61,6 +62,24 @@ export function frameLabel(at: string, now: Date, tz: string): string {
   if (age < 0) return `observed ${clockText(at, tz)} · age unavailable (future timestamp)`;
   const minutes = Math.round(age / MINUTE);
   return `observed ${clockText(at, tz)} · ${minutes < 1 ? 'under 1 min' : `${minutes} min`} ago`;
+}
+
+/** SC1352-02: `frameLabel` as catalogue parts (same instant, zone and rounding), for the page's language at render. */
+export function frameLabelCopy(at: string, now: Date, tz: string): StatusPart[] {
+  const age = now.getTime() - Date.parse(at), time = {clock: at, tz};
+  if (age < 0) return [sp('map.status.clouds.future', {time})];
+  const minutes = Math.round(age / MINUTE);
+  return [sp('map.status.clouds.observed', {time, ago: minutes < 1 ? {id: 'map.status.clouds.underMinute'} : {id: 'map.status.clouds.minutes', vars: {n: minutes}}})];
+}
+
+/** SC1352-02: `cloudStatus` as catalogue parts, deciding on the same branches. */
+export function cloudStatusCopy(cloud: CloudImage | null, frames: readonly string[], selected: Date, now: Date, tz: string): StatusPart[] {
+  if (!cloud) return [sp('map.status.clouds.noFrames')];
+  if (localParts(selected, tz).day !== localParts(now, tz).day) return [sp('map.status.clouds.otherDay')];
+  const newest = frames.at(-1);
+  if (newest) return frameLabelCopy(newest, now, tz);
+  const last = localParts(new Date(cloud.observedAt), tz).day, time = {clock: cloud.observedAt, tz};
+  return [last === localParts(now, tz).day ? sp('map.status.clouds.noFresh', {time}) : sp('map.status.clouds.noFreshDay', {day: last, time})];
 }
 
 /** The rail's note: the newest frame drawn, or why none draws. */
@@ -108,7 +127,7 @@ export function cloudOverlay(cloud: CloudImage, frames: readonly string[], now: 
 }
 
 /** The legend's label for the frame on screen, while the Chart shows it. */
-export interface CloudStamp {readonly at: string; readonly label: string; readonly canLoop: boolean}
+export interface CloudStamp {readonly at: string; readonly label: string; readonly canLoop: boolean; readonly copy?: readonly StatusPart[]}
 export const cloudStamp = signal<CloudStamp | null>(null);
 /** The viewer's hold on the loop (the legend's toggle). */
 export const cloudHeld = signal(false);
@@ -199,8 +218,9 @@ export function createClouds(options: CloudsOptions): {destroy(): void} {
     }),
     effect(() => {
       const tz = zone(), at = shown.value, chart = shownPresentation.value === 'chart' && mapped.value;
-      cloudStamp.value = at && chart ? {at, label: frameLabel(at, clock.value, tz), canLoop: canLoop.value} : null;
-      setRailNote(REGISTRY_ID, on.value && (read.value || cloud.value) ? cloudStatus(cloud.value, frames.value, selected.value, clock.value, tz) : '');
+      cloudStamp.value = at && chart ? {at, label: frameLabel(at, clock.value, tz), canLoop: canLoop.value, copy: frameLabelCopy(at, clock.value, tz)} : null;
+      setRailNote(REGISTRY_ID, on.value && (read.value || cloud.value) ? cloudStatus(cloud.value, frames.value, selected.value, clock.value, tz) : '',
+        on.value && (read.value || cloud.value) ? cloudStatusCopy(cloud.value, frames.value, selected.value, clock.value, tz) : undefined);
     }),
     // Off: the next loop starts on the newest frame, and a layer a tile error marked unavailable is retried.
     effect(() => {
