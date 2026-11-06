@@ -433,7 +433,7 @@ test('confirmed_mark_save_invalidates_private_layer: one detail-free event after
   // The account panel's own writes use the same event name, and only the spot writes (not the catch log).
   const account = readFileSync(new URL('../dist/account.js', import.meta.url), 'utf8');
   assert.ok(account.includes(`'${k.SAVED_SPOTS_CHANGED}'`));
-  assert.equal(account.split('spotsChanged()').length - 1, 2, 'after the spot POST and the spot DELETE');
+  assert.equal(account.split('spotsChanged()').length - 1, 3, 'after the spot POST, the spot DELETE and a confirmed spot PATCH (SC1137-09)');
   assert.match(account, /api\('spots', \{method: 'POST'[^\n]*\n\s*\$\('#spot-form'\)\.reset\(\); spotsChanged\(\)/);
   assert.match(account, /api\('spots\/' \+ encodeURIComponent\(b\.dataset\.removeSpot\), \{method: 'DELETE', body: \{\}\}\); spotsChanged\(\)/);
 });
