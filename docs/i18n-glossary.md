@@ -139,6 +139,9 @@ Station, buoy, site and datum names are never translated. Catalogue IDs:
 | `ebb` / `flood` / `mid-ebb` | `vaciante` / `creciente` / `mitad de la vaciante` | `tile.detail.ebb`, `.flood`, `.midEbb` | tide stage |
 | `Rising` / `Falling` / `Turning` | `Subiendo` / `Bajando` / `Cambiando` | `tile.detail.rising`, `.falling`, `.turning` | trend |
 | `next high` / `next low` | `próxima pleamar` / `próxima bajamar` | `tile.detail.nextHigh`, `.nextLow` | |
+| rule-of-thumb model, not a sea-keeping calculation | `modelo empírico` ... `no un cálculo de navegabilidad` | `brief.boat.note` | `empírico` is this heuristic, not a validated sea-keeping calculation; `navegabilidad` does not certify seaworthiness |
+| Saved regions are unchanged | `Las regiones guardadas no han cambiado` | `tidePack.unavailable`, `tidePack.notLive` | only the two refusals before anything is stored; not a claim about a storage failure |
+| Life stage / What to search for / How to fish it / Timing / When conditions change / Caution / Confirm on the day | `Etapa de vida` / `Qué buscar` / `Cómo pescarlo` / `Cuándo pescar` / `Cuando cambian las condiciones` / `Precaución` / `Confirmar ese día` | `where.searchPlan.*` | labels only; the reviewed plan text is not translated |
 | surf, seas small / moderate / large / heavy | `pequeño` / `moderado` / `grande` / `muy intenso` | `tile.detail.band.small`, `.moderate`, `.large`, `.heavy` | in `oleaje en la costa {band}` and `oleaje {band}` |
 | surge low / moderate / strong / heavy | `leve` / `moderado` / `fuerte` / `muy intenso` | `tile.detail.band.low`, `.moderate`, `.strong`, `.heavy` | in `vaivén del agua {band}` |
 | kayak wind light / moderate / fresh / strong | `leve` / `moderado` / `fresco` / `fuerte` | `tile.detail.band.light`, `.moderate`, `.fresh`, `.strong` | |

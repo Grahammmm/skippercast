@@ -15,6 +15,7 @@ import {
   type PackMeta, type Progress,
 } from '../trip.ts';
 import {oceanLines} from '../trip-ocean-lines.ts';
+import {tidePackMessage} from '../brief/remaining-copy.ts';
 import {forecastEndLine} from '../trip-forecast-end.ts';
 import {language, localeOf, t, type Language, type StringId} from '../i18n.ts';
 import {regionInfo, zone} from './App.tsx';
@@ -24,7 +25,7 @@ const PRODUCTS: Readonly<Record<string, StringId>> = {'/api/coast/report': 'trip
 
 /** A status line kept as its catalogue id and variables (and an English tail the store supplies), never as translated text. */
 type Status = {id: StringId; vars?: Readonly<Record<string, string | number>>; missing?: number; tail?: string} | null;
-const statusText = (s: Status, lang: Language): string => !s ? '' : t(s.id, lang, {...s.vars, ...(s.missing === undefined ? {} : {missing: s.missing ? t('trip.status.missing', lang, {n: s.missing}) : ''})}) + (s.tail ?? '');
+const statusText = (s: Status, lang: Language): string => !s ? '' : t(s.id, lang, {...s.vars, ...(s.id === 'trip.status.failed' && typeof s.vars?.detail === 'string' ? {detail: tidePackMessage(s.vars.detail, lang)} : {}), ...(s.missing === undefined ? {} : {missing: s.missing ? t('trip.status.missing', lang, {n: s.missing}) : ''})}) + (s.tail ?? '');
 
 /** "Oct 9, 3:42 PM PDT" in the region's zone ("9 oct, 3:42 p. m. PDT" in Spanish). */
 export const stamp = (iso: string, timeZone = zone(), lang: Language = 'en'): string =>
