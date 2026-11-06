@@ -119,3 +119,13 @@ test('tiles_classification_and_catalogue_positive_controls', async () => {
   const src = await readFile(join(ROOT, 'web/brief/Tiles.tsx'), 'utf8');
   for (const m of src.matchAll(/t\(['`]([\w.$]+)['`]/g)) if (!m[1].includes('$')) assert.ok(m[1] in STRINGS, `${m[1]} exists`);
 });
+
+test('SC1137-02 tile detail: the tile props carry the detail in the page language; compact hides it; English stays the model line', async () => {
+  const {tileProps} = await load();
+  const tide = tile('tide', {unit: 'ft', detail: 'Rising · Monterey · MLLW', source: 'NOAA 9413450 Monterey',
+    display: {parts: [{kind: 'tideTrend', trend: 'Rising'}, {kind: 'literal', text: 'Monterey'}, {kind: 'literal', text: 'MLLW'}], datum: 'MLLW'}});
+  assert.equal(tileProps(tide, false, false, 'en').detail, 'Rising · Monterey · MLLW');
+  assert.equal(tileProps(tide, false, false, 'es').detail, 'Subiendo · Monterey · MLLW');
+  assert.equal(tileProps(tide, true, false, 'es').detail, undefined);
+  assert.equal(tileProps(tile('water', {detail: 'detail'}), false, false, 'es').detail, 'detail', 'a tile without display keeps its text');
+});
