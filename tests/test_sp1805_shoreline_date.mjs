@@ -42,7 +42,9 @@ test('A4 preserves the full mark and does not mutate input across accuracy/sourc
   for (const {extra, id, reading} of variants) {
     const props = {...healthy, ...extra};
     const before = structuredClone(props);
-    assert.deepEqual(coastlineMark(props), {
+    const {copy, ...mark} = coastlineMark(props);
+    assert.ok(copy, 'the display wording rides beside the unchanged English fields (SC1352-08)');
+    assert.deepEqual(mark, {
       id,
       name: 'Shoreline',
       kind: 'Mean High Water · Natural',

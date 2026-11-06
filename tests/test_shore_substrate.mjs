@@ -76,10 +76,10 @@ test('the Chart card of a rocky run shows the rocky lead; a sand run card is unc
     for (const [i, r] of sand.entries()) {
       const card = runMark(r, target, NOW), rockCard = runMark(rocky[i], target, NOW);
       assert.ok(card.basis.includes(SANDY[target] + CHECKS), `${r.name}/${target}: sand lead`);
-      assert.deepEqual(runMark(bare[i], target, NOW), card, 'a run without substrate reads as sand');
+      assert.deepEqual({...runMark(bare[i], target, NOW), copy: undefined}, {...card, copy: undefined}, 'a run without substrate reads as sand');
       assert.ok(rockCard.basis.includes(ROCKY[target] + CHECKS), `${r.name}/${target}: rocky lead`);
       assert.doesNotMatch(rockCard.basis, /sandy shore/);
-      assert.deepEqual({...rockCard, basis: ''}, {...card, basis: ''}, 'only the guidance differs');
+      assert.deepEqual({...rockCard, basis: '', copy: undefined}, {...card, basis: '', copy: undefined}, 'only the guidance differs');
     }
   }
   const odd = {...sand[0], run: {...sand[0].run, properties: {...sand[0].run.properties, substrate: 'gravel'}}};

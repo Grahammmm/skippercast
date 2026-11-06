@@ -151,7 +151,8 @@ test('the style: a 44 px target, a numbered disc and a "+n", all from the palett
 });
 
 test('a spot\'s card has v1\'s lines in the planner\'s order and reviews the spot in the plan', () => {
-  const card = rankedCard(reefs[0].target, {id: 'morro-bay'});
+  const {copy, ...card} = rankedCard(reefs[0].target, {id: 'morro-bay'});
+  assert.ok(copy, 'the display wording rides beside the unchanged English fields (SC1352-08)');
   assert.deepEqual(card, {
     id: 'ranked:test-reef-00', name: '#1 · 01 LR H3 C90% 90-120ft', kind: 'Ranked trip spot · numbered in the planner\'s order',
     reading: 'Habitat 3/3 · 90% evidence confidence', source: 'Seafloor publication · surveyed 2008',

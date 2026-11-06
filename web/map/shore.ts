@@ -22,8 +22,10 @@ import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import type {Report} from '../../packages/coast/src/types.ts';
 import {closureHits} from '../../dist/geo-screen.js';
-import {activeAlerts, alertCheckCurrent, beachNotices, nextShoreChange, shoreGuidance, shoreNeverReviewed, shoreReviewLines, shoreShown, shoreStatus, rankRuns, type ShoreRunClocks, type ShoreStatus} from '../brief/shore.ts';
+import {activeAlerts, alertCheckCurrent, beachNotices, nextShoreChange, shoreGuidance, shoreNeverReviewed, shoreGuidanceCopy, shoreLabelCopy, shoreReviewCopy, shoreReviewLines, shoreShown, shoreStatus, shoreStatusCopy, rankRuns, type ShoreRunClocks, type ShoreStatus, type ShoreStatusCopy} from '../brief/shore.ts';
+import {cp, joinParts} from '../mark-copy.ts';
 import {zone} from '../app/region-info.ts';
+import type {StringId} from '../i18n.ts';
 import {coastData} from '../coast-data.ts';
 import {PROFILE_TABLE} from '../profile.ts';
 import {DEFAULT_ZONE} from '../zone.ts';
@@ -39,6 +41,7 @@ import {readPalette, type Palette} from './palette.ts';
 import {SEAFLOOR_CELLS} from './seafloor.ts';
 
 const REGISTRY_ID = 'shore-runs';
+const SID = (key: string): StringId => `mark.layer.shore.${key}` as StringId;
 export const RUNS_SOURCE = 'shore-runs';
 export const ACCESS_SOURCE = 'shore-access';
 export const RUNS_LINE = 'shore-runs-line';
@@ -62,7 +65,8 @@ export interface RunProps extends ShoreRunClocks {
 }
 export interface Run {readonly type: 'Feature'; readonly id: string; readonly geometry: {readonly type: 'MultiLineString'; readonly coordinates: Position[][]}; readonly properties: RunProps}
 export interface ShorePackage {readonly type: 'FeatureCollection'; readonly regionId: string; readonly features: readonly Run[]}
-export interface ShownRun {readonly run: Run; readonly name: string; readonly status: ShoreStatus}
+/** `copy` is display-only (SC1352-08): the reasons as catalogue parts, from the inputs the status was decided with. It never changes the status. */
+export interface ShownRun {readonly run: Run; readonly name: string; readonly status: ShoreStatus; readonly copy?: ShoreStatusCopy}
 
 export const validPackage = (d: unknown, id: string): boolean => {
   const p = d as ShorePackage | null;
@@ -80,11 +84,13 @@ export function shownRuns(pkg: ShorePackage | null, screen: MarkScreen, report: 
   const runs = (pkg?.features ?? []).filter(f => f?.geometry?.type === 'MultiLineString' && f.properties?.region === pkg!.regionId && shoreShown(f.properties, now));
   return rankRuns(runs.map(run => {
     const area = run.properties.areaId;
-    return {run, name: run.properties.name, status: shoreStatus(run.properties, {
+    const inputs = {
       now, inside: insideAreas(run, screen), conditions: !!report && freshNearshore(report, area, new Date(now)).length > 0,
       alertCheck: !!report && alertCheckCurrent(report, now),
       alerts: report ? activeAlerts(report.alerts ?? [], area, now).map(a => a.event) : [],
-      notices: report ? beachNotices(report, area, now).map(n => n.name) : []})};
+      notices: report ? beachNotices(report, area, now).map(n => n.name) : []};
+    const status = shoreStatus(run.properties, inputs), copy = shoreStatusCopy(inputs, status);
+    return {run, name: run.properties.name, status, ...(copy ? {copy} : {})};
   }));
 }
 
@@ -119,13 +125,24 @@ export function shoreOverlay(p: Palette, data: ReturnType<typeof shoreCollection
 /** The card for a run: its status and reasons, review dates, access points, method guidance and the rules link. */
 export function runMark(r: ShownRun, target: string, now = Date.now(), tz: string = DEFAULT_ZONE): ChartMark {
   const p = r.run.properties, guide = shoreGuidance(target, p.substrate);
-  const access = r.status.label === 'Blocked' ? '' : ` Public access: ${p.access.map(a => a.name).join('; ')}.`;
+  const blocked = r.status.label === 'Blocked', names = p.access.map(a => a.name).join('; ');
+  const access = blocked ? '' : ` Public access: ${names}.`;
+  const label = shoreLabelCopy(r.status.label), gc = shoreGuidanceCopy(target, p.substrate);
+  // Display wording only: the reasons come from the status's own inputs, or stay as written when there are none.
+  const reasons = r.copy ? r.copy.reasons : r.status.reasons;
   return {
     id: `shore:${p.id}`, name: p.name, kind: `Shore run · ${r.status.label}`,
     reading: `${r.status.reasons.join('; ')}.${access} ${shoreReviewLines(p, now, tz)}.`,
     source: `NOAA ESI ${p.sourceYear} · ${p.shoreClass} · access points from the California Coastal Commission inventory`,
     basis: `${layerEntry(REGISTRY_ID).basis} ${guide.text} Historical shoreline classification; access points are inventory references, not opening status or directions.`,
     regulations: {href: guide.href, label: guide.label},
+    copy: {
+      ...(label ? {kind: [cp(SID('kind'), {status: label})]} : {}),
+      reading: [...joinParts(reasons.map(x => [x]), '; '), '.', ...(blocked ? [] : [' ', cp(SID('access'), {names})]), ' ', ...shoreReviewCopy(p, now, tz), '.'],
+      source: [cp(SID('source'), {year: p.sourceYear, shoreClass: p.shoreClass})],
+      basis: [cp('layer.shore-runs.basis'), ' ', ...gc.text, ' ', cp(SID('historical'))],
+      regulationsLabel: [...gc.label],
+    },
   };
 }
 
