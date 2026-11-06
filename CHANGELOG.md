@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC1352-06: the map's Chart / 2D / 3D toggle, its group labels, the terrain zoom, reset and top-view buttons, the waypoint prompt and refusal, the terrain-unavailable reasons and the private saved-spots row and cards read Spanish. The saved-spot card keeps its "not a recommendation" and "check current rules" statements and its protected-area wording, a person's own spot names stay as typed, and no card shows the private note in either language; the English text is unchanged.
+
 - SC1352-05: the map's buoy and tide-station cards, the Stations layer note and the nearshore model rings' card, basis and summary read Spanish. Heights use a decimal comma, times show a date and clock in the region's zone, and the fresh, stale and last-good states, the region-default and chosen tide-station labels, and the 90-minute, 48-hour and 3-hour model caveats are all kept; station and site names, ids, datum names and provider notes stay as published, and the English text and stale decisions are unchanged.
 
 - SC1352-04: the Protected areas row and a clicked area's card read Spanish. The loading, map-unavailable, partial, incomplete, failed-load, failed-completeness-check and wrong-region lines keep every "an area without an outline may still be protected" and failed-check statement, and a designation shows a Spanish label with the official English designation beside it; area names, legal citations and the CDFW rules link are unchanged, and the English text, status and Try again decisions are unchanged.

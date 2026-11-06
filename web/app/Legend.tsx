@@ -343,7 +343,7 @@ export function SavedSpotsRow() {
     <li class="app-legend-saved-spots">
       <label><input type="checkbox" style={{width: '24px', height: '24px'}} checked={savedSpotsOn.value} disabled={!status.canToggle} onChange={e => setSavedSpotsOn(e.currentTarget.checked)} /> {entry.label}</label>
       <Popover iconOnly summary={t('legend.bs.saved', lang)}><p>{entry.basis}</p></Popover>
-      <p class="app-legend-note" data-reason="saved-spots" role="status"><EnglishDetail lang={lang}>{status.text}</EnglishDetail></p>
+      <p class="app-legend-note" data-reason="saved-spots" role="status"><Status lang={lang} raw={status.text} parts={status.copy} /></p>
       {status.retry ? <Button variant="quiet" onClick={retrySavedSpots}>{t('legend.tryAgain', lang)}</Button> : null}
     </li>
   );

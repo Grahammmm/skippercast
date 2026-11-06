@@ -34,7 +34,8 @@ import {createStations} from '../map/stations.ts';
 import {dailyFeed} from '../brief/Brief.tsx';
 import {createWind} from '../map/wind.ts';
 import type {HourClock} from '../clock.ts';
-import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked} from '../map/stage.ts';
+import {camera, choosePresentation, createStage, shownPresentation, terrainActions, terrainBlocked, terrainReason} from '../map/stage.ts';
+import {language, t, type StringId} from '../i18n.ts';
 import {poster, posterPlacement} from '../map/poster.ts';
 import {profile, region, species} from '../state.ts';
 import {cancelWaypointPlacement, placementRefused, verdictLine, waypointPlacement} from '../waypoint-placement.ts';
@@ -43,22 +44,24 @@ import {currentRegionInfo, zone} from './App.tsx';
 export const PRESENTATIONS: ReadonlyArray<{value: Presentation; label: string}> = [
   {value: 'chart', label: 'Chart'}, {value: '2d', label: '2D'}, {value: '3d', label: '3D'},
 ];
+/** SC1352-06: each presentation's catalogue label, shown in the page's language at render; PRESENTATIONS stays the English compatibility list. */
+const PRESENTATION_IDS: Readonly<Record<Presentation, StringId>> = {chart: 'stage.chart', '2d': 'stage.2d', '3d': 'stage.3d'};
 const NOTE_ID = 'app-stage-note';
 
 /** Chart, 2D, 3D; where no terrain can show, the terrain choices are disabled and point at the reason in the status line. */
 export function PresentationToggle() {
-  const shown = shownPresentation.value, blocked = terrainBlocked.value;
-  const armed = waypointPlacement.value === region.value && shown === 'chart', refused = armed && placementRefused.value ? verdictLine(placementRefused.value) : null;
+  const shown = shownPresentation.value, blocked = terrainBlocked.value, lang = language.value;
+  const armed = waypointPlacement.value === region.value && shown === 'chart', refused = armed && placementRefused.value ? verdictLine(placementRefused.value, lang) : null;
   return (
     <div class="app-presentation">
-      <p id={NOTE_ID} class="app-stage-note" role="status">{blocked ?? ''}</p>
-      {armed ? <p class="app-stage-note" role="status">Tap the Chart to place your waypoint. {refused ? <>{refused}. </> : null}<button onClick={cancelWaypointPlacement}>Cancel waypoint</button></p> : null}
-      <div role="group" aria-label="Map presentation" class="ui-segmented">
+      <p id={NOTE_ID} class="app-stage-note" role="status">{blocked === null ? '' : terrainReason(blocked, lang)}</p>
+      {armed ? <p class="app-stage-note" role="status">{t('stage.placePrompt', lang)} {refused ? <>{refused}. </> : null}<button onClick={cancelWaypointPlacement}>{t('stage.cancelWaypoint', lang)}</button></p> : null}
+      <div role="group" aria-label={t('stage.presentation', lang)} class="ui-segmented">
         {PRESENTATIONS.map(p => {
           const off = p.value !== 'chart' && !!blocked;
           return (
             <Chip key={p.value} on={p.value === shown} disabled={off} aria-describedby={off ? NOTE_ID : undefined}
-              onClick={() => { if (p.value !== shown) choosePresentation(p.value); }}>{p.label}</Chip>
+              onClick={() => { if (p.value !== shown) choosePresentation(p.value); }}>{t(PRESENTATION_IDS[p.value], lang)}</Chip>
           );
         })}
       </div>
@@ -68,14 +71,14 @@ export function PresentationToggle() {
 
 /** The terrain's view buttons (FE-80), in the Chart's zoom-control group; absent until the renderer mounts. */
 export function TerrainControls() {
-  const a = terrainActions.value;
+  const a = terrainActions.value, lang = language.value;
   if (!a || shownPresentation.value === 'chart') return null;
   return (
-    <div class="app-terrain-controls" role="group" aria-label="Terrain view">
-      <IconButton icon="plus" label="Zoom in" onClick={() => a.zoom('in')} />
-      <IconButton icon="minus" label="Zoom out" onClick={() => a.zoom('out')} />
-      <IconButton icon="target" label="Reset map view" onClick={() => a.reset()} />
-      <IconButton icon="compass" label="View from above" onClick={() => a.top()} />
+    <div class="app-terrain-controls" role="group" aria-label={t('stage.terrainView', lang)}>
+      <IconButton icon="plus" label={t('stage.zoomIn', lang)} onClick={() => a.zoom('in')} />
+      <IconButton icon="minus" label={t('stage.zoomOut', lang)} onClick={() => a.zoom('out')} />
+      <IconButton icon="target" label={t('stage.resetView', lang)} onClick={() => a.reset()} />
+      <IconButton icon="compass" label={t('stage.viewAbove', lang)} onClick={() => a.top()} />
     </div>
   );
 }
@@ -118,13 +121,13 @@ export function MapStage({children, clock}: {children?: ComponentChildren; clock
           engine => createReach({engine, host: chartHost.current!})]})]});
     return () => stage.destroy();
   }, [clock]);
-  const shown = shownPresentation.value;
+  const shown = shownPresentation.value, lang = language.value;
   return (
-    <section class="app-stage" tabIndex={-1} aria-label="Map">
+    <section class="app-stage" tabIndex={-1} aria-label={t('stage.map', lang)}>
       <div class="app-map" hidden={shown !== 'chart'}>
         <div class="app-chart" ref={chartHost} hidden={chartFailed.value} />
         <ChartPoster />
-        {chartFailed.value ? <span>Map unavailable.</span> : null}
+        {chartFailed.value ? <span>{t('map.mpa.mapUnavailable', lang)}</span> : null}
       </div>
       <div class="app-terrain" ref={terrainHost} tabIndex={-1} hidden={shown === 'chart'} data-coast-theme="tokens" />
       <TerrainControls />

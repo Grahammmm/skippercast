@@ -127,7 +127,7 @@ normalize one to the other. Do not convert between units.
 The line under each brief tile reading is said from structured parts by
 `web/brief/tile-copy.ts`; the model's English line stays for other readers.
 Station, buoy, site and datum names are never translated. Catalogue IDs:
-`tile.detail.*`, `tile.clock.*`, `tile.gap.*`, `tide.unavailable`, `tide.noCurve`; the map's station and ring cards use `map.station.*` and `map.nearshore.*` (`high event` / `low event` are `evento de pleamar` / `evento de bajamar`).
+`tile.detail.*`, `tile.clock.*`, `tile.gap.*`, `tide.unavailable`, `tide.noCurve`; the map's station and ring cards use `map.station.*` and `map.nearshore.*`; the map stage's toggle, terrain buttons and terrain reasons use `stage.*` (`Chart` is `Carta`; `Los gráficos costeros no están disponibles. La carta, los pronósticos y las herramientas de viaje siguen funcionando.` and `Aún no hay terreno costero revisado que cubra esta región.` keep every clause), and the private saved-spots row and cards use `savedSpots.*` (`A saved position, not a recommendation. Check current rules before you fish.` is `Una posición guardada, no una recomendación. Revisa el reglamento vigente antes de pescar.`; `No protected-area overlap found in this check.` is `No se encontró superposición con áreas protegidas en esta comprobación.`, a result of this check and never legal clearance), with the protected-area verdict lines still `where.screen.*` (`high event` / `low event` are `evento de pleamar` / `evento de bajamar`).
 
 | English | Spanish | Catalogue ID | Meaning kept |
 | --- | --- | --- | --- |

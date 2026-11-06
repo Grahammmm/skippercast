@@ -220,7 +220,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC0452-05: MapStage accepts the shared clock and keys its stage effect on
   // that clock's identity. BODY09 never mounts MapStage; the Reports catch path,
   // paint, backdrop, assertions and thresholds remain unchanged. Rebind MapStage.tsx.
-  "web/app/MapStage.tsx": "01c5547daf6d6230a6eaef1c849bbec27f3c820f53b0ccc9f800034c651cc150",
+  "web/app/MapStage.tsx": "94261787b52f2a336265208ba91d271f04f4178914f381fcaaa5e6ff90bfd4a9",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "0a636f225f5b51d1e34f2de059c826e4a0f2af876fcf20f827f2ccb5ef705008",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   // BF-wcag: app.css and panel.css add only 24 px min-height target floors (no paint); app.css merged with SC2222-07.
@@ -292,7 +292,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1352-03: Currents, Wind and Swell status in the page's language; check_contrast.mjs rebinds only the Legend.tsx surface hash, one line citation and a comment. Rebind only these two sources.
   // SC1352-04: the Protected areas row shows its state in the page's language (copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. Rebind only this source.
   // SC1352-05: the Stations note and nearshore-ring words show in the page's language (copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. Rebind only this source.
-  "scripts/check_contrast.mjs": "f1ddffde7f0c7a98a37d29e4670418513ebbcb803d664886d1755944f7df1586",
+  // SC1352-06: MapStage shows its labels and reasons in the page’s language and the legend’s saved-spots note does too (copy only); BODY09 never mounts MapStage. check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. Rebind only MapStage.tsx and this source.
+  "scripts/check_contrast.mjs": "9c4286d74d59d7ab25337f4854fd5c2792ffd704e8f91d941b935c24690512b8",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still

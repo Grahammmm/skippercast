@@ -319,7 +319,7 @@ const NO_PLACE = new Set(['harborOrigin', 'loadTerrainHabitat', 'loadReefPublica
   // Only aggregates confidence percentages; it neither names nor returns a place.
   'sharedConfidence', 'pickRun', 'routeWhyText',
   // Only words a verdict it is handed (a refused placement's status, a leg's line); it screens nothing and names no place of its own.
-  'verdictLine', 'diveText', 'WhereToLook']);
+  'verdictLine', 'verdictParts', 'diveText', 'WhereToLook']);
 test('every exported function of the owned modules either carries a screen verdict or is listed as naming no place', () => {
   const fns = (mod, names = Object.keys(mod)) => names.filter(k => typeof mod[k] === 'function');
   const tsx = readFileSync(new URL('../web/brief/WhereToLook.tsx', import.meta.url), 'utf8');

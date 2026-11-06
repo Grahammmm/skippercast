@@ -408,7 +408,8 @@ export const SURFACE_SOURCE_SHA256 = {
   // the note and basis keep their app-mpa-note and popover text roles, and no backing, opacity, token or threshold changed.
   // SC1352-05 shows the Stations note and the nearshore-ring summary and basis in the page's language (copy only, no paint); the same text roles
   // stay, and no backing, opacity, token or threshold changed.
-  "legendTsx": "1bb1ea120e34603022be28305ab7f9ded374374854940665267ebb7d9bd840ba"
+  // SC1352-06 shows the saved-spots status in the page’s language through the same Status wrapper (copy only, no paint); the same note text role stays, and no backing, opacity, token or threshold changed.
+  "legendTsx": "f2f4c4448307183c31d8a52d1d76933320dc14b33e1a245983bdcb13808a644f"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
