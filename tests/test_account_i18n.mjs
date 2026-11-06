@@ -150,6 +150,10 @@ test('account_spots_fine_print_es_adds_the_gpx_note_sentence_and_keeps_privacy_t
   assert.match(STRINGS['account.spots.notesGpx'].es, /^Las notas privadas nunca se incluyen en el GPX\.$/);
   const es = STRINGS['account.spots.fine'].es;
   for (const term of ['nunca se comparten', 'dentro de un área protegida', 'se excluyen del archivo GPX']) assert.ok(es.includes(term), term);
+  // owner-only spots may be shown on their own Chart; only notes are never mapped or in the GPX
+  assert.ok(es.includes('Puedes mostrar tus sitios guardados en tu propia Carta'));
+  assert.ok(es.includes('Las notas privadas nunca se dibujan en el mapa ni se incluyen en el GPX'));
+  assert.ok(!/sitio y su nota nunca[^.]*se muestran en el mapa/.test(es));
   assert.match(STRINGS['account.log.fine'].es, /Una posición nunca se comparte/);
   assert.match(STRINGS['account.out.fine'].es, /solo almacena su clave pública/);
   assert.match(STRINGS['account.del.body'].es, /No se puede deshacer\.$/); assert.match(STRINGS['account.del.confirm'].es, /No se puede deshacer\.$/);
