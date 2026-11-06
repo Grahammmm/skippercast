@@ -318,8 +318,35 @@ const logFormHTML = t => `<h2 class="account-subhead">${esc(t('account.log.head'
 export function spotItemHTML(spot, verdict, format = chosenFormat(), copy) {
   const t = asCopy(copy);
   const name = String(spot.name ?? '').replace(/[\u0000-\u001f\ufffe\uffff]/g, '').trim() || t('account.spots.unnamed');
-  return `<li><span>${esc(name)} · ${esc(formatCoordinates(spot.lat, spot.lon, format))}</span>${verdict?.text ? `<p class="account-hint">${esc(verdict.text)}</p>` : ''}${spot.note ? `<p class="account-hint">${esc(spot.note)}</p>` : ''}
-    <button type="button" data-remove-spot="${esc(spot.id)}">${esc(t('account.remove'))}</button></li>`;
+  return `<li data-spot-row="${esc(spot.id)}"><span>${esc(name)} · ${esc(formatCoordinates(spot.lat, spot.lon, format))}</span>${verdict?.text ? `<p class="account-hint">${esc(verdict.text)}</p>` : ''}${spot.note ? `<p class="account-hint">${esc(spot.note)}</p>` : ''}
+    <button type="button" data-edit-spot="${esc(spot.id)}">${esc(t('account.spotEdit.edit'))}</button> <button type="button" data-remove-spot="${esc(spot.id)}">${esc(t('account.remove'))}</button></li>`;
+}
+
+/**
+ * SC1137-09: the edit form that replaces one spot's row. The position is shown as plain text (a different position is a new
+ * spot) and the current protected-area reading stays. The name and note are filled by `fillSpotEdit` with .value, so their
+ * bytes are exact; nothing here is submitted but those two.
+ */
+export function spotEditHTML(spot, verdict, format = chosenFormat(), copy) {
+  const t = asCopy(copy), id = esc(spot.id);
+  return `<li data-spot-row="${id}" data-spot-editing><form class="spot-edit" autocomplete="off" aria-label="${esc(t('account.spotEdit.title'))}">
+    <label for="spot-edit-name">${esc(t('account.name'))}</label><input id="spot-edit-name" name="name" type="text" maxlength="80" />
+    <p class="account-hint">${esc(t('account.log.lat'))} / ${esc(t('account.log.lon'))}: ${esc(formatCoordinates(spot.lat, spot.lon, format))}</p>${verdict?.text ? `<p class="account-hint">${esc(verdict.text)}</p>` : ''}
+    <p class="home-port-fine">${esc(t('account.spotEdit.positionHelp'))}</p>
+    <label for="spot-edit-note">${esc(t('account.spots.note'))}</label><textarea id="spot-edit-note" name="note"></textarea>
+    <p class="home-port-feedback" data-edit-status role="status"></p>
+    <div class="home-port-actions"><button type="submit" data-edit-save>${esc(t('account.spotEdit.save'))}</button><button type="button" data-edit-cancel>${esc(t('account.cancel'))}</button></div></form></li>`;
+}
+
+/** The stored name and note into the edit form exactly as saved (not the cleaned display name). */
+export function fillSpotEdit(form, spot) {
+  form.elements.name.value = spot.name ?? '';
+  form.elements.note.value = spot.note ?? '';
+}
+
+/** The edit request's body: only the two editable fields, never trimmed here and never a position (the route refuses one). */
+export function spotEditBody(f) {
+  return {name: f.name ?? '', note: f.note ?? null};
 }
 
 /** The form's fields as the spots route's body. A position is always required; a blank or unreadable box is refused here with the parser's reason. */
@@ -579,14 +606,71 @@ export async function openAccount(options = {}) {
     // BF-saved-spots: the list reads each spot against the shared protected-area screen; a screen that cannot load reads "unavailable".
     let screenOnce = null;
     const spotScreen = () => screenOnce ??= import('./protected-areas.js').then(m => m.initProtectedAreas(null, () => {})).catch(() => null);
-    let spotRows = [];
+    let spotRows = [], spotReadings = [], loadGen = 0, loading = false, editor = null;
     const spotList = $('#spot-list'), spotsChanged = () => { try { globalThis.dispatchEvent?.(new Event('skippercast:saved-spots-changed')); } catch { /* the Chart layer reads again on its next turn-on */ } }, showSpots = async () => {
+      const gen = ++loadGen; loading = true; editor = null;
       try {
-        spotRows = (await api('spots')).spots;
-        const verdicts = await spotVerdicts(spotRows, await spotScreen(), t);
+        const rows = (await api('spots')).spots;
+        const verdicts = await spotVerdicts(rows, await spotScreen(), t);
+        if (gen !== loadGen || open !== self) return;   // a newer read or a confirmed edit has already answered
+        spotRows = rows; spotReadings = verdicts;
         spotList.innerHTML = spotRows.map((s, i) => spotItemHTML(s, verdicts[i], undefined, t)).join('');
-      } catch (error) { status(passkeyMessage(error, t)); }
+      } catch (error) { if (gen === loadGen) status(passkeyMessage(error, t)); }
+      finally { if (gen === loadGen) loading = false; }
     };
+    // SC1137-09: edit a spot's name and note in its own row. One editor at a time; a draft is only the form's own fields.
+    const rowOf = id => [...spotList.children].find(li => li.dataset.spotRow === id);
+    const redrawRow = (id, focusEdit) => {
+      const i = spotRows.findIndex(s => s.id === id), row = rowOf(id); if (i < 0 || !row) return;
+      const holder = document.createElement('template'); holder.innerHTML = spotItemHTML(spotRows[i], spotReadings[i], undefined, t);
+      row.replaceWith(holder.content.firstElementChild);
+      if (focusEdit) rowOf(id)?.querySelector('[data-edit-spot]')?.focus();
+    };
+    const closeEditor = focusEdit => { const e = editor; editor = null; if (e) redrawRow(e.id, focusEdit); };
+    const openEditor = id => {
+      const i = spotRows.findIndex(s => s.id === id), row = rowOf(id); if (i < 0 || !row || editor?.pending) return;
+      closeEditor(false);
+      const holder = document.createElement('template'); holder.innerHTML = spotEditHTML(spotRows[i], spotReadings[i], undefined, t);
+      const li = holder.content.firstElementChild; row.replaceWith(li);
+      fillSpotEdit(li.querySelector('form'), spotRows[i]);
+      editor = {id, pending: false, token: {}};
+      li.querySelector('input').focus();
+    };
+    const saveEditor = async form => {
+      const e = editor, token = e?.token; if (!e || e.pending) return;
+      const mine = () => editor === e && open === self && form.isConnected;
+      const say = text => { if (mine()) form.querySelector('[data-edit-status]').textContent = text; };
+      const lock = on => { for (const el of form.querySelectorAll('input,textarea,button')) el.disabled = on; };
+      const i = spotRows.findIndex(s => s.id === e.id), before = spotRows[i];
+      e.pending = true; lock(true); say(t('account.spotEdit.saving'));
+      let saved;
+      try {
+        saved = await api('spots/' + encodeURIComponent(e.id), {method: 'PATCH', body: spotEditBody({name: form.elements.name.value, note: form.elements.note.value})});
+        if (!saved || saved.id !== before.id || saved.lat !== before.lat || saved.lon !== before.lon) throw Object.assign(Error('unconfirmed'), {unconfirmed: true});
+      } catch (error) {
+        e.pending = false;
+        if (mine()) { lock(false); say(error?.status && !error.apiFallback && error.message ? error.message : t('account.spotEdit.failed')); }
+        return;
+      }
+      e.pending = false;
+      // Confirmed: the stored row replaces this spot where it stands; an older list read still in flight must not put the old name back.
+      const j = spotRows.findIndex(s => s.id === saved.id); if (j >= 0) spotRows[j] = saved;
+      const reread = loading; loadGen++; loading = false;
+      if (editor === e) editor = null;
+      if (open === self && token) { redrawRow(saved.id, true); status(t('account.spotEdit.saved')); }
+      spotsChanged();
+      if (reread && open === self) showSpots();
+    };
+    spotList.addEventListener('click', event => {
+      const edit = event.target.closest('[data-edit-spot]'); if (edit) { openEditor(edit.dataset.editSpot); return; }
+      if (event.target.closest('[data-edit-cancel]') && editor && !editor.pending) closeEditor(true);
+    });
+    spotList.addEventListener('submit', event => { event.preventDefault(); const form = event.target.closest('form.spot-edit'); if (form) saveEditor(form); });
+    spotList.addEventListener('keydown', event => {
+      if (event.key !== 'Escape' || !event.target.closest('form.spot-edit')) return;
+      event.preventDefault(); event.stopPropagation();
+      if (editor && !editor.pending) closeEditor(true);
+    });
     spotList.addEventListener('click', async event => {
       const b = event.target.closest('[data-remove-spot]'); if (!b) return;
       try { await api('spots/' + encodeURIComponent(b.dataset.removeSpot), {method: 'DELETE', body: {}}); spotsChanged(); await showSpots(); } catch (error) { status(passkeyMessage(error, t)); }
