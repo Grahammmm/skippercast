@@ -147,3 +147,19 @@ test('the new words exist in English and Spanish with matching placeholders, and
   assert.ok(privacy.includes('Nothing is sent to SkipperCast until you press Save'));
   assert.ok(privacy.includes('your location is used in the browser only and is not sent to SkipperCast'));
 });
+
+test('the catch-log redraw keeps Save off while a position request is pending, and lets it go afterwards', () => {
+  // drawLog rewrites Save on every filter change, older-page load and initial read: its calculation must include logPos.pending.
+  const line = source.split('\n').find(l => l.includes("$('#log-save').disabled ="));
+  assert.ok(line && /logPos\?\.pending/.test(line), 'drawLog counts the pending position request');
+  assert.match(source, /let editing = null, tripRegion = null, logPos = null;/, 'logPos exists before the first redraw can read it');
+  // The same calculation, run as drawLog runs it, on a control whose redraw is wired as `after`.
+  const f = form(), g = geo(); let editing = null, busy = false, c = null;
+  const draw = () => { f.save.disabled = Boolean((editing && (busy || editing.pending)) || c?.pending); };
+  c = make(f, g, {after: draw});
+  f.button.click(); assert.ok(c.pending); assert.equal(f.save.disabled, true);
+  busy = true; draw(); busy = false; draw();   // a filter change / older-page load / log read finishing mid-request
+  assert.equal(f.save.disabled, true, 'a redraw during the request does not re-enable Save');
+  g.calls[0].ok(fix(1, 2, 3));
+  assert.equal(f.save.disabled, false, 'Save returns once the answer arrives');
+});

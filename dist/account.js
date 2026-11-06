@@ -644,7 +644,7 @@ export async function openAccount(options = {}) {
     // saved entry has overtaken is dropped. `gone` holds ids removed here, so a page read before a removal cannot bring one back.
     let view = {outcome: '', species: ''}, trips = [], entries = null, nextCursor = null, busy = false, generation = 0, loadFailed = false, gone = new Set();
     // SC1137-11: `editing` is {id, original, draft, pending} while the log form holds a correction (draft: the create form as it was).
-    let editing = null, tripRegion = null;
+    let editing = null, tripRegion = null, logPos = null;   // logPos: the position control, wired below
     const live = () => open === self && list.isConnected;
     const FORM_FIELDS = ['started', 'ended', 'outcome', 'count', 'species', 'method', 'trip', 'lat', 'lon', 'note'];
     const readForm = () => Object.fromEntries(FORM_FIELDS.map(n => [n, $('#log-' + n).value]));
@@ -661,7 +661,7 @@ export async function openAccount(options = {}) {
       for (const b of list.querySelectorAll('[data-edit-log]')) b.disabled = Boolean(editing);
       $('#log-editing').hidden = !editing; $('#log-cancel').hidden = !editing; $('#log-cancel').disabled = Boolean(editing?.pending);
       $('#log-save').textContent = editing ? t('account.log.saveChanges') : t('account.log.save');
-      $('#log-save').disabled = Boolean(editing && (busy || editing.pending));
+      $('#log-save').disabled = Boolean((editing && (busy || editing.pending)) || logPos?.pending);   // a position request in flight keeps Save off
     };
     // The Trip choice: "No trip", the saved trips, and (while correcting an entry whose trip is not in the list) its exact id kept as a labelled choice.
     const renderTripOptions = (want = tripSelect.value) => {
@@ -780,7 +780,7 @@ export async function openAccount(options = {}) {
         });
       } catch (error) { status(error?.local ? error.message : passkeyMessage(error, t)); }
     });
-    const logPos = createPositionControl({$, prefix: 'log', copy: t, alive: live, after: drawLog});
+    logPos = createPositionControl({$, prefix: 'log', copy: t, alive: live, after: drawLog});
     showLog(); loadTrips();
     // BF-saved-spots: the list reads each spot against the shared protected-area screen; a screen that cannot load reads "unavailable".
     let screenOnce = null;
