@@ -5,19 +5,46 @@
 // when a ceremony starts: app.html does not load it for map page views.
 const RETURN_KEY = 'skippercast-account-return';
 import {coordinateFormat, formatCoordinate, formatCoordinates, parseCoordinate} from './coordinates.js';
+import catalog from '../catalog/app/strings.json' with {type: 'json'};
+
+// SC0922-14: this module is imported on demand and cannot call web/i18n.ts t(), so openAccount({lang, strings}) receives the
+// resolved language and the finished `account.*` catalogue values (web/account-copy.ts). Without them every string is the English
+// value in the same catalogue, so there is one English table.
+const DEFAULTS = catalog.strings;
+const holes = text => [...new Set([...text.matchAll(/\{(\w+)\}/g)].map(m => m[1]))].sort().join(',');
+/**
+ * One dialog's copy reader: `t(id, vars)` fills `{name}` variables (plain text; callers escape at HTML sinks). An injected value is used
+ * only for a known id, as a nonempty string with the same placeholders as the English; anything else reads the English. An unknown
+ * id throws. An unknown `lang` reads English. Nothing is shared between readers, so a deferred handler keeps its own dialog's language.
+ */
+export function createCopy(options) {
+  const lang = options?.lang === 'es' ? 'es' : 'en';
+  const given = options?.strings && typeof options.strings === 'object' ? options.strings : {};
+  const t = (id, vars = {}) => {
+    if (!Object.hasOwn(DEFAULTS, id)) throw Error('unknown account string ' + id);
+    const base = DEFAULTS[id].en, own = Object.hasOwn(given, id) ? given[id] : undefined;
+    const text = typeof own === 'string' && own !== '' && holes(own) === holes(base) ? own : base;
+    return text.replace(/\{(\w+)\}/g, (whole, name) => Object.hasOwn(vars, name) ? String(vars[name]) : whole);
+  };
+  t.lang = lang;
+  return t;
+}
+const DEFAULT_COPY = createCopy();
+/** A reader as given to an exported helper: a reader itself, options to make one from, or nothing (English). */
+const asCopy = copy => typeof copy === 'function' ? copy : copy ? createCopy(copy) : DEFAULT_COPY;
 
 // The position format chosen in the account menu, read at each draw; blocked or unreadable storage means decimal degrees.
 function chosenFormat() {
   try { return coordinateFormat(globalThis.localStorage?.getItem('skippercast-coordinates-v1')); } catch { return 'dd'; }
 }
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[c]);
-const day = iso => iso ? new Date(iso).toLocaleDateString(undefined, {year: 'numeric', month: 'short', day: 'numeric'}) : '';
+const day = (iso, lang = 'en') => iso ? new Date(iso).toLocaleDateString(lang === 'es' ? 'es' : undefined, {year: 'numeric', month: 'short', day: 'numeric'}) : '';
 
 async function api(path, {method = 'GET', body, includeResponse = false} = {}) {
   const response = await fetch('/api/' + path, {method, headers: {'Content-Type': 'application/json'},
     body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(20000)});
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) { const error = Error(data.error || 'Could not complete this request.'); error.status = response.status; throw error; }
+  if (!response.ok) { const error = Error(data.error || DEFAULTS['account.err.apiFallback'].en); error.status = response.status; if (!data.error) error.apiFallback = true; throw error; }
   return includeResponse ? {data, response} : data;
 }
 
@@ -44,14 +71,17 @@ export function signInHref(signIn) {
 }
 
 /** Plain-language message for a failed passkey ceremony. */
-export function passkeyMessage(error) {
-  const name = error?.name, code = error?.code;
-  if (code === 'PASSKEY_LIBRARY_UNAVAILABLE') return PASSKEY_UNAVAILABLE;
-  if (code === 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED' || name === 'InvalidStateError') return 'This device already has a passkey for this account.';
-  if (name === 'NotAllowedError' || name === 'AbortError') return 'The passkey request was cancelled or timed out. Try again when ready.';
-  if (name === 'SecurityError') return 'Passkeys are not available on this address.';
-  if (error?.status === 429) return 'Too many attempts. Wait a minute and try again.';
-  return error?.message ? error.message.charAt(0).toUpperCase() + error.message.slice(1) + '.' : 'Something went wrong. Try again.';
+export function passkeyMessage(error, copy) {
+  const t = asCopy(copy), name = error?.name, code = error?.code;
+  if (code === 'PASSKEY_LIBRARY_UNAVAILABLE') return t('account.err.library');
+  if (code === 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED' || name === 'InvalidStateError') return t('account.err.registered');
+  if (name === 'NotAllowedError' || name === 'AbortError') return t('account.err.cancelled');
+  if (name === 'SecurityError') return t('account.err.insecure');
+  if (error?.status === 429) return t('account.err.rate');
+  // Spanish: this module's own fallback is translated; any other message comes from the server or the browser and is shown as given.
+  if (t.lang !== 'en' && error?.apiFallback) return t('account.err.apiFallback');
+  if (!error?.message) return t('account.err.generic');
+  return t.lang === 'en' ? error.message.charAt(0).toUpperCase() + error.message.slice(1) + '.' : t('account.err.detail', {detail: error.message});
 }
 
 /**
@@ -59,12 +89,13 @@ export function passkeyMessage(error) {
  * page and automation). Resolves true for the confirm button, false for Cancel
  * or Escape. Only one is shown per anchor.
  */
-export function confirmInPage(anchor, message, confirmLabel) {
+export function confirmInPage(anchor, message, confirmLabel, copy) {
+  const t = asCopy(copy);
   anchor.parentElement.querySelector(':scope > .account-confirm')?.remove();
   const box = document.createElement('div');
   box.className = 'account-confirm';
   box.setAttribute('role', 'alertdialog');
-  box.innerHTML = `<p>${esc(message)}</p><div class="home-port-actions"><button type="button" data-confirm="no">Cancel</button><button type="button" data-confirm="yes" class="account-destructive">${esc(confirmLabel)}</button></div>`;
+  box.innerHTML = `<p>${esc(message)}</p><div class="home-port-actions"><button type="button" data-confirm="no">${esc(t('account.cancel'))}</button><button type="button" data-confirm="yes" class="account-destructive">${esc(confirmLabel)}</button></div>`;
   const id = 'account-confirm-' + Math.random().toString(36).slice(2);
   box.querySelector('p').id = id; box.setAttribute('aria-labelledby', id);
   anchor.after(box);
@@ -81,9 +112,8 @@ const webauthn = () => globalThis.SimpleWebAuthnBrowser;
 
 /** The vendored passkey library: same-origin absolute path (so /map and hash links resolve it alike), pinned by SRI to the bytes in scripts/web-vendor-sha256.json. */
 export const PASSKEY_LIBRARY = {src: '/vendor/simplewebauthn-browser-14.0.0/index.umd.min.js', integrity: 'sha256-KbsGmbRbw5o1DZkqE7/BpNQNiVMTkFgeH1fxFCxuIh0='};
-export const PASSKEY_UNAVAILABLE = 'Passkeys are unavailable right now. Try again when you are online.';
+export const PASSKEY_UNAVAILABLE = DEFAULTS['account.err.library'].en;
 const PASSKEY_LOAD_MS = 20000;
-const UNSUPPORTED = 'This browser does not support passkeys. Try an up-to-date Safari, Chrome, Edge or Firefox.';
 const isComplete = lib => ['browserSupportsWebAuthn', 'startAuthentication', 'startRegistration'].every(name => typeof lib?.[name] === 'function');
 
 let passkeyLoad = null;   // the one shared attempt: pending, or resolved once the library has loaded
@@ -133,18 +163,21 @@ function finish() {
   location.reload();
 }
 
-const OUTCOME_WORDS = {fish: 'Fish', blank: 'Blank: no fish', unknown: 'Not sure'};
+const OUTCOME_WORDS = {fish: 'account.outcome.fish', blank: 'account.outcome.blank', unknown: 'account.outcome.unknown'};
 /**
  * One catch-log entry as list HTML. Every stored string is escaped, so markup in a note shows as plain text.
  * `trips` are the person's saved trips: an entry whose trip_id is exactly one of them also shows that trip's saved date
  * (a stored calendar date, never parsed as an instant); a null, orphan or deleted association adds nothing.
  */
-export function logItemHTML(row, trips = [], format = chosenFormat()) {
-  const trip = row.trip_id ? (Array.isArray(trips) ? trips : []).find(t => t?.id === row.trip_id) : null;
-  const bits = [day(row.started_at), OUTCOME_WORDS[row.outcome] ?? row.outcome, row.outcome === 'fish' ? `${row.count} fish` : '', row.species, row.method,
-    row.lat != null && row.lon != null ? formatCoordinates(row.lat, row.lon, format) : '', trip?.date ? `Trip: ${trip.date}` : ''].filter(Boolean);
+export function logItemHTML(row, trips = [], format = chosenFormat(), copy) {
+  const t = asCopy(copy);
+  const trip = row.trip_id ? (Array.isArray(trips) ? trips : []).find(x => x?.id === row.trip_id) : null;
+  const outcome = Object.hasOwn(OUTCOME_WORDS, row.outcome) ? t(OUTCOME_WORDS[row.outcome]) : row.outcome;   // an unknown stored outcome shows as stored
+  const fish = row.outcome === 'fish' ? (Number(row.count) === 1 ? t('account.log.fish.one', {n: row.count}) : t('account.log.fish.other', {n: row.count})) : '';
+  const bits = [day(row.started_at, t.lang), outcome, fish, row.species, row.method,
+    row.lat != null && row.lon != null ? formatCoordinates(row.lat, row.lon, format) : '', trip?.date ? t('account.log.tripDate', {date: trip.date}) : ''].filter(Boolean);
   return `<li><span>${bits.map(esc).join(' · ')}</span>${row.note ? `<p class="account-hint">${esc(row.note)}</p>` : ''}
-    <button type="button" data-remove-log="${esc(row.id)}">Remove</button></li>`;
+    <button type="button" data-remove-log="${esc(row.id)}">${esc(t('account.remove'))}</button></li>`;
 }
 
 // SC2037-10: the person's own counts over the entries loaded so far. Never a rate, a score or a comparison; nothing is sent.
@@ -168,29 +201,31 @@ export function filterLog(rows, {outcome = '', species = ''} = {}) {
   return (Array.isArray(rows) ? rows : []).filter(row => (!outcome || row.outcome === outcome) && (!want || speciesKey(row.species) === want));
 }
 /** The one-line summary of `counts`; `filtered` and `more` (older pages still unread) change only the opening words. */
-export function logCountsText(counts, {filtered = false, more = false} = {}) {
-  const n = counts.entries, noun = n === 1 ? 'entry' : 'entries';
-  const head = filtered ? (more ? `In the ${n} loaded ${noun} that match` : `In the ${n} ${noun} that match`) : (more ? `In the ${n} ${noun} loaded` : `In the ${n} ${noun}`);
-  const top = counts.species.length ? ` Most logged: ${counts.species.map(s => `${s.name} ${s.count}`).join(', ')}.` : '';
-  return `${head}: ${counts.fish} fish trips (${counts.fishTotal} fish), ${counts.blank} blanks, ${counts.unknown} not sure.${top}${more ? ' Older entries are not loaded yet.' : ''}`;
+export function logCountsText(counts, {filtered = false, more = false} = {}, copy) {
+  const t = asCopy(copy), n = counts.entries, one = n === 1;
+  const head = filtered
+    ? (more ? (one ? t('account.counts.loadedMatch.one', {n}) : t('account.counts.loadedMatch.other', {n})) : (one ? t('account.counts.match.one', {n}) : t('account.counts.match.other', {n})))
+    : (more ? (one ? t('account.counts.loaded.one', {n}) : t('account.counts.loaded.other', {n})) : (one ? t('account.counts.plain.one', {n}) : t('account.counts.plain.other', {n})));
+  const top = counts.species.length ? t('account.counts.top', {list: counts.species.map(s => `${s.name} ${s.count}`).join(', ')}) : '';
+  return t('account.counts.body', {head, fish: counts.fish, fishTotal: counts.fishTotal, blank: counts.blank, unknown: counts.unknown, top, more: more ? t('account.counts.more') : ''});
 }
-export const LOG_NO_MATCH = 'No loaded entries match these filters.';
+export const LOG_NO_MATCH = DEFAULTS['account.log.noMatch'].en;
 /**
  * Draw the list, the counts line and the species choices for the loaded `entries` under `view` ({outcome, species}).
  * `els` are {list, counts, species}. The counts are over the filtered rows. A chosen species that no longer appears still filters.
  */
-export function drawLogView(els, {entries, trips = [], view, more = false}) {
-  const all = Array.isArray(entries) ? entries : [], shown = filterLog(all, view);
+export function drawLogView(els, {entries, trips = [], view, more = false, copy}) {
+  const t = asCopy(copy), all = Array.isArray(entries) ? entries : [], shown = filterLog(all, view);
   const options = new Map();
   for (const row of all) { const key = speciesKey(row.species); if (key && !options.has(key)) options.set(key, row.species.trim()); }
   const chosen = speciesKey(view.species);
   if (chosen && !options.has(chosen)) options.set(chosen, view.species.trim());
-  els.species.innerHTML = `<option value="">Any</option>` + [...options].map(([key, name]) => `<option value="${esc(key)}">${esc(name)}</option>`).join('');
+  els.species.innerHTML = `<option value="">${esc(t('account.any'))}</option>` + [...options].map(([key, name]) => `<option value="${esc(key)}">${esc(name)}</option>`).join('');
   els.species.value = chosen;
-  els.list.innerHTML = shown.map(row => logItemHTML(row, trips)).join('');
+  els.list.innerHTML = shown.map(row => logItemHTML(row, trips, undefined, t)).join('');
   const filtered = Boolean(view.outcome || chosen);
   els.counts.hidden = !all.length;
-  els.counts.textContent = !all.length ? '' : shown.length ? logCountsText(logCounts(shown), {filtered, more}) : LOG_NO_MATCH;
+  els.counts.textContent = !all.length ? '' : shown.length ? logCountsText(logCounts(shown), {filtered, more}, t) : t('account.log.noMatch');
 }
 
 /** A typed position the form refused: a plain Error carrying `.field` ('lat' or 'lon') and the parser's reason. */
@@ -204,10 +239,10 @@ function readPosition(text, field) {
 const blankText = v => String(v ?? '').trim() === '';
 
 /** One latitude or longitude box: a text input with an example in the chosen format as its hint and an empty error line beside it. */
-export function positionFieldHTML(prefix, field, label, note = '', format = chosenFormat()) {
-  const latitude = field === 'lat', id = `${prefix}-${field}`;
+export function positionFieldHTML(prefix, field, label, note = '', format = chosenFormat(), copy) {
+  const t = asCopy(copy), latitude = field === 'lat', id = `${prefix}-${field}`;
   const example = latitude ? formatCoordinate(35.3576, 'latitude', format) : formatCoordinate(-120.8578, 'longitude', format);
-  return `<label for="${id}">${label}${note ? ` <span class="account-hint">${note}</span>` : ''}</label><input id="${id}" type="text" inputmode="text" autocomplete="off" aria-describedby="${id}-hint ${id}-error" /><span class="account-hint" id="${id}-hint">For example ${esc(example)}</span><p class="account-hint" role="alert" id="${id}-error" hidden></p>`;
+  return `<label for="${id}">${label}${note ? ` <span class="account-hint">${note}</span>` : ''}</label><input id="${id}" type="text" inputmode="text" autocomplete="off" aria-describedby="${id}-hint ${id}-error" /><span class="account-hint" id="${id}-hint">${esc(t('account.pos.example', {example}))}</span><p class="account-hint" role="alert" id="${id}-error" hidden></p>`;
 }
 
 /**
@@ -234,10 +269,10 @@ export async function submitPositionForm($, prefix, build, send) {
 }
 
 /** The form's fields as the log route's body: a blank sends no count, a position is sent only when both boxes are filled; typed positions are read in decimal degrees, degrees and decimal minutes, or degrees minutes seconds. */
-export function logBody(f) {
+export function logBody(f, copy) {
   const num = v => (String(v ?? '').trim() === '' ? null : Number(v));
   const hasLat = !blankText(f.lat), hasLon = !blankText(f.lon);
-  if (hasLat !== hasLon) throw fieldError(hasLat ? 'lon' : 'lat', 'Enter both latitude and longitude, or neither.');
+  if (hasLat !== hasLon) throw fieldError(hasLat ? 'lon' : 'lat', asCopy(copy)('account.log.both'));
   const lat = hasLat ? readPosition(f.lat, 'lat') : null, lon = hasLon ? readPosition(f.lon, 'lon') : null;
   const started = f.started ? new Date(f.started) : new Date();
   const out = {started_at: started.toISOString(), outcome: f.outcome, method: f.method || null, species: f.species || null, note: f.note || null, lat, lon};
@@ -254,36 +289,37 @@ export function logTripLabel(trip, region) {
 
 /** The Trip choices after "No trip": one option per saved trip, in the order given, value the exact id, label escaped. */
 export function logTripOptionsHTML(trips, region) {
-  return (Array.isArray(trips) ? trips : []).map(t => `<option value="${esc(t.id)}">${esc(logTripLabel(t, region))}</option>`).join('');
+  return (Array.isArray(trips) ? trips : []).map(trip => `<option value="${esc(trip.id)}">${esc(logTripLabel(trip, region))}</option>`).join('');
 }
-const NO_TRIP = '<option value="">No trip</option>';
+const noTrip = t => `<option value="">${esc(t('account.log.noTrip'))}</option>`;
 
-const logFormHTML = () => `<h2 class="account-subhead">Catch log</h2>
-    <p class="home-port-fine">Private to this account. Record a blank day as well as a good one. A position is never shared, mapped or put in a feed.</p>
+const logFormHTML = t => `<h2 class="account-subhead">${esc(t('account.log.head'))}</h2>
+    <p class="home-port-fine">${esc(t('account.log.fine'))}</p>
     <form id="log-form" autocomplete="off">
-      <label for="log-started">When</label><input id="log-started" type="datetime-local" />
-      <label for="log-outcome">What happened</label><select id="log-outcome"><option value="blank">Blank: no fish</option><option value="fish">Fish</option><option value="unknown">Not sure</option></select>
-      <label for="log-count">Fish count</label><input id="log-count" type="number" min="1" max="9999" step="1" />
-      <label for="log-species">Target species</label><input id="log-species" type="text" maxlength="60" />
-      <label for="log-method">Method</label><input id="log-method" type="text" maxlength="40" />
-      <label for="log-trip">Trip <span class="account-hint">(optional)</span></label><select id="log-trip">${NO_TRIP}</select>
-      ${positionFieldHTML('log', 'lat', 'Latitude', '(optional, private)')}
-      ${positionFieldHTML('log', 'lon', 'Longitude', '(optional, private)')}
-      <label for="log-note">Note</label><input id="log-note" type="text" maxlength="1000" />
-      <div class="home-port-actions"><button type="submit" id="log-save">Save to my log</button></div>
+      <label for="log-started">${esc(t('account.log.when'))}</label><input id="log-started" type="datetime-local" />
+      <label for="log-outcome">${esc(t('account.log.what'))}</label><select id="log-outcome"><option value="blank">${esc(t('account.outcome.blank'))}</option><option value="fish">${esc(t('account.outcome.fish'))}</option><option value="unknown">${esc(t('account.outcome.unknown'))}</option></select>
+      <label for="log-count">${esc(t('account.log.count'))}</label><input id="log-count" type="number" min="1" max="9999" step="1" />
+      <label for="log-species">${esc(t('account.log.species'))}</label><input id="log-species" type="text" maxlength="60" />
+      <label for="log-method">${esc(t('account.log.method'))}</label><input id="log-method" type="text" maxlength="40" />
+      <label for="log-trip">${esc(t('account.log.trip'))} <span class="account-hint">${esc(t('account.optional'))}</span></label><select id="log-trip">${noTrip(t)}</select>
+      ${positionFieldHTML('log', 'lat', esc(t('account.log.lat')), esc(t('account.optional.private')), chosenFormat(), t)}
+      ${positionFieldHTML('log', 'lon', esc(t('account.log.lon')), esc(t('account.optional.private')), chosenFormat(), t)}
+      <label for="log-note">${esc(t('account.log.note'))}</label><input id="log-note" type="text" maxlength="1000" />
+      <div class="home-port-actions"><button type="submit" id="log-save">${esc(t('account.log.save'))}</button></div>
     </form>
-    <div class="home-port-actions"><label for="log-filter-outcome">Show</label><select id="log-filter-outcome"><option value="">Any</option><option value="fish">Fish</option><option value="blank">Blank: no fish</option><option value="unknown">Not sure</option></select>
-      <label for="log-filter-species">Species</label><select id="log-filter-species"><option value="">Any</option></select></div>
+    <div class="home-port-actions"><label for="log-filter-outcome">${esc(t('account.log.filter'))}</label><select id="log-filter-outcome"><option value="">${esc(t('account.any'))}</option><option value="fish">${esc(t('account.outcome.fish'))}</option><option value="blank">${esc(t('account.outcome.blank'))}</option><option value="unknown">${esc(t('account.outcome.unknown'))}</option></select>
+      <label for="log-filter-species">${esc(t('account.log.filterSpecies'))}</label><select id="log-filter-species"><option value="">${esc(t('account.any'))}</option></select></div>
     <p class="account-hint" id="log-counts" role="status" hidden></p>
     <ul class="account-passkeys" id="log-list"></ul>
     <p class="account-hint" id="log-status" role="status"></p>
-    <div class="home-port-actions"><button type="button" id="log-retry" hidden>Try again</button><button type="button" id="log-older" hidden>Show older entries</button></div>`;
+    <div class="home-port-actions"><button type="button" id="log-retry" hidden>${esc(t('account.log.retry'))}</button><button type="button" id="log-older" hidden>${esc(t('account.log.older'))}</button></div>`;
 
 /** One saved spot as list HTML. Name, note and verdict are escaped, so markup in them shows as plain text. */
-export function spotItemHTML(spot, verdict, format = chosenFormat()) {
-  const name = String(spot.name ?? '').replace(/[\u0000-\u001f\ufffe\uffff]/g, '').trim() || 'Unnamed spot';
+export function spotItemHTML(spot, verdict, format = chosenFormat(), copy) {
+  const t = asCopy(copy);
+  const name = String(spot.name ?? '').replace(/[\u0000-\u001f\ufffe\uffff]/g, '').trim() || t('account.spots.unnamed');
   return `<li><span>${esc(name)} · ${esc(formatCoordinates(spot.lat, spot.lon, format))}</span>${verdict?.text ? `<p class="account-hint">${esc(verdict.text)}</p>` : ''}${spot.note ? `<p class="account-hint">${esc(spot.note)}</p>` : ''}
-    <button type="button" data-remove-spot="${esc(spot.id)}">Remove</button></li>`;
+    <button type="button" data-remove-spot="${esc(spot.id)}">${esc(t('account.remove'))}</button></li>`;
 }
 
 /** The form's fields as the spots route's body. A position is always required; a blank or unreadable box is refused here with the parser's reason. */
@@ -292,16 +328,17 @@ export function spotBody(f) {
 }
 
 // SC0022-04: the reading for a spot the protected-area screen could not check.
-const UNCHECKED_SPOT = 'Protected areas not checked for this spot: outside coverage or check unavailable; not exported.';
 
 /** Each spot's reading from the shared screen (dist/geo-screen.js `screenPlace`, BF-closures-everywhere): excluded (boundary named), unavailable (not checked), or clear (no text). */
-export async function spotVerdicts(spots, screen) {
-  const {screenPlace, placeRefused} = await import('./geo-screen.js'), {protectedHitReading} = await import('./trip-export.js');
+export async function spotVerdicts(spots, screen, copy) {
+  const t = asCopy(copy), {screenPlace, placeRefused} = await import('./geo-screen.js'), {protectedHitReading} = await import('./trip-export.js');
   return spots.map(s => {
     const v = screenPlace(screen, {latitude: s.lat, longitude: s.lon});
-    if (!v.screened) return {status: 'unavailable', text: UNCHECKED_SPOT};
+    if (!v.screened) return {status: 'unavailable', text: t('account.spots.unchecked')};
     if (!placeRefused(v)) return {status: 'clear', text: ''};
-    return {status: 'excluded', text: `${protectedHitReading({inside: v.inside, reef: false})} ${v.name ? v.name + '.' : ''} Not exported.`.replace(/\s+/g, ' ')};
+    // Spanish picks its sentence from the structured `inside`, never by matching the English reading.
+    const reading = t.lang === 'es' ? t(v.inside ? 'account.spots.inside' : 'account.spots.margin') : protectedHitReading({inside: v.inside, reef: false});
+    return {status: 'excluded', text: t('account.spots.excluded', {reading, name: v.name ? v.name + '.' : ''}).replace(/\s+/g, ' ')};
   });
 }
 
@@ -310,66 +347,69 @@ export async function spotVerdicts(spots, screen) {
  * names are cleaned and made unique by its one serialiser). A spot inside or near a protected area is left out and named;
  * with the screen stale or missing nothing is exported. The file must pass the same GPX check, with the screen, that the planner runs.
  */
-export async function exportSpots(spots, screen, region, now = new Date()) {
-  const {buildExport} = await import('./trip-export.js'), {checkGpx} = await import('../web/gpx-check.ts');
-  if (!spots.length) throw Error('You have no saved spots to export.');
-  const verdicts = await spotVerdicts(spots, screen);
-  if (verdicts.some(v => v.status === 'unavailable')) throw Error('Protected-area checks are unavailable or older than 36 hours, or a saved spot is outside coverage. Nothing was exported.');
+export async function exportSpots(spots, screen, region, now = new Date(), copy) {
+  const t = asCopy(copy), {buildExport} = await import('./trip-export.js'), {checkGpx} = await import('../web/gpx-check.ts');
+  if (!spots.length) throw Error(t('account.exp.none'));
+  const verdicts = await spotVerdicts(spots, screen, t);
+  if (verdicts.some(v => v.status === 'unavailable')) throw Error(t('account.exp.unavailable'));
   const held = spots.filter((s, i) => verdicts[i].status !== 'clear'), clear = spots.filter((s, i) => verdicts[i].status === 'clear');
-  if (!clear.length) throw Error('Every saved spot is inside or near a protected area, so nothing was exported.');
+  if (!clear.length) throw Error(t('account.exp.allHeld'));
   const points = clear.map(s => ({id: 'user:' + s.id, name: s.name.trim() ? s.name : 'Waypoint', category: 'other', latitude: s.lat, longitude: s.lon}));
   const out = buildExport({atlas: {targets: [], areas: [], drifts: []}, screen, ids: points.map(p => p.id), region, title: 'SkipperCast saved spots', now, userWaypoints: points});
   const check = checkGpx(out.gpx, {waypoints: clear.length}, screen);
-  if (!check.ok) throw Error(`The GPX file failed its own check: ${check.problems[0]}. Nothing was handed over.`);
+  if (!check.ok) throw Error(t('account.exp.failed', {problem: check.problems[0]}));
   return {gpx: out.gpx, exported: clear.length, withheld: held.length};
 }
 
-const spotFormHTML = () => `<h2 class="account-subhead">Saved spots</h2>
-    <p class="home-port-fine">Private to this account. You can show your saved spots on your own Chart. Spots and notes are never shared, put in a public feed or shown to anyone else. Private notes are never drawn on the map or included in GPX. Spots inside a protected area are shown with that reading and left out of the GPX file.</p>
+// The Spanish text adds one paragraph that the English does not carry: private notes never reach the GPX (the English sentence above already says so).
+const spotFormHTML = t => `<h2 class="account-subhead">${esc(t('account.spots.head'))}</h2>
+    <p class="home-port-fine">${esc(t('account.spots.fine'))}</p>${t.lang === 'es' ? `<p class="home-port-fine">${esc(t('account.spots.notesGpx'))}</p>` : ''}
     <form id="spot-form" autocomplete="off">
-      <label for="spot-name">Name</label><input id="spot-name" type="text" maxlength="80" />
-      ${positionFieldHTML('spot', 'lat', 'Latitude')}
-      ${positionFieldHTML('spot', 'lon', 'Longitude')}
-      <label for="spot-note">Private note</label><input id="spot-note" type="text" maxlength="1000" />
-      <div class="home-port-actions"><button type="submit" id="spot-save">Save this spot</button><button type="button" id="spot-export">Download my spots as GPX</button></div>
+      <label for="spot-name">${esc(t('account.name'))}</label><input id="spot-name" type="text" maxlength="80" />
+      ${positionFieldHTML('spot', 'lat', esc(t('account.log.lat')), '', chosenFormat(), t)}
+      ${positionFieldHTML('spot', 'lon', esc(t('account.log.lon')), '', chosenFormat(), t)}
+      <label for="spot-note">${esc(t('account.spots.note'))}</label><input id="spot-note" type="text" maxlength="1000" />
+      <div class="home-port-actions"><button type="submit" id="spot-save">${esc(t('account.spots.save'))}</button><button type="button" id="spot-export">${esc(t('account.spots.export'))}</button></div>
     </form>
     <ul class="account-passkeys" id="spot-list"></ul>`;
 
-function signedOutHTML() {
-  return `<h1 id="account-title">Save trips and alerts with an account</h1>
-    <p class="home-port-intro">SkipperCast accounts use passkeys: Face ID, Touch ID or your device PIN. There is no password. The map and forecasts stay free without an account.</p>
-    <label for="account-name">Name <span class="account-hint">(optional, shown only to you)</span></label>
-    <input id="account-name" type="text" maxlength="60" autocomplete="username webauthn" placeholder="e.g. Graham" />
+function signedOutHTML(t) {
+  return `<h1 id="account-title">${esc(t('account.out.title'))}</h1>
+    <p class="home-port-intro">${esc(t('account.out.intro'))}</p>
+    <label for="account-name">${esc(t('account.name'))} <span class="account-hint">${esc(t('account.name.optional'))}</span></label>
+    <input id="account-name" type="text" maxlength="60" autocomplete="username webauthn" placeholder="${esc(t('account.name.placeholder'))}" />
     <p id="account-status" class="home-port-feedback" role="status"></p>
-    <div class="home-port-actions"><button type="button" id="account-create" class="account-primary">Create account</button><button type="button" id="account-signin">Sign in with a passkey</button></div>
-    <p class="home-port-fine">Your passkey stays on your device or in your password manager; SkipperCast stores only its public key. Saved trips, alerts, boat comfort feedback, catch-log entries and saved spots belong to your account, and you can delete the account at any time.</p>`;
+    <div class="home-port-actions"><button type="button" id="account-create" class="account-primary">${esc(t('account.create'))}</button><button type="button" id="account-signin">${esc(t('account.signin'))}</button></div>
+    <p class="home-port-fine">${esc(t('account.out.fine'))}</p>`;
 }
 
-function signedInHTML(session, passkeys) {
+function signedInHTML(session, passkeys, t) {
   const name = session.user?.display_name;
-  return `<h1 id="account-title">${name ? `Signed in as ${esc(name)}` : 'You are signed in'}</h1>
-    <p class="home-port-intro">Your saved trips, alerts and comfort feedback are private to this account.</p>
-    <h2 class="account-subhead">Passkeys</h2>
-    <ul class="account-passkeys">${passkeys.map(p => `<li><span>Added ${esc(day(p.created_at))}${p.last_used_at ? ` · last used ${esc(day(p.last_used_at))}` : ''}</span>
-      <button type="button" data-remove-passkey="${esc(p.id)}"${passkeys.length < 2 ? ' disabled title="Add another passkey before removing this one"' : ''}>Remove</button></li>`).join('')}</ul>
+  return `<h1 id="account-title">${esc(name ? t('account.in.titleNamed', {name}) : t('account.in.title'))}</h1>
+    <p class="home-port-intro">${esc(t('account.in.intro'))}</p>
+    <h2 class="account-subhead">${esc(t('account.passkeys.head'))}</h2>
+    <ul class="account-passkeys">${passkeys.map(p => `<li><span>${esc(t('account.passkeys.added', {date: day(p.created_at, t.lang)}))}${p.last_used_at ? esc(t('account.passkeys.lastUsed', {date: day(p.last_used_at, t.lang)})) : ''}</span>
+      <button type="button" data-remove-passkey="${esc(p.id)}"${passkeys.length < 2 ? ` disabled title="${esc(t('account.passkeys.removeTitle'))}"` : ''}>${esc(t('account.remove'))}</button></li>`).join('')}</ul>
     <p id="account-status" class="home-port-feedback" role="status"></p>
-    <div class="home-port-actions"><button type="button" id="account-add">Add a passkey on this device</button><button type="button" id="account-signout">Sign out</button></div>
-    ${logFormHTML()}
-    ${spotFormHTML()}
-    <details class="account-danger"><summary>Delete account</summary>
-      <p>Deletes your account, passkeys, saved trips, alerts, notification devices, catch log, saved spots and comfort feedback. This cannot be undone.</p>
-      <button type="button" id="account-delete">Delete my account and records</button></details>`;
+    <div class="home-port-actions"><button type="button" id="account-add">${esc(t('account.add'))}</button><button type="button" id="account-signout">${esc(t('account.signout'))}</button></div>
+    ${logFormHTML(t)}
+    ${spotFormHTML(t)}
+    <details class="account-danger"><summary>${esc(t('account.del.head'))}</summary>
+      <p>${esc(t('account.del.body'))}</p>
+      <button type="button" id="account-delete">${esc(t('account.del.button'))}</button></details>`;
 }
 
 let open = null;
-export async function openAccount() {
+/** Opens the dialog. `options` is {lang, strings} from web/account-copy.ts, read once here: this dialog keeps them for its life. */
+export async function openAccount(options = {}) {
   if (open) return;
+  const t = createCopy(options);
   const previous = document.activeElement;
   const scrim = document.createElement('div');
   scrim.className = 'home-port-scrim account-scrim';
   scrim.innerHTML = `<section class="home-port-card account-card" role="dialog" aria-modal="true" aria-labelledby="account-title">
-    <div class="home-port-kicker">YOUR ACCOUNT</div><div id="account-body"><h1 id="account-title">Account</h1><p role="status">Checking your account…</p></div>
-    <button type="button" class="home-port-close" aria-label="Close account">×</button></section>`;
+    <div class="home-port-kicker">${esc(t('account.kicker'))}</div><div id="account-body"><h1 id="account-title">${esc(t('account.title'))}</h1><p role="status">${esc(t('account.checking'))}</p></div>
+    <button type="button" class="home-port-close" aria-label="${esc(t('account.close'))}">×</button></section>`;
   document.body.append(scrim);
   document.body.classList.add('choosing-home-port');
   const $ = sel => scrim.querySelector(sel), body = $('#account-body');
@@ -392,16 +432,16 @@ export async function openAccount() {
 
   let session;
   try { session = await api('session'); }
-  catch { body.innerHTML = '<h1 id="account-title">Account</h1><p class="home-port-intro">Accounts need a connection. Try again when you are online.</p>'; return; }
-  if (!session.signIn) { body.innerHTML = '<h1 id="account-title">Account</h1><p class="home-port-intro">Accounts are not available on this site.</p>'; return; }
+  catch { body.innerHTML = `<h1 id="account-title">${esc(t('account.title'))}</h1><p class="home-port-intro">${esc(t('account.offline'))}</p>`; return; }
+  if (!session.signIn) { body.innerHTML = `<h1 id="account-title">${esc(t('account.title'))}</h1><p class="home-port-intro">${esc(t('account.disabled'))}</p>`; return; }
 
   if (!session.signedIn) {
-    body.innerHTML = signedOutHTML();
+    body.innerHTML = signedOutHTML(t);
     const buttons = [$('#account-create'), $('#account-signin')];
     const busy = on => buttons.forEach(b => { b.disabled = on; });
     // Without the native API there is nothing to load: say so now. Otherwise the library loads when a ceremony starts
     // (a tap on Create or Sign in, or the optional autofill below), never because the dialog is merely open signed in.
-    if (typeof globalThis.PublicKeyCredential !== 'function') { busy(true); status(UNSUPPORTED); return; }
+    if (typeof globalThis.PublicKeyCredential !== 'function') { busy(true); status(t('account.status.unsupported')); return; }
     // #597: once the person taps Create or Sign in, or this dialog is closed or replaced, a passkey-autofill request
     // still waiting for the library, its support check or its options must not start: its ceremony would abort theirs
     // through the shared abort service.
@@ -413,18 +453,18 @@ export async function openAccount() {
       const response = await lib.startAuthentication({optionsJSON: options, useBrowserAutofill: autofill});
       if (open !== self) return;
       await api('auth/login/verify', {method: 'POST', body: {response}});
-      status('Signed in.'); finish();
+      status(t('account.status.signedIn')); finish();
     };
     // The library, once it has loaded and this browser supports passkeys; null when the dialog was closed or replaced meanwhile
     // (nothing is painted into it) or when the browser lacks passkeys (said, and the buttons stay off).
     const ready = async () => {
       const lib = await loadPasskeyLibrary();
       if (open !== self) return null;
-      if (!lib.browserSupportsWebAuthn()) { status(UNSUPPORTED); return null; }
+      if (!lib.browserSupportsWebAuthn()) { status(t('account.status.unsupported')); return null; }
       return lib;
     };
     $('#account-create').addEventListener('click', async () => {
-      manual = true; busy(true); status('Follow your device to create a passkey…');
+      manual = true; busy(true); status(t('account.status.createPrompt'));
       try {
         const lib = await ready(); if (!lib) return;
         const name = $('#account-name').value.trim();
@@ -433,12 +473,12 @@ export async function openAccount() {
         const response = await lib.startRegistration({optionsJSON: options});
         if (open !== self) return;
         await api('auth/register/verify', {method: 'POST', body: {response, display_name: name}});
-        status('Account created.'); finish();
-      } catch (error) { if (open === self) { status(passkeyMessage(error)); busy(false); } }
+        status(t('account.status.created')); finish();
+      } catch (error) { if (open === self) { status(passkeyMessage(error, t)); busy(false); } }
     });
     $('#account-signin').addEventListener('click', async () => {
-      manual = true; busy(true); status('Choose your SkipperCast passkey…');
-      try { const lib = await ready(); if (lib) await signIn(lib, false); } catch (error) { if (open === self) { status(passkeyMessage(error)); busy(false); } }
+      manual = true; busy(true); status(t('account.status.signinPrompt'));
+      try { const lib = await ready(); if (lib) await signIn(lib, false); } catch (error) { if (open === self) { status(passkeyMessage(error, t)); busy(false); } }
     });
     // Passkey autofill: suggestions appear in the name field where supported. Optional, so a library that will not
     // load stays silent here; only the server's answer is shown, because the browser ends a pending autofill request
@@ -450,7 +490,7 @@ export async function openAccount() {
         if (!await lib.browserSupportsWebAuthnAutofill()) return;
         if (stale(true)) return;
         await signIn(lib, true);
-      } catch (error) { if (open === self && error?.status) status(passkeyMessage(error)); }
+      } catch (error) { if (open === self && error?.status) status(passkeyMessage(error, t)); }
     })();
     $('#account-name').focus();
     return;
@@ -458,8 +498,8 @@ export async function openAccount() {
 
   const render = async () => {
     let passkeys = [];
-    try { passkeys = (await api('auth/passkeys')).passkeys; } catch (error) { status(passkeyMessage(error)); }
-    body.innerHTML = signedInHTML(session, passkeys);
+    try { passkeys = (await api('auth/passkeys')).passkeys; } catch (error) { status(passkeyMessage(error, t)); }
+    body.innerHTML = signedInHTML(session, passkeys, t);
     const list = $('#log-list'), tripSelect = $('#log-trip'), older = $('#log-older'), retry = $('#log-retry'), logStatus = $('#log-status');
     // Saved trips (one read per render, independent of the log, passkeys and spots): they label the Trip choice and date the entries.
     // SC0922-03: the log is read a page at a time. `entries` holds every page shown so far in server order, `nextCursor` where the
@@ -468,9 +508,9 @@ export async function openAccount() {
     let view = {outcome: '', species: ''}, trips = [], entries = null, nextCursor = null, busy = false, generation = 0, loadFailed = false, gone = new Set();
     const live = () => open === self && list.isConnected;
     const drawLog = () => {
-      if (entries) drawLogView({list, counts: $('#log-counts'), species: $('#log-filter-species')}, {entries, trips, view, more: Boolean(nextCursor)});
+      if (entries) drawLogView({list, counts: $('#log-counts'), species: $('#log-filter-species')}, {entries, trips, view, more: Boolean(nextCursor), copy: t});
       const keepFocus = document.activeElement === older && !(entries && nextCursor);
-      older.hidden = !(entries && nextCursor); older.textContent = busy ? 'Loading older entries…' : 'Show older entries';
+      older.hidden = !(entries && nextCursor); older.textContent = busy ? t('account.log.olderLoading') : t('account.log.older');
       older.setAttribute('aria-disabled', String(busy));   // not `disabled`: a disabled button drops keyboard focus mid-load
       retry.hidden = !loadFailed;
       if (keepFocus) { logStatus.tabIndex = -1; logStatus.focus(); }
@@ -481,10 +521,10 @@ export async function openAccount() {
         const page = await readLogPage();
         if (!live() || mine !== generation) return;
         entries = page.entries; nextCursor = page.nextCursor; loadFailed = false;
-        logStatus.textContent = entries.length || nextCursor ? '' : 'No entries yet.';
+        logStatus.textContent = entries.length || nextCursor ? '' : t('account.log.none');
       } catch {
         if (!live() || mine !== generation) return;
-        loadFailed = true; logStatus.textContent = 'Could not load your catch log. Try again.';
+        loadFailed = true; logStatus.textContent = t('account.log.loadFailed');
       }
       drawLog();
     };
@@ -498,7 +538,7 @@ export async function openAccount() {
         const seen = new Set(entries.map(row => row.id));
         for (const row of page.entries) if (!seen.has(row?.id) && !gone.has(row?.id)) { seen.add(row?.id); entries.push(row); }
         nextCursor = page.nextCursor;
-      } catch { if (live() && mine === generation) logStatus.textContent = 'Could not load older entries. Try again.'; }
+      } catch { if (live() && mine === generation) logStatus.textContent = t('account.log.olderFailed'); }
       finally { if (live() && mine === generation) { busy = false; drawLog(); } }
     };
     const loadTrips = async () => {
@@ -507,9 +547,9 @@ export async function openAccount() {
         const region = await import('./region.js').then(m => m.getRegion(), () => null);   // only names the area; without it the label reads "region / point"
         if (!live()) return;
         trips = rows; const chosen = tripSelect.value;
-        tripSelect.innerHTML = NO_TRIP + logTripOptionsHTML(trips, region); tripSelect.value = chosen;
+        tripSelect.innerHTML = noTrip(t) + logTripOptionsHTML(trips, region); tripSelect.value = chosen;
         drawLog();
-      } catch { if (live()) status('Saved trips could not be loaded. You can still save without a trip.'); }
+      } catch { if (live()) status(t('account.log.tripsFailed')); }
     };
     list.addEventListener('click', async event => {
       const b = event.target.closest('[data-remove-log]'); if (!b) return;
@@ -518,8 +558,8 @@ export async function openAccount() {
         await api('catch-log/' + encodeURIComponent(id), {method: 'DELETE', body: {}});
         // Only this row goes: older pages already shown and the cursor stay, and the cursor stays valid if it pointed at this row.
         gone.add(id);
-        if (live() && entries) { entries = entries.filter(row => row.id !== id); if (!entries.length && !nextCursor) logStatus.textContent = 'No entries yet.'; drawLog(); }
-      } catch (error) { status(passkeyMessage(error)); }
+        if (live() && entries) { entries = entries.filter(row => row.id !== id); if (!entries.length && !nextCursor) logStatus.textContent = t('account.log.none'); drawLog(); }
+      } catch (error) { status(passkeyMessage(error, t)); }
     });
     older.addEventListener('click', showOlder);
     $('#log-filter-outcome').addEventListener('change', event => { view = {...view, outcome: event.target.value}; drawLog(); });
@@ -529,11 +569,11 @@ export async function openAccount() {
       event.preventDefault();
       const field = n => $('#log-' + n).value;
       try {
-        await submitPositionForm($, 'log', () => logBody({started: field('started'), outcome: field('outcome'), count: field('count'), species: field('species'), method: field('method'), trip_id: field('trip'), lat: field('lat'), lon: field('lon'), note: field('note')}), async body => {
+        await submitPositionForm($, 'log', () => logBody({started: field('started'), outcome: field('outcome'), count: field('count'), species: field('species'), method: field('method'), trip_id: field('trip'), lat: field('lat'), lon: field('lon'), note: field('note')}, t), async body => {
           await api('catch-log', {method: 'POST', body});
-          $('#log-form').reset(); await showLog(); status('Saved to your log.');
+          $('#log-form').reset(); await showLog(); status(t('account.log.saved'));
         });
-      } catch (error) { status(passkeyMessage(error)); }
+      } catch (error) { status(passkeyMessage(error, t)); }
     });
     showLog(); loadTrips();
     // BF-saved-spots: the list reads each spot against the shared protected-area screen; a screen that cannot load reads "unavailable".
@@ -543,13 +583,13 @@ export async function openAccount() {
     const spotList = $('#spot-list'), spotsChanged = () => { try { globalThis.dispatchEvent?.(new Event('skippercast:saved-spots-changed')); } catch { /* the Chart layer reads again on its next turn-on */ } }, showSpots = async () => {
       try {
         spotRows = (await api('spots')).spots;
-        const verdicts = await spotVerdicts(spotRows, await spotScreen());
-        spotList.innerHTML = spotRows.map((s, i) => spotItemHTML(s, verdicts[i])).join('');
-      } catch (error) { status(passkeyMessage(error)); }
+        const verdicts = await spotVerdicts(spotRows, await spotScreen(), t);
+        spotList.innerHTML = spotRows.map((s, i) => spotItemHTML(s, verdicts[i], undefined, t)).join('');
+      } catch (error) { status(passkeyMessage(error, t)); }
     };
     spotList.addEventListener('click', async event => {
       const b = event.target.closest('[data-remove-spot]'); if (!b) return;
-      try { await api('spots/' + encodeURIComponent(b.dataset.removeSpot), {method: 'DELETE', body: {}}); spotsChanged(); await showSpots(); } catch (error) { status(passkeyMessage(error)); }
+      try { await api('spots/' + encodeURIComponent(b.dataset.removeSpot), {method: 'DELETE', body: {}}); spotsChanged(); await showSpots(); } catch (error) { status(passkeyMessage(error, t)); }
     });
     $('#spot-form').addEventListener('submit', async event => {
       event.preventDefault();
@@ -557,53 +597,54 @@ export async function openAccount() {
       try {
         await submitPositionForm($, 'spot', () => spotBody({name: field('name'), lat: field('lat'), lon: field('lon'), note: field('note')}), async body => {
           await api('spots', {method: 'POST', body});
-          $('#spot-form').reset(); spotsChanged(); await showSpots(); status('Saved to your spots.');
+          $('#spot-form').reset(); spotsChanged(); await showSpots(); status(t('account.spots.saved'));
         });
-      } catch (error) { status(passkeyMessage(error)); }
+      } catch (error) { status(passkeyMessage(error, t)); }
     });
     $('#spot-export').addEventListener('click', async () => {
       try {
         const screen = await spotScreen();
         if (screen && !screen.ready()) await screen.refresh();
-        const {getRegion} = await import('./region.js'), out = await exportSpots(spotRows, screen, getRegion());
+        const {getRegion} = await import('./region.js'), out = await exportSpots(spotRows, screen, getRegion(), new Date(), t);
         const url = URL.createObjectURL(new Blob([out.gpx], {type: 'application/gpx+xml'})), a = document.createElement('a');
         a.href = url; a.download = 'SkipperCast-saved-spots.gpx'; a.click(); URL.revokeObjectURL(url);
-        status(`Downloaded ${out.exported} spot${out.exported === 1 ? '' : 's'}${out.withheld ? `; ${out.withheld} left out because of a protected area` : ''}.`);
-      } catch (error) { status(error?.message || 'Could not build the GPX file.'); }
+        const one = out.exported === 1, vars = {exported: out.exported, withheld: out.withheld};
+        status(out.withheld ? (one ? t('account.exp.doneHeld.one', vars) : t('account.exp.doneHeld.other', vars)) : (one ? t('account.exp.done.one', vars) : t('account.exp.done.other', vars)));
+      } catch (error) { status(error?.message || t('account.exp.build')); }
     });
     showSpots();
     $('#account-add').addEventListener('click', async () => {
-      status('Follow your device to add a passkey…');
+      status(t('account.status.addPrompt'));
       try {
         const lib = await loadPasskeyLibrary();
         if (open !== self) return;
-        if (!lib.browserSupportsWebAuthn()) { status('This browser does not support passkeys.'); return; }
+        if (!lib.browserSupportsWebAuthn()) { status(t('account.status.unsupportedShort')); return; }
         const options = await api('auth/passkeys/options', {method: 'POST', body: {}});
         if (open !== self) return;
         const response = await lib.startRegistration({optionsJSON: options});
         if (open !== self) return;
         await api('auth/passkeys', {method: 'POST', body: {response}});
-        await render(); status('Passkey added.');
-      } catch (error) { if (open === self) status(passkeyMessage(error)); }
+        await render(); status(t('account.status.added'));
+      } catch (error) { if (open === self) status(passkeyMessage(error, t)); }
     });
     $('#account-signout').addEventListener('click', async () => {
-      try { await api('auth/logout', {method: 'POST', body: {}}); finish(); } catch (error) { status(passkeyMessage(error)); }
+      try { await api('auth/logout', {method: 'POST', body: {}}); finish(); } catch (error) { status(passkeyMessage(error, t)); }
     });
     $('#account-delete').addEventListener('click', async event => {
-      if (!await confirmInPage(event.currentTarget, 'Delete your SkipperCast account and all saved trips, alerts, notification devices, catch log, saved spots and comfort feedback? This cannot be undone.', 'Yes, delete everything')) return;
-      try { await api('privacy', {method: 'DELETE', body: {}}); status('Your account has been deleted.'); finish(); } catch (error) { status(passkeyMessage(error)); }
+      if (!await confirmInPage(event.currentTarget, t('account.del.confirm'), t('account.del.yes'), t)) return;
+      try { await api('privacy', {method: 'DELETE', body: {}}); status(t('account.del.done')); finish(); } catch (error) { status(passkeyMessage(error, t)); }
     });
     for (const button of body.querySelectorAll('[data-remove-passkey]')) button.addEventListener('click', async () => {
-      if (!await confirmInPage(button, 'Remove this passkey? You will not be able to sign in with it again.', 'Remove passkey')) return;
-      try { await api('auth/passkeys', {method: 'DELETE', body: {id: button.dataset.removePasskey}}); await render(); status('Passkey removed.'); }
-      catch (error) { status(passkeyMessage(error)); }
+      if (!await confirmInPage(button, t('account.pk.confirm'), t('account.pk.confirmYes'), t)) return;
+      try { await api('auth/passkeys', {method: 'DELETE', body: {id: button.dataset.removePasskey}}); await render(); status(t('account.status.removed')); }
+      catch (error) { status(passkeyMessage(error, t)); }
     });
   };
   await render();
 }
 
 export async function initAccount() {
-  const entry = document.getElementById('account-entry');
+  const t = DEFAULT_COPY, entry = document.getElementById('account-entry');
   const remember = back => { try { sessionStorage.setItem(RETURN_KEY, back && back !== '#account' ? back : '#guide'); } catch { /* storage blocked */ } };
   const fromHash = event => {
     if (location.hash !== '#account') { open?.close(); return; }
@@ -617,7 +658,7 @@ export async function initAccount() {
     const session = await api('session');
     if (entry) {
       entry.hidden = !session.signIn;
-      entry.querySelector('span').textContent = session.signedIn ? `Signed in${session.user?.display_name ? ' as ' + session.user.display_name : ''}` : 'Sign in or create an account';
+      entry.querySelector('span').textContent = session.signedIn ? (session.user?.display_name ? t('account.entry.signedInAs', {name: session.user.display_name}) : t('account.entry.signedIn')) : t('account.entry.signIn');
     }
   } catch { if (entry) entry.hidden = true; }
 }
