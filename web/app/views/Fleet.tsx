@@ -16,107 +16,51 @@
 // API with v1's own query builder; "Show on map" also turns the events layer on
 // when no activity layer is, as v1's button does.
 import {useEffect, useState} from 'preact/hooks';
-import {Button} from '../../ui/Button.tsx';
-import {boatDirectory, dateBounds, directoryHref, FILTER_LABELS, filterChoices, HOW_INFERRED, PLANNING_LABEL, readFilters, VESSELS_NOTE,
-  type Choice, type SelectName} from '../../fleet.ts';
+import {boatDirectory, directoryHref} from '../../fleet.ts';
+import {language, t, type Language} from '../../i18n.ts';
 import {groundsState} from '../../map/charter-grounds.ts';
 import {aisOn, aisState} from '../../map/commercial-ais.ts';
-import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityChoices, activityFilters, activityOn, activityStatus, hidePlanning, toggleActivity} from '../../map/fleet.ts';
-import {layerEntry} from '../../map/layers.ts';
+import {activityAccess} from '../../map/fleet.ts';
+import {layerCopy, layerEntry} from '../../map/layers.ts';
 import {savedPortId, type Port} from '../../ports.ts';
-import {layers, layersParam, region, setParams} from '../../state.ts';
-import {toggled} from '../rail.ts';
+import {layers, region} from '../../state.ts';
+import {EnglishDetail} from '../EnglishDetail.tsx';
+import {Admin, Check, showGrounds} from './FleetAdmin.tsx';
 
-/** v1's status line while no activity layer is on (dist/fleet-activity.js `statusText`). */
-export const ACTIVITY_OFF = 'Fleet activity is off. Turn on a layer to load it.';
+export {ACTIVITY_OFF} from './FleetAdmin.tsx';
 
-const checked = (event: Event): boolean => (event.currentTarget as HTMLInputElement).checked;
-/** Turn the Charter fleet entry on or off (the rail's own toggle). */
-const showGrounds = (on: boolean): void => { setParams({layers: layersParam(toggled(layers.value, 'fleet', on))}); };
-
-/** A 24 px target (WCAG 2.5.8; app.css draws rail inputs at 16 px). Preact 11 sets style values verbatim, so lengths carry their unit. */
-function Check({label, on, onChange}: {label: string; on: boolean; onChange: (on: boolean) => void}) {
-  return <label class="app-rail-option app-fleet-check"><input type="checkbox" style={{minWidth: '24px', minHeight: '24px'}} checked={on} onChange={event => onChange(checked(event))} />{label}</label>;
+/** A layer's basis in the page's language: English shows the registry's runtime basis as it is; Spanish leads with the registry sentence in Spanish, then the runtime basis unchanged (labelled English) unless it is the registry's own English sentence. */
+function Basis({id, lang}: {id: string; lang: Language}) {
+  const runtime = layerEntry(id).basis;
+  if (lang !== 'es') return <p class="app-fleet-basis">{runtime}</p>;
+  return <p class="app-fleet-basis">{layerCopy(id, lang).basis}{runtime && runtime !== layerCopy(id, 'en').basis ? <> <EnglishDetail lang={lang}>{runtime}</EnglishDetail></> : null}</p>;
 }
 
 /** The public part: grounds, the AIS option and the directory link. */
 function Public({directory}: {directory: readonly Port[]}) {
-  const on = layers.value.includes('fleet'), grounds = groundsState.value, ais = aisState.value;
-  const status = !on ? 'Off. Turn it on to draw the grounds on the map.' : grounds.drawn ? `${grounds.drawn} charter ground${grounds.drawn === 1 ? '' : 's'} on the map` : grounds.note;
+  const lang = language.value, on = layers.value.includes('fleet'), grounds = groundsState.value, ais = aisState.value;
+  // The layer's own note is English text it wrote at run time: whole, labelled English in Spanish.
+  const status = !on ? t('fleet.public.off', lang) : grounds.drawn ? t(grounds.drawn === 1 ? 'fleet.public.drawn.one' : 'fleet.public.drawn.other', lang, {n: grounds.drawn}) : <EnglishDetail lang={lang}>{grounds.note}</EnglishDetail>;
   return (
     <>
-      <h2 class="ui-eyebrow">Charter grounds</h2>
-      <Check label="Show charter grounds" on={on} onChange={showGrounds} />
-      <p class="app-empty" role="status">{status}{grounds.audit ? ` · audited ${grounds.audit}` : ''}</p>
-      <p class="app-fleet-basis">{layerEntry('charter-grounds').basis}</p>
+      <h2 class="ui-eyebrow">{t('fleet.public.grounds', lang)}</h2>
+      <Check label={t('fleet.public.show', lang)} on={on} onChange={showGrounds} />
+      <p class="app-empty" role="status">{status}{grounds.audit ? t('fleet.public.audited', lang, {date: grounds.audit}) : ''}</p>
+      <Basis id="charter-grounds" lang={lang} />
       {ais.offered ? (
         <>
-          <Check label={layerEntry('commercial-ais').label} on={on && aisOn.value} onChange={next => { aisOn.value = next; if (next && !on) showGrounds(true); }} />
-          {on && aisOn.value && ais.note ? <p class="app-empty">{ais.note}</p> : null}
-          <p class="app-fleet-basis">{layerEntry('commercial-ais').basis}</p>
+          <Check label={layerCopy('commercial-ais', lang).label} on={on && aisOn.value} onChange={next => { aisOn.value = next; if (next && !on) showGrounds(true); }} />
+          {on && aisOn.value && ais.note ? <p class="app-empty"><EnglishDetail lang={lang}>{ais.note}</EnglishDetail></p> : null}
+          <Basis id="commercial-ais" lang={lang} />
         </>
       ) : null}
       {directory.length ? (
         <>
-          <h2 class="ui-eyebrow">Boat directory</h2>
-          <ul class="app-fleet-links">{directory.map(p => <li key={p.id}><a href={directoryHref(p)}>Boats out of {p.name}</a></li>)}</ul>
+          <h2 class="ui-eyebrow">{t('fleet.public.directory', lang)}</h2>
+          <ul class="app-fleet-links">{directory.map(p => <li key={p.id}><a href={directoryHref(p)}>{t('fleet.public.boatsOut', lang, {port: p.name})}</a></li>)}</ul>
         </>
       ) : null}
     </>
-  );
-}
-
-type Draft = Readonly<Record<string, string>>;
-type Edit = (name: string, value: string) => void;
-const typed = (event: Event): string => (event.currentTarget as HTMLInputElement | HTMLSelectElement).value;
-
-function Select({name, choices, draft, edit}: {name: SelectName; choices: readonly Choice[]; draft: Draft; edit: Edit}) {
-  return (
-    <label class="app-fleet-field">{FILTER_LABELS[name]}
-      <select name={name} value={draft[name] ?? ''} onChange={event => edit(name, typed(event))}>
-        {choices.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-      </select>
-    </label>
-  );
-}
-
-/** The admin part: v1's filter form driving FE-24's layers. Rendered only for a viewer the server admitted. */
-function Admin({onShowMap}: {onShowMap?: () => void}) {
-  const data = activityChoices.value, choices = filterChoices(data), dates = dateBounds(data), on = activityOn.value;
-  const [draft, setDraft] = useState<Draft>(activityFilters.value);
-  const edit: Edit = (name, value) => setDraft(d => ({...d, [name]: value}));
-  const apply = () => { activityFilters.value = readFilters(draft); };
-  const select = (name: SelectName) => <Select name={name} choices={choices[name]} draft={draft} edit={edit} />;
-  const date = (name: 'from' | 'to') => (
-    <label class="app-fleet-field">{FILTER_LABELS[name]}
-      <input name={name} type="date" value={draft[name] ?? ''} min={dates.min} max={dates.max} onInput={event => edit(name, typed(event))} />
-    </label>
-  );
-  return (
-    <section class="app-fleet-admin" aria-labelledby="app-fleet-admin-title">
-      <h2 id="app-fleet-admin-title" class="ui-eyebrow">Fleet activity · admin</h2>
-      <p class="app-fleet-basis">{layerEntry('fleet-events').basis}</p>
-      {ACTIVITY.map(name => <Check key={name} label={layerEntry(ACTIVITY_ENTRY[name]).label} on={on.includes(name)} onChange={next => toggleActivity(name, next)} />)}
-      <form class="app-fleet-form" onSubmit={event => { event.preventDefault(); apply(); }}>
-        {select('vessel')}
-        {data?.truncated ? <p class="app-empty">{VESSELS_NOTE}</p> : null}
-        {select('port')}{select('class')}{select('trip_type')}{select('kind')}
-        {date('from')}{date('to')}
-        {select('season')}{select('season_part')}
-        <Check label={PLANNING_LABEL} on={hidePlanning.value} onChange={next => { hidePlanning.value = next; }} />
-        <div class="app-fleet-actions">
-          <Button type="submit">Apply filters</Button>
-          <Button variant="primary" onClick={() => {
-            apply();
-            if (!layers.value.includes('fleet')) showGrounds(true);
-            if (!activityOn.value.length) toggleActivity('events', true);
-            onShowMap?.();
-          }}>Show on map</Button>
-        </div>
-      </form>
-      <p class="app-empty" role="status">{activityStatus.value || ACTIVITY_OFF}</p>
-      <details class="app-fleet-how"><summary>How fleet activity is inferred</summary><p>{HOW_INFERRED}</p></details>
-    </section>
   );
 }
 
@@ -132,7 +76,7 @@ export function Fleet({onShowMap}: {onShowMap?: () => void} = {}) {
   return (
     // Not a landmark of its own: the desktop's aside and the phone's sheet are already labelled "Fleet".
     <div class="app-fleet">
-      <h1 id="app-fleet-title">Fleet</h1>
+      <h1 id="app-fleet-title">{t('shell.view.fleet', language.value)}</h1>
       <Public directory={directory.region === id ? directory.ports : []} />
       {activityAccess.value ? <Admin onShowMap={onShowMap} /> : null}
     </div>

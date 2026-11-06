@@ -23,6 +23,7 @@ import {reportSummary} from '../dist/charter-grounds.js';
 import {coastForPackage, loadCoastalStatus, loadCoasts, sourceFresh} from '../dist/coasts.js';
 import {recentDiscussionState} from '../dist/recent-discussions.js';
 import {matchesTargetSpecies} from '../dist/target-groups.js';
+import {t} from './i18n.ts';
 
 export const DISCUSSIONS_FEED = '/feeds/data/recent-intel.json';
 /** The region's daily evidence feed (region.json `daily_feed`, routed through /feeds/). */
@@ -41,10 +42,19 @@ export interface Discussions {
   readonly checkedQueries: number; readonly totalQueries: number; readonly generatedAt?: string;
 }
 
-export interface EvidenceRow {readonly date: string; readonly boat: string; readonly catches: string; readonly where: string; readonly url: string | null}
+/** SC0922-13: the raw facts behind an evidence row's English text, so the page can write it in another language without parsing English. */
+export interface CatchItem {readonly count: number; readonly label: string; readonly released: boolean}
+export interface EvidenceRow {
+  readonly date: string; readonly boat: string; readonly catches: string; readonly where: string; readonly url: string | null;
+  readonly items?: readonly CatchItem[]; readonly ground?: string | null; readonly port?: string | null;
+}
+/** Which of reportEvidence's five reasons applies, from its own flags and counts (the same precedence), never from its English text. */
+export type ReasonKind = 'stale' | 'coverage' | 'none' | 'strong' | 'thin';
 export interface Evidence {
   readonly confidence: string; readonly reason: string; readonly start: string; readonly end: string;
   readonly boats: number; readonly days: number; readonly trips: number; readonly generatedAt: string; readonly rows: readonly EvidenceRow[];
+  /** Presentation metadata; an object without it (an older producer) is shown with its English reason. */
+  readonly fresh?: boolean; readonly coverage?: number; readonly reasonKind?: ReasonKind;
 }
 
 type FeedCatch = {species?: unknown; label?: unknown; count?: unknown; disposition?: unknown};
@@ -55,13 +65,19 @@ export function evidenceFrom(data: unknown, region: string, species: string, now
   const feed = data as {region_id?: string; generated_at: string} | null;
   if (!validFeed(data) || feed?.region_id !== region) return null;
   const e = reportEvidence(data, species, now);
-  const rows = (e.reports as FeedReport[]).slice(0, 5).map(r => ({
-    date: r.date, boat: r.boat, url: https(r.source_url),
-    catches: (r.catches ?? []).filter(c => matchesTargetSpecies(c.species, species) && Number(c.count) > 0)
-      .map(c => `${Number(c.count)} ${String(c.label ?? c.species)}${c.disposition === 'released' ? ' released' : ' reported'}`).join(' · '),
-    where: r.ground ? `Reported ground: ${r.ground}` : `${r.port ?? 'Port'} landing · fishing location unreported`,
-  }));
-  return {confidence: e.confidence, reason: e.reason, start: e.start, end: e.end ?? e.start, boats: e.boats, days: e.days, trips: e.reports.length, generatedAt: feed.generated_at, rows};
+  const rows = (e.reports as FeedReport[]).slice(0, 5).map(r => {
+    const items = (r.catches ?? []).filter(c => matchesTargetSpecies(c.species, species) && Number(c.count) > 0)
+      .map(c => ({count: Number(c.count), label: String(c.label ?? c.species), released: c.disposition === 'released'}));
+    return {
+      date: r.date, boat: r.boat, url: https(r.source_url),
+      catches: items.map(c => t(c.released ? 'reports.catch.released' : 'reports.catch.reported', 'en', {n: c.count, species: c.label})).join(' · '),
+      where: r.ground ? t('reports.where.ground', 'en', {ground: r.ground}) : t('reports.where.port', 'en', {port: r.port ?? t('reports.where.portFallback', 'en')}),
+      items, ground: r.ground ? r.ground : null, port: r.port ?? null,
+    };
+  });
+  const reasonKind: ReasonKind = !e.fresh ? 'stale' : e.coverage < 7 ? 'coverage' : !e.reports.length ? 'none' : e.confidence === 'Moderate' ? 'strong' : 'thin';
+  return {confidence: e.confidence, reason: e.reason, start: e.start, end: e.end ?? e.start, boats: e.boats, days: e.days, trips: e.reports.length, generatedAt: feed.generated_at, rows,
+    fresh: !!e.fresh, coverage: e.coverage, reasonKind};
 }
 
 export interface WatchItem {readonly name: string; readonly located: boolean; readonly links: readonly {date: string; publisher: string; url: string}[]}
