@@ -282,6 +282,7 @@ export function positionFromFix(fix) {
 }
 /** The words for a refused or failed request: code 1 or a SecurityError is permission, code 3 a time-out, anything else the device. */
 export function positionFailure(error) { return error?.code === 1 || error?.name === 'SecurityError' ? 'denied' : error?.code === 3 ? 'timeout' : 'unavailable'; }
+const FAILURE_WORDS = {denied: 'account.position.denied', timeout: 'account.position.timeout', unavailable: 'account.position.unavailable'};
 /** The button, hint and status line under a form's two position boxes. */
 export function positionControlsHTML(prefix, copy) {
   const t = asCopy(copy);
@@ -325,8 +326,8 @@ export function createPositionControl({$, prefix, copy, alive = () => true, bloc
         const pos = positionFromFix(fix);
         if (pos) settle(() => t('account.position.filled', {accuracy: pos.accuracy}), () => fill(pos));
         else settle(() => t('account.position.unavailable'));
-      }, error => settle(() => t('account.position.' + positionFailure(error))), POSITION_OPTIONS);
-    } catch (error) { settle(() => t('account.position.' + positionFailure(error))); }
+      }, error => settle(() => t(FAILURE_WORDS[positionFailure(error)])), POSITION_OPTIONS);
+    } catch (error) { settle(() => t(FAILURE_WORDS[positionFailure(error)])); }
   });
   return {invalidate, get pending() { return attempt !== null; }};
 }
@@ -863,7 +864,7 @@ export async function openAccount(options = {}) {
       try {
         await submitPositionForm($, 'spot', () => spotBody({name: field('name'), lat: field('lat'), lon: field('lon'), note: field('note')}), async body => {
           await api('spots', {method: 'POST', body});
-          spotPos.invalidate(); $('#spot-form').reset(); syncSpotPos(); spotsChanged(); await showSpots(); status(t('account.spots.saved'));
+          $('#spot-form').reset(); spotsChanged(); spotPos.invalidate(); await showSpots(); status(t('account.spots.saved'));
         });
       } catch (error) { status(passkeyMessage(error, t)); }
     });
