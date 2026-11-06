@@ -127,7 +127,7 @@ normalize one to the other. Do not convert between units.
 The line under each brief tile reading is said from structured parts by
 `web/brief/tile-copy.ts`; the model's English line stays for other readers.
 Station, buoy, site and datum names are never translated. Catalogue IDs:
-`tile.detail.*`, `tile.clock.*`, `tile.gap.*`, `tide.unavailable`, `tide.noCurve`.
+`tile.detail.*`, `tile.clock.*`, `tile.gap.*`, `tide.unavailable`, `tide.noCurve`; the map's station and ring cards use `map.station.*` and `map.nearshore.*` (`high event` / `low event` are `evento de pleamar` / `evento de bajamar`).
 
 | English | Spanish | Catalogue ID | Meaning kept |
 | --- | --- | --- | --- |

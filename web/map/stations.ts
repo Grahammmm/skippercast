@@ -14,10 +14,12 @@ import type {Engine, Overlay} from './engine.ts';
 import {layerEntry, setRailNote} from './layers.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {terrainHour} from './stage.ts';
+import {copyText} from '../mark-copy.ts';
+import {sp, type StatusPart} from './status-copy.ts';
 import {activeTideChoice, stationGeoJSON, stationPins, type StationPin, type StationRegion} from './station-model.ts';
 
 export const STATION_SOURCE = 'stations', STATION_DOTS = 'station-dots', STATION_HIT = 'station-hit';
-export const stationState = signal<{pins: readonly StationPin[]; note: string}>({pins: [], note: ''});
+export const stationState = signal<{pins: readonly StationPin[]; note: string; copy?: readonly StatusPart[]}>({pins: [], note: ''});
 export function stationOverlay(p: Palette): Overlay {
   return {sources: {[STATION_SOURCE]: {type: 'geojson', data: {type: 'FeatureCollection', features: []}, attribution: layerEntry('stations').attribution}}, layers: [
     {id: STATION_HIT, type: 'circle', source: STATION_SOURCE, paint: {'circle-radius': 22, 'circle-color': p.blue, 'circle-opacity': 0}},
@@ -40,7 +42,7 @@ export function createStations(o: {engine: ReadonlySignal<Engine | null>; feed: 
     const t = now();
     const tideRegion = tideSelection.region.value;
     const tideChoice = tideRegion ? {regionId: tideRegion.id, defaultStation: tideRegion.station, chosen: tideSelection.choice.value} : null;
-    return stationPins({region: r, context: area.value, catalog: locations, feed: o.feed(), report, county, now: t, at: terrainHour(hour.value, t, day.value, o.zone()), tideChoice});
+    return stationPins({region: r, context: area.value, catalog: locations, feed: o.feed(), report, county, now: t, at: terrainHour(hour.value, t, day.value, o.zone()), tideChoice, zone: o.zone()});
   });
   const disposers = [
     effect(() => {
@@ -60,13 +62,18 @@ export function createStations(o: {engine: ReadonlySignal<Engine | null>; feed: 
     }),
     effect(() => {
       const all = pins.value, enabled = on.value, e = o.engine.value;
-      const missing = all.filter(p => !p.location).map(p => `${p.mark.name}: location unavailable`);
+      const lost = all.filter(p => !p.location), missing = lost.map(p => `${p.mark.name}: location unavailable`);
       const tideRegion = tideSelection.region.value;
       const chosen = region.value && tideRegion ? activeTideChoice(region.value, {regionId: tideRegion.id, defaultStation: tideRegion.station, chosen: tideSelection.choice.value}) : null;
       const chosenNote = chosen && !all.some(p => p.key === `coops:${chosen}`) ? `Chosen tide station ${chosen} is shown in the Brief, not on this layer` : null;
       const note = !enabled ? '' : !all.length ? error.value ? 'Station configuration unavailable' : 'Loading station configuration'
         : `${all.filter(p => p.location).length} station locations · latest readings with individual times${missing.length ? `; ${missing.join('; ')}` : ''}${chosenNote ? `; ${chosenNote}` : ''}`;
-      stationState.value = {pins: all, note}; setRailNote('stations', note);
+      // SC1352-05: the same note as catalogue parts; names, ids and datums are the published strings.
+      const copy: StatusPart[] | undefined = !enabled ? undefined : !all.length ? [sp(error.value ? 'map.station.note.noConfig' : 'map.station.note.loading')]
+        : [sp('map.station.note.count', {n: all.filter(p => p.location).length}),
+          ...lost.flatMap(p => ['; ', sp('map.station.note.missing', {name: p.mark.copy?.name ? copyText(p.mark.copy.name, 'es') : p.mark.name})]),
+          ...(chosenNote ? ['; ', sp('map.station.note.chosen', {id: chosen!})] : [])];
+      stationState.value = {pins: all, note, copy}; setRailNote('stations', note, copy);
       if (e) {
         e.setOverlay('stations', enabled && all.length ? stationOverlay(palette()) : null, COASTLINE_GLOW);
         if (enabled && all.length) e.setData(STATION_SOURCE, stationGeoJSON(all));

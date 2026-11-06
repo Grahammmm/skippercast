@@ -5,6 +5,7 @@ import type {RegionalDailyFeed, RegionalSource} from '../brief/types.ts';
 import {ndbcStationURL, sourceStation, tidePredictionURL} from '../station-label.ts';
 import type {ChartMark} from './coastline.ts';
 import {FT_PER_M, KT_PER_MS} from '../units.ts';
+import {cp, esDecimal, esStamp, joinParts, type MarkCopyPart} from '../mark-copy.ts';
 
 export type Provider = 'ndbc' | 'coops';
 export interface StationConfig {
@@ -16,6 +17,7 @@ export interface Location {provider: string; id: string; name: string; latitude:
 export interface StationCatalog {stations: Readonly<Record<string, Location>>}
 export interface StationIdentity {provider: Provider; id: string}
 export interface StationPin {key: string; location: Location | null; mark: ChartMark; stale: boolean}
+interface Reading {text: string; stale: boolean; copy: MarkCopyPart[]}
 export interface TideChoice {regionId: string; defaultStation: string; chosen: string | null}
 /** The chosen station id when a different station is actively chosen for this region; null otherwise (the Brief.tsx guard). */
 export const activeTideChoice = (regionId: string, tideChoice: TideChoice | null | undefined): string | null =>
@@ -49,11 +51,11 @@ export function located(loc: Location | undefined): loc is Location {
 }
 interface Sample {at: string; value: number; retained: boolean}
 const VARIABLES = [
-  {key: 'WVHT', field: 'waveFt', label: 'Seas', unit: 'ft', raw: 'm', scale: FT_PER_M, offset: 0},
-  {key: 'DPD', field: 'wavePeriodS', label: 'Period', unit: 's', raw: 'sec', scale: 1, offset: 0},
-  {key: 'WTMP', field: 'waterTempF', label: 'Water', unit: '°F', raw: 'degC', scale: 1.8, offset: 32},
-  {key: 'WSPD', field: 'windKnots', label: 'Wind', unit: 'kt', raw: 'm/s', scale: KT_PER_MS, offset: 0},
-  {key: 'GST', field: 'gustKnots', label: 'Gust', unit: 'kt', raw: 'm/s', scale: KT_PER_MS, offset: 0},
+  {key: 'WVHT', field: 'waveFt', label: 'Seas', lid: 'seas', unit: 'ft', raw: 'm', scale: FT_PER_M, offset: 0},
+  {key: 'DPD', field: 'wavePeriodS', label: 'Period', lid: 'period', unit: 's', raw: 'sec', scale: 1, offset: 0},
+  {key: 'WTMP', field: 'waterTempF', label: 'Water', lid: 'water', unit: '°F', raw: 'degC', scale: 1.8, offset: 32},
+  {key: 'WSPD', field: 'windKnots', label: 'Wind', lid: 'wind', unit: 'kt', raw: 'm/s', scale: KT_PER_MS, offset: 0},
+  {key: 'GST', field: 'gustKnots', label: 'Gust', lid: 'gust', unit: 'kt', raw: 'm/s', scale: KT_PER_MS, offset: 0},
 ] as const;
 const rows = (v: unknown): Record<string, unknown>[] => Array.isArray(v) ? v.filter(r => r && typeof r === 'object') : [];
 /** Mismatching payload identity is never relabelled with the role's station. */
@@ -63,8 +65,10 @@ function matches(source: RegionalSource, id: string): boolean {
   return actual?.id === id && (dataId === undefined || dataId === id);
 }
 const clock = (s: RegionalSource): string => s.status === 'retained' ? s.data_retrieved_at ?? s.last_success_at ?? '' : s.data_retrieved_at ?? s.checked_at;
-function observations(id: string, sources: RegionalSource[], report: Report | null, now: number): {text: string; stale: boolean} {
+const state = (s: 'fresh' | 'stale' | 'unavailable'): MarkCopyPart => cp(`map.station.state.${s}`);
+function observations(id: string, sources: RegionalSource[], report: Report | null, now: number, zone: string): Reading {
   let stale = false;
+  const copy: MarkCopyPart[][] = [];
   const lines = VARIABLES.map(v => {
     const samples: Sample[] = [];
     for (const s of sources.filter(s => s.kind === 'observation' && matches(s, id))) {
@@ -77,15 +81,17 @@ function observations(id: string, sources: RegionalSource[], report: Report | nu
       samples.push({at: o.observedAt, value: o[v.field]!, retained: report!.sources.some(s => s.kind === 'observation' && s.url === o.url && s.outcome !== 'ok')});
     const sample = samples.filter(s => readingState(s.at, now, 3 * HOUR) !== 'unavailable')
       .sort((a, b) => stationClock(b.at) - stationClock(a.at) || Number(a.retained) - Number(b.retained))[0];
-    if (!sample) return `${v.label}: unavailable`;
-    const state = readingState(sample.at, now, 3 * HOUR, sample.retained);
-    stale ||= state === 'stale';
-    return `${v.label} ${sample.value.toFixed(1)} ${v.unit} · ${sample.at} · ${state}${sample.retained ? ' / last good' : ''}`;
+    const label = cp(`map.station.label.${v.lid}`);
+    if (!sample) { copy.push([cp('map.station.obs.unavailable', {label})]); return `${v.label}: unavailable`; }
+    const st = readingState(sample.at, now, 3 * HOUR, sample.retained);
+    stale ||= st === 'stale';
+    copy.push([cp('map.station.obs.reading', {label, value: esDecimal(sample.value), unit: v.unit, time: esStamp(sample.at, zone), state: state(st), lastGood: sample.retained ? cp('map.station.lastGood') : ''})]);
+    return `${v.label} ${sample.value.toFixed(1)} ${v.unit} · ${sample.at} · ${st}${sample.retained ? ' / last good' : ''}`;
   });
-  return {text: lines.join('; '), stale: stale || lines.every(l => l.endsWith('unavailable'))};
+  return {text: lines.join('; '), stale: stale || lines.every(l => l.endsWith('unavailable')), copy: joinParts(copy, '; ')};
 }
-function predictions(id: string, sources: RegionalSource[], report: Report | null, county: County | null, at: number, now: number): {text: string; stale: boolean} {
-  const products: {points: {at: string; value: number; type: string}[]; fetched: string; retained: boolean; datum: string; note: string; start?: string; end?: string}[] = [];
+function predictions(id: string, sources: RegionalSource[], report: Report | null, county: County | null, at: number, now: number, zone: string): Reading {
+  const products: {points: {at: string; value: number; type: string}[]; fetched: string; retained: boolean; datum: string; note: string; noteCopy?: MarkCopyPart[]; start?: string; end?: string}[] = [];
   for (const s of sources.filter(s => s.kind === 'prediction' && matches(s, id))) {
     if (s.data?.units !== 'ft' || typeof s.data.datum !== 'string') continue;
     products.push({points: rows(s.data.predictions).filter(r => finite(r.height_ft) && typeof r.time === 'string').map(r => ({at: String(r.time), value: r.height_ft as number, type: r.type === 'H' ? 'high event' : r.type === 'L' ? 'low event' : 'prediction'})),
@@ -99,38 +105,44 @@ function predictions(id: string, sources: RegionalSource[], report: Report | nul
     if (s) {
       const curve = report.tides.length > 0;
       products.push({points: (curve ? report.tides : report.tideEvents).map(p => ({at: p.at, value: p.heightFt, type: 'type' in p ? p.type === 'H' ? 'high event' : 'low event' : 'prediction'})), fetched: s.fetchedAt,
-        retained: predictionSources.some(p => p.outcome !== 'ok'), datum: 'MLLW', note: `Oldest bound prediction retrieval clock. ${county.tideStation.note}`});
+        retained: predictionSources.some(p => p.outcome !== 'ok'), datum: 'MLLW', note: `Oldest bound prediction retrieval clock. ${county.tideStation.note}`,
+        noteCopy: [cp('map.station.tide.oldestClock'), ` ${county.tideStation.note}`]});
     }
   }
   const product = products.filter(p => readingState(p.fetched, now, 36 * HOUR) !== 'unavailable')
     .sort((a, b) => stationClock(b.fetched) - stationClock(a.fetched))[0];
-  if (!product) return {text: 'Tide prediction unavailable; no valid retrieval clock or data.', stale: true};
+  if (!product) return {text: 'Tide prediction unavailable; no valid retrieval clock or data.', stale: true, copy: [cp('map.station.tide.noClock')]};
   const points = product.points.filter(p => finite(p.value) && finite(stationClock(p.at))).sort((a, b) => stationClock(a.at) - stationClock(b.at));
   const start = stationClock(product.start) || stationClock(points[0]?.at), end = stationClock(product.end) || stationClock(points.at(-1)?.at);
   const coverage = finite(start) && finite(end) ? `coverage ${new Date(start).toISOString()} – ${new Date(end).toISOString()}` : 'coverage unavailable';
-  const state = readingState(product.fetched, now, 36 * HOUR, product.retained);
-  const stamp = `retrieved ${product.fetched} · ${state}${product.retained ? ' / last good' : ''} · ${coverage}. ${product.note}`;
-  if (!(at >= start && at <= end)) return {text: `Tide prediction unavailable for selected time; ${stamp}`, stale: true};
+  const st = readingState(product.fetched, now, 36 * HOUR, product.retained);
+  const stamp = `retrieved ${product.fetched} · ${st}${product.retained ? ' / last good' : ''} · ${coverage}. ${product.note}`;
+  const stampCopy: MarkCopyPart = cp('map.station.tide.stamp', {time: esStamp(product.fetched, zone), state: state(st), lastGood: product.retained ? cp('map.station.lastGood') : '',
+    coverage: finite(start) && finite(end) ? cp('map.station.tide.coverage', {start: esStamp(new Date(start).toISOString(), zone), end: esStamp(new Date(end).toISOString(), zone)}) : cp('map.station.tide.coverageNone'),
+    note: product.noteCopy ?? product.note});
+  if (!(at >= start && at <= end)) return {text: `Tide prediction unavailable for selected time; ${stamp}`, stale: true, copy: [cp('map.station.tide.unavailableAt', {stamp: stampCopy})]};
   const curve = points.filter(p => p.type === 'prediction');
   const point = curve.length ? curve.reduce((a, b) => Math.abs(stationClock(a.at) - at) <= Math.abs(stationClock(b.at) - at) ? a : b) : points.find(p => stationClock(p.at) >= at);
-  if (!point || (curve.length && Math.abs(stationClock(point.at) - at) > 90 * 60_000)) return {text: `Tide prediction gap; ${stamp}`, stale: true};
-  return {text: `Tide ${point.type}: ${point.value.toFixed(1)} ft ${product.datum} · valid ${point.at}; ${stamp}`, stale: state === 'stale'};
+  if (!point || (curve.length && Math.abs(stationClock(point.at) - at) > 90 * 60_000)) return {text: `Tide prediction gap; ${stamp}`, stale: true, copy: [cp('map.station.tide.gap', {stamp: stampCopy})]};
+  return {text: `Tide ${point.type}: ${point.value.toFixed(1)} ft ${product.datum} · valid ${point.at}; ${stamp}`, stale: st === 'stale',
+    copy: [cp('map.station.tide.reading', {type: cp(`map.station.tide.type.${point.type === 'high event' ? 'high' : point.type === 'low event' ? 'low' : 'prediction'}`), height: esDecimal(point.value), datum: product.datum, time: esStamp(point.at, zone), stamp: stampCopy})]};
 }
-export function stationPins(input: {region: StationRegion; context?: string | null; catalog: StationCatalog; feed: RegionalDailyFeed | null; report?: Report | null; county?: County | null; now: Date; at: Date; tideChoice?: TideChoice | null}): StationPin[] {
-  const {region, catalog, now, at} = input, report = input.report ?? null, county = input.county ?? null;
+export function stationPins(input: {region: StationRegion; context?: string | null; catalog: StationCatalog; feed: RegionalDailyFeed | null; report?: Report | null; county?: County | null; now: Date; at: Date; tideChoice?: TideChoice | null; zone?: string}): StationPin[] {
+  const {region, catalog, now, at} = input, zone = input.zone ?? 'UTC', report = input.report ?? null, county = input.county ?? null;
   const tideChoice = input.tideChoice ?? null, chosen = activeTideChoice(region.id, tideChoice);
   const sources = input.feed?.region_id === region.id ? Object.values(input.feed.sources).filter((s): s is RegionalSource => !!s) : [];
   return selectedStations(region, input.context ?? null, county).map(identity => {
     const {provider, id} = identity, key = `${provider}:${id}`, metadata = catalog.stations[key];
     const location = metadata?.id === id && metadata.provider === provider && located(metadata) ? metadata : null;
-    const reading = provider === 'ndbc' ? observations(id, sources, report, now.getTime()) : predictions(id, sources, report, county, at.getTime(), now.getTime());
+    const reading = provider === 'ndbc' ? observations(id, sources, report, now.getTime(), zone) : predictions(id, sources, report, county, at.getTime(), now.getTime(), zone);
     let kind = provider === 'ndbc' ? 'Observing buoy' : 'Tide prediction station';
-    let text = reading.text;
+    let kindCopy = cp(provider === 'ndbc' ? 'map.station.kind.buoy' : 'map.station.kind.tide'), text = reading.text, readingCopy = reading.copy;
     if (provider === 'coops' && chosen && tideChoice) {
       if (id === tideChoice.defaultStation) {
-        kind = 'Region default tide station';
+        kind = 'Region default tide station'; kindCopy = cp('map.station.kind.default');
         text = `Region default tide station · the Brief uses your chosen station ${chosen}. ${reading.text}`;
-      } else if (id === chosen) kind = 'Chosen tide station';
+        readingCopy = [cp('map.station.defaultNote', {id: chosen, reading: reading.copy})];
+      } else if (id === chosen) { kind = 'Chosen tide station'; kindCopy = cp('map.station.kind.chosen'); }
     }
     const backups = [...new Set(sources.filter(s => matches(s, id)).map(s => sourceStation(s)?.backupFor).filter(Boolean))];
     const publisher = provider === 'coops' ? 'NOAA CO-OPS' : `NOAA NDBC${metadata?.owner ? ` · ${metadata.owner}` : ''}${metadata?.program ? ` · ${metadata.program}` : ''}`;
@@ -138,6 +150,9 @@ export function stationPins(input: {region: StationRegion; context?: string | nu
       id: `station:${key}`, name: `${metadata?.name ?? id} · ${id}${backups.length ? ` (backup for ${backups.join(', ')})` : ''}`,
       kind, reading: text,
       source: `${publisher}${location ? '' : ' · location unavailable'}`, basis: STATION_BASIS,
+      // SC1352-05: display-only Spanish; published names, ids, datums and notes stay as published.
+      copy: {name: [`${metadata?.name ?? id} · ${id}`, ...(backups.length ? [cp('map.station.backupFor', {ids: backups.join(', ')})] : [])], kind: [kindCopy], reading: readingCopy,
+        source: [publisher, ...(location ? [] : [cp('legend.locationUnavailable')])], basis: [cp('map.station.basis')]},
       provider: {href: provider === 'ndbc' ? ndbcStationURL(id) : tidePredictionURL(id), label: `${publisher} station ${id}`},
     }};
   });
