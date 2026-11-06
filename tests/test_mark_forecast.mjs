@@ -17,6 +17,7 @@ import {rendererPlugins} from './helpers/esbuild-url.mjs';
 const {parseConditionsForecast} = await import('../web/conditions.ts');
 const {CELL_REACH, MODEL_GRIDS, distanceKm, gateGap, markForecast, nearestCell, readingSource} = await import('../web/brief/mark-forecast.ts');
 const {answer} = await import('../server/model-api.js');
+const markForecastTime = await import('../web/brief/mark-forecast.ts');
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const HOUR = 3_600_000;
@@ -215,6 +216,7 @@ async function components() {
       export {assessScreen} from './web/map/habitat.ts';
       export {regionalForecast} from './web/brief/Brief.tsx';
       export {regionInfo} from './web/app/App.tsx';
+      export {language} from './web/i18n.ts';
       export {parseConditionsForecast} from './web/conditions.ts';
       export * as state from './web/state.ts';
       export {render} from 'preact-render-to-string';
@@ -283,4 +285,94 @@ test('the mark card carries the block for a reef mark the screen shows, and drop
     assert.match(withheld, /<h2 tabindex="-1">Reef mark withheld<\/h2>/);
     assert.doesNotMatch(withheld, /app-mark-forecast/, 'a withheld mark keeps its position, and so its forecast, to itself');
   } finally { markData.value = null; regionalForecast.value = null; regionInfo.value = null; }
+});
+
+// SC1137-04: the same block in Spanish. Every clause of a "not at this mark", "never averaged" or gap statement stays.
+const ES = (f, i) => f.families.flatMap(x => x.rows)[i];
+test('SC1137-04 es: gap reasons keep every clause, thresholds and the other family are untouched, English is the default', () => {
+  const es = (feed, at = AT, now = NOW) => markForecast(parsed(feed), 'morro-bay', MARK, at, now, TZ, 'es');
+  const stale = es(morroFeed({runAgeH: 37}));
+  assert.match(ES(stale, 0).gap, /^la corrida de NOAA GFS de .+ supera su límite de antigüedad de 36 horas$/);
+  assert.ok(stale.current.value, 'WCOFS keeps its own clock');
+  const old = es(morroFeed({retrievedAgeH: 7}));
+  for (const r of [...old.families.flatMap(x => x.rows), old.current]) assert.equal(r.gap, 'el pronóstico regional se recuperó por última vez hace más de 6 horas');
+  const hole = es(morroFeed({hole: [AT]}));
+  assert.equal(hole.families[0].rows[0].value, null);
+  assert.match(hole.families[0].rows[0].gap, /^la muestra de NOAA GFS no tiene un valor de viento para .+$/);
+  assert.equal(hole.families[1].rows[0].value, '21 kt desde WNW 301° · ráfagas de 27 kt', 'the other family is not used to fill it');
+  assert.equal(es(morroFeed({currents: 'stale'})).current.gap, 'el pronóstico regional no contiene un pronóstico de corriente superficial de NOAA WCOFS (stale)');
+  assert.equal(es(morroFeed({currents: 'missing'})).current.gap, 'el pronóstico regional no contiene un pronóstico de corriente superficial de NOAA WCOFS');
+  assert.match(es(morroFeed(), Date.parse('2026-10-24T17:00:00Z')).families[0].rows[0].gap, /^la hora seleccionada está fuera de la corrida de NOAA GFS de .+$/);
+  assert.equal(gateGap('X', [], null, NOW, AT, NOW, TZ, 'es'), 'la corrida de X no incluye hora de emisión, por lo que no se puede comprobar su antigüedad');
+  assert.equal(gateGap('X', [AT], NOW, NaN, AT, NOW, TZ, 'es'), 'el pronóstico regional no incluye hora de recuperación, por lo que no se puede comprobar su antigüedad');
+  assert.equal(gateGap('X', [AT], NOW, NOW + 3600_000, AT, NOW, TZ, 'es'), 'el pronóstico regional está fechado después de la hora de este dispositivo');
+  assert.match(gateGap('X', [AT], NOW + 3600_000, NOW, AT, NOW, TZ, 'es'), /^la corrida de X de .+ está fechada después de la hora de este dispositivo$/);
+  assert.match(gateGap('X', [AT - 20 * HOUR, AT + 20 * HOUR].map(v => v), NOW - HOUR, NOW, AT, NOW, TZ, 'es'), /^la corrida de X de .+ no incluye ninguna hora a menos de 90 minutos de la hora seleccionada$/);
+  assert.equal(gateGap('X', [], null, NOW, AT, NOW, TZ), gateGap('X', [], null, NOW, AT, NOW, TZ, 'en'));
+  assert.equal(gateGap('X', [], null, NOW, AT, NOW, TZ, 'en'), 'the X run carries no issue time, so its age cannot be checked');
+});
+
+test('SC1137-04 es: readings, sources and the current keep values, units, point/cell and distance; both current failure clauses stay', () => {
+  const en = markForecast(parsed(morroFeed()), 'morro-bay', MARK, AT, NOW, TZ), es = markForecast(parsed(morroFeed()), 'morro-bay', MARK, AT, NOW, TZ, 'es');
+  assert.equal(ES(es, 0).value, '11 kt desde WNW 301° · ráfagas de 17 kt');
+  assert.equal(ES(es, 1).value, ES(en, 1).value.replace(' from ', ' desde '));
+  assert.equal(es.current.value, '0.20 kt hacia 101° verdadero');
+  assert.deepEqual([es.current.cell, es.current.point, es.current.validAt], [en.current.cell, en.current.point, en.current.validAt], 'same cell, point and hour');
+  assert.equal(ES(es, 0).grid, 'aproximadamente 13 km');
+  assert.equal(ES(es, 2).grid, '0.25°', 'degree grids pass through');
+  assert.equal(es.current.grid, 'aproximadamente 4 km');
+  assert.match(readingSource(es.current, AT, TZ, 'es'), /^NOAA WCOFS · malla de aproximadamente 4 km · celda a 0\.9 km de esta marca · válido .+ · corrida .+$/);
+  assert.match(readingSource(ES(es, 0), AT, TZ, 'es'), /^NOAA GFS · malla de aproximadamente 13 km · punto de pronóstico central · corrida .+$/);
+  assert.equal(readingSource(ES(en, 0), AT, TZ), readingSource(ES(en, 0), AT, TZ, 'en'));
+  // A mark far from every cell: the regional point answers; with no sample at that hour, both clauses of the failure survive.
+  const far = markForecast(parsed(morroFeed()), 'morro-bay', {lat: 36.2, lon: -121.9}, AT, NOW, TZ, 'es');
+  assert.match(far.current.value, / hacia \d+° verdadero$/);
+  assert.equal(far.current.cell, null);
+  assert.match(readingSource(far.current, AT, TZ, 'es'), /punto de pronóstico central/);
+  const feed = morroFeed(); feed.currents.points = feed.currents.points.filter(p => p.point_id !== 'central');
+  const none = markForecast(parsed(feed), 'morro-bay', {lat: 36.2, lon: -121.9}, AT, NOW, TZ, 'es');
+  assert.match(none.current.gap, /^ninguna celda de NOAA WCOFS muestreada para .+ está a menos de 6 km \(1\.5 longitudes de malla\) de esta marca, y el punto de pronóstico central no tiene una muestra a esa hora$/);
+  const noneEn = markForecast(parsed(feed), 'morro-bay', {lat: 36.2, lon: -121.9}, AT, NOW, TZ);
+  assert.match(noneEn.current.gap, /^no NOAA WCOFS cell sampled for Tue 11 am lies within 6 km \(1\.5 grid lengths\) of this mark, and forecast point central has no sample then$/);
+});
+
+test('SC1137-04 es: hours follow the language in the region zone and the language switch changes only words', () => {
+  const when = Date.parse('2026-10-20T17:00:00Z');
+  const {hourText, runText} = markForecastTime;
+  assert.equal(hourText(when, TZ), 'Tue 10 am');
+  assert.equal(runText(when, TZ), 'Oct 20, 10 am');
+  assert.equal(hourText(when, TZ, 'en'), 'Tue 10 am');
+  const esHour = hourText(when, TZ, 'es'), esRun = runText(when, TZ, 'es');
+  assert.match(esHour, /^mar\.?,? 10/); assert.match(esRun, /^20 oct\.?,? 10|oct\.? 20/);
+  assert.notEqual(hourText(when, 'UTC', 'es'), esHour, 'the zone is the region\'s, per call');
+  assert.equal(hourText(when, TZ, 'en'), 'Tue 10 am', 'English after Spanish is unchanged');
+});
+
+test('SC1137-04 es: the block, its basis and the mark card read Spanish, and English returns byte for byte', async () => {
+  const {MarkForecast, regionalForecast, regionInfo, language, parseConditionsForecast: parse, state, render, h} = await components();
+  state.configureStore({v2: true, storage: null});
+  state.syncFromURL('https://s.test/map?region=morro-bay');
+  regionInfo.value = {id: 'morro-bay', name: MORRO.name, center: MORRO.map.center, timezone: TZ};
+  regionalForecast.value = parse(morroFeed({hole: [AT]}), 'morro-bay', MORRO.map.center);
+  const draw = () => render(h(MarkForecast, {place: MARK, now: new Date(NOW)}));
+  try {
+    language.value = 'en';
+    const before = draw();
+    language.value = 'es';
+    const es = draw();
+    assert.match(es, /aria-label="Pronóstico en esta marca"/);
+    assert.match(es, /<span class="ui-eyebrow">Pronóstico regional<\/span> <span class="ui-mono">válido /);
+    assert.match(es, /no hay una malla del modelo que se pueda muestrear en esta marca\. Viento y oleaje en el punto de pronóstico central\./);
+    assert.deepEqual([...es.matchAll(/<dt>([^<]+)<\/dt>/g)].map(m => m[1]), ['NOAA: viento', 'NOAA: oleaje', 'ECMWF: viento', 'ECMWF: oleaje', 'Corriente superficial']);
+    assert.match(es, /<div data-gap="true"><dt>NOAA: viento<\/dt><dd class="ui-mono">—<\/dd><dd class="app-mark-forecast-source">Faltante: la muestra de NOAA GFS no tiene un valor de viento para .+\.<\/dd><\/div>/);
+    for (const clause of ['no valores en esta marca ni en una celda del modelo', 'dentro de 1.5 longitudes de malla', 'lee la muestra del punto de pronóstico central',
+      'nunca se promedian', 'más de 36 horas', 'más de 6 horas', 'un valor faltante deja un hueco']) assert.ok(es.includes(clause), clause);
+    assert.doesNotMatch(es, /Forecast|forecast point|never averaged|Gap:|toward|gusts/);
+    regionalForecast.value = null;
+    assert.match(draw(), /El pronóstico regional no se ha cargado, por lo que estas filas están vacías\./);
+    regionalForecast.value = parse(morroFeed({hole: [AT]}), 'morro-bay', MORRO.map.center);
+    language.value = 'en';
+    assert.ok(draw() === before, 'English after Spanish is the same markup');
+    assert.match(before, /nor at a model cell|not values at this mark or at a model cell/);
+  } finally { language.value = 'en'; regionalForecast.value = null; regionInfo.value = null; }
 });

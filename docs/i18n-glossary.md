@@ -145,6 +145,24 @@ Station, buoy, site and datum names are never translated. Catalogue IDs:
 | onshore / offshore / cross-shore | `hacia la costa` / `hacia mar adentro` / `paralelo a la costa` | `tile.detail.side.*` | |
 | `(offshore estimate)` | `(estimación mar adentro)` | `tile.detail.offshoreEstimate` | not an exact launch reading |
 
+### Mark forecast block (SC1137-04)
+
+The mark card's forecast rows, gap reasons, source lines and basis are said from the catalogue by
+`web/brief/MarkForecast.tsx` and `web/brief/mark-forecast.ts` (explicit `lang`, English default).
+Model, family and forecast-point names, grid degrees and `kt` / `ft` / `s` / `km` tokens stay as published.
+Catalogue IDs: `markForecast.*`.
+
+| English | Spanish | Catalogue ID | Meaning kept |
+| --- | --- | --- | --- |
+| run (model run) | `corrida` | `markForecast.gate.*`, `markForecast.src.run` | the model run, not the forecast |
+| not values at this mark or at a model cell | `no valores en esta marca ni en una celda del modelo` | `markForecast.basis` | point values, not the mark's or a cell's |
+| never averaged | `nunca se promedian` | `markForecast.basis` | two families, two rows |
+| leaves a gap | `deja un hueco` | `markForecast.basis` | a gap is not filled |
+| Gap: {reason}. | `Faltante: {reason}.` | `markForecast.gapLine` | |
+| about {km} km / unstated | `aproximadamente {km} km` / `no indicada` | `markForecast.gridAbout`, `markForecast.unstated` | grid spacing as stated |
+| from / gusts / toward {n}° true | `desde` / `ráfagas de` / `hacia {n}° verdadero` | `markForecast.from`, `.gusts`, `.towardTrue` | direction wind comes from vs. current goes toward |
+| within 1.5 grid lengths | `a menos de {km} km (1.5 longitudes de malla)` | `markForecast.gap.noCell` | both failure clauses stay |
+
 ## 2. Observed divergences
 
 Every catalogue Spanish value that renders a listed term differently from
