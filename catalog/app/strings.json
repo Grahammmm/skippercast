@@ -2152,6 +2152,12 @@
     "account.pk.confirmYes": {"en": "Remove passkey", "es": "Eliminar clave de acceso"},
     "account.entry.signedIn": {"en": "Signed in", "es": "Sesión iniciada"},
     "account.entry.signedInAs": {"en": "Signed in as {name}", "es": "Sesión iniciada como {name}"},
-    "account.entry.signIn": {"en": "Sign in or create an account", "es": "Iniciar sesión o crear una cuenta"}
+    "account.entry.signIn": {"en": "Sign in or create an account", "es": "Iniciar sesión o crear una cuenta"},
+    "shared.guard.failed": {"en": "This part could not load. The rest of the page still works.", "es": "Esta parte no se pudo cargar. El resto de la página sigue funcionando."},
+    "shared.guard.retry": {"en": "Try again", "es": "Intentar de nuevo"},
+    "shared.popover.basis": {"en": "basis", "es": "base"},
+    "shared.popover.sources": {"en": "How it’s built", "es": "Cómo se hizo"},
+    "shared.degraded.saved": {"en": "Live data is paused for today to keep SkipperCast free; some readings are saved copies.", "es": "Los datos en vivo están pausados por hoy para mantener SkipperCast gratis; algunas lecturas son copias guardadas."},
+    "shared.degraded.savedAt": {"en": "Live data is paused for today to keep SkipperCast free; some readings are saved copies from {time}.", "es": "Los datos en vivo están pausados por hoy para mantener SkipperCast gratis; algunas lecturas son copias guardadas de {time}."}
   }
 }

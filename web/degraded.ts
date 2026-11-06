@@ -13,6 +13,7 @@
 //
 // Erasable syntax only: the node tests import it by type stripping.
 import {signal} from '@preact/signals';
+import {localeOf, t, type Language} from './i18n.ts';
 
 export const DEGRADED_HEADER = 'X-SC-Degraded';
 export const LAST_KNOWN_HEADER = 'X-SC-Last-Known-At';
@@ -51,13 +52,13 @@ export function installDegradedWatch(scope: {fetch?: typeof fetch} = globalThis)
   scope.fetch = watchDegraded((...args: Parameters<typeof fetch>) => original.apply(scope, args));
 }
 
-/** The notice's words for `state`; null while live. `time` formats a saved copy's ISO time. */
-export function degradedText(state: Degraded, time: (iso: string) => string = localTime): string | null {
+/** The notice's words for `state` in `lang` (English when omitted); null while live. `time` formats a saved copy's ISO time. */
+export function degradedText(state: Degraded, time?: (iso: string) => string, lang?: Language): string | null {
   if (!state) return null;
-  const saved = state.since ? `some readings are saved copies from ${time(state.since)}` : 'some readings are saved copies';
-  return `Live data is paused for today to keep SkipperCast free; ${saved}.`;
+  return state.since ? t('shared.degraded.savedAt', lang ?? 'en', {time: (time ?? ((iso: string) => localTime(iso, lang)))(state.since)}) : t('shared.degraded.saved', lang ?? 'en');
 }
 
-function localTime(iso: string): string {
-  try { return new Date(iso).toLocaleString(undefined, {weekday: 'short', hour: 'numeric', minute: '2-digit'}); } catch { return iso; }
+// No language keeps the legacy browser-locale clock; a chosen language formats in its own locale.
+function localTime(iso: string, lang?: Language): string {
+  try { return new Date(iso).toLocaleString(lang ? localeOf(lang) : undefined, {weekday: 'short', hour: 'numeric', minute: '2-digit'}); } catch { return iso; }
 }
