@@ -396,8 +396,8 @@ test('run origin: only the port chooser reads the device position, and it hands 
   for (const name of readdirSync(join(ROOT, 'dist'))) if (/\.m?js$/.test(name)) files.push(join(ROOT, 'dist', name));
   const DEVICE_READ = /\bgeolocation\b|getCurrentPosition|watchPosition|\.coords\b/;
   const readers = files.filter(f => DEVICE_READ.test(readFileSync(f, 'utf8'))).map(f => f.slice(ROOT.length)).sort();
-  assert.deepEqual(readers, ['dist/home-port.js', 'web/landing/PortInput.tsx', 'web/ports.ts'],
-    'a new reader of the device position must not feed a run distance; review it and extend this list only if it suggests a listed port');
+  assert.deepEqual(readers, ['dist/account.js', 'dist/home-port.js', 'web/landing/PortInput.tsx', 'web/ports.ts'],
+    'a new reader of the device position must not feed a run distance; review it and extend this list only if it suggests a listed port (dist/account.js only fills the account forms\' typed-position boxes on a button press, SC1607-05)');
   // Each reader turns the fix straight into the nearest listed port; PortInput only passes geolocation to locatePort.
   for (const f of ['dist/home-port.js', 'web/ports.ts']) {
     const text = readFileSync(join(ROOT, f), 'utf8');
