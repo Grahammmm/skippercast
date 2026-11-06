@@ -22,7 +22,7 @@ import {TIDE_UNAVAILABLE, tideTrend} from '../tides.ts';
 import {ndbcStationURL, sourceStation, stationText, tidePredictionURL} from '../station-label.ts';
 import {ageText} from '../confidence.ts';
 import {FT_PER_M as M_TO_FT, KT_PER_MS as MS_TO_KT} from '../units.ts';
-import type {Brief, BriefBasis, BriefFleet, BriefNotice, BriefTile, LandingReport, SourceGap, RegionalDailyFeed, RegionalForecast, RegionalSource, TileId} from './types.ts';
+import type {Brief, BriefBasis, BriefFleet, BriefNotice, BriefTile, GapDisplay, LandingReport, SourceGap, RegionalDailyFeed, RegionalForecast, RegionalSource, TileDetailPart, TileDisplay, TileId} from './types.ts';
 
 const HOUR = 3_600_000;
 /**
@@ -44,12 +44,12 @@ const round = (value: number, digits = 1) => Number(value.toFixed(digits));
 const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
 const compass = (deg: number | null | undefined) => finite(deg) ? COMPASS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16]! : null;
 
-function tile(id: TileId, label: string, value: number | null, unit: string, detail: string, source: Pick<SourceStatus, 'label' | 'url'> | null, at: string | null, limitMs: number, now: Date, lastGood = false): BriefTile {
+function tile(id: TileId, label: string, value: number | null, unit: string, detail: string, source: Pick<SourceStatus, 'label' | 'url'> | null, at: string | null, limitMs: number, now: Date, lastGood = false, display?: TileDisplay): BriefTile {
   const clock = at === null ? NaN : Date.parse(at);
   const ageMs = Number.isFinite(clock) ? now.getTime() - clock : null;
   const state = value === null || ageMs === null ? 'unavailable' : lastGood || ageMs > limitMs || ageMs < -HOUR ? 'stale' : 'fresh';
   return {id, label, value: value === null ? null : round(value), unit, detail, source: source?.label ?? 'No source', sourceUrl: source?.url ?? null, at: ageMs === null ? null : at, ageMs, limitMs, state,
-    ...(lastGood && state === 'stale' ? {lastGood: true} : {})};
+    ...(lastGood && state === 'stale' ? {lastGood: true} : {}), ...(display ? {display} : {})};
 }
 
 function nearest<T extends {at: string}>(points: readonly T[], at: number): T | undefined {
@@ -83,19 +83,27 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
   // Boat at a regulated bar adds the hour's ebb and bar band to the tide tile (packages/coast bar-conditions.ts).
   const barHour = daily.bar && hour ? daily.bar.hours.find(item => item.at === hour.at) : undefined;
   const barText = barHour ? [barHour.tide.midEbb ? 'mid-ebb' : barHour.tide.stage, `${barHour.band === 'No bar flag' ? '' : 'bar '}${barHour.band.toLowerCase()} (estimate)`].filter(Boolean).join(' · ') : null;
+  const barParts: TileDetailPart[] = barHour ? [...(barHour.tide.midEbb ? [{kind: 'tideStage', stage: 'midEbb'}] : barHour.tide.stage ? [{kind: 'tideStage', stage: barHour.tide.stage}] : []) as TileDetailPart[], {kind: 'barBand', band: barHour.band === 'No bar flag' ? 'clear' : barHour.band === 'Caution' ? 'caution' : barHour.band === 'Hazardous' ? 'hazardous' : 'unknown'}] : [];
   // Kayak adds the wind band and side, seas band, chop and launch surf of the selected hour (packages/coast kayak.ts).
   const kayakHour = daily.kayak && hour ? daily.kayak.hours.find(item => item.at === hour.at) : undefined;
   const kayakWind = kayakHour && kayakHour.wind.band !== 'Unknown' ? `${kayakHour.wind.band.toLowerCase()}${kayakHour.wind.side ? ` ${kayakHour.wind.side}` : ''}` : null;
+  // The same branches as the English line, as parts the page can say in its own language (tile-copy.ts).
+  const windSide = shoreHour?.wind.side ?? null;
+  const windParts: TileDetailPart[] = [{kind: 'gust', value: finite(hour?.gustKnots) ? round(hour.gustKnots) : null}, ...(direction ? [{kind: 'direction', value: direction} as TileDetailPart] : []),
+    ...(windSide ? [{kind: 'windSide', side: windSide} as TileDetailPart] : kayakHour && kayakHour.wind.band !== 'Unknown' ? [{kind: 'kayakWind', band: kayakHour.wind.band, side: kayakHour.wind.side} as TileDetailPart] : [])];
   const wind = tile('wind', 'Wind', hour?.windKnots ?? null, 'kt',
     [finite(hour?.gustKnots) ? `gust ${round(hour.gustKnots)} kt` : 'gust unknown', direction ? `from ${direction}` : null, shoreHour?.wind.side ?? kayakWind].filter(Boolean).join(' · '),
-    forecastSource, issued, TILE_LIMIT_MS.wind, now);
+    forecastSource, issued, TILE_LIMIT_MS.wind, now, false, {parts: windParts, ...(forecastSource ? {} : {sourceMissing: true})});
 
   let swell: BriefTile;
   if (profileSemantics(profile).swellTile === 'offshore') {
     const period = hour?.wavePeriodS ?? hour?.swellPeriodS ?? null;
     const kayakSeas = kayakHour && kayakHour.seas.band !== 'Unknown'
       ? ` · ${kayakHour.seas.band.toLowerCase()} seas${kayakHour.seas.chop ? ' · short-period chop' : ''}${kayakHour.launchCaution ? ` · surf at the launch${kayakHour.launch.basis === 'offshore' ? ' (offshore estimate)' : ''}` : ''}` : '';
-    swell = tile('swell', 'Swell', hour?.waveFt ?? null, 'ft', (finite(period) ? `${period} s · offshore forecast` : 'offshore forecast') + kayakSeas, forecastSource, issued, TILE_LIMIT_MS.swell, now);
+    swell = tile('swell', 'Swell', hour?.waveFt ?? null, 'ft', (finite(period) ? `${period} s · offshore forecast` : 'offshore forecast') + kayakSeas, forecastSource, issued, TILE_LIMIT_MS.swell, now, false,
+      {parts: [...(finite(period) ? [{kind: 'literal', text: `${period} s`} as TileDetailPart] : []), {kind: 'offshoreForecast'}, ...(kayakHour && kayakHour.seas.band !== 'Unknown' ? [{kind: 'kayakSeas', band: kayakHour.seas.band} as TileDetailPart,
+        ...(kayakHour.seas.chop ? [{kind: 'shortChop'} as TileDetailPart] : []), ...(kayakHour.launchCaution ? [{kind: 'launchSurf', offshore: kayakHour.launch.basis === 'offshore'} as TileDetailPart] : [])] : [])],
+        ...(forecastSource ? {} : {sourceMissing: true})});
   } else {
     const site = (report.nearshore ?? []).filter(item => item.areaId === area.id && item.availability === 'available')
       .sort((a, b) => Date.parse(b.fetchedAt) - Date.parse(a.fetchedAt))[0];
@@ -106,7 +114,11 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
     const surf = shoreHour && shoreHour.surf.band !== 'Unknown'
       ? ` · ${shoreHour.surf.band.toLowerCase()} surf${shoreHour.surf.basis === 'offshore' ? ' (offshore estimate)' : ''}${shoreHour.surf.sneaker ? ' · long-period swell' : ''}` : '';
     swell = tile('swell', 'Swell', point?.waveFt ?? null, 'ft', (site ? `${finite(point?.periodS) ? `${point.periodS} s · ` : ''}${site.name}` : 'No nearshore model site') + surge + surf,
-      site ? {label: site.name, url: site.url} : null, site?.fetchedAt ?? null, TILE_LIMIT_MS.nearshore, now);
+      site ? {label: site.name, url: site.url} : null, site?.fetchedAt ?? null, TILE_LIMIT_MS.nearshore, now, false,
+      {parts: [...(site ? [...(finite(point?.periodS) ? [{kind: 'literal', text: `${point.periodS} s`} as TileDetailPart] : []), {kind: 'literal', text: site.name} as TileDetailPart] : [{kind: 'noNearshore'} as TileDetailPart]),
+        ...(surgeHour && surgeHour.surge.band !== 'Unknown' ? [{kind: 'surge', band: surgeHour.surge.band} as TileDetailPart] : []),
+        ...(shoreHour && shoreHour.surf.band !== 'Unknown' ? [{kind: 'surf', band: shoreHour.surf.band, offshore: shoreHour.surf.basis === 'offshore'} as TileDetailPart, ...(shoreHour.surf.sneaker ? [{kind: 'longSwell'} as TileDetailPart] : [])] : [])],
+        ...(site ? {} : {sourceMissing: true})});
   }
 
   // Use the model's selected reading; retain the latest reading during an outage or on a future day.
@@ -115,16 +127,21 @@ export function briefFromDaily(daily: DailyBrief, basis: BriefBasis, context: Br
   const buoyName = observation ? stationText({id: observation.stationId, backupFor: context.buoyBackupFor ?? null}) : '';
   const water = tile('water', 'Water', observation?.waterTempF ?? null, '°F', observation ? `buoy ${buoyName}` : 'no fresh buoy',
     observation ? {label: `NDBC ${buoyName}`, url: observation.url} : null, observation?.observedAt ?? null, TILE_LIMIT_MS.water, now,
-    !!observation && report.sources.some(item => item.kind === 'observation' && item.url === observation.url && item.outcome === 'error'));
+    !!observation && report.sources.some(item => item.kind === 'observation' && item.url === observation.url && item.outcome === 'error'),
+    {parts: [observation ? {kind: 'buoy', name: buoyName} : {kind: 'noBuoy'}], ...(observation ? {} : {sourceMissing: true})});
 
   const tideSource = report.sources.find(item => item.kind === 'prediction') ?? null;
   const datum = context.tideDatum ?? 'MLLW';
   const curvePoint = nearest(daily.tides, pivot);
   const nextEvent: TideEvent | undefined = curvePoint ? undefined : [...report.tideEvents].sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).find(item => Date.parse(item.at) >= pivot);
+  const trend = curvePoint ? tideTrend(daily.tides, pivot) : null;
+  const tideParts: TileDetailPart[] = curvePoint ? [...(trend ? [{kind: 'tideTrend', trend} as TileDetailPart] : []), ...(shoreHour?.tide.veryLow ? [{kind: 'veryLow'} as TileDetailPart] : []), ...barParts, {kind: 'literal', text: county.tideStation.name}, {kind: 'literal', text: datum}]
+    : nextEvent ? [{kind: 'nextEvent', type: nextEvent.type}, ...barParts, {kind: 'literal', text: county.tideStation.name}, {kind: 'literal', text: datum}] : [{kind: 'tideUnavailable'}];
   const tide = tile('tide', 'Tide', curvePoint?.heightFt ?? nextEvent?.heightFt ?? null, 'ft',
     curvePoint ? [tideTrend(daily.tides, pivot), shoreHour?.tide.veryLow ? 'very low' : null, barText, county.tideStation.name, datum].filter(Boolean).join(' · ')
       : nextEvent ? [`next ${nextEvent.type === 'H' ? 'high' : 'low'}`, barText, county.tideStation.name, datum].filter(Boolean).join(' · ') : TIDE_UNAVAILABLE,
-    tideSource, tideSource?.fetchedAt ?? null, TILE_LIMIT_MS.tide, now, tideSource?.outcome === 'error');
+    tideSource, tideSource?.fetchedAt ?? null, TILE_LIMIT_MS.tide, now, tideSource?.outcome === 'error',
+    {parts: tideParts, ...(curvePoint || nextEvent ? {datum} : {}), ...(tideSource ? {} : {sourceMissing: true})});
 
   return {
     basis, profile, date: daily.date, label: daily.label, provisional: daily.provisional,
@@ -303,10 +320,16 @@ function dataClock(source: RegionalSource): {at: string; what: 'reading' | 'issu
   return retrieved ? {at: retrieved, what: 'retrieved'} : null;
 }
 
-function clockText(source: RegionalSource, now: Date): string | null {
+function readingClock(source: RegionalSource, now: Date): {what: 'reading' | 'issued' | 'ended' | 'retrieved'; ageMs: number} | null {
   const clock = dataClock(source);
   const ms = clock ? now.getTime() - Date.parse(clock.at) : NaN;
-  if (!clock || !Number.isFinite(ms)) return null;
+  return clock && Number.isFinite(ms) ? {what: clock.what, ageMs: ms} : null;
+}
+
+function clockText(source: RegionalSource, now: Date): string | null {
+  const clock = readingClock(source, now);
+  if (!clock) return null;
+  const ms = clock.ageMs;
   if (clock.what === 'ended') return ms >= 0 ? `coverage ended ${ageText(ms)} ago` : `coverage runs ${ageText(-ms)} more`;
   return clock.what === 'reading' ? `newest reading ${ageText(ms)} old` : `${clock.what} ${ageText(ms)} ago`;
 }
@@ -320,7 +343,9 @@ function feedGap(source: RegionalSource, now: Date): SourceGap {
     : source.status === 'failed' ? 'latest check failed; nothing earlier on hand'
     : source.status === 'missing' ? 'not published in this feed'
     : source.status;
-  return {id: source.id, label, status: source.status, text: `${label}: ${text}.`};
+  const kind: GapDisplay['kind'] = source.status === 'stale' ? 'stale' : source.status === 'retained' ? 'retained' : source.status === 'failed' ? 'failedEmpty' : source.status === 'missing' ? 'missing' : 'other';
+  const at = readingClock(source, now);
+  return {id: source.id, label, status: source.status, text: `${label}: ${text}.`, display: {kind, ...(at && (kind === 'stale' || kind === 'retained') ? {clock: at} : {})}};
 }
 
 /**
@@ -363,7 +388,8 @@ export function reportGaps(report: Report, county: County, area: Area, now: Date
   return shown.map(item => {
     const ms = now.getTime() - Date.parse(item.fetchedAt);
     const when = Number.isFinite(ms) ? `; last fetched ${ageText(ms)} ago` : '';
-    return {id: item.id, label: item.label, status: 'failed', text: `${item.label}: latest check failed${when}.`};
+    return {id: item.id, label: item.label, status: 'failed', text: `${item.label}: latest check failed${when}.`,
+      display: {kind: 'failedCheck', ...(Number.isFinite(ms) ? {clock: {what: 'fetched', ageMs: ms}} : {})}};
   });
 }
 

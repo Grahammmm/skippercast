@@ -29,6 +29,42 @@ export interface BriefTile {
   readonly state: TileState;
   /** The source's latest check failed and this is its last good reading (a feed `retained` source); always stale. */
   readonly lastGood?: boolean;
+  /** The detail line as structured parts, so the page can say it in the reader's language (web/brief/tile-copy.ts); `detail` stays the English line for other readers. */
+  readonly display?: TileDisplay;
+}
+
+export type Side = 'onshore' | 'offshore' | 'cross-shore';
+export type Band4 = 'Small' | 'Moderate' | 'Large' | 'Heavy';
+/** The finite app phrases a tile's detail line is made of; a published name is only ever a literal. */
+export type TileDetailPart =
+  | {readonly kind: 'literal'; readonly text: string}
+  | {readonly kind: 'gust'; readonly value: number | null}
+  | {readonly kind: 'direction'; readonly value: string}
+  | {readonly kind: 'windSide'; readonly side: Side}
+  | {readonly kind: 'kayakWind'; readonly band: 'Light' | 'Moderate' | 'Fresh' | 'Strong'; readonly side: Side | null}
+  | {readonly kind: 'surf'; readonly band: Band4; readonly offshore: boolean}
+  | {readonly kind: 'longSwell'}
+  | {readonly kind: 'surge'; readonly band: 'Low' | 'Moderate' | 'Strong' | 'Heavy'}
+  | {readonly kind: 'kayakSeas'; readonly band: Band4}
+  | {readonly kind: 'shortChop'}
+  | {readonly kind: 'launchSurf'; readonly offshore: boolean}
+  | {readonly kind: 'tideTrend'; readonly trend: 'Rising' | 'Falling' | 'Turning'}
+  | {readonly kind: 'nextEvent'; readonly type: 'H' | 'L'}
+  | {readonly kind: 'veryLow'}
+  | {readonly kind: 'tideStage'; readonly stage: 'ebb' | 'flood' | 'midEbb'}
+  | {readonly kind: 'barBand'; readonly band: 'clear' | 'caution' | 'hazardous' | 'unknown'}
+  | {readonly kind: 'offshoreForecast'}
+  | {readonly kind: 'noNearshore'}
+  | {readonly kind: 'buoy'; readonly name: string}
+  | {readonly kind: 'noBuoy'}
+  | {readonly kind: 'tideUnavailable'}
+  | {readonly kind: 'predictionsUnavailable'};
+export interface TileDisplay {
+  readonly parts: readonly TileDetailPart[];
+  /** The tide tile's reference level, when the detail line names it. */
+  readonly datum?: string;
+  /** The tile has no source (its `source` reads the English "No source"). */
+  readonly sourceMissing?: boolean;
 }
 
 export interface BriefNotice {readonly name: string; readonly advisory: string; readonly url: string}
@@ -89,6 +125,12 @@ export interface SourceGap {
   readonly status: string;
   /** One sentence: the label, the status and its age where the data has a clock. */
   readonly text: string;
+  /** Which sentence `text` is and the clock it names, so the page can say it in the reader's language; `text` stays English. */
+  readonly display?: GapDisplay;
+}
+export interface GapDisplay {
+  readonly kind: 'stale' | 'retained' | 'failedEmpty' | 'missing' | 'failedCheck' | 'other';
+  readonly clock?: {readonly what: 'reading' | 'issued' | 'ended' | 'retrieved' | 'fetched'; readonly ageMs: number};
 }
 
 /** The landing-reports feed rows the fleet line reads (`data` branch `regions/<id>/latest.json` `reports`). */
