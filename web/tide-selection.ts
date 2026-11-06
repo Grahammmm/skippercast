@@ -1,4 +1,5 @@
 import {signal} from '@preact/signals';
+import {t} from './i18n.ts';
 import {loadTideReading, readSavedTideStations, saveSavedTideStations, MAX_SAVED_TIDE_STATIONS, stationsInRegion, TIDE_DIRECTORY_URL, tidePackURLs, type TideReading, type TideRegion, type TideStation} from './tide-stations.ts';
 
 export function createTideSelection(fetcher: typeof fetch = (...args) => fetch(...args), storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>) {
@@ -27,7 +28,7 @@ export function createTideSelection(fetcher: typeof fetch = (...args) => fetch(.
       if (current()) stations.value = rows;
       return rows;
     } catch {
-      if (current()) error.value = 'NOAA station directory unavailable. Retry when connected.';
+      if (current()) error.value = t('tideStation.err.directory', 'en');
       return [];
     }
   }
@@ -39,12 +40,12 @@ export function createTideSelection(fetcher: typeof fetch = (...args) => fetch(.
     const rows = await list();
     if (token !== generation) return;
     const station = rows.find(s => s.id === id);
-    if (!station) { error.value ||= 'Chosen station unavailable in this region. Choose another station or the region default.'; loading.value = false; return; }
+    if (!station) { error.value ||= t('tideStation.err.missing', 'en'); loading.value = false; return; }
     const result = await loadTideReading(station, fetcher);
     if (token !== generation) return;
     reading.value = result;
     loading.value = false;
-    if (result.failed) error.value = 'Some chosen-station predictions are unavailable. Missing readings stay blank rather than using the default station.';
+    if (result.failed) error.value = t('tideStation.err.partial', 'en');
   }
   function configure(next: TideRegion | null): void {
     generation++;
@@ -65,7 +66,7 @@ export function createTideSelection(fetcher: typeof fetch = (...args) => fetch(.
     const active = id === selected.station ? null : id;
     if (active && !saved.peek().includes(active)) {
       if (saved.peek().length >= MAX_SAVED_TIDE_STATIONS) {
-        notice.value = 'Up to three tide stations can be saved per region. Remove one before adding another.';
+        notice.value = t('tideStation.err.cap', 'en');
         return false;
       }
       saved.value = [...saved.peek(), active];

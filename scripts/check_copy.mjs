@@ -257,7 +257,7 @@ export function lintFile(path, source) {
 
 /** The string catalogue (catalog/app/strings.json, en + es) and the files whose user-visible words all come from it. To cover a surface: add its ids, replace its literals with t(id, lang), list its file here. */
 export const CATALOGUE = 'catalog/app/strings.json';
-export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/FirstAnswerLine.tsx', 'web/app/RulesCard.tsx', 'web/brief/verdict-copy.ts', 'web/brief/WhereToLook.tsx', 'web/brief/Run.tsx', 'web/app/LanguageChoice.tsx', 'web/brief/Tiles.tsx', 'web/brief/tile-copy.ts',
+export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/FirstAnswerLine.tsx', 'web/app/RulesCard.tsx', 'web/brief/verdict-copy.ts', 'web/brief/WhereToLook.tsx', 'web/brief/Run.tsx', 'web/app/LanguageChoice.tsx', 'web/brief/Tiles.tsx', 'web/brief/tile-copy.ts', 'web/brief/TideStationControl.tsx', 'web/brief/TideSpark.tsx', 'web/brief/tide-copy.ts',
   'web/landing/main.tsx', 'web/landing/copy.ts', 'web/landing/Landing.tsx', 'web/landing/PortInput.tsx', 'web/landing/ProfileStep.tsx', 'web/landing/Readout.tsx', 'web/landing/readings.ts', 'web/landing/live-verdict.ts', 'web/app/FirstRun.tsx', 'web/app/LimitsPanel.tsx',
   'web/app/Masthead.tsx', 'web/app/Mobile.tsx', 'web/app/CommandBar.tsx', 'web/app/AccountMenu.tsx',
   'web/app/TimeDock.tsx', 'web/ui/Dock.tsx', 'web/season.ts', 'web/app/SeasonStrip.tsx',
@@ -314,8 +314,6 @@ export const NOT_COVERED = {
   'web/app/PlanRules.tsx': 'plan-date rules card (headings, check-the-rules line, link labels) is English, deferred to a later Spanish unit',
   'web/app/views/FleetAdmin.tsx': 'admin-only fleet activity panel; admin views are outside the Spanish scope (#1512)',
   'web/brief/MarkForecast.tsx': 'regional forecast rows at a mark are English, deferred to a later Spanish unit',
-  'web/brief/TideSpark.tsx': 'tide curve figure: the aria-label and event labels are English, deferred to a later Spanish unit',
-  'web/brief/TideStationControl.tsx': 'tide station picker and its notices are English, deferred to a later Spanish unit',
   'web/landing/LayerDots.tsx': 'landing layer dots and their aria-label are English, deferred to a later Spanish unit',
   'web/landing/NightMap.tsx': 'night map canvas is aria-hidden; its Basemap and Currents credit lines are English, deferred',
   'web/landing/Shoreline.tsx': 'decorative shoreline SVG (aria-hidden); its English shoreline credit sentence is deferred',
