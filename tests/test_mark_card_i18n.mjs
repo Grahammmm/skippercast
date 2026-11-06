@@ -142,5 +142,7 @@ test('catalogue_and_wire_token: the tree is clean, and the server wire token is 
   assert.ok(isProse(token), 'the token reads as prose to the lint');
   assert.ok(WIRE_OK.get('web/saved-spots.ts')?.has(token));
   assert.equal(WIRE_OK.get('web/app/MarkCard.tsx'), undefined);
-  assert.equal(WIRE_OK.size, 1, 'one path, one token');
+  assert.deepEqual(WIRE_OK.get('web/reports.ts'), new Set(['Broad regional name']));
+  assert.deepEqual([...WIRE_OK.keys()].sort(), ['web/reports.ts', 'web/saved-spots.ts'], 'two paths, one token each');
+  for (const [path, tokens] of WIRE_OK) assert.equal(tokens.size, 1, `${path}: one token`);
 });
