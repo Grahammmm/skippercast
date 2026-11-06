@@ -177,7 +177,7 @@ function CurrentsRow() {
         <span class="app-swatch" data-layer="currents-fast" aria-hidden="true"></span>{t('legend.fastest', lang)}
       </> : layerCopy('currents', lang).label}
       <Popover iconOnly summary={t('legend.bs.currents', lang)}>{chart ? <Basis lang={lang} id="currents" runtime={state.basis} /> : layerCopy('currents', lang).basis}</Popover>
-      {reason ? <p class="app-legend-note" data-reason="currents"><EnglishDetail lang={lang}>{reason}</EnglishDetail></p> : null}
+      {reason ? <p class="app-legend-note" data-reason="currents"><Status lang={lang} raw={reason} parts={chart ? state.copy?.reason : undefined} /></p> : null}
     </li>
   );
 }
@@ -241,8 +241,8 @@ function WindRow() {
   const s = windState.value, lang = language.value;
   return <li class="app-legend-wind">{t('legend.windRow', lang)}
     <Popover iconOnly summary={t('legend.bs.wind', lang)}><Basis lang={lang} id="wind" runtime={s.basis} /></Popover>
-    {s.drawn ? <p class="app-legend-note ui-mono" data-stamp="wind"><EnglishDetail lang={lang}>{t('legend.windStamp', 'en', {stamp: s.drawn.stamp})}</EnglishDetail></p> : null}
-    {s.reason ? <p class="app-legend-note" data-reason="wind"><EnglishDetail lang={lang}>{s.reason}</EnglishDetail></p> : null}
+    {s.drawn ? <p class="app-legend-note ui-mono" data-stamp="wind"><Status lang={lang} raw={t('legend.windStamp', 'en', {stamp: s.drawn.stamp})} parts={s.copy?.stamp} /></p> : null}
+    {s.reason ? <p class="app-legend-note" data-reason="wind"><Status lang={lang} raw={s.reason} parts={s.copy?.reason} /></p> : null}
   </li>;
 }
 
@@ -250,8 +250,9 @@ function SwellRow() {
   const s = swellState.value, f = s.drawn, reason = s.reason, r = nearshoreState.value, lang = language.value;
   // The producer's own prefix is compared in English, from the catalogue, never in Spanish.
   const prefix = t('legend.swell.unavailable', 'en');
-  const fieldReason = !f && r?.rings.length && reason.startsWith(prefix)
-    ? `${t('legend.swell.fieldUnavailable', 'en')}${reason.slice(prefix.length)}${t('legend.swell.ringsRemain', 'en')}` : reason;
+  const field = !f && r?.rings.length && reason.startsWith(prefix);
+  const fieldReason = field ? `${t('legend.swell.fieldUnavailable', 'en')}${reason.slice(prefix.length)}${t('legend.swell.ringsRemain', 'en')}` : reason;
+  const reasonParts = field ? s.copy?.fieldReason : s.copy?.reason;
   return (
     <li class="app-legend-swell">
       {f ? <span class="app-swatch" data-layer="swell" aria-hidden="true"></span> : null}{layerCopy('swell', lang).label}
@@ -260,9 +261,9 @@ function SwellRow() {
         options={[{value: 'primary', label: t('legend.swell.primary', lang)}, {value: 'wind', label: t('legend.swell.wind', lang)}, {value: 'secondary', label: t('legend.swell.secondary', lang)}]} />
       {f ? <p class="app-legend-note app-legend-range ui-mono" data-range="swell"><EnglishDetail lang={lang}>{frameSummary(f)}</EnglishDetail></p> : null}
       {f ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="swell">{HEIGHT_SCALE[0]} ft<span class="app-swatch" data-layer="swell" aria-hidden="true"></span><span class="app-visually-hidden">{t('legend.to', lang)}</span>{HEIGHT_SCALE[1]}+ ft</p> : null}
-      {f ? <p class="app-legend-note ui-mono" data-stamp="swell">{t('legend.swell.stamp', lang, {name: WAVE_MODEL.name, stamp: f.stamp})}</p> : null}
+      {f ? <p class="app-legend-note ui-mono" data-stamp="swell"><Status lang={lang} raw={t('legend.swell.stamp', 'en', {name: WAVE_MODEL.name, stamp: f.stamp})} parts={s.copy?.stamp} /></p> : null}
       {r ? <p class="app-legend-note ui-mono" data-nearshore="swell"><span class="app-ring" aria-hidden="true"></span><EnglishDetail lang={lang}>{ringSummary(r, new Date())}</EnglishDetail></p> : null}
-      {fieldReason ? <p class="app-legend-note" data-reason="swell"><EnglishDetail lang={lang}>{fieldReason}</EnglishDetail></p> : null}
+      {fieldReason ? <p class="app-legend-note" data-reason="swell"><Status lang={lang} raw={fieldReason} parts={reasonParts} /></p> : null}
     </li>
   );
 }

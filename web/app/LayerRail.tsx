@@ -57,13 +57,6 @@ export function chooseCurrent(value: string): void {
   setParams({current: value, layers: layersParam(toggled(layers.value, 'currents', value !== 'off'))});
 }
 
-/** The Currents entry's note: the Chart's frame state, or the terrain renderer's own status line. */
-const currentsNote = (): string => {
-  if (shownPresentation.value !== 'chart') return currentStatus.value;
-  const state = currentsState.value;
-  return state.drawn ? state.note : state.reason || state.note;
-};
-
 /** The one `?current=` control, shared by the Currents rail entry and the Conditions view (FE-32). */
 export function CurrentSource() {
   const value = current.value, lang = language.value;
@@ -263,6 +256,13 @@ export function LayerRail() {
   const on = layers.value, source = current.value, shown = shownPresentation.value, lang = language.value;
   const basisLabel = (label: string) => t('rail.basisSummary', lang, {label});
   const runtime = (note: string | undefined) => note ? <EnglishDetail lang={lang}>{note}</EnglishDetail> : undefined;
+  // The Currents entry's note: the terrain renderer's own status line, or the Chart's frame note, else its reason; SC1352-03: in the page's language when the producer attached parts.
+  const currentsNote = () => {
+    if (shownPresentation.value !== 'chart') return runtime(currentStatus.value);
+    const state = currentsState.value, raw = state.drawn ? state.note : state.reason || state.note;
+    const r = statusText(raw, state.drawn || !state.reason ? state.copy?.note : state.copy?.reason, lang);
+    return r.translated ? r.text : runtime(raw);
+  };
   // SC1352-02: a note whose producer attached catalogue parts reads in the page's language; any other stays labelled English.
   const railNote = (id: string) => { const raw = railNotes.value[id as keyof typeof railNotes.value]; const r = raw ? statusText(raw, railNoteCopies.value[id as keyof typeof railNotes.value], lang) : null; return r?.translated ? r.text : runtime(raw || undefined); };
   return (
@@ -271,7 +271,7 @@ export function LayerRail() {
         const here = drawsIn(e.id, shown), active = railOn(e.id, on, source);
         return e.id === 'currents' ? (
           <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(e.label)} disabled={!here}
-            note={!here ? chartOnly(lang) : active ? runtime(currentsNote()) : undefined} onToggle={(_, next) => chooseCurrent(next ? DEFAULT_CURRENT : 'off')}>
+            note={!here ? chartOnly(lang) : active ? currentsNote() : undefined} onToggle={(_, next) => chooseCurrent(next ? DEFAULT_CURRENT : 'off')}>
             {active && here ? <CurrentSource /> : null}
           </RailItem>
         ) : (

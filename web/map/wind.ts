@@ -11,6 +11,7 @@ import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {terrainHour} from './stage.ts';
 import {LABEL_FONT} from './style.ts';
+import {sp, type StatusCopy, type StatusPart} from './status-copy.ts';
 import {runText, validText} from './swell.ts';
 
 export const WIND_MODEL = 'gfs_global';
@@ -24,7 +25,7 @@ export interface WindFrame {
   readonly step: readonly [number, number];
   readonly stamp: string;
 }
-export interface WindStatus {readonly drawn: WindFrame | null; readonly reason: string; readonly basis: string}
+export interface WindStatus {readonly drawn: WindFrame | null; readonly reason: string; readonly basis: string; /** SC1352-03: catalogue parts for `reason` and the legend `stamp`. */ readonly copy?: StatusCopy}
 const OFF: WindStatus = {drawn: null, reason: '', basis: layerEntry('wind').basis};
 export const windState = signal<WindStatus>(OFF);
 
@@ -42,25 +43,26 @@ export function windPoints(f: WaveForecast, epoch: number): WindSample[] {
 
 export function windStatus(on: boolean, f: WaveForecast | null, at: Date, now: Date, tz: string, failed = false): WindStatus {
   if (!on) return OFF;
-  const none = (reason: string): WindStatus => ({...OFF, reason});
-  if (!f) return none(failed ? 'Wind unavailable: the regional forecast failed to load.' : 'Loading the regional wind forecast.');
-  if (!f.step) return none('Wind unavailable: this region has no forecast grid.');
-  if (!f.model) return none('Wind unavailable: the regional forecast carries no NOAA GFS run.');
-  const issued = f.model.issued * 1000, run = runText(issued, tz);
+  const none = (reason: string, part: StatusPart): WindStatus => ({...OFF, reason, copy: {reason: [part]}});
+  if (!f) return failed ? none('Wind unavailable: the regional forecast failed to load.', sp('map.status.wind.failed')) : none('Loading the regional wind forecast.', sp('map.status.wind.loading'));
+  if (!f.step) return none('Wind unavailable: this region has no forecast grid.', sp('map.status.wind.noGrid'));
+  if (!f.model) return none('Wind unavailable: the regional forecast carries no NOAA GFS run.', sp('map.status.wind.noModel'));
+  const issued = f.model.issued * 1000, run = runText(issued, tz), runAt = {moment: issued, tz, form: 'run'} as const;
   const validAt = forecastTime(f.model.times.map(t => t * 1000), issued, f.retrieved, at, now);
   if (validAt === null) {
     const age = now.getTime() - issued, retrievalAge = now.getTime() - f.retrieved;
-    const why = age < -300_000 || retrievalAge < -300_000 ? 'a timestamp is ahead of the device clock'
-      : age > 36 * HOUR ? 'the run is past its 36-hour age limit'
-      : retrievalAge > 6 * HOUR ? 'retrieval is past its 6-hour age limit'
-      : 'no listed forecast hour is available within 90 minutes inside the run';
-    return none(`Wind unavailable: NOAA GFS run ${run}; ${why}.`);
+    const [why, id] = age < -300_000 || retrievalAge < -300_000 ? ['a timestamp is ahead of the device clock', 'map.status.wind.ahead'] as const
+      : age > 36 * HOUR ? ['the run is past its 36-hour age limit', 'map.status.wind.runStale'] as const
+      : retrievalAge > 6 * HOUR ? ['retrieval is past its 6-hour age limit', 'map.status.wind.retrievalStale'] as const
+      : ['no listed forecast hour is available within 90 minutes inside the run', 'map.status.wind.noHour'] as const;
+    return none(`Wind unavailable: NOAA GFS run ${run}; ${why}.`, sp(id, {run: runAt}));
   }
   const points = windPoints(f, validAt / 1000);
-  if (!points.length) return none('Wind unavailable: no unit-checked wind samples at this forecast hour.');
+  if (!points.length) return none('Wind unavailable: no unit-checked wind samples at this forecast hour.', sp('map.status.wind.noSamples'));
   const stamp = `run ${run} · ${Math.floor(Math.max(0, now.getTime() - issued) / HOUR)} h old · valid ${validText(validAt, tz, true)}`;
   const grid = f.step.map(v => `${Number(v.toFixed(3))}°`).join(' × ');
   return {drawn: {key: `${f.region}|${issued}|${f.retrieved}|${validAt}`, validAt, points, step: f.step, stamp}, reason: '',
+    copy: {stamp: [sp('legend.windStamp', {stamp: {id: 'map.status.wind.stamp', vars: {run: runAt, hours: {num: Math.floor(Math.max(0, now.getTime() - issued) / HOUR), digits: 0}, valid: {moment: validAt, tz, form: 'dated'}}}})]},
     basis: `${OFF.basis} Regional sampling grid ${grid}; ${stamp}. Fixed-length arrows show direction, not speed; labels give speed. Calm samples have a 0 kt label and no arrow. Missing samples stay blank; headlands and harbors are not resolved.`};
 }
 

@@ -43,6 +43,7 @@ import {fieldTexture, isolines} from './field.ts';
 import {WAVE_MODEL, loadForecast, swellPoints, type SwellPartition, type WaveForecast} from './forecast-grid.ts';
 import {forecastTime} from './frames.ts';
 import {layerEntry, setRailNote} from './layers.ts';
+import {pair, sp, type StatusCopy, type StatusPart} from './status-copy.ts';
 import {DEPTH_BOTTOM} from './depth-contours.ts';
 import {MPA_FILL} from './mpa.ts';
 import {NEARSHORE_HIT, NEARSHORE_LAYER, NEARSHORE_SOURCE, nearshoreRings, ringHitLayer, ringLayer, ringMark, type Rings} from './nearshore.ts';
@@ -103,12 +104,18 @@ export interface SwellStatus {
   /** Why nothing draws, for the legend; '' when a frame draws or the layer is off. */
   readonly reason: string;
   readonly basis: string;
+  /** SC1352-03: catalogue parts for `note`, `reason`, the legend `stamp` and the `fieldReason` shown while nearshore rings stay; absent when off. */
+  readonly copy?: StatusCopy & {readonly fieldReason?: readonly StatusPart[]};
 }
 export interface SwellLoad {readonly state: 'idle' | 'loading' | 'ready' | 'error'; readonly region: string | null; readonly forecast: WaveForecast | null; readonly at: number}
 
 export const SWELL_BASIS = layerEntry('swell').basis;
 const OFF: SwellStatus = {drawn: null, note: '', reason: '', basis: SWELL_BASIS};
-const none = (note: string, reason: string): SwellStatus => ({...OFF, note, reason});
+const none = (note: string, reason: string, copy: StatusCopy & {readonly fieldReason?: readonly StatusPart[]}): SwellStatus => ({...OFF, note, reason, copy});
+/** A "Swell unavailable: ..." refusal; with rings left, the legend reads the same clause after "Swell field unavailable:" and before "Nearshore rings remain visible." */
+const refuse = (note: string, notePart: StatusPart, body: string, bodyPart: StatusPart): SwellStatus => none(note, `Swell unavailable: ${body}`, {
+  note: [notePart], reason: [sp('legend.swell.unavailable'), ' ', bodyPart], fieldReason: [sp('legend.swell.fieldUnavailable'), ' ', bodyPart, sp('legend.swell.ringsRemain')],
+});
 
 const formats = new Map<string, Intl.DateTimeFormat>();
 function parts(ms: number, tz: string): Record<string, string> {
@@ -163,26 +170,37 @@ export function swellFrame(f: WaveForecast, validAt: number, now: Date, tz: stri
 export function swellStatus(on: boolean, load: SwellLoad, at: Date, now: Date, tz: string, partition: SwellPartition = 'primary'): SwellStatus {
   if (!on) return OFF;
   const f = load.forecast, name = WAVE_MODEL.name;
-  if (!f) return load.state === 'error' ? none('unavailable', 'Swell unavailable: the regional wave forecast failed to load.') : none('loading', 'Loading the regional wave forecast.');
-  if (!f.step) return none('no forecast grid for this region', 'Swell unavailable: this region\'s forecast points do not form a grid, so no field is drawn.');
-  if (!f.model) return none('unavailable', `Swell unavailable: the regional forecast carries no ${name} run.`);
-  const issued = f.model.issued * 1000, run = runText(issued, tz);
+  if (!f) return load.state === 'error' ? refuse('unavailable', sp('map.status.common.unavailable'), 'the regional wave forecast failed to load.', sp('map.status.swell.failed'))
+    : none('loading', 'Loading the regional wave forecast.', pair(sp('map.status.common.loading'), sp('map.status.swell.loading')));
+  if (!f.step) return refuse('no forecast grid for this region', sp('map.status.swell.noGridNote'), 'this region\'s forecast points do not form a grid, so no field is drawn.', sp('map.status.swell.noGrid'));
+  if (!f.model) return refuse('unavailable', sp('map.status.common.unavailable'), `the regional forecast carries no ${name} run.`, sp('map.status.swell.noModel', {name}));
+  const issued = f.model.issued * 1000, run = runText(issued, tz), runAt = {moment: issued, tz, form: 'run'} as const;
   const t = forecastTime(f.model.times.map(s => s * 1000), issued, f.retrieved, at, now);
   if (t === null) {
     // Why the gate refused, in its own order: a time ahead of the clock, an age limit, the run's span, then no listed hour near.
     const clock = now.getTime(), ahead = clock + 5 * 60_000, first = f.model.times[0], last = f.model.times.at(-1);
-    if (issued > ahead) return none(`run ahead of the clock · ${run}`, `Swell unavailable: the ${name} run of ${run} is dated more than 5 minutes ahead of this device's clock, so its age cannot be checked.`);
-    if (clock - issued > 36 * HOUR) return none(`no fresh forecast · run ${run}`, `Swell unavailable: the latest ${name} run, of ${run}, is past its 36-hour age limit.`);
-    if (f.retrieved > ahead) return none(`forecast ahead of the clock · run ${run}`, 'Swell unavailable: the regional forecast\'s retrieval is dated more than 5 minutes ahead of this device\'s clock, so its age cannot be checked.');
-    if (clock - f.retrieved > 6 * HOUR) return none(`no fresh forecast · run ${run}`, 'Swell unavailable: the regional forecast was last retrieved more than 6 hours ago.');
+    if (issued > ahead) return refuse(`run ahead of the clock · ${run}`, sp('map.status.swell.runAheadNote', {run: runAt}),
+      `the ${name} run of ${run} is dated more than 5 minutes ahead of this device's clock, so its age cannot be checked.`, sp('map.status.swell.runAhead', {name, run: runAt}));
+    if (clock - issued > 36 * HOUR) return refuse(`no fresh forecast · run ${run}`, sp('map.status.swell.noFreshNote', {run: runAt}),
+      `the latest ${name} run, of ${run}, is past its 36-hour age limit.`, sp('map.status.swell.runStale', {name, run: runAt}));
+    if (f.retrieved > ahead) return refuse(`forecast ahead of the clock · run ${run}`, sp('map.status.swell.retrievalAheadNote', {run: runAt}),
+      'the regional forecast\'s retrieval is dated more than 5 minutes ahead of this device\'s clock, so its age cannot be checked.', sp('map.status.swell.retrievalAhead'));
+    if (clock - f.retrieved > 6 * HOUR) return refuse(`no fresh forecast · run ${run}`, sp('map.status.swell.noFreshNote', {run: runAt}),
+      'the regional forecast was last retrieved more than 6 hours ago.', sp('map.status.swell.retrievalStale'));
     if (first === undefined || last === undefined || at.getTime() < first * 1000 || at.getTime() > last * 1000)
-      return none('no forecast for this hour', `Swell unavailable: the selected hour is outside the ${name} run of ${run}${last === undefined ? '' : `, which ends ${validText(last * 1000, tz, true)}`}.`);
-    return none(`no forecast hour near ${validText(at.getTime(), tz)}`, `Swell unavailable: the ${name} run of ${run} lists no hour within 90 minutes of ${validText(at.getTime(), tz, true)}.`);
+      return refuse('no forecast for this hour', sp('map.status.swell.noHourNote'),
+        `the selected hour is outside the ${name} run of ${run}${last === undefined ? '' : `, which ends ${validText(last * 1000, tz, true)}`}.`,
+        last === undefined ? sp('map.status.swell.outside', {name, run: runAt}) : sp('map.status.swell.outsideEnds', {name, run: runAt, end: {moment: last * 1000, tz, form: 'dated'}}));
+    return refuse(`no forecast hour near ${validText(at.getTime(), tz)}`, sp('map.status.swell.noNearNote', {time: {moment: at.getTime(), tz, form: 'hour'}}),
+      `the ${name} run of ${run} lists no hour within 90 minutes of ${validText(at.getTime(), tz, true)}.`, sp('map.status.swell.noNear', {name, run: runAt, time: {moment: at.getTime(), tz, form: 'dated'}}));
   }
-  const frame = swellFrame(f, t, now, tz, partition);
-  if (!frame) return none(`no complete grid cell · valid ${validText(t, tz)}`,
-    `Swell unavailable: no cell of the ${name} grid has height, period and direction at all four corners for ${validText(t, tz, true)}; missing samples stay blank.`);
-  return {drawn: frame, note: `valid ${validText(t, tz)} · run ${age(now.getTime() - issued)} old`, reason: '', basis: frameBasis(frame, now, tz)};
+  const frame = swellFrame(f, t, now, tz, partition), valid = {moment: t, tz, form: 'hour'} as const;
+  if (!frame) return refuse(`no complete grid cell · valid ${validText(t, tz)}`, sp('map.status.swell.noCellNote', {time: valid}),
+    `no cell of the ${name} grid has height, period and direction at all four corners for ${validText(t, tz, true)}; missing samples stay blank.`,
+    sp('map.status.swell.noCell', {name, time: {moment: t, tz, form: 'dated'}}));
+  const old = {age: now.getTime() - issued}, stamp = sp('legend.swell.stamp', {name, stamp: {id: 'map.status.swell.stamp', vars: {run: runAt, age: {age: now.getTime() - frame.issuedAt}, valid: {moment: t, tz, form: 'dated'}}}});
+  return {drawn: frame, note: `valid ${validText(t, tz)} · run ${age(now.getTime() - issued)} old`, reason: '', basis: frameBasis(frame, now, tz),
+    copy: {note: [sp('map.status.swell.readyNote', {time: valid, age: old})], stamp: [stamp]}};
 }
 
 /** Period isolines at whole seconds through the field's complete quads, each labelled with the unit. */
@@ -322,7 +340,7 @@ export function createSwell(o: SwellOptions): {
     effect(() => {
       const s = status.value;
       swellState.value = s;
-      setRailNote(REGISTRY_ID, on.value ? s.note : '');
+      setRailNote(REGISTRY_ID, on.value ? s.note : '', on.value ? s.copy?.note : undefined);
     }),
     // A new frame (an hour, a run, a region) repaints at once; none (off, refused, stale) removes everything.
     effect(() => {

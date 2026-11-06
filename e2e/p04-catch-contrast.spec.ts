@@ -205,7 +205,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC0707-09: LayerRail.tsx reads its words from the string catalogue and renders each runtime status note behind the
   // catalogue English-source disclosure (a plain span lang=en in Spanish only; English unchanged). No CSS, token or catch
   // markup change; BODY09 mounts Reports, not the rail. contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
-  "web/app/LayerRail.tsx": "acc556ca5fd3af5f948238641294273109014ebc90bcd7a1d2b18535552b5dfa",
+  // SC1352-03: the Currents note resolves the chosen frame note or reason in the page's language (same note element and text role). No CSS, token or catch markup change.
+  "web/app/LayerRail.tsx": "8bc1b44ac2b1d20dd1dc6551ade66b7620e932c39b19c70ec1206464da53969e",
   // SC-MAIN-FLAKE (#1400, contours drawn signal): MapStage.tsx only passes host: chartHost.current! to
   // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
   // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),
@@ -286,7 +287,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1352-02: LayerRail.tsx shows a note in the page's language when its layer attached catalogue parts (a status string through the same
   // note element and text role); check_contrast.mjs rebinds only the Legend.tsx surface hash, two line citations and a scope comment. BODY09 mounts
   // Reports/CatchCards, never the rail or Legend; contrast(), catch paint, backing, assertions and thresholds are unchanged. Rebind only these two sources.
-  "scripts/check_contrast.mjs": "bd1b4cd460cdba81fce0b1a4e19d8598a9e1836b8330c0b49bfdd86abcdccfc1",
+  // SC1352-03: Currents, Wind and Swell status in the page's language; check_contrast.mjs rebinds only the Legend.tsx surface hash, one line citation and a comment. Rebind only these two sources.
+  "scripts/check_contrast.mjs": "300dbcefb432bd1e3a3f194701d6753c668f95e2b6d4d642a54ebffe4148cae1",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still

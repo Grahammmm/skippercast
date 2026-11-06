@@ -1,4 +1,4 @@
-// SC1352-02: water-temperature, contrast, chlorophyll, cloud and offline layer statuses in Spanish. Each producer keeps its
+// SC1352-02/03: water-temperature, contrast, chlorophyll, cloud and offline layer statuses in Spanish. Each producer keeps its
 // English string and attaches catalogue parts; the rail and legend resolve them in the page's language at render.
 // The bundle is built with esbuild; nothing is fetched.
 import assert from 'node:assert/strict';
@@ -33,6 +33,10 @@ async function load() {
       export {cloudStatus, cloudStatusCopy, frameLabel, frameLabelCopy, NO_FRAMES, OTHER_DAY} from './web/map/clouds.ts';
       export {NOT_SAVED, COAST_NOT_SAVED, TILES_NOT_SAVED, COAST_OFFLINE_COPY, TILES_OFFLINE_COPY} from './web/map/offline.ts';
       export {statusIn, statusText, resolveStatusText, sp} from './web/map/status-copy.ts';
+      export {currentsStatus, regionalCurrentsStatus, currentsState} from './web/map/currents.ts';
+      export {swellStatus, swellState, nearshoreState} from './web/map/swell.ts';
+      export {windStatus, windState} from './web/map/wind.ts';
+      export {parseForecast, WAVE_MODEL} from './web/map/forecast-grid.ts';
       export * as state from './web/state.ts';
       export {render} from 'preact-render-to-string';
       export {h} from 'preact';`},
@@ -211,4 +215,168 @@ test('status_en_es_en_retained_without_refetch: the real rail and legend switch 
   // A legend status with no descriptor (a producer that attaches none) keeps the labelled-English path.
   m.waterTempState.value = {...refused, copy: undefined};
   assert.ok(legend('es').includes(`Detalles de la fuente (en inglés): <span lang="en">${refused.reason}</span>`));
+});
+
+// SC1352-03: currents, swell and wind. Fixtures are synthetic.
+const WCOFS = (over = {}) => ({id: 'wcofs', kind: 'forecast', label: 'NOAA WCOFS surface forecast', url: 'https://example.test/wcofs', fetchedAt: '2026-10-07T11:50:00Z', issuedAt: '2026-10-07T03:00:00Z',
+  sampleAt: null, nativeResolutionKm: 1, sampleStride: 1, horizontalDatum: 'NAD83', surfaceOnly: true, attribution: 'NOAA', license: 'public-domain-us-gov', limitations: 'Surface only.',
+  frames: [{validAt: '2026-10-07T12:00:00Z', cells: Array.from({length: 64}, (_, k) => ({lat: 35.5 - Math.floor(k / 8) * 0.04, lon: -121 + (k % 8) * 0.04, uMs: 0.3, vMs: 0.1, speedKnots: 0.6, towardDeg: 70}))}], ...over});
+const packet = (...currents) => ({schemaVersion: 1, countyId: 'slo', generatedAt: '2026-10-07T11:55:00Z', currents, cloud: null, sources: []});
+const CNOW = new Date('2026-10-07T12:20:00Z'), CAT = new Date('2026-10-07T12:00:00Z');
+const ISSUED_S = Date.parse('2026-10-09T06:00:00Z'), SNOW = new Date('2026-10-09T18:00:00Z'), SAT = new Date('2026-10-09T20:00:00Z');
+const hoursOf = (n, from = ISSUED_S / 1000) => Array.from({length: n}, (_, k) => from + k * 3600);
+function wave(m, {retrieved = SNOW.getTime() - HOUR, issued = ISSUED_S / 1000, hours = hoursOf(48), values = (i, j, k) => [2 + i * 0.5 + j * 0.3 + k * 0.5, 11.2 + i * 1.2, 290 + j * 5]} = {}) {
+  const lats = [35.05, 35.3, 35.55], lons = [-121.75, -121.5, -121.25], pts = [], series = [];
+  const units = Object.fromEntries(['swell_wave_height', 'swell_wave_period', 'swell_wave_direction', 'wind_wave_height', 'wind_wave_period', 'wind_wave_direction', 'secondary_swell_wave_height', 'secondary_swell_wave_period', 'secondary_swell_wave_direction']
+    .map(v => [v, v.endsWith('_height') ? 'ft' : v.endsWith('_period') ? 's' : '°']));
+  for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) {
+    pts.push([`offshore-${j}-${i}`, lats[j], lons[i]]);
+    const p = hours.map((_, k) => values(i, j, k)), col = f => p.map(v => v[f]);
+    series.push({utc_offset_seconds: 0, hourly_units: {time: 'unixtime', ...units}, hourly: {time: hours, swell_wave_height: col(0), swell_wave_period: col(1), swell_wave_direction: col(2),
+      wind_wave_height: col(0), wind_wave_period: col(1), wind_wave_direction: col(2), secondary_swell_wave_height: col(0), secondary_swell_wave_period: col(1), secondary_swell_wave_direction: col(2)}});
+  }
+  const model = {data: series, meta: {last_run_initialisation_time: issued, data_end_time: hours.at(-1)}};
+  return m.parseForecast({region_id: 'morro-bay', requested_points: pts, retrieved, models: {[m.WAVE_MODEL.id]: model, gfs_global: {data: [], meta: {}}}}, 'morro-bay');
+}
+const swellOf = (m, f, at = SAT, now = SNOW) => m.swellStatus(true, {state: 'ready', region: 'morro-bay', forecast: f, at: now.getTime()}, at, now, TZ);
+const WNOW = new Date('2026-10-20T12:00:00Z'), WISSUED = WNOW.getTime() - 12 * HOUR;
+function windFeed({retrieved = WNOW.getTime(), issued = WISSUED / 1000, speed = i => i} = {}) {
+  const times = Array.from({length: 49}, (_, i) => WISSUED / 1000 + i * 3600);
+  return {region_id: 'morro-bay', retrieved, requested_points: [['a', 35, -122], ['b', 35, -121.75], ['c', 35.25, -122], ['d', 35.25, -121.75]],
+    models: {gfs_global: {meta: {last_run_initialisation_time: issued, data_end_time: times.at(-1)},
+      data: Array.from({length: 4}, () => ({utc_offset_seconds: 0, hourly_units: {time: 'unixtime', wind_speed_10m: 'kn', wind_direction_10m: '°'}, hourly: {time: times, wind_speed_10m: times.map((_, i) => speed(i)), wind_direction_10m: times.map(() => 0)}}))}}};
+}
+const windOf = (m, over, at = WNOW, now = WNOW) => m.windStatus(true, m.parseForecast(windFeed(over), 'morro-bay', 'gfs_global'), at, now, 'UTC');
+const inEs = (m, st, field = 'reason') => plain(m.resolveStatusText(st[field], st.copy[field], 'es'));
+const inEn = (m, st, field = 'reason') => m.statusIn(st.copy[field], 'en');
+
+test('currents_no_fallback_missing_last_and_grid: every branch is byte-identical in English and keeps its no-other-source clause in Spanish', async () => {
+  const m = await load(), at = (choice, status, ocean) => m.currentsStatus(choice, status, ocean, CAT, CNOW, TZ);
+  const all = {
+    unbound: at('wcofs', 'unbound', null), error: at('wcofs', 'error', null), invalid: at('wcofs', 'invalid', null), expired: at('wcofs', 'expired', packet()), loading: at('wcofs', 'ok', null),
+    offline: m.currentsStatus('wcofs', 'error', null, CAT, CNOW, TZ, true),
+    radarOnly: at('hfr-6', 'ok', packet(WCOFS())), noLast: at('hfr-1', 'ok', packet()),
+    last: at('wcofs', 'ok', packet(WCOFS({issuedAt: '2026-10-05T21:00:00Z'}))),
+    sparse: at('wcofs', 'ok', packet(WCOFS({nativeResolutionKm: 1, frames: [{validAt: '2026-10-07T12:00:00Z', cells: WCOFS().frames[0].cells.filter((_, k) => k % 2 === 0).map((c, k) => ({...c, lon: c.lon + (k % 3) * 0.013}))}]}))),
+    regionalRadar: m.regionalCurrentsStatus('hfr-1', null, CAT, CNOW, TZ), regionalLoading: m.regionalCurrentsStatus('wcofs', null, CAT, CNOW, TZ),
+    regionalNone: m.regionalCurrentsStatus('wcofs', {state: 'none'}, CAT, CNOW, TZ), regionalError: m.regionalCurrentsStatus('wcofs', {state: 'error'}, CAT, CNOW, TZ),
+    regionalOffline: m.regionalCurrentsStatus('wcofs', {state: 'error', network: true}, CAT, CNOW, TZ, true),
+    regionalListed: m.regionalCurrentsStatus('wcofs', {state: 'listed', validAt: ['2026-10-07T09:00:00Z']}, CAT, CNOW, TZ),
+    drawn: at('wcofs', 'ok', packet(WCOFS({nativeResolutionKm: 4}))),
+  };
+  for (const [name, st] of Object.entries(all)) {
+    assert.ok(st.copy?.note, `${name} carries note parts`);
+    assert.equal(m.statusIn(st.copy.note, 'en'), st.note, `${name} note`);
+    if (st.reason) assert.equal(m.statusIn(st.copy.reason, 'en'), st.reason, `${name} reason`);
+  }
+  assert.ok(all.sparse.reason.includes('not a grid') && all.sparse.drawn === null && all.sparse.note.startsWith('grid cannot be drawn'), 'the sparse frame is the undrawable one');
+  assert.equal(all.drawn.copy.reason, undefined, 'a drawn frame has a note and no reason');
+  assert.match(inEs(m, all.drawn, 'note'), /^pronóstico \S+ 5 a\. m\.$/);
+  const clause = 'y no se muestra ninguna otra fuente.';
+  for (const name of ['error', 'invalid', 'expired', 'regionalError']) assert.ok(inEs(m, all[name]).startsWith('Corrientes no disponibles: ') && inEs(m, all[name]).endsWith(clause), name);
+  assert.equal(inEs(m, all.expired), 'Corrientes no disponibles: el paquete de corrientes superficiales superó su límite de antigüedad, y no se muestra ninguna otra fuente.');
+  assert.equal(inEs(m, all.regionalRadar), 'Corrientes no disponibles: Observed HF radar · 1 km se publica solo donde un paquete local de corrientes superficiales cubre la región; el pronóstico de NOAA WCOFS puede estar disponible.');
+  assert.equal(inEs(m, all.noLast), 'Corrientes no disponibles: no hay un fotograma reciente de Observed HF radar · 1 km para esta hora.');
+  assert.match(inEs(m, all.last), /^Corrientes no disponibles: no hay un fotograma reciente de NOAA WCOFS forecast para esta hora; el último era válido \S+ \d+ [ap]\. m\.\.$/);
+  assert.equal(inEs(m, all.last, 'note').startsWith('sin fotograma reciente · último '), true);
+  assert.match(inEs(m, all.sparse), /no es una cuadrícula que se pueda dibujar sin unir vacíos \(demasiado dispersa, demasiado gruesa, irregular o demasiado grande\), y no se muestra ninguna otra fuente\.$/);
+  assert.equal(inEs(m, all.offline), 'Las lecturas costeras no están disponibles sin conexión. Guarda las lecturas costeras y revisa el paquete guardado antes de salir de la cobertura.');
+  // The chosen source's own words, and the producer's gate, are untouched.
+  assert.equal(all.radarOnly.drawn, null);
+  assert.equal(m.currentsStatus('off', 'ok', packet(), CAT, CNOW, TZ).copy, undefined);
+  assert.equal(m.regionalCurrentsStatus('off', null, CAT, CNOW, TZ).copy, undefined);
+});
+
+test('swell_clock_limits_and_missing_corners_es: each limit and each gate order keeps its meaning in Spanish', async () => {
+  const m = await load(), A = (f, at, now) => swellOf(m, f, at, now);
+  const ok = A(wave(m)), rows = {
+    failed: m.swellStatus(true, {state: 'error', region: 'morro-bay', forecast: null, at: 0}, SAT, SNOW, TZ), loading: m.swellStatus(true, {state: 'loading', region: 'morro-bay', forecast: null, at: 0}, SAT, SNOW, TZ),
+    runAhead: A(wave(m, {issued: (SNOW.getTime() + 10 * 60_000) / 1000})), runStale: A(wave(m, {issued: (SNOW.getTime() - 37 * HOUR) / 1000})),
+    retrievalAhead: A(wave(m, {retrieved: SNOW.getTime() + 10 * 60_000})), retrievalStale: A(wave(m, {retrieved: SNOW.getTime() - 7 * HOUR})),
+    outside: A(wave(m), new Date(ISSUED_S + 60 * HOUR)), sparse: A(wave(m, {hours: hoursOf(48).filter((_, k) => k % 6 === 0)})), noCell: A(wave(m, {values: () => [null, 12, 290]})),
+  };
+  assert.ok(ok.drawn && ok.copy.stamp && ok.copy.note);
+  assert.equal(m.statusIn(ok.copy.note, 'en'), ok.note);
+  assert.equal(m.statusIn(ok.copy.stamp, 'en'), m.lookup(m.STRINGS, 'legend.swell.stamp', 'en', {name: m.WAVE_MODEL.name, stamp: ok.drawn.stamp}, true), 'the stamp is the legend\'s English');
+  for (const [name, st] of Object.entries(rows)) {
+    assert.equal(st.drawn, null, name);
+    assert.equal(m.statusIn(st.copy.note, 'en'), st.note, `${name} note`);
+    assert.equal(m.statusIn(st.copy.reason, 'en'), st.reason, `${name} reason`);
+    if (st.reason.startsWith('Swell unavailable:')) assert.equal(m.statusIn(st.copy.fieldReason, 'en'), `Swell field unavailable:${st.reason.slice('Swell unavailable:'.length)} Nearshore rings remain visible.`, `${name} field reason`);
+    else assert.equal(st.copy.fieldReason, undefined, `${name} gets no rings suffix`);
+  }
+  assert.equal(inEs(m, rows.runAhead), 'Oleaje no disponible: la corrida de NOAA GFS-Wave del 9 oct, 11 a. m. está fechada más de 5 minutos por delante del reloj de este dispositivo, por lo que no se puede comprobar su antigüedad.');
+  assert.match(inEs(m, rows.runStale), /^Oleaje no disponible: la última corrida de NOAA GFS-Wave, del .*, superó su límite de antigüedad de 36 horas\.$/);
+  assert.match(inEs(m, rows.retrievalAhead), /^Oleaje no disponible: .* más de 5 minutos por delante del reloj de este dispositivo, por lo que no se puede comprobar su antigüedad\.$/);
+  assert.equal(inEs(m, rows.retrievalStale), 'Oleaje no disponible: el pronóstico regional se obtuvo por última vez hace más de 6 horas.');
+  assert.match(inEs(m, rows.outside), /^Oleaje no disponible: la hora seleccionada queda fuera de la corrida de NOAA GFS-Wave del .*, que termina el .*\.$/);
+  assert.match(inEs(m, rows.sparse), /no indica ninguna hora a menos de 90 minutos de .*\.$/);
+  assert.match(inEs(m, rows.noCell), /tiene altura, período y dirección en las cuatro esquinas para .*; las muestras faltantes quedan en blanco\.$/);
+  assert.equal(inEs(m, rows.loading), 'Cargando el pronóstico regional de oleaje.');
+  // The limits are the producer's: 36 h and 6 h exactly pass, 5 minutes ahead exactly passes, one more does not (gate order unchanged).
+  assert.ok(A(wave(m, {issued: (SNOW.getTime() - 36 * HOUR) / 1000})).drawn && A(wave(m, {retrieved: SNOW.getTime() - 6 * HOUR})).drawn);
+  assert.equal(A(wave(m, {issued: (SNOW.getTime() - 36 * HOUR - 1000) / 1000})).drawn, null);
+  const both = A(wave(m, {issued: (SNOW.getTime() + 10 * 60_000) / 1000, retrieved: SNOW.getTime() - 7 * HOUR}));
+  assert.ok(both.reason.includes('5 minutes ahead'), 'a run ahead of the clock outranks a stale retrieval, in both languages');
+  assert.ok(inEs(m, both).includes('5 minutos por delante'));
+  assert.equal(m.swellStatus(false, {state: 'idle', region: null, forecast: null, at: 0}, SAT, SNOW, TZ).copy, undefined);
+});
+
+test('wind_multi_failure_precedence: the first reason wins in both languages; the stamp and every limit keep their meaning', async () => {
+  const m = await load(), W = (o, at, now) => windOf(m, o, at, now);
+  const ok = W();
+  assert.ok(ok.drawn);
+  assert.equal(m.statusIn(ok.copy.stamp, 'en'), m.lookup(m.STRINGS, 'legend.windStamp', 'en', {stamp: ok.drawn.stamp}, true));
+  assert.equal(plain(m.statusIn(ok.copy.stamp, 'es')), 'NOAA NCEP · GFS · corrida 20 oct, 12 a. m. · 12 h de antigüedad · válido mar 20 oct, 12 p. m.');
+  const future = W({issued: (WNOW.getTime() + 10 * 60_000) / 1000, retrieved: WNOW.getTime() - 7 * HOUR});
+  const stale = W({issued: (WNOW.getTime() - 37 * HOUR) / 1000, retrieved: WNOW.getTime() - 7 * HOUR});
+  const retrieved = W({retrieved: WNOW.getTime() - 7 * HOUR});
+  const noHour = W({}, new Date(WISSUED + 60 * HOUR));
+  const samples = W({speed: () => null});
+  for (const [name, st] of Object.entries({future, stale, retrieved, noHour, samples})) { assert.equal(st.drawn, null, name); assert.equal(m.statusIn(st.copy.reason, 'en'), st.reason, name); }
+  assert.match(inEs(m, future), /una marca de tiempo está por delante del reloj del dispositivo\.$/);
+  assert.match(inEs(m, stale), /la corrida superó su límite de antigüedad de 36 horas\.$/);
+  assert.match(inEs(m, retrieved), /la obtención superó su límite de antigüedad de 6 horas\.$/);
+  assert.match(inEs(m, noHour), /no hay ninguna hora de pronóstico listada a menos de 90 minutos dentro de la corrida\.$/);
+  assert.equal(inEs(m, samples), 'Viento no disponible: no hay muestras de viento con unidades comprobadas en esta hora de pronóstico.');
+  assert.ok(inEs(m, stale).startsWith('Viento no disponible: corrida 18 oct, 11 p. m. de NOAA GFS; '), 'the run is named in Spanish and the model name stays');
+  assert.equal(m.windStatus(true, null, WNOW, WNOW, 'UTC', true).reason, 'Wind unavailable: the regional forecast failed to load.');
+  assert.equal(inEs(m, m.windStatus(true, null, WNOW, WNOW, 'UTC', true)), 'Viento no disponible: no se pudo cargar el pronóstico regional.');
+  assert.equal(inEs(m, m.windStatus(true, null, WNOW, WNOW, 'UTC')), 'Cargando el pronóstico regional de viento.');
+  assert.equal(m.windStatus(false, null, WNOW, WNOW, 'UTC').copy, undefined);
+});
+
+test('swell_field_rings_language_switch and currents/wind rows: the legend and rail follow the language from the same retained state', async t => {
+  const m = await load(), s = m.state;
+  const prior = {sw: m.swellState.value, ns: m.nearshoreState.value, wi: m.windState.value, cu: m.currentsState.value};
+  t.after(() => { m.language.value = 'en'; m.swellState.value = prior.sw; m.nearshoreState.value = prior.ns; m.windState.value = prior.wi; m.currentsState.value = prior.cu; });
+  s.configureStore({v2: true, storage: null});
+  s.syncFromURL(`${ORIGIN}?region=morro-bay&presentation=chart&layers=swell,wind,currents&current=wcofs`);
+  const legend = lang => { m.language.value = lang; return m.render(m.h(m.Legend)); }, rail = lang => { m.language.value = lang; return m.render(m.h(m.LayerRail)); };
+  const refused = swellOf(m, wave(m, {retrieved: SNOW.getTime() - 7 * HOUR}));
+  m.swellState.value = refused;
+  m.nearshoreState.value = null;
+  m.windState.value = windOf(m, {retrieved: WNOW.getTime() - 7 * HOUR});
+  m.currentsState.value = m.currentsStatus('wcofs', 'expired', packet(), CAT, CNOW, TZ);
+  const plainLegend = lang => plain(legend(lang));
+  const en = legend('en'), es = plainLegend('es');
+  assert.ok(en.includes('Swell unavailable: the regional forecast was last retrieved more than 6 hours ago.'));
+  assert.ok(es.includes('Oleaje no disponible: el pronóstico regional se obtuvo por última vez hace más de 6 horas.'));
+  assert.ok(es.includes('Viento no disponible: corrida 20 oct, 12 a. m. de NOAA GFS; la obtención superó su límite de antigüedad de 6 horas.'));
+  assert.ok(es.includes('Corrientes no disponibles: el paquete de corrientes superficiales superó su límite de antigüedad, y no se muestra ninguna otra fuente.'));
+  assert.equal(es.includes('<span lang="en">Swell unavailable'), false);
+  assert.equal(legend('en'), en, 'back to English restores the same bytes');
+  // Rings retained, no field: the field wording and the rings sentence, from the same clause; unknown reasons get no suffix.
+  m.nearshoreState.value = {rings: [{site: {id: 'n1'}}], product: 'x', key: 'k', collection: {type: 'FeatureCollection', features: []}};
+  assert.ok(legend('en').includes('Swell field unavailable: the regional forecast was last retrieved more than 6 hours ago. Nearshore rings remain visible.'));
+  assert.ok(plainLegend('es').includes('Campo de oleaje no disponible: el pronóstico regional se obtuvo por última vez hace más de 6 horas. Los anillos cercanos a la costa siguen visibles.'));
+  m.swellState.value = {...refused, copy: undefined};
+  assert.ok(plainLegend('es').includes('<span lang="en">Swell field unavailable: the regional forecast was last retrieved'), 'no parts: the whole English field wording stays labelled English');
+  m.swellState.value = swellOf(m, wave(m), SAT, SNOW);
+  m.nearshoreState.value = {rings: [{site: {id: 'n1'}}], product: 'x', key: 'k', collection: {type: 'FeatureCollection', features: []}};
+  assert.equal(plainLegend('es').includes('anillos cercanos'), false, 'a field that draws shows no refusal');
+  assert.ok(plainLegend('es').includes('NOAA GFS-Wave: pronóstico del modelo · corrida'), 'the drawn stamp is Spanish');
+  // The rail's Currents note follows the matching descriptor: the reason while nothing draws.
+  assert.ok(plain(rail('es')).includes('Corrientes no disponibles: el paquete de corrientes superficiales superó su límite de antigüedad, y no se muestra ninguna otra fuente.'), 'the rail shows the Spanish reason, as it shows the English one');
+  assert.ok(rail('en').includes('Currents unavailable: the surface-current packet passed its age limit, and no other source is shown.'), 'English rail shows the reason, as before');
 });

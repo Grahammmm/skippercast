@@ -12,7 +12,8 @@ export type StatusVar = string | number
   | {readonly day: string | number; readonly tz: string}
   | {readonly clock: string | number; readonly tz: string}
   | {readonly num: number; readonly digits: number}
-  | {readonly age: number};
+  | {readonly age: number}
+  | {readonly moment: string | number; readonly tz: string; readonly form: 'hour' | 'run' | 'dated'};
 export type StatusPart = string | {readonly id: StringId; readonly vars?: Readonly<Record<string, StatusVar>>};
 /** The pieces of a status, each as catalogue parts: `note` (rail), `reason` (legend), `stamp` (legend). */
 export type StatusCopy = Partial<Readonly<Record<'note' | 'reason' | 'stamp', readonly StatusPart[]>>>;
@@ -30,6 +31,17 @@ const format = (locale: string, tz: string, kind: 'day' | 'clock'): Intl.DateTim
   return f;
 };
 
+const wformats = new Map<string, Intl.DateTimeFormat>();
+/** "Tue 2 pm" (`hour`), "Oct 8, 5 pm" (`run`) or "Thu Oct 9, 3 pm" (`dated`) in the zone and language: the forms the current, swell and wind layers print. */
+function moment(locale: string, tz: string, at: string | number, form: 'hour' | 'run' | 'dated'): string {
+  const key = `${locale}|${tz}`;
+  let f = wformats.get(key);
+  if (!f) wformats.set(key, f = new Intl.DateTimeFormat(locale, {timeZone: tz, weekday: 'short', hour: 'numeric', hour12: true}));
+  const when = new Date(at), p = Object.fromEntries(f.formatToParts(when).map(part => [part.type, part.value]));
+  const hour = `${p.hour} ${(p.dayPeriod ?? '').toLowerCase()}`, day = format(locale, tz, 'day').format(when);
+  return form === 'hour' ? `${p.weekday} ${hour}` : form === 'run' ? `${day}, ${hour}` : `${p.weekday} ${day}, ${hour}`;
+}
+
 /** The variable as the text or number the template takes, in `lang`; throws on a value that cannot be formatted. */
 function resolveVar(v: StatusVar, lang: string): string | number {
   if (typeof v === 'string' || typeof v === 'number') return v;
@@ -40,6 +52,7 @@ function resolveVar(v: StatusVar, lang: string): string | number {
     const p = Object.fromEntries(format(locale, v.tz, 'clock').formatToParts(new Date(v.clock)).map(part => [part.type, part.value]));
     return `${p.hour}:${p.minute} ${(p.dayPeriod ?? '').toLowerCase()}`;
   }
+  if ('moment' in v) return moment(locale, v.tz, v.moment, v.form);
   if ('num' in v) return new Intl.NumberFormat(locale, {minimumFractionDigits: v.digits, maximumFractionDigits: v.digits, useGrouping: false}).format(v.num);
   const h = Math.floor(Math.max(0, v.age) / HOUR);
   return h < 1 ? t('map.status.common.underHour', lang) : h < 72 ? t('map.status.common.hours', lang, {n: h}) : t('map.status.common.days', lang, {n: Math.floor(h / 24)});
