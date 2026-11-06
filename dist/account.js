@@ -312,7 +312,7 @@ export function logEditBody(f, original = {}, copy) {
   const position = (value, field) => blankText(value) ? null : (original[field] != null && value === original[field + 'Shown'] ? original[field] : readPosition(value, field));
   const started_at = instant(f.started, original.started_at, original.startedShown, true), ended_at = instant(f.ended, original.ended_at, original.endedShown, false);
   return {started_at, ended_at, outcome: f.outcome, count: f.outcome === 'fish' ? num(f.count) : 0, species: f.species || null, method: f.method || null,
-    trip_id: f.trip_id || null, lat: position(f.lat, 'lat'), lon: position(f.lon, 'lon'), note: f.note || null};
+    trip_id: f.trip || null, lat: position(f.lat, 'lat'), lon: position(f.lon, 'lon'), note: f.note || null};
 }
 /** The stored entries in the log's own order: newest start first, ties by id. */
 export const sortLogEntries = rows => rows.sort((a, b) => (a.started_at < b.started_at ? 1 : a.started_at > b.started_at ? -1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
