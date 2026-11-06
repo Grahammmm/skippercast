@@ -1,6 +1,6 @@
 // #711: packages/coast chart series read v2 roles through tokens-bridge.css. Under the token opt-in each series
 // colour is a web/tokens.css role (or a mix of two), readable as label text on the coast panels in both themes;
-// without it every series keeps its v1 colour as the var() fallback, so non-opt-in hosts are unchanged.
+// FE-61 removes the retired v1 fallbacks; every host must load the token bridge.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
@@ -16,18 +16,18 @@ const SERIES = {
     'Reported gust': ['series-gust', '#b5eaaa'], 'Dominant wave period': ['series-violet', '#bb9aff']},
 };
 
-test('every chart series names its v2 role and keeps its v1 colour as the fallback', () => {
+test('every chart series names its v2 role without a v1 fallback', () => {
   for (const [file, source] of [['briefing', BRIEFING], ['history', HISTORY]])
-    for (const [label, [role, v1]] of Object.entries(SERIES[file]))
-      assert.ok(source.includes(`label:'${label}',`) && new RegExp(`label:'${label}',unit:'[^']*',color:'var\\(--coast-${role},${v1}\\)'`).test(source), `${file} ${label}`);
-  assert.equal(BRIEFING.match(/color:'var\(--coast-amber,#eabd76\)'/g).length, 2, 'both tide charts');
+    for (const [label, [role]] of Object.entries(SERIES[file]))
+      assert.ok(source.includes(`label:'${label}',`) && new RegExp(`label:'${label}',unit:'[^']*',color:'var\\(--coast-${role}\\)'`).test(source), `${file} ${label}`);
+  assert.equal(BRIEFING.match(/color:'var\(--coast-amber\)'/g).length, 2, 'both tide charts');
   assert.doesNotMatch(`${BRIEFING}${HISTORY}`, /color:'#/, 'no bare series literal');
 });
 
 test('SVG colours that may be var() sit in style, never in a presentation attribute (which cannot resolve var())', () => {
   for (const source of [BRIEFING, HISTORY, read('packages/coast/src/charts/series.ts')])
     assert.doesNotMatch(source, /(?:stroke|fill)="\$\{(?:spec|row)\.color\}"|(?:stroke|fill)="var\(/);
-  assert.match(HISTORY, /style="stroke:var\(--coast-line,#9db6cc\)"/, 'the gridline reads --coast-line');
+  assert.match(HISTORY, /style="stroke:var\(--coast-line\)"/, 'the gridline reads --coast-line');
 });
 
 test('under the opt-in every series role resolves to an opaque colour readable as label text on the coast panels', () => {

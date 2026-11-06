@@ -116,7 +116,7 @@ test('bridged coast text pairs reach 4.5:1 under the opt-in in both web/tokens.c
   assert.match(checkBridge(bridge.replace('--coast-coral: var(--coral);', ''), tokens).failures.join('\n'), /--coast-coral or --coast-panel does not resolve/);
 });
 
-test('the script fails on a new literal in packages/coast and passes once it is a fallback', () => {
+test('the script fails on a new literal in packages/coast and passes once it is a defined token', () => {
   const root = mkdtempSync(join(tmpdir(), 'token-lint-coast-'));
   try {
     mkdirSync(join(root, 'web'), {recursive: true});
@@ -129,10 +129,12 @@ test('the script fails on a new literal in packages/coast and passes once it is 
     const bad = run();
     assert.equal(bad.status, 1);
     assert.match(bad.stderr, /packages\/coast\/coast\.css:1 \[colour-literal\] body\{background:#dce8eb\}/);
-    writeFileSync(join(root, 'packages/coast/coast.css'), 'body{background:var(--coast-ground,#dce8eb)}\n');
+    writeFileSync(join(root, 'packages/coast/coast.css'), 'body{background:var(--coast-ground)}\n');
+    writeFileSync(join(root, 'packages/coast/tokens-bridge.css'), '[data-coast-theme="tokens"], :host([data-coast-theme="tokens"]) {--coast-ground:var(--bg); }');
+    writeFileSync(join(root, 'web/tokens.css'), ':root {--bg:#dce8eb;}');
     const good = run();
     assert.equal(good.status, 0, good.stderr);
-    assert.match(good.stdout, /Token lint passed: 1 files, 0 finding\(s\).*\[packages\/coast\]/);
+    assert.match(good.stdout, /Token lint passed: 2 files, 0 finding\(s\).*\[packages\/coast\]/);
   } finally {
     rmSync(root, {recursive: true, force: true});
   }

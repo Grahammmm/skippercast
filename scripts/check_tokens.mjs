@@ -161,6 +161,28 @@ export function collectCoastRoleCoverage(sources) {
 }
 
 
+// FE-61: the current source tree must use fallback-free roles with complete
+// bridge -> web/tokens.css bindings. Retained-inventory evidence stays separate.
+export function checkFallbackFreeCoast(sources, tokensCss) {
+  const {uses, findings} = collectCoastRoleCoverage(sources);
+  const failures = [...findings];
+  const bridge = stripComments(sources[COAST_COVERAGE_BRIDGE] || '');
+  const declarations = text => new Map([...text.matchAll(/(--[\w-]+)\s*:\s*([^;{}]+);/g)].map(m => [m[1], m[2]]));
+  const cleanTokens = stripComments(tokensCss);
+  const dark = declarations(cleanTokens.match(/:root\s*\{([^}]*)\}/)?.[1] || '');
+  const light = new Map([...dark, ...declarations(cleanTokens.match(/:root\[data-theme="light"\]\s*\{([^}]*)\}/)?.[1] || '')]);
+  const bindings = new Map([...bridge.matchAll(/(--coast-[\w-]+)\s*:\s*([^;{}]+);/g)].map(m => [m[1], m[2]]));
+  const resolves = (value, tokens, seen = new Set()) => [...value.matchAll(/var\(\s*(--[\w-]+)/g)].every(([, token]) =>
+    tokens.has(token) && !seen.has(token) && resolves(tokens.get(token), tokens, new Set([...seen, token])));
+  for (const use of uses) {
+    const tail = stripComments(sources[use.file]).split('\n').slice(use.line - 1).join('\n').slice(use.column - 1);
+    if (/^var\(\s*--coast-[\w-]+\s*,/.test(tail)) failures.push({...use, rule: 'coast-fallback'});
+    if (bindings.has(use.role) && [dark, light].some(tokens => !resolves(bindings.get(use.role), tokens)))
+      failures.push({...use, rule: 'coast-token-undefined'});
+  }
+  return failures;
+}
+
 // Approved retained inventory is the coverage boundary, not a license to scan
 // arbitrary consumers or grow the literal baselines. Any changed source fails
 // closed until a separately reviewed inventory delta is supplied.
@@ -264,7 +286,7 @@ function checkScope({dir, baseline: file, cssOnly = false}, update, baseRef) {
   const list = keys => keys.map(k => { const [path, rule, text] = JSON.parse(k); return `  ${path}:${findings.find(f => key(f) === k)?.line ?? '?'} [${rule}] ${text}`; }).join('\n');
   const errors = [];
   const fix = !dir.startsWith('packages/coast') ? `Use var(--…) from ${TOKENS_FILE}; read tokens into JavaScript only through ${BRIDGE_FILE}.`
-    : `Write var(--coast-…, literal) and map the role in packages/coast/tokens-bridge.css; renderer colours belong in ${COAST_PALETTE_FILE}.`;
+    : `Write var(--coast-…) without a fallback and map the role in packages/coast/tokens-bridge.css; renderer colours belong in ${COAST_PALETTE_FILE}.`;
   if (added.length) errors.push(`${added.length} new finding(s). ${fix} ${file ? `Do not add these to ${file}.` : 'This source CSS has no baseline; fix the source.'}\n${list(added)}`);
   if (stale.length && update && !added.length) {
     writeFileSync(join(ROOT, file), formatBaseline(current));
@@ -299,6 +321,9 @@ function main(argv) {
   const update = argv.includes('--update');
   const baseRef = argv.includes('--base') ? argv[argv.indexOf('--base') + 1] : null;
   const errors = SCOPES.flatMap(scope => checkScope(scope, update, baseRef));
+  const coastSources = Object.fromEntries(sourceFiles(ROOT, 'packages/coast').map(file => [file, readFileSync(join(ROOT, file), 'utf8')]));
+  const coastFailures = checkFallbackFreeCoast(coastSources, existsSync(join(ROOT, TOKENS_FILE)) ? readFileSync(join(ROOT, TOKENS_FILE), 'utf8') : '');
+  errors.push(...coastFailures.map(f => `${f.file}:${f.line} [${f.rule}] ${f.role}`));
   if (errors.length) { for (const e of errors) console.error(`Token lint: ${e}`); process.exit(1); }
 }
 
