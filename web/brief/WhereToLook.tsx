@@ -37,7 +37,8 @@ import {habitat, navigate, profile, region, selection, setParams, species} from 
 import {loadProtectedScreen, protectedScreen} from '../trip.ts';
 import {durationText, runMinutes} from './run.ts';
 import {regionCoverage, regionPlans, targetState} from '../species.ts';
-import {planFor, noPlanText} from '../search-plan.ts';
+import {planFor} from '../search-plan.ts';
+import {missingSearchPlanText, searchPlanLabel} from './remaining-copy.ts';
 import {regionInfo} from '../app/region-info.ts';
 import {NO_REASONS, reasonsFor, targetEvidence} from '../area-reasons.ts';
 import {language, t, type Language, type StringId} from '../i18n.ts';
@@ -210,12 +211,12 @@ function EmptyOrPlan({empty}: {empty: string}) {
   const plans = loaded && loaded.region === id ? loaded.plans : null;
   if (!plans || targetState(target, p, plans, regionCoverage(id)) !== 'plan') return <p class="app-empty">{empty}</p>;
   const plan = planFor(target, loaded, id), info = regionInfo.value, lang = language.value;
-  if (!plan) return <p class="app-empty">{empty} {noPlanText(info?.id === id ? info.name : null)}</p>;
+  if (!plan) return <p class="app-empty">{empty} {missingSearchPlanText(info?.id === id ? info.name : null, lang)}</p>;
   return (
     <div data-plan={plan.id}>
       <h3 class="ui-eyebrow">{t('where.plan', lang)}</h3>
       <ul class="app-picks">
-        {plan.items.map((item, i) => <li key={i} data-field={item.field}>{item.label}: {item.text}</li>)}
+        {plan.items.map((item, i) => <li key={i} data-field={item.field}>{searchPlanLabel(item, lang)}: {item.text}</li>)}
       </ul>
       {plan.basis ? <p data-field="tactics_basis">{plan.basis}</p> : null}
       {plan.links.length ? (
