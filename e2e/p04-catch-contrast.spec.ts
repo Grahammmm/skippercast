@@ -288,7 +288,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // note element and text role); check_contrast.mjs rebinds only the Legend.tsx surface hash, two line citations and a scope comment. BODY09 mounts
   // Reports/CatchCards, never the rail or Legend; contrast(), catch paint, backing, assertions and thresholds are unchanged. Rebind only these two sources.
   // SC1352-03: Currents, Wind and Swell status in the page's language; check_contrast.mjs rebinds only the Legend.tsx surface hash, one line citation and a comment. Rebind only these two sources.
-  "scripts/check_contrast.mjs": "300dbcefb432bd1e3a3f194701d6753c668f95e2b6d4d642a54ebffe4148cae1",
+  // SC1352-04: the Protected areas row shows its state in the page's language (copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. Rebind only this source.
+  "scripts/check_contrast.mjs": "f68356990581b2eb7541544ec878a0a92db10c2f3d85c03a03d87b01364bd84d",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still

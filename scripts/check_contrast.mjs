@@ -404,7 +404,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // every row keeps its app-legend-note/ui-mono text roles and no backing, opacity, token or threshold changed. Line citations above moved with the source.
   // SC1352-03 gives the Currents, Wind and Swell rows the same Status wrapper (a reason or stamp in the page's language); no text role,
   // backing, opacity, token or threshold changed, and the Depth row's citation moved one line.
-  "legendTsx": "439a3cb139248181e32f1498464000c63ccc3805939e117f450227ac59fb1fba"
+  // SC1352-04 resolves the protected-areas row's note and basis detail in the page's language through the same Status wrapper (copy only, no paint);
+  // the note and basis keep their app-mpa-note and popover text roles, and no backing, opacity, token or threshold changed.
+  "legendTsx": "6380ced79c00ed2d08185178af2967638d82b76a6941b79f75cd9f3faf703ada"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
