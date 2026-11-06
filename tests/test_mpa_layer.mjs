@@ -248,7 +248,10 @@ test('the loader reads the region\'s own files, never an asset path outside data
 
 test('a clicked area shows its name, designation and citation, the source and check date, and links the official rules page', () => {
   const morro = json('dist/data/protected-areas.geojson').features.find(f => f.properties.NAME === 'Morro Bay SMR').properties;
-  assert.deepEqual(mpaMark({...morro, source: 'cdfw', checked: '2026-09-21'}), {
+  // SC1352-04: the card also carries display-only `copy`; the English fields are pinned exactly.
+  const {copy, ...english} = mpaMark({...morro, source: 'cdfw', checked: '2026-09-21'});
+  assert.ok(copy, 'display descriptors are attached');
+  assert.deepEqual(english, {
     id: 'mpa:Morro Bay SMR', name: 'Morro Bay State Marine Reserve', kind: 'State Marine Reserve', reading: 'CCR Title 14, Section 632 (b) (92)',
     source: 'CDFW ds582 · checked 2026-09-21', basis: layerEntry('mpas').basis, regulations: {href: CDFW_MPA_PAGE, label: 'CDFW marine protected areas'},
   });

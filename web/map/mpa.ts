@@ -18,10 +18,13 @@
 //
 // Erasable syntax only: tests/test_mpa_layer.mjs imports this file by type stripping.
 import {signal} from '@preact/signals';
+import type {StringId} from '../i18n.ts';
+import {cp, type MarkCopyPart} from '../mark-copy.ts';
 import type {ChartMark} from './coastline.ts';
 import {ZOOM_OFFSET} from './engine.ts';
 import {MPA_SOURCE, layerEntry} from './layers.ts';
 import type {Palette} from './palette.ts';
+import {sp, type StatusCopy, type StatusPart, type StatusVar} from './status-copy.ts';
 import {LABEL_FONT} from './style.ts';
 
 export const MPA_FILL = 'mpa-fill';
@@ -59,11 +62,18 @@ export interface MpaState {
   /** The snapshot's check date (YYYY-MM-DD), when known. */
   readonly checked: string | null;
   readonly count: number;
+  /** SC1352-04: catalogue parts for `note` and `detail` (as `note` and `reason`); display only. The strings above stay English and are what status and Retry compare. */
+  readonly copy?: StatusCopy;
 }
-const state = (status: MpaStatus, note = '', detail = '', checked: string | null = null, count = 0): MpaState =>
-  Object.freeze({status, note, detail, checked, count});
+const state = (status: MpaStatus, note = '', detail = '', checked: string | null = null, count = 0, copy?: StatusCopy): MpaState =>
+  Object.freeze(copy ? {status, note, detail, checked, count, copy} : {status, note, detail, checked, count});
+/** A catalogue part for `map.mpa.<key>`. */
+const P = (key: string, vars?: Readonly<Record<string, StatusVar>>): StatusPart => sp(`map.mpa.${key}` as StringId, vars);
+/** A civil check date (YYYY-MM-DD) as a date the language formats. */
+const civil = (date: string): StatusVar => ({day: date, tz: 'UTC'});
+const spaced = (parts: readonly StatusPart[]): StatusPart[] => parts.flatMap((p, i) => i ? [' ', p] : [p]);
 export const IDLE: MpaState = state('idle');
-export const LOADING: MpaState = state('loading', 'Loading boundaries.');
+export const LOADING: MpaState = state('loading', 'Loading boundaries.', '', null, 0, {note: [P('loading')]});
 /** The drawn snapshot's state, for the legend and the chart host's `data-mpa`. */
 export const mpaState = signal<MpaState>(IDLE);
 
@@ -73,8 +83,10 @@ export const NOTES = {
   incomplete: `The boundary snapshot is incomplete for this region; ${MAYBE}`,
   unavailable: `Boundaries did not load, so none are drawn; ${MAYBE}`,
 } as const;
+const NOTE_PARTS: Readonly<Record<keyof typeof NOTES, StatusPart[]>> = {partial: [P('partial'), P('maybe')], incomplete: [P('incomplete'), P('maybe')], unavailable: [P('unavailable'), P('maybe')]};
 /** The Chart itself could not start (no WebGL): nothing is drawn at all. */
-export const MAP_UNAVAILABLE: MpaState = state('unavailable', 'Map unavailable.', `The map could not start, so no boundaries are drawn; ${MAYBE}`);
+export const MAP_UNAVAILABLE: MpaState = state('unavailable', 'Map unavailable.', `The map could not start, so no boundaries are drawn; ${MAYBE}`, null, 0,
+  {note: [P('mapUnavailable')], reason: [P('mapStart'), P('maybe')]});
 
 /**
  * What the legend shows: "Loading boundaries." until the Chart has loaded them, "Map unavailable."
@@ -84,7 +96,7 @@ export const MAP_UNAVAILABLE: MpaState = state('unavailable', 'Map unavailable.'
 export function shownMpaState(s: MpaState, {sourceFailed = false, mapFailed = false}: {sourceFailed?: boolean; mapFailed?: boolean} = {}): MpaState {
   if (mapFailed) return MAP_UNAVAILABLE;
   if (s.status === 'idle') return LOADING;
-  if (sourceFailed && s.status !== 'unavailable') return state('unavailable', NOTES.unavailable, 'The map could not draw the boundary data.', s.checked);
+  if (sourceFailed && s.status !== 'unavailable') return state('unavailable', NOTES.unavailable, 'The map could not draw the boundary data.', s.checked, 0, {note: NOTE_PARTS.unavailable, reason: [P('drawFail')]});
   return s;
 }
 
@@ -156,9 +168,10 @@ function review(coverage: unknown, region: string): string {
 }
 
 /** What a partial drawing holds, in the data's own terms (the review's reasons describe v1's screening, which this drawing does not do). */
-function partialDetail(count: number, checked: string | null, reviewed: boolean): string {
+function partialDetail(count: number, checked: string | null, reviewed: boolean): {text: string; parts: StatusPart[]} {
   const drawnLine = `Drawn: ${count} areas from the CDFW ds582 snapshot${checked ? ` checked ${checked}` : ''}.`;
-  return `${drawnLine} ${reviewed ? 'The region\'s review has not confirmed that this is every protected area here.' : 'This region\'s boundary review did not load, so the drawing is unconfirmed.'}`;
+  return {text: `${drawnLine} ${reviewed ? 'The region\'s review has not confirmed that this is every protected area here.' : 'This region\'s boundary review did not load, so the drawing is unconfirmed.'}`,
+    parts: spaced([checked ? P('drawn', {n: count, date: civil(checked)}) : P('drawnUndated', {n: count}), P(reviewed ? 'reviewOpen' : 'reviewMissing')])};
 }
 
 const drawn = (list: Json[], source: 'cdfw' | 'noaa', checked: string | null): Json[] => list.map(f => {
@@ -172,32 +185,37 @@ const drawn = (list: Json[], source: 'cdfw' | 'noaa', checked: string | null): J
  */
 export function assessMpas({region, config, snapshot, coverage, closures}: MpaInput): MpaResult {
   // v1 reads the closures only after the snapshot passes, so a failed snapshot fails them too.
-  if (!validSnapshot(snapshot)) return {state: state('unavailable', NOTES.unavailable, 'The boundary snapshot failed its completeness check.'), data: EMPTY(),
+  if (!validSnapshot(snapshot)) return {state: state('unavailable', NOTES.unavailable, 'The boundary snapshot failed its completeness check.', null, 0, {note: NOTE_PARTS.unavailable, reason: [P('completeness')]}), data: EMPTY(),
     screen: {areas: null, checkedAt: null, closures: closures === undefined ? undefined : null}};
   const snap = obj(snapshot)!, list = features(snap), checked = day(snap.checked_at);
   const valid = validMpas(snap, config.mpa?.minimum_features);
   const screen: ScreenSource = {areas: valid ? list : null, checkedAt: valid ? text(snap.checked_at) || null : null, closures: valid ? closuresSource(closures, region) : closures === undefined ? undefined : null};
   const bounds = config.mpa?.bounds ?? [], minimum = Math.max(1, Number(config.mpa?.minimum_features) || 1);
   const envelope = snapshotEnvelope(snap.source_url);
-  const gaps: string[] = [];
-  if (list.length < minimum) gaps.push(`The snapshot holds ${list.length} areas; this region's check expects at least ${minimum}.`);
-  if (snap.region_id !== undefined && snap.region_id !== region) gaps.push('The snapshot was taken for another region.');
-  if (!envelope || !covers(envelope, bounds)) gaps.push('The snapshot\'s query area does not cover this whole region.');
+  const gaps: string[] = [], gapParts: StatusPart[] = [];
+  const gap = (text: string, part: StatusPart): void => { gaps.push(text); gapParts.push(part); };
+  if (list.length < minimum) gap(`The snapshot holds ${list.length} areas; this region's check expects at least ${minimum}.`, P('fewAreas', {n: list.length, minimum}));
+  if (snap.region_id !== undefined && snap.region_id !== region) gap('The snapshot was taken for another region.', P('otherRegion'));
+  if (!envelope || !covers(envelope, bounds)) gap('The snapshot\'s query area does not cover this whole region.', P('envelope'));
   const out = drawn(list, 'cdfw', checked);
   if (closures !== undefined) {
     const c = obj(closures);
     if (validClosures(c, region)) out.push(...drawn(features(c), 'noaa', day(c!.checked_at)));
-    else gaps.push('The federal groundfish closures named for this region did not load.');
+    else gap('The federal groundfish closures named for this region did not load.', P('closures'));
   }
   const data: Collection = {type: 'FeatureCollection', features: out};
-  if (gaps.length) return {state: state('incomplete', NOTES.incomplete, gaps.join(' '), checked, out.length), data, screen};
+  if (gaps.length) return {state: state('incomplete', NOTES.incomplete, gaps.join(' '), checked, out.length, {note: NOTE_PARTS.incomplete, reason: spaced(gapParts)}), data, screen};
   const status = review(coverage, region);
-  if (status === 'ready') return {state: state('complete', checked ? `CDFW ds582 snapshot for this region, checked ${checked}.` : 'CDFW ds582 snapshot for this region.', '', checked, out.length), data, screen};
-  return {state: state('partial', NOTES.partial, partialDetail(out.length, checked, status !== ''), checked, out.length), data, screen};
+  if (status === 'ready') return {state: state('complete', checked ? `CDFW ds582 snapshot for this region, checked ${checked}.` : 'CDFW ds582 snapshot for this region.', '', checked, out.length,
+    {note: [checked ? P('complete', {date: civil(checked)}) : P('completeUndated')]}), data, screen};
+  const detail = partialDetail(out.length, checked, status !== '');
+  return {state: state('partial', NOTES.partial, detail.text, checked, out.length, {note: NOTE_PARTS.partial, reason: detail.parts}), data, screen};
 }
 
 /** The read failures a retry can clear (SC2007-02); a region that names no snapshot is a package fact, not one of them. */
 export const TRANSIENT_DETAILS = {region: 'The region package did not load.', snapshot: 'The boundary snapshot did not load.'} as const;
+const NO_SNAPSHOT = 'This region names no boundary snapshot.';
+const DETAIL_PARTS: Readonly<Record<string, StatusPart>> = {[TRANSIENT_DETAILS.region]: P('regionLoad'), [TRANSIENT_DETAILS.snapshot]: P('snapshotLoad'), [NO_SNAPSHOT]: P('noSnapshot')};
 /** A region asset path (relative to the site root) that may be fetched: `data/…` or `regions/<id>/…` GeoJSON. */
 const ASSET = /^(?:data|regions\/[a-z0-9-]{1,80})\/[A-Za-z0-9._-]{1,120}\.geojson$/;
 async function json(fetchFn: typeof fetch, url: string): Promise<unknown> {
@@ -210,12 +228,12 @@ async function json(fetchFn: typeof fetch, url: string): Promise<unknown> {
 export async function loadMpas(region: string, fetchFn: typeof fetch, page: string): Promise<MpaResult> {
   const at = (path: string): string => new URL(path, page).href;
   // Closures the region names fail with its snapshot (null); unknown before region.json loads (the screen reads the region's own copy).
-  const failed = (detail: string, closures?: null): MpaResult => ({state: state('unavailable', NOTES.unavailable, detail), data: EMPTY(), screen: {areas: null, checkedAt: null, closures}});
+  const failed = (detail: string, closures?: null): MpaResult => ({state: state('unavailable', NOTES.unavailable, detail, null, 0, {note: NOTE_PARTS.unavailable, reason: [DETAIL_PARTS[detail]!]}), data: EMPTY(), screen: {areas: null, checkedAt: null, closures}});
   const base = `regions/${encodeURIComponent(region)}/`;
   let config: RegionMpaConfig;
   try { config = (obj(await json(fetchFn, at(`${base}region.json`))) ?? {}) as RegionMpaConfig; } catch { return failed(TRANSIENT_DETAILS.region); }
   const asset = text(config.assets?.protected_areas), closuresAsset = text(config.assets?.closures), named = closuresAsset ? null : undefined;
-  if (!ASSET.test(asset)) return failed('This region names no boundary snapshot.', named);
+  if (!ASSET.test(asset)) return failed(NO_SNAPSHOT, named);
   const [snapshot, coverage, closures] = await Promise.all([
     json(fetchFn, at(asset)).catch(() => null),
     json(fetchFn, at(`${base}coverage.json`)).catch(() => null),
@@ -246,10 +264,11 @@ export function mpaLayers(p: Palette): MpaLayer[] {
 }
 
 /** The citation as ds582 gives it; never a reading of what the rules allow. */
-function citation(type: string, ccr: string): string {
-  if (/^Section\s/.test(ccr)) return `CCR Title 14, ${ccr}`;
-  if (type === 'GEA' && ccr) return ccr;
-  return type === 'FMR' || type === 'FMCA' ? 'Federal waters; ds582 lists no state section.' : 'ds582 lists no regulation section.';
+function citation(type: string, ccr: string): {text: string; copy?: MarkCopyPart[]} {
+  if (/^Section\s/.test(ccr)) return {text: `CCR Title 14, ${ccr}`};
+  if (type === 'GEA' && ccr) return {text: ccr};
+  return type === 'FMR' || type === 'FMCA' ? {text: 'Federal waters; ds582 lists no state section.', copy: [cp('map.mpa.cite.federal')]}
+    : {text: 'ds582 lists no regulation section.', copy: [cp('map.mpa.cite.none')]};
 }
 
 /** The mark card for a clicked protected area: its name, designation and citation, the source and check date, and the official rules page. */
@@ -257,14 +276,22 @@ export function mpaMark(properties: Record<string, unknown> | null | undefined):
   const p = properties ?? {};
   const short = text(p.NAME), name = text(p.FULLNAME) || short;
   if (!name) return null;
-  const type = text(p.Type), federal = p.source === 'noaa', checked = text(p.checked);
+  const type = text(p.Type), federal = p.source === 'noaa', checked = text(p.checked), cite = citation(type, text(p.CCR)), official = Object.hasOwn(DESIGNATIONS, type) ? DESIGNATIONS[type]! : null;
+  const origin = federal ? 'NOAA Fisheries' : 'CDFW ds582';
+  // SC1352-04: display wording only. A Spanish card gives a readable label with the official designation beside it (never in place of it); area names, citations and links stay as published.
+  const kind = official ? [cp(`map.mpa.kind.${type}` as StringId, {official})] : [type ? cp('map.mpa.kind.unknown', {type}) : cp('map.mpa.kind.none')];
   return {
     id: `mpa:${short || name}`,
     name,
-    kind: DESIGNATIONS[type] ?? (type ? `Designation ${type}` : 'Designation not stated'),
-    reading: citation(type, text(p.CCR)),
-    source: `${federal ? 'NOAA Fisheries' : 'CDFW ds582'} · ${checked ? `checked ${checked}` : 'check date not stated'}`,
+    kind: official ?? (type ? `Designation ${type}` : 'Designation not stated'),
+    reading: cite.text,
+    source: `${origin} · ${checked ? `checked ${checked}` : 'check date not stated'}`,
     basis: federal ? GEA_BASIS : layerEntry('mpas').basis,
     regulations: federal ? {href: NOAA_GEA_PAGE, label: 'NOAA groundfish closed areas'} : {href: CDFW_MPA_PAGE, label: 'CDFW marine protected areas'},
+    copy: {
+      kind, ...(cite.copy ? {reading: cite.copy} : {}), source: [checked ? cp('map.mpa.source.checked', {source: origin, date: checked}) : cp('map.mpa.source.undated', {source: origin})],
+      basis: [federal ? cp('map.mpa.geaBasis') : cp('layer.mpas.basis')],
+      regulationsLabel: [cp(federal ? 'mark.layer.habitat.regs.noaa' : 'mark.layer.habitat.regs.mpa')],
+    },
   };
 }
