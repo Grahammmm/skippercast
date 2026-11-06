@@ -3,7 +3,7 @@
 // (or to restore a choice), not on the default first paint.
 import {dateKey} from '../packages/coast/src/daily.ts';
 import type {TideEvent, TidePoint} from '../packages/coast/src/types.ts';
-import type {Brief, BriefTile} from './brief/types.ts';
+import type {Brief, BriefTile, TileDetailPart} from './brief/types.ts';
 import {tidePredictionURL} from './station-label.ts';
 import {tideTrend, TREND_MATCH_MS} from './tides.ts';
 
@@ -163,8 +163,11 @@ export function withTideSelection(brief: Brief, station: {id: string; name: stri
   const value = point?.heightFt ?? next?.heightFt ?? null;
   const ageMs = reading ? now.getTime() - Date.parse(reading.fetchedAt) : null;
   const limitMs = 36 * 3600000;
+  const trend = point ? tideTrend(points.slice(best), Date.parse(point.at)) : null;
   const tile: BriefTile = {id: 'tide', label: 'Tide', value: value === null ? null : Number(value.toFixed(1)), unit: 'ft',
-    detail: [point ? tideTrend(points.slice(best), Date.parse(point.at)) : next ? `next ${next.type === 'H' ? 'high' : 'low'}` : 'Predictions unavailable', station.name, 'MLLW'].filter(Boolean).join(' · '),
+    detail: [point ? trend : next ? `next ${next.type === 'H' ? 'high' : 'low'}` : 'Predictions unavailable', station.name, 'MLLW'].filter(Boolean).join(' · '),
+    display: {parts: [...(point ? (trend ? [{kind: 'tideTrend', trend} as TileDetailPart] : []) : next ? [{kind: 'nextEvent', type: next.type} as TileDetailPart] : [{kind: 'predictionsUnavailable'} as TileDetailPart]),
+      {kind: 'literal', text: station.name}, {kind: 'literal', text: 'MLLW'}], datum: 'MLLW'},
     source: `NOAA ${station.id} ${station.name}`, sourceUrl: tidePredictionURL(station.id), at: reading?.fetchedAt ?? null, ageMs, limitMs,
     state: value === null || ageMs === null ? 'unavailable' : reading?.failed || ageMs > limitMs || ageMs < -3600000 ? 'stale' : 'fresh'};
   return {...brief, tiles: brief.tiles.map(t => t.id === 'tide' ? tile : t), tides: points, tideEvents: events, tideDatum: 'MLLW'};

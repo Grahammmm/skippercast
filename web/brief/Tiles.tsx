@@ -8,6 +8,7 @@ import {Tile, type TileHue, type TileProps} from '../ui/Tile.tsx';
 import type {IconName} from '../ui/icons.tsx';
 import type {BriefTile, TileId} from './types.ts';
 import {language, t, type Language, type StringId} from '../i18n.ts';
+import {tileDetailText, tileSourceName} from './tile-copy.ts';
 
 const LOOK: Readonly<Record<TileId, {icon: IconName; hue: TileHue}>> = {
   wind: {icon: 'wind', hue: 'mint'}, swell: {icon: 'wave', hue: 'blue'}, water: {icon: 'temperature', hue: 'coral'}, tide: {icon: 'tide', hue: 'amber'},
@@ -42,15 +43,18 @@ export function sourceLine(tile: BriefTile, compact = false, lang: Language = 'e
  * line and basis for the full sheet, so the four tiles fit the half detent.
  */
 export function tileProps(tile: BriefTile, compact = false, dense = false, lang: Language = 'en'): TileProps {
-  const datum = tile.id === 'tide' && tile.detail.includes(' · ') ? tile.detail.split(' · ').at(-1) : null;
-  const name = tile.sourceUrl ? <a href={tile.sourceUrl} target="_blank" rel="noopener">{tile.source}</a> : tile.source;
+  // The reference level: the model's own datum when it has one, else the last part of the English tide line.
+  const datum = tile.id !== 'tide' ? null : tile.display ? tile.display.datum ?? null : tile.detail.includes(' · ') ? tile.detail.split(' · ').at(-1) : null;
+  const sourceName = tileSourceName(tile, lang);
+  const name = tile.sourceUrl ? <a href={tile.sourceUrl} target="_blank" rel="noopener">{sourceName}</a> : sourceName;
+  const shown = sourceName === tile.source ? tile : {...tile, source: sourceName};
   if (compact) {
     return {label: tile.label, ...LOOK[tile.id], reading: tile.value === null ? '—' : String(tile.value), unit: tile.unit,
-      source: sourceLine(tile, true, lang), stale: tile.state === 'stale'};
+      source: sourceLine(shown, true, lang), stale: tile.state === 'stale'};
   }
   return {
-    label: tile.label, ...LOOK[tile.id], reading: tile.value === null ? '—' : String(tile.value), unit: tile.unit, detail: tile.detail,
-    source: sourceLine(tile, dense, lang), stale: tile.state === 'stale',
+    label: tile.label, ...LOOK[tile.id], reading: tile.value === null ? '—' : String(tile.value), unit: tile.unit, detail: tileDetailText(tile, lang),
+    source: sourceLine(shown, dense, lang), stale: tile.state === 'stale',
     basis: <>{t(`tile.basis.${tile.id}` as StringId, lang)}{datum ? t('tile.basis.reference', lang, {datum: String(datum)}) : ''}{t('tile.basis.source', lang)}{name}.{tile.lastGood ? t('tile.basis.lastGood', lang) : ''}{t('tile.basis.staleAfter', lang, {hours: Math.round(tile.limitMs / 3_600_000)})}</>,
   };
 }
