@@ -12,7 +12,10 @@ import {computed, effect, signal, untracked, type ReadonlySignal} from '@preact/
 import {session as accountSession, type Session} from '../account.ts';
 import {screenPlace, type PlaceVerdict} from '../../dist/geo-screen.js';
 import {appView, region} from '../state.ts';
-import {verdictLine} from '../waypoint-placement.ts';
+import {verdictLine, verdictParts} from '../waypoint-placement.ts';
+import {language, t, type StringId} from '../i18n.ts';
+import type {MarkCopyFields, MarkCopyPart} from '../mark-copy.ts';
+import {sp, type StatusPart} from './status-copy.ts';
 import type {ProtectedScreen} from '../trip.ts';
 import type {ChartMark} from './coastline.ts';
 import {EMPTY, regulationsLink, type Collection} from './habitat.ts';
@@ -57,7 +60,8 @@ const ID = /^[\w.-]{1,64}$/;
 const CONTROLS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\ufffe\uffff]/g;
 
 /** One saved spot as the layer keeps it: an opaque pick key, a display name and a point. Nothing else. */
-export interface SavedSpotRow {readonly key: string; readonly name: string; readonly latitude: number; readonly longitude: number}
+/** `unnamed` is set only when the name was blank, so the fallback can be shown in the page's language; a person's own 'Unnamed spot' never has it. */
+export interface SavedSpotRow {readonly key: string; readonly name: string; readonly latitude: number; readonly longitude: number; readonly unnamed?: true}
 
 /** The list answer as rows, or null when anything about it is wrong: one malformed row, a repeat or a 101st fails the whole read. */
 export function projectSavedSpots(data: unknown): SavedSpotRow[] | null {
@@ -69,7 +73,8 @@ export function projectSavedSpots(data: unknown): SavedSpotRow[] | null {
     if (!r || typeof r !== 'object' || typeof r.id !== 'string' || !ID.test(r.id) || seen.has(r.id) || typeof r.name !== 'string' || r.name.length > MAX_NAME
       || typeof r.lat !== 'number' || !(r.lat > -90 && r.lat < 90) || typeof r.lon !== 'number' || !(r.lon > -180 && r.lon < 180)) return null;
     seen.add(r.id);
-    rows.push({key: `s${rows.length}`, name: r.name.replace(CONTROLS, '').trim() || CARD_WORDS.unnamed, latitude: r.lat, longitude: r.lon});
+    const name = r.name.replace(CONTROLS, '').trim();
+    rows.push({key: `s${rows.length}`, name: name || CARD_WORDS.unnamed, latitude: r.lat, longitude: r.lon, ...(name ? {} : {unnamed: true as const})});
   }
   return rows;
 }
@@ -94,20 +99,26 @@ const drawable = computed(() => {
   return signedIn(who) && read.who === who && read.state === 'ready' && savedSpotsOn.value && onChart();
 });
 
-export interface SavedSpotsStatus {readonly text: string; /** Whether the checkbox may be changed. */ readonly canToggle: boolean; readonly retry: boolean}
+export interface SavedSpotsStatus {
+  readonly text: string; /** Whether the checkbox may be changed. */ readonly canToggle: boolean; readonly retry: boolean;
+  /** SC1352-06: the same words as catalogue parts, which the legend shows in the page's language. `text` stays the English. */
+  readonly copy?: readonly StatusPart[];
+}
+const statusOf = (key: keyof typeof STATUS_WORDS, canToggle: boolean, retry: boolean): SavedSpotsStatus =>
+  ({text: STATUS_WORDS[key], canToggle, retry, copy: [sp(`savedSpots.status.${key}` as StringId)]});
 /** What the legend row says and allows. Never a count or a private value. */
 export const savedSpotsStatus = computed<SavedSpotsStatus>(() => {
   const who = followed.value.value, read = store.value;
-  if (who.state === 'signed-out') return {text: STATUS_WORDS.signedOut, canToggle: false, retry: false};
-  if (who.state === 'loading') return {text: STATUS_WORDS.loadingAccount, canToggle: false, retry: false};
-  if (who.state === 'offline') return {text: STATUS_WORDS.offline, canToggle: false, retry: false};
-  if (who.state === 'disabled') return {text: STATUS_WORDS.disabled, canToggle: false, retry: false};
-  if (!onChart()) return {text: 'Chart only', canToggle: false, retry: false};
-  if (!savedSpotsOn.value) return {text: STATUS_WORDS.off, canToggle: true, retry: false};
+  if (who.state === 'signed-out') return statusOf('signedOut', false, false);
+  if (who.state === 'loading') return statusOf('loadingAccount', false, false);
+  if (who.state === 'offline') return statusOf('offline', false, false);
+  if (who.state === 'disabled') return statusOf('disabled', false, false);
+  if (!onChart()) return {text: 'Chart only', canToggle: false, retry: false, copy: [sp('rail.chartOnly')]};
+  if (!savedSpotsOn.value) return statusOf('off', true, false);
   const mine = read.who === who;
-  if (mine && read.state === 'failed') return {text: STATUS_WORDS.failed, canToggle: true, retry: true};
-  if (mine && read.state === 'ready') return {text: read.rows.length ? STATUS_WORDS.ready : STATUS_WORDS.empty, canToggle: true, retry: false};
-  return {text: STATUS_WORDS.loading, canToggle: true, retry: false};
+  if (mine && read.state === 'failed') return statusOf('failed', true, true);
+  if (mine && read.state === 'ready') return statusOf(read.rows.length ? 'ready' : 'empty', true, false);
+  return statusOf('loading', true, false);
 });
 
 export function setSavedSpotsOn(on: boolean): void {
@@ -131,8 +142,9 @@ const rowByKey = (key: unknown): SavedSpotRow | undefined => {
 /** The pins as GeoJSON: the pick key and the name, at the point; empty unless the layer may draw. */
 export function savedSpotFeatures(): Collection {
   if (!drawable.value) return EMPTY;
+  const lang = language.value;
   return {type: 'FeatureCollection', features: store.value.rows.map(r => ({
-    type: 'Feature', geometry: {type: 'Point', coordinates: [r.longitude, r.latitude]}, properties: {key: r.key, name: r.name}}))} as unknown as Collection;
+    type: 'Feature', geometry: {type: 'Point', coordinates: [r.longitude, r.latitude]}, properties: {key: r.key, name: r.unnamed ? t('savedSpots.card.unnamed', lang) : r.name}}))} as unknown as Collection;
 }
 
 /** The Chart's source and layers: a 44 px target, the pin and its name, from the palette. */
@@ -166,6 +178,12 @@ export function readingFor(v: PlaceVerdict): string {
   if (!line) return CARD_WORDS.clear;
   return v.screened && !v.inside ? `${line} · ${CARD_WORDS.near}` : line;
 }
+/** The same reading as catalogue parts, for the card to say in the page's language. */
+function readingParts(v: PlaceVerdict): MarkCopyPart[] {
+  const line = verdictParts(v);
+  if (!line) return [{id: 'savedSpots.card.clear'}];
+  return v.screened && !v.inside ? [...line, ' · ', {id: 'savedSpots.card.near'}] : line;
+}
 
 let wantScreen: (() => void) | null = null;
 
@@ -196,6 +214,11 @@ function cardFor(row: SavedSpotRow): ChartMark {
   const card: ChartMark = {
     id: `${SAVED_CARD_PREFIX}${row.key}`, name: row.name, kind: CARD_WORDS.kind, reading: readingFor(verdictFor(row, at)), source: CARD_WORDS.source,
     rules: CARD_WORDS.caveat, regulations: regulationsLink(data && data.id === at ? data : {id: at ?? ''}), basis: layerEntry('saved-spots').basis,
+    // Display wording only: no note, owner, id or date goes into it. A real name is never in it; only the generated fallback is.
+    copy: {
+      kind: [{id: 'savedSpots.card.kind'}], reading: readingParts(verdictFor(row, at)), source: [{id: 'savedSpots.card.source'}], rules: [{id: 'savedSpots.card.caveat'}],
+      ...(row.unnamed ? {name: [{id: 'savedSpots.card.unnamed'}]} : {}),
+    } satisfies MarkCopyFields,
   };
   CARD_ROW.set(card, row);
   return card;

@@ -35,6 +35,8 @@ async function components() {
       export {picked} from './web/map/marks.ts';
       export {camera} from './web/map/stage.ts';
       export {session} from './web/account.ts';
+      export {setLanguage} from './web/i18n.ts';
+      export {resolveMarkCopy, copyText} from './web/mark-copy.ts';
       export * as state from './web/state.ts';
       export {signal} from '@preact/signals';
       export {render} from 'preact-render-to-string';
@@ -591,4 +593,103 @@ test('saved_spot_distance_is_ephemeral_and_revocable: a real private card gets a
   assert.equal(h.net.calls.length >= 1 && h.net.calls.every(c => c.url === '/api/spots' && (c.init?.method ?? 'GET') === 'GET'), true, 'only the existing list read; the line asks for nothing');
   k.regionPorts.value = null;
   h.destroy();
+});
+
+const NONE_STORE = {getItem: () => null, setItem() {}};
+const lang = async code => (await components()).setLanguage(code, {storage: NONE_STORE, doc: null});
+
+test('saved_spots_es_status_matrix_and_pending_switch: every legend state reads Spanish, English is unchanged, Try again only on failure, and a switch asks for nothing', async () => {
+  const k = await components();
+  const row = () => k.render(k.h(k.SavedSpotsRow, {}));
+  const ES = {
+    signedOut: 'Inicia sesión para mostrar tus lugares guardados.', loadingAccount: 'Comprobando tu cuenta…', offline: 'Las cuentas necesitan conexión.',
+    disabled: 'Las cuentas no están disponibles en este sitio.', off: 'Desactivado. Actívalo para mostrar tus lugares guardados en la Carta.', loading: 'Cargando tus lugares guardados…',
+    empty: 'Aún no hay lugares guardados.', failed: 'No se pudieron cargar tus lugares guardados. Inténtalo de nuevo.', ready: 'Tus lugares guardados se muestran solo a ti.',
+  };
+  try {
+    for (const key of Object.keys(ES)) assert.equal(k.STATUS_WORDS[key] !== ES[key], true);
+    for (const [s, key] of [[{state: 'signed-out', advisor: false}, 'signedOut'], [{state: 'loading'}, 'loadingAccount'], [{state: 'offline'}, 'offline'], [{state: 'disabled', advisor: false}, 'disabled']]) {
+      const h = await harness({session: s});
+      await lang('en'); const en = row();
+      await lang('es'); const es = row();
+      assert.ok(en.includes(k.STATUS_WORDS[key]) && es.includes(ES[key]) && !es.includes(k.STATUS_WORDS[key]), key);
+      h.destroy();
+    }
+    // Off, loading (a read that never answers), failed with Try again, empty and ready.
+    const off = await harness(); await lang('es');
+    assert.ok(row().includes(ES.off)); assert.doesNotMatch(row(), /Reintentar|Try again/);
+    off.destroy();
+    const pending = await harness({net: spy(() => new Promise(() => {}))});
+    await pending.turnOn(); await lang('es');
+    assert.ok(row().includes(ES.loading));
+    pending.destroy();
+    const failed = await harness({net: spy(() => answer(null, {ok: false, status: 500}))});
+    await failed.turnOn(); await lang('es');
+    assert.ok(row().includes(ES.failed)); assert.match(row(), /Intentar de nuevo|Reintentar/);
+    const calls = failed.net.calls.length;
+    await lang('en'); assert.ok(row().includes(k.STATUS_WORDS.failed)); await lang('es'); await flush();
+    assert.equal(failed.net.calls.length, calls, 'a language change reads nothing');
+    failed.destroy();
+    const empty = await harness({net: spy(() => answer({spots: []}))}); await empty.turnOn(); await lang('es');
+    assert.ok(row().includes(ES.empty)); empty.destroy();
+    const ready = await harness(); await ready.turnOn(); await lang('es');
+    assert.ok(row().includes(ES.ready)); assert.doesNotMatch(row(), /Reintentar|Intentar de nuevo/);
+    ready.k.state.presentation.value = '2d'; await flush();
+    assert.ok(row().includes('Solo en la Carta'));
+    assert.equal(ready.k.savedSpotsStatus.value.text, 'Chart only', 'the canonical English status stays');
+    ready.destroy();
+  } finally { await lang('en'); }
+});
+
+test('saved_spots_es_privacy_and_name_provenance: Spanish card words, the generated fallback name relabels without a read, a person\'s own "Unnamed spot" never does, and no note appears', async () => {
+  const k = await components();
+  const rows = [stored(1, east(150), {name: 'Unnamed spot'}), stored(2, east(160), {name: '  \u0007 '}), stored(3, east(170), {name: '<b>Reef</b> 🐟'}), stored(4, {latitude: CY, longitude: CX}, {name: 'Inside'}), stored(5, east(30), {name: 'Near'})];
+  const h = await harness({net: spy(() => answer({spots: rows}))});
+  try {
+    await h.turnOn();
+    const calls = h.net.calls.length;
+    const names = () => h.pins().map(f => f.properties.name);
+    assert.deepEqual(names(), ['Unnamed spot', 'Unnamed spot', '<b>Reef</b> 🐟', 'Inside', 'Near']);
+    await lang('es'); await flush();
+    assert.deepEqual(names(), ['Unnamed spot', 'Lugar sin nombre', '<b>Reef</b> 🐟', 'Inside', 'Near'], 'only the generated fallback follows the language');
+    assert.deepEqual(h.pins().map(f => Object.keys(f.properties).sort()), rows.map(() => ['key', 'name']));
+    const card = i => h.k.savedSpotMark(h.pins()[i].properties), es = m => h.k.resolveMarkCopy(m, 'es'), en = m => h.k.resolveMarkCopy(m, 'en');
+    const c = card(0);
+    assert.deepEqual([es(c).kind, es(c).source, es(c).rules, es(c).name], ['Tu lugar guardado · privado', 'Tu cuenta', 'Una posición guardada, no una recomendación. Revisa el reglamento vigente antes de pescar.', 'Unnamed spot']);
+    assert.equal(es(c).reading, 'No se encontró superposición con áreas protegidas en esta comprobación.');
+    assert.equal(es(card(1)).name, 'Lugar sin nombre');
+    assert.equal(en(card(1)).name, 'Unnamed spot');
+    assert.equal(es(card(2)).name, '<b>Reef</b> 🐟', 'a real name is verbatim');
+    assert.equal(es(card(3)).reading, 'Dentro de Synthetic Reef State Marine Reserve');
+    assert.match(es(card(4)).reading, /^A \d+ m de Synthetic Reef State Marine Reserve · A 70 m o menos de un área protegida\.$/);
+    assert.match(en(card(4)).reading, /^\d+ m from Synthetic Reef State Marine Reserve · Within 70 m of a protected area\.$/);
+    for (const m of [0, 1, 2, 3, 4].map(card)) {
+      const json = JSON.stringify(m);
+      for (const secret of [NOTE, OWNER, ROW_ID.slice(0, -2), '2026-11-04']) assert.ok(!json.includes(secret), `the card never holds ${secret}`);
+    }
+    for (const secret of [NOTE, OWNER]) assert.ok(!JSON.stringify(h.pins()).includes(secret));
+    await lang('en'); await flush();
+    assert.deepEqual(names(), ['Unnamed spot', 'Unnamed spot', '<b>Reef</b> 🐟', 'Inside', 'Near'], 'English comes back');
+    assert.equal(h.net.calls.length, calls, 'no read for any language change');
+  } finally { await lang('en'); h.destroy(); }
+});
+
+test('saved_spots_es_verdict_edges: the shared verdict ids speak for unchecked, inside, near at the margin and clear, with the same numbers', async () => {
+  const k = await components();
+  const {verdictLine, verdictParts} = await import('../web/waypoint-placement.ts');
+  const say = (v, l) => { const parts = verdictParts(v); return parts && k.copyText(parts, l); };
+  const cases = [
+    [{inside: false, name: null, distanceM: null, screened: false}, 'Áreas protegidas sin revisar'],
+    [{inside: true, name: 'Reef', distanceM: 0, screened: true}, 'Dentro de Reef'],
+    [{inside: true, name: null, distanceM: 0, screened: true}, 'Dentro de un área protegida'],
+    [{inside: false, name: 'Reef', distanceM: 70, screened: true}, 'A 70 m de Reef'],
+    [{inside: false, name: null, distanceM: 69.6, screened: true}, 'A 70 m de un área protegida'],
+  ];
+  for (const [v, es] of cases) {
+    assert.equal(say(v, 'es'), es); assert.equal(say(v, 'en'), verdictLine(v)); assert.equal(verdictLine(v, 'es'), es);
+  }
+  assert.equal(verdictParts({inside: false, name: null, distanceM: 70.1, screened: true}), null, 'past 70 m there is no refusal wording');
+  assert.equal(verdictParts({inside: false, name: 'Reef', distanceM: 500, screened: true}), null, 'a clear point has no refusal parts');
+  assert.equal(verdictLine({inside: false, name: 'Reef', distanceM: 500, screened: true}, 'es'), null);
+  assert.equal(k.readingFor({inside: false, name: 'A', distanceM: 70, screened: true}), '70 m from A · Within 70 m of a protected area.');
 });
