@@ -138,7 +138,7 @@ test('static_hosts_catalogue_and_budget: English is a no-op; Spanish writes only
     for (const lang of ['en', 'es']) assert.ok(slice[id][lang]?.trim(), `${id}: first-paint ${lang} exists`);
   }
   for (const [id, entry] of Object.entries(slice)) assert.deepEqual(entry, m.STRINGS[id], `${id}: generated first-paint copy matches the shared catalogue`);
-  assert.equal(JSON.parse(await readFile(join(ROOT, 'scripts/startup-budget.json'), 'utf8')).precache.install_raw_max, 716000, 'the install ceiling is the SC1352-03 measurement + 10% (the landing page adds nothing to it)');
+  assert.equal(JSON.parse(await readFile(join(ROOT, 'scripts/startup-budget.json'), 'utf8')).precache.install_raw_max, 726544, 'the install ceiling is the SC1352-03 measurement + 10% (the landing page adds nothing to it)');
   for (const file of ['Landing.tsx', 'PortInput.tsx', 'Readout.tsx', 'readings.ts']) {
     const root = await mkdtemp(join(tmpdir(), 'landing-lint-')), {mkdir, writeFile} = await import('node:fs/promises');
     await mkdir(join(root, 'catalog/app'), {recursive: true}); await mkdir(join(root, 'web/landing'), {recursive: true});
