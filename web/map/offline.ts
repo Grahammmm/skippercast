@@ -1,6 +1,8 @@
 // Connectivity for ocean-layer status, independent of the saved-at banner.
 // A failed read is labelled offline only after the reader tried saved data.
 import {signal} from '@preact/signals';
+import {t} from '../i18n.ts';
+import {sp, type StatusCopy} from './status-copy.ts';
 
 export function watchOffline() {
   const offline = signal(globalThis.navigator?.onLine === false);
@@ -13,6 +15,9 @@ export function watchOffline() {
   }};
 }
 
-export const NOT_SAVED = 'not saved for offline';
-export const COAST_NOT_SAVED = 'Coastal readings are not available offline. Save Coastal readings and check the saved pack before leaving coverage.';
-export const TILES_NOT_SAVED = 'These ocean tiles are not available offline. The chart pack does not prefetch them; check the saved pack before leaving coverage.';
+// SC1352-02: the English strings come from the catalogue; the descriptors let a layer's status show them in the page's language.
+export const NOT_SAVED = t('map.status.offline.notSaved', 'en');
+export const COAST_NOT_SAVED = t('map.status.offline.coastNotSaved', 'en');
+export const TILES_NOT_SAVED = t('map.status.offline.tilesNotSaved', 'en');
+export const COAST_OFFLINE_COPY: StatusCopy = {note: [sp('map.status.offline.notSaved')], reason: [sp('map.status.offline.coastNotSaved')]};
+export const TILES_OFFLINE_COPY: StatusCopy = {note: [sp('map.status.offline.notSaved')], reason: [sp('map.status.offline.tilesNotSaved')]};
