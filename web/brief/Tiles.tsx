@@ -51,7 +51,7 @@ export function tileProps(tile: BriefTile, compact = false, dense = false, lang:
   return {
     label: tile.label, ...LOOK[tile.id], reading: tile.value === null ? '—' : String(tile.value), unit: tile.unit, detail: tile.detail,
     source: sourceLine(tile, dense, lang), stale: tile.state === 'stale',
-    basis: <>{t(`tile.basis.${tile.id}` as StringId, lang)}{datum ? t('tile.basis.reference', lang, {datum}) : ''}{t('tile.basis.source', lang)}{name}.{tile.lastGood ? t('tile.basis.lastGood', lang) : ''}{t('tile.basis.staleAfter', lang, {hours: Math.round(tile.limitMs / 3_600_000)})}</>,
+    basis: <>{t(`tile.basis.${tile.id}` as StringId, lang)}{datum ? t('tile.basis.reference', lang, {datum: String(datum)}) : ''}{t('tile.basis.source', lang)}{name}.{tile.lastGood ? t('tile.basis.lastGood', lang) : ''}{t('tile.basis.staleAfter', lang, {hours: Math.round(tile.limitMs / 3_600_000)})}</>,
   };
 }
 
@@ -75,7 +75,7 @@ export function Tiles({tiles, nearshore = false, compact = false, dense = false,
   const lang = language.value, label = (name: string) => LABELS.has(name) ? t(`tile.${name.toLowerCase()}` as StringId, lang) : name;
   const props = tiles ? tiles.map(tile => {
     const p = tileProps(tile, compact, dense, lang);
-    return provisional && FORECAST_TILES.has(tile.id) ? {...p, source: t('tile.source.provisional', lang, {source: p.source})} : p;
+    return provisional && FORECAST_TILES.has(tile.id) ? {...p, source: t('tile.source.provisional', lang, {source: p.source ?? ''})} : p;
   }) : emptyTiles(nearshore, lang);
   return <div class={dense ? 'app-tiles app-tiles--dense' : 'app-tiles'}>{props.map(tile => <Tile key={tile.label} {...tile} label={label(tile.label)} />)}</div>;
 }
