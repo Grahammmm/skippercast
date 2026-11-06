@@ -86,13 +86,13 @@ function Status({lang, raw, parts}: {lang: Language; raw: string; parts?: readon
   return r.translated ? <>{r.text}</> : <EnglishDetail lang={lang}>{raw}</EnglishDetail>;
 }
 
-function Basis({lang, id, runtime, extra}: {lang: Language; id: string; runtime: string; extra?: string}) {
+function Basis({lang, id, runtime, extra, extraEs}: {lang: Language; id: string; runtime: string; extra?: string; extraEs?: string}) {
   if (lang !== 'es') return <>{runtime}{extra ? <> {extra}</> : null}</>;
   const same = runtime === layerCopy(id, 'en').basis;
   return <>
     <p>{layerCopy(id, lang).basis}</p>
     {!same && runtime ? <p><EnglishDetail lang={lang}>{runtime}</EnglishDetail></p> : null}
-    {extra ? <p><EnglishDetail lang={lang}>{extra}</EnglishDetail></p> : null}
+    {extraEs ? <p>{extraEs}</p> : extra ? <p><EnglishDetail lang={lang}>{extra}</EnglishDetail></p> : null}
   </>;
 }
 
@@ -256,13 +256,13 @@ function SwellRow() {
   return (
     <li class="app-legend-swell">
       {f ? <span class="app-swatch" data-layer="swell" aria-hidden="true"></span> : null}{layerCopy('swell', lang).label}
-      <Popover iconOnly summary={t('legend.bs.swell', lang)}><Basis lang={lang} id="swell" runtime={s.basis} extra={r ? ringBasis(r.product) : undefined} /></Popover>
+      <Popover iconOnly summary={t('legend.bs.swell', lang)}><Basis lang={lang} id="swell" runtime={s.basis} extra={r ? ringBasis(r.product) : undefined} extraEs={r ? ringBasis(r.product, 'es') : undefined} /></Popover>
       <Segmented label={layerCopy('swell', lang).label} value={swellPartition.value} onChange={v => { swellPartition.value = v; }}
         options={[{value: 'primary', label: t('legend.swell.primary', lang)}, {value: 'wind', label: t('legend.swell.wind', lang)}, {value: 'secondary', label: t('legend.swell.secondary', lang)}]} />
       {f ? <p class="app-legend-note app-legend-range ui-mono" data-range="swell"><EnglishDetail lang={lang}>{frameSummary(f)}</EnglishDetail></p> : null}
       {f ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="swell">{HEIGHT_SCALE[0]} ft<span class="app-swatch" data-layer="swell" aria-hidden="true"></span><span class="app-visually-hidden">{t('legend.to', lang)}</span>{HEIGHT_SCALE[1]}+ ft</p> : null}
       {f ? <p class="app-legend-note ui-mono" data-stamp="swell"><Status lang={lang} raw={t('legend.swell.stamp', 'en', {name: WAVE_MODEL.name, stamp: f.stamp})} parts={s.copy?.stamp} /></p> : null}
-      {r ? <p class="app-legend-note ui-mono" data-nearshore="swell"><span class="app-ring" aria-hidden="true"></span><EnglishDetail lang={lang}>{ringSummary(r, new Date())}</EnglishDetail></p> : null}
+      {r ? <p class="app-legend-note ui-mono" data-nearshore="swell"><span class="app-ring" aria-hidden="true"></span>{ringSummary(r, new Date(), lang)}</p> : null}
       {fieldReason ? <p class="app-legend-note" data-reason="swell"><Status lang={lang} raw={fieldReason} parts={reasonParts} /></p> : null}
     </li>
   );
@@ -393,9 +393,9 @@ function StationsRow() {
   const s = stationState.value, rings = nearshoreState.value, lang = language.value, entry = layerCopy('stations', lang);
   return <li class="app-legend-stations">{entry.label}
     <Popover iconOnly summary={t('legend.bs.stations', lang)}>{entry.basis}<p>{layerEntry('stations').attribution}</p></Popover>
-    <p class="app-legend-note"><EnglishDetail lang={lang}>{s.note}</EnglishDetail></p>
+    <p class="app-legend-note"><Status lang={lang} raw={s.note} parts={s.copy} /></p>
     <ul>{entry.legend.map(row => <li key={row.label}><span class="app-key" aria-hidden="true" style={{background: `var(--${row.swatch})`}} />{row.label}</li>)}</ul>
-    <p class="app-legend-note">{rings ? <EnglishDetail lang={lang}>{ringSummary(rings, new Date())}</EnglishDetail> : t('legend.ringsUnavailable', lang)}</p>
+    <p class="app-legend-note">{rings ? ringSummary(rings, new Date(), lang) : t('legend.ringsUnavailable', lang)}</p>
     <details><summary>{t('legend.stationList', lang)}</summary><ul>{s.pins.map(pin => <li key={pin.key}><Button variant="quiet" onClick={() => { chartMark.value = pin.mark; }}>{pin.mark.name}{pin.location ? '' : t('legend.locationUnavailable', lang)}</Button></li>)}</ul></details>
   </li>;
 }

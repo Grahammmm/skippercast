@@ -406,7 +406,9 @@ export const SURFACE_SOURCE_SHA256 = {
   // backing, opacity, token or threshold changed, and the Depth row's citation moved one line.
   // SC1352-04 resolves the protected-areas row's note and basis detail in the page's language through the same Status wrapper (copy only, no paint);
   // the note and basis keep their app-mpa-note and popover text roles, and no backing, opacity, token or threshold changed.
-  "legendTsx": "6380ced79c00ed2d08185178af2967638d82b76a6941b79f75cd9f3faf703ada"
+  // SC1352-05 shows the Stations note and the nearshore-ring summary and basis in the page's language (copy only, no paint); the same text roles
+  // stay, and no backing, opacity, token or threshold changed.
+  "legendTsx": "1bb1ea120e34603022be28305ab7f9ded374374854940665267ebb7d9bd840ba"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];
