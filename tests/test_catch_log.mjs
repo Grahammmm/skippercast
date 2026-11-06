@@ -871,3 +871,79 @@ test('stale_patch_after_delete_or_for_another_owner_is_404_and_leaks_nothing', a
   assert.ok(!JSON.stringify(conflict.out.data).includes('SECRET') && !JSON.stringify(conflict.out.data).includes('LOGNOTE'), 'no row or submitted data in 409');
   sql.close(); conflict.sql.close();
 });
+
+// SC1137-11: the account panel's edit form. logEditBody sends every mutable field so a cleared box really clears.
+const {logEditBody, localInputValue, sortLogEntries, mergeOlderLogEntries, createCopy} = await import('../dist/account.js');
+const FORM = {started: '', ended: '', outcome: 'fish', count: '3', species: 'lingcod', method: 'drift', trip: 'trip-a', lat: '35.5', lon: '-120.5', note: 'n'};
+const STORED = {started_at: '2026-11-01T14:00:00.123Z', ended_at: '2026-11-01T19:30:00.000Z', lat: 35.123456789, lon: -120.987654321};
+
+test('edit_body_sends_every_field_and_an_untouched_box_keeps_the_stored_value', () => {
+  const original = {...STORED, startedShown: 'S', endedShown: 'E', latShown: '35.123456789', lonShown: '-120.987654321'};
+  const same = logEditBody({...FORM, started: 'S', ended: 'E', lat: '35.123456789', lon: '-120.987654321'}, original);
+  assert.equal(same.started_at, STORED.started_at, 'an untouched start is the stored instant, milliseconds and all');
+  assert.equal(same.ended_at, STORED.ended_at); assert.equal(same.lat, STORED.lat); assert.equal(same.lon, STORED.lon);
+  assert.deepEqual(Object.keys(same).sort(), ['count', 'ended_at', 'lat', 'lon', 'method', 'note', 'outcome', 'species', 'started_at', 'trip_id']);
+  const cleared = logEditBody({started: 'S', ended: '', outcome: 'blank', count: '3', species: '', method: ' ', trip: '', lat: '', lon: '', note: ''}, original);
+  assert.deepEqual({...cleared, method: null}, {started_at: STORED.started_at, ended_at: null, outcome: 'blank', count: 0, species: null, method: null, trip_id: null, lat: null, lon: null, note: null});
+  assert.equal(cleared.method, ' ', 'text is sent as typed; the server turns blank text into null');
+  const changed = logEditBody({...FORM, started: '2026-11-02T08:15', ended: ''}, original);
+  assert.equal(changed.started_at, new Date('2026-11-02T08:15').toISOString());
+  assert.equal(changed.lat, 35.5);
+  assert.equal(logEditBody({...FORM, started: 'S', outcome: 'fish', count: ''}, original).count, null, 'fish with no count is left for the server to refuse');
+  assert.equal(logEditBody({...FORM, started: 'S', lat: '0', lon: '0'}, {...original, lat: 0, lon: 0, latShown: '0', lonShown: '0'}).lat, 0, 'a zero coordinate is a position');
+  const half = logEditBody({...FORM, started: 'S', lat: '', lon: '-120.5'}, original);
+  assert.ok(half.lat === null && half.lon === -120.5, 'a half-entered pair reaches the server as it is');
+});
+
+test('edit_body_local_time_refusals_use_the_catalogue', () => {
+  const es = createCopy({lang: 'es', strings: {'account.log.invalidTime': 'ES-INVALID'}});
+  for (const f of [{...FORM, started: ''}, {...FORM, started: 'not a time'}, {...FORM, started: '2026-11-02T08:15', ended: 'nope'}]) {
+    assert.throws(() => logEditBody(f, {}), error => error.local === true && error.message === 'Enter a valid start and optional end time.');
+    assert.throws(() => logEditBody(f, {}, es), error => error.message === 'ES-INVALID');
+  }
+  assert.throws(() => logBody({started: '2026-11-02T08:15', ended: 'nope', outcome: 'blank'}), error => error.local === true);
+  assert.equal(logBody({started: '2026-11-02T08:15', ended: '2026-11-02T09:15', outcome: 'blank'}).ended_at, new Date('2026-11-02T09:15').toISOString());
+  assert.ok(!('ended_at' in logBody({started: '2026-11-02T08:15', ended: '', outcome: 'blank'})), 'create still omits an empty end');
+});
+
+test('edit_input_value_keeps_the_local_calendar_and_subsecond_precision', () => {
+  const d = new Date(2026, 10, 1, 9, 5, 7, 45);
+  assert.equal(localInputValue(d.toISOString()), '2026-11-01T09:05:07.045');
+  assert.equal(new Date(localInputValue(d.toISOString())).getTime(), d.getTime(), 'the control value names the same instant');
+  assert.equal(localInputValue(new Date(2026, 10, 1, 9, 5, 0, 0).toISOString()), '2026-11-01T09:05:00');
+  assert.equal(localInputValue(null), ''); assert.equal(localInputValue('nonsense'), '');
+});
+
+test('edit_list_offers_edit_and_sorts_loaded_rows_newest_first_then_id', () => {
+  assert.match(logItemHTML({id: 'a"b', outcome: 'blank', started_at: BLANK.started_at, count: 0}), /data-edit-log="a&quot;b">Edit<\/button>/);
+  assert.match(logItemHTML({id: 'x', outcome: 'blank', started_at: BLANK.started_at, count: 0}, [], 'dd', {lang: 'es', strings: {'account.log.edit': 'Editar'}}), />Editar<\/button>/);
+  const rows = [{id: 'b', started_at: '2026-01-01T00:00:00.000Z'}, {id: 'c', started_at: '2026-03-01T00:00:00.000Z'}, {id: 'a', started_at: '2026-01-01T00:00:00.000Z'}];
+  assert.deepEqual(sortLogEntries(rows).map(r => r.id), ['c', 'a', 'b']);
+});
+
+test('edit_start_backward_past_the_cursor_then_show_older_keeps_newest_first_and_dedupes', () => {
+  const at = (id, day) => ({id, started_at: `2026-${day}T00:00:00.000Z`});
+  // Page one holds 09-10..09-08; the cursor sits at 09-08. 'p1c' is edited back to 07-15, past the cursor.
+  const rows = [at('p1a', '09-10'), at('p1b', '09-09'), at('p1c', '09-08')];
+  rows[2] = at('p1c', '07-15'); sortLogEntries(rows);
+  assert.deepEqual(rows.map(r => r.id), ['p1a', 'p1b', 'p1c']);
+  const gone = new Set(['p2x']);
+  mergeOlderLogEntries(rows, [at('p2a', '08-30'), at('p1a', '09-10'), at('p2x', '08-20'), at('p2b', '07-30'), at('p2c', '06-01')], gone);
+  assert.deepEqual(rows.map(r => r.id), ['p1a', 'p1b', 'p2a', 'p2b', 'p1c', 'p2c'], 'older dates fall in front of the edited row; the loaded and removed ids are not added again');
+});
+
+test('edit_body_round_trips_through_the_route_and_a_no_op_changes_nothing', async () => {
+  const {sql, adapter} = database(), env = {DB: adapter};
+  addTrip(sql, 'trip-a', 'alice', '2026-11-05');
+  const made = (await post(env, 'alice', {...FISH, trip_id: 'trip-a', started_at: '2026-11-01T14:00:00.123Z'})).data, before = rowOf(sql, made.id);
+  const original = {...made, startedShown: 'S', endedShown: 'E', latShown: String(made.lat), lonShown: String(made.lon)};
+  const none = await patch(env, 'alice', made.id, logEditBody({started: 'S', ended: 'E', outcome: made.outcome, count: String(made.count), species: made.species, method: made.method, trip: made.trip_id, lat: String(made.lat), lon: String(made.lon), note: made.note}, original));
+  assert.equal(none.status, 200); assert.ok(util.isDeepStrictEqual(rowOf(sql, made.id), before), 'an untouched form leaves the stored row exactly as it was');
+  const clear = await patch(env, 'alice', made.id, logEditBody({started: 'S', ended: '', outcome: 'blank', count: '', species: '', method: '', trip: '', lat: '', lon: '', note: ''}, original));
+  assert.equal(clear.status, 200);
+  const after = rowOf(sql, made.id);
+  assert.ok(after.ended_at === null && after.trip_id === null && after.lat === null && after.lon === null && after.note === null && after.count === 0 && after.outcome === 'blank', 'every cleared box is cleared');
+  const half = await patch(env, 'alice', made.id, logEditBody({started: 'S', ended: '', outcome: 'blank', count: '', species: '', method: '', trip: '', lat: '', lon: '-120.5', note: ''}, original));
+  assert.equal(half.status, 400); assert.match(half.data.error, /^coordinates_incomplete/);
+  sql.close();
+});

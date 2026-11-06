@@ -177,6 +177,7 @@ export function logItemHTML(row, trips = [], format = chosenFormat(), copy) {
   const bits = [day(row.started_at, t.lang), outcome, fish, row.species, row.method,
     row.lat != null && row.lon != null ? formatCoordinates(row.lat, row.lon, format) : '', trip?.date ? t('account.log.tripDate', {date: trip.date}) : ''].filter(Boolean);
   return `<li><span>${bits.map(esc).join(' · ')}</span>${row.note ? `<p class="account-hint">${esc(row.note)}</p>` : ''}
+    <button type="button" data-edit-log="${esc(row.id)}">${esc(t('account.log.edit'))}</button>
     <button type="button" data-remove-log="${esc(row.id)}">${esc(t('account.remove'))}</button></li>`;
 }
 
@@ -276,10 +277,52 @@ export function logBody(f, copy) {
   const lat = hasLat ? readPosition(f.lat, 'lat') : null, lon = hasLon ? readPosition(f.lon, 'lon') : null;
   const started = f.started ? new Date(f.started) : new Date();
   const out = {started_at: started.toISOString(), outcome: f.outcome, method: f.method || null, species: f.species || null, note: f.note || null, lat, lon};
+  if (f.ended) { const ended = new Date(f.ended); if (Number.isNaN(ended.getTime())) throw localError(asCopy(copy)('account.log.invalidTime')); out.ended_at = ended.toISOString(); }
   if (f.outcome === 'fish') out.count = num(f.count);
   if (f.trip_id !== undefined && f.trip_id !== null && f.trip_id !== '') out.trip_id = f.trip_id;   // the chosen id exactly; the route checks it is the caller's own
   return out;
 }
+
+/** A refusal made in the page before anything is sent: its message is already the person's own-language words. */
+function localError(message) { const error = Error(message); error.local = true; return error; }
+const pad = (n, width = 2) => String(n).padStart(width, '0');
+/** An instant as a datetime-local value in the browser's own time, with seconds and milliseconds when present (so no precision is lost). */
+export function localInputValue(iso) {
+  const d = new Date(iso);
+  if (!iso || Number.isNaN(d.getTime())) return '';
+  const ms = d.getMilliseconds();
+  return `${pad(d.getFullYear(), 4)}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}${ms ? '.' + pad(ms, 3) : ''}`;
+}
+/**
+ * SC1137-11: the whole edit form as the PATCH body. Every mutable field is sent, so a cleared box really clears: a blank or unknown
+ * outcome sends count 0, no trip sends trip_id null, an empty end sends ended_at null, empty boxes send lat and lon null, blank text sends null.
+ * `original` is {started_at, ended_at, startedShown, endedShown, lat, lon, latShown, lonShown}: a box still showing the value it was
+ * filled with sends the stored value itself (exact instant, subsecond precision, repeated-hour side, exact coordinate), never a re-parse.
+ * A half-entered position is sent as the number and null it is, so the server names the refusal.
+ */
+export function logEditBody(f, original = {}, copy) {
+  const t = asCopy(copy), num = v => (String(v ?? '').trim() === '' ? null : Number(v));
+  const instant = (value, stored, shown, required) => {
+    if (blankText(value)) { if (required) throw localError(t('account.log.invalidTime')); return null; }
+    if (stored && value === shown) return stored;
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) throw localError(t('account.log.invalidTime'));
+    return d.toISOString();
+  };
+  const position = (value, field) => blankText(value) ? null : (original[field] != null && value === original[field + 'Shown'] ? original[field] : readPosition(value, field));
+  const started_at = instant(f.started, original.started_at, original.startedShown, true), ended_at = instant(f.ended, original.ended_at, original.endedShown, false);
+  return {started_at, ended_at, outcome: f.outcome, count: f.outcome === 'fish' ? num(f.count) : 0, species: f.species || null, method: f.method || null,
+    trip_id: f.trip || null, lat: position(f.lat, 'lat'), lon: position(f.lon, 'lon'), note: f.note || null};
+}
+/** The stored entries in the log's own order: newest start first, ties by id. */
+export const sortLogEntries = rows => rows.sort((a, b) => (a.started_at < b.started_at ? 1 : a.started_at > b.started_at ? -1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+// Older-page rows join the loaded ones (ids already loaded or removed are skipped) and the whole set is put back in the log's order,
+// so a row edited to start before the cursor still sorts among the older dates that arrive after it.
+export const mergeOlderLogEntries = (rows, page, gone = new Set()) => {
+  const seen = new Set(rows.map(row => row.id));
+  for (const row of page || []) if (!seen.has(row?.id) && !gone.has(row?.id)) { seen.add(row?.id); rows.push(row); }
+  return sortLogEntries(rows);
+};
 
 /** A saved trip's choice label: its stored date as written, then the area (the active region's point name when known, else "region / point"). */
 export function logTripLabel(trip, region) {
@@ -296,7 +339,9 @@ const noTrip = t => `<option value="">${esc(t('account.log.noTrip'))}</option>`;
 const logFormHTML = t => `<h2 class="account-subhead">${esc(t('account.log.head'))}</h2>
     <p class="home-port-fine">${esc(t('account.log.fine'))}</p>
     <form id="log-form" autocomplete="off">
-      <label for="log-started">${esc(t('account.log.when'))}</label><input id="log-started" type="datetime-local" />
+      <p class="account-hint" id="log-editing" role="status" hidden>${esc(t('account.log.editing'))}</p>
+      <label for="log-started">${esc(t('account.log.when'))}</label><input id="log-started" type="datetime-local" step="any" />
+      <label for="log-ended">${esc(t('account.log.ended'))}</label><input id="log-ended" type="datetime-local" step="any" />
       <label for="log-outcome">${esc(t('account.log.what'))}</label><select id="log-outcome"><option value="blank">${esc(t('account.outcome.blank'))}</option><option value="fish">${esc(t('account.outcome.fish'))}</option><option value="unknown">${esc(t('account.outcome.unknown'))}</option></select>
       <label for="log-count">${esc(t('account.log.count'))}</label><input id="log-count" type="number" min="1" max="9999" step="1" />
       <label for="log-species">${esc(t('account.log.species'))}</label><input id="log-species" type="text" maxlength="60" />
@@ -305,7 +350,7 @@ const logFormHTML = t => `<h2 class="account-subhead">${esc(t('account.log.head'
       ${positionFieldHTML('log', 'lat', esc(t('account.log.lat')), esc(t('account.optional.private')), chosenFormat(), t)}
       ${positionFieldHTML('log', 'lon', esc(t('account.log.lon')), esc(t('account.optional.private')), chosenFormat(), t)}
       <label for="log-note">${esc(t('account.log.note'))}</label><input id="log-note" type="text" maxlength="1000" />
-      <div class="home-port-actions"><button type="submit" id="log-save">${esc(t('account.log.save'))}</button></div>
+      <div class="home-port-actions"><button type="submit" id="log-save">${esc(t('account.log.save'))}</button><button type="button" id="log-cancel" hidden>${esc(t('account.cancel'))}</button></div>
     </form>
     <div class="home-port-actions"><label for="log-filter-outcome">${esc(t('account.log.filter'))}</label><select id="log-filter-outcome"><option value="">${esc(t('account.any'))}</option><option value="fish">${esc(t('account.outcome.fish'))}</option><option value="blank">${esc(t('account.outcome.blank'))}</option><option value="unknown">${esc(t('account.outcome.unknown'))}</option></select>
       <label for="log-filter-species">${esc(t('account.log.filterSpecies'))}</label><select id="log-filter-species"><option value="">${esc(t('account.any'))}</option></select></div>
@@ -533,14 +578,73 @@ export async function openAccount(options = {}) {
     // next older page starts (null: none), and `generation` counts first-page reads so an older-page read that a refresh or a newly
     // saved entry has overtaken is dropped. `gone` holds ids removed here, so a page read before a removal cannot bring one back.
     let view = {outcome: '', species: ''}, trips = [], entries = null, nextCursor = null, busy = false, generation = 0, loadFailed = false, gone = new Set();
+    // SC1137-11: `editing` is {id, original, draft, pending} while the log form holds a correction (draft: the create form as it was).
+    let editing = null, tripRegion = null;
     const live = () => open === self && list.isConnected;
+    const FORM_FIELDS = ['started', 'ended', 'outcome', 'count', 'species', 'method', 'trip', 'lat', 'lon', 'note'];
+    const readForm = () => Object.fromEntries(FORM_FIELDS.map(n => [n, $('#log-' + n).value]));
+    const writeForm = values => { for (const n of FORM_FIELDS) $('#log-' + n).value = values[n] ?? ''; };
+    const clearPositionErrors = () => { for (const f of ['lat', 'lon']) { const err = $(`#log-${f}-error`); err.textContent = ''; err.hidden = true; $('#log-' + f).removeAttribute('aria-invalid'); } };
     const drawLog = () => {
       if (entries) drawLogView({list, counts: $('#log-counts'), species: $('#log-filter-species')}, {entries, trips, view, more: Boolean(nextCursor), copy: t});
       const keepFocus = document.activeElement === older && !(entries && nextCursor);
       older.hidden = !(entries && nextCursor); older.textContent = busy ? t('account.log.olderLoading') : t('account.log.older');
-      older.setAttribute('aria-disabled', String(busy));   // not `disabled`: a disabled button drops keyboard focus mid-load
+      older.setAttribute('aria-disabled', String(busy || Boolean(editing?.pending)));   // not `disabled`: a disabled button drops keyboard focus mid-load
       retry.hidden = !loadFailed;
       if (keepFocus) { logStatus.tabIndex = -1; logStatus.focus(); }
+      // One correction at a time: the other Edit buttons rest until Save or Cancel; Save waits for an older-page read and for its own request.
+      for (const b of list.querySelectorAll('[data-edit-log]')) b.disabled = Boolean(editing);
+      $('#log-editing').hidden = !editing; $('#log-cancel').hidden = !editing; $('#log-cancel').disabled = Boolean(editing?.pending);
+      $('#log-save').textContent = editing ? t('account.log.saveChanges') : t('account.log.save');
+      $('#log-save').disabled = Boolean(editing && (busy || editing.pending));
+    };
+    // The Trip choice: "No trip", the saved trips, and (while correcting an entry whose trip is not in the list) its exact id kept as a labelled choice.
+    const renderTripOptions = (want = tripSelect.value) => {
+      tripSelect.innerHTML = noTrip(t) + logTripOptionsHTML(trips, tripRegion);
+      const kept = editing?.original.trip_id;
+      if (kept && ![...tripSelect.options].some(o => o.value === kept)) tripSelect.insertAdjacentHTML('beforeend', `<option value="${esc(kept)}">${esc(t('account.log.tripUnavailable'))}</option>`);
+      tripSelect.value = want;
+    };
+    const focusEdit = id => { [...list.querySelectorAll('[data-edit-log]')].find(b => b.dataset.editLog === id)?.focus(); };
+    const leaveEdit = (focusId) => {
+      const e = editing; editing = null; if (!e) return;
+      renderTripOptions(e.draft.trip); writeForm(e.draft); clearPositionErrors();
+      drawLog(); if (focusId) focusEdit(focusId);
+    };
+    const openEdit = id => {
+      const row = entries?.find(r => r.id === id); if (!row || editing) return;
+      const draft = readForm();
+      editing = {id, draft, pending: false, original: {...row}};
+      renderTripOptions(row.trip_id || '');
+      writeForm({started: localInputValue(row.started_at), ended: localInputValue(row.ended_at), outcome: row.outcome, count: row.outcome === 'fish' ? String(row.count) : '',
+        species: row.species ?? '', method: row.method ?? '', trip: row.trip_id || '', lat: row.lat == null ? '' : String(row.lat), lon: row.lon == null ? '' : String(row.lon), note: row.note ?? ''});
+      Object.assign(editing.original, {startedShown: $('#log-started').value, endedShown: $('#log-ended').value, latShown: $('#log-lat').value, lonShown: $('#log-lon').value});
+      clearPositionErrors(); logStatus.textContent = '';
+      drawLog(); $('#log-started').focus();
+    };
+    const saveEdit = async () => {
+      const e = editing; if (!e || e.pending || busy) return;
+      const gen = generation, mine = () => editing === e && live();
+      try {
+        await submitPositionForm($, 'log', () => logEditBody(readForm(), e.original, t), async body => {
+          e.pending = true; logStatus.textContent = t('account.spotEdit.saving'); drawLog();
+          let saved;
+          try {
+            saved = await api('catch-log/' + encodeURIComponent(e.id), {method: 'PATCH', body});
+            if (!saved || saved.id !== e.id) throw Object.assign(Error('unconfirmed'), {unconfirmed: true});
+          } catch (error) {
+            e.pending = false;
+            if (mine()) { logStatus.textContent = error?.status && !error.apiFallback && error.message ? error.message : t('account.log.updateFailed'); drawLog(); }
+            return;
+          }
+          e.pending = false;
+          if (!mine() || gen !== generation) return;
+          // The stored row replaces this one where it stands, then the loaded rows are put back in the log's order; pages and cursor stay as they are.
+          const i = entries.findIndex(r => r.id === saved.id); if (i >= 0) entries[i] = saved;
+          sortLogEntries(entries);
+          logStatus.textContent = ''; leaveEdit(saved.id); status(t('account.log.updated'));
+        });
+      } catch (error) { if (mine()) { e.pending = false; logStatus.textContent = error?.local ? error.message : passkeyMessage(error, t); drawLog(); } }
     };
     const showLog = async () => {
       const mine = ++generation; busy = false; gone = new Set();
@@ -562,8 +666,7 @@ export async function openAccount(options = {}) {
       try {
         const page = await readLogPage(cursor);
         if (!live() || mine !== generation) return;
-        const seen = new Set(entries.map(row => row.id));
-        for (const row of page.entries) if (!seen.has(row?.id) && !gone.has(row?.id)) { seen.add(row?.id); entries.push(row); }
+        mergeOlderLogEntries(entries, page.entries, gone);
         nextCursor = page.nextCursor;
       } catch { if (live() && mine === generation) logStatus.textContent = t('account.log.olderFailed'); }
       finally { if (live() && mine === generation) { busy = false; drawLog(); } }
@@ -573,34 +676,42 @@ export async function openAccount(options = {}) {
         const rows = (await api('trips')).trips;
         const region = await import('./region.js').then(m => m.getRegion(), () => null);   // only names the area; without it the label reads "region / point"
         if (!live()) return;
-        trips = rows; const chosen = tripSelect.value;
-        tripSelect.innerHTML = noTrip(t) + logTripOptionsHTML(trips, region); tripSelect.value = chosen;
+        trips = rows; tripRegion = region; renderTripOptions();
         drawLog();
       } catch { if (live()) status(t('account.log.tripsFailed')); }
     };
     list.addEventListener('click', async event => {
-      const b = event.target.closest('[data-remove-log]'); if (!b) return;
+      const edit = event.target.closest('[data-edit-log]'); if (edit) { openEdit(edit.dataset.editLog); return; }
+      const b = event.target.closest('[data-remove-log]'); if (!b || editing?.pending) return;
       const id = b.dataset.removeLog;
       try {
         await api('catch-log/' + encodeURIComponent(id), {method: 'DELETE', body: {}});
         // Only this row goes: older pages already shown and the cursor stay, and the cursor stays valid if it pointed at this row.
         gone.add(id);
+        if (editing?.id === id) leaveEdit();
         if (live() && entries) { entries = entries.filter(row => row.id !== id); if (!entries.length && !nextCursor) logStatus.textContent = t('account.log.none'); drawLog(); }
       } catch (error) { status(passkeyMessage(error, t)); }
     });
-    older.addEventListener('click', showOlder);
+    older.addEventListener('click', () => { if (!editing?.pending) showOlder(); });
     $('#log-filter-outcome').addEventListener('change', event => { view = {...view, outcome: event.target.value}; drawLog(); });
     $('#log-filter-species').addEventListener('change', event => { view = {...view, species: event.target.value}; drawLog(); });
-    retry.addEventListener('click', showLog);
+    retry.addEventListener('click', () => { if (!editing?.pending) showLog(); });
+    $('#log-cancel').addEventListener('click', () => { if (editing && !editing.pending) leaveEdit(editing.id); });
+    $('#log-form').addEventListener('keydown', event => {
+      if (event.key !== 'Escape' || !editing) return;
+      event.preventDefault(); event.stopPropagation();
+      if (!editing.pending) leaveEdit(editing.id);
+    });
     $('#log-form').addEventListener('submit', async event => {
       event.preventDefault();
+      if (editing) { saveEdit(); return; }
       const field = n => $('#log-' + n).value;
       try {
-        await submitPositionForm($, 'log', () => logBody({started: field('started'), outcome: field('outcome'), count: field('count'), species: field('species'), method: field('method'), trip_id: field('trip'), lat: field('lat'), lon: field('lon'), note: field('note')}, t), async body => {
+        await submitPositionForm($, 'log', () => logBody({started: field('started'), ended: field('ended'), outcome: field('outcome'), count: field('count'), species: field('species'), method: field('method'), trip_id: field('trip'), lat: field('lat'), lon: field('lon'), note: field('note')}, t), async body => {
           await api('catch-log', {method: 'POST', body});
           $('#log-form').reset(); await showLog(); status(t('account.log.saved'));
         });
-      } catch (error) { status(passkeyMessage(error, t)); }
+      } catch (error) { status(error?.local ? error.message : passkeyMessage(error, t)); }
     });
     showLog(); loadTrips();
     // BF-saved-spots: the list reads each spot against the shared protected-area screen; a screen that cannot load reads "unavailable".
