@@ -94,8 +94,8 @@ test('the dialog offers the range on the date input and checks before any reques
   assert.match(src, /range = dateRange\(region\.timezone\)/, 'computed at render from the region zone');
   assert.match(src, /<input name="date" type="date" defaultValue=\{alertDate\(region\.timezone\)\} min=\{range\.min\} max=\{range\.max\} required \/>/);
   const save = src.slice(src.indexOf('const save = async'), src.indexOf('const act = '));
-  const check = save.indexOf('const problem = formProblem(form, dateRange(region.timezone));');
-  const stop = save.indexOf('if (problem) { setStatus(problem); return; }');
+  const check = save.indexOf('const problem = formProblemId(form, dateRange(region.timezone));');
+  const stop = save.indexOf("if (problem) { setStatus({id: problem}); return; }");
   assert.ok(check > 0 && stop > check, 'save checks the form first and stops with the message');
   assert.ok(save.indexOf("api('trips'") > stop, 'the request comes only after the check');
   assert.equal(save.match(/api\(/g)?.length, 1, 'no other request in save');
@@ -192,7 +192,7 @@ test('reuse_note_replaces_initial_provenance: the limits come from the saved tri
   assert.equal(reuseLimitsNote('2026-10-24', 'some', true), "Some limits start from your saved trip on 2026-10-24; other limits were left unchanged. Alerts use your current boat settings, not the old trip's boat.");
   for (const note of [reuseLimitsNote('2026-10-24', 'all', true), reuseLimitsNote('2026-10-24', 'some', false)]) assert.doesNotMatch(note, /saved boat|reference 23 ft|Boat limits|your .* limits;/);
   const src = readFileSync(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
-  assert.match(src, /reuse && reuse\.copied !== 'none' \? reuseLimitsNote\(reuse\.date, reuse\.copied, p === 'boat'\) : p !== 'boat'/, 'the initial notes remain the fallback');
+  assert.match(src, /reuse && reuse\.copied !== 'none' \? reuseLimitsNote\(reuse\.date, reuse\.copied, p === 'boat', lang\) : p !== 'boat'/, 'the initial notes remain the fallback');
 });
 
 test('reuse_sends_nothing_until_explicit_save: filling the form makes no request and Use again has no network or storage path', async () => {
@@ -206,5 +206,6 @@ test('reuse_sends_nothing_until_explicit_save: filling the form makes no request
   assert.ok(handler.length > 100 && !/api\(|refresh|ack\(|fetch|localStorage|sessionStorage|enablePush|location|submit|requestSubmit/.test(handler), 'Use again only fills the form');
   const save = src.slice(src.indexOf('const save = async'), src.indexOf('const act = '));
   assert.ok(save.indexOf('region.forecast_points.some') > save.indexOf('formProblem') && save.indexOf("api('trips'") > save.indexOf('region.species.includes'), 'save checks the current area and species before the one request');
-  assert.match(src, /<Button type="submit" variant="primary" disabled=\{unavailable\}>Save this fishing window<\/Button>/);
+  assert.match(src, /<Button type="submit" variant="primary" disabled=\{unavailable\}>\{t\('alerts\.save', lang\)\}<\/Button>/);
+  assert.equal(JSON.parse(readFileSync(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings['alerts.save'].en, 'Save this fishing window');
 });

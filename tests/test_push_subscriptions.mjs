@@ -103,7 +103,10 @@ test('sheet_stop_actions_are_distinct', async () => {
   await assert.rejects(alerts.stopNotifications('device', failed.fetchFn, failed.nav), /Service unavailable/, 'the server error reaches the sheet');
   // The sheet (Preact, not importable here) wires exactly these two labelled actions, both disabled while either runs.
   const sheet = readFileSync(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
-  assert.ok(sheet.includes("'Stop notifications on this device'") && sheet.includes("'Stop on all devices'"));
-  assert.ok(sheet.includes('disabled={stopping}') && sheet.includes('stopNotifications(scope)'));
+  const strings = JSON.parse(readFileSync(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings;
+  assert.ok(sheet.includes("'alerts.stopDevice'") && sheet.includes("'alerts.stopAll'"));
+  assert.equal(strings['alerts.stopDevice'].en, 'Stop notifications on this device');
+  assert.equal(strings['alerts.stopAll'].en, 'Stop on all devices');
+  assert.ok(sheet.includes('disabled={stopping}') && sheet.includes('stopNotificationsId(scope)'));
   assert.ok(!sheet.includes('disablePush'), 'the sheet no longer calls the old account-wide stop');
 });
