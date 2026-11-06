@@ -13,9 +13,11 @@
 import {computed, signal} from '@preact/signals';
 import {manifestState} from '../../dist/seafloor-data.js';
 import {landWater, placeFor} from '../land-water.ts';
+import type {StringId} from '../i18n.ts';
+import {cp, joinParts} from '../mark-copy.ts';
 import {region, setParams} from '../state.ts';
 import type {ChartMark} from './coastline.ts';
-import {regulationsLink, withheld, type Collection, type RegionData} from './habitat.ts';
+import {regulationsCopy, regulationsLink, withheld, type Collection, type RegionData} from './habitat.ts';
 import {RANKED_SOURCE} from './layers.ts';
 import {markData, markScreen} from './marks.ts';
 import type {Palette} from './palette.ts';
@@ -156,6 +158,7 @@ export function zoomToGroup(properties: Record<string, unknown> | null): boolean
   return !!at;
 }
 
+const RID = (key: string): StringId => `mark.layer.ranked.${key}` as StringId;
 const joined = (...parts: unknown[]): string => parts.filter(p => typeof p === 'string' && p.trim()).join(' · ');
 
 /** A ranked spot's card: v1's heading and line (rank, habitat fit, evidence confidence), its interpretation and note in the basis. */
@@ -170,6 +173,14 @@ export function rankedCard(t: RankedTarget, region: RegionData | null): ChartMar
     basis: [t.terrain_interpretation, t.special_note, t.evidence_status].filter(Boolean).join(' '),
     trip: t.id,
     position: {latitude: t.latitude, longitude: t.longitude},
+    // SC1352-08: display wording only; the name, rank, interpretation, note and evidence status stay as published.
+    copy: {
+      kind: [cp(RID('kind'))],
+      reading: joinParts([!!t.trip_fit && [cp(RID('fit'), {n: t.trip_fit})], typeof percent === 'number' && [cp(RID('confidence'), {percent})]], ' · ') .concat(t.trip_fit || typeof percent === 'number' ? [] : [cp(RID('unrated'))]),
+      source: joinParts([[cp(RID('publication'))], !!t.survey_year && [cp(RID('surveyed'), {year: t.survey_year})]], ' · '),
+      rules: [cp(RID('rules'))],
+      regulationsLabel: regulationsCopy(region ?? {id: ''}),
+    },
   };
 }
 

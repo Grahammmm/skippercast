@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- SC1352-08: the shore-run, ranked trip-spot and shoreline-segment cards read Spanish where they are shown: the status and every Blocked and Hold reason, the review clocks (in the region's zone), the guidance with its "fish presence is unverified" and check-current-rules statements, the ranked spot's habitat, evidence-confidence and rules lines, and the shoreline accuracy lines. Area, run, alert and source names stay as published; the status, priority, access pins and counters still decide on the English values, and English output is unchanged.
+
 - SC1352-06: the map's Chart / 2D / 3D toggle, its group labels, the terrain zoom, reset and top-view buttons, the waypoint prompt and refusal, the terrain-unavailable reasons and the private saved-spots row and cards read Spanish. The saved-spot card keeps its "not a recommendation" and "check current rules" statements and its protected-area wording, a person's own spot names stay as typed, and no card shows the private note in either language; the English text is unchanged.
 
 - SC1352-05: the map's buoy and tide-station cards, the Stations layer note and the nearshore model rings' card, basis and summary read Spanish. Heights use a decimal comma, times show a date and clock in the region's zone, and the fresh, stale and last-good states, the region-default and chosen tide-station labels, and the 90-minute, 48-hour and 3-hour model caveats are all kept; station and site names, ids, datum names and provider notes stay as published, and the English text and stale decisions are unchanged.

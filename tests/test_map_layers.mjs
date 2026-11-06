@@ -84,7 +84,9 @@ test('the coastline is a glow under a crisp line, coloured from the palette, and
 
 test('a shoreline click becomes a mark with its own source date and stated accuracy', () => {
   const props = {SOURCE_ID: 'CA13JA', SRC_DATE: '20101101', HOR_ACC: '3.14', ATTRIBUTE: 'Natural.Mean High Water', DATA_SOURC: 'Lidar', source_date: '2010-11-01', source_tile: '12/666/1610'};
-  assert.deepEqual(coastlineMark(props), {
+  const {copy, ...mark} = coastlineMark(props);
+  assert.ok(copy, 'the display wording rides beside the unchanged English fields (SC1352-08)');
+  assert.deepEqual(mark, {
     id: 'coastline:CA13JA', name: 'Shoreline', kind: 'Mean High Water · Natural', reading: 'Lidar · ±3.14 m stated',
     source: 'NOAA NGS CUSP · source date 2010-11-01', basis: 'NOAA NGS CUSP shoreline, 1994–2010 sources.',
   });
