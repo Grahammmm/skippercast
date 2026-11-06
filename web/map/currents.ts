@@ -35,7 +35,8 @@ import type {MapView} from './engine.ts';
 import {drawBase, drawDashes, fastSpeed, flowPaths, frameField, screenVector, type FlowPath} from './flow.ts';
 import {chosenCurrent, type CurrentField, type CurrentFrame} from './frames.ts';
 import {layerEntry} from './layers.ts';
-import {COAST_NOT_SAVED, NOT_SAVED, TILES_NOT_SAVED, watchOffline} from './offline.ts';
+import {COAST_NOT_SAVED, COAST_OFFLINE_COPY, NOT_SAVED, TILES_NOT_SAVED, TILES_OFFLINE_COPY, watchOffline} from './offline.ts';
+import {pair, sp, type StatusCopy} from './status-copy.ts';
 import type {Palette} from './palette.ts';
 import {shownPresentation, terrainHour, UNSUPPORTED_CURRENT} from './stage.ts';
 import {vectorReading, type SurfaceField} from './surface-field.js';
@@ -51,6 +52,8 @@ export interface CurrentsStatus {
   readonly reason: string;
   /** One sentence: product, resolution, age, and what the arrows mean (D13). */
   readonly basis: string;
+  /** SC1352-02/03: catalogue parts for `note` and `reason`; absent when off or when a producer attaches none. */
+  readonly copy?: StatusCopy;
 }
 
 /** The rail's source choices, with v1's labels (dist/coastal-current-control.js). */
@@ -61,6 +64,7 @@ export const CURRENT_SOURCES = [
 const MOTION = 'arrows follow the toward-bearing and their motion is illustrative';
 export const CURRENTS_BASIS = layerEntry('currents').basis;
 const OFF: CurrentsStatus = {drawn: null, note: '', reason: '', basis: CURRENTS_BASIS};
+const none = (note: string, reason: string, copy: StatusCopy): CurrentsStatus => ({...OFF, note, reason, copy});
 /**
  * The dashes move 20 times a second (fish's rate): a display's frames arrive a few ms early or
  * late, so a frame within 4 ms of the budget paints. Measured in headless Chromium (software
@@ -97,11 +101,11 @@ function lastFrame(fields: readonly unknown[], choice: string, at: Date): string
 export function currentsStatus(choice: CurrentChoice, status: CoastStatus, ocean: OceanData | null, at: Date, now: Date, tz: string, offline = false): CurrentsStatus {
   if (choice === 'off') return OFF;
   if (choice === UNSUPPORTED) return {...OFF, note: 'unsupported source', reason: UNSUPPORTED_CURRENT};
-  if (offline && status === 'error' && !ocean) return {...OFF, note: NOT_SAVED, reason: COAST_NOT_SAVED};
-  if (status === 'unbound') return {...OFF, note: 'no packet for this region', reason: 'Currents unavailable: no local surface-current packet covers this region yet.'};
-  if (status === 'error' || status === 'invalid') return {...OFF, note: 'unavailable', reason: 'Currents unavailable: the surface-current packet failed to load, and no other source is shown.'};
-  if (status === 'expired') return {...OFF, note: 'expired', reason: 'Currents unavailable: the surface-current packet passed its age limit, and no other source is shown.'};
-  if (!ocean) return {...OFF, note: 'loading', reason: 'Loading the surface-current packet.'};
+  if (offline && status === 'error' && !ocean) return none(NOT_SAVED, COAST_NOT_SAVED, COAST_OFFLINE_COPY);
+  if (status === 'unbound') return none('no packet for this region', 'Currents unavailable: no local surface-current packet covers this region yet.', pair(sp('map.status.currents.noPacketNote'), sp('map.status.currents.noPacket')));
+  if (status === 'error' || status === 'invalid') return none('unavailable', 'Currents unavailable: the surface-current packet failed to load, and no other source is shown.', pair(sp('map.status.common.unavailable'), sp('map.status.currents.packetFailed')));
+  if (status === 'expired') return none('expired', 'Currents unavailable: the surface-current packet passed its age limit, and no other source is shown.', pair(sp('map.status.common.expired'), sp('map.status.currents.packetExpired')));
+  if (!ocean) return none('loading', 'Loading the surface-current packet.', pair(sp('map.status.common.loading'), sp('map.status.currents.loadingPacket')));
   return fieldsStatus(choice, ocean.currents, at, now, tz);
 }
 
@@ -109,12 +113,15 @@ export function currentsStatus(choice: CurrentChoice, status: CoastStatus, ocean
 export function regionalCurrentsStatus(choice: CurrentChoice, feed: RegionalCurrents | null, at: Date, now: Date, tz: string, offline = false): CurrentsStatus {
   if (choice === 'off') return OFF;
   if (choice === UNSUPPORTED) return {...OFF, note: 'unsupported source', reason: UNSUPPORTED_CURRENT};
-  if (choice !== 'wcofs') return {...OFF, note: 'no radar for this region',
-    reason: `Currents unavailable: ${CURRENT_SOURCES.find(s => s.value === choice)?.label ?? choice} is published only where a local surface-current packet covers the region; the NOAA WCOFS forecast may be.`};
-  if (!feed) return {...OFF, note: 'loading', reason: 'Loading the region\'s surface-current forecast.'};
-  if (offline && feed.state === 'error' && feed.network) return {...OFF, note: NOT_SAVED, reason: TILES_NOT_SAVED};
-  if (feed.state === 'none') return {...OFF, note: 'no forecast for this region', reason: 'Currents unavailable: no surface-current forecast covers this region yet.'};
-  if (feed.state === 'error') return {...OFF, note: 'unavailable', reason: 'Currents unavailable: the region\'s surface-current forecast failed to load or failed its checks, and no other source is shown.'};
+  if (choice !== 'wcofs') {
+    const name = CURRENT_SOURCES.find(s => s.value === choice)?.label ?? choice;
+    return none('no radar for this region', `Currents unavailable: ${name} is published only where a local surface-current packet covers the region; the NOAA WCOFS forecast may be.`,
+      pair(sp('map.status.currents.noRadarNote'), sp('map.status.currents.noRadar', {name})));
+  }
+  if (!feed) return none('loading', 'Loading the region\'s surface-current forecast.', pair(sp('map.status.common.loading'), sp('map.status.currents.loadingForecast')));
+  if (offline && feed.state === 'error' && feed.network) return none(NOT_SAVED, TILES_NOT_SAVED, TILES_OFFLINE_COPY);
+  if (feed.state === 'none') return none('no forecast for this region', 'Currents unavailable: no surface-current forecast covers this region yet.', pair(sp('map.status.currents.noForecastNote'), sp('map.status.currents.noForecast')));
+  if (feed.state === 'error') return none('unavailable', 'Currents unavailable: the region\'s surface-current forecast failed to load or failed its checks, and no other source is shown.', pair(sp('map.status.common.unavailable'), sp('map.status.currents.forecastFailed')));
   // A listed forecast that was not loaded names its last frame, as a stale packet's does.
   return fieldsStatus(choice, feed.state === 'ready' ? [feed.field] : [{id: 'wcofs', frames: feed.validAt.map(validAt => ({validAt}))}], at, now, tz);
 }
@@ -123,14 +130,19 @@ export function regionalCurrentsStatus(choice: CurrentChoice, feed: RegionalCurr
 function fieldsStatus(choice: CurrentChoice, fields: readonly unknown[], at: Date, now: Date, tz: string): CurrentsStatus {
   const drawn = chosenCurrent(fields, choice, at, now), name = CURRENT_SOURCES.find(s => s.value === choice)?.label ?? choice;
   if (drawn) {
-    const time = frameTime(drawn.frame.validAt, tz), surface = frameField(drawn.field, drawn.frame);
-    if (!surface) return {...OFF, note: `grid cannot be drawn · ${time}`,
-      reason: `Currents unavailable: the ${name} frame valid ${time} is not a grid that can be drawn without bridging gaps (too sparse, too coarse, irregular or too large), and no other source is shown.`};
-    return {drawn: {...drawn, surface}, note: `${drawn.field.kind === 'forecast' ? 'forecast' : 'observed'} ${time}`, reason: '', basis: sourceBasis(drawn, now)};
+    const time = frameTime(drawn.frame.validAt, tz), surface = frameField(drawn.field, drawn.frame), when = {moment: drawn.frame.validAt, tz, form: 'hour'} as const;
+    if (!surface) return none(`grid cannot be drawn · ${time}`,
+      `Currents unavailable: the ${name} frame valid ${time} is not a grid that can be drawn without bridging gaps (too sparse, too coarse, irregular or too large), and no other source is shown.`,
+      pair(sp('map.status.currents.gridNote', {time: when}), sp('map.status.currents.noGrid', {name, time: when})));
+    const forecast = drawn.field.kind === 'forecast';
+    return {drawn: {...drawn, surface}, note: `${forecast ? 'forecast' : 'observed'} ${time}`, reason: '', basis: sourceBasis(drawn, now),
+      copy: {note: [sp(forecast ? 'map.status.currents.forecastAt' : 'map.status.currents.observedAt', {time: when})]}};
   }
-  const last = lastFrame(fields, choice, at);
-  return {...OFF, note: `no fresh frame${last ? ` · last ${frameTime(last, tz)}` : ''}`,
-    reason: `Currents unavailable: no fresh ${name} frame for this hour${last ? `; the last was valid ${frameTime(last, tz)}` : ''}.`};
+  const last = lastFrame(fields, choice, at), lastTime = last ? {moment: last, tz, form: 'hour'} as const : null;
+  return none(`no fresh frame${last ? ` · last ${frameTime(last, tz)}` : ''}`,
+    `Currents unavailable: no fresh ${name} frame for this hour${last ? `; the last was valid ${frameTime(last, tz)}` : ''}.`,
+    pair(lastTime ? sp('map.status.currents.noFreshLastNote', {time: lastTime}) : sp('map.status.currents.noFreshNote'),
+      lastTime ? sp('map.status.currents.noFreshLast', {name, time: lastTime}) : sp('map.status.currents.noFresh', {name})));
 }
 
 /** The mark card's reading at a clicked point inside the drawn field, or null outside it. */
