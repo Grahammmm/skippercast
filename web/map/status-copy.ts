@@ -15,8 +15,8 @@ export type StatusVar = string | number
   | {readonly age: number}
   | {readonly moment: string | number; readonly tz: string; readonly form: 'hour' | 'run' | 'dated'};
 export type StatusPart = string | {readonly id: StringId; readonly vars?: Readonly<Record<string, StatusVar>>};
-/** The pieces of a status, each as catalogue parts: `note` (rail), `reason` (legend), `stamp` (legend). */
-export type StatusCopy = Partial<Readonly<Record<'note' | 'reason' | 'stamp', readonly StatusPart[]>>>;
+/** The pieces of a status, each as catalogue parts: `note` (rail), `reason` (legend), `stamp` (legend), `basis` (the legend's basis popover; SC1352-07). */
+export type StatusCopy = Partial<Readonly<Record<'note' | 'reason' | 'stamp' | 'basis', readonly StatusPart[]>>>;
 
 /** A catalogue part for a status descriptor. */
 export const sp = (id: StringId, vars?: Readonly<Record<string, StatusVar>>): StatusPart => vars ? {id, vars} : {id};

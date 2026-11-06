@@ -293,7 +293,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1352-04: the Protected areas row shows its state in the page's language (copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. Rebind only this source.
   // SC1352-05: the Stations note and nearshore-ring words show in the page's language (copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. Rebind only this source.
   // SC1352-06: MapStage shows its labels and reasons in the page’s language and the legend’s saved-spots note does too (copy only); BODY09 never mounts MapStage. check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. Rebind only MapStage.tsx and this source.
-  "scripts/check_contrast.mjs": "9c4286d74d59d7ab25337f4854fd5c2792ffd704e8f91d941b935c24690512b8",
+  // SC1352-07: the evidence layers' status lines and the fronts basis show in the page's language (copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash, line citations and a comment. Rebind only this source.
+  "scripts/check_contrast.mjs": "8e3f16f1d0b4c754908de296b002e9381b013d8ed33e9f76a720115e620d3e62",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still

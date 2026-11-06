@@ -49,7 +49,7 @@ import {EnglishDetail} from './EnglishDetail.tsx';
 import {targetLabel} from '../species.ts';
 import {PlanLink} from './PlanView.tsx';
 import {chartFailed, chartMark, retryMpas, unavailable} from '../map/chart.ts';
-import {NOTES, groundsState} from '../map/charter-grounds.ts';
+import {NOTES, NOTE_COPY, groundsState} from '../map/charter-grounds.ts';
 import {cloudHeld, cloudStamp} from '../map/clouds.ts';
 import {statusText, type StatusPart} from '../map/status-copy.ts';
 import {AIS_CREDIT, aisOn, aisState} from '../map/commercial-ais.ts';
@@ -86,8 +86,10 @@ function Status({lang, raw, parts}: {lang: Language; raw: string; parts?: readon
   return r.translated ? <>{r.text}</> : <EnglishDetail lang={lang}>{raw}</EnglishDetail>;
 }
 
-function Basis({lang, id, runtime, extra, extraEs}: {lang: Language; id: string; runtime: string; extra?: string; extraEs?: string}) {
+function Basis({lang, id, runtime, extra, extraEs, copy}: {lang: Language; id: string; runtime: string; extra?: string; extraEs?: string; copy?: readonly StatusPart[]}) {
   if (lang !== 'es') return <>{runtime}{extra ? <> {extra}</> : null}</>;
+  const full = statusText(runtime, copy, lang);
+  if (full.translated) return <p>{full.text}</p>;
   const same = runtime === layerCopy(id, 'en').basis;
   return <>
     <p>{layerCopy(id, lang).basis}</p>
@@ -228,10 +230,10 @@ function FrontsRow() {
   return (
     <li class="app-legend-sst-fronts">
       {layerCopy('sst-fronts', lang).label}
-      <Popover iconOnly summary={t('legend.bs.fronts', lang)}><Basis lang={lang} id="sst-fronts" runtime={s.basis} /></Popover>
+      <Popover iconOnly summary={t('legend.bs.fronts', lang)}><Basis lang={lang} id="sst-fronts" runtime={s.basis} copy={s.copy?.basis} /></Popover>
       {d ? <p class="app-legend-note" data-band="sst-fronts">{t('legend.band', lang)}</p> : null}
-      {d ? <p class="app-legend-note ui-mono" data-stamp="sst-fronts"><EnglishDetail lang={lang}>{`${d.product} · ${s.note}`}</EnglishDetail></p> : null}
-      {s.reason ? <p class="app-legend-note" data-reason="sst-fronts"><EnglishDetail lang={lang}>{s.reason}</EnglishDetail></p> : null}
+      {d ? <p class="app-legend-note ui-mono" data-stamp="sst-fronts"><Status lang={lang} raw={`${d.product} · ${s.note}`} parts={s.copy?.stamp} /></p> : null}
+      {s.reason ? <p class="app-legend-note" data-reason="sst-fronts"><Status lang={lang} raw={s.reason} parts={s.copy?.reason} /></p> : null}
     </li>
   );
 }
@@ -308,12 +310,12 @@ function FleetRow() {
       {g.drawn ? <span class="app-swatch" data-layer="charter-grounds" aria-hidden="true"></span> : null}{layerCopy('charter-grounds', lang).label}
       <Popover iconOnly summary={t('legend.bs.charter', lang)}>{layerCopy('charter-grounds', lang).basis}{audit ? ` ${t('legend.fleet.checked', lang, {date: audit})}` : ''}</Popover>
       {g.drawn ? <p class="app-legend-note ui-mono" data-stamp="charter-grounds">{t(g.drawn === 1 ? 'legend.fleet.one' : 'legend.fleet.many', lang, {n: g.drawn})}</p> : null}
-      {g.note || !g.drawn ? <p class="app-legend-note" data-reason="charter-grounds"><EnglishDetail lang={lang}>{g.note || NOTES.loading}</EnglishDetail></p> : null}
+      {g.note || !g.drawn ? <p class="app-legend-note" data-reason="charter-grounds"><Status lang={lang} raw={g.note || NOTES.loading} parts={g.note ? g.copy?.note : NOTE_COPY.loading} /></p> : null}
       {coarseNote('charter-grounds', lang)}
       {ais ? <>
         <p class="app-legend-note app-legend-sub">{a.drawn && chart ? <span class="app-swatch" data-layer="commercial-ais" aria-hidden="true"></span> : null}{layerCopy('commercial-ais', lang).label}
           <Popover iconOnly summary={t('legend.bs.ais', lang)}>{layerCopy('commercial-ais', lang).basis} <EnglishDetail lang={lang}>{AIS_CREDIT}</EnglishDetail></Popover></p>
-        {!chart ? <p class="app-legend-note" data-reason="commercial-ais">{chartOnly(lang)}</p> : a.note ? <p class="app-legend-note" data-reason="commercial-ais"><EnglishDetail lang={lang}>{a.note}</EnglishDetail></p> : null}
+        {!chart ? <p class="app-legend-note" data-reason="commercial-ais">{chartOnly(lang)}</p> : a.note ? <p class="app-legend-note" data-reason="commercial-ais"><Status lang={lang} raw={a.note} parts={a.copy?.note} /></p> : null}
       </> : null}
       {activityAccess.value ? ACTIVITY.filter(name => activityOn.value.includes(name)).map(name => {
         const entry = layerCopy(ACTIVITY_ENTRY[name], lang);

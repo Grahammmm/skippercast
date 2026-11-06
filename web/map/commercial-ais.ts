@@ -14,6 +14,8 @@
 import {computed, effect, signal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {layers, region} from '../state.ts';
+import type {StringId} from '../i18n.ts';
+import {cp} from '../mark-copy.ts';
 import {AIS_HEAT, AIS_LINE, aisBefore, assetLoader, screened, type Collection, type FleetLayerOptions} from './charter-grounds.ts';
 import type {ChartMark} from './coastline.ts';
 import type {Engine, Overlay} from './engine.ts';
@@ -21,8 +23,11 @@ import type {MarkScreen} from './habitat.ts';
 import {layerEntry} from './layers.ts';
 import {markData, markScreen} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
+import {sp, type StatusCopy, type StatusPart} from './status-copy.ts';
 
 const REGISTRY_ID = 'commercial-ais';
+/** SC1352-07: a catalogue id for this module's card and status words (mark.layer.ais.<key>). */
+const aid = (key: string): StringId => `mark.layer.ais.${key}` as StringId;
 export const AIS_SOURCE = 'commercial-ais';
 export {AIS_HEAT, AIS_LINE};
 /** The heat's opacity from no apparent fishing to the most in the drawn cells. */
@@ -34,6 +39,10 @@ export const AIS_NOTES = {
   failed: 'Historical commercial AIS unavailable.',
   loading: 'Loading commercial AIS.',
 } as const;
+/** The catalogue parts of each AIS_NOTES line and of the cell summary (display only; the English strings stay what the state holds). */
+export const AIS_NOTE_COPY: Readonly<Record<keyof typeof AIS_NOTES, readonly StatusPart[]>> = {
+  none: [sp(aid('status.none'))], failed: [sp(aid('status.failed'))], loading: [sp(aid('status.loading'))],
+};
 /** The source credit, verbatim from dist/commercial-ais.html. */
 export const AIS_CREDIT = '© Global Fishing Watch. 2025. Global AIS-based Apparent Fishing Effort Dataset v3.0. SkipperCast extracted the region, applied a repeat-day filter and excluded MPAs.';
 /** v1's status line for the drawn cells. */
@@ -71,21 +80,30 @@ export function aisOverlay(p: Palette, data: Collection): Overlay {
 }
 
 const hours = (n: number): string => n.toLocaleString('en-US', {maximumFractionDigits: 1});
+const esHours = (n: number): string => n.toLocaleString('es', {maximumFractionDigits: 1});
 
 /** The mark card for a cell: v1's card lines (dist/commercial-ais.js `select`). */
 export function aisMark(p: AisProps): ChartMark {
+  const days = p.days_with_apparent_fishing === 1 ? cp(aid('daysOne')) : cp(aid('days'), {n: p.days_with_apparent_fishing});
   return {
     id: `ais:${p.id}`, name: p.label, kind: 'Commercial AIS · historical 2024',
     reading: `${p.days_with_apparent_fishing} days with activity · ${hours(p.apparent_fishing_hours)} hr apparent fishing time. Apparent fishing activity, not a verified catch spot.`,
     source: `${p.attribution} Activity dates (UTC): ${p.active_dates_utc.join(', ')}`,
     basis: `${layerEntry(REGISTRY_ID).basis} Depth and target species unknown. This offshore context is not qualified for the 200-foot fishing limit. ${p.resolution_note} `
       + `Gear classification: ${p.gear_label}. ${p.fishing_location_confidence}. Local sportfishing-charter identity remains unverified. ${p.vessel_count_note}`,
+    // SC1352-07: Spanish wording, resolved by the card; the label, attribution, dates, gear, confidence and notes stay as published.
+    copy: {
+      kind: [cp(aid('kind'))],
+      reading: [cp(aid('reading'), {days, hours: esHours(p.apparent_fishing_hours)})],
+      source: [cp(aid('source'), {attribution: p.attribution, dates: p.active_dates_utc.join(', ')})],
+      basis: [cp(aid('basis'), {basis: cp('layer.commercial-ais.basis'), resolution: p.resolution_note, gear: p.gear_label, confidence: p.fishing_location_confidence, count: p.vessel_count_note})],
+    },
   };
 }
 
 /** The Fleet entry's option (v1's "Show commercial AIS areas"): off by default. */
 export const aisOn = signal(false);
-export interface AisState {readonly offered: boolean; readonly drawn: number; readonly note: string}
+export interface AisState {readonly offered: boolean; readonly drawn: number; readonly note: string; readonly copy?: StatusCopy}
 export const aisState = signal<AisState>({offered: false, drawn: 0, note: ''});
 
 /** Draws the cells while the Fleet entry and its option are on; created with the Chart (web/map/chart.ts `layers`). */
@@ -104,9 +122,12 @@ export function createCommercialAis({engine, fetchFn = (...a) => fetch(...a), pa
     }),
     effect(() => {
       const p = path.value, l = loaded.value, list = cells.value, ready = !!l && l.path === p;
-      const note = !on.value ? '' : p === null || !ready && !!p ? AIS_NOTES.loading : !p ? AIS_NOTES.none : !l!.data ? AIS_NOTES.failed
-        : markScreen.value.status !== 'ready' ? markScreen.value.note : aisSummary(list.length);
-      aisState.value = {offered: !!p, drawn: on.value ? list.length : 0, note};
+      const key: keyof typeof AIS_NOTES | 'screen' | 'summary' | '' = !on.value ? '' : p === null || !ready && !!p ? 'loading' : !p ? 'none' : !l!.data ? 'failed'
+        : markScreen.value.status !== 'ready' ? 'screen' : 'summary';
+      const note = key === '' ? '' : key === 'screen' ? markScreen.value.note : key === 'summary' ? aisSummary(list.length) : AIS_NOTES[key];
+      const copy: readonly StatusPart[] | undefined = key === '' ? undefined : key === 'screen' ? markScreen.value.noteCopy as readonly StatusPart[] | undefined
+        : key === 'summary' ? [sp(aid('status.summary'), {n: list.length})] : AIS_NOTE_COPY[key];
+      aisState.value = {offered: !!p, drawn: on.value ? list.length : 0, note, ...(copy ? {copy: {note: copy}} : {})};
     }),
     effect(() => {
       const e = engine.value, list = on.value ? cells.value : [];

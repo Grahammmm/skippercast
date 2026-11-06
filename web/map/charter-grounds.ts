@@ -20,6 +20,8 @@ import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import {closureHits, pointGeometry} from '../../dist/geo-screen.js';
 import {matchesTargetSpecies} from '../../dist/target-groups.js';
+import type {StringId} from '../i18n.ts';
+import {cp} from '../mark-copy.ts';
 import {PROFILE_TABLE, withinDepth, type Profile} from '../profile.ts';
 import {layers, profile, region, species} from '../state.ts';
 import type {ChartMark} from './coastline.ts';
@@ -29,6 +31,7 @@ import type {MarkScreen} from './habitat.ts';
 import {layerEntry, overlayFeatures, setRailNote, setTerrainLayer} from './layers.ts';
 import {MARK_PICK, chartPick, markData, markScreen} from './marks.ts';
 import {readPalette, type Palette} from './palette.ts';
+import {sp, type StatusCopy, type StatusPart} from './status-copy.ts';
 import {LABEL_FONT} from './style.ts';
 
 const REGISTRY_ID = 'charter-grounds';
@@ -63,6 +66,13 @@ export const NOTES = {
   loading: 'Loading charter grounds.',
   filtered: 'Charter grounds · filtered',
 } as const;
+/** SC1352-07: a catalogue id for this module's card and status words (mark.layer.grounds.<key>). */
+const gid = (key: string): StringId => `mark.layer.grounds.${key}` as StringId;
+/** The catalogue parts of each NOTES line (display only; the English strings above stay what the state holds). */
+export const NOTE_COPY: Readonly<Record<keyof typeof NOTES, readonly StatusPart[]>> = {
+  none: [sp(gid('status.none'))], failed: [sp(gid('status.failed'))], species: [sp(gid('status.species'))],
+  loading: [sp(gid('status.loading'))], filtered: [sp(gid('status.filtered'))],
+};
 
 type Json = Record<string, unknown>;
 export interface Ground {
@@ -139,22 +149,35 @@ export function groundsOverlay(p: Palette, data: {outlines: Collection; hatch: C
 }
 
 const date = (s: string): string => new Date(`${s}T12:00:00Z`).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'});
+/** The same date-only (UTC) form in Spanish; the English text when the date is not one, so no date is invented. */
+const esDate = (s: string): string => {
+  const at = new Date(`${s}T12:00:00Z`);
+  return Number.isNaN(+at) ? date(s) : new Intl.DateTimeFormat('es', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'}).format(at);
+};
 
 /**
  * The mark card for a ground: v1's card lines (dist/charter-grounds.js `select`), without boat names or report links.
  * The depths are the survey raster's nominal values: the published file says its datum is unverified, so no datum is named here.
  */
 export function groundMark(g: Ground, evidence: Evidence): ChartMark {
+  const trips = g.report_count === 1 ? cp(gid('tripsOne')) : cp(gid('trips'), {n: g.report_count}), boats = g.boats.length === 1 ? cp(gid('boat.one')) : cp(gid('boat.many'), {n: g.boats.length});
   return {
     id: `charter:${g.id}`, name: g.label, kind: `Charter-reported ground · ${g.precision}`,
     reading: `${g.report_count} reported trips · ${g.boats.length} boat${g.boats.length === 1 ? '' : 's'} · latest report ${date(g.latest_report)}. Outline survey depths ${g.depth_ft.join('–')} ft (nominal, ${g.survey_year} survey)`,
     source: `Published trip reports · research checked ${date(evidence.audit_date)}`,
     basis: `${layerEntry(REGISTRY_ID).basis} Reported area, exact stops unknown. Captains named “${g.reported_ground}”; they did not publish GPS positions or fishing depths. `
       + `Location precision: ${g.location_confidence}. Report counts are not catch rates or a popularity ranking. ${g.boundary_note}`,
+    // SC1352-07: Spanish wording, resolved by the card; the published label, precision, confidence, ground and boundary note stay as published.
+    copy: {
+      kind: [cp(gid('kind'), {precision: g.precision})],
+      reading: [cp(gid('reading'), {trips, boats, date: esDate(g.latest_report), range: g.depth_ft.join('–'), year: g.survey_year})],
+      source: [cp(gid('source'), {date: esDate(evidence.audit_date)})],
+      basis: [cp(gid('basis'), {basis: cp('layer.charter-grounds.basis'), ground: g.reported_ground, confidence: g.location_confidence, note: g.boundary_note})],
+    },
   };
 }
 
-export interface GroundsState {readonly drawn: number; readonly note: string; readonly audit: string | null}
+export interface GroundsState {readonly drawn: number; readonly note: string; readonly audit: string | null; readonly copy?: StatusCopy}
 /** What the Fleet entry's legend row shows for the grounds. */
 export const groundsState = signal<GroundsState>({drawn: 0, note: '', audit: null});
 
@@ -194,11 +217,15 @@ export function createCharterGrounds({engine, fetchFn = (...a) => fetch(...a), p
     }),
     effect(() => {
       const p = path.value, e = evidence.value, list = shown.value, ready = !!e && e.path === p;
-      const note = !on.value ? '' : p === null ? NOTES.loading : !p ? NOTES.none : !ready ? NOTES.loading : !e.data ? NOTES.failed
-        : !['lingcod', 'rockfish'].some(s => matchesTargetSpecies(s, target.value)) ? NOTES.species
-        : markScreen.value.status !== 'ready' ? markScreen.value.note : list.length ? '' : NOTES.filtered;
-      groundsState.value = {drawn: on.value ? list.length : 0, note, audit: ready && e.data ? e.data.audit_date : null};
-      setRailNote('fleet', on.value && list.length ? `${list.length} charter ground${list.length === 1 ? '' : 's'}` : note);
+      const supported = ['lingcod', 'rockfish'].some(s => matchesTargetSpecies(s, target.value)), screen = markScreen.value;
+      const key: keyof typeof NOTES | 'screen' | '' = !on.value ? '' : p === null ? 'loading' : !p ? 'none' : !ready ? 'loading' : !e.data ? 'failed'
+        : !supported ? 'species' : screen.status !== 'ready' ? 'screen' : list.length ? '' : 'filtered';
+      const note = key === '' ? '' : key === 'screen' ? screen.note : NOTES[key];
+      // SC1352-07: the same line as catalogue parts (a borrowed screen note keeps the screen's own parts, or none).
+      const noteCopy = key === '' ? undefined : key === 'screen' ? screen.noteCopy as readonly StatusPart[] | undefined : NOTE_COPY[key];
+      const count = list.length === 1 ? sp(gid('status.count.one'), {n: 1}) : sp(gid('status.count.many'), {n: list.length});
+      groundsState.value = {drawn: on.value ? list.length : 0, note, audit: ready && e.data ? e.data.audit_date : null, ...(noteCopy ? {copy: {note: noteCopy}} : {})};
+      setRailNote('fleet', on.value && list.length ? `${list.length} charter ground${list.length === 1 ? '' : 's'}` : note, on.value && list.length ? [count] : noteCopy);
     }),
     effect(() => {
       const e = engine.value, list = on.value ? shown.value : [];

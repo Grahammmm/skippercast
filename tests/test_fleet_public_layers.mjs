@@ -102,7 +102,7 @@ test('Accept 1: both layers render from the committed files, offline, in the --f
   await flush(); await flush();
   assert.deepEqual(asked, ['data/charter-grounds.json', 'data/commercial-ais-effort.geojson']);
   assert.deepEqual(calls.slice(-2), [['overlay', 'commercial-ais', [AIS_HEAT, AIS_LINE], [...ACTIVITY_LAYERS, MARK_PICK]], ['data', AIS_SOURCE, 3]]);
-  assert.deepEqual(aisState.value, {offered: true, drawn: 3, note: aisSummary(3)});
+  assert.deepEqual(aisState.value, {offered: true, drawn: 3, note: aisSummary(3), copy: {note: [{id: 'mark.layer.ais.status.summary', vars: {n: 3}}]}});
   assert.equal(aisSummary(3), '3 historical grid cells · Jul & Sep 2024 · depth unknown');
   // The cards.
   const card = grounds.pick.mark(GROUNDS_FILL, {id: 'CHARTER-PECHO'});

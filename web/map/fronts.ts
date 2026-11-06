@@ -15,6 +15,8 @@ import {computed, effect, signal, type ReadonlySignal} from '@preact/signals';
 import type * as MapLibre from 'maplibre-gl';
 import type {CoastReportContext} from '../../packages/coast/src/state/report-binding.ts';
 import {layers} from '../state.ts';
+import type {StringId} from '../i18n.ts';
+import {cp, esFixed} from '../mark-copy.ts';
 import {chartMark} from './chart.ts';
 import type {ChartMark} from './coastline.ts';
 import {DEPTH_BOTTOM} from './depth-contours.ts';
@@ -23,9 +25,12 @@ import {FRONTS_SOURCE, layerEntry, setRailNote} from './layers.ts';
 import {MPA_FILL} from './mpa.ts';
 import {readPalette, type Palette} from './palette.ts';
 import {shownPresentation} from './stage.ts';
+import {sp, type StatusCopy} from './status-copy.ts';
 import {SWELL_LAYER} from './swell.ts';
 
 const REGISTRY_ID = 'sst-fronts' as const;
+/** SC1352-07: a catalogue id for this module's card and status words (mark.layer.fronts.<key>). */
+const fid = (key: string): StringId => `mark.layer.fronts.${key}` as StringId;
 export const FRONTS_LAYER = 'sst-fronts';
 export const FRONTS_BAND_LAYER = 'sst-fronts-band';
 const HOUR = 3_600_000;
@@ -40,7 +45,7 @@ export interface Front {readonly id: string; readonly observedAt: string; readon
 export interface FrontsDoc {readonly product: string; readonly credit: string; readonly maxAgeMs: number; readonly observedAt: string | null; readonly fronts: readonly Front[]}
 export type FrontsFeed = {readonly state: 'none'} | {readonly state: 'error'} | {readonly state: 'ready'; readonly doc: FrontsDoc};
 export interface DrawnFronts {readonly key: string; readonly product: string; readonly credit: string; readonly observedAt: string; readonly limitMs: number; readonly fronts: readonly Front[]}
-export interface FrontsStatus {readonly drawn: DrawnFronts | null; readonly note: string; readonly reason: string; readonly basis: string}
+export interface FrontsStatus {readonly drawn: DrawnFronts | null; readonly note: string; readonly reason: string; readonly basis: string; readonly copy?: StatusCopy}
 
 const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const text = (v: unknown): v is string => typeof v === 'string' && v.trim() !== '';
@@ -89,6 +94,12 @@ export function ageWords(ms: number): string {
   return minutes < 1 ? 'less than a minute ago' : minutes < 60 ? `${plural(minutes, 'minute')} ago` : hours < 48 ? `${plural(hours, 'hour')} ago` : `${plural(Math.floor(hours / 24), 'day')} ago`;
 }
 const ageOf = (iso: string, now: Date): number => now.getTime() - Date.parse(iso);
+/** SC1352-07: `ageWords` as a catalogue part, from the same minute, hour and day buckets (less than a minute, then 48 hours before days). */
+function ageVar(ms: number): {id: StringId; vars: {n: number}} {
+  const minutes = Math.floor(Math.max(0, ms) / 60_000), hours = Math.floor(minutes / 60);
+  const one = (unit: string, n: number) => ({id: fid(`age.${unit}${n === 1 ? '' : 's'}`), vars: {n}});
+  return minutes < 1 ? {id: fid('age.lessMinute'), vars: {n: 0}} : minutes < 60 ? one('minute', minutes) : hours < 48 ? one('hour', hours) : one('day', Math.floor(hours / 24));
+}
 const fresh = (iso: string, now: Date, limit: number): boolean => { const d = ageOf(iso, now); return Number.isFinite(d) && d >= -AHEAD_MS && d <= limit; };
 export const ageLimit = (fileMs: number): number => Math.min(fileMs, MAX_AGE_MS);
 
@@ -96,23 +107,35 @@ export function frontsBasis(d: DrawnFronts, now: Date): string {
   return `Offshore temperature fronts found in the ${d.product} daily analysis, observed ${ageWords(ageOf(d.observedAt, now))}, drawn as an edge with a band: the position is uncertain by the analysis's own stated error divided by the front's strength, either side of the line. `
     + `Withheld past its ${Math.round(d.limitMs / HOUR)}-hour age limit. Surface water only; a front is an edge to search along, not a fish or catch location.${d.credit ? ` Credit: ${d.credit}.` : ''}`;
 }
-const none = (reason: string, note = NONE): FrontsStatus => ({drawn: null, note, reason, basis: FRONTS_BASIS});
+/** The variables of the basis sentence, for the card and the legend's popover alike (a Spanish card or legend resolves them at render). */
+function basisVars(d: DrawnFronts, now: Date) {
+  return {product: d.product, age: ageVar(ageOf(d.observedAt, now)), hours: Math.round(d.limitMs / HOUR), credit: d.credit ? {id: fid('credit'), vars: {credit: d.credit}} : ''};
+}
+const none = (reason: string, note = NONE, copy?: StatusCopy): FrontsStatus => ({drawn: null, note, reason, basis: FRONTS_BASIS, ...(copy ? {copy} : {})});
 const OFF: FrontsStatus = {drawn: null, note: '', reason: '', basis: FRONTS_BASIS};
 
 /** What Temp fronts shows from the region's file (`null` while it loads). Each front is judged by its own observation time. */
 export function frontsStatus(on: boolean, feed: FrontsFeed | null, now: Date): FrontsStatus {
   if (!on) return OFF;
-  if (!feed) return none('Loading the region\'s offshore temperature fronts.', 'loading');
-  if (feed.state === 'none') return none('No current front data: no offshore temperature fronts are published for this region yet.');
-  if (feed.state === 'error') return none('No current front data: the region\'s fronts file could not be read or failed its checks.');
+  const say = (reason: string, id: string): FrontsStatus => none(reason, NONE, {note: [sp(fid('status.noneNote'))], reason: [sp(fid(id))]});
+  if (!feed) return none('Loading the region\'s offshore temperature fronts.', 'loading', {note: [sp(fid('status.loadingNote'))], reason: [sp(fid('status.loading'))]});
+  if (feed.state === 'none') return say('No current front data: no offshore temperature fronts are published for this region yet.', 'status.none');
+  if (feed.state === 'error') return say('No current front data: the region\'s fronts file could not be read or failed its checks.', 'status.error');
   const {doc} = feed, limit = ageLimit(doc.maxAgeMs), current = doc.fronts.filter(f => fresh(f.observedAt, now, limit));
   const limitText = `${Math.round(limit / HOUR)}-hour`;
   if (doc.fronts.length > current.length || (!doc.fronts.length && (!doc.observedAt || !fresh(doc.observedAt, now, limit))))
-    return none(`No current front data: the latest fronts are past their ${limitText} age limit or carry no usable observation time.`);
-  if (!current.length) return none(`No front found in the analysis observed ${ageWords(ageOf(doc.observedAt ?? '', now))}.`, `no front · observed ${ageWords(ageOf(doc.observedAt ?? '', now))}`);
+    return none(`No current front data: the latest fronts are past their ${limitText} age limit or carry no usable observation time.`, NONE,
+      {note: [sp(fid('status.noneNote'))], reason: [sp(fid('status.stale'), {hours: Math.round(limit / HOUR)})]});
+  if (!current.length) {
+    const age = ageVar(ageOf(doc.observedAt ?? '', now));
+    return none(`No front found in the analysis observed ${ageWords(ageOf(doc.observedAt ?? '', now))}.`, `no front · observed ${ageWords(ageOf(doc.observedAt ?? '', now))}`,
+      {note: [sp(fid('status.noFrontNote'), {age})], reason: [sp(fid('status.noFront'), {age})]});
+  }
   const observedAt = current.map(f => f.observedAt).sort().at(-1) ?? '';
   const drawn: DrawnFronts = {key: `${doc.product}|${observedAt}|${current.map(f => f.id).join(',')}`, product: doc.product, credit: doc.credit, observedAt, limitMs: limit, fronts: current};
-  return {drawn, note: `${plural(current.length, 'front')} · observed ${ageWords(ageOf(observedAt, now))}`, reason: '', basis: frontsBasis(drawn, now)};
+  const noteCopy = sp(fid(current.length === 1 ? 'status.drawn.one' : 'status.drawn.many'), {n: current.length, age: ageVar(ageOf(observedAt, now))});
+  return {drawn, note: `${plural(current.length, 'front')} · observed ${ageWords(ageOf(observedAt, now))}`, reason: '', basis: frontsBasis(drawn, now),
+    copy: {note: [noteCopy], stamp: [`${doc.product} · `, noteCopy], basis: [sp(fid('basis'), basisVars(drawn, now))]}};
 }
 
 export type FrontFeature = {type: 'Feature'; properties: {id: string; px0: number}; geometry: {type: 'MultiLineString'; coordinates: number[][][]}};
@@ -150,7 +173,13 @@ export function frontsMark(d: DrawnFronts, at: {lon: number; lat: number}, now: 
   const age = ageWords(ageOf(hit.observedAt, now));
   return {id: `sst-fronts:${d.key}:${hit.id}`, name: 'Temperature front', kind: `Observed ${age}`,
     reading: `${hit.strengthCPerKm.toFixed(2)} °C per km, position uncertain by about ±${hit.bandHalfWidthKm.toFixed(1)} km (analysis error ${hit.uncertaintyC.toFixed(2)} °C)`,
-    source: `${d.product} · observed ${age}`, basis: frontsBasis(d, now)};
+    source: `${d.product} · observed ${age}`, basis: frontsBasis(d, now),
+    // SC1352-07: Spanish wording, resolved by the card; the product and credit stay as published.
+    copy: {
+      name: [cp(fid('name'))], kind: [cp(fid('kind'), {age: ageVar(ageOf(hit.observedAt, now))})],
+      reading: [cp(fid('reading'), {strength: esFixed(hit.strengthCPerKm, 2), band: esFixed(hit.bandHalfWidthKm, 1), error: esFixed(hit.uncertaintyC, 2)})],
+      source: [cp(fid('source'), {product: d.product, age: ageVar(ageOf(hit.observedAt, now))})], basis: [cp(fid('basis'), basisVars(d, now))],
+    }};
 }
 
 /** What the rail and legend show for Temp fronts. */
@@ -184,7 +213,7 @@ export function createFronts(o: FrontsOptions): {reading(at: {lon: number; lat: 
       feedRegion = id; feedAt = t;
       regionalFronts(id, {fetchFn, page: page(), signal: abort.signal}).then(result => { if (!abort.signal.aborted) feed.value = {region: id, result}; }, () => { /* aborted by a newer read */ });
     }),
-    effect(() => { const s = status.value; frontsState.value = s; setRailNote(REGISTRY_ID, on.value ? s.note : ''); }),
+    effect(() => { const s = status.value; frontsState.value = s; setRailNote(REGISTRY_ID, on.value ? s.note : '', on.value ? s.copy?.note : undefined); }),
     // New fronts redraw; none (off, stale, nothing found) removes the lines at once.
     effect(() => {
       const e = engine.value, d = status.value.drawn, k = d?.key ?? '';
