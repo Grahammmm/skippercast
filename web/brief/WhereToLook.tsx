@@ -41,6 +41,7 @@ import {planFor, noPlanText} from '../search-plan.ts';
 import {regionInfo} from '../app/region-info.ts';
 import {NO_REASONS, reasonsFor, targetEvidence} from '../area-reasons.ts';
 import {language, t, type Language, type StringId} from '../i18n.ts';
+import {pickDistance, pickFit, pickName, pickReason, rankingAbout, rankingBasis, rankingEmpty, rankingLabel, reasonText} from './ranking-copy.ts';
 
 export type {Pick, Ranking};
 
@@ -234,11 +235,12 @@ function Why({pick}: {pick: Pick}) {
   const data = markData.value, pub = reefPublication.value;
   const found = pick.kind === 'spot' ? data?.atlas?.targets.find(t => t.id === pick.id) : pick.kind === 'reef' && pub.state === 'ready' ? pub.loaded.targets.find(t => t.id === pick.id) : undefined;
   const reasons = found ? reasonsFor(pick.id, targetEvidence(found, pick.kind === 'spot' ? data?.atlas : null, data?.region.source_names), Date.now()) : [];
-  if (!reasons.length) return <p class="app-empty app-pick-why" data-why="none">{NO_REASONS}</p>;
+  const lang = language.value;
+  if (!reasons.length) return <p class="app-empty app-pick-why" data-why="none">{lang === 'es' ? t('ranking.noReasons', lang) : NO_REASONS}</p>;
   return (
-    <ul class="app-pick-why" data-why="reasons" aria-label={t('where.why', language.value)}>
+    <ul class="app-pick-why" data-why="reasons" aria-label={t('where.why', lang)}>
       {reasons.map((x, i) => (
-        <li key={i}><span class="ui-mono">{x.date}</span> {x.text} · {x.sourceURL ? <a href={x.sourceURL} target="_blank" rel="noopener noreferrer">{x.source}</a> : x.source}</li>
+        <li key={i}><span class="ui-mono">{x.date}</span> {reasonText(x, lang)} · {x.sourceURL ? <a href={x.sourceURL} target="_blank" rel="noopener noreferrer">{x.source}</a> : x.source}</li>
       ))}
     </ul>
   );
@@ -283,8 +285,8 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
     <section class="app-where" data-source={r.source ?? undefined}>
       <div class="app-where-head">
         <h2 class="ui-eyebrow">{t('where.title', lang)}</h2>
-        {r.source ? <span class="app-where-source ui-mono">{r.label}</span> : null}
-        {r.source ? <Popover iconOnly summary={t('where.about', lang, {label: r.label.toLowerCase()})} align="end">{r.basis}</Popover> : null}
+        {r.source ? <span class="app-where-source ui-mono">{rankingLabel(r, lang)}</span> : null}
+        {r.source ? <Popover iconOnly summary={rankingAbout(r, lang)} align="end">{rankingBasis(r, lang)}</Popover> : null}
       </div>
       {picks.length ? (
         <ol class="app-picks">
@@ -292,16 +294,16 @@ export function WhereToLook({ranking: given}: {ranking?: Ranking} = {}) {
             <li key={pick.id} data-mark={pick.id}>
               <button type="button" class="app-pick" aria-pressed={selected(pick)} onClick={() => choosePick(pick)}>
                 <span class="app-pick-rank ui-mono">{i + 1}</span>
-                <span>{pick.name} <span class="ui-mono">{water ? distanceLabel(pick, lang) : pick.distance} · {pick.depth}{boat ? pickRun(pick.nm, speed, pick.basis, lang) : ''}</span>{kayak && routeWhyText(pick, lang) ? <span class="app-pick-route-why" data-route-why={pick.why ?? 'not-computed'}> · {routeWhyText(pick, lang)}</span> : null}</span>
-                <span class="app-fit ui-eyebrow">{pick.fit}</span>
-                <span class="app-pick-reason">{pick.reason}</span>
+                <span>{pickName(pick, lang)} <span class="ui-mono">{water ? distanceLabel(pick, lang) : pickDistance(pick, lang)} · {pick.depth}{boat ? pickRun(pick.nm, speed, pick.basis, lang) : ''}</span>{kayak && routeWhyText(pick, lang) ? <span class="app-pick-route-why" data-route-why={pick.why ?? 'not-computed'}> · {routeWhyText(pick, lang)}</span> : null}</span>
+                <span class="app-fit ui-eyebrow">{pickFit(pick, lang)}</span>
+                <span class="app-pick-reason">{pickReason(pick, lang)}</span>
                 {screenLine(pick.screen, lang) && <span class="app-pick-reason">{screenLine(pick.screen, lang)}</span>}
               </button>
               {selected(pick) ? <Why pick={pick} /> : null}
             </li>
           ))}
         </ol>
-      ) : <EmptyOrPlan empty={r.empty} />}
+      ) : <EmptyOrPlan empty={rankingEmpty(r, lang)} />}
       <RangeControl measured={r.harbor} />
     </section>
   );
