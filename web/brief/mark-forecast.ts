@@ -34,6 +34,7 @@ import {FAMILIES, MODEL_NAMES, type ConditionsForecast, type Family} from '../co
 import {compass} from '../landing/readings.ts';
 import {sample} from '../map/forecast-grid.ts';
 import {forecastTime} from '../map/frames.ts';
+import {localeOf, t, type Language} from '../i18n.ts';
 
 const HOUR = 3_600_000;
 /** A WCOFS cell farther than this many grid lengths from the mark is not the mark's cell. */
@@ -118,26 +119,48 @@ function parts(ms: number, tz: string): Record<string, string> {
   if (!f) formats.set(tz, f = new Intl.DateTimeFormat('en-US', {timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', hour12: true}));
   return Object.fromEntries(f.formatToParts(new Date(ms)).map(p => [p.type, p.value]));
 }
-/** "Oct 8, 5 pm" in the region's zone. */
-export const runText = (ms: number, tz: string): string => { const p = parts(ms, tz); return `${p.month} ${p.day}, ${p.hour} ${(p.dayPeriod ?? '').toLowerCase()}`; };
+/** Non-English clocks: the platform's own grammar for the language, cached by locale, zone and kind. */
+const localFormats = new Map<string, Intl.DateTimeFormat>();
+function localClock(ms: number, tz: string, lang: Language, kind: 'run' | 'hour'): string {
+  const key = `${localeOf(lang)}|${tz}|${kind}`;
+  let f = localFormats.get(key);
+  if (!f) localFormats.set(key, f = new Intl.DateTimeFormat(localeOf(lang), kind === 'run' ? {timeZone: tz, month: 'short', day: 'numeric', hour: 'numeric'} : {timeZone: tz, weekday: 'short', hour: 'numeric'}));
+  return f.format(new Date(ms));
+}
+/** "Oct 8, 5 pm" in the region's zone (`lang` other than English: the language's own short date and hour). */
+export const runText = (ms: number, tz: string, lang: Language = 'en'): string => {
+  if (lang !== 'en') return localClock(ms, tz, lang, 'run');
+  const p = parts(ms, tz); return `${p.month} ${p.day}, ${p.hour} ${(p.dayPeriod ?? '').toLowerCase()}`;
+};
 /** "Thu 3 pm". */
-export const hourText = (ms: number, tz: string): string => { const p = parts(ms, tz); return `${p.weekday} ${p.hour} ${(p.dayPeriod ?? '').toLowerCase()}`; };
+export const hourText = (ms: number, tz: string, lang: Language = 'en'): string => {
+  if (lang !== 'en') return localClock(ms, tz, lang, 'hour');
+  const p = parts(ms, tz); return `${p.weekday} ${p.hour} ${(p.dayPeriod ?? '').toLowerCase()}`;
+};
+
+/** A grid spacing in `lang`: the built-in "about N km" and "unstated" are the only words; degree grids pass through. */
+function gridText(grid: string, lang: Language): string {
+  if (lang === 'en') return grid;
+  if (grid === 'unstated') return t('markForecast.unstated', lang);
+  const km = /^about (\d+(?:\.\d+)?) km$/.exec(grid);
+  return km ? t('markForecast.gridAbout', lang, {km: km[1]!}) : grid;
+}
 
 /**
  * Why the gate refused a listed hour, in its own order (as the Swell layer words it): a run ahead of the
  * clock, the run's 36-hour limit, the feed's retrieval, the run's span, then no listed hour near.
  */
-export function gateGap(name: string, times: readonly number[], issued: number | null, retrieved: number, at: number, now: number, tz: string): string {
-  if (issued === null) return `the ${name} run carries no issue time, so its age cannot be checked`;
-  const ahead = now + 5 * 60_000, run = runText(issued, tz);
-  if (issued > ahead) return `the ${name} run of ${run} is dated ahead of this device's clock`;
-  if (now - issued > 36 * HOUR) return `the ${name} run of ${run} is past its 36-hour age limit`;
-  if (!Number.isFinite(retrieved)) return 'the regional forecast carries no retrieval time, so its age cannot be checked';
-  if (retrieved > ahead) return 'the regional forecast is dated ahead of this device\'s clock';
-  if (now - retrieved > 6 * HOUR) return 'the regional forecast was last retrieved more than 6 hours ago';
+export function gateGap(name: string, times: readonly number[], issued: number | null, retrieved: number, at: number, now: number, tz: string, lang: Language = 'en'): string {
+  if (issued === null) return t('markForecast.gate.noIssue', lang, {model: name});
+  const ahead = now + 5 * 60_000, run = runText(issued, tz, lang);
+  if (issued > ahead) return t('markForecast.gate.futureRun', lang, {model: name, run});
+  if (now - issued > 36 * HOUR) return t('markForecast.gate.oldRun', lang, {model: name, run});
+  if (!Number.isFinite(retrieved)) return t('markForecast.gate.noRetrieval', lang);
+  if (retrieved > ahead) return t('markForecast.gate.futureRetrieval', lang);
+  if (now - retrieved > 6 * HOUR) return t('markForecast.gate.oldRetrieval', lang);
   const first = times.length ? Math.min(...times) : null, last = times.length ? Math.max(...times) : null;
-  if (first === null || last === null || at < first || at > last) return `the selected hour is outside the ${name} run of ${run}`;
-  return `the ${name} run of ${run} lists no hour within 90 minutes of the selected hour`;
+  if (first === null || last === null || at < first || at > last) return t('markForecast.gate.outside', lang, {model: name, run});
+  return t('markForecast.gate.noHour', lang, {model: name, run});
 }
 
 /** The feed's requested points, in feed order; null when malformed. */
@@ -151,18 +174,18 @@ const gapRow = (label: MarkReading['label'], model: string, grid: string, gap: s
   ({label, model, grid, value: null, gap, point: null, cell: null, validAt: null, issuedAt: null, ...extra});
 
 /** What a model's sample reads at epoch seconds `t`: the row's value, or null when a needed value is missing. */
-function modelValue(label: 'Wind' | 'Seas', series: unknown, t: number, end: number | null): string | null {
-  const meta = end === null ? null : {data_end_time: end}, at = (v: string, unit: string) => sample(series, v, t, unit, meta);
+function modelValue(label: 'Wind' | 'Seas', series: unknown, sec: number, end: number | null, lang: Language): string | null {
+  const meta = end === null ? null : {data_end_time: end}, at = (v: string, unit: string) => sample(series, v, sec, unit, meta);
   if (label === 'Wind') {
     const speed = at('wind_speed_10m', 'kn'), from = at('wind_direction_10m', '°'), gust = at('wind_gusts_10m', 'kn');
     if (speed === null) return null;
     // v1's rule: a gust below the sustained wind is left out.
-    return `${Math.round(speed)} kt${from === null ? '' : ` from ${compass(from)} ${Math.round(from)}°`}${gust !== null && gust >= speed ? ` · gusts ${Math.round(gust)} kt` : ''}`;
+    return `${Math.round(speed)} kt${from === null ? '' : t('markForecast.from', lang, {compass: compass(from), degrees: Math.round(from)})}${gust !== null && gust >= speed ? t('markForecast.gusts', lang, {gust: Math.round(gust)}) : ''}`;
   }
   // v1's rule: seas without a positive period are left out.
   const period = at('wave_period', 's'), height = period !== null && period > 0 ? at('wave_height', 'ft') : null, from = at('wave_direction', '°');
   if (height === null || period === null) return null;
-  return `${height.toFixed(1)} ft · ${Math.round(period)} s${from === null ? '' : ` from ${compass(from)} ${Math.round(from)}°`}`;
+  return `${height.toFixed(1)} ft · ${Math.round(period)} s${from === null ? '' : t('markForecast.from', lang, {compass: compass(from), degrees: Math.round(from)})}`;
 }
 
 /**
@@ -170,19 +193,19 @@ function modelValue(label: 'Wind' | 'Seas', series: unknown, t: number, end: num
  * latitude and longitude (the dominant cell) are never read: the value is the point's, not that cell's.
  */
 function modelRow(label: 'Wind' | 'Seas', id: string, f: Feed, points: readonly {id: string; lat: number; lon: number}[], index: number,
-  at: number, now: number, tz: string): MarkReading {
-  const name = MODEL_NAMES[id] ?? id, grid = MODEL_GRIDS[id] ?? 'unstated', point = points[index]!.id;
+  at: number, now: number, tz: string, lang: Language): MarkReading {
+  const name = MODEL_NAMES[id] ?? id, grid = gridText(MODEL_GRIDS[id] ?? 'unstated', lang), point = points[index]!.id;
   const m = f.models?.[id], data = Array.isArray(m?.data) && m.data.length === points.length ? m.data as unknown[] : null;
-  if (!data) return gapRow(label, name, grid, `the regional forecast carries no ${name} samples`, {point});
+  if (!data) return gapRow(label, name, grid, t('markForecast.gap.noModel', lang, {model: name}), {point});
   const issued = finite(m?.meta?.last_run_initialisation_time) ? m.meta.last_run_initialisation_time * 1000 : null;
   const end = finite(m?.meta?.data_end_time) ? m.meta.data_end_time : null;
   const times = (data[index] as Series | null)?.hourly?.time, retrieved = finite(f.retrieved) ? f.retrieved : NaN;
   const listed = Array.isArray(times) ? times.filter(finite).map(s => s * 1000) : [];
-  const t = issued === null ? null : forecastTime(listed, issued, retrieved, new Date(at), new Date(now));
-  if (t === null) return gapRow(label, name, grid, gateGap(name, listed, issued, retrieved, at, now, tz), {point, issuedAt: issued});
-  const value = modelValue(label, data[index], t / 1000, end);
-  if (value === null) return gapRow(label, name, grid, `the ${name} sample has no ${label === 'Wind' ? 'wind' : 'seas'} value for ${hourText(t, tz)}`, {point, issuedAt: issued});
-  return {label, model: name, grid, value, gap: '', point, cell: null, validAt: t, issuedAt: issued};
+  const hr = issued === null ? null : forecastTime(listed, issued, retrieved, new Date(at), new Date(now));
+  if (hr === null) return gapRow(label, name, grid, gateGap(name, listed, issued, retrieved, at, now, tz, lang), {point, issuedAt: issued});
+  const value = modelValue(label, data[index], hr / 1000, end, lang);
+  if (value === null) return gapRow(label, name, grid, t(label === 'Wind' ? 'markForecast.gap.noWind' : 'markForecast.gap.noSeas', lang, {model: name, hour: hourText(hr, tz, lang)}), {point, issuedAt: issued});
+  return {label, model: name, grid, value, gap: '', point, cell: null, validAt: hr, issuedAt: issued};
 }
 
 /** A WCOFS sample that can be real: five finite numbers, a cell on the globe, a speed of zero or more, a bearing in 0-360. Rejected whole, never repaired. */
@@ -193,10 +216,10 @@ const possibleSample = (s: unknown): s is number[] =>
  * The surface current row from the feed's WCOFS native-cell samples: the sampled cell nearest the mark within
  * 1.5 grid lengths, else the regional point's own sample (named, no distance).
  */
-function currentRow(f: Feed, points: readonly {id: string; lat: number; lon: number}[], mark: LatLon, regional: number, at: number, now: number, tz: string): MarkReading {
+function currentRow(f: Feed, points: readonly {id: string; lat: number; lon: number}[], mark: LatLon, regional: number, at: number, now: number, tz: string, lang: Language): MarkReading {
   const c = f.currents, name = CURRENT_MODEL, resolution = finite(c?.resolution_km) ? c.resolution_km : null;
-  const grid = resolution === null ? 'unstated' : `about ${km1(resolution)} km`;
-  if (!c || c.status !== 'ok') return gapRow('Current', name, grid, `the regional forecast carries no ${name} surface-current forecast${typeof c?.status === 'string' && c.status !== 'missing' ? ` (${c.status})` : ''}`);
+  const grid = gridText(resolution === null ? 'unstated' : `about ${km1(resolution)} km`, lang);
+  if (!c || c.status !== 'ok') return gapRow('Current', name, grid, t('markForecast.gap.noCurrent', lang, {model: name, status: typeof c?.status === 'string' && c.status !== 'missing' ? ` (${c.status})` : ''}));
   const issued = typeof c.issued_at === 'string' && Number.isFinite(Date.parse(c.issued_at)) ? Date.parse(c.issued_at) : null;
   // Each sample: [valid time s, cell lat, cell lon, speed kn, toward °, km from its point].
   const samples = (Array.isArray(c.points) ? c.points : []).map(p => {
@@ -206,23 +229,23 @@ function currentRow(f: Feed, points: readonly {id: string; lat: number; lon: num
   }).filter(p => p.index >= 0);
   const listed = [...new Set(samples.flatMap(p => p.samples.map(s => s[0]! * 1000)))].sort((a, b) => a - b);
   const retrieved = finite(f.retrieved) ? f.retrieved : NaN, pointId = points[regional]!.id;
-  const t = issued === null ? null : forecastTime(listed, issued, retrieved, new Date(at), new Date(now));
-  if (t === null) return gapRow('Current', name, grid, gateGap(name, listed, issued, retrieved, at, now, tz), {point: pointId, issuedAt: issued});
-  const at_t = samples.flatMap(p => p.samples.filter(s => s[0]! * 1000 === t).map(s => ({index: p.index, point: points[p.index]!.id, s})));
+  const hr = issued === null ? null : forecastTime(listed, issued, retrieved, new Date(at), new Date(now));
+  if (hr === null) return gapRow('Current', name, grid, gateGap(name, listed, issued, retrieved, at, now, tz, lang), {point: pointId, issuedAt: issued});
+  const at_t = samples.flatMap(p => p.samples.filter(s => s[0]! * 1000 === hr).map(s => ({index: p.index, point: points[p.index]!.id, s})));
   const reach = CELL_REACH * (resolution ?? 0);
   const near = nearestCell(at_t.map(x => ({...x, requested: {lat: points[x.index]!.lat, lon: points[x.index]!.lon}, cell: {lat: x.s[1]!, lon: x.s[2]!}})), mark, reach);
   const pick: {point: string; s: number[]; km?: number} | null = near ?? at_t.find(x => x.index === regional) ?? null;
-  if (!pick) return gapRow('Current', name, grid, `no ${name} cell sampled for ${hourText(t, tz)} lies within ${km1(reach)} km (1.5 grid lengths) of this mark, and forecast point ${pointId} has no sample then`, {point: pointId, issuedAt: issued});
+  if (!pick) return gapRow('Current', name, grid, t('markForecast.gap.noCell', lang, {model: name, hour: hourText(hr, tz, lang), km: km1(reach), point: pointId}), {point: pointId, issuedAt: issued});
   const [, lat, lon, speed, toward] = pick.s as [number, number, number, number, number];
-  return {label: 'Current', model: name, grid, value: `${speed.toFixed(2)} kt toward ${Math.round(toward)}° true`, gap: '', point: pick.point,
-    cell: pick.km === undefined ? null : {lat, lon, km: pick.km}, validAt: t, issuedAt: issued};
+  return {label: 'Current', model: name, grid, value: t('markForecast.towardTrue', lang, {speed: speed.toFixed(2), degrees: Math.round(toward)}), gap: '', point: pick.point,
+    cell: pick.km === undefined ? null : {lat, lon, km: pick.km}, validAt: hr, issuedAt: issued};
 }
 
 /**
  * The forecast for a mark at `mark` and the dock's hour `at` (epoch ms), from the regional forecast `f` as the
  * brief loaded it; null without that region's feed or its regional point.
  */
-export function markForecast(f: ConditionsForecast | null, region: string, mark: LatLon, at: number, now: number, tz: string): MarkForecast | null {
+export function markForecast(f: ConditionsForecast | null, region: string, mark: LatLon, at: number, now: number, tz: string, lang: Language = 'en'): MarkForecast | null {
   const feed = f?.region === region ? f.feed as Feed | undefined : undefined;
   const points = feed && feed.region_id === region ? feedPoints(feed) : null;
   if (!f || !feed || !points) return null;
@@ -230,17 +253,17 @@ export function markForecast(f: ConditionsForecast | null, region: string, mark:
   if (regional < 0) return null;
   const families = (Object.keys(FAMILIES) as Family[]).map(family => ({
     family, label: FAMILIES[family].label,
-    rows: [modelRow('Wind', FAMILIES[family].wind, feed, points, regional, at, now, tz), modelRow('Seas', FAMILIES[family].wave, feed, points, regional, at, now, tz)],
+    rows: [modelRow('Wind', FAMILIES[family].wind, feed, points, regional, at, now, tz, lang), modelRow('Seas', FAMILIES[family].wave, feed, points, regional, at, now, tz, lang)],
   }));
-  return {kind: 'points', at, point: f.point.id, families, current: currentRow(feed, points, mark, regional, at, now, tz)};
+  return {kind: 'points', at, point: f.point.id, families, current: currentRow(feed, points, mark, regional, at, now, tz, lang)};
 }
 
 /** A row's source line: model, grid, where it was read, and its hour when that differs from the dock's. */
-export function readingSource(r: MarkReading, at: number, tz: string): string {
+export function readingSource(r: MarkReading, at: number, tz: string, lang: Language = 'en'): string {
   return [
-    `${r.model} · ${r.grid} grid`,
-    r.cell ? `cell ${km1(r.cell.km)} km from this mark` : r.point ? `forecast point ${r.point}` : '',
-    r.validAt !== null && r.validAt !== at ? `valid ${hourText(r.validAt, tz)}` : '',
-    r.issuedAt !== null && r.value !== null ? `run ${runText(r.issuedAt, tz)}` : '',
+    t('markForecast.src.model', lang, {model: r.model, grid: r.grid}),
+    r.cell ? t('markForecast.src.cell', lang, {km: km1(r.cell.km)}) : r.point ? t('markForecast.src.point', lang, {point: r.point}) : '',
+    r.validAt !== null && r.validAt !== at ? t('markForecast.valid', lang, {hour: hourText(r.validAt, tz, lang)}) : '',
+    r.issuedAt !== null && r.value !== null ? t('markForecast.src.run', lang, {run: runText(r.issuedAt, tz, lang)}) : '',
   ].filter(Boolean).join(' · ');
 }

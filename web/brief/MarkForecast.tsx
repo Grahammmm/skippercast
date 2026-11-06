@@ -9,21 +9,18 @@ import {useEffect} from 'preact/hooks';
 import {regionInfo, zone} from '../app/region-info.ts';
 import {dockState} from '../app/TimeDock.tsx';
 import {Popover} from '../ui/Popover.tsx';
+import {language, t, type Language} from '../i18n.ts';
 import {ensureRegionalForecast, regionalForecast} from './Brief.tsx';
 import {CELL_REACH, hourText, markForecast, readingSource, type LatLon, type MarkReading} from './mark-forecast.ts';
 
-const basis = (point: string) => 'The regional forecast feed carries model wind and seas as series interpolated at a few named points, '
-  + `so those rows are forecast point ${point}'s values, the point the brief reads, not values at this mark or at a model cell. `
-  + `The NOAA WCOFS surface current is published as ocean-cell samples: the row reads the sampled cell nearest this mark when one lies within ${CELL_REACH} grid lengths, `
-  + `otherwise forecast point ${point}'s sample. The two model families keep their own rows and are never averaged. `
-  + 'A run older than 36 hours, a feed retrieved over 6 hours ago or a missing value leaves a gap.';
+const basis = (point: string, lang: Language) => t('markForecast.basis', lang, {point, reach: CELL_REACH});
 
-function Row({name, r, at, tz}: {name: string; r: MarkReading; at: number; tz: string}) {
+function Row({name, r, at, tz, lang}: {name: string; r: MarkReading; at: number; tz: string; lang: Language}) {
   return (
     <div data-gap={r.value === null ? 'true' : undefined}>
       <dt>{name}</dt>
       <dd class="ui-mono">{r.value ?? '—'}</dd>
-      <dd class="app-mark-forecast-source">{r.value === null ? `Gap: ${r.gap}.` : readingSource(r, at, tz)}</dd>
+      <dd class="app-mark-forecast-source">{r.value === null ? t('markForecast.gapLine', lang, {reason: r.gap}) : readingSource(r, at, tz, lang)}</dd>
     </div>
   );
 }
@@ -33,18 +30,18 @@ export function MarkForecast({place, now = new Date()}: {place: LatLon; now?: Da
   const info = regionInfo.value, id = info?.id ?? null;
   useEffect(() => { if (info) void ensureRegionalForecast(info.id, info.center); }, [id]);
   if (!info) return null;
-  const tz = zone(), at = dockState(now, tz).at, f = markForecast(regionalForecast.value, info.id, place, at, now.getTime(), tz);
+  const tz = zone(), at = dockState(now, tz).at, lang = language.value, f = markForecast(regionalForecast.value, info.id, place, at, now.getTime(), tz, lang);
   return (
-    <section class="app-mark-forecast" aria-label="Forecast at this mark">
-      <p class="app-mark-forecast-head"><span class="ui-eyebrow">Regional forecast</span> <span class="ui-mono">valid {hourText(at, tz)}</span></p>
-      {!f ? <p class="app-mark-forecast-note">The regional forecast has not loaded, so these rows are empty.</p> : (
+    <section class="app-mark-forecast" aria-label={t('markForecast.aria', lang)}>
+      <p class="app-mark-forecast-head"><span class="ui-eyebrow">{t('markForecast.eyebrow', lang)}</span> <span class="ui-mono">{t('markForecast.valid', lang, {hour: hourText(at, tz, lang)})}</span></p>
+      {!f ? <p class="app-mark-forecast-note">{t('markForecast.unloaded', lang)}</p> : (
         <>
-          <p class="app-mark-forecast-note">This region's wind and seas forecast is a few named points, with no model grid to sample at this mark. Wind and seas at forecast point {f.point}.</p>
+          <p class="app-mark-forecast-note">{t('markForecast.note', lang, {point: f.point})}</p>
           <dl>
-            {f.families.flatMap(family => family.rows.map(r => <Row key={`${family.family}-${r.label}`} name={`${family.label} ${r.label.toLowerCase()}`} r={r} at={at} tz={tz} />))}
-            <Row name="Surface current" r={f.current} at={at} tz={tz} />
+            {f.families.flatMap(family => family.rows.map(r => <Row key={`${family.family}-${r.label}`} name={t(r.label === 'Wind' ? 'markForecast.rowWind' : 'markForecast.rowSeas', lang, {family: family.label})} r={r} at={at} tz={tz} lang={lang} />))}
+            <Row name={t('markForecast.current', lang)} r={f.current} at={at} tz={tz} lang={lang} />
           </dl>
-          <Popover>{basis(f.point)}</Popover>
+          <Popover>{basis(f.point, lang)}</Popover>
         </>
       )}
     </section>
