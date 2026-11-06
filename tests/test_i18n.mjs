@@ -212,12 +212,12 @@ test('check_copy.mjs: clean on main, and fails on a gap, an unknown id and a new
   const root = await mkdtemp(join(tmpdir(), 'i18n-lint-'));
   const put = async (path, text) => { await mkdir(join(root, path, '..'), {recursive: true}); await writeFile(join(root, path), text); };
   await put('catalog/app/strings.json', JSON.stringify({strings: {'x.ok': {en: 'One', es: 'Uno'}, 'x.gap': {en: 'Two', es: ''}}}));
-  await put(COVERED[0], "import {t} from './i18n.ts';\nexport const a = (l) => t('x.ok', l);\n");
+  await put('web/first-answer.ts', "import {t} from './i18n.ts';\nexport const a = (l) => t('x.ok', l);\n");
   assert.deepEqual(catalogueProblems(root).map(p => p.replace(/^.*?: /, '')), ['x.gap has no es value (it renders English)'], 'a catalogue id with no es value is a gap');
-  await put(COVERED[0], "import {t} from './i18n.ts';\nexport const a = (l) => t('x.ok', l) + t('x.missing', l) + 'Rules due for review today';\n");
+  await put('web/first-answer.ts', "import {t} from './i18n.ts';\nexport const a = (l) => t('x.ok', l) + t('x.missing', l) + 'Rules due for review today';\n");
   const found = catalogueProblems(root).join('\n');
   assert.match(found, /t\('x\.missing'\) is not in catalog/); assert.match(found, /bare literal "Rules due for review today"/);
-  await put(COVERED[1], "export const V = () => <p class=\"app-note\">Not translated yet</p>;\n");
+  await put('web/brief/Brief.tsx', "export const V = () => <p class=\"app-note\">Not translated yet</p>;\n");
   assert.match(catalogueProblems(root).join('\n'), /Brief\.tsx:1 bare literal "Not translated yet"/, 'JSX text counts');
   assert.deepEqual(catalogueProblems(await mkdtemp(join(tmpdir(), 'i18n-none-'))), [], 'no catalogue, nothing to check');
 });

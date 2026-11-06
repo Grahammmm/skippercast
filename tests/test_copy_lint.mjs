@@ -8,7 +8,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import util from 'node:util';
 import {
-  BASELINE, compare, formatBaseline, grown, htmlUnits, lint, lintFile, literals, readBaseline, sentences, tally, unitFindings,
+  BASELINE, COVERED, NOT_COVERED, compare, coverageProblems, formatBaseline, grown, htmlUnits, lint, lintFile, literals, readBaseline, sentences, tally, unitFindings,
 } from '../scripts/check_copy.mjs';
 
 const SCRIPT = new URL('../scripts/check_copy.mjs', import.meta.url).pathname;
@@ -319,4 +319,82 @@ test('research_caveats_keep_distinctions: salmon, tuna, dated charter and AIS pa
   for (const href of ['local-physical-indicators', 'inport/item/80237', 'inport/item/80247', 'wonews.com/a-trip-to-lingcod-alley']) assert.ok(research.includes(href), href);
   const ais = read('dist/commercial-ais.html');
   assert.ok(ais.includes('2024 vessel classification is provisional. AIS coverage omits some boats; detection and classification errors remain possible. Apparent fishing effort is not proof of fishing or catches.'));
+});
+
+// SC0922-15: every .tsx screen is classified. Synthetic trees only (COPY_LINT_ROOT for the CLI).
+const mkTree = files => {
+  const root = mkdtempSync(join(tmpdir(), 'copy-cover-'));
+  mkdirSync(join(root, 'dist')); mkdirSync(join(root, 'scripts'));
+  writeFileSync(join(root, 'dist', 'index.html'), '<main><p>Hello.</p></main>');
+  writeFileSync(join(root, BASELINE), formatBaseline(new Map()));
+  for (const [path, text] of Object.entries(files)) { mkdirSync(join(root, path, '..'), {recursive: true}); writeFileSync(join(root, path), text); }
+  return root;
+};
+const runIn = (root, ...args) => spawnSync(process.execPath, [SCRIPT, ...args], {env: {...process.env, COPY_LINT_ROOT: root}, encoding: 'utf8'});
+
+test('coverage: an unlisted .tsx fails by path in each root and a nested view; .ts, admin and symlinks are not screens', () => {
+  const paths = ['web/app/New.tsx', 'web/app/views/NewView.tsx', 'web/brief/New.tsx', 'web/landing/New.tsx', 'web/app/views/deep/er/New.tsx'];
+  const root = mkTree({...Object.fromEntries(paths.map(p => [p, ''])), 'web/app/helper.ts': '', 'web/admin/Panel.tsx': ''});
+  try {
+    assert.deepEqual(coverageProblems(root, [], {}), paths.slice().sort().map(p => `${p}: copy-lint coverage missing; add to COVERED or NOT_COVERED with a reason`));
+    assert.deepEqual(coverageProblems(mkdtempSync(join(tmpdir(), 'copy-cover-empty-')), [], {}), [], 'missing roots are empty');
+  } finally { rmSync(root, {recursive: true, force: true}); }
+});
+
+test('coverage: a listed file passes; bad reasons, overlap, duplicates and odd paths fail', () => {
+  const root = mkTree({'web/app/New.tsx': '', 'web/brief/Other.tsx': ''});
+  try {
+    assert.deepEqual(coverageProblems(root, ['web/app/New.tsx'], {'web/brief/Other.tsx': 'data only'}), []);
+    const bad = coverageProblems(root, ['web/app/New.tsx', 'web/app/New.tsx', '/abs.tsx', 'web/../x.tsx'], {'web/app/New.tsx': 'x', 'web/brief/Other.tsx': ' ', 'web/a.tsx': 'two\nlines'}).join('\n');
+    assert.match(bad, /web\/app\/New\.tsx: listed twice in COVERED/);
+    assert.match(bad, /web\/app\/New\.tsx: listed in both COVERED and NOT_COVERED/);
+    assert.match(bad, /\/abs\.tsx: COVERED path must be repository-relative/);
+    assert.match(bad, /web\/\.\.\/x\.tsx: COVERED path must be repository-relative/);
+    assert.match(bad, /web\/brief\/Other\.tsx: NOT_COVERED needs a one-line reason/);
+    assert.match(bad, /web\/a\.tsx: NOT_COVERED needs a one-line reason/);
+  } finally { rmSync(root, {recursive: true, force: true}); }
+});
+
+test('coverage: the repository lists classify every screen exactly once, with a reason for each exception', () => {
+  assert.deepEqual(coverageProblems(), []);
+  for (const [path, reason] of Object.entries(NOT_COVERED)) assert.ok(!COVERED.includes(path) && reason.trim(), path);
+});
+
+test('coverage CLI: an unlisted screen fails with and without a catalogue, in every mode; lists and baseline are never rewritten', () => {
+  const root = mkTree({'web/app/views/NewEnglishScreen.tsx': 'export const V = () => <p>Hello there.</p>;\n'});
+  try {
+    for (const withCatalogue of [false, true]) {
+      if (withCatalogue) { mkdirSync(join(root, 'catalog/app'), {recursive: true}); writeFileSync(join(root, 'catalog/app/strings.json'), JSON.stringify({strings: {}})); }
+      const res = runIn(root);
+      assert.equal(res.status, 1, `catalogue=${withCatalogue}`);
+      assert.match(res.stderr, /Copy coverage: 1 problem\(s\)\n {2}web\/app\/views\/NewEnglishScreen\.tsx: copy-lint coverage missing/);
+    }
+    const git = (...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.com', ...args], {cwd: root, stdio: 'ignore'});
+    git('init', '-q'); git('add', '-A'); git('commit', '-qm', 'base');
+    const before = readFileSync(join(root, BASELINE), 'utf8'), script = readFileSync(SCRIPT, 'utf8');
+    assert.equal(runIn(root, '--update').status, 1);
+    assert.equal(runIn(root, '--base', 'HEAD').status, 1);
+    assert.equal(readFileSync(join(root, BASELINE), 'utf8'), before, 'the baseline is untouched');
+    assert.equal(readFileSync(SCRIPT, 'utf8'), script, 'the lists are not rewritten');
+  } finally { rmSync(root, {recursive: true, force: true}); }
+});
+
+test('coverage CLI: a listed screen passes; listed bare prose still fails the catalogue; an excluded screen still meets the ordinary rules', () => {
+  const clean = mkTree({'web/app/FirstAnswerLine.tsx': "import {t} from '../i18n.ts';\nexport const A = ({lang}) => <p>{t('x.ok', lang)}</p>;\n", 'catalog/app/strings.json': JSON.stringify({strings: {'x.ok': {en: 'One', es: 'Uno'}}})});
+  try {
+    const res = runIn(clean);
+    assert.equal(res.status, 0, res.stderr);
+    writeFileSync(join(clean, 'web/app/FirstAnswerLine.tsx'), 'export const A = () => <p>This screen is English only</p>;\n');
+    const bare = runIn(clean);
+    assert.equal(bare.status, 1);
+    assert.match(bare.stderr, /FirstAnswerLine\.tsx:1 bare literal "This screen is English only"/);
+  } finally { rmSync(clean, {recursive: true, force: true}); }
+  const excluded = mkTree({'web/app/App.tsx': 'export const A = () => <p>Plain words here.</p>;\n'});
+  try {
+    assert.equal(runIn(excluded).status, 0, 'an excluded screen with clean copy passes');
+    writeFileSync(join(excluded, 'web/app/App.tsx'), 'export function A() {\n  return <p>This is not a chart. It is not a route.</p>;\n}\n');
+    const res = runIn(excluded);
+    assert.equal(res.status, 1);
+    assert.match(res.stderr, /web\/app\/App\.tsx:2 \[consecutive-not\]/);
+  } finally { rmSync(excluded, {recursive: true, force: true}); }
 });
