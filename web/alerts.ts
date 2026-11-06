@@ -7,6 +7,13 @@
 // Erasable syntax only: the node tests import this file by type stripping.
 
 import {DEFAULT_ZONE} from './zone.ts';
+import {t, type Language, type StringId} from './i18n.ts';
+
+/** A message this module wrote itself, carried with its catalogue id so the sheet can show it in the language chosen when it is drawn. `.message` stays the English text. */
+export class AlertCopyError extends Error {
+  id: StringId;
+  constructor(id: StringId) { super(t(id, 'en')); this.id = id; }
+}
 
 /** A boat's comfort factors (dist/boat-handling.js `boatFactors`). */
 export type BoatFactors = {sea: number; wind: number; chopPeriod?: number; custom?: boolean};
@@ -39,8 +46,8 @@ export function tripBoat(factors: BoatFactors | null | undefined, boat: {name?: 
 export async function api<T = Record<string, unknown>>(path: string, options: RequestInit = {}, fetchFn: typeof fetch = fetch): Promise<T> {
   const r = await fetchFn('/api/' + path, {signal: AbortSignal.timeout(20000), ...options, headers: {'Content-Type': 'application/json', ...options.headers as Record<string, string>}});
   let data: {error?: string} & Record<string, unknown>;
-  try { data = await r.json() as typeof data; } catch { throw Error('Personal services are available on the published site.'); }
-  if (!r.ok) throw Error(data.error || 'Could not complete this request.');
+  try { data = await r.json() as typeof data; } catch { throw new AlertCopyError('alerts.err.personal'); }
+  if (!r.ok) throw data.error ? Error(data.error) : new AlertCopyError('alerts.err.request');
   return data as T;
 }
 
@@ -55,9 +62,9 @@ export type RegionAlerts = {
 export type SpeciesOption = {id: string; name: string; group: string};
 
 /** The alert species: the region's listed species with their names, starting on the app's target when the region lists it. */
-export function alertSpecies(region: RegionAlerts, target: string | null): {options: SpeciesOption[]; value: string} {
-  const named = new Map((region.target_options ?? []).map(t => [t.id, t]));
-  const options = region.species.map(id => ({id, name: named.get(id)?.name ?? id, group: named.get(id)?.group ?? 'Other'}));
+export function alertSpecies(region: RegionAlerts, target: string | null, lang: Language = 'en'): {options: SpeciesOption[]; value: string} {
+  const named = new Map((region.target_options ?? []).map(o => [o.id, o]));
+  const options = region.species.map(id => ({id, name: named.get(id)?.name ?? id, group: named.get(id)?.group ?? t('alerts.other', lang)}));
   return {options, value: target && region.species.includes(target) ? target : region.species[0] ?? ''};
 }
 
@@ -72,13 +79,18 @@ export const dateRange = (timeZone: string, now: number = Date.now()): {min: str
 };
 
 /** What the server would refuse first, in plain words, or null; checked before the form is sent. */
-export function formProblem(form: AlertForm, range: {min: string; max: string}): string | null {
+export function formProblemId(form: AlertForm, range: {min: string; max: string}): StringId | null {
   const day = /^\d{4}-\d{2}-\d{2}$/.test(form.date) ? Date.parse(form.date + 'T12:00:00Z') : NaN;
   if (!Number.isFinite(day) || new Date(day).toISOString().slice(0, 10) !== form.date || form.date < range.min || form.date > range.max)
-    return 'Choose a date from today to seven days ahead.';
-  if (!(form.end_hour > form.start_hour)) return 'The window must end after it starts.';
-  if (!(form.gust_limit >= form.wind_limit)) return 'The gust limit cannot be lower than the wind limit.';
+    return 'alerts.problem.date';
+  if (!(form.end_hour > form.start_hour)) return 'alerts.problem.window';
+  if (!(form.gust_limit >= form.wind_limit)) return 'alerts.problem.gust';
   return null;
+}
+/** The same first problem in words, in `lang`; English by default. */
+export function formProblem(form: AlertForm, range: {min: string; max: string}, lang: Language = 'en'): string | null {
+  const id = formProblemId(form, range);
+  return id ? t(id, lang) : null;
 }
 
 /** v2 has no forecast hour beside the dialog, so feedback carries no forecast context, as before. */
@@ -127,20 +139,15 @@ export function fillAlertForm(form: FillableForm, reuse: Reuse): void {
   if (date) { date.value = ''; date.focus?.(); }
 }
 
-const OMITTED_TEXT: Readonly<Record<ReuseOmission, string>> = {
-  area: 'Area was not copied because it is no longer offered in this region.',
-  species: 'Alert species was not copied because it is no longer listed in this region.',
-  hours: 'Saved hours could not be copied.',
-  limits: 'Some saved limits could not be copied.',
+const OMITTED_TEXT: Readonly<Record<ReuseOmission, StringId>> = {
+  area: 'alerts.reuse.area', species: 'alerts.reuse.species', hours: 'alerts.reuse.hours', limits: 'alerts.reuse.limits',
 };
 /** The status after Use again: what was copied and, in order, what was left out. */
-export const reuseStatus = (omitted: readonly ReuseOmission[]): string => ['Window copied. Choose a date, then save.', ...omitted.map(o => OMITTED_TEXT[o])].join(' ');
+export const reuseStatus = (omitted: readonly ReuseOmission[], lang: Language = 'en'): string => [t('alerts.reuse.copied', lang), ...omitted.map(o => t(OMITTED_TEXT[o], lang))].join(' ');
 
 /** The limits note once they came from a saved trip, replacing the profile/boat wording; the boat part says the current boat is what alerts use. */
-export const reuseLimitsNote = (date: string, copied: 'all' | 'some', boat: boolean): string =>
-  `${copied === 'all' ? `Limits start from your saved trip on ${date}; you can edit them before saving.` : `Some limits start from your saved trip on ${date}; other limits were left unchanged.`} ${boat
-    ? "Alerts use your current boat settings, not the old trip's boat."
-    : 'Alerts still judge wind, gusts and offshore seas only, not surf at your launch or beach.'}`;
+export const reuseLimitsNote = (date: string, copied: 'all' | 'some', boat: boolean, lang: Language = 'en'): string =>
+  `${t(copied === 'all' ? 'alerts.reuse.all' : 'alerts.reuse.some', lang, {date})} ${t(boat ? 'alerts.reuse.boat' : 'alerts.reuse.noBoat', lang)}`;
 
 export type AlertEvent = {id: string | number; trip_id?: string; kind: string; status: string; message: string; created_at?: string};
 export type Feedback = {observed_at: string; rating: number; context: string};
@@ -237,8 +244,8 @@ export const alertNames = (region: RegionAlerts): AlertNames => ({
 });
 
 /** The saved trip's line: "2026-11-02 · Point Sur · Rockfish · 7:00–13:00" with names (raw ids without them or when unknown), with the saved boat when it has one. */
-export const tripLine = (t: SavedTrip, names?: AlertNames): string =>
-  `${t.date} · ${names?.point.get(t.point) ?? t.point} · ${names?.species.get(t.species) ?? t.species} · ${t.start_hour}:00–${t.end_hour}:00${t.boat_sea ? ` · ${t.boat_name || 'saved boat'}` : ''}`;
+export const tripLine = (trip: SavedTrip, names?: AlertNames, lang: Language = 'en'): string =>
+  `${trip.date} · ${names?.point.get(trip.point) ?? trip.point} · ${names?.species.get(trip.species) ?? trip.species} · ${trip.start_hour}:00–${trip.end_hour}:00${trip.boat_sea ? ` · ${trip.boat_name || t('alerts.savedBoat', lang)}` : ''}`;
 
 /** What a saved trip's stored plan shows: target names, stop names in saved order and summed leg totals. Never positions, notes or ids. */
 export type TripPlanSummary =
@@ -249,7 +256,7 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object
 const fixed5 = (units: number) => String(units / 100000);
 
 /** The plan saved with a trip (SC1822-04), read from the parsed GET answer: null without one, 'unavailable' when it is malformed (no partial totals). */
-export function tripPlanSummary(trip: SavedTrip, names?: AlertNames): TripPlanSummary | null {
+export function tripPlanSummary(trip: SavedTrip, names?: AlertNames, lang: Language = 'en'): TripPlanSummary | null {
   const plan = trip.plan;
   if (plan === undefined || plan === null) return null;
   if (!isObj(plan) || !Array.isArray(plan.spots) || !Array.isArray(plan.legs)) return {kind: 'unavailable'};
@@ -266,20 +273,28 @@ export function tripPlanSummary(trip: SavedTrip, names?: AlertNames): TripPlanSu
   const ids = Array.isArray(trip.targets) && trip.targets.length && trip.targets.every(t => typeof t === 'string') ? trip.targets as string[] : [trip.species];
   return {kind: 'saved',
     targets: ids.map(id => names?.species.get(id) ?? id),
-    stops: spots.sort((a, b) => a.order - b.order || a.i - b.i).map(s => s.name.trim() ? s.name : 'Unnamed stop'),
+    stops: spots.sort((a, b) => a.order - b.order || a.i - b.i).map(s => s.name.trim() ? s.name : t('alerts.unnamedStop', lang)),
     totals: plan.legs.length ? {nm: fixed5(nm), minutes: fixed5(minutes)} : null};
 }
 
-/** The assessment kinds and delivery statuses server/trips.ts writes, in plain words. */
-export const KIND_LABEL: Readonly<Record<string, string>> = {
-  initial: 'First assessment', update: 'Material change', retraction: 'Earlier alert withdrawn', final: 'Day-before assessment', 'missed-final': 'Day-before assessment missed',
+/** The assessment kinds and delivery statuses server/trips.ts writes, in plain words: finite maps from the server's own keys to catalogue ids. */
+const KIND_ID: Readonly<Record<string, StringId>> = {
+  initial: 'alerts.kind.initial', update: 'alerts.kind.update', retraction: 'alerts.kind.retraction', final: 'alerts.kind.final', 'missed-final': 'alerts.kind.missedFinal',
 };
-export const STATUS_LABEL: Readonly<Record<string, string>> = {
-  pending: 'sending', accepted: 'sent to your device', uncertain: 'delivery not confirmed', held: 'not delivered — read it here', 'in-app': 'shown here', delivered: 'delivered', read: 'read',
+const STATUS_ID: Readonly<Record<string, StringId>> = {
+  pending: 'alerts.delivery.pending', accepted: 'alerts.delivery.accepted', uncertain: 'alerts.delivery.uncertain', held: 'alerts.delivery.held',
+  'in-app': 'alerts.delivery.inApp', delivered: 'alerts.delivery.delivered', read: 'alerts.delivery.read',
 };
-const label = (labels: Readonly<Record<string, string>>, key: string): string => (Object.hasOwn(labels, key) ? labels[key] : undefined) ?? key;
+const words = (ids: Readonly<Record<string, StringId>>, lang: Language): Readonly<Record<string, string>> => Object.fromEntries(Object.entries(ids).map(([key, id]) => [key, t(id, lang)]));
+/** The English labels, kept for callers that read the tables. */
+export const KIND_LABEL: Readonly<Record<string, string>> = words(KIND_ID, 'en');
+export const STATUS_LABEL: Readonly<Record<string, string>> = words(STATUS_ID, 'en');
+const label = (ids: Readonly<Record<string, StringId>>, key: string, lang: Language): string => (Object.hasOwn(ids, key) ? t(ids[key]!, lang) : key);
+/** The assessment kind or delivery status in `lang`; an unknown key (or an inherited name) prints as written. */
+export const kindLabel = (key: string, lang: Language = 'en'): string => label(KIND_ID, key, lang);
+export const statusLabel = (key: string, lang: Language = 'en'): string => label(STATUS_ID, key, lang);
 /** The assessment's heading: "Day-before assessment · shown here"; an unknown kind or status prints as written. */
-export const eventLine = (e: AlertEvent): string => `${label(KIND_LABEL, e.kind)} · ${label(STATUS_LABEL, e.status)}`;
+export const eventLine = (e: AlertEvent, lang: Language = 'en'): string => `${kindLabel(e.kind, lang)} · ${statusLabel(e.status, lang)}`;
 
 /** The newest event GET /api/trips returned for this exact trip (the list is newest first), or null when none of the returned events is its own. */
 export function latestTripEvent(events: readonly AlertEvent[], tripId: string): AlertEvent | null {
@@ -288,23 +303,27 @@ export function latestTripEvent(events: readonly AlertEvent[], tripId: string): 
 }
 
 /** The limits the trip was saved with, as stored: "Saved limits: wind 9 kt · gust 14 kt · sea 2.5 ft"; a field that is not a finite number reads "not recorded". */
-export function savedTripLimits(t: SavedTrip): string {
-  const v = (x: unknown, unit: string): string => (typeof x === 'number' && Number.isFinite(x) ? `${x} ${unit}` : 'not recorded');
-  return `Saved limits: wind ${v(t.wind_limit, 'kt')} · gust ${v(t.gust_limit, 'kt')} · sea ${v(t.sea_limit, 'ft')}`;
+export function savedTripLimits(trip: SavedTrip, lang: Language = 'en'): string {
+  const v = (x: unknown, unit: string): string => (typeof x === 'number' && Number.isFinite(x) ? `${x} ${unit}` : t('alerts.notRecorded', lang));
+  return t('alerts.limits', lang, {wind: v(trip.wind_limit, 'kt'), gust: v(trip.gust_limit, 'kt'), sea: v(trip.sea_limit, 'ft')});
 }
 
 /** The assessment's time in the region's zone, or "Time unavailable" when it has no usable timestamp. */
-export function assessmentTime(e: AlertEvent, timeZone: string = DEFAULT_ZONE): string {
-  if (typeof e.created_at !== 'string' || !e.created_at) return 'Time unavailable';
-  const d = new Date(e.created_at);
-  if (Number.isNaN(d.getTime())) return 'Time unavailable';
-  return new Intl.DateTimeFormat('en-GB', {timeZone, year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZoneName: 'short'}).format(d);
+export function assessmentTimeOrNull(e: AlertEvent, timeZone: string = DEFAULT_ZONE, lang: Language = 'en'): string | null {
+  const d = typeof e.created_at === 'string' && e.created_at ? new Date(e.created_at) : null;
+  if (!d || Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat(lang === 'es' ? 'es' : 'en-GB', {timeZone, year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', timeZoneName: 'short'}).format(d);
 }
+export const assessmentTime = (e: AlertEvent, timeZone: string = DEFAULT_ZONE, lang: Language = 'en'): string => assessmentTimeOrNull(e, timeZone, lang) ?? t('alerts.timeUnavailable', lang);
 
-/** The feedback's phase, or '' when its stored context does not parse. */
-export function feedbackPhase(f: Feedback): string {
-  try { const p = (JSON.parse(f.context) as {phase?: unknown})?.phase; return typeof p === 'string' ? p : ''; } catch { return ''; }
+/** The feedback's phase, or '' when its stored context does not parse; outbound, fishing and return in `lang`, anything else as stored. */
+export function feedbackPhase(f: Feedback, lang: Language = 'en'): string {
+  try {
+    const p = (JSON.parse(f.context) as {phase?: unknown})?.phase;
+    return typeof p === 'string' ? (lang === 'es' && Object.hasOwn(PHASE_ID, p) ? t(PHASE_ID[p]!, lang) : p) : '';
+  } catch { return ''; }
 }
+const PHASE_ID: Readonly<Record<string, StringId>> = {outbound: 'alerts.comfort.outbound', fishing: 'alerts.comfort.fishing', return: 'alerts.comfort.return'};
 
 /** The VAPID key from base64url to bytes. */
 export const b64 = (s: string): Uint8Array<ArrayBuffer> =>
@@ -312,9 +331,9 @@ export const b64 = (s: string): Uint8Array<ArrayBuffer> =>
 
 /** Subscribe this device to the account's push and register it with the server. */
 export async function enablePush(publicKey: string | null | undefined): Promise<void> {
-  if (!('serviceWorker' in navigator) || !('PushManager' in globalThis) || !publicKey) throw Error('Notifications are not available here. On iPad/iPhone, add SkipperCast to the Home Screen and open it there.');
+  if (!('serviceWorker' in navigator) || !('PushManager' in globalThis) || !publicKey) throw new AlertCopyError('alerts.err.push');
   const permission = await Notification.requestPermission();
-  if (permission !== 'granted') throw Error('Notifications were not enabled. You can still read assessments here.');
+  if (permission !== 'granted') throw new AlertCopyError('alerts.err.pushDenied');
   const registration = await navigator.serviceWorker.register('/sw.js');
   await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.getSubscription() ?? await registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: b64(publicKey)});
@@ -353,14 +372,17 @@ export async function disableAllPush(fetchFn: typeof fetch = fetch, nav: PushNav
   } catch { return 'partial'; }
 }
 
-/** The status line for a finished stop, from the scope the person chose. */
-export const stopStatus = (scope: 'device' | 'all', result: StopResult): string =>
-  result === 'none' ? 'No notifications are enabled on this device. Other devices were not changed.'
-  : result === 'partial' ? 'The server stopped notifications, but this browser could not unsubscribe. Try again.'
-  : scope === 'all' ? 'Notifications stopped on all devices. Saved assessments remain available here.'
-  : 'Notifications stopped on this device. Other devices were not changed. Saved assessments remain available here.';
+/** The catalogue id of the status line for a finished stop, from the scope the person chose. */
+export const stopStatusId = (scope: 'device' | 'all', result: StopResult): StringId =>
+  result === 'none' ? 'alerts.stop.none' : result === 'partial' ? 'alerts.stop.partial' : scope === 'all' ? 'alerts.stop.all' : 'alerts.stop.device';
+/** The status line for a finished stop, in `lang` (English by default). */
+export const stopStatus = (scope: 'device' | 'all', result: StopResult, lang: Language = 'en'): string => t(stopStatusId(scope, result), lang);
 
-/** One stop action for the sheet: runs the chosen scope and returns the status line to show. Errors propagate to the sheet's error line. */
+/** One stop action for the sheet: runs the chosen scope and returns the catalogue id of the status line to show. Errors propagate to the sheet's error line. */
+export async function stopNotificationsId(scope: 'device' | 'all', fetchFn: typeof fetch = fetch, nav: PushNavigator = navigator): Promise<StringId> {
+  return stopStatusId(scope, await (scope === 'all' ? disableAllPush : disablePush)(fetchFn, nav));
+}
+/** The same action with the status line in English. */
 export async function stopNotifications(scope: 'device' | 'all', fetchFn: typeof fetch = fetch, nav: PushNavigator = navigator): Promise<string> {
-  return stopStatus(scope, await (scope === 'all' ? disableAllPush : disablePush)(fetchFn, nav));
+  return t(await stopNotificationsId(scope, fetchFn, nav), 'en');
 }
