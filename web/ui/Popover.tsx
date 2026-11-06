@@ -5,6 +5,7 @@
 // default, or an info icon with that label.
 import type {ComponentChildren} from 'preact';
 import {Icon} from './icons.tsx';
+import {language, t} from '../i18n.ts';
 
 export type PopoverProps = {
   /** The summary text; the default reads "basis". */
@@ -22,13 +23,14 @@ export type PopoverProps = {
 /** The canonical sources page (open-questions Q16; the Worker serves dist/sources.html there). */
 export const SOURCES_PAGE = '/sources';
 
-export function Popover({summary = 'basis', iconOnly = false, align = 'start', children, class: cls, sources = SOURCES_PAGE}: PopoverProps) {
+export function Popover({summary: given, iconOnly = false, align = 'start', children, class: cls, sources = SOURCES_PAGE}: PopoverProps) {
+  const lang = language.value, summary = given ?? t('shared.popover.basis', lang);
   return (
     <details class={['ui-popover', iconOnly ? 'ui-popover--icon' : '', cls].filter(Boolean).join(' ')} data-align={align}>
       <summary class="ui-popover-summary ui-eyebrow" aria-label={iconOnly ? summary : undefined}>
         {iconOnly ? <Icon name="info" size={16} /> : summary}
       </summary>
-      <div class="ui-popover-body">{children}{sources ? <p class="ui-popover-sources"><a href={sources}>How it’s built</a></p> : null}</div>
+      <div class="ui-popover-body">{children}{sources ? <p class="ui-popover-sources"><a href={sources}>{t('shared.popover.sources', lang)}</a></p> : null}</div>
     </details>
   );
 }

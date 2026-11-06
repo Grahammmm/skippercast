@@ -12,7 +12,12 @@ export interface EvidenceRecord {
   readonly text: unknown; readonly date: unknown; readonly source: unknown; readonly sourceURL?: unknown;
   /** The feed that carried it; never part of a record's identity. */ readonly feed?: unknown;
 }
-export interface Reason {readonly text: string; readonly date: string; readonly source: string; readonly sourceURL: string | null}
+/** SC1137-05: which sentence the code itself wrote for a reason (never a published one), so a Spanish page can say it in Spanish; display only. */
+export interface ReasonCopy {readonly key: 'survey' | 'clearance'; readonly m?: number}
+export interface Reason {readonly text: string; readonly date: string; readonly source: string; readonly sourceURL: string | null; readonly copy?: ReasonCopy}
+/** Held under a symbol, so a record that arrived as JSON from a feed can never carry it: only `targetEvidence` tags its own sentences. */
+const GENERATED: unique symbol = Symbol('generated reason');
+type Tagged = EvidenceRecord & {readonly [GENERATED]?: ReasonCopy};
 
 /** How many reasons an area shows. */
 export const MAX_REASONS = 3;
@@ -58,8 +63,9 @@ export function reasonsFor(area: string, evidence: readonly EvidenceRecord[] | n
     if (!r || typeof r !== 'object' || str(r.area) !== area) continue;
     const when = dated(r.date, now), text = str(r.text), source = str(r.source);
     if (!when || !text || !source) continue;
+    const copy = (r as Tagged)[GENERATED];
     eligible.push({ms: when.ms, key: identity(r, source, when.label), kind: str(r.kind) || 'report', reason: {
-      text: text.length > MAX_TEXT ? `${text.slice(0, MAX_TEXT - 1).trimEnd()}…` : text, date: when.label, source, sourceURL: https(r.sourceURL)}});
+      text: text.length > MAX_TEXT ? `${text.slice(0, MAX_TEXT - 1).trimEnd()}…` : text, date: when.label, source, sourceURL: https(r.sourceURL), ...(copy ? {copy} : {})}});
   }
   // Sorted before anything is dropped, so which copy of a duplicate stands never depends on the order the feeds came in.
   eligible.sort((a, b) => b.ms - a.ms || a.kind.localeCompare(b.kind) || Number(!a.reason.sourceURL) - Number(!b.reason.sourceURL)
@@ -87,10 +93,13 @@ interface AtlasLike {
  */
 export function targetEvidence(t: TargetLike, atlas?: AtlasLike | null, sourceNames: Readonly<Record<string, string>> = {}): EvidenceRecord[] {
   const src = atlas?.sources?.find(s => s.id === t.source_id), credit = t.source_rights?.find(c => str(c.credit))?.credit;
-  const survey: EvidenceRecord = {area: t.id, kind: 'survey', date: t.survey_year, source: t.source_name ?? sourceNames[t.source_id ?? ''] ?? src?.name ?? credit ?? src?.credit ?? t.source_id,
-    sourceURL: t.source_url ?? src?.url, text: t.terrain_interpretation ?? 'Surveyed reef terrain.'};
+  const survey: Tagged = {area: t.id, kind: 'survey', date: t.survey_year, source: t.source_name ?? sourceNames[t.source_id ?? ''] ?? src?.name ?? credit ?? src?.credit ?? t.source_id,
+    sourceURL: t.source_url ?? src?.url, text: t.terrain_interpretation ?? 'Surveyed reef terrain.',
+    // Only the sentence written here is tagged; a published terrain_interpretation is never translated, even when it reads the same.
+    ...(t.terrain_interpretation === undefined ? {[GENERATED]: {key: 'survey'} as ReasonCopy} : {})};
   const m = t.recorded_validation?.closed_or_screened_area_clearance_m ?? t.qualification?.closure_clearance_m;
-  const screen: EvidenceRecord[] = atlas?.source_validation_date && typeof m === 'number' && m > 0
-    ? [{area: t.id, kind: 'screen', date: atlas.source_validation_date, source: atlas.title ?? 'Survey reef atlas', text: `Passed the protected-area check with ${Math.round(m)} m clearance.`}] : [];
+  const screen: Tagged[] = atlas?.source_validation_date && typeof m === 'number' && m > 0
+    ? [{area: t.id, kind: 'screen', date: atlas.source_validation_date, source: atlas.title ?? 'Survey reef atlas', text: `Passed the protected-area check with ${Math.round(m)} m clearance.`,
+      [GENERATED]: {key: 'clearance', m: Math.round(m)} as ReasonCopy}] : [];
   return [survey, ...screen];
 }
