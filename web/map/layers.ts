@@ -11,12 +11,13 @@
 // and web/map/stage.ts hands them to the renderer's setOverlay.
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type stripping.
-import {signal} from '@preact/signals';
+import {batch, signal} from '@preact/signals';
 import type {CoastOverlayColor, CoastOverlayFeature, CoastOverlayKind} from '../../packages/coast/src/embed-types.ts';
 import type {Presentation} from '../coast-context.ts';
 import type {RailId} from '../profile.ts';
 import type {ChartMark} from './coastline.ts';
 import type {Palette, PaletteKey} from './palette.ts';
+import type {StatusPart} from './status-copy.ts';
 import {BASEMAP_ATTRIBUTION, BASEMAP_SOURCE} from './style.ts';
 import {t, type Language, type StringId} from '../i18n.ts';
 
@@ -231,8 +232,16 @@ export function sourceLayer(sourceId: string | undefined): string | null {
  * cannot ("no fresh frame · last 1:28 pm"). Empty: no note. The rail reads it (FE-22 first).
  */
 export const railNotes = signal<Readonly<Partial<Record<RailId, string>>>>({});
-export function setRailNote(rail: RailId, note: string): void {
-  if ((railNotes.peek()[rail] ?? '') !== note) railNotes.value = {...railNotes.peek(), [rail]: note};
+/** SC1352-02: catalogue parts for a rail note, kept beside it (never the translated text) so the rail can show it in the page's language. */
+export const railNoteCopies = signal<Readonly<Partial<Record<RailId, readonly StatusPart[]>>>>({});
+export function setRailNote(rail: RailId, note: string, copy?: readonly StatusPart[]): void {
+  const parts = note && copy?.length ? copy : undefined, held = railNoteCopies.peek()[rail];
+  const copyChanged = JSON.stringify(held) !== JSON.stringify(parts), noteChanged = (railNotes.peek()[rail] ?? '') !== note;
+  if (!copyChanged && !noteChanged) return;
+  batch(() => {
+    if (copyChanged) { const {[rail]: _gone, ...rest} = railNoteCopies.peek(); railNoteCopies.value = parts ? {...rest, [rail]: parts} : rest; }
+    if (noteChanged) railNotes.value = {...railNotes.peek(), [rail]: note};
+  });
 }
 
 /** The entries a rail entry (or the base choice) turns on and off, in draw order. */

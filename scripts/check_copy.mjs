@@ -262,9 +262,15 @@ export const COVERED = ['web/first-answer.ts', 'web/brief/Brief.tsx', 'web/app/F
   'web/app/Masthead.tsx', 'web/app/Mobile.tsx', 'web/app/CommandBar.tsx', 'web/app/AccountMenu.tsx',
   'web/app/TimeDock.tsx', 'web/ui/Dock.tsx', 'web/season.ts', 'web/app/SeasonStrip.tsx',
   'web/map/layers.ts', 'web/app/rail.ts', 'web/app/LayerRail.tsx', 'web/app/Legend.tsx',
-  'web/app/Planner.tsx', 'web/app/Trip.tsx', 'web/trip-ocean-lines.ts', 'web/planner-copy.ts'];
+  'web/app/Planner.tsx', 'web/app/Trip.tsx', 'web/trip-ocean-lines.ts', 'web/planner-copy.ts',
+  'web/app/views/Conditions.tsx', 'web/app/views/HourlyTable.tsx', 'web/app/views/History.tsx', 'web/model-disagreement.ts', 'web/view-copy.ts',
+  'web/app/MarkCard.tsx', 'web/saved-spots.ts', 'web/mark-copy.ts', 'web/map/status-copy.ts',
+  'web/app/PlanView.tsx', 'web/plan.ts', 'web/app/ControlsTour.tsx', 'web/tour.ts', 'web/app/Presets.tsx', 'web/app/presets.ts',
+  'web/app/TripAlerts.tsx', 'web/alerts.ts', 'web/digest.ts'];
 /** Prose-like literals in covered files that are data or code, not copy: a species group name (not translated) and a prefix the model writes. */
 export const LITERAL_OK = new Set(['Lingcod & rockfish', 'Using your limits']);
+/** Server wire tokens (compared, never shown), allowed only in the one file that compares them. */
+export const WIRE_OK = new Map([['web/saved-spots.ts', new Set(['you can keep at most 100 saved spots; remove one first'])]]);
 
 /** Catalogue problems under `root`: ids without an es value, unknown ids in t() calls, bare prose literals in covered files. No catalogue, nothing to check. */
 export function catalogueProblems(root = ROOT) {
@@ -277,7 +283,7 @@ export function catalogueProblems(root = ROOT) {
     for (const m of source.matchAll(/\bt\(\s*(['"])([\w.]+)\1/g)) if (!Object.hasOwn(ids, m[2])) out.push(`${path}:${lineOf(source, m.index)} t('${m[2]}') is not in ${CATALOGUE}`);
     const bare = source.replace(/\/\*[\s\S]*?\*\/|(?<![:'"`\w])\/\/[^\n]*/g, c => c.replace(/[^\n]/g, ' '));   // comments are not copy
     for (const item of [...literals(source), ...(path.endsWith('.tsx') ? jsxText(bare) : [])])
-      if (isProse(item.value) && !LITERAL_OK.has(item.value.trim()) && !item.value.trim().split(/\s+/).every(w => w.includes('-'))) out.push(`${path}:${lineOf(source, item.index)} bare literal "${clip(normal(item.value))}": use a catalogue id`);
+      if (isProse(item.value) && !LITERAL_OK.has(item.value.trim()) && !WIRE_OK.get(path)?.has(item.value.trim()) && !item.value.trim().split(/\s+/).every(w => w.includes('-'))) out.push(`${path}:${lineOf(source, item.index)} bare literal "${clip(normal(item.value))}": use a catalogue id`);
   }
   return out;
 }

@@ -116,9 +116,9 @@ test('v2: the mark card names the candidate, its nominal depth, survey and year,
   const {habitat} = await fixtureFeatures();
   const [a, , search] = habitat.map(f => admitHabitat(f, PUB));
   const mark = seafloorMark(a, 'fit_lingcod');
-  assert.deepEqual({...mark, basis: undefined}, {id: 'seafloor:fixture-candidate-a', name: 'Habitat candidate, unverified',
+  assert.deepEqual({...mark, basis: undefined, copy: undefined, copyTerms: undefined}, {id: 'seafloor:fixture-candidate-a', name: 'Habitat candidate, unverified',
     kind: 'Terrain grade A · fits lingcod habitat 3 of 3', reading: '41–90 ft nominal', source: 'Survey fixture-survey-2m · 2010 · 2 m grid', basis: undefined,
-    terms: [{href: 'https://example.org/terms', label: 'Publisher terms'}]});
+    terms: [{href: 'https://example.org/terms', label: 'Publisher terms'}], copy: undefined, copyTerms: undefined});
   assert.ok(mark.basis.startsWith(a.basis));
   assert.match(mark.basis, /Fixture Survey Lab Synthetic test credit; never survey data\. Planning only\. Not a navigation chart\. Check current CDFW regulations\.$/);
   assert.equal(seafloorMark(a, 'terrain').kind, 'Terrain grade A');
@@ -370,8 +370,8 @@ test('v2: a drawn coverage cell opens its own card: its survey, year and datum n
   t.after(() => rig.layer.destroy());
   await settle();
   const card = rig.layer.cellAt(CELL_ONLY);
-  assert.deepEqual({...card, basis: undefined}, {id: 'seafloor:cell:3310:fx:1', name: 'Surveyed 250 m cell', kind: 'Survey coverage · no habitat rank',
-    reading: 'Depth not given for this cell', source: 'Survey fixture-survey-2m · year and vertical datum not recorded for this cell', basis: undefined});
+  assert.deepEqual({...card, basis: undefined, copy: undefined}, {id: 'seafloor:cell:3310:fx:1', name: 'Surveyed 250 m cell', kind: 'Survey coverage · no habitat rank',
+    reading: 'Depth not given for this cell', source: 'Survey fixture-survey-2m · year and vertical datum not recorded for this cell', basis: undefined, copy: undefined});
   assert.ok(card.basis.startsWith(cellBasis('fixture-survey-2m')), 'the cell\'s own basis');
   assert.match(card.basis, /Fixture Survey Lab .*Planning only\. Not a navigation chart\./, 'with the publication\'s credits and notice');
   assert.doesNotMatch(`${card.kind} ${card.reading} ${card.source}`, /grade|fits|\bft\b|candidate/i, 'no terrain grade, fit or depth from the habitat branch');

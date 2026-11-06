@@ -5,7 +5,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-const {hourlyTable, hourlyCells, NO_FORECAST} = await import('../web/hourly-table.ts');
+const {hourlyTable, hourlyCells, NO_FORECAST, overLimits} = await import('../web/hourly-table.ts');
+const {t} = await import('../web/i18n.ts');
 const {feedReader} = await import('../web/brief/verdict.ts');
 const {rateComfort} = await import('../web/score.ts');
 
@@ -222,4 +223,40 @@ test('SC2037-01: compass words use the shared 16-point helper (0 and 359.9 are N
   assert.equal(wind(0), '8 kt from N');
   assert.equal(wind(359.9), '8 kt from N');
   assert.equal(wind(11.25), '8 kt from NNE');
+});
+
+// SC2037-02: marks over the person's own limits (strictly greater, as daily.ts buildDaily overLimit).
+const mine = {wind: 12, gust: 18, seas: 5};
+const rowWith = (wind, gust, seas) => ({wind, gust, seas});
+
+test('SC2037-02: own limits mark only values strictly over, for wind, gust and seas', () => {
+  for (const [k, lim] of [['wind', 12], ['gust', 18], ['seas', 5]]) {
+    const at = v => overLimits({wind: null, gust: null, seas: null, [k]: v}, mine)[k];
+    assert.equal(at(lim - 0.1), false, `${k} under`);
+    assert.equal(at(lim), false, `${k} equal is not marked`);
+    assert.equal(at(lim + 0.1), true, `${k} over`);
+  }
+  assert.deepEqual(overLimits(rowWith(13, 10, 6), mine), {wind: true, gust: false, seas: true});
+});
+
+test('SC2037-02: default limits (null) mark nothing; a missing value is never marked', () => {
+  assert.deepEqual(overLimits(rowWith(40, 50, 20), null), {wind: false, gust: false, seas: false});
+  assert.deepEqual(overLimits(rowWith(null, null, null), mine), {wind: false, gust: false, seas: false});
+  assert.deepEqual(overLimits(rowWith(NaN, Infinity, undefined), mine), {wind: false, gust: false, seas: false});
+  assert.equal(hourlyCells({...hourlyTable(forecast(NORMAL), null, '2026-06-15', TZ, nowAt(NORMAL)).rows[0], wind: null, windFrom: null})[0], '—');
+});
+
+test('SC2037-02: the accessible labels name the limit; the note says marks compare NOAA values and the window can differ', () => {
+  assert.equal(t('hourly.over.wind', 'en', {limit: '12'}), 'over your 12 kt wind limit');
+  assert.equal(t('hourly.over.gust', 'en', {limit: '18'}), 'over your 18 kt gust limit');
+  assert.equal(t('hourly.over.seas', 'en', {limit: '5'}), 'over your 5 ft seas limit');
+  assert.match(t('hourly.limits', 'en'), /NOAA values/);
+  assert.match(t('hourly.limits', 'en'), /window can differ/);
+  assert.match(t('hourly.limits', 'es'), /NOAA/);
+});
+
+test('SC2037-02: marking leaves the cell text and score unchanged', () => {
+  const r = hourlyTable(forecast(NORMAL), null, '2026-06-15', TZ, nowAt(NORMAL)).rows[0], before = JSON.stringify([hourlyCells(r), r.score]);
+  overLimits(r, {wind: 1, gust: 1, seas: 1});
+  assert.equal(JSON.stringify([hourlyCells(r), r.score]), before);
 });

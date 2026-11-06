@@ -198,5 +198,8 @@ test('server rateHour: no boat is the reference score; valid factors scale it; b
 
 test('the no-boat trip-dialog wording is unchanged', async () => {
   const src = await readFile(new URL('../web/app/TripAlerts.tsx', import.meta.url), 'utf8');
-  assert.ok(src.includes("'Limits start from the reference 23 ft boat. Set your boat to tailor them.'"));
+  // SC0922-12: the sentence moved to the catalogue (English unchanged); the reference branch draws it by id.
+  assert.ok(src.includes("t('alerts.noteReference', lang)"));
+  const strings = JSON.parse(await readFile(new URL('../catalog/app/strings.json', import.meta.url), 'utf8')).strings;
+  assert.equal(strings['alerts.noteReference'].en, 'Limits start from the reference 23 ft boat. Set your boat to tailor them.');
 });

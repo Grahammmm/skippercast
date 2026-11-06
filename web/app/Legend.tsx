@@ -51,6 +51,7 @@ import {PlanLink} from './PlanView.tsx';
 import {chartFailed, chartMark, retryMpas, unavailable} from '../map/chart.ts';
 import {NOTES, groundsState} from '../map/charter-grounds.ts';
 import {cloudHeld, cloudStamp} from '../map/clouds.ts';
+import {statusText, type StatusPart} from '../map/status-copy.ts';
 import {AIS_CREDIT, aisOn, aisState} from '../map/commercial-ais.ts';
 import {ACTIVITY, ACTIVITY_ENTRY, activityAccess, activityOn, activityStatus} from '../map/fleet.ts';
 import {currentsState} from '../map/currents.ts';
@@ -79,6 +80,12 @@ import {Popover} from '../ui/Popover.tsx';
 import {railEntries, railOn} from './rail.ts';
 
 /** A basis popover body: English shows the producer's own basis as it is; Spanish leads with the registry sentence in Spanish, then the producer's full basis unchanged (labelled English) unless it is the registry's own English sentence. */
+/** SC1352-02: a status the producer wrote in English, in the page's language when it attached catalogue parts; otherwise labelled English. */
+function Status({lang, raw, parts}: {lang: Language; raw: string; parts?: readonly StatusPart[]}) {
+  const r = statusText(raw, parts, lang);
+  return r.translated ? <>{r.text}</> : <EnglishDetail lang={lang}>{raw}</EnglishDetail>;
+}
+
 function Basis({lang, id, runtime, extra}: {lang: Language; id: string; runtime: string; extra?: string}) {
   if (lang !== 'es') return <>{runtime}{extra ? <> {extra}</> : null}</>;
   const same = runtime === layerCopy(id, 'en').basis;
@@ -183,7 +190,7 @@ function ChlorophyllRow() {
     {s.drawn ? <p class="app-legend-note">{t('legend.logScale', lang)}{entry.legend.map(row => <span key={row.label}>
       <span class="app-swatch" style={{background: `var(--${PALETTE_TOKENS[row.swatch!]})`}} aria-hidden="true"></span>{row.label}{' '}
     </span>)}</p> : null}
-    <p class="app-legend-note ui-mono" data-stamp="chlorophyll"><EnglishDetail lang={lang}>{s.note}</EnglishDetail></p>
+    <p class="app-legend-note ui-mono" data-stamp="chlorophyll"><Status lang={lang} raw={s.note} parts={s.copy?.note} /></p>
     <p class="app-legend-note">{layerEntry('chlorophyll').attribution}</p>
   </li>;
 }
@@ -195,8 +202,8 @@ function WaterTempRow() {
       {a ? <span class="app-swatch" data-layer="water-temp" aria-hidden="true"></span> : null}{layerCopy('water-temp', lang).label}
       {a ? <span class="app-legend-range ui-mono" data-range="water-temp">{a.range[0]}–{a.range[1]} °F</span> : null}
       <Popover iconOnly summary={t('legend.bs.waterTemp', lang)}><Basis lang={lang} id="water-temp" runtime={s.basis} /></Popover>
-      {a ? <p class="app-legend-note ui-mono" data-stamp="water-temp"><EnglishDetail lang={lang}>{`${a.product} · ${a.stamp}`}</EnglishDetail></p> : null}
-      {s.reason ? <p class="app-legend-note" data-reason="water-temp"><EnglishDetail lang={lang}>{s.reason}</EnglishDetail></p> : null}
+      {a ? <p class="app-legend-note ui-mono" data-stamp="water-temp"><Status lang={lang} raw={`${a.product} · ${a.stamp}`} parts={s.copy?.stamp} /></p> : null}
+      {s.reason ? <p class="app-legend-note" data-reason="water-temp"><Status lang={lang} raw={s.reason} parts={s.copy?.reason} /></p> : null}
     </li>
   );
 }
@@ -209,8 +216,8 @@ function ContrastRow() {
       {layerCopy('sst-contrast', lang).label}
       <Popover iconOnly summary={t('legend.bs.contrast', lang)}><Basis lang={lang} id="sst-contrast" runtime={s.basis} /></Popover>
       {d ? <p class="app-legend-note ui-mono app-legend-scale" data-scale="sst-contrast">{CONTRAST_SCALE[0]}<span class="app-swatch" data-layer="sst-contrast" aria-hidden="true"></span><span class="app-visually-hidden">{t('legend.to', lang)}</span>{CONTRAST_SCALE[1]}+{t('legend.perNm', lang)}</p> : null}
-      {d ? <p class="app-legend-note ui-mono" data-stamp="sst-contrast"><EnglishDetail lang={lang}>{`${d.product} · ${d.stamp}`}</EnglishDetail></p> : null}
-      {s.reason ? <p class="app-legend-note" data-reason="sst-contrast"><EnglishDetail lang={lang}>{s.reason}</EnglishDetail></p> : null}
+      {d ? <p class="app-legend-note ui-mono" data-stamp="sst-contrast"><Status lang={lang} raw={`${d.product} · ${d.stamp}`} parts={s.copy?.stamp} /></p> : null}
+      {s.reason ? <p class="app-legend-note" data-reason="sst-contrast"><Status lang={lang} raw={s.reason} parts={s.copy?.reason} /></p> : null}
     </li>
   );
 }
@@ -265,7 +272,7 @@ export function CloudsRow({label}: {label: string}) {
   const stamp = cloudStamp.value, lang = language.value;
   return (
     <>
-      <span class="app-legend-text">{label}{stamp ? <span class="app-legend-note ui-mono"><EnglishDetail lang={lang}>{stamp.label}</EnglishDetail></span> : null}</span>
+      <span class="app-legend-text">{label}{stamp ? <span class="app-legend-note ui-mono"><Status lang={lang} raw={stamp.label} parts={stamp.copy} /></span> : null}</span>
       {stamp?.canLoop ? <IconButton icon={cloudHeld.value ? 'play' : 'pause'} label={t('legend.cloudLoop', lang)} pressed={!cloudHeld.value} size="sm"
         onClick={() => { cloudHeld.value = !cloudHeld.value; }} /> : null}
     </>

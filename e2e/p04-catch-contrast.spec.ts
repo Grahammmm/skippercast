@@ -20,7 +20,7 @@ const read = (p: string) => readFileSync(resolve(ROOT, p));
 // plain imports in the document head, so HEAD_STYLES are the shell's three sheets plus those four, linked in order; the
 // ?url sheets stay URL assets. All are qualified, hash-pinned below and, where the page requests them, served exact;
 // model-disagreement.css is only a URL string in the bundle (Reports never mounts Conditions) and must not be requested.
-const HEAD_STYLES = ['web/tokens.css', 'web/ui/ui.css', 'web/app/app.css', 'web/app/plan.css', 'web/app/season.css', 'web/app/views/hourly-table.css', 'web/ui/guard.css'];
+const HEAD_STYLES = ['web/tokens.css', 'web/ui/ui.css', 'web/app/app.css', 'web/app/plan.css', 'web/app/season.css', 'web/app/views/hourly-table.css', 'web/ui/guard.css', 'web/brief/brief-print.css'];
 const URL_STYLES = ['packages/coast/panel.css', 'packages/coast/tokens-bridge.css', 'web/app/views/model-disagreement.css'];
 const UNREQUESTED_STYLES = ['web/app/views/model-disagreement.css'];
 const STYLES = [...HEAD_STYLES, ...URL_STYLES];
@@ -205,7 +205,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC0707-09: LayerRail.tsx reads its words from the string catalogue and renders each runtime status note behind the
   // catalogue English-source disclosure (a plain span lang=en in Spanish only; English unchanged). No CSS, token or catch
   // markup change; BODY09 mounts Reports, not the rail. contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
-  "web/app/LayerRail.tsx": "0488a7b3233c46bae9cecc2ad98d5e1487d184025a86f023c9f3b5c2d832342f",
+  "web/app/LayerRail.tsx": "acc556ca5fd3af5f948238641294273109014ebc90bcd7a1d2b18535552b5dfa",
   // SC-MAIN-FLAKE (#1400, contours drawn signal): MapStage.tsx only passes host: chartHost.current! to
   // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
   // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),
@@ -235,8 +235,11 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "56215598e33a416cb6c877a0661ce3923035f3266872faae9b7eb89db02eb4a2",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
-  "web/app/views/hourly-table.css": "f18fec199fc5e0ef63ebafef5d16af17a4fb4343765641543ccc9494b0da8552",
+  // SC2037-02: hourly-table.css appends only a scoped .app-hourly-over rule (amber token colour, semibold) for own-limit cell marks; Reports never mounts the hourly table, so no counted paint changes. Rebound from the final bytes.
+  "web/app/views/hourly-table.css": "deddfad213ef5d81cd6f82be591b5259a874a1da2961c307df9a9ca1ef644ee0",
   "web/ui/guard.css": "8e53f065f8f7af23121f7eb346ebeefe571baa21eebf1b6179e27a8b86b74d11",
+  // SC2037-04: Brief.tsx imports brief-print.css (only a hidden .app-print-only class and an @media print block; no screen paint); Reports bundles Brief.
+  "web/brief/brief-print.css": "35b695c448385cd449304ca7158d3b8c26dfe9db3d3a9c90ecd0c17796b45dc0",
   "web/app/views/model-disagreement.css": "c6edfd6e81395b8d5e9fe67e982e399989172765490456f6a28ec036c115b72c",
   "packages/coast/panel.css": "ca0495fc90db3cf3f140d520c8231751660268af72bc7b9a4a3ac4dc1679314e",
   "packages/coast/tokens-bridge.css": "8ea4a379a3e516817d4472ad434da797482c4b96e07697aa29269464f433e6d5",
@@ -280,7 +283,10 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC0707-09: LayerRail.tsx reads its words through the catalogue (labels, Chart-only reasons, Terrain options chrome, grade and base choices)
   // and check_contrast.mjs rebinds only the Legend.tsx surface hash, two line citations and a scope comment. BODY09 mounts Reports/CatchCards, never the
   // rail or Legend; contrast(), catch paint, backing, assertions and thresholds are unchanged. Rebind only these two sources.
-  "scripts/check_contrast.mjs": "c15f43be963e79a1c7d82a94ca38382e8ab13b1bea83f4f4e4142381517f9538",
+  // SC1352-02: LayerRail.tsx shows a note in the page's language when its layer attached catalogue parts (a status string through the same
+  // note element and text role); check_contrast.mjs rebinds only the Legend.tsx surface hash, two line citations and a scope comment. BODY09 mounts
+  // Reports/CatchCards, never the rail or Legend; contrast(), catch paint, backing, assertions and thresholds are unchanged. Rebind only these two sources.
+  "scripts/check_contrast.mjs": "bd1b4cd460cdba81fce0b1a4e19d8598a9e1836b8330c0b49bfdd86abcdccfc1",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still

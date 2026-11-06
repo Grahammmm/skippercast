@@ -43,7 +43,8 @@ import type {Engine, Overlay} from './engine.ts';
 import {fieldTexture, isolines} from './field.ts';
 import {layerEntry, setRailNote} from './layers.ts';
 import {DEPTH_BOTTOM} from './depth-contours.ts';
-import {COAST_NOT_SAVED, NOT_SAVED, TILES_NOT_SAVED, watchOffline} from './offline.ts';
+import {COAST_NOT_SAVED, COAST_OFFLINE_COPY, NOT_SAVED, TILES_NOT_SAVED, TILES_OFFLINE_COPY, watchOffline} from './offline.ts';
+import {pair, sp, type StatusCopy} from './status-copy.ts';
 import {MPA_FILL} from './mpa.ts';
 import {ramps, readPalette, type Palette} from './palette.ts';
 import {shownPresentation, terrainHour} from './stage.ts';
@@ -88,11 +89,13 @@ export interface WaterTempStatus {
   readonly reason: string;
   /** One sentence or two: product, grid, date and age, error, and what the field is not. */
   readonly basis: string;
+  /** SC1352-02: catalogue parts for `note`, `reason` and the legend `stamp`; absent when off or when a producer attaches none. */
+  readonly copy?: StatusCopy;
 }
 
 export const WATER_TEMP_BASIS = layerEntry('water-temp').basis;
 const OFF: WaterTempStatus = {drawn: null, note: '', reason: '', basis: WATER_TEMP_BASIS};
-const none = (note: string, reason: string): WaterTempStatus => ({...OFF, note, reason});
+const none = (note: string, reason: string, copy?: StatusCopy): WaterTempStatus => ({...OFF, note, reason, ...(copy ? {copy} : {})});
 
 const dates = new Map<string, Intl.DateTimeFormat>();
 /** "Oct 7" in the region's zone. */
@@ -130,48 +133,52 @@ function grid(sst: SurfaceTemperature): {field: SurfaceField; range: [number, nu
 /** What Water temp shows for the report's state at the dock's hour `at`. */
 export function analysisStatus(on: boolean, status: CoastStatus, report: Report | null, at: Date, now: Date, tz: string, offline = false): WaterTempStatus {
   if (!on) return OFF;
-  if (offline && status === 'error' && !report) return none(NOT_SAVED, COAST_NOT_SAVED);
-  if (status === 'unbound') return none('no analysis for this region', 'Water temp unavailable: no local surface-temperature analysis covers this region yet.');
-  if (status === 'error' || status === 'invalid') return none('unavailable', 'Water temp unavailable: the coast report failed to load.');
-  if (status === 'expired') return none('expired', 'Water temp unavailable: the coast report passed its age limit.');
-  if (!report) return none('loading', 'Loading the coast report.');
+  if (offline && status === 'error' && !report) return none(NOT_SAVED, COAST_NOT_SAVED, COAST_OFFLINE_COPY);
+  if (status === 'unbound') return none('no analysis for this region', 'Water temp unavailable: no local surface-temperature analysis covers this region yet.', pair(sp('map.status.common.noRegion'), sp('map.status.sst.noRegion')));
+  if (status === 'error' || status === 'invalid') return none('unavailable', 'Water temp unavailable: the coast report failed to load.', pair(sp('map.status.common.unavailable'), sp('map.status.sst.reportFailed')));
+  if (status === 'expired') return none('expired', 'Water temp unavailable: the coast report passed its age limit.', pair(sp('map.status.common.expired'), sp('map.status.sst.reportExpired')));
+  if (!report) return none('loading', 'Loading the coast report.', pair(sp('map.status.common.loading'), sp('map.status.sst.loadingReport')));
   const sst = report.spatial?.surfaceTemperature;
   const source = sst && Array.isArray(report.sources) ? report.sources.find(s => s?.id === sst.sourceId) : undefined;
   if (!sst || sst.kind !== 'analysis' || !Number.isFinite(Date.parse(sst.analysedAt)) || source?.outcome !== 'ok' || source.kind !== 'analysis' || typeof source.label !== 'string' || !source.label)
-    return none('no analysis in the report', 'Water temp unavailable: the coast report carries no surface-temperature analysis that loaded.');
+    return none('no analysis in the report', 'Water temp unavailable: the coast report carries no surface-temperature analysis that loaded.', pair(sp('map.status.sst.noReportNote'), sp('map.status.sst.noReportAnalysis')));
   return judge(sst, source.label.split(' · ')[0]!.trim(), MAX_AGE_MS, at, now, tz);
 }
 
 const stale = (product: string, analysedAt: string, limit: number, tz: string): WaterTempStatus => {
-  const date = dayText(analysedAt, tz);
-  return none(`no fresh analysis · last ${date}`, `Water temp unavailable: the latest ${product} analysis, for ${date}, is past its ${Math.round(limit / HOUR)}-hour age limit.`);
+  const date = dayText(analysedAt, tz), when = {day: analysedAt, tz};
+  return none(`no fresh analysis · last ${date}`, `Water temp unavailable: the latest ${product} analysis, for ${date}, is past its ${Math.round(limit / HOUR)}-hour age limit.`,
+    pair(sp('map.status.common.staleNote', {date: when}), sp('map.status.sst.stale', {product, date: when, hours: Math.round(limit / HOUR)})));
 };
 
 /** What Water temp shows from the region's own feed (`null` while it loads) for a place with no local report. */
 export function regionalStatus(on: boolean, feed: RegionalSST | null, at: Date, now: Date, tz: string, offline = false): WaterTempStatus {
   if (!on) return OFF;
-  if (offline && feed?.state === 'error' && feed.network) return none(NOT_SAVED, TILES_NOT_SAVED);
-  if (!feed) return none('loading', 'Loading the region\'s surface-temperature analysis.');
-  if (feed.state === 'none') return none('no analysis for this region', 'Water temp unavailable: no local surface-temperature analysis covers this region yet.');
-  if (feed.state === 'error') return none('unavailable', 'Water temp unavailable: the region\'s surface-temperature analysis failed to load or failed its checks.');
+  if (offline && feed?.state === 'error' && feed.network) return none(NOT_SAVED, TILES_NOT_SAVED, TILES_OFFLINE_COPY);
+  if (!feed) return none('loading', 'Loading the region\'s surface-temperature analysis.', pair(sp('map.status.common.loading'), sp('map.status.common.loadingRegion')));
+  if (feed.state === 'none') return none('no analysis for this region', 'Water temp unavailable: no local surface-temperature analysis covers this region yet.', pair(sp('map.status.common.noRegion'), sp('map.status.sst.noRegion')));
+  if (feed.state === 'error') return none('unavailable', 'Water temp unavailable: the region\'s surface-temperature analysis failed to load or failed its checks.', pair(sp('map.status.common.unavailable'), sp('map.status.sst.feedFailed')));
   if (feed.state === 'listed') return feed.analysedAt && (feed.layerStatus === 'stale' || !fresh(feed.analysedAt, now, feed.maxAgeMs))
     ? stale(feed.product, feed.analysedAt, feed.maxAgeMs, tz)
-    : none('no analysis in the feed', 'Water temp unavailable: the region\'s feed carries no surface-temperature analysis that loaded.');
+    : none('no analysis in the feed', 'Water temp unavailable: the region\'s feed carries no surface-temperature analysis that loaded.', pair(sp('map.status.common.noFeedAnalysis'), sp('map.status.sst.noFeedAnalysis')));
   return judge(feed.sst, feed.product, feed.maxAgeMs, at, now, tz);
 }
 
 /** The shared gate: age (the analysis's and its retrieval's), the dock's hour, then the grid. */
 function judge(sst: SurfaceTemperature, product: string, limit: number, at: Date, now: Date, tz: string): WaterTempStatus {
-  const date = dayText(sst.analysedAt, tz);
+  const date = dayText(sst.analysedAt, tz), when = {day: sst.analysedAt, tz};
   if (!fresh(sst.analysedAt, now, limit) || !fresh(sst.fetchedAt, now, limit)) return stale(product, sst.analysedAt, limit, tz);
   if (Date.parse(sst.analysedAt) > at.getTime())
-    return none(`analysis after this hour · ${date}`, `Water temp unavailable: the ${product} analysis, for ${date}, is later than the selected hour.`);
+    return none(`analysis after this hour · ${date}`, `Water temp unavailable: the ${product} analysis, for ${date}, is later than the selected hour.`,
+      pair(sp('map.status.common.afterHourNote', {date: when}), sp('map.status.sst.afterHour', {product, date: when})));
   const built = grid(sst);
   if (!built) return none(`grid cannot be drawn · ${date}`,
-    `Water temp unavailable: the ${product} analysis for ${date} is not a grid that can be drawn without bridging gaps, and no earlier analysis is shown.`);
+    `Water temp unavailable: the ${product} analysis for ${date} is not a grid that can be drawn without bridging gaps, and no earlier analysis is shown.`,
+    pair(sp('map.status.sst.gridNote', {date: when}), sp('map.status.sst.noGrid', {product, date: when})));
   const stamp = `analysis ${date} · ${age(now.getTime() - Date.parse(sst.analysedAt))} old`;
   const drawn: Analysis = {key: `${sst.sourceId}|${sst.analysedAt}|${sst.fetchedAt}`, sst, product, ...built, stamp, limitMs: limit};
-  return {drawn, note: stamp, reason: '', basis: analysisBasis(drawn, now, tz)};
+  const shown = sp('map.status.common.stamp', {date: when, age: {age: now.getTime() - Date.parse(sst.analysedAt)}});
+  return {drawn, note: stamp, reason: '', basis: analysisBasis(drawn, now, tz), copy: {note: [shown], stamp: [`${product} · `, shown]}};
 }
 
 /**
@@ -277,7 +284,7 @@ export function createWaterTemp(o: WaterTempOptions): {reading(at: {lon: number;
     effect(() => {
       const s = status.value;
       waterTempState.value = s;
-      setRailNote(REGISTRY_ID, on.value ? s.note : '');
+      setRailNote(REGISTRY_ID, on.value ? s.note : '', on.value ? s.copy?.note : undefined);
     }),
     // A new analysis repaints; no analysis (off, refused, stale) removes the texture and the contours at once.
     effect(() => {

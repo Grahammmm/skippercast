@@ -15,6 +15,14 @@ systemd unit (CF-42). Four asyncio tasks share one ``Listener``:
   connection has been receiving for ``STABLE_SECONDS`` (60 s) or delivered
   ``STABLE_RECORDS`` (100) records, so a server that accepts and then drops
   every connection still backs off.
+  With more than one configured source (``ais.sources``) there is one reader
+  task per source (``ais-reader-<id>``; a single source keeps the name
+  ``ais-reader``), each with its own backoff and attempt counter, all feeding the same
+  queue. ``NotConfigured`` from the primary (first) source is fatal; from a
+  secondary it is logged and that source stays idle while the primary keeps
+  running. Rows from different sources are all kept: the store's key is
+  ``(mmsi, ts, source)``, so the same fix from two sources is two rows and the same
+  fix twice from one source is one; no extra de-duplication is done here.
 - **writer**: commits the queue every ``BATCH_SECONDS`` (1 s) or
   ``BATCH_ROWS`` (1,000) rows through ``AisStore.write`` in a worker thread.
   One flush writes at most the rows queued when it started, so a busy feed
@@ -54,6 +62,11 @@ holds each vessel's statics).
      "queue_depth": 3, "queue_max": 50000,
      "watch_size": 41, "watch_generated_at": "...Z" | null, "watch_errors": 0,
      "retention_at": "...Z" | null}
+
+With more than one source configured the document also has ``"sources":
+{"<id>": {"connected": bool, "messages": n_since_start, "reconnects": n,
+"last_message_at": "...Z" | null}}`` (``connected`` above is true when any is);
+a single-source document has no ``sources`` key.
 
 Rates and ``vessels`` (distinct MMSIs heard) cover the interval since the
 previous heartbeat; the other counters run since ``started_at``. ``git_sha`` is
@@ -216,18 +229,37 @@ class _Resubscribe(Exception):
     pass
 
 
+@dataclass
+class SourceState:
+    """One source's reader state (the heartbeat's ``sources`` entry)."""
+    source: AisSource
+    connected: bool = False
+    messages: int = 0
+    reconnects: int = 0
+    last_message_at: float | None = None
+    resubscribe: asyncio.Event = field(default_factory=asyncio.Event)
+
+
 class Listener:
     """One region's listener. Everything time- or chance-dependent is injectable for tests."""
 
-    def __init__(self, *, region: str, source: AisSource, store: AisStore, bbox: Bbox,
+    def __init__(self, *, region: str, source: AisSource | None = None,
+                 sources: Sequence[AisSource] | None = None, store: AisStore, bbox: Bbox,
                  geofences: Iterable[Geofence], retention: RetentionLimits, watch: WatchFile,
                  heartbeat_path: Path, mmsi_filter: bool = False, settings: Settings | None = None,
                  clock: Callable[[], float] = time.time,
                  sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
                  jitter: Callable[[float, float], float] = random.uniform,
                  git_sha: str | None = None):
+        sources = tuple(sources) if sources else ((source,) if source is not None else ())
+        if not sources:
+            raise ValueError("a listener needs at least one source")
         self.region = region
-        self.source = source
+        self.sources = sources
+        self.source = sources[0]                 # the primary
+        self.states = {src.id: SourceState(src) for src in sources}
+        if len(self.states) != len(sources):
+            raise ValueError("duplicate AIS source ids")
         self.store = store
         self.bbox = bbox
         self.retention = retention
@@ -243,14 +275,17 @@ class Listener:
         self.queue: deque[tuple[str, AisMessage]] = deque()
         self.counters = Counters()
         self.started_at = clock()
-        self.connected = False
         self.last_message_at: float | None = None
         self.last_error: str | None = None
         self.last_retention_at: float | None = None
         self.delays: list[float] = []          # reconnect delays drawn, newest last (kept short)
         self._heartbeat_at = self.started_at
         self._batch_ready = asyncio.Event()
-        self._resubscribe = asyncio.Event()
+        self._resubscribe = self.states[self.source.id].resubscribe
+
+    @property
+    def connected(self) -> bool:
+        return any(state.connected for state in self.states.values())
 
     # ----- reader -----
 
@@ -294,10 +329,10 @@ class Listener:
             self._batch_ready.set()
         return table
 
-    async def _next(self, stream):
+    async def _next(self, stream, resubscribe: asyncio.Event | None = None):
         """The next record, or ``asyncio.TimeoutError`` after ``idle_seconds``; ``_Resubscribe`` on a watch change."""
         step = asyncio.ensure_future(anext(stream))
-        change = asyncio.ensure_future(self._resubscribe.wait())
+        change = asyncio.ensure_future((resubscribe or self._resubscribe).wait())
         try:
             done, _ = await asyncio.wait({step, change}, timeout=self.settings.idle_seconds,
                                          return_when=asyncio.FIRST_COMPLETED)
@@ -318,31 +353,38 @@ class Listener:
             future.cancel()
         await asyncio.gather(*futures, return_exceptions=True)
 
-    async def read_forever(self) -> None:
-        """Connect, read and reconnect until cancelled. ``NotConfigured`` (no API key) is fatal."""
+    async def read_forever(self, source: AisSource | None = None) -> None:
+        """Connect, read and reconnect until cancelled. ``NotConfigured`` (no API key) is fatal.
+
+        ``source`` defaults to the primary; each source has its own backoff ``attempt``.
+        """
+        source = source or self.source
+        state = self.states[source.id]
         attempt = 0
         while True:
             mmsis = self.subscription_mmsis()
             if mmsis is not None and not mmsis:
                 # watched-only mode with nothing to watch: wait for the list to fill
-                self._resubscribe.clear()
+                state.resubscribe.clear()
                 await self.sleep(self.settings.reload_seconds)
                 continue
-            self._resubscribe.clear()
-            stream = self.source.stream(self.bbox, mmsis)
+            state.resubscribe.clear()
+            stream = source.stream(self.bbox, mmsis)
             reason = None
             first_at, delivered = None, 0
             try:
                 while True:
-                    record = await self._next(stream)
-                    if not self.connected:
-                        self.connected = True
+                    record = await self._next(stream, state.resubscribe)
+                    if not state.connected:
+                        state.connected = True
                         first_at = self.clock()
-                        log.info("receiving AIS", extra={"region": self.region, "source_id": self.source.id})
+                        log.info("receiving AIS", extra={"region": self.region, "source_id": source.id})
                     delivered += 1
                     if attempt and (delivered >= self.settings.stable_records
                                     or self.clock() - first_at >= self.settings.stable_seconds):
                         attempt = 0   # the connection proved stable
+                    state.messages += 1
+                    state.last_message_at = self.clock()
                     self.accept(record)
             except _Resubscribe:
                 reason = None
@@ -358,7 +400,7 @@ class Listener:
             except Exception as error:   # connection errors, error frames, protocol errors
                 reason = f"{type(error).__name__}: {str(error)[:200]}"
             finally:
-                self.connected = False
+                state.connected = False
                 try:
                     await stream.aclose()
                 except Exception:
@@ -367,13 +409,24 @@ class Listener:
                 log.info("watch list changed; resubscribing", extra={"region": self.region})
                 continue
             self.counters.reconnects += 1
+            state.reconnects += 1
             self.last_error = reason
             delay = self.jitter(0.0, backoff_ceiling(attempt, self.settings.backoff_initial, self.settings.backoff_max))
             attempt += 1
             self.delays = (self.delays + [delay])[-20:]
             log.warning("AIS connection lost (%s); reconnecting in %.1f s", reason, delay,
-                        extra={"region": self.region, "source_id": self.source.id})
+                        extra={"region": self.region, "source_id": source.id})
             await self.sleep(delay)
+
+    async def _read_secondary(self, source: AisSource) -> None:
+        """A non-primary reader: ``NotConfigured`` is logged and the reader idles (it must not end the run)."""
+        try:
+            await self.read_forever(source)
+        except NotConfigured as error:
+            self.last_error = f"{source.id}: {str(error)[:200]}"
+            log.warning("AIS source %s is not configured; not reading it: %s", source.id, error,
+                        extra={"region": self.region, "source_id": source.id})
+            await asyncio.Event().wait()
 
     # ----- writer -----
 
@@ -463,7 +516,8 @@ class Listener:
         if changed:
             log.info("watch list now %d MMSIs", len(self.watch.current), extra={"region": self.region})
             if self.mmsi_filter:
-                self._resubscribe.set()
+                for state in self.states.values():
+                    state.resubscribe.set()
         if self.watch.last_error:
             log.warning("watch.json rejected, keeping %d MMSIs: %s", len(self.watch.current), self.watch.last_error,
                         extra={"region": self.region})
@@ -487,6 +541,10 @@ class Listener:
             "watch_size": len(self.watch.current), "watch_generated_at": self.watch.current.generated_at,
             "watch_errors": self.watch.errors, "retention_at": _iso(self.last_retention_at),
         }
+        if len(self.sources) > 1:
+            document["sources"] = {sid: {"connected": st.connected, "messages": st.messages,
+                                         "reconnects": st.reconnects, "last_message_at": _iso(st.last_message_at)}
+                                   for sid, st in self.states.items()}
         return document
 
     def write_heartbeat(self) -> dict:
@@ -514,11 +572,17 @@ class Listener:
     async def run(self, stop: asyncio.Event | None = None) -> None:
         """Run until ``stop`` is set (or a task fails), then flush the queue and write a last heartbeat."""
         stop = stop or asyncio.Event()
-        if hasattr(self.source, "on_malformed") and getattr(self.source, "on_malformed") is None:
-            self.source.on_malformed = self.on_malformed
+        for source in self.sources:
+            if hasattr(source, "on_malformed") and getattr(source, "on_malformed") is None:
+                source.on_malformed = self.on_malformed
         self.reload_watch()
+        if len(self.sources) == 1:
+            readers = [("ais-reader", self.read_forever())]
+        else:
+            readers = [(f"ais-reader-{src.id}", self.read_forever() if src is self.source else self._read_secondary(src))
+                       for src in self.sources]
         tasks = [asyncio.create_task(coro, name=name) for name, coro in (
-            ("ais-reader", self.read_forever()), ("ais-writer", self.write_forever()),
+            *readers, ("ais-writer", self.write_forever()),
             ("ais-watch", self.watch_forever()), ("ais-heartbeat", self.heartbeat_forever()))]
         stopper = asyncio.create_task(stop.wait(), name="ais-stop")
         failure = None
@@ -553,12 +617,14 @@ def build_listener(region_id: str, var: Path | None = None, environ=None, **over
 
     environ = os.environ if environ is None else environ
     region = load_region(region_id)
-    source_options = {"message_types": region.ais.message_types}
-    if region.ais.source == "aisstream":
-        source_options["api_key"] = environ.get("AISSTREAM_API_KEY", "").strip() or None
-    source = get_source(region.ais.source, **source_options)
+    sources = []
+    for source_id in region.ais.sources:
+        source_options = {"message_types": region.ais.message_types}
+        if source_id == "aisstream":
+            source_options["api_key"] = environ.get("AISSTREAM_API_KEY", "").strip() or None
+        sources.append(get_source(source_id, **source_options))
     store = AisStore.for_region(region.id, var)
-    return Listener(region=region.id, source=source, store=store, bbox=bbox_of(region.ais),
+    return Listener(region=region.id, sources=sources, store=store, bbox=bbox_of(region.ais),
                     geofences=geofences_of(region), retention=retention_limits(region),
                     watch=WatchFile(store.root / "watch.json", region.id),
                     heartbeat_path=store.root / "heartbeat.json", mmsi_filter=region.ais.mmsi_filter,

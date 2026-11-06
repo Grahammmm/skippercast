@@ -39,9 +39,11 @@ import {coordinates, navigate, profile, region as stateRegion, selection, setPar
 import {formatCoordinates} from '../../dist/coordinates.js';
 import {RulesLine} from './RulesCard.tsx';
 import {session, type Session} from '../account.ts';
-import {SAVE_WORDS, saveMarkSpot, spotCandidate, type SpotResult} from '../saved-spots.ts';
+import {resultMessage, saveMarkSpot, spotCandidate, uncertainResult, type SpotResult} from '../saved-spots.ts';
+import {language, t} from '../i18n.ts';
+import {copyText, resolveMarkCopy} from '../mark-copy.ts';
 import {addPlaceToTrip, addToTrip, placeTripId, reviewPlace, reviewTrip, tripIds} from '../trip.ts';
-import {regulationsLink} from '../map/habitat.ts';
+import {regulationsCopy, regulationsLink} from '../map/habitat.ts';
 import {drawnSpots} from '../map/ranked.ts';
 import {SAVED_CARD_PREFIX, savedSpotDistancePosition} from '../map/saved-spots.ts';
 import {cruiseSpeed} from '../limits.ts';
@@ -59,7 +61,10 @@ export {RulesLine};
 export {terrainCard} from '../map/habitat.ts';
 
 /** The card's placeholder while the region's marks load. */
-export const placeholderMark = (id: string): Mark => ({id, name: id, kind: 'Mark', reading: '—', source: 'Source —', basis: 'The mark loads with the map engine; its source and age show here.'});
+export const placeholderMark = (id: string): Mark => ({
+  id, name: id, kind: t('mark.placeholder.kind'), reading: '—', source: t('mark.placeholder.source'), basis: t('mark.placeholder.basis'),
+  copy: {kind: [{id: 'mark.placeholder.kind'}], source: [{id: 'mark.placeholder.source'}], basis: [{id: 'mark.placeholder.basis'}]},
+});
 
 /** The id prefix of a terrain reading's card. */
 export const READING = 'reading:';
@@ -67,7 +72,8 @@ export const READING = 'reading:';
 export const readingCard = (r: CoastReading): Mark => ({
   id: `${READING}${r.latitude.toFixed(5)},${r.longitude.toFixed(5)}`, name: r.value, kind: r.label, reading: '', source: r.detail,
   position: {latitude: r.latitude, longitude: r.longitude},
-  basis: `${r.source.label}, ${r.source.kind}, dated ${r.source.sourceDate}. The reading is the original nearest displayed sample; not for navigation.`,
+  basis: t('mark.readingBasis', 'en', {label: r.source.label, kind: r.source.kind, date: r.source.sourceDate}),
+  copy: {basis: [{id: 'mark.readingBasis', vars: {label: r.source.label, kind: r.source.kind, date: r.source.sourceDate}}]},
 });
 
 /**
@@ -165,7 +171,7 @@ export function MarkDistance({mark}: {mark: Mark}) {
 }
 
 type SaveKey = {readonly id: string; readonly name: string; readonly lat: number | null; readonly lon: number | null; readonly region: string | null; readonly session: Session};
-type SaveStatus = {readonly key: SaveKey; readonly state: 'pending' | SpotResult['state']; readonly message: string};
+type SaveStatus = {readonly key: SaveKey; readonly state: 'pending' | SpotResult['state']; readonly result: SpotResult | null};
 const sameSave = (a: SaveKey | null, b: SaveKey | null): boolean =>
   !!a && !!b && a.id === b.id && a.name === b.name && a.lat === b.lat && a.lon === b.lon && a.region === b.region && a.session === b.session;
 
@@ -174,7 +180,7 @@ const sameSave = (a: SaveKey | null, b: SaveKey | null): boolean =>
  * region and session: a different mark, region or account resets it, and a late answer for another one is ignored.
  */
 export function SaveSpotAction({mark}: {mark: Mark}) {
-  const who = session.value, where = stateRegion.value, at = mark.position;
+  const who = session.value, where = stateRegion.value, at = mark.position, lang = language.value;
   const key: SaveKey = {id: mark.id, name: mark.name, lat: at ? at.latitude : null, lon: at ? at.longitude : null, region: where, session: who};
   const [status, setStatus] = useState<SaveStatus | null>(null);
   const latest = useRef(key), inflight = useRef<SaveKey | null>(null), mounted = useRef(true);
@@ -183,32 +189,32 @@ export function SaveSpotAction({mark}: {mark: Mark}) {
   useEffect(() => { setStatus(null); }, [key.id, key.name, key.lat, key.lon, key.region, key.session]);
   if (who.state !== 'signed-in') return null;
   const shown = status && sameSave(status.key, key) ? status : null, candidate = spotCandidate(mark);
-  const blocked = 'state' in candidate ? candidate.message : '';
+  const blocked = 'state' in candidate ? candidate : null;
   const save = async () => {
     if (blocked || shown?.state === 'pending' || shown?.state === 'saved' || sameSave(inflight.current, key)) return;
     const mine = key;
     inflight.current = mine;
-    setStatus({key: mine, state: 'pending', message: ''});
-    const result = await saveMarkSpot(mark).catch((): SpotResult => ({state: 'failed', message: SAVE_WORDS.uncertain}));
+    setStatus({key: mine, state: 'pending', result: null});
+    const result = await saveMarkSpot(mark).catch(uncertainResult);
     if (sameSave(inflight.current, mine)) inflight.current = null;
     if (!mounted.current || !sameSave(latest.current, mine)) return;
-    setStatus({key: mine, state: result.state, message: result.message});
+    setStatus({key: mine, state: result.state, result});
   };
   const saved = shown?.state === 'saved';
   return (
     <>
       <Button size="sm" icon={saved ? 'check' : 'plus'} disabled={!!blocked || shown?.state === 'pending' || saved} onClick={() => { void save(); }}>
-        {shown?.state === 'pending' ? 'Saving…' : saved ? SAVE_WORDS.saved : 'Save this spot'}</Button>
+        {shown?.state === 'pending' ? t('mark.save.pending', lang) : saved ? t('mark.save.saved', lang) : t('mark.save.action', lang)}</Button>
       <div class="app-mark-why" style={{flexBasis: '100%'}}>
-        <p>{SAVE_WORDS.helper}</p>
-        <p role="status">{shown && shown.state !== 'pending' ? shown.message : blocked}</p>
+        <p>{t('mark.save.helper', lang)}</p>
+        <p role="status">{shown?.result && shown.state !== 'pending' ? resultMessage(shown.result, lang) : blocked ? resultMessage(blocked, lang) : ''}</p>
       </div>
     </>
   );
 }
 
 export function MarkCard({mark}: {mark?: Mark} = {}) {
-  const selected = mark ?? currentMark.value, request = picked.value;
+  const selected = mark ?? currentMark.value, request = picked.value, lang = language.value;
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     // A pick, never a link or a restore, moves focus to the card so its reading is announced.
@@ -230,54 +236,57 @@ export function MarkCard({mark}: {mark?: Mark} = {}) {
   // SCJ-1: a habitat card (the brief's recommended places) joins a trip, or opens it for GPX, as a user waypoint, and links its region's rules page.
   const habitat = selected.id.startsWith('habitat:'), survey = selected.id.startsWith('survey:'), at = selected.withheld ? undefined : selected.position;
   const where = (habitat || survey) && at && Number.isFinite(at.latitude) && Number.isFinite(at.longitude)
-    ? {id: selected.id, name: (survey && selected.kind === 'Historical kelp detections' ? `Historical kelp detections · ${selected.name}` : selected.name).slice(0, 80), latitude: at.latitude, longitude: at.longitude, shore: survey ? !['Mapped hard bottom', 'Mapped mixed bottom'].includes(selected.kind) : /\bshore\b/i.test(`${selected.name} ${selected.kind}`)} : null;
+    ? {id: selected.id, name: (survey && selected.kind === t('mark.kind.kelp', 'en') ? `${t('mark.kind.kelp', 'en')} · ${selected.name}` : selected.name).slice(0, 80), latitude: at.latitude, longitude: at.longitude, shore: survey ? ![t('mark.kind.hard', 'en'), t('mark.kind.mixed', 'en')].includes(selected.kind) : /\bshore\b/i.test(`${selected.name} ${selected.kind}`)} : null;
   const added = spot ? tripIds.value.includes(spot) : !!where && tripIds.value.includes(survey ? `user:survey-${where.id.slice(7).replace(/[^a-zA-Z0-9-]/g, '-').slice(0, 72)}` : placeTripId(where.id));
   const regulations = selected.regulations ?? (habitat && markData.value?.region ? regulationsLink(markData.value.region) : undefined);
+  // The fallback link (a habitat card with no regulations of its own) is named in the page's language too.
+  const regulationsName = !regulations || selected.regulations ? '' : lang === 'es' && markData.value?.region ? copyText(regulationsCopy(markData.value.region), lang) : regulations.label;
   const close = () => {
     const back = returnTo?.isConnected ? returnTo : mapFocusTarget(document);
     returnTo = null;
     clearMark(selected);
     back?.focus();
   };
+  const shown = resolveMarkCopy(selected, lang);
   return (
-    <section class="app-mark" aria-label="Selected mark"
+    <section class="app-mark" aria-label={t('mark.selected', lang)}
       onKeyDown={event => { if (event.key === 'Escape' && !event.currentTarget.querySelector('details[open]')) { event.preventDefault(); close(); } }}>
       <div class="app-mark-head">
-        <h2 tabIndex={-1} ref={heading}>{selected.name}</h2>
-        <IconButton icon="close" label="Clear selection" size="sm" onClick={close} />
+        <h2 tabIndex={-1} ref={heading}>{shown.name}</h2>
+        <IconButton icon="close" label={t('mark.clear', lang)} size="sm" onClick={close} />
       </div>
-      <p class="app-mark-kind">{selected.kind}</p>
-      {selected.reading ? <p class="ui-reading">{selected.reading}</p> : null}
+      <p class="app-mark-kind">{shown.kind}</p>
+      {selected.reading ? <p class="ui-reading">{shown.reading}</p> : null}
       {selected.position && !selected.withheld ? <p class="ui-mono">{formatCoordinates(selected.position.latitude, selected.position.longitude, coordinates.value)}</p> : null}
       {(profile.value === 'boat' || profile.value === 'kayak') && !selected.withheld ? <MarkDistance mark={selected} /> : null}
-      <p class="app-mark-source ui-mono">{selected.source}</p>
+      <p class="app-mark-source ui-mono">{shown.source}</p>
       {selected.provider ? <a href={selected.provider.href} target="_blank" rel="noopener">{selected.provider.label}</a> : null}
       {selected.rules ? (
-        <p class="app-mark-rules">{selected.rules}{selected.regulations ? <>{' '}
-          <a href={selected.regulations.href} target="_blank" rel="noopener" aria-label={`${selected.regulations.label} (official page, opens in a new tab)`}>{selected.regulations.label}</a>
+        <p class="app-mark-rules">{shown.rules}{selected.regulations ? <>{' '}
+          <a href={selected.regulations.href} target="_blank" rel="noopener" aria-label={t('mark.officialAria', lang, {label: shown.regulationsLabel!})}>{shown.regulationsLabel}</a>
         </> : null}</p>
       ) : null}
       <RulesLine mark={selected} />
       {place ? <MarkForecast place={place} /> : null}
       {privateSaved ? null : <div class="app-mark-actions">
         <Button size="sm" icon={added ? 'check' : 'plus'} disabled={!spot && !where} onClick={() => { if (spot) void addToTrip(spot); else if (where) void addPlaceToTrip(where); }}>
-          {added ? 'Added to trip' : target && target.canonical_habitat !== true ? 'Save research reference' : 'Add to trip'}</Button>
-        <Button size="sm" icon="download" disabled={!spot && !where} onClick={() => { if (spot) void reviewTrip(spot); else if (where) void reviewPlace(where); }}>{selected.trip ? 'Review & export' : 'GPX'}</Button>
+          {added ? t('mark.added', lang) : target && target.canonical_habitat !== true ? t('mark.research', lang) : t('mark.add', lang)}</Button>
+        <Button size="sm" icon="download" disabled={!spot && !where} onClick={() => { if (spot) void reviewTrip(spot); else if (where) void reviewPlace(where); }}>{selected.trip ? t('mark.review', lang) : 'GPX'}</Button>
         {regulations ? (
           <a class="ui-button ui-button--ghost ui-button--sm" href={regulations.href} target="_blank" rel="noopener"
-            aria-label={`Regulations: ${regulations.label} (official page, opens in a new tab)`}>
-            <Icon name="shield" size={16} />Regulations
+            aria-label={t('mark.regulationsAria', lang, {label: selected.regulations ? shown.regulationsLabel! : regulationsName})}>
+            <Icon name="shield" size={16} />{t('mark.regulations', lang)}
           </a>
-        ) : <Button size="sm" icon="shield" disabled>Regulations</Button>}
+        ) : <Button size="sm" icon="shield" disabled>{t('mark.regulations', lang)}</Button>}
         <SaveSpotAction mark={selected} />
       </div>}
-      {!selected.withheld && (survey && !where || /^(geology|charter|fleet):/.test(selected.id)) ? <p class="app-mark-why">{survey ? 'Pick this place on the map to export its position' : selected.id.startsWith('geology:') ? 'Geology unit: context for reading the map, not a place to fish' : 'Charter-reported grounds and AIS activity are not exported: they show apparent activity, not a verified place.'}</p> : null}
-      {habitat && !selected.withheld && !where ? <p class="app-mark-why">This place has no saved position yet, so it cannot be added to a trip or exported.</p> : null}
+      {!selected.withheld && (survey && !where || /^(geology|charter|fleet):/.test(selected.id)) ? <p class="app-mark-why">{t(survey ? 'mark.pick' : selected.id.startsWith('geology:') ? 'mark.geology' : 'mark.activity', lang)}</p> : null}
+      {habitat && !selected.withheld && !where ? <p class="app-mark-why">{t('mark.noPosition', lang)}</p> : null}
       <div class="app-mark-basis">
-        <Popover>{selected.basis}{selected.terms?.map(t => (
-          <p key={t.href}><a href={t.href} target="_blank" rel="noopener" aria-label={`${t.label} (publisher's page, opens in a new tab)`}>{t.label}</a></p>
+        <Popover>{shown.basis}{selected.terms?.map((term, i) => (
+          <p key={term.href}><a href={term.href} target="_blank" rel="noopener" aria-label={t('mark.publisherAria', lang, {label: shown.terms[i] ?? term.label})}>{shown.terms[i] ?? term.label}</a></p>
         ))}</Popover>
-        {sources ? <Button variant="quiet" size="sm" icon="info" onClick={() => sources.sources()}>Terrain sources</Button> : null}
+        {sources ? <Button variant="quiet" size="sm" icon="info" onClick={() => sources.sources()}>{t('mark.sources', lang)}</Button> : null}
       </div>
     </section>
   );

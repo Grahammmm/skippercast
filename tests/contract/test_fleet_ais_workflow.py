@@ -52,13 +52,14 @@ class FleetAisWorkflowTests(unittest.TestCase):
                 result, calls, context = self.run_script(cron=cron)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(calls, [['-m', 'skippercast.fleet.ais', 'process', '--region', 'CA'],
+                                         ['-m', 'skippercast.fleet.ais', 'port-coverage', '--region', 'CA'],
                                          ['-m', 'skippercast.fleet.ais', 'validate', '--region', 'CA', '--sync-only']])
                 self.assertEqual(context, [f'AIS run kind=normal trigger=schedule cron={cron} source={SHA}'])
 
     def test_manual_normal_is_identified_separately_from_schedule(self):
         result, calls, context = self.run_script(trigger='workflow_dispatch')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(calls), 3)
         self.assertEqual(context, [f'AIS run kind=normal trigger=workflow_dispatch cron=none source={SHA}'])
 
     def test_historical_modes_do_not_dispatch_normal_process_or_sync(self):

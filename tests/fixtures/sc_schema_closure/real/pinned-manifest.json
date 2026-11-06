@@ -42,7 +42,7 @@
     },
     {
       "path": "schemas/fleet-region.schema.json",
-      "sha256": "8c6701473387dd9a03f39585441ce43421e1d45c14291e6895761b96f6c59f51"
+      "sha256": "a35d25ad0da12987b5294d5d8195a4256b82bd66bbaedac457fef79980cd746f"
     },
     {
       "path": "schemas/forecast-index.schema.json",

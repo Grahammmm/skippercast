@@ -9,6 +9,7 @@
 //
 // Erasable syntax only: tests/test_map_layers.mjs imports this file by type stripping.
 import type {Palette} from './palette.ts';
+import type {MarkCopyFields, MarkCopyPart} from '../mark-copy.ts';
 import {COASTLINE_SOURCE, layerEntry} from './layers.ts';
 import {ZOOM_OFFSET} from './engine.ts';
 import {chartFileListed} from '../chart-files.ts';
@@ -73,6 +74,10 @@ export interface ChartMark {
   readonly trip?: string;
   /** The source publishers' own terms pages (https only), linked beside the basis as v1's "Publisher terms" was. */
   readonly terms?: readonly {readonly href: string; readonly label: string}[];
+  /** SC0922-09: display-only wording per field (web/mark-copy.ts); the fields above stay the mark's own English and identity. */
+  readonly copy?: MarkCopyFields;
+  /** Display wording for each of `terms`' labels, by index. */
+  readonly copyTerms?: readonly (readonly MarkCopyPart[])[];
 }
 
 const text = (value: unknown): string => typeof value === 'string' ? value.trim() : typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
