@@ -1,11 +1,15 @@
 // One opt-in controls tour, shared by desktop and mobile. No onboarding,
 // profile or flyover storage is read or reset when the tour is replayed.
-export const TOUR_STEPS = [
-  {title: 'Time dock', text: 'Use the day buttons and hour slider below the map to choose a forecast time. Check the displayed time before reading a layer.'},
-  {title: 'Layer list', text: 'Use the layer list beside the map, or open Layers on a phone. Each layer explains its source and limits; unavailable layers are not evidence of clear conditions.'},
-  {title: 'Save for offline', text: 'Open the account menu and choose Save for offline after choosing a port. Review what is saved and its date before leaving your connection.'},
-  {title: 'Evidence-limit line', text: 'Open Details under the brief to read what this brief cannot tell you for your activity. A map layer is not a safety clearance.'},
+import {t, type Language} from './i18n.ts';
+
+/** The four tour steps in `lang` (English by default). */
+export const tourSteps = (lang: Language = 'en') => [
+  {title: t('tour.s1.title', lang), text: t('tour.s1.text', lang)},
+  {title: t('tour.s2.title', lang), text: t('tour.s2.text', lang)},
+  {title: t('tour.s3.title', lang), text: t('tour.s3.text', lang)},
+  {title: t('tour.s4.title', lang), text: t('tour.s4.text', lang)},
 ] as const;
+export const TOUR_STEPS = tourSteps('en');
 
 export type TourState = number | null;
 export type TourAction = 'replay' | 'next' | 'back' | 'close';
