@@ -122,6 +122,29 @@ source units and rounding are preserved.
 `kn` and `kt` are both source-unit spellings; keep the one supplied and do not
 normalize one to the other. Do not convert between units.
 
+### Tile detail lines (SC1137-02)
+
+The line under each brief tile reading is said from structured parts by
+`web/brief/tile-copy.ts`; the model's English line stays for other readers.
+Station, buoy, site and datum names are never translated. Catalogue IDs:
+`tile.detail.*`, `tile.clock.*`, `tile.gap.*`, `tide.unavailable`, `tide.noCurve`.
+
+| English | Spanish | Catalogue ID | Meaning kept |
+| --- | --- | --- | --- |
+| `no bar flag (estimate)` | `sin señal de alerta en la barra (estimación)` | `tile.detail.bar.clear` | an estimate, not a clearance |
+| `bar caution (estimate)` | `precaución en la barra (estimación)` | `tile.detail.bar.caution` | estimate |
+| `bar hazardous (estimate)` | `condiciones peligrosas en la barra (estimación)` | `tile.detail.bar.hazardous` | estimate |
+| `bar unknown (estimate)` | `estado desconocido de la barra (estimación)` | `tile.detail.bar.unknown` | unknown stays unknown |
+| `very low` | `muy baja` | `tile.detail.veryLow` | tide height |
+| `ebb` / `flood` / `mid-ebb` | `vaciante` / `creciente` / `mitad de la vaciante` | `tile.detail.ebb`, `.flood`, `.midEbb` | tide stage |
+| `Rising` / `Falling` / `Turning` | `Subiendo` / `Bajando` / `Cambiando` | `tile.detail.rising`, `.falling`, `.turning` | trend |
+| `next high` / `next low` | `próxima pleamar` / `próxima bajamar` | `tile.detail.nextHigh`, `.nextLow` | |
+| surf, seas small / moderate / large / heavy | `pequeño` / `moderado` / `grande` / `muy intenso` | `tile.detail.band.small`, `.moderate`, `.large`, `.heavy` | in `oleaje en la costa {band}` and `oleaje {band}` |
+| surge low / moderate / strong / heavy | `leve` / `moderado` / `fuerte` / `muy intenso` | `tile.detail.band.low`, `.moderate`, `.strong`, `.heavy` | in `vaivén del agua {band}` |
+| kayak wind light / moderate / fresh / strong | `leve` / `moderado` / `fresco` / `fuerte` | `tile.detail.band.light`, `.moderate`, `.fresh`, `.strong` | |
+| onshore / offshore / cross-shore | `hacia la costa` / `hacia mar adentro` / `paralelo a la costa` | `tile.detail.side.*` | |
+| `(offshore estimate)` | `(estimación mar adentro)` | `tile.detail.offshoreEstimate` | not an exact launch reading |
+
 ## 2. Observed divergences
 
 Every catalogue Spanish value that renders a listed term differently from

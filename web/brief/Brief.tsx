@@ -33,6 +33,7 @@ import {Popover} from '../ui/Popover.tsx';
 import {Button} from '../ui/Button.tsx';
 import {buildCoastBrief, buildRegionalBrief} from './model.ts';
 import {Tiles} from './Tiles.tsx';
+import {sourceGapText} from './tile-copy.ts';
 import {TideStationControl} from './TideStationControl.tsx';
 import {tideSelection} from '../tide-selection.ts';
 import {withTideSelection} from '../tide-stations.ts';
@@ -397,7 +398,7 @@ export function BriefGaps({brief}: {brief: BriefModel | null}) {
       {feeds.length || sources.length ? (
         <ul class="app-gaps-list" aria-label={t('brief.gaps.label', lang)}>
           {feeds.map(text => <li key={text}>{gapText(text, lang)}</li>)}
-          {sources.map(gap => <li key={gap.id} data-status={gap.status}>{gap.text}</li>)}
+          {sources.map(gap => <li key={gap.id} data-status={gap.status}>{sourceGapText(gap, lang)}</li>)}
         </ul>
       ) : null}
       {unchecked.length ? (
