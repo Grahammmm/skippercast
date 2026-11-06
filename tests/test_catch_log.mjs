@@ -873,7 +873,7 @@ test('stale_patch_after_delete_or_for_another_owner_is_404_and_leaks_nothing', a
 });
 
 // SC1137-11: the account panel's edit form. logEditBody sends every mutable field so a cleared box really clears.
-const {logEditBody, localInputValue, sortLogEntries, createCopy} = await import('../dist/account.js');
+const {logEditBody, localInputValue, sortLogEntries, mergeOlderLogEntries, createCopy} = await import('../dist/account.js');
 const FORM = {started: '', ended: '', outcome: 'fish', count: '3', species: 'lingcod', method: 'drift', trip: 'trip-a', lat: '35.5', lon: '-120.5', note: 'n'};
 const STORED = {started_at: '2026-11-01T14:00:00.123Z', ended_at: '2026-11-01T19:30:00.000Z', lat: 35.123456789, lon: -120.987654321};
 
@@ -919,6 +919,17 @@ test('edit_list_offers_edit_and_sorts_loaded_rows_newest_first_then_id', () => {
   assert.match(logItemHTML({id: 'x', outcome: 'blank', started_at: BLANK.started_at, count: 0}, [], 'dd', {lang: 'es', strings: {'account.log.edit': 'Editar'}}), />Editar<\/button>/);
   const rows = [{id: 'b', started_at: '2026-01-01T00:00:00.000Z'}, {id: 'c', started_at: '2026-03-01T00:00:00.000Z'}, {id: 'a', started_at: '2026-01-01T00:00:00.000Z'}];
   assert.deepEqual(sortLogEntries(rows).map(r => r.id), ['c', 'a', 'b']);
+});
+
+test('edit_start_backward_past_the_cursor_then_show_older_keeps_newest_first_and_dedupes', () => {
+  const at = (id, day) => ({id, started_at: `2026-${day}T00:00:00.000Z`});
+  // Page one holds 09-10..09-08; the cursor sits at 09-08. 'p1c' is edited back to 07-15, past the cursor.
+  const rows = [at('p1a', '09-10'), at('p1b', '09-09'), at('p1c', '09-08')];
+  rows[2] = at('p1c', '07-15'); sortLogEntries(rows);
+  assert.deepEqual(rows.map(r => r.id), ['p1a', 'p1b', 'p1c']);
+  const gone = new Set(['p2x']);
+  mergeOlderLogEntries(rows, [at('p2a', '08-30'), at('p1a', '09-10'), at('p2x', '08-20'), at('p2b', '07-30'), at('p2c', '06-01')], gone);
+  assert.deepEqual(rows.map(r => r.id), ['p1a', 'p1b', 'p2a', 'p2b', 'p1c', 'p2c'], 'older dates fall in front of the edited row; the loaded and removed ids are not added again');
 });
 
 test('edit_body_round_trips_through_the_route_and_a_no_op_changes_nothing', async () => {

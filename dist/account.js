@@ -316,6 +316,13 @@ export function logEditBody(f, original = {}, copy) {
 }
 /** The stored entries in the log's own order: newest start first, ties by id. */
 export const sortLogEntries = rows => rows.sort((a, b) => (a.started_at < b.started_at ? 1 : a.started_at > b.started_at ? -1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+// Older-page rows join the loaded ones (ids already loaded or removed are skipped) and the whole set is put back in the log's order,
+// so a row edited to start before the cursor still sorts among the older dates that arrive after it.
+export const mergeOlderLogEntries = (rows, page, gone = new Set()) => {
+  const seen = new Set(rows.map(row => row.id));
+  for (const row of page || []) if (!seen.has(row?.id) && !gone.has(row?.id)) { seen.add(row?.id); rows.push(row); }
+  return sortLogEntries(rows);
+};
 
 /** A saved trip's choice label: its stored date as written, then the area (the active region's point name when known, else "region / point"). */
 export function logTripLabel(trip, region) {
@@ -659,8 +666,7 @@ export async function openAccount(options = {}) {
       try {
         const page = await readLogPage(cursor);
         if (!live() || mine !== generation) return;
-        const seen = new Set(entries.map(row => row.id));
-        for (const row of page.entries) if (!seen.has(row?.id) && !gone.has(row?.id)) { seen.add(row?.id); entries.push(row); }
+        mergeOlderLogEntries(entries, page.entries, gone);
         nextCursor = page.nextCursor;
       } catch { if (live() && mine === generation) logStatus.textContent = t('account.log.olderFailed'); }
       finally { if (live() && mine === generation) { busy = false; drawLog(); } }
