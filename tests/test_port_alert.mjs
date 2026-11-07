@@ -90,3 +90,16 @@ test('the panel is catalogue copy, mounted in Conditions, and says what it is no
   for (const id of ids) assert.ok(table[id].en && table[id].es, id);
   assert.match(table['portAlert.notnav'].en, /not for navigation/i);
 });
+
+test('readings for only one variable never read \"clear\": partial, while a known exceedance still alerts', () => {
+  const noSwell = forecast([hourAt(0, {swellFt: null}), hourAt(1, {swellFt: null})]);
+  const a = evaluatePortAlert(LIMITS, noSwell, NOW);
+  assert.equal(a.state, 'partial');
+  assert.equal(a.notification, null);
+  const noWind = forecast([hourAt(0, {windKnots: null}), hourAt(1, {windKnots: null})]);
+  assert.equal(evaluatePortAlert(LIMITS, noWind, NOW).state, 'partial');
+  const windHit = evaluatePortAlert(LIMITS, forecast([hourAt(0, {swellFt: null, windKnots: 20})]), NOW);
+  assert.equal(windHit.state, 'alert');
+  const swellHit = evaluatePortAlert(LIMITS, forecast([hourAt(0, {windKnots: null, swellFt: 9})]), NOW);
+  assert.equal(swellHit.state, 'alert');
+});

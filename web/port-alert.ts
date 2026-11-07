@@ -21,7 +21,7 @@ export type Thresholds = {windKt: number; swellFt: number};
 export type PortAlertStorage = {getItem(key: string): string | null; setItem(key: string, value: string): void; removeItem?(key: string): void};
 export type Exceedance = {kind: 'wind' | 'swell'; at: string; value: number};
 export type PortAlert = {
-  state: 'alert' | 'clear' | 'no-data' | 'stale';
+  state: 'alert' | 'clear' | 'partial' | 'no-data' | 'stale';
   exceedances: Exceedance[];
   peak: {windKt: number | null; swellFt: number | null};
   hoursChecked: number;
@@ -70,7 +70,7 @@ export function clearThresholds(storage: PortAlertStorage | null = browserStorag
  * Compares the thresholds with the forecast's hours from the current whole hour to WINDOW_HOURS ahead.
  * A reading at or above its threshold is an exceedance. Old data never reads clear or alerts: a run older than
  * MAX_RUN_AGE_HOURS, a retrieval older than MAX_FETCH_AGE_HOURS or an unreadable clock is "stale"; no forecast or
- * no reading in the window is "no-data".
+ * no reading in the window is "no-data"; readings for only one of wind and swell with no exceedance is "partial", never "clear".
  */
 export function evaluatePortAlert(limits: Thresholds, forecast: RegionalForecast | null, now: number = Date.now()): PortAlert {
   const base = {exceedances: [], peak: {windKt: null, swellFt: null}, hoursChecked: 0, source: forecast?.label ?? null, issuedAt: forecast?.issuedAt ?? null, fetchedAt: forecast?.fetchedAt ?? null, notification: null};
@@ -98,7 +98,8 @@ export function evaluatePortAlert(limits: Thresholds, forecast: RegionalForecast
   }
   if (!hoursChecked) return {state: 'no-data', ...base};
   const found = {...base, exceedances, peak, hoursChecked};
-  if (!exceedances.length) return {state: 'clear', ...found};
+  // A known exceedance still alerts. "Clear" needs readings for BOTH variables: with one missing there is no evidence it is below its limit.
+  if (!exceedances.length) return {state: peak.windKt === null || peak.swellFt === null ? 'partial' : 'clear', ...found};
   const parts = exceedances.map(e => e.kind === 'wind' ? `wind ${e.value} kt (your limit ${limits.windKt} kt)` : `swell ${e.value} ft (your limit ${limits.swellFt} ft)`);
   return {state: 'alert', ...found, notification: {tag: 'port-alert', title: `${exceedances.map(e => e.kind === 'wind' ? 'Wind' : 'Swell').join(' and ')} forecast above your limit`, body: `Forecast ${parts.join('; ')} within ${WINDOW_HOURS} h. Model forecast for planning, not for navigation.`}};
 }

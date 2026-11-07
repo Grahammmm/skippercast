@@ -39,7 +39,7 @@ export function PortAlert({now, tz}: {now: Date; tz: string}) {
   const raw = regionalForecast.value?.region === region.value ? regionalForecast.value : null;
   const forecast = briefForecast(raw);
   const result = limits ? evaluatePortAlert(limits, forecast, now.getTime()) : null;
-  const stateId = !result ? 'portAlert.state.none' : result.state === 'alert' ? 'portAlert.state.alert' : result.state === 'clear' ? 'portAlert.state.clear' : result.state === 'stale' ? 'portAlert.state.stale' : 'portAlert.state.nodata';
+  const stateId = !result ? 'portAlert.state.none' : result.state === 'alert' ? 'portAlert.state.alert' : result.state === 'clear' ? 'portAlert.state.clear' : result.state === 'partial' ? 'portAlert.state.partial' : result.state === 'stale' ? 'portAlert.state.stale' : 'portAlert.state.nodata';
   return (
     <section class="app-port-alert" aria-labelledby="app-port-alert-title" data-state={result?.state ?? 'none'}>
       <h3 id="app-port-alert-title" class="ui-eyebrow">{t('portAlert.title', lang)}</h3>

@@ -1301,6 +1301,7 @@
     "portAlert.state.alert": {"en": "Forecast above your limit in the next {hours} h", "es": "Pronóstico por encima de tu límite en las próximas {hours} h"},
     "portAlert.state.clear": {"en": "Forecast below your limits for the next {hours} h", "es": "Pronóstico por debajo de tus límites en las próximas {hours} h"},
     "portAlert.state.nodata": {"en": "No forecast readings available to compare.", "es": "No hay lecturas de pronóstico para comparar."},
+    "portAlert.state.partial": {"en": "Only part of the forecast is available (wind or swell is missing), so this cannot be called below your limits.", "es": "Solo hay parte del pronóstico (falta el viento o el oleaje de fondo), así que no se puede decir que esté por debajo de tus límites."},
     "portAlert.state.stale": {"en": "Forecast is too old to compare, so no alert state is shown.", "es": "El pronóstico es demasiado antiguo para comparar, así que no se muestra estado de alerta."},
     "portAlert.hit.wind": {"en": "Wind {value} kt from {time} (limit {limit} kt)", "es": "Viento {value} kt desde {time} (límite {limit} kt)"},
     "portAlert.hit.swell": {"en": "Swell {value} ft from {time} (limit {limit} ft)", "es": "Oleaje de fondo {value} pies desde {time} (límite {limit} pies)"},
