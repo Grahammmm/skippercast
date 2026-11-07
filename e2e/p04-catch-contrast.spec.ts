@@ -206,7 +206,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // catalogue English-source disclosure (a plain span lang=en in Spanish only; English unchanged). No CSS, token or catch
   // markup change; BODY09 mounts Reports, not the rail. contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
   // SC1352-03: the Currents note resolves the chosen frame note or reason in the page's language (same note element and text role). No CSS, token or catch markup change.
-  "web/app/LayerRail.tsx": "8bc1b44ac2b1d20dd1dc6551ade66b7620e932c39b19c70ec1206464da53969e",
+  // MAPLIVE-1: LayerRail.tsx only appends <PreviewRailItems />, which renders nothing without an owner/admin session and adds no catch markup; BODY09 mounts Reports, not the rail. contrast(), assertions and thresholds are untouched.
+  "web/app/LayerRail.tsx": "b48695a6b917d3b897ed610c4d2a25e08b6249169f767a07dfa53574ce41f720",
   // SC-MAIN-FLAKE (#1400, contours drawn signal): MapStage.tsx only passes host: chartHost.current! to
   // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
   // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),
@@ -220,7 +221,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC0452-05: MapStage accepts the shared clock and keys its stage effect on
   // that clock's identity. BODY09 never mounts MapStage; the Reports catch path,
   // paint, backdrop, assertions and thresholds remain unchanged. Rebind MapStage.tsx.
-  "web/app/MapStage.tsx": "94261787b52f2a336265208ba91d271f04f4178914f381fcaaa5e6ff90bfd4a9",
+  // MAPLIVE-1: MapStage.tsx only adds one more Chart layer (createPreviewLayers); no class, colour or paint change, and BODY09 never mounts MapStage.
+  "web/app/MapStage.tsx": "9a01830da6f227cf6608a271ee0f61dd4f7e4d749965715a69794db71bb8dffa",
   "web/tokens.css": "41cd0ad0581c0efd8374e4dec8cd44daf41db0e09a64980735547962273517b8",
   "web/ui/ui.css": "0a636f225f5b51d1e34f2de059c826e4a0f2af876fcf20f827f2ccb5ef705008",  // #600: only .ui-icon-button min sizes changed; the catch sheet has no icon button. SC2222-06: aria-disabled ui-button rules; no catch button
   // BF-wcag: app.css and panel.css add only 24 px min-height target floors (no paint); app.css merged with SC2222-07.
@@ -232,7 +234,8 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC2207-11 (first answer styles): app.css appends only a scoped .app-first-answer* block (opaque --panel, token text roles) that the
   // Reports catch sheet never mounts (FirstAnswerLine renders only in the desktop App shell); check_contrast.mjs changes only the appCss
   // surface hash and its comment, with contrast(), pairs, thresholds and line citations untouched. Both rebound from the final bytes.
-  "web/app/app.css": "b1592e490fc050131a7ff30d8ac8a1975e5a540288d84360755875336f986cc6",
+  // MAPLIVE-1: app.css appends only a scoped .app-preview-head / .app-legend-preview / .app-preview-* block for the owner-only previews; the Reports catch sheet never mounts it. Rebound from the final bytes.
+  "web/app/app.css": "77b50ecc146b1b5b21c4834ebbed5f64044d8cacbf70d44cf0a14eab15bfc3a5",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "56215598e33a416cb6c877a0661ce3923035f3266872faae9b7eb89db02eb4a2",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
