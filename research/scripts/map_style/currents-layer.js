@@ -201,3 +201,18 @@ export function addCurrents(map, doc, {visible = true, tintWidth = 900} = {}) {
     layout: {visibility: vis, 'icon-image': 'currents-arrow', 'icon-rotate': ['get', 'bearing'], 'icon-rotation-alignment': 'map', 'icon-allow-overlap': true, 'icon-size': 0.6}});
   return {ids: Object.values(IDS), setVisible(on) { for (const id of Object.values(IDS)) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none'); }};
 }
+
+// The status line is hidden only when the data loaded fine and the viewer switched the overlay off;
+// an unavailable or invalid data file keeps its message visible whatever the checkbox says.
+export function statusHidden(failed, checked) {
+  return !failed && !checked;
+}
+
+// Parse a fetched response into a usable doc, or throw so the page can show "unavailable".
+export async function loadCurrentsDoc(fetchFn, url) {
+  const res = await fetchFn(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const doc = await res.json();
+  if (!doc || !Array.isArray(doc.lats) || !Array.isArray(doc.lons) || !doc.u || !doc.v) throw new Error('invalid currents data');
+  return doc;
+}

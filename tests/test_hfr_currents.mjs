@@ -91,3 +91,17 @@ test('the colour table is the 256-entry cmocean balance and the output stays out
   const build = readFileSync(new URL('../scripts/client-build.mjs', import.meta.url), 'utf8');
   assert.ok(!/var\/currents/.test(build), 'client-build never reads var/');
 });
+
+test('missing or invalid currents data keeps its status visible and draws nothing; overlay-off still hides valid data', async () => {
+  const {statusHidden, loadCurrentsDoc} = await import('../research/scripts/map_style/currents-layer.js');
+  assert.equal(statusHidden(true, false), false);   // failure shown even with the checkbox unchecked
+  assert.equal(statusHidden(false, false), true);   // valid data, overlay deliberately off
+  assert.equal(statusHidden(false, true), false);
+  await assert.rejects(loadCurrentsDoc(async () => ({ok: false, status: 404, json: async () => ({})}), '/x'), /404/);
+  await assert.rejects(loadCurrentsDoc(async () => ({ok: true, json: async () => ({foo: 1})}), '/x'), /invalid/);
+  const good = {lats: [1], lons: [2], u: [[0]], v: [[0]]};
+  assert.equal(await loadCurrentsDoc(async () => ({ok: true, json: async () => good}), '/x'), good);
+  const page = readFileSync(new URL('../research/scripts/map_style/bathy-deep-test.html', import.meta.url), 'utf8');
+  assert.match(page, /statusHidden\(failed, box\.checked\)/);
+  assert.match(page, /failed = true;/);
+});
