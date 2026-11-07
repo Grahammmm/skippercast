@@ -385,3 +385,21 @@ test('planner_opens_after_corrupt_ranked_priority; export gates stay', async () 
     assert.ok((await (await p.exportFile('gpx')).text()).includes('<gpx'));
   } finally { p.dispose(); }
 });
+
+
+test('route download reuses publication/consent gates and refuses a draft changed during context load', async () => {
+  const {planner:p}=harness();
+  p.add('old-1');
+  try { await assert.rejects(p.exportRouteFile(),/Research coordinates/); }
+  finally { p.dispose(); }
+  let finish;
+  const wait=new Promise(resolve=>{finish=resolve;});
+  const q=createPlanner({atlas:ATLAS,screen:SCREEN,region:REGION,map:MAP,getVisible:()=>[],storage:null,now:()=>NOW,
+    loadPorts:async()=>null,landWater:async()=>place,routeContext:()=>wait,emit:()=>{},nav:{open(){},showMap(){},conditions(){}}});
+  try {
+    q.add('old-1');q.setResearch(true);
+    const pending=q.exportRouteFile();
+    await settle();q.edit({name:'Changed plan'});finish({model:null,lines:null});
+    await assert.rejects(pending,/changed/i);
+  } finally {q.dispose();}
+});
