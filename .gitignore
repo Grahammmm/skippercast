@@ -23,10 +23,6 @@ raw-data/
 *.parquet
 *.arrow
 *.zip
-# Local output of scripts/build_bathy_tiles.py: styled from a private survey raster whose rights
-# are still under review, so it is built on demand and never committed.
-dist/tiles/morro-bay-seafloor-deep.pmtiles
-dist/tiles/*.part
 
 # Python and OS artifacts
 .venv/

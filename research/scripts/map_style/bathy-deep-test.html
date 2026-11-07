@@ -20,7 +20,7 @@
   Tan = no survey. <span id="readout"></span></div>
 <script src="/node_modules/pmtiles/dist/pmtiles.js"></script>
 <script type="module">
-// Test page for dist/tiles/morro-bay-seafloor-deep.pmtiles (scripts/build_bathy_tiles.py).
+// Test page for var/seafloor/tiles/morro-bay-seafloor-deep.pmtiles (scripts/build_bathy_tiles.py).
 // Serve the repository root with range support: python research/scripts/map_style/serve_range.py 18771
 // Then open /research/scripts/map_style/bathy-deep-test.html?view=canyons  (or nearshore, full).
 // Options: tiles=<url of the archive>, bg=checker (checkerboard behind the tiles, to see transparency),
@@ -29,7 +29,7 @@ import * as maplibregl from '/node_modules/maplibre-gl/dist/maplibre-gl.mjs';
 const {Protocol} = window.pmtiles;   // the bundled build; the ESM build needs a bundler for fflate
 
 const q = new URLSearchParams(location.search);
-const archive = q.get('tiles') || '/dist/tiles/morro-bay-seafloor-deep.pmtiles';
+const archive = q.get('tiles') || '/var/seafloor/tiles/morro-bay-seafloor-deep.pmtiles';
 // lon/lat boxes (W, S, E, N) of the two crops that bathy.py of the map style study renders
 // (columns/rows of the 10 m raster: canyons 0..8000 x 2800..10163; nearshore 7500..10800 x 3300..8300).
 const VIEWS = {

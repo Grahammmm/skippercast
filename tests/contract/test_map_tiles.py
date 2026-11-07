@@ -42,10 +42,7 @@ class MapTilesTest(unittest.TestCase):
 
     def test_every_archive_is_registered_in_the_build(self):
         source = (ROOT / "scripts" / "build_map_tiles.py").read_text()
-        # The raster seafloor base is a local build output of build_bathy_tiles.py (gitignored).
         for path in TILES.glob("*.pmtiles"):
-            if path.name == "morro-bay-seafloor-deep.pmtiles":
-                continue
             self.assertIn(f"'{path.stem}'", source)
 
 

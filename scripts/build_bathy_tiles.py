@@ -3,7 +3,7 @@
 
     python scripts/build_bathy_tiles.py --source /path/to/elevation.tif
 
-Writes `dist/tiles/morro-bay-seafloor-deep.pmtiles` (override with `--output`), zooms 8-13,
+Writes `var/seafloor/tiles/morro-bay-seafloor-deep.pmtiles` (override with `--output`), zooms 8-13,
 256 px web-mercator PNG tiles, and prints the file size, zoom range and tile count.
 
 The look is "style 2, Deep" of the map style study (G decision 2026-11-06): the cmocean
@@ -37,7 +37,7 @@ import zlib
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUTPUT = ROOT / 'dist/tiles/morro-bay-seafloor-deep.pmtiles'
+DEFAULT_OUTPUT = ROOT / 'var/seafloor/tiles/morro-bay-seafloor-deep.pmtiles'
 TILE = 256
 PAD = 2                      # halo (pixels) read around each tile so hillshade matches across seams
 ORIGIN = 20037508.342789244  # web-mercator half-width, metres
