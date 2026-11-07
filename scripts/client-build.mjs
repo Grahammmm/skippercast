@@ -18,7 +18,7 @@
 // to a module, stylesheet or page gives a new id (and a new service worker).
 import {createHash} from 'node:crypto';
 import {cp, readdir, readFile, rename, rm, writeFile} from 'node:fs/promises';
-import {join, resolve} from 'node:path';
+import {join, resolve, sep} from 'node:path';
 import {build} from 'vite';
 import {clientConfig, pages} from '../vite.config.mjs';
 import {writePrecache} from './precache.mjs';
@@ -35,6 +35,10 @@ export function hashName(name, buildId) {
   return `${name.slice(0, dot)}.${buildId}${name.slice(dot)}`;
 }
 
+// Local-only build output of scripts/build_bathy_tiles.py (rights under review): never published,
+// even if someone points --output into dist/.
+const PRIVATE_OUTPUT = /(?:^|\/)morro-bay-seafloor-deep\.(?:pmtiles|part)$/;
+
 /** Copy dist's static files (everything but module sources, build output and dot-entries). */
 export async function copyStatic(src, out, {only} = {}) {
   for (const entry of await readdir(src, {withFileTypes: true})) {
@@ -42,7 +46,7 @@ export async function copyStatic(src, out, {only} = {}) {
     if (name === 'client' || name === 'server' || name.startsWith('.')) continue;
     if (entry.isFile() && SOURCE.test(name) && !STABLE.has(name)) continue;
     if (only && !only(name)) continue;
-    await cp(join(src, name), join(out, name), {recursive: true});
+    await cp(join(src, name), join(out, name), {recursive: true, filter: from => !PRIVATE_OUTPUT.test(from.split(sep).join('/'))});
   }
 }
 

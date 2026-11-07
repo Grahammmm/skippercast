@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- MAPSTYLE-1: `scripts/build_bathy_tiles.py` turns the 10 m Morro Bay survey raster into styled "Deep" seafloor base tiles (cmocean deep colours, nonlinear depth stretch, four-direction hillshade) as a local PMTiles archive, zooms 8-13, with no-survey cells fully transparent; `research/scripts/map_style/bathy-deep-test.html` shows it as the base layer of a MapLibre test page. Nothing in the app map changes and the archive is not committed.
+
 - SC1352-08: the shore-run, ranked trip-spot and shoreline-segment cards read Spanish where they are shown: the status and every Blocked and Hold reason, the review clocks (in the region's zone), the guidance with its "fish presence is unverified" and check-current-rules statements, the ranked spot's habitat, evidence-confidence and rules lines, and the shoreline accuracy lines. Area, run, alert and source names stay as published; the status, priority, access pins and counters still decide on the English values, and English output is unchanged.
 
 - SC1352-06: the map's Chart / 2D / 3D toggle, its group labels, the terrain zoom, reset and top-view buttons, the waypoint prompt and refusal, the terrain-unavailable reasons and the private saved-spots row and cards read Spanish. The saved-spot card keeps its "not a recommendation" and "check current rules" statements and its protected-area wording, a person's own spot names stay as typed, and no card shows the private note in either language; the English text is unchanged.
