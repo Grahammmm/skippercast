@@ -17,6 +17,7 @@ function fakeEngine() {
   const calls = [];
   return {calls, setOverlay: (id, overlay) => calls.push([id, overlay ? 'draw' : 'remove']), view: {container: () => ({appendChild() {}})}};
 }
+const PALETTE = {text: '#eeeeee', bgDeep: '#111111'};
 const tick = () => new Promise(r => setTimeout(r, 0));
 
 test('the gate: only the server\'s is_admin answer opens it', () => {
@@ -116,7 +117,7 @@ test('each real layer requests only its own private file, and only when attached
     const attach = await P.PREVIEW_LOADERS[id]();
     const before = requests.length;
     const abort = new AbortController();
-    const ctx = {engine, fetchFn, now: () => new Date(), url: p => new URL(p, 'https://x.test/app').href, signal: abort.signal, report: s => reports.push(s)};
+    const ctx = {engine, fetchFn, now: () => new Date(), palette: () => PALETTE, url: p => new URL(p, 'https://x.test/app').href, signal: abort.signal, report: s => reports.push(s)};
     if (id === 'seafloor') await assert.rejects(attach(ctx), /not found \(HTTP 404\)/, 'a missing archive reads unavailable, nothing drawn');
     else {
       const handle = await attach(ctx);
@@ -136,7 +137,7 @@ test('stale or invalid data is withheld, never drawn', async () => {
   const doc = {data_time: old, max_age_hours: 48, colours: ['#111', '#222'], cells: {type: 'FeatureCollection', features: []}, breaks: {type: 'FeatureCollection', features: []}};
   const engine = fakeEngine(), reports = [];
   const attach = await P.PREVIEW_LOADERS.sst();
-  const handle = await attach({engine, fetchFn: async () => new Response(JSON.stringify(doc)), now: () => new Date(), url: p => 'https://x.test' + p, signal: new AbortController().signal, report: s => reports.push(s)});
+  const handle = await attach({engine, fetchFn: async () => new Response(JSON.stringify(doc)), now: () => new Date(), palette: () => PALETTE, url: p => 'https://x.test' + p, signal: new AbortController().signal, report: s => reports.push(s)});
   assert.equal(handle, null);
   assert.deepEqual(engine.calls, []);
   assert.equal(reports.at(-1).state, 'stale');

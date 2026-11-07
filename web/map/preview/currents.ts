@@ -21,9 +21,9 @@ export function arrowhead(tip: Position, from: Position, size: number): Position
 }
 
 export function currentsOverlay(lines: Array<{coords: number[][]}>, image: {url: string; coordinates: number[][]}, size: number): Overlay {
-  const features = lines.map(l => ({type: 'Feature' as const, properties: {}, geometry: {type: 'LineString' as const, coordinates: l.coords}}));
-  const heads = lines.filter(l => l.coords.length > 2).map(l => ({type: 'Feature' as const, properties: {},
-    geometry: {type: 'Polygon' as const, coordinates: [arrowhead(l.coords.at(-1)! as Position, l.coords.at(-3)! as Position, size)]}}));
+  const features = lines.map(({coords}) => ({type: 'Feature' as const, properties: {}, geometry: {type: 'LineString' as const, coordinates: coords}}));
+  const heads = lines.filter(({coords}) => coords.length > 2).map(({coords}) => ({type: 'Feature' as const, properties: {},
+    geometry: {type: 'Polygon' as const, coordinates: [arrowhead(coords.at(-1)! as Position, coords.at(-3)! as Position, size)]}}));
   return {
     sources: {
       [CURRENTS_TINT]: {type: 'image', url: image.url, coordinates: image.coordinates as [Position, Position, Position, Position]},
@@ -39,8 +39,8 @@ export function currentsOverlay(lines: Array<{coords: number[][]}>, image: {url:
   };
 }
 
-const rgb = (c: number[]): string => `rgb(${c.join(',')})`;
-export const CURRENTS_RAMP = [0, 0.25, 0.5, 0.75, 1].map(t => rgb(balance(t)));
+const toHex = (c: number[]): string => '#' + c.map(n => n.toString(16).padStart(2, '0')).join('');
+export const CURRENTS_RAMP = [0, 0.25, 0.5, 0.75, 1].map(t => toHex(balance(t)));
 
 export const attach: PreviewAttach = async ctx => {
   const doc = await loadCurrentsDoc((url: string) => ctx.fetchFn(url, {cache: 'no-store', signal: ctx.signal}), ctx.url(PREVIEW_DATA.currents));

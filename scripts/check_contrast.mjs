@@ -387,7 +387,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // scrolling legend does not clip them; the popover keeps its existing ui.css paint, and legend text paint and backing are unchanged.
   // SC2207-11 only appends a scoped .app-first-answer* block at the end of app.css (opaque --panel, token text roles); no existing rule or
   // legend paint changed, and the cited line numbers above are unmoved.
-  "appCss": "b1592e490fc050131a7ff30d8ac8a1975e5a540288d84360755875336f986cc6",
+  "appCss": "a991ae3707630d1057b89fd316948f1904261e44e0d82db0e1f3ed036a26cb14",
   // CI6-08 adds a chlorophyll row and CI6-18 a Stations row, both using the existing text/muted glass roles.
   // CI6-09 adds the existing Segmented control for swell partitions; the pinned text paint is unchanged.
   // No backing, opacity, text paint or threshold changed; swatches, decorative scales and controls remain excluded.
@@ -410,7 +410,7 @@ export const SURFACE_SOURCE_SHA256 = {
   // stay, and no backing, opacity, token or threshold changed.
   // SC1352-06 shows the saved-spots status in the page’s language through the same Status wrapper (copy only, no paint); the same note text role stays, and no backing, opacity, token or threshold changed.
   // SC1352-07 shows the evidence layers' status lines (charter grounds, commercial AIS, temperature fronts) and the fronts basis in the page's language through the same Status wrapper (copy only, no paint); the same note text roles stay, and two lines were added above the cited rows.
-  "legendTsx": "16bc146900b6ebfd274339e31fa378edc51f258a5958a4ebe22f2e1f97cca8be"
+  "legendTsx": "b1eb2cb8d53df28041ade55287f4c006b4fb1921e77e633c54e1319506ca1a3b"
 };
 export function checkSurfaceSource(sources) {
   const hashes = {}, results = [];

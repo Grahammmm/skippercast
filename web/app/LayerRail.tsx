@@ -268,7 +268,7 @@ export function LayerRail() {
   const railNote = (id: string) => { const raw = railNotes.value[id as keyof typeof railNotes.value]; const r = raw ? statusText(raw, railNoteCopies.value[id as keyof typeof railNotes.value], lang) : null; return r?.translated ? r.text : runtime(raw || undefined); };
   return (
     <Rail class="app-rail" label={t('rail.aria', lang)} header={<><LookFor /><Presets /></>} footer={<BaseChoice />}>
-      {railEntries(lang).map(e => {
+      {[...railEntries(lang).map(e => {
         const here = drawsIn(e.id, shown), active = railOn(e.id, on, source);
         return e.id === 'currents' ? (
           <RailItem key={e.id} id={e.id} label={e.label} icon={e.icon} on={active} basis={e.basis} basisLabel={basisLabel(e.label)} disabled={!here}
@@ -283,8 +283,7 @@ export function LayerRail() {
             {e.id === 'seafloor' && shown !== 'chart' ? <TerrainOptions on={active} /> : null}
           </RailItem>
         );
-      })}
-      <PreviewRailItems />
+      }), <PreviewRailItems key="previews" />]}
     </Rail>
   );
 }

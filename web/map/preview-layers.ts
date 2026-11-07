@@ -13,6 +13,7 @@
 import {effect, signal, type ReadonlySignal} from '@preact/signals';
 import {session, sessionAdmin} from '../account.ts';
 import type {Engine} from './engine.ts';
+import {readPalette, type Palette} from './palette.ts';
 
 export const PREVIEW_IDS = ['seafloor', 'wind', 'currents', 'sst', 'chlorophyll'] as const;
 export type PreviewId = typeof PREVIEW_IDS[number];
@@ -64,6 +65,8 @@ export interface PreviewContext {
   readonly engine: Engine;
   readonly fetchFn: typeof fetch;
   readonly now: () => Date;
+  /** The design tokens, read when a layer draws (never a colour literal). */
+  readonly palette: () => Palette;
   /** Resolves a private path against the page. */
   readonly url: (path: string) => string;
   /** Aborts when the layer is switched off or the gate closes; a late answer must draw nothing. */
@@ -115,13 +118,13 @@ const setStatus = (id: PreviewId, status: PreviewStatus | null): void => {
  * a layer is on, a layer that goes off (or a closed gate) is destroyed, and a switch-off while loading aborts the load.
  */
 export function createPreviewLayers(o: {
-  engine: ReadonlySignal<Engine | null>; fetchFn?: typeof fetch; now?: () => Date; page?: () => string;
+  engine: ReadonlySignal<Engine | null>; fetchFn?: typeof fetch; now?: () => Date; page?: () => string; palette?: () => Palette;
   loaders?: Readonly<Record<PreviewId, PreviewLoader>>; access?: () => boolean;
   /** Registry layers the Chart marked unavailable (web/map/chart.ts `unavailable`), and how to forget one. A source that fails after attach (a missing image, an unreadable archive) arrives here. */
   failures?: {readonly list: ReadonlySignal<readonly string[]>; clear(layer: string): void};
 }) {
   const {fetchFn = (...args: Parameters<typeof fetch>) => fetch(...args), now = () => new Date(), page = () => location.href,
-    loaders = PREVIEW_LOADERS, access = () => previewAccess()} = o;
+    loaders = PREVIEW_LOADERS, access = () => previewAccess(), palette = () => readPalette()} = o;
   const live = new Map<PreviewId, {engine: Engine; abort: AbortController; handle: PreviewHandle | null; failed: boolean}>();
   const stop = (id: PreviewId): void => {
     const item = live.get(id);
@@ -148,7 +151,7 @@ export function createPreviewLayers(o: {
     try {
       const attach = await loaders[id]();
       if (abort.signal.aborted) return;
-      const handle = await attach({engine, fetchFn, now, url: path => new URL(path, page()).href, signal: abort.signal, report});
+      const handle = await attach({engine, fetchFn, now, palette, url: path => new URL(path, page()).href, signal: abort.signal, report});
       if (abort.signal.aborted) { handle?.destroy(); return; }
       item.handle = handle;
       if (item.failed) fail(id, item);

@@ -2,6 +2,7 @@
 // Native analysis cells in 14 bands from 52 to 66 °F, with strong-break lines. The file carries its own time and
 // age limit; an older or unreadable analysis draws nothing.
 import type {Overlay} from '../engine.ts';
+import type {Palette} from '../palette.ts';
 import {PREVIEW_DATA, type PreviewAttach} from '../preview-layers.ts';
 import {ageText, BEFORE_APP_LAYERS, expireWhenStale, freshWithin, getJson, handle, hoursOld, utc} from './common.ts';
 
@@ -18,7 +19,8 @@ export function readSst(raw: unknown): SstDoc {
   return d as SstDoc;
 }
 
-export function sstOverlay(d: SstDoc): Overlay {
+/** The strong-break line is the token text colour over a token dark under-stroke, so it reads on every band. */
+export function sstOverlay(d: SstDoc, p: Pick<Palette, 'text' | 'bgDeep'>): Overlay {
   return {
     sources: {
       [SST_CELLS]: {type: 'geojson', data: d.cells as never, attribution: 'NOAA CoastWatch / GHRSST'},
@@ -26,8 +28,8 @@ export function sstOverlay(d: SstDoc): Overlay {
     },
     layers: [
       {id: SST_CELLS, type: 'fill', source: SST_CELLS, paint: {'fill-color': ['get', 'colour'], 'fill-opacity': 0.82, 'fill-antialias': false}},
-      {id: SST_HALO, type: 'line', source: SST_BREAKS, paint: {'line-color': '#ffffff', 'line-width': 2.4}},
-      {id: SST_LINES, type: 'line', source: SST_BREAKS, paint: {'line-color': '#101010', 'line-width': 0.5}},
+      {id: SST_HALO, type: 'line', source: SST_BREAKS, paint: {'line-color': p.text, 'line-width': 2.4}},
+      {id: SST_LINES, type: 'line', source: SST_BREAKS, paint: {'line-color': p.bgDeep, 'line-width': 0.5}},
     ],
   };
 }
@@ -41,7 +43,7 @@ export const attach: PreviewAttach = async ctx => {
     ctx.report({state: 'stale', dataTime: d.data_time, text: `Analysis ${utc(d.data_time)} is older than its ${d.max_age_hours} h limit or not valid. Withheld.`});
     return null;
   }
-  const draw = () => ctx.engine.setOverlay(SST_CELLS, sstOverlay(d), BEFORE_APP_LAYERS);
+  const draw = () => ctx.engine.setOverlay(SST_CELLS, sstOverlay(d, ctx.palette()), BEFORE_APP_LAYERS);
   draw();
   const text = () => `Analysis ${utc(d.data_time)} (${ageText(hoursOld(d.data_time, ctx.now()))}). Not live observations.`;
   ctx.report({state: 'ready', dataTime: d.data_time, text: text(), ramp});
