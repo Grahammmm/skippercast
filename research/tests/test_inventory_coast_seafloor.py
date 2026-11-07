@@ -79,3 +79,13 @@ class GeometryTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TierToleranceTest(unittest.TestCase):
+    def test_santa_barbara_nominal_2m_raster_is_2m(self):
+        from research.scripts.inventory_coast_seafloor import tier_of
+        self.assertEqual(tier_of(2.000000000000003), '2 m')  # catalog/surveys.json recorded spacing
+        self.assertEqual(tier_of(5.000000000000002), '5 m')
+        self.assertEqual(tier_of(2.01), '5 m')
+        out = classify_shallow([grid(2.000000000000003, 'confirmed', 'USGS SB')])
+        self.assertEqual(out['tier'], '2 m')

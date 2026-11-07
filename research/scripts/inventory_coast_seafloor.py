@@ -100,14 +100,17 @@ def rnd(x, n=1):
     return None if x is None else round(float(x), n)
 
 
+TIER_EPS = 1e-6  # recorded spacings carry float noise (Santa Barbara 2 m raster = 2.000000000000003 m)
+
+
 def tier_of(res_m):
     if res_m is None:
         return 'none'
-    if res_m <= 2.0:
+    if res_m <= 2.0 + TIER_EPS:
         return '2 m'
-    if res_m <= 5.0:
+    if res_m <= 5.0 + TIER_EPS:
         return '5 m'
-    if res_m <= 10.0:
+    if res_m <= 10.0 + TIER_EPS:
         return '10 m'
     return 'coarser'
 
@@ -240,8 +243,8 @@ def ledger_tier_proxy(reaches, tier_res):
     if band <= 0:
         return None
     low = sum(r['selected_km2'] for r in kept
-              if r['resolutions_m'] and all(x <= tier_res for x in r['resolutions_m']))
-    high = sum(r['selected_km2'] for r in kept if any(x <= tier_res for x in r['resolutions_m']))
+              if r['resolutions_m'] and all(x <= tier_res + TIER_EPS for x in r['resolutions_m']))
+    high = sum(r['selected_km2'] for r in kept if any(x <= tier_res + TIER_EPS for x in r['resolutions_m']))
     return {'low_pct': 100.0 * low / band, 'high_pct': 100.0 * high / band, 'low_km2': low, 'high_km2': high,
             'band_km2': band, 'excluded_crossing_band_km2': excluded,
             'reaches_used': len(kept), 'reaches_crossing': len(reaches) - len(kept)}
