@@ -47,6 +47,7 @@ import {
 import {base, current, DEFAULT_CURRENT, grade, isBase, layers, layersParam, profile, region, setParams, species, UNSUPPORTED, type Base} from '../state.ts';
 import {railEntries, railOn, toggled} from './rail.ts';
 import {Presets} from './Presets.tsx';
+import {PreviewRailItems} from './PreviewLayers.tsx';
 import {EnglishDetail} from './EnglishDetail.tsx';
 import {shellGroupLabel, shellTargetText} from './CommandBar.tsx';
 
@@ -283,6 +284,7 @@ export function LayerRail() {
           </RailItem>
         );
       })}
+      <PreviewRailItems />
     </Rail>
   );
 }

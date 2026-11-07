@@ -24,6 +24,17 @@ export type Session =
   | {readonly state: 'signed-in'; readonly name: string | null; readonly advisor: boolean};
 
 export const session = signal<Session>({state: 'loading'});
+/**
+ * The server's own is_admin answer from the same /api/session read, kept apart from `session` so no role field
+ * rides in the Session a screen can render (readSession keeps no private field). It is true only for a signed-in
+ * admin and false for every other answer, failure or sign-out. MAPLIVE-1's private map layers read it.
+ */
+export const sessionAdmin = signal(false);
+/** The admin flag of one /api/session answer: strict boolean true, signed in, and a successful read. */
+export function readAdmin(data: unknown, ok = true): boolean {
+  const d = data as {signIn?: unknown; signedIn?: unknown; is_admin?: unknown} | null;
+  return ok && !!d && typeof d === 'object' && !!d.signIn && !!d.signedIn && d.is_admin === true;
+}
 let sessionRequest: Promise<Session> | null = null;
 let sessionGeneration = 0;
 
@@ -49,13 +60,16 @@ export function ensureSession(fetchFn: typeof fetch = fetch): Promise<Session> {
 /** Always fetch; only the latest requested read may update shared state. Offline reads remain retryable. */
 export function refreshSession(fetchFn: typeof fetch = fetch): Promise<Session> {
   const generation = ++sessionGeneration;
+  let admin = false;
   sessionRequest = (async (): Promise<Session> => {
     try {
       const response = await fetchFn('/api/session', {signal: AbortSignal.timeout(20000)});
-      return readSession(await response.json().catch(() => null), response.ok);
+      const data = await response.json().catch(() => null);
+      admin = readAdmin(data, response.ok);
+      return readSession(data, response.ok);
     } catch { return {state: 'offline'}; }
   })().then(next => {
-    if (generation === sessionGeneration) session.value = next;
+    if (generation === sessionGeneration) { session.value = next; sessionAdmin.value = admin && next.state === 'signed-in'; }
     return next;
   }).finally(() => {
     if (generation === sessionGeneration) sessionRequest = null;

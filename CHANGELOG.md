@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- MAPLIVE-1: the real app map has a "Private previews" group in its Layers rail with one switch each for seafloor medium relief (with 2 m shallow bathymetry), wind particle trails, HF-radar surface currents, sea-surface temperature and chlorophyll. It appears only for the owner/admin session (`/api/session` `is_admin`), every layer is off at start, and each layer's code and private `var/` data file are requested only when its switch turns on (nothing at first paint). Each shows the data's own time and is withheld past its age limit; a missing file reads unavailable. The legend gets a row per layer that is on. Tile output stays private and nothing changes for visitors. Tide (PR 1755) is not included yet: it merged into the unmerged MAPSTYLE-2 branch, not main. TODO: add each layer's update-cadence line once SCFEAT-FRESH-1 (PR 1759) lands.
+
 - SCFEAT-CATCH-1: selected map marks with a visible position offer one-tap catch or blank (no catch) entries in a separate private device log. Entries keep the selected position, capture time and already-loaded model conditions with sources, clocks and explicit gaps. Nothing is uploaded or added to an account; clearing browser site data loses the log. No live GPS, species/count inference or export. NOT FOR NAVIGATION.
 
 - SCFEAT-ROUTE-1: the trip planner can download a separate GPX route through 2–12 selected stops, avoiding current protected-area polygons and their 70 m planning margin on the existing shoreline water screen. The route carries boundary-check time, sources and NOT FOR NAVIGATION warnings; a missing route is withheld, never replaced by a straight line. No live position or passage clearance.

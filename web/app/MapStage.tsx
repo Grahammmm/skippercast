@@ -30,6 +30,7 @@ import {createFronts} from '../map/fronts.ts';
 import {createWaterTemp} from '../map/sst.ts';
 import {createChlorophyll} from '../map/chlorophyll.ts';
 import {createSwell} from '../map/swell.ts';
+import {createPreviewLayers} from '../map/preview-layers.ts';
 import {createStations} from '../map/stations.ts';
 import {dailyFeed} from '../brief/Brief.tsx';
 import {createWind} from '../map/wind.ts';
@@ -118,7 +119,8 @@ export function MapStage({children, clock}: {children?: ComponentChildren; clock
           engine => createStations({engine, zone, feed: () => dailyFeed.value}),
           engine => createAerial({engine, offer: () => currentRegionInfo()?.aerial ?? null}), engine => createDepthContours({engine, host: chartHost.current!}),
           engine => createShore({engine}), engine => createCharterGrounds({engine}), engine => createCommercialAis({engine}), engine => createFleetActivity({engine, zone}),
-          engine => createReach({engine, host: chartHost.current!})]})]});
+          engine => createReach({engine, host: chartHost.current!}),
+          engine => createPreviewLayers({engine})]})]});
     return () => stage.destroy();
   }, [clock]);
   const shown = shownPresentation.value, lang = language.value;
