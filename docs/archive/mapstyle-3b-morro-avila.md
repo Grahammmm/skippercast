@@ -39,7 +39,7 @@ Source URL: https://data.ngdc.noaa.gov/platforms/ocean/ships/ventresca/PGE_Avila
 ## Evidence and honest limits
 
 Six fixed-camera 1280×800 screenshots are in
-`/home/user/agent-work/reports/mapstyle-3/`: `avila-1` and `avila-2`, each with
+the local `reports/mapstyle-3/` directory: `avila-1` and `avila-2`, each with
 `before`, `control-10m`, and `after` suffixes. All use medium relief at displayed z15.
 The existing 10 m archive has **no coverage at these Avila cameras**. The before
 images honestly show that absence. A separate, explicitly labelled **derived
@@ -62,8 +62,9 @@ that single probe is not regional proof of artifact-free joins.
 
 The source catalog's SCC Block25 is outside Morro–Avila and is excluded. The added
 native data are catalogued Avila I/J slices, not region-wide 2 m coverage. Block J's
-native 2 m datum remains unknown; I and the 5 m companion metadata declare NAVD88
-Geoid03. The 10 m background has mixed references. No datum correction, sounding
+native 2 m datum remains unknown; I's 2 m metadata and J's 5 m companion metadata
+state NAVD88 Geoid03. I's 5 m datum was not separately re-reviewed here. The 10 m
+background has mixed references. No datum correction, sounding
 accuracy, habitat interpretation or navigation qualification is claimed. Per-cell
 uncertainty and interpolation masks remain unknown. Rights were not re-audited,
 as directed; tile archives stay private and MAPSTYLE-1's public guard is unchanged.
