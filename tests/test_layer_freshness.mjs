@@ -17,6 +17,7 @@ async function load() {
   const out = join(dir, 'fresh.mjs');
   await build({stdin: {resolveDir: root, loader: 'ts', contents: `
     export * from './web/map/freshness.ts';
+    export {forecastTime} from './web/map/frames.ts';
     export {Legend} from './web/app/Legend.tsx';
     export * as state from './web/state.ts';
     export {render} from 'preact-render-to-string';
@@ -74,5 +75,24 @@ test('the legend shows the cadence line under each layer that is on', async () =
     assert.match(html, /data-cadence="clouds"/);
     assert.match(html, /data-cadence="mpas"/);
     assert.ok(!html.includes('data-cadence="currents"'), 'only layers that are on');
+  } finally { await rm(dir, {recursive: true, force: true}); }
+});
+
+test('swell states the gates forecastTime actually applies, not an invented age limit', async () => {
+  const {m, dir} = await load();
+  try {
+    const g = m.LAYER_FRESHNESS.swell.forecastGate;
+    assert.deepEqual(g, {runHours: 36, retrievedHours: 6});
+    assert.equal(m.cadenceLine('swell', 'en'), 'Updates: every 6 to 12 h, with each model run · run at most 36 h old, retrieved within 6 h');
+    assert.ok(!/18 h/.test(m.cadenceLine('swell', 'en')) && !/18 h/.test(m.cadenceLine('swell', 'es')));
+    // Behaviour of the renderers' gate (swell.ts and wind.ts both call forecastTime) at the published numbers.
+    const H = 3600e3, now = new Date('2026-11-07T12:00:00Z'), n = now.getTime();
+    const times = [n - 30 * H, n - 24 * H, n - 12 * H, n, n + 12 * H];
+    const draw = (runAge, fetchAge, at) => m.forecastTime(times, n - runAge * H, n - fetchAge * H, new Date(at), now);
+    assert.equal(draw(24, 1, n - 24 * H), n - 24 * H, 'a 24 h old run, freshly retrieved, still draws (18 h would be false)');
+    assert.equal(draw(g.runHours, 1, n), n, 'run exactly at the limit draws');
+    assert.equal(draw(g.runHours + 1, 1, n), null, 'run past the limit is withheld');
+    assert.equal(draw(1, g.retrievedHours, n), n, 'retrieval exactly at the limit draws');
+    assert.equal(draw(1, g.retrievedHours + 1, n), null, 'retrieval past the limit is withheld');
   } finally { await rm(dir, {recursive: true, force: true}); }
 });

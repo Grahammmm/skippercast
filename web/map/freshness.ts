@@ -16,6 +16,8 @@ export interface LayerFreshness {
   limitMinutes?: number;
   /** layer-inventory.json layer ids this row's numbers come from. */
   inventory: readonly string[];
+  /** Forecast layers (wind, swell) draw through web/map/frames.ts forecastTime: a run at most runHours old, retrieved at most retrievedHours ago. */
+  forecastGate?: {runHours: number; retrievedHours: number};
   /** Whether the inventory update_cadence text must contain limitHours (test). */
   checkInventoryLimit?: boolean;
 }
@@ -28,7 +30,9 @@ export const LAYER_FRESHNESS: Readonly<Record<string, LayerFreshness>> = {
   'sst-contrast': {cadence: 'legend.fresh.daily', limitHours: 72, inventory: ['sst-noaa-blended'], checkInventoryLimit: true},
   'sst-fronts': {cadence: 'legend.fresh.habitat', limitHours: 48, inventory: ['sst-fronts'], checkInventoryLimit: true},
   'chlorophyll': {cadence: 'legend.fresh.daily', limitHours: 96, inventory: ['chl-viirs-merged'], checkInventoryLimit: true},
-  'swell': {cadence: 'legend.fresh.cycles', limitHours: 18, inventory: ['waves-gfswave-ecmwf-wam'], checkInventoryLimit: true},
+  // Swell (and the wind arrows under it) draw through forecastTime: run <= 36 h old AND retrieved <= 6 h ago.
+  // The 18 h in the inventory is the data pipeline's own limit, not the renderer's, so it is not published here.
+  'swell': {cadence: 'legend.fresh.cycles', limitHours: null, forecastGate: {runHours: 36, retrievedHours: 6}, inventory: ['waves-gfswave-ecmwf-wam']},
   'stations': {cadence: 'legend.fresh.live', limitHours: 3, inventory: []},
   'fleet': {cadence: 'legend.fresh.dated', limitHours: null, inventory: []},
   'clouds': {cadence: 'legend.fresh.min5', limitHours: null, limitMinutes: 90, inventory: ['goes-ir']},
@@ -40,6 +44,7 @@ export function cadenceLine(id: string, lang: Language = 'en'): string {
   const f = LAYER_FRESHNESS[id];
   if (!f) return '';
   const line = t('legend.fresh.line', lang, {cadence: t(f.cadence, lang)});
+  if (f.forecastGate) return `${line}${t('legend.fresh.gate', lang, {run: String(f.forecastGate.runHours), retrieved: String(f.forecastGate.retrievedHours)})}`;
   const limit = f.limitHours !== null ? `${f.limitHours} h` : f.limitMinutes !== undefined ? `${f.limitMinutes} min` : '';
   return limit ? `${line}${t('legend.fresh.limit', lang, {limit})}` : line;
 }

@@ -947,6 +947,7 @@
     "legend.windStamp": {"en": "NOAA NCEP · GFS · {stamp}", "es": "NOAA NCEP · GFS · {stamp}"},
     "legend.fresh.line": {"en": "Updates: {cadence}", "es": "Actualización: {cadence}"},
     "legend.fresh.limit": {"en": " · age limit {limit}", "es": " · límite de antigüedad {limit}"},
+    "legend.fresh.gate": {"en": " · run at most {run} h old, retrieved within {retrieved} h", "es": " · ejecución de hasta {run} h, obtenida hace menos de {retrieved} h"},
     "legend.fresh.daily": {"en": "daily", "es": "diaria"},
     "legend.fresh.hourly": {"en": "hourly", "es": "cada hora"},
     "legend.fresh.habitat": {"en": "with each habitat refresh", "es": "con cada actualización del hábitat"},
