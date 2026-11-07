@@ -196,6 +196,16 @@
      "url": "dist/offline-core.js",
      "accessed": "repo@5fd63730e3e91a6f669ee1e428d8416736da0cdc",
      "label": "DAILY_PARTS: regulations, mpa-boundaries, additional-closures, brief"
+    },
+    "inventory": {
+     "url": "catalog/layer-inventory.json",
+     "accessed": "repo@431772b2855fb16b063675f19fc83d8cc892c203",
+     "label": "LAYER-INVENTORY-1 layer records with MEASURED/ESTIMATED labels"
+    },
+    "windts": {
+     "url": "web/map/wind.ts",
+     "accessed": "repo@431772b2855fb16b063675f19fc83d8cc892c203",
+     "label": "Wind layer age gates and regional sampling grid"
     }
    },
    "verification": "verified-in-repo",
@@ -324,30 +334,30 @@
      "tier": "free",
      "source": "strings",
      "note": "NOAA CoastWatch SST analysis (observed) plus temperature contours",
-     "resolution": "Grid named on the map where it draws (varies with the bound analysis)",
-     "cadence": "Daily analysis; withheld past 72 h",
-     "coverage": "Active region's forecast area",
-     "attr_source": "strings"
+     "resolution": "0.05 degree (~5 km) NOAA Geo-Polar Blended analysis (inventory, MEASURED from feed metadata); the legend names the grid where it draws",
+     "cadence": "Update frequency: source analysis daily (inventory, MEASURED); app re-reads it in the 04:17 PT daily job and the habitat step of each live cycle. Age gate (not a frequency): withheld past 72 h",
+     "coverage": "Whole-coast global grid; 2026-11-06 snapshot had 54-87% valid sea cells per region (inventory, MEASURED)",
+     "attr_source": "inventory"
     },
     "chlorophyll": {
      "status": "yes",
      "tier": "free",
      "source": "strings",
      "note": "NOAA NESDIS STAR / CoastWatch, observed",
-     "resolution": "0.0375 degree native grid",
-     "cadence": "Labelled with sample date; withheld at the manifest age limit; cloud gaps stay empty",
-     "coverage": "Active region's forecast area",
-     "attr_source": "strings"
+     "resolution": "0.0375 degree (~4 km) native VIIRS grid (inventory and legend agree)",
+     "cadence": "Update frequency: source daily (inventory, MEASURED); app re-reads it in the 04:17 PT daily job and the habitat step. Age gate (not a frequency): 96 h app limit (inventory); legend labels the sample date and leaves cloud gaps empty",
+     "coverage": "Whole-coast global grid with cloud gaps; 2026-11-06 snapshot 0-83% valid cells per region (inventory, MEASURED)",
+     "attr_source": "inventory"
     },
     "hf_radar": {
      "status": "yes",
      "tier": "free",
      "source": "strings",
      "note": "HF radar observed within 6 h at 1 or 6 km, else NOAA WCOFS ~4 km forecast",
-     "resolution": "HF radar 1 or 6 km; WCOFS forecast about 4 km",
-     "cadence": "HF radar observed within 6 h, else WCOFS forecast",
-     "coverage": "Active region's forecast area",
-     "attr_source": "strings"
+     "resolution": "Native: HF radar 6 km, and 1 km sampled at stride 4 where short-range radars exist (inventory, MEASURED); WCOFS forecast fallback 0.04 degree (~4 km)",
+     "cadence": "Update frequency: radar source hourly (inventory, MEASURED); app re-reads it in the live-loop intelligence step when older than 55 min, plus one daily snapshot. Age gate (not a frequency): radar drawn only if observed within 6 h, else WCOFS forecast (legend; inventory: 6 h intelligence, 12 h daily)",
+     "coverage": "Coastal radar footprint only: 2026-11-06 daily snapshot had usable 6 km cells in 1 of 16 regions; Morro Bay intelligence feed 234/368 cells (inventory, MEASURED)",
+     "attr_source": "inventory"
     },
     "tidal_currents": {
      "status": "no",
@@ -364,50 +374,50 @@
      "tier": "free",
      "source": "layers",
      "note": "NOAA NCEP wind arrows, hourly over the 7-day dock",
-     "resolution": "GFS 10 m wind, native ~13 km tiles",
-     "cadence": "Runs older than 36 h or retrievals older than 6 h withheld; hourly steps over the 7-day dock",
-     "coverage": "Active region's forecast grid",
-     "attr_source": "strings"
+     "resolution": "UNVERIFIED delivered resolution (sources disagree, not resolved here): legend basis (catalog/app/strings.json) says GFS native ~13 km tiles; layer inventory gives a 0.25 degree grid (GFS 0.25 / IFS 0.25), labelled ESTIMATED from model ids. The map draws a regional sampling grid whose step the legend prints; headlands and harbors are not resolved (web/map/wind.ts)",
+     "cadence": "Update frequency: GFS runs 6-hourly, ECMWF 12-hourly (inventory, MEASURED); forecast tiles republished at the start of each live cycle (30 min loop) and in the daily job. Age gates (not a frequency) disagree: wind.ts withholds runs older than 36 h or retrievals older than 6 h; inventory lists an 18 h app limit (36 h in intelligence)",
+     "coverage": "Whole coast; coarse fields miss headland and harbor effects (inventory, ESTIMATED)",
+     "attr_source": "inventory"
     },
     "waves": {
      "status": "yes",
      "tier": "free",
      "source": "strings",
      "note": "Hourly swell layer plus CDIP MOP nearshore model rings where a coast report binds",
-     "resolution": "GFS-Wave wcoast.0p16 grid; CDIP MOP nearshore sites as rings",
-     "cadence": "Run issued within 36 h",
-     "coverage": "Region's forecast grid; MOP rings where a coast report binds",
-     "attr_source": "strings"
+     "resolution": "GFS-Wave 0.16 degree (~16 km) grid (legend and inventory agree); inventory also lists ECMWF WAM ~9 km (ESTIMATED from catalog); CDIP MOP alongshore model points (~100 m apart per CDIP, ESTIMATED) as rings",
+     "cadence": "Update frequency: GFS-Wave 6-hourly, ECMWF 12-hourly cycles; CDIP MOP 3-hourly valid times read every 30 min live cycle (inventory, MEASURED). Age gates (not a frequency) disagree: legend says run issued within 36 h; inventory lists an 18 h app limit, MOP feed limit 3 h",
+     "coverage": "Whole coast at each region's forecast points, no inshore bar waves; MOP rings in San Luis Obispo County only (Pismo to San Simeon) (inventory)",
+     "attr_source": "inventory"
     },
     "fronts": {
      "status": "yes",
      "tier": "free",
      "source": "layers",
      "note": "Temp contrast and observed SST fronts with age and uncertainty band",
-     "resolution": "n/a: outline or point layer",
-     "cadence": "Daily SST analysis; withheld past the feed age limit (never past 72 h)",
-     "coverage": "Active region's forecast area",
-     "attr_source": "strings"
+     "resolution": "Edges on the 0.05 degree SST grid (inventory, ESTIMATED)",
+     "cadence": "Update frequency: recomputed with each habitat refresh (inventory, MEASURED). Age gate (not a frequency): feed limit 48 h (catalog/feed-health.json); legend says never past 72 h",
+     "coverage": "Every published region; cloudy or uniform days give no fronts (inventory, ESTIMATED)",
+     "attr_source": "inventory"
     },
     "upwelling": {
      "status": "no",
      "tier": "n/a",
-     "source": "layers",
-     "note": "No upwelling or altimetry layer in the registry",
+     "source": "inventory",
+     "note": "No upwelling or altimetry layer in the registry (web/map/layers.ts); the layer inventory lists NOAA CUTI/BEUTI indices as an unused candidate",
      "resolution": "n/a: layer not offered (see note)",
      "cadence": "n/a: layer not offered (see note)",
      "coverage": "n/a: layer not offered (see note)",
-     "attr_source": "layers"
+     "attr_source": "inventory"
     },
     "satellite": {
      "status": "partial",
      "tier": "free",
      "source": "strings",
      "note": "GOES infrared cloud loop (observed <= 90 min); aerial base where a region offers it; no ocean true colour",
-     "resolution": "UNVERIFIED (not stated on the cited public page)",
-     "cadence": "GOES infrared frames observed within 90 minutes; NAIP aerial is dated imagery",
-     "coverage": "GOES loop over the region; NAIP aerial where a region offers it",
-     "attr_source": "strings"
+     "resolution": "GOES longwave IR ~2 km (inventory, ESTIMATED from catalog); NAIP aerial resolution not stated in the sources read",
+     "cadence": "Update frequency: GOES frames about every 5 min (inventory, MEASURED); frame index re-read every 30 min live cycle. Age gate (not a frequency): frames observed within 90 min. NAIP aerial is dated imagery, refresh UNVERIFIED",
+     "coverage": "GOES over the whole coast (inventory); NAIP aerial where a region offers it",
+     "attr_source": "inventory"
     },
     "rock_reef": {
      "status": "yes",
@@ -1021,7 +1031,7 @@
      "tier": "paid",
      "source": "ios",
      "note": "Safety depth contours, shallow highlight, fishing ranges",
-     "resolution": "Safety-depth and fishing-range shading user-set; contour interval as SonarChart HD",
+     "resolution": "Contour interval as SonarChart HD (1 ft; a contour spacing, not a grid resolution); safety-depth and fishing-range shading user-set",
      "cadence": "'Daily updates' (Play listing)",
      "coverage": "US & Canada subscription region",
      "attr_source": "play"
@@ -1298,7 +1308,7 @@
      "source": "ios",
      "note": "All California MPA classes offline",
      "resolution": "n/a: outline or point layer",
-     "cadence": "Pro advertises 'immediate update' of regulations; MPA map cadence not stated",
+     "cadence": "UNVERIFIED MPA map update rate; Pro advertises 'immediate update' of regulations, not of the map",
      "coverage": "All California MPA classes, Special Closures, Groundfish Exclusion Areas",
      "attr_source": "ios"
     },
@@ -1307,7 +1317,7 @@
      "tier": "free",
      "source": "play",
      "note": "20 and 50 fathom lines (one user review)",
-     "resolution": "20 and 50 fathom lines (one 2024 user review)",
+     "resolution": "UNVERIFIED by the vendor: one 2024 user review mentions 20 and 50 fathom lines (a contour set, not a grid resolution)",
      "cadence": "UNVERIFIED (not stated on the cited public page)",
      "coverage": "California (app scope)",
      "attr_source": "play"
@@ -2366,7 +2376,7 @@
      "tier": "mixed",
      "source": "pro",
      "note": "Forecast maps 'Limited' free, full with PRO",
-     "resolution": "97 forecast models, many local high-resolution; free users get full access to 9",
+     "resolution": "UNVERIFIED spatial resolution: the FREE vs PRO page gives model counts only (97 forecast models, many local high-resolution; free users get full access to 9), no grid spacing",
      "cadence": "UNVERIFIED (not stated on the cited public page)",
      "coverage": "Windguru spots free; custom spots and any map point need PRO",
      "attr_source": "pro"
@@ -2658,7 +2668,7 @@
      "source": "upgrade",
      "note": "Surf forecast at spots; cams",
      "resolution": "UNVERIFIED (not stated on the cited public page)",
-     "cadence": "Twice-daily forecaster reports (Premium); 16-day forecast range (Premium)",
+     "cadence": "Forecaster reports twice daily (Premium); model update rate UNVERIFIED; 16-day forecast range (Premium) is a range, not a frequency",
      "coverage": "Surf spots with forecasts; 1000+ cams (Premium)",
      "attr_source": "upgrade"
     },
