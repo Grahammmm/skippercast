@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>MAPLAYER-WIND-1 · private GFS wind preview</title>
+<link rel="stylesheet" href="/node_modules/maplibre-gl/dist/maplibre-gl.css">
+<style>
+html,body{margin:0;height:100%;font:13px/1.45 system-ui,sans-serif;color:#172a3a}
+#map,#tint,#wind{position:absolute;inset:0} #tint{background:#06121fb8;pointer-events:none}
+#wind{pointer-events:none} #panel{position:absolute;top:12px;left:12px;max-width:410px;background:#fffffff2;padding:12px;border-radius:6px;z-index:2}
+h1{font-size:16px;margin:0 0 6px} p{margin:6px 0} .warning{color:#8a1c1c}
+#ramp{height:14px;background:linear-gradient(to right,#3b6fb6,#2aa6c8,#43c08a,#d8d84a,#f29a2e,#e2492f,#b0208a)}
+#ticks{display:flex;justify-content:space-between}
+</style>
+</head><body>
+<div id="map"></div><div id="tint"></div><canvas id="wind" hidden aria-hidden="true"></canvas>
+<section id="panel">
+<h1>Wind 3 · Morro Bay / central coast</h1>
+<label><input id="toggle" type="checkbox" disabled> GFS 10 m wind · particle trails</label>
+<p id="status" role="status">Loading private wind field…</p><p id="time"></p>
+<div id="ramp" aria-hidden="true"></div><div id="ticks"><span>0 kt</span><span>15 kt</span><span>30+ kt</span></div>
+<p>Trails move downwind; colour = model speed. Motion exaggerated 900×; particles are visual tracers, not forecast trajectories.</p>
+<p>0.25° grid (~23 × 28 km here), bilinearly interpolated. Land and sea model winds; does not resolve harbor or headland gusts. Outside the retained crop = no trails.</p>
+<p id="sample">Click map to sample the model.</p>
+<p class="warning"><b>RESEARCH PREVIEW · NOT FOR NAVIGATION</b></p>
+<p>NOAA / NCEP GFS · medium seafloor survey, darkened as wind(3). Gray/tan gaps = no survey, not a land mask. Survey vertical references vary. Live map unchanged.</p>
+<p id="zoom"></p>
+</section>
+<script src="/node_modules/pmtiles/dist/pmtiles.js"></script>
+<script type="module">
+import * as maplibregl from '/node_modules/maplibre-gl/dist/maplibre-gl.mjs';
+import {validate,fresh,sample,particles} from './wind-layer.js';
+const q=new URLSearchParams(location.search);
+maplibregl.setWorkerUrl('/node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs');
+maplibregl.addProtocol('pmtiles',new window.pmtiles.Protocol().tile);
+const map=new maplibregl.Map({container:'map',renderWorldCopies:false,maxPitch:0,fadeDuration:0,
+  center:[+(q.get('lon')||-121.12),+(q.get('lat')||35.35)],zoom:+(q.get('zoom')||9.5),
+  style:{version:8,sources:{base:{type:'raster',tileSize:256,
+    attribution:'NOAA / NCEP GFS wind; retained medium seafloor research base',
+    url:'pmtiles://'+new URL('/var/seafloor/tiles/morro-bay-seafloor-deep-medium.pmtiles',location.href).href}},
+    layers:[{id:'no-survey',type:'background',paint:{'background-color':'#d9d2c0'}},
+      {id:'medium-seafloor',type:'raster',source:'base',paint:{'raster-fade-duration':0}}]}});
+window.__map=map;
+map.on('error',e=>{window.__error=String(e.error?.message||e.error);});
+const toggle=document.getElementById('toggle'),status=document.getElementById('status');
+let grid,overlay;
+function freshness() {
+  const usable=fresh(grid);toggle.disabled=!usable;
+  status.textContent=usable ? `Model run age ${((Date.now()-Date.parse(grid.run_time))/3600000).toFixed(1)} h · forecast, not observations` : 'STALE / invalid time — wind hidden (18 h run-age limit)';
+  status.className=usable?'':'warning';
+  if(!usable) toggle.checked=false;
+  overlay.setVisible(usable && toggle.checked);window.__windFresh=usable;
+}
+toggle.addEventListener('change',()=>overlay.setVisible(toggle.checked && fresh(grid)));
+map.on('move',()=>{document.getElementById('zoom').textContent=`Zoom ${map.getZoom().toFixed(2)}`;});
+map.on('load',async()=>{
+  try {
+    const response=await fetch('/var/maplayer-wind-1/wind-preview.json',{cache:'no-store'});
+    if(!response.ok)throw new Error(`private GFS file HTTP ${response.status}`);
+    grid=validate(await response.json());
+    document.getElementById('time').textContent=`DATA VALID: ${grid.data_time} · RUN: ${grid.run_time}`;
+    overlay=particles(map,document.getElementById('wind'),grid);
+    toggle.checked=true;freshness();setInterval(freshness,60000);
+    map.on('click',e=>{
+      const uv=sample(grid,e.lngLat.lng,e.lngLat.lat);
+      document.getElementById('sample').textContent=uv ? `${(Math.hypot(...uv)*1.94384449).toFixed(1)} kt · east ${uv[0].toFixed(2)}, north ${uv[1].toFixed(2)} m/s · ${grid.data_time}` : 'No GFS coverage at this point.';
+    });
+    document.getElementById('zoom').textContent=`Zoom ${map.getZoom().toFixed(2)}`;
+    window.__windLoaded=true;
+  } catch(error) {
+    status.textContent=`Wind unavailable — ${error.message}`;status.className='warning';
+    toggle.checked=false;toggle.disabled=true;window.__windError=String(error);
+  }
+});
+</script>
+</body></html>

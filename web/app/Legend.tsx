@@ -78,6 +78,7 @@ import {retrySavedSpots, savedSpotsOn, savedSpotsStatus, setSavedSpotsOn} from '
 import {Segmented} from '../ui/Chip.tsx';
 import {Popover} from '../ui/Popover.tsx';
 import {railEntries, railOn} from './rail.ts';
+import {PreviewLegendRows} from './PreviewLayers.tsx';
 
 /** A basis popover body: English shows the producer's own basis as it is; Spanish leads with the registry sentence in Spanish, then the producer's full basis unchanged (labelled English) unless it is the registry's own English sentence. */
 /** SC1352-02: a status the producer wrote in English, in the page's language when it attached catalogue parts; otherwise labelled English. */
@@ -426,6 +427,7 @@ export function Legend() {
           : e.id === 'fleet' ? <FleetRow key={e.id} />
           : e.id === 'stations' ? <StationsRow key={e.id} />
           : <PlainRow key={e.id} id={e.id} label={e.label} reason={t('rail.notDrawn', lang)} />)}
+        <PreviewLegendRows />
         <RankedRow />
         <SavedSpotsRow />
         <ShoreRow />
@@ -433,7 +435,7 @@ export function Legend() {
         <DepthContoursRow />
         <MpaRow />
       </ul>
-      {unavailable.value.filter(id => id !== 'mpas').map(id => <p key={id} class="app-empty" data-unavailable={id}>{t('rail.unavailable', lang, {label: layerCopy(id, lang).label})}</p>)}
+      {unavailable.value.filter(id => id !== 'mpas' && !id.startsWith('preview-')).map(id => <p key={id} class="app-empty" data-unavailable={id}>{t('rail.unavailable', lang, {label: layerCopy(id, lang).label})}</p>)}
     </section>
   );
 }
