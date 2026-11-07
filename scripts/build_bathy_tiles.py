@@ -435,10 +435,10 @@ def render_zoom(windows, z, enhance=None):
 
 
 def output_for(variant, directory=None):
-    """base keeps the MAPSTYLE-1 name; the others add -<variant> (the public-build guard matches both)."""
+    """base keeps the MAPSTYLE-1 path; the others go in a <variant>/ subdirectory under the same file name,
+    so the existing public-build guard (scripts/client-build.mjs) matches every variant unchanged."""
     directory = Path(directory) if directory else DEFAULT_OUTPUT.parent
-    return directory / ('morro-bay-seafloor-deep.pmtiles' if variant == 'base'
-                        else f'morro-bay-seafloor-deep-{variant}.pmtiles')
+    return directory / DEFAULT_OUTPUT.name if variant == 'base' else directory / variant / DEFAULT_OUTPUT.name
 
 
 def build(source, output, minzoom=MINZOOM, maxzoom=MAXZOOM, log=print, variant='base'):

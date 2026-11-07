@@ -335,9 +335,10 @@ class EnhancementTests(unittest.TestCase):
     def test_outputs_are_named_so_the_public_build_guard_catches_them(self):
         names = {v: bt.output_for(v).name for v in bt.ENHANCE}
         self.assertEqual(names['base'], 'morro-bay-seafloor-deep.pmtiles')
-        self.assertEqual(names['strong'], 'morro-bay-seafloor-deep-strong.pmtiles')
-        self.assertEqual(bt.output_for('mild').parent, bt.DEFAULT_OUTPUT.parent)
-        self.assertEqual(bt.output_for('mild').parent.parts[-3:], ('var', 'seafloor', 'tiles'))
+        self.assertEqual(names['strong'], 'morro-bay-seafloor-deep.pmtiles')
+        self.assertEqual(bt.output_for('strong').parent.name, 'strong')
+        self.assertEqual(bt.output_for('mild').parent, bt.DEFAULT_OUTPUT.parent / 'mild')
+        self.assertEqual(bt.output_for('mild').parent.parts[-4:], ('var', 'seafloor', 'tiles', 'mild'))
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / 'elevation.tif'
             write_survey(source)
