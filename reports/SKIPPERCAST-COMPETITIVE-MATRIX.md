@@ -507,7 +507,7 @@ Effort: small = days of one builder; medium = one to three weeks; large = a mont
 - Navionics' US App Store rating is 2.9 from 2.4K ratings on 2026-11-07 and the US & Canada yearly price is $49.99 in the IAP list; the 2026-10-31 retro could not find a US price.
 - FishLegal's Play listing showed "Updated on Jul 30, 2025" on 2026-11-07, while the 2026-11-01 refresh recorded "Updated on Oct 30, 2026" for the same listing. The two reads disagree; neither is resolved here.
 - Not re-done: SatFish, RipCharts, Hilton's, 976-TUNA, SoCal Fish Reports and NOAA forecast paths from the 2026-10-31 retro are reused with their dates, not re-read, except SatFish's feature page (re-read 2026-11-07).
-- LAYER-INVENTORY-1's `catalog/layer-inventory.json` did not exist at 5fd63730, so SkipperCast's layers were read from `web/map/layers.ts` and `catalog/app/strings.json`.
+- LAYER-INVENTORY-1's `catalog/layer-inventory.json` did not exist at 5fd63730, so SkipperCast's layers were read from `web/map/layers.ts` and `catalog/app/strings.json`. It merged to main during review (PR #1745) and arrives on this branch with the main merge; this report was not re-based on it, and a follow-up can reconcile the SkipperCast column against it.
 
 ## 7. Limits
 
