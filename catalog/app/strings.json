@@ -2294,6 +2294,22 @@
     "mark.layer.coastline.segment": {"en": "Shoreline segment", "es": "Tramo de línea costera"},
     "mark.layer.coastline.accuracy": {"en": "±{n} m stated", "es": "±{n} m declarados"},
     "mark.layer.coastline.noAccuracy": {"en": "Accuracy not stated", "es": "No se indica la precisión"},
-    "mark.layer.coastline.source": {"en": "NOAA NGS CUSP · source date {date}", "es": "NOAA NGS CUSP · fecha de la fuente {date}"}
+    "mark.layer.coastline.source": {"en": "NOAA NGS CUSP · source date {date}", "es": "NOAA NGS CUSP · fecha de la fuente {date}"},
+    "trip.legal.open": {"en": "Save rules for offline", "es": "Guardar reglas sin conexión"},
+    "trip.legal.heading": {"en": "Offline legal checklist", "es": "Lista legal sin conexión"},
+    "trip.legal.complete": {"en": "All listed legal files saved", "es": "Todos los archivos legales enumerados guardados"},
+    "trip.legal.incomplete": {"en": "Legal files missing — save again with a connection", "es": "Faltan archivos legales — vuelve a guardar con conexión"},
+    "trip.legal.stale": {"en": "Stale or unknown dates — refresh before departure", "es": "Fechas antiguas o desconocidas — actualiza antes de salir"},
+    "trip.legal.note": {"en": "File presence is not legal clearance. Source checks can change after saving; confirm current official rules before departure. NOT FOR NAVIGATION.", "es": "Tener los archivos no confirma autorización legal. Las fuentes pueden cambiar después de guardar; confirma las reglas oficiales vigentes antes de salir. NO USAR PARA NAVEGACIÓN."},
+    "trip.legal.rules": {"en": "Rule registry", "es": "Registro de reglas"},
+    "trip.legal.areas": {"en": "Protected-area boundaries", "es": "Límites de áreas protegidas"},
+    "trip.legal.regulations": {"en": "Daily rule checks", "es": "Verificaciones diarias de reglas"},
+    "trip.legal.mpa-boundaries": {"en": "Daily boundary checks", "es": "Verificaciones diarias de límites"},
+    "trip.legal.additional-closures": {"en": "Additional closures", "es": "Cierres adicionales"},
+    "trip.legal.saved": {"en": "Saved", "es": "Guardado"},
+    "trip.legal.missing": {"en": "Missing or unreadable", "es": "Falta o no se puede leer"},
+    "trip.legal.unknown": {"en": "Unknown", "es": "Desconocido"},
+    "trip.legal.dates": {"en": "Saved: {saved} · Feed assembled: {generated} · Rules reviewed: {reviewed} · Effective window: {from} – {through}", "es": "Guardado: {saved} · Fuente compilada: {generated} · Reglas revisadas: {reviewed} · Vigencia: {from} – {through}"},
+    "trip.legal.source": {"en": "Source {n}", "es": "Fuente {n}"}
   }
 }

@@ -291,6 +291,8 @@ export interface PackMeta {
   region_id: string; region_name: string; saved_at: string; bytes: number; missing: string[];
   tiles: {saved: number; planned: number; min_zoom: number; max_zoom: number | null};
   v2?: {basemap: {saved: number; planned: number}; shell: {saved: number; requested: number}; /** URLs (and basemap tiles) the v2 phase could not save. */ missing?: string[]};
+  /** Cache-only inventory, recomputed whenever the offline dialog opens. */
+  legal?: Awaited<ReturnType<typeof import('../dist/legal-pack.js').inspectLegalPack>>;
   /** The ocean phase's record (D9), additive: absent from packs saved before it. */
   ocean?: Awaited<ReturnType<typeof oceanPhase>>;
   /** ISO time of the last hour both the saved wind and wave models cover; additive, absent from older packs or when a model was not saved. */
@@ -299,7 +301,10 @@ export interface PackMeta {
 export type Progress = {phase: string; done: number; total: number; bytes: number};
 export async function listPacks(): Promise<{cache: string; meta: PackMeta}[]> {
   if (!('caches' in globalThis)) return [];
-  return (await import('../dist/offline-pack.js')).listPacks() as Promise<{cache: string; meta: PackMeta}[]>;
+  const packs = await (await import('../dist/offline-pack.js')).listPacks() as {cache: string; meta: PackMeta}[];
+  const {inspectLegalPack} = await import('../dist/legal-pack.js');
+  for (const pack of packs) pack.meta.legal = await inspectLegalPack(await caches.open(pack.cache), pack.meta.region_id, location.origin);
+  return packs;
 }
 /** Save `id` for offline: v1's pack with this app added; then the worker is registered so the pack answers offline. */
 export async function savePack(id: string, signal: AbortSignal, progress: (p: Progress) => void): Promise<PackMeta> {
