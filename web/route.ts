@@ -59,7 +59,7 @@ function sharedFor(model: LandWaterModel, lines: LandWaterLines | null | false):
 }
 
 /** A* over the passable sub-cells from `from` to `to` (both {latitude, longitude}); `maxNodes` is for tests. */
-export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines | null | false, from: RoutePoint, to: RoutePoint, maxNodes: number = MAX_NODES): Route {
+export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines | null | false, from: RoutePoint, to: RoutePoint, maxNodes: number = MAX_NODES, allows?: (points: readonly RoutePoint[]) => boolean): Route {
   if (!model) return fail('no-product');
   const n = 2 ** model.zoom, S = model.grid * SUB, size = n * S, Q = 4 * size;
   let sawMixed = false;
@@ -110,7 +110,15 @@ export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines |
     if (v < 0) sawMixed = true;
     return Math.max(v, 0);
   };
-  const cellWater = (gx: number, gy: number): number => water(4 * gx + 2, 4 * gy + 2);
+  // Optional route-local exclusion screen; never put it in the shared shoreline cache.
+  const allowed = new Map<number, boolean>();
+  const cellWater = (gx: number, gy: number): number => {
+    const v = water(4 * gx + 2, 4 * gy + 2);
+    if (!v || !allows) return v;
+    const id = gy * size + gx;
+    if (!allowed.has(id)) allowed.set(id, allows([at(4 * gx + 2, 4 * gy + 2)]));
+    return allowed.get(id) ? v : 0;
+  };
   const centre = (id: number): RoutePoint => at(4 * (id % size) + 2, 4 * Math.floor(id / size) + 2);
   // The nearest passable sub-cell centre within SNAP_M of p (first in row order on a tie), or -1.
   const snap = (p: RoutePoint): number => {
@@ -122,7 +130,7 @@ export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines |
       for (let gx = Math.floor(fx) - r; gx <= Math.floor(fx) + r; gx++) {
         if (gx < 0 || gy < 0 || gx >= size || gy >= size) continue;
         const m = distanceNm(p, centre(gy * size + gx)) * M_PER_NMI;
-        if (m <= SNAP_M && m < bestM && cellWater(gx, gy)) { best = gy * size + gx; bestM = m; }
+        if (m <= SNAP_M && m < bestM && cellWater(gx, gy) && (!allows || allows([p, centre(gy * size + gx)]))) { best = gy * size + gx; bestM = m; }
       }
     }
     return best;
@@ -138,6 +146,7 @@ export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines |
   // smoothing_entered_mixed_subcell_guard_is_independent). It is a conservative planning rule: not a supercover of
   // the segment, not proof that the line never meets land, and not a navigation guarantee. Do not remove it.
   const clear = (a: number, b: number): boolean => {
+    if (allows && !allows([centre(a), centre(b)])) return false;
     const ax = 4 * (a % size) + 2, ay = 4 * Math.floor(a / size) + 2, dx = 4 * (b % size) + 2 - ax, dy = 4 * Math.floor(b / size) + 2 - ay;
     const steps = Math.max(Math.abs(dx), Math.abs(dy));
     let px = a % size, py = Math.floor(a / size);
@@ -220,6 +229,7 @@ export function waterRoute(model: LandWaterModel | null, lines: LandWaterLines |
           mixed ||= a === 2 || b === 2;
         }
         if (mixed && ![1, 2, 3].every(k => water(4 * gx + 2 + k * dx, 4 * gy + 2 + k * dy))) continue;
+        if (allows && !allows([c, centre(next)])) continue;
         const cost = base + distanceNm(c, centre(next));
         if (cost < (g.get(next) ?? Infinity)) { g.set(next, cost); parent.set(next, id); push(cost + distanceNm(centre(next), goal), next); }
       }
