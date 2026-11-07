@@ -13,7 +13,7 @@ function fixture() {
   put('/data/rules.json', {schema_version: 1, valid_from: '2026-01-01', valid_through: '2026-12-31', reviewed_at: '2026-10-01', sources: {rules: {url: 'https://wildlife.ca.gov/Fishing/Ocean'}}});
   put('/data/areas.json', {type: 'FeatureCollection', features: []});
   for (const part of ['regulations', 'mpa-boundaries', 'additional-closures']) put(`/api/daily?region=test&part=${part}`,
-    {schema_version: 1, region_id: 'test', part, generated_at: at, ...(part === 'regulations' ? {regulations: {checks: {rules: {status: 'ok', data_retrieved_at: at}}}} : {sources: {source: {status: 'ok', checked_at: at}}})});
+    {schema_version: 1, region_id: 'test', part, generated_at: at, ...(part === 'regulations' ? {regulations: {checks: {rules: {status: 'unchanged', source_status: 'ok', data_retrieved_at: at}}}} : {sources: {source: {status: 'ok', checked_at: at}}})});
   return {entries, put, cache: {match: async path => entries.get(new URL(path, origin).href)?.clone()}};
 }
 
@@ -54,11 +54,20 @@ test('freshly saved old feeds, future/missing dates and expired rules warn rathe
 });
 
 test('newly assembled feeds with stale, failed or absent source checks still warn', async () => {
-  for (const checks of [{}, {rules: {status: 'error', data_retrieved_at: at}}, {rules: {status: 'ok', data_retrieved_at: '2026-11-05T12:00:00Z'}}]) {
+  for (const checks of [{}, {rules: {status: 'unavailable', source_status: 'error', data_retrieved_at: at}}, {rules: {status: 'changed', source_status: 'ok', data_retrieved_at: at}}, {rules: {status: 'unchanged', source_status: 'ok', data_retrieved_at: '2026-11-05T12:00:00Z'}}]) {
     const {cache, put} = fixture();
     put('/api/daily?region=test&part=regulations', {schema_version: 1, region_id: 'test', part: 'regulations', generated_at: at, regulations: {checks}});
     assert.equal((await inspectLegalPack(cache, 'test', origin, now)).stale, true);
   }
+});
+
+test('out-of-scope and not-requested rule checks do not trigger the stale warning', async () => {
+  const {cache, put} = fixture();
+  put('/api/daily?region=test&part=regulations', {schema_version: 1, region_id: 'test', part: 'regulations', generated_at: at, regulations: {checks: {
+    rules: {status: 'unchanged', source_status: 'ok', data_retrieved_at: at},
+    other: {status: 'out-of-scope', source_status: 'ok', data_retrieved_at: at},
+    later: {status: 'not-requested', source_status: 'not-requested', data_retrieved_at: null}}}});
+  assert.equal((await inspectLegalPack(cache, 'test', origin, now)).stale, false);
 });
 
 test('old packs without a readable region config never report a complete legal inventory', async () => {

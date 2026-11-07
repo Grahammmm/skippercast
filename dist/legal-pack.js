@@ -36,7 +36,12 @@ export async function inspectLegalPack(cache, regionId, origin, now = Date.now()
     const sources = Object.values(record?.sources ?? {}).map(s => s?.url).concat(record?.source_url ?? []).filter(https);
     // A new download cannot make an old source check fresh. Unknown/error checks warn as well.
     const checks = Object.values(record?.checks ?? record?.sources ?? {});
-    const staleChecks = PARTS.includes(id) && (!checks.length || checks.some(s => s?.status !== 'ok' || !fresh(s.data_retrieved_at ?? s.checked_at, now, Math.min(36, s.max_age_hours > 0 ? s.max_age_hours : 36))));
+    // Pipeline regulation checks: healthy is status 'unchanged' with source_status 'ok'. 'out-of-scope' and
+    // 'not-requested' checks are not this region's rules and never made a request, so they neither pass nor warn.
+    // Source entries of the other parts report plain status 'ok'.
+    const skipped = s => id === 'regulations' && (s?.status === 'out-of-scope' || s?.status === 'not-requested');
+    const healthy = s => id === 'regulations' ? s?.status === 'unchanged' && s.source_status === 'ok' : s?.status === 'ok';
+    const staleChecks = PARTS.includes(id) && (!checks.length || checks.some(s => !skipped(s) && (!healthy(s) || !fresh(s.data_retrieved_at ?? s.checked_at, now, Math.min(36, s.max_age_hours > 0 ? s.max_age_hours : 36)))));
     const date = new Intl.DateTimeFormat('en-CA', {timeZone: config?.timezone ?? 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit'}).format(now);
     const expired = id === 'rules' && (!/^\d{4}-\d{2}-\d{2}$/.test(d?.valid_from ?? '') || !/^\d{4}-\d{2}-\d{2}$/.test(d?.valid_through ?? '') || date < d.valid_from || date > d.valid_through);
     items.push({id, saved: !!valid, saved_at: hit?.saved_at ?? null,
