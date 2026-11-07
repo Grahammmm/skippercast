@@ -1570,9 +1570,9 @@
     },
     "forecasts_alerts": {
      "status": "yes",
-     "tier": "free",
+     "tier": "free+paid",
      "source": "apps",
-     "note": "Wind alerts; 35,000 real-time stations"
+     "note": "Free forecasts and station reports (35,000 real-time stations); wind alerts are Windfinder Plus only (paid)"
     },
     "trip_planning": {
      "status": "UNVERIFIED",
@@ -6450,7 +6450,7 @@
     "rank": 8,
     "bucket": "MUST-HAVE",
     "title": "Lightweight condition alerts for a home port (wind, swell) without saving a full trip",
-    "why": "Windy, Windfinder and Windguru offer free spot alerts; SkipperCast alerts need a passkey account and a saved trip.",
+    "why": "Windy offers free spot alerts, Windfinder wind alerts are Plus-only (paid) and Windguru alerts tier is unverified; SkipperCast alerts need a passkey account and a saved trip.",
     "effort": "small",
     "data": "Existing forecast tiles and alert engine."
    },
