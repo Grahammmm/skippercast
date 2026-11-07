@@ -30,6 +30,7 @@ h1 {font-size:16px;margin:0 0 6px} p {margin:6px 0}
 <div id="ticks"><span>&lt;53°F</span><span>56°F</span><span>60°F</span><span>≥65°F</span></div>
 <p>White/black line: strong break ≥1.2°F/km. End colours saturate outside 52–66°F.</p>
 <p id="coverage"></p>
+<p id="range"></p>
 <p>Native cells, not fine-scale measurements. Transparent = no SST cell; tan base = no seafloor survey. Surface analysis, not bottom temperature.</p>
 <p id="sample">Click a coloured cell for its analysis value.</p>
 <p class="warning"><b>RESEARCH PREVIEW · NOT FOR NAVIGATION</b></p>
@@ -77,6 +78,11 @@ map.on('load', async () => {
     data = await response.json();
     document.getElementById('time').textContent = `DATA TIME: ${data.data_time} · ${data.source_id}`;
     document.getElementById('coverage').textContent = `${data.valid_cells} cells displayed after region clipping (source: ${data.source_valid_cells}/${data.total_cells} valid); ${data.resolution_degrees.join('° × ')}° (~5 km). ${data.breaks.features.length} strong-break segments; zero means none resolved, not no fronts at sea.`;
+    const values = data.cells.features.map(f => f.properties.temperature_f);
+    const low = Math.min(...values), high = Math.max(...values);
+    document.getElementById('range').textContent = `Actual range: ${low.toFixed(1)}–${high.toFixed(1)}°F.` +
+      (low >= 66 ? ' Entire crop exceeds 66°F: saturated red. Visible texture is seafloor, not SST variation.' :
+        high < 52 ? ' Entire crop below 52°F: saturated cool colour.' : '');
     for (const colour of data.colours) {
       const swatch = document.createElement('span'); swatch.style.backgroundColor = colour;
       document.getElementById('ramp').append(swatch);

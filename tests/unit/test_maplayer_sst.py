@@ -3,11 +3,11 @@ from datetime import datetime, timezone
 import hashlib
 import importlib.util
 import json
-from pathlib import Path
 
 import pytest
+from tests._support import ROOT
 
-PATH = Path(__file__).resolve().parents[2] / 'research/scripts/map_style/build_sst.py'
+PATH = ROOT / 'research/scripts/map_style/build_sst.py'
 spec = importlib.util.spec_from_file_location('build_sst_preview', PATH)
 sst = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(sst)

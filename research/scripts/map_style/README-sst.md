@@ -73,8 +73,8 @@ Reuse the existing daily-data and habitat refresh producers listed in the
 inventory; do not add a duplicate timer or new source acquisition. For this private
 preview, rerun the builder after copying one newly completed, hash-verified
 `conditions` snapshot. No automatic refresh job or live publishing is installed.
-Evidence and the exact real input receipt live in
-`/home/user/agent-work/reports/maplayer-sst-1/` on AgentOrange.
+Evidence and the exact real input receipt live in AgentOrange's private
+`reports/maplayer-sst-1/` directory outside this repository.
 
 **RESEARCH PREVIEW — NOT FOR NAVIGATION.** Medium base: 10 m survey, mixed
 vertical references, tan where no survey exists. Neither this page nor its data
