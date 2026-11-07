@@ -27,11 +27,22 @@
                 line-height: 1.25; color: #10243a; white-space: nowrap; }
   .tide-label b { display: block; }
   .tide-label span { display: block; }
+  /* Chlorophyll overlay (MAPLAYER-CHLR-1): toggle, data time and legend. */
+  #chl { position: absolute; right: 8px; top: 84px; z-index: 2; width: 17em; padding: 6px 8px;
+         background: rgba(255,255,255,.9); border-radius: 3px; color: #222; }
+  #chl label { font-weight: 600; }
+  #chl .time { margin-top: 3px; }
+  #chl .stale { color: #8a1c1c; font-weight: 600; }
+  #chl .bar { height: 10px; margin: 6px 0 2px; border-radius: 2px; }
+  #chl .ticks { position: relative; height: 1.2em; font-size: 11px; }
+  #chl .ticks span { position: absolute; transform: translateX(-50%); }
+  #chl .fine { font-size: 11px; color: #444; margin-top: 2px; }
 </style>
 </head>
 <body>
 <div id="map"></div>
-<div id="picker"><label>Relief <select id="variant"></select></label></div>
+<div id="picker"><label>Relief <select id="variant"></select></label>
+  <div id="layers"><label><input type="checkbox" id="currents-on"> Surface currents (HF radar)</label></div></div>
 <div id="tidebox" hidden>
   <label><input type="checkbox" id="tideon" checked> <b>Tide layer</b> (water level at tide stations)</label>
   <div id="tidetime"></div>
@@ -42,6 +53,13 @@
 </div>
 <div id="note"><b>Research preview. Not for navigation.</b> Morro–Avila surveys; native coverage varies, mixed vertical references.
   Tan = no survey. <span id="readout"></span></div>
+<div id="chl" hidden>
+  <label><input type="checkbox" id="chl-on" checked> Chlorophyll (satellite)</label>
+  <div class="time" id="chl-time"></div>
+  <div class="bar" id="chl-bar"></div>
+  <div class="ticks" id="chl-ticks"></div>
+  <div class="fine">mg/m<sup>3</sup>, log scale. Clear = no reading (cloud or land), not zero. Sea-surface estimate, ~4 km cells; <b>not for navigation</b>.</div>
+</div>
 <script src="/node_modules/pmtiles/dist/pmtiles.js"></script>
 <script type="module">
 // Test page for var/seafloor/tiles/morro-bay-seafloor-deep.pmtiles (scripts/build_bathy_tiles.py).
@@ -81,9 +99,27 @@ const layers = [{id: 'no-survey', type: 'background', paint: {'background-color'
 if (q.get('bg') === 'checker') layers.length = 0;
 layers.push({id: 'seafloor-deep', type: 'raster', source: 'deep', paint: {'raster-fade-duration': 0}});
 
+// Chlorophyll overlay (MAPLAYER-CHLR-1): a private web-mercator image built by
+// scripts/build_chlorophyll_layer.py into var/chlorophyll/<sector>/. Options: chl=off (start hidden),
+// sector=<id> (default central-coast). The page shows the data's own time, never the load time.
+const sources = {deep: {type: 'raster', url: 'pmtiles://' + new URL(archive, location.href).href, tileSize: 256}};
+const sector = q.get('sector') || 'central-coast';
+let chl = null;
+try {
+  const r = await fetch(`/var/chlorophyll/${sector}/chlorophyll.json`);
+  if (r.ok) chl = await r.json();
+} catch (e) { /* no layer built: the base still works */ }
+if (chl) {
+  const [w, s, e, n] = chl.bounds;
+  sources.chlorophyll = {type: 'image', url: `/var/chlorophyll/${sector}/chlorophyll.png`, coordinates: [[w, n], [e, n], [e, s], [w, s]]};
+  layers.push({id: 'chlorophyll', type: 'raster', source: 'chlorophyll',
+               layout: {visibility: q.get('chl') === 'off' ? 'none' : 'visible'},
+               paint: {'raster-fade-duration': 0, 'raster-resampling': 'linear', 'raster-opacity': 1}});
+}
+
 const map = new maplibregl.Map({
   container: 'map', fadeDuration: 0, attributionControl: {compact: true}, renderWorldCopies: false,
-  style: {version: 8, sources: {deep: {type: 'raster', url: 'pmtiles://' + new URL(archive, location.href).href, tileSize: 256}}, layers},
+  style: {version: 8, sources, layers},
   bounds: VIEWS[q.get('view')] || VIEWS.full,
   fitBoundsOptions: {padding: 0, animate: false}, interactive: true, maxPitch: 0,
 });
@@ -130,6 +166,63 @@ if (q.get('tide')) {
     box.hidden = false;
     box.textContent = 'Tide layer failed to load (' + err + '). Build it with scripts/build_tide_layer.py.';
   }
+}
+// MAPLAYER-CURRENT-1: surface currents (style "current 5": vorticity tint + streamlines) from real HF-radar data.
+// Data: python research/scripts/map_style/fetch_hfr_currents.py --sector central-coast  ->  var/currents/hfr-central-coast-6km.json
+// Options: currents=on|off (default on), current_data=<url of another sector's json>.
+// The data time is always written in the note; if the file is missing the page says so and draws nothing.
+import {addCurrents, freshnessText, loadCurrentsDoc, statusHidden} from './currents-layer.js';
+const box = document.getElementById('currents-on');
+const note = document.getElementById('note');
+const line = document.createElement('div');
+note.appendChild(line);
+const dataUrl = q.get('current_data') || '/var/currents/hfr-central-coast-6km.json';
+let overlay = null;
+let failed = false;
+const paintLine = () => {
+  line.hidden = statusHidden(failed, box.checked);
+};
+map.on('load', async () => {
+  try {
+    const doc = await loadCurrentsDoc(fetch, dataUrl);
+    overlay = addCurrents(map, doc, {visible: q.get('currents') !== 'off'});
+    box.checked = q.get('currents') !== 'off';
+    const label = document.createElement('b');
+    label.textContent = 'Surface currents, not for navigation.';
+    line.replaceChildren(label, document.createTextNode(' ' + freshnessText(doc) + '. Near-surface flow only; '
+      + 'colour = spin (red counter-clockwise, blue clockwise); lines follow the flow; no colour = no radar vector.'));
+    window.__currents = doc.sample_at;
+  } catch (e) {
+    failed = true;
+    line.textContent = 'Surface currents unavailable: data file missing or invalid (' + dataUrl + '). No currents are drawn. Run research/scripts/map_style/fetch_hfr_currents.py.';
+    box.disabled = true;
+    window.__error = String(e);
+  }
+  paintLine();
+  window.__currentsReady = true;
+});
+box.onchange = () => { if (overlay) overlay.setVisible(box.checked); paintLine(); };
+if (chl) {
+  const panel = document.getElementById('chl');
+  const on = document.getElementById('chl-on');
+  panel.hidden = false;
+  on.checked = q.get('chl') !== 'off';
+  on.addEventListener('change', () => map.setLayoutProperty('chlorophyll', 'visibility', on.checked ? 'visible' : 'none'));
+  const sample = new Date(chl.sample_at);
+  const ageH = (Date.now() - sample.getTime()) / 3600e3;
+  const when = sample.toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+  const days = ageH >= 48 ? Math.round(ageH / 24) + ' days' : Math.round(ageH) + ' h';
+  const stale = ageH > chl.max_age_hours;
+  const time = document.getElementById('chl-time');
+  time.innerHTML = `Data time: <b>${when}</b> (${days} old)` +
+    (stale ? `<div class="stale">Older than the app's ${chl.max_age_hours} h limit: stale.</div>` : '');
+  const stops = chl.style.legend;
+  document.getElementById('chl-bar').style.background =
+    'linear-gradient(to right, ' + stops.map((x, i) => `${x[1]} ${(100 * i / (stops.length - 1)).toFixed(1)}%`).join(', ') + ')';
+  const lo = Math.log10(chl.style.vmin), hi = Math.log10(chl.style.vmax);
+  document.getElementById('chl-ticks').innerHTML = [0.1, 0.3, 1, 3, 10]
+    .map(v => `<span style="left:${(100 * (Math.log10(v) - lo) / (hi - lo)).toFixed(1)}%">${v}</span>`).join('');
+  window.__chl = chl;
 }
 </script>
 </body>
