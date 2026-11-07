@@ -19,7 +19,7 @@
 <body>
 <div id="map"></div>
 <div id="picker"><label>Relief <select id="variant"></select></label></div>
-<div id="note"><b>Research preview. Not for navigation.</b> Morro Bay 10 m survey; mixed vertical references.
+<div id="note"><b>Research preview. Not for navigation.</b> Morro–Avila surveys; native coverage varies, mixed vertical references.
   Tan = no survey. <span id="readout"></span></div>
 <script src="/node_modules/pmtiles/dist/pmtiles.js"></script>
 <script type="module">
@@ -35,7 +35,7 @@ const q = new URLSearchParams(location.search);
 // variant=base|mild|medium|strong picks the relief enhancement of scripts/build_bathy_tiles.py (MAPSTYLE-2);
 // base is the MAPSTYLE-1 look. A dropdown in the corner switches it (it reloads with ?variant=...).
 const VARIANTS = ['base', 'mild', 'medium', 'strong'];
-const variant = VARIANTS.includes(q.get('variant')) ? q.get('variant') : 'base';
+const variant = VARIANTS.includes(q.get('variant')) ? q.get('variant') : 'medium';
 const archive = q.get('tiles') || '/var/seafloor/tiles/' + (variant === 'base' ? '' : variant + '/') + 'morro-bay-seafloor-deep.pmtiles';
 const picker = document.getElementById('variant');
 picker.innerHTML = VARIANTS.map((v) => `<option${v === variant ? ' selected' : ''}>${v}</option>`).join('');
