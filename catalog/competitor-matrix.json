@@ -1,0 +1,6545 @@
+{
+ "schema": "skippercast.competitor-matrix/1",
+ "card": "COMPETITOR-MATRIX-1 (t_bf284d4a)",
+ "accessed_default": "2026-11-07",
+ "method": "Public vendor pages, store listings and help pages only; no accounts, purchases, installs or paid-feature tests. A cell is 'yes' or 'partial' only when a cited page documents it; UNVERIFIED means the pages read did not document it, not that the product lacks it; 'no' only when a cited page states the absence or the product's own scope excludes it.",
+ "status_values": [
+  "yes",
+  "partial",
+  "no",
+  "UNVERIFIED"
+ ],
+ "tier_values": [
+  "free",
+  "paid",
+  "mixed",
+  "unknown",
+  "n/a"
+ ],
+ "features": [
+  {
+   "id": "reports_logs",
+   "label": "Fishing reports and catch logs"
+  },
+  {
+   "id": "species_regs",
+   "label": "Species and regulations"
+  },
+  {
+   "id": "mpa_closures",
+   "label": "MPA and closure maps"
+  },
+  {
+   "id": "offline",
+   "label": "Offline use"
+  },
+  {
+   "id": "tides",
+   "label": "Tides"
+  },
+  {
+   "id": "wind_waves",
+   "label": "Wind and waves"
+  },
+  {
+   "id": "forecasts_alerts",
+   "label": "Forecasts and alerts"
+  },
+  {
+   "id": "trip_planning",
+   "label": "Trip planning"
+  },
+  {
+   "id": "route_distance",
+   "label": "Route and distance"
+  },
+  {
+   "id": "safety_checkin",
+   "label": "Safety and check-in"
+  },
+  {
+   "id": "community",
+   "label": "Community"
+  },
+  {
+   "id": "charts",
+   "label": "Charts"
+  },
+  {
+   "id": "ais",
+   "label": "AIS"
+  },
+  {
+   "id": "bite_prediction",
+   "label": "Bite prediction"
+  },
+  {
+   "id": "hot_spots",
+   "label": "Hot spots"
+  },
+  {
+   "id": "boat_fuel",
+   "label": "Boat profile and fuel"
+  }
+ ],
+ "layers": [
+  {
+   "id": "bathymetry",
+   "label": "Bathymetry (resolution, where)"
+  },
+  {
+   "id": "hard_bottom",
+   "label": "Hard-bottom and habitat"
+  },
+  {
+   "id": "sst",
+   "label": "Sea surface temperature"
+  },
+  {
+   "id": "chlorophyll",
+   "label": "Chlorophyll"
+  },
+  {
+   "id": "hf_radar",
+   "label": "HF-radar currents"
+  },
+  {
+   "id": "tidal_currents",
+   "label": "Tidal currents"
+  },
+  {
+   "id": "wind",
+   "label": "Wind"
+  },
+  {
+   "id": "waves",
+   "label": "Waves"
+  },
+  {
+   "id": "fronts",
+   "label": "Fronts and breaks"
+  },
+  {
+   "id": "upwelling",
+   "label": "Upwelling (or altimetry proxy)"
+  },
+  {
+   "id": "satellite",
+   "label": "Satellite imagery"
+  },
+  {
+   "id": "rock_reef",
+   "label": "Rock and reef overlays"
+  },
+  {
+   "id": "fishing_spots",
+   "label": "Fishing spots"
+  },
+  {
+   "id": "mpas",
+   "label": "MPAs"
+  },
+  {
+   "id": "depth_contours",
+   "label": "Depth contours"
+  },
+  {
+   "id": "weather_radar",
+   "label": "Weather radar"
+  }
+ ],
+ "products": [
+  {
+   "id": "skippercast",
+   "name": "SkipperCast (baseline)",
+   "group": "baseline",
+   "kind": "California boat-angler map, forecast and rules web app",
+   "price": "Free web app; account (passkey) for alerts, catch log and saved spots",
+   "sources": {
+    "readme": {
+     "url": "README.md",
+     "accessed": "repo@5fd63730e3e91a6f669ee1e428d8416736da0cdc",
+     "label": "README What you get"
+    },
+    "roadmap": {
+     "url": "docs/roadmap.md",
+     "accessed": "repo@5fd63730e3e91a6f669ee1e428d8416736da0cdc",
+     "label": "What ships now (v0.8)"
+    },
+    "webapp": {
+     "url": "docs/web-app.md",
+     "accessed": "repo@5fd63730e3e91a6f669ee1e428d8416736da0cdc",
+     "label": "Web app guide"
+    },
+    "layers": {
+     "url": "web/map/layers.ts",
+     "accessed": "repo@5fd63730e3e91a6f669ee1e428d8416736da0cdc",
+     "label": "Layer registry"
+    },
+    "strings": {
+     "url": "catalog/app/strings.json",
+     "accessed": "repo@5fd63730e3e91a6f669ee1e428d8416736da0cdc",
+     "label": "Layer basis sentences"
+    },
+    "seabed": {
+     "url": "docs/seabed-views.md",
+     "accessed": "repo@5fd63730e3e91a6f669ee1e428d8416736da0cdc",
+     "label": "2 m USGS seabed views"
+    },
+    "homeport": {
+     "url": "web/ports.ts",
+     "accessed": "repo@5fd63730e3e91a6f669ee1e428d8416736da0cdc",
+     "label": "Only geolocation use: locatePort (nearest port), also dist/home-port.js"
+    },
+    "offlinecore": {
+     "url": "dist/offline-core.js",
+     "accessed": "repo@5fd63730e3e91a6f669ee1e428d8416736da0cdc",
+     "label": "DAILY_PARTS: regulations, mpa-boundaries, additional-closures, brief"
+    }
+   },
+   "verification": "verified-in-repo",
+   "notes": "Coverage: Morro Bay & Avila active; other California packages preview.",
+   "features": {
+    "reports_logs": {
+     "status": "yes",
+     "tier": "free",
+     "source": "roadmap",
+     "note": "Reports view: dated catch cards with source links; private catch/blank log for signed-in owner, feeds no public score"
+    },
+    "species_regs": {
+     "status": "yes",
+     "tier": "free",
+     "source": "roadmap",
+     "note": "Rules cards (bag, size, depth, last verified date, official link) and yearly season calendar; checked against CDFW daily"
+    },
+    "mpa_closures": {
+     "status": "yes",
+     "tier": "free",
+     "source": "roadmap",
+     "note": "Protected areas always drawn; every place output (spot, leg, waypoint, GPX point) screened; not a complete live closure service"
+    },
+    "offline": {
+     "status": "yes",
+     "tier": "free",
+     "source": "offlinecore",
+     "note": "Save-for-offline pack: regulations, MPA boundaries, additional closures, brief, ENC z8-12, basemap, contours, SST and currents when current; saved only on request"
+    },
+    "tides": {
+     "status": "yes",
+     "tier": "free",
+     "source": "webapp",
+     "note": "NOAA CO-OPS predictions (Port San Luis for Morro Bay); not bar currents"
+    },
+    "wind_waves": {
+     "status": "yes",
+     "tier": "free",
+     "source": "readme",
+     "note": "7-day meteogram from NOAA and ECMWF tiles, live buoys, hourly swell and wind layers"
+    },
+    "forecasts_alerts": {
+     "status": "yes",
+     "tier": "free",
+     "source": "roadmap",
+     "note": "Model disagreement in words; saved-trip alerts on material change and day before (account)"
+    },
+    "trip_planning": {
+     "status": "yes",
+     "tier": "free",
+     "source": "roadmap",
+     "note": "Brief per port and profile: day verdict, lower-exposure window, run time, turn-back, fishing time, bar leave-by/back-by"
+    },
+    "route_distance": {
+     "status": "partial",
+     "tier": "free",
+     "source": "roadmap",
+     "note": "Water route over the land-water screen (planning distance); does not route around MPAs; legs not exported as a route"
+    },
+    "safety_checkin": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "roadmap",
+     "note": "No float plan, check-in or position sharing in What ships now"
+    },
+    "community": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "roadmap",
+     "note": "No public community; Text Advisor built but dark"
+    },
+    "charts": {
+     "status": "yes",
+     "tier": "free",
+     "source": "webapp",
+     "note": "NOAA ENC display (planning only) and self-hosted basemap"
+    },
+    "ais": {
+     "status": "partial",
+     "tier": "free",
+     "source": "layers",
+     "note": "Dated Commercial AIS 2024 effort layer only; no live AIS"
+    },
+    "bite_prediction": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "webapp",
+     "note": "Deliberately none: 'bite potential stays unknown'"
+    },
+    "hot_spots": {
+     "status": "partial",
+     "tier": "free",
+     "source": "roadmap",
+     "note": "Ranked habitat places and named charter-reported grounds, each labelled not a hotspot or catch probability"
+    },
+    "boat_fuel": {
+     "status": "partial",
+     "tier": "free",
+     "source": "roadmap",
+     "note": "Saved boat, cruise speed and comfort limits; fuel not computed"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "yes",
+     "tier": "free",
+     "source": "seabed",
+     "note": "2 m USGS 2008 grids (Point Buchon, Morro Bay, Point Estero) in 2D/3D terrain; SoCal source-grid views in preview; static survey dates"
+    },
+    "hard_bottom": {
+     "status": "yes",
+     "tier": "free",
+     "source": "webapp",
+     "note": "Seafloor habitat layer from original surveys; reef and soft-bottom candidates with terrain evidence (zoom >= 10)"
+    },
+    "sst": {
+     "status": "yes",
+     "tier": "free",
+     "source": "strings",
+     "note": "NOAA CoastWatch SST analysis (observed) plus temperature contours"
+    },
+    "chlorophyll": {
+     "status": "yes",
+     "tier": "free",
+     "source": "strings",
+     "note": "NOAA NESDIS STAR / CoastWatch, observed"
+    },
+    "hf_radar": {
+     "status": "yes",
+     "tier": "free",
+     "source": "strings",
+     "note": "HF radar observed within 6 h at 1 or 6 km, else NOAA WCOFS ~4 km forecast"
+    },
+    "tidal_currents": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "webapp",
+     "note": "Station tide heights only; 'not Morro Bay bar currents'"
+    },
+    "wind": {
+     "status": "yes",
+     "tier": "free",
+     "source": "layers",
+     "note": "NOAA NCEP wind arrows, hourly over the 7-day dock"
+    },
+    "waves": {
+     "status": "yes",
+     "tier": "free",
+     "source": "strings",
+     "note": "Hourly swell layer plus CDIP MOP nearshore model rings where a coast report binds"
+    },
+    "fronts": {
+     "status": "yes",
+     "tier": "free",
+     "source": "layers",
+     "note": "Temp contrast and observed SST fronts with age and uncertainty band"
+    },
+    "upwelling": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "layers",
+     "note": "No upwelling or altimetry layer in the registry"
+    },
+    "satellite": {
+     "status": "partial",
+     "tier": "free",
+     "source": "strings",
+     "note": "GOES infrared cloud loop (observed <= 90 min); aerial base where a region offers it; no ocean true colour"
+    },
+    "rock_reef": {
+     "status": "yes",
+     "tier": "free",
+     "source": "readme",
+     "note": "Reef habitat candidates with terrain grade; 132 qualified Morro Bay targets"
+    },
+    "fishing_spots": {
+     "status": "partial",
+     "tier": "free",
+     "source": "roadmap",
+     "note": "Ranked habitat places and charter-reported grounds, explicitly not hotspots; private saved spots layer"
+    },
+    "mpas": {
+     "status": "yes",
+     "tier": "free",
+     "source": "layers",
+     "note": "Always drawn, Chart and terrain; official boundaries"
+    },
+    "depth_contours": {
+     "status": "yes",
+     "tier": "free",
+     "source": "layers",
+     "note": "Shelf contours from reviewed survey grids, every zoom"
+    },
+    "weather_radar": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "layers",
+     "note": "No radar layer in the registry"
+    }
+   }
+  },
+  {
+   "id": "fishbrain",
+   "name": "Fishbrain",
+   "group": "fishing",
+   "kind": "Fishing social network, logbook and maps app",
+   "price": "Free app; Pro: Monthly $12.99-14.99, Quarter $41.99, Annual $79.99 (App Store IAP list)",
+   "sources": {
+    "pro": {
+     "url": "https://fishbrain.com/pro",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "ios": {
+     "url": "https://apps.apple.com/us/app/fishbrain-fishing-app/id477967747",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "play": {
+     "url": "https://play.google.com/store/apps/details?id=com.fishbrain.app&hl=en_US",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "regs": {
+     "url": "https://fishbrainhelp.zendesk.com/hc/en-us/articles/22539052337820-What-areas-do-Fishbrain-s-fishing-regulations-cover",
+     "accessed": "2026-11-01",
+     "label": "via 2026-11-01 refresh"
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "yes",
+     "tier": "free",
+     "source": "ios",
+     "note": "Logbook with personal stats; local catch reports and photos"
+    },
+    "species_regs": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "pro",
+     "note": "Pro page lists Local regulations; support page covers California saltwater rules by time and coordinates (2026-11-01)"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": "regs",
+     "note": "Rules by coordinates documented; MPA boundary drawing not documented"
+    },
+    "offline": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "tides": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "ios",
+     "note": "Tide charts listed; free/paid split not stated"
+    },
+    "wind_waves": {
+     "status": "partial",
+     "tier": "unknown",
+     "source": "ios",
+     "note": "Weather, wind speed, pressure listed; waves not listed"
+    },
+    "forecasts_alerts": {
+     "status": "partial",
+     "tier": "mixed",
+     "source": "play",
+     "note": "AI forecasts; 'premium forecasts' in Pro; alerts not described"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "community": {
+     "status": "yes",
+     "tier": "free",
+     "source": "ios",
+     "note": "Social community, groups; '15 million members'"
+    },
+    "charts": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "pro",
+     "note": "HD depth maps from Garmin (US and Canada) in Pro; C-Map Social depth charts listed"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "bite_prediction": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "ios",
+     "note": "BiteTime forecasts 'powered by advanced AI'"
+    },
+    "hot_spots": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "pro",
+     "note": "Exact catch locations from '20 million verified public catch locations' (Pro)"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "pro",
+     "note": "Garmin HD depth contour maps, US and Canada (Pro); resolution not stated"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "wind": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "fishing_spots": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "pro",
+     "note": "Community catch locations (Pro for exact)"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    },
+    "depth_contours": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "pro",
+     "note": "Garmin HD depth contours (Pro)"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the vendor and store pages read"
+    }
+   }
+  },
+  {
+   "id": "navionics",
+   "name": "Navionics Boating (Garmin)",
+   "group": "charts",
+   "kind": "Chart, bathymetry and navigation app",
+   "price": "Free download with limited trial; US & Canada yearly subscription $49.99 (App Store IAP list)",
+   "sources": {
+    "ios": {
+     "url": "https://apps.apple.com/us/app/navionics-boating/id744920098",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "play": {
+     "url": "https://play.google.com/store/apps/details?id=it.navionics.singleAppMarineLakesHD&hl=en_US",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "outreach": {
+     "url": "https://californiampas.org/about-mpas/fishing-mpas",
+     "accessed": "2026-11-01",
+     "label": "via 2026-11-01 refresh"
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Markers, tracks, photos ('where you reeled in a big fish'); no catch log described"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the App Store or Play listing read"
+    },
+    "mpa_closures": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "outreach",
+     "note": "California MPA outreach page says the app and charts show MPAs; rules not described"
+    },
+    "offline": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Offline charts with subscription"
+    },
+    "tides": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Weather and tides: tides and currents"
+    },
+    "wind_waves": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Wind, weather buoys, daily and hourly forecasts; waves not listed"
+    },
+    "forecasts_alerts": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Forecasts; AIS proximity alerts; weather alerts not described"
+    },
+    "trip_planning": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Auto Guidance+: ETA, distance, heading, fuel consumption"
+    },
+    "route_distance": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Dock-to-dock suggested path 'for planning purposes only'; distance tool"
+    },
+    "safety_checkin": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Share live location, tracks, routes with friends"
+    },
+    "community": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Community edits and ActiveCaptain POIs"
+    },
+    "charts": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Navionics charts plus NOAA charts (US and Canada)"
+    },
+    "ais": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Needs a compatible Wi-Fi AIS receiver; collision alerts"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the App Store or Play listing read"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the App Store or Play listing read"
+    },
+    "boat_fuel": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Fuel consumption in Auto Guidance+"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "ios",
+     "note": "SonarChart HD 1 ft (0.5 m) contours from surveys and user sonar logs; daily updates"
+    },
+    "hard_bottom": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Sonar imagery of bottom hardness 'on select lakes' only"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the App Store or Play listing read"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the App Store or Play listing read"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the App Store or Play listing read"
+    },
+    "tidal_currents": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Tides and currents listed"
+    },
+    "wind": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Wind on chart"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the App Store or Play listing read"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the App Store or Play listing read"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the App Store or Play listing read"
+    },
+    "satellite": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Satellite imagery on land and water overlay"
+    },
+    "rock_reef": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Relief shading overlay for bottom topography"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the App Store or Play listing read"
+    },
+    "mpas": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "outreach",
+     "note": "Shown per California MPA outreach page"
+    },
+    "depth_contours": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Safety depth contours, shallow highlight, fishing ranges"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the App Store or Play listing read"
+    }
+   }
+  },
+  {
+   "id": "fishlegal",
+   "name": "FishLegal",
+   "group": "rules",
+   "kind": "California MPA and regulations app",
+   "price": "MPA maps and regulations free; Pro $9.99/yr (30-day trial) for species regulations",
+   "sources": {
+    "ios": {
+     "url": "https://apps.apple.com/us/app/fishlegal/id1230932238",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "play": {
+     "url": "https://play.google.com/store/apps/details?id=com.fishlegal.mobile&hl=en_US",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "ios_reviews": {
+     "url": "https://apps.apple.com/us/app/fishlegal/id1230932238?see-all=reviews",
+     "accessed": "2026-11-07",
+     "label": ""
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "species_regs": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Pro: species-specific California saltwater regulations, immediate update; MPA regulations free"
+    },
+    "mpa_closures": {
+     "status": "yes",
+     "tier": "free",
+     "source": "ios",
+     "note": "SMR, SMCA, SMP, Special Closure, Groundfish Exclusion Areas (iOS); Cowcod Conservation Area (Play); GPS position relative to MPAs"
+    },
+    "offline": {
+     "status": "yes",
+     "tier": "free",
+     "source": "ios",
+     "note": "'Completely offline capable'; maps and rules preloaded"
+    },
+    "tides": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "wind_waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "forecasts_alerts": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Regulation-change updates (Pro); no weather"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": "play",
+     "note": "One 2024 Play review asks for destination entry beyond MPAs"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "charts": {
+     "status": "partial",
+     "tier": "free",
+     "source": "play",
+     "note": "A 2024 Play review praises 20 and 50 fathom contour lines; no nautical chart described"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "wind": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    },
+    "mpas": {
+     "status": "yes",
+     "tier": "free",
+     "source": "ios",
+     "note": "All California MPA classes offline"
+    },
+    "depth_contours": {
+     "status": "partial",
+     "tier": "free",
+     "source": "play",
+     "note": "20 and 50 fathom lines (one user review)"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the store listings read"
+    }
+   }
+  },
+  {
+   "id": "cdfw_map",
+   "name": "CDFW Ocean Sportfishing Web App",
+   "group": "rules",
+   "kind": "Official California regulations map (web)",
+   "price": "Free, public",
+   "sources": {
+    "map": {
+     "url": "https://wildlife.ca.gov/OceanSportfishMap",
+     "accessed": "2026-11-01",
+     "label": "description verified 2026-11-01; 2026-11-07 extract returned title only"
+    },
+    "region": {
+     "url": "https://wildlife.ca.gov/Conservation/Marine/Ocean-Sportfish-Map",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "baseline": {
+     "url": "docs/archive/product-research.md",
+     "accessed": "2026-09-21",
+     "label": "repo baseline: joins rules, MPAs, depth restrictions"
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "species_regs": {
+     "status": "yes",
+     "tier": "free",
+     "source": "map",
+     "note": "Selecting an area shows its rules; informational, not legal documents"
+    },
+    "mpa_closures": {
+     "status": "yes",
+     "tier": "free",
+     "source": "map",
+     "note": "Management areas and MPAs with device location"
+    },
+    "offline": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "map",
+     "note": "Requires internet and location services"
+    },
+    "tides": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "wind_waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "forecasts_alerts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": "map",
+     "note": "No nautical chart described; publisher says the map is not for safe navigation"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "wind": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    },
+    "mpas": {
+     "status": "yes",
+     "tier": "free",
+     "source": "map",
+     "note": "Official boundaries"
+    },
+    "depth_contours": {
+     "status": "partial",
+     "tier": "free",
+     "source": "baseline",
+     "note": "Depth restrictions shown per 2026-09-21 baseline"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the public description read"
+    }
+   }
+  },
+  {
+   "id": "windy",
+   "name": "Windy.com",
+   "group": "weather",
+   "kind": "Weather model map (web and app)",
+   "price": "Free, no ads; Premium $24.99/yr auto-renew or $37.99 one-year",
+   "sources": {
+    "sub": {
+     "url": "https://www.windy.com/subscription",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "play": {
+     "url": "https://play.google.com/store/apps/details?id=com.windyty.android&hl=en_US",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "point": {
+     "url": "https://www.windy.com/35.366/-120.863?waves,35.366,-120.863,8",
+     "accessed": "2026-10-31",
+     "label": "observed Morro Rock page, 2026-10-31 retro"
+    },
+    "fishq": {
+     "url": "https://community.windy.com/topic/15109/fishing-forecast",
+     "accessed": "2026-11-07",
+     "label": "search-result snippet only: staff say no fish-oriented forecast"
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "offline": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "tides": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "wind_waves": {
+     "status": "yes",
+     "tier": "free",
+     "source": "play",
+     "note": "51 weather maps incl. wind, swell; ECMWF, GFS, ICON, NAM, HRRR; point page shows ECMWF WAM and RDWPS wave models"
+    },
+    "forecasts_alerts": {
+     "status": "yes",
+     "tier": "free",
+     "source": "play",
+     "note": "Favourite-spot mobile or e-mail alerts; model comparison; Premium: 1-h step, 15 days, >= 4 updates/day"
+    },
+    "trip_planning": {
+     "status": "partial",
+     "tier": "free",
+     "source": "point",
+     "note": "Point forecast with per-day predictability percent (observed 2026-10-31)"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "community": {
+     "status": "partial",
+     "tier": "free",
+     "source": "fishq",
+     "note": "Public community forum"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "bite_prediction": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fishq",
+     "note": "Staff: 'We do not have any fish oriented forecast' (snippet)"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "wind": {
+     "status": "yes",
+     "tier": "free",
+     "source": "play",
+     "note": "Global and local models; Premium updates >= 4/day"
+    },
+    "waves": {
+     "status": "yes",
+     "tier": "free",
+     "source": "point",
+     "note": "ECMWF WAM 9 km, RDWPS 2.5 km at Morro Rock"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "satellite": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "play",
+     "note": "NOAA/EUMETSAT/Himawari composite every 5-15 min; 24-h loop Premium"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the subscription page or Play listing read"
+    },
+    "weather_radar": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "play",
+     "note": "Doppler radar 'large parts of ... America'; 24-h loop and archive Premium"
+    }
+   }
+  },
+  {
+   "id": "windfinder",
+   "name": "Windfinder",
+   "group": "weather",
+   "kind": "Wind and weather forecast app",
+   "price": "Free forever tier; Windfinder Plus for Superforecast (price not on page)",
+   "sources": {
+    "apps": {
+     "url": "https://www.windfinder.com/apps",
+     "accessed": "2026-11-07",
+     "label": ""
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "offline": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "tides": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "wind_waves": {
+     "status": "partial",
+     "tier": "mixed",
+     "source": "apps",
+     "note": "10-day forecast in 3-h steps free; hourly high-res Superforecast Plus; waves in tagline only"
+    },
+    "forecasts_alerts": {
+     "status": "yes",
+     "tier": "free",
+     "source": "apps",
+     "note": "Wind alerts; 35,000 real-time stations"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "wind": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "apps",
+     "note": "Animated wind map free; advanced map with gusts and precipitation Plus"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": "apps",
+     "note": "'Waves' in the app tagline; no wave layer described"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the apps page read"
+    }
+   }
+  },
+  {
+   "id": "windguru",
+   "name": "Windguru",
+   "group": "weather",
+   "kind": "Wind forecast tables and maps (web PWA)",
+   "price": "Free site; PRO team seats from EUR 21.40/seat/yr (individual PRO price not extracted)",
+   "sources": {
+    "apps": {
+     "url": "https://www.windguru.cz/help.php?sec=apps",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "team": {
+     "url": "https://www.windguru.cz/help.php?sec=proteam",
+     "accessed": "2026-11-07",
+     "label": ""
+    }
+   },
+   "verification": "partly-verified",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "offline": {
+     "status": "partial",
+     "tier": "free",
+     "source": "apps",
+     "note": "Installable PWA with '(limited) offline use'"
+    },
+    "tides": {
+     "status": "partial",
+     "tier": "unknown",
+     "source": "apps",
+     "note": "Tides menu item only"
+    },
+    "wind_waves": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "apps",
+     "note": "Forecast maps and tables"
+    },
+    "forecasts_alerts": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "apps",
+     "note": "Push notifications for wind or forecast alerts"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "sst": {
+     "status": "partial",
+     "tier": "unknown",
+     "source": "apps",
+     "note": "'Sea temperature' map menu item only"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "wind": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "apps",
+     "note": "Forecast maps"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "PRO feature page body was not extractable on 2026-11-07"
+    }
+   }
+  },
+  {
+   "id": "surfline",
+   "name": "Surfline",
+   "group": "weather",
+   "kind": "Surf cams and surf forecast",
+   "price": "Free account; Premium monthly or yearly (price did not render on 2026-11-07)",
+   "sources": {
+    "benefits": {
+     "url": "https://www.surfline.com/premium-benefits",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "upgrade": {
+     "url": "https://www.surfline.com/upgrade",
+     "accessed": "2026-11-07",
+     "label": ""
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "offline": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "tides": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "upgrade",
+     "note": "16-day forecast includes tide"
+    },
+    "wind_waves": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "upgrade",
+     "note": "Wave height, wind, energy, consistency; 16 days Premium; 1000+ cams Premium"
+    },
+    "forecasts_alerts": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "upgrade",
+     "note": "Twice-daily forecaster reports"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "community": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "upgrade",
+     "note": "Crowd predictions, no angler community"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "wind": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "upgrade",
+     "note": "Wind in spot forecast"
+    },
+    "waves": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "upgrade",
+     "note": "Surf forecast at spots; cams"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the Premium pages read (surf product)"
+    }
+   }
+  },
+  {
+   "id": "fishangler",
+   "name": "FishAngler",
+   "group": "fishing",
+   "kind": "Fishing log, spots and AI game-plan app",
+   "price": "Free account; VIP subscription (price not on pages read)",
+   "sources": {
+    "vip": {
+     "url": "https://www.fishangler.com/membership",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "play": {
+     "url": "https://play.google.com/store/apps/details?id=com.fishangler.fishangler&hl=en_US",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "ios": {
+     "url": "https://apps.apple.com/us/app/fishangler-fishing-app/id1073941118",
+     "accessed": "2026-11-07",
+     "label": "App Store description via search result"
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "yes",
+     "tier": "free",
+     "source": "play",
+     "note": "Catch log with 45+ attributes, private by default; local catch reports"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": "play",
+     "note": "Property lines and land access ('where you can legally fish'), not fishing rules; IGFA records"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the VIP page or store listings read"
+    },
+    "offline": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "vip",
+     "note": "Map modes usable 'even offline' (VIP)"
+    },
+    "tides": {
+     "status": "yes",
+     "tier": "free",
+     "source": "play",
+     "note": "Tide charts"
+    },
+    "wind_waves": {
+     "status": "yes",
+     "tier": "free",
+     "source": "play",
+     "note": "7-day hourly wind, pressure; animated wind and current layers"
+    },
+    "forecasts_alerts": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "vip",
+     "note": "FishForecast and hourly bite ratings (VIP)"
+    },
+    "trip_planning": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "vip",
+     "note": "FINN AI Game Plans: limited free, unlimited VIP"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the VIP page or store listings read"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the VIP page or store listings read"
+    },
+    "community": {
+     "status": "yes",
+     "tier": "free",
+     "source": "play",
+     "note": "Groups, public catch feed"
+    },
+    "charts": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "ios",
+     "note": "Garmin Navionics bathymetric charts (VIP)"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the VIP page or store listings read"
+    },
+    "bite_prediction": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "ios",
+     "note": "FishForecast solunar bite windows (VIP)"
+    },
+    "hot_spots": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "ios",
+     "note": "Community spots free; 'verified catch locations' exact GPS (VIP)"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the VIP page or store listings read"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "ios",
+     "note": "3D lake and ocean contour maps, Navionics (VIP)"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the VIP page or store listings read"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the VIP page or store listings read"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the VIP page or store listings read"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": "play",
+     "note": "Animated 'current' layer; source not stated"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the VIP page or store listings read"
+    },
+    "wind": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "play",
+     "note": "Animated wind layer"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the VIP page or store listings read"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the VIP page or store listings read"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the VIP page or store listings read"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the VIP page or store listings read"
+    },
+    "rock_reef": {
+     "status": "yes",
+     "tier": "free",
+     "source": "ios",
+     "note": "Shipwrecks, artificial reefs, FADs, oil platforms"
+    },
+    "fishing_spots": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "ios",
+     "note": "Community spots; verified catch locations VIP"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the VIP page or store listings read"
+    },
+    "depth_contours": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "vip",
+     "note": "Depth contours from Navionics"
+    },
+    "weather_radar": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "vip",
+     "note": "Live radar (VIP)"
+    }
+   }
+  },
+  {
+   "id": "inavx",
+   "name": "iNavX",
+   "group": "charts",
+   "kind": "Phone chartplotter",
+   "price": "Paid app (price not on page); NOAA US charts included free; other charts in-app",
+   "sources": {
+    "cap": {
+     "url": "https://www.inavx.com/capabilities",
+     "accessed": "2026-11-07",
+     "label": ""
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "cap",
+     "note": "Track logging; no catch log"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "offline": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "cap",
+     "note": "Charts stored on device, offline GPS"
+    },
+    "tides": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "cap",
+     "note": "Tides and currents for your position"
+    },
+    "wind_waves": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "cap",
+     "note": "GRIB wind, wave, pressure"
+    },
+    "forecasts_alerts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "trip_planning": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "cap",
+     "note": "'Route weather routing' listed"
+    },
+    "route_distance": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "cap",
+     "note": "Multi-leg routes, bearing and distance per leg, GPX/KML"
+    },
+    "safety_checkin": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "cap",
+     "note": "Anchor and AIS alarms"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "charts": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "cap",
+     "note": "Raster and vector; NOAA free with app"
+    },
+    "ais": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "cap",
+     "note": "Live AIS via external receiver or AIS data servers; CPA/TCPA alarms"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "tidal_currents": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "cap",
+     "note": "Tides and currents"
+    },
+    "wind": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "cap",
+     "note": "GRIB overlay"
+    },
+    "waves": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "cap",
+     "note": "GRIB overlay"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    },
+    "depth_contours": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "cap",
+     "note": "Chart depths"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the capabilities page read"
+    }
+   }
+  },
+  {
+   "id": "aquamap",
+   "name": "Aqua Map",
+   "group": "charts",
+   "kind": "Chart and navigation app",
+   "price": "Free download; chart subscription plus Expert/Master tiers (14-day trial; prices not on page)",
+   "sources": {
+    "overview": {
+     "url": "https://www.aquamap.app/app-overview",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "baseline": {
+     "url": "docs/archive/product-research.md",
+     "accessed": "2026-09-21",
+     "label": "repo baseline: overlays marine currents"
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "offline": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "overview",
+     "note": "Official charts offline with chart subscription"
+    },
+    "tides": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "wind_waves": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "overview",
+     "note": "Marine forecast up to 40 h (Expert/Master)"
+    },
+    "forecasts_alerts": {
+     "status": "partial",
+     "tier": "mixed",
+     "source": "overview",
+     "note": "Anchor alarm free; remote alerts and mirroring Expert/Master"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "route_distance": {
+     "status": "yes",
+     "tier": "free",
+     "source": "overview",
+     "note": "Manual, automatic and hybrid routing free"
+    },
+    "safety_checkin": {
+     "status": "partial",
+     "tier": "mixed",
+     "source": "overview",
+     "note": "Anchor alarm with GPS tracking and remote alerts"
+    },
+    "community": {
+     "status": "yes",
+     "tier": "free",
+     "source": "overview",
+     "note": "Chat, share markers, routes, tracks"
+    },
+    "charts": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "overview",
+     "note": "Official hydrographic charts; USACE surveys (reviews)"
+    },
+    "ais": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "overview",
+     "note": "Connect onboard AIS (Expert/Master)"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "tidal_currents": {
+     "status": "partial",
+     "tier": "unknown",
+     "source": "baseline",
+     "note": "Marine currents overlay per 2026-09-21 baseline"
+    },
+    "wind": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    },
+    "depth_contours": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "overview",
+     "note": "Chart depths"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the overview page read"
+    }
+   }
+  },
+  {
+   "id": "cmap",
+   "name": "C-MAP App",
+   "group": "charts",
+   "kind": "Chart, routing and weather app",
+   "price": "Free tier; Premium (price not on page; 12 months included with Discover X/Reveal X chart purchase)",
+   "sources": {
+    "app": {
+     "url": "https://www.c-map.com/app/",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "reviews": {
+     "url": "https://apps.apple.com/us/app/c-map-boating/id967289980?see-all=reviews",
+     "accessed": "2026-11-07",
+     "label": ""
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "partial",
+     "tier": "free",
+     "source": "app",
+     "note": "Waypoints with photo and notes, tracks; no catch log"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the app page read"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the app page read"
+    },
+    "offline": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "app",
+     "note": "Unlimited offline maps (Premium)"
+    },
+    "tides": {
+     "status": "yes",
+     "tier": "free",
+     "source": "app",
+     "note": "Tides in weather"
+    },
+    "wind_waves": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "app",
+     "note": "Wind, waves, air and water temperature; 5-day overlay Premium"
+    },
+    "forecasts_alerts": {
+     "status": "partial",
+     "tier": "mixed",
+     "source": "app",
+     "note": "Personalised push notifications free; anchoring alert Premium"
+    },
+    "trip_planning": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "app",
+     "note": "Weather along the route: 24 h free, 5 days Premium"
+    },
+    "route_distance": {
+     "status": "yes",
+     "tier": "free",
+     "source": "app",
+     "note": "Manual and autorouting, measure distance, GPX"
+    },
+    "safety_checkin": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "app",
+     "note": "Anchoring alert; C-MAP Traffic shows friends"
+    },
+    "community": {
+     "status": "partial",
+     "tier": "mixed",
+     "source": "app",
+     "note": "POI reviews and photos; track sharing; Traffic (Premium)"
+    },
+    "charts": {
+     "status": "yes",
+     "tier": "free",
+     "source": "app",
+     "note": "View charts free; GPS position and navigation Premium"
+    },
+    "ais": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "app",
+     "note": "Class A and B within 100 km (Premium)"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the app page read"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the app page read"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the app page read"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "app",
+     "note": "High Resolution Bathymetry 'down to a 1-ft level of detail' (Premium)"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the app page read"
+    },
+    "sst": {
+     "status": "partial",
+     "tier": "mixed",
+     "source": "app",
+     "note": "Water temperature in the forecast; not a satellite layer"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the app page read"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the app page read"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the app page read"
+    },
+    "wind": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "app",
+     "note": "Weather overlay"
+    },
+    "waves": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "app",
+     "note": "Weather overlay"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the app page read"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the app page read"
+    },
+    "satellite": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "app",
+     "note": "Satellite overlay (Premium)"
+    },
+    "rock_reef": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "app",
+     "note": "Shaded relief (Premium)"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the app page read"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the app page read"
+    },
+    "depth_contours": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "app",
+     "note": "Custom depth shading (Premium)"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the app page read"
+    }
+   }
+  },
+  {
+   "id": "fishtrack",
+   "name": "FishTrack",
+   "group": "ocean",
+   "kind": "Satellite SST and chlorophyll fishing charts",
+   "price": "Free app tier; Premium for latest imagery (price pages returned 404 on 2026-11-07)",
+   "sources": {
+    "home": {
+     "url": "https://www.fishtrack.com/",
+     "accessed": "2026-11-07",
+     "label": ""
+    }
+   },
+   "verification": "partly-verified",
+   "notes": "Coverage: US, Mexico, Chile, Australia, NZ, UK, Japan, South Africa.",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "offline": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "home",
+     "note": "'Save unlimited chart imagery offline'"
+    },
+    "tides": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "home",
+     "note": "Tides and moon phase"
+    },
+    "wind_waves": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "home",
+     "note": "7-day marine swell, wind and weather forecasts"
+    },
+    "forecasts_alerts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "route_distance": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "home",
+     "note": "Headings, measure distance, plot routes"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "hot_spots": {
+     "status": "partial",
+     "tier": "unknown",
+     "source": "home",
+     "note": "User marks own hot spots and breaks"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "sst": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "home",
+     "note": "Cloud-free SST and SST charts; latest imagery Premium"
+    },
+    "chlorophyll": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "home",
+     "note": "Chlorophyll and water colour"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": "home",
+     "note": "'Currents' listed; source not stated"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "wind": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "home",
+     "note": "Wind forecast"
+    },
+    "waves": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "home",
+     "note": "Swell forecast"
+    },
+    "fronts": {
+     "status": "partial",
+     "tier": "unknown",
+     "source": "home",
+     "note": "User records temperature breaks and colour barriers"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "satellite": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "home",
+     "note": "High-definition satellite imagery"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home page; tier and price pages 404"
+    }
+   }
+  },
+  {
+   "id": "ripcharts",
+   "name": "RipCharts",
+   "group": "ocean",
+   "kind": "Satellite fishing charts",
+   "price": "Standard $99/yr, Premium $169/yr (2026-10-31 registration page); mobile and offline Premium only",
+   "sources": {
+    "home": {
+     "url": "https://www.ripcharts.com/",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "register": {
+     "url": "https://www.ripcharts.com/RegisterForPremium.aspx",
+     "accessed": "2026-10-31",
+     "label": "2026-10-31 retro"
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "Coverage: US West Coast region (also Gulf, East Coast, Hawaii, Baja, Australia).",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "offline": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "home",
+     "note": "Preload maps, navigate offshore with phone GPS (Premium)"
+    },
+    "tides": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "wind_waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "forecasts_alerts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "route_distance": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "home",
+     "note": "Coordinate tool, waypoint manager"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "hot_spots": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "home",
+     "note": "Base set of waypoints supplied"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "home",
+     "note": "Bathymetric maps; resolution not stated"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "sst": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "home",
+     "note": "4-12 updates/region/day (home); 4-8 Standard, 8-20 Premium (price table)"
+    },
+    "chlorophyll": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "home",
+     "note": "Daily and 3-day composites"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "paid",
+     "source": "home",
+     "note": "Surface current maps; source not stated"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "wind": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "upwelling": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "home",
+     "note": "Altimetry daily; vendor reads low sea level as upwelling"
+    },
+    "satellite": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "home",
+     "note": "True colour daily"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "fishing_spots": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "home",
+     "note": "Base waypoint set"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not described on the home or registration page"
+    }
+   }
+  },
+  {
+   "id": "predictwind",
+   "name": "PredictWind",
+   "group": "weather",
+   "kind": "Marine forecast, routing and departure planning",
+   "price": "Free $0; Basic $29/yr; Standard $249/yr; Professional $499/yr",
+   "sources": {
+    "pricing": {
+     "url": "https://www.predictwind.com/pricing",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "retro": {
+     "url": "https://www.predictwind.com/pricing",
+     "accessed": "2026-10-31",
+     "label": "per-tier split read on 2026-10-31 (retro)"
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "offline": {
+     "status": "partial",
+     "tier": "mixed",
+     "source": "pricing",
+     "note": "Offshore app GRIB download; high-res GRIBs paid"
+    },
+    "tides": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "retro",
+     "note": "High-res tidal currents at Standard"
+    },
+    "wind_waves": {
+     "status": "yes",
+     "tier": "free",
+     "source": "retro",
+     "note": "11 models, wind, wave, daily briefing free"
+    },
+    "forecasts_alerts": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "retro",
+     "note": "Forecast alerts and extreme-weather warnings from Basic"
+    },
+    "trip_planning": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "retro",
+     "note": "Departure planning from Standard ($249)"
+    },
+    "route_distance": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "retro",
+     "note": "Weather and power routing from Standard"
+    },
+    "safety_checkin": {
+     "status": "partial",
+     "tier": "mixed",
+     "source": "pricing",
+     "note": "GPS tracking pages; MOB and anchor apps (DataHub)"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "ais": {
+     "status": "partial",
+     "tier": "unknown",
+     "source": "pricing",
+     "note": "AIS data rows (terrestrial, satellite); tier not readable"
+    },
+    "bite_prediction": {
+     "status": "partial",
+     "tier": "unknown",
+     "source": "pricing",
+     "note": "'Solunar' row; tier not readable"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "boat_fuel": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "retro",
+     "note": "Power routing with roll, vertical acceleration, slamming (Professional)"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "sst": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "retro",
+     "note": "Sea Temp 1 km (Standard)"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "tidal_currents": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "retro",
+     "note": "Tidal currents (Standard); ocean currents (Professional)"
+    },
+    "wind": {
+     "status": "yes",
+     "tier": "mixed",
+     "source": "retro",
+     "note": "50 km free; 1 km from Basic"
+    },
+    "waves": {
+     "status": "yes",
+     "tier": "free",
+     "source": "retro",
+     "note": "Wave forecast free"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "satellite": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "retro",
+     "note": "Satellite imagery from Basic"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing table"
+    },
+    "weather_radar": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "retro",
+     "note": "Rain radar from Basic"
+    }
+   }
+  },
+  {
+   "id": "savvynavvy",
+   "name": "Savvy Navvy",
+   "group": "charts",
+   "kind": "Simple boat navigation and routing",
+   "price": "Essential GBP 59/yr; Explore GBP 95/yr; 3-day trial (USD not shown)",
+   "sources": {
+    "pricing": {
+     "url": "https://www.savvy-navvy.com/pricing",
+     "accessed": "2026-11-07",
+     "label": ""
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "offline": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "pricing",
+     "note": "Offline charts and weather (Explore)"
+    },
+    "tides": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "pricing",
+     "note": "Tidal heights graph (Explore)"
+    },
+    "wind_waves": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "pricing",
+     "note": "Weather used in routing"
+    },
+    "forecasts_alerts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "trip_planning": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "pricing",
+     "note": "Four-day trip planning; departure schedule planner (Explore)"
+    },
+    "route_distance": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "pricing",
+     "note": "Automated weather and tidal routing, course to steer; export route to plotter (Explore)"
+    },
+    "safety_checkin": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "pricing",
+     "note": "Live location sharing"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "charts": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "pricing",
+     "note": "Savvy Charts"
+    },
+    "ais": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "pricing",
+     "note": "Over the Horizon AIS, 3 nm"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "tidal_currents": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "pricing",
+     "note": "Tidal routing implies tidal stream data; layer not described"
+    },
+    "wind": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pricing page"
+    }
+   }
+  },
+  {
+   "id": "satfish",
+   "name": "SatFish (BDOutdoors)",
+   "group": "ocean",
+   "kind": "Satellite fishing maps with bathymetry",
+   "price": "$129/yr after 30-day trial (2026-10-31); free app needs subscription",
+   "sources": {
+    "features": {
+     "url": "https://www.satfish.com/satfish-map-features/",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "price": {
+     "url": "https://www.satfish.com/free-trial/",
+     "accessed": "2026-10-31",
+     "label": "2026-10-31 retro"
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "Coverage: 55+ regions incl. California & Baja; Central California page Bay Area to Point Conception (2026-10-31).",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the map-features page"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the map-features page"
+    },
+    "mpa_closures": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "features",
+     "note": "'Fishing Closures and Political Boundaries (where available)'"
+    },
+    "offline": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "features",
+     "note": "Offline access, live GPS offline"
+    },
+    "tides": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the map-features page"
+    },
+    "wind_waves": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "features",
+     "note": "5-day wind forecast 4x/day; hourly buoys; waves not listed"
+    },
+    "forecasts_alerts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the map-features page"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the map-features page"
+    },
+    "route_distance": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "features",
+     "note": "Measure distance, route planning (web), distance and heading from GPS"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the map-features page"
+    },
+    "community": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "features",
+     "note": "Share waypoints with other members"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the map-features page"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the map-features page"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the map-features page"
+    },
+    "hot_spots": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "features",
+     "note": "6,000+ fishing spots and reference points"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the map-features page"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "features",
+     "note": "Shaded relief bathymetry; resolution not stated"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the map-features page"
+    },
+    "sst": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "features",
+     "note": "HD SST 8-12x/day in clear sky; cloud-free and 3-day composite daily"
+    },
+    "chlorophyll": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "features",
+     "note": "HD 3-4x/day; 1- and 3-day composites"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "paid",
+     "source": "features",
+     "note": "'Circulation and tidal currents 3-6x/day'; HF radar not named"
+    },
+    "tidal_currents": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "features",
+     "note": "3-6x/day"
+    },
+    "wind": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "features",
+     "note": "5-day forecast 4x/day"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the map-features page"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the map-features page"
+    },
+    "upwelling": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "features",
+     "note": "Sea surface height and anomaly daily"
+    },
+    "satellite": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "features",
+     "note": "Enhanced true colour 1-3x/day"
+    },
+    "rock_reef": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "features",
+     "note": "Artificial reefs and offshore platforms"
+    },
+    "fishing_spots": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "features",
+     "note": "6,000+"
+    },
+    "mpas": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "features",
+     "note": "Closures where available"
+    },
+    "depth_contours": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "features",
+     "note": "Depth contours"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the map-features page"
+    }
+   }
+  },
+  {
+   "id": "fishdope",
+   "name": "FishDope",
+   "group": "reports",
+   "kind": "Southern California paid fishing reports and hot-bite maps",
+   "price": "$199/yr",
+   "sources": {
+    "home": {
+     "url": "https://www.fishdope.com/",
+     "accessed": "2026-11-07",
+     "label": ""
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "Coverage: Santa Barbara and Channel Islands to San Quintin; no Central Coast.",
+   "features": {
+    "reports_logs": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "home",
+     "note": "Daily reports, spotter-plane reports, subscriber archive"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "offline": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "tides": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "wind_waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "forecasts_alerts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "community": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "home",
+     "note": "Network of commercial, professional and recreational fishermen"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "hot_spots": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "home",
+     "note": "Hot-bite GPS coordinates and Hot Bite Report Map"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "sst": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "home",
+     "note": "SST and cloud-free SST charts"
+    },
+    "chlorophyll": {
+     "status": "partial",
+     "tier": "paid",
+     "source": "home",
+     "note": "Mentioned in a subscriber story only"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "wind": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "fishing_spots": {
+     "status": "yes",
+     "tier": "paid",
+     "source": "home",
+     "note": "Hot-bite icons at reported positions"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the home page"
+    }
+   }
+  },
+  {
+   "id": "fishcity",
+   "name": "Fish City: Real Fish Counts",
+   "group": "reports",
+   "kind": "California landing fish-count app (new to our research)",
+   "price": "Free (iPhone only)",
+   "sources": {
+    "ios": {
+     "url": "https://apps.apple.com/us/app/fish-city-real-fish-counts/id6458538966",
+     "accessed": "2026-11-07",
+     "label": ""
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "Coverage named: San Diego to Bodega Bay incl. Avila Beach, Morro Bay, Monterey.",
+   "features": {
+    "reports_logs": {
+     "status": "yes",
+     "tier": "free",
+     "source": "ios",
+     "note": "Daily counts boat by boat from California landings incl. Morro Bay and Avila Beach"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "offline": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "tides": {
+     "status": "yes",
+     "tier": "free",
+     "source": "ios",
+     "note": "Tide with counts"
+    },
+    "wind_waves": {
+     "status": "yes",
+     "tier": "free",
+     "source": "ios",
+     "note": "NOAA wind, swell, tide tied to each count"
+    },
+    "forecasts_alerts": {
+     "status": "yes",
+     "tier": "free",
+     "source": "ios",
+     "note": "Push alerts on new counts or rising species activity"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "community": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "ios",
+     "note": "'not social media'"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "bite_prediction": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "ios",
+     "note": "'not a magic fishing forecast'"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "wind": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the App Store listing"
+    }
+   }
+  },
+  {
+   "id": "fishingpoints",
+   "name": "Fishing Points",
+   "group": "fishing",
+   "kind": "Fishing spots, forecast and log app",
+   "price": "Free with in-app purchases (split not stated)",
+   "sources": {
+    "site": {
+     "url": "https://fishingpoints.app/",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "ios": {
+     "url": "https://apps.apple.com/us/app/fishing-points-map-forecast/id1203032512",
+     "accessed": "2026-11-07",
+     "label": "App Store description via search result"
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "site",
+     "note": "Private catch logbook with automatic conditions"
+    },
+    "species_regs": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "ios",
+     "note": "Rules only for FL, TX, GA, NC, LA: not California"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    },
+    "offline": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "ios",
+     "note": "Offline NOAA nautical charts"
+    },
+    "tides": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "ios",
+     "note": "Hourly tides and tidal current"
+    },
+    "wind_waves": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "ios",
+     "note": "Hourly waves, swell, wind waves; wind and gusts"
+    },
+    "forecasts_alerts": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "ios",
+     "note": "Smart notifications; severe weather alerts"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    },
+    "route_distance": {
+     "status": "partial",
+     "tier": "unknown",
+     "source": "site",
+     "note": "Measure distance; record trolling paths"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    },
+    "charts": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "ios",
+     "note": "Worldwide nautical maps; NOAA offline"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    },
+    "bite_prediction": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "site",
+     "note": "Fish activity from solunar, tides and other factors"
+    },
+    "hot_spots": {
+     "status": "partial",
+     "tier": "unknown",
+     "source": "ios",
+     "note": "Save own hotspots; share with friends"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    },
+    "sst": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "ios",
+     "note": "Sea temperature (SST)"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": "ios",
+     "note": "'Sea and ocean currents data'; source not stated"
+    },
+    "tidal_currents": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "ios",
+     "note": "Tide charts with tidal current"
+    },
+    "wind": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "ios",
+     "note": "Wind forecast"
+    },
+    "waves": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "ios",
+     "note": "Hourly waves"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    },
+    "satellite": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "site",
+     "note": "Detailed satellite images map type"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the site or App Store description"
+    },
+    "weather_radar": {
+     "status": "yes",
+     "tier": "unknown",
+     "source": "ios",
+     "note": "Rain radar"
+    }
+   }
+  },
+  {
+   "id": "onx_fish",
+   "name": "onX Fish",
+   "group": "fishing",
+   "kind": "Freshwater lake finder (Midwest)",
+   "price": "$34.99/yr, 7-day trial",
+   "sources": {
+    "fish": {
+     "url": "https://www.onxmaps.com/fish",
+     "accessed": "2026-11-07",
+     "label": ""
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "species_regs": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "mpa_closures": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "offline": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "tides": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "wind_waves": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "forecasts_alerts": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "trip_planning": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "route_distance": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "safety_checkin": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "community": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "charts": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "ais": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "bite_prediction": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "hot_spots": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "boat_fuel": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "hard_bottom": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "sst": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "chlorophyll": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "hf_radar": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "tidal_currents": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "wind": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "waves": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "fronts": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "upwelling": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "satellite": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "rock_reef": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "fishing_spots": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "mpas": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "depth_contours": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    },
+    "weather_radar": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "fish",
+     "note": "not offered in California: onX Fish covers Midwest states only (vendor page)"
+    }
+   }
+  },
+  {
+   "id": "fishingbooker",
+   "name": "FishingBooker",
+   "group": "reports",
+   "kind": "Charter booking marketplace",
+   "price": "Free to browse; bookings priced per charter",
+   "sources": {
+    "catches": {
+     "url": "https://fishingbooker.com/catches",
+     "accessed": "2026-11-07",
+     "label": ""
+    }
+   },
+   "verification": "UNVERIFIED",
+   "notes": "Only the page title ('Catches: See What's Biting Around the World') and navigation ('List your boat', 'See what's biting') were readable.",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "offline": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "tides": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "wind_waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "forecasts_alerts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "wind": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "fishingbooker.com/reports returned 404 and /catches had no extractable body on 2026-11-07"
+    }
+   }
+  },
+  {
+   "id": "dock_totals",
+   "name": "SoCal Fish Reports / 976-TUNA",
+   "group": "reports",
+   "kind": "Landing dock-total and party-boat report sites",
+   "price": "Free",
+   "sources": {
+    "socal": {
+     "url": "https://socalfishreports.com/dock_totals/boats.php?date=2026-10-31",
+     "accessed": "2026-10-31",
+     "label": "2026-10-31 retro"
+    },
+    "tuna": {
+     "url": "https://976-tuna.com/",
+     "accessed": "2026-10-31",
+     "label": "2026-10-31 retro"
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "yes",
+     "tier": "free",
+     "source": "socal",
+     "note": "Per-boat dated counts incl. Morro Bay Landing and Patriot (Avila) on 2026-10-31"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "offline": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "tides": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "wind_waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "forecasts_alerts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "hot_spots": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "socal",
+     "note": "Rows name no ground, depth or coordinates"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "wind": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "fishing_spots": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "socal",
+     "note": "No grounds in rows read"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the pages read (2026-10-31)"
+    }
+   }
+  },
+  {
+   "id": "noaa_public",
+   "name": "NOAA public viewers (NWS, NDBC, CO-OPS, nowCOAST, BlueTopo, IOOS HF radar)",
+   "group": "public",
+   "kind": "Official forecasts, observations and map viewers",
+   "price": "Free, public",
+   "sources": {
+    "nws": {
+     "url": "https://www.weather.gov/marine/",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "cwf": {
+     "url": "https://www.ndbc.noaa.gov/data/Forecasts/FZUS56.KLOX.html",
+     "accessed": "2026-10-31",
+     "label": "current CWF observed 2026-10-31"
+    },
+    "coops": {
+     "url": "https://tidesandcurrents.noaa.gov/",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "nowcoast": {
+     "url": "https://nowcoast.noaa.gov/",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "bluetopo": {
+     "url": "https://nauticalcharts.noaa.gov/data/bluetopo.html",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "hfr": {
+     "url": "https://hfradar.ioos.us/",
+     "accessed": "2026-11-07",
+     "label": ""
+    },
+    "inavx": {
+     "url": "https://www.inavx.com/capabilities",
+     "accessed": "2026-11-07",
+     "label": "states NOAA US charts are free"
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "offline": {
+     "status": "no",
+     "tier": "n/a",
+     "source": "nws",
+     "note": "Web products; text versions low-bandwidth"
+    },
+    "tides": {
+     "status": "yes",
+     "tier": "free",
+     "source": "coops",
+     "note": "Official tide and current predictions; 48-72 h coastal forecasts"
+    },
+    "wind_waves": {
+     "status": "yes",
+     "tier": "free",
+     "source": "nws",
+     "note": "Coastal waters forecasts; buoys"
+    },
+    "forecasts_alerts": {
+     "status": "yes",
+     "tier": "free",
+     "source": "cwf",
+     "note": "Small-craft advisories in the coastal waters forecast"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "charts": {
+     "status": "yes",
+     "tier": "free",
+     "source": "inavx",
+     "note": "NOAA charts are free public products"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "yes",
+     "tier": "free",
+     "source": "bluetopo",
+     "note": "BlueTopo national best-available compilation, updated weekly to monthly"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "sst": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "hf_radar": {
+     "status": "yes",
+     "tier": "free",
+     "source": "hfr",
+     "note": "~183 radars, real-time surface currents"
+    },
+    "tidal_currents": {
+     "status": "yes",
+     "tier": "free",
+     "source": "coops",
+     "note": "Current predictions at stations"
+    },
+    "wind": {
+     "status": "yes",
+     "tier": "free",
+     "source": "nws",
+     "note": "Graphical forecasts (ocean.weather.gov)"
+    },
+    "waves": {
+     "status": "yes",
+     "tier": "free",
+     "source": "nws",
+     "note": "Forecasts and buoys"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the public pages read"
+    },
+    "weather_radar": {
+     "status": "yes",
+     "tier": "free",
+     "source": "nowcoast",
+     "note": "nowCOAST weather radar loop"
+    }
+   }
+  },
+  {
+   "id": "cdip",
+   "name": "CDIP (Scripps)",
+   "group": "public",
+   "kind": "Wave buoy network and swell models",
+   "price": "Free, public",
+   "sources": {
+    "about": {
+     "url": "https://cdip.ucsd.edu/m/about/",
+     "accessed": "2026-11-07",
+     "label": ""
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "offline": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "tides": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "wind_waves": {
+     "status": "partial",
+     "tier": "free",
+     "source": "about",
+     "note": "Directional wave buoys and swell models, near real time; no wind"
+    },
+    "forecasts_alerts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "sst": {
+     "status": "partial",
+     "tier": "free",
+     "source": "about",
+     "note": "Buoy SST at points only"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "hf_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "wind": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "waves": {
+     "status": "yes",
+     "tier": "free",
+     "source": "about",
+     "note": "Buoys and swell models, near real time"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "satellite": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the About page"
+    }
+   }
+  },
+  {
+   "id": "cencoos",
+   "name": "CeNCOOS data portal",
+   "group": "public",
+   "kind": "Central and Northern California ocean data portal",
+   "price": "Free, public",
+   "sources": {
+    "portal": {
+     "url": "https://data.cencoos.org/",
+     "accessed": "2026-11-07",
+     "label": ""
+    }
+   },
+   "verification": "verified-public-page",
+   "notes": "",
+   "features": {
+    "reports_logs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "species_regs": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "mpa_closures": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "offline": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "tides": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "wind_waves": {
+     "status": "partial",
+     "tier": "free",
+     "source": "portal",
+     "note": "Real-time sensors and models; not an angler forecast"
+    },
+    "forecasts_alerts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "trip_planning": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "route_distance": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "safety_checkin": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "community": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "charts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "ais": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "bite_prediction": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "hot_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "boat_fuel": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    }
+   },
+   "layers": {
+    "bathymetry": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "hard_bottom": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "sst": {
+     "status": "partial",
+     "tier": "free",
+     "source": "portal",
+     "note": "Physical oceanography observations; SST product not named"
+    },
+    "chlorophyll": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "hf_radar": {
+     "status": "yes",
+     "tier": "free",
+     "source": "portal",
+     "note": "Surface current category"
+    },
+    "tidal_currents": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "wind": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "waves": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "fronts": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "upwelling": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "satellite": {
+     "status": "yes",
+     "tier": "free",
+     "source": "portal",
+     "note": "Satellite observations"
+    },
+    "rock_reef": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "fishing_spots": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "mpas": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "depth_contours": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    },
+    "weather_radar": {
+     "status": "UNVERIFIED",
+     "tier": "unknown",
+     "source": null,
+     "note": "not on the portal entry page"
+    }
+   }
+  }
+ ],
+ "review_sample": {
+  "_note": "Hand-coded themes for every user review exposed on the US App Store 'see-all=reviews' page of each app, fetched 2026-11-07. Developer responses excluded. One review can carry several codes. UNCODED = text truncated or off-topic. Samples are the reviews Apple chose to expose, not random samples.",
+  "navionics": {
+   "url": "https://apps.apple.com/us/app/navionics-boating/id744920098?see-all=reviews",
+   "reviews": [
+    [
+     "DEPTH_DATA_QUALITY",
+     "PRAISE_PLANNING"
+    ],
+    [
+     "PRAISE_OFFLINE_SAFETY"
+    ],
+    [
+     "PRAISE_OFFLINE_SAFETY",
+     "PRAISE_VALUE"
+    ],
+    [
+     "POSITION_RELIABILITY"
+    ],
+    [
+     "PAYWALL_FRICTION"
+    ],
+    [
+     "UNCODED"
+    ],
+    [
+     "POSITION_RELIABILITY"
+    ],
+    [
+     "PAYWALL_FRICTION"
+    ],
+    [
+     "SUPPORT_ABANDONED"
+    ],
+    [
+     "DEPTH_DATA_QUALITY"
+    ],
+    [
+     "PAYWALL_FRICTION"
+    ]
+   ]
+  },
+  "fishbrain": {
+   "url": "https://apps.apple.com/us/app/fishbrain-fishing-app/id477967747?see-all=reviews",
+   "reviews": [
+    [
+     "CATCH_LOCATION_DATA"
+    ],
+    [
+     "FEATURE_REMOVED"
+    ],
+    [
+     "CATCH_LOCATION_DATA"
+    ],
+    [
+     "CATCH_LOCATION_DATA"
+    ],
+    [
+     "PAYWALL_FRICTION"
+    ],
+    [
+     "COMMUNITY_TROLLS"
+    ],
+    [
+     "UNCODED"
+    ],
+    [
+     "UNCODED"
+    ],
+    [
+     "PAYWALL_FRICTION"
+    ],
+    [
+     "PRAISE_LEGAL_POSITION"
+    ]
+   ]
+  },
+  "cmap": {
+   "url": "https://apps.apple.com/us/app/c-map-boating/id967289980?see-all=reviews",
+   "reviews": [
+    [
+     "FEATURE_REQUEST"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "UI_INTERRUPTIONS"
+    ],
+    [
+     "AUTOROUTE_QUALITY"
+    ],
+    [
+     "OFFLINE_FAIL"
+    ],
+    [
+     "UI_INTERRUPTIONS"
+    ],
+    [
+     "UI_INTERRUPTIONS"
+    ],
+    [
+     "OFFLINE_FAIL"
+    ],
+    [
+     "POSITION_RELIABILITY"
+    ]
+   ]
+  },
+  "fishingpoints": {
+   "url": "https://apps.apple.com/us/app/fishing-points-map-forecast/id1203032512?see-all=reviews",
+   "reviews": [
+    [
+     "PRAISE_ALL_IN_ONE"
+    ],
+    [
+     "COVERAGE_GAP"
+    ],
+    [
+     "PRAISE_ALL_IN_ONE"
+    ],
+    [
+     "BITE_FORECAST_MISS"
+    ],
+    [
+     "BITE_FORECAST_MISS"
+    ],
+    [
+     "PRAISE_ALL_IN_ONE"
+    ],
+    [
+     "PRAISE_ALL_IN_ONE"
+    ],
+    [
+     "DATA_WITHOUT_INTERPRETATION"
+    ],
+    [
+     "BITE_FORECAST_MISS"
+    ],
+    [
+     "PAYWALL_FRICTION"
+    ]
+   ]
+  },
+  "fishlegal": {
+   "url": "https://apps.apple.com/us/app/fishlegal/id1230932238?see-all=reviews",
+   "reviews": [
+    [
+     "SPECIES_PHOTOS"
+    ],
+    [
+     "PRAISE_LEGAL_POSITION"
+    ],
+    [
+     "PRAISE_ALL_IN_ONE"
+    ],
+    [
+     "PRAISE_LEGAL_POSITION"
+    ],
+    [
+     "SPECIES_PHOTOS"
+    ],
+    [
+     "REGS_CURRENCY"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "REGS_CURRENCY",
+     "SPECIES_PHOTOS"
+    ],
+    [
+     "PRAISE_LEGAL_POSITION"
+    ],
+    [
+     "PRAISE_LEGAL_POSITION"
+    ]
+   ]
+  },
+  "aquamap": {
+   "url": "https://apps.apple.com/us/app/aqua-map-boating/id919552329?see-all=reviews",
+   "reviews": [
+    [
+     "PRAISE_SUPPORT"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_PLANNING"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_OFFLINE_SAFETY"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "OFFLINE_FAIL"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ]
+   ]
+  },
+  "windy": {
+   "url": "https://apps.apple.com/us/app/windy-com/id1161387262?see-all=reviews",
+   "reviews": [
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_MODEL_TRANSPARENCY"
+    ],
+    [
+     "UI_INTERRUPTIONS"
+    ],
+    [
+     "UNCODED"
+    ],
+    [
+     "UI_INTERRUPTIONS"
+    ],
+    [
+     "PRAISE_MODEL_TRANSPARENCY"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_PLANNING"
+    ]
+   ]
+  },
+  "predictwind_offshore": {
+   "url": "https://apps.apple.com/us/app/predictwind-offshore-weather/id1068677891?see-all=reviews",
+   "reviews": [
+    [
+     "SUPPORT_ABANDONED"
+    ],
+    [
+     "UNITS_MODELS_CONTROL",
+     "SUPPORT_ABANDONED"
+    ],
+    [
+     "FEATURE_REMOVED"
+    ],
+    [
+     "PAYWALL_FRICTION"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ]
+   ]
+  },
+  "satfish": {
+   "url": "https://apps.apple.com/us/app/satfish-fishing-app/id1499577732?see-all=reviews",
+   "reviews": [
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_SAVES_FUEL"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "ACCOUNT_CONFUSION"
+    ],
+    [
+     "DATA_WITHOUT_INTERPRETATION"
+    ],
+    [
+     "PRAISE_SAVES_FUEL"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_SAVES_FUEL"
+    ],
+    [
+     "FEATURE_REQUEST"
+    ]
+   ]
+  },
+  "ripcharts": {
+   "url": "https://apps.apple.com/us/app/ripcharts/id993060891?see-all=reviews",
+   "reviews": [
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_SUPPORT"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_OFFLINE_SAFETY"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ],
+    [
+     "PRAISE_GENERAL"
+    ]
+   ]
+  }
+ },
+ "recommendations": {
+  "effort_scale": "small = days of one builder; medium = one to three weeks; large = a month or more or blocked on data rights. Rough, not a delivery promise.",
+  "ranked": [
+   {
+    "rank": 1,
+    "bucket": "MUST-HAVE",
+    "title": "Show the user's live position on the Chart, with the protected-area reading for that position, offline too",
+    "why": "FishLegal (free) and the CDFW web app (free) both show position against MPA boundaries; SatFish, RipCharts, C-MAP Premium, iNavX and Navionics show GPS on their maps. SkipperCast only calls geolocation to choose a nearby port (web/ports.ts locatePort, dist/home-port.js). Legal-position praise was the second most frequent praise code in the review sample (5 mentions, 2 apps), and position freezes were a complaint in chart apps (3 mentions, 2 apps), so show fix age and accuracy.",
+    "effort": "medium",
+    "data": "Device geolocation only; reuse the existing protected-area screen and 70 m planning margin; no new source."
+   },
+   {
+    "rank": 2,
+    "bucket": "DIFFERENTIATOR",
+    "title": "Lead with the offline legal pack that already exists: offer it for every saved trip, show each rule's effective and saved-at date offline, and check the pack is complete and current before departure",
+    "why": "The pack already stores regulations, MPA boundaries, additional closures and the brief with charts, contours and ocean layers (dist/offline-core.js DAILY_PARTS), but it is saved only on request from the account menu. FishLegal's free tier is offline MPA maps and rules; the CDFW map needs internet; Navionics and C-MAP keep offline behind a subscription. Offline praise appeared in 3 apps (4 mentions) and offline download failures in 2 apps (3 mentions), so the completeness check matters.",
+    "effort": "small",
+    "data": "Existing pack parts and their revision dates; no new source."
+   },
+   {
+    "rank": 3,
+    "bucket": "DIFFERENTIATOR",
+    "title": "Route around protected areas and export the planned route as a GPX route",
+    "why": "Roadmap item 4 still lists it. Navionics, C-MAP, Aqua Map and Savvy Navvy document autorouting; none of the pages read documents routing that avoids MPAs or screens a whole plan (UNVERIFIED for them, not proven absent). SkipperCast already screens every point and leg, so this extends a real lead.",
+    "effort": "medium",
+    "data": "MPA polygons, land-water screen, web/route.ts; GPX <rte> writer; planning-only wording kept."
+   },
+   {
+    "rank": 4,
+    "bucket": "MUST-HAVE",
+    "title": "Daily landing counts per port and boat, with filed time and 'location not stated'",
+    "why": "Fish City (free, iPhone) documents boat-by-boat daily counts from California landings including Morro Bay and Avila Beach, with NOAA conditions and push alerts. SoCal Fish Reports does the same on dated URLs. SkipperCast's Reports view has dated catch cards but no per-boat daily count table.",
+    "effort": "medium",
+    "data": "Landing count sources. Rights are HELD: the data-rights register marks TECK.net report sites 'needs permission' for paid use and the facts-only free use is an open owner question (Q3). Do not start before the owner decides."
+   },
+   {
+    "rank": 5,
+    "bucket": "DIFFERENTIATOR",
+    "title": "Extend 2 m shallow bathymetry and hard-bottom classes beyond Morro Bay, with depth and survey at the cursor",
+    "why": "Navionics (SonarChart HD 1 ft) and C-MAP (HRB 1 ft, Premium) sell fine contours, but the pages read give no per-area survey date or source, and Navionics reviews in the sample complain of wrong or degraded depth (2 mentions). SkipperCast shows native 2 m USGS grids with survey year and datum, and hard-bottom classes, which no product page read documents for California.",
+    "effort": "large",
+    "data": "USGS CSMP 2 m bathymetry and seafloor character, NOAA BlueTopo; CSUMB Cambria grids are rights-held; per-source licence review."
+   },
+   {
+    "rank": 6,
+    "bucket": "MUST-HAVE",
+    "title": "Tidal current timing at the harbor entrance",
+    "why": "Navionics, iNavX, SatFish (3-6x/day), PredictWind Standard and Fishing Points document tidal currents; SkipperCast states its tides are 'not Morro Bay bar currents'. The bar is the limiting fact for small boats on this coast (2026-10-31 retro).",
+    "effort": "medium",
+    "data": "NOAA CO-OPS current predictions or a validated model; whether a CO-OPS current station covers the Morro Bay entrance is UNVERIFIED."
+   },
+   {
+    "rank": 7,
+    "bucket": "DIFFERENTIATOR",
+    "title": "One freshness stamp and one published update cadence per layer and rule, visible in the legend",
+    "why": "SatFish and RipCharts each publish two conflicting update rates (2026-10-31 retro). FishLegal reviews dispute rule currency (2 of 10 reviews). SkipperCast already has basis sentences and /status; making age visible on every layer turns that into an advantage users can see.",
+    "effort": "small",
+    "data": "Existing feed metadata and rule revision dates."
+   },
+   {
+    "rank": 8,
+    "bucket": "MUST-HAVE",
+    "title": "Lightweight condition alerts for a home port (wind, swell) without saving a full trip",
+    "why": "Windy, Windfinder and Windguru offer free spot alerts; SkipperCast alerts need a passkey account and a saved trip.",
+    "effort": "small",
+    "data": "Existing forecast tiles and alert engine."
+   },
+   {
+    "rank": 9,
+    "bucket": "DIFFERENTIATOR",
+    "title": "Put forecast skill and model disagreement in the brief, not only on /skill",
+    "why": "Windy's model comparison and predictability percent drew praise (2 mentions); PredictWind lists 'Validation' and 'Forecast Replay'. SkipperCast already measures skill against buoys.",
+    "effort": "small",
+    "data": "Existing skill statistics and model-disagreement text."
+   },
+   {
+    "rank": 10,
+    "bucket": "MUST-HAVE",
+    "title": "One-tap catch or blank entry from the map with position and conditions attached, private by default",
+    "why": "Fishing Points, FishAngler and Fishbrain attach conditions to log entries automatically; SkipperCast's log needs typed positions in the account panel.",
+    "effort": "small",
+    "data": "Existing catch-log API, geolocation, the hour's conditions."
+   },
+   {
+    "rank": 11,
+    "bucket": "NICE-TO-HAVE",
+    "title": "Ocean true-colour / water-clarity imagery",
+    "why": "SatFish (1-3x/day), RipCharts (daily), FishTrack and C-MAP Premium document it; SkipperCast has GOES infrared clouds only.",
+    "effort": "medium",
+    "data": "NOAA CoastWatch VIIRS true colour (public), cloud masks, pass time."
+   },
+   {
+    "rank": 12,
+    "bucket": "NICE-TO-HAVE",
+    "title": "Upwelling or sea-surface-height layer",
+    "why": "RipCharts (altimetry daily) and SatFish (SSH, SSHA daily) document it; SkipperCast has none.",
+    "effort": "medium",
+    "data": "CoastWatch upwelling index or altimetry products; licence check."
+   },
+   {
+    "rank": 13,
+    "bucket": "NICE-TO-HAVE",
+    "title": "Weather radar layer",
+    "why": "Windy, PredictWind Basic, FishAngler VIP, Fishing Points and NOAA nowCOAST (free) show radar; SkipperCast has none. Rain matters less than wind on this coast.",
+    "effort": "small",
+    "data": "nowCOAST or MRMS public radar tiles."
+   },
+   {
+    "rank": 14,
+    "bucket": "NICE-TO-HAVE",
+    "title": "Share my trip plan with a contact (user-initiated)",
+    "why": "Navionics, C-MAP, Savvy Navvy and PredictWind document live-location or tracking sharing; SkipperCast has no safety or check-in feature. A user-sent share-sheet plan avoids any SkipperCast outbound message.",
+    "effort": "small",
+    "data": "Existing share link and trip plan; no tracking server."
+   },
+   {
+    "rank": 15,
+    "bucket": "NICE-TO-HAVE",
+    "title": "Bring a second region to 'active' (Southern California is the plan doc's candidate)",
+    "why": "FishDope and 976-TUNA concentrate on Southern California, and Fish City's listing leads with Southern California bluefin and yellowtail; SkipperCast's SoCal package is preview. Region order is the owner's call.",
+    "effort": "large",
+    "data": "Per-region rules, forecast, closures and habitat reviews (docs/plans/second-active-region.md)."
+   }
+  ],
+  "do_not_build": [
+   {
+    "title": "A public catch map or social feed",
+    "why": "Fishbrain's sample reviews complain of wrong catch locations (3 of 10), trolls (1) and paywalled catches (2); exposes private spots; conflicts with the no-hotspot rule."
+   },
+   {
+    "title": "A solunar or AI bite score",
+    "why": "3 of 10 Fishing Points reviews say high-activity days produced nothing; Windy and Fish City explicitly do not offer one; SkipperCast keeps bite potential unknown."
+   },
+   {
+    "title": "Turn-by-turn navigation as a chartplotter replacement",
+    "why": "Position-freeze and pop-up complaints dominate chart-app samples (C-MAP, Navionics); liability; GPX and iNavX handoff already exist."
+   },
+   {
+    "title": "Passage routing with polars and boat-motion models",
+    "why": "PredictWind sells it at $249-$499 for passages; its Offshore app reviews complain of abandonment and clutter; a half-day angler needs the bar and the window."
+   },
+   {
+    "title": "Unsourced hot-spot pins or bought spot lists",
+    "why": "SatFish 6,000+ spots and FishDope hot-bite pins carry no date or provenance on the pages read; the 2026-10-31 retro lists this as a trap."
+   },
+   {
+    "title": "Paywalls on data or features a user already has",
+    "why": "Paywall friction was the most frequent complaint code: 7 mentions across 4 of 10 apps (Navionics, Fishbrain, Fishing Points, PredictWind)."
+   },
+   {
+    "title": "Live charter-fleet AIS hotspots",
+    "why": "aisstream is internal-only and MarineCadastre is planning-only in the data-rights register; the classifier has no validation; roadmap forbids hotspots without evidence."
+   }
+  ]
+ }
+}
