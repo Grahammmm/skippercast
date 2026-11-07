@@ -1,0 +1,1 @@
+{"schema_version":1,"region_id":"big-sur-coast","layer_id":"sst-fronts","product":"NOAA Geo-Polar Blended night SST","credit":"NOAA CoastWatch","generated_at":"2026-11-07T14:07:21Z","max_age_hours":48.0,"observed_at":null,"refused_frames":{"missing_time":0,"unparseable_time":0,"future":0,"stale":0},"fronts":[]}
