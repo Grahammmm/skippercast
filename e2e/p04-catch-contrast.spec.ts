@@ -207,7 +207,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // markup change; BODY09 mounts Reports, not the rail. contrast(), assertions and thresholds are untouched. Rebind only LayerRail.tsx.
   // SC1352-03: the Currents note resolves the chosen frame note or reason in the page's language (same note element and text role). No CSS, token or catch markup change.
   // MAPLIVE-1: LayerRail.tsx only appends <PreviewRailItems />, which renders nothing without an owner/admin session and adds no catch markup; BODY09 mounts Reports, not the rail. contrast(), assertions and thresholds are untouched.
-  "web/app/LayerRail.tsx": "b48695a6b917d3b897ed610c4d2a25e08b6249169f767a07dfa53574ce41f720",
+  "web/app/LayerRail.tsx": "ebadc8d0f04f19893b11fa2e0583c469806e61fe6b371b3ab7dc4b363a0f022f",
   // SC-MAIN-FLAKE (#1400, contours drawn signal): MapStage.tsx only passes host: chartHost.current! to
   // createDepthContours, which sets data-contours-drawn on that host only with the exact ?diagnostics=1 parameter.
   // No class, colour, token or paint change; BODY09 mounts Reports/CatchCards, never MapStage. contrast(),
@@ -235,7 +235,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // Reports catch sheet never mounts (FirstAnswerLine renders only in the desktop App shell); check_contrast.mjs changes only the appCss
   // surface hash and its comment, with contrast(), pairs, thresholds and line citations untouched. Both rebound from the final bytes.
   // MAPLIVE-1: app.css appends only a scoped .app-preview-head / .app-legend-preview / .app-preview-* block for the owner-only previews; the Reports catch sheet never mounts it. Rebound from the final bytes.
-  "web/app/app.css": "77b50ecc146b1b5b21c4834ebbed5f64044d8cacbf70d44cf0a14eab15bfc3a5",
+  "web/app/app.css": "a991ae3707630d1057b89fd316948f1904261e44e0d82db0e1f3ed036a26cb14",
   // SC-E2E-GREEN: the production style imports Reports now bundles (see HEAD_STYLES/URL_STYLES), pinned as found on main.
   "web/app/plan.css": "56215598e33a416cb6c877a0661ce3923035f3266872faae9b7eb89db02eb4a2",
   "web/app/season.css": "f444d78cb23a423409e1b954d7068484367a8106c11fbc6ea5d5cf74d00bda9f",
@@ -297,7 +297,7 @@ const REVIEWED_SOURCE_INPUTS: Record<string, string> = {
   // SC1352-05: the Stations note and nearshore-ring words show in the page's language (copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. Rebind only this source.
   // SC1352-06: MapStage shows its labels and reasons in the page’s language and the legend’s saved-spots note does too (copy only); BODY09 never mounts MapStage. check_contrast.mjs rebinds only the Legend.tsx surface hash and a comment. Rebind only MapStage.tsx and this source.
   // SC1352-07: the evidence layers' status lines and the fronts basis show in the page's language (copy only); check_contrast.mjs rebinds only the Legend.tsx surface hash, line citations and a comment. Rebind only this source.
-  "scripts/check_contrast.mjs": "8e3f16f1d0b4c754908de296b002e9381b013d8ed33e9f76a720115e620d3e62",
+  "scripts/check_contrast.mjs": "b5d966a242ecd4306b37d274442442c6082b2bca18a5433dc148bbdd8061a06d",
   // Dependabot #1420 (npm-minor-and-patch, 8 updates): package.json and pnpm-lock.yaml change only dependency pins
   // (preact 11.1.1, @preact/signals 2.11.4, preact-render-to-string 6.8.2, hono, maplibre-gl, three, @types/three,
   // @cloudflare/workers-types, plus transitive @preact/signals-core and @maplibre/vt-pbf). The BODY09 bundle still
