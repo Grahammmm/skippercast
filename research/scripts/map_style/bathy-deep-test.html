@@ -12,10 +12,13 @@
   #note { position: absolute; left: 8px; bottom: 8px; z-index: 2; max-width: 34em; padding: 4px 8px;
           background: rgba(255,255,255,.85); border-radius: 3px; color: #222; }
   #note b { color: #8a1c1c; }
+  #picker { position: absolute; right: 8px; top: 8px; z-index: 2; padding: 4px 8px; background: rgba(255,255,255,.85);
+            border-radius: 3px; color: #222; }
 </style>
 </head>
 <body>
 <div id="map"></div>
+<div id="picker"><label>Relief <select id="variant"></select></label></div>
 <div id="note"><b>Research preview. Not for navigation.</b> Morro Bay 10 m survey; mixed vertical references.
   Tan = no survey. <span id="readout"></span></div>
 <script src="/node_modules/pmtiles/dist/pmtiles.js"></script>
@@ -29,12 +32,23 @@ import * as maplibregl from '/node_modules/maplibre-gl/dist/maplibre-gl.mjs';
 const {Protocol} = window.pmtiles;   // the bundled build; the ESM build needs a bundler for fflate
 
 const q = new URLSearchParams(location.search);
-const archive = q.get('tiles') || '/var/seafloor/tiles/morro-bay-seafloor-deep.pmtiles';
-// lon/lat boxes (W, S, E, N) of the two crops that bathy.py of the map style study renders
-// (columns/rows of the 10 m raster: canyons 0..8000 x 2800..10163; nearshore 7500..10800 x 3300..8300).
+// variant=base|mild|medium|strong picks the relief enhancement of scripts/build_bathy_tiles.py (MAPSTYLE-2);
+// base is the MAPSTYLE-1 look. A dropdown in the corner switches it (it reloads with ?variant=...).
+const VARIANTS = ['base', 'mild', 'medium', 'strong'];
+const variant = VARIANTS.includes(q.get('variant')) ? q.get('variant') : 'base';
+const archive = q.get('tiles') || '/var/seafloor/tiles/morro-bay-seafloor-deep' + (variant === 'base' ? '' : '-' + variant) + '.pmtiles';
+const picker = document.getElementById('variant');
+picker.innerHTML = VARIANTS.map((v) => `<option${v === variant ? ' selected' : ''}>${v}</option>`).join('');
+if (q.get('picker') === 'off') document.getElementById('picker').hidden = true;   // clean screenshots
+picker.onchange = () => { q.set('variant', picker.value); location.search = q.toString(); };
+// lon/lat boxes (W, S, E, N) of the crops: the two that bathy.py of the map style study renders
+// (columns/rows of the 10 m raster: canyons 0..8000 x 2800..10163; nearshore 7500..10800 x 3300..8300)
+// and, for MAPSTYLE-2, `ridges`, a nearshore view where rock outcrops and ridges show.
 const VIEWS = {
   canyons: [-121.9664, 34.9348, -121.0733, 35.6092],
   nearshore: [-121.1371, 35.1135, -120.7683, 35.5667],
+  // 3 x 3 km of 15-90 m bottom west of Morro Bay with the most ridge-like curvature in the survey
+  ridges: [-120.9300, 35.2650, -120.8940, 35.2930],
   full: [-121.95, 34.95, -120.55, 35.85],
 };
 const TAN = '#d9d2c0';   // the study's "no survey" colour

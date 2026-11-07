@@ -86,16 +86,61 @@ LIGHTS = ((225.0, 0.2), (315.0, 0.4), (270.0, 0.2), (360.0, 0.2))
 ALTITUDE = 38.0
 BLEND_GAIN = 1.8
 
+# MAPSTYLE-2 relief enhancement (contrast and exposure only; ramp, depth stretch and the no-survey
+# transparency are untouched). `base` is the MAPSTYLE-1 look, byte for byte. Controls:
+#   ve_boost / gain_boost  fractional rise of vertical exaggeration / hillshade strength, ramped in
+#                          from 0 at zoom 11 to full at zoom 13 (the shelf zooms)
+#   unsharp, sigma_m, clip local-contrast boost on the shading: amount, blur radius in ground metres
+#                          (1-4 px), and the largest detail it may add (a bound, so a cliff or a
+#                          survey seam cannot blow out); faded to zero within 2 sigma of no survey
+#   light2, light2_az      weight and azimuth of a second light from the opposite (SE) side, so ridges
+#                          show from either side; the four base lights share the remaining weight
+#   curv                   weight of a ridge/trough term (smoothed Laplacian: crests lighter, hollows
+#                          darker), light-direction free
+#   ev                     exposure lift in stops, peaking in the mid-depths of the ramp, 0 at both ends
+BASE_ENHANCE = {'ve_boost': 0.0, 'gain_boost': 0.0, 'unsharp': 0.0, 'sigma_m': 50.0, 'clip': 0.25,
+                'light2': 0.0, 'light2_az': 135.0, 'curv': 0.0, 'ev': 0.0}
+ENHANCE = {
+    'base': BASE_ENHANCE,
+    'mild': {**BASE_ENHANCE, 've_boost': 0.15, 'gain_boost': 0.10, 'unsharp': 0.6, 'light2': 0.10,
+             'curv': 0.10, 'ev': 0.05},
+    'medium': {**BASE_ENHANCE, 've_boost': 0.30, 'gain_boost': 0.20, 'unsharp': 1.0, 'light2': 0.15,
+               'curv': 0.20, 'ev': 0.10},
+    'strong': {**BASE_ENHANCE, 've_boost': 0.50, 'gain_boost': 0.35, 'unsharp': 1.6, 'light2': 0.20,
+               'curv': 0.35, 'ev': 0.18},
+}
+ENHANCED_PAD = 12            # halo for the blurs: 3 sigma of the widest (4 px) kernel, so tiles still match at seams
+
 
 def deep_lut():
     return np.frombuffer(bytes.fromhex(''.join(DEEP_HEX)), dtype=np.uint8).reshape(256, 3)
 
 
-def style_for_zoom(zoom):
-    """Depth breakpoints and vertical exaggeration for a zoom level."""
-    t = min(1.0, max(0.0, (zoom - CANYON_ZOOM) / (NEARSHORE_ZOOM - CANYON_ZOOM)))
+def zoom_ramp(zoom):
+    """0 at the canyon zoom and below, 1 at the nearshore zoom and above."""
+    return min(1.0, max(0.0, (zoom - CANYON_ZOOM) / (NEARSHORE_ZOOM - CANYON_ZOOM)))
+
+
+def style_for_zoom(zoom, enhance=None):
+    """Depth breakpoints, vertical exaggeration and hillshade gain for a zoom level."""
+    enhance = enhance or BASE_ENHANCE
+    t = zoom_ramp(zoom)
     bp = tuple(a + (b - a) * t for a, b in zip(CANYON['bp'], NEARSHORE['bp']))
-    return {'bp': bp, 've': CANYON['ve'] + (NEARSHORE['ve'] - CANYON['ve']) * t}
+    ve = CANYON['ve'] + (NEARSHORE['ve'] - CANYON['ve']) * t
+    return {'bp': bp, 've': ve * (1.0 + enhance['ve_boost'] * t), 'gain': BLEND_GAIN * (1.0 + enhance['gain_boost'] * t)}
+
+
+def lights_for(enhance=None):
+    enhance = enhance or BASE_ENHANCE
+    w2 = enhance['light2']
+    if w2 <= 0:
+        return LIGHTS
+    return tuple((az, w * (1.0 - w2)) for az, w in LIGHTS) + ((enhance['light2_az'], w2),)
+
+
+def pad_for(enhance=None):
+    enhance = enhance or BASE_ENHANCE
+    return PAD if enhance == BASE_ENHANCE else ENHANCED_PAD
 
 
 def ramp_position(elevation, bp):
@@ -138,14 +183,51 @@ def rescale(raw, lo, hi):
     return np.clip(raw, 0.0, 1.0)
 
 
-def combined_intensity(raws, ranges):
-    return sum(w * rescale(r, *ranges[i]) for i, ((_, w), r) in enumerate(zip(LIGHTS, raws)))
+def combined_intensity(raws, ranges, lights=LIGHTS):
+    return sum(w * rescale(r, *ranges[i]) for i, ((_, w), r) in enumerate(zip(lights, raws)))
 
 
-def shade(position_rgb, intensity, median):
+def shade(position_rgb, intensity, median, gain=BLEND_GAIN):
     """Soft blend of hillshade intensity into the colour (bathy.py `blend`, gain 1.8)."""
-    f = (intensity - median) * BLEND_GAIN
+    f = (intensity - median) * gain
     return np.clip(position_rgb * (1.0 + f[..., None]), 0.0, 1.0)
+
+
+def edge_fade(invalid, width):
+    """0 on and next to no-survey cells, rising to 1 at `width` pixels inside the survey (1 everywhere if none)."""
+    if not invalid.any():
+        return np.ones(invalid.shape)
+    from scipy import ndimage
+    return np.clip((ndimage.distance_transform_edt(~invalid) - 1.0) / width, 0.0, 1.0)
+
+
+def local_contrast(intensity, invalid, ground, enhance):
+    """Bounded unsharp mask of the shading. The blur counts surveyed cells only and the boost fades out
+    near the survey edge, so the nearest-fill used for the hillshade cannot show up as a ridge."""
+    amount = enhance['unsharp']
+    if amount <= 0:
+        return intensity
+    from scipy import ndimage
+    sigma = min(4.0, max(1.0, enhance['sigma_m'] / ground))
+    valid = (~invalid).astype(np.float64)
+    blur = ndimage.gaussian_filter(intensity * valid, sigma, mode='nearest') \
+        / np.maximum(ndimage.gaussian_filter(valid, sigma, mode='nearest'), 1e-6)
+    detail = np.clip(intensity - blur, -enhance['clip'], enhance['clip'])
+    return intensity + amount * detail * edge_fade(invalid, 2.0 * sigma)
+
+
+def ridge_signal(filled, invalid):
+    """Crest-positive curvature of the lightly smoothed bottom (metres per pixel squared), 0 near no survey."""
+    from scipy import ndimage
+    return -ndimage.laplace(ndimage.gaussian_filter(filled, 1.0, mode='nearest')) * edge_fade(invalid, 3.0)
+
+
+def expose(rgb, position, ev):
+    """Lift the mid-depths by up to `ev` stops; the shallow and deep ends of the ramp keep their colour."""
+    if ev <= 0:
+        return rgb
+    lift = 2.0 ** (ev * np.sin(np.pi * np.clip(position, 0.0, 1.0)))
+    return np.clip(rgb * lift[..., None], 0.0, 1.0)
 
 
 # ---- PNG ------------------------------------------------------------------------------------
@@ -268,20 +350,20 @@ def tile_range(bounds, z):
     return range(x_of(west), x_of(east) + 1), range(y_of(north), y_of(south) + 1)
 
 
-def tile_grid(z, x, y):
+def tile_grid(z, x, y, pad=PAD):
     """Affine transform of the padded tile window and the ground metres per pixel at its centre."""
     from affine import Affine
     res = 2 * ORIGIN / (TILE * (1 << z))
     left, top = -ORIGIN + x * TILE * res, ORIGIN - y * TILE * res
     centre_y = top - TILE * res / 2
     lat = math.degrees(2 * math.atan(math.exp(centre_y / EARTH)) - math.pi / 2)
-    return Affine(res, 0, left - PAD * res, 0, -res, top + PAD * res), res * math.cos(math.radians(lat))
+    return Affine(res, 0, left - pad * res, 0, -res, top + pad * res), res * math.cos(math.radians(lat))
 
 
-def warp_window(elevation, src_transform, src_crs, z, x, y):
+def warp_window(elevation, src_transform, src_crs, z, x, y, pad=PAD):
     from rasterio.warp import Resampling, reproject
-    transform, ground = tile_grid(z, x, y)
-    size = TILE + 2 * PAD
+    transform, ground = tile_grid(z, x, y, pad)
+    size = TILE + 2 * pad
     dest = np.full((size, size), NODATA, dtype=np.float32)
     reproject(elevation, dest, src_transform=src_transform, src_crs=src_crs, dst_transform=transform,
               dst_crs='EPSG:3857', src_nodata=NODATA, dst_nodata=NODATA, resampling=Resampling.average,
@@ -289,55 +371,81 @@ def warp_window(elevation, src_transform, src_crs, z, x, y):
     return dest, ground
 
 
-def zoom_windows(elevation, src_transform, src_crs, bounds, z):
+def zoom_windows(elevation, src_transform, src_crs, bounds, z, pad=PAD):
     """{(x, y): (padded elevation, invalid mask, ground metres per pixel)} for tiles with any survey."""
     xs, ys = tile_range(bounds, z)
     out = {}
     for x in xs:
         for y in ys:
-            window, ground = warp_window(elevation, src_transform, src_crs, z, x, y)
+            window, ground = warp_window(elevation, src_transform, src_crs, z, x, y, pad)
             invalid = ~np.isfinite(window) | (window == NODATA)
-            if not (~invalid[PAD:-PAD, PAD:-PAD]).any():
+            if not (~invalid[pad:-pad, pad:-pad]).any():
                 continue
             out[(x, y)] = (window, invalid, ground)
     return out
 
 
-def raws_for(window, invalid, ground, ve):
+def relief(window, invalid, ground, ve, lights, enhance):
+    """Per-light raw illumination and (when the curvature term is on) the ridge signal of one window."""
     filled = fill_nodata(window, invalid)
-    return [raw_intensity(filled, ground, ve, az) for az, _ in LIGHTS]
+    raws = [raw_intensity(filled, ground, ve, az) for az, _ in lights]
+    ridge = ridge_signal(filled, invalid) if enhance['curv'] > 0 else None
+    return raws, ridge
 
 
-def render_zoom(windows, z):
+def render_zoom(windows, z, enhance=None):
     """Two passes: zoom-wide hillshade extremes and median (the study's picture-wide constants), then RGBA."""
-    style = style_for_zoom(z)
-    lo = [np.inf] * len(LIGHTS)
-    hi = [-np.inf] * len(LIGHTS)
+    enhance = enhance or BASE_ENHANCE
+    style, lights = style_for_zoom(z, enhance), lights_for(enhance)
+    lo = [np.inf] * len(lights)
+    hi = [-np.inf] * len(lights)
+    ridge_samples = []
     for window, invalid, ground in windows.values():
         valid = ~invalid
-        for i, raw in enumerate(raws_for(window, invalid, ground, style['ve'])):
+        raws, ridge = relief(window, invalid, ground, style['ve'], lights, enhance)
+        for i, raw in enumerate(raws):
             lo[i], hi[i] = min(lo[i], float(raw[valid].min())), max(hi[i], float(raw[valid].max()))
+        if ridge is not None:
+            ridge_samples.append(np.abs(ridge[valid & (ridge != 0)])[::7])
     ranges = list(zip(lo, hi))
+    # the ridge term is scaled by the zoom-wide 95th percentile of |ridge| and soft-limited with tanh
+    ridge_scale = 1.0
+    if ridge_samples and sum(len(s) for s in ridge_samples):
+        ridge_scale = max(float(np.percentile(np.concatenate(ridge_samples), 95)), 1e-6)
     samples, shaded = [], {}
     for key, (window, invalid, ground) in windows.items():
-        intensity = combined_intensity(raws_for(window, invalid, ground, style['ve']), ranges)
+        raws, ridge = relief(window, invalid, ground, style['ve'], lights, enhance)
+        intensity = local_contrast(combined_intensity(raws, ranges, lights), invalid, ground, enhance)
+        if ridge is not None:
+            intensity = intensity + enhance['curv'] * np.tanh(ridge / ridge_scale)
         shaded[key] = intensity
         samples.append(intensity[~invalid][::5])
     median = float(np.median(np.concatenate(samples)))
     tiles = {}
     for (x, y), (window, invalid, _) in windows.items():
-        rgb = shade(deep_colour(ramp_position(window.astype(np.float64), style['bp'])), shaded[(x, y)], median)
+        pad = (window.shape[0] - TILE) // 2
+        position = ramp_position(window.astype(np.float64), style['bp'])
+        rgb = expose(shade(deep_colour(position), shaded[(x, y)], median, style['gain']), position, enhance['ev'])
         rgba = np.zeros(window.shape + (4,), dtype=np.uint8)
         rgba[..., :3] = np.round(rgb * 255).astype(np.uint8)
         rgba[..., 3] = np.where(invalid, 0, 255)
         rgba[invalid, :3] = 0          # no survey: transparent, colour irrelevant
-        tiles[(z, x, y)] = encode_png(rgba[PAD:-PAD, PAD:-PAD])
+        tiles[(z, x, y)] = encode_png(rgba[pad:-pad, pad:-pad])
     return tiles
 
 
-def build(source, output, minzoom=MINZOOM, maxzoom=MAXZOOM, log=print):
+def output_for(variant, directory=None):
+    """base keeps the MAPSTYLE-1 name; the others add -<variant> (the public-build guard matches both)."""
+    directory = Path(directory) if directory else DEFAULT_OUTPUT.parent
+    return directory / ('morro-bay-seafloor-deep.pmtiles' if variant == 'base'
+                        else f'morro-bay-seafloor-deep-{variant}.pmtiles')
+
+
+def build(source, output, minzoom=MINZOOM, maxzoom=MAXZOOM, log=print, variant='base'):
     import rasterio
     from rasterio.warp import transform_bounds
+    enhance = ENHANCE[variant]
+    pad = pad_for(enhance)
     with rasterio.open(source) as ds:
         if ds.crs.to_epsg() != 3310 or ds.count != 1:
             raise ValueError(f'expected one band in EPSG:3310, got {ds.crs} with {ds.count} bands')
@@ -350,31 +458,34 @@ def build(source, output, minzoom=MINZOOM, maxzoom=MAXZOOM, log=print):
         log('warning: source has cells at or above zero elevation; they are drawn with the shallowest colour')
     tiles = {}
     for z in range(minzoom, maxzoom + 1):
-        windows = zoom_windows(elevation, src_transform, src_crs, bounds, z)
-        tiles.update(render_zoom(windows, z))
+        windows = zoom_windows(elevation, src_transform, src_crs, bounds, z, pad)
+        tiles.update(render_zoom(windows, z, enhance))
         log(f'zoom {z}: {len(windows)} tiles')
     centre = ((bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2)
     metadata = {
-        'name': 'SkipperCast Morro Bay seafloor (Deep)',
+        'name': 'SkipperCast Morro Bay seafloor (Deep)' + ('' if variant == 'base' else f', relief {variant}'),
         'description': 'Styled raster of the 10 m Morro Bay survey: cmocean deep ramp, nonlinear depth stretch and '
                        'four-direction hillshade. Transparent = no survey. Mixed vertical references; '
                        'research preview, NOT FOR NAVIGATION.',
         'attribution': 'USGS California Seafloor Mapping Program and other public surveys (via SkipperCast); colours: cmocean',
-        'type': 'baselayer', 'format': 'png', 'version': '1',
+        'type': 'baselayer', 'format': 'png', 'version': '1', 'relief_variant': variant,
+        'relief_settings': enhance,
         'minzoom': minzoom, 'maxzoom': maxzoom, 'bounds': [round(v, 6) for v in bounds],
         'center': [round(centre[0], 6), round(centre[1], 6), 10],
     }
     write_pmtiles(output, tiles, metadata=metadata, bounds=bounds, minzoom=minzoom, maxzoom=maxzoom,
                   center=(10, centre[0], centre[1]))
     size = Path(output).stat().st_size
-    log(f'{output}: {size / 1e6:.1f} MB, zooms {minzoom}-{maxzoom}, {len(tiles)} tiles')
+    log(f'{output}: {size / 1e6:.1f} MB, zooms {minzoom}-{maxzoom}, {len(tiles)} tiles, relief {variant}')
     return size
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     parser.add_argument('--source', required=True, help='elevation GeoTIFF (EPSG:3310, metres, positive up)')
-    parser.add_argument('--output', default=str(DEFAULT_OUTPUT))
+    parser.add_argument('--output', default=None, help='archive path (one variant only; default var/seafloor/tiles/...)')
+    parser.add_argument('--variant', default='base', choices=[*ENHANCE, 'all'],
+                        help='relief enhancement: base (MAPSTYLE-1 look), mild, medium, strong, or all four')
     parser.add_argument('--minzoom', type=int, default=MINZOOM)
     parser.add_argument('--maxzoom', type=int, default=MAXZOOM)
     args = parser.parse_args(argv)
@@ -384,7 +495,12 @@ def main(argv=None):
     if not 0 <= args.minzoom <= args.maxzoom <= 15:
         print('build_bathy_tiles: need 0 <= minzoom <= maxzoom <= 15', file=sys.stderr)
         return 2
-    build(args.source, Path(args.output), args.minzoom, args.maxzoom)
+    if args.variant == 'all' and args.output:
+        print('build_bathy_tiles: --variant all writes the default file names; drop --output', file=sys.stderr)
+        return 2
+    for variant in (ENHANCE if args.variant == 'all' else [args.variant]):
+        build(args.source, Path(args.output) if args.output else output_for(variant), args.minzoom, args.maxzoom,
+              variant=variant)
     return 0
 
 
