@@ -38,6 +38,7 @@ import {TideStationControl} from './TideStationControl.tsx';
 import {tideSelection} from '../tide-selection.ts';
 import {withTideSelection} from '../tide-stations.ts';
 import {briefVerdict, clockText, feedReader, type BriefVerdict} from './verdict.ts';
+import {loadSkill, skillFile, skillLine, skillSummary} from './skill.ts';
 import {activeBoatFactors, savedBoat} from '../../dist/boat-handling.js';
 import {boatBasisName, boatRangeNote, REFERENCE_BOAT_NAME, type SavedBoatLike} from '../boat-range.ts';
 import {language, localeOf, num, shortDate, t, type Language, type StringId} from '../i18n.ts';
@@ -311,6 +312,15 @@ export function LeadRules({date, now}: {date: string; now: Date}) {
   );
 }
 
+/** SCFEAT-SKILL-1: measured forecast skill under the model-disagreement line (web/brief/skill.ts); UNKNOWN when history is short. */
+function SkillLine({now, lang}: {now: Date; lang: Language}) {
+  useEffect(() => { loadSkill(); }, []);
+  const file = skillFile.value, id = regionInfo.value?.id;
+  if (file === undefined || !id) return null;
+  const s = skillSummary(file, id, now.getTime());
+  return <p class="app-verdict-skill ui-mono" data-skill={s.state}>{skillLine(s, lang)}</p>;
+}
+
 /**
  * The brief's first lines: the verdict word for the morning window of the lead's day (tomorrow until
  * a time is chosen), the day and window, one sentence naming what limits it with the basis behind a
@@ -340,6 +350,7 @@ export function Verdict({now}: {now: Date}) {
       {rangeNote ? <p class="app-verdict-boat-note">{rangeNote}</p> : null}
       {models ? <p class="app-verdict-models ui-mono" data-agreement={a!.state}>{models}</p> : null}
       {modelHour ? <details class="app-verdict-models-detail"><summary>{t('brief.models.detail', lang)}</summary>{t('brief.models.readings', lang, {w1: gap(modelHour.wind!), w2: gap(modelHour.other_wind!), s1: gap(modelHour.sea!), s2: gap(modelHour.other_sea!)})}</details> : null}
+      <SkillLine now={now} lang={lang} />
       {rulesLine}
     </div>
   );
